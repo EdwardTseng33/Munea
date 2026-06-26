@@ -32,6 +32,7 @@
 2. **擬真 Ditto 在租來的 4090 上跑得動嗎**（fps / 延遲 / 同時幾路）— 過了擬真才成立
 
 ## 下一步（Mac 上開工順序）
+> 📋 **可照著打勾的完整開發任務清單 → `docs/DEV-TASKS.md`**
 1. 裝環境（Node + Capacitor + Xcode）
 2. 把 `castle-voice-engine` 接進來、Capacitor 包成 iOS 殼
 3. **2D 軌先跑起來**（最小可跑版：能講話 ＋ 能設提醒）→ 上真機、釘語音延遲
