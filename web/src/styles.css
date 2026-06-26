@@ -27,10 +27,7 @@ body { font-family: var(--sans); background: #DDD; color: var(--ink); -webkit-fo
 .app-shell {
   max-width: 400px; margin: 0 auto; min-height: 100vh; position: relative; overflow: hidden;
   display: flex; flex-direction: column;
-  background:
-    radial-gradient(120% 60% at 85% -8%, rgba(58,168,160,.16), transparent 60%),
-    radial-gradient(80% 40% at -10% 4%, rgba(217,136,65,.10), transparent 55%),
-    linear-gradient(180deg, var(--cream-2), var(--cream) 30%);
+  background: var(--cream); /* 單一米黃底色（Edward 6/27：不要兩色漸層、薄荷綠留作點綴/其他模板底） */
 }
 
 /* iOS 狀態列 */
@@ -399,7 +396,7 @@ body { font-family: var(--sans); background: #DDD; color: var(--ink); -webkit-fo
 .modal-btn { width: 100%; padding: 16px; border: none; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--teal), var(--teal-d)); color: #fff; font-family: var(--display); font-weight: 700; font-size: 17px; cursor: pointer; }
 
 /* ===== 聊聊：日常語音陪聊（暖色，跟視訊分開） ===== */
-.chat-screen { background: radial-gradient(120% 50% at 50% 0%, #DCEFE9, transparent 60%), linear-gradient(180deg, #EFF6F2, var(--cream)); }
+.chat-screen { background: var(--mint); } /* 聊聊頁＝單一薄荷綠底（Edward 6/27：薄荷綠當其他畫面底色、跟米黃區隔；亦無漸層） */
 .chat-inner { min-height: calc(100vh - 44px); display: flex; flex-direction: column; align-items: center; padding: 16px 24px 36px; }
 .chat-butler { width: 132px; height: 132px; border-radius: 50%; overflow: hidden; margin: 26px 0 10px; box-shadow: 0 20px 44px -18px rgba(46,138,131,.5); animation: floaty 4.5s ease-in-out infinite; border: 4px solid #fff; }
 .chat-butler img { width: 100%; height: 100%; object-fit: cover; }
