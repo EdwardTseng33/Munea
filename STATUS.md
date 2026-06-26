@@ -37,6 +37,9 @@
 - 人物素材：randomuser（**西方臉示意，正式版換亞洲真人**）
 
 ## 重要文件
+- ⭐ **`docs/產品遠景-核心目標.md`** — **北極星**（Edward 6/27 親訂：avatar 兩軌標竿、聽講像真人、感知、記憶、視訊取捨）。任何設計/實作對齊這份。
+- `docs/解決方案與系統骨架-管家版-2026-06-26.md` — 系統架構（三顆腦 + 一張臉，實現上面的遠景）
+- `docs/自架成本與PoC計畫-2026-06-26.md` · `docs/擬真avatar授權合規查核-2026-06-26.md` — 自架成本 / 擬真授權（Ditto）
 - `docs/design-brief-peining.md` — 產品設計需求
 - `docs/design-system.md` — 設計原則規範（顏色/字體/圖示/元件）
 - `docs/architecture-elfie-fusion.md` — Elfie 融入 + 家人傳話架構 + Apple 健康 + 家庭遊戲（§一~九）
