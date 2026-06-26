@@ -54,8 +54,12 @@ python3 -m http.server 8126 --directory web
 ## 技術路線（不變）
 Capacitor 把網頁包成 iPhone App；複用 `castle-voice-engine`（台語語音 + 三顆腦 + 擬真 avatar）；iOS 先、Android 後。
 
+## 夜間自治進度（蘇菲 · 6/27 凌晨、Edward 睡後）
+- ✅ **擬真 Ditto PoC 成功**（Edward 在 RunPod RTX 4090 親跑通、生出 talking-head 影片、24GB 夠、~12fps 半即時、TRT 預期到即時）→ 一鍵重跑指南 `docs/Ditto-PoC結果與重跑指南-2026-06-27.md`。便宜消費卡自架擬真「跑得動」實證。
+- ✅ **子女端 `family.html` 補「寧寧的提醒」**（收通知：回診 7/2／膝蓋痛關懷／天氣轉涼主動關照；沿用設計系統、eval 驗證渲染正常〔截圖工具這 session 卡 C 槽 careon、未附圖〕）。
+
 ## 下一步（接手做這些）
-1. **子女端畫面**（家人視角：看媽媽狀態、傳話、收通知）
+1. ~~子女端畫面~~ ✅ **已做**（`family.html`：看媽媽狀態／傳話／收通知／這週讚／動態／視訊）；可再串雲端傳話 + 通知推播
 2. **亞洲臉真人素材**換上（現為西方臉示意）
 3. **串真實引擎**（castle-voice-engine 台語語音 + 擬真 avatar）
 4. **Apple 健康/Watch 真串接** + 跌倒求救
