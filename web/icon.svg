@@ -1,0 +1,17 @@
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3AA8A0"/><stop offset="1" stop-color="#2E8A83"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#bg)"/>
+  <!-- 聲波（寧寧的聲音 / 陪伴） -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round">
+    <path d="M61 90 q-13 -22 -26 0 q13 22 26 0" opacity=".55"/>
+    <path d="M73 90 q-18 -34 -36 0 q18 34 36 0" opacity=".35"/>
+  </g>
+  <!-- P 字主標 -->
+  <path d="M84 56 h26 a20 20 0 0 1 0 40 h-14 v28 h-12 z M96 68 v16 h12 a8 8 0 0 0 0 -16 z" fill="#FFFFFF"/>
+  <!-- 心點（關懷） -->
+  <circle cx="128" cy="120" r="9" fill="#F4D59C"/>
+</svg>

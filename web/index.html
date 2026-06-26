@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#3AA8A0" />
+  <title>PAINING 陪寧</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ===== 首頁（寧寧） ===== -->
+  <section class="screen active" id="home">
+    <div class="status-bar"><span>9:41</span><span class="notch"></span><span class="sb-icons"><svg class="ic" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8"/></svg><svg class="ic" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span></div>
+    <div class="pad">
+      <div class="home-top">
+        <span class="brand"><svg class="ic logo-wave" viewBox="0 0 24 24"><path d="M8 8a5 5 0 0 1 0 8M11.5 5a9 9 0 0 1 0 14"/></svg><span class="pai">PAI</span><span class="ning">NING</span></span>
+        <span class="home-meta">6/26 星期四 · 晴 26°</span>
+      </div>
+
+      <div class="greeting-wrap">
+        <div class="greeting-sun"></div>
+        <p class="greeting-kicker">早安時光</p>
+        <h1 class="greeting-big">早安，陳奶奶</h1>
+      </div>
+
+      <div class="wallet-strip">
+        <span class="ws-ic"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg></span>
+        <span class="ws-text">這個月你有 <b>23 天</b>準時吃藥，很穩，繼續保持。</span>
+      </div>
+
+      <div class="butler-card">
+        <span class="bc-chip"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/></svg>適合散步</span>
+        <div class="bc-row">
+          <div class="bc-avatar"><img class="ava-img" src="https://randomuser.me/api/portraits/women/79.jpg" alt="寧寧"><span class="online"></span></div>
+          <div class="bc-info">
+            <div class="bc-name">寧寧<span class="bc-tag">專屬管家</span></div>
+            <span class="bc-status"><span class="dot"></span>昨晚睡得好嗎？</span>
+          </div>
+        </div>
+        <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>開始視訊通話</button>
+      </div>
+
+      <div class="sec-head">
+        <div><p class="sec-kicker">Today</p><h2>今天一起完成</h2></div>
+        <span class="task-progress"><span class="bar"><i></i></span>0 / 3</span>
+      </div>
+      <div class="task-card" id="taskCard">
+        <div class="task-item" data-task="pill">
+          <span class="task-ico pill"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span>
+          <div class="task-body"><div class="task-title">吃血壓藥</div><div class="task-sub">飯後 · 1 顆</div></div>
+          <span class="task-time">14:00</span>
+          <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </div>
+        <div class="task-item" data-task="walk">
+          <span class="task-ico walk"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span>
+          <div class="task-body"><div class="task-title">到公園散步</div><div class="task-sub">天氣正好</div></div>
+          <span class="task-time coral">16:30</span>
+          <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </div>
+        <div class="task-item" data-task="chat">
+          <span class="task-ico chat"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></span>
+          <div class="task-body"><div class="task-title">跟寧寧聊聊天</div><div class="task-sub">說說今天的事</div></div>
+          <span class="task-time">隨時</span>
+          <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </div>
+      </div>
+
+      <div class="fam-peek">
+        <div class="fp-avatar"><img class="ava-img" src="https://randomuser.me/api/portraits/women/68.jpg" alt="美華"></div>
+        <div class="fp-text"><b>美華</b>剛留言：「媽，記得吃藥，週末回去看你 💛」</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 狀態 ===== -->
+  <section class="screen" id="status">
+    <div class="status-bar"><span>9:41</span><span class="notch"></span><span class="sb-icons"><svg class="ic" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8"/></svg><svg class="ic" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span></div>
+    <div class="pad">
+      <div class="page-head"><p class="page-kicker">Today</p><h1 class="page-title">陳奶奶的今天</h1><p class="page-sub">寧寧幫你看著身體和心情</p></div>
+
+      <div class="wallet-card">
+        <div class="wc-top"><svg class="ic" viewBox="0 0 24 24" style="color:#fff"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>安心存摺</div>
+        <div class="wc-big">這個月 <span>23</span><small> / 30 天</small> 都準時吃藥</div>
+        <div class="wc-note">不用怕中斷，慢慢累積就好。美華都看得到你的努力。</div>
+      </div>
+
+      <div class="src-strip"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.4-3h5.2l.4 3M9 18l.4 3h5.2l.4-3"/></svg><span>步數、心率、睡眠由 <b>Apple Watch</b> 自動帶入；跌倒或心律不對，手錶會自動通知美華。</span></div>
+
+      <div class="stat-grid">
+        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128/82</div><div class="st-label">血壓 · 已量</div></div>
+        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 小時</small></div><div class="st-label">昨晚睡眠</div></div>
+        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val">2<small>/3</small></div><div class="st-label">今天用藥</div></div>
+        <div class="stat-tile"><span class="st-ico warn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">20<small> 分</small></div><div class="st-label">活動量</div></div>
+      </div>
+
+      <div class="observe-card">
+        <span class="oc-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>
+        <div class="oc-text"><b>寧寧的觀察：</b>今天心情看起來不錯，早上主動聊了 10 分鐘。膝蓋的痠這兩天有提到，我幫你記著、也跟美華說了一聲。</div>
+      </div>
+
+      <button class="report-btn" id="reportBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>整理一份回診摘要給醫生</button>
+    </div>
+  </section>
+
+  <!-- ===== 家人 ===== -->
+  <section class="screen" id="family">
+    <div class="status-bar"><span>9:41</span><span class="notch"></span><span class="sb-icons"><svg class="ic" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8"/></svg><svg class="ic" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span></div>
+    <div class="pad">
+      <div class="page-head"><p class="page-kicker">Family</p><h1 class="page-title">我的家人</h1><p class="page-sub">他們都在，隨時找得到</p></div>
+      <div class="fam-members">
+        <div class="fam-member"><div class="fm-av"><img class="ava-img" src="https://randomuser.me/api/portraits/women/68.jpg" alt=""></div><div class="fm-name">美華</div><div class="fm-rel">女兒</div></div>
+        <div class="fam-member"><div class="fm-av"><img class="ava-img" src="https://randomuser.me/api/portraits/men/52.jpg" alt=""></div><div class="fm-name">志明</div><div class="fm-rel">兒子</div></div>
+        <div class="fam-member"><div class="fm-av"><img class="ava-img" src="https://randomuser.me/api/portraits/men/85.jpg" alt=""></div><div class="fm-name">小寶</div><div class="fm-rel">孫子</div></div>
+        <div class="fam-member"><div class="fm-av add"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div class="fm-name">邀請</div><div class="fm-rel">家人</div></div>
+      </div>
+
+      <div class="quest-card">
+        <div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>這週家庭任務</div>
+        <div class="qc-goal">全家一起走 30,000 步</div>
+        <div class="qc-bar"><i></i></div>
+        <div class="qc-num">21,500 / 30,000 步 · 還差一點點</div>
+        <div class="qc-foot">
+          <div class="qc-members">
+            <div class="qc-mem"><img src="https://randomuser.me/api/portraits/women/65.jpg" alt=""></div>
+            <div class="qc-mem"><img src="https://randomuser.me/api/portraits/women/68.jpg" alt=""></div>
+            <div class="qc-mem"><img src="https://randomuser.me/api/portraits/men/52.jpg" alt=""></div>
+            <div class="qc-mem"><img src="https://randomuser.me/api/portraits/men/85.jpg" alt=""></div>
+          </div>
+          <div class="qc-cheer">一起幫阿嬤加油 💪</div>
+        </div>
+      </div>
+
+      <div class="week-card">
+        <div class="wk-head"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>媽媽這週很棒</div>
+        <div class="wk-stats">
+          <div class="wk-stat"><div class="wk-num">6 天</div><div class="wk-lbl">準時吃藥</div></div>
+          <div class="wk-stat"><div class="wk-num">4 次</div><div class="wk-lbl">出門散步</div></div>
+          <div class="wk-stat"><div class="wk-num">平穩</div><div class="wk-lbl">情緒</div></div>
+        </div>
+        <div class="react-row" id="reactRow">
+          <button class="react-btn" data-react="按了讚"><span class="re-emoji">👍</span>按讚</button>
+          <button class="react-btn" data-react="送上愛心"><span class="re-emoji">💛</span>愛心</button>
+          <button class="react-btn" data-react="畫了張塗鴉"><span class="re-emoji">🎨</span>塗鴉</button>
+          <button class="react-btn" data-react="留了語音"><span class="re-emoji">🎤</span>語音</button>
+        </div>
+      </div>
+
+      <div class="msg-card">
+        <div class="msg-head"><div class="mh-av"><img class="ava-img" src="https://randomuser.me/api/portraits/women/68.jpg" alt=""></div><div class="mh-name">美華</div><div class="mh-time">剛剛</div></div>
+        <div class="msg-body">媽，記得吃血壓藥，週末回去看你！想吃什麼我買過去 💛</div>
+      </div>
+      <button class="fam-call-btn" id="askCall"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>請寧寧提醒他們打給我</button>
+    </div>
+  </section>
+
+  <!-- ===== 設定 ===== -->
+  <section class="screen" id="settings">
+    <div class="status-bar"><span>9:41</span><span class="notch"></span><span class="sb-icons"><svg class="ic" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8"/></svg><svg class="ic" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span></div>
+    <div class="pad">
+      <div class="page-head"><p class="page-kicker">Settings</p><h1 class="page-title">設定</h1><p class="page-sub">讓陪寧更貼近你</p></div>
+      <div class="set-about">
+        <img class="sa-icon" src="icon.svg" alt="PAINING" />
+        <div><div class="sa-name">PAINING 陪寧</div><div class="sa-sub">陳奶奶的專屬管家 · 寧寧</div></div>
+      </div>
+
+      <h2 class="set-section">連接的裝置</h2>
+      <div class="set-list">
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.4-3h5.2l.4 3M9 18l.4 3h5.2l.4-3"/></svg></span>Apple Watch<span class="sr-on"><span class="d"></span>已連接</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></svg></span>Apple 健康<span class="sr-on"><span class="d"></span>已連接</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span>跌倒自動求救<span class="sr-on"><span class="d"></span>已開</span></div>
+      </div>
+
+      <h2 class="set-section">一般</h2>
+      <div class="set-list">
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>選一位管家<span class="sr-arrow">寧寧 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>字體大小<span class="sr-arrow">大 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>提醒管理<span class="sr-arrow">3 項 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span>緊急聯絡<span class="sr-arrow">美華 ›</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 視訊通話 ===== -->
+  <section class="screen call-screen" id="call">
+    <div class="status-bar on-dark"><span>9:41</span><span class="notch"></span><span class="sb-icons"><svg class="ic" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8"/></svg><svg class="ic" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span></div>
+    <div class="call-inner">
+      <div class="call-pill"><span class="dot"></span>寧寧<span class="timer" id="callTimer">00:00</span></div>
+      <div class="avatar-frame photo"><img class="ava-img" src="https://randomuser.me/api/portraits/women/79.jpg" alt="寧寧"><span class="live-badge"><span class="dot"></span>LIVE · 寧寧</span></div>
+      <div class="speaking-pill"><span class="wave"><i></i><i></i><i></i><i></i></span>寧寧 正在說話</div>
+      <div class="call-controls">
+        <button class="cc-btn"><span class="cc-circle"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M14 12h4M6 15h8"/></svg></span>字幕</button>
+        <button class="cc-btn"><span class="cc-circle"><svg class="ic" viewBox="0 0 24 24"><path d="M1 1l22 22M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.6"/><path d="M17 16.9A7 7 0 0 1 5 12v-2M19 10v2a7 7 0 0 1-.1 1.2M12 19v3"/></svg></span>靜音</button>
+        <button class="cc-btn" id="toMed"><span class="cc-circle"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span>鏡頭</button>
+        <button class="cc-btn end" id="endCall"><span class="cc-circle"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span>結束</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 用藥服務窗 ===== -->
+  <section class="screen med-screen" id="med">
+    <div class="status-bar on-dark"><span>9:41</span><span class="notch"></span><span class="sb-icons"><svg class="ic" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8"/></svg><svg class="ic" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.4a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span></div>
+    <div class="med-top">
+      <div class="call-pill"><span class="dot"></span>寧寧<span class="timer">03:24</span></div>
+      <div class="med-avatar-tag">AVATAR · 通話中</div>
+      <div class="med-say">寧寧：陳奶奶，吃藥時間到囉</div>
+    </div>
+    <div class="med-sheet">
+      <div class="med-grab"></div>
+      <div class="med-head">
+        <div class="mh-left"><span class="mh-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span>用藥提醒</div>
+        <div class="mh-now">現在 14:00</div>
+      </div>
+      <div class="med-pill-card">
+        <div class="mpc-row">
+          <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
+          <div><div class="mpc-name">脈優 Amlodipine</div><div class="mpc-desc">血壓藥 · 1 顆 · 配溫開水</div></div>
+        </div>
+        <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>已連續服藥 6 天，做得很好！</div>
+      </div>
+      <div class="med-actions">
+        <button class="taken" id="medTaken"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>我吃過了</button>
+        <button class="snooze" id="medSnooze">等 10 分鐘<br>再提醒</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 底部 5 分頁 ===== -->
+  <nav class="tab-bar" id="tabBar">
+    <button class="tab-btn active" data-view="home"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg><span>寧寧</span></button>
+    <button class="tab-btn" data-view="status"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>狀態</span></button>
+    <button class="tab-btn center" data-view="call"><span class="center-fab"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><span>聊聊</span></button>
+    <button class="tab-btn" data-view="family"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>家人</span></button>
+    <button class="tab-btn" data-view="settings"><svg class="ic" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>設定</span></button>
+  </nav>
+
+</div>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
