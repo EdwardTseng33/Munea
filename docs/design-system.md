@@ -1,4 +1,4 @@
-# PAINING 陪寧 — 設計原則規範（Design System）
+# PeiNing 陪寧 — 設計原則規範（Design System）
 
 > 對齊 Claude Design「陪寧 CAREON 配色」設計稿 · 2026-06-26
 > 凡開發畫面，**一律以本規範為準**。圖示、顏色、字體、間距不得各做各的。

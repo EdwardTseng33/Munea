@@ -1,4 +1,4 @@
-# 陪寧 PAINING · STATUS（接力檔）
+# 陪寧 PeiNing · STATUS（接力檔）
 
 > 銀髮 AI 專屬管家 App · **新 session cold-start 先讀這份**
 > 最後更新 2026-06-26（原型 5 分頁 + Elfie 融入 + 設計精修完成）
@@ -10,7 +10,7 @@
 設計對齊 Claude Design「陪寧 CAREON 配色」設計稿 + 融入 Elfie 行為科學 + 兩輪設計精修。
 
 ## 品名 / 角色（本 session 更新）
-- 品名：**PAINING**（英）/ **陪寧**（中）—— 舊的 PeiNing / Aria 已汰換
+- 品名：**PeiNing**（英）/ **陪寧**（中）。〔英文定 PeiNing：Edward 6/27 拍板、PAINING 棄用——英文負面義「使人痛苦」+ 與已查證域名/商標不符〕
 - 管家：**寧寧**（女）；範例長輩：陳奶奶；子女：美華（女兒）/ 志明（兒子）；孫子：小寶
 
 ## App 架構（底部 5 分頁 + 延伸流程）

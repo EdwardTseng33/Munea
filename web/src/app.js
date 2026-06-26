@@ -1,4 +1,4 @@
-/* PAINING 陪寧 — 原型互動
+/* PeiNing 陪寧 — 原型互動
  * 落實 Claude Design「陪寧 CAREON 配色」+ Elfie 融入（安心存摺 / 今天一起完成 / 媽媽這週）
  * 標 [ENGINE] 處正式版接 castle-voice-engine（台語語音 + 三顆腦 + 擬真 avatar）。 */
 
