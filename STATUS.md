@@ -25,7 +25,8 @@
 7. ✅ **架構 = 三顆腦（反射快回 / 管家背景深想 / 守護安全網）+ 一張臉**；感知+記憶在背景跑 = 深而不慢。詳 `解決方案與系統骨架-管家版-2026-06-26.md`。
 8. ✅ **平台路線 = 混合原生（Capacitor）**：正統 App（上 App Store + 原生推播）但包現有網頁引擎、七成複用；iOS 先、Android 後。非純 web app（iPhone 網頁推播弱、上不了正式櫃）、非從零純原生（慢/貴/不複用）。
 9. ✅ **擬真撞牆 = 做法/硬體問題、非做不到**（Edward 6/26）：前 5 次是自家拼圖+動畫硬接 + 無像樣 GPU + 沒照競品正規法。Ditto PoC 要用正規生成法 + 像樣機器重測。
-10. ✅ **主幹程式庫已開**：`E:\Claude\智慧健康\陪寧-PeiNing\peining`（git、main 分支、首版 commit 59b6d32：README 架構 + docs/ARCHITECTURE + ROADMAP）。Mac 上接：裝環境 + Capacitor iOS + Apple 開發者帳號 + 推 GitHub。
+10. ✅ **主幹程式庫已上 GitHub**：**https://github.com/EdwardTseng33/PeiNing**（私人、18 檔：code trunk + 全設計文件 + STATUS + MAC-START.md）。**Mac 接手：`git clone https://github.com/EdwardTseng33/PeiNing.git` → 叫新 session 先讀 `MAC-START.md` → 裝環境 + Capacitor iOS + Apple 開發者帳號**。本機原始檔 `E:\Claude\智慧健康\陪寧-PeiNing\peining`。
+11. ✅ **前期語言 = 台灣中文 + 台語 + 英語**（負擔過大則收 台灣中文 + 台語）。Edward 6/26 拍板。註：台語最重（招牌、留）、中文幾乎隨台語免費、英語最輕（模型支援最好、**非負擔來源**）；核心長輩用不到英語 → 英語價值在海外輸出、前期火力主磨中文+台語的長輩體驗、英語做到「能用」即可。
 
 ## 產品一句話
 住在手機裡、會說台語、記得你、出事會找人的「**家人替身**」。子女買給長輩（用的人 ≠ 付錢的人）。
