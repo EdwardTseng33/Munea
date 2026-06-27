@@ -123,8 +123,42 @@ def consolidate():
     return mems, mems
 
 
+def update_interests(conversation):
+    """興趣權重＋反向：從對話找出喜歡/不喜歡的主題，累加/扣減分數，存回檔。"""
+    pf = os.path.join(HERE, "user_profile.json")
+    p = json.load(open(pf, encoding="utf-8"))
+    weights = p.get("興趣權重", {})
+    prompt = ("從以下對話，找這個人對哪些『主題/活動』表達了興趣或反感。"
+              "喜歡/常做＝正分（+2 很愛、+1 有興趣）；不喜歡/排斥＝負分（-2 討厭、-1 不太愛）。"
+              "只回 JSON 物件 {主題: 分數}，沒有就空物件。\n\n" + conversation)
+    for m in ("gemini-2.5-flash", "gemini-flash-latest"):
+        try:
+            r = client.models.generate_content(
+                model=m, contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json"))
+            delta = json.loads(r.text)
+            for k, v in delta.items():
+                weights[k] = weights.get(k, 0) + v
+            p["興趣權重"] = weights
+            json.dump(p, open(pf, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            return delta, weights
+        except Exception:
+            pass
+    return {}, weights
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if args and args[0] == "interest":
+        convo = ("用戶：我超愛看韓劇的，每天都追！\n"
+                 "用戶：欸不要再叫我去運動了啦，我最討厭流汗。\n"
+                 "用戶：不過種花我倒是很喜歡，每天澆水。")
+        delta, weights = update_interests(convo)
+        print("這場偵測到的興趣訊號：", delta)
+        print("\n累積興趣權重（正＝愛、負＝不愛）：")
+        for k, v in sorted(weights.items(), key=lambda x: -x[1]):
+            print(f"  {k}: {v:+d}")
+        print("\nDONE"); sys.exit()
     if args and args[0] == "tidy":
         before, after = consolidate()
         print(f"整理前 {len(before)} 條：")
