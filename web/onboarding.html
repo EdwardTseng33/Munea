@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>陪寧 · 幫爸媽設定</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" />
+<link rel="stylesheet" href="src/styles.css" />
+<style>
+  /* 子女裝機流程（onboarding）· 沿用 styles.css 設計系統，僅補本流程專屬樣式 */
+  .ob-step { display: none; flex: 1; overflow-y: auto; padding: 8px 22px 28px; flex-direction: column; }
+  .ob-step.active { display: flex; animation: fade .35s ease; }
+
+  .ob-kicker { font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--teal-d); margin-bottom: 8px; }
+  .ob-h1 { font-family: var(--display); font-weight: 700; font-size: 27px; line-height: 1.28; color: var(--ink); margin-bottom: 12px; }
+  .ob-h2 { font-family: var(--display); font-weight: 700; font-size: 23px; line-height: 1.3; color: var(--ink); margin-bottom: 8px; }
+  .ob-p { font-size: 16px; line-height: 1.65; color: var(--ink-2); margin-bottom: 22px; }
+  .ob-spacer { flex: 1; min-height: 12px; }
+
+  /* 歡迎頁的寧寧頭像 */
+  .ob-hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 0 22px; }
+  .ob-hero .ob-orb { width: 132px; height: 132px; border-radius: 44px; background: linear-gradient(155deg, #FFFFFF, #EAF4F0); box-shadow: var(--shadow); display: grid; place-items: center; margin-bottom: 24px; position: relative; overflow: hidden; }
+  .ob-hero .ob-orb::after { content: ""; position: absolute; right: -30px; top: -30px; width: 110px; height: 110px; border-radius: 50%; background: radial-gradient(circle, rgba(58,168,160,.20), transparent 70%); }
+  .ob-hero .ob-orb img { width: 96px; height: 96px; }
+  .ob-hero .ob-h1 { font-size: 28px; }
+  .ob-hero .ob-p { max-width: 320px; }
+  .ob-note { font-size: 13px; color: var(--muted); margin-top: 16px; display: flex; align-items: center; gap: 7px; justify-content: center; }
+
+  /* 表單欄位（示意，不收真資料） */
+  .ob-field { margin-bottom: 16px; }
+  .ob-field label { display: block; font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--ink-2); margin-bottom: 7px; }
+  .ob-input { width: 100%; border: 1.5px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); padding: 14px 16px; font-family: var(--sans); font-size: 17px; color: var(--ink); }
+  .ob-input:focus { outline: none; border-color: var(--teal); }
+  .ob-row { display: flex; gap: 12px; }
+  .ob-row .ob-field { flex: 1; }
+
+  /* 加照片 */
+  .ob-photo { display: flex; flex-direction: column; align-items: center; margin-bottom: 22px; }
+  .ob-photo .pp { width: 92px; height: 92px; border-radius: 50%; border: 2px dashed var(--teal); background: var(--mint); display: grid; place-items: center; color: var(--teal-d); margin-bottom: 8px; }
+  .ob-photo .pp .ic { width: 30px; height: 30px; }
+  .ob-photo span { font-size: 13px; color: var(--muted); }
+
+  /* avatar 兩軌切換 */
+  .ob-track { display: flex; gap: 10px; margin-bottom: 18px; }
+  .ob-track button { flex: 1; border: 1.5px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); padding: 13px 8px; font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink-2); cursor: pointer; transition: .15s; }
+  .ob-track button.on { border-color: var(--teal); background: var(--mint); color: var(--teal-dd); }
+  .ob-track button small { display: block; font-family: var(--sans); font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .ob-track button.on small { color: var(--teal-d); }
+
+  .ob-faces { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+  .ob-faces.hidden { display: none; }
+  .ob-face { border: 2px solid transparent; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-sm); padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: .15s; }
+  .ob-face.on { border-color: var(--teal); background: var(--mint); }
+  .ob-face .fc { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .ob-face .fc .ic { width: 30px; height: 30px; stroke-width: 1.8; }
+  .ob-face .fn { font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--ink); }
+  .ob-face .ft { font-size: 12px; color: var(--muted); }
+  .ob-hint { font-size: 12px; color: var(--muted); text-align: center; margin: 4px 0 18px; }
+
+  /* 邀請家人 */
+  .ob-mem { display: flex; align-items: center; gap: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 13px 15px; margin-bottom: 11px; }
+  .ob-mem .ma { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; color: #fff; }
+  .ob-mem .ma .ic { width: 22px; height: 22px; }
+  .ob-mem .mi { flex: 1; }
+  .ob-mem .mn { font-family: var(--display); font-weight: 600; font-size: 16px; color: var(--ink); }
+  .ob-mem .mr { font-size: 13px; color: var(--muted); }
+  .ob-mem .madd { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--teal-d); border: 1.5px solid var(--teal); background: transparent; border-radius: 999px; padding: 7px 15px; cursor: pointer; transition: .15s; }
+  .ob-mem .madd.added { color: #fff; background: var(--teal); border-color: var(--teal); }
+  .ob-mem .mdone { font-size: 13px; font-family: var(--display); font-weight: 600; color: var(--teal-d); display: flex; align-items: center; gap: 5px; }
+
+  /* 完成頁 */
+  .ob-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 0 10px; }
+  .ob-check { width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(140deg, var(--teal), var(--teal-d)); display: grid; place-items: center; color: #fff; box-shadow: 0 16px 30px -14px rgba(58,168,160,.7); margin-bottom: 20px; }
+  .ob-check .ic { width: 44px; height: 44px; stroke-width: 2.6; }
+  .ob-preview { width: 100%; background: var(--mint); border: 1px solid rgba(58,168,160,.18); border-radius: var(--radius); padding: 18px; display: flex; align-items: center; gap: 13px; margin: 18px 0 8px; text-align: left; }
+  .ob-preview .pa { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--teal), var(--teal-d)); display: grid; place-items: center; color: #fff; flex-shrink: 0; }
+  .ob-preview .pa .ic { width: 26px; height: 26px; }
+  .ob-preview .pt { font-size: 15px; line-height: 1.55; color: var(--ink); }
+  .ob-preview .pt b { font-family: var(--display); }
+
+  /* 底部按鈕區 + 進度點 */
+  .ob-foot { padding: 14px 22px 22px; flex-shrink: 0; }
+  .ob-dots { display: flex; gap: 7px; justify-content: center; margin-bottom: 14px; }
+  .ob-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: .2s; }
+  .ob-dots i.on { background: var(--teal); width: 22px; border-radius: 999px; }
+  .ob-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 17px; border: none; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--teal), var(--teal-d)); color: #fff; font-family: var(--display); font-weight: 700; font-size: 18px; cursor: pointer; box-shadow: 0 14px 26px -12px rgba(58,168,160,.7); }
+  .ob-btn .ic { width: 20px; height: 20px; }
+  .ob-btn.ghost { background: none; color: var(--teal-d); box-shadow: none; font-size: 16px; padding: 12px; margin-top: 4px; }
+  .ob-back { background: none; border: none; color: var(--muted); font-family: var(--display); font-weight: 600; font-size: 15px; cursor: pointer; padding: 8px; display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-bottom: 4px; }
+  .ob-back .ic { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- iOS 狀態列 -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="notch"></div>
+    <div class="sb-icons">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg>
+      <svg class="ic" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+      <svg class="ic" viewBox="0 0 24 24"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M23 13v-2"/></svg>
+    </div>
+  </div>
+
+  <!-- 第 0 步 · 歡迎 -->
+  <section class="ob-step active" data-step="0">
+    <div class="ob-hero">
+      <div class="ob-orb"><img src="icons/peining-app-icon-source-rounded-transparent-clean-256.png" alt="陪寧" /></div>
+      <div class="ob-kicker">陪寧 · 幫爸媽設定</div>
+      <h1 class="ob-h1">幫爸媽，裝一個<br>會陪他的人</h1>
+      <p class="ob-p">陪寧會陪媽媽聊天、提醒吃藥、有狀況第一時間找你。花 5 分鐘幫她設定好，剩下的交給寧寧。</p>
+    </div>
+    <div class="ob-spacer"></div>
+    <div class="ob-note">
+      <svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/></svg>
+      你是子女，設定好後把手機交給長輩用
+    </div>
+  </section>
+
+  <!-- 第 1 步 · 給誰用 -->
+  <section class="ob-step" data-step="1">
+    <button class="ob-back" data-back><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>上一步</button>
+    <div class="ob-kicker">第 1 步 · 給誰用</div>
+    <h2 class="ob-h2">這支手機，是給誰用的？</h2>
+    <p class="ob-p">填一次就好，寧寧會記得她、用她的稱呼跟她說話。</p>
+    <div class="ob-photo">
+      <div class="pp"><svg class="ic" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+      <span>加一張她的照片（之後也能加）</span>
+    </div>
+    <div class="ob-field"><label>我都叫她</label><input class="ob-input" value="媽媽" /></div>
+    <div class="ob-field"><label>她的名字</label><input class="ob-input" value="陳秀英" /></div>
+    <div class="ob-row">
+      <div class="ob-field"><label>年紀</label><input class="ob-input" value="72" /></div>
+      <div class="ob-field"><label>住在</label><input class="ob-input" value="台南" /></div>
+    </div>
+  </section>
+
+  <!-- 第 2 步 · 挑樣子（avatar 兩軌） -->
+  <section class="ob-step" data-step="2">
+    <button class="ob-back" data-back><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>上一步</button>
+    <div class="ob-kicker">第 2 步 · 挑陪她的樣子</div>
+    <h2 class="ob-h2">挑一個陪媽媽的樣子</h2>
+    <p class="ob-p">媽媽打開手機，就會看到這個樣子的寧寧跟她說話。挑她會喜歡的。</p>
+
+    <div class="ob-track">
+      <button class="trk on" data-track="real">擬真真人<small>像真人在陪她</small></button>
+      <button class="trk" data-track="cute">可愛夥伴<small>溫暖不嚴肅</small></button>
+    </div>
+
+    <!-- 擬真：2 男 2 女 -->
+    <div class="ob-faces" data-pane="real">
+      <div class="ob-face on" data-av="f1"><div class="fc" style="background:linear-gradient(135deg,#3AA8A0,#2E8A83)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="fn">秀蘭阿姨</span><span class="ft">溫柔・60 代</span></div>
+      <div class="ob-face" data-av="f2"><div class="fc" style="background:linear-gradient(135deg,#D98841,#C06E2E)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="fn">淑芬阿姨</span><span class="ft">爽朗・50 代</span></div>
+      <div class="ob-face" data-av="m1"><div class="fc" style="background:linear-gradient(135deg,#5E7FB6,#475f8c)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="fn">志強大哥</span><span class="ft">穩重・60 代</span></div>
+      <div class="ob-face" data-av="m2"><div class="fc" style="background:linear-gradient(135deg,#E0B354,#C99A38)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="fn">明德大哥</span><span class="ft">親切・50 代</span></div>
+    </div>
+
+    <!-- 2D 可愛 -->
+    <div class="ob-faces hidden" data-pane="cute">
+      <div class="ob-face" data-av="c1"><div class="fc" style="background:linear-gradient(135deg,#E0B354,#D29F3E)"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M8 4l2 3M16 4l-2 3M10 13h.01M14 13h.01M10 16s1 1 2 1 2-1 2-1"/></svg></div><span class="fn">橘子貓</span><span class="ft">愛撒嬌</span></div>
+      <div class="ob-face" data-av="c2"><div class="fc" style="background:linear-gradient(135deg,#3AA8A0,#2E8A83)"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M6 9l-2-2M18 9l2-2M9 13h.01M15 13h.01M9 16h6"/></svg></div><span class="fn">小綠狗</span><span class="ft">忠心黏人</span></div>
+      <div class="ob-face" data-av="c3"><div class="fc" style="background:linear-gradient(135deg,#D98841,#C06E2E)"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M12 3v3M9 13h.01M15 13h.01M9.5 16.5a3 3 0 0 0 5 0"/></svg></div><span class="fn">圓圓熊</span><span class="ft">憨厚療癒</span></div>
+      <div class="ob-face" data-av="c4"><div class="fc" style="background:linear-gradient(135deg,#7FA8D0,#5E7FB6)"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M12 3l3 3-3 1-3-1zM9 13h.01M15 13h.01M9.5 16h5"/></svg></div><span class="fn">藍藍鳥</span><span class="ft">愛聊天</span></div>
+    </div>
+    <div class="ob-hint" data-realhint>擬真真人為示意圖，正式版為亞洲真人素材</div>
+
+    <div class="ob-field" style="margin-top:6px"><label>要叫她什麼？</label><input class="ob-input" value="寧寧" /></div>
+  </section>
+
+  <!-- 第 3 步 · 邀家人 -->
+  <section class="ob-step" data-step="3">
+    <button class="ob-back" data-back><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>上一步</button>
+    <div class="ob-kicker">第 3 步 · 誰一起關心</div>
+    <h2 class="ob-h2">還有誰，要一起<br>關心媽媽？</h2>
+    <p class="ob-p">加進來的家人，都能看到媽媽的狀態、收到寧寧的提醒。媽媽有事，大家一起接住。</p>
+
+    <div class="ob-mem">
+      <div class="ma" style="background:linear-gradient(135deg,#D98841,#C06E2E)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="mi"><div class="mn">你（美華）</div><div class="mr">女兒 · 設定的人</div></div>
+      <span class="mdone"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M20 6 9 17l-5-5"/></svg>已加入</span>
+    </div>
+    <div class="ob-mem">
+      <div class="ma" style="background:linear-gradient(135deg,#5E7FB6,#475f8c)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="mi"><div class="mn">志明</div><div class="mr">兒子</div></div>
+      <button class="madd">＋ 邀請</button>
+    </div>
+    <div class="ob-mem">
+      <div class="ma" style="background:linear-gradient(135deg,#E0B354,#C99A38)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="mi"><div class="mn">小寶</div><div class="mr">孫子</div></div>
+      <button class="madd">＋ 邀請</button>
+    </div>
+    <div class="ob-mem">
+      <div class="ma" style="background:linear-gradient(135deg,#8B9690,#6E7873)"><svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="mi"><div class="mn">用電話／LINE 邀請其他人</div><div class="mr">兄弟姊妹、看護都可以</div></div>
+      <button class="madd">＋ 邀請</button>
+    </div>
+  </section>
+
+  <!-- 第 4 步 · 完成，交給媽媽 -->
+  <section class="ob-step" data-step="4">
+    <div class="ob-done">
+      <div class="ob-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="ob-kicker">設定完成</div>
+      <h2 class="ob-h2">都設定好了</h2>
+      <p class="ob-p" style="max-width:320px">把手機交給媽媽，她打開就看到寧寧在等她。你這邊隨時能從「家人」看到她好不好。</p>
+      <div class="ob-preview">
+        <div class="pa"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></div>
+        <div class="pt"><b>寧寧：</b>「秀英阿姨，我是寧寧，以後我陪你。今天，想先跟我聊點什麼呢？」</div>
+      </div>
+    </div>
+    <div class="ob-spacer"></div>
+  </section>
+
+  <!-- 底部：進度 + 主按鈕 -->
+  <div class="ob-foot">
+    <div class="ob-dots">
+      <i class="on"></i><i></i><i></i><i></i><i></i>
+    </div>
+    <button class="ob-btn" id="obNext">
+      <span id="obNextText">開始幫媽媽設定</span>
+      <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+    <button class="ob-btn ghost" id="obDash" style="display:none">我先看看「家人」儀表板</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const steps = [...document.querySelectorAll('.ob-step')];
+  const dots = [...document.querySelectorAll('.ob-dots i')];
+  const nextBtn = document.getElementById('obNext');
+  const nextText = document.getElementById('obNextText');
+  const dashBtn = document.getElementById('obDash');
+  let i = 0;
+  const last = steps.length - 1;
+
+  // 各步主按鈕文案
+  const labels = ['開始幫媽媽設定', '下一步', '下一步', '下一步', '把手機交給媽媽'];
+
+  function render() {
+    steps.forEach((s, n) => s.classList.toggle('active', n === i));
+    dots.forEach((d, n) => d.classList.toggle('on', n === i));
+    nextText.textContent = labels[i];
+    dashBtn.style.display = (i === last) ? 'block' : 'none';
+    document.querySelector('.app-shell').scrollTop = 0;
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (i < last) { i++; render(); }
+    else { window.location.href = 'index.html'; }   // 交給長輩 → 長輩端 App
+  });
+  dashBtn.addEventListener('click', () => { window.location.href = 'family.html'; });
+
+  document.querySelectorAll('[data-back]').forEach(b =>
+    b.addEventListener('click', () => { if (i > 0) { i--; render(); } }));
+
+  // avatar 兩軌切換
+  const trks = [...document.querySelectorAll('.ob-track .trk')];
+  const panes = { real: document.querySelector('[data-pane="real"]'), cute: document.querySelector('[data-pane="cute"]') };
+  const realHint = document.querySelector('[data-realhint]');
+  trks.forEach(t => t.addEventListener('click', () => {
+    trks.forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    const k = t.dataset.track;
+    panes.real.classList.toggle('hidden', k !== 'real');
+    panes.cute.classList.toggle('hidden', k !== 'cute');
+    realHint.style.display = (k === 'real') ? 'block' : 'none';
+  }));
+
+  // 挑樣子（單選高亮，限同一軌）
+  document.querySelectorAll('.ob-faces').forEach(pane =>
+    pane.addEventListener('click', e => {
+      const f = e.target.closest('.ob-face'); if (!f) return;
+      pane.querySelectorAll('.ob-face').forEach(x => x.classList.remove('on'));
+      f.classList.add('on');
+    }));
+
+  // 邀請（示意：點一下變已邀請）
+  document.querySelectorAll('.madd').forEach(b =>
+    b.addEventListener('click', () => {
+      b.classList.toggle('added');
+      b.textContent = b.classList.contains('added') ? '✓ 已邀請' : '＋ 邀請';
+    }));
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 /* PeiNing 陪寧 — 原型互動
  * 落實 Claude Design「陪寧 CAREON 配色」+ Elfie 融入（安心存摺 / 今天一起完成 / 媽媽這週）
- * 標 [ENGINE] 處正式版接 castle-voice-engine（台語語音 + 三顆腦 + 擬真 avatar）。 */
+ * 標 [ENGINE] 處正式版接 castle-voice-engine（台灣中文語音 + 三顆腦 + 擬真 avatar；台語/英語後期）。 */
 
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -27,7 +27,7 @@ function startCallTimer() {
 }
 function stopCallTimer() { clearInterval(callTimer); }
 
-// [ENGINE] 原型用瀏覽器內建語音；正式版換台語 TTS
+// [ENGINE] 原型用瀏覽器內建語音；正式版換台灣中文 TTS（台語後期）
 function say(text) {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
@@ -141,7 +141,7 @@ function init() {
   if ($('#bookBtn')) $('#bookBtn').addEventListener('click', () => { $('#viewAll').classList.remove('active'); $('#viewPerson').classList.remove('active'); $('#viewBook').classList.add('active'); });
   if ($('#bookBack')) $('#bookBack').addEventListener('click', () => { $('#viewBook').classList.remove('active'); $('#viewAll').classList.add('active'); });
 
-  // 聊聊：日常語音陪聊 · [ENGINE] 正式版換台語 STT/TTS + 反射腦
+  // 聊聊：日常語音陪聊 · [ENGINE] 正式版換台灣中文 STT/TTS（台語後期）+ 反射腦
   const SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
   let chatRec = null, chatOn = false;
   const CHAT_RULES = [
@@ -159,7 +159,7 @@ function init() {
   }
   const chatMic = $('#chatMic');
   if (chatMic) chatMic.addEventListener('click', () => {
-    if (!SR2) { const s = prompt('（這個瀏覽器先用打字，正式版用台語語音）跟寧寧說什麼？'); if (s) chatHandle(s); return; }
+    if (!SR2) { const s = prompt('（這個瀏覽器先用打字，正式版用即時語音）跟寧寧說什麼？'); if (s) chatHandle(s); return; }
     if (chatOn) { chatRec && chatRec.stop(); return; }
     chatRec = new SR2(); chatRec.lang = 'zh-TW'; chatRec.interimResults = false;
     chatRec.onstart = () => { chatOn = true; chatMic.classList.add('recording'); if ($('#chatCaption')) $('#chatCaption').textContent = '嗯，我聽著呢…'; if ($('#chatHint')) $('#chatHint').textContent = '再點一下結束'; };
