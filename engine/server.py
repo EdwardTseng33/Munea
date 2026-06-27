@@ -73,7 +73,7 @@ PAGE = """<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
 </style></head><body>
 <header><div class="av">🌸</div><div><b>寧寧</b><small>智慧照護陪伴 · 測試版</small></div></header>
 <div id="log"></div>
-<footer><input id="msg" placeholder="跟寧寧說說話…" autocomplete="off"><button id="send">送出</button></footer>
+<footer><button id="mic" title="用說的">🎤</button><input id="msg" placeholder="跟寧寧說說話…" autocomplete="off"><button id="send">送出</button></footer>
 <script>
 const log=document.getElementById('log'),inp=document.getElementById('msg'),btn=document.getElementById('send');
 let history=[], audioUnlocked=false;
@@ -90,6 +90,8 @@ async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'C
 async function send(){const m=inp.value.trim();if(!m)return;inp.value='';bubble(m,'me');history.push({role:'user',text:m});audioUnlocked=true;typing(true);
   const r=await post('/chat',{history});typing(false);bubble(r.reply,'ne',r.audio);history.push({role:'model',text:r.reply});}
 btn.onclick=send;inp.onkeydown=e=>{if(e.key==='Enter')send();};
+const mic=document.getElementById('mic');const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SR){mic.onclick=()=>{const r=new SR();r.lang='zh-TW';mic.textContent='🔴';audioUnlocked=true;r.onresult=e=>{inp.value=e.results[0][0].transcript;send();};r.onend=()=>mic.textContent='🎤';r.start();};}else{mic.style.display='none';}
 (async()=>{typing(true);const r=await post('/open',{});typing(false);bubble(r.reply,'ne',r.audio);history.push({role:'model',text:r.reply});})();
 </script></body></html>"""
 
