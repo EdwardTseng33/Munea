@@ -7,7 +7,7 @@
 
 ## 現在到哪
 **可跑的原型 App 做出來了**（`web/`）—— 5 分頁 + 視訊 + 用藥，瀏覽器就能點來點去。
-設計對齊 Claude Design「陪寧 CAREON 配色」設計稿 + 融入 Elfie 行為科學 + 兩輪設計精修。
+設計對齊 Claude Design「陪寧 陪寧 配色」設計稿 + 融入 Elfie 行為科學 + 兩輪設計精修。
 
 ## 品名 / 角色（本 session 更新）
 - 品名：**PeiNing**（英）/ **陪寧**（中）。〔英文定 PeiNing：Edward 6/27 拍板、PAINING 棄用——英文負面義「使人痛苦」+ 與已查證域名/商標不符〕
@@ -30,7 +30,7 @@
 | 用藥服務窗 | 藥卡 + 連續服藥 + 我吃過了/再提醒 |
 
 ## 設計
-- **CAREON 配色**：療癒綠 `#3AA8A0` + 珊瑚橘 + 奶油底（讀自 careon-site 實際數值）
+- **陪寧 配色**：療癒綠 `#3AA8A0` + 珊瑚橘 + 奶油底（讀自 careon-site 實際數值）
 - 線條圖示（非表情符號）+ Poppins / Noto Sans TC
 - 規範：`docs/design-system.md`（哪個位置用哪個圖示都有定）
 - App 圖示：`web/icon.svg`

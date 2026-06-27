@@ -1,5 +1,5 @@
 /* PeiNing 陪寧 — 原型互動
- * 落實 Claude Design「陪寧 CAREON 配色」+ Elfie 融入（安心存摺 / 今天一起完成 / 媽媽這週）
+ * 落實 Claude Design「陪寧 陪寧 配色」+ Elfie 融入（安心存摺 / 今天一起完成 / 媽媽這週）
  * 標 [ENGINE] 處正式版接 castle-voice-engine（台灣中文語音 + 三顆腦 + 擬真 avatar；台語/英語後期）。 */
 
 const $  = (s) => document.querySelector(s);
