@@ -47,6 +47,15 @@ VRAM 算式（14B video diffusion）：
 - 💡 **建議高階版＝「即時 LiveAvatar 有額度」不無限**：例 **尊榮版 NT$1,990/月 含 120 分即時 LiveAvatar(≈每天 4 分)＋無限 Ditto＋語音聊到飽**。成本 120 分 LiveAvatar ~NT$800＋其他 ~NT$200＝~NT$1,000、實收(Apple 15%)NT$1,692、毛利 ~41% ✅。超額→加購即時臉點數或自動降 Ditto。
 - **定論：高階版走「有額度尊榮版(~NT$1,990)」可賣可活；「無限即時 LiveAvatar」只留 B2B/醫療。**
 
+## Q6 · 國外有沒有同等級的開源 avatar？（6/27 Edward 問、WebSearch）
+**沒有「西方、開源、可自架、同等級」的。**
+- 微軟 **VASA-1**（西方最強）= **故意不釋出**權重/API（怕 deepfake）→ 用不了。
+- 西方高階全是**閉源付費 API**：HeyGen / Synthesia / Tavus / Hedra / D-ID / Anam——雲端、按用量收費、**不能自架** → 正好違背「全自架、不付每分鐘費」。
+- 開源高品質 talking-head **幾乎都中國實驗室**（阿里 LiveAvatar/Wan、騰訊 MuseTalk、快手 LivePortrait、硅基 Duix/Heygem）。
+- → 要「**自架＋不付三方費＋可商用**」，中國開源(Ditto/LiveAvatar)反而最合適。
+- ⚠️ **「中國來源 ≠ 資料送中國」**：下載權重、跑自己的卡、**資料不出境**、Apache 可商用、**技術安全**。唯一真議題＝**B2B2C/政府長照的「用中國 AI」觀感**（非技術安全、用「自架＋資料不出境＋開源權重」說明化解）。呼應 ADR-020「好的開源不分國界、自架自用」。
+- 來源：[VASA-1 too good to release(The Register)](https://www.theregister.com/2024/04/20/microsoft_deepfake_vasa/)、[Duix/Heygem 開源可本機](https://github.com/duixcom/Duix-Avatar)、[2026 avatar 方案盤點](https://www.toughtongueai.com/blog/best-virtual-avatar-solutions-2026/)。
+
 ## 🎯 結論
 **擬真主力 = Ditto（即時、每人 ~NT$11、撐得住）；LiveAvatar 走「離線預生 + 時刻分級」當情感峰值奢侈品（②）。即時 LiveAvatar = 死路別碰。真要碰 LiveAvatar 最低 48GB 卡離線。**
 
