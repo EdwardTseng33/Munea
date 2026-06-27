@@ -175,6 +175,53 @@
         <div class="relay-sent" id="buySent"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M20 6L9 17l-5-5"/></svg>已加購、點數進帳了</div>
       </div>
 
+      <!-- 寧寧的表現（標準/生動 · 子女端設定；生動為尊榮解鎖、6 點/分） -->
+      <style>
+        .mode-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .mode-opt{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;background:var(--surface);border:1.5px solid var(--line,#e8e3da);border-radius:14px;padding:13px 14px;cursor:pointer;font-family:inherit;transition:.15s}
+        .mode-opt .mo-t{font-size:16px;font-weight:800;color:var(--ink)}
+        .mode-opt .mo-s{font-size:12px;color:var(--muted);line-height:1.4}
+        .mode-opt .mo-r{font-size:12px;font-weight:700;color:var(--teal-d);margin-top:2px}
+        .mode-opt.on{border-color:var(--teal);background:var(--mint)}
+        .mode-opt.locked{opacity:.72}
+        .mode-opt.locked .mo-r{color:var(--coral,#C98A3C)}
+        .mode-opt .mo-lock{position:absolute;top:11px;right:12px;color:var(--muted)}
+        .mode-opt .mo-lock svg{width:15px;height:15px}
+        .mode-note{font-size:12.5px;color:var(--ink-2);line-height:1.6;margin-top:11px}
+      </style>
+      <div class="sec-head" style="margin-top:6px"><div><p class="sec-kicker">體驗</p><h2 style="font-size:18px;font-weight:700;color:var(--ink)">寧寧的表現</h2></div></div>
+      <div class="sub-card">
+        <div class="mode-row">
+          <button class="mode-opt on" data-m="std">
+            <span class="mo-t">標準</span>
+            <span class="mo-s">自然順暢的陪伴</span>
+            <span class="mo-r">1 點／分</span>
+          </button>
+          <button class="mode-opt locked" data-m="vivid">
+            <span class="mo-lock"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+            <span class="mo-t">生動</span>
+            <span class="mo-s">表情更豐富、更靈動</span>
+            <span class="mo-r">6 點／分 · 尊榮解鎖</span>
+          </button>
+        </div>
+        <div class="mode-note" id="modeNote">生動的寧寧表情更多、更像真人，但點數燒得快（<b>6 倍</b>）。現在是<b>基礎方案</b>、維持標準；<b>尊榮方案</b>才開放切到生動。</div>
+      </div>
+      <script>
+        (function(){
+          const opts=[...document.querySelectorAll('.mode-opt')], note=document.getElementById('modeNote');
+          opts.forEach(o=>o.addEventListener('click',()=>{
+            if(o.classList.contains('locked')){
+              note.innerHTML='生動寧寧是 <b>尊榮方案</b>的功能。升級後就能在這裡切到生動——她的表情會更豐富，聊天時以 <b>6 點／分</b>計（標準的 6 倍）。';
+              note.style.color='var(--coral,#C98A3C)';
+              return;
+            }
+            opts.forEach(x=>x.classList.remove('on')); o.classList.add('on');
+            note.style.color='';
+            note.innerHTML='標準的寧寧自然順暢、最省點數（<b>1 點／分</b>）。想要更生動的表情，升級<b>尊榮</b>就能切。';
+          }));
+        })();
+      </script>
+
       <button class="fam-call-btn" id="videoBtn" style="margin-top:18px"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>視訊看看媽媽</button>
       <div style="height:30px"></div>
 
