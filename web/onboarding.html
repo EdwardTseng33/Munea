@@ -321,6 +321,10 @@
       b.textContent = b.classList.contains('added') ? '✓ 已邀請' : '＋ 邀請';
     }));
 
+  // 從著陸頁帶入口（?mode=family/self）→ 已選過、跳過第 0 步雙入口
+  const pmode = new URLSearchParams(location.search).get('mode');
+  if (pmode === 'family' || pmode === 'self') { mode = pmode; applyMode(); i = 1; }
+
   render();
 })();
 </script>
