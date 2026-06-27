@@ -59,12 +59,43 @@ def speak(char, text, fn):
             pass
     return False
 
+def remember(history_text):
+    """跨天記憶：聊完從對話萃取『值得長期記住的新事情』，存進 user_profile.json 的 回憶。"""
+    prompt = ("從以下對話，列出『關於這位用戶、值得長期記住的新事情』"
+              "（每條一句、繁體中文、只列對話裡新出現的；沒有就回空陣列）。只回 JSON 字串陣列。\n\n" + history_text)
+    for m in ("gemini-2.5-flash", "gemini-flash-latest"):
+        try:
+            r = client.models.generate_content(
+                model=m, contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json"))
+            new = json.loads(r.text)
+            if new:
+                pf = os.path.join(HERE, "user_profile.json")
+                p = json.load(open(pf, encoding="utf-8"))
+                p.setdefault("回憶", []).extend(new)
+                json.dump(p, open(pf, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            return new
+        except Exception:
+            pass
+    return []
+
+
 if __name__ == "__main__":
-    USER = "欸我跟你說，我最近想開始學畫畫，但又怕自己太老沒天份。"
-    who = sys.argv[1:] or ["小昀", "阿宏", "阿原"]
-    print(f"【用戶】{USER}\n")
-    for name in who:
-        print(f"── {name}（聲音 {CHARS[name]['voice']}）──")
-        print(reply(name, USER))
-        print()
-    print("DONE — 角色引擎讀設定檔、可當任何角色講話。")
+    args = sys.argv[1:]
+    if args and args[0] == "learn":
+        # 跨天記憶 demo：聊到新事情 → 自動記住 → 存檔（下次她就記得）
+        convo = ("用戶：寧寧我跟你說，我下個月要搬去台北跟女兒美華住了，有點捨不得台南的老房子。\n"
+                 "用戶：對了我最近迷上看韓劇，每天追到半夜。")
+        print("這場對話她學到（自動存進檔）：")
+        for m in remember(convo):
+            print("  +", m)
+        print("→ 下次聊天她就記得這些了。")
+    else:
+        USER = "欸我跟你說，我最近想開始學畫畫，但又怕自己太老沒天份。"
+        who = args or ["小昀", "阿宏", "阿原"]
+        print(f"【用戶】{USER}\n")
+        for name in who:
+            print(f"── {name}（聲音 {CHARS[name]['voice']}）──")
+            print(reply(name, USER))
+            print()
+    print("DONE")
