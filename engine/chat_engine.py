@@ -101,8 +101,39 @@ def open_chat(char="寧寧"):
     return "(連不上腦)"
 
 
+def consolidate():
+    """整理員：把回憶去重、合併同類、用新蓋舊、移除與基本資料重複的，存回乾淨清單。"""
+    pf = os.path.join(HERE, "user_profile.json")
+    p = json.load(open(pf, encoding="utf-8"))
+    mems = p.get("回憶", [])
+    prompt = ("把以下『關於這個人的記憶』整理乾淨：合併重複／同類、用較新的蓋掉矛盾的舊的、"
+              "濃縮成精簡自然的句子、移除跟基本資料重複的。保留所有重要的事、別漏。只回 JSON 字串陣列。\n\n"
+              + json.dumps(mems, ensure_ascii=False))
+    for m in ("gemini-2.5-flash", "gemini-flash-latest"):
+        try:
+            r = client.models.generate_content(
+                model=m, contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json"))
+            clean = json.loads(r.text)
+            p["回憶"] = clean
+            json.dump(p, open(pf, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            return mems, clean
+        except Exception:
+            pass
+    return mems, mems
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if args and args[0] == "tidy":
+        before, after = consolidate()
+        print(f"整理前 {len(before)} 條：")
+        for x in before:
+            print("  -", x)
+        print(f"\n整理後 {len(after)} 條（去重／合併／濃縮）：")
+        for x in after:
+            print("  +", x)
+        print("\nDONE"); sys.exit()
     if args and args[0] == "open":
         print("寧寧主動開口（用記憶＋今日狀態先備好）：\n")
         print(open_chat())
