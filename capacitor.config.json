@@ -1,0 +1,8 @@
+{
+  "appId": "net.munea.app",
+  "appName": "Munea",
+  "webDir": "web",
+  "server": {
+    "androidScheme": "https"
+  }
+}

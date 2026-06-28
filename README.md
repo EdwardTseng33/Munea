@@ -155,8 +155,9 @@ For current planning truth, read these first:
 
 1. `docs/00-總綱-從這裡開始.md`
 2. `docs/SPEC-沐寧-v1-2026-06-28.md`
-3. `STATUS.md`
-4. `BACKLOG.md`
+3. `docs/CURRENT-DEVELOPMENT-PLAN.md`
+4. `STATUS.md`
+5. `BACKLOG.md`
 
 Some older documents still preserve research history and may contain superseded assumptions, especially around GPT-Realtime, full self-hosting language, old character names, and pre-6/28 screen structure. The SPEC file is the current authority.
 
@@ -166,6 +167,7 @@ Some older documents still preserve research history and may contain superseded 
 
 - Windows/local prototype: use `run-munea-app.bat`.
 - iOS packaging: requires macOS, Xcode, Apple Developer access, and Capacitor.
+- Repeatable baseline check: `npm run smoke` when the local engine is running, or `npm run smoke:no-api` for static checks only.
 - The local development folder may still contain historical `PeiNing/peining` path names; GitHub and product naming are now **Munea / 沐寧**.
 - Do not commit `engine/.env.local`.
 
