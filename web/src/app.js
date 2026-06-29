@@ -37,9 +37,11 @@ let companionBackendSyncing = false;
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
 let speakTimer = null;
 let visemeTimer = null;
+let avatarSession = null;
 const avatarRuntime = {
   modes: AVATAR_ENGINE_MODES,
   mode: AVATAR_ENGINE_MODES.STATIC_CSS,
+  decision: null,
   state: 'idle',
   viseme: 'rest',
   character: currentChar,
@@ -47,6 +49,7 @@ const avatarRuntime = {
     const forced = new URLSearchParams(location.search).get('avatar');
     if (forced === '2d') return AVATAR_ENGINE_MODES.TWO_D_VISEME;
     if (forced === 'static') return AVATAR_ENGINE_MODES.STATIC_CSS;
+    if (Object.values(AVATAR_ENGINE_MODES).includes(forced)) return forced;
     return TWO_D_AVATARS.has(avatarId) ? AVATAR_ENGINE_MODES.TWO_D_VISEME : AVATAR_ENGINE_MODES.STATIC_CSS;
   },
   setMode(mode) {
@@ -54,6 +57,10 @@ const avatarRuntime = {
     this.mode = valid ? mode : AVATAR_ENGINE_MODES.STATIC_CSS;
     const sc = $('#chat');
     if (sc) sc.dataset.avatarMode = this.mode;
+  },
+  setDecision(decision) {
+    this.decision = decision || null;
+    if (this.decision && this.decision.selectedMode) this.setMode(this.decision.selectedMode);
   },
   setViseme(shape) {
     this.viseme = shape || 'rest';
@@ -110,6 +117,7 @@ const avatarRuntime = {
         setCallHint('直接說，我在這裡');
       }
     }, ms);
+    return ms;
   },
   onAudioEnd() {
     if (this.state === 'speaking') {
@@ -121,7 +129,11 @@ const avatarRuntime = {
 window.MuneaAvatarRuntime = avatarRuntime;
 
 function setFaceState(st) { avatarRuntime.setState(st); }
-function faceSpeak(text, audioMs = 0) { avatarRuntime.speak(text, audioMs); }
+function faceSpeak(text, audioMs = 0) {
+  const ms = avatarRuntime.speak(text, audioMs);
+  recordAvatarUsage(text, ms);
+  return ms;
+}
 function setCallHint(text) {
   const cap = $('#chatCaption');
   if (cap) cap.textContent = text;
@@ -246,6 +258,84 @@ async function brainPost(url, body) {
 }
 
 /* ===== VoiceProvider：先立合約，之後可換 Gemini Live / Interactions，不綁死 App 核心 ===== */
+function isAvatarDebug() {
+  return new URLSearchParams(location.search).get('debug') === 'avatar';
+}
+function requestedAvatarMode() {
+  return avatarRuntime.resolveMode(currentAvatarId);
+}
+function premiumAvatarMode(mode = avatarRuntime.mode) {
+  return mode === AVATAR_ENGINE_MODES.DITTO || mode === AVATAR_ENGINE_MODES.LIVE_AVATAR;
+}
+function avatarSessionPayload(action = 'start', extra = {}) {
+  const mode = extra.mode || requestedAvatarMode();
+  return {
+    action,
+    mode,
+    requestedMode: mode,
+    templateId: currentAvatarId,
+    char: currentChar,
+    displayName: companionDisplayName.trim() || templateFor().defaultName,
+    ...extra,
+  };
+}
+function updateAvatarDiagnostics(response) {
+  const el = $('#avatarDiagnostics');
+  if (!el) return;
+  if (!isAvatarDebug()) {
+    el.hidden = true;
+    return;
+  }
+  const session = response && response.session ? response.session : avatarSession;
+  if (!session) {
+    el.hidden = false;
+    el.textContent = 'avatar: local preview';
+    return;
+  }
+  const fallback = session.fallbackReason ? ` / ${session.fallbackReason}` : '';
+  el.hidden = false;
+  el.textContent = `avatar: ${session.selectedMode} via ${session.provider || 'local-browser'}${fallback}`;
+}
+function applyAvatarSessionDecision(response) {
+  if (!response || !response.ok || !response.session) {
+    updateAvatarDiagnostics(response);
+    return null;
+  }
+  avatarSession = response.session;
+  avatarRuntime.setDecision(avatarSession);
+  const sc = $('#chat');
+  if (sc) {
+    sc.dataset.avatarProvider = avatarSession.provider || 'local-browser';
+    sc.dataset.avatarFallbackReason = avatarSession.fallbackReason || '';
+  }
+  updateAvatarDiagnostics(response);
+  return avatarSession;
+}
+async function avatarSessionApi(action = 'start', extra = {}) {
+  if (isStaticPreview()) {
+    updateAvatarDiagnostics(null);
+    return null;
+  }
+  return brainPost('/avatar-session', avatarSessionPayload(action, extra));
+}
+async function prepareAvatarSession(extra = {}) {
+  avatarRuntime.setMode(requestedAvatarMode());
+  const response = await avatarSessionApi('start', extra);
+  applyAvatarSessionDecision(response);
+  return response;
+}
+async function recordAvatarUsage(text, audioMs = 0) {
+  if (!premiumAvatarMode()) return;
+  const durationMs = audioMs || Math.min(8000, Math.max(2200, (text ? text.length : 8) * 165));
+  const response = await avatarSessionApi('complete', {
+    mode: avatarRuntime.mode,
+    selectedMode: avatarRuntime.mode,
+    durationMs,
+    estimatedDurationMs: durationMs,
+  });
+  applyAvatarSessionDecision(response);
+}
+
 const voiceProvider = {
   modes: VOICE_PROVIDER_MODES,
   mode: VOICE_PROVIDER_MODES.STT_CHAT_TTS,
@@ -306,6 +396,7 @@ async function enterChat() {
   chatOpened = true;
   setFaceState('idle');
   setCallHint('正在連線...');
+  await prepareAvatarSession();
   const r = await voiceProvider.open(currentChar);
   if (r && r.reply) {
     setCallHint('正在說話');

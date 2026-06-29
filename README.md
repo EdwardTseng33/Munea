@@ -86,7 +86,7 @@ Secrets are expected in `engine/.env.local`, which is ignored by Git.
 | Face | Fullscreen butler presence | 2D/static now; Ditto / LiveAvatar PoCs decide real lip-sync path |
 | Companion identity | User-visible name, template, voice, and avatar asset | User can name the companion; template changes appearance / voice / personality without forcing a fixed public name |
 | Subscription entitlement | App Store subscription and usage ledger | `/entitlements` is the backend source of truth; frontend does not own paid status or Avatar minutes |
-| Avatar session | Runtime mode and premium Avatar usage decision | `/avatar-session` selects `static-css`, `2d-viseme`, `ditto`, or `liveavatar`, with premium fallback and usage ledger recording |
+| Avatar session | Runtime mode and premium Avatar usage decision | Chat startup calls `/avatar-session`; backend selects `static-css`, `2d-viseme`, `ditto`, or `liveavatar`, with premium fallback and usage ledger recording |
 | App shell | App Store delivery | Capacitor iOS shell planned; microphone bridge is the next go/no-go |
 
 Critical principle: **conversation continuity beats face fidelity**. If avatar rendering is slow or unavailable, the app should keep the voice conversation alive and degrade the face gracefully.

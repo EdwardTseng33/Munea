@@ -22,7 +22,7 @@
 | Prototype AI engine | Local Python Gemini chat/TTS demo works | 35-45% |
 | iOS shell | Capacitor config scaffolded; native project still requires Mac/Xcode | 5-10% |
 | Data backend | Local JSON demo only | 10-15% |
-| Real-time avatar | Avatar Runtime contract added; engine PoCs still pending | 25-35% |
+| Real-time avatar | Avatar Runtime now consumes backend `/avatar-session`; engine PoCs still pending | 35-45% |
 | First TestFlight path | Not ready yet | 30-35% |
 
 ## 2026-06-29 Update
@@ -55,6 +55,8 @@
 - Extended the Supabase adapter so `/entitlements`, subscription/usage ledger mapping, `/privacy-export`, and `/account-deletion` request creation can use Supabase when backend env is configured, with JSON fallback preserved.
 - Added `supabase/sql/002_demo_bootstrap.sql` and demo env ids so a real Supabase project can be seeded for first backend adapter testing.
 - Added `/avatar-session` as the backend contract for Avatar runtime selection, premium entitlement gating, `2d-viseme` fallback, and Avatar minute usage recording.
+- Connected the frontend Avatar Runtime to backend `/avatar-session` so Chat startup consumes the backend-selected runtime mode instead of relying only on local browser choice.
+- Added `?debug=avatar` runtime diagnostics and smoke coverage for the frontend Avatar session bridge.
 
 ## Tech Stack Verdict
 
@@ -148,6 +150,9 @@ Work items:
 - [x] Add first 2D viseme / mouth-state PoC.
 - [x] Add mobile visual QA checklist for idle/listen/think/speak.
 - [x] Add backend `/avatar-session` contract for entitlement-gated Avatar mode selection.
+- [x] Connect frontend Avatar Runtime to backend `/avatar-session`.
+- [x] Add visible runtime diagnostics in development mode.
+- [x] Add smoke coverage for Avatar session frontend bridge.
 - [ ] Test idle/listen/think/speak on iPhone WKWebView.
 
 Go/no-go:

@@ -63,6 +63,8 @@ The frontend now has `MuneaAvatarRuntime` with:
 
 This is the shared contract for static fallback, 2D viseme, Ditto, and LiveAvatar.
 
+The runtime now also consumes the backend `/avatar-session` decision when Chat opens. The backend is responsible for choosing the allowed mode, applying premium fallback, and recording premium Avatar usage; the frontend renders the selected mode and keeps the S2S conversation alive.
+
 ### Track B: Fallback Experience
 
 Status: active.
@@ -96,9 +98,10 @@ Current implementation:
 
 - Engine modes exist: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
 - 2D avatar choices automatically use `2d-viseme`.
-- Photoreal choices remain on `static-css` unless `?avatar=2d` is used for development testing.
+- Photoreal choices remain on `static-css` unless `?avatar=2d`, `?avatar=ditto`, or `?avatar=liveavatar` is used for development testing.
 - The first mock mouth layer cycles through `rest`, `open`, `wide`, `round`, and `smile` while speaking.
 - Backend `/avatar-session` selects the allowed runtime mode, falls back to `2d-viseme` when premium Avatar entitlement or minutes are unavailable, and records premium Avatar minute usage.
+- Frontend Chat startup calls `/avatar-session` before opening the voice session, applies `selectedMode`, and exposes `?debug=avatar` diagnostics for local verification.
 
 ### Track D: Ditto / LiveAvatar PoC
 
@@ -125,11 +128,12 @@ Constraint:
 
 ### Sprint B: Avatar Runtime MVP
 
-- [ ] Add visible runtime diagnostics in development mode.
+- [x] Add visible runtime diagnostics in development mode.
 - [x] Add avatar engine mode enum: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
 - [x] Add a mock avatar engine that consumes audio duration and state events.
 - [x] Add first 2D mouth-state layer.
 - [x] Add backend entitlement gate for Avatar runtime mode selection.
+- [x] Connect frontend runtime to backend Avatar session decisions.
 - [x] Add mobile visual QA checklist for idle/listen/think/speak.
 
 ### Sprint C: 2D Viseme Prototype
