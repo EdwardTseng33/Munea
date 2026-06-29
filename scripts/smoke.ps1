@@ -245,6 +245,8 @@ Step "Supabase schema contract"
 from pathlib import Path
 
 sql = Path("supabase/sql/001_initial_munea_schema.sql").read_text(encoding="utf-8").lower()
+seed = Path("supabase/sql/002_demo_bootstrap.sql").read_text(encoding="utf-8").lower()
+env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
     "accounts",
     "account_members",
@@ -274,9 +276,29 @@ if "grant select, insert, update, delete on all tables in schema public to authe
     raise SystemExit("Missing authenticated grant")
 if "auth.uid()" not in sql:
     raise SystemExit("Missing auth.uid RLS predicate")
+required_seed_tokens = [
+    "11111111-1111-4111-8111-111111111111",
+    "22222222-2222-4222-8222-222222222222",
+    "33333333-3333-4333-8333-333333333333",
+    "insert into public.accounts",
+    "insert into public.persons",
+    "insert into public.family_groups",
+    "insert into public.family_memberships",
+    "insert into public.companion_profiles",
+    "insert into public.subscription_ledger",
+    "insert into public.usage_ledger",
+    "insert into public.audit_events",
+    "demo_user_id uuid := null",
+]
+missing_seed = [token for token in required_seed_tokens if token not in seed]
+if missing_seed:
+    raise SystemExit("Missing Supabase seed tokens: " + ", ".join(missing_seed))
+for key in ["MUNEA_SUPABASE_ACCOUNT_ID", "MUNEA_SUPABASE_PERSON_ID", "MUNEA_SUPABASE_FAMILY_GROUP_ID"]:
+    if key not in env_example:
+        raise SystemExit("Missing Supabase env example key: " + key)
 print("supabase tables", len(required_tables))
 '@ | python -
-Pass "Supabase schema includes tables, RLS, and grants"
+Pass "Supabase schema and demo bootstrap include tables, RLS, grants, and seed ids"
 
 Step "Secret boundary contract"
 @'

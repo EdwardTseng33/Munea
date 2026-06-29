@@ -53,6 +53,7 @@
 - Added `engine/supabase_adapter.py` and wired companion profile load/save through a Supabase-ready adapter with JSON fallback.
 - Extended the Supabase adapter so `/app-profile` can aggregate account, person, family group, family membership, and companion profile data when Supabase env is configured.
 - Extended the Supabase adapter so `/entitlements`, subscription/usage ledger mapping, `/privacy-export`, and `/account-deletion` request creation can use Supabase when backend env is configured, with JSON fallback preserved.
+- Added `supabase/sql/002_demo_bootstrap.sql` and demo env ids so a real Supabase project can be seeded for first backend adapter testing.
 
 ## Tech Stack Verdict
 
@@ -188,6 +189,7 @@ Work items:
 - [x] Add Supabase app profile aggregate adapter.
 - [x] Add Supabase subscription/usage ledger adapter.
 - [x] Add Supabase privacy request adapter.
+- [x] Add deterministic Supabase demo bootstrap seed and env ids.
 - [ ] Create/live-link Supabase project and run initial SQL.
 - [ ] Convert SQL draft into official Supabase migration after CLI/MCP authentication.
 

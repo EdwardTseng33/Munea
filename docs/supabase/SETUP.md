@@ -9,6 +9,7 @@ Current status:
 - Supabase account exists.
 - Cloud project still needs to be created or connected.
 - Repo now contains the initial SQL schema draft at `supabase/sql/001_initial_munea_schema.sql`.
+- Repo now contains a deterministic demo bootstrap seed at `supabase/sql/002_demo_bootstrap.sql`.
 - Supabase CLI is not installed in this Windows environment yet, so this is a SQL Editor-ready schema, not an official migration history entry.
 
 ## Recommended Project
@@ -52,6 +53,26 @@ This schema creates:
 - `audit_events`
 
 All public tables have RLS enabled. `anon` is explicitly revoked. `authenticated` gets table grants, then row access is restricted by account membership policies.
+
+## Demo Bootstrap Seed
+
+After `001_initial_munea_schema.sql` succeeds, run:
+
+```text
+supabase/sql/002_demo_bootstrap.sql
+```
+
+This creates a deterministic backend-test account, primary person, family group, companion profile, free subscription ledger row, usage ledger rows, and a seed audit event.
+
+Use these backend env values for first Supabase adapter testing:
+
+```text
+MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111
+MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222
+MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333
+```
+
+The seed does not require a Supabase Auth user because the local backend adapter uses the service role key. To test authenticated RLS from a client session, edit `demo_user_id` inside `002_demo_bootstrap.sql` and set it to a real `auth.users.id` before running it.
 
 ## RLS Model
 
@@ -160,4 +181,5 @@ Once the Supabase project is created:
 1. Add env values to local backend environment.
 2. Add a Supabase database adapter in `engine/`.
 3. `/app-profile`, `/companion-profile`, `/entitlements`, `/privacy-export`, and `/account-deletion` now have Supabase adapter paths behind the `MUNEA_DATABASE_PROVIDER=supabase` feature flag, with JSON fallback preserved.
-4. Keep JSON fallback for local offline prototype only.
+4. Run `002_demo_bootstrap.sql` and copy the demo ids into backend env for first live adapter testing.
+5. Keep JSON fallback for local offline prototype only.

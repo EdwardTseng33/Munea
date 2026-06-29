@@ -98,7 +98,7 @@ The prototype now uses one Companion Profile across onboarding, Home, Chat, and 
 
 For App Store readiness, the local backend also includes `engine/billing_store.json`, `/entitlements`, `/subscription-event`, and `/healthz` contracts. These are prototype contracts for the production StoreKit / App Store Server API / RevenueCat path; production must verify signed subscription events server-side before granting paid entitlements.
 
-The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`, with setup notes in `docs/supabase/SETUP.md`. It is SQL Editor-ready; once Supabase CLI is installed and authenticated, convert it into a formal migration.
+The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`, and the deterministic demo seed lives in `supabase/sql/002_demo_bootstrap.sql`, with setup notes in `docs/supabase/SETUP.md`. These are SQL Editor-ready; once Supabase CLI is installed and authenticated, convert them into formal migrations.
 
 Backend architecture v1 is tracked in `docs/BACKEND-ARCHITECTURE-v1.md`. It defines the API surface, Supabase/RLS model, subscription entitlement flow, data rights contracts, admin console MVP, and North Star analytics plan.
 
