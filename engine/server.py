@@ -21,6 +21,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.normpath(os.path.join(HERE, "..", "web"))
 DEFAULT_CHAR = "寧寧"
 COMPANION_PROFILE_PATH = os.path.join(HERE, "companion_profile.json")
+APP_PROFILE_STORE_PATH = os.path.join(HERE, "app_profile_store.json")
+PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
 COMPANION_TEMPLATES = {
     "nening-real-female": {"defaultName": "寧寧", "backendChar": "寧寧"},
     "companion-real-male": {"defaultName": "阿宏", "backendChar": "阿宏"},
@@ -57,18 +59,145 @@ def normalize_companion_profile(data=None):
     }
 
 
-def load_companion_profile():
+def utc_now():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def read_json_file(path, fallback=None):
     try:
-        with open(COMPANION_PROFILE_PATH, encoding="utf-8") as f:
-            return normalize_companion_profile(json.load(f))
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
     except Exception:
-        return normalize_companion_profile()
+        return fallback
+
+
+def write_json_file(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def load_legacy_companion_profile():
+    return normalize_companion_profile(read_json_file(COMPANION_PROFILE_PATH, {}))
+
+
+def default_app_profile_store(companion_profile=None):
+    companion_profile = normalize_companion_profile(companion_profile)
+    return {
+        "schemaVersion": 1,
+        "account": {
+            "id": "local-demo-account",
+            "locale": "zh-TW",
+            "preferredLanguages": ["zh-TW", "en"],
+            "createdAt": "2026-06-29T00:00:00Z",
+        },
+        "familyGroup": {
+            "id": "local-demo-family",
+            "name": "Munea Care Circle",
+            "members": [
+                {
+                    "id": PRIMARY_CARE_RECIPIENT_ID,
+                    "role": "primary_user",
+                    "displayName": "Primary user",
+                    "relationship": "self",
+                },
+                {
+                    "id": "local-family-contact",
+                    "role": "family_contact",
+                    "displayName": "Family contact",
+                    "relationship": "family",
+                },
+            ],
+        },
+        "primaryCareRecipientId": PRIMARY_CARE_RECIPIENT_ID,
+        "companionProfiles": {
+            PRIMARY_CARE_RECIPIENT_ID: companion_profile,
+        },
+        "updatedAt": companion_profile.get("updatedAt") or utc_now(),
+    }
+
+
+def normalize_family_member(member):
+    member = member or {}
+    member_id = str(member.get("id") or PRIMARY_CARE_RECIPIENT_ID)
+    return {
+        "id": member_id,
+        "role": str(member.get("role") or ("primary_user" if member_id == PRIMARY_CARE_RECIPIENT_ID else "family_contact")),
+        "displayName": str(member.get("displayName") or member.get("display_name") or "Member").strip()[:40] or "Member",
+        "relationship": str(member.get("relationship") or "family"),
+    }
+
+
+def normalize_app_profile_store(data=None):
+    data = data or {}
+    primary_id = str(data.get("primaryCareRecipientId") or data.get("primary_care_recipient_id") or PRIMARY_CARE_RECIPIENT_ID)
+    raw_profiles = data.get("companionProfiles") or data.get("companion_profiles") or {}
+    if data.get("companionProfile") and primary_id not in raw_profiles:
+        raw_profiles = {**raw_profiles, primary_id: data.get("companionProfile")}
+    companion_profiles = {
+        str(person_id): normalize_companion_profile(profile)
+        for person_id, profile in raw_profiles.items()
+    }
+    companion_profiles.setdefault(primary_id, load_legacy_companion_profile())
+
+    family_group = data.get("familyGroup") or data.get("family_group") or {}
+    members = [normalize_family_member(m) for m in family_group.get("members", [])]
+    if not any(m["id"] == primary_id for m in members):
+        members.insert(0, normalize_family_member({
+            "id": primary_id,
+            "role": "primary_user",
+            "displayName": "Primary user",
+            "relationship": "self",
+        }))
+
+    account = data.get("account") or {}
+    return {
+        "schemaVersion": int(data.get("schemaVersion") or data.get("schema_version") or 1),
+        "account": {
+            "id": str(account.get("id") or "local-demo-account"),
+            "locale": str(account.get("locale") or "zh-TW"),
+            "preferredLanguages": account.get("preferredLanguages") or account.get("preferred_languages") or ["zh-TW", "en"],
+            "createdAt": account.get("createdAt") or account.get("created_at") or "2026-06-29T00:00:00Z",
+        },
+        "familyGroup": {
+            "id": str(family_group.get("id") or "local-demo-family"),
+            "name": str(family_group.get("name") or "Munea Care Circle"),
+            "members": members,
+        },
+        "primaryCareRecipientId": primary_id,
+        "companionProfiles": companion_profiles,
+        "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
+    }
+
+
+def load_app_profile_store():
+    raw = read_json_file(APP_PROFILE_STORE_PATH)
+    if raw is None:
+        return default_app_profile_store(load_legacy_companion_profile())
+    return normalize_app_profile_store(raw)
+
+
+def save_app_profile_store(data):
+    store = normalize_app_profile_store({**data, "updatedAt": utc_now()})
+    write_json_file(APP_PROFILE_STORE_PATH, store)
+    return store
+
+
+def active_companion_profile(store=None):
+    store = store or load_app_profile_store()
+    primary_id = store["primaryCareRecipientId"]
+    return normalize_companion_profile(store["companionProfiles"].get(primary_id))
+
+
+def load_companion_profile():
+    return active_companion_profile(load_app_profile_store())
 
 
 def save_companion_profile(data):
-    profile = normalize_companion_profile({**data, "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
-    with open(COMPANION_PROFILE_PATH, "w", encoding="utf-8") as f:
-        json.dump(profile, f, ensure_ascii=False, indent=2)
+    profile = normalize_companion_profile({**data, "updatedAt": utc_now()})
+    store = load_app_profile_store()
+    store["companionProfiles"][store["primaryCareRecipientId"]] = profile
+    save_app_profile_store(store)
+    write_json_file(COMPANION_PROFILE_PATH, profile)
     return profile
 
 
@@ -80,6 +209,18 @@ def companion_profile_response(data):
         profile = load_companion_profile()
     template = COMPANION_TEMPLATES[profile["templateId"]]
     return {"ok": True, "profile": profile, "backendChar": template["backendChar"]}
+
+
+def app_profile_response(data):
+    action = (data.get("action") or "load").lower()
+    if action in ("save", "replace"):
+        store = save_app_profile_store(data.get("store") or data.get("profileStore") or data)
+    elif action in ("save-companion", "save_companion"):
+        save_companion_profile(data.get("profile") or data.get("companionProfile") or data)
+        store = load_app_profile_store()
+    else:
+        store = load_app_profile_store()
+    return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store)}
 
 
 def _sys_for(char):
@@ -210,6 +351,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(decode_voice_note(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
+            elif self.path == "/app-profile":
+                self._json(app_profile_response(data))
             else:
                 self._send(404, "text/plain; charset=utf-8", b"404")
         except Exception as e:

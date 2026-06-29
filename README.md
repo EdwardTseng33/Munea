@@ -93,7 +93,7 @@ Companion identity is intentionally split: `display_name` is what the user calls
 
 Chat is designed as speech-to-speech by default. The main experience should feel like a video call, not a transcript reader; visible text is limited to call state, safety prompts, and future optional accessibility captions.
 
-The prototype now uses one Companion Profile across onboarding, Home, Chat, and Settings. Static preview stores it in local storage; full app mode also syncs it through `/companion-profile`. In production, the same `templateId` / `displayName` shape should move into the account database.
+The prototype now uses one Companion Profile across onboarding, Home, Chat, and Settings. Static preview stores it in local storage; full app mode also syncs it through `/companion-profile`. The local backend now mirrors that profile into `engine/app_profile_store.json`, which keeps account, family group, primary person, and companion profiles in one shape before the same model moves into the production database.
 
 ---
 

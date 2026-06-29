@@ -24,6 +24,7 @@
 - ✅ S2S 產品框架校正：聊聊頁改為「像視訊聊天」的狀態提示，不再把使用者/AI 逐字稿作為主要畫面；字幕僅保留為未來輔助功能方向。
 - ✅ Companion Profile 串接：登入/裝機流程選角色與命名會寫入同一份 profile；首頁、聊聊、設定頁同步讀取；設定更改角色或命名會同步回寫。
 - ✅ Companion Profile 後端橋接：新增 `engine/companion_profile.json` 與 `/companion-profile` 讀寫 route，前端靜態預覽用 localStorage、完整 App 模式可同步本機後端。
+- ✅ App Profile Store 底座：新增 `engine/app_profile_store.json` 與 `/app-profile`，先把帳號、家庭圈、主要使用者、陪伴角色 profiles 收進同一個本地結構，方便後續移往正式資料庫。
 - ✅ `scripts/smoke.ps1` 新增 `node --check web/src/app.js`，避免前端 runtime 改動沒被驗收。
 - ✅ `npm run smoke` 全綠：`/open`、`/chat`、`/voice-note`、語音 payload、JS syntax 都通過。
 

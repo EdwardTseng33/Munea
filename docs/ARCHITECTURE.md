@@ -122,12 +122,14 @@ Rules:
 Current prototype contract:
 
 - `web/src/companion-profile.js` is the browser-side Companion Profile adapter and static-preview fallback.
-- `engine/companion_profile.json` is the local backend persistence placeholder.
+- `engine/companion_profile.json` remains the legacy single-profile mirror for compatibility.
+- `engine/app_profile_store.json` is the local account/family/person/companion store placeholder.
 - `POST /companion-profile` loads or saves the same `templateId` / `displayName` shape.
+- `POST /app-profile` loads the broader local store so account and family features can attach without changing the companion contract.
 - Onboarding writes `templateId` and `displayName` before entering the app.
 - Home, Chat, and Settings all read the same profile.
 - Settings writes back to the same profile when the user renames the companion or changes templates.
-- Static preview persistence uses `localStorage`; full app mode syncs to the local backend. Production should move the same shape into the account/family database.
+- Static preview persistence uses `localStorage`; full app mode syncs to the local backend store. Production should move the same account/family/profile shape into the database.
 
 ## iOS Shell
 
@@ -143,7 +145,12 @@ Native responsibilities:
 
 ## Data Layer
 
-The local JSON demo must be replaced before multi-user testing.
+The local JSON demo now has two layers:
+
+- `companion_profile.json`: compatibility mirror for the current prototype route.
+- `app_profile_store.json`: account, family group, primary person, and companion profile store.
+
+This is still not production storage. It exists so the product model can stabilize before the database move.
 
 Recommended first production path: Postgres with row-level tenant isolation.
 

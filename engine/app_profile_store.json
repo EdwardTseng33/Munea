@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "account": {
+    "id": "local-demo-account",
+    "locale": "zh-TW",
+    "preferredLanguages": [
+      "zh-TW",
+      "en"
+    ],
+    "createdAt": "2026-06-29T00:00:00Z"
+  },
+  "familyGroup": {
+    "id": "local-demo-family",
+    "name": "Munea Care Circle",
+    "members": [
+      {
+        "id": "local-person-self",
+        "role": "primary_user",
+        "displayName": "Primary user",
+        "relationship": "self"
+      },
+      {
+        "id": "local-family-contact",
+        "role": "family_contact",
+        "displayName": "Family contact",
+        "relationship": "family"
+      }
+    ]
+  },
+  "primaryCareRecipientId": "local-person-self",
+  "companionProfiles": {
+    "local-person-self": {
+      "templateId": "nening-real-female",
+      "displayName": "\u5be7\u5be7",
+      "nameTouched": false,
+      "updatedAt": "2026-06-29T00:00:00Z"
+    }
+  },
+  "updatedAt": "2026-06-29T00:00:00Z"
+}

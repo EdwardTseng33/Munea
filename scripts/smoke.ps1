@@ -28,7 +28,7 @@ Pass "Python files compile"
 Step "JSON parse"
 @'
 import json, pathlib
-for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json"]:
+for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json"]:
     json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
     print(f"{p} OK")
 '@ | python -
@@ -68,9 +68,18 @@ assert profile["nameTouched"] is True
 resp = server.companion_profile_response({"action": "load"})
 assert resp["ok"] is True
 assert "templateId" in resp["profile"]
+store_resp = server.app_profile_response({"action": "load"})
+assert store_resp["ok"] is True
+assert store_resp["store"]["primaryCareRecipientId"] in store_resp["store"]["companionProfiles"]
+normalized_store = server.normalize_app_profile_store({
+    "companionProfile": {"templateId": "real-f", "displayName": "Munea", "nameTouched": True},
+})
+active = server.active_companion_profile(normalized_store)
+assert active["templateId"] == "nening-real-female"
+assert active["displayName"] == "Munea"
 print("companion profile", profile["templateId"], profile["displayName"])
 '@ | python -
-Pass "Companion profile normalizes aliases and load response"
+Pass "Companion profile and app store contracts are valid"
 
 Step "Frontend JavaScript syntax"
 node --check web\src\app.js
@@ -184,6 +193,13 @@ $profile = Invoke-RestMethod -Uri "$BaseUrl/companion-profile" -Method Post -Con
 if (-not $profile.ok) { throw "/companion-profile returned not ok" }
 if (-not $profile.profile.templateId) { throw "/companion-profile missing templateId" }
 Pass "/companion-profile returns saved companion profile"
+
+Step "API /app-profile"
+$appProfile = Invoke-RestMethod -Uri "$BaseUrl/app-profile" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"load"}' -TimeoutSec 30
+if (-not $appProfile.ok) { throw "/app-profile returned not ok" }
+if (-not $appProfile.store.primaryCareRecipientId) { throw "/app-profile missing primaryCareRecipientId" }
+if (-not $appProfile.activeCompanionProfile.templateId) { throw "/app-profile missing active companion profile" }
+Pass "/app-profile returns account/family/companion store"
 
 Step "API /chat"
 $chatBody = '{"char":"\u5be7\u5be7","history":[{"role":"user","text":"\u6211\u4eca\u5929\u60f3\u804a\u804a\u5065\u5eb7\u548c\u5bb6\u4eba"}]}'

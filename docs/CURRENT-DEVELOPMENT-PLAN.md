@@ -46,6 +46,7 @@
 - Reframed Chat as S2S call-first: visible text is state feedback only; transcript/captions are future accessibility options, not the default product surface.
 - Added a shared browser-side Companion Profile contract so onboarding, Home, Chat, and Settings use the same `templateId` and `displayName`.
 - Added local backend `/companion-profile` persistence as the bridge from prototype local storage to the future account database.
+- Added `engine/app_profile_store.json` plus `/app-profile` so account, family group, primary person, and companion profiles share one local store before the production database move.
 
 ## Tech Stack Verdict
 
@@ -171,6 +172,7 @@ Work items:
 - [ ] Add conversation memory and retention policy without making raw transcripts the default user-facing surface.
 - [x] Persist prototype companion template/name across onboarding, Home, Chat, and Settings.
 - [x] Add local backend companion profile load/save route.
+- [x] Add local account/family/person/companion profile store placeholder.
 - [ ] Add deletion/export requirements to the backlog.
 
 ## Immediate Priority Order
