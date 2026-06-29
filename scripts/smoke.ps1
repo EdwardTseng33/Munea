@@ -53,6 +53,24 @@ Step "Frontend JavaScript syntax"
 node --check web\src\app.js
 Pass "Frontend JavaScript parses"
 
+Step "Avatar runtime contract"
+@'
+from pathlib import Path
+html = Path("web/index.html").read_text(encoding="utf-8")
+js = Path("web/src/app.js").read_text(encoding="utf-8")
+css = Path("web/src/styles.css").read_text(encoding="utf-8")
+required_js = ["AVATAR_ENGINE_MODES", "STATIC_CSS", "TWO_D_VISEME", "DITTO", "LIVE_AVATAR", "MuneaAvatarRuntime", "setViseme", "startMockViseme"]
+missing_js = [token for token in required_js if token not in js]
+if missing_js:
+    raise SystemExit("Missing avatar runtime tokens: " + ", ".join(missing_js))
+if 'id="avatarMouth"' not in html:
+    raise SystemExit("Missing avatar mouth layer")
+if 'data-avatar-mode="2d-viseme"' not in css:
+    raise SystemExit("Missing 2d-viseme CSS mode selector")
+print("avatar runtime contract OK")
+'@ | python -
+Pass "Avatar runtime contract is present"
+
 Step "Frontend id references"
 @'
 from pathlib import Path

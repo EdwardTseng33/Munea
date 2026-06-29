@@ -36,6 +36,8 @@
 - Replaced `docs/ARCHITECTURE.md` with the current product/service architecture.
 - Added `docs/PRODUCT-ARCHITECTURE-AVATAR-FIRST-PLAN.md`.
 - Added frontend `MuneaAvatarRuntime` as the future insertion point for 2D viseme, Ditto, and LiveAvatar.
+- Added Avatar engine modes and the first mock 2D viseme mouth-state layer.
+- Added `docs/AVATAR-RUNTIME-QA.md` for local and iPhone visual QA.
 
 ## Sprint 1-B: Handoff Baseline
 
@@ -114,9 +116,10 @@ Work items:
 - [x] Route idle/listening/thinking/speaking through the runtime.
 - [x] Route character switching through the runtime.
 - [x] Expose `window.MuneaAvatarRuntime` for development diagnostics.
-- [ ] Add avatar engine mode enum: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
-- [ ] Add a mock avatar engine that consumes audio duration and state events.
-- [ ] Add first 2D viseme / mouth-state PoC.
+- [x] Add avatar engine mode enum: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
+- [x] Add a mock avatar engine that consumes audio duration and state events.
+- [x] Add first 2D viseme / mouth-state PoC.
+- [x] Add mobile visual QA checklist for idle/listen/think/speak.
 - [ ] Test idle/listen/think/speak on iPhone WKWebView.
 
 Go/no-go:

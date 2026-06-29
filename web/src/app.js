@@ -6,6 +6,13 @@ const $  = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 const OVERLAYS = ['med', 'chat', 'connect'];
+const AVATAR_ENGINE_MODES = Object.freeze({
+  STATIC_CSS: 'static-css',
+  TWO_D_VISEME: '2d-viseme',
+  DITTO: 'ditto',
+  LIVE_AVATAR: 'liveavatar',
+});
+const TWO_D_AVATARS = new Set(['munea-2d-xiaoyun', 'munea-2d-ayuan', 'munea-2d-mimi', 'munea-2d-wangcai']);
 
 /* ===== [ENGINE] 真角色腦：頭像 ↔ 角色名、對話狀態、跟伺服器要回話＋語音 ===== */
 const AVA_TO_CHAR = {
@@ -14,6 +21,7 @@ const AVA_TO_CHAR = {
   'munea-2d-mimi': '咪咪', 'munea-2d-wangcai': '旺財',
 };
 let currentChar = '寧寧';        // 設定頁選的角色，決定腦＋聲音
+let currentAvatarId = 'nening-real-female';
 let chatHistory = [];            // 多輪對話脈絡
 let chatOpened = false;          // 這次進聊聊她有沒有先開過口
 let chatAudio = null;
@@ -21,27 +29,70 @@ let chatAudio = null;
 /* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
 let speakTimer = null;
+let visemeTimer = null;
 const avatarRuntime = {
-  mode: 'static-css',
+  modes: AVATAR_ENGINE_MODES,
+  mode: AVATAR_ENGINE_MODES.STATIC_CSS,
   state: 'idle',
+  viseme: 'rest',
   character: currentChar,
+  resolveMode(avatarId = currentAvatarId) {
+    const forced = new URLSearchParams(location.search).get('avatar');
+    if (forced === '2d') return AVATAR_ENGINE_MODES.TWO_D_VISEME;
+    if (forced === 'static') return AVATAR_ENGINE_MODES.STATIC_CSS;
+    return TWO_D_AVATARS.has(avatarId) ? AVATAR_ENGINE_MODES.TWO_D_VISEME : AVATAR_ENGINE_MODES.STATIC_CSS;
+  },
+  setMode(mode) {
+    const valid = Object.values(AVATAR_ENGINE_MODES).includes(mode);
+    this.mode = valid ? mode : AVATAR_ENGINE_MODES.STATIC_CSS;
+    const sc = $('#chat');
+    if (sc) sc.dataset.avatarMode = this.mode;
+  },
+  setViseme(shape) {
+    this.viseme = shape || 'rest';
+    const sc = $('#chat');
+    if (sc) sc.dataset.avatarViseme = this.viseme;
+  },
   setState(st) {
     this.state = st;
     const sc = $('#chat');
     if (sc) {
       sc.dataset.state = st;
       sc.dataset.avatarMode = this.mode;
+      sc.dataset.avatarViseme = this.viseme;
     }
+    if (st !== 'speaking') this.stopMockViseme();
   },
   setCharacter(name, avatarId) {
     this.character = name;
+    if (avatarId) currentAvatarId = avatarId;
+    this.setMode(this.resolveMode(avatarId));
+    this.setViseme('rest');
     const nm = $('#chatName'); if (nm) nm.textContent = name;
     const fimg = $('#faceImg'); if (fimg && avatarId) fimg.src = 'avatars/' + avatarId + '.png';
+  },
+  startMockViseme(ms) {
+    this.stopMockViseme();
+    if (this.mode !== AVATAR_ENGINE_MODES.TWO_D_VISEME) return;
+    const shapes = ['open', 'wide', 'round', 'smile', 'open', 'rest'];
+    let i = 0;
+    this.setViseme(shapes[i]);
+    visemeTimer = setInterval(() => {
+      i = (i + 1) % shapes.length;
+      this.setViseme(shapes[i]);
+    }, 120);
+    setTimeout(() => this.stopMockViseme(), ms);
+  },
+  stopMockViseme() {
+    clearInterval(visemeTimer);
+    visemeTimer = null;
+    this.setViseme('rest');
   },
   speak(text, audioMs = 0) {
     this.setState('speaking');
     clearTimeout(speakTimer);
     const ms = audioMs || Math.min(8000, Math.max(2200, (text ? text.length : 8) * 165));
+    this.startMockViseme(ms);
     speakTimer = setTimeout(() => { if (this.state === 'speaking') this.setState('idle'); }, ms);
   },
   onAudioEnd() {
@@ -127,6 +178,8 @@ function toggleTask(item) {
 }
 
 function init() {
+  avatarRuntime.setCharacter(currentChar, currentAvatarId);
+  avatarRuntime.setState('idle');
   $('#tabBar').addEventListener('click', e => { const b = e.target.closest('.tab-btn'); if (b) showView(b.dataset.view); });
 
   // 首頁「跟寧寧聊聊」＝ 進同一個全屏臉（不再有獨立視訊頁）

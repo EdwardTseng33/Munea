@@ -50,12 +50,14 @@ flowchart LR
 
 ### Track A: Runtime Contract
 
-Status: started.
+Status: active.
 
 The frontend now has `MuneaAvatarRuntime` with:
 
 - `setState(state)`
 - `setCharacter(name, avatarId)`
+- `setMode(mode)`
+- `setViseme(shape)`
 - `speak(text, audioMs)`
 - `onAudioEnd()`
 
@@ -76,7 +78,7 @@ This must remain production-grade because it is the safety net when GPU avatar i
 
 ### Track C: 2D Viseme PoC
 
-Status: next local engineering step.
+Status: first local layer added.
 
 Goal:
 
@@ -89,6 +91,13 @@ Deliverable:
 - one selected avatar with mouth states or lightweight motion states.
 - driven by audio playback state or generated timing.
 - measured on mobile Safari / WKWebView.
+
+Current implementation:
+
+- Engine modes exist: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
+- 2D avatar choices automatically use `2d-viseme`.
+- Photoreal choices remain on `static-css` unless `?avatar=2d` is used for development testing.
+- The first mock mouth layer cycles through `rest`, `open`, `wide`, `round`, and `smile` while speaking.
 
 ### Track D: Ditto / LiveAvatar PoC
 
@@ -116,9 +125,10 @@ Constraint:
 ### Sprint B: Avatar Runtime MVP
 
 - [ ] Add visible runtime diagnostics in development mode.
-- [ ] Add avatar engine mode enum: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
-- [ ] Add a mock avatar engine that consumes audio duration and state events.
-- [ ] Add mobile visual QA checklist for idle/listen/think/speak.
+- [x] Add avatar engine mode enum: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
+- [x] Add a mock avatar engine that consumes audio duration and state events.
+- [x] Add first 2D mouth-state layer.
+- [x] Add mobile visual QA checklist for idle/listen/think/speak.
 
 ### Sprint C: 2D Viseme Prototype
 

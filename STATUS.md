@@ -15,6 +15,7 @@
 - ✅ `docs/ARCHITECTURE.md` 重寫為當前產品／服務架構：Munea = AI 健康照護 + 家人互動 + `聊聊`，不是老人限定 App。
 - ✅ 新增 `docs/PRODUCT-ARCHITECTURE-AVATAR-FIRST-PLAN.md`：Avatar-first 但不 GPU-first；先做 runtime、2D viseme 保底，再接 Ditto / LiveAvatar PoC。
 - ✅ 前端新增 `window.MuneaAvatarRuntime`：`setState`、`setCharacter`、`speak`、`onAudioEnd`。
+- ✅ Avatar engine mode 往前推：`static-css`、`2d-viseme`、`ditto`、`liveavatar`；2D 角色已可跑 mock mouth-state。
 - ✅ `scripts/smoke.ps1` 新增 `node --check web/src/app.js`，避免前端 runtime 改動沒被驗收。
 - ✅ `npm run smoke` 全綠：`/open`、`/chat`、`/voice-note`、語音 payload、JS syntax 都通過。
 
