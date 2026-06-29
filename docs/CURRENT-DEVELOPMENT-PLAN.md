@@ -41,6 +41,7 @@
 - Added `docs/RUNPOD-AVATAR-POC-SCHEDULE.md` to anchor Ditto retest and first LiveAvatar benchmark around the RunPod console.
 - Added `docs/TECH-STACK-EVALUATION-2026-06-29.md` to review the full product stack and confirm the best path.
 - Added `docs/VOICE-PROVIDER-ADAPTER.md` and the first `window.MuneaVoiceProvider` / `/voice-session` contract.
+- Split companion identity into user-chosen display name plus selectable character template, and redesigned Settings around product domains instead of duplicated role rows.
 
 ## Tech Stack Verdict
 

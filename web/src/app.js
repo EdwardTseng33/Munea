@@ -20,14 +20,19 @@ const VOICE_PROVIDER_MODES = Object.freeze({
 });
 const TWO_D_AVATARS = new Set(['munea-2d-xiaoyun', 'munea-2d-ayuan', 'munea-2d-mimi', 'munea-2d-wangcai']);
 
-/* ===== [ENGINE] 真角色腦：頭像 ↔ 角色名、對話狀態、跟伺服器要回話＋語音 ===== */
-const AVA_TO_CHAR = {
-  'nening-real-female': '寧寧', 'companion-real-male': '阿宏',
-  'munea-2d-xiaoyun': '小昀', 'munea-2d-ayuan': '阿原',
-  'munea-2d-mimi': '咪咪', 'munea-2d-wangcai': '旺財',
+/* ===== [ENGINE] 角色模板 vs 使用者命名：模板決定外觀/聲音/人格，名字由使用者取 ===== */
+const CHARACTER_TEMPLATES = {
+  'nening-real-female': { backendChar: '寧寧', defaultName: '寧寧', templateLabel: '溫柔型 · 像家人，會照看' },
+  'companion-real-male': { backendChar: '阿宏', defaultName: '阿宏', templateLabel: '沉穩型 · 像大哥，很可靠' },
+  'munea-2d-xiaoyun': { backendChar: '小昀', defaultName: '小昀', templateLabel: '開朗型 · 像朋友，很有朝氣' },
+  'munea-2d-ayuan': { backendChar: '阿原', defaultName: '阿原', templateLabel: '隨和型 · 鄰家感，好聊天' },
+  'munea-2d-mimi': { backendChar: '咪咪', defaultName: '咪咪', templateLabel: '貓咪型 · 陪伴感，有個性' },
+  'munea-2d-wangcai': { backendChar: '旺財', defaultName: '旺財', templateLabel: '狗狗型 · 熱情，很黏人' },
 };
-let currentChar = '寧寧';        // 設定頁選的角色，決定腦＋聲音
+let currentChar = CHARACTER_TEMPLATES['nening-real-female'].backendChar; // 後端角色模板，決定腦＋聲音
 let currentAvatarId = 'nening-real-female';
+let companionDisplayName = CHARACTER_TEMPLATES[currentAvatarId].defaultName;
+let companionNameTouched = false;
 let chatHistory = [];            // 多輪對話脈絡
 let chatOpened = false;          // 這次進聊聊她有沒有先開過口
 let chatAudio = null;
@@ -109,6 +114,43 @@ window.MuneaAvatarRuntime = avatarRuntime;
 
 function setFaceState(st) { avatarRuntime.setState(st); }
 function faceSpeak(text, audioMs = 0) { avatarRuntime.speak(text, audioMs); }
+function templateFor(avatarId = currentAvatarId) {
+  return CHARACTER_TEMPLATES[avatarId] || CHARACTER_TEMPLATES['nening-real-female'];
+}
+function syncCompanionUI() {
+  const t = templateFor();
+  const display = companionDisplayName.trim() || t.defaultName;
+  const src = 'avatars/' + currentAvatarId + '.png';
+  const homeName = $('#companionHomeName'); if (homeName) homeName.textContent = display;
+  const chatName = $('#chatName'); if (chatName) chatName.textContent = display;
+  const summary = $('#companionSummary'); if (summary) summary.textContent = `AI 健康照護 · 陪伴角色：${display}`;
+  const settingName = $('#settingsCompanionName'); if (settingName) settingName.textContent = display;
+  const settingLabel = $('#settingsTemplateLabel'); if (settingLabel) settingLabel.textContent = t.templateLabel;
+  const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = src;
+  const nameInput = $('#companionNameInput');
+  if (nameInput && document.activeElement !== nameInput && nameInput.value !== display) nameInput.value = display;
+  const fimg = $('#faceImg'); if (fimg) fimg.src = src;
+  $$('.bc-avatar img').forEach(i => { i.src = src; });
+  $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
+  avatarRuntime.setCharacter(display, currentAvatarId);
+}
+function setCompanionName(name) {
+  companionDisplayName = (name || '').slice(0, 12);
+  companionNameTouched = companionDisplayName.trim().length > 0;
+  syncCompanionUI();
+}
+function setCompanionTemplate(avatarId) {
+  const t = templateFor(avatarId);
+  currentAvatarId = avatarId;
+  currentChar = t.backendChar;
+  if (!companionNameTouched) companionDisplayName = t.defaultName;
+  chatHistory = [];
+  chatOpened = false;
+  voiceProvider.close();
+  syncCompanionUI();
+  const cap = $('#chatCaption');
+  if (cap) cap.textContent = `${companionDisplayName}在這裡，想聊什麼都可以。`;
+}
 
 function playB64(b64) {
   try {
@@ -240,7 +282,7 @@ function toggleTask(item) {
 }
 
 function init() {
-  avatarRuntime.setCharacter(currentChar, currentAvatarId);
+  syncCompanionUI();
   avatarRuntime.setState('idle');
   $('#tabBar').addEventListener('click', e => { const b = e.target.closest('.tab-btn'); if (b) showView(b.dataset.view); });
 
@@ -393,7 +435,7 @@ function init() {
       if (cap) cap.textContent = r.reply || '語音已送出，下一步會接上即時理解。';
     } else {
       if (cap) cap.textContent = '這個裝置可以錄音，但目前先用打字繼續聊。';
-      const s = prompt('我先用文字接住你，想跟寧寧說什麼？');
+      const s = prompt(`我先用文字接住你，想跟${companionDisplayName}說什麼？`);
       if (s) chatHandle(s);
     }
     setFaceState('idle');
@@ -403,7 +445,7 @@ function init() {
   async function startVoiceCapture() {
     const cap = $('#chatCaption');
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      const s = prompt('（這個裝置先用打字，正式版用即時語音）跟寧寧說什麼？');
+      const s = prompt(`（這個裝置先用打字，正式版用即時語音）跟${companionDisplayName}說什麼？`);
       if (s) chatHandle(s);
       return;
     }
@@ -427,7 +469,7 @@ function init() {
       if (cap) cap.textContent = '我在錄音，說完再按一次。';
     } catch (e) {
       if (cap) cap.textContent = '目前拿不到麥克風權限，先用打字聊。';
-      const s = prompt('想跟寧寧說什麼？');
+      const s = prompt(`想跟${companionDisplayName}說什麼？`);
       if (s) chatHandle(s);
     }
   }
@@ -447,15 +489,19 @@ function init() {
   });
   if ($('#chatEnd')) $('#chatEnd').addEventListener('click', () => { chatOpened = false; showView('home'); });
 
-  // 選角色 → 換那個角色的腦＋聲音＋名字，並重新認識（清對話）
+  // 陪伴角色：使用者命名與模板分離
+  const companionNameInput = $('#companionNameInput');
+  if (companionNameInput) {
+    companionNameInput.addEventListener('input', e => setCompanionName(e.target.value));
+    companionNameInput.addEventListener('blur', () => {
+      if (!companionDisplayName.trim()) companionDisplayName = templateFor().defaultName;
+      syncCompanionUI();
+    });
+  }
   const avatarPick = $('#avatarPick');
   if (avatarPick) avatarPick.addEventListener('click', e => {
     const o = e.target.closest('.avo:not(.soon)'); if (!o) return;
-    currentChar = AVA_TO_CHAR[o.dataset.ava] || '寧寧';
-    chatHistory = []; chatOpened = false;
-    voiceProvider.close();
-    avatarRuntime.setCharacter(currentChar, o.dataset.ava);
-    if ($('#chatCaption')) $('#chatCaption').textContent = `${currentChar}在這裡，想聊什麼都可以。`;
+    setCompanionTemplate(o.dataset.ava);
   });
 
   if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};

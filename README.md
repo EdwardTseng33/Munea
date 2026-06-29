@@ -44,7 +44,7 @@ The working north star is an AI health-care companion for everyday life. Older-a
 
 ## Current Prototype Status
 
-As of 2026-06-28, this repo is no longer just pre-build planning. It contains a runnable local prototype:
+As of 2026-06-29, this repo is no longer just pre-build planning. It contains a runnable local prototype:
 
 - landing page, onboarding, app home, and family dashboard
 - fullscreen butler-face conversation screen
@@ -84,9 +84,12 @@ Secrets are expected in `engine/.env.local`, which is ignored by Git.
 | Butler brain | Memory, schedules, context, daily care | Background rules + cheap AI when judgment is needed |
 | Guardian brain | Crisis / anomaly referral | Family notification and hotline referral, not medical judgment |
 | Face | Fullscreen butler presence | 2D/static now; Ditto / LiveAvatar PoCs decide real lip-sync path |
+| Companion identity | User-visible name, template, voice, and avatar asset | User can name the companion; template changes appearance / voice / personality without forcing a fixed public name |
 | App shell | App Store delivery | Capacitor iOS shell planned; microphone bridge is the next go/no-go |
 
 Critical principle: **conversation continuity beats face fidelity**. If avatar rendering is slow or unavailable, the app should keep the voice conversation alive and degrade the face gracefully.
+
+Companion identity is intentionally split: `display_name` is what the user calls the companion, while `template_id`, `avatar_asset`, and `voice_profile` define how that companion looks, sounds, and behaves. This prevents Settings from becoming a repeated "choose a character" flow and keeps future family profiles flexible.
 
 ---
 

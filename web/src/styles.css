@@ -225,6 +225,29 @@ body { font-family: var(--sans); background: #DDD; color: var(--ink); -webkit-fo
 .set-row + .set-row { border-top: 1px solid var(--line); }
 .set-row .sr-ico { width: 38px; height: 38px; border-radius: 11px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
 .set-row .sr-arrow { margin-left: auto; color: var(--muted); font-size: 14px; }
+.set-row .sr-main { flex: 1; min-width: 0; font-weight: 700; }
+.set-row .sr-main small { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.companion-panel { background: linear-gradient(150deg, #fff, #F3FAF7); border: 1px solid rgba(58,168,160,.14); border-radius: 24px; padding: 18px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.companion-live { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.companion-live-img { width: 78px; height: 78px; border-radius: 24px; overflow: hidden; background: var(--mint); flex-shrink: 0; box-shadow: 0 10px 22px -13px rgba(46,138,131,.55); }
+.companion-live-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.companion-live-copy { min-width: 0; }
+.companion-live-kicker { display: block; font-size: 12px; font-weight: 700; color: var(--teal-d); margin-bottom: 2px; }
+.companion-live-copy strong { display: block; font-family: var(--display); font-size: 24px; line-height: 1.1; color: var(--ink); }
+.companion-live-copy small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.35; }
+.companion-name-label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+.companion-name-input { width: 100%; border: 1.5px solid var(--line); border-radius: 14px; background: var(--cream-2); padding: 13px 14px; font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--ink); outline: none; }
+.companion-name-input:focus { border-color: var(--teal); box-shadow: 0 0 0 4px rgba(58,168,160,.12); background: #fff; }
+.companion-name-hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.45; }
+.avatar-pick { display: flex; gap: 12px; overflow-x: auto; padding: 16px 0 2px; margin-top: 4px; }
+.avo { flex: 0 0 auto; width: 92px; border: none; background: transparent; padding: 0; cursor: pointer; text-align: center; }
+.avo .avi { display: block; width: 76px; height: 76px; border-radius: 50%; overflow: hidden; border: 3px solid transparent; margin: 0 auto; background: var(--mint); transition: border-color .2s, transform .2s; }
+.avo .avi img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avo.on .avi { border-color: var(--teal); transform: scale(1.03); }
+.avo .avl { display: block; margin-top: 7px; line-height: 1.25; }
+.avo .avl b { display: block; font-size: 13px; font-weight: 800; color: var(--ink); }
+.avo .avl small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+.avo.on .avl b { color: var(--teal-d); }
 
 /* ===== Apple Watch 連接卡（狀態頁） ===== */
 .watch-card { position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px; background: linear-gradient(140deg, #243430, #1A2723); border-radius: 22px; padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 13px; color: #fff; }

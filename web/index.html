@@ -42,7 +42,7 @@
         <div class="bc-row">
           <div class="bc-avatar"><img class="ava-img" src="avatars/nening-real-female.png" alt="寧寧"><span class="online"></span></div>
           <div class="bc-info">
-            <div class="bc-name">Munea<span class="bc-tag">AI 健康陪伴</span></div>
+            <div class="bc-name"><span id="companionHomeName">寧寧</span><span class="bc-tag">AI 健康陪伴</span></div>
             <span class="bc-status"><span class="dot"></span>今天想先聊聊嗎？</span>
           </div>
         </div>
@@ -261,69 +261,50 @@
     <div class="pad">
       <div class="page-head"><p class="page-kicker">Settings</p><h1 class="page-title">設定</h1><p class="page-sub">讓沐寧更貼近你</p></div>
       <div class="set-about">
-        <img class="sa-icon" src="icons/peining-app-icon-source-rounded-transparent-clean-256.png" alt="Munea" />
-        <div><div class="sa-name">Munea 沐寧</div><div class="sa-sub">你的專屬 AI 健康管家 · 寧寧</div></div>
+        <img class="sa-icon" src="icons/munea-logo.png" alt="Munea" />
+        <div><div class="sa-name">Munea 沐寧</div><div class="sa-sub" id="companionSummary">AI 健康照護 · 陪伴角色：寧寧</div></div>
       </div>
 
-      <h2 class="set-section">個人資料</h2>
+      <h2 class="set-section">帳號與家庭</h2>
       <div class="set-list" id="setProfile" style="cursor:pointer">
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>頭像<span class="sr-arrow">換一張 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>名稱<span class="sr-arrow">陳秀英 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>對家人顯示<span class="sr-arrow">媽媽 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>年齡<span class="sr-arrow">72 歲 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>所在地<span class="sr-arrow">台南 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>每週活動狀態<span class="sr-arrow">規律・常出門 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span><span class="sr-main">個人資料<small>名稱、生日、所在地與活動狀態</small></span><span class="sr-arrow">陳秀英 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main">家庭照護圈<small>家人權限、顯示稱呼與通知</small></span><span class="sr-arrow">3 人 ›</span></div>
       </div>
 
-      <style>
-        .avatar-pick{display:flex;gap:12px;overflow-x:auto;padding:4px 0 10px}
-        .avo{flex:0 0 auto;width:84px;border:none;background:none;padding:0;cursor:pointer;text-align:center}
-        .avo .avi{display:block;width:72px;height:72px;border-radius:50%;overflow:hidden;border:3px solid transparent;margin:0 auto;background:var(--mint)}
-        .avo .avi img{width:100%;height:100%;object-fit:cover;display:block}
-        .avo.on .avi{border-color:var(--teal)}
-        .avo .avl{display:block;font-size:12px;color:var(--ink-2);margin-top:6px}
-        .avo.on .avl{color:var(--teal-d);font-weight:700}
-        .avo.soon{opacity:.5;cursor:default}
-        .avo.soon .avi{display:grid;place-items:center;color:var(--muted)}
-        .avo.soon .avi svg{width:30px;height:30px}
-        .avahint{font-size:12.5px;color:var(--muted);margin:2px 2px 4px;line-height:1.5}
-      </style>
-      <style>
-        #avatarPick .avl b{display:block;font-size:13px;font-weight:800;color:var(--ink)}
-        #avatarPick .avl small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px;font-weight:400}
-        #avatarPick .avo.on .avl b{color:var(--teal-d)}
-      </style>
-      <h2 class="set-section">選一個陪你的角色</h2>
-      <div class="avatar-pick" id="avatarPick">
-        <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-real-female.png" alt="寧寧"></span><span class="avl"><b>寧寧</b><small>溫柔 · 像女兒</small></span></button>
-        <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/companion-real-male.png" alt="阿宏"></span><span class="avl"><b>阿宏</b><small>沉穩 · 像大哥</small></span></button>
-        <button class="avo" data-ava="munea-2d-xiaoyun"><span class="avi"><img src="avatars/munea-2d-xiaoyun.png" alt="小昀"></span><span class="avl"><b>小昀</b><small>開朗好朋友</small></span></button>
-        <button class="avo" data-ava="munea-2d-ayuan"><span class="avi"><img src="avatars/munea-2d-ayuan.png" alt="阿原"></span><span class="avl"><b>阿原</b><small>隨和鄰家</small></span></button>
-        <button class="avo" data-ava="munea-2d-mimi"><span class="avi"><img src="avatars/munea-2d-mimi.png" alt="咪咪"></span><span class="avl"><b>咪咪</b><small>傲嬌貓 🐱</small></span></button>
-        <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai.png" alt="旺財"></span><span class="avl"><b>旺財</b><small>忠誠黏人 🐶</small></span></button>
+      <h2 class="set-section">AI 陪伴角色</h2>
+      <div class="companion-panel">
+        <div class="companion-live">
+          <div class="companion-live-img"><img id="settingsCompanionImg" src="avatars/nening-real-female.png" alt="陪伴角色預覽"></div>
+          <div class="companion-live-copy">
+            <span class="companion-live-kicker">目前陪你的是</span>
+            <strong id="settingsCompanionName">寧寧</strong>
+            <small id="settingsTemplateLabel">溫柔型 · 像家人，會照看</small>
+          </div>
+        </div>
+        <label class="companion-name-label" for="companionNameInput">角色名稱</label>
+        <input class="companion-name-input" id="companionNameInput" value="寧寧" maxlength="12" autocomplete="off" />
+        <div class="companion-name-hint">名稱是你的稱呼；外觀、聲音和互動氣質由下面的模板決定。</div>
+        <div class="avatar-pick" id="avatarPick">
+          <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-real-female.png" alt="溫柔陪伴型"></span><span class="avl"><b>溫柔型</b><small>像家人 · 會照看</small></span></button>
+          <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/companion-real-male.png" alt="沉穩陪伴型"></span><span class="avl"><b>沉穩型</b><small>像大哥 · 很可靠</small></span></button>
+          <button class="avo" data-ava="munea-2d-xiaoyun"><span class="avi"><img src="avatars/munea-2d-xiaoyun.png" alt="開朗陪伴型"></span><span class="avl"><b>開朗型</b><small>像朋友 · 很有朝氣</small></span></button>
+          <button class="avo" data-ava="munea-2d-ayuan"><span class="avi"><img src="avatars/munea-2d-ayuan.png" alt="隨和陪伴型"></span><span class="avl"><b>隨和型</b><small>鄰家感 · 好聊天</small></span></button>
+          <button class="avo" data-ava="munea-2d-mimi"><span class="avi"><img src="avatars/munea-2d-mimi.png" alt="貓咪陪伴型"></span><span class="avl"><b>貓咪型</b><small>陪伴感 · 有個性</small></span></button>
+          <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai.png" alt="狗狗陪伴型"></span><span class="avl"><b>狗狗型</b><small>熱情 · 很黏人</small></span></button>
+        </div>
       </div>
-      <p class="avahint">每個角色有自己的長相、聲音和脾氣。選一個，打開就看到他在等你。</p>
-      <script>
-        document.querySelectorAll('#avatarPick .avo:not(.soon)').forEach(o=>o.addEventListener('click',()=>{
-          document.querySelectorAll('#avatarPick .avo').forEach(x=>x.classList.remove('on'));
-          o.classList.add('on');
-          const s='avatars/'+o.dataset.ava+'.png';
-          document.querySelectorAll('.bc-avatar img,#faceImg').forEach(i=>i.src=s);
-        }));
-      </script>
 
-      <h2 class="set-section">連接的裝置</h2>
+      <h2 class="set-section">健康資料與安全</h2>
       <div class="set-list" id="setDevices" style="cursor:pointer">
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>Apple 健康<small style="color:var(--muted);font-weight:400">（含手錶與其他裝置）</small><span class="sr-on"><span class="d"></span>已連接</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span>跌倒自動求救<span class="sr-on"><span class="d"></span>已開</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main">Apple 健康<small>步數、心率、睡眠與裝置資料</small></span><span class="sr-on"><span class="d"></span>已連接</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>跌倒、異常與緊急聯絡</small></span><span class="sr-arrow">美華 ›</span></div>
       </div>
 
-      <h2 class="set-section">一般</h2>
+      <h2 class="set-section">App 體驗</h2>
       <div class="set-list">
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>選一位管家<span class="sr-arrow">寧寧 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>字體大小<span class="sr-arrow">大 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>提醒管理<span class="sr-arrow">3 項 ›</span></div>
-        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span>緊急聯絡<span class="sr-arrow">美華 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span><span class="sr-main">字體與顯示<small>大小、對比與閱讀舒適度</small></span><span class="sr-arrow">大 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="sr-main">提醒管理<small>用藥、回診、家人互動</small></span><span class="sr-arrow">3 項 ›</span></div>
+        <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">隱私與資料<small>保留、刪除、匯出與授權</small></span><span class="sr-arrow">管理 ›</span></div>
       </div>
     </div>
   </section>

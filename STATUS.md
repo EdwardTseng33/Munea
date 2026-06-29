@@ -19,6 +19,7 @@
 - ✅ RunPod Avatar PoC 路線補齊：Ditto 先復測 online fps；LiveAvatar 尚未排，先走 H100/H200 單卡 FP8 首測，不直接燒 5×H800。
 - ✅ 技術棧審查完成：保留 Capacitor + Web Core；語音改為 Voice Provider Adapter；資料層建議 Postgres + RLS；Avatar 保持 Runtime/2D 保底，Ditto/LiveAvatar 只在 RunPod gate 通過後接。
 - ✅ Voice Provider Adapter baseline 已落地：前端新增 `window.MuneaVoiceProvider`，後端新增 `/voice-session` 能力回傳，先走 `stt-chat-tts` fallback，保留 Gemini Live / Interactions 接入點。
+- ✅ Companion Identity Model 校正：陪伴角色拆成「使用者命名」與「角色模板」，設定頁改為帳號與家庭／AI 陪伴角色／健康資料與安全／App 體驗，不再重複「選一位管家」。
 - ✅ `scripts/smoke.ps1` 新增 `node --check web/src/app.js`，避免前端 runtime 改動沒被驗收。
 - ✅ `npm run smoke` 全綠：`/open`、`/chat`、`/voice-note`、語音 payload、JS syntax 都通過。
 

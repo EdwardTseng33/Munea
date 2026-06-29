@@ -97,6 +97,27 @@ This state contract is the insertion point for future engines:
 
 Principle: conversation continuity beats face fidelity. If an avatar engine is slow or unavailable, Munea keeps talking and degrades the face gracefully.
 
+## Companion Identity Model
+
+Munea's companion is not a fixed character name.
+
+Separate these concepts:
+
+| Layer | Meaning | Example |
+|---|---|---|
+| `display_name` | User-chosen name shown in the app | 寧寧, 小安, 阿福 |
+| `template_id` | Visual/personality/voice template selected by the user | warm-family, calm-brother, upbeat-friend |
+| `backend_char` | Current prototype persona key used by the local engine | 寧寧, 阿宏, 小昀 |
+| `avatar_asset` | Rendered face/body asset | `nening-real-female.png` |
+| `voice_profile` | Voice and speaking style | Leda / Charon / etc. |
+
+Rules:
+
+- The user can rename the companion without changing its face, voice, or memory.
+- Changing a template updates appearance, voice, and interaction style, but should not force a user-visible name change after the user has edited the name.
+- Family members may later have their own relationship-specific nicknames for the same companion.
+- Database design should store `display_name` and `template_id` separately in the companion profile.
+
 ## iOS Shell
 
 Munea uses Capacitor so the web core can become an iOS app first, Android later.
