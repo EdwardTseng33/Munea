@@ -5,6 +5,7 @@
   GET  /<path>               → web/ 底下的靜態檔（js / css / 圖）
   POST /open  {char}         → 該角色「主動先開口」＋語音
   POST /chat  {history,char} → 該角色帶記憶回話＋語音
+  POST /voice-session        → 回傳目前語音 provider 能力；之後接即時語音 session
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
 import os, sys, json, base64, io, wave, time, posixpath
@@ -80,6 +81,25 @@ def decode_voice_note(data):
     }
 
 
+def voice_session(data):
+    """回傳前端語音層能力；未來 Gemini Live / Interactions token 從這裡核發。"""
+    return {
+        "ok": True,
+        "provider": "stt-chat-tts",
+        "fallback": "typed-chat",
+        "locale": data.get("locale") or "zh-TW",
+        "char": data.get("char") or DEFAULT_CHAR,
+        "capabilities": {
+            "textChat": True,
+            "recordedVoiceNote": True,
+            "serverTts": True,
+            "realtimeAudio": False,
+            "interrupt": False,
+            "visemeTiming": False,
+        },
+    }
+
+
 EXT = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
        ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -123,6 +143,8 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/chat":
                 t = reply_conv(data.get("history", []), char)
                 self._json({"reply": t, "audio": tts_b64(t, char)})
+            elif self.path == "/voice-session":
+                self._json(voice_session(data))
             elif self.path == "/voice-note":
                 self._json(decode_voice_note(data))
             else:

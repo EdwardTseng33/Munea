@@ -40,6 +40,7 @@
 - Added `docs/AVATAR-RUNTIME-QA.md` for local and iPhone visual QA.
 - Added `docs/RUNPOD-AVATAR-POC-SCHEDULE.md` to anchor Ditto retest and first LiveAvatar benchmark around the RunPod console.
 - Added `docs/TECH-STACK-EVALUATION-2026-06-29.md` to review the full product stack and confirm the best path.
+- Added `docs/VOICE-PROVIDER-ADAPTER.md` and the first `window.MuneaVoiceProvider` / `/voice-session` contract.
 
 ## Tech Stack Verdict
 
@@ -108,7 +109,7 @@ Go/no-go:
 Goal: shift from current POST-based demo to real-time speech interaction.
 
 Work items:
-- [ ] Define `MuneaVoiceProvider` adapter.
+- [x] Define `MuneaVoiceProvider` adapter.
 - [ ] Confirm Gemini Live / Interactions API shape and auth model.
 - [ ] Define frontend audio stream format.
 - [ ] Build smallest loop: listen -> send -> receive voice -> play.

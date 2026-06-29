@@ -57,6 +57,7 @@ Hot path for `聊聊`.
 - Taiwanese Hokkien remains research only.
 - Current prototype uses Gemini generation + TTS.
 - Target direction is a real-time voice loop behind a `MuneaVoiceProvider` adapter, with Gemini Live / Interactions as the first candidate rather than a hard-coded dependency.
+- Current app contract exposes `window.MuneaVoiceProvider`; backend exposes `/voice-session` for capability metadata and future ephemeral real-time sessions.
 
 ### Butler Brain
 

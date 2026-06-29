@@ -12,6 +12,12 @@ const AVATAR_ENGINE_MODES = Object.freeze({
   DITTO: 'ditto',
   LIVE_AVATAR: 'liveavatar',
 });
+const VOICE_PROVIDER_MODES = Object.freeze({
+  STATIC_FALLBACK: 'static-fallback',
+  STT_CHAT_TTS: 'stt-chat-tts',
+  GEMINI_LIVE: 'gemini-live',
+  INTERACTIONS: 'interactions',
+});
 const TWO_D_AVATARS = new Set(['munea-2d-xiaoyun', 'munea-2d-ayuan', 'munea-2d-mimi', 'munea-2d-wangcai']);
 
 /* ===== [ENGINE] 真角色腦：頭像 ↔ 角色名、對話狀態、跟伺服器要回話＋語音 ===== */
@@ -126,6 +132,62 @@ async function brainPost(url, body) {
   } catch (e) { return null; }
   finally { clearTimeout(to); }
 }
+
+/* ===== VoiceProvider：先立合約，之後可換 Gemini Live / Interactions，不綁死 App 核心 ===== */
+const voiceProvider = {
+  modes: VOICE_PROVIDER_MODES,
+  mode: VOICE_PROVIDER_MODES.STT_CHAT_TTS,
+  state: 'idle',
+  session: null,
+  setState(st) {
+    this.state = st;
+    const sc = $('#chat');
+    if (sc) sc.dataset.voiceState = st;
+  },
+  async connect(context = {}) {
+    this.setState('connecting');
+    const session = await brainPost('/voice-session', {
+      char: currentChar,
+      locale: 'zh-TW',
+      fallback: VOICE_PROVIDER_MODES.STT_CHAT_TTS,
+      ...context,
+    });
+    this.session = session || {
+      ok: false,
+      provider: VOICE_PROVIDER_MODES.STATIC_FALLBACK,
+      fallback: VOICE_PROVIDER_MODES.STT_CHAT_TTS,
+      locale: 'zh-TW',
+    };
+    this.mode = this.session.provider || this.session.fallback || VOICE_PROVIDER_MODES.STT_CHAT_TTS;
+    this.setState('idle');
+    return this.session;
+  },
+  async open(char) {
+    if (!this.session) await this.connect({ char });
+    return brainPost('/open', { char });
+  },
+  async sendText({ history, char }) {
+    this.setState('thinking');
+    try {
+      return await brainPost('/chat', { history, char });
+    } finally {
+      this.setState('idle');
+    }
+  },
+  async sendVoiceNote({ audio, mime, durationMs, char }) {
+    this.setState('uploading');
+    try {
+      return await brainPost('/voice-note', { char, audio, mime, durationMs, provider: this.mode });
+    } finally {
+      this.setState('idle');
+    }
+  },
+  close() {
+    this.session = null;
+    this.setState('idle');
+  },
+};
+window.MuneaVoiceProvider = voiceProvider;
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 async function enterChat() {
   if (chatOpened) return;
@@ -133,7 +195,7 @@ async function enterChat() {
   setFaceState('idle');
   const cap = $('#chatCaption');
   if (cap) cap.textContent = '我在這裡，今天過得好嗎？';   // 先暖暖招呼、不留空白，等個人化開場回來再換
-  const r = await brainPost('/open', { char: currentChar });
+  const r = await voiceProvider.open(currentChar);
   if (r && r.reply) {
     if (cap) cap.textContent = r.reply;
     chatHistory.push({ role: 'model', text: r.reply });
@@ -295,7 +357,7 @@ function init() {
     chatHistory.push({ role: 'user', text: t });
     // [§6.2] 思考態：不空等轉圈，臉有「她在想」的活著感（< 1.5s 內回）
     setTimeout(() => { setFaceState('thinking'); if (cap && cap.textContent.startsWith('你說')) cap.textContent = '嗯…我想想'; }, 380);
-    const r = await brainPost('/chat', { history: chatHistory, char: currentChar });
+    const r = await voiceProvider.sendText({ history: chatHistory, char: currentChar });
     if (r && r.reply) {                              // 真腦回話＋真聲音
       if (cap) cap.textContent = r.reply;
       chatHistory.push({ role: 'model', text: r.reply });
@@ -326,7 +388,7 @@ function init() {
     }
     if (cap) cap.textContent = '收到語音了，我先記下來。';
     const audio = await blobToDataUrl(blob);
-    const r = await brainPost('/voice-note', { char: currentChar, audio, mime: blob.type || 'audio/webm', durationMs });
+    const r = await voiceProvider.sendVoiceNote({ char: currentChar, audio, mime: blob.type || 'audio/webm', durationMs });
     if (r && r.ok) {
       if (cap) cap.textContent = r.reply || '語音已送出，下一步會接上即時理解。';
     } else {
@@ -391,6 +453,7 @@ function init() {
     const o = e.target.closest('.avo:not(.soon)'); if (!o) return;
     currentChar = AVA_TO_CHAR[o.dataset.ava] || '寧寧';
     chatHistory = []; chatOpened = false;
+    voiceProvider.close();
     avatarRuntime.setCharacter(currentChar, o.dataset.ava);
     if ($('#chatCaption')) $('#chatCaption').textContent = `${currentChar}在這裡，想聊什麼都可以。`;
   });

@@ -71,6 +71,25 @@ print("avatar runtime contract OK")
 '@ | python -
 Pass "Avatar runtime contract is present"
 
+Step "Voice provider contract"
+@'
+from pathlib import Path
+js = Path("web/src/app.js").read_text(encoding="utf-8")
+required = [
+    "window.MuneaVoiceProvider",
+    "VOICE_PROVIDER_MODES",
+    "connect(context",
+    "sendText({ history, char })",
+    "sendVoiceNote({ audio, mime, durationMs, char })",
+    "/voice-session",
+]
+missing = [item for item in required if item not in js]
+if missing:
+    raise SystemExit("Missing voice provider contract pieces: " + ", ".join(missing))
+print("voice provider contract OK")
+'@ | python -
+Pass "Voice provider contract is present"
+
 Step "Frontend id references"
 @'
 from pathlib import Path
@@ -128,6 +147,13 @@ $voice = Invoke-RestMethod -Uri "$BaseUrl/voice-note" -Method Post -ContentType 
 if (-not $voice.ok) { throw "/voice-note returned not ok" }
 if ($voice.bytes -ne 4) { throw "/voice-note decoded unexpected byte length: $($voice.bytes)" }
 Pass "/voice-note accepts captured audio payloads"
+
+Step "API /voice-session"
+$session = Invoke-RestMethod -Uri "$BaseUrl/voice-session" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"char":"\u5be7\u5be7","locale":"zh-TW"}' -TimeoutSec 30
+if (-not $session.ok) { throw "/voice-session returned not ok" }
+if ($session.provider -ne "stt-chat-tts") { throw "/voice-session provider unexpected: $($session.provider)" }
+if (-not $session.capabilities.recordedVoiceNote) { throw "/voice-session missing recorded voice capability" }
+Pass "/voice-session returns provider capabilities"
 
 Step "API /chat"
 $chatBody = '{"char":"\u5be7\u5be7","history":[{"role":"user","text":"\u6211\u4eca\u5929\u60f3\u804a\u804a\u5065\u5eb7\u548c\u5bb6\u4eba"}]}'
