@@ -14,6 +14,7 @@ Current state:
 - Supabase schema draft exists in `supabase/sql/001_initial_munea_schema.sql`.
 - Supabase-ready backend adapter exists in `engine/supabase_adapter.py`.
 - Supabase adapter now covers companion/app profile, subscription/usage ledger reads, billing save mapping, and privacy request creation/listing with JSON fallback.
+- Backend startup can load private values from `engine/.env.local`, and `npm run supabase:doctor` validates Supabase wiring without printing backend secrets.
 - `/avatar-session` now provides the backend contract for selecting Avatar runtime mode, falling back to `2d-viseme`, and recording premium Avatar minute usage.
 - Production API contracts are partially represented in `engine/server.py`.
 - Admin and analytics are not built yet, but their data model must be planned now.

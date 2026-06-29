@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import sys
+import urllib.parse
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENGINE_DIR = os.path.join(ROOT, "engine")
+sys.path.insert(0, ENGINE_DIR)
+
+from env_loader import load_engine_env
+import supabase_adapter
+
+
+def safe_url(url):
+    parsed = urllib.parse.urlparse(url or "")
+    if not parsed.netloc:
+        return ""
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def doctor(live=False):
+    loaded = load_engine_env()
+    adapter = supabase_adapter.make_adapter()
+    status = adapter.status()
+    result = {
+        "ok": adapter.enabled(),
+        "provider": status["provider"],
+        "enabled": status["enabled"],
+        "loadedEnvKeys": sorted([key for key in loaded if key != "SUPABASE_SERVICE_ROLE_KEY"]),
+        "hasServiceRoleKey": bool(os.environ.get("SUPABASE_SERVICE_ROLE_KEY")),
+        "supabaseUrl": safe_url(os.environ.get("SUPABASE_URL")),
+        "accountId": os.environ.get("MUNEA_SUPABASE_ACCOUNT_ID") or "",
+        "personId": os.environ.get("MUNEA_SUPABASE_PERSON_ID") or "",
+        "familyGroupId": os.environ.get("MUNEA_SUPABASE_FAMILY_GROUP_ID") or "",
+        "missing": status["missing"],
+        "tables": status["tables"],
+        "liveChecks": [],
+    }
+
+    if live and adapter.enabled():
+        checks = [
+            ("appProfile", adapter.load_app_profile_store),
+            ("companionProfile", adapter.load_companion_profile),
+            ("billing", adapter.load_billing_store),
+            ("privacyRequests", adapter.load_privacy_requests_store),
+        ]
+        for name, fn in checks:
+            try:
+                value = fn()
+                result["liveChecks"].append({"name": name, "ok": value is not None})
+            except Exception as exc:
+                result["liveChecks"].append({"name": name, "ok": False, "error": str(exc)[:180]})
+        result["ok"] = all(check["ok"] for check in result["liveChecks"])
+
+    return result
+
+
+def print_text(result):
+    print("Munea Supabase Doctor")
+    print(f"- provider: {result['provider']}")
+    print(f"- enabled: {result['enabled']}")
+    print(f"- url: {result['supabaseUrl'] or '(missing)'}")
+    print(f"- service role key: {'present' if result['hasServiceRoleKey'] else 'missing'}")
+    if result["missing"]:
+        print("- missing:")
+        for item in result["missing"]:
+            print(f"  - {item}")
+    else:
+        print("- missing: none")
+    if result["liveChecks"]:
+        print("- live checks:")
+        for check in result["liveChecks"]:
+            suffix = "" if check["ok"] else f" ({check.get('error', 'failed')})"
+            print(f"  - {check['name']}: {'ok' if check['ok'] else 'failed'}{suffix}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Validate Munea Supabase backend environment without printing secrets.")
+    parser.add_argument("--live", action="store_true", help="Run read-only live REST checks when Supabase env is complete.")
+    parser.add_argument("--json", action="store_true", help="Print JSON output.")
+    parser.add_argument("--allow-missing", action="store_true", help="Exit 0 even when Supabase env is incomplete.")
+    args = parser.parse_args()
+
+    result = doctor(live=args.live)
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print_text(result)
+
+    if result["ok"] or args.allow_missing:
+        return 0
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

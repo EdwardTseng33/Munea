@@ -21,7 +21,7 @@
 | Runnable web prototype | Home, status, chat, family, settings, onboarding, landing | 65-70% |
 | Prototype AI engine | Local Python Gemini chat/TTS demo works | 35-45% |
 | iOS shell | Capacitor config scaffolded; native project still requires Mac/Xcode | 5-10% |
-| Data backend | Local JSON demo only | 10-15% |
+| Data backend | Supabase schema/seed exists; backend env loader and doctor added; live env wiring pending | 25-35% |
 | Real-time avatar | Avatar Runtime now consumes backend `/avatar-session`; engine PoCs still pending | 35-45% |
 | First TestFlight path | Not ready yet | 30-35% |
 
@@ -57,6 +57,7 @@
 - Added `/avatar-session` as the backend contract for Avatar runtime selection, premium entitlement gating, `2d-viseme` fallback, and Avatar minute usage recording.
 - Connected the frontend Avatar Runtime to backend `/avatar-session` so Chat startup consumes the backend-selected runtime mode instead of relying only on local browser choice.
 - Added `?debug=avatar` runtime diagnostics and smoke coverage for the frontend Avatar session bridge.
+- Added backend `engine/.env.local` loading plus `npm run supabase:doctor` / `npm run supabase:doctor:live` so Supabase wiring can be checked without exposing secrets.
 
 ## Tech Stack Verdict
 
@@ -180,7 +181,7 @@ Go/no-go:
 Goal: stop relying on local JSON before multi-user work starts.
 
 Work items:
-- [ ] Choose backend database stack.
+- [x] Choose backend database stack.
 - [ ] Implement Profile and Memory tables first.
 - [ ] Define `family_group_id` and permission model.
 - [ ] Add conversation memory and retention policy without making raw transcripts the default user-facing surface.
@@ -197,7 +198,9 @@ Work items:
 - [x] Add Supabase subscription/usage ledger adapter.
 - [x] Add Supabase privacy request adapter.
 - [x] Add deterministic Supabase demo bootstrap seed and env ids.
-- [ ] Create/live-link Supabase project and run initial SQL.
+- [x] Add backend `.env.local` loading and Supabase doctor scripts.
+- [x] Create Supabase project and run initial SQL through dashboard SQL Editor.
+- [ ] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.
 - [ ] Convert SQL draft into official Supabase migration after CLI/MCP authentication.
 
 ## Sprint 1-G: App Store Subscription And Trust Layer

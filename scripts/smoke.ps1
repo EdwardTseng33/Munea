@@ -22,7 +22,7 @@ function Warn($message) {
 }
 
 Step "Python compile"
-python -m py_compile engine\server.py engine\supabase_adapter.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py
+python -m py_compile engine\server.py engine\env_loader.py engine\supabase_adapter.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py scripts\supabase_doctor.py
 Pass "Python files compile"
 
 Step "JSON parse"
@@ -215,6 +215,37 @@ assert privacy_req["subscriptionNoticeRequired"] is True
 print("supabase adapter", adapter.status()["enabled"])
 '@ | python -
 Pass "Supabase adapter supports profile, billing, usage, and privacy contracts"
+
+Step "Environment loader and Supabase doctor contract"
+@'
+import os, sys, tempfile
+from pathlib import Path
+sys.path.insert(0, "engine")
+from env_loader import load_env_file
+
+with tempfile.TemporaryDirectory() as d:
+    env_path = Path(d) / ".env.local"
+    env_path.write_text("""
+# comment
+MUNEA_DATABASE_PROVIDER=supabase
+SUPABASE_URL="https://example.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY='secret-test-key'
+""", encoding="utf-8")
+    os.environ["SUPABASE_URL"] = "https://existing.supabase.co"
+    loaded = load_env_file(str(env_path), override=False)
+    assert "MUNEA_DATABASE_PROVIDER" in loaded
+    assert "SUPABASE_SERVICE_ROLE_KEY" in loaded
+    assert os.environ["SUPABASE_URL"] == "https://existing.supabase.co"
+    loaded_override = load_env_file(str(env_path), override=True)
+    assert "SUPABASE_URL" in loaded_override
+    assert os.environ["SUPABASE_URL"] == "https://example.supabase.co"
+print("env loader OK")
+'@ | python -
+
+$doctorJson = python scripts\supabase_doctor.py --allow-missing --json | ConvertFrom-Json
+if (-not $doctorJson.tables -or $doctorJson.tables.Count -lt 5) { throw "Supabase doctor missing table status" }
+if ($doctorJson.hasServiceRoleKey -and ($doctorJson | ConvertTo-Json -Compress) -match "secret-test-key") { throw "Supabase doctor leaked service key" }
+Pass "Environment loader and Supabase doctor are safe"
 
 Step "Billing and entitlement contract"
 @'

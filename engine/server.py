@@ -11,6 +11,8 @@
 """
 import os, sys, json, base64, io, wave, time, posixpath
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from env_loader import load_engine_env
+load_engine_env()
 import chat_engine as eng
 import supabase_adapter
 from google.genai import types

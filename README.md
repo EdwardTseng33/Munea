@@ -74,6 +74,18 @@ http://localhost:8200
 
 Secrets are expected in `engine/.env.local`, which is ignored by Git.
 
+To check whether the backend is still using local JSON fallback or is wired to Supabase, run:
+
+```powershell
+npm run supabase:doctor
+```
+
+After `engine/.env.local` contains the real backend-only Supabase values, use the read-only live check:
+
+```powershell
+npm run supabase:doctor:live
+```
+
 ---
 
 ## Architecture Snapshot
