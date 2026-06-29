@@ -22,7 +22,7 @@
 | Prototype AI engine | Local Python Gemini chat/TTS demo works | 35-45% |
 | iOS shell | Capacitor config scaffolded; native project still requires Mac/Xcode | 5-10% |
 | Data backend | Local JSON demo only | 10-15% |
-| Real-time avatar | PoC docs exist; not integrated | 15-25% |
+| Real-time avatar | Avatar Runtime contract added; engine PoCs still pending | 25-35% |
 | First TestFlight path | Not ready yet | 30-35% |
 
 ## 2026-06-29 Update
@@ -32,6 +32,10 @@
 - Updated smoke tests so the audio payload route is checked in full API verification.
 - Added `docs/MOBILE-VOICE-BRIDGE.md` for iOS handoff and next device test steps.
 - Ran local `npm install`, full smoke test, and Capacitor Doctor.
+- Moved product architecture and Avatar development forward.
+- Replaced `docs/ARCHITECTURE.md` with the current product/service architecture.
+- Added `docs/PRODUCT-ARCHITECTURE-AVATAR-FIRST-PLAN.md`.
+- Added frontend `MuneaAvatarRuntime` as the future insertion point for 2D viseme, Ditto, and LiveAvatar.
 
 ## Sprint 1-B: Handoff Baseline
 
@@ -101,6 +105,24 @@ Go/no-go:
 - Taiwan Mandarin voice feels natural enough for a first TestFlight.
 - Latency is acceptable before avatar integration.
 
+## Sprint 1-E2: Avatar Runtime MVP
+
+Goal: move real-time Avatar development forward without blocking on GPU PoC.
+
+Work items:
+- [x] Define frontend Avatar Runtime contract.
+- [x] Route idle/listening/thinking/speaking through the runtime.
+- [x] Route character switching through the runtime.
+- [x] Expose `window.MuneaAvatarRuntime` for development diagnostics.
+- [ ] Add avatar engine mode enum: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
+- [ ] Add a mock avatar engine that consumes audio duration and state events.
+- [ ] Add first 2D viseme / mouth-state PoC.
+- [ ] Test idle/listen/think/speak on iPhone WKWebView.
+
+Go/no-go:
+- If 2D viseme is smooth on iPhone, use it as the first TestFlight avatar path.
+- If Ditto / LiveAvatar PoC clears fps and cold-start gates, attach it behind the same runtime.
+
 ## Sprint 1-F: Data And Safety Foundation
 
 Goal: stop relying on local JSON before multi-user work starts.
@@ -114,9 +136,10 @@ Work items:
 
 ## Immediate Priority Order
 
-1. Keep docs aligned to README + SPEC.
-2. Keep the runnable prototype stable with smoke tests.
-3. Finish Capacitor shell setup.
-4. Validate microphone on a real iPhone.
-5. Build Gemini Live voice loop.
-6. Only then connect real-time avatar.
+1. Keep docs aligned to README + SPEC + `ARCHITECTURE.md`.
+2. Lock the product architecture and Avatar Runtime contract.
+3. Keep the runnable prototype stable with smoke tests.
+4. Build Avatar Runtime MVP and 2D viseme fallback path.
+5. Finish Capacitor shell setup and validate microphone on a real iPhone.
+6. Build Gemini Live voice loop.
+7. Attach Ditto / LiveAvatar only after PoC gates are real.

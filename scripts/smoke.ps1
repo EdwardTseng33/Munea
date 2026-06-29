@@ -49,6 +49,10 @@ print("voice note bytes", result["bytes"])
 '@ | python -
 Pass "Voice note payload decodes"
 
+Step "Frontend JavaScript syntax"
+node --check web\src\app.js
+Pass "Frontend JavaScript parses"
+
 Step "Frontend id references"
 @'
 from pathlib import Path

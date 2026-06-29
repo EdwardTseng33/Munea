@@ -1,64 +1,140 @@
-# Munea — System Architecture
+# Munea System Architecture
 
-> The full system design for the Munea personal AI butler.
-> Source of truth for the product/solution layer; deep media-infra detail lives alongside the voice engine.
+> Updated: 2026-06-29
+> Scope: product and service architecture for the iOS-first Munea app.
 
----
+## Product Position
 
-## 1. Positioning
+Munea is an AI health-care companion app built around three product pillars:
 
-A personal AI butler **engine**, with Munea as its first "skin": a 30–35-year-old butler devoted to one elder.
-Core audience = elders 60+ (served); buyer = adult children. The engine is reusable — future skins can serve other segments.
+1. AI health care.
+2. Family interaction.
+3. `聊聊` as the core daily relationship loop.
 
-## 2. Three Brains + One Face
+Family and older-adult care remain the first high-value market wedge, but Munea is not an elderly-only product. The app should support future expansion into broader family health, assisted living, clinics, pharmacies, and hardware-assisted services.
 
-### 🧠 Reflex brain (hot path — must be fast)
-- Real-time listen & speak; natural turn-taking.
-- **Graceful interruption:** hear → decide whether to stop → may finish the half-sentence → resume with context, never a hard cut.
-- Low latency is the lifeline (elders won't wait).
-- Built on a real-time speech model (GPT-Realtime-2 integrated) + a "conversation rhythm" design layer.
+## User-Facing App Layers
 
-### 🧠 Butler brain (background — deep, never blocks)
-- **Perception:** each morning, prepares "today" — weather (→ health nudges), appointments / meds / important dates, curated local news, family updates shared by children.
-- **Memory:** distills every interaction into a profile of the person — preferred topics, personality, family members & names, mood, body, daily rhythm, life stories, taboo topics, faith, chronic conditions.
-- Runs in the background (morning, idle gaps, overnight). The conversation only *consumes* what's already prepared → **deep without being slow.**
+| Layer | Purpose | Current State |
+|---|---|---|
+| Home | Daily greeting, reminders, quick entry into `聊聊` | Runnable prototype |
+| 聊聊 | Fullscreen face, voice, subtitles, emotional companionship | Local Gemini chat/TTS demo + microphone bridge |
+| Health Status | Health routines, Apple Health entry, trend summaries | Prototype UI |
+| Family | Family view, encouragement, shared care loop | Prototype UI |
+| Settings / Onboarding | Profile, avatar choice, family setup, device setup | Prototype UI |
 
-### 🧠 Guardian brain (safety net — P0)
-- Detects emotional / routine anomalies + crisis keywords → notifies family / refers to 1925 / 119.
-- The AI is a **referrer**, not a therapist (regulatory line).
+The first-screen experience should lead with Munea as a living companion, not with an elderly-care label.
 
-### 🙂 The Face (two tracks, self-hosted)
-- 30–35-year-old butler. Elder picks one:
-  - **Photorealistic** — 4 identities (2 male, 2 female), competitor-grade quality.
-  - **2D character** — cute animal / cartoon.
-- The 4 faces are **skins only** (look + voice). The butler brain behind them is **shared** — more faces ≠ more "knowing you" complexity.
-- **Cost:** self-hosting cost scales with *concurrent streams*, not with *number of face options* → offering more faces is near-free at runtime (one-time creation only).
-- **Voice out (her speaking) = yes.** **Camera in (real-time visual cognition of the elder) = not in v1** (cost + latency + privacy). Visual health sensing, if ever, = occasional background snapshots, not the live loop.
+## Service Architecture
 
-## 3. Two interaction layers (resolves the iOS proactive limit)
+Munea is organized as four core layers:
 
-- **App closed → Push layer:** standard iOS push (always delivers; zero iOS-limit risk). Carries the butler's face, quick-action buttons (no app-open needed), critical alerts (can break silent mode), optional short voice clips. Daily greetings / meds / reminders / safety run here, 24/7.
-- **App open → Conversation layer:** full real-time voice + talking face.
-- This sidesteps "can the app speak proactively while closed" (iOS won't allow). The remaining risk is **behavioural** (will the elder tap the push and open the app) — a lower bar than cold-opening an app, and the first thing to validate.
+```mermaid
+flowchart TD
+  App["iOS App Shell<br/>Capacitor + Web Core"]
+  Conversation["Conversation Layer<br/>listen, respond, voice, subtitles"]
+  Brains["AI Brains<br/>reflex, butler, guardian"]
+  Data["Data Layer<br/>profile, memory, family, health, ledger"]
+  Avatar["Avatar Runtime<br/>static fallback, 2D viseme, Ditto, LiveAvatar"]
+  Safety["Safety Layer<br/>medical boundary, crisis referral, audit"]
 
-## 4. Why "knows you" doesn't mean "slow"
-Depth (perception + memory) is precomputed in the background butler brain; the live conversation only consumes prepared context. The only thing that would tax the hot path is real-time camera cognition → kept out of the live loop.
+  App --> Conversation
+  Conversation --> Brains
+  Conversation --> Avatar
+  Brains --> Data
+  Data --> Safety
+  Brains --> Safety
+```
 
-## 5. Self-hosting = the business model's root
-- Whole pipeline self-hosted, zero per-minute third-party fees.
-- Renting a conversational-avatar API ≈ US$0.05–0.20/min ≈ ~NT$900/user/month for the face alone → margin death.
-- Self-hosted amortizes toward near-zero marginal cost → supports the ~65% gross margin in the financial model.
-- The face renders only while the app is open (not 24/7) → cost down further.
+## Three Brains
 
-## 6. Hybrid app shell (Capacitor)
-- A real App Store app with native push, wrapping the reusable web core (~70% reuse from `castle-voice-engine`).
-- One core → iOS first, Android later.
-- Native layer provides: push notifications, notification actions, critical alerts, lock-screen presence, future health-data hooks.
+### Reflex Brain
 
-## 7. Honest unknowns (validate, don't promise on paper)
-- **Self-hosted real-time photorealistic on affordable hardware** is an unsolved frontier. Prior in-house attempts failed due to *method + hardware* (home-grown image-stitching, no proper GPU, not the competitor approach) — not a proof of impossibility. The PoC must use the proper generative method + proper hardware.
-- Per the dead-ends rule: **no promise of "matches Tavus" without a PoC.**
+Hot path for `聊聊`.
 
----
+- Taiwan Mandarin first.
+- English second.
+- Taiwanese Hokkien remains research only.
+- Current prototype uses Gemini generation + TTS.
+- Target direction is a real-time voice loop, subject to integration tests.
 
-*See `ROADMAP.md` for the build sequence. Product/market/finance research lives in the parent project folder.*
+### Butler Brain
+
+Background context layer.
+
+- Prepares today: health routines, appointments, weather, family notes, reminders.
+- Reads from profile, memory, family, and health data.
+- Must not block the live conversation.
+
+### Guardian Brain
+
+Safety and referral layer.
+
+- Watches for crisis language, abnormal routine signals, and escalation needs.
+- Refers to family or external help.
+- Does not diagnose, prescribe, treat, or act as therapy.
+
+## One Face: Avatar Runtime
+
+Avatar is now moved forward as a core architecture track, but it must be staged correctly.
+
+Current runtime contract:
+
+| State | Meaning | Current Fallback |
+|---|---|---|
+| `idle` | Present and breathing | Static image + CSS breathing/blink |
+| `listening` | User is speaking | Listening cue |
+| `thinking` | AI is preparing a response | Thinking cue |
+| `speaking` | Munea is speaking | Wave cue + face motion |
+
+This state contract is the insertion point for future engines:
+
+1. Static CSS fallback.
+2. 2D viseme / lightweight live face.
+3. Ditto standard talking head.
+4. LiveAvatar high-end engine if PoC proves viable.
+
+Principle: conversation continuity beats face fidelity. If an avatar engine is slow or unavailable, Munea keeps talking and degrades the face gracefully.
+
+## iOS Shell
+
+Munea uses Capacitor so the web core can become an iOS app first, Android later.
+
+Native responsibilities:
+
+- Microphone permission and capture.
+- Push notifications.
+- Future HealthKit bridge.
+- App Store packaging.
+- Optional native audio bridge if WKWebView microphone capture is unstable.
+
+## Data Layer
+
+The local JSON demo must be replaced before multi-user testing.
+
+Minimum tables / collections:
+
+- user profile.
+- companion profile.
+- family group.
+- memory items.
+- transcript references.
+- health data snapshots.
+- safety events.
+- subscription / usage ledger.
+
+Every production API must carry a tenant scope such as `family_group_id` and user/person scope. Cross-family memory leakage is a P0 failure.
+
+## Development Order
+
+The updated order is:
+
+1. Stabilize the runnable prototype and smoke tests.
+2. Define product/service architecture and runtime contracts.
+3. Move Avatar Runtime forward with state-driven fallback.
+4. Validate iOS microphone and app shell.
+5. Build the real-time voice loop.
+6. Attach the selected avatar engine to the already-defined runtime.
+7. Replace local JSON with scoped data storage.
+
+This brings avatar development forward without betting the product on an unproven GPU path.

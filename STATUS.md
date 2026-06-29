@@ -1,9 +1,25 @@
 # 沐寧 Munea · STATUS（接力檔）
 
 > 沐寧 Munea · 智慧健康陪伴 App · **新 session cold-start：先讀 `docs/00-總綱-從這裡開始.md`（唯一真相入口）+ `docs/SPEC-沐寧-v1-2026-06-28.md`（權威規格），再看本檔現況**
-> 最後更新 **2026-06-28（規劃底重建日：立 SSOT 總綱 + 對齊盤點 + SPEC v1 + 定位鎖定 + 訂價修正；對話畫面重做成「全屏管家臉」已核、可測）**
+> 最後更新 **2026-06-29（產品架構與 Avatar 開發提前：`ARCHITECTURE.md` 改為當前架構、補 Avatar-first 計畫、前端加入 `MuneaAvatarRuntime`）**
 
 > **2026-06-28 晚間校正：產品不是老人 App。核心是 AI 健康照護 + 家人互動 + `聊聊`。語音語言策略為中文（台灣）優先、英文第二；台語只保留研究觀察，不列入 v1/v2 承諾，也不自研語言模型。語音腦接點以 SPEC 的 Gemini 3.1 Flash Live 方向為準。下方 6/27 歷史段落若仍出現 gpt-realtime、台語護城河或純長輩定位，一律視為歷史紀錄，不作為施工依據。**
+
+---
+
+## 🆕 2026-06-29 最新（產品架構 + Avatar 開發提前）
+
+**策略校正：** Avatar 不再等 Gemini Live 完全穩定後才開始；改成先建立 **Avatar Runtime 合約**，讓 `聊聊` 的待命／聆聽／思考／說話、角色切換、音訊結束都先走同一層。這代表 Avatar 開發已往前搬，但不是現在就押注 LiveAvatar GPU，而是先把產品體驗與工程接點立起來。
+
+**做完：**
+- ✅ `docs/ARCHITECTURE.md` 重寫為當前產品／服務架構：Munea = AI 健康照護 + 家人互動 + `聊聊`，不是老人限定 App。
+- ✅ 新增 `docs/PRODUCT-ARCHITECTURE-AVATAR-FIRST-PLAN.md`：Avatar-first 但不 GPU-first；先做 runtime、2D viseme 保底，再接 Ditto / LiveAvatar PoC。
+- ✅ 前端新增 `window.MuneaAvatarRuntime`：`setState`、`setCharacter`、`speak`、`onAudioEnd`。
+- ✅ `scripts/smoke.ps1` 新增 `node --check web/src/app.js`，避免前端 runtime 改動沒被驗收。
+- ✅ `npm run smoke` 全綠：`/open`、`/chat`、`/voice-note`、語音 payload、JS syntax 都通過。
+
+**新優先序：** 產品架構 + Avatar Runtime → 2D viseme fallback → iOS 麥克風真機 → Gemini Live voice loop → Ditto / LiveAvatar PoC 接入。
+**核心原則：** Avatar 是早期產品層，不是早期 GPU 依賴；對話不能因為臉還沒即時而中斷。
 
 ---
 

@@ -18,22 +18,48 @@ let chatHistory = [];            // 多輪對話脈絡
 let chatOpened = false;          // 這次進聊聊她有沒有先開過口
 let chatAudio = null;
 
-/* ===== [§6.2] 四狀態：待命 / 聆聽 / 思考 / 說話 —— 切 #chat 的 data-state ===== */
+/* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
+ * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
 let speakTimer = null;
-function setFaceState(st) {
-  const sc = $('#chat');
-  if (sc) sc.dataset.state = st;
-}
-// 說話態：依字幕長度估個說話時長，講完自動回待命（之後接真 avatar 用音檔長度精準收尾）
-function faceSpeak(text) {
-  setFaceState('speaking');
-  clearTimeout(speakTimer);
-  const ms = Math.min(8000, Math.max(2200, (text ? text.length : 8) * 165));
-  speakTimer = setTimeout(() => { if ($('#chat') && $('#chat').dataset.state === 'speaking') setFaceState('idle'); }, ms);
-}
+const avatarRuntime = {
+  mode: 'static-css',
+  state: 'idle',
+  character: currentChar,
+  setState(st) {
+    this.state = st;
+    const sc = $('#chat');
+    if (sc) {
+      sc.dataset.state = st;
+      sc.dataset.avatarMode = this.mode;
+    }
+  },
+  setCharacter(name, avatarId) {
+    this.character = name;
+    const nm = $('#chatName'); if (nm) nm.textContent = name;
+    const fimg = $('#faceImg'); if (fimg && avatarId) fimg.src = 'avatars/' + avatarId + '.png';
+  },
+  speak(text, audioMs = 0) {
+    this.setState('speaking');
+    clearTimeout(speakTimer);
+    const ms = audioMs || Math.min(8000, Math.max(2200, (text ? text.length : 8) * 165));
+    speakTimer = setTimeout(() => { if (this.state === 'speaking') this.setState('idle'); }, ms);
+  },
+  onAudioEnd() {
+    if (this.state === 'speaking') this.setState('idle');
+  },
+};
+window.MuneaAvatarRuntime = avatarRuntime;
+
+function setFaceState(st) { avatarRuntime.setState(st); }
+function faceSpeak(text, audioMs = 0) { avatarRuntime.speak(text, audioMs); }
 
 function playB64(b64) {
-  try { if (chatAudio) chatAudio.pause(); chatAudio = new Audio('data:audio/wav;base64,' + b64); chatAudio.play(); } catch (e) {}
+  try {
+    if (chatAudio) chatAudio.pause();
+    chatAudio = new Audio('data:audio/wav;base64,' + b64);
+    chatAudio.onended = () => avatarRuntime.onAudioEnd();
+    chatAudio.play();
+  } catch (e) {}
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
 async function brainPost(url, body) {
@@ -312,8 +338,7 @@ function init() {
     const o = e.target.closest('.avo:not(.soon)'); if (!o) return;
     currentChar = AVA_TO_CHAR[o.dataset.ava] || '寧寧';
     chatHistory = []; chatOpened = false;
-    const nm = $('#chatName'); if (nm) nm.textContent = currentChar;
-    const fimg = $('#faceImg'); if (fimg) fimg.src = 'avatars/' + o.dataset.ava + '.png';
+    avatarRuntime.setCharacter(currentChar, o.dataset.ava);
     if ($('#chatCaption')) $('#chatCaption').textContent = `${currentChar}在這裡，想聊什麼都可以。`;
   });
 
