@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "accountId": "local-demo-account",
+  "platform": "ios",
+  "provider": "storekit2-or-revenuecat",
+  "activePlan": "free",
+  "subscription": {
+    "status": "inactive",
+    "productId": null,
+    "originalTransactionId": null,
+    "expiresAt": null,
+    "willRenew": false,
+    "lastVerifiedAt": null
+  },
+  "entitlements": {
+    "voiceCompanion": true,
+    "familyDashboard": true,
+    "routineReminders": true,
+    "realtimeAvatar": false,
+    "premiumAvatarMinutesMonthly": 0,
+    "familyMembersMax": 2
+  },
+  "usageLedger": {
+    "period": "2026-06",
+    "voiceMinutesUsed": 0,
+    "avatarMinutesUsed": 0
+  },
+  "serverVerificationRequired": true,
+  "updatedAt": "2026-06-29T00:00:00Z"
+}

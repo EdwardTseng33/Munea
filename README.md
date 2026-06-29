@@ -85,6 +85,7 @@ Secrets are expected in `engine/.env.local`, which is ignored by Git.
 | Guardian brain | Crisis / anomaly referral | Family notification and hotline referral, not medical judgment |
 | Face | Fullscreen butler presence | 2D/static now; Ditto / LiveAvatar PoCs decide real lip-sync path |
 | Companion identity | User-visible name, template, voice, and avatar asset | User can name the companion; template changes appearance / voice / personality without forcing a fixed public name |
+| Subscription entitlement | App Store subscription and usage ledger | `/entitlements` is the backend source of truth; frontend does not own paid status or Avatar minutes |
 | App shell | App Store delivery | Capacitor iOS shell planned; microphone bridge is the next go/no-go |
 
 Critical principle: **conversation continuity beats face fidelity**. If avatar rendering is slow or unavailable, the app should keep the voice conversation alive and degrade the face gracefully.
@@ -94,6 +95,8 @@ Companion identity is intentionally split: `display_name` is what the user calls
 Chat is designed as speech-to-speech by default. The main experience should feel like a video call, not a transcript reader; visible text is limited to call state, safety prompts, and future optional accessibility captions.
 
 The prototype now uses one Companion Profile across onboarding, Home, Chat, and Settings. Static preview stores it in local storage; full app mode also syncs it through `/companion-profile`. The local backend now mirrors that profile into `engine/app_profile_store.json`, which keeps account, family group, primary person, and companion profiles in one shape before the same model moves into the production database.
+
+For App Store readiness, the local backend also includes `engine/billing_store.json`, `/entitlements`, `/subscription-event`, and `/healthz` contracts. These are prototype contracts for the production StoreKit / App Store Server API / RevenueCat path; production must verify signed subscription events server-side before granting paid entitlements.
 
 ---
 
@@ -170,8 +173,9 @@ For current planning truth, read these first:
 8. `docs/TECH-STACK-EVALUATION-2026-06-29.md`
 9. `docs/VOICE-PROVIDER-ADAPTER.md`
 10. `docs/MOBILE-VOICE-BRIDGE.md`
-11. `STATUS.md`
-12. `BACKLOG.md`
+11. `docs/APP-STORE-PRODUCTION-READINESS.md`
+12. `STATUS.md`
+13. `BACKLOG.md`
 
 Some older documents still preserve research history and may contain superseded assumptions, especially around GPT-Realtime, full self-hosting language, old character names, and pre-6/28 screen structure. The SPEC file is the current authority.
 

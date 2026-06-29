@@ -22,7 +22,11 @@ WEB_DIR = os.path.normpath(os.path.join(HERE, "..", "web"))
 DEFAULT_CHAR = "寧寧"
 COMPANION_PROFILE_PATH = os.path.join(HERE, "companion_profile.json")
 APP_PROFILE_STORE_PATH = os.path.join(HERE, "app_profile_store.json")
+BILLING_STORE_PATH = os.path.join(HERE, "billing_store.json")
 PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
+MAX_JSON_BODY_BYTES = 1_000_000
+MAX_AUDIO_NOTE_BYTES = 12_000_000
+ALLOWED_AUDIO_MIMES = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"}
 COMPANION_TEMPLATES = {
     "nening-real-female": {"defaultName": "寧寧", "backendChar": "寧寧"},
     "companion-real-male": {"defaultName": "阿宏", "backendChar": "阿宏"},
@@ -61,6 +65,10 @@ def normalize_companion_profile(data=None):
 
 def utc_now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def request_id():
+    return "req_" + str(int(time.time() * 1000))
 
 
 def read_json_file(path, fallback=None):
@@ -223,6 +231,103 @@ def app_profile_response(data):
     return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store)}
 
 
+def default_billing_store():
+    return {
+        "schemaVersion": 1,
+        "accountId": "local-demo-account",
+        "platform": "ios",
+        "provider": "storekit2-or-revenuecat",
+        "activePlan": "free",
+        "subscription": {
+            "status": "inactive",
+            "productId": None,
+            "originalTransactionId": None,
+            "expiresAt": None,
+            "willRenew": False,
+            "lastVerifiedAt": None,
+        },
+        "entitlements": {
+            "voiceCompanion": True,
+            "familyDashboard": True,
+            "routineReminders": True,
+            "realtimeAvatar": False,
+            "premiumAvatarMinutesMonthly": 0,
+            "familyMembersMax": 2,
+        },
+        "usageLedger": {
+            "period": time.strftime("%Y-%m"),
+            "voiceMinutesUsed": 0,
+            "avatarMinutesUsed": 0,
+        },
+        "serverVerificationRequired": True,
+        "updatedAt": utc_now(),
+    }
+
+
+def normalize_billing_store(data=None):
+    base = default_billing_store()
+    data = data or {}
+    subscription = {**base["subscription"], **(data.get("subscription") or {})}
+    entitlements = {**base["entitlements"], **(data.get("entitlements") or {})}
+    usage = {**base["usageLedger"], **(data.get("usageLedger") or data.get("usage_ledger") or {})}
+    return {
+        "schemaVersion": int(data.get("schemaVersion") or data.get("schema_version") or 1),
+        "accountId": str(data.get("accountId") or data.get("account_id") or base["accountId"]),
+        "platform": str(data.get("platform") or base["platform"]),
+        "provider": str(data.get("provider") or base["provider"]),
+        "activePlan": str(data.get("activePlan") or data.get("active_plan") or base["activePlan"]),
+        "subscription": subscription,
+        "entitlements": entitlements,
+        "usageLedger": usage,
+        "serverVerificationRequired": bool(data.get("serverVerificationRequired", base["serverVerificationRequired"])),
+        "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
+    }
+
+
+def load_billing_store():
+    return normalize_billing_store(read_json_file(BILLING_STORE_PATH, {}))
+
+
+def save_billing_store(data):
+    store = normalize_billing_store({**data, "updatedAt": utc_now()})
+    write_json_file(BILLING_STORE_PATH, store)
+    return store
+
+
+def entitlements_response(data):
+    action = (data.get("action") or "load").lower()
+    if action in ("save", "replace"):
+        store = save_billing_store(data.get("store") or data.get("billingStore") or data)
+    else:
+        store = load_billing_store()
+    return {
+        "ok": True,
+        "billing": store,
+        "entitlements": store["entitlements"],
+        "subscription": store["subscription"],
+    }
+
+
+def subscription_event_response(data):
+    event = data.get("event") or {}
+    if not isinstance(event, dict):
+        return {"ok": False, "error": {"code": "invalid_subscription_event"}}
+    store = load_billing_store()
+    store["lastSubscriptionEvent"] = {
+        "receivedAt": utc_now(),
+        "provider": data.get("provider") or "apple-app-store-server-notifications-v2",
+        "eventType": event.get("type") or event.get("notificationType") or "unknown",
+        "requiresJwsVerification": True,
+    }
+    save_billing_store(store)
+    return {
+        "ok": True,
+        "accepted": True,
+        "serverVerificationRequired": True,
+        "note": "Local prototype only. Production must verify Apple signedTransactionInfo / signedRenewalInfo server-side.",
+    }
+
+
 def _sys_for(char):
     """組這個角色的系統人格：人格 + 醫療界線 +（真人才帶）記憶側寫。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
@@ -274,11 +379,16 @@ def decode_voice_note(data):
     if "," in raw:
         raw = raw.split(",", 1)[1]
     audio_bytes = base64.b64decode(raw) if raw else b""
+    mime = data.get("mime") or "audio/webm"
+    if mime not in ALLOWED_AUDIO_MIMES:
+        raise ValueError("unsupported_audio_mime")
+    if len(audio_bytes) > MAX_AUDIO_NOTE_BYTES:
+        raise ValueError("audio_note_too_large")
     return {
         "ok": bool(audio_bytes),
         "bytes": len(audio_bytes),
-        "mime": data.get("mime") or "audio/webm",
-        "durationMs": data.get("durationMs") or 0,
+        "mime": mime,
+        "durationMs": max(0, min(int(data.get("durationMs") or 0), 180000)),
         "reply": "我收到你的語音了。下一步會把這段接到即時語音理解。",
     }
 
@@ -320,10 +430,32 @@ class H(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _json(self, obj):
-        self._send(200, "application/json; charset=utf-8", json.dumps(obj).encode())
+        self._send(200, "application/json; charset=utf-8", json.dumps(obj, ensure_ascii=False).encode())
+
+    def _json_error(self, code, err_code, message="Request could not be processed", detail=None):
+        rid = request_id()
+        body = {"ok": False, "error": {"code": err_code, "message": message, "requestId": rid}}
+        if detail and os.environ.get("MUNEA_DEBUG_API") == "1":
+            body["error"]["detail"] = str(detail)[:160]
+        self._send(code, "application/json; charset=utf-8", json.dumps(body, ensure_ascii=False).encode())
+
+    def _read_json_body(self):
+        ln = int(self.headers.get("Content-Length", 0))
+        if ln > MAX_JSON_BODY_BYTES:
+            raise ValueError("payload_too_large")
+        raw = self.rfile.read(ln).decode("utf-8", "replace") if ln else "{}"
+        return json.loads(raw or "{}")
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path == "/healthz":
+            self._json({
+                "ok": True,
+                "service": "munea-local-engine",
+                "time": utc_now(),
+                "contracts": ["app-profile", "companion-profile", "entitlements", "voice-session"],
+            })
+            return
         if path in ("/", ""):
             path = "/index.html"
         rel = posixpath.normpath(path).lstrip("/")
@@ -336,8 +468,7 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            ln = int(self.headers.get("Content-Length", 0))
-            data = json.loads(self.rfile.read(ln).decode("utf-8", "replace") or "{}")
+            data = self._read_json_body()
             char = data.get("char") or DEFAULT_CHAR
             if self.path == "/open":
                 t = eng.open_chat(char)
@@ -353,10 +484,25 @@ class H(BaseHTTPRequestHandler):
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":
                 self._json(app_profile_response(data))
+            elif self.path == "/entitlements":
+                self._json(entitlements_response(data))
+            elif self.path == "/subscription-event":
+                self._json(subscription_event_response(data))
             else:
                 self._send(404, "text/plain; charset=utf-8", b"404")
+        except json.JSONDecodeError as e:
+            self._json_error(400, "invalid_json", "Request body must be valid JSON", e)
+        except ValueError as e:
+            if str(e) == "payload_too_large":
+                self._json_error(413, "payload_too_large", "Request body is too large")
+            elif str(e) == "audio_note_too_large":
+                self._json_error(413, "audio_note_too_large", "Audio note is too large")
+            elif str(e) == "unsupported_audio_mime":
+                self._json_error(415, "unsupported_audio_mime", "Audio MIME type is not supported")
+            else:
+                self._json_error(400, "invalid_request", "Request could not be processed", e)
         except Exception as e:
-            self._json({"reply": "（不好意思，我這邊出了點小狀況，稍等一下再陪你～）", "audio": "", "err": str(e)[:80]})
+            self._json_error(500, "internal_error", "Request could not be processed", e)
 
 
 if __name__ == "__main__":

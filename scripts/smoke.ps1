@@ -28,7 +28,7 @@ Pass "Python files compile"
 Step "JSON parse"
 @'
 import json, pathlib
-for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json"]:
+for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json", "engine/billing_store.json"]:
     json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
     print(f"{p} OK")
 '@ | python -
@@ -45,9 +45,14 @@ result = server.decode_voice_note(payload)
 assert result["ok"] is True
 assert result["bytes"] == 4
 assert result["durationMs"] == 1200
+try:
+    server.decode_voice_note({"mime": "application/octet-stream", "audio": "dGVzdA=="})
+    raise AssertionError("unsupported mime should fail")
+except ValueError as e:
+    assert str(e) == "unsupported_audio_mime"
 print("voice note bytes", result["bytes"])
 '@ | python -
-Pass "Voice note payload decodes"
+Pass "Voice note payload decodes with safety guards"
 
 Step "Companion profile contract"
 @'
@@ -80,6 +85,30 @@ assert active["displayName"] == "Munea"
 print("companion profile", profile["templateId"], profile["displayName"])
 '@ | python -
 Pass "Companion profile and app store contracts are valid"
+
+Step "Billing and entitlement contract"
+@'
+import os, sys
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+billing = server.entitlements_response({"action": "load"})
+assert billing["ok"] is True
+assert billing["entitlements"]["voiceCompanion"] is True
+assert billing["billing"]["serverVerificationRequired"] is True
+
+normalized = server.normalize_billing_store({
+    "activePlan": "premium",
+    "subscription": {"status": "active", "productId": "munea.premium.monthly"},
+    "entitlements": {"realtimeAvatar": True, "premiumAvatarMinutesMonthly": 120},
+})
+assert normalized["activePlan"] == "premium"
+assert normalized["subscription"]["status"] == "active"
+assert normalized["entitlements"]["realtimeAvatar"] is True
+print("billing plan", normalized["activePlan"])
+'@ | python -
+Pass "Billing entitlements normalize correctly"
 
 Step "Frontend JavaScript syntax"
 node --check web\src\app.js
@@ -200,6 +229,19 @@ if (-not $appProfile.ok) { throw "/app-profile returned not ok" }
 if (-not $appProfile.store.primaryCareRecipientId) { throw "/app-profile missing primaryCareRecipientId" }
 if (-not $appProfile.activeCompanionProfile.templateId) { throw "/app-profile missing active companion profile" }
 Pass "/app-profile returns account/family/companion store"
+
+Step "API /entitlements"
+$entitlements = Invoke-RestMethod -Uri "$BaseUrl/entitlements" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"load"}' -TimeoutSec 30
+if (-not $entitlements.ok) { throw "/entitlements returned not ok" }
+if (-not $entitlements.entitlements.voiceCompanion) { throw "/entitlements missing voiceCompanion" }
+if (-not $entitlements.billing.serverVerificationRequired) { throw "/entitlements should require server verification" }
+Pass "/entitlements returns subscription gates"
+
+Step "API /healthz"
+$health = Invoke-RestMethod -Uri "$BaseUrl/healthz" -Method Get -TimeoutSec 30
+if (-not $health.ok) { throw "/healthz returned not ok" }
+if ($health.contracts -notcontains "entitlements") { throw "/healthz missing entitlements contract" }
+Pass "/healthz returns service contracts"
 
 Step "API /chat"
 $chatBody = '{"char":"\u5be7\u5be7","history":[{"role":"user","text":"\u6211\u4eca\u5929\u60f3\u804a\u804a\u5065\u5eb7\u548c\u5bb6\u4eba"}]}'
