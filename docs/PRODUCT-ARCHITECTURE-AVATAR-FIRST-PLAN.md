@@ -98,6 +98,7 @@ Current implementation:
 - 2D avatar choices automatically use `2d-viseme`.
 - Photoreal choices remain on `static-css` unless `?avatar=2d` is used for development testing.
 - The first mock mouth layer cycles through `rest`, `open`, `wide`, `round`, and `smile` while speaking.
+- Backend `/avatar-session` selects the allowed runtime mode, falls back to `2d-viseme` when premium Avatar entitlement or minutes are unavailable, and records premium Avatar minute usage.
 
 ### Track D: Ditto / LiveAvatar PoC
 
@@ -128,6 +129,7 @@ Constraint:
 - [x] Add avatar engine mode enum: `static-css`, `2d-viseme`, `ditto`, `liveavatar`.
 - [x] Add a mock avatar engine that consumes audio duration and state events.
 - [x] Add first 2D mouth-state layer.
+- [x] Add backend entitlement gate for Avatar runtime mode selection.
 - [x] Add mobile visual QA checklist for idle/listen/think/speak.
 
 ### Sprint C: 2D Viseme Prototype

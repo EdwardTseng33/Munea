@@ -29,6 +29,16 @@ PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
 ALLOWED_AUDIO_MIMES = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"}
+AVATAR_ENGINE_MODES = {"static-css", "2d-viseme", "ditto", "liveavatar"}
+PREMIUM_AVATAR_MODES = {"ditto", "liveavatar"}
+AVATAR_MODE_ALIASES = {
+    "static": "static-css",
+    "css": "static-css",
+    "2d": "2d-viseme",
+    "viseme": "2d-viseme",
+    "live": "liveavatar",
+    "live-avatar": "liveavatar",
+}
 COMPANION_TEMPLATES = {
     "nening-real-female": {"defaultName": "寧寧", "backendChar": "寧寧"},
     "companion-real-male": {"defaultName": "阿宏", "backendChar": "阿宏"},
@@ -380,6 +390,78 @@ def subscription_event_response(data):
     }
 
 
+def normalize_avatar_mode(mode):
+    mode = str(mode or "2d-viseme").strip().lower()
+    mode = AVATAR_MODE_ALIASES.get(mode, mode)
+    return mode if mode in AVATAR_ENGINE_MODES else "2d-viseme"
+
+
+def avatar_minutes_from_duration(duration_ms):
+    try:
+        duration_ms = int(duration_ms or 0)
+    except Exception:
+        duration_ms = 0
+    duration_ms = max(0, min(duration_ms, 3_600_000))
+    return round(duration_ms / 60000, 2)
+
+
+def avatar_session_response(data):
+    action = (data.get("action") or "start").lower()
+    requested_mode = normalize_avatar_mode(data.get("mode") or data.get("requestedMode") or data.get("engineMode"))
+    duration_minutes = avatar_minutes_from_duration(data.get("durationMs") or data.get("estimatedDurationMs"))
+    billing = load_billing_store()
+    entitlements = billing["entitlements"]
+    usage = billing["usageLedger"]
+    premium_grant = float(entitlements.get("premiumAvatarMinutesMonthly") or 0)
+    premium_used = float(usage.get("avatarMinutesUsed") or 0)
+    premium_allowed = bool(entitlements.get("realtimeAvatar"))
+    selected_mode = requested_mode
+    fallback_reason = None
+
+    if requested_mode in PREMIUM_AVATAR_MODES:
+        if not premium_allowed:
+            selected_mode = "2d-viseme"
+            fallback_reason = "premium_avatar_not_entitled"
+        elif premium_grant <= 0:
+            selected_mode = "2d-viseme"
+            fallback_reason = "premium_avatar_no_monthly_grant"
+        elif premium_used + duration_minutes > premium_grant:
+            selected_mode = "2d-viseme"
+            fallback_reason = "premium_avatar_minutes_exhausted"
+
+    usage_committed = False
+    if action in ("complete", "record-usage", "record_usage") and selected_mode in PREMIUM_AVATAR_MODES and duration_minutes > 0:
+        usage["avatarMinutesUsed"] = round(premium_used + duration_minutes, 2)
+        billing["usageLedger"] = usage
+        billing = save_billing_store(billing)
+        usage = billing["usageLedger"]
+        usage_committed = True
+
+    provider = "local-browser"
+    if selected_mode == "ditto":
+        provider = "runpod-ditto-reserved"
+    elif selected_mode == "liveavatar":
+        provider = "runpod-liveavatar-reserved"
+
+    return {
+        "ok": True,
+        "session": {
+            "id": "avatar_" + str(int(time.time() * 1000)),
+            "action": action,
+            "requestedMode": requested_mode,
+            "selectedMode": selected_mode,
+            "provider": provider,
+            "fallbackReason": fallback_reason,
+            "estimatedMinutes": duration_minutes,
+            "usageCommitted": usage_committed,
+            "startedAt": utc_now(),
+        },
+        "entitlements": entitlements,
+        "usageLedger": usage,
+        "backend": data_backend_status(),
+    }
+
+
 def default_privacy_requests_store():
     return {
         "schemaVersion": 1,
@@ -632,7 +714,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["app-profile", "companion-profile", "entitlements", "voice-session", "privacy-export", "account-deletion"],
+                "contracts": ["app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -660,6 +742,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(voice_session(data))
             elif self.path == "/voice-note":
                 self._json(decode_voice_note(data))
+            elif self.path == "/avatar-session":
+                self._json(avatar_session_response(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

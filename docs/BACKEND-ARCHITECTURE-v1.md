@@ -14,6 +14,7 @@ Current state:
 - Supabase schema draft exists in `supabase/sql/001_initial_munea_schema.sql`.
 - Supabase-ready backend adapter exists in `engine/supabase_adapter.py`.
 - Supabase adapter now covers companion/app profile, subscription/usage ledger reads, billing save mapping, and privacy request creation/listing with JSON fallback.
+- `/avatar-session` now provides the backend contract for selecting Avatar runtime mode, falling back to `2d-viseme`, and recording premium Avatar minute usage.
 - Production API contracts are partially represented in `engine/server.py`.
 - Admin and analytics are not built yet, but their data model must be planned now.
 
@@ -97,10 +98,10 @@ Prototype coverage:
 - `/voice-session`
 - `/voice-note`
 - `/chat`
+- `/avatar-session`
 
 Missing:
 
-- `/avatar-session`
 - memory summary persistence.
 - cost and usage ledger integration.
 

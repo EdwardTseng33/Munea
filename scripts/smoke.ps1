@@ -236,9 +236,36 @@ normalized = server.normalize_billing_store({
 assert normalized["activePlan"] == "premium"
 assert normalized["subscription"]["status"] == "active"
 assert normalized["entitlements"]["realtimeAvatar"] is True
+fallback = server.avatar_session_response({"mode": "liveavatar", "estimatedDurationMs": 60000})
+assert fallback["ok"] is True
+assert fallback["session"]["requestedMode"] == "liveavatar"
+assert fallback["session"]["selectedMode"] == "2d-viseme"
+assert fallback["session"]["fallbackReason"] == "premium_avatar_not_entitled"
+
+original_load = server.load_billing_store
+original_save = server.save_billing_store
+premium_store = server.normalize_billing_store({
+    "activePlan": "premium",
+    "subscription": {"status": "active", "productId": "munea.premium.monthly"},
+    "entitlements": {"realtimeAvatar": True, "premiumAvatarMinutesMonthly": 120},
+    "usageLedger": {"period": "2026-06", "avatarMinutesUsed": 10},
+})
+def fake_load():
+    return premium_store
+def fake_save(data):
+    premium_store.update(server.normalize_billing_store(data))
+    return premium_store
+server.load_billing_store = fake_load
+server.save_billing_store = fake_save
+premium = server.avatar_session_response({"action": "complete", "mode": "ditto", "durationMs": 120000})
+assert premium["session"]["selectedMode"] == "ditto"
+assert premium["session"]["usageCommitted"] is True
+assert premium["usageLedger"]["avatarMinutesUsed"] == 12
+server.load_billing_store = original_load
+server.save_billing_store = original_save
 print("billing plan", normalized["activePlan"])
 '@ | python -
-Pass "Billing entitlements normalize correctly"
+Pass "Billing entitlements and avatar session gates normalize correctly"
 
 Step "Supabase schema contract"
 @'
@@ -531,9 +558,18 @@ Step "API /healthz"
 $health = Invoke-RestMethod -Uri "$BaseUrl/healthz" -Method Get -TimeoutSec 30
 if (-not $health.ok) { throw "/healthz returned not ok" }
 if ($health.contracts -notcontains "entitlements") { throw "/healthz missing entitlements contract" }
+if ($health.contracts -notcontains "avatar-session") { throw "/healthz missing avatar-session contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
+
+Step "API /avatar-session"
+$avatar = Invoke-RestMethod -Uri "$BaseUrl/avatar-session" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"mode":"liveavatar","estimatedDurationMs":60000}' -TimeoutSec 30
+if (-not $avatar.ok) { throw "/avatar-session returned not ok" }
+if ($avatar.session.requestedMode -ne "liveavatar") { throw "/avatar-session requested mode unexpected: $($avatar.session.requestedMode)" }
+if (-not $avatar.session.selectedMode) { throw "/avatar-session missing selected mode" }
+if (-not $avatar.usageLedger) { throw "/avatar-session missing usage ledger" }
+Pass "/avatar-session returns entitlement-gated runtime decision"
 
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30

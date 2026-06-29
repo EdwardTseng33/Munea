@@ -54,6 +54,7 @@
 - Extended the Supabase adapter so `/app-profile` can aggregate account, person, family group, family membership, and companion profile data when Supabase env is configured.
 - Extended the Supabase adapter so `/entitlements`, subscription/usage ledger mapping, `/privacy-export`, and `/account-deletion` request creation can use Supabase when backend env is configured, with JSON fallback preserved.
 - Added `supabase/sql/002_demo_bootstrap.sql` and demo env ids so a real Supabase project can be seeded for first backend adapter testing.
+- Added `/avatar-session` as the backend contract for Avatar runtime selection, premium entitlement gating, `2d-viseme` fallback, and Avatar minute usage recording.
 
 ## Tech Stack Verdict
 
@@ -146,6 +147,7 @@ Work items:
 - [x] Add a mock avatar engine that consumes audio duration and state events.
 - [x] Add first 2D viseme / mouth-state PoC.
 - [x] Add mobile visual QA checklist for idle/listen/think/speak.
+- [x] Add backend `/avatar-session` contract for entitlement-gated Avatar mode selection.
 - [ ] Test idle/listen/think/speak on iPhone WKWebView.
 
 Go/no-go:
