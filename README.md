@@ -96,6 +96,7 @@ npm run supabase:doctor:live
 | Butler brain | Memory, schedules, context, daily care | Background rules + cheap AI when judgment is needed |
 | Guardian brain | Crisis / anomaly referral | Family notification and hotline referral, not medical judgment |
 | Face | Fullscreen butler presence | 2D/static now; Ditto / LiveAvatar PoCs decide real lip-sync path |
+| Account bootstrap | First account/family/person creation after auth | `/account-bootstrap` previews or creates the backend-owned account graph; Supabase path requires verified `auth.users.id` |
 | Companion identity | User-visible name, template, voice, and avatar asset | User can name the companion; template changes appearance / voice / personality without forcing a fixed public name |
 | Subscription entitlement | App Store subscription and usage ledger | `/entitlements` is the backend source of truth; frontend does not own paid status or Avatar minutes |
 | Avatar session | Runtime mode and premium Avatar usage decision | Chat startup calls `/avatar-session`; backend selects `static-css`, `2d-viseme`, `ditto`, or `liveavatar`, with premium fallback and usage ledger recording |

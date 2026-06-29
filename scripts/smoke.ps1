@@ -230,9 +230,70 @@ event = adapter.append_product_event({"eventName": "voice_session_completed", "p
 assert event["eventName"] == "voice_session_completed"
 events = adapter.load_product_events(limit=10)
 assert events[0]["eventName"] == "voice_session_completed"
+
+bootstrap_writes = []
+bootstrap_adapter = supabase_adapter.make_adapter(env=env)
+def fake_bootstrap_request(method, table, query=None, payload=None, prefer=None):
+    if method == "GET" and table == "account_members":
+        return []
+    if method == "GET":
+        fixtures = {
+            "accounts": [{"id": bootstrap_adapter.account_id, "locale": "zh-TW", "preferred_languages": ["zh-TW", "en"]}],
+            "persons": [{"id": bootstrap_adapter.person_id, "display_name": "Bootstrap User", "relationship": "self"}],
+            "family_groups": [{"id": bootstrap_adapter.family_group_id, "name": "Munea Care Circle"}],
+            "family_memberships": [{"person_id": bootstrap_adapter.person_id, "role": "primary_user"}],
+            "companion_profiles": [{"person_id": bootstrap_adapter.person_id, "template_id": "nening-real-female", "display_name": "Munea", "name_touched": True}],
+            "subscription_ledger": [{"account_id": bootstrap_adapter.account_id, "status": "inactive", "active_plan": "free", "entitlements": {}}],
+            "usage_ledger": [],
+        }
+        return fixtures.get(table, [])
+    bootstrap_writes.append(table)
+    if table == "accounts":
+        bootstrap_adapter.account_id = payload["id"]
+    elif table == "persons":
+        bootstrap_adapter.person_id = payload["id"]
+    elif table == "family_groups":
+        bootstrap_adapter.family_group_id = payload["id"]
+    return [{**(payload or {}), "id": (payload or {}).get("id") or f"{table}-row"}]
+
+bootstrap_adapter._request = fake_bootstrap_request
+bootstrapped = bootstrap_adapter.bootstrap_account({
+    "authUserId": "44444444-4444-4444-8444-444444444444",
+    "displayName": "Bootstrap User",
+})
+for table in ["accounts", "account_members", "persons", "family_groups", "family_memberships", "companion_profiles", "subscription_ledger", "usage_ledger", "audit_events"]:
+    assert table in bootstrap_writes, f"bootstrap did not write {table}"
+assert bootstrapped["familyGroup"]["members"][0]["role"] == "primary_user"
 print("supabase adapter", adapter.status()["enabled"])
 '@ | python -
 Pass "Supabase adapter supports profile, billing, usage, and privacy contracts"
+
+Step "Account bootstrap contract"
+@'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+with tempfile.TemporaryDirectory() as d:
+    server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
+    server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
+    server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
+    response = server.bootstrap_account_response({
+        "displayName": "Test User",
+        "companionProfile": {"templateId": "real-f", "displayName": "Munea", "nameTouched": True},
+    })
+    assert response["ok"] is True
+    store = response["store"]
+    assert store["account"]["id"].startswith("local-account-")
+    assert store["familyGroup"]["members"][0]["displayName"] == "Test User"
+    assert response["activeCompanionProfile"]["templateId"] == "nening-real-female"
+    events = server.load_product_events(limit=10)
+    assert events[0]["eventName"] == "account_bootstrapped"
+print("account bootstrap OK")
+'@ | python -
+Pass "Account bootstrap creates local account/family/person/companion store"
 
 Step "Product event and North Star contract"
 @'
@@ -681,6 +742,7 @@ Pass "/entitlements returns subscription gates"
 Step "API /healthz"
 $health = Invoke-RestMethod -Uri "$BaseUrl/healthz" -Method Get -TimeoutSec 30
 if (-not $health.ok) { throw "/healthz returned not ok" }
+if ($health.contracts -notcontains "account-bootstrap") { throw "/healthz missing account-bootstrap contract" }
 if ($health.contracts -notcontains "entitlements") { throw "/healthz missing entitlements contract" }
 if ($health.contracts -notcontains "avatar-session") { throw "/healthz missing avatar-session contract" }
 if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
@@ -688,6 +750,14 @@ if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
+
+Step "API /account-bootstrap"
+$bootstrapBody = '{"action":"preview","displayName":"Smoke User","companionProfile":{"templateId":"real-f","displayName":"Munea","nameTouched":true}}'
+$bootstrap = Invoke-RestMethod -Uri "$BaseUrl/account-bootstrap" -Method Post -ContentType "application/json; charset=utf-8" -Body $bootstrapBody -TimeoutSec 30
+if (-not $bootstrap.ok) { throw "/account-bootstrap returned not ok" }
+if (-not $bootstrap.store.account.id) { throw "/account-bootstrap missing account id" }
+if (-not $bootstrap.activeCompanionProfile.templateId) { throw "/account-bootstrap missing active companion profile" }
+Pass "/account-bootstrap previews account store"
 
 Step "API /avatar-session"
 $avatar = Invoke-RestMethod -Uri "$BaseUrl/avatar-session" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"mode":"liveavatar","estimatedDurationMs":60000}' -TimeoutSec 30

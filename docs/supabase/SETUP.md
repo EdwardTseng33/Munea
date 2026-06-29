@@ -93,6 +93,8 @@ MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333
 
 The seed does not require a Supabase Auth user because the local backend adapter uses the service role key. To test authenticated RLS from a client session, edit `demo_user_id` inside `002_demo_bootstrap.sql` and set it to a real `auth.users.id` before running it.
 
+For real onboarding after Supabase Auth or Apple Sign-In, use the backend `/account-bootstrap` contract instead of copying the demo seed. The Supabase adapter requires a verified `auth.users.id` and creates the first `accounts`, `account_members`, `persons`, `family_groups`, `family_memberships`, and `companion_profiles` rows from the backend service-role environment.
+
 ## RLS Model
 
 Main rule:

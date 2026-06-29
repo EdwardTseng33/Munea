@@ -11,6 +11,7 @@
 """
 import os, sys, json, base64, io, wave, time, posixpath
 from datetime import datetime, timedelta, timezone
+import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from env_loader import load_engine_env
 load_engine_env()
@@ -24,10 +25,10 @@ if not os.environ.get("GEMINI_API_KEY"):
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.normpath(os.path.join(HERE, "..", "web"))
 DEFAULT_CHAR = "寧寧"
-COMPANION_PROFILE_PATH = os.path.join(HERE, "companion_profile.json")
-APP_PROFILE_STORE_PATH = os.path.join(HERE, "app_profile_store.json")
-BILLING_STORE_PATH = os.path.join(HERE, "billing_store.json")
-PRIVACY_REQUESTS_PATH = os.path.join(HERE, "privacy_requests.json")
+COMPANION_PROFILE_PATH = os.environ.get("MUNEA_COMPANION_PROFILE_PATH") or os.path.join(HERE, "companion_profile.json")
+APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
+BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
+PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
@@ -239,6 +240,56 @@ def save_app_profile_store(data):
         pass
     write_json_file(APP_PROFILE_STORE_PATH, store)
     return store
+
+
+def bootstrap_account_response(data):
+    data = data or {}
+    action = (data.get("action") or "create").lower()
+    try:
+        remote_store = None if action == "preview" else data_backend().bootstrap_account(data)
+        if remote_store:
+            store = normalize_app_profile_store(remote_store)
+            append_product_event({"eventName": "account_bootstrapped", "properties": {"backend": "supabase"}})
+            return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store), "backend": data_backend_status()}
+    except Exception as e:
+        if data_backend().enabled():
+            raise e
+
+    display_name = (data.get("displayName") or data.get("display_name") or "Munea user").strip()[:80] or "Munea user"
+    account_id = data.get("accountId") or data.get("account_id") or f"local-account-{uuid.uuid4()}"
+    person_id = data.get("personId") or data.get("person_id") or f"local-person-{uuid.uuid4()}"
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or f"local-family-{uuid.uuid4()}"
+    companion_profile = normalize_companion_profile(data.get("companionProfile") or data.get("companion_profile") or {
+        "templateId": "nening-real-female",
+        "displayName": "Munea",
+        "nameTouched": True,
+    })
+    store = normalize_app_profile_store({
+        "schemaVersion": 1,
+        "account": {
+            "id": account_id,
+            "locale": data.get("locale") or "zh-TW",
+            "preferredLanguages": data.get("preferredLanguages") or data.get("preferred_languages") or ["zh-TW", "en"],
+            "createdAt": utc_now(),
+        },
+        "familyGroup": {
+            "id": family_group_id,
+            "name": data.get("familyGroupName") or data.get("family_group_name") or "Munea Care Circle",
+            "members": [{
+                "id": person_id,
+                "role": "primary_user",
+                "displayName": display_name,
+                "relationship": data.get("relationship") or "self",
+            }],
+        },
+        "primaryCareRecipientId": person_id,
+        "companionProfiles": {person_id: companion_profile},
+        "updatedAt": utc_now(),
+    })
+    if action != "preview":
+        save_app_profile_store(store)
+        append_product_event({"eventName": "account_bootstrapped", "properties": {"backend": "json"}})
+    return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store), "backend": data_backend_status()}
 
 
 def active_companion_profile(store=None):
@@ -882,7 +933,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
+                "contracts": ["account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -924,6 +975,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":
                 self._json(app_profile_response(data))
+            elif self.path == "/account-bootstrap":
+                self._json(bootstrap_account_response(data))
             elif self.path == "/entitlements":
                 self._json(entitlements_response(data))
             elif self.path == "/subscription-event":

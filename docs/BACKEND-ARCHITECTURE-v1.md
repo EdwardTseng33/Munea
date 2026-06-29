@@ -18,6 +18,7 @@ Current state:
 - `/avatar-session` now provides the backend contract for selecting Avatar runtime mode, falling back to `2d-viseme`, and recording premium Avatar minute usage.
 - `/product-event` now records product analytics events, and `/admin/north-star` provides the first token-gated North Star summary contract.
 - The web prototype now emits safe product events for Chat start/completion, voice turns, voice-note upload, Avatar session start/completion, and routine completion. It does not send raw transcript text to analytics.
+- `/account-bootstrap` now defines the backend-owned account/member/person/family/companion creation contract for the future Supabase Auth or Apple Sign-In flow. In production it requires a verified `auth.users.id`; local prototype fallback can preview/create a JSON store.
 - Production API contracts are partially represented in `engine/server.py`.
 - Admin and analytics are not built yet, but their data model must be planned now.
 
@@ -72,6 +73,7 @@ Errors:
 | Endpoint | Method | Purpose | Auth | Production source |
 |---|---|---|---|---|
 | `/app-profile` | GET/POST | Account, family group, primary person, companion profile aggregate | required | `accounts`, `persons`, `family_groups`, `family_memberships`, `companion_profiles` |
+| `/account-bootstrap` | POST | Create first account/member/person/family/companion rows after auth | required | `accounts`, `account_members`, `persons`, `family_groups`, `family_memberships`, `companion_profiles` |
 | `/companion-profile` | GET/POST | Active companion identity for current person | required | `companion_profiles` |
 | `/family-members` | GET/POST/PATCH | Invite/list/update family contacts | required | `family_memberships`, `persons` |
 | `/routine-reminders` | GET/POST/PATCH | Routine and medication reminders | required | `routine_reminders` |
@@ -79,6 +81,7 @@ Errors:
 Prototype coverage:
 
 - `/app-profile`
+- `/account-bootstrap`
 - `/companion-profile`
 
 Missing:

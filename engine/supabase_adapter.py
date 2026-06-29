@@ -9,6 +9,7 @@ import json
 import os
 import re
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -57,6 +58,7 @@ class SupabaseAdapter:
             "missing": missing,
             "tables": [
                 "accounts",
+                "account_members",
                 "persons",
                 "family_groups",
                 "family_memberships",
@@ -140,6 +142,156 @@ class SupabaseAdapter:
                 prefer="return=representation",
         )
         return self.companion_row_to_profile(rows[0]) if rows else None
+
+    def bootstrap_account(self, data=None):
+        if not self.enabled():
+            return None
+        data = data or {}
+        auth_user_id = data.get("authUserId") or data.get("auth_user_id") or data.get("userId") or data.get("user_id")
+        if not self._is_uuid(auth_user_id):
+            raise RuntimeError("Supabase account bootstrap requires a verified auth user id")
+
+        existing_member = self._first(
+            "account_members",
+            {"user_id": f"eq.{auth_user_id}", "status": "eq.active", "select": "*"},
+        )
+        if existing_member:
+            previous_account_id = self.account_id
+            previous_person_id = self.person_id
+            try:
+                self.account_id = existing_member.get("account_id") or self.account_id
+                person = self._first("persons", {"account_id": f"eq.{self.account_id}", "is_primary_care_recipient": "eq.true", "select": "*"})
+                if person and person.get("id"):
+                    self.person_id = person["id"]
+                return self.load_app_profile_store()
+            finally:
+                self.account_id = previous_account_id
+                self.person_id = previous_person_id
+
+        account_id = str(uuid.uuid4())
+        person_id = str(uuid.uuid4())
+        family_group_id = str(uuid.uuid4())
+        display_name = (data.get("displayName") or data.get("display_name") or "Munea user").strip()[:80] or "Munea user"
+        companion = data.get("companionProfile") or data.get("companion_profile") or {}
+
+        account = self._request(
+            "POST",
+            "accounts",
+            query={"select": "*"},
+            payload={
+                "id": account_id,
+                "name": data.get("accountName") or data.get("account_name") or "Munea account",
+                "locale": data.get("locale") or "zh-TW",
+                "preferred_languages": data.get("preferredLanguages") or data.get("preferred_languages") or ["zh-TW", "en"],
+            },
+            prefer="return=representation",
+        )[0]
+        self._request(
+            "POST",
+            "account_members",
+            query={"select": "*"},
+            payload={
+                "account_id": account_id,
+                "user_id": auth_user_id,
+                "role": data.get("role") or "owner",
+                "status": "active",
+            },
+            prefer="return=representation",
+        )
+        person = self._request(
+            "POST",
+            "persons",
+            query={"select": "*"},
+            payload={
+                "id": person_id,
+                "account_id": account_id,
+                "display_name": display_name,
+                "relationship": data.get("relationship") or "self",
+                "locale": data.get("locale") or "zh-TW",
+                "timezone": data.get("timezone") or "Asia/Taipei",
+                "is_primary_care_recipient": True,
+            },
+            prefer="return=representation",
+        )[0]
+        family_group = self._request(
+            "POST",
+            "family_groups",
+            query={"select": "*"},
+            payload={
+                "id": family_group_id,
+                "account_id": account_id,
+                "name": data.get("familyGroupName") or data.get("family_group_name") or "Munea Care Circle",
+            },
+            prefer="return=representation",
+        )[0]
+        self._request(
+            "POST",
+            "family_memberships",
+            query={"select": "*"},
+            payload={
+                "account_id": account_id,
+                "family_group_id": family_group_id,
+                "person_id": person_id,
+                "role": "primary_user",
+                "permissions": {"manage_companion": True, "view_family_dashboard": True},
+            },
+            prefer="return=representation",
+        )
+
+        previous_account_id = self.account_id
+        previous_person_id = self.person_id
+        previous_family_group_id = self.family_group_id
+        try:
+            self.account_id = account_id
+            self.person_id = person_id
+            self.family_group_id = family_group_id
+            self.save_companion_profile({
+                "templateId": companion.get("templateId") or companion.get("template_id") or "nening-real-female",
+                "displayName": companion.get("displayName") or companion.get("display_name") or "Munea",
+                "nameTouched": bool(companion.get("nameTouched") or companion.get("name_touched")),
+            })
+            self.save_billing_store({
+                "activePlan": "free",
+                "platform": "ios",
+                "provider": "bootstrap",
+                "subscription": {"status": "inactive"},
+                "entitlements": {
+                    "voiceCompanion": True,
+                    "familyDashboard": True,
+                    "routineReminders": True,
+                    "realtimeAvatar": False,
+                    "premiumAvatarMinutesMonthly": 0,
+                    "familyMembersMax": 2,
+                },
+                "usageLedger": {
+                    "period": time.strftime("%Y-%m"),
+                    "voiceMinutesUsed": 0,
+                    "voiceMinutesGranted": 300,
+                    "avatarMinutesUsed": 0,
+                    "avatarMinutesGranted": 0,
+                    "familyMembersUsed": 1,
+                    "familyMembersGranted": 2,
+                },
+            })
+            self._request(
+                "POST",
+                "audit_events",
+                query={"select": "*"},
+                payload={
+                    "account_id": account_id,
+                    "actor_user_id": auth_user_id,
+                    "event_type": "account_bootstrapped",
+                    "target_table": "accounts",
+                    "target_id": account_id,
+                    "details": {"source": "munea-api"},
+                },
+                prefer="return=representation",
+            )
+            return self.load_app_profile_store()
+        finally:
+            self.account_id = previous_account_id
+            self.person_id = previous_person_id
+            self.family_group_id = previous_family_group_id
 
     def load_billing_store(self):
         if not self.enabled():

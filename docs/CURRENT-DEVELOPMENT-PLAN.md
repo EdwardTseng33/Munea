@@ -60,6 +60,7 @@
 - Added backend `engine/.env.local` loading plus `npm run supabase:doctor` / `npm run supabase:doctor:live` so Supabase wiring can be checked without exposing secrets.
 - Added `supabase/sql/003_analytics_admin_foundation.sql`, `/product-event`, and token-gated `/admin/north-star` as the first North Star/Admin MVP data contract.
 - Connected the web prototype to `/product-event` for safe Chat, Voice, Avatar, and routine-completion analytics without sending transcript text.
+- Added `/account-bootstrap` as the backend-owned contract for creating account/member/person/family/companion rows after Supabase Auth or Apple Sign-In.
 
 ## Tech Stack Verdict
 
@@ -205,6 +206,7 @@ Work items:
 - [x] Add analytics/admin foundation schema for product events, North Star metrics, cost ledger, and admin notes.
 - [x] Add backend `/product-event` and token-gated `/admin/north-star` contracts.
 - [x] Emit safe frontend product events from Chat / Voice / Avatar / routine flows.
+- [x] Add account bootstrap contract with local preview/create and Supabase adapter path.
 - [ ] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.
 - [ ] Convert SQL draft into official Supabase migration after CLI/MCP authentication.
 
