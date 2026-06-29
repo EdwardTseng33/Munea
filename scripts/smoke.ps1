@@ -128,6 +128,8 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**payload, "id": "privacy-request-1", "requested_at": "2026-06-29T00:00:00Z"}]
         if table == "companion_profiles":
             return [{**payload, "updated_at": "2026-06-29T00:00:00Z"}]
+        if table == "product_events":
+            return [{**payload, "id": "product-event-1", "created_at": "2026-06-29T00:00:00Z"}]
         raise AssertionError(f"Unexpected write table: {table}")
 
     assert method == "GET"
@@ -187,6 +189,18 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "subscription_notice_required": False,
             "requested_at": "2026-06-29T00:00:00Z",
         }],
+        "product_events": [{
+            "id": "product-event-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+            "event_name": "voice_session_completed",
+            "event_time": "2026-06-29T00:00:00Z",
+            "source": "smoke",
+            "session_id": "voice-session-1",
+            "properties": {"durationMs": 90000},
+            "created_at": "2026-06-29T00:00:00Z",
+        }],
     }
     return fixtures[table]
 
@@ -212,9 +226,46 @@ assert privacy_store["requests"][0]["type"] == "export"
 privacy_req = adapter.append_privacy_request("account_deletion", {"reason": "test"})
 assert privacy_req["type"] == "account_deletion"
 assert privacy_req["subscriptionNoticeRequired"] is True
+event = adapter.append_product_event({"eventName": "voice_session_completed", "properties": {"durationMs": 90000}})
+assert event["eventName"] == "voice_session_completed"
+events = adapter.load_product_events(limit=10)
+assert events[0]["eventName"] == "voice_session_completed"
 print("supabase adapter", adapter.status()["enabled"])
 '@ | python -
 Pass "Supabase adapter supports profile, billing, usage, and privacy contracts"
+
+Step "Product event and North Star contract"
+@'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+with tempfile.TemporaryDirectory() as d:
+    server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
+    event = server.product_event_response({
+        "eventName": "voice_session_completed",
+        "personId": "local-person-self",
+        "properties": {"durationMs": 90000, "turnCount": 5},
+    })
+    assert event["ok"] is True
+    assert event["event"]["eventName"] == "voice_session_completed"
+    summary = server.north_star_summary({"days": 7})
+    assert summary["metric"] == "Weekly Meaningful Companion Days"
+    assert summary["meaningfulCompanionDays"] >= 1
+    assert summary["voiceSessionsCompleted"] >= 1
+    ok, code = server.admin_authorized({})
+    assert ok is False
+    assert code == "admin_token_not_configured"
+    os.environ["MUNEA_ADMIN_API_TOKEN"] = "admin-smoke-token"
+    ok, code = server.admin_authorized({"X-Munea-Admin-Token": "admin-smoke-token"})
+    assert ok is True
+    assert code is None
+    del os.environ["MUNEA_ADMIN_API_TOKEN"]
+print("north star OK")
+'@ | python -
+Pass "Product events produce North Star summary and admin gate is closed by default"
 
 Step "Environment loader and Supabase doctor contract"
 @'
@@ -304,6 +355,7 @@ from pathlib import Path
 
 sql = Path("supabase/sql/001_initial_munea_schema.sql").read_text(encoding="utf-8").lower()
 seed = Path("supabase/sql/002_demo_bootstrap.sql").read_text(encoding="utf-8").lower()
+analytics = Path("supabase/sql/003_analytics_admin_foundation.sql").read_text(encoding="utf-8").lower()
 env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
     "accounts",
@@ -354,9 +406,27 @@ if missing_seed:
 for key in ["MUNEA_SUPABASE_ACCOUNT_ID", "MUNEA_SUPABASE_PERSON_ID", "MUNEA_SUPABASE_FAMILY_GROUP_ID"]:
     if key not in env_example:
         raise SystemExit("Missing Supabase env example key: " + key)
+analytics_tables = [
+    "product_events",
+    "daily_user_metrics",
+    "voice_session_metrics",
+    "reminder_events",
+    "family_interaction_events",
+    "cost_ledger",
+    "admin_notes",
+]
+for table in analytics_tables:
+    if f"create table if not exists public.{table}" not in analytics:
+        raise SystemExit("Missing analytics table: " + table)
+    if f"alter table public.{table} enable row level security" not in analytics:
+        raise SystemExit("Missing analytics RLS: " + table)
+    if f"revoke all on public.{table} from anon" not in analytics:
+        raise SystemExit("Missing analytics anon revoke: " + table)
+if "weekly meaningful companion days" not in Path("docs/BACKEND-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower():
+    raise SystemExit("Backend architecture missing North Star definition")
 print("supabase tables", len(required_tables))
 '@ | python -
-Pass "Supabase schema and demo bootstrap include tables, RLS, grants, and seed ids"
+Pass "Supabase schema, analytics foundation, RLS, grants, and seed ids are present"
 
 Step "Secret boundary contract"
 @'
@@ -605,6 +675,8 @@ $health = Invoke-RestMethod -Uri "$BaseUrl/healthz" -Method Get -TimeoutSec 30
 if (-not $health.ok) { throw "/healthz returned not ok" }
 if ($health.contracts -notcontains "entitlements") { throw "/healthz missing entitlements contract" }
 if ($health.contracts -notcontains "avatar-session") { throw "/healthz missing avatar-session contract" }
+if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
+if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
@@ -616,6 +688,23 @@ if ($avatar.session.requestedMode -ne "liveavatar") { throw "/avatar-session req
 if (-not $avatar.session.selectedMode) { throw "/avatar-session missing selected mode" }
 if (-not $avatar.usageLedger) { throw "/avatar-session missing usage ledger" }
 Pass "/avatar-session returns entitlement-gated runtime decision"
+
+Step "API /product-event"
+$eventBody = '{"eventName":"voice_session_completed","personId":"local-person-self","properties":{"durationMs":90000,"turnCount":5}}'
+$productEvent = Invoke-RestMethod -Uri "$BaseUrl/product-event" -Method Post -ContentType "application/json; charset=utf-8" -Body $eventBody -TimeoutSec 30
+if (-not $productEvent.ok) { throw "/product-event returned not ok" }
+if ($productEvent.northStar.meaningfulCompanionDays -lt 1) { throw "/product-event did not update North Star summary" }
+Pass "/product-event records meaningful event"
+
+Step "API /admin/north-star gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/north-star" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"days":7}' -TimeoutSec 30 | Out-Null
+  throw "/admin/north-star should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/north-star is closed without admin token"
 
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30

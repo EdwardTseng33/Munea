@@ -21,7 +21,7 @@
 | Runnable web prototype | Home, status, chat, family, settings, onboarding, landing | 65-70% |
 | Prototype AI engine | Local Python Gemini chat/TTS demo works | 35-45% |
 | iOS shell | Capacitor config scaffolded; native project still requires Mac/Xcode | 5-10% |
-| Data backend | Supabase schema/seed exists; backend env loader and doctor added; live env wiring pending | 25-35% |
+| Data backend | Supabase schema/seed + analytics foundation exists; backend env loader and doctor added; live env wiring pending | 35-45% |
 | Real-time avatar | Avatar Runtime now consumes backend `/avatar-session`; engine PoCs still pending | 35-45% |
 | First TestFlight path | Not ready yet | 30-35% |
 
@@ -58,6 +58,7 @@
 - Connected the frontend Avatar Runtime to backend `/avatar-session` so Chat startup consumes the backend-selected runtime mode instead of relying only on local browser choice.
 - Added `?debug=avatar` runtime diagnostics and smoke coverage for the frontend Avatar session bridge.
 - Added backend `engine/.env.local` loading plus `npm run supabase:doctor` / `npm run supabase:doctor:live` so Supabase wiring can be checked without exposing secrets.
+- Added `supabase/sql/003_analytics_admin_foundation.sql`, `/product-event`, and token-gated `/admin/north-star` as the first North Star/Admin MVP data contract.
 
 ## Tech Stack Verdict
 
@@ -200,6 +201,8 @@ Work items:
 - [x] Add deterministic Supabase demo bootstrap seed and env ids.
 - [x] Add backend `.env.local` loading and Supabase doctor scripts.
 - [x] Create Supabase project and run initial SQL through dashboard SQL Editor.
+- [x] Add analytics/admin foundation schema for product events, North Star metrics, cost ledger, and admin notes.
+- [x] Add backend `/product-event` and token-gated `/admin/north-star` contracts.
 - [ ] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.
 - [ ] Convert SQL draft into official Supabase migration after CLI/MCP authentication.
 

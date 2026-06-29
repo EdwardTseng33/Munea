@@ -26,5 +26,6 @@ Thumbs.db
 # 語音測試樣本（可由 engine 小工具 + 卡司表配方重生、不入庫免肥大）
 voice-samples/*.wav
 engine/*.wav
+engine/product_events.json
 __pycache__/
 *.pyc

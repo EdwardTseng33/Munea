@@ -16,6 +16,7 @@ Current state:
 - Supabase adapter now covers companion/app profile, subscription/usage ledger reads, billing save mapping, and privacy request creation/listing with JSON fallback.
 - Backend startup can load private values from `engine/.env.local`, and `npm run supabase:doctor` validates Supabase wiring without printing backend secrets.
 - `/avatar-session` now provides the backend contract for selecting Avatar runtime mode, falling back to `2d-viseme`, and recording premium Avatar minute usage.
+- `/product-event` now records product analytics events, and `/admin/north-star` provides the first token-gated North Star summary contract.
 - Production API contracts are partially represented in `engine/server.py`.
 - Admin and analytics are not built yet, but their data model must be planned now.
 
@@ -93,6 +94,7 @@ Missing:
 | `/chat` | POST | Current fallback chat | required | AI provider + `conversation_summaries` |
 | `/avatar-session` | POST | Select Avatar runtime/provider and entitlement gate | required | `entitlements`, `usage_ledger`, Avatar provider |
 | `/conversation-summary` | POST | Store memory summary, not raw transcript by default | required | `conversation_summaries` |
+| `/product-event` | POST | Record product analytics events without raw transcript text | required | `product_events` |
 
 Prototype coverage:
 
@@ -159,6 +161,10 @@ Admin APIs should not be available to normal app clients.
 
 Admin access should use admin-only roles stored outside user-editable metadata. Sensitive mutations should run through backend service functions and write to `audit_events`.
 
+Prototype coverage:
+
+- `/admin/north-star` exists, but it is closed unless `MUNEA_ADMIN_API_TOKEN` is configured and sent in `X-Munea-Admin-Token`.
+
 ## Supabase Data Model v1
 
 Already drafted in `supabase/sql/001_initial_munea_schema.sql`:
@@ -178,7 +184,7 @@ Already drafted in `supabase/sql/001_initial_munea_schema.sql`:
 - `privacy_requests`
 - `audit_events`
 
-Next analytics/admin additions:
+Analytics/admin foundation added in `supabase/sql/003_analytics_admin_foundation.sql`:
 
 - `product_events`
 - `daily_user_metrics`
@@ -188,7 +194,7 @@ Next analytics/admin additions:
 - `cost_ledger`
 - `admin_notes`
 
-These can be a second migration after the initial schema is applied and verified.
+These tables are the data base for the first Admin MVP and North Star dashboard. They should be applied after the initial schema and demo bootstrap seed.
 
 ## RLS And Permission Matrix
 

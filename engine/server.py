@@ -10,6 +10,7 @@
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
 import os, sys, json, base64, io, wave, time, posixpath
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from env_loader import load_engine_env
 load_engine_env()
@@ -27,12 +28,23 @@ COMPANION_PROFILE_PATH = os.path.join(HERE, "companion_profile.json")
 APP_PROFILE_STORE_PATH = os.path.join(HERE, "app_profile_store.json")
 BILLING_STORE_PATH = os.path.join(HERE, "billing_store.json")
 PRIVACY_REQUESTS_PATH = os.path.join(HERE, "privacy_requests.json")
+PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
 ALLOWED_AUDIO_MIMES = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"}
 AVATAR_ENGINE_MODES = {"static-css", "2d-viseme", "ditto", "liveavatar"}
 PREMIUM_AVATAR_MODES = {"ditto", "liveavatar"}
+MEANINGFUL_EVENT_NAMES = {
+    "voice_session_completed",
+    "routine_reminder_completed",
+    "family_interaction_sent",
+    "family_message_sent",
+    "family_message_viewed",
+    "family_dashboard_viewed",
+    "avatar_session_completed",
+    "companion_summary_created",
+}
 AVATAR_MODE_ALIASES = {
     "static": "static-css",
     "css": "static-css",
@@ -281,6 +293,161 @@ def app_profile_response(data):
     else:
         store = load_app_profile_store()
     return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store), "backend": data_backend_status()}
+
+
+def parse_iso_datetime(value):
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc)
+    if not value:
+        return datetime.now(timezone.utc)
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
+    except Exception:
+        return datetime.now(timezone.utc)
+
+
+def normalize_product_event(data=None):
+    data = data or {}
+    store = load_app_profile_store()
+    account_id = data.get("accountId") or data.get("account_id") or store.get("account", {}).get("id") or "local-demo-account"
+    person_id = data.get("personId") or data.get("person_id") or store.get("primaryCareRecipientId")
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or store.get("familyGroup", {}).get("id")
+    event_time = parse_iso_datetime(data.get("eventTime") or data.get("event_time"))
+    event_name = str(data.get("eventName") or data.get("event_name") or "unknown_event").strip()[:80] or "unknown_event"
+    properties = data.get("properties") if isinstance(data.get("properties"), dict) else {}
+    return {
+        "id": data.get("id") or request_id(),
+        "accountId": str(account_id),
+        "personId": str(person_id) if person_id else None,
+        "familyGroupId": str(family_group_id) if family_group_id else None,
+        "eventName": event_name,
+        "eventTime": event_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source": str(data.get("source") or "munea-api")[:60],
+        "sessionId": data.get("sessionId") or data.get("session_id"),
+        "properties": properties,
+        "createdAt": data.get("createdAt") or data.get("created_at") or utc_now(),
+    }
+
+
+def default_product_events_store():
+    return {"schemaVersion": 1, "events": [], "updatedAt": utc_now()}
+
+
+def normalize_product_events_store(data=None):
+    data = data or {}
+    events = [normalize_product_event(e) for e in data.get("events", [])]
+    events.sort(key=lambda e: e["eventTime"], reverse=True)
+    return {
+        "schemaVersion": int(data.get("schemaVersion") or data.get("schema_version") or 1),
+        "events": events[:1000],
+        "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
+    }
+
+
+def load_product_events(since_iso=None, limit=500):
+    try:
+        remote_events = data_backend().load_product_events(since_iso=since_iso, limit=limit)
+        if remote_events is not None:
+            return [normalize_product_event(e) for e in remote_events]
+    except Exception:
+        pass
+    store = normalize_product_events_store(read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store()))
+    events = store["events"]
+    if since_iso:
+        since = parse_iso_datetime(since_iso)
+        events = [e for e in events if parse_iso_datetime(e.get("eventTime")) >= since]
+    return events[:limit]
+
+
+def append_product_event(data=None):
+    event = normalize_product_event(data)
+    try:
+        remote_event = data_backend().append_product_event(event)
+        if remote_event:
+            return normalize_product_event(remote_event)
+    except Exception:
+        pass
+    store = normalize_product_events_store(read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store()))
+    store["events"].insert(0, event)
+    store["events"] = store["events"][:1000]
+    store["updatedAt"] = utc_now()
+    write_json_file(PRODUCT_EVENTS_PATH, store)
+    return event
+
+
+def is_meaningful_product_event(event):
+    name = event.get("eventName")
+    props = event.get("properties") or {}
+    if name in MEANINGFUL_EVENT_NAMES:
+        return True
+    if name == "voice_session_completed":
+        return int(props.get("durationMs") or props.get("duration_ms") or 0) >= 60000 or int(props.get("turnCount") or props.get("turn_count") or 0) >= 3
+    return bool(props.get("meaningful"))
+
+
+def north_star_summary(data=None):
+    data = data or {}
+    days = max(1, min(30, int(data.get("days") or 7)))
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days - 1)
+    since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
+    events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=1000)
+    meaningful_days = set()
+    active_people = set()
+    voice_started = 0
+    voice_completed = 0
+    avatar_completed = 0
+    family_interactions = 0
+    routine_completions = 0
+    for event in events:
+        event_time = parse_iso_datetime(event.get("eventTime"))
+        event_day = event_time.strftime("%Y-%m-%d")
+        person_id = event.get("personId") or "unknown-person"
+        active_people.add(person_id)
+        name = event.get("eventName")
+        if is_meaningful_product_event(event):
+            meaningful_days.add((person_id, event_day))
+        if name == "voice_session_started":
+            voice_started += 1
+        elif name == "voice_session_completed":
+            voice_completed += 1
+        elif name == "avatar_session_completed":
+            avatar_completed += 1
+        elif name in ("family_interaction_sent", "family_message_sent", "family_message_viewed", "family_dashboard_viewed"):
+            family_interactions += 1
+        elif name == "routine_reminder_completed":
+            routine_completions += 1
+    return {
+        "ok": True,
+        "metric": "Weekly Meaningful Companion Days",
+        "windowDays": days,
+        "since": since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "meaningfulCompanionDays": len(meaningful_days),
+        "activePeople": len(active_people),
+        "voiceSessionSuccessRate": round(voice_completed / voice_started, 4) if voice_started else None,
+        "voiceSessionsStarted": voice_started,
+        "voiceSessionsCompleted": voice_completed,
+        "avatarSessionsCompleted": avatar_completed,
+        "routineCompletions": routine_completions,
+        "familyInteractions": family_interactions,
+        "eventCount": len(events),
+        "backend": data_backend_status(),
+    }
+
+
+def product_event_response(data):
+    event = append_product_event(data)
+    return {"ok": True, "event": event, "northStar": north_star_summary({"days": 7})}
+
+
+def admin_authorized(headers):
+    token = os.environ.get("MUNEA_ADMIN_API_TOKEN") or ""
+    if not token:
+        return False, "admin_token_not_configured"
+    supplied = headers.get("X-Munea-Admin-Token") or headers.get("x-munea-admin-token") or ""
+    if supplied != token:
+        return False, "invalid_admin_token"
+    return True, None
 
 
 def default_billing_store():
@@ -716,7 +883,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "privacy-export", "account-deletion"],
+                "contracts": ["app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -746,6 +913,14 @@ class H(BaseHTTPRequestHandler):
                 self._json(decode_voice_note(data))
             elif self.path == "/avatar-session":
                 self._json(avatar_session_response(data))
+            elif self.path == "/product-event":
+                self._json(product_event_response(data))
+            elif self.path == "/admin/north-star":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(north_star_summary(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

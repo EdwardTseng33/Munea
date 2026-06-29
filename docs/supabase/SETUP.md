@@ -10,6 +10,7 @@ Current status:
 - Cloud project has been created manually in the Supabase dashboard.
 - Repo now contains the initial SQL schema draft at `supabase/sql/001_initial_munea_schema.sql`.
 - Repo now contains a deterministic demo bootstrap seed at `supabase/sql/002_demo_bootstrap.sql`.
+- Repo now contains analytics/admin foundation SQL at `supabase/sql/003_analytics_admin_foundation.sql`.
 - The SQL bootstrap has been tested through the dashboard SQL Editor flow.
 - Supabase CLI is not installed in this Windows environment yet, so this is a SQL Editor-ready schema, not an official migration history entry.
 - The backend can now load `engine/.env.local` directly, and `npm run supabase:doctor` can validate local Supabase wiring without printing secrets.
@@ -65,6 +66,22 @@ supabase/sql/002_demo_bootstrap.sql
 ```
 
 This creates a deterministic backend-test account, primary person, family group, companion profile, free subscription ledger row, usage ledger rows, and a seed audit event.
+
+Then run:
+
+```text
+supabase/sql/003_analytics_admin_foundation.sql
+```
+
+This creates the first Admin/North Star analytics tables:
+
+- `product_events`
+- `daily_user_metrics`
+- `voice_session_metrics`
+- `reminder_events`
+- `family_interaction_events`
+- `cost_ledger`
+- `admin_notes`
 
 Use these backend env values for first Supabase adapter testing:
 
@@ -161,6 +178,7 @@ GEMINI_API_KEY=...
 MUNEA_DATABASE_PROVIDER=supabase
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
+MUNEA_ADMIN_API_TOKEN=...
 MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111
 MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222
 MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333

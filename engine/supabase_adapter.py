@@ -64,6 +64,13 @@ class SupabaseAdapter:
                 "subscription_ledger",
                 "usage_ledger",
                 "privacy_requests",
+                "product_events",
+                "daily_user_metrics",
+                "voice_session_metrics",
+                "reminder_events",
+                "family_interaction_events",
+                "cost_ledger",
+                "admin_notes",
             ],
         }
 
@@ -249,6 +256,32 @@ class SupabaseAdapter:
         )
         return self.privacy_row_to_request(rows[0]) if rows else None
 
+    def append_product_event(self, event):
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "POST",
+            "product_events",
+            query={"select": "*"},
+            payload=self.product_event_to_row(event),
+            prefer="return=representation",
+        )
+        return self.product_event_row_to_event(rows[0]) if rows else None
+
+    def load_product_events(self, since_iso=None, limit=500):
+        if not self.enabled():
+            return None
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "select": "*",
+            "order": "event_time.desc",
+            "limit": str(limit or 500),
+        }
+        if since_iso:
+            query["event_time"] = f"gte.{since_iso}"
+        rows = self._select("product_events", query)
+        return [self.product_event_row_to_event(row) for row in rows]
+
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
             return self._first("family_groups", {"id": f"eq.{self.family_group_id}", "select": "*"})
@@ -374,6 +407,35 @@ class SupabaseAdapter:
             "reason": row.get("reason") or "",
             "requiresReauth": bool(row.get("requires_reauth", True)),
             "subscriptionNoticeRequired": bool(row.get("subscription_notice_required")),
+        }
+
+    def product_event_to_row(self, event):
+        event = event or {}
+        return {
+            "account_id": self.account_id,
+            "person_id": event.get("personId") or event.get("person_id") or self.person_id,
+            "family_group_id": event.get("familyGroupId") or event.get("family_group_id") or self.family_group_id or None,
+            "event_name": event.get("eventName") or event.get("event_name") or "unknown_event",
+            "event_time": event.get("eventTime") or event.get("event_time") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "source": event.get("source") or "munea-api",
+            "session_id": event.get("sessionId") or event.get("session_id"),
+            "properties": event.get("properties") or {},
+        }
+
+    @staticmethod
+    def product_event_row_to_event(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id"),
+            "familyGroupId": row.get("family_group_id"),
+            "eventName": row.get("event_name") or "unknown_event",
+            "eventTime": row.get("event_time") or row.get("created_at"),
+            "source": row.get("source") or "munea-api",
+            "sessionId": row.get("session_id"),
+            "properties": row.get("properties") or {},
+            "createdAt": row.get("created_at"),
         }
 
     @staticmethod
