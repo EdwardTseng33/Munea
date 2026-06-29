@@ -102,7 +102,7 @@ The production database path is Supabase Postgres with Row Level Security. The f
 
 Backend architecture v1 is tracked in `docs/BACKEND-ARCHITECTURE-v1.md`. It defines the API surface, Supabase/RLS model, subscription entitlement flow, data rights contracts, admin console MVP, and North Star analytics plan.
 
-The backend now includes `engine/supabase_adapter.py`. By default the prototype still uses JSON fallback; setting `MUNEA_DATABASE_PROVIDER=supabase` with backend-only Supabase environment variables enables the Supabase path for companion profile reads/writes.
+The backend now includes `engine/supabase_adapter.py`. By default the prototype still uses JSON fallback; setting `MUNEA_DATABASE_PROVIDER=supabase` with backend-only Supabase environment variables enables the Supabase path for companion profile reads/writes and `/app-profile` aggregation.
 
 ---
 

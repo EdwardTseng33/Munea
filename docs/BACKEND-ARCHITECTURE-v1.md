@@ -324,8 +324,8 @@ Do not build a broad CRM first. The admin MVP should answer: what happened, who 
 
 - [x] Add backend config for JSON fallback vs Supabase.
 - [x] Implement Supabase adapter for companion profile.
+- [x] Implement Supabase app profile aggregate adapter for account, person, family group, family memberships, and companion profile.
 - [x] Keep JSON fallback active until Supabase env and seeded ids are configured.
-- [ ] Implement full app profile aggregate reads from Supabase.
 - Add entitlements adapter.
 - Add privacy requests adapter.
 

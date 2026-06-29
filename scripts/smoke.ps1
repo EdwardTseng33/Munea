@@ -105,6 +105,7 @@ env = {
     "SUPABASE_SERVICE_ROLE_KEY": "service-role-test-key",
     "MUNEA_SUPABASE_ACCOUNT_ID": "11111111-1111-4111-8111-111111111111",
     "MUNEA_SUPABASE_PERSON_ID": "22222222-2222-4222-8222-222222222222",
+    "MUNEA_SUPABASE_FAMILY_GROUP_ID": "33333333-3333-4333-8333-333333333333",
 }
 adapter = supabase_adapter.make_adapter(env=env)
 assert adapter.enabled() is True
@@ -116,6 +117,45 @@ profile = adapter.companion_row_to_profile({"template_id": "nening-real-female",
 assert profile["templateId"] == "nening-real-female"
 assert profile["displayName"] == "Nening"
 assert profile["nameTouched"] is True
+
+def fake_request(method, table, query=None, payload=None, prefer=None):
+    assert method == "GET"
+    fixtures = {
+        "accounts": [{
+            "id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "locale": "zh-TW",
+            "preferred_languages": ["zh-TW", "en"],
+            "created_at": "2026-06-29T00:00:00Z",
+            "updated_at": "2026-06-29T00:00:00Z",
+        }],
+        "persons": [{
+            "id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "display_name": "Primary user",
+            "relationship": "self",
+        }],
+        "family_groups": [{
+            "id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"] or "33333333-3333-4333-8333-333333333333",
+            "name": "Munea Care Circle",
+        }],
+        "family_memberships": [{
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "role": "primary_user",
+        }],
+        "companion_profiles": [{
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "template_id": "nening-real-female",
+            "display_name": "Nening",
+            "name_touched": True,
+            "updated_at": "2026-06-29T00:00:00Z",
+        }],
+    }
+    return fixtures[table]
+
+adapter._request = fake_request
+store = adapter.load_app_profile_store()
+assert store["account"]["locale"] == "zh-TW"
+assert store["familyGroup"]["members"][0]["role"] == "primary_user"
+assert store["companionProfiles"][env["MUNEA_SUPABASE_PERSON_ID"]]["displayName"] == "Nening"
 print("supabase adapter", adapter.status()["enabled"])
 '@ | python -
 Pass "Supabase adapter enables only when backend env is complete"

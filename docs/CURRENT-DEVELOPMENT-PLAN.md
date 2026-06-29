@@ -51,6 +51,7 @@
 - Added Supabase production database bootstrap files: `supabase/sql/001_initial_munea_schema.sql`, `docs/supabase/SETUP.md`, and `docs/supabase/munea-env.example.txt`.
 - Added `docs/BACKEND-ARCHITECTURE-v1.md` to lock the backend API, data, RLS, subscription, admin, and North Star analytics plan before deeper feature work.
 - Added `engine/supabase_adapter.py` and wired companion profile load/save through a Supabase-ready adapter with JSON fallback.
+- Extended the Supabase adapter so `/app-profile` can aggregate account, person, family group, family membership, and companion profile data when Supabase env is configured.
 
 ## Tech Stack Verdict
 
@@ -183,6 +184,7 @@ Work items:
 - [x] Draft Supabase Postgres schema and RLS policy baseline.
 - [x] Document Backend Architecture v1, including admin console and North Star dashboard plan.
 - [x] Add Supabase-ready backend adapter with JSON fallback.
+- [x] Add Supabase app profile aggregate adapter.
 - [ ] Create/live-link Supabase project and run initial SQL.
 - [ ] Convert SQL draft into official Supabase migration after CLI/MCP authentication.
 

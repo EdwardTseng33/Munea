@@ -189,15 +189,31 @@ def normalize_app_profile_store(data=None):
     }
 
 
-def load_app_profile_store():
+def load_json_app_profile_store():
     raw = read_json_file(APP_PROFILE_STORE_PATH)
     if raw is None:
         return default_app_profile_store(load_legacy_companion_profile())
     return normalize_app_profile_store(raw)
 
 
+def load_app_profile_store():
+    try:
+        remote_store = data_backend().load_app_profile_store()
+        if remote_store:
+            return normalize_app_profile_store(remote_store)
+    except Exception:
+        pass
+    return load_json_app_profile_store()
+
+
 def save_app_profile_store(data):
     store = normalize_app_profile_store({**data, "updatedAt": utc_now()})
+    try:
+        remote_store = data_backend().save_app_profile_store(store)
+        if remote_store:
+            store = normalize_app_profile_store(remote_store)
+    except Exception:
+        pass
     write_json_file(APP_PROFILE_STORE_PATH, store)
     return store
 

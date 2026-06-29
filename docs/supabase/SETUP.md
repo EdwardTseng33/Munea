@@ -97,6 +97,7 @@ Current behavior:
 - Default backend remains JSON fallback.
 - Set `MUNEA_DATABASE_PROVIDER=supabase` plus Supabase URL, service role key, account id, and person id to enable the adapter.
 - `/healthz`, `/app-profile`, and `/companion-profile` expose backend status so we can verify whether the process is using JSON fallback or Supabase.
+- `/app-profile` can aggregate `accounts`, `persons`, `family_groups`, `family_memberships`, and `companion_profiles` from Supabase when env is complete.
 
 Required backend-only environment values:
 
