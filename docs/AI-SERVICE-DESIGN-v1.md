@@ -193,7 +193,7 @@ Memory types:
 | `routine` | sleeps at 22:00, morning walk, medication reminder | durable but requires confirmation |
 | `health_context` | blood pressure concern, dizziness mention | sensitive, time-bounded unless confirmed |
 | `emotion` | lonely this week, anxious recently | decays unless repeated |
-| `topic_interest` | books, travel, outings, exercise, finance, films, music, spirituality, food | durable but low sensitivity |
+| `topic_interest` | books, travel, outings, exercise, finance, Korean/Japanese/Chinese/Taiwan dramas, Netflix/streaming, films, music, spirituality, food | durable but low sensitivity |
 | `temporary_event` | tomorrow rains, dinner appointment | short TTL |
 | `safety_signal` | crisis phrase, fall, emergency | high retention + audit policy |
 
@@ -241,7 +241,7 @@ Perception sources:
 | location/region | local recommendations, Taiwan language/culture context |
 | calendar/routines | reminders, check-ins, activity suggestions |
 | family context | who can be notified, who visited recently |
-| current retrieval | books, travel, outings, exercise, finance, media, food, news, local events when freshness matters |
+| current retrieval | books, travel, outings, exercise, finance, video entertainment, music, food, news, local events when freshness matters |
 | interest graph | what the person tends to enjoy |
 
 Supported topic domains should be broad. Movies are only one example, not the architecture.
@@ -253,7 +253,8 @@ Supported topic domains should be broad. Movies are only one example, not the ar
 | Local outings | weather, opening hours, local events, maps | suggest nearby activities and avoid inventing schedules |
 | Exercise / sport | weather, routine memory, health boundary, local facilities | encourage safe activity, avoid medical/fitness prescription |
 | Finance | market data, trusted news, risk disclaimer | discuss markets factually, never give personalized investment instruction |
-| Movies / media / music | current catalog, showtimes, reviews | discuss taste and current options with verified availability |
+| Video entertainment | streaming catalog, regional availability, showtimes, reviews | discuss Korean dramas, Japanese dramas, Chinese dramas, Taiwan dramas, Netflix/streaming series, films, documentaries, variety, anime, and current options with verified availability |
+| Music / audio | music catalog, events, reviews | discuss songs, albums, singers, podcasts, and concerts with availability/date caveats |
 | Food / cooking | preferences, weather, local options, recipe sources | suggest meals or places with dietary and safety caveats |
 | News / current affairs | trusted news, date context | discuss current events without pretending certainty beyond sources |
 | Spiritual reflection | curated wisdom sources, user preference | offer gentle framing without fake quotes or imposed belief |
@@ -319,7 +320,7 @@ Current implementation anchors:
   - evaluates safety risk and emits a safety-related product event when audit is required.
 - `POST /perception/topic-plan`
   - identifies the user's broad topic domain and returns which real-world sources are needed before making recommendations.
-  - covers books, travel, outings, exercise, finance, media, food, news, spiritual reflection, and future domains through a shared contract.
+  - covers books, travel, outings, exercise, finance, video entertainment, music/audio, food, news, spiritual reflection, and future domains through a shared contract.
 - `engine/memory_items.json`
   - local prototype fallback only.
 
@@ -331,7 +332,7 @@ These endpoints are not the final AI provider integration. They are the durable 
 2. Add Supabase `memory_items`, `perception_snapshots`, and `ai_brain_runs` tables.
 3. Wire Butler Brain to Claude Sonnet for `/memory/extract`.
 4. Wire Guardian Brain to rules + Claude Sonnet + moderation classifier.
-5. Add current-facts retrieval only for topics that need freshness, such as books availability, travel, local events, exercise/weather, finance, media catalogs, food/local options, weather, or news.
+5. Add current-facts retrieval only for topics that need freshness, such as books availability, travel, local events, exercise/weather, finance, video streaming catalogs/regional availability, showtimes, food/local options, weather, or news.
 6. Add privacy export/deletion coverage for memory items.
 7. Add admin safety-event review surface.
 

@@ -209,7 +209,7 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
             "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
             "memory_type": "preference",
-            "content": "Likes movies",
+            "content": "Likes Korean dramas and Netflix series",
             "source": "conversation",
             "confidence": 0.8,
             "importance": 0.7,
@@ -219,7 +219,7 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "valid_until": None,
             "last_confirmed_at": None,
             "supersedes_memory_id": None,
-            "metadata": {"topic": "movie"},
+            "metadata": {"topic": "video_entertainment"},
             "created_at": "2026-06-29T00:00:00Z",
             "updated_at": "2026-06-29T00:00:00Z",
         }],
@@ -254,7 +254,7 @@ events = adapter.load_product_events(limit=10)
 assert events[0]["eventName"] == "voice_session_completed"
 memories = adapter.load_memory_items(limit=10)
 assert memories[0]["type"] == "preference"
-assert memories[0]["content"] == "Likes movies"
+assert memories[0]["content"] == "Likes Korean dramas and Netflix series"
 saved_memories = adapter.save_memory_items([{
     "personId": env["MUNEA_SUPABASE_PERSON_ID"],
     "type": "relationship",
@@ -363,25 +363,31 @@ assert status["effortProfiles"]["deep"]["effort"] == "high"
 assert "books" in status["topicDomains"]
 assert "finance" in status["topicDomains"]
 assert "travel" in status["topicDomains"]
+assert "video_entertainment" in status["topicDomains"]
 plan = model_router.topic_perception_plan_response({"query": "I want books, travel, exercise, and finance ideas for this week"})
 domains = {item["domain"] for item in plan["domains"]}
 assert {"books", "travel", "exercise", "finance"}.issubset(domains)
 assert plan["needsCurrentFacts"] is True
 assert plan["antiFabricationPolicy"]["verifyRecommendationsWhenFreshnessIsHigh"] is True
+video_plan = model_router.topic_perception_plan_response({"query": "Can we talk about Korean drama, Japanese drama, Taiwan drama, Netflix series, and documentaries?"})
+video_domains = {item["domain"] for item in video_plan["domains"]}
+assert "video_entertainment" in video_domains
+assert "streaming_catalog" in video_plan["perceptionSources"]
+assert "regional_availability" in video_plan["perceptionSources"]
 
 with tempfile.TemporaryDirectory() as d:
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     extracted = server.memory_extract_response({
         "action": "store",
-        "text": "I like movies and often talk with my daughter Mei-Hua. Recently I feel lonely.",
+        "text": "I like Korean dramas on Netflix and often talk with my daughter Mei-Hua. Recently I feel lonely.",
     })
     assert extracted["ok"] is True
     assert extracted["stored"] >= 2
     types = {item["type"] for item in extracted["memoryItems"]}
     assert "preference" in types
     assert "relationship" in types
-    retrieved = server.memory_retrieve_response({"query": "movies daughter", "limit": 5})
+    retrieved = server.memory_retrieve_response({"query": "Korean drama Netflix daughter", "limit": 5})
     assert retrieved["ok"] is True
     assert retrieved["count"] >= 1
 
