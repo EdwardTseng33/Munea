@@ -360,6 +360,14 @@ assert status["brains"]["reflex"]["interface"] == "MuneaVoiceProvider"
 assert status["brains"]["butler"]["interface"] == "MuneaBrainRouter"
 assert status["brains"]["guardian"]["interface"] == "MuneaBrainRouter"
 assert status["effortProfiles"]["deep"]["effort"] == "high"
+assert "books" in status["topicDomains"]
+assert "finance" in status["topicDomains"]
+assert "travel" in status["topicDomains"]
+plan = model_router.topic_perception_plan_response({"query": "I want books, travel, exercise, and finance ideas for this week"})
+domains = {item["domain"] for item in plan["domains"]}
+assert {"books", "travel", "exercise", "finance"}.issubset(domains)
+assert plan["needsCurrentFacts"] is True
+assert plan["antiFabricationPolicy"]["verifyRecommendationsWhenFreshnessIsHigh"] is True
 
 with tempfile.TemporaryDirectory() as d:
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
@@ -639,6 +647,9 @@ if "embedding vector(1536)" not in ai_memory:
     raise SystemExit("Missing memory embedding column")
 if "supersedes_memory_id" not in ai_memory:
     raise SystemExit("Missing memory supersede support")
+for snapshot_type in ["book_context", "travel_context", "exercise_context", "finance_context", "media_context", "food_context", "news_context", "wisdom_context"]:
+    if snapshot_type not in ai_memory:
+        raise SystemExit("Missing perception snapshot type: " + snapshot_type)
 if "weekly meaningful companion days" not in Path("docs/BACKEND-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower():
     raise SystemExit("Backend architecture missing North Star definition")
 print("supabase tables", len(required_tables))
@@ -1065,6 +1076,7 @@ if ($health.contracts -notcontains "ai-brain-status") { throw "/healthz missing 
 if ($health.contracts -notcontains "memory-extract") { throw "/healthz missing memory-extract contract" }
 if ($health.contracts -notcontains "memory-retrieve") { throw "/healthz missing memory-retrieve contract" }
 if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missing guardian-evaluate contract" }
+if ($health.contracts -notcontains "perception-topic-plan") { throw "/healthz missing perception-topic-plan contract" }
 if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
 if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }

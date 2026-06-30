@@ -300,6 +300,10 @@ def guardian_evaluate_response(data):
     return result
 
 
+def topic_perception_plan_response(data):
+    return model_router.topic_perception_plan_response(data or {})
+
+
 def load_legacy_companion_profile():
     return normalize_companion_profile(read_json_file(COMPANION_PROFILE_PATH, {}))
 
@@ -1182,7 +1186,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "perception-topic-plan", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -1222,6 +1226,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(memory_retrieve_response(data))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
+            elif self.path == "/perception/topic-plan":
+                self._json(topic_perception_plan_response(data))
             elif self.path == "/admin/north-star":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

@@ -22,6 +22,7 @@ Current state:
 - `/auth-status` now defines the backend token verification contract. Supabase mode verifies `Authorization: Bearer <access_token>` against Supabase Auth and derives the real `auth.users.id`; local developer bypass is env-gated and marked as developer mode.
 - `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` now define the first AI service contracts for three-brain routing, memory lifecycle, and Guardian risk policy.
 - The Supabase adapter now includes `memory_items` load/save mapping, so Butler memory extraction can persist structured memories through the backend when Supabase env is configured, with JSON fallback for local development.
+- The perception design is now domain-aware rather than movie-specific: books, travel, outings, exercise, finance, media, food, news, and wisdom/reflection topics share the same anti-fabrication contract.
 - The web onboarding/settings flow now calls the `/account-bootstrap` contract through a one-time browser bootstrap flag. Local JSON mode can create the prototype account graph immediately; Supabase mode returns `auth_user_required` until a verified Auth / Apple Sign-In bearer token is available.
 - Auth/onboarding v1 is now locked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`: v1 providers are Sign in with Apple, Google, and email magic link/OTP fallback; Facebook is intentionally out of v1.
 - Production API contracts are partially represented in `engine/server.py`.
@@ -249,6 +250,8 @@ AI memory/service foundation added in `supabase/sql/004_ai_memory_service_founda
 - `ai_brain_runs`
 
 These tables support long-term companion memory, time/weather/topic perception, Guardian decisions, model cost tracking, and privacy export/deletion requirements.
+
+Perception snapshots must be domain-aware. `current_topic` is a generic fallback, but the schema also supports `book_context`, `travel_context`, `local_activity_context`, `exercise_context`, `finance_context`, `media_context`, `food_context`, `news_context`, and `wisdom_context`.
 
 ## RLS And Permission Matrix
 

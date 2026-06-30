@@ -31,13 +31,57 @@ MEMORY_TYPES = {
 
 SENSITIVE_TYPES = {"health_context", "emotion", "safety_signal"}
 
+TOPIC_DOMAINS = {
+    "books": {
+        "keywords": ["book", "books", "novel", "reading", "author", "literature"],
+        "freshness": "medium",
+        "sources": ["book_catalog", "library_or_store_availability", "reviews"],
+    },
+    "travel": {
+        "keywords": ["travel", "trip", "hotel", "flight", "vacation", "outing"],
+        "freshness": "high",
+        "sources": ["weather", "maps", "local_events", "transportation"],
+    },
+    "local_activities": {
+        "keywords": ["activity", "event", "museum", "walk", "park", "restaurant", "outing"],
+        "freshness": "high",
+        "sources": ["weather", "local_events", "opening_hours", "maps"],
+    },
+    "exercise": {
+        "keywords": ["exercise", "sport", "walk", "yoga", "swim", "gym", "run"],
+        "freshness": "medium",
+        "sources": ["weather", "routine", "health_boundary", "local_facilities"],
+    },
+    "finance": {
+        "keywords": ["stock", "market", "finance", "invest", "economy", "etf", "fund"],
+        "freshness": "high",
+        "sources": ["market_data", "news", "risk_disclaimer"],
+    },
+    "movies_media": {
+        "keywords": ["movie", "film", "series", "cinema", "streaming", "music"],
+        "freshness": "high",
+        "sources": ["current_catalog", "showtimes", "reviews"],
+    },
+    "food_cooking": {
+        "keywords": ["food", "cook", "recipe", "restaurant", "tea", "coffee"],
+        "freshness": "medium",
+        "sources": ["preference_memory", "weather", "local_options"],
+    },
+    "news_current_affairs": {
+        "keywords": ["news", "politics", "world", "current", "today"],
+        "freshness": "high",
+        "sources": ["trusted_news", "date_context"],
+    },
+    "spiritual_reflection": {
+        "keywords": ["buddhism", "dao", "bible", "faith", "meaning", "life"],
+        "freshness": "low",
+        "sources": ["curated_wisdom_sources", "user_preference"],
+    },
+}
+
 
 def utc_now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-
-
-def request_id():
-    return "brain_" + uuid.uuid4().hex[:12]
 
 
 def env_model(key, fallback):
@@ -105,6 +149,7 @@ def brain_status_response():
         "service": "munea-ai-service",
         "version": 1,
         "brains": brain_config(),
+        "topicDomains": topic_domain_catalog(),
         "effortProfiles": {
             "quick": effort_profile("quick"),
             "standard": effort_profile("standard"),
@@ -115,6 +160,7 @@ def brain_status_response():
             "memory-extract",
             "memory-retrieve",
             "guardian-evaluate",
+            "topic-perception-plan",
         ],
     }
 
@@ -131,6 +177,57 @@ def text_from_payload(data):
             if value:
                 parts.append(str(value))
     return "\n".join(parts)
+
+
+def tokenize(text):
+    return {t for t in re.split(r"[\s,.;:!?，。！？、]+", (text or "").lower()) if t}
+
+
+def topic_domain_catalog():
+    return {
+        key: {
+            "freshness": value["freshness"],
+            "sources": value["sources"],
+        }
+        for key, value in TOPIC_DOMAINS.items()
+    }
+
+
+def detect_topic_domains(text):
+    tokens = tokenize(text)
+    lowered = (text or "").lower()
+    domains = []
+    for domain, config in TOPIC_DOMAINS.items():
+        matched = sorted({k for k in config["keywords"] if k in tokens or k in lowered})
+        if matched:
+            domains.append({
+                "domain": domain,
+                "matched": matched,
+                "freshness": config["freshness"],
+                "requiredSources": config["sources"],
+            })
+    return domains
+
+
+def topic_perception_plan_response(data):
+    data = data or {}
+    text = data.get("topic") or data.get("query") or text_from_payload(data)
+    domains = detect_topic_domains(text)
+    needs_current_facts = any(d["freshness"] in {"medium", "high"} for d in domains)
+    return {
+        "ok": True,
+        "brain": "butler",
+        "query": text,
+        "domains": domains,
+        "needsCurrentFacts": needs_current_facts,
+        "antiFabricationPolicy": {
+            "doNotInventAvailability": True,
+            "verifyRecommendationsWhenFreshnessIsHigh": True,
+            "sayWhenCurrentDataIsUnavailable": True,
+        },
+        "perceptionSources": sorted({source for d in domains for source in d["requiredSources"]}),
+        "supportedDomains": topic_domain_catalog(),
+    }
 
 
 def make_candidate(memory_type, content, confidence=0.7, importance=0.5, valid_days=None, source="conversation"):
@@ -153,21 +250,21 @@ def memory_extract_response(data):
     lowered = text.lower()
     candidates = []
 
-    if any(k in text for k in ["喜歡", "愛看", "愛吃", "偏好"]) or "like" in lowered:
+    if any(k in lowered for k in ["like", "love", "prefer", "favorite", "enjoy"]):
         candidates.append(make_candidate("preference", text, 0.72, 0.68, None))
-    if any(k in text for k in ["不喜歡", "討厭", "不想要"]) or "dislike" in lowered:
+    if any(k in lowered for k in ["dislike", "hate", "avoid", "do not like"]):
         candidates.append(make_candidate("preference", text, 0.72, 0.7, None))
-    if any(k in text for k in ["女兒", "兒子", "太太", "先生", "媽媽", "爸爸", "家人", "孫"]) or any(k in lowered for k in ["daughter", "son", "wife", "husband", "family"]):
+    if any(k in lowered for k in ["daughter", "son", "wife", "husband", "mother", "father", "family", "grandchild"]):
         candidates.append(make_candidate("relationship", text, 0.75, 0.82, None))
-    if any(k in text for k in ["吃藥", "服藥", "回診", "散步", "睡覺", "起床", "運動"]):
+    if any(k in lowered for k in ["medicine", "medication", "doctor visit", "walk every", "sleep at", "exercise every"]):
         candidates.append(make_candidate("routine", text, 0.7, 0.8, 90))
-    if any(k in text for k in ["電影", "音樂", "新聞", "旅行", "股票", "烹飪", "書"]):
+    if detect_topic_domains(text):
         candidates.append(make_candidate("topic_interest", text, 0.7, 0.6, None))
-    if any(k in text for k in ["孤單", "難過", "焦慮", "害怕", "失眠", "心情"]):
+    if any(k in lowered for k in ["lonely", "sad", "anxious", "afraid", "insomnia", "mood", "depressed"]):
         candidates.append(make_candidate("emotion", text, 0.66, 0.7, 30))
-    if any(k in text for k in ["頭暈", "胸痛", "跌倒", "血壓", "疼痛", "發燒"]):
+    if any(k in lowered for k in ["dizzy", "chest pain", "fell", "blood pressure", "pain", "fever"]):
         candidates.append(make_candidate("health_context", text, 0.65, 0.78, 30))
-    if any(k in text for k in ["今天", "明天", "下雨", "天氣", "等一下"]):
+    if any(k in lowered for k in ["today", "tomorrow", "weather", "rain", "later"]):
         candidates.append(make_candidate("temporary_event", text, 0.62, 0.35, 3))
     if guardian_evaluate_response({"text": text})["risk"]["level"] in {"medium", "high", "critical"}:
         candidates.append(make_candidate("safety_signal", text, 0.8, 1.0, 365, "guardian"))
@@ -181,6 +278,7 @@ def memory_extract_response(data):
         "modelPlan": brain_config()["butler"],
         "effort": effort_profile((data or {}).get("effort") or "quick"),
         "inputLength": len(text),
+        "topicDomains": detect_topic_domains(text),
         "candidates": candidates,
         "storagePolicy": {
             "storeRawTranscriptByDefault": False,
@@ -191,7 +289,7 @@ def memory_extract_response(data):
 
 
 def normalize_memory_item(candidate, person_id="local-person-self"):
-    item = {
+    return {
         "id": "mem_" + uuid.uuid4().hex[:12],
         "personId": person_id,
         "type": candidate.get("type") if candidate.get("type") in MEMORY_TYPES else "temporary_event",
@@ -206,12 +304,10 @@ def normalize_memory_item(candidate, person_id="local-person-self"):
         "lastConfirmedAt": None,
         "supersedesMemoryId": None,
         "consentScope": "user",
+        "metadata": {
+            "topicDomains": detect_topic_domains(candidate.get("content") or ""),
+        },
     }
-    return item
-
-
-def tokenize(text):
-    return {t for t in re.split(r"[\s,.;:!?，。！？、]+", (text or "").lower()) if t}
 
 
 def score_memory(query, item):
@@ -235,6 +331,7 @@ def memory_retrieve_response(data, memory_items=None):
         "ok": True,
         "brain": "butler",
         "query": query,
+        "topicDomains": detect_topic_domains(query),
         "count": min(len(ranked), limit),
         "memories": ranked[:limit],
         "retrievalPolicy": {
@@ -251,25 +348,25 @@ def guardian_evaluate_response(data):
     level = "none"
     action = "allow"
 
-    critical_terms = ["想死", "自殺", "不想活", "傷害自己", "kill myself", "suicide"]
-    emergency_terms = ["胸痛", "喘不過氣", "昏倒", "跌倒起不來", "stroke", "heart attack"]
-    medical_terms = ["診斷", "處方", "藥量", "停藥", "治療", "diagnose", "prescribe"]
-    distress_terms = ["孤單", "難過", "焦慮", "失眠", "害怕", "panic", "depressed"]
+    critical_terms = ["want to die", "kill myself", "suicide", "hurt myself", "self harm"]
+    emergency_terms = ["chest pain", "cannot breathe", "fainted", "fell and cannot get up", "stroke", "heart attack"]
+    medical_terms = ["diagnose", "prescribe", "dosage", "stop medication", "treatment"]
+    distress_terms = ["lonely", "sad", "anxious", "insomnia", "afraid", "panic", "depressed"]
 
     lowered = text.lower()
-    if any(k in text or k in lowered for k in critical_terms):
+    if any(k in lowered for k in critical_terms):
         categories.append("self_harm_crisis")
         level = "critical"
         action = "interrupt_and_escalate"
-    elif any(k in text or k in lowered for k in emergency_terms):
+    elif any(k in lowered for k in emergency_terms):
         categories.append("medical_emergency_signal")
         level = "high"
         action = "advise_emergency_help"
-    elif any(k in text or k in lowered for k in medical_terms):
+    elif any(k in lowered for k in medical_terms):
         categories.append("medical_boundary")
         level = "medium"
         action = "safe_completion_with_boundary"
-    elif any(k in text or k in lowered for k in distress_terms):
+    elif any(k in lowered for k in distress_terms):
         categories.append("emotional_distress")
         level = "low"
         action = "supportive_check_in"

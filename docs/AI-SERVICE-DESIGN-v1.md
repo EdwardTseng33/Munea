@@ -188,12 +188,12 @@ Memory types:
 | Type | Examples | Retention behavior |
 |---|---|---|
 | `identity` | name preference, locale, living region | durable, user-editable |
-| `preference` | likes movies, dislikes noisy places | durable, confirm/update over time |
+| `preference` | likes books, travel, finance, exercise, films, dislikes noisy places | durable, confirm/update over time |
 | `relationship` | daughter name, caregiver, spouse | durable, high permission sensitivity |
 | `routine` | sleeps at 22:00, morning walk, medication reminder | durable but requires confirmation |
 | `health_context` | blood pressure concern, dizziness mention | sensitive, time-bounded unless confirmed |
 | `emotion` | lonely this week, anxious recently | decays unless repeated |
-| `topic_interest` | movies, music, Buddhism, travel | durable but low sensitivity |
+| `topic_interest` | books, travel, outings, exercise, finance, films, music, spirituality, food | durable but low sensitivity |
 | `temporary_event` | tomorrow rains, dinner appointment | short TTL |
 | `safety_signal` | crisis phrase, fall, emergency | high retention + audit policy |
 
@@ -241,17 +241,32 @@ Perception sources:
 | location/region | local recommendations, Taiwan language/culture context |
 | calendar/routines | reminders, check-ins, activity suggestions |
 | family context | who can be notified, who visited recently |
-| current retrieval | movie/news/event facts when user wants current topics |
+| current retrieval | books, travel, outings, exercise, finance, media, food, news, local events when freshness matters |
 | interest graph | what the person tends to enjoy |
 
-Example flow:
+Supported topic domains should be broad. Movies are only one example, not the architecture.
+
+| Domain | Current fact sources | Product behavior |
+|---|---|---|
+| Books / reading | book catalog, library/store availability, reviews | discuss authors, genres, reading habits, recommend with availability caveat |
+| Travel / trips | weather, maps, transport, local conditions | suggest realistic plans, timing, packing, mobility-safe alternatives |
+| Local outings | weather, opening hours, local events, maps | suggest nearby activities and avoid inventing schedules |
+| Exercise / sport | weather, routine memory, health boundary, local facilities | encourage safe activity, avoid medical/fitness prescription |
+| Finance | market data, trusted news, risk disclaimer | discuss markets factually, never give personalized investment instruction |
+| Movies / media / music | current catalog, showtimes, reviews | discuss taste and current options with verified availability |
+| Food / cooking | preferences, weather, local options, recipe sources | suggest meals or places with dietary and safety caveats |
+| News / current affairs | trusted news, date context | discuss current events without pretending certainty beyond sources |
+| Spiritual reflection | curated wisdom sources, user preference | offer gentle framing without fake quotes or imposed belief |
+
+Generic flow:
 
 ```text
-User wants to talk about movies
+User wants to talk about any interest domain
   -> read interest memories
   -> check region and language
-  -> retrieve current movie facts if recommendation is requested
-  -> avoid making up showtimes or availability
+  -> decide whether current facts are needed
+  -> retrieve domain-appropriate facts if recommendation is requested
+  -> avoid making up availability, prices, schedules, weather, market data, or news
   -> respond through Reflex in warm conversation
 ```
 
@@ -260,6 +275,7 @@ Munea should distinguish between:
 - companionship talk, where current facts are optional,
 - recommendations, where current facts must be verified,
 - health/safety claims, where advice must stay bounded.
+- finance, health, travel, and weather-sensitive suggestions, where date, region, and source freshness matter.
 
 ## Wisdom Lens
 
@@ -301,6 +317,9 @@ Current implementation anchors:
   - retrieves scoped memory from Supabase when configured, otherwise from local JSON.
 - `POST /guardian/evaluate`
   - evaluates safety risk and emits a safety-related product event when audit is required.
+- `POST /perception/topic-plan`
+  - identifies the user's broad topic domain and returns which real-world sources are needed before making recommendations.
+  - covers books, travel, outings, exercise, finance, media, food, news, spiritual reflection, and future domains through a shared contract.
 - `engine/memory_items.json`
   - local prototype fallback only.
 
@@ -312,7 +331,7 @@ These endpoints are not the final AI provider integration. They are the durable 
 2. Add Supabase `memory_items`, `perception_snapshots`, and `ai_brain_runs` tables.
 3. Wire Butler Brain to Claude Sonnet for `/memory/extract`.
 4. Wire Guardian Brain to rules + Claude Sonnet + moderation classifier.
-5. Add current-facts retrieval only for topics that need freshness, such as movies, weather, local events, or news.
+5. Add current-facts retrieval only for topics that need freshness, such as books availability, travel, local events, exercise/weather, finance, media catalogs, food/local options, weather, or news.
 6. Add privacy export/deletion coverage for memory items.
 7. Add admin safety-event review surface.
 
@@ -324,4 +343,5 @@ These endpoints are not the final AI provider integration. They are the durable 
 - Memory rows are account/person scoped.
 - Sensitive memories have consent and retention policy.
 - Current-topic recommendations use retrieval instead of fabrication.
+- Current-topic recommendations are domain-aware rather than movie-only.
 - App Store trust requirements remain in scope: export, deletion, privacy labels, and non-medical positioning.
