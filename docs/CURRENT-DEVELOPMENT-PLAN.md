@@ -65,6 +65,7 @@
 - Added `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md` to lock progressive onboarding, guest mode, v1 auth providers, registration fields, and the future Supabase Auth bridge. v1 providers are Sign in with Apple, Google, and email magic link/OTP fallback; Facebook is intentionally out of v1.
 - Added browser Auth Bridge v0: `web/src/auth.js` exposes `window.MuneaAuth` for Apple, Google, email magic link/OTP, guest mode, sign-out, and Bearer-token API headers when a Supabase session exists. `web/src/auth-config.example.js` documents publishable-key-only browser configuration.
 - Added local-only developer mode foundation: `MUNEA_DEV_CONFIG` can auto sign-in, skip onboarding, and mark all developer/test events as analytics-excluded. North Star summaries now exclude developer/internal/test/QA/ops events and configured excluded ids.
+- Added Settings account UI foundation: guest/signed-in/developer status card, Apple/Google/email sign-in sheet, sign-out control, and developer-mode entry when local bypass is allowed.
 
 ## Tech Stack Verdict
 
@@ -215,7 +216,8 @@ Work items:
 - [x] Lock auth/onboarding product architecture: Apple, Google, email magic link/OTP fallback, guest mode, and progressive profile gates.
 - [x] Implement Supabase Auth frontend bridge foundation for Sign in with Apple, Google, and email magic link/OTP.
 - [x] Add local-only developer bypass and analytics exclusion for test/developer accounts.
-- [ ] Add production login UI and configured Supabase Auth provider testing.
+- [x] Add production login UI foundation for Apple, Google, email OTP, sign-out, and local developer entry.
+- [ ] Test configured Supabase Auth providers end-to-end.
 - [ ] Add backend token verification and derive `auth.users.id` from `Authorization: Bearer <access_token>`.
 - [ ] Convert `/account-bootstrap` away from trusting body-provided `authUserId`.
 - [ ] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.

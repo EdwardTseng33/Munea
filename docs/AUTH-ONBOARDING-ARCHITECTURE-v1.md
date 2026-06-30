@@ -98,6 +98,24 @@ Auth gate triggers:
 | Data export / account deletion | sign in required + reauth |
 | Cross-device memory | sign in required |
 
+## Production Login UI Foundation
+
+The first app-facing login surface lives in Settings so the home and S2S chat loop can remain usable in guest mode.
+
+Current UI contract:
+
+- Settings account card shows guest, signed-in, or developer-mode state.
+- Sign-in sheet offers Sign in with Apple, Google, and email magic link/OTP.
+- Sign-out is available from the account card after a session exists.
+- Developer-mode entry is hidden unless local developer bypass is explicitly allowed.
+- The UI calls `window.MuneaAuth` only; it does not know Supabase secrets or backend-only credentials.
+- Auth state changes close the sheet, refresh the account card, and retry `/account-bootstrap` when onboarding is already complete.
+
+Not complete yet:
+
+- Real Supabase provider configuration must still be tested end-to-end.
+- Backend must still verify `Authorization: Bearer <access_token>` and derive `auth.users.id` server-side.
+
 ## Developer Mode And Test Accounts
 
 Munea needs a developer/tester path so Edward, designers, and engineers can move quickly without repeatedly completing registration and onboarding.
@@ -243,7 +261,8 @@ Phase 1: Frontend session bridge
 - [x] Send Bearer-token API headers, `Authorization: Bearer <access_token>`, from app/onboarding API calls when a Supabase session exists.
 - [x] Add sign-out method.
 - [x] Add local-only developer mode with onboarding skip and analytics exclusion.
-- [ ] Add production login UI states.
+- [x] Add production login UI foundation in Settings.
+- [ ] Test configured Supabase Auth provider redirects and callbacks.
 - [ ] Store session using Supabase client session handling in a configured environment.
 
 Phase 2: Backend auth verification

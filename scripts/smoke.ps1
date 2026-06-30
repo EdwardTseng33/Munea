@@ -674,6 +674,20 @@ app = Path("web/src/app.js").read_text(encoding="utf-8")
 index = Path("web/index.html").read_text(encoding="utf-8")
 onboarding = Path("web/onboarding.html").read_text(encoding="utf-8")
 config = Path("web/src/auth-config.example.js").read_text(encoding="utf-8")
+required_auth_ui = [
+    "authCard",
+    "authSheet",
+    "authSignInBtn",
+    "authSignOutBtn",
+    "authAppleBtn",
+    "authGoogleBtn",
+    "authEmailInput",
+    "authEmailBtn",
+    "authDeveloperBtn",
+]
+missing_auth_ui = [token for token in required_auth_ui if token not in index]
+if missing_auth_ui:
+    raise SystemExit("Missing auth UI tokens: " + ", ".join(missing_auth_ui))
 required_auth = [
     "window.MuneaAuth",
     "signInWithApple",
@@ -700,6 +714,9 @@ for token in ["src/auth.js", "MuneaAuth"]:
 for token in ["muneaAuthHeaders", "Authorization", "Bearer", "munea:auth-state"]:
     if token not in app:
         raise SystemExit("app.js missing auth API bridge: " + token)
+for token in ["setupAuthControls", "updateAuthUI", "signInWithAuthProvider", "signInWithEmailLink", "signOutAuth"]:
+    if token not in app:
+        raise SystemExit("app.js missing auth UI controller: " + token)
 for token in ["MUNEA_DEV_CONFIG", "skipOnboarding", "analyticsExcluded", "accountType", "developerMode"]:
     if token not in config and token not in app:
         raise SystemExit("Missing developer mode analytics token: " + token)

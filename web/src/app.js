@@ -574,6 +574,120 @@ function showView(id) {
   if (id === 'chat') enterChat();
 }
 
+function authState() {
+  const auth = window.MuneaAuth;
+  return auth && typeof auth.state === 'function' ? auth.state() : { status: 'guest' };
+}
+function authProviderLabel(provider) {
+  const key = String(provider || '').toLowerCase();
+  if (key === 'apple') return 'Apple';
+  if (key === 'google') return 'Google';
+  if (key === 'email' || key === 'email_otp') return 'Email';
+  if (key === 'dev-bypass') return 'Developer';
+  return 'Munea';
+}
+function setAuthMessage(text = '', type = '') {
+  const el = $('#authMessage');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('is-error', type === 'error');
+  el.classList.toggle('is-ok', type === 'ok');
+}
+function openAuthSheet() {
+  const sheet = $('#authSheet');
+  if (!sheet) return;
+  sheet.classList.add('show');
+  sheet.setAttribute('aria-hidden', 'false');
+  setAuthMessage('');
+  const devBtn = $('#authDeveloperBtn');
+  if (devBtn) devBtn.hidden = !isDeveloperBypassAllowed();
+  const input = $('#authEmailInput');
+  if (input) setTimeout(() => input.focus(), 180);
+}
+function closeAuthSheet() {
+  const sheet = $('#authSheet');
+  if (!sheet) return;
+  sheet.classList.remove('show');
+  sheet.setAttribute('aria-hidden', 'true');
+}
+function updateAuthUI() {
+  const state = authState();
+  const signedIn = state.status === 'signed-in';
+  const card = $('#authCard');
+  if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
+  const status = $('#authStatusText');
+  if (status) status.textContent = signedIn ? '已登入' : '訪客模式';
+  const provider = $('#authProviderText');
+  if (provider) {
+    if (signedIn && state.developerMode) provider.textContent = '開發測試帳號，數據不列入營運統計';
+    else if (signedIn) provider.textContent = `${authProviderLabel(state.provider)} 帳號同步中`;
+    else provider.textContent = state.configured === false ? '登入尚未連到雲端設定' : '登入後同步家人、提醒與訂閱';
+  }
+  const email = $('#authEmailText');
+  if (email) email.textContent = signedIn && state.email ? state.email : '';
+  const signIn = $('#authSignInBtn');
+  if (signIn) signIn.hidden = signedIn;
+  const signOut = $('#authSignOutBtn');
+  if (signOut) signOut.hidden = !signedIn;
+  const devBadge = $('#authDevBadge');
+  if (devBadge) devBadge.hidden = !(signedIn && state.developerMode);
+}
+async function signInWithAuthProvider(provider) {
+  const auth = window.MuneaAuth;
+  if (!auth) return setAuthMessage('登入模組尚未載入', 'error');
+  setAuthMessage('正在前往登入...', 'ok');
+  trackProductEvent('auth_sign_in_started', { provider });
+  const method = provider === 'apple' ? auth.signInWithApple : auth.signInWithGoogle;
+  const result = method ? await method() : { ok: false, error: { code: 'unsupported_provider' } };
+  if (result && result.ok) return setAuthMessage('請在瀏覽器或系統視窗完成登入', 'ok');
+  setAuthMessage(result && result.error && result.error.code === 'auth_not_configured' ? '尚未連接 Supabase 登入設定' : '登入暫時無法啟動', 'error');
+}
+async function signInWithEmailLink() {
+  const input = $('#authEmailInput');
+  const email = input ? input.value.trim() : '';
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setAuthMessage('請輸入有效 email', 'error');
+  const auth = window.MuneaAuth;
+  if (!auth || typeof auth.signInWithEmail !== 'function') return setAuthMessage('Email 登入尚未啟用', 'error');
+  setAuthMessage('正在寄送登入連結...', 'ok');
+  trackProductEvent('auth_sign_in_started', { provider: 'email_otp' });
+  const result = await auth.signInWithEmail(email);
+  if (result && result.ok) return setAuthMessage('登入連結已寄出', 'ok');
+  setAuthMessage(result && result.error && result.error.code === 'auth_not_configured' ? '尚未連接 Supabase 登入設定' : '登入連結暫時無法寄送', 'error');
+}
+async function signInDeveloperMode() {
+  const auth = window.MuneaAuth;
+  if (!auth || typeof auth.signInAsDeveloper !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
+  const result = await auth.signInAsDeveloper({ reason: 'settings_auth_sheet' });
+  if (result && result.ok) {
+    trackProductEvent('auth_developer_signed_in', { provider: 'dev-bypass' });
+    updateAuthUI();
+    closeAuthSheet();
+    return;
+  }
+  setAuthMessage('此環境不可使用開發者模式', 'error');
+}
+async function signOutAuth() {
+  const auth = window.MuneaAuth;
+  if (!auth || typeof auth.signOut !== 'function') return;
+  await auth.signOut();
+  trackProductEvent('auth_signed_out', {});
+  updateAuthUI();
+}
+function setupAuthControls() {
+  if ($('#authSignInBtn')) $('#authSignInBtn').addEventListener('click', openAuthSheet);
+  if ($('#authSignOutBtn')) $('#authSignOutBtn').addEventListener('click', signOutAuth);
+  if ($('#authCloseBtn')) $('#authCloseBtn').addEventListener('click', closeAuthSheet);
+  if ($('#authAppleBtn')) $('#authAppleBtn').addEventListener('click', () => signInWithAuthProvider('apple'));
+  if ($('#authGoogleBtn')) $('#authGoogleBtn').addEventListener('click', () => signInWithAuthProvider('google'));
+  if ($('#authEmailBtn')) $('#authEmailBtn').addEventListener('click', signInWithEmailLink);
+  if ($('#authDeveloperBtn')) $('#authDeveloperBtn').addEventListener('click', signInDeveloperMode);
+  const email = $('#authEmailInput');
+  if (email) email.addEventListener('keydown', e => { if (e.key === 'Enter') signInWithEmailLink(); });
+  const sheet = $('#authSheet');
+  if (sheet) sheet.addEventListener('click', e => { if (e.target === sheet) closeAuthSheet(); });
+  updateAuthUI();
+}
+
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function say(text) {
   if (!('speechSynthesis' in window)) return;
@@ -600,9 +714,15 @@ function toggleTask(item) {
 function init() {
   syncCompanionUI();
   applyDeveloperBypass();
-  if (window.MuneaAuth && typeof window.MuneaAuth.init === 'function') window.MuneaAuth.init();
+  setupAuthControls();
+  if (window.MuneaAuth && typeof window.MuneaAuth.init === 'function') {
+    const authInit = window.MuneaAuth.init();
+    if (authInit && typeof authInit.then === 'function') authInit.then(updateAuthUI).catch(updateAuthUI);
+  }
   window.addEventListener('munea:auth-state', e => {
     const detail = e.detail || {};
+    updateAuthUI();
+    if (detail.status === 'signed-in') closeAuthSheet();
     if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY) === 'true') {
       syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true });
     }
