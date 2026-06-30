@@ -7,3 +7,14 @@ window.MUNEA_SUPABASE_CONFIG = {
   sdkUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm',
   redirectTo: new URL('index.html', window.location.href).toString(),
 };
+
+// Optional local-only developer mode. Keep disabled in production builds.
+window.MUNEA_DEV_CONFIG = {
+  enabled: false,
+  autoSignIn: false,
+  skipOnboarding: false,
+  analyticsExcluded: true,
+  authUserId: '00000000-0000-4000-8000-000000000001',
+  email: 'developer@munea.local',
+  displayName: 'Munea Developer',
+};

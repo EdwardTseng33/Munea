@@ -329,8 +329,26 @@ with tempfile.TemporaryDirectory() as d:
     assert event["event"]["eventName"] == "voice_session_completed"
     summary = server.north_star_summary({"days": 7})
     assert summary["metric"] == "Weekly Meaningful Companion Days"
-    assert summary["meaningfulCompanionDays"] >= 1
-    assert summary["voiceSessionsCompleted"] >= 1
+    assert summary["meaningfulCompanionDays"] == 1
+    assert summary["voiceSessionsCompleted"] == 1
+    assert summary["excludedEventCount"] == 0
+    developer_event = server.product_event_response({
+        "eventName": "voice_session_completed",
+        "personId": "developer-person",
+        "sessionId": "developer-session",
+        "properties": {
+            "durationMs": 120000,
+            "turnCount": 10,
+            "analyticsExcluded": True,
+            "developerMode": True,
+            "accountType": "developer",
+        },
+    })
+    assert developer_event["ok"] is True
+    summary = server.north_star_summary({"days": 7})
+    assert summary["meaningfulCompanionDays"] == 1
+    assert summary["voiceSessionsCompleted"] == 1
+    assert summary["excludedEventCount"] == 1
     ok, code = server.admin_authorized({})
     assert ok is False
     assert code == "admin_token_not_configured"
@@ -555,8 +573,11 @@ required = [
     "google",
     "email magic link",
     "guest mode",
+    "developer mode",
     "web/src/auth.js",
     "bearer-token api headers",
+    "analyticsexcluded",
+    "munea_analytics_excluded_account_ids",
     "progressive account",
     "facebook",
     "not v1",
@@ -570,7 +591,7 @@ if missing:
 for token in ["auth and onboarding", "docs/auth-onboarding-architecture-v1.md"]:
     if token not in readme:
         raise SystemExit("README missing auth architecture pointer: " + token)
-for token in ["sign in with apple", "google", "email magic link/otp", "facebook"]:
+for token in ["sign in with apple", "google", "email magic link/otp", "facebook", "developer mode", "analytics exclusion"]:
     if token not in setup:
         raise SystemExit("Supabase setup missing auth provider decision: " + token)
 print("auth onboarding contract OK")
@@ -658,10 +679,12 @@ required_auth = [
     "signInWithApple",
     "signInWithGoogle",
     "signInWithEmail",
+    "signInAsDeveloper",
     "signInWithOtp",
     "signInWithOAuth",
     "getAccessToken",
     "signOut",
+    "developerMode",
     "guest",
     "apple",
     "google",
@@ -677,6 +700,9 @@ for token in ["src/auth.js", "MuneaAuth"]:
 for token in ["muneaAuthHeaders", "Authorization", "Bearer", "munea:auth-state"]:
     if token not in app:
         raise SystemExit("app.js missing auth API bridge: " + token)
+for token in ["MUNEA_DEV_CONFIG", "skipOnboarding", "analyticsExcluded", "accountType", "developerMode"]:
+    if token not in config and token not in app:
+        raise SystemExit("Missing developer mode analytics token: " + token)
 for forbidden in ["SERVICE_ROLE", "service_role"]:
     if forbidden in config or forbidden in auth:
         raise SystemExit("Auth browser files must not mention service role secret tokens")

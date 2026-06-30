@@ -122,6 +122,8 @@ Auth and onboarding architecture v1 is tracked in `docs/AUTH-ONBOARDING-ARCHITEC
 
 The browser Auth Bridge starts in `web/src/auth.js`. It keeps guest mode active when Supabase public config is absent, exposes `window.MuneaAuth` for Apple, Google, email magic link/OTP, and sign-out, and adds Bearer-token headers to app/onboarding API calls when a Supabase session exists. Browser config must use only the Supabase publishable/anon key; never use the service role key in `web/`.
 
+Developer mode is controlled by `window.MUNEA_DEV_CONFIG` and is off by default. It can skip onboarding and create a local developer session for localhost testing, while marking events as `analyticsExcluded` so developer/test clicks, logins, chats, reminders, and Avatar sessions do not count in operating dashboards.
+
 The backend now includes `engine/supabase_adapter.py`. By default the prototype still uses JSON fallback; setting `MUNEA_DATABASE_PROVIDER=supabase` with backend-only Supabase environment variables enables the Supabase path for companion profile reads/writes and `/app-profile` aggregation.
 
 ---

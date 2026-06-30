@@ -11,6 +11,42 @@
     return window.MUNEA_SUPABASE_CONFIG || {};
   }
 
+  function devConfig() {
+    return window.MUNEA_DEV_CONFIG || {};
+  }
+
+  function isLocalDevHost() {
+    return ['localhost', '127.0.0.1', ''].includes(window.location.hostname) || window.location.protocol === 'file:';
+  }
+
+  function isDeveloperModeAllowed() {
+    const cfg = devConfig();
+    return cfg.enabled === true && (cfg.allowNonLocalhost === true || isLocalDevHost());
+  }
+
+  function devUserId() {
+    const cfg = devConfig();
+    return cfg.authUserId || cfg.userId || '00000000-0000-4000-8000-000000000001';
+  }
+
+  function makeDeveloperSession(overrides = {}) {
+    const cfg = { ...devConfig(), ...overrides };
+    const id = cfg.authUserId || cfg.userId || devUserId();
+    const email = cfg.email || 'developer@munea.local';
+    return {
+      access_token: cfg.accessToken || `dev-local-token-${id}`,
+      token_type: 'bearer',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: {
+        id,
+        email,
+        app_metadata: { provider: 'dev-bypass', role: 'developer' },
+        user_metadata: { name: cfg.displayName || 'Munea Developer' },
+      },
+      developer: true,
+    };
+  }
+
   function publishableKey(cfg) {
     return cfg.publishableKey || cfg.anonKey || cfg.key || '';
   }
@@ -36,10 +72,12 @@
     const user = session && session.user ? session.user : null;
     return {
       configured: isConfigured(),
+      developerMode: isDeveloperModeAllowed() && !!(session && session.developer),
       status,
       event: lastEvent,
       user,
       userId: user ? user.id : null,
+      authUserId: user ? user.id : null,
       email: user ? user.email || null : null,
       provider: user && user.app_metadata ? user.app_metadata.provider || null : null,
     };
@@ -90,6 +128,9 @@
   async function init() {
     if (initPromise) return initPromise;
     initPromise = (async () => {
+      if (isDeveloperModeAllowed() && devConfig().autoSignIn === true) {
+        return signInAsDeveloper({ reason: 'auto_sign_in' });
+      }
       const supabaseClient = await ensureClient();
       if (!supabaseClient) return publicState();
       try {
@@ -140,7 +181,20 @@
     return { ok: !result.error, result, error: result.error || null };
   }
 
+  async function signInAsDeveloper(overrides = {}) {
+    if (!isDeveloperModeAllowed()) {
+      return { ok: false, error: { code: 'developer_mode_not_allowed' } };
+    }
+    const devSession = makeDeveloperSession(overrides);
+    setState('signed-in', devSession, 'DEV_SIGNED_IN');
+    return { ok: true, session: devSession, state: publicState() };
+  }
+
   async function signOut() {
+    if (session && session.developer) {
+      setState('guest', null, 'SIGNED_OUT');
+      return { ok: true };
+    }
     const supabaseClient = await ensureClient();
     if (!supabaseClient) {
       setState('guest', null, 'SIGNED_OUT');
@@ -152,6 +206,7 @@
   }
 
   async function getAccessToken() {
+    if (session && session.developer) return session.access_token || null;
     const supabaseClient = await ensureClient();
     if (!supabaseClient) return null;
     try {
@@ -177,6 +232,7 @@
     signInWithApple: () => signInWithProvider('apple'),
     signInWithGoogle: () => signInWithProvider('google'),
     signInWithEmail,
+    signInAsDeveloper,
     signOut,
     getAccessToken,
   };

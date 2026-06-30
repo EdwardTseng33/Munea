@@ -333,6 +333,19 @@ Core events:
 
 Do not put raw transcript text in analytics events.
 
+Developer and internal usage exclusion:
+
+- Developer mode, QA, internal ops, and demo/test accounts must be excluded from operating dashboards.
+- Frontend developer mode sends `analyticsExcluded: true`, `developerMode: true`, and `accountType: developer`.
+- `north_star_summary` excludes developer/internal/test/QA/ops events before calculating meaningful days, active people, voice success, Avatar usage, family interactions, and routine completions.
+- Backend env can exclude known accounts, people, or sessions:
+
+```text
+MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS=...
+MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS=...
+MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS=...
+```
+
 ## Admin Console MVP
 
 Build after the backend contracts are stable, before public App Store launch.

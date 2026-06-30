@@ -98,6 +98,46 @@ Auth gate triggers:
 | Data export / account deletion | sign in required + reauth |
 | Cross-device memory | sign in required |
 
+## Developer Mode And Test Accounts
+
+Munea needs a developer/tester path so Edward, designers, and engineers can move quickly without repeatedly completing registration and onboarding.
+
+Rules:
+
+- Developer mode is disabled by default.
+- Developer mode must only run on localhost, `127.0.0.1`, or `file:` preview unless `allowNonLocalhost` is explicitly set for a controlled staging build.
+- Developer mode must never use server-only secrets in browser code.
+- Developer mode may mark onboarding as complete and may create a deterministic local developer session.
+- Developer mode must not be treated as real production authentication.
+- Developer/test activity must be excluded from North Star and operating metrics.
+
+Browser config:
+
+```js
+window.MUNEA_DEV_CONFIG = {
+  enabled: true,
+  autoSignIn: true,
+  skipOnboarding: true,
+  analyticsExcluded: true,
+  authUserId: '00000000-0000-4000-8000-000000000001',
+  email: 'developer@munea.local'
+};
+```
+
+Analytics rule:
+
+- Frontend product events from developer mode include `analyticsExcluded: true`, `developerMode: true`, and `accountType: developer`.
+- Backend North Star summaries exclude events with `analyticsExcluded`, `developerMode`, `accountType=developer/internal/test/qa/ops`, or ids listed in the backend exclusion env variables.
+- Developer clicks, logins, registration attempts, chats, Avatar sessions, and reminders must not count toward operating dashboards.
+
+Backend exclusion env:
+
+```text
+MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS=...
+MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS=...
+MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS=...
+```
+
 ## Registration Fields
 
 Registration should be split into required, contextual, and deferred fields.
@@ -202,6 +242,7 @@ Phase 1: Frontend session bridge
 - [x] Add `web/src/auth-config.example.js` for publishable/anon-key-only configuration.
 - [x] Send Bearer-token API headers, `Authorization: Bearer <access_token>`, from app/onboarding API calls when a Supabase session exists.
 - [x] Add sign-out method.
+- [x] Add local-only developer mode with onboarding skip and analytics exclusion.
 - [ ] Add production login UI states.
 - [ ] Store session using Supabase client session handling in a configured environment.
 

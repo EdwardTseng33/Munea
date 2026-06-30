@@ -187,6 +187,25 @@ Browser Auth Bridge:
 - `SUPABASE_SERVICE_ROLE_KEY` must stay backend-only.
 - When configured, app/onboarding API calls send `Authorization: Bearer <access_token>` for the next backend verification step.
 
+Developer mode and analytics exclusion:
+
+- Local testing can use `window.MUNEA_DEV_CONFIG` from `web/src/auth-config.example.js`.
+- Developer mode is off by default and should only be enabled in local/private development builds.
+- `autoSignIn` can create a local developer session for fast testing.
+- `skipOnboarding` can mark onboarding complete so the developer account can jump directly into the app.
+- `analyticsExcluded` should stay `true` for developer, ops, QA, and internal test accounts.
+- Frontend product events include `developerMode`, `analyticsExcluded`, and `accountType` so clicks, sign-ins, registrations, voice use, Avatar use, and reminder usage can be separated from real customer metrics.
+- Backend North Star summaries exclude events marked as developer/internal/test/QA/ops activity.
+- For known accounts or sessions, add ids to backend env:
+
+```text
+MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS=...
+MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS=...
+MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS=...
+```
+
+This keeps operational and developer usage available for debugging while preventing it from entering the Admin MVP, North Star, conversion, login, registration, click, and usage statistics.
+
 Create a private local file:
 
 ```text

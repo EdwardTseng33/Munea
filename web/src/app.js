@@ -215,6 +215,10 @@ function storageSet(key, value) {
 }
 function currentAuthUserId() {
   const auth = window.MuneaAuth || {};
+  if (typeof auth.state === 'function') {
+    const state = auth.state() || {};
+    if (state.authUserId || state.userId) return state.authUserId || state.userId;
+  }
   const user = auth.user || auth.currentUser || {};
   return auth.userId || auth.authUserId || user.id || user.userId || null;
 }
@@ -324,6 +328,34 @@ async function brainPost(url, body) {
 function makeSessionId(prefix = 'session') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
 }
+function developerConfig() {
+  return window.MUNEA_DEV_CONFIG || {};
+}
+function isLocalDevHost() {
+  return ['localhost', '127.0.0.1', ''].includes(location.hostname) || location.protocol === 'file:';
+}
+function isDeveloperBypassAllowed() {
+  const cfg = developerConfig();
+  return cfg.enabled === true && (cfg.allowNonLocalhost === true || isLocalDevHost());
+}
+function applyDeveloperBypass() {
+  const cfg = developerConfig();
+  if (!isDeveloperBypassAllowed()) return;
+  if (cfg.skipOnboarding === true) storageSet(ONBOARDING_COMPLETED_KEY, 'true');
+}
+function authAnalyticsContext() {
+  const auth = window.MuneaAuth;
+  const state = auth && typeof auth.state === 'function' ? auth.state() : {};
+  const cfg = developerConfig();
+  const devBypass = isDeveloperBypassAllowed();
+  const excluded = !!(state.developerMode || (devBypass && (cfg.analyticsExcluded === true || cfg.excludeAnalytics === true)));
+  return {
+    authProvider: state.provider || 'guest',
+    developerMode: !!state.developerMode,
+    analyticsExcluded: excluded,
+    accountType: excluded ? 'developer' : 'user',
+  };
+}
 function analyticsContext(extra = {}) {
   return {
     templateId: currentAvatarId,
@@ -331,6 +363,7 @@ function analyticsContext(extra = {}) {
     voiceProvider: voiceProvider.mode,
     voiceState: voiceProvider.state,
     companionTemplate: currentAvatarId,
+    ...authAnalyticsContext(),
     ...extra,
   };
 }
@@ -566,6 +599,7 @@ function toggleTask(item) {
 
 function init() {
   syncCompanionUI();
+  applyDeveloperBypass();
   if (window.MuneaAuth && typeof window.MuneaAuth.init === 'function') window.MuneaAuth.init();
   window.addEventListener('munea:auth-state', e => {
     const detail = e.detail || {};

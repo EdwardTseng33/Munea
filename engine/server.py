@@ -430,6 +430,36 @@ def load_product_events(since_iso=None, limit=500):
     return events[:limit]
 
 
+def truthy(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def env_set(name):
+    raw = os.environ.get(name) or ""
+    return {item.strip() for item in raw.split(",") if item.strip()}
+
+
+def is_analytics_excluded_event(event):
+    props = event.get("properties") or {}
+    for key in ("analyticsExcluded", "excludeAnalytics", "developerMode", "isDeveloperActivity", "operationalAccount"):
+        if truthy(props.get(key)):
+            return True
+    account_type = str(props.get("accountType") or props.get("actorType") or props.get("environment") or "").strip().lower()
+    if account_type in {"developer", "dev", "internal", "test", "qa", "ops", "operational"}:
+        return True
+    excluded_ids = set()
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS"))
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS"))
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS"))
+    if event.get("accountId") in excluded_ids or event.get("personId") in excluded_ids or event.get("sessionId") in excluded_ids:
+        return True
+    return False
+
+
 def append_product_event(data=None):
     event = normalize_product_event(data)
     try:
@@ -447,6 +477,8 @@ def append_product_event(data=None):
 
 
 def is_meaningful_product_event(event):
+    if is_analytics_excluded_event(event):
+        return False
     name = event.get("eventName")
     props = event.get("properties") or {}
     if name in MEANINGFUL_EVENT_NAMES:
@@ -462,7 +494,9 @@ def north_star_summary(data=None):
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
-    events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=1000)
+    all_events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=1000)
+    events = [event for event in all_events if not is_analytics_excluded_event(event)]
+    excluded_events = len(all_events) - len(events)
     meaningful_days = set()
     active_people = set()
     voice_started = 0
@@ -502,6 +536,7 @@ def north_star_summary(data=None):
         "routineCompletions": routine_completions,
         "familyInteractions": family_interactions,
         "eventCount": len(events),
+        "excludedEventCount": excluded_events,
         "backend": data_backend_status(),
     }
 
