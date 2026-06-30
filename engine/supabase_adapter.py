@@ -470,6 +470,40 @@ class SupabaseAdapter:
         )
         return [self.memory_row_to_item(row) for row in rows]
 
+    def load_perception_snapshots(self, query=None, limit=100):
+        if not self.enabled():
+            return None
+        query = query or {}
+        filters = {
+            "account_id": f"eq.{self.account_id}",
+            "select": "*",
+            "order": "observed_at.desc",
+            "limit": str(limit or 100),
+        }
+        person_id = query.get("personId") or query.get("person_id")
+        if person_id:
+            filters["person_id"] = f"eq.{person_id}"
+        snapshot_type = query.get("snapshotType") or query.get("snapshot_type") or query.get("type")
+        if snapshot_type:
+            filters["snapshot_type"] = f"eq.{snapshot_type}"
+        rows = self._select("perception_snapshots", filters)
+        return [self.perception_row_to_snapshot(row) for row in rows]
+
+    def save_perception_snapshots(self, snapshots):
+        if not self.enabled():
+            return None
+        rows_payload = [self.perception_snapshot_to_row(snapshot) for snapshot in (snapshots or [])]
+        if not rows_payload:
+            return []
+        rows = self._request(
+            "POST",
+            "perception_snapshots",
+            query={"select": "*"},
+            payload=rows_payload,
+            prefer="return=representation",
+        )
+        return [self.perception_row_to_snapshot(row) for row in rows]
+
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
             return self._first("family_groups", {"id": f"eq.{self.family_group_id}", "select": "*"})
@@ -668,6 +702,33 @@ class SupabaseAdapter:
             "metadata": row.get("metadata") or {},
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
+        }
+
+    def perception_snapshot_to_row(self, snapshot):
+        snapshot = snapshot or {}
+        return {
+            "account_id": snapshot.get("accountId") or snapshot.get("account_id") or self.account_id,
+            "person_id": snapshot.get("personId") or snapshot.get("person_id") or self.person_id,
+            "snapshot_type": snapshot.get("snapshotType") or snapshot.get("snapshot_type") or snapshot.get("type") or "current_topic",
+            "observed_at": snapshot.get("observedAt") or snapshot.get("observed_at"),
+            "expires_at": snapshot.get("expiresAt") or snapshot.get("expires_at"),
+            "facts": snapshot.get("facts") or {},
+            "source": snapshot.get("source") or "munea",
+        }
+
+    @staticmethod
+    def perception_row_to_snapshot(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id"),
+            "snapshotType": row.get("snapshot_type") or "current_topic",
+            "observedAt": row.get("observed_at"),
+            "expiresAt": row.get("expires_at"),
+            "facts": row.get("facts") or {},
+            "source": row.get("source") or "munea",
+            "createdAt": row.get("created_at"),
         }
 
     @staticmethod

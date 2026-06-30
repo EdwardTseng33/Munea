@@ -28,7 +28,7 @@ Pass "Python files compile"
 Step "JSON parse"
 @'
 import json, pathlib
-for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json", "engine/billing_store.json", "engine/privacy_requests.json", "engine/memory_items.json"]:
+for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json", "engine/billing_store.json", "engine/privacy_requests.json", "engine/memory_items.json", "engine/perception_snapshots.json"]:
     json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
     print(f"{p} OK")
 '@ | python -
@@ -133,6 +133,9 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
         if table == "memory_items":
             rows = payload if isinstance(payload, list) else [payload]
             return [{**row, "id": f"memory-item-{idx}", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"} for idx, row in enumerate(rows, start=1)]
+        if table == "perception_snapshots":
+            rows = payload if isinstance(payload, list) else [payload]
+            return [{**row, "id": f"perception-snapshot-{idx}", "created_at": "2026-06-29T00:00:00Z"} for idx, row in enumerate(rows, start=1)]
         raise AssertionError(f"Unexpected write table: {table}")
 
     assert method == "GET"
@@ -223,6 +226,17 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "created_at": "2026-06-29T00:00:00Z",
             "updated_at": "2026-06-29T00:00:00Z",
         }],
+        "perception_snapshots": [{
+            "id": "perception-snapshot-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "snapshot_type": "media_context",
+            "observed_at": "2026-06-29T00:00:00Z",
+            "expires_at": "2026-06-30T00:00:00Z",
+            "facts": {"domain": "video_entertainment", "sources": ["streaming_catalog", "regional_availability"]},
+            "source": "smoke",
+            "created_at": "2026-06-29T00:00:00Z",
+        }],
     }
     return fixtures[table]
 
@@ -265,6 +279,17 @@ saved_memories = adapter.save_memory_items([{
 }])
 assert saved_memories[0]["type"] == "relationship"
 assert saved_memories[0]["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
+snapshots = adapter.load_perception_snapshots({"snapshotType": "media_context"}, limit=10)
+assert snapshots[0]["snapshotType"] == "media_context"
+assert snapshots[0]["facts"]["domain"] == "video_entertainment"
+saved_snapshots = adapter.save_perception_snapshots([{
+    "personId": env["MUNEA_SUPABASE_PERSON_ID"],
+    "snapshotType": "finance_context",
+    "facts": {"symbols": ["SPY"], "freshness": "high"},
+    "source": "smoke",
+}])
+assert saved_snapshots[0]["snapshotType"] == "finance_context"
+assert saved_snapshots[0]["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
 
 bootstrap_writes = []
 bootstrap_adapter = supabase_adapter.make_adapter(env=env)
@@ -377,6 +402,7 @@ assert "regional_availability" in video_plan["perceptionSources"]
 
 with tempfile.TemporaryDirectory() as d:
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
+    server.PERCEPTION_SNAPSHOTS_PATH = str(Path(d) / "perception_snapshots.json")
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     extracted = server.memory_extract_response({
         "action": "store",
@@ -390,6 +416,19 @@ with tempfile.TemporaryDirectory() as d:
     retrieved = server.memory_retrieve_response({"query": "Korean drama Netflix daughter", "limit": 5})
     assert retrieved["ok"] is True
     assert retrieved["count"] >= 1
+
+    stored_snapshot = server.perception_snapshot_response({
+        "action": "store",
+        "snapshotType": "finance_context",
+        "facts": {"symbols": ["SPY"], "freshness": "high", "requiresDisclaimer": True},
+        "source": "smoke",
+    })
+    assert stored_snapshot["ok"] is True
+    assert stored_snapshot["stored"] == 1
+    listed_snapshot = server.perception_snapshot_response({"snapshotType": "finance_context"})
+    assert listed_snapshot["ok"] is True
+    assert listed_snapshot["count"] == 1
+    assert listed_snapshot["snapshots"][0]["facts"]["requiresDisclaimer"] is True
 
     guardian = server.guardian_evaluate_response({"text": "I may be having a heart attack"})
     assert guardian["ok"] is True
@@ -1083,6 +1122,7 @@ if ($health.contracts -notcontains "memory-extract") { throw "/healthz missing m
 if ($health.contracts -notcontains "memory-retrieve") { throw "/healthz missing memory-retrieve contract" }
 if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missing guardian-evaluate contract" }
 if ($health.contracts -notcontains "perception-topic-plan") { throw "/healthz missing perception-topic-plan contract" }
+if ($health.contracts -notcontains "perception-snapshot") { throw "/healthz missing perception-snapshot contract" }
 if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
 if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }

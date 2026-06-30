@@ -321,6 +321,10 @@ Current implementation anchors:
 - `POST /perception/topic-plan`
   - identifies the user's broad topic domain and returns which real-world sources are needed before making recommendations.
   - covers books, travel, outings, exercise, finance, video entertainment, music/audio, food, news, spiritual reflection, and future domains through a shared contract.
+- `POST /perception/snapshot`
+  - stores and lists real-world perception facts in one format.
+  - writes to Supabase `perception_snapshots` when backend env is configured, otherwise falls back to local JSON.
+  - intended for time, weather, location, book, travel, outing, exercise, finance, video entertainment, food, news, family, and wisdom context.
 - `engine/memory_items.json`
   - local prototype fallback only.
 

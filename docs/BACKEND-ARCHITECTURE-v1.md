@@ -23,6 +23,7 @@ Current state:
 - `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` now define the first AI service contracts for three-brain routing, memory lifecycle, and Guardian risk policy.
 - The Supabase adapter now includes `memory_items` load/save mapping, so Butler memory extraction can persist structured memories through the backend when Supabase env is configured, with JSON fallback for local development.
 - The perception design is now domain-aware rather than movie-specific: books, travel, outings, exercise, finance, video entertainment, music/audio, food, news, and wisdom/reflection topics share the same anti-fabrication contract.
+- `/perception/snapshot` now provides the API and adapter contract for storing/listing real-world perception facts through Supabase `perception_snapshots` or JSON fallback.
 - The web onboarding/settings flow now calls the `/account-bootstrap` contract through a one-time browser bootstrap flag. Local JSON mode can create the prototype account graph immediately; Supabase mode returns `auth_user_required` until a verified Auth / Apple Sign-In bearer token is available.
 - Auth/onboarding v1 is now locked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`: v1 providers are Sign in with Apple, Google, and email magic link/OTP fallback; Facebook is intentionally out of v1.
 - Production API contracts are partially represented in `engine/server.py`.
@@ -136,6 +137,7 @@ Missing:
 | `/memory/extract` | POST | Extract structured memory candidates from conversation context | required | `memory_items` |
 | `/memory/retrieve` | POST | Retrieve scoped memories for the next interaction | required | `memory_items`, vector/graph later |
 | `/guardian/evaluate` | POST | Evaluate safety risk and response policy | required | `safety_events`, `ai_brain_runs` |
+| `/perception/snapshot` | POST | Store/list real-world perception facts for recommendations | required | `perception_snapshots` |
 | `/conversation-summary` | POST | Store memory summary, not raw transcript by default | required | `conversation_summaries` |
 | `/product-event` | POST | Record product analytics events without raw transcript text | required | `product_events` |
 

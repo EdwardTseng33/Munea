@@ -73,6 +73,7 @@
 - Added `supabase/sql/004_ai_memory_service_foundation.sql` for `memory_items`, `perception_snapshots`, and `ai_brain_runs`.
 - Added Supabase adapter support for `memory_items`, so `/memory/extract?action=store` and `/memory/retrieve` can use the production database path when env is configured, with JSON fallback preserved.
 - Expanded Perception Layer from a movie example into a domain-aware topic framework for books, travel, outings, exercise, finance, video entertainment, music/audio, food, news, and wisdom/reflection, with anti-fabrication rules for recommendations.
+- Added `/perception/snapshot` plus Supabase adapter path for `perception_snapshots`, giving time/weather/topic/current-fact providers a shared storage contract.
 
 ## Tech Stack Verdict
 
@@ -208,6 +209,7 @@ Work items:
 - [ ] Wire Guardian Brain to rules + Claude Sonnet + moderation/classifier layer.
 - [ ] Add live perception tools for time, weather, current-topic retrieval, and regional recommendations.
 - [x] Define domain-aware topic perception contract so recommendations are not movie-only and do not fabricate real-world availability, streaming catalogs, prices, schedules, market data, or news.
+- [x] Add perception snapshot API and Supabase adapter path for real-world context facts.
 - [x] Persist prototype companion template/name across onboarding, Home, Chat, and Settings.
 - [x] Add local backend companion profile load/save route.
 - [x] Add local account/family/person/companion profile store placeholder.

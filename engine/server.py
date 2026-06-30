@@ -34,6 +34,7 @@ BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 MEMORY_ITEMS_PATH = os.environ.get("MUNEA_MEMORY_ITEMS_PATH") or os.path.join(HERE, "memory_items.json")
+PERCEPTION_SNAPSHOTS_PATH = os.environ.get("MUNEA_PERCEPTION_SNAPSHOTS_PATH") or os.path.join(HERE, "perception_snapshots.json")
 PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
@@ -268,6 +269,60 @@ def append_memory_items(items):
     return items
 
 
+def normalize_perception_snapshot(data):
+    data = data or {}
+    return {
+        "id": data.get("id") or "ps_" + uuid.uuid4().hex[:12],
+        "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "snapshotType": data.get("snapshotType") or data.get("snapshot_type") or data.get("type") or "current_topic",
+        "observedAt": data.get("observedAt") or data.get("observed_at") or utc_now(),
+        "expiresAt": data.get("expiresAt") or data.get("expires_at"),
+        "facts": data.get("facts") or {},
+        "source": data.get("source") or "munea",
+        "createdAt": data.get("createdAt") or data.get("created_at") or utc_now(),
+    }
+
+
+def load_perception_snapshots(query=None, limit=100):
+    query = query or {}
+    try:
+        remote_snapshots = data_backend().load_perception_snapshots(query=query, limit=limit)
+        if remote_snapshots is not None:
+            return remote_snapshots
+    except Exception as e:
+        if data_backend().enabled():
+            raise e
+    snapshots = read_json_file(PERCEPTION_SNAPSHOTS_PATH, [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshot_type = query.get("snapshotType") or query.get("snapshot_type") or query.get("type")
+    person_id = query.get("personId") or query.get("person_id")
+    if snapshot_type:
+        snapshots = [s for s in snapshots if s.get("snapshotType") == snapshot_type]
+    if person_id:
+        snapshots = [s for s in snapshots if s.get("personId") == person_id]
+    return snapshots[-limit:]
+
+
+def save_perception_snapshots(snapshots):
+    write_json_file(PERCEPTION_SNAPSHOTS_PATH, list(snapshots)[-1000:])
+    return snapshots
+
+
+def append_perception_snapshots(snapshots):
+    snapshots = [normalize_perception_snapshot(snapshot) for snapshot in (snapshots or [])]
+    try:
+        remote_snapshots = data_backend().save_perception_snapshots(snapshots)
+        if remote_snapshots is not None:
+            return remote_snapshots
+    except Exception as e:
+        if data_backend().enabled():
+            raise e
+    existing = load_perception_snapshots(limit=1000)
+    save_perception_snapshots(existing + snapshots)
+    return snapshots
+
+
 def memory_extract_response(data):
     data = data or {}
     response = model_router.memory_extract_response(data)
@@ -302,6 +357,33 @@ def guardian_evaluate_response(data):
 
 def topic_perception_plan_response(data):
     return model_router.topic_perception_plan_response(data or {})
+
+
+def perception_snapshot_response(data):
+    data = data or {}
+    action = (data.get("action") or "list").lower()
+    if action == "store":
+        snapshots = data.get("snapshots") if isinstance(data.get("snapshots"), list) else [data]
+        stored = append_perception_snapshots(snapshots)
+        return {
+            "ok": True,
+            "action": "store",
+            "stored": len(stored),
+            "snapshots": stored,
+            "backend": data_backend_status(),
+        }
+    query = {
+        "personId": data.get("personId") or data.get("person_id"),
+        "snapshotType": data.get("snapshotType") or data.get("snapshot_type") or data.get("type"),
+    }
+    snapshots = load_perception_snapshots(query=query, limit=int(data.get("limit") or 100))
+    return {
+        "ok": True,
+        "action": "list",
+        "count": len(snapshots),
+        "snapshots": snapshots,
+        "backend": data_backend_status(),
+    }
 
 
 def load_legacy_companion_profile():
@@ -1186,7 +1268,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "perception-topic-plan", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -1228,6 +1310,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":
                 self._json(topic_perception_plan_response(data))
+            elif self.path == "/perception/snapshot":
+                self._json(perception_snapshot_response(data))
             elif self.path == "/admin/north-star":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
