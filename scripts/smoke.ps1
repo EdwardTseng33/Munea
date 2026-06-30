@@ -22,13 +22,13 @@ function Warn($message) {
 }
 
 Step "Python compile"
-python -m py_compile engine\server.py engine\env_loader.py engine\supabase_adapter.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py scripts\supabase_doctor.py
+python -m py_compile engine\server.py engine\env_loader.py engine\supabase_adapter.py engine\model_router.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py scripts\supabase_doctor.py
 Pass "Python files compile"
 
 Step "JSON parse"
 @'
 import json, pathlib
-for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json", "engine/billing_store.json", "engine/privacy_requests.json"]:
+for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json", "engine/billing_store.json", "engine/privacy_requests.json", "engine/memory_items.json"]:
     json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
     print(f"{p} OK")
 '@ | python -
@@ -310,6 +310,47 @@ print("account bootstrap OK")
 '@ | python -
 Pass "Account bootstrap creates local account/family/person/companion store"
 
+Step "AI service brain and memory contract"
+@'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import model_router
+import server
+
+status = model_router.brain_status_response()
+assert status["ok"] is True
+assert status["brains"]["reflex"]["interface"] == "MuneaVoiceProvider"
+assert status["brains"]["butler"]["interface"] == "MuneaBrainRouter"
+assert status["brains"]["guardian"]["interface"] == "MuneaBrainRouter"
+assert status["effortProfiles"]["deep"]["effort"] == "high"
+
+with tempfile.TemporaryDirectory() as d:
+    server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
+    server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
+    extracted = server.memory_extract_response({
+        "action": "store",
+        "text": "I like movies and often talk with my daughter Mei-Hua. Recently I feel lonely.",
+    })
+    assert extracted["ok"] is True
+    assert extracted["stored"] >= 2
+    types = {item["type"] for item in extracted["memoryItems"]}
+    assert "preference" in types
+    assert "relationship" in types
+    retrieved = server.memory_retrieve_response({"query": "movies daughter", "limit": 5})
+    assert retrieved["ok"] is True
+    assert retrieved["count"] >= 1
+
+    guardian = server.guardian_evaluate_response({"text": "I may be having a heart attack"})
+    assert guardian["ok"] is True
+    assert guardian["risk"]["level"] == "high"
+    assert guardian["risk"]["requiresHumanEscalation"] is True
+
+print("ai service OK")
+'@ | python -
+Pass "AI service router, memory, and Guardian contracts are valid"
+
 Step "Auth token verification contract"
 @'
 import os, sys
@@ -482,6 +523,7 @@ from pathlib import Path
 sql = Path("supabase/sql/001_initial_munea_schema.sql").read_text(encoding="utf-8").lower()
 seed = Path("supabase/sql/002_demo_bootstrap.sql").read_text(encoding="utf-8").lower()
 analytics = Path("supabase/sql/003_analytics_admin_foundation.sql").read_text(encoding="utf-8").lower()
+ai_memory = Path("supabase/sql/004_ai_memory_service_foundation.sql").read_text(encoding="utf-8").lower()
 env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
     "accounts",
@@ -548,6 +590,20 @@ for table in analytics_tables:
         raise SystemExit("Missing analytics RLS: " + table)
     if f"revoke all on public.{table} from anon" not in analytics:
         raise SystemExit("Missing analytics anon revoke: " + table)
+ai_memory_tables = [
+    "memory_items",
+    "perception_snapshots",
+    "ai_brain_runs",
+]
+for table in ai_memory_tables:
+    if f"create table if not exists public.{table}" not in ai_memory:
+        raise SystemExit("Missing AI memory table: " + table)
+    if f"alter table public.{table} enable row level security" not in ai_memory:
+        raise SystemExit("Missing AI memory RLS: " + table)
+if "embedding vector(1536)" not in ai_memory:
+    raise SystemExit("Missing memory embedding column")
+if "supersedes_memory_id" not in ai_memory:
+    raise SystemExit("Missing memory supersede support")
 if "weekly meaningful companion days" not in Path("docs/BACKEND-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower():
     raise SystemExit("Backend architecture missing North Star definition")
 print("supabase tables", len(required_tables))
@@ -629,6 +685,34 @@ for token in ["sign in with apple", "google", "email magic link/otp", "facebook"
 print("auth onboarding contract OK")
 '@ | python -
 Pass "Auth onboarding architecture is documented"
+
+Step "AI service design document contract"
+@'
+from pathlib import Path
+
+doc = Path("docs/AI-SERVICE-DESIGN-v1.md").read_text(encoding="utf-8").lower()
+readme = Path("README.md").read_text(encoding="utf-8").lower()
+required = [
+    "reflex brain",
+    "butler brain",
+    "guardian brain",
+    "model effort profiles",
+    "long-term memory architecture",
+    "perception layer",
+    "wisdom lens",
+    "memory_items",
+    "perception_snapshots",
+    "ai_brain_runs",
+    "non-medical",
+]
+missing = [token for token in required if token not in doc]
+if missing:
+    raise SystemExit("AI service design missing: " + ", ".join(missing))
+if "docs/ai-service-design-v1.md" not in readme:
+    raise SystemExit("README missing AI service design link")
+print("ai service design contract OK")
+'@ | python -
+Pass "AI service design is documented"
 
 Step "Repo-backed Codex skill contract"
 @'
@@ -942,6 +1026,10 @@ if ($health.contracts -notcontains "auth-status") { throw "/healthz missing auth
 if ($health.contracts -notcontains "account-bootstrap") { throw "/healthz missing account-bootstrap contract" }
 if ($health.contracts -notcontains "entitlements") { throw "/healthz missing entitlements contract" }
 if ($health.contracts -notcontains "avatar-session") { throw "/healthz missing avatar-session contract" }
+if ($health.contracts -notcontains "ai-brain-status") { throw "/healthz missing ai-brain-status contract" }
+if ($health.contracts -notcontains "memory-extract") { throw "/healthz missing memory-extract contract" }
+if ($health.contracts -notcontains "memory-retrieve") { throw "/healthz missing memory-retrieve contract" }
+if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missing guardian-evaluate contract" }
 if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
 if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }

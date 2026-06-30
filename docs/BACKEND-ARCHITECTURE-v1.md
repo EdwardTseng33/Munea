@@ -20,6 +20,7 @@ Current state:
 - The web prototype now emits safe product events for Chat start/completion, voice turns, voice-note upload, Avatar session start/completion, and routine completion. It does not send raw transcript text to analytics.
 - `/account-bootstrap` now defines the backend-owned account/member/person/family/companion creation contract for the future Supabase Auth or Apple Sign-In flow. In production it requires a verified `auth.users.id`; local prototype fallback can preview/create a JSON store.
 - `/auth-status` now defines the backend token verification contract. Supabase mode verifies `Authorization: Bearer <access_token>` against Supabase Auth and derives the real `auth.users.id`; local developer bypass is env-gated and marked as developer mode.
+- `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` now define the first AI service contracts for three-brain routing, memory lifecycle, and Guardian risk policy.
 - The web onboarding/settings flow now calls the `/account-bootstrap` contract through a one-time browser bootstrap flag. Local JSON mode can create the prototype account graph immediately; Supabase mode returns `auth_user_required` until a verified Auth / Apple Sign-In bearer token is available.
 - Auth/onboarding v1 is now locked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`: v1 providers are Sign in with Apple, Google, and email magic link/OTP fallback; Facebook is intentionally out of v1.
 - Production API contracts are partially represented in `engine/server.py`.
@@ -129,6 +130,10 @@ Missing:
 | `/voice-note` | POST | Recorded voice fallback | required | object storage + `voice_sessions` |
 | `/chat` | POST | Current fallback chat | required | AI provider + `conversation_summaries` |
 | `/avatar-session` | POST | Select Avatar runtime/provider and entitlement gate | required | `entitlements`, `usage_ledger`, Avatar provider |
+| `/ai/brain-status` | POST | Return current Reflex/Butler/Guardian model service plan | admin/dev initially | `ai_brain_runs`, config |
+| `/memory/extract` | POST | Extract structured memory candidates from conversation context | required | `memory_items` |
+| `/memory/retrieve` | POST | Retrieve scoped memories for the next interaction | required | `memory_items`, vector/graph later |
+| `/guardian/evaluate` | POST | Evaluate safety risk and response policy | required | `safety_events`, `ai_brain_runs` |
 | `/conversation-summary` | POST | Store memory summary, not raw transcript by default | required | `conversation_summaries` |
 | `/product-event` | POST | Record product analytics events without raw transcript text | required | `product_events` |
 
@@ -138,10 +143,15 @@ Prototype coverage:
 - `/voice-note`
 - `/chat`
 - `/avatar-session`
+- `/ai/brain-status`
+- `/memory/extract`
+- `/memory/retrieve`
+- `/guardian/evaluate`
 
 Missing:
 
-- memory summary persistence.
+- Supabase memory item persistence.
+- vector/temporal graph retrieval.
 - cost and usage ledger integration.
 
 ### Subscription And Entitlements
@@ -231,6 +241,14 @@ Analytics/admin foundation added in `supabase/sql/003_analytics_admin_foundation
 - `admin_notes`
 
 These tables are the data base for the first Admin MVP and North Star dashboard. They should be applied after the initial schema and demo bootstrap seed.
+
+AI memory/service foundation added in `supabase/sql/004_ai_memory_service_foundation.sql`:
+
+- `memory_items`
+- `perception_snapshots`
+- `ai_brain_runs`
+
+These tables support long-term companion memory, time/weather/topic perception, Guardian decisions, model cost tracking, and privacy export/deletion requirements.
 
 ## RLS And Permission Matrix
 

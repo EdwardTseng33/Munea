@@ -54,8 +54,8 @@ Munea should be able to change providers without changing the user journey or da
 | Brain | Responsibility | Current implementation | Future provider direction |
 |---|---|---|---|
 | Reflex Brain | Real-time `聊聊` conversation: listen, respond, speak, interrupt, recover | Gemini generation + TTS demo through local endpoints | `MuneaVoiceProvider`, with Gemini Live / Interactions as first candidate |
-| Butler Brain | Background care context: routines, family notes, daily prep, memory summaries | Deterministic rules and local profile/family stores | Cheap/fast AI only when summarization or judgment is needed |
-| Guardian Brain | Safety boundary: crisis language, abnormal routine signals, referral rules | Deterministic guardrails and referral principles | Classifier or moderation layer may assist, but does not make medical decisions |
+| Butler Brain | Background care context: routines, family notes, daily prep, memory summaries | `MuneaBrainRouter` deterministic contract + local memory fallback | Claude Sonnet 4.6 first, effort profiles before cost fallback |
+| Guardian Brain | Safety boundary: crisis language, abnormal routine signals, referral rules | Rules + `MuneaBrainRouter` deterministic risk contract | Claude Sonnet 4.6 + moderation/classifier support; rules keep priority |
 
 Avatar is not one of the three brains. Ditto and LiveAvatar are face/rendering engines that consume conversation state and audio timing; they should not own health logic, memory, or medical/safety decisions.
 
@@ -78,6 +78,8 @@ Background context layer.
 - Prepares today: health routines, appointments, weather, family notes, reminders.
 - Reads from profile, memory, family, and health data.
 - Must not block the live conversation.
+- Owns memory extraction, memory retrieval, care summaries, topic preparation, and family digest drafts.
+- Uses effort profiles: `quick`, `standard`, `deep`.
 
 ### Guardian Brain
 
@@ -86,6 +88,10 @@ Safety and referral layer.
 - Watches for crisis language, abnormal routine signals, and escalation needs.
 - Refers to family or external help.
 - Does not diagnose, prescribe, treat, or act as therapy.
+- Has authority to interrupt or constrain Reflex responses when risk is high.
+- Starts with deterministic rules, then can ask a classifier/model for ambiguous cases.
+
+`docs/AI-SERVICE-DESIGN-v1.md` is the current source of truth for model selection, memory lifecycle, perception, Wisdom Lens, and Guardian policy details.
 
 ## One Face: Avatar Runtime
 
@@ -143,6 +149,10 @@ Current prototype contract:
 - `POST /subscription-event` accepts local notification-shaped subscription events; production must verify Apple signed payloads before granting paid access.
 - `POST /privacy-export` returns a local JSON export package for the account/family/profile/billing/privacy ledger.
 - `POST /account-deletion` tracks the in-app account deletion request contract.
+- `POST /ai/brain-status` returns the current AI brain model/service plan.
+- `POST /memory/extract` extracts memory candidates without storing raw transcripts by default.
+- `POST /memory/retrieve` retrieves local prototype memory by query.
+- `POST /guardian/evaluate` returns Guardian risk level and response policy.
 - Onboarding writes `templateId` and `displayName` before entering the app.
 - Home, Chat, and Settings all read the same profile.
 - Settings writes back to the same profile when the user renames the companion or changes templates.

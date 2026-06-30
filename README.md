@@ -98,6 +98,7 @@ npm run supabase:doctor:live
 | Guardian brain | Crisis / anomaly referral | Deterministic safety rules first; classifier/moderation may assist, but not medical judgment |
 | Face | Fullscreen butler presence | 2D/static now; Ditto / LiveAvatar PoCs decide real lip-sync path |
 | Auth status | Verified session bridge | `/auth-status` validates Bearer-token auth context; `/account-bootstrap` derives `auth.users.id` from verified auth in Supabase mode |
+| AI service design | Long-term companion intelligence | `docs/AI-SERVICE-DESIGN-v1.md` defines three-brain model selection, effort profiles, memory lifecycle, perception, Guardian safety, and Supabase memory tables |
 | Account bootstrap | First account/family/person creation after auth | `/account-bootstrap` previews or creates the backend-owned account graph; Supabase path requires verified `auth.users.id` |
 | Companion identity | User-visible name, template, voice, and avatar asset | User can name the companion; template changes appearance / voice / personality without forcing a fixed public name |
 | Subscription entitlement | App Store subscription and usage ledger | `/entitlements` is the backend source of truth; frontend does not own paid status or Avatar minutes |
@@ -116,9 +117,11 @@ The prototype now uses one Companion Profile across onboarding, Home, Chat, and 
 
 For App Store readiness, the local backend also includes `engine/billing_store.json`, `/entitlements`, `/subscription-event`, and `/healthz` contracts. These are prototype contracts for the production StoreKit / App Store Server API / RevenueCat path; production must verify signed subscription events server-side before granting paid entitlements.
 
-The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`, and the deterministic demo seed lives in `supabase/sql/002_demo_bootstrap.sql`, with setup notes in `docs/supabase/SETUP.md`. These are SQL Editor-ready; once Supabase CLI is installed and authenticated, convert them into formal migrations.
+The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`; demo seed, analytics/admin foundation, and AI memory/service foundation live in `supabase/sql/002_demo_bootstrap.sql`, `supabase/sql/003_analytics_admin_foundation.sql`, and `supabase/sql/004_ai_memory_service_foundation.sql`, with setup notes in `docs/supabase/SETUP.md`. These are SQL Editor-ready; once Supabase CLI is installed and authenticated, convert them into formal migrations.
 
 Backend architecture v1 is tracked in `docs/BACKEND-ARCHITECTURE-v1.md`. It defines the API surface, Supabase/RLS model, subscription entitlement flow, data rights contracts, admin console MVP, and North Star analytics plan.
+
+AI service design v1 is tracked in `docs/AI-SERVICE-DESIGN-v1.md`. It clarifies that Munea's moat is not self-training a foundation model, but a product-owned AI service layer: Reflex for S2S presence, Butler for long-term memory and care planning, Guardian for safety and escalation, plus a structured memory/perception framework that can survive privacy export and deletion.
 
 Auth and onboarding architecture v1 is tracked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`. It locks the v1 sign-in providers, guest mode, registration fields, progressive onboarding gates, and the future Supabase Auth bridge.
 

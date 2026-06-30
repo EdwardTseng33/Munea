@@ -68,6 +68,9 @@
 - Added Settings account UI foundation: guest/signed-in/developer status card, Apple/Google/email sign-in sheet, sign-out control, and developer-mode entry when local bypass is allowed.
 - Documented the AI model boundary: the "three brains" are product responsibility layers, not three fixed models. Reflex is real-time conversation, Butler is background care context, Guardian is safety/referral, and Ditto/LiveAvatar are face engines.
 - Added backend Auth verification foundation: `/auth-status` validates bearer-token auth context, and Supabase `/account-bootstrap` derives `auth.users.id` from verified auth instead of trusting a body-supplied id.
+- Added `docs/AI-SERVICE-DESIGN-v1.md` to define Munea's AI service moat: three-brain model selection, effort profiles, long-term memory lifecycle, perception layer, Wisdom Lens, Guardian policy, and MVP implementation order.
+- Added `engine/model_router.py` plus `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` contracts so Butler and Guardian can be tested before live model/provider wiring.
+- Added `supabase/sql/004_ai_memory_service_foundation.sql` for `memory_items`, `perception_snapshots`, and `ai_brain_runs`.
 
 ## Tech Stack Verdict
 
@@ -195,6 +198,12 @@ Work items:
 - [ ] Implement Profile and Memory tables first.
 - [ ] Define `family_group_id` and permission model.
 - [ ] Add conversation memory and retention policy without making raw transcripts the default user-facing surface.
+- [x] Define AI service design v1 for Reflex, Butler, Guardian, memory, perception, Wisdom Lens, and safety boundaries.
+- [x] Add local AI Brain Router framework with deterministic memory extraction/retrieval and Guardian risk evaluation contracts.
+- [x] Add Supabase AI memory/service schema draft for structured memories, perception snapshots, and model run logs.
+- [ ] Wire Butler Brain to Claude Sonnet for live memory extraction and care summaries.
+- [ ] Wire Guardian Brain to rules + Claude Sonnet + moderation/classifier layer.
+- [ ] Add live perception tools for time, weather, current-topic retrieval, and regional recommendations.
 - [x] Persist prototype companion template/name across onboarding, Home, Chat, and Settings.
 - [x] Add local backend companion profile load/save route.
 - [x] Add local account/family/person/companion profile store placeholder.

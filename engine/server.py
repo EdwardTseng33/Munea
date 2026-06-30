@@ -19,6 +19,7 @@ from env_loader import load_engine_env
 load_engine_env()
 import chat_engine as eng
 import supabase_adapter
+import model_router
 from google.genai import types
 
 if not os.environ.get("GEMINI_API_KEY"):
@@ -32,6 +33,7 @@ APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.pa
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
+MEMORY_ITEMS_PATH = os.environ.get("MUNEA_MEMORY_ITEMS_PATH") or os.path.join(HERE, "memory_items.json")
 PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
@@ -231,6 +233,51 @@ def data_backend_status():
     status = data_backend().status()
     status["fallback"] = "json"
     return status
+
+
+def load_memory_items(limit=200):
+    items = read_json_file(MEMORY_ITEMS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    return items[-limit:]
+
+
+def save_memory_items(items):
+    write_json_file(MEMORY_ITEMS_PATH, list(items)[-1000:])
+    return items
+
+
+def memory_extract_response(data):
+    data = data or {}
+    response = model_router.memory_extract_response(data)
+    if (data.get("action") or "preview") == "store":
+        existing = load_memory_items(limit=1000)
+        person_id = data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID
+        new_items = [model_router.normalize_memory_item(c, person_id) for c in response["candidates"]]
+        save_memory_items(existing + new_items)
+        response["stored"] = len(new_items)
+        response["memoryItems"] = new_items
+    else:
+        response["stored"] = 0
+    return response
+
+
+def memory_retrieve_response(data):
+    return model_router.memory_retrieve_response(data or {}, load_memory_items())
+
+
+def guardian_evaluate_response(data):
+    result = model_router.guardian_evaluate_response(data or {})
+    if result["risk"]["requiresAuditEvent"]:
+        append_product_event({
+            "eventName": "guardian_risk_evaluated",
+            "properties": {
+                "riskLevel": result["risk"]["level"],
+                "categories": result["risk"]["categories"],
+                "analyticsExcluded": True,
+            },
+        })
+    return result
 
 
 def load_legacy_companion_profile():
@@ -1115,7 +1162,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -1147,6 +1194,14 @@ class H(BaseHTTPRequestHandler):
                 self._json(avatar_session_response(data))
             elif self.path == "/product-event":
                 self._json(product_event_response(data))
+            elif self.path == "/ai/brain-status":
+                self._json(model_router.brain_status_response())
+            elif self.path == "/memory/extract":
+                self._json(memory_extract_response(data))
+            elif self.path == "/memory/retrieve":
+                self._json(memory_retrieve_response(data))
+            elif self.path == "/guardian/evaluate":
+                self._json(guardian_evaluate_response(data))
             elif self.path == "/admin/north-star":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
