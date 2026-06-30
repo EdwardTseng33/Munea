@@ -36,6 +36,9 @@ let accountBootstrapSyncing = false;
 let activeChatSessionId = null;
 let activeChatStartedAt = 0;
 let activeChatTurnCount = 0;
+let latestAiContext = null;
+let latestAiContextSource = 'not loaded';
+let latestRelationshipState = null;
 const ACCOUNT_BOOTSTRAP_KEY = 'munea.accountBootstrapped.v1';
 const ONBOARDING_COMPLETED_KEY = 'munea.onboardingCompleted.v1';
 
@@ -277,6 +280,7 @@ function syncCompanionUI() {
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
+  renderAiDiagnostics();
 }
 function setCompanionName(name) {
   companionDisplayName = (name || '').slice(0, 12);
@@ -356,6 +360,95 @@ function authAnalyticsContext() {
     accountType: excluded ? 'developer' : 'user',
   };
 }
+function isAiDevDiagnosticsEnabled() {
+  const debug = new URLSearchParams(location.search).get('debug');
+  const auth = window.MuneaAuth;
+  const state = auth && typeof auth.state === 'function' ? auth.state() : {};
+  const cfg = developerConfig();
+  return debug === 'ai' || debug === 'all' || state.developerMode || (isDeveloperBypassAllowed() && cfg.showAiDiagnostics !== false);
+}
+function compactList(value) {
+  if (!value) return '-';
+  if (Array.isArray(value)) return value.length ? value.join(', ') : '-';
+  return String(value || '-');
+}
+function renderAiDiagnostics() {
+  const panel = $('#aiDevPanel');
+  if (!panel) return;
+  const enabled = isAiDevDiagnosticsEnabled();
+  panel.hidden = !enabled;
+  if (!enabled) return;
+  const ctx = latestAiContext || {};
+  const persona = ctx.personaLayer || {};
+  const relationship = ctx.relationship || {};
+  const guardian = ctx.guardian || {};
+  const perception = ctx.perception || {};
+  const memory = ctx.memory || {};
+  const setText = (id, value) => { const el = $(id); if (el) el.textContent = value == null || value === '' ? '-' : String(value); };
+  setText('#aiDevPersona', persona.templateId || currentAvatarId);
+  setText('#aiDevRapport', relationship.rapportLevel || (latestRelationshipState && latestRelationshipState.rapportLevel) || 'new');
+  setText('#aiDevGuardian', guardian.riskLevel || 'none');
+  setText('#aiDevMemory', memory.count == null ? '-' : memory.count);
+  setText('#aiDevSource', latestAiContextSource);
+  setText('#aiDevPerception', compactList(perception.domains));
+  setText('#aiDevTone', compactList(relationship.toneOverrideKeys || (latestRelationshipState && Object.keys(latestRelationshipState.toneOverrides || {}))));
+  const json = $('#aiDevJson');
+  if (json) {
+    json.textContent = JSON.stringify({
+      aiContext: latestAiContext,
+      relationshipState: latestRelationshipState,
+      voiceProvider: voiceProvider.mode,
+      avatarMode: avatarRuntime.mode,
+      analytics: authAnalyticsContext(),
+    }, null, 2);
+  }
+}
+function setLatestAiContext(context, source, relationshipState) {
+  if (context) latestAiContext = context;
+  if (relationshipState) latestRelationshipState = relationshipState;
+  if (source) latestAiContextSource = source;
+  renderAiDiagnostics();
+}
+async function refreshAiDiagnostics() {
+  const panel = $('#aiDevPanel');
+  if (!panel || panel.hidden) return null;
+  const button = $('#aiDevRefresh');
+  if (button) button.textContent = 'Loading';
+  try {
+    const response = await brainPost('/persona/context', {
+      companionProfile: savedCompanionProfile,
+      char: currentChar,
+      text: 'developer diagnostics refresh',
+      ...authAnalyticsContext(),
+    });
+    if (response) {
+      latestRelationshipState = response.relationshipState || latestRelationshipState;
+      setLatestAiContext({
+        personaLayer: {
+          templateId: response.templateId,
+          displayName: response.displayName,
+          personaArchetype: response.persona && response.persona.personaArchetype,
+        },
+        relationship: {
+          rapportLevel: response.relationshipState && response.relationshipState.rapportLevel,
+          hasRelationshipMemory: !!(response.relationshipState && response.relationshipState.relationshipMemory),
+          toneOverrideKeys: Object.keys((response.relationshipState && response.relationshipState.toneOverrides) || {}),
+        },
+        guardian: {
+          riskLevel: response.safety && response.safety.riskLevel,
+          action: response.safety && response.safety.forceSafetyBoundary ? 'boundary' : 'allow',
+        },
+        perception: { domains: [], needsCurrentFacts: false },
+        memory: { count: 0 },
+      }, 'persona-context refresh', response.relationshipState);
+    } else if (!latestAiContext) {
+      setLatestAiContext(null, isStaticPreview() ? 'static preview' : 'refresh unavailable');
+    }
+    return response;
+  } finally {
+    if (button) button.textContent = 'Refresh';
+  }
+}
 function analyticsContext(extra = {}) {
   return {
     templateId: currentAvatarId,
@@ -388,6 +481,9 @@ function postTurnReview() {
     companionProfile: savedCompanionProfile,
     sessionId: activeChatSessionId,
     ...authAnalyticsContext(),
+  }).then(response => {
+    if (response) setLatestAiContext(response.aiContext, 'butler post-turn', response.relationshipState);
+    return response;
   });
 }
 
@@ -506,6 +602,7 @@ const voiceProvider = {
       locale: 'zh-TW',
     };
     this.mode = this.session.provider || this.session.fallback || VOICE_PROVIDER_MODES.STT_CHAT_TTS;
+    setLatestAiContext(this.session.aiContext, 'voice-session', this.session.relationshipState);
     this.setState('idle');
     return this.session;
   },
@@ -516,7 +613,9 @@ const voiceProvider = {
   async sendText({ history, char }) {
     this.setState('thinking');
     try {
-      return await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile });
+      const response = await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile });
+      if (response) setLatestAiContext(response.aiContext, 'chat response', response.relationshipState);
+      return response;
     } finally {
       this.setState('idle');
     }
@@ -524,7 +623,9 @@ const voiceProvider = {
   async sendVoiceNote({ audio, mime, durationMs, char }) {
     this.setState('uploading');
     try {
-      return await brainPost('/voice-note', { char, audio, mime, durationMs, provider: this.mode });
+      const response = await brainPost('/voice-note', { char, audio, mime, durationMs, provider: this.mode });
+      if (response) setLatestAiContext(response.aiContext, 'voice-note', response.relationshipState);
+      return response;
     } finally {
       this.setState('idle');
     }
@@ -642,6 +743,7 @@ function updateAuthUI() {
   if (signOut) signOut.hidden = !signedIn;
   const devBadge = $('#authDevBadge');
   if (devBadge) devBadge.hidden = !(signedIn && state.developerMode);
+  renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
   const auth = window.MuneaAuth;
@@ -745,6 +847,8 @@ function init() {
   });
   avatarRuntime.setState('idle');
   $('#tabBar').addEventListener('click', e => { const b = e.target.closest('.tab-btn'); if (b) showView(b.dataset.view); });
+  renderAiDiagnostics();
+  if ($('#aiDevRefresh')) $('#aiDevRefresh').addEventListener('click', () => refreshAiDiagnostics());
 
   // 首頁「跟寧寧聊聊」＝ 進同一個全屏臉（不再有獨立視訊頁）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => showView('chat'));

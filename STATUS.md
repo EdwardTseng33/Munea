@@ -10,7 +10,19 @@
 - `aiContext` now includes a relationship summary for developer diagnostics.
 - Smoke tests now verify the write/read loop: post-turn writes `companion_relationship_states`, then the next persona/build context reads it back.
 
-**Next:** Gemini Live realtime adapter, dev diagnostics view for `aiContext`, and Supabase/RLS validation against the real project.
+**Next:** Gemini Live realtime adapter and Supabase/RLS validation against the real project.
+
+## 2026-06-30 Update - AI diagnostics panel
+
+**Status:** completed for frontend developer visibility.
+
+- Settings now includes a developer-only `AI context diagnostics` panel.
+- Normal user mode keeps the panel hidden; `?debug=ai` or local developer mode can show it.
+- The panel displays persona template, rapport level, Guardian risk, memory count, perception domains, tone overrides, and compact raw context JSON.
+- Chat, voice-note, voice-session, and Butler post-turn responses now feed their latest `aiContext` into the panel.
+- A manual refresh calls `/persona/context` so developers can inspect the current persona + relationship state without storing raw transcript text.
+
+**Next:** Gemini Live realtime adapter and live Supabase project validation.
 
 > 沐寧 Munea · 智慧健康陪伴 App · **新 session cold-start：先讀 `docs/00-總綱-從這裡開始.md`（唯一真相入口）+ `docs/SPEC-沐寧-v1-2026-06-28.md`（權威規格），再看本檔現況**
 > 最後更新 **2026-06-30（AI 服務架構補 Companion Persona Layer：三腦之外新增角色人格層、真實回話公式、`/persona/context` 合約與 Supabase 005 persona schema）**

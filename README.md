@@ -137,6 +137,8 @@ This keeps the six characters meaningfully different while preserving the same s
 
 The local `/chat` fallback now uses this composition path before calling the model and returns a lightweight `aiContext` summary for verification. `/voice-session` also returns the same persona-aware context for the future S2S/Gemini Live path, and `/butler/post-turn` can run after a turn to extract structured memory and update relationship state without retaining raw transcripts by default. The next `/persona/context` call now retrieves that relationship state, so rapport, preferred address, tone overrides, and relationship memory can shape the next response.
 
+Developer-only AI diagnostics are available in Settings when local developer mode is enabled or the page is opened with `?debug=ai`. The panel shows the latest `aiContext`, relationship state, Guardian risk, memory count, perception domains, and tone overrides without exposing transcript text as analytics.
+
 Auth and onboarding architecture v1 is tracked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`. It locks the v1 sign-in providers, guest mode, registration fields, progressive onboarding gates, and the future Supabase Auth bridge.
 
 The browser Auth Bridge starts in `web/src/auth.js`. It keeps guest mode active when Supabase public config is absent, exposes `window.MuneaAuth` for Apple, Google, email magic link/OTP, and sign-out, and adds Bearer-token headers to app/onboarding API calls when a Supabase session exists. Browser config must use only the Supabase publishable/anon key; never use the service role key in `web/`.

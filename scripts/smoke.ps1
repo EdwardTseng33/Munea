@@ -1141,6 +1141,45 @@ print("voice provider contract OK")
 '@ | python -
 Pass "Voice provider contract is present"
 
+Step "Frontend AI diagnostics contract"
+@'
+from pathlib import Path
+html = Path("web/index.html").read_text(encoding="utf-8")
+js = Path("web/src/app.js").read_text(encoding="utf-8")
+css = Path("web/src/styles.css").read_text(encoding="utf-8")
+required_html = [
+    "aiDevPanel",
+    "aiDevRefresh",
+    "aiDevPersona",
+    "aiDevRapport",
+    "aiDevGuardian",
+    "aiDevMemory",
+    "aiDevJson",
+]
+missing_html = [token for token in required_html if token not in html]
+if missing_html:
+    raise SystemExit("Missing AI diagnostics UI tokens: " + ", ".join(missing_html))
+required_js = [
+    "latestAiContext",
+    "latestRelationshipState",
+    "isAiDevDiagnosticsEnabled",
+    "renderAiDiagnostics",
+    "refreshAiDiagnostics",
+    "setLatestAiContext",
+    "/persona/context",
+    "relationshipState",
+    "toneOverrideKeys",
+]
+missing_js = [token for token in required_js if token not in js]
+if missing_js:
+    raise SystemExit("Missing AI diagnostics JS tokens: " + ", ".join(missing_js))
+for token in ["ai-dev-panel", "ai-dev-grid", "ai-dev-json"]:
+    if token not in css:
+        raise SystemExit("Missing AI diagnostics CSS token: " + token)
+print("frontend ai diagnostics OK")
+'@ | python -
+Pass "Frontend AI diagnostics are present"
+
 Step "Account bootstrap frontend contract"
 @'
 from pathlib import Path

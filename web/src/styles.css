@@ -264,6 +264,18 @@ body { font-family: var(--sans); background: #DDD; color: var(--ink); -webkit-fo
 .avo .avl b { display: block; font-size: 13px; font-weight: 800; color: var(--ink); }
 .avo .avl small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; font-weight: 500; }
 .avo.on .avl b { color: var(--teal-d); }
+.ai-dev-panel { margin-top: 16px; background: #17231F; color: #EAF4F0; border-radius: 20px; padding: 16px; box-shadow: var(--shadow-sm); border: 1px solid rgba(255,255,255,.08); }
+.ai-dev-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+.ai-dev-kicker { font-family: var(--display); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #8FD4CC; margin-bottom: 2px; }
+.ai-dev-head h2 { font-family: var(--display); font-size: 17px; line-height: 1.15; color: #fff; }
+.ai-dev-refresh { border: 1px solid rgba(143,212,204,.35); background: rgba(143,212,204,.12); color: #BDECE6; border-radius: 12px; min-height: 36px; padding: 0 12px; font-family: var(--display); font-size: 12px; font-weight: 800; cursor: pointer; }
+.ai-dev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.ai-dev-metric { background: rgba(255,255,255,.07); border-radius: 14px; padding: 10px; min-width: 0; }
+.ai-dev-metric span, .ai-dev-row span { display: block; color: rgba(234,244,240,.68); font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+.ai-dev-metric b, .ai-dev-row b { display: block; color: #fff; font-family: var(--display); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.ai-dev-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: start; gap: 10px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.08); }
+.ai-dev-row span { margin-bottom: 0; }
+.ai-dev-json { max-height: 190px; overflow: auto; background: rgba(0,0,0,.26); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 11px; margin-top: 10px; font-size: 11px; line-height: 1.55; color: #D6E7E1; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ===== Apple Watch 連接卡（狀態頁） ===== */
 .watch-card { position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px; background: linear-gradient(140deg, #243430, #1A2723); border-radius: 22px; padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 13px; color: #fff; }

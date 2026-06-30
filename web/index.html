@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260629-uiux-avatar" />
+  <link rel="stylesheet" href="src/styles.css?v=20260630-ai-dev-diagnostics" />
 </head>
 <body>
 <div class="app-shell">
@@ -311,6 +311,26 @@
           <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai.png" alt="狗狗陪伴型"></span><span class="avl"><b>狗狗型</b><small>熱情 · 很黏人</small></span></button>
         </div>
       </div>
+
+      <section class="ai-dev-panel" id="aiDevPanel" hidden>
+        <div class="ai-dev-head">
+          <div>
+            <p class="ai-dev-kicker">Developer</p>
+            <h2>AI context diagnostics</h2>
+          </div>
+          <button class="ai-dev-refresh" id="aiDevRefresh" type="button">Refresh</button>
+        </div>
+        <div class="ai-dev-grid">
+          <div class="ai-dev-metric"><span>Persona</span><b id="aiDevPersona">-</b></div>
+          <div class="ai-dev-metric"><span>Rapport</span><b id="aiDevRapport">-</b></div>
+          <div class="ai-dev-metric"><span>Guardian</span><b id="aiDevGuardian">-</b></div>
+          <div class="ai-dev-metric"><span>Memory</span><b id="aiDevMemory">-</b></div>
+        </div>
+        <div class="ai-dev-row"><span>Source</span><b id="aiDevSource">not loaded</b></div>
+        <div class="ai-dev-row"><span>Perception</span><b id="aiDevPerception">-</b></div>
+        <div class="ai-dev-row"><span>Tone overrides</span><b id="aiDevTone">-</b></div>
+        <pre class="ai-dev-json" id="aiDevJson">{}</pre>
+      </section>
 
       <h2 class="set-section">健康資料與安全</h2>
       <div class="set-list" id="setDevices" style="cursor:pointer">

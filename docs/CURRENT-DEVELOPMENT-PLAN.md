@@ -25,6 +25,14 @@
 | Real-time avatar | Avatar Runtime now consumes backend `/avatar-session`; engine PoCs still pending | 35-45% |
 | First TestFlight path | Not ready yet | 30-35% |
 
+## 2026-06-30 Update
+
+- Added developer-only AI context diagnostics in Settings, visible through local developer mode or `?debug=ai`.
+- The diagnostics panel shows persona template, relationship rapport, Guardian risk, memory count, perception domains, tone overrides, and compact raw diagnostic JSON.
+- Connected `/voice-session`, `/chat`, `/voice-note`, and `/butler/post-turn` responses to the latest `aiContext` display.
+- Added a manual `/persona/context` refresh so developers can inspect persona + relationship state without storing raw transcript analytics.
+- Verified that normal mode hides the panel and `?debug=ai` shows it in Settings.
+
 ## 2026-06-29 Update
 
 - Added the first mobile microphone bridge path.
