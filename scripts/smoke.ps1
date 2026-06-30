@@ -130,6 +130,9 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**payload, "updated_at": "2026-06-29T00:00:00Z"}]
         if table == "product_events":
             return [{**payload, "id": "product-event-1", "created_at": "2026-06-29T00:00:00Z"}]
+        if table == "memory_items":
+            rows = payload if isinstance(payload, list) else [payload]
+            return [{**row, "id": f"memory-item-{idx}", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"} for idx, row in enumerate(rows, start=1)]
         raise AssertionError(f"Unexpected write table: {table}")
 
     assert method == "GET"
@@ -201,6 +204,25 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "properties": {"durationMs": 90000},
             "created_at": "2026-06-29T00:00:00Z",
         }],
+        "memory_items": [{
+            "id": "memory-item-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "memory_type": "preference",
+            "content": "Likes movies",
+            "source": "conversation",
+            "confidence": 0.8,
+            "importance": 0.7,
+            "sensitivity": "normal",
+            "consent_scope": "user",
+            "valid_from": "2026-06-29T00:00:00Z",
+            "valid_until": None,
+            "last_confirmed_at": None,
+            "supersedes_memory_id": None,
+            "metadata": {"topic": "movie"},
+            "created_at": "2026-06-29T00:00:00Z",
+            "updated_at": "2026-06-29T00:00:00Z",
+        }],
     }
     return fixtures[table]
 
@@ -230,6 +252,19 @@ event = adapter.append_product_event({"eventName": "voice_session_completed", "p
 assert event["eventName"] == "voice_session_completed"
 events = adapter.load_product_events(limit=10)
 assert events[0]["eventName"] == "voice_session_completed"
+memories = adapter.load_memory_items(limit=10)
+assert memories[0]["type"] == "preference"
+assert memories[0]["content"] == "Likes movies"
+saved_memories = adapter.save_memory_items([{
+    "personId": env["MUNEA_SUPABASE_PERSON_ID"],
+    "type": "relationship",
+    "content": "Daughter is Mei-Hua",
+    "confidence": 0.9,
+    "importance": 0.9,
+    "sensitivity": "normal",
+}])
+assert saved_memories[0]["type"] == "relationship"
+assert saved_memories[0]["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
 
 bootstrap_writes = []
 bootstrap_adapter = supabase_adapter.make_adapter(env=env)

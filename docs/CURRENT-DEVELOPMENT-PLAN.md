@@ -71,6 +71,7 @@
 - Added `docs/AI-SERVICE-DESIGN-v1.md` to define Munea's AI service moat: three-brain model selection, effort profiles, long-term memory lifecycle, perception layer, Wisdom Lens, Guardian policy, and MVP implementation order.
 - Added `engine/model_router.py` plus `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` contracts so Butler and Guardian can be tested before live model/provider wiring.
 - Added `supabase/sql/004_ai_memory_service_foundation.sql` for `memory_items`, `perception_snapshots`, and `ai_brain_runs`.
+- Added Supabase adapter support for `memory_items`, so `/memory/extract?action=store` and `/memory/retrieve` can use the production database path when env is configured, with JSON fallback preserved.
 
 ## Tech Stack Verdict
 
@@ -201,6 +202,7 @@ Work items:
 - [x] Define AI service design v1 for Reflex, Butler, Guardian, memory, perception, Wisdom Lens, and safety boundaries.
 - [x] Add local AI Brain Router framework with deterministic memory extraction/retrieval and Guardian risk evaluation contracts.
 - [x] Add Supabase AI memory/service schema draft for structured memories, perception snapshots, and model run logs.
+- [x] Add Supabase adapter load/save path for `memory_items`.
 - [ ] Wire Butler Brain to Claude Sonnet for live memory extraction and care summaries.
 - [ ] Wire Guardian Brain to rules + Claude Sonnet + moderation/classifier layer.
 - [ ] Add live perception tools for time, weather, current-topic retrieval, and regional recommendations.

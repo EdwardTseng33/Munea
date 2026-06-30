@@ -295,9 +295,10 @@ Current implementation anchors:
 - `POST /ai/brain-status`
   - returns current model/service plan.
 - `POST /memory/extract`
-  - returns memory candidates and can store local prototype memory when `action=store`.
+  - returns memory candidates and can store structured memories when `action=store`.
+  - writes to Supabase `memory_items` when backend env is configured, otherwise falls back to local JSON.
 - `POST /memory/retrieve`
-  - retrieves local prototype memory by query.
+  - retrieves scoped memory from Supabase when configured, otherwise from local JSON.
 - `POST /guardian/evaluate`
   - evaluates safety risk and emits a safety-related product event when audit is required.
 - `engine/memory_items.json`

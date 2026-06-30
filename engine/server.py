@@ -236,6 +236,13 @@ def data_backend_status():
 
 
 def load_memory_items(limit=200):
+    try:
+        remote_items = data_backend().load_memory_items(limit=limit)
+        if remote_items is not None:
+            return remote_items
+    except Exception as e:
+        if data_backend().enabled():
+            raise e
     items = read_json_file(MEMORY_ITEMS_PATH, [])
     if not isinstance(items, list):
         items = []
@@ -247,16 +254,29 @@ def save_memory_items(items):
     return items
 
 
+def append_memory_items(items):
+    items = items or []
+    try:
+        remote_items = data_backend().save_memory_items(items)
+        if remote_items is not None:
+            return remote_items
+    except Exception as e:
+        if data_backend().enabled():
+            raise e
+    existing = load_memory_items(limit=1000)
+    save_memory_items(existing + items)
+    return items
+
+
 def memory_extract_response(data):
     data = data or {}
     response = model_router.memory_extract_response(data)
     if (data.get("action") or "preview") == "store":
-        existing = load_memory_items(limit=1000)
         person_id = data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID
         new_items = [model_router.normalize_memory_item(c, person_id) for c in response["candidates"]]
-        save_memory_items(existing + new_items)
-        response["stored"] = len(new_items)
-        response["memoryItems"] = new_items
+        stored_items = append_memory_items(new_items)
+        response["stored"] = len(stored_items)
+        response["memoryItems"] = stored_items
     else:
         response["stored"] = 0
     return response

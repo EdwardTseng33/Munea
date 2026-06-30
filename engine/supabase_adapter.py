@@ -73,6 +73,9 @@ class SupabaseAdapter:
                 "family_interaction_events",
                 "cost_ledger",
                 "admin_notes",
+                "memory_items",
+                "perception_snapshots",
+                "ai_brain_runs",
             ],
         }
 
@@ -434,6 +437,39 @@ class SupabaseAdapter:
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows]
 
+    def load_memory_items(self, query=None, limit=200):
+        if not self.enabled():
+            return None
+        query = query or {}
+        filters = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{query.get('personId') or query.get('person_id') or self.person_id}",
+            "deleted_at": "is.null",
+            "select": "*",
+            "order": "importance.desc,confidence.desc,updated_at.desc",
+            "limit": str(limit or 200),
+        }
+        memory_type = query.get("type") or query.get("memoryType") or query.get("memory_type")
+        if memory_type:
+            filters["memory_type"] = f"eq.{memory_type}"
+        rows = self._select("memory_items", filters)
+        return [self.memory_row_to_item(row) for row in rows]
+
+    def save_memory_items(self, items):
+        if not self.enabled():
+            return None
+        rows_payload = [self.memory_item_to_row(item) for item in (items or [])]
+        if not rows_payload:
+            return []
+        rows = self._request(
+            "POST",
+            "memory_items",
+            query={"select": "*"},
+            payload=rows_payload,
+            prefer="return=representation",
+        )
+        return [self.memory_row_to_item(row) for row in rows]
+
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
             return self._first("family_groups", {"id": f"eq.{self.family_group_id}", "select": "*"})
@@ -588,6 +624,50 @@ class SupabaseAdapter:
             "sessionId": row.get("session_id"),
             "properties": row.get("properties") or {},
             "createdAt": row.get("created_at"),
+        }
+
+    def memory_item_to_row(self, item):
+        item = item or {}
+        memory_type = item.get("type") or item.get("memoryType") or item.get("memory_type") or "temporary_event"
+        return {
+            "account_id": item.get("accountId") or item.get("account_id") or self.account_id,
+            "person_id": item.get("personId") or item.get("person_id") or self.person_id,
+            "source_conversation_summary_id": item.get("sourceConversationSummaryId") or item.get("source_conversation_summary_id"),
+            "memory_type": memory_type,
+            "content": item.get("content") or "",
+            "source": item.get("source") or "conversation",
+            "confidence": item.get("confidence", 0.5),
+            "importance": item.get("importance", 0.5),
+            "sensitivity": item.get("sensitivity") or "normal",
+            "consent_scope": item.get("consentScope") or item.get("consent_scope") or "user",
+            "valid_from": item.get("validFrom") or item.get("valid_from") or item.get("createdAt") or item.get("created_at"),
+            "valid_until": item.get("validUntil") or item.get("valid_until"),
+            "last_confirmed_at": item.get("lastConfirmedAt") or item.get("last_confirmed_at"),
+            "supersedes_memory_id": item.get("supersedesMemoryId") or item.get("supersedes_memory_id"),
+            "metadata": item.get("metadata") or {},
+        }
+
+    @staticmethod
+    def memory_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id") or "",
+            "type": row.get("memory_type") or "temporary_event",
+            "content": row.get("content") or "",
+            "source": row.get("source") or "conversation",
+            "confidence": float(row.get("confidence") or 0),
+            "importance": float(row.get("importance") or 0),
+            "sensitivity": row.get("sensitivity") or "normal",
+            "consentScope": row.get("consent_scope") or "user",
+            "validFrom": row.get("valid_from"),
+            "validUntil": row.get("valid_until"),
+            "lastConfirmedAt": row.get("last_confirmed_at"),
+            "supersedesMemoryId": row.get("supersedes_memory_id"),
+            "metadata": row.get("metadata") or {},
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
         }
 
     @staticmethod
