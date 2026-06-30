@@ -1,5 +1,17 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-06-30 Update - Relationship state readback
+
+**Status:** completed for local/backend contract.
+
+- `/butler/post-turn` can save structured memory and companion relationship state after a turn.
+- `/persona/context` now reads the latest matching relationship state and returns it with the persona pack.
+- `/chat`, `/voice-note`, and `/voice-session` use the same persona context path, so rapport, preferred address, tone overrides, and relationship memory can affect the next response.
+- `aiContext` now includes a relationship summary for developer diagnostics.
+- Smoke tests now verify the write/read loop: post-turn writes `companion_relationship_states`, then the next persona/build context reads it back.
+
+**Next:** Gemini Live realtime adapter, dev diagnostics view for `aiContext`, and Supabase/RLS validation against the real project.
+
 > 沐寧 Munea · 智慧健康陪伴 App · **新 session cold-start：先讀 `docs/00-總綱-從這裡開始.md`（唯一真相入口）+ `docs/SPEC-沐寧-v1-2026-06-28.md`（權威規格），再看本檔現況**
 > 最後更新 **2026-06-30（AI 服務架構補 Companion Persona Layer：三腦之外新增角色人格層、真實回話公式、`/persona/context` 合約與 Supabase 005 persona schema）**
 

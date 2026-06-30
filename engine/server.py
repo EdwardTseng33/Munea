@@ -353,9 +353,10 @@ def normalize_relationship_state(data):
     }
 
 
-def load_relationship_states(limit=100):
+def load_relationship_states(query=None, limit=100):
+    query = query or {}
     try:
-        remote_states = data_backend().load_relationship_states(limit=limit)
+        remote_states = data_backend().load_relationship_states(query=query, limit=limit)
         if remote_states is not None:
             return remote_states
     except Exception as e:
@@ -363,7 +364,19 @@ def load_relationship_states(limit=100):
             raise e
     store = read_json_file(RELATIONSHIP_STATES_PATH, {"states": []})
     states = store.get("states") if isinstance(store, dict) else store
-    return [normalize_relationship_state(state) for state in (states or [])][:limit]
+    states = [normalize_relationship_state(state) for state in (states or [])]
+    person_id = query.get("personId") or query.get("person_id")
+    template_id = query.get("personaTemplateId") or query.get("persona_template_id") or query.get("templateId")
+    companion_profile_id = query.get("companionProfileId") or query.get("companion_profile_id")
+    if person_id:
+        states = [state for state in states if state.get("personId") == person_id]
+    if template_id:
+        template_id = normalize_template_id(template_id)
+        states = [state for state in states if state.get("personaTemplateId") == template_id]
+    if companion_profile_id:
+        states = [state for state in states if state.get("companionProfileId") == companion_profile_id]
+    states.sort(key=lambda state: state.get("updatedAt") or "", reverse=True)
+    return states[:limit]
 
 
 def save_relationship_states(states):
@@ -402,6 +415,36 @@ def upsert_relationship_state(state):
     return state
 
 
+def relationship_state_for_context(data, profile):
+    data = data or {}
+    profile = profile or {}
+    explicit_state = data.get("relationshipState") or data.get("relationship_state")
+    if explicit_state:
+        return normalize_relationship_state(explicit_state)
+    store = load_app_profile_store()
+    person_id = data.get("personId") or data.get("person_id") or store.get("primaryCareRecipientId") or PRIMARY_CARE_RECIPIENT_ID
+    template_id = normalize_template_id(
+        data.get("templateId")
+        or data.get("template_id")
+        or profile.get("templateId")
+        or profile.get("template_id")
+    )
+    companion_profile_id = (
+        data.get("companionProfileId")
+        or data.get("companion_profile_id")
+        or profile.get("id")
+        or profile.get("companionProfileId")
+        or profile.get("companion_profile_id")
+    )
+    query = {"personId": person_id, "personaTemplateId": template_id}
+    states = load_relationship_states(query=query, limit=10)
+    if companion_profile_id:
+        for state in states:
+            if state.get("companionProfileId") == companion_profile_id:
+                return state
+    return states[0] if states else None
+
+
 def memory_extract_response(data):
     data = data or {}
     response = model_router.memory_extract_response(data)
@@ -438,7 +481,22 @@ def persona_context_response(data):
     data = data or {}
     if not data.get("companionProfile") and not data.get("companion_profile") and not data.get("templateId"):
         data = {**data, "companionProfile": load_companion_profile()}
-    return model_router.persona_context_response(data)
+    profile = data.get("companionProfile") or data.get("companion_profile") or load_companion_profile()
+    relationship_state = relationship_state_for_context(data, profile)
+    response = model_router.persona_context_response({
+        **data,
+        "companionProfile": profile,
+        "relationshipState": relationship_state,
+    })
+    if relationship_state:
+        response["relationshipState"] = {
+            **(response.get("relationshipState") or {}),
+            "id": relationship_state.get("id"),
+            "personId": relationship_state.get("personId"),
+            "personaTemplateId": relationship_state.get("personaTemplateId"),
+            "companionProfileId": relationship_state.get("companionProfileId"),
+        }
+    return response
 
 
 def topic_perception_plan_response(data):
@@ -524,6 +582,15 @@ def reply_context_instruction(context):
     perception = context.get("perception") or {}
     memories = context.get("memories") or []
     persona_body = persona.get("persona") or {}
+    relationship_state = persona.get("relationshipState") or context.get("relationshipState") or {}
+    relationship_memory = relationship_state.get("relationshipMemory") or {}
+    tone_overrides = relationship_state.get("toneOverrides") or {}
+    relationship_line = (
+        f"[Relationship state] rapport={relationship_state.get('rapportLevel') or 'new'}; "
+        f"preferredAddress={relationship_state.get('preferredAddress') or ''}; "
+        f"toneOverrides={json.dumps(tone_overrides, ensure_ascii=False)}; "
+        f"relationshipMemory={json.dumps(relationship_memory, ensure_ascii=False)}."
+    )
     memory_lines = [
         f"- {item.get('type')}: {item.get('content')}"
         for item in memories[:5]
@@ -535,6 +602,7 @@ def reply_context_instruction(context):
     ]
     return "\n".join([
         "",
+        relationship_line,
         "（Munea AI 服務組裝規則：回應 = 角色人格 + 使用者記憶 + 即時感知 + 當下對話 + 安全規則 + 語音表達限制。）",
         f"（目前角色顯示名：{persona.get('displayName') or ''}；人格型：{persona_body.get('personaArchetype') or ''}；關係框架：{persona_body.get('relationshipFrame') or ''}。）",
         f"（語氣：{', '.join(persona_body.get('toneProfile') or [])}。）",
@@ -556,6 +624,11 @@ def ai_context_summary(context):
             "templateId": persona.get("templateId"),
             "displayName": persona.get("displayName"),
             "personaArchetype": (persona.get("persona") or {}).get("personaArchetype"),
+        },
+        "relationship": {
+            "rapportLevel": (persona.get("relationshipState") or {}).get("rapportLevel") or "new",
+            "hasRelationshipMemory": bool((persona.get("relationshipState") or {}).get("relationshipMemory")),
+            "toneOverrideKeys": sorted(((persona.get("relationshipState") or {}).get("toneOverrides") or {}).keys()),
         },
         "guardian": {
             "riskLevel": (guardian.get("risk") or {}).get("level"),

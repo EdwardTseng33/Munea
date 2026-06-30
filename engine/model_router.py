@@ -364,6 +364,12 @@ def persona_context_response(data):
     display_name = str(display_name).strip()[:24] or template["defaultName"]
     risk = guardian_evaluate_response(data).get("risk", {})
     risk_level = risk.get("level") or "none"
+    relationship_state = data.get("relationshipState") or data.get("relationship_state") or {}
+    relationship_memory = relationship_state.get("relationshipMemory") or relationship_state.get("relationship_memory") or {}
+    tone_overrides = relationship_state.get("toneOverrides") or relationship_state.get("tone_overrides") or {}
+    user_boundaries = relationship_state.get("userBoundaries") or relationship_state.get("user_boundaries") or {}
+    rapport_level = relationship_state.get("rapportLevel") or relationship_state.get("rapport_level") or "new"
+    preferred_address = relationship_state.get("preferredAddress") or relationship_state.get("preferred_address")
 
     return {
         "ok": True,
@@ -385,13 +391,22 @@ def persona_context_response(data):
         "voice": {
             "voiceProfile": template["voiceProfile"],
             "avatarAsset": template["avatarAsset"],
-            "speechFirst": True,
+            "speechFirst": bool(tone_overrides.get("speechFirst", True)),
             "visibleTranscriptDefault": False,
+        },
+        "relationshipState": {
+            "rapportLevel": rapport_level,
+            "preferredAddress": preferred_address,
+            "toneOverrides": tone_overrides,
+            "userBoundaries": user_boundaries,
+            "relationshipMemory": relationship_memory,
+            "updatedAt": relationship_state.get("updatedAt") or relationship_state.get("updated_at"),
         },
         "promptDirectives": [
             "Address the user through the selected display name only when natural.",
             "Express the same factual context through this persona's tone and relationship frame.",
             "Use memory only if scoped to the current person/account and relevant to the moment.",
+            "Apply relationship state as delivery guidance: rapport, preferred address, tone overrides, and boundaries can shape phrasing but cannot invent facts.",
             "Use perception facts for current recommendations; say when current data is unavailable.",
             "Never invent schedules, prices, availability, weather, market data, or medical facts.",
             "Guardian safety policy overrides persona style.",
@@ -401,11 +416,13 @@ def persona_context_response(data):
             "sameFactsDifferentVoice": True,
             "personaOverridesSafety": False,
             "personaStoredAsUserMemory": False,
+            "relationshipStateAffectsDelivery": True,
         },
         "safety": {
             "riskLevel": risk_level,
-            "reduceHumor": risk_level in {"low", "medium", "high", "critical"},
+            "reduceHumor": bool(tone_overrides.get("reduceHumor")) or risk_level in {"low", "medium", "high", "critical"},
             "forceSafetyBoundary": risk_level in {"medium", "high", "critical"},
+            "userBoundaries": user_boundaries,
         },
     }
 

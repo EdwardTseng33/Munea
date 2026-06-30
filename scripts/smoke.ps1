@@ -433,6 +433,11 @@ assert model_router.template_id_for_backend_char("\u963f\u5b8f") == "companion-r
 warm_persona = model_router.persona_context_response({
     "companionProfile": {"templateId": "nening-real-female", "displayName": "小晴"},
     "text": "Can we talk about travel today?",
+    "relationshipState": {
+        "rapportLevel": "trusted",
+        "toneOverrides": {"reduceHumor": True, "speechFirst": True},
+        "relationshipMemory": {"lastTopicDomains": ["travel"]},
+    },
 })
 steady_persona = model_router.persona_context_response({
     "companionProfile": {"templateId": "companion-real-male", "displayName": "阿宏"},
@@ -445,6 +450,10 @@ assert warm_persona["persona"]["personaArchetype"] != steady_persona["persona"][
 assert warm_persona["persona"]["toneProfile"] != steady_persona["persona"]["toneProfile"]
 assert warm_persona["composition"]["sameFactsDifferentVoice"] is True
 assert warm_persona["composition"]["personaOverridesSafety"] is False
+assert warm_persona["composition"]["relationshipStateAffectsDelivery"] is True
+assert warm_persona["relationshipState"]["rapportLevel"] == "trusted"
+assert warm_persona["relationshipState"]["relationshipMemory"]["lastTopicDomains"] == ["travel"]
+assert warm_persona["safety"]["reduceHumor"] is True
 
 with tempfile.TemporaryDirectory() as d:
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
@@ -517,7 +526,24 @@ with tempfile.TemporaryDirectory() as d:
     assert post_turn["brain"] == "butler"
     assert post_turn["relationshipState"]["personaTemplateId"] == "companion-real-male"
     assert post_turn["privacy"]["storesRawTranscriptByDefault"] is False
-    assert server.load_relationship_states(limit=5)[0]["personaTemplateId"] == "companion-real-male"
+    stored_relationships = server.load_relationship_states({"templateId": "companion-real-male"}, limit=5)
+    assert stored_relationships[0]["personaTemplateId"] == "companion-real-male"
+    next_persona = server.persona_context_response({
+        "companionProfile": {"templateId": "companion-real-male", "displayName": "\u963f\u5b8f"},
+        "text": "Can you remember how we talked last time?",
+    })
+    assert next_persona["relationshipState"]["personaTemplateId"] == "companion-real-male"
+    assert next_persona["relationshipState"]["rapportLevel"] in {"familiar", "trusted", "close"}
+    assert next_persona["relationshipState"]["relationshipMemory"]["lastMeaningfulTurnCount"] >= 1
+    next_context = server.build_reply_context([
+        {"role": "user", "text": "Can you remember our Korean drama chat?"}
+    ], "\u963f\u5b8f", {})
+    assert next_context["persona"]["relationshipState"]["personaTemplateId"] == "companion-real-male"
+    assert next_context["persona"]["relationshipState"]["relationshipMemory"]["storedMemoryCount"] >= 1
+    assert next_context["persona"]["composition"]["relationshipStateAffectsDelivery"] is True
+    assert next_context["persona"]["safety"]["reduceHumor"] is True
+    assert next_context["persona"]["voice"]["visibleTranscriptDefault"] is False
+    assert next_context["persona"]["relationshipState"]["rapportLevel"] in {"familiar", "trusted", "close"}
 
 print("ai service OK")
 '@ | python -

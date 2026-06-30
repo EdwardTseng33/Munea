@@ -21,9 +21,9 @@ Current state:
 - `/account-bootstrap` now defines the backend-owned account/member/person/family/companion creation contract for the future Supabase Auth or Apple Sign-In flow. In production it requires a verified `auth.users.id`; local prototype fallback can preview/create a JSON store.
 - `/auth-status` now defines the backend token verification contract. Supabase mode verifies `Authorization: Bearer <access_token>` against Supabase Auth and derives the real `auth.users.id`; local developer bypass is env-gated and marked as developer mode.
 - `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` now define the first AI service contracts for three-brain routing, memory lifecycle, and Guardian risk policy.
-- `/persona/context` now defines the companion persona context contract, so six-character identity, user naming, voice/avatar assets, and style directives are available to the AI service layer instead of living only in the UI.
+- `/persona/context` now defines the companion persona context contract, so six-character identity, user naming, voice/avatar assets, style directives, and retrieved relationship state are available to the AI service layer instead of living only in the UI.
 - `/voice-session` now returns the persona-aware `aiContext` and speech-first session context needed by the future Gemini Live path.
-- `/butler/post-turn` now defines the background review contract for structured memory extraction and `companion_relationship_states` updates without retaining raw transcripts by default.
+- `/butler/post-turn` now defines the background review contract for structured memory extraction and `companion_relationship_states` updates without retaining raw transcripts by default; the next context build reads those states back into persona delivery.
 - The Supabase adapter now includes `memory_items` load/save mapping, so Butler memory extraction can persist structured memories through the backend when Supabase env is configured, with JSON fallback for local development.
 - The perception design is now domain-aware rather than movie-specific: books, travel, outings, exercise, finance, video entertainment, music/audio, food, news, and wisdom/reflection topics share the same anti-fabrication contract.
 - `/perception/snapshot` now provides the API and adapter contract for storing/listing real-world perception facts through Supabase `perception_snapshots` or JSON fallback.
@@ -137,7 +137,7 @@ Missing:
 | `/chat` | POST | Current fallback chat with persona + memory + perception + Guardian context composition | required | AI provider + `conversation_summaries` |
 | `/avatar-session` | POST | Select Avatar runtime/provider and entitlement gate | required | `entitlements`, `usage_ledger`, Avatar provider |
 | `/ai/brain-status` | POST | Return current Reflex/Butler/Guardian model service plan | admin/dev initially | `ai_brain_runs`, config |
-| `/persona/context` | POST | Return selected companion persona context for Reflex/Butler/Guardian composition | required | `companion_profiles`, persona template config, `companion_relationship_states` later |
+| `/persona/context` | POST | Return selected companion persona context for Reflex/Butler/Guardian composition | required | `companion_profiles`, persona template config, `companion_relationship_states` |
 | `/memory/extract` | POST | Extract structured memory candidates from conversation context | required | `memory_items` |
 | `/memory/retrieve` | POST | Retrieve scoped memories for the next interaction | required | `memory_items`, vector/graph later |
 | `/butler/post-turn` | POST | Background post-turn memory extraction and relationship-state update | required | `memory_items`, `companion_relationship_states`, `product_events` |
