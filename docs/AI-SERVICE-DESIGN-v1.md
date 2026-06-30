@@ -390,6 +390,11 @@ Current implementation anchors:
 - `POST /chat`
   - now composes the live fallback reply with persona context, scoped memory retrieval, topic perception planning, and Guardian policy before calling the model.
   - returns a lightweight `aiContext` summary for verification without exposing raw transcript analytics.
+- `POST /voice-session`
+  - returns the same persona-aware `aiContext` and speech-first session context so future Gemini Live sessions can use the same composition pack.
+- `POST /butler/post-turn`
+  - runs after a turn/session to extract structured memory and update companion relationship state.
+  - stores structured memory and relationship state, not raw transcript by default.
 - `POST /memory/extract`
   - returns memory candidates and can store structured memories when `action=store`.
   - writes to Supabase `memory_items` when backend env is configured, otherwise falls back to local JSON.

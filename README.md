@@ -135,7 +135,7 @@ reply = persona + memory + perception + current conversation + safety + voice/av
 
 This keeps the six characters meaningfully different while preserving the same safety, factuality, privacy, and non-medical boundaries.
 
-The local `/chat` fallback now uses this composition path before calling the model and returns a lightweight `aiContext` summary for verification. The S2S/Gemini Live path should use the same context pack through `MuneaVoiceProvider` next.
+The local `/chat` fallback now uses this composition path before calling the model and returns a lightweight `aiContext` summary for verification. `/voice-session` also returns the same persona-aware context for the future S2S/Gemini Live path, and `/butler/post-turn` can run after a turn to extract structured memory and update relationship state without retaining raw transcripts by default.
 
 Auth and onboarding architecture v1 is tracked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`. It locks the v1 sign-in providers, guest mode, registration fields, progressive onboarding gates, and the future Supabase Auth bridge.
 

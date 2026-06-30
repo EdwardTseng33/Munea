@@ -76,6 +76,8 @@ class SupabaseAdapter:
                 "memory_items",
                 "perception_snapshots",
                 "ai_brain_runs",
+                "companion_persona_templates",
+                "companion_relationship_states",
             ],
         }
 
@@ -504,6 +506,50 @@ class SupabaseAdapter:
         )
         return [self.perception_row_to_snapshot(row) for row in rows]
 
+    def load_relationship_states(self, query=None, limit=100):
+        if not self.enabled():
+            return None
+        query = query or {}
+        filters = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{query.get('personId') or query.get('person_id') or self.person_id}",
+            "deleted_at": "is.null",
+            "select": "*",
+            "order": "updated_at.desc",
+            "limit": str(limit or 100),
+        }
+        template_id = query.get("personaTemplateId") or query.get("persona_template_id") or query.get("templateId")
+        if template_id:
+            filters["persona_template_id"] = f"eq.{template_id}"
+        rows = self._select("companion_relationship_states", filters)
+        return [self.relationship_row_to_state(row) for row in rows]
+
+    def save_relationship_state(self, state):
+        if not self.enabled():
+            return None
+        payload = self.relationship_state_to_row(state)
+        query = {
+            "person_id": f"eq.{payload['person_id']}",
+            "persona_template_id": f"eq.{payload['persona_template_id']}",
+            "select": "*",
+        }
+        rows = self._request(
+            "PATCH",
+            "companion_relationship_states",
+            query=query,
+            payload=payload,
+            prefer="return=representation",
+        )
+        if not rows:
+            rows = self._request(
+                "POST",
+                "companion_relationship_states",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        return self.relationship_row_to_state(rows[0]) if rows else None
+
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
             return self._first("family_groups", {"id": f"eq.{self.family_group_id}", "select": "*"})
@@ -729,6 +775,41 @@ class SupabaseAdapter:
             "facts": row.get("facts") or {},
             "source": row.get("source") or "munea",
             "createdAt": row.get("created_at"),
+        }
+
+    def relationship_state_to_row(self, state):
+        state = state or {}
+        return {
+            "account_id": state.get("accountId") or state.get("account_id") or self.account_id,
+            "person_id": state.get("personId") or state.get("person_id") or self.person_id,
+            "companion_profile_id": state.get("companionProfileId") or state.get("companion_profile_id"),
+            "persona_template_id": state.get("personaTemplateId") or state.get("persona_template_id") or state.get("templateId") or "nening-real-female",
+            "rapport_level": state.get("rapportLevel") or state.get("rapport_level") or "new",
+            "preferred_address": state.get("preferredAddress") or state.get("preferred_address"),
+            "tone_overrides": state.get("toneOverrides") or state.get("tone_overrides") or {},
+            "user_boundaries": state.get("userBoundaries") or state.get("user_boundaries") or {},
+            "relationship_memory": state.get("relationshipMemory") or state.get("relationship_memory") or {},
+            "updated_by_brain_run_id": state.get("updatedByBrainRunId") or state.get("updated_by_brain_run_id"),
+        }
+
+    @staticmethod
+    def relationship_row_to_state(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id") or "",
+            "companionProfileId": row.get("companion_profile_id"),
+            "personaTemplateId": row.get("persona_template_id") or "nening-real-female",
+            "rapportLevel": row.get("rapport_level") or "new",
+            "preferredAddress": row.get("preferred_address"),
+            "toneOverrides": row.get("tone_overrides") or {},
+            "userBoundaries": row.get("user_boundaries") or {},
+            "relationshipMemory": row.get("relationship_memory") or {},
+            "updatedByBrainRunId": row.get("updated_by_brain_run_id"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+            "deletedAt": row.get("deleted_at"),
         }
 
     @staticmethod

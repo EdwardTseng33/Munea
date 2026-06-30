@@ -28,7 +28,7 @@ Pass "Python files compile"
 Step "JSON parse"
 @'
 import json, pathlib
-for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json", "engine/billing_store.json", "engine/privacy_requests.json", "engine/memory_items.json", "engine/perception_snapshots.json"]:
+for p in ["engine/characters.json", "engine/user_profile.json", "engine/companion_profile.json", "engine/app_profile_store.json", "engine/billing_store.json", "engine/privacy_requests.json", "engine/memory_items.json", "engine/perception_snapshots.json", "engine/companion_relationship_states.json"]:
     json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
     print(f"{p} OK")
 '@ | python -
@@ -136,6 +136,8 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
         if table == "perception_snapshots":
             rows = payload if isinstance(payload, list) else [payload]
             return [{**row, "id": f"perception-snapshot-{idx}", "created_at": "2026-06-29T00:00:00Z"} for idx, row in enumerate(rows, start=1)]
+        if table == "companion_relationship_states":
+            return [{**payload, "id": "relationship-state-1", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"}]
         raise AssertionError(f"Unexpected write table: {table}")
 
     assert method == "GET"
@@ -237,6 +239,21 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "source": "smoke",
             "created_at": "2026-06-29T00:00:00Z",
         }],
+        "companion_relationship_states": [{
+            "id": "relationship-state-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "companion_profile_id": None,
+            "persona_template_id": "nening-real-female",
+            "rapport_level": "familiar",
+            "preferred_address": None,
+            "tone_overrides": {"speechFirst": True},
+            "user_boundaries": {"noRawTranscriptRetention": True},
+            "relationship_memory": {"lastTopicDomains": ["video_entertainment"]},
+            "updated_by_brain_run_id": None,
+            "created_at": "2026-06-29T00:00:00Z",
+            "updated_at": "2026-06-29T00:00:00Z",
+        }],
     }
     return fixtures[table]
 
@@ -290,6 +307,16 @@ saved_snapshots = adapter.save_perception_snapshots([{
 }])
 assert saved_snapshots[0]["snapshotType"] == "finance_context"
 assert saved_snapshots[0]["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
+relationships = adapter.load_relationship_states({"templateId": "nening-real-female"}, limit=10)
+assert relationships[0]["rapportLevel"] == "familiar"
+saved_relationship = adapter.save_relationship_state({
+    "personId": env["MUNEA_SUPABASE_PERSON_ID"],
+    "personaTemplateId": "companion-real-male",
+    "rapportLevel": "trusted",
+    "relationshipMemory": {"lastTopicDomains": ["travel"]},
+})
+assert saved_relationship["personaTemplateId"] == "companion-real-male"
+assert saved_relationship["rapportLevel"] == "trusted"
 
 bootstrap_writes = []
 bootstrap_adapter = supabase_adapter.make_adapter(env=env)
@@ -423,6 +450,14 @@ with tempfile.TemporaryDirectory() as d:
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
     server.PERCEPTION_SNAPSHOTS_PATH = str(Path(d) / "perception_snapshots.json")
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
+    server.RELATIONSHIP_STATES_PATH = str(Path(d) / "companion_relationship_states.json")
+    voice_session = server.voice_session({
+        "char": "\u963f\u5b8f",
+        "companionProfile": {"templateId": "companion-real-male", "displayName": "\u963f\u5b8f"},
+    })
+    assert voice_session["ok"] is True
+    assert voice_session["aiContext"]["personaLayer"]["templateId"] == "companion-real-male"
+    assert voice_session["sessionContext"]["visibleTranscriptDefault"] is False
     extracted = server.memory_extract_response({
         "action": "store",
         "text": "I like Korean dramas on Netflix and often talk with my daughter Mei-Hua. Recently I feel lonely.",
@@ -469,6 +504,20 @@ with tempfile.TemporaryDirectory() as d:
     instruction = server.reply_context_instruction(context)
     assert "\u89d2\u8272\u4eba\u683c" in instruction
     assert "\u4f7f\u7528\u8005\u8a18\u61b6" in instruction
+    post_turn = server.butler_post_turn_response({
+        "history": [
+            {"role": "user", "text": "I like Korean dramas on Netflix and recently feel lonely."},
+            {"role": "model", "text": "I am here with you."},
+        ],
+        "char": "\u963f\u5b8f",
+        "companionProfile": {"templateId": "companion-real-male", "displayName": "\u963f\u5b8f"},
+        "analyticsExcluded": True,
+    })
+    assert post_turn["ok"] is True
+    assert post_turn["brain"] == "butler"
+    assert post_turn["relationshipState"]["personaTemplateId"] == "companion-real-male"
+    assert post_turn["privacy"]["storesRawTranscriptByDefault"] is False
+    assert server.load_relationship_states(limit=5)[0]["personaTemplateId"] == "companion-real-male"
 
 print("ai service OK")
 '@ | python -
@@ -1047,6 +1096,8 @@ required = [
     "connect(context",
     "sendText({ history, char })",
     "sendVoiceNote({ audio, mime, durationMs, char })",
+    "postTurnReview",
+    "/butler/post-turn",
     "/voice-session",
     "trackProductEvent",
     "/product-event",
@@ -1151,6 +1202,7 @@ $voiceBody = '{"char":"\u5be7\u5be7","mime":"audio/webm","durationMs":1200,"audi
 $voice = Invoke-RestMethod -Uri "$BaseUrl/voice-note" -Method Post -ContentType "application/json; charset=utf-8" -Body $voiceBody -TimeoutSec 30
 if (-not $voice.ok) { throw "/voice-note returned not ok" }
 if ($voice.bytes -ne 4) { throw "/voice-note decoded unexpected byte length: $($voice.bytes)" }
+if (-not $voice.aiContext.personaLayer.templateId) { throw "/voice-note missing persona aiContext" }
 Pass "/voice-note accepts captured audio payloads"
 
 Step "API /voice-session"
@@ -1158,6 +1210,8 @@ $session = Invoke-RestMethod -Uri "$BaseUrl/voice-session" -Method Post -Content
 if (-not $session.ok) { throw "/voice-session returned not ok" }
 if ($session.provider -ne "stt-chat-tts") { throw "/voice-session provider unexpected: $($session.provider)" }
 if (-not $session.capabilities.recordedVoiceNote) { throw "/voice-session missing recorded voice capability" }
+if (-not $session.aiContext.personaLayer.templateId) { throw "/voice-session missing persona aiContext" }
+if ($session.sessionContext.visibleTranscriptDefault) { throw "/voice-session should not default to transcript UI" }
 Pass "/voice-session returns provider capabilities"
 
 Step "API /companion-profile"
@@ -1173,6 +1227,15 @@ if (-not $persona.ok) { throw "/persona/context returned not ok" }
 if ($persona.layer -ne "companion_persona") { throw "/persona/context unexpected layer: $($persona.layer)" }
 if ($persona.composition.personaOverridesSafety) { throw "/persona/context persona should not override safety" }
 Pass "/persona/context returns companion persona pack"
+
+Step "API /butler/post-turn"
+$postTurnBody = '{"char":"\u963f\u5b8f","companionProfile":{"templateId":"companion-real-male","displayName":"\u963f\u5b8f"},"analyticsExcluded":true,"history":[{"role":"user","text":"I like Korean dramas and feel lonely recently."},{"role":"model","text":"I am here with you."}]}'
+$postTurn = Invoke-RestMethod -Uri "$BaseUrl/butler/post-turn" -Method Post -ContentType "application/json; charset=utf-8" -Body $postTurnBody -TimeoutSec 30
+if (-not $postTurn.ok) { throw "/butler/post-turn returned not ok" }
+if ($postTurn.brain -ne "butler") { throw "/butler/post-turn unexpected brain: $($postTurn.brain)" }
+if ($postTurn.privacy.storesRawTranscriptByDefault) { throw "/butler/post-turn should not store raw transcript by default" }
+if ($postTurn.relationshipState.personaTemplateId -ne "companion-real-male") { throw "/butler/post-turn wrong persona template" }
+Pass "/butler/post-turn stores memory and relationship state"
 
 Step "API /app-profile"
 $appProfile = Invoke-RestMethod -Uri "$BaseUrl/app-profile" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"load"}' -TimeoutSec 30
@@ -1199,6 +1262,7 @@ if ($health.contracts -notcontains "ai-brain-status") { throw "/healthz missing 
 if ($health.contracts -notcontains "persona-context") { throw "/healthz missing persona-context contract" }
 if ($health.contracts -notcontains "memory-extract") { throw "/healthz missing memory-extract contract" }
 if ($health.contracts -notcontains "memory-retrieve") { throw "/healthz missing memory-retrieve contract" }
+if ($health.contracts -notcontains "butler-post-turn") { throw "/healthz missing butler-post-turn contract" }
 if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missing guardian-evaluate contract" }
 if ($health.contracts -notcontains "perception-topic-plan") { throw "/healthz missing perception-topic-plan contract" }
 if ($health.contracts -notcontains "perception-snapshot") { throw "/healthz missing perception-snapshot contract" }

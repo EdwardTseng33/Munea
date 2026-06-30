@@ -35,6 +35,7 @@ PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 MEMORY_ITEMS_PATH = os.environ.get("MUNEA_MEMORY_ITEMS_PATH") or os.path.join(HERE, "memory_items.json")
 PERCEPTION_SNAPSHOTS_PATH = os.environ.get("MUNEA_PERCEPTION_SNAPSHOTS_PATH") or os.path.join(HERE, "perception_snapshots.json")
+RELATIONSHIP_STATES_PATH = os.environ.get("MUNEA_RELATIONSHIP_STATES_PATH") or os.path.join(HERE, "companion_relationship_states.json")
 PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
@@ -323,6 +324,84 @@ def append_perception_snapshots(snapshots):
     return snapshots
 
 
+def normalize_relationship_state(data):
+    data = data or {}
+    template_id = normalize_template_id(
+        data.get("personaTemplateId")
+        or data.get("persona_template_id")
+        or data.get("templateId")
+        or "nening-real-female"
+    )
+    rapport = data.get("rapportLevel") or data.get("rapport_level") or "new"
+    if rapport not in {"new", "familiar", "trusted", "close"}:
+        rapport = "new"
+    return {
+        "id": data.get("id") or f"rel_{uuid.uuid4().hex[:12]}",
+        "accountId": data.get("accountId") or data.get("account_id") or "local-account-demo",
+        "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "companionProfileId": data.get("companionProfileId") or data.get("companion_profile_id"),
+        "personaTemplateId": template_id,
+        "rapportLevel": rapport,
+        "preferredAddress": data.get("preferredAddress") or data.get("preferred_address"),
+        "toneOverrides": data.get("toneOverrides") or data.get("tone_overrides") or {},
+        "userBoundaries": data.get("userBoundaries") or data.get("user_boundaries") or {},
+        "relationshipMemory": data.get("relationshipMemory") or data.get("relationship_memory") or {},
+        "updatedByBrainRunId": data.get("updatedByBrainRunId") or data.get("updated_by_brain_run_id"),
+        "createdAt": data.get("createdAt") or data.get("created_at") or utc_now(),
+        "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
+        "deletedAt": data.get("deletedAt") or data.get("deleted_at"),
+    }
+
+
+def load_relationship_states(limit=100):
+    try:
+        remote_states = data_backend().load_relationship_states(limit=limit)
+        if remote_states is not None:
+            return remote_states
+    except Exception as e:
+        if data_backend().enabled():
+            raise e
+    store = read_json_file(RELATIONSHIP_STATES_PATH, {"states": []})
+    states = store.get("states") if isinstance(store, dict) else store
+    return [normalize_relationship_state(state) for state in (states or [])][:limit]
+
+
+def save_relationship_states(states):
+    states = [normalize_relationship_state(state) for state in (states or [])]
+    write_json_file(RELATIONSHIP_STATES_PATH, {"states": states})
+    return states
+
+
+def upsert_relationship_state(state):
+    state = normalize_relationship_state({**(state or {}), "updatedAt": utc_now()})
+    try:
+        remote_state = data_backend().save_relationship_state(state)
+        if remote_state is not None:
+            return normalize_relationship_state(remote_state)
+    except Exception as e:
+        if data_backend().enabled():
+            raise e
+    states = load_relationship_states(limit=1000)
+    updated = False
+    next_states = []
+    for existing in states:
+        if (
+            existing.get("personId") == state.get("personId")
+            and existing.get("personaTemplateId") == state.get("personaTemplateId")
+            and existing.get("companionProfileId") == state.get("companionProfileId")
+        ):
+            state["id"] = existing.get("id") or state["id"]
+            state["createdAt"] = existing.get("createdAt") or state["createdAt"]
+            next_states.append(state)
+            updated = True
+        else:
+            next_states.append(existing)
+    if not updated:
+        next_states.append(state)
+    save_relationship_states(next_states)
+    return state
+
+
 def memory_extract_response(data):
     data = data or {}
     response = model_router.memory_extract_response(data)
@@ -465,6 +544,31 @@ def reply_context_instruction(context):
         "（即時感知需求：\n" + ("\n".join(domain_lines) if domain_lines else "- 此輪不需要外部即時事實。") + "\n）",
         "（請遵守：不主動顯示逐字稿；不診斷、不開藥、不說不用看醫生；需要即時資料卻沒有來源時，要自然說目前不能確認，不要編造。）",
     ])
+
+
+def ai_context_summary(context):
+    context = context or {}
+    persona = context.get("persona") or {}
+    guardian = context.get("guardian") or {}
+    perception = context.get("perception") or {}
+    return {
+        "personaLayer": {
+            "templateId": persona.get("templateId"),
+            "displayName": persona.get("displayName"),
+            "personaArchetype": (persona.get("persona") or {}).get("personaArchetype"),
+        },
+        "guardian": {
+            "riskLevel": (guardian.get("risk") or {}).get("level"),
+            "action": (guardian.get("risk") or {}).get("action"),
+        },
+        "perception": {
+            "domains": [item.get("domain") for item in perception.get("domains", [])],
+            "needsCurrentFacts": perception.get("needsCurrentFacts"),
+        },
+        "memory": {
+            "count": len(context.get("memories") or []),
+        },
+    }
 
 
 def load_legacy_companion_profile():
@@ -1254,30 +1358,96 @@ def chat_response(data, char=DEFAULT_CHAR):
     history = data.get("history", [])
     context = build_reply_context(history, char, data)
     t = reply_conv(history, char, data, context)
-    persona = context.get("persona") or {}
-    guardian = context.get("guardian") or {}
-    perception = context.get("perception") or {}
     return {
         "reply": t,
         "audio": tts_b64(t, char),
-        "aiContext": {
-            "personaLayer": {
-                "templateId": persona.get("templateId"),
-                "displayName": persona.get("displayName"),
-                "personaArchetype": (persona.get("persona") or {}).get("personaArchetype"),
-            },
-            "guardian": {
-                "riskLevel": (guardian.get("risk") or {}).get("level"),
-                "action": (guardian.get("risk") or {}).get("action"),
-            },
-            "perception": {
-                "domains": [item.get("domain") for item in perception.get("domains", [])],
-                "needsCurrentFacts": perception.get("needsCurrentFacts"),
-            },
-            "memory": {
-                "count": len(context.get("memories") or []),
-            },
+        "aiContext": ai_context_summary(context),
+    }
+
+
+def relationship_state_from_turn(data, context, stored_memories):
+    data = data or {}
+    context = context or {}
+    persona = context.get("persona") or {}
+    text = conversation_text(data.get("history") or [])
+    topic_domains = [
+        item.get("domain")
+        for item in (context.get("perception") or {}).get("domains", [])
+        if item.get("domain")
+    ]
+    turn_count = len([h for h in (data.get("history") or []) if h.get("role") == "user"])
+    sensitive_count = len([m for m in stored_memories if m.get("sensitivity") in {"sensitive", "restricted"}])
+    has_emotional_memory = any(m.get("type") == "emotion" for m in stored_memories)
+    rapport = "new"
+    if turn_count >= 3 or stored_memories:
+        rapport = "familiar"
+    if turn_count >= 6 or has_emotional_memory:
+        rapport = "trusted"
+    if turn_count >= 10 and has_emotional_memory:
+        rapport = "close"
+    return normalize_relationship_state({
+        "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "personaTemplateId": persona.get("templateId") or "nening-real-female",
+        "preferredAddress": data.get("preferredAddress") or data.get("preferred_address"),
+        "rapportLevel": rapport,
+        "toneOverrides": {
+            "reduceHumor": sensitive_count > 0 or has_emotional_memory,
+            "preferShortResponses": len(text) > 1200,
+            "speechFirst": True,
         },
+        "userBoundaries": {
+            "noRawTranscriptRetention": True,
+            "medicalAdviceBoundary": True,
+        },
+        "relationshipMemory": {
+            "lastTopicDomains": topic_domains[:5],
+            "lastMeaningfulTurnCount": turn_count,
+            "storedMemoryCount": len(stored_memories),
+            "lastSafetyLevel": ((context.get("guardian") or {}).get("risk") or {}).get("level", "none"),
+            "updatedFrom": "butler_post_turn",
+        },
+    })
+
+
+def butler_post_turn_response(data):
+    data = data or {}
+    history = data.get("history") or []
+    char = data.get("char") or DEFAULT_CHAR
+    context = build_reply_context(history, char, data)
+    extract = memory_extract_response({
+        "action": "store" if (data.get("storeMemory") is not False) else "preview",
+        "history": history,
+        "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "effort": data.get("effort") or "quick",
+    })
+    stored_memories = extract.get("memoryItems") or []
+    relationship_state = relationship_state_from_turn(data, context, stored_memories)
+    saved_state = upsert_relationship_state(relationship_state)
+    append_product_event({
+        "eventName": "butler_post_turn_completed",
+        "properties": {
+            "storedMemoryCount": len(stored_memories),
+            "rapportLevel": saved_state.get("rapportLevel"),
+            "analyticsExcluded": bool(data.get("analyticsExcluded")),
+        },
+    })
+    return {
+        "ok": True,
+        "brain": "butler",
+        "action": "post_turn_review",
+        "aiContext": ai_context_summary(context),
+        "memory": {
+            "stored": extract.get("stored", 0),
+            "candidateCount": len(extract.get("candidates") or []),
+            "storagePolicy": extract.get("storagePolicy"),
+        },
+        "relationshipState": saved_state,
+        "privacy": {
+            "storesRawTranscriptByDefault": False,
+            "storesStructuredMemory": True,
+            "relationshipStateIsUserScoped": True,
+        },
+        "backend": data_backend_status(),
     }
 
 
@@ -1313,23 +1483,34 @@ def decode_voice_note(data):
         raise ValueError("unsupported_audio_mime")
     if len(audio_bytes) > MAX_AUDIO_NOTE_BYTES:
         raise ValueError("audio_note_too_large")
+    char = data.get("char") or DEFAULT_CHAR
+    context = build_reply_context([], char, data)
     return {
         "ok": bool(audio_bytes),
         "bytes": len(audio_bytes),
         "mime": mime,
         "durationMs": max(0, min(int(data.get("durationMs") or 0), 180000)),
         "reply": "我收到你的語音了。下一步會把這段接到即時語音理解。",
+        "aiContext": ai_context_summary(context),
     }
 
 
 def voice_session(data):
     """回傳前端語音層能力；未來 Gemini Live / Interactions token 從這裡核發。"""
+    char = data.get("char") or DEFAULT_CHAR
+    context = build_reply_context([], char, data)
     return {
         "ok": True,
         "provider": "stt-chat-tts",
         "fallback": "typed-chat",
         "locale": data.get("locale") or "zh-TW",
-        "char": data.get("char") or DEFAULT_CHAR,
+        "char": char,
+        "aiContext": ai_context_summary(context),
+        "sessionContext": {
+            "personaContextEndpoint": "/persona/context",
+            "replyComposition": "persona + memory + perception + current conversation + safety + voice/avatar limits",
+            "visibleTranscriptDefault": False,
+        },
         "capabilities": {
             "textChat": True,
             "recordedVoiceNote": True,
@@ -1382,7 +1563,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -1421,6 +1602,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(memory_extract_response(data))
             elif self.path == "/memory/retrieve":
                 self._json(memory_retrieve_response(data))
+            elif self.path == "/butler/post-turn":
+                self._json(butler_post_turn_response(data))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":

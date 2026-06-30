@@ -380,6 +380,16 @@ function trackProductEvent(eventName, properties = {}) {
     properties: safeProperties,
   });
 }
+function postTurnReview() {
+  if (isStaticPreview() || !chatHistory.length) return Promise.resolve(null);
+  return brainPost('/butler/post-turn', {
+    history: chatHistory.slice(-12),
+    char: currentChar,
+    companionProfile: savedCompanionProfile,
+    sessionId: activeChatSessionId,
+    ...authAnalyticsContext(),
+  });
+}
 
 function isAvatarDebug() {
   return new URLSearchParams(location.search).get('debug') === 'avatar';
@@ -864,6 +874,7 @@ function init() {
         replyAudio: !!r.audio,
         fallbackUsed: false,
       });
+      postTurnReview();
     } else {                                          // 沒真腦 → 退回規則版（純靜態 demo 也能動）
       const rr = chatReply(t);
       setCallHint('正在說話');
@@ -874,6 +885,7 @@ function init() {
         turnCount: activeChatTurnCount,
         fallback: 'local-rule-reply',
       });
+      postTurnReview();
     }
   }
   function blobToDataUrl(blob) {
