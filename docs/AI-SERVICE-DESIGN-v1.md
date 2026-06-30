@@ -387,6 +387,9 @@ Current implementation anchors:
 - `POST /persona/context`
   - returns the selected companion persona context pack.
   - composes `templateId`, user-given `displayName`, voice/avatar assets, tone, relationship frame, safety constraints, and prompt directives.
+- `POST /chat`
+  - now composes the live fallback reply with persona context, scoped memory retrieval, topic perception planning, and Guardian policy before calling the model.
+  - returns a lightweight `aiContext` summary for verification without exposing raw transcript analytics.
 - `POST /memory/extract`
   - returns memory candidates and can store structured memories when `action=store`.
   - writes to Supabase `memory_items` when backend env is configured, otherwise falls back to local JSON.

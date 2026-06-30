@@ -132,7 +132,7 @@ Missing:
 |---|---|---|---|---|
 | `/voice-session` | POST | Create a voice provider session | required | `voice_sessions`, provider token service |
 | `/voice-note` | POST | Recorded voice fallback | required | object storage + `voice_sessions` |
-| `/chat` | POST | Current fallback chat | required | AI provider + `conversation_summaries` |
+| `/chat` | POST | Current fallback chat with persona + memory + perception + Guardian context composition | required | AI provider + `conversation_summaries` |
 | `/avatar-session` | POST | Select Avatar runtime/provider and entitlement gate | required | `entitlements`, `usage_ledger`, Avatar provider |
 | `/ai/brain-status` | POST | Return current Reflex/Butler/Guardian model service plan | admin/dev initially | `ai_brain_runs`, config |
 | `/persona/context` | POST | Return selected companion persona context for Reflex/Butler/Guardian composition | required | `companion_profiles`, persona template config, `companion_relationship_states` later |
@@ -150,6 +150,7 @@ Prototype coverage:
 - `/chat`
 - `/avatar-session`
 - `/ai/brain-status`
+- `/persona/context`
 - `/memory/extract`
 - `/memory/retrieve`
 - `/guardian/evaluate`

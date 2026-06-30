@@ -23,11 +23,16 @@
 - ✅ `docs/AI-SERVICE-DESIGN-v1.md` 補上 Persona Layer 在 Reflex / Butler / Guardian 之間的組裝鏈。
 - ✅ `engine/model_router.py` 新增六角色 persona template 與 `persona_context_response()`。
 - ✅ `engine/server.py` 新增 `POST /persona/context`，`/healthz` 加入 `persona-context` 合約。
+- ✅ `/chat` fallback 已接入 persona + memory retrieval + perception plan + Guardian policy 組裝鏈，回傳輕量 `aiContext` 供驗證。
+- ✅ 中文感知關鍵詞補齊：書籍、旅遊、出去玩、運動、財經、影視/韓劇/日劇/台劇/Netflix、音樂、美食、新聞、信仰反思。
 - ✅ 新增 `supabase/sql/005_companion_persona_layer.sql`：`companion_persona_templates` + `companion_relationship_states`。
 - ✅ README、總綱、Backend Architecture、Supabase Setup 均已補上 persona layer 與 005 schema。
 - ✅ `scripts/smoke.ps1 -SkipApi` 通過，涵蓋 persona layer、文件契約、前端語法與現有後端合約。
 
-**下一步：** 把 persona context 接入實際 `/chat` / voice loop 的 prompt composition，並修正目前前端/engine 早期角色名稱編碼亂碼，讓六角色顯示與 AI persona contract 完全一致。
+**下一步：**
+1. 把同一份 persona context pack 接進 `MuneaVoiceProvider` / Gemini Live S2S 熱路徑。
+2. 將對話後的 Butler memory extraction 與 `companion_relationship_states` 寫回串起來，形成「聊完會更新關係狀態」。
+3. 讓 `/chat` / voice loop 的 `aiContext` 進入 dev diagnostics，不進正式使用者主畫面，維持 S2S 非逐字稿體驗。
 
 ---
 

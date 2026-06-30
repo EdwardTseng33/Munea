@@ -393,6 +393,80 @@ def perception_snapshot_response(data):
     }
 
 
+def template_id_for_backend_char(char):
+    for template_id, template in COMPANION_TEMPLATES.items():
+        if template.get("backendChar") == char:
+            return template_id
+    return "nening-real-female"
+
+
+def conversation_text(history):
+    parts = []
+    for item in history or []:
+        if isinstance(item, dict):
+            role = item.get("role") or "user"
+            text = item.get("text") or item.get("content") or ""
+            if text:
+                parts.append(f"{role}: {text}")
+    return "\n".join(parts)
+
+
+def build_reply_context(history, char=DEFAULT_CHAR, data=None):
+    data = data or {}
+    text = conversation_text(history)
+    active_profile = load_companion_profile()
+    template_id = data.get("templateId") or active_profile.get("templateId")
+    if not template_id or COMPANION_TEMPLATES.get(template_id, {}).get("backendChar") != char:
+        template_id = template_id_for_backend_char(char)
+    profile = {
+        **active_profile,
+        "templateId": template_id,
+        "displayName": data.get("displayName") or active_profile.get("displayName") or COMPANION_TEMPLATES[template_id]["defaultName"],
+    }
+    persona = persona_context_response({
+        "companionProfile": profile,
+        "char": char,
+        "text": text,
+    })
+    guardian = guardian_evaluate_response({"text": text, "effort": "quick"})
+    memories = memory_retrieve_response({"query": text, "limit": 5}).get("memories", [])
+    perception = topic_perception_plan_response({"query": text})
+    return {
+        "persona": persona,
+        "guardian": guardian,
+        "memories": memories,
+        "perception": perception,
+    }
+
+
+def reply_context_instruction(context):
+    persona = context.get("persona") or {}
+    guardian = context.get("guardian") or {}
+    perception = context.get("perception") or {}
+    memories = context.get("memories") or []
+    persona_body = persona.get("persona") or {}
+    memory_lines = [
+        f"- {item.get('type')}: {item.get('content')}"
+        for item in memories[:5]
+        if item.get("content")
+    ]
+    domain_lines = [
+        f"- {item.get('domain')} needs {', '.join(item.get('requiredSources') or [])}"
+        for item in perception.get("domains", [])
+    ]
+    return "\n".join([
+        "",
+        "（Munea AI 服務組裝規則：回應 = 角色人格 + 使用者記憶 + 即時感知 + 當下對話 + 安全規則 + 語音表達限制。）",
+        f"（目前角色顯示名：{persona.get('displayName') or ''}；人格型：{persona_body.get('personaArchetype') or ''}；關係框架：{persona_body.get('relationshipFrame') or ''}。）",
+        f"（語氣：{', '.join(persona_body.get('toneProfile') or [])}。）",
+        f"（對話風格：{', '.join(persona_body.get('conversationStyle') or [])}。）",
+        f"（安全風險：{(guardian.get('risk') or {}).get('level', 'none')}；動作：{(guardian.get('risk') or {}).get('action', 'allow')}。）",
+        "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
+        "（即時感知需求：\n" + ("\n".join(domain_lines) if domain_lines else "- 此輪不需要外部即時事實。") + "\n）",
+        "（請遵守：不主動顯示逐字稿；不診斷、不開藥、不說不用看醫生；需要即時資料卻沒有來源時，要自然說目前不能確認，不要編造。）",
+    ])
+
+
 def load_legacy_companion_profile():
     return normalize_companion_profile(read_json_file(COMPANION_PROFILE_PATH, {}))
 
@@ -1157,9 +1231,11 @@ def _sys_for(char):
     return base, c
 
 
-def reply_conv(history, char=DEFAULT_CHAR):
+def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     """帶完整對話脈絡，用該角色的腦＋記憶回話。"""
     base, _ = _sys_for(char)
+    context = context or build_reply_context(history, char, data)
+    base = base + reply_context_instruction(context)
     contents = [types.Content(role=h["role"], parts=[types.Part(text=h["text"])]) for h in history]
     for _ in range(4):
         for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
@@ -1172,6 +1248,37 @@ def reply_conv(history, char=DEFAULT_CHAR):
                 pass
         time.sleep(2)
     return "（不好意思，我這邊連線有點不順，等一下再陪你好不好？）"
+
+
+def chat_response(data, char=DEFAULT_CHAR):
+    history = data.get("history", [])
+    context = build_reply_context(history, char, data)
+    t = reply_conv(history, char, data, context)
+    persona = context.get("persona") or {}
+    guardian = context.get("guardian") or {}
+    perception = context.get("perception") or {}
+    return {
+        "reply": t,
+        "audio": tts_b64(t, char),
+        "aiContext": {
+            "personaLayer": {
+                "templateId": persona.get("templateId"),
+                "displayName": persona.get("displayName"),
+                "personaArchetype": (persona.get("persona") or {}).get("personaArchetype"),
+            },
+            "guardian": {
+                "riskLevel": (guardian.get("risk") or {}).get("level"),
+                "action": (guardian.get("risk") or {}).get("action"),
+            },
+            "perception": {
+                "domains": [item.get("domain") for item in perception.get("domains", [])],
+                "needsCurrentFacts": perception.get("needsCurrentFacts"),
+            },
+            "memory": {
+                "count": len(context.get("memories") or []),
+            },
+        },
+    }
 
 
 def tts_b64(text, char=DEFAULT_CHAR):
@@ -1297,8 +1404,7 @@ class H(BaseHTTPRequestHandler):
                 t = eng.open_chat(char)
                 self._json({"reply": t, "audio": tts_b64(t, char)})
             elif self.path == "/chat":
-                t = reply_conv(data.get("history", []), char)
-                self._json({"reply": t, "audio": tts_b64(t, char)})
+                self._json(chat_response(data, char))
             elif self.path == "/voice-session":
                 self._json(voice_session(data))
             elif self.path == "/voice-note":

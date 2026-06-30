@@ -402,6 +402,7 @@ video_domains = {item["domain"] for item in video_plan["domains"]}
 assert "video_entertainment" in video_domains
 assert "streaming_catalog" in video_plan["perceptionSources"]
 assert "regional_availability" in video_plan["perceptionSources"]
+assert model_router.template_id_for_backend_char("\u963f\u5b8f") == "companion-real-male"
 warm_persona = model_router.persona_context_response({
     "companionProfile": {"templateId": "nening-real-female", "displayName": "小晴"},
     "text": "Can we talk about travel today?",
@@ -459,6 +460,15 @@ with tempfile.TemporaryDirectory() as d:
     assert persona["ok"] is True
     assert persona["templateId"] == "munea-2d-xiaoyun"
     assert persona["safety"]["reduceHumor"] is True
+    context = server.build_reply_context([
+        {"role": "user", "text": "\u6211\u4eca\u5929\u60f3\u804a\u97d3\u5287\uff0c\u4e5f\u6709\u9ede\u5b64\u55ae\u3002"}
+    ], "\u963f\u5b8f", {})
+    assert context["persona"]["templateId"] == "companion-real-male"
+    assert context["guardian"]["risk"]["level"] == "none"
+    assert context["perception"]["needsCurrentFacts"] is True
+    instruction = server.reply_context_instruction(context)
+    assert "\u89d2\u8272\u4eba\u683c" in instruction
+    assert "\u4f7f\u7528\u8005\u8a18\u61b6" in instruction
 
 print("ai service OK")
 '@ | python -
@@ -637,6 +647,7 @@ sql = Path("supabase/sql/001_initial_munea_schema.sql").read_text(encoding="utf-
 seed = Path("supabase/sql/002_demo_bootstrap.sql").read_text(encoding="utf-8").lower()
 analytics = Path("supabase/sql/003_analytics_admin_foundation.sql").read_text(encoding="utf-8").lower()
 ai_memory = Path("supabase/sql/004_ai_memory_service_foundation.sql").read_text(encoding="utf-8").lower()
+persona_layer = Path("supabase/sql/005_companion_persona_layer.sql").read_text(encoding="utf-8").lower()
 env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
     "accounts",
@@ -720,9 +731,21 @@ if "supersedes_memory_id" not in ai_memory:
 for snapshot_type in ["book_context", "travel_context", "exercise_context", "finance_context", "media_context", "food_context", "news_context", "wisdom_context"]:
     if snapshot_type not in ai_memory:
         raise SystemExit("Missing perception snapshot type: " + snapshot_type)
+persona_tables = [
+    "companion_persona_templates",
+    "companion_relationship_states",
+]
+for table in persona_tables:
+    if f"create table if not exists public.{table}" not in persona_layer:
+        raise SystemExit("Missing persona table: " + table)
+    if f"alter table public.{table} enable row level security" not in persona_layer:
+        raise SystemExit("Missing persona RLS: " + table)
+for token in ["nening-real-female", "companion-real-male", "munea-2d-xiaoyun", "munea-2d-ayuan", "munea-2d-mimi", "munea-2d-wangcai"]:
+    if token not in persona_layer:
+        raise SystemExit("Missing persona template seed: " + token)
 if "weekly meaningful companion days" not in Path("docs/BACKEND-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower():
     raise SystemExit("Backend architecture missing North Star definition")
-print("supabase tables", len(required_tables))
+print("supabase tables", len(required_tables) + len(analytics_tables) + len(ai_memory_tables) + len(persona_tables))
 '@ | python -
 Pass "Supabase schema, analytics foundation, RLS, grants, and seed ids are present"
 
@@ -1235,6 +1258,8 @@ $chatBody = '{"char":"\u5be7\u5be7","history":[{"role":"user","text":"\u6211\u4e
 $chat = Invoke-RestMethod -Uri "$BaseUrl/chat" -Method Post -ContentType "application/json; charset=utf-8" -Body $chatBody -TimeoutSec 120
 if (-not $chat.reply) { throw "/chat returned no reply" }
 if (-not $SkipVoice -and -not $chat.audio) { throw "/chat returned no audio" }
+if (-not $chat.aiContext.personaLayer.templateId) { throw "/chat missing persona aiContext" }
+if (-not $chat.aiContext.guardian.riskLevel) { throw "/chat missing guardian aiContext" }
 $chatAudioStatus = if ($chat.audio) { " + audio" } else { "" }
 Pass ("/chat returned reply" + $chatAudioStatus)
 

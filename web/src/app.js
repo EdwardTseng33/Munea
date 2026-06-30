@@ -484,6 +484,7 @@ const voiceProvider = {
     this.setState('connecting');
     const session = await brainPost('/voice-session', {
       char: currentChar,
+      companionProfile: savedCompanionProfile,
       locale: 'zh-TW',
       fallback: VOICE_PROVIDER_MODES.STT_CHAT_TTS,
       ...context,
@@ -505,7 +506,7 @@ const voiceProvider = {
   async sendText({ history, char }) {
     this.setState('thinking');
     try {
-      return await brainPost('/chat', { history, char });
+      return await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile });
     } finally {
       this.setState('idle');
     }

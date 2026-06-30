@@ -115,7 +115,7 @@ insert into public.companion_persona_templates (
 ) values
   (
     'nening-real-female',
-    'Ningning',
+    '寧寧',
     'warm_family_companion',
     'warm family-like companion',
     'Leda',
@@ -125,7 +125,7 @@ insert into public.companion_persona_templates (
   ),
   (
     'companion-real-male',
-    'Ah-Hong',
+    '阿宏',
     'calm_brother_friend',
     'steady older-brother-like friend',
     'Charon',
@@ -135,7 +135,7 @@ insert into public.companion_persona_templates (
   ),
   (
     'munea-2d-xiaoyun',
-    'Xiaoyun',
+    '小昀',
     'bright_friend',
     'curious upbeat friend',
     'Callirrhoe',
@@ -145,7 +145,7 @@ insert into public.companion_persona_templates (
   ),
   (
     'munea-2d-ayuan',
-    'A-Yuan',
+    '阿原',
     'thoughtful_friend',
     'observant reflective friend',
     'Algenib',
@@ -155,7 +155,7 @@ insert into public.companion_persona_templates (
   ),
   (
     'munea-2d-mimi',
-    'Mimi',
+    '咪咪',
     'playful_small_companion',
     'cute low-pressure companion',
     'Aoede',
@@ -165,7 +165,7 @@ insert into public.companion_persona_templates (
   ),
   (
     'munea-2d-wangcai',
-    'Wangcai',
+    '旺財',
     'loyal_guardian_companion',
     'loyal reassuring companion',
     'Charon',
@@ -187,4 +187,3 @@ set
   updated_at = now();
 
 commit;
-

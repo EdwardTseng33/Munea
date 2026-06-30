@@ -135,6 +135,8 @@ reply = persona + memory + perception + current conversation + safety + voice/av
 
 This keeps the six characters meaningfully different while preserving the same safety, factuality, privacy, and non-medical boundaries.
 
+The local `/chat` fallback now uses this composition path before calling the model and returns a lightweight `aiContext` summary for verification. The S2S/Gemini Live path should use the same context pack through `MuneaVoiceProvider` next.
+
 Auth and onboarding architecture v1 is tracked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`. It locks the v1 sign-in providers, guest mode, registration fields, progressive onboarding gates, and the future Supabase Auth bridge.
 
 The browser Auth Bridge starts in `web/src/auth.js`. It keeps guest mode active when Supabase public config is absent, exposes `window.MuneaAuth` for Apple, Google, email magic link/OTP, and sign-out, and adds Bearer-token headers to app/onboarding API calls when a Supabase session exists. Browser config must use only the Supabase publishable/anon key; never use the service role key in `web/`.
