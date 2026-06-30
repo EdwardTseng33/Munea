@@ -555,6 +555,8 @@ required = [
     "google",
     "email magic link",
     "guest mode",
+    "web/src/auth.js",
+    "bearer-token api headers",
     "progressive account",
     "facebook",
     "not v1",
@@ -639,7 +641,48 @@ Pass "Privacy export and account deletion contracts are valid"
 Step "Frontend JavaScript syntax"
 node --check web\src\app.js
 node --check web\src\companion-profile.js
+node --check web\src\auth.js
+node --check web\src\auth-config.example.js
 Pass "Frontend JavaScript parses"
+
+Step "Frontend auth bridge contract"
+@'
+from pathlib import Path
+auth = Path("web/src/auth.js").read_text(encoding="utf-8")
+app = Path("web/src/app.js").read_text(encoding="utf-8")
+index = Path("web/index.html").read_text(encoding="utf-8")
+onboarding = Path("web/onboarding.html").read_text(encoding="utf-8")
+config = Path("web/src/auth-config.example.js").read_text(encoding="utf-8")
+required_auth = [
+    "window.MuneaAuth",
+    "signInWithApple",
+    "signInWithGoogle",
+    "signInWithEmail",
+    "signInWithOtp",
+    "signInWithOAuth",
+    "getAccessToken",
+    "signOut",
+    "guest",
+    "apple",
+    "google",
+]
+missing_auth = [token for token in required_auth if token not in auth]
+if missing_auth:
+    raise SystemExit("Missing auth bridge tokens: " + ", ".join(missing_auth))
+for token in ["src/auth.js", "MuneaAuth"]:
+    if token not in index and token == "src/auth.js":
+        raise SystemExit("index.html missing auth runtime")
+    if token not in onboarding:
+        raise SystemExit("onboarding.html missing auth runtime/token: " + token)
+for token in ["muneaAuthHeaders", "Authorization", "Bearer", "munea:auth-state"]:
+    if token not in app:
+        raise SystemExit("app.js missing auth API bridge: " + token)
+for forbidden in ["SERVICE_ROLE", "service_role"]:
+    if forbidden in config or forbidden in auth:
+        raise SystemExit("Auth browser files must not mention service role secret tokens")
+print("frontend auth bridge OK")
+'@ | python -
+Pass "Frontend Auth bridge is present"
 
 Step "Avatar runtime contract"
 @'

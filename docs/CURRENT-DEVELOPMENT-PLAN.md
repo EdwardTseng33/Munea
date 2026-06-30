@@ -63,6 +63,7 @@
 - Added `/account-bootstrap` as the backend-owned contract for creating account/member/person/family/companion rows after Supabase Auth or Apple Sign-In.
 - Connected onboarding/settings to the account bootstrap contract with a one-time frontend bootstrap flag. Local JSON mode now creates the prototype account graph from the selected companion profile; Supabase mode fails safely with `auth_user_required` until verified Auth exists.
 - Added `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md` to lock progressive onboarding, guest mode, v1 auth providers, registration fields, and the future Supabase Auth bridge. v1 providers are Sign in with Apple, Google, and email magic link/OTP fallback; Facebook is intentionally out of v1.
+- Added browser Auth Bridge v0: `web/src/auth.js` exposes `window.MuneaAuth` for Apple, Google, email magic link/OTP, guest mode, sign-out, and Bearer-token API headers when a Supabase session exists. `web/src/auth-config.example.js` documents publishable-key-only browser configuration.
 
 ## Tech Stack Verdict
 
@@ -211,7 +212,8 @@ Work items:
 - [x] Add account bootstrap contract with local preview/create and Supabase adapter path.
 - [x] Connect onboarding/settings to `/account-bootstrap` with safe retry and Auth-required handling.
 - [x] Lock auth/onboarding product architecture: Apple, Google, email magic link/OTP fallback, guest mode, and progressive profile gates.
-- [ ] Implement Supabase Auth frontend bridge for Sign in with Apple, Google, and email magic link/OTP.
+- [x] Implement Supabase Auth frontend bridge foundation for Sign in with Apple, Google, and email magic link/OTP.
+- [ ] Add production login UI and configured Supabase Auth provider testing.
 - [ ] Add backend token verification and derive `auth.users.id` from `Authorization: Bearer <access_token>`.
 - [ ] Convert `/account-bootstrap` away from trusting body-provided `authUserId`.
 - [ ] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.

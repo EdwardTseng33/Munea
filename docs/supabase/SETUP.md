@@ -179,6 +179,14 @@ docs/supabase/munea-env.example.txt
 
 Never commit real Supabase secrets. The publishable/anon key can be used by a public client only after RLS is correct. The service role key must stay on the backend only.
 
+Browser Auth Bridge:
+
+- `web/src/auth.js` expects optional public config at `window.MUNEA_SUPABASE_CONFIG`.
+- Use the shape in `web/src/auth-config.example.js`.
+- Only the Supabase publishable/anon key belongs in browser config.
+- `SUPABASE_SERVICE_ROLE_KEY` must stay backend-only.
+- When configured, app/onboarding API calls send `Authorization: Bearer <access_token>` for the next backend verification step.
+
 Create a private local file:
 
 ```text

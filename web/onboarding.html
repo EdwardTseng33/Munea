@@ -244,6 +244,7 @@
 </div>
 
 <script src="src/companion-profile.js?v=20260629-profile"></script>
+<script src="src/auth.js?v=20260630-auth"></script>
 <script>
 (function () {
   const steps = [...document.querySelectorAll('.ob-step')];
@@ -311,13 +312,21 @@
   function storageSet(key, value) {
     try { localStorage.setItem(key, value); } catch (e) {}
   }
+  async function authHeaders(base) {
+    const headers = { ...(base || {}) };
+    if (window.MuneaAuth && typeof window.MuneaAuth.getAccessToken === 'function') {
+      const token = await window.MuneaAuth.getAccessToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  }
   async function bootstrapAccount(profile) {
     storageSet(ONBOARDING_COMPLETED_KEY, 'true');
     if (isStaticPreview()) return null;
     try {
       const r = await fetch('/account-bootstrap', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           action: 'create',
           displayName: profile.displayName,

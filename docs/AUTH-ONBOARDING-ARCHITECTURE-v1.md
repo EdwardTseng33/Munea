@@ -196,11 +196,14 @@ Current prototype note:
 
 Phase 1: Frontend session bridge
 
-- Add Supabase client using publishable/anon key only.
-- Implement Sign in with Apple, Google, and email magic link/OTP.
-- Store session using Supabase client session handling.
-- Expose only safe session state to `window.MuneaAuth`.
-- Add sign-out.
+- [x] Add `web/src/auth.js` as the browser Auth runtime.
+- [x] Support Sign in with Apple, Google, and email magic link/OTP methods behind `window.MuneaAuth`.
+- [x] Keep guest mode active when Supabase public config is not injected.
+- [x] Add `web/src/auth-config.example.js` for publishable/anon-key-only configuration.
+- [x] Send Bearer-token API headers, `Authorization: Bearer <access_token>`, from app/onboarding API calls when a Supabase session exists.
+- [x] Add sign-out method.
+- [ ] Add production login UI states.
+- [ ] Store session using Supabase client session handling in a configured environment.
 
 Phase 2: Backend auth verification
 
@@ -254,4 +257,3 @@ These can be added as a later migration after the first Supabase Auth bridge is 
 5. Convert `/account-bootstrap` from body-provided auth id to verified-token-derived auth id.
 6. Add auth-gated UX states.
 7. Add smoke tests for guest, signed-in, auth-required, and reauth-required flows.
-

@@ -157,6 +157,15 @@ function persistCompanionProfile() {
 function isStaticPreview() {
   return location.port === '8135' || location.protocol === 'file:';
 }
+async function muneaAuthHeaders(base = {}) {
+  const headers = { ...base };
+  const auth = window.MuneaAuth;
+  if (auth && typeof auth.getAccessToken === 'function') {
+    const token = await auth.getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
 async function companionProfileApi(action, profile) {
   if (isStaticPreview()) return null;
   const ctrl = new AbortController();
@@ -164,7 +173,7 @@ async function companionProfileApi(action, profile) {
   try {
     const r = await fetch('/companion-profile', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ action, profile }),
       signal: ctrl.signal,
     });
@@ -304,7 +313,7 @@ async function brainPost(url, body) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
+    const r = await fetch(url, { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body), signal: ctrl.signal });
     if (!r.ok) return null;
     return await r.json();
   } catch (e) { return null; }
@@ -557,6 +566,13 @@ function toggleTask(item) {
 
 function init() {
   syncCompanionUI();
+  if (window.MuneaAuth && typeof window.MuneaAuth.init === 'function') window.MuneaAuth.init();
+  window.addEventListener('munea:auth-state', e => {
+    const detail = e.detail || {};
+    if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY) === 'true') {
+      syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true });
+    }
+  });
   loadCompanionProfileFromBackend().finally(() => {
     if (storageGet(ONBOARDING_COMPLETED_KEY) === 'true' || storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'pending-auth') {
       syncAccountBootstrap('create', { reason: 'app_init' });
