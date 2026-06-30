@@ -355,6 +355,13 @@ def guardian_evaluate_response(data):
     return result
 
 
+def persona_context_response(data):
+    data = data or {}
+    if not data.get("companionProfile") and not data.get("companion_profile") and not data.get("templateId"):
+        data = {**data, "companionProfile": load_companion_profile()}
+    return model_router.persona_context_response(data)
+
+
 def topic_perception_plan_response(data):
     return model_router.topic_perception_plan_response(data or {})
 
@@ -1268,7 +1275,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -1302,6 +1309,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(product_event_response(data))
             elif self.path == "/ai/brain-status":
                 self._json(model_router.brain_status_response())
+            elif self.path == "/persona/context":
+                self._json(persona_context_response(data))
             elif self.path == "/memory/extract":
                 self._json(memory_extract_response(data))
             elif self.path == "/memory/retrieve":

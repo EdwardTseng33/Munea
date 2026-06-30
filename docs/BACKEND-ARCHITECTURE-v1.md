@@ -21,6 +21,7 @@ Current state:
 - `/account-bootstrap` now defines the backend-owned account/member/person/family/companion creation contract for the future Supabase Auth or Apple Sign-In flow. In production it requires a verified `auth.users.id`; local prototype fallback can preview/create a JSON store.
 - `/auth-status` now defines the backend token verification contract. Supabase mode verifies `Authorization: Bearer <access_token>` against Supabase Auth and derives the real `auth.users.id`; local developer bypass is env-gated and marked as developer mode.
 - `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` now define the first AI service contracts for three-brain routing, memory lifecycle, and Guardian risk policy.
+- `/persona/context` now defines the companion persona context contract, so six-character identity, user naming, voice/avatar assets, and style directives are available to the AI service layer instead of living only in the UI.
 - The Supabase adapter now includes `memory_items` load/save mapping, so Butler memory extraction can persist structured memories through the backend when Supabase env is configured, with JSON fallback for local development.
 - The perception design is now domain-aware rather than movie-specific: books, travel, outings, exercise, finance, video entertainment, music/audio, food, news, and wisdom/reflection topics share the same anti-fabrication contract.
 - `/perception/snapshot` now provides the API and adapter contract for storing/listing real-world perception facts through Supabase `perception_snapshots` or JSON fallback.
@@ -134,6 +135,7 @@ Missing:
 | `/chat` | POST | Current fallback chat | required | AI provider + `conversation_summaries` |
 | `/avatar-session` | POST | Select Avatar runtime/provider and entitlement gate | required | `entitlements`, `usage_ledger`, Avatar provider |
 | `/ai/brain-status` | POST | Return current Reflex/Butler/Guardian model service plan | admin/dev initially | `ai_brain_runs`, config |
+| `/persona/context` | POST | Return selected companion persona context for Reflex/Butler/Guardian composition | required | `companion_profiles`, persona template config, `companion_relationship_states` later |
 | `/memory/extract` | POST | Extract structured memory candidates from conversation context | required | `memory_items` |
 | `/memory/retrieve` | POST | Retrieve scoped memories for the next interaction | required | `memory_items`, vector/graph later |
 | `/guardian/evaluate` | POST | Evaluate safety risk and response policy | required | `safety_events`, `ai_brain_runs` |
@@ -254,6 +256,13 @@ AI memory/service foundation added in `supabase/sql/004_ai_memory_service_founda
 These tables support long-term companion memory, time/weather/topic perception, Guardian decisions, model cost tracking, and privacy export/deletion requirements.
 
 Perception snapshots must be domain-aware. `current_topic` is a generic fallback, but the schema also supports `book_context`, `travel_context`, `local_activity_context`, `exercise_context`, `finance_context`, `media_context`, `food_context`, `news_context`, and `wisdom_context`. `media_context` covers broad video entertainment such as Korean dramas, Japanese dramas, Chinese dramas, Taiwan dramas, Netflix/streaming series, films, documentaries, variety, and anime.
+
+Companion persona layer foundation added in `supabase/sql/005_companion_persona_layer.sql`:
+
+- `companion_persona_templates`
+- `companion_relationship_states`
+
+These tables separate product-owned persona templates from user-owned relationship state. This keeps the six characters durable while allowing a specific user and companion to grow a shared style over time.
 
 ## RLS And Permission Matrix
 

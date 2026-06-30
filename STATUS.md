@@ -1,9 +1,33 @@
 # 沐寧 Munea · STATUS（接力檔）
 
 > 沐寧 Munea · 智慧健康陪伴 App · **新 session cold-start：先讀 `docs/00-總綱-從這裡開始.md`（唯一真相入口）+ `docs/SPEC-沐寧-v1-2026-06-28.md`（權威規格），再看本檔現況**
-> 最後更新 **2026-06-29（產品架構與 Avatar 開發提前：`ARCHITECTURE.md` 改為當前架構、補 Avatar-first 計畫、前端加入 `MuneaAvatarRuntime`）**
+> 最後更新 **2026-06-30（AI 服務架構補 Companion Persona Layer：三腦之外新增角色人格層、真實回話公式、`/persona/context` 合約與 Supabase 005 persona schema）**
 
 > **2026-06-28 晚間校正：產品不是老人 App。核心是 AI 健康照護 + 家人互動 + `聊聊`。語音語言策略為中文（台灣）優先、英文第二；台語只保留研究觀察，不列入 v1/v2 承諾，也不自研語言模型。語音腦接點以 SPEC 的 Gemini 3.1 Flash Live 方向為準。下方 6/27 歷史段落若仍出現 gpt-realtime、台語護城河或純長輩定位，一律視為歷史紀錄，不作為施工依據。**
+
+---
+
+## 🆕 2026-06-30 最新（AI 服務架構 + 角色人格層）
+
+**策略校正：** 三顆腦仍是責任分層，但六角色不能只是 UI 皮膚。正式架構新增 **Companion Persona Layer / 角色人格層**，負責角色人格、語氣、關係感、聲音演出與 avatar 表達；Guardian 仍保有安全最高優先權。
+
+**核心公式已寫入北極星：**
+
+```text
+回應 = 角色人格 + 使用者記憶 + 即時感知 + 當下對話 + 安全規則 + 語音表達限制
+```
+
+**做完：**
+- ✅ `docs/產品遠景-核心目標.md` 補上真實回話公式與六角色人格要求。
+- ✅ 新增 `docs/COMPANION-PERSONA-LAYER-v1.md`：定義六角色模板、使用者命名、persona / memory / perception / relationship state 分離。
+- ✅ `docs/AI-SERVICE-DESIGN-v1.md` 補上 Persona Layer 在 Reflex / Butler / Guardian 之間的組裝鏈。
+- ✅ `engine/model_router.py` 新增六角色 persona template 與 `persona_context_response()`。
+- ✅ `engine/server.py` 新增 `POST /persona/context`，`/healthz` 加入 `persona-context` 合約。
+- ✅ 新增 `supabase/sql/005_companion_persona_layer.sql`：`companion_persona_templates` + `companion_relationship_states`。
+- ✅ README、總綱、Backend Architecture、Supabase Setup 均已補上 persona layer 與 005 schema。
+- ✅ `scripts/smoke.ps1 -SkipApi` 通過，涵蓋 persona layer、文件契約、前端語法與現有後端合約。
+
+**下一步：** 把 persona context 接入實際 `/chat` / voice loop 的 prompt composition，並修正目前前端/engine 早期角色名稱編碼亂碼，讓六角色顯示與 AI persona contract 完全一致。
 
 ---
 

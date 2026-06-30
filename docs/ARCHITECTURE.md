@@ -33,12 +33,15 @@ Munea is organized as four core layers:
 flowchart TD
   App["iOS App Shell<br/>Capacitor + Web Core"]
   Conversation["Conversation Layer<br/>listen, respond, voice, call state"]
+  Persona["Companion Persona Layer<br/>six templates, user-given name, tone, relationship style"]
   Brains["AI Brains<br/>reflex, butler, guardian"]
   Data["Data Layer<br/>profile, memory, family, health, ledger"]
   Avatar["Avatar Runtime<br/>static fallback, 2D viseme, Ditto, LiveAvatar"]
   Safety["Safety Layer<br/>medical boundary, crisis referral, audit"]
 
   App --> Conversation
+  Conversation --> Persona
+  Persona --> Brains
   Conversation --> Brains
   Conversation --> Avatar
   Brains --> Data
@@ -58,6 +61,47 @@ Munea should be able to change providers without changing the user journey or da
 | Guardian Brain | Safety boundary: crisis language, abnormal routine signals, referral rules | Rules + `MuneaBrainRouter` deterministic risk contract | Claude Sonnet 4.6 + moderation/classifier support; rules keep priority |
 
 Avatar is not one of the three brains. Ditto and LiveAvatar are face/rendering engines that consume conversation state and audio timing; they should not own health logic, memory, or medical/safety decisions.
+
+## Companion Persona Layer
+
+The companion persona layer sits between product identity and the three brains.
+
+It controls how the selected companion expresses care, but it must not change facts, privacy boundaries, or Guardian safety policy.
+
+```text
+Final reply
+  = companion persona
+  + user memory
+  + live perception
+  + current conversation
+  + safety rules
+  + voice / avatar expression limits
+```
+
+Six templates are currently planned:
+
+| Template | Role | Primary expression |
+|---|---|---|
+| `nening-real-female` | warm family companion | gentle, attentive, emotionally present |
+| `companion-real-male` | calm brother / steady friend | grounded, practical, protective |
+| `munea-2d-xiaoyun` | bright friend | light, curious, encouraging |
+| `munea-2d-ayuan` | thoughtful friend | observant, reflective, tidy |
+| `munea-2d-mimi` | playful small companion | cute, warm, lightly mischievous |
+| `munea-2d-wangcai` | loyal guardian companion | steady, warm, simple |
+
+Important split:
+
+- `display_name` is what the user calls the companion.
+- `template_id` is the selected face / voice / persona template.
+- persona template is product-owned behavior.
+- relationship state is user-specific growth over time.
+
+Current contract:
+
+- `POST /persona/context` returns the selected persona context pack.
+- `docs/COMPANION-PERSONA-LAYER-v1.md` is the source of truth for persona composition.
+- `companion_profiles.template_id` and `companion_profiles.display_name` remain separate.
+- production relationship state should move into `companion_relationship_states` before App Store launch.
 
 ### Reflex Brain
 

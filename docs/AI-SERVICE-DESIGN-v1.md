@@ -10,10 +10,11 @@ Munea should compete on AI service design, not on training a proprietary foundat
 The product moat is:
 
 1. a speech-to-speech companion that feels present,
-2. a long-term memory system that knows what should be remembered, updated, forgotten, or escalated,
-3. a perception layer that knows time, weather, family context, user interests, and current facts,
-4. a safety layer that prevents the companion from becoming unsafe medical, crisis, or therapeutic advice,
-5. a data model that can survive App Store review, subscriptions, family permissions, privacy export, and deletion.
+2. a companion persona layer that makes six characters feel meaningfully different without breaking factuality or safety,
+3. a long-term memory system that knows what should be remembered, updated, forgotten, or escalated,
+4. a perception layer that knows time, weather, family context, user interests, and current facts,
+5. a safety layer that prevents the companion from becoming unsafe medical, crisis, or therapeutic advice,
+6. a data model that can survive App Store review, subscriptions, family permissions, privacy export, and deletion.
 
 The current v1 recommendation:
 
@@ -24,6 +25,26 @@ The current v1 recommendation:
 | Guardian Brain | deterministic safety rules + Claude Sonnet 4.6 + moderation/classifier layer | `standard` and `deep` for risk review | crisis detection, medical boundary, escalation, safety response policy |
 
 Butler and Guardian may both use Claude Sonnet 4.6 at MVP, but they must remain separate product brains with separate prompts, inputs, output schemas, logs, and authority.
+
+The three brains do not replace the six-character product design. Munea also needs a product-owned `Companion Persona Layer`:
+
+```text
+Final reply
+  = companion persona
+  + user memory
+  + live perception
+  + current conversation
+  + safety rules
+  + voice / avatar expression limits
+```
+
+Shorthand:
+
+```text
+reply = persona + memory + perception + current conversation + safety + voice/avatar limits
+```
+
+Persona is an expression and relationship layer, not a safety authority. It shapes tone, rhythm, warmth, humor, topic bias, and relationship style. Guardian still has the right to constrain or interrupt any answer.
 
 ## Research Notes
 
@@ -62,12 +83,63 @@ Munea's architecture should therefore use model adapters plus product-owned stat
 
 ```text
 User voice
-  -> Reflex Brain: real-time conversation
-  -> Guardian Brain: input/output safety gate
+  -> Guardian Brain: input safety pre-check
+  -> Butler Brain: memory / perception context pack
+  -> Companion Persona Layer: tone / role / relationship pack
+  -> Reflex Brain: real-time spoken response
+  -> Guardian Brain: output safety policy
   -> Avatar Runtime: face, mouth, state, presence
-  -> Butler Brain: post-session memory, summaries, care plans
-  -> Supabase: structured memory, events, safety records, consent, audit
+  -> Butler Brain: post-session memory, summaries, care plans, relationship updates
+  -> Supabase: structured memory, persona state, events, safety records, consent, audit
 ```
+
+## Companion Persona Layer
+
+The six companions are not only artwork. Each template must carry structured product behavior.
+
+| Template | Role | Main expression |
+|---|---|---|
+| `nening-real-female` | warm family companion | gentle, attentive, emotionally present |
+| `companion-real-male` | calm brother / steady friend | grounded, practical, protective |
+| `munea-2d-xiaoyun` | bright friend | light, curious, encouraging |
+| `munea-2d-ayuan` | thoughtful friend | observant, reflective, tidy |
+| `munea-2d-mimi` | playful small companion | cute, warm, lightly mischievous |
+| `munea-2d-wangcai` | loyal guardian companion | steady, warm, simple |
+
+Each persona template should define:
+
+- `persona_archetype`
+- `relationship_frame`
+- `tone_profile`
+- `conversation_style`
+- `emotional_style`
+- `humor_style`
+- `wisdom_style`
+- `topic_biases`
+- `boundary_style`
+- `voice_profile`
+- `avatar_asset`
+- `prompt_directives`
+
+Keep identity split:
+
+| Concept | Product rule |
+|---|---|
+| `display_name` | user-given name; can change without changing face, voice, memory, or persona |
+| `template_id` | selected visual / voice / personality template |
+| persona template | product-owned stable config |
+| relationship state | user + companion-specific growth over time |
+
+Memory separation:
+
+| Class | Stored where | Notes |
+|---|---|---|
+| user memory | `memory_items` | facts, preferences, family, routine, emotions |
+| persona template | backend config / future template table | never mixed into user memory |
+| relationship memory | future `companion_relationship_states` | how this user prefers this companion to relate |
+| perception facts | `perception_snapshots` | time, weather, topic, local reality |
+
+The same memory and perception should produce different style directives for different companions, but not different facts or safety outcomes.
 
 ## Model Effort Profiles
 
@@ -305,12 +377,16 @@ Current implementation anchors:
 
 - `engine/model_router.py`
   - three-brain configuration,
+  - companion persona context contract,
   - effort profiles,
   - memory extraction contract,
   - memory retrieval contract,
   - Guardian risk evaluation contract.
 - `POST /ai/brain-status`
   - returns current model/service plan.
+- `POST /persona/context`
+  - returns the selected companion persona context pack.
+  - composes `templateId`, user-given `displayName`, voice/avatar assets, tone, relationship frame, safety constraints, and prompt directives.
 - `POST /memory/extract`
   - returns memory candidates and can store structured memories when `action=store`.
   - writes to Supabase `memory_items` when backend env is configured, otherwise falls back to local JSON.
@@ -334,15 +410,17 @@ These endpoints are not the final AI provider integration. They are the durable 
 
 1. Keep deterministic mock contracts green in smoke tests.
 2. Add Supabase `memory_items`, `perception_snapshots`, and `ai_brain_runs` tables.
-3. Wire Butler Brain to Claude Sonnet for `/memory/extract`.
-4. Wire Guardian Brain to rules + Claude Sonnet + moderation classifier.
-5. Add current-facts retrieval only for topics that need freshness, such as books availability, travel, local events, exercise/weather, finance, video streaming catalogs/regional availability, showtimes, food/local options, weather, or news.
-6. Add privacy export/deletion coverage for memory items.
-7. Add admin safety-event review surface.
+3. Add persona context contract and database path for relationship state.
+4. Wire Butler Brain to Claude Sonnet for `/memory/extract`.
+5. Wire Guardian Brain to rules + Claude Sonnet + moderation classifier.
+6. Add current-facts retrieval only for topics that need freshness, such as books availability, travel, local events, exercise/weather, finance, video streaming catalogs/regional availability, showtimes, food/local options, weather, or news.
+7. Add privacy export/deletion coverage for memory items and relationship state.
+8. Add admin safety-event review surface.
 
 ## Definition Of Done For AI Service v1
 
 - Three brains expose health/status endpoints.
+- Persona layer exposes a structured context endpoint and documents all six templates.
 - Butler can extract and retrieve memories without storing raw transcripts by default.
 - Guardian can block or redirect unsafe outputs.
 - Memory rows are account/person scoped.

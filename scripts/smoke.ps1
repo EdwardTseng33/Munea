@@ -384,6 +384,9 @@ assert status["ok"] is True
 assert status["brains"]["reflex"]["interface"] == "MuneaVoiceProvider"
 assert status["brains"]["butler"]["interface"] == "MuneaBrainRouter"
 assert status["brains"]["guardian"]["interface"] == "MuneaBrainRouter"
+assert status["personaLayer"]["isFourthBrain"] is False
+assert status["personaLayer"]["templateCount"] == 6
+assert "persona-context" in status["contracts"]
 assert status["effortProfiles"]["deep"]["effort"] == "high"
 assert "books" in status["topicDomains"]
 assert "finance" in status["topicDomains"]
@@ -399,6 +402,21 @@ video_domains = {item["domain"] for item in video_plan["domains"]}
 assert "video_entertainment" in video_domains
 assert "streaming_catalog" in video_plan["perceptionSources"]
 assert "regional_availability" in video_plan["perceptionSources"]
+warm_persona = model_router.persona_context_response({
+    "companionProfile": {"templateId": "nening-real-female", "displayName": "小晴"},
+    "text": "Can we talk about travel today?",
+})
+steady_persona = model_router.persona_context_response({
+    "companionProfile": {"templateId": "companion-real-male", "displayName": "阿宏"},
+    "text": "Can we talk about travel today?",
+})
+assert warm_persona["ok"] is True
+assert steady_persona["ok"] is True
+assert warm_persona["displayName"] == "小晴"
+assert warm_persona["persona"]["personaArchetype"] != steady_persona["persona"]["personaArchetype"]
+assert warm_persona["persona"]["toneProfile"] != steady_persona["persona"]["toneProfile"]
+assert warm_persona["composition"]["sameFactsDifferentVoice"] is True
+assert warm_persona["composition"]["personaOverridesSafety"] is False
 
 with tempfile.TemporaryDirectory() as d:
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
@@ -434,6 +452,13 @@ with tempfile.TemporaryDirectory() as d:
     assert guardian["ok"] is True
     assert guardian["risk"]["level"] == "high"
     assert guardian["risk"]["requiresHumanEscalation"] is True
+    persona = server.persona_context_response({
+        "companionProfile": {"templateId": "munea-2d-xiaoyun", "displayName": "晴晴"},
+        "text": "I feel a little sad today.",
+    })
+    assert persona["ok"] is True
+    assert persona["templateId"] == "munea-2d-xiaoyun"
+    assert persona["safety"]["reduceHumor"] is True
 
 print("ai service OK")
 '@ | python -
@@ -782,11 +807,21 @@ Step "AI service design document contract"
 from pathlib import Path
 
 doc = Path("docs/AI-SERVICE-DESIGN-v1.md").read_text(encoding="utf-8").lower()
+persona_doc = Path("docs/COMPANION-PERSONA-LAYER-v1.md").read_text(encoding="utf-8").lower()
 readme = Path("README.md").read_text(encoding="utf-8").lower()
+vision_path = next(
+    p for p in Path("docs").iterdir()
+    if "\u7522\u54c1\u9060\u666f" in p.name and "\u6838\u5fc3\u76ee\u6a19" in p.name
+)
+vision = vision_path.read_text(encoding="utf-8")
+setup = Path("docs/supabase/SETUP.md").read_text(encoding="utf-8").lower()
 required = [
     "reflex brain",
     "butler brain",
     "guardian brain",
+    "companion persona layer",
+    "final reply",
+    "persona + memory + perception",
     "model effort profiles",
     "long-term memory architecture",
     "perception layer",
@@ -801,6 +836,18 @@ if missing:
     raise SystemExit("AI service design missing: " + ", ".join(missing))
 if "docs/ai-service-design-v1.md" not in readme:
     raise SystemExit("README missing AI service design link")
+for token in ["companion persona layer", "six companions", "samefactsdifferentvoice", "companion_relationship_states"]:
+    if token not in persona_doc:
+        raise SystemExit("Companion persona design missing: " + token)
+for token in ["companion-persona-layer-v1.md", "reply = persona + memory + perception"]:
+    if token not in readme:
+        raise SystemExit("README missing persona pointer: " + token)
+for token in ["\u89d2\u8272\u4eba\u683c", "\u4f7f\u7528\u8005\u8a18\u61b6", "\u5373\u6642\u611f\u77e5", "\u5b89\u5168\u898f\u5247", "\u8a9e\u97f3\u8868\u9054\u9650\u5236"]:
+    if token not in vision:
+        raise SystemExit("Product vision missing reply formula token: " + token)
+for token in ["005_companion_persona_layer.sql", "companion_persona_templates", "companion_relationship_states"]:
+    if token not in setup:
+        raise SystemExit("Supabase setup missing persona schema token: " + token)
 print("ai service design contract OK")
 '@ | python -
 Pass "AI service design is documented"
@@ -1096,6 +1143,14 @@ if (-not $profile.ok) { throw "/companion-profile returned not ok" }
 if (-not $profile.profile.templateId) { throw "/companion-profile missing templateId" }
 Pass "/companion-profile returns saved companion profile"
 
+Step "API /persona/context"
+$personaBody = '{"companionProfile":{"templateId":"nening-real-female","displayName":"Munea"},"text":"I want to talk about today."}'
+$persona = Invoke-RestMethod -Uri "$BaseUrl/persona/context" -Method Post -ContentType "application/json; charset=utf-8" -Body $personaBody -TimeoutSec 30
+if (-not $persona.ok) { throw "/persona/context returned not ok" }
+if ($persona.layer -ne "companion_persona") { throw "/persona/context unexpected layer: $($persona.layer)" }
+if ($persona.composition.personaOverridesSafety) { throw "/persona/context persona should not override safety" }
+Pass "/persona/context returns companion persona pack"
+
 Step "API /app-profile"
 $appProfile = Invoke-RestMethod -Uri "$BaseUrl/app-profile" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"load"}' -TimeoutSec 30
 if (-not $appProfile.ok) { throw "/app-profile returned not ok" }
@@ -1118,6 +1173,7 @@ if ($health.contracts -notcontains "account-bootstrap") { throw "/healthz missin
 if ($health.contracts -notcontains "entitlements") { throw "/healthz missing entitlements contract" }
 if ($health.contracts -notcontains "avatar-session") { throw "/healthz missing avatar-session contract" }
 if ($health.contracts -notcontains "ai-brain-status") { throw "/healthz missing ai-brain-status contract" }
+if ($health.contracts -notcontains "persona-context") { throw "/healthz missing persona-context contract" }
 if ($health.contracts -notcontains "memory-extract") { throw "/healthz missing memory-extract contract" }
 if ($health.contracts -notcontains "memory-retrieve") { throw "/healthz missing memory-retrieve contract" }
 if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missing guardian-evaluate contract" }

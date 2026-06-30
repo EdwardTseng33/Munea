@@ -12,6 +12,7 @@ Current status:
 - Repo now contains a deterministic demo bootstrap seed at `supabase/sql/002_demo_bootstrap.sql`.
 - Repo now contains analytics/admin foundation SQL at `supabase/sql/003_analytics_admin_foundation.sql`.
 - Repo now contains AI memory/service foundation SQL at `supabase/sql/004_ai_memory_service_foundation.sql`.
+- Repo now contains companion persona layer foundation SQL at `supabase/sql/005_companion_persona_layer.sql`.
 - The SQL bootstrap has been tested through the dashboard SQL Editor flow.
 - Supabase CLI is not installed in this Windows environment yet, so this is a SQL Editor-ready schema, not an official migration history entry.
 - The backend can now load `engine/.env.local` directly, and `npm run supabase:doctor` can validate local Supabase wiring without printing secrets.
@@ -81,6 +82,14 @@ supabase/sql/004_ai_memory_service_foundation.sql
 ```
 
 This adds `memory_items`, `perception_snapshots`, and `ai_brain_runs` for Butler/Guardian service design, long-term memory, perception, and model run auditing.
+
+Then run the companion persona layer foundation:
+
+```text
+supabase/sql/005_companion_persona_layer.sql
+```
+
+This adds `companion_persona_templates` and `companion_relationship_states`. Persona templates keep the six characters as product-owned structured config, while relationship state lets a specific user and selected companion grow a shared style over time.
 
 This creates the first Admin/North Star analytics tables:
 

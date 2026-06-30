@@ -25,20 +25,23 @@ The working north star is an AI health-care companion for everyday life. Older-a
 
 ## What Makes Munea Different
 
-1. **Memory with boundaries**
+1. **Companion persona layer**
+   Munea is not one generic AI with six skins. Each companion template has its own relationship style, tone, voice, and avatar direction, while the user can rename the companion without changing the selected persona.
+
+2. **Memory with boundaries**
    Munea remembers names, habits, preferences, family context, life stories, and recent emotional signals, but uses that memory to support daily life rather than diagnose.
 
-2. **Family-aware care**
+3. **Family-aware care**
    Munea is designed for both individual use and family care. The person using Munea and the person checking in may be different, but the product should keep both sides calm, informed, and connected.
 
-3. **Three brains, one face**
+4. **Three brains, one face**
    The live conversation, background care planning, and safety referral logic are separated so the app can feel responsive while still becoming personal over time.
    These are responsibility layers, not three fixed model names: Reflex is the real-time conversation loop, Butler is background care context, and Guardian is safety/referral logic. Ditto and LiveAvatar are face engines, not extra conversation brains.
 
-4. **Proactive, but iOS-realistic**
+5. **Proactive, but iOS-realistic**
    When the app is closed, Munea reaches out through iOS push notifications. When opened, it becomes a full voice conversation with a talking face.
 
-5. **Non-medical by design**
+6. **Non-medical by design**
    Medication features are reminders, not advice. Emotional support is companionship, not therapy. Crisis handling routes to family or proper hotlines such as 1925 / 119.
 
 ---
@@ -96,6 +99,7 @@ npm run supabase:doctor:live
 | Reflex brain | Live voice conversation | Gemini Live / Interactions candidate behind `MuneaVoiceProvider`; local demo currently uses Gemini generation + TTS |
 | Butler brain | Memory, schedules, context, daily care | Background rules + cheap AI when judgment is needed |
 | Guardian brain | Crisis / anomaly referral | Deterministic safety rules first; classifier/moderation may assist, but not medical judgment |
+| Companion persona layer | Six-character relationship and expression system | `docs/COMPANION-PERSONA-LAYER-v1.md` defines persona templates, user naming, relationship state, and the final reply formula |
 | Face | Fullscreen butler presence | 2D/static now; Ditto / LiveAvatar PoCs decide real lip-sync path |
 | Auth status | Verified session bridge | `/auth-status` validates Bearer-token auth context; `/account-bootstrap` derives `auth.users.id` from verified auth in Supabase mode |
 | AI service design | Long-term companion intelligence | `docs/AI-SERVICE-DESIGN-v1.md` defines three-brain model selection, effort profiles, memory lifecycle, perception, Guardian safety, and Supabase memory tables |
@@ -117,11 +121,19 @@ The prototype now uses one Companion Profile across onboarding, Home, Chat, and 
 
 For App Store readiness, the local backend also includes `engine/billing_store.json`, `/entitlements`, `/subscription-event`, and `/healthz` contracts. These are prototype contracts for the production StoreKit / App Store Server API / RevenueCat path; production must verify signed subscription events server-side before granting paid entitlements.
 
-The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`; demo seed, analytics/admin foundation, and AI memory/service foundation live in `supabase/sql/002_demo_bootstrap.sql`, `supabase/sql/003_analytics_admin_foundation.sql`, and `supabase/sql/004_ai_memory_service_foundation.sql`, with setup notes in `docs/supabase/SETUP.md`. These are SQL Editor-ready; once Supabase CLI is installed and authenticated, convert them into formal migrations.
+The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`; demo seed, analytics/admin foundation, AI memory/service foundation, and companion persona layer foundation live in `supabase/sql/002_demo_bootstrap.sql`, `supabase/sql/003_analytics_admin_foundation.sql`, `supabase/sql/004_ai_memory_service_foundation.sql`, and `supabase/sql/005_companion_persona_layer.sql`, with setup notes in `docs/supabase/SETUP.md`. These are SQL Editor-ready; once Supabase CLI is installed and authenticated, convert them into formal migrations.
 
 Backend architecture v1 is tracked in `docs/BACKEND-ARCHITECTURE-v1.md`. It defines the API surface, Supabase/RLS model, subscription entitlement flow, data rights contracts, admin console MVP, and North Star analytics plan.
 
 AI service design v1 is tracked in `docs/AI-SERVICE-DESIGN-v1.md`. It clarifies that Munea's moat is not self-training a foundation model, but a product-owned AI service layer: Reflex for S2S presence, Butler for long-term memory and care planning, Guardian for safety and escalation, plus a structured memory/perception framework that can survive privacy export and deletion.
+
+Companion persona design v1 is tracked in `docs/COMPANION-PERSONA-LAYER-v1.md`. The key product formula is:
+
+```text
+reply = persona + memory + perception + current conversation + safety + voice/avatar limits
+```
+
+This keeps the six characters meaningfully different while preserving the same safety, factuality, privacy, and non-medical boundaries.
 
 Auth and onboarding architecture v1 is tracked in `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`. It locks the v1 sign-in providers, guest mode, registration fields, progressive onboarding gates, and the future Supabase Auth bridge.
 
