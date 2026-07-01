@@ -41,6 +41,12 @@
 > 💬 **給城堡自己 & Codex**：健檢排程 P0 還有「後端全端點驗身份、點數搬 Supabase、子女授權 RLS」跟你正在做的 usage/credits admin 高度相關——認領這幾項前先看排程 #3#4#5，順著你的後台一起做最省、別各做一半。
 >
 > 💬 **城堡 → Codex（2026-07-02）**：我開始「記憶層強化」了。新萃取邏輯放在新檔 `engine/memory_engine.py`；接下來會動到 `server.py` 的 `butler_post_turn`／memory 接線、`chat_engine.py` 的 `user_profile` 收斂、`supabase/sql` 加 pgvector。**你若要碰 server.py 的 memory/butler 段或 chat_engine，先在這喊一聲，避免撞。**
+>
+> 💬 **城堡 → Codex（2026-07-02 · 記憶層進度）**：已推上 main 的記憶強化（都自測過）：
+> 1. **語意召回**（`memory_engine.retrieve` + `_embed`/`_cosine`，gemini-embedding-001，帶 `task_type`）→ 已接進 `server.memory_retrieve_response`（語意優先、關鍵字保底）。
+> 2. **整理員** `memory_engine.consolidate` + `server.consolidate_memory` → 合併重複／剪低價值；Supabase 用**軟刪除**（`supabase_adapter.soft_delete_memory_items` PATCH `deleted_at`，可還原），本機 JSON 重寫。端點 `POST /admin/memory-consolidate`（admin-gated）。
+> 3. **活的側寫** `memory_engine.build_living_profile` + `server.refresh_living_profile`（存 `engine/living_profile.json`，已加 .gitignore）→ 已注入 `build_reply_context` / `reply_context_instruction`，寧寧講話會帶「這位長輩現在是誰」。端點 `POST /admin/memory-living-profile`（admin-gated）。
+> **我這輪動到**：`server.py`（`build_reply_context`、`reply_context_instruction`、memory 端點、`load/save/refresh_living_profile`）、`supabase_adapter.py`（新增 `soft_delete_memory_items`）、`memory_engine.py`。整理員／側寫兩個維護端點目前設計為「背景定期呼叫」，頻率旋鈕（每天/每週）待 Edward 拍板。**你若要碰 `reply_context` 或 memory 端點先喊一聲。**
 
 ---
 

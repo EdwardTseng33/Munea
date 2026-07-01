@@ -186,6 +186,59 @@ def consolidate(items, sim_threshold=0.9):
     return result, report
 
 
+_PROFILE_SYS = """你是沐寧的側寫員。讀「關於這位長輩的所有記憶」，合成一張『這個人現在是誰』的側寫，
+給陪伴 AI（寧寧）主動關心時用。要溫暖、具體、講當下的他，不要條列一堆流水帳。
+只回 JSON 物件，欄位：
+- who：一句話核心（名字／家人／慢性病／喪偶等定義他的事）
+- recent：近況（最近在幹嘛、生活發生什麼）
+- moodTrend：心情走向（最近偏什麼情緒；沒線索就寫「平穩」）
+- caresAbout：最在乎的 2-3 件事（陣列）
+- intoLately：最近迷什麼／喜歡什麼 2-3 個（陣列）
+- openingIdeas：寧寧可以主動開口關心／聊的 2-3 個點子（陣列，親切口語，像家人問候）
+沒有足夠資訊的欄位就給空字串或空陣列，不要瞎編。"""
+
+
+def build_living_profile(items):
+    """活的側寫：讀所有記憶 → 合成一張「這位長輩現在是誰」（近況／心情走向／最在乎／最近迷什麼／可主動開口的點子）。
+    餵給主動開口與人格。回 dict。"""
+    if not _client or not items:
+        return {}
+    by_tier = {"core": [], "long": [], "recent": [], "today": []}
+    for it in items:
+        tier = it.get("tier") if it.get("tier") in by_tier else "recent"
+        by_tier[tier].append(it.get("content", ""))
+    lines = []
+    for tier, label in (("core", "核心（你是誰）"), ("long", "長期（重要事件/喜好）"),
+                        ("recent", "近況"), ("today", "今天")):
+        if by_tier[tier]:
+            lines.append(f"【{label}】\n" + "\n".join(f"- {c}" for c in by_tier[tier] if c))
+    digest = "\n\n".join(lines)
+    if not digest.strip():
+        return {}
+    try:
+        r = _client.models.generate_content(
+            model=MODEL,
+            contents=[types.Content(role="user", parts=[types.Part(text="這位長輩的記憶：\n" + digest)])],
+            config=types.GenerateContentConfig(
+                system_instruction=_PROFILE_SYS, temperature=0.4, response_mime_type="application/json"
+            ),
+        )
+        profile = json.loads(r.text)
+    except Exception:
+        return {}
+    if not isinstance(profile, dict):
+        return {}
+    return {
+        "who": (profile.get("who") or "").strip(),
+        "recent": (profile.get("recent") or "").strip(),
+        "moodTrend": (profile.get("moodTrend") or "").strip(),
+        "caresAbout": [str(x).strip() for x in (profile.get("caresAbout") or []) if str(x).strip()][:3],
+        "intoLately": [str(x).strip() for x in (profile.get("intoLately") or []) if str(x).strip()][:3],
+        "openingIdeas": [str(x).strip() for x in (profile.get("openingIdeas") or []) if str(x).strip()][:3],
+        "basedOnMemories": len(items),
+    }
+
+
 def migrate_profile(profile):
     """收斂：把舊的中文側寫 `user_profile`（稱呼/年紀/住在/喜好/回憶/興趣權重）
     轉成新記憶候選，之後併進 `memory_items`（單一來源）。"""

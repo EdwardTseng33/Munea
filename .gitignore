@@ -31,6 +31,7 @@ engine/*_store.json
 engine/companion_profile.json
 engine/companion_relationship_states.json
 engine/memory_items.json
+engine/living_profile.json
 engine/perception_snapshots.json
 engine/privacy_requests.json
 engine/user_profile.json

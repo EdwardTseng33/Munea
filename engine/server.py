@@ -343,6 +343,36 @@ def append_memory_items(items):
     return items
 
 
+LIVING_PROFILE_PATH = os.environ.get("MUNEA_LIVING_PROFILE_PATH") or os.path.join(HERE, "living_profile.json")
+
+
+def load_living_profile():
+    prof = read_json_file(LIVING_PROFILE_PATH, {})
+    return prof if isinstance(prof, dict) else {}
+
+
+def save_living_profile(profile):
+    write_json_file(LIVING_PROFILE_PATH, profile or {})
+    return profile
+
+
+def refresh_living_profile(person_id=None):
+    """活的側寫：重讀全部記憶 → 合成一張「這位長輩現在是誰」→ 存起來供聊天/主動開口取用。
+    設計為『每週』由背景重跑一次（頻率旋鈕待 Edward 拍板）。"""
+    items = load_memory_items(limit=1000)
+    try:
+        import memory_engine
+        profile = memory_engine.build_living_profile(items)
+    except Exception as e:
+        log_fallback_exception("build living profile", e)
+        profile = {}
+    if profile:
+        profile["updatedAt"] = utc_now()
+        save_living_profile(profile)
+    return {"ok": bool(profile), "brain": "butler", "action": "living_profile",
+            "profile": profile, "basedOnMemories": len(items)}
+
+
 def normalize_perception_snapshot(data):
     data = data or {}
     return {
@@ -662,6 +692,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "guardian": guardian,
         "memories": memories,
         "perception": perception,
+        "livingProfile": load_living_profile(),
     }
 
 
@@ -680,6 +711,22 @@ def reply_context_instruction(context):
         f"toneOverrides={json.dumps(tone_overrides, ensure_ascii=False)}; "
         f"relationshipMemory={json.dumps(relationship_memory, ensure_ascii=False)}."
     )
+    living = context.get("livingProfile") or {}
+    living_parts = []
+    if living.get("who"):
+        living_parts.append(f"是誰：{living['who']}")
+    if living.get("recent"):
+        living_parts.append(f"近況：{living['recent']}")
+    if living.get("moodTrend"):
+        living_parts.append(f"心情走向：{living['moodTrend']}")
+    if living.get("caresAbout"):
+        living_parts.append("最在乎：" + "、".join(living["caresAbout"]))
+    if living.get("intoLately"):
+        living_parts.append("最近迷：" + "、".join(living["intoLately"]))
+    living_line = (
+        "（這位長輩現在是誰（活的側寫，拿來自然關心、別照唸出來）：\n"
+        + "\n".join(f"- {p}" for p in living_parts) + "\n）"
+    ) if living_parts else ""
     memory_lines = [
         f"- {item.get('type')}: {item.get('content')}"
         for item in memories[:5]
@@ -697,6 +744,7 @@ def reply_context_instruction(context):
         f"（語氣：{', '.join(persona_body.get('toneProfile') or [])}。）",
         f"（對話風格：{', '.join(persona_body.get('conversationStyle') or [])}。）",
         f"（安全風險：{(guardian.get('risk') or {}).get('level', 'none')}；動作：{(guardian.get('risk') or {}).get('action', 'allow')}。）",
+        living_line,
         "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
         "（即時感知需求：\n" + ("\n".join(domain_lines) if domain_lines else "- 此輪不需要外部即時事實。") + "\n）",
         "（請遵守：不主動顯示逐字稿；不診斷、不開藥、不說不用看醫生；需要即時資料卻沒有來源時，要自然說目前不能確認，不要編造。）",
@@ -2288,6 +2336,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(consolidate_memory(data.get("personId") or data.get("person_id")))
+            elif self.path == "/admin/memory-living-profile":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(refresh_living_profile(data.get("personId") or data.get("person_id")))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":
