@@ -66,23 +66,38 @@ def process_request(connection, request):
     return _file_response(path)
 
 
+import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
+
+
 def system_instruction(char="寧寧"):
+    """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
-    base = c.get("persona", "")
-    base += eng.RED
+    base = c.get("persona", "") + eng.RED
+    try:
+        ctx = server.build_reply_context([], char, {})
+        base += server.reply_context_instruction(ctx)
+    except Exception:
+        pass
+    if c.get("type") == "animal" and c.get("style"):
+        base += f"（你講話的聲音演技：{c['style']}）"
     base += (
-        "（現在是即時語音通話。你剛接起電話：先用『一句』溫暖的話打招呼就好，別一次講一大串。"
-        "你還不知道對方是誰，所以絕對不要亂猜名字、不要亂叫稱呼（不可以叫人『阿姨』或任何名字）；"
-        "可以自然地說『喂～我是寧寧，今天想聊聊什麼呀？』。"
-        "整通電話都要：口語、句子短、一次只講一兩句、講完就停下來等對方回應。）"
+        "（現在是即時語音通話。剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
+        "句子短、口語、一次一兩句、講完停下來等對方回應。）"
     )
     return base
 
 
 def live_config(char="寧寧"):
+    c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
+    voice = c.get("voice") or "Leda"  # 聲線讀角色檔（Edward 親耳拍板的語音卡司）
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
         system_instruction=system_instruction(char),
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
+            )
+        ),
     )
 
 
