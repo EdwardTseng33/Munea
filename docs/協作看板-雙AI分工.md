@@ -32,7 +32,7 @@
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
 | Claude / 城堡 | 記憶層強化：真萃取引擎（`engine/memory_engine.py` 已建＋自測，只存長輩事實不存 AI 的話）→ 接進聊完整理、收斂舊側寫、pgvector 語意、四層/整理員/活側寫 | 新增 `engine/memory_engine.py`；**將動** `engine/server.py`（butler_post_turn 記憶接線）、`engine/chat_engine.py`（收斂 user_profile）、`supabase/sql/`（加 pgvector）、記憶設計文件 | 2026-07-02 | 🔄 進行中 |
-| Codex | 健檢修復排程 P1-13：清理 `except: pass`，至少留下 debug log，降低後續除錯盲區 | `engine/server.py`、`engine/chat_engine.py`、`scripts/smoke.ps1`、狀態文件 | 2026-07-02 | ✅ 完成（本輪驗證通過） |
+| Codex | 同步 Claude/城堡最新「記憶／感知／交互」規劃，重排開發順序；記憶接線期間先避讓 `server.py` / `chat_engine.py` / `supabase/sql` | `docs/健檢修復排程-2026-07-01.md`、本看板 | 2026-07-02 | 🔄 排程同步中 |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
 >
@@ -94,3 +94,9 @@
 - 本輪範圍：補 backend / legacy chat engine fallback logging，避免 Supabase fallback、模型回覆、TTS、記憶萃取失敗時靜默。
 - 已驗證：`npm run smoke:no-api` 通過；smoke 會用 AST 檢查 `engine/server.py` 與 `engine/chat_engine.py` 不再出現 silent `except ...: pass` handler。
 - 避讓範圍：未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線。
+
+## 同步紀錄（2026-07-02 · Codex · 三模組排程）
+
+- 已同步 Claude/城堡最新架構更新：對外三大核心服務模組＝記憶／感知／交互；對內仍拆為可換技術層＋指揮層。
+- 協作決策：Claude/城堡目前主攻記憶層強化，會動 `engine/server.py`、`engine/chat_engine.py`、`supabase/sql/`；Codex 暫避這些檔案，不接 M1/M2。
+- 已更新 `docs/健檢修復排程-2026-07-01.md` 的「聊聊三模組落地排程」：記憶主線先由 Claude 做，Codex 待推完後接 M-QA smoke/契約補強；感知 P1/P2 與指揮層 I1 排在其後。
