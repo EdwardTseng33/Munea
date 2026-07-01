@@ -82,6 +82,42 @@ def extract(history):
     return out
 
 
+def migrate_profile(profile):
+    """收斂：把舊的中文側寫 `user_profile`（稱呼/年紀/住在/喜好/回憶/興趣權重）
+    轉成新記憶候選，之後併進 `memory_items`（單一來源）。"""
+    profile = profile or {}
+    out = []
+    call = (profile.get("稱呼") or "").strip()
+    age = str(profile.get("年紀") or "").strip()
+    live = (profile.get("住在") or "").strip()
+    bits = []
+    if call:
+        bits.append(f"稱呼「{call}」")
+    if age:
+        bits.append(f"{age}歲")
+    if live:
+        bits.append(f"住在{live}")
+    if bits:
+        out.append({"type": "identity", "tier": "core", "content": "長輩" + "、".join(bits),
+                    "importance": 0.9, "confidence": 0.8, "sensitivity": "normal"})
+    for like in (profile.get("喜好") or []):
+        if str(like).strip():
+            out.append({"type": "preference", "tier": "long", "content": f"長輩喜歡{str(like).strip()}",
+                        "importance": 0.6, "confidence": 0.75, "sensitivity": "normal"})
+    for mem in (profile.get("回憶") or []):
+        if str(mem).strip():
+            out.append({"type": "relationship", "tier": "long", "content": f"長輩說過：{str(mem).strip()}",
+                        "importance": 0.75, "confidence": 0.7, "sensitivity": "normal"})
+    for topic, w in (profile.get("興趣權重") or {}).items():
+        try:
+            imp = max(0.3, min(1.0, 0.5 + float(w) * 0.1))
+        except Exception:
+            imp = 0.5
+        out.append({"type": "topic_interest", "tier": "long", "content": f"長輩對「{topic}」有興趣（權重 {w}）",
+                    "importance": round(imp, 2), "confidence": 0.7, "sensitivity": "normal"})
+    return out
+
+
 if __name__ == "__main__":
     demo = [
         {"role": "user", "text": "寧寧，我孫子小寶下個月要結婚了，我最近膝蓋不太好，晚上都在追韓劇"},

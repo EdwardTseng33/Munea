@@ -1929,7 +1929,7 @@ def account_deletion_response(data):
 def _sys_for(char):
     """組這個角色的系統人格：人格 + 醫療界線 +（真人才帶）記憶側寫。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
-    base = c["persona"] + eng.RED + (eng._profile_ctx() if c["type"] == "human" else "")
+    base = c["persona"] + eng.RED  # 收斂：記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
     return base, c
 
 
