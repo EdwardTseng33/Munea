@@ -195,6 +195,7 @@ def verify_auth_context(headers=None):
 
 PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap"}
 ADMIN_POST_PATHS = {"/admin/north-star", "/admin/usage", "/admin/credits"}
+PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
 
 def auth_required_mode():
@@ -205,8 +206,19 @@ def auth_required_for_path(path):
     return auth_required_mode() and path not in PUBLIC_POST_PATHS and path not in ADMIN_POST_PATHS
 
 
-def require_verified_auth(headers=None, path=""):
+def auth_required_for_request(path, data=None):
+    data = data or {}
     if not auth_required_for_path(path):
+        return False
+    if path in PRIVILEGED_BILLING_POST_PATHS:
+        return False
+    if path == "/entitlements" and (data.get("action") or "load").lower() in ("save", "replace"):
+        return False
+    return True
+
+
+def require_verified_auth(headers=None, path="", data=None):
+    if not auth_required_for_request(path, data):
         return {"ok": True, "required": False}
     auth_context = verify_auth_context(headers)
     if not auth_context.get("ok"):
@@ -1223,6 +1235,31 @@ def admin_authorized(headers):
     return True, None
 
 
+def provider_webhook_authorized(headers):
+    token = os.environ.get("MUNEA_PROVIDER_WEBHOOK_TOKEN") or ""
+    if not token:
+        return False, "provider_token_not_configured"
+    supplied = headers.get("X-Munea-Provider-Token") or headers.get("x-munea-provider-token") or ""
+    if supplied != token:
+        return False, "invalid_provider_token"
+    return True, None
+
+
+def privileged_billing_write_authorized(headers, allow_provider=False):
+    if not auth_required_mode():
+        return True, None
+    ok, code = admin_authorized(headers)
+    if ok:
+        return True, None
+    if allow_provider:
+        provider_ok, provider_code = provider_webhook_authorized(headers)
+        if provider_ok:
+            return True, None
+        if code == "admin_token_not_configured":
+            return False, provider_code
+    return False, code
+
+
 def default_billing_store():
     return {
         "schemaVersion": 1,
@@ -2072,7 +2109,7 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             data = self._read_json_body()
-            auth_gate = require_verified_auth(self.headers, self.path)
+            auth_gate = require_verified_auth(self.headers, self.path, data)
             if not auth_gate.get("ok"):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
@@ -2133,14 +2170,32 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/account-bootstrap":
                 self._json(bootstrap_account_response(data, self.headers))
             elif self.path == "/entitlements":
+                action = (data.get("action") or "load").lower()
+                if action in ("save", "replace"):
+                    ok, code = privileged_billing_write_authorized(self.headers)
+                    if not ok:
+                        self._json_error(403, code, "Admin token is required for entitlement changes")
+                        return
                 self._json(entitlements_response(data))
             elif self.path == "/subscription-event":
+                ok, code = privileged_billing_write_authorized(self.headers, allow_provider=True)
+                if not ok:
+                    self._json_error(403, code, "Provider or admin token is required for subscription events")
+                    return
                 self._json(subscription_event_response(data))
             elif self.path == "/credits/balance":
                 self._json(credits_balance_response(data))
             elif self.path == "/credits/grant":
+                ok, code = privileged_billing_write_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required for credit grants")
+                    return
                 self._json(credits_grant_response(data))
             elif self.path == "/credits/consume":
+                ok, code = privileged_billing_write_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required for direct credit consumption")
+                    return
                 self._json(credits_consume_response(data))
             elif self.path == "/privacy-export":
                 self._json(privacy_export_response(data))

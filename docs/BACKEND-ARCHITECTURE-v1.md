@@ -82,6 +82,7 @@ Production auth rule:
 - user-editable metadata must not drive authorization.
 - Current backend foundation: setting `MUNEA_REQUIRE_AUTH=1` makes sensitive POST endpoints require verified bearer auth. Local prototype mode remains permissive by default so design/dev previews do not break before the iOS auth flow is wired.
 - Admin endpoints remain separate and require `MUNEA_ADMIN_API_TOKEN` through `X-Munea-Admin-Token`.
+- Billing mutation routes are separated from normal user bearer auth: direct credit grants/consumption and entitlement saves require `X-Munea-Admin-Token` when `MUNEA_REQUIRE_AUTH=1`; subscription provider events may use `X-Munea-Provider-Token` from trusted webhook infrastructure.
 
 All production API responses should use this envelope:
 
@@ -194,6 +195,7 @@ Production rule:
 
 - Client purchase state is a signal, not authority.
 - Entitlements change only after server verification.
+- In auth-required mode, `/subscription-event`, `/credits/grant`, `/credits/consume`, and entitlement save/replace actions are privileged writes and cannot be performed by a normal app bearer token alone.
 - Basic companionship, routine reminders, privacy controls, and safety/referral flows must not depend on purchased credits.
 - Expensive Avatar/GPU add-ons should consume included monthly allowance first, then purchased credits, then degrade gracefully to lower-cost mode.
 

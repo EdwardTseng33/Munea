@@ -42,6 +42,7 @@
 - Connected `/avatar-session` to the credits deduction path: monthly premium Avatar allowance first, purchased/included credits for overage, then graceful fallback to `2d-viseme`.
 - Added Supabase adapter support for credits runtime tables: `credit_wallets`, `credit_transactions`, and `credit_ledger`.
 - Added token-gated Admin MVP read contracts: `/admin/usage` for product usage/North Star composition and `/admin/credits` for subscription, entitlements, usage ledger, wallets, and recent credit ledger lookup.
+- Added production-mode billing mutation guard: `MUNEA_REQUIRE_AUTH=1` separates normal bearer-auth user reads from privileged entitlement/credits/provider writes using admin/provider tokens.
 - Clarified that subscriptions should protect the trust-building base experience, while credits should only apply to expensive or bursty add-ons such as premium Avatar/GPU minutes.
 
 ## 2026-06-29 Update

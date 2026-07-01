@@ -693,6 +693,12 @@ assert status["ok"] is True
 assert status["auth"]["provider"] == "dev-bypass"
 os.environ["MUNEA_REQUIRE_AUTH"] = "1"
 assert server.auth_required_for_path("/chat") is True
+assert server.auth_required_for_request("/chat", {}) is True
+assert server.auth_required_for_request("/credits/balance", {}) is True
+assert server.auth_required_for_request("/credits/grant", {}) is False
+assert server.auth_required_for_request("/subscription-event", {}) is False
+assert server.auth_required_for_request("/entitlements", {"action": "load"}) is True
+assert server.auth_required_for_request("/entitlements", {"action": "save"}) is False
 missing_gate = server.require_verified_auth({}, "/chat")
 assert missing_gate["ok"] is False
 assert missing_gate["code"] == "auth_token_missing"
@@ -701,6 +707,15 @@ assert verified_gate["ok"] is True
 assert verified_gate["required"] is True
 assert server.auth_required_for_path("/auth-status") is False
 assert server.auth_required_for_path("/admin/usage") is False
+assert server.privileged_billing_write_authorized({}) == (False, "admin_token_not_configured")
+os.environ["MUNEA_ADMIN_API_TOKEN"] = "admin-smoke-token"
+assert server.privileged_billing_write_authorized({"X-Munea-Admin-Token": "admin-smoke-token"}) == (True, None)
+assert server.privileged_billing_write_authorized({"X-Munea-Admin-Token": "wrong"}) == (False, "invalid_admin_token")
+del os.environ["MUNEA_ADMIN_API_TOKEN"]
+os.environ["MUNEA_PROVIDER_WEBHOOK_TOKEN"] = "provider-smoke-token"
+assert server.privileged_billing_write_authorized({"X-Munea-Provider-Token": "provider-smoke-token"}, allow_provider=True) == (True, None)
+assert server.privileged_billing_write_authorized({"X-Munea-Provider-Token": "wrong"}, allow_provider=True) == (False, "invalid_provider_token")
+del os.environ["MUNEA_PROVIDER_WEBHOOK_TOKEN"]
 del os.environ["MUNEA_REQUIRE_AUTH"]
 del os.environ["MUNEA_ENABLE_DEV_AUTH_BYPASS"]
 

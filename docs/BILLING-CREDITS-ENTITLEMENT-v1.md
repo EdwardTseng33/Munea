@@ -230,11 +230,11 @@ Provider mapping can be RevenueCat first, but Munea backend still owns the autho
 Current:
 
 - `POST /entitlements`
-- `POST /subscription-event`
+- `POST /subscription-event` - privileged provider/admin write in production mode; requires provider webhook token or admin token before changing backend billing state.
 - `POST /avatar-session`
 - `POST /credits/balance`
-- `POST /credits/grant`
-- `POST /credits/consume`
+- `POST /credits/grant` - privileged write in production mode; requires admin token.
+- `POST /credits/consume` - privileged direct write in production mode; normal feature usage should consume credits through backend feature routes such as `/avatar-session`.
 
 Next production APIs:
 
