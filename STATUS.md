@@ -1,5 +1,37 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-02 Update - Smoke reliability and auth gate contract coverage
+
+**Status:** completed for local/backend verification.
+
+- Continued development on the non-overlapping Codex lane: backend verification, auth gate coverage, and local developer tooling only.
+- Fixed Windows smoke execution so inline Python blocks run from UTF-8 temporary files and fail the script when Python exits non-zero.
+- Converted smoke test fixture strings to ASCII-safe Unicode escapes so Windows PowerShell cannot corrupt Taiwan Mandarin test data.
+- Expanded `MUNEA_REQUIRE_AUTH=1` smoke coverage for user-scoped endpoints, public/admin carve-outs, and privileged billing mutation token separation.
+- Added `scripts/supabase-doctor.ps1` and updated npm scripts so Supabase doctor uses the repo `.venv` Python instead of the Windows Store python stub.
+- Verified `npm run smoke:no-api`, `npm run supabase:doctor`, and full `scripts/smoke.ps1` against a local engine on `127.0.0.1:8200`.
+- Avoided Claude/城堡's active realtime voice lane: no changes to `engine/live_voice_*`, `engine/voice_playback_probe.py`, or realtime voice web wiring.
+
+## 2026-07-02 Update - Auth-required API smoke
+
+**Status:** completed for P0-3 backend auth gate.
+
+- Added `npm run smoke:auth`, backed by `scripts/auth-gate-smoke.ps1`.
+- The auth smoke starts a temporary local engine with `MUNEA_REQUIRE_AUTH=1`, dev bearer bypass enabled, admin token, provider token, and isolated JSON store paths.
+- Verified real HTTP behavior: user-scoped endpoints require Bearer auth, admin endpoints require admin token, credit grants reject normal Bearer auth, subscription events require provider/admin token, and entitlement mutations require admin token.
+- Updated `docs/健檢修復排程-2026-07-01.md` so P0-3 is marked complete for backend auth gate/API smoke, with live Supabase Auth provider E2E still pending.
+- Still avoided Claude/城堡's active realtime voice lane.
+
+## 2026-07-02 Update - Chinese Butler memory extraction baseline
+
+**Status:** completed for deterministic Chinese keyword fallback.
+
+- Continued on a non-overlapping backend/AI service lane; no realtime voice files were changed.
+- Added Chinese keyword coverage to `engine/model_router.py` for Butler memory extraction: preferences, dislikes, family relationships, routines, emotions, health context, and temporary events.
+- Chinese examples such as liking Korean dramas, daughter visits, daily walks, knee pain, insomnia, and loneliness now produce structured memory candidates instead of falling through to a generic temporary event.
+- Updated smoke coverage so Chinese memory extraction must return preference, relationship, routine, emotion, and health-context memory types.
+- Updated `docs/健檢修復排程-2026-07-01.md` so P1-12 is marked complete for the deterministic fallback; live Butler/Claude memory extraction remains a later provider-integration step.
+
 ## 2026-07-01 Update - Guardian Chinese safety terms
 
 **Status:** completed and synchronized from Claude/城堡 local work.

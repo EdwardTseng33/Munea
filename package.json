@@ -6,8 +6,9 @@
   "scripts": {
     "smoke": "powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1",
     "smoke:no-api": "powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1 -SkipApi",
-    "supabase:doctor": "python scripts/supabase_doctor.py --allow-missing",
-    "supabase:doctor:live": "python scripts/supabase_doctor.py --live",
+    "smoke:auth": "powershell -ExecutionPolicy Bypass -File scripts/auth-gate-smoke.ps1",
+    "supabase:doctor": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --allow-missing",
+    "supabase:doctor:live": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --live",
     "cap:doctor": "npx cap doctor",
     "cap:sync": "npx cap sync",
     "cap:add:ios": "npx cap add ios",

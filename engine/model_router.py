@@ -471,6 +471,41 @@ def detect_topic_domains(text):
     return domains
 
 
+def has_any(text, terms):
+    lowered = (text or "").lower()
+    return any(term.lower() in lowered for term in terms)
+
+
+PREFERENCE_TERMS = [
+    "like", "love", "prefer", "favorite", "enjoy",
+    "喜歡", "愛看", "愛聽", "愛吃", "最愛", "偏好", "常看", "常聽",
+]
+DISLIKE_TERMS = [
+    "dislike", "hate", "avoid", "do not like",
+    "不喜歡", "討厭", "不愛", "避免", "少吃", "不想看",
+]
+RELATIONSHIP_TERMS = [
+    "daughter", "son", "wife", "husband", "mother", "father", "family", "grandchild",
+    "女兒", "兒子", "太太", "先生", "老婆", "老公", "媽媽", "爸爸", "家人", "孫子", "孫女", "媳婦", "女婿",
+]
+ROUTINE_TERMS = [
+    "medicine", "medication", "doctor visit", "walk every", "sleep at", "exercise every",
+    "吃藥", "藥", "回診", "看醫生", "每天散步", "每天運動", "固定散步", "睡覺", "睡前", "起床", "量血壓",
+]
+EMOTION_TERMS = [
+    "lonely", "sad", "anxious", "afraid", "insomnia", "mood", "depressed",
+    "孤單", "寂寞", "難過", "傷心", "焦慮", "害怕", "睡不著", "失眠", "心情不好", "想哭",
+]
+HEALTH_CONTEXT_TERMS = [
+    "dizzy", "chest pain", "fell", "blood pressure", "pain", "fever",
+    "頭暈", "暈", "胸痛", "胸悶", "跌倒", "摔倒", "血壓", "痛", "疼", "膝蓋痛", "腰痛", "發燒", "咳嗽",
+]
+TEMPORARY_EVENT_TERMS = [
+    "today", "tomorrow", "weather", "rain", "later",
+    "今天", "明天", "天氣", "下雨", "等等", "等一下", "晚點", "下午", "晚上",
+]
+
+
 def topic_perception_plan_response(data):
     data = data or {}
     text = data.get("topic") or data.get("query") or text_from_payload(data)
@@ -509,24 +544,23 @@ def make_candidate(memory_type, content, confidence=0.7, importance=0.5, valid_d
 
 def memory_extract_response(data):
     text = text_from_payload(data)
-    lowered = text.lower()
     candidates = []
 
-    if any(k in lowered for k in ["like", "love", "prefer", "favorite", "enjoy"]):
+    if has_any(text, PREFERENCE_TERMS):
         candidates.append(make_candidate("preference", text, 0.72, 0.68, None))
-    if any(k in lowered for k in ["dislike", "hate", "avoid", "do not like"]):
+    if has_any(text, DISLIKE_TERMS):
         candidates.append(make_candidate("preference", text, 0.72, 0.7, None))
-    if any(k in lowered for k in ["daughter", "son", "wife", "husband", "mother", "father", "family", "grandchild"]):
+    if has_any(text, RELATIONSHIP_TERMS):
         candidates.append(make_candidate("relationship", text, 0.75, 0.82, None))
-    if any(k in lowered for k in ["medicine", "medication", "doctor visit", "walk every", "sleep at", "exercise every"]):
+    if has_any(text, ROUTINE_TERMS):
         candidates.append(make_candidate("routine", text, 0.7, 0.8, 90))
     if detect_topic_domains(text):
         candidates.append(make_candidate("topic_interest", text, 0.7, 0.6, None))
-    if any(k in lowered for k in ["lonely", "sad", "anxious", "afraid", "insomnia", "mood", "depressed"]):
+    if has_any(text, EMOTION_TERMS):
         candidates.append(make_candidate("emotion", text, 0.66, 0.7, 30))
-    if any(k in lowered for k in ["dizzy", "chest pain", "fell", "blood pressure", "pain", "fever"]):
+    if has_any(text, HEALTH_CONTEXT_TERMS):
         candidates.append(make_candidate("health_context", text, 0.65, 0.78, 30))
-    if any(k in lowered for k in ["today", "tomorrow", "weather", "rain", "later"]):
+    if has_any(text, TEMPORARY_EVENT_TERMS):
         candidates.append(make_candidate("temporary_event", text, 0.62, 0.35, 3))
     if guardian_evaluate_response({"text": text})["risk"]["level"] in {"medium", "high", "critical"}:
         candidates.append(make_candidate("safety_signal", text, 0.8, 1.0, 365, "guardian"))

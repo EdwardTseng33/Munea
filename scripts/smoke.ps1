@@ -8,6 +8,20 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
+function Resolve-Python {
+  $venvPython = Join-Path $root ".venv\Scripts\python.exe"
+  if (Test-Path $venvPython) {
+    return $venvPython
+  }
+
+  $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+  if ($pythonCommand) {
+    return $pythonCommand.Source
+  }
+
+  throw "Python runtime not found. Create .venv or add python to PATH."
+}
+
 function Step($name) {
   Write-Host ""
   Write-Host "== $name ==" -ForegroundColor Cyan
@@ -21,21 +35,42 @@ function Warn($message) {
   Write-Host "WARN $message" -ForegroundColor Yellow
 }
 
+$Python = Resolve-Python
+
+function Invoke-PythonBlock {
+  param(
+    [Parameter(Mandatory = $true, Position = 0)]
+    [string]$Code
+  )
+
+  $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ("munea-smoke-" + [System.Guid]::NewGuid().ToString("N") + ".py")
+  try {
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($tempPath, $Code, $utf8NoBom)
+    & $Python $tempPath
+    if ($LASTEXITCODE -ne 0) {
+      throw "Python smoke block failed with exit code $LASTEXITCODE"
+    }
+  } finally {
+    Remove-Item -LiteralPath $tempPath -ErrorAction SilentlyContinue
+  }
+}
+
 Step "Python compile"
-python -m py_compile engine\server.py engine\env_loader.py engine\supabase_adapter.py engine\model_router.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py scripts\supabase_doctor.py
+& $Python -m py_compile engine\server.py engine\env_loader.py engine\supabase_adapter.py engine\model_router.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py scripts\supabase_doctor.py
 Pass "Python files compile"
 
 Step "JSON parse"
-@'
+Invoke-PythonBlock @'
 import json, pathlib
 for p in ["engine/characters.json"]:
     json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
     print(f"{p} OK")
-'@ | python -
+'@
 Pass "Static JSON files parse"
 
 Step "Chat engine profile is local runtime data"
-@'
+Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
@@ -45,19 +80,19 @@ import chat_engine
 with tempfile.TemporaryDirectory() as d:
     chat_engine.USER_PROFILE_PATH = str(Path(d) / "user_profile.json")
     profile = chat_engine._read_user_profile()
-    assert profile["稱呼"] == "使用者"
-    assert profile["回憶"] == []
-    profile["回憶"].append("喜歡早上散步")
+    assert profile["\u7a31\u547c"] == "\u4f7f\u7528\u8005"
+    assert profile["\u56de\u61b6"] == []
+    profile["\u56de\u61b6"].append("\u559c\u6b61\u65e9\u4e0a\u6563\u6b65")
     chat_engine._write_user_profile(profile)
     assert Path(chat_engine.USER_PROFILE_PATH).exists()
     loaded = chat_engine._read_user_profile()
-    assert loaded["回憶"] == ["喜歡早上散步"]
+    assert loaded["\u56de\u61b6"] == ["\u559c\u6b61\u65e9\u4e0a\u6563\u6b65"]
 print("chat engine runtime profile OK")
-'@ | python -
+'@
 Pass "Chat engine user profile is runtime-local"
 
 Step "Voice note payload decode"
-@'
+Invoke-PythonBlock @'
 import os, sys
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
@@ -73,11 +108,11 @@ try:
 except ValueError as e:
     assert str(e) == "unsupported_audio_mime"
 print("voice note bytes", result["bytes"])
-'@ | python -
+'@
 Pass "Voice note payload decodes with safety guards"
 
 Step "Companion profile contract"
-@'
+Invoke-PythonBlock @'
 import os, sys
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
@@ -85,11 +120,11 @@ import server
 
 profile = server.normalize_companion_profile({
     "templateId": "cat",
-    "displayName": " 小花 ",
+    "displayName": " \u5c0f\u82b1 ",
     "nameTouched": True,
 })
 assert profile["templateId"] == "munea-2d-mimi"
-assert profile["displayName"] == "小花"
+assert profile["displayName"] == "\u5c0f\u82b1"
 assert profile["nameTouched"] is True
 
 resp = server.companion_profile_response({"action": "load"})
@@ -107,11 +142,11 @@ active = server.active_companion_profile(normalized_store)
 assert active["templateId"] == "nening-real-female"
 assert active["displayName"] == "Munea"
 print("companion profile", profile["templateId"], profile["displayName"])
-'@ | python -
+'@
 Pass "Companion profile and app store contracts are valid"
 
 Step "Supabase adapter contract"
-@'
+Invoke-PythonBlock @'
 import os, sys
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
@@ -483,11 +518,11 @@ for table in ["accounts", "account_members", "persons", "family_groups", "family
     assert table in bootstrap_writes, f"bootstrap did not write {table}"
 assert bootstrapped["familyGroup"]["members"][0]["role"] == "primary_user"
 print("supabase adapter", adapter.status()["enabled"])
-'@ | python -
+'@
 Pass "Supabase adapter supports profile, billing, usage, and privacy contracts"
 
 Step "Account bootstrap contract"
-@'
+Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
@@ -525,11 +560,11 @@ with tempfile.TemporaryDirectory() as d:
     finally:
         server.data_backend = original_backend
 print("account bootstrap OK")
-'@ | python -
+'@
 Pass "Account bootstrap creates local account/family/person/companion store"
 
 Step "AI service brain and memory contract"
-@'
+Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
@@ -564,7 +599,7 @@ assert "streaming_catalog" in video_plan["perceptionSources"]
 assert "regional_availability" in video_plan["perceptionSources"]
 assert model_router.template_id_for_backend_char("\u963f\u5b8f") == "companion-real-male"
 warm_persona = model_router.persona_context_response({
-    "companionProfile": {"templateId": "nening-real-female", "displayName": "小晴"},
+    "companionProfile": {"templateId": "nening-real-female", "displayName": "\u5c0f\u6674"},
     "text": "Can we talk about travel today?",
     "relationshipState": {
         "rapportLevel": "trusted",
@@ -573,12 +608,12 @@ warm_persona = model_router.persona_context_response({
     },
 })
 steady_persona = model_router.persona_context_response({
-    "companionProfile": {"templateId": "companion-real-male", "displayName": "阿宏"},
+    "companionProfile": {"templateId": "companion-real-male", "displayName": "\u963f\u5b8f"},
     "text": "Can we talk about travel today?",
 })
 assert warm_persona["ok"] is True
 assert steady_persona["ok"] is True
-assert warm_persona["displayName"] == "小晴"
+assert warm_persona["displayName"] == "\u5c0f\u6674"
 assert warm_persona["persona"]["personaArchetype"] != steady_persona["persona"]["personaArchetype"]
 assert warm_persona["persona"]["toneProfile"] != steady_persona["persona"]["toneProfile"]
 assert warm_persona["composition"]["sameFactsDifferentVoice"] is True
@@ -609,6 +644,17 @@ with tempfile.TemporaryDirectory() as d:
     types = {item["type"] for item in extracted["memoryItems"]}
     assert "preference" in types
     assert "relationship" in types
+    zh_extracted = server.memory_extract_response({
+        "action": "store",
+        "text": "\u6211\u559c\u6b61\u770b\u97d3\u5287\uff0c\u5973\u5152\u7f8e\u83ef\u5e38\u5e38\u4f86\u627e\u6211\u804a\u5929\u3002\u6211\u6bcf\u5929\u6563\u6b65\uff0c\u6700\u8fd1\u819d\u84cb\u75db\uff0c\u665a\u4e0a\u7761\u4e0d\u8457\uff0c\u6709\u9ede\u5b64\u55ae\u3002",
+    })
+    assert zh_extracted["ok"] is True
+    zh_types = {item["type"] for item in zh_extracted["memoryItems"]}
+    assert "preference" in zh_types
+    assert "relationship" in zh_types
+    assert "routine" in zh_types
+    assert "emotion" in zh_types
+    assert "health_context" in zh_types
     retrieved = server.memory_retrieve_response({"query": "Korean drama Netflix daughter", "limit": 5})
     assert retrieved["ok"] is True
     assert retrieved["count"] >= 1
@@ -631,7 +677,7 @@ with tempfile.TemporaryDirectory() as d:
     assert guardian["risk"]["level"] == "high"
     assert guardian["risk"]["requiresHumanEscalation"] is True
     persona = server.persona_context_response({
-        "companionProfile": {"templateId": "munea-2d-xiaoyun", "displayName": "晴晴"},
+        "companionProfile": {"templateId": "munea-2d-xiaoyun", "displayName": "\u6674\u6674"},
         "text": "I feel a little sad today.",
     })
     assert persona["ok"] is True
@@ -641,7 +687,9 @@ with tempfile.TemporaryDirectory() as d:
         {"role": "user", "text": "\u6211\u4eca\u5929\u60f3\u804a\u97d3\u5287\uff0c\u4e5f\u6709\u9ede\u5b64\u55ae\u3002"}
     ], "\u963f\u5b8f", {})
     assert context["persona"]["templateId"] == "companion-real-male"
-    assert context["guardian"]["risk"]["level"] == "none"
+    assert context["guardian"]["risk"]["level"] == "low"
+    assert "emotional_distress" in context["guardian"]["risk"]["categories"]
+    assert context["guardian"]["risk"]["requiresHumanEscalation"] is False
     assert context["perception"]["needsCurrentFacts"] is True
     instruction = server.reply_context_instruction(context)
     assert "\u89d2\u8272\u4eba\u683c" in instruction
@@ -679,11 +727,11 @@ with tempfile.TemporaryDirectory() as d:
     assert next_context["persona"]["relationshipState"]["rapportLevel"] in {"familiar", "trusted", "close"}
 
 print("ai service OK")
-'@ | python -
+'@
 Pass "AI service router, memory, and Guardian contracts are valid"
 
 Step "Auth token verification contract"
-@'
+Invoke-PythonBlock @'
 import os, sys
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
@@ -703,9 +751,40 @@ assert status["ok"] is True
 assert status["auth"]["provider"] == "dev-bypass"
 os.environ["MUNEA_REQUIRE_AUTH"] = "1"
 assert server.auth_required_for_path("/chat") is True
-assert server.auth_required_for_request("/chat", {}) is True
-assert server.auth_required_for_request("/credits/balance", {}) is True
+user_scoped_paths = [
+    "/open",
+    "/chat",
+    "/voice-session",
+    "/voice-note",
+    "/avatar-session",
+    "/product-event",
+    "/ai/brain-status",
+    "/persona/context",
+    "/memory/extract",
+    "/memory/retrieve",
+    "/butler/post-turn",
+    "/guardian/evaluate",
+    "/perception/snapshot",
+    "/companion-profile",
+    "/app-profile",
+    "/entitlements",
+    "/credits/balance",
+    "/privacy-export",
+    "/account-deletion",
+]
+for path in user_scoped_paths:
+    assert server.auth_required_for_request(path, {}) is True, path
+    missing = server.require_verified_auth({}, path, {})
+    assert missing["ok"] is False, path
+    assert missing["code"] == "auth_token_missing", path
+    verified = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, path, {})
+    assert verified["ok"] is True, path
+    assert verified["required"] is True, path
+for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits"]:
+    assert server.auth_required_for_path(path) is False, path
+    assert server.require_verified_auth({}, path, {})["ok"] is True, path
 assert server.auth_required_for_request("/credits/grant", {}) is False
+assert server.auth_required_for_request("/credits/consume", {}) is False
 assert server.auth_required_for_request("/subscription-event", {}) is False
 assert server.auth_required_for_request("/entitlements", {"action": "load"}) is True
 assert server.auth_required_for_request("/entitlements", {"action": "save"}) is False
@@ -719,6 +798,7 @@ assert server.auth_required_for_path("/auth-status") is False
 assert server.auth_required_for_path("/admin/usage") is False
 assert server.privileged_billing_write_authorized({}) == (False, "admin_token_not_configured")
 os.environ["MUNEA_ADMIN_API_TOKEN"] = "admin-smoke-token"
+assert server.privileged_billing_write_authorized({"Authorization": "Bearer " + dev_token}) == (False, "invalid_admin_token")
 assert server.privileged_billing_write_authorized({"X-Munea-Admin-Token": "admin-smoke-token"}) == (True, None)
 assert server.privileged_billing_write_authorized({"X-Munea-Admin-Token": "wrong"}) == (False, "invalid_admin_token")
 del os.environ["MUNEA_ADMIN_API_TOKEN"]
@@ -737,11 +817,11 @@ assert missing_remote["code"] in {"invalid_auth_token", "auth_verification_unava
 del os.environ["SUPABASE_URL"]
 del os.environ["SUPABASE_ANON_KEY"]
 print("auth verification OK")
-'@ | python -
+'@
 Pass "Auth token verification contract is valid"
 
 Step "Atomic JSON store writes"
-@'
+Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
@@ -757,11 +837,11 @@ with tempfile.TemporaryDirectory() as d:
     leftovers = list(Path(d).glob("store.json.tmp.*"))
     assert leftovers == []
 print("atomic json write OK")
-'@ | python -
+'@
 Pass "JSON fallback stores write atomically"
 
 Step "Product event and North Star contract"
-@'
+Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
@@ -824,11 +904,11 @@ with tempfile.TemporaryDirectory() as d:
     assert code is None
     del os.environ["MUNEA_ADMIN_API_TOKEN"]
 print("north star OK")
-'@ | python -
+'@
 Pass "Product events produce North Star summary and admin gate is closed by default"
 
 Step "Environment loader and Supabase doctor contract"
-@'
+Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, "engine")
@@ -851,15 +931,15 @@ SUPABASE_SERVICE_ROLE_KEY='secret-test-key'
     assert "SUPABASE_URL" in loaded_override
     assert os.environ["SUPABASE_URL"] == "https://example.supabase.co"
 print("env loader OK")
-'@ | python -
+'@
 
-$doctorJson = python scripts\supabase_doctor.py --allow-missing --json | ConvertFrom-Json
+$doctorJson = & $Python scripts\supabase_doctor.py --allow-missing --json | ConvertFrom-Json
 if (-not $doctorJson.tables -or $doctorJson.tables.Count -lt 5) { throw "Supabase doctor missing table status" }
 if ($doctorJson.hasServiceRoleKey -and ($doctorJson | ConvertTo-Json -Compress) -match "secret-test-key") { throw "Supabase doctor leaked service key" }
 Pass "Environment loader and Supabase doctor are safe"
 
 Step "Billing and entitlement contract"
-@'
+Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
@@ -1001,11 +1081,11 @@ with tempfile.TemporaryDirectory() as d:
     assert insufficient["fallbackMode"] == "2d-viseme"
     server.CREDITS_STORE_PATH = original_credits_path
 print("billing plan", normalized["activePlan"])
-'@ | python -
+'@
 Pass "Billing entitlements and avatar session gates normalize correctly"
 
 Step "Supabase schema contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 
 sql = Path("supabase/sql/001_initial_munea_schema.sql").read_text(encoding="utf-8").lower()
@@ -1135,11 +1215,11 @@ for token in [
 if "weekly meaningful companion days" not in Path("docs/BACKEND-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower():
     raise SystemExit("Backend architecture missing North Star definition")
 print("supabase tables", len(required_tables) + len(analytics_tables) + len(ai_memory_tables) + len(persona_tables) + len(billing_credit_tables))
-'@ | python -
+'@
 Pass "Supabase schema, analytics foundation, RLS, grants, and seed ids are present"
 
 Step "Secret boundary contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 
 web_hits = []
@@ -1151,11 +1231,11 @@ for path in Path("web").rglob("*"):
 if web_hits:
     raise SystemExit("Service role reference leaked into web files: " + ", ".join(web_hits))
 print("service role stays backend-only")
-'@ | python -
+'@
 Pass "Service role references are not in web assets"
 
 Step "Backend architecture document contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 
 doc = Path("docs/BACKEND-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower()
@@ -1174,11 +1254,11 @@ missing = [token for token in required if token not in doc]
 if missing:
     raise SystemExit("Backend architecture doc missing sections: " + ", ".join(missing))
 print("backend architecture sections", len(required))
-'@ | python -
+'@
 Pass "Backend architecture document covers required sections"
 
 Step "Auth onboarding architecture document contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 
 doc = Path("docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower()
@@ -1211,11 +1291,11 @@ for token in ["sign in with apple", "google", "email magic link/otp", "facebook"
     if token not in setup:
         raise SystemExit("Supabase setup missing auth provider decision: " + token)
 print("auth onboarding contract OK")
-'@ | python -
+'@
 Pass "Auth onboarding architecture is documented"
 
 Step "Billing credits entitlement document contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 
 doc = Path("docs/BILLING-CREDITS-ENTITLEMENT-v1.md").read_text(encoding="utf-8").lower()
@@ -1259,11 +1339,11 @@ for token in ["006_billing_credits_foundation.sql", "credit_wallets", "credit_tr
     if token not in Path("docs/supabase/SETUP.md").read_text(encoding="utf-8").lower():
         raise SystemExit("Supabase setup missing billing credits setup token: " + token)
 print("billing credits entitlement OK")
-'@ | python -
+'@
 Pass "Billing credits entitlement ladder is documented"
 
 Step "AI service design document contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 
 doc = Path("docs/AI-SERVICE-DESIGN-v1.md").read_text(encoding="utf-8").lower()
@@ -1309,11 +1389,11 @@ for token in ["005_companion_persona_layer.sql", "companion_persona_templates", 
     if token not in setup:
         raise SystemExit("Supabase setup missing persona schema token: " + token)
 print("ai service design contract OK")
-'@ | python -
+'@
 Pass "AI service design is documented"
 
 Step "Repo-backed Codex skill contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 
 required = {
@@ -1345,11 +1425,11 @@ if "Claude collaboration is unaffected" not in setup_doc:
     raise SystemExit("Codex skill setup doc must state Claude collaboration boundary")
 
 print("codex skills", len(required))
-'@ | python -
+'@
 Pass "Repo-backed Codex skills are present and documented"
 
 Step "Privacy data-rights contract"
-@'
+Invoke-PythonBlock @'
 import os, sys
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
@@ -1370,7 +1450,7 @@ deletion = server.account_deletion_response({"action": "status"})
 assert deletion["ok"] is True
 assert deletion["requiresReauth"] is True
 print("privacy status", deletion["status"])
-'@ | python -
+'@
 Pass "Privacy export and account deletion contracts are valid"
 
 Step "Frontend JavaScript syntax"
@@ -1381,7 +1461,7 @@ node --check web\src\auth-config.example.js
 Pass "Frontend JavaScript parses"
 
 Step "Frontend auth bridge contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 auth = Path("web/src/auth.js").read_text(encoding="utf-8")
 app = Path("web/src/app.js").read_text(encoding="utf-8")
@@ -1438,11 +1518,11 @@ for forbidden in ["SERVICE_ROLE", "service_role"]:
     if forbidden in config or forbidden in auth:
         raise SystemExit("Auth browser files must not mention service role secret tokens")
 print("frontend auth bridge OK")
-'@ | python -
+'@
 Pass "Frontend Auth bridge is present"
 
 Step "Avatar runtime contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 html = Path("web/index.html").read_text(encoding="utf-8")
 js = Path("web/src/app.js").read_text(encoding="utf-8")
@@ -1471,11 +1551,11 @@ if 'id="avatarDiagnostics"' not in html:
 if 'data-avatar-mode="2d-viseme"' not in css:
     raise SystemExit("Missing 2d-viseme CSS mode selector")
 print("avatar runtime contract OK")
-'@ | python -
+'@
 Pass "Avatar runtime contract is present"
 
 Step "Voice provider contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 js = Path("web/src/app.js").read_text(encoding="utf-8")
 required = [
@@ -1500,11 +1580,11 @@ for forbidden in ["safeProperties.text", "safeProperties.transcript", "safePrope
     if forbidden not in js:
         raise SystemExit("Product analytics must explicitly strip: " + forbidden)
 print("voice provider contract OK")
-'@ | python -
+'@
 Pass "Voice provider contract is present"
 
 Step "Frontend AI diagnostics contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 html = Path("web/index.html").read_text(encoding="utf-8")
 js = Path("web/src/app.js").read_text(encoding="utf-8")
@@ -1539,11 +1619,11 @@ for token in ["ai-dev-panel", "ai-dev-grid", "ai-dev-json"]:
     if token not in css:
         raise SystemExit("Missing AI diagnostics CSS token: " + token)
 print("frontend ai diagnostics OK")
-'@ | python -
+'@
 Pass "Frontend AI diagnostics are present"
 
 Step "Account bootstrap frontend contract"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 js = Path("web/src/app.js").read_text(encoding="utf-8")
 onboarding = Path("web/onboarding.html").read_text(encoding="utf-8")
@@ -1570,11 +1650,11 @@ missing_onboarding = [item for item in required_onboarding if item not in onboar
 if missing_onboarding:
     raise SystemExit("Missing onboarding bootstrap pieces: " + ", ".join(missing_onboarding))
 print("account bootstrap frontend contract OK")
-'@ | python -
+'@
 Pass "Frontend onboarding can initialize account bootstrap"
 
 Step "Frontend id references"
-@'
+Invoke-PythonBlock @'
 from pathlib import Path
 import re
 html = Path("web/index.html").read_text(encoding="utf-8")
@@ -1586,7 +1666,7 @@ missing = sorted([r for r in refs if r not in ids and r not in allowed])
 if missing:
     raise SystemExit("Missing id refs: " + ", ".join(missing))
 print("index ids", len(ids))
-'@ | python -
+'@
 Pass "Frontend id refs are valid"
 
 Step "Git diff check"

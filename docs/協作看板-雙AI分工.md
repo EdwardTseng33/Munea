@@ -60,3 +60,23 @@
 - 若產品方向衝突，以 Edward 最新明確決策為最高優先，再回寫 SSOT。
 - 若文件與程式衝突，以目前已實作且已推上 main 的程式行為為事實基準，再補文件。
 - 若涉及帳務、醫療安全、個資、App Store 上架風險，先收斂架構與風險，再進功能開發。
+
+---
+
+## 同步紀錄（2026-07-02 · Codex）
+
+- 本輪範圍：本機 smoke / Supabase doctor 穩定化、`MUNEA_REQUIRE_AUTH=1` 權限契約測試補強、完整 API smoke 驗證。
+- 避讓範圍：未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線；不影響 Claude/城堡的 Gemini Live / 播放診斷主線。
+- 驗證：`npm run smoke:no-api`、`npm run supabase:doctor`、本地 engine `127.0.0.1:8200` 完整 `scripts/smoke.ps1` 皆通過。
+
+## 同步紀錄（2026-07-02 · Codex · P0-3 收尾）
+
+- 本輪範圍：新增 `npm run smoke:auth`，用臨時 JSON store 啟動 `MUNEA_REQUIRE_AUTH=1` engine，驗證正式模式 HTTP auth gate。
+- 已驗證：user-scoped endpoint 要 Bearer、admin endpoint 要 admin token、credit grant/entitlement mutation 不接受一般 Bearer、subscription event 接受 provider token。
+- 避讓範圍：仍未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線。
+
+## 同步紀錄（2026-07-02 · Codex · P1-12）
+
+- 本輪範圍：補 `memory_extract` deterministic 中文保底詞庫，讓偏好/家人/作息/情緒/健康脈絡的中文句子可產生結構化記憶候選。
+- 已驗證：中文樣本「喜歡韓劇、女兒、每天散步、膝蓋痛、睡不著、孤單」會抓到 preference / relationship / routine / emotion / health_context。
+- 避讓範圍：未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線。
