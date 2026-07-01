@@ -1,6 +1,6 @@
 # Munea AI Service Design v1
 
-> Updated: 2026-06-30
+> Updated: 2026-07-01
 > Scope: model/service design for Munea's three-brain AI companion architecture.
 
 ## Executive Decision
@@ -21,10 +21,10 @@ The current v1 recommendation:
 | Brain | Primary v1 model/provider | Runtime profile | Responsibility |
 |---|---|---|---|
 | Reflex Brain | Gemini Live primary through `MuneaVoiceProvider` | low-latency real-time | speech-to-speech conversation, interruption, voice presence |
-| Butler Brain | Claude Sonnet 4.6 through `MuneaBrainRouter` | `quick`, `standard`, `deep` effort profiles | memory extraction, summaries, care planning, topic preparation, family digest |
-| Guardian Brain | deterministic safety rules + Claude Sonnet 4.6 + moderation/classifier layer | `standard` and `deep` for risk review | crisis detection, medical boundary, escalation, safety response policy |
+| Butler Brain | Claude Sonnet 5 through `MuneaBrainRouter` | `quick`, `standard`, `deep` effort profiles | memory extraction, summaries, care planning, topic preparation, family digest |
+| Guardian Brain | deterministic safety rules + Claude Sonnet 5 + moderation/classifier layer | `standard` and `deep` for risk review | crisis detection, medical boundary, escalation, safety response policy |
 
-Butler and Guardian may both use Claude Sonnet 4.6 at MVP, but they must remain separate product brains with separate prompts, inputs, output schemas, logs, and authority.
+Butler and Guardian may both use Claude Sonnet 5 at MVP, but they must remain separate product brains with separate prompts, inputs, output schemas, logs, and authority.
 
 The three brains do not replace the six-character product design. Munea also needs a product-owned `Companion Persona Layer`:
 

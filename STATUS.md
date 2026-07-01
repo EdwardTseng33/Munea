@@ -4,6 +4,7 @@
 
 **Status:** product naming decision locked.
 
+- AI model target updated: Butler Brain and Guardian Brain now default to `Claude Sonnet 5` / `claude-sonnet-5`.
 - Subscription ladder: `Free / Plus / Premium / Concierge`.
 - Added `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` as the billing, credits, and entitlement source of truth, including prior-plan review and the current service architecture.
 - Added `supabase/sql/006_billing_credits_foundation.sql` for entitlement policy versions, credit wallets, credit transactions, and credit ledger.

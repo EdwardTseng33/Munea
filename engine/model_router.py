@@ -13,8 +13,8 @@ import uuid
 
 
 DEFAULT_REFLEX_MODEL = "gemini-live-primary"
-DEFAULT_BUTLER_MODEL = "claude-sonnet-4-6"
-DEFAULT_GUARDIAN_MODEL = "claude-sonnet-4-6"
+DEFAULT_BUTLER_MODEL = "claude-sonnet-5"
+DEFAULT_GUARDIAN_MODEL = "claude-sonnet-5"
 DEFAULT_MODERATION_MODEL = "omni-moderation-latest"
 
 PERSONA_TEMPLATES = {

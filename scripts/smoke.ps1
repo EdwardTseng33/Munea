@@ -411,6 +411,8 @@ assert status["ok"] is True
 assert status["brains"]["reflex"]["interface"] == "MuneaVoiceProvider"
 assert status["brains"]["butler"]["interface"] == "MuneaBrainRouter"
 assert status["brains"]["guardian"]["interface"] == "MuneaBrainRouter"
+assert status["brains"]["butler"]["model"] == "claude-sonnet-5"
+assert status["brains"]["guardian"]["model"] == "claude-sonnet-5"
 assert status["personaLayer"]["isFourthBrain"] is False
 assert status["personaLayer"]["templateCount"] == 6
 assert "persona-context" in status["contracts"]

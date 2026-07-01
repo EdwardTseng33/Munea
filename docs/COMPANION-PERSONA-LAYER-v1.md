@@ -140,7 +140,7 @@ Persona is subordinate to safety:
 The current Munea architecture is directionally strong for June 2026:
 
 - Real-time voice should stay behind `MuneaVoiceProvider`, with Gemini Live / Interactions as the first candidate because the official Live API direction supports low-latency voice/vision, barge-in, tool use, proactive audio, and affective dialog.
-- Butler and Guardian should remain separate service contracts even if both start on Claude Sonnet 4.6. Claude's adaptive / extended thinking controls fit variable-depth background reasoning better than forcing one cheap model for all care decisions.
+- Butler and Guardian should remain separate service contracts even if both start on Claude Sonnet 5. Claude's adaptive / extended thinking controls fit variable-depth background reasoning better than forcing one cheap model for all care decisions.
 - Supabase Postgres + RLS remains a strong v1 source of truth for account/person/family-scoped memory, because RLS protects exposed tables and lets policies enforce `auth.uid()` ownership.
 - Persona templates should be product-owned structured config, not only prompt text. This protects future provider swaps.
 

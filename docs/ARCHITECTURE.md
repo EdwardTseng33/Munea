@@ -57,8 +57,8 @@ Munea should be able to change providers without changing the user journey or da
 | Brain | Responsibility | Current implementation | Future provider direction |
 |---|---|---|---|
 | Reflex Brain | Real-time `聊聊` conversation: listen, respond, speak, interrupt, recover | Gemini generation + TTS demo through local endpoints | `MuneaVoiceProvider`, with Gemini Live / Interactions as first candidate |
-| Butler Brain | Background care context: routines, family notes, daily prep, memory summaries | `MuneaBrainRouter` deterministic contract + local memory fallback | Claude Sonnet 4.6 first, effort profiles before cost fallback |
-| Guardian Brain | Safety boundary: crisis language, abnormal routine signals, referral rules | Rules + `MuneaBrainRouter` deterministic risk contract | Claude Sonnet 4.6 + moderation/classifier support; rules keep priority |
+| Butler Brain | Background care context: routines, family notes, daily prep, memory summaries | `MuneaBrainRouter` deterministic contract + local memory fallback | Claude Sonnet 5 first, effort profiles before cost fallback |
+| Guardian Brain | Safety boundary: crisis language, abnormal routine signals, referral rules | Rules + `MuneaBrainRouter` deterministic risk contract | Claude Sonnet 5 + moderation/classifier support; rules keep priority |
 
 Avatar is not one of the three brains. Ditto and LiveAvatar are face/rendering engines that consume conversation state and audio timing; they should not own health logic, memory, or medical/safety decisions.
 

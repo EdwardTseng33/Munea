@@ -87,6 +87,7 @@
 - Added backend Auth verification foundation: `/auth-status` validates bearer-token auth context, and Supabase `/account-bootstrap` derives `auth.users.id` from verified auth instead of trusting a body-supplied id.
 - Added `docs/AI-SERVICE-DESIGN-v1.md` to define Munea's AI service moat: three-brain model selection, effort profiles, long-term memory lifecycle, perception layer, Wisdom Lens, Guardian policy, and MVP implementation order.
 - Added `engine/model_router.py` plus `/ai/brain-status`, `/memory/extract`, `/memory/retrieve`, and `/guardian/evaluate` contracts so Butler and Guardian can be tested before live model/provider wiring.
+- Updated Butler and Guardian default target model to Claude Sonnet 5.
 - Added `supabase/sql/004_ai_memory_service_foundation.sql` for `memory_items`, `perception_snapshots`, and `ai_brain_runs`.
 - Added Supabase adapter support for `memory_items`, so `/memory/extract?action=store` and `/memory/retrieve` can use the production database path when env is configured, with JSON fallback preserved.
 - Expanded Perception Layer from a movie example into a domain-aware topic framework for books, travel, outings, exercise, finance, video entertainment, music/audio, food, news, and wisdom/reflection, with anti-fabrication rules for recommendations.
