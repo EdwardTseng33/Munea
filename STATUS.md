@@ -8,6 +8,14 @@
 - Added `docs/健檢修復排程-2026-07-01.md` as the P0/P1/core repair schedule from the three-way health check.
 - Updated the dual-AI collaboration board so Codex's previous admin usage/credits commit is correctly marked as pushed.
 
+## 2026-07-01 Update - Atomic JSON fallback writes
+
+**Status:** completed for local JSON fallback.
+
+- Started P0-7 from `docs/健檢修復排程-2026-07-01.md`.
+- Local JSON fallback writes now use a temporary file, flush/fsync, and `os.replace()` so an interrupted write is less likely to corrupt profile, billing, credits, privacy, memory, or analytics fallback stores.
+- Added smoke coverage for atomic JSON writes; it should be run in a Python-enabled environment.
+
 ## 2026-07-01 Update - Dual-AI collaboration board aligned
 
 **Status:** completed and ready for GitHub sync.

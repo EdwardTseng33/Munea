@@ -682,6 +682,26 @@ print("auth verification OK")
 '@ | python -
 Pass "Auth token verification contract is valid"
 
+Step "Atomic JSON store writes"
+@'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+with tempfile.TemporaryDirectory() as d:
+    path = Path(d) / "store.json"
+    server.write_json_file(str(path), {"ok": True, "items": [1, 2, 3]})
+    loaded = server.read_json_file(str(path), {})
+    assert loaded["ok"] is True
+    assert loaded["items"] == [1, 2, 3]
+    leftovers = list(Path(d).glob("store.json.tmp.*"))
+    assert leftovers == []
+print("atomic json write OK")
+'@ | python -
+Pass "JSON fallback stores write atomically"
+
 Step "Product event and North Star contract"
 @'
 import os, sys, tempfile
