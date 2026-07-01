@@ -537,7 +537,19 @@ def memory_extract_response(data):
 
 
 def memory_retrieve_response(data):
-    return model_router.memory_retrieve_response(data or {}, load_memory_items())
+    data = data or {}
+    items = load_memory_items()
+    query = data.get("query") or data.get("text") or ""
+    if query and items:
+        try:
+            import memory_engine
+            sem = memory_engine.retrieve(query, items, limit=int(data.get("limit") or 5))
+        except Exception:
+            sem = []
+        if sem:
+            return {"ok": True, "brain": "butler", "query": query,
+                    "memories": sem, "retriever": "semantic_local", "count": len(sem)}
+    return model_router.memory_retrieve_response(data, items)
 
 
 def guardian_evaluate_response(data):

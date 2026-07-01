@@ -10,6 +10,7 @@
 
 import os
 import json
+import math
 
 from google import genai
 from google.genai import types
@@ -79,6 +80,62 @@ def extract(history):
             "confidence": round(float(it.get("confidence", 0.6) or 0.6), 2),
             "sensitivity": "sensitive" if t in SENSITIVE else "normal",
         })
+    return out
+
+
+EMBED_MODEL = "gemini-embedding-001"
+_embed_cache = {}
+
+
+def _embed(text, task_type="RETRIEVAL_DOCUMENT"):
+    text = (text or "").strip()
+    if not text or not _client:
+        return None
+    key = (task_type, text)
+    if key in _embed_cache:
+        return _embed_cache[key]
+    try:
+        r = _client.models.embed_content(
+            model=EMBED_MODEL, contents=text,
+            config=types.EmbedContentConfig(task_type=task_type),
+        )
+        vec = list(r.embeddings[0].values)
+    except Exception:
+        return None
+    _embed_cache[key] = vec
+    return vec
+
+
+def _cosine(a, b):
+    if not a or not b:
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    return dot / (na * nb) if na and nb else 0.0
+
+
+def retrieve(query, items, limit=5):
+    """語意召回：用「意思」找回相關記憶（本機版，之後一鍵換 pgvector）。
+    分數 = 語意相似度 × 重要性加權。回傳 top-K，含 _score/_sim 供驗證。"""
+    qv = _embed(query, task_type="RETRIEVAL_QUERY")
+    if qv is None:
+        return []
+    scored = []
+    for it in items or []:
+        vec = _embed(it.get("content"))
+        if vec is None:
+            continue
+        sim = _cosine(qv, vec)
+        imp = float(it.get("importance", 0.5) or 0.5)
+        scored.append((sim + 0.05 * imp, sim, it))  # 以語意相似度為主、重要性只做微幅加權
+    scored.sort(key=lambda x: x[0], reverse=True)
+    out = []
+    for score, sim, it in scored[:limit]:
+        row = dict(it)
+        row["_score"] = round(score, 3)
+        row["_sim"] = round(sim, 3)
+        out.append(row)
     return out
 
 
