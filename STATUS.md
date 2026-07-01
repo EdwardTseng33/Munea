@@ -1,5 +1,13 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-01 Update - Guardian Chinese safety terms
+
+**Status:** completed and synchronized from Claude/城堡 local work.
+
+- Added Taiwan Mandarin crisis/safety terms to Guardian evaluation for self-harm, emergency symptoms, medical boundary requests, and emotional distress.
+- Added `docs/健檢修復排程-2026-07-01.md` as the P0/P1/core repair schedule from the three-way health check.
+- Updated the dual-AI collaboration board so Codex's previous admin usage/credits commit is correctly marked as pushed.
+
 ## 2026-07-01 Update - Dual-AI collaboration board aligned
 
 **Status:** completed and ready for GitHub sync.

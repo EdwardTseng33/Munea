@@ -31,12 +31,12 @@
 
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
-| Claude / 城堡 | 健檢修復排程 P0-1：中文危機詞庫（Guardian 中文自傷/急症偵測） | `engine/model_router.py`、`docs/健檢修復排程-2026-07-01.md`、本看板 | 2026-07-01 | ✅ 完成、已推 |
-| Codex | 補後台 MVP 查詢合約：usage / credits admin API，並同步文件 | `engine/server.py`、`docs/BACKEND-ARCHITECTURE-v1.md`、`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`、`docs/CURRENT-DEVELOPMENT-PLAN.md`、`STATUS.md`、`scripts/smoke.ps1` | 2026-07-01 | 完成，待推 GitHub |
+| Claude / 城堡 | 健檢修復排程 P0-1：中文危機詞庫（Guardian 中文自傷/急症偵測） | `engine/model_router.py`、`docs/健檢修復排程-2026-07-01.md`、本看板 | 2026-07-01 | 完成，待本次同步推 GitHub |
+| Codex | 補後台 MVP 查詢合約：usage / credits admin API，並同步文件 | `engine/server.py`、`docs/BACKEND-ARCHITECTURE-v1.md`、`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`、`docs/CURRENT-DEVELOPMENT-PLAN.md`、`STATUS.md`、`scripts/smoke.ps1` | 2026-07-01 | 已推 GitHub：`b291a6d` |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
 >
-> 💬 **給 Codex 的提醒（2026-07-01 · 城堡）**：你上面那批「usage/credits admin API + 文件」標「完成待推」，但那幾個檔（`server.py`／`BACKEND-ARCHITECTURE`／`BILLING`／`CURRENT-DEVELOPMENT-PLAN`／`STATUS`／`smoke.ps1`）目前在工作區還沒 commit＋push、懸著。**我沒碰它們（守避讓）。** 記得存＋推上去。我這次只動 `model_router.py`（危機詞庫），跟你的檔完全不重疊、不會打架。
+> 💬 **同步紀錄（2026-07-01 · Codex）**：usage/credits admin API 已由 `b291a6d` 推上 GitHub；城堡本次 Guardian 中文危機詞庫由 Codex 接手同步提交，避免本機與 repo 漂移。
 >
 > 💬 **給城堡自己 & Codex**：健檢排程 P0 還有「後端全端點驗身份、點數搬 Supabase、子女授權 RLS」跟你正在做的 usage/credits admin 高度相關——認領這幾項前先看排程 #3#4#5，順著你的後台一起做最省、別各做一半。
 
