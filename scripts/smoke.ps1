@@ -1460,6 +1460,69 @@ node --check web\src\auth.js
 node --check web\src\auth-config.example.js
 Pass "Frontend JavaScript parses"
 
+Step "Frontend AI provider consent contract"
+Invoke-PythonBlock @'
+from pathlib import Path
+index = Path("web/index.html").read_text(encoding="utf-8")
+onboarding = Path("web/onboarding.html").read_text(encoding="utf-8")
+app = Path("web/src/app.js").read_text(encoding="utf-8")
+css = Path("web/src/styles.css").read_text(encoding="utf-8")
+privacy = Path("web/privacy.html").read_text(encoding="utf-8")
+
+required_index = [
+    "aiProviderConsentPanel",
+    "aiProviderConsentToggle",
+    "aiProviderConsentStatus",
+    "privacy.html",
+    "Gemini",
+    "OpenAI",
+    "\u5883\u5916",
+    "119",
+    "1925",
+]
+missing_index = [token for token in required_index if token not in index]
+if missing_index:
+    raise SystemExit("Missing settings AI provider consent tokens: " + ", ".join(missing_index))
+
+required_onboarding = [
+    "aiProviderConsentSetup",
+    "munea.aiProviderConsent.v1",
+    "2026-07-02-ai-provider-v1",
+    "privacy.html",
+    "Gemini",
+    "OpenAI",
+    "\u5883\u5916",
+]
+missing_onboarding = [token for token in required_onboarding if token not in onboarding]
+if missing_onboarding:
+    raise SystemExit("Missing onboarding AI provider consent tokens: " + ", ".join(missing_onboarding))
+
+required_app = [
+    "AI_PROVIDER_CONSENT_KEY",
+    "AI_PROVIDER_CONSENT_VERSION",
+    "readAiProviderConsent",
+    "saveAiProviderConsent",
+    "setupAiProviderConsentControls",
+    "MuneaAiProviderConsent",
+    "ai_provider_consent_updated",
+]
+missing_app = [token for token in required_app if token not in app]
+if missing_app:
+    raise SystemExit("Missing app AI provider consent controller tokens: " + ", ".join(missing_app))
+
+for token in ["provider-consent-card", "provider-consent-toggle", "provider-privacy-link"]:
+    if token not in css:
+        raise SystemExit("Missing AI provider consent CSS token: " + token)
+for token in ["\u96b1\u79c1\u6b0a\u653f\u7b56", "Gemini", "OpenAI", "\u5883\u5916", "119", "1925", "\u8cc7\u6599\u532f\u51fa", "\u5e33\u865f\u522a\u9664"]:
+    if token not in privacy:
+        raise SystemExit("Privacy page missing token: " + token)
+for forbidden in ["SERVICE_ROLE", "service_role", "SUPABASE_SERVICE_ROLE_KEY"]:
+    if forbidden in privacy or forbidden in index or forbidden in onboarding:
+        raise SystemExit("Frontend privacy/consent files must not mention service role secret tokens")
+print("frontend AI provider consent OK")
+'@
+Pass "Frontend AI provider consent is present"
+
 Step "Frontend auth bridge contract"
 Invoke-PythonBlock @'
 from pathlib import Path

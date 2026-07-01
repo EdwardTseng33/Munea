@@ -41,6 +41,8 @@ let latestAiContextSource = 'not loaded';
 let latestRelationshipState = null;
 const ACCOUNT_BOOTSTRAP_KEY = 'munea.accountBootstrapped.v1';
 const ONBOARDING_COMPLETED_KEY = 'munea.onboardingCompleted.v1';
+const AI_PROVIDER_CONSENT_KEY = 'munea.aiProviderConsent.v1';
+const AI_PROVIDER_CONSENT_VERSION = '2026-07-02-ai-provider-v1';
 
 /* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
@@ -216,6 +218,61 @@ function storageGet(key) {
 function storageSet(key, value) {
   try { localStorage.setItem(key, value); } catch (e) {}
 }
+function readAiProviderConsent() {
+  try {
+    const raw = localStorage.getItem(AI_PROVIDER_CONSENT_KEY);
+    if (!raw) return { agreed: false, version: AI_PROVIDER_CONSENT_VERSION };
+    const parsed = JSON.parse(raw);
+    return {
+      agreed: parsed && parsed.agreed === true,
+      version: parsed && parsed.version ? parsed.version : AI_PROVIDER_CONSENT_VERSION,
+      agreedAt: parsed && parsed.agreedAt ? parsed.agreedAt : '',
+      source: parsed && parsed.source ? parsed.source : 'unknown',
+    };
+  } catch (e) {
+    return { agreed: false, version: AI_PROVIDER_CONSENT_VERSION };
+  }
+}
+function saveAiProviderConsent(agreed, source = 'settings') {
+  const payload = {
+    agreed: agreed === true,
+    version: AI_PROVIDER_CONSENT_VERSION,
+    source,
+    agreedAt: agreed === true ? new Date().toISOString() : '',
+    updatedAt: new Date().toISOString(),
+  };
+  storageSet(AI_PROVIDER_CONSENT_KEY, JSON.stringify(payload));
+  updateAiProviderConsentUI();
+  trackProductEvent('ai_provider_consent_updated', {
+    agreed: payload.agreed,
+    source,
+    consentVersion: AI_PROVIDER_CONSENT_VERSION,
+  });
+  return payload;
+}
+function updateAiProviderConsentUI() {
+  const consent = readAiProviderConsent();
+  const toggle = $('#aiProviderConsentToggle');
+  const status = $('#aiProviderConsentStatus');
+  const panel = $('#aiProviderConsentPanel');
+  if (toggle) toggle.checked = consent.agreed === true;
+  if (status) status.textContent = consent.agreed ? '已同意' : '尚未同意';
+  if (panel) panel.dataset.consent = consent.agreed ? 'agreed' : 'missing';
+}
+function setupAiProviderConsentControls() {
+  const toggle = $('#aiProviderConsentToggle');
+  if (!toggle) return;
+  updateAiProviderConsentUI();
+  toggle.addEventListener('change', e => {
+    saveAiProviderConsent(e.target.checked, 'settings');
+  });
+}
+window.MuneaAiProviderConsent = {
+  key: AI_PROVIDER_CONSENT_KEY,
+  version: AI_PROVIDER_CONSENT_VERSION,
+  read: readAiProviderConsent,
+  save: saveAiProviderConsent,
+};
 function currentAuthUserId() {
   const auth = window.MuneaAuth || {};
   if (typeof auth.state === 'function') {
@@ -828,6 +885,7 @@ function init() {
   syncCompanionUI();
   applyDeveloperBypass();
   setupAuthControls();
+  setupAiProviderConsentControls();
   if (window.MuneaAuth && typeof window.MuneaAuth.init === 'function') {
     const authInit = window.MuneaAuth.init();
     if (authInit && typeof authInit.then === 'function') authInit.then(updateAuthUI).catch(updateAuthUI);

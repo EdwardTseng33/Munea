@@ -32,7 +32,7 @@
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
 | Claude / 城堡 | 階段一：即時語音（Gemini Live）＋腦 → 手機能開的臨時網址。先驗 Live 連得通，再建語音橋接 | 新增 `engine/live_voice_*`（盡量避開 Codex 的 `server.py`）、`web/src` 語音接線、scratch 測試 | 2026-07-01 | 🔄 進行中 |
-| Codex | 健檢修復排程 P0-4：正式模式下點數/訂閱改帳防偽造，分離 Bearer 使用者 auth、Admin token、Provider webhook token，並寫入 audit | `engine/server.py`、`engine/supabase_adapter.py`、`docs/BACKEND-ARCHITECTURE-v1.md`、`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`、`docs/健檢修復排程-2026-07-01.md`、`STATUS.md`、`scripts/smoke.ps1` | 2026-07-01 | 完成，待推 GitHub |
+| Codex | 健檢修復排程 P0-6：境外 AI／語音服務知情同意 UI 與隱私權政策連結 | `web/index.html`、`web/onboarding.html`、`web/src/app.js`、`web/src/styles.css`、`web/privacy.html`、`scripts/smoke.ps1`、狀態文件 | 2026-07-02 | ✅ 完成（本輪驗證通過） |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
 >
@@ -79,4 +79,10 @@
 
 - 本輪範圍：補 `memory_extract` deterministic 中文保底詞庫，讓偏好/家人/作息/情緒/健康脈絡的中文句子可產生結構化記憶候選。
 - 已驗證：中文樣本「喜歡韓劇、女兒、每天散步、膝蓋痛、睡不著、孤單」會抓到 preference / relationship / routine / emotion / health_context。
+- 避讓範圍：未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線。
+
+## 同步紀錄（2026-07-02 · Codex · P0-6）
+
+- 本輪範圍：補 onboarding 境外 AI／語音服務知情同意、設定頁同意狀態、App 內隱私權政策頁與 smoke 契約。
+- 已驗證：`npm run smoke:no-api` 通過；同意 UI、onboarding gate、隱私連結、前端 secret boundary 均納入檢查。
 - 避讓範圍：未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線。

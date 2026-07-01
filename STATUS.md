@@ -1,5 +1,15 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-02 Update - AI provider consent and privacy link
+
+**Status:** completed for frontend/App Store consent baseline.
+
+- Continued development on P0-6 without touching Claude/城堡's realtime Gemini Live lane.
+- Added onboarding consent for AI/voice provider processing before entering the app.
+- Added Settings consent state for AI and voice services, using a versioned local consent key that can later be promoted to backend account records.
+- Added an in-app privacy policy page covering AI/voice provider processing, overseas services, health/safety boundaries, family visibility, export, and account deletion.
+- Added smoke coverage so the consent UI, onboarding gate, privacy link, and browser-secret boundary are checked.
+
 ## 2026-07-02 Update - Smoke reliability and auth gate contract coverage
 
 **Status:** completed for local/backend verification.

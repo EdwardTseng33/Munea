@@ -46,6 +46,12 @@
 - Added audit event writes for privileged billing mutations, using Supabase `audit_events` when configured and local ignored fallback during prototype mode.
 - Clarified that subscriptions should protect the trust-building base experience, while credits should only apply to expensive or bursty add-ons such as premium Avatar/GPU minutes.
 
+## 2026-07-02 Update
+
+- Added the P0-6 frontend consent baseline for overseas AI/voice services: onboarding requires explicit consent before entering the app, Settings can show/update consent state, and the app links to an in-app privacy policy.
+- The consent state is stored under a versioned browser key as a prototype bridge; production should persist this to backend account consent records once Supabase Auth/user identity is live.
+- The privacy policy now states the Gemini/OpenAI overseas provider boundary, health/safety limits, family visibility, data export, and account deletion expectations.
+
 ## 2026-06-29 Update
 
 - Added the first mobile microphone bridge path.

@@ -79,6 +79,11 @@
   .ob-preview .pa .ic { width: 26px; height: 26px; }
   .ob-preview .pt { font-size: 15px; line-height: 1.55; color: var(--ink); }
   .ob-preview .pt b { font-family: var(--display); }
+  .ob-consent { width: 100%; display: flex; align-items: flex-start; gap: 11px; padding: 14px; margin-top: 10px; border: 1px solid rgba(58,168,160,.22); border-radius: var(--radius-sm); background: #fff; text-align: left; }
+  .ob-consent input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--teal-d); flex-shrink: 0; }
+  .ob-consent-text { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+  .ob-consent-text b { display: block; color: var(--ink); font-family: var(--display); font-size: 14.5px; margin-bottom: 3px; }
+  .ob-consent-text a { color: var(--teal-d); font-weight: 700; text-decoration: none; }
 
   /* 底部按鈕區 + 進度點 */
   .ob-foot { padding: 14px 22px 22px; flex-shrink: 0; }
@@ -86,6 +91,7 @@
   .ob-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: .2s; }
   .ob-dots i.on { background: var(--teal); width: 22px; border-radius: 999px; }
   .ob-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 17px; border: none; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--teal), var(--teal-d)); color: #fff; font-family: var(--display); font-weight: 700; font-size: 18px; cursor: pointer; box-shadow: 0 14px 26px -12px rgba(58,168,160,.7); }
+  .ob-btn:disabled { opacity: .52; cursor: not-allowed; box-shadow: none; }
   .ob-btn .ic { width: 20px; height: 20px; }
   .ob-btn.ghost { background: none; color: var(--teal-d); box-shadow: none; font-size: 16px; padding: 12px; margin-top: 4px; }
   .ob-back { background: none; border: none; color: var(--muted); font-family: var(--display); font-weight: 600; font-size: 15px; cursor: pointer; padding: 8px; display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-bottom: 4px; }
@@ -225,6 +231,13 @@
         <div class="pa"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></div>
         <div class="pt" id="doneCompanionPreview"><b>寧寧：</b>「秀英阿姨，我是寧寧，以後我陪你。今天，想先跟我聊點什麼呢？」</div>
       </div>
+      <label class="ob-consent">
+        <input id="aiProviderConsentSetup" type="checkbox" />
+        <span class="ob-consent-text">
+          <b>我了解 AI 與語音服務的資料處理</b>
+          AI 陪伴與語音功能可能使用 Gemini、OpenAI 等境外服務處理語音、文字或摘要。沐寧不是醫療診斷或緊急服務；緊急狀況請聯絡 119 或 1925。<a href="privacy.html" target="_blank" rel="noopener">閱讀隱私權政策</a>
+        </span>
+      </label>
     </div>
     <div class="ob-spacer"></div>
   </section>
@@ -255,8 +268,11 @@
   const Profile = window.MuneaCompanionProfile;
   const companionNameInput = document.getElementById('companionNameSetup');
   const doneCompanionPreview = document.getElementById('doneCompanionPreview');
+  const aiProviderConsentSetup = document.getElementById('aiProviderConsentSetup');
   const ACCOUNT_BOOTSTRAP_KEY = 'munea.accountBootstrapped.v1';
   const ONBOARDING_COMPLETED_KEY = 'munea.onboardingCompleted.v1';
+  const AI_PROVIDER_CONSENT_KEY = 'munea.aiProviderConsent.v1';
+  const AI_PROVIDER_CONSENT_VERSION = '2026-07-02-ai-provider-v1';
   let companionNameTouched = false;
   let i = 0;
   let mode = 'family';   // 'family' 幫家人裝 / 'self' 自己用
@@ -284,6 +300,9 @@
     nextText.textContent = labelsByMode[mode][i];
     nextBtn.style.display = (i === 0) ? 'none' : 'flex';
     dashBtn.style.display = (i === last && mode === 'family') ? 'block' : 'none';
+    const consentRequired = i === last && aiProviderConsentSetup && !aiProviderConsentSetup.checked;
+    nextBtn.disabled = consentRequired;
+    nextBtn.setAttribute('aria-disabled', consentRequired ? 'true' : 'false');
     updateDonePreview();
     document.querySelector('.app-shell').scrollTop = 0;
   }
@@ -311,6 +330,16 @@
   }
   function storageSet(key, value) {
     try { localStorage.setItem(key, value); } catch (e) {}
+  }
+  function saveAiProviderConsent(source) {
+    if (!aiProviderConsentSetup || !aiProviderConsentSetup.checked) return false;
+    storageSet(AI_PROVIDER_CONSENT_KEY, JSON.stringify({
+      agreed: true,
+      version: AI_PROVIDER_CONSENT_VERSION,
+      source,
+      agreedAt: new Date().toISOString()
+    }));
+    return true;
   }
   async function authHeaders(base) {
     const headers = { ...(base || {}) };
@@ -378,12 +407,17 @@
   nextBtn.addEventListener('click', async () => {
     if (i < last) { i++; render(); }
     else {
+      if (!saveAiProviderConsent('web-onboarding')) { render(); return; }
       const profile = saveCompanionProfile();
       await bootstrapAccount(profile);
       window.location.href = 'index.html';
     }   // 交給長輩 → 長輩端 App
   });
-  dashBtn.addEventListener('click', () => { window.location.href = 'family.html'; });
+  dashBtn.addEventListener('click', () => {
+    if (!saveAiProviderConsent('web-onboarding-family-dashboard')) { render(); return; }
+    window.location.href = 'family.html';
+  });
+  if (aiProviderConsentSetup) aiProviderConsentSetup.addEventListener('change', render);
 
   document.querySelectorAll('[data-back]').forEach(b =>
     b.addEventListener('click', () => { if (i > 0) { i--; render(); } }));

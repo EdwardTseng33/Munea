@@ -139,6 +139,7 @@ Current implemented guardrails:
 - `/app-profile`, `/companion-profile`, and `/entitlements` are separate contracts.
 - `/privacy-export` returns a local JSON export package for the account/family/profile/billing/privacy ledger.
 - `/account-deletion` returns the deletion status contract and production deletion steps.
+- Frontend onboarding now asks for AI/voice provider consent before entering the app, Settings shows the current consent state, and the app links to `web/privacy.html` for the in-app privacy policy.
 
 Production guardrails still required:
 
@@ -148,6 +149,7 @@ Production guardrails still required:
 - signed webhook verification for App Store Server Notifications.
 - no API keys in the app bundle.
 - server-side model/provider keys only.
+- backend account-level consent records for AI/voice provider processing.
 - audit logging for entitlement changes, family permission changes, safety events, and account deletion.
 - encryption at rest for production DB and object storage.
 
