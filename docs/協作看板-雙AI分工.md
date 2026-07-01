@@ -31,7 +31,7 @@
 
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
-| Claude / 城堡 | #10 危機偵測行為測試（`engine/test_guardian_crisis.py` 20/20 過）＋ #5 子女授權 RLS 設計與待決文件 | `engine/test_guardian_crisis.py`、`docs/RLS-子女授權同意分層-設計與待決-2026-07-01.md`、排程、本看板 | 2026-07-01 | ✅ 完成、本次推 GitHub。#5 卡 Edward 決定（可見度預設偏向）+ 跟 Codex 對 schema |
+| Claude / 城堡 | 階段一：即時語音（Gemini Live）＋腦 → 手機能開的臨時網址。先驗 Live 連得通，再建語音橋接 | 新增 `engine/live_voice_*`（盡量避開 Codex 的 `server.py`）、`web/src` 語音接線、scratch 測試 | 2026-07-01 | 🔄 進行中 |
 | Codex | 健檢修復排程 P0-4：正式模式下點數/訂閱改帳防偽造，分離 Bearer 使用者 auth、Admin token、Provider webhook token，並寫入 audit | `engine/server.py`、`engine/supabase_adapter.py`、`docs/BACKEND-ARCHITECTURE-v1.md`、`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`、`docs/健檢修復排程-2026-07-01.md`、`STATUS.md`、`scripts/smoke.ps1` | 2026-07-01 | 完成，待推 GitHub |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
