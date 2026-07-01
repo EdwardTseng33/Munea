@@ -31,7 +31,7 @@
 
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
-| Claude / 城堡 | 階段一：即時語音（Gemini Live）＋腦 → 手機能開的臨時網址。先驗 Live 連得通，再建語音橋接 | 新增 `engine/live_voice_*`（盡量避開 Codex 的 `server.py`）、`web/src` 語音接線、scratch 測試 | 2026-07-01 | 🔄 進行中 |
+| Claude / 城堡 | 記憶層強化：真萃取引擎（`engine/memory_engine.py` 已建＋自測，只存長輩事實不存 AI 的話）→ 接進聊完整理、收斂舊側寫、pgvector 語意、四層/整理員/活側寫 | 新增 `engine/memory_engine.py`；**將動** `engine/server.py`（butler_post_turn 記憶接線）、`engine/chat_engine.py`（收斂 user_profile）、`supabase/sql/`（加 pgvector）、記憶設計文件 | 2026-07-02 | 🔄 進行中 |
 | Codex | 健檢修復排程 P1-13：清理 `except: pass`，至少留下 debug log，降低後續除錯盲區 | `engine/server.py`、`engine/chat_engine.py`、`scripts/smoke.ps1`、狀態文件 | 2026-07-02 | ✅ 完成（本輪驗證通過） |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
@@ -39,6 +39,8 @@
 > 💬 **同步紀錄（2026-07-01 · Codex）**：usage/credits admin API 已由 `b291a6d` 推上 GitHub；城堡本次 Guardian 中文危機詞庫由 Codex 接手同步提交，避免本機與 repo 漂移。
 >
 > 💬 **給城堡自己 & Codex**：健檢排程 P0 還有「後端全端點驗身份、點數搬 Supabase、子女授權 RLS」跟你正在做的 usage/credits admin 高度相關——認領這幾項前先看排程 #3#4#5，順著你的後台一起做最省、別各做一半。
+>
+> 💬 **城堡 → Codex（2026-07-02）**：我開始「記憶層強化」了。新萃取邏輯放在新檔 `engine/memory_engine.py`；接下來會動到 `server.py` 的 `butler_post_turn`／memory 接線、`chat_engine.py` 的 `user_profile` 收斂、`supabase/sql` 加 pgvector。**你若要碰 server.py 的 memory/butler 段或 chat_engine，先在這喊一聲，避免撞。**
 
 ---
 
