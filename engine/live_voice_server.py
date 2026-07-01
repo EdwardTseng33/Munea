@@ -19,6 +19,7 @@
 import os
 import sys
 import json
+import time
 import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -85,13 +86,33 @@ def live_config(char="寧寧"):
     )
 
 
+def _diag(cid, event, **kv):
+    parts = " ".join(f"{k}={v}" for k, v in kv.items())
+    print(f"[diag] c{cid} {event} {parts}".rstrip(), flush=True)
+
+
+_CID = {"n": 0}
+
+
 async def handle(ws):
     char = "寧寧"
+    _CID["n"] += 1
+    cid = _CID["n"]
+    t0 = time.monotonic()
+    st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
+    _diag(cid, "connected")
     try:
         async with client.aio.live.connect(model=MODEL, config=live_config(char)) as session:
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):
+                        n = len(message)
+                        st["in"] += n
+                        st["last_in"] = time.monotonic()
+                        st["await_first"] = True
+                        if not st["first_mic"]:
+                            st["first_mic"] = True
+                            _diag(cid, "node.mic_uplink", ms=round((st["last_in"] - t0) * 1000))
                         await session.send_realtime_input(
                             audio=types.Blob(data=bytes(message), mime_type="audio/pcm;rate=16000")
                         )
@@ -102,6 +123,8 @@ async def handle(ws):
                             continue
                         t = obj.get("type")
                         if t == "text" and obj.get("text"):
+                            st["last_in"] = time.monotonic()
+                            st["await_first"] = True
                             await session.send_client_content(
                                 turns=types.Content(role="user", parts=[types.Part(text=obj["text"])]),
                                 turn_complete=True,
@@ -110,9 +133,20 @@ async def handle(ws):
                             await session.send_realtime_input(audio_stream_end=True)
 
             async def from_live():
+                turn_out = 0
                 async for msg in session.receive():
                     data = getattr(msg, "data", None)
                     if data:
+                        if st["await_first"] and st["last_in"] is not None:
+                            lat = round((time.monotonic() - st["last_in"]) * 1000)
+                            st["await_first"] = False
+                            _diag(cid, "node.first_audio", latency_ms=lat)
+                            try:
+                                await ws.send(json.dumps({"type": "diag", "firstAudioMs": lat}))
+                            except Exception:
+                                pass
+                        st["out"] += len(data)
+                        turn_out += len(data)
                         await ws.send(data)
                     sc = getattr(msg, "server_content", None)
                     if sc:
@@ -123,13 +157,22 @@ async def handle(ws):
                         if it and getattr(it, "text", None):
                             await ws.send(json.dumps({"type": "caption", "who": "user", "text": it.text}))
                         if getattr(sc, "interrupted", False):
+                            _diag(cid, "node.interrupted")
                             await ws.send(json.dumps({"type": "interrupted"}))
                         if getattr(sc, "turn_complete", False):
+                            ms = round(turn_out / (24000 * 2) * 1000)
+                            _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
+                            turn_out = 0
+                            st["await_first"] = True
                             await ws.send(json.dumps({"type": "turn_complete"}))
 
             await asyncio.gather(from_browser(), from_live())
     except websockets.ConnectionClosed:
         pass
+    except Exception as e:
+        _diag(cid, "node.error", err=f"{type(e).__name__}:{str(e)[:80]}")
+    finally:
+        _diag(cid, "closed", in_bytes=st["in"], out_bytes=st["out"])
 
 
 async def main():

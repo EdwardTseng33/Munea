@@ -28,6 +28,7 @@
 </style>
 </head>
 <body>
+<div id="dbg" style="display:none;position:fixed;top:8px;left:8px;background:rgba(0,0,0,.72);color:#8fe6b0;font:12px/1.4 monospace;padding:6px 9px;border-radius:8px;z-index:9;max-width:94vw"></div>
 <div class="stage" id="stage">
   <div class="face" id="face"></div>
   <div class="scrim"></div>
@@ -52,6 +53,14 @@ const stateEl = document.getElementById('state');
 const btn = document.getElementById('btn');
 const btnl = document.getElementById('btnl');
 let ws, ac, micStream, proc, playCtx, playHead = 0, on = false, speakTimer = null;
+const dbg = { sent: 0, recv: 0, gaps: 0, first: null };
+const showDbg = location.search.includes('debug');
+function paint(){
+  if (!showDbg) return;
+  const p = document.getElementById('dbg'); if (!p) return;
+  p.style.display = 'block';
+  p.textContent = `連線 ${ws && ws.readyState === 1 ? 'OK' : '—'} · 首次回聲 ${dbg.first ?? '—'}ms · 上行 ${dbg.sent/1024|0}KB · 下行 ${dbg.recv/1024|0}KB · 播放斷點 ${dbg.gaps}`;
+}
 
 function setState(html, mode){
   stateEl.innerHTML = html;
@@ -81,17 +90,19 @@ async function start(){
     const src = ac.createMediaStreamSource(micStream);
     proc = ac.createScriptProcessor(4096,1,1);
     src.connect(proc); proc.connect(ac.destination);
-    proc.onaudioprocess = e => { if(ws&&ws.readyState===1) ws.send(floatToI16(downsample(e.inputBuffer.getChannelData(0), ac.sampleRate, 16000)).buffer); };
+    proc.onaudioprocess = e => { if(!ws||ws.readyState!==1)return; const buf=floatToI16(downsample(e.inputBuffer.getChannelData(0), ac.sampleRate, 16000)).buffer; dbg.sent+=buf.byteLength; ws.send(buf); paint(); };
     listening();
   };
   ws.onmessage = ev => {
-    if(typeof ev.data === 'string'){ const o=JSON.parse(ev.data); if(o.type==='interrupted'){playHead=playCtx.currentTime;} return; }
+    if(typeof ev.data === 'string'){ const o=JSON.parse(ev.data); if(o.type==='diag'){dbg.first=o.firstAudioMs;paint();} if(o.type==='interrupted'){playHead=playCtx.currentTime;} return; }
     speaking();
+    dbg.recv += ev.data.byteLength;
     const i16=new Int16Array(ev.data), f=new Float32Array(i16.length);
     for(let k=0;k<i16.length;k++) f[k]=i16[k]/0x8000;
     const b=playCtx.createBuffer(1,f.length,24000); b.getChannelData(0).set(f);
     const s=playCtx.createBufferSource(); s.buffer=b; s.connect(playCtx.destination);
-    const now=playCtx.currentTime; if(playHead<now)playHead=now; s.start(playHead); playHead+=b.duration;
+    const now=playCtx.currentTime; if(playHead<now){dbg.gaps++;playHead=now;} s.start(playHead); playHead+=b.duration;
+    paint();
   };
   ws.onclose = () => { if(on) stop(); };
   ws.onerror = () => setState('連線失敗，確認語音服務有開');
