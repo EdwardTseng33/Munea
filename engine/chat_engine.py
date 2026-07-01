@@ -4,7 +4,7 @@
 真人（寧寧/阿宏/小昀/阿原）會帶「記憶」（user_profile.json）；動物（咪咪/旺財）用各自演技聲音。
 用法：GEMINI_API_KEY="..." py chat_engine.py [角色名 角色名 ...]
 """
-import os, sys, json, time, wave
+import os, sys, json, time, wave, logging
 from google import genai
 from google.genai import types
 
@@ -14,6 +14,7 @@ if not API_KEY:
 HERE = os.path.dirname(os.path.abspath(__file__))
 USER_PROFILE_PATH = os.environ.get("MUNEA_USER_PROFILE_PATH") or os.path.join(HERE, "user_profile.json")
 client = genai.Client(api_key=API_KEY)
+LOGGER = logging.getLogger("munea.chat_engine")
 
 CHARS = json.load(open(os.path.join(HERE, "characters.json"), encoding="utf-8"))
 RED = "（界線：只陪伴／生活提醒／情緒支持，不診斷不治療、絕不說不用看醫生；嚴重不適或想不開→不裝醫生，溫柔轉介家人／1925／119。）"
@@ -27,13 +28,23 @@ DEFAULT_USER_PROFILE = {
 }
 
 
+def _log_fallback_exception(context, exc):
+    LOGGER.warning(
+        "%s failed; using fallback: %s",
+        context,
+        exc,
+        exc_info=os.environ.get("MUNEA_DEBUG_TRACEBACK") == "1",
+    )
+
+
 def _read_user_profile():
     if not os.path.exists(USER_PROFILE_PATH):
         return dict(DEFAULT_USER_PROFILE)
     try:
         with open(USER_PROFILE_PATH, encoding="utf-8") as f:
             return {**DEFAULT_USER_PROFILE, **json.load(f)}
-    except Exception:
+    except Exception as e:
+        _log_fallback_exception("read user profile", e)
         return dict(DEFAULT_USER_PROFILE)
 
 
@@ -53,8 +64,8 @@ def _write_user_profile(profile):
         if os.path.exists(tmp_path):
             try:
                 os.remove(tmp_path)
-            except OSError:
-                pass
+            except OSError as e:
+                _log_fallback_exception("remove temp user profile", e)
 
 def _profile_ctx():
     if not os.path.exists(USER_PROFILE_PATH):
@@ -75,6 +86,7 @@ def reply(char, user):
                     config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9))
                 return r.text.strip()
             except Exception as e:
+                _log_fallback_exception(f"generate chat reply with {m}", e)
                 last = str(e)[:50]
         time.sleep(2 * (attempt + 1))
     return f"(連不上腦 — {last})"
@@ -93,8 +105,8 @@ def speak(char, text, fn):
             with wave.open(fn, "wb") as w:
                 w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
             return True
-        except Exception:
-            pass
+        except Exception as e:
+            _log_fallback_exception(f"generate TTS audio with {m}", e)
     return False
 
 def remember(history_text):
@@ -112,8 +124,8 @@ def remember(history_text):
                 p.setdefault("回憶", []).extend(new)
                 _write_user_profile(p)
             return new
-        except Exception:
-            pass
+        except Exception as e:
+            _log_fallback_exception(f"extract long-term memories with {m}", e)
     return []
 
 
@@ -133,8 +145,8 @@ def open_chat(char="寧寧"):
                     model=m, contents=task,
                     config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9))
                 return r.text.strip()
-            except Exception:
-                pass
+            except Exception as e:
+                _log_fallback_exception(f"generate proactive opener with {m}", e)
         time.sleep(2 * (attempt + 1))
     return "(連不上腦)"
 
@@ -155,8 +167,8 @@ def consolidate():
             p["回憶"] = clean
             _write_user_profile(p)
             return mems, clean
-        except Exception:
-            pass
+        except Exception as e:
+            _log_fallback_exception(f"consolidate user memories with {m}", e)
     return mems, mems
 
 
@@ -178,8 +190,8 @@ def update_interests(conversation):
             p["興趣權重"] = weights
             _write_user_profile(p)
             return delta, weights
-        except Exception:
-            pass
+        except Exception as e:
+            _log_fallback_exception(f"update interest weights with {m}", e)
     return {}, weights
 
 

@@ -1,5 +1,15 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-02 Update - Backend fallback logging
+
+**Status:** completed for P1-13 debug visibility.
+
+- Continued on a non-overlapping backend reliability lane; no realtime Gemini Live files were changed.
+- Added warning logs for Supabase-to-JSON fallback paths across profile, memory, perception, relationship state, analytics, audit, credits, billing, and privacy stores.
+- Added warning logs for model reply and TTS failures before returning text/audio fallbacks.
+- Added legacy `chat_engine.py` fallback logs for profile reads, model replies, TTS, memory extraction, memory consolidation, and interest updates.
+- Added smoke coverage that fails if `engine/server.py` or `engine/chat_engine.py` reintroduces silent `except ...: pass` handlers.
+
 ## 2026-07-02 Update - AI provider consent and privacy link
 
 **Status:** completed for frontend/App Store consent baseline.

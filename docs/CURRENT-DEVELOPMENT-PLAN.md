@@ -51,6 +51,8 @@
 - Added the P0-6 frontend consent baseline for overseas AI/voice services: onboarding requires explicit consent before entering the app, Settings can show/update consent state, and the app links to an in-app privacy policy.
 - The consent state is stored under a versioned browser key as a prototype bridge; production should persist this to backend account consent records once Supabase Auth/user identity is live.
 - The privacy policy now states the Gemini/OpenAI overseas provider boundary, health/safety limits, family visibility, data export, and account deletion expectations.
+- Added backend fallback logging so Supabase adapter failures, model reply failures, and TTS failures leave warning logs before prototype fallbacks are used.
+- Added smoke coverage to prevent silent `except ...: pass` handlers from returning in `engine/server.py` and `engine/chat_engine.py`.
 
 ## 2026-06-29 Update
 

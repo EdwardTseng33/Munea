@@ -32,7 +32,7 @@
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
 | Claude / 城堡 | 階段一：即時語音（Gemini Live）＋腦 → 手機能開的臨時網址。先驗 Live 連得通，再建語音橋接 | 新增 `engine/live_voice_*`（盡量避開 Codex 的 `server.py`）、`web/src` 語音接線、scratch 測試 | 2026-07-01 | 🔄 進行中 |
-| Codex | 健檢修復排程 P0-6：境外 AI／語音服務知情同意 UI 與隱私權政策連結 | `web/index.html`、`web/onboarding.html`、`web/src/app.js`、`web/src/styles.css`、`web/privacy.html`、`scripts/smoke.ps1`、狀態文件 | 2026-07-02 | ✅ 完成（本輪驗證通過） |
+| Codex | 健檢修復排程 P1-13：清理 `except: pass`，至少留下 debug log，降低後續除錯盲區 | `engine/server.py`、`engine/chat_engine.py`、`scripts/smoke.ps1`、狀態文件 | 2026-07-02 | ✅ 完成（本輪驗證通過） |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
 >
@@ -85,4 +85,10 @@
 
 - 本輪範圍：補 onboarding 境外 AI／語音服務知情同意、設定頁同意狀態、App 內隱私權政策頁與 smoke 契約。
 - 已驗證：`npm run smoke:no-api` 通過；同意 UI、onboarding gate、隱私連結、前端 secret boundary 均納入檢查。
+- 避讓範圍：未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線。
+
+## 同步紀錄（2026-07-02 · Codex · P1-13）
+
+- 本輪範圍：補 backend / legacy chat engine fallback logging，避免 Supabase fallback、模型回覆、TTS、記憶萃取失敗時靜默。
+- 已驗證：`npm run smoke:no-api` 通過；smoke 會用 AST 檢查 `engine/server.py` 與 `engine/chat_engine.py` 不再出現 silent `except ...: pass` handler。
 - 避讓範圍：未改 `engine/live_voice_*`、`engine/voice_playback_probe.py`、即時語音 web 接線。

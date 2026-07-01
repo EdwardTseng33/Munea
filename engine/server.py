@@ -9,7 +9,7 @@
   POST /companion-profile    → 讀寫陪伴角色 templateId/displayName
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
-import os, sys, json, base64, io, wave, time, posixpath, threading
+import os, sys, json, base64, io, wave, time, posixpath, threading, logging
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -78,6 +78,16 @@ COMPANION_ALIASES = {
     "dog": "munea-2d-wangcai",
 }
 JSON_STORE_LOCK = threading.RLock()
+LOGGER = logging.getLogger("munea.server")
+
+
+def log_fallback_exception(context, exc):
+    LOGGER.warning(
+        "%s failed; using prototype fallback: %s",
+        context,
+        exc,
+        exc_info=os.environ.get("MUNEA_DEBUG_TRACEBACK") == "1",
+    )
 
 
 def normalize_template_id(template_id):
@@ -169,7 +179,8 @@ def verify_supabase_access_token(token):
             payload = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         return {"ok": False, "code": "invalid_auth_token", "status": e.code}
-    except Exception:
+    except Exception as e:
+        log_fallback_exception("supabase auth token verification", e)
         return {"ok": False, "code": "auth_verification_unavailable"}
     auth_user_id = payload.get("id") or payload.get("sub")
     if not is_uuid_like(auth_user_id):
@@ -259,7 +270,10 @@ def read_json_file(path, fallback=None):
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except FileNotFoundError:
+        return fallback
+    except Exception as e:
+        log_fallback_exception(f"read_json_file({os.path.basename(path)})", e)
         return fallback
 
 
@@ -280,8 +294,8 @@ def write_json_file(path, data):
             if os.path.exists(tmp_path):
                 try:
                     os.remove(tmp_path)
-                except OSError:
-                    pass
+                except OSError as e:
+                    log_fallback_exception(f"remove temp json file {os.path.basename(tmp_path)}", e)
 
 
 def data_backend():
@@ -302,6 +316,7 @@ def load_memory_items(limit=200):
     except Exception as e:
         if data_backend().enabled():
             raise e
+        log_fallback_exception("load memory items from Supabase", e)
     items = read_json_file(MEMORY_ITEMS_PATH, [])
     if not isinstance(items, list):
         items = []
@@ -322,6 +337,7 @@ def append_memory_items(items):
     except Exception as e:
         if data_backend().enabled():
             raise e
+        log_fallback_exception("append memory items to Supabase", e)
     existing = load_memory_items(limit=1000)
     save_memory_items(existing + items)
     return items
@@ -350,6 +366,7 @@ def load_perception_snapshots(query=None, limit=100):
     except Exception as e:
         if data_backend().enabled():
             raise e
+        log_fallback_exception("load perception snapshots from Supabase", e)
     snapshots = read_json_file(PERCEPTION_SNAPSHOTS_PATH, [])
     if not isinstance(snapshots, list):
         snapshots = []
@@ -376,6 +393,7 @@ def append_perception_snapshots(snapshots):
     except Exception as e:
         if data_backend().enabled():
             raise e
+        log_fallback_exception("append perception snapshots to Supabase", e)
     existing = load_perception_snapshots(limit=1000)
     save_perception_snapshots(existing + snapshots)
     return snapshots
@@ -419,6 +437,7 @@ def load_relationship_states(query=None, limit=100):
     except Exception as e:
         if data_backend().enabled():
             raise e
+        log_fallback_exception("load relationship states from Supabase", e)
     store = read_json_file(RELATIONSHIP_STATES_PATH, {"states": []})
     states = store.get("states") if isinstance(store, dict) else store
     states = [normalize_relationship_state(state) for state in (states or [])]
@@ -451,6 +470,7 @@ def upsert_relationship_state(state):
     except Exception as e:
         if data_backend().enabled():
             raise e
+        log_fallback_exception("upsert relationship state to Supabase", e)
     states = load_relationship_states(limit=1000)
     updated = False
     next_states = []
@@ -806,8 +826,8 @@ def load_app_profile_store():
         remote_store = data_backend().load_app_profile_store()
         if remote_store:
             return normalize_app_profile_store(remote_store)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("load app profile from Supabase", e)
     return load_json_app_profile_store()
 
 
@@ -817,8 +837,8 @@ def save_app_profile_store(data):
         remote_store = data_backend().save_app_profile_store(store)
         if remote_store:
             store = normalize_app_profile_store(remote_store)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("save app profile to Supabase", e)
     write_json_file(APP_PROFILE_STORE_PATH, store)
     return store
 
@@ -863,6 +883,7 @@ def bootstrap_account_response(data, headers=None):
     except Exception as e:
         if data_backend().enabled():
             raise e
+        log_fallback_exception("bootstrap account through Supabase", e)
 
     display_name = (data.get("displayName") or data.get("display_name") or "Munea user").strip()[:80] or "Munea user"
     account_id = data.get("accountId") or data.get("account_id") or f"local-account-{uuid.uuid4()}"
@@ -918,8 +939,8 @@ def load_companion_profile():
         remote_profile = data_backend().load_companion_profile()
         if remote_profile:
             return normalize_companion_profile(remote_profile)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("load companion profile from Supabase", e)
     return active_companion_profile(load_app_profile_store())
 
 
@@ -929,8 +950,8 @@ def save_companion_profile(data):
         remote_profile = data_backend().save_companion_profile(profile)
         if remote_profile:
             profile = normalize_companion_profile(remote_profile)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("save companion profile to Supabase", e)
     store = load_app_profile_store()
     store["companionProfiles"][store["primaryCareRecipientId"]] = profile
     save_app_profile_store(store)
@@ -1014,8 +1035,8 @@ def load_product_events(since_iso=None, limit=500):
         remote_events = data_backend().load_product_events(since_iso=since_iso, limit=limit)
         if remote_events is not None:
             return [normalize_product_event(e) for e in remote_events]
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("load product events from Supabase", e)
     store = normalize_product_events_store(read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store()))
     events = store["events"]
     if since_iso:
@@ -1060,8 +1081,8 @@ def append_product_event(data=None):
         remote_event = data_backend().append_product_event(event)
         if remote_event:
             return normalize_product_event(remote_event)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("append product event to Supabase", e)
     store = normalize_product_events_store(read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store()))
     store["events"].insert(0, event)
     store["events"] = store["events"][:1000]
@@ -1299,8 +1320,8 @@ def append_audit_event(event=None):
         remote_event = data_backend().append_audit_event(normalized)
         if remote_event:
             return normalize_audit_event(remote_event)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("append audit event to Supabase", e)
     store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
     events = [normalize_audit_event(e) for e in store.get("events", [])]
     events.insert(0, normalized)
@@ -1429,8 +1450,8 @@ def load_credits_store():
         remote_store = data_backend().load_credits_store()
         if remote_store:
             return normalize_credits_store(remote_store)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("load credits store from Supabase", e)
     return normalize_credits_store(read_json_file(CREDITS_STORE_PATH, {}))
 
 
@@ -1440,8 +1461,8 @@ def save_credits_store(data):
         remote_store = data_backend().save_credits_store(store)
         if remote_store:
             store = normalize_credits_store(remote_store)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("save credits store to Supabase", e)
     write_json_file(CREDITS_STORE_PATH, store)
     return store
 
@@ -1634,8 +1655,8 @@ def load_billing_store():
         remote_store = data_backend().load_billing_store()
         if remote_store:
             return normalize_billing_store(remote_store)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("load billing store from Supabase", e)
     return normalize_billing_store(read_json_file(BILLING_STORE_PATH, {}))
 
 
@@ -1645,8 +1666,8 @@ def save_billing_store(data):
         remote_store = data_backend().save_billing_store(store)
         if remote_store:
             store = normalize_billing_store(remote_store)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("save billing store to Supabase", e)
     write_json_file(BILLING_STORE_PATH, store)
     return store
 
@@ -1830,8 +1851,8 @@ def load_privacy_requests_store():
         remote_store = data_backend().load_privacy_requests_store()
         if remote_store:
             return normalize_privacy_requests_store(remote_store)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("load privacy requests from Supabase", e)
     return normalize_privacy_requests_store(read_json_file(PRIVACY_REQUESTS_PATH, {}))
 
 
@@ -1847,8 +1868,8 @@ def append_privacy_request(req_type, data=None):
         remote_request = data_backend().append_privacy_request(req_type, data)
         if remote_request:
             return normalize_privacy_request(remote_request)
-    except Exception:
-        pass
+    except Exception as e:
+        log_fallback_exception("append privacy request to Supabase", e)
     store = load_privacy_requests_store()
     req = normalize_privacy_request({**data, "type": req_type, "requestedAt": utc_now()})
     store["requests"].append(req)
@@ -1925,8 +1946,8 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                     model=m, contents=contents,
                     config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
                 return r.text.strip()
-            except Exception:
-                pass
+            except Exception as e:
+                log_fallback_exception(f"generate chat reply with {m}", e)
         time.sleep(2)
     return "（不好意思，我這邊連線有點不順，等一下再陪你好不好？）"
 
@@ -2045,8 +2066,8 @@ def tts_b64(text, char=DEFAULT_CHAR):
             with wave.open(buf, "wb") as w:
                 w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
             return base64.b64encode(buf.getvalue()).decode()
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception(f"generate TTS audio with {m}", e)
     return ""
 
 

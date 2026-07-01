@@ -1453,6 +1453,44 @@ print("privacy status", deletion["status"])
 '@
 Pass "Privacy export and account deletion contracts are valid"
 
+Step "Backend fallback logging contract"
+Invoke-PythonBlock @'
+import ast
+from pathlib import Path
+
+for path in [Path("engine/server.py"), Path("engine/chat_engine.py")]:
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    silent_handlers = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ExceptHandler) and len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
+            silent_handlers.append(node.lineno)
+    if silent_handlers:
+        raise SystemExit(f"{path} still has silent except/pass handlers at lines: {silent_handlers}")
+
+server = Path("engine/server.py").read_text(encoding="utf-8")
+chat_engine = Path("engine/chat_engine.py").read_text(encoding="utf-8")
+for token in [
+    "log_fallback_exception",
+    "load app profile from Supabase",
+    "load memory items from Supabase",
+    "generate chat reply with",
+    "generate TTS audio with",
+]:
+    if token not in server:
+        raise SystemExit("server.py missing fallback logging token: " + token)
+for token in [
+    "_log_fallback_exception",
+    "read user profile",
+    "extract long-term memories",
+    "update interest weights",
+]:
+    if token not in chat_engine:
+        raise SystemExit("chat_engine.py missing fallback logging token: " + token)
+print("fallback logging contract OK")
+'@
+Pass "Backend fallback failures are logged"
+
 Step "Frontend JavaScript syntax"
 node --check web\src\app.js
 node --check web\src\companion-profile.js
