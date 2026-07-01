@@ -101,7 +101,9 @@ async function start(){
     for(let k=0;k<i16.length;k++) f[k]=i16[k]/0x8000;
     const b=playCtx.createBuffer(1,f.length,24000); b.getChannelData(0).set(f);
     const s=playCtx.createBufferSource(); s.buffer=b; s.connect(playCtx.destination);
-    const now=playCtx.currentTime; if(playHead<now){dbg.gaps++;playHead=now;} s.start(playHead); playHead+=b.duration;
+    const now=playCtx.currentTime, LEAD=0.18;
+    if(playHead < now + 0.02){ dbg.gaps++; playHead = now + LEAD; }
+    s.start(playHead); playHead += b.duration;
     paint();
   };
   ws.onclose = () => { if(on) stop(); };
