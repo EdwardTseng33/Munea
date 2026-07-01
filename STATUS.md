@@ -37,8 +37,8 @@
 
 **Next:** Gemini Live realtime adapter and live Supabase project validation.
 
-> 沐寧 Munea · 智慧健康陪伴 App · **新 session cold-start：先讀 `docs/00-總綱-從這裡開始.md`（唯一真相入口）+ `docs/SPEC-沐寧-v1-2026-06-28.md`（權威規格），再看本檔現況**
-> 最後更新 **2026-06-30（AI 服務架構補 Companion Persona Layer：三腦之外新增角色人格層、真實回話公式、`/persona/context` 合約與 Supabase 005 persona schema）**
+> 沐寧 Munea · 智慧健康陪伴 App · **新 session cold-start：先讀 `docs/00-總綱-從這裡開始.md`（唯一真相入口）+ `docs/SPEC-沐寧-v1-2026-06-28.md`（權威規格）+ `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`（帳單/訂閱權威），再看本檔現況**
+> 最後更新 **2026-07-01（帳單/訂閱制命名鎖定：Free/Plus/Premium/Concierge + 點數只用於加值；Butler/Guardian 腦改用 Claude Sonnet 5）**——見本檔最上方 2026-07-01 段。6/30 段（AI 服務架構補 Companion Persona Layer）為前一版最新，保留於下方。
 
 > **2026-06-28 晚間校正：產品不是老人 App。核心是 AI 健康照護 + 家人互動 + `聊聊`。語音語言策略為中文（台灣）優先、英文第二；台語只保留研究觀察，不列入 v1/v2 承諾，也不自研語言模型。語音腦接點以 SPEC 的 Gemini 3.1 Flash Live 方向為準。下方 6/27 歷史段落若仍出現 gpt-realtime、台語護城河或純長輩定位，一律視為歷史紀錄，不作為施工依據。**
 

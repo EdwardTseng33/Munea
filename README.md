@@ -194,9 +194,11 @@ Munea/
 ├── STATUS.md
 ├── BACKLOG.md
 ├── docs/
-│   ├── 00-總綱-從這裡開始.md
+│   ├── 00-總綱-從這裡開始.md   # SSOT entry / doc map, read first
 │   ├── SPEC-沐寧-v1-2026-06-28.md
+│   ├── BILLING-CREDITS-ENTITLEMENT-v1.md
 │   ├── ARCHITECTURE.md
+│   ├── archive/               # superseded docs, kept for research history
 │   └── ROADMAP.md
 ├── engine/
 │   ├── server.py
@@ -209,30 +211,37 @@ Munea/
 │   ├── onboarding.html
 │   ├── landing.html
 │   └── src/
+├── supabase/
+│   └── sql/                   # 001-006 schema drafts
 └── avatar-candidates/
 ```
 
+**Start here, in order: `docs/00-總綱-從這裡開始.md` is the single source-of-truth entry point and routing page for this whole repo.** It tells any human or AI session which document is authoritative for a given topic (product spec, billing, architecture, avatar, etc.), what is still in-flight, and what has been superseded. Read that page before making product or architecture decisions here.
+
 For current planning truth, read these first:
 
-1. `docs/00-總綱-從這裡開始.md`
-2. `docs/SPEC-沐寧-v1-2026-06-28.md`
-3. `docs/CURRENT-DEVELOPMENT-PLAN.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/PRODUCT-ARCHITECTURE-AVATAR-FIRST-PLAN.md`
-6. `docs/AVATAR-RUNTIME-QA.md`
-7. `docs/RUNPOD-AVATAR-POC-SCHEDULE.md`
-8. `docs/TECH-STACK-EVALUATION-2026-06-29.md`
-9. `docs/VOICE-PROVIDER-ADAPTER.md`
-10. `docs/MOBILE-VOICE-BRIDGE.md`
-11. `docs/APP-STORE-PRODUCTION-READINESS.md`
-12. `docs/BACKEND-ARCHITECTURE-v1.md`
-13. `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`
-14. `docs/supabase/SETUP.md`
-15. `docs/CODEX-SKILLS-SETUP.md`
-16. `STATUS.md`
-17. `BACKLOG.md`
+1. `docs/00-總綱-從這裡開始.md` — **SSOT entry point / doc map, read this first**
+2. `docs/SPEC-沐寧-v1-2026-06-28.md` — master PRD (12 chapters). Note: §9 billing tier names are superseded, see #3 below and the SSOT page.
+3. `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` — **billing/subscription/credits source of truth** (Free / Plus / Premium / Concierge, credits for add-ons only)
+4. `docs/CURRENT-DEVELOPMENT-PLAN.md`
+5. `docs/ARCHITECTURE.md`
+6. `docs/PRODUCT-ARCHITECTURE-AVATAR-FIRST-PLAN.md`
+7. `docs/AVATAR-RUNTIME-QA.md`
+8. `docs/RUNPOD-AVATAR-POC-SCHEDULE.md`
+9. `docs/TECH-STACK-EVALUATION-2026-06-29.md`
+10. `docs/VOICE-PROVIDER-ADAPTER.md`
+11. `docs/MOBILE-VOICE-BRIDGE.md`
+12. `docs/APP-STORE-PRODUCTION-READINESS.md`
+13. `docs/BACKEND-ARCHITECTURE-v1.md`
+14. `docs/AUTH-ONBOARDING-ARCHITECTURE-v1.md`
+15. `docs/AI-SERVICE-DESIGN-v1.md`
+16. `docs/COMPANION-PERSONA-LAYER-v1.md`
+17. `docs/supabase/SETUP.md`
+18. `docs/CODEX-SKILLS-SETUP.md`
+19. `STATUS.md` — session-to-session handoff log (append-only, most recent update on top)
+20. `BACKLOG.md`
 
-Some older documents still preserve research history and may contain superseded assumptions, especially around GPT-Realtime, full self-hosting language, old character names, and pre-6/28 screen structure. The SPEC file is the current authority.
+Superseded documents (old business model versions, old English architecture draft, pre-6/28 screen structure, old character names such as Aria/Aiden, GPT-Realtime cost assumptions) have been moved to `docs/archive/`, with a README there explaining what replaced each one. Nothing was deleted; archived files still hold useful research/reasoning, but their conclusions and numbers are stale. The SSOT page (`docs/00-總綱-從這裡開始.md`) and the SPEC file are the current authority for anything not explicitly marked superseded.
 
 ---
 
