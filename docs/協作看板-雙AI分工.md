@@ -31,7 +31,7 @@
 
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
-| Claude / 城堡 | 健檢修復排程 P0-1：中文危機詞庫（Guardian 中文自傷/急症偵測） | `engine/model_router.py`、`docs/健檢修復排程-2026-07-01.md`、本看板 | 2026-07-01 | 完成，待本次同步推 GitHub |
+| Claude / 城堡 | #10 危機偵測行為測試（`engine/test_guardian_crisis.py` 20/20 過）＋ #5 子女授權 RLS 設計與待決文件 | `engine/test_guardian_crisis.py`、`docs/RLS-子女授權同意分層-設計與待決-2026-07-01.md`、排程、本看板 | 2026-07-01 | ✅ 完成、本次推 GitHub。#5 卡 Edward 決定（可見度預設偏向）+ 跟 Codex 對 schema |
 | Codex | 健檢修復排程 P0-3：正式模式後端敏感端點驗身份，先以 `MUNEA_REQUIRE_AUTH=1` 開關落地 | `engine/server.py`、`docs/健檢修復排程-2026-07-01.md`、`STATUS.md`、`scripts/smoke.ps1` | 2026-07-01 | 進行中 |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
