@@ -260,9 +260,9 @@ Admin MVP must be able to answer:
 Recommended Admin modules:
 
 - account subscription lookup.
-- credit wallet balance and ledger.
+- credit wallet balance and ledger. Backend read contract started as `POST /admin/credits`.
 - provider event audit.
-- usage/cost summary.
+- usage/cost summary. Backend read contract started as `POST /admin/usage`.
 - refund/revoke queue.
 - entitlement policy version history.
 
@@ -285,7 +285,7 @@ Recommended Admin modules:
 6. Add Supabase adapter mapping for credit wallets, transactions, and ledger. Done.
 7. Implement StoreKit 2 or RevenueCat purchase/restore in Capacitor iOS.
 8. Add signed provider event verification and production webhook validation.
-9. Add Admin MVP views before public App Store launch.
+9. Add Admin MVP views before public App Store launch. Backend read contracts started with `POST /admin/usage` and `POST /admin/credits`; UI views are still not built.
 
 ## Open Decisions
 

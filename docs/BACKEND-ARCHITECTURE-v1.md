@@ -222,7 +222,8 @@ Admin APIs should not be available to normal app clients.
 |---|---|
 | `/admin/accounts` | Search account, family, primary user |
 | `/admin/subscriptions` | Inspect entitlements and subscription ledger |
-| `/admin/usage` | Voice/avatar/cost usage lookup |
+| `/admin/usage` | Product usage, event counts, voice/avatar minutes, North Star composition, and developer/test exclusion summary |
+| `/admin/credits` | Subscription, entitlement, usage ledger, credit wallets, and recent credit ledger lookup |
 | `/admin/privacy-requests` | Track export/deletion requests |
 | `/admin/safety-events` | Review high-risk events |
 | `/admin/audit-events` | Review admin actions |
@@ -232,7 +233,7 @@ Admin access should use admin-only roles stored outside user-editable metadata. 
 
 Prototype coverage:
 
-- `/admin/north-star` exists, but it is closed unless `MUNEA_ADMIN_API_TOKEN` is configured and sent in `X-Munea-Admin-Token`.
+- `/admin/north-star`, `/admin/usage`, and `/admin/credits` exist, but they are closed unless `MUNEA_ADMIN_API_TOKEN` is configured and sent in `X-Munea-Admin-Token`.
 
 ## Supabase Data Model v1
 
@@ -400,6 +401,7 @@ Developer and internal usage exclusion:
 - Developer mode, QA, internal ops, and demo/test accounts must be excluded from operating dashboards.
 - Frontend developer mode sends `analyticsExcluded: true`, `developerMode: true`, and `accountType: developer`.
 - `north_star_summary` excludes developer/internal/test/QA/ops events before calculating meaningful days, active people, voice success, Avatar usage, family interactions, and routine completions.
+- `/admin/usage` uses the same exclusion logic so internal testing does not inflate usage, conversion, or engagement dashboards.
 - Backend env can exclude known accounts, people, or sessions:
 
 ```text

@@ -32,7 +32,7 @@
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
 | Claude / 城堡 | 待填 | 待填 | 待填 | 待填 |
-| Codex | 校準 Claude 整理後的地端/repo 協作規則，避免「Codex 只能做 Avatar」與 Edward 的 L6 自治開發方向衝突 | `docs/協作看板-雙AI分工.md`、`docs/00-總綱-從這裡開始.md`、`STATUS.md` | 2026-07-01 | 完成，待推 GitHub |
+| Codex | 補後台 MVP 查詢合約：usage / credits admin API，並同步文件 | `engine/server.py`、`docs/BACKEND-ARCHITECTURE-v1.md`、`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`、`docs/CURRENT-DEVELOPMENT-PLAN.md`、`STATUS.md`、`scripts/smoke.ps1` | 2026-07-01 | 完成，待推 GitHub |
 
 ---
 

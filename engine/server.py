@@ -1079,6 +1079,92 @@ def north_star_summary(data=None):
     }
 
 
+def safe_number(value, fallback=0):
+    try:
+        if value is None or value == "":
+            return fallback
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def admin_usage_summary(data=None):
+    data = data or {}
+    days = max(1, min(90, int(data.get("days") or 30)))
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days - 1)
+    since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
+    all_events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
+    events = [event for event in all_events if not is_analytics_excluded_event(event)]
+    event_counts = {}
+    daily = {}
+    voice_minutes = 0.0
+    avatar_minutes = 0.0
+    voice_started = 0
+    voice_completed = 0
+    for event in events:
+        name = event.get("eventName") or "unknown_event"
+        props = event.get("properties") or {}
+        event_counts[name] = event_counts.get(name, 0) + 1
+        event_day = parse_iso_datetime(event.get("eventTime")).strftime("%Y-%m-%d")
+        bucket = daily.setdefault(event_day, {"events": 0, "meaningfulEvents": 0, "voiceMinutes": 0, "avatarMinutes": 0})
+        bucket["events"] += 1
+        if is_meaningful_product_event(event):
+            bucket["meaningfulEvents"] += 1
+        if name == "voice_session_started":
+            voice_started += 1
+        elif name == "voice_session_completed":
+            voice_completed += 1
+            minutes = safe_number(props.get("durationMinutes") or props.get("duration_minutes"))
+            if not minutes:
+                minutes = safe_number(props.get("durationMs") or props.get("duration_ms")) / 60000
+            voice_minutes += minutes
+            bucket["voiceMinutes"] = round(bucket["voiceMinutes"] + minutes, 2)
+        elif name == "avatar_session_completed":
+            minutes = safe_number(props.get("durationMinutes") or props.get("duration_minutes"))
+            if not minutes:
+                minutes = safe_number(props.get("durationMs") or props.get("duration_ms")) / 60000
+            avatar_minutes += minutes
+            bucket["avatarMinutes"] = round(bucket["avatarMinutes"] + minutes, 2)
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "northStar": north_star_summary({"days": min(days, 30)}),
+        "totals": {
+            "events": len(events),
+            "excludedEvents": len(all_events) - len(events),
+            "voiceMinutes": round(voice_minutes, 2),
+            "avatarMinutes": round(avatar_minutes, 2),
+            "voiceSessionSuccessRate": round(voice_completed / voice_started, 4) if voice_started else None,
+        },
+        "eventCounts": dict(sorted(event_counts.items())),
+        "daily": [{"date": date, **daily[date]} for date in sorted(daily.keys())],
+        "backend": data_backend_status(),
+    }
+
+
+def admin_credits_summary(data=None):
+    data = data or {}
+    limit = max(1, min(100, int(data.get("limit") or 25)))
+    billing = load_billing_store()
+    credits = load_credits_store()
+    return {
+        "ok": True,
+        "accountId": billing.get("accountId") or credits.get("accountId"),
+        "activePlan": billing.get("activePlan"),
+        "subscription": billing.get("subscription"),
+        "entitlements": billing.get("entitlements"),
+        "usageLedger": billing.get("usageLedger"),
+        "walletSummary": credit_wallet_summary(credits),
+        "wallets": credits.get("wallets", []),
+        "recentTransactions": credits.get("transactions", [])[:limit],
+        "recentLedger": credits.get("ledger", [])[:limit],
+        "serverVerificationRequired": bool(billing.get("serverVerificationRequired", True)),
+        "backend": data_backend_status(),
+    }
+
+
 def product_event_response(data):
     event = append_product_event(data)
     return {"ok": True, "event": event, "northStar": north_star_summary({"days": 7})}
@@ -1925,7 +2011,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -1978,6 +2064,18 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(north_star_summary(data))
+            elif self.path == "/admin/usage":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_usage_summary(data))
+            elif self.path == "/admin/credits":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_credits_summary(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

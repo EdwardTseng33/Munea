@@ -8,6 +8,15 @@
 - Reframed the board from fixed ownership lanes into an SSOT-first collaboration protocol: task registration, file avoidance, small commits, no force push, and required documentation backfill.
 - Updated `docs/00-總綱-從這裡開始.md` so Codex is not constrained to Avatar-only work; Codex can continue as CTO/technical architect/full-stack development agent while still respecting coordination rules.
 
+## 2026-07-01 Update - Admin usage and credits read contracts
+
+**Status:** backend contracts added.
+
+- Added token-gated `POST /admin/usage` for product usage summary, event counts, voice/avatar minutes, North Star composition, and developer/test event exclusion counts.
+- Added token-gated `POST /admin/credits` for subscription, entitlement, usage ledger, credit wallet, recent transaction, and recent ledger lookup.
+- Extended `/healthz` contracts with `admin-usage` and `admin-credits`.
+- These are backend read contracts only; the internal Admin UI is still future work.
+
 ## 2026-07-01 Update - Billing tier naming
 
 **Status:** product naming decision locked.

@@ -721,6 +721,13 @@ with tempfile.TemporaryDirectory() as d:
     assert summary["meaningfulCompanionDays"] == 1
     assert summary["voiceSessionsCompleted"] == 1
     assert summary["excludedEventCount"] == 1
+    usage = server.admin_usage_summary({"days": 7})
+    assert usage["ok"] is True
+    assert usage["totals"]["excludedEvents"] == 1
+    assert usage["totals"]["voiceMinutes"] == 1.5
+    credits = server.admin_credits_summary({"limit": 10})
+    assert credits["ok"] is True
+    assert credits["walletSummary"]["currencyCode"] == "MUNEA_CREDIT"
     ok, code = server.admin_authorized({})
     assert ok is False
     assert code == "admin_token_not_configured"
@@ -1616,6 +1623,8 @@ if ($health.contracts -notcontains "perception-topic-plan") { throw "/healthz mi
 if ($health.contracts -notcontains "perception-snapshot") { throw "/healthz missing perception-snapshot contract" }
 if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
 if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
+if ($health.contracts -notcontains "admin-usage") { throw "/healthz missing admin-usage contract" }
+if ($health.contracts -notcontains "admin-credits") { throw "/healthz missing admin-credits contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
@@ -1652,6 +1661,26 @@ try {
   if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
 }
 Pass "/admin/north-star is closed without admin token"
+
+Step "API /admin/usage gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/usage" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"days":7}' -TimeoutSec 30 | Out-Null
+  throw "/admin/usage should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/usage is closed without admin token"
+
+Step "API /admin/credits gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/credits" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"limit":5}' -TimeoutSec 30 | Out-Null
+  throw "/admin/credits should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/credits is closed without admin token"
 
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30
