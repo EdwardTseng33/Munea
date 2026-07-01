@@ -1,5 +1,13 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-01 Update - Dual-AI collaboration board aligned
+
+**Status:** completed and ready for GitHub sync.
+
+- Reviewed Claude/城堡 local repo organization update and found the new collaboration board at `docs/協作看板-雙AI分工.md`.
+- Reframed the board from fixed ownership lanes into an SSOT-first collaboration protocol: task registration, file avoidance, small commits, no force push, and required documentation backfill.
+- Updated `docs/00-總綱-從這裡開始.md` so Codex is not constrained to Avatar-only work; Codex can continue as CTO/technical architect/full-stack development agent while still respecting coordination rules.
+
 ## 2026-07-01 Update - Billing tier naming
 
 **Status:** product naming decision locked.
