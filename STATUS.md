@@ -44,7 +44,7 @@
 
 ## 2026-07-01 Update - Billing mutation privilege split
 
-**Status:** in progress.
+**Status:** backend anti-forgery/audit foundation completed.
 
 - Started P0-4 from `docs/健檢修復排程-2026-07-01.md`.
 - In `MUNEA_REQUIRE_AUTH=1` mode, normal user bearer auth can read user-scoped billing/credits data, but cannot directly mutate entitlements or credit balances.
