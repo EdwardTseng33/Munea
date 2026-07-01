@@ -78,6 +78,10 @@ class SupabaseAdapter:
                 "ai_brain_runs",
                 "companion_persona_templates",
                 "companion_relationship_states",
+                "entitlement_policy_versions",
+                "credit_wallets",
+                "credit_transactions",
+                "credit_ledger",
             ],
         }
 
@@ -371,6 +375,89 @@ class SupabaseAdapter:
                 )
         return self.load_billing_store()
 
+    def load_credits_store(self):
+        if not self.enabled():
+            return None
+        wallets = self._select(
+            "credit_wallets",
+            {"account_id": f"eq.{self.account_id}", "select": "*", "order": "created_at.asc"},
+        )
+        transactions = self._select(
+            "credit_transactions",
+            {"account_id": f"eq.{self.account_id}", "select": "*", "order": "created_at.asc", "limit": "500"},
+        )
+        ledger = self._select(
+            "credit_ledger",
+            {"account_id": f"eq.{self.account_id}", "select": "*", "order": "created_at.asc", "limit": "500"},
+        )
+        return self.credits_rows_to_store(wallets, transactions, ledger)
+
+    def save_credits_store(self, store):
+        if not self.enabled():
+            return None
+        store = store or {}
+        for wallet in store.get("wallets") or []:
+            payload = self.credit_wallet_to_row(wallet)
+            query = {
+                "account_id": f"eq.{self.account_id}",
+                "wallet_type": f"eq.{payload['wallet_type']}",
+                "person_id": f"eq.{payload['person_id']}" if payload.get("person_id") else "is.null",
+                "period": f"eq.{payload['period']}" if payload.get("period") else "is.null",
+                "select": "*",
+            }
+            rows = self._request(
+                "PATCH",
+                "credit_wallets",
+                query=query,
+                payload=payload,
+                prefer="return=representation",
+            )
+            if not rows:
+                self._request(
+                    "POST",
+                    "credit_wallets",
+                    query={"select": "*"},
+                    payload=payload,
+                    prefer="return=representation",
+                )
+
+        for tx in store.get("transactions") or []:
+            payload = self.credit_transaction_to_row(tx)
+            idempotency_key = payload.get("idempotency_key")
+            if idempotency_key:
+                existing = self._first(
+                    "credit_transactions",
+                    {"account_id": f"eq.{self.account_id}", "idempotency_key": f"eq.{idempotency_key}", "select": "*"},
+                )
+                if existing:
+                    continue
+            self._request(
+                "POST",
+                "credit_transactions",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+
+        for event in store.get("ledger") or []:
+            payload = self.credit_ledger_to_row(event)
+            source_ref = payload.get("source_ref")
+            if source_ref:
+                existing = self._first(
+                    "credit_ledger",
+                    {"account_id": f"eq.{self.account_id}", "source_ref": f"eq.{source_ref}", "select": "*"},
+                )
+                if existing:
+                    continue
+            self._request(
+                "POST",
+                "credit_ledger",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        return self.load_credits_store()
+
     def load_privacy_requests_store(self):
         if not self.enabled():
             return None
@@ -661,6 +748,126 @@ class SupabaseAdapter:
                 usage["familyMembersUsed"] = used
                 usage["familyMembersGranted"] = granted
         return usage
+
+    def credit_wallet_to_row(self, wallet):
+        wallet = wallet or {}
+        wallet_type = wallet.get("type") or wallet.get("walletType") or wallet.get("wallet_type") or "purchased"
+        if wallet_type not in {"included_monthly", "purchased"}:
+            wallet_type = "purchased"
+        return {
+            "account_id": self.account_id,
+            "person_id": wallet.get("personId") or wallet.get("person_id") or (self.person_id if wallet_type == "included_monthly" else None),
+            "wallet_type": wallet_type,
+            "period": wallet.get("period"),
+            "balance": wallet.get("balance") or 0,
+            "currency_code": wallet.get("currencyCode") or wallet.get("currency_code") or "MUNEA_CREDIT",
+            "status": wallet.get("status") or "active",
+            "expires_at": wallet.get("expiresAt") or wallet.get("expires_at"),
+            "metadata": wallet.get("metadata") or {},
+        }
+
+    def credit_transaction_to_row(self, tx):
+        tx = tx or {}
+        tx_type = tx.get("type") or tx.get("transactionType") or tx.get("transaction_type") or "adjustment"
+        return {
+            "account_id": tx.get("accountId") or tx.get("account_id") or self.account_id,
+            "person_id": tx.get("personId") or tx.get("person_id") or self.person_id,
+            "wallet_id": tx.get("walletUuid") or tx.get("wallet_uuid"),
+            "transaction_type": tx_type,
+            "source": tx.get("source") or "system",
+            "amount": tx.get("amount") or 0,
+            "balance_after": tx.get("balanceAfter") or tx.get("balance_after"),
+            "provider": tx.get("provider"),
+            "provider_transaction_id": tx.get("providerTransactionId") or tx.get("provider_transaction_id"),
+            "idempotency_key": tx.get("idempotencyKey") or tx.get("idempotency_key") or tx.get("id") or f"local-{int(time.time() * 1000)}",
+            "reason": tx.get("reason") or tx_type,
+            "metadata": {
+                "localWalletId": tx.get("walletId"),
+                "walletType": tx.get("walletType"),
+                "feature": tx.get("feature"),
+            },
+        }
+
+    def credit_ledger_to_row(self, event):
+        event = event or {}
+        event_type = event.get("eventType") or event.get("event_type") or "admin_adjusted"
+        if event_type == "credits_grant":
+            event_type = "included_allowance_granted"
+        elif event_type == "credits_consume":
+            event_type = "credits_consumed"
+        return {
+            "account_id": event.get("accountId") or event.get("account_id") or self.account_id,
+            "person_id": event.get("personId") or event.get("person_id") or self.person_id,
+            "wallet_id": event.get("walletUuid") or event.get("wallet_uuid"),
+            "credit_transaction_id": event.get("creditTransactionUuid") or event.get("credit_transaction_uuid"),
+            "event_type": event_type,
+            "amount": event.get("amount") or 0,
+            "balance_after": event.get("balanceAfter") or event.get("balance_after"),
+            "feature": event.get("feature"),
+            "source_ref": event.get("sourceRef") or event.get("source_ref") or event.get("id"),
+            "metadata": {"localWalletId": event.get("walletId")},
+        }
+
+    def credits_rows_to_store(self, wallet_rows=None, transaction_rows=None, ledger_rows=None):
+        return {
+            "schemaVersion": 1,
+            "accountId": self.account_id,
+            "personId": self.person_id,
+            "currencyCode": "MUNEA_CREDIT",
+            "wallets": [self.credit_wallet_row_to_wallet(row) for row in wallet_rows or []],
+            "transactions": [self.credit_transaction_row_to_transaction(row) for row in transaction_rows or []],
+            "ledger": [self.credit_ledger_row_to_event(row) for row in ledger_rows or []],
+            "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+
+    @staticmethod
+    def credit_wallet_row_to_wallet(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "type": row.get("wallet_type") or "purchased",
+            "period": row.get("period"),
+            "balance": float(row.get("balance") or 0),
+            "currencyCode": row.get("currency_code") or "MUNEA_CREDIT",
+            "expiresAt": row.get("expires_at"),
+            "status": row.get("status") or "active",
+            "metadata": row.get("metadata") or {},
+        }
+
+    @staticmethod
+    def credit_transaction_row_to_transaction(row):
+        row = row or {}
+        metadata = row.get("metadata") or {}
+        return {
+            "id": row.get("id") or "",
+            "type": row.get("transaction_type") or "adjustment",
+            "walletId": metadata.get("localWalletId") or row.get("wallet_id"),
+            "walletType": metadata.get("walletType"),
+            "amount": float(row.get("amount") or 0),
+            "balanceAfter": float(row.get("balance_after") or 0),
+            "source": row.get("source") or "system",
+            "reason": row.get("reason") or "",
+            "feature": metadata.get("feature"),
+            "provider": row.get("provider"),
+            "providerTransactionId": row.get("provider_transaction_id"),
+            "idempotencyKey": row.get("idempotency_key"),
+            "createdAt": row.get("created_at"),
+        }
+
+    @staticmethod
+    def credit_ledger_row_to_event(row):
+        row = row or {}
+        metadata = row.get("metadata") or {}
+        return {
+            "id": row.get("id") or "",
+            "eventType": row.get("event_type") or "admin_adjusted",
+            "walletId": metadata.get("localWalletId") or row.get("wallet_id"),
+            "amount": float(row.get("amount") or 0),
+            "balanceAfter": float(row.get("balance_after") or 0),
+            "feature": row.get("feature"),
+            "sourceRef": row.get("source_ref"),
+            "createdAt": row.get("created_at"),
+        }
 
     @staticmethod
     def privacy_row_to_request(row):

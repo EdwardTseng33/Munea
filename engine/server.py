@@ -1210,11 +1210,23 @@ def normalize_credits_store(data=None):
 
 
 def load_credits_store():
+    try:
+        remote_store = data_backend().load_credits_store()
+        if remote_store:
+            return normalize_credits_store(remote_store)
+    except Exception:
+        pass
     return normalize_credits_store(read_json_file(CREDITS_STORE_PATH, {}))
 
 
 def save_credits_store(data):
     store = normalize_credits_store({**(data or {}), "updatedAt": utc_now()})
+    try:
+        remote_store = data_backend().save_credits_store(store)
+        if remote_store:
+            store = normalize_credits_store(remote_store)
+    except Exception:
+        pass
     write_json_file(CREDITS_STORE_PATH, store)
     return store
 

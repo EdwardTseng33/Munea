@@ -138,6 +138,12 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**row, "id": f"perception-snapshot-{idx}", "created_at": "2026-06-29T00:00:00Z"} for idx, row in enumerate(rows, start=1)]
         if table == "companion_relationship_states":
             return [{**payload, "id": "relationship-state-1", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"}]
+        if table == "credit_wallets":
+            return [{**payload, "id": "credit-wallet-1", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"}]
+        if table == "credit_transactions":
+            return [{**payload, "id": "credit-transaction-1", "created_at": "2026-06-29T00:00:00Z"}]
+        if table == "credit_ledger":
+            return [{**payload, "id": "credit-ledger-1", "created_at": "2026-06-29T00:00:00Z"}]
         raise AssertionError(f"Unexpected write table: {table}")
 
     assert method == "GET"
@@ -254,6 +260,66 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "created_at": "2026-06-29T00:00:00Z",
             "updated_at": "2026-06-29T00:00:00Z",
         }],
+        "credit_wallets": [
+            {
+                "id": "credit-wallet-included",
+                "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+                "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+                "wallet_type": "included_monthly",
+                "period": "2026-07",
+                "balance": 10,
+                "currency_code": "MUNEA_CREDIT",
+                "status": "active",
+                "expires_at": "2026-07-31T23:59:59Z",
+                "metadata": {},
+                "created_at": "2026-06-29T00:00:00Z",
+                "updated_at": "2026-06-29T00:00:00Z",
+            },
+            {
+                "id": "credit-wallet-purchased",
+                "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+                "person_id": None,
+                "wallet_type": "purchased",
+                "period": None,
+                "balance": 5,
+                "currency_code": "MUNEA_CREDIT",
+                "status": "active",
+                "expires_at": None,
+                "metadata": {},
+                "created_at": "2026-06-29T00:00:00Z",
+                "updated_at": "2026-06-29T00:00:00Z",
+            },
+        ],
+        "credit_transactions": [{
+            "id": "credit-transaction-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "wallet_id": "credit-wallet-included",
+            "transaction_type": "grant",
+            "source": "included_monthly",
+            "amount": 10,
+            "balance_after": 10,
+            "provider": None,
+            "provider_transaction_id": None,
+            "idempotency_key": "smoke-credit-grant-existing",
+            "reason": "monthly allowance",
+            "metadata": {"localWalletId": "wallet_included_monthly", "walletType": "included_monthly", "feature": "premium_avatar"},
+            "created_at": "2026-06-29T00:00:00Z",
+        }],
+        "credit_ledger": [{
+            "id": "credit-ledger-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "wallet_id": "credit-wallet-included",
+            "credit_transaction_id": "credit-transaction-1",
+            "event_type": "included_allowance_granted",
+            "amount": 10,
+            "balance_after": 10,
+            "feature": "premium_avatar",
+            "source_ref": "credit-transaction-1",
+            "metadata": {"localWalletId": "wallet_included_monthly"},
+            "created_at": "2026-06-29T00:00:00Z",
+        }],
     }
     return fixtures[table]
 
@@ -274,6 +340,39 @@ saved_billing = adapter.save_billing_store({
     "usageLedger": {"period": "2026-06", "voiceMinutesUsed": 1, "avatarMinutesUsed": 1},
 })
 assert saved_billing["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
+remote_credits = adapter.load_credits_store()
+assert remote_credits["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
+assert len(remote_credits["wallets"]) == 2
+assert sum(w["balance"] for w in remote_credits["wallets"]) == 15
+assert remote_credits["transactions"][0]["idempotencyKey"] == "smoke-credit-grant-existing"
+saved_credits = adapter.save_credits_store({
+    "wallets": [
+        {"id": "wallet_included_monthly", "type": "included_monthly", "period": "2026-07", "balance": 8},
+        {"id": "wallet_purchased", "type": "purchased", "balance": 4},
+    ],
+    "transactions": [{
+        "id": "local-credit-transaction-1",
+        "type": "consume",
+        "walletId": "wallet_included_monthly",
+        "walletType": "included_monthly",
+        "amount": 2,
+        "balanceAfter": 8,
+        "source": "system",
+        "reason": "premium_avatar_overage",
+        "feature": "premium_avatar",
+        "idempotencyKey": "smoke-credit-consume-new",
+    }],
+    "ledger": [{
+        "id": "local-credit-ledger-1",
+        "eventType": "credits_consumed",
+        "walletId": "wallet_included_monthly",
+        "amount": 2,
+        "balanceAfter": 8,
+        "feature": "premium_avatar",
+        "sourceRef": "local-credit-transaction-1",
+    }],
+})
+assert saved_credits["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
 privacy_store = adapter.load_privacy_requests_store()
 assert privacy_store["requests"][0]["type"] == "export"
 privacy_req = adapter.append_privacy_request("account_deletion", {"reason": "test"})

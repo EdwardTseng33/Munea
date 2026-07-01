@@ -10,6 +10,7 @@
 - Added `supabase/sql/006_billing_credits_foundation.sql` for entitlement policy versions, credit wallets, credit transactions, and credit ledger.
 - Added local runtime credits contracts: `/credits/balance`, `/credits/grant`, and `/credits/consume`, backed by `engine/credits_store.json`.
 - Connected premium Avatar overage to credits in `/avatar-session`; when credits are insufficient, the session falls back to `2d-viseme` instead of breaking.
+- Added Supabase adapter support for runtime credits tables: `credit_wallets`, `credit_transactions`, and `credit_ledger`.
 - Credits remain reserved for expensive/bursty add-ons such as premium Avatar/GPU minutes; basic companionship should not feel metered.
 - Current implementation still uses backend entitlements + usage ledger; full credits wallet remains future work.
 

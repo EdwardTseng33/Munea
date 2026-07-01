@@ -32,6 +32,7 @@ Current state:
 - Billing/credits v1 is now locked in `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`: the product ladder is Free / Plus / Premium / Concierge, subscriptions are the trust-building base, credits are reserved for expensive/bursty add-ons, and `supabase/sql/006_billing_credits_foundation.sql` adds the first credit wallet and entitlement policy tables.
 - `/credits/balance`, `/credits/grant`, and `/credits/consume` now define the local runtime credit wallet API with JSON fallback, idempotent grants/consumes, included-first deduction, and insufficient-credit fallback.
 - `/avatar-session` now uses the deduction order for premium Avatar: included monthly Avatar allowance first, then credits for overage, then `2d-viseme` fallback.
+- Supabase adapter now maps runtime credits to `credit_wallets`, `credit_transactions`, and `credit_ledger`, while keeping JSON fallback for local development.
 - Production API contracts are partially represented in `engine/server.py`.
 - Admin and analytics are not built yet, but their data model must be planned now.
 
@@ -444,6 +445,7 @@ Do not build a broad CRM first. The admin MVP should answer: what happened, who 
 - [x] Implement Supabase app profile aggregate adapter for account, person, family group, family memberships, and companion profile.
 - [x] Keep JSON fallback active until Supabase env and seeded ids are configured.
 - [x] Add entitlements adapter for subscription and usage ledger reads/writes.
+- [x] Add credits adapter for credit wallet, transaction, and ledger reads/writes.
 - [x] Add privacy requests adapter for export/deletion request creation and listing.
 
 ### Phase C: Auth And Family

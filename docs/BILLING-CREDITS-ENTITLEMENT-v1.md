@@ -71,7 +71,7 @@ Not implemented yet:
 - RevenueCat / StoreKit SDK integration.
 - Signed App Store Server API or RevenueCat webhook verification.
 - Restore purchases UX.
-- Supabase adapter for runtime credits.
+- Supabase adapter for runtime credits is implemented for `credit_wallets`, `credit_transactions`, and `credit_ledger`.
 - Refund/revoke handling for credits.
 - Admin console screens for manual adjustment.
 
@@ -282,9 +282,10 @@ Recommended Admin modules:
 3. Keep `/entitlements` backend-authoritative. Done for prototype.
 4. Add local credit wallet runtime API. Done for prototype.
 5. Connect premium Avatar overage to credits. Done for prototype.
-6. Implement StoreKit 2 or RevenueCat purchase/restore in Capacitor iOS.
-7. Add signed provider event verification and Supabase-backed idempotency.
-8. Add Admin MVP views before public App Store launch.
+6. Add Supabase adapter mapping for credit wallets, transactions, and ledger. Done.
+7. Implement StoreKit 2 or RevenueCat purchase/restore in Capacitor iOS.
+8. Add signed provider event verification and production webhook validation.
+9. Add Admin MVP views before public App Store launch.
 
 ## Open Decisions
 
