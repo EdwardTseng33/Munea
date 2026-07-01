@@ -34,6 +34,14 @@
 - `chat_engine.py` now tolerates missing `user_profile.json` and creates/writes it only as a local runtime file.
 - Git now only tracks static `engine/characters.json`; local runtime JSON files remain on disk but are ignored.
 
+## 2026-07-01 Update - Auth gate foundation for sensitive endpoints
+
+**Status:** in progress.
+
+- Started P0-3 from `docs/健檢修復排程-2026-07-01.md`.
+- Added `MUNEA_REQUIRE_AUTH=1` mode so sensitive POST endpoints require a verified Bearer token while local prototype mode remains usable by default.
+- Admin endpoints continue to use `MUNEA_ADMIN_API_TOKEN`; auth/bootstrap routes remain available for sign-in and account setup.
+
 ## 2026-07-01 Update - Dual-AI collaboration board aligned
 
 **Status:** completed and ready for GitHub sync.

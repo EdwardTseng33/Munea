@@ -691,6 +691,17 @@ assert dev["developerMode"] is True
 status = server.auth_status_response({"Authorization": "Bearer " + dev_token})
 assert status["ok"] is True
 assert status["auth"]["provider"] == "dev-bypass"
+os.environ["MUNEA_REQUIRE_AUTH"] = "1"
+assert server.auth_required_for_path("/chat") is True
+missing_gate = server.require_verified_auth({}, "/chat")
+assert missing_gate["ok"] is False
+assert missing_gate["code"] == "auth_token_missing"
+verified_gate = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, "/chat")
+assert verified_gate["ok"] is True
+assert verified_gate["required"] is True
+assert server.auth_required_for_path("/auth-status") is False
+assert server.auth_required_for_path("/admin/usage") is False
+del os.environ["MUNEA_REQUIRE_AUTH"]
 del os.environ["MUNEA_ENABLE_DEV_AUTH_BYPASS"]
 
 os.environ["SUPABASE_URL"] = "https://example.supabase.co"
@@ -1650,6 +1661,7 @@ $health = Invoke-RestMethod -Uri "$BaseUrl/healthz" -Method Get -TimeoutSec 30
 if (-not $health.ok) { throw "/healthz returned not ok" }
 if ($health.runtime.concurrency -ne "threading") { throw "/healthz missing threaded runtime marker" }
 if ($health.runtime.jsonStoreWrites -ne "atomic") { throw "/healthz missing atomic JSON write marker" }
+if ($null -eq $health.runtime.authRequired) { throw "/healthz missing authRequired runtime marker" }
 if ($health.contracts -notcontains "auth-status") { throw "/healthz missing auth-status contract" }
 if ($health.contracts -notcontains "account-bootstrap") { throw "/healthz missing account-bootstrap contract" }
 if ($health.contracts -notcontains "entitlements") { throw "/healthz missing entitlements contract" }

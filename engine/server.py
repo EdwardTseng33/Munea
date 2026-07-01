@@ -193,6 +193,32 @@ def verify_auth_context(headers=None):
     return verify_supabase_access_token(token)
 
 
+PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap"}
+ADMIN_POST_PATHS = {"/admin/north-star", "/admin/usage", "/admin/credits"}
+
+
+def auth_required_mode():
+    return str(os.environ.get("MUNEA_REQUIRE_AUTH") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def auth_required_for_path(path):
+    return auth_required_mode() and path not in PUBLIC_POST_PATHS and path not in ADMIN_POST_PATHS
+
+
+def require_verified_auth(headers=None, path=""):
+    if not auth_required_for_path(path):
+        return {"ok": True, "required": False}
+    auth_context = verify_auth_context(headers)
+    if not auth_context.get("ok"):
+        return {
+            "ok": False,
+            "required": True,
+            "code": auth_context.get("code") or "auth_required",
+            "auth": public_auth_context(auth_context),
+        }
+    return {"ok": True, "required": True, "auth": public_auth_context(auth_context)}
+
+
 def public_auth_context(auth_context):
     return {
         "verified": bool(auth_context.get("ok")),
@@ -2028,7 +2054,7 @@ class H(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "munea-local-engine",
                 "time": utc_now(),
-                "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic"},
+                "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
                 "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
@@ -2046,6 +2072,10 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             data = self._read_json_body()
+            auth_gate = require_verified_auth(self.headers, self.path)
+            if not auth_gate.get("ok"):
+                self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
+                return
             char = data.get("char") or DEFAULT_CHAR
             if self.path == "/open":
                 t = eng.open_chat(char)

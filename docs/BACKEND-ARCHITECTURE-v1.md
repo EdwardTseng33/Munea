@@ -80,6 +80,8 @@ Production auth rule:
 - backend must verify the token through `/auth-status` / shared auth context helpers and derive the real `auth.users.id`.
 - production `/account-bootstrap` must not trust `authUserId` supplied in the JSON body.
 - user-editable metadata must not drive authorization.
+- Current backend foundation: setting `MUNEA_REQUIRE_AUTH=1` makes sensitive POST endpoints require verified bearer auth. Local prototype mode remains permissive by default so design/dev previews do not break before the iOS auth flow is wired.
+- Admin endpoints remain separate and require `MUNEA_ADMIN_API_TOKEN` through `X-Munea-Admin-Token`.
 
 All production API responses should use this envelope:
 
@@ -452,6 +454,7 @@ Do not build a broad CRM first. The admin MVP should answer: what happened, who 
 
 ### Phase C: Auth And Family
 
+- [x] Add backend auth verification helper and `MUNEA_REQUIRE_AUTH=1` gate for sensitive endpoints.
 - Add Supabase Auth.
 - Create account/member bootstrap flow.
 - Add family invitation and membership roles.
