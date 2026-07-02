@@ -624,6 +624,8 @@ assert warm_persona["relationshipState"]["relationshipMemory"]["lastTopicDomains
 assert warm_persona["safety"]["reduceHumor"] is True
 
 with tempfile.TemporaryDirectory() as d:
+    server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
+    server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
     server.PERCEPTION_SNAPSHOTS_PATH = str(Path(d) / "perception_snapshots.json")
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
