@@ -943,12 +943,13 @@ function init() {
   });
 
   // 全家健康圈：切換成員看健康
-  function showFamPerson(p, rel, av) {
+  function showFamPerson(p, rel, init, tint) {
     $('#viewAll').classList.remove('active');
     $('#viewPerson').classList.add('active');
     if ($('#ptName')) $('#ptName').textContent = p;
     if ($('#ptRel')) $('#ptRel').textContent = rel || '';
-    if ($('#ptAv') && av) $('#ptAv').src = av;
+    const pa = $('#ptAv');
+    if (pa) { pa.textContent = init || (p || '')[0] || ''; pa.className = 'init-ava init-ava-lg ' + (tint || ''); }
     $$('.fam-switch-item').forEach(b => b.classList.toggle('active', b.dataset.person === p));
     const v = $('#viewPerson'); if (v) v.scrollIntoView({ block: 'start' });
   }
@@ -963,12 +964,12 @@ function init() {
     const p = b.dataset.person;
     if (p === 'all') showFamAll();
     else if (p === 'invite') say('好，我幫你發邀請給家人，加進來就能互相關心健康。');
-    else showFamPerson(p, b.dataset.rel, b.dataset.av);
+    else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
   });
   const healthList = $('#healthList');
   if (healthList) healthList.addEventListener('click', e => {
     const r = e.target.closest('.health-row'); if (!r) return;
-    showFamPerson(r.dataset.person, r.dataset.rel, r.dataset.av);
+    showFamPerson(r.dataset.person, r.dataset.rel, r.dataset.init, r.dataset.tint);
   });
   // 週/月趨勢切換
   const trendTabs = $('#trendTabs');
