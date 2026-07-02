@@ -25,7 +25,7 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; min-height: 100%; }
-body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
 
 .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; flex-shrink: 0; }
 
@@ -533,7 +533,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center top;
   display: block;
   /* §6.5 第 2 層降級：靜態圖 + CSS 呼吸（極輕微縮放，像活著、不恐怖谷） */
@@ -826,9 +826,6 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .qc-rsvp .no { background: #F1EFE8; color: var(--muted); }
 .qc-rsvp .wait { background: var(--coral-soft); color: var(--coral-d); }
 
-/* 捲動邊緣淡出（Apple 2026 scroll-edge 的不透明版） */
-.app-shell::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(env(safe-area-inset-top, 0px) + 18px); background: linear-gradient(to bottom, var(--cream) 30%, transparent); pointer-events: none; z-index: 15; }
-.app-shell::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(env(safe-area-inset-bottom, 0px) + 92px); background: linear-gradient(to top, var(--cream) 8%, transparent 55%); pointer-events: none; z-index: 15; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
@@ -908,9 +905,9 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .bc-avatar img, .bc-avatar .ava-img { object-position: center 8% !important; }
 
 /* 通話鈕：像電話——綠色開始、紅色結束 */
-.face-bar.idlebar { justify-content: center; }
-.call-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  min-height: 64px; padding: 16px 34px; border: none; border-radius: 100px;
+
+.call-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+  min-height: 64px; padding: 14px 24px; border: none; border-radius: 100px;
   font-family: var(--sans); font-size: 19px; font-weight: 700; color: #FFF; cursor: pointer;
   box-shadow: var(--shadow-sm); }
 .call-btn .ic { width: 26px; height: 26px; }
@@ -929,3 +926,14 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 沒有全身圖的角色（方形素材）：滿版聰明裁切、臉保持偏上 */
 .face-bg img.sq { object-fit: cover; object-position: center 22%; }
+
+/* 通話控制列：三鈕一列 */
+.ctl-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  width: 64px; height: 64px; border: none; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.92); color: var(--ink-2); font-family: var(--sans); font-size: 11.5px; font-weight: 600; }
+.ctl-btn .ic { width: 22px; height: 22px; }
+.ctl-btn.off { background: rgba(0,0,0,.35); color: rgba(255,255,255,.85); }
+.ctl-btn.off .ic { opacity: .75; }
+.ctl-btn.rec { background: var(--coral-d); color: #FFF; }
+.call-btn.end { background: var(--danger); }
+.call-btn.end .ic { transform: rotate(135deg); }

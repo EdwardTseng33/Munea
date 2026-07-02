@@ -695,11 +695,20 @@ const voiceProvider = {
 };
 window.MuneaVoiceProvider = voiceProvider;
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
+let callConnected = false;
+function setCallToggle(connected) {
+  callConnected = connected;
+  const b = $('#callToggle');
+  if (!b) return;
+  b.classList.toggle('start', !connected);
+  b.classList.toggle('end', connected);
+  const lbl = $('#callToggleLabel');
+  if (lbl) lbl.textContent = connected ? '結束通話' : '開始通話';
+}
+
 async function enterChat() {
-  // 未接通：只亮綠色「開始通話」；接通後才計時
-  if ($('#callIdleBar')) $('#callIdleBar').style.display = '';
-  if ($('#callLiveBar')) $('#callLiveBar').style.display = 'none';
-  setCaption('按下綠色按鈕，開始跟寧寧通話', '');
+  setCallToggle(false);
+  setCaption('按綠色按鈕開始通話', '');
   if (chatOpened) return;
   chatOpened = true;
   activeChatSessionId = makeSessionId('voice');
@@ -1049,8 +1058,7 @@ function setupHscrollHints() {
 }
 
 function connectCall() {
-  if ($('#callIdleBar')) $('#callIdleBar').style.display = 'none';
-  if ($('#callLiveBar')) $('#callLiveBar').style.display = '';
+  setCallToggle(true);
   startCallTimer();
   setCaption('接通了，直接說話就可以', '想到什麼就說，寧寧聽得到');
 }
@@ -1058,7 +1066,17 @@ function connectCall() {
 function init() {
   syncCompanionUI();
   setupHscrollHints();
-  if ($('#callStartBtn')) $('#callStartBtn').addEventListener('click', connectCall);
+  if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
+    if (!callConnected) { connectCall(); }
+    else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); showView('home'); }
+  });
+  if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
+    const b = $('#captionToggle');
+    const box = document.querySelector('.face-caption-box');
+    const off = b.classList.toggle('off');
+    if (box) box.style.display = off ? 'none' : '';
+    toast(off ? '字幕已關閉' : '字幕已開啟');
+  });
   refreshTaskProgress();
   restoreFamilyFeed();
   applyDeveloperBypass();
@@ -1380,7 +1398,6 @@ function init() {
     chatRec.onerror = chatRec.onend;
     chatRec.start();
   });
-  if ($('#chatEnd')) $('#chatEnd').addEventListener('click', () => { completeChatSession('user_ended'); chatOpened = false; showView('home'); });
 
   // 陪伴角色：使用者命名與模板分離
   const companionNameInput = $('#companionNameInput');
