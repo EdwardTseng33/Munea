@@ -858,6 +858,23 @@ function setupAuthControls() {
   updateAuthUI();
 }
 
+(function homeGreeting() {
+  const now = new Date();
+  const h = now.getHours();
+  const wd = ['日','一','二','三','四','五','六'][now.getDay()];
+  const meta = $('#metaDate');
+  if (meta) meta.textContent = `${now.getMonth() + 1}/${now.getDate()} 週${wd}`;
+  const kick = $('#greetKicker'), big = $('#greetBig');
+  let k = '今日概況', b = '今天想先聊聊嗎？';
+  if (h >= 5 && h < 11) { k = '早安'; b = '新的一天，想先聊聊嗎？'; }
+  else if (h >= 11 && h < 14) { k = '午安'; b = '吃飽了嗎？來聊聊吧'; }
+  else if (h >= 14 && h < 18) { k = '午後好'; b = '下午了，想聊聊今天的事嗎？'; }
+  else if (h >= 18 && h < 22) { k = '晚上好'; b = '今天過得怎麼樣？'; }
+  else { k = '夜深了'; b = '睡前想說說話嗎？'; }
+  if (kick) kick.textContent = k;
+  if (big) big.textContent = b;
+})();
+
 let _toastTimer = null;
 function toast(text) {
   const t = $('#toast');

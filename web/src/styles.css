@@ -319,14 +319,14 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .st-src .ic { width: 12px; height: 12px; }
 
 /* ===== 家庭任務卡（家人頁 · 合作型） ===== */
-.quest-card { position: relative; overflow: hidden; background: linear-gradient(140deg, var(--teal), var(--teal-d)); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); color: #fff; margin-bottom: 16px; }
+.quest-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px 16px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
 .quest-card::before { content: ""; position: absolute; right: -34px; top: -34px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.09); }
-.quest-card .qc-kicker { font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .9; display: flex; align-items: center; gap: 7px; margin-bottom: 7px; position: relative; }
+.quest-card .qc-kicker { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--teal-dd); margin-bottom: 6px; }
 .quest-card .qc-kicker .ic { width: 16px; height: 16px; }
-.quest-card .qc-goal { font-family: var(--display); font-size: 20px; font-weight: 800; position: relative; }
-.quest-card .qc-bar { height: 11px; border-radius: 999px; background: rgba(255,255,255,.22); margin: 14px 0 8px; overflow: hidden; position: relative; }
-.quest-card .qc-bar i { display: block; height: 100%; width: 72%; background: #fff; border-radius: 999px; box-shadow: 0 0 12px rgba(255,255,255,.5); }
-.quest-card .qc-num { font-size: 13px; opacity: .92; position: relative; font-weight: 600; }
+.quest-card .qc-goal { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
+.quest-card .qc-bar { display: none; }
+.quest-card 
+.quest-card .qc-num { font-size: 13.5px; color: var(--muted); } .qc-num b { color: var(--coral-d); font-weight: 700; }
 .quest-card .qc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; position: relative; }
 .quest-card .qc-members { display: flex; }
 .quest-card .qc-mem { width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--teal-d); overflow: hidden; margin-left: -10px; background: #cdd; }
@@ -769,3 +769,51 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
   max-width: 82%; text-align: center; opacity: 0; pointer-events: none;
   transition: opacity .25s ease, transform .25s ease; z-index: 60; box-shadow: var(--shadow); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+
+/* ===== 家庭挑戰 · 全家走在進度上（巧思層） ===== */
+.qc-kicker .ic { width: 17px; height: 17px; color: var(--coral-d); }
+.qc-kicker.night .ic { color: #5E7FB6; }
+.qc-days { margin-left: auto; font-size: 12.5px; color: var(--muted); font-weight: 600; background: var(--cream); border-radius: 100px; padding: 3px 10px; }
+.qc-walk { padding: 14px 6px 6px; }
+.qc-track { position: relative; height: 10px; background: var(--mint); border-radius: 100px; margin: 18px 8px 8px; }
+.qc-track > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--teal); border-radius: 100px; }
+.qc-walker { position: absolute; top: 50%; transform: translate(-50%, -78%); width: 30px; height: 30px; border-radius: 50%; border: 2px solid #FFF; box-shadow: var(--shadow-sm); overflow: hidden; }
+.qc-walker .init-ava { font-size: 13px; }
+.qc-walker.lead { width: 36px; height: 36px; z-index: 2; }
+.qc-flag { position: absolute; right: -4px; top: 50%; transform: translate(0, -120%); }
+.qc-flag .ic { width: 18px; height: 18px; color: var(--coral-d); }
+
+/* 早睡挑戰：五個月亮點 */
+.qc-moons { display: flex; gap: 10px; padding: 6px 4px 10px; }
+.qc-moons span { width: 30px; height: 30px; border-radius: 50%; background: var(--cream); border: 1.5px solid var(--line); position: relative; }
+.qc-moons span.on { background: #E4EBF3; border-color: #B9C9DC; }
+.qc-moons span.on::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: radial-gradient(circle at 62% 38%, transparent 42%, #5E7FB6 46%); }
+
+/* ===== 全家狀態：心情小臉 ===== */
+.hr-mood { width: 17px; height: 17px; display: inline-block; vertical-align: -3px; margin-right: 5px; }
+.hr-mood.m-happy { color: #C25716; }
+.hr-mood.m-good { color: #9A6E14; }
+.hr-mood.m-calm { color: #1E7169; }
+.hr-mood.m-tired { color: #5F6A61; }
+
+/* ===== 今天一起完成：時間軸巧思 ===== */
+.task-card { position: relative; }
+.task-card::before { content: ""; position: absolute; left: 43px; top: 26px; bottom: 26px; width: 2px; background: var(--line); border-radius: 2px; }
+.task-item { position: relative; }
+.task-ico { position: relative; z-index: 1; box-shadow: 0 0 0 4px var(--surface); }
+
+/* ===== 記錄簿 · 故事書時間軸 ===== */
+.book-month { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--coral-d); margin: 4px 0 10px 4px; }
+.book-timeline { position: relative; padding-left: 18px; }
+.book-timeline::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--line); border-radius: 2px; }
+.book-timeline .book-entry { position: relative; }
+.book-timeline .book-entry::before { content: ""; position: absolute; left: -18px; top: 24px; width: 10px; height: 10px; border-radius: 50%; background: var(--coral); border: 2px solid #FFF; box-shadow: 0 0 0 1.5px var(--coral-soft); }
+
+/* ===== 家人頁三視圖 · 滑頁切換（像原生 push） ===== */
+.fam-view.active { animation: viewIn .26s ease; }
+@keyframes viewIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+
+/* ===== 寧寧呼吸感（首頁小生命） ===== */
+.bc-avatar img { animation: breathe 4.2s ease-in-out infinite; transform-origin: center; }
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
