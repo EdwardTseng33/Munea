@@ -695,6 +695,8 @@ const voiceProvider = {
 window.MuneaVoiceProvider = voiceProvider;
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 async function enterChat() {
+  startCallTimer();
+  setCaption('接通了，直接說話就可以', '想到什麼就說，寧寧聽得到');
   if (chatOpened) return;
   chatOpened = true;
   activeChatSessionId = makeSessionId('voice');
@@ -721,6 +723,7 @@ async function enterChat() {
 }
 
 function completeChatSession(reason = 'ended') {
+  stopCallTimer();
   if (!activeChatSessionId || !activeChatStartedAt) return;
   const durationMs = Math.max(0, Date.now() - activeChatStartedAt);
   trackProductEvent('voice_session_completed', {
@@ -874,6 +877,28 @@ function setupAuthControls() {
   if (kick) kick.textContent = k;
   if (big) big.textContent = b;
 })();
+
+let _callTimerInt = null, _callSec = 0;
+function startCallTimer() {
+  stopCallTimer(); _callSec = 0;
+  const el = $('#callTimer');
+  _callTimerInt = setInterval(() => {
+    _callSec++;
+    const m = String(Math.floor(_callSec / 60)).padStart(2, '0');
+    const s = String(_callSec % 60).padStart(2, '0');
+    if (el) el.textContent = m + ':' + s;
+  }, 1000);
+}
+function stopCallTimer() { if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
+function setCaption(text, hint) {
+  let box = document.querySelector('.face-caption-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'face-caption-box';
+    document.getElementById('chat')?.appendChild(box);
+  }
+  box.innerHTML = text + (hint ? '<small>' + hint + '</small>' : '');
+}
 
 let _toastTimer = null;
 function pushFamilyFeed(text) {

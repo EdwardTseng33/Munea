@@ -3,6 +3,9 @@
    健康照護可用性：大字、高對比、少元素 */
 
 :root {
+  /* 字級規範 v1（UIUX 定案）：頁大標 serif 30 / 區塊標 20 / 卡標 17 / 內文 17 / 說明 15 / 註記 13——不再任意生字級 */
+  --fs-page: 30px; --fs-section: 20px; --fs-card: 17px; --fs-body: 17px; --fs-sub: 15px; --fs-note: 13px;
+  --fw-title: 700; --fw-em: 600; --fw-body: 400;
   --teal: #3AA8A0; --teal-d: #2E8A83; --teal-dd: #236C66;
   --mint: #E8F2EE; --mint-2: #D9EFE8;
   --cream: #FAF7F2; --cream-2: #FFFFFF; --surface: #FFFFFF;
@@ -340,7 +343,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .react-btn.sent { background: #D29F3E; color: #fff; }
 .react-btn 
 /* 狀態頁數據來源輕量條（連接動作移到設定頁） */
-.src-strip { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); background: var(--mint); border-radius: 14px; padding: 11px 14px; margin-bottom: 16px; line-height: 1.45; }
+.src-strip { display: flex; align-items: center; gap: 12px; background: var(--mint); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; color: var(--ink-2); line-height: 1.55; margin-bottom: 16px; }
 .src-strip .ic { width: 17px; height: 17px; color: var(--teal-d); flex-shrink: 0; }
 .src-strip b { color: var(--teal-dd); font-weight: 600; }
 
@@ -532,8 +535,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 28%;
+  object-fit: contain;
+  object-position: center 42%;
   display: block;
   /* §6.5 第 2 層降級：靜態圖 + CSS 呼吸（極輕微縮放，像活著、不恐怖谷） */
   animation: faceBreath 5.2s ease-in-out infinite;
@@ -553,7 +556,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .avatar-mouth span { display: block; width: 100%; height: 100%; border-radius: 999px;
   background: #4B2C35; border: 3px solid rgba(255,255,255,.76);
   transform-origin: center; transition: transform .08s ease, border-radius .08s ease, height .08s ease, width .08s ease; }
-.face-screen[data-avatar-mode="2d-viseme"] .avatar-mouth { display: block; }
+.face-screen[data-avatar-mode="2d-viseme"] .avatar-mouth { display: none; }
 .face-screen[data-avatar-viseme="rest"] .avatar-mouth span { transform: scaleX(.72) scaleY(.28); }
 .face-screen[data-avatar-viseme="open"] .avatar-mouth span { transform: scaleX(.72) scaleY(1.18); border-radius: 46%; }
 .face-screen[data-avatar-viseme="wide"] .avatar-mouth span { transform: scaleX(1.18) scaleY(.45); }
@@ -847,3 +850,14 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* 通話 HUD（時間/點數）＋常駐字幕框 */
+.face-hud { position: absolute; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 14px); z-index: 6; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.hud-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,.38); color: #FFF; font-size: 14px; font-weight: 600; padding: 7px 13px; border-radius: 100px; }
+.hud-pill .ic { width: 15px; height: 15px; }
+.hud-pill.pts { color: #FFD9AE; }
+.face-caption-box { position: absolute; left: 16px; right: 16px; bottom: 128px; z-index: 6; background: rgba(0,0,0,.42); color: #FFF; border-radius: 18px; padding: 13px 16px; font-size: 17px; line-height: 1.6; text-align: center; }
+.face-caption-box small { display: block; color: rgba(255,255,255,.62); font-size: 12.5px; margin-top: 3px; }
+
+/* 舊單行字幕退役（由常駐字幕框取代、避免疊字） */
+.face-screen .face-caption { display: none !important; }
