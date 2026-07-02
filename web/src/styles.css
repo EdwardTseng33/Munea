@@ -1026,3 +1026,8 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 聊聊頁：提示視窗放在通話按鈕上方（不蓋住按鈕） */
 body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)); }
+
+/* 設定 · 陪伴角色入口列 */
+.sr-ico.comp { overflow: hidden; padding: 0; }
+.sr-ico.comp img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#companionRow .sr-main b { display: block; font-size: 16px; font-weight: 700; color: var(--ink); }

@@ -730,7 +730,7 @@ async function openVoiceSession() {
   if (r && r.reply) {
     setCallHint('正在說話');
     chatHistory.push({ role: 'model', text: r.reply });
-    if (r.audio) playB64(r.audio); else say(r.reply);
+    if (r.audio) playB64(r.audio); else speakChat(r.reply);
     faceSpeak(r.reply);
   } else {
     const fallback = '我在這裡，今天過得好嗎？想聊什麼都可以。';
@@ -988,6 +988,11 @@ function toast(text) {
 
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function say(text) {
+  // 聊聊以外不出聲（2026-07-03 Edward 拍板）：只顯示提示
+  toast(text);
+}
+function speakChat(text) {
+  // 只給聊聊頁用：正式版是寧寧本人的聲音，這裡是開發用的代打
   toast(text);
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
@@ -1173,6 +1178,8 @@ function init() {
   // 連接裝置（狀態頁資料條 / 設定裝置區 → 串接三方裝置引導）
   if ($('#srcStrip')) $('#srcStrip').addEventListener('click', () => showView('connect'));
   if ($('#setDevices')) $('#setDevices').addEventListener('click', () => showView('connect'));
+  if ($('#companionRow')) $('#companionRow').addEventListener('click', () => $('#companionSheet').classList.add('show'));
+  if ($('#companionSheet')) $('#companionSheet').addEventListener('click', e => { if (e.target === $('#companionSheet')) $('#companionSheet').classList.remove('show'); });
   if ($('#setProfile')) $('#setProfile').addEventListener('click', () => say('這裡可以改頭像、名稱、對家人顯示的稱呼、年齡、所在地。'));
   if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView('status'));
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', () => {
@@ -1615,7 +1622,7 @@ function init() {
     if (r && r.reply) {                              // 真腦回話＋真聲音
       setCallHint('正在說話');
       chatHistory.push({ role: 'model', text: r.reply });
-      if (r.audio) playB64(r.audio); else say(r.reply);
+      if (r.audio) playB64(r.audio); else speakChat(r.reply);
       faceSpeak(r.reply);
       trackProductEvent('voice_turn_completed', {
         turnCount: activeChatTurnCount,
@@ -1627,7 +1634,7 @@ function init() {
       const rr = chatReply(t);
       setCallHint('正在說話');
       chatHistory.push({ role: 'model', text: rr });
-      say(rr);
+      speakChat(rr);
       faceSpeak(rr);
       trackProductEvent('voice_session_fallback_used', {
         turnCount: activeChatTurnCount,
