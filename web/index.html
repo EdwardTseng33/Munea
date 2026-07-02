@@ -308,6 +308,16 @@
         </div>
       </div>
 
+      <div class="modal-mask" id="quizModal">
+        <div class="modal">
+          <div class="modal-grab"></div>
+          <h2>機智問答</h2>
+          <p class="modal-sub" id="quizProgress">第 1 題／共 5 題</p>
+          <div class="quiz-q" id="quizQ">—</div>
+          <div class="quiz-opts" id="quizOpts"></div>
+        </div>
+      </div>
+
       <div class="modal-mask" id="chalModal">
         <div class="modal">
           <div class="modal-grab"></div>
@@ -340,7 +350,7 @@
               <button class="mchip" data-day="sun">這週日</button>
               <button class="mchip" data-day="pick">選日期</button>
             </div>
-            <input type="date" class="chal-input" id="evDatePick" style="display:none" />
+            <div class="cal-grid" id="evDatePick" style="display:none"></div>
             <div class="field-label">時段</div>
             <div class="med-chips" id="evTimeChips">
               <button class="mchip" data-t="中午">中午</button>

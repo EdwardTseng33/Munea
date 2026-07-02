@@ -1007,3 +1007,22 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 左上日期 */
 .home-date { font-size: 13.5px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
+
+/* 揪一攤 · 14 天快選月曆（自家設計、不用瀏覽器原生格） */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 2px 0 8px; }
+.cal-cell { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 0 8px; text-align: center; cursor: pointer; line-height: 1.15; }
+.cal-cell small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+.cal-cell b { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--display); }
+.cal-cell.on { background: var(--teal-d); border-color: var(--teal-d); }
+.cal-cell.on small, .cal-cell.on b { color: #FFF; }
+
+/* 機智問答作答 */
+.quiz-q { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.5; margin: 6px 0 14px; min-height: 30px; }
+.quiz-opts { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.quiz-opt { width: 100%; text-align: left; border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; padding: 14px 16px; font-family: var(--sans); font-size: 16px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.quiz-opt.good { border-color: var(--teal-d); background: var(--mint); }
+.quiz-opt.bad { opacity: .45; }
+.quiz-score { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--teal-dd); text-align: center; margin: 14px 0 6px; }
+
+/* 聊聊頁：提示視窗放在通話按鈕上方（不蓋住按鈕） */
+body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)); }

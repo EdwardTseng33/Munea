@@ -1394,12 +1394,31 @@ function init() {
     else if (k === 'sat') d.setDate(d.getDate() + (((6 - d.getDay() + 7) % 7) || 7));
     else if (k === 'sun') d.setDate(d.getDate() + (((0 - d.getDay() + 7) % 7) || 7));
     else if (k === 'pick') {
-      const v = $('#evDatePick') && $('#evDatePick').value;
-      if (v) { const pd = new Date(v + 'T00:00'); if (!isNaN(pd)) return pd; }
+      const on = document.querySelector('#evDatePick .cal-cell.on');
+      if (on) { const pd = new Date(on.dataset.iso + 'T00:00'); if (!isNaN(pd)) return pd; }
     }
     return d;
   }
   function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function buildCalGrid() {
+    const box = $('#evDatePick');
+    if (!box || box.dataset.built) return;
+    box.dataset.built = '1';
+    const now = new Date();
+    let html = '';
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const wdName = i === 0 ? '今天' : (i === 1 ? '明天' : '週' + '日一二三四五六'[d.getDay()]);
+      html += '<button type="button" class="cal-cell" data-iso="' + isoOf(d) + '"><small>' + wdName + '</small><b>' + (d.getDate() === 1 ? (d.getMonth() + 1) + '/1' : d.getDate()) + '</b></button>';
+    }
+    box.innerHTML = html;
+    box.addEventListener('click', e => {
+      const cell = e.target.closest('.cal-cell');
+      if (!cell) return;
+      box.querySelectorAll('.cal-cell').forEach(x => x.classList.remove('on'));
+      cell.classList.add('on');
+    });
+  }
   function loadActs() { try { return JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) { return []; } }
   function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} }
   function renderActCard(act) {
@@ -1414,8 +1433,8 @@ function init() {
       note = '寧寧會親口問阿嬤要不要一起；開始後每個人走多少都看得到';
     } else if (act.kind === 'quiz') {
       chip = act.q + ' 題';
-      goal = '等 ' + act.names.join('、') + ' 答應就開局';
-      note = '寧寧當主持人——阿嬤用說的就能玩；答完看排名';
+      goal = '你的 ' + act.q + ' 題準備好了';
+      note = '點這張卡先作答；寧寧會找其他人玩，都答完看排名';
     } else {
       chip = act.dateLabel;
       goal = act.title + '，誰能到？';
@@ -1426,6 +1445,7 @@ function init() {
       '<span class="qc-days">' + chip + '</span></div>' +
       '<div class="qc-goal">' + goal + '</div>' +
       '<div class="qc-num">' + note + '</div>';
+    if (act.kind === 'quiz') { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
     list.parentNode.insertBefore(card, list);
   }
   if ($('#startChalBtn')) $('#startChalBtn').addEventListener('click', () => {
@@ -1514,9 +1534,61 @@ function init() {
       if (!b2) return;
       box.querySelectorAll('.mchip').forEach(x => x.classList.remove('on'));
       b2.classList.add('on');
-      if (id === '#evDayChips' && $('#evDatePick')) $('#evDatePick').style.display = b2.dataset.day === 'pick' ? '' : 'none';
+      if (id === '#evDayChips' && $('#evDatePick')) {
+        const g = $('#evDatePick');
+        if (b2.dataset.day === 'pick') { buildCalGrid(); g.style.display = ''; } else { g.style.display = 'none'; }
+      }
     });
   });
+  // 機智問答（示範題庫；正式版由寧寧出題、語音作答）
+  const QUIZ_BANK = [
+    { q: '一般建議大人每天走多少步，比較有活力？', opts: ['500 步', '2,000 步', '7,000 步左右', '50,000 步'], a: 2 },
+    { q: '下面哪一個是台灣的傳統節日？', opts: ['感恩節', '端午節', '萬聖節', '復活節'], a: 1 },
+    { q: '睡前做哪件事，通常比較好睡？', opts: ['喝濃茶', '滑手機', '聽輕音樂', '吃宵夜'], a: 2 },
+    { q: '「一暝大一寸」說的是誰？', opts: ['小嬰兒', '大樹', '月亮', '麵團'], a: 0 },
+    { q: '夏天出門，哪件事最重要？', opts: ['多喝水', '穿厚外套', '戴毛帽', '正中午曬太陽'], a: 0 },
+  ];
+  let quizState = null;
+  function startQuiz(act, card) {
+    quizState = { act, card, i: 0, score: 0, n: Math.min(act.q || 5, QUIZ_BANK.length) };
+    renderQuizStep();
+    $('#quizModal').classList.add('show');
+  }
+  function renderQuizStep() {
+    const st = quizState;
+    if (!st) return;
+    const item = QUIZ_BANK[st.i];
+    $('#quizProgress').textContent = '第 ' + (st.i + 1) + ' 題／共 ' + st.n + ' 題';
+    $('#quizQ').textContent = item.q;
+    $('#quizOpts').innerHTML = item.opts.map((o, k) => '<button type="button" class="quiz-opt" data-k="' + k + '">' + o + '</button>').join('');
+  }
+  function finishQuiz() {
+    const st = quizState;
+    $('#quizProgress').textContent = '完成！';
+    $('#quizQ').textContent = '';
+    $('#quizOpts').innerHTML = '<div class="quiz-score">答對 ' + st.score + ' / ' + st.n + ' 題</div>' +
+      '<p class="modal-sub" style="text-align:center">寧寧會找 ' + st.act.names.join('、') + ' 來作答——都答完就看排名</p>' +
+      '<button class="modal-btn" id="quizCloseBtn">好</button>';
+    $('#quizCloseBtn').addEventListener('click', () => $('#quizModal').classList.remove('show'));
+    const note = st.card && st.card.querySelector('.qc-num');
+    if (note) note.textContent = '你答對 ' + st.score + '/' + st.n + '——等 ' + st.act.names.join('、') + ' 作答完看排名';
+    pushFamilyFeed('<b>你</b>完成了機智問答，答對 ' + st.score + '/' + st.n + ' 題——等大家玩完看排名');
+  }
+  if ($('#quizOpts')) $('#quizOpts').addEventListener('click', e => {
+    const btn = e.target.closest('.quiz-opt');
+    if (!btn || !quizState) return;
+    const item = QUIZ_BANK[quizState.i];
+    const k = +btn.dataset.k;
+    [...$('#quizOpts').children].forEach((b2, idx) => {
+      if (idx === item.a) b2.classList.add('good');
+      else if (idx === k) b2.classList.add('bad');
+      b2.disabled = true;
+    });
+    if (k === item.a) quizState.score++;
+    setTimeout(() => { quizState.i++; if (quizState.i >= quizState.n) finishQuiz(); else renderQuizStep(); }, 700);
+  });
+  if ($('#quizModal')) $('#quizModal').addEventListener('click', e => { if (e.target === $('#quizModal')) $('#quizModal').classList.remove('show'); });
+
   // 家庭記錄簿
   if ($('#bookBtn')) $('#bookBtn').addEventListener('click', () => { $('#viewAll').classList.remove('active'); $('#viewPerson').classList.remove('active'); $('#viewBook').classList.add('active'); });
   if ($('#bookBack')) $('#bookBack').addEventListener('click', () => { $('#viewBook').classList.remove('active'); $('#viewAll').classList.add('active'); });
