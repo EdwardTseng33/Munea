@@ -54,7 +54,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .sec-head .more { font-size: 14px; color: var(--teal); font-weight: 600; align-self: flex-end; }
 
 /* ============ 首頁 ============ */
-.home-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 2px; margin-bottom: 14px; }
+.home-top { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 2px; margin-bottom: 14px; }
 .brand { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.025em; display: inline-flex; align-items: center; gap: 8px; color: var(--ink); line-height: 1; }
 .brand .logo-mark { width: 32px; height: 32px; display: inline-grid; place-items: center; flex-shrink: 0; filter: drop-shadow(0 3px 8px rgba(244,162,97,.24)); }
 .brand .logo-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -67,7 +67,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .greeting-wrap { position: relative; margin: 4px 0 16px; }
 .greeting-kicker { font-family: var(--sans); font-size: 12.5px; font-weight: 700; letter-spacing: .1em; color: var(--teal-d); text-transform: uppercase; margin-bottom: 2px; }
 .greeting-big { font-family: var(--serif); max-width: 310px; font-size: 28px; font-weight: 800; color: var(--ink); letter-spacing: 0; line-height: 1.16; }
-.greeting-sun { position: absolute; right: 8px; top: 4px; width: 56px; height: 56px; border-radius: 50%; background: #F6ECD4; opacity: .55; }
 
 /* 安心存摺 條（升級：獎章圓 + 進度感） */
 .wallet-strip { display: flex; align-items: center; gap: 13px; background: var(--mint); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 26px; box-shadow: var(--shadow-sm); }
@@ -183,7 +182,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .stat-tile .st-label { font-size: 13.5px; color: var(--muted); margin-top: 2px; }
 
 .wallet-card { position: relative; overflow: hidden; background: var(--teal-dd); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); color: #fff; margin-bottom: 16px; }
-.wallet-card::before { content: ""; position: absolute; right: -30px; bottom: -40px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.07); }
 .wallet-card .wc-top { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 600; opacity: .92; margin-bottom: 10px; }
 .wallet-card .wc-big { font-family: var(--display); font-size: 27px; font-weight: 800; position: relative; }
 .wallet-card .wc-big small { font-size: 15px; font-weight: 500; opacity: .85; }
@@ -300,7 +298,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 /* ===== Apple Watch 連接卡（狀態頁） ===== */
 .watch-card { position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px; background: #1A2723; border-radius: 22px; padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 13px; color: #fff; }
-.watch-card::before { content: ""; position: absolute; right: -24px; top: -30px; width: 110px; height: 110px; border-radius: 50%; background: rgba(58,168,160,.14); }
 .watch-card .wch-ic { width: 48px; height: 48px; border-radius: 15px; background: rgba(255,255,255,.12); display: grid; place-items: center; color: #fff; flex-shrink: 0; position: relative; }
 .watch-card .wch-ic .ic { width: 26px; height: 26px; }
 .watch-card .wch-body { flex: 1; position: relative; }
@@ -323,7 +320,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 /* ===== 家庭任務卡（家人頁 · 合作型） ===== */
 .quest-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px 16px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
-.quest-card::before { content: ""; position: absolute; right: -34px; top: -34px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.09); }
 .quest-card .qc-kicker { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--teal-dd); margin-bottom: 6px; }
 .quest-card .qc-kicker .ic { width: 16px; height: 16px; }
 .quest-card .qc-goal { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
@@ -559,12 +555,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .face-screen[data-avatar-viseme="wide"] .avatar-mouth span { transform: scaleX(1.18) scaleY(.45); }
 .face-screen[data-avatar-viseme="round"] .avatar-mouth span { transform: scaleX(.62) scaleY(.92); border-radius: 50%; }
 .face-screen[data-avatar-viseme="smile"] .avatar-mouth span { transform: scaleX(1.05) scaleY(.26); border-radius: 999px 999px 40% 40%; }
-
-/* 上深下深的漸層，保證白衣/亮背景下 狀態列、名牌、狀態提示都讀得清 */
-.face-grad { position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background:
-    rgba(8,18,15,.94),
-    rgba(255,255,255,.05); }
 
 .face-screen .status-bar { position: relative; z-index: 5; }
 
@@ -883,7 +873,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .mood-legend i { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-style: normal; font-size: 12px; margin-right: 4px; vertical-align: -6px; }
 
 /* 首頁寧寧頭像：頭靠上緣（Edward 拍板） */
-.bc-avatar img, .bc-avatar .ava-img { object-position: center 2% !important; }
+.bc-avatar img, .bc-avatar .ava-img { object-position: center top !important; }
 
 /* 通話鈕：像電話——綠色開始、紅色結束 */
 

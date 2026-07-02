@@ -6,7 +6,7 @@
       defaultName: '寧寧',
       templateLabel: '溫柔型 · 像家人，會照看',
       thumbAsset: 'avatars/nening-real-female.png',
-      homeAsset: 'avatars/nening-real-female-full.png',
+      homeAsset: 'avatars/nening-hero.png',
       fullAsset: 'avatars/nening-real-female-full.png',
     },
     'companion-real-male': {

@@ -1340,7 +1340,6 @@ function init() {
     toast('好，寧寧會在' + times.join('、') + '提醒吃「' + name + '」');
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
-  if ($('#medPreviewBtn')) $('#medPreviewBtn').addEventListener('click', () => { $('#medMgrModal').classList.remove('show'); showView('med'); });
   if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ——正式版在這裡直接買。'));
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => toast('方案管理：升級、降級、取消都在這裡；發票寄給付費的家人。'));
