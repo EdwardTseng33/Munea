@@ -33,7 +33,7 @@
 
       <div class="butler-card">
         <div class="bc-row">
-          <div class="bc-avatar"><img class="ava-img" src="avatars/nening-real-female-full.png" alt="寧寧"><span class="online"></span></div>
+          <div class="bc-avatar"><img class="ava-img" src="avatars/nening-real-female-full.png" alt="寧寧"></div>
           <div class="bc-info">
             <div class="bc-name"><span id="companionHomeName">寧寧</span></div>
             <span class="bc-status"><span class="dot"></span>今天想先聊聊嗎？</span>
@@ -101,7 +101,8 @@
         <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">20<small> 分</small></div><div class="st-label">活動量</div></div>
       </div>
 
-      <div class="observe-card">
+      <button class="med-entry" id="medEntryStatus"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg><span>用藥提醒 · <b id="medCountLabel">2 種藥</b></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div class="observe-card">
         <span class="oc-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>
         <div class="oc-text"><b>寧寧的觀察：</b>今天心情看起來不錯，早上主動聊了 10 分鐘。膝蓋的痠這兩天有提到，我幫你記著、也跟美華說了一聲。</div>
       </div>
@@ -284,11 +285,21 @@
           <h2>用藥提醒</h2>
           <p class="modal-sub">家人或本人都能設定；寧寧到時間會親口提醒、記錄有沒有吃，漏了會告訴家人。<br>寧寧只當鬧鐘，不是藥師——藥怎麼吃，聽醫生的。</p>
           <div id="medList"></div>
-          <div class="field-label">新增一種藥</div>
-          <input class="chal-input" id="medName" placeholder="藥名（照藥袋抄，例：脈優）" />
-          <div class="med-form-row">
-            <input class="chal-input" id="medTime" placeholder="時間（例：14:00 飯後）" />
-            <input class="chal-input" id="medDays" placeholder="吃多久（例：30 天 / 長期）" />
+          <div class="field-label">新增一種藥（照藥袋抄藥名，其它用點的就好）</div>
+          <input class="chal-input" id="medName" placeholder="藥名（例：脈優）" />
+          <div class="field-label">什麼時候吃（可多選）</div>
+          <div class="med-chips" id="medTimeChips">
+            <button class="mchip" data-t="早餐後 08:00">早餐後</button>
+            <button class="mchip" data-t="午餐後 12:30">午餐後</button>
+            <button class="mchip" data-t="晚餐後 18:30">晚餐後</button>
+            <button class="mchip" data-t="睡前 21:30">睡前</button>
+          </div>
+          <div class="field-label">吃多久</div>
+          <div class="med-chips" id="medDayChips">
+            <button class="mchip" data-d="7 天">7 天</button>
+            <button class="mchip" data-d="30 天">30 天</button>
+            <button class="mchip" data-d="90 天">90 天</button>
+            <button class="mchip on" data-d="長期">長期</button>
           </div>
           <button class="modal-btn" id="medAddBtn">加入提醒</button>
           <button class="plan-btn ghost" id="medPreviewBtn" style="width:100%;margin-top:8px">看看提醒時長輩會看到什麼</button>

@@ -744,6 +744,7 @@ function completeChatSession(reason = 'ended') {
     const mins = Math.max(1, Math.round(_callSec / 60));
     POINTS.used = Math.min(POINTS.total, POINTS.used + mins * 10);
     renderPoints();
+  updateMedCount();
     toast('今天聊得真開心，下次見！');
   }
   stopCallTimer();
@@ -915,6 +916,10 @@ function loadMeds() {
   try { return JSON.parse(localStorage.getItem('munea.meds')) || [
     { name: '脈優 Amlodipine', time: '14:00', days: '長期', by: '美華' },
     { name: '維他命 D', time: '08:30', days: '30 天', by: '阿嬤' }]; } catch (e) { return []; }
+}
+function updateMedCount() {
+  const el = $('#medCountLabel');
+  if (el) el.textContent = loadMeds().length + ' 種藥';
 }
 function renderMedList() {
   const box = $('#medList');
@@ -1109,6 +1114,7 @@ function init() {
   syncCompanionUI();
   setupHscrollHints();
   renderPoints();
+  updateMedCount();
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected) { connectCall(); }
     else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); showView('home'); }
@@ -1306,18 +1312,34 @@ function init() {
   });
   if ($('#medMgrClose')) $('#medMgrClose').addEventListener('click', () => $('#medMgrModal').classList.remove('show'));
   if ($('#medMgrModal')) $('#medMgrModal').addEventListener('click', e => { if (e.target === $('#medMgrModal')) $('#medMgrModal').classList.remove('show'); });
+  const chipToggle = (boxId, single) => {
+    const box = $(boxId);
+    if (!box) return;
+    box.addEventListener('click', e => {
+      const b = e.target.closest('.mchip');
+      if (!b) return;
+      if (single) box.querySelectorAll('.mchip').forEach(x => x.classList.remove('on'));
+      b.classList.toggle('on');
+    });
+  };
+  chipToggle('#medTimeChips', false);
+  chipToggle('#medDayChips', true);
   if ($('#medAddBtn')) $('#medAddBtn').addEventListener('click', () => {
     const name = $('#medName').value.trim();
-    const time = $('#medTime').value.trim();
-    const days = $('#medDays').value.trim();
-    if (!name || !time) { toast('藥名和時間先填好，寧寧才知道怎麼提醒'); return; }
+    const times = [...document.querySelectorAll('#medTimeChips .mchip.on')].map(b => b.dataset.t);
+    const days = document.querySelector('#medDayChips .mchip.on')?.dataset.d || '長期';
+    if (!name) { toast('先寫藥名（照藥袋抄就好）'); return; }
+    if (!times.length) { toast('點一下什麼時候吃（可以選好幾個）'); return; }
     const meds = loadMeds();
-    meds.push({ name, time, days: days || '長期', by: '美華' });
+    meds.push({ name, time: times.join('、'), days, by: '美華' });
     try { localStorage.setItem('munea.meds', JSON.stringify(meds)); } catch (e) {}
-    $('#medName').value = ''; $('#medTime').value = ''; $('#medDays').value = '';
+    $('#medName').value = '';
+    document.querySelectorAll('#medTimeChips .mchip.on').forEach(x => x.classList.remove('on'));
     renderMedList();
-    toast('好，寧寧會在 ' + time + ' 提醒吃「' + name + '」');
+    updateMedCount();
+    toast('好，寧寧會在' + times.join('、') + '提醒吃「' + name + '」');
   });
+  if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medPreviewBtn')) $('#medPreviewBtn').addEventListener('click', () => { $('#medMgrModal').classList.remove('show'); showView('med'); });
   if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ——正式版在這裡直接買。'));

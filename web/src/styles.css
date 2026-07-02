@@ -50,7 +50,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* 區塊標題三層次（Careon 手法） */
 .sec-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 26px 0 13px; }
 .sec-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--coral-d); margin-bottom: 3px; }
-.sec-head h2 { font-size: 19px; font-weight: 800; color: var(--ink); }
+.sec-head h2 { font-size: 20px; font-weight: 800; color: var(--ink); }
 .sec-head .more { font-size: 14px; color: var(--teal); font-weight: 600; align-self: flex-end; }
 
 /* ============ 首頁 ============ */
@@ -66,7 +66,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 .greeting-wrap { position: relative; margin: 4px 0 16px; }
 .greeting-kicker { font-family: var(--sans); font-size: 12.5px; font-weight: 700; letter-spacing: .1em; color: var(--teal-d); text-transform: uppercase; margin-bottom: 2px; }
-.greeting-big { font-family: var(--serif); max-width: 310px; font-size: 29px; font-weight: 800; color: var(--ink); letter-spacing: 0; line-height: 1.16; }
+.greeting-big { font-family: var(--serif); max-width: 310px; font-size: 28px; font-weight: 800; color: var(--ink); letter-spacing: 0; line-height: 1.16; }
 .greeting-sun { position: absolute; right: 8px; top: 4px; width: 56px; height: 56px; border-radius: 50%; background: #F6ECD4; opacity: .55; }
 
 /* 安心存摺 條（升級：獎章圓 + 進度感） */
@@ -172,7 +172,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* ============ 狀態頁 ============ */
 .page-head { margin: 6px 0 18px; }
 .page-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--coral-d); margin-bottom: 4px; }
-.page-title { font-size: 27px; font-weight: 800; color: var(--ink); }
+.page-title { font-family: var(--serif); font-size: 28px; font-weight: 800; color: var(--ink); }
 .page-sub { font-size: 14px; color: var(--muted); margin-top: 4px; }
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
 .stat-tile { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-sm); }
@@ -899,7 +899,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .mood-legend i { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-style: normal; font-size: 12px; margin-right: 4px; vertical-align: -6px; }
 
 /* 首頁寧寧頭像：頭靠上緣（Edward 拍板） */
-.bc-avatar img, .bc-avatar .ava-img { object-position: center 8% !important; }
+.bc-avatar img, .bc-avatar .ava-img { object-position: center 2% !important; }
 
 /* 通話鈕：像電話——綠色開始、紅色結束 */
 
@@ -992,3 +992,14 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .rg-label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
 .rsvp-group.yes .rg-label { color: var(--teal-dd); }
 .rsvp-group.wait .rg-label { color: var(--coral-d); }
+
+/* 狀態頁用藥入口 */
+.med-entry { display: flex; align-items: center; gap: 12px; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 15px 16px; margin-bottom: 16px; font-family: var(--sans); font-size: 16px; color: var(--ink); cursor: pointer; }
+.med-entry .ic { width: 20px; height: 20px; color: var(--teal-dd); }
+.med-entry .chev { margin-left: auto; color: var(--muted); width: 17px; height: 17px; }
+.med-entry b { color: var(--teal-dd); }
+
+/* 用藥設定 · 點選籤 */
+.med-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.mchip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-family: var(--sans); font-size: 15px; font-weight: 600; padding: 10px 16px; border-radius: 100px; min-height: 44px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+.mchip.on { background: var(--teal-d); border-color: var(--teal-d); color: #FFF; }
