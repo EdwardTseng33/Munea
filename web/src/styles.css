@@ -886,3 +886,37 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .hscroll-more .ic { width: 15px; height: 15px; }
 .hscroll-wrap.at-end .hscroll-more { opacity: 0; }
 .hscroll-more, .hscroll-wrap::after { transition: opacity .25s ease; }
+
+/* 心情今天卡（個人頁只放今天；週/月在圖表頁） */
+.mood-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+.mc-head { display: flex; align-items: center; gap: 12px; }
+.mc-face { position: relative; width: 52px; height: 52px; border-radius: 50%; background: #FBE7D2; display: grid; place-items: center; flex-shrink: 0; }
+.mc-face .ic { width: 30px; height: 30px; color: #C25716; }
+.mc-dot { position: absolute; right: -1px; top: -1px; width: 13px; height: 13px; border-radius: 50%; background: #6E4488; border: 2.5px solid #FFF; display: none; }
+.mc-face.mixed .mc-dot { display: block; }
+.mc-title { font-family: var(--serif); font-size: 18px; font-weight: 700; color: var(--ink); }
+.mc-sub { font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+.mc-obs { font-size: 14.5px; color: var(--ink); margin: 12px 0 8px; line-height: 1.7; }
+.mc-obs span { color: var(--muted); margin-right: 2px; }
+.mc-topics i { display: inline-block; font-style: normal; background: var(--mint); color: var(--teal-dd); font-size: 13px; padding: 3px 12px; border-radius: 100px; margin: 0 6px 6px 0; }
+.mc-more { display: flex; align-items: center; justify-content: space-between; width: 100%; border: none; background: none; border-top: 1px solid var(--line); margin-top: 8px; padding: 12px 2px 2px; font-size: 15px; font-weight: 600; color: var(--teal-dd); cursor: pointer; min-height: 44px; }
+.mc-more .ic { width: 16px; height: 16px; }
+
+/* 心情趨勢頁 */
+.mood-range { margin-bottom: 14px; display: inline-flex; }
+.mood-week { display: flex; gap: 6px; margin-bottom: 14px; }
+.mood-week .md { flex: 1; text-align: center; border: none; background: none; cursor: pointer; padding: 0; }
+.mood-week .md .mcirc { position: relative; width: 100%; aspect-ratio: 1; max-width: 44px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; }
+.mood-week .md .mcirc .ic { width: 22px; height: 22px; }
+.mood-week .md.today .mcirc { outline: 2.5px solid var(--coral-d); outline-offset: 2px; }
+.mood-week .md .mday { font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+.mood-week .md.today .mday { color: var(--ink); font-weight: 700; }
+.mood-week .md .mixdot { position: absolute; right: -1px; top: -1px; width: 11px; height: 11px; border-radius: 50%; background: #6E4488; border: 2px solid #FFF; }
+.mood-day-detail { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; min-height: 60px; }
+.mood-day-detail .dd-date { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.mood-day-detail .dd-row { display: flex; gap: 9px; align-items: flex-start; font-size: 14.5px; color: var(--ink); line-height: 1.6; margin-bottom: 8px; }
+.mood-day-detail .dd-row .ic { width: 19px; height: 19px; flex-shrink: 0; margin-top: 2px; }
+.mood-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-bottom: 14px; }
+.mood-month b { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; }
+.mood-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; font-size: 13px; color: var(--muted); }
+.mood-legend i { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-style: normal; font-size: 12px; margin-right: 4px; vertical-align: -6px; }

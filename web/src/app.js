@@ -975,6 +975,58 @@ function toggleTask(item) {
   say(CHEERS[item.dataset.task] || '做得很好。');
 }
 
+// 心情圖譜 v2（六類）；之後接 /wellbeing/trend 真資料
+const MOODS = {
+  happy:  { label: '開心', bg: '#FBE7D2', fg: '#C25716', face: 'M9 10h.01M15 10h.01M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5' },
+  glad:   { label: '愉快', bg: '#F6ECD4', fg: '#9A6E14', face: 'M9 10h.01M15 10h.01M8.5 14.5s1.2 1.8 3.5 1.8 3.5-1.8 3.5-1.8' },
+  calm:   { label: '平穩', bg: '#E8F2EE', fg: '#1E7169', face: 'M9 10h.01M15 10h.01M9 15h6' },
+  tired:  { label: '疲累', bg: '#EEEFEA', fg: '#5F6A61', face: 'M9 10h.01M15 10h.01M9.5 15.5h5' },
+  down:   { label: '低落', bg: '#E4EBF3', fg: '#3F5F80', face: 'M9 10h.01M15 10h.01M8.5 15.5s1.2-1.8 3.5-1.8 3.5 1.8 3.5 1.8' },
+  upset:  { label: '煩躁', bg: '#ECE1F0', fg: '#6E4488', face: 'M8.5 9.5l2 1M15.5 9.5l-2 1M8.5 15.5s1.2-1.5 3.5-1.5 3.5 1.5 3.5 1.5' },
+};
+const MOOD_WEEK_DEMO = [
+  { d: '五', mood: 'happy', chats: [{ m: 'happy', t: '聊到孫子回來，笑聲不斷' }] },
+  { d: '六', mood: 'glad',  chats: [{ m: 'glad', t: '天氣好，去公園走了一圈回來心情不錯' }] },
+  { d: '日', mood: 'calm',  chats: [{ m: 'calm', t: '平常的一天，聊了午餐吃什麼' }] },
+  { d: '一', mood: 'down',  chats: [{ m: 'down', t: '翻到老伴的照片，聊著聊著有點想念' }] },
+  { d: '二', mood: 'tired', chats: [{ m: 'tired', t: '昨晚沒睡好，講話比較沒力氣' }] },
+  { d: '三', mood: 'glad',  chats: [{ m: 'glad', t: '韓劇大結局，聊得很起勁' }] },
+  { d: '今天', mood: 'happy', mixed: true, chats: [
+    { m: 'upset', t: '早上：推銷電話一直來，有點火氣，寧寧陪她抱怨了一會兒' },
+    { m: 'happy', t: '傍晚：小寶來電話說畢業了，笑得合不攏嘴' } ] },
+];
+function moodFaceSvg(key, size) {
+  const m = MOODS[key] || MOODS.calm;
+  return '<svg class="ic" viewBox="0 0 24 24" style="color:' + m.fg + ';width:' + size + 'px;height:' + size + 'px"><circle cx="12" cy="12" r="9"/><path d="' + m.face + '"/></svg>';
+}
+function renderMoodWeek() {
+  const wrap = $('#moodWeek');
+  if (!wrap) return;
+  wrap.innerHTML = MOOD_WEEK_DEMO.map((day, i) => {
+    const m = MOODS[day.mood];
+    const today = day.d === '今天';
+    return '<button class="md' + (today ? ' today' : '') + '" data-i="' + i + '">' +
+      '<span class="mcirc" style="background:' + m.bg + '">' + moodFaceSvg(day.mood, 22) +
+      (day.mixed ? '<span class="mixdot"></span>' : '') + '</span>' +
+      '<span class="mday">' + day.d + '</span></button>';
+  }).join('');
+  wrap.querySelectorAll('.md').forEach(b => b.addEventListener('click', () => showMoodDay(+b.dataset.i)));
+  showMoodDay(MOOD_WEEK_DEMO.length - 1);
+}
+function showMoodDay(i) {
+  const day = MOOD_WEEK_DEMO[i];
+  const box = $('#moodDayDetail');
+  if (!box || !day) return;
+  box.innerHTML = '<div class="dd-date">' + (day.d === '今天' ? '今天' : '週' + day.d) + ' · 聊了 ' + day.chats.length + ' 次</div>' +
+    day.chats.map(c => '<div class="dd-row">' + moodFaceSvg(c.m, 19) + '<span>' + c.t + '</span></div>').join('');
+}
+function renderMoodMonth() {
+  const wrap = $('#moodMonth');
+  if (!wrap || wrap.childElementCount) return;
+  const seq = ['calm','glad','happy','calm','tired','glad','calm','down','calm','glad','happy','glad','calm','calm','tired','glad','calm','happy','glad','calm','down','tired','glad','calm','happy','glad','calm','happy'];
+  wrap.innerHTML = seq.map(k => '<b style="background:' + MOODS[k].bg + '" title="' + MOODS[k].label + '"></b>').join('');
+}
+
 const _hscrollUpdaters = [];
 function refreshHscrollHints() { _hscrollUpdaters.forEach(u => u()); }
 function setupHscrollHints() {
@@ -1076,6 +1128,31 @@ function init() {
     $$('.fam-switch-item').forEach(b => b.classList.toggle('active', b.dataset.person === 'all'));
   }
   if ($('#personBack')) $('#personBack').addEventListener('click', showFamAll);
+  if ($('#moodTrendBtn')) $('#moodTrendBtn').addEventListener('click', () => {
+    $('#viewPerson').classList.remove('active');
+    $('#viewMood').classList.add('active');
+    const n = $('#ptName') ? $('#ptName').textContent : '阿嬤';
+    if ($('#moodTitle')) $('#moodTitle').textContent = n + '的心情';
+    if ($('#moodBack')) $('#moodBack').lastChild.textContent = '回到' + n;
+    renderMoodWeek();
+    const lg = $('#moodLegend');
+    if (lg && !lg.childElementCount) lg.innerHTML = Object.keys(MOODS).map(k =>
+      '<span><i style="background:' + MOODS[k].bg + '">' + moodFaceSvg(k, 14) + '</i>' + MOODS[k].label + '</span>').join('');
+  });
+  if ($('#moodBack')) $('#moodBack').addEventListener('click', () => {
+    $('#viewMood').classList.remove('active');
+    $('#viewPerson').classList.add('active');
+  });
+  if ($('#moodRange')) $('#moodRange').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    $('#moodRange').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    const month = b.dataset.r === 'month';
+    $('#moodWeek').style.display = month ? 'none' : '';
+    $('#moodDayDetail').style.display = month ? 'none' : '';
+    $('#moodMonth').style.display = month ? '' : 'none';
+    if (month) renderMoodMonth();
+  });
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ——正式版在這裡直接買。'));
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => toast('方案管理：升級、降級、取消都在這裡；發票寄給付費的家人。'));
   const famSwitch = $('#famSwitch');

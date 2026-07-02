@@ -192,6 +192,19 @@
           <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 小時</small></div><div class="st-label">昨晚睡眠</div></div>
           <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val">2<small>/3</small></div><div class="st-label">今天用藥</div></div>
         </div>
+
+        <div class="mood-card" id="moodToday">
+          <div class="mc-head">
+            <span class="mc-face" id="mcFace"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5"/></svg><i class="mc-dot" id="mcDot"></i></span>
+            <div>
+              <div class="mc-title" id="mcTitle">今天聊得很開心</div>
+              <div class="mc-sub" id="mcSub">和寧寧聊了 2 次 · 有一小段有點火氣</div>
+            </div>
+          </div>
+          <div class="mc-obs" id="mcObs"><span>聲音</span> 有精神　<span>聊天</span> 話匣子全開</div>
+          <div class="mc-topics" id="mcTopics"><i>孫子畢業</i><i>推銷電話</i></div>
+          <button class="mc-more" id="moodTrendBtn">看一週心情 <svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
         <div class="trend-card">
           <div class="trend-head"><h3>健康趨勢</h3><div class="trend-tabs" id="trendTabs"><button class="active" data-range="week">本週</button><button data-range="month">本月</button></div></div>
           <div class="trend-bars" id="trendBars">
@@ -223,6 +236,16 @@
       </div>
 
       <!-- 家庭記錄簿 -->
+
+      <div class="fam-view" id="viewMood">
+        <button class="pv-back" id="moodBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>回到阿嬤</button>
+        <div class="page-head"><h1 class="page-title" id="moodTitle">阿嬤的心情</h1></div>
+        <div class="trend-tabs mood-range" id="moodRange"><button class="active" data-r="week">這一週</button><button data-r="month">這個月</button></div>
+        <div class="mood-week" id="moodWeek"></div>
+        <div class="mood-month" id="moodMonth" style="display:none"></div>
+        <div class="mood-day-detail" id="moodDayDetail"></div>
+        <div class="mood-legend" id="moodLegend"></div>
+      </div>
       <div class="fam-view" id="viewBook">
         <button class="back-btn" id="bookBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>回全家</button>
         <div class="page-head"><h1 class="page-title">家庭記錄簿</h1></div>
