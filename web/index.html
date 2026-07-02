@@ -265,6 +265,24 @@
       </div>
 
       <!-- 發起挑戰 面板 -->
+      <div class="modal-mask" id="medMgrModal">
+        <div class="modal">
+          <div class="modal-grab"></div>
+          <h2>用藥提醒</h2>
+          <p class="modal-sub">家人或本人都能設定；寧寧到時間會親口提醒、記錄有沒有吃，漏了會告訴家人。<br>寧寧只當鬧鐘，不是藥師——藥怎麼吃，聽醫生的。</p>
+          <div id="medList"></div>
+          <div class="field-label">新增一種藥</div>
+          <input class="chal-input" id="medName" placeholder="藥名（照藥袋抄，例：脈優）" />
+          <div class="med-form-row">
+            <input class="chal-input" id="medTime" placeholder="時間（例：14:00 飯後）" />
+            <input class="chal-input" id="medDays" placeholder="吃多久（例：30 天 / 長期）" />
+          </div>
+          <button class="modal-btn" id="medAddBtn">加入提醒</button>
+          <button class="plan-btn ghost" id="medPreviewBtn" style="width:100%;margin-top:8px">看看提醒時長輩會看到什麼</button>
+          <button class="auth-close" id="medMgrClose" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </div>
+      </div>
+
       <div class="modal-mask" id="chalModal">
         <div class="modal">
           <div class="modal-grab"></div>
@@ -461,6 +479,7 @@
   <section class="screen med-screen" id="med">
     <div class="med-top">
       <div class="call-pill"><span class="dot"></span>寧寧<span class="timer">03:24</span></div>
+      <button class="nav-back med-back" id="medBackBtn" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="med-avatar-tag">通話中</div>
       <div class="med-say">寧寧：吃藥時間到囉</div>
     </div>

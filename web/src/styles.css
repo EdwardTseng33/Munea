@@ -569,7 +569,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .face-screen .status-bar { position: relative; z-index: 5; }
 
 /* 左上 角色名牌 */
-.face-name { position: absolute; left: 18px; top: 52px; z-index: 6;
+.face-name { position: absolute; left: 16px; top: calc(env(safe-area-inset-top, 0px) + 16px); z-index: 6;
   display: inline-flex; align-items: center; gap: 8px;
   background: rgba(0,0,0,.34); backdrop-filter: blur(8px);
   color: #fff; font-family: var(--display); font-weight: 600; font-size: 16px;
@@ -583,7 +583,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   font-size: 12.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ===== 狀態指示層（依 data-state 顯示其一）===== */
-.face-cue { position: absolute; left: 0; right: 0; z-index: 6; bottom: 204px;
+.face-cue { position: absolute; left: 0; right: 0; z-index: 6; bottom: calc(268px + env(safe-area-inset-bottom));
   display: flex; justify-content: center; pointer-events: none; min-height: 30px; }
 .face-cue .cue { display: none; align-items: center; gap: 7px;
   background: rgba(0,0,0,.36); backdrop-filter: blur(8px); border-radius: 999px; padding: 10px 18px; }
@@ -630,7 +630,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 }
 
 /* ===== 底部操作列：超大結束鈕（固定）＋ 麥克風 ===== */
-.face-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 7;
+.face-bar { position: absolute; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 7;
   display: flex; align-items: center; justify-content: center; gap: 22px;
   padding: 18px 24px calc(26px + env(safe-area-inset-bottom)); }
 
@@ -653,7 +653,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .face-end .ic { width: 26px; height: 26px; color: #fff; }
 
 /* 全屏臉時隱藏底部分頁（沉浸、像通話中）—— showView 已加 .hidden，這裡兜底 */
-#chat.active ~ .tab-bar { display: none; }
+
 
 .tab-bar {
   position: absolute;
@@ -832,7 +832,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .hud-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,.38); color: #FFF; font-size: 14px; font-weight: 600; padding: 7px 13px; border-radius: 100px; }
 .hud-pill .ic { width: 15px; height: 15px; }
 .hud-pill.pts { color: #FFD9AE; }
-.face-caption-box { position: absolute; left: 16px; right: 16px; bottom: 128px; z-index: 6; background: rgba(0,0,0,.42); color: #FFF; border-radius: 18px; padding: 13px 16px; font-size: 17px; line-height: 1.6; text-align: center; }
+.face-caption-box { position: absolute; left: 16px; right: 16px; bottom: calc(196px + env(safe-area-inset-bottom)); z-index: 6; background: rgba(0,0,0,.42); color: #FFF; border-radius: 18px; padding: 13px 16px; font-size: 17px; line-height: 1.6; text-align: center; }
 .face-caption-box small { display: block; color: rgba(255,255,255,.62); font-size: 12.5px; margin-top: 3px; }
 
 /* 舊單行字幕退役（由常駐字幕框取代、避免疊字） */
@@ -942,3 +942,16 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .nav-title { text-align: center; font-size: 17px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .chal-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(58,168,160,.18); }
+
+/* 開始通話 · 呼吸光環（招牌巧思；系統設「減少動態」時自動靜止） */
+.call-btn.start { position: relative; }
+.call-btn.start::before { content: ""; position: absolute; inset: -7px; border-radius: 100px;
+  border: 2px solid rgba(46,158,91,.45); animation: callBreath 2.6s ease-in-out infinite; pointer-events: none; }
+@keyframes callBreath { 0%,100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.06); opacity: .15; } }
+
+/* 提醒管理面板 */
+.med-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; }
+.med-row b { font-size: 15.5px; color: var(--ink); display: block; }
+.med-row span { font-size: 13px; color: var(--muted); }
+.med-form-row { display: flex; gap: 8px; }
+.med-back { position: absolute; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 8; background: rgba(255,255,255,.16); color: #FFF; }

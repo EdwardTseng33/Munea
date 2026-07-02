@@ -5,7 +5,7 @@
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
-const OVERLAYS = ['med', 'chat', 'connect'];
+const OVERLAYS = ['med', 'connect'];
 const AVATAR_ENGINE_MODES = Object.freeze({
   STATIC_CSS: 'static-css',
   TWO_D_VISEME: '2d-viseme',
@@ -911,6 +911,18 @@ function setupAuthControls() {
   if (big) big.textContent = b;
 })();
 
+function loadMeds() {
+  try { return JSON.parse(localStorage.getItem('munea.meds')) || [
+    { name: '脈優 Amlodipine', time: '14:00', days: '長期', by: '美華' },
+    { name: '維他命 D', time: '08:30', days: '30 天', by: '阿嬤' }]; } catch (e) { return []; }
+}
+function renderMedList() {
+  const box = $('#medList');
+  if (!box) return;
+  box.innerHTML = loadMeds().map(m =>
+    '<div class="med-row"><div><b>' + m.name + '</b><span>' + m.time + ' · ' + m.days + ' · ' + m.by + '設定</span></div></div>').join('');
+}
+
 const POINTS = { total: 800, used: 320 };
 function renderPoints() {
   const left = POINTS.total - POINTS.used;
@@ -1246,6 +1258,27 @@ function init() {
     $('#moodMonth').style.display = month ? '' : 'none';
     if (month) renderMoodMonth();
   });
+  const setReminders = [...document.querySelectorAll('.set-row')].find(r => r.textContent.includes('提醒管理'));
+  if (setReminders) setReminders.addEventListener('click', () => {
+    const mask = $('#medMgrModal');
+    if (mask) { renderMedList(); mask.classList.add('show'); }
+  });
+  if ($('#medMgrClose')) $('#medMgrClose').addEventListener('click', () => $('#medMgrModal').classList.remove('show'));
+  if ($('#medMgrModal')) $('#medMgrModal').addEventListener('click', e => { if (e.target === $('#medMgrModal')) $('#medMgrModal').classList.remove('show'); });
+  if ($('#medAddBtn')) $('#medAddBtn').addEventListener('click', () => {
+    const name = $('#medName').value.trim();
+    const time = $('#medTime').value.trim();
+    const days = $('#medDays').value.trim();
+    if (!name || !time) { toast('藥名和時間先填好，寧寧才知道怎麼提醒'); return; }
+    const meds = loadMeds();
+    meds.push({ name, time, days: days || '長期', by: '美華' });
+    try { localStorage.setItem('munea.meds', JSON.stringify(meds)); } catch (e) {}
+    $('#medName').value = ''; $('#medTime').value = ''; $('#medDays').value = '';
+    renderMedList();
+    toast('好，寧寧會在 ' + time + ' 提醒吃「' + name + '」');
+  });
+  if ($('#medPreviewBtn')) $('#medPreviewBtn').addEventListener('click', () => { $('#medMgrModal').classList.remove('show'); showView('med'); });
+  if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ——正式版在這裡直接買。'));
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => toast('方案管理：升級、降級、取消都在這裡；發票寄給付費的家人。'));
   const famSwitch = $('#famSwitch');
