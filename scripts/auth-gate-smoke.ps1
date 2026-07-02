@@ -9,12 +9,18 @@ Set-Location $root
 function Resolve-Python {
   $venvPython = Join-Path $root ".venv\Scripts\python.exe"
   if (Test-Path $venvPython) {
-    return $venvPython
+    & $venvPython --version | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      return $venvPython
+    }
   }
 
-  $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+  $pythonCommand = Get-Command python.exe -ErrorAction SilentlyContinue
   if ($pythonCommand) {
-    return $pythonCommand.Source
+    & $pythonCommand.Source --version | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      return $pythonCommand.Source
+    }
   }
 
   throw "Python runtime not found. Create .venv or add python to PATH."

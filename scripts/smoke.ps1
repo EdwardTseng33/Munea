@@ -11,12 +11,18 @@ Set-Location $root
 function Resolve-Python {
   $venvPython = Join-Path $root ".venv\Scripts\python.exe"
   if (Test-Path $venvPython) {
-    return $venvPython
+    & $venvPython --version | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      return $venvPython
+    }
   }
 
-  $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+  $pythonCommand = Get-Command python.exe -ErrorAction SilentlyContinue
   if ($pythonCommand) {
-    return $pythonCommand.Source
+    & $pythonCommand.Source --version | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      return $pythonCommand.Source
+    }
   }
 
   throw "Python runtime not found. Create .venv or add python to PATH."
@@ -58,6 +64,9 @@ function Invoke-PythonBlock {
 
 Step "Python compile"
 & $Python -m py_compile engine\server.py engine\env_loader.py engine\supabase_adapter.py engine\model_router.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py scripts\supabase_doctor.py
+if ($LASTEXITCODE -ne 0) {
+  throw "Python compile failed with exit code $LASTEXITCODE"
+}
 Pass "Python files compile"
 
 Step "JSON parse"
