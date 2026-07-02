@@ -15,7 +15,7 @@
   --line: #E7E0D6;
   --deep: #16241F; --deep-2: #1E342C; --deep-card: #2A3D36;
   --danger: #E55B4D;
-  --radius: 24px; --radius-lg: 30px; --radius-sm: 16px;
+  --radius: 20px; --radius-lg: 26px; --radius-sm: 16px;
   --shadow: 0 16px 38px -20px rgba(31,60,52,.28);
   --shadow-sm: 0 8px 20px -14px rgba(31,60,52,.22);
   --shadow-lg: 0 30px 60px -28px rgba(31,60,52,.34);
@@ -75,7 +75,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .wallet-strip .ws-text b { color: var(--teal-dd); font-family: var(--display); font-weight: 700; }
 
 /* AI 陪伴入口：資訊分層 + 人物存在感 */
-.butler-card { position: relative; border-radius: 24px; padding: 18px; margin-bottom: 24px; overflow: hidden; box-shadow: var(--shadow-sm); background: var(--surface); border: 1px solid var(--line); }
+.butler-card { position: relative; border-radius: 20px; padding: 18px; margin-bottom: 24px; overflow: hidden; box-shadow: var(--shadow-sm); background: var(--surface); border: 1px solid var(--line); }
 .butler-card::before { content: none; }
 .butler-card::after { content: none; }
 .bc-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 110px; align-items: center; gap: 12px; margin-bottom: 16px; min-height: 132px; }
@@ -105,10 +105,10 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .task-item:active { background: var(--cream-2); }
 .task-item + .task-item { border-top: 1px solid var(--line); }
 .task-ico { width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; flex-shrink: 0; color: var(--teal-d); }
-.task-ico.pill { background: var(--mint); } .task-ico.walk { background: var(--coral-soft); color: var(--coral); } .task-ico.chat { background: #EAF0FB; color: #5B7CB5; }
+.task-ico.pill { background: var(--mint); } .task-ico.walk { background: var(--coral-soft); color: var(--coral); } .task-ico.chat { background: var(--mint); color: var(--teal-d); }
 .task-body { flex: 1; }
-.task-title { font-size: 18px; font-weight: 700; color: var(--ink); }
-.task-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.task-title { font-size: 17px; font-weight: 700; color: var(--ink); }
+.task-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .task-check { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; color: transparent; transition: .2s; }
 .task-item.done .task-check { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.05); }
 .task-item.done .task-title { color: var(--muted); }
@@ -177,9 +177,9 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .stat-tile { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-sm); }
 .stat-tile .st-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--mint); margin-bottom: 10px; color: var(--teal-d); }
 .stat-tile .st-ico.warn { background: var(--coral-soft); color: var(--coral); }
-.stat-tile .st-val { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); }
+.stat-tile .st-val { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--ink); }
 .stat-tile .st-val small { font-size: 14px; color: var(--muted); font-weight: 500; }
-.stat-tile .st-label { font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+.stat-tile .st-label { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
 .wallet-card { position: relative; overflow: hidden; background: var(--teal-dd); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); color: #fff; margin-bottom: 16px; }
 .wallet-card .wc-top { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 600; opacity: .92; margin-bottom: 10px; }
@@ -664,6 +664,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 }
 .tab-bar.hidden { display: none; }
 .tab-btn {
+  position: relative;
   min-width: 0;
   border: none;
   background: transparent;
@@ -1034,3 +1035,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 
 /* 已結束卡 · 收版狀態腳註 */
 .qc-life { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 9px; margin-top: 10px; }
+
+/* 導覽列選中訊號（中央聊聊鈕太搶、光靠文字色不夠） */
+.tab-btn.active:not(.center)::before { content: ""; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 22px; height: 3px; border-radius: 3px; background: var(--teal-d); }
+.field-label.sect-new { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 24px; }
