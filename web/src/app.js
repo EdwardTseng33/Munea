@@ -1145,6 +1145,7 @@ function init() {
     $('#viewAll').classList.remove('active');
     $('#viewPerson').classList.add('active');
     if ($('#ptName')) $('#ptName').textContent = p;
+    if ($('#personNavTitle')) $('#personNavTitle').textContent = p;
     if ($('#ptRel')) $('#ptRel').textContent = rel || '';
     const pa = $('#ptAv');
     if (pa) { pa.textContent = init || (p || '')[0] || ''; pa.className = 'init-ava init-ava-lg ' + (tint || ''); }
@@ -1162,7 +1163,6 @@ function init() {
     $('#viewMood').classList.add('active');
     const n = $('#ptName') ? $('#ptName').textContent : '阿嬤';
     if ($('#moodTitle')) $('#moodTitle').textContent = n + '的心情';
-    if ($('#moodBack')) $('#moodBack').lastChild.textContent = '回到' + n;
     renderMoodWeek();
     const lg = $('#moodLegend');
     if (lg && !lg.childElementCount) lg.innerHTML = Object.keys(MOODS).map(k =>

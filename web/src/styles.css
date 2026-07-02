@@ -42,7 +42,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .status-bar .sb-icons .ic { width: 17px; height: 17px; stroke-width: 2.2; }
 .status-bar.on-dark { color: #fff; }
 
-.screen { display: none; height: 100%; overflow-y: auto; padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 6px); padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+.screen { display: none; height: 100%; overflow-y: auto; padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 6px); padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
 .screen.active { display: block; animation: fade .35s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 .pad { padding: 4px 20px 16px; }
@@ -662,50 +662,47 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   right: 0;
   bottom: 0;
   z-index: 20;
-  padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+  padding: 6px 4px calc(8px + env(safe-area-inset-bottom));
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: center;
-  background: #FFFFFF;
-  border-top: 1px solid var(--line);
-  border-radius: 26px 26px 0 0;
-  box-shadow: 0 -10px 30px -24px rgba(31,60,52,.35);
+  align-items: end;
+  background: rgba(255,255,255,.98);
+  border-top: 0.5px solid var(--line);
 }
 .tab-bar.hidden { display: none; }
 .tab-btn {
   min-width: 0;
-  min-height: 56px;
   border: none;
   background: transparent;
-  color: var(--muted);
+  color: #8A9893;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 3px;
-  padding: 4px 0 8px;
-  position: relative;
+  padding: 4px 0 2px;
+  min-height: 50px;
   font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .01em;
   cursor: pointer;
-  transition: color .18s ease, transform .12s ease;
+  transition: color .15s ease;
 }
-.tab-btn .ic { width: 24px; height: 24px; }
-.tab-btn.active { color: var(--teal-dd); font-weight: 700; }
-.tab-btn.active::after { content: ""; position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--coral-d); }
-.tab-btn.center { transform: translateY(-8px); }
+.tab-btn .ic { width: 24px; height: 24px; stroke-width: 1.9; }
+.tab-btn.active { color: var(--teal-dd); font-weight: 600; }
+.tab-btn.center { color: var(--teal-dd); }
 .tab-btn.center .center-fab {
-  width: 58px;
-  height: 58px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   color: #fff;
   background: var(--teal-d);
-  box-shadow: 0 8px 18px -8px rgba(46,138,131,.5);
 }
-.tab-btn.center:active .center-fab { transform: scale(.94); }
+.tab-btn.center .center-fab .ic { width: 19px; height: 19px; }
+.tab-btn.center:active .center-fab { transform: scale(.93); }
 .tab-btn.center.active .center-fab { background: var(--teal-dd); }
 
 
@@ -753,7 +750,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .pv-back .ic { width: 20px; height: 20px; }
 
 /* 6) 視覺提示吐司（取代只用唸的回饋） */
-.toast { position: absolute; left: 50%; bottom: calc(112px + env(safe-area-inset-bottom));
+.toast { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom));
   transform: translateX(-50%) translateY(16px); background: var(--ink); color: #FFF;
   font-size: 14.5px; line-height: 1.5; padding: 12px 18px; border-radius: 100px;
   max-width: 82%; text-align: center; opacity: 0; pointer-events: none;
@@ -937,3 +934,10 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .ctl-btn.rec { background: var(--coral-d); color: #FFF; }
 .call-btn.end { background: var(--danger); }
 .call-btn.end .ic { transform: rotate(135deg); }
+
+/* 子頁導覽頭（App 式返回：箭頭＋置中標題） */
+.nav-head { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: 48px; margin: 0 0 6px; }
+.nav-back { width: 44px; height: 44px; border: none; background: none; color: var(--teal-dd); display: grid; place-items: center; cursor: pointer; border-radius: 50%; }
+.nav-back .ic { width: 24px; height: 24px; stroke-width: 2.2; }
+.nav-back:active { background: var(--mint); }
+.nav-title { text-align: center; font-size: 17px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

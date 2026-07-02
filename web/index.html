@@ -184,7 +184,7 @@
 
       <!-- 個人健康（點某人後） -->
       <div class="fam-view" id="viewPerson">
-        <button class="pv-back" id="personBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>回全家</button>
+        <div class="nav-head"><button class="nav-back" id="personBack" aria-label="回全家"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="personNavTitle">家人</span><span></span></div>
         <div class="person-top"><span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv">嬤</span></span><div><div class="pt-name" id="ptName">—</div><div class="pt-rel" id="ptRel">—</div></div></div>
         <div class="person-grid">
           <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128/82</div><div class="st-label">血壓</div></div>
@@ -238,8 +238,7 @@
       <!-- 家庭記錄簿 -->
 
       <div class="fam-view" id="viewMood">
-        <button class="pv-back" id="moodBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>回到阿嬤</button>
-        <div class="page-head"><h1 class="page-title" id="moodTitle">阿嬤的心情</h1></div>
+        <div class="nav-head"><button class="nav-back" id="moodBack" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="moodTitle">心情</span><span></span></div>
         <div class="trend-tabs mood-range" id="moodRange"><button class="active" data-r="week">這一週</button><button data-r="month">這個月</button></div>
         <div class="mood-week" id="moodWeek"></div>
         <div class="mood-month" id="moodMonth" style="display:none"></div>
@@ -247,8 +246,7 @@
         <div class="mood-legend" id="moodLegend"></div>
       </div>
       <div class="fam-view" id="viewBook">
-        <button class="back-btn" id="bookBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>回全家</button>
-        <div class="page-head"><h1 class="page-title">家庭記錄簿</h1></div>
+        <div class="nav-head"><button class="nav-back" id="bookBack" aria-label="回全家"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">家庭記錄簿</span><span></span></div>
         <div class="book-month">六月</div>
         <div class="book-timeline">
         <div class="book-entry">
