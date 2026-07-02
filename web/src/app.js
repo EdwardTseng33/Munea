@@ -763,6 +763,13 @@ function completeChatSession(reason = 'ended') {
 
 function showView(id) {
   const t = $('#toast'); if (t) t.classList.remove('show');
+  if (id === 'family') {
+    const va = $('#viewAll');
+    if (va && !va.classList.contains('active')) {
+      $$('#family .fam-view').forEach(v => v.classList.remove('active'));
+      va.classList.add('active');
+    }
+  }
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
   setTimeout(refreshHscrollHints, 60); // 分頁切換後重算「右邊還有」提示
   const overlay = OVERLAYS.includes(id);
@@ -889,6 +896,13 @@ function setupAuthControls() {
 
 (function homeGreeting() {
   const now = new Date();
+  (function fixDemoEventDate() {
+    const chip = document.getElementById('demoEventDate');
+    if (!chip) return;
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    d.setDate(d.getDate() + (((6 - d.getDay() + 7) % 7) || 7));
+    chip.textContent = (d.getMonth() + 1) + '/' + d.getDate() + '（週六）傍晚';
+  })();
   const h = now.getHours();
   const dayN = Math.max(1, now.getDate() - 1);
   const ws = $('#wsText');
@@ -987,8 +1001,8 @@ function toast(text) {
 }
 
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
-function say(text) {
-  // 聊聊以外不出聲（2026-07-03 Edward 拍板）：只顯示提示
+function hint(text) {
+  // 聊聊以外不出聲（只出文字提示，禁止在此接語音）（2026-07-03 Edward 拍板）：只顯示提示
   toast(text);
 }
 function speakChat(text) {
@@ -1013,6 +1027,9 @@ const CHEERS = {
 function refreshTaskProgress() {
   const items = $$('#taskCard .task-item');
   const done = items.filter(i => i.classList.contains('done')).length;
+  const pillTask = document.querySelector('.task-item[data-task="pill"]');
+  const pv = $('#statPillVal');
+  if (pv && pillTask) pv.innerHTML = (pillTask.classList.contains('done') ? '3' : '2') + '<small>/3</small>';
   const prog = $('.task-progress');
   if (!prog) return;
   const label = prog.childNodes[prog.childNodes.length - 1];
@@ -1039,7 +1056,7 @@ function toggleTask(item) {
   }
   item.classList.add('done');
   refreshTaskProgress();
-  say(CHEERS[item.dataset.task] || '做得很好。');
+  hint(CHEERS[item.dataset.task] || '做得很好。');
 }
 
 // 心情圖譜 v2（六類）；之後接 /wellbeing/trend 真資料
@@ -1123,6 +1140,7 @@ function connectCall() {
 }
 
 function init() {
+  if (location.hash === '#med') setTimeout(() => showView('med'), 300);
   syncCompanionUI();
   setupHscrollHints();
   renderPoints();
@@ -1170,7 +1188,7 @@ function init() {
   // 用藥服務窗（獨立功能、保留）
   if ($('#medTaken')) $('#medTaken').addEventListener('click', () => {
     trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
-    say('好，記下來了，連續六天，你真棒。');
+    hint('好，記下來了，連續六天，你真棒。');
     showView('home');
   });
   if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => showView('home'));
@@ -1179,13 +1197,15 @@ function init() {
   if ($('#srcStrip')) $('#srcStrip').addEventListener('click', () => showView('connect'));
   if ($('#setDevices')) $('#setDevices').addEventListener('click', () => showView('connect'));
   if ($('#companionRow')) $('#companionRow').addEventListener('click', () => $('#companionSheet').classList.add('show'));
+  if ($('#companionCloseBtn')) $('#companionCloseBtn').addEventListener('click', () => $('#companionSheet').classList.remove('show'));
+  if ($('#quizCloseX')) $('#quizCloseX').addEventListener('click', () => $('#quizModal').classList.remove('show'));
   if ($('#companionSheet')) $('#companionSheet').addEventListener('click', e => { if (e.target === $('#companionSheet')) $('#companionSheet').classList.remove('show'); });
-  if ($('#setProfile')) $('#setProfile').addEventListener('click', () => say('這裡可以改頭像、名稱、對家人顯示的稱呼、年齡、所在地。'));
+  if ($('#setProfile')) $('#setProfile').addEventListener('click', () => hint('這裡可以改頭像、名稱、對家人顯示的稱呼、年齡、所在地。'));
   if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView('status'));
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', () => {
     const on = b.classList.toggle('done');
     b.textContent = on ? '✓ 已連接' : (b.dataset.label || '連接');
-    if (on) say('好，連上了，之後健康資料我會自動留意。');
+    if (on) hint('好，連上了，之後健康資料我會自動留意。');
   }));
 
   // 今天一起完成（任務打勾）
@@ -1198,7 +1218,7 @@ function init() {
     if (!b || b.classList.contains('sent')) return;
     reactRow.querySelectorAll('.react-btn.sent').forEach(x => x.classList.remove('sent'));
     b.classList.add('sent');
-    say(`好，寧寧會幫你轉達——你${b.dataset.react}。`);
+    hint(`好，寧寧會幫你轉達——你${b.dataset.react}。`);
     const who = document.getElementById('ptName')?.textContent || '家人';
     pushFamilyFeed(`<b>你</b>剛剛給${who}${b.dataset.react || '送上心意'}——寧寧下次聊天會親口告訴${['阿嬤','美華'].includes(who) ? '她' : '他'}`);
   });
@@ -1206,7 +1226,7 @@ function init() {
   // 全家健康圈：切換成員看健康
   const PERSON_STATS = {
     '阿嬤': [
-      { ic: 'bp', val: '128/82', label: '血壓 · 已量' },
+      { ic: 'bp', val: '128/82', label: '早上 8:12 量 · 手環' },
       { ic: 'walk', val: '3,850<small> 步</small>', label: '今日活動' },
       { ic: 'sleep', val: '7.5<small> 小時</small>', label: '昨晚睡眠' },
       { ic: 'pill', val: '2<small>/3</small>', label: '今天用藥' }],
@@ -1362,7 +1382,7 @@ function init() {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
     const p = b.dataset.person;
     if (p === 'all') showFamAll();
-    else if (p === 'invite') say('好，我幫你發邀請給家人，加進來就能互相關心健康。');
+    else if (p === 'invite') hint('好，我幫你發邀請給家人，加進來就能互相關心健康。');
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
   });
   const healthList = $('#healthList');
@@ -1384,7 +1404,7 @@ function init() {
 
   // 一鍵回診摘要
   const rep = $('#reportBtn');
-  if (rep) rep.addEventListener('click', () => say('好，我把這個月的用藥和血壓整理成一張，回診給醫生看就清楚了。'));
+  if (rep) rep.addEventListener('click', () => hint('好，我把這個月的用藥和血壓整理成一張，回診給醫生看就清楚了。'));
 
   // 發起挑戰面板
   const chalModal = $('#chalModal');
@@ -1434,7 +1454,11 @@ function init() {
     const card = document.createElement('div');
     card.className = 'quest-card pending';
     let chip, goal, note;
-    if (act.kind === 'walk') {
+    if (act.status === 'done') {
+      chip = '已結束';
+      goal = act.kind === 'quiz' ? ('你答對 ' + act.score + ' / ' + (act.q || 5) + ' 題') : (act.title + ' 結束了');
+      note = '等大家都看過就收進記錄簿 · 最多留 3 天——還沒看的，寧寧會親口告訴';
+    } else if (act.kind === 'walk') {
       chip = act.days === 3 ? '3 天內' : '一週內';
       goal = '大家一起走 ' + (+act.goal).toLocaleString() + ' 步';
       note = '寧寧會親口問阿嬤要不要一起；開始後每個人走多少都看得到';
@@ -1452,7 +1476,7 @@ function init() {
       '<span class="qc-days">' + chip + '</span></div>' +
       '<div class="qc-goal">' + goal + '</div>' +
       '<div class="qc-num">' + note + '</div>';
-    if (act.kind === 'quiz') { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
+    if (act.kind === 'quiz' && act.status !== 'done') { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
     list.parentNode.insertBefore(card, list);
   }
   if ($('#startChalBtn')) $('#startChalBtn').addEventListener('click', () => {
@@ -1480,15 +1504,19 @@ function init() {
     const acts = loadActs(); acts.push(act); saveActs(acts);
     closeChal();
     renderActCard(act);
-    say(kind === 'event' ? '好，寧寧幫你問大家——誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了——寧寧會親口問阿嬤，等大家答應就開始。');
+    hint(kind === 'event' ? '好，寧寧幫你問大家——誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了——寧寧會親口問阿嬤，等大家答應就開始。');
   });
   // 到期自動收卡：過了活動日就從牆上收走、記到家庭動態
   (function restoreActs() {
     const today = isoOf(new Date());
     const acts = loadActs();
     const keep = [];
+    const d3 = new Date(); d3.setDate(d3.getDate() - 3);
+    const cutoff = isoOf(d3);
     acts.forEach(a => {
-      if (a.kind !== 'quiz' && a.dateISO && a.dateISO < today) {
+      if (a.status === 'done' && a.doneISO && a.doneISO <= cutoff) {
+        pushFamilyFeed('「' + a.title + '」的結果收進<b>家庭記錄簿</b>了');
+      } else if (a.status !== 'done' && a.kind !== 'quiz' && a.dateISO && a.dateISO < today) {
         pushFamilyFeed('「' + a.title + '」結束了——那天的紀錄收進<b>家庭記錄簿</b>了');
       } else { keep.push(a); renderActCard(a); }
     });
@@ -1579,6 +1607,9 @@ function init() {
     $('#quizCloseBtn').addEventListener('click', () => $('#quizModal').classList.remove('show'));
     const note = st.card && st.card.querySelector('.qc-num');
     if (note) note.textContent = '你答對 ' + st.score + '/' + st.n + '——等 ' + st.act.names.join('、') + ' 作答完看排名';
+    const acts2 = loadActs();
+    const rec = acts2.find(a => a.id === st.act.id);
+    if (rec) { rec.status = 'done'; rec.score = st.score; rec.doneISO = isoOf(new Date()); saveActs(acts2); }
     pushFamilyFeed('<b>你</b>完成了機智問答，答對 ' + st.score + '/' + st.n + ' 題——等大家玩完看排名');
   }
   if ($('#quizOpts')) $('#quizOpts').addEventListener('click', e => {
@@ -1604,6 +1635,7 @@ function init() {
   const SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
   let chatRec = null, chatOn = false;
   const CHAT_RULES = [
+    [/(藥.*(怎麼吃|幾顆|停|加量|減量))|劑量|(可以吃.*藥)/, '藥怎麼吃、吃幾顆，我不能幫你決定——這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？'],
     [/痛|痠|不舒服|頭暈/, '聽到你不太舒服，我有點擔心。先坐下歇會兒，需要的話我幫你通知美華。'],
     [/累|睡不|失眠/, '辛苦了，累就歇著、不用硬撐，我在這陪你。'],
     [/孫|想.*他|想.*她|寂寞|一個人/, '想家人了是吧？要不要我提醒他們今晚打給你？'],
@@ -1737,12 +1769,18 @@ function init() {
       syncCompanionUI();
       saveCompanionProfileToBackend();
       syncAccountBootstrap('create', { reason: 'companion_name_updated' });
+      toast('名字改好了：以後叫「' + companionDisplayName.trim() + '」');
     });
   }
   const avatarPick = $('#avatarPick');
   if (avatarPick) avatarPick.addEventListener('click', e => {
     const o = e.target.closest('.avo:not(.soon)'); if (!o) return;
+    const wasOn = o.classList.contains('on');
     setCompanionTemplate(o.dataset.ava);
+    if (!wasOn) {
+      const label = o.querySelector('.avl b');
+      toast('已換成 ' + (label ? label.textContent : '新的陪伴'));
+    }
   });
 
   if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
