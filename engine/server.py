@@ -434,13 +434,24 @@ def wellbeing_trend_response(data):
         rows = by_date[d]
         avg = sum(r.get("level", 3) for r in rows) / len(rows)
         latest = rows[-1]
+        moods = [r.get("mood") for r in rows if r.get("mood")]
+        dominant = latest.get("mood") or "平穩"  # 日總結＝最近一次為主
         daily.append({
             "date": d,
+            "mood": dominant,
+            "moodColor": latest.get("moodColor"),
+            "mixed": len(set(moods)) > 1,          # 當天不只一種心情 → 顯示層加小點
+            "chats": len(rows),
             "level": round(avg, 1),
-            "levelLabel": latest.get("levelLabel"),
+            "levelLabel": dominant,
             "voiceObs": latest.get("voiceObs"),
             "chatObs": latest.get("chatObs"),
             "topics": latest.get("topics") or [],
+            "signals": [{                          # 點該日展開：每次聊天各自的心情＋一句觀察
+                "mood": r.get("mood"),
+                "oneLine": r.get("wordObs") or r.get("chatObs") or "",
+                "createdAt": r.get("createdAt"),
+            } for r in rows],
         })
     # 個人基準線＝再往前 14 天的平均（跟自己比、不跟量表比）
     base_dates = dates[:-3] if len(dates) > 3 else []
@@ -452,10 +463,12 @@ def wellbeing_trend_response(data):
     gentle_note = ""
     if concern:
         gentle_note = "這幾天聊天比平常安靜一些。不一定有什麼事——但也許是打通電話回家的好時機。"
+    import perception_engine
     return {"ok": True, "personId": person_id, "daily": daily,
             "baseline": baseline, "recent": recent,
             "gentleConcern": concern, "gentleNote": gentle_note,
-            "display": {"scale": ["悶悶的", "有點悶", "平平", "不錯", "很開朗"],
+            "display": {"moodMap": perception_engine.MOOD_CATEGORIES,   # 六類心情圖譜（App 直接取色）
+                        "selfView": "today_only",                        # 自己只看今天；週/月在圖表頁
                         "rule": "觀察不是判定；絕無分數、絕無臨床字眼"}}
 
 

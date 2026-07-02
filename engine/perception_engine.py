@@ -265,17 +265,27 @@ def _genai_client():
 
 
 _MOOD_SYS = """你是沐寧的心情觀察員（陪伴用，非醫療、絕不診斷）。讀「長輩（使用者）這輪對話說的話」，
-從三個角度溫和觀察：語氣（怎麼說：有沒有精神、急促或低緩——由文字語感推測）、用語（慣用說法、話量、主動或簡短）、用詞（選了什麼字眼：正向/負向/身體/思念）。
+從三個角度溫和觀察：語氣（怎麼說：有沒有精神、急促或低緩——由文字語感推測）、用語（慣用說法、話量、主動或簡短）、用詞（選了什麼字眼：正向/負向/身體/思念/火氣）。
 只回 JSON：
-{"level":1-5,  // 5=很開朗 4=不錯 3=平平 2=有點悶 1=悶悶的
+{"mood":"開心|愉快|平穩|疲累|低落|煩躁",  // 六類擇一（心情圖譜）
+ "level":1-5,  // 心情高低：5=很好 4=不錯 3=平平 2=偏低 1=很低（煩躁通常 1-2、疲累通常 2-3）
  "voiceObs":"聲音聽起來…（有精神/平穩/比較累，一短句）",
  "chatObs":"聊天狀態…（話匣子全開/平常/話比較少，一短句）",
- "wordObs":"用詞觀察一短句（例：提到開心的事居多／出現想念、疼痛字眼）",
+ "wordObs":"用詞觀察一短句（例：提到開心的事居多／出現想念、疼痛字眼／講到某事有點火氣）",
  "topics":["聊到的話題1","2","3"],
  "positives":["提到的開心事"],
- "concerns":["提到的掛心事（身體不適/想念/煩惱），沒有就空"],
+ "concerns":["提到的掛心事（身體不適/想念/煩惱/火氣的事），沒有就空"],
  "confidence":0-1}
-規則：這是「觀察」不是「判定」；絕不用憂鬱/焦慮/失智等臨床字眼；資訊不足時 level 給 3、confidence 給低。"""
+規則：這是「觀察」不是「判定」；絕不用憂鬱/焦慮/失智等臨床字眼（火氣寫「有點火氣」、難過寫「比較低落」）；資訊不足時 mood 給平穩、level 給 3、confidence 給低。"""
+
+MOOD_CATEGORIES = {
+    "開心": {"colorKey": "coral", "bg": "#FBE7D2", "fg": "#C25716"},
+    "愉快": {"colorKey": "apricot", "bg": "#F6ECD4", "fg": "#9A6E14"},
+    "平穩": {"colorKey": "teal", "bg": "#E8F2EE", "fg": "#1E7169"},
+    "疲累": {"colorKey": "grayGreen", "bg": "#EEEFEA", "fg": "#5F6A61"},
+    "低落": {"colorKey": "grayBlue", "bg": "#E4EBF3", "fg": "#3F5F80"},
+    "煩躁": {"colorKey": "plum", "bg": "#ECE1F0", "fg": "#6E4488"},
+}
 
 
 def analyze_conversation_mood(history):
@@ -303,10 +313,12 @@ def analyze_conversation_mood(history):
         level = max(1, min(5, int(level)))
     except (TypeError, ValueError):
         return None
-    labels = {5: "很開朗", 4: "不錯", 3: "平平", 2: "有點悶", 1: "悶悶的"}
+    mood = m.get("mood") if m.get("mood") in MOOD_CATEGORIES else "平穩"
     return {
+        "mood": mood,                                   # 六類心情圖譜
+        "moodColor": MOOD_CATEGORIES[mood],             # 顯示層直接用（bg/fg/colorKey）
         "level": level,
-        "levelLabel": labels[level],
+        "levelLabel": mood,                             # 相容舊欄位：現在＝心情類別名
         "voiceObs": (m.get("voiceObs") or "").strip()[:60],
         "chatObs": (m.get("chatObs") or "").strip()[:60],
         "wordObs": (m.get("wordObs") or "").strip()[:60],
