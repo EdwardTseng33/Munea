@@ -925,7 +925,7 @@ function renderMedList() {
   const box = $('#medList');
   if (!box) return;
   box.innerHTML = loadMeds().map(m =>
-    '<div class="med-row"><div><b>' + m.name + '</b><span>' + m.time + ' · ' + m.days + ' · ' + m.by + '設定</span></div></div>').join('');
+    '<div class="med-row"><div><b>' + m.name + '</b><span>' + m.time + ' · ' + m.days + '</span></div></div>').join('');
 }
 
 const POINTS = { total: 800, used: 320 };
