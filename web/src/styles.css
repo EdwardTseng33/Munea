@@ -955,3 +955,12 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .med-row span { font-size: 13px; color: var(--muted); }
 .med-form-row { display: flex; gap: 8px; }
 .med-back { position: absolute; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 8; background: rgba(255,255,255,.16); color: #FFF; }
+
+/* 家人左右滑翻頁：方向滑入動畫＋頁點 */
+.fam-view.slide-l { animation: slideInL .28s ease; }
+.fam-view.slide-r { animation: slideInR .28s ease; }
+@keyframes slideInL { from { opacity: .3; transform: translateX(34px); } to { opacity: 1; transform: none; } }
+@keyframes slideInR { from { opacity: .3; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
+.pager-dots { display: flex; justify-content: center; gap: 7px; margin: -2px 0 10px; }
+.pager-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: background .2s, transform .2s; }
+.pager-dots i.on { background: var(--teal-d); transform: scale(1.25); }

@@ -1215,7 +1215,31 @@ function init() {
       '<div class="st-val">' + t.val + '</div><div class="st-label">' + t.label + '</div></div>').join('');
   }
 
+  const FAM_ORDER = ['阿嬤', '美華', '志明', '小寶'];
+  let currentPerson = '阿嬤';
+  function famItemOf(name) {
+    return [...document.querySelectorAll('.fam-switch-item')].find(x => x.dataset.person === name);
+  }
+  function renderFamDots() {
+    const box = $('#famDots');
+    if (!box) return;
+    box.innerHTML = FAM_ORDER.map(n => '<i class="' + (n === currentPerson ? 'on' : '') + '"></i>').join('');
+  }
+  function switchPerson(delta) {
+    const idx = FAM_ORDER.indexOf(currentPerson);
+    const next = FAM_ORDER[idx + delta];
+    if (!next) return; // 到邊了
+    const b = famItemOf(next);
+    if (!b) return;
+    const v = $('#viewPerson');
+    if (v) { v.classList.remove('slide-l', 'slide-r'); void v.offsetWidth; v.classList.add(delta > 0 ? 'slide-l' : 'slide-r'); }
+    showFamPerson(next, b.dataset.rel, b.dataset.init, b.dataset.tint);
+    b.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+
   function showFamPerson(p, rel, init, tint) {
+    currentPerson = p;
+    renderFamDots();
     $('#viewAll').classList.remove('active');
     $('#viewPerson').classList.add('active');
     if ($('#ptName')) $('#ptName').textContent = p;
@@ -1232,6 +1256,23 @@ function init() {
     $('#viewPerson').classList.remove('active');
     $('#viewAll').classList.add('active');
     $$('.fam-switch-item').forEach(b => b.classList.toggle('active', b.dataset.person === 'all'));
+  }
+  const vp = $('#viewPerson');
+  if (vp) {
+    let sx = 0, sy = 0, tracking = false;
+    vp.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true; }, { passive: true });
+    vp.addEventListener('touchend', e => {
+      if (!tracking) return; tracking = false;
+      const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 2) switchPerson(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    let mx = null;
+    vp.addEventListener('mousedown', e => { mx = e.clientX; });
+    vp.addEventListener('mouseup', e => {
+      if (mx === null) return;
+      const dx = e.clientX - mx; mx = null;
+      if (Math.abs(dx) > 56) switchPerson(dx < 0 ? 1 : -1);
+    });
   }
   if ($('#personBack')) $('#personBack').addEventListener('click', showFamAll);
   if ($('#moodTrendBtn')) $('#moodTrendBtn').addEventListener('click', () => {
