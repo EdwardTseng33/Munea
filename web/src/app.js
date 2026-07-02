@@ -895,12 +895,19 @@ function setupAuthControls() {
   if (ws) ws.innerHTML = `這個月你有 <b>${dayN} 天</b>準時吃藥，很穩，繼續保持。`;
   const chip = $('#bcChip');
   if (chip) {
-    const night = h >= 18 || h < 5;
-    chip.innerHTML = chip.querySelector('svg').outerHTML + (night ? '泡杯熱茶吧' : '適合散步');
+    const sun = '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/></svg>';
+    const moon = '<svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>';
+    let icon = sun, text = '晴 26°，下午去公園正好';
+    if (h >= 18 || h < 5) { icon = moon; text = '睡前 10 分鐘，說說今天的事'; }
+    else if (h >= 5 && h < 11) { text = '晴 26°，早上出門走走正好'; }
+    else if (h >= 14) { text = '晴 26°，傍晚去公園正好'; }
+    chip.innerHTML = icon + text;
   }
+  const stat = $('#bcStatus');
+  if (stat) stat.textContent = '連續 6 天都有聊 · 今天還沒';
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
-  if (meta) meta.textContent = `${now.getMonth() + 1}/${now.getDate()} 週${wd}`;
+  if (meta) meta.textContent = `${now.getMonth() + 1}月${now.getDate()}日 週${wd}`;
   const kick = $('#greetKicker'), big = $('#greetBig');
   let k = '今日概況', b = '今天想先聊聊嗎？';
   if (h >= 5 && h < 11) { k = '早安'; b = '新的一天，想先聊聊嗎？'; }

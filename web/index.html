@@ -18,7 +18,8 @@
   <section class="screen active" id="home">
     <div class="pad">
       <div class="home-top">
-        <span class="home-meta"><span id="metaDate">—</span><b>晴 26°</b></span>
+        <span class="home-date" id="metaDate">—</span>
+        <span class="home-meta"><b>晴 26°</b></span>
       </div>
 
       <div class="greeting-wrap">
@@ -31,7 +32,7 @@
           <div class="bc-avatar"><img class="ava-img" src="avatars/nening-hero.png" alt="寧寧"></div>
           <div class="bc-info">
             <div class="bc-name"><span id="companionHomeName">寧寧</span></div>
-            <span class="bc-status"><span class="dot"></span>今天想先聊聊嗎？</span>
+            <span class="bc-status"><span class="dot"></span><span id="bcStatus">連續 6 天都有聊 · 今天還沒</span></span>
             <span class="bc-chip" id="bcChip"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/></svg>適合散步</span>
           </div>
         </div>
@@ -425,12 +426,12 @@
         <input class="companion-name-input" id="companionNameInput" value="寧寧" maxlength="12" autocomplete="off" />
         <div class="companion-name-hint">名稱是你的稱呼；外觀、聲音和互動氣質由下面的模板決定。</div>
         <div class="hscroll-wrap"><div class="avatar-pick" id="avatarPick">
-          <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-real-female.png" alt="溫柔陪伴型"></span><span class="avl"><b>溫柔型</b><small>像家人 · 會照看</small></span></button>
-          <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/companion-real-male.png" alt="沉穩陪伴型"></span><span class="avl"><b>沉穩型</b><small>像大哥 · 很可靠</small></span></button>
-          <button class="avo" data-ava="munea-2d-xiaoyun"><span class="avi"><img src="avatars/munea-2d-xiaoyun.png" alt="開朗陪伴型"></span><span class="avl"><b>開朗型</b><small>像朋友 · 很有朝氣</small></span></button>
-          <button class="avo" data-ava="munea-2d-ayuan"><span class="avi"><img src="avatars/munea-2d-ayuan.png" alt="隨和陪伴型"></span><span class="avl"><b>隨和型</b><small>鄰家感 · 好聊天</small></span></button>
-          <button class="avo" data-ava="munea-2d-mimi"><span class="avi"><img src="avatars/munea-2d-mimi.png" alt="貓咪陪伴型"></span><span class="avl"><b>貓咪型</b><small>陪伴感 · 有個性</small></span></button>
-          <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai.png" alt="狗狗陪伴型"></span><span class="avl"><b>狗狗型</b><small>熱情 · 很黏人</small></span></button>
+          <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-real-female.png" alt="溫柔陪伴型"></span><span class="avl"><b>寧寧 · 溫柔型</b><small>像家人，會照看你</small></span></button>
+          <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/companion-real-male.png" alt="沉穩陪伴型"></span><span class="avl"><b>阿宏 · 沉穩型</b><small>像大哥，很可靠</small></span></button>
+          <button class="avo" data-ava="munea-2d-xiaoyun"><span class="avi"><img src="avatars/munea-2d-xiaoyun.png" alt="開朗陪伴型"></span><span class="avl"><b>小昀 · 開朗型</b><small>像朋友，有朝氣</small></span></button>
+          <button class="avo" data-ava="munea-2d-ayuan"><span class="avi"><img src="avatars/munea-2d-ayuan.png" alt="隨和陪伴型"></span><span class="avl"><b>阿原 · 隨和型</b><small>鄰家感，好聊天</small></span></button>
+          <button class="avo" data-ava="munea-2d-mimi"><span class="avi"><img src="avatars/munea-2d-mimi.png" alt="貓咪陪伴型"></span><span class="avl"><b>咪咪 · 貓咪型</b><small>有個性的陪伴</small></span></button>
+          <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai.png" alt="狗狗陪伴型"></span><span class="avl"><b>旺財 · 狗狗型</b><small>熱情又黏人</small></span></button>
         </div><span class="hscroll-more" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
       </div>
 

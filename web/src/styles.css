@@ -54,7 +54,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .sec-head .more { font-size: 14px; color: var(--teal); font-weight: 600; align-self: flex-end; }
 
 /* ============ 首頁 ============ */
-.home-top { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 2px; margin-bottom: 14px; }
+.home-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 2px; margin-bottom: 14px; }
 .brand { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.025em; display: inline-flex; align-items: center; gap: 8px; color: var(--ink); line-height: 1; }
 .brand .logo-mark { width: 32px; height: 32px; display: inline-grid; place-items: center; flex-shrink: 0; filter: drop-shadow(0 3px 8px rgba(244,162,97,.24)); }
 .brand .logo-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -274,14 +274,18 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .companion-name-input { width: 100%; border: 1.5px solid var(--line); border-radius: 14px; background: var(--cream-2); padding: 13px 14px; font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--ink); outline: none; }
 .companion-name-input:focus { border-color: var(--teal); box-shadow: 0 0 0 4px rgba(58,168,160,.12); background: #fff; }
 .companion-name-hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.45; }
-.avatar-pick { display: flex; gap: 12px; overflow-x: auto; padding: 16px 0 2px; margin-top: 4px; }
-.avo { flex: 0 0 auto; width: 92px; border: none; background: transparent; padding: 0; cursor: pointer; text-align: center; }
-.avo .avi { display: block; width: 76px; height: 76px; border-radius: 50%; overflow: hidden; border: 3px solid transparent; margin: 0 auto; background: var(--mint); transition: border-color .2s, transform .2s; }
+.avatar-pick { display: flex; flex-direction: column; gap: 10px; padding: 14px 0 2px; margin-top: 4px; }
+.avo { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 10px 46px 10px 10px; cursor: pointer; text-align: left; transition: border-color .15s, background .15s; }
+.avo .avi { flex-shrink: 0; width: 62px; height: 62px; border-radius: 14px; overflow: hidden; background: var(--mint); }
 .avo .avi img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.avo.on .avi { border-color: var(--teal); transform: scale(1.03); }
-.avo .avl { display: block; margin-top: 7px; line-height: 1.25; }
-.avo .avl b { display: block; font-size: 13px; font-weight: 800; color: var(--ink); }
-.avo .avl small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+.avo .avl { min-width: 0; line-height: 1.3; }
+.avo .avl b { display: block; font-size: 15.5px; font-weight: 700; color: var(--ink); }
+.avo .avl small { display: block; font-size: 13px; color: var(--muted); margin-top: 3px; font-weight: 500; }
+.avo::after { content: ""; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); background: #FFF; }
+.avo.on { border-color: var(--teal); background: var(--mint); }
+.avo.on::after { background: var(--teal-d); border-color: var(--teal-d); }
+.avo.on::before { content: ""; position: absolute; right: 21px; top: 50%; transform: translate(0, -62%) rotate(45deg); width: 5px; height: 9px; border: solid #FFF; border-width: 0 2px 2px 0; z-index: 1; }
+.hscroll-wrap:has(#avatarPick) .hscroll-more { display: none; }
 .avo.on .avl b { color: var(--teal-d); }
 .ai-dev-panel { margin-top: 16px; background: #17231F; color: #EAF4F0; border-radius: 20px; padding: 16px; box-shadow: var(--shadow-sm); border: 1px solid rgba(255,255,255,.08); }
 .ai-dev-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
@@ -1000,3 +1004,6 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .rank-av .init-ava { width: 30px; height: 30px; border-radius: 50%; font-size: 13px; }
 .rank-score { margin-left: auto; font-size: 13.5px; font-weight: 700; color: var(--teal-dd); }
 .qc-note { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+/* 左上日期 */
+.home-date { font-size: 13.5px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
