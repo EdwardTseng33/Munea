@@ -1,5 +1,14 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-02 Update - Staging smoke scheduler readiness
+
+**Status:** completed for staging automation readiness.
+
+- `scripts/staging-smoke.ps1` now accepts `MUNEA_STAGING_API_URL` when `-BaseUrl` is not passed.
+- This lets future CI, hosting scheduler, or manual ops checks run `npm run smoke:staging` without hard-coding the staging API URL in command history.
+- Updated the staging runbook and production infrastructure map with the environment-variable path.
+- Avoided `web/`, `supabase/sql/`, memory internals, perception internals, realtime voice files, and backend behavior changes.
+
 ## 2026-07-02 Update - Smoke workflow concurrency and action runtime cleanup
 
 **Status:** completed for CI notification hygiene.

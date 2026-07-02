@@ -1,6 +1,5 @@
 param(
-  [Parameter(Mandatory = $true)]
-  [string]$BaseUrl,
+  [string]$BaseUrl = "",
   [string]$BearerToken = "",
   [string]$AdminToken = "",
   [string]$ProviderToken = "",
@@ -12,6 +11,14 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
+
+if (-not $BaseUrl) {
+  $BaseUrl = $env:MUNEA_STAGING_API_URL
+}
+
+if (-not $BaseUrl) {
+  throw "Set -BaseUrl or MUNEA_STAGING_API_URL before running staging smoke."
+}
 
 function Step($name) {
   Write-Host ""

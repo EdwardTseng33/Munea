@@ -32,6 +32,7 @@ New handoff:
 - Staging backend runbook: `docs/STAGING-BACKEND-RUNBOOK-2026-07-02.md`.
 - It defines the minimum hosted backend contract, required staging env, Supabase gate, TestFlight backend strategy, hosted smoke expectations, and rollback plan.
 - Hosted staging smoke: `npm run smoke:staging -- -BaseUrl https://YOUR-STAGING-API.example.com`.
+- Scheduled staging smoke can also use `MUNEA_STAGING_API_URL` so the same command can run from CI or a hosting scheduler without hard-coding the URL in arguments.
 
 ## What Can Move Now Without Overlap
 

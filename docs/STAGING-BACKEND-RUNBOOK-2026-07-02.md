@@ -120,6 +120,13 @@ Run without secrets first:
 npm run smoke:staging -- -BaseUrl https://YOUR-STAGING-API.example.com
 ```
 
+For scheduled or hosted CI checks, set the URL once and run the same script without repeating arguments:
+
+```powershell
+$env:MUNEA_STAGING_API_URL = "https://YOUR-STAGING-API.example.com"
+npm run smoke:staging
+```
+
 This verifies `/healthz`, unauthenticated rejection, invalid bearer rejection, admin rejection, and provider webhook rejection.
 
 Run with real staging credentials when available:
