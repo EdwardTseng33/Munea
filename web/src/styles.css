@@ -39,7 +39,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .status-bar .sb-icons .ic { width: 17px; height: 17px; stroke-width: 2.2; }
 .status-bar.on-dark { color: #fff; }
 
-.screen { display: none; height: 100%; overflow-y: auto; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.screen { display: none; height: 100%; overflow-y: auto; padding-top: calc(env(safe-area-inset-top, 0px) + 6px); padding-bottom: calc(114px + env(safe-area-inset-bottom)); }
 .screen.active { display: block; animation: fade .35s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 .pad { padding: 4px 20px 16px; }
@@ -668,41 +668,44 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* 底部導覽：固定在 App 視窗底部，不跟內容一起滾走 */
 .tab-bar {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 14px;
+  right: 14px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 20;
-  height: calc(78px + env(safe-area-inset-bottom));
-  padding: 9px 16px calc(10px + env(safe-area-inset-bottom));
+  padding: 8px 10px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: end;
-  gap: 4px;
-  background: rgba(251,248,242,.94);
-  border-top: 1px solid rgba(236,230,218,.92);
-  box-shadow: 0 -16px 34px -26px rgba(31,60,52,.42);
-  backdrop-filter: blur(14px);
+  align-items: center;
+  gap: 2px;
+  background: rgba(255,255,255,.96);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  box-shadow: 0 18px 40px -22px rgba(31,60,52,.35);
+  backdrop-filter: blur(10px);
 }
 .tab-bar.hidden { display: none; }
 .tab-btn {
   min-width: 0;
-  min-height: 54px;
+  min-height: 52px;
   border: none;
   background: transparent;
   color: var(--muted);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 0;
+  border-radius: 100px;
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: background .18s ease, color .18s ease, transform .12s ease;
 }
 .tab-btn .ic { width: 23px; height: 23px; }
-.tab-btn.active { color: var(--teal-d); }
-.tab-btn.center { transform: translateY(-10px); }
+.tab-btn.active { color: var(--teal-dd); background: var(--mint); }
+.tab-btn.center { transform: translateY(-24px); }
 .tab-btn.center .center-fab {
   width: 62px;
   height: 62px;
@@ -711,9 +714,12 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   place-items: center;
   color: #fff;
   background: var(--teal-d);
-  border: 5px solid var(--cream);
-  box-shadow: 0 16px 28px -14px rgba(46,138,131,.72);
+  border: 5px solid #FFFFFF;
+  box-shadow: 0 14px 26px -12px rgba(46,138,131,.55);
 }
+.tab-btn.center:active .center-fab { transform: scale(.94); }
+.tab-btn.center.active .center-fab { background: var(--teal-dd); }
+.tab-btn.center { background: transparent; }
 .tab-btn.center .center-fab .ic { width: 28px; height: 28px; }
 
 
@@ -761,7 +767,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .pv-back .ic { width: 20px; height: 20px; }
 
 /* 6) 視覺提示吐司（取代只用唸的回饋） */
-.toast { position: absolute; left: 50%; bottom: calc(108px + env(safe-area-inset-bottom));
+.toast { position: absolute; left: 50%; bottom: calc(128px + env(safe-area-inset-bottom));
   transform: translateX(-50%) translateY(16px); background: var(--ink); color: #FFF;
   font-size: 14.5px; line-height: 1.5; padding: 12px 18px; border-radius: 100px;
   max-width: 82%; text-align: center; opacity: 0; pointer-events: none;
