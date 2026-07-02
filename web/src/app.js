@@ -858,8 +858,19 @@ function setupAuthControls() {
   updateAuthUI();
 }
 
+let _toastTimer = null;
+function toast(text) {
+  const t = $('#toast');
+  if (!t) return;
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function say(text) {
+  toast(text);
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
@@ -958,6 +969,7 @@ function init() {
     $('#viewAll').classList.add('active');
     $$('.fam-switch-item').forEach(b => b.classList.toggle('active', b.dataset.person === 'all'));
   }
+  if ($('#personBack')) $('#personBack').addEventListener('click', showFamAll);
   const famSwitch = $('#famSwitch');
   if (famSwitch) famSwitch.addEventListener('click', e => {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
