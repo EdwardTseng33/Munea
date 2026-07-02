@@ -27,6 +27,11 @@ This document avoids the active collision zones:
 | Admin operations | Contract only | `/admin/usage`, `/admin/credits`, and `/admin/north-star` exist; admin UI / ops playbook still missing. |
 | Privacy jobs | Contract only | Export/deletion contracts exist; async workers and reauth enforcement are not production-ready. |
 
+New handoff:
+
+- Staging backend runbook: `docs/STAGING-BACKEND-RUNBOOK-2026-07-02.md`.
+- It defines the minimum hosted backend contract, required staging env, Supabase gate, TestFlight backend strategy, hosted smoke expectations, and rollback plan.
+
 ## What Can Move Now Without Overlap
 
 ### 1. CI And Release Hygiene
@@ -50,6 +55,10 @@ Next safe improvements:
 
 The repo currently has no deployment target. Before TestFlight, Munea needs a reachable staging API for reviewer/device testing.
 
+Runbook:
+
+- `docs/STAGING-BACKEND-RUNBOOK-2026-07-02.md`
+
 Decision needed:
 
 1. Where the Python API runs for staging.
@@ -60,11 +69,22 @@ Decision needed:
 Minimum staging requirements:
 
 - `GEMINI_API_KEY`
+- `MUNEA_SKIP_ENV_LOCAL=1`
+- `MUNEA_DATABASE_PROVIDER=supabase`
 - `MUNEA_REQUIRE_AUTH=1` for any real-user environment.
+- `MUNEA_ENABLE_DEV_AUTH_BYPASS=false` for real-device external testers.
 - `MUNEA_ADMIN_API_TOKEN`
 - `MUNEA_PROVIDER_WEBHOOK_TOKEN` before billing webhook tests.
 - Supabase backend env values, service role kept backend-only.
 - Uptime check for `/healthz`.
+
+First backend-connected TestFlight should only happen after:
+
+1. `npm run release:check` passes locally.
+2. Approved Supabase SQL is applied to the staging project.
+3. `npm run supabase:doctor:live` passes against staging secrets.
+4. Hosted `GET /healthz` returns `ok:true` over HTTPS.
+5. Real Supabase Auth session verification is tested against `/auth-status`.
 
 ### 3. Supabase Live Gate
 

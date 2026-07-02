@@ -1,5 +1,14 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-02 Update - Staging backend runbook
+
+**Status:** completed for the non-overlapping infrastructure lane.
+
+- Added `docs/STAGING-BACKEND-RUNBOOK-2026-07-02.md` to define the first hosted backend path before a backend-connected TestFlight build.
+- The runbook covers staging env requirements, Supabase live gate, hosted API smoke expectations, TestFlight backend strategy, go/no-go criteria, and rollback.
+- Updated `docs/PRODUCTION-INFRA-READINESS-2026-07-02.md` so staging backend planning is now linked from the infrastructure status map.
+- Avoided `web/`, `supabase/sql/`, memory logic, perception logic, realtime voice files, and broad backend behavior changes while Claude/城堡 continues active planning and implementation there.
+
 ## 2026-07-02 Update - Release check bundle
 
 **Status:** completed for release hygiene.

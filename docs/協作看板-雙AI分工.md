@@ -145,3 +145,9 @@
 - 本輪範圍：新增 `scripts/release-check.ps1` 與 `npm run release:check`，把靜態 smoke、auth-gate smoke、Supabase doctor 組成推版前一鍵檢查。
 - 預設使用 `MUNEA_SKIP_ENV_LOCAL=1`，避免本機私密 `.env.local` 干擾 smoke 預期；auth-gate 預設跑 `http://127.0.0.1:8211`。
 - 避讓範圍：未改 `web/`、`supabase/sql/`、`engine/perception_engine.py`、`engine/memory_engine.py`、即時語音檔。
+
+## 同步紀錄（2026-07-02 · Codex · Staging backend runbook）
+
+- 本輪範圍：新增 `docs/STAGING-BACKEND-RUNBOOK-2026-07-02.md`，把第一個 hosted staging API 的環境變數、Supabase gate、Hosted smoke、TestFlight backend 策略、go/no-go 與 rollback 寫成交接 runbook。
+- 已同步文件：`docs/PRODUCTION-INFRA-READINESS-2026-07-02.md`、`STATUS.md`。
+- 避讓範圍：未改 `web/`、`supabase/sql/`、`engine/server.py`、`engine/perception_engine.py`、`engine/memory_engine.py`、`engine/chat_engine.py`、即時語音檔；不干擾 Claude/城堡的記憶、感知、互動、web retheme 與 family schema 協調。
