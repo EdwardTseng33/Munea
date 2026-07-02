@@ -723,6 +723,10 @@ async function enterChat() {
 }
 
 function completeChatSession(reason = 'ended') {
+  if (_callSec > 3) {
+    const mins = Math.max(1, Math.round(_callSec / 60));
+    toast(`這通聊了 ${mins} 分鐘 · 用了 ${mins * 10} 點（剩 ${480 - mins * 10} 點）`);
+  }
   stopCallTimer();
   if (!activeChatSessionId || !activeChatStartedAt) return;
   const durationMs = Math.max(0, Date.now() - activeChatStartedAt);
@@ -739,6 +743,7 @@ function completeChatSession(reason = 'ended') {
 
 function showView(id) {
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+  setTimeout(refreshHscrollHints, 60); // 分頁切換後重算「右邊還有」提示
   const overlay = OVERLAYS.includes(id);
   $('#tabBar').classList.toggle('hidden', overlay);
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === id));
@@ -970,8 +975,27 @@ function toggleTask(item) {
   say(CHEERS[item.dataset.task] || '做得很好。');
 }
 
+const _hscrollUpdaters = [];
+function refreshHscrollHints() { _hscrollUpdaters.forEach(u => u()); }
+function setupHscrollHints() {
+  $$('.hscroll-wrap').forEach(w => {
+    const sc = w.querySelector('.fam-switch, .avatar-pick');
+    if (!sc) return;
+    const update = () => {
+      if (!sc.clientWidth) return; // 分頁隱藏中不判定
+      const atEnd = sc.scrollLeft + sc.clientWidth >= sc.scrollWidth - 8;
+      w.classList.toggle('at-end', atEnd);
+    };
+    sc.addEventListener('scroll', update, { passive: true });
+    _hscrollUpdaters.push(update);
+    update();
+  });
+  window.addEventListener('resize', refreshHscrollHints);
+}
+
 function init() {
   syncCompanionUI();
+  setupHscrollHints();
   refreshTaskProgress();
   restoreFamilyFeed();
   applyDeveloperBypass();
@@ -1052,6 +1076,8 @@ function init() {
     $$('.fam-switch-item').forEach(b => b.classList.toggle('active', b.dataset.person === 'all'));
   }
   if ($('#personBack')) $('#personBack').addEventListener('click', showFamAll);
+  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ——正式版在這裡直接買。'));
+  if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => toast('方案管理：升級、降級、取消都在這裡；發票寄給付費的家人。'));
   const famSwitch = $('#famSwitch');
   if (famSwitch) famSwitch.addEventListener('click', e => {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;

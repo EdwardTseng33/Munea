@@ -861,3 +861,28 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 舊單行字幕退役（由常駐字幕框取代、避免疊字） */
 .face-screen .face-caption { display: none !important; }
+
+/* 訂閱與點數（商業模式進 App） */
+.plan-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+.plan-row { display: flex; align-items: center; gap: 12px; }
+.plan-name { font-size: 17px; font-weight: 700; color: var(--ink); }
+.plan-price { color: var(--teal-dd); font-weight: 600; font-size: 15px; margin-left: 4px; }
+.plan-payer { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.plan-btn { border: none; background: var(--teal-d); color: #FFF; font-size: 15px; font-weight: 600; padding: 11px 20px; border-radius: 100px; min-height: 44px; cursor: pointer; }
+.plan-btn.ghost { background: var(--surface); color: var(--teal-dd); border: 1px solid var(--teal-d); }
+.plan-divider { height: 1px; background: var(--line); margin: 14px 0; }
+.pts-label { font-size: 15px; color: var(--ink); }
+.pts-label b { font-size: 19px; color: var(--coral-d); }
+.pts-used { font-size: 12.5px; color: var(--muted); margin-left: 6px; }
+.pts-bar { height: 8px; background: var(--cream); border-radius: 100px; margin: 8px 0 6px; overflow: hidden; }
+.pts-bar i { display: block; height: 100%; background: var(--coral); border-radius: 100px; }
+.pts-note { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+/* 橫向列「右邊還有」提示：右緣淡出＋小箭頭（捲到底自動消失） */
+.hscroll-wrap { position: relative; }
+.hscroll-wrap::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 44px; background: linear-gradient(to left, var(--cream) 12%, transparent); pointer-events: none; }
+.hscroll-wrap.at-end::after { opacity: 0; }
+.hscroll-more { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); pointer-events: none; box-shadow: var(--shadow-sm); }
+.hscroll-more .ic { width: 15px; height: 15px; }
+.hscroll-wrap.at-end .hscroll-more { opacity: 0; }
+.hscroll-more, .hscroll-wrap::after { transition: opacity .25s ease; }

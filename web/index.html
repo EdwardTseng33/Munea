@@ -85,7 +85,7 @@
   <!-- ===== 狀態 ===== -->
   <section class="screen" id="status">
     <div class="pad">
-      <div class="page-head"><h1 class="page-title">今天的狀態</h1><p class="page-sub">寧寧陪你留意身體、心情和日常節奏</p></div>
+      <div class="page-head"><h1 class="page-title">今天的狀態</h1></div>
 
       <div class="wallet-card">
         <div class="wc-top"><svg class="ic" viewBox="0 0 24 24" style="color:#fff"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>安心存摺</div>
@@ -114,16 +114,16 @@
   <!-- ===== 家人 ===== -->
   <section class="screen" id="family">
     <div class="pad">
-      <div class="page-head"><h1 class="page-title">全家健康圈</h1><p class="page-sub">點頭像看每個人，互相關心</p></div>
+      <div class="page-head"><h1 class="page-title">全家健康圈</h1></div>
 
-      <div class="fam-switch" id="famSwitch">
+      <div class="hscroll-wrap"><div class="fam-switch" id="famSwitch">
         <button class="fam-switch-item active" data-person="all"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="fs-name">全家</span></button>
         <button class="fam-switch-item" data-person="阿嬤" data-rel="媽媽 · 72 歲" data-init="嬤" data-tint="p-ama"><span class="fs-av"><span class="init-ava p-ama">嬤</span></span><span class="fs-name">阿嬤</span></button>
         <button class="fam-switch-item" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei"><span class="fs-av"><span class="init-ava p-mei">華</span></span><span class="fs-name">美華</span></button>
         <button class="fam-switch-item" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi"><span class="fs-av"><span class="init-ava p-zhi">明</span></span><span class="fs-name">志明</span></button>
         <button class="fam-switch-item" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao"><span class="fs-av"><span class="init-ava p-bao">寶</span></span><span class="fs-name">小寶</span></button>
         <button class="fam-switch-item" data-person="invite"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="fs-name">邀請</span></button>
-      </div>
+      </div><span class="hscroll-more" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
 
       <!-- 全家總覽 -->
       <div class="fam-view active" id="viewAll">
@@ -225,7 +225,7 @@
       <!-- 家庭記錄簿 -->
       <div class="fam-view" id="viewBook">
         <button class="back-btn" id="bookBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>回全家</button>
-        <div class="page-head"><h1 class="page-title">家庭記錄簿</h1><p class="page-sub">一起做過的事，都記在這——像一本全家的故事書</p></div>
+        <div class="page-head"><h1 class="page-title">家庭記錄簿</h1></div>
         <div class="book-month">六月</div>
         <div class="book-timeline">
         <div class="book-entry">
@@ -278,7 +278,7 @@
   <!-- ===== 設定 ===== -->
   <section class="screen" id="settings">
     <div class="pad">
-      <div class="page-head"><h1 class="page-title">設定</h1><p class="page-sub">讓沐寧更貼近你</p></div>
+      <div class="page-head"><h1 class="page-title">設定</h1></div>
       <div class="set-about">
         <img class="sa-icon" src="icons/munea-logo.png" alt="Munea" />
         <div><div class="sa-name">Munea 沐寧</div><div class="sa-sub" id="companionSummary">AI 健康照護 · 陪伴角色：寧寧</div></div>
@@ -301,6 +301,26 @@
         </div>
       </div>
 
+      <h2 class="set-section">訂閱與點數</h2>
+      <div class="plan-card">
+        <div class="plan-row">
+          <div>
+            <div class="plan-name">安心方案 <span class="plan-price">NT$999/月</span></div>
+            <div class="plan-payer">美華付費中 · 下次扣款 7/26</div>
+          </div>
+          <button class="plan-btn ghost" id="managePlanBtn">管理方案</button>
+        </div>
+        <div class="plan-divider"></div>
+        <div class="plan-row">
+          <div style="flex:1">
+            <div class="pts-label">生動點數 <b>480</b> 點 <span class="pts-used">本月已用 320</span></div>
+            <div class="pts-bar"><i style="width:60%"></i></div>
+            <div class="pts-note">通話與生動模式會用點數；基本陪伴不限量、不會中斷</div>
+          </div>
+          <button class="plan-btn" id="topUpBtn">加值</button>
+        </div>
+      </div>
+
       <h2 class="set-section">帳號與家庭</h2>
       <div class="set-list" id="setProfile" style="cursor:pointer">
         <div class="set-row"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span><span class="sr-main">個人資料<small>名稱、生日、所在地與活動狀態</small></span><span class="sr-arrow">陳秀英 ›</span></div>
@@ -320,14 +340,14 @@
         <label class="companion-name-label" for="companionNameInput">角色名稱</label>
         <input class="companion-name-input" id="companionNameInput" value="寧寧" maxlength="12" autocomplete="off" />
         <div class="companion-name-hint">名稱是你的稱呼；外觀、聲音和互動氣質由下面的模板決定。</div>
-        <div class="avatar-pick" id="avatarPick">
+        <div class="hscroll-wrap"><div class="avatar-pick" id="avatarPick">
           <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-real-female.png" alt="溫柔陪伴型"></span><span class="avl"><b>溫柔型</b><small>像家人 · 會照看</small></span></button>
           <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/companion-real-male.png" alt="沉穩陪伴型"></span><span class="avl"><b>沉穩型</b><small>像大哥 · 很可靠</small></span></button>
           <button class="avo" data-ava="munea-2d-xiaoyun"><span class="avi"><img src="avatars/munea-2d-xiaoyun.png" alt="開朗陪伴型"></span><span class="avl"><b>開朗型</b><small>像朋友 · 很有朝氣</small></span></button>
           <button class="avo" data-ava="munea-2d-ayuan"><span class="avi"><img src="avatars/munea-2d-ayuan.png" alt="隨和陪伴型"></span><span class="avl"><b>隨和型</b><small>鄰家感 · 好聊天</small></span></button>
           <button class="avo" data-ava="munea-2d-mimi"><span class="avi"><img src="avatars/munea-2d-mimi.png" alt="貓咪陪伴型"></span><span class="avl"><b>貓咪型</b><small>陪伴感 · 有個性</small></span></button>
           <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai.png" alt="狗狗陪伴型"></span><span class="avl"><b>狗狗型</b><small>熱情 · 很黏人</small></span></button>
-        </div>
+        </div><span class="hscroll-more" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
       </div>
 
       <section class="ai-dev-panel" id="aiDevPanel" hidden>
@@ -449,7 +469,7 @@
   <section class="screen" id="connect">
     <div class="pad">
       <button class="cn-back" id="connectBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>狀態</button>
-      <div class="page-head"><p class="page-kicker">裝置</p><h1 class="page-title">連接裝置</h1><p class="page-sub">連上後，健康資料會自動進來</p></div>
+      <div class="page-head"><h1 class="page-title">連接裝置</h1></div>
 
       <div class="cn-intro">
         <svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg>
