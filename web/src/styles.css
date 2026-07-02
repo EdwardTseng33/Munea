@@ -764,9 +764,10 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .qc-walk { padding: 14px 6px 6px; }
 .qc-track { position: relative; height: 10px; background: var(--mint); border-radius: 100px; margin: 18px 8px 8px; }
 .qc-track > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--teal); border-radius: 100px; }
-.qc-walker { position: absolute; top: 50%; transform: translate(-50%, -78%); width: 30px; height: 30px; border-radius: 50%; border: 2px solid #FFF; box-shadow: var(--shadow-sm); overflow: hidden; }
+.qc-walker { position: absolute; top: 50%; transform: translate(-50%, -78%); width: 30px; height: 30px; border-radius: 50%; border: 2px solid #FFF; box-shadow: var(--shadow-sm); }
+.qc-walker .init-ava { border-radius: 50%; overflow: hidden; }
 .qc-walker .init-ava { font-size: 13px; }
-.qc-walker.lead { width: 36px; height: 36px; z-index: 2; }
+.qc-walker.lead { width: 36px; height: 36px; z-index: 2; overflow: visible; }
 .qc-flag { position: absolute; right: -4px; top: 50%; transform: translate(0, -120%); }
 .qc-flag .ic { width: 18px; height: 18px; color: var(--coral-d); }
 
@@ -964,3 +965,30 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .pager-dots { display: flex; justify-content: center; gap: 7px; margin: -2px 0 10px; }
 .pager-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: background .2s, transform .2s; }
 .pager-dots i.on { background: var(--teal-d); transform: scale(1.25); }
+
+/* 挑戰卡遊戲感：里程碑刻度＋完成率＋終點旗輕飄 */
+.qc-tick { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 4px; height: 16px; border-radius: 3px; background: #FFFFFF; box-shadow: 0 0 0 1.5px var(--mint-2); }
+.qc-pct { position: absolute; left: 50%; transform: translateX(-50%); top: -34px; z-index: 3; background: var(--coral-d); color: #FFF; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 100px; white-space: nowrap; }
+.qc-pct::after { content: ""; position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%) rotate(45deg); width: 6px; height: 6px; background: var(--coral-d); }
+.qc-flag .ic { animation: flagSway 2.4s ease-in-out infinite; transform-origin: bottom left; }
+@keyframes flagSway { 0%,100% { transform: rotate(0); } 50% { transform: rotate(6deg); } }
+
+/* 出席看板：分組＋頭像狀態徽章（一眼懂誰能到） */
+.rsvp-board { display: flex; gap: 10px; padding: 6px 0 12px; }
+.rsvp-group { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--cream); border-radius: 14px; padding: 10px 14px 8px; }
+.rsvp-group.yes { background: var(--mint); }
+.rsvp-group.wait { background: var(--coral-soft); }
+.rg-avs { display: flex; }
+.rg-av { position: relative; width: 40px; height: 40px; margin-left: -8px; }
+.rg-av:first-child { margin-left: 0; }
+.rg-av .init-ava { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #FFF; font-size: 15px; }
+.rg-av.dim .init-ava { opacity: .55; filter: grayscale(.4); }
+.rg-badge { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; border: 2px solid #FFF; }
+.rg-badge .ic { width: 10px; height: 10px; stroke-width: 3; }
+.rg-badge.ok { background: var(--teal-d); color: #FFF; }
+.rg-badge.nope { background: #B4B2A9; color: #FFF; }
+.rg-badge.ask { background: var(--coral-d); color: #FFF; animation: askPulse 1.8s ease-in-out infinite; }
+@keyframes askPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.rg-label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.rsvp-group.yes .rg-label { color: var(--teal-dd); }
+.rsvp-group.wait .rg-label { color: var(--coral-d); }
