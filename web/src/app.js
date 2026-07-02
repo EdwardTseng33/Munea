@@ -98,6 +98,7 @@ const avatarRuntime = {
     if (fimg && avatarId) {
       const template = templateFor(avatarId);
       fimg.src = template.fullAsset || ('avatars/' + avatarId + '.png');
+      fimg.classList.toggle('sq', !template.fullAsset);
     }
   },
   startMockViseme(ms) {
@@ -333,7 +334,7 @@ function syncCompanionUI() {
   const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = thumbSrc;
   const nameInput = $('#companionNameInput');
   if (nameInput && document.activeElement !== nameInput && nameInput.value !== display) nameInput.value = display;
-  const fimg = $('#faceImg'); if (fimg) fimg.src = fullSrc;
+  const fimg = $('#faceImg'); if (fimg) { fimg.src = fullSrc; fimg.classList.toggle('sq', !t.fullAsset); }
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
@@ -695,8 +696,10 @@ const voiceProvider = {
 window.MuneaVoiceProvider = voiceProvider;
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 async function enterChat() {
-  startCallTimer();
-  setCaption('接通了，直接說話就可以', '想到什麼就說，寧寧聽得到');
+  // 未接通：只亮綠色「開始通話」；接通後才計時
+  if ($('#callIdleBar')) $('#callIdleBar').style.display = '';
+  if ($('#callLiveBar')) $('#callLiveBar').style.display = 'none';
+  setCaption('按下綠色按鈕，開始跟寧寧通話', '');
   if (chatOpened) return;
   chatOpened = true;
   activeChatSessionId = makeSessionId('voice');
@@ -1045,9 +1048,17 @@ function setupHscrollHints() {
   window.addEventListener('resize', refreshHscrollHints);
 }
 
+function connectCall() {
+  if ($('#callIdleBar')) $('#callIdleBar').style.display = 'none';
+  if ($('#callLiveBar')) $('#callLiveBar').style.display = '';
+  startCallTimer();
+  setCaption('接通了，直接說話就可以', '想到什麼就說，寧寧聽得到');
+}
+
 function init() {
   syncCompanionUI();
   setupHscrollHints();
+  if ($('#callStartBtn')) $('#callStartBtn').addEventListener('click', connectCall);
   refreshTaskProgress();
   restoreFamilyFeed();
   applyDeveloperBypass();

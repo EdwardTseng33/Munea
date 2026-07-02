@@ -25,12 +25,12 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; min-height: 100%; }
-body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
+body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 
 .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; flex-shrink: 0; }
 
 .app-shell {
-  width: 100%; max-width: 400px; margin: 0 auto; height: 100vh; min-height: 100vh; position: relative; overflow: hidden;
+  width: 100%; max-width: 400px; margin: 0 auto; height: 100vh; max-height: 866px; min-height: 640px; position: relative; overflow: hidden; border-radius: 24px;
   display: flex; flex-direction: column;
   background: var(--cream); /* 單一米黃底色（Edward 6/27：不要兩色漸層、薄荷綠留作點綴/其他模板底） */
 }
@@ -526,16 +526,14 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* 全屏臉：鋪滿、置中偏上像視訊（臉在上中段、object-position 偏上不切臉） */
 .face-bg {
   position: absolute; inset: 0; z-index: 0;
-  background:
-    rgba(20,32,27,.88),
-    #17231F;
+  background: #C9AE96; /* 取照片背景同色系：等比留白處無縫貼合 */
 }
 .face-bg img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center top;
   display: block;
   /* §6.5 第 2 層降級：靜態圖 + CSS 呼吸（極輕微縮放，像活著、不恐怖谷） */
@@ -837,7 +835,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 }
 
 /* 通話 HUD（時間/點數）＋常駐字幕框 */
-.face-hud { position: absolute; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 14px); z-index: 6; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.face-hud { position: absolute; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 16px); z-index: 6; display: flex; flex-direction: row; gap: 8px; align-items: center; }
 .hud-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,.38); color: #FFF; font-size: 14px; font-weight: 600; padding: 7px 13px; border-radius: 100px; }
 .hud-pill .ic { width: 15px; height: 15px; }
 .hud-pill.pts { color: #FFD9AE; }
@@ -908,3 +906,26 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 首頁寧寧頭像：頭靠上緣（Edward 拍板） */
 .bc-avatar img, .bc-avatar .ava-img { object-position: center 8% !important; }
+
+/* 通話鈕：像電話——綠色開始、紅色結束 */
+.face-bar.idlebar { justify-content: center; }
+.call-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 64px; padding: 16px 34px; border: none; border-radius: 100px;
+  font-family: var(--sans); font-size: 19px; font-weight: 700; color: #FFF; cursor: pointer;
+  box-shadow: var(--shadow-sm); }
+.call-btn .ic { width: 26px; height: 26px; }
+.call-btn.start { background: #2E9E5B; }
+.call-btn.start:active { transform: scale(.96); }
+.call-btn.end { background: var(--danger); }
+.call-btn.end .ic { transform: rotate(135deg); }
+.call-btn.end:active { transform: scale(.96); }
+
+/* 訂閱卡精緻版：價格不換行、按鈕整排 */
+.plan-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.plan-price { white-space: nowrap; color: var(--teal-dd); font-weight: 700; font-size: 19px; }
+.plan-price small { font-size: 13px; font-weight: 600; color: var(--muted); }
+.plan-actions { display: flex; gap: 10px; margin-top: 14px; }
+.plan-actions .plan-btn { flex: 1; white-space: nowrap; min-height: 48px; }
+
+/* 沒有全身圖的角色（方形素材）：滿版聰明裁切、臉保持偏上 */
+.face-bg img.sq { object-fit: cover; object-position: center 22%; }

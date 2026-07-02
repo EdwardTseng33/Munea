@@ -18,6 +18,7 @@
     'munea-2d-xiaoyun': {
       backendChar: '小昀',
       defaultName: '小昀',
+      fullAsset: 'avatars/nening-real-female-full.png',
       templateLabel: '開朗型 · 像朋友，很有朝氣',
       thumbAsset: 'avatars/munea-2d-xiaoyun.png',
     },
