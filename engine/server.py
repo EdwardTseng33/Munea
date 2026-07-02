@@ -393,6 +393,46 @@ def _invalidate_memory_items(ids):
     save_memory_items(kept)
 
 
+def refresh_daily_briefing(region=None, person_id=None):
+    """每日簡報功課：抓真天氣＋真空品 → 一句人話 → 存感知抽屜（帶當天到期）。
+    設計為清晨定時跑（預設 06:30）；也可由管理端手動觸發。"""
+    import perception_engine
+    person_id = person_id or PRIMARY_CARE_RECIPIENT_ID
+    try:
+        briefing = perception_engine.build_briefing(region)
+    except Exception as e:
+        log_fallback_exception("build daily briefing", e)
+        return {"ok": False, "brain": "butler", "action": "daily_briefing", "error": "briefing_failed"}
+    expires = briefing["date"] + "T23:59:59+08:00"  # 當天有效、隔天自然過期
+    append_perception_snapshots([{
+        "personId": person_id,
+        "snapshotType": "daily_briefing",
+        "expiresAt": expires,
+        "facts": briefing,
+        "source": "perception_engine",
+    }])
+    return {"ok": True, "brain": "butler", "action": "daily_briefing",
+            "briefing": briefing, "expiresAt": expires}
+
+
+def _latest_daily_briefing(person_id=None):
+    """讀最新、未過期的今日簡報（通話中只讀這裡、絕不臨時對外查）。"""
+    person_id = person_id or PRIMARY_CARE_RECIPIENT_ID
+    snaps = load_perception_snapshots({"snapshotType": "daily_briefing", "personId": person_id}, limit=10)
+    now = datetime.now(timezone.utc)
+    for snap in reversed(snaps or []):
+        exp = snap.get("expiresAt")
+        try:
+            if exp and datetime.fromisoformat(str(exp).replace("Z", "+00:00")) < now:
+                continue
+        except ValueError:
+            pass
+        facts = snap.get("facts") or {}
+        if facts.get("briefingLine") or facts.get("careHints"):
+            return facts
+    return {}
+
+
 def normalize_perception_snapshot(data):
     data = data or {}
     return {
@@ -707,12 +747,19 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
     guardian = guardian_evaluate_response({"text": text, "effort": "quick"})
     memories = memory_retrieve_response({"query": text, "limit": 5}).get("memories", [])
     perception = topic_perception_plan_response({"query": text})
+    try:
+        import perception_engine
+        now_ctx = perception_engine.now_context()
+    except Exception:
+        now_ctx = {}
     return {
         "persona": persona,
         "guardian": guardian,
         "memories": memories,
         "perception": perception,
         "livingProfile": load_living_profile(),
+        "now": now_ctx,                                # 真時間（台灣、時段、語氣提示）
+        "dailyBriefing": _latest_daily_briefing(),     # 今日簡報（清晨備好的真天氣/空品）
     }
 
 
@@ -731,6 +778,20 @@ def reply_context_instruction(context):
         f"toneOverrides={json.dumps(tone_overrides, ensure_ascii=False)}; "
         f"relationshipMemory={json.dumps(relationship_memory, ensure_ascii=False)}."
     )
+    now_ctx = context.get("now") or {}
+    time_line = ""
+    if now_ctx.get("time"):
+        time_line = (f"（現在時間：{now_ctx.get('date')}（{now_ctx.get('weekday')}）{now_ctx.get('period')} {now_ctx.get('time')}。"
+                     + (f"時段語氣：{now_ctx.get('toneHint')}。" if now_ctx.get("toneHint") else "") + "）")
+    brief = context.get("dailyBriefing") or {}
+    brief_line = ""
+    if brief.get("briefingLine") or brief.get("careHints"):
+        seg = "（今日簡報（已核實的真實資料，可自然帶進關心、不要照唸）："
+        if brief.get("briefingLine"):
+            seg += brief["briefingLine"] + "。"
+        if brief.get("careHints"):
+            seg += "關心提示：" + "；".join(brief["careHints"]) + "。"
+        brief_line = seg + "）"
     living = context.get("livingProfile") or {}
     living_parts = []
     if living.get("who"):
@@ -764,6 +825,9 @@ def reply_context_instruction(context):
         f"（語氣：{', '.join(persona_body.get('toneProfile') or [])}。）",
         f"（對話風格：{', '.join(persona_body.get('conversationStyle') or [])}。）",
         f"（安全風險：{(guardian.get('risk') or {}).get('level', 'none')}；動作：{(guardian.get('risk') or {}).get('action', 'allow')}。）",
+        time_line,
+        brief_line,
+        "（聽出對方的語氣與心情、跟著調整：聽起來累或低落→放柔放慢、不催、多陪；開心→跟著亮起來。這是關心、不是診斷，絕不評斷對方的心理狀態。）",
         living_line,
         "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
         "（即時感知需求：\n" + ("\n".join(domain_lines) if domain_lines else "- 此輪不需要外部即時事實。") + "\n）",
@@ -2385,6 +2449,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(refresh_living_profile(data.get("personId") or data.get("person_id")))
+            elif self.path == "/admin/daily-briefing":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(refresh_daily_briefing(data.get("region"), data.get("personId") or data.get("person_id")))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":

@@ -129,12 +129,29 @@ def remember(history_text):
     return []
 
 
-def open_chat(char="寧寧"):
-    """主動開口：用記憶＋今日狀態，生一句『她先開口』的開場（像朋友、不是等你講）。"""
+def open_chat(char="寧寧", today=""):
+    """主動開口：用記憶＋今日狀態，生一句『她先開口』的開場（像朋友、不是等你講）。
+    today＝真實的今日簡報（由感知引擎備好傳入）；沒有就不提天氣、不瞎編。"""
     c = CHARS.get(char, CHARS["寧寧"])
-    today = "今天天氣轉涼、有寒流。"  # demo；之後接真天氣＋每日感知排程
-    sys_i = (c["persona"] + RED + _profile_ctx()
-             + f"\n今天的狀態（你已經先知道了）：{today}")
+    if not today:
+        try:
+            import perception_engine
+            b = perception_engine.build_briefing()
+            today = b.get("briefingLine") or ""
+            if b.get("careHints"):
+                today += ("。" if today else "") + "；".join(b["careHints"])
+        except Exception as e:
+            _log_fallback_exception("build real briefing for opener", e)
+            today = ""
+    today_ctx = f"\n今天的狀態（已核實的真實資料，你已經先知道了）：{today}" if today else \
+        "\n（今天的天氣資料暫時沒有——不要提天氣細節、不要編造。）"
+    try:
+        import perception_engine
+        n = perception_engine.now_context()
+        today_ctx += f"\n現在是{n['weekday']}{n['period']} {n['time']}——問候要符合時段（中午別說早安）。{n.get('toneHint','')}"
+    except Exception:
+        pass
+    sys_i = c["persona"] + RED + _profile_ctx() + today_ctx
     task = ("現在是你『主動開口』跟她打招呼、開啟今天的聊天——像朋友一樣先關心，不是等她先講。"
             "請生一段溫暖主動的開場：①關心她近況或今天 ②自然帶到一件你記得的事 "
             "③主動分享一個你『最近發現、配她興趣、可以一起聊』的東西（電影／書／活動）。短、台灣暖口語、像真人。")

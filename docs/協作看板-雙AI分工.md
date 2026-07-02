@@ -31,7 +31,7 @@
 
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
-| Claude / 城堡 | 記憶層強化：真萃取引擎（`engine/memory_engine.py` 已建＋自測，只存長輩事實不存 AI 的話）→ 接進聊完整理、收斂舊側寫、pgvector 語意、四層/整理員/活側寫 | 新增 `engine/memory_engine.py`；**將動** `engine/server.py`（butler_post_turn 記憶接線）、`engine/chat_engine.py`（收斂 user_profile）、`supabase/sql/`（加 pgvector）、記憶設計文件 | 2026-07-02 | 🔄 進行中 |
+| Claude / 城堡 | ✅ 記憶層 100%（13/13 驗收）→ **感知層 P0 實作中**：真時間/真天氣(CWA+Open-Meteo 兜底)/AQI/每日簡報→snapshot→開場注入、拿掉假寒流、語氣感知指示 | `engine/perception_engine.py`（新）、`engine/server.py`（build_reply_context/reply_context_instruction/daily-briefing 端點）、`engine/chat_engine.py`（open_chat 真天氣＋時段） | 2026-07-02 | 🔄 進行中 |
 | Codex | iOS/TestFlight Mac 交接包：在不碰記憶主線的情況下，把 Mac/Xcode/Apple Developer/真機 QA 步驟落檔 | `docs/TESTFLIGHT-MAC-HANDOFF-2026-07-02.md`、`docs/APP-STORE-PRODUCTION-READINESS.md`、`docs/MOBILE-VOICE-BRIDGE.md`、`docs/CURRENT-DEVELOPMENT-PLAN.md`、`STATUS.md` | 2026-07-02 | ✅ 完成 |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
@@ -55,7 +55,9 @@
 > 4. `memory_engine.extract` 加重試（萃取偶發失敗不再默默丟掉整輪記憶）。
 > 完整評估：`docs/城堡評估-記憶與感知-2026-07-02.md`。**感知層經稽核僅約 13%（孤兒 snapshot 未接回話＋假天氣寫死），是下一主戰場**——Codex 若要動感知（時間/天氣/CWA/snapshot 接回 `build_reply_context`）先在此喊一聲、避免撞。
 >
-> 💬 **城堡 → Codex（2026-07-02 · 感知層 100% 定案規劃已落檔）**：`docs/感知層-定案規劃-2026-07-02.md`（三路 2026-07 調研合成：S2S 技術/模型、競品、情緒/V2 法規）。定案要點：① 架構＝**清晨背景預抓 → snapshot → 開場注入 → 通話中只讀本地**（因 3.1 Flash Live 同步阻塞 function calling、不支援 Maps grounding）② 雙模型抽象（3.1 主力、2.5 Native Audio 非阻塞逃生門）③ 地基＝CWA 天氣＋moenv AQI＋當地時間（免費）④ P0＝真時間/打通 snapshot 斷點/拿掉假天氣/CWA/AQI ⑤ 主動開口＝ElliQ「先算了才開口」引擎 ⑥ 聲音情緒 V1 先靠模型自然語氣、非醫療硬閘 ⑦ V2（視訊/表情）以統一 `WellbeingSignal` 事件＋同意能力清冊預留、跌倒用雷達優先。**感知層我還沒開工實作、待 Edward 拍板旋鈕（簡報時間/主動頻率/聲音情緒V1與否/V2起點）；Codex 若要先動 P0 感知（真時間/CWA/AQI/snapshot 接回）在此喊一聲認領、避免撞。**
+> 💬 **城堡 → Codex（2026-07-02 · 感知層 100% 定案規劃已落檔）**：`docs/感知層-定案規劃-2026-07-02.md`（三路 2026-07 調研合成：S2S 技術/模型、競品、情緒/V2 法規）。定案要點：① 架構＝**清晨背景預抓 → snapshot → 開場注入 → 通話中只讀本地**（因 3.1 Flash Live 同步阻塞 function calling、不支援 Maps grounding）② 雙模型抽象（3.1 主力、2.5 Native Audio 非阻塞逃生門）③ 地基＝CWA 天氣＋moenv AQI＋當地時間（免費）④ P0＝真時間/打通 snapshot 斷點/拿掉假天氣/CWA/AQI ⑤ 主動開口＝ElliQ「先算了才開口」引擎 ⑥ 聲音情緒 V1 先靠模型自然語氣、非醫療硬閘 ⑦ V2（視訊/表情）以統一 `WellbeingSignal` 事件＋同意能力清冊預留、跌倒用雷達優先。~~感知層我還沒開工實作~~ → **感知 P0 由城堡開工（2026-07-02）**，Edward 已拍板：語氣情緒＝基礎能力、V2 進 backlog 不開發、簡報 06:30、主動 1 次/天。
+>
+> 💬 **城堡 → Codex（2026-07-02 · 感知 P0 落地）**：新檔 `engine/perception_engine.py`（now_context 台灣時間/時段、fetch_weather CWA 優先＋Open-Meteo 兜底、fetch_aqi moenv＋兜底、build_briefing 一句人話＋careHints）。`server.py`：`refresh_daily_briefing`（存 daily_briefing snapshot、當天到期）、`_latest_daily_briefing`（只讀未過期）、`build_reply_context` 注入 `now`＋`dailyBriefing`、`reply_context_instruction` 加時間行/簡報行/語氣感知行、`POST /admin/daily-briefing`（admin-gated）。`chat_engine.open_chat` 改吃真簡報＋時段（假寒流已滅、中午不再說早安）。**環境鑰匙**：`CWA_API_KEY`/`MOENV_API_KEY` 可選（沒有走 Open-Meteo 免鑰匙）、`MUNEA_REGION` 預設臺北市。**清晨 06:30 定時任務還沒掛**（誰接 host 排程在此喊一聲）。你若要動 perception_engine / reply_context 先喊。
 
 ---
 
