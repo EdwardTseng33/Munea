@@ -1,5 +1,16 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-02 Update - Non-App infrastructure readiness
+
+**Status:** completed for a non-overlapping infrastructure lane.
+
+- Added `.github/workflows/smoke.yml` so GitHub push / pull request runs Windows `npm run smoke:no-api` and `npm run supabase:doctor`.
+- Added `docs/PRODUCTION-INFRA-READINESS-2026-07-02.md` to map staging backend, Supabase live gate, Auth live E2E, billing provider verification, scheduled jobs, observability, and Admin MVP readiness.
+- Added `MUNEA_SKIP_ENV_LOCAL=1` for CI/clean verification so static smoke can skip local private `engine/.env.local` values.
+- Kept the existing smoke guardrail green by logging invalid daily-briefing expiration parsing in `engine/server.py` and opener time-context failures in `engine/chat_engine.py`.
+- Identified a billing reliability follow-up: duplicate Avatar completion events should not double-count usage, but the fix likely touches `engine/server.py` and should wait for coordination with Claude/城堡's active server/perception lane.
+- Avoided `engine/server.py`, `engine/perception_engine.py`, `engine/memory_engine.py`, `engine/chat_engine.py`, `web/`, and `supabase/sql/`.
+
 ## 2026-07-02 Update - TestFlight Mac handoff
 
 **Status:** completed for iOS/TestFlight planning without touching Claude/城堡's memory lane.

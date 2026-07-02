@@ -149,8 +149,8 @@ def open_chat(char="寧寧", today=""):
         import perception_engine
         n = perception_engine.now_context()
         today_ctx += f"\n現在是{n['weekday']}{n['period']} {n['time']}——問候要符合時段（中午別說早安）。{n.get('toneHint','')}"
-    except Exception:
-        pass
+    except Exception as e:
+        _log_fallback_exception("build opener time context", e)
     sys_i = c["persona"] + RED + _profile_ctx() + today_ctx
     task = ("現在是你『主動開口』跟她打招呼、開啟今天的聊天——像朋友一樣先關心，不是等她先講。"
             "請生一段溫暖主動的開場：①關心她近況或今天 ②自然帶到一件你記得的事 "

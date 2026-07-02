@@ -23,5 +23,7 @@ def load_env_file(path, override=False):
 
 
 def load_engine_env(filename=".env.local", override=False):
+    if os.environ.get("MUNEA_SKIP_ENV_LOCAL") in {"1", "true", "TRUE", "yes", "YES"}:
+        return []
     here = os.path.dirname(os.path.abspath(__file__))
     return load_env_file(os.path.join(here, filename), override=override)

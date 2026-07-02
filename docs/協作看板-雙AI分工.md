@@ -32,7 +32,7 @@
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
 | Claude / 城堡 | ✅ 記憶 100%＋感知 ~95%＋**心情圖譜 v2 已入引擎**（六類：開心/愉快/平穩/疲累/低落/煩躁；每聊一筆、日總結 mixed 小點、點日展開明細、moodMap 色回傳 App）→ ✅ 家人帳號連動設計＋UIUX 重設計定案（munea.net 錨）＋遊戲系統設計落檔 → **下一步：App 全面換裝實作（web/ 由城堡認領）＋家人帳號 P0（等 Codex 對齊 007 欄位）** | `engine/perception_engine.py`（MOOD_CATEGORIES/_MOOD_SYS 六類）、`engine/server.py`（wellbeing_trend 六類/mixed/signals）；**將動 `web/`（index/styles 全面換裝、照 UIUX 定案）** | 2026-07-02 | 🔄 進行中 |
-| Codex | iOS/TestFlight Mac 交接包：在不碰記憶主線的情況下，把 Mac/Xcode/Apple Developer/真機 QA 步驟落檔 | `docs/TESTFLIGHT-MAC-HANDOFF-2026-07-02.md`、`docs/APP-STORE-PRODUCTION-READINESS.md`、`docs/MOBILE-VOICE-BRIDGE.md`、`docs/CURRENT-DEVELOPMENT-PLAN.md`、`STATUS.md` | 2026-07-02 | ✅ 完成 |
+| Codex | 非 App 基礎建設：新增 GitHub Actions smoke、自動驗證路線圖、整理 staging/Supabase/Auth/Billing/排程/監控/Admin 可推進項 | `.github/workflows/smoke.yml`、`docs/PRODUCTION-INFRA-READINESS-2026-07-02.md`、`STATUS.md` | 2026-07-02 | ✅ 完成 |
 
 > 📋 **開發排程**見 [健檢修復排程-2026-07-01](健檢修復排程-2026-07-01.md)（健檢三方發現的問題已排 P0/P1/核心＋認領欄）。**認領前先看、避免重複。**
 >
@@ -127,3 +127,9 @@
 - 本輪範圍：因 Edward 已有 Mac/Xcode 與 Apple Developer Program，補上 `docs/TESTFLIGHT-MAC-HANDOFF-2026-07-02.md`，把 Capacitor iOS project、Xcode signing、Info.plist purpose strings、iPhone 麥克風/播放 QA、App Store Connect 初始資料、TestFlight build gate 落成可執行清單。
 - 已同步文件：`APP-STORE-PRODUCTION-READINESS.md`、`MOBILE-VOICE-BRIDGE.md`、`CURRENT-DEVELOPMENT-PLAN.md`、`STATUS.md`。
 - 避讓範圍：未改 `engine/server.py`、`engine/memory_engine.py`、`engine/chat_engine.py`、`supabase/sql/`、`engine/live_voice_*`，不干擾 Claude/城堡的記憶層與即時語音主線。
+
+## 同步紀錄（2026-07-02 · Codex · 非 App 基礎建設）
+
+- 本輪範圍：新增 `.github/workflows/smoke.yml`，讓 GitHub push / PR 自動跑 `npm run smoke:no-api` 與 `npm run supabase:doctor`。
+- 新增 `docs/PRODUCTION-INFRA-READINESS-2026-07-02.md`，整理 staging backend、Supabase live gate、Auth live E2E、Billing provider verification、scheduled jobs、observability、Admin MVP 的可推進順序。
+- 避讓範圍：未改 `engine/server.py`、`engine/perception_engine.py`、`engine/memory_engine.py`、`engine/chat_engine.py`、`web/`、`supabase/sql/`。

@@ -1,0 +1,46 @@
+name: Smoke
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  smoke-no-api:
+    name: Windows smoke without API server
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: python -m pip install -r engine/requirements.txt
+
+      - name: Run static smoke
+        env:
+          GEMINI_API_KEY: smoke-test-key
+          MUNEA_SKIP_ENV_LOCAL: "1"
+        run: npm run smoke:no-api
+
+      - name: Run Supabase doctor without secrets
+        env:
+          MUNEA_SKIP_ENV_LOCAL: "1"
+        run: npm run supabase:doctor

@@ -609,8 +609,8 @@ def _latest_daily_briefing(person_id=None):
         try:
             if exp and datetime.fromisoformat(str(exp).replace("Z", "+00:00")) < now:
                 continue
-        except ValueError:
-            pass
+        except ValueError as e:
+            log_fallback_exception("parse daily briefing expiration", e)
         facts = snap.get("facts") or {}
         if facts.get("briefingLine") or facts.get("careHints"):
             return facts
