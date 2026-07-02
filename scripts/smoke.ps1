@@ -92,7 +92,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import chat_engine
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     chat_engine.USER_PROFILE_PATH = str(Path(d) / "user_profile.json")
     profile = chat_engine._read_user_profile()
     assert profile["\u7a31\u547c"] == "\u4f7f\u7528\u8005"
@@ -544,7 +544,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
     server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
@@ -638,7 +638,7 @@ assert warm_persona["relationshipState"]["rapportLevel"] == "trusted"
 assert warm_persona["relationshipState"]["relationshipMemory"]["lastTopicDomains"] == ["travel"]
 assert warm_persona["safety"]["reduceHumor"] is True
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
     server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
@@ -845,7 +845,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     path = Path(d) / "store.json"
     server.write_json_file(str(path), {"ok": True, "items": [1, 2, 3]})
     loaded = server.read_json_file(str(path), {})
@@ -865,7 +865,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     server.AUDIT_EVENTS_STORE_PATH = str(Path(d) / "audit_events_store.json")
     event = server.product_event_response({
@@ -931,7 +931,7 @@ from pathlib import Path
 sys.path.insert(0, "engine")
 from env_loader import load_env_file
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     env_path = Path(d) / ".env.local"
     env_path.write_text("""
 # comment
@@ -1001,7 +1001,7 @@ premium = server.avatar_session_response({"action": "complete", "mode": "ditto",
 assert premium["session"]["selectedMode"] == "ditto"
 assert premium["session"]["usageCommitted"] is True
 assert premium["usageLedger"]["avatarMinutesUsed"] == 12
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     original_credits_path = server.CREDITS_STORE_PATH
     server.CREDITS_STORE_PATH = str(Path(d) / "credits_store.json")
     premium_store.update(server.normalize_billing_store({
@@ -1033,7 +1033,7 @@ with tempfile.TemporaryDirectory() as d:
 server.load_billing_store = original_load
 server.save_billing_store = original_save
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     original_credits_path = server.CREDITS_STORE_PATH
     server.CREDITS_STORE_PATH = str(Path(d) / "credits_store.json")
     balance = server.credits_balance_response({})

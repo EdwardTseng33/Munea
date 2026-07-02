@@ -7,6 +7,7 @@
 - Added GitHub Actions concurrency to the Smoke workflow so newer pushes on the same branch cancel older in-progress Smoke runs.
 - Updated core workflow actions to their Node 24-compatible major versions: checkout v5, setup-node v5, and setup-python v6.
 - This reduces intermediate-run noise during rapid Claude/Codex push rounds and clears the Node.js 20 deprecation warnings shown in Actions annotations.
+- Follow-up: smoke temp-directory fixtures now tolerate delayed Windows cleanup so CI does not fail after assertions have already passed.
 - Avoided `web/`, `supabase/sql/`, memory internals, perception internals, realtime voice files, and backend behavior changes.
 
 ## 2026-07-02 Update - Clean no-api smoke isolation

@@ -436,9 +436,10 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* 發起挑戰 彈出面板 */
 .modal-mask { position: absolute; inset: 0; background: rgba(31,45,41,.5); backdrop-filter: blur(3px); z-index: 60; display: none; align-items: flex-end; }
 .modal-mask.show { display: flex; }
-.modal { background: var(--cream); border-radius: 26px 26px 0 0; width: 100%; padding: 8px 20px 28px; max-height: 88%; overflow-y: auto; animation: slideup .3s ease; }
+.modal { background: var(--cream); border-radius: 26px 26px 0 0; width: 100%; padding: 0 20px 28px; max-height: 88%; overflow-y: auto; animation: slideup .3s ease; }
 @keyframes slideup { from { transform: translateY(100%) } to { transform: none } }
-.modal-grab { width: 40px; height: 5px; border-radius: 999px; background: var(--line); margin: 8px auto 16px; }
+.modal-grab { position: sticky; top: 0; z-index: 5; display: block; width: calc(100% + 40px); height: 28px; margin: 0 -20px 12px; background: var(--cream); border-radius: 26px 26px 0 0; }
+.modal-grab::after { content: ""; position: absolute; left: 50%; top: 12px; transform: translateX(-50%); width: 40px; height: 5px; border-radius: 999px; background: var(--line); }
 .modal h2 { font-family: var(--display); font-size: 21px; font-weight: 800; margin-bottom: 4px; }
 .modal .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
 .auth-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -785,12 +786,6 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .hr-mood.m-tired { color: #5F6A61; }
 .hr-mood.m-sad { color: #3F5F80; }
 .hr-mood.m-upset { color: #6E4488; }
-
-/* ===== 今天一起完成：時間軸巧思 ===== */
-.task-card { position: relative; }
-.task-card::before { content: ""; position: absolute; left: 43px; top: 26px; bottom: 26px; width: 2px; background: var(--line); border-radius: 2px; }
-.task-item { position: relative; }
-.task-ico { position: relative; z-index: 1; box-shadow: 0 0 0 4px var(--surface); }
 
 /* ===== 記錄簿 · 故事書時間軸 ===== */
 .book-month { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--coral-d); margin: 4px 0 10px 4px; }
