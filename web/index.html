@@ -122,9 +122,9 @@
 
       <!-- 全家總覽 -->
       <div class="fam-view active" id="viewAll">
-        <div class="sec-head"><div><h2>家庭挑戰</h2></div></div>
+        <div class="sec-head"><div><h2>家庭活動</h2></div></div>
         <div class="chal-actions">
-          <button class="chal-act new" id="newChalBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>發起挑戰</button>
+          <button class="chal-act new" id="newChalBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>發起活動</button>
           <button class="chal-act book" id="bookBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/></svg>家庭記錄簿</button>
         </div>
         <div class="quest-card">
@@ -139,7 +139,7 @@
           <div class="qc-note">還差 8,500 步——今晚一起散個步就到了</div>
         </div>
         <div class="quest-card">
-          <div class="qc-kicker event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M9 16h6"/></svg>揪一攤 · 週六聚餐<span class="qc-days">7/6 傍晚</span></div>
+          <div class="qc-kicker event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M9 16h6"/></svg>揪一攤 · 週六聚餐<span class="qc-days">7/4（週六）傍晚</span></div>
           <div class="qc-goal">阿嬤生日聚餐，誰能到？</div>
           <div class="rsvp-board">
             <div class="rsvp-group yes">
@@ -159,6 +159,16 @@
             </div>
           </div>
           <div class="qc-num">3 人已回覆 · 寧寧會親口問阿嬤、也會提醒小寶回覆</div>
+        </div>
+
+        <div class="quest-card done">
+          <div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg>機智問答 · 已結束<span class="qc-days">昨晚 · 10 題</span></div>
+          <div class="rank-list">
+            <div class="rank-row"><span class="rank-no n1">1</span><span class="rank-av"><span class="init-ava p-bao">寶</span></span><b>小寶</b><span class="rank-score">答對 9 題</span></div>
+            <div class="rank-row"><span class="rank-no n2">2</span><span class="rank-av"><span class="init-ava p-mei">華</span></span><b>美華</b><span class="rank-score">答對 8 題</span></div>
+            <div class="rank-row"><span class="rank-no n3">3</span><span class="rank-av"><span class="init-ava p-ama">嬤</span></span><b>阿嬤</b><span class="rank-score">答對 7 題</span></div>
+          </div>
+          <div class="qc-note">阿嬤全程用說的作答——寧寧說她記性一點都沒退步</div>
         </div>
 
         <div class="sec-head"><div><h2>全家狀態</h2></div></div>
@@ -300,19 +310,43 @@
       <div class="modal-mask" id="chalModal">
         <div class="modal">
           <div class="modal-grab"></div>
-          <h2>發起新挑戰</h2>
-          <p class="modal-sub">選一個挑戰，找想一起的人——不勉強誰</p>
-          <div class="field-label">挑戰類型</div>
+          <h2>發起活動</h2>
+          <p class="modal-sub">選一種活動，找想一起的人——不勉強誰</p>
+          <div class="field-label">活動類型</div>
           <div class="chal-types">
             <button class="chal-type active" data-kind="walk"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg>一起運動</button>
             <button class="chal-type" data-kind="quiz"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .3c0 1.7-2.5 2.2-2.5 3.7M12 17h.01"/></svg>機智問答</button>
             <button class="chal-type" data-kind="event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M9 16h6"/></svg>揪一攤</button>
           </div>
+          <div id="walkFields">
+            <div class="field-label">目標步數（大家一起累積）</div>
+            <div class="range-row"><input type="range" id="walkGoal" min="10000" max="60000" step="5000" value="30000" /><b id="walkGoalVal">30,000 步</b></div>
+            <div class="field-label">期間</div>
+            <div class="med-chips" id="walkDays"><button class="mchip" data-d="3">3 天</button><button class="mchip on" data-d="7">一週</button></div>
+          </div>
+          <div id="quizFields" style="display:none">
+            <div class="field-label">要玩幾題</div>
+            <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" /><b id="quizNVal">10 題</b></div>
+          </div>
           <div id="eventFields" style="display:none">
             <div class="field-label">要揪什麼</div>
             <input class="chal-input" id="eventName" placeholder="例：週六晚上全家聚餐" />
             <div class="field-label">哪一天</div>
-            <input class="chal-input" id="eventDate" placeholder="例：7/6（週六）傍晚" />
+            <div class="med-chips" id="evDayChips">
+              <button class="mchip" data-day="today">今天</button>
+              <button class="mchip" data-day="tomorrow">明天</button>
+              <button class="mchip on" data-day="sat">這週六</button>
+              <button class="mchip" data-day="sun">這週日</button>
+              <button class="mchip" data-day="pick">選日期</button>
+            </div>
+            <input type="date" class="chal-input" id="evDatePick" style="display:none" />
+            <div class="field-label">時段</div>
+            <div class="med-chips" id="evTimeChips">
+              <button class="mchip" data-t="中午">中午</button>
+              <button class="mchip" data-t="下午">下午</button>
+              <button class="mchip on" data-t="傍晚">傍晚</button>
+              <button class="mchip" data-t="晚上">晚上</button>
+            </div>
           </div>
           <div class="field-label" id="inviteLabel">找誰一起（可以不選全部）</div>
           <div class="invite-list" id="inviteList">
@@ -321,8 +355,8 @@
             <div class="invite-item" data-step="8000"><span class="iv-av"><span class="init-ava p-zhi">明</span></span><div class="iv-name">志明<div class="iv-sub">份額 8,000 步</div></div><span class="iv-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></div>
             <div class="invite-item on" data-step="6000"><span class="iv-av"><span class="init-ava p-bao">寶</span></span><div class="iv-name">小寶<div class="iv-sub">份額 6,000 步</div></div><span class="iv-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></div>
           </div>
-          <div class="goal-box">這次 <b id="goalN">3</b> 人一起，目標 <b id="goalSum">17,000</b> 步——難度跟著人數和每個人的能力算，公平、誰都不拖累誰。</div>
-          <button class="modal-btn" id="startChalBtn">送出邀請，開始挑戰</button>
+          <div class="goal-box">這次 <b id="goalN">3</b> 人一起，目標 <b id="goalSum">30,000</b> 步——寧寧會照每個人的能力分，誰都不勉強。</div>
+          <button class="modal-btn" id="startChalBtn">送出邀請</button>
         </div>
       </div>
     </div>
