@@ -765,6 +765,9 @@ function showView(id) {
   const t = $('#toast'); if (t) t.classList.remove('show');
   $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
   if (id === 'status') {
+    renderStatusCharts();
+    const strip = $('#srcStrip');
+    if (strip) strip.style.display = localStorage.getItem('munea.devicesOn') ? 'none' : '';
     const segBtns = document.querySelectorAll('#statusSeg .seg-btn');
     if (segBtns.length) {
       segBtns.forEach(x => x.classList.toggle('on', x.dataset.v === 'today'));
@@ -987,6 +990,31 @@ const PILL_SLOT_ORDER = ['早餐後', '午餐後', '晚餐後', '睡前'];
 function pillDateKey() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+const WEEK_STEPS = [4200, 5100, 3600, 6200, 5500, 0, 0]; // 一~日；今天=第5天
+function renderStatusCharts() {
+  const wb = document.getElementById('weekBars');
+  if (wb && !wb.dataset.done) {
+    const mx = Math.max(...WEEK_STEPS, 1);
+    const names = ['一', '二', '三', '四', '五', '六', '日'];
+    wb.innerHTML = WEEK_STEPS.map((v, i) => {
+      const kind = i === 4 ? 'today' : (i > 4 ? 'future' : (v >= 5000 ? 'hi' : ''));
+      const hpx = v ? Math.max(10, Math.round(v / mx * 74)) : 8;
+      return '<div class="cbar ' + kind + '"><i style="height:' + hpx + 'px"></i><b>' + names[i] + '</b></div>';
+    }).join('');
+    wb.dataset.done = '1';
+  }
+  const mb = document.getElementById('monthBars');
+  if (mb && !mb.dataset.done) {
+    let html = '';
+    for (let d = 1; d <= 30; d++) {
+      const v = d <= 23 ? (30 + ((d * 37) % 60)) : 0; // 過去23天示範值、未來留白
+      const kind = d === 23 ? 'today' : (d > 23 ? 'future' : (v >= 70 ? 'hi' : ''));
+      html += '<div class="cbar ' + kind + '"><i style="height:' + Math.max(6, Math.round(v / 90 * 44)) + 'px"></i></div>';
+    }
+    mb.innerHTML = html;
+    mb.dataset.done = '1';
+  }
 }
 function renderPillTask() {
   const card = document.querySelector('.task-item[data-task="pill"]');
@@ -1546,7 +1574,7 @@ function init() {
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', () => {
     const on = b.classList.toggle('done');
     b.textContent = on ? '✓ 已連接' : (b.dataset.label || '連接');
-    if (on) hint('好，連上了，之後健康資料我會自動留意。');
+    if (on) { hint('好，連上了，之後健康資料我會自動留意。'); try { localStorage.setItem('munea.devicesOn', '1'); } catch (e2) {} }
   }));
 
   // 今天一起完成（任務打勾）

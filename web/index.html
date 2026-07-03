@@ -89,25 +89,31 @@
         <div class="wc-note">不用怕中斷，慢慢累積就好。美華都看得到你的努力。</div>
       </div>
 
-      <div class="src-strip" id="srcStrip" style="cursor:pointer"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.4-3h5.2l.4 3M9 18l.4 3h5.2l.4-3"/></svg><span>步數、心率、睡眠由 <b>Apple 健康</b> 自動帶入（含手錶與其他裝置）；跌倒會自動通知美華。<b style="color:var(--teal-d)">點這裡管理裝置 ›</b></span></div>
-
       <div class="stat-grid">
-        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128/82</div><div class="st-label">早上 8:12 量 · 手環</div></div>
-        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 小時</small></div><div class="st-label">昨晚睡眠</div></div>
-        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val" id="statPillVal">2<small>/3</small></div><div class="st-label">今天用藥</div></div>
-        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">20<small> 分</small></div><div class="st-label">活動量</div></div>
+        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128<small>/82</small></div><div class="st-label">血壓 · 早上量 <em class="st-trend ok">穩</em></div></div>
+        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 時</small></div><div class="st-label">昨晚睡眠 <em class="st-trend up">↗ 比平常多</em></div></div>
+        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val" id="statPillVal">2<small>/3</small></div><div class="st-label">今天用藥 <em class="st-trend warn" id="statPillHint">還剩 1 次</em></div></div>
+        <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">20<small> 分</small></div><div class="st-label">今天活動 <em class="st-trend up">↗ 有出門</em></div></div>
       </div>
 
-      <button class="med-entry" id="medEntryStatus"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg><span>用藥提醒 · <b id="medCountLabel">2 種藥</b></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
         <div class="observe-card">
         <span class="oc-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>
         <div class="oc-text"><b><span class="cname">寧寧</span>的觀察：</b>今天心情看起來不錯，早上主動聊了 10 分鐘。膝蓋的痠這兩天有提到，我幫你記著、也跟美華說了一聲。</div>
       </div>
 
-      <button class="med-entry" id="reportBtn" style="margin-bottom:8px"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span>整理回診摘要給醫生</span><svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="act-duo">
+        <button class="med-entry duo" id="medEntryStatus"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg><span>用藥提醒<b id="medCountLabel">2 種藥</b></span></button>
+        <button class="med-entry duo" id="reportBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8"/></svg><span>回診摘要<b>整理給醫生</b></span></button>
+      </div>
+
+      <div class="src-strip" id="srcStrip" style="cursor:pointer"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.4-3h5.2l.4 3M9 18l.4 3h5.2l.4-3"/></svg><span>接上 <b>Apple 健康</b>，步數心率睡眠自動帶入。<b style="color:var(--teal-d)">管理裝置 ›</b></span></div>
       </div>
 
       <div id="statusWeek" style="display:none">
+        <div class="chart-card">
+          <div class="cc-head"><b>這週走了 <span class="cc-big">24,600</span> 步</b><em class="st-trend up">↗ 比上週多 12%</em></div>
+          <div class="cbar-row" id="weekBars"></div>
+        </div>
         <div class="wk-cal">
           <div class="wkc-head"><span></span><div class="wkc-days"><i>一</i><i>二</i><i>三</i><i>四</i><i>五</i><i>六</i><i>日</i></div><b class="wkc-sum"></b></div>
           <div class="wkc-row"><span class="wkc-label">吃藥</span><div class="wkc-cells"><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="miss"></i><i class="today"></i><i class="future"></i><i class="future"></i></div><b class="wkc-sum">3/4 天</b></div>
@@ -126,6 +132,10 @@
           <div class="ms"><b>23<small>/30</small></b><span>吃藥準時天數</span></div>
           <div class="ms"><b>14<small> 天</small></b><span>走路達標</span></div>
           <div class="ms"><b>7.3<small> 時</small></b><span>平均睡眠</span></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-head"><b>每天的活動</b><em class="st-trend">30 天</em></div>
+          <div class="cbar-row mini" id="monthBars"></div>
         </div>
         <div class="mo-list">
           <div class="mo-row"><span>第 1 週</span><div class="mo-bar"><i style="width:92%"></i></div><b>92%</b></div>
@@ -229,8 +239,8 @@
         <div class="person-grid" id="personGrid">
           <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128/82</div><div class="st-label">血壓</div></div>
           <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">6,200<small> 步</small></div><div class="st-label">今日活動</div></div>
-          <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 小時</small></div><div class="st-label">昨晚睡眠</div></div>
-          <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val" id="statPillVal">2<small>/3</small></div><div class="st-label">今天用藥</div></div>
+          <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 時</small></div><div class="st-label">昨晚睡眠 <em class="st-trend up">↗ 比平常多</em></div></div>
+          <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val" id="statPillVal">2<small>/3</small></div><div class="st-label">今天用藥 <em class="st-trend warn" id="statPillHint">還剩 1 次</em></div></div>
         </div>
 
         <div class="mood-card" id="moodToday">
