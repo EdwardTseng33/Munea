@@ -920,17 +920,17 @@ function setupAuthControls() {
     chip.innerHTML = icon + text;
   }
   const stat = $('#bcStatus');
-  if (stat) stat.textContent = '連續 6 天都有聊 · 今天還沒';
+  if (stat) stat.textContent = '昨天說到孫子快畢業了——她都記得';
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
   if (meta) meta.textContent = `${now.getMonth() + 1}月${now.getDate()}日 週${wd}`;
   const kick = $('#greetKicker'), big = $('#greetBig');
-  let k = '今日概況', b = '今天想先聊聊嗎？';
-  if (h >= 5 && h < 11) { k = '早安'; b = '新的一天，想先聊聊嗎？'; }
-  else if (h >= 11 && h < 14) { k = '午安'; b = '吃飽了嗎？來聊聊吧'; }
-  else if (h >= 14 && h < 18) { k = '午後好'; b = '下午了，想聊聊今天的事嗎？'; }
+  let k = '你好', b = '今天還好嗎？';
+  if (h >= 5 && h < 11) { k = '早安'; b = '昨晚睡得還好嗎？'; }
+  else if (h >= 11 && h < 14) { k = '午安'; b = '吃飽了嗎？'; }
+  else if (h >= 14 && h < 18) { k = '午後'; b = '下午了，歇一下吧'; }
   else if (h >= 18 && h < 22) { k = '晚上好'; b = '今天過得怎麼樣？'; }
-  else { k = '夜深了'; b = '睡前想說說話嗎？'; }
+  else { k = '夜深了'; b = '早點休息，別撐太晚'; }
   if (kick) kick.textContent = k;
   if (big) big.textContent = b;
 })();
@@ -1489,7 +1489,7 @@ function init() {
       goal = act.kind === 'quiz' ? ('你答對 ' + act.score + ' / ' + (act.q || 5) + ' 題') : (act.title + ' 結束了');
       note = '等大家都看過就收進記錄簿 · 最多留 3 天——還沒看的，寧寧會親口告訴';
     } else if (act.kind === 'walk') {
-      chip = act.days === 3 ? '3 天內' : '一週內';
+      chip = act.days + ' 天內';
       goal = '大家一起走 ' + (+act.goal).toLocaleString() + ' 步';
       note = '寧寧會親口問阿嬤要不要一起；開始後每個人走多少都看得到';
     } else if (act.kind === 'quiz') {
@@ -1512,13 +1512,13 @@ function init() {
   if ($('#startChalBtn')) $('#startChalBtn').addEventListener('click', () => {
     const type = document.querySelector('.chal-type.active');
     const kind = type ? (type.dataset.kind || 'walk') : 'walk';
-    const ons = $$('#inviteList .invite-item.on');
-    const names = ons.map(x => (x.querySelector('.iv-name')?.childNodes[0]?.textContent || '').trim()).filter(Boolean);
+    const ons = $$('#inviteList .iv.on');
+    const names = ons.map(x => x.dataset.name).filter(Boolean);
     if (!names.length) { toast('先選至少一位家人一起'); return; }
     const act = { id: Date.now(), kind, names };
     if (kind === 'walk') {
       act.goal = +(($('#walkGoal') && $('#walkGoal').value) || 30000);
-      act.days = +((document.querySelector('#walkDays .mchip.on') || {}).dataset || {}).d || 7;
+      act.days = +(($('#walkDays') && $('#walkDays').value) || 7);
       act.title = '一起運動';
       const end = new Date(); end.setDate(end.getDate() + act.days);
       act.dateISO = isoOf(end);
@@ -1555,26 +1555,35 @@ function init() {
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
   const inviteList = $('#inviteList');
-  function recalcGoal() {
-    const ons = $$('#inviteList .invite-item.on');
-    if ($('#goalN')) $('#goalN').textContent = ons.length;
-    if ($('#goalSum')) $('#goalSum').textContent = (+(($('#walkGoal') && $('#walkGoal').value) || 30000)).toLocaleString();
+  function updateWalkLabels() {
+    const g = +($('#walkGoal') ? $('#walkGoal').value : 30000);
+    if ($('#walkGoalVal')) $('#walkGoalVal').textContent = g.toLocaleString() + ' 步';
+    const n = $$('#inviteList .iv.on').length || 1;
+    const d = +($('#walkDays') ? $('#walkDays').value : 7);
+    if ($('#walkDaysVal')) $('#walkDaysVal').textContent = d + ' 天';
+    const per = Math.max(100, Math.round(g / (n * d) / 100) * 100);
+    if ($('#goalHint')) $('#goalHint').textContent = n + ' 人一起走 ' + d + ' 天 · 平均每人每天約 ' + per.toLocaleString() + ' 步';
   }
-  if (inviteList) inviteList.addEventListener('click', e => { const it = e.target.closest('.invite-item'); if (it) { it.classList.toggle('on'); recalcGoal(); } });
+  function recalcWalk(reset) {
+    const slider = $('#walkGoal');
+    if (!slider) return;
+    const n = $$('#inviteList .iv.on').length || 1;
+    const d = +($('#walkDays') ? $('#walkDays').value : 7);
+    const suggest = Math.round(n * d * 4000 / 1000) * 1000;
+    slider.min = Math.max(2000, Math.round(n * d * 1500 / 1000) * 1000);
+    slider.max = Math.max(suggest * 2, n * d * 8000);
+    slider.step = 1000;
+    if (reset || +slider.value < +slider.min || +slider.value > +slider.max) slider.value = suggest;
+    updateWalkLabels();
+  }
+  if (inviteList) inviteList.addEventListener('click', e => { const it = e.target.closest('.iv'); if (it) { it.classList.toggle('on'); recalcWalk(true); } });
   // 挑戰類型選擇
-  const CHAL_SUBS = { quiz: ['用說的就能玩', '手機作答', '手機作答', '手機作答'], event: ['寧寧親口問她', '回覆 去/沒空', '回覆 去/沒空', '回覆 去/沒空'] };
+  const INVITE_NOTES = { walk: '阿嬤那份，寧寧會親口問她', quiz: '阿嬤用說的就能玩；其他人手機作答', event: '寧寧親口問阿嬤；其他人回「去／沒空」' };
   function applyChalKind(kind) {
-    $$('#inviteList .invite-item').forEach((it, i) => {
-      const sub = it.querySelector('.iv-sub');
-      if (!sub) return;
-      if (kind === 'walk') { sub.style.display = 'none'; }
-      else { sub.style.display = ''; sub.textContent = (CHAL_SUBS[kind] || [])[i] || ''; }
-    });
+    if ($('#inviteNote')) $('#inviteNote').textContent = INVITE_NOTES[kind] || '';
     if ($('#walkFields')) $('#walkFields').style.display = kind === 'walk' ? '' : 'none';
     if ($('#quizFields')) $('#quizFields').style.display = kind === 'quiz' ? '' : 'none';
     if ($('#eventFields')) $('#eventFields').style.display = kind === 'event' ? '' : 'none';
-    const gb = document.querySelector('.goal-box');
-    if (gb) gb.style.display = kind === 'walk' ? '' : 'none';
   }
   $$('.chal-type').forEach(b => b.addEventListener('click', () => {
     $$('.chal-type').forEach(x => x.classList.remove('active'));
@@ -1582,16 +1591,15 @@ function init() {
     applyChalKind(b.dataset.kind || 'walk');
   }));
   applyChalKind('walk');
+  recalcWalk(true);
   // 拉桿連動
-  if ($('#walkGoal')) $('#walkGoal').addEventListener('input', () => {
-    if ($('#walkGoalVal')) $('#walkGoalVal').textContent = (+$('#walkGoal').value).toLocaleString() + ' 步';
-    recalcGoal();
-  });
+  if ($('#walkGoal')) $('#walkGoal').addEventListener('input', () => updateWalkLabels());
+  if ($('#walkDays')) $('#walkDays').addEventListener('input', () => recalcWalk(true));
   if ($('#quizN')) $('#quizN').addEventListener('input', () => {
     if ($('#quizNVal')) $('#quizNVal').textContent = $('#quizN').value + ' 題';
   });
   // 日期／時段／期間 點選（單選）
-  ['#walkDays', '#evDayChips', '#evTimeChips'].forEach(id => {
+  ['#evDayChips', '#evTimeChips'].forEach(id => {
     const box = $(id);
     if (!box) return;
     box.addEventListener('click', e => {

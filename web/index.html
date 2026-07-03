@@ -320,10 +320,11 @@
             <button class="chal-type" data-kind="event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M9 16h6"/></svg>揪一攤</button>
           </div>
           <div id="walkFields">
+            <div class="field-label">一起走幾天</div>
+            <div class="range-row"><input type="range" id="walkDays" min="1" max="7" step="1" value="7" /><b id="walkDaysVal">7 天</b></div>
             <div class="field-label">目標步數（大家一起累積）</div>
-            <div class="range-row"><input type="range" id="walkGoal" min="10000" max="60000" step="5000" value="30000" /><b id="walkGoalVal">30,000 步</b></div>
-            <div class="field-label">期間</div>
-            <div class="med-chips" id="walkDays"><button class="mchip" data-d="3">3 天</button><button class="mchip on" data-d="7">一週</button></div>
+            <div class="range-row"><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" /><b id="walkGoalVal">84,000 步</b></div>
+            <div class="goal-hint" id="goalHint">3 人一起走 7 天 · 平均每人每天約 4,000 步</div>
           </div>
           <div id="quizFields" style="display:none">
             <div class="field-label">要玩幾題</div>
@@ -351,13 +352,13 @@
           </div>
           <div class="field-label" id="inviteLabel">找誰一起（可以不選全部）</div>
           <!-- 注意：Edward 2026-07-02 拍板「運動邀請不顯示份額」；份額只是內部能力分配，改 applyChalKind 前必查 -->
-          <div class="invite-list" id="inviteList">
-            <div class="invite-item on" data-step="3000"><span class="iv-av"><span class="init-ava p-ama">嬤</span></span><div class="iv-name">阿嬤<div class="iv-sub">份額 3,000 步（依能力）</div></div><span class="iv-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></div>
-            <div class="invite-item on" data-step="8000"><span class="iv-av"><span class="init-ava p-mei">華</span></span><div class="iv-name">美華<div class="iv-sub">份額 8,000 步</div></div><span class="iv-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></div>
-            <div class="invite-item" data-step="8000"><span class="iv-av"><span class="init-ava p-zhi">明</span></span><div class="iv-name">志明<div class="iv-sub">份額 8,000 步</div></div><span class="iv-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></div>
-            <div class="invite-item on" data-step="6000"><span class="iv-av"><span class="init-ava p-bao">寶</span></span><div class="iv-name">小寶<div class="iv-sub">份額 6,000 步</div></div><span class="iv-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></div>
+          <div class="invite-row" id="inviteList">
+            <button type="button" class="iv on" data-name="阿嬤"><span class="iv-ava"><span class="init-ava p-ama">嬤</span></span>阿嬤</button>
+            <button type="button" class="iv on" data-name="美華"><span class="iv-ava"><span class="init-ava p-mei">華</span></span>美華</button>
+            <button type="button" class="iv" data-name="志明"><span class="iv-ava"><span class="init-ava p-zhi">明</span></span>志明</button>
+            <button type="button" class="iv on" data-name="小寶"><span class="iv-ava"><span class="init-ava p-bao">寶</span></span>小寶</button>
           </div>
-          <div class="goal-box">這次 <b id="goalN">3</b> 人一起，目標 <b id="goalSum">30,000</b> 步——寧寧會照每個人的能力分，誰都不勉強。</div>
+          <div class="invite-note" id="inviteNote">阿嬤那份，寧寧會親口問她</div>
           <button class="modal-btn" id="startChalBtn">送出邀請</button>
         </div>
       </div>

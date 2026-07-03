@@ -33,6 +33,8 @@ New handoff:
 - It defines the minimum hosted backend contract, required staging env, Supabase gate, TestFlight backend strategy, hosted smoke expectations, and rollback plan.
 - Hosted staging smoke: `npm run smoke:staging -- -BaseUrl https://YOUR-STAGING-API.example.com`.
 - Scheduled staging smoke can also use `MUNEA_STAGING_API_URL` so the same command can run from CI or a hosting scheduler without hard-coding the URL in arguments.
+- Release checklist: `docs/RELEASE-CHECKLIST.md`.
+- Release record draft: `npm run release:record -- -SmokeRun "GITHUB_ACTIONS_RUN_URL" -BackendMode json -Risk "none"`.
 
 ## What Can Move Now Without Overlap
 
@@ -51,7 +53,7 @@ Done in this pass:
 Next safe improvements:
 
 1. Add branch protection requiring the smoke workflow before merging.
-2. Add a release checklist that records commit, smoke result, backend mode, and known risk.
+2. Keep release records for push/TestFlight/staging changes using `npm run release:record`.
 3. Add an optional nightly Supabase live doctor after the live schema is fully applied.
 
 ### 2. Staging Backend Decision

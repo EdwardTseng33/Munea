@@ -1,5 +1,14 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-03 Update - Release record checklist
+
+**Status:** completed for release hygiene and non-technical review.
+
+- Added `docs/RELEASE-CHECKLIST.md` so push, staging, and TestFlight changes can record scope, verification, backend mode, known risk, and rollback.
+- Added `scripts/release-record.ps1` and `npm run release:record` to generate a release record draft with commit, working-tree state, Smoke run, backend mode, and risk.
+- Updated the production infrastructure readiness map so release records are part of the repeatable release process.
+- Avoided `web/`, `supabase/sql/`, memory internals, perception internals, realtime voice files, and backend behavior changes while Claude / Edward continue UI/product work there.
+
 ## 2026-07-02 Update - Staging smoke scheduler readiness
 
 **Status:** completed for staging automation readiness.
