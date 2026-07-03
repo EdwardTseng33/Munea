@@ -1,0 +1,56 @@
+<section class="screen active" id="home">
+    <div class="pad">
+      <div class="home-top">
+        <span class="home-date" id="metaDate">7月4日 週六</span>
+        <span class="home-meta"><b>晴 26°</b></span>
+      </div>
+
+      <div class="greeting-wrap">
+        <p class="greeting-kicker" id="greetKicker">夜深了</p>
+        <h1 class="greeting-big" id="greetBig">早點休息，別撐太晚</h1>
+      </div>
+
+      <div class="butler-card">
+        <div class="bc-row">
+          <div class="bc-avatar"><img class="ava-img" src="avatars/nening-hero.png" alt="寧寧"></div>
+          <div class="bc-info">
+            <div class="bc-name"><span id="companionHomeName">寧寧</span></div>
+            <div class="bc-msg"><span class="bc-msg-t" id="bcMsg">記得你說，孫子快畢業了——睡前跟我聊聊今天？</span></div>
+          </div>
+        </div>
+        <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>開始聊聊</button>
+      </div>
+      <div class="care-card" id="careCard">
+        <div class="care-head"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l1.9 5.6L20 10l-5 3.8L16.8 21 12 17.5 7.2 21 9 13.8 4 10l6.1-1.4z"></path></svg><span>幫你留意</span><span class="care-dots" id="careDots"><i class=""></i><i class="on"></i><i class=""></i></span></div>
+        <div class="care-body" id="careBody"><div class="care-item" data-k="family"><span class="care-ico "><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"></path></svg></span><div class="care-txt"><p><b>你</b>托寧寧帶話給美華：明天回診</p></div><button type="button" class="care-btn" data-go="family">回話</button></div><div class="care-item on" data-k="family"><span class="care-ico coral"><svg class="ic" viewBox="0 0 24 24"><path d="M13 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM8 21l3-6M14 21v-5l-2.5-3 1-5.5M8.5 9 11 6.5l2.5 1 2 3H18"></path></svg></span><div class="care-txt"><p><b>外婆</b>發起的走路活動進行中</p></div><button type="button" class="care-btn" data-go="family">去看看</button></div><div class="care-item" data-k="status"><span class="care-ico gold"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"></circle><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"></path></svg></span><div class="care-txt"><p>這個月有 <b>3 天</b>準時吃藥，節奏出來了</p></div></div></div>
+      </div>
+
+
+
+      <div class="sec-head">
+        <div><h2>今天一起完成</h2></div>
+        <span class="task-progress"><span class="bar"><i style="width: 0%;"></i></span> 0 / 3</span>
+      </div>
+      <div class="task-card" id="taskCard">
+        <div class="task-item" data-task="pill">
+          <span class="task-ico pill"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"></path><path d="M8.5 8.5l7 7"></path></svg></span>
+          <div class="task-body"><div class="task-title" id="pillTitle">吃脈優</div><div class="task-sub" id="pillSub">午餐後 · 今天 0/1 次</div></div>
+          <span class="task-time">14:00</span>
+          <span class="task-check" aria-label="完成打勾"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+        </div>
+        <div class="task-item" data-task="walk">
+          <span class="task-ico walk"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"></path></svg></span>
+          <div class="task-body"><div class="task-title">到公園散步</div><div class="task-sub">天氣正好</div></div>
+          <span class="task-time coral">16:30</span>
+          <span class="task-check" aria-label="完成打勾"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+        </div>
+        <div class="task-item" data-task="chat">
+          <span class="task-ico chat"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"></path></svg></span>
+          <div class="task-body"><div class="task-title">和<span class="cname">寧寧</span>聊聊</div><div class="task-sub">說說今天的事</div></div>
+          <span class="task-time">隨時</span>
+          <span class="task-check" aria-label="完成打勾"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+        </div>
+      </div>
+
+    </div>
+  </section>

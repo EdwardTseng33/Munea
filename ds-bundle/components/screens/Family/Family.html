@@ -1,0 +1,222 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../../../styles.css"><title>家人頁</title></head><body style="margin:0"><div style="background:#2b2b2b;padding:24px;display:flex;justify-content:center;min-height:100%"><div class="app-shell" style="position:relative;width:390px;background:var(--cream);border-radius:28px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)"><section style="display:block;position:static;height:auto;padding-bottom:24px" class="screen active" id="family">
+    <div class="pad">
+      <div class="page-head"><h1 class="page-title">全家健康圈</h1></div>
+
+      <div class="hscroll-wrap"><div class="fam-switch" id="famSwitch">
+        <button class="fam-switch-item active" data-person="all"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"></path></svg></span><span class="fs-name">全家</span></button>
+        <button class="fam-switch-item" data-person="阿嬤" data-rel="媽媽 · 72 歲" data-init="嬤" data-tint="p-ama"><span class="fs-av"><span class="init-ava p-ama">嬤</span></span><span class="fs-name">阿嬤</span></button>
+        <button class="fam-switch-item" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei"><span class="fs-av"><span class="init-ava p-mei">華</span></span><span class="fs-name">美華</span></button>
+        <button class="fam-switch-item" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi"><span class="fs-av"><span class="init-ava p-zhi">明</span></span><span class="fs-name">志明</span></button>
+        <button class="fam-switch-item" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao"><span class="fs-av"><span class="init-ava p-bao">寶</span></span><span class="fs-name">小寶</span></button>
+        <button class="fam-switch-item invite" data-person="invite"><span class="fs-av plus"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span><span class="fs-name">邀請</span></button>
+      </div><span class="hscroll-more" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></span></div>
+
+      <!-- 全家總覽 -->
+      <div class="fam-view active" id="viewAll">
+        <div class="sec-head"><div><h2>家庭活動</h2></div></div>
+        <div class="chal-actions">
+          <button class="chal-act new" id="newChalBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>發起活動</button>
+          <button class="chal-act book" id="bookBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"></path></svg>家庭記錄簿</button>
+        </div>
+        <div class="quest-card">
+          <div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path></svg>本週 · 一起走路<span class="qc-days">還剩 2 天</span></div>
+          <div class="qc-hero"><b>21,500</b><span class="qc-unit">/ 30,000 步</span><span class="qc-badge">72%</span></div>
+          <div class="qc-bar"><i style="width:72%"></i></div>
+          <div class="qc-crew">
+            <span class="qc-person"><span class="init-ava p-ama">嬤</span>3,850</span>
+            <span class="qc-person"><span class="init-ava p-mei">華</span>8,900</span>
+            <span class="qc-person"><span class="init-ava p-bao">寶</span>8,750</span>
+          </div>
+          <div class="qc-note">還差 8,500 步，今晚一起散個步就到了</div>
+        </div>
+        <div class="quest-card">
+          <div class="qc-kicker event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M8 3v4M16 3v4M3 11h18M9 16h6"></path></svg>揪一攤 · 週六聚餐<span class="qc-days" id="demoEventDate">7/11（週六）傍晚</span></div>
+          <div class="qc-goal">阿嬤生日聚餐，誰能到？</div>
+          <div class="rsvp-list">
+            <div class="rl"><span class="init-ava p-ama">嬤</span><b>阿嬤</b><span class="rl-st ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>會到</span></div>
+            <div class="rl"><span class="init-ava p-mei">華</span><b>美華</b><span class="rl-st ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>會到</span></div>
+            <div class="rl dim"><span class="init-ava p-zhi">明</span><b>志明</b><span class="rl-st no"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></svg>沒空</span></div>
+            <div class="rl"><span class="init-ava p-bao">寶</span><b>小寶</b><span class="rl-st ask"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4M12 16h.01"></path></svg>等回覆</span></div>
+          </div>
+          <div class="qc-num">就差小寶還沒回，<span class="cname">寧寧</span>會提醒他</div>
+        </div>
+
+        <div class="quest-card done">
+          <div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"></path><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"></path></svg>機智問答 · 排名出來了<span class="qc-days">10 題</span></div>
+          <div class="rank-list">
+            <div class="rank-row"><span class="rank-no n1">1</span><span class="rank-av"><span class="init-ava p-bao">寶</span></span><b>小寶</b><span class="rank-score">答對 9 題</span></div>
+            <div class="rank-row"><span class="rank-no n2">2</span><span class="rank-av"><span class="init-ava p-mei">華</span></span><b>美華</b><span class="rank-score">答對 8 題</span></div>
+            <div class="rank-row"><span class="rank-no n3">3</span><span class="rank-av"><span class="init-ava p-ama">嬤</span></span><b>阿嬤</b><span class="rank-score">答對 7 題</span></div>
+          </div>
+          <div class="qc-prize"><span class="qp-ico">🏅</span><div class="qp-txt">第 1 名 寶可夢卡包一包<small>獎品提供：美華</small></div></div>
+          <div class="qc-life">排名保留一天，明天自動收進記錄簿</div>
+        </div>
+
+        <div class="sec-head"><div><h2>全家狀態</h2></div></div>
+        <div class="health-list" id="healthList">
+          <div class="health-row" data-person="阿嬤" data-rel="媽媽 · 72 歲" data-init="嬤" data-tint="p-ama">
+            <span class="hr-av"><span class="init-ava p-ama">嬤</span></span>
+            <div class="hr-info"><div class="hr-name">阿嬤</div><div class="hr-state"><em class="mood-pill calm">平穩</em>藥已吃 2/3</div></div>
+            <div class="hr-lights"><span class="lt"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"></path></svg></span><span class="lt warn"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"></path><path d="M8.5 8.5l7 7"></path></svg></span></div>
+          </div>
+          <div class="health-row" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei">
+            <span class="hr-av"><span class="init-ava p-mei">華</span></span>
+            <div class="hr-info"><div class="hr-name">美華</div><div class="hr-state"><em class="mood-pill tired">有點累</em>活動量達標 · 睡眠偏少</div></div>
+            <div class="hr-lights"><span class="lt"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"></path></svg></span><span class="lt warn"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg></span></div>
+          </div>
+          <div class="health-row" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi">
+            <span class="hr-av"><span class="init-ava p-zhi">明</span></span>
+            <div class="hr-info"><div class="hr-name">志明</div><div class="hr-state"><em class="mood-pill happy">不錯</em>這週很規律</div></div>
+            <div class="hr-lights"><span class="lt"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"></path></svg></span><span class="lt"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"></path></svg></span></div>
+          </div>
+          <div class="health-row" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao">
+            <span class="hr-av"><span class="init-ava p-bao">寶</span></span>
+            <div class="hr-info"><div class="hr-name">小寶</div><div class="hr-state"><em class="mood-pill happy">開心</em>活蹦亂跳</div></div>
+            <div class="hr-lights"><span class="lt"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"></path></svg></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 個人健康（點某人後） -->
+      <div class="fam-view" id="viewPerson">
+        <div class="nav-head"><button class="nav-back" id="personBack" aria-label="回全家"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></button><span class="nav-title" id="personNavTitle">家人</span><span></span></div>
+        <div class="pager-dots" id="famDots" aria-hidden="true"></div>
+        <div class="person-top"><span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv">嬤</span></span><div><div class="pt-name" id="ptName">—</div><div class="pt-rel" id="ptRel">—</div></div></div>
+        <div class="person-grid" id="personGrid">
+          <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"></path><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"></path></svg></span><div class="st-val">128/82</div><div class="st-label">血壓</div></div>
+          <div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"></path></svg></span><div class="st-val">6,200<small> 步</small></div><div class="st-label">今日活動</div></div>
+          <div class="stat-tile t-sleep"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg></span><div class="st-val">7.5<small> 時</small></div><div class="st-label">睡眠 <em class="st-trend up">↗ 好</em></div></div>
+          <div class="stat-tile t-med"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"></path><path d="M8.5 8.5l7 7"></path></svg></span><div class="st-val">2<small>/3</small></div><span class="pill-dots"><i class="f"></i><i class="f"></i><i></i></span><div class="st-label">今天用藥 <em class="st-trend warn">還剩 1 次</em></div></div>
+        </div>
+
+        <div class="mood-card" id="moodToday">
+          <div class="mc-head">
+            <span class="mc-face" id="mcFace"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9 10h.01M15 10h.01M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5"></path></svg><i class="mc-dot" id="mcDot"></i></span>
+            <div>
+              <div class="mc-title" id="mcTitle">今天聊得很開心</div>
+              <div class="mc-sub" id="mcSub">和寧寧聊了 2 次 · 有一小段有點火氣</div>
+            </div>
+          </div>
+          <div class="mc-obs" id="mcObs"><span>聲音</span> 有精神　<span>聊天</span> 話匣子全開</div>
+          <div class="mc-topics" id="mcTopics"><i>孫子畢業</i><i>推銷電話</i></div>
+          <button class="mc-more" id="moodTrendBtn">看一週心情 <svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div class="trend-card">
+          <div class="trend-head"><h3>活動量</h3><div class="trend-tabs" id="trendTabs"><button class="active" data-range="week">本週</button><button data-range="month">本月</button></div></div>
+          <div class="trend-bars" id="trendBars"><div class="tb soso"><i style="height:55%"></i><span>一</span></div><div class="tb ok"><i style="height:72%"></i><span>二</span></div><div class="tb soso"><i style="height:45%"></i><span>三</span></div><div class="tb ok"><i style="height:80%"></i><span>四</span></div><div class="tb today"><i style="height:62%"></i><span>五</span></div><div class="tb future"><i style="height:6%"></i><span>六</span></div><div class="tb future"><i style="height:6%"></i><span>日</span></div></div>
+          <div class="wkc-legend" style="margin:10px 0 2px"><span><i class="ok"></i>達標</span><span><i class="soso"></i>沒達標</span><span><i class="today"></i>進行中</span></div>
+          <div class="trend-note" id="trendNote">這週到目前 <b>2 天達標</b>；今天已經走 6,200 步，再走一小段就達標了。</div>
+        </div>
+
+        <div class="react-row" id="reactRow">
+          <button class="react-btn" data-react="按了讚"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M7 10v12M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H7V10l4.4-7.2A2 2 0 0 1 15 5.9z"></path></svg></span>按讚</button>
+          <button class="react-btn" data-react="送上愛心"><span class="re-ic coral"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"></path></svg></span>愛心</button>
+          <button class="react-btn" data-react="畫了張塗鴉"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg></span>塗鴉</button>
+          <button class="react-btn" data-react="留了語音"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"></path></svg></span>語音</button>
+        </div>
+      </div>
+
+      <!-- 家庭記錄簿 -->
+
+      <div class="fam-view" id="viewMood">
+        <div class="nav-head"><button class="nav-back" id="moodBack" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></button><span class="nav-title" id="moodTitle">心情</span><span></span></div>
+        <div class="trend-tabs mood-range" id="moodRange"><button class="active" data-r="week">這一週</button><button data-r="month">這個月</button></div>
+        <div class="mood-week" id="moodWeek"></div>
+        <div class="mood-month" id="moodMonth" style="display:none"></div>
+        <div class="mood-day-detail" id="moodDayDetail"></div>
+        <div class="mood-legend" id="moodLegend"></div>
+      </div>
+      <div class="fam-view" id="viewBook">
+        <div class="nav-head"><button class="nav-back" id="bookBack" aria-label="回全家"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></button><span class="nav-title">家庭記錄簿</span><span></span></div>
+        <div class="book-month">六月</div>
+        <div class="book-timeline">
+        <div class="book-entry">
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"></circle><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"></path></svg></span>一起走路 30,000 步</div><div class="be-date">6/19</div></div>
+          <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>達成！全家慶祝</span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama">嬤</span></span><span class="be-mem"><span class="init-ava p-mei">華</span></span><span class="be-mem"><span class="init-ava p-bao">寶</span></span></div></div>
+        </div>
+        <div class="book-entry">
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg></span>早睡一週</div><div class="be-date">6/12</div></div>
+          <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>達成！</span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama">嬤</span></span><span class="be-mem"><span class="init-ava p-mei">華</span></span><span class="be-mem"><span class="init-ava p-zhi">明</span></span></div></div>
+        </div>
+        <div class="book-entry">
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2.7s6.5 7.2 6.5 11.8a6.5 6.5 0 0 1-13 0C5.5 9.9 12 2.7 12 2.7z"></path></svg></span>每天喝水</div><div class="be-date">6/5</div></div>
+          <div class="be-foot"><span class="be-result">參加過 · 差一點點，下次再來</span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama">嬤</span></span><span class="be-mem"><span class="init-ava p-mei">華</span></span></div></div>
+        </div>
+        </div>
+      </div>
+
+      <!-- 發起挑戰 面板 -->
+      <div class="modal-mask" id="quizModal">
+        <div class="modal">
+          <div class="modal-grab"></div>
+          <button class="auth-close" id="quizCloseX" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+          <h2>機智問答</h2>
+          <p class="modal-sub" id="quizProgress">第 1 題／共 5 題</p>
+          <div class="quiz-q" id="quizQ">—</div>
+          <div class="quiz-opts" id="quizOpts"></div>
+        </div>
+      </div>
+
+      <div class="modal-mask" id="chalModal">
+        <div class="modal">
+          <div class="modal-grab"></div>
+          <h2>發起活動</h2>
+          <p class="modal-sub">選一種活動，找想一起的人，不勉強誰</p>
+          <div class="field-label">活動類型</div>
+          <div class="chal-types">
+            <button class="chal-type active" data-kind="walk"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"></path></svg>一起運動</button>
+            <button class="chal-type" data-kind="quiz"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 0 1 5 .3c0 1.7-2.5 2.2-2.5 3.7M12 17h.01"></path></svg>機智問答</button>
+            <button class="chal-type" data-kind="event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M8 3v4M16 3v4M3 11h18M9 16h6"></path></svg>揪一攤</button>
+          </div>
+          <div id="walkFields">
+            <div class="field-label">一起走幾天</div>
+            <div class="range-row"><input type="range" id="walkDays" min="1" max="7" step="1" value="7" style="--fill: 100.0%;"><b id="walkDaysVal">7 天</b></div>
+            <div class="field-label">目標步數（大家一起累積）</div>
+            <div class="range-row"><input type="range" id="walkGoal" min="32000" max="168000" step="1000" value="84000" style="--fill: 38.2%;"><b id="walkGoalVal">84,000 步</b></div>
+            <div class="goal-hint" id="goalHint">3 人一起走 7 天 · 平均每人每天約 4,000 步</div>
+          </div>
+          <div id="quizFields" style="display:none">
+            <div class="field-label">要玩幾題</div>
+            <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" style="--fill: 33.3%;"><b id="quizNVal">10 題</b></div>
+          </div>
+          <div id="eventFields" style="display:none">
+            <div class="field-label">要揪什麼</div>
+            <input class="chal-input" id="eventName" placeholder="例：週六晚上全家聚餐">
+            <div class="field-label">哪一天</div>
+            <div class="med-chips" id="evDayChips">
+              <button class="mchip" data-day="today">今天</button>
+              <button class="mchip" data-day="tomorrow">明天</button>
+              <button class="mchip on" data-day="sat">這週六</button>
+              <button class="mchip" data-day="sun">這週日</button>
+              <button class="mchip" data-day="pick">選日期</button>
+            </div>
+            <div class="cal-grid" id="evDatePick" style="display:none"></div>
+            <div class="field-label">時段</div>
+            <div class="med-chips" id="evTimeChips">
+              <button class="mchip" data-t="中午">中午</button>
+              <button class="mchip" data-t="下午">下午</button>
+              <button class="mchip on" data-t="傍晚">傍晚</button>
+              <button class="mchip" data-t="晚上">晚上</button>
+            </div>
+          </div>
+          <div class="field-label" id="inviteLabel">找誰一起（可以不選全部）</div>
+          <!-- 注意：Edward 2026-07-02 拍板「運動邀請不顯示份額」；份額只是內部能力分配，改 applyChalKind 前必查 -->
+          <div class="invite-row" id="inviteList">
+            <button type="button" class="iv on" data-name="阿嬤"><span class="iv-ava"><span class="init-ava p-ama">嬤</span></span>阿嬤</button>
+            <button type="button" class="iv on" data-name="美華"><span class="iv-ava"><span class="init-ava p-mei">華</span></span>美華</button>
+            <button type="button" class="iv" data-name="志明"><span class="iv-ava"><span class="init-ava p-zhi">明</span></span>志明</button>
+            <button type="button" class="iv on" data-name="小寶"><span class="iv-ava"><span class="init-ava p-bao">寶</span></span>小寶</button>
+          </div>
+          <div class="invite-note" id="inviteNote">阿嬤那份，寧寧會親口問她</div>
+          <div class="field-label">設個小獎勵（想到就填，不填也行）</div>
+          <div class="rw-list">
+            <div class="rw-row"><span class="rank-no n1">1</span><input class="rw-in" id="rw1" maxlength="14" placeholder="例：饗食天堂一頓"></div>
+            <div class="rw-row"><span class="rank-no n2">2</span><input class="rw-in" id="rw2" maxlength="14" placeholder="例：寶可夢卡包一包"></div>
+            <div class="rw-row"><span class="rank-no n3">3</span><input class="rw-in" id="rw3" maxlength="14" placeholder="例：冰淇淋一支"></div>
+          </div>
+          <button class="modal-btn" id="startChalBtn">送出邀請</button>
+        </div>
+      </div>
+    </div>
+  </section></div></div></body></html>

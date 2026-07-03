@@ -2813,6 +2813,14 @@ class H(BaseHTTPRequestHandler):
                         },
                     })
                 self._json(response)
+            elif self.path == "/dev/page-capture":
+                # 本機開發用：把前端傳來的畫面 HTML 原樣存檔（僅綁 127.0.0.1、不對外）
+                name = "".join(ch for ch in str(data.get("name") or "page") if ch.isalnum() or ch in "-_")[:40]
+                cap_dir = os.path.join(os.path.dirname(HERE), ".design-sync", "captures")
+                os.makedirs(cap_dir, exist_ok=True)
+                with open(os.path.join(cap_dir, name + ".html"), "w", encoding="utf-8") as f:
+                    f.write(str(data.get("html") or ""))
+                self._json({"ok": True, "name": name})
             elif self.path == "/privacy-export":
                 self._json(privacy_export_response(data))
             elif self.path == "/account-deletion":
