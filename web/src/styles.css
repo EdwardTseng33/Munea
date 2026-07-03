@@ -85,7 +85,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 .bc-avatar { grid-column: 2; grid-row: 1; width: 78px; height: 92px; margin: 0 auto; border-radius: 18px; position: relative; z-index: 1; flex-shrink: 0; background: var(--mint-2); overflow: visible; box-shadow: 0 6px 14px -8px rgba(46,138,131,.24); }
 .bc-avatar img { border-radius: 18px; }
-.bc-avatar::after { content: ""; position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--btn-green); border: 2.5px solid #FFF; }
 .bc-avatar .ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center 24%; transform: scale(1.03); transform-origin: center top; }
 .bc-avatar .av-stripes { position: absolute; inset: 0; background: none; }
 .bc-avatar .online { position: absolute; right: 4px; bottom: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); border: 3px solid #fff; }
