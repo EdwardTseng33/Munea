@@ -473,11 +473,8 @@
       </div>
 
       <h2 class="set-section">關於</h2>
-      <div class="set-about">
-        <img class="sa-icon" src="icons/munea-logo.png" alt="Munea" />
-        <div><div class="sa-name">Munea 沐寧</div><div class="sa-sub" id="companionSummary">AI 健康照護 · 陪伴角色：寧寧</div></div>
-      </div>
       <div class="set-list">
+        <div class="set-row"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small id="companionSummary">AI 健康照護 · 陪伴角色：寧寧</small></span><span class="sr-arrow">示範版</span></div>
         <div class="set-row" id="legalRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款與隱私權<small>服務範圍、資料保存與你的權利</small></span><span class="sr-arrow">›</span></div>
       </div>
     </div>
@@ -640,7 +637,7 @@
         <h4>我們蒐集什麼</h4>
         <p>健康數據（步數、睡眠、血壓等，經你授權後由 Apple 健康帶入）、用藥與活動記錄、對話的照護摘要。</p>
         <h4>怎麼使用</h4>
-        <p>用來提醒、陪伴與家人關懷。語音與文字可能由 AI 服務（含境外，如 Gemini）協助處理；只為了提供服務，不作廣告販售。</p>
+        <p>用來提醒、陪伴與家人關懷。語音與文字由沐寧的 AI 系統處理（部分處理在境外機房完成）；只為了提供服務，不作廣告販售。</p>
         <h4>保存多久</h4>
         <p>健康與活動紀錄在 app 內保存一年；滿一年前會先問你要保留還是刪除。</p>
         <h4>你的權利</h4>
@@ -672,14 +669,31 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="historyClose" type="button" aria-label="關閉紀錄" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>過去紀錄</h2>
-      <p class="modal-sub">每月自動整理成一頁，保存一年；滿一年前寧寧會先問你要不要留下來。</p>
-      <button class="hist-row"><b>2026 年 6 月</b><span>吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時</span></button>
-      <button class="hist-row dim"><b>2026 年 5 月</b><span>已保存 · 點開看當月整理</span></button>
-      <button class="hist-row dim"><b>2026 年 4 月</b><span>已保存 · 點開看當月整理</span></button>
-      <button class="hist-row dim"><b>2026 年 3 月</b><span>已保存 · 點開看當月整理</span></button>
-      <button class="hist-row dim"><b>2026 年 2 月</b><span>已保存 · 點開看當月整理</span></button>
-      <button class="hist-row dim"><b>2026 年 1 月</b><span>已保存 · 點開看當月整理</span></button>
-      <p class="modal-sub" style="margin-top:6px">更早的（到 2025 年 8 月）也都在，往下會自動接著列。</p>
+      <p class="modal-sub">保存一年；滿一年前寧寧會先問你要不要留下來。</p>
+      <div class="seg" id="histSeg" style="margin-bottom:14px">
+        <button class="seg-btn on" data-v="months">每月整理</button>
+        <button class="seg-btn" data-v="range">自選日期</button>
+      </div>
+      <div id="histMonths">
+        <button class="hist-row"><b>2026 年 6 月</b><span>吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時</span></button>
+        <button class="hist-row dim"><b>2026 年 5 月</b><span>已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b>2026 年 4 月</b><span>已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b>2026 年 3 月</b><span>已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b>2026 年 2 月</b><span>已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b>2026 年 1 月</b><span>已保存 · 點開看當月整理</span></button>
+        <p class="modal-sub" style="margin-top:6px">更早的（到 2025 年 8 月）也都在，往下會自動接著列。</p>
+      </div>
+      <div id="histRange" style="display:none">
+        <div class="rc-head">
+          <button class="rc-nav" id="rcPrev" type="button" aria-label="上個月">‹</button>
+          <b id="rcTitle">2026 年 7 月</b>
+          <button class="rc-nav" id="rcNext" type="button" aria-label="下個月">›</button>
+        </div>
+        <div class="rc-week"><i>一</i><i>二</i><i>三</i><i>四</i><i>五</i><i>六</i><i>日</i></div>
+        <div class="rc-grid" id="rcGrid"></div>
+        <p class="rc-hint" id="rcHint">點開始那天，再點結束那天</p>
+        <div class="rpt-card" id="rcResult" style="display:none"></div>
+      </div>
     </div>
   </div>
 
@@ -692,11 +706,12 @@
       <div class="field-label sect-new">新增一種藥</div>
       <input class="chal-input" id="medName" placeholder="藥名照藥袋抄（例：脈優）" />
       <div class="field-label">什麼時候吃（可多選）</div>
+          <div class="med-sched-note">提醒時間跟著你的作息走：寧寧知道你平常幾點吃飯、幾點睡，會在對的時間提醒。</div>
       <div class="med-chips" id="medTimeChips">
-        <button class="mchip" data-t="早餐後 08:00">早餐後</button>
-        <button class="mchip" data-t="午餐後 12:30">午餐後</button>
-        <button class="mchip" data-t="晚餐後 18:30">晚餐後</button>
-        <button class="mchip" data-t="睡前 21:30">睡前</button>
+        <button class="mchip" data-t="早餐後">早餐後</button>
+        <button class="mchip" data-t="午餐後">午餐後</button>
+        <button class="mchip" data-t="晚餐後">晚餐後</button>
+        <button class="mchip" data-t="睡前">睡前</button>
       </div>
       <div class="field-label">吃多久</div>
       <div class="med-chips" id="medDayChips">
@@ -731,7 +746,7 @@
         <input id="authEmailInput" type="email" inputmode="email" autocomplete="email" placeholder="你的電子信箱" aria-label="電子信箱" />
         <button class="auth-email-btn" id="authEmailBtn" type="button">寄登入信</button>
       </div>
-      <p class="auth-terms">繼續即代表同意<a href="privacy.html" target="_blank" rel="noopener">服務條款與隱私權政策</a>，包含語音、文字或摘要可能由 Gemini、OpenAI 等境外 AI 服務協助處理的說明。</p>
+      <p class="auth-terms">繼續即代表同意<a href="privacy.html" target="_blank" rel="noopener">服務條款與隱私權政策</a>，包含語音與文字由沐寧的 AI 系統（部分在境外）處理的說明。</p>
       <button class="auth-dev-btn" id="authDeveloperBtn" type="button" hidden>使用開發者模式</button>
       <p class="auth-message" id="authMessage"></p>
     </div>

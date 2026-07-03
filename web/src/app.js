@@ -956,8 +956,8 @@ function setupAuthControls() {
 
 function loadMeds() {
   try { return JSON.parse(localStorage.getItem('munea.meds')) || [
-    { name: '脈優 Amlodipine', time: '14:00', days: '長期', by: '美華' },
-    { name: '維他命 D', time: '08:30', days: '30 天', by: '阿嬤' }]; } catch (e) { return []; }
+    { name: '脈優 Amlodipine', time: '午餐後', days: '長期', by: '美華' },
+    { name: '維他命 D', time: '早餐後', days: '30 天', by: '阿嬤' }]; } catch (e) { return []; }
 }
 function updateMedCount() {
   const n = loadMeds().length + ' 種藥';
@@ -1395,7 +1395,7 @@ function init() {
     document.querySelectorAll('#medTimeChips .mchip.on').forEach(x => x.classList.remove('on'));
     renderMedList();
     updateMedCount();
-    toast('好，寧寧會在' + times.join('、') + '提醒吃「' + name + '」');
+    toast('好，寧寧會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
@@ -1696,7 +1696,80 @@ function init() {
   });
   const authTermsLink = document.querySelector('.auth-terms a');
   if (authTermsLink) authTermsLink.addEventListener('click', e => { e.preventDefault(); closeAuthSheet(); openLegal('terms'); });
-  if ($('#historyEntry')) $('#historyEntry').addEventListener('click', () => $('#historyModal').classList.add('show'));
+  if ($('#historyEntry')) $('#historyEntry').addEventListener('click', () => { rcInit(); $('#historyModal').classList.add('show'); });
+  if ($('#histSeg')) $('#histSeg').addEventListener('click', e => {
+    const b = e.target.closest('.seg-btn');
+    if (!b) return;
+    $('#histSeg').querySelectorAll('.seg-btn').forEach(x => x.classList.toggle('on', x === b));
+    $('#histMonths').style.display = b.dataset.v === 'months' ? '' : 'none';
+    $('#histRange').style.display = b.dataset.v === 'range' ? '' : 'none';
+  });
+  // 自選日期範圍（一年內）
+  let rcYear = 0, rcMonth = 0, rcStart = null, rcEnd = null;
+  function rcInit() {
+    const now = new Date();
+    rcYear = now.getFullYear(); rcMonth = now.getMonth();
+    rcStart = null; rcEnd = null;
+    if ($('#rcResult')) { $('#rcResult').style.display = 'none'; }
+    if ($('#rcHint')) $('#rcHint').textContent = '點開始那天，再點結束那天';
+    renderRangeCal();
+  }
+  function renderRangeCal() {
+    const grid = $('#rcGrid');
+    if (!grid) return;
+    if ($('#rcTitle')) $('#rcTitle').textContent = rcYear + ' 年 ' + (rcMonth + 1) + ' 月';
+    const startPad = (new Date(rcYear, rcMonth, 1).getDay() + 6) % 7;
+    const daysInM = new Date(rcYear, rcMonth + 1, 0).getDate();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const minDate = new Date(today); minDate.setFullYear(minDate.getFullYear() - 1);
+    let html = '';
+    for (let i = 0; i < startPad; i++) html += '<span class="rc-cell pad"></span>';
+    for (let d = 1; d <= daysInM; d++) {
+      const dt = new Date(rcYear, rcMonth, d);
+      const iso = isoOf(dt);
+      let cls = 'rc-cell';
+      if (dt > today || dt < minDate) cls += ' off';
+      if (rcStart && iso === rcStart) cls += ' sel';
+      if (rcEnd && iso === rcEnd) cls += ' sel';
+      if (rcStart && rcEnd && iso > rcStart && iso < rcEnd) cls += ' in';
+      html += '<span class="' + cls + '" data-iso="' + iso + '">' + d + '</span>';
+    }
+    grid.innerHTML = html;
+  }
+  function rcShowResult() {
+    const a = new Date(rcStart + 'T00:00'), b2 = new Date(rcEnd + 'T00:00');
+    const days = Math.round((b2 - a) / 86400000) + 1;
+    const med = Math.max(1, Math.round(days * 0.86));
+    const act = Math.max(1, Math.round(days * 0.55));
+    const box = $('#rcResult');
+    box.innerHTML = '<div class="rpt-row"><span class="rpt-k">期間</span><div><b>' + fmtDay(a) + ' 到 ' + fmtDay(b2) + '</b><span>共 ' + days + ' 天（示範數據）</span></div></div>' +
+      '<div class="rpt-row"><span class="rpt-k">用藥</span><div><b>準時 ' + med + ' / ' + days + ' 天</b></div></div>' +
+      '<div class="rpt-row"><span class="rpt-k">活動</span><div><b>達標 ' + act + ' 天</b></div></div>' +
+      '<div class="rpt-row"><span class="rpt-k">睡眠</span><div><b>平均 7.2 小時</b></div></div>';
+    box.style.display = '';
+    if ($('#rcHint')) $('#rcHint').textContent = '要看別段，再點一次新的開始日';
+  }
+  if ($('#rcGrid')) $('#rcGrid').addEventListener('click', e => {
+    const cell = e.target.closest('.rc-cell');
+    if (!cell || cell.classList.contains('off') || cell.classList.contains('pad')) return;
+    const iso = cell.dataset.iso;
+    if (!rcStart || (rcStart && rcEnd)) { rcStart = iso; rcEnd = null; if ($('#rcResult')) $('#rcResult').style.display = 'none'; if ($('#rcHint')) $('#rcHint').textContent = '再點結束那天'; }
+    else if (iso < rcStart) { rcStart = iso; if ($('#rcHint')) $('#rcHint').textContent = '再點結束那天'; }
+    else { rcEnd = iso; rcShowResult(); }
+    renderRangeCal();
+  });
+  if ($('#rcPrev')) $('#rcPrev').addEventListener('click', () => {
+    const min = new Date(); min.setFullYear(min.getFullYear() - 1);
+    if (new Date(rcYear, rcMonth - 1, 28) < min) { toast('紀錄保存一年，再往前就沒有了'); return; }
+    rcMonth--; if (rcMonth < 0) { rcMonth = 11; rcYear--; }
+    renderRangeCal();
+  });
+  if ($('#rcNext')) $('#rcNext').addEventListener('click', () => {
+    const now = new Date();
+    if (rcYear === now.getFullYear() && rcMonth === now.getMonth()) { toast('已經是這個月了'); return; }
+    rcMonth++; if (rcMonth > 11) { rcMonth = 0; rcYear++; }
+    renderRangeCal();
+  });
   if ($('#historyClose')) $('#historyClose').addEventListener('click', () => $('#historyModal').classList.remove('show'));
   if ($('#historyModal')) $('#historyModal').addEventListener('click', e => {
     if (e.target === $('#historyModal')) { $('#historyModal').classList.remove('show'); return; }

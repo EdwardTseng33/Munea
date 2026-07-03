@@ -1157,3 +1157,19 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .plan-feats li + li { border-top: 1px solid var(--line); }
 .plan-feats li::before { content: ""; position: absolute; left: 2px; top: 13px; width: 14px; height: 14px; border-radius: 50%; background: var(--mint); }
 .plan-feats li::after { content: ""; position: absolute; left: 6px; top: 17px; width: 6px; height: 3px; border-left: 1.8px solid var(--teal-d); border-bottom: 1.8px solid var(--teal-d); transform: rotate(-45deg); }
+
+.med-sched-note { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: -4px 0 10px; }
+
+/* 過去紀錄 · 自選日期月曆 */
+.rc-head { display: flex; align-items: center; justify-content: space-between; margin: 2px 0 10px; }
+.rc-head b { font-size: 16px; color: var(--ink); font-family: var(--display); font-weight: 700; }
+.rc-nav { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 19px; line-height: 1; color: var(--teal-dd); cursor: pointer; }
+.rc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
+.rc-week i { font-style: normal; text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; }
+.rc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.rc-cell { height: 38px; display: grid; place-items: center; border-radius: 12px; font-size: 14.5px; font-weight: 600; color: var(--ink); cursor: pointer; font-family: var(--sans); }
+.rc-cell.pad, .rc-cell.off { cursor: default; }
+.rc-cell.off { color: var(--line); }
+.rc-cell.in { background: var(--mint); border-radius: 6px; }
+.rc-cell.sel { background: var(--teal-d); color: #FFF; }
+.rc-hint { font-size: 12.5px; color: var(--muted); margin: 10px 2px 8px; }
