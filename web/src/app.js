@@ -326,6 +326,7 @@ function syncCompanionUI() {
   if (nameInput && document.activeElement !== nameInput && nameInput.value !== display) nameInput.value = display;
   const fimg = $('#faceImg'); if (fimg) { fimg.src = fullSrc; fimg.classList.toggle('sq', !t.fullAsset); }
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
+  $$('.cname').forEach(el => { el.textContent = display; });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
   renderAiDiagnostics();
@@ -1032,6 +1033,9 @@ function toast(text) {
 }
 
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
+function cname() {
+  try { return (companionDisplayName || '寧寧').trim() || '寧寧'; } catch (e) { return '寧寧'; }
+}
 function hint(text) {
   // 聊聊以外不出聲（只出文字提示，禁止在此接語音）（2026-07-03 Edward 拍板）：只顯示提示
   toast(text);
@@ -1188,8 +1192,9 @@ function connectCall() {
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
   const box = document.querySelector('.face-caption-box');
   if (box) box.style.display = capOff ? 'none' : '';
-  setCaption('接通了，按一下麥克風跟我說話', '講完再按一次，寧寧就會回你');
+  setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
   openVoiceSession();
+  setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
 }
 
 function init() {
@@ -1200,7 +1205,7 @@ function init() {
   updateMedCount();
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected) { connectCall(); }
-    else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); }
+    else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
   });
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
     const b = $('#captionToggle');
@@ -1237,7 +1242,10 @@ function init() {
   if ($('#aiDevRefresh')) $('#aiDevRefresh').addEventListener('click', () => refreshAiDiagnostics());
 
   // 首頁「跟寧寧聊聊」＝ 進同一個全屏臉（不再有獨立視訊頁）
-  if ($('#startCall')) $('#startCall').addEventListener('click', () => showView('chat'));
+  if ($('#startCall')) $('#startCall').addEventListener('click', () => {
+    showView('chat');
+    setTimeout(() => { if (!callConnected) connectCall(); }, 350);
+  });
   // 用藥服務窗（獨立功能、保留）
   if ($('#medTaken')) $('#medTaken').addEventListener('click', () => {
     trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
@@ -1458,7 +1466,7 @@ function init() {
     document.querySelectorAll('#medTimeChips .mchip.on').forEach(x => x.classList.remove('on'));
     renderMedList();
     updateMedCount();
-    toast('好，寧寧會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
+    toast('好，' + cname() + '會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
@@ -1534,7 +1542,12 @@ function init() {
   // 發起挑戰面板
   const chalModal = $('#chalModal');
   const closeChal = () => chalModal && chalModal.classList.remove('show');
-  if ($('#newChalBtn')) $('#newChalBtn').addEventListener('click', () => chalModal && chalModal.classList.add('show'));
+  if ($('#newChalBtn')) $('#newChalBtn').addEventListener('click', () => {
+    if (!chalModal) return;
+    const cur = document.querySelector('.chal-type.active');
+    applyChalKind(cur ? (cur.dataset.kind || 'walk') : 'walk');
+    chalModal.classList.add('show');
+  });
   const WD = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
   function fmtDay(d) { return (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）'; }
   function resolveEvDate() {
@@ -1586,15 +1599,15 @@ function init() {
     } else if (act.kind === 'walk') {
       chip = act.days + ' 天內';
       goal = '大家一起走 ' + (+act.goal).toLocaleString() + ' 步';
-      note = '寧寧會親口問阿嬤要不要一起；開始後每個人走多少都看得到';
+      note = cname() + '會親口問阿嬤要不要一起；開始後每個人走多少都看得到';
     } else if (act.kind === 'quiz') {
       chip = act.q + ' 題';
       goal = '你的 ' + act.q + ' 題準備好了';
-      note = '點這張卡先作答；寧寧會找其他人玩，都答完看排名';
+      note = '點這張卡先作答；' + cname() + '會找其他人玩，都答完看排名';
     } else {
       chip = act.dateLabel;
       goal = act.title + '，誰能到？';
-      note = '寧寧會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
+      note = cname() + '會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
     }
     card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
       (act.kind === 'event' ? '揪一攤 · ' + act.title : '邀請已送出 · ' + act.title) +
@@ -1629,7 +1642,7 @@ function init() {
     const acts = loadActs(); acts.push(act); saveActs(acts);
     closeChal();
     renderActCard(act);
-    hint(kind === 'event' ? '好，寧寧幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了，寧寧會親口問阿嬤，等大家答應就開始。');
+    hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
   });
   // 到期自動收卡：過了活動日就從牆上收走、記到家庭動態
   (function restoreActs() {
@@ -1673,9 +1686,9 @@ function init() {
   }
   if (inviteList) inviteList.addEventListener('click', e => { const it = e.target.closest('.iv'); if (it) { it.classList.toggle('on'); recalcWalk(true); } });
   // 挑戰類型選擇
-  const INVITE_NOTES = { walk: '阿嬤那份，寧寧會親口問她', quiz: '阿嬤用說的就能玩；其他人手機作答', event: '寧寧親口問阿嬤；其他人回「去／沒空」' };
+  const INVITE_NOTES = () => ({ walk: '阿嬤那份，' + cname() + '會親口問她', quiz: '阿嬤用說的就能玩；其他人手機作答', event: cname() + '親口問阿嬤；其他人回「去／沒空」' });
   function applyChalKind(kind) {
-    if ($('#inviteNote')) $('#inviteNote').textContent = INVITE_NOTES[kind] || '';
+    if ($('#inviteNote')) $('#inviteNote').textContent = INVITE_NOTES()[kind] || '';
     if ($('#walkFields')) $('#walkFields').style.display = kind === 'walk' ? '' : 'none';
     if ($('#quizFields')) $('#quizFields').style.display = kind === 'quiz' ? '' : 'none';
     if ($('#eventFields')) $('#eventFields').style.display = kind === 'event' ? '' : 'none';
@@ -1748,7 +1761,7 @@ function init() {
     try { localStorage.setItem('munea.visit', JSON.stringify({ dateISO: on.dataset.iso, label })); } catch (e2) {}
     renderVisitRow();
     $('#visitModal').classList.remove('show');
-    toast('好，' + label + '回診，我前一天會提醒你，摘要也會先準備好');
+    toast('好，' + label + '回診，' + cname() + '前一天會提醒你，摘要也會先準備好');
   });
   renderVisitRow();
   const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
@@ -2038,19 +2051,39 @@ function init() {
       if (s) chatHandle(s);
     }
   }
+  let micMuted = false;
+  function startListening() {
+    if (!SR2 || chatOn || micMuted || !callConnected) return;
+    chatRec = new SR2(); chatRec.lang = 'zh-TW'; chatRec.interimResults = false;
+    chatRec.onstart = () => { chatOn = true; chatMic && chatMic.classList.add('recording'); setFaceState('listening'); setCallHint('我在聽'); };
+    chatRec.onresult = e => chatHandle(e.results[0][0].transcript);
+    chatRec.onend = () => {
+      chatOn = false;
+      chatMic && chatMic.classList.remove('recording');
+      if (callConnected && !micMuted) { setTimeout(() => startListening(), 300); }
+      else if ($('#chat') && $('#chat').dataset.state === 'listening') setFaceState('idle');
+    };
+    chatRec.onerror = chatRec.onend;
+    try { chatRec.start(); } catch (e) {}
+  }
+  window.__muneaStartListen = startListening;
+  window.__muneaStopListen = () => { micMuted = false; try { chatRec && chatRec.stop(); } catch (e) {} };
   if (chatMic) chatMic.addEventListener('click', async () => {
     if (!SR2) {
       if (chatOn && mediaRec) { mediaRec.stop(); return; }
       await startVoiceCapture();
       return;
     }
-    if (chatOn) { chatRec && chatRec.stop(); return; }
-    chatRec = new SR2(); chatRec.lang = 'zh-TW'; chatRec.interimResults = false;
-    chatRec.onstart = () => { chatOn = true; chatMic.classList.add('recording'); setFaceState('listening'); setCallHint('我在聽'); };
-    chatRec.onresult = e => chatHandle(e.results[0][0].transcript);
-    chatRec.onend = () => { chatOn = false; chatMic.classList.remove('recording'); if ($('#chat') && $('#chat').dataset.state === 'listening') setFaceState('idle'); };
-    chatRec.onerror = chatRec.onend;
-    chatRec.start();
+    if (!callConnected) { // 還沒接通：按一下講一句（舊行為保底）
+      if (chatOn) { chatRec && chatRec.stop(); return; }
+      startListening();
+      return;
+    }
+    // 通話中：麥克風＝靜音開關
+    micMuted = !micMuted;
+    chatMic.classList.toggle('off', micMuted);
+    if (micMuted) { try { chatRec && chatRec.stop(); } catch (e) {} setCallHint('麥克風先關著'); }
+    else { setCallHint('我在聽'); startListening(); }
   });
 
   // 陪伴角色：使用者命名與模板分離
