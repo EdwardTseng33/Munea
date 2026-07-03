@@ -78,17 +78,19 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .wallet-strip .ws-text b { color: var(--teal-dd); font-family: var(--display); font-weight: 700; }
 
 /* AI 陪伴入口：資訊分層 + 人物存在感 */
-.butler-card { position: relative; border-radius: var(--radius-md); padding: 18px; margin-bottom: 24px; overflow: hidden; box-shadow: var(--shadow-sm); background: var(--surface); border: 1px solid var(--line); }
+.butler-card { position: relative; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 22px; overflow: hidden; box-shadow: var(--shadow-sm); background: var(--surface); border: 1px solid var(--line); }
 .butler-card::before { content: none; }
 .butler-card::after { content: none; }
-.bc-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 110px; align-items: center; gap: 12px; margin-bottom: 16px; min-height: 132px; }
-.bc-avatar { grid-column: 2; grid-row: 1; width: 108px; height: 132px; border-radius: 28px; position: relative; flex-shrink: 0; background: var(--mint-2); overflow: hidden; box-shadow: 0 8px 18px -10px rgba(46,138,131,.26); }
+.bc-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 84px; align-items: start; gap: 12px; margin-bottom: 12px; }
+/* 女巫必修 2：拱門移到外層、照片蓋在拱門上、露出頂弧（官網「照片在拱門裡」的關係） */
+.bc-row::after { content: ""; position: absolute; right: -4px; top: -12px; width: 92px; height: 100px; background: var(--mint-2); border-radius: 999px 999px 22px 22px; z-index: 0; }
+.bc-avatar { grid-column: 2; grid-row: 1; width: 78px; height: 92px; margin: 0 auto; border-radius: 18px; position: relative; z-index: 1; flex-shrink: 0; background: var(--mint-2); overflow: hidden; box-shadow: 0 6px 14px -8px rgba(46,138,131,.24); }
 .bc-avatar .ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center 24%; transform: scale(1.03); transform-origin: center top; }
 .bc-avatar .av-stripes { position: absolute; inset: 0; background: none; }
 .bc-avatar .online { position: absolute; right: 4px; bottom: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); border: 3px solid #fff; }
 .bc-info { grid-column: 1; grid-row: 1; min-width: 0; }
 .bc-eyebrow { display: inline-flex; align-items: center; color: var(--coral-d); font-size: 13px; font-weight: 600; letter-spacing: .03em; margin-bottom: 7px; }
-.bc-name { font-family: var(--serif); font-weight: 700; font-size: 28px; color: var(--ink); margin-bottom: 5px; display: flex; align-items: center; gap: 8px; line-height: 1.05; }
+.bc-name { font-family: var(--serif); font-weight: 700; font-size: 22px; color: var(--ink); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; line-height: 1.05; position: relative; z-index: 1; }
 .bc-name .bc-tag { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--teal-dd); background: var(--mint); padding: 3px 9px; border-radius: 999px; }
 .bc-status { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 15px; font-weight: 700; margin-bottom: 12px; }
 .bc-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 0 rgba(58,168,160,.5); animation: live 1.8s infinite; }
@@ -886,13 +888,14 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 /* 通話鈕：像電話——綠色開始、紅色結束 */
 
 .call-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
-  min-height: 64px; padding: 14px 24px; border: none; border-radius: 100px;
-  font-family: var(--sans); font-size: 20px; font-weight: 700; color: #FFF; cursor: pointer;
-  box-shadow: var(--shadow-sm); }
-.call-btn .ic { width: 26px; height: 26px; }
-.call-btn.start { background: var(--teal-d); }
+  min-height: 58px; padding: 12px 22px; border: none; border-radius: 20px;
+  font-family: var(--sans); font-size: 18px; font-weight: 700; color: #FFF; cursor: pointer;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 55%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 6px rgba(31,60,52,.22), 0 0 0 0.5px rgba(0,0,0,.06); }
+.call-btn .ic { width: 24px; height: 24px; }
+.call-btn.start { background-color: var(--btn-green); }
 .call-btn.start:active { transform: scale(.96); }
-.call-btn.end { background: var(--coral-d); }
+.call-btn.end { background-color: var(--coral-d); }
 .call-btn.end .ic { transform: rotate(135deg); }
 .call-btn.end:active { transform: scale(.96); }
 
@@ -908,13 +911,16 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 通話控制列：三鈕一列 */
 .ctl-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  width: 64px; height: 64px; border: none; border-radius: 50%; cursor: pointer;
-  background: rgba(255,255,255,.92); color: var(--ink-2); font-family: var(--sans); font-size: 13px; font-weight: 600; }
-.ctl-btn .ic { width: 22px; height: 22px; }
+  width: 58px; height: 58px; border: none; border-radius: 20px; cursor: pointer;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F3F1EC 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 3px rgba(31,60,52,.14), 0 0 0 0.5px rgba(58,53,46,.10);
+  color: var(--ink-2); font-family: var(--sans); font-size: 12px; font-weight: 700; }
+.ctl-btn .ic { width: 21px; height: 21px; }
+.ctl-btn:active { transform: scale(.94); }
 .ctl-btn.off { background: rgba(0,0,0,.35); color: rgba(255,255,255,.85); }
 .ctl-btn.off .ic { opacity: .75; }
 .ctl-btn.rec { background: var(--coral-d); color: #FFF; }
-.call-btn.end { background: var(--coral-d); }
+.call-btn.end { background-color: var(--coral-d); }
 .call-btn.end .ic { transform: rotate(135deg); }
 
 /* 子頁導覽頭（App 式返回：箭頭＋置中標題） */
@@ -1030,9 +1036,9 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .field-label.sect-new { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 24px; }
 
 /* 狀態頁三檔切換 */
-.seg { display: flex; background: var(--mint); border-radius: 100px; padding: 4px; gap: 4px; margin-bottom: 16px; }
+.seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 100px; padding: 4px; gap: 4px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
 .seg-btn { flex: 1; border: none; background: transparent; font-family: var(--sans); font-size: 15px; font-weight: 600; color: var(--ink-2); padding: 9px 0; border-radius: 100px; cursor: pointer; min-height: 40px; }
-.seg-btn.on { background: #FFF; color: var(--teal-dd); box-shadow: var(--shadow-sm); }
+.seg-btn.on { background: var(--btn-green); color: #FFF; box-shadow: none; }
 
 /* 本週 · 色塊週曆 */
 .wk-cal { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 16px; margin-bottom: 16px; }
@@ -1223,7 +1229,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 /* ── 設計規範 v1 · 按鈕三階（2026 深研定案：互動只用深綠、一頁一顆主鈕）── */
 .video-btn, .modal-btn, .auth-primary, .chal-act.new { background: var(--btn-green); border-radius: 16px; min-height: 50px; }
 .chal-act:not(.new), .plan-btn, .fam-call-btn { background: var(--mint); color: var(--teal-dd); border: none; border-radius: 16px; min-height: 48px; }
-.call-btn.start { background: var(--btn-green); }
+.call-btn.start { background-color: var(--btn-green); }
 
 /* 規範 v1.1 · 女巫把關修正 */
 .tab-btn { font-size: 13px; }
@@ -1295,16 +1301,18 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .ms-empty { font-size: 13px; color: var(--muted); padding: 8px 0 0; }
 
 /* ===== 智慧照護提示輪播（首頁綜合資訊入口） ===== */
-.care-card { background: var(--mint); border-radius: var(--radius); padding: 14px 16px 12px; margin: 14px 0 4px; cursor: pointer; }
+.care-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px 12px 20px; margin: 14px 0 4px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.care-card::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 4px 4px 0; background: linear-gradient(180deg, var(--teal), var(--mint-2)); }
 .care-head { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--teal-dd); font-weight: 700; }
 .care-head .ic { width: 15px; height: 15px; }
 .care-dots { margin-left: auto; display: inline-flex; gap: 5px; }
-.care-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(35,108,102,.25); transition: background .3s; }
+.care-dots i { width: 6px; height: 6px; border-radius: 4px; background: rgba(35,108,102,.22); transition: all .3s; }
+.care-dots i.on { width: 14px; }
 .care-dots i.on { background: var(--teal-dd); }
 .care-body { display: grid; min-height: 56px; margin-top: 8px; min-width: 0; }
 .care-item { grid-area: 1 / 1; min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 12px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none; }
 .care-item.on { opacity: 1; pointer-events: auto; }
-.care-ico { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: #FFF; display: grid; place-items: center; color: var(--teal-d); }
+.care-ico { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 14px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); }
 .care-ico.coral { color: var(--coral-d); }
 .care-ico.gold { color: #B98A2E; }
 .care-txt { min-width: 0; }
@@ -1342,6 +1350,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 @keyframes sheetUp { from { opacity: .4; transform: translateY(26px); } to { opacity: 1; transform: none; } }
 @keyframes checkPop { 0% { transform: scale(.6); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
 @keyframes tabIn { 0% { transform: translateY(2px) scale(.92); } 100% { transform: none; } }
+@keyframes rowGlow { 0% { background: var(--mint-2); } 100% { background: transparent; } }
 /* 統一按壓回饋：所有能點的東西都有手感 */
 .modal-btn, .care-btn, .tier, .set-row, .task-item, .mchip, .tu-card, .avo, .ms-tbtn, .btn-quiet, .chal-act, .fam-switch-item, .plan-cancel {
   transition: transform .13s ease, box-shadow .2s ease, background .2s ease;
@@ -1349,8 +1358,9 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .modal-btn:active, .care-btn:active, .tier:active, .set-row:active, .task-item:active, .mchip:active,
 .tu-card:active, .avo:active, .ms-tbtn:active, .btn-quiet:active, .chal-act:active, .plan-cancel:active { transform: scale(.98); }
 .fam-switch-item:active .fs-av { transform: scale(.94); }
-/* 打勾＝小小的慶祝 */
+/* 打勾＝小小的慶祝：勾勾彈跳＋該行輕輕亮一下 */
 .task-item.done .task-check { animation: checkPop .32s cubic-bezier(.3,1.4,.5,1) both; }
+.task-item.done { animation: rowGlow .5s ease both; }
 /* 分頁切換的落點感 */
 .tab-btn.on .ic { animation: tabIn .22s ease both; }
 /* 輪播進場：淡入＋微升 */
@@ -1381,10 +1391,6 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .bc-msg { margin-top: 8px; background: var(--mint); border-radius: 4px 16px 16px 16px; padding: 10px 13px;
   font-size: 15px; line-height: 1.5; color: var(--ink);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-/* ② 官網的拱門記號帶進 App：寧寧照片後的薄荷拱 */
-.bc-avatar { position: relative; }
-.bc-avatar::before { content: ""; position: absolute; left: -9px; top: -12px; width: 78%; height: 96%;
-  background: var(--mint-2); border-radius: 999px 999px 0 0; z-index: -1; }
 /* ③ 首頁進場節奏：卡片一張張輕輕浮上（總長 <0.5 秒） */
 #home.screen.active .pad > * { animation: viewIn .3s cubic-bezier(.22,.9,.32,1) both; }
 #home.screen.active .pad > *:nth-child(2) { animation-delay: .05s; }

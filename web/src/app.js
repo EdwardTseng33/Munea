@@ -956,8 +956,7 @@ function setupAuthControls() {
     else if (h >= 14) ask = '傍晚去公園走走，回來跟我聊？';
     msg.textContent = mem + '——' + ask;
   }
-  const stat = $('#bcStatus');
-  if (stat) stat.textContent = '連續 6 天都有聊';
+
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
   if (meta) meta.textContent = `${now.getMonth() + 1}月${now.getDate()}日 週${wd}`;
@@ -1194,6 +1193,10 @@ function renderCareCarousel() {
   _careIdx = 0;
   if (_careTimer) clearInterval(_careTimer);
   _careTimer = setInterval(() => careAdvance(1), 5200);
+  // 首輪起轉延後 1.4 秒：讓進場動畫先走完、不疊影
+  clearInterval(_careTimer);
+  _careTimer = null;
+  setTimeout(() => { if (!_careTimer) _careTimer = setInterval(() => careAdvance(1), 5200); }, 1400);
 }
 function careAdvance(step) {
   const its = document.querySelectorAll('#careBody .care-item');
