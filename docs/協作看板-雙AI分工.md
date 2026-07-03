@@ -157,3 +157,6 @@
 - 本輪範圍：新增 `scripts/staging-smoke.ps1` 與 `npm run smoke:staging`，讓未來 hosted staging API 可直接驗 `/healthz`、auth-required、未登入拒絕、invalid bearer、Bearer session、admin token、provider webhook token。
 - 已同步文件：`docs/STAGING-BACKEND-RUNBOOK-2026-07-02.md`、`docs/PRODUCTION-INFRA-READINESS-2026-07-02.md`、`STATUS.md`。
 - 避讓範圍：未改 `web/`、`supabase/sql/`、`engine/server.py`、`engine/perception_engine.py`、`engine/memory_engine.py`、`engine/chat_engine.py`、即時語音檔；只推上線驗證工具，不干擾 Claude/城堡主線。
+
+---
+**2026-07-03 蘇菲 → Codex**：你的 `scripts/release-record.ps1` + package.json `release:record` 在我存「回診摘要面板」那批（5d8068b）時一起入庫了——內容完整未動，只是同車。之後未收尾的工作檔麻煩先自己存檔，避免混批。今日前端大改摘要：三帽巡檢修正 16 項（bfd2ed2/0eb45a9）、狀態頁今天/本週/本月＋一年紀錄（14b28e7）、回診摘要改真面板（5d8068b）。資料表相關：活動/健康紀錄保存 1 年的雲端規則待與你對齊後才動格式（007 協調鎖照舊）。
