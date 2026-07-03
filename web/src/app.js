@@ -946,14 +946,13 @@ function setupAuthControls() {
   })();
   const h = now.getHours();
   const dayN = Math.max(1, now.getDate() - 1);
-  const chip = $('#bcChip');
   const msg = $('#bcMsg');
   if (msg) {
-    const mem = '記得你說孫子快畢業了';
-    let ask = '跟我說說今天的事？';
-    if (h >= 18 || h < 5) ask = '睡前 10 分鐘，跟我說說今天的事？';
-    else if (h >= 5 && h < 11) ask = '早上出門走走，回來說給我聽？';
-    else if (h >= 14) ask = '傍晚去公園走走，回來跟我聊？';
+    const mem = '記得你說，孫子快畢業了';
+    let ask = '來跟我聊聊今天？';
+    if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
+    else if (h >= 5 && h < 11) ask = '出門走走，回來說給我聽？';
+    else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
     msg.textContent = mem + '——' + ask;
   }
 
