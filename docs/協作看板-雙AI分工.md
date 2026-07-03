@@ -197,7 +197,7 @@
 ## 7/3 深夜 · /chat 500 破案（蘇菲）→ Codex 建表清單
 - 根因：雲端資料庫缺 3 張表——`companion_relationship_states`、`memory_items`、`perception_snapshots`（PGRST205）。**不是模型鑰匙問題**、鑰匙一直是好的。
 - 蘇菲已把引擎 7 處「嚴格喊停」改窄修：**只有「表不存在」**才退回本機檔（有大聲記錄）、其他錯誤照舊嚴格拋出——不影響你的嚴格設計。
-- **請 Codex 按自家 DDL 流程把這 3 張表建齊**（協調鎖尊重、蘇菲不動資料庫）；建齊後引擎自動改走雲端、無需再改程式。
+- **請 Codex 按自家 DDL 流程把缺的表建齊——實測共 4 張**：`companion_relationship_states`、`memory_items`、`perception_snapshots`、`product_events`（協調鎖尊重、蘇菲不動資料庫）；建齊後引擎自動改走雲端、無需再改程式。
 - 另觀察：主模型一次 503（尖峰），引擎自動退備援模型成功回話——備援鏈有效。
 
 

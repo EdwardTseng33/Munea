@@ -364,11 +364,13 @@ function playB64(b64) {
   } catch (e) {}
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
+const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000 };
 async function brainPost(url, body) {
   if (isStaticPreview()) return null;
   // 加超時護欄：語音腦連不上時，不卡死畫面（§6.5 降級鐵律：對話不斷、老實退回）
+  // 等待分級：聊天回話給足 30 秒（畫面有「我想一下」思考態撐場）、記憶整理背景 45 秒、其餘 6 秒
   const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), 6000);
+  const to = setTimeout(() => ctrl.abort(), BRAIN_PATIENCE[url] || 6000);
   try {
     const r = await fetch(url, { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body), signal: ctrl.signal });
     if (!r.ok) return null;
@@ -532,6 +534,10 @@ function postTurnReview() {
     ...authAnalyticsContext(),
   }).then(response => {
     if (response) setLatestAiContext(response.aiContext, 'butler post-turn', response.relationshipState);
+    if (!response && !postTurnReview._retried) {
+      postTurnReview._retried = true;
+      setTimeout(() => { postTurnReview().finally(() => { postTurnReview._retried = false; }); }, 10000);
+    }
     return response;
   });
 }
@@ -2290,8 +2296,10 @@ function init() {
         ? '我看了一下，你還有 ' + left + ' 點，生動模式大概還能聊 ' + left + ' 分鐘。放心，就算用完，基本陪伴也不會斷。'
         : '點數用完了，不過別擔心，基本陪伴不限量，我一樣在。想要生動模式的話，設定裡可以加值。';
     }
-    const relay0 = t.match(/(提醒|告訴|跟)\s*([一-龥]{2,3})(說|，|要|來)?\s*(.{2,30})/);
-    if (relay0 && relay0[2] !== '我' && !/我/.test(relay0[2])) {
+    // 傳話：①「提醒／告訴 某人 …」直接算 ②「跟 某人」必須真的接「說」才算（防「有跟誰約好」這種閒聊誤觸發）
+    const relay0 = t.match(/(提醒|告訴)\s*([一-龥]{2,3})(說|，|要|來)?\s*(.{2,30})/) || t.match(/(跟)\s*([一-龥]{2,3})(說)\s*(.{2,30})/);
+    const relayBadWho = /[我你妳他她誰哪]/;
+    if (relay0 && !relayBadWho.test(relay0[2])) {
       let who = relay0[2].replace(/[要說來]$/, '');
       if (who.length < 2) who = relay0[2];
       pushFamilyFeed('<b>你</b>托' + cname() + '帶話給' + who + '：' + relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, ''));
