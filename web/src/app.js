@@ -1054,6 +1054,7 @@ function renderPoints() {
 
 let _callTimerInt = null, _callSec = 0;
 let _lowWarned = false, _zeroSaid = false;
+let _brainDegraded = false;
 function callBudgetTick() {
   const left = ptsLeft() - Math.floor(_callSec / 60);
   if (!_lowWarned && left <= 15 && left > 0) {
@@ -1077,7 +1078,7 @@ function startCallTimer() {
   }, 1000);
 }
 function stopCallTimer() {
-  _lowWarned = false; _zeroSaid = false; if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
+  _lowWarned = false; _zeroSaid = false; _brainDegraded = false; if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
 function setCaption(text, hint) {
   let box = document.querySelector('.face-caption-box');
   if (!box) {
@@ -2304,6 +2305,7 @@ function init() {
     return null;
   }
   window.__chatTest = t => { const r = parseChatIntent(t); return r || chatReply(t); };
+  window.__chatSay = t => chatHandle(t);
   async function chatHandle(t) {
     const acted = parseChatIntent(t);
     if (acted) { speakChat(acted); return; }
@@ -2314,6 +2316,11 @@ function init() {
     setTimeout(() => { setFaceState('thinking'); setCallHint('我想一下'); }, 380);
     const r = await voiceProvider.sendText({ history: chatHistory, char: currentChar });
     if (r && r.reply) {                              // 真腦回話＋真聲音
+      if (_brainDegraded) {
+        _brainDegraded = false;
+        setCaption('接回來了，剛剛說的我都記著', '我們繼續');
+        trackProductEvent('voice_brain_recovered', { turnCount: activeChatTurnCount });
+      }
       setCallHint('正在說話');
       chatHistory.push({ role: 'model', text: r.reply });
       if (r.audio) playB64(r.audio); else speakChat(r.reply);
@@ -2325,6 +2332,10 @@ function init() {
       });
       postTurnReview();
     } else {                                          // 沒真腦 → 退回規則版（純靜態 demo 也能動）
+      if (!_brainDegraded) {
+        _brainDegraded = true;
+        setCaption('訊號不太穩，我先用簡單的方式陪你', '會自己接回來，聊的內容我都記著');
+      }
       const rr = chatReply(t);
       setCallHint('正在說話');
       chatHistory.push({ role: 'model', text: rr });
