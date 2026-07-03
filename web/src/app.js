@@ -979,6 +979,48 @@ function updateMedCount() {
   if (el) el.textContent = n;
   const el2 = $('#medCountSettings');
   if (el2) el2.textContent = n;
+  renderPillTask();
+}
+const PILL_SLOT_ORDER = ['早餐後', '午餐後', '晚餐後', '睡前'];
+function pillDateKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function renderPillTask() {
+  const card = document.querySelector('.task-item[data-task="pill"]');
+  const title = $('#pillTitle'), sub = $('#pillSub');
+  if (!card || !title || !sub) return;
+  const meds = loadMeds();
+  if (!meds.length) {
+    title.textContent = '吃藥提醒';
+    sub.textContent = '還沒設定，跟' + (typeof cname === 'function' ? cname() : '寧寧') + '說一聲就好';
+    card.classList.remove('done');
+    if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
+    return;
+  }
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem('munea.medDone.' + pillDateKey())) || {}; } catch (e) {}
+  const slots = [];
+  for (const med of meds) {
+    for (const raw of String(med.time).split('、')) {
+      const slot = raw.trim();
+      if (slot) slots.push({ slot, name: med.name, key: slot + '|' + med.name });
+    }
+  }
+  slots.sort((a, b) => PILL_SLOT_ORDER.indexOf(a.slot) - PILL_SLOT_ORDER.indexOf(b.slot));
+  const total = slots.length;
+  const doneN = slots.filter(s => done[s.key]).length;
+  const next = slots.find(s => !done[s.key]);
+  if (next) {
+    title.textContent = '吃' + next.name;
+    sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
+    card.classList.remove('done');
+  } else {
+    title.textContent = '今天的藥都吃了';
+    sub.textContent = total + ' 次都記到了，讚';
+    card.classList.add('done');
+  }
+  if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
 function renderMedList() {
   const box = $('#medList');
@@ -991,6 +1033,7 @@ const POINTS = { total: 400, used: 160,
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
 const LOW_PTS = 30;
 window.__ptsTest = { setUsed: v => { POINTS.used = v; renderPoints(); }, ff: s => { _callSec = s; } };
+window.__medRefresh = () => updateMedCount();
 function ptsLeft() { return POINTS.total - POINTS.used + POINTS.bought; }
 function refreshLowState() {
   const pts = document.querySelector('.hud-pill.pts');
@@ -2109,8 +2152,7 @@ function init() {
     medShowing = null;
     $('#medRemindModal').classList.remove('show');
     toast('記下了，藥吃了。');
-    const pt = document.querySelector('.task-item[data-task="pill"]');
-    if (pt && !pt.classList.contains('done')) { pt.classList.add('done'); refreshTaskProgress(); }
+    renderPillTask();
   });
   if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => {
     medSnoozeUntil = Date.now() + 10 * 60 * 1000;
