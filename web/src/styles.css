@@ -1431,3 +1431,27 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .cbar b { font-size: 11px; font-weight: 600; color: var(--muted); }
 .cbar-row.mini { height: 52px; gap: 2px; }
 .cbar-row.mini .cbar i { border-radius: 3px; max-width: none; }
+
+/* ===== 設定頁精修（Edward 7/4：單行、內頁選字級、條款 App 內閱讀） ===== */
+.set-row .sr-main { min-width: 0; }
+.set-row .sr-main small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.set-row .sr-arrow { white-space: nowrap; flex-shrink: 0; }
+/* 加值卡三行各自單行 */
+.tu-card { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+.tu-card b, .tu-card .tu-price, .tu-card .tu-min { white-space: nowrap; }
+.tu-card .tu-price { font-size: 15px; font-weight: 700; color: var(--ink); }
+.tu-card .tu-min { font-size: 12.5px; color: var(--muted); }
+/* 字級選單 */
+.font-opts { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.font-opt { display: flex; align-items: baseline; gap: 12px; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: 14px; background: #FFF; text-align: left; }
+.font-opt span { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.font-opt.on { border-color: var(--btn-green); background: var(--mint); }
+.font-opt.on::after { content: "✓"; margin-left: auto; color: var(--teal-dd); font-weight: 800; }
+/* 條款閱讀內頁：白色滿版、左上返回、內容可滑 */
+.reader-page { position: fixed; inset: 0; z-index: 60; background: var(--cream); display: none; flex-direction: column; }
+.reader-page.show { display: flex; }
+.reader-scroll { flex: 1; overflow-y: auto; padding: 4px 18px calc(24px + env(safe-area-inset-bottom)); }
+.reader-card { background: #FFF; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 18px 18px 22px; }
+.reader-card h4 { font-size: 16px; margin: 16px 0 6px; color: var(--ink); }
+.reader-card h4:first-child { margin-top: 0; }
+.reader-card p { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin-bottom: 4px; }

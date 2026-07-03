@@ -2149,21 +2149,46 @@ function init() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     const step = FONT_STEPS.find(x => x[0] === cur) || FONT_STEPS[0];
     document.querySelectorAll('.screen .pad, .modal').forEach(el => { el.style.zoom = step[2]; });
-    const row = $('#fontRow .sr-arrow');
+    const row = $('#fontNow');
     if (row) row.textContent = step[1] + ' ›';
   }
-  if ($('#fontRow')) $('#fontRow').addEventListener('click', () => {
+  function markFontOpt() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
-    const i = FONT_STEPS.findIndex(x => x[0] === cur);
-    const next = FONT_STEPS[(i + 1) % FONT_STEPS.length];
-    try { localStorage.setItem('munea.fontScale', next[0]); } catch (e) {}
+    document.querySelectorAll('.font-opt').forEach(o => o.classList.toggle('on', o.dataset.f === cur));
+  }
+  if ($('#fontRow')) $('#fontRow').addEventListener('click', () => { markFontOpt(); $('#fontModal').classList.add('show'); });
+  if ($('#fontClose')) $('#fontClose').addEventListener('click', () => $('#fontModal').classList.remove('show'));
+  if ($('#fontModal')) $('#fontModal').addEventListener('click', e => {
+    if (e.target === $('#fontModal')) { $('#fontModal').classList.remove('show'); return; }
+    const o = e.target.closest('.font-opt');
+    if (!o) return;
+    try { localStorage.setItem('munea.fontScale', o.dataset.f); } catch (e2) {}
     applyFontScale();
-    toast('字體改成「' + next[1] + '」了');
+    markFontOpt();
+    const nm = (FONT_STEPS.find(x => x[0] === o.dataset.f) || [])[1] || '標準';
+    toast('好，改成「' + nm + '」了');
   });
   applyFontScale();
+  // 條款／隱私：App 內白色內頁（左上返回、內容可滑）
+  async function openReader(kind) {
+    const page = kind === 'terms' ? 'terms.html' : 'privacy.html';
+    $('#readerTitle').textContent = kind === 'terms' ? '使用條款' : '隱私權政策';
+    const body = $('#readerBody');
+    body.innerHTML = '<p>讀取中…</p>';
+    $('#readerPage').classList.add('show');
+    try {
+      const html = await fetch(page).then(r => r.text());
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const secs = [...doc.querySelectorAll('.privacy-section')];
+      body.innerHTML = secs.map(s2 => '<h4>' + s2.querySelector('h2').textContent + '</h4>' +
+        [...s2.querySelectorAll('p, ul')].map(x => x.outerHTML.replace(/<h2.*?<\/h2>/, '')).join('')).join('');
+    } catch (e2) { body.innerHTML = '<p>暫時讀不到，晚點再試。</p>'; }
+    $('#readerBody').closest('.reader-scroll').scrollTop = 0;
+  }
+  if ($('#readerBack')) $('#readerBack').addEventListener('click', () => $('#readerPage').classList.remove('show'));
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
-  if ($('#termsRow')) $('#termsRow').addEventListener('click', () => window.open('terms.html', '_blank'));
-  if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => window.open('privacy.html', '_blank'));
+  if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openReader('terms'));
+  if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openReader('privacy'));
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));
   if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));
   if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });
