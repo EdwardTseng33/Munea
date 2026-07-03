@@ -1214,3 +1214,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .plan-cancel { display: block; margin: 16px auto 2px; border: none; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; padding: 8px 12px; }
 
 .tier-tag { font-style: normal; margin-left: 6px; font-size: 11px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 100px; padding: 2px 7px; }
+
+/* ── 設計規範 v1 · 按鈕三階（2026 深研定案：互動只用深綠、一頁一顆主鈕）── */
+.video-btn, .modal-btn, .auth-primary, .chal-act.new { background: var(--teal-dd); border-radius: 18px; min-height: 56px; }
+.chal-act:not(.new), .plan-btn, .fam-call-btn { background: var(--mint); color: var(--teal-dd); border: none; border-radius: 16px; min-height: 48px; }
+.call-btn.start { background: var(--teal-dd); }
