@@ -10,7 +10,7 @@
   --mint: #E8F2EE; --mint-2: #D9EFE8;
   --cream: #FAF7F2; --cream-2: #FFFFFF; --surface: #FFFFFF;
   --ink: #33403D; --ink-2: #4A5651; --muted: #5A6963;
-  --coral: #E08B45; --coral-d: #C25716; --coral-soft: #FBE7D2;
+  --coral: #D98841; --coral-d: #A8611E; --coral-soft: #F8E9D8;
   --gold: #E0B354; --gold-soft: #F6EAD0;
   --line: #E7E0D6;
   --deep: #16241F; --deep-2: #1E342C; --deep-card: #2A3D36;
@@ -1289,3 +1289,20 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .ms-med span { font-size: 13px; color: var(--muted); }
 .ms-med .ms-del { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--mint); color: var(--ink-2); }
 .ms-empty { font-size: 13px; color: var(--muted); padding: 8px 0 0; }
+
+/* ===== 智慧照護提示輪播（首頁綜合資訊入口） ===== */
+.care-card { background: var(--mint); border-radius: var(--radius); padding: 14px 16px 12px; margin: 14px 0 4px; cursor: pointer; }
+.care-head { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--teal-dd); font-weight: 700; }
+.care-head .ic { width: 15px; height: 15px; }
+.care-dots { margin-left: auto; display: inline-flex; gap: 5px; }
+.care-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(35,108,102,.25); transition: background .3s; }
+.care-dots i.on { background: var(--teal-dd); }
+.care-body { position: relative; min-height: 56px; margin-top: 8px; }
+.care-item { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+.care-item.on { opacity: 1; pointer-events: auto; }
+.care-ico { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: #FFF; display: grid; place-items: center; color: var(--teal-d); }
+.care-ico.coral { color: var(--coral-d); }
+.care-ico.gold { color: #B98A2E; }
+.care-txt { min-width: 0; }
+.care-txt p { font-size: 15px; line-height: 1.45; color: var(--ink); }
+.care-txt small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }

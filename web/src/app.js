@@ -946,8 +946,6 @@ function setupAuthControls() {
   })();
   const h = now.getHours();
   const dayN = Math.max(1, now.getDate() - 1);
-  const ws = $('#wsText');
-  if (ws) ws.innerHTML = `這個月你有 <b>${dayN} 天</b>準時吃藥，很穩，繼續保持。`;
   const chip = $('#bcChip');
   if (chip) {
     const sun = '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/></svg>';
@@ -1141,10 +1139,69 @@ async function syncPullAll() {
     if (typeof updateMedCount === 'function') updateMedCount();
     if (typeof renderPoints === 'function') renderPoints();
     if (typeof renderVisitRow === 'function') try { renderVisitRow(); } catch (e) {}
-    const peek = document.querySelector('.fam-peek .fp-text');
-    const feed = st.familyFeed;
-    if (peek && Array.isArray(feed) && feed.length) peek.innerHTML = feed[0];
+    renderCareCarousel();
   } catch (e) {}
+}
+function streakLine(n) {
+  if (n >= 10) return '這個月有 <b>' + n + ' 天</b>準時吃藥，很穩，繼續保持';
+  if (n >= 3) return '這個月有 <b>' + n + ' 天</b>準時吃藥，節奏出來了';
+  return '開始把吃藥記下來了，好的開始';
+}
+const CARE_ICONS = {
+  msg: '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>',
+  walk: '<svg class="ic" viewBox="0 0 24 24"><path d="M13 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM8 21l3-6M14 21v-5l-2.5-3 1-5.5M8.5 9 11 6.5l2.5 1 2 3H18"/></svg>',
+  cal: '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  medal: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>'
+};
+let _careIdx = 0, _careTimer = null;
+function buildCareItems() {
+  const items = [];
+  let feed = [];
+  try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
+  const relayMsg = feed.find(x => String(x).includes('帶話'));
+  if (relayMsg) items.push({ k: 'family', tone: '', icon: 'msg', html: relayMsg, sub: '打開家人頁可以請寧寧回話' });
+  else items.push({ k: 'family', tone: '', icon: 'msg', html: feed[0] || '<b>美華</b>托寧寧帶話：週末回去看你', sub: '家人的話，寧寧幫你收著' });
+  let acts = [];
+  try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
+  const act = acts.find(a => a && !a.done && !a.archived);
+  if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
+    const goal = +(act.steps || act.goal || 8000);
+    const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的走路活動進行中', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步達標，加把勁' : '目標達成了，去看看大家' });
+  } else if (act) {
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的「' + (act.title || '家庭活動') + '」進行中', sub: '到家人頁看看大家的進度' });
+  } else {
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>外婆</b>發起的走路活動進行中', sub: '還差 5,000 步達標，飯後走一圈剛好' });
+  }
+  let v = null;
+  try { v = JSON.parse(localStorage.getItem('munea.visit') || 'null'); } catch (e) {}
+  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', html: (v.label || '回診') + '快到了（' + String(v.dateISO).slice(5).replace('-', '/') + '）', sub: '想問醫生的，寧寧都幫你記著' });
+  items.push({ k: 'status', tone: 'gold', icon: 'medal', html: streakLine(Math.max(1, new Date().getDate() - 1)), sub: '家人都看得到你的努力' });
+  return items;
+}
+function renderCareCarousel() {
+  const body = document.getElementById('careBody');
+  const dots = document.getElementById('careDots');
+  if (!body || !dots) return;
+  const items = buildCareItems();
+  body.innerHTML = items.map((it, i) =>
+    '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
+    '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
+    '<div class="care-txt"><p>' + it.html + '</p><small>' + it.sub + '</small></div></div>').join('');
+  dots.innerHTML = items.map((_, i) => '<i class="' + (i === 0 ? 'on' : '') + '"></i>').join('');
+  _careIdx = 0;
+  if (_careTimer) clearInterval(_careTimer);
+  _careTimer = setInterval(() => careAdvance(1), 5200);
+}
+function careAdvance(step) {
+  const its = document.querySelectorAll('#careBody .care-item');
+  const dots = document.querySelectorAll('#careDots i');
+  if (!its.length) return;
+  its[_careIdx].classList.remove('on');
+  if (dots[_careIdx]) dots[_careIdx].classList.remove('on');
+  _careIdx = (_careIdx + step + its.length) % its.length;
+  its[_careIdx].classList.add('on');
+  if (dots[_careIdx]) dots[_careIdx].classList.add('on');
 }
 function loadFeed() {
   try { const a = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; return Array.isArray(a) ? a : []; } catch (e) { return []; }
@@ -1155,13 +1212,9 @@ function pushFamilyFeed(text) {
   while (a.length > 3) a.pop();
   try { localStorage.setItem('munea.familyFeed2', JSON.stringify(a)); } catch (e) {}
   syncPush('familyFeed', a);
-  const peek = $('.fam-peek .fp-text');
-  if (peek) peek.innerHTML = text;
+  renderCareCarousel();
 }
-function restoreFamilyFeed() {
-  const a = loadFeed();
-  if (a.length) { const peek = $('.fam-peek .fp-text'); if (peek) peek.innerHTML = a[0]; }
-}
+function restoreFamilyFeed() { renderCareCarousel(); }
 
 function toast(text) {
   const t = $('#toast');
@@ -1382,6 +1435,11 @@ function init() {
   setupHscrollHints();
   renderPoints();
   updateMedCount();
+  renderCareCarousel();
+  if ($('#careCard')) $('#careCard').addEventListener('click', () => {
+    const cur = document.querySelector('#careBody .care-item.on');
+    showView(cur && cur.dataset.k === 'status' ? 'status' : 'family');
+  });
   if (location.hash.slice(1) === 'pick') {
     const sheet = $('#companionSheet');
     const mask = sheet && sheet.closest('.modal-mask');
@@ -2063,28 +2121,27 @@ function init() {
   });
   applyFontScale();
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
-  function openLegal(tab) {
-    const seg = $('#legalSeg');
-    if (seg) seg.querySelectorAll('.seg-btn').forEach(x => x.classList.toggle('on', x.dataset.v === tab));
-    if ($('#legalTerms')) $('#legalTerms').style.display = tab === 'terms' ? '' : 'none';
-    if ($('#legalPrivacy')) $('#legalPrivacy').style.display = tab === 'privacy' ? '' : 'none';
-    $('#legalModal').classList.add('show');
-  }
-  if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => openLegal('privacy'));
+  if ($('#termsRow')) $('#termsRow').addEventListener('click', () => window.open('terms.html', '_blank'));
+  if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => window.open('privacy.html', '_blank'));
+  if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));
+  if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));
+  if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });
+  if ($('#dataExportBtn')) $('#dataExportBtn').addEventListener('click', () => {
+    brainPost('/privacy-export', {}).then(r => toast(r ? '資料整理好了，正式版會寄到你的信箱' : '示範版先記下：正式版會把資料寄給你'));
+  });
+  if ($('#dataDeleteBtn')) $('#dataDeleteBtn').addEventListener('click', () => {
+    const b = $('#dataDeleteBtn');
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次就整份刪除（無法復原）'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '刪除我的資料'; }, 6000); return; }
+    brainPost('/account-deletion', {}).then(() => { $('#dataModal').classList.remove('show'); toast('刪除申請送出了，我會照規則處理。'); });
+    b.dataset.arm = ''; b.textContent = '刪除我的資料';
+  });
   if ($('#consentAgree')) $('#consentAgree').addEventListener('click', () => {
     try { localStorage.setItem('munea.consent.crossborder', new Date().toISOString()); } catch (e) {}
     trackProductEvent('crossborder_consent_given', {});
     $('#consentSheet').classList.remove('show');
     connectCall();
   });
-  if ($('#consentDetail')) $('#consentDetail').addEventListener('click', () => { $('#consentSheet').classList.remove('show'); openLegal('privacy'); });
-  if ($('#legalRow')) $('#legalRow').addEventListener('click', () => openLegal('terms'));
-  if ($('#legalClose')) $('#legalClose').addEventListener('click', () => $('#legalModal').classList.remove('show'));
-  if ($('#legalModal')) $('#legalModal').addEventListener('click', e => { if (e.target === $('#legalModal')) $('#legalModal').classList.remove('show'); });
-  if ($('#legalSeg')) $('#legalSeg').addEventListener('click', e => {
-    const b = e.target.closest('.seg-btn');
-    if (b) openLegal(b.dataset.v);
-  });
+  if ($('#consentDetail')) $('#consentDetail').addEventListener('click', () => { window.open('privacy.html', '_blank'); });
   const authTermsLink = document.querySelector('.auth-terms a');
   if (authTermsLink) authTermsLink.addEventListener('click', e => { e.preventDefault(); closeAuthSheet(); openLegal('terms'); });
   if ($('#historyEntry')) $('#historyEntry').addEventListener('click', () => { rcInit(); $('#historyModal').classList.add('show'); });
@@ -2344,7 +2401,13 @@ function init() {
         : '點數用完了，不過別擔心，基本陪伴不限量，我一樣在。想要生動模式的話，設定裡可以加值。';
     }
     // 傳話：①「提醒／告訴 某人 …」直接算 ②「跟 某人」必須真的接「說」才算（防「有跟誰約好」這種閒聊誤觸發）
-    const relay0 = t.match(/(提醒|告訴)\s*([一-龥]{2,3})(說|，|要|來)?\s*(.{2,30})/) || t.match(/(跟)\s*([一-龥]{2,3})(說)\s*(.{2,30})/);
+    const KNOWN_FAM = ['美華', '志明', '小寶', '允辰', '阿嬤', '阿公', '秀英'];
+    let relay0 = null;
+    for (const nm of KNOWN_FAM) {
+      relay0 = t.match(new RegExp('(提醒|告訴)\\s*(' + nm + ')(說|，|要|來)?\\s*(.{2,30})')) || t.match(new RegExp('(跟)\\s*(' + nm + ')(說)\\s*(.{2,30})'));
+      if (relay0) break;
+    }
+    if (!relay0) relay0 = t.match(/(提醒|告訴)\s*([一-龥]{2,3})(說|，|要|來)?\s*(.{2,30})/) || t.match(/(跟)\s*([一-龥]{2,3})(說)\s*(.{2,30})/);
     const relayBadWho = /[我你妳他她誰哪]/;
     if (relay0 && !relayBadWho.test(relay0[2])) {
       let who = relay0[2].replace(/[要說來]$/, '');
