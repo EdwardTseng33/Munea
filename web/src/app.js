@@ -819,7 +819,7 @@ function updateAuthUI() {
     const card0 = $('#authCard');
     if (card0) card0.dataset.authState = 'signed-in';
     if ($('#authStatusText')) $('#authStatusText').textContent = '陳秀英';
-    if ($('#authProviderText')) $('#authProviderText').textContent = '家庭成員 · 美華邀請加入';
+    if ($('#authProviderText')) $('#authProviderText').textContent = '我的帳號 · 資料已同步';
     if ($('#authEmailText')) $('#authEmailText').textContent = '';
     if ($('#authSignInBtn')) $('#authSignInBtn').hidden = true;
     if ($('#authSignOutBtn')) $('#authSignOutBtn').hidden = false;
@@ -976,7 +976,7 @@ function renderMedList() {
     '<div class="med-row"><div><b>' + m.name + '</b><span>' + m.time + ' · ' + m.days + '</span></div></div>').join('');
 }
 
-const POINTS = { total: 800, used: 320 };
+const POINTS = { total: 400, used: 160 };
 function renderPoints() {
   const left = POINTS.total - POINTS.used;
   const hud = document.querySelector('.hud-pill.pts');
@@ -1482,7 +1482,17 @@ function init() {
   if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', () => {
     const sel = document.querySelector('.tu-card.on b');
     $('#topUpModal').classList.remove('show');
-    toast('已通知美華：想加值 ' + (sel ? sel.textContent : '') + '，她同意後就入帳');
+    toast('買好了，' + (sel ? sel.textContent : '') + '入帳，這批不會過期');
+  });
+  const tierList = document.querySelector('.tier-list');
+  if (tierList) tierList.addEventListener('click', e => {
+    const t = e.target.closest('.tier');
+    if (!t || t.classList.contains('on')) return;
+    toast('好，下期起改成「' + t.dataset.t + '」，這期權益用到 7/25');
+  });
+  if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', () => {
+    $('#planModal').classList.remove('show');
+    toast('會在 7/25 到期後停止扣款、轉為免費試用；資料和記憶都會留著');
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => $('#planModal').classList.add('show'));
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));

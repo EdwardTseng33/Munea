@@ -394,11 +394,11 @@
       <h2 class="set-section">訂閱與點數</h2>
       <div class="plan-card">
         <div class="plan-title-row">
-          <span class="plan-name">Premium 尊享版</span>
-          <span class="plan-payer" style="margin:0">美華付費中</span>
+          <span class="plan-name">高級方案</span>
+          <span class="plan-payer" style="margin:0">我的訂閱</span>
         </div>
         <div class="plan-divider"></div>
-        <div class="pts-label">生動點數 <b id="ptsLeft">480</b> 點 <span class="pts-used">本月 800 點 · 已用 <i id="ptsUsed" style="font-style:normal">320</i></span></div>
+        <div class="pts-label">點數 <b id="ptsLeft">240</b> 點 <span class="pts-used">每月送 400 · 已用 <i id="ptsUsed" style="font-style:normal">160</i></span></div>
         <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
         <div class="pts-note">通話與生動模式會用點數；基本陪伴不限量、不會中斷</div>
         <div class="plan-actions">
@@ -631,11 +631,13 @@
       <h2>加值點數</h2>
       <p class="modal-sub">通話與生動模式會用點數；基本陪伴不限量。</p>
       <div class="tu-grid">
-        <button class="tu-card" data-p="120"><b>120 點</b><span>NT$120</span></button>
-        <button class="tu-card on" data-p="500"><b>500 點</b><span>NT$450 · 划算</span></button>
+        <button class="tu-card" data-p="200"><b>200 點</b><span>NT$350</span></button>
+        <button class="tu-card on" data-p="500"><b>500 點</b><span>NT$800</span></button>
+        <button class="tu-card" data-p="1000"><b>1,000 點</b><span>NT$1,500</span></button>
+        <button class="tu-card" data-p="2000"><b>2,000 點</b><span>NT$2,900</span></button>
       </div>
-      <button class="modal-btn" id="tuBuyBtn" style="margin-top:14px">通知美華幫我加值</button>
-      <p class="modal-sub" style="margin-top:10px">費用記在付款人（美華）的帳上，她同意後點數就入帳。</p>
+      <button class="modal-btn" id="tuBuyBtn" style="margin-top:14px">直接購買</button>
+      <p class="modal-sub" style="margin-top:10px">買的點數不會過期；每月送的先用完，才會用到買的。</p>
     </div>
   </div>
 
@@ -645,17 +647,24 @@
       <button class="auth-close" id="planClose" type="button" aria-label="關閉方案" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>管理方案</h2>
       <div class="plan-current">
-        <div class="pc-row"><b>Premium 尊享版</b><span class="pc-price">NT$999<small>/月</small></span></div>
-        <div class="pc-meta">美華付費 · 下次扣款 7/26</div>
+        <div class="pc-row"><b>高級方案</b><span class="pc-price">NT$999<small>/月</small></span></div>
+        <div class="pc-meta">我的訂閱 · 下次扣款 7/26 · 每月送 400 點</div>
       </div>
       <div class="field-label">方案包含</div>
       <ul class="plan-feats">
         <li>基本陪伴聊天不限量、不會中斷</li>
-        <li>每月 800 生動點數（通話與生動模式）</li>
-        <li>全家照護圈共享</li>
+        <li>每月送 400 點（通話 1 點/分、生動模式 6 點/分）</li>
+        <li>兩位長輩共用額度池</li>
         <li>健康週報與回診摘要</li>
       </ul>
-      <p class="modal-sub" style="margin-top:14px">方案由美華管理；要升級、換方案或取消，請美華在她的手機上操作。</p>
+      <div class="field-label">換一個方案（隨時可升可降）</div>
+      <div class="tier-list">
+        <button class="tier" data-t="免費試用"><b>免費試用</b><span>一次性 5 點體驗</span><i>NT$0</i></button>
+        <button class="tier" data-t="基礎"><b>基礎</b><span>每月送 200 點</span><i>NT$499/月</i></button>
+        <button class="tier on" data-t="高級"><b>高級</b><span>每月送 400 點 · 雙人共用</span><i>NT$999/月</i></button>
+        <button class="tier" data-t="尊榮"><b>尊榮</b><span>每月送 1,000 點</span><i>NT$1,999/月</i></button>
+      </div>
+      <button class="plan-cancel" id="planCancelBtn">取消訂閱</button>
     </div>
   </div>
 

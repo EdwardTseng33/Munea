@@ -403,7 +403,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* 發起 / 記錄簿 入口 */
 .chal-actions { display: flex; gap: 10px; margin-bottom: 16px; }
 .chal-act { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 14px; font-family: var(--display); font-weight: 700; font-size: 14px; cursor: pointer; }
-.chal-act.new { background: var(--teal); color: #fff; border: none; }
+.chal-act.new { background: var(--teal-d); color: #fff; border: none; }
 .chal-act.book { background: #fff; color: var(--teal-d); border: 1.5px solid var(--teal); }
 .chal-act .ic { width: 18px; height: 18px; }
 
@@ -1203,3 +1203,12 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .auth-ava { flex-shrink: 0; }
 .auth-ava .init-ava { width: 44px; height: 44px; border-radius: 50%; font-size: 17px; }
 .auth-ava.guest .init-ava { background: var(--cream-2); color: var(--muted); filter: grayscale(1); }
+
+/* 方案四檔 */
+.tier-list { display: flex; flex-direction: column; gap: 8px; }
+.tier { display: flex; align-items: center; gap: 10px; width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; padding: 12px 14px; font-family: var(--sans); cursor: pointer; text-align: left; }
+.tier b { font-size: 15.5px; color: var(--ink); width: 74px; flex-shrink: 0; }
+.tier span { flex: 1; font-size: 13px; color: var(--muted); }
+.tier i { font-style: normal; font-size: 14px; font-weight: 700; color: var(--teal-dd); white-space: nowrap; }
+.tier.on { border-color: var(--teal); background: var(--mint); }
+.plan-cancel { display: block; margin: 16px auto 2px; border: none; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; padding: 8px 12px; }
