@@ -2129,7 +2129,10 @@ function init() {
   function renderVisitRow() {
     const v = loadVisit();
     const lb = $('#visitLabel');
-    if (lb) lb.textContent = v ? (v.label + ' ›') : '未設定 ›';
+    const has = v && (v.label || v.dateISO);
+    if (lb) lb.textContent = has ? ((v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' ›') : '未設定 ›';
+    const clr = $('#visitClearBtn');
+    if (clr) clr.style.display = has ? '' : 'none';
   }
   if ($('#visitEntry')) $('#visitEntry').addEventListener('click', () => {
     buildCalGrid('#visitDatePick');
@@ -2153,6 +2156,13 @@ function init() {
     renderVisitRow();
     $('#visitModal').classList.remove('show');
     toast('好，' + label + '回診，' + cname() + '前一天會提醒你，摘要也會先準備好');
+  });
+  if ($('#visitClearBtn')) $('#visitClearBtn').addEventListener('click', () => {
+    try { localStorage.removeItem('munea.visit'); } catch (e2) {}
+    syncPush('visit', {});
+    renderVisitRow();
+    $('#visitModal').classList.remove('show');
+    toast('好，先把看診提醒收掉了；要再設隨時跟我說。');
   });
   renderVisitRow();
   const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
