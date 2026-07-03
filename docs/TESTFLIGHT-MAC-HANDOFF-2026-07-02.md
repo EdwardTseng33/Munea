@@ -23,11 +23,20 @@ Run these on the Mac from a fresh clone or synced repo:
 cd /path/to/Munea
 git pull --rebase
 npm install
+npm run mac:doctor
 npm run smoke:no-api
 npm run cap:doctor
 npm run cap:add:ios
 npm run cap:sync
 npm run cap:open:ios
+```
+
+`npm run mac:doctor` checks the Mac prerequisites before the first iOS build: Git, Node/npm, PowerShell for repo smoke scripts, Xcode, xcrun, repo status, and Capacitor config.
+
+If PowerShell is missing on Mac, install it before running `npm run smoke:no-api`:
+
+```bash
+brew install --cask powershell
 ```
 
 If `npm run cap:add:ios` says the iOS project already exists, skip it and run:

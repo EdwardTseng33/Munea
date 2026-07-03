@@ -256,9 +256,10 @@ Munea is not ready for TestFlight upload yet, but the next practical gate is now
 Recommended order:
 
 1. Generate or sync the Capacitor iOS project on Mac.
-2. Add required iOS purpose strings for microphone, speech recognition, and notifications.
-3. Run on a real iPhone and verify bundled web shell, `聊聊`, microphone prompt, voice-note fallback, playback, and privacy link.
-4. Decide whether the first TestFlight build is a static UI shell QA build or a staging-backend build.
-5. Only after that, prepare App Store Connect metadata, support URL, privacy URL, subscriptions, and reviewer notes.
+2. Run `npm run mac:doctor` on Mac to confirm Git, Node/npm, PowerShell, Xcode, xcrun, and Capacitor config are ready.
+3. Add required iOS purpose strings for microphone, speech recognition, and notifications.
+4. Run on a real iPhone and verify bundled web shell, `聊聊`, microphone prompt, voice-note fallback, playback, and privacy link.
+5. Decide whether the first TestFlight build is a static UI shell QA build or a staging-backend build.
+6. Only after that, prepare App Store Connect metadata, support URL, privacy URL, subscriptions, and reviewer notes.
 
 The detailed Mac-side handoff lives in `docs/TESTFLIGHT-MAC-HANDOFF-2026-07-02.md`.
