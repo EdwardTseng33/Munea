@@ -1525,9 +1525,7 @@ css = Path("web/src/styles.css").read_text(encoding="utf-8")
 privacy = Path("web/privacy.html").read_text(encoding="utf-8")
 
 required_index = [
-    "aiProviderConsentPanel",
-    "aiProviderConsentToggle",
-    "aiProviderConsentStatus",
+    "auth-terms",
     "privacy.html",
     "Gemini",
     "OpenAI",
@@ -1537,7 +1535,7 @@ required_index = [
 ]
 missing_index = [token for token in required_index if token not in index]
 if missing_index:
-    raise SystemExit("Missing settings AI provider consent tokens: " + ", ".join(missing_index))
+    raise SystemExit("Missing in-app AI provider consent disclosure tokens: " + ", ".join(missing_index))
 
 required_onboarding = [
     "aiProviderConsentSetup",

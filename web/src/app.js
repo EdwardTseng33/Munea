@@ -1457,8 +1457,8 @@ function init() {
     return d;
   }
   function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  function buildCalGrid() {
-    const box = $('#evDatePick');
+  function buildCalGrid(boxSel) {
+    const box = $(boxSel || '#evDatePick');
     if (!box || box.dataset.built) return;
     box.dataset.built = '1';
     const now = new Date();
@@ -1626,6 +1626,39 @@ function init() {
       if ($('#statusTitle')) $('#statusTitle').textContent = stitles[b.dataset.v];
     });
   }
+  function loadVisit() { try { return JSON.parse(localStorage.getItem('munea.visit')); } catch (e) { return null; } }
+  function renderVisitRow() {
+    const v = loadVisit();
+    const lb = $('#visitLabel');
+    if (lb) lb.textContent = v ? (v.label + ' ›') : '未設定 ›';
+  }
+  if ($('#visitEntry')) $('#visitEntry').addEventListener('click', () => {
+    buildCalGrid('#visitDatePick');
+    $('#visitModal').classList.add('show');
+  });
+  if ($('#visitClose')) $('#visitClose').addEventListener('click', () => $('#visitModal').classList.remove('show'));
+  if ($('#visitModal')) $('#visitModal').addEventListener('click', e => { if (e.target === $('#visitModal')) $('#visitModal').classList.remove('show'); });
+  if ($('#visitTimeChips')) $('#visitTimeChips').addEventListener('click', e => {
+    const b = e.target.closest('.mchip');
+    if (!b) return;
+    $('#visitTimeChips').querySelectorAll('.mchip').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+  });
+  if ($('#visitSaveBtn')) $('#visitSaveBtn').addEventListener('click', () => {
+    const on = document.querySelector('#visitDatePick .cal-cell.on');
+    if (!on) { toast('先點一天'); return; }
+    const t = (document.querySelector('#visitTimeChips .mchip.on') || { dataset: {} }).dataset.t || '上午';
+    const d = new Date(on.dataset.iso + 'T00:00');
+    const label = fmtDay(d) + t;
+    try { localStorage.setItem('munea.visit', JSON.stringify({ dateISO: on.dataset.iso, label })); } catch (e2) {}
+    renderVisitRow();
+    $('#visitModal').classList.remove('show');
+    toast('好，' + label + '回診，我前一天會提醒你，摘要也會先準備好');
+  });
+  renderVisitRow();
+  if ($('#fontRow')) $('#fontRow').addEventListener('click', () => toast('字體大小調整下一版開放，我先幫你記著'));
+  if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
+  if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => window.open('privacy.html', '_blank'));
   if ($('#historyEntry')) $('#historyEntry').addEventListener('click', () => $('#historyModal').classList.add('show'));
   if ($('#historyClose')) $('#historyClose').addEventListener('click', () => $('#historyModal').classList.remove('show'));
   if ($('#historyModal')) $('#historyModal').addEventListener('click', e => {
