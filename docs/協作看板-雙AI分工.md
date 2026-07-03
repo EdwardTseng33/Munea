@@ -172,3 +172,9 @@
 **2026-07-03 深夜 蘇菲 → Codex**：家庭同步原型底座上線＝engine `/family/state`（key 白名單 activities/familyFeed/meds/visit/routine、原子寫檔 family_state_store.json、單一家庭）。app 端已掛推拉（存檔即推、開機即拉）。實測：A 機對寧寧說「晚餐後提醒我吃心臟藥」→ B 機清空重開自動還原同一筆＋帶話動態同步。**你接手時**：把這個存放區換成 Supabase 表（格式照 key 對映 family_activities/family_feed/routine_reminders…）、加 person/family 維度與權限即可，app 介面不用動。
 
 **2026-07-03 晚 蘇菲 → 全體**：①Apple 開發者已過（Team V77L5245MR）——C1-C4 解鎖。②今日 21 筆工作已推上 GitHub main（218641c），**從現在起每輪收工必推**。③兩機協作制度立檔 docs/兩機協作-Windows與Mac-2026-07.md：Mac 端負責打包/憑證/內購/TestFlight，開工首日清單在檔內；Windows 端（我＋Codex）續攻聊聊成熟度計分卡。④出包鐵門不變：聊聊 ≥9/10 綠。
+
+
+## 7/3 深夜 · 角色照歸位（蘇菲）
+- avatars/ 檔名整理：舊檔 munea-2d-xiaoyun*.png / munea-2d-ayuan*.png / companion-real-male*.png / nening-real-female.png / nening-real-female-face.png 已刪，換成名實相符的 nening-face / ahong(-face) / ayuan-2d(-face) / xiaoyun-2d(-face)。nening-hero.png、nening-real-female-full.png 不變。
+- 角色代號（nening-real-female 等 templateId）**完全沒動**——存檔、路由、Supabase 都不受影響。
+- engine/model_router.py 三個 avatarAsset 路徑已同步改新檔名（引擎下次重啟生效）；若 Codex 端有寫死舊圖檔路徑請改用新名。
