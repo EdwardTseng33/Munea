@@ -989,6 +989,15 @@ function renderMedList() {
 
 const POINTS = { total: 400, used: 160,
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
+const LOW_PTS = 30;
+window.__ptsTest = { setUsed: v => { POINTS.used = v; renderPoints(); }, ff: s => { _callSec = s; } };
+function ptsLeft() { return POINTS.total - POINTS.used + POINTS.bought; }
+function refreshLowState() {
+  const pts = document.querySelector('.hud-pill.pts');
+  if (pts) pts.classList.toggle('low', ptsLeft() < LOW_PTS);
+  const strip = document.getElementById('lowPtsStrip');
+  if (strip) strip.style.display = ptsLeft() < LOW_PTS ? '' : 'none';
+}
 function pushWallet() { syncPush('wallet', { grant: POINTS.total, used: POINTS.used, bought: POINTS.bought }); }
 function renderPoints() {
   const left = POINTS.total - POINTS.used + POINTS.bought;
@@ -997,20 +1006,35 @@ function renderPoints() {
   if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
   if ($('#ptsUsed')) $('#ptsUsed').textContent = POINTS.used;
   if ($('#ptsBar')) $('#ptsBar').style.width = Math.round(POINTS.used / POINTS.total * 100) + '%';
+  refreshLowState();
 }
 
 let _callTimerInt = null, _callSec = 0;
+let _lowWarned = false, _zeroSaid = false;
+function callBudgetTick() {
+  const left = ptsLeft() - Math.floor(_callSec / 60);
+  if (!_lowWarned && left <= 15 && left > 0) {
+    _lowWarned = true;
+    setCaption('我們慢慢聊，點數剩不多的話我會先提醒你', '聊完我幫你記著：設定裡可以加值');
+  }
+  if (!_zeroSaid && left <= 0) {
+    _zeroSaid = true;
+    setCaption('點數用完了，換基本模式繼續陪你', '基本陪伴不限量、不會中斷');
+  }
+}
 function startCallTimer() {
   stopCallTimer(); _callSec = 0;
   const el = $('#callTimer');
   _callTimerInt = setInterval(() => {
+    callBudgetTick();
     _callSec++;
     const m = String(Math.floor(_callSec / 60)).padStart(2, '0');
     const s = String(_callSec % 60).padStart(2, '0');
     if (el) el.textContent = m + ':' + s;
   }, 1000);
 }
-function stopCallTimer() { if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
+function stopCallTimer() {
+  _lowWarned = false; _zeroSaid = false; if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
 function setCaption(text, hint) {
   let box = document.querySelector('.face-caption-box');
   if (!box) {
