@@ -417,7 +417,7 @@ def load_wellbeing_signals(person_id=None, limit=200):
     return signals[-limit:]
 
 
-FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine"}
+FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine", "wallet"}
 
 def family_state_response(data):
     """家庭共享狀態（原型底座）：單一家庭 key-value；正式版由 Codex 換成雲端表、格式不變。"""

@@ -735,7 +735,8 @@ async function openVoiceSession() {
 function completeChatSession(reason = 'ended') {
   if (_callSec > 3) {
     const mins = Math.max(1, Math.round(_callSec / 60));
-    POINTS.used = Math.min(POINTS.total, POINTS.used + mins * 10);
+    POINTS.used = Math.min(POINTS.total, POINTS.used + mins * 1);
+    pushWallet();
     renderPoints();
   updateMedCount();
     toast('今天聊得真開心，下次見！');
@@ -988,6 +989,7 @@ function renderMedList() {
 
 const POINTS = { total: 400, used: 160,
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
+function pushWallet() { syncPush('wallet', { grant: POINTS.total, used: POINTS.used, bought: POINTS.bought }); }
 function renderPoints() {
   const left = POINTS.total - POINTS.used + POINTS.bought;
   const hud = document.querySelector('.hud-pill.pts');
@@ -1036,7 +1038,13 @@ async function syncPullAll() {
         try { localStorage.setItem(map[k], JSON.stringify(st[k])); } catch (e) {}
       }
     }
+    if (st.wallet && typeof st.wallet.used === 'number') {
+      POINTS.used = st.wallet.used;
+      try { localStorage.setItem('munea.ptsBought', String(st.wallet.bought || 0)); } catch (e) {}
+    }
     if (typeof updateMedCount === 'function') updateMedCount();
+    if (typeof renderPoints === 'function') renderPoints();
+    if (typeof renderVisitRow === 'function') try { renderVisitRow(); } catch (e) {}
     const peek = document.querySelector('.fam-peek .fp-text');
     const feed = st.familyFeed;
     if (peek && Array.isArray(feed) && feed.length) peek.innerHTML = feed[0];
@@ -1571,6 +1579,7 @@ function init() {
     const selCard = document.querySelector('.tu-card.on');
     const p = selCard ? +selCard.dataset.p : 0;
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
+    pushWallet();
     renderPoints();
     $('#topUpModal').classList.remove('show');
     toast('買好了，' + p.toLocaleString() + ' 點入帳（餘額已更新），這批不會過期');
@@ -1715,16 +1724,27 @@ function init() {
     let chip, goal, note;
     if (act.status === 'done') {
       chip = '已結束';
-      goal = act.kind === 'quiz' ? ('你答對 ' + act.score + ' / ' + (act.q || 5) + ' 題') : (act.title + ' 結束了');
-      note = '等大家都看過就收進記錄簿 · 最多留 3 天，還沒看的，寧寧會親口告訴';
+      if (act.kind === 'quiz' && act.answers && Object.keys(act.answers).length) {
+        const rows = Object.entries(act.answers).sort((x, y) => y[1] - x[1]);
+        goal = '排名出來了';
+        note = rows.map((r2, i3) => '第 ' + (i3 + 1) + ' 名 ' + r2[0] + '（答對 ' + r2[1] + ' 題）').join('、');
+      } else {
+        goal = act.kind === 'quiz' ? ('你答對 ' + act.score + ' / ' + (act.q || 5) + ' 題') : (act.title + ' 結束了');
+        note = '等大家都看過就收進記錄簿 · 最多留 3 天，還沒看的，寧寧會親口告訴';
+      }
     } else if (act.kind === 'walk') {
       chip = act.days + ' 天內';
       goal = '大家一起走 ' + (+act.goal).toLocaleString() + ' 步';
       note = cname() + '會親口問阿嬤要不要一起；開始後每個人走多少都看得到';
     } else if (act.kind === 'quiz') {
       chip = act.q + ' 題';
-      goal = '你的 ' + act.q + ' 題準備好了';
-      note = '點這張卡先作答；' + cname() + '會找其他人玩，都答完看排名';
+      if (act.myDone && act.answers && act.answers['你'] !== undefined) {
+        goal = '你答對 ' + act.answers['你'] + ' / ' + act.q + ' 題';
+        note = '等 ' + act.names.join('、') + ' 作答完看排名，' + cname() + '會去找他們玩';
+      } else {
+        goal = '你的 ' + act.q + ' 題準備好了';
+        note = '點這張卡先作答；' + cname() + '會找其他人玩，都答完看排名';
+      }
     } else {
       chip = act.dateLabel;
       goal = act.title + '，誰能到？';
@@ -1738,7 +1758,7 @@ function init() {
       '<span class="qc-days">' + chip + '</span></div>' +
       '<div class="qc-goal">' + goal + '</div>' +
       '<div class="qc-num">' + note + '</div>' + rwLine;
-    if (act.kind === 'quiz' && act.status !== 'done') { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
+    if (act.kind === 'quiz' && act.status !== 'done' && !act.myDone) { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
     list.parentNode.insertBefore(card, list);
   }
   if ($('#startChalBtn')) $('#startChalBtn').addEventListener('click', () => {
@@ -2124,7 +2144,15 @@ function init() {
     if (note) note.textContent = '你答對 ' + st.score + '/' + st.n + '，等 ' + st.act.names.join('、') + ' 作答完看排名';
     const acts2 = loadActs();
     const rec = acts2.find(a => a.id === st.act.id);
-    if (rec) { rec.status = 'done'; rec.score = st.score; rec.doneISO = isoOf(new Date()); saveActs(acts2); }
+    if (rec) {
+      rec.answers = rec.answers || {};
+      rec.answers['你'] = st.score;
+      rec.myDone = true;
+      const everyone = [...(rec.names || [])];
+      if (everyone.every(n => rec.answers[n] !== undefined)) { rec.status = 'done'; rec.doneISO = isoOf(new Date()); }
+      rec.score = st.score;
+      saveActs(acts2);
+    }
     pushFamilyFeed('<b>你</b>完成了機智問答，答對 ' + st.score + '/' + st.n + ' 題，等大家玩完看排名');
   }
   if ($('#quizOpts')) $('#quizOpts').addEventListener('click', e => {
