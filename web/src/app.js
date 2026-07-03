@@ -2283,6 +2283,13 @@ function init() {
   function chatReply(t) { for (const [re, r] of CHAT_RULES) if (re.test(t.toLowerCase())) return r; return '我聽見了，你慢慢說，我都在。'; }
   function parseChatIntent(t) {
     // 聊聊代辦：講一句、寧寧直接把 app 設定做好（原型版；真腦版走同一批動作）
+    // 問點數：用真錢包數字回答、順帶安心話（不推銷）
+    if (/(還剩幾點|剩幾點|剩多少點|點數還有|點數剩|我有幾點)/.test(t)) {
+      const left = POINTS.total - POINTS.used + POINTS.bought;
+      return left > 0
+        ? '我看了一下，你還有 ' + left + ' 點，生動模式大概還能聊 ' + left + ' 分鐘。放心，就算用完，基本陪伴也不會斷。'
+        : '點數用完了，不過別擔心，基本陪伴不限量，我一樣在。想要生動模式的話，設定裡可以加值。';
+    }
     const relay0 = t.match(/(提醒|告訴|跟)\s*([一-龥]{2,3})(說|，|要|來)?\s*(.{2,30})/);
     if (relay0 && relay0[2] !== '我' && !/我/.test(relay0[2])) {
       let who = relay0[2].replace(/[要說來]$/, '');
