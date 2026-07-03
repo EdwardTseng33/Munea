@@ -1105,3 +1105,10 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .iv.on .iv-ava::after { content: ""; position: absolute; right: -3px; bottom: -1px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal-d); border: 2px solid #FFF; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'); background-size: 9px; background-position: center; background-repeat: no-repeat; }
 .invite-note { font-size: 12.5px; color: var(--muted); margin: 8px 2px 0; }
 .goal-hint { font-size: 13px; color: var(--ink-2); margin: 2px 2px 0; }
+
+/* 設定頁 · 免責一行（原同意卡收進註冊流程） */
+.set-disclaim { font-size: 12.5px; color: var(--muted); line-height: 1.65; margin: 4px 4px 20px; }
+.set-disclaim a { color: var(--teal-dd); font-weight: 600; margin-left: 6px; }
+/* 註冊 · 條款一行 */
+.auth-terms { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin: 12px 2px 2px; }
+.auth-terms a { color: var(--teal-dd); font-weight: 600; }

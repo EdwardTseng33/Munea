@@ -15,8 +15,8 @@ if (-not $Commit) {
   $Commit = (git rev-parse --short HEAD).Trim()
 }
 
-$status = (git status --short).Trim()
-$dirtyState = if ($status) { "dirty" } else { "clean" }
+$statusLines = @(git status --short)
+$dirtyState = if ($statusLines.Count -gt 0) { "dirty" } else { "clean" }
 $date = Get-Date -Format "yyyy-MM-dd HH:mm zzz"
 
 $lines = @(
