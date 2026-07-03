@@ -1303,7 +1303,7 @@ function refreshTaskProgress() {
   const dots = document.querySelectorAll('#pillDots i');
   if (dots.length) dots.forEach((d2, i2) => d2.classList.toggle('f', i2 < (pdone ? 3 : 2)));
   const hint = $('#statPillHint');
-  if (hint) { hint.textContent = pdone ? '都吃了' : '還剩 1 次'; hint.className = 'st-trend ' + (pdone ? 'ok' : 'warn'); }
+  if (hint) { hint.textContent = pdone ? '都吃了' : '剩 1 次'; hint.className = 'st-trend ' + (pdone ? 'ok' : 'warn'); }
   const prog = $('.task-progress');
   if (!prog) return;
   const label = prog.childNodes[prog.childNodes.length - 1];

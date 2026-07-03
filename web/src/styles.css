@@ -190,8 +190,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 .wallet-card { position: relative; overflow: hidden; background: var(--deep); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow); color: #fff; margin-bottom: 12px; }
 .wallet-card .wc-top { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 600; opacity: .92; margin-bottom: 10px; }
-.wallet-card .wc-big { font-family: var(--display); font-size: 28px; font-weight: 800; position: relative; }
-.wallet-card .wc-big small { font-size: 15px; font-weight: 500; opacity: .85; }
+.wallet-card .wc-big { font-family: var(--display); font-size: 15px; font-weight: 700; position: relative; }
+.wallet-card .wc-big small { font-size: 12px; font-weight: 500; opacity: .85; }
 .wallet-card .wc-note { font-size: 13px; opacity: .85; margin-top: 8px; line-height: 1.5; position: relative; }
 
 .observe-card { background: var(--surface); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm); display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
@@ -1555,12 +1555,12 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 #startChalBtn { position: sticky; bottom: -22px; z-index: 2; box-shadow: 0 -10px 14px -10px rgba(31,60,52,.25), var(--shadow-sm); }
 
 /* 板面減半（Edward 7/4）：存摺卡文字與間距收斂、她的話單行 */
-.wc-big { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0 0; }
-.wc-big span { font-size: 26px; }
+.wc-big { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; margin: 2px 0 0; }
+.wc-big span { font-size: 21px; font-weight: 800; }
 .wc-track { margin: 8px 0; height: 6px; }
 .wc-say { margin-top: 8px; padding-top: 8px; }
 .wc-face { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 10px; }
-.wc-quote { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-quote { font-size: 12.5px; line-height: 1.55; display: block; overflow: hidden; max-height: 39px; /* 兩行完整、來源限 40 字 */ }
 .wc-top { font-size: 12.5px; }
 .stat-grid { gap: 10px; }
 .med-entry.duo { padding: 10px 12px; gap: 4px; }
