@@ -1548,14 +1548,26 @@ function init() {
     const p = loadPersonProfile();
     if ($('#pfName')) $('#pfName').value = p.name;
     if ($('#pfNick')) $('#pfNick').value = p.nick;
-    if ($('#pfBirth')) $('#pfBirth').value = p.birth;
+    const ys = $('#pfBirthY'), ms = $('#pfBirthM');
+    if (ys && !ys.options.length) {
+      const nowY = new Date().getFullYear();
+      let yh = '';
+      for (let y = nowY - 5; y >= 1920; y--) yh += '<option value="' + y + '">' + y + ' 年</option>';
+      ys.innerHTML = yh;
+      let mh = '';
+      for (let m = 1; m <= 12; m++) mh += '<option value="' + m + '">' + m + ' 月</option>';
+      ms.innerHTML = mh;
+    }
+    const mt = String(p.birth || '').match(/(19|20)(\d{2}).*?(\d{1,2})/);
+    if (ys) ys.value = mt ? mt[1] + mt[2] : '1954';
+    if (ms) ms.value = mt ? String(+mt[3]) : '3';
     if ($('#pfCity')) $('#pfCity').value = p.city;
   }
   if ($('#pfSaveBtn')) $('#pfSaveBtn').addEventListener('click', () => {
     const p = {
       name: ($('#pfName').value || '').trim() || PF_DEF.name,
       nick: ($('#pfNick').value || '').trim() || PF_DEF.nick,
-      birth: ($('#pfBirth').value || '').trim() || PF_DEF.birth,
+      birth: ($('#pfBirthY') && $('#pfBirthY').value ? $('#pfBirthY').value + ' 年 ' + $('#pfBirthM').value + ' 月' : PF_DEF.birth),
       city: ($('#pfCity').value || '').trim() || PF_DEF.city,
     };
     try { localStorage.setItem('munea.personProfile', JSON.stringify(p)); } catch (e) {}

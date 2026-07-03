@@ -1455,3 +1455,12 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .reader-card h4 { font-size: 16px; margin: 16px 0 6px; color: var(--ink); }
 .reader-card h4:first-child { margin-top: 0; }
 .reader-card p { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin-bottom: 4px; }
+
+/* 個人資料：欄位說明在上方小字、不佔左欄；生日雙下拉 */
+.pf-form { background: #FFF; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 6px 16px 14px; margin-top: 10px; }
+.pf-field { padding: 10px 0 2px; }
+.pf-field + .pf-field { border-top: 1px solid var(--line); }
+.pf-label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
+.pf-form .chal-input { width: 100%; }
+.pf-birth { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+.pf-hint { display: block; font-size: 12.5px; color: var(--muted); margin-top: 5px; }
