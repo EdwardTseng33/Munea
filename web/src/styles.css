@@ -93,7 +93,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .bc-chip { position: static; width: fit-content; max-width: 100%; background: var(--mint); padding: 8px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 .bc-chip b { color: var(--teal-dd); font-weight: 800; }
 .bc-chip .ic { width: 15px; height: 15px; color: var(--coral); }
-.video-btn { position: relative; z-index: 1; width: 100%; min-height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 18px; border: none; border-radius: 20px; background: var(--teal-d); color: #fff; font-family: var(--display); font-weight: 800; font-size: 18px; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform .12s, box-shadow .2s; }
+.video-btn { position: relative; z-index: 1; width: 100%; min-height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 18px; border: none; border-radius: 18px; background: var(--teal-dd); color: #fff; font-family: var(--display); font-weight: 800; font-size: 18px; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform .12s, box-shadow .2s; }
 .video-btn .ic { color: #fff; }
 .video-btn:active { transform: scale(.98); box-shadow: 0 10px 20px -12px rgba(58,168,160,.72); }
 
@@ -337,7 +337,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 /* 互動回應列（按讚升級） */
 .react-row { display: flex; gap: 9px; margin-top: 14px; }
-.react-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 11px 4px; border: none; background: var(--mint); border-radius: 14px; cursor: pointer; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--teal-dd); transition: transform .15s, background .2s; }
+.react-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 11px 4px; border: none; background: var(--mint); border-radius: 16px; cursor: pointer; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--teal-dd); transition: transform .15s, background .2s; }
 .react-btn:active { transform: scale(.92); }
 .react-btn.sent { background: #D29F3E; color: #fff; }
 /* 狀態頁數據來源輕量條（連接動作移到設定頁） */
@@ -822,8 +822,8 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-name { font-size: 17px; font-weight: 700; color: var(--ink); }
 .plan-price { color: var(--teal-dd); font-weight: 600; font-size: 15px; margin-left: 4px; }
 .plan-payer { font-size: 13px; color: var(--muted); margin-top: 3px; }
-.plan-btn { border: none; background: var(--teal-d); color: #FFF; font-size: 15px; font-weight: 600; padding: 11px 20px; border-radius: 100px; min-height: 44px; cursor: pointer; }
-.plan-btn.ghost { background: var(--surface); color: var(--teal-dd); border: 1px solid var(--teal-d); }
+.plan-btn { border: none; background: var(--mint); color: var(--teal-dd); font-size: 15px; font-weight: 600; padding: 11px 20px; border-radius: 16px; min-height: 48px; cursor: pointer; }
+.plan-btn.ghost { border: 1px solid var(--teal-d); }
 .plan-divider { height: 1px; background: var(--line); margin: 14px 0; }
 .pts-label { font-size: 15px; color: var(--ink); }
 .pts-label b { font-size: 19px; color: var(--coral-d); }
@@ -1219,3 +1219,13 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .video-btn, .modal-btn, .auth-primary, .chal-act.new { background: var(--teal-dd); border-radius: 18px; min-height: 56px; }
 .chal-act:not(.new), .plan-btn, .fam-call-btn { background: var(--mint); color: var(--teal-dd); border: none; border-radius: 16px; min-height: 48px; }
 .call-btn.start { background: var(--teal-dd); }
+
+/* 規範 v1.1 · 女巫把關修正 */
+.tab-btn { font-size: 13px; }
+.set-row .sr-main small { color: var(--ink-2); }
+.set-section { color: var(--ink-2); }
+.plan-payer { color: var(--ink-2); }
+.tu-card span { font-size: 15px; color: var(--ink-2); }
+.plan-cancel { color: var(--ink-2); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.tier.on { pointer-events: none; cursor: default; }
+.tier-tag.now { color: var(--teal-dd); background: var(--mint-2); }
