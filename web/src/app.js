@@ -1132,6 +1132,26 @@ const MOOD_WEEK_DEMO = [
     { m: 'upset', t: '早上：推銷電話一直來，有點火氣，寧寧陪她抱怨了一會兒' },
     { m: 'happy', t: '傍晚：小寶來電話說畢業了，笑得合不攏嘴' } ] },
 ];
+let MOOD_WEEK = MOOD_WEEK_DEMO;
+const MOOD_ZH2KEY = { '開心': 'happy', '愉快': 'glad', '平穩': 'calm', '疲累': 'tired', '低落': 'down', '煩躁': 'upset' };
+async function loadMoodWeekReal() {
+  try {
+    const r = await fetch('/wellbeing/trend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days: 7 }) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const daily = d.daily || [];
+    if (!daily.length) return null;
+    const wd = ['日', '一', '二', '三', '四', '五', '六'];
+    const now = new Date();
+    const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    return daily.map(x => ({
+      d: x.date === todayIso ? '今天' : wd[new Date(x.date + 'T00:00').getDay()],
+      mood: MOOD_ZH2KEY[x.mood] || 'calm',
+      mixed: !!x.mixed,
+      chats: (x.signals || []).map(s => ({ m: MOOD_ZH2KEY[s.mood] || 'calm', t: s.oneLine || '' })).filter(c => c.t),
+    })).filter(x => x.chats.length);
+  } catch (e) { return null; }
+}
 function moodFaceSvg(key, size) {
   const m = MOODS[key] || MOODS.calm;
   return '<svg class="ic" viewBox="0 0 24 24" style="color:' + m.fg + ';width:' + size + 'px;height:' + size + 'px"><circle cx="12" cy="12" r="9"/><path d="' + m.face + '"/></svg>';
@@ -1139,7 +1159,7 @@ function moodFaceSvg(key, size) {
 function renderMoodWeek() {
   const wrap = $('#moodWeek');
   if (!wrap) return;
-  wrap.innerHTML = MOOD_WEEK_DEMO.map((day, i) => {
+  wrap.innerHTML = MOOD_WEEK.map((day, i) => {
     const m = MOODS[day.mood];
     const today = day.d === '今天';
     return '<button class="md' + (today ? ' today' : '') + '" data-i="' + i + '">' +
@@ -1148,10 +1168,16 @@ function renderMoodWeek() {
       '<span class="mday">' + day.d + '</span></button>';
   }).join('');
   wrap.querySelectorAll('.md').forEach(b => b.addEventListener('click', () => showMoodDay(+b.dataset.i)));
-  showMoodDay(MOOD_WEEK_DEMO.length - 1);
+  showMoodDay(MOOD_WEEK.length - 1);
+  if (!window.__moodFetched) {
+    window.__moodFetched = true;
+    loadMoodWeekReal().then(real => {
+      if (real && real.length >= 3) { MOOD_WEEK = real; renderMoodWeek(); }
+    });
+  }
 }
 function showMoodDay(i) {
-  const day = MOOD_WEEK_DEMO[i];
+  const day = MOOD_WEEK[i];
   const box = $('#moodDayDetail');
   if (!box || !day) return;
   box.innerHTML = '<div class="dd-date">' + (day.d === '今天' ? '今天' : '週' + day.d) + ' · 聊了 ' + day.chats.length + ' 次</div>' +
