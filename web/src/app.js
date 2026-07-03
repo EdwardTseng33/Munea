@@ -947,17 +947,17 @@ function setupAuthControls() {
   const h = now.getHours();
   const dayN = Math.max(1, now.getDate() - 1);
   const chip = $('#bcChip');
-  if (chip) {
-    const sun = '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/></svg>';
-    const moon = '<svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>';
-    let icon = sun, text = '<b>晴 26°</b>，下午去公園正好';
-    if (h >= 18 || h < 5) { icon = moon; text = '睡前 10 分鐘，說說今天的事'; }
-    else if (h >= 5 && h < 11) { text = '<b>晴 26°</b>，早上出門走走正好'; }
-    else if (h >= 14) { text = '<b>晴 26°</b>，傍晚去公園正好'; }
-    chip.innerHTML = icon + text;
+  const msg = $('#bcMsg');
+  if (msg) {
+    const mem = '記得你說孫子快畢業了';
+    let ask = '跟我說說今天的事？';
+    if (h >= 18 || h < 5) ask = '睡前 10 分鐘，跟我說說今天的事？';
+    else if (h >= 5 && h < 11) ask = '早上出門走走，回來說給我聽？';
+    else if (h >= 14) ask = '傍晚去公園走走，回來跟我聊？';
+    msg.textContent = mem + '——' + ask;
   }
   const stat = $('#bcStatus');
-  if (stat) stat.textContent = '記得你昨天說，孫子快要畢業了';
+  if (stat) stat.textContent = '連續 6 天都有聊';
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
   if (meta) meta.textContent = `${now.getMonth() + 1}月${now.getDate()}日 週${wd}`;
@@ -1257,6 +1257,8 @@ const CHEERS = {
 function refreshTaskProgress() {
   const items = $$('#taskCard .task-item');
   const done = items.filter(i => i.classList.contains('done')).length;
+  const tp = document.querySelector('.task-progress');
+  if (tp) tp.classList.toggle('full', done === items.length && items.length > 0);
   if (done === items.length && items.length && !window.__celebrated) {
     window.__celebrated = true;
     setTimeout(() => toast('今天三件都完成了，我跟家人說一聲'), 250);
