@@ -1037,8 +1037,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .field-label.sect-new { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 24px; }
 
 /* 狀態頁三檔切換 */
-.seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 100px; padding: 4px; gap: 4px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
-.seg-btn { flex: 1; border: none; background: transparent; font-family: var(--sans); font-size: 15px; font-weight: 600; color: var(--ink-2); padding: 9px 0; border-radius: 100px; cursor: pointer; min-height: 40px; }
+.seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 100px; padding: 3px; gap: 3px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+.seg-btn { flex: 1; border: none; background: transparent; font-family: var(--sans); font-size: 13.5px; font-weight: 700; color: var(--ink-2); padding: 6px 0; border-radius: 100px; cursor: pointer; min-height: 32px; }
 .seg-btn.on { background: var(--btn-green); color: #FFF; box-shadow: none; }
 
 /* 本週 · 色塊週曆 */
@@ -1584,3 +1584,8 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .med-entry.duo .dz-val { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .med-entry.duo .dz-chev { width: 15px; height: 15px; color: var(--muted); flex: 0 0 auto; margin-left: 2px; }
 .med-entry.duo .dz-title + .dz-chev { margin-left: auto; }
+
+/* 選段切換的落點感＋首頁任務進度小條加深 */
+.seg-btn.on { animation: tabIn .2s ease both; }
+.task-progress .bar i { background: var(--btn-green); }
+.task-progress { font-weight: 700; }

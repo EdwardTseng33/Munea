@@ -1044,7 +1044,7 @@ function renderPillTask() {
   const doneN = slots.filter(s => done[s.key]).length;
   const next = slots.find(s => !done[s.key]);
   if (next) {
-    title.textContent = '吃' + next.name;
+    title.textContent = '吃' + String(next.name).split(/\s+/)[0]; // 標題用短名、全名在用藥管理
     sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
     card.classList.remove('done');
   } else {
