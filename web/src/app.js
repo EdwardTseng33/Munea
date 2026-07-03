@@ -1185,7 +1185,7 @@ function renderCareCarousel() {
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
-    '<div class="care-txt"><p>' + it.html + '</p><small>' + it.sub + '</small></div>' +
+    '<div class="care-txt"><p>' + it.html + '</p></div>' +
     (it.btn ? '<button type="button" class="care-btn" data-go="' + it.k + '">' + it.btn + '</button>' : '') +
     '</div>').join('');
   dots.innerHTML = items.map((_, i) => '<i class="' + (i === 0 ? 'on' : '') + '"></i>').join('');

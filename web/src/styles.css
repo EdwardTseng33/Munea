@@ -1301,15 +1301,14 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .ms-empty { font-size: 13px; color: var(--muted); padding: 8px 0 0; }
 
 /* ===== 智慧照護提示輪播（首頁綜合資訊入口） ===== */
-.care-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px 12px 20px; margin: 14px 0 4px; box-shadow: var(--shadow-sm); overflow: hidden; }
-.care-card::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 4px 4px 0; background: linear-gradient(180deg, var(--teal), var(--mint-2)); }
+.care-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px 12px; margin: 14px 0 4px; box-shadow: var(--shadow-sm); overflow: hidden; }
 .care-head { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--teal-dd); font-weight: 700; }
 .care-head .ic { width: 15px; height: 15px; }
 .care-dots { margin-left: auto; display: inline-flex; gap: 5px; }
 .care-dots i { width: 6px; height: 6px; border-radius: 4px; background: rgba(35,108,102,.22); transition: all .3s; }
 .care-dots i.on { width: 14px; }
 .care-dots i.on { background: var(--teal-dd); }
-.care-body { display: grid; min-height: 56px; margin-top: 8px; min-width: 0; }
+.care-body { display: grid; min-height: 44px; margin-top: 8px; min-width: 0; }
 .care-item { grid-area: 1 / 1; min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 12px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none; }
 .care-item.on { opacity: 1; pointer-events: auto; }
 .care-ico { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 14px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); }
