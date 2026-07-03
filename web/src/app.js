@@ -1006,13 +1006,20 @@ function setCaption(text, hint) {
 }
 
 let _toastTimer = null;
+function loadFeed() {
+  try { const a = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
 function pushFamilyFeed(text) {
+  const a = loadFeed();
+  a.unshift(text);
+  while (a.length > 3) a.pop();
+  try { localStorage.setItem('munea.familyFeed2', JSON.stringify(a)); } catch (e) {}
   const peek = $('.fam-peek .fp-text');
   if (peek) peek.innerHTML = text;
-  try { localStorage.setItem('munea.familyFeed', text); } catch (e) {}
 }
 function restoreFamilyFeed() {
-  try { const t = localStorage.getItem('munea.familyFeed'); if (t) { const peek = $('.fam-peek .fp-text'); if (peek) peek.innerHTML = t; } } catch (e) {}
+  const a = loadFeed();
+  if (a.length) { const peek = $('.fam-peek .fp-text'); if (peek) peek.innerHTML = a[0]; }
 }
 
 function toast(text) {
@@ -1128,11 +1135,33 @@ function showMoodDay(i) {
   box.innerHTML = '<div class="dd-date">' + (day.d === '今天' ? '今天' : '週' + day.d) + ' · 聊了 ' + day.chats.length + ' 次</div>' +
     day.chats.map(c => '<div class="dd-row">' + moodFaceSvg(c.m, 19) + '<span>' + c.t + '</span></div>').join('');
 }
+const MOOD_DAY_LINES = {
+  happy: '那天聊得很開心，聲音都亮亮的',
+  glad: '心情不錯，話匣子開著',
+  calm: '平平穩穩的一天',
+  tired: '有點累，講話比較小聲',
+  down: '悶悶的，寧寧多陪了一會兒',
+  upset: '有點火氣，抱怨完就好多了',
+};
 function renderMoodMonth() {
   const wrap = $('#moodMonth');
   if (!wrap || wrap.childElementCount) return;
   const seq = ['calm','glad','happy','calm','tired','glad','calm','down','calm','glad','happy','glad','calm','calm','tired','glad','calm','happy','glad','calm','down','tired','glad','calm','happy','glad','calm','happy'];
-  wrap.innerHTML = seq.map(k => '<b style="background:' + MOODS[k].bg + '" title="' + MOODS[k].label + '"></b>').join('');
+  const now = new Date();
+  wrap.innerHTML = seq.map((k, i) => {
+    const day = i + 1;
+    return '<button class="mm-cell" data-k="' + k + '" data-d="' + day + '" style="background:' + MOODS[k].bg + ';color:' + MOODS[k].fg + '">' + day + '</button>';
+  }).join('');
+  wrap.addEventListener('click', e => {
+    const c = e.target.closest('.mm-cell');
+    if (!c) return;
+    wrap.querySelectorAll('.mm-cell').forEach(x => x.classList.remove('on'));
+    c.classList.add('on');
+    const box = $('#moodDayDetail');
+    if (box) box.innerHTML = '<div class="dd-date">' + (now.getMonth() + 1) + '/' + c.dataset.d + ' · ' + MOODS[c.dataset.k].label + '</div>' +
+      '<div class="dd-row">' + moodFaceSvg(c.dataset.k, 19) + '<span>' + (MOOD_DAY_LINES[c.dataset.k] || '') + '</span></div>';
+    $('#moodDayDetail').style.display = '';
+  });
 }
 
 const _hscrollUpdaters = [];
@@ -1224,7 +1253,41 @@ function init() {
   if ($('#companionCloseBtn')) $('#companionCloseBtn').addEventListener('click', () => $('#companionSheet').classList.remove('show'));
   if ($('#quizCloseX')) $('#quizCloseX').addEventListener('click', () => $('#quizModal').classList.remove('show'));
   if ($('#companionSheet')) $('#companionSheet').addEventListener('click', e => { if (e.target === $('#companionSheet')) $('#companionSheet').classList.remove('show'); });
-  if ($('#setProfile')) $('#setProfile').addEventListener('click', () => hint('這裡可以改頭像、名稱、對家人顯示的稱呼、年齡、所在地。'));
+  const RT_DEF = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
+  const RT_LABEL = { b: '早餐', l: '午餐', d: '晚餐', s: '就寢' };
+  function loadRoutine() { try { return Object.assign({}, RT_DEF, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) { return Object.assign({}, RT_DEF); } }
+  function saveRoutine(rt) { try { localStorage.setItem('munea.routine', JSON.stringify(rt)); } catch (e) {} }
+  function shiftTime(t, mins) {
+    let [h, m] = t.split(':').map(Number);
+    let total = (h * 60 + m + mins + 1440) % 1440;
+    return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+  }
+  function renderRoutine() {
+    const box = $('#rtList');
+    if (!box) return;
+    const rt = loadRoutine();
+    box.innerHTML = ['b', 'l', 'd', 's'].map(k =>
+      '<div class="rt-row"><span class="rt-name">' + RT_LABEL[k] + '</span>' +
+      '<button class="rt-btn" data-k="' + k + '" data-m="-30">−</button>' +
+      '<b class="rt-time">' + rt[k] + '</b>' +
+      '<button class="rt-btn" data-k="' + k + '" data-m="30">＋</button></div>').join('');
+  }
+  if ($('#rtList')) $('#rtList').addEventListener('click', e => {
+    const b = e.target.closest('.rt-btn');
+    if (!b) return;
+    const rt = loadRoutine();
+    rt[b.dataset.k] = shiftTime(rt[b.dataset.k], +b.dataset.m);
+    saveRoutine(rt);
+    renderRoutine();
+  });
+  if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { renderRoutine(); $('#profileModal').classList.add('show'); });
+  if ($('#profileClose')) $('#profileClose').addEventListener('click', () => { $('#profileModal').classList.remove('show'); toast('作息記好了，提醒會照這份時間走'); });
+  if ($('#profileModal')) $('#profileModal').addEventListener('click', e => { if (e.target === $('#profileModal')) $('#profileModal').classList.remove('show'); });
+  // 家庭照護圈
+  if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => $('#famCircleModal').classList.add('show'));
+  if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
+  if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', () => { $('#famCircleModal').classList.remove('show'); toast('邀請連結準備好了，用訊息傳給家人就能加入'); });
   if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView(window.__connectFrom || 'status'));
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', () => {
     const on = b.classList.toggle('done');
@@ -1359,7 +1422,7 @@ function init() {
     $('#moodRange').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
     const month = b.dataset.r === 'month';
     $('#moodWeek').style.display = month ? 'none' : '';
-    $('#moodDayDetail').style.display = month ? 'none' : '';
+    if (!month) $('#moodDayDetail').style.display = '';
     $('#moodMonth').style.display = month ? '' : 'none';
     if (month) renderMoodMonth();
   });
@@ -1399,7 +1462,18 @@ function init() {
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
-  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ，正式版在這裡直接買。'));
+  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
+  if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
+  if ($('#topUpModal')) $('#topUpModal').addEventListener('click', e => {
+    if (e.target === $('#topUpModal')) { $('#topUpModal').classList.remove('show'); return; }
+    const card = e.target.closest('.tu-card');
+    if (card) { document.querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on'); }
+  });
+  if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', () => {
+    const sel = document.querySelector('.tu-card.on b');
+    $('#topUpModal').classList.remove('show');
+    toast('已通知美華：想加值 ' + (sel ? sel.textContent : '') + '，她同意後就入帳');
+  });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => $('#planModal').classList.add('show'));
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
   if ($('#planModal')) $('#planModal').addEventListener('click', e => { if (e.target === $('#planModal')) $('#planModal').classList.remove('show'); });
@@ -1677,7 +1751,23 @@ function init() {
     toast('好，' + label + '回診，我前一天會提醒你，摘要也會先準備好');
   });
   renderVisitRow();
-  if ($('#fontRow')) $('#fontRow').addEventListener('click', () => toast('字體大小調整下一版開放，我先幫你記著'));
+  const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
+  function applyFontScale() {
+    const cur = localStorage.getItem('munea.fontScale') || 'std';
+    const step = FONT_STEPS.find(x => x[0] === cur) || FONT_STEPS[0];
+    document.querySelectorAll('.screen .pad, .modal').forEach(el => { el.style.zoom = step[2]; });
+    const row = $('#fontRow .sr-arrow');
+    if (row) row.textContent = step[1] + ' ›';
+  }
+  if ($('#fontRow')) $('#fontRow').addEventListener('click', () => {
+    const cur = localStorage.getItem('munea.fontScale') || 'std';
+    const i = FONT_STEPS.findIndex(x => x[0] === cur);
+    const next = FONT_STEPS[(i + 1) % FONT_STEPS.length];
+    try { localStorage.setItem('munea.fontScale', next[0]); } catch (e) {}
+    applyFontScale();
+    toast('字體改成「' + next[1] + '」了');
+  });
+  applyFontScale();
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
   function openLegal(tab) {
     const seg = $('#legalSeg');
@@ -1831,7 +1921,10 @@ function init() {
   if ($('#quizModal')) $('#quizModal').addEventListener('click', e => { if (e.target === $('#quizModal')) $('#quizModal').classList.remove('show'); });
 
   // 家庭記錄簿
-  if ($('#bookBtn')) $('#bookBtn').addEventListener('click', () => { $('#viewAll').classList.remove('active'); $('#viewPerson').classList.remove('active'); $('#viewBook').classList.add('active'); });
+  function openBook() { showView('family'); $$('#family .fam-view').forEach(v => v.classList.remove('active')); $('#viewBook').classList.add('active'); }
+  if ($('#bookBtn')) $('#bookBtn').addEventListener('click', openBook);
+  const peekCard = document.querySelector('.fam-peek');
+  if (peekCard) { peekCard.style.cursor = 'pointer'; peekCard.addEventListener('click', openBook); }
   if ($('#bookBack')) $('#bookBack').addEventListener('click', () => { $('#viewBook').classList.remove('active'); $('#viewAll').classList.add('active'); });
 
   // 聊聊：日常語音陪聊 · [ENGINE] 正式版換中文（台灣）/英文即時語音 + 反射腦

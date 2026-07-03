@@ -1527,8 +1527,8 @@ privacy = Path("web/privacy.html").read_text(encoding="utf-8")
 required_index = [
     "auth-terms",
     "privacy.html",
-    "Gemini",
-    "OpenAI",
+    "\u8a9e\u97f3",
+    "AI",
     "\u5883\u5916",
     "119",
     "1925",
@@ -1542,8 +1542,8 @@ required_onboarding = [
     "munea.aiProviderConsent.v1",
     "2026-07-02-ai-provider-v1",
     "privacy.html",
-    "Gemini",
-    "OpenAI",
+    "\u8a9e\u97f3",
+    "AI",
     "\u5883\u5916",
 ]
 missing_onboarding = [token for token in required_onboarding if token not in onboarding]
@@ -1566,7 +1566,7 @@ if missing_app:
 for token in ["provider-consent-card", "provider-consent-toggle", "provider-privacy-link"]:
     if token not in css:
         raise SystemExit("Missing AI provider consent CSS token: " + token)
-for token in ["\u96b1\u79c1\u6b0a\u653f\u7b56", "Gemini", "OpenAI", "\u5883\u5916", "119", "1925", "\u8cc7\u6599\u532f\u51fa", "\u5e33\u865f\u522a\u9664"]:
+for token in ["\u96b1\u79c1\u6b0a\u653f\u7b56", "\u8a9e\u97f3", "AI", "\u5883\u5916", "119", "1925", "\u8cc7\u6599\u532f\u51fa", "\u5e33\u865f\u522a\u9664"]:
     if token not in privacy:
         raise SystemExit("Privacy page missing token: " + token)
 for forbidden in ["SERVICE_ROLE", "service_role", "SUPABASE_SERVICE_ROLE_KEY"]:

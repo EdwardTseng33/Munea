@@ -1173,3 +1173,28 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rc-cell.in { background: var(--mint); border-radius: 6px; }
 .rc-cell.sel { background: var(--teal-d); color: #FFF; }
 .rc-hint { font-size: 12.5px; color: var(--muted); margin: 10px 2px 8px; }
+
+/* 個人資料 · 作息表 */
+.rt-list { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px 14px; }
+.rt-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+.rt-row + .rt-row { border-top: 1px solid var(--line); }
+.rt-name { flex: 1; font-size: 15px; font-weight: 700; color: var(--ink); }
+.rt-btn { width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 18px; color: var(--teal-dd); cursor: pointer; }
+.rt-time { width: 58px; text-align: center; font-family: var(--display); font-size: 16px; color: var(--ink); }
+
+/* 照護圈身分 */
+.rl-wrap { padding: 2px 0; }
+.fc-role { font-size: 12.5px; font-weight: 700; color: var(--muted); background: var(--cream); border-radius: 100px; padding: 4px 10px; }
+.fc-role.pay { color: var(--teal-dd); background: var(--mint); }
+
+/* 加值點數 */
+.tu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tu-card { border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 16px 10px; text-align: center; cursor: pointer; font-family: var(--sans); }
+.tu-card b { display: block; font-family: var(--display); font-size: 20px; color: var(--ink); }
+.tu-card span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.tu-card.on { border-color: var(--teal); background: var(--mint); }
+
+/* 心情月檢視 v2 */
+.mood-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.mm-cell { height: 34px; border: none; border-radius: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--sans); }
+.mm-cell.on { outline: 2px solid var(--teal-d); outline-offset: 1px; }
