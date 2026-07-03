@@ -1083,3 +1083,11 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .hist-row b { font-size: 15.5px; color: var(--ink); }
 .hist-row span { font-size: 13px; color: var(--muted); line-height: 1.4; }
 .hist-row.dim { opacity: .72; }
+
+/* 回診摘要 · 一頁四行 */
+.rpt-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 6px 16px; margin-bottom: 18px; }
+.rpt-row { display: flex; gap: 14px; padding: 13px 0; }
+.rpt-row + .rpt-row { border-top: 1px solid var(--line); }
+.rpt-k { flex-shrink: 0; width: 60px; font-size: 13px; font-weight: 700; color: var(--teal-dd); padding-top: 2px; }
+.rpt-row b { display: block; font-size: 16px; color: var(--ink); }
+.rpt-row span { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.5; }

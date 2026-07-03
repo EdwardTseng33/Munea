@@ -9,6 +9,7 @@
     "smoke:auth": "powershell -ExecutionPolicy Bypass -File scripts/auth-gate-smoke.ps1",
     "smoke:staging": "powershell -ExecutionPolicy Bypass -File scripts/staging-smoke.ps1",
     "release:check": "powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1",
+    "release:record": "powershell -ExecutionPolicy Bypass -File scripts/release-record.ps1",
     "supabase:doctor": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --allow-missing",
     "supabase:doctor:live": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --live",
     "cap:doctor": "npx cap doctor",

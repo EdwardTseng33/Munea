@@ -1406,7 +1406,14 @@ function init() {
 
   // 一鍵回診摘要
   const rep = $('#reportBtn');
-  if (rep) rep.addEventListener('click', () => hint('好，我把這個月的用藥和血壓整理成一張，回診給醫生看就清楚了。'));
+  if (rep) rep.addEventListener('click', () => $('#reportModal').classList.add('show'));
+  if ($('#reportClose')) $('#reportClose').addEventListener('click', () => $('#reportModal').classList.remove('show'));
+  if ($('#reportModal')) $('#reportModal').addEventListener('click', e => { if (e.target === $('#reportModal')) $('#reportModal').classList.remove('show'); });
+  if ($('#rptSendBtn')) $('#rptSendBtn').addEventListener('click', () => {
+    $('#reportModal').classList.remove('show');
+    toast('傳給美華了——回診那天她手機一打開就有');
+    pushFamilyFeed('<b>阿嬤</b>把 6 月的回診摘要傳給了美華');
+  });
 
   // 發起挑戰面板
   const chalModal = $('#chalModal');
