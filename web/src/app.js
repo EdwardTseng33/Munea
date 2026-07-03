@@ -1296,7 +1296,12 @@ function refreshTaskProgress() {
   }
   const pillTask = document.querySelector('.task-item[data-task="pill"]');
   const pv = $('#statPillVal');
-  if (pv && pillTask) pv.innerHTML = (pillTask.classList.contains('done') ? '3' : '2') + '<small>/3</small>';
+  const pdone = pillTask && pillTask.classList.contains('done');
+  if (pv && pillTask) pv.innerHTML = (pdone ? '3' : '2') + '<small>/3</small>';
+  const dots = document.querySelectorAll('#pillDots i');
+  if (dots.length) dots.forEach((d2, i2) => d2.classList.toggle('f', i2 < (pdone ? 3 : 2)));
+  const hint = $('#statPillHint');
+  if (hint) { hint.textContent = pdone ? '都吃了' : '還剩 1 次'; hint.className = 'st-trend ' + (pdone ? 'ok' : 'warn'); }
   const prog = $('.task-progress');
   if (!prog) return;
   const label = prog.childNodes[prog.childNodes.length - 1];
@@ -1778,6 +1783,7 @@ function init() {
     toast('好，' + cname() + '會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
+  if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
