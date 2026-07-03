@@ -44,7 +44,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["plans", "routines", "outings", "family logistics"],
         "boundaryStyle": "clear boundaries without sounding cold",
         "voiceProfile": "Charon",
-        "avatarAsset": "avatars/companion-real-male.png",
+        "avatarAsset": "avatars/ahong.png",
     },
     "munea-2d-xiaoyun": {
         "defaultName": "小昀",
@@ -58,7 +58,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["entertainment", "books", "food", "local outings", "creative topics"],
         "boundaryStyle": "turns risk into calm grounding and safe support",
         "voiceProfile": "Callirrhoe",
-        "avatarAsset": "avatars/munea-2d-xiaoyun.png",
+        "avatarAsset": "avatars/xiaoyun-2d.png",
     },
     "munea-2d-ayuan": {
         "defaultName": "阿原",
@@ -72,7 +72,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["reading", "reflection", "planning", "finance context", "life stories"],
         "boundaryStyle": "uses calm clarity for sensitive topics",
         "voiceProfile": "Algenib",
-        "avatarAsset": "avatars/munea-2d-ayuan.png",
+        "avatarAsset": "avatars/ayuan-2d.png",
     },
     "munea-2d-mimi": {
         "defaultName": "咪咪",

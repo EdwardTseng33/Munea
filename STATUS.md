@@ -3,6 +3,14 @@
 - 聊聊計分卡：4🟢2🟡4🔴（#6 今晚轉綠）；紅=真鑰匙/延遲/打斷/動臉（多數待 Mac+真機階段）。
 - 下一步（本機）：角色照重畫（生圖之手）＋女巫把關；Codex：/chat 鑰匙載入確認、正式帳本；Mac 開工首日清單見 docs/兩機協作。
 
+## 2026-07-03 Update - Avatar asset rename guard
+
+**Status:** completed for asset stability.
+
+- Synced the new companion avatar asset names across onboarding, landing, settings, companion profile adapter, and persona templates.
+- Added a release smoke check that scans avatar references in web/persona files and fails if any referenced image is missing.
+- Verified `npm run release:check`; the new avatar asset check found 34 references and all referenced files exist.
+
 ## 2026-07-03 Update - Codex Mac day-one doctor
 
 **Status:** completed for the TestFlight handoff lane.

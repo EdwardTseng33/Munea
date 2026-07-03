@@ -1670,6 +1670,36 @@ print("avatar runtime contract OK")
 '@
 Pass "Avatar runtime contract is present"
 
+Step "Frontend avatar asset references"
+Invoke-PythonBlock @'
+from pathlib import Path
+import re
+
+files = [
+    Path("web/index.html"),
+    Path("web/landing.html"),
+    Path("web/onboarding.html"),
+    Path("web/src/companion-profile.js"),
+    Path("engine/model_router.py"),
+]
+refs = []
+for file_path in files:
+    text = file_path.read_text(encoding="utf-8")
+    for match in re.finditer(r"avatars/[A-Za-z0-9_.-]+", text):
+        refs.append((file_path, match.group(0)))
+
+missing = []
+for file_path, ref in refs:
+    asset_path = Path("web") / ref
+    if not asset_path.exists():
+        missing.append(f"{file_path}: {ref}")
+
+if missing:
+    raise SystemExit("Missing avatar assets:\n" + "\n".join(missing))
+print("avatar asset refs", len(refs))
+'@
+Pass "Frontend avatar asset references exist"
+
 Step "Voice provider contract"
 Invoke-PythonBlock @'
 from pathlib import Path

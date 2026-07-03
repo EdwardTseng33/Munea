@@ -97,7 +97,7 @@ const avatarRuntime = {
     const fimg = $('#faceImg');
     if (fimg && avatarId) {
       const template = templateFor(avatarId);
-      fimg.src = template.fullAsset || ('avatars/' + avatarId + '.png');
+      fimg.src = template.fullAsset || template.homeAsset || template.thumbAsset || ('avatars/' + avatarId + '.png');
       fimg.classList.toggle('sq', !template.fullAsset);
     }
   },
@@ -1310,6 +1310,11 @@ function init() {
   setupHscrollHints();
   renderPoints();
   updateMedCount();
+  if (location.hash.slice(1) === 'pick') {
+    const sheet = $('#companionSheet');
+    const mask = sheet && sheet.closest('.modal-mask');
+    if (mask) { showView('settings'); mask.classList.add('show'); }
+  }
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected) { connectCall(); }
     else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
