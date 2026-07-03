@@ -1139,3 +1139,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .legal-body h4 { font-size: 15.5px; font-weight: 700; color: var(--ink); margin: 16px 0 6px; }
 .legal-body p { font-size: 14.5px; line-height: 1.75; color: var(--ink-2); }
 .legal-body p b { color: var(--ink); }
+
+/* 設定列：右側標籤不折行、不擠壓 */
+.set-row .sr-arrow { white-space: nowrap; flex-shrink: 0; }
+.set-row .sr-main { flex: 1; min-width: 0; }

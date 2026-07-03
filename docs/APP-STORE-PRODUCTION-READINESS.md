@@ -139,7 +139,7 @@ Current implemented guardrails:
 - `/app-profile`, `/companion-profile`, and `/entitlements` are separate contracts.
 - `/privacy-export` returns a local JSON export package for the account/family/profile/billing/privacy ledger.
 - `/account-deletion` returns the deletion status contract and production deletion steps.
-- Frontend onboarding now asks for AI/voice provider consent before entering the app, Settings shows the current consent state, and the app links to `web/privacy.html` for the in-app privacy policy.
+- Frontend onboarding and sign-in now disclose AI/voice provider processing before entering the app, Settings keeps the privacy-policy entry and safety disclaimer, and the app links to `web/privacy.html` for the in-app privacy policy.
 
 Production guardrails still required:
 

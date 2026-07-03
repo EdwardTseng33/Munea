@@ -1,5 +1,14 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-03 Update - Consent smoke contract alignment
+
+**Status:** completed for CI stability after the sign-in consent decision.
+
+- Updated the frontend AI provider consent smoke contract so it checks the sign-in/onboarding disclosure and privacy-policy path instead of requiring a persistent Settings consent card.
+- The sign-in terms now explicitly mention Gemini, OpenAI, and overseas AI provider processing for voice, text, or summaries.
+- Updated App Store readiness wording to match the product decision: onboarding/sign-in disclosure plus Settings privacy entry and safety disclaimer.
+- Avoided reintroducing the Settings consent card after Edward's 2026-07-03 ruling.
+
 ## 2026-07-03 Update - Release record checklist
 
 **Status:** completed for release hygiene and non-technical review.

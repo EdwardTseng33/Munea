@@ -253,20 +253,10 @@ function saveAiProviderConsent(agreed, source = 'settings') {
 }
 function updateAiProviderConsentUI() {
   const consent = readAiProviderConsent();
-  const toggle = $('#aiProviderConsentToggle');
-  const status = $('#aiProviderConsentStatus');
-  const panel = $('#aiProviderConsentPanel');
-  if (toggle) toggle.checked = consent.agreed === true;
-  if (status) status.textContent = consent.agreed ? '已同意' : '尚未同意';
-  if (panel) panel.dataset.consent = consent.agreed ? 'agreed' : 'missing';
+  window.MuneaAiProviderConsentState = consent;
 }
 function setupAiProviderConsentControls() {
-  const toggle = $('#aiProviderConsentToggle');
-  if (!toggle) return;
   updateAiProviderConsentUI();
-  toggle.addEventListener('change', e => {
-    saveAiProviderConsent(e.target.checked, 'settings');
-  });
 }
 window.MuneaAiProviderConsent = {
   key: AI_PROVIDER_CONSENT_KEY,
@@ -920,7 +910,7 @@ function setupAuthControls() {
     chip.innerHTML = icon + text;
   }
   const stat = $('#bcStatus');
-  if (stat) stat.textContent = '你昨天說孫子快畢業了，我記著呢';
+  if (stat) stat.textContent = '記得你昨天說，孫子快要畢業了';
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
   if (meta) meta.textContent = `${now.getMonth() + 1}月${now.getDate()}日 週${wd}`;
@@ -928,7 +918,7 @@ function setupAuthControls() {
   let k = '你好', b = '今天還好嗎？';
   if (h >= 5 && h < 11) { k = '早安'; b = '昨晚睡得還好嗎？'; }
   else if (h >= 11 && h < 14) { k = '午安'; b = '吃飽了嗎？'; }
-  else if (h >= 14 && h < 18) { k = '午後'; b = '下午了，歇一下吧'; }
+  else if (h >= 14 && h < 18) { k = '午安'; b = '下午了，休息一下吧'; }
   else if (h >= 18 && h < 22) { k = '晚上好'; b = '今天過得怎麼樣？'; }
   else { k = '夜深了'; b = '早點休息，別撐太晚'; }
   if (kick) kick.textContent = k;
@@ -1027,7 +1017,7 @@ function speakChat(text) {
 const CHEERS = {
   pill: '藥吃了，你真棒，我幫你記到存摺裡，美華也看得到。',
   walk: '出去走走最好了，回來記得喝口水。',
-  chat: '謝謝你跟我說這些，我都記著呢。',
+  chat: '謝謝你跟我說這些，我都記下來了。',
 };
 function refreshTaskProgress() {
   const items = $$('#taskCard .task-item');
@@ -1152,7 +1142,7 @@ function init() {
   updateMedCount();
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected) { connectCall(); }
-    else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); showView('home'); }
+    else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); }
   });
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
     const b = $('#captionToggle');
@@ -1199,14 +1189,14 @@ function init() {
   if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => showView('home'));
 
   // 連接裝置（狀態頁資料條 / 設定裝置區 → 串接三方裝置引導）
-  if ($('#srcStrip')) $('#srcStrip').addEventListener('click', () => showView('connect'));
-  if ($('#setDevices')) $('#setDevices').addEventListener('click', () => showView('connect'));
+  if ($('#srcStrip')) $('#srcStrip').addEventListener('click', () => { window.__connectFrom = 'status'; showView('connect'); });
+  if ($('#setDevices')) $('#setDevices').addEventListener('click', () => { window.__connectFrom = 'settings'; showView('connect'); });
   if ($('#companionRow')) $('#companionRow').addEventListener('click', () => $('#companionSheet').classList.add('show'));
   if ($('#companionCloseBtn')) $('#companionCloseBtn').addEventListener('click', () => $('#companionSheet').classList.remove('show'));
   if ($('#quizCloseX')) $('#quizCloseX').addEventListener('click', () => $('#quizModal').classList.remove('show'));
   if ($('#companionSheet')) $('#companionSheet').addEventListener('click', e => { if (e.target === $('#companionSheet')) $('#companionSheet').classList.remove('show'); });
   if ($('#setProfile')) $('#setProfile').addEventListener('click', () => hint('這裡可以改頭像、名稱、對家人顯示的稱呼、年齡、所在地。'));
-  if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView('status'));
+  if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView(window.__connectFrom || 'status'));
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', () => {
     const on = b.classList.toggle('done');
     b.textContent = on ? '✓ 已連接' : (b.dataset.label || '連接');
@@ -1401,7 +1391,7 @@ function init() {
       bars: [
         { l: '一', h: 55, s: 'soso' }, { l: '二', h: 72, s: 'ok' }, { l: '三', h: 45, s: 'soso' },
         { l: '四', h: 80, s: 'ok' }, { l: '五', h: 62, s: 'today' }, { l: '六', h: 0, s: 'future' }, { l: '日', h: 0, s: 'future' }],
-      note: '這週到目前 <b>2 天達標</b>；今天已走 6,200 步，再一段就第三天了。'
+      note: '這週到目前 <b>2 天達標</b>；今天已經走 6,200 步，再走一小段就達標了。'
     },
     month: {
       bars: [
@@ -1646,7 +1636,7 @@ function init() {
   });
   if ($('#visitSaveBtn')) $('#visitSaveBtn').addEventListener('click', () => {
     const on = document.querySelector('#visitDatePick .cal-cell.on');
-    if (!on) { toast('先點一天'); return; }
+    if (!on) { toast('先選一天'); return; }
     const t = (document.querySelector('#visitTimeChips .mchip.on') || { dataset: {} }).dataset.t || '上午';
     const d = new Date(on.dataset.iso + 'T00:00');
     const label = fmtDay(d) + t;
@@ -1746,7 +1736,7 @@ function init() {
   const CHAT_RULES = [
     [/(藥.*(怎麼吃|幾顆|停|加量|減量))|劑量|(可以吃.*藥)/, '藥怎麼吃、吃幾顆，我不能幫你決定，這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？'],
     [/痛|痠|不舒服|頭暈/, '聽到你不太舒服，我有點擔心。先坐下歇會兒，需要的話我幫你通知美華。'],
-    [/累|睡不|失眠/, '辛苦了，累就歇著、不用硬撐，我在這陪你。'],
+    [/累|睡不|失眠/, '辛苦了，累了就休息、不要硬撐，我在這裡陪你。'],
     [/孫|想.*他|想.*她|寂寞|一個人/, '想家人了是吧？要不要我提醒他們今晚打給你？'],
     [/吃|飯|餓|藥/, '好，吃飯吃藥都別忘了，到時間我會叫你。'],
     [/天氣|冷|熱|下雨/, '記得隨天氣加減衣服，別著涼了。'],
