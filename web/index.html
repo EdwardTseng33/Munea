@@ -198,7 +198,7 @@
           </div>
           <div class="qc-note">阿嬤全程用說的作答，寧寧說她記性一點都沒退步</div>
           <div class="qc-note">🏅 第 1 名獎勵：寶可夢卡包一包（美華提供），小寶記得找媽媽領</div>
-          <div class="qc-life">等大家都看過排名就收進記錄簿 · 最多留 3 天</div>
+          <div class="qc-life">排名保留一天，明天自動收進記錄簿</div>
         </div>
 
         <div class="sec-head"><div><h2>全家狀態</h2></div></div>
@@ -519,21 +519,20 @@
   <!-- ===== 用藥服務窗 ===== -->
   <section class="screen med-screen" id="med">
     <div class="med-top">
-      <div class="call-pill"><span class="dot"></span>寧寧<span class="timer">03:24</span></div>
       <button class="nav-back med-back" id="medBackBtn" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <div class="med-avatar-tag">通話中</div>
+      <img class="med-face" src="avatars/nening-real-female-face.png" alt="" />
       <div class="med-say" id="medDueSay">寧寧：吃藥時間到囉</div>
     </div>
     <div class="med-sheet">
       <div class="med-grab"></div>
       <div class="med-head">
         <div class="mh-left"><span class="mh-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span>用藥提醒</div>
-        <div class="mh-now">現在 14:00</div>
+        <div class="mh-now" id="medNow">現在 14:00</div>
       </div>
       <div class="med-pill-card">
         <div class="mpc-row">
           <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
-          <div><div class="mpc-name" id="medDueName">脈優 Amlodipine</div><div class="mpc-desc">血壓藥 · 1 顆 · 配溫開水</div></div>
+          <div><div class="mpc-name" id="medDueName">脈優 Amlodipine</div><div class="mpc-desc" id="medDueDesc">照你設定的提醒 · 配溫開水就可以</div></div>
         </div>
         <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>已連續服藥 6 天，做得很好！</div>
       </div>

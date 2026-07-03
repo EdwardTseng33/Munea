@@ -1279,7 +1279,7 @@ function connectCall() {
 }
 
 function init() {
-  syncPullAll();
+  const __pullPromise = syncPullAll();
   document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
   document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
   if (location.hash === '#med') setTimeout(() => showView('med'), 300);
@@ -1440,13 +1440,10 @@ function init() {
   (function famRings() {
     document.querySelectorAll('.fam-switch-item').forEach(it => {
       const name = it.dataset.person;
-      const av = it.querySelector('.init-ava');
-      if (!name || !av || !(name in FAM_ACT) || av.closest('.fam-ring')) return;
-      const ring = document.createElement('span');
-      ring.className = 'fam-ring';
-      ring.style.setProperty('--p', FAM_ACT[name]);
-      av.parentNode.insertBefore(ring, av);
-      ring.appendChild(av);
+      const fsav = it.querySelector('.fs-av');
+      if (!name || !fsav || !(name in FAM_ACT)) return;
+      fsav.classList.add('ringed');
+      fsav.style.setProperty('--p', FAM_ACT[name]);
       it.title = name + ' 今天活動量約 ' + FAM_ACT[name] + '%';
     });
   })();
@@ -1567,7 +1564,7 @@ function init() {
     toast('好，' + cname() + '會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
-  if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
+  if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('home'));
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
   if ($('#topUpModal')) $('#topUpModal').addEventListener('click', e => {
@@ -1725,7 +1722,7 @@ function init() {
       return '<div class="rank-row"><span class="rank-no ' + noCls + '">' + (i3 + 1) + '</span>' +
         '<span class="rank-av"><span class="init-ava ' + av[1] + '">' + av[0] + '</span></span>' +
         '<b>' + r2[0] + '</b><span class="rank-score">答對 ' + r2[1] + ' 題</span></div>';
-    }).join('') + '</div><div class="qc-life">等大家都看過排名就收進記錄簿 · 最多留 3 天</div>';
+    }).join('') + '</div><div class="qc-life">排名保留一天，明天自動收進記錄簿</div>';
   }
   function renderActCard(act) {
     const list = document.querySelector('#newChalBtn')?.closest('.pad')?.querySelector('.quest-card');
@@ -1807,22 +1804,23 @@ function init() {
     renderActCard(act);
     hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
   });
-  // 到期自動收卡：過了活動日就從牆上收走、記到家庭動態
-  (function restoreActs() {
+  // 到期自動收卡：先等雲端拉完再整理牆面（避免舊雲端資料蓋回剛收掉的卡）
+  function restoreActsBoot() {
     const today = isoOf(new Date());
     const acts = loadActs();
     const keep = [];
     const d3 = new Date(); d3.setDate(d3.getDate() - 3);
     const cutoff = isoOf(d3);
     acts.forEach(a => {
-      if (a.status === 'done' && a.doneISO && a.doneISO <= cutoff) {
-        pushFamilyFeed('「' + a.title + '」的結果收進<b>家庭記錄簿</b>了');
+      if (a.status === 'done' && a.doneISO && a.doneISO < today) {
+        pushFamilyFeed('「' + a.title + '」的排名收進<b>家庭記錄簿</b>了');
       } else if (a.status !== 'done' && a.kind !== 'quiz' && a.dateISO && a.dateISO < today) {
         pushFamilyFeed('「' + a.title + '」結束了，那天的紀錄收進<b>家庭記錄簿</b>了');
       } else { keep.push(a); renderActCard(a); }
     });
     if (keep.length !== acts.length) saveActs(keep);
-  })();
+  }
+  __pullPromise.finally(() => restoreActsBoot());
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
   const inviteList = $('#inviteList');
@@ -2055,6 +2053,9 @@ function init() {
   function todayKey() { const n = new Date(); return 'munea.medDone.' + isoOf(n); }
   let medSnoozeUntil = 0, medShowing = null;
   function fireMedReminder(med) {
+    const n2 = new Date();
+    if ($('#medNow')) $('#medNow').textContent = '現在 ' + String(n2.getHours()).padStart(2, '0') + ':' + String(n2.getMinutes()).padStart(2, '0');
+    if ($('#medDueDesc')) $('#medDueDesc').textContent = med.time + '的提醒 · 配溫開水就可以';
     medShowing = med;
     if ($('#medDueName')) $('#medDueName').textContent = med.name;
     if ($('#medDueSay')) $('#medDueSay').textContent = cname() + '：' + med.time + '的藥，時間到囉';
