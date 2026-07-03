@@ -1989,7 +1989,8 @@ function init() {
       note = cname() + '會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
     }
     const rwLine = act.rewards && act.rewards.some(Boolean)
-      ? '<div class="qc-note">🏅 獎勵：' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '</div>'
+      ? '<div class="qc-note">🏅 獎勵：' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '</div>' +
+        '<div class="qc-provider">獎品提供：' + (act.owner || '你') + '</div>'
       : '';
     if (act._rankHtml) {
       card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg>機智問答 · 排名出來了<span class="qc-days">' + (act.q || 5) + ' 題</span></div>' + act._rankHtml + rwLine;
@@ -2054,7 +2055,13 @@ function init() {
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
   const inviteList = $('#inviteList');
+  function paintRange(el) {
+    if (!el) return;
+    const p = (el.value - el.min) / (el.max - el.min) * 100;
+    el.style.setProperty('--fill', p.toFixed(1) + '%');
+  }
   function updateWalkLabels() {
+    paintRange($('#walkGoal')); paintRange($('#walkDays')); paintRange($('#quizN'));
     const g = +($('#walkGoal') ? $('#walkGoal').value : 30000);
     if ($('#walkGoalVal')) $('#walkGoalVal').textContent = g.toLocaleString() + ' 步';
     const n = $$('#inviteList .iv.on').length || 1;
@@ -2095,6 +2102,7 @@ function init() {
   if ($('#walkGoal')) $('#walkGoal').addEventListener('input', () => updateWalkLabels());
   if ($('#walkDays')) $('#walkDays').addEventListener('input', () => recalcWalk(true));
   if ($('#quizN')) $('#quizN').addEventListener('input', () => {
+    paintRange($('#quizN'));
     if ($('#quizNVal')) $('#quizNVal').textContent = $('#quizN').value + ' 題';
   });
   // 日期／時段／期間 點選（單選）

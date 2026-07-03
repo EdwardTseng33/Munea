@@ -984,8 +984,9 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 發起活動：拉桿（flat） */
 .range-row { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
-.range-row input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 12px; border-radius: 100px; background: var(--mint); outline: none; }
-.range-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: #FFF; border: 2.5px solid var(--teal-d); box-shadow: var(--shadow-sm); cursor: pointer; }
+.range-row input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 10px; border-radius: 100px; outline: none; border: 1px solid var(--line); background: linear-gradient(90deg, var(--btn-green) var(--fill, 50%), var(--mint-2) var(--fill, 50%)); }
+.range-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; border-radius: 50%; background: #FFF; border: 3px solid var(--btn-green); box-shadow: 0 2px 6px rgba(31,60,52,.2); cursor: pointer; transition: transform .12s; }
+.range-row input[type=range]:active::-webkit-slider-thumb { transform: scale(1.12); }
 .range-row input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: #FFF; border: 2.5px solid var(--teal-d); cursor: pointer; }
 .range-row b { font-family: var(--display); font-size: 17px; color: var(--teal-dd); min-width: 86px; text-align: right; }
 
@@ -1479,3 +1480,18 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .fam-switch-item .fs-av.all { background: var(--btn-green); color: #FFF; box-shadow: none; }
 .fam-switch-item .fs-av { border: none; box-shadow: 0 0 0 1px var(--line); }
 .fam-switch-item.active .fs-av { transform: scale(1.05); box-shadow: 0 0 0 2.5px #FFF, 0 0 0 5px var(--btn-green); }
+
+/* ===== 家人頁活力（Edward 7/4：有趣、不單調） ===== */
+/* 區塊標題的小暖點：跟首頁問候的太陽點同一家 */
+#family .sec-head h2 { position: relative; padding-left: 14px; }
+#family .sec-head h2::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--coral); }
+/* 全家狀態：心情做成有顏色的小藥丸、一眼分辨 */
+.mood-pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-right: 4px; }
+.mood-pill.calm { background: var(--mint); color: #1E7169; }
+.mood-pill.happy { background: var(--coral-soft); color: #B4581B; }
+.mood-pill.tired { background: #EFEBE2; color: #5F6A61; }
+/* 成員列按下去的小彈跳（活著的感覺） */
+.health-row:active { transform: scale(.985); }
+.health-row { transition: transform .12s ease; }
+
+.qc-provider { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
