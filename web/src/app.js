@@ -1430,6 +1430,7 @@ function connectCall() {
 }
 
 function init() {
+  if (new URLSearchParams(location.search).get('debug')) document.body.classList.add('debug');
   const __pullPromise = syncPullAll();
   document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
   document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
