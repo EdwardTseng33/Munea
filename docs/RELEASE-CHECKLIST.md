@@ -28,6 +28,18 @@ Then confirm:
 4. Backend mode matches the release target.
 5. Known risks are written down before push or upload.
 
+To check the latest GitHub Smoke run from the terminal:
+
+```powershell
+npm run smoke:status
+```
+
+After a fresh push, wait for the matching commit:
+
+```powershell
+npm run smoke:status -- -Wait
+```
+
 ## 3. Release Record
 
 Generate a record draft:
@@ -43,7 +55,7 @@ Use `-BackendMode supabase-staging` only after the staging Supabase live gate pa
 Go when:
 
 1. `npm run release:check` passes.
-2. GitHub Smoke workflow passes.
+2. `npm run smoke:status -- -Wait` confirms the GitHub Smoke workflow passed.
 3. The release target and backend mode are clear.
 4. There is a rollback path.
 

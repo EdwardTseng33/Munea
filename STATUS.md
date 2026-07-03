@@ -1,5 +1,14 @@
 # 沐寧 Munea · STATUS（接力檔）
 
+## 2026-07-03 Update - GitHub Smoke status helper
+
+**Status:** completed for release notification hygiene.
+
+- Added `scripts/smoke-status.ps1` and `npm run smoke:status` to check the latest GitHub Smoke workflow from the terminal.
+- The helper can wait for the current commit with `npm run smoke:status -- -Wait`, returning success only when GitHub Actions is green.
+- Updated `docs/RELEASE-CHECKLIST.md` so push/release verification no longer depends on manually opening the Actions page or waiting for failure emails.
+- Avoided memory, perception, Supabase schema, backend behavior, and main product UI lanes while Claude / Edward continue active work there.
+
 ## 2026-07-03 Update - Consent smoke contract alignment
 
 **Status:** completed for CI stability after the sign-in consent decision.
