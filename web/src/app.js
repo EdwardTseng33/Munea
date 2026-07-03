@@ -702,6 +702,8 @@ function setCallToggle(connected) {
   if (!b) return;
   b.classList.toggle('start', !connected);
   b.classList.toggle('end', connected);
+  const pts = document.querySelector('.hud-pill.pts');
+  if (pts) pts.style.display = connected ? 'none' : '';
   const lbl = $('#callToggleLabel');
   if (lbl) lbl.textContent = connected ? '結束通話' : '開始通話';
 }
@@ -1575,6 +1577,27 @@ function init() {
       }
     });
   });
+  // 狀態頁三檔切換（今天/本週/本月）
+  const statusSeg = $('#statusSeg');
+  if (statusSeg) {
+    const sviews = { today: $('#statusToday'), week: $('#statusWeek'), month: $('#statusMonth') };
+    const stitles = { today: '今天的狀態', week: '這週的狀態', month: '這個月的狀態' };
+    statusSeg.addEventListener('click', e => {
+      const b = e.target.closest('.seg-btn');
+      if (!b) return;
+      statusSeg.querySelectorAll('.seg-btn').forEach(x => x.classList.toggle('on', x === b));
+      Object.entries(sviews).forEach(([k, el]) => { if (el) el.style.display = k === b.dataset.v ? '' : 'none'; });
+      if ($('#statusTitle')) $('#statusTitle').textContent = stitles[b.dataset.v];
+    });
+  }
+  if ($('#historyEntry')) $('#historyEntry').addEventListener('click', () => $('#historyModal').classList.add('show'));
+  if ($('#historyClose')) $('#historyClose').addEventListener('click', () => $('#historyModal').classList.remove('show'));
+  if ($('#historyModal')) $('#historyModal').addEventListener('click', e => {
+    if (e.target === $('#historyModal')) { $('#historyModal').classList.remove('show'); return; }
+    const row = e.target.closest('.hist-row');
+    if (row) toast(row.classList.contains('dim') ? '正式版點開就是當月整理——示範先看 6 月這行' : '6 月整理好了——完整月報之後接引擎');
+  });
+
   // 機智問答（示範題庫；正式版由寧寧出題、語音作答）
   const QUIZ_BANK = [
     { q: '一般建議大人每天走多少步，比較有活力？', opts: ['500 步', '2,000 步', '7,000 步左右', '50,000 步'], a: 2 },

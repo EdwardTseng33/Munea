@@ -80,8 +80,14 @@
   <!-- ===== 狀態 ===== -->
   <section class="screen" id="status">
     <div class="pad">
-      <div class="page-head"><h1 class="page-title">今天的狀態</h1></div>
+      <div class="page-head"><h1 class="page-title" id="statusTitle">今天的狀態</h1></div>
+      <div class="seg" id="statusSeg">
+        <button class="seg-btn on" data-v="today">今天</button>
+        <button class="seg-btn" data-v="week">本週</button>
+        <button class="seg-btn" data-v="month">本月</button>
+      </div>
 
+      <div id="statusToday">
       <div class="wallet-card">
         <div class="wc-top"><svg class="ic" viewBox="0 0 24 24" style="color:#fff"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>安心存摺</div>
         <div class="wc-big">這個月 <span>23</span><small> / 30 天</small> 都準時吃藥</div>
@@ -104,6 +110,33 @@
       </div>
 
       <button class="report-btn" id="reportBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>整理一份回診摘要給醫生</button>
+      </div>
+
+      <div id="statusWeek" style="display:none">
+        <div class="wk-cal">
+          <div class="wkc-head"><span></span><div class="wkc-days"><i>一</i><i>二</i><i>三</i><i>四</i><i>五</i><i>六</i><i>日</i></div></div>
+          <div class="wkc-row"><span class="wkc-label">吃藥</span><div class="wkc-cells"><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="miss"></i><i class="ok"></i><i class="today"></i><i class="future"></i></div></div>
+          <div class="wkc-row"><span class="wkc-label">活動</span><div class="wkc-cells"><i class="ok"></i><i class="soso"></i><i class="ok"></i><i class="ok"></i><i class="soso"></i><i class="today"></i><i class="future"></i></div></div>
+          <div class="wkc-row"><span class="wkc-label">睡眠</span><div class="wkc-cells"><i class="ok"></i><i class="ok"></i><i class="soso"></i><i class="ok"></i><i class="ok"></i><i class="today"></i><i class="future"></i></div></div>
+          <div class="wkc-legend"><span><i class="ok"></i>做到了</span><span><i class="soso"></i>差一點</span><span><i class="miss"></i>漏了</span><span><i class="today"></i>今天</span></div>
+        </div>
+        <div class="observe-card">
+          <div class="oc-head"><svg class="ic" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>寧寧的觀察</div>
+          <div class="oc-text">這週吃藥五天準時、星期四漏了午餐那顆——寧寧那天會多叮一次。活動有三天達標，睡眠都很穩。</div>
+        </div>
+      </div>
+
+      <div id="statusMonth" style="display:none">
+        <div class="mo-list">
+          <div class="mo-row"><span>第 1 週</span><div class="mo-bar"><i style="width:92%"></i></div><b>92%</b></div>
+          <div class="mo-row"><span>第 2 週</span><div class="mo-bar"><i style="width:85%"></i></div><b>85%</b></div>
+          <div class="mo-row"><span>第 3 週</span><div class="mo-bar"><i style="width:71%"></i></div><b>71%</b></div>
+          <div class="mo-row" style="margin-bottom:2px"><span>本週</span><div class="mo-bar"><i style="width:83%"></i></div><b>83%</b></div>
+        </div>
+        <div class="mo-note">這個月到目前：吃藥準時 <b>23/30 天</b> · 走路達標 <b>14 天</b> · 平均睡 <b>7.3 小時</b>。第 3 週那幾天在感冒，別放在心上。</div>
+      </div>
+
+      <button class="med-entry" id="historyEntry"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span>過去紀錄 · <b>保存 1 年</b></span><svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
   </section>
 
@@ -408,7 +441,7 @@
           <div class="modal-grab"></div>
           <button class="auth-close" id="companionCloseBtn" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           <h2>陪伴角色</h2>
-          <p class="modal-sub">名稱是你的稱呼；外觀、聲音和互動氣質由模板決定。</p>
+          <p class="modal-sub">名稱是你的稱呼；外觀、聲音和互動氣質由模板決定。<br><b style="color:var(--teal-dd)">換角色不會忘記你們聊過的事</b>——記憶跟著你，不跟角色走。</p>
           <label class="companion-name-label" for="companionNameInput">角色名稱</label>
           <input class="companion-name-input" id="companionNameInput" value="寧寧" maxlength="12" autocomplete="off" />
           <div class="field-label">選擇模板</div>
@@ -568,6 +601,22 @@
       <div class="cn-privacy"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>健康資料只有你授權的家人看得到</div>
     </div>
   </section>
+
+  <div class="modal-mask" id="historyModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <button class="auth-close" id="historyClose" type="button" aria-label="關閉紀錄" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <h2>過去紀錄</h2>
+      <p class="modal-sub">每月自動整理成一頁，保存一年；滿一年前寧寧會先問你要不要留下來。</p>
+      <button class="hist-row"><b>2026 年 6 月</b><span>吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時</span></button>
+      <button class="hist-row dim"><b>2026 年 5 月</b><span>已保存 · 點開看當月整理</span></button>
+      <button class="hist-row dim"><b>2026 年 4 月</b><span>已保存 · 點開看當月整理</span></button>
+      <button class="hist-row dim"><b>2026 年 3 月</b><span>已保存 · 點開看當月整理</span></button>
+      <button class="hist-row dim"><b>2026 年 2 月</b><span>已保存 · 點開看當月整理</span></button>
+      <button class="hist-row dim"><b>2026 年 1 月</b><span>已保存 · 點開看當月整理</span></button>
+      <p class="modal-sub" style="margin-top:6px">更早的（到 2025 年 8 月）也都在，往下會自動接著列。</p>
+    </div>
+  </div>
 
   <div class="modal-mask" id="medMgrModal">
     <div class="modal">
