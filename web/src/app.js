@@ -1706,11 +1706,14 @@ function init() {
       goal = act.title + '，誰能到？';
       note = cname() + '會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
     }
+    const rwLine = act.rewards && act.rewards.some(Boolean)
+      ? '<div class="qc-note">🏅 獎勵：' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '</div>'
+      : '';
     card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
       (act.kind === 'event' ? '揪一攤 · ' + act.title : '邀請已送出 · ' + act.title) +
       '<span class="qc-days">' + chip + '</span></div>' +
       '<div class="qc-goal">' + goal + '</div>' +
-      '<div class="qc-num">' + note + '</div>';
+      '<div class="qc-num">' + note + '</div>' + rwLine;
     if (act.kind === 'quiz' && act.status !== 'done') { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
     list.parentNode.insertBefore(card, list);
   }
@@ -1736,6 +1739,9 @@ function init() {
       act.dateLabel = fmtDay(d) + ((document.querySelector('#evTimeChips .mchip.on') || { dataset: {} }).dataset.t || '');
       act.title = (($('#eventName') && $('#eventName').value.trim()) || '家庭聚會');
     }
+    const rw = ['#rw1', '#rw2', '#rw3'].map(x => ($(x) && $(x).value.trim()) || '');
+    if (rw.some(Boolean)) act.rewards = rw;
+    ['#rw1', '#rw2', '#rw3'].forEach(x => { if ($(x)) $(x).value = ''; });
     const acts = loadActs(); acts.push(act); saveActs(acts);
     closeChal();
     renderActCard(act);
