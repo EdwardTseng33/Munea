@@ -226,8 +226,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .set-about .sa-icon { width: 58px; height: 58px; border-radius: 17px; flex-shrink: 0; box-shadow: 0 8px 18px -8px rgba(46,138,131,.6); }
 .set-about .sa-name { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--ink); }
 .set-about .sa-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.auth-card { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-sm); padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid rgba(58,168,160,.08); }
-.auth-card[data-auth-state="signed-in"] { background: #F2FAF6; border-color: rgba(58,168,160,.16); }
+.auth-card { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-sm); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--line); }
+
 .auth-card-main { display: flex; align-items: center; gap: 13px; min-width: 0; }
 .auth-ico { width: 42px; height: 42px; border-radius: 13px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
 .auth-copy { min-width: 0; }
@@ -236,8 +236,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-email { font-size: 13px; color: var(--teal-dd); font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 185px; }
 .auth-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .auth-primary, .auth-secondary, .auth-dev-btn, .auth-email-btn { border: none; font-family: var(--display); font-weight: 800; cursor: pointer; }
-.auth-primary { min-width: 70px; height: 40px; border-radius: 14px; color: #fff; background: var(--teal-d); box-shadow: 0 10px 22px -14px rgba(58,168,160,.8); }
-.auth-secondary { min-width: 70px; height: 38px; border-radius: 13px; color: var(--ink-2); background: var(--cream-2); border: 1px solid var(--line); }
+.auth-primary { min-width: 72px; height: 40px; border-radius: 13px; color: #fff; background: var(--teal-d); }
+.auth-secondary { min-width: 0; height: auto; border-radius: 10px; color: var(--muted); background: transparent; border: none; font-family: var(--sans); font-weight: 600; font-size: 14px; padding: 10px 6px; }
 .auth-dev-badge { font-size: 12.5px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 999px; padding: 4px 8px; }
 .set-list { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-sm); overflow: hidden; }
 .set-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; font-size: 16px; color: var(--ink); }
@@ -1198,3 +1198,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .mood-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 .mm-cell { height: 34px; border: none; border-radius: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--sans); }
 .mm-cell.on { outline: 2px solid var(--teal-d); outline-offset: 1px; }
+
+/* 帳號卡 · 頭像走家人系統 */
+.auth-ava { flex-shrink: 0; }
+.auth-ava .init-ava { width: 44px; height: 44px; border-radius: 50%; font-size: 17px; }
+.auth-ava.guest .init-ava { background: var(--cream-2); color: var(--muted); filter: grayscale(1); }

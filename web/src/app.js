@@ -824,9 +824,11 @@ function updateAuthUI() {
     if ($('#authSignInBtn')) $('#authSignInBtn').hidden = true;
     if ($('#authSignOutBtn')) $('#authSignOutBtn').hidden = false;
     if ($('#authDevBadge')) $('#authDevBadge').hidden = true;
+    if ($('#authAvatar')) $('#authAvatar').classList.remove('guest');
     renderAiDiagnostics();
     return;
   }
+  if ($('#authAvatar')) $('#authAvatar').classList.toggle('guest', !signedIn);
   const card = $('#authCard');
   if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
   const status = $('#authStatusText');
