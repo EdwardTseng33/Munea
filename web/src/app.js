@@ -1360,6 +1360,7 @@ function init() {
     if (mask) { showView('settings'); mask.classList.add('show'); }
   }
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
+    if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     if (!callConnected) { connectCall(); }
     else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
   });
@@ -2017,6 +2018,13 @@ function init() {
     $('#legalModal').classList.add('show');
   }
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => openLegal('privacy'));
+  if ($('#consentAgree')) $('#consentAgree').addEventListener('click', () => {
+    try { localStorage.setItem('munea.consent.crossborder', new Date().toISOString()); } catch (e) {}
+    trackProductEvent('crossborder_consent_given', {});
+    $('#consentSheet').classList.remove('show');
+    connectCall();
+  });
+  if ($('#consentDetail')) $('#consentDetail').addEventListener('click', () => { $('#consentSheet').classList.remove('show'); openLegal('privacy'); });
   if ($('#legalRow')) $('#legalRow').addEventListener('click', () => openLegal('terms'));
   if ($('#legalClose')) $('#legalClose').addEventListener('click', () => $('#legalModal').classList.remove('show'));
   if ($('#legalModal')) $('#legalModal').addEventListener('click', e => { if (e.target === $('#legalModal')) $('#legalModal').classList.remove('show'); });

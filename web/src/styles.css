@@ -1270,3 +1270,5 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .low-strip { display: flex; align-items: center; gap: 8px; background: var(--coral-soft); color: var(--coral-d); border-radius: 12px; padding: 10px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
 .low-strip .ic { width: 16px; height: 16px; flex-shrink: 0; }
 .hud-pill.pts.low { background: rgba(194,87,22,.55); }
+
+.consent-body { font-size: 15px; line-height: 1.7; color: var(--ink-2); background: var(--mint); border-radius: 14px; padding: 14px 16px; margin: 10px 0 14px; }
