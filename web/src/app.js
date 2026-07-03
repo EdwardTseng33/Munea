@@ -1658,7 +1658,23 @@ function init() {
   renderVisitRow();
   if ($('#fontRow')) $('#fontRow').addEventListener('click', () => toast('字體大小調整下一版開放，我先幫你記著'));
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
-  if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => window.open('privacy.html', '_blank'));
+  function openLegal(tab) {
+    const seg = $('#legalSeg');
+    if (seg) seg.querySelectorAll('.seg-btn').forEach(x => x.classList.toggle('on', x.dataset.v === tab));
+    if ($('#legalTerms')) $('#legalTerms').style.display = tab === 'terms' ? '' : 'none';
+    if ($('#legalPrivacy')) $('#legalPrivacy').style.display = tab === 'privacy' ? '' : 'none';
+    $('#legalModal').classList.add('show');
+  }
+  if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => openLegal('privacy'));
+  if ($('#legalRow')) $('#legalRow').addEventListener('click', () => openLegal('terms'));
+  if ($('#legalClose')) $('#legalClose').addEventListener('click', () => $('#legalModal').classList.remove('show'));
+  if ($('#legalModal')) $('#legalModal').addEventListener('click', e => { if (e.target === $('#legalModal')) $('#legalModal').classList.remove('show'); });
+  if ($('#legalSeg')) $('#legalSeg').addEventListener('click', e => {
+    const b = e.target.closest('.seg-btn');
+    if (b) openLegal(b.dataset.v);
+  });
+  const authTermsLink = document.querySelector('.auth-terms a');
+  if (authTermsLink) authTermsLink.addEventListener('click', e => { e.preventDefault(); closeAuthSheet(); openLegal('terms'); });
   if ($('#historyEntry')) $('#historyEntry').addEventListener('click', () => $('#historyModal').classList.add('show'));
   if ($('#historyClose')) $('#historyClose').addEventListener('click', () => $('#historyModal').classList.remove('show'));
   if ($('#historyModal')) $('#historyModal').addEventListener('click', e => {

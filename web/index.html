@@ -180,11 +180,11 @@
         <div class="quest-card">
           <div class="qc-kicker event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M9 16h6"/></svg>揪一攤 · 週六聚餐<span class="qc-days" id="demoEventDate">7/4（週六）傍晚</span></div>
           <div class="qc-goal">阿嬤生日聚餐，誰能到？</div>
-          <div class="rsvp-people">
-            <div class="rp yes"><span class="rp-av"><span class="init-ava p-ama">嬤</span><i class="rg-badge ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></i></span><b>阿嬤</b><span class="rp-st ok">會到</span></div>
-            <div class="rp yes"><span class="rp-av"><span class="init-ava p-mei">華</span><i class="rg-badge ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></i></span><b>美華</b><span class="rp-st ok">會到</span></div>
-            <div class="rp dim"><span class="rp-av"><span class="init-ava p-zhi">明</span><i class="rg-badge nope"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></i></span><b>志明</b><span class="rp-st no">沒空</span></div>
-            <div class="rp wait"><span class="rp-av"><span class="init-ava p-bao">寶</span><i class="rg-badge ask">?</i></span><b>小寶</b><span class="rp-st ask">等回覆</span></div>
+          <div class="rsvp-list">
+            <div class="rl"><span class="init-ava p-ama">嬤</span><b>阿嬤</b><span class="rl-st ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>會到</span></div>
+            <div class="rl"><span class="init-ava p-mei">華</span><b>美華</b><span class="rl-st ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>會到</span></div>
+            <div class="rl dim"><span class="init-ava p-zhi">明</span><b>志明</b><span class="rl-st no"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>沒空</span></div>
+            <div class="rl"><span class="init-ava p-bao">寶</span><b>小寶</b><span class="rl-st ask"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>等回覆</span></div>
           </div>
           <div class="qc-num">就差小寶還沒回，寧寧會提醒他</div>
         </div>
@@ -478,7 +478,9 @@
         <img class="sa-icon" src="icons/munea-logo.png" alt="Munea" />
         <div><div class="sa-name">Munea 沐寧</div><div class="sa-sub" id="companionSummary">AI 健康照護 · 陪伴角色：寧寧</div></div>
       </div>
-      <p class="set-disclaim">沐寧是陪伴、提醒與安全轉介工具，不提供診斷、治療或緊急服務；緊急狀況請直接聯絡 119 或 1925。<a href="privacy.html" target="_blank" rel="noopener">隱私權政策</a></p>
+      <div class="set-list">
+        <div class="set-row" id="legalRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款與隱私權<small>服務範圍、資料保存與你的權利</small></span><span class="sr-arrow">›</span></div>
+      </div>
     </div>
   </section>
 
@@ -591,6 +593,40 @@
       </div>
       <button class="modal-btn" id="rptSendBtn">傳給美華，回診帶著</button>
       <p class="modal-sub" style="margin-top:10px;margin-bottom:4px">在診間也可以直接打開這一頁給醫生看。</p>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="legalModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <button class="auth-close" id="legalClose" type="button" aria-label="關閉條款" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <h2>條款與隱私權</h2>
+      <div class="seg" id="legalSeg" style="margin-top:10px">
+        <button class="seg-btn on" data-v="terms">使用條款</button>
+        <button class="seg-btn" data-v="privacy">隱私權政策</button>
+      </div>
+      <div class="legal-body" id="legalTerms">
+        <p class="legal-tag">草案 · 正式版由法務定稿</p>
+        <h4>沐寧是什麼</h4>
+        <p>沐寧是全家人的陪伴、提醒與安全轉介工具。<b>不提供診斷、治療或緊急服務</b>；藥怎麼吃、身體怎麼了，請以醫師與藥師為準。<b>緊急狀況請直接聯絡 119 或 1925</b>。</p>
+        <h4>帳號與家庭照護圈</h4>
+        <p>一個帳號可以邀請家人組成照護圈；每位成員能看到的內容，以本人同意的範圍為準。對話內容不對家人公開，只分享狀態與關懷摘要。</p>
+        <h4>訂閱與點數</h4>
+        <p>基本陪伴不限量；通話與生動模式使用點數。方案內容與價格以「訂閱與點數」頁為準，可隨時調整方案。</p>
+        <h4>合理使用</h4>
+        <p>請勿用於違法用途或試圖讓 AI 提供醫療處置建議。服務內容若有重大調整，會提前在 app 內告知。</p>
+      </div>
+      <div class="legal-body" id="legalPrivacy" style="display:none">
+        <p class="legal-tag">草案 · 正式版由法務定稿</p>
+        <h4>我們蒐集什麼</h4>
+        <p>健康數據（步數、睡眠、血壓等，經你授權後由 Apple 健康帶入）、用藥與活動記錄、對話的照護摘要。</p>
+        <h4>怎麼使用</h4>
+        <p>用來提醒、陪伴與家人關懷。語音與文字可能由 AI 服務（含境外，如 Gemini）協助處理；只為了提供服務，不作廣告販售。</p>
+        <h4>保存多久</h4>
+        <p>健康與活動紀錄在 app 內保存一年；滿一年前會先問你要保留還是刪除。</p>
+        <h4>你的權利</h4>
+        <p>你可以隨時查閱、匯出或刪除自己的資料；刪除後記憶與紀錄一併清除，無法復原。</p>
+      </div>
     </div>
   </div>
 
