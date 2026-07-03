@@ -175,22 +175,11 @@
         <div class="quest-card">
           <div class="qc-kicker event"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M9 16h6"/></svg>揪一攤 · 週六聚餐<span class="qc-days" id="demoEventDate">7/4（週六）傍晚</span></div>
           <div class="qc-goal">阿嬤生日聚餐，誰能到？</div>
-          <div class="rsvp-board">
-            <div class="rsvp-group yes">
-              <div class="rg-avs">
-                <span class="rg-av"><span class="init-ava p-ama">嬤</span><i class="rg-badge ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></i></span>
-                <span class="rg-av"><span class="init-ava p-mei">華</span><i class="rg-badge ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></i></span>
-              </div>
-              <span class="rg-label">能到 2 位</span>
-            </div>
-            <div class="rsvp-group no">
-              <div class="rg-avs"><span class="rg-av dim"><span class="init-ava p-zhi">明</span><i class="rg-badge nope"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></i></span></div>
-              <span class="rg-label">沒空 1 位</span>
-            </div>
-            <div class="rsvp-group wait">
-              <div class="rg-avs"><span class="rg-av"><span class="init-ava p-bao">寶</span><i class="rg-badge ask">?</i></span></div>
-              <span class="rg-label">等回覆</span>
-            </div>
+          <div class="rsvp-people">
+            <div class="rp yes"><span class="rp-av"><span class="init-ava p-ama">嬤</span><i class="rg-badge ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></i></span><b>阿嬤</b><span class="rp-st ok">會到</span></div>
+            <div class="rp yes"><span class="rp-av"><span class="init-ava p-mei">華</span><i class="rg-badge ok"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></i></span><b>美華</b><span class="rp-st ok">會到</span></div>
+            <div class="rp dim"><span class="rp-av"><span class="init-ava p-zhi">明</span><i class="rg-badge nope"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></i></span><b>志明</b><span class="rp-st no">沒空</span></div>
+            <div class="rp wait"><span class="rp-av"><span class="init-ava p-bao">寶</span><i class="rg-badge ask">?</i></span><b>小寶</b><span class="rp-st ask">等回覆</span></div>
           </div>
           <div class="qc-num">3 人已回覆 · 寧寧會親口問阿嬤、也會提醒小寶回覆</div>
         </div>
@@ -256,17 +245,10 @@
           <button class="mc-more" id="moodTrendBtn">看一週心情 <svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
         </div>
         <div class="trend-card">
-          <div class="trend-head"><h3>健康趨勢</h3><div class="trend-tabs" id="trendTabs"><button class="active" data-range="week">本週</button><button data-range="month">本月</button></div></div>
-          <div class="trend-bars" id="trendBars">
-            <div class="tb"><i style="height:55%"></i><span>一</span></div>
-            <div class="tb"><i style="height:72%"></i><span>二</span></div>
-            <div class="tb"><i style="height:45%"></i><span>三</span></div>
-            <div class="tb"><i style="height:80%"></i><span>四</span></div>
-            <div class="tb"><i style="height:62%"></i><span>五</span></div>
-            <div class="tb"><i style="height:90%"></i><span>六</span></div>
-            <div class="tb"><i style="height:75%"></i><span>日</span></div>
-          </div>
-          <div class="trend-note">這週<b>活動量穩定</b>、睡眠比上週好；用藥準時率 <b>92%</b>。</div>
+          <div class="trend-head"><h3>活動量</h3><div class="trend-tabs" id="trendTabs"><button class="active" data-range="week">本週</button><button data-range="month">本月</button></div></div>
+          <div class="trend-bars" id="trendBars"></div>
+          <div class="wkc-legend" style="margin:10px 0 2px"><span><i class="ok"></i>達標</span><span><i class="soso"></i>沒達標</span><span><i class="today"></i>進行中</span></div>
+          <div class="trend-note" id="trendNote">這週到目前 <b>2 天達標</b>；今天已走 6,200 步，再一段就第三天了。</div>
         </div>
 
         <div class="sec-head"><div><h2>成就徽章</h2></div></div>

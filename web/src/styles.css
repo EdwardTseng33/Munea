@@ -395,8 +395,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .trend-bars { display: flex; align-items: flex-end; justify-content: space-between; height: 96px; gap: 7px; }
 .trend-bars .tb { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; justify-content: flex-end; }
 .trend-bars .tb i { width: 100%; background: var(--mint-2); border-radius: 8px; min-height: 8px; }
-.trend-bars .tb:last-child i { background: var(--coral); }
-.trend-bars .tb:nth-child(4) i, .trend-bars .tb:nth-child(6) i { background: var(--teal); opacity: .82; }
 .trend-bars .tb span { font-size: 12px; color: var(--muted); }
 .trend-note { font-size: 12.5px; color: var(--ink-2); margin-top: 14px; line-height: 1.5; }
 .trend-note b { color: var(--teal-dd); }
@@ -939,27 +937,13 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .pager-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: background .2s, transform .2s; }
 .pager-dots i.on { background: var(--teal-d); transform: scale(1.25); }
 
-/* 挑戰卡遊戲感：里程碑刻度＋完成率＋終點旗輕飄 */ 50% { transform: rotate(6deg); } }
-
-/* 出席看板：分組＋頭像狀態徽章（一眼懂誰能到） */
-.rsvp-board { display: flex; gap: 10px; padding: 6px 0 12px; }
-.rsvp-group { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--cream); border-radius: 14px; padding: 10px 14px 8px; }
-.rsvp-group.yes { background: var(--mint); }
-.rsvp-group.wait { background: var(--coral-soft); }
-.rg-avs { display: flex; }
-.rg-av { position: relative; width: 40px; height: 40px; margin-left: -8px; }
-.rg-av:first-child { margin-left: 0; }
-.rg-av .init-ava { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #FFF; font-size: 15px; }
-.rg-av.dim .init-ava { opacity: .55; filter: grayscale(.4); }
+/* 出席看板：頭像狀態徽章（一眼懂誰能到） */
 .rg-badge { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; border: 2px solid #FFF; }
 .rg-badge .ic { width: 10px; height: 10px; stroke-width: 3; }
 .rg-badge.ok { background: var(--teal-d); color: #FFF; }
 .rg-badge.nope { background: #B4B2A9; color: #FFF; }
 .rg-badge.ask { background: var(--coral-d); color: #FFF; animation: askPulse 1.8s ease-in-out infinite; }
 @keyframes askPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-.rg-label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
-.rsvp-group.yes .rg-label { color: var(--teal-dd); }
-.rsvp-group.wait .rg-label { color: var(--coral-d); }
 
 /* 狀態頁用藥入口 */
 .med-entry { display: flex; align-items: center; gap: 12px; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 15px 16px; margin-bottom: 16px; font-family: var(--sans); font-size: 16px; color: var(--ink); cursor: pointer; }
@@ -1091,3 +1075,24 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rpt-k { flex-shrink: 0; width: 60px; font-size: 13px; font-weight: 700; color: var(--teal-dd); padding-top: 2px; }
 .rpt-row b { display: block; font-size: 16px; color: var(--ink); }
 .rpt-row span { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+
+/* 趨勢柱：顏色有意義（class 對應狀態、不再裝飾性上色） */
+.trend-bars .tb.ok i { background: var(--teal); }
+.trend-bars .tb.today i { background: #FFF; border: 1.5px dashed var(--teal); }
+.trend-bars .tb.future i { background: var(--cream); opacity: .5; }
+.trend-bars .tb span { white-space: nowrap; }
+
+/* 出席看板 v2：一排四人 */
+.rsvp-people { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 4px 0 12px; }
+.rp { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--cream); border-radius: 14px; padding: 12px 4px 10px; }
+.rp.yes { background: var(--mint); }
+.rp.wait { background: var(--coral-soft); }
+.rp .rp-av { position: relative; width: 44px; height: 44px; }
+.rp .init-ava { width: 44px; height: 44px; border-radius: 50%; font-size: 16px; border: 2px solid #FFF; }
+.rp.dim .init-ava { opacity: .55; filter: grayscale(.4); }
+.rp b { font-size: 13.5px; color: var(--ink); font-weight: 700; }
+.rp-st { font-size: 12px; font-weight: 700; }
+.rp-st.ok { color: var(--teal-dd); }
+.rp-st.no { color: var(--muted); }
+.rp-st.ask { color: var(--coral-d); }
+.rp .rg-badge { bottom: 0; right: -3px; }

@@ -1396,15 +1396,33 @@ function init() {
     showFamPerson(r.dataset.person, r.dataset.rel, r.dataset.init, r.dataset.tint);
   });
   // 週/月趨勢切換
+  const TREND = {
+    week: {
+      bars: [
+        { l: '一', h: 55, s: 'soso' }, { l: '二', h: 72, s: 'ok' }, { l: '三', h: 45, s: 'soso' },
+        { l: '四', h: 80, s: 'ok' }, { l: '五', h: 62, s: 'today' }, { l: '六', h: 0, s: 'future' }, { l: '日', h: 0, s: 'future' }],
+      note: '這週到目前 <b>2 天達標</b>；今天已走 6,200 步，再一段就第三天了。'
+    },
+    month: {
+      bars: [
+        { l: '第 1 週', h: 64, s: 'ok' }, { l: '第 2 週', h: 78, s: 'ok' }, { l: '第 3 週', h: 42, s: 'soso' }, { l: '第 4 週', h: 70, s: 'today' }],
+      note: '這個月 <b>2 週達標</b>；第 3 週在感冒、少動很正常，這週正在補回來。'
+    }
+  };
+  function renderTrend(range) {
+    const box = $('#trendBars');
+    if (!box) return;
+    const d = TREND[range] || TREND.week;
+    box.innerHTML = d.bars.map(b2 => '<div class="tb ' + b2.s + '"><i style="height:' + Math.max(b2.h, 6) + '%"></i><span>' + b2.l + '</span></div>').join('');
+    if ($('#trendNote')) $('#trendNote').innerHTML = d.note;
+  }
+  renderTrend('week');
   const trendTabs = $('#trendTabs');
   if (trendTabs) trendTabs.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     trendTabs.querySelectorAll('button').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
-    const week = [55,72,45,80,62,90,75], month = [62,70,76,84,72,88,80];
-    const data = b.dataset.range === 'month' ? month : week;
-    $$('#trendBars .tb i').forEach((i, idx) => i.style.height = data[idx] + '%');
-    $$('#trendBars .tb span').forEach((s, idx) => s.textContent = b.dataset.range === 'month' ? ['第1','第2','第3','第4','週','',''][idx] : ['一','二','三','四','五','六','日'][idx]);
+    renderTrend(b.dataset.range);
   });
 
   // 一鍵回診摘要
