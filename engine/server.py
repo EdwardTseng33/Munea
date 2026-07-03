@@ -32,6 +32,7 @@ COMPANION_PROFILE_PATH = os.environ.get("MUNEA_COMPANION_PROFILE_PATH") or os.pa
 APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
 CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(HERE, "credits_store.json")
+FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.path.join(HERE, "family_state_store.json")
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 AUDIT_EVENTS_STORE_PATH = os.environ.get("MUNEA_AUDIT_EVENTS_STORE_PATH") or os.path.join(HERE, "audit_events_store.json")
@@ -415,6 +416,26 @@ def load_wellbeing_signals(person_id=None, limit=200):
         signals = [s for s in signals if s.get("personId") == person_id]
     return signals[-limit:]
 
+
+FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine"}
+
+def family_state_response(data):
+    """家庭共享狀態（原型底座）：單一家庭 key-value；正式版由 Codex 換成雲端表、格式不變。"""
+    data = data or {}
+    action = data.get("action") or "load"
+    state = {}
+    try:
+        state = read_json_file(FAMILY_STATE_STORE_PATH) or {}
+    except Exception:
+        state = {}
+    if action == "save":
+        key = data.get("key")
+        if key not in FAMILY_STATE_KEYS:
+            return {"ok": False, "error": "key_not_allowed"}
+        state[key] = {"value": data.get("value"), "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
+        write_json_file(FAMILY_STATE_STORE_PATH, state)
+        return {"ok": True, "key": key}
+    return {"ok": True, "state": {k: v.get("value") for k, v in state.items() if isinstance(v, dict)}}
 
 def wellbeing_trend_response(data):
     """心情趨勢（餵 App 心情天氣卡）：近 N 天每日聚合＋個人基準線＋溫柔提示判斷。
@@ -2662,6 +2683,8 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(refresh_living_profile(data.get("personId") or data.get("person_id")))
+            elif self.path == "/family/state":
+                self._json(family_state_response(data))
             elif self.path == "/wellbeing/trend":
                 self._json(wellbeing_trend_response(data))
             elif self.path == "/proactive/opening":

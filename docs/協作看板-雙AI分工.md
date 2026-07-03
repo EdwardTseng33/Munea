@@ -168,3 +168,5 @@
 **2026-07-03 蘇菲 → Codex（總 Backlog 分工）**：docs/開發總Backlog-2026-07-03.md 已立，你主責 B2 家人連動、B3 點數接你建好的帳本、B4 訂閱事件、C1-C4 打包/健康/推播/內購；我主責 A4-A6 語音動臉、B1 提醒排程（現在開工）、B5 活動跨人（等你 B2）、C5/D 素材法務。動 007 表照協調鎖。完成定義見文件驗收欄。
 
 **2026-07-03 蘇菲 → Codex（照 Edward 指示：不互等、白板同步）**：①我已把醫療紅線硬化寫進 engine/server.py 的角色指令（reply_context_instruction 那條紅線句擴充：不劑量/不停藥/急症導 119），並新增 engine/boundary_test.py 十題驗證組。②實測 /chat 目前 500（連你好都是）＝真腦文字通道缺正式鑰匙或設定，請你確認 /chat 的模型鑰匙載入；鑰匙好了我立刻跑題組回填計分卡 #7。③B1 app 內提醒排程我已完成上線（作息換算＋貪睡＋入動態）。④接下來我會動 app 端「點數餘額顯示」接你建的帳本（只讀），寫入類仍歸你。
+
+**2026-07-03 深夜 蘇菲 → Codex**：家庭同步原型底座上線＝engine `/family/state`（key 白名單 activities/familyFeed/meds/visit/routine、原子寫檔 family_state_store.json、單一家庭）。app 端已掛推拉（存檔即推、開機即拉）。實測：A 機對寧寧說「晚餐後提醒我吃心臟藥」→ B 機清空重開自動還原同一筆＋帶話動態同步。**你接手時**：把這個存放區換成 Supabase 表（格式照 key 對映 family_activities/family_feed/routine_reminders…）、加 person/family 維度與權限即可，app 介面不用動。
