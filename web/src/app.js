@@ -1983,6 +1983,72 @@ function init() {
     if (row) toast(row.classList.contains('dim') ? '正式版點開就是當月整理，示範先看 6 月這行' : '6 月整理好了，完整月報之後接引擎');
   });
 
+  // B1 提醒排程：app 開著就到點響（打包後升級推播）
+  const SLOT_MIN = { '早餐後': ['b', 30], '午餐後': ['l', 30], '晚餐後': ['d', 30], '睡前': ['s', -30] };
+  function slotDueMinutes(slot) {
+    const m = SLOT_MIN[slot];
+    if (!m) return null;
+    const rt = loadRoutine();
+    const [h2, mi] = (rt[m[0]] || '08:00').split(':').map(Number);
+    return h2 * 60 + mi + m[1];
+  }
+  function todayKey() { const n = new Date(); return 'munea.medDone.' + isoOf(n); }
+  let medSnoozeUntil = 0, medShowing = null;
+  function fireMedReminder(med) {
+    medShowing = med;
+    if ($('#medDueName')) $('#medDueName').textContent = med.name;
+    if ($('#medDueSay')) $('#medDueSay').textContent = cname() + '：' + med.time + '的藥，時間到囉';
+    showView('med');
+  }
+  function checkDueMeds() {
+    if (Date.now() < medSnoozeUntil || medShowing) return;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    let done = {};
+    try { done = JSON.parse(localStorage.getItem(todayKey())) || {}; } catch (e) {}
+    for (const med of loadMeds()) {
+      for (const slot of String(med.time).split('、')) {
+        const due = slotDueMinutes(slot.trim());
+        if (due === null) continue;
+        const key = slot.trim() + '|' + med.name;
+        if (!done[key] && nowMin >= due && nowMin <= due + 20) { fireMedReminder({ ...med, time: slot.trim(), key }); return; }
+      }
+    }
+  }
+  window.__fireMedNow = () => { const m = loadMeds()[0]; if (m) fireMedReminder({ ...m, time: String(m.time).split('、')[0], key: 'test|' + m.name }); };
+  if ($('#medTaken')) $('#medTaken').addEventListener('click', () => {
+    if (medShowing) {
+      let done = {};
+      try { done = JSON.parse(localStorage.getItem(todayKey())) || {}; } catch (e) {}
+      done[medShowing.key] = true;
+      try { localStorage.setItem(todayKey(), JSON.stringify(done)); } catch (e) {}
+      pushFamilyFeed('<b>阿嬤</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
+    }
+    medShowing = null;
+    showView('home');
+    toast('記下了，藥吃了。');
+    const pt = document.querySelector('.task-item[data-task="pill"]');
+    if (pt && !pt.classList.contains('done')) { pt.classList.add('done'); refreshTaskProgress(); }
+  });
+  if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => {
+    medSnoozeUntil = Date.now() + 10 * 60 * 1000;
+    medShowing = null;
+    showView('home');
+    toast('好，10 分鐘後再提醒你。');
+  });
+  setInterval(checkDueMeds, 30000);
+  setTimeout(checkDueMeds, 1500);
+  // 回診前一天：開 app 提醒一次
+  (function visitEve() {
+    const v = loadVisit && loadVisit();
+    if (!v || !v.dateISO) return;
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    if (v.dateISO === isoOf(t) && !sessionStorage.getItem('visitEveShown')) {
+      sessionStorage.setItem('visitEveShown', '1');
+      setTimeout(() => toast('明天' + v.label.slice(-2) + '回診，回診摘要我準備好了'), 1200);
+    }
+  })();
+
   // 機智問答（示範題庫；正式版由寧寧出題、語音作答）
   const QUIZ_BANK = [
     { q: '一般建議大人每天走多少步，比較有活力？', opts: ['500 步', '2,000 步', '7,000 步左右', '50,000 步'], a: 2 },
