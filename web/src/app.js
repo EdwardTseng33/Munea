@@ -1028,11 +1028,33 @@ function renderPillTask() {
   }
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
-function renderMedList() {
-  const box = $('#medList');
+function renderMedList() { renderMedSlots(); }
+const MED_SLOT_DEF = [
+  ['早餐後', 'b', 30], ['午餐後', 'l', 30], ['晚餐後', 'd', 30], ['睡前', 's', -30]
+];
+function medSlotTime(rtKey, offset) {
+  let rt = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
+  try { rt = Object.assign(rt, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) {}
+  let parts = (rt[rtKey] || '08:00').split(':').map(Number);
+  const total = (parts[0] * 60 + parts[1] + offset + 1440) % 1440;
+  return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+}
+function renderMedSlots() {
+  const box = $('#medSlots');
   if (!box) return;
-  box.innerHTML = loadMeds().map(m =>
-    '<div class="med-row"><div><b>' + m.name + '</b><span>' + m.time + ' · ' + m.days + '</span></div></div>').join('');
+  const meds = loadMeds();
+  box.innerHTML = MED_SLOT_DEF.map(def => {
+    const slot = def[0], k = def[1], off = def[2];
+    const inSlot = meds.filter(m => String(m.time).split('、').map(x => x.trim()).includes(slot));
+    const rows = inSlot.length
+      ? inSlot.map(m => '<div class="ms-med"><b>' + m.name + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')
+      : '<div class="ms-empty">這個時段沒有藥</div>';
+    return '<div class="ms-group"><div class="ms-head"><b>' + slot + '</b>' +
+      '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
+      '<b class="ms-time">' + medSlotTime(k, off) + '</b>' +
+      '<button type="button" class="ms-tbtn" data-k="' + k + '" data-m="15">＋</button></span>' +
+      '<span class="ms-count">' + (inSlot.length ? inSlot.length + ' 種' : '') + '</span></div>' + rows + '</div>';
+  }).join('');
 }
 
 const POINTS = { total: 400, used: 160,
@@ -1427,26 +1449,28 @@ function init() {
     let total = (h * 60 + m + mins + 1440) % 1440;
     return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
   }
-  function renderRoutine() {
-    const box = $('#rtList');
-    if (!box) return;
-    const rt = loadRoutine();
-    box.innerHTML = ['b', 'l', 'd', 's'].map(k =>
-      '<div class="rt-row"><span class="rt-name">' + RT_LABEL[k] + '</span>' +
-      '<button class="rt-btn" data-k="' + k + '" data-m="-30">−</button>' +
-      '<b class="rt-time">' + rt[k] + '</b>' +
-      '<button class="rt-btn" data-k="' + k + '" data-m="30">＋</button></div>').join('');
+  const PF_DEF = { name: '陳秀英', nick: '阿嬤', birth: '1954 年 3 月', city: '台北市' };
+  function loadPersonProfile() { try { return Object.assign({}, PF_DEF, JSON.parse(localStorage.getItem('munea.personProfile') || '{}')); } catch (e) { return Object.assign({}, PF_DEF); } }
+  function fillPersonProfile() {
+    const p = loadPersonProfile();
+    if ($('#pfName')) $('#pfName').value = p.name;
+    if ($('#pfNick')) $('#pfNick').value = p.nick;
+    if ($('#pfBirth')) $('#pfBirth').value = p.birth;
+    if ($('#pfCity')) $('#pfCity').value = p.city;
   }
-  if ($('#rtList')) $('#rtList').addEventListener('click', e => {
-    const b = e.target.closest('.rt-btn');
-    if (!b) return;
-    const rt = loadRoutine();
-    rt[b.dataset.k] = shiftTime(rt[b.dataset.k], +b.dataset.m);
-    saveRoutine(rt);
-    renderRoutine();
+  if ($('#pfSaveBtn')) $('#pfSaveBtn').addEventListener('click', () => {
+    const p = {
+      name: ($('#pfName').value || '').trim() || PF_DEF.name,
+      nick: ($('#pfNick').value || '').trim() || PF_DEF.nick,
+      birth: ($('#pfBirth').value || '').trim() || PF_DEF.birth,
+      city: ($('#pfCity').value || '').trim() || PF_DEF.city,
+    };
+    try { localStorage.setItem('munea.personProfile', JSON.stringify(p)); } catch (e) {}
+    $('#profileModal').classList.remove('show');
+    toast('存好了，' + p.name + '，資料我記著。');
   });
-  if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { renderRoutine(); $('#profileModal').classList.add('show'); });
-  if ($('#profileClose')) $('#profileClose').addEventListener('click', () => { $('#profileModal').classList.remove('show'); toast('作息記好了，提醒會照這份時間走'); });
+  if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
+  if ($('#profileClose')) $('#profileClose').addEventListener('click', () => $('#profileModal').classList.remove('show'));
   if ($('#profileModal')) $('#profileModal').addEventListener('click', e => { if (e.target === $('#profileModal')) $('#profileModal').classList.remove('show'); });
   // 家庭照護圈
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => $('#famCircleModal').classList.add('show'));
@@ -1621,6 +1645,29 @@ function init() {
   };
   chipToggle('#medTimeChips', false);
   chipToggle('#medDayChips', true);
+  if ($('#medSlots')) $('#medSlots').addEventListener('click', e => {
+    const tb = e.target.closest('.ms-tbtn');
+    if (tb) {
+      const rt = loadRoutine();
+      rt[tb.dataset.k] = shiftTime(rt[tb.dataset.k], +tb.dataset.m);
+      saveRoutine(rt);
+      renderMedSlots();
+      return;
+    }
+    const del = e.target.closest('.ms-del');
+    if (del) {
+      let meds = loadMeds();
+      meds = meds.map(m => {
+        if (m.name !== del.dataset.name) return m;
+        const rest = String(m.time).split('、').map(x => x.trim()).filter(x => x && x !== del.dataset.slot);
+        return rest.length ? Object.assign({}, m, { time: rest.join('、') }) : null;
+      }).filter(Boolean);
+      try { localStorage.setItem('munea.meds', JSON.stringify(meds)); syncPush('meds', meds); } catch (e2) {}
+      updateMedCount();
+      renderMedSlots();
+      toast('拿掉了，這個時段不再提醒這種藥。');
+    }
+  });
   if ($('#medAddBtn')) $('#medAddBtn').addEventListener('click', () => {
     const name = $('#medName').value.trim();
     const times = [...document.querySelectorAll('#medTimeChips .mchip.on')].map(b => b.dataset.t);

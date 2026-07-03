@@ -573,13 +573,12 @@
       <button class="auth-close" id="profileClose" type="button" aria-label="關閉個人資料" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>個人資料</h2>
       <div class="rpt-card" style="margin-top:10px">
-        <div class="rpt-row"><span class="rpt-k">名稱</span><div><b>陳秀英</b><span>家人看到的稱呼：阿嬤</span></div></div>
-        <div class="rpt-row"><span class="rpt-k">生日</span><div><b>1954 年 3 月</b></div></div>
-        <div class="rpt-row"><span class="rpt-k">所在地</span><div><b>台北市</b><span>天氣與在地建議會用到</span></div></div>
+        <div class="rpt-row"><span class="rpt-k">名稱</span><div><input class="chal-input pf-input" id="pfName" maxlength="12" /></div></div>
+        <div class="rpt-row"><span class="rpt-k">家人稱呼</span><div><input class="chal-input pf-input" id="pfNick" maxlength="8" placeholder="例：阿嬤" /></div></div>
+        <div class="rpt-row"><span class="rpt-k">生日</span><div><input class="chal-input pf-input" id="pfBirth" maxlength="12" placeholder="例：1954 年 3 月" /></div></div>
+        <div class="rpt-row"><span class="rpt-k">所在地</span><div><input class="chal-input pf-input" id="pfCity" maxlength="10" placeholder="例：台北市" /><span>天氣與在地建議會用到</span></div></div>
       </div>
-      <div class="field-label">我的作息（提醒時間照這份走）</div>
-      <div class="rt-list" id="rtList"></div>
-      <p class="modal-sub" style="margin-top:10px">用藥、散步這些提醒，寧寧都會照你的作息挑對的時間。</p>
+      <button class="modal-btn" id="pfSaveBtn" style="margin-top:14px">存好</button>
     </div>
   </div>
 
@@ -762,11 +761,10 @@
       <div class="modal-grab"></div>
       <h2>用藥提醒</h2>
       <p class="modal-sub">設定好，<span class="cname">寧寧</span>到時間會親口提醒你，也會記下有沒有吃。<br><span class="cname">寧寧</span>只當鬧鐘，不是藥師，藥怎麼吃，聽醫生的。</p>
-      <div id="medList"></div>
+      <div id="medSlots"></div>
       <div class="field-label sect-new">新增一種藥</div>
       <input class="chal-input" id="medName" placeholder="藥名照藥袋抄（例：脈優）" />
       <div class="field-label">什麼時候吃（可多選）</div>
-          <div class="med-sched-note">提醒時間跟著你的作息走：寧寧知道你平常幾點吃飯、幾點睡，會在對的時間提醒。</div>
       <div class="med-chips" id="medTimeChips">
         <button class="mchip" data-t="早餐後">早餐後</button>
         <button class="mchip" data-t="午餐後">午餐後</button>

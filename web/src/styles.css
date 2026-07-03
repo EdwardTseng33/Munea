@@ -1272,3 +1272,20 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .hud-pill.pts.low { background: rgba(194,87,22,.55); }
 
 .consent-body { font-size: 15px; line-height: 1.7; color: var(--ink-2); background: var(--mint); border-radius: 14px; padding: 14px 16px; margin: 10px 0 14px; }
+
+/* 個人資料輸入 */
+.pf-input { width: 100%; max-width: 260px; }
+.rpt-row div span { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
+/* 用藥時段清單 */
+.ms-group { background: #FFF; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.ms-head { display: flex; align-items: center; gap: 10px; }
+.ms-head > b { font-size: 17px; }
+.ms-time-wrap { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.ms-time { font-size: 17px; font-variant-numeric: tabular-nums; }
+.ms-tbtn { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--line); background: #FFF; color: var(--teal-d); font-size: 17px; }
+.ms-count { font-size: 13px; color: var(--muted); min-width: 34px; text-align: right; }
+.ms-med { display: flex; align-items: center; gap: 8px; padding: 8px 0 0; }
+.ms-med b { font-size: 15px; }
+.ms-med span { font-size: 13px; color: var(--muted); }
+.ms-med .ms-del { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--mint); color: var(--ink-2); }
+.ms-empty { font-size: 13px; color: var(--muted); padding: 8px 0 0; }
