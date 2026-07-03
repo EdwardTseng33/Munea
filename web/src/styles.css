@@ -1417,9 +1417,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .st-trend.warn { background: var(--coral-soft); color: var(--coral-d); }
 .st-trend.ok { background: var(--mint); color: var(--teal-dd); }
 .act-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 10px; }
-.med-entry.duo { flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 14px; }
-.med-entry.duo span { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); }
-.med-entry.duo span b { font-size: 15px; color: var(--ink); }
+
 /* 長條圖（純樣式、無外掛） */
 .chart-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px 16px 12px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
 .cc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
@@ -1563,7 +1561,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .wc-quote { font-size: 12.5px; line-height: 1.55; display: block; overflow: hidden; max-height: 39px; /* 兩行完整、來源限 40 字 */ }
 .wc-top { font-size: 12.5px; }
 .stat-grid { gap: 10px; }
-.med-entry.duo { padding: 10px 12px; gap: 4px; }
+
 
 /* ===== 方案卡重構（名稱+標籤+價格一行、說明自成一行、標籤改輕盈描邊） ===== */
 .tier { display: block; width: 100%; text-align: left; }
@@ -1577,3 +1575,12 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .tier-tag.next { background: #FFF; color: var(--coral-d); border: 1.5px solid var(--coral); padding: 1px 8px; font-size: 11.5px; margin-left: 0; }
 .tier.trial b { font-size: 15px; }
 .tier.trial b::after { content: "（體驗用）"; font-size: 11.5px; margin-left: 2px; }
+
+/* 行動入口列：色章＋標題＋狀態小字＋箭頭（一行、跟數據磚同語言但軟色章=可點入口） */
+.med-entry.duo { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 9px 12px; min-height: 52px; text-align: left; }
+.med-entry.duo .dz-ico { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 11px; background: var(--mint); color: var(--teal-d); display: grid; place-items: center; }
+.med-entry.duo .dz-ico .ic { width: 17px; height: 17px; }
+.med-entry.duo .dz-title { font-size: 14.5px; color: var(--ink); white-space: nowrap; }
+.med-entry.duo .dz-val { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.med-entry.duo .dz-chev { width: 15px; height: 15px; color: var(--muted); flex: 0 0 auto; margin-left: 2px; }
+.med-entry.duo .dz-title + .dz-chev { margin-left: auto; }
