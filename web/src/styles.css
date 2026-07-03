@@ -188,7 +188,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .stat-tile .st-val small { font-size: 15px; color: var(--muted); font-weight: 500; }
 .stat-tile .st-label { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
-.wallet-card { position: relative; overflow: hidden; background: var(--deep); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow); color: #fff; margin-bottom: 16px; }
+.wallet-card { position: relative; overflow: hidden; background: var(--deep); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow); color: #fff; margin-bottom: 12px; }
 .wallet-card .wc-top { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 600; opacity: .92; margin-bottom: 10px; }
 .wallet-card .wc-big { font-family: var(--display); font-size: 28px; font-weight: 800; position: relative; }
 .wallet-card .wc-big small { font-size: 15px; font-weight: 500; opacity: .85; }
@@ -1499,7 +1499,17 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* ===== 狀態·今天 活力版（每磚一色、磚內小巧思） ===== */
 .wc-track { height: 7px; border-radius: 999px; background: rgba(255,255,255,.16); margin: 10px 0 10px; overflow: hidden; }
 .wc-track i { display: block; height: 100%; border-radius: 999px; background: var(--teal); transition: width .6s cubic-bezier(.4,0,.2,1); }
-.stat-tile { padding: 13px 14px 12px; text-align: left; background: var(--surface); border: 1px solid var(--line); }
+.stat-tile { padding: 10px 12px; text-align: left; background: var(--surface); border: 1px solid var(--line);
+  display: grid; grid-template-columns: 34px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; align-items: center; position: relative; }
+.stat-tile .st-ico { grid-row: 1 / 3; width: 34px; height: 34px; border-radius: 11px; }
+.stat-tile .st-ico .ic { width: 17px; height: 17px; }
+.stat-tile .st-val { grid-column: 2; font-size: 20px; line-height: 1.15; }
+.stat-tile .st-label { grid-column: 2; font-size: 12px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-tile .st-trend { font-size: 10.5px; padding: 1px 6px; }
+.stat-tile .pill-dots { position: absolute; right: 12px; top: 12px; margin: 0; }
+.stat-tile .pill-dots i { width: 11px; height: 6px; }
+.stat-tile .act-spark { right: 12px; top: 12px; }
+.stat-tile .act-spark i { width: 5px; }
 .stat-tile .st-ico { border-radius: 14px; }
 .stat-tile.t-bp .st-ico { background: var(--teal); color: #FFF; }
 .stat-tile.t-bp .st-val { color: var(--teal-dd); }
@@ -1543,3 +1553,14 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .hscroll-wrap:has(#famSwitch) .hs-hint { display: none; }
 /* 發起活動：送出鍵釘在視窗底、永遠看得到 */
 #startChalBtn { position: sticky; bottom: -22px; z-index: 2; box-shadow: 0 -10px 14px -10px rgba(31,60,52,.25), var(--shadow-sm); }
+
+/* 板面減半（Edward 7/4）：存摺卡文字與間距收斂、她的話單行 */
+.wc-big { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0 0; }
+.wc-big span { font-size: 26px; }
+.wc-track { margin: 8px 0; height: 6px; }
+.wc-say { margin-top: 8px; padding-top: 8px; }
+.wc-face { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 10px; }
+.wc-quote { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-top { font-size: 12.5px; }
+.stat-grid { gap: 10px; }
+.med-entry.duo { padding: 10px 12px; gap: 4px; }
