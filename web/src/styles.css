@@ -82,9 +82,9 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .butler-card::before { content: none; }
 .butler-card::after { content: none; }
 .bc-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 84px; align-items: start; gap: 12px; margin-bottom: 12px; }
-/* 女巫必修 2：拱門移到外層、照片蓋在拱門上、露出頂弧（官網「照片在拱門裡」的關係） */
-.bc-row::after { content: ""; position: absolute; right: -4px; top: -12px; width: 92px; height: 100px; background: var(--mint-2); border-radius: 999px 999px 22px 22px; z-index: 0; }
-.bc-avatar { grid-column: 2; grid-row: 1; width: 78px; height: 92px; margin: 0 auto; border-radius: 18px; position: relative; z-index: 1; flex-shrink: 0; background: var(--mint-2); overflow: hidden; box-shadow: 0 6px 14px -8px rgba(46,138,131,.24); }
+/* 拱形疊影：跟照片同一個形狀、往左上錯開——同形不衝突（官網拱門語彙） */
+.bc-row::after { content: ""; position: absolute; right: 10px; top: -7px; width: 78px; height: 92px; background: var(--mint-2); border-radius: 999px 999px 16px 16px; z-index: 0; }
+.bc-avatar { grid-column: 2; grid-row: 1; width: 78px; height: 92px; margin: 0 auto; border-radius: 999px 999px 16px 16px; position: relative; z-index: 1; flex-shrink: 0; background: var(--mint-2); overflow: hidden; box-shadow: 0 6px 14px -8px rgba(46,138,131,.24); }
 .bc-avatar .ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center 24%; transform: scale(1.03); transform-origin: center top; }
 .bc-avatar .av-stripes { position: absolute; inset: 0; background: none; }
 .bc-avatar .online { position: absolute; right: 4px; bottom: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); border: 3px solid #fff; }
