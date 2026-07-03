@@ -1842,7 +1842,6 @@ function init() {
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => $('#planModal').classList.add('show'));
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
-  if ($('#planModal')) $('#planModal').addEventListener('click', e => { if (e.target === $('#planModal')) $('#planModal').classList.remove('show'); });
   const famSwitch = $('#famSwitch');
   if (famSwitch) famSwitch.addEventListener('click', e => {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;

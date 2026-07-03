@@ -655,22 +655,19 @@
     </div>
   </div>
 
-  <div class="modal-mask" id="planModal">
-    <div class="modal">
-      <div class="modal-grab"></div>
-      <button class="auth-close" id="planClose" type="button" aria-label="關閉方案" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>管理方案</h2>
+  <div class="reader-page" id="planModal">
+    <div class="nav-head"><button class="nav-back" id="planClose" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">管理方案</span><span></span></div>
+    <div class="reader-scroll plan-scroll">
       <div class="plan-current">
         <div class="pc-row"><b>高級方案</b><span class="pc-price">NT$999<small>/月</small></span></div>
-        <div class="pc-meta">我的訂閱 · 下次扣款 7/26 · 你和阿公兩位使用中</div>
+        <div class="pc-meta">下次扣款 7/26 · 你和阿公兩位使用中</div>
+        <ul class="plan-feats">
+          <li>基本陪伴聊天不限量、不會中斷</li>
+          <li>每月送 400 點（生動模式 6 點/分）</li>
+          <li>兩位長輩共用額度池</li>
+          <li>健康週報與回診摘要</li>
+        </ul>
       </div>
-      <div class="field-label">方案包含</div>
-      <ul class="plan-feats">
-        <li>基本陪伴聊天不限量、不會中斷</li>
-        <li>每月送 400 點（通話 1 點/分、生動模式 6 點/分）</li>
-        <li>兩位長輩共用額度池</li>
-        <li>健康週報與回診摘要</li>
-      </ul>
       <div class="field-label">換一個方案（隨時可升可降）</div>
       <div class="tier-list">
         <button class="tier trial" data-t="免費試用" type="button"><b>免費試用</b><span>先聊 5 分鐘感受一下</span><i>NT$0</i></button>
@@ -678,11 +675,12 @@
         <button class="tier on" data-t="高級"><b>高級</b><span>兩位長輩共用 · 月送 400 點<em class="tier-tag now">使用中</em></span><i>NT$999/月</i></button>
         <button class="tier" data-t="尊榮"><b>尊榮</b><span>重度陪伴與生動模式 · 月送 1,000 點</span><i>NT$1,999/月</i></button>
       </div>
-      <div class="plan-confirm" id="planConfirm" style="display:none">
-        <p id="planConfirmText"></p>
-        <div class="pc-actions"><button class="modal-btn" id="planYes" type="button">確認變更</button><button class="btn-quiet" id="planNo" type="button">先不要</button></div>
-      </div>
       <button class="plan-cancel" id="planCancelBtn" type="button">取消訂閱</button>
+      <div style="height:84px"></div>
+    </div>
+    <div class="plan-confirm-bar" id="planConfirm" style="display:none">
+      <p id="planConfirmText"></p>
+      <div class="pc-actions"><button class="modal-btn" id="planYes" type="button">確認變更</button><button class="btn-quiet" id="planNo" type="button">先不要</button></div>
     </div>
   </div>
 
