@@ -1817,7 +1817,8 @@ function init() {
         const em = document.createElement('em');
         em.className = 'tier-tag next';
         em.textContent = '7/26 起';
-        t.querySelector('span').appendChild(em);
+        const top = t.querySelector('.tier-top');
+        top.insertBefore(em, top.querySelector('i'));
       }
     }
   }
