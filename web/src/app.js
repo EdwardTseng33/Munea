@@ -2057,7 +2057,7 @@ function init() {
   const SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
   let chatRec = null, chatOn = false;
   const CHAT_RULES = [
-    [/(藥.*(怎麼吃|幾顆|停|加量|減量))|劑量|(可以吃.*藥)/, '藥怎麼吃、吃幾顆，我不能幫你決定，這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？'],
+    [/(藥.*(怎麼吃|幾顆|[0-9一二兩三四五]顆|停|加量|減量|可以吃|能不能吃))|劑量|(可以吃.*藥)/, '藥怎麼吃、吃幾顆，我不能幫你決定，這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？'],
     [/痛|痠|不舒服|頭暈/, '聽到你不太舒服，我有點擔心。先坐下歇會兒，需要的話我幫你通知美華。'],
     [/累|睡不|失眠/, '辛苦了，累了就休息、不要硬撐，我在這裡陪你。'],
     [/孫|想.*他|想.*她|寂寞|一個人/, '想家人了是吧？要不要我提醒他們今晚打給你？'],
@@ -2066,7 +2066,43 @@ function init() {
     [/謝|你真好|感謝/, '不用謝，陪著你是我最想做的事。'],
   ];
   function chatReply(t) { for (const [re, r] of CHAT_RULES) if (re.test(t.toLowerCase())) return r; return '我聽見了，你慢慢說，我都在。'; }
+  function parseChatIntent(t) {
+    // 聊聊代辦：講一句、寧寧直接把 app 設定做好（原型版；真腦版走同一批動作）
+    const relay0 = t.match(/(提醒|告訴|跟)\s*([一-龥]{2,3})(說|，|要|來)?\s*(.{2,30})/);
+    if (relay0 && relay0[2] !== '我' && !/我/.test(relay0[2])) {
+      let who = relay0[2].replace(/[要說來]$/, '');
+      if (who.length < 2) who = relay0[2];
+      pushFamilyFeed('<b>你</b>托' + cname() + '帶話給' + who + '：' + relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, ''));
+      return '好，我會帶話給' + who + '，也會顯示在' + who + '的首頁上。';
+    }
+    const seg = (t.match(/(早餐後|午餐後|晚餐後|睡前)/) || [])[1];
+    if (/(提醒|記得|叫我).*(吃藥|用藥)|(吃藥|用藥).*(提醒|記)/.test(t)) {
+      const name = (t.match(/吃(「)?([一-龥A-Za-z0-9]{2,6})(」)?(藥)?/) || [])[2];
+      const meds = loadMeds();
+      meds.push({ name: name && name !== '血壓' ? name : '血壓藥', time: seg || '早餐後', days: '長期', by: '本人' });
+      try { localStorage.setItem('munea.meds', JSON.stringify(meds)); } catch (e) {}
+      updateMedCount();
+      return '好，我幫你設好了：' + (seg || '早餐後') + '提醒吃藥，時間照你的作息。想改隨時跟我說。';
+    }
+    const visitDay = (t.match(/(\d{1,2})[\/月](\d{1,2})/) || []);
+    if (/(回診|看診|門診).*(提醒|記)/.test(t) || (/(回診|看診)/.test(t) && visitDay[0])) {
+      if (visitDay[0]) {
+        const now = new Date();
+        const d = new Date(now.getFullYear(), +visitDay[1] - 1, +visitDay[2]);
+        const label = (d.getMonth() + 1) + '/' + d.getDate() + '（週' + '日一二三四五六'[d.getDay()] + '）' + (/(下午)/.test(t) ? '下午' : /(晚上)/.test(t) ? '晚上' : '上午');
+        const iso2 = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        try { localStorage.setItem('munea.visit', JSON.stringify({ dateISO: iso2, label })); } catch (e) {}
+        if (typeof renderVisitRow === 'function') try { renderVisitRow(); } catch (e2) {}
+        return '記好了，' + label + '回診。我前一天會提醒你，回診摘要也會先準備好。';
+      }
+      return '好，跟我說是哪一天回診（例如 7 月 10 日下午），我來設提醒。';
+    }
+    return null;
+  }
+  window.__chatTest = t => { const r = parseChatIntent(t); return r || chatReply(t); };
   async function chatHandle(t) {
+    const acted = parseChatIntent(t);
+    if (acted) { speakChat(acted); return; }
     setCallHint('我聽見了');
     chatHistory.push({ role: 'user', text: t });
     activeChatTurnCount += 1;
