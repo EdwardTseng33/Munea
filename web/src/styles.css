@@ -1512,7 +1512,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 用藥三顆小藥點 */
 .pill-dots { display: inline-flex; gap: 5px; margin: 4px 0 2px; }
 .pill-dots i { width: 14px; height: 8px; border-radius: 999px; background: #FFF; border: 1px solid var(--coral-d); opacity: .55; }
-.pill-dots i.f { background: var(--coral-d); border-color: var(--coral-d); opacity: 1; }
+.pill-dots i.f { background: var(--coral-d); border-color: var(--coral-d); opacity: 1; animation: checkPop .3s cubic-bezier(.3,1.4,.5,1) both; }
 /* 活動迷你三日條（右上角、前兩天 vs 今天） */
 .act-spark { position: absolute; right: 14px; top: 16px; display: inline-flex; align-items: flex-end; gap: 3px; }
 .act-spark i { width: 7px; border-radius: 3px; background: rgba(35,108,102,.28); }
@@ -1520,3 +1520,12 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 寧寧觀察卡：小頭像 */
 .oc-face { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 14px; overflow: hidden; }
 .oc-face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+
+/* 獎勵行：獎牌一欄、文字一欄（兩行左緣自然對齊） */
+.qc-prize { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
+.qc-prize .qp-ico { flex: 0 0 auto; line-height: 1.4; }
+.qc-prize .qp-txt { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.qc-prize .qp-txt small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+/* 選角卡：頭像裁切統一（同大小、同貼齊、頭部置頂） */
+.avo .avi { width: 62px; height: 62px; border-radius: 16px; overflow: hidden; flex: 0 0 62px; }
+.avo .avi img { width: 100%; height: 100%; object-fit: cover; object-position: center 12%; }

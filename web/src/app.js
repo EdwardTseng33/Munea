@@ -318,7 +318,6 @@ function syncCompanionUI() {
   const fullSrc = t.fullAsset || homeSrc;
   const homeName = $('#companionHomeName'); if (homeName) homeName.textContent = display;
   const chatName = $('#chatName'); if (chatName) chatName.textContent = display;
-  const summary = $('#companionSummary'); if (summary) summary.textContent = `AI 健康照護 · 陪伴角色：${display}`;
   const settingName = $('#settingsCompanionName'); if (settingName) settingName.textContent = display;
   const settingLabel = $('#settingsTemplateLabel'); if (settingLabel) settingLabel.textContent = t.templateLabel;
   const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = thumbSrc;
@@ -343,7 +342,10 @@ function setCompanionTemplate(avatarId) {
   const t = templateFor(templateId);
   currentAvatarId = templateId;
   currentChar = t.backendChar;
-  if (!companionNameTouched) companionDisplayName = t.defaultName;
+  // 名字規則：只有「用戶自己取過的名字」才保留；名字若等於任一角色的預設名＝沒真的取過 → 跟著新角色走
+  const defaults = Object.values(CompanionProfile.templates || {}).map(x => x.defaultName);
+  const isCustom = companionNameTouched && defaults.indexOf((companionDisplayName || '').trim()) === -1;
+  if (!isCustom) { companionDisplayName = t.defaultName; companionNameTouched = false; }
   persistCompanionProfile();
   chatHistory = [];
   chatOpened = false;
@@ -1995,8 +1997,7 @@ function init() {
       note = cname() + '會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
     }
     const rwLine = act.rewards && act.rewards.some(Boolean)
-      ? '<div class="qc-note">🏅 獎勵：' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '</div>' +
-        '<div class="qc-provider">獎品提供：' + (act.owner || '你') + '</div>'
+      ? '<div class="qc-prize"><span class="qp-ico">🏅</span><div class="qp-txt">' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '<small>獎品提供：' + (act.owner || '你') + '</small></div></div>'
       : '';
     if (act._rankHtml) {
       card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg>機智問答 · 排名出來了<span class="qc-days">' + (act.q || 5) + ' 題</span></div>' + act._rankHtml + rwLine;
