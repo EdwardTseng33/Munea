@@ -1064,6 +1064,11 @@ const CHEERS = {
 function refreshTaskProgress() {
   const items = $$('#taskCard .task-item');
   const done = items.filter(i => i.classList.contains('done')).length;
+  if (done === items.length && items.length && !window.__celebrated) {
+    window.__celebrated = true;
+    setTimeout(() => toast('今天三件都完成了，我跟家人說一聲'), 250);
+    if (typeof pushFamilyFeed === 'function') pushFamilyFeed('<b>阿嬤</b>今天把三件事都完成了，給她一個讚');
+  }
   const pillTask = document.querySelector('.task-item[data-task="pill"]');
   const pv = $('#statPillVal');
   if (pv && pillTask) pv.innerHTML = (pillTask.classList.contains('done') ? '3' : '2') + '<small>/3</small>';
@@ -1354,6 +1359,20 @@ function init() {
 
   const FAM_ORDER = ['阿嬤', '美華', '志明', '小寶'];
   let currentPerson = '阿嬤';
+  const FAM_ACT = { '阿嬤': 48, '美華': 74, '志明': 62, '小寶': 93 };
+  (function famRings() {
+    document.querySelectorAll('.fam-switch-item').forEach(it => {
+      const name = it.dataset.person;
+      const av = it.querySelector('.init-ava');
+      if (!name || !av || !(name in FAM_ACT) || av.closest('.fam-ring')) return;
+      const ring = document.createElement('span');
+      ring.className = 'fam-ring';
+      ring.style.setProperty('--p', FAM_ACT[name]);
+      av.parentNode.insertBefore(ring, av);
+      ring.appendChild(av);
+      it.title = name + ' 今天活動量約 ' + FAM_ACT[name] + '%';
+    });
+  })();
   function famItemOf(name) {
     return [...document.querySelectorAll('.fam-switch-item')].find(x => x.dataset.person === name);
   }
