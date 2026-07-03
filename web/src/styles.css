@@ -17,7 +17,7 @@
   --coral: #D98841; --coral-d: #A8611E; --coral-soft: #F8E9D8;   /* 暮色橘 */
   --gold: #E0B354; --gold-soft: #F6EAD0;
   --line: #EAE3D6;          /* 官網線色 */
-  --deep: #2F3B38; --deep-2: #38453F; --deep-card: #41504A;      /* 石墨綠模板色（官網深色塊） */
+  --deep: #36423E; --deep-2: #3F4C47; --deep-card: #485751;      /* 石墨綠模板色（官網深色塊 · 7/4 提亮一階） */
   --danger: #E55B4D;
   --radius: 18px; --radius-lg: 22px; --radius-sm: 14px; --radius-md: 20px; --radius-xl: 24px;
   --shadow: 0 6px 16px -8px rgba(31,60,52,.12);
@@ -41,7 +41,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 /* iOS 狀態列 */
 .status-bar { height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-family: var(--display); font-weight: 600; font-size: 15px; position: relative; z-index: 5; }
-.status-bar .notch { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: 120px; height: 26px; background: #000; border-radius: 0 0 18px 18px; }
 .status-bar .sb-icons { display: flex; gap: 6px; align-items: center; }
 .status-bar .sb-icons .ic { width: 17px; height: 17px; stroke-width: 2; }
 .status-bar.on-dark { color: #fff; }
@@ -1364,8 +1363,6 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 }
 
 /* ===== 北歐修正（女巫清單 · 2026-07-03） ===== */
-/* G4 假瀏海退場 */
-.status-bar .notch { display: none !important; }
 /* G5 開發者面板：一般畫面不出現（帶 ?debug=avatar 才看得到） */
 body:not(.debug) .ai-dev-panel { display: none !important; }
 /* B 卡片邊界改「細線＋極淡影」雙手法 */
