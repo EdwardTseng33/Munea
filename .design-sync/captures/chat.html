@@ -1,0 +1,34 @@
+<section class="screen face-screen active" id="chat" data-state="idle" data-avatar-mode="static-css" data-avatar-viseme="rest">
+    <!-- 全屏臉（佔畫面主體、置中偏上、像跟家人視訊）。會動時對嘴；現為靜態圖＋CSS 呼吸眨眼佔位（§6.5 降級層 1-2） -->
+    <div class="face-bg">
+      <img id="faceImg" src="avatars/nening-real-female-full.png" alt="寧寧">
+      <div class="face-blink"></div>
+      <div class="avatar-mouth" id="avatarMouth" aria-hidden="true"><span></span></div>
+    </div>
+
+
+    <!-- 左上 角色名牌（像視訊左上的人名） -->
+    <div class="face-name"><span class="dot"></span><span id="chatName">寧寧</span></div>
+    <div class="face-hud">
+      <span class="hud-pill" id="callTimer">00:00</span>
+      <span class="hud-pill pts">剩 239 點</span>
+    </div>
+    <div class="avatar-diagnostics" id="avatarDiagnostics" hidden=""></div>
+
+    <!-- 狀態指示：聆聽收音光點 / 思考三點 / 說話波形（依 data-state 顯示其一） -->
+    <div class="face-cue">
+      <div class="cue cue-listen"><span></span><span></span><span></span></div>
+      <div class="cue cue-think"><i></i><i></i><i></i></div>
+      <div class="cue cue-speak"><b></b><b></b><b></b><b></b><b></b></div>
+    </div>
+
+    <!-- S2S 狀態提示：不顯示逐字稿，保持像視訊聊天 -->
+    <div class="face-caption" id="chatCaption">直接說，我在這裡</div>
+
+    <!-- 底部單列：字幕開關｜麥克風開關｜通話（同一顆：綠=開始、紅=結束） -->
+    <div class="face-bar">
+      <button class="ctl-btn" id="captionToggle" aria-label="字幕開關"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M10 11h-3v3h3M17 11h-3v3h3"></path></svg><span>字幕</span></button>
+      <button class="ctl-btn" id="chatMic" aria-label="麥克風開關"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"></path></svg><span>麥克風</span></button>
+      <button class="call-btn start" id="callToggle" aria-label="開始或結束通話"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"></path></svg><span id="callToggleLabel">開始通話</span></button>
+    </div>
+  </section>
