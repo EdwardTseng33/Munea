@@ -3,6 +3,15 @@
 - 聊聊計分卡：4🟢2🟡4🔴（#6 今晚轉綠）；紅=真鑰匙/延遲/打斷/動臉（多數待 Mac+真機階段）。
 - 下一步（本機）：角色照重畫（生圖之手）＋女巫把關；Codex：/chat 鑰匙載入確認、正式帳本；Mac 開工首日清單見 docs/兩機協作。
 
+## 2026-07-03 Update - Codex AI key doctor
+
+**Status:** completed for the `/chat` key-loading verification lane.
+
+- Added `scripts/ai-key-doctor.ps1`, `npm run ai:doctor`, and `npm run ai:doctor:live` so Munea can verify backend AI key visibility without exposing secret values.
+- The doctor distinguishes process environment variables, `engine/.env.local`, and keys blocked by `MUNEA_SKIP_ENV_LOCAL`, matching the real engine loader behavior.
+- Updated staging and infrastructure docs so `/chat` / real Gemini validation has a clear preflight before Claude runs boundary or dialogue acceptance tests.
+- Avoided `engine/server.py`, `engine/chat_engine.py`, `engine/memory_engine.py`, `engine/perception_engine.py`, `web/`, and `supabase/sql/` to stay out of Claude / Edward active lanes.
+
 ## 2026-07-03 Update - Avatar asset rename guard
 
 **Status:** completed for asset stability.

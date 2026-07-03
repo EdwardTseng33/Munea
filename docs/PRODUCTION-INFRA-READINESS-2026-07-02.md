@@ -86,11 +86,19 @@ Minimum staging requirements:
 First backend-connected TestFlight should only happen after:
 
 1. `npm run release:check` passes locally.
-2. Approved Supabase SQL is applied to the staging project.
-3. `npm run supabase:doctor:live` passes against staging secrets.
-4. Hosted `GET /healthz` returns `ok:true` over HTTPS.
-5. Real Supabase Auth session verification is tested against `/auth-status`.
-6. `npm run smoke:staging` passes against the hosted API.
+2. `npm run ai:doctor:live` confirms `GEMINI_API_KEY` is available to the backend without printing the key value.
+3. Approved Supabase SQL is applied to the staging project.
+4. `npm run supabase:doctor:live` passes against staging secrets.
+5. Hosted `GET /healthz` returns `ok:true` over HTTPS.
+6. Real Supabase Auth session verification is tested against `/auth-status`.
+7. `npm run smoke:staging` passes against the hosted API.
+
+AI key preflight:
+
+- `npm run ai:doctor` reports whether backend-only AI keys are present through environment variables or `engine/.env.local`, but exits successfully when keys are missing so local planning stays safe.
+- `npm run ai:doctor:live` is the strict gate for real `/chat`, `/open`, TTS, and Gemini Live validation.
+- The doctor reports only key names, source, and brain provider/model routing. It never prints secret values.
+- If `MUNEA_SKIP_ENV_LOCAL=1` is enabled, keys that exist only in `engine/.env.local` will be shown as blocked, matching how `engine/env_loader.py` behaves.
 
 ### 3. Supabase Live Gate
 

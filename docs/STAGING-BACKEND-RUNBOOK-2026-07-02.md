@@ -71,6 +71,7 @@ Run locally before creating or updating the staging service:
 
 ```powershell
 npm run release:check
+npm run ai:doctor:live
 ```
 
 Then verify the live database path only after the staging Supabase SQL files are applied:
@@ -83,7 +84,8 @@ Expected local result:
 
 1. Static smoke passes.
 2. Auth-gate smoke passes.
-3. Supabase doctor reports configured live env values without printing service-role secrets.
+3. AI doctor confirms `GEMINI_API_KEY` is available to the backend without printing the key value.
+4. Supabase doctor reports configured live env values without printing service-role secrets.
 
 ## Supabase Gate
 

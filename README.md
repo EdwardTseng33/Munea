@@ -78,6 +78,18 @@ http://localhost:8200
 
 Secrets are expected in `engine/.env.local`, which is ignored by Git.
 
+To check whether the local backend can see the AI provider keys needed by `/chat`, without printing any secret values, run:
+
+```powershell
+npm run ai:doctor
+```
+
+For a strict real-backend gate, use:
+
+```powershell
+npm run ai:doctor:live
+```
+
 To check whether the backend is still using local JSON fallback or is wired to Supabase, run:
 
 ```powershell
