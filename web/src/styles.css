@@ -43,7 +43,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .status-bar.on-dark { color: #fff; }
 
 .screen { display: none; height: 100%; overflow-y: auto; padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 6px); padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
-.screen.active { display: block; animation: fade .35s ease; }
+.screen.active { display: block; animation: viewIn .3s cubic-bezier(.22,.9,.32,1) both; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 .pad { padding: 4px 20px 16px; }
 
@@ -435,7 +435,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* 發起挑戰 彈出面板 */
 .modal-mask { position: absolute; inset: 0; background: rgba(31,45,41,.5); backdrop-filter: blur(3px); z-index: 60; display: none; align-items: flex-end; }
 .modal-mask.show { display: flex; }
-.modal { position: relative; background: var(--cream); border-radius: 26px 26px 0 0; width: 100%; padding: 0 20px 28px; max-height: 88%; overflow-y: auto; animation: slideup .3s ease; }
+.modal { position: relative; background: var(--cream); border-radius: 26px 26px 0 0; width: 100%; padding: 0 20px 28px; max-height: 88%; overflow-y: auto; animation: sheetUp .34s cubic-bezier(.22,.9,.32,1); }
 .modal > .auth-close { z-index: 6; }
 @keyframes slideup { from { transform: translateY(100%) } to { transform: none } }
 .modal-grab { position: sticky; top: 0; z-index: 5; display: block; width: calc(100% + 40px); height: 28px; margin: 0 -20px 12px; background: var(--cream); border-radius: 26px 26px 0 0; }
@@ -1333,3 +1333,28 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .care-btn { flex: 0 0 auto; margin-left: auto; padding: 7px 13px; border-radius: 999px; border: 1.5px solid var(--teal-d); background: #FFF; color: var(--teal-dd); font-size: 13px; font-weight: 800; }
 .care-item { padding-right: 2px; }
 .care-txt { flex: 1 1 auto; }
+
+/* ===== 北歐動態巧思 v1（輕巧不炫技 · 200-400ms） ===== */
+@keyframes viewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes sheetUp { from { opacity: .4; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes checkPop { 0% { transform: scale(.6); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes tabIn { 0% { transform: translateY(2px) scale(.92); } 100% { transform: none; } }
+/* 統一按壓回饋：所有能點的東西都有手感 */
+.modal-btn, .care-btn, .tier, .set-row, .task-item, .mchip, .tu-card, .avo, .ms-tbtn, .btn-quiet, .chal-act, .fam-switch-item, .plan-cancel {
+  transition: transform .13s ease, box-shadow .2s ease, background .2s ease;
+}
+.modal-btn:active, .care-btn:active, .tier:active, .set-row:active, .task-item:active, .mchip:active,
+.tu-card:active, .avo:active, .ms-tbtn:active, .btn-quiet:active, .chal-act:active, .plan-cancel:active { transform: scale(.98); }
+.fam-switch-item:active .fs-av { transform: scale(.94); }
+/* 打勾＝小小的慶祝 */
+.task-item.done .task-check { animation: checkPop .32s cubic-bezier(.3,1.4,.5,1) both; }
+/* 分頁切換的落點感 */
+.tab-btn.on .ic { animation: tabIn .22s ease both; }
+/* 輪播進場：淡入＋微升 */
+.care-item { transform: translateY(5px); transition: opacity .45s ease, transform .45s ease; }
+.care-item.on { transform: none; }
+/* 尊重「減少動態」設定（北歐的體貼） */
+@media (prefers-reduced-motion: reduce) {
+  .screen.active, .modal, .task-item.done .task-check, .tab-btn.on .ic { animation: none !important; }
+  .care-item { transition: opacity .2s ease; transform: none; }
+}
