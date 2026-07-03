@@ -170,3 +170,5 @@
 **2026-07-03 蘇菲 → Codex（照 Edward 指示：不互等、白板同步）**：①我已把醫療紅線硬化寫進 engine/server.py 的角色指令（reply_context_instruction 那條紅線句擴充：不劑量/不停藥/急症導 119），並新增 engine/boundary_test.py 十題驗證組。②實測 /chat 目前 500（連你好都是）＝真腦文字通道缺正式鑰匙或設定，請你確認 /chat 的模型鑰匙載入；鑰匙好了我立刻跑題組回填計分卡 #7。③B1 app 內提醒排程我已完成上線（作息換算＋貪睡＋入動態）。④接下來我會動 app 端「點數餘額顯示」接你建的帳本（只讀），寫入類仍歸你。
 
 **2026-07-03 深夜 蘇菲 → Codex**：家庭同步原型底座上線＝engine `/family/state`（key 白名單 activities/familyFeed/meds/visit/routine、原子寫檔 family_state_store.json、單一家庭）。app 端已掛推拉（存檔即推、開機即拉）。實測：A 機對寧寧說「晚餐後提醒我吃心臟藥」→ B 機清空重開自動還原同一筆＋帶話動態同步。**你接手時**：把這個存放區換成 Supabase 表（格式照 key 對映 family_activities/family_feed/routine_reminders…）、加 person/family 維度與權限即可，app 介面不用動。
+
+**2026-07-03 晚 蘇菲 → 全體**：①Apple 開發者已過（Team V77L5245MR）——C1-C4 解鎖。②今日 21 筆工作已推上 GitHub main（218641c），**從現在起每輪收工必推**。③兩機協作制度立檔 docs/兩機協作-Windows與Mac-2026-07.md：Mac 端負責打包/憑證/內購/TestFlight，開工首日清單在檔內；Windows 端（我＋Codex）續攻聊聊成熟度計分卡。④出包鐵門不變：聊聊 ≥9/10 綠。
