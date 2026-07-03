@@ -807,9 +807,25 @@ function closeAuthSheet() {
   sheet.classList.remove('show');
   sheet.setAttribute('aria-hidden', 'true');
 }
+function demoAuthOn() {
+  try { return (localStorage.getItem('munea.demoAuth') || 'in') === 'in'; } catch (e) { return true; }
+}
 function updateAuthUI() {
   const state = authState();
-  const signedIn = state.status === 'signed-in';
+  let signedIn = state.status === 'signed-in';
+  // 示範機：未接雲端時，以「陳秀英 · 家庭成員」的已登入狀態展示（登出可切回訪客）
+  if (!signedIn && demoAuthOn()) {
+    const card0 = $('#authCard');
+    if (card0) card0.dataset.authState = 'signed-in';
+    if ($('#authStatusText')) $('#authStatusText').textContent = '陳秀英';
+    if ($('#authProviderText')) $('#authProviderText').textContent = '家庭成員 · 美華邀請加入';
+    if ($('#authEmailText')) $('#authEmailText').textContent = '';
+    if ($('#authSignInBtn')) $('#authSignInBtn').hidden = true;
+    if ($('#authSignOutBtn')) $('#authSignOutBtn').hidden = false;
+    if ($('#authDevBadge')) $('#authDevBadge').hidden = true;
+    renderAiDiagnostics();
+    return;
+  }
   const card = $('#authCard');
   if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
   const status = $('#authStatusText');
@@ -831,6 +847,13 @@ function updateAuthUI() {
   renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
+  if (isStaticPreview() || authState().configured === false) {
+    try { localStorage.setItem('munea.demoAuth', 'in'); } catch (e) {}
+    closeAuthSheet();
+    updateAuthUI();
+    toast('歡迎回來，陳秀英');
+    return;
+  }
   const auth = window.MuneaAuth;
   if (!auth) return setAuthMessage('登入模組尚未載入', 'error');
   setAuthMessage('正在前往登入...', 'ok');
@@ -873,7 +896,13 @@ async function signOutAuth() {
 }
 function setupAuthControls() {
   if ($('#authSignInBtn')) $('#authSignInBtn').addEventListener('click', openAuthSheet);
-  if ($('#authSignOutBtn')) $('#authSignOutBtn').addEventListener('click', signOutAuth);
+  if ($('#authSignOutBtn')) $('#authSignOutBtn').addEventListener('click', async () => {
+    const state = authState();
+    if (state.status === 'signed-in') { await signOutAuth(); return; }
+    try { localStorage.setItem('munea.demoAuth', 'out'); } catch (e) {}
+    updateAuthUI();
+    toast('已登出，資料還安全放著；再登入就接回來');
+  });
   if ($('#authCloseBtn')) $('#authCloseBtn').addEventListener('click', closeAuthSheet);
   if ($('#authAppleBtn')) $('#authAppleBtn').addEventListener('click', () => signInWithAuthProvider('apple'));
   if ($('#authGoogleBtn')) $('#authGoogleBtn').addEventListener('click', () => signInWithAuthProvider('google'));
@@ -903,10 +932,10 @@ function setupAuthControls() {
   if (chip) {
     const sun = '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/></svg>';
     const moon = '<svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>';
-    let icon = sun, text = '晴 26°，下午去公園正好';
+    let icon = sun, text = '<b>晴 26°</b>，下午去公園正好';
     if (h >= 18 || h < 5) { icon = moon; text = '睡前 10 分鐘，說說今天的事'; }
-    else if (h >= 5 && h < 11) { text = '晴 26°，早上出門走走正好'; }
-    else if (h >= 14) { text = '晴 26°，傍晚去公園正好'; }
+    else if (h >= 5 && h < 11) { text = '<b>晴 26°</b>，早上出門走走正好'; }
+    else if (h >= 14) { text = '<b>晴 26°</b>，傍晚去公園正好'; }
     chip.innerHTML = icon + text;
   }
   const stat = $('#bcStatus');
@@ -1371,7 +1400,9 @@ function init() {
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ，正式版在這裡直接買。'));
-  if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => toast('方案管理：升級、降級、取消都在這裡；發票寄給付費的家人。'));
+  if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => $('#planModal').classList.add('show'));
+  if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
+  if ($('#planModal')) $('#planModal').addEventListener('click', e => { if (e.target === $('#planModal')) $('#planModal').classList.remove('show'); });
   const famSwitch = $('#famSwitch');
   if (famSwitch) famSwitch.addEventListener('click', e => {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
