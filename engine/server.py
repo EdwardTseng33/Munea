@@ -315,7 +315,7 @@ def load_memory_items(limit=200):
         if remote_items is not None:
             return remote_items
     except Exception as e:
-        if data_backend().enabled():
+        if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("load memory items from Supabase", e)
     items = read_json_file(MEMORY_ITEMS_PATH, [])
@@ -336,7 +336,7 @@ def append_memory_items(items):
         if remote_items is not None:
             return remote_items
     except Exception as e:
-        if data_backend().enabled():
+        if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("append memory items to Supabase", e)
     existing = load_memory_items(limit=1000)
@@ -659,7 +659,7 @@ def load_perception_snapshots(query=None, limit=100):
         if remote_snapshots is not None:
             return remote_snapshots
     except Exception as e:
-        if data_backend().enabled():
+        if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("load perception snapshots from Supabase", e)
     snapshots = read_json_file(PERCEPTION_SNAPSHOTS_PATH, [])
@@ -686,7 +686,7 @@ def append_perception_snapshots(snapshots):
         if remote_snapshots is not None:
             return remote_snapshots
     except Exception as e:
-        if data_backend().enabled():
+        if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("append perception snapshots to Supabase", e)
     existing = load_perception_snapshots(limit=1000)
@@ -723,6 +723,11 @@ def normalize_relationship_state(data):
     }
 
 
+def is_missing_table_error(e):
+    msg = str(e)
+    return "PGRST205" in msg or "Could not find the table" in msg
+
+
 def load_relationship_states(query=None, limit=100):
     query = query or {}
     try:
@@ -730,7 +735,7 @@ def load_relationship_states(query=None, limit=100):
         if remote_states is not None:
             return remote_states
     except Exception as e:
-        if data_backend().enabled():
+        if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("load relationship states from Supabase", e)
     store = read_json_file(RELATIONSHIP_STATES_PATH, {"states": []})
@@ -763,7 +768,7 @@ def upsert_relationship_state(state):
         if remote_state is not None:
             return normalize_relationship_state(remote_state)
     except Exception as e:
-        if data_backend().enabled():
+        if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("upsert relationship state to Supabase", e)
     states = load_relationship_states(limit=1000)
@@ -1240,7 +1245,7 @@ def bootstrap_account_response(data, headers=None):
                 "backend": data_backend_status(),
             }
     except Exception as e:
-        if data_backend().enabled():
+        if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("bootstrap account through Supabase", e)
 
