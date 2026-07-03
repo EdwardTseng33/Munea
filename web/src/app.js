@@ -2124,6 +2124,8 @@ function init() {
     if ($('#medDueName')) $('#medDueName').textContent = med.name;
     if ($('#medDueSay')) $('#medDueSay').textContent = med.time + '的藥，時間到囉';
     $('#medRemindModal').classList.add('show');
+    // A6：寧寧親口說（App 開著時；打包後升級推播）
+    try { if (typeof speakChat === 'function') speakChat(med.time + '的' + med.name + '，時間到囉。吃完跟我說一聲。'); } catch (e) {}
   }
   function checkDueMeds() {
     if (Date.now() < medSnoozeUntil || medShowing) return;
