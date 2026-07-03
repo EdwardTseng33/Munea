@@ -951,7 +951,7 @@ function setupAuthControls() {
     const mem = '記得你說，孫子快畢業了';
     let ask = '來跟我聊聊今天？';
     if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
-    else if (h >= 5 && h < 11) ask = '出門走走，回來說給我聽？';
+    else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
     else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
     msg.textContent = mem + '——' + ask;
   }
