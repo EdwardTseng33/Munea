@@ -1247,3 +1247,5 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rw-row { display: flex; align-items: center; gap: 10px; }
 .rw-in { flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); padding: 10px 13px; font-family: var(--sans); font-size: 15px; color: var(--ink); }
 .rw-in:focus { outline: none; border-color: var(--teal); }
+
+.init-ava.p-me { background: var(--mint-2); color: var(--teal-dd); }

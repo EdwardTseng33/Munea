@@ -1716,6 +1716,17 @@ function init() {
   }
   function loadActs() { try { return JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) { return []; } }
   function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} syncPush('activities', a); }
+  const FAM_AVA = { '阿嬤': ['嬤', 'p-ama'], '美華': ['華', 'p-mei'], '志明': ['明', 'p-zhi'], '小寶': ['寶', 'p-bao'], '你': ['我', 'p-me'] };
+  function buildRankList(act) {
+    const rows = Object.entries(act.answers).sort((x, y) => y[1] - x[1]);
+    return '<div class="rank-list">' + rows.map((r2, i3) => {
+      const av = FAM_AVA[r2[0]] || [r2[0][0], 'p-me'];
+      const noCls = i3 === 0 ? 'n1' : i3 === 1 ? 'n2' : i3 === 2 ? 'n3' : '';
+      return '<div class="rank-row"><span class="rank-no ' + noCls + '">' + (i3 + 1) + '</span>' +
+        '<span class="rank-av"><span class="init-ava ' + av[1] + '">' + av[0] + '</span></span>' +
+        '<b>' + r2[0] + '</b><span class="rank-score">答對 ' + r2[1] + ' 題</span></div>';
+    }).join('') + '</div><div class="qc-life">等大家都看過排名就收進記錄簿 · 最多留 3 天</div>';
+  }
   function renderActCard(act) {
     const list = document.querySelector('#newChalBtn')?.closest('.pad')?.querySelector('.quest-card');
     if (!list) return;
@@ -1725,9 +1736,9 @@ function init() {
     if (act.status === 'done') {
       chip = '已結束';
       if (act.kind === 'quiz' && act.answers && Object.keys(act.answers).length) {
-        const rows = Object.entries(act.answers).sort((x, y) => y[1] - x[1]);
-        goal = '排名出來了';
-        note = rows.map((r2, i3) => '第 ' + (i3 + 1) + ' 名 ' + r2[0] + '（答對 ' + r2[1] + ' 題）').join('、');
+        act._rankHtml = buildRankList(act);
+        goal = '';
+        note = '';
       } else {
         goal = act.kind === 'quiz' ? ('你答對 ' + act.score + ' / ' + (act.q || 5) + ' 題') : (act.title + ' 結束了');
         note = '等大家都看過就收進記錄簿 · 最多留 3 天，還沒看的，寧寧會親口告訴';
@@ -1753,11 +1764,16 @@ function init() {
     const rwLine = act.rewards && act.rewards.some(Boolean)
       ? '<div class="qc-note">🏅 獎勵：' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '</div>'
       : '';
-    card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
-      (act.kind === 'event' ? '揪一攤 · ' + act.title : '邀請已送出 · ' + act.title) +
-      '<span class="qc-days">' + chip + '</span></div>' +
-      '<div class="qc-goal">' + goal + '</div>' +
-      '<div class="qc-num">' + note + '</div>' + rwLine;
+    if (act._rankHtml) {
+      card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg>機智問答 · 排名出來了<span class="qc-days">' + (act.q || 5) + ' 題</span></div>' + act._rankHtml + rwLine;
+      delete act._rankHtml;
+    } else {
+      card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
+        (act.kind === 'event' ? '揪一攤 · ' + act.title : '邀請已送出 · ' + act.title) +
+        '<span class="qc-days">' + chip + '</span></div>' +
+        '<div class="qc-goal">' + goal + '</div>' +
+        '<div class="qc-num">' + note + '</div>' + rwLine;
+    }
     if (act.kind === 'quiz' && act.status !== 'done' && !act.myDone) { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
     list.parentNode.insertBefore(card, list);
   }
