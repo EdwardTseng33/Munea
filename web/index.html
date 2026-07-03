@@ -517,31 +517,7 @@
 
 
   <!-- ===== 用藥服務窗 ===== -->
-  <section class="screen med-screen" id="med">
-    <div class="med-top">
-      <button class="nav-back med-back" id="medBackBtn" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <img class="med-face" src="avatars/nening-real-female-face.png" alt="" />
-      <div class="med-say" id="medDueSay">寧寧：吃藥時間到囉</div>
-    </div>
-    <div class="med-sheet">
-      <div class="med-grab"></div>
-      <div class="med-head">
-        <div class="mh-left"><span class="mh-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span>用藥提醒</div>
-        <div class="mh-now" id="medNow">現在 14:00</div>
-      </div>
-      <div class="med-pill-card">
-        <div class="mpc-row">
-          <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
-          <div><div class="mpc-name" id="medDueName">脈優 Amlodipine</div><div class="mpc-desc" id="medDueDesc">照你設定的提醒 · 配溫開水就可以</div></div>
-        </div>
-        <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>已連續服藥 6 天，做得很好！</div>
-      </div>
-      <div class="med-actions">
-        <button class="taken" id="medTaken"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>我吃過了</button>
-        <button class="snooze" id="medSnooze">等 10 分鐘<br>再提醒</button>
-      </div>
-    </div>
-  </section>
+  
 
   <!-- ===== 連接裝置（狀態頁引導串接三方裝置）===== -->
   <section class="screen" id="connect">
@@ -747,6 +723,24 @@
         <div class="rc-grid" id="rcGrid"></div>
         <p class="rc-hint" id="rcHint">點開始那天，再點結束那天</p>
         <div class="rpt-card" id="rcResult" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="medRemindModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <div class="mr-say"><img class="mr-face" src="avatars/nening-real-female-face.png" alt="" /><span id="medDueSay">吃藥時間到囉</span></div>
+      <div class="med-pill-card">
+        <div class="mpc-row">
+          <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
+          <div><div class="mpc-name" id="medDueName">脈優</div><div class="mpc-desc" id="medDueDesc">照你設定的提醒 · 配溫開水就可以</div></div>
+        </div>
+        <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>已連續服藥 6 天，做得很好！</div>
+      </div>
+      <div class="med-actions" style="margin-top:14px">
+        <button class="taken" id="medTaken"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>我吃過了</button>
+        <button class="snooze" id="medSnooze">等 10 分鐘<br>再提醒</button>
       </div>
     </div>
   </div>

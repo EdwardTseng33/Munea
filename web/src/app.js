@@ -1282,7 +1282,6 @@ function init() {
   const __pullPromise = syncPullAll();
   document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
   document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
-  if (location.hash === '#med') setTimeout(() => showView('med'), 300);
   syncCompanionUI();
   setupHscrollHints();
   renderPoints();
@@ -1330,13 +1329,7 @@ function init() {
     showView('chat');
     setTimeout(() => { if (!callConnected) connectCall(); }, 350);
   });
-  // 用藥服務窗（獨立功能、保留）
-  if ($('#medTaken')) $('#medTaken').addEventListener('click', () => {
-    trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
-    hint('好，記下來了，連續六天，你真棒。');
-    showView('home');
-  });
-  if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => showView('home'));
+  // （提醒改為彈窗版；埋點併入 B1 排程處理器）
 
   // 連接裝置（狀態頁資料條 / 設定裝置區 → 串接三方裝置引導）
   if ($('#srcStrip')) $('#srcStrip').addEventListener('click', () => { window.__connectFrom = 'status'; showView('connect'); });
@@ -1564,7 +1557,7 @@ function init() {
     toast('好，' + cname() + '會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
-  if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('home'));
+  
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
   if ($('#topUpModal')) $('#topUpModal').addEventListener('click', e => {
@@ -2053,13 +2046,11 @@ function init() {
   function todayKey() { const n = new Date(); return 'munea.medDone.' + isoOf(n); }
   let medSnoozeUntil = 0, medShowing = null;
   function fireMedReminder(med) {
-    const n2 = new Date();
-    if ($('#medNow')) $('#medNow').textContent = '現在 ' + String(n2.getHours()).padStart(2, '0') + ':' + String(n2.getMinutes()).padStart(2, '0');
-    if ($('#medDueDesc')) $('#medDueDesc').textContent = med.time + '的提醒 · 配溫開水就可以';
     medShowing = med;
+    if ($('#medDueDesc')) $('#medDueDesc').textContent = med.time + '的提醒 · 配溫開水就可以';
     if ($('#medDueName')) $('#medDueName').textContent = med.name;
-    if ($('#medDueSay')) $('#medDueSay').textContent = cname() + '：' + med.time + '的藥，時間到囉';
-    showView('med');
+    if ($('#medDueSay')) $('#medDueSay').textContent = med.time + '的藥，時間到囉';
+    $('#medRemindModal').classList.add('show');
   }
   function checkDueMeds() {
     if (Date.now() < medSnoozeUntil || medShowing) return;
@@ -2084,9 +2075,10 @@ function init() {
       done[medShowing.key] = true;
       try { localStorage.setItem(todayKey(), JSON.stringify(done)); } catch (e) {}
       pushFamilyFeed('<b>阿嬤</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
+      trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
     }
     medShowing = null;
-    showView('home');
+    $('#medRemindModal').classList.remove('show');
     toast('記下了，藥吃了。');
     const pt = document.querySelector('.task-item[data-task="pill"]');
     if (pt && !pt.classList.contains('done')) { pt.classList.add('done'); refreshTaskProgress(); }
@@ -2094,7 +2086,7 @@ function init() {
   if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => {
     medSnoozeUntil = Date.now() + 10 * 60 * 1000;
     medShowing = null;
-    showView('home');
+    $('#medRemindModal').classList.remove('show');
     toast('好，10 分鐘後再提醒你。');
   });
   setInterval(checkDueMeds, 30000);
