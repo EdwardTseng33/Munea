@@ -4,7 +4,7 @@
 
 :root {
   /* 字級規範 v1（UIUX 定案）：頁大標 serif 30 / 區塊標 20 / 卡標 17 / 內文 17 / 說明 15 / 註記 13——不再任意生字級 */
-  --fs-page: 30px; --fs-section: 20px; --fs-card: 17px; --fs-body: 17px; --fs-sub: 15px; --fs-note: 13px;
+  --fs-page: 28px; --fs-section: 20px; --fs-card: 17px; --fs-body: 17px; --fs-sub: 15px; --fs-note: 13px;
   --fw-title: 700; --fw-em: 600; --fw-body: 400;
   --teal: #3AA8A0; --teal-d: #2E8A83; --teal-dd: #236C66;
   --mint: #E8F2EE; --mint-2: #D9EFE8;
@@ -938,7 +938,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .pager-dots i.on { background: var(--teal-d); transform: scale(1.25); }
 
 /* 出席看板：頭像狀態徽章（一眼懂誰能到） */
-.rg-badge { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; border: 2px solid #FFF; }
+.rg-badge { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 13px; font-weight: 700; border: 2px solid #FFF; }
 .rg-badge .ic { width: 10px; height: 10px; stroke-width: 3; }
 .rg-badge.ok { background: var(--teal-d); color: #FFF; }
 .rg-badge.nope { background: #B4B2A9; color: #FFF; }
@@ -996,7 +996,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 /* 揪一攤 · 14 天快選月曆（自家設計、不用瀏覽器原生格） */
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 2px 0 8px; }
 .cal-cell { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 0 8px; text-align: center; cursor: pointer; line-height: 1.15; }
-.cal-cell small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+.cal-cell small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
 .cal-cell b { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--display); }
 .cal-cell.on { background: var(--teal-d); border-color: var(--teal-d); }
 .cal-cell.on small, .cal-cell.on b { color: #FFF; }
@@ -1213,7 +1213,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .tier.on { border-color: var(--teal); background: var(--mint); }
 .plan-cancel { display: block; margin: 16px auto 2px; border: none; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 12px; }
 
-.tier-tag { font-style: normal; margin-left: 6px; font-size: 11px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 100px; padding: 2px 7px; }
+.tier-tag { font-style: normal; margin-left: 6px; font-size: 13px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 100px; padding: 2px 7px; }
 
 /* ── 設計規範 v1 · 按鈕三階（2026 深研定案：互動只用深綠、一頁一顆主鈕）── */
 .video-btn, .modal-btn, .auth-primary, .chal-act.new { background: var(--teal-dd); border-radius: 18px; min-height: 56px; }
@@ -1239,3 +1239,5 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .tier-tag.next { color: var(--coral-d); background: var(--coral-soft); margin-left: 6px; }
 .mm-cell.future { background: var(--cream); pointer-events: none; }
 .mm-note { grid-column: 1 / -1; font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+.chal-type.active { color: var(--teal-d); }

@@ -756,6 +756,7 @@ function completeChatSession(reason = 'ended') {
 
 function showView(id) {
   const t = $('#toast'); if (t) t.classList.remove('show');
+  $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
   if (id === 'status') {
     const segBtns = document.querySelectorAll('#statusSeg .seg-btn');
     if (segBtns.length) {
