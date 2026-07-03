@@ -920,7 +920,7 @@ function setupAuthControls() {
     chip.innerHTML = icon + text;
   }
   const stat = $('#bcStatus');
-  if (stat) stat.textContent = '昨天說到孫子快畢業了——她都記得';
+  if (stat) stat.textContent = '你昨天說孫子快畢業了，我記著呢';
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
   if (meta) meta.textContent = `${now.getMonth() + 1}月${now.getDate()}日 週${wd}`;
@@ -1054,7 +1054,7 @@ function toggleTask(item) {
       toast('好，先取消這筆，等等再完成也可以。');
     } else {
       _uncheckArm = item;
-      toast('這件已經完成了——再按一次才會取消。');
+      toast('這件已經完成了，再按一次才會取消。');
       setTimeout(() => { if (_uncheckArm === item) _uncheckArm = null; }, 3000);
     }
     return;
@@ -1140,7 +1140,7 @@ function connectCall() {
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
   const box = document.querySelector('.face-caption-box');
   if (box) box.style.display = capOff ? 'none' : '';
-  setCaption('接通了——按一下麥克風跟我說話', '講完再按一次，寧寧就會回你');
+  setCaption('接通了，按一下麥克風跟我說話', '講完再按一次，寧寧就會回你');
   openVoiceSession();
 }
 
@@ -1223,9 +1223,9 @@ function init() {
     if (!b || b.classList.contains('sent')) return;
     reactRow.querySelectorAll('.react-btn.sent').forEach(x => x.classList.remove('sent'));
     b.classList.add('sent');
-    hint(`好，寧寧會幫你轉達——你${b.dataset.react}。`);
+    hint(`好，寧寧會幫你轉達，你${b.dataset.react}。`);
     const who = document.getElementById('ptName')?.textContent || '家人';
-    pushFamilyFeed(`<b>你</b>剛剛給${who}${b.dataset.react || '送上心意'}——寧寧下次聊天會親口告訴${['阿嬤','美華'].includes(who) ? '她' : '他'}`);
+    pushFamilyFeed(`<b>你</b>剛剛給${who}${b.dataset.react || '送上心意'}，寧寧下次聊天會親口告訴${['阿嬤','美華'].includes(who) ? '她' : '他'}`);
   });
 
   // 全家健康圈：切換成員看健康
@@ -1380,7 +1380,7 @@ function init() {
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medBackBtn')) $('#medBackBtn').addEventListener('click', () => showView('settings'));
-  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ——正式版在這裡直接買。'));
+  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => toast('加值方案：120 點 NT$120 ／ 500 點 NT$450 ，正式版在這裡直接買。'));
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => toast('方案管理：升級、降級、取消都在這裡；發票寄給付費的家人。'));
   const famSwitch = $('#famSwitch');
   if (famSwitch) famSwitch.addEventListener('click', e => {
@@ -1432,7 +1432,7 @@ function init() {
   if ($('#reportModal')) $('#reportModal').addEventListener('click', e => { if (e.target === $('#reportModal')) $('#reportModal').classList.remove('show'); });
   if ($('#rptSendBtn')) $('#rptSendBtn').addEventListener('click', () => {
     $('#reportModal').classList.remove('show');
-    toast('傳給美華了——回診那天她手機一打開就有');
+    toast('傳給美華了，回診那天她手機一打開就有');
     pushFamilyFeed('<b>阿嬤</b>把 6 月的回診摘要傳給了美華');
   });
 
@@ -1487,7 +1487,7 @@ function init() {
     if (act.status === 'done') {
       chip = '已結束';
       goal = act.kind === 'quiz' ? ('你答對 ' + act.score + ' / ' + (act.q || 5) + ' 題') : (act.title + ' 結束了');
-      note = '等大家都看過就收進記錄簿 · 最多留 3 天——還沒看的，寧寧會親口告訴';
+      note = '等大家都看過就收進記錄簿 · 最多留 3 天，還沒看的，寧寧會親口告訴';
     } else if (act.kind === 'walk') {
       chip = act.days + ' 天內';
       goal = '大家一起走 ' + (+act.goal).toLocaleString() + ' 步';
@@ -1534,7 +1534,7 @@ function init() {
     const acts = loadActs(); acts.push(act); saveActs(acts);
     closeChal();
     renderActCard(act);
-    hint(kind === 'event' ? '好，寧寧幫你問大家——誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了——寧寧會親口問阿嬤，等大家答應就開始。');
+    hint(kind === 'event' ? '好，寧寧幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了，寧寧會親口問阿嬤，等大家答應就開始。');
   });
   // 到期自動收卡：過了活動日就從牆上收走、記到家庭動態
   (function restoreActs() {
@@ -1547,7 +1547,7 @@ function init() {
       if (a.status === 'done' && a.doneISO && a.doneISO <= cutoff) {
         pushFamilyFeed('「' + a.title + '」的結果收進<b>家庭記錄簿</b>了');
       } else if (a.status !== 'done' && a.kind !== 'quiz' && a.dateISO && a.dateISO < today) {
-        pushFamilyFeed('「' + a.title + '」結束了——那天的紀錄收進<b>家庭記錄簿</b>了');
+        pushFamilyFeed('「' + a.title + '」結束了，那天的紀錄收進<b>家庭記錄簿</b>了');
       } else { keep.push(a); renderActCard(a); }
     });
     if (keep.length !== acts.length) saveActs(keep);
@@ -1631,7 +1631,7 @@ function init() {
   if ($('#historyModal')) $('#historyModal').addEventListener('click', e => {
     if (e.target === $('#historyModal')) { $('#historyModal').classList.remove('show'); return; }
     const row = e.target.closest('.hist-row');
-    if (row) toast(row.classList.contains('dim') ? '正式版點開就是當月整理——示範先看 6 月這行' : '6 月整理好了——完整月報之後接引擎');
+    if (row) toast(row.classList.contains('dim') ? '正式版點開就是當月整理，示範先看 6 月這行' : '6 月整理好了，完整月報之後接引擎');
   });
 
   // 機智問答（示範題庫；正式版由寧寧出題、語音作答）
@@ -1661,15 +1661,16 @@ function init() {
     $('#quizProgress').textContent = '完成！';
     $('#quizQ').textContent = '';
     $('#quizOpts').innerHTML = '<div class="quiz-score">答對 ' + st.score + ' / ' + st.n + ' 題</div>' +
-      '<p class="modal-sub" style="text-align:center">寧寧會找 ' + st.act.names.join('、') + ' 來作答——都答完就看排名</p>' +
-      '<button class="modal-btn" id="quizCloseBtn">好</button>';
-    $('#quizCloseBtn').addEventListener('click', () => $('#quizModal').classList.remove('show'));
+      '<p class="modal-sub" style="text-align:center">寧寧會找 ' + st.act.names.join('、') + ' 來作答，都答完就看排名</p>' +
+      '<button class="modal-btn quiz-close-btn" type="button">好</button>';
+    const closeBtn = $('#quizOpts .quiz-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => $('#quizModal').classList.remove('show'));
     const note = st.card && st.card.querySelector('.qc-num');
-    if (note) note.textContent = '你答對 ' + st.score + '/' + st.n + '——等 ' + st.act.names.join('、') + ' 作答完看排名';
+    if (note) note.textContent = '你答對 ' + st.score + '/' + st.n + '，等 ' + st.act.names.join('、') + ' 作答完看排名';
     const acts2 = loadActs();
     const rec = acts2.find(a => a.id === st.act.id);
     if (rec) { rec.status = 'done'; rec.score = st.score; rec.doneISO = isoOf(new Date()); saveActs(acts2); }
-    pushFamilyFeed('<b>你</b>完成了機智問答，答對 ' + st.score + '/' + st.n + ' 題——等大家玩完看排名');
+    pushFamilyFeed('<b>你</b>完成了機智問答，答對 ' + st.score + '/' + st.n + ' 題，等大家玩完看排名');
   }
   if ($('#quizOpts')) $('#quizOpts').addEventListener('click', e => {
     const btn = e.target.closest('.quiz-opt');
@@ -1694,7 +1695,7 @@ function init() {
   const SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
   let chatRec = null, chatOn = false;
   const CHAT_RULES = [
-    [/(藥.*(怎麼吃|幾顆|停|加量|減量))|劑量|(可以吃.*藥)/, '藥怎麼吃、吃幾顆，我不能幫你決定——這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？'],
+    [/(藥.*(怎麼吃|幾顆|停|加量|減量))|劑量|(可以吃.*藥)/, '藥怎麼吃、吃幾顆，我不能幫你決定，這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？'],
     [/痛|痠|不舒服|頭暈/, '聽到你不太舒服，我有點擔心。先坐下歇會兒，需要的話我幫你通知美華。'],
     [/累|睡不|失眠/, '辛苦了，累就歇著、不用硬撐，我在這陪你。'],
     [/孫|想.*他|想.*她|寂寞|一個人/, '想家人了是吧？要不要我提醒他們今晚打給你？'],
