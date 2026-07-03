@@ -1499,16 +1499,18 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* ===== 狀態·今天 活力版（每磚一色、磚內小巧思） ===== */
 .wc-track { height: 7px; border-radius: 999px; background: rgba(255,255,255,.16); margin: 10px 0 10px; overflow: hidden; }
 .wc-track i { display: block; height: 100%; border-radius: 999px; background: var(--teal); transition: width .6s cubic-bezier(.4,0,.2,1); }
-.stat-tile { padding: 13px 14px 12px; text-align: left; border: 1px solid rgba(58,53,46,.06); }
-.stat-tile.t-bp { background: #EAF4F1; }
-.stat-tile.t-bp .st-ico { background: #FFF; color: var(--teal-d); }
-.stat-tile.t-sleep { background: var(--gold-soft); }
-.stat-tile.t-sleep .st-ico { background: #FFF; color: #B98A2E; }
-.stat-tile.t-med { background: var(--coral-soft); cursor: pointer; font: inherit; }
-.stat-tile.t-med .st-ico { background: #FFF; color: var(--coral-d); }
-.stat-tile.t-act { background: var(--mint-2); }
+.stat-tile { padding: 13px 14px 12px; text-align: left; background: var(--surface); border: 1px solid var(--line); }
+.stat-tile .st-ico { border-radius: 14px; }
+.stat-tile.t-bp .st-ico { background: var(--teal); color: #FFF; }
+.stat-tile.t-bp .st-val { color: var(--teal-dd); }
+.stat-tile.t-sleep .st-ico { background: #C79A3B; color: #FFF; }
+.stat-tile.t-sleep .st-val { color: #8A6410; }
+.stat-tile.t-med { cursor: pointer; font: inherit; }
+.stat-tile.t-med .st-ico { background: var(--coral); color: #FFF; }
+.stat-tile.t-med .st-val { color: var(--coral-d); }
 .stat-tile.t-act { position: relative; }
-.stat-tile.t-act .st-ico { background: #FFF; color: var(--teal-dd); }
+.stat-tile.t-act .st-ico { background: var(--teal-dd); color: #FFF; }
+.stat-tile.t-act .st-val { color: var(--teal-dd); }
 /* 用藥三顆小藥點 */
 .pill-dots { display: inline-flex; gap: 5px; margin: 4px 0 2px; }
 .pill-dots i { width: 14px; height: 8px; border-radius: 999px; background: #FFF; border: 1px solid var(--coral-d); opacity: .55; }
@@ -1529,3 +1531,15 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 選角卡：頭像裁切統一（同大小、同貼齊、頭部置頂） */
 .avo .avi { width: 62px; height: 62px; border-radius: 16px; overflow: hidden; flex: 0 0 62px; }
 .avo .avi img { width: 100%; height: 100%; object-fit: cover; object-position: center 12%; }
+
+/* 存摺合體卡：她的一句話（成就數字之下、人味在裡面） */
+.wc-say { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.14); }
+.wc-face { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 12px; overflow: hidden; }
+.wc-face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.wc-quote { font-size: 13.5px; line-height: 1.55; color: rgba(255,255,255,.92); }
+/* 健康圈：邀請＝虛線＋號、不再鬼影；捲動小箭頭在這排不蓋圈 */
+.fam-switch-item.invite { opacity: 1; }
+.fs-av.plus { background: #FFF; border: 1.5px dashed var(--teal-d); color: var(--teal-d); display: grid; place-items: center; box-shadow: none; }
+.hscroll-wrap:has(#famSwitch) .hs-hint { display: none; }
+/* 發起活動：送出鍵釘在視窗底、永遠看得到 */
+#startChalBtn { position: sticky; bottom: -22px; z-index: 2; box-shadow: 0 -10px 14px -10px rgba(31,60,52,.25), var(--shadow-sm); }
