@@ -941,8 +941,11 @@ function loadMeds() {
     { name: '維他命 D', time: '08:30', days: '30 天', by: '阿嬤' }]; } catch (e) { return []; }
 }
 function updateMedCount() {
+  const n = loadMeds().length + ' 種藥';
   const el = $('#medCountLabel');
-  if (el) el.textContent = loadMeds().length + ' 種藥';
+  if (el) el.textContent = n;
+  const el2 = $('#medCountSettings');
+  if (el2) el2.textContent = n;
 }
 function renderMedList() {
   const box = $('#medList');
@@ -1341,7 +1344,7 @@ function init() {
     $('#moodMonth').style.display = month ? '' : 'none';
     if (month) renderMoodMonth();
   });
-  const setReminders = [...document.querySelectorAll('.set-row')].find(r => r.textContent.includes('提醒管理'));
+  const setReminders = $('#medEntrySettings');
   if (setReminders) setReminders.addEventListener('click', () => {
     const mask = $('#medMgrModal');
     if (mask) { renderMedList(); mask.classList.add('show'); }
