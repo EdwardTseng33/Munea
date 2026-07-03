@@ -4,7 +4,7 @@
 
 :root {
   /* 字級規範 v1（UIUX 定案）：頁大標 serif 30 / 區塊標 20 / 卡標 17 / 內文 17 / 說明 15 / 註記 13——不再任意生字級 */
-  --fs-page: 28px; --fs-section: 20px; --fs-card: 17px; --fs-body: 17px; --fs-sub: 15px; --fs-note: 13px;
+  --fs-page: 24px; --fs-section: 18px; --fs-card: 16px; --fs-body: 16px; --fs-sub: 14px; --fs-note: 12.5px;
   --fw-title: 700; --fw-em: 600; --fw-body: 400;
   --teal: #3AA8A0; --teal-d: #2E8A83; --teal-dd: #236C66;
   --mint: #E8F2EE; --mint-2: #D9EFE8;
@@ -15,7 +15,7 @@
   --line: #E7E0D6;
   --deep: #16241F; --deep-2: #1E342C; --deep-card: #2A3D36;
   --danger: #E55B4D;
-  --radius: 20px; --radius-lg: 26px; --radius-sm: 16px;
+  --radius: 18px; --radius-lg: 22px; --radius-sm: 14px;
   --shadow: 0 16px 38px -20px rgba(31,60,52,.28);
   --shadow-sm: 0 8px 20px -14px rgba(31,60,52,.22);
   --shadow-lg: 0 30px 60px -28px rgba(31,60,52,.34);
@@ -94,7 +94,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .bc-chip .ic { margin-top: 2px; flex-shrink: 0; }
 .bc-chip b { color: var(--teal-dd); font-weight: 800; }
 .bc-chip .ic { width: 15px; height: 15px; color: var(--coral); }
-.video-btn { position: relative; z-index: 1; width: 100%; min-height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 18px; border: none; border-radius: 18px; background: var(--teal-dd); color: #fff; font-family: var(--display); font-weight: 800; font-size: 17px; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform .12s, box-shadow .2s; }
+.video-btn { position: relative; z-index: 1; width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 12px 16px; border: none; border-radius: 15px; background: var(--teal-dd); color: #fff; font-family: var(--display); font-weight: 800; font-size: 17px; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform .12s, box-shadow .2s; }
 .video-btn .ic { color: #fff; }
 .video-btn:active { transform: scale(.98); box-shadow: 0 10px 20px -12px rgba(58,168,160,.72); }
 
@@ -355,8 +355,9 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .fam-switch { display: flex; gap: 12px; overflow-x: auto; padding: 2px 0 8px; margin-bottom: 14px; }
 .fam-switch-item { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; opacity: .5; transition: opacity .2s; background: none; border: none; font-family: var(--sans); }
 .fam-switch-item.active { opacity: 1; }
-.fam-switch-item .fs-av { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; border: 3px solid transparent; background: var(--mint); transition: border-color .2s; }
-.fam-switch-item.active .fs-av { border-color: var(--teal); }
+.fam-switch-item .fs-av { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; border: 2.5px solid transparent; background: #FFF; box-shadow: inset 0 0 0 1px var(--line); transition: border-color .2s, transform .15s; }
+.fam-switch-item.active .fs-av { border-color: var(--teal-dd); transform: scale(1.06); box-shadow: none; }
+.fam-switch-item.active .fs-name { color: var(--teal-dd); font-weight: 800; }
 .fam-switch-item .fs-av img { width: 100%; height: 100%; object-fit: cover; }
 .fam-switch-item .fs-av.all { display: grid; place-items: center; color: var(--teal-d); }
 .fam-switch-item .fs-name { font-size: 13px; font-weight: 600; color: var(--ink); }
@@ -701,11 +702,11 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 
 /* 字首暖色頭像（取代素材照 · UIUX 重設計 2026-07-02） */
-.init-ava { width: 100%; height: 100%; border-radius: inherit; display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-weight: 700; font-size: 17px; line-height: 1; }
-.p-ama { background: #FBE7D2; color: #A05A1E; }
-.p-mei { background: #E8F2EE; color: #236C66; }
-.p-zhi { background: #DDEBE7; color: #1E5B54; }
-.p-bao { background: #F6ECD4; color: #8A6410; }
+.init-ava { width: 100%; height: 100%; border-radius: inherit; display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-weight: 700; font-size: 16px; line-height: 1; }
+.p-ama { background: #D98841; color: #FFF; }
+.p-mei { background: #3AA8A0; color: #FFF; }
+.p-zhi { background: #236C66; color: #FFF; }
+.p-bao { background: #B98A2E; color: #FFF; }
 .init-ava-lg { font-size: 28px; border-radius: 50%; }
 
 .re-ic { display: inline-flex; }
@@ -1249,7 +1250,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rw-in { flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); padding: 10px 13px; font-family: var(--sans); font-size: 15px; color: var(--ink); }
 .rw-in:focus { outline: none; border-color: var(--teal); }
 
-.init-ava.p-me { background: var(--mint-2); color: var(--teal-dd); }
+.init-ava.p-me { background: #2E8A83; color: #FFF; }
 
 .med-face { align-self: center; width: 108px; height: 108px; border-radius: 50%; object-fit: cover; margin: auto auto 14px; border: 4px solid #FFF; box-shadow: var(--shadow-sm); }
 .med-back { background: var(--surface) !important; color: var(--ink) !important; border: 1px solid var(--line); }
@@ -1306,3 +1307,29 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .care-txt { min-width: 0; }
 .care-txt p { font-size: 15px; line-height: 1.45; color: var(--ink); }
 .care-txt small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+/* ===== 家庭版緊湊刻度 v2 ＋ 對比補強（Edward 7/3） ===== */
+.video-btn { font-size: 16px; }
+.chal-act.book { background: #FFF; border: 1.5px solid var(--teal-d); color: var(--teal-dd); font-weight: 800; }
+.fam-ring { display: contents; }  /* 活動圈圈退場：不再包裝頭像 */
+.fs-av.ringed { padding: 0 !important; background: #FFF !important; }
+/* 方案清單：緊湊＋標籤實色 */
+.tier { padding: 12px 14px; }
+.tier b { font-size: 16px; }
+.tier i { font-size: 16px; }
+.tier span { font-size: 13px; }
+.tier-tag.now { background: var(--teal-dd); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; }
+.tier-tag.next { background: var(--coral-d); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; margin-left: 6px; }
+.tier.trial { opacity: .62; }
+.tier.trial b::after { content: "體驗用"; font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.plan-confirm { background: var(--coral-soft); border-radius: 14px; padding: 12px 14px; margin-top: 10px; }
+.plan-confirm p { font-size: 14px; color: var(--ink); line-height: 1.55; }
+.plan-confirm .pc-actions { display: flex; gap: 10px; margin-top: 10px; }
+.plan-confirm .modal-btn { flex: 1; margin: 0; min-height: 44px; }
+.plan-confirm .btn-quiet { flex: 0 0 auto; padding: 0 16px; }
+.plan-cancel { display: block; width: 100%; margin-top: 14px; padding: 11px; border: 1.5px solid var(--line); border-radius: 12px; background: #FFF; color: var(--muted); font-size: 14px; }
+/* 照護輪播：標題不可反白、動作用按鈕表達 */
+.care-card { cursor: default; user-select: none; -webkit-user-select: none; }
+.care-btn { flex: 0 0 auto; margin-left: auto; padding: 7px 13px; border-radius: 999px; border: 1.5px solid var(--teal-d); background: #FFF; color: var(--teal-dd); font-size: 13px; font-weight: 800; }
+.care-item { padding-right: 2px; }
+.care-txt { flex: 1 1 auto; }

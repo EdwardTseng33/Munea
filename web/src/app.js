@@ -1159,23 +1159,23 @@ function buildCareItems() {
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
   const relayMsg = feed.find(x => String(x).includes('帶話'));
-  if (relayMsg) items.push({ k: 'family', tone: '', icon: 'msg', html: relayMsg, sub: '打開家人頁可以請寧寧回話' });
-  else items.push({ k: 'family', tone: '', icon: 'msg', html: feed[0] || '<b>美華</b>托寧寧帶話：週末回去看你', sub: '家人的話，寧寧幫你收著' });
+  if (relayMsg) items.push({ k: 'family', tone: '', icon: 'msg', html: relayMsg, sub: '可以請寧寧幫你回話', btn: '回話' });
+  else items.push({ k: 'family', tone: '', icon: 'msg', html: feed[0] || '<b>美華</b>托寧寧帶話：週末回去看你', sub: '家人的話，寧寧幫你收著', btn: '去看看' });
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
   const act = acts.find(a => a && !a.done && !a.archived);
   if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
     const goal = +(act.steps || act.goal || 8000);
     const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的走路活動進行中', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步達標，加把勁' : '目標達成了，去看看大家' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的走路活動進行中', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步達標，加把勁' : '目標達成了，去看看大家', btn: '去看看' });
   } else if (act) {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的「' + (act.title || '家庭活動') + '」進行中', sub: '到家人頁看看大家的進度' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的「' + (act.title || '家庭活動') + '」進行中', sub: '看看大家的進度', btn: '去看看' });
   } else {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>外婆</b>發起的走路活動進行中', sub: '還差 5,000 步達標，飯後走一圈剛好' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>外婆</b>發起的走路活動進行中', sub: '還差 5,000 步達標，飯後走一圈剛好', btn: '去看看' });
   }
   let v = null;
   try { v = JSON.parse(localStorage.getItem('munea.visit') || 'null'); } catch (e) {}
-  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', html: (v.label || '回診') + '快到了（' + String(v.dateISO).slice(5).replace('-', '/') + '）', sub: '想問醫生的，寧寧都幫你記著' });
+  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', html: (v.label || '回診') + '快到了（' + String(v.dateISO).slice(5).replace('-', '/') + '）', sub: '想問醫生的，寧寧都幫你記著', btn: '看安排' });
   items.push({ k: 'status', tone: 'gold', icon: 'medal', html: streakLine(Math.max(1, new Date().getDate() - 1)), sub: '家人都看得到你的努力' });
   return items;
 }
@@ -1187,7 +1187,9 @@ function renderCareCarousel() {
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
-    '<div class="care-txt"><p>' + it.html + '</p><small>' + it.sub + '</small></div></div>').join('');
+    '<div class="care-txt"><p>' + it.html + '</p><small>' + it.sub + '</small></div>' +
+    (it.btn ? '<button type="button" class="care-btn" data-go="' + it.k + '">' + it.btn + '</button>' : '') +
+    '</div>').join('');
   dots.innerHTML = items.map((_, i) => '<i class="' + (i === 0 ? 'on' : '') + '"></i>').join('');
   _careIdx = 0;
   if (_careTimer) clearInterval(_careTimer);
@@ -1436,9 +1438,9 @@ function init() {
   renderPoints();
   updateMedCount();
   renderCareCarousel();
-  if ($('#careCard')) $('#careCard').addEventListener('click', () => {
-    const cur = document.querySelector('#careBody .care-item.on');
-    showView(cur && cur.dataset.k === 'status' ? 'status' : 'family');
+  if ($('#careBody')) $('#careBody').addEventListener('click', e => {
+    const b = e.target.closest('.care-btn');
+    if (b) showView(b.dataset.go === 'status' ? 'status' : 'family');
   });
   if (location.hash.slice(1) === 'pick') {
     const sheet = $('#companionSheet');
@@ -1591,17 +1593,6 @@ function init() {
 
   const FAM_ORDER = ['阿嬤', '美華', '志明', '小寶'];
   let currentPerson = '阿嬤';
-  const FAM_ACT = { '阿嬤': 48, '美華': 74, '志明': 62, '小寶': 93 };
-  (function famRings() {
-    document.querySelectorAll('.fam-switch-item').forEach(it => {
-      const name = it.dataset.person;
-      const fsav = it.querySelector('.fs-av');
-      if (!name || !fsav || !(name in FAM_ACT)) return;
-      fsav.classList.add('ringed');
-      fsav.style.setProperty('--p', FAM_ACT[name]);
-      it.title = name + ' 今天活動量約 ' + FAM_ACT[name] + '%';
-    });
-  })();
   function famItemOf(name) {
     return [...document.querySelectorAll('.fam-switch-item')].find(x => x.dataset.person === name);
   }
@@ -1764,8 +1755,10 @@ function init() {
     const nx = localStorage.getItem('munea.planNext');
     document.querySelectorAll('.tier .tier-tag.next').forEach(x => x.remove());
     const meta = document.querySelector('.pc-meta');
-    if (meta) meta.textContent = '我的訂閱 · 下次扣款 7/26 · 你和阿公兩位使用中' + (nx ? '（' + nx + ' 7/26 起）' : '');
-    if (nx && tierList) {
+    if (meta) meta.textContent = nx === '取消'
+      ? '我的訂閱 · 已排定取消 · 高級權益用到 7/25'
+      : '我的訂閱 · 下次扣款 7/26 · 你和阿公兩位使用中' + (nx ? '（' + nx + ' 7/26 起）' : '');
+    if (nx && nx !== '取消' && tierList) {
       const t = [...tierList.querySelectorAll('.tier')].find(x => x.dataset.t === nx);
       if (t) {
         const em = document.createElement('em');
@@ -1775,17 +1768,32 @@ function init() {
       }
     }
   }
+  let _planPick = null;
   if (tierList) tierList.addEventListener('click', e => {
     const t = e.target.closest('.tier');
     if (!t || t.classList.contains('on')) return;
-    try { localStorage.setItem('munea.planNext', t.dataset.t); } catch (e2) {}
-    renderPlanNext();
-    toast('排好了：7/26 起改「' + t.dataset.t + '」，這期權益照用');
+    if (t.classList.contains('trial')) { toast('這是體驗方案；訂閱中不用切，取消訂閱後會自動回到這裡。'); return; }
+    _planPick = t.dataset.t;
+    $('#planConfirmText').innerHTML = '7/26 起改為「<b>' + _planPick + '</b>」；這期高級的權益用到 7/25，一天都不少。';
+    $('#planConfirm').style.display = '';
   });
+  if ($('#planYes')) $('#planYes').addEventListener('click', () => {
+    if (!_planPick) return;
+    try { localStorage.setItem('munea.planNext', _planPick); } catch (e2) {}
+    $('#planConfirm').style.display = 'none';
+    renderPlanNext();
+    toast('排好了：7/26 起改「' + _planPick + '」');
+    _planPick = null;
+  });
+  if ($('#planNo')) $('#planNo').addEventListener('click', () => { $('#planConfirm').style.display = 'none'; _planPick = null; });
   renderPlanNext();
   if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', () => {
-    $('#planModal').classList.remove('show');
-    toast('會在 7/25 到期後停止扣款、轉為免費試用；資料和記憶都會留著');
+    const b = $('#planCancelBtn');
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次確認：7/25 之後不再扣款'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '取消訂閱'; }, 6000); return; }
+    b.dataset.arm = ''; b.textContent = '取消訂閱';
+    try { localStorage.setItem('munea.planNext', '取消'); } catch (e2) {}
+    renderPlanNext();
+    toast('好，這期用完就不再扣款；記憶和資料都會留著，隨時能回來。');
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => $('#planModal').classList.add('show'));
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
