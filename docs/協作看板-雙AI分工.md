@@ -178,3 +178,9 @@
 - avatars/ 檔名整理：舊檔 munea-2d-xiaoyun*.png / munea-2d-ayuan*.png / companion-real-male*.png / nening-real-female.png / nening-real-female-face.png 已刪，換成名實相符的 nening-face / ahong(-face) / ayuan-2d(-face) / xiaoyun-2d(-face)。nening-hero.png、nening-real-female-full.png 不變。
 - 角色代號（nening-real-female 等 templateId）**完全沒動**——存檔、路由、Supabase 都不受影響。
 - engine/model_router.py 三個 avatarAsset 路徑已同步改新檔名（引擎下次重啟生效）；若 Codex 端有寫死舊圖檔路徑請改用新名。
+
+
+## 7/3 20:35 · Codex 額度告罄通知（蘇菲）
+- 生圖連續失敗根因＝ChatGPT/Codex 訂閱額度用完（官方訊息：try again at 11:33 PM）。**同一額度池，Codex 端跑任務可能也受影響**，23:33 後恢復。
+- 小昀 2D 重生已排 23:40 自動執行（女巫上一輪 FAIL 開的藥方版：鎖家族線稿語彙＋負向詞）。
+- 阿原新 2D 已過女巫全維度、已上（e5fa721）。
