@@ -1235,3 +1235,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .fam-ring { display: grid; place-items: center; border-radius: 50%; padding: 3px;
   background: conic-gradient(var(--teal-d) calc(var(--p, 0) * 1%), var(--mint) 0); }
 .fam-ring .init-ava { border: 2px solid #FFF; }
+
+.tier-tag.next { color: var(--coral-d); background: var(--coral-soft); margin-left: 6px; }
+.mm-cell.future { background: var(--cream); pointer-events: none; }
+.mm-note { grid-column: 1 / -1; font-size: 13px; color: var(--muted); margin-top: 6px; }

@@ -756,6 +756,15 @@ function completeChatSession(reason = 'ended') {
 
 function showView(id) {
   const t = $('#toast'); if (t) t.classList.remove('show');
+  if (id === 'status') {
+    const segBtns = document.querySelectorAll('#statusSeg .seg-btn');
+    if (segBtns.length) {
+      segBtns.forEach(x => x.classList.toggle('on', x.dataset.v === 'today'));
+      const m = { today: $('#statusToday'), week: $('#statusWeek'), month: $('#statusMonth') };
+      Object.entries(m).forEach(([k, el]) => { if (el) el.style.display = k === 'today' ? '' : 'none'; });
+      if ($('#statusTitle')) $('#statusTitle').textContent = '今天的狀態';
+    }
+  }
   if (id === 'family') {
     const va = $('#viewAll');
     if (va && !va.classList.contains('active')) {
@@ -976,9 +985,10 @@ function renderMedList() {
     '<div class="med-row"><div><b>' + m.name + '</b><span>' + m.time + ' · ' + m.days + '</span></div></div>').join('');
 }
 
-const POINTS = { total: 400, used: 160 };
+const POINTS = { total: 400, used: 160,
+  get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
 function renderPoints() {
-  const left = POINTS.total - POINTS.used;
+  const left = POINTS.total - POINTS.used + POINTS.bought;
   const hud = document.querySelector('.hud-pill.pts');
   if (hud) hud.textContent = '剩 ' + left + ' 點';
   if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
@@ -1159,10 +1169,16 @@ function renderMoodMonth() {
   if (!wrap || wrap.childElementCount) return;
   const seq = ['calm','glad','happy','calm','tired','glad','calm','down','calm','glad','happy','glad','calm','calm','tired','glad','calm','happy','glad','calm','down','tired','glad','calm','happy','glad','calm','happy'];
   const now = new Date();
-  wrap.innerHTML = seq.map((k, i) => {
+  const daysInM = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const todayD = now.getDate();
+  let html = '';
+  for (let i = 0; i < daysInM; i++) {
     const day = i + 1;
-    return '<button class="mm-cell" data-k="' + k + '" data-d="' + day + '" style="background:' + MOODS[k].bg + ';color:' + MOODS[k].fg + '">' + day + '</button>';
-  }).join('');
+    if (day > todayD) { html += '<span class="mm-cell future"></span>'; continue; }
+    const k = seq[i % seq.length];
+    html += '<button class="mm-cell" data-k="' + k + '" data-d="' + day + '" style="background:' + MOODS[k].bg + ';color:' + MOODS[k].fg + '">' + day + '</button>';
+  }
+  wrap.innerHTML = html + '<div class="mm-note">記到今天（' + (now.getMonth() + 1) + '/' + todayD + '）為止</div>';
   wrap.addEventListener('click', e => {
     const c = e.target.closest('.mm-cell');
     if (!c) return;
@@ -1205,6 +1221,8 @@ function connectCall() {
 }
 
 function init() {
+  document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
+  document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
   if (location.hash === '#med') setTimeout(() => showView('med'), 300);
   syncCompanionUI();
   setupHscrollHints();
@@ -1499,16 +1517,37 @@ function init() {
     if (card) { document.querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on'); }
   });
   if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', () => {
-    const sel = document.querySelector('.tu-card.on b');
+    const selCard = document.querySelector('.tu-card.on');
+    const p = selCard ? +selCard.dataset.p : 0;
+    try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
+    renderPoints();
     $('#topUpModal').classList.remove('show');
-    toast('買好了，' + (sel ? sel.textContent : '') + '入帳，這批不會過期');
+    toast('買好了，' + p.toLocaleString() + ' 點入帳（餘額已更新），這批不會過期');
   });
   const tierList = document.querySelector('.tier-list');
+  function renderPlanNext() {
+    const nx = localStorage.getItem('munea.planNext');
+    document.querySelectorAll('.tier .tier-tag.next').forEach(x => x.remove());
+    const meta = document.querySelector('.pc-meta');
+    if (meta) meta.textContent = '我的訂閱 · 下次扣款 7/26 · 你和阿公兩位使用中' + (nx ? '（' + nx + ' 7/26 起）' : '');
+    if (nx && tierList) {
+      const t = [...tierList.querySelectorAll('.tier')].find(x => x.dataset.t === nx);
+      if (t) {
+        const em = document.createElement('em');
+        em.className = 'tier-tag next';
+        em.textContent = '7/26 起';
+        t.querySelector('span').appendChild(em);
+      }
+    }
+  }
   if (tierList) tierList.addEventListener('click', e => {
     const t = e.target.closest('.tier');
     if (!t || t.classList.contains('on')) return;
-    toast('好，下期起改成「' + t.dataset.t + '」，這期權益用到 7/25');
+    try { localStorage.setItem('munea.planNext', t.dataset.t); } catch (e2) {}
+    renderPlanNext();
+    toast('排好了：7/26 起改「' + t.dataset.t + '」，這期權益照用');
   });
+  renderPlanNext();
   if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', () => {
     $('#planModal').classList.remove('show');
     toast('會在 7/25 到期後停止扣款、轉為免費試用；資料和記憶都會留著');
@@ -1918,6 +1957,20 @@ function init() {
     { q: '睡前做哪件事，通常比較好睡？', opts: ['喝濃茶', '滑手機', '聽輕音樂', '吃宵夜'], a: 2 },
     { q: '「一暝大一寸」說的是誰？', opts: ['小嬰兒', '大樹', '月亮', '麵團'], a: 0 },
     { q: '夏天出門，哪件事最重要？', opts: ['多喝水', '穿厚外套', '戴毛帽', '正中午曬太陽'], a: 0 },
+    { q: '台灣哪個節日要吃湯圓？', opts: ['冬至', '端午節', '中秋節', '清明節'], a: 0 },
+    { q: '晚上走路，穿什麼顏色比較安全？', opts: ['亮色或反光', '全黑', '深藍', '深咖啡'], a: 0 },
+    { q: '「呷緊弄破碗」是什麼意思？', opts: ['欲速則不達', '吃飯要快', '碗要買厚的', '肚子餓了'], a: 0 },
+    { q: '綠燈行，紅燈要怎樣？', opts: ['停', '衝', '倒退', '按喇叭'], a: 0 },
+    { q: '台灣夏天最有名的水果是？', opts: ['芒果', '蘋果', '水梨', '柿子'], a: 0 },
+    { q: '喝茶說的「回甘」是指？', opts: ['喝完嘴裡回甜', '茶很苦', '茶涼了', '要再泡一次'], a: 0 },
+    { q: '中秋節大家常一起做什麼？', opts: ['烤肉賞月', '包粽子', '掃墓', '提燈籠'], a: 0 },
+    { q: '台語「呷飽未」是什麼意思？', opts: ['吃飽了嗎', '睡飽了嗎', '要出門嗎', '天氣好嗎'], a: 0 },
+    { q: '散步選什麼時段比較舒服？', opts: ['清晨或傍晚', '正中午', '半夜', '颱風天'], a: 0 },
+    { q: '睡前喝哪一種，比較不好睡？', opts: ['濃咖啡', '溫開水', '溫牛奶', '無咖啡因花茶'], a: 0 },
+    { q: '元宵節會做什麼？', opts: ['提燈籠吃元宵', '烤肉', '立蛋', '吃月餅'], a: 0 },
+    { q: '「家和萬事」下一個字是？', opts: ['興', '好', '成', '樂'], a: 0 },
+    { q: '適度曬太陽，身體會自己做出什麼？', opts: ['維生素 D', '維生素 C', '鐵', '鈣片'], a: 0 },
+    { q: '過馬路前，先做哪件事？', opts: ['左右看清楚', '看手機', '快跑', '閉眼睛'], a: 0 },
   ];
   let quizState = null;
   function startQuiz(act, card) {
@@ -1931,7 +1984,9 @@ function init() {
     const item = QUIZ_BANK[st.i];
     $('#quizProgress').textContent = '第 ' + (st.i + 1) + ' 題／共 ' + st.n + ' 題';
     $('#quizQ').textContent = item.q;
-    $('#quizOpts').innerHTML = item.opts.map((o, k) => '<button type="button" class="quiz-opt" data-k="' + k + '">' + o + '</button>').join('');
+    const order = item.opts.map((_, k) => k).sort((a2, b2) => ((a2 * 7 + st.i * 3) % 4) - ((b2 * 7 + st.i * 3) % 4));
+    st.map = order;
+    $('#quizOpts').innerHTML = order.map(k => '<button type="button" class="quiz-opt" data-k="' + k + '">' + item.opts[k] + '</button>').join('');
   }
   function finishQuiz() {
     const st = quizState;
@@ -1954,9 +2009,9 @@ function init() {
     if (!btn || !quizState) return;
     const item = QUIZ_BANK[quizState.i];
     const k = +btn.dataset.k;
-    [...$('#quizOpts').children].forEach((b2, idx) => {
-      if (idx === item.a) b2.classList.add('good');
-      else if (idx === k) b2.classList.add('bad');
+    [...$('#quizOpts').children].forEach(b2 => {
+      if (+b2.dataset.k === item.a) b2.classList.add('good');
+      else if (b2 === btn) b2.classList.add('bad');
       b2.disabled = true;
     });
     if (k === item.a) quizState.score++;
