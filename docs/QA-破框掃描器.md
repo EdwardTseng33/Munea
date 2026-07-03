@@ -9,3 +9,9 @@ document.querySelectorAll('.screen.active *').forEach(el=>{if(!el.offsetParent)r
 if(OK.some(k=>c.includes(k)))return;const cs=getComputedStyle(el);if(/auto|scroll/.test(cs.overflowX))return;
 if(el.scrollWidth-el.clientWidth>2&&el.textContent.trim())hits.push(c);});
 ```
+
+
+## v3（2026-07-04 · 誤報修正）
+- **略過「有管理自己溢出」的元素**：`overflow(-x): hidden/clip`＋`text-overflow: ellipsis` 或 `-webkit-line-clamp` 的元素，內容量本來就大於盒子（裁字加省略號是設計、不是破版）——掃描時跳過，改驗「畫面盒子是否超出父卡邊界」。
+- **垂直破版也要掃**：輪播/疊格類容器，逐則切換、驗每則的實際畫面盒不高出卡片底、不疊到標題。
+- **文字極值必測**：任何含用戶文字的元件，交付前塞「最長合理值」與「最短值」各驗一次（例：傳話 60 字/2 字）。
