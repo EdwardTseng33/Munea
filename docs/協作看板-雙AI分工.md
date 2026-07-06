@@ -288,4 +288,11 @@ Edward 真機檢視聊聊、點出多項 UX/設計問題。已修（動 `web/src
 - **驗證**：模組載入無錯、WebSocket 從 App 環境連上橋 9ms 成功；`BUILD SUCCEEDED`＋裝上 Edward iPhone。
 - **Edward 真機測法**：聊聊 → 開始通話 → 允許麥克風＋允許區域網路 → 開口。前提：Mac 開著、`live_voice_server.py` 跑著、手機與 Mac 同 Wi-Fi。
 - ⚠️ **這是 DEV（手機↔Mac 同網段）**；正式上線＝真語音搬 hosted 後端（App 只要改 `munea.liveVoiceUrl`）。
+
+## 2026-07-06 Mac 端 · 真機第一測回饋三修（Edward 真機實測後）
+Edward 真機測通（她真的講話了）、回三點，已修＋重裝真機：
+- **① 圖片不要動**：`styles.css` 移除臉部三種動畫（呼吸 faceBreath／眨眼 faceBlink／講話 faceTalk），圖片完全靜止（inspect 確認 animation-name:none）。
+- **② 收音／講話狀態要分明**：通話回呼直設 `#chat` data-state（listening/speaking），對應 `.cue-listen`（收音光點）／`.cue-speak`（聲波）確實切換。
+- **③ 後面講話她不回**（真兇＝手機喇叭→麥克風回音，她以為你一直在講）：`LiveVoice` 改**半雙工**——她說話時暫停送麥克風、`turn_complete` 或 900ms 靜音安全網切回收音。診斷來源＝伺服器 log（in 1.9MB / out 僅 1 turn 8.6s）。
+- 代價：半雙工暫時犧牲「講話中打斷」（聊聊 #10），先換多輪穩定；barge-in 待真回音消除再開。
 - 註：舊 `.face-caption`(#chatCaption) 仍是被隱藏的死元件（setCallHint 寫進去看不到）；本輪只解可見重疊，徹底清死碼列後續。
