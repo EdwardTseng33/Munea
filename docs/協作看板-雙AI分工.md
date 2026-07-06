@@ -280,4 +280,12 @@ Edward 真機檢視聊聊、點出多項 UX/設計問題。已修（動 `web/src
 - `gemini-3.1-flash-live-preview` 用此鑰匙連通；請它「用溫暖聲音說：陳奶奶你好，我是寧寧」→ **收到寧寧真聲音 399KB／約 8.3 秒**。核心整條通（鑰匙✓ 模型✓ 生聲音✓）。
 - 真語音伺服器 `engine/live_voice_server.py` 已在 Mac 背景跑（門牌 8201、測試頁 200）；Edward 可瀏覽器 `localhost:8201` 親耳試。
 - **下一步（Mac 主線）**：把這條真語音接進 App 聊聊（照分層架構的 `MuneaVoiceProvider`＋WebSocket 橋接約定，不另開路）、手機同 Wi-Fi 連 Mac 引擎、重裝真機 → 驗聊聊 #1/#8/#10。
+
+## 2026-07-06 Mac 端 · ✅✅ 真語音已接進 App、裝上真機
+- **App 聊聊「開始通話」接上真語音**：`web/src/app.js` 新增 `MuneaLiveVoice`（麥克風 16kHz 即時上行→WebSocket 橋、24kHz 回播、支援打斷）；`connectCall` 有真語音位置就走真路、接不上退回簡單陪聊、結束通話停真語音。連哪＝`getLiveVoiceUrl()`（localStorage['munea.liveVoiceUrl'] 或 DEV 預設 `ws://192.168.0.107:8201`）。
+- **伺服器** `live_voice_server.py` 綁 `0.0.0.0`（`LIVE_VOICE_HOST` 可調）→ 手機同 Wi-Fi 連得到；區網＋本機皆實測 200。
+- **手機殼放行**：`Info.plist` 加 `NSLocalNetworkUsageDescription` + `NSAllowsLocalNetworking`。
+- **驗證**：模組載入無錯、WebSocket 從 App 環境連上橋 9ms 成功；`BUILD SUCCEEDED`＋裝上 Edward iPhone。
+- **Edward 真機測法**：聊聊 → 開始通話 → 允許麥克風＋允許區域網路 → 開口。前提：Mac 開著、`live_voice_server.py` 跑著、手機與 Mac 同 Wi-Fi。
+- ⚠️ **這是 DEV（手機↔Mac 同網段）**；正式上線＝真語音搬 hosted 後端（App 只要改 `munea.liveVoiceUrl`）。
 - 註：舊 `.face-caption`(#chatCaption) 仍是被隱藏的死元件（setCallHint 寫進去看不到）；本輪只解可見重疊，徹底清死碼列後續。
