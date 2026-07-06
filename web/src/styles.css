@@ -1318,6 +1318,14 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .consent-go { width: 100%; border: none; border-radius: var(--radius-sm); background: var(--teal-d); color: #fff; font-family: var(--display); font-weight: 700; font-size: 17px; padding: 16px; cursor: pointer; box-shadow: var(--shadow-sm); white-space: nowrap; }
 .consent-go:active { transform: scale(.98); }
 .consent-link { display: block; width: 100%; margin-top: 10px; background: none; border: none; color: var(--teal-d); font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; padding: 6px; white-space: nowrap; }
+/* 版本更新彈窗：每版一組（版號＋日期＋白話更新項目） */
+.changelog { display: flex; flex-direction: column; gap: 18px; margin: 6px 0 16px; }
+.cl-rel .cl-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 7px; }
+.cl-rel .cl-head b { font-size: 16px; font-weight: 800; color: var(--teal-dd); }
+.cl-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.cl-date { font-size: 12px; color: var(--muted); margin-left: auto; }
+.changelog ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.changelog li { font-size: 14.5px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
 
 /* 個人資料輸入 */
 .pf-input { width: 100%; max-width: 260px; }

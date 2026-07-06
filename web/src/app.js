@@ -1351,6 +1351,27 @@ function toast(text) {
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+// 版本顯示 + 「版本更新」彈窗（讀 window.MuneaVersion 這個單一真相）
+function applyAppVersion() {
+  const V = window.MuneaVersion; if (!V) return;
+  const n = document.getElementById('verRowNum'); if (n) n.textContent = V.current;
+}
+function openVersionSheet() {
+  const V = window.MuneaVersion || { current: '—', channel: '', changelog: [] };
+  const cur = document.getElementById('verCurrent'); if (cur) cur.textContent = V.current;
+  const ch = document.getElementById('verChannel'); if (ch) ch.textContent = V.channel || '';
+  const list = document.getElementById('changelogList');
+  if (list) {
+    list.innerHTML = (V.changelog || []).map(rel =>
+      '<div class="cl-rel"><div class="cl-head"><b>v' + rel.version + '</b>' +
+      (rel.title ? '<span class="cl-title">' + rel.title + '</span>' : '') +
+      '<span class="cl-date">' + (rel.date || '') + '</span></div><ul>' +
+      (rel.items || []).map(i => '<li>' + i + '</li>').join('') + '</ul></div>'
+    ).join('');
+  }
+  const m = document.getElementById('versionSheet'); if (m) m.classList.add('show');
+}
+
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function cname() {
   try { return (companionDisplayName || '寧寧').trim() || '寧寧'; } catch (e) { return '寧寧'; }
@@ -2415,6 +2436,9 @@ function init() {
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
   if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openReader('terms'));
   if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openReader('privacy'));
+  if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);
+  if ($('#verClose')) $('#verClose').addEventListener('click', () => $('#versionSheet').classList.remove('show'));
+  applyAppVersion();
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));
   if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));
   if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });
