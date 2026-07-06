@@ -1372,22 +1372,58 @@ function openVersionSheet() {
   const m = document.getElementById('versionSheet'); if (m) m.classList.add('show');
 }
 
-// ===== 健康數據：點一格就地展開（這週趨勢＋寧寧白話解讀）· 對應「健康照護-數據告警AI提醒-設計」=====
-// [ENGINE] 正式版：這些值＋燈號由守護腦判定、由真 Apple 健康資料帶入；read 由管家腦生成。
-const HEALTH_METRICS = {
-  bp:     { name: '血壓',       status: 'ok',   read: '這週血壓都很穩，維持得很好。', trend: [126,130,128,124,128,127,128] },
-  hr:     { name: '心率',       status: 'ok',   read: '心跳平穩，沒有不規則的狀況。', trend: [70,72,71,73,72,70,72] },
-  spo2:   { name: '血氧',       status: 'ok',   read: '血氧很足，呼吸順順的。', trend: [97,98,97,96,97,97,97] },
-  steady: { name: '走路穩定度', status: 'warn', read: '這週走路穩定度有點降，走慢些、扶著點。要不要我提醒美華多留意？', trend: [3,3,2,2,2,2,2] },
-  sleep:  { name: '睡眠',       status: 'ok',   read: '睡得不錯，這週平均 7.4 小時。', trend: [7.2,7.5,6.8,7.6,7.4,7.5,7.5] },
-  act:    { name: '活動',       status: 'ok',   read: '今天有出門走走，很好；回來記得喝口水。', trend: [12,18,9,20,15,22,20] },
+// ===== 健康頁：分層排版（今日總結＋想提醒你＋都很穩）· 對應「健康照護-數據告警AI提醒-設計」=====
+// [ENGINE] 正式版：值/燈號由守護腦判定＋真 Apple 健康帶入；read 由管家腦生成。
+const METRIC_ICON = {
+  bp:     '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/>',
+  hr:     '<path d="M3 12h4l2-6 4 12 2-6h6"/>',
+  spo2:   '<path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/>',
+  steady: '<path d="M13 4a2 2 0 1 0 0 0M8 21l2-6 3 2 1 4M14 11l-3-2-3 2-2 4M15 13l3 1"/>',
+  sleep:  '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+  act:    '<path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/>',
+  med:    '<path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>',
 };
+const HEALTH_METRICS = {
+  bp:     { name: '血壓', val: '128', unit: '/82', status: 'ok',   read: '這週血壓都很穩，維持得很好。', trend: [126,130,128,124,128,127,128] },
+  hr:     { name: '心率', val: '72',  unit: ' 次', status: 'ok',   read: '心跳平穩，沒有不規則的狀況。', trend: [70,72,71,73,72,70,72] },
+  spo2:   { name: '血氧', val: '97',  unit: '%',   status: 'ok',   read: '血氧很足，呼吸順順的。', trend: [97,98,97,96,97,97,97] },
+  steady: { name: '走路穩定度', val: '偏低', unit: '', status: 'warn', read: '這週走路穩定度有點降，走慢些、扶著點。要不要我提醒美華多留意？', trend: [3,3,2,2,2,2,2] },
+  sleep:  { name: '睡眠', val: '7.5', unit: ' 時', status: 'ok',   read: '睡得不錯，這週平均 7.4 小時。', trend: [7.2,7.5,6.8,7.6,7.4,7.5,7.5] },
+  act:    { name: '活動', val: '20',  unit: ' 分', status: 'ok',   read: '今天有出門走走，很好；回來記得喝口水。', trend: [12,18,9,20,15,22,20] },
+  med:    { name: '用藥', val: '2',   unit: '/3',  status: 'warn', read: '今天還剩 1 次沒吃，到時間我會叫你。', trend: [1,1,1,0,1,1,1] },
+};
+const METRIC_ORDER = ['bp', 'hr', 'spo2', 'steady', 'sleep', 'act', 'med'];
 const STATUS_WORD = { ok: '穩', warn: '注意', alert: '要小心' };
+function metricSvg(key) { return '<svg class="ic" viewBox="0 0 24 24">' + (METRIC_ICON[key] || '') + '</svg>'; }
+function renderHealthDashboard() {
+  const dots = document.getElementById('miniDots'), focus = document.getElementById('focusList'), calm = document.getElementById('calmStrip');
+  if (!dots || !focus || !calm) return;
+  const warns = METRIC_ORDER.filter(k => HEALTH_METRICS[k].status !== 'ok');
+  const oks = METRIC_ORDER.filter(k => HEALTH_METRICS[k].status === 'ok');
+  const head = document.getElementById('thHead'), sub = document.getElementById('thSub');
+  if (head && sub) {
+    if (!warns.length) { head.textContent = '今天一切都好'; sub.textContent = '每一項我都看著，放心。'; }
+    else { head.textContent = '今天大致都穩'; sub.textContent = '有 ' + warns.length + ' 件事我幫你盯著，其他都好。'; }
+  }
+  dots.innerHTML = METRIC_ORDER.map(k => '<i class="' + HEALTH_METRICS[k].status + '"></i>').join('');
+  focus.innerHTML = warns.map(k => {
+    const m = HEALTH_METRICS[k];
+    return '<button class="focus-card ' + m.status + '" type="button" data-metric="' + k + '">' +
+      '<span class="fc-ico t-' + k + '">' + metricSvg(k) + '</span>' +
+      '<div class="fc-body"><div class="fc-top"><b>' + m.name + '</b><span class="fc-val">' + m.val + '<small>' + m.unit + '</small></span></div>' +
+      '<div class="fc-read">' + m.read + '</div></div>' +
+      '<span class="fc-chev"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>';
+  }).join('');
+  calm.innerHTML = oks.map(k => {
+    const m = HEALTH_METRICS[k];
+    return '<button class="calm-chip" type="button" data-metric="' + k + '"><span class="cc-ic t-' + k + '">' + metricSvg(k) + '</span><b>' + m.val + '<small>' + m.unit + '</small></b><span class="cc-name">' + m.name + '</span></button>';
+  }).join('');
+}
 function renderMetricDetail(key) {
   const box = document.getElementById('metricDetail');
   if (!box) return;
-  document.querySelectorAll('#statGrid .stat-tile').forEach(t => t.classList.toggle('open', t.dataset.metric === key));
-  if (box.dataset.open === key) { box.hidden = true; box.dataset.open = ''; document.querySelectorAll('#statGrid .stat-tile').forEach(t => t.classList.remove('open')); return; }
+  document.querySelectorAll('#status [data-metric]').forEach(t => t.classList.toggle('open', t.dataset.metric === key));
+  if (box.dataset.open === key) { box.hidden = true; box.dataset.open = ''; document.querySelectorAll('#status [data-metric]').forEach(t => t.classList.remove('open')); return; }
   const m = HEALTH_METRICS[key];
   if (!m) { box.hidden = true; return; }
   const max = Math.max(...m.trend), min = Math.min(...m.trend);
@@ -1405,11 +1441,11 @@ function renderMetricDetail(key) {
   try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }
 function initHealthDashboard() {
-  const grid = document.getElementById('statGrid');
-  if (grid) grid.addEventListener('click', e => {
-    const tile = e.target.closest('.stat-tile[data-metric]');
-    if (!tile || tile.id === 'medTileBtn') return;   // 用藥格保留原本開藥單行為
-    renderMetricDetail(tile.dataset.metric);
+  renderHealthDashboard();
+  const status = document.getElementById('status');
+  if (status) status.addEventListener('click', e => {
+    const el = e.target.closest('.focus-card[data-metric], .calm-chip[data-metric]');
+    if (el) renderMetricDetail(el.dataset.metric);
   });
 }
 
