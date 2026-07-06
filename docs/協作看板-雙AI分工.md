@@ -245,3 +245,12 @@
 - **TestFlight 前置補齊**：`ios/App/App/Info.plist` 補上三個權限字串（麥克風／語音／通知，照 `TESTFLIGHT-MAC-HANDOFF` 指定字串，先前缺）；最新 web 已 `cap sync` 進殼；`plutil` 驗證 OK。`ios/` 殼首次入庫（附加、不衝突，順帶雲端備份這台獨有的殼）。
 - **卡點**：這台 Mac 尚無簽章憑證（`security find-identity`=0），待 Edward 開一次 Xcode 選 Team `V77L5245MR` 自動建；帳號在 Apple 端已通。
 - **認領**：聊聊 5 項（1 真語音接通／5 斷網優雅／8 延遲／9 嘴型／10 打斷）Mac 端接手，先攻第 1 項。會動 `engine/live_voice_*` 與即時語音 web 接線＝Mac 語音線，Codex 本就避讓此區、沿用不撞。
+
+## 2026-07-06 Mac 端（Claude/蘇菲）· 自動出包診斷（終端機 xcodebuild）
+> Edward 要求「自主完成、不手動點 Xcode」。已用終端機直接試出包，把卡點釘死到「只有 Edward 能做」的最小集合。
+- ✅ **帳號通路 OK**：`xcodebuild ... -allowProvisioningUpdates`（Team `V77L5245MR`）成功連上 Apple、簽章流程走得動。證明可終端機自動出包。
+- 🔴 **卡點 1**：開發者帳號**無登記裝置** → 自動「開發用」簽章生不出通行證。
+- 🔴 **卡點 2**：Edward 的 **iPhone 15 Pro**（UDID `00008130-00123D590C92001C`、iOS 26.5）**開發者模式未開**（`Developer Mode disabled`）→ 無法登記裝置、無法直裝。
+- 🔑 **上 TestFlight 的結論**：上架用（distribution）簽章**不需裝置**，但需要 **App Store Connect API 金鑰**才能裝置無關地自動簽發行版＋上傳（並自動建/驗 app record）。
+- 已請 Edward 二選一：**Ⓐ 產生 API 金鑰**（推薦、全自動、免手機、可重複用）｜**Ⓑ 手機開開發者模式**（可先直裝真機測聊聊，但 TestFlight 上傳仍需金鑰）。
+- 未改任何 `engine/`／`web/` 程式；本輪僅診斷 + 本白板紀錄。
