@@ -14,6 +14,7 @@ Current status:
 - Repo now contains AI memory/service foundation SQL at `supabase/sql/004_ai_memory_service_foundation.sql`.
 - Repo now contains companion persona layer foundation SQL at `supabase/sql/005_companion_persona_layer.sql`.
 - Repo now contains billing credits foundation SQL at `supabase/sql/006_billing_credits_foundation.sql`.
+- Repo now contains family cloud state foundation SQL at `supabase/sql/007_family_cloud_state_foundation.sql`.
 - The SQL bootstrap has been tested through the dashboard SQL Editor flow.
 - Supabase CLI is not installed in this Windows environment yet, so this is a SQL Editor-ready schema, not an official migration history entry.
 - The backend can now load `engine/.env.local` directly, and `npm run supabase:doctor` can validate local Supabase wiring without printing secrets.
@@ -99,6 +100,16 @@ supabase/sql/006_billing_credits_foundation.sql
 ```
 
 This adds `entitlement_policy_versions`, `credit_wallets`, `credit_transactions`, and `credit_ledger`. The v1 plan ladder is Free / Plus / Premium / Concierge. Subscriptions remain the base access model; credits are reserved for expensive or bursty add-ons such as premium Avatar/GPU minutes, and every mutation must be server-side and idempotent.
+
+Then run the family cloud state foundation:
+
+```text
+supabase/sql/007_family_cloud_state_foundation.sql
+```
+
+This adds the Codex-owned family cloud bridge for `family_invitations`, `consent_records`, `wellbeing_signals`, `family_state_entries`, `family_activities`, and `family_activity_participants`. It also extends `persons` with `auth_user_id`, `region_code`, and `attributes`.
+
+`family_state_entries` is the production bridge for the current `/family/state` local JSON prototype keys: `activities`, `familyFeed`, `meds`, `visit`, `routine`, and `wallet`. This lets the existing app sync path move to Supabase later without changing the user-facing family UI first.
 
 This creates the first Admin/North Star analytics tables:
 
@@ -266,6 +277,8 @@ When all env values are present and the SQL seed has been applied, run the read-
 ```powershell
 npm run supabase:doctor:live
 ```
+
+The live doctor now performs read-only table reachability checks for every expected table, including the 007 family cloud tables. If a table is missing, the output lists the table name without printing `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## After SQL Runs
 

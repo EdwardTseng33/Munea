@@ -36,10 +36,18 @@ def doctor(live=False):
         "familyGroupId": os.environ.get("MUNEA_SUPABASE_FAMILY_GROUP_ID") or "",
         "missing": status["missing"],
         "tables": status["tables"],
+        "tableChecks": [],
         "liveChecks": [],
     }
 
     if live and adapter.enabled():
+        for table in status["tables"]:
+            try:
+                adapter.check_table(table)
+                result["tableChecks"].append({"table": table, "ok": True})
+            except Exception as exc:
+                result["tableChecks"].append({"table": table, "ok": False, "error": str(exc)[:180]})
+
         checks = [
             ("appProfile", adapter.load_app_profile_store),
             ("companionProfile", adapter.load_companion_profile),
@@ -52,7 +60,10 @@ def doctor(live=False):
                 result["liveChecks"].append({"name": name, "ok": value is not None})
             except Exception as exc:
                 result["liveChecks"].append({"name": name, "ok": False, "error": str(exc)[:180]})
-        result["ok"] = all(check["ok"] for check in result["liveChecks"])
+        result["ok"] = (
+            all(check["ok"] for check in result["tableChecks"])
+            and all(check["ok"] for check in result["liveChecks"])
+        )
 
     return result
 
@@ -70,6 +81,11 @@ def print_text(result):
     else:
         print("- missing: none")
     if result["liveChecks"]:
+        if result["tableChecks"]:
+            failed_tables = [check for check in result["tableChecks"] if not check["ok"]]
+            print(f"- table checks: {len(result['tableChecks']) - len(failed_tables)}/{len(result['tableChecks'])} ok")
+            for check in failed_tables:
+                print(f"  - {check['table']}: failed ({check.get('error', 'failed')})")
         print("- live checks:")
         for check in result["liveChecks"]:
             suffix = "" if check["ok"] else f" ({check.get('error', 'failed')})"

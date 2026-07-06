@@ -952,6 +952,8 @@ print("env loader OK")
 
 $doctorJson = & $Python scripts\supabase_doctor.py --allow-missing --json | ConvertFrom-Json
 if (-not $doctorJson.tables -or $doctorJson.tables.Count -lt 5) { throw "Supabase doctor missing table status" }
+if ($doctorJson.tables -notcontains "family_state_entries") { throw "Supabase doctor missing 007 family table status" }
+if ($null -eq $doctorJson.tableChecks) { throw "Supabase doctor missing live table check contract" }
 if ($doctorJson.hasServiceRoleKey -and ($doctorJson | ConvertTo-Json -Compress) -match "secret-test-key") { throw "Supabase doctor leaked service key" }
 Pass "Environment loader and Supabase doctor are safe"
 
@@ -1111,6 +1113,7 @@ analytics = Path("supabase/sql/003_analytics_admin_foundation.sql").read_text(en
 ai_memory = Path("supabase/sql/004_ai_memory_service_foundation.sql").read_text(encoding="utf-8").lower()
 persona_layer = Path("supabase/sql/005_companion_persona_layer.sql").read_text(encoding="utf-8").lower()
 billing_credits = Path("supabase/sql/006_billing_credits_foundation.sql").read_text(encoding="utf-8").lower()
+family_cloud = Path("supabase/sql/007_family_cloud_state_foundation.sql").read_text(encoding="utf-8").lower()
 env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
     "accounts",
@@ -1229,9 +1232,35 @@ for token in [
 ]:
     if token not in billing_credits:
         raise SystemExit("Missing billing credits schema token: " + token)
+family_cloud_tables = [
+    "family_invitations",
+    "consent_records",
+    "wellbeing_signals",
+    "family_state_entries",
+    "family_activities",
+    "family_activity_participants",
+]
+for table in family_cloud_tables:
+    if f"create table if not exists public.{table}" not in family_cloud:
+        raise SystemExit("Missing family cloud table: " + table)
+    if f"alter table public.{table} enable row level security" not in family_cloud:
+        raise SystemExit("Missing family cloud RLS: " + table)
+    if f"revoke all on public.{table} from anon" not in family_cloud:
+        raise SystemExit("Missing family cloud anon revoke: " + table)
+for token in [
+    "auth_user_id",
+    "region_code",
+    "token_hash",
+    "short_code",
+    "elder_assisted",
+    "'familyFeed'",
+    "'wallet'",
+]:
+    if token.lower() not in family_cloud:
+        raise SystemExit("Missing family cloud schema token: " + token)
 if "weekly meaningful companion days" not in Path("docs/BACKEND-ARCHITECTURE-v1.md").read_text(encoding="utf-8").lower():
     raise SystemExit("Backend architecture missing North Star definition")
-print("supabase tables", len(required_tables) + len(analytics_tables) + len(ai_memory_tables) + len(persona_tables) + len(billing_credit_tables))
+print("supabase tables", len(required_tables) + len(analytics_tables) + len(ai_memory_tables) + len(persona_tables) + len(billing_credit_tables) + len(family_cloud_tables))
 '@
 Pass "Supabase schema, analytics foundation, RLS, grants, and seed ids are present"
 

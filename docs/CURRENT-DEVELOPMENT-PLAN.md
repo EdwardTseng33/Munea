@@ -21,7 +21,7 @@
 | Runnable web prototype | Home, status, chat, family, settings, onboarding, landing | 65-70% |
 | Prototype AI engine | Local Python Gemini chat/TTS demo works | 35-45% |
 | iOS shell | Capacitor config scaffolded; native project still requires Mac/Xcode | 5-10% |
-| Data backend | Supabase schema/seed + analytics foundation exists; backend env loader and doctor added; live env wiring pending | 35-45% |
+| Data backend | Supabase schema 001-007 + adapter table audit exist; live env/schema apply still pending | 45-55% |
 | Real-time avatar | Avatar Runtime now consumes backend `/avatar-session`; engine PoCs still pending | 35-45% |
 | First TestFlight path | Not ready yet | 30-35% |
 
@@ -54,6 +54,13 @@
 - Added backend fallback logging so Supabase adapter failures, model reply failures, and TTS failures leave warning logs before prototype fallbacks are used.
 - Added smoke coverage to prevent silent `except ...: pass` handlers from returning in `engine/server.py` and `engine/chat_engine.py`.
 - Added `docs/TESTFLIGHT-MAC-HANDOFF-2026-07-02.md` now that Xcode and Apple Developer Program access are available on Edward's Mac. The next iOS gate is Mac-side Capacitor project generation, purpose strings, signing, and real-iPhone microphone/playback QA.
+
+## 2026-07-06 Update
+
+- Added `supabase/sql/007_family_cloud_state_foundation.sql` as the Codex-owned family cloud schema bridge for invites, consent records, wellbeing signals, `/family/state` cloud entries, family activities, and activity participants.
+- Extended `persons` schema planning with `auth_user_id`, `region_code`, and `attributes` so family-account linking can move from local prototype to Supabase without relying on user-editable metadata.
+- Extended Supabase doctor live mode with read-only table reachability checks for every expected table, including the 007 family cloud tables. This should make future "missing table" incidents report exact table names instead of producing vague fallback symptoms.
+- Live database apply is still pending: the repo now has the SQL and verification contract, but the staging/live Supabase project must run SQL 001-007 in order before `npm run supabase:doctor:live` can pass.
 
 ## 2026-06-29 Update
 
@@ -231,7 +238,7 @@ Goal: stop relying on local JSON before multi-user work starts.
 Work items:
 - [x] Choose backend database stack.
 - [ ] Implement Profile and Memory tables first.
-- [ ] Define `family_group_id` and permission model.
+- [x] Define first `family_group_id` and account-member permission model baseline.
 - [ ] Add conversation memory and retention policy without making raw transcripts the default user-facing surface.
 - [x] Define AI service design v1 for Reflex, Butler, Guardian, memory, perception, Wisdom Lens, and safety boundaries.
 - [x] Add local AI Brain Router framework with deterministic memory extraction/retrieval and Guardian risk evaluation contracts.
@@ -271,6 +278,7 @@ Work items:
 - [ ] Test backend token verification against a live Supabase Auth session.
 - [ ] Convert remaining production endpoints away from body-provided identity fields.
 - [ ] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.
+- [ ] Apply `supabase/sql/007_family_cloud_state_foundation.sql` to staging/live Supabase and confirm all table checks pass.
 - [ ] Convert SQL draft into official Supabase migration after CLI/MCP authentication.
 
 ## Sprint 1-G: App Store Subscription And Trust Layer

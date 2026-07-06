@@ -19,7 +19,7 @@ This document avoids the active collision zones:
 | Local verification | Good | `npm run release:check` now runs the clean pre-release bundle: static smoke, auth-gate smoke, and Supabase doctor. |
 | CI verification | Improved | `.github/workflows/smoke.yml` now runs static smoke, Supabase doctor, and auth-gate smoke on push / PR. |
 | Staging backend | Not ready | No hosted Munea API URL is configured yet. |
-| Supabase live wiring | Partially ready | SQL and adapter exist; live env verification remains pending. |
+| Supabase live wiring | Partially ready | SQL 001-007 and adapter table audit exist; live SQL apply and env verification remain pending. |
 | Auth live E2E | Not ready | Supabase Auth providers and backend token verification still need live-session testing. |
 | Billing provider verification | Not ready | StoreKit / RevenueCat webhook signature verification is not implemented yet. |
 | Scheduled jobs | Partially ready | Daily briefing logic exists, but production 06:30 scheduler / host is not wired. |
@@ -87,7 +87,7 @@ First backend-connected TestFlight should only happen after:
 
 1. `npm run release:check` passes locally.
 2. `npm run ai:doctor:live` confirms `GEMINI_API_KEY` is available to the backend without printing the key value.
-3. Approved Supabase SQL is applied to the staging project.
+3. Approved Supabase SQL 001-007 is applied to the staging project.
 4. `npm run supabase:doctor:live` passes against staging secrets.
 5. Hosted `GET /healthz` returns `ok:true` over HTTPS.
 6. Real Supabase Auth session verification is tested against `/auth-status`.
@@ -104,20 +104,20 @@ AI key preflight:
 
 Ready foundations:
 
-- SQL drafts `001` through current active schema files.
-- Supabase adapter and `npm run supabase:doctor`.
+- SQL drafts `001` through `007_family_cloud_state_foundation.sql`.
+- Supabase adapter and `npm run supabase:doctor`, including live table reachability checks.
 - JSON fallback remains safe for local development.
 
 Observed local blocker:
 
-- If `MUNEA_DATABASE_PROVIDER=supabase` is enabled before every SQL file is applied, local smoke can fail when the backend tries to read missing tables such as `companion_relationship_states`.
+- If `MUNEA_DATABASE_PROVIDER=supabase` is enabled before every SQL file is applied, local smoke can fail when the backend tries to read missing tables such as `companion_relationship_states` or the 007 family cloud tables.
 - For CI/static checks, force `MUNEA_DATABASE_PROVIDER=json` so the smoke workflow verifies repo contracts without depending on a partially configured live database.
 - `MUNEA_SKIP_ENV_LOCAL=1` is available for CI/clean verification so `engine/.env.local` secrets do not leak into static smoke assumptions.
 - `npm run smoke:no-api` now sets this clean mode automatically; use `npm run supabase:doctor:live` when the goal is to validate real Supabase wiring.
 
 Next safe work:
 
-1. Run the SQL in the real project in order.
+1. Run SQL 001-007 in the real project in order.
 2. Fill backend-only `engine/.env.local` locally, never committing secrets.
 3. Run `npm run supabase:doctor:live`.
 4. Test one real Supabase Auth session against `/auth-status`.

@@ -113,8 +113,25 @@ class SupabaseAdapter:
                 "credit_wallets",
                 "credit_transactions",
                 "credit_ledger",
+                "family_invitations",
+                "consent_records",
+                "wellbeing_signals",
+                "family_state_entries",
+                "family_activities",
+                "family_activity_participants",
             ],
         }
+
+    def check_table(self, table):
+        if not self.enabled():
+            return False
+        select_columns = {
+            "companion_persona_templates": "template_id",
+            "entitlement_policy_versions": "policy_key",
+        }
+        column = select_columns.get(table, "id")
+        self._request("GET", table, query={"select": column, "limit": "1"})
+        return True
 
     def load_companion_profile(self):
         if not self.enabled():
