@@ -1372,6 +1372,47 @@ function openVersionSheet() {
   const m = document.getElementById('versionSheet'); if (m) m.classList.add('show');
 }
 
+// ===== 健康數據：點一格就地展開（這週趨勢＋寧寧白話解讀）· 對應「健康照護-數據告警AI提醒-設計」=====
+// [ENGINE] 正式版：這些值＋燈號由守護腦判定、由真 Apple 健康資料帶入；read 由管家腦生成。
+const HEALTH_METRICS = {
+  bp:     { name: '血壓',       status: 'ok',   read: '這週血壓都很穩，維持得很好。', trend: [126,130,128,124,128,127,128] },
+  hr:     { name: '心率',       status: 'ok',   read: '心跳平穩，沒有不規則的狀況。', trend: [70,72,71,73,72,70,72] },
+  spo2:   { name: '血氧',       status: 'ok',   read: '血氧很足，呼吸順順的。', trend: [97,98,97,96,97,97,97] },
+  steady: { name: '走路穩定度', status: 'warn', read: '這週走路穩定度有點降，走慢些、扶著點。要不要我提醒美華多留意？', trend: [3,3,2,2,2,2,2] },
+  sleep:  { name: '睡眠',       status: 'ok',   read: '睡得不錯，這週平均 7.4 小時。', trend: [7.2,7.5,6.8,7.6,7.4,7.5,7.5] },
+  act:    { name: '活動',       status: 'ok',   read: '今天有出門走走，很好；回來記得喝口水。', trend: [12,18,9,20,15,22,20] },
+};
+const STATUS_WORD = { ok: '穩', warn: '注意', alert: '要小心' };
+function renderMetricDetail(key) {
+  const box = document.getElementById('metricDetail');
+  if (!box) return;
+  document.querySelectorAll('#statGrid .stat-tile').forEach(t => t.classList.toggle('open', t.dataset.metric === key));
+  if (box.dataset.open === key) { box.hidden = true; box.dataset.open = ''; document.querySelectorAll('#statGrid .stat-tile').forEach(t => t.classList.remove('open')); return; }
+  const m = HEALTH_METRICS[key];
+  if (!m) { box.hidden = true; return; }
+  const max = Math.max(...m.trend), min = Math.min(...m.trend);
+  const bars = m.trend.map((v, i) => {
+    const h = max === min ? 60 : 22 + Math.round((v - min) / (max - min) * 58);
+    return `<i style="height:${h}%" class="${i === m.trend.length - 1 ? 'now' : ''}"></i>`;
+  }).join('');
+  const days = ['一', '二', '三', '四', '五', '六', '日'];
+  box.innerHTML =
+    `<div class="md-head"><b>${m.name} · 這週</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]}</span></div>` +
+    `<div class="md-chart">${bars}</div>` +
+    `<div class="md-days">${days.map(d => '<span>' + d + '</span>').join('')}</div>` +
+    `<div class="md-read"><span class="md-face"><img src="avatars/nening-face.png" alt=""></span><span>${m.read}</span></div>`;
+  box.hidden = false; box.dataset.open = key;
+  try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+}
+function initHealthDashboard() {
+  const grid = document.getElementById('statGrid');
+  if (grid) grid.addEventListener('click', e => {
+    const tile = e.target.closest('.stat-tile[data-metric]');
+    if (!tile || tile.id === 'medTileBtn') return;   // 用藥格保留原本開藥單行為
+    renderMetricDetail(tile.dataset.metric);
+  });
+}
+
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function cname() {
   try { return (companionDisplayName || '寧寧').trim() || '寧寧'; } catch (e) { return '寧寧'; }
@@ -1930,6 +1971,7 @@ function init() {
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
+  initHealthDashboard();
   
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));

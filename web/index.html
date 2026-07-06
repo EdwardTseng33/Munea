@@ -90,12 +90,24 @@
         <div class="wc-say"><span class="wc-face"><img src="avatars/nening-face.png" alt="寧寧"></span><span class="wc-quote">今天心情不錯，膝蓋的痠我記著、也跟美華說了。</span></div>
       </div>
 
-      <div class="stat-grid">
-        <div class="stat-tile t-bp"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128<small>/82</small></div><div class="st-label">血壓 <em class="st-trend ok">穩</em></div></div>
-        <div class="stat-tile t-sleep"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 時</small></div><div class="st-label">睡眠 <em class="st-trend up">↗ 好</em></div></div>
-        <button class="stat-tile t-med" id="medTileBtn" type="button"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val" id="statPillVal">2<small>/3</small></div><span class="pill-dots" id="pillDots"><i class="f"></i><i class="f"></i><i></i></span><div class="st-label">用藥 <em class="st-trend warn" id="statPillHint">剩 1 次</em></div></button>
-        <div class="stat-tile t-act"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">20<small> 分</small></div><span class="act-spark"><i style="height:9px"></i><i style="height:14px"></i><i class="hi" style="height:19px"></i></span><div class="st-label">活動 <em class="st-trend up">↗ 出門</em></div></div>
+      <!-- 寧寧的整體健康觀察：把三級燈號＋主動關心變成一句人話（黃/紅才出現內容）-->
+      <div class="health-note" id="healthNote">
+        <span class="hn-face"><img src="avatars/nening-face.png" alt="寧寧"></span>
+        <div class="hn-text" id="healthNoteText">今天整體看起來不錯，有兩項我幫你留意著。</div>
       </div>
+
+      <!-- 健康數據格：7 項、每項帶燈號、點一下就地展開看趨勢＋寧寧解讀 -->
+      <div class="stat-grid" id="statGrid">
+        <button class="stat-tile t-bp" type="button" data-metric="bp"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128<small>/82</small></div><div class="st-label">血壓 <em class="st-dot ok"></em></div></button>
+        <button class="stat-tile t-hr" type="button" data-metric="hr"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></span><div class="st-val">72<small> 次</small></div><div class="st-label">心率 <em class="st-dot ok"></em></div></button>
+        <button class="stat-tile t-spo2" type="button" data-metric="spo2"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg></span><div class="st-val">97<small>%</small></div><div class="st-label">血氧 <em class="st-dot ok"></em></div></button>
+        <button class="stat-tile t-steady" type="button" data-metric="steady"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M13 4a2 2 0 1 0 0 0M8 21l2-6 3 2 1 4M14 11l-3-2-3 2-2 4M15 13l3 1"/></svg></span><div class="st-val">偏低</div><div class="st-label">走路穩定 <em class="st-dot warn"></em></div></button>
+        <button class="stat-tile t-sleep" type="button" data-metric="sleep"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><div class="st-val">7.5<small> 時</small></div><div class="st-label">睡眠 <em class="st-dot ok"></em></div></button>
+        <button class="stat-tile t-act" type="button" data-metric="act"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">20<small> 分</small></div><div class="st-label">活動 <em class="st-dot ok"></em></div></button>
+        <button class="stat-tile t-med" id="medTileBtn" type="button" data-metric="med"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><div class="st-val" id="statPillVal">2<small>/3</small></div><span class="pill-dots" id="pillDots"><i class="f"></i><i class="f"></i><i></i></span><div class="st-label">用藥 <em class="st-dot warn"></em></div></button>
+      </div>
+      <!-- 點一格就地展開：這格的趨勢＋寧寧一句白話解讀（不跳頁、不用找返回）-->
+      <div class="metric-detail" id="metricDetail" hidden></div>
 
       <div class="act-duo">
         <button class="med-entry duo" id="medEntryStatus" type="button"><span class="dz-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><b class="dz-title">用藥提醒</b><span class="dz-tag" id="medCountLabel">1 種藥</span><svg class="ic dz-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -883,6 +895,6 @@
   <script src="src/version.js?v=20260706-version"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth.js?v=20260630-auth"></script>
-  <script type="module" src="src/app.js?v=20260706-v100"></script>
+  <script type="module" src="src/app.js?v=20260706-health"></script>
 </body>
 </html>

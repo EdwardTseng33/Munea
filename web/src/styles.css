@@ -207,6 +207,43 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .stat-tile .act-spark i { width: 5px; }
 #personGrid .stat-tile.t-med { cursor: default; } /* 個人頁四磚僅展示、不可點 */
 
+/* 健康頁重做（2026-07-06）：新數據格配色 + 三級燈號 + 就地展開 */
+.stat-tile.t-hr .st-ico { background: #D9695E; color: #FFF; }
+.stat-tile.t-hr .st-val { color: #B0463C; }
+.stat-tile.t-spo2 .st-ico { background: #4C93C4; color: #FFF; }
+.stat-tile.t-spo2 .st-val { color: #2E6D96; }
+.stat-tile.t-steady .st-ico { background: #C79A3B; color: #FFF; }
+.stat-tile.t-steady .st-val { color: #8A6410; }
+.st-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 3px; vertical-align: 0; }
+.st-dot.ok { background: var(--teal-d); }
+.st-dot.warn { background: #E0A32E; }
+.st-dot.alert { background: var(--coral-d); }
+.stat-tile[data-metric] { cursor: pointer; }
+.stat-tile.open { box-shadow: 0 0 0 2px var(--teal-d); }
+/* 寧寧整體健康觀察 */
+.health-note { display: flex; align-items: center; gap: 11px; background: var(--mint); border-radius: 16px; padding: 12px 14px; margin-bottom: 14px; }
+.health-note .hn-face { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+.health-note .hn-face img { width: 100%; height: 100%; object-fit: cover; }
+.health-note .hn-text { font-size: 14px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty; }
+/* 點一格就地展開：這週趨勢 + 寧寧解讀 */
+.metric-detail { background: #FFF; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin: -4px 0 16px; box-shadow: var(--shadow-sm); animation: mdIn .22s ease; }
+@keyframes mdIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.md-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.md-head b { font-size: 15px; font-weight: 800; color: var(--ink); }
+.md-status { margin-left: auto; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+.md-status.ok { background: var(--mint); color: var(--teal-dd); }
+.md-status.warn { background: var(--coral-soft); color: #A9711A; }
+.md-status.alert { background: var(--coral-soft); color: var(--coral-d); }
+.md-chart { display: flex; align-items: flex-end; gap: 6px; height: 72px; padding: 0 2px; }
+.md-chart i { flex: 1; background: var(--mint); border-radius: 5px 5px 0 0; min-height: 6px; transition: height .3s ease; }
+.md-chart i.now { background: var(--teal-d); }
+.md-days { display: flex; gap: 6px; margin: 5px 0 12px; padding: 0 2px; }
+.md-days span { flex: 1; text-align: center; font-size: 11px; color: var(--muted); }
+.md-read { display: flex; align-items: flex-start; gap: 9px; background: var(--cream); border-radius: 12px; padding: 10px 12px; }
+.md-read .md-face { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.md-read .md-face img { width: 100%; height: 100%; object-fit: cover; }
+.md-read span:last-child { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+
 .wallet-card { position: relative; overflow: hidden; background: var(--deep); border-radius: 20px; padding: 16px; box-shadow: var(--shadow); color: #fff; margin-bottom: 12px; }
 .wallet-card .wc-top { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,.92); margin-bottom: 10px; }
 .wallet-card .wc-top .ic { width: 18px; height: 18px; }
