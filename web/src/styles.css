@@ -565,17 +565,11 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   object-fit: cover;
   object-position: center top;
   display: block;
-  /* §6.5 第 2 層降級：靜態圖 + CSS 呼吸（極輕微縮放，像活著、不恐怖谷） */
-  animation: faceBreath 5.2s ease-in-out infinite;
-  transform-origin: center 36%;
+  /* Edward 2026-07-06：圖片不要有動態——保持完全靜止（呼吸縮放已移除） */
 }
-@keyframes faceBreath { 0%,100% { transform: scale(1.0); } 50% { transform: scale(1.014); } }
 
-/* 眨眼：一條極淡的暗帶快速掃過眼睛區域（佔位，真 avatar 接好後移除） */
-.face-blink { position: absolute; left: 0; right: 0; top: 30%; height: 7%; z-index: 1; pointer-events: none;
-  background: transparent; opacity: 0;
-  animation: faceBlink 6.5s ease-in-out infinite; }
-@keyframes faceBlink { 0%,92%,100% { opacity: 0; } 95% { opacity: 1; } }
+/* Edward 2026-07-06：圖片不要有動態——關閉眨眼佔位效果 */
+.face-blink { display: none; }
 
 .avatar-mouth { position: absolute; left: 50%; top: 50%; z-index: 2; display: none;
   width: 58px; height: 24px; transform: translate(-50%, -50%);
@@ -635,9 +629,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .face-screen[data-state="speaking"]  .cue-speak  { display: inline-flex; }
 /* 待命態：不顯 cue（臉靜靜呼吸眨眼即可）*/
 
-/* 說話時臉多一點點生氣（極輕的微動，佔位真對嘴前） */
-.face-screen[data-state="speaking"] .face-bg img { animation: faceTalk 1.1s ease-in-out infinite; }
-@keyframes faceTalk { 0%,100% { transform: scale(1.006); } 50% { transform: scale(1.02); } }
+/* Edward 2026-07-06：圖片不要有動態——移除說話時的臉部微動（改由下方聲波動態表達「在說」） */
 
 /* ===== S2S 狀態提示：不是字幕/文字稿，只告訴使用者現在是否在聽 ===== */
 .face-caption { position: absolute; left: 50%; bottom: 142px; z-index: 6;

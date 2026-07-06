@@ -706,10 +706,13 @@ const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
+  _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
+  _toListening() { clearTimeout(this._speakTimer); this.speaking = false; if (this.onListen) this.onListen(); },
   async start(onListen, onSpeak) {
     const url = getLiveVoiceUrl();
     if (!url) return false;
     this.on = true;
+    this.onListen = onListen; this.onSpeak = onSpeak; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
     return await new Promise(resolve => {
@@ -723,18 +726,27 @@ const LiveVoice = {
         const src = this.ac.createMediaStreamSource(this.mic);
         this.proc = this.ac.createScriptProcessor(4096, 1, 1);
         src.connect(this.proc); this.proc.connect(this.ac.destination);
+        // 半雙工：她說話時暫停送麥克風→治好手機喇叭被麥克風收回去的回音，讓她每一輪都回你
         this.proc.onaudioprocess = e => {
+          if (this.speaking) return;
           if (!this.ws || this.ws.readyState !== 1) return;
           const buf = this._f2i(this._down(e.inputBuffer.getChannelData(0), this.ac.sampleRate, 16000)).buffer;
           this.ws.send(buf);
         };
-        if (onListen) onListen();
+        this._toListening();     // 一接通就是「在聽你說」
         done(true);
       };
       this.ws.onmessage = ev => {
-        if (typeof ev.data === 'string') { try { const o = JSON.parse(ev.data); if (o.type === 'interrupted' && this.playCtx) this.playHead = this.playCtx.currentTime; } catch (e) {} return; }
+        if (typeof ev.data === 'string') {
+          try {
+            const o = JSON.parse(ev.data);
+            if (o.type === 'interrupted' && this.playCtx) this.playHead = this.playCtx.currentTime;
+            if (o.type === 'turn_complete') this._toListening();   // 她講完 → 換你講、麥克風重開
+          } catch (e) {}
+          return;
+        }
         if (!this.playCtx) return;
-        if (onSpeak) onSpeak();
+        this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
@@ -742,6 +754,9 @@ const LiveVoice = {
         const now = this.playCtx.currentTime;
         if (this.playHead < now + 0.02) this.playHead = now + 0.18;
         s.start(this.playHead); this.playHead += b.duration;
+        // 安全網：她若 900ms 沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）
+        clearTimeout(this._speakTimer);
+        this._speakTimer = setTimeout(() => this._toListening(), 900);
       };
       this.ws.onclose = () => { done(false); if (this.on) this.stop(); };
       this.ws.onerror = () => { done(false); };
@@ -1542,9 +1557,10 @@ function connectCall() {
     setFaceState('idle');
     setCallHint('接通中…');
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
+    const chatEl = document.getElementById('chat');
     LiveVoice.start(
-      () => { setFaceState('listening'); setCallHint('我在聽，你說吧'); },
-      () => { setFaceState('speaking'); setCallHint('正在說話'); }
+      () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); },   // 收音
+      () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); }             // 講話
     ).then(ok => {
       if (!ok) {  // 真語音接不上 → 退回簡單陪聊，不掛斷
         chatOpened = false;
