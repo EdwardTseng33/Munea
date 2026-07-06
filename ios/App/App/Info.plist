@@ -10,6 +10,13 @@
 	<string>Munea may use speech recognition to help turn your voice into companion responses.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Munea uses notifications for reminders, family care updates, and gentle check-ins.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Munea connects to a voice service on your local Wi-Fi so you can talk with your AI companion in real time.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

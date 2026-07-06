@@ -191,8 +191,10 @@ async def handle(ws):
 
 
 async def main():
-    async with websockets.serve(handle, "127.0.0.1", 8201, max_size=None, process_request=process_request):
-        print("即時語音橋接已啟動：http://127.0.0.1:8201 （網頁＋語音同門，模型 " + MODEL + "）")
+    # 綁 0.0.0.0＝同一個 Wi-Fi 的手機也連得到（真機測聊聊用）；純本機測試連 127.0.0.1 亦可。
+    host = os.environ.get("LIVE_VOICE_HOST", "0.0.0.0")
+    async with websockets.serve(handle, host, 8201, max_size=None, process_request=process_request):
+        print(f"即時語音橋接已啟動：{host}:8201 （網頁＋語音同門，模型 {MODEL}）")
         await asyncio.Future()
 
 

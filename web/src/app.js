@@ -693,6 +693,72 @@ const voiceProvider = {
   },
 };
 window.MuneaVoiceProvider = voiceProvider;
+
+// ===== 真即時語音（Gemini 3.1 Live）：MuneaVoiceProvider 的 live 模式 =====
+// 架構：前端這支 → WebSocket 即時語音橋（engine/live_voice_server.py）。麥克風即時串流上去、聲音即時播回來、可打斷。
+// 連哪裡：localStorage['munea.liveVoiceUrl']，沒設就用下面 DEV 預設（同 Wi-Fi 指到 Mac 引擎；正式版改 hosted 後端）。
+const LIVE_VOICE_URL_DEFAULT = 'ws://192.168.0.107:8201';
+function getLiveVoiceUrl() {
+  try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
+  return LIVE_VOICE_URL_DEFAULT;
+}
+const LiveVoice = {
+  ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
+  _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
+  _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
+  async start(onListen, onSpeak) {
+    const url = getLiveVoiceUrl();
+    if (!url) return false;
+    this.on = true;
+    try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
+    catch (e) { this.on = false; return false; }
+    return await new Promise(resolve => {
+      let settled = false;
+      const done = ok => { if (!settled) { settled = true; resolve(ok); } };
+      this.ws.onopen = async () => {
+        this.playCtx = new AudioContext({ sampleRate: 24000 }); this.playHead = this.playCtx.currentTime;
+        try { this.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+        catch (e) { setCallHint('拿不到麥克風，請到設定允許'); done(true); return; }
+        this.ac = new AudioContext();
+        const src = this.ac.createMediaStreamSource(this.mic);
+        this.proc = this.ac.createScriptProcessor(4096, 1, 1);
+        src.connect(this.proc); this.proc.connect(this.ac.destination);
+        this.proc.onaudioprocess = e => {
+          if (!this.ws || this.ws.readyState !== 1) return;
+          const buf = this._f2i(this._down(e.inputBuffer.getChannelData(0), this.ac.sampleRate, 16000)).buffer;
+          this.ws.send(buf);
+        };
+        if (onListen) onListen();
+        done(true);
+      };
+      this.ws.onmessage = ev => {
+        if (typeof ev.data === 'string') { try { const o = JSON.parse(ev.data); if (o.type === 'interrupted' && this.playCtx) this.playHead = this.playCtx.currentTime; } catch (e) {} return; }
+        if (!this.playCtx) return;
+        if (onSpeak) onSpeak();
+        const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
+        for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
+        const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
+        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this.playCtx.destination);
+        const now = this.playCtx.currentTime;
+        if (this.playHead < now + 0.02) this.playHead = now + 0.18;
+        s.start(this.playHead); this.playHead += b.duration;
+      };
+      this.ws.onclose = () => { done(false); if (this.on) this.stop(); };
+      this.ws.onerror = () => { done(false); };
+    });
+  },
+  stop() {
+    this.on = false;
+    try { if (this.proc) this.proc.disconnect(); } catch (e) {}
+    try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
+    try { if (this.ws) this.ws.close(); } catch (e) {}
+    try { if (this.ac) this.ac.close(); } catch (e) {}
+    try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
+    this.ws = this.ac = this.mic = this.proc = this.playCtx = null;
+  },
+};
+window.MuneaLiveVoice = LiveVoice;
+
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
 function setCallToggle(connected) {
@@ -1467,6 +1533,28 @@ function connectCall() {
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
   const box = document.querySelector('.face-caption-box');
   if (box) box.style.display = capOff ? 'none' : '';
+  // 真即時語音（Gemini 3.1 Live）：麥克風即時串流、寧寧真聲音即時回、可打斷
+  if (getLiveVoiceUrl()) {
+    chatOpened = true;
+    activeChatSessionId = makeSessionId('voice');
+    activeChatStartedAt = Date.now();
+    activeChatTurnCount = 0;
+    setFaceState('idle');
+    setCallHint('接通中…');
+    trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
+    LiveVoice.start(
+      () => { setFaceState('listening'); setCallHint('我在聽，你說吧'); },
+      () => { setFaceState('speaking'); setCallHint('正在說話'); }
+    ).then(ok => {
+      if (!ok) {  // 真語音接不上 → 退回簡單陪聊，不掛斷
+        chatOpened = false;
+        setCallHint('真語音一時接不上，先用簡單方式陪你');
+        openVoiceSession();
+        setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
+      }
+    });
+    return;
+  }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
   openVoiceSession();
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
@@ -1494,7 +1582,7 @@ function init() {
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     if (!callConnected) { connectCall(); }
-    else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
+    else { LiveVoice.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
   });
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
     captionsOn = !captionsOn;
