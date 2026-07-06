@@ -724,8 +724,15 @@ def normalize_relationship_state(data):
 
 
 def is_missing_table_error(e):
+    # 「雲端不可用、可安全退回本地備份」的判斷：缺表(PGRST205) 或 連線層失敗(逾時/連不上/斷路器開)
+    # 連線失敗也走本地備份，才不會在雲端掛掉時噴 500（配合 supabase_adapter 斷路器）
     msg = str(e)
-    return "PGRST205" in msg or "Could not find the table" in msg
+    return (
+        "PGRST205" in msg
+        or "Could not find the table" in msg
+        or "circuit open" in msg
+        or "unreachable" in msg
+    )
 
 
 def load_relationship_states(query=None, limit=100):
@@ -1185,14 +1192,30 @@ def load_json_app_profile_store():
     return normalize_app_profile_store(raw)
 
 
+# 帳號側寫短期快取：normalize_product_event 等熱路徑會在單一請求內反覆讀取，
+# 每次雲端往返 ~1.7s、77 筆事件就滾成兩分鐘。5 秒 TTL 把同批呼叫收斂成一次。
+_APP_PROFILE_CACHE = {"store": None, "ts": 0.0}
+_APP_PROFILE_TTL = 5.0
+
+
 def load_app_profile_store():
+    now = time.time()
+    cached = _APP_PROFILE_CACHE["store"]
+    if cached is not None and (now - _APP_PROFILE_CACHE["ts"]) < _APP_PROFILE_TTL:
+        return cached
     try:
         remote_store = data_backend().load_app_profile_store()
         if remote_store:
-            return normalize_app_profile_store(remote_store)
+            store = normalize_app_profile_store(remote_store)
+            _APP_PROFILE_CACHE["store"] = store
+            _APP_PROFILE_CACHE["ts"] = now
+            return store
     except Exception as e:
         log_fallback_exception("load app profile from Supabase", e)
-    return load_json_app_profile_store()
+    store = load_json_app_profile_store()
+    _APP_PROFILE_CACHE["store"] = store
+    _APP_PROFILE_CACHE["ts"] = now
+    return store
 
 
 def save_app_profile_store(data):
@@ -1204,6 +1227,8 @@ def save_app_profile_store(data):
     except Exception as e:
         log_fallback_exception("save app profile to Supabase", e)
     write_json_file(APP_PROFILE_STORE_PATH, store)
+    _APP_PROFILE_CACHE["store"] = store  # 存檔後即時更新快取，避免讀到舊值
+    _APP_PROFILE_CACHE["ts"] = time.time()
     return store
 
 
@@ -2302,7 +2327,18 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     base, _ = _sys_for(char)
     context = context or build_reply_context(history, char, data)
     base = base + reply_context_instruction(context)
-    contents = [types.Content(role=h["role"], parts=[types.Part(text=h["text"])]) for h in history]
+    # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
+    contents = []
+    for h in (history or []):
+        if not isinstance(h, dict):
+            continue
+        txt = (h.get("text") or h.get("content") or "").strip()
+        if not txt:
+            continue
+        contents.append(types.Content(role=(h.get("role") or "user"), parts=[types.Part(text=txt)]))
+    # 空對話：不白燒 12 次 Gemini 呼叫，直接回開場引導
+    if not contents:
+        return "（嗨，我在的，想聊什麼都可以，先跟我說說今天過得怎麼樣？）"
     for _ in range(4):
         for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
             try:

@@ -52,7 +52,7 @@ Munea must keep these concepts separate:
 | `default_name` | Starter name before user renames | `寧寧` |
 | `persona_archetype` | Stable personality pattern | warm family companion |
 | `voice_profile` | Voice and performance direction | `Leda` |
-| `avatar_asset` | Face/body asset | `avatars/nening-real-female-full.png` |
+| `avatar_asset` | Face/body asset | `avatars/nening-real-female-full.jpg` |
 | `relationship_state` | How this user and companion have grown together | trusted, playful, quieter in mornings |
 
 Changing `display_name` should not change the face, voice, memory, or persona.

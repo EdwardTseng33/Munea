@@ -1,0 +1,8 @@
+{
+  "projectId": "9f93deab-880f-4c6d-aa98-dcdf1e41ee2a",
+  "projectName": "Munea",
+  "shape": "off-script-screens",
+  "localBundle": "E:\\Claude\\Munea\\ds-bundle",
+  "note": "Design bundle contains Home, Chat, Status, Family, Settings, and BrandTokens screens. Keep ds-bundle as the local handoff source.",
+  "createdAt": "2026-07-04"
+}

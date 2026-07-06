@@ -23,6 +23,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+web/avatars/_orig_backup/
 # 語音測試樣本（可由 engine 小工具 + 卡司表配方重生、不入庫免肥大）
 voice-samples/*.wav
 engine/*.wav

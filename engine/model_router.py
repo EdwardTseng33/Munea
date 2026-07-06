@@ -30,7 +30,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["daily care", "family connection", "health routines", "gentle interests"],
         "boundaryStyle": "softly redirects medical or crisis requests to safe help",
         "voiceProfile": "Leda",
-        "avatarAsset": "avatars/nening-real-female-full.png",
+        "avatarAsset": "avatars/nening-real-female-full.jpg",
     },
     "companion-real-male": {
         "defaultName": "阿宏",

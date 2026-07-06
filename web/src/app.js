@@ -1588,7 +1588,21 @@ function init() {
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => $('#famCircleModal').classList.add('show'));
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', () => { $('#famCircleModal').classList.remove('show'); toast('邀請連結準備好了，用訊息傳給家人就能加入'); });
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', () => { $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); });
+  const INV_LINK = 'https://munea.net/join?c=MUNEA-2847';
+  if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
+  if ($('#inviteCloseX')) $('#inviteCloseX').addEventListener('click', () => $('#inviteFamModal').classList.remove('show'));
+  if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
+    const text = '來 Munea 沐寧一起互相照顧：' + INV_LINK;
+    if (navigator.share) { navigator.share({ text }).catch(() => {}); }
+    else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
+  });
+  if ($('#invCopyBtn')) $('#invCopyBtn').addEventListener('click', () => {
+    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(INV_LINK) : Promise.reject()).then(
+      () => toast('邀請連結複製好了，貼給家人就能加入'),
+      () => toast('連結：' + INV_LINK)
+    );
+  });
   if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView(window.__connectFrom || 'status'));
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', () => {
     const on = b.classList.toggle('done');
@@ -1638,8 +1652,9 @@ function init() {
     const grid = $('#personGrid');
     if (!grid) return;
     const stats = PERSON_STATS[p] || PERSON_STATS['阿嬤'];
+    const TINT = { bp: 't-bp', walk: 't-act', sleep: 't-sleep', pill: 't-med' };
     grid.innerHTML = stats.map(t =>
-      '<div class="stat-tile"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24">' + STAT_ICONS[t.ic] + '</svg></span>' +
+      '<div class="stat-tile ' + (TINT[t.ic] || '') + '"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24">' + STAT_ICONS[t.ic] + '</svg></span>' +
       '<div class="st-val">' + t.val + '</div><div class="st-label">' + t.label + '</div></div>').join('');
   }
 
@@ -1856,7 +1871,7 @@ function init() {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
     const p = b.dataset.person;
     if (p === 'all') showFamAll();
-    else if (p === 'invite') hint('好，我幫你發邀請給家人，加進來就能互相關心健康。');
+    else if (p === 'invite') { if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); }
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
   });
   const healthList = $('#healthList');
@@ -1992,9 +2007,17 @@ function init() {
         goal = '你的 ' + act.q + ' 題準備好了';
         note = '點這張卡先作答；' + cname() + '會找其他人玩，都答完看排名';
       }
+    } else if (act.kind === 'vote') {
+      chip = act.names.length + 1 + ' 人';
+      goal = '';
+      note = '';
+    } else if (act.kind === 'draw') {
+      chip = act.when + '開獎';
+      goal = '';
+      note = '';
     } else {
       chip = act.dateLabel;
-      goal = act.title + '，誰能到？';
+      goal = act.title + (act.place ? ' · ' + act.place : '') + '，誰能到？';
       note = cname() + '會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
     }
     const rwLine = act.rewards && act.rewards.some(Boolean)
@@ -2005,13 +2028,55 @@ function init() {
       delete act._rankHtml;
     } else {
       card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
-        (act.kind === 'event' ? '揪一攤 · ' + act.title : '邀請已送出 · ' + act.title) +
+        (act.kind === 'event' ? '揪一攤 · ' + act.title : act.kind === 'vote' ? '投票 · ' + act.title : act.kind === 'draw' ? '抽獎 · ' + act.prize : '邀請已送出 · ' + act.title) +
         '<span class="qc-days">' + chip + '</span></div>' +
-        '<div class="qc-goal">' + goal + '</div>' +
-        '<div class="qc-num">' + note + '</div>' + rwLine;
+        (goal ? '<div class="qc-goal">' + goal + '</div>' : '') +
+        (note ? '<div class="qc-num">' + note + '</div>' : '') + rwLine;
+      if (act.kind === 'vote') renderVoteBody(act, card);
+      if (act.kind === 'draw') renderDrawBody(act, card);
     }
     if (act.kind === 'quiz' && act.status !== 'done' && !act.myDone) { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
     list.parentNode.insertBefore(card, list);
+  }
+  function renderVoteBody(act, card) {
+    const my = act.votes && act.votes['你'];
+    const total = Object.keys(act.votes || {}).length;
+    const wrap = document.createElement('div');
+    wrap.className = 'vote-body';
+    wrap.innerHTML = act.opts.map((o, i) => {
+      const n = Object.values(act.votes || {}).filter(v => v === o).length;
+      const pct = total ? Math.round(n / total * 100) : 0;
+      return '<button type="button" class="vote-opt' + (my === o ? ' mine' : '') + (my ? ' voted' : '') + '" data-o="' + o + '">' +
+        '<i style="width:' + (my ? pct : 0) + '%"></i><span class="vo-txt">' + o + '</span>' +
+        (my ? '<span class="vo-n">' + n + ' 票</span>' : '') + (my === o ? '<span class="vo-check">✓</span>' : '') + '</button>';
+    }).join('') + '<div class="qc-num">' + (my ? cname() + '去問其他人了，誰投了什麼會直接亮在這裡' : '點一個選項投下你的票') + '</div>';
+    if (!my) wrap.addEventListener('click', e => {
+      const b = e.target.closest('.vote-opt');
+      if (!b) return;
+      act.votes = act.votes || {}; act.votes['你'] = b.dataset.o;
+      const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.votes = act.votes; saveActs(acts);
+      wrap.remove(); renderVoteBody(act, card);
+      toast('投好了，' + cname() + '去收其他人的票');
+    });
+    card.appendChild(wrap);
+  }
+  function renderDrawBody(act, card) {
+    const wrap = document.createElement('div');
+    wrap.className = 'draw-body';
+    const all = ['你'].concat(act.names || []);
+    if (act.winner) {
+      wrap.innerHTML = '<div class="draw-win">🎉 <b>' + act.winner + '</b> 抽中了「' + act.prize + '」</div>' +
+        '<div class="qc-num">' + cname() + '已經去恭喜' + (act.winner === '你' ? '你' : '他') + '了，記錄收進家庭記錄簿</div>';
+    } else {
+      wrap.innerHTML = '<div class="qc-num">' + all.join('、') + ' 都有份，' + act.when + '由' + cname() + '開獎</div>' +
+        '<button type="button" class="draw-now">等不及了，現在開！</button>';
+      wrap.querySelector('.draw-now').addEventListener('click', () => {
+        act.winner = all[Math.floor(Math.random() * all.length)];
+        const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.winner = act.winner; saveActs(acts);
+        wrap.remove(); renderDrawBody(act, card);
+      });
+    }
+    card.appendChild(wrap);
   }
   if ($('#startChalBtn')) $('#startChalBtn').addEventListener('click', () => {
     const type = document.querySelector('.chal-type.active');
@@ -2029,11 +2094,24 @@ function init() {
     } else if (kind === 'quiz') {
       act.q = +(($('#quizN') && $('#quizN').value) || 10);
       act.title = '機智問答';
+    } else if (kind === 'vote') {
+      act.title = (($('#voteQ') && $('#voteQ').value.trim()) || '家庭投票');
+      act.opts = ['#vo1', '#vo2', '#vo3'].map(x => ($(x) && $(x).value.trim()) || '').filter(Boolean);
+      if (act.opts.length < 2) { toast('投票至少要兩個選項'); return; }
+      act.votes = {};
+      ['#voteQ', '#vo1', '#vo2', '#vo3'].forEach(x => { if ($(x)) $(x).value = ''; });
+    } else if (kind === 'draw') {
+      act.prize = (($('#drawPrize') && $('#drawPrize').value.trim()) || '');
+      if (!act.prize) { toast('先填獎品，抽起來才有趣'); return; }
+      act.when = ((document.querySelector('#drawWhenChips .mchip.on') || { dataset: {} }).dataset.w || '今晚');
+      act.title = '幸運抽獎';
+      if ($('#drawPrize')) $('#drawPrize').value = '';
     } else {
       const d = resolveEvDate();
       act.dateISO = isoOf(d);
       act.dateLabel = fmtDay(d) + ((document.querySelector('#evTimeChips .mchip.on') || { dataset: {} }).dataset.t || '');
       act.title = (($('#eventName') && $('#eventName').value.trim()) || '家庭聚會');
+      act.place = (($('#eventPlace') && $('#eventPlace').value.trim()) || '');
     }
     const rw = ['#rw1', '#rw2', '#rw3'].map(x => ($(x) && $(x).value.trim()) || '');
     if (rw.some(Boolean)) act.rewards = rw;
@@ -2041,7 +2119,7 @@ function init() {
     const acts = loadActs(); acts.push(act); saveActs(acts);
     closeChal();
     renderActCard(act);
-    hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
+    hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : kind === 'vote' ? '好，' + cname() + '把問題送出去了，誰投了什麼馬上看得到。' : kind === 'draw' ? '好，' + cname() + '把抽獎報給大家了，' + (act.when || '') + '開獎！' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
   });
   // 到期自動收卡：先等雲端拉完再整理牆面（避免舊雲端資料蓋回剛收掉的卡）
   function restoreActsBoot() {
@@ -2092,12 +2170,15 @@ function init() {
   }
   if (inviteList) inviteList.addEventListener('click', e => { const it = e.target.closest('.iv'); if (it) { it.classList.toggle('on'); recalcWalk(true); } });
   // 挑戰類型選擇
-  const INVITE_NOTES = () => ({ walk: '阿嬤那份，' + cname() + '會親口問她', quiz: '阿嬤用說的就能玩；其他人手機作答', event: cname() + '親口問阿嬤；其他人回「去／沒空」' });
+  const INVITE_NOTES = () => ({ walk: '阿嬤那份，' + cname() + '會親口問她', quiz: '阿嬤用說的就能玩；其他人手機作答', event: cname() + '親口問阿嬤；其他人回「去／沒空」', vote: '阿嬤那票，' + cname() + '會唸選項給她聽、幫她投', draw: '人人有機會；開獎時' + cname() + '會告訴每個人' });
   function applyChalKind(kind) {
     if ($('#inviteNote')) $('#inviteNote').textContent = INVITE_NOTES()[kind] || '';
     if ($('#walkFields')) $('#walkFields').style.display = kind === 'walk' ? '' : 'none';
     if ($('#quizFields')) $('#quizFields').style.display = kind === 'quiz' ? '' : 'none';
     if ($('#eventFields')) $('#eventFields').style.display = kind === 'event' ? '' : 'none';
+    if ($('#voteFields')) $('#voteFields').style.display = kind === 'vote' ? '' : 'none';
+    if ($('#drawFields')) $('#drawFields').style.display = kind === 'draw' ? '' : 'none';
+    if ($('#rewardFields')) $('#rewardFields').style.display = (kind === 'walk' || kind === 'quiz') ? '' : 'none';
   }
   $$('.chal-type').forEach(b => b.addEventListener('click', () => {
     $$('.chal-type').forEach(x => x.classList.remove('active'));

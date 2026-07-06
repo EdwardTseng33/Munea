@@ -6,8 +6,8 @@
       defaultName: '寧寧',
       templateLabel: '溫柔型 · 像家人，會照看',
       thumbAsset: 'avatars/nening-face.png',
-      homeAsset: 'avatars/nening-hero.png',
-      fullAsset: 'avatars/nening-real-female-full.png',
+      homeAsset: 'avatars/nening-hero.jpg',
+      fullAsset: 'avatars/nening-real-female-full.jpg',
     },
     'companion-real-male': {
       backendChar: '阿宏',
@@ -15,7 +15,7 @@
       templateLabel: '沉穩型 · 像大哥，很可靠',
       thumbAsset: 'avatars/ahong-face.png',
       homeAsset: 'avatars/ahong.png',
-      fullAsset: 'avatars/ahong-tall.png',
+      fullAsset: 'avatars/ahong-tall.jpg',
     },
     'munea-2d-xiaoyun': {
       backendChar: '小昀',
@@ -23,7 +23,7 @@
       templateLabel: '開朗型 · 像朋友，很有朝氣',
       thumbAsset: 'avatars/xiaoyun-2d-face.png',
       homeAsset: 'avatars/xiaoyun-2d.png',
-      fullAsset: 'avatars/xiaoyun-2d-tall.png',
+      fullAsset: 'avatars/xiaoyun-2d-tall.jpg',
     },
     'munea-2d-ayuan': {
       backendChar: '阿原',
@@ -31,21 +31,21 @@
       templateLabel: '隨和型 · 鄰家感，好聊天',
       thumbAsset: 'avatars/ayuan-2d-face.png',
       homeAsset: 'avatars/ayuan-2d.png',
-      fullAsset: 'avatars/ayuan-2d-tall.png',
+      fullAsset: 'avatars/ayuan-2d-tall.jpg',
     },
     'munea-2d-mimi': {
       backendChar: '咪咪',
       defaultName: '咪咪',
       templateLabel: '貓咪型 · 陪伴感，有個性',
       thumbAsset: 'avatars/munea-2d-mimi-face.png',
-      fullAsset: 'avatars/mimi-tall.png',
+      fullAsset: 'avatars/mimi-tall.jpg',
     },
     'munea-2d-wangcai': {
       backendChar: '旺財',
       defaultName: '旺財',
       templateLabel: '狗狗型 · 熱情，很黏人',
       thumbAsset: 'avatars/munea-2d-wangcai-face.png',
-      fullAsset: 'avatars/wangcai-tall.png',
+      fullAsset: 'avatars/wangcai-tall.jpg',
     },
   };
   const aliases = {

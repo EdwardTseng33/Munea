@@ -25,8 +25,8 @@
           <span class="plan-payer" style="margin:0">我的訂閱</span>
         </div>
         <div class="plan-divider"></div>
-        <div class="pts-label">點數 <b id="ptsLeft">239</b> 點 <span class="pts-used">每月送 400 · 已用 <i id="ptsUsed" style="font-style:normal">161</i></span></div>
-        <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
+        <div class="pts-label">點數 <b id="ptsLeft">237</b> 點 <span class="pts-used">每月送 400 · 已用 <i id="ptsUsed" style="font-style:normal">163</i></span></div>
+        <div class="pts-bar"><i id="ptsBar" style="width: 41%;"></i></div>
         <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>點數快用完了；基本陪伴不受影響，加值後生動模式不中斷</div>
         <div class="pts-note">240 點約可通話 240 分鐘；基本陪伴不限量、不會中斷</div>
         <div class="plan-actions">
@@ -46,25 +46,6 @@
         <div class="set-row"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/nening-face.png" alt=""></span><span class="sr-main"><b id="settingsCompanionName">寧寧</b><small id="settingsTemplateLabel">溫柔型 · 像家人，會照看</small></span><span class="sr-arrow">›</span></div>
       </div>
 
-      <div class="modal-mask" id="companionSheet">
-        <div class="modal">
-          <div class="modal-grab"></div>
-          <button class="auth-close" id="companionCloseBtn" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
-          <h2>陪伴角色</h2>
-          <p class="modal-sub">先選角色、再取名字，個性、外觀、聲音由角色決定，名字由你決定。<br><b style="color:var(--teal-dd)">換角色不會忘記你們聊過的事</b>，記憶跟著你，不跟角色走。</p>
-          <label class="companion-name-label" for="companionNameInput">幫 TA 取個名字</label>
-          <input class="companion-name-input" id="companionNameInput" value="寧寧" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿福">
-          <div class="field-label">選擇互動 AI 角色</div>
-          <div class="avatar-pick" id="avatarPick">
-            <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-face.png" alt="溫柔陪伴型"></span><span class="avl"><b>溫柔型</b><small>像家人，會照看你</small></span></button>
-            <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/ahong-face.png" alt="沉穩陪伴型"></span><span class="avl"><b>沉穩型</b><small>像大哥，很可靠</small></span></button>
-            <button class="avo" data-ava="munea-2d-xiaoyun"><span class="avi"><img src="avatars/xiaoyun-2d-face.png" alt="開朗陪伴型"></span><span class="avl"><b>開朗型</b><small>像朋友，有朝氣</small></span></button>
-            <button class="avo" data-ava="munea-2d-ayuan"><span class="avi"><img src="avatars/ayuan-2d-face.png" alt="隨和陪伴型"></span><span class="avl"><b>隨和型</b><small>鄰家感，好聊天</small></span></button>
-            <button class="avo" data-ava="munea-2d-mimi"><span class="avi"><img src="avatars/munea-2d-mimi-face.png" alt="貓咪陪伴型"></span><span class="avl"><b>貓咪型</b><small>有個性的陪伴</small></span></button>
-            <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai-face.png" alt="狗狗陪伴型"></span><span class="avl"><b>狗狗型</b><small>熱情又黏人</small></span></button>
-          </div>
-        </div>
-      </div>
 
       <section class="ai-dev-panel" id="aiDevPanel" hidden="">
         <div class="ai-dev-head">
@@ -102,7 +83,7 @@
 
       <h2 class="set-section">關於</h2>
       <div class="set-list">
-        <div class="set-row"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px"></span><span class="sr-main">Munea 沐寧</span><span class="sr-arrow">›</span></div>
+        <div class="set-row set-info"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px"></span><span class="sr-main">Munea 沐寧<small>版本 1.0.0 · 測試版</small></span></div>
         <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M16 13H8M16 17H8"></path></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>

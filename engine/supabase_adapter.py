@@ -21,6 +21,37 @@ UUID_RE = re.compile(
 )
 
 
+# ── 雲端斷路器（跨 adapter 實例共用，因 data_backend() 每次重建 adapter）──
+_CIRCUIT = {"open_until": 0.0}
+_CIRCUIT_COOLDOWN = 20.0  # 秒：一次連線失敗後，這段時間內直接秒退走本地備份
+
+# ── 缺表短記憶：某表回過 404(缺表) 就記著 30 秒，同批後續呼叫秒退不再白跑往返 ──
+# 等 Codex 建好表、TTL 過期會自動重試恢復。
+_MISSING_TABLES = {}
+_MISSING_TTL = 30.0
+
+
+def _circuit_open():
+    return time.time() < _CIRCUIT["open_until"]
+
+
+def _trip_circuit():
+    _CIRCUIT["open_until"] = time.time() + _CIRCUIT_COOLDOWN
+
+
+def _reset_circuit():
+    _CIRCUIT["open_until"] = 0.0
+
+
+def _table_known_missing(table):
+    until = _MISSING_TABLES.get(table)
+    return until is not None and time.time() < until
+
+
+def _mark_table_missing(table):
+    _MISSING_TABLES[table] = time.time() + _MISSING_TTL
+
+
 class SupabaseAdapter:
     def __init__(self, env=None):
         self.env = env or os.environ
@@ -1100,6 +1131,12 @@ class SupabaseAdapter:
     def _request(self, method, table, query=None, payload=None, prefer=None):
         if not self.enabled():
             raise RuntimeError("Supabase adapter is not fully configured")
+        # 斷路器：雲端連不上時，20 秒內同一波後續呼叫直接秒退（走本地備份），
+        # 不再每次苦等 4 秒逾時。防「單一請求連問十幾次、累加成數分鐘卡死」。
+        if _circuit_open():
+            raise RuntimeError("Supabase circuit open: recent connection failure, using local fallback")
+        if _table_known_missing(table):
+            raise RuntimeError(f"Supabase table '{table}' known missing (PGRST205 cached), using local fallback")
         query_string = urllib.parse.urlencode(query or {})
         url = f"{self.url}/rest/v1/{table}"
         if query_string:
@@ -1114,12 +1151,21 @@ class SupabaseAdapter:
             headers["prefer"] = prefer
         req = urllib.request.Request(url, data=body, headers=headers, method=method)
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:
                 raw = resp.read().decode("utf-8")
+                _reset_circuit()
                 return json.loads(raw) if raw else []
         except urllib.error.HTTPError as e:
+            # HTTP 層有明確快速回應（如缺表 404）：不觸發斷路器（本來就快），但視為連線成功可用
+            _reset_circuit()
             detail = e.read().decode("utf-8", "replace")[:300]
+            if e.code == 404 and "PGRST205" in detail:
+                _mark_table_missing(table)  # 記著這張表缺，30 秒內同批呼叫秒退
             raise RuntimeError(f"Supabase {method} {table} failed: {e.code} {detail}") from e
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            # 連線層失敗（逾時 / 連不上 / 被重置）：開啟斷路器，讓同批後續呼叫秒退
+            _trip_circuit()
+            raise RuntimeError(f"Supabase {method} {table} unreachable: {type(e).__name__}") from e
 
     @staticmethod
     def _is_uuid(value):

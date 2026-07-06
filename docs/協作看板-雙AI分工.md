@@ -175,7 +175,7 @@
 
 
 ## 7/3 深夜 · 角色照歸位（蘇菲）
-- avatars/ 檔名整理：舊檔 munea-2d-xiaoyun*.png / munea-2d-ayuan*.png / companion-real-male*.png / nening-real-female.png / nening-real-female-face.png 已刪，換成名實相符的 nening-face / ahong(-face) / ayuan-2d(-face) / xiaoyun-2d(-face)。nening-hero.png、nening-real-female-full.png 不變。
+- avatars/ 檔名整理：舊檔 munea-2d-xiaoyun*.png / munea-2d-ayuan*.png / companion-real-male*.png / nening-real-female.png / nening-real-female-face.png 已刪，換成名實相符的 nening-face / ahong(-face) / ayuan-2d(-face) / xiaoyun-2d(-face)。大圖已壓成 nening-hero.jpg、nening-real-female-full.jpg。
 - 角色代號（nening-real-female 等 templateId）**完全沒動**——存檔、路由、Supabase 都不受影響。
 - engine/model_router.py 三個 avatarAsset 路徑已同步改新檔名（引擎下次重啟生效）；若 Codex 端有寫死舊圖檔路徑請改用新名。
 
@@ -205,3 +205,14 @@
 - **E:\Claude\Muneavatar-candidates = 六角色照片唯一來源，不得擅自生成或替換角色臉。**
 - 蘇菲已：停掉小昀重生排程、把阿原的圖退回素材庫原版；今晚生成的候選圖封存於 E:\Claude\image-assets、不入 App。
 - 裁切/接錯檔修復屬工程整理；「角色長相」的任何變動 = Edward 事先點頭。
+
+## 2026-07-06 蘇菲 → Codex · P0 交辦：Supabase 缺表（007 鎖區、你來建）
+卡西法 Gate 1 全 App 體檢抓到 **P0 卡死**：`/product-event` 等接口在雲端表全缺時，單請求連問雲端數十次、多人同時用滾成 **227 秒像當機**。根因 = Supabase 缺 `product_events / memory_items / perception_snapshots / companion_relationship_states / credit_wallets` 等表（PGRST205），全靠本地 JSON 撐。
+
+**我做的止血（都在 adapter/engine client 端、沒碰你的 DDL 鎖區）：**
+1. `supabase_adapter.py`：加斷路器（連線失敗 20s 內秒退）＋缺表短記憶（某表回 404 就記 30s、同批秒退不再白跑）＋單次逾時 10s→4s。
+2. `server.py`：`load_app_profile_store` 加 5s TTL 快取（原本 normalize 每筆事件都重讀帳號、77 筆=兩分鐘）。
+3. 效果實測：`/product-event` 37s→2s、8 發併發 185s→2.25s。且前端 `trackProductEvent` 本就射後不理、用戶無感。
+
+**要你做（007 鎖區、我不碰）：** 依 `家人帳號連動-架構設計` 建齊上述缺表。表一建好，我的缺表短記憶 30s 後自動失效、走回雲端，不需回滾我的改動（斷路器/快取是防禦層、永久保留有益）。
+其他同輪修（非 DDL）：`/chat` 欄位相容 text/content＋空對話不白燒 12 次呼叫（server.py reply_conv）；前端設定頁 Munea 列改版本資訊、邀請彈窗補關閉叉。
