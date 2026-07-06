@@ -381,7 +381,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .set-row .sr-on .d { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); }
 
 /* ===== 家人頁：全家健康圈 ===== */
-.fam-switch { display: flex; gap: 0; justify-content: flex-start; overflow-x: auto; padding: 4px 0 10px; margin-bottom: 24px; scroll-snap-type: x proximity; scroll-padding-left: 20px; }
+.fam-switch { display: flex; gap: 0; justify-content: flex-start; overflow-x: auto; overflow-y: visible; padding: 9px 0 10px; margin-bottom: 22px; scroll-snap-type: x proximity; scroll-padding-left: 20px; }
 .fam-switch-item { scroll-snap-align: start; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 5px; /* 圈距視覺同 10px、縫隙整段可點（女巫熱區建議） */ cursor: pointer; background: none; border: none; font-family: var(--sans); }
 .fam-switch-item .fs-av.all { display: grid; place-items: center; background: var(--btn-green); color: #FFF; box-shadow: none; }
 .fam-switch-item .fs-av { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #FFF; box-shadow: 0 0 0 1px var(--line); transition: box-shadow .2s, transform .15s; }
@@ -680,7 +680,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   right: 0;
   bottom: 0;
   z-index: 20;
-  padding: 6px 4px calc(8px + env(safe-area-inset-bottom));
+  padding: 3px 4px calc(5px + env(safe-area-inset-bottom));
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: end;
@@ -698,17 +698,17 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 3px;
-  padding: 4px 0 2px;
-  min-height: 50px;
+  gap: 2px;
+  padding: 2px 0 0;
+  min-height: 40px;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: .01em;
   cursor: pointer;
   transition: color .15s ease;
 }
-.tab-btn .ic { width: 24px; height: 24px; stroke-width: 2; }
+.tab-btn .ic { width: 22px; height: 22px; stroke-width: 2; }
 .tab-btn.active { color: var(--teal-dd); font-weight: 600; }
 .tab-btn.center { color: var(--teal-dd); }
 .tab-btn.center .center-fab {
