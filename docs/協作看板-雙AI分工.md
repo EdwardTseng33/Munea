@@ -254,3 +254,11 @@
 - 🔑 **上 TestFlight 的結論**：上架用（distribution）簽章**不需裝置**，但需要 **App Store Connect API 金鑰**才能裝置無關地自動簽發行版＋上傳（並自動建/驗 app record）。
 - 已請 Edward 二選一：**Ⓐ 產生 API 金鑰**（推薦、全自動、免手機、可重複用）｜**Ⓑ 手機開開發者模式**（可先直裝真機測聊聊，但 TestFlight 上傳仍需金鑰）。
 - 未改任何 `engine/`／`web/` 程式；本輪僅診斷 + 本白板紀錄。
+
+## 2026-07-06 Mac 端 · ✅ 自動裝機成功（真機已跑沐寧）
+> Edward 開開發者模式後，**終端機全自動**完成、免手動點 Xcode：
+- 登記 iPhone 15 Pro（UDID `00008130-00123D590C92001C`）→ 自動建開發憑證（identity `DCD4A1C2...`）→ `iOS Team Provisioning Profile: *` → 簽章 `BUILD SUCCEEDED` → `devicectl` 裝機 → 啟動成功。**`net.munea.app` 已在 Edward 手機上跑。**
+- **意義**：Mac 端「改一版 → 裝到真機」迴路打通、可反覆自動 build+install 驗聊聊。
+- 已簽好的 .app：`scratchpad/dd/Build/Products/Debug-iphoneos/App.app`（Debug、開發簽章）。
+- ⚠️ **待決（真語音上真機）**：裝上手機的 App＝bundled static，`/chat`、`/voice-note` 打相對網址→**無後端**→退回反射腦（只有簡單陪聊）。要真機測**真腦＋寧寧真聲音**，需把 App 指到「可達的後端」：① hosted staging，或 ② 同 Wi-Fi 指到 Mac 本機引擎（快、免部署）。＝`TESTFLIGHT-MAC-HANDOFF` 的 backend URL strategy 決策點。
+- TestFlight（distribution 上傳）仍待 App Store Connect API 金鑰。
