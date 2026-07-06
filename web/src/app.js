@@ -708,11 +708,11 @@ const LiveVoice = {
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
   _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
   _toListening() { clearTimeout(this._speakTimer); this.speaking = false; if (this.onListen) this.onListen(); },
-  async start(onListen, onSpeak) {
+  async start(onListen, onSpeak, onDrop) {
     const url = getLiveVoiceUrl();
     if (!url) return false;
     this.on = true;
-    this.onListen = onListen; this.onSpeak = onSpeak; this.speaking = false; this._speakTimer = null;
+    this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
     return await new Promise(resolve => {
@@ -758,7 +758,7 @@ const LiveVoice = {
         clearTimeout(this._speakTimer);
         this._speakTimer = setTimeout(() => this._toListening(), 900);
       };
-      this.ws.onclose = () => { done(false); if (this.on) this.stop(); };
+      this.ws.onclose = () => { const wasOpen = this.on; done(false); this.stop(); if (wasOpen && onDrop) onDrop(); };
       this.ws.onerror = () => { done(false); };
     });
   },
@@ -1666,17 +1666,22 @@ function connectCall() {
     setCallHint('接通中…');
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
     const chatEl = document.getElementById('chat');
-    LiveVoice.start(
-      () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); },   // 收音
-      () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); }             // 講話
-    ).then(ok => {
-      if (!ok) {  // 真語音接不上 → 退回簡單陪聊，不掛斷
-        chatOpened = false;
-        setCallHint('真語音一時接不上，先用簡單方式陪你');
+    const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); };   // 收音
+    const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); };            // 講話
+    // 斷線自動接回：治「她答完一次、線就掉、不再回」——掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
+    let _reconnects = 0;
+    const onDrop = () => {
+      if (!callConnected) return;                         // 使用者已掛斷 → 不重連
+      if (_reconnects++ > 6) {                            // 接不回了 → 退簡單陪聊，不掛斷
+        setCallHint('真語音不太穩，先用簡單方式陪你');
         openVoiceSession();
         setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
+        return;
       }
-    });
+      setCallHint('接回來中…');
+      setTimeout(() => { if (callConnected) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
+    };
+    LiveVoice.start(onListen, onSpeak, onDrop);
     return;
   }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
