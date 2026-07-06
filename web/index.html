@@ -90,18 +90,19 @@
         <div class="wc-say"><span class="wc-face"><img src="avatars/nening-face.png" alt="寧寧"></span><span class="wc-quote">今天心情不錯，膝蓋的痠我記著、也跟美華說了。</span></div>
       </div>
 
-      <!-- 今日安心 hero：寧寧的今日總結（暖、像她在跟你講話）-->
+      <!-- ① 今日安心 HERO：深綠石墨主卡（全頁唯一主角）-->
       <div class="today-hero">
-        <span class="th-face"><img src="avatars/nening-face.png" alt="寧寧"></span>
-        <div class="th-say"><b id="thHead">今天大致都穩</b><span id="thSub">有兩件事我幫你盯著，其他都好。</span></div>
+        <div class="th-row">
+          <span class="th-face"><img src="avatars/nening-face.png" alt="寧寧"></span>
+          <div class="th-say"><b id="thHead">今天大致都穩</b><span id="thSub">有 2 件事我幫你盯著，其他都好。</span></div>
+        </div>
+        <div class="hero-dots" id="heroDots"></div>
       </div>
-      <!-- 全指標燈號一排（一眼掃過全身狀態）-->
-      <div class="mini-dots" id="miniDots"></div>
-      <!-- 想提醒你：只放要注意的（黃/紅），大卡、帶趨勢＋寧寧的話 -->
+      <!-- ② 想請你留意：只放要注意的（大卡、帶寧寧的話）-->
       <div class="focus-list" id="focusList"></div>
-      <!-- 都很穩：綠燈的收成一排小膠囊，低調不吵 -->
-      <div class="calm-wrap" id="calmWrap"><div class="calm-title">都很穩，我一樣看著</div><div class="calm-strip" id="calmStrip"></div></div>
-      <!-- 點開看這週趨勢＋寧寧解讀 -->
+      <!-- ③ 其他都很穩：一張安靜的清單（非五個搶戲的方格）-->
+      <div class="calm-block" id="calmBlock"><div class="calm-title">其他都很穩</div><div id="calmStrip"></div></div>
+      <!-- 點一項就地展開：這週趨勢＋寧寧解讀 -->
       <div class="metric-detail" id="metricDetail" hidden></div>
 
       <div class="act-duo">
@@ -890,6 +891,6 @@
   <script src="src/version.js?v=20260706-version"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth.js?v=20260630-auth"></script>
-  <script type="module" src="src/app.js?v=20260706-health2"></script>
+  <script type="module" src="src/app.js?v=20260706-health3"></script>
 </body>
 </html>

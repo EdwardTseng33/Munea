@@ -1396,27 +1396,37 @@ const METRIC_ORDER = ['bp', 'hr', 'spo2', 'steady', 'sleep', 'act', 'med'];
 const STATUS_WORD = { ok: '穩', warn: '注意', alert: '要小心' };
 function metricSvg(key) { return '<svg class="ic" viewBox="0 0 24 24">' + (METRIC_ICON[key] || '') + '</svg>'; }
 function renderHealthDashboard() {
-  const dots = document.getElementById('miniDots'), focus = document.getElementById('focusList'), calm = document.getElementById('calmStrip');
+  const dots = document.getElementById('heroDots'), focus = document.getElementById('focusList'), calm = document.getElementById('calmStrip');
   if (!dots || !focus || !calm) return;
   const warns = METRIC_ORDER.filter(k => HEALTH_METRICS[k].status !== 'ok');
   const oks = METRIC_ORDER.filter(k => HEALTH_METRICS[k].status === 'ok');
+  // 寧寧的話隨時段變（招牌記憶點：像記得你的時間）
   const head = document.getElementById('thHead'), sub = document.getElementById('thSub');
   if (head && sub) {
-    if (!warns.length) { head.textContent = '今天一切都好'; sub.textContent = '每一項我都看著，放心。'; }
-    else { head.textContent = '今天大致都穩'; sub.textContent = '有 ' + warns.length + ' 件事我幫你盯著，其他都好。'; }
+    const h = new Date().getHours();
+    const part = h < 11 ? '早安，昨晚睡得不錯。' : h < 17 ? '午後了，記得起來走走。' : '今天辛苦了，早點歇著。';
+    if (!warns.length) { head.textContent = '今天一切都好'; sub.textContent = part + '每一項我都看著，放心。'; }
+    else { head.textContent = '今天大致都穩'; sub.textContent = part + '有 ' + warns.length + ' 件事我幫你盯著。'; }
   }
+  // HERO 燈號：短橫條（綠=穩會呼吸、珊瑚=注意恆亮）
   dots.innerHTML = METRIC_ORDER.map(k => '<i class="' + HEALTH_METRICS[k].status + '"></i>').join('');
+  // 想請你留意：大卡
   focus.innerHTML = warns.map(k => {
     const m = HEALTH_METRICS[k];
     return '<button class="focus-card ' + m.status + '" type="button" data-metric="' + k + '">' +
-      '<span class="fc-ico t-' + k + '">' + metricSvg(k) + '</span>' +
+      '<span class="fc-ico">' + metricSvg(k) + '</span>' +
       '<div class="fc-body"><div class="fc-top"><b>' + m.name + '</b><span class="fc-val">' + m.val + '<small>' + m.unit + '</small></span></div>' +
       '<div class="fc-read">' + m.read + '</div></div>' +
       '<span class="fc-chev"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>';
   }).join('');
+  // 其他都很穩：安靜清單列
   calm.innerHTML = oks.map(k => {
     const m = HEALTH_METRICS[k];
-    return '<button class="calm-chip" type="button" data-metric="' + k + '"><span class="cc-ic t-' + k + '">' + metricSvg(k) + '</span><b>' + m.val + '<small>' + m.unit + '</small></b><span class="cc-name">' + m.name + '</span></button>';
+    return '<button class="calm-row" type="button" data-metric="' + k + '">' +
+      '<span class="cr-ico">' + metricSvg(k) + '</span>' +
+      '<span class="cr-name">' + m.name + '</span>' +
+      '<span class="cr-val">' + m.val + '<small>' + m.unit + '</small></span>' +
+      '<span class="cr-dot"></span></button>';
   }).join('');
 }
 function renderMetricDetail(key) {
@@ -1444,7 +1454,7 @@ function initHealthDashboard() {
   renderHealthDashboard();
   const status = document.getElementById('status');
   if (status) status.addEventListener('click', e => {
-    const el = e.target.closest('.focus-card[data-metric], .calm-chip[data-metric]');
+    const el = e.target.closest('.focus-card[data-metric], .calm-row[data-metric]');
     if (el) renderMetricDetail(el.dataset.metric);
   });
 }

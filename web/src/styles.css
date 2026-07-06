@@ -207,13 +207,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .stat-tile .act-spark i { width: 5px; }
 #personGrid .stat-tile.t-med { cursor: default; } /* 個人頁四磚僅展示、不可點 */
 
-/* 健康頁重做（2026-07-06）：新數據格配色 + 三級燈號 + 就地展開 */
-.stat-tile.t-hr .st-ico { background: #D9695E; color: #FFF; }
-.stat-tile.t-hr .st-val { color: #B0463C; }
-.stat-tile.t-spo2 .st-ico { background: #4C93C4; color: #FFF; }
-.stat-tile.t-spo2 .st-val { color: #2E6D96; }
-.stat-tile.t-steady .st-ico { background: #C79A3B; color: #FFF; }
-.stat-tile.t-steady .st-val { color: #8A6410; }
+/* 健康頁就地展開面板（女巫規格：色=語意、不自創色）*/
 .st-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 3px; vertical-align: 0; }
 .st-dot.ok { background: var(--teal-d); }
 .st-dot.warn { background: #E0A32E; }
@@ -232,7 +226,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .md-head b { font-size: 15px; font-weight: 800; color: var(--ink); }
 .md-status { margin-left: auto; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
 .md-status.ok { background: var(--mint); color: var(--teal-dd); }
-.md-status.warn { background: var(--coral-soft); color: #A9711A; }
+.md-status.warn { background: var(--coral-soft); color: var(--coral-d); }
 .md-status.alert { background: var(--coral-soft); color: var(--coral-d); }
 .md-chart { display: flex; align-items: flex-end; gap: 6px; height: 72px; padding: 0 2px; }
 .md-chart i { flex: 1; background: var(--mint); border-radius: 5px 5px 0 0; min-height: 6px; transition: height .3s ease; }
@@ -242,56 +236,49 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .md-read { display: flex; align-items: flex-start; gap: 9px; background: var(--cream); border-radius: 12px; padding: 10px 12px; }
 .md-read .md-face { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
 .md-read .md-face img { width: 100%; height: 100%; object-fit: cover; }
-.md-read span:last-child { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+.md-read span:last-child { font-size: 15px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
 
-/* ===== 健康頁分層排版 v2（Edward 7/6：不要罐頭方格）===== */
-/* 今日安心 hero */
-.today-hero { display: flex; align-items: center; gap: 13px; background: var(--mint); border-radius: 18px; padding: 15px 16px; margin-bottom: 12px; }
-.today-hero .th-face { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+/* ===== 健康頁分層排版 v3（女巫規格 · 照設計系統：色=語意、不亂配色、無左線）===== */
+/* ① 今日安心 HERO：深綠石墨主卡（全頁唯一主角）*/
+.today-hero { background: var(--deep); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow); color: #fff; margin-bottom: 20px; }
+.today-hero .th-row { display: flex; align-items: center; gap: 13px; margin-bottom: 14px; }
+.today-hero .th-face { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
 .today-hero .th-face img { width: 100%; height: 100%; object-fit: cover; }
-.today-hero .th-say { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.today-hero .th-say b { font-family: var(--display); font-size: 19px; font-weight: 800; color: var(--teal-dd); letter-spacing: -.2px; }
-.today-hero .th-say span { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; text-wrap: pretty; }
-/* 全指標燈號一排 */
-.mini-dots { display: flex; gap: 7px; padding: 0 4px; margin-bottom: 18px; }
-.mini-dots i { width: 9px; height: 9px; border-radius: 50%; }
-.mini-dots i.ok { background: var(--teal-d); }
-.mini-dots i.warn { background: #E0A32E; }
-.mini-dots i.alert { background: var(--coral-d); }
-/* 想提醒你（大卡）*/
-.focus-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-.focus-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: #FFF; border: 1px solid var(--line); border-left: 4px solid #E0A32E; border-radius: 14px; padding: 13px 14px; cursor: pointer; font-family: var(--sans); box-shadow: var(--shadow-sm); }
-.focus-card.alert { border-left-color: var(--coral-d); }
+.today-hero .th-say b { font-family: var(--display); font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -.2px; display: block; margin-bottom: 3px; }
+.today-hero .th-say span { font-size: 15px; color: rgba(255,255,255,.82); line-height: 1.5; }
+.hero-dots { display: flex; gap: 8px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.12); }
+.hero-dots i { flex: 1; height: 6px; border-radius: 999px; background: var(--teal); }
+.hero-dots i.ok { background: var(--teal); animation: heroBreathe 3.5s ease-in-out infinite; }
+.hero-dots i.warn { background: var(--coral); }
+.hero-dots i.alert { background: var(--coral-d); }
+@keyframes heroBreathe { 0%,100% { opacity: .82; } 50% { opacity: 1; } }
+/* ② 想請你留意：大卡（無左線、珊瑚圖示語意、字級守無障礙 ≥15）*/
+.focus-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.focus-card { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; background: #FFF; border: 1px solid var(--line); border-radius: 18px; padding: 15px; cursor: pointer; font-family: var(--sans); box-shadow: var(--shadow-sm); }
+.focus-card:active { transform: scale(.985); transition: transform .1s; }
 .focus-card.open { box-shadow: 0 0 0 2px var(--teal-d); }
-.focus-card .fc-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; color: #FFF; }
-.focus-card .fc-ico .ic { width: 20px; height: 20px; }
+.focus-card .fc-ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0; background: var(--coral-soft); color: var(--coral-d); }
+.focus-card .fc-ico .ic { width: 22px; height: 22px; }
 .focus-card .fc-body { flex: 1; min-width: 0; }
 .focus-card .fc-top { display: flex; align-items: baseline; gap: 8px; }
-.focus-card .fc-top b { font-size: 15px; font-weight: 800; color: var(--ink); }
-.focus-card .fc-val { margin-left: auto; font-family: var(--display); font-size: 18px; font-weight: 800; color: #8A6410; white-space: nowrap; }
-.focus-card .fc-val small { font-size: 12px; color: var(--muted); }
-.focus-card .fc-read { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-top: 3px; text-wrap: pretty; }
+.focus-card .fc-top b { font-size: 17px; font-weight: 800; color: var(--ink); }
+.focus-card .fc-val { margin-left: auto; font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--coral-d); white-space: nowrap; }
+.focus-card .fc-val small { font-size: 13px; color: var(--muted); font-weight: 600; }
+.focus-card .fc-read { font-size: 15px; color: var(--ink-2); line-height: 1.5; margin-top: 4px; text-wrap: pretty; }
 .focus-card .fc-chev { color: var(--muted); flex-shrink: 0; }
-.focus-card .fc-chev .ic { width: 20px; height: 20px; }
-/* 都很穩（小膠囊）*/
-.calm-wrap { margin-bottom: 8px; }
-.calm-title { font-size: 12.5px; color: var(--muted); font-weight: 600; margin: 0 4px 9px; }
-.calm-strip { display: flex; flex-wrap: wrap; gap: 8px; }
-.calm-chip { display: inline-flex; align-items: center; gap: 7px; background: #FFF; border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px 6px 7px; cursor: pointer; font-family: var(--sans); box-shadow: var(--shadow-sm); }
-.calm-chip.open { box-shadow: 0 0 0 2px var(--teal-d); }
-.calm-chip .cc-ic { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #FFF; flex-shrink: 0; }
-.calm-chip .cc-ic .ic { width: 15px; height: 15px; }
-.calm-chip b { font-family: var(--display); font-size: 15px; font-weight: 800; color: var(--ink); }
-.calm-chip b small { font-size: 11px; color: var(--muted); font-weight: 600; }
-.calm-chip .cc-name { font-size: 12.5px; color: var(--muted); }
-/* 圖示底色（focus/calm 共用）*/
-.fc-ico.t-bp, .cc-ic.t-bp { background: var(--teal); }
-.fc-ico.t-hr, .cc-ic.t-hr { background: #D9695E; }
-.fc-ico.t-spo2, .cc-ic.t-spo2 { background: #4C93C4; }
-.fc-ico.t-steady, .cc-ic.t-steady { background: #C79A3B; }
-.fc-ico.t-sleep, .cc-ic.t-sleep { background: #C79A3B; }
-.fc-ico.t-act, .cc-ic.t-act { background: var(--teal-dd); }
-.fc-ico.t-med, .cc-ic.t-med { background: var(--coral); }
+.focus-card .fc-chev .ic { width: 22px; height: 22px; }
+/* ③ 其他都很穩：一張安靜清單（成組、不是搶戲的方格）*/
+.calm-block { background: #FFF; border: 1px solid var(--line); border-radius: var(--radius-md); padding: 6px 16px; box-shadow: var(--shadow-sm); margin-bottom: 16px; }
+.calm-title { font-size: 14px; color: var(--muted); font-weight: 600; padding: 12px 0 4px; }
+.calm-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 13px 0; cursor: pointer; background: none; border: none; border-top: 1px solid var(--line); font-family: var(--sans); }
+.calm-row:first-of-type { border-top: none; }
+.calm-row.open { background: var(--mint); border-radius: 12px; padding-left: 10px; padding-right: 10px; margin: 0 -10px; border-top-color: transparent; }
+.calm-row .cr-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: var(--mint); color: var(--teal-d); }
+.calm-row .cr-ico .ic { width: 19px; height: 19px; }
+.calm-row .cr-name { font-size: 16px; font-weight: 700; color: var(--ink); }
+.calm-row .cr-val { margin-left: auto; font-family: var(--display); font-size: 16px; font-weight: 800; color: var(--teal-dd); }
+.calm-row .cr-val small { font-size: 12px; color: var(--muted); font-weight: 600; }
+.calm-row .cr-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal-d); flex-shrink: 0; margin-left: 10px; }
 
 .wallet-card { position: relative; overflow: hidden; background: var(--deep); border-radius: 20px; padding: 16px; box-shadow: var(--shadow); color: #fff; margin-bottom: 12px; }
 .wallet-card .wc-top { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,.92); margin-bottom: 10px; }
