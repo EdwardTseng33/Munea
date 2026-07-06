@@ -148,40 +148,53 @@ async def handle(ws):
                             await session.send_realtime_input(audio_stream_end=True)
 
             async def from_live():
-                turn_out = 0
-                async for msg in session.receive():
-                    data = getattr(msg, "data", None)
-                    if data:
-                        if st["await_first"] and st["last_in"] is not None:
-                            lat = round((time.monotonic() - st["last_in"]) * 1000)
-                            st["await_first"] = False
-                            _diag(cid, "node.first_audio", latency_ms=lat)
-                            try:
-                                await ws.send(json.dumps({"type": "diag", "firstAudioMs": lat}))
-                            except Exception:
-                                pass
-                        st["out"] += len(data)
-                        turn_out += len(data)
-                        await ws.send(data)
-                    sc = getattr(msg, "server_content", None)
-                    if sc:
-                        ot = getattr(sc, "output_transcription", None)
-                        if ot and getattr(ot, "text", None):
-                            await ws.send(json.dumps({"type": "caption", "who": "nening", "text": ot.text}))
-                        it = getattr(sc, "input_transcription", None)
-                        if it and getattr(it, "text", None):
-                            await ws.send(json.dumps({"type": "caption", "who": "user", "text": it.text}))
-                        if getattr(sc, "interrupted", False):
-                            _diag(cid, "node.interrupted")
-                            await ws.send(json.dumps({"type": "interrupted"}))
-                        if getattr(sc, "turn_complete", False):
-                            ms = round(turn_out / (24000 * 2) * 1000)
-                            _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
-                            turn_out = 0
-                            st["await_first"] = True
-                            await ws.send(json.dumps({"type": "turn_complete"}))
+                # session.receive() 每輪結束就收（SDK 行為）；外層 while 讓「一輪接完再等下一輪」＝多輪對話不斷
+                while True:
+                    turn_out = 0
+                    got = False
+                    async for msg in session.receive():
+                        got = True
+                        data = getattr(msg, "data", None)
+                        if data:
+                            if st["await_first"] and st["last_in"] is not None:
+                                lat = round((time.monotonic() - st["last_in"]) * 1000)
+                                st["await_first"] = False
+                                _diag(cid, "node.first_audio", latency_ms=lat)
+                                try:
+                                    await ws.send(json.dumps({"type": "diag", "firstAudioMs": lat}))
+                                except Exception:
+                                    pass
+                            st["out"] += len(data)
+                            turn_out += len(data)
+                            await ws.send(data)
+                        sc = getattr(msg, "server_content", None)
+                        if sc:
+                            ot = getattr(sc, "output_transcription", None)
+                            if ot and getattr(ot, "text", None):
+                                await ws.send(json.dumps({"type": "caption", "who": "nening", "text": ot.text}))
+                            it = getattr(sc, "input_transcription", None)
+                            if it and getattr(it, "text", None):
+                                await ws.send(json.dumps({"type": "caption", "who": "user", "text": it.text}))
+                            if getattr(sc, "interrupted", False):
+                                _diag(cid, "node.interrupted")
+                                await ws.send(json.dumps({"type": "interrupted"}))
+                            if getattr(sc, "turn_complete", False):
+                                ms = round(turn_out / (24000 * 2) * 1000)
+                                _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
+                                turn_out = 0
+                                st["await_first"] = True
+                                await ws.send(json.dumps({"type": "turn_complete"}))
+                    if not got:
+                        break   # receive() 立刻空 = session 真的結束 → 收線
 
-            await asyncio.gather(from_browser(), from_live())
+            # 任一邊結束（使用者掛斷 or session 收）就取消另一邊，乾淨收線
+            tasks = [asyncio.create_task(from_browser()), asyncio.create_task(from_live())]
+            try:
+                await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            finally:
+                for t in tasks:
+                    if not t.done():
+                        t.cancel()
     except websockets.ConnectionClosed:
         pass
     except Exception as e:
