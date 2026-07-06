@@ -1313,6 +1313,17 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .hud-pill.pts.low { background: rgba(194,87,22,.55); }
 
 .consent-body { font-size: 15px; line-height: 1.7; color: var(--ink-2); background: var(--mint); border-radius: 14px; padding: 14px 16px; margin: 10px 0 14px; }
+/* 跨境同意頁：清爽三點＋療癒綠主鈕＋低調連結（Edward 7/6：留著、重畫精緻） */
+.consent-points { list-style: none; margin: 2px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+.consent-points li { display: flex; gap: 12px; align-items: flex-start; }
+.consent-points .cp-dot { flex-shrink: 0; width: 7px; height: 7px; margin-top: 8px; border-radius: 50%; background: var(--teal-d); }
+.consent-points b { display: block; font-size: 15.5px; font-weight: 700; color: var(--ink); line-height: 1.55; }
+.consent-points small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+.consent-note { font-size: 13.5px; line-height: 1.65; color: var(--muted); background: var(--mint); border-radius: 12px; padding: 11px 14px; margin: 0 0 16px; }
+.consent-note b { color: var(--teal-dd); }
+.consent-go { width: 100%; border: none; border-radius: var(--radius-sm); background: var(--teal-d); color: #fff; font-family: var(--display); font-weight: 700; font-size: 17px; padding: 16px; cursor: pointer; box-shadow: var(--shadow-sm); white-space: nowrap; }
+.consent-go:active { transform: scale(.98); }
+.consent-link { display: block; width: 100%; margin-top: 10px; background: none; border: none; color: var(--teal-d); font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; padding: 6px; white-space: nowrap; }
 
 /* 個人資料輸入 */
 .pf-input { width: 100%; max-width: 260px; }

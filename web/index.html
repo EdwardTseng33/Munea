@@ -777,13 +777,15 @@
   <div class="modal-mask" id="consentSheet">
     <div class="modal">
       <div class="modal-grab"></div>
-      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span>開始聊之前，跟你說一件事</span></div>
-      <p class="consent-body">為了讓我聽懂你、記得你，你說的話會傳到台灣境外的雲端機房處理。我們只留下對話的重點摘要幫助記憶，原始錄音不會當作正式保存的紀錄；你隨時可以在「我的資料」把內容刪掉。語音只拿來聽懂你說什麼，不會拿去做聲紋辨識。</p>
-      <p class="consent-body" style="margin-top:8px">小提醒：沐寧是陪伴、不是緊急服務——遇到急難請直接撥 <b>119</b>，需要心理支持可撥 <b>1925</b>。</p>
-      <div class="med-actions">
-        <button type="button" class="btn-primary" id="consentAgree">我知道了，開始聊</button>
-        <button type="button" class="btn-quiet" id="consentDetail">先看隱私說明</button>
-      </div>
+      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span>開始聊之前，先跟你說一聲</span></div>
+      <ul class="consent-points">
+        <li><i class="cp-dot"></i><div><b>你說的話會送到境外的雲端處理</b><small>這樣我才聽得懂你、也記得你</small></div></li>
+        <li><i class="cp-dot"></i><div><b>只留對話重點，原始錄音不保存</b><small>隨時能在「我的資料」刪掉</small></div></li>
+        <li><i class="cp-dot"></i><div><b>聲音只用來聽懂你，不做聲紋辨識</b></div></li>
+      </ul>
+      <p class="consent-note">沐寧是陪伴、不是緊急服務。遇到急難請撥 <b>119</b>，想找人說說話可撥 <b>1925</b>。</p>
+      <button type="button" class="consent-go" id="consentAgree">我知道了，開始聊</button>
+      <button type="button" class="consent-link" id="consentDetail">先看完整隱私說明</button>
     </div>
   </div>
   <div class="modal-mask" id="medRemindModal">
