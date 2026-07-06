@@ -262,3 +262,13 @@
 - 已簽好的 .app：`scratchpad/dd/Build/Products/Debug-iphoneos/App.app`（Debug、開發簽章）。
 - ⚠️ **待決（真語音上真機）**：裝上手機的 App＝bundled static，`/chat`、`/voice-note` 打相對網址→**無後端**→退回反射腦（只有簡單陪聊）。要真機測**真腦＋寧寧真聲音**，需把 App 指到「可達的後端」：① hosted staging，或 ② 同 Wi-Fi 指到 Mac 本機引擎（快、免部署）。＝`TESTFLIGHT-MAC-HANDOFF` 的 backend URL strategy 決策點。
 - TestFlight（distribution 上傳）仍待 App Store Connect API 金鑰。
+
+## 2026-07-06 Mac 端 · 聊聊 UX 修正（Edward 真機指正）
+Edward 真機檢視聊聊、點出多項 UX/設計問題。已修（動 `web/src/app.js`＋`styles.css`；**未碰引擎/架構**）：
+- **拿掉系統機械聲**：`speakChat` 不再用瀏覽器 `speechSynthesis`；寧寧只用真聲音，無真聲音時改輕量文字提示（Edward：不要系統聲音）。
+- **字幕預設關**（對齊 SPEC「像視訊、字幕預設關、只留必要狀態」）：`captionsOn` 預設 false＋localStorage 記住；`setCaption` 尊重開關；`captionToggle` 清楚開/關＋`#chat.captions-on` 控版位。
+- **解「字幕/狀態兩模組重疊」**：`.face-cue`（在聽/在想/在說）移到控制列正上方、不再浮臉中央；開字幕時 cue 讓位、字幕條在下，量測 gap 14px、無重疊。
+- **按鈕不斷行**：`.ctl-btn span` white-space:nowrap ＋字距微收。
+- 已 `cap sync`＋重新出包＋裝回 Edward iPhone 實機，瀏覽器手機比例＋真機皆驗。
+- **待續**（需 Edward 拍板/真機驗）：麥克風「通話中靜音」態視覺再明確、跨境同意頁精緻化＋是否必要（沙利曼合規要求 vs UX 精簡）。
+- 註：舊 `.face-caption`(#chatCaption) 仍是被隱藏的死元件（setCallHint 寫進去看不到）；本輪只解可見重疊，徹底清死碼列後續。

@@ -607,8 +607,11 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ===== 狀態指示層（依 data-state 顯示其一）===== */
-.face-cue { position: absolute; left: 0; right: 0; z-index: 6; bottom: calc(268px + env(safe-area-inset-bottom));
-  display: flex; justify-content: center; pointer-events: none; min-height: 30px; }
+/* 狀態點：貼在控制列正上方（不浮在臉中央）；字幕開啟時再往上讓位 */
+.face-cue { position: absolute; left: 0; right: 0; z-index: 6; bottom: calc(190px + env(safe-area-inset-bottom));
+  display: flex; justify-content: center; pointer-events: none; min-height: 30px;
+  transition: bottom .2s ease; }
+#chat.captions-on .face-cue { bottom: calc(250px + env(safe-area-inset-bottom)); }
 .face-cue .cue { display: none; align-items: center; gap: 7px;
   background: rgba(0,0,0,.36); backdrop-filter: blur(8px); border-radius: 999px; padding: 10px 18px; }
 
@@ -839,7 +842,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .face-hud { position: absolute; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 16px); z-index: 6; display: flex; flex-direction: row; gap: 8px; align-items: center; }
 .hud-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,.38); color: #FFF; font-size: 15px; font-weight: 600; padding: 7px 13px; border-radius: 100px; }
 .hud-pill .ic { width: 15px; height: 15px; }
-.face-caption-box { position: absolute; left: 16px; right: 16px; bottom: calc(196px + env(safe-area-inset-bottom)); z-index: 6; background: rgba(0,0,0,.42); color: #FFF; border-radius: 18px; padding: 13px 16px; font-size: 17px; line-height: 1.6; text-align: center; }
+.face-caption-box { position: absolute; left: 16px; right: 16px; bottom: calc(184px + env(safe-area-inset-bottom)); z-index: 6; background: rgba(8,18,15,.58); backdrop-filter: blur(14px); color: #FFF; border-radius: 18px; padding: 13px 16px; font-size: 16px; line-height: 1.6; text-align: center; }
 .face-caption-box small { display: block; color: rgba(255,255,255,.62); font-size: 13px; margin-top: 3px; }
 
 /* 舊單行字幕退役（由常駐字幕框取代、避免疊字） */
@@ -938,9 +941,11 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 3px rgba(31,60,52,.14), 0 0 0 0.5px rgba(58,53,46,.10);
   color: var(--ink-2); font-family: var(--sans); font-size: 12px; font-weight: 700; }
 .ctl-btn .ic { width: 21px; height: 21px; }
+.ctl-btn span { white-space: nowrap; letter-spacing: -.01em; }
 .ctl-btn:active { transform: scale(.94); }
-.ctl-btn.off { background: rgba(0,0,0,.35); color: rgba(255,255,255,.85); }
-.ctl-btn.off .ic { opacity: .75; }
+/* 關閉態（字幕關／麥克風靜音）：灰底＋圖示打斜槓，一眼看出是「關」 */
+.ctl-btn.off { background: rgba(0,0,0,.32); color: rgba(255,255,255,.9); }
+.ctl-btn.off .ic { opacity: .8; }
 .ctl-btn.rec { background: var(--coral-d); color: #FFF; }
 .call-btn.end { background-color: var(--coral-d); }
 .call-btn.end .ic { transform: rotate(135deg); }

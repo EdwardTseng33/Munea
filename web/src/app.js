@@ -1133,7 +1133,18 @@ function startCallTimer() {
 }
 function stopCallTimer() {
   _lowWarned = false; _zeroSaid = false; _brainDegraded = false; if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
+// 字幕（逐字稿）預設「關」——依產品規劃，聊聊像視訊通話、只留必要狀態；字幕是給重聽長輩的可選輔助。
+let captionsOn = false;
+try { captionsOn = localStorage.getItem('munea.captions') === '1'; } catch (e) {}
+function applyCaptionState() {
+  const b = document.getElementById('captionToggle');
+  const chat = document.getElementById('chat');
+  if (b) { b.classList.toggle('off', !captionsOn); b.setAttribute('aria-pressed', captionsOn ? 'true' : 'false'); }
+  if (chat) chat.classList.toggle('captions-on', captionsOn);
+  if (!captionsOn) { const box = document.querySelector('.face-caption-box'); if (box) box.remove(); }
+}
 function setCaption(text, hint) {
+  if (!captionsOn) return;                 // 字幕關閉時不顯示逐字稿
   let box = document.querySelector('.face-caption-box');
   if (!box) {
     box = document.createElement('div');
@@ -1268,16 +1279,9 @@ function hint(text) {
   toast(text);
 }
 function speakChat(text) {
-  // 只給聊聊頁用：正式版是寧寧本人的聲音，這裡是開發用的代打
+  // 寧寧只用她本人的聲音（真語音 playB64）。沒有真聲音時，絕不用系統的機械聲代打——
+  // 改用一則輕量文字提示，不破壞「是寧寧在講話」的感覺。
   toast(text);
-  if (!('speechSynthesis' in window)) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-TW'; u.rate = 0.92;
-  const v = speechSynthesis.getVoices();
-  const zh = v.find(x => /zh[-_]?TW/i.test(x.lang)) || v.find(x => /zh/i.test(x.lang));
-  if (zh) u.voice = zh;
-  speechSynthesis.speak(u);
 }
 
 // 今天一起完成：打勾 → 寧寧鼓勵（不是賺幣，是被看見）
@@ -1493,12 +1497,12 @@ function init() {
     else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
   });
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
-    const b = $('#captionToggle');
-    const box = document.querySelector('.face-caption-box');
-    const off = b.classList.toggle('off');
-    if (box) box.style.display = off ? 'none' : '';
-    toast(off ? '字幕已關閉' : '字幕已開啟');
+    captionsOn = !captionsOn;
+    try { localStorage.setItem('munea.captions', captionsOn ? '1' : '0'); } catch (e) {}
+    applyCaptionState();
+    toast(captionsOn ? '字幕開啟：會顯示逐字' : '字幕關閉');
   });
+  applyCaptionState();
   refreshTaskProgress();
   restoreFamilyFeed();
   applyDeveloperBypass();
