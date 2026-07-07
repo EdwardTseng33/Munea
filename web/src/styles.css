@@ -752,11 +752,11 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   position: absolute;
   left: 24px;              /* 對齊內容 .pad 的 24px 左右留白 */
   right: 24px;
-  bottom: calc(12px + env(safe-area-inset-bottom));
+  bottom: calc(4px + env(safe-area-inset-bottom));   /* Edward 7/7：往下移一點 */
   z-index: 20;
   display: flex;
   align-items: flex-end;
-  height: 84px;
+  height: 94px;            /* Edward 7/7：整體放大 */
   padding: 0 18px;         /* 條變窄了、內縮收一點讓五格不擠 */
 }
 .tab-bar.hidden { display: none; }
@@ -780,34 +780,37 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 5px;
-  padding: 0 0 12px;
+  gap: 6px;
+  padding: 0 0 15px;
   color: var(--cream);
   cursor: pointer;
+  touch-action: manipulation;   /* Edward 7/7：iOS 觸控更靈敏 */
   transition: color .15s ease;
 }
-.tab-btn .ic { width: 20px; height: 20px; stroke-width: 1.7; }
-.tab-btn > span { font-size: 10px; font-weight: 600; letter-spacing: .05em; line-height: 1; }
+.tab-btn .ic { width: 24px; height: 24px; stroke-width: 1.7; }
+.tab-btn > span { font-size: 12px; font-weight: 600; letter-spacing: .04em; line-height: 1; }
 .tab-btn.active { color: var(--teal); }
 .tab-btn.active > span { font-weight: 800; }
-/* 中央「聊聊」：搖籃內的 44px 薄荷綠鈕（絕對定位、無陰影），文字標籤留在底部 */
+/* 中央「聊聊」：搖籃內的薄荷綠鈕（絕對定位、無陰影），文字標籤留在底部 */
 /* position:static → 讓下方的聊聊鈕改以整條 navbar 為定位基準（不是這顆短鈕），才會往上嵌進凹槽 */
-.tab-btn.center { color: var(--cream); position: static; }
+/* align-self:stretch → 讓中央按鈕撐滿整欄高度、蓋住上方圓鈕的區域，真手機才點得到（Edward 7/7 修 bug）*/
+.tab-btn.center { color: var(--cream); position: static; align-self: stretch; justify-content: flex-end; }
 .tab-btn.center .center-fab {
   position: absolute;
   z-index: 2;
-  top: 11px;
+  top: 13px;
   left: 50%;
   transform: translateX(-50%);
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--teal);
   display: grid;
   place-items: center;
+  pointer-events: none;         /* 點擊穿透到下方撐滿整欄的按鈕、確保可點 */
   transition: transform .12s ease;
 }
-.tab-btn.center .center-fab .ic { width: 20px; height: 20px; stroke: #fff; stroke-width: 2.2; }
+.tab-btn.center .center-fab .ic { width: 24px; height: 24px; stroke: #fff; stroke-width: 2.2; }
 .tab-btn.center:active .center-fab { transform: translateX(-50%) scale(.93); }
 .tab-btn.center.active .center-fab { background: var(--btn-green); }
 
