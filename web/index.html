@@ -1054,7 +1054,8 @@
     var MSG={
       'family-invite':{t:'邀請家人，升級就解鎖',m:'免費方案可以一起看家人的狀態；想邀請家人進照護圈、大家互相照應，升級 Plus 就可以囉。'},
       'status-history':{t:'看更久的變化，升級解鎖',m:'免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。'},
-      'chat-daily':{t:'今天的免費陪聊用完了',m:'免費方案每天可以跟寧寧聊 5 分鐘。想不限時間、隨時想聊就聊，升級 Plus 就好——明天會再有 5 分鐘。'}
+      'chat-daily':{t:'今天的免費陪聊用完了',m:'免費方案每天可以跟寧寧聊 5 分鐘。想不限時間、隨時想聊就聊，升級 Plus 就好——明天會再有 5 分鐘。'},
+      'join-circle':{t:'加入家人的照護圈，升級解鎖',m:'免費方案可以自己用沐寧、記自己的提醒；想加入家人的照護圈、大家一起看著長輩，升級 Plus 就可以囉。'}
     };
     function upsell(feature){
       var d=MSG[feature]||{t:'升級解鎖更多',m:'升級方案就能使用這個功能。'};
@@ -1076,7 +1077,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260707-reconcile"></script>
+  <script type="module" src="src/app.js?v=20260707-freejoin"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

@@ -2035,7 +2035,7 @@ function init() {
     saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
     renderFcRoster(); toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
   });
-  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
+  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
   if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
   if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', () => {
