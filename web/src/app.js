@@ -2303,7 +2303,7 @@ function init() {
   });
   // ===== 訂閱頁：比較表 + 月/年繳切換 + 訂閱鈕（金額為暫定、待 Edward 拍板）=====
   // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
-  const SUB_PRICE = { plus: { month: 99, year: 950 }, pro: { month: 249, year: 2390 } };
+  const SUB_PRICE = { plus: { month: 499, year: 4790 }, pro: { month: 999, year: 9590 } };
   const PT_PRICE = { 200: 350, 500: 800, 1000: 1500, 2000: 2900 };
   let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
   function fmtPrice(plan, cyc) { return 'NT$' + SUB_PRICE[plan][cyc].toLocaleString() + (cyc === 'year' ? '／年' : '／月'); }
