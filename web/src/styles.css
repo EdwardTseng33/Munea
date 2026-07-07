@@ -2006,3 +2006,10 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .health-row .hr-status.watch .hr-slabel { color: #8A6410; }
 .health-row .hr-status.alert .hr-dot { background: var(--danger); box-shadow: 0 0 0 3px rgba(229,91,77,.2); }
 .health-row .hr-status.alert .hr-slabel { color: var(--danger); }
+
+/* 家人傳話提示（Edward 2026-07-07） */
+.relay-hint { display: flex; gap: 11px; align-items: center; background: var(--mint); border: 1px solid var(--mint-2); border-radius: 15px; padding: 12px 14px; margin-bottom: 16px; }
+.relay-hint .rh-ic { flex: 0 0 30px; width: 30px; height: 30px; border-radius: 9px; background: #fff; display: grid; place-items: center; }
+.relay-hint .rh-ic .ic { width: 17px; height: 17px; color: var(--teal-dd); fill: none; stroke: currentColor; stroke-width: 2; }
+.relay-hint .rh-tx { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
+.relay-hint .rh-tx b { color: var(--teal-dd); font-weight: 800; }

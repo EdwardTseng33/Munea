@@ -1453,9 +1453,11 @@ function buildCareItems() {
   const items = [];
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
-  const relayMsg = feed.find(x => String(x).includes('帶話'));
+  const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
+  let _rTitle = '家人帶話給你', _rSub = '';
+  if (relayMsg) { const _p = plain(relayMsg); const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/); if (_m) { _rTitle = _m[1].trim() + ' 要我提醒你'; _rSub = _m[2].trim(); } else { _rSub = _p; } }
   const familyItem = relayMsg
-    ? { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: plain(relayMsg), btn: '回話' }
+    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: '知道了' }
     : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，' + cname() + '都幫你收著了', btn: '去看看' };
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
@@ -2860,7 +2862,7 @@ function init() {
   function renderVisitRow() {
     const v = nextVisit();
     const lb = $('#visitLabel');
-    if (lb) lb.textContent = v ? ((v.title ? v.title + ' · ' : '') + (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' ›') : '未設定 ›';
+    if (lb) lb.textContent = v ? ((v.title ? v.title + ' · ' : '') + (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' ›') : '›';
     // 看診有增減時，同步首頁「今天一起完成」的回診任務（只在當天顯示）
     if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks();
   }
@@ -2944,7 +2946,7 @@ function init() {
   // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常時通知他們確認
   const SAFETY_MEMBERS = [{ name: '美華', init: '華', tint: 'p-mei' }, { name: '志明', init: '明', tint: 'p-zhi' }, { name: '小寶', init: '寶', tint: 'p-bao' }];
   function loadSafety() { try { return JSON.parse(localStorage.getItem('munea.safetyContacts')) || []; } catch (e) { return []; } }
-  function updateSafetyCount() { const el = $('#safetyCount'); if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.join('、') : '未設定'; } }
+  function updateSafetyCount() { const el = $('#safetyCount'); if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.join('、') : ''; } }
   function renderSafety() {
     const picks = $('#safetyPicks'); if (!picks) return;
     const sel = loadSafety();
@@ -3309,8 +3311,11 @@ function init() {
     if (relay0 && !relayBadWho.test(relay0[2])) {
       let who = relay0[2].replace(/[要說來]$/, '');
       if (who.length < 2) who = relay0[2];
-      pushFamilyFeed('<b>你</b>托' + cname() + '帶話給' + who + '：' + relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, ''));
-      return '好，我會帶話給' + who + '，也會顯示在' + who + '的首頁上。';
+      const _msg = relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, '');
+      const _pf = (typeof loadPersonProfile === 'function') ? loadPersonProfile() : {};
+      const _me = _pf.nick || _pf.name || '家人';   // 暱稱優先、沒暱稱才名字
+      pushFamilyFeed('<b>' + _me + '</b>要我提醒你：' + _msg);
+      return '好，我幫你把話帶給' + who + '——他打開沐寧就會看到「' + _me + '要我提醒你：' + _msg + '」。';
     }
     // ===== 用藥提醒：聽到「幫我記得／提醒我…吃藥」→ 直接建好 =====
     const medTrig = /(提醒|記得|記錄|紀錄|幫我記|幫我排|安排|叫我)/.test(t);
