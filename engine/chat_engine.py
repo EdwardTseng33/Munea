@@ -83,7 +83,7 @@ def reply(char, user):
             try:
                 r = client.models.generate_content(
                     model=m, contents=user,
-                    config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9))
+                    config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
                 return r.text.strip()
             except Exception as e:
                 _log_fallback_exception(f"generate chat reply with {m}", e)
@@ -160,7 +160,7 @@ def open_chat(char="寧寧", today=""):
             try:
                 r = client.models.generate_content(
                     model=m, contents=task,
-                    config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9))
+                    config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
                 return r.text.strip()
             except Exception as e:
                 _log_fallback_exception(f"generate proactive opener with {m}", e)
