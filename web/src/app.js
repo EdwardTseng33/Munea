@@ -2340,7 +2340,7 @@ function init() {
       if (_lbl) _lbl.style.display = _isFreeP ? 'none' : '';
       if (_bar) _bar.style.display = _isFreeP ? 'none' : '';
       if (_note) _note.textContent = _isFreeP
-        ? '目前是免費方案 · 每天陪寧寧聊 5 分鐘。升級 Plus／Pro 解鎖不限量聊天、看更久的紀錄、邀家人進照護圈。'
+        ? '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。'
         : (pts + ' 點約可通話 ' + pts + ' 分鐘；基本陪伴不限量、不會中斷');
     }
     const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
