@@ -704,13 +704,16 @@ function getLiveVoiceUrl() {
 }
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
+  micLevel: 0, playLevel: 0, onCaption: null, _capBuf: '',
   _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
   _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
-  _toListening() { clearTimeout(this._speakTimer); this.speaking = false; if (this.onListen) this.onListen(); },
+  _toListening() { clearTimeout(this._speakTimer); this.speaking = false; this.playLevel = 0; if (this.onListen) this.onListen(); },
   async start(onListen, onSpeak, onDrop) {
-    const url = getLiveVoiceUrl();
+    let url = getLiveVoiceUrl();
     if (!url) return false;
+    // 把使用者改過的名字帶給語音伺服器，讓 AI 知道自己現在叫什麼
+    try { const nm = (typeof cname === 'function' ? cname() : ''); if (nm) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'name=' + encodeURIComponent(nm); } catch (e) {}
     this.on = true;
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
@@ -728,9 +731,12 @@ const LiveVoice = {
         src.connect(this.proc); this.proc.connect(this.ac.destination);
         // 半雙工：她說話時暫停送麥克風→治好手機喇叭被麥克風收回去的回音，讓她每一輪都回你
         this.proc.onaudioprocess = e => {
-          if (this.speaking) return;
+          const inp = e.inputBuffer.getChannelData(0);
+          if (this.speaking) { this.micLevel = 0; return; }       // 她在說＝麥克風靜音＝收音波頻歸零
+          let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
+          this.micLevel = Math.min(1, Math.sqrt(s / inp.length) * 8);   // 即時音量→收音波頻高度
           if (!this.ws || this.ws.readyState !== 1) return;
-          const buf = this._f2i(this._down(e.inputBuffer.getChannelData(0), this.ac.sampleRate, 16000)).buffer;
+          const buf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
           this.ws.send(buf);
         };
         this._toListening();     // 一接通就是「在聽你說」
@@ -740,8 +746,16 @@ const LiveVoice = {
         if (typeof ev.data === 'string') {
           try {
             const o = JSON.parse(ev.data);
-            if (o.type === 'interrupted' && this.playCtx) this.playHead = this.playCtx.currentTime;
-            if (o.type === 'turn_complete') this._toListening();   // 她講完 → 換你講、麥克風重開
+            if (o.type === 'interrupted' && this.playCtx) {
+              // 使用者插話：把還在播/已排隊的舊語音全部停掉，避免兩個聲音疊在一起（真人不會同時兩個聲音）
+              (this._srcs || []).forEach(s => { try { s.stop(); } catch (e2) {} });
+              this._srcs = []; this.playHead = this.playCtx.currentTime; this.playLevel = 0;
+            }
+            if (o.type === 'caption' && o.who === 'nening' && o.text) {   // 寧寧說的話→字幕逐字（累積成一句）
+              this._capBuf = (this._capBuf || '') + o.text;
+              if (this.onCaption) this.onCaption(this._capBuf);
+            }
+            if (o.type === 'turn_complete') { this._toListening(); this._capBuf = ''; }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
           } catch (e) {}
           return;
         }
@@ -749,11 +763,16 @@ const LiveVoice = {
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
+        let ps = 0; for (let k = 0; k < f.length; k++) ps += f[k] * f[k];
+        this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
         const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this.playCtx.destination);
         const now = this.playCtx.currentTime;
         if (this.playHead < now + 0.02) this.playHead = now + 0.18;
         s.start(this.playHead); this.playHead += b.duration;
+        // 記著正在播的語音，插話時才能一次停乾淨（不留尾巴跟新句疊音）
+        if (!this._srcs) this._srcs = [];
+        this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); };
         // 安全網：她若 900ms 沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）
         clearTimeout(this._speakTimer);
         this._speakTimer = setTimeout(() => this._toListening(), 900);
@@ -774,10 +793,42 @@ const LiveVoice = {
 };
 window.MuneaLiveVoice = LiveVoice;
 
+// 聲波波頻：收音／講話都跟著「真實音量」跳；沒聲音就低伏收攏，不再是常亮的假 loading
+const FaceWave = {
+  bars: null, raf: 0, src: null, cur: 0,
+  _init() { this.bars = Array.prototype.slice.call(document.querySelectorAll('.face-wave i')); },
+  start(getLevel) {
+    this.src = getLevel;                                     // 已在跑就只換來源（收音↔講話）
+    if (!this.bars || !this.bars.length) this._init();
+    if (this.raf) return;
+    const loop = () => {
+      const n = this.bars.length;
+      const target = Math.max(0, Math.min(1, this.src ? (this.src() || 0) : 0));
+      this.cur += (target - this.cur) * 0.35;                // 平滑起落，不抖
+      for (let i = 0; i < n; i++) {
+        const shape = 1 - Math.abs(i - (n - 1) / 2) / n;     // 中間高、兩側低＝聲波形狀
+        const h = 0.3 + this.cur * (0.5 + shape) * 0.85;
+        this.bars[i].style.transform = 'scaleY(' + Math.min(1.7, h).toFixed(2) + ')';
+      }
+      this.raf = requestAnimationFrame(loop);
+    };
+    this.raf = requestAnimationFrame(loop);
+  },
+  stop() {
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.raf = 0; this.src = null; this.cur = 0;
+    if (this.bars) this.bars.forEach(b => { b.style.transform = 'scaleY(0.16)'; });
+  },
+};
+window.MuneaFaceWave = FaceWave;
+
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
 function setCallToggle(connected) {
   callConnected = connected;
+  // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
+  const fn = document.querySelector('.face-name');
+  if (fn) { fn.classList.toggle('off', !connected); const st = fn.querySelector('.fn-status'); if (st) st.textContent = connected ? '在線' : '未在線'; }
   const b = $('#callToggle');
   if (!b) return;
   b.classList.toggle('start', !connected);
@@ -911,6 +962,39 @@ function closeAuthSheet() {
   if (!sheet) return;
   sheet.classList.remove('show');
   sheet.setAttribute('aria-hidden', 'true');
+}
+// 通用「下拉關閉」手勢：抓每個彈窗頂部的把手往下拖，過門檻就關、沒過就彈回（Edward 7/7：所有類似彈窗都要有）
+function enableSheetDrag() {
+  let active = null, startY = 0, dy = 0;
+  const modalOf = m => m && m.querySelector('.modal');
+  const move = clientY => {
+    if (!active) return;
+    dy = Math.max(0, clientY - startY);
+    const m = modalOf(active); if (m) m.style.transform = 'translateY(' + dy + 'px)';
+  };
+  const end = () => {
+    if (!active) return;
+    const mask = active, m = modalOf(mask); active = null;
+    if (m) {
+      m.style.transition = 'transform .28s cubic-bezier(.22,.9,.32,1)';
+      if (dy > 88) { m.style.transform = 'translateY(100%)'; setTimeout(() => { mask.classList.remove('show'); m.style.transform = ''; m.style.transition = ''; }, 250); }
+      else { m.style.transform = ''; setTimeout(() => { if (m) m.style.transition = ''; }, 300); }
+    }
+    dy = 0;
+  };
+  document.querySelectorAll('.modal-mask').forEach(mask => {
+    const grab = mask.querySelector('.modal-grab');
+    if (!grab || grab.dataset.drag) return;
+    grab.dataset.drag = '1';
+    grab.style.touchAction = 'none';                 // 把手上不觸發捲動
+    const down = clientY => { active = mask; startY = clientY; dy = 0; const m = modalOf(mask); if (m) m.style.transition = 'none'; };
+    grab.addEventListener('touchstart', e => down(e.touches[0].clientY), { passive: true });
+    grab.addEventListener('mousedown', e => { e.preventDefault(); down(e.clientY); });
+  });
+  window.addEventListener('touchmove', e => { if (active) { move(e.touches[0].clientY); if (e.cancelable) e.preventDefault(); } }, { passive: false });
+  window.addEventListener('touchend', end);
+  window.addEventListener('mousemove', e => { if (active) move(e.clientY); });
+  window.addEventListener('mouseup', end);
 }
 function demoAuthOn() {
   try { return (localStorage.getItem('munea.demoAuth') || 'in') === 'in'; } catch (e) { return true; }
@@ -1107,12 +1191,13 @@ function renderPillTask() {
   if (!card || !title || !sub) return;
   const meds = loadMeds();
   if (!meds.length) {
-    title.textContent = '吃藥提醒';
-    sub.textContent = '還沒設定，跟' + (typeof cname === 'function' ? cname() : '寧寧') + '說一聲就好';
+    // 沒設定用藥就不該有這個任務——整條收起來，不留佔位（Edward 2026-07-07）
+    card.style.display = 'none';
     card.classList.remove('done');
     if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
     return;
   }
+  card.style.display = '';
   let done = {};
   try { done = JSON.parse(localStorage.getItem('munea.medDone.' + pillDateKey())) || {}; } catch (e) {}
   const slots = [];
@@ -1139,6 +1224,40 @@ function renderPillTask() {
   if (_pico) { const _pph = next && next.photo; if (_pph) { _pico.style.backgroundImage = 'url(' + _pph + ')'; _pico.style.backgroundSize = 'cover'; _pico.style.backgroundPosition = 'center'; _pico.classList.add('med-photo-ico'); _pico.onclick = ev => { ev.stopPropagation(); showMedPhoto(_pph, next.name); }; } else { _pico.style.backgroundImage = ''; _pico.classList.remove('med-photo-ico'); _pico.onclick = null; } }
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
+// 回診只在「當天」變成今日任務；其餘日子不顯示（Edward 2026-07-07）
+function _todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function visitToday() {
+  let arr = null;
+  try { arr = JSON.parse(localStorage.getItem('munea.visits') || 'null'); } catch (e) {}
+  if (!Array.isArray(arr)) return null;
+  const today = _todayISO();
+  return arr.filter(v => v && v.dateISO === today).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')))[0] || null;
+}
+function _clock12(tv) {
+  const p = String(tv || '').split(':'); const hh = +p[0], mm = +p[1] || 0;
+  if (isNaN(hh)) return '';
+  const ap = hh < 12 ? '上午' : '下午'; const h12 = ((hh + 11) % 12) + 1;
+  return ap + ' ' + h12 + (mm ? ':' + String(mm).padStart(2, '0') : '');
+}
+function renderVisitTask() {
+  const card = document.getElementById('visitTask');
+  if (!card) return;
+  const v = visitToday();
+  if (!v) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
+  card.style.display = '';
+  const t = $('#visitTaskTitle'), s = $('#visitTaskSub'), tm = $('#visitTaskTime');
+  const clk = v.time ? _clock12(v.time) : '';
+  if (t) t.textContent = v.title || v.label || '回診';
+  if (s) s.textContent = [clk, v.label].filter(Boolean).join(' · ') || '記得帶健保卡';
+  if (tm) tm.textContent = clk || '今天';
+  if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
+}
+// 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋走走＋聊聊
+function renderDailyTasks() { renderPillTask(); renderVisitTask(); }
+window.__muneaRenderDailyTasks = renderDailyTasks;
 function renderMedList() { renderMedSlots(); }
 const MED_SLOT_DEF = [
   ['早餐後', 'b', 30], ['午餐後', 'l', 30], ['晚餐後', 'd', 30], ['睡前', 's', -30]
@@ -1184,7 +1303,7 @@ function renderMedSlots() {
   }).join('');
 }
 
-const POINTS = { total: 400, used: 160,
+const POINTS = { total: 200, used: 60,    // Plus 每月 200 點（Pro 為 500）；切方案時 renderPlanState 會更新 total
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
 const LOW_PTS = 30;
 window.__ptsTest = { setUsed: v => { POINTS.used = v; renderPoints(); }, ff: s => { _callSec = s; } };
@@ -1266,7 +1385,7 @@ async function syncPullAll() {
     const r = await fetch('/family/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'load' }) });
     if (!r.ok) return;
     const st = (await r.json()).state || {};
-    const map = { activities: 'munea.activities', familyFeed: 'munea.familyFeed2', meds: 'munea.meds', visit: 'munea.visit', routine: 'munea.routine' };
+    const map = { activities: 'munea.activities', familyFeed: 'munea.familyFeed2', meds: 'munea.meds', visit: 'munea.visit', visits: 'munea.visits', routine: 'munea.routine' };
     for (const k in map) {
       if (st[k] !== undefined && st[k] !== null) {
         try { localStorage.setItem(map[k], JSON.stringify(st[k])); } catch (e) {}
@@ -1303,7 +1422,7 @@ function buildCareItems() {
   const relayMsg = feed.find(x => String(x).includes('帶話'));
   const familyItem = relayMsg
     ? { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: plain(relayMsg), btn: '回話' }
-    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，寧寧都幫你收著了', btn: '去看看' };
+    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，' + cname() + '都幫你收著了', btn: '去看看' };
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
   const act = acts.find(a => a && !a.done && !a.archived);
@@ -1318,8 +1437,13 @@ function buildCareItems() {
   }
   items.push(familyItem);
   let v = null;
-  try { v = JSON.parse(localStorage.getItem('munea.visit') || 'null'); } catch (e) {}
-  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', title: (v.label || '回診') + '快到了', sub: String(v.dateISO).slice(5).replace('-', '/') + ' · 想問醫生的，寧寧都幫你記著', btn: '看安排' });
+  try {
+    let arr = JSON.parse(localStorage.getItem('munea.visits') || 'null');
+    if (!Array.isArray(arr)) { const old = JSON.parse(localStorage.getItem('munea.visit') || 'null'); arr = (old && old.dateISO) ? [old] : []; }
+    const today = isoOf(new Date());
+    v = arr.filter(x => x && x.dateISO && x.dateISO >= today).sort((a, b) => a.dateISO.localeCompare(b.dateISO))[0] || null;
+  } catch (e) {}
+  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', title: (v.title ? v.title : (v.label || '回診')) + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' });
   items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   return items;
 }
@@ -1500,18 +1624,19 @@ function speakChat(text) {
 // 今天一起完成：打勾 → 寧寧鼓勵（不是賺幣，是被看見）
 const CHEERS = {
   pill: '藥吃了，你真棒，我幫你記到存摺裡，美華也看得到。',
+  visit: '回診辛苦了，醫生說的我幫你記著，回家歇一下。',
   walk: '出去走走最好了，回來記得喝口水。',
   chat: '謝謝你跟我說這些，我都記下來了。',
 };
 function refreshTaskProgress() {
-  const items = $$('#taskCard .task-item');
+  const items = $$('#taskCard .task-item').filter(i => i.style.display !== 'none');
   const done = items.filter(i => i.classList.contains('done')).length;
   const tp = document.querySelector('.task-progress');
   if (tp) tp.classList.toggle('full', done === items.length && items.length > 0);
   if (done === items.length && items.length && !window.__celebrated) {
     window.__celebrated = true;
-    setTimeout(() => toast('今天三件都完成了，我跟家人說一聲'), 250);
-    if (typeof pushFamilyFeed === 'function') pushFamilyFeed('<b>阿嬤</b>今天把三件事都完成了，給她一個讚');
+    setTimeout(() => toast('今天' + items.length + '件都完成了，我跟家人說一聲'), 250);
+    if (typeof pushFamilyFeed === 'function') pushFamilyFeed('<b>阿嬤</b>今天把該做的都完成了，給她一個讚');
   }
   const pillTask = document.querySelector('.task-item[data-task="pill"]');
   const pv = $('#statPillVal');
@@ -1690,8 +1815,9 @@ function connectCall() {
     setCallHint('接通中…');
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
     const chatEl = document.getElementById('chat');
-    const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); };   // 收音
-    const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); };            // 講話
+    const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻跟麥克風
+    const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); };            // 講話波頻跟寧寧聲音
+    LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
     // 斷線自動接回：治「她答完一次、線就掉、不再回」——掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
     let _reconnects = 0;
     const onDrop = () => {
@@ -1722,6 +1848,7 @@ function init() {
   setupHscrollHints();
   renderPoints();
   updateMedCount();
+  renderVisitTask();
   renderCareCarousel();
   if ($('#careBody')) $('#careBody').addEventListener('click', e => {
     const b = e.target.closest('.care-btn');
@@ -1732,11 +1859,16 @@ function init() {
     const mask = sheet && sheet.closest('.modal-mask');
     if (mask) { showView('settings'); mask.classList.add('show'); }
   }
-  if ($('#chatExit')) $('#chatExit').addEventListener('click', () => showView('home'));
+  // 關閉聊聊（X）＝有通話先掛斷結算，再回首頁；沒通話就直接回
+  if ($('#chatExit')) $('#chatExit').addEventListener('click', () => {
+    if (callConnected) { LiveVoice.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
+    FaceWave.stop();
+    showView('home');
+  });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     if (!callConnected) { connectCall(); }
-    else { LiveVoice.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
+    else { LiveVoice.stop(); FaceWave.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
   });
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
     captionsOn = !captionsOn;
@@ -1745,6 +1877,7 @@ function init() {
     toast(captionsOn ? '字幕開啟：會顯示逐字' : '字幕關閉');
   });
   applyCaptionState();
+  enableSheetDrag();               // 所有彈窗支援下拉關閉手勢
   refreshTaskProgress();
   restoreFamilyFeed();
   applyDeveloperBypass();
@@ -1772,10 +1905,9 @@ function init() {
   renderAiDiagnostics();
   if ($('#aiDevRefresh')) $('#aiDevRefresh').addEventListener('click', () => refreshAiDiagnostics());
 
-  // 首頁「跟寧寧聊聊」＝ 進同一個全屏臉（不再有獨立視訊頁）
+  // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
     showView('chat');
-    setTimeout(() => { if (!callConnected) connectCall(); }, 350);
   });
   // （提醒改為彈窗版；埋點併入 B1 排程處理器）
 
@@ -1860,37 +1992,38 @@ function init() {
   if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '阿嬤'); });
   applyUserAvatar();
   // 家庭照護圈
-  const CIRCLE_LIMITS = { free: 2, plus: 4, premium: 8, concierge: 12 };
-  const CIRCLE_PLAN_LABEL = { free: '免費版', plus: 'Plus', premium: 'Premium', concierge: 'Concierge' };
+  const CIRCLE_LIMITS = { plus: 4, pro: 12 };                       // Plus 最多 4 人、Pro 最多 12 人
+  const CIRCLE_PLAN_LABEL = { plus: 'Plus', pro: 'Pro' };
+  const PLAN_POINTS = { plus: 200, pro: 500 };                       // 每月贈點
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'plus'; } catch (e) { return 'plus'; } }
+  // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
   const CIRCLE_DEFAULT = [
-    { name: '陳秀英', init: '嬤', tint: 'p-ama', role: 'recipient' },
-    { name: '美華', init: '華', tint: 'p-mei', role: 'payer' },
-    { name: '志明', init: '明', tint: 'p-zhi', role: 'member' },
-    { name: '小寶', init: '寶', tint: 'p-bao', role: 'member' }
+    { name: '陳秀英', init: '嬤', tint: 'p-ama', self: true },
+    { name: '美華', init: '華', tint: 'p-mei' },
+    { name: '志明', init: '明', tint: 'p-zhi' },
+    { name: '小寶', init: '寶', tint: 'p-bao' }
   ];
   function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : CIRCLE_DEFAULT.slice(); } catch (e) { return CIRCLE_DEFAULT.slice(); } }
   function saveCircle(a2) { try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {} }
-  const ROLE_LABEL = { recipient: '照顧對象', payer: '發起人 · 付款人', member: '成員' };
   function renderFcRoster() {
     const box = $('#fcRoster'); if (!box) return;
     const members = loadCircle(); const plan = circlePlan(); const limit = CIRCLE_LIMITS[plan] || 4;
     const cnt = $('#fcCount'); if (cnt) cnt.textContent = members.length + '/' + limit + ' · ' + CIRCLE_PLAN_LABEL[plan];
     box.innerHTML = members.map(m => {
-      const roleCls = m.role === 'payer' ? 'fc-role pay' : 'fc-role';
-      const action = (m.role === 'member') ? '<button type="button" class="fc-remove" data-name="' + m.name + '">移除</button>' : '<span class="' + roleCls + '">' + ROLE_LABEL[m.role] + '</span>';
-      return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + (m.role === 'recipient' ? '（本人）' : '') + '</b>' + action + '</div>';
+      const action = m.self ? '<span class="fc-you">本人</span>' : '<button type="button" class="fc-remove" data-name="' + m.name + '">移除</button>';
+      return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
     const inv = $('#fcInviteBtn');
     if (inv) { const full = members.length >= limit; inv.textContent = full ? ('已達 ' + CIRCLE_PLAN_LABEL[plan] + ' 上限 · 升級可加更多') : '邀請家人加入'; inv.dataset.full = full ? '1' : ''; }
-    const note = $('#invLimitNote'); if (note) note.textContent = '目前 ' + CIRCLE_PLAN_LABEL[plan] + ' 方案 · 照護圈最多 ' + limit + ' 人';
+    const note = $('#invLimitNote'); if (note) note.textContent = '目前 ' + CIRCLE_PLAN_LABEL[plan] + ' 方案 · 家庭健康圈最多 ' + limit + ' 人';
   }
+  // 移除家人：點一下「移除」→變紅「確定移除」、再點才移（App 內確認、不用系統醜彈窗）
   if ($('#fcRoster')) $('#fcRoster').addEventListener('click', e => {
     const rm = e.target.closest('.fc-remove'); if (!rm) return;
-    if (!window.confirm('把「' + rm.dataset.name + '」移出照護圈？之後他就看不到阿嬤的健康摘要。')) return;
+    if (rm.dataset.arm !== '1') { rm.dataset.arm = '1'; rm.classList.add('arm'); rm.textContent = '確定移除'; setTimeout(() => { rm.dataset.arm = ''; rm.classList.remove('arm'); rm.textContent = '移除'; }, 3000); return; }
     saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
-    renderFcRoster(); toast('已把 ' + rm.dataset.name + ' 移出照護圈。');
+    renderFcRoster(); toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
   });
   if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
@@ -1902,9 +2035,11 @@ function init() {
     toast('邀請碼送出了，對方確認後你就進圈囉。');
   });
   if ($('#fcLeaveBtn')) $('#fcLeaveBtn').addEventListener('click', () => {
-    if (!window.confirm('退出這個照護圈？退出後你就看不到對方的健康摘要與關懷摘要了。')) return;
+    const b = $('#fcLeaveBtn');
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.add('arm'); b.textContent = '再按一次確認退出'; setTimeout(() => { b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈'; }, 4000); return; }
+    b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈';
     $('#famCircleModal').classList.remove('show');
-    toast('已退出這個照護圈。想再回來，請對方重新邀請你。');
+    toast('已退出這個健康圈。想再回來，請家人重新邀請你。');
   });
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
@@ -1941,9 +2076,9 @@ function init() {
     if (!b || b.classList.contains('sent')) return;
     reactRow.querySelectorAll('.react-btn.sent').forEach(x => x.classList.remove('sent'));
     b.classList.add('sent');
-    hint(`好，寧寧會幫你轉達，你${b.dataset.react}。`);
+    hint(`好，${cname()}會幫你轉達，你${b.dataset.react}。`);
     const who = document.getElementById('ptName')?.textContent || '家人';
-    pushFamilyFeed(`<b>你</b>剛剛給${who}${b.dataset.react || '送上心意'}，寧寧下次聊天會親口告訴${['阿嬤','美華'].includes(who) ? '她' : '他'}`);
+    pushFamilyFeed(`<b>你</b>剛剛給${who}${b.dataset.react || '送上心意'}，${cname()}下次聊天會親口告訴${['阿嬤','美華'].includes(who) ? '她' : '他'}`);
   });
 
   // 全家健康圈：切換成員看健康
@@ -1955,7 +2090,7 @@ function init() {
       { ic: 'pill', val: '2<small>/3</small>', label: '今天用藥' }],
     '美華': [
       { ic: 'walk', val: '8,900<small> 步</small>', label: '今日活動' },
-      { ic: 'sleep', val: '6.2<small> 小時</small>', label: '昨晚睡眠（偏少）' }],
+      { ic: 'sleep', val: '6.2<small> 小時</small>', label: '昨晚睡眠', tag: '偏少', tagCls: 'warn' }],
     '志明': [
       { ic: 'walk', val: '7,400<small> 步</small>', label: '今日活動' },
       { ic: 'sleep', val: '7.1<small> 小時</small>', label: '昨晚睡眠' }],
@@ -1976,11 +2111,11 @@ function init() {
     const TINT = { bp: 't-bp', walk: 't-act', sleep: 't-sleep', pill: 't-med' };
     grid.innerHTML = stats.map(t =>
       '<div class="stat-tile ' + (TINT[t.ic] || '') + '"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24">' + STAT_ICONS[t.ic] + '</svg></span>' +
-      '<div class="st-val">' + t.val + '</div><div class="st-label">' + t.label + '</div></div>').join('');
+      '<div class="st-val">' + t.val + '</div><div class="st-label">' + t.label + (t.tag ? ' <em class="st-trend ' + (t.tagCls || '') + '">' + t.tag + '</em>' : '') + '</div></div>').join('');
   }
 
-  const FAM_ORDER = ['阿嬤', '美華', '志明', '小寶'];
-  let currentPerson = '阿嬤';
+  const FAM_ORDER = ['美華', '志明', '小寶'];   // 阿嬤＝本人，資料在「狀態」頁，家人頁不重複顯示
+  let currentPerson = '美華';
   function famItemOf(name) {
     return [...document.querySelectorAll('.fam-switch-item')].find(x => x.dataset.person === name);
   }
@@ -2156,54 +2291,97 @@ function init() {
     $('#topUpModal').classList.remove('show');
     toast('買好了，' + p.toLocaleString() + ' 點入帳（餘額已更新），這批不會過期');
   });
-  const tierList = document.querySelector('.tier-list');
-  function renderPlanNext() {
-    const nx = localStorage.getItem('munea.planNext');
-    document.querySelectorAll('.tier .tier-tag.next').forEach(x => x.remove());
-    const meta = document.querySelector('.pc-meta');
-    if (meta) meta.textContent = nx === '取消'
-      ? '我的訂閱 · 已排定取消 · 高級權益用到 7/25'
-      : '我的訂閱 · 下次扣款 7/26 · 你和阿公兩位使用中' + (nx ? '（' + nx + ' 7/26 起）' : '');
-    if (nx && nx !== '取消' && tierList) {
-      const t = [...tierList.querySelectorAll('.tier')].find(x => x.dataset.t === nx);
-      if (t) {
-        const em = document.createElement('em');
-        em.className = 'tier-tag next';
-        em.textContent = '7/26 起';
-        const top = t.querySelector('.tier-top');
-        top.insertBefore(em, top.querySelector('i'));
+  // ===== 訂閱頁：比較表 + 月/年繳切換 + 訂閱鈕（金額為暫定、待 Edward 拍板）=====
+  // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
+  const SUB_PRICE = { plus: { month: 99, year: 950 }, pro: { month: 249, year: 2390 } };
+  const PT_PRICE = { 200: 350, 500: 800, 1000: 1500, 2000: 2900 };
+  let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
+  function fmtPrice(plan, cyc) { return 'NT$' + SUB_PRICE[plan][cyc].toLocaleString() + (cyc === 'year' ? '／年' : '／月'); }
+  function renderSubUI() {
+    const cur = circlePlan();
+    [['plus', 'Plus'], ['pro', 'Pro']].forEach(([pl, Cap]) => {
+      const priceEl = $('#price' + Cap);
+      if (priceEl) priceEl.innerHTML = 'NT$' + SUB_PRICE[pl][_subCyc].toLocaleString() + '<small>' + (_subCyc === 'year' ? '/年' : '/月') + '</small>';
+      const saveEl = $('#save' + Cap);
+      if (saveEl) {
+        if (_subCyc === 'year') { const save = SUB_PRICE[pl].month * 12 - SUB_PRICE[pl].year; saveEl.textContent = '一年省 NT$' + save.toLocaleString(); saveEl.style.display = ''; }
+        else saveEl.style.display = 'none';
       }
+    });
+    document.querySelectorAll('.ppk').forEach(c => { c.classList.toggle('sel', c.dataset.t === _subPlan); c.classList.toggle('is-cur', c.dataset.t === cur); });
+    const cta = $('#subCta');
+    if (cta) {
+      if (_subPlan === cur) cta.textContent = '你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案';
+      else cta.textContent = (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? '升級 ' : '改用 ') + CIRCLE_PLAN_LABEL[_subPlan] + ' · ' + fmtPrice(_subPlan, _subCyc);
     }
   }
-  let _planPick = null;
-  if (tierList) tierList.addEventListener('click', e => {
-    const t = e.target.closest('.tier');
-    if (!t || t.classList.contains('on')) return;
-    if (t.classList.contains('trial')) { toast('這是體驗方案；訂閱中不用切，取消訂閱後會自動回到這裡。'); return; }
-    _planPick = t.dataset.t;
-    $('#planConfirmText').innerHTML = '7/26 起改為「<b>' + _planPick + '</b>」；這期高級的權益用到 7/25，一天都不少。';
+  function renderPlanState() {
+    const plan = circlePlan();
+    const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
+    const pts = PLAN_POINTS[plan] || 200;
+    const sn = $('#setPlanName'); if (sn) sn.textContent = label + ' 方案';
+    const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
+    if (POINTS.total !== pts) { POINTS.total = pts; if (POINTS.used > pts) POINTS.used = Math.round(pts * 0.3); }
+    if (typeof renderPoints === 'function') renderPoints();
+    renderSubUI();
+  }
+  // 分段 tab（訂閱方案 / 點數購買）
+  document.querySelectorAll('.sseg-btn').forEach((b, i) => b.addEventListener('click', () => {
+    document.querySelectorAll('.sseg-btn').forEach(x => x.classList.toggle('on', x === b));
+    const th = $('#ssegThumb'); if (th) th.style.transform = 'translateX(' + (i * 100) + '%)';
+    const pane = b.dataset.pane;
+    if ($('#subPlans')) $('#subPlans').style.display = pane === 'plans' ? '' : 'none';
+    if ($('#subPoints')) $('#subPoints').style.display = pane === 'points' ? '' : 'none';
+  }));
+  // 月/年繳
+  document.querySelectorAll('.scyc-btn').forEach((b, i) => b.addEventListener('click', () => {
+    document.querySelectorAll('.scyc-btn').forEach(x => x.classList.toggle('on', x === b));
+    const th = $('#scycThumb'); if (th) th.style.transform = 'translateX(' + (i * 100) + '%)';
+    _subCyc = b.dataset.cyc; renderSubUI();
+  }));
+  // 選方案欄
+  document.querySelectorAll('.ppk').forEach(c => c.addEventListener('click', () => { _subPlan = c.dataset.t; renderSubUI(); }));
+  // 訂閱鈕
+  if ($('#subCta')) $('#subCta').addEventListener('click', () => {
+    const cur = circlePlan();
+    if (_subPlan === cur) { toast('你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案'); return; }
+    _planPick = _subPlan;
+    $('#planConfirmText').innerHTML = '訂閱「<b>' + CIRCLE_PLAN_LABEL[_subPlan] + '</b>」· ' + fmtPrice(_subPlan, _subCyc) + '<br>每月 ' + PLAN_POINTS[_subPlan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[_subPlan] + ' 人。';
     $('#planConfirm').style.display = '';
   });
   if ($('#planYes')) $('#planYes').addEventListener('click', () => {
     if (!_planPick) return;
-    try { localStorage.setItem('munea.planNext', _planPick); } catch (e2) {}
+    try { localStorage.setItem('munea.plan', _planPick); localStorage.removeItem('munea.planNext'); } catch (e2) {}
     $('#planConfirm').style.display = 'none';
-    renderPlanNext();
-    toast('排好了：7/26 起改「' + _planPick + '」');
+    renderPlanState();
+    if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e3) {} }
+    toast('訂閱好了，現在是 ' + CIRCLE_PLAN_LABEL[_planPick] + ' 方案');
     _planPick = null;
   });
   if ($('#planNo')) $('#planNo').addEventListener('click', () => { $('#planConfirm').style.display = 'none'; _planPick = null; });
-  renderPlanNext();
   if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', () => {
     const b = $('#planCancelBtn');
-    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次確認：7/25 之後不再扣款'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '取消訂閱'; }, 6000); return; }
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次確認：這期用完後不再扣款'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '取消訂閱'; }, 6000); return; }
     b.dataset.arm = ''; b.textContent = '取消訂閱';
     try { localStorage.setItem('munea.planNext', '取消'); } catch (e2) {}
-    renderPlanNext();
     toast('好，這期用完就不再扣款；記憶和資料都會留著，隨時能回來。');
   });
-  if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => $('#planModal').classList.add('show'));
+  if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => { renderSubUI(); $('#planModal').classList.add('show'); });
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
+  // 點數購買
+  if ($('#subPoints')) $('#subPoints').addEventListener('click', e => {
+    const card = e.target.closest('.tu-card'); if (!card) return;
+    $('#subPoints').querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on');
+    const p = +card.dataset.p; const cta = $('#tuBuyBtn2'); if (cta) cta.textContent = '直接購買 ' + p.toLocaleString() + ' 點 · NT$' + (PT_PRICE[p] || 0).toLocaleString();
+  });
+  if ($('#tuBuyBtn2')) $('#tuBuyBtn2').addEventListener('click', () => {
+    const sel = document.querySelector('#subPoints .tu-card.on');
+    const p = sel ? +sel.dataset.p : 0;
+    try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
+    pushWallet(); renderPoints();
+    toast('買好了，' + p.toLocaleString() + ' 點入帳，這批不會過期');
+  });
+  renderPlanState();
   const famSwitch = $('#famSwitch');
   if (famSwitch) famSwitch.addEventListener('click', e => {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
@@ -2370,11 +2548,66 @@ function init() {
         '<span class="qc-days">' + chip + '</span></div>' +
         (goal ? '<div class="qc-goal">' + goal + '</div>' : '') +
         (note ? '<div class="qc-num">' + note + '</div>' : '') + rwLine;
-      if (act.kind === 'vote') renderVoteBody(act, card);
-      if (act.kind === 'draw') renderDrawBody(act, card);
     }
-    if (act.kind === 'quiz' && act.status !== 'done' && !act.myDone) { card.style.cursor = 'pointer'; card.addEventListener('click', () => startQuiz(act, card)); }
+    // 點整張卡片＝打開完整活動詳情頁（投票／作答／開獎／管理／刪除都在裡面）
+    card.style.cursor = 'pointer';
+    card.dataset.actId = act.id;
+    card.addEventListener('click', () => openActDetail(act, card));
     list.parentNode.insertBefore(card, list);
+  }
+  function actParts(act) { return ['你'].concat(act.names || []); }
+  function avatarsHtml(names) {
+    return names.map(n => { const a = FAM_AVA[n] || [(n || '')[0] || '', 'p-me']; return '<span class="init-ava ' + a[1] + '">' + a[0] + '</span>'; }).join('');
+  }
+  // 完整活動詳情頁：看完整資訊＋參與者，並在裡面投票／作答／開獎／刪除（Edward 7/7 拍板「做完整詳情頁」）
+  function openActDetail(act, card) {
+    const sheet = $('#actDetailModal'), body = $('#actDetailBody');
+    if (!sheet || !body) return;
+    const done = act.status === 'done';
+    const chip = done ? '已結束'
+      : act.kind === 'walk' ? '進行中 · ' + act.days + ' 天內'
+      : act.kind === 'quiz' ? (act.q + ' 題')
+      : act.kind === 'draw' ? (act.when + '開獎')
+      : act.kind === 'event' ? (act.dateLabel || '進行中') : '進行中';
+    const kindName = act.kind === 'walk' ? '一起運動' : act.kind === 'quiz' ? '機智問答' : act.kind === 'vote' ? '投票' : act.kind === 'draw' ? '抽獎' : '揪一攤';
+    const title = act.kind === 'draw' ? act.prize : (act.title || kindName);
+    body.innerHTML =
+      '<div class="ad-kind">' + kindName + '</div>' +
+      '<div class="ad-title">' + title + '</div>' +
+      '<div><span class="ad-chip">' + chip + '</span></div>' +
+      '<div class="ad-sec"><div class="ad-lbl">一起的人（' + actParts(act).length + ' 人）</div><div class="ad-avs">' + avatarsHtml(actParts(act)) + '</div></div>' +
+      '<div class="ad-interact"></div>';
+    const box = body.querySelector('.ad-interact');
+    if (act.kind === 'vote') { renderVoteBody(act, box); }
+    else if (act.kind === 'draw') { renderDrawBody(act, box); }
+    else if (act.kind === 'quiz') {
+      if (act.myDone && act.answers && act.answers['你'] !== undefined) { box.innerHTML = '<div class="ad-note">你答對 ' + act.answers['你'] + ' / ' + act.q + ' 題，等 ' + (act.names || []).join('、') + ' 答完看排名。</div>'; }
+      else {
+        box.innerHTML = '<div class="ad-note">你的 ' + act.q + ' 題準備好了，點下面開始作答；' + cname() + '會找其他人玩，都答完看排名。</div>';
+        const qb = document.createElement('button'); qb.className = 'modal-btn'; qb.style.marginTop = '14px'; qb.textContent = '開始作答';
+        qb.addEventListener('click', () => { sheet.classList.remove('show'); startQuiz(act, card || document.querySelector('[data-act-id="' + act.id + '"]')); });
+        box.appendChild(qb);
+      }
+    }
+    else if (act.kind === 'walk') { box.innerHTML = '<div class="ad-note">目標：大家一起走 <b>' + (+act.goal).toLocaleString() + ' 步</b>，' + act.days + ' 天內完成。' + cname() + '會親口問阿嬤要不要一起；開始後每個人走多少都看得到。</div>'; }
+    else if (act.kind === 'event') { box.innerHTML = '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + '<br>' + (act.dateLabel || '') + '，' + cname() + '會親口問阿嬤、幫大家收「去 / 沒空」。</div>'; }
+    if (act.rewards && act.rewards.some(Boolean)) {
+      box.insertAdjacentHTML('beforeend', '<div class="ad-sec"><div class="ad-lbl">小獎勵</div><div class="ad-rewards">' + act.rewards.map((r, i) => r ? '<div>第 ' + (i + 1) + ' 名 · ' + r + '</div>' : '').filter(Boolean).join('') + '</div></div>');
+    }
+    const del = document.createElement('button');
+    del.className = 'ad-del'; del.type = 'button';
+    del.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg><span>刪除這個活動</span>';
+    del.addEventListener('click', () => {
+      if (del.dataset.arm !== '1') { del.dataset.arm = '1'; del.classList.add('arm'); del.querySelector('span').textContent = '確定刪除？再點一下'; setTimeout(() => { del.dataset.arm = ''; del.classList.remove('arm'); const s = del.querySelector('span'); if (s) s.textContent = '刪除這個活動'; }, 3200); return; }
+      const acts = loadActs().filter(a => a.id !== act.id); saveActs(acts);
+      const c = card || document.querySelector('[data-act-id="' + act.id + '"]'); if (c) c.remove();
+      sheet.classList.remove('show');
+      toast('活動刪除了');
+    });
+    body.appendChild(del);
+    if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();   // 有上傳帳號照片的（本人）→ 圓形頭像帶照片
+    if (!sheet.dataset.wired) { sheet.dataset.wired = '1'; sheet.addEventListener('click', e => { if (e.target === sheet) sheet.classList.remove('show'); }); }
+    sheet.classList.add('show');
   }
   function renderVoteBody(act, card) {
     const my = act.votes && act.votes['你'];
@@ -2560,44 +2793,62 @@ function init() {
       if ($('#statusTitle')) $('#statusTitle').textContent = stitles[b.dataset.v];
     });
   }
-  function loadVisit() { try { return JSON.parse(localStorage.getItem('munea.visit')); } catch (e) { return null; } }
-  function renderVisitRow() {
-    const v = loadVisit();
-    const lb = $('#visitLabel');
-    const has = v && (v.label || v.dateISO);
-    if (lb) lb.textContent = has ? ((v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' ›') : '未設定 ›';
-    const clr = $('#visitClearBtn');
-    if (clr) clr.style.display = has ? '' : 'none';
+  // 看診可記多筆、每筆有標題（看什麼診）＋日期＋時間
+  function loadVisits() {
+    let arr = null; try { arr = JSON.parse(localStorage.getItem('munea.visits') || 'null'); } catch (e) {}
+    if (!Array.isArray(arr)) {
+      let old = null; try { old = JSON.parse(localStorage.getItem('munea.visit') || 'null'); } catch (e2) {}
+      arr = (old && (old.dateISO || old.label)) ? [{ id: 1, title: old.title || '回診', dateISO: old.dateISO || '', time: old.time || '', label: old.label || '' }] : [];
+    }
+    return arr.filter(v => v && v.dateISO).sort((a, b) => (a.dateISO + (a.time || '')).localeCompare(b.dateISO + (b.time || '')));
   }
+  function saveVisits(arr) { try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) {} syncPush('visits', arr); }
+  function nextVisit() { const today = isoOf(new Date()); const arr = loadVisits(); return arr.filter(v => v.dateISO >= today)[0] || arr[0] || null; }
+  function fmtVisitTime(tv) {  // "14:30" → "下午 2:30"
+    const p = String(tv || '09:00').split(':'); const hh = +p[0] || 9, mm = +p[1] || 0;
+    const ap = hh < 12 ? '上午' : '下午'; const h12 = ((hh + 11) % 12) + 1;
+    return ap + ' ' + h12 + ':' + String(mm).padStart(2, '0');
+  }
+  function renderVisitRow() {
+    const v = nextVisit();
+    const lb = $('#visitLabel');
+    if (lb) lb.textContent = v ? ((v.title ? v.title + ' · ' : '') + (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' ›') : '未設定 ›';
+    // 看診有增減時，同步首頁「今天一起完成」的回診任務（只在當天顯示）
+    if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks();
+  }
+  function renderVisitList() {
+    const box = $('#visitList'); if (!box) return;
+    const arr = loadVisits();
+    box.innerHTML = arr.length ? ('<div class="field-label">已排的看診</div>' + arr.map(v =>
+      '<div class="visit-item"><div class="vi-info"><b>' + (v.title || '回診') + '</b><span>' + (v.label || '') + '</span></div><button type="button" class="vi-del" data-id="' + v.id + '">刪除</button></div>').join('')) : '';
+  }
+  if ($('#visitList')) $('#visitList').addEventListener('click', e => {
+    const b = e.target.closest('.vi-del'); if (!b) return;
+    saveVisits(loadVisits().filter(v => String(v.id) !== String(b.dataset.id)));
+    renderVisitList(); renderVisitRow();
+  });
   if ($('#visitEntry')) $('#visitEntry').addEventListener('click', () => {
     buildCalGrid('#visitDatePick');
+    if ($('#visitTitle')) $('#visitTitle').value = '';
+    if ($('#visitTime')) $('#visitTime').value = '09:00';
+    renderVisitList();
     $('#visitModal').classList.add('show');
   });
   if ($('#visitClose')) $('#visitClose').addEventListener('click', () => $('#visitModal').classList.remove('show'));
   if ($('#visitModal')) $('#visitModal').addEventListener('click', e => { if (e.target === $('#visitModal')) $('#visitModal').classList.remove('show'); });
-  if ($('#visitTimeChips')) $('#visitTimeChips').addEventListener('click', e => {
-    const b = e.target.closest('.mchip');
-    if (!b) return;
-    $('#visitTimeChips').querySelectorAll('.mchip').forEach(x => x.classList.remove('on'));
-    b.classList.add('on');
-  });
   if ($('#visitSaveBtn')) $('#visitSaveBtn').addEventListener('click', () => {
     const on = document.querySelector('#visitDatePick .cal-cell.on');
     if (!on) { toast('先選一天'); return; }
-    const t = (document.querySelector('#visitTimeChips .mchip.on') || { dataset: {} }).dataset.t || '上午';
+    const title = ((($('#visitTitle') && $('#visitTitle').value) || '').trim()) || '回診';
+    const tv = ($('#visitTime') && $('#visitTime').value) || '09:00';
     const d = new Date(on.dataset.iso + 'T00:00');
-    const label = fmtDay(d) + t;
-    try { localStorage.setItem('munea.visit', JSON.stringify({ dateISO: on.dataset.iso, label })); } catch (e2) {} syncPush('visit', { dateISO: on.dataset.iso, label });
-    renderVisitRow();
-    $('#visitModal').classList.remove('show');
-    toast('好，' + label + '回診，' + cname() + '前一天會提醒你，摘要也會先準備好');
-  });
-  if ($('#visitClearBtn')) $('#visitClearBtn').addEventListener('click', () => {
-    try { localStorage.removeItem('munea.visit'); } catch (e2) {}
-    syncPush('visit', {});
-    renderVisitRow();
-    $('#visitModal').classList.remove('show');
-    toast('好，先把看診提醒收掉了；要再設隨時跟我說。');
+    const label = fmtDay(d) + ' ' + fmtVisitTime(tv);
+    const arr = loadVisits(); arr.push({ id: Date.now(), title, dateISO: on.dataset.iso, time: tv, label });
+    saveVisits(arr);
+    renderVisitList(); renderVisitRow();
+    if ($('#visitTitle')) $('#visitTitle').value = '';
+    document.querySelectorAll('#visitDatePick .cal-cell.on').forEach(x => x.classList.remove('on'));
+    toast('好，「' + title + '」' + label + '記下了，' + cname() + '前一天會提醒你');
   });
   renderVisitRow();
   const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
@@ -2642,7 +2893,36 @@ function init() {
     $('#readerBody').closest('.reader-scroll').scrollTop = 0;
   }
   if ($('#readerBack')) $('#readerBack').addEventListener('click', () => $('#readerPage').classList.remove('show'));
-  if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
+  // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常時通知他們確認
+  const SAFETY_MEMBERS = [{ name: '美華', init: '華', tint: 'p-mei' }, { name: '志明', init: '明', tint: 'p-zhi' }, { name: '小寶', init: '寶', tint: 'p-bao' }];
+  function loadSafety() { try { return JSON.parse(localStorage.getItem('munea.safetyContacts')) || []; } catch (e) { return []; } }
+  function updateSafetyCount() { const el = $('#safetyCount'); if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.join('、') : '未設定'; } }
+  function renderSafety() {
+    const picks = $('#safetyPicks'); if (!picks) return;
+    const sel = loadSafety();
+    picks.innerHTML = SAFETY_MEMBERS.map(m =>
+      '<button type="button" class="safety-pick' + (sel.includes(m.name) ? ' on' : '') + '" data-name="' + m.name + '">' +
+      '<span class="init-ava ' + m.tint + '">' + m.init + '</span><span class="sp-name">' + m.name + '</span>' +
+      '<span class="sp-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></button>').join('');
+    updateSafetyCount();
+  }
+  if ($('#safetyPicks')) $('#safetyPicks').addEventListener('click', e => {
+    const b = e.target.closest('.safety-pick'); if (!b) return;
+    let sel = loadSafety(); const name = b.dataset.name;
+    if (sel.includes(name)) sel = sel.filter(n => n !== name);
+    else { if (sel.length >= 3) { toast('最多選 3 位緊急聯絡人'); return; } sel.push(name); }
+    try { localStorage.setItem('munea.safetyContacts', JSON.stringify(sel)); } catch (e2) {}
+    b.classList.toggle('on', sel.includes(name));
+    updateSafetyCount();
+  });
+  if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => { renderSafety(); $('#safetyModal').classList.add('show'); });
+  if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
+    $('#safetyModal').classList.remove('show');
+    const sel = loadSafety();
+    toast(sel.length ? ('好，緊急時我會通知 ' + sel.join('、')) : '還沒選聯絡人，等你想好再設定就好');
+  });
+  if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
+  updateSafetyCount();
   if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openReader('terms'));
   if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openReader('privacy'));
   if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);
@@ -2922,8 +3202,8 @@ function init() {
     if (/(還剩幾點|剩幾點|剩多少點|點數還有|點數剩|我有幾點)/.test(t)) {
       const left = POINTS.total - POINTS.used + POINTS.bought;
       return left > 0
-        ? '我看了一下，你還有 ' + left + ' 點，生動模式大概還能聊 ' + left + ' 分鐘。放心，就算用完，基本陪伴也不會斷。'
-        : '點數用完了，不過別擔心，基本陪伴不限量，我一樣在。想要生動模式的話，設定裡可以加值。';
+        ? '我看了一下，你還有 ' + left + ' 點，語音陪聊大概還能聊 ' + left + ' 分鐘。放心，就算用完，基本陪伴也不會斷。'
+        : '點數用完了，不過別擔心，基本陪伴不限量，我一樣在。想要語音陪聊的話，設定裡可以加值。';
     }
     // 傳話：①「提醒／告訴 某人 …」直接算 ②「跟 某人」必須真的接「說」才算（防「有跟誰約好」這種閒聊誤觸發）
     const KNOWN_FAM = ['美華', '志明', '小寶', '允辰', '阿嬤', '阿公', '秀英'];

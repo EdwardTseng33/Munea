@@ -17,6 +17,8 @@ android/app/src/main/assets/public/
 *.p8
 *.p12
 *.mobileprovision
+# claude code 本機設定（每台機器自己的，不入庫）
+.claude/settings.local.json
 # os & editor
 .DS_Store
 Thumbs.db

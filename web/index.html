@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260707-safearea" />
+  <link rel="stylesheet" href="src/styles.css?v=20260707-daily1" />
 </head>
 <body>
 <div class="app-shell">
@@ -33,7 +33,7 @@
       </div>
       <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>開始聊聊</button>
       <div class="care-card" id="careCard">
-        <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"/></svg><span>寧寧幫你留意</span><span class="care-dots" id="careDots"></span></div>
+        <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"/></svg><span><span class="cname">寧寧</span>幫你留意</span><span class="care-dots" id="careDots"></span></div>
         <div class="care-body" id="careBody"></div>
       </div>
 
@@ -50,10 +50,16 @@
           <span class="task-time">14:00</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
+        <div class="task-item" data-task="visit" id="visitTask" style="display:none">
+          <span class="task-ico visit"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>
+          <div class="task-body"><div class="task-title" id="visitTaskTitle">回診</div><div class="task-sub" id="visitTaskSub">今天</div></div>
+          <span class="task-time coral" id="visitTaskTime">今天</span>
+          <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </div>
         <div class="task-item" data-task="walk">
           <span class="task-ico walk"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span>
-          <div class="task-body"><div class="task-title">到公園散步</div><div class="task-sub">天氣正好</div></div>
-          <span class="task-time coral">16:30</span>
+          <div class="task-body"><div class="task-title">出門走走</div><div class="task-sub" id="walkSub">今天走 500 步</div></div>
+          <span class="task-time coral" id="walkChip">隨時</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
         <div class="task-item" data-task="chat">
@@ -83,7 +89,7 @@
     <div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
       <span style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--mint2),var(--coral-soft));display:grid;place-items:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 11c.55-.65 1.55-.65 2.1 0"/><path d="M13.5 11c.55-.65 1.55-.65 2.1 0"/><path d="M9.5 14.2c1.3 1.2 3.7 1.2 5 0"/><circle cx="7.8" cy="13.4" r="1" fill="var(--coral)" stroke="none"/><circle cx="16.2" cy="13.4" r="1" fill="var(--coral)" stroke="none"/></svg></span>
       <div style="flex:1">
-        <div class="serif" style="font-size:15.5px;font-weight:900">寧寧的觀察</div>
+        <div class="serif" style="font-size:15.5px;font-weight:900"><span class="cname">寧寧</span>的觀察</div>
         <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700">剛剛幫你看過數據</span></div>
       </div>
       <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff">今天</span>
@@ -205,7 +211,6 @@
 
       <div class="hscroll-wrap"><div class="fam-switch" id="famSwitch">
         <button class="fam-switch-item active" data-person="all"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="fs-name">全家</span></button>
-        <button class="fam-switch-item" data-person="阿嬤" data-rel="媽媽 · 72 歲" data-init="嬤" data-tint="p-ama"><span class="fs-av"><span class="init-ava p-ama">嬤</span></span><span class="fs-name">阿嬤</span></button>
         <button class="fam-switch-item" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei"><span class="fs-av"><span class="init-ava p-mei">華</span></span><span class="fs-name">美華</span></button>
         <button class="fam-switch-item" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi"><span class="fs-av"><span class="init-ava p-zhi">明</span></span><span class="fs-name">志明</span></button>
         <button class="fam-switch-item" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao"><span class="fs-av"><span class="init-ava p-bao">寶</span></span><span class="fs-name">小寶</span></button>
@@ -255,11 +260,6 @@
 
         <div class="sec-head"><div><h2>全家狀態</h2></div></div>
         <div class="health-list" id="healthList">
-          <div class="health-row" data-person="阿嬤" data-rel="媽媽 · 72 歲" data-init="嬤" data-tint="p-ama">
-            <span class="hr-av"><span class="init-ava p-ama">嬤</span></span>
-            <div class="hr-info"><div class="hr-name">阿嬤</div><div class="hr-state"><em class="mood-pill calm">平穩</em>藥已吃 2/3</div></div>
-            <div class="hr-lights"><span class="lt"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="lt warn"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span></div>
-          </div>
           <div class="health-row" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei">
             <span class="hr-av"><span class="init-ava p-mei">華</span></span>
             <div class="hr-info"><div class="hr-name">美華</div><div class="hr-state"><em class="mood-pill tired">有點累</em>活動量達標 · 睡眠偏少</div></div>
@@ -295,7 +295,7 @@
             <span class="mc-face" id="mcFace"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5"/></svg><i class="mc-dot" id="mcDot"></i></span>
             <div>
               <div class="mc-title" id="mcTitle">今天聊得很開心</div>
-              <div class="mc-sub" id="mcSub">和寧寧聊了 2 次 · 有一小段有點火氣</div>
+              <div class="mc-sub" id="mcSub">和<span class="cname">寧寧</span>聊了 2 次 · 有一小段有點火氣</div>
             </div>
           </div>
           <div class="mc-obs" id="mcObs"><span>聲音</span> 有精神　<span>聊天</span> 話匣子全開</div>
@@ -376,16 +376,16 @@
       <h2 class="set-section">訂閱與點數</h2>
       <div class="plan-card">
         <div class="plan-title-row">
-          <span class="plan-name">高級方案</span>
+          <span class="plan-name" id="setPlanName">Plus 方案</span>
           <span class="plan-payer" style="margin:0">我的訂閱</span>
         </div>
         <div class="plan-divider"></div>
-        <div class="pts-label">點數 <b id="ptsLeft">240</b> 點 <span class="pts-used">每月送 400 · 已用 <i id="ptsUsed" style="font-style:normal">160</i></span></div>
+        <div class="pts-label">點數 <b id="ptsLeft">240</b> 點 <span class="pts-used">每月送 <i id="setPlanGrant" style="font-style:normal">200</i> · 已用 <i id="ptsUsed" style="font-style:normal">160</i></span></div>
         <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
-        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>點數快用完了；基本陪伴不受影響，加值後生動模式不中斷</div>
+        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>點數快用完了；基本陪伴不受影響，加值後語音陪聊不中斷</div>
         <div class="pts-note">240 點約可通話 240 分鐘；基本陪伴不限量、不會中斷</div>
         <div class="plan-actions">
-          <button class="plan-btn ghost" id="managePlanBtn">管理方案</button>
+          <button class="plan-btn ghost" id="managePlanBtn">訂閱方案</button>
           <button class="plan-btn" id="topUpBtn">加值點數</button>
         </div>
       </div>
@@ -427,7 +427,7 @@
         <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main">Apple 健康<small>步數・心率・睡眠</small></span><span class="sr-on"><span class="d"></span>已連接</span></div>
         <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main">用藥提醒<small>到時間<span class="cname">寧寧</span>親口提醒</small></span><span class="sr-arrow"><b id="medCountSettings">2 種藥</b> ›</span></div>
         <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main">看診提醒<small>回診前一天提醒你</small></span><span class="sr-arrow" id="visitLabel">未設定 ›</span></div>
-        <div class="set-row" id="safetyRow" hidden style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>跌倒、異常與緊急聯絡</small></span><span class="sr-arrow">美華 ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>健康數據異常時，通知緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount">未設定</b> ›</span></div>
         <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">我的資料<small>匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進註冊流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
@@ -453,22 +453,22 @@
       <div class="face-blink"></div>
       <div class="avatar-mouth" id="avatarMouth" aria-hidden="true"><span></span></div>
     </div>
+    <div class="face-topscrim" aria-hidden="true"></div>
 
 
-    <!-- 左上 角色名牌（像視訊左上的人名） -->
-    <button class="face-exit" id="chatExit" aria-label="離開聊聊"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div class="face-name"><span class="dot"></span><span id="chatName">寧寧</span><span class="fn-status">在線</span></div>
+    <!-- 關閉聊聊：X 鍵，放在原本 navbar「聊聊」的位置（底部中央），按了收掉通話回首頁 -->
+    <button class="face-exit" id="chatExit" aria-label="關閉聊聊，返回首頁"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+    <div class="face-name off"><span class="dot"></span><span id="chatName">寧寧</span><span class="fn-status">未在線</span></div>
     <div class="face-hud">
       <span class="hud-pill" id="callTimer">00:00</span>
       <span class="hud-pill pts">剩 240 點</span>
     </div>
     <div class="avatar-diagnostics" id="avatarDiagnostics" hidden></div>
 
-    <!-- 狀態指示：聆聽收音光點 / 思考三點 / 說話波形（依 data-state 顯示其一） -->
+    <!-- 狀態指示：思考三點 / 聲波波頻（收音＝跟麥克風、講話＝跟寧寧聲音，依 data-state 顯示） -->
     <div class="face-cue">
-      <div class="cue cue-listen"><span></span><span></span><span></span></div>
       <div class="cue cue-think"><i></i><i></i><i></i></div>
-      <div class="cue cue-speak"><b></b><b></b><b></b><b></b><b></b></div>
+      <div class="cue face-wave"><i></i><i></i><i></i><i></i><i></i></div>
     </div>
 
     <!-- S2S 狀態提示：不顯示逐字稿，保持像視訊聊天 -->
@@ -615,6 +615,37 @@
     </div>
   </div>
 
+  <!-- 活動詳情頁：點活動卡片打開，看完整資訊＋參與者，並在裡面投票／作答／開獎／刪除 -->
+  <div class="modal-mask" id="actDetailModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <div id="actDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- 安全通知：選 1~3 位家庭圈家人當緊急聯絡人；健康數據危險異常時通知他們確認 -->
+  <div class="modal-mask" id="safetyModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <h2>安全通知</h2>
+      <p class="modal-sub"><span class="cname">寧寧</span>發現健康數據出現危險異常時，會立刻通知你選的家人，請他們打電話確認你的狀況。</p>
+      <div class="field-label">誰來當緊急聯絡人（最多 3 位）</div>
+      <div class="safety-picks" id="safetyPicks"></div>
+      <div class="field-label">什麼情況會通知</div>
+      <ul class="safety-triggers">
+        <li><span class="st-ic bp"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>血壓過高或過低（如高於 180 或低於 90）</li>
+        <li><span class="st-ic hr"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>心率異常（過快或過慢）</li>
+        <li><span class="st-ic ox"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg></span>血氧偏低（低於 90%）</li>
+      </ul>
+      <div class="safety-flow">
+        <div class="sf-step"><b>1</b><span>異常發生，<span class="cname">寧寧</span>先關心你一句、確認你還好嗎</span></div>
+        <div class="sf-step"><b>2</b><span>沒回應或情況嚴重，立刻推播＋來電通知緊急聯絡人</span></div>
+        <div class="sf-step"><b>3</b><span>聯絡人打電話或趕來確認；真的危急請直接撥 119</span></div>
+      </div>
+      <button class="modal-btn" id="safetySave">存起來</button>
+    </div>
+  </div>
+
   <div class="modal-mask" id="companionSheet">
     <div class="modal">
       <div class="modal-grab"></div>
@@ -645,7 +676,7 @@
         <div class="rpt-row"><span class="rpt-k">用藥</span><div><b>準時 23 / 30 天</b><span>漏的多在午餐後，已改成飯後半小時提醒</span></div></div>
         <div class="rpt-row"><span class="rpt-k">血壓</span><div><b>平均 128 / 82</b><span>範圍 118–142 · 早晚各量一次</span></div></div>
         <div class="rpt-row"><span class="rpt-k">睡眠</span><div><b>平均 7.3 小時</b><span>入睡穩定，偶爾半夜醒一次</span></div></div>
-        <div class="rpt-row"><span class="rpt-k">想問醫生</span><div><b>睡前偶爾頭暈</b><span>7/1 跟寧寧聊到，記得帶這題問</span></div></div>
+        <div class="rpt-row"><span class="rpt-k">想問醫生</span><div><b>睡前偶爾頭暈</b><span>7/1 跟<span class="cname">寧寧</span>聊到，記得帶這題問</span></div></div>
       </div>
       <button class="modal-btn" id="rptSendBtn">傳給美華，回診帶著</button>
       <p class="modal-sub" style="margin-top:10px;margin-bottom:4px">在診間也可以直接打開這一頁給醫生看。</p>
@@ -714,16 +745,16 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close" id="famCircleClose" type="button" aria-label="關閉照護圈" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>家庭照護圈</h2>
+      <h2>全家健康圈</h2>
       <div class="fc-top">
-        <span class="fc-recip-av init-ava p-ama">嬤</span>
-        <div class="fc-recip-info"><b>照顧 阿嬤</b><span>大家一起看著她的狀態</span></div>
+        <span class="fc-recip-av init-ava" style="background:var(--teal);color:#fff"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>
+        <div class="fc-recip-info"><b>全家一起</b><span>互相看著彼此的狀態</span></div>
         <span class="fc-count" id="fcCount">—</span>
       </div>
       <div class="rl-wrap" id="fcRoster"></div>
       <button class="modal-btn" id="fcInviteBtn" style="margin-top:14px">邀請家人加入</button>
-      <button class="fc-link" id="fcJoinBtn" type="button">我有邀請碼 · 加入別人的照護圈</button>
-      <button class="fc-leave" id="fcLeaveBtn" type="button">退出這個照護圈</button>
+      <button class="fc-link" id="fcJoinBtn" type="button">我有邀請碼 · 加入別人的健康圈</button>
+      <button class="fc-leave" id="fcLeaveBtn" type="button">退出這個健康圈</button>
       <p class="fc-privacy">互相看得到狀態與關懷摘要；對話內容不會給任何人看。</p>
     </div>
   </div>
@@ -758,7 +789,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="topUpClose" type="button" aria-label="關閉加值" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>加值點數</h2>
-      <p class="modal-sub">通話與生動模式會用點數；基本陪伴不限量。</p>
+      <p class="modal-sub">通話與語音陪聊會用點數；基本陪伴不限量。</p>
       <div class="tu-grid">
         <button class="tu-card" data-p="200"><b>200 點</b><span class="tu-price">NT$350</span><small class="tu-min">約 200 分鐘</small></button>
         <button class="tu-card on" data-p="500"><b>500 點</b><span class="tu-price">NT$800</span><small class="tu-min">約 500 分鐘</small></button>
@@ -770,28 +801,64 @@
     </div>
   </div>
 
-  <div class="reader-page" id="planModal">
-    <div class="nav-head"><button class="nav-back" id="planClose" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">管理方案</span><span></span></div>
-    <div class="reader-scroll plan-scroll">
-      <div class="plan-current">
-        <div class="pc-row"><b>高級方案</b><span class="pc-price">NT$999<small>/月</small></span></div>
-        <div class="pc-meta">下次扣款 7/26 · 你和阿公兩位使用中</div>
-        <ul class="plan-feats">
-          <li>基本陪伴聊天不限量、不會中斷</li>
-          <li>每月送 400 點（生動模式 6 點/分）</li>
-          <li>兩位長輩共用額度池</li>
-          <li>健康週報與回診摘要</li>
-        </ul>
+  <div class="reader-page sub-page" id="planModal">
+    <!-- 全幅照片 hero -->
+    <div class="sub-hero">
+      <img src="avatars/nening-real-female-full.jpg" alt="">
+      <button class="sub-x" id="planClose" type="button" aria-label="關閉"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <div class="sub-hero-cap"><div class="sub-hero-title">升級沐寧</div><div class="sub-hero-sub">讓寧寧，把家裡的長輩照顧得更好</div></div>
+    </div>
+    <div class="sub-body">
+      <!-- 分段 tab（狀態頁風格）-->
+      <div class="sub-seg" id="subSeg">
+        <div class="sseg-thumb" id="ssegThumb"></div>
+        <button class="sseg-btn on" data-pane="plans" type="button">訂閱方案</button>
+        <button class="sseg-btn" data-pane="points" type="button">點數購買</button>
       </div>
-      <div class="field-label">換一個方案（隨時可升可降）</div>
-      <div class="tier-list">
-        <button class="tier trial" data-t="免費試用" type="button"><span class="tier-top"><b>免費試用</b><i>NT$0</i></span><span class="tier-desc">先聊 5 分鐘感受一下</span></button>
-        <button class="tier" data-t="基礎"><span class="tier-top"><b>基礎</b><i>NT$499<u>/月</u></i></span><span class="tier-desc">一位長輩天天聊 · 月送 200 點</span></button>
-        <button class="tier on" data-t="高級"><span class="tier-top"><b>高級</b><em class="tier-tag now">使用中</em><i>NT$999<u>/月</u></i></span><span class="tier-desc">兩位長輩共用 · 月送 400 點</span></button>
-        <button class="tier" data-t="尊榮"><span class="tier-top"><b>尊榮</b><i>NT$1,999<u>/月</u></i></span><span class="tier-desc">重度陪伴與生動模式 · 月送 1,000 點</span></button>
+      <!-- 訂閱方案 -->
+      <div id="subPlans">
+        <div class="sub-cycle" id="subCycle">
+          <div class="scyc-thumb" id="scycThumb"></div>
+          <button class="scyc-btn on" data-cyc="month" type="button">月繳</button>
+          <button class="scyc-btn" data-cyc="year" type="button">年繳 <em class="scyc-badge">省 20%</em></button>
+        </div>
+        <div class="plan-pick" id="planPick">
+          <button class="ppk" data-t="plus" type="button">
+            <span class="ppk-radio"></span>
+            <div class="ppk-top"><span class="ppk-name">Plus</span><span class="ppk-price" id="pricePlus">NT$99<small>/月</small></span><span class="ppk-save" id="savePlus" style="display:none"></span></div>
+            <ul class="ppk-feats">
+              <li>每月 <b>200</b> 點</li>
+              <li>健康&nbsp;7／30&nbsp;天數據</li>
+              <li>家庭圈最多 <b>4 人</b></li>
+            </ul>
+          </button>
+          <button class="ppk pro sel" data-t="pro" type="button">
+            <span class="ppk-tag">推薦</span>
+            <span class="ppk-radio"></span>
+            <div class="ppk-top"><span class="ppk-name">Pro</span><span class="ppk-price" id="pricePro">NT$249<small>/月</small></span><span class="ppk-save" id="savePro" style="display:none"></span></div>
+            <ul class="ppk-feats">
+              <li>每月 <b>500</b> 點</li>
+              <li>健康&nbsp;7／30&nbsp;天數據</li>
+              <li>家庭圈最多 <b>12 人</b></li>
+            </ul>
+          </button>
+        </div>
+        <button class="sub-cta" id="subCta" type="button">升級 Pro · NT$249／月</button>
+        <button class="sub-cancel2" id="planCancelBtn" type="button">取消訂閱</button>
+        <span id="planHeroName" hidden></span><span id="planHeroPts" hidden></span><span id="planHeroMeta" hidden></span>
       </div>
-      <button class="plan-cancel" id="planCancelBtn" type="button">取消訂閱</button>
-      <div style="height:84px"></div>
+      <!-- 點數購買 -->
+      <div id="subPoints" style="display:none">
+        <p class="sub-fine" style="margin:4px 0 12px">通話、語音陪聊會用點數；基本陪伴不限量、不會斷。方案每月送的先用完，才用到買的。</p>
+        <div class="tu-grid">
+          <button class="tu-card" data-p="200" type="button"><b>200 點</b><span class="tu-price">NT$350</span><small class="tu-min">約 200 分鐘</small></button>
+          <button class="tu-card on" data-p="500" type="button"><b>500 點</b><span class="tu-price">NT$800</span><small class="tu-min">約 500 分鐘</small></button>
+          <button class="tu-card" data-p="1000" type="button"><b>1,000 點</b><span class="tu-price">NT$1,500</span><small class="tu-min">約 1,000 分鐘</small></button>
+          <button class="tu-card" data-p="2000" type="button"><b>2,000 點</b><span class="tu-price">NT$2,900</span><small class="tu-min">約 2,000 分鐘</small></button>
+        </div>
+        <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">直接購買 500 點 · NT$800</button>
+        <p class="sub-fine" style="margin-top:10px">買的點數不會過期。</p>
+      </div>
     </div>
     <div class="plan-confirm-bar" id="planConfirm" style="display:none">
       <p id="planConfirmText"></p>
@@ -805,17 +872,15 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="visitClose" type="button" aria-label="關閉看診提醒" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>看診提醒</h2>
-      <p class="modal-sub">設定回診那天，我會提前一天提醒你，回診摘要也先準備好。</p>
+      <p class="modal-sub">記下回診，我會提前一天提醒你、回診摘要也先準備好。可以記好幾筆。</p>
+      <div class="visit-list" id="visitList"></div>
+      <div class="field-label">看什麼診</div>
+      <input class="chal-input" id="visitTitle" maxlength="16" placeholder="例：心臟科回診、眼科">
       <div class="field-label">哪一天</div>
       <div class="cal-grid" id="visitDatePick"></div>
-      <div class="field-label">時段</div>
-      <div class="med-chips" id="visitTimeChips">
-        <button class="mchip on" data-t="上午">上午</button>
-        <button class="mchip" data-t="下午">下午</button>
-        <button class="mchip" data-t="晚上">晚上</button>
-      </div>
-      <button class="modal-btn" id="visitSaveBtn">設定提醒</button>
-      <button class="btn-quiet" id="visitClearBtn" type="button" style="display:none;width:100%;margin-top:8px">清除這個提醒</button>
+      <div class="field-label">看診時間</div>
+      <input type="time" id="visitTime" class="visit-time" value="09:00" step="300" aria-label="看診時間">
+      <button class="modal-btn" id="visitSaveBtn">加入這筆看診</button>
     </div>
   </div>
 
@@ -824,7 +889,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="historyClose" type="button" aria-label="關閉紀錄" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>過去紀錄</h2>
-      <p class="modal-sub">保存一年；滿一年前寧寧會先問你要不要留下來。</p>
+      <p class="modal-sub">保存一年；滿一年前<span class="cname">寧寧</span>會先問你要不要留下來。</p>
       <div class="seg" id="histSeg" style="margin-bottom:14px">
         <button class="seg-btn on" data-v="months">每月整理</button>
         <button class="seg-btn" data-v="range">自選日期</button>
@@ -959,7 +1024,7 @@
   <!-- ===== 底部 5 分頁 ===== -->
   <div class="toast" id="toast"></div>
   <nav class="tab-bar" id="tabBar">
-    <svg class="navbg" viewBox="0 0 358 84" preserveAspectRatio="none" aria-hidden="true"><path d="M20,28 L141,28 A8 8 0 0 0 149.3,24 A31 31 0 0 1 208.7,24 A8 8 0 0 0 217,28 L338,28 A20 20 0 0 1 358,48 L358,62 A20 20 0 0 1 338,82 L20,82 A20 20 0 0 1 0,62 L0,48 A20 20 0 0 1 20,28 Z"/></svg>
+    <svg class="navbg" viewBox="0 0 358 84" preserveAspectRatio="none" aria-hidden="true"><path d="M20,28 L143,28 A8 6.5 0 0 0 151,23.5 A29.6 24.1 0 0 1 207,23.5 A8 6.5 0 0 0 215,28 L338,28 A20 20 0 0 1 358,48 L358,62 A20 20 0 0 1 338,82 L20,82 A20 20 0 0 1 0,62 L0,48 A20 20 0 0 1 20,28 Z"/></svg>
     <button class="tab-btn active" data-view="home"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>首頁</span></button>
     <button class="tab-btn" data-view="status"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>狀態</span></button>
     <button class="tab-btn center" data-view="chat"><span class="center-fab"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><span>聊聊</span></button>
@@ -971,7 +1036,7 @@
   <script src="src/version.js?v=20260706-version"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth.js?v=20260630-auth"></script>
-  <script type="module" src="src/app.js?v=20260707-merge"></script>
+  <script type="module" src="src/app.js?v=20260707-daily1"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
@@ -1035,8 +1100,22 @@ window.MM = (function(){
   var burstTimes=[], lastNote=0;
   function registerBurst(){ var now=Date.now(); burstTimes.push(now); burstTimes=burstTimes.filter(function(t){return now-t<15000;}); if(burstTimes.length>=12 && now-lastNote>60000){ lastNote=now; burstTimes=[]; gentleNote(); } }
   function gentleNote(){ var n=document.createElement('div'); n.style.cssText='position:fixed;left:50%;bottom:118px;transform:translateX(-50%) translateY(8px);z-index:9998;background:rgba(54,66,62,.94);color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:999px;box-shadow:0 12px 28px -8px rgba(0,0,0,.42);opacity:0;transition:opacity .4s ease,transform .4s ease;pointer-events:none'; n.textContent='有好多感覺呢，我都在 · 想聊聊嗎'; document.body.appendChild(n); requestAnimationFrame(function(){ n.style.opacity='1'; n.style.transform='translateX(-50%) translateY(0)'; }); setTimeout(function(){ n.style.opacity='0'; n.style.transform='translateX(-50%) translateY(8px)'; setTimeout(function(){ n.remove(); },450); },2800); }
-  function bindFaces(){ var faces=[].slice.call(document.querySelectorAll('#moodFaces .moodface')); faces.forEach(function(f){ f.onclick=function(){ var i=+f.getAttribute('data-i'); var orb=document.getElementById('moodOrb'); quickSquish(orb); var wasEmpty=(state()==='empty'); record(i); eatBall(f,i,wasEmpty); decorate(); registerBurst(); }; }); }
-  function decorate(){ var orb=document.getElementById('moodOrb'), label=document.getElementById('moodLabel'), note=document.getElementById('moodNote'), chip=document.getElementById('moodChip'); if(!orb||!label) return; var cur=currentEntry(), i=cur?cur.i:null, st=state(); orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='breathe 3.4s ease-in-out infinite'; if(i==null){ label.textContent='還沒記錄'; label.style.color='#8A9297'; if(note) note.textContent='點下面的表情，餵情緒球第一口'; } else { label.textContent=MOODS[i].k; label.style.color=MOODS[i].c; if(note) note.textContent=MOODS[i].note; } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent='寧寧從聊天感覺到的'; else sub.textContent='今天'; } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?'還沒記錄':'今天'; }
+  var _tapTimes=[];
+  function bindFaces(){
+    var orb=document.getElementById('moodOrb');
+    if(orb && !orb._mmClick){ orb._mmClick=1; orb.style.cursor='pointer'; orb.addEventListener('click',function(){ wobble(orb); }); }   // 點球本身＝橡膠彈一下
+    var faces=[].slice.call(document.querySelectorAll('#moodFaces .moodface'));
+    faces.forEach(function(f){ f.onclick=function(){
+      var i=+f.getAttribute('data-i'); var o=document.getElementById('moodOrb');
+      var now=Date.now(); _tapTimes.push(now); _tapTimes=_tapTimes.filter(function(t){return now-t<1600;});
+      quickSquish(o);                                          // 按下：立刻縮一下
+      var wasEmpty=(state()==='empty'); record(i); eatBall(f,i,wasEmpty);
+      setTimeout(function(){ wobble(o); }, 520);               // 球進肚：橡膠氣球彈一下
+      if(_tapTimes.length>=3){ setTimeout(function(){ spitBall(f,i); }, 720); }   // 連點吃太多：吐一顆出來
+      decorate(); registerBurst();
+    }; });
+  }
+  function decorate(){ var orb=document.getElementById('moodOrb'), label=document.getElementById('moodLabel'), note=document.getElementById('moodNote'), chip=document.getElementById('moodChip'); if(!orb||!label) return; var cur=currentEntry(), i=cur?cur.i:null, st=state(); orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent='還沒記錄'; label.style.color='#8A9297'; if(note) note.textContent='點下面的表情，餵情緒球第一口'; } else { label.textContent=MOODS[i].k; label.style.color=MOODS[i].c; if(note) note.textContent=MOODS[i].note; } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent='寧寧從聊天感覺到的'; else sub.textContent='今天'; } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?'還沒記錄':'今天'; }
   function weekHTML(){ var days=[],filled=0; for(var off=6;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; days.push({lab:WD[d.getDay()],i:i}); } var dots=days.map(function(x){ var col=(x.i==null)?'transparent':MOODS[x.i].c; var bd=(x.i==null)?'2px dashed #D2CCBE':'none'; return '<div style="text-align:center;flex:1"><div style="width:28px;height:28px;border-radius:50%;margin:0 auto;background:'+col+';border:'+bd+'"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">'+x.lab+'</div></div>'; }).join(''); var cap=filled?('這週記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>的心情，繼續保持。'):'每天記一點，這裡會慢慢長出你的心情軌跡。'; return '<div style="display:flex;justify-content:space-between;margin-bottom:12px">'+dots+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function monthHTML(){ var cells=[],filled=0; for(var off=29;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; cells.push(i); } var grid=cells.map(function(i){ var col=(i==null)?'transparent':MOODS[i].c; var bd=(i==null)?'1.5px dashed #DAD4C6':'none'; return '<div style="height:22px;border-radius:5px;background:'+col+';border:'+bd+'"></div>'; }).join(''); var cap=filled?('這個月記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>，心情地圖正在長出來。'):'每天記一點，一個月後這裡就是你的心情地圖。'; return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+grid+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function renderMood(mood){ var body=document.getElementById('moodBody'), chip=document.getElementById('moodChip'); if(!body) return; function paint(){ var b=document.getElementById('moodBody'); if(!b) return; if(mood==='today'){ if(window.__todayMoodHTML) b.innerHTML=window.__todayMoodHTML; decorate(); bindFaces(); } else if(mood==='week'){ b.innerHTML=weekHTML(); var c=document.getElementById('moodChip'); if(c) c.textContent='過去 7 天'; } else { b.innerHTML=monthHTML(); var c2=document.getElementById('moodChip'); if(c2) c2.textContent='過去 30 天'; } } paint(); pull().then(function(){ paint(); }); }

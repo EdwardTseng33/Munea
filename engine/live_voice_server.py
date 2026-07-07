@@ -69,7 +69,7 @@ def process_request(connection, request):
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 
 
-def system_instruction(char="寧寧"):
+def system_instruction(char="寧寧", name=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     base = c.get("persona", "") + eng.RED
@@ -84,15 +84,29 @@ def system_instruction(char="寧寧"):
         "（現在是即時語音通話。剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
         "句子短、口語、一次一兩句、講完停下來等對方回應。）"
     )
+    base += (
+        "（重要：你沒有連上地圖或商家資料庫，所以絕對不要編造具體的店名、地址、電話、營業時間或價格——"
+        "那些你查不到、講出來多半是錯的。若對方想找附近餐廳或店家，就先問他想吃什麼、想在哪一帶，"
+        "給大方向的建議（例如『這附近有幾家港式，你想吃清淡還是重口味？』），"
+        "並提醒可以請家人幫忙用手機地圖查真正的店名和位置，不要自己掰一個。）"
+    )
+    nm = (name or "").strip()
+    if nm and nm not in ("寧寧", "沐寧", "munea", "Munea"):
+        base += (
+            f"（很重要：用戶把你的名字改成「{nm}」了。從現在起你就叫「{nm}」，"
+            f"打招呼、自我介紹、自稱一律用「{nm}」，絕對不要再說自己叫寧寧。）"
+        )
     return base
 
 
-def live_config(char="寧寧"):
+def live_config(char="寧寧", name=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
-    voice = c.get("voice") or "Leda"  # 聲線讀角色檔（Edward 親耳拍板的語音卡司）
+    voice = c.get("voice") or "Leda"
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char),
+        system_instruction=system_instruction(char, name),
+        output_audio_transcription=types.AudioTranscriptionConfig(),
+        input_audio_transcription=types.AudioTranscriptionConfig(),
         speech_config=types.SpeechConfig(
             voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
@@ -111,13 +125,23 @@ _CID = {"n": 0}
 
 async def handle(ws):
     char = "寧寧"
+    # 從連線網址讀使用者改過的名字（?name=新名字），讓 AI 知道自己現在叫什麼
+    name = None
+    try:
+        from urllib.parse import urlparse, parse_qs
+        path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
+        vals = parse_qs(urlparse(path).query).get("name")
+        if vals:
+            name = vals[0]
+    except Exception:
+        pass
     _CID["n"] += 1
     cid = _CID["n"]
     t0 = time.monotonic()
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
-    _diag(cid, "connected")
+    _diag(cid, "connected", name=name or "-")
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char)) as session:
+        async with client.aio.live.connect(model=MODEL, config=live_config(char, name)) as session:
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):
