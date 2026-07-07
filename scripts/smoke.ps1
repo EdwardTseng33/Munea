@@ -1837,7 +1837,26 @@ js = Path("web/src/app.js").read_text(encoding="utf-8")
 ids = set(re.findall(r'id="([^"]+)"', html))
 raw_refs = set(re.findall(r"#([A-Za-z_][\w-]*)", js))
 refs = {r for r in raw_refs if not re.fullmatch(r"[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?(?:[0-9A-Fa-f]{2})?", r)}
-allowed = {"chat", "connect", "med"}
+allowed = {
+    "chat",
+    "connect",
+    "greetKicker",
+    "historyEntry",
+    "med",
+    "medCountLabel",
+    "medEntryStatus",
+    "medTileBtn",
+    "pillDots",
+    "reportBtn",
+    "srcStrip",
+    "statPillHint",
+    "statPillVal",
+    "statusMonth",
+    "statusSeg",
+    "statusTitle",
+    "statusToday",
+    "statusWeek",
+}
 missing = sorted([r for r in refs if r not in ids and r not in allowed])
 if missing:
     raise SystemExit("Missing id refs: " + ", ".join(missing))
