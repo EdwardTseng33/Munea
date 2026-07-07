@@ -71,6 +71,12 @@
 - Added the first `/family/state` Supabase bridge: the API now reads/writes `family_state_entries` when the 007 table exists, while preserving JSON fallback until the live database apply is complete. This keeps the current family UI contract stable while moving shared family state toward the cloud source of truth.
 - Added the `/wellbeing/*` Supabase bridge: manual mood check-ins, recent wellbeing signals, and trend reads now use `wellbeing_signals` when the 007 table exists, while preserving JSON fallback and the existing frontend response shape. This lets Claude/UI work continue without touching backend storage details.
 
+## 2026-07-08 Update
+
+- Added the `/family/activity` backend contract for family activity list/save/participant updates, backed by `family_activities` and `family_activity_participants` when the 007 tables exist.
+- Preserved JSON fallback for family activities so Claude/UI work can continue before live Supabase SQL 007 is applied.
+- Added smoke coverage for the Supabase adapter and server fallback path, including local-to-Supabase id preservation for future frontend handoff.
+
 ## 2026-06-29 Update
 
 - Added the first mobile microphone bridge path.

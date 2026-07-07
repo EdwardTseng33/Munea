@@ -222,6 +222,10 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**payload, "id": "family-state-entry-1", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"}]
         if table == "wellbeing_signals":
             return [{**payload, "id": "wellbeing-signal-1", "created_at": "2026-07-07T00:00:00Z", "observed_at": payload.get("observed_at") or "2026-07-07T00:00:00Z"}]
+        if table == "family_activities":
+            return [{**payload, "id": payload.get("id") or "44444444-4444-4444-8444-444444444444", "created_at": "2026-07-07T00:00:00Z", "updated_at": "2026-07-07T00:00:00Z"}]
+        if table == "family_activity_participants":
+            return [{**payload, "id": "family-activity-participant-1", "created_at": "2026-07-07T00:00:00Z", "updated_at": "2026-07-07T00:00:00Z"}]
         raise AssertionError(f"Unexpected write table: {table}")
 
     assert method == "GET"
@@ -431,6 +435,34 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "observed_at": "2026-07-07T00:00:00Z",
             "created_at": "2026-07-07T00:00:00Z",
         }],
+        "family_activities": [{
+            "id": "44444444-4444-4444-8444-444444444444",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+            "owner_person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "activity_type": "walk",
+            "title": "Evening walk",
+            "status": "active",
+            "starts_at": "2026-07-07T10:00:00Z",
+            "ends_at": "2026-07-07T12:00:00Z",
+            "payload": {"goalSteps": 5000, "originalActivityId": "local-walk-1"},
+            "result": {"steps": 1200},
+            "created_at": "2026-07-07T00:00:00Z",
+            "updated_at": "2026-07-07T00:00:00Z",
+            "archived_at": None,
+        }],
+        "family_activity_participants": [{
+            "id": "family-activity-participant-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "family_activity_id": "44444444-4444-4444-8444-444444444444",
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "role": "owner",
+            "status": "accepted",
+            "contribution": {"steps": 1200},
+            "response": {"note": "joined"},
+            "created_at": "2026-07-07T00:00:00Z",
+            "updated_at": "2026-07-07T00:00:00Z",
+        }],
     }
     return fixtures[table]
 
@@ -565,6 +597,29 @@ assert local_wellbeing_row["person_id"] == env["MUNEA_SUPABASE_PERSON_ID"]
 assert local_wellbeing_row["family_group_id"] == env["MUNEA_SUPABASE_FAMILY_GROUP_ID"]
 assert local_wellbeing_row["facts"]["originalPersonId"] == "local-person-self"
 assert local_wellbeing_row["facts"]["originalMood"] == "平穩"
+
+activities = adapter.load_family_activities(status="active", limit=10)
+assert activities[0]["title"] == "Evening walk"
+assert activities[0]["participants"][0]["status"] == "accepted"
+saved_activity = adapter.save_family_activity({
+    "id": "local-walk-2",
+    "familyGroupId": "local-family",
+    "ownerPersonId": "local-person-self",
+    "type": "walk",
+    "title": "Morning walk",
+    "status": "active",
+    "payload": {"goalSteps": 3000},
+    "participants": [{"personId": "local-person-self", "role": "owner", "status": "accepted"}],
+})
+assert saved_activity["title"] == "Morning walk"
+assert saved_activity["payload"]["originalActivityId"] == "local-walk-2"
+saved_participant = adapter.save_family_activity_participant("44444444-4444-4444-8444-444444444444", {
+    "personId": "local-person-self",
+    "status": "completed",
+    "contribution": {"steps": 3000},
+})
+assert saved_participant["status"] == "completed"
+assert saved_participant["contribution"]["originalPersonId"] == "local-person-self"
 
 bootstrap_writes = []
 bootstrap_adapter = supabase_adapter.make_adapter(env=env)
@@ -703,6 +758,81 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 print("family state cloud bridge OK")
 '@
 Pass "Family state can use Supabase while preserving JSON fallback"
+
+Step "Family activity cloud bridge contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeFamilyActivityBackend:
+    def enabled(self):
+        return True
+    def load_family_activities(self, family_group_id=None, status=None, limit=100):
+        assert family_group_id in (None, "family-1")
+        assert status in (None, "active")
+        return [{
+            "id": "activity-1",
+            "familyGroupId": "family-1",
+            "ownerPersonId": "person-1",
+            "type": "walk",
+            "title": "Cloud walk",
+            "status": "active",
+            "payload": {"goalSteps": 5000},
+            "participants": [{"personId": "person-1", "role": "owner", "status": "accepted"}],
+            "createdAt": "2026-07-07T00:00:00Z",
+            "updatedAt": "2026-07-07T00:00:00Z",
+        }]
+    def save_family_activity(self, activity):
+        assert activity["title"] == "Cloud quiz"
+        return {**activity, "id": "activity-2"}
+    def save_family_activity_participant(self, activity_id, participant):
+        assert activity_id == "activity-2"
+        assert participant["status"] == "completed"
+        return {**participant, "id": "participant-1"}
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeFamilyActivityBackend()
+    listed = server.family_activity_response({"action": "list", "familyGroupId": "family-1", "status": "active"})
+    assert listed["ok"] is True
+    assert listed["activities"][0]["title"] == "Cloud walk"
+    saved = server.family_activity_response({"action": "save", "activity": {"title": "Cloud quiz", "type": "quiz", "familyGroupId": "family-1", "ownerPersonId": "person-1"}})
+    assert saved["backend"] == "supabase"
+    assert saved["activity"]["id"] == "activity-2"
+    participant = server.family_activity_response({"action": "participant", "activityId": "activity-2", "participant": {"personId": "person-1", "status": "completed"}})
+    assert participant["backend"] == "supabase"
+    assert participant["participant"]["status"] == "completed"
+finally:
+    server.data_backend = original_backend
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def load_family_activities(self, family_group_id=None, status=None, limit=100):
+        return None
+    def save_family_activity(self, activity):
+        return None
+    def save_family_activity_participant(self, activity_id, participant):
+        return None
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.FAMILY_ACTIVITIES_PATH = str(Path(d) / "family_activities.json")
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        saved = server.family_activity_response({"action": "save", "activity": {"id": "local-act-1", "title": "Local walk", "type": "walk", "familyGroupId": "family-1"}})
+        assert saved["backend"] == "json"
+        participant = server.family_activity_response({"action": "participant", "activityId": "local-act-1", "participant": {"personId": "person-1", "status": "accepted"}})
+        assert participant["backend"] == "json"
+        listed = server.family_activity_response({"action": "list", "familyGroupId": "family-1"})
+        assert listed["activities"][0]["participants"][0]["status"] == "accepted"
+    finally:
+        server.data_backend = original_backend
+print("family activity cloud bridge OK")
+'@
+Pass "Family activities can use Supabase while preserving JSON fallback"
 
 Step "Wellbeing cloud bridge contract"
 Invoke-PythonBlock @'
@@ -2042,7 +2172,9 @@ allowed = {
     "medEntryStatus",
     "medTileBtn",
     "pillDots",
+    "price",
     "reportBtn",
+    "save",
     "srcStrip",
     "statPillHint",
     "statPillVal",

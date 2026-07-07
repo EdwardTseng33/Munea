@@ -792,6 +792,99 @@ class SupabaseAdapter:
         )
         return self.wellbeing_row_to_signal(rows[0]) if rows else None
 
+    def load_family_activities(self, family_group_id=None, status=None, limit=100):
+        if not self.enabled():
+            return None
+        family_group_id = family_group_id if self._is_uuid(family_group_id or "") else self.family_group_id
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "family_group_id": f"eq.{family_group_id}",
+            "select": "*",
+            "order": "updated_at.desc",
+            "limit": str(limit or 100),
+        }
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("family_activities", query)
+        activities = []
+        for row in rows or []:
+            participants = self._select(
+                "family_activity_participants",
+                {
+                    "account_id": f"eq.{self.account_id}",
+                    "family_activity_id": f"eq.{row.get('id')}",
+                    "select": "*",
+                    "order": "updated_at.desc",
+                },
+            )
+            activities.append(self.family_activity_row_to_activity(row, participants=participants))
+        return activities
+
+    def save_family_activity(self, activity):
+        if not self.enabled():
+            return None
+        payload = self.family_activity_to_row(activity)
+        activity_id = (activity or {}).get("id")
+        rows = None
+        if self._is_uuid(activity_id or ""):
+            rows = self._request(
+                "PATCH",
+                "family_activities",
+                query={"id": f"eq.{activity_id}", "select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        if not rows:
+            rows = self._request(
+                "POST",
+                "family_activities",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        saved = self.family_activity_row_to_activity(rows[0]) if rows else None
+        for participant in (activity or {}).get("participants") or []:
+            self.save_family_activity_participant((saved or {}).get("id"), participant)
+        if saved:
+            saved["participants"] = self.load_family_activity_participants(saved["id"])
+        return saved
+
+    def load_family_activity_participants(self, activity_id):
+        if not self.enabled() or not self._is_uuid(activity_id or ""):
+            return []
+        rows = self._select(
+            "family_activity_participants",
+            {
+                "account_id": f"eq.{self.account_id}",
+                "family_activity_id": f"eq.{activity_id}",
+                "select": "*",
+                "order": "updated_at.desc",
+            },
+        )
+        return [self.family_activity_participant_row_to_participant(row) for row in rows or []]
+
+    def save_family_activity_participant(self, activity_id, participant):
+        if not self.enabled() or not self._is_uuid(activity_id or ""):
+            return None
+        payload = self.family_activity_participant_to_row(activity_id, participant)
+        person_id = payload["person_id"]
+        rows = self._request(
+            "PATCH",
+            "family_activity_participants",
+            query={"family_activity_id": f"eq.{activity_id}", "person_id": f"eq.{person_id}", "select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        if not rows:
+            rows = self._request(
+                "POST",
+                "family_activity_participants",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        return self.family_activity_participant_row_to_participant(rows[0]) if rows else None
+
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
             return self._first("family_groups", {"id": f"eq.{self.family_group_id}", "select": "*"})
@@ -1299,6 +1392,103 @@ class SupabaseAdapter:
             "observedAt": row.get("observed_at"),
             "visibility": row.get("visibility"),
             "facts": facts,
+        }
+
+    @staticmethod
+    def _normalize_family_activity_type(activity_type):
+        allowed = {"walk", "quiz", "event", "vote", "draw", "custom"}
+        return activity_type if activity_type in allowed else "custom"
+
+    @staticmethod
+    def _normalize_family_activity_status(status):
+        allowed = {"draft", "active", "completed", "archived", "cancelled"}
+        return status if status in allowed else "active"
+
+    @staticmethod
+    def _normalize_family_participant_status(status):
+        allowed = {"invited", "accepted", "declined", "completed"}
+        return status if status in allowed else "invited"
+
+    def family_activity_to_row(self, activity):
+        activity = activity or {}
+        payload = dict(activity.get("payload") or {})
+        activity_id = activity.get("id")
+        owner_person_id = activity.get("ownerPersonId") or activity.get("owner_person_id") or self.person_id
+        family_group_id = activity.get("familyGroupId") or activity.get("family_group_id") or self.family_group_id
+        if activity_id and not self._is_uuid(activity_id):
+            payload.setdefault("originalActivityId", activity_id)
+        if owner_person_id and not self._is_uuid(owner_person_id):
+            payload.setdefault("originalOwnerPersonId", owner_person_id)
+            owner_person_id = self.person_id
+        if family_group_id and not self._is_uuid(family_group_id):
+            payload.setdefault("originalFamilyGroupId", family_group_id)
+            family_group_id = self.family_group_id
+        return {
+            "account_id": activity.get("accountId") or activity.get("account_id") or self.account_id,
+            "family_group_id": family_group_id,
+            "owner_person_id": owner_person_id or None,
+            "activity_type": self._normalize_family_activity_type(activity.get("type") or activity.get("activityType") or activity.get("activity_type")),
+            "title": activity.get("title") or "Family activity",
+            "status": self._normalize_family_activity_status(activity.get("status")),
+            "starts_at": activity.get("startsAt") or activity.get("starts_at"),
+            "ends_at": activity.get("endsAt") or activity.get("ends_at"),
+            "payload": payload,
+            "result": activity.get("result") or {},
+            "archived_at": activity.get("archivedAt") or activity.get("archived_at"),
+        }
+
+    def family_activity_row_to_activity(self, row, participants=None):
+        row = row or {}
+        payload = row.get("payload") or {}
+        return {
+            "id": row.get("id") or payload.get("originalActivityId") or "",
+            "accountId": row.get("account_id") or "",
+            "familyGroupId": row.get("family_group_id"),
+            "ownerPersonId": row.get("owner_person_id"),
+            "type": row.get("activity_type") or "custom",
+            "title": row.get("title") or "Family activity",
+            "status": row.get("status") or "active",
+            "startsAt": row.get("starts_at"),
+            "endsAt": row.get("ends_at"),
+            "payload": payload,
+            "result": row.get("result") or {},
+            "participants": [self.family_activity_participant_row_to_participant(p) for p in (participants or [])],
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+            "archivedAt": row.get("archived_at"),
+        }
+
+    def family_activity_participant_to_row(self, activity_id, participant):
+        participant = participant or {}
+        contribution = dict(participant.get("contribution") or {})
+        person_id = participant.get("personId") or participant.get("person_id") or self.person_id
+        if person_id and not self._is_uuid(person_id):
+            contribution.setdefault("originalPersonId", person_id)
+            person_id = self.person_id
+        return {
+            "account_id": participant.get("accountId") or participant.get("account_id") or self.account_id,
+            "family_activity_id": activity_id,
+            "person_id": person_id,
+            "role": participant.get("role") or "participant",
+            "status": self._normalize_family_participant_status(participant.get("status")),
+            "contribution": contribution,
+            "response": participant.get("response") or {},
+        }
+
+    @staticmethod
+    def family_activity_participant_row_to_participant(row):
+        row = row or {}
+        contribution = row.get("contribution") or {}
+        return {
+            "id": row.get("id") or "",
+            "activityId": row.get("family_activity_id"),
+            "personId": row.get("person_id") or contribution.get("originalPersonId"),
+            "role": row.get("role") or "participant",
+            "status": row.get("status") or "invited",
+            "contribution": contribution,
+            "response": row.get("response") or {},
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
         }
 
     @staticmethod
