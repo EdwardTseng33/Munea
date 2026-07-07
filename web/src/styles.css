@@ -1039,9 +1039,12 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .call-btn.end { background-color: var(--danger); }
 .call-btn.end .ic { transform: rotate(135deg); }
 
-/* 子頁導覽頭（App 式返回：箭頭＋置中標題）
-   頂部安全區：背景填到動態島/瀏海下方，返回鍵＋標題壓在島下面才點得到 */
-.nav-head { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: 48px; margin: 0;
+/* 子頁導覽頭（App 式返回：箭頭＋置中標題） */
+.nav-head { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: 48px; margin: 0 0 6px; }
+/* 只有「全螢幕子頁」(reader-page：方案/條款) 才加頂部安全區，做成 App 標題列——
+   背景填到動態島下方、返回鍵＋標題壓在島下面才點得到。
+   螢幕內子頁(家人/心情/記錄簿)本身已在有安全區的 .screen 裡，不再疊一層。 */
+.reader-page .nav-head { margin: 0;
   padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px 8px; background: var(--cream);
   position: sticky; top: 0; z-index: 3; box-shadow: 0 1px 0 var(--line); }
 .nav-back { width: 44px; height: 44px; border: none; background: none; color: var(--teal-dd); display: grid; place-items: center; cursor: pointer; border-radius: 50%; }
