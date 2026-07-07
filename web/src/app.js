@@ -2835,7 +2835,8 @@ function init() {
     const t = new Date(); t.setDate(t.getDate() + 1);
     if (v.dateISO === isoOf(t) && !sessionStorage.getItem('visitEveShown')) {
       sessionStorage.setItem('visitEveShown', '1');
-      setTimeout(() => toast('明天' + v.label.slice(-2) + '回診，回診摘要我準備好了'), 1200);
+      const _when = ((String(v.label).split('）')[1]) || '').trim();
+      setTimeout(() => toast('明天' + (_when ? _when + ' ' : '') + '回診，回診摘要我準備好了'), 1200);
     }
   })();
 
@@ -2936,6 +2937,49 @@ function init() {
     [/謝|你真好|感謝/, '不用謝，陪著你是我最想做的事。'],
   ];
   function chatReply(t) { for (const [re, r] of CHAT_RULES) if (re.test(t.toLowerCase())) return r; return '我聽見了，你慢慢說，我都在。'; }
+  // 中文時間／日期解析（聊聊自動建提醒用 · Edward 7/7）
+  function zhDigit(s) {
+    if (s == null) return NaN;
+    s = String(s).replace('兩', '二');
+    if (/^\d+$/.test(s)) return +s;
+    const M = { 零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+    if (s in M) return M[s];
+    let m = s.match(/^十([一二三四五六七八九])?$/); if (m) return 10 + (m[1] ? M[m[1]] : 0);
+    m = s.match(/^([二三四五六七八九])十([一二三四五六七八九])?$/); if (m) return M[m[1]] * 10 + (m[2] ? M[m[2]] : 0);
+    return NaN;
+  }
+  function parseZhClock(t) { // → 'HH:MM' 或 null
+    const m = t.match(/(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上|晚間|夜裡|半夜)?\s*([0-9一二兩三四五六七八九十]{1,3})\s*[點点時](半|[0-9一二兩三四五六七八九十]{1,3})?\s*分?/);
+    if (!m) return null;
+    let h = zhDigit(m[2]); if (isNaN(h)) return null;
+    let mi = 0;
+    if (m[3]) { if (m[3] === '半') mi = 30; else { const mm = zhDigit(m[3]); if (!isNaN(mm)) mi = mm; } }
+    const p = m[1] || '';
+    if (/(下午|傍晚|晚上|晚間|夜裡)/.test(p) && h < 12) h += 12;
+    if (/中午/.test(p)) { if (h < 12) h = 12; }
+    if (/(凌晨|半夜)/.test(p) && h === 12) h = 0;
+    if (/(清晨|早晨|早上|上午)/.test(p) && h === 12) h = 0;
+    if (h > 23) h = h % 24;
+    return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
+  }
+  function clockToSegment(hhmm) { const h = +String(hhmm).split(':')[0]; return h < 10 ? '早餐後' : h < 14 ? '午餐後' : h < 19 ? '晚餐後' : '睡前'; }
+  function parseZhDate(t) { // → Date 或 null
+    const now = new Date(); const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (/大後天/.test(t)) { base.setDate(base.getDate() + 3); return base; }
+    if (/後天/.test(t)) { base.setDate(base.getDate() + 2); return base; }
+    if (/明天|明日/.test(t)) { base.setDate(base.getDate() + 1); return base; }
+    if (/今天|今日|等一下|待會/.test(t)) return base;
+    const wm = t.match(/(這|本|下|下個|下一)?\s*(週|周|星期|禮拜|拜)\s*([一二三四五六日天末])/);
+    if (wm) {
+      const map = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 0, 天: 0, 末: 6 };
+      const target = map[wm[3]]; const d = new Date(base); let add = (target - d.getDay() + 7) % 7;
+      if (add === 0) add = 7; if (/(下|下個|下一)/.test(wm[1] || '')) add += 7;
+      d.setDate(d.getDate() + add); return d;
+    }
+    const dm = t.match(/(\d{1,2})\s*[\/月]\s*(\d{1,2})/);
+    if (dm) { let d = new Date(now.getFullYear(), +dm[1] - 1, +dm[2]); if (d < base) d = new Date(now.getFullYear() + 1, +dm[1] - 1, +dm[2]); return d; }
+    return null;
+  }
   function parseChatIntent(t) {
     // 聊聊代辦：講一句、寧寧直接把 app 設定做好（原型版；真腦版走同一批動作）
     // 問點數：用真錢包數字回答、順帶安心話（不推銷）
@@ -2960,27 +3004,40 @@ function init() {
       pushFamilyFeed('<b>你</b>托' + cname() + '帶話給' + who + '：' + relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, ''));
       return '好，我會帶話給' + who + '，也會顯示在' + who + '的首頁上。';
     }
-    const seg = (t.match(/(早餐後|午餐後|晚餐後|睡前)/) || [])[1];
-    if (/(提醒|記得|叫我).*吃.{0,4}藥|吃.{0,4}藥.*(提醒|記)|(提醒|記得|叫我).*(吃藥|用藥)|(吃藥|用藥).*(提醒|記)/.test(t)) {
-      let name = (t.match(/吃(「)?([一-龥A-Za-z0-9]{1,6}藥)/) || [])[2] || (t.match(/吃(「)?([一-龥A-Za-z0-9]{2,6})(」)?(藥)?/) || [])[2];
+    // ===== 用藥提醒：聽到「幫我記得／提醒我…吃藥」→ 直接建好 =====
+    const medTrig = /(提醒|記得|記錄|紀錄|幫我記|幫我排|安排|叫我)/.test(t);
+    const medSig = /(吃藥|用藥|服藥)/.test(t) || (/(吃|服)\s*(「)?[一-龥A-Za-z0-9]{2,6}(」)?/.test(t) && /(藥|錠|膠囊|膜衣錠|優|血壓|糖|膽固醇|降|鈣|鐵|甲狀腺|抗凝)/.test(t));
+    if (medTrig && medSig) {
+      let name = (t.match(/(吃|服)\s*(「)?([一-龥A-Za-z0-9]{2,6}藥)/) || [])[3]
+              || (t.match(/(吃|服)\s*(「)?([一-龥A-Za-z0-9]{2,4})/) || [])[3] || '';
+      if (/^(的|一下|一顆|東西|飯|完)$/.test(name) || /(提醒|記得|時候|每天|天天|早上|中午|下午|晚上|睡前|點|要|了)/.test(name)) name = '';
+      const clock = parseZhClock(t);
+      const seg = (t.match(/(早餐後|午餐後|晚餐後|睡前)/) || [])[1] || (clock ? clockToSegment(clock) : '早餐後');
+      const daysM = t.match(/(\d{1,3})\s*[天日]/);
+      const days = daysM ? (daysM[1] + ' 天') : '長期';
       const meds = loadMeds();
-      meds.push({ name: name && name !== '血壓' ? name : '血壓藥', time: seg || '早餐後', days: '長期', by: '本人' });
+      meds.push({ name: name || '藥', time: seg, days, by: '本人' });
       try { localStorage.setItem('munea.meds', JSON.stringify(meds)); syncPush('meds', meds); } catch (e) {}
       updateMedCount();
-      return '好，我幫你設好了：' + (seg || '早餐後') + '提醒吃藥，時間照你的作息。想改隨時跟我說。';
+      if (window.__medRefresh) { try { window.__medRefresh(); } catch (e3) {} }
+      const whenSay = clock ? (clock + '（' + seg + '）') : seg;
+      return '好，我幫你記下來了：' + (name ? '「' + name + '」' : '你的藥') + '，' + whenSay + '提醒你吃'
+        + (days !== '長期' ? ('，連續 ' + days) : '') + '。到時間我會叫你，也會記下你有沒有吃。想改隨時跟我說。';
     }
-    const visitDay = (t.match(/(\d{1,2})[\/月](\d{1,2})/) || []);
-    if (/(回診|看診|門診).*(提醒|記)/.test(t) || (/(回診|看診)/.test(t) && visitDay[0])) {
-      if (visitDay[0]) {
-        const now = new Date();
-        const d = new Date(now.getFullYear(), +visitDay[1] - 1, +visitDay[2]);
-        const label = (d.getMonth() + 1) + '/' + d.getDate() + '（週' + '日一二三四五六'[d.getDay()] + '）' + (/(下午)/.test(t) ? '下午' : /(晚上)/.test(t) ? '晚上' : '上午');
+    // ===== 回診提醒：聽到「記得我…回診」→ 抓日期＋時間建好 =====
+    if (/(回診|看診|門診|複診|回院|要看醫生|去看醫生)/.test(t) && /(提醒|記得|記錄|紀錄|幫我記|排|安排|預約|要去|約|去)/.test(t)) {
+      const d = parseZhDate(t);
+      const clock = parseZhClock(t);
+      if (d) {
+        const wd = '日一二三四五六'[d.getDay()];
         const iso2 = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const timeStr = clock ? (' ' + clock) : (/(下午)/.test(t) ? ' 下午' : /(晚上|傍晚)/.test(t) ? ' 晚上' : /(上午|早上|早)/.test(t) ? ' 上午' : '');
+        const label = (d.getMonth() + 1) + '/' + d.getDate() + '（週' + wd + '）' + timeStr;
         try { localStorage.setItem('munea.visit', JSON.stringify({ dateISO: iso2, label })); } catch (e) {} syncPush('visit', { dateISO: iso2, label });
         if (typeof renderVisitRow === 'function') try { renderVisitRow(); } catch (e2) {}
-        return '記好了，' + label + '回診。我前一天會提醒你，回診摘要也會先準備好。';
+        return '記好了，' + label + '回診。我前一天會提醒你，回診要問醫生的、要帶的東西，也會先幫你準備好。';
       }
-      return '好，跟我說是哪一天回診（例如 7 月 10 日下午），我來設提醒。';
+      return '好，跟我說是哪一天回診就好（像是「明天下午三點」「下週三」或「7 月 10 日」），我馬上幫你設。';
     }
     return null;
   }
