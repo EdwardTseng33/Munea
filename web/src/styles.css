@@ -1808,8 +1808,8 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .scmp-tag { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #C79A3B; color: #fff; font-size: 9px; font-weight: 800; padding: 1px 8px; border-radius: 0 0 7px 7px; }
 
 /* 選方案卡：兩張並排、圓形勾選點、選中整張高亮（直覺切換）*/
-.plan-pick { display: flex; gap: 11px; margin-bottom: 18px; }
-.ppk { position: relative; flex: 1; text-align: left; border: 2px solid var(--line); border-radius: 16px; padding: 15px 13px 14px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s; }
+.plan-pick { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.ppk { position: relative; text-align: left; border: 2px solid var(--line); border-radius: 18px; padding: 16px 17px 15px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s; }
 .ppk.pro { background: var(--mint); }
 .ppk.sel { border-color: var(--teal); }
 .ppk.sel.pro { border-color: #C79A3B; background: #FBF3DF; }
@@ -1817,10 +1817,10 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .ppk.sel .ppk-radio { border-color: var(--teal); background: var(--teal); box-shadow: inset 0 0 0 3px #fff; }
 .ppk.sel.pro .ppk-radio { border-color: #C79A3B; background: #C79A3B; }
 .ppk-tag { position: absolute; top: 0; left: 0; background: #C79A3B; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 14px 0 12px 0; }
-.ppk-top { margin-bottom: 12px; padding-right: 28px; }
-.ppk.pro .ppk-top { margin-top: 6px; }
-.ppk-name { display: block; font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); }
-.ppk-price { display: block; font-size: 14px; font-weight: 700; color: var(--muted); margin-top: 2px; }
+.ppk-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-right: 30px; }
+.ppk.pro .ppk-top { margin-top: 4px; }
+.ppk-name { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); }
+.ppk-price { font-size: 17px; font-weight: 800; color: var(--ink); white-space: nowrap; }
 .ppk-price small { font-size: 11px; }
 .ppk.sel .ppk-price { color: var(--teal-dd); }
 .ppk.sel.pro .ppk-price { color: #8A6410; }
@@ -1981,3 +1981,16 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .fc-leave.arm { background: var(--coral-soft); border-radius: 999px; }
 .fc-privacy { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.6; margin-top: 14px; }
 .jc-code { text-align: center; letter-spacing: 3px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
+
+/* 訂閱頁 v2：產品價值 + 適合誰 + 堆疊卡（Edward 7/7 去寧寧、講優勢） */
+.sub-intro { font-size: 13.5px; line-height: 1.75; color: var(--muted); margin: 2px 2px 15px; }
+.sub-intro b { color: var(--ink); font-weight: 800; }
+.sub-value { display: flex; flex-direction: column; gap: 13px; margin-bottom: 20px; }
+.sv-row { display: flex; gap: 13px; align-items: flex-start; }
+.sv-ic { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 13px; background: var(--mint); display: grid; place-items: center; }
+.sv-ic svg { width: 21px; height: 21px; fill: none; stroke: var(--teal-dd); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sv-txt b { display: block; font-size: 14.5px; font-weight: 800; color: var(--ink); }
+.sv-txt small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-top: 2px; }
+.sub-sec-label { font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); margin: 4px 2px 12px; }
+.ppk-who { font-size: 12.5px; color: var(--muted); margin: 3px 0 12px; }
+.ppk.sel.pro .ppk-who { color: #8A6410; }
