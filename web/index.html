@@ -382,8 +382,8 @@
         <div class="plan-divider"></div>
         <div class="pts-label">點數 <b id="ptsLeft">240</b> 點 <span class="pts-used">每月送 <i id="setPlanGrant" style="font-style:normal">200</i> · 已用 <i id="ptsUsed" style="font-style:normal">160</i></span></div>
         <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
-        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>點數快用完了；基本陪伴不受影響，加值後語音陪聊不中斷</div>
-        <div class="pts-note">240 點約可通話 240 分鐘；基本陪伴不限量、不會中斷</div>
+        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>點數快用完了——用完聊天會先停，到這裡加值就能繼續</div>
+        <div class="pts-note">點數用來聊天；用完會先停，補一下就能繼續</div>
         <div class="plan-actions">
           <button class="plan-btn ghost" id="managePlanBtn">訂閱方案</button>
           <button class="plan-btn" id="topUpBtn">加值點數</button>
@@ -789,7 +789,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="topUpClose" type="button" aria-label="關閉加值" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>加值點數</h2>
-      <p class="modal-sub">通話與語音陪聊會用點數；基本陪伴不限量。</p>
+      <p class="modal-sub">聊天會用點數；點數用完就先停，補了才能繼續。</p>
       <div class="tu-grid">
         <button class="tu-card" data-p="200"><b>200 點</b><span class="tu-price">NT$350</span><small class="tu-min">約 200 分鐘</small></button>
         <button class="tu-card on" data-p="500"><b>500 點</b><span class="tu-price">NT$800</span><small class="tu-min">約 500 分鐘</small></button>
@@ -860,7 +860,7 @@
       </div>
       <!-- 點數購買 -->
       <div id="subPoints" style="display:none">
-        <p class="sub-fine" style="margin:4px 0 12px">通話、語音陪聊會用點數；基本陪伴不限量、不會斷。方案每月送的先用完，才用到買的。</p>
+        <p class="sub-fine" style="margin:4px 0 12px">聊天會用點數；用完就先停、補了再聊。方案每月送的點數先用，才用到你買的。</p>
         <div class="tu-grid">
           <button class="tu-card" data-p="200" type="button"><b>200 點</b><span class="tu-price">NT$350</span><small class="tu-min">約 200 分鐘</small></button>
           <button class="tu-card on" data-p="500" type="button"><b>500 點</b><span class="tu-price">NT$800</span><small class="tu-min">約 500 分鐘</small></button>
@@ -1088,7 +1088,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260707-fambatch"></script>
+  <script type="module" src="src/app.js?v=20260707-points"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

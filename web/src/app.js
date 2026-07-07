@@ -1329,15 +1329,40 @@ let _callTimerInt = null, _callSec = 0;
 let _lowWarned = false, _zeroSaid = false;
 let _brainDegraded = false;
 function callBudgetTick() {
+  if (window.MMPLAN && window.MMPLAN.isFree()) return;   // 免費用「單次時間試用」、不吃點數
   const left = ptsLeft() - Math.floor(_callSec / 60);
   if (!_lowWarned && left <= 15 && left > 0) {
     _lowWarned = true;
-    setCaption('我們慢慢聊，點數剩不多的話我會先提醒你', '聊完我幫你記著：設定裡可以加值');
+    setCaption('點數快用完了，大概還能聊 ' + left + ' 分鐘', '用完聊天會先停，補點數就能繼續');
   }
   if (!_zeroSaid && left <= 0) {
     _zeroSaid = true;
-    setCaption('點數用完了，換基本模式繼續陪你', '基本陪伴不限量、不會中斷');
+    __muneaPointsOut();                                  // 點數用完 → 停止聊天 + 跳補點數
   }
+}
+function __muneaShowPointsPopup(){
+  var old=document.getElementById('mm-pts'); if(old) old.remove();
+  var m=document.createElement('div'); m.id='mm-pts';
+  m.style.cssText='position:fixed;inset:0;z-index:10060;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
+  m.innerHTML='<div style="width:min(320px,84vw);background:#F4F0E8;border-radius:24px;padding:26px 22px 18px;text-align:center;box-shadow:0 24px 60px -14px rgba(0,0,0,.5)">'
+    +'<div style="width:54px;height:54px;border-radius:16px;margin:0 auto 16px;background:linear-gradient(135deg,#E0B354,#C79A3B);display:grid;place-items:center"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M9 10h4.5a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3H15"/></svg></div>'
+    +'<div style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px">點數用完了</div>'
+    +'<div style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px">聊天會用到點數，這批剛好用完囉。補一些點數，就能繼續跟沐寧聊。</div>'
+    +'<button id="mm-pts-go" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px">補充點數</button>'
+    +'<button id="mm-pts-no" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer">先不用</button>'
+    +'</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-pts-no') m.remove(); });
+  var go=document.getElementById('mm-pts-go');
+  if(go) go.addEventListener('click',function(){ m.remove(); var tm=document.getElementById('topUpModal'); if(tm) tm.classList.add('show'); });
+}
+function __muneaPointsOut(){
+  try { if (typeof LiveVoice !== 'undefined' && LiveVoice && LiveVoice.stop) LiveVoice.stop(); } catch (e) {}
+  try { completeChatSession('out_of_points'); } catch (e) {}
+  try { chatOpened = false; } catch (e) {}
+  try { setCallToggle(false); } catch (e) {}
+  stopCallTimer();
+  __muneaShowPointsPopup();
 }
 function __muneaFreeChatOut(){
   try { if (typeof LiveVoice !== 'undefined' && LiveVoice && LiveVoice.stop) LiveVoice.stop(); } catch (e) {}
@@ -1916,7 +1941,8 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
-    if (window.MMPLAN && window.MMPLAN.isFree() && window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; }
+    if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
+    else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
     showView('chat');
   });
   // （提醒改為彈窗版；埋點併入 B1 排程處理器）
@@ -2341,7 +2367,7 @@ function init() {
       if (_bar) _bar.style.display = _isFreeP ? 'none' : '';
       if (_note) _note.textContent = _isFreeP
         ? '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。'
-        : (pts + ' 點約可通話 ' + pts + ' 分鐘；基本陪伴不限量、不會中斷');
+        : (pts + ' 點約可聊 ' + pts + ' 分鐘；聊天用點數，用完補一下就能繼續。');
     }
     const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
     const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = _isFreeP ? '升級方案' : '訂閱方案';
@@ -3269,7 +3295,7 @@ function init() {
       const left = POINTS.total - POINTS.used + POINTS.bought;
       return left > 0
         ? '我看了一下，你還有 ' + left + ' 點，語音陪聊大概還能聊 ' + left + ' 分鐘。放心，就算用完，基本陪伴也不會斷。'
-        : '點數用完了，不過別擔心，基本陪伴不限量，我一樣在。想要語音陪聊的話，設定裡可以加值。';
+        : '點數用完了喔——補一些點數就能繼續跟我聊，設定裡就能加值。';
     }
     // 傳話：①「提醒／告訴 某人 …」直接算 ②「跟 某人」必須真的接「說」才算（防「有跟誰約好」這種閒聊誤觸發）
     const KNOWN_FAM = ['美華', '志明', '小寶', '允辰', '阿嬤', '阿公', '秀英'];
