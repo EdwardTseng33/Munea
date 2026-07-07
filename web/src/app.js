@@ -2002,10 +2002,10 @@ function init() {
   if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '阿嬤'); });
   applyUserAvatar();
   // 家庭照護圈
-  const CIRCLE_LIMITS = { plus: 4, pro: 12 };                       // Plus 最多 4 人、Pro 最多 12 人
-  const CIRCLE_PLAN_LABEL = { plus: 'Plus', pro: 'Pro' };
-  const PLAN_POINTS = { plus: 200, pro: 500 };                       // 每月贈點
-  function circlePlan() { try { return localStorage.getItem('munea.plan') || 'plus'; } catch (e) { return 'plus'; } }
+  const CIRCLE_LIMITS = { free: 0, plus: 4, pro: 12 };                       // Plus 最多 4 人、Pro 最多 12 人
+  const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', pro: 'Pro' };
+  const PLAN_POINTS = { free: 0, plus: 200, pro: 500 };                       // 每月贈點
+  function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
   const CIRCLE_DEFAULT = [
     { name: '陳秀英', init: '嬤', tint: 'p-ama', self: true },
@@ -2333,6 +2333,18 @@ function init() {
     const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
     if (POINTS.total !== pts) { POINTS.total = pts; if (POINTS.used > pts) POINTS.used = Math.round(pts * 0.3); }
     if (typeof renderPoints === 'function') renderPoints();
+    const _isFreeP = plan === 'free';
+    const _card = document.querySelector('.plan-card');
+    if (_card) {
+      const _lbl = _card.querySelector('.pts-label'), _bar = _card.querySelector('.pts-bar'), _note = _card.querySelector('.pts-note');
+      if (_lbl) _lbl.style.display = _isFreeP ? 'none' : '';
+      if (_bar) _bar.style.display = _isFreeP ? 'none' : '';
+      if (_note) _note.textContent = _isFreeP
+        ? '目前是免費方案 · 每天陪寧寧聊 5 分鐘。升級 Plus／Pro 解鎖不限量聊天、看更久的紀錄、邀家人進照護圈。'
+        : (pts + ' 點約可通話 ' + pts + ' 分鐘；基本陪伴不限量、不會中斷');
+    }
+    const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
+    const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = _isFreeP ? '升級方案' : '訂閱方案';
     renderSubUI();
   }
   // 分段 tab（訂閱方案 / 點數購買）
