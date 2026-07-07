@@ -400,6 +400,14 @@ CARE_SCHEDULE_PATH = os.environ.get("MUNEA_CARE_SCHEDULE_PATH") or os.path.join(
 
 def append_wellbeing_signal(signal):
     """存一筆「心情觀察」訊號（統一格式 WellbeingSignal：V2 影像/動作將來也吐同格式）。"""
+    try:
+        remote_signal = data_backend().append_wellbeing_signal(signal)
+        if remote_signal is not None:
+            return remote_signal
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("append wellbeing signal to Supabase", e)
     signals = read_json_file(WELLBEING_PATH, [])
     if not isinstance(signals, list):
         signals = []
@@ -409,6 +417,14 @@ def append_wellbeing_signal(signal):
 
 
 def load_wellbeing_signals(person_id=None, limit=200):
+    try:
+        remote_signals = data_backend().load_wellbeing_signals(person_id=person_id, limit=limit)
+        if remote_signals is not None:
+            return remote_signals
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load wellbeing signals from Supabase", e)
     signals = read_json_file(WELLBEING_PATH, [])
     if not isinstance(signals, list):
         signals = []
@@ -490,7 +506,7 @@ def wellbeing_log_response(data):
         "isMedicalInference": False,
         "createdAt": utc_now(),
     }
-    append_wellbeing_signal(signal)
+    signal = append_wellbeing_signal(signal)
     return {"ok": True, "signal": signal}
 
 

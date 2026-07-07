@@ -69,6 +69,7 @@
 - Upgraded `npm run supabase:doctor:live` so missing cloud tables map back to the repo SQL files that should be applied next. The current live project has base profile/billing/privacy tables, and the doctor now recommends applying SQL 003-007 to finish analytics, AI memory, persona, credits, and family cloud state foundations.
 - Added `npm run supabase:bundle:missing` to generate a paste-ready SQL bundle at `dist/supabase/munea_missing_foundations.sql` from the current live doctor result. This lets the remaining Supabase schema apply happen through SQL Editor without guessing file order or exposing secrets.
 - Added the first `/family/state` Supabase bridge: the API now reads/writes `family_state_entries` when the 007 table exists, while preserving JSON fallback until the live database apply is complete. This keeps the current family UI contract stable while moving shared family state toward the cloud source of truth.
+- Added the `/wellbeing/*` Supabase bridge: manual mood check-ins, recent wellbeing signals, and trend reads now use `wellbeing_signals` when the 007 table exists, while preserving JSON fallback and the existing frontend response shape. This lets Claude/UI work continue without touching backend storage details.
 
 ## 2026-06-29 Update
 
