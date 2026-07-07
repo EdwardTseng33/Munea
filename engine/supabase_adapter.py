@@ -714,8 +714,56 @@ class SupabaseAdapter:
                 query={"select": "*"},
                 payload=payload,
                 prefer="return=representation",
-            )
+        )
         return self.relationship_row_to_state(rows[0]) if rows else None
+
+    def load_family_state_store(self, family_group_id=None):
+        if not self.enabled():
+            return None
+        family_group_id = family_group_id or self.family_group_id
+        rows = self._select(
+            "family_state_entries",
+            {
+                "account_id": f"eq.{self.account_id}",
+                "family_group_id": f"eq.{family_group_id}",
+                "select": "*",
+                "order": "updated_at.desc",
+            },
+        )
+        return self.family_state_rows_to_store(rows)
+
+    def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
+        if not self.enabled():
+            return None
+        payload = {
+            "account_id": self.account_id,
+            "family_group_id": family_group_id or self.family_group_id,
+            "state_key": key,
+            "value": value,
+            "updated_by_person_id": updated_by_person_id or self.person_id,
+        }
+        query = {
+            "account_id": f"eq.{payload['account_id']}",
+            "family_group_id": f"eq.{payload['family_group_id']}",
+            "state_key": f"eq.{payload['state_key']}",
+            "select": "*",
+        }
+        rows = self._request(
+            "PATCH",
+            "family_state_entries",
+            query=query,
+            payload=payload,
+            prefer="return=representation",
+        )
+        if not rows:
+            rows = self._request(
+                "POST",
+                "family_state_entries",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        return self.family_state_row_to_entry(rows[0]) if rows else None
 
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
@@ -1129,6 +1177,31 @@ class SupabaseAdapter:
             "updatedAt": row.get("updated_at"),
             "deletedAt": row.get("deleted_at"),
         }
+
+    @staticmethod
+    def family_state_row_to_entry(row):
+        row = row or {}
+        return {
+            "key": row.get("state_key") or "",
+            "value": row.get("value"),
+            "updatedAt": row.get("updated_at") or row.get("created_at"),
+            "updatedByPersonId": row.get("updated_by_person_id"),
+            "familyGroupId": row.get("family_group_id"),
+        }
+
+    def family_state_rows_to_store(self, rows):
+        store = {}
+        for row in rows or []:
+            entry = self.family_state_row_to_entry(row)
+            key = entry.get("key")
+            if key:
+                store[key] = {
+                    "value": entry.get("value"),
+                    "updatedAt": entry.get("updatedAt"),
+                    "updatedByPersonId": entry.get("updatedByPersonId"),
+                    "familyGroupId": entry.get("familyGroupId"),
+                }
+        return store
 
     @staticmethod
     def _granted_key_for_metric(metric):

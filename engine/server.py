@@ -423,18 +423,45 @@ def family_state_response(data):
     """家庭共享狀態（原型底座）：單一家庭 key-value；正式版由 Codex 換成雲端表、格式不變。"""
     data = data or {}
     action = data.get("action") or "load"
-    state = {}
-    try:
-        state = read_json_file(FAMILY_STATE_STORE_PATH) or {}
-    except Exception:
-        state = {}
     if action == "save":
         key = data.get("key")
         if key not in FAMILY_STATE_KEYS:
             return {"ok": False, "error": "key_not_allowed"}
+        try:
+            backend = data_backend()
+            remote_entry = backend.save_family_state_entry(
+                key,
+                data.get("value"),
+                family_group_id=data.get("familyGroupId") or data.get("family_group_id"),
+                updated_by_person_id=data.get("personId") or data.get("person_id"),
+            )
+            if remote_entry is not None:
+                return {"ok": True, "key": key, "backend": "supabase"}
+        except Exception as e:
+            if data_backend().enabled() and not is_missing_table_error(e):
+                raise e
+            log_fallback_exception("save family state to Supabase", e)
+        try:
+            state = read_json_file(FAMILY_STATE_STORE_PATH) or {}
+        except Exception:
+            state = {}
         state[key] = {"value": data.get("value"), "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
         write_json_file(FAMILY_STATE_STORE_PATH, state)
-        return {"ok": True, "key": key}
+        return {"ok": True, "key": key, "backend": "json"}
+    try:
+        remote_state = data_backend().load_family_state_store(
+            family_group_id=data.get("familyGroupId") or data.get("family_group_id")
+        )
+        if remote_state is not None:
+            return {"ok": True, "state": {k: v.get("value") for k, v in remote_state.items() if isinstance(v, dict)}, "backend": "supabase"}
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load family state from Supabase", e)
+    try:
+        state = read_json_file(FAMILY_STATE_STORE_PATH) or {}
+    except Exception:
+        state = {}
     return {"ok": True, "state": {k: v.get("value") for k, v in state.items() if isinstance(v, dict)}}
 
 def wellbeing_log_response(data):
