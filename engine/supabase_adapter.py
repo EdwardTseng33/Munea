@@ -714,8 +714,83 @@ class SupabaseAdapter:
                 query={"select": "*"},
                 payload=payload,
                 prefer="return=representation",
-            )
+        )
         return self.relationship_row_to_state(rows[0]) if rows else None
+
+    def load_family_state_store(self, family_group_id=None):
+        if not self.enabled():
+            return None
+        family_group_id = family_group_id or self.family_group_id
+        rows = self._select(
+            "family_state_entries",
+            {
+                "account_id": f"eq.{self.account_id}",
+                "family_group_id": f"eq.{family_group_id}",
+                "select": "*",
+                "order": "updated_at.desc",
+            },
+        )
+        return self.family_state_rows_to_store(rows)
+
+    def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
+        if not self.enabled():
+            return None
+        payload = {
+            "account_id": self.account_id,
+            "family_group_id": family_group_id or self.family_group_id,
+            "state_key": key,
+            "value": value,
+            "updated_by_person_id": updated_by_person_id or self.person_id,
+        }
+        query = {
+            "account_id": f"eq.{payload['account_id']}",
+            "family_group_id": f"eq.{payload['family_group_id']}",
+            "state_key": f"eq.{payload['state_key']}",
+            "select": "*",
+        }
+        rows = self._request(
+            "PATCH",
+            "family_state_entries",
+            query=query,
+            payload=payload,
+            prefer="return=representation",
+        )
+        if not rows:
+            rows = self._request(
+                "POST",
+                "family_state_entries",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        return self.family_state_row_to_entry(rows[0]) if rows else None
+
+    def load_wellbeing_signals(self, person_id=None, limit=200):
+        if not self.enabled():
+            return None
+        person_id = person_id if self._is_uuid(person_id or "") else self.person_id
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "select": "*",
+            "order": "observed_at.desc",
+            "limit": str(limit or 200),
+        }
+        query["person_id"] = f"eq.{person_id}"
+        rows = self._select("wellbeing_signals", query)
+        return [self.wellbeing_row_to_signal(row) for row in reversed(rows or [])]
+
+    def append_wellbeing_signal(self, signal):
+        if not self.enabled():
+            return None
+        payload = self.wellbeing_signal_to_row(signal)
+        rows = self._request(
+            "POST",
+            "wellbeing_signals",
+            query={"select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.wellbeing_row_to_signal(rows[0]) if rows else None
 
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
@@ -1128,6 +1203,102 @@ class SupabaseAdapter:
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
             "deletedAt": row.get("deleted_at"),
+        }
+
+    @staticmethod
+    def family_state_row_to_entry(row):
+        row = row or {}
+        return {
+            "key": row.get("state_key") or "",
+            "value": row.get("value"),
+            "updatedAt": row.get("updated_at") or row.get("created_at"),
+            "updatedByPersonId": row.get("updated_by_person_id"),
+            "familyGroupId": row.get("family_group_id"),
+        }
+
+    def family_state_rows_to_store(self, rows):
+        store = {}
+        for row in rows or []:
+            entry = self.family_state_row_to_entry(row)
+            key = entry.get("key")
+            if key:
+                store[key] = {
+                    "value": entry.get("value"),
+                    "updatedAt": entry.get("updatedAt"),
+                    "updatedByPersonId": entry.get("updatedByPersonId"),
+                    "familyGroupId": entry.get("familyGroupId"),
+                }
+        return store
+
+    @staticmethod
+    def _normalize_wellbeing_mood(mood):
+        allowed = {"happy", "pleasant", "steady", "tired", "low", "irritated", "mixed", "unknown"}
+        return mood if mood in allowed else "unknown"
+
+    def wellbeing_signal_to_row(self, signal):
+        signal = signal or {}
+        mood = signal.get("mood")
+        normalized_mood = self._normalize_wellbeing_mood(signal.get("moodKey") or signal.get("mood_key") or mood)
+        facts = dict(signal.get("facts") or {})
+        person_id = signal.get("personId") or signal.get("person_id") or self.person_id
+        family_group_id = signal.get("familyGroupId") or signal.get("family_group_id") or self.family_group_id
+        if person_id and not self._is_uuid(person_id):
+            facts.setdefault("originalPersonId", person_id)
+            person_id = self.person_id
+        if family_group_id and not self._is_uuid(family_group_id):
+            facts.setdefault("originalFamilyGroupId", family_group_id)
+            family_group_id = self.family_group_id or None
+        if mood and mood != normalized_mood:
+            facts.setdefault("originalMood", mood)
+        for source_key, facts_key in [
+            ("moodKey", "moodKey"),
+            ("moodColor", "moodColor"),
+            ("levelLabel", "levelLabel"),
+            ("confidence", "confidence"),
+            ("modality", "modality"),
+            ("isMedicalInference", "isMedicalInference"),
+        ]:
+            if source_key in signal and signal.get(source_key) is not None:
+                facts[facts_key] = signal.get(source_key)
+        return {
+            "account_id": signal.get("accountId") or signal.get("account_id") or self.account_id,
+            "person_id": person_id,
+            "family_group_id": family_group_id or None,
+            "signal_date": signal.get("date") or signal.get("signalDate") or signal.get("signal_date"),
+            "signal_type": signal.get("signalType") or signal.get("signal_type") or "mood",
+            "mood": normalized_mood,
+            "level": signal.get("level"),
+            "visibility": signal.get("visibility") or "family_summary",
+            "facts": facts,
+            "source": signal.get("source") or "munea-api",
+            "observed_at": signal.get("observedAt") or signal.get("observed_at") or signal.get("createdAt") or signal.get("created_at"),
+        }
+
+    @staticmethod
+    def wellbeing_row_to_signal(row):
+        row = row or {}
+        facts = row.get("facts") or {}
+        mood = facts.get("originalMood") or row.get("mood") or "unknown"
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id") or "",
+            "familyGroupId": row.get("family_group_id"),
+            "date": row.get("signal_date"),
+            "modality": facts.get("modality"),
+            "signalType": row.get("signal_type") or "mood",
+            "source": row.get("source") or "munea-api",
+            "mood": mood,
+            "moodKey": facts.get("moodKey") or row.get("mood"),
+            "moodColor": facts.get("moodColor") or {},
+            "level": row.get("level"),
+            "levelLabel": facts.get("levelLabel") or mood,
+            "confidence": facts.get("confidence", 1.0),
+            "isMedicalInference": bool(facts.get("isMedicalInference", False)),
+            "createdAt": row.get("created_at"),
+            "observedAt": row.get("observed_at"),
+            "visibility": row.get("visibility"),
+            "facts": facts,
         }
 
     @staticmethod

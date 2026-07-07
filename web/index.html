@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260707-daily1" />
+  <link rel="stylesheet" href="src/styles.css?v=20260707-merge1" />
 </head>
 <body>
 <div class="app-shell">
@@ -1036,7 +1036,7 @@
   <script src="src/version.js?v=20260706-version"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth.js?v=20260630-auth"></script>
-  <script type="module" src="src/app.js?v=20260707-daily1"></script>
+  <script type="module" src="src/app.js?v=20260707-merge1"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
@@ -1357,6 +1357,8 @@ window.MMDEV = function(){
   var segs=[].slice.call(document.querySelectorAll('.st-seg span'));
   var segThumb=document.getElementById('segThumb');
   segs.forEach(function(sp,i){ sp.style.cursor='pointer'; sp.addEventListener('click',function(){
+    var _p=sp.textContent.trim();
+    if((_p==='過去7天'||_p==='過去30天') && window.MMPLAN && window.MMPLAN.isFree()){ window.MMPLAN.upsell('status-history'); return; }
     segs.forEach(function(s){s.style.color='rgba(244,240,232,.55)';});
     sp.style.color='#fff';
     segThumb.style.transform='translateX('+(i*100)+'%)';

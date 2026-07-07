@@ -218,6 +218,10 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**payload, "id": "credit-ledger-1", "created_at": "2026-06-29T00:00:00Z"}]
         if table == "audit_events":
             return [{**payload, "id": "audit-event-1", "created_at": "2026-06-29T00:00:00Z"}]
+        if table == "family_state_entries":
+            return [{**payload, "id": "family-state-entry-1", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"}]
+        if table == "wellbeing_signals":
+            return [{**payload, "id": "wellbeing-signal-1", "created_at": "2026-07-07T00:00:00Z", "observed_at": payload.get("observed_at") or "2026-07-07T00:00:00Z"}]
         raise AssertionError(f"Unexpected write table: {table}")
 
     assert method == "GET"
@@ -394,6 +398,39 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "metadata": {"localWalletId": "wallet_included_monthly"},
             "created_at": "2026-06-29T00:00:00Z",
         }],
+        "family_state_entries": [{
+            "id": "family-state-entry-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+            "state_key": "familyFeed",
+            "value": [{"id": "feed-1", "text": "Medication checked"}],
+            "updated_by_person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "created_at": "2026-06-29T00:00:00Z",
+            "updated_at": "2026-06-29T00:00:00Z",
+        }],
+        "wellbeing_signals": [{
+            "id": "wellbeing-signal-1",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+            "signal_date": "2026-07-07",
+            "signal_type": "mood",
+            "mood": "steady",
+            "level": 4,
+            "visibility": "family_summary",
+            "facts": {
+                "originalMood": "穩定",
+                "moodKey": "steady",
+                "moodColor": {"hex": "#3AA8A0"},
+                "levelLabel": "穩定",
+                "confidence": 1.0,
+                "modality": "manual",
+                "isMedicalInference": False,
+            },
+            "source": "self-report",
+            "observed_at": "2026-07-07T00:00:00Z",
+            "created_at": "2026-07-07T00:00:00Z",
+        }],
     }
     return fixtures[table]
 
@@ -498,6 +535,36 @@ saved_relationship = adapter.save_relationship_state({
 })
 assert saved_relationship["personaTemplateId"] == "companion-real-male"
 assert saved_relationship["rapportLevel"] == "trusted"
+family_state = adapter.load_family_state_store()
+assert family_state["familyFeed"]["value"][0]["text"] == "Medication checked"
+saved_family_state = adapter.save_family_state_entry("meds", [{"name": "Vitamin D"}])
+assert saved_family_state["key"] == "meds"
+assert saved_family_state["value"][0]["name"] == "Vitamin D"
+wellbeing = adapter.load_wellbeing_signals(limit=10)
+assert wellbeing[0]["mood"] == "穩定"
+assert wellbeing[0]["moodKey"] == "steady"
+saved_wellbeing = adapter.append_wellbeing_signal({
+    "personId": env["MUNEA_SUPABASE_PERSON_ID"],
+    "date": "2026-07-07",
+    "mood": "開心",
+    "moodKey": "happy",
+    "level": 5,
+    "source": "self-report",
+    "createdAt": "2026-07-07T00:01:00Z",
+})
+assert saved_wellbeing["mood"] == "開心"
+assert saved_wellbeing["moodKey"] == "happy"
+local_wellbeing_row = adapter.wellbeing_signal_to_row({
+    "personId": "local-person-self",
+    "familyGroupId": "local-family",
+    "date": "2026-07-07",
+    "mood": "平穩",
+    "moodKey": "steady",
+})
+assert local_wellbeing_row["person_id"] == env["MUNEA_SUPABASE_PERSON_ID"]
+assert local_wellbeing_row["family_group_id"] == env["MUNEA_SUPABASE_FAMILY_GROUP_ID"]
+assert local_wellbeing_row["facts"]["originalPersonId"] == "local-person-self"
+assert local_wellbeing_row["facts"]["originalMood"] == "平穩"
 
 bootstrap_writes = []
 bootstrap_adapter = supabase_adapter.make_adapter(env=env)
@@ -577,6 +644,134 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 print("account bootstrap OK")
 '@
 Pass "Account bootstrap creates local account/family/person/companion store"
+
+Step "Family state cloud bridge contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeFamilyStateBackend:
+    def enabled(self):
+        return True
+    def load_family_state_store(self, family_group_id=None):
+        assert family_group_id in (None, "family-1")
+        return {
+            "familyFeed": {"value": [{"id": "feed-1", "text": "Cloud feed"}], "updatedAt": "2026-07-07T00:00:00Z"},
+            "meds": {"value": [{"name": "Vitamin D"}], "updatedAt": "2026-07-07T00:00:00Z"},
+        }
+    def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
+        assert key == "wallet"
+        assert value["points"] == 12
+        assert family_group_id == "family-1"
+        assert updated_by_person_id == "person-1"
+        return {"key": key, "value": value, "updatedAt": "2026-07-07T00:00:00Z"}
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeFamilyStateBackend()
+    loaded = server.family_state_response({"action": "load", "familyGroupId": "family-1"})
+    assert loaded["ok"] is True
+    assert loaded["backend"] == "supabase"
+    assert loaded["state"]["familyFeed"][0]["text"] == "Cloud feed"
+    saved = server.family_state_response({"action": "save", "key": "wallet", "value": {"points": 12}, "familyGroupId": "family-1", "personId": "person-1"})
+    assert saved["ok"] is True
+    assert saved["backend"] == "supabase"
+finally:
+    server.data_backend = original_backend
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def load_family_state_store(self, family_group_id=None):
+        return None
+    def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
+        return None
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.FAMILY_STATE_STORE_PATH = str(Path(d) / "family_state_store.json")
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        saved = server.family_state_response({"action": "save", "key": "routine", "value": {"done": True}})
+        assert saved["backend"] == "json"
+        loaded = server.family_state_response({"action": "load"})
+        assert loaded["state"]["routine"]["done"] is True
+    finally:
+        server.data_backend = original_backend
+print("family state cloud bridge OK")
+'@
+Pass "Family state can use Supabase while preserving JSON fallback"
+
+Step "Wellbeing cloud bridge contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeWellbeingBackend:
+    def enabled(self):
+        return True
+    def load_wellbeing_signals(self, person_id=None, limit=200):
+        assert person_id in (None, "person-1")
+        return [{
+            "id": "wellbeing-signal-1",
+            "personId": "person-1",
+            "date": "2026-07-07",
+            "modality": "manual",
+            "signalType": "mood",
+            "source": "self-report",
+            "mood": "穩定",
+            "moodKey": "steady",
+            "moodColor": {"hex": "#3AA8A0"},
+            "level": 4,
+            "levelLabel": "穩定",
+            "confidence": 1.0,
+            "isMedicalInference": False,
+            "createdAt": "2026-07-07T00:00:00Z",
+        }]
+    def append_wellbeing_signal(self, signal):
+        assert signal["personId"] == "person-1"
+        assert signal["mood"] == "開心"
+        return {**signal, "id": "wellbeing-signal-2", "backend": "supabase"}
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeWellbeingBackend()
+    recent = server.wellbeing_recent_response({"personId": "person-1"})
+    assert recent["ok"] is True
+    assert recent["signals"][0]["mood"] == "穩定"
+    saved = server.wellbeing_log_response({"personId": "person-1", "mood": "開心", "moodKey": "happy", "level": 5})
+    assert saved["ok"] is True
+    assert saved["signal"]["backend"] == "supabase"
+    assert saved["signal"]["mood"] == "開心"
+finally:
+    server.data_backend = original_backend
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def load_wellbeing_signals(self, person_id=None, limit=200):
+        return None
+    def append_wellbeing_signal(self, signal):
+        return None
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.WELLBEING_PATH = str(Path(d) / "wellbeing_signals.json")
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        saved = server.wellbeing_log_response({"personId": "person-1", "mood": "平穩", "moodKey": "steady", "level": 4})
+        assert saved["signal"]["mood"] == "平穩"
+        recent = server.wellbeing_recent_response({"personId": "person-1"})
+        assert recent["signals"][0]["mood"] == "平穩"
+    finally:
+        server.data_backend = original_backend
+print("wellbeing cloud bridge OK")
+'@
+Pass "Wellbeing can use Supabase while preserving JSON fallback"
 
 Step "AI service brain and memory contract"
 Invoke-PythonBlock @'
@@ -1837,7 +2032,26 @@ js = Path("web/src/app.js").read_text(encoding="utf-8")
 ids = set(re.findall(r'id="([^"]+)"', html))
 raw_refs = set(re.findall(r"#([A-Za-z_][\w-]*)", js))
 refs = {r for r in raw_refs if not re.fullmatch(r"[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?(?:[0-9A-Fa-f]{2})?", r)}
-allowed = {"chat", "connect", "med"}
+allowed = {
+    "chat",
+    "connect",
+    "greetKicker",
+    "historyEntry",
+    "med",
+    "medCountLabel",
+    "medEntryStatus",
+    "medTileBtn",
+    "pillDots",
+    "reportBtn",
+    "srcStrip",
+    "statPillHint",
+    "statPillVal",
+    "statusMonth",
+    "statusSeg",
+    "statusTitle",
+    "statusToday",
+    "statusWeek",
+}
 missing = sorted([r for r in refs if r not in ids and r not in allowed])
 if missing:
     raise SystemExit("Missing id refs: " + ", ".join(missing))

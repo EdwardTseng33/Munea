@@ -279,6 +279,21 @@ npm run supabase:doctor:live
 ```
 
 The live doctor now performs read-only table reachability checks for every expected table, including the 007 family cloud tables. If a table is missing, the output lists the table name without printing `SUPABASE_SERVICE_ROLE_KEY`.
+When missing tables map to known repo schema files, the doctor also prints a recommended SQL apply order, for example `supabase/sql/003_analytics_admin_foundation.sql` before later dependent foundation files. Treat this as a database setup checklist: apply the listed files in Supabase SQL Editor, then rerun `npm run supabase:doctor:live`.
+
+To generate one paste-ready SQL file for the currently missing live tables, run:
+
+```powershell
+npm run supabase:bundle:missing
+```
+
+This writes an ignored local bundle to:
+
+```text
+dist/supabase/munea_missing_foundations.sql
+```
+
+Paste that bundle into Supabase SQL Editor, run it, then rerun `npm run supabase:doctor:live`. The bundle is generated from the live doctor result and contains schema SQL only; it does not include Supabase secrets.
 
 ## After SQL Runs
 

@@ -16,6 +16,7 @@
     "ai:doctor:live": "powershell -ExecutionPolicy Bypass -File scripts/ai-key-doctor.ps1",
     "supabase:doctor": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --allow-missing",
     "supabase:doctor:live": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --live",
+    "supabase:bundle:missing": "powershell -ExecutionPolicy Bypass -File scripts/supabase-bundle-missing.ps1",
     "cap:doctor": "npx cap doctor",
     "cap:sync": "npx cap sync",
     "cap:add:ios": "npx cap add ios",

@@ -13,6 +13,63 @@ from env_loader import load_engine_env
 import supabase_adapter
 
 
+SCHEMA_TABLES = {
+    "supabase/sql/001_initial_munea_schema.sql": {
+        "accounts",
+        "account_members",
+        "persons",
+        "family_groups",
+        "family_memberships",
+        "companion_profiles",
+        "routine_reminders",
+        "voice_sessions",
+        "conversation_summaries",
+        "safety_events",
+        "subscription_ledger",
+        "usage_ledger",
+        "privacy_requests",
+        "audit_events",
+    },
+    "supabase/sql/003_analytics_admin_foundation.sql": {
+        "product_events",
+        "daily_user_metrics",
+        "voice_session_metrics",
+        "reminder_events",
+        "family_interaction_events",
+        "cost_ledger",
+        "admin_notes",
+    },
+    "supabase/sql/004_ai_memory_service_foundation.sql": {
+        "memory_items",
+        "perception_snapshots",
+        "ai_brain_runs",
+    },
+    "supabase/sql/005_companion_persona_layer.sql": {
+        "companion_persona_templates",
+        "companion_relationship_states",
+    },
+    "supabase/sql/006_billing_credits_foundation.sql": {
+        "entitlement_policy_versions",
+        "credit_wallets",
+        "credit_transactions",
+        "credit_ledger",
+    },
+    "supabase/sql/007_family_cloud_state_foundation.sql": {
+        "family_invitations",
+        "consent_records",
+        "wellbeing_signals",
+        "family_state_entries",
+        "family_activities",
+        "family_activity_participants",
+    },
+}
+
+
+def schema_files_for_tables(tables):
+    missing = set(tables)
+    return [path for path, table_names in SCHEMA_TABLES.items() if missing.intersection(table_names)]
+
+
 def safe_url(url):
     parsed = urllib.parse.urlparse(url or "")
     if not parsed.netloc:
@@ -38,6 +95,7 @@ def doctor(live=False):
         "tables": status["tables"],
         "tableChecks": [],
         "liveChecks": [],
+        "recommendedSqlFiles": [],
     }
 
     if live and adapter.enabled():
@@ -64,6 +122,8 @@ def doctor(live=False):
             all(check["ok"] for check in result["tableChecks"])
             and all(check["ok"] for check in result["liveChecks"])
         )
+        failed_tables = [check["table"] for check in result["tableChecks"] if not check["ok"]]
+        result["recommendedSqlFiles"] = schema_files_for_tables(failed_tables)
 
     return result
 
@@ -86,6 +146,11 @@ def print_text(result):
             print(f"- table checks: {len(result['tableChecks']) - len(failed_tables)}/{len(result['tableChecks'])} ok")
             for check in failed_tables:
                 print(f"  - {check['table']}: failed ({check.get('error', 'failed')})")
+            if result.get("recommendedSqlFiles"):
+                print("- recommended SQL apply order:")
+                for path in result["recommendedSqlFiles"]:
+                    print(f"  - {path}")
+                print("  After applying, rerun: npm run supabase:doctor:live")
         print("- live checks:")
         for check in result["liveChecks"]:
             suffix = "" if check["ok"] else f" ({check.get('error', 'failed')})"

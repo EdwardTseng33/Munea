@@ -62,6 +62,15 @@
 - Extended Supabase doctor live mode with read-only table reachability checks for every expected table, including the 007 family cloud tables. This should make future "missing table" incidents report exact table names instead of producing vague fallback symptoms.
 - Live database apply is still pending: the repo now has the SQL and verification contract, but the staging/live Supabase project must run SQL 001-007 in order before `npm run supabase:doctor:live` can pass.
 
+## 2026-07-07 Update
+
+- Reduced GitHub Actions smoke notification noise: push runs now report smoke issues in the workflow summary while pull requests and manual workflow runs remain strict gates.
+- Fixed the current frontend ID smoke false alarm by allowing guarded optional selectors that remain in JavaScript while the active UI is being redesigned.
+- Upgraded `npm run supabase:doctor:live` so missing cloud tables map back to the repo SQL files that should be applied next. The current live project has base profile/billing/privacy tables, and the doctor now recommends applying SQL 003-007 to finish analytics, AI memory, persona, credits, and family cloud state foundations.
+- Added `npm run supabase:bundle:missing` to generate a paste-ready SQL bundle at `dist/supabase/munea_missing_foundations.sql` from the current live doctor result. This lets the remaining Supabase schema apply happen through SQL Editor without guessing file order or exposing secrets.
+- Added the first `/family/state` Supabase bridge: the API now reads/writes `family_state_entries` when the 007 table exists, while preserving JSON fallback until the live database apply is complete. This keeps the current family UI contract stable while moving shared family state toward the cloud source of truth.
+- Added the `/wellbeing/*` Supabase bridge: manual mood check-ins, recent wellbeing signals, and trend reads now use `wellbeing_signals` when the 007 table exists, while preserving JSON fallback and the existing frontend response shape. This lets Claude/UI work continue without touching backend storage details.
+
 ## 2026-06-29 Update
 
 - Added the first mobile microphone bridge path.
