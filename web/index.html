@@ -376,14 +376,19 @@
       <h2 class="set-section">訂閱與點數</h2>
       <div class="plan-card">
         <div class="plan-title-row">
-          <span class="plan-name">高級方案</span>
+          <span class="plan-name" id="setPlanName">免費方案</span>
           <span class="plan-payer" style="margin:0">我的訂閱</span>
         </div>
         <div class="plan-divider"></div>
-        <div class="pts-label">點數 <b id="ptsLeft">240</b> 點 <span class="pts-used">每月送 400 · 已用 <i id="ptsUsed" style="font-style:normal">160</i></span></div>
-        <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
-        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>點數快用完了；基本陪伴不受影響，加值後生動模式不中斷</div>
-        <div class="pts-note">240 點約可通話 240 分鐘；基本陪伴不限量、不會中斷</div>
+        <div id="setPtsArea">
+          <div class="pts-label">點數 <b id="ptsLeft">240</b> 點 <span class="pts-used">每月送 400 · 已用 <i id="ptsUsed" style="font-style:normal">160</i></span></div>
+          <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
+          <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>點數快用完了；基本陪伴不受影響，加值後生動模式不中斷</div>
+          <div class="pts-note">240 點約可通話 240 分鐘；基本陪伴不限量、不會中斷</div>
+        </div>
+        <div id="setFreeArea" style="display:none">
+          <div class="pts-note" style="margin-top:2px">目前是免費方案 · 每天可以陪寧寧聊 5 分鐘。升級 Plus 就能不限量聊天、看過去 7／30 天紀錄、邀家人進照護圈。</div>
+        </div>
         <div class="plan-actions">
           <button class="plan-btn ghost" id="managePlanBtn">管理方案</button>
           <button class="plan-btn" id="topUpBtn">加值點數</button>
@@ -773,22 +778,15 @@
   <div class="reader-page" id="planModal">
     <div class="nav-head"><button class="nav-back" id="planClose" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">管理方案</span><span></span></div>
     <div class="reader-scroll plan-scroll">
-      <div class="plan-current">
-        <div class="pc-row"><b>高級方案</b><span class="pc-price">NT$999<small>/月</small></span></div>
-        <div class="pc-meta">下次扣款 7/26 · 你和阿公兩位使用中</div>
-        <ul class="plan-feats">
-          <li>基本陪伴聊天不限量、不會中斷</li>
-          <li>每月送 400 點（生動模式 6 點/分）</li>
-          <li>兩位長輩共用額度池</li>
-          <li>健康週報與回診摘要</li>
-        </ul>
+      <div class="plan-current" id="planCurrent">
+        <div class="pc-row"><b>免費方案</b><span class="pc-price">NT$0</span></div>
+        <div class="pc-meta">你正在用免費方案</div>
       </div>
       <div class="field-label">換一個方案（隨時可升可降）</div>
       <div class="tier-list">
-        <button class="tier trial" data-t="免費試用" type="button"><span class="tier-top"><b>免費試用</b><i>NT$0</i></span><span class="tier-desc">先聊 5 分鐘感受一下</span></button>
-        <button class="tier" data-t="基礎"><span class="tier-top"><b>基礎</b><i>NT$499<u>/月</u></i></span><span class="tier-desc">一位長輩天天聊 · 月送 200 點</span></button>
-        <button class="tier on" data-t="高級"><span class="tier-top"><b>高級</b><em class="tier-tag now">使用中</em><i>NT$999<u>/月</u></i></span><span class="tier-desc">兩位長輩共用 · 月送 400 點</span></button>
-        <button class="tier" data-t="尊榮"><span class="tier-top"><b>尊榮</b><i>NT$1,999<u>/月</u></i></span><span class="tier-desc">重度陪伴與生動模式 · 月送 1,000 點</span></button>
+        <button class="tier" data-t="免費" type="button"><span class="tier-top"><b>免費</b><i>NT$0</i></span><span class="tier-desc">每天跟寧寧聊 5 分鐘 · 家人狀態一起看</span></button>
+        <button class="tier" data-t="Plus"><span class="tier-top"><b>Plus</b><i>NT$499<u>/月</u></i></span><span class="tier-desc">聊天不限量 · 看過去 7／30 天 · 邀家人最多 4 人</span></button>
+        <button class="tier" data-t="Premium"><span class="tier-top"><b>Premium</b><i>NT$999<u>/月</u></i></span><span class="tier-desc">再加：邀家人最多 8 人 · 更多點數 · 健康週報</span></button>
       </div>
       <button class="plan-cancel" id="planCancelBtn" type="button">取消訂閱</button>
       <div style="height:84px"></div>
@@ -975,8 +973,13 @@
   /* ===== 方案／權限判斷中心（單一真相 · 兩邊都讀得到）＋ 升級提示彈窗 ·（Edward 7/7 上線待辦 Phase 2）=====
      預設 free（新用戶＝免費）。真付款接上前，管理方案選付費方案＝示範切換。 */
   window.MMPLAN = (function(){
-    var RANK={free:0,plus:1,premium:2,concierge:3};
-    var LABEL={free:'免費',plus:'Plus',premium:'Premium',concierge:'Concierge'};
+    var RANK={free:0,plus:1,premium:2};
+    var LABEL={free:'免費',plus:'Plus',premium:'Premium'};
+    var INFO={
+      free:{name:'免費',price:'NT$0',invite:0,feats:['首頁與狀態（今天）都能看','家人的狀態一起看','每天跟寧寧聊 5 分鐘']},
+      plus:{name:'Plus',price:'NT$499',invite:4,feats:['基本陪伴聊天不限量、不會中斷','狀態看得到過去 7 天、30 天','邀請家人進照護圈（最多 4 人）','每月送 200 點（生動模式）']},
+      premium:{name:'Premium',price:'NT$999',invite:8,feats:['Plus 全部功能','邀請家人進照護圈（最多 8 人）','每月送 400 點（生動模式）','健康週報與回診摘要']}
+    };
     var CHAT_FREE_SEC=300; // 免費每天 5 分鐘
     function today(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
     function get(){ try{ return localStorage.getItem('munea.plan')||'free'; }catch(e){ return 'free'; } }
@@ -1009,10 +1012,10 @@
       var go=document.getElementById('mm-upsell-go');
       if(go) go.addEventListener('click',function(){ m.remove(); var pm=document.getElementById('planModal'); if(pm) pm.classList.add('show'); });
     }
-    return {RANK:RANK,LABEL:LABEL,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
+    return {RANK:RANK,LABEL:LABEL,INFO:INFO,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260707-gates"></script>
+  <script type="module" src="src/app.js?v=20260707-tiers"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

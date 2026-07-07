@@ -1870,8 +1870,8 @@ function init() {
   if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '阿嬤'); });
   applyUserAvatar();
   // 家庭照護圈
-  const CIRCLE_LIMITS = { free: 2, plus: 4, premium: 8, concierge: 12 };
-  const CIRCLE_PLAN_LABEL = { free: '免費版', plus: 'Plus', premium: 'Premium', concierge: 'Concierge' };
+  const CIRCLE_LIMITS = { free: 2, plus: 4, premium: 8 };
+  const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', premium: 'Premium' };
   function circlePlan() { return (window.MMPLAN && window.MMPLAN.get && window.MMPLAN.get()) || 'free'; }
   const CIRCLE_DEFAULT = [
     { name: '陳秀英', init: '嬤', tint: 'p-ama', role: 'recipient' },
@@ -2167,53 +2167,60 @@ function init() {
     toast('買好了，' + p.toLocaleString() + ' 點入帳（餘額已更新），這批不會過期');
   });
   const tierList = document.querySelector('.tier-list');
+  const PLAN_KEYMAP = { '免費': 'free', 'Plus': 'plus', 'Premium': 'premium' };
   function renderPlanNext() {
-    const nx = localStorage.getItem('munea.planNext');
-    document.querySelectorAll('.tier .tier-tag.next').forEach(x => x.remove());
-    const meta = document.querySelector('.pc-meta');
-    if (meta) meta.textContent = nx === '取消'
-      ? '我的訂閱 · 已排定取消 · 高級權益用到 7/25'
-      : '我的訂閱 · 下次扣款 7/26 · 你和阿公兩位使用中' + (nx ? '（' + nx + ' 7/26 起）' : '');
-    if (nx && nx !== '取消' && tierList) {
-      const t = [...tierList.querySelectorAll('.tier')].find(x => x.dataset.t === nx);
-      if (t) {
-        const em = document.createElement('em');
-        em.className = 'tier-tag next';
-        em.textContent = '7/26 起';
-        const top = t.querySelector('.tier-top');
-        top.insertBefore(em, top.querySelector('i'));
-      }
+    const plan = (window.MMPLAN && window.MMPLAN.get()) || 'free';
+    const INFO = (window.MMPLAN && window.MMPLAN.INFO) || {};
+    const info = INFO[plan] || INFO.free || { name: '免費', price: 'NT$0', feats: [] };
+    const isFreeP = plan === 'free';
+    const pc = document.getElementById('planCurrent');
+    if (pc) {
+      pc.innerHTML = '<div class="pc-row"><b>' + info.name + '方案</b><span class="pc-price">' + info.price + (isFreeP ? '' : '<small>/月</small>') + '</span></div>'
+        + '<div class="pc-meta">' + (isFreeP ? '你正在用免費方案' : '我的訂閱 · 每月自動續訂') + '</div>'
+        + '<ul class="plan-feats">' + (info.feats || []).map(f => '<li>' + f + '</li>').join('') + '</ul>';
     }
+    if (tierList) {
+      [...tierList.querySelectorAll('.tier')].forEach(b => {
+        b.querySelectorAll('.tier-tag.now').forEach(x => x.remove());
+        const isNow = PLAN_KEYMAP[b.dataset.t] === plan;
+        b.classList.toggle('on', isNow);
+        if (isNow) { const em = document.createElement('em'); em.className = 'tier-tag now'; em.textContent = '使用中'; const top = b.querySelector('.tier-top'); if (top) top.insertBefore(em, top.querySelector('i')); }
+      });
+    }
+    const sn = document.getElementById('setPlanName'); if (sn) sn.textContent = info.name + '方案';
+    const ptsArea = document.getElementById('setPtsArea'); if (ptsArea) ptsArea.style.display = isFreeP ? 'none' : '';
+    const freeArea = document.getElementById('setFreeArea'); if (freeArea) freeArea.style.display = isFreeP ? '' : 'none';
+    const mBtn = document.getElementById('managePlanBtn'); if (mBtn) mBtn.textContent = isFreeP ? '升級方案' : '管理方案';
+    const tBtn = document.getElementById('topUpBtn'); if (tBtn) tBtn.style.display = isFreeP ? 'none' : '';
   }
   let _planPick = null;
   if (tierList) tierList.addEventListener('click', e => {
     const t = e.target.closest('.tier');
     if (!t || t.classList.contains('on')) return;
-    if (t.classList.contains('trial')) { if (window.MMPLAN) window.MMPLAN.set('free'); if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e4) {} } toast('已切回免費方案（示範用）'); return; }
     _planPick = t.dataset.t;
-    $('#planConfirmText').innerHTML = '7/26 起改為「<b>' + _planPick + '</b>」；這期高級的權益用到 7/25，一天都不少。';
+    $('#planConfirmText').innerHTML = '切換到「<b>' + _planPick + '</b>」方案？（示範用、馬上生效；接真付款後這裡會跳蘋果付款）';
     $('#planConfirm').style.display = '';
   });
   if ($('#planYes')) $('#planYes').addEventListener('click', () => {
     if (!_planPick) return;
-    const _km = {'免費試用':'free','基礎':'plus','高級':'premium','尊榮':'concierge'}; const _key = _km[_planPick] || 'free';
+    const _key = PLAN_KEYMAP[_planPick] || 'free';
     if (window.MMPLAN) window.MMPLAN.set(_key);
-    try { localStorage.setItem('munea.planNext', _planPick); } catch (e2) {}
     $('#planConfirm').style.display = 'none';
     renderPlanNext();
     if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e3) {} }
-    toast('已切換到「' + _planPick + '」（示範用，之後接真付款）');
+    toast('已切換到「' + _planPick + '」方案（示範用）');
     _planPick = null;
   });
   if ($('#planNo')) $('#planNo').addEventListener('click', () => { $('#planConfirm').style.display = 'none'; _planPick = null; });
   renderPlanNext();
   if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', () => {
     const b = $('#planCancelBtn');
-    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次確認：7/25 之後不再扣款'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '取消訂閱'; }, 6000); return; }
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次確認：取消後回到免費方案'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '取消訂閱'; }, 6000); return; }
     b.dataset.arm = ''; b.textContent = '取消訂閱';
-    try { localStorage.setItem('munea.planNext', '取消'); } catch (e2) {}
+    if (window.MMPLAN) window.MMPLAN.set('free');
     renderPlanNext();
-    toast('好，這期用完就不再扣款；記憶和資料都會留著，隨時能回來。');
+    if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e3) {} }
+    toast('好，已回到免費方案；記憶和資料都留著，隨時能再升級。');
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => $('#planModal').classList.add('show'));
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
