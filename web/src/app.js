@@ -670,7 +670,7 @@ const voiceProvider = {
   async sendText({ history, char }) {
     this.setState('thinking');
     try {
-      const response = await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile });
+      const response = await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile, userMood: (window.MM && window.MM.currentMood) ? window.MM.currentMood() : '' });
       if (response) setLatestAiContext(response.aiContext, 'chat response', response.relationshipState);
       return response;
     } finally {
@@ -714,6 +714,7 @@ const LiveVoice = {
     if (!url) return false;
     // 把使用者改過的名字帶給語音伺服器，讓 AI 知道自己現在叫什麼
     try { const nm = (typeof cname === 'function' ? cname() : ''); if (nm) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'name=' + encodeURIComponent(nm); } catch (e) {}
+    try { const _md = (window.MM && window.MM.currentMood) ? window.MM.currentMood() : ''; if (_md) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'mood=' + encodeURIComponent(_md); } catch (e) {}
     this.on = true;
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }

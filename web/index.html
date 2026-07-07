@@ -1089,7 +1089,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260707-relay"></script>
+  <script type="module" src="src/app.js?v=20260708-mood"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
@@ -1172,7 +1172,8 @@ window.MM = (function(){
   function weekHTML(){ var days=[],filled=0; for(var off=6;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; days.push({lab:WD[d.getDay()],i:i}); } var dots=days.map(function(x){ var col=(x.i==null)?'transparent':MOODS[x.i].c; var bd=(x.i==null)?'2px dashed #D2CCBE':'none'; return '<div style="text-align:center;flex:1"><div style="width:28px;height:28px;border-radius:50%;margin:0 auto;background:'+col+';border:'+bd+'"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">'+x.lab+'</div></div>'; }).join(''); var cap=filled?('這週記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>的心情，繼續保持。'):'每天記一點，這裡會慢慢長出你的心情軌跡。'; return '<div style="display:flex;justify-content:space-between;margin-bottom:12px">'+dots+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function monthHTML(){ var cells=[],filled=0; for(var off=29;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; cells.push(i); } var grid=cells.map(function(i){ var col=(i==null)?'transparent':MOODS[i].c; var bd=(i==null)?'1.5px dashed #DAD4C6':'none'; return '<div style="height:22px;border-radius:5px;background:'+col+';border:'+bd+'"></div>'; }).join(''); var cap=filled?('這個月記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>，心情地圖正在長出來。'):'每天記一點，一個月後這裡就是你的心情地圖。'; return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+grid+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function renderMood(mood){ var body=document.getElementById('moodBody'), chip=document.getElementById('moodChip'); if(!body) return; function paint(){ var b=document.getElementById('moodBody'); if(!b) return; if(mood==='today'){ if(window.__todayMoodHTML) b.innerHTML=window.__todayMoodHTML; decorate(); bindFaces(); } else if(mood==='week'){ b.innerHTML=weekHTML(); var c=document.getElementById('moodChip'); if(c) c.textContent='過去 7 天'; } else { b.innerHTML=monthHTML(); var c2=document.getElementById('moodChip'); if(c2) c2.textContent='過去 30 天'; } } paint(); pull().then(function(){ paint(); }); }
-  return { renderMood:renderMood, pull:pull, MOODS:MOODS };
+  function currentMood(){ try{ var i=dominant(keyOf(Date.now())); return (i==null)?'':((MOODS[i]&&MOODS[i].k)||''); }catch(e){ return ''; } }
+  return { renderMood:renderMood, pull:pull, MOODS:MOODS, currentMood:currentMood };
 })();
 </script>
 

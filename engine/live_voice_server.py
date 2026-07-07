@@ -69,12 +69,12 @@ def process_request(connection, request):
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 
 
-def system_instruction(char="寧寧", name=None):
+def system_instruction(char="寧寧", name=None, mood=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     base = c.get("persona", "") + eng.RED
     try:
-        ctx = server.build_reply_context([], char, {})
+        ctx = server.build_reply_context([], char, {"userMood": mood} if mood else {})
         base += server.reply_context_instruction(ctx)
     except Exception:
         pass
@@ -99,12 +99,12 @@ def system_instruction(char="寧寧", name=None):
     return base
 
 
-def live_config(char="寧寧", name=None):
+def live_config(char="寧寧", name=None, mood=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name),
+        system_instruction=system_instruction(char, name, mood),
         output_audio_transcription=types.AudioTranscriptionConfig(),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         speech_config=types.SpeechConfig(
@@ -127,12 +127,17 @@ async def handle(ws):
     char = "寧寧"
     # 從連線網址讀使用者改過的名字（?name=新名字），讓 AI 知道自己現在叫什麼
     name = None
+    mood = None
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
-        vals = parse_qs(urlparse(path).query).get("name")
+        _q = parse_qs(urlparse(path).query)
+        vals = _q.get("name")
         if vals:
             name = vals[0]
+        mvals = _q.get("mood")
+        if mvals:
+            mood = mvals[0]
     except Exception:
         pass
     _CID["n"] += 1
@@ -141,7 +146,7 @@ async def handle(ws):
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
     _diag(cid, "connected", name=name or "-")
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char, name)) as session:
+        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood)) as session:
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):

@@ -33,6 +33,7 @@ APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.pa
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
 CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(HERE, "credits_store.json")
 FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.path.join(HERE, "family_state_store.json")
+FAMILY_ACTIVITIES_PATH = os.environ.get("MUNEA_FAMILY_ACTIVITIES_PATH") or os.path.join(HERE, "family_activities.json")
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 AUDIT_EVENTS_STORE_PATH = os.environ.get("MUNEA_AUDIT_EVENTS_STORE_PATH") or os.path.join(HERE, "audit_events_store.json")
@@ -479,6 +480,128 @@ def family_state_response(data):
     except Exception:
         state = {}
     return {"ok": True, "state": {k: v.get("value") for k, v in state.items() if isinstance(v, dict)}}
+
+FAMILY_ACTIVITY_TYPES = {"walk", "quiz", "event", "vote", "draw", "custom"}
+FAMILY_ACTIVITY_STATUSES = {"draft", "active", "completed", "archived", "cancelled"}
+FAMILY_PARTICIPANT_STATUSES = {"invited", "accepted", "declined", "completed"}
+
+def normalize_family_activity(activity):
+    activity = activity or {}
+    activity_id = str(activity.get("id") or ("fam_act_" + uuid.uuid4().hex[:10]))
+    activity_type = activity.get("type") or activity.get("activityType") or activity.get("activity_type") or "custom"
+    status = activity.get("status") or "active"
+    participants = activity.get("participants") if isinstance(activity.get("participants"), list) else []
+    return {
+        "id": activity_id,
+        "familyGroupId": activity.get("familyGroupId") or activity.get("family_group_id") or "local-demo-family",
+        "ownerPersonId": activity.get("ownerPersonId") or activity.get("owner_person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "type": activity_type if activity_type in FAMILY_ACTIVITY_TYPES else "custom",
+        "title": str(activity.get("title") or "Family activity"),
+        "status": status if status in FAMILY_ACTIVITY_STATUSES else "active",
+        "startsAt": activity.get("startsAt") or activity.get("starts_at"),
+        "endsAt": activity.get("endsAt") or activity.get("ends_at"),
+        "payload": activity.get("payload") or {},
+        "result": activity.get("result") or {},
+        "participants": [normalize_family_activity_participant(p) for p in participants],
+        "createdAt": activity.get("createdAt") or activity.get("created_at") or utc_now(),
+        "updatedAt": activity.get("updatedAt") or activity.get("updated_at") or utc_now(),
+        "archivedAt": activity.get("archivedAt") or activity.get("archived_at"),
+    }
+
+
+def normalize_family_activity_participant(participant):
+    participant = participant or {}
+    status = participant.get("status") or "invited"
+    return {
+        "id": participant.get("id") or "",
+        "activityId": participant.get("activityId") or participant.get("family_activity_id"),
+        "personId": participant.get("personId") or participant.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "role": participant.get("role") or "participant",
+        "status": status if status in FAMILY_PARTICIPANT_STATUSES else "invited",
+        "contribution": participant.get("contribution") or {},
+        "response": participant.get("response") or {},
+        "createdAt": participant.get("createdAt") or participant.get("created_at"),
+        "updatedAt": participant.get("updatedAt") or participant.get("updated_at") or utc_now(),
+    }
+
+
+def load_family_activities(family_group_id=None, status=None, limit=100):
+    try:
+        remote_activities = data_backend().load_family_activities(family_group_id=family_group_id, status=status, limit=limit)
+        if remote_activities is not None:
+            return [normalize_family_activity(a) for a in remote_activities]
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load family activities from Supabase", e)
+    activities = read_json_file(FAMILY_ACTIVITIES_PATH, [])
+    if not isinstance(activities, list):
+        activities = []
+    activities = [normalize_family_activity(a) for a in activities]
+    if family_group_id:
+        activities = [a for a in activities if a.get("familyGroupId") == family_group_id]
+    if status:
+        activities = [a for a in activities if a.get("status") == status]
+    return activities[-limit:]
+
+
+def save_family_activity(activity):
+    activity = normalize_family_activity({**(activity or {}), "updatedAt": utc_now()})
+    try:
+        remote_activity = data_backend().save_family_activity(activity)
+        if remote_activity is not None:
+            return normalize_family_activity(remote_activity), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save family activity to Supabase", e)
+    activities = load_family_activities(limit=1000)
+    next_activities = [a for a in activities if a.get("id") != activity.get("id")]
+    next_activities.append(activity)
+    write_json_file(FAMILY_ACTIVITIES_PATH, next_activities[-1000:])
+    return activity, "json"
+
+
+def save_family_activity_participant(activity_id, participant):
+    participant = normalize_family_activity_participant({**(participant or {}), "activityId": activity_id, "updatedAt": utc_now()})
+    try:
+        remote_participant = data_backend().save_family_activity_participant(activity_id, participant)
+        if remote_participant is not None:
+            return normalize_family_activity_participant(remote_participant), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save family activity participant to Supabase", e)
+    activities = load_family_activities(limit=1000)
+    next_activities = []
+    for activity in activities:
+        if activity.get("id") == activity_id:
+            participants = [p for p in activity.get("participants", []) if p.get("personId") != participant.get("personId")]
+            participants.append(participant)
+            activity = {**activity, "participants": participants, "updatedAt": utc_now()}
+        next_activities.append(activity)
+    write_json_file(FAMILY_ACTIVITIES_PATH, next_activities[-1000:])
+    return participant, "json"
+
+
+def family_activity_response(data):
+    data = data or {}
+    action = data.get("action") or "list"
+    if action == "save":
+        activity, backend = save_family_activity(data.get("activity") or data)
+        return {"ok": True, "activity": activity, "backend": backend}
+    if action == "participant":
+        activity_id = data.get("activityId") or data.get("activity_id")
+        if not activity_id:
+            return {"ok": False, "error": "activity_id_required"}
+        participant, backend = save_family_activity_participant(activity_id, data.get("participant") or data)
+        return {"ok": True, "participant": participant, "backend": backend}
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id")
+    status = data.get("status")
+    limit = int(data.get("limit") or 100)
+    activities = load_family_activities(family_group_id=family_group_id, status=status, limit=limit)
+    return {"ok": True, "activities": activities}
+
 
 def wellbeing_log_response(data):
     """情緒球手動打卡：寫一筆『自我回報』心情訊號，與聊聊觀察同一本帳（wellbeing_signals）。"""
@@ -1042,6 +1165,7 @@ def conversation_text(history):
 def build_reply_context(history, char=DEFAULT_CHAR, data=None):
     data = data or {}
     text = conversation_text(history)
+    user_mood = (data or {}).get("userMood") or ""   # 情緒球：使用者當下記錄的心情
     active_profile = load_companion_profile()
     template_id = data.get("templateId") or active_profile.get("templateId")
     if not template_id or COMPANION_TEMPLATES.get(template_id, {}).get("backendChar") != char:
@@ -1077,6 +1201,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "livingProfile": load_living_profile(),
         "now": now_ctx,                                # 真時間（台灣、時段、語氣提示）
         "dailyBriefing": briefing,                     # 今日簡報（清晨備好的真天氣/空品/行程/暖聞）
+        "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
     }
 
 
@@ -1138,6 +1263,11 @@ def reply_context_instruction(context):
         f"- {item.get('domain')} needs {', '.join(item.get('requiredSources') or [])}"
         for item in perception.get("domains", [])
     ]
+    _um = context.get("userMood") or ""
+    mood_recorded_line = (
+        f"（使用者剛在情緒球親手記錄的心情是「{_um}」——把它當這輪陪伴的重要參考，自然貼著這個心情關心、調整語氣；"
+        "低落/焦慮/煩躁/生氣先接住情緒、放慢；開心/愉悅就一起有精神。別生硬地把『你現在心情是X』唸出來。）"
+    ) if _um else ""
     return "\n".join([
         "",
         relationship_line,
@@ -1149,6 +1279,7 @@ def reply_context_instruction(context):
         time_line,
         brief_line,
         "（聽出對方的語氣與心情、跟著調整：聽起來累或低落→放柔放慢、不催、多陪；開心→跟著亮起來。這是關心、不是診斷，絕不評斷對方的心理狀態。）",
+        mood_recorded_line,
         "（智慧鏡頭：可溫柔用台灣諺語、生活智慧、簡單的反思提問陪伴；對方有信仰才順著其信仰語彙。絕不捏造經文、不強加宗教、不說教；危機時安全規則優先於一切。）",
         living_line,
         "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
@@ -2821,6 +2952,8 @@ class H(BaseHTTPRequestHandler):
                     self._json(refresh_living_profile(data.get("personId") or data.get("person_id")))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
+            elif self.path == "/family/activity":
+                self._json(family_activity_response(data))
             elif self.path == "/wellbeing/trend":
                 self._json(wellbeing_trend_response(data))
             elif self.path == "/wellbeing/log":
