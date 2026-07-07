@@ -62,6 +62,12 @@
 - Extended Supabase doctor live mode with read-only table reachability checks for every expected table, including the 007 family cloud tables. This should make future "missing table" incidents report exact table names instead of producing vague fallback symptoms.
 - Live database apply is still pending: the repo now has the SQL and verification contract, but the staging/live Supabase project must run SQL 001-007 in order before `npm run supabase:doctor:live` can pass.
 
+## 2026-07-07 Update
+
+- Reduced GitHub Actions smoke notification noise: push runs now report smoke issues in the workflow summary while pull requests and manual workflow runs remain strict gates.
+- Fixed the current frontend ID smoke false alarm by allowing guarded optional selectors that remain in JavaScript while the active UI is being redesigned.
+- Upgraded `npm run supabase:doctor:live` so missing cloud tables map back to the repo SQL files that should be applied next. The current live project has base profile/billing/privacy tables, and the doctor now recommends applying SQL 003-007 to finish analytics, AI memory, persona, credits, and family cloud state foundations.
+
 ## 2026-06-29 Update
 
 - Added the first mobile microphone bridge path.
