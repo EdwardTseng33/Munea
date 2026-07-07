@@ -3112,14 +3112,14 @@ function init() {
   setTimeout(checkDueMeds, 1500);
   // 回診前一天：開 app 提醒一次
   (function visitEve() {
-    const v = loadVisit && loadVisit();
-    if (!v || !v.dateISO) return;
-    const t = new Date(); t.setDate(t.getDate() + 1);
-    if (v.dateISO === isoOf(t) && !sessionStorage.getItem('visitEveShown')) {
-      sessionStorage.setItem('visitEveShown', '1');
-      const _when = ((String(v.label).split('）')[1]) || '').trim();
-      setTimeout(() => toast('明天' + (_when ? _when + ' ' : '') + '回診，回診摘要我準備好了'), 1200);
-    }
+    const arr = (typeof loadVisits === 'function') ? loadVisits() : [];
+    const t = new Date(); t.setDate(t.getDate() + 1); const tIso = isoOf(t);
+    const v = arr.find(x => x && x.dateISO === tIso);
+    if (!v || sessionStorage.getItem('visitEveShown')) return;
+    sessionStorage.setItem('visitEveShown', '1');
+    let _when = ((String(v.label || '').split('）')[1]) || '').trim();
+    if (!_when && v.time && typeof fmtVisitTime === 'function') _when = fmtVisitTime(v.time);
+    setTimeout(() => toast('明天' + (_when ? _when + ' ' : '') + '回診，回診摘要我準備好了'), 1200);
   })();
 
   // 機智問答（示範題庫；正式版由寧寧出題、語音作答）
