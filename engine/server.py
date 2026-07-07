@@ -437,6 +437,58 @@ def family_state_response(data):
         return {"ok": True, "key": key}
     return {"ok": True, "state": {k: v.get("value") for k, v in state.items() if isinstance(v, dict)}}
 
+def wellbeing_log_response(data):
+    """情緒球手動打卡：寫一筆『自我回報』心情訊號，與聊聊觀察同一本帳（wellbeing_signals）。"""
+    data = data or {}
+    person_id = data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID
+    mood = data.get("mood") or "平靜"
+    try:
+        import perception_engine
+        d = perception_engine.now_context()["date"]
+    except Exception:
+        d = time.strftime("%Y-%m-%d")
+    signal = {
+        "id": "wb_" + uuid.uuid4().hex[:10],
+        "personId": person_id,
+        "date": d,
+        "modality": "manual",
+        "signalType": "mood",
+        "source": "self-report",
+        "mood": mood,
+        "moodKey": data.get("moodKey"),
+        "moodColor": data.get("moodColor") or {},
+        "level": data.get("level") if data.get("level") is not None else 3,
+        "levelLabel": mood,
+        "confidence": 1.0,
+        "isMedicalInference": False,
+        "createdAt": utc_now(),
+    }
+    append_wellbeing_signal(signal)
+    return {"ok": True, "signal": signal}
+
+
+def wellbeing_recent_response(data):
+    """情緒球讀取：近期原始心情訊號（含時間），前端用來算當前色與當天主色。"""
+    data = data or {}
+    person_id = data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID
+    limit = int(data.get("limit") or 400)
+    signals = load_wellbeing_signals(person_id, limit=limit)
+    out = []
+    for sig in signals:
+        if sig.get("signalType") and sig.get("signalType") != "mood":
+            continue
+        out.append({
+            "mood": sig.get("mood"),
+            "moodKey": sig.get("moodKey"),
+            "moodColor": sig.get("moodColor"),
+            "level": sig.get("level"),
+            "source": sig.get("source") or ("self-report" if sig.get("modality") == "manual" else "observation"),
+            "date": sig.get("date"),
+            "createdAt": sig.get("createdAt"),
+        })
+    return {"ok": True, "signals": out}
+
+
 def wellbeing_trend_response(data):
     """心情趨勢（餵 App 心情天氣卡）：近 N 天每日聚合＋個人基準線＋溫柔提示判斷。
     鐵律：給的是觀察與天氣等級，絕無 0-100 分數、絕無臨床字眼。"""
@@ -2728,6 +2780,10 @@ class H(BaseHTTPRequestHandler):
                 self._json(family_state_response(data))
             elif self.path == "/wellbeing/trend":
                 self._json(wellbeing_trend_response(data))
+            elif self.path == "/wellbeing/log":
+                self._json(wellbeing_log_response(data))
+            elif self.path == "/wellbeing/recent":
+                self._json(wellbeing_recent_response(data))
             elif self.path == "/proactive/opening":
                 self._json(proactive_opening_response(data))
             elif self.path == "/care-schedule":

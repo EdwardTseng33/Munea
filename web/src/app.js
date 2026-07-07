@@ -5,7 +5,7 @@
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
-const OVERLAYS = ['med', 'connect'];
+const OVERLAYS = ['med', 'connect', 'chat'];
 const AVATAR_ENGINE_MODES = Object.freeze({
   STATIC_CSS: 'static-css',
   TWO_D_VISEME: '2d-viseme',
@@ -786,6 +786,7 @@ function showView(id) {
     }
   }
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+  if (window.__muneaApplyUserAvatar) window.__muneaApplyUserAvatar();
   setTimeout(refreshHscrollHints, 60); // 分頁切換後重算「右邊還有」提示
   const overlay = OVERLAYS.includes(id);
   $('#tabBar').classList.toggle('hidden', overlay);
@@ -959,6 +960,7 @@ function setupAuthControls() {
     else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
     else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
     msg.textContent = mem + '——' + ask;
+    const _ih = $('#faceIdleHi'); if (_ih) _ih.textContent = mem + '——' + ask;
   }
 
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
@@ -972,7 +974,7 @@ function setupAuthControls() {
   else if (h >= 18 && h < 22) { k = '晚上好'; b = '今天過得怎麼樣？'; }
   else { k = '夜深了'; b = '早點休息，別撐太晚'; }
   if (kick) kick.textContent = k;
-  if (big) big.textContent = b;
+  if (big) big.textContent = k;
 })();
 
 function loadMeds() {
@@ -1036,7 +1038,7 @@ function renderPillTask() {
   for (const med of meds) {
     for (const raw of String(med.time).split('、')) {
       const slot = raw.trim();
-      if (slot) slots.push({ slot, name: med.name, key: slot + '|' + med.name });
+      if (slot) slots.push({ slot, name: med.name, key: slot + '|' + med.name, photo: med.photo || '' });
     }
   }
   slots.sort((a, b) => PILL_SLOT_ORDER.indexOf(a.slot) - PILL_SLOT_ORDER.indexOf(b.slot));
@@ -1052,6 +1054,8 @@ function renderPillTask() {
     sub.textContent = total + ' 次都記到了，讚';
     card.classList.add('done');
   }
+  const _pico = card.querySelector('.task-ico');
+  if (_pico) { const _pph = next && next.photo; if (_pph) { _pico.style.backgroundImage = 'url(' + _pph + ')'; _pico.style.backgroundSize = 'cover'; _pico.style.backgroundPosition = 'center'; _pico.classList.add('med-photo-ico'); _pico.onclick = ev => { ev.stopPropagation(); showMedPhoto(_pph, next.name); }; } else { _pico.style.backgroundImage = ''; _pico.classList.remove('med-photo-ico'); _pico.onclick = null; } }
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
 function renderMedList() { renderMedSlots(); }
@@ -1065,6 +1069,22 @@ function medSlotTime(rtKey, offset) {
   const total = (parts[0] * 60 + parts[1] + offset + 1440) % 1440;
   return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
 }
+function showMedPhoto(url, name) {
+  if (!url) return;
+  let lb = document.getElementById('medLightbox');
+  if (!lb) { lb = document.createElement('div'); lb.id = 'medLightbox'; lb.className = 'med-lightbox'; document.body.appendChild(lb); lb.addEventListener('click', ev => { if (ev.target === lb || ev.target.classList.contains('mlb-close')) lb.classList.remove('show'); }); }
+  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + (name || '') + '</div><button type="button" class="mlb-close">關閉</button></div>';
+  lb.classList.add('show');
+}
+function canvasToJpeg(cv) { let q = 0.82; let url = cv.toDataURL('image/jpeg', q); while (url.length > 180000 && q > 0.4) { q -= 0.16; url = cv.toDataURL('image/jpeg', q); } return url; }
+function looksLikeImage(file) { return !!file && (/^image\//.test(file.type || '') || /\.(jpe?g|png|heic|heif|webp|gif|bmp)$/i.test(file.name || '')); }
+function resizeSquare(file, cb, onErr) {
+  if (!looksLikeImage(file)) { if (onErr) onErr(); return; }
+  const r = new FileReader();
+  r.onerror = () => { if (onErr) onErr(); };
+  r.onload = () => { const img = new Image(); img.onload = () => { try { const S = 512; const side = Math.min(img.width, img.height); const sx = (img.width - side) / 2, sy = (img.height - side) / 2; const cv = document.createElement('canvas'); cv.width = S; cv.height = S; cv.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, S, S); cb(canvasToJpeg(cv)); } catch (e) { if (onErr) onErr(); } }; img.onerror = () => { if (onErr) onErr(); }; img.src = r.result; };
+  r.readAsDataURL(file);
+}
 function renderMedSlots() {
   const box = $('#medSlots');
   if (!box) return;
@@ -1073,11 +1093,11 @@ function renderMedSlots() {
     const slot = def[0], k = def[1], off = def[2];
     const inSlot = meds.filter(m => String(m.time).split('、').map(x => x.trim()).includes(slot));
     const rows = inSlot.length
-      ? inSlot.map(m => '<div class="ms-med"><b>' + m.name + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')
+      ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + m.name + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')
       : '<div class="ms-empty">這個時段沒有藥</div>';
     return '<div class="ms-group"><div class="ms-head"><b>' + slot + '</b>' +
       '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
-      '<b class="ms-time">' + medSlotTime(k, off) + '</b>' +
+      '<input type="time" class="ms-time" data-k="' + k + '" data-off="' + off + '" value="' + medSlotTime(k, off) + '" />' +
       '<button type="button" class="ms-tbtn" data-k="' + k + '" data-m="15">＋</button></span>' +
       '<span class="ms-count">' + (inSlot.length ? inSlot.length + ' 種' : '') + '</span></div>' + rows + '</div>';
   }).join('');
@@ -1182,29 +1202,33 @@ const CARE_ICONS = {
   medal: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>'
 };
 let _careIdx = 0, _careTimer = null;
+// 留意卡文案規則（Edward 7/6）：標題 ≤12 字（一行放得下）、副標最多兩行（約 26 字內）完整顯示
+function plain(s) { return String(s == null ? '' : s).replace(/<[^>]+>/g, ''); }
 function buildCareItems() {
   const items = [];
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
   const relayMsg = feed.find(x => String(x).includes('帶話'));
-  if (relayMsg) items.push({ k: 'family', tone: '', icon: 'msg', html: relayMsg, sub: '可以請寧寧幫你回話', btn: '回話' });
-  else items.push({ k: 'family', tone: '', icon: 'msg', html: feed[0] || '<b>美華</b>托寧寧帶話：週末回去看你', sub: '家人的話，寧寧幫你收著', btn: '去看看' });
+  const familyItem = relayMsg
+    ? { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: plain(relayMsg), btn: '回話' }
+    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，寧寧都幫你收著了', btn: '去看看' };
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
   const act = acts.find(a => a && !a.done && !a.archived);
   if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
     const goal = +(act.steps || act.goal || 8000);
     const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的走路活動進行中', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步達標，加把勁' : '目標達成了，去看看大家', btn: '去看看' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: (act.owner || '家人') + '發起的走路活動', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績', btn: '去看看' });
   } else if (act) {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>' + (act.owner || '家人') + '</b>發起的「' + (act.title || '家庭活動') + '」進行中', sub: '看看大家的進度', btn: '去看看' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: (act.owner || '家人') + '發起了活動', sub: '「' + (act.title || '家庭活動') + '」進行中，看看大家的進度', btn: '去看看' });
   } else {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', html: '<b>外婆</b>發起的走路活動進行中', sub: '還差 5,000 步達標，飯後走一圈剛好', btn: '去看看' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: '外婆發起的走路活動', sub: '還差 5,000 步就達標，今晚一起走走？', btn: '去看看' });
   }
+  items.push(familyItem);
   let v = null;
   try { v = JSON.parse(localStorage.getItem('munea.visit') || 'null'); } catch (e) {}
-  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', html: (v.label || '回診') + '快到了（' + String(v.dateISO).slice(5).replace('-', '/') + '）', sub: '想問醫生的，寧寧都幫你記著', btn: '看安排' });
-  items.push({ k: 'status', tone: 'gold', icon: 'medal', html: streakLine(Math.max(1, new Date().getDate() - 1)), sub: '家人都看得到你的努力' });
+  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', title: (v.label || '回診') + '快到了', sub: String(v.dateISO).slice(5).replace('-', '/') + ' · 想問醫生的，寧寧都幫你記著', btn: '看安排' });
+  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   return items;
 }
 function renderCareCarousel() {
@@ -1215,7 +1239,7 @@ function renderCareCarousel() {
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
-    '<div class="care-txt"><p>' + it.html + '</p></div>' +
+    '<div class="care-txt"><p>' + (String(it.title).length > 12 ? String(it.title).slice(0, 12) : it.title) + '</p>' + (it.sub ? '<small>' + it.sub + '</small>' : '') + '</div>' +
     (it.btn ? '<button type="button" class="care-btn" data-go="' + it.k + '">' + it.btn + '</button>' : '') +
     '</div>').join('');
   dots.innerHTML = items.map((_, i) => '<i class="' + (i === 0 ? 'on' : '') + '"></i>').join('');
@@ -1487,6 +1511,7 @@ function init() {
     const mask = sheet && sheet.closest('.modal-mask');
     if (mask) { showView('settings'); mask.classList.add('show'); }
   }
+  if ($('#chatExit')) $('#chatExit').addEventListener('click', () => showView('home'));
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     if (!callConnected) { connectCall(); }
@@ -1549,6 +1574,7 @@ function init() {
     let total = (h * 60 + m + mins + 1440) % 1440;
     return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
   }
+  let _pfPendingAvatar = '';
   const PF_DEF = { name: '陳秀英', nick: '阿嬤', birth: '1954 年 3 月', city: '台北市' };
   function loadPersonProfile() { try { return Object.assign({}, PF_DEF, JSON.parse(localStorage.getItem('munea.personProfile') || '{}')); } catch (e) { return Object.assign({}, PF_DEF); } }
   function fillPersonProfile() {
@@ -1569,6 +1595,8 @@ function init() {
     if (ys) ys.value = mt ? mt[1] + mt[2] : '1954';
     if (ms) ms.value = mt ? String(+mt[3]) : '3';
     if ($('#pfCity')) $('#pfCity').value = p.city;
+    _pfPendingAvatar = p.avatar || '';
+    if (typeof renderPfAvatar === 'function') renderPfAvatar(p.avatar, p.nick);
   }
   if ($('#pfSaveBtn')) $('#pfSaveBtn').addEventListener('click', () => {
     const p = {
@@ -1576,19 +1604,91 @@ function init() {
       nick: ($('#pfNick').value || '').trim() || PF_DEF.nick,
       birth: ($('#pfBirthY') && $('#pfBirthY').value ? $('#pfBirthY').value + ' 年 ' + $('#pfBirthM').value + ' 月' : PF_DEF.birth),
       city: ($('#pfCity').value || '').trim() || PF_DEF.city,
+      avatar: _pfPendingAvatar,
     };
     try { localStorage.setItem('munea.personProfile', JSON.stringify(p)); } catch (e) {}
+    if (typeof applyUserAvatar === 'function') applyUserAvatar();
     $('#profileModal').classList.remove('show');
     toast('存好了，' + p.name + '，資料我記著。');
   });
   if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
   if ($('#profileClose')) $('#profileClose').addEventListener('click', () => $('#profileModal').classList.remove('show'));
   if ($('#profileModal')) $('#profileModal').addEventListener('click', e => { if (e.target === $('#profileModal')) $('#profileModal').classList.remove('show'); });
+  function renderPfAvatar(av, nick) {
+    const box = $('#pfAvatar'); if (!box) return;
+    if (av) { box.style.backgroundImage = 'url(' + av + ')'; box.textContent = ''; if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = false; }
+    else { box.style.backgroundImage = ''; box.textContent = (nick || '阿嬤').slice(0, 1); if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = true; }
+  }
+  function resizeAvatar(file, cb, onErr) {
+    if (!looksLikeImage(file)) { if (onErr) onErr(); return; }
+    const r = new FileReader();
+    r.onerror = () => { if (onErr) onErr(); };
+    r.onload = () => { const img = new Image(); img.onload = () => { try { const max = 320; let w = img.width, h = img.height; const sc = Math.min(max / w, max / h, 1); const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w * sc)); cv.height = Math.max(1, Math.round(h * sc)); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); cb(canvasToJpeg(cv)); } catch (e) { if (onErr) onErr(); } }; img.onerror = () => { if (onErr) onErr(); }; img.src = r.result; };
+    r.readAsDataURL(file);
+  }
+  function applyUserAvatar() {
+    let av = ''; try { av = (JSON.parse(localStorage.getItem('munea.personProfile') || '{}')).avatar || ''; } catch (e) {}
+    document.querySelectorAll('.init-ava.p-ama').forEach(el => {
+      if (av) { el.style.backgroundImage = 'url(' + av + ')'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.style.color = 'transparent'; }
+      else { el.style.backgroundImage = ''; el.style.color = ''; }
+    });
+  }
+  window.__muneaApplyUserAvatar = applyUserAvatar;
+  if ($('#pfAvatarBtn')) $('#pfAvatarBtn').addEventListener('click', () => { if ($('#pfAvatarFile')) $('#pfAvatarFile').click(); });
+  if ($('#pfAvatarFile')) $('#pfAvatarFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#pfAvatar'); if (box) box.classList.add('processing'); resizeAvatar(f, dataUrl => { if (box) box.classList.remove('processing'); _pfPendingAvatar = dataUrl; renderPfAvatar(dataUrl); }, () => { if (box) box.classList.remove('processing'); toast('這張照片讀不到，換一張相簿裡的照片試試'); }); });
+  if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '阿嬤'); });
+  applyUserAvatar();
   // 家庭照護圈
-  if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => $('#famCircleModal').classList.add('show'));
+  const CIRCLE_LIMITS = { free: 2, plus: 4, premium: 8, concierge: 12 };
+  const CIRCLE_PLAN_LABEL = { free: '免費版', plus: 'Plus', premium: 'Premium', concierge: 'Concierge' };
+  function circlePlan() { try { return localStorage.getItem('munea.plan') || 'plus'; } catch (e) { return 'plus'; } }
+  const CIRCLE_DEFAULT = [
+    { name: '陳秀英', init: '嬤', tint: 'p-ama', role: 'recipient' },
+    { name: '美華', init: '華', tint: 'p-mei', role: 'payer' },
+    { name: '志明', init: '明', tint: 'p-zhi', role: 'member' },
+    { name: '小寶', init: '寶', tint: 'p-bao', role: 'member' }
+  ];
+  function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : CIRCLE_DEFAULT.slice(); } catch (e) { return CIRCLE_DEFAULT.slice(); } }
+  function saveCircle(a2) { try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {} }
+  const ROLE_LABEL = { recipient: '照顧對象', payer: '發起人 · 付款人', member: '成員' };
+  function renderFcRoster() {
+    const box = $('#fcRoster'); if (!box) return;
+    const members = loadCircle(); const plan = circlePlan(); const limit = CIRCLE_LIMITS[plan] || 4;
+    const cnt = $('#fcCount'); if (cnt) cnt.textContent = members.length + '/' + limit + ' · ' + CIRCLE_PLAN_LABEL[plan];
+    box.innerHTML = members.map(m => {
+      const roleCls = m.role === 'payer' ? 'fc-role pay' : 'fc-role';
+      const action = (m.role === 'member') ? '<button type="button" class="fc-remove" data-name="' + m.name + '">移除</button>' : '<span class="' + roleCls + '">' + ROLE_LABEL[m.role] + '</span>';
+      return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + (m.role === 'recipient' ? '（本人）' : '') + '</b>' + action + '</div>';
+    }).join('');
+    if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
+    const inv = $('#fcInviteBtn');
+    if (inv) { const full = members.length >= limit; inv.textContent = full ? ('已達 ' + CIRCLE_PLAN_LABEL[plan] + ' 上限 · 升級可加更多') : '邀請家人加入'; inv.dataset.full = full ? '1' : ''; }
+    const note = $('#invLimitNote'); if (note) note.textContent = '目前 ' + CIRCLE_PLAN_LABEL[plan] + ' 方案 · 照護圈最多 ' + limit + ' 人';
+  }
+  if ($('#fcRoster')) $('#fcRoster').addEventListener('click', e => {
+    const rm = e.target.closest('.fc-remove'); if (!rm) return;
+    if (!window.confirm('把「' + rm.dataset.name + '」移出照護圈？之後他就看不到阿嬤的健康摘要。')) return;
+    saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
+    renderFcRoster(); toast('已把 ' + rm.dataset.name + ' 移出照護圈。');
+  });
+  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
+  if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
+  if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
+  if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', () => {
+    const code = ($('#joinCodeInput').value || '').trim();
+    if (!code || code.length < 4) { toast('把家人給你的邀請碼打進去（例：MUNEA-2847）'); return; }
+    $('#joinCircleModal').classList.remove('show'); $('#joinCodeInput').value = '';
+    toast('邀請碼送出了，對方確認後你就進圈囉。');
+  });
+  if ($('#fcLeaveBtn')) $('#fcLeaveBtn').addEventListener('click', () => {
+    if (!window.confirm('退出這個照護圈？退出後你就看不到對方的健康摘要與關懷摘要了。')) return;
+    $('#famCircleModal').classList.remove('show');
+    toast('已退出這個照護圈。想再回來，請對方重新邀請你。');
+  });
+  if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', () => { $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); });
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); });
   const INV_LINK = 'https://munea.net/join?c=MUNEA-2847';
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
   if ($('#inviteCloseX')) $('#inviteCloseX').addEventListener('click', () => $('#inviteFamModal').classList.remove('show'));
@@ -1762,6 +1862,8 @@ function init() {
   chipToggle('#medTimeChips', false);
   chipToggle('#medDayChips', true);
   if ($('#medSlots')) $('#medSlots').addEventListener('click', e => {
+    const thumb = e.target.closest('.ms-thumb');
+    if (thumb) { const _m = loadMeds().find(x => x.name === thumb.dataset.name); if (_m && _m.photo) showMedPhoto(_m.photo, _m.name); return; }
     const tb = e.target.closest('.ms-tbtn');
     if (tb) {
       const rt = loadRoutine();
@@ -1784,6 +1886,19 @@ function init() {
       toast('拿掉了，這個時段不再提醒這種藥。');
     }
   });
+  if ($('#medSlots')) $('#medSlots').addEventListener('change', e => {
+    const ti = e.target.closest('input.ms-time');
+    if (ti && ti.value) {
+      const rt = loadRoutine();
+      rt[ti.dataset.k] = shiftTime(ti.value, -(+ti.dataset.off || 0));
+      saveRoutine(rt);
+      renderMedSlots();
+      updateMedCount();
+    }
+  });
+  let _medPendingPhoto = '';
+  if ($('#medPhotoBtn')) $('#medPhotoBtn').addEventListener('click', () => { if ($('#medPhotoFile')) $('#medPhotoFile').click(); });
+  if ($('#medPhotoFile')) $('#medPhotoFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#medPhotoBox'); if (box) box.classList.add('processing'); resizeSquare(f, url => { if (box) box.classList.remove('processing'); _medPendingPhoto = url; if (box) { box.style.backgroundImage = 'url(' + url + ')'; box.classList.add('has'); } }, () => { if (box) box.classList.remove('processing'); toast('這張照片讀不到，換一張相簿裡的照片試試'); }); });
   if ($('#medAddBtn')) $('#medAddBtn').addEventListener('click', () => {
     const name = $('#medName').value.trim();
     const times = [...document.querySelectorAll('#medTimeChips .mchip.on')].map(b => b.dataset.t);
@@ -1791,9 +1906,10 @@ function init() {
     if (!name) { toast('先寫藥名（照藥袋抄就好）'); return; }
     if (!times.length) { toast('點一下什麼時候吃（可以選好幾個）'); return; }
     const meds = loadMeds();
-    meds.push({ name, time: times.join('、'), days, by: '美華' });
+    meds.push({ name, time: times.join('、'), days, by: '美華', photo: _medPendingPhoto });
     try { localStorage.setItem('munea.meds', JSON.stringify(meds)); syncPush('meds', meds); } catch (e) {}
     $('#medName').value = '';
+    _medPendingPhoto = ''; { const _b = $('#medPhotoBox'); if (_b) { _b.style.backgroundImage = ''; _b.classList.remove('has'); } }
     document.querySelectorAll('#medTimeChips .mchip.on').forEach(x => x.classList.remove('on'));
     renderMedList();
     updateMedCount();
