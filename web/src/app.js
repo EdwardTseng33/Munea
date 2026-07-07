@@ -693,6 +693,87 @@ const voiceProvider = {
   },
 };
 window.MuneaVoiceProvider = voiceProvider;
+
+// ===== 真即時語音（Gemini 3.1 Live）：MuneaVoiceProvider 的 live 模式 =====
+// 架構：前端這支 → WebSocket 即時語音橋（engine/live_voice_server.py）。麥克風即時串流上去、聲音即時播回來、可打斷。
+// 連哪裡：localStorage['munea.liveVoiceUrl']，沒設就用下面 DEV 預設（同 Wi-Fi 指到 Mac 引擎；正式版改 hosted 後端）。
+const LIVE_VOICE_URL_DEFAULT = 'ws://192.168.0.107:8201';
+function getLiveVoiceUrl() {
+  try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
+  return LIVE_VOICE_URL_DEFAULT;
+}
+const LiveVoice = {
+  ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
+  _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
+  _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
+  _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
+  _toListening() { clearTimeout(this._speakTimer); this.speaking = false; if (this.onListen) this.onListen(); },
+  async start(onListen, onSpeak, onDrop) {
+    const url = getLiveVoiceUrl();
+    if (!url) return false;
+    this.on = true;
+    this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
+    try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
+    catch (e) { this.on = false; return false; }
+    return await new Promise(resolve => {
+      let settled = false;
+      const done = ok => { if (!settled) { settled = true; resolve(ok); } };
+      this.ws.onopen = async () => {
+        this.playCtx = new AudioContext({ sampleRate: 24000 }); this.playHead = this.playCtx.currentTime;
+        try { this.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+        catch (e) { setCallHint('拿不到麥克風，請到設定允許'); done(true); return; }
+        this.ac = new AudioContext();
+        const src = this.ac.createMediaStreamSource(this.mic);
+        this.proc = this.ac.createScriptProcessor(4096, 1, 1);
+        src.connect(this.proc); this.proc.connect(this.ac.destination);
+        // 半雙工：她說話時暫停送麥克風→治好手機喇叭被麥克風收回去的回音，讓她每一輪都回你
+        this.proc.onaudioprocess = e => {
+          if (this.speaking) return;
+          if (!this.ws || this.ws.readyState !== 1) return;
+          const buf = this._f2i(this._down(e.inputBuffer.getChannelData(0), this.ac.sampleRate, 16000)).buffer;
+          this.ws.send(buf);
+        };
+        this._toListening();     // 一接通就是「在聽你說」
+        done(true);
+      };
+      this.ws.onmessage = ev => {
+        if (typeof ev.data === 'string') {
+          try {
+            const o = JSON.parse(ev.data);
+            if (o.type === 'interrupted' && this.playCtx) this.playHead = this.playCtx.currentTime;
+            if (o.type === 'turn_complete') this._toListening();   // 她講完 → 換你講、麥克風重開
+          } catch (e) {}
+          return;
+        }
+        if (!this.playCtx) return;
+        this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
+        const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
+        for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
+        const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
+        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this.playCtx.destination);
+        const now = this.playCtx.currentTime;
+        if (this.playHead < now + 0.02) this.playHead = now + 0.18;
+        s.start(this.playHead); this.playHead += b.duration;
+        // 安全網：她若 900ms 沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）
+        clearTimeout(this._speakTimer);
+        this._speakTimer = setTimeout(() => this._toListening(), 900);
+      };
+      this.ws.onclose = () => { const wasOpen = this.on; done(false); this.stop(); if (wasOpen && onDrop) onDrop(); };
+      this.ws.onerror = () => { done(false); };
+    });
+  },
+  stop() {
+    this.on = false;
+    try { if (this.proc) this.proc.disconnect(); } catch (e) {}
+    try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
+    try { if (this.ws) this.ws.close(); } catch (e) {}
+    try { if (this.ac) this.ac.close(); } catch (e) {}
+    try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
+    this.ws = this.ac = this.mic = this.proc = this.playCtx = null;
+  },
+};
+window.MuneaLiveVoice = LiveVoice;
+
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
 function setCallToggle(connected) {
@@ -1153,7 +1234,18 @@ function startCallTimer() {
 }
 function stopCallTimer() {
   _lowWarned = false; _zeroSaid = false; _brainDegraded = false; if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
+// 字幕（逐字稿）預設「關」——依產品規劃，聊聊像視訊通話、只留必要狀態；字幕是給重聽長輩的可選輔助。
+let captionsOn = false;
+try { captionsOn = localStorage.getItem('munea.captions') === '1'; } catch (e) {}
+function applyCaptionState() {
+  const b = document.getElementById('captionToggle');
+  const chat = document.getElementById('chat');
+  if (b) { b.classList.toggle('off', !captionsOn); b.setAttribute('aria-pressed', captionsOn ? 'true' : 'false'); }
+  if (chat) chat.classList.toggle('captions-on', captionsOn);
+  if (!captionsOn) { const box = document.querySelector('.face-caption-box'); if (box) box.remove(); }
+}
 function setCaption(text, hint) {
+  if (!captionsOn) return;                 // 字幕關閉時不顯示逐字稿
   let box = document.querySelector('.face-caption-box');
   if (!box) {
     box = document.createElement('div');
@@ -1283,6 +1375,114 @@ function toast(text) {
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+// 版本顯示 + 「版本更新」彈窗（讀 window.MuneaVersion 這個單一真相）
+function applyAppVersion() {
+  const V = window.MuneaVersion; if (!V) return;
+  const n = document.getElementById('verRowNum'); if (n) n.textContent = V.current;
+}
+function openVersionSheet() {
+  const V = window.MuneaVersion || { current: '—', channel: '', changelog: [] };
+  const cur = document.getElementById('verCurrent'); if (cur) cur.textContent = V.current;
+  const ch = document.getElementById('verChannel'); if (ch) ch.textContent = V.channel || '';
+  const list = document.getElementById('changelogList');
+  if (list) {
+    list.innerHTML = (V.changelog || []).map(rel =>
+      '<div class="cl-rel"><div class="cl-head"><b>v' + rel.version + '</b>' +
+      (rel.title ? '<span class="cl-title">' + rel.title + '</span>' : '') +
+      '<span class="cl-date">' + (rel.date || '') + '</span></div><ul>' +
+      (rel.items || []).map(i => '<li>' + i + '</li>').join('') + '</ul></div>'
+    ).join('');
+  }
+  const m = document.getElementById('versionSheet'); if (m) m.classList.add('show');
+}
+
+// ===== 健康頁：分層排版（今日總結＋想提醒你＋都很穩）· 對應「健康照護-數據告警AI提醒-設計」=====
+// [ENGINE] 正式版：值/燈號由守護腦判定＋真 Apple 健康帶入；read 由管家腦生成。
+const METRIC_ICON = {
+  bp:     '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/>',
+  hr:     '<path d="M3 12h4l2-6 4 12 2-6h6"/>',
+  spo2:   '<path d="M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/>',
+  steady: '<path d="M13 4a2 2 0 1 0 0 0M8 21l2-6 3 2 1 4M14 11l-3-2-3 2-2 4M15 13l3 1"/>',
+  sleep:  '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+  act:    '<path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/>',
+  med:    '<path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>',
+};
+const HEALTH_METRICS = {
+  bp:     { name: '血壓', val: '128', unit: '/82', status: 'ok',   read: '這週血壓都很穩，維持得很好。', trend: [126,130,128,124,128,127,128] },
+  hr:     { name: '心率', val: '72',  unit: ' 次', status: 'ok',   read: '心跳平穩，沒有不規則的狀況。', trend: [70,72,71,73,72,70,72] },
+  spo2:   { name: '血氧', val: '97',  unit: '%',   status: 'ok',   read: '血氧很足，呼吸順順的。', trend: [97,98,97,96,97,97,97] },
+  steady: { name: '走路穩定度', val: '偏低', unit: '', status: 'warn', read: '這週走路穩定度有點降，走慢些、扶著點。要不要我提醒美華多留意？', trend: [3,3,2,2,2,2,2] },
+  sleep:  { name: '睡眠', val: '7.5', unit: ' 時', status: 'ok',   read: '睡得不錯，這週平均 7.4 小時。', trend: [7.2,7.5,6.8,7.6,7.4,7.5,7.5] },
+  act:    { name: '活動', val: '20',  unit: ' 分', status: 'ok',   read: '今天有出門走走，很好；回來記得喝口水。', trend: [12,18,9,20,15,22,20] },
+  med:    { name: '用藥', val: '2',   unit: '/3',  status: 'warn', read: '今天還剩 1 次沒吃，到時間我會叫你。', trend: [1,1,1,0,1,1,1] },
+};
+const METRIC_ORDER = ['bp', 'hr', 'spo2', 'steady', 'sleep', 'act', 'med'];
+const STATUS_WORD = { ok: '穩', warn: '注意', alert: '要小心' };
+function metricSvg(key) { return '<svg class="ic" viewBox="0 0 24 24">' + (METRIC_ICON[key] || '') + '</svg>'; }
+function renderHealthDashboard() {
+  const dots = document.getElementById('heroDots'), focus = document.getElementById('focusList'), calm = document.getElementById('calmStrip');
+  if (!dots || !focus || !calm) return;
+  const warns = METRIC_ORDER.filter(k => HEALTH_METRICS[k].status !== 'ok');
+  const oks = METRIC_ORDER.filter(k => HEALTH_METRICS[k].status === 'ok');
+  // 寧寧的話隨時段變（招牌記憶點：像記得你的時間）
+  const head = document.getElementById('thHead'), sub = document.getElementById('thSub');
+  if (head && sub) {
+    const h = new Date().getHours();
+    const part = h < 11 ? '早安，昨晚睡得不錯。' : h < 17 ? '午後了，記得起來走走。' : '今天辛苦了，早點歇著。';
+    if (!warns.length) { head.textContent = '今天一切都好'; sub.textContent = part + '每一項我都看著，放心。'; }
+    else { head.textContent = '今天大致都穩'; sub.textContent = part + '有 ' + warns.length + ' 件事我幫你盯著。'; }
+  }
+  // HERO 燈號：短橫條（綠=穩會呼吸、珊瑚=注意恆亮）
+  dots.innerHTML = METRIC_ORDER.map(k => '<i class="' + HEALTH_METRICS[k].status + '"></i>').join('');
+  // 想請你留意：大卡
+  focus.innerHTML = warns.map(k => {
+    const m = HEALTH_METRICS[k];
+    return '<button class="focus-card ' + m.status + '" type="button" data-metric="' + k + '">' +
+      '<span class="fc-ico">' + metricSvg(k) + '</span>' +
+      '<div class="fc-body"><div class="fc-top"><b>' + m.name + '</b><span class="fc-val">' + m.val + '<small>' + m.unit + '</small></span></div>' +
+      '<div class="fc-read">' + m.read + '</div></div>' +
+      '<span class="fc-chev"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>';
+  }).join('');
+  // 其他都很穩：安靜清單列
+  calm.innerHTML = oks.map(k => {
+    const m = HEALTH_METRICS[k];
+    return '<button class="calm-row" type="button" data-metric="' + k + '">' +
+      '<span class="cr-ico">' + metricSvg(k) + '</span>' +
+      '<span class="cr-name">' + m.name + '</span>' +
+      '<span class="cr-val">' + m.val + '<small>' + m.unit + '</small></span>' +
+      '<span class="cr-dot"></span></button>';
+  }).join('');
+}
+function renderMetricDetail(key) {
+  const box = document.getElementById('metricDetail');
+  if (!box) return;
+  document.querySelectorAll('#status [data-metric]').forEach(t => t.classList.toggle('open', t.dataset.metric === key));
+  if (box.dataset.open === key) { box.hidden = true; box.dataset.open = ''; document.querySelectorAll('#status [data-metric]').forEach(t => t.classList.remove('open')); return; }
+  const m = HEALTH_METRICS[key];
+  if (!m) { box.hidden = true; return; }
+  const max = Math.max(...m.trend), min = Math.min(...m.trend);
+  const bars = m.trend.map((v, i) => {
+    const h = max === min ? 60 : 22 + Math.round((v - min) / (max - min) * 58);
+    return `<i style="height:${h}%" class="${i === m.trend.length - 1 ? 'now' : ''}"></i>`;
+  }).join('');
+  const days = ['一', '二', '三', '四', '五', '六', '日'];
+  box.innerHTML =
+    `<div class="md-head"><b>${m.name} · 這週</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]}</span></div>` +
+    `<div class="md-chart">${bars}</div>` +
+    `<div class="md-days">${days.map(d => '<span>' + d + '</span>').join('')}</div>` +
+    `<div class="md-read"><span class="md-face"><img src="avatars/nening-face.png" alt=""></span><span>${m.read}</span></div>`;
+  box.hidden = false; box.dataset.open = key;
+  try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+}
+function initHealthDashboard() {
+  renderHealthDashboard();
+  const status = document.getElementById('status');
+  if (status) status.addEventListener('click', e => {
+    const el = e.target.closest('.focus-card[data-metric], .calm-row[data-metric]');
+    if (el) renderMetricDetail(el.dataset.metric);
+  });
+}
+
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function cname() {
   try { return (companionDisplayName || '寧寧').trim() || '寧寧'; } catch (e) { return '寧寧'; }
@@ -1292,16 +1492,9 @@ function hint(text) {
   toast(text);
 }
 function speakChat(text) {
-  // 只給聊聊頁用：正式版是寧寧本人的聲音，這裡是開發用的代打
+  // 寧寧只用她本人的聲音（真語音 playB64）。沒有真聲音時，絕不用系統的機械聲代打——
+  // 改用一則輕量文字提示，不破壞「是寧寧在講話」的感覺。
   toast(text);
-  if (!('speechSynthesis' in window)) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-TW'; u.rate = 0.92;
-  const v = speechSynthesis.getVoices();
-  const zh = v.find(x => /zh[-_]?TW/i.test(x.lang)) || v.find(x => /zh/i.test(x.lang));
-  if (zh) u.voice = zh;
-  speechSynthesis.speak(u);
 }
 
 // 今天一起完成：打勾 → 寧寧鼓勵（不是賺幣，是被看見）
@@ -1487,6 +1680,34 @@ function connectCall() {
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
   const box = document.querySelector('.face-caption-box');
   if (box) box.style.display = capOff ? 'none' : '';
+  // 真即時語音（Gemini 3.1 Live）：麥克風即時串流、寧寧真聲音即時回、可打斷
+  if (getLiveVoiceUrl()) {
+    chatOpened = true;
+    activeChatSessionId = makeSessionId('voice');
+    activeChatStartedAt = Date.now();
+    activeChatTurnCount = 0;
+    setFaceState('idle');
+    setCallHint('接通中…');
+    trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
+    const chatEl = document.getElementById('chat');
+    const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); };   // 收音
+    const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); };            // 講話
+    // 斷線自動接回：治「她答完一次、線就掉、不再回」——掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
+    let _reconnects = 0;
+    const onDrop = () => {
+      if (!callConnected) return;                         // 使用者已掛斷 → 不重連
+      if (_reconnects++ > 6) {                            // 接不回了 → 退簡單陪聊，不掛斷
+        setCallHint('真語音不太穩，先用簡單方式陪你');
+        openVoiceSession();
+        setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
+        return;
+      }
+      setCallHint('接回來中…');
+      setTimeout(() => { if (callConnected) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
+    };
+    LiveVoice.start(onListen, onSpeak, onDrop);
+    return;
+  }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
   openVoiceSession();
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
@@ -1515,15 +1736,15 @@ function init() {
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     if (!callConnected) { connectCall(); }
-    else { completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
+    else { LiveVoice.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
   });
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
-    const b = $('#captionToggle');
-    const box = document.querySelector('.face-caption-box');
-    const off = b.classList.toggle('off');
-    if (box) box.style.display = off ? 'none' : '';
-    toast(off ? '字幕已關閉' : '字幕已開啟');
+    captionsOn = !captionsOn;
+    try { localStorage.setItem('munea.captions', captionsOn ? '1' : '0'); } catch (e) {}
+    applyCaptionState();
+    toast(captionsOn ? '字幕開啟：會顯示逐字' : '字幕關閉');
   });
+  applyCaptionState();
   refreshTaskProgress();
   restoreFamilyFeed();
   applyDeveloperBypass();
@@ -1917,6 +2138,7 @@ function init() {
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
+  initHealthDashboard();
   
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
@@ -2423,6 +2645,9 @@ function init() {
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => toast('正式版可以選誰收緊急通知；目前跌倒會通知美華'));
   if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openReader('terms'));
   if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openReader('privacy'));
+  if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);
+  if ($('#verClose')) $('#verClose').addEventListener('click', () => $('#versionSheet').classList.remove('show'));
+  applyAppVersion();
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));
   if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));
   if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });

@@ -438,7 +438,7 @@
 
       <h2 class="set-section">關於</h2>
       <div class="set-list">
-        <div class="set-row set-info"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 1.0.0 · 測試版</small></span></div>
+        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">1.0.0</span> · 測試版 · 看更新內容</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
@@ -855,13 +855,24 @@
   <div class="modal-mask" id="consentSheet">
     <div class="modal">
       <div class="modal-grab"></div>
-      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span>開始聊之前，跟你說一件事</span></div>
-      <p class="consent-body">為了讓我聽懂你、記得你，你說的話會傳到台灣境外的雲端機房處理。我們只留下對話的重點摘要幫助記憶，原始錄音不會當作正式保存的紀錄；你隨時可以在「我的資料」把內容刪掉。語音只拿來聽懂你說什麼，不會拿去做聲紋辨識。</p>
-      <p class="consent-body" style="margin-top:8px">小提醒：沐寧是陪伴、不是緊急服務——遇到急難請直接撥 <b>119</b>，需要心理支持可撥 <b>1925</b>。</p>
-      <div class="med-actions">
-        <button type="button" class="btn-primary" id="consentAgree">我知道了，開始聊</button>
-        <button type="button" class="btn-quiet" id="consentDetail">先看隱私說明</button>
-      </div>
+      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span>開始聊之前，先跟你說一聲</span></div>
+      <ul class="consent-points">
+        <li><i class="cp-dot"></i><div><b>你說的話會加密後送到境外的雲端處理</b><small>全程加密傳輸，只用來聽懂你、記得你——不外流、不販售、不做廣告</small></div></li>
+        <li><i class="cp-dot"></i><div><b>只留對話重點，原始錄音不保存</b><small>隨時能在「我的資料」刪掉</small></div></li>
+        <li><i class="cp-dot"></i><div><b>聲音只用來聽懂你，不做聲紋辨識</b></div></li>
+      </ul>
+      <p class="consent-note">沐寧是陪伴、不是緊急服務。遇到急難請撥 <b>119</b>，想找人說說話可撥 <b>1925</b>。</p>
+      <button type="button" class="consent-go" id="consentAgree">我知道了，開始聊</button>
+      <button type="button" class="consent-link" id="consentDetail">先看完整隱私說明</button>
+    </div>
+  </div>
+  <div class="modal-mask" id="versionSheet">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <h2>版本更新</h2>
+      <p class="modal-sub">沐寧 <span id="verCurrent">1.0.0</span> · <span id="verChannel">測試版</span></p>
+      <div id="changelogList" class="changelog"></div>
+      <button type="button" class="consent-go" id="verClose">好，知道了</button>
     </div>
   </div>
   <div class="modal-mask" id="medRemindModal">
@@ -957,9 +968,10 @@
   </nav>
 
 </div>
+  <script src="src/version.js?v=20260706-version"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth.js?v=20260630-auth"></script>
-  <script type="module" src="src/app.js?v=20260629-profile"></script>
+  <script type="module" src="src/app.js?v=20260707-merge"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 沐寧 TestFlight 上傳設定：xcodebuild -exportArchive 用
+         destination=upload 會直接傳到 App Store Connect，不用開 Xcode 介面
+         teamID 留白：等付費開發者帳號開通後填入（不是免費 Personal Team 的 V77L5245MR） -->
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>destination</key>
+    <string>upload</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <key>manageAppVersionAndBuildNumber</key>
+    <true/>
+</dict>
+</plist>

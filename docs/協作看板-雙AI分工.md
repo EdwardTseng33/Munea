@@ -237,3 +237,79 @@
 
 **做的順序建議**：先 1（真語音接通，其他都依賴它）→ 同時量 8（延遲）→ 串 9（嘴型）→ 驗 5、10（斷網/打斷）。全綠即達 TestFlight 聊聊門檻。
 **Windows 這端已交付**：前端／設計／引擎邏輯全綠、後端 API 我實測綠燈、卡死 P0 已解（見上一段體檢紀錄）；缺雲端表也在上面交辦你了。Edward 來問時可直接跟他說「Windows 那半都好了，聊聊就差真語音這 5 項」。
+
+---
+
+## 2026-07-06 Mac 端（Claude/蘇菲）→ 全體 · 上工報到
+- **開工先拉**：本機曾落後遠端 273 版、已乾淨快轉到最新。Mac 獨有 `ios/` 殼＋`assets/` 完整保留並備份（遠端原本沒有 `ios/`）。
+- **TestFlight 前置補齊**：`ios/App/App/Info.plist` 補上三個權限字串（麥克風／語音／通知，照 `TESTFLIGHT-MAC-HANDOFF` 指定字串，先前缺）；最新 web 已 `cap sync` 進殼；`plutil` 驗證 OK。`ios/` 殼首次入庫（附加、不衝突，順帶雲端備份這台獨有的殼）。
+- **卡點**：這台 Mac 尚無簽章憑證（`security find-identity`=0），待 Edward 開一次 Xcode 選 Team `V77L5245MR` 自動建；帳號在 Apple 端已通。
+- **認領**：聊聊 5 項（1 真語音接通／5 斷網優雅／8 延遲／9 嘴型／10 打斷）Mac 端接手，先攻第 1 項。會動 `engine/live_voice_*` 與即時語音 web 接線＝Mac 語音線，Codex 本就避讓此區、沿用不撞。
+
+## 2026-07-06 Mac 端（Claude/蘇菲）· 自動出包診斷（終端機 xcodebuild）
+> Edward 要求「自主完成、不手動點 Xcode」。已用終端機直接試出包，把卡點釘死到「只有 Edward 能做」的最小集合。
+- ✅ **帳號通路 OK**：`xcodebuild ... -allowProvisioningUpdates`（Team `V77L5245MR`）成功連上 Apple、簽章流程走得動。證明可終端機自動出包。
+- 🔴 **卡點 1**：開發者帳號**無登記裝置** → 自動「開發用」簽章生不出通行證。
+- 🔴 **卡點 2**：Edward 的 **iPhone 15 Pro**（UDID `00008130-00123D590C92001C`、iOS 26.5）**開發者模式未開**（`Developer Mode disabled`）→ 無法登記裝置、無法直裝。
+- 🔑 **上 TestFlight 的結論**：上架用（distribution）簽章**不需裝置**，但需要 **App Store Connect API 金鑰**才能裝置無關地自動簽發行版＋上傳（並自動建/驗 app record）。
+- 已請 Edward 二選一：**Ⓐ 產生 API 金鑰**（推薦、全自動、免手機、可重複用）｜**Ⓑ 手機開開發者模式**（可先直裝真機測聊聊，但 TestFlight 上傳仍需金鑰）。
+- 未改任何 `engine/`／`web/` 程式；本輪僅診斷 + 本白板紀錄。
+
+## 2026-07-06 Mac 端 · ✅ 自動裝機成功（真機已跑沐寧）
+> Edward 開開發者模式後，**終端機全自動**完成、免手動點 Xcode：
+- 登記 iPhone 15 Pro（UDID `00008130-00123D590C92001C`）→ 自動建開發憑證（identity `DCD4A1C2...`）→ `iOS Team Provisioning Profile: *` → 簽章 `BUILD SUCCEEDED` → `devicectl` 裝機 → 啟動成功。**`net.munea.app` 已在 Edward 手機上跑。**
+- **意義**：Mac 端「改一版 → 裝到真機」迴路打通、可反覆自動 build+install 驗聊聊。
+- 已簽好的 .app：`scratchpad/dd/Build/Products/Debug-iphoneos/App.app`（Debug、開發簽章）。
+- ⚠️ **待決（真語音上真機）**：裝上手機的 App＝bundled static，`/chat`、`/voice-note` 打相對網址→**無後端**→退回反射腦（只有簡單陪聊）。要真機測**真腦＋寧寧真聲音**，需把 App 指到「可達的後端」：① hosted staging，或 ② 同 Wi-Fi 指到 Mac 本機引擎（快、免部署）。＝`TESTFLIGHT-MAC-HANDOFF` 的 backend URL strategy 決策點。
+- TestFlight（distribution 上傳）仍待 App Store Connect API 金鑰。
+
+## 2026-07-06 Mac 端 · 聊聊 UX 修正（Edward 真機指正）
+Edward 真機檢視聊聊、點出多項 UX/設計問題。已修（動 `web/src/app.js`＋`styles.css`；**未碰引擎/架構**）：
+- **拿掉系統機械聲**：`speakChat` 不再用瀏覽器 `speechSynthesis`；寧寧只用真聲音，無真聲音時改輕量文字提示（Edward：不要系統聲音）。
+- **字幕預設關**（對齊 SPEC「像視訊、字幕預設關、只留必要狀態」）：`captionsOn` 預設 false＋localStorage 記住；`setCaption` 尊重開關；`captionToggle` 清楚開/關＋`#chat.captions-on` 控版位。
+- **解「字幕/狀態兩模組重疊」**：`.face-cue`（在聽/在想/在說）移到控制列正上方、不再浮臉中央；開字幕時 cue 讓位、字幕條在下，量測 gap 14px、無重疊。
+- **按鈕不斷行**：`.ctl-btn span` white-space:nowrap ＋字距微收。
+- 已 `cap sync`＋重新出包＋裝回 Edward iPhone 實機，瀏覽器手機比例＋真機皆驗。
+- **待續**（需 Edward 拍板/真機驗）：麥克風「通話中靜音」態視覺再明確（真機通話時驗）。
+- **✅ 跨境同意頁重畫完成**（Edward 7/6 選 A：留著、精緻化）：清爽三點（境外處理／只留摘要可刪／非聲紋）＋療癒綠全寬主鈕＋低調文字連結；原 `.btn-primary` 無樣式=醜預設鈕已換掉。守住沙利曼合規揭露。已 sync＋出包＋裝回真機。
+- **✅ 同意頁「安全」文案補強**（Edward 7/6）：第一點改「加密後送到境外雲端處理／全程加密傳輸、只用來聽懂你記得你——不外流、不販售、不做廣告」，回應「要說明怎麼個安全法」。
+
+## 2026-07-06 Mac 端 · ✅✅ 真語音（Gemini 3.1 Live）驗證通過
+> Edward 提供 Google 鑰匙後、Mac 端實測：
+- 鑰匙收進本機 `.env.local`（`.gitignore` 已排除 `.env*`、**不上傳**）。
+- `gemini-3.1-flash-live-preview` 用此鑰匙連通；請它「用溫暖聲音說：陳奶奶你好，我是寧寧」→ **收到寧寧真聲音 399KB／約 8.3 秒**。核心整條通（鑰匙✓ 模型✓ 生聲音✓）。
+- 真語音伺服器 `engine/live_voice_server.py` 已在 Mac 背景跑（門牌 8201、測試頁 200）；Edward 可瀏覽器 `localhost:8201` 親耳試。
+- **下一步（Mac 主線）**：把這條真語音接進 App 聊聊（照分層架構的 `MuneaVoiceProvider`＋WebSocket 橋接約定，不另開路）、手機同 Wi-Fi 連 Mac 引擎、重裝真機 → 驗聊聊 #1/#8/#10。
+
+## 2026-07-06 Mac 端 · ✅✅ 真語音已接進 App、裝上真機
+- **App 聊聊「開始通話」接上真語音**：`web/src/app.js` 新增 `MuneaLiveVoice`（麥克風 16kHz 即時上行→WebSocket 橋、24kHz 回播、支援打斷）；`connectCall` 有真語音位置就走真路、接不上退回簡單陪聊、結束通話停真語音。連哪＝`getLiveVoiceUrl()`（localStorage['munea.liveVoiceUrl'] 或 DEV 預設 `ws://192.168.0.107:8201`）。
+- **伺服器** `live_voice_server.py` 綁 `0.0.0.0`（`LIVE_VOICE_HOST` 可調）→ 手機同 Wi-Fi 連得到；區網＋本機皆實測 200。
+- **手機殼放行**：`Info.plist` 加 `NSLocalNetworkUsageDescription` + `NSAllowsLocalNetworking`。
+- **驗證**：模組載入無錯、WebSocket 從 App 環境連上橋 9ms 成功；`BUILD SUCCEEDED`＋裝上 Edward iPhone。
+- **Edward 真機測法**：聊聊 → 開始通話 → 允許麥克風＋允許區域網路 → 開口。前提：Mac 開著、`live_voice_server.py` 跑著、手機與 Mac 同 Wi-Fi。
+- ⚠️ **這是 DEV（手機↔Mac 同網段）**；正式上線＝真語音搬 hosted 後端（App 只要改 `munea.liveVoiceUrl`）。
+
+## 2026-07-06 Mac 端 · 真機第一測回饋三修（Edward 真機實測後）
+Edward 真機測通（她真的講話了）、回三點，已修＋重裝真機：
+- **① 圖片不要動**：`styles.css` 移除臉部三種動畫（呼吸 faceBreath／眨眼 faceBlink／講話 faceTalk），圖片完全靜止（inspect 確認 animation-name:none）。
+- **② 收音／講話狀態要分明**：通話回呼直設 `#chat` data-state（listening/speaking），對應 `.cue-listen`（收音光點）／`.cue-speak`（聲波）確實切換。
+- **③ 後面講話她不回**（真兇＝手機喇叭→麥克風回音，她以為你一直在講）：`LiveVoice` 改**半雙工**——她說話時暫停送麥克風、`turn_complete` 或 900ms 靜音安全網切回收音。診斷來源＝伺服器 log（in 1.9MB / out 僅 1 turn 8.6s）。
+- 代價：半雙工暫時犧牲「講話中打斷」（聊聊 #10），先換多輪穩定；barge-in 待真回音消除再開。
+
+## 2026-07-06 Mac 端 · 彈窗排版根治 + 會動的臉確認實作
+- **彈窗(toast) 根治**（Edward 回饋「功能結束彈窗折行醜」）：真因＝`left:50%+translateX` 置中把 shrink-to-fit 寬度鎖死 50%(≈188px)→ 所有訊息被擠成多行、掉 1~2 字孤行。改真置中（`left:0;right:0;margin:auto;width:fit-content;max-width:min(320px,86vw)`）+`text-wrap:pretty`+藥丸改圓角方框。瀏覽器驗證依內容撐寬(160→320px)無孤字、已裝真機。
+- **會動的臉（live avatar）確認實作**：`avatarRuntime` 介面在（含 `ditto`/`liveavatar` 模式位子、`/avatar-session`、viseme），但**真臉未接**——現為靜態照片＋假 2D viseme mock（timer 驅動、非真音）。接真臉＝`avatar-雙引擎技術藍圖` 那個大工程（AvatarEngine 介面＋AOL＋WebRTC 串 iOS＋GPU，估 47-75 天、3 未證 keystone：Ditto TRT 25fps／LiveAvatar 45fps／冷啟動秒數）。CTO 明示「先燒幾百塊做 PoC 釘死 keystone 再蓋、否則整塊重來＝憲法 v5.4.23 燒錢」。**非本 session 可接、需 Edward 拍板路線＋預算**：Ⓐ Ditto 便宜 PoC（RunPod ~NT$30-數百）💡／Ⓑ 雲端 avatar API 試用（HeyGen/Tavus，每分鐘付費）／Ⓒ 維持靜態＋真語音、會動臉留 v1.5。
+- 順帶記：首頁「幫你留意」輪播卡長字被切（「…回來跟」）＝待收小 bug。
+
+## 2026-07-06 Mac 端 · ✅ 版本管理上線（v1.0.0）· 全體遵守
+- 新增 `web/src/version.js`＝**版本與更新紀錄單一真相**（`current`/`channel`/`changelog`）。設定「關於」版本列改可點 → 「版本更新」彈窗（版號/日期/白話更新項目、動態渲染 changelog）。已裝真機。
+- 三處版號對齊 **1.0.0**：`ios MARKETING_VERSION`、`package.json version`、頁面顯示。
+- **改版流程（Windows/Mac 兩端都照做）**：每次有意義更新 = ① `version.js` `current` 升號＋`changelog` 最上面加一筆（白話更新項目）② 同步 `ios MARKETING_VERSION` ＋ `package.json version` 成同號。
+- **版號規則** = 大改.功能.修正：修 bug/小調整→尾碼（1.0.0→1.0.1）；加功能→中碼（→1.1.0）；大改/正式上線→首碼（→2.0.0）。
+
+## 2026-07-06 Mac 端 · 健康頁重做 + 健康照護「數據/告警/AI提醒」設計稿 ⭐
+- **設計稿** `docs/健康照護-數據告警AI提醒-設計-2026-07-06.md`（Edward 拍板：研究到的數據全納入、且數據範圍/告警/AI提醒同步設計）：8 數據（血壓/心率/心律不整/血氧/睡眠/活動/走路穩定度/用藥＋跌倒事件流）、三級燈號（綠黃紅＋緊急）＋告警規則（誰看/誰通知/趨勢判定不誤報）＋寧寧三語氣主動提醒＋醫療紅線＋前端/引擎分工。**→ 引擎端（守護腦告警判定＋管家腦對話注入＋真 HealthKit）依此規格做。**
+- **狀態頁重做**（前端）：4→7 數據格、每格三級燈號、寧寧整體健康觀察卡、**點一格就地展開**（這週 7 天趨勢圖＋寧寧白話解讀），不跳頁不找返回。已裝真機、瀏覽器驗證無錯。
+- **UI 微調**：底部導覽列變矮俐落、家人頭像選中綠框不再被裁。
+- **待續**：① 健康詳細頁去重複（點自己不再跳帶頭像重複頁）＋家人 drill-in 統一（Edward 3.1/3.2）② 引擎端真告警＋真 Apple 健康資料。
+- 註：舊 `.face-caption`(#chatCaption) 仍是被隱藏的死元件（setCallHint 寫進去看不到）；本輪只解可見重疊，徹底清死碼列後續。
