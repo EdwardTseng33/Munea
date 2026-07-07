@@ -971,7 +971,48 @@
   <script src="src/version.js?v=20260706-version"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth.js?v=20260630-auth"></script>
-  <script type="module" src="src/app.js?v=20260707-merge"></script>
+  <script>
+  /* ===== 方案／權限判斷中心（單一真相 · 兩邊都讀得到）＋ 升級提示彈窗 ·（Edward 7/7 上線待辦 Phase 2）=====
+     預設 free（新用戶＝免費）。真付款接上前，管理方案選付費方案＝示範切換。 */
+  window.MMPLAN = (function(){
+    var RANK={free:0,plus:1,premium:2,concierge:3};
+    var LABEL={free:'免費',plus:'Plus',premium:'Premium',concierge:'Concierge'};
+    var CHAT_FREE_SEC=300; // 免費每天 5 分鐘
+    function today(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+    function get(){ try{ return localStorage.getItem('munea.plan')||'free'; }catch(e){ return 'free'; } }
+    function set(p){ try{ localStorage.setItem('munea.plan',p); }catch(e){} }
+    function atLeast(t){ return (RANK[get()]||0) >= (RANK[t]||0); }
+    function isFree(){ return get()==='free'; }
+    function chatKey(){ return 'munea.chatSec.'+today(); }
+    function chatUsedToday(){ try{ return parseInt(localStorage.getItem(chatKey())||'0',10)||0; }catch(e){ return 0; } }
+    function chatTick(){ try{ localStorage.setItem(chatKey(), String(chatUsedToday()+1)); }catch(e){} }
+    function chatRemainSec(){ return Math.max(0, CHAT_FREE_SEC - chatUsedToday()); }
+    var MSG={
+      'family-invite':{t:'邀請家人，升級就解鎖',m:'免費方案可以一起看家人的狀態；想邀請家人進照護圈、大家互相照應，升級 Plus 就可以囉。'},
+      'status-history':{t:'看更久的變化，升級解鎖',m:'免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。'},
+      'chat-daily':{t:'今天的免費陪聊用完了',m:'免費方案每天可以跟寧寧聊 5 分鐘。想不限時間、隨時想聊就聊，升級 Plus 就好——明天會再有 5 分鐘。'}
+    };
+    function upsell(feature){
+      var d=MSG[feature]||{t:'升級解鎖更多',m:'升級方案就能使用這個功能。'};
+      var old=document.getElementById('mm-upsell'); if(old) old.remove();
+      var m=document.createElement('div'); m.id='mm-upsell';
+      m.style.cssText='position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
+      m.innerHTML='<div style="width:min(322px,84vw);background:#F4F0E8;border-radius:24px;padding:26px 22px 18px;text-align:center;box-shadow:0 24px 60px -14px rgba(0,0,0,.5)">'
+        +'<div style="width:54px;height:54px;border-radius:16px;margin:0 auto 16px;background:linear-gradient(135deg,#3AA8A0,#2E8A83);display:grid;place-items:center"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg></div>'
+        +'<div style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px">'+d.t+'</div>'
+        +'<div style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px">'+d.m+'</div>'
+        +'<button id="mm-upsell-go" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px">看看方案</button>'
+        +'<button id="mm-upsell-no" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer">先不用</button>'
+        +'</div>';
+      document.body.appendChild(m);
+      m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-upsell-no') m.remove(); });
+      var go=document.getElementById('mm-upsell-go');
+      if(go) go.addEventListener('click',function(){ m.remove(); var pm=document.getElementById('planModal'); if(pm) pm.classList.add('show'); });
+    }
+    return {RANK:RANK,LABEL:LABEL,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
+  })();
+  </script>
+  <script type="module" src="src/app.js?v=20260707-gates"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
@@ -1278,6 +1319,8 @@ window.MMDEV = function(){
   var segs=[].slice.call(document.querySelectorAll('.st-seg span'));
   var segThumb=document.getElementById('segThumb');
   segs.forEach(function(sp,i){ sp.style.cursor='pointer'; sp.addEventListener('click',function(){
+    var _p=sp.textContent.trim();
+    if((_p==='過去7天'||_p==='過去30天') && window.MMPLAN && window.MMPLAN.isFree()){ window.MMPLAN.upsell('status-history'); return; }
     segs.forEach(function(s){s.style.color='rgba(244,240,232,.55)';});
     sp.style.color='#fff';
     segThumb.style.transform='translateX('+(i*100)+'%)';

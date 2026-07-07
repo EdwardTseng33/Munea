@@ -1221,11 +1221,20 @@ function callBudgetTick() {
     setCaption('點數用完了，換基本模式繼續陪你', '基本陪伴不限量、不會中斷');
   }
 }
+function __muneaFreeChatOut(){
+  try { if (typeof LiveVoice !== 'undefined' && LiveVoice && LiveVoice.stop) LiveVoice.stop(); } catch (e) {}
+  try { completeChatSession('free_daily_limit'); } catch (e) {}
+  try { chatOpened = false; } catch (e) {}
+  try { setCallToggle(false); } catch (e) {}
+  stopCallTimer();
+  if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
+}
 function startCallTimer() {
   stopCallTimer(); _callSec = 0;
   const el = $('#callTimer');
   _callTimerInt = setInterval(() => {
     callBudgetTick();
+    if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.chatTick(); if (window.MMPLAN.chatRemainSec() <= 0) { __muneaFreeChatOut(); return; } }
     _callSec++;
     const m = String(Math.floor(_callSec / 60)).padStart(2, '0');
     const s = String(_callSec % 60).padStart(2, '0');
@@ -1774,6 +1783,7 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進同一個全屏臉（不再有獨立視訊頁）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
+    if (window.MMPLAN && window.MMPLAN.isFree() && window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; }
     showView('chat');
     setTimeout(() => { if (!callConnected) connectCall(); }, 350);
   });
@@ -1862,7 +1872,7 @@ function init() {
   // 家庭照護圈
   const CIRCLE_LIMITS = { free: 2, plus: 4, premium: 8, concierge: 12 };
   const CIRCLE_PLAN_LABEL = { free: '免費版', plus: 'Plus', premium: 'Premium', concierge: 'Concierge' };
-  function circlePlan() { try { return localStorage.getItem('munea.plan') || 'plus'; } catch (e) { return 'plus'; } }
+  function circlePlan() { return (window.MMPLAN && window.MMPLAN.get && window.MMPLAN.get()) || 'free'; }
   const CIRCLE_DEFAULT = [
     { name: '陳秀英', init: '嬤', tint: 'p-ama', role: 'recipient' },
     { name: '美華', init: '華', tint: 'p-mei', role: 'payer' },
@@ -1883,7 +1893,7 @@ function init() {
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
     const inv = $('#fcInviteBtn');
-    if (inv) { const full = members.length >= limit; inv.textContent = full ? ('已達 ' + CIRCLE_PLAN_LABEL[plan] + ' 上限 · 升級可加更多') : '邀請家人加入'; inv.dataset.full = full ? '1' : ''; }
+    if (inv) { const isFreeP = window.MMPLAN && window.MMPLAN.isFree(); const full = members.length >= limit; inv.textContent = isFreeP ? '邀請家人加入 · 需 Plus' : (full ? ('已達 ' + CIRCLE_PLAN_LABEL[plan] + ' 上限 · 升級可加更多') : '邀請家人加入'); inv.dataset.full = full ? '1' : ''; }
     const note = $('#invLimitNote'); if (note) note.textContent = '目前 ' + CIRCLE_PLAN_LABEL[plan] + ' 方案 · 照護圈最多 ' + limit + ' 人';
   }
   if ($('#fcRoster')) $('#fcRoster').addEventListener('click', e => {
@@ -1909,7 +1919,7 @@ function init() {
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); });
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); });
   const INV_LINK = 'https://munea.net/join?c=MUNEA-2847';
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
   if ($('#inviteCloseX')) $('#inviteCloseX').addEventListener('click', () => $('#inviteFamModal').classList.remove('show'));
@@ -2179,17 +2189,20 @@ function init() {
   if (tierList) tierList.addEventListener('click', e => {
     const t = e.target.closest('.tier');
     if (!t || t.classList.contains('on')) return;
-    if (t.classList.contains('trial')) { toast('這是體驗方案；訂閱中不用切，取消訂閱後會自動回到這裡。'); return; }
+    if (t.classList.contains('trial')) { if (window.MMPLAN) window.MMPLAN.set('free'); if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e4) {} } toast('已切回免費方案（示範用）'); return; }
     _planPick = t.dataset.t;
     $('#planConfirmText').innerHTML = '7/26 起改為「<b>' + _planPick + '</b>」；這期高級的權益用到 7/25，一天都不少。';
     $('#planConfirm').style.display = '';
   });
   if ($('#planYes')) $('#planYes').addEventListener('click', () => {
     if (!_planPick) return;
+    const _km = {'免費試用':'free','基礎':'plus','高級':'premium','尊榮':'concierge'}; const _key = _km[_planPick] || 'free';
+    if (window.MMPLAN) window.MMPLAN.set(_key);
     try { localStorage.setItem('munea.planNext', _planPick); } catch (e2) {}
     $('#planConfirm').style.display = 'none';
     renderPlanNext();
-    toast('排好了：7/26 起改「' + _planPick + '」');
+    if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e3) {} }
+    toast('已切換到「' + _planPick + '」（示範用，之後接真付款）');
     _planPick = null;
   });
   if ($('#planNo')) $('#planNo').addEventListener('click', () => { $('#planConfirm').style.display = 'none'; _planPick = null; });
