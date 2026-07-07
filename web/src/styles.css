@@ -1669,9 +1669,10 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 #family .sec-head h2 { font-size: 17px; }
 /* 全家狀態：心情做成有顏色的小藥丸、一眼分辨 */
 .mood-pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-right: 4px; }
-.mood-pill.calm { background: var(--mint); color: #1E7169; }
-.mood-pill.happy { background: var(--coral-soft); color: #B4581B; }
-.mood-pill.tired { background: #EFEBE2; color: #3F4844; }
+.mood-pill.calm { background: var(--mint-2); color: var(--teal-dd); }
+.mood-pill.happy { background: var(--coral-soft); color: var(--coral-d); }
+.mood-pill.tired { background: #F6E7C8; color: #8A6410; }
+.mood-pill.down { background: #E4EAF0; color: #46566A; }
 /* 成員列按下去的小彈跳（活著的感覺） */
 .health-row:active { transform: scale(.985); }
 .health-row { transition: transform .12s ease; }
@@ -1764,7 +1765,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .piv-tx b { display: block; font-size: 15px; font-weight: 800; margin-bottom: 1px; color: var(--ink); }
 
 /* ===== 訂閱頁 v2：整頁照片 hero + 比較表 + 狀態頁式分段控制（一頁看完）===== */
-.sub-hero { position: relative; flex-shrink: 0; text-align: center; padding: calc(env(safe-area-inset-top, 0px) + 28px) 24px 26px; background: radial-gradient(135% 100% at 50% 0%, var(--teal-d) 0%, var(--teal-dd) 50%, var(--deep) 100%); overflow: hidden; }
+.sub-hero { position: relative; flex-shrink: 0; text-align: center; padding: calc(env(safe-area-inset-top, 0px) + 30px) 24px 26px; background: radial-gradient(135% 100% at 50% 0%, var(--teal-d) 0%, var(--teal-dd) 50%, var(--deep) 100%); overflow: hidden; }
 .sub-hero::after { content: ''; position: absolute; right: -50px; top: -44px; width: 190px; height: 190px; border-radius: 50%; background: radial-gradient(circle, rgba(224,179,84,.28), transparent 68%); pointer-events: none; }
 .sub-hero-av { position: relative; display: block; width: 78px; height: 78px; margin: 2px auto 15px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 12px 28px -10px rgba(0,0,0,.55); }
 .sub-hero-av img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
@@ -1983,9 +1984,9 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .jc-code { text-align: center; letter-spacing: 3px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
 
 /* 訂閱頁 v2：產品價值 + 適合誰 + 堆疊卡（Edward 7/7 去寧寧、講優勢） */
-.sub-intro { font-size: 13.5px; line-height: 1.75; color: var(--muted); margin: 2px 2px 15px; }
+.sub-intro { font-size: 13.5px; line-height: 1.7; color: var(--muted); margin: 2px 2px 12px; }
 .sub-intro b { color: var(--ink); font-weight: 800; }
-.sub-value { display: flex; flex-direction: column; gap: 13px; margin-bottom: 20px; }
+.sub-value { display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px; }
 .sv-row { display: flex; gap: 13px; align-items: flex-start; }
 .sv-ic { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 13px; background: var(--mint); display: grid; place-items: center; }
 .sv-ic svg { width: 21px; height: 21px; fill: none; stroke: var(--teal-dd); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -1994,3 +1995,14 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .sub-sec-label { font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); margin: 4px 2px 12px; }
 .ppk-who { font-size: 12.5px; color: var(--muted); margin: 3px 0 12px; }
 .ppk.sel.pro .ppk-who { color: #8A6410; }
+
+/* 家人狀態：統一紅綠燈狀態 + 一詞（Edward 2026-07-07 工整/心情對應/警示） */
+.health-row .hr-status { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; min-width: 40px; }
+.health-row .hr-dot { width: 11px; height: 11px; border-radius: 50%; }
+.health-row .hr-slabel { font-size: 11px; font-weight: 800; line-height: 1; letter-spacing: .02em; }
+.health-row .hr-status.ok .hr-dot { background: var(--teal); }
+.health-row .hr-status.ok .hr-slabel { color: var(--teal-dd); }
+.health-row .hr-status.watch .hr-dot { background: var(--gold); box-shadow: 0 0 0 3px rgba(224,179,84,.22); }
+.health-row .hr-status.watch .hr-slabel { color: #8A6410; }
+.health-row .hr-status.alert .hr-dot { background: var(--danger); box-shadow: 0 0 0 3px rgba(229,91,77,.2); }
+.health-row .hr-status.alert .hr-slabel { color: var(--danger); }

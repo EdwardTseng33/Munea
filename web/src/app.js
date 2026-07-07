@@ -1143,9 +1143,8 @@ function setupAuthControls() {
 })();
 
 function loadMeds() {
-  try { return JSON.parse(localStorage.getItem('munea.meds')) || [
-    { name: '脈優 Amlodipine', time: '午餐後', days: '長期', by: '美華' },
-    { name: '維他命 D', time: '早餐後', days: '30 天', by: '阿嬤' }]; } catch (e) { return []; }
+  // 沒設用藥就是空的——首頁不該有吃藥任務、用藥管理顯示空狀態（Edward 2026-07-07）
+  try { return JSON.parse(localStorage.getItem('munea.meds')) || []; } catch (e) { return []; }
 }
 function updateMedCount() {
   const n = loadMeds().length + ' 種藥';
@@ -1370,6 +1369,7 @@ function applyCaptionState() {
   const chat = document.getElementById('chat');
   if (b) { b.classList.toggle('off', !captionsOn); b.setAttribute('aria-pressed', captionsOn ? 'true' : 'false'); }
   if (chat) chat.classList.toggle('captions-on', captionsOn);
+  const ih = document.getElementById('faceIdleHi'); if (ih) ih.style.display = captionsOn ? '' : 'none';  // 字幕關→開場那串招呼字也不顯示（Edward 2026-07-07）
   if (!captionsOn) { const box = document.querySelector('.face-caption-box'); if (box) box.remove(); }
 }
 function setCaption(text, hint) {
