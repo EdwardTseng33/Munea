@@ -2826,6 +2826,7 @@ function init() {
       const due = new Date(t0); due.setDate(due.getDate() + 2);
       if ($('#walkStart') && !$('#walkStart').value) $('#walkStart').value = isoOf(t0);
       if ($('#quizDue') && !$('#quizDue').value) $('#quizDue').value = isoOf(due);
+      if ($('#voteDue') && !$('#voteDue').value) $('#voteDue').value = isoOf(due);
       if ($('#evDate') && !$('#evDate').value) $('#evDate').value = isoOf(sat);
       if ($('#drawDate') && !$('#drawDate').value) $('#drawDate').value = isoOf(t0);
     } catch (e) {}
@@ -2938,9 +2939,10 @@ function init() {
     const done = act.status === 'done';
     const chip = done ? '已結束'
       : act.kind === 'walk' ? '進行中 · ' + act.days + ' 天內'
-      : act.kind === 'quiz' ? (act.q + ' 題')
+      : act.kind === 'quiz' ? (act.q + ' 題' + (act.dueLabel ? ' · ' + act.dueLabel : ''))
       : act.kind === 'draw' ? (act.when + '開獎')
-      : act.kind === 'event' ? (act.dateLabel || '進行中') : '進行中';
+      : act.kind === 'event' ? (act.dateLabel || '進行中')
+      : act.kind === 'vote' ? (act.dueLabel || '進行中') : '進行中';
     const kindName = act.kind === 'walk' ? '一起運動' : act.kind === 'quiz' ? '機智問答' : act.kind === 'vote' ? '投票' : act.kind === 'draw' ? '抽獎' : '揪一攤';
     const title = act.kind === 'draw' ? act.prize : (act.title || kindName);
     body.innerHTML =
@@ -3041,11 +3043,18 @@ function init() {
       act.q = +(($('#quizN') && $('#quizN').value) || 10);
       act.title = '機智問答';
       const qd = ($('#quizDue') && $('#quizDue').value) ? new Date($('#quizDue').value + 'T00:00') : null;
-      if (qd && !isNaN(qd)) { act.dueISO = isoOf(qd); act.dueLabel = fmtDay(qd) + ' 截止'; }
+      const qt = ($('#quizDueTime') && $('#quizDueTime').value) || '20:00';
+      if (qd && !isNaN(qd)) { act.dueISO = isoOf(qd); act.dueTime = qt; act.dueLabel = fmtDay(qd) + ' ' + _clock12(qt) + ' 截止'; }
     } else if (kind === 'vote') {
       act.title = (($('#voteQ') && $('#voteQ').value.trim()) || '家庭投票');
       act.opts = ['#vo1', '#vo2', '#vo3'].map(x => ($(x) && $(x).value.trim()) || '').filter(Boolean);
       if (act.opts.length < 2) { toast('投票至少要兩個選項'); return; }
+      // 投票要有截止（到期自動公布結果、收進記錄簿）— Edward 7/9
+      const vd0 = ($('#voteDue') && $('#voteDue').value) ? new Date($('#voteDue').value + 'T00:00') : null;
+      if (!vd0 || isNaN(vd0)) { toast('先選投票截止的日期'); return; }
+      const vt = ($('#voteDueTime') && $('#voteDueTime').value) || '20:00';
+      act.dueISO = isoOf(vd0); act.dueTime = vt; act.dateISO = act.dueISO;
+      act.dueLabel = fmtDay(vd0) + ' ' + _clock12(vt) + ' 截止';
       act.votes = {};
       ['#voteQ', '#vo1', '#vo2', '#vo3'].forEach(x => { if ($(x)) $(x).value = ''; });
     } else if (kind === 'draw') {
@@ -3144,6 +3153,16 @@ function init() {
   // 拉桿連動
   if ($('#walkGoal')) $('#walkGoal').addEventListener('input', () => updateWalkLabels());
   if ($('#walkDays')) $('#walkDays').addEventListener('input', () => recalcWalk(true));
+  // 數量改用 −／＋ 按鈕（拉桿藏起來只當存值用；視窗內不再有左右拖移手勢 · Edward 7/9）
+  $$('#chalModal .step-btn').forEach(b => b.addEventListener('click', () => {
+    const el = document.getElementById(b.dataset.t);
+    if (!el) return;
+    const st = (+el.step || 1) * (+b.dataset.d || 1);
+    el.value = Math.min(+el.max, Math.max(+el.min, (+el.value || 0) + st));
+    if (b.dataset.t === 'walkDays') { recalcWalk(true); return; }
+    if (b.dataset.t === 'quizN' && $('#quizNVal')) $('#quizNVal').textContent = el.value + ' 題';
+    updateWalkLabels();
+  }));
   if ($('#quizN')) $('#quizN').addEventListener('input', () => {
     paintRange($('#quizN'));
     if ($('#quizNVal')) $('#quizNVal').textContent = $('#quizN').value + ' 題';
