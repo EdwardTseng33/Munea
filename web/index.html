@@ -1098,6 +1098,7 @@
       'join-circle':{t:'加入家人的照護圈，升級解鎖',m:'免費方案可以自己用沐寧、記自己的提醒；想加入家人的照護圈、大家一起看著長輩，升級 Plus 就可以囉。'}
     };
     function upsell(feature){
+      try{ if(typeof trackProductEvent==='function') trackProductEvent('paywall_shown',{feature:feature||''}); }catch(e){}
       var d=MSG[feature]||{t:'升級解鎖更多',m:'升級方案就能使用這個功能。'};
       var old=document.getElementById('mm-upsell'); if(old) old.remove();
       var m=document.createElement('div'); m.id='mm-upsell';

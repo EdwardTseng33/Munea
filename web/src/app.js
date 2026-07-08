@@ -2385,6 +2385,7 @@ function init() {
       if (r && r.ok) {
         clearBtnBusy(b, '✓ 已連接');
         b.classList.add('done');
+        trackProductEvent('health_connected', {});
         hint('好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
       } else {
         clearBtnBusy(b, b.dataset.label || '連接');
@@ -2834,6 +2835,7 @@ function init() {
     const PT_PID = { 'net.munea.app.points.200': 200, 'net.munea.app.points.500': 500, 'net.munea.app.points.1000': 1000, 'net.munea.app.points.1800': 1800 };
     if (SUB_PID[pid]) {
       try { localStorage.setItem('munea.plan', SUB_PID[pid]); localStorage.removeItem('munea.planNext'); } catch (e) {}
+      trackProductEvent('subscription_purchased', { productId: pid, plan: SUB_PID[pid] });
       renderPlanState();
       if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e2) {} }
       toast('訂閱好了，現在是 ' + CIRCLE_PLAN_LABEL[SUB_PID[pid]] + ' 方案');
@@ -2841,6 +2843,7 @@ function init() {
     }
     if (PT_PID[pid]) {
       try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + PT_PID[pid])); } catch (e3) {}
+      trackProductEvent('points_purchased', { productId: pid, points: PT_PID[pid] });
       pushWallet(); renderPoints();
       toast('買好了，' + PT_PID[pid].toLocaleString() + ' 點入帳，這批不會過期');
       return true;
@@ -3216,6 +3219,7 @@ function init() {
     if (rw.some(Boolean)) act.rewards = rw;
     ['#rw1', '#rw2', '#rw3'].forEach(x => { if ($(x)) $(x).value = ''; });
     const acts = loadActs(); acts.push(act); saveActs(acts);
+    trackProductEvent('activity_created', { kind: kind });
     closeChal();
     renderActCard(act);
     hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : kind === 'vote' ? '好，' + cname() + '把問題送出去了，誰投了什麼馬上看得到。' : kind === 'draw' ? '好，' + cname() + '把抽獎報給大家了，' + (act.when || '') + '開獎！' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
@@ -3500,6 +3504,7 @@ function init() {
   if ($('#interestsRow')) $('#interestsRow').addEventListener('click', () => window.__muneaOpenInterests(false));
   if ($('#interestsSave')) $('#interestsSave').addEventListener('click', () => {
     saveInterests(_intSel);
+    trackProductEvent('interests_saved', { count: _intSel.length });
     renderInterestPicks();
     toast(_intSel.length ? '記下了，這些話題我會多幫你留意新鮮事' : '好，不挑也行，想聊什麼直接說');
     closeInterests(true);

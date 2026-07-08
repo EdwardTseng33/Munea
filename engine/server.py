@@ -20,6 +20,7 @@ load_engine_env()
 import chat_engine as eng
 import supabase_adapter
 import model_router
+import notify
 from google.genai import types
 
 if not os.environ.get("GEMINI_API_KEY"):
@@ -2938,6 +2939,14 @@ def admin_safety_events_summary(data=None):
 
 def product_event_response(data):
     event = append_product_event(data)
+    try:
+        name = (event or {}).get("eventName") or ""
+        if name in ("subscription_purchased", "points_purchased", "onboarding_completed", "health_connected")            and not is_analytics_excluded_event(event):
+            props = (event or {}).get("properties") or {}
+            summary = props.get("plan") or (str(props.get("points")) + " 點" if props.get("points") else "")
+            notify.ops(name, summary)
+    except Exception:
+        pass  # 通知失敗不影響主流程
     return {"ok": True, "event": event, "northStar": north_star_summary({"days": 7})}
 
 
@@ -4333,6 +4342,10 @@ class H(BaseHTTPRequestHandler):
             else:
                 self._json_error(400, "invalid_request", "Request could not be processed", e)
         except Exception as e:
+            try:
+                notify.alert("engine", getattr(self, "path", "?"), str(e)[:200])
+            except Exception:
+                pass
             self._json_error(500, "internal_error", "Request could not be processed", e)
 
 
