@@ -1715,7 +1715,7 @@ for path in user_scoped_paths:
     verified = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, path, {})
     assert verified["ok"] is True, path
     assert verified["required"] is True, path
-for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests"]:
+for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/safety-events"]:
     assert server.auth_required_for_path(path) is False, path
     assert server.require_verified_auth({}, path, {})["ok"] is True, path
 assert server.auth_required_for_request("/credits/grant", {}) is False
@@ -1855,6 +1855,18 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     assert privacy_admin["privacy"]["rawTranscriptRecords"] == 0
     filtered_privacy_admin = server.admin_privacy_requests_summary({"type": "account_deletion"})
     assert filtered_privacy_admin["count"] == 1
+    high_risk = server.guardian_evaluate_response({"text": "I may be having a heart attack"})
+    assert high_risk["risk"]["level"] == "high"
+    safety_admin = server.admin_safety_events_summary({"days": 7})
+    assert safety_admin["ok"] is True
+    assert safety_admin["count"] >= 2
+    assert safety_admin["totals"]["byRiskLevel"]["high"] == 1
+    assert safety_admin["totals"]["requiresHumanEscalation"] == 1
+    assert safety_admin["totals"]["summaryReviewRecords"] == 1
+    assert safety_admin["totals"]["rawTranscriptRecords"] == 0
+    assert safety_admin["privacy"]["storesRawTranscriptByDefault"] is False
+    filtered_safety_admin = server.admin_safety_events_summary({"level": "high"})
+    assert filtered_safety_admin["count"] == 1
     audit = server.append_audit_event({
         "eventType": "credits_granted",
         "targetTable": "credit_transactions",
@@ -2985,6 +2997,7 @@ if ($health.contracts -notcontains "admin-usage") { throw "/healthz missing admi
 if ($health.contracts -notcontains "admin-credits") { throw "/healthz missing admin-credits contract" }
 if ($health.contracts -notcontains "admin-conversation-summaries") { throw "/healthz missing admin-conversation-summaries contract" }
 if ($health.contracts -notcontains "admin-privacy-requests") { throw "/healthz missing admin-privacy-requests contract" }
+if ($health.contracts -notcontains "admin-safety-events") { throw "/healthz missing admin-safety-events contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
@@ -3061,6 +3074,16 @@ try {
   if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
 }
 Pass "/admin/privacy-requests is closed without admin token"
+
+Step "API /admin/safety-events gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/safety-events" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"days":7}' -TimeoutSec 30 | Out-Null
+  throw "/admin/safety-events should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/safety-events is closed without admin token"
 
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30

@@ -85,6 +85,7 @@
 - Connected `/butler/post-turn` to the conversation summary contract so post-turn reviews now create summary-only records and link new memory items through `sourceConversationSummaryId`.
 - Added the `/admin/conversation-summaries` read contract so operators can review summary-only companion memory records, tag counts, and safety-relevant totals without exposing raw transcripts.
 - Added the `/admin/privacy-requests` read contract so operators can review export/deletion request status, reauth requirements, subscription notice needs, and retention policy from the Admin MVP trust surface.
+- Added the `/admin/safety-events` read contract so operators can review Guardian risk events and safety-relevant summaries by risk level/category without exposing raw transcripts.
 
 ## 2026-06-29 Update
 

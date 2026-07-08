@@ -247,7 +247,7 @@ Admin access should use admin-only roles stored outside user-editable metadata. 
 
 Prototype coverage:
 
-- `/admin/north-star`, `/admin/usage`, `/admin/credits`, `/admin/conversation-summaries`, and `/admin/privacy-requests` exist, but they are closed unless `MUNEA_ADMIN_API_TOKEN` is configured and sent in `X-Munea-Admin-Token`.
+- `/admin/north-star`, `/admin/usage`, `/admin/credits`, `/admin/conversation-summaries`, `/admin/privacy-requests`, and `/admin/safety-events` exist, but they are closed unless `MUNEA_ADMIN_API_TOKEN` is configured and sent in `X-Munea-Admin-Token`.
 
 ## Supabase Data Model v1
 
