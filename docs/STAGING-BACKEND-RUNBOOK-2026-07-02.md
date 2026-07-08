@@ -143,6 +143,20 @@ npm run smoke:staging -- `
 
 The script does not print tokens. For non-local URLs it requires HTTPS and requires `/healthz` to report `runtime.authRequired=true` and a non-JSON backend.
 
+## Cloud Run Inventory Check
+
+When staging runs on Google Cloud Run, first check the hosting layer without touching user data or printing secrets:
+
+```powershell
+npm run cloudrun:status
+```
+
+The command verifies the active gcloud account, project, Cloud Run service readiness, service URLs, visible environment variable names, Secret Manager secret existence, and `secretAccessor` IAM bindings for the checked runtime service accounts. Use strict mode when this becomes a required release gate:
+
+```powershell
+npm run cloudrun:status -- -Strict
+```
+
 ## TestFlight Backend Strategy
 
 There are two valid first TestFlight tracks:
