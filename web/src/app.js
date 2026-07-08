@@ -146,9 +146,22 @@ function faceSpeak(text, audioMs = 0) {
   recordAvatarUsage(text, ms);
   return ms;
 }
-function setCallHint(text) {
+function setCallHint(text, busy) {
   const cap = $('#chatCaption');
-  if (cap) cap.textContent = text;
+  if (cap) { cap.textContent = text; cap.classList.toggle('cap-busy', !!busy); }
+}
+// 等待中按鈕：加轉圈、鎖點擊（Edward 7/8：Loading 要有動態，不然像當機）
+function setBtnBusy(b, text) {
+  if (!b) return;
+  if (!b.dataset.idleText) b.dataset.idleText = b.textContent;
+  b.disabled = true; b.classList.add('busy-spin');
+  if (text) b.textContent = text;
+}
+function clearBtnBusy(b, text) {
+  if (!b) return;
+  b.disabled = false; b.classList.remove('busy-spin');
+  b.textContent = text || b.dataset.idleText || b.textContent;
+  delete b.dataset.idleText;
 }
 function templateFor(avatarId = currentAvatarId) {
   return CompanionProfile.templateFor(avatarId);
@@ -1303,6 +1316,7 @@ function updateMedCount() {
   const el2 = $('#medCountSettings');
   if (el2) el2.textContent = n;
   renderPillTask();
+  if (window.MuneaNotify) window.MuneaNotify.sync(); // 用藥變動 → 重排 App 關著也會響的提醒
 }
 const PILL_SLOT_ORDER = ['早餐後', '午餐後', '晚餐後', '睡前'];
 function pillDateKey() {
@@ -2065,7 +2079,7 @@ function connectCall() {
     activeChatStartedAt = Date.now();
     activeChatTurnCount = 0;
     setFaceState('idle');
-    setCallHint('接通中…');
+    setCallHint('接通中', true);
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
     const chatEl = document.getElementById('chat');
     const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻跟麥克風
@@ -2081,7 +2095,7 @@ function connectCall() {
         setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
         return;
       }
-      setCallHint('接回來中…');
+      setCallHint('接回來中', true);
       setTimeout(() => { if (callConnected) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
@@ -2179,7 +2193,7 @@ function init() {
   const RT_DEF = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
   const RT_LABEL = { b: '早餐', l: '午餐', d: '晚餐', s: '就寢' };
   function loadRoutine() { try { return Object.assign({}, RT_DEF, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) { return Object.assign({}, RT_DEF); } }
-  function saveRoutine(rt) { try { localStorage.setItem('munea.routine', JSON.stringify(rt)); } catch (e) {} syncPush('routine', rt); }
+  function saveRoutine(rt) { try { localStorage.setItem('munea.routine', JSON.stringify(rt)); } catch (e) {} syncPush('routine', rt); if (window.MuneaNotify) window.MuneaNotify.sync(); }
   function shiftTime(t, mins) {
     let [h, m] = t.split(':').map(Number);
     let total = (h * 60 + m + mins + 1440) % 1440;
@@ -2321,14 +2335,14 @@ function init() {
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', async () => {
     // Apple 健康：在 App 裡就真的去要 iPhone 授權；網頁預覽則走原本示範切換
     if (b.id === 'cnHealthBtn' && window.MuneaHealth && window.MuneaHealth.available()) {
-      b.disabled = true; b.textContent = '連接中…';
+      setBtnBusy(b, '連接中');
       const r = await window.MuneaHealth.connect();
-      b.disabled = false;
       if (r && r.ok) {
-        b.classList.add('done'); b.textContent = '✓ 已連接';
+        clearBtnBusy(b, '✓ 已連接');
+        b.classList.add('done');
         hint('好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
       } else {
-        b.textContent = b.dataset.label || '連接';
+        clearBtnBusy(b, b.dataset.label || '連接');
         hint(r && r.reason === 'unavailable' ? '這台裝置沒有健康資料可讀。' : '沒有連上，晚點在「連接裝置」再試一次也可以。');
       }
       return;
@@ -2565,9 +2579,20 @@ function init() {
     const card = e.target.closest('.tu-card');
     if (card) { document.querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on'); }
   });
-  if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', () => {
+  if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', async () => {
     const selCard = document.querySelector('.tu-card.on');
     const p = selCard ? +selCard.dataset.p : 0;
+    if (!p) { toast('先選一包點數'); return; }
+    // App 裡走真蘋果付款；點數入帳由 __muneaApplyPurchase 統一做
+    if (window.MuneaStore && window.MuneaStore.available()) {
+      const b = $('#tuBuyBtn');
+      setBtnBusy(b, '連到 App Store');
+      const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
+      clearBtnBusy(b);
+      if (r.ok) $('#topUpModal').classList.remove('show');
+      else if (r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      return;
+    }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
     pushWallet();
     renderPoints();
@@ -2644,8 +2669,21 @@ function init() {
     $('#planConfirmText').innerHTML = '訂閱「<b>' + CIRCLE_PLAN_LABEL[_subPlan] + '</b>」· ' + fmtPrice(_subPlan, _subCyc) + '<br>每月 ' + PLAN_POINTS[_subPlan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[_subPlan] + ' 人。';
     $('#planConfirm').style.display = '';
   });
-  if ($('#planYes')) $('#planYes').addEventListener('click', () => {
+  if ($('#planYes')) $('#planYes').addEventListener('click', async () => {
     if (!_planPick) return;
+    // App 裡走真蘋果付款（StoreKit）；網頁預覽維持示範切換
+    if (window.MuneaStore && window.MuneaStore.available()) {
+      const pid = window.MuneaStore.subId(_planPick, _subCyc);
+      const b = $('#planYes');
+      setBtnBusy(b, '連到 App Store');
+      const r = await window.MuneaStore.purchase(pid);
+      clearBtnBusy(b, '確認變更');
+      if (r.ok) { $('#planConfirm').style.display = 'none'; _planPick = null; } // 生效與提示由 __muneaApplyPurchase 統一做
+      else if (r.reason === 'cancelled') toast('沒關係，想好再訂就好。');
+      else if (r.reason === 'pending') { toast('付款送出了，等核准後會自動生效。'); $('#planConfirm').style.display = 'none'; _planPick = null; }
+      else toast('付款沒有完成，晚點再試一次就好。');
+      return;
+    }
     try { localStorage.setItem('munea.plan', _planPick); localStorage.removeItem('munea.planNext'); } catch (e2) {}
     $('#planConfirm').style.display = 'none';
     renderPlanState();
@@ -2669,9 +2707,18 @@ function init() {
     $('#subPoints').querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on');
     const p = +card.dataset.p; const cta = $('#tuBuyBtn2'); if (cta) cta.textContent = '直接購買 ' + p.toLocaleString() + ' 點 · NT$' + (PT_PRICE[p] || 0).toLocaleString();
   });
-  if ($('#tuBuyBtn2')) $('#tuBuyBtn2').addEventListener('click', () => {
+  if ($('#tuBuyBtn2')) $('#tuBuyBtn2').addEventListener('click', async () => {
     const sel = document.querySelector('#subPoints .tu-card.on');
     const p = sel ? +sel.dataset.p : 0;
+    if (!p) { toast('先選一包點數'); return; }
+    if (window.MuneaStore && window.MuneaStore.available()) {
+      const b = $('#tuBuyBtn2');
+      setBtnBusy(b, '連到 App Store');
+      const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
+      clearBtnBusy(b);
+      if (!r.ok && r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      return;
+    }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
     pushWallet(); renderPoints();
     toast('買好了，' + p.toLocaleString() + ' 點入帳，這批不會過期');
@@ -3122,7 +3169,7 @@ function init() {
     }
     return arr.filter(v => v && v.dateISO).sort((a, b) => (a.dateISO + (a.time || '')).localeCompare(b.dateISO + (b.time || '')));
   }
-  function saveVisits(arr) { try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) {} syncPush('visits', arr); }
+  function saveVisits(arr) { try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) {} syncPush('visits', arr); if (window.MuneaNotify) window.MuneaNotify.sync(); }
   function nextVisit() { const today = isoOf(new Date()); const arr = loadVisits(); return arr.filter(v => v.dateISO >= today)[0] || arr[0] || null; }
   function fmtVisitTime(tv) {  // "14:30" → "下午 2:30"
     const p = String(tv || '09:00').split(':'); const hh = +p[0] || 9, mm = +p[1] || 0;
