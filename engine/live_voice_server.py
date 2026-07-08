@@ -172,6 +172,15 @@ async def handle(ws):
     _diag(cid, "connected", name=name or "-", char=char)
     try:
         async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics)) as session:
+            # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
+            # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
+            # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。
+            try:
+                await ws.send(json.dumps({"type": "ready"}))
+            except Exception:
+                pass
+            _diag(cid, "node.ready", ms=round((time.monotonic() - t0) * 1000))
+
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):
