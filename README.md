@@ -131,7 +131,7 @@ Chat is designed as speech-to-speech by default. The main experience should feel
 
 The prototype now uses one Companion Profile across onboarding, Home, Chat, and Settings. Static preview stores it in local storage; full app mode also syncs it through `/companion-profile`. The local backend now mirrors that profile into `engine/app_profile_store.json`, which keeps account, family group, primary person, and companion profiles in one shape before the same model moves into the production database. Onboarding and Settings also bridge into `/account-bootstrap` with a one-time browser flag, so the first selected companion profile can initialize the account graph without repeatedly recreating it.
 
-For App Store readiness, the local backend also includes `engine/billing_store.json`, `engine/credits_store.json`, `/entitlements`, `/subscription-event`, `/credits/balance`, `/credits/grant`, `/credits/consume`, and `/healthz` contracts. These are prototype contracts for the production StoreKit / App Store Server API / RevenueCat path; production must verify signed subscription and credit events server-side before granting paid entitlements. Billing and credits plan names are locked in `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`: Free / Plus / Premium / Concierge.
+For App Store readiness, the local backend also includes `engine/billing_store.json`, `engine/credits_store.json`, `/entitlements`, `/subscription-event`, `/credits/balance`, `/credits/grant`, `/credits/consume`, and `/healthz` contracts. These are prototype contracts for the production StoreKit / App Store Server API / RevenueCat path; production must verify signed subscription and credit events server-side before granting paid entitlements. Billing plan names were re-decided on 2026-07-07: the single source of truth is `docs/方案架構-定案-2026-07-07.md` — **Free / Plus (NT$499) / Pro (NT$999)** with chat points (1 point ≈ 1 minute). Earlier drafts in `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` (Free / Plus / Premium / Concierge) are superseded.
 
 The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`; demo seed, analytics/admin foundation, AI memory/service foundation, companion persona layer foundation, and billing credits foundation live in `supabase/sql/002_demo_bootstrap.sql`, `supabase/sql/003_analytics_admin_foundation.sql`, `supabase/sql/004_ai_memory_service_foundation.sql`, `supabase/sql/005_companion_persona_layer.sql`, and `supabase/sql/006_billing_credits_foundation.sql`, with setup notes in `docs/supabase/SETUP.md`. These are SQL Editor-ready; once Supabase CLI is installed and authenticated, convert them into formal migrations.
 
@@ -160,6 +160,35 @@ Settings now includes the first account UI foundation: guest/signed-in/developer
 Developer mode is controlled by `window.MUNEA_DEV_CONFIG` and is off by default. It can skip onboarding and create a local developer session for localhost testing, while marking events as `analyticsExcluded` so developer/test clicks, logins, chats, reminders, and Avatar sessions do not count in operating dashboards.
 
 The backend now includes `engine/supabase_adapter.py`. By default the prototype still uses JSON fallback; setting `MUNEA_DATABASE_PROVIDER=supabase` with backend-only Supabase environment variables enables the Supabase path for companion profile reads/writes and `/app-profile` aggregation.
+
+---
+
+## AI Chat Service (聊聊) — Master Guide
+
+聊聊 is Munea's soul: a real-time speech-to-speech AI health-care butler for the whole family.
+
+**The living master document is [`docs/AI聊聊-總覽-架構與迭代指南.md`](docs/AI聊聊-總覽-架構與迭代指南.md).** It consolidates the product architecture, the technical frame (voice bridge + brain assembly), the persona system (shared butler core + six characters), memory / perception / interaction layers, topic boundaries and safety, knowledge application (real-time search rules, interest topics, daily briefing), business hooks (free trial + points), the verification playbook with probe commands, and the iteration status table with next directions.
+
+**Rules of engagement:**
+1. Before changing anything about 聊聊 (persona, brain assembly, voice bridge, search rules, points behavior), **read the master guide first**.
+2. After shipping a change, **update the guide's iteration table + `STATUS.md`**, then push.
+3. Product-rule changes (plans, pricing, free limits, persona identity) require Edward's sign-off.
+
+**Quick start (local):**
+
+```bash
+# voice bridge (reads engine/.env.local for the Gemini key)
+.venv/Scripts/python.exe -u engine/live_voice_server.py   # ws://localhost:8201
+
+# full brain server (text chat, memory, briefing, guardian)
+.venv/Scripts/python.exe engine/server.py                 # http://localhost:8200
+
+# quality probes (no mic/speaker needed) — see the master guide §11
+python engine/voice_playback_probe.py
+python engine/test_guardian_crisis.py
+```
+
+Key capabilities as of 2026-07-08: multi-turn interruptible voice, character switching (`?char=`) with user renaming (`?name=`), mood-aware replies (`?mood=`), user-picked interest topics (`?topics=`), Google-grounded real-time answers on both text and voice paths (real places, real forecasts, no fabrication), and a shared butler core so every character — including the cartoon pets — knows it is the family's dedicated health-care butler with alert handling, emotional support, and family-mediation skills.
 
 ---
 
