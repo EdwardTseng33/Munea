@@ -26,10 +26,12 @@ if errorlevel 1 (
 )
 
 REM --- 影像引擎 :8188（載模型約 15 秒） ---
+REM 底＝待機小影片（會眨眼/微動）。要換底：改下面 MUNEA_AVATAR_SRC 的路徑（影片或照片都吃）
+set "MUNEA_AVATAR_SRC=E:\Claude\Munea\Munea\Lily\1929df67-6645-4821-89a3-b856beef82aa.mp4"
 netstat -an | findstr ":8188" | findstr "LISTENING" >nul 2>nul
 if errorlevel 1 (
-  echo 啟動寧寧影像引擎（載模型約 15 秒）...
-  start "沐寧Demo-影像引擎(關掉=結束)" /min cmd /c "cd /d %~dp0 && E:\voice-poc\.venv\Scripts\python.exe -u engine\avatar_live_server.py > demo-avatar.log 2>&1"
+  echo 啟動影像引擎（載模型約 15 秒）...
+  start "沐寧Demo-影像引擎(關掉=結束)" /min cmd /c "cd /d %~dp0 && set MUNEA_AVATAR_SRC=%MUNEA_AVATAR_SRC%&& E:\voice-poc\.venv\Scripts\python.exe -u engine\avatar_live_server.py > demo-avatar.log 2>&1"
 )
 
 REM --- 等兩個門都開（最多 40 秒） ---

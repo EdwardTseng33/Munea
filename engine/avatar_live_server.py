@@ -18,6 +18,8 @@ import os, sys, time, json, asyncio
 import numpy as np, cv2, torch
 from aiohttp import web, WSMsgType
 
+HERE = os.path.dirname(os.path.abspath(__file__))          # 在換工作目錄前先記住自己在哪
+POSTER = os.path.join(HERE, "..", "web", "avatars", "demo-live-poster.jpg")
 WAV2LIP = r"E:/voice-poc/repo/Wav2Lip"
 sys.path.insert(0, WAV2LIP); os.chdir(WAV2LIP)
 import audio as w2l_audio
@@ -33,34 +35,74 @@ _h264.DEFAULT_BITRATE = 8_000_000
 _h264.MAX_BITRATE = 12_000_000
 
 FACE_IMG = r"E:/Claude/Munea/web/avatars/nening-real-female-full.jpg"
+# 底可以是「一張照片」或「一段待機小影片」（眨眼/呼吸/髮絲微動、嘴自然）——影片底整個人就是活的
+FACE_SRC = os.environ.get("MUNEA_AVATAR_SRC", FACE_IMG)
 CKPT     = r"E:/voice-poc/models/wav2lip_gan.pth"
 PORT     = 8188
 device = "cuda"; img_size = 96; mel_step = 16; MICROBATCH = 2
 FPS = 30.0                     # 跟影像實際節奏一致（aiortc 30fps）；每幀吃 80/FPS 格聲譜
 MEL_PER_FRAME = 80.0 / FPS
-START_DELAY_FRAMES = 6         # 聲音剛到先等 ~0.24s 再開嘴（配合瀏覽器播放緩衝、嘴不超前聲音）
 SR_IN, SR_MEL = 24000, 16000   # 進來 24k（Gemini 原生）→ 內部 16k（Wav2Lip 訓練規格）
+PORTRAIT_AR = 0.745            # 直式裁切比例（跟寧寧照片一致、前端構圖不變）
 
-# ---------- 載寧寧 + 模型（一次） ----------
-print("[init] loading nening + wav2lip ...", flush=True)
-_img = cv2.imread(FACE_IMG)
-_scale = 960.0 / _img.shape[0]
-FRAME = cv2.resize(_img, (int(_img.shape[1] * _scale), 960))
+# ---------- 載底（照片或影片）+ 模型（一次） ----------
+print(f"[init] loading source + wav2lip ... src={os.path.basename(FACE_SRC)}", flush=True)
+
+def _load_source(path):
+    if path.lower().endswith((".mp4", ".mov", ".webm")):
+        vs = cv2.VideoCapture(path)
+        fps = vs.get(cv2.CAP_PROP_FPS) or 24.0
+        raw = []
+        while True:
+            ok, fr = vs.read()
+            if not ok:
+                break
+            raw.append(fr)
+        vs.release()
+        return raw, fps
+    return [cv2.imread(path)], 24.0
+
+_raw, SRC_FPS = _load_source(FACE_SRC)
 import face_detection
 _det = face_detection.FaceAlignment(face_detection.LandmarksType._2D, flip_input=False, device=device)
-_rect = _det.get_detections_for_batch(np.array([FRAME]))[0]
+_r0 = _det.get_detections_for_batch(np.array([_raw[0]]))[0]
+# 影片底通常是橫的 → 以臉為中心裁成直式（比例跟照片一致），高度縮到 960
+_H0, _W0 = _raw[0].shape[:2]
+_cw = min(_W0, int(_H0 * PORTRAIT_AR))
+_cx = int((_r0[0] + _r0[2]) / 2)
+_x0 = max(0, min(_W0 - _cw, _cx - _cw // 2))
+def _prep(fr):
+    fr = fr[:, _x0:_x0 + _cw]
+    s = 960.0 / fr.shape[0]
+    return cv2.resize(fr, (int(fr.shape[1] * s), 960))
+FRAMES = [_prep(fr) for fr in _raw]
+del _raw
+N_SRC = len(FRAMES)
+_rect = _det.get_detections_for_batch(np.array([FRAMES[0]]))[0]
 del _det; torch.cuda.empty_cache()
-Y1 = max(0, _rect[1]); Y2 = min(FRAME.shape[0], _rect[3] + 10)
-X1 = max(0, _rect[0]); X2 = min(FRAME.shape[1], _rect[2])
-FACE96 = cv2.resize(FRAME[Y1:Y2, X1:X2], (img_size, img_size))
-# 畫質修正②：生成結果「只貼下半臉＋邊緣羽化」——眼睛/額頭永遠是原圖、接縫看不見
+Y1 = max(0, _rect[1]); Y2 = min(FRAMES[0].shape[0], _rect[3] + 10)
+X1 = max(0, _rect[0]); X2 = min(FRAMES[0].shape[1], _rect[2])
+FACES96 = [cv2.resize(fr[Y1:Y2, X1:X2], (img_size, img_size)) for fr in FRAMES]
+FACE96 = FACES96[0]
+# 畫質修正②：生成結果「只貼下半臉＋邊緣羽化」——眼睛/額頭永遠是原底、接縫看不見
 PATCH_W, PATCH_H = X2 - X1, Y2 - Y1
 _m = np.zeros((PATCH_H, PATCH_W), np.float32)
 _e = max(6, PATCH_W // 12)
 cv2.rectangle(_m, (_e, int(PATCH_H * 0.52)), (PATCH_W - _e, PATCH_H - 3), 1.0, -1)
 _m = cv2.GaussianBlur(_m, (0, 0), _e / 2.0)
-BLEND_MASK = _m[..., None]                     # (H,W,1) 0=原圖 1=生成
-ORIG_PATCH = FRAME[Y1:Y2, X1:X2].astype(np.float32)
+BLEND_MASK = _m[..., None]                     # (H,W,1) 0=原底 1=生成
+BOOT = time.time()
+try:
+    cv2.imwrite(POSTER, FRAMES[0])             # 開場照片跟底同步（接通前後看起來是同一個人）
+except Exception:
+    pass
+
+def src_idx_at(t):
+    """牆上時間 → 底影格（來回播放、不跳接）；照片底恆為 0。"""
+    if N_SRC == 1:
+        return 0
+    p = int((t - BOOT) * SRC_FPS) % (2 * N_SRC - 2)
+    return p if p < N_SRC else 2 * N_SRC - 2 - p
 model = Wav2Lip(); _ck = torch.load(CKPT, map_location=device)
 model.load_state_dict({k.replace("module.", ""): v for k, v in _ck["state_dict"].items()})
 model = model.to(device).eval()
@@ -74,7 +116,7 @@ for _ in range(3):
     with torch.no_grad():
         _ = model(_mt, _it)
 torch.cuda.synchronize()
-print(f"[init] ready. frame={FRAME.shape[1]}x{FRAME.shape[0]} face=({X1},{Y1})-({X2},{Y2})", flush=True)
+print(f"[init] ready. frame={FRAMES[0].shape[1]}x{FRAMES[0].shape[0]} src_frames={N_SRC}@{SRC_FPS:.0f}fps face=({X1},{Y1})-({X2},{Y2})", flush=True)
 
 # ---------- 聲音 → 聲譜（滑動累積、跨段連續） ----------
 HOP, NFFT = 200, 800
@@ -156,8 +198,9 @@ def _resample_24k_to_16k(i16_bytes):
     return np.interp(xq, xp, x).astype(np.float32)
 
 # ---------- GPU 生成 ----------
-def gen_frames(mel_windows):
-    fb = np.asarray([FACE96] * len(mel_windows), dtype=np.float32) / 255.0
+def gen_frames(mel_windows, idxs):
+    """把每個聲譜窗的嘴、貼到「當下那一幀底」上——影片底連講話時都在眨眼/微動。"""
+    fb = np.asarray([FACES96[i] for i in idxs], dtype=np.float32) / 255.0
     mk = fb.copy(); mk[:, img_size // 2:] = 0
     fb = np.concatenate((mk, fb), axis=3)
     it = torch.from_numpy(np.transpose(fb, (0, 3, 1, 2))).float().to(device)
@@ -166,10 +209,11 @@ def gen_frames(mel_windows):
         pred = model(mt, it)
     pred = (pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.0)
     outs = []
-    for p in pred:
-        fr = FRAME.copy()
+    for p, i in zip(pred, idxs):
+        fr = FRAMES[i].copy()
+        orig = fr[Y1:Y2, X1:X2].astype(np.float32)
         gen = cv2.resize(p.astype(np.uint8), (PATCH_W, PATCH_H)).astype(np.float32)
-        fr[Y1:Y2, X1:X2] = (ORIG_PATCH * (1.0 - BLEND_MASK) + gen * BLEND_MASK).astype(np.uint8)
+        fr[Y1:Y2, X1:X2] = (orig * (1.0 - BLEND_MASK) + gen * BLEND_MASK).astype(np.uint8)
         outs.append(fr)
     return outs
 
@@ -178,7 +222,9 @@ def worker_step():
     wins = mels.windows_now(MICROBATCH)
     if wins is None:
         return None
-    return gen_frames(wins)
+    now = time.time()
+    idxs = [src_idx_at(now + k / FPS) for k in range(len(wins))]
+    return gen_frames(wins, idxs)
 
 class NeningTrack(VideoStreamTrack):
     kind = "video"
@@ -191,7 +237,7 @@ class NeningTrack(VideoStreamTrack):
             frames = await asyncio.get_event_loop().run_in_executor(None, worker_step)
             if frames:
                 self.buf = frames; self.live += len(frames)
-        fr = self.buf.pop(0) if self.buf else FRAME     # 沒聲音＝原照片待機
+        fr = self.buf.pop(0) if self.buf else FRAMES[src_idx_at(time.time())]   # 待機＝活的底（眨眼/微動）
         self.count += 1
         if self.count % 120 == 0:
             print(f"[stream] frames={self.count} live_lip={self.live} eff_fps={round(self.count/(time.time()-self.t0),1)} "
