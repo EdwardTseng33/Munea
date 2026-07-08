@@ -1857,7 +1857,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 發起活動：日期時間並排＋送出鈕固定在畫面下方（內容從按鈕底下滑過） */
 .dt-row { display: flex; gap: 9px; }
 .dt-row .chal-input { flex: 1; min-width: 0; }
-#chalModal #startChalBtn { box-shadow: var(--shadow-sm); }
+#chalModal #startChalBtn { position: sticky; bottom: 6px; z-index: 5; box-shadow: var(--shadow-sm), 0 -12px 14px -12px rgba(31,41,38,.14); }
 /* 想聊的話題：小圓籤（長輩好按的大觸控） */
 .topic-chips { display: flex; flex-wrap: wrap; gap: 9px; margin: 4px 0 8px; }
 .topic-chip { padding: 10px 15px; border: 2px solid var(--line); border-radius: 100px; background: #fff; font-size: 14.5px; font-weight: 700; color: var(--ink2); cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
