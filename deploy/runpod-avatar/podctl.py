@@ -92,7 +92,9 @@ def main():
     elif cmd == "status":
         status(sys.argv[2])
     elif cmd == "stop":
-        print(json.dumps(_req("POST", f"/pods/{sys.argv[2]}/stop"), indent=1)[:400]); print("已關卡（磁碟保留）")
+        print(json.dumps(_req("POST", f"/pods/{sys.argv[2]}/stop"), indent=1)[:400]); print("已暫停（磁碟保留、只付置物費）")
+    elif cmd == "start":
+        print(json.dumps(_req("POST", f"/pods/{sys.argv[2]}/start"), indent=1)[:600]); print("喚醒指令已送出")
     elif cmd == "terminate":
         _req("DELETE", f"/pods/{sys.argv[2]}")
         print("已銷毀（計費停止）")
