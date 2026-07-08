@@ -349,6 +349,12 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-primary { min-width: 72px; height: 40px; border-radius: 13px; color: #fff; background: var(--teal-d); }
 .auth-secondary { min-width: 0; height: auto; border-radius: 10px; color: var(--muted); background: transparent; border: none; font-family: var(--sans); font-weight: 600; font-size: 15px; padding: 10px 6px; }
 .auth-dev-badge { font-size: 13px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 999px; padding: 4px 8px; }
+/* 會員身份標籤（帳號卡 · FREE/PLUS/PRO · Edward 7/8） */
+.auth-title-row { display: flex; align-items: center; gap: 8px; }
+.mem-badge { font-family: var(--display); font-size: 12.5px; font-weight: 800; letter-spacing: .06em; border-radius: 999px; padding: 3px 10px; line-height: 1.4; flex-shrink: 0; }
+.mem-badge.free { background: var(--mint); color: var(--teal-dd); }
+.mem-badge.plus { background: var(--teal); color: #fff; }
+.mem-badge.pro { background: var(--gold); color: #fff; }
 .set-list { background: var(--surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden; }
 .set-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; font-size: 17px; color: var(--ink); }
 .set-row + .set-row { border-top: 1px solid var(--line); }

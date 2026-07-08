@@ -2634,6 +2634,9 @@ function init() {
     const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
     const pts = PLAN_POINTS[plan] || 200;
     const sn = $('#setPlanName'); if (sn) sn.textContent = label + ' 方案';
+    // 帳號卡的會員身份標籤（FREE/PLUS/PRO）
+    const mb = $('#memBadge');
+    if (mb) { mb.textContent = String(plan).toUpperCase(); mb.className = 'mem-badge ' + plan; }
     const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
     if (POINTS.total !== pts) { POINTS.total = pts; if (POINTS.used > pts) POINTS.used = Math.round(pts * 0.3); }
     if (typeof renderPoints === 'function') renderPoints();

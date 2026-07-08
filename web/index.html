@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260708-relay1" />
+  <link rel="stylesheet" href="src/styles.css?v=20260708-badge1" />
 </head>
 <body>
 <div class="app-shell">
@@ -361,7 +361,7 @@
         <div class="auth-card-main">
           <span class="auth-ava" id="authAvatar"><span class="init-ava p-ama">嬤</span></span>
           <div class="auth-copy">
-            <div class="auth-title" id="authStatusText">訪客模式</div>
+            <div class="auth-title-row"><div class="auth-title" id="authStatusText">訪客模式</div><span class="mem-badge free" id="memBadge">FREE</span></div>
             <div class="auth-sub" id="authProviderText">登入後同步家人、提醒與訂閱</div>
             <div class="auth-email" id="authEmailText"></div>
           </div>
@@ -1102,7 +1102,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260708-relay1"></script>
+  <script type="module" src="src/app.js?v=20260708-badge1"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
