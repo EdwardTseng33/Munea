@@ -107,8 +107,15 @@ const capUser = $('#capUser'), capAi = $('#capAi'), vid = $('#avatarVid');
 const qs = new URLSearchParams(location.search);
 const SELFTEST_TEXT = qs.get('text');
 const showDbg = qs.has('debug');
-// 影像引擎位置：預設同一台機器的 :8188、?avatar= 可覆寫
-const AVATAR_BASE = qs.get('avatar') || (location.hostname || 'localhost') + ':8188';
+// 影像引擎位置：預設同一台機器的 :8188；?avatar= 可覆寫（可給 host:port 或完整 https 網址）
+const _av = qs.get('avatar') || (location.hostname || 'localhost') + ':8188';
+const AVATAR_HTTP = _av.startsWith('http') ? _av.replace(/\/$/, '') : (location.protocol === 'https:' ? 'https' : 'http') + '://' + _av;
+const AVATAR_WS = AVATAR_HTTP.replace(/^http/, 'ws');
+// 穿牆中繼（雲端用）：?turn=IP:port&tu=帳&tp=密 → 影像走中繼、手機行動網路也通
+const ICE = qs.get('turn') ? {
+  iceServers: [{ urls: 'turn:' + qs.get('turn') + '?transport=tcp', username: qs.get('tu') || 'munea', credential: qs.get('tp') || '' }],
+  iceTransportPolicy: 'relay',
+} : {};
 window.__demoStats = { ws:0, recv:0, capsAi:'', turns:0, state:'idle', firstAudioMs:null, vidFrames:0, vidLive:0, err:'' };
 
 function setState(st){ stage.dataset.state = st; window.__demoStats.state = st; }
@@ -137,17 +144,20 @@ function waveStop(){ cancelAnimationFrame(raf); raf=0; lvlSrc=null; cur=0; bars.
 const Avatar = {
   pc:null, ws:null, on:false,
   async start(){
-    const proto = location.protocol==='https:'?'https':'http';
-    const wproto = location.protocol==='https:'?'wss':'ws';
     try{
-      this.pc = new RTCPeerConnection();
+      this.pc = new RTCPeerConnection(ICE);
       this.pc.addTransceiver('video',{direction:'recvonly'});
       this.pc.ontrack = e=>{ vid.srcObject = e.streams[0]; };
       const o = await this.pc.createOffer(); await this.pc.setLocalDescription(o);
-      const r = await fetch(`${proto}://${AVATAR_BASE}/offer`,{method:'POST',headers:{'Content-Type':'application/json'},
+      await new Promise(res=>{ // 等收集完連線候選（含中繼）再送出
+        if(this.pc.iceGatheringState==='complete') return res();
+        const chk=()=>{ if(this.pc.iceGatheringState==='complete'){ this.pc.removeEventListener('icegatheringstatechange',chk); res(); } };
+        this.pc.addEventListener('icegatheringstatechange',chk); setTimeout(res,3000);
+      });
+      const r = await fetch(`${AVATAR_HTTP}/offer`,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({sdp:this.pc.localDescription.sdp,type:this.pc.localDescription.type})});
       const a = await r.json(); await this.pc.setRemoteDescription(a);
-      this.ws = new WebSocket(`${wproto}://${AVATAR_BASE}/audio`);
+      this.ws = new WebSocket(`${AVATAR_WS}/audio`);
       this.ws.binaryType='arraybuffer';
       this.on = true;
       return true;
