@@ -978,6 +978,9 @@ def wellbeing_trend_response(data):
 
 
 def load_care_schedule(person_id=None):
+    remote_items = load_routine_reminders(person_id=person_id, status="active", limit=500)
+    if remote_items:
+        return [routine_reminder_to_care_item(item) for item in remote_items]
     items = read_json_file(CARE_SCHEDULE_PATH, [])
     if not isinstance(items, list):
         items = []
@@ -1002,29 +1005,151 @@ def care_schedule_response(data):
     data = data or {}
     action = data.get("action") or "list"
     person_id = data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID
+    if action == "add":
+        reminder = {
+            "personId": person_id,
+            "title": (data.get("label") or data.get("title") or "").strip()[:80],
+            "type": data.get("type") or data.get("reminderType") or data.get("reminder_type") or "routine",
+            "schedule": {"date": data.get("date"), "weekday": data.get("weekday"), **(data.get("schedule") or {})},
+            "status": "active",
+        }
+        item, backend = save_routine_reminder(reminder)
+        return {"ok": True, "action": "add", "item": routine_reminder_to_care_item(item), "backend": backend}
+    if action == "remove":
+        rid = data.get("id")
+        item, backend = update_routine_reminder(rid, {"status": "archived"})
+        return {"ok": True, "action": "remove", "id": rid, "backend": backend, "item": item}
+    return {"ok": True, "action": "list", "items": load_care_schedule(person_id),
+            "today": today_care_items(person_id)}
+
+ROUTINE_REMINDER_TYPES = {"medication", "routine", "check_in", "custom"}
+ROUTINE_REMINDER_STATUSES = {"active", "paused", "archived"}
+
+def normalize_routine_reminder(item):
+    item = item or {}
+    reminder_type = item.get("type") or item.get("reminderType") or item.get("reminder_type") or "routine"
+    status = item.get("status") or "active"
+    title = item.get("title") or item.get("label") or "Routine reminder"
+    schedule = dict(item.get("schedule") or {})
+    for key in ("date", "weekday", "time", "times", "dosage", "note", "repeat"):
+        if key in item and item.get(key) is not None:
+            schedule.setdefault(key, item.get(key))
+    return {
+        "id": str(item.get("id") or ("rr_" + uuid.uuid4().hex[:10])),
+        "accountId": item.get("accountId") or item.get("account_id") or "local-demo-account",
+        "personId": item.get("personId") or item.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "title": str(title).strip()[:120] or "Routine reminder",
+        "type": reminder_type if reminder_type in ROUTINE_REMINDER_TYPES else "custom",
+        "status": status if status in ROUTINE_REMINDER_STATUSES else "active",
+        "schedule": schedule,
+        "createdAt": item.get("createdAt") or item.get("created_at") or utc_now(),
+        "updatedAt": item.get("updatedAt") or item.get("updated_at") or utc_now(),
+        "deletedAt": item.get("deletedAt") or item.get("deleted_at"),
+    }
+
+
+def routine_reminder_to_care_item(item):
+    reminder = normalize_routine_reminder(item)
+    schedule = reminder.get("schedule") or {}
+    return {
+        "id": reminder.get("id"),
+        "personId": reminder.get("personId"),
+        "label": reminder.get("title"),
+        "date": schedule.get("date"),
+        "weekday": schedule.get("weekday"),
+        "type": reminder.get("type"),
+        "status": reminder.get("status"),
+        "schedule": schedule,
+        "createdAt": reminder.get("createdAt"),
+        "updatedAt": reminder.get("updatedAt"),
+    }
+
+
+def load_routine_reminders(person_id=None, status=None, limit=100):
+    try:
+        remote_items = data_backend().load_routine_reminders(person_id=person_id, status=status, limit=limit)
+        if remote_items is not None:
+            return [normalize_routine_reminder(item) for item in remote_items]
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load routine reminders from Supabase", e)
     items = read_json_file(CARE_SCHEDULE_PATH, [])
     if not isinstance(items, list):
         items = []
-    if action == "add":
-        item = {
-            "id": "cs_" + uuid.uuid4().hex[:10],
-            "personId": person_id,
-            "label": (data.get("label") or "").strip()[:60],
-            "date": data.get("date"),
-            "weekday": data.get("weekday"),
-            "createdAt": utc_now(),
-        }
-        if item["label"]:
-            items.append(item)
-            write_json_file(CARE_SCHEDULE_PATH, items[-500:])
-        return {"ok": True, "action": "add", "item": item}
-    if action == "remove":
-        rid = data.get("id")
-        items = [i for i in items if i.get("id") != rid]
-        write_json_file(CARE_SCHEDULE_PATH, items)
-        return {"ok": True, "action": "remove", "id": rid}
-    return {"ok": True, "action": "list", "items": load_care_schedule(person_id),
-            "today": today_care_items(person_id)}
+    items = [normalize_routine_reminder(item) for item in items]
+    if person_id:
+        items = [item for item in items if item.get("personId") in (None, person_id)]
+    if status:
+        items = [item for item in items if item.get("status") == status]
+    return items[-limit:]
+
+
+def save_routine_reminder(item):
+    reminder = normalize_routine_reminder({**(item or {}), "updatedAt": utc_now()})
+    try:
+        remote_item = data_backend().save_routine_reminder(reminder)
+        if remote_item is not None:
+            return normalize_routine_reminder(remote_item), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save routine reminder to Supabase", e)
+    items = load_routine_reminders(limit=1000)
+    next_items = [item for item in items if item.get("id") != reminder.get("id")]
+    next_items.append(reminder)
+    write_json_file(CARE_SCHEDULE_PATH, next_items[-1000:])
+    return reminder, "json"
+
+
+def update_routine_reminder(reminder_id, patch):
+    if not reminder_id:
+        return None, "reminder_id_required"
+    patch = patch or {}
+    try:
+        remote_item = data_backend().update_routine_reminder(reminder_id, patch)
+        if remote_item is not None:
+            return normalize_routine_reminder(remote_item), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("update routine reminder in Supabase", e)
+    items = load_routine_reminders(limit=1000)
+    updated = None
+    next_items = []
+    for item in items:
+        if item.get("id") == reminder_id:
+            merged_schedule = {**(item.get("schedule") or {}), **(patch.get("schedule") or {})}
+            item = normalize_routine_reminder({**item, **patch, "schedule": merged_schedule, "updatedAt": utc_now()})
+            updated = item
+        next_items.append(item)
+    write_json_file(CARE_SCHEDULE_PATH, next_items[-1000:])
+    return (updated, "json") if updated else (None, "not_found")
+
+
+def routine_reminders_response(data):
+    data = data or {}
+    action = data.get("action") or "list"
+    if action in ("save", "create", "add"):
+        item, backend = save_routine_reminder(data.get("reminder") or data.get("item") or data)
+        return {"ok": True, "reminder": item, "backend": backend}
+    if action in ("update", "patch", "archive", "pause", "activate"):
+        reminder_id = data.get("id") or data.get("reminderId") or data.get("reminder_id")
+        patch = data.get("patch") or data
+        if action == "archive":
+            patch = {**patch, "status": "archived"}
+        elif action == "pause":
+            patch = {**patch, "status": "paused"}
+        elif action == "activate":
+            patch = {**patch, "status": "active"}
+        item, backend = update_routine_reminder(reminder_id, patch)
+        if item is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "reminder": item, "backend": backend}
+    person_id = data.get("personId") or data.get("person_id")
+    status = data.get("status")
+    limit = int(data.get("limit") or 100)
+    return {"ok": True, "reminders": load_routine_reminders(person_id=person_id, status=status, limit=limit)}
 
 
 def proactive_opening_response(data):
@@ -3159,7 +3284,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "consent-records", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -3224,6 +3349,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(consent_records_response(data))
             elif self.path == "/family/activity":
                 self._json(family_activity_response(data))
+            elif self.path == "/routine-reminders":
+                self._json(routine_reminders_response(data))
             elif self.path == "/wellbeing/trend":
                 self._json(wellbeing_trend_response(data))
             elif self.path == "/wellbeing/log":

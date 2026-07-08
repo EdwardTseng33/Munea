@@ -549,6 +549,66 @@ class SupabaseAdapter:
         )
         return self.privacy_row_to_request(rows[0]) if rows else None
 
+    def load_routine_reminders(self, person_id=None, status=None, limit=100):
+        if not self.enabled():
+            return None
+        person_id = person_id if self._is_uuid(person_id or "") else self.person_id
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{person_id}",
+            "select": "*",
+            "order": "updated_at.desc",
+            "limit": str(limit or 100),
+        }
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("routine_reminders", query)
+        return [self.routine_reminder_row_to_item(row) for row in rows or []]
+
+    def save_routine_reminder(self, item):
+        if not self.enabled():
+            return None
+        payload = self.routine_reminder_to_row(item)
+        reminder_id = (item or {}).get("id")
+        rows = None
+        if self._is_uuid(reminder_id or ""):
+            rows = self._request(
+                "PATCH",
+                "routine_reminders",
+                query={"id": f"eq.{reminder_id}", "select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        if not rows:
+            rows = self._request(
+                "POST",
+                "routine_reminders",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        return self.routine_reminder_row_to_item(rows[0]) if rows else None
+
+    def update_routine_reminder(self, reminder_id, patch):
+        if not self.enabled() or not self._is_uuid(reminder_id or ""):
+            return None
+        payload = self.routine_reminder_patch_to_row(patch)
+        if not payload:
+            return self.routine_reminder_row_to_item(
+                self._first("routine_reminders", {"id": f"eq.{reminder_id}", "select": "*"})
+            )
+        if "schedule" in payload:
+            current = self._first("routine_reminders", {"id": f"eq.{reminder_id}", "select": "schedule"})
+            payload["schedule"] = {**((current or {}).get("schedule") or {}), **(payload.get("schedule") or {})}
+        rows = self._request(
+            "PATCH",
+            "routine_reminders",
+            query={"id": f"eq.{reminder_id}", "select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.routine_reminder_row_to_item(rows[0]) if rows else None
+
     def append_product_event(self, event):
         if not self.enabled():
             return None
@@ -1592,6 +1652,71 @@ class SupabaseAdapter:
             "revokedAt": row.get("revoked_at"),
             "expiresAt": row.get("expires_at"),
             "createdAt": row.get("created_at"),
+        }
+
+    @staticmethod
+    def _normalize_routine_reminder_type(reminder_type):
+        allowed = {"medication", "routine", "check_in", "custom"}
+        return reminder_type if reminder_type in allowed else "custom"
+
+    @staticmethod
+    def _normalize_routine_reminder_status(status):
+        allowed = {"active", "paused", "archived"}
+        return status if status in allowed else "active"
+
+    def routine_reminder_to_row(self, item):
+        item = item or {}
+        schedule = dict(item.get("schedule") or {})
+        reminder_id = item.get("id")
+        person_id = item.get("personId") or item.get("person_id") or self.person_id
+        if reminder_id and not self._is_uuid(reminder_id):
+            schedule.setdefault("originalReminderId", reminder_id)
+        if person_id and not self._is_uuid(person_id):
+            schedule.setdefault("originalPersonId", person_id)
+            person_id = self.person_id
+        for key in ("date", "weekday", "time", "times", "dosage", "note", "repeat"):
+            if key in item and item.get(key) is not None:
+                schedule.setdefault(key, item.get(key))
+        return {
+            "account_id": item.get("accountId") or item.get("account_id") or self.account_id,
+            "person_id": person_id,
+            "title": item.get("title") or item.get("label") or "Routine reminder",
+            "reminder_type": self._normalize_routine_reminder_type(item.get("type") or item.get("reminderType") or item.get("reminder_type")),
+            "schedule": schedule,
+            "status": self._normalize_routine_reminder_status(item.get("status")),
+            "deleted_at": item.get("deletedAt") or item.get("deleted_at"),
+        }
+
+    def routine_reminder_patch_to_row(self, patch):
+        patch = patch or {}
+        payload = {}
+        if any(key in patch for key in ("title", "label")):
+            payload["title"] = patch.get("title") or patch.get("label") or "Routine reminder"
+        if any(key in patch for key in ("type", "reminderType", "reminder_type")):
+            payload["reminder_type"] = self._normalize_routine_reminder_type(patch.get("type") or patch.get("reminderType") or patch.get("reminder_type"))
+        if "status" in patch:
+            payload["status"] = self._normalize_routine_reminder_status(patch.get("status"))
+            if payload["status"] == "archived":
+                payload["deleted_at"] = patch.get("deletedAt") or patch.get("deleted_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        if "schedule" in patch:
+            payload["schedule"] = patch.get("schedule") or {}
+        return payload
+
+    @staticmethod
+    def routine_reminder_row_to_item(row):
+        row = row or {}
+        schedule = row.get("schedule") or {}
+        return {
+            "id": row.get("id") or schedule.get("originalReminderId") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id") or schedule.get("originalPersonId"),
+            "title": row.get("title") or "Routine reminder",
+            "type": row.get("reminder_type") or "routine",
+            "status": row.get("status") or "active",
+            "schedule": schedule,
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+            "deletedAt": row.get("deleted_at"),
         }
 
     @staticmethod

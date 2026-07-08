@@ -198,6 +198,8 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**payload, "id": "usage-ledger-1", "updated_at": "2026-06-29T00:00:00Z"}]
         if table == "privacy_requests":
             return [{**payload, "id": "privacy-request-1", "requested_at": "2026-06-29T00:00:00Z"}]
+        if table == "routine_reminders":
+            return [{**payload, "id": payload.get("id") or "77777777-7777-4777-8777-777777777777", "created_at": "2026-07-08T00:00:00Z", "updated_at": "2026-07-08T00:00:00Z"}]
         if table == "companion_profiles":
             return [{**payload, "updated_at": "2026-06-29T00:00:00Z"}]
         if table == "product_events":
@@ -288,6 +290,18 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "requires_reauth": True,
             "subscription_notice_required": False,
             "requested_at": "2026-06-29T00:00:00Z",
+        }],
+        "routine_reminders": [{
+            "id": "77777777-7777-4777-8777-777777777777",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "title": "Vitamin D after breakfast",
+            "reminder_type": "medication",
+            "schedule": {"weekday": "Wednesday", "time": "09:00", "dosage": "1 tablet"},
+            "status": "active",
+            "created_at": "2026-07-08T00:00:00Z",
+            "updated_at": "2026-07-08T00:00:00Z",
+            "deleted_at": None,
         }],
         "product_events": [{
             "id": "product-event-1",
@@ -568,6 +582,32 @@ assert privacy_store["requests"][0]["type"] == "export"
 privacy_req = adapter.append_privacy_request("account_deletion", {"reason": "test"})
 assert privacy_req["type"] == "account_deletion"
 assert privacy_req["subscriptionNoticeRequired"] is True
+routine_reminders = adapter.load_routine_reminders(status="active", limit=10)
+assert routine_reminders[0]["title"] == "Vitamin D after breakfast"
+assert routine_reminders[0]["type"] == "medication"
+saved_routine = adapter.save_routine_reminder({
+    "id": "local-med-1",
+    "personId": "local-person-self",
+    "title": "Blood pressure check",
+    "type": "routine",
+    "schedule": {"weekday": "Wednesday", "time": "20:00"},
+})
+assert saved_routine["title"] == "Blood pressure check"
+assert saved_routine["schedule"]["originalReminderId"] == "local-med-1"
+local_routine_row = adapter.routine_reminder_to_row({
+    "id": "local-visit-1",
+    "personId": "local-person-self",
+    "title": "Clinic visit",
+    "type": "check_in",
+    "date": "2026-07-09",
+})
+assert local_routine_row["person_id"] == env["MUNEA_SUPABASE_PERSON_ID"]
+assert local_routine_row["schedule"]["originalPersonId"] == "local-person-self"
+archived_routine = adapter.update_routine_reminder("77777777-7777-4777-8777-777777777777", {"status": "archived"})
+assert archived_routine["status"] == "archived"
+rescheduled_routine = adapter.update_routine_reminder("77777777-7777-4777-8777-777777777777", {"schedule": {"time": "10:00"}})
+assert rescheduled_routine["schedule"]["time"] == "10:00"
+assert rescheduled_routine["schedule"]["dosage"] == "1 tablet"
 event = adapter.append_product_event({"eventName": "voice_session_completed", "properties": {"durationMs": 90000}})
 assert event["eventName"] == "voice_session_completed"
 events = adapter.load_product_events(limit=10)
@@ -1018,6 +1058,92 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 print("consent records cloud bridge OK")
 '@
 Pass "Consent records can use Supabase while preserving JSON fallback"
+
+Step "Routine reminders cloud bridge contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeRoutineBackend:
+    def enabled(self):
+        return True
+    def load_routine_reminders(self, person_id=None, status=None, limit=100):
+        assert person_id in (None, "person-1")
+        assert status in (None, "active")
+        return [{
+            "id": "reminder-1",
+            "personId": "person-1",
+            "title": "Take morning medicine",
+            "type": "medication",
+            "status": "active",
+            "schedule": {"weekday": "Wednesday", "time": "09:00"},
+            "createdAt": "2026-07-08T00:00:00Z",
+        }]
+    def save_routine_reminder(self, item):
+        assert item["title"] == "Evening walk"
+        return {**item, "id": "reminder-2"}
+    def update_routine_reminder(self, reminder_id, patch):
+        assert reminder_id == "reminder-2"
+        assert patch["status"] in ("archived", "paused", "active")
+        return {
+            "id": reminder_id,
+            "personId": "person-1",
+            "title": "Evening walk",
+            "type": "routine",
+            "status": patch["status"],
+            "schedule": {"weekday": "Wednesday"},
+        }
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeRoutineBackend()
+    listed = server.routine_reminders_response({"action": "list", "personId": "person-1", "status": "active"})
+    assert listed["ok"] is True
+    assert listed["reminders"][0]["title"] == "Take morning medicine"
+    saved = server.routine_reminders_response({"action": "save", "reminder": {"personId": "person-1", "title": "Evening walk", "type": "routine", "weekday": "Wednesday"}})
+    assert saved["backend"] == "supabase"
+    assert saved["reminder"]["id"] == "reminder-2"
+    archived = server.routine_reminders_response({"action": "archive", "id": "reminder-2"})
+    assert archived["backend"] == "supabase"
+    assert archived["reminder"]["status"] == "archived"
+    care = server.care_schedule_response({"action": "list", "personId": "person-1"})
+    assert care["items"][0]["label"] == "Take morning medicine"
+finally:
+    server.data_backend = original_backend
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def load_routine_reminders(self, person_id=None, status=None, limit=100):
+        return None
+    def save_routine_reminder(self, item):
+        return None
+    def update_routine_reminder(self, reminder_id, patch):
+        return None
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.CARE_SCHEDULE_PATH = str(Path(d) / "care_schedule.json")
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        saved = server.routine_reminders_response({"action": "save", "reminder": {"personId": "person-1", "title": "Clinic visit", "type": "check_in", "date": "2026-07-09"}})
+        assert saved["backend"] == "json"
+        listed = server.routine_reminders_response({"action": "list", "personId": "person-1"})
+        assert listed["reminders"][0]["title"] == "Clinic visit"
+        care_added = server.care_schedule_response({"action": "add", "personId": "person-1", "label": "Drink water", "weekday": "Wednesday"})
+        assert care_added["item"]["label"] == "Drink water"
+        care_list = server.care_schedule_response({"action": "list", "personId": "person-1"})
+        assert any(item["label"] == "Drink water" for item in care_list["items"])
+        archived = server.routine_reminders_response({"action": "archive", "id": saved["reminder"]["id"]})
+        assert archived["backend"] == "json"
+        assert archived["reminder"]["status"] == "archived"
+    finally:
+        server.data_backend = original_backend
+print("routine reminders cloud bridge OK")
+'@
+Pass "Routine reminders can use Supabase while preserving JSON fallback"
 
 Step "Family activity cloud bridge contract"
 Invoke-PythonBlock @'

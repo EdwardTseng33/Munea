@@ -127,6 +127,7 @@ Prototype coverage:
 - `/family/invitations`
 - `/consent-records`
 - `/companion-profile`
+- `/routine-reminders`
 
 Frontend bridge:
 
@@ -137,7 +138,7 @@ Frontend bridge:
 
 Missing:
 
-- reminder CRUD route.
+- family membership role update route.
 
 ### Voice, Avatar, And Memory
 
