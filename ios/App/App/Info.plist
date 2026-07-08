@@ -14,6 +14,8 @@
 	<string>Munea connects to a voice service on your local Wi-Fi so you can talk with your AI companion in real time.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>沐寧需要讀取你的健康資料（步數、心率、睡眠、血壓、血氧等），用來陪你看顧每天的身體狀況，並在有明顯異常時提醒你與授權的家人。</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>沐寧目前只讀取健康資料、不寫入；此說明為系統要求預留，若未來記錄健康資料會先徵求你的同意。</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

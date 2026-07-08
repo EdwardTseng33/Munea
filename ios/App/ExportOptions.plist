@@ -5,6 +5,8 @@
     <!-- 沐寧 TestFlight 上傳設定：xcodebuild -exportArchive 用
          destination=upload 會直接傳到 App Store Connect，不用開 Xcode 介面
          teamID 留白：等付費開發者帳號開通後填入（不是免費 Personal Team 的 V77L5245MR） -->
+    <key>teamID</key>
+    <string>V77L5245MR</string>
     <key>method</key>
     <string>app-store-connect</string>
     <key>destination</key>
