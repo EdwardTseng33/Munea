@@ -170,6 +170,41 @@ class SupabaseAdapter:
             "updatedAt": (account or {}).get("updated_at") or (person or {}).get("updated_at"),
         }
 
+    def load_admin_accounts(self, query=None, limit=50):
+        if not self.enabled():
+            return None
+        query = (query or "").strip()
+        limit = max(1, min(200, int(limit or 50)))
+        filters = {"select": "*", "order": "created_at.desc", "limit": str(limit)}
+        if query:
+            if self._is_uuid(query):
+                filters["or"] = f"(id.eq.{query},name.ilike.*{query}*)"
+            else:
+                filters["name"] = f"ilike.*{query}*"
+        rows = self._select("accounts", filters)
+        summaries = []
+        for account in rows or []:
+            account_id = account.get("id")
+            family_group = self._first("family_groups", {"account_id": f"eq.{account_id}", "select": "*", "limit": "1"})
+            primary_person = self._first(
+                "persons",
+                {"account_id": f"eq.{account_id}", "is_primary_care_recipient": "eq.true", "select": "*", "limit": "1"},
+            )
+            memberships = []
+            if family_group and family_group.get("id"):
+                memberships = self._select(
+                    "family_memberships",
+                    {"account_id": f"eq.{account_id}", "family_group_id": f"eq.{family_group.get('id')}", "select": "*"},
+                )
+            companion = None
+            if primary_person and primary_person.get("id"):
+                companion = self._first(
+                    "companion_profiles",
+                    {"account_id": f"eq.{account_id}", "person_id": f"eq.{primary_person.get('id')}", "select": "*", "limit": "1"},
+                )
+            summaries.append(self.admin_account_rows_to_summary(account, family_group, primary_person, memberships, companion))
+        return summaries
+
     def save_app_profile_store(self, store):
         if not self.enabled():
             return None
@@ -1312,6 +1347,45 @@ class SupabaseAdapter:
             "displayName": row.get("display_name") or "Nening",
             "nameTouched": bool(row.get("name_touched")),
             "updatedAt": row.get("updated_at") or row.get("created_at"),
+        }
+
+    def admin_account_rows_to_summary(self, account=None, family_group=None, primary_person=None, memberships=None, companion=None):
+        account = account or {}
+        family_group = family_group or {}
+        primary_person = primary_person or {}
+        memberships = memberships or []
+        companion = companion or {}
+        roles = {}
+        for membership in memberships:
+            role = membership.get("role") or "unknown"
+            roles[role] = roles.get(role, 0) + 1
+        return {
+            "accountId": account.get("id") or "",
+            "accountName": account.get("name") or "",
+            "locale": account.get("locale") or "zh-TW",
+            "preferredLanguages": account.get("preferred_languages") or ["zh-TW", "en"],
+            "createdAt": account.get("created_at"),
+            "updatedAt": account.get("updated_at"),
+            "familyGroup": {
+                "id": family_group.get("id") or "",
+                "name": family_group.get("name") or "Munea Care Circle",
+            },
+            "primaryPerson": {
+                "id": primary_person.get("id") or "",
+                "displayName": primary_person.get("display_name") or "",
+                "relationship": primary_person.get("relationship") or "self",
+                "locale": primary_person.get("locale") or account.get("locale") or "zh-TW",
+                "timezone": primary_person.get("timezone") or "Asia/Taipei",
+            },
+            "companion": {
+                "templateId": companion.get("template_id") or "nening-real-female",
+                "displayName": companion.get("display_name") or "Munea",
+                "nameTouched": bool(companion.get("name_touched")),
+            },
+            "familyMembers": {
+                "count": len(memberships),
+                "byRole": dict(sorted(roles.items())),
+            },
         }
 
     def person_row_to_member(self, row, role=None):

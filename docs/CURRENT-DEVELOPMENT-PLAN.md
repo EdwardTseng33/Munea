@@ -91,6 +91,8 @@
 
 - Added the `/admin/audit-events` read contract so operators can review privileged entitlement, credits, subscription, and admin actions by event type, actor type, and target table.
 - Extended the Supabase adapter with `audit_events` reads while preserving JSON fallback, keeping Admin MVP traceability available before the live schema is fully applied.
+- Added the `/admin/accounts` read contract so operators can look up account, family group, primary person, companion identity, and family role counts without exposing conversation transcripts.
+- Extended Admin MVP smoke coverage so account lookup is admin-token gated and works through both Supabase and JSON fallback.
 
 ## 2026-06-29 Update
 

@@ -212,6 +212,7 @@ def verify_auth_context(headers=None):
 
 PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap"}
 ADMIN_POST_PATHS = {
+    "/admin/accounts",
     "/admin/north-star",
     "/admin/usage",
     "/admin/credits",
@@ -2564,6 +2565,133 @@ def admin_usage_summary(data=None):
     }
 
 
+def normalize_admin_account_summary(item=None):
+    item = item or {}
+    family_group = item.get("familyGroup") or item.get("family_group") or {}
+    primary_person = item.get("primaryPerson") or item.get("primary_person") or {}
+    companion = item.get("companion") or {}
+    family_members = item.get("familyMembers") or item.get("family_members") or {}
+    roles = family_members.get("byRole") or family_members.get("by_role") or {}
+    return {
+        "accountId": str(item.get("accountId") or item.get("account_id") or ""),
+        "accountName": str(item.get("accountName") or item.get("account_name") or ""),
+        "locale": str(item.get("locale") or "zh-TW"),
+        "preferredLanguages": item.get("preferredLanguages") or item.get("preferred_languages") or ["zh-TW", "en"],
+        "createdAt": item.get("createdAt") or item.get("created_at"),
+        "updatedAt": item.get("updatedAt") or item.get("updated_at"),
+        "familyGroup": {
+            "id": str(family_group.get("id") or ""),
+            "name": str(family_group.get("name") or "Munea Care Circle"),
+        },
+        "primaryPerson": {
+            "id": str(primary_person.get("id") or ""),
+            "displayName": str(primary_person.get("displayName") or primary_person.get("display_name") or ""),
+            "relationship": str(primary_person.get("relationship") or "self"),
+            "locale": str(primary_person.get("locale") or item.get("locale") or "zh-TW"),
+            "timezone": str(primary_person.get("timezone") or "Asia/Taipei"),
+        },
+        "companion": {
+            "templateId": str(companion.get("templateId") or companion.get("template_id") or "nening-real-female"),
+            "displayName": str(companion.get("displayName") or companion.get("display_name") or "Munea"),
+            "nameTouched": bool(companion.get("nameTouched") or companion.get("name_touched")),
+        },
+        "familyMembers": {
+            "count": int(family_members.get("count") or 0),
+            "byRole": dict(sorted(roles.items())),
+        },
+    }
+
+
+def local_admin_account_summary():
+    store = load_app_profile_store()
+    account = store.get("account") or {}
+    family_group = store.get("familyGroup") or {}
+    primary_id = store.get("primaryCareRecipientId") or PRIMARY_CARE_RECIPIENT_ID
+    members = [normalize_family_member(member) for member in family_group.get("members", [])]
+    primary_member = next((member for member in members if member.get("id") == primary_id), None) or {}
+    roles = {}
+    for member in members:
+        role = member.get("role") or "unknown"
+        roles[role] = roles.get(role, 0) + 1
+    companion = (store.get("companionProfiles") or {}).get(primary_id) or active_companion_profile(store)
+    return normalize_admin_account_summary({
+        "accountId": account.get("id"),
+        "accountName": account.get("name") or account.get("id") or "local-demo-account",
+        "locale": account.get("locale"),
+        "preferredLanguages": account.get("preferredLanguages"),
+        "createdAt": account.get("createdAt"),
+        "updatedAt": store.get("updatedAt"),
+        "familyGroup": {
+            "id": family_group.get("id"),
+            "name": family_group.get("name"),
+        },
+        "primaryPerson": {
+            "id": primary_id,
+            "displayName": primary_member.get("displayName") or "Primary user",
+            "relationship": primary_member.get("relationship") or "self",
+            "locale": account.get("locale") or "zh-TW",
+            "timezone": "Asia/Taipei",
+        },
+        "companion": companion,
+        "familyMembers": {
+            "count": len(members),
+            "byRole": roles,
+        },
+    })
+
+
+def load_admin_accounts(query=None, limit=50):
+    try:
+        remote_accounts = data_backend().load_admin_accounts(query=query, limit=limit)
+        if remote_accounts is not None:
+            return [normalize_admin_account_summary(account) for account in remote_accounts]
+    except Exception as e:
+        log_fallback_exception("load admin accounts from Supabase", e)
+    return [local_admin_account_summary()]
+
+
+def admin_accounts_summary(data=None):
+    data = data or {}
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    query = str(data.get("query") or "").strip()
+    account_id = data.get("accountId") or data.get("account_id")
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id")
+    person_id = data.get("personId") or data.get("person_id")
+    accounts = load_admin_accounts(query=query, limit=limit)
+    if account_id:
+        accounts = [account for account in accounts if account.get("accountId") == account_id]
+    if family_group_id:
+        accounts = [account for account in accounts if (account.get("familyGroup") or {}).get("id") == family_group_id]
+    if person_id:
+        accounts = [account for account in accounts if (account.get("primaryPerson") or {}).get("id") == person_id]
+    if query:
+        q = query.lower()
+        accounts = [
+            account for account in accounts
+            if q in (account.get("accountId") or "").lower()
+            or q in (account.get("accountName") or "").lower()
+            or q in ((account.get("familyGroup") or {}).get("name") or "").lower()
+            or q in ((account.get("primaryPerson") or {}).get("displayName") or "").lower()
+        ]
+    return {
+        "ok": True,
+        "count": len(accounts),
+        "filters": {
+            "query": query,
+            "accountId": account_id,
+            "familyGroupId": family_group_id,
+            "personId": person_id,
+            "limit": limit,
+        },
+        "accounts": accounts[:limit],
+        "privacy": {
+            "surface": "admin_account_lookup",
+            "rawTranscriptRecords": 0,
+        },
+        "backend": data_backend_status(),
+    }
+
+
 def admin_credits_summary(data=None):
     data = data or {}
     limit = max(1, min(100, int(data.get("limit") or 25)))
@@ -3950,7 +4078,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -4043,6 +4171,12 @@ class H(BaseHTTPRequestHandler):
                 self._json(topic_perception_plan_response(data))
             elif self.path == "/perception/snapshot":
                 self._json(perception_snapshot_response(data))
+            elif self.path == "/admin/accounts":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_accounts_summary(data))
             elif self.path == "/admin/north-star":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

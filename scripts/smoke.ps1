@@ -1157,6 +1157,90 @@ print("family members cloud bridge OK")
 '@
 Pass "Family members can use Supabase while preserving JSON fallback"
 
+Step "Admin account lookup contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeAdminAccountsBackend:
+    def enabled(self):
+        return True
+    def status(self):
+        return {"provider": "supabase", "enabled": True, "missing": []}
+    def load_admin_accounts(self, query=None, limit=50):
+        return [{
+            "accountId": "account-remote",
+            "accountName": "Remote care account",
+            "locale": "zh-TW",
+            "preferredLanguages": ["zh-TW", "en"],
+            "familyGroup": {"id": "family-remote", "name": "Remote family"},
+            "primaryPerson": {"id": "person-remote", "displayName": "Auntie", "relationship": "self"},
+            "companion": {"templateId": "nening-real-female", "displayName": "Munea", "nameTouched": False},
+            "familyMembers": {"count": 2, "byRole": {"primary_user": 1, "caregiver": 1}},
+        }]
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def status(self):
+        return {"provider": "json", "enabled": False, "missing": []}
+    def load_admin_accounts(self, query=None, limit=50):
+        return None
+    def load_app_profile_store(self):
+        return None
+    def save_app_profile_store(self, store):
+        return None
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeAdminAccountsBackend()
+    remote = server.admin_accounts_summary({"query": "Remote"})
+    assert remote["ok"] is True
+    assert remote["count"] == 1
+    assert remote["accounts"][0]["accountId"] == "account-remote"
+    assert remote["accounts"][0]["familyMembers"]["byRole"]["caregiver"] == 1
+    assert remote["privacy"]["rawTranscriptRecords"] == 0
+finally:
+    server.data_backend = original_backend
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
+    server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
+    server._APP_PROFILE_CACHE["store"] = None
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        server.save_app_profile_store({
+            "account": {"id": "local-account-1", "name": "Local care account", "locale": "zh-TW"},
+            "familyGroup": {
+                "id": "family-local-1",
+                "name": "Local family",
+                "members": [
+                    {"id": "person-local-1", "role": "primary_user", "displayName": "Edward", "relationship": "self"},
+                    {"id": "person-local-2", "role": "caregiver", "displayName": "Daughter", "relationship": "daughter"},
+                ],
+            },
+            "primaryCareRecipientId": "person-local-1",
+            "companionProfiles": {"person-local-1": {"templateId": "nening-real-female", "displayName": "Ning"}},
+        })
+        local = server.admin_accounts_summary({"query": "Edward"})
+        assert local["ok"] is True
+        assert local["count"] == 1
+        assert local["accounts"][0]["accountId"] == "local-account-1"
+        assert local["accounts"][0]["familyGroup"]["id"] == "family-local-1"
+        assert local["accounts"][0]["primaryPerson"]["displayName"] == "Edward"
+        assert local["accounts"][0]["familyMembers"]["count"] == 2
+        by_person = server.admin_accounts_summary({"personId": "person-local-1"})
+        assert by_person["count"] == 1
+    finally:
+        server._APP_PROFILE_CACHE["store"] = None
+        server.data_backend = original_backend
+print("admin account lookup OK")
+'@
+Pass "Admin account lookup supports Supabase and JSON fallback"
+
 Step "Consent records cloud bridge contract"
 Invoke-PythonBlock @'
 import os, sys, tempfile
@@ -1715,7 +1799,7 @@ for path in user_scoped_paths:
     verified = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, path, {})
     assert verified["ok"] is True, path
     assert verified["required"] is True, path
-for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/safety-events", "/admin/audit-events"]:
+for path in ["/auth-status", "/account-bootstrap", "/admin/accounts", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/safety-events", "/admin/audit-events"]:
     assert server.auth_required_for_path(path) is False, path
     assert server.require_verified_auth({}, path, {})["ok"] is True, path
 assert server.auth_required_for_request("/credits/grant", {}) is False
@@ -3001,6 +3085,7 @@ if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missin
 if ($health.contracts -notcontains "perception-topic-plan") { throw "/healthz missing perception-topic-plan contract" }
 if ($health.contracts -notcontains "perception-snapshot") { throw "/healthz missing perception-snapshot contract" }
 if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
+if ($health.contracts -notcontains "admin-accounts") { throw "/healthz missing admin-accounts contract" }
 if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
 if ($health.contracts -notcontains "admin-usage") { throw "/healthz missing admin-usage contract" }
 if ($health.contracts -notcontains "admin-credits") { throw "/healthz missing admin-credits contract" }
@@ -3034,6 +3119,16 @@ $productEvent = Invoke-RestMethod -Uri "$BaseUrl/product-event" -Method Post -Co
 if (-not $productEvent.ok) { throw "/product-event returned not ok" }
 if ($productEvent.northStar.meaningfulCompanionDays -lt 1) { throw "/product-event did not update North Star summary" }
 Pass "/product-event records meaningful event"
+
+Step "API /admin/accounts gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/accounts" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"limit":5}' -TimeoutSec 30 | Out-Null
+  throw "/admin/accounts should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/accounts is closed without admin token"
 
 Step "API /admin/north-star gate"
 try {
