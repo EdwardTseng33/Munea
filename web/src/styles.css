@@ -1968,7 +1968,8 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 
 /* 照片上傳「處理中」狀態（Edward 7/7） */
 .med-photo-box.processing, .pf-avatar.processing { position: relative; }
-.med-photo-box.processing::after, .pf-avatar.processing::after { content: '處理中'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--teal-dd); background: rgba(255,255,255,.72); border-radius: inherit; }
+.med-photo-box.processing::after, .pf-avatar.processing::after { content: '處理中'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--teal-dd); background: rgba(255,255,255,.72); border-radius: inherit; animation: mn-pulse 1s ease-in-out infinite; }
+@keyframes mn-pulse { 50% { opacity: .45; } }
 
 /* 健康圈機制（Edward 7/7） */
 .fc-top { display: flex; align-items: center; gap: 12px; background: var(--mint); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin: 4px 0 14px; }
@@ -2018,3 +2019,13 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .relay-hint .rh-ic .ic { width: 17px; height: 17px; color: var(--teal-dd); fill: none; stroke: currentColor; stroke-width: 2; }
 .relay-hint .rh-tx { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
 .relay-hint .rh-tx b { color: var(--teal-dd); font-weight: 800; }
+
+/* ===== 等待中動態（Edward 7/8：Loading 要有動態，不然像當機）===== */
+@keyframes mn-spin { to { transform: rotate(360deg); } }
+/* 按鈕忙碌：文字後面加一個轉圈 */
+.busy-spin { pointer-events: none; opacity: .88; }
+.busy-spin::after { content: ''; display: inline-block; width: 14px; height: 14px; margin-left: 8px; vertical-align: -2px;
+  border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: mn-spin .7s linear infinite; }
+/* 聊聊「接通中/接回來中」：提示字尾加轉圈（深色底跟字同色） */
+.cap-busy::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 7px; vertical-align: -1.5px;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: mn-spin .7s linear infinite; }

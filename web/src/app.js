@@ -146,9 +146,22 @@ function faceSpeak(text, audioMs = 0) {
   recordAvatarUsage(text, ms);
   return ms;
 }
-function setCallHint(text) {
+function setCallHint(text, busy) {
   const cap = $('#chatCaption');
-  if (cap) cap.textContent = text;
+  if (cap) { cap.textContent = text; cap.classList.toggle('cap-busy', !!busy); }
+}
+// 等待中按鈕：加轉圈、鎖點擊（Edward 7/8：Loading 要有動態，不然像當機）
+function setBtnBusy(b, text) {
+  if (!b) return;
+  if (!b.dataset.idleText) b.dataset.idleText = b.textContent;
+  b.disabled = true; b.classList.add('busy-spin');
+  if (text) b.textContent = text;
+}
+function clearBtnBusy(b, text) {
+  if (!b) return;
+  b.disabled = false; b.classList.remove('busy-spin');
+  b.textContent = text || b.dataset.idleText || b.textContent;
+  delete b.dataset.idleText;
 }
 function templateFor(avatarId = currentAvatarId) {
   return CompanionProfile.templateFor(avatarId);
@@ -2066,7 +2079,7 @@ function connectCall() {
     activeChatStartedAt = Date.now();
     activeChatTurnCount = 0;
     setFaceState('idle');
-    setCallHint('接通中…');
+    setCallHint('接通中', true);
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
     const chatEl = document.getElementById('chat');
     const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻跟麥克風
@@ -2082,7 +2095,7 @@ function connectCall() {
         setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
         return;
       }
-      setCallHint('接回來中…');
+      setCallHint('接回來中', true);
       setTimeout(() => { if (callConnected) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
@@ -2322,14 +2335,14 @@ function init() {
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', async () => {
     // Apple 健康：在 App 裡就真的去要 iPhone 授權；網頁預覽則走原本示範切換
     if (b.id === 'cnHealthBtn' && window.MuneaHealth && window.MuneaHealth.available()) {
-      b.disabled = true; b.textContent = '連接中…';
+      setBtnBusy(b, '連接中');
       const r = await window.MuneaHealth.connect();
-      b.disabled = false;
       if (r && r.ok) {
-        b.classList.add('done'); b.textContent = '✓ 已連接';
+        clearBtnBusy(b, '✓ 已連接');
+        b.classList.add('done');
         hint('好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
       } else {
-        b.textContent = b.dataset.label || '連接';
+        clearBtnBusy(b, b.dataset.label || '連接');
         hint(r && r.reason === 'unavailable' ? '這台裝置沒有健康資料可讀。' : '沒有連上，晚點在「連接裝置」再試一次也可以。');
       }
       return;
@@ -2573,9 +2586,9 @@ function init() {
     // App 裡走真蘋果付款；點數入帳由 __muneaApplyPurchase 統一做
     if (window.MuneaStore && window.MuneaStore.available()) {
       const b = $('#tuBuyBtn');
-      b.disabled = true;
+      setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
-      b.disabled = false;
+      clearBtnBusy(b);
       if (r.ok) $('#topUpModal').classList.remove('show');
       else if (r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
       return;
@@ -2662,9 +2675,9 @@ function init() {
     if (window.MuneaStore && window.MuneaStore.available()) {
       const pid = window.MuneaStore.subId(_planPick, _subCyc);
       const b = $('#planYes');
-      b.disabled = true; b.textContent = '連到 App Store…';
+      setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(pid);
-      b.disabled = false; b.textContent = '確認變更';
+      clearBtnBusy(b, '確認變更');
       if (r.ok) { $('#planConfirm').style.display = 'none'; _planPick = null; } // 生效與提示由 __muneaApplyPurchase 統一做
       else if (r.reason === 'cancelled') toast('沒關係，想好再訂就好。');
       else if (r.reason === 'pending') { toast('付款送出了，等核准後會自動生效。'); $('#planConfirm').style.display = 'none'; _planPick = null; }
@@ -2700,9 +2713,9 @@ function init() {
     if (!p) { toast('先選一包點數'); return; }
     if (window.MuneaStore && window.MuneaStore.available()) {
       const b = $('#tuBuyBtn2');
-      b.disabled = true;
+      setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
-      b.disabled = false;
+      clearBtnBusy(b);
       if (!r.ok && r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
       return;
     }
