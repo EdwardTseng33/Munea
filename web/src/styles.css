@@ -1851,6 +1851,9 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .sub-fine { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
 
 /* ===== 安全通知：緊急聯絡人 ===== */
+/* 訂閱法務區：恢復購買＋自動續訂說明（蘋果審核要求、放購買鈕下方） */
+.sub-legal { font-size: 11.5px; line-height: 1.7; color: var(--muted); margin: 10px 2px 4px; text-align: justify; }
+.sub-legal a { color: var(--teal-d); font-weight: 700; text-decoration: none; }
 /* 發起活動：日期時間並排＋送出鈕固定在畫面下方（內容從按鈕底下滑過） */
 .dt-row { display: flex; gap: 9px; }
 .dt-row .chal-input { flex: 1; min-width: 0; }

@@ -2710,6 +2710,14 @@ function init() {
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => { renderSubUI(); $('#planModal').classList.add('show'); });
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
+  // 恢復購買（蘋果硬規定）：原生付款層在（真機）→ 交給它；不在（網頁預覽）→ 誠實說明
+  // Mac 對接約定：原生實作 window.__muneaNativeRestore()，找回的每筆購買逐筆呼叫 __muneaApplyPurchase(產品ID)
+  if ($('#restoreBtn')) $('#restoreBtn').addEventListener('click', () => {
+    if (typeof window.__muneaNativeRestore === 'function') { toast('正在向 Apple 查你的購買紀錄…'); try { window.__muneaNativeRestore(); } catch (e) {} }
+    else toast('會在正式 App 裡向 Apple 找回你買過的方案與點數');
+  });
+  if ($('#legalTermsLink')) $('#legalTermsLink').addEventListener('click', e => { e.preventDefault(); openReader('terms'); });
+  if ($('#legalPrivacyLink')) $('#legalPrivacyLink').addEventListener('click', e => { e.preventDefault(); openReader('privacy'); });
   // 點數購買
   if ($('#subPoints')) $('#subPoints').addEventListener('click', e => {
     const card = e.target.closest('.tu-card'); if (!card) return;
