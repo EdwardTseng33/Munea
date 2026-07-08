@@ -90,3 +90,4 @@
 - **⚠️ 動到 Mac 地盤（打招呼）**：`engine/live_voice_server.py` 三處小改——① `?char=` 換角色（人格＋聲音跟 characters.json，預設仍寧寧、往後相容）② 組腦時 displayName 跟角色走（修「換角色仍自稱寧寧」——存檔陪伴檔名字會蓋掉角色名）③ 啟動自動吃 `.env.local`（跟 server.py 同款、環境變數優先）。多輪/插話邏輯沒動。
 - **驗證**：文字探針端對端 PASS（寧寧/旺財/咪咪三角色、首聲 547–984ms、字幕＋語音都回）；瀏覽器自動化實測通話畫面 OK；記憶入話實錄（「我記得小寶下個月就要結婚了」）。
 - **提案附件**：桌面產出「產品介紹（含聊聊Demo附頁）」「模組介紹（含聊聊Demo附頁）」兩份副本（原檔沒動），附頁素材在 `_SalesKit-2026-07/demo-assets/`。
+- **雲端版 Demo（`demo-cloud/`）**：Edward 要「連結打開就能玩」→ 做了 Vercel 版——頁面掛 Vercel、**通話由瀏覽器直連 Google**（後台 `api/token.js` 只發 30 分鐘單次短效通行碼、正式鑰匙不出後台、可設 DEMO_CODE 門禁）。本機端對端 PASS（文字＋假麥克風模式、首聲 ~531ms、接通先打招呼、不認識就問稱呼、無記憶假資料）。Vercel 專案 `munea-chat-demo` 已連結 Edward 帳號；鑰匙上雲＋正式部署 = Edward 雙擊 `demo-cloud/上Vercel.bat`（權限層要求本人執行）。
