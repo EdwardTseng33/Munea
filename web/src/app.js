@@ -3345,7 +3345,7 @@ function init() {
   if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));
   if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });
   if ($('#dataExportBtn')) $('#dataExportBtn').addEventListener('click', () => {
-    brainPost('/privacy-export', {}).then(r => toast(r ? '資料整理好了，正式版會寄到你的信箱' : '示範版先記下：正式版會把資料寄給你'));
+    brainPost('/privacy-export', {}).then(r => toast(r ? '收到，資料整理好會寄到你的信箱' : '已記下你的申請，資料整理好會寄給你'));
   });
   if ($('#dataDeleteBtn')) $('#dataDeleteBtn').addEventListener('click', () => {
     const b = $('#dataDeleteBtn');
