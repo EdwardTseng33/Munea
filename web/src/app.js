@@ -2835,7 +2835,7 @@ function init() {
   function fmtDay(d) { return (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）'; }
   function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function buildCalGrid(boxSel) {
-    const box = $(boxSel || '#evDatePick');
+    const box = boxSel ? $(boxSel) : null;
     if (!box || box.dataset.built) return;
     box.dataset.built = '1';
     const now = new Date();

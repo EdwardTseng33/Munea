@@ -87,6 +87,11 @@
 - Added the `/admin/privacy-requests` read contract so operators can review export/deletion request status, reauth requirements, subscription notice needs, and retention policy from the Admin MVP trust surface.
 - Added the `/admin/safety-events` read contract so operators can review Guardian risk events and safety-relevant summaries by risk level/category without exposing raw transcripts.
 
+## 2026-07-09 Update
+
+- Added the `/admin/audit-events` read contract so operators can review privileged entitlement, credits, subscription, and admin actions by event type, actor type, and target table.
+- Extended the Supabase adapter with `audit_events` reads while preserving JSON fallback, keeping Admin MVP traceability available before the live schema is fully applied.
+
 ## 2026-06-29 Update
 
 - Added the first mobile microphone bridge path.
