@@ -35,8 +35,8 @@
 
 | 技術 | 用什麼 | 狀態 |
 |---|---|---|
-| AI 腦（聊天/個性）| Gemini（文字 gemini-2.5-flash 系列 · 語音 Gemini Live）| 🟢 能跑；個性檔 `engine/characters.json`；文字聊天已接 **Google 搜尋**（不瞎掰）；語音搜尋待 Mac 有鑰匙驗 |
-| 語音鏈 | 瀏覽器 ⇄ `engine/live_voice_server.py` ⇄ Gemini Live | 🟢 多輪修復完成；已支援 ?name（改名）＋ ?mood（情緒球心情）＋ **?char（換角色：人格＋聲音跟 characters.json 走，7/8 Windows 加）**；啟動自動吃 `.env.local` 鑰匙 |
+| AI 腦（聊天/個性）| Gemini（文字 gemini-2.5-flash 系列 · 語音 Gemini Live）| 🟢 能跑；個性檔 `engine/characters.json`；文字聊天已接 **Google 搜尋**；**語音也接上即時查詢（7/8 晚 Windows 驗過：桃園景點給真地名、天氣講真預報）**；興趣話題（?topics=／interests）兩路都入腦 |
+| 語音鏈 | 瀏覽器 ⇄ `engine/live_voice_server.py` ⇄ Gemini Live | 🟢 多輪修復完成；已支援 ?name（改名）＋ ?mood（情緒球心情）＋ **?char（換角色）＋ ?topics（興趣話題，7/8 晚加）**；連線設定掛上 **Google 即時查詢工具**；啟動自動吃 `.env.local` 鑰匙 |
 | **聊聊實機 Demo（提案用）** | **`web/demo-live.html`（主打·單角色寧寧·擬真對嘴）**＋`web/demo.html`（六角色備用）＋`demo-聊聊.bat` 一鍵啟動 | 🟢 **7/8 上線**：提案副本已含附頁（桌面「…（含聊聊Demo附頁）.pptx」×2）；素材在 `_SalesKit-2026-07/demo-assets/` |
 | **擬真 Live Avatar（產品第3層）** | `engine/avatar_live_server.py`（:8188）——voice-poc 6/3 驗證引擎 × 寧寧照片 × 聊聊即時語音 | 🟢 **7/8 demo 接通**：GPU 即時對嘴→WebRTC 進瀏覽器；聲譜走工作執行緒、嘴型牆上時鐘對時；需 `E:\voice-poc\.venv`＋本機 GPU（3070 可跑）。正式版照顯卡經濟學文件走 RunPod（Ditto 路線） |
 | 雲端資料 | Supabase（帳號/家人/心情/活動）| 🟡 橋接程式好了、**表還沒建**→自動退本機 JSON 備援、資料不掉 |
@@ -125,3 +125,10 @@
 - **安全分工**：AI 鑰匙不出本機——聲音留本機、雲端只有臉引擎與寧寧照片（無秘密）；中繼密碼不進程式庫（跑時 export）。正式版語音上雲前走沙利曼關卡。
 - demo-live.html 支援雲端參數（?avatar= 完整網址、?turn= 中繼）；bootstrap 補 aiohttp/aiortc。
 - 卡留著給 Edward 試玩（$0.69/hr、玩完即關）。
+
+### 2026-07-08 深夜（Windows 蘇菲 · 聊聊服務優化：興趣話題＋即時查證 · Edward 交辦）
+- **興趣話題全鏈上線**：設定頁新入口「想聊的話題」（12 選 5 小圓籤）＋第一次開聊前輕問一次（可跳過、只問一次）；選好的話題文字聊天（POST interests）與語音（?topics=）都帶進腦，腦裡新增「開場/冷場從這些方向起頭、聊到就多帶料、但跟著他走不硬拉」指令。前端流程瀏覽器實測全過（挑選/上限5個/存檔/開聊輕問/跳過）、零錯誤。
+- **語音聊天接上即時查詢（原本只有文字有）**：`live_voice_server.py` 連線設定掛 Google 搜尋工具＋指令改寫——舊版教她「你查不到店家、請家人查」整段拆掉，改成「聊到餐廳/景點/影劇/天氣/時事先查再答、只講真名字、像去過或朋友推薦的口吻、絕不編店名價格、查前先出聲過場」。
+- **實測（文字探針過語音橋）**：①「桃園哪裡好玩好吃」→ 推薦**馬祖新村眷村文化園區**（真景點）＋龍潭無菜單料理，還把「喜歡韓劇老房子、孫子要結婚」記憶織進推薦；②「明天台北會不會下雨」→ 真預報（晴時多雲、降雨機率不大）＋防曬提醒；③ 純聊天「我今天有點累」→ 記憶關心（膝蓋、搬家）品質不變。
+- **已知現象（誠實記）**：探針每問都「新開一通」、首聲 ~5 秒＝連線開機成本、非查詢造成（今天下午量的 547–984ms 是接通後的回合）；真機通話中提問不付這成本。後續可在真機驗收時量「通話中查詢」的實際等待感。
+- **⚠️ 動到 Mac 地盤（打招呼）**：`live_voice_server.py`（tools＋指令＋?topics）與 `server.py`（build_reply_context/instruction 加 interests 一條線）；多輪/插話/音訊邏輯都沒動。`.claude/launch.json`（智慧健康工作區）加 munea-voice 啟動項。

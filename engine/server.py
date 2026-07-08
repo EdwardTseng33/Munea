@@ -217,6 +217,7 @@ ADMIN_POST_PATHS = {
     "/admin/credits",
     "/admin/conversation-summaries",
     "/admin/privacy-requests",
+    "/admin/safety-events",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -2710,6 +2711,101 @@ def admin_privacy_requests_summary(data=None):
     }
 
 
+def admin_safety_events_summary(data=None):
+    data = data or {}
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    days = max(1, min(365, int(data.get("days") or 30)))
+    level_filter = data.get("level") or data.get("riskLevel") or data.get("risk_level")
+    category_filter = data.get("category")
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days - 1)
+    since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
+    events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
+    safety_events = []
+    for event in events:
+        if event.get("eventName") != "guardian_risk_evaluated":
+            continue
+        props = event.get("properties") or {}
+        categories = props.get("categories") or []
+        if isinstance(categories, str):
+            categories = [categories]
+        risk_level = props.get("riskLevel") or props.get("risk_level") or "unknown"
+        if level_filter and risk_level != level_filter:
+            continue
+        if category_filter and category_filter not in categories:
+            continue
+        safety_events.append({
+            "id": event.get("id"),
+            "source": "guardian",
+            "riskLevel": risk_level,
+            "categories": categories,
+            "personId": event.get("personId"),
+            "familyGroupId": event.get("familyGroupId"),
+            "eventTime": event.get("eventTime") or event.get("createdAt"),
+            "requiresHumanEscalation": risk_level in {"high", "crisis"},
+            "analyticsExcluded": bool(props.get("analyticsExcluded")),
+        })
+    summaries = load_conversation_summaries(limit=500, include_deleted=False)
+    for summary in summaries:
+        if not summary.get("safetyRelevant"):
+            continue
+        tags = summary.get("memoryTags") or []
+        if category_filter and category_filter not in tags:
+            continue
+        safety_events.append({
+            "id": summary.get("id"),
+            "source": "conversation_summary",
+            "riskLevel": "review",
+            "categories": tags,
+            "personId": summary.get("personId"),
+            "familyGroupId": summary.get("familyGroupId"),
+            "eventTime": summary.get("createdAt"),
+            "requiresHumanEscalation": False,
+            "analyticsExcluded": False,
+        })
+    if level_filter:
+        safety_events = [event for event in safety_events if event.get("riskLevel") == level_filter]
+    safety_events = sorted(safety_events, key=lambda event: event.get("eventTime") or "", reverse=True)
+    level_counts = {}
+    category_counts = {}
+    escalation_count = 0
+    for event in safety_events:
+        level = event.get("riskLevel") or "unknown"
+        level_counts[level] = level_counts.get(level, 0) + 1
+        if event.get("requiresHumanEscalation"):
+            escalation_count += 1
+        for category in event.get("categories") or []:
+            category_counts[category] = category_counts.get(category, 0) + 1
+    top_categories = [
+        {"category": category, "count": count}
+        for category, count in sorted(category_counts.items(), key=lambda item: (-item[1], item[0]))[:12]
+    ]
+    return {
+        "ok": True,
+        "count": len(safety_events),
+        "filters": {
+            "days": days,
+            "since": since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "level": level_filter,
+            "category": category_filter,
+            "limit": limit,
+        },
+        "totals": {
+            "byRiskLevel": dict(sorted(level_counts.items())),
+            "requiresHumanEscalation": escalation_count,
+            "summaryReviewRecords": sum(1 for event in safety_events if event.get("source") == "conversation_summary"),
+            "rawTranscriptRecords": 0,
+        },
+        "topCategories": top_categories,
+        "recent": safety_events[:limit],
+        "privacy": {
+            "surface": "admin_safety_event_review",
+            "storesRawTranscriptByDefault": False,
+        },
+        "backend": data_backend_status(),
+    }
+
+
 def product_event_response(data):
     event = append_product_event(data)
     return {"ok": True, "event": event, "northStar": north_star_summary({"days": 7})}
@@ -3777,7 +3873,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-safety-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -3900,6 +3996,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_privacy_requests_summary(data))
+            elif self.path == "/admin/safety-events":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_safety_events_summary(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

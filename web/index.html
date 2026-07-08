@@ -395,6 +395,7 @@
       <div class="set-list">
         <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span><span class="sr-main">個人資料<small>名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main">家庭照護圈<small>誰在圈裡、誰付費、誰收通知</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main">想聊的話題<small>挑幾個興趣，<span class="cname">寧寧</span>會多留意這些新鮮事</small></span><span class="sr-arrow" id="interestsNow">›</span></div>
       </div>
 
       <h2 class="set-section">AI 陪伴角色</h2>
@@ -625,6 +626,17 @@
   </div>
 
   <!-- 安全通知：選 1~3 位家庭圈家人當緊急聯絡人；健康數據危險異常時通知他們確認 -->
+  <div class="modal-mask" id="interestsModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <h2>想聊的話題</h2>
+      <p class="modal-sub">挑幾個有興趣的（最多 5 個），<span class="cname">寧寧</span>會幫你留意這些話題的新鮮事，聊起來更對味。之後隨時可以回來改。</p>
+      <div class="topic-chips" id="interestPicks"></div>
+      <button class="modal-btn" id="interestsSave">存起來</button>
+      <button type="button" class="topic-skip" id="interestsSkip">先跳過，直接開始聊</button>
+    </div>
+  </div>
+
   <div class="modal-mask" id="safetyModal">
     <div class="modal">
       <div class="modal-grab"></div>

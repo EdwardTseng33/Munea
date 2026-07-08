@@ -809,7 +809,7 @@ const voiceProvider = {
   async sendText({ history, char }) {
     this.setState('thinking');
     try {
-      const response = await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile, userMood: (window.MM && window.MM.currentMood) ? window.MM.currentMood() : '' });
+      const response = await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile, userMood: (window.MM && window.MM.currentMood) ? window.MM.currentMood() : '', interests: loadInterests() });
       if (response) setLatestAiContext(response.aiContext, 'chat response', response.relationshipState);
       return response;
     } finally {
@@ -833,6 +833,14 @@ const voiceProvider = {
 };
 window.MuneaVoiceProvider = voiceProvider;
 
+// ===== 想聊的話題（興趣）：存本機、文字/語音聊天都帶給 AI 當開場方向＋接話素材 =====
+const INTEREST_TOPICS = ['旅遊景點', '美食餐廳', '影劇戲劇', '新聞時事', '健康養生', '運動', '懷舊老歌', '園藝花草', '歷史故事', '寵物', '棋牌麻將', '天氣節氣'];
+function loadInterests() {
+  try { const a = JSON.parse(localStorage.getItem('munea.interests') || 'null'); return Array.isArray(a) ? a.filter(t => INTEREST_TOPICS.includes(t)).slice(0, 5) : []; }
+  catch (e) { return []; }
+}
+function saveInterests(list) { try { localStorage.setItem('munea.interests', JSON.stringify((list || []).slice(0, 5))); } catch (e) {} }
+
 // ===== 真即時語音（Gemini 3.1 Live）：MuneaVoiceProvider 的 live 模式 =====
 // 架構：前端這支 → WebSocket 即時語音橋（engine/live_voice_server.py）。麥克風即時串流上去、聲音即時播回來、可打斷。
 // 連哪裡：localStorage['munea.liveVoiceUrl']，沒設就用下面 DEV 預設（同 Wi-Fi 指到 Mac 引擎；正式版改 hosted 後端）。
@@ -854,6 +862,8 @@ const LiveVoice = {
     // 把使用者改過的名字帶給語音伺服器，讓 AI 知道自己現在叫什麼
     try { const nm = (typeof cname === 'function' ? cname() : ''); if (nm) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'name=' + encodeURIComponent(nm); } catch (e) {}
     try { const _md = (window.MM && window.MM.currentMood) ? window.MM.currentMood() : ''; if (_md) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'mood=' + encodeURIComponent(_md); } catch (e) {}
+    // 帶上他挑的興趣話題，讓 AI 開場就聊得對味
+    try { const _ts = loadInterests(); if (_ts.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'topics=' + encodeURIComponent(_ts.join(',')); } catch (e) {}
     this.on = true;
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
@@ -2111,6 +2121,8 @@ function init() {
   });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
+    // 第一次開聊前輕問一次「想聊什麼話題」（可跳過、之後在設定隨時改；只問這一次）
+    if (!callConnected && !localStorage.getItem('munea.interestsAsked') && !loadInterests().length && window.__muneaOpenInterests) { window.__muneaOpenInterests(true); return; }
     if (!callConnected) { connectCall(); }
     else { LiveVoice.stop(); FaceWave.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
   });
@@ -3238,6 +3250,45 @@ function init() {
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();
+  // 想聊的話題：設定入口＋第一次開聊前輕問一次（可跳過、只問一次）
+  let _intSel = loadInterests();
+  let _intFromCall = false;
+  function renderInterestPicks() {
+    const box = $('#interestPicks');
+    if (box) box.innerHTML = INTEREST_TOPICS.map(t => '<button type="button" class="topic-chip' + (_intSel.includes(t) ? ' on' : '') + '" data-t="' + t + '">' + t + '</button>').join('');
+    const now = $('#interestsNow');
+    if (now) now.innerHTML = _intSel.length ? ('<b>已挑 ' + _intSel.length + ' 個</b> ›') : '›';
+  }
+  window.__muneaOpenInterests = function (fromCall) {
+    _intSel = loadInterests(); _intFromCall = !!fromCall;
+    renderInterestPicks();
+    const skip = $('#interestsSkip'); if (skip) skip.style.display = fromCall ? '' : 'none';
+    $('#interestsModal').classList.add('show');
+  };
+  function closeInterests(startAfter) {
+    $('#interestsModal').classList.remove('show');
+    try { localStorage.setItem('munea.interestsAsked', '1'); } catch (e2) {}
+    const goCall = startAfter && _intFromCall;
+    _intFromCall = false;
+    if (goCall) connectCall();
+  }
+  if ($('#interestPicks')) $('#interestPicks').addEventListener('click', e => {
+    const b = e.target.closest('.topic-chip'); if (!b) return;
+    const t = b.dataset.t;
+    if (_intSel.includes(t)) _intSel = _intSel.filter(x => x !== t);
+    else { if (_intSel.length >= 5) { toast('挑 5 個以內就好，聊得才深'); return; } _intSel.push(t); }
+    b.classList.toggle('on', _intSel.includes(t));
+  });
+  if ($('#interestsRow')) $('#interestsRow').addEventListener('click', () => window.__muneaOpenInterests(false));
+  if ($('#interestsSave')) $('#interestsSave').addEventListener('click', () => {
+    saveInterests(_intSel);
+    renderInterestPicks();
+    toast(_intSel.length ? '記下了，這些話題我會多幫你留意新鮮事' : '好，不挑也行，想聊什麼直接說');
+    closeInterests(true);
+  });
+  if ($('#interestsSkip')) $('#interestsSkip').addEventListener('click', () => closeInterests(true));
+  if ($('#interestsModal')) $('#interestsModal').addEventListener('click', e => { if (e.target === $('#interestsModal')) closeInterests(false); });
+  renderInterestPicks();
   if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openReader('terms'));
   if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openReader('privacy'));
   if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);

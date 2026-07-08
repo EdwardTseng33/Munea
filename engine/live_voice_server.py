@@ -71,7 +71,7 @@ def process_request(connection, request):
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 
 
-def system_instruction(char="寧寧", name=None, mood=None):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     base = c.get("persona", "") + eng.RED
@@ -81,6 +81,8 @@ def system_instruction(char="寧寧", name=None, mood=None):
         data = {"displayName": (name or char)}
         if mood:
             data["userMood"] = mood
+        if topics:
+            data["interests"] = topics  # 用戶挑的興趣話題（?topics=）→ 開場/接話的方向
         ctx = server.build_reply_context([], char, data)
         base += server.reply_context_instruction(ctx)
     except Exception:
@@ -92,10 +94,14 @@ def system_instruction(char="寧寧", name=None, mood=None):
         "句子短、口語、一次一兩句、講完停下來等對方回應。）"
     )
     base += (
-        "（重要：你沒有連上地圖或商家資料庫，所以絕對不要編造具體的店名、地址、電話、營業時間或價格——"
-        "那些你查不到、講出來多半是錯的。若對方想找附近餐廳或店家，就先問他想吃什麼、想在哪一帶，"
-        "給大方向的建議（例如『這附近有幾家港式，你想吃清淡還是重口味？』），"
-        "並提醒可以請家人幫忙用手機地圖查真正的店名和位置，不要自己掰一個。）"
+        "（你有「即時查詢」工具，聊天時可以真的上網查。聊到餐廳店家、景點旅遊（例如日本哪裡好玩、桃園有什麼好吃的）、"
+        "電影影劇、天氣預報、時事、活動檔期這類「講錯會誤導人」的具體話題——先安靜查一下再回，"
+        "只講查到的真店名、真地點、真資訊；用「我聽很多人推薦…」「那邊最有名的是…」這種像自己去過或朋友推薦的口吻，"
+        "自然分享一兩個亮點就好，順便帶一個有意思的小知識或典故更好。不要唸清單、不要報網址、不要像導覽機。"
+        "查不到或不確定就老實說「這我不太確定，我幫你查查看」——寧可少講，絕對不可以自己編店名、地址、價格或營業時間。"
+        "天氣要講就查當地真的預報再講。"
+        "要查東西時，先自然講一句短的過場再查（例如「喔這我知道有個好地方，等我想一下」），"
+        "別讓對方對著沒聲音的電話等好幾秒。）"
     )
     nm = (name or "").strip()
     if nm and nm not in ("寧寧", "沐寧", "munea", "Munea"):
@@ -106,12 +112,14 @@ def system_instruction(char="寧寧", name=None, mood=None):
     return base
 
 
-def live_config(char="寧寧", name=None, mood=None):
+def live_config(char="寧寧", name=None, mood=None, topics=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood),
+        system_instruction=system_instruction(char, name, mood, topics),
+        # 即時查詢（Google 搜尋）：聊到店家/景點/影劇/天氣等具體話題先查再答、不編造——跟文字聊天同一套能力
+        tools=[types.Tool(google_search=types.GoogleSearch())],
         output_audio_transcription=types.AudioTranscriptionConfig(),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         speech_config=types.SpeechConfig(
@@ -135,6 +143,7 @@ async def handle(ws):
     # 從連線網址讀使用者改過的名字（?name=新名字），讓 AI 知道自己現在叫什麼
     name = None
     mood = None
+    topics = None
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
@@ -149,6 +158,10 @@ async def handle(ws):
         cvals = _q.get("char")
         if cvals and cvals[0] in eng.CHARS:
             char = cvals[0]
+        # ?topics=旅遊景點,美食餐廳：用戶挑的興趣話題 → 開場方向＋接話素材（最多收 8 個、防亂塞）
+        tvals = _q.get("topics")
+        if tvals:
+            topics = [t.strip() for t in tvals[0].split(",") if t.strip()][:8] or None
     except Exception:
         pass
     _CID["n"] += 1
@@ -157,7 +170,7 @@ async def handle(ws):
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
     _diag(cid, "connected", name=name or "-", char=char)
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood)) as session:
+        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics)) as session:
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):

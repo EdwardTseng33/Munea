@@ -1841,6 +1841,11 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .sub-fine { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
 
 /* ===== 安全通知：緊急聯絡人 ===== */
+/* 想聊的話題：小圓籤（長輩好按的大觸控） */
+.topic-chips { display: flex; flex-wrap: wrap; gap: 9px; margin: 4px 0 8px; }
+.topic-chip { padding: 10px 15px; border: 2px solid var(--line); border-radius: 100px; background: #fff; font-size: 14.5px; font-weight: 700; color: var(--ink2); cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.topic-chip.on { border-color: var(--teal); background: var(--mint); color: var(--teal-dd); }
+.topic-skip { width: 100%; margin-top: 8px; background: none; border: none; color: var(--muted); font-size: 13.5px; padding: 8px; cursor: pointer; display: none; }
 .safety-picks { display: flex; gap: 10px; margin-bottom: 4px; }
 .safety-pick { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px 6px; border: 2px solid var(--line); border-radius: 16px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s; }
 .safety-pick .init-ava { width: 46px; height: 46px; font-size: 17px; }
