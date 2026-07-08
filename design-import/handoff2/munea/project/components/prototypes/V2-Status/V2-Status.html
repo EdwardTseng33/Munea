@@ -1,0 +1,60 @@
+<!-- @dsCard group="V2 編輯暖彩" -->
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"><title>V2-Status</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--cream:#F6F1E7;--ink:#2E2A24;--muted:#8B8578;--line:#EEE7DA;
+--sage:#7E8B4F;--coral:#E8703A;--lav:#9B8FE8;--gold:#E6B34A;--cocoa:#6B4E3D;--sky:#5AA9C9}
+.frame{width:390px;background:var(--cream);border-radius:34px;overflow:hidden;
+box-shadow:0 24px 70px rgba(0,0,0,.4);font-family:'Poppins','Noto Sans TC',system-ui,sans-serif;color:var(--ink)}
+.pad{padding:24px 20px 30px}
+.disp{font-family:'Poppins','Noto Sans TC',sans-serif;font-weight:800;letter-spacing:-.5px;line-height:1.05}
+.big{font-weight:800;letter-spacing:-1px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px}
+.svg{width:22px;height:22px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.nav{display:flex;justify-content:space-around;align-items:center;padding:12px 8px 22px;background:#fff;box-shadow:0 -4px 20px -12px rgba(0,0,0,.2)}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--muted);font-weight:700}
+.nav a.on{color:var(--coral)}
+.nav .d{width:40px;height:32px;border-radius:12px;display:grid;place-items:center}
+.nav a.on .d{background:#FBE6DA}
+.nav .fab{width:50px;height:50px;border-radius:18px;background:var(--coral);box-shadow:0 10px 22px -6px rgba(232,112,58,.6);margin-top:-16px}
+body{background:#2b2b2b;display:flex;justify-content:center;padding:24px;min-height:100vh}</style></head><body><div class="frame">
+<div class="pad">
+  <div class="disp" style="font-size:30px;margin-bottom:16px">今天的狀態</div>
+  <div style="display:flex;gap:8px;margin-bottom:18px">
+    <span class="chip" style="background:var(--coral);color:#fff;font-size:13px;padding:8px 18px">今天</span>
+    <span class="chip" style="background:#fff;color:var(--muted);font-size:13px;padding:8px 18px">本週</span>
+    <span class="chip" style="background:#fff;color:var(--muted);font-size:13px;padding:8px 18px">本月</span></div>
+  <!-- 血壓：珊瑚實色卡＋白折線＋巨數字 -->
+  <div style="background:var(--coral);border-radius:26px;padding:20px;color:#fff;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:13px;font-weight:700;opacity:.9">❤ 血壓</span><span class="chip" style="background:rgba(255,255,255,.22);color:#fff">穩定</span></div>
+    <div class="big" style="font-size:52px;line-height:1">121<span style="font-size:22px;opacity:.75">/82</span></div>
+    <svg viewBox="0 0 320 60" style="width:100%;height:52px;margin-top:6px"><polyline points="0,42 45,30 90,36 135,18 180,28 225,14 270,24 320,16" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="320" cy="16" r="4" fill="#fff"/></svg>
+  </div>
+  <!-- 睡眠＋活動 雙卡 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div style="background:var(--lav);border-radius:24px;padding:18px;color:#fff">
+      <span style="font-size:12px;font-weight:700;opacity:.9">🌙 睡眠</span>
+      <div class="big" style="font-size:38px;margin-top:6px">7.5<span style="font-size:16px;opacity:.8">時</span></div>
+      <svg viewBox="0 0 120 40" style="width:100%;height:36px;margin-top:4px"><path d="M6 34 a26 26 0 0 1 108 0" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="6" stroke-linecap="round"/><path d="M6 34 a26 26 0 0 1 92 -22" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>
+    </div>
+    <div style="background:var(--sage);border-radius:24px;padding:18px;color:#fff">
+      <span style="font-size:12px;font-weight:700;opacity:.9">👟 活動</span>
+      <div class="big" style="font-size:38px;margin-top:6px">20<span style="font-size:16px;opacity:.8">分</span></div>
+      <div style="display:flex;align-items:flex-end;gap:5px;height:36px;margin-top:4px"><i style="flex:1;height:45%;background:rgba(255,255,255,.4);border-radius:3px"></i><i style="flex:1;height:65%;background:rgba(255,255,255,.4);border-radius:3px"></i><i style="flex:1;height:100%;background:#fff;border-radius:3px"></i></div>
+    </div>
+  </div>
+  <!-- 用藥：暖金卡＋白點陣 -->
+  <div style="background:var(--gold);border-radius:24px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:16px">
+    <div><span style="font-size:12px;font-weight:700;opacity:.9">💊 今天用藥</span>
+      <div class="big" style="font-size:38px;margin-top:4px">2<span style="font-size:18px;opacity:.8">/3</span></div></div>
+    <div style="flex:1;display:flex;gap:8px;justify-content:flex-end">
+      <i style="width:26px;height:26px;border-radius:9px;background:#fff"></i><i style="width:26px;height:26px;border-radius:9px;background:#fff"></i><i style="width:26px;height:26px;border-radius:9px;background:rgba(255,255,255,.35)"></i></div>
+  </div>
+</div>
+
+<div class="nav"><a><span class="d"><svg class="svg" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>首頁</a>
+<a class="on"><span class="d"><svg class="svg" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>狀態</a>
+<a><span class="fab" style="display:grid;place-items:center"><svg class="svg" style="stroke:#fff" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></span><span style="margin-top:2px">聊聊</span></a>
+<a><span class="d"><svg class="svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg></span>家人</a>
+<a><span class="d"><svg class="svg" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>設定</a></div>
+</div></body></html>

@@ -1,0 +1,60 @@
+<!-- @dsCard group="V3 靜奢資料" -->
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"><title>V3-Home</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#1E2A26;--card:#26332E;--card2:#2C3B35;--line:#37463F;
+--ink:#F4EFE6;--muted:#9DB0A6;--mint:#4FD1B5;--amber:#E9B44C;--coral:#E8825A;--violet:#B3A6F0}
+.frame{width:390px;background:var(--bg);border-radius:34px;overflow:hidden;
+box-shadow:0 24px 70px rgba(0,0,0,.55);font-family:'Inter','Noto Sans TC',system-ui,sans-serif;color:var(--ink)}
+.pad{padding:24px 20px 30px}
+.big{font-weight:800;letter-spacing:-1.5px;font-family:'Inter','Noto Sans TC',sans-serif}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px}
+.svg{width:22px;height:22px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.nav{display:flex;justify-content:space-around;align-items:center;padding:12px 8px 22px;background:#18211D;border-top:1px solid var(--line)}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--muted);font-weight:700}
+.nav a.on{color:var(--mint)}
+.nav .fab{width:50px;height:50px;border-radius:18px;background:var(--mint);box-shadow:0 0 24px -2px rgba(79,209,181,.7);margin-top:-16px}
+body{background:#111;display:flex;justify-content:center;padding:24px;min-height:100vh}</style></head><body><div class="frame">
+<div class="pad">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+    <div style="font-size:12.5px;color:var(--muted);font-weight:600">7月6日 週一 · 晴 27°</div>
+    <div style="width:42px;height:42px;border-radius:50%;background:var(--card2);border:2px solid var(--mint);display:grid;place-items:center;font-size:20px;box-shadow:0 0 18px -4px rgba(79,209,181,.6)">🌸</div>
+  </div>
+  <div style="font-size:14px;color:var(--muted);font-weight:600">晚安，秀英</div>
+  <div class="big" style="font-size:32px;margin:2px 0 22px">今天過得好嗎？</div>
+  <!-- 寧寧卡 -->
+  <div style="background:var(--card);border-radius:24px;padding:18px;margin-bottom:14px;border:1px solid var(--line)">
+    <div style="display:flex;align-items:center;gap:13px;margin-bottom:14px">
+      <div style="width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,#2C3B35,#3a4d44);display:grid;place-items:center;font-size:22px;box-shadow:0 0 16px -4px rgba(79,209,181,.5)">🌸</div>
+      <div><div style="font-weight:800;font-size:16px">寧寧</div><div style="font-size:13px;color:var(--muted);margin-top:1px">記得你膝蓋前兩天痠，好點沒？</div></div></div>
+    <button style="width:100%;border:none;background:var(--mint);color:#12211C;font-weight:800;font-size:15px;padding:14px;border-radius:15px;box-shadow:0 0 22px -6px rgba(79,209,181,.6)">開始聊聊</button>
+  </div>
+  <!-- 今日關鍵數據一眼卡 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 12px;text-align:center">
+      <div class="big" style="font-size:24px;color:var(--mint)">128</div><div style="font-size:11px;color:var(--muted);margin-top:2px">血壓</div></div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 12px;text-align:center">
+      <div class="big" style="font-size:24px;color:var(--amber)">7.5</div><div style="font-size:11px;color:var(--muted);margin-top:2px">睡眠</div></div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 12px;text-align:center">
+      <div class="big" style="font-size:24px;color:var(--coral)">2/3</div><div style="font-size:11px;color:var(--muted);margin-top:2px">用藥</div></div>
+  </div>
+  <!-- 三件事 -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <span style="font-size:16px;font-weight:800">今天一起完成</span><span class="chip" style="background:rgba(79,209,181,.14);color:var(--mint)">1 / 3</span></div>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid var(--line)">
+      <div style="width:38px;height:38px;border-radius:12px;background:rgba(232,130,90,.16);display:grid;place-items:center;font-size:18px">💊</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:14.5px">吃血壓藥</div><div style="font-size:12px;color:var(--muted)">午餐後 14:00</div></div>
+      <div style="width:24px;height:24px;border-radius:50%;border:2px solid var(--line)"></div></div>
+    <div style="display:flex;align-items:center;gap:13px;padding:14px 16px">
+      <div style="width:38px;height:38px;border-radius:12px;background:rgba(79,209,181,.16);display:grid;place-items:center;font-size:18px">💬</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:14.5px;color:var(--muted);text-decoration:line-through">和寧寧聊聊</div></div>
+      <div style="width:24px;height:24px;border-radius:50%;background:var(--mint);display:grid;place-items:center;color:#12211C;font-weight:800">✓</div></div>
+  </div>
+</div>
+
+<div class="nav"><a class="on"><svg class="svg" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>首頁</a>
+<a><svg class="svg" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>狀態</a>
+<a><span class="fab" style="display:grid;place-items:center"><svg class="svg" style="stroke:#12211C" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></span><span style="margin-top:2px">聊聊</span></a>
+<a><svg class="svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg>家人</a>
+<a><svg class="svg" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>設定</a></div>
+</div></body></html>

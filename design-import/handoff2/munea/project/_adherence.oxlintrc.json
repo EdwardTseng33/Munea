@@ -1,0 +1,195 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/brand/BrandTokens/**",
+              "components/prototypes/V1-Family/**",
+              "components/prototypes/V1-Home/**",
+              "components/prototypes/V1-Status/**",
+              "components/prototypes/V2-Family/**",
+              "components/prototypes/V2-Home/**",
+              "components/prototypes/V2-Status/**",
+              "components/prototypes/V3-Family/**",
+              "components/prototypes/V3-Home/**",
+              "components/prototypes/V3-Status/**",
+              "components/screens/Chat/**",
+              "components/screens/Family/**",
+              "components/screens/Home/**",
+              "components/screens/Settings/**",
+              "components/screens/Status/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Poppins|Noto Sans TC|Noto Serif TC))/i]",
+        "message": "Font not provided by the design system. Available: Poppins, Noto Sans TC, Noto Serif TC."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "BrandTokens": {
+        "replaces": []
+      },
+      "Chat": {
+        "replaces": []
+      },
+      "Family": {
+        "replaces": []
+      },
+      "Home": {
+        "replaces": []
+      },
+      "Settings": {
+        "replaces": []
+      },
+      "Status": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--btn-green",
+      "--coral",
+      "--coral-d",
+      "--coral-soft",
+      "--cream",
+      "--cream-2",
+      "--danger",
+      "--deep",
+      "--deep-2",
+      "--deep-card",
+      "--display",
+      "--fs-body",
+      "--fs-card",
+      "--fs-note",
+      "--fs-page",
+      "--fs-section",
+      "--fs-sub",
+      "--fw-body",
+      "--fw-em",
+      "--fw-title",
+      "--gold",
+      "--gold-soft",
+      "--ink",
+      "--ink-2",
+      "--line",
+      "--mint",
+      "--mint-2",
+      "--muted",
+      "--radius",
+      "--radius-lg",
+      "--radius-md",
+      "--radius-sm",
+      "--radius-xl",
+      "--sans",
+      "--serif",
+      "--shadow",
+      "--shadow-lg",
+      "--shadow-sm",
+      "--sp-1",
+      "--sp-2",
+      "--sp-3",
+      "--sp-4",
+      "--sp-5",
+      "--sp-6",
+      "--sp-7",
+      "--surface",
+      "--teal",
+      "--teal-d",
+      "--teal-dd"
+    ],
+    "tokenKinds": {
+      "--fs-page": "spacing",
+      "--fs-section": "spacing",
+      "--fs-card": "spacing",
+      "--fs-body": "spacing",
+      "--fs-sub": "spacing",
+      "--fs-note": "spacing",
+      "--fw-title": "other",
+      "--fw-em": "other",
+      "--fw-body": "other",
+      "--teal": "color",
+      "--teal-d": "color",
+      "--teal-dd": "color",
+      "--btn-green": "color",
+      "--mint": "color",
+      "--mint-2": "color",
+      "--cream": "color",
+      "--cream-2": "color",
+      "--surface": "color",
+      "--ink": "color",
+      "--ink-2": "color",
+      "--muted": "color",
+      "--coral": "color",
+      "--coral-d": "color",
+      "--coral-soft": "color",
+      "--gold": "color",
+      "--gold-soft": "color",
+      "--line": "color",
+      "--deep": "color",
+      "--deep-2": "color",
+      "--deep-card": "color",
+      "--danger": "color",
+      "--radius": "radius",
+      "--radius-lg": "radius",
+      "--radius-sm": "radius",
+      "--radius-md": "radius",
+      "--radius-xl": "radius",
+      "--shadow": "shadow",
+      "--shadow-sm": "shadow",
+      "--shadow-lg": "shadow",
+      "--sans": "font",
+      "--display": "font",
+      "--serif": "font",
+      "--sp-1": "spacing",
+      "--sp-2": "spacing",
+      "--sp-3": "spacing",
+      "--sp-4": "spacing",
+      "--sp-5": "spacing",
+      "--sp-6": "spacing",
+      "--sp-7": "spacing"
+    },
+    "fontFamilies": [
+      "Noto Sans TC",
+      "Noto Serif TC",
+      "Poppins"
+    ]
+  }
+}
