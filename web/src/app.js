@@ -113,6 +113,18 @@ const avatarRuntime = {
     }, 120);
     setTimeout(() => this.stopMockViseme(), ms);
   },
+  // 真語音通話的嘴型：跟著她「實際的聲音大小」動（有聲音才動嘴、停頓就合嘴）— Edward 7/9 六角色全 avatar
+  startLiveViseme(getLevel) {
+    this.stopMockViseme();
+    if (this.mode !== AVATAR_ENGINE_MODES.TWO_D_VISEME) return;
+    const shapes = ['open', 'wide', 'round', 'smile'];
+    let i = 0;
+    visemeTimer = setInterval(() => {
+      const lv = Math.max(0, Math.min(1, getLevel ? (getLevel() || 0) : 0));
+      if (lv > 0.05) { i = (i + 1) % shapes.length; this.setViseme(shapes[i]); }
+      else this.setViseme('rest');
+    }, 110);
+  },
   stopMockViseme() {
     clearInterval(visemeTimer);
     visemeTimer = null;
@@ -2116,7 +2128,7 @@ function connectCall() {
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：同位置先放載入動態、收音動態等真的接上才出現（Edward 7/9）
     LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setCallHint('接通中', true); };
     const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻跟麥克風
-    const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); };            // 講話波頻跟寧寧聲音
+    const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };   // 講話波頻＋2D 嘴型都跟她實際聲音（六角色全 avatar · Edward 7/9）
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
     // 斷線自動接回：治「她答完一次、線就掉、不再回」——掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
     let _reconnects = 0;

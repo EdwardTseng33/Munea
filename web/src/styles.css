@@ -2082,3 +2082,10 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .draw-win-card .dw-prize { font-size: 18px; color: var(--coral-d); font-weight: 800; margin-top: 3px; }
 .draw-win-card .dw-claim { font-size: 14px; color: var(--ink-2); line-height: 1.6; margin-top: 10px; }
 @keyframes win-pop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* 六角色 avatar 效果 · 本機層（Edward 7/9 定案：不管選哪個角色、聊聊都要有 avatar 效果）
+   2D 四角色＝嘴型跟真實聲音動；真人照兩角色（寧寧/阿宏）先給「呼吸感」、
+   正式會動的臉＝雲端臉引擎（接上後蓋過這層） */
+@keyframes face-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.016); } }
+.face-screen .face-bg img { animation: face-breathe 5.2s ease-in-out infinite; transform-origin: center 30%; }
+.face-screen[data-state="speaking"] .face-bg img { animation-duration: 2.4s; }
