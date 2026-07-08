@@ -1,5 +1,5 @@
-<!-- @dsCard group="Munea App 2026-07-07" -->
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700;900&display=swap" rel="stylesheet"><title>Munea 首頁</title><style>/* Munea 沐寧 — 沐寧 配色 · 精修 v2（提升設計感 + 層次 + 操作舒適度）
+<!-- @dsCard group="Munea 流程 2026-07-07" -->
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700;900&display=swap" rel="stylesheet"><title>使用條款</title><style>/* Munea 沐寧 — 沐寧 配色 · 精修 v2（提升設計感 + 層次 + 操作舒適度）
    往 Careon 調性：柔光背景 / 標題三層次 / 卡片質感交錯 / 浮動標籤 / 裝飾曲線
    健康照護可用性：大字、高對比、少元素 */
 
@@ -1682,61 +1682,104 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .fc-privacy { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.6; margin-top: 14px; }
 .jc-code { text-align: center; letter-spacing: 3px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
 
-body{margin:0;background:#2b2b2b;display:flex;justify-content:center;padding:24px;min-height:100vh}.app-shell{height:844px;box-shadow:0 24px 70px rgba(0,0,0,.4)}</style></head><body><div class="app-shell"><section class="screen active" id="home">
+body{margin:0;background:#2b2b2b;display:flex;justify-content:center;padding:24px;min-height:100vh}.app-shell{height:844px;position:relative;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.4)}.app-shell .modal-mask,.app-shell .reader-page{position:absolute!important}</style></head><body><div class="app-shell"><section class="screen active" id="settings">
     <div class="pad">
-      <div class="page-head home-head">
-        <h1 class="page-title" id="greetBig">夜深了</h1>
-        <span class="home-meta"><span class="home-date" id="metaDate">7月7日 週二</span><span class="home-sep">·</span><b>☀ 晴 26°</b></span>
-      </div>
-
-      <div class="butler-card">
-        <div class="bc-row">
-          <div class="bc-avatar"><img class="ava-img" src="avatars/nening-hero.jpg" alt="寧寧"></div>
-          <div class="bc-info">
-            <div class="bc-name"><span id="companionHomeName">寧寧</span></div>
-            <div class="bc-msg"><span class="bc-msg-t" id="bcMsg">記得你說，孫子快畢業了——睡前跟我聊聊今天？</span></div>
+      <div class="page-head"><h1 class="page-title">設定</h1></div>
+      <h2 class="set-section">帳號</h2>
+      <div class="auth-card" id="authCard" data-auth-state="signed-in">
+        <div class="auth-card-main">
+          <span class="auth-ava" id="authAvatar"><span class="init-ava p-ama">嬤</span></span>
+          <div class="auth-copy">
+            <div class="auth-title" id="authStatusText">陳秀英</div>
+            <div class="auth-sub" id="authProviderText">我的帳號 · 資料已同步</div>
+            <div class="auth-email" id="authEmailText"></div>
           </div>
         </div>
-      </div>
-      <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>開始聊聊</button>
-      <div class="care-card" id="careCard">
-        <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"></path><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"></path></svg><span>寧寧幫你留意</span><span class="care-dots" id="careDots"><i class="on"></i><i class=""></i><i class=""></i></span></div>
-        <div class="care-body" id="careBody"><div class="care-item on" data-k="family"><span class="care-ico coral"><svg class="ic" viewBox="0 0 24 24"><path d="M13 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM8 21l3-6M14 21v-5l-2.5-3 1-5.5M8.5 9 11 6.5l2.5 1 2 3H18"></path></svg></span><div class="care-txt"><p>外婆發起的走路活動</p><small>還差 5,000 步就達標，今晚一起走走？</small></div><button type="button" class="care-btn" data-go="family">去看看</button></div><div class="care-item" data-k="family"><span class="care-ico "><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"></path></svg></span><div class="care-txt"><p>家人帶話給你</p><small>你剛剛給美華留了語音，寧寧下次聊天會親口告訴她</small></div><button type="button" class="care-btn" data-go="family">去看看</button></div><div class="care-item" data-k="status"><span class="care-ico gold"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"></circle><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"></path></svg></span><div class="care-txt"><p>準時吃藥有節奏</p><small>這個月有 6 天準時吃藥，節奏出來了</small></div></div></div>
-      </div>
-
-
-
-      <div class="sec-head">
-        <div><h2>今天一起完成</h2></div>
-        <span class="task-progress"> 0 / 3</span>
-      </div>
-      <div class="task-card" id="taskCard">
-        <div class="task-item" data-task="pill">
-          <span class="task-ico pill"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"></path><path d="M8.5 8.5l7 7"></path></svg></span>
-          <div class="task-body"><div class="task-title" id="pillTitle">吃脈優</div><div class="task-sub" id="pillSub">午餐後 · 今天 0/1 次</div></div>
-          <span class="task-time">14:00</span>
-          <span class="task-check" aria-label="完成打勾"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
-        </div>
-        <div class="task-item" data-task="walk">
-          <span class="task-ico walk"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"></path></svg></span>
-          <div class="task-body"><div class="task-title">到公園散步</div><div class="task-sub">天氣正好</div></div>
-          <span class="task-time coral">16:30</span>
-          <span class="task-check" aria-label="完成打勾"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
-        </div>
-        <div class="task-item" data-task="chat">
-          <span class="task-ico chat"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"></path></svg></span>
-          <div class="task-body"><div class="task-title">和<span class="cname">寧寧</span>聊聊</div><div class="task-sub">說說今天的事</div></div>
-          <span class="task-time">隨時</span>
-          <span class="task-check" aria-label="完成打勾"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+        <div class="auth-actions">
+          <span class="auth-dev-badge" id="authDevBadge" hidden="">開發者</span>
+          <button class="auth-primary" id="authSignInBtn" type="button" hidden="">登入</button>
+          <button class="auth-secondary" id="authSignOutBtn" type="button">登出</button>
         </div>
       </div>
 
+      <h2 class="set-section">訂閱與點數</h2>
+      <div class="plan-card">
+        <div class="plan-title-row">
+          <span class="plan-name">高級方案</span>
+          <span class="plan-payer" style="margin:0">我的訂閱</span>
+        </div>
+        <div class="plan-divider"></div>
+        <div class="pts-label">點數 <b id="ptsLeft">236</b> 點 <span class="pts-used">每月送 400 · 已用 <i id="ptsUsed" style="font-style:normal">164</i></span></div>
+        <div class="pts-bar"><i id="ptsBar" style="width: 41%;"></i></div>
+        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>點數快用完了；基本陪伴不受影響，加值後生動模式不中斷</div>
+        <div class="pts-note">240 點約可通話 240 分鐘；基本陪伴不限量、不會中斷</div>
+        <div class="plan-actions">
+          <button class="plan-btn ghost" id="managePlanBtn">管理方案</button>
+          <button class="plan-btn" id="topUpBtn">加值點數</button>
+        </div>
+      </div>
+
+      <h2 class="set-section">帳號與家庭</h2>
+      <div class="set-list">
+        <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg></span><span class="sr-main">個人資料<small>名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"></path></svg></span><span class="sr-main">家庭照護圈<small>誰在圈裡、誰付費、誰收通知</small></span><span class="sr-arrow">›</span></div>
+      </div>
+
+      <h2 class="set-section">AI 陪伴角色</h2>
+      <div class="set-list" id="companionRow" style="cursor:pointer">
+        <div class="set-row"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/nening-face.png" alt=""></span><span class="sr-main"><b id="settingsCompanionName">寧寧</b><small id="settingsTemplateLabel">溫柔型 · 像家人，會照看</small></span><span class="sr-arrow">›</span></div>
+      </div>
+
+
+      <section class="ai-dev-panel" id="aiDevPanel" hidden="">
+        <div class="ai-dev-head">
+          <div>
+            <p class="ai-dev-kicker">Developer</p>
+            <h2>AI context diagnostics</h2>
+          </div>
+          <button class="ai-dev-refresh" id="aiDevRefresh" type="button">Refresh</button>
+        </div>
+        <div class="ai-dev-grid">
+          <div class="ai-dev-metric"><span>Persona</span><b id="aiDevPersona">-</b></div>
+          <div class="ai-dev-metric"><span>Rapport</span><b id="aiDevRapport">-</b></div>
+          <div class="ai-dev-metric"><span>Guardian</span><b id="aiDevGuardian">-</b></div>
+          <div class="ai-dev-metric"><span>Memory</span><b id="aiDevMemory">-</b></div>
+        </div>
+        <div class="ai-dev-row"><span>Source</span><b id="aiDevSource">not loaded</b></div>
+        <div class="ai-dev-row"><span>Perception</span><b id="aiDevPerception">-</b></div>
+        <div class="ai-dev-row"><span>Tone overrides</span><b id="aiDevTone">-</b></div>
+        <pre class="ai-dev-json" id="aiDevJson">{}</pre>
+      </section>
+
+      <h2 class="set-section">健康資料與安全</h2>
+      <div class="set-list">
+        <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"></path></svg></span><span class="sr-main">Apple 健康<small>步數・心率・睡眠</small></span><span class="sr-on"><span class="d"></span>已連接</span></div>
+        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"></path><path d="M8.5 8.5l7 7"></path></svg></span><span class="sr-main">用藥提醒<small>到時間<span class="cname">寧寧</span>親口提醒</small></span><span class="sr-arrow"><b id="medCountSettings">1 種藥</b> ›</span></div>
+        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M8 3v4M16 3v4M3 11h18"></path><path d="M9 16l2 2 4-4"></path></svg></span><span class="sr-main">看診提醒<small>回診前一天提醒你</small></span><span class="sr-arrow" id="visitLabel">未設定 ›</span></div>
+        <div class="set-row" id="safetyRow" hidden="" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg></span><span class="sr-main">安全通知<small>跌倒、異常與緊急聯絡</small></span><span class="sr-arrow">美華 ›</span></div>
+        <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span><span class="sr-main">我的資料<small>匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
+      </div>
+      <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進註冊流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
+      <h2 class="set-section">App 體驗</h2>
+      <div class="set-list">
+        <div class="set-row" id="fontRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"></path></svg></span><span class="sr-main">字體與顯示<small>字級大小與閱讀舒適</small></span><span class="sr-arrow" id="fontNow">標準 ›</span></div>
+      </div>
+
+      <h2 class="set-section">關於</h2>
+      <div class="set-list">
+        <div class="set-row set-info"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px"></span><span class="sr-main">Munea 沐寧<small>版本 1.0.0 · 測試版</small></span></div>
+        <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M16 13H8M16 17H8"></path></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
+      </div>
     </div>
   </section><nav class="tab-bar" id="tabBar">
     <svg class="navbg" viewBox="0 0 358 84" preserveAspectRatio="none" aria-hidden="true"><path d="M20,28 L141,28 A8 8 0 0 0 149.3,24 A31 31 0 0 1 208.7,24 A8 8 0 0 0 217,28 L338,28 A20 20 0 0 1 358,48 L358,62 A20 20 0 0 1 338,82 L20,82 A20 20 0 0 1 0,62 L0,48 A20 20 0 0 1 20,28 Z"></path></svg>
-    <button class="tab-btn active" data-view="home"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg><span>首頁</span></button>
+    <button class="tab-btn" data-view="home"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg><span>首頁</span></button>
     <button class="tab-btn" data-view="status"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg><span>狀態</span></button>
     <button class="tab-btn center" data-view="chat"><span class="center-fab"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"></path></svg></span><span>聊聊</span></button>
     <button class="tab-btn" data-view="family"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M15.5 3.13a4 4 0 0 1 0 7.75"></path></svg><span>家人</span></button>
-    <button class="tab-btn" data-view="settings"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"></path><circle cx="15" cy="8" r="2.3"></circle><circle cx="9" cy="16" r="2.3"></circle></svg><span>設定</span></button>
-  </nav></div></body></html>
+    <button class="tab-btn active" data-view="settings"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"></path><circle cx="15" cy="8" r="2.3"></circle><circle cx="9" cy="16" r="2.3"></circle></svg><span>設定</span></button>
+  </nav><div class="reader-page show" id="readerPage" aria-hidden="true">
+    <div class="nav-head"><button class="nav-back" id="readerBack" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg></button><span class="nav-title" id="readerTitle">使用條款</span><span></span></div>
+    <div class="reader-scroll"><div class="reader-card" id="readerBody"><h4>沐寧是什麼</h4><p>沐寧是全家人的陪伴、提醒與安全轉介工具。<strong>不提供診斷、治療或緊急服務</strong>；藥怎麼吃、身體怎麼了，請以醫師與藥師為準。<strong>緊急狀況請直接聯絡 119，心理支持可撥 1925</strong>。</p><h4>帳號與家庭照護圈</h4><p>一個帳號可以邀請家人組成照護圈；每位成員能看到的內容，以本人同意的範圍為準。對話內容不對家人公開，只分享狀態與關懷摘要。未成年人僅能由家長（或監護人）邀請加入使用。</p><h4>訂閱與點數</h4><p>基本陪伴不限量；通話與生動模式使用點數。方案內容與價格以 App 內「訂閱與點數」頁為準，可隨時調整方案；加購點數不過期。</p><h4>合理使用</h4><p>請勿用於違法用途，或試圖讓 AI 提供醫療處置建議。服務內容若有重大調整，會提前在 App 內告知。</p><h4>資料與隱私</h4><p>資料怎麼收集、怎麼使用、保存多久，請見「<a href="privacy.html" style="color:var(--teal-d);font-weight:800;text-decoration:none">隱私權政策</a>」。</p></div></div>
+  </div></div></body></html>
