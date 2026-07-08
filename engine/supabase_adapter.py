@@ -579,6 +579,18 @@ class SupabaseAdapter:
                 payload=payload,
                 prefer="return=representation",
             )
+        elif reminder_id:
+            rows = self._request(
+                "PATCH",
+                "routine_reminders",
+                query={
+                    "account_id": f"eq.{self.account_id}",
+                    "schedule->>originalReminderId": f"eq.{reminder_id}",
+                    "select": "*",
+                },
+                payload=payload,
+                prefer="return=representation",
+            )
         if not rows:
             rows = self._request(
                 "POST",
@@ -590,20 +602,28 @@ class SupabaseAdapter:
         return self.routine_reminder_row_to_item(rows[0]) if rows else None
 
     def update_routine_reminder(self, reminder_id, patch):
-        if not self.enabled() or not self._is_uuid(reminder_id or ""):
+        if not self.enabled() or not reminder_id:
             return None
+        query = {"id": f"eq.{reminder_id}", "select": "*"}
+        if not self._is_uuid(reminder_id or ""):
+            query = {
+                "account_id": f"eq.{self.account_id}",
+                "schedule->>originalReminderId": f"eq.{reminder_id}",
+                "select": "*",
+            }
         payload = self.routine_reminder_patch_to_row(patch)
         if not payload:
             return self.routine_reminder_row_to_item(
-                self._first("routine_reminders", {"id": f"eq.{reminder_id}", "select": "*"})
+                self._first("routine_reminders", query)
             )
         if "schedule" in payload:
-            current = self._first("routine_reminders", {"id": f"eq.{reminder_id}", "select": "schedule"})
+            current_query = {**query, "select": "schedule"}
+            current = self._first("routine_reminders", current_query)
             payload["schedule"] = {**((current or {}).get("schedule") or {}), **(payload.get("schedule") or {})}
         rows = self._request(
             "PATCH",
             "routine_reminders",
-            query={"id": f"eq.{reminder_id}", "select": "*"},
+            query=query,
             payload=payload,
             prefer="return=representation",
         )

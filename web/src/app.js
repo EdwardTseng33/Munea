@@ -381,6 +381,145 @@ async function brainPost(url, body) {
   finally { clearTimeout(to); }
 }
 
+async function routineRemindersPost(body) {
+  if (isStaticPreview()) return null;
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const r = await fetch('/routine-reminders', {
+      method: 'POST',
+      headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body || {}),
+      signal: ctrl.signal
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+  finally { clearTimeout(to); }
+}
+function stableReminderId(prefix, raw) {
+  let h = 0;
+  const s = String(raw || '');
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return prefix + Math.abs(h).toString(36);
+}
+function splitReminderSlots(value) {
+  return String(value || '').split('\u3001').map(x => x.trim()).filter(Boolean);
+}
+function medScheduleTimes(med) {
+  return splitReminderSlots(med && med.time).map(label => {
+    const def = (typeof MED_SLOT_DEF !== 'undefined' ? MED_SLOT_DEF : []).find(x => x[0] === label);
+    return { label, time: def ? medSlotTime(def[1], def[2]) : '' };
+  });
+}
+function ensureMedReminderId(med) {
+  if (!med.id) med.id = stableReminderId('med_', [med.name, med.time, med.days, med.by].join('|'));
+  return med.id;
+}
+function ensureVisitReminderId(visit) {
+  if (!visit.id) visit.id = stableReminderId('visit_', [visit.title, visit.dateISO, visit.time].join('|'));
+  return visit.id;
+}
+function syncMedicationReminder(med) {
+  if (!med || !med.name) return;
+  ensureMedReminderId(med);
+  routineRemindersPost({
+    action: 'save',
+    reminder: {
+      id: med.id,
+      title: med.name,
+      type: 'medication',
+      status: 'active',
+      schedule: {
+        slotLabels: splitReminderSlots(med.time),
+        times: medScheduleTimes(med),
+        days: med.days || '\u9577\u671f',
+        by: med.by || '',
+        photo: med.photo || '',
+        source: 'munea-web'
+      }
+    }
+  });
+}
+function syncVisitReminder(visit) {
+  if (!visit || !visit.dateISO) return;
+  ensureVisitReminderId(visit);
+  routineRemindersPost({
+    action: 'save',
+    reminder: {
+      id: visit.id,
+      title: visit.title || '\u56de\u8a3a',
+      type: 'check_in',
+      status: 'active',
+      schedule: {
+        date: visit.dateISO,
+        time: visit.time || '',
+        label: visit.label || '',
+        source: 'munea-web'
+      }
+    }
+  });
+}
+function archiveRoutineReminder(id) {
+  if (!id) return;
+  routineRemindersPost({ action: 'archive', id });
+}
+function reminderToLocalMed(reminder) {
+  const schedule = reminder.schedule || {};
+  const labels = Array.isArray(schedule.slotLabels) ? schedule.slotLabels : splitReminderSlots(schedule.slotLabels || '');
+  const fallbackLabels = Array.isArray(schedule.times) ? schedule.times.map(x => x && x.label).filter(Boolean) : [];
+  return {
+    id: reminder.id,
+    name: reminder.title || '\u85e5',
+    time: (labels.length ? labels : fallbackLabels).join('\u3001'),
+    days: schedule.days || schedule.repeat || '\u9577\u671f',
+    by: schedule.by || '\u96f2\u7aef',
+    photo: schedule.photo || ''
+  };
+}
+function reminderToLocalVisit(reminder) {
+  const schedule = reminder.schedule || {};
+  return {
+    id: reminder.id,
+    title: reminder.title || '\u56de\u8a3a',
+    dateISO: schedule.date || '',
+    time: schedule.time || '',
+    label: schedule.label || ''
+  };
+}
+function mergeByReminderKey(primary, secondary, keyFn) {
+  const seen = new Set();
+  const out = [];
+  [...(primary || []), ...(secondary || [])].forEach(item => {
+    const key = keyFn(item);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(item);
+  });
+  return out;
+}
+async function refreshRoutineRemindersFromBackend() {
+  const data = await routineRemindersPost({ action: 'list', status: 'active', limit: 200 });
+  const reminders = data && Array.isArray(data.reminders) ? data.reminders : [];
+  if (!reminders.length) return;
+  const remoteMeds = reminders.filter(r => r && r.type === 'medication').map(reminderToLocalMed).filter(m => m.name && m.time);
+  const remoteVisits = reminders.filter(r => r && r.type === 'check_in').map(reminderToLocalVisit).filter(v => v.dateISO);
+  if (remoteMeds.length) {
+    const merged = mergeByReminderKey(remoteMeds, loadMeds(), m => m.id || (m.name + '|' + m.time));
+    try { localStorage.setItem('munea.meds', JSON.stringify(merged)); } catch (e) {}
+    updateMedCount();
+  }
+  if (remoteVisits.length) {
+    let existing = [];
+    try { existing = JSON.parse(localStorage.getItem('munea.visits') || '[]') || []; } catch (e2) {}
+    const merged = mergeByReminderKey(remoteVisits, existing, v => v.id || (v.title + '|' + v.dateISO + '|' + v.time));
+    try { localStorage.setItem('munea.visits', JSON.stringify(merged)); } catch (e3) {}
+    if (window.__muneaRefreshVisitRow) window.__muneaRefreshVisitRow();
+    if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks();
+  }
+}
+window.__muneaRoutineReminderSync = { refresh: refreshRoutineRemindersFromBackend, saveMed: syncMedicationReminder, saveVisit: syncVisitReminder };
+
 /* ===== VoiceProvider：先立合約，之後可換 Gemini Live / Interactions，不綁死 App 核心 ===== */
 function makeSessionId(prefix = 'session') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
@@ -2299,12 +2438,20 @@ function init() {
     const del = e.target.closest('.ms-del');
     if (del) {
       let meds = loadMeds();
+      let changedMed = null, archivedMed = null;
       meds = meds.map(m => {
         if (m.name !== del.dataset.name) return m;
         const rest = String(m.time).split('、').map(x => x.trim()).filter(x => x && x !== del.dataset.slot);
-        return rest.length ? Object.assign({}, m, { time: rest.join('、') }) : null;
+        if (rest.length) {
+          changedMed = Object.assign({}, m, { time: rest.join('、') });
+          return changedMed;
+        }
+        archivedMed = m;
+        return null;
       }).filter(Boolean);
       try { localStorage.setItem('munea.meds', JSON.stringify(meds)); syncPush('meds', meds); } catch (e2) {}
+      if (changedMed) syncMedicationReminder(changedMed);
+      if (archivedMed) archiveRoutineReminder(archivedMed.id || stableReminderId('med_', [archivedMed.name, archivedMed.time, archivedMed.days, archivedMed.by].join('|')));
       updateMedCount();
       renderMedSlots();
       toast('拿掉了，這個時段不再提醒這種藥。');
@@ -2330,8 +2477,11 @@ function init() {
     if (!name) { toast('先寫藥名（照藥袋抄就好）'); return; }
     if (!times.length) { toast('點一下什麼時候吃（可以選好幾個）'); return; }
     const meds = loadMeds();
-    meds.push({ name, time: times.join('、'), days, by: '美華', photo: _medPendingPhoto });
+    const med = { name, time: times.join('、'), days, by: '美華', photo: _medPendingPhoto };
+    ensureMedReminderId(med);
+    meds.push(med);
     try { localStorage.setItem('munea.meds', JSON.stringify(meds)); syncPush('meds', meds); } catch (e) {}
+    syncMedicationReminder(med);
     $('#medName').value = '';
     _medPendingPhoto = ''; { const _b = $('#medPhotoBox'); if (_b) { _b.style.backgroundImage = ''; _b.classList.remove('has'); } }
     document.querySelectorAll('#medTimeChips .mchip.on').forEach(x => x.classList.remove('on'));
@@ -2896,6 +3046,7 @@ function init() {
     // 看診有增減時，同步首頁「今天一起完成」的回診任務（只在當天顯示）
     if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks();
   }
+  window.__muneaRefreshVisitRow = renderVisitRow;
   function renderVisitList() {
     const box = $('#visitList'); if (!box) return;
     const arr = loadVisits();
@@ -2904,7 +3055,10 @@ function init() {
   }
   if ($('#visitList')) $('#visitList').addEventListener('click', e => {
     const b = e.target.closest('.vi-del'); if (!b) return;
-    saveVisits(loadVisits().filter(v => String(v.id) !== String(b.dataset.id)));
+    const currentVisits = loadVisits();
+    const removed = currentVisits.find(v => String(v.id) === String(b.dataset.id));
+    saveVisits(currentVisits.filter(v => String(v.id) !== String(b.dataset.id)));
+    if (removed) archiveRoutineReminder(removed.id);
     renderVisitList(); renderVisitRow();
   });
   if ($('#visitEntry')) $('#visitEntry').addEventListener('click', () => {
@@ -2923,14 +3077,17 @@ function init() {
     const tv = ($('#visitTime') && $('#visitTime').value) || '09:00';
     const d = new Date(on.dataset.iso + 'T00:00');
     const label = fmtDay(d) + ' ' + fmtVisitTime(tv);
-    const arr = loadVisits(); arr.push({ id: Date.now(), title, dateISO: on.dataset.iso, time: tv, label });
+    const visit = { id: Date.now(), title, dateISO: on.dataset.iso, time: tv, label };
+    const arr = loadVisits(); arr.push(visit);
     saveVisits(arr);
+    syncVisitReminder(visit);
     renderVisitList(); renderVisitRow();
     if ($('#visitTitle')) $('#visitTitle').value = '';
     document.querySelectorAll('#visitDatePick .cal-cell.on').forEach(x => x.classList.remove('on'));
     toast('好，「' + title + '」' + label + '記下了，' + cname() + '前一天會提醒你');
   });
   renderVisitRow();
+  refreshRoutineRemindersFromBackend();
   const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
   function applyFontScale() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
@@ -3359,8 +3516,11 @@ function init() {
       const daysM = t.match(/(\d{1,3})\s*[天日]/);
       const days = daysM ? (daysM[1] + ' 天') : '長期';
       const meds = loadMeds();
-      meds.push({ name: name || '藥', time: seg, days, by: '本人' });
+      const med = { name: name || '藥', time: seg, days, by: '本人' };
+      ensureMedReminderId(med);
+      meds.push(med);
       try { localStorage.setItem('munea.meds', JSON.stringify(meds)); syncPush('meds', meds); } catch (e) {}
+      syncMedicationReminder(med);
       updateMedCount();
       if (window.__medRefresh) { try { window.__medRefresh(); } catch (e3) {} }
       const whenSay = clock ? (clock + '（' + seg + '）') : seg;
@@ -3376,7 +3536,14 @@ function init() {
         const iso2 = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         const timeStr = clock ? (' ' + clock) : (/(下午)/.test(t) ? ' 下午' : /(晚上|傍晚)/.test(t) ? ' 晚上' : /(上午|早上|早)/.test(t) ? ' 上午' : '');
         const label = (d.getMonth() + 1) + '/' + d.getDate() + '（週' + wd + '）' + timeStr;
+        const visit = { id: Date.now(), title: '回診', dateISO: iso2, time: clock || '', label };
         try { localStorage.setItem('munea.visit', JSON.stringify({ dateISO: iso2, label })); } catch (e) {} syncPush('visit', { dateISO: iso2, label });
+        try {
+          const visits = JSON.parse(localStorage.getItem('munea.visits') || '[]') || [];
+          visits.push(visit);
+          localStorage.setItem('munea.visits', JSON.stringify(visits));
+        } catch (e3) {}
+        syncVisitReminder(visit);
         if (typeof renderVisitRow === 'function') try { renderVisitRow(); } catch (e2) {}
         return '記好了，' + label + '回診。我前一天會提醒你，回診要問醫生的、要帶的東西，也會先幫你準備好。';
       }

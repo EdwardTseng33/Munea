@@ -608,6 +608,8 @@ assert archived_routine["status"] == "archived"
 rescheduled_routine = adapter.update_routine_reminder("77777777-7777-4777-8777-777777777777", {"schedule": {"time": "10:00"}})
 assert rescheduled_routine["schedule"]["time"] == "10:00"
 assert rescheduled_routine["schedule"]["dosage"] == "1 tablet"
+archived_local_routine = adapter.update_routine_reminder("local-med-1", {"status": "archived"})
+assert archived_local_routine["status"] == "archived"
 event = adapter.append_product_event({"eventName": "voice_session_completed", "properties": {"durationMs": 90000}})
 assert event["eventName"] == "voice_session_completed"
 events = adapter.load_product_events(limit=10)
@@ -2538,6 +2540,32 @@ if missing_onboarding:
 print("account bootstrap frontend contract OK")
 '@
 Pass "Frontend onboarding can initialize account bootstrap"
+
+Step "Frontend routine reminder bridge contract"
+Invoke-PythonBlock @'
+from pathlib import Path
+js = Path("web/src/app.js").read_text(encoding="utf-8")
+required = [
+    "routineRemindersPost",
+    "/routine-reminders",
+    "refreshRoutineRemindersFromBackend",
+    "syncMedicationReminder",
+    "syncVisitReminder",
+    "archiveRoutineReminder",
+    "__muneaRoutineReminderSync",
+    "stableReminderId",
+    "routine_reminder_completed",
+]
+missing = [item for item in required if item not in js]
+if missing:
+    raise SystemExit("Missing frontend routine reminder bridge pieces: " + ", ".join(missing))
+if js.count("syncMedicationReminder(") < 3:
+    raise SystemExit("Medication reminder sync is not wired into add/chat/update flows")
+if js.count("syncVisitReminder(") < 3:
+    raise SystemExit("Visit reminder sync is not wired into add/chat/load flows")
+print("frontend routine reminder bridge OK")
+'@
+Pass "Frontend can sync medication and visit reminders to backend"
 
 Step "Frontend id references"
 Invoke-PythonBlock @'

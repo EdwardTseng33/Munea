@@ -134,6 +134,7 @@ Frontend bridge:
 - `web/onboarding.html` saves the selected companion template/name, marks onboarding complete, and attempts `/account-bootstrap`.
 - `web/src/app.js` retries account bootstrap on app init when onboarding is complete or Auth was previously required.
 - Companion name/template edits update `/companion-profile`; they do not recreate the account graph after bootstrap succeeds.
+- Medication and visit reminder settings now save/archive through `/routine-reminders` and hydrate active reminders back into local UI state at startup, while localStorage remains the offline/static-preview fallback.
 - Supabase production bootstrap must be triggered only after verified Auth, not from user-editable local metadata.
 
 Missing:
