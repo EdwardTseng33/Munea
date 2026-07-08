@@ -37,7 +37,8 @@
 |---|---|---|
 | AI 腦（聊天/個性）| Gemini（文字 gemini-2.5-flash 系列 · 語音 Gemini Live）| 🟢 能跑；個性檔 `engine/characters.json`；文字聊天已接 **Google 搜尋**（不瞎掰）；語音搜尋待 Mac 有鑰匙驗 |
 | 語音鏈 | 瀏覽器 ⇄ `engine/live_voice_server.py` ⇄ Gemini Live | 🟢 多輪修復完成；已支援 ?name（改名）＋ ?mood（情緒球心情）＋ **?char（換角色：人格＋聲音跟 characters.json 走，7/8 Windows 加）**；啟動自動吃 `.env.local` 鑰匙 |
-| **聊聊實機 Demo（提案用）** | `web/demo.html` ＋ `demo-聊聊.bat` 一鍵啟動 | 🟢 **7/8 上線**：六角色選角→即時語音通話→字幕/聲波/計時；提案副本已含附頁（桌面「…（含聊聊Demo附頁）.pptx」×2）；素材在 `_SalesKit-2026-07/demo-assets/` |
+| **聊聊實機 Demo（提案用）** | **`web/demo-live.html`（主打·單角色寧寧·擬真對嘴）**＋`web/demo.html`（六角色備用）＋`demo-聊聊.bat` 一鍵啟動 | 🟢 **7/8 上線**：提案副本已含附頁（桌面「…（含聊聊Demo附頁）.pptx」×2）；素材在 `_SalesKit-2026-07/demo-assets/` |
+| **擬真 Live Avatar（產品第3層）** | `engine/avatar_live_server.py`（:8188）——voice-poc 6/3 驗證引擎 × 寧寧照片 × 聊聊即時語音 | 🟢 **7/8 demo 接通**：GPU 即時對嘴→WebRTC 進瀏覽器；聲譜走工作執行緒、嘴型牆上時鐘對時；需 `E:\voice-poc\.venv`＋本機 GPU（3070 可跑）。正式版照顯卡經濟學文件走 RunPod（Ditto 路線） |
 | 雲端資料 | Supabase（帳號/家人/心情/活動）| 🟡 橋接程式好了、**表還沒建**→自動退本機 JSON 備援、資料不掉 |
 | 付款 | Apple 內購（StoreKit）| 🔴 未接；產品 ID 已定案（見步驟單第 4 步表）|
 | 打包 | Capacitor 8 → iOS 殼（net.munea.app）| 🟢 殼＋圖示＋權限字串齊；差憑證 |
@@ -90,4 +91,10 @@
 - **⚠️ 動到 Mac 地盤（打招呼）**：`engine/live_voice_server.py` 三處小改——① `?char=` 換角色（人格＋聲音跟 characters.json，預設仍寧寧、往後相容）② 組腦時 displayName 跟角色走（修「換角色仍自稱寧寧」——存檔陪伴檔名字會蓋掉角色名）③ 啟動自動吃 `.env.local`（跟 server.py 同款、環境變數優先）。多輪/插話邏輯沒動。
 - **驗證**：文字探針端對端 PASS（寧寧/旺財/咪咪三角色、首聲 547–984ms、字幕＋語音都回）；瀏覽器自動化實測通話畫面 OK；記憶入話實錄（「我記得小寶下個月就要結婚了」）。
 - **提案附件**：桌面產出「產品介紹（含聊聊Demo附頁）」「模組介紹（含聊聊Demo附頁）」兩份副本（原檔沒動），附頁素材在 `_SalesKit-2026-07/demo-assets/`。
+
+### 2026-07-08 傍晚（Windows · Edward 拍板「照規劃的技術做 live avatar demo」）
+- **產品第 3 層（擬真對嘴）接進聊聊 demo**：找到 6/3 voice-poc-stream 已驗證的對嘴引擎（Wav2Lip×WebRTC、這台 3070 實測 26fps），臉換寧寧、聲音接聊聊即時語音 → `engine/avatar_live_server.py`（:8188）＋單角色頁 `web/demo-live.html`。端對端 PASS（嘴跟聲音同步開合、記憶入話、插話 reset）。
+- 兩個工程要點（正式版同款）：聲譜計算搬工作執行緒（Google 聲音整坨倒進來不再噎住影像）；嘴型用牆上時鐘對時（卡頓自動復原、不快轉）。
+- `demo-聊聊.bat` 改一鍵帶起語音＋影像兩服務、直開 demo-live.html。
+- 品質備註：對嘴解析度為 Wav2Lip 96px 級（正式版可疊畫質強化層，voice-poc 有 gfpgan 實驗）；正式上雲照 `docs/avatar-顯卡經濟學與LiveAvatar評估-2026-06-27.md`（RunPod／Ditto 路線、scale-to-zero）。
 - **雲端版 Demo（`demo-cloud/`）**：Edward 要「連結打開就能玩」→ 做了 Vercel 版——頁面掛 Vercel、**通話由瀏覽器直連 Google**（後台 `api/token.js` 只發 30 分鐘單次短效通行碼、正式鑰匙不出後台、可設 DEMO_CODE 門禁）。本機端對端 PASS（文字＋假麥克風模式、首聲 ~531ms、接通先打招呼、不認識就問稱呼、無記憶假資料）。Vercel 專案 `munea-chat-demo` 已連結 Edward 帳號；鑰匙上雲＋正式部署 = Edward 雙擊 `demo-cloud/上Vercel.bat`（權限層要求本人執行）。
