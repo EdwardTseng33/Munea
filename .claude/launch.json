@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8123", "--directory", "web"],
       "port": 8123
+    },
+    {
+      "name": "munea-demo",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-u", "engine/live_voice_server.py"],
+      "port": 8201
     }
   ]
 }

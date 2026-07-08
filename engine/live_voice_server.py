@@ -23,6 +23,8 @@ import time
 import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from env_loader import load_engine_env
+load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 import chat_engine as eng
 from google import genai
 from google.genai import types
@@ -74,7 +76,12 @@ def system_instruction(char="寧寧", name=None, mood=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     base = c.get("persona", "") + eng.RED
     try:
-        ctx = server.build_reply_context([], char, {"userMood": mood} if mood else {})
+        # displayName 跟著角色走：用戶自訂名優先、否則用角色本名。
+        # 不傳的話會 fallback 到存檔的陪伴檔案（寧寧），把換角色的名字蓋回去。
+        data = {"displayName": (name or char)}
+        if mood:
+            data["userMood"] = mood
+        ctx = server.build_reply_context([], char, data)
         base += server.reply_context_instruction(ctx)
     except Exception:
         pass
@@ -138,13 +145,17 @@ async def handle(ws):
         mvals = _q.get("mood")
         if mvals:
             mood = mvals[0]
+        # ?char=咪咪：切換角色模板（人格＋聲音都跟 characters.json 走）；沒帶或帶錯就維持寧寧
+        cvals = _q.get("char")
+        if cvals and cvals[0] in eng.CHARS:
+            char = cvals[0]
     except Exception:
         pass
     _CID["n"] += 1
     cid = _CID["n"]
     t0 = time.monotonic()
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
-    _diag(cid, "connected", name=name or "-")
+    _diag(cid, "connected", name=name or "-", char=char)
     try:
         async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood)) as session:
             async def from_browser():

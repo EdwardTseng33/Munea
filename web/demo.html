@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>沐寧 Munea · 聊聊實機 Demo</title>
+<style>
+  /* 沿用 App 聊聊視覺：深綠夜色底 + 療癒綠 · 全屏頭像像跟家人視訊 */
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:system-ui,"Noto Sans TC",sans-serif;background:#0E1A17;color:#fff;overflow:hidden;-webkit-tap-highlight-color:transparent}
+  button{font-family:inherit}
+
+  /* ===== 通話舞台 ===== */
+  .stage{position:relative;height:100dvh;width:100%;overflow:hidden}
+  .face-bg{position:absolute;inset:0;overflow:hidden}
+  .face-bg img{width:100%;height:100%;object-fit:cover;object-position:center 18%;
+    transform:scale(var(--zoom,1));transition:transform .18s ease-out;will-change:transform}
+  /* 呼吸：待機時緩慢起伏、講話時交給音量驅動 */
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
+  .stage[data-state="idle"] .face-bg img,
+  .stage[data-state="listening"] .face-bg img{animation:breathe 4.6s ease-in-out infinite}
+  .scrim{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to bottom,rgba(4,12,10,.42),rgba(4,12,10,0) 22%,rgba(4,12,10,0) 52%,rgba(4,12,10,.55) 78%,rgba(4,12,10,.85))}
+  /* 講話光暈：底部升起療癒綠、亮度跟真實音量走 */
+  .aura{position:absolute;left:50%;bottom:-12%;width:150%;height:52%;transform:translateX(-50%);pointer-events:none;
+    background:radial-gradient(ellipse at center bottom,rgba(22,196,174,.55),rgba(22,196,174,0) 68%);
+    opacity:0;transition:opacity .25s}
+  .stage[data-state="speaking"] .aura{opacity:calc(.25 + var(--lvl,0)*.75)}
+
+  .face-name{position:absolute;left:18px;top:calc(env(safe-area-inset-top) + 16px);z-index:6;
+    display:flex;align-items:center;gap:8px;background:rgba(8,18,15,.5);backdrop-filter:blur(10px);
+    padding:8px 14px;border-radius:999px;font-size:16px;font-weight:600}
+  .face-name .dot{width:9px;height:9px;border-radius:50%;background:#9aa4a0;flex:none}
+  .stage.on .face-name .dot{background:#4ED6C4;box-shadow:0 0 0 0 rgba(78,214,196,.6);animation:live 1.9s infinite}
+  @keyframes live{0%{box-shadow:0 0 0 0 rgba(78,214,196,.55)}70%{box-shadow:0 0 0 9px rgba(78,214,196,0)}100%{box-shadow:0 0 0 0 rgba(78,214,196,0)}}
+  .face-name .st{font-size:13px;font-weight:600;color:rgba(255,255,255,.72)}
+  .badge{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 16px);z-index:6;
+    background:rgba(8,18,15,.5);backdrop-filter:blur(10px);padding:8px 13px;border-radius:999px;
+    font-size:12.5px;font-weight:600;color:#8FE6D8;letter-spacing:.04em}
+  .timer{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 56px);z-index:6;display:none;
+    background:rgba(8,18,15,.42);backdrop-filter:blur(8px);padding:5px 11px;border-radius:999px;font-size:13px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums}
+  .stage.on .timer{display:block}
+
+  /* 聲波：中間高兩側低、跟真實音量跳（收音=亮綠、講話=深亮綠） */
+  .wave{position:absolute;left:50%;bottom:206px;transform:translateX(-50%);z-index:6;display:none;gap:7px}
+  .stage[data-state="listening"] .wave,.stage[data-state="speaking"] .wave{display:inline-flex}
+  .wave i{display:block;width:5px;height:20px;border-radius:999px;background:#3ED4C2;transform:scaleY(.16);transform-origin:center}
+  .stage[data-state="speaking"] .wave i{background:#16C4AE;box-shadow:0 0 12px rgba(22,196,174,.9)}
+
+  .caps{position:absolute;left:16px;right:16px;bottom:calc(120px + env(safe-area-inset-bottom));z-index:6;text-align:center;pointer-events:none}
+  .cap-user{display:none;margin:0 auto 8px;max-width:520px;font-size:14.5px;color:rgba(255,255,255,.66);line-height:1.5}
+  .cap-user.show{display:block}
+  .cap-ai{margin:0 auto;max-width:560px;background:rgba(8,18,15,.58);backdrop-filter:blur(14px);
+    border-radius:18px;padding:12px 16px;font-size:17px;line-height:1.6;min-height:22px}
+  .hint{position:absolute;left:0;right:0;bottom:calc(120px + env(safe-area-inset-bottom));z-index:5;text-align:center;
+    font-size:16px;color:#F6ECE2;text-shadow:0 1px 8px rgba(0,0,0,.6);padding:0 24px}
+
+  .bar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 26px);z-index:7;
+    display:flex;justify-content:center;align-items:center;gap:18px}
+  .call-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:none;cursor:pointer;
+    min-width:172px;height:58px;border-radius:999px;color:#fff;font-size:17px;font-weight:700;
+    box-shadow:0 10px 26px rgba(0,0,0,.4);transition:transform .1s}
+  .call-btn:active{transform:scale(.96)}
+  .call-btn.start{background:#1DA47C}
+  .call-btn.end{background:#E2544F;min-width:132px}
+  .call-btn.end svg{transform:rotate(135deg)}
+  .call-btn svg{width:23px;height:23px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .ghost-btn{display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;
+    width:58px;height:58px;border-radius:50%;background:rgba(8,18,15,.55);backdrop-filter:blur(10px);color:#fff}
+  .ghost-btn svg{width:23px;height:23px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ===== 開場（選角） ===== */
+  .intro{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;
+    background:linear-gradient(168deg,#0E1A17 0%,#10231E 55%,#0C1714 100%);overflow-y:auto;
+    padding:calc(env(safe-area-inset-top) + 34px) 22px calc(env(safe-area-inset-bottom) + 26px);
+    transition:opacity .3s;text-align:center}
+  .intro.hide{opacity:0;pointer-events:none}
+  .logo{width:64px;height:64px;border-radius:16px;margin-bottom:14px}
+  .intro h1{font-size:24px;font-weight:800;letter-spacing:.02em}
+  .intro h1 small{display:block;margin-top:7px;font-size:14.5px;font-weight:600;color:#8FE6D8;letter-spacing:.12em}
+  .intro p.sub{margin-top:11px;font-size:15.5px;color:rgba(255,255,255,.78);line-height:1.65;max-width:340px}
+  .cast{margin-top:22px;display:grid;grid-template-columns:repeat(3,minmax(92px,108px));gap:12px;justify-content:center}
+  .cv{position:relative;border:2px solid transparent;border-radius:18px;background:rgba(255,255,255,.055);
+    padding:12px 6px 10px;cursor:pointer;color:#fff;transition:border-color .15s,background .15s}
+  .cv img{width:58px;height:58px;border-radius:50%;object-fit:cover;object-position:center 18%;display:block;margin:0 auto}
+  .cv b{display:block;margin-top:8px;font-size:15px;font-weight:700}
+  .cv small{display:block;margin-top:3px;font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.4}
+  .cv.on{border-color:#3ED4C2;background:rgba(62,212,194,.12)}
+  .cv.on::after{content:"✓";position:absolute;top:7px;right:9px;font-size:12px;color:#3ED4C2;font-weight:800}
+  .go{margin-top:24px;border:none;cursor:pointer;background:#1DA47C;color:#fff;
+    font-size:18px;font-weight:700;padding:16px 46px;border-radius:999px;box-shadow:0 10px 26px rgba(0,0,0,.35);
+    display:inline-flex;align-items:center;gap:10px;transition:transform .1s}
+  .go:active{transform:scale(.97)}
+  .go svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .note{margin-top:15px;font-size:12.5px;color:rgba(255,255,255,.5);line-height:1.7}
+
+  .toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);z-index:30;
+    background:rgba(226,84,79,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:14.5px;display:none;max-width:86%;text-align:center}
+  .toast.show{display:block}
+
+  #dbg{display:none;position:fixed;top:calc(env(safe-area-inset-top) + 100px);left:10px;z-index:40;background:rgba(0,0,0,.72);
+    color:#8fe6b0;font:12px/1.5 monospace;padding:6px 9px;border-radius:8px;max-width:92vw}
+
+  @media (min-width:700px){ /* 桌機投影：舞台置中收窄、像手機直式 */
+    .stage{max-width:460px;margin:0 auto;border-radius:0}
+    body{background:#081210}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage" data-state="idle">
+  <div class="face-bg"><img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧"></div>
+  <div class="aura"></div>
+  <div class="scrim"></div>
+
+  <div class="face-name"><span class="dot"></span><span id="chName">寧寧</span><span class="st" id="chSt">未在線</span></div>
+  <div class="badge">實機展示 · AI 即時生成</div>
+  <div class="timer" id="timer">00:00</div>
+
+  <div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="hint" id="hint"></div>
+  <div class="caps" id="caps" style="display:none">
+    <div class="cap-user" id="capUser"></div>
+    <div class="cap-ai" id="capAi"></div>
+  </div>
+
+  <div class="bar">
+    <button class="ghost-btn" id="backBtn" aria-label="回選角" title="換一位夥伴">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <button class="call-btn end" id="endBtn" aria-label="結束通話">
+      <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg>
+      <span>結束通話</span>
+    </button>
+  </div>
+</div>
+
+<div class="intro" id="intro">
+  <img class="logo" src="icons/munea-logo.png" alt="Munea" onerror="this.style.display='none'">
+  <h1>沐寧 Munea · 聊聊<small>實機互動展示 LIVE DEMO</small></h1>
+  <p class="sub">點開，就像跟家人視訊。<br>選一位夥伴，直接開口跟他說話——<br>你聽到的每一句都是 AI 即時生成。</p>
+  <div class="cast" id="cast"></div>
+  <button class="go" id="goBtn">
+    <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg>
+    開始通話
+  </button>
+  <div class="note">需要允許麥克風 · 建議開聲音體驗<br>展示用途 · 對話內容不會被保存</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="dbg"></div>
+
+<script>
+/* ===== 六位夥伴（人格＋聲音跟 engine/characters.json 走、由語音橋 ?char= 切換） ===== */
+const CAST = [
+  { id:'寧寧', full:'avatars/nening-real-female-full.jpg', face:'avatars/nening-face.png',      tag:'貼心暖管家 · 最懂你' },
+  { id:'阿宏', full:'avatars/ahong-tall.jpg',              face:'avatars/ahong-face.png',       tag:'沉穩可靠 · 一句穩住' },
+  { id:'小昀', full:'avatars/xiaoyun-2d-tall.jpg',         face:'avatars/xiaoyun-2d-face.png',  tag:'開朗元氣 · 氣氛擔當' },
+  { id:'阿原', full:'avatars/ayuan-2d-tall.jpg',           face:'avatars/ayuan-2d-face.png',    tag:'隨和好聊 · 零壓力' },
+  { id:'咪咪', full:'avatars/mimi-tall.jpg',               face:'avatars/munea-2d-mimi-face.png', tag:'傲嬌小貓 · 口嫌體正直' },
+  { id:'旺財', full:'avatars/wangcai-tall.jpg',            face:'avatars/munea-2d-wangcai-face.png', tag:'忠心暖狗 · 無條件挺你' },
+];
+let picked = CAST[0];
+
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), intro = $('#intro'), hint = $('#hint'), caps = $('#caps');
+const capUser = $('#capUser'), capAi = $('#capAi');
+const qs = new URLSearchParams(location.search);
+const SELFTEST_TEXT = qs.get('text');          // ?text=... ＝ 免麥克風自測（打字代替說話）
+const showDbg = qs.has('debug');
+window.__demoStats = { ws:0, sent:0, recv:0, capsAi:'', capsUser:'', turns:0, state:'idle', firstAudioMs:null };
+
+/* 選角卡 */
+const castEl = $('#cast');
+CAST.forEach((c,i)=>{
+  const b = document.createElement('button');
+  b.className = 'cv' + (i===0?' on':'');
+  b.innerHTML = `<img src="${c.face}" alt="${c.id}" onerror="this.src='${c.full}'"><b>${c.id}</b><small>${c.tag.replace(' · ','<br>')}</small>`;
+  b.onclick = ()=>{ picked=c; [...castEl.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+  castEl.appendChild(b);
+});
+
+function setState(st){
+  stage.dataset.state = st;
+  window.__demoStats.state = st;
+}
+function setHint(t){ hint.textContent = t || ''; }
+function toast(t){
+  const el = $('#toast'); el.textContent = t; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove('show'), 4200);
+}
+function paintDbg(){
+  if(!showDbg) return;
+  const d = $('#dbg'); d.style.display='block';
+  const s = window.__demoStats;
+  d.textContent = `ws ${s.ws} · 首回聲 ${s.firstAudioMs??'—'}ms · 上行 ${s.sent/1024|0}KB · 下行 ${s.recv/1024|0}KB · 輪 ${s.turns}`;
+}
+
+/* ===== 通話計時 ===== */
+let timerIv=null, t0=0;
+function timerStart(){ t0=Date.now(); const el=$('#timer');
+  timerIv=setInterval(()=>{ const s=(Date.now()-t0)/1000|0; el.textContent=`${String(s/60|0).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; },500); }
+function timerStop(){ clearInterval(timerIv); $('#timer').textContent='00:00'; }
+
+/* ===== 聲波＋頭像跟真實音量走 ===== */
+const bars=[...document.querySelectorAll('.wave i')];
+let raf=0, lvlSrc=null, cur=0;
+function waveStart(get){ lvlSrc=get; if(raf) return;
+  const loop=()=>{ const t=Math.max(0,Math.min(1,lvlSrc?(lvlSrc()||0):0)); cur+=(t-cur)*.35;
+    bars.forEach((b,i)=>{ const shape=1-Math.abs(i-2)/5; b.style.transform=`scaleY(${Math.min(1.7,.3+cur*(0.5+shape)*.9).toFixed(2)})`; });
+    stage.style.setProperty('--lvl',cur.toFixed(2));
+    stage.style.setProperty('--zoom',(stage.dataset.state==='speaking'?1+cur*.018:1).toFixed(3));
+    raf=requestAnimationFrame(loop); };
+  raf=requestAnimationFrame(loop); }
+function waveStop(){ cancelAnimationFrame(raf); raf=0; lvlSrc=null; cur=0;
+  bars.forEach(b=>b.style.transform='scaleY(0.16)'); stage.style.setProperty('--lvl',0); stage.style.setProperty('--zoom',1); }
+
+/* ===== 即時語音（同 App 聊聊那套：半雙工＋可插話） ===== */
+const Live = {
+  ws:null, ac:null, mic:null, proc:null, playCtx:null, playHead:0, on:false,
+  micLevel:0, playLevel:0, speaking:false, _srcs:[], _spkT:null,
+  _f2i(f){ const b=new Int16Array(f.length); for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i])); b[i]=s<0?s*0x8000:s*0x7fff;} return b; },
+  _down(buf,inR,outR){ if(outR>=inR)return buf; const r=inR/outR,len=Math.round(buf.length/r),o=new Float32Array(len);
+    let i=0,j=0; while(j<len){const n=Math.round((j+1)*r);let s=0,c=0;for(;i<n&&i<buf.length;i++){s+=buf[i];c++;}o[j++]=c?s/c:0;} return o; },
+  _toSpeaking(){ if(this.speaking)return; this.speaking=true; setState('speaking'); waveStart(()=>this.playLevel); },
+  _toListening(){ clearTimeout(this._spkT); this.speaking=false; this.playLevel=0;
+    if(!this.on)return; setState('listening'); waveStart(()=>this.micLevel); },
+  async start(){
+    // 連線位址：預設同一個門（location.host）＝本機/區網/tunnel 都通；?ws= 可覆寫
+    let url = qs.get('ws') || ((location.protocol==='https:'?'wss':'ws')+'://'+location.host);
+    url += (url.includes('?')?'&':'?') + 'char=' + encodeURIComponent(picked.id);
+    this.on = true;
+    try{ this.ws = new WebSocket(url); this.ws.binaryType='arraybuffer'; }
+    catch(e){ this.on=false; return false; }
+    return await new Promise(res=>{
+      let done=false; const settle=ok=>{ if(!done){done=true;res(ok);} };
+      this.ws.onopen = async ()=>{
+        window.__demoStats.ws=1;
+        this.playCtx = new AudioContext({sampleRate:24000}); this.playHead=this.playCtx.currentTime;
+        if (SELFTEST_TEXT){ // 免麥自測：不開麥克風、直接送一句文字
+          this._t0 = performance.now();
+          this.ws.send(JSON.stringify({type:'text',text:SELFTEST_TEXT}));
+          this._toListening(); settle(true); return;
+        }
+        try{ this.mic = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
+        catch(e){ toast('拿不到麥克風——請允許權限後再試一次'); settle(false); this.stop(); return; }
+        this.ac = new AudioContext();
+        const src=this.ac.createMediaStreamSource(this.mic);
+        this.proc=this.ac.createScriptProcessor(4096,1,1);
+        src.connect(this.proc); this.proc.connect(this.ac.destination);
+        this._t0 = performance.now();
+        this.proc.onaudioprocess = e=>{
+          const inp=e.inputBuffer.getChannelData(0);
+          if(this.speaking){ this.micLevel=0; return; }   // 她說話時麥克風暫停＝不吃回音
+          let s=0; for(let i=0;i<inp.length;i++)s+=inp[i]*inp[i];
+          this.micLevel=Math.min(1,Math.sqrt(s/inp.length)*8);
+          if(!this.ws||this.ws.readyState!==1)return;
+          const buf=this._f2i(this._down(inp,this.ac.sampleRate,16000)).buffer;
+          window.__demoStats.sent+=buf.byteLength; this.ws.send(buf); paintDbg();
+        };
+        this._toListening(); settle(true);
+      };
+      this.ws.onmessage = ev=>{
+        if(typeof ev.data==='string'){
+          try{
+            const o=JSON.parse(ev.data);
+            if(o.type==='diag'&&o.firstAudioMs){ window.__demoStats.firstAudioMs=o.firstAudioMs; paintDbg(); }
+            if(o.type==='interrupted'&&this.playCtx){ // 使用者插話：舊語音全部停掉
+              this._srcs.forEach(s=>{try{s.stop();}catch(e2){}}); this._srcs=[];
+              this.playHead=this.playCtx.currentTime; this.playLevel=0;
+            }
+            if(o.type==='caption'&&o.text){
+              // 語音轉寫會夾半形空格（想 小寶 啦）——中文字之間的空格收掉、英文保留
+              const tidy = s=>s.replace(/([一-鿿　-〿，。！？、：；]) +(?=[一-鿿　-〿，。！？、：；])/g,'$1');
+              if(o.who==='nening'){ this._cap=tidy((this._cap||'')+o.text); capAi.textContent=this._cap; window.__demoStats.capsAi=this._cap; }
+              else { capUser.textContent='你說：'+tidy(o.text); capUser.classList.add('show'); window.__demoStats.capsUser=o.text; }
+              caps.style.display='block'; setHint('');
+            }
+            if(o.type==='turn_complete'){ window.__demoStats.turns++; this._cap=''; this._toListening();
+              setTimeout(()=>capUser.classList.remove('show'),1200); paintDbg(); }
+          }catch(e){}
+          return;
+        }
+        if(!this.playCtx)return;
+        if(window.__demoStats.firstAudioMs===null&&this._t0) window.__demoStats.firstAudioMs=Math.round(performance.now()-this._t0);
+        this._toSpeaking();
+        window.__demoStats.recv+=ev.data.byteLength;
+        const i16=new Int16Array(ev.data), f=new Float32Array(i16.length);
+        for(let k=0;k<i16.length;k++)f[k]=i16[k]/0x8000;
+        let ps=0; for(let k=0;k<f.length;k++)ps+=f[k]*f[k];
+        this.playLevel=Math.min(1,Math.sqrt(ps/f.length)*3.4);
+        const b=this.playCtx.createBuffer(1,f.length,24000); b.getChannelData(0).set(f);
+        const s=this.playCtx.createBufferSource(); s.buffer=b; s.connect(this.playCtx.destination);
+        const now=this.playCtx.currentTime;
+        if(this.playHead<now+0.02)this.playHead=now+0.18;
+        s.start(this.playHead); this.playHead+=b.duration;
+        this._srcs.push(s); s.onended=()=>{const k2=this._srcs.indexOf(s); if(k2>=0)this._srcs.splice(k2,1);};
+        clearTimeout(this._spkT); this._spkT=setTimeout(()=>this._toListening(),900); // 安全網：沒聲音 900ms 視同講完
+        paintDbg();
+      };
+      this.ws.onclose=()=>{ const was=this.on; settle(false); if(was){ hangup(); toast('連線中斷了，再撥一次就好'); } };
+      this.ws.onerror=()=>{ settle(false); };
+    });
+  },
+  stop(){
+    this.on=false; this.speaking=false; clearTimeout(this._spkT);
+    try{this._srcs.forEach(s=>s.stop());}catch(e){} this._srcs=[];
+    try{if(this.proc)this.proc.disconnect();}catch(e){}
+    try{if(this.mic)this.mic.getTracks().forEach(t=>t.stop());}catch(e){}
+    try{if(this.ws)this.ws.close();}catch(e){}
+    try{if(this.ac)this.ac.close();}catch(e){}
+    try{if(this.playCtx)this.playCtx.close();}catch(e){}
+    this.ws=this.ac=this.mic=this.proc=this.playCtx=null; this.micLevel=this.playLevel=0;
+  },
+};
+
+/* ===== 畫面流：選角 → 通話 → 掛斷回選角 ===== */
+function applyCast(){
+  $('#faceImg').src = picked.full; $('#faceImg').alt = picked.id;
+  $('#chName').textContent = picked.id;
+}
+async function dial(){
+  applyCast();
+  intro.classList.add('hide');
+  stage.classList.add('on'); $('#chSt').textContent='接通中…';
+  setHint('接通中…'); caps.style.display='none'; capAi.textContent=''; capUser.textContent='';
+  const ok = await Live.start();
+  if(!ok){ if(Live.on)Live.stop(); stage.classList.remove('on'); intro.classList.remove('hide');
+    setState('idle'); toast('連不上語音服務——請確認 demo 服務有開'); return; }
+  $('#chSt').textContent='在線';
+  timerStart();
+  setHint(SELFTEST_TEXT ? '' : '接通了，直接開口說話吧');
+}
+function hangup(){
+  Live.stop(); waveStop(); timerStop();
+  setState('idle'); stage.classList.remove('on');
+  $('#chSt').textContent='未在線'; setHint(''); caps.style.display='none';
+  intro.classList.remove('hide');
+}
+$('#goBtn').onclick = dial;
+$('#endBtn').onclick = hangup;
+$('#backBtn').onclick = hangup;
+applyCast();
+</script>
+</body>
+</html>
