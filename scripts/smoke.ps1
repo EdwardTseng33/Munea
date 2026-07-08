@@ -1715,7 +1715,7 @@ for path in user_scoped_paths:
     verified = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, path, {})
     assert verified["ok"] is True, path
     assert verified["required"] is True, path
-for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries"]:
+for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests"]:
     assert server.auth_required_for_path(path) is False, path
     assert server.require_verified_auth({}, path, {})["ok"] is True, path
 assert server.auth_required_for_request("/credits/grant", {}) is False
@@ -1787,6 +1787,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     server.AUDIT_EVENTS_STORE_PATH = str(Path(d) / "audit_events_store.json")
     server.CONVERSATION_SUMMARIES_PATH = str(Path(d) / "conversation_summaries.json")
+    server.PRIVACY_REQUESTS_PATH = str(Path(d) / "privacy_requests.json")
     event = server.product_event_response({
         "eventName": "voice_session_completed",
         "personId": "local-person-self",
@@ -1842,6 +1843,18 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     assert conversation_admin["totals"]["rawTranscriptRecords"] == 0
     assert conversation_admin["privacy"]["storesRawTranscriptByDefault"] is False
     assert conversation_admin["topTags"][0]["tag"] in {"emotion", "routine", "video_entertainment"}
+    server.privacy_export_response({"action": "request", "reason": "export smoke"})
+    server.account_deletion_response({"action": "request", "reason": "delete smoke"})
+    privacy_admin = server.admin_privacy_requests_summary({"limit": 10})
+    assert privacy_admin["ok"] is True
+    assert privacy_admin["count"] == 2
+    assert privacy_admin["totals"]["byType"]["export"] == 1
+    assert privacy_admin["totals"]["byType"]["account_deletion"] == 1
+    assert privacy_admin["totals"]["reauthRequired"] == 2
+    assert privacy_admin["totals"]["subscriptionNoticeRequired"] == 1
+    assert privacy_admin["privacy"]["rawTranscriptRecords"] == 0
+    filtered_privacy_admin = server.admin_privacy_requests_summary({"type": "account_deletion"})
+    assert filtered_privacy_admin["count"] == 1
     audit = server.append_audit_event({
         "eventType": "credits_granted",
         "targetTable": "credit_transactions",
@@ -2971,6 +2984,7 @@ if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing
 if ($health.contracts -notcontains "admin-usage") { throw "/healthz missing admin-usage contract" }
 if ($health.contracts -notcontains "admin-credits") { throw "/healthz missing admin-credits contract" }
 if ($health.contracts -notcontains "admin-conversation-summaries") { throw "/healthz missing admin-conversation-summaries contract" }
+if ($health.contracts -notcontains "admin-privacy-requests") { throw "/healthz missing admin-privacy-requests contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
@@ -3037,6 +3051,16 @@ try {
   if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
 }
 Pass "/admin/conversation-summaries is closed without admin token"
+
+Step "API /admin/privacy-requests gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/privacy-requests" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"limit":5}' -TimeoutSec 30 | Out-Null
+  throw "/admin/privacy-requests should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/privacy-requests is closed without admin token"
 
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30

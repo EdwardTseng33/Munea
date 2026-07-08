@@ -211,7 +211,13 @@ def verify_auth_context(headers=None):
 
 
 PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap"}
-ADMIN_POST_PATHS = {"/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries"}
+ADMIN_POST_PATHS = {
+    "/admin/north-star",
+    "/admin/usage",
+    "/admin/credits",
+    "/admin/conversation-summaries",
+    "/admin/privacy-requests",
+}
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
 
@@ -1766,6 +1772,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
     data = data or {}
     text = conversation_text(history)
     user_mood = (data or {}).get("userMood") or ""   # 情緒球：使用者當下記錄的心情
+    interests = [str(t).strip() for t in (data.get("interests") or []) if str(t).strip()][:8]  # 用戶挑的興趣話題
     active_profile = load_companion_profile()
     template_id = data.get("templateId") or active_profile.get("templateId")
     if not template_id or COMPANION_TEMPLATES.get(template_id, {}).get("backendChar") != char:
@@ -1802,6 +1809,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "now": now_ctx,                                # 真時間（台灣、時段、語氣提示）
         "dailyBriefing": briefing,                     # 今日簡報（清晨備好的真天氣/空品/行程/暖聞）
         "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
+        "interests": interests,                         # 用戶挑的興趣話題（開場方向＋接話素材）
     }
 
 
@@ -1868,6 +1876,13 @@ def reply_context_instruction(context):
         f"（使用者剛在情緒球親手記錄的心情是「{_um}」——把它當這輪陪伴的重要參考，自然貼著這個心情關心、調整語氣；"
         "低落/焦慮/煩躁/生氣先接住情緒、放慢；開心/愉悅就一起有精神。別生硬地把『你現在心情是X』唸出來。）"
     ) if _um else ""
+    _ints = context.get("interests") or []
+    interests_line = (
+        "（他勾選過想聊的話題：" + "、".join(_ints) + "。"
+        "開場或冷場時可以從這幾個方向自然起頭（搭今日簡報或最近的真時事更好）；"
+        "聊到相關話題時多帶點料、多分享一個真實的亮點或小知識。"
+        "但這是參考不是劇本——他想聊別的就跟著他走，別硬拉回來、別一次全部聊完。）"
+    ) if _ints else ""
     return "\n".join([
         "",
         relationship_line,
@@ -1880,6 +1895,7 @@ def reply_context_instruction(context):
         brief_line,
         "（聽出對方的語氣與心情、跟著調整：聽起來累或低落→放柔放慢、不催、多陪；開心→跟著亮起來。這是關心、不是診斷，絕不評斷對方的心理狀態。）",
         mood_recorded_line,
+        interests_line,
         "（智慧鏡頭：可溫柔用台灣諺語、生活智慧、簡單的反思提問陪伴；對方有信仰才順著其信仰語彙。絕不捏造經文、不強加宗教、不說教；危機時安全規則優先於一切。）",
         living_line,
         "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
@@ -2622,6 +2638,73 @@ def admin_conversation_summaries(data=None):
         "privacy": {
             "storesRawTranscriptByDefault": False,
             "surface": "admin_summary_only",
+        },
+        "backend": data_backend_status(),
+    }
+
+
+def admin_privacy_requests_summary(data=None):
+    data = data or {}
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    request_type = data.get("type") or data.get("requestType") or data.get("request_type")
+    status_filter = data.get("status")
+    account_id = data.get("accountId") or data.get("account_id")
+    store = load_privacy_requests_store()
+    requests = store.get("requests") or []
+    if request_type:
+        requests = [req for req in requests if req.get("type") == request_type]
+    if status_filter:
+        requests = [req for req in requests if req.get("status") == status_filter]
+    if account_id:
+        requests = [req for req in requests if req.get("accountId") == account_id]
+    requests = sorted(requests, key=lambda req: req.get("requestedAt") or "", reverse=True)
+    type_counts = {}
+    status_counts = {}
+    reauth_required = 0
+    subscription_notice_required = 0
+    for req in requests:
+        req_type = req.get("type") or "unknown"
+        req_status = req.get("status") or "unknown"
+        type_counts[req_type] = type_counts.get(req_type, 0) + 1
+        status_counts[req_status] = status_counts.get(req_status, 0) + 1
+        if req.get("requiresReauth"):
+            reauth_required += 1
+        if req.get("subscriptionNoticeRequired"):
+            subscription_notice_required += 1
+    recent = [
+        {
+            "id": req.get("id"),
+            "type": req.get("type"),
+            "status": req.get("status"),
+            "accountId": req.get("accountId"),
+            "requestedAt": req.get("requestedAt"),
+            "completedAt": req.get("completedAt"),
+            "reason": req.get("reason") or "",
+            "requiresReauth": req.get("requiresReauth") is True,
+            "subscriptionNoticeRequired": req.get("subscriptionNoticeRequired") is True,
+        }
+        for req in requests[:limit]
+    ]
+    return {
+        "ok": True,
+        "count": len(requests),
+        "filters": {
+            "accountId": account_id,
+            "type": request_type,
+            "status": status_filter,
+            "limit": limit,
+        },
+        "totals": {
+            "byType": dict(sorted(type_counts.items())),
+            "byStatus": dict(sorted(status_counts.items())),
+            "reauthRequired": reauth_required,
+            "subscriptionNoticeRequired": subscription_notice_required,
+        },
+        "recent": recent,
+        "retentionPolicy": store.get("retentionPolicy") or {},
+        "privacy": {
+            "surface": "admin_privacy_request_review",
+            "rawTranscriptRecords": 0,
         },
         "backend": data_backend_status(),
     }
@@ -3694,7 +3777,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -3811,6 +3894,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_conversation_summaries(data))
+            elif self.path == "/admin/privacy-requests":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_privacy_requests_summary(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":
