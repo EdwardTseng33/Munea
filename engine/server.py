@@ -211,7 +211,7 @@ def verify_auth_context(headers=None):
 
 
 PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap"}
-ADMIN_POST_PATHS = {"/admin/north-star", "/admin/usage", "/admin/credits"}
+ADMIN_POST_PATHS = {"/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries"}
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
 
@@ -2567,6 +2567,66 @@ def admin_credits_summary(data=None):
     }
 
 
+def admin_conversation_summaries(data=None):
+    data = data or {}
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    include_deleted = bool(data.get("includeDeleted") or data.get("include_deleted"))
+    person_id = data.get("personId") or data.get("person_id")
+    summaries = load_conversation_summaries(
+        person_id=person_id,
+        limit=limit,
+        include_deleted=include_deleted,
+    )
+    tag_counts = {}
+    safety_relevant = 0
+    deleted = 0
+    for summary in summaries:
+        if summary.get("safetyRelevant"):
+            safety_relevant += 1
+        if summary.get("deletedAt"):
+            deleted += 1
+        for tag in summary.get("memoryTags") or []:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+    top_tags = [
+        {"tag": tag, "count": count}
+        for tag, count in sorted(tag_counts.items(), key=lambda item: (-item[1], item[0]))[:12]
+    ]
+    recent = [
+        {
+            "id": summary.get("id"),
+            "personId": summary.get("personId"),
+            "createdAt": summary.get("createdAt"),
+            "deletedAt": summary.get("deletedAt"),
+            "memoryTags": summary.get("memoryTags") or [],
+            "safetyRelevant": summary.get("safetyRelevant") is True,
+            "summary": summary.get("summary") or "",
+            "privacy": summary.get("privacy") or {"storesRawTranscriptByDefault": False},
+        }
+        for summary in summaries[:limit]
+    ]
+    return {
+        "ok": True,
+        "count": len(summaries),
+        "filters": {
+            "personId": person_id,
+            "limit": limit,
+            "includeDeleted": include_deleted,
+        },
+        "totals": {
+            "safetyRelevant": safety_relevant,
+            "deleted": deleted,
+            "rawTranscriptRecords": 0,
+        },
+        "topTags": top_tags,
+        "recent": recent,
+        "privacy": {
+            "storesRawTranscriptByDefault": False,
+            "surface": "admin_summary_only",
+        },
+        "backend": data_backend_status(),
+    }
+
+
 def product_event_response(data):
     event = append_product_event(data)
     return {"ok": True, "event": event, "northStar": north_star_summary({"days": 7})}
@@ -3634,7 +3694,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -3745,6 +3805,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_credits_summary(data))
+            elif self.path == "/admin/conversation-summaries":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_conversation_summaries(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

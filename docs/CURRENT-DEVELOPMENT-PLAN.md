@@ -83,6 +83,7 @@
 - Added the `/family-members` backend contract for listing, adding, role/permission updates, and removal of family care-circle members, backed by `family_memberships` + `persons` with JSON fallback through the app profile store.
 - Added the `/conversation-summary` backend contract for summary-only conversation memory: save/list/archive now uses `conversation_summaries` in Supabase with JSON fallback, explicitly avoiding raw transcript retention by default.
 - Connected `/butler/post-turn` to the conversation summary contract so post-turn reviews now create summary-only records and link new memory items through `sourceConversationSummaryId`.
+- Added the `/admin/conversation-summaries` read contract so operators can review summary-only companion memory records, tag counts, and safety-relevant totals without exposing raw transcripts.
 
 ## 2026-06-29 Update
 

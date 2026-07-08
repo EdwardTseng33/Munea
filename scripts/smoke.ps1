@@ -1715,7 +1715,7 @@ for path in user_scoped_paths:
     verified = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, path, {})
     assert verified["ok"] is True, path
     assert verified["required"] is True, path
-for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits"]:
+for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries"]:
     assert server.auth_required_for_path(path) is False, path
     assert server.require_verified_auth({}, path, {})["ok"] is True, path
 assert server.auth_required_for_request("/credits/grant", {}) is False
@@ -1786,6 +1786,7 @@ import server
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     server.AUDIT_EVENTS_STORE_PATH = str(Path(d) / "audit_events_store.json")
+    server.CONVERSATION_SUMMARIES_PATH = str(Path(d) / "conversation_summaries.json")
     event = server.product_event_response({
         "eventName": "voice_session_completed",
         "personId": "local-person-self",
@@ -1822,6 +1823,25 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     credits = server.admin_credits_summary({"limit": 10})
     assert credits["ok"] is True
     assert credits["walletSummary"]["currencyCode"] == "MUNEA_CREDIT"
+    server.conversation_summary_response({
+        "action": "save",
+        "summary": "Admin smoke summary about loneliness and Korean dramas.",
+        "memoryTags": ["emotion", "video_entertainment"],
+        "safetyRelevant": True,
+    })
+    server.conversation_summary_response({
+        "action": "save",
+        "summary": "Admin smoke summary about a routine reminder.",
+        "memoryTags": ["routine"],
+        "safetyRelevant": False,
+    })
+    conversation_admin = server.admin_conversation_summaries({"limit": 10})
+    assert conversation_admin["ok"] is True
+    assert conversation_admin["count"] == 2
+    assert conversation_admin["totals"]["safetyRelevant"] == 1
+    assert conversation_admin["totals"]["rawTranscriptRecords"] == 0
+    assert conversation_admin["privacy"]["storesRawTranscriptByDefault"] is False
+    assert conversation_admin["topTags"][0]["tag"] in {"emotion", "routine", "video_entertainment"}
     audit = server.append_audit_event({
         "eventType": "credits_granted",
         "targetTable": "credit_transactions",
@@ -2950,6 +2970,7 @@ if ($health.contracts -notcontains "product-event") { throw "/healthz missing pr
 if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
 if ($health.contracts -notcontains "admin-usage") { throw "/healthz missing admin-usage contract" }
 if ($health.contracts -notcontains "admin-credits") { throw "/healthz missing admin-credits contract" }
+if ($health.contracts -notcontains "admin-conversation-summaries") { throw "/healthz missing admin-conversation-summaries contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
@@ -3006,6 +3027,16 @@ try {
   if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
 }
 Pass "/admin/credits is closed without admin token"
+
+Step "API /admin/conversation-summaries gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/conversation-summaries" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"limit":5}' -TimeoutSec 30 | Out-Null
+  throw "/admin/conversation-summaries should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/conversation-summaries is closed without admin token"
 
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30

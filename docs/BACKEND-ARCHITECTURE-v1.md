@@ -237,6 +237,7 @@ Admin APIs should not be available to normal app clients.
 | `/admin/subscriptions` | Inspect entitlements and subscription ledger |
 | `/admin/usage` | Product usage, event counts, voice/avatar minutes, North Star composition, and developer/test exclusion summary |
 | `/admin/credits` | Subscription, entitlement, usage ledger, credit wallets, and recent credit ledger lookup |
+| `/admin/conversation-summaries` | Review summary-only companion memory records, tags, and safety-relevant counts without raw transcripts |
 | `/admin/privacy-requests` | Track export/deletion requests |
 | `/admin/safety-events` | Review high-risk events |
 | `/admin/audit-events` | Review admin actions |
@@ -246,7 +247,7 @@ Admin access should use admin-only roles stored outside user-editable metadata. 
 
 Prototype coverage:
 
-- `/admin/north-star`, `/admin/usage`, and `/admin/credits` exist, but they are closed unless `MUNEA_ADMIN_API_TOKEN` is configured and sent in `X-Munea-Admin-Token`.
+- `/admin/north-star`, `/admin/usage`, `/admin/credits`, and `/admin/conversation-summaries` exist, but they are closed unless `MUNEA_ADMIN_API_TOKEN` is configured and sent in `X-Munea-Admin-Token`.
 
 ## Supabase Data Model v1
 
