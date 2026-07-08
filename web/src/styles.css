@@ -1124,10 +1124,10 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .med-back { position: absolute; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 8; background: rgba(255,255,255,.16); color: #FFF; }
 
 /* 家人左右滑翻頁：方向滑入動畫＋頁點 */
-.fam-view.slide-l { animation: slideInL .28s ease; }
-.fam-view.slide-r { animation: slideInR .28s ease; }
-@keyframes slideInL { from { opacity: .3; transform: translateX(34px); } to { opacity: 1; transform: none; } }
-@keyframes slideInR { from { opacity: .3; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
+.fam-view.slide-l { animation: slideInL .3s ease-out; }
+.fam-view.slide-r { animation: slideInR .3s ease-out; }
+@keyframes slideInL { from { opacity: .6; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes slideInR { from { opacity: .6; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
 .pager-dots { display: flex; justify-content: center; gap: 7px; margin: -2px 0 10px; }
 .pager-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: background .2s, transform .2s; }
 .pager-dots i.on { background: var(--teal-d); transform: scale(1.25); }
@@ -2089,3 +2089,13 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 @keyframes face-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.016); } }
 .face-screen .face-bg img { animation: face-breathe 5.2s ease-in-out infinite; transform-origin: center 30%; }
 .face-screen[data-state="speaking"] .face-bg img { animation-duration: 2.4s; }
+
+/* 家人頁 · 左右切換鍵（Edward 7/9：不能只靠隱藏手勢，要看得到怎麼換人） */
+.pt-nav { width: 42px; height: 42px; border-radius: 999px; border: 1.5px solid var(--mint-2); background: var(--mint);
+  color: var(--teal-dd); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+.pt-nav .ic { width: 20px; height: 20px; }
+.pt-nav:disabled { opacity: .32; }
+.pt-nav:active:not(:disabled) { background: var(--mint-2); }
+/* 心率 / 血氧 磚色（沿用現有色盤語彙） */
+.stat-tile.t-hr .st-ico { background: var(--coral-soft); color: var(--coral-d); }
+.stat-tile.t-spo2 .st-ico { background: var(--mint-2); color: var(--teal-dd); }

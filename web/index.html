@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260709-avatar1" />
+  <link rel="stylesheet" href="src/styles.css?v=20260709-fam1" />
 </head>
 <body>
 <div class="app-shell">
@@ -282,7 +282,11 @@
       <div class="fam-view" id="viewPerson">
         <div class="nav-head"><button class="nav-back" id="personBack" aria-label="回全家"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="personNavTitle">家人</span><span></span></div>
         <div class="pager-dots" id="famDots" aria-hidden="true"></div>
-        <div class="person-top"><span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv">嬤</span></span><div><div class="pt-name" id="ptName">—</div><div class="pt-rel" id="ptRel">—</div></div></div>
+        <div class="person-top">
+          <button class="pt-nav" id="ptPrev" type="button" aria-label="看上一位家人"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv">嬤</span></span><div style="flex:1;min-width:0"><div class="pt-name" id="ptName">—</div><div class="pt-rel" id="ptRel">—</div></div>
+          <button class="pt-nav" id="ptNext" type="button" aria-label="看下一位家人"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
         <div class="person-grid" id="personGrid">
           <div class="stat-tile t-bp"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></svg></span><div class="st-val">128/82</div><div class="st-label">血壓</div></div>
           <div class="stat-tile t-act"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span><div class="st-val">6,200<small> 步</small></div><div class="st-label">今日活動</div></div>
@@ -1066,7 +1070,7 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260709-v126"></script>
+  <script src="src/version.js?v=20260709-v127"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth.js?v=20260630-auth"></script>
   <script src="src/health.js?v=20260708-health"></script>
@@ -1113,7 +1117,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260709-avatar1"></script>
+  <script type="module" src="src/app.js?v=20260709-fam1"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

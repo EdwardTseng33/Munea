@@ -2413,24 +2413,48 @@ function init() {
   });
 
   // 全家健康圈：切換成員看健康
+  // 每位家人的完整看板（Edward 7/9：心情/用藥/血壓/心率/血氧/睡眠/運動量都要有）
   const PERSON_STATS = {
     '阿嬤': [
-      { ic: 'bp', val: '128/82', label: '早上 8:12 量 · 手環' },
-      { ic: 'walk', val: '3,850<small> 步</small>', label: '今日活動' },
-      { ic: 'sleep', val: '7.5<small> 小時</small>', label: '昨晚睡眠' },
-      { ic: 'pill', val: '2<small>/3</small>', label: '今天用藥' }],
+      { ic: 'bp', val: '128/82', label: '血壓', tag: '正常', tagCls: 'ok' },
+      { ic: 'hr', val: '72<small> 次/分</small>', label: '心率' },
+      { ic: 'spo2', val: '97<small>%</small>', label: '血氧' },
+      { ic: 'sleep', val: '7.5<small> 小時</small>', label: '昨晚睡眠', tag: '好', tagCls: 'ok' },
+      { ic: 'walk', val: '3,850<small> 步</small>', label: '運動量' },
+      { ic: 'pill', val: '2<small>/3</small>', label: '今天用藥', tag: '剩 1 次', tagCls: 'warn' }],
     '美華': [
-      { ic: 'walk', val: '8,900<small> 步</small>', label: '今日活動' },
-      { ic: 'sleep', val: '6.2<small> 小時</small>', label: '昨晚睡眠', tag: '偏少', tagCls: 'warn' }],
+      { ic: 'bp', val: '118/76', label: '血壓', tag: '正常', tagCls: 'ok' },
+      { ic: 'hr', val: '68<small> 次/分</small>', label: '心率' },
+      { ic: 'spo2', val: '98<small>%</small>', label: '血氧' },
+      { ic: 'sleep', val: '6.2<small> 小時</small>', label: '昨晚睡眠', tag: '偏少', tagCls: 'warn' },
+      { ic: 'walk', val: '8,900<small> 步</small>', label: '運動量', tag: '達標', tagCls: 'ok' },
+      { ic: 'pill', val: '—', label: '沒有設定用藥' }],
     '志明': [
-      { ic: 'walk', val: '7,400<small> 步</small>', label: '今日活動' },
-      { ic: 'sleep', val: '7.1<small> 小時</small>', label: '昨晚睡眠' }],
+      { ic: 'bp', val: '132/86', label: '血壓', tag: '偏高', tagCls: 'warn' },
+      { ic: 'hr', val: '75<small> 次/分</small>', label: '心率' },
+      { ic: 'spo2', val: '97<small>%</small>', label: '血氧' },
+      { ic: 'sleep', val: '7.1<small> 小時</small>', label: '昨晚睡眠' },
+      { ic: 'walk', val: '7,400<small> 步</small>', label: '運動量' },
+      { ic: 'pill', val: '1<small>/1</small>', label: '今天用藥', tag: '都吃了', tagCls: 'ok' }],
     '小寶': [
-      { ic: 'walk', val: '11,200<small> 步</small>', label: '今日活動' },
-      { ic: 'sleep', val: '8.8<small> 小時</small>', label: '昨晚睡眠' }],
+      { ic: 'bp', val: '105/65', label: '血壓', tag: '正常', tagCls: 'ok' },
+      { ic: 'hr', val: '80<small> 次/分</small>', label: '心率' },
+      { ic: 'spo2', val: '99<small>%</small>', label: '血氧' },
+      { ic: 'sleep', val: '8.8<small> 小時</small>', label: '昨晚睡眠', tag: '好', tagCls: 'ok' },
+      { ic: 'walk', val: '11,200<small> 步</small>', label: '運動量', tag: '達標', tagCls: 'ok' },
+      { ic: 'pill', val: '—', label: '沒有設定用藥' }],
+  };
+  // 每位家人的心情監測（心情卡不再只有阿嬤有）
+  const PERSON_MOOD = {
+    '阿嬤': { title: '今天聊得很開心', sub: '和{n}聊了 2 次 · 有一小段有點火氣', obs: '<span>聲音</span> 有精神　<span>聊天</span> 話匣子全開', topics: ['孫子畢業', '推銷電話'] },
+    '美華': { title: '有點忙、心情平穩', sub: '和{n}聊了 1 次 · 語氣平穩', obs: '<span>聲音</span> 平穩　<span>聊天</span> 簡短有條理', topics: ['工作', '晚餐吃什麼'] },
+    '志明': { title: '平常心', sub: '今天還沒跟{n}聊', obs: '<span>上次</span> 昨天晚上　<span>語氣</span> 輕鬆', topics: ['棒球', '爬山'] },
+    '小寶': { title: '活力滿滿', sub: '和{n}聊了 3 次 · 一直笑', obs: '<span>聲音</span> 開心　<span>聊天</span> 話多', topics: ['寶可夢', '學校'] },
   };
   const STAT_ICONS = {
     bp: '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/>',
+    hr: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    spo2: '<path d="M12 2.7S6 9.2 6 13.5a6 6 0 0 0 12 0C18 9.2 12 2.7 12 2.7z"/>',
     walk: '<path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/>',
     sleep: '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
     pill: '<path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>',
@@ -2439,10 +2463,17 @@ function init() {
     const grid = $('#personGrid');
     if (!grid) return;
     const stats = PERSON_STATS[p] || PERSON_STATS['阿嬤'];
-    const TINT = { bp: 't-bp', walk: 't-act', sleep: 't-sleep', pill: 't-med' };
+    const TINT = { bp: 't-bp', hr: 't-hr', spo2: 't-spo2', walk: 't-act', sleep: 't-sleep', pill: 't-med' };
     grid.innerHTML = stats.map(t =>
       '<div class="stat-tile ' + (TINT[t.ic] || '') + '"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24">' + STAT_ICONS[t.ic] + '</svg></span>' +
       '<div class="st-val">' + t.val + '</div><div class="st-label">' + t.label + (t.tag ? ' <em class="st-trend ' + (t.tagCls || '') + '">' + t.tag + '</em>' : '') + '</div></div>').join('');
+  }
+  function renderPersonMood(p) {
+    const m = PERSON_MOOD[p] || PERSON_MOOD['阿嬤'];
+    if ($('#mcTitle')) $('#mcTitle').textContent = m.title;
+    if ($('#mcSub')) $('#mcSub').textContent = m.sub.replace('{n}', cname());
+    if ($('#mcObs')) $('#mcObs').innerHTML = m.obs;
+    if ($('#mcTopics')) $('#mcTopics').innerHTML = m.topics.map(t => '<i>' + t + '</i>').join('');
   }
 
   const FAM_ORDER = ['美華', '志明', '小寶'];   // 阿嬤＝本人，資料在「狀態」頁，家人頁不重複顯示
@@ -2470,17 +2501,25 @@ function init() {
   function showFamPerson(p, rel, init, tint) {
     currentPerson = p;
     renderFamDots();
+    const v = $('#viewPerson');
+    const wasActive = v && v.classList.contains('active');
     $('#viewAll').classList.remove('active');
-    $('#viewPerson').classList.add('active');
+    if (v) v.classList.add('active');
     if ($('#ptName')) $('#ptName').textContent = p;
     if ($('#personNavTitle')) $('#personNavTitle').textContent = p;
     renderPersonStats(p);
-    if ($('#moodToday')) $('#moodToday').style.display = (p === '阿嬤') ? '' : 'none';
+    renderPersonMood(p);   // 心情監測每個人都有（Edward 7/9）
+    if ($('#moodToday')) $('#moodToday').style.display = '';
     if ($('#ptRel')) $('#ptRel').textContent = rel || '';
     const pa = $('#ptAv');
     if (pa) { pa.textContent = init || (p || '')[0] || ''; pa.className = 'init-ava init-ava-lg ' + (tint || ''); }
     $$('.fam-switch-item').forEach(b => b.classList.toggle('active', b.dataset.person === p));
-    const v = $('#viewPerson'); if (v) v.scrollIntoView({ block: 'start' });
+    // 左右切換鍵：到邊就變淡（美華在最左、小寶在最右）
+    const idx = FAM_ORDER.indexOf(p);
+    if ($('#ptPrev')) $('#ptPrev').disabled = idx <= 0;
+    if ($('#ptNext')) $('#ptNext').disabled = idx < 0 || idx >= FAM_ORDER.length - 1;
+    // 只有「從全家頁進來」才捲到頂；左右換人保持原捲動位置（治晃動 · Edward 7/9）
+    if (v && !wasActive) v.scrollIntoView({ block: 'start' });
   }
   function showFamAll() {
     $('#viewPerson').classList.remove('active');
@@ -2505,6 +2544,9 @@ function init() {
     });
   }
   if ($('#personBack')) $('#personBack').addEventListener('click', showFamAll);
+  // 左右切換鍵＝跟左右滑同一件事（看得到的入口 · Edward 7/9）
+  if ($('#ptPrev')) $('#ptPrev').addEventListener('click', () => switchPerson(-1));
+  if ($('#ptNext')) $('#ptNext').addEventListener('click', () => switchPerson(1));
   if ($('#moodTrendBtn')) $('#moodTrendBtn').addEventListener('click', () => {
     $('#viewPerson').classList.remove('active');
     $('#viewMood').classList.add('active');
