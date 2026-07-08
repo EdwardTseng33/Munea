@@ -3,251 +3,178 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>沐寧 Munea · 聊聊實機 Demo</title>
+<title>沐寧 Munea · 聊聊體驗版</title>
 <style>
-  /* 沿用 App 聊聊視覺：深綠夜色底 + 療癒綠 · 全屏頭像像跟家人視訊 */
+  /* ＝App 聊聊畫面複刻（單角色寧寧）＋體驗版倒數＝ */
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{font-family:system-ui,"Noto Sans TC",sans-serif;background:#0E1A17;color:#fff;overflow:hidden;-webkit-tap-highlight-color:transparent}
   button{font-family:inherit}
+  .screen{position:relative;height:100dvh;width:100%;overflow:hidden;background:#0E1A17}
 
-  .stage{position:relative;height:100dvh;width:100%;overflow:hidden}
-  .face-bg{position:absolute;inset:0;overflow:hidden}
-  .face-bg img{width:100%;height:100%;object-fit:cover;object-position:center 18%;
-    transform:scale(var(--zoom,1)) translateY(var(--bob,0px));transition:transform .18s ease-out;will-change:transform}
-  /* 2D 嘴型層：跟真實聲音開合（沐寧 avatar 引擎 2d-viseme 層 · 只在講話時浮現） */
-  .lip{position:absolute;z-index:3;pointer-events:none;opacity:0;transition:opacity .25s}
-  .stage[data-state="speaking"] .lip.on{opacity:.86}
-  .lip span{display:block;width:100%;height:100%;transform-origin:50% 12%;   /* 從嘴唇線往下開＝像下巴在動 */
-    background:radial-gradient(ellipse at center,#3a2422 52%,#5a3730 100%);border-radius:999px;filter:blur(.4px)}
-  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
-  .stage[data-state="idle"] .face-bg img,
-  .stage[data-state="listening"] .face-bg img{animation:breathe 4.6s ease-in-out infinite}
+  .face-bg{position:absolute;inset:0}
+  .face-bg img{width:100%;height:100%;object-fit:cover;object-position:center 14%}
   .scrim{position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(to bottom,rgba(4,12,10,.42),rgba(4,12,10,0) 22%,rgba(4,12,10,0) 52%,rgba(4,12,10,.55) 78%,rgba(4,12,10,.85))}
-  .aura{position:absolute;left:50%;bottom:-12%;width:150%;height:52%;transform:translateX(-50%);pointer-events:none;
-    background:radial-gradient(ellipse at center bottom,rgba(22,196,174,.55),rgba(22,196,174,0) 68%);
-    opacity:0;transition:opacity .25s}
-  .stage[data-state="speaking"] .aura{opacity:calc(.25 + var(--lvl,0)*.75)}
+    background:linear-gradient(to bottom,rgba(4,12,10,.40),rgba(4,12,10,0) 22%,rgba(4,12,10,0) 55%,rgba(4,12,10,.52) 78%,rgba(4,12,10,.84))}
 
+  /* 名字＋在線（App 同款） */
   .face-name{position:absolute;left:18px;top:calc(env(safe-area-inset-top) + 16px);z-index:6;
     display:flex;align-items:center;gap:8px;background:rgba(8,18,15,.5);backdrop-filter:blur(10px);
     padding:8px 14px;border-radius:999px;font-size:16px;font-weight:600}
   .face-name .dot{width:9px;height:9px;border-radius:50%;background:#9aa4a0;flex:none}
-  .stage.on .face-name .dot{background:#4ED6C4;box-shadow:0 0 0 0 rgba(78,214,196,.6);animation:live 1.9s infinite}
+  .screen.on .face-name .dot{background:#4ED6C4;box-shadow:0 0 0 0 rgba(78,214,196,.6);animation:live 1.9s infinite}
   @keyframes live{0%{box-shadow:0 0 0 0 rgba(78,214,196,.55)}70%{box-shadow:0 0 0 9px rgba(78,214,196,0)}100%{box-shadow:0 0 0 0 rgba(78,214,196,0)}}
-  .face-name .st{font-size:13px;font-weight:600;color:rgba(255,255,255,.72)}
-  .badge{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 16px);z-index:6;
-    background:rgba(8,18,15,.5);backdrop-filter:blur(10px);padding:8px 13px;border-radius:999px;
-    font-size:12.5px;font-weight:600;color:#8FE6D8;letter-spacing:.04em}
-  .timer{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 56px);z-index:6;display:none;
-    background:rgba(8,18,15,.42);backdrop-filter:blur(8px);padding:5px 11px;border-radius:999px;font-size:13px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums}
-  .stage.on .timer{display:block}
+  .face-name .st{font-size:13px;font-weight:600;color:rgba(255,255,255,.75)}
 
-  .wave{position:absolute;left:50%;bottom:206px;transform:translateX(-50%);z-index:6;display:none;gap:7px}
-  .stage[data-state="listening"] .wave,.stage[data-state="speaking"] .wave{display:inline-flex}
-  .wave i{display:block;width:5px;height:20px;border-radius:999px;background:#3ED4C2;transform:scaleY(.16);transform-origin:center}
-  .stage[data-state="speaking"] .wave i{background:#16C4AE;box-shadow:0 0 12px rgba(22,196,174,.9)}
+  /* 右上：體驗版標示＋倒數（App 的 hud-pill 樣式） */
+  .face-hud{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 16px);z-index:6;display:flex;gap:8px}
+  .hud-pill{background:rgba(8,18,15,.5);backdrop-filter:blur(10px);padding:8px 13px;border-radius:999px;
+    font-size:12.5px;font-weight:600;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums}
+  .hud-pill.demo{color:#8FE6D8;letter-spacing:.04em}
+  .hud-pill.cnt.low{color:#FFB4A8}
 
-  .caps{position:absolute;left:16px;right:16px;bottom:calc(120px + env(safe-area-inset-bottom));z-index:6;text-align:center;pointer-events:none}
+  /* 聲波（App 同款：聽=亮綠、說=深亮綠發光） */
+  .face-cue{position:absolute;left:50%;bottom:210px;transform:translateX(-50%);z-index:6}
+  .face-wave{display:none;gap:8px}
+  .screen[data-state="listening"] .face-wave,.screen[data-state="speaking"] .face-wave{display:inline-flex}
+  .face-wave i{display:block;width:5px;height:20px;border-radius:999px;background:#3ED4C2;transform:scaleY(.16);transform-origin:center}
+  .screen[data-state="speaking"] .face-wave i{background:#16C4AE;box-shadow:0 0 12px rgba(22,196,174,.95)}
+
+  /* 字幕（App 樣式） */
+  .caps{position:absolute;left:16px;right:16px;bottom:calc(128px + env(safe-area-inset-bottom));z-index:6;text-align:center;pointer-events:none}
   .cap-user{display:none;margin:0 auto 8px;max-width:520px;font-size:14.5px;color:rgba(255,255,255,.66);line-height:1.5}
   .cap-user.show{display:block}
   .cap-ai{margin:0 auto;max-width:560px;background:rgba(8,18,15,.58);backdrop-filter:blur(14px);
     border-radius:18px;padding:12px 16px;font-size:17px;line-height:1.6;min-height:22px}
-  .hint{position:absolute;left:0;right:0;bottom:calc(120px + env(safe-area-inset-bottom));z-index:5;text-align:center;
+  .caps.capoff{display:none}
+  .hint{position:absolute;left:0;right:0;bottom:calc(132px + env(safe-area-inset-bottom));z-index:5;text-align:center;
     font-size:16px;color:#F6ECE2;text-shadow:0 1px 8px rgba(0,0,0,.6);padding:0 24px}
 
-  .bar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 26px);z-index:7;
-    display:flex;justify-content:center;align-items:center;gap:18px}
+  /* 底部三鍵（App 同款：字幕｜麥克風｜通話） */
+  .face-bar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 24px);z-index:7;
+    display:flex;justify-content:center;align-items:center;gap:16px}
+  .ctl-btn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;cursor:pointer;
+    width:64px;height:58px;border-radius:16px;background:rgba(8,18,15,.55);backdrop-filter:blur(10px);color:#fff;font-size:11.5px}
+  .ctl-btn svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .ctl-btn.off{opacity:.45}
   .call-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:none;cursor:pointer;
-    min-width:172px;height:58px;border-radius:999px;color:#fff;font-size:17px;font-weight:700;
-    box-shadow:0 10px 26px rgba(0,0,0,.4);transition:transform .1s}
+    min-width:168px;height:58px;border-radius:999px;color:#fff;font-size:17px;font-weight:700;
+    box-shadow:0 8px 22px rgba(0,0,0,.4);transition:transform .1s;background:#1DA47C}
   .call-btn:active{transform:scale(.96)}
-  .call-btn.start{background:#1DA47C}
-  .call-btn.end{background:#E2544F;min-width:132px}
+  .call-btn.end{background:#E2544F;min-width:140px}
   .call-btn.end svg{transform:rotate(135deg)}
   .call-btn svg{width:23px;height:23px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-  .ghost-btn{display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;
-    width:58px;height:58px;border-radius:50%;background:rgba(8,18,15,.55);backdrop-filter:blur(10px);color:#fff}
-  .ghost-btn svg{width:23px;height:23px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-  .intro{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;
-    background:linear-gradient(168deg,#0E1A17 0%,#10231E 55%,#0C1714 100%);overflow-y:auto;
-    padding:calc(env(safe-area-inset-top) + 34px) 22px calc(env(safe-area-inset-bottom) + 26px);
-    transition:opacity .3s;text-align:center}
-  .intro.hide{opacity:0;pointer-events:none}
-  .logo{width:64px;height:64px;border-radius:16px;margin-bottom:14px}
-  .intro h1{font-size:24px;font-weight:800;letter-spacing:.02em}
-  .intro h1 small{display:block;margin-top:7px;font-size:14.5px;font-weight:600;color:#8FE6D8;letter-spacing:.12em}
-  .intro p.sub{margin-top:11px;font-size:15.5px;color:rgba(255,255,255,.78);line-height:1.65;max-width:340px}
-  .cast{margin-top:22px;display:grid;grid-template-columns:repeat(3,minmax(92px,108px));gap:12px;justify-content:center}
-  .cv{position:relative;border:2px solid transparent;border-radius:18px;background:rgba(255,255,255,.055);
-    padding:12px 6px 10px;cursor:pointer;color:#fff;transition:border-color .15s,background .15s}
-  .cv img{width:58px;height:58px;border-radius:50%;object-fit:cover;object-position:center 18%;display:block;margin:0 auto}
-  .cv b{display:block;margin-top:8px;font-size:15px;font-weight:700}
-  .cv small{display:block;margin-top:3px;font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.4}
-  .cv.on{border-color:#3ED4C2;background:rgba(62,212,194,.12)}
-  .cv.on::after{content:"✓";position:absolute;top:7px;right:9px;font-size:12px;color:#3ED4C2;font-weight:800}
-  .go{margin-top:24px;border:none;cursor:pointer;background:#1DA47C;color:#fff;
-    font-size:18px;font-weight:700;padding:16px 46px;border-radius:999px;box-shadow:0 10px 26px rgba(0,0,0,.35);
-    display:inline-flex;align-items:center;gap:10px;transition:transform .1s}
-  .go:active{transform:scale(.97)}
-  .go svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  .note{margin-top:15px;font-size:12.5px;color:rgba(255,255,255,.5);line-height:1.7}
+  /* 開場提示（未接通）與結束畫面 */
+  .pre{position:absolute;left:0;right:0;bottom:calc(132px + env(safe-area-inset-bottom));z-index:5;text-align:center;padding:0 26px}
+  .pre b{display:block;font-size:18px;text-shadow:0 1px 8px rgba(0,0,0,.65)}
+  .pre span{display:block;margin-top:7px;font-size:13.5px;color:rgba(255,255,255,.75);text-shadow:0 1px 6px rgba(0,0,0,.6)}
+  .screen.on .pre{display:none}
 
-  .toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);z-index:30;
+  .over{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(6,14,12,.88);backdrop-filter:blur(10px);text-align:center;padding:0 30px}
+  .over.show{display:flex}
+  .over h2{font-size:24px;font-weight:800}
+  .over p{margin-top:12px;font-size:15.5px;line-height:1.75;color:rgba(255,255,255,.82);max-width:340px}
+  .over .again{margin-top:26px;border:none;cursor:pointer;background:#1DA47C;color:#fff;font-size:16px;font-weight:700;
+    padding:14px 38px;border-radius:999px}
+  .over small{margin-top:16px;font-size:12px;color:rgba(255,255,255,.45)}
+
+  .toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);z-index:40;
     background:rgba(226,84,79,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:14.5px;display:none;max-width:86%;text-align:center}
   .toast.show{display:block}
-
-  #dbg{display:none;position:fixed;top:calc(env(safe-area-inset-top) + 100px);left:10px;z-index:40;background:rgba(0,0,0,.72);
-    color:#8fe6b0;font:12px/1.5 monospace;padding:6px 9px;border-radius:8px;max-width:92vw}
-
-  @media (min-width:700px){
-    .stage{max-width:460px;margin:0 auto;border-radius:0}
-    body{background:#081210}
-  }
+  @media (min-width:700px){ .screen{max-width:460px;margin:0 auto} body{background:#081210} }
 </style>
 </head>
 <body>
 
-<div class="stage" id="stage" data-state="idle">
-  <div class="face-bg"><img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧"></div>
-  <div class="lip" id="lip"><span></span></div>
-  <div class="aura"></div>
+<div class="screen" id="sc" data-state="idle">
+  <div class="face-bg"><img src="avatars/nening-real-female-full.jpg" alt="寧寧"></div>
   <div class="scrim"></div>
 
-  <div class="face-name"><span class="dot"></span><span id="chName">寧寧</span><span class="st" id="chSt">未在線</span></div>
-  <div class="badge">實機展示 · AI 即時生成</div>
-  <div class="timer" id="timer">00:00</div>
+  <div class="face-name"><span class="dot"></span><span>寧寧</span><span class="st" id="st">未在線</span></div>
+  <div class="face-hud">
+    <span class="hud-pill demo">體驗版</span>
+    <span class="hud-pill cnt" id="cnt" style="display:none">1:00</span>
+  </div>
 
-  <div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="face-cue"><div class="face-wave" id="wave"><i></i><i></i><i></i><i></i><i></i></div></div>
+
+  <div class="pre" id="pre">
+    <b>點開，就像跟家人視訊</b>
+    <span>按下方綠色按鈕，直接開口跟寧寧說話<br>每通體驗 1 分鐘 · 語音與回應由 AI 即時生成</span>
+  </div>
   <div class="hint" id="hint"></div>
   <div class="caps" id="caps" style="display:none">
     <div class="cap-user" id="capUser"></div>
     <div class="cap-ai" id="capAi"></div>
   </div>
 
-  <div class="bar">
-    <button class="ghost-btn" id="backBtn" aria-label="回選角" title="換一位夥伴">
-      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  <div class="face-bar">
+    <button class="ctl-btn" id="capBtn" aria-label="字幕開關">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 11h-3v3h3M17 11h-3v3h3"/></svg><span>字幕</span>
     </button>
-    <button class="call-btn end" id="endBtn" aria-label="結束通話">
+    <button class="call-btn" id="callBtn" aria-label="開始通話">
       <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg>
-      <span>結束通話</span>
+      <span id="callLabel">開始通話</span>
+    </button>
+    <button class="ctl-btn" id="micBtn" aria-label="麥克風開關">
+      <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg><span>麥克風</span>
     </button>
   </div>
-</div>
 
-<div class="intro" id="intro">
-  <img class="logo" src="icons/munea-logo.png" alt="Munea" onerror="this.style.display='none'">
-  <h1>沐寧 Munea · 聊聊<small>實機互動展示 LIVE DEMO</small></h1>
-  <p class="sub">點開，就像跟家人視訊。<br>選一位夥伴，直接開口跟他說話——<br>你聽到的每一句都是 AI 即時生成。</p>
-  <div class="cast" id="cast"></div>
-  <button class="go" id="goBtn">
-    <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg>
-    開始通話
-  </button>
-  <div class="note">需要允許麥克風 · 建議開聲音體驗<br>展示用途 · 對話內容不會被保存</div>
-</div>
+  <div class="over" id="over">
+    <h2>🌸 一分鐘體驗結束囉</h2>
+    <p>這就是沐寧的「聊聊」——會記得你、有溫度的即時陪伴。<br>App 上架後，寧寧可以天天陪伴家裡的長輩。</p>
+    <button class="again" id="again">再體驗一次</button>
+    <small>沐寧 Munea · 語音與回應由 AI 即時生成</small>
+  </div>
 
-<div class="toast" id="toast"></div>
-<div id="dbg"></div>
+  <div class="toast" id="toast"></div>
+</div>
 
 <script>
-/* ===== 六位夥伴（人格＋聲音由後台發碼窗口決定、跟 App 同一套） ===== */
-/* anim: photo=擬真照片（呼吸+光暈）· flap=2D 嘴型對嘴 · bounce=講話彈跳（角色本身張著嘴）
- * mouth: 嘴巴在原圖上的相對位置（x,y=中心點比例、w=寬度比例），跨螢幕尺寸自動換算 */
-const CAST = [
-  { id:'寧寧', full:'avatars/nening-real-female-full.jpg', face:'avatars/nening-face.png',      tag:'貼心暖管家 · 最懂你', anim:'photo' },
-  { id:'阿宏', full:'avatars/ahong-tall.jpg',              face:'avatars/ahong-face.png',       tag:'沉穩可靠 · 一句穩住', anim:'photo' },
-  { id:'小昀', full:'avatars/xiaoyun-2d-tall.jpg',         face:'avatars/xiaoyun-2d-face.png',  tag:'開朗元氣 · 氣氛擔當', anim:'flap', mouth:{x:.517,y:.450,w:.052} },
-  { id:'阿原', full:'avatars/ayuan-2d-tall.jpg',           face:'avatars/ayuan-2d-face.png',    tag:'隨和好聊 · 零壓力', anim:'flap', mouth:{x:.515,y:.458,w:.054} },
-  { id:'咪咪', full:'avatars/mimi-tall.jpg',               face:'avatars/munea-2d-mimi-face.png', tag:'傲嬌小貓 · 口嫌體正直', anim:'flap', mouth:{x:.511,y:.562,w:.034} },
-  { id:'旺財', full:'avatars/wangcai-tall.jpg',            face:'avatars/munea-2d-wangcai-face.png', tag:'忠心暖狗 · 無條件挺你', anim:'bounce' },
-];
-let picked = CAST[0];
-
 const $ = s => document.querySelector(s);
-const stage = $('#stage'), intro = $('#intro'), hint = $('#hint'), caps = $('#caps');
-const capUser = $('#capUser'), capAi = $('#capAi');
+const sc = $('#sc'), hint = $('#hint'), caps = $('#caps'), capUser = $('#capUser'), capAi = $('#capAi');
 const qs = new URLSearchParams(location.search);
-const SELFTEST_TEXT = qs.get('text');          // ?text=... ＝ 免麥克風自測（打字代替說話）
-const showDbg = qs.has('debug');
-window.__demoStats = { ws:0, sent:0, recv:0, capsAi:'', capsUser:'', turns:0, state:'idle', firstAudioMs:null, err:'' };
+const SELFTEST_TEXT = qs.get('text');
+window.__demoStats = { ws:0, recv:0, capsAi:'', turns:0, state:'idle', firstAudioMs:null, cutBy:'', err:'' };
 
-const castEl = $('#cast');
-CAST.forEach((c,i)=>{
-  const b = document.createElement('button');
-  b.className = 'cv' + (i===0?' on':'');
-  b.innerHTML = `<img src="${c.face}" alt="${c.id}" onerror="this.src='${c.full}'"><b>${c.id}</b><small>${c.tag.replace(' · ','<br>')}</small>`;
-  b.onclick = ()=>{ picked=c; [...castEl.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
-  castEl.appendChild(b);
-});
-
-function setState(st){ stage.dataset.state = st; window.__demoStats.state = st; }
+function setState(st){ sc.dataset.state = st; window.__demoStats.state = st; }
 function setHint(t){ hint.textContent = t || ''; }
-function toast(t){
-  const el = $('#toast'); el.textContent = t; el.classList.add('show');
-  clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove('show'), 4200);
-}
-function paintDbg(){
-  if(!showDbg) return;
-  const d = $('#dbg'); d.style.display='block';
-  const s = window.__demoStats;
-  d.textContent = `ws ${s.ws} · 首回聲 ${s.firstAudioMs??'—'}ms · 上行 ${s.sent/1024|0}KB · 下行 ${s.recv/1024|0}KB · 輪 ${s.turns}`;
-}
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),4200); }
 
-let timerIv=null, t0=0;
-function timerStart(){ t0=Date.now(); const el=$('#timer');
-  timerIv=setInterval(()=>{ const s=(Date.now()-t0)/1000|0; el.textContent=`${String(s/60|0).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; },500); }
-function timerStop(){ clearInterval(timerIv); $('#timer').textContent='00:00'; }
+/* 倒數（顯示用；真正的斷線由通行碼到期在 Google 端強制） */
+let cntIv=null;
+function cntStart(sec){
+  const el=$('#cnt'); el.style.display='inline-block';
+  let left=sec;
+  const paint=()=>{ el.textContent=`${(left/60|0)}:${String(left%60).padStart(2,'0')}`;
+    el.classList.toggle('low', left<=15); };
+  paint();
+  cntIv=setInterval(()=>{ left--; paint(); if(left<=0){ clearInterval(cntIv); endDemo('time'); } },1000);
+}
+function cntStop(){ clearInterval(cntIv); $('#cnt').style.display='none'; }
 
-const bars=[...document.querySelectorAll('.wave i')];
-let raf=0, lvlSrc=null, cur=0;
-function waveStart(get){ lvlSrc=get; if(raf) return;
+/* 聲波跟真實音量 */
+const bars=[...document.querySelectorAll('.face-wave i')];
+let raf=0,lvlSrc=null,cur=0;
+function waveStart(get){ lvlSrc=get; if(raf)return;
   const loop=()=>{ const t=Math.max(0,Math.min(1,lvlSrc?(lvlSrc()||0):0)); cur+=(t-cur)*.35;
-    bars.forEach((b,i)=>{ const shape=1-Math.abs(i-2)/5; b.style.transform=`scaleY(${Math.min(1.7,.3+cur*(0.5+shape)*.9).toFixed(2)})`; });
-    stage.style.setProperty('--lvl',cur.toFixed(2));
-    const spk = stage.dataset.state==='speaking';
-    const a = picked.anim||'photo';
-    const zoomAmp = a==='bounce'?.03 : a==='flap'?.022 : .018;   // 卡通講話彈跳比擬真明顯
-    const bobAmp  = a==='bounce'?10 : a==='flap'?4 : 0;
-    stage.style.setProperty('--zoom',(spk?1+cur*zoomAmp:1).toFixed(3));
-    stage.style.setProperty('--bob',(spk?-(cur*bobAmp):0).toFixed(1)+'px');
-    lipSpan.style.transform='scaleY('+(0.12+cur*1.05).toFixed(2)+')';   // 嘴巴跟真實音量開合
+    bars.forEach((b,i)=>{const shape=1-Math.abs(i-2)/5; b.style.transform=`scaleY(${Math.min(1.7,.3+cur*(0.5+shape)*.9).toFixed(2)})`;});
     raf=requestAnimationFrame(loop); };
   raf=requestAnimationFrame(loop); }
-function waveStop(){ cancelAnimationFrame(raf); raf=0; lvlSrc=null; cur=0;
-  bars.forEach(b=>b.style.transform='scaleY(0.16)'); stage.style.setProperty('--lvl',0);
-  stage.style.setProperty('--zoom',1); stage.style.setProperty('--bob','0px'); }
+function waveStop(){ cancelAnimationFrame(raf); raf=0; lvlSrc=null; cur=0; bars.forEach(b=>b.style.transform='scaleY(0.16)'); }
 
-/* ===== 2D 嘴型層：把「嘴在原圖的比例位置」換算成螢幕座標（object-fit:cover + center 18%） ===== */
-const lip = $('#lip'), lipSpan = document.querySelector('#lip span'), faceImg = $('#faceImg');
-function layoutLip(){
-  const m = picked.mouth;
-  if(!m || !faceImg.naturalWidth){ lip.classList.remove('on'); return; }
-  lip.classList.add('on');
-  const vw = stage.clientWidth, vh = stage.clientHeight;
-  const s = Math.max(vw/faceImg.naturalWidth, vh/faceImg.naturalHeight);
-  const rw = faceImg.naturalWidth*s, rh = faceImg.naturalHeight*s;
-  const ox = (vw-rw)*.5, oy = (vh-rh)*.18;
-  const w = m.w*rw, h = w*.6;
-  lip.style.left = (ox+m.x*rw-w/2)+'px';
-  lip.style.top  = (oy+m.y*rh-h/2)+'px';
-  lip.style.width = w+'px'; lip.style.height = h+'px';
-}
-faceImg.addEventListener('load', layoutLip);
-window.addEventListener('resize', layoutLip);
-
-/* ===== base64 ⇄ PCM16 ===== */
 function b64FromBuf(buf){ const u8=new Uint8Array(buf); let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,Math.min(i+0x8000,u8.length))); return btoa(s); }
 function i16FromB64(b64){ const bin=atob(b64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i); return new Int16Array(u8.buffer); }
 
-/* ===== 即時語音：瀏覽器直連 Google（半雙工＋可插話，同 App 那套節奏） ===== */
+/* 直連 Google（短效通行碼、半雙工、可插話）＝App 聊聊的完整服務 */
 const GWS = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained';
 const Live = {
-  ws:null, ac:null, mic:null, proc:null, playCtx:null, playHead:0, on:false,
-  micLevel:0, playLevel:0, speaking:false, _srcs:[], _spkT:null, _ready:false,
+  ws:null, ac:null, mic:null, proc:null, playCtx:null, playHead:0, on:false, micMuted:false,
+  micLevel:0, playLevel:0, speaking:false, _srcs:[], _spkT:null, _ready:false, demoSeconds:60,
   _f2i(f){ const b=new Int16Array(f.length); for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i])); b[i]=s<0?s*0x8000:s*0x7fff;} return b; },
   _down(buf,inR,outR){ if(outR>=inR)return buf; const r=inR/outR,len=Math.round(buf.length/r),o=new Float32Array(len);
     let i=0,j=0; while(j<len){const n=Math.round((j+1)*r);let s=0,c=0;for(;i<n&&i<buf.length;i++){s+=buf[i];c++;}o[j++]=c?s/c:0;} return o; },
@@ -255,15 +182,14 @@ const Live = {
   _toListening(){ clearTimeout(this._spkT); this.speaking=false; this.playLevel=0;
     if(!this.on)return; setState('listening'); waveStart(()=>this.micLevel); },
   async start(){
-    // 1) 跟後台要一張短效通行碼（正式鑰匙不出後台）
     let info;
     try{
       const codeQ = qs.get('code') ? '&code='+encodeURIComponent(qs.get('code')) : '';
-      const r = await fetch('/api/token?char='+encodeURIComponent(picked.id)+codeQ);
+      const r = await fetch('/api/token?char='+encodeURIComponent('寧寧')+codeQ);
       info = await r.json();
       if(!r.ok || !info.token) throw new Error(info.error||('HTTP '+r.status));
-    }catch(e){ window.__demoStats.err='token:'+e.message; toast('拿不到通行碼——'+(e.message||'請稍後再試')); return false; }
-    // 2) 直連 Google
+      this.demoSeconds = info.demoSeconds || 60;
+    }catch(e){ window.__demoStats.err='token:'+e.message; toast('連不上服務——'+(e.message||'請稍後再試')); return false; }
     this.on = true; this._ready = false;
     try{ this.ws = new WebSocket(GWS+'?access_token='+encodeURIComponent(info.token)); this.ws.binaryType='arraybuffer'; }
     catch(e){ this.on=false; return false; }
@@ -282,12 +208,11 @@ const Live = {
       };
       this.ws.onmessage = async ev=>{
         let msg;
-        try{ msg = JSON.parse(typeof ev.data==='string' ? ev.data : td.decode(ev.data)); }
-        catch(e){ return; }
+        try{ msg = JSON.parse(typeof ev.data==='string' ? ev.data : td.decode(ev.data)); }catch(e){ return; }
         if(msg.setupComplete){
           this._ready = true;
           this.playCtx = new AudioContext({sampleRate:24000}); this.playHead=this.playCtx.currentTime;
-          if (SELFTEST_TEXT){ // 免麥自測：不開麥克風、直接送一句文字
+          if (SELFTEST_TEXT){
             this._t0 = performance.now();
             this.ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:SELFTEST_TEXT}]}],turnComplete:true}}));
             this._toListening(); settle(true); return;
@@ -301,30 +226,27 @@ const Live = {
           this._t0 = performance.now();
           this.proc.onaudioprocess = e=>{
             const inp=e.inputBuffer.getChannelData(0);
-            if(this.speaking){ this.micLevel=0; return; }   // 她說話時麥克風暫停＝不吃回音
+            if(this.speaking||this.micMuted){ this.micLevel=0; return; }
             let s=0; for(let i=0;i<inp.length;i++)s+=inp[i]*inp[i];
             this.micLevel=Math.min(1,Math.sqrt(s/inp.length)*8);
             if(!this.ws||this.ws.readyState!==1||!this._ready)return;
             const buf=this._f2i(this._down(inp,this.ac.sampleRate,16000)).buffer;
-            window.__demoStats.sent+=buf.byteLength;
             this.ws.send(JSON.stringify({realtimeInput:{audio:{data:b64FromBuf(buf),mimeType:'audio/pcm;rate=16000'}}}));
-            paintDbg();
           };
-          // 她先開口打招呼（像電話接通）
           this.ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'（電話接通了）'}]}],turnComplete:true}}));
           this._toListening(); settle(true);
           return;
         }
-        const sc = msg.serverContent || {};
-        if(sc.interrupted && this.playCtx){
+        const scv = msg.serverContent || {};
+        if(scv.interrupted && this.playCtx){
           this._srcs.forEach(s=>{try{s.stop();}catch(e2){}}); this._srcs=[];
           this.playHead=this.playCtx.currentTime; this.playLevel=0;
         }
         const tidy = s=>s.replace(/([一-鿿　-〿，。！？、：；]) +(?=[一-鿿　-〿，。！？、：；])/g,'$1');
-        const ot = sc.outputTranscription, it = sc.inputTranscription;
+        const ot = scv.outputTranscription, it = scv.inputTranscription;
         if(ot && ot.text){ this._cap=tidy((this._cap||'')+ot.text); capAi.textContent=this._cap; window.__demoStats.capsAi=this._cap; caps.style.display='block'; setHint(''); }
-        if(it && it.text){ capUser.textContent='你說：'+tidy(it.text); capUser.classList.add('show'); window.__demoStats.capsUser=it.text; caps.style.display='block'; }
-        for(const p of ((sc.modelTurn||{}).parts||[])){
+        if(it && it.text){ capUser.textContent='你說：'+tidy(it.text); capUser.classList.add('show'); caps.style.display='block'; }
+        for(const p of ((scv.modelTurn||{}).parts||[])){
           const d=(p.inlineData||{}).data;
           if(!d || !this.playCtx) continue;
           if(window.__demoStats.firstAudioMs===null&&this._t0) window.__demoStats.firstAudioMs=Math.round(performance.now()-this._t0);
@@ -342,17 +264,16 @@ const Live = {
           this._srcs.push(s); s.onended=()=>{const k2=this._srcs.indexOf(s); if(k2>=0)this._srcs.splice(k2,1);};
           clearTimeout(this._spkT); this._spkT=setTimeout(()=>this._toListening(),900);
         }
-        if(sc.turnComplete){ window.__demoStats.turns++; this._cap='';
-          setTimeout(()=>capUser.classList.remove('show'),1200); paintDbg(); }
-        paintDbg();
+        if(scv.turnComplete){ window.__demoStats.turns++; this._cap='';
+          setTimeout(()=>capUser.classList.remove('show'),1200); }
       };
-      this.ws.onclose=(ev)=>{ const was=this.on; window.__demoStats.err='close:'+ev.code; settle(false);
-        if(was){ hangup(); toast('連線中斷了，再撥一次就好'); } };
+      this.ws.onclose=()=>{ const was=this.on; settle(false);
+        if(was){ endDemo(window.__demoStats.cutBy||'server'); } };  // 通行碼到期＝Google 端硬切
       this.ws.onerror=()=>{ settle(false); };
     });
   },
   stop(){
-    this.on=false; this.speaking=false; this._ready=false; clearTimeout(this._spkT);
+    this.on=false; this.speaking=false; clearTimeout(this._spkT);
     try{this._srcs.forEach(s=>s.stop());}catch(e){} this._srcs=[];
     try{if(this.proc)this.proc.disconnect();}catch(e){}
     try{if(this.mic)this.mic.getTracks().forEach(t=>t.stop());}catch(e){}
@@ -363,40 +284,37 @@ const Live = {
   },
 };
 
-/* ===== 畫面流：選角 → 通話 → 掛斷回選角 ===== */
-function applyCast(){
-  $('#faceImg').src = picked.full; $('#faceImg').alt = picked.id;
-  $('#chName').textContent = picked.id;
-  layoutLip();
-}
+/* 通話流＋結束畫面 */
+const callBtn=$('#callBtn'), callLabel=$('#callLabel');
+let onCall=false;
 async function dial(){
-  applyCast();
-  intro.classList.add('hide');
-  stage.classList.add('on'); $('#chSt').textContent='接通中…';
-  setHint('接通中…'); caps.style.display='none'; capAi.textContent=''; capUser.textContent='';
+  onCall=true;
+  callBtn.classList.add('end'); callLabel.textContent='結束通話';
+  sc.classList.add('on'); $('#st').textContent='接通中…'; setHint('接通中…');
+  caps.style.display='none'; capAi.textContent=''; capUser.textContent='';
   const ok = await Live.start();
-  if(!ok){ if(Live.on)Live.stop(); stage.classList.remove('on'); intro.classList.remove('hide');
-    setState('idle'); return; }
-  $('#chSt').textContent='在線';
-  timerStart();
-  setHint(SELFTEST_TEXT ? '' : '接通了，直接開口說話吧');
+  if(!ok){ hangup(); return; }
+  $('#st').textContent='在線';
+  cntStart(Live.demoSeconds);
+  setHint(SELFTEST_TEXT?'':'接通了，直接開口說話吧');
 }
 function hangup(){
-  Live.stop(); waveStop(); timerStop();
-  setState('idle'); stage.classList.remove('on');
-  $('#chSt').textContent='未在線'; setHint(''); caps.style.display='none';
-  intro.classList.remove('hide');
+  onCall=false;
+  Live.stop(); waveStop(); cntStop();
+  setState('idle'); sc.classList.remove('on');
+  callBtn.classList.remove('end'); callLabel.textContent='開始通話';
+  $('#st').textContent='未在線'; setHint(''); caps.style.display='none';
 }
-$('#goBtn').onclick = dial;
-$('#endBtn').onclick = hangup;
-$('#backBtn').onclick = hangup;
-/* 校嘴用（不連線看嘴型）：?cast=2&lip=0.7 */
-if(qs.has('cast')) { picked = CAST[parseInt(qs.get('cast'),10)] || CAST[0]; }
-applyCast();
-if(qs.has('lip')){
-  intro.classList.add('hide'); stage.classList.add('on');
-  setState('speaking'); waveStart(()=>parseFloat(qs.get('lip'))||.7);
+function endDemo(why){
+  window.__demoStats.cutBy = why;
+  if(!onCall) return;
+  hangup();
+  $('#over').classList.add('show');
 }
+callBtn.onclick = ()=> onCall ? (window.__demoStats.cutBy='user', hangup()) : dial();
+$('#again').onclick = ()=>{ $('#over').classList.remove('show'); dial(); };
+$('#capBtn').onclick = ()=>{ caps.classList.toggle('capoff'); $('#capBtn').classList.toggle('off'); };
+$('#micBtn').onclick = ()=>{ Live.micMuted=!Live.micMuted; $('#micBtn').classList.toggle('off',Live.micMuted); };
 </script>
 </body>
 </html>
