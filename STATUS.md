@@ -11,6 +11,15 @@
 
 **7/9 凌晨 Mac 大進度：三塊水電接通兩塊半。① 雲端資料櫃 36 表全建好（Edward+Mac 實跑成功）② StoreKit 真付款全接好＋沙盒測試帳號建好（剩 Edward 手機點一次）③ 推播＝本機提醒通知完成（吃藥/回診、App 關著會響）④ Apple 健康原生橋接完成（步數自動進走路任務）⑤ 會員標籤 FREE/PLUS/PRO ⑥ 版號升 1.2.0（三處同步）。剩：真帳號接線（Windows 有鑰匙）、簽章憑證（Edward 開 Xcode 5 分鐘）、送審素材。**
 
+**⑦（Windows 同夜）雲端試吃檯完工**：管家腦＋語音橋部署 Google 台灣機房（staging、鎖門、鑰匙進保險箱、費用警戒 NT$500）；**staging 腦已接上雲端資料櫃（backend=supabase 驗證過）**；App 1.2.2 含恢復購買＋自動續訂法務文。
+
+### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
+- 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）
+- ⚠ 兩服務**鎖門中**：呼叫要帶 Google 通行證（`gcloud auth print-identity-token`）；開門方式待 Edward 拍板（不擋你手上的真機/付款工作）
+- 恢復購買對接約定：原生實作 `window.__muneaNativeRestore()` → 找回的購買逐筆呼叫 `__muneaApplyPurchase(產品ID)`
+- 搬家配方＋7 顆排雷：`deploy/cloudrun/搬家配方-README.md`（⚠ 另有一個未入庫的 `deploy/cloud-run/` 資料夾像是平行準備的草稿——以 `cloudrun`（無橫線）為準、草稿留給主人自行處置）
+- 冷知識：`/healthz` 被 Google 大門保留、打不進——探活打 `/` 或加別名路
+
 ---
 
 ## 各項目進度（對應上線待辦總表）
@@ -23,7 +32,7 @@
 | **蘋果開發者帳號** | ✅ **已開通**（Team V77L5245MR · 效期 2027/7/4）| Edward | — |
 | Mac 簽章憑證 | 🔴 缺（Archive/上傳的門票）| **Edward** | 在 Mac 開一次 Xcode 選 Team 讓它自動建（一次性、5 分鐘）|
 | 內購金流（合約/銀行/稅務）| 🟢 **全部完成(7/8)** | — | 8 商品全建好；**StoreKit 2 真付款已接進 App（7/9 Mac）：訂閱＋兩處點數鈕都跳真蘋果付款視窗**；沙盒測試員已建（edwardt0303+munea1）；剩 Edward 真機點一次沙盒付款＋審查截圖 |
-| 雲端後端（Supabase）| 🟢 60% | Mac→Windows | **雲端資料櫃建好（7/9）：001~007 全套 36 表＋示範資料在正式櫃跑過、表清單驗過**；機房=雪梨（上線前可再議搬近）；接棒 Windows 用鑰匙開同步 |
+| 雲端後端（Supabase）| 🟢 **80%** | Mac→Windows | 36 表建好（7/9）＋**staging 雲端腦已接上（backend=supabase 驗證過、重開失憶解除）**；機房=雪梨（上線前可議搬近）；剩真帳號正式開＋記憶實寫驗證 |
 | 真帳號登入 | 🟡 45% | Windows | 櫃子好了、可以正式接（鑰匙在 Windows）|
 | 推播通知（App 關著也響）| 🟢 80%（7/9 Mac）| Mac | 本機提醒通知完成：吃藥每日到點響＋回診提前 1 小時；用藥/看診/作息變動自動重排；剩真機授權實測 |
 | Apple 健康串接 | 🟢 85%（7/9 Mac 原生完成）| Edward 真機授權 | 原生 HealthKit 外掛＋權限＋網頁橋全好、步數自動進走路任務（達標自動打勾）；剩 Edward 在 App 按「連接」授權一次 |
