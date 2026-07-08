@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>沐寧 Munea · 聊聊 Live Avatar Demo</title>
+<style>
+  /* 沿用 App 聊聊視覺 · 單角色（寧寧）· 擬真對嘴影像全屏 */
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:system-ui,"Noto Sans TC",sans-serif;background:#0E1A17;color:#fff;overflow:hidden;-webkit-tap-highlight-color:transparent}
+  button{font-family:inherit}
+  .stage{position:relative;height:100dvh;width:100%;overflow:hidden}
+  .face-bg{position:absolute;inset:0;overflow:hidden;background:#0E1A17}
+  .face-bg img,.face-bg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 12%}
+  .face-bg video{opacity:0;transition:opacity .35s}
+  .stage.livevid .face-bg video{opacity:1}
+  .scrim{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to bottom,rgba(4,12,10,.42),rgba(4,12,10,0) 22%,rgba(4,12,10,0) 55%,rgba(4,12,10,.5) 80%,rgba(4,12,10,.82))}
+
+  .face-name{position:absolute;left:18px;top:calc(env(safe-area-inset-top) + 16px);z-index:6;
+    display:flex;align-items:center;gap:8px;background:rgba(8,18,15,.5);backdrop-filter:blur(10px);
+    padding:8px 14px;border-radius:999px;font-size:16px;font-weight:600}
+  .face-name .dot{width:9px;height:9px;border-radius:50%;background:#9aa4a0;flex:none}
+  .stage.on .face-name .dot{background:#4ED6C4;box-shadow:0 0 0 0 rgba(78,214,196,.6);animation:live 1.9s infinite}
+  @keyframes live{0%{box-shadow:0 0 0 0 rgba(78,214,196,.55)}70%{box-shadow:0 0 0 9px rgba(78,214,196,0)}100%{box-shadow:0 0 0 0 rgba(78,214,196,0)}}
+  .face-name .st{font-size:13px;font-weight:600;color:rgba(255,255,255,.72)}
+  .badge{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 16px);z-index:6;
+    background:rgba(8,18,15,.5);backdrop-filter:blur(10px);padding:8px 13px;border-radius:999px;
+    font-size:12.5px;font-weight:600;color:#8FE6D8;letter-spacing:.04em}
+  .timer{position:absolute;right:18px;top:calc(env(safe-area-inset-top) + 56px);z-index:6;display:none;
+    background:rgba(8,18,15,.42);backdrop-filter:blur(8px);padding:5px 11px;border-radius:999px;font-size:13px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums}
+  .stage.on .timer{display:block}
+
+  .wave{position:absolute;left:50%;bottom:200px;transform:translateX(-50%);z-index:6;display:none;gap:7px}
+  .stage[data-state="listening"] .wave,.stage[data-state="speaking"] .wave{display:inline-flex}
+  .wave i{display:block;width:5px;height:20px;border-radius:999px;background:#3ED4C2;transform:scaleY(.16);transform-origin:center}
+  .stage[data-state="speaking"] .wave i{background:#16C4AE;box-shadow:0 0 12px rgba(22,196,174,.9)}
+
+  .caps{position:absolute;left:16px;right:16px;bottom:calc(116px + env(safe-area-inset-bottom));z-index:6;text-align:center;pointer-events:none}
+  .cap-user{display:none;margin:0 auto 8px;max-width:520px;font-size:14.5px;color:rgba(255,255,255,.66);line-height:1.5}
+  .cap-user.show{display:block}
+  .cap-ai{margin:0 auto;max-width:560px;background:rgba(8,18,15,.58);backdrop-filter:blur(14px);
+    border-radius:18px;padding:12px 16px;font-size:17px;line-height:1.6;min-height:22px}
+  .hint{position:absolute;left:0;right:0;bottom:calc(120px + env(safe-area-inset-bottom));z-index:5;text-align:center;
+    font-size:16px;color:#F6ECE2;text-shadow:0 1px 8px rgba(0,0,0,.6);padding:0 24px}
+
+  .bar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 26px);z-index:7;
+    display:flex;justify-content:center;align-items:center;gap:18px}
+  .call-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:none;cursor:pointer;
+    min-width:180px;height:60px;border-radius:999px;color:#fff;font-size:17.5px;font-weight:700;
+    box-shadow:0 10px 26px rgba(0,0,0,.4);transition:transform .1s}
+  .call-btn:active{transform:scale(.96)}
+  .call-btn.start{background:#1DA47C}
+  .call-btn.end{background:#E2544F;min-width:140px}
+  .call-btn.end svg{transform:rotate(135deg)}
+  .call-btn svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  .sub{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 98px);z-index:6;text-align:center;
+    font-size:12.5px;color:rgba(255,255,255,.55);letter-spacing:.03em}
+  .stage.on .sub{display:none}
+
+  .toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);z-index:30;
+    background:rgba(226,84,79,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:14.5px;display:none;max-width:86%;text-align:center}
+  .toast.show{display:block}
+  #dbg{display:none;position:fixed;top:calc(env(safe-area-inset-top) + 100px);left:10px;z-index:40;background:rgba(0,0,0,.72);
+    color:#8fe6b0;font:12px/1.5 monospace;padding:6px 9px;border-radius:8px;max-width:92vw}
+  @media (min-width:700px){ .stage{max-width:460px;margin:0 auto} body{background:#081210} }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage" data-state="idle">
+  <div class="face-bg">
+    <img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧">
+    <video id="avatarVid" autoplay playsinline muted></video>
+  </div>
+  <div class="scrim"></div>
+
+  <div class="face-name"><span class="dot"></span><span>寧寧</span><span class="st" id="chSt">未在線</span></div>
+  <div class="badge">實機展示 · Live Avatar</div>
+  <div class="timer" id="timer">00:00</div>
+
+  <div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="hint" id="hint"></div>
+  <div class="caps" id="caps" style="display:none">
+    <div class="cap-user" id="capUser"></div>
+    <div class="cap-ai" id="capAi"></div>
+  </div>
+
+  <div class="sub">沐寧 Munea · 聊聊——照片級擬真對嘴 · 語音與影像皆即時生成</div>
+  <div class="bar">
+    <button class="call-btn start" id="callBtn" aria-label="開始通話">
+      <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg>
+      <span id="callLabel">開始通話</span>
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="dbg"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), hint = $('#hint'), caps = $('#caps');
+const capUser = $('#capUser'), capAi = $('#capAi'), vid = $('#avatarVid');
+const qs = new URLSearchParams(location.search);
+const SELFTEST_TEXT = qs.get('text');
+const showDbg = qs.has('debug');
+// 影像引擎位置：預設同一台機器的 :8188、?avatar= 可覆寫
+const AVATAR_BASE = qs.get('avatar') || (location.hostname || 'localhost') + ':8188';
+window.__demoStats = { ws:0, recv:0, capsAi:'', turns:0, state:'idle', firstAudioMs:null, vidFrames:0, vidLive:0, err:'' };
+
+function setState(st){ stage.dataset.state = st; window.__demoStats.state = st; }
+function setHint(t){ hint.textContent = t || ''; }
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),4200); }
+function paintDbg(){ if(!showDbg)return; const d=$('#dbg'); d.style.display='block';
+  const s=window.__demoStats;
+  d.textContent=`ws ${s.ws} · 首回聲 ${s.firstAudioMs??'—'}ms · 下行 ${s.recv/1024|0}KB · 影格 ${s.vidFrames}`; }
+
+let timerIv=null,t0=0;
+function timerStart(){ t0=Date.now(); const el=$('#timer');
+  timerIv=setInterval(()=>{const s=(Date.now()-t0)/1000|0; el.textContent=`${String(s/60|0).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;},500); }
+function timerStop(){ clearInterval(timerIv); $('#timer').textContent='00:00'; }
+
+const bars=[...document.querySelectorAll('.wave i')];
+let raf=0,lvlSrc=null,cur=0;
+function waveStart(get){ lvlSrc=get; if(raf)return;
+  const loop=()=>{ const t=Math.max(0,Math.min(1,lvlSrc?(lvlSrc()||0):0)); cur+=(t-cur)*.35;
+    bars.forEach((b,i)=>{const shape=1-Math.abs(i-2)/5; b.style.transform=`scaleY(${Math.min(1.7,.3+cur*(0.5+shape)*.9).toFixed(2)})`;});
+    raf=requestAnimationFrame(loop); };
+  raf=requestAnimationFrame(loop); }
+function waveStop(){ cancelAnimationFrame(raf); raf=0; lvlSrc=null; cur=0; bars.forEach(b=>b.style.transform='scaleY(0.16)'); }
+
+/* ===== 影像端（WebRTC 收寧寧對嘴影像） ===== */
+const Avatar = {
+  pc:null, ws:null, on:false,
+  async start(){
+    const proto = location.protocol==='https:'?'https':'http';
+    const wproto = location.protocol==='https:'?'wss':'ws';
+    try{
+      this.pc = new RTCPeerConnection();
+      this.pc.addTransceiver('video',{direction:'recvonly'});
+      this.pc.ontrack = e=>{ vid.srcObject = e.streams[0]; };
+      const o = await this.pc.createOffer(); await this.pc.setLocalDescription(o);
+      const r = await fetch(`${proto}://${AVATAR_BASE}/offer`,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({sdp:this.pc.localDescription.sdp,type:this.pc.localDescription.type})});
+      const a = await r.json(); await this.pc.setRemoteDescription(a);
+      this.ws = new WebSocket(`${wproto}://${AVATAR_BASE}/audio`);
+      this.ws.binaryType='arraybuffer';
+      this.on = true;
+      return true;
+    }catch(e){ window.__demoStats.err='avatar:'+(e.message||e); return false; }
+  },
+  feed(buf){ try{ if(this.on&&this.ws&&this.ws.readyState===1) this.ws.send(buf); }catch(e){} },
+  reset(){ try{ if(this.on&&this.ws&&this.ws.readyState===1) this.ws.send('reset'); }catch(e){} },
+  stop(){ this.on=false;
+    try{if(this.ws)this.ws.close();}catch(e){}
+    try{if(this.pc)this.pc.close();}catch(e){}
+    this.ws=this.pc=null; vid.srcObject=null; stage.classList.remove('livevid');
+  },
+};
+vid.addEventListener('playing',()=>{ stage.classList.add('livevid'); });
+setInterval(()=>{ if(!Avatar.pc) return;
+  Avatar.pc.getStats().then(st=>st.forEach(r=>{ if(r.type==='inbound-rtp'&&r.kind==='video'){
+    window.__demoStats.vidFrames=r.framesDecoded; paintDbg(); } })); },1000);
+
+/* ===== 語音端（同 App 聊聊：ws://此機:8201 ⇄ Gemini Live · 半雙工＋可插話） ===== */
+const Live = {
+  ws:null, ac:null, mic:null, proc:null, playCtx:null, playHead:0, on:false,
+  micLevel:0, playLevel:0, speaking:false, _srcs:[], _spkT:null,
+  _f2i(f){ const b=new Int16Array(f.length); for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i])); b[i]=s<0?s*0x8000:s*0x7fff;} return b; },
+  _down(buf,inR,outR){ if(outR>=inR)return buf; const r=inR/outR,len=Math.round(buf.length/r),o=new Float32Array(len);
+    let i=0,j=0; while(j<len){const n=Math.round((j+1)*r);let s=0,c=0;for(;i<n&&i<buf.length;i++){s+=buf[i];c++;}o[j++]=c?s/c:0;} return o; },
+  _toSpeaking(){ if(this.speaking)return; this.speaking=true; setState('speaking'); waveStart(()=>this.playLevel); },
+  _toListening(){ clearTimeout(this._spkT); this.speaking=false; this.playLevel=0;
+    if(!this.on)return; setState('listening'); waveStart(()=>this.micLevel); },
+  async start(){
+    let url = qs.get('ws') || ((location.protocol==='https:'?'wss':'ws')+'://'+(location.hostname||'localhost')+':8201');
+    url += (url.includes('?')?'&':'?') + 'char=' + encodeURIComponent('寧寧');
+    this.on = true;
+    try{ this.ws = new WebSocket(url); this.ws.binaryType='arraybuffer'; }
+    catch(e){ this.on=false; return false; }
+    return await new Promise(res=>{
+      let done=false; const settle=ok=>{ if(!done){done=true;res(ok);} };
+      this.ws.onopen = async ()=>{
+        window.__demoStats.ws=1;
+        this.playCtx = new AudioContext({sampleRate:24000}); this.playHead=this.playCtx.currentTime;
+        if (SELFTEST_TEXT){
+          this._t0=performance.now();
+          this.ws.send(JSON.stringify({type:'text',text:SELFTEST_TEXT}));
+          this._toListening(); settle(true); return;
+        }
+        try{ this.mic = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
+        catch(e){ toast('拿不到麥克風——請允許權限後再試一次'); settle(false); this.stop(); return; }
+        this.ac = new AudioContext();
+        const src=this.ac.createMediaStreamSource(this.mic);
+        this.proc=this.ac.createScriptProcessor(4096,1,1);
+        src.connect(this.proc); this.proc.connect(this.ac.destination);
+        this._t0=performance.now();
+        this.proc.onaudioprocess = e=>{
+          const inp=e.inputBuffer.getChannelData(0);
+          if(this.speaking){ this.micLevel=0; return; }
+          let s=0; for(let i=0;i<inp.length;i++)s+=inp[i]*inp[i];
+          this.micLevel=Math.min(1,Math.sqrt(s/inp.length)*8);
+          if(!this.ws||this.ws.readyState!==1)return;
+          this.ws.send(this._f2i(this._down(inp,this.ac.sampleRate,16000)).buffer);
+        };
+        this._toListening(); settle(true);
+      };
+      this.ws.onmessage = ev=>{
+        if(typeof ev.data==='string'){
+          try{
+            const o=JSON.parse(ev.data);
+            if(o.type==='interrupted'&&this.playCtx){
+              this._srcs.forEach(s=>{try{s.stop();}catch(e2){}}); this._srcs=[];
+              this.playHead=this.playCtx.currentTime; this.playLevel=0;
+              Avatar.reset();                                  // 插話：影像也回待機
+            }
+            const tidy = s=>s.replace(/([一-鿿　-〿，。！？、：；]) +(?=[一-鿿　-〿，。！？、：；])/g,'$1');
+            if(o.type==='caption'&&o.text){
+              if(o.who==='nening'){ this._cap=tidy((this._cap||'')+o.text); capAi.textContent=this._cap; window.__demoStats.capsAi=this._cap; }
+              else { capUser.textContent='你說：'+tidy(o.text); capUser.classList.add('show'); }
+              caps.style.display='block'; setHint('');
+            }
+            if(o.type==='turn_complete'){ window.__demoStats.turns++; this._cap='';
+              setTimeout(()=>capUser.classList.remove('show'),1200); paintDbg(); }
+          }catch(e){}
+          return;
+        }
+        if(!this.playCtx)return;
+        if(window.__demoStats.firstAudioMs===null&&this._t0) window.__demoStats.firstAudioMs=Math.round(performance.now()-this._t0);
+        Avatar.feed(ev.data);                                  // 同一份聲音餵給影像引擎（對嘴）
+        this._toSpeaking();
+        window.__demoStats.recv+=ev.data.byteLength;
+        const i16=new Int16Array(ev.data), f=new Float32Array(i16.length);
+        for(let k=0;k<i16.length;k++)f[k]=i16[k]/0x8000;
+        let ps=0; for(let k=0;k<f.length;k++)ps+=f[k]*f[k];
+        this.playLevel=Math.min(1,Math.sqrt(ps/f.length)*3.4);
+        const b=this.playCtx.createBuffer(1,f.length,24000); b.getChannelData(0).set(f);
+        const s=this.playCtx.createBufferSource(); s.buffer=b; s.connect(this.playCtx.destination);
+        const now=this.playCtx.currentTime;
+        if(this.playHead<now+0.02)this.playHead=now+0.18;
+        s.start(this.playHead); this.playHead+=b.duration;
+        this._srcs.push(s); s.onended=()=>{const k2=this._srcs.indexOf(s); if(k2>=0)this._srcs.splice(k2,1);};
+        clearTimeout(this._spkT); this._spkT=setTimeout(()=>this._toListening(),900);
+      };
+      this.ws.onclose=()=>{ const was=this.on; settle(false); if(was){ hangup(); toast('連線中斷了，再撥一次就好'); } };
+      this.ws.onerror=()=>{ settle(false); };
+    });
+  },
+  stop(){
+    this.on=false; this.speaking=false; clearTimeout(this._spkT);
+    try{this._srcs.forEach(s=>s.stop());}catch(e){} this._srcs=[];
+    try{if(this.proc)this.proc.disconnect();}catch(e){}
+    try{if(this.mic)this.mic.getTracks().forEach(t=>t.stop());}catch(e){}
+    try{if(this.ws)this.ws.close();}catch(e){}
+    try{if(this.ac)this.ac.close();}catch(e){}
+    try{if(this.playCtx)this.playCtx.close();}catch(e){}
+    this.ws=this.ac=this.mic=this.proc=this.playCtx=null; this.micLevel=this.playLevel=0;
+  },
+};
+
+/* ===== 通話流 ===== */
+const callBtn=$('#callBtn'), callLabel=$('#callLabel');
+let onCall=false;
+async function dial(){
+  onCall=true;
+  callBtn.classList.remove('start'); callBtn.classList.add('end'); callLabel.textContent='結束通話';
+  stage.classList.add('on'); $('#chSt').textContent='接通中…'; setHint('接通中…');
+  caps.style.display='none'; capAi.textContent=''; capUser.textContent='';
+  const av = await Avatar.start();          // 影像先開（照片→活影像無縫）
+  const ok = await Live.start();            // 語音接通
+  if(!ok){ hangup(); toast('連不上語音服務——請先跑 demo-聊聊.bat'); return; }
+  if(!av){ toast('影像引擎沒開（跑 demo-聊聊.bat 會一起帶起來）'); }
+  $('#chSt').textContent='在線'; timerStart();
+  setHint(SELFTEST_TEXT?'':'接通了，直接開口說話吧');
+}
+function hangup(){
+  onCall=false;
+  Live.stop(); Avatar.stop(); waveStop(); timerStop();
+  setState('idle'); stage.classList.remove('on');
+  callBtn.classList.add('start'); callBtn.classList.remove('end'); callLabel.textContent='開始通話';
+  $('#chSt').textContent='未在線'; setHint(''); caps.style.display='none';
+}
+callBtn.onclick = ()=> onCall ? hangup() : dial();
+</script>
+</body>
+</html>

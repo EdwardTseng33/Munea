@@ -1,10 +1,9 @@
 @echo off
 chcp 65001 >nul
 REM ============================================
-REM  沐寧 · 聊聊實機 Demo 一鍵啟動
-REM  會開：縮小的服務視窗（關掉=結束 Demo）＋瀏覽器 Demo 頁
-REM  服務訊息寫在 demo-voice.log（出問題拍這個檔給蘇菲）
-REM  ⚠ 服務輸出走日誌檔，就算滑鼠點到黑視窗也不會把服務卡住（Windows 選取模式老毛病）
+REM  沐寧 · 聊聊 Live Avatar Demo 一鍵啟動（單角色 · 寧寧）
+REM  會開兩個縮小視窗（語音服務＋影像引擎、關掉=結束）＋瀏覽器 Demo 頁
+REM  日誌：demo-voice.log（語音）/ demo-avatar.log（影像）——出問題拍給蘇菲
 REM ============================================
 cd /d "%~dp0"
 
@@ -13,36 +12,47 @@ if not exist "engine\.env.local" (
   pause
   exit /b 1
 )
-
-REM 已經有服務在跑（8201 有人聽）→ 直接開頁面就好
-netstat -an | findstr ":8201" | findstr "LISTENING" >nul 2>nul
-if not errorlevel 1 (
-  echo Demo 服務已經在跑了，直接打開頁面。
-  start "" "http://localhost:8201/demo.html"
-  timeout /t 3 /nobreak >nul
-  exit /b 0
+if not exist "E:\voice-poc\.venv\Scripts\python.exe" (
+  echo [!] 找不到影像引擎環境 E:\voice-poc\.venv（對嘴引擎要用它）
+  pause
+  exit /b 1
 )
 
-echo 正在啟動語音服務（工作列會多一個縮小的視窗，關掉它=結束 Demo）...
-start "沐寧聊聊Demo-語音服務(關掉=結束)" /min cmd /c "cd /d %~dp0 && python -u engine\live_voice_server.py > demo-voice.log 2>&1"
+REM --- 語音服務 :8201 ---
+netstat -an | findstr ":8201" | findstr "LISTENING" >nul 2>nul
+if errorlevel 1 (
+  echo 啟動語音服務...
+  start "沐寧Demo-語音服務(關掉=結束)" /min cmd /c "cd /d %~dp0 && python -u engine\live_voice_server.py > demo-voice.log 2>&1"
+)
 
-REM 等服務起來再開瀏覽器（最多等 15 秒）
+REM --- 影像引擎 :8188（載模型約 15 秒） ---
+netstat -an | findstr ":8188" | findstr "LISTENING" >nul 2>nul
+if errorlevel 1 (
+  echo 啟動寧寧影像引擎（載模型約 15 秒）...
+  start "沐寧Demo-影像引擎(關掉=結束)" /min cmd /c "cd /d %~dp0 && E:\voice-poc\.venv\Scripts\python.exe -u engine\avatar_live_server.py > demo-avatar.log 2>&1"
+)
+
+REM --- 等兩個門都開（最多 40 秒） ---
 set /a tries=0
 :waitloop
-timeout /t 1 /nobreak >nul
+timeout /t 2 /nobreak >nul
+set /a ok=0
 netstat -an | findstr ":8201" | findstr "LISTENING" >nul 2>nul
-if not errorlevel 1 goto ready
+if not errorlevel 1 set /a ok+=1
+netstat -an | findstr ":8188" | findstr "LISTENING" >nul 2>nul
+if not errorlevel 1 set /a ok+=1
+if %ok%==2 goto ready
 set /a tries+=1
-if %tries% lss 15 goto waitloop
-echo [!] 服務 15 秒內沒起來——打開 demo-voice.log 看錯誤訊息（拍給蘇菲也行）。
+if %tries% lss 20 goto waitloop
+echo [!] 服務沒起來——看 demo-voice.log / demo-avatar.log（拍給蘇菲也行）。
 pause
 exit /b 1
 
 :ready
 echo.
-echo   電腦體驗：http://localhost:8201/demo.html
-echo   （手機／遠端要體驗：再雙擊「demo-聊聊-公開連結.bat」拿 https 網址）
+echo   Demo 頁：http://localhost:8201/demo-live.html
+echo   （六角色卡通版備用：http://localhost:8201/demo.html）
 echo.
-start "" "http://localhost:8201/demo.html"
+start "" "http://localhost:8201/demo-live.html"
 timeout /t 3 /nobreak >nul
 exit /b 0
