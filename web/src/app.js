@@ -884,6 +884,7 @@ const LiveVoice = {
     // 帶上他挑的興趣話題，讓 AI 開場就聊得對味
     try { const _ts = loadInterests(); if (_ts.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'topics=' + encodeURIComponent(_ts.join(',')); } catch (e) {}
     this.on = true;
+    this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
@@ -901,6 +902,7 @@ const LiveVoice = {
         // 半雙工：她說話時暫停送麥克風→治好手機喇叭被麥克風收回去的回音，讓她每一輪都回你
         this.proc.onaudioprocess = e => {
           const inp = e.inputBuffer.getChannelData(0);
+          if (!this.ready) { this.micLevel = 0; return; }         // 腦還在開機：先不送聲音（治「第一句沒回應」——開機期的聲音以前會先塞住再一口氣灌進去）
           if (this.speaking) { this.micLevel = 0; return; }       // 她在說＝麥克風靜音＝收音波頻歸零
           let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
           this.micLevel = Math.min(1, Math.sqrt(s / inp.length) * 8);   // 即時音量→收音波頻高度
@@ -908,7 +910,7 @@ const LiveVoice = {
           const buf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
           this.ws.send(buf);
         };
-        this._toListening();     // 一接通就是「在聽你說」
+        if (this.onConnecting) this.onConnecting();   // 線接上了、腦還在開機 → 顯示「撥通中」載入動態
         done(true);
       };
       this.ws.onmessage = ev => {
@@ -924,6 +926,7 @@ const LiveVoice = {
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
+            if (o.type === 'ready') { this.ready = true; this._toListening(); }   // 腦開機完成 → 開麥、換成真收音動態
             if (o.type === 'turn_complete') { this._toListening(); this._capBuf = ''; }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
           } catch (e) {}
           return;
@@ -952,6 +955,8 @@ const LiveVoice = {
   },
   stop() {
     this.on = false;
+    this.ready = false;
+    try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
     try { if (this.ws) this.ws.close(); } catch (e) {}
@@ -974,10 +979,12 @@ const FaceWave = {
       const n = this.bars.length;
       const target = Math.max(0, Math.min(1, this.src ? (this.src() || 0) : 0));
       this.cur += (target - this.cur) * 0.35;                // 平滑起落，不抖
+      const t = performance.now() / 1000;
       for (let i = 0; i < n; i++) {
         const shape = 1 - Math.abs(i - (n - 1) / 2) / n;     // 中間高、兩側低＝聲波形狀
-        const h = 0.3 + this.cur * (0.5 + shape) * 0.85;
-        this.bars[i].style.transform = 'scaleY(' + Math.min(1.7, h).toFixed(2) + ')';
+        const wob = 0.5 + 0.5 * Math.sin(t * (5.2 + (i % 4) * 1.9) + i * 1.9);  // 每根有自己的節奏＝顆粒感（Edward 7/9）
+        const h = 0.2 + this.cur * (0.3 + shape * 0.55 + wob * 0.65);
+        this.bars[i].style.transform = 'scaleY(' + Math.min(1.8, h).toFixed(2) + ')';
       }
       this.raf = requestAnimationFrame(loop);
     };
@@ -2088,6 +2095,8 @@ function connectCall() {
     setCallHint('接通中', true);
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
     const chatEl = document.getElementById('chat');
+    if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：同位置先放載入動態、收音動態等真的接上才出現（Edward 7/9）
+    LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setCallHint('接通中', true); };
     const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻跟麥克風
     const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); };            // 講話波頻跟寧寧聲音
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕

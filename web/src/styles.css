@@ -743,8 +743,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 /* 聲波波頻：JS 依「真實音量」逐格設 scaleY；沒聲音低伏收攏，不再是常亮假 loading */
 /* 波頻：不用深色膠囊底，改浮在畫面上的圓潤發光細柱（跟著真實音量跳、間距拉開、不是一片綠塊）*/
-.face-cue .cue.face-wave { background: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 0 !important; gap: 8px !important; }
-.face-wave i { display: block; width: 5px; height: 18px; border-radius: 999px; background: #3ED4C2;
+.face-cue .cue.face-wave { background: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 0 !important; gap: 5px !important; }
+.face-wave i { display: block; width: 3.5px; height: 20px; border-radius: 999px; background: #3ED4C2;
   box-shadow: 0 0 11px rgba(62,212,194,.95), 0 2px 6px rgba(0,0,0,.28);
   transform: scaleY(.3); transform-origin: center; transition: transform .12s cubic-bezier(.34,1.4,.5,1); }
 .face-screen[data-state="listening"] .face-wave i { background: #3ED4C2; }   /* 收音（聽你說）＝亮療癒綠 */
@@ -2053,3 +2053,16 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
   color: var(--teal-dd); font-family: var(--display); font-size: 24px; font-weight: 800; line-height: 1; cursor: pointer; flex-shrink: 0; }
 .step-btn:active { background: var(--mint-2); }
 .step-row .step-val { flex: 1; text-align: center; font-family: var(--display); font-size: 19px; color: var(--teal-dd); min-width: 0; }
+
+/* 撥通中（腦開機）：同位置放載入動態；真收音動態等 ready 才出現（Edward 7/9） */
+.face-screen[data-state="connecting"] .face-wave { display: inline-flex; }
+@keyframes wave-boot { 0%, 100% { transform: scaleY(.18); opacity: .45; } 50% { transform: scaleY(.85); opacity: 1; } }
+.face-screen[data-state="connecting"] .face-wave i { animation: wave-boot 1.05s ease-in-out infinite; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(2) { animation-delay: .09s; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(3) { animation-delay: .18s; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(4) { animation-delay: .27s; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(5) { animation-delay: .36s; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(6) { animation-delay: .45s; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(7) { animation-delay: .54s; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(8) { animation-delay: .63s; }
+.face-screen[data-state="connecting"] .face-wave i:nth-child(9) { animation-delay: .72s; }
