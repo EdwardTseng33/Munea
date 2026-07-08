@@ -1,0 +1,21 @@
+# 上雲打包時不帶的東西（--source 部署會讀這份；跟 .dockerignore 同內容）
+.git/
+Munea/
+_SalesKit-2026-07/
+avatar-candidates/
+design-import/
+ds-bundle/
+prototypes/
+demo-cloud/
+deploy/runpod-avatar/
+docs/
+ios/
+android/
+node_modules/
+supabase/
+*.pptx
+*.pdf
+*.mp4
+engine/.env.local
+engine/.env*
+.design-sync/

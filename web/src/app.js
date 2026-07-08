@@ -190,7 +190,7 @@ async function companionProfileApi(action, profile) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 2500);
   try {
-    const r = await fetch('/companion-profile', {
+    const r = await fetch(brainURL('/companion-profile'), {
       method: 'POST',
       headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ action, profile }),
@@ -380,6 +380,10 @@ function playB64(b64) {
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
 const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000 };
+// 引擎住址：沒設就走同一棟樓（本機/區網照舊）；上雲後設 munea.brainUrl 指到正式服務
+function brainURL(path) {
+  try { const b = localStorage.getItem('munea.brainUrl') || ''; return b ? b.replace(/\/$/, '') + path : path; } catch (e) { return path; }
+}
 async function brainPost(url, body) {
   if (isStaticPreview()) return null;
   // 加超時護欄：語音腦連不上時，不卡死畫面（§6.5 降級鐵律：對話不斷、老實退回）
@@ -387,7 +391,7 @@ async function brainPost(url, body) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), BRAIN_PATIENCE[url] || 6000);
   try {
-    const r = await fetch(url, { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body), signal: ctrl.signal });
+    const r = await fetch(brainURL(url), { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body), signal: ctrl.signal });
     if (!r.ok) return null;
     return await r.json();
   } catch (e) { return null; }
@@ -399,7 +403,7 @@ async function routineRemindersPost(body) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const r = await fetch('/routine-reminders', {
+    const r = await fetch(brainURL('/routine-reminders'), {
       method: 'POST',
       headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body || {}),
@@ -1644,12 +1648,12 @@ function setCaption(text, hint) {
 let _toastTimer = null;
 function syncPush(key, value) {
   try {
-    fetch('/family/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', key, value }) }).catch(() => {});
+    fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', key, value }) }).catch(() => {});
   } catch (e) {}
 }
 async function syncPullAll() {
   try {
-    const r = await fetch('/family/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'load' }) });
+    const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'load' }) });
     if (!r.ok) return;
     const st = (await r.json()).state || {};
     const map = { activities: 'munea.activities', familyFeed: 'munea.familyFeed2', meds: 'munea.meds', visit: 'munea.visit', visits: 'munea.visits', routine: 'munea.routine' };
@@ -1968,7 +1972,7 @@ let MOOD_WEEK = MOOD_WEEK_DEMO;
 const MOOD_ZH2KEY = { '開心': 'happy', '愉快': 'glad', '平穩': 'calm', '疲累': 'tired', '低落': 'down', '煩躁': 'upset' };
 async function loadMoodWeekReal() {
   try {
-    const r = await fetch('/wellbeing/trend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days: 7 }) });
+    const r = await fetch(brainURL('/wellbeing/trend'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days: 7 }) });
     if (!r.ok) return null;
     const d = await r.json();
     const daily = d.daily || [];

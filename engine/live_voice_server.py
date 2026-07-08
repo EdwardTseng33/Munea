@@ -260,8 +260,10 @@ async def handle(ws):
 async def main():
     # 綁 0.0.0.0＝同一個 Wi-Fi 的手機也連得到（真機測聊聊用）；純本機測試連 127.0.0.1 亦可。
     host = os.environ.get("LIVE_VOICE_HOST", "0.0.0.0")
-    async with websockets.serve(handle, host, 8201, max_size=None, process_request=process_request):
-        print(f"即時語音橋接已啟動：{host}:8201 （網頁＋語音同門，模型 {MODEL}）")
+    # 門牌：雲端主機（Cloud Run）會用 PORT 指定；本機沒設就照舊 8201
+    port = int(os.environ.get("PORT") or os.environ.get("MUNEA_VOICE_PORT") or "8201")
+    async with websockets.serve(handle, host, port, max_size=None, process_request=process_request):
+        print(f"即時語音橋接已啟動：{host}:{port} （網頁＋語音同門，模型 {MODEL}）")
         await asyncio.Future()
 
 
