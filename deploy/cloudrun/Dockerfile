@@ -13,5 +13,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY engine/ engine/
 COPY web/ web/
 
-# 管家腦：Cloud Run 用 PORT 指定門牌 → 轉給 MUNEA_PORT
-CMD ["sh", "-c", "MUNEA_PORT=${PORT:-8200} python engine/server.py"]
+# 一顆映像兩種身分：MUNEA_SERVICE=voice → 語音橋；沒設 → 管家腦
+CMD ["sh", "-c", "if [ \"$MUNEA_SERVICE\" = \"voice\" ]; then exec python engine/live_voice_server.py; else MUNEA_HOST=0.0.0.0 MUNEA_PORT=${PORT:-8200} exec python engine/server.py; fi"]

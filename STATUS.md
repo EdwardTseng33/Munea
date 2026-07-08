@@ -200,3 +200,10 @@
 - **D 路實測（半場完成）**：置物櫃 `munea-locker`（50GB · EUR-IS-1 · 月費約 NT$110 · **保留中**）＋置物櫃版裝機配方 `deploy/runpod-avatar/bootstrap-volume.sh`——**卡 A 裝機進置物櫃 737 秒完成 ✅**（venv＋模型＋cuDNN8＋wake.sh 全在櫃裡）。Edward 喊停時停在「起服務驗證」前一步。**明天只剩下半場**：開全新卡掛櫃 → 跑 `wake.sh` → 掐錶「開卡→臉就緒」（小工具現成：scratchpad `locker_wake_test.py` 階段 B）。
 - **B 路實測（環境全通、差按錶）**：Edward 給了 Modal 帳號（edwardt0303）、鑰匙已接本機（`~/.modal.toml`）；寧寧引擎 Modal 版已寫好 `deploy/modal-avatar/nening_modal.py`（GPU 快照開啟、L40S 卡、沿用全部裝機排雷）；映像雲端建置到最後一層。**明天**：`modal deploy` → `seed_models`（模型進雲端櫃）→ 冷喚醒掐錶。⚠ 已知風險：引擎有背景執行緒、跟快照技術可能相沖——實測見真章，沖了就退而求其次只快照「已載引擎」半熟狀態。
 - **收場確認**：RunPod 零機器＝零燒錢；Modal 零容器在跑；本晚實測費 <US$0.2。看門狗與本機殘留小工具無害（卡已銷毀、它們只會空轉到自然結束）。
+
+### 2026-07-09 凌晨（Windows 蘇菲 · 🎉 試吃檯搬家完成）
+- **兩服務都在台灣機房服役**：管家腦 munea-brain-staging＋語音橋 munea-voice-staging（asia-east1、鎖門模式、鑰匙走保險箱）。
+- **雲端驗收**：管家腦對話 ✅（記憶入話＋語音生成）；語音橋文字探針 **首聲 2.1s**（本機 5s → 快一倍多，台灣機房紅利）、真景點大溪老街＋真名產、興趣話題（?topics=）雲端全通。
+- 再排 3 雷（門向 0.0.0.0、一映像雙身分 MUNEA_SERVICE、**/healthz 被 Google 大門保留**→探活打 / 或請 Mac 加別名路）——7 顆雷全數固化進搬家配方 README。
+- server.py 門向改可設定（本機預設不變、⚠ Mac 地盤打招呼：兩行、邏輯沒動）。
+- **下一步**：① 鑰匙用量上限＋開門方式（Edward 拍板）② App/TestFlight 指到試吃檯網址 ③ 正式環境照同配方複製（-prod 鑰匙＋資料櫃）。

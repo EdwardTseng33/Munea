@@ -4341,4 +4341,6 @@ if __name__ == "__main__":
     except ValueError:
         port = 8200
     print(f"沐寧 App 伺服器啟動 → http://localhost:{port}  （Ctrl+C 結束）")
-    ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+    # 門向：本機照舊只開給自己家（安全）；雲端主機（Cloud Run）由配方設 MUNEA_HOST=0.0.0.0 開正門
+    host = os.environ.get("MUNEA_HOST") or "127.0.0.1"
+    ThreadingHTTPServer((host, port), H).serve_forever()
