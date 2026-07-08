@@ -15,7 +15,12 @@
   .stage{position:relative;height:100dvh;width:100%;overflow:hidden}
   .face-bg{position:absolute;inset:0;overflow:hidden}
   .face-bg img{width:100%;height:100%;object-fit:cover;object-position:center 18%;
-    transform:scale(var(--zoom,1));transition:transform .18s ease-out;will-change:transform}
+    transform:scale(var(--zoom,1)) translateY(var(--bob,0px));transition:transform .18s ease-out;will-change:transform}
+  /* 2D 嘴型層：跟真實聲音開合（沐寧 avatar 引擎 2d-viseme 層 · 只在講話時浮現） */
+  .lip{position:absolute;z-index:3;pointer-events:none;opacity:0;transition:opacity .25s}
+  .stage[data-state="speaking"] .lip.on{opacity:.86}
+  .lip span{display:block;width:100%;height:100%;transform-origin:50% 12%;   /* 從嘴唇線往下開＝像下巴在動 */
+    background:radial-gradient(ellipse at center,#3a2422 52%,#5a3730 100%);border-radius:999px;filter:blur(.4px)}
   /* 呼吸：待機時緩慢起伏、講話時交給音量驅動 */
   @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
   .stage[data-state="idle"] .face-bg img,
@@ -112,6 +117,7 @@
 
 <div class="stage" id="stage" data-state="idle">
   <div class="face-bg"><img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧"></div>
+  <div class="lip" id="lip"><span></span></div>
   <div class="aura"></div>
   <div class="scrim"></div>
 
@@ -154,13 +160,15 @@
 
 <script>
 /* ===== 六位夥伴（人格＋聲音跟 engine/characters.json 走、由語音橋 ?char= 切換） ===== */
+/* anim: photo=擬真照片（呼吸+光暈）· flap=2D 嘴型對嘴 · bounce=講話彈跳（角色本身張著嘴）
+ * mouth: 嘴巴在原圖上的相對位置（x,y=中心點比例、w=寬度比例），跨螢幕尺寸自動換算 */
 const CAST = [
-  { id:'寧寧', full:'avatars/nening-real-female-full.jpg', face:'avatars/nening-face.png',      tag:'貼心暖管家 · 最懂你' },
-  { id:'阿宏', full:'avatars/ahong-tall.jpg',              face:'avatars/ahong-face.png',       tag:'沉穩可靠 · 一句穩住' },
-  { id:'小昀', full:'avatars/xiaoyun-2d-tall.jpg',         face:'avatars/xiaoyun-2d-face.png',  tag:'開朗元氣 · 氣氛擔當' },
-  { id:'阿原', full:'avatars/ayuan-2d-tall.jpg',           face:'avatars/ayuan-2d-face.png',    tag:'隨和好聊 · 零壓力' },
-  { id:'咪咪', full:'avatars/mimi-tall.jpg',               face:'avatars/munea-2d-mimi-face.png', tag:'傲嬌小貓 · 口嫌體正直' },
-  { id:'旺財', full:'avatars/wangcai-tall.jpg',            face:'avatars/munea-2d-wangcai-face.png', tag:'忠心暖狗 · 無條件挺你' },
+  { id:'寧寧', full:'avatars/nening-real-female-full.jpg', face:'avatars/nening-face.png',      tag:'貼心暖管家 · 最懂你', anim:'photo' },
+  { id:'阿宏', full:'avatars/ahong-tall.jpg',              face:'avatars/ahong-face.png',       tag:'沉穩可靠 · 一句穩住', anim:'photo' },
+  { id:'小昀', full:'avatars/xiaoyun-2d-tall.jpg',         face:'avatars/xiaoyun-2d-face.png',  tag:'開朗元氣 · 氣氛擔當', anim:'flap', mouth:{x:.517,y:.450,w:.052} },
+  { id:'阿原', full:'avatars/ayuan-2d-tall.jpg',           face:'avatars/ayuan-2d-face.png',    tag:'隨和好聊 · 零壓力', anim:'flap', mouth:{x:.515,y:.458,w:.054} },
+  { id:'咪咪', full:'avatars/mimi-tall.jpg',               face:'avatars/munea-2d-mimi-face.png', tag:'傲嬌小貓 · 口嫌體正直', anim:'flap', mouth:{x:.511,y:.562,w:.034} },
+  { id:'旺財', full:'avatars/wangcai-tall.jpg',            face:'avatars/munea-2d-wangcai-face.png', tag:'忠心暖狗 · 無條件挺你', anim:'bounce' },
 ];
 let picked = CAST[0];
 
@@ -211,11 +219,36 @@ function waveStart(get){ lvlSrc=get; if(raf) return;
   const loop=()=>{ const t=Math.max(0,Math.min(1,lvlSrc?(lvlSrc()||0):0)); cur+=(t-cur)*.35;
     bars.forEach((b,i)=>{ const shape=1-Math.abs(i-2)/5; b.style.transform=`scaleY(${Math.min(1.7,.3+cur*(0.5+shape)*.9).toFixed(2)})`; });
     stage.style.setProperty('--lvl',cur.toFixed(2));
-    stage.style.setProperty('--zoom',(stage.dataset.state==='speaking'?1+cur*.018:1).toFixed(3));
+    const spk = stage.dataset.state==='speaking';
+    const a = picked.anim||'photo';
+    const zoomAmp = a==='bounce'?.03 : a==='flap'?.022 : .018;   // 卡通講話彈跳比擬真明顯
+    const bobAmp  = a==='bounce'?10 : a==='flap'?4 : 0;
+    stage.style.setProperty('--zoom',(spk?1+cur*zoomAmp:1).toFixed(3));
+    stage.style.setProperty('--bob',(spk?-(cur*bobAmp):0).toFixed(1)+'px');
+    lipSpan.style.transform='scaleY('+(0.12+cur*1.05).toFixed(2)+')';   // 嘴巴跟真實音量開合
     raf=requestAnimationFrame(loop); };
   raf=requestAnimationFrame(loop); }
 function waveStop(){ cancelAnimationFrame(raf); raf=0; lvlSrc=null; cur=0;
-  bars.forEach(b=>b.style.transform='scaleY(0.16)'); stage.style.setProperty('--lvl',0); stage.style.setProperty('--zoom',1); }
+  bars.forEach(b=>b.style.transform='scaleY(0.16)'); stage.style.setProperty('--lvl',0);
+  stage.style.setProperty('--zoom',1); stage.style.setProperty('--bob','0px'); }
+
+/* ===== 2D 嘴型層：把「嘴在原圖的比例位置」換算成螢幕座標（object-fit:cover + center 18%） ===== */
+const lip = $('#lip'), lipSpan = document.querySelector('#lip span'), faceImg = $('#faceImg');
+function layoutLip(){
+  const m = picked.mouth;
+  if(!m || !faceImg.naturalWidth){ lip.classList.remove('on'); return; }
+  lip.classList.add('on');
+  const vw = stage.clientWidth, vh = stage.clientHeight;
+  const s = Math.max(vw/faceImg.naturalWidth, vh/faceImg.naturalHeight);
+  const rw = faceImg.naturalWidth*s, rh = faceImg.naturalHeight*s;
+  const ox = (vw-rw)*.5, oy = (vh-rh)*.18;
+  const w = m.w*rw, h = w*.6;
+  lip.style.left = (ox+m.x*rw-w/2)+'px';
+  lip.style.top  = (oy+m.y*rh-h/2)+'px';
+  lip.style.width = w+'px'; lip.style.height = h+'px';
+}
+faceImg.addEventListener('load', layoutLip);
+window.addEventListener('resize', layoutLip);
 
 /* ===== 即時語音（同 App 聊聊那套：半雙工＋可插話） ===== */
 const Live = {
@@ -320,6 +353,7 @@ const Live = {
 function applyCast(){
   $('#faceImg').src = picked.full; $('#faceImg').alt = picked.id;
   $('#chName').textContent = picked.id;
+  layoutLip();
 }
 async function dial(){
   applyCast();
@@ -342,7 +376,13 @@ function hangup(){
 $('#goBtn').onclick = dial;
 $('#endBtn').onclick = hangup;
 $('#backBtn').onclick = hangup;
+/* 校嘴用（不連線看嘴型）：?cast=2&lip=0.7 */
+if(qs.has('cast')) { picked = CAST[parseInt(qs.get('cast'),10)] || CAST[0]; }
 applyCast();
+if(qs.has('lip')){
+  intro.classList.add('hide'); stage.classList.add('on');
+  setState('speaking'); waveStart(()=>parseFloat(qs.get('lip'))||.7);
+}
 </script>
 </body>
 </html>
