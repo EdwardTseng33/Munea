@@ -2066,3 +2066,19 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .face-screen[data-state="connecting"] .face-wave i:nth-child(7) { animation-delay: .54s; }
 .face-screen[data-state="connecting"] .face-wave i:nth-child(8) { animation-delay: .63s; }
 .face-screen[data-state="connecting"] .face-wave i:nth-child(9) { animation-delay: .72s; }
+
+/* 抽獎儀式（Edward 7/9：開獎要有動畫、中獎要有慶祝；全用自家色盤、不用外部素材） */
+.draw-stage { position: relative; overflow: hidden; text-align: center; padding: 20px 12px 22px; background: var(--gold-soft); border: 1.5px solid var(--gold); border-radius: 18px; margin-top: 10px; }
+.draw-stage .ds-gift { width: 46px; height: 46px; margin: 0 auto 10px; color: var(--coral-d); animation: gift-rock .5s ease-in-out infinite; }
+@keyframes gift-rock { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+.draw-roll .dr-name { display: block; font-family: var(--display); font-size: 27px; font-weight: 800; color: var(--ink); min-height: 38px; }
+.draw-roll small { display: block; font-size: 14px; color: var(--muted); font-weight: 600; margin-top: 3px; }
+.draw-confetti i { position: absolute; top: -14px; width: 8px; height: 14px; border-radius: 3px; opacity: 0; animation: conf-fall 1.6s ease-in forwards; }
+@keyframes conf-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(210px) rotate(560deg); } }
+.draw-win-card { position: relative; z-index: 1; animation: win-pop .5s cubic-bezier(.2, 1.4, .4, 1); }
+.draw-win-card.nopop { animation: none; }
+.draw-win-card .dw-ico { width: 46px; height: 46px; border-radius: 999px; background: var(--gold); color: #fff; display: grid; place-items: center; margin: 0 auto 10px; }
+.draw-win-card .dw-name { font-family: var(--display); font-size: 24px; font-weight: 800; color: var(--ink); }
+.draw-win-card .dw-prize { font-size: 18px; color: var(--coral-d); font-weight: 800; margin-top: 3px; }
+.draw-win-card .dw-claim { font-size: 14px; color: var(--ink-2); line-height: 1.6; margin-top: 10px; }
+@keyframes win-pop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }

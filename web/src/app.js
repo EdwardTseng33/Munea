@@ -3042,19 +3042,60 @@ function init() {
     card.appendChild(wrap);
   }
   function renderDrawBody(act, card) {
+    // 開獎儀式（Edward 7/9）：按「現在開獎」→ 名字輪盤轉快轉慢 → 定格 → 彩帶＋中獎卡（獎品＋找誰領）
     const wrap = document.createElement('div');
     wrap.className = 'draw-body';
     const all = ['你'].concat(act.names || []);
+    const AWARD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></svg>';
+    const GIFT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9"/><path d="M7.5 8a2.5 2.5 0 1 1 0-5C10 3 12 5.5 12 8c0-2.5 2-5 4.5-5a2.5 2.5 0 1 1 0 5"/></svg>';
+    function winCardHtml(pop) {
+      const claim = act.winner === '你' ? '獎品就是你的了，跟家人說一聲' : '獎品請找阿嬤領';
+      return '<div class="draw-stage"><div class="draw-confetti"></div><div class="draw-win-card' + (pop ? '' : ' nopop') + '">' +
+        '<span class="dw-ico">' + AWARD + '</span>' +
+        '<div class="dw-name">' + act.winner + ' 抽中了</div>' +
+        '<div class="dw-prize">「' + act.prize + '」</div>' +
+        '<div class="dw-claim">' + claim + '；' + cname() + '已經去恭喜' + (act.winner === '你' ? '你' : '他') + '了，記錄收進家庭記錄簿。</div>' +
+        '</div></div>';
+    }
+    function throwConfetti() {
+      const conf = wrap.querySelector('.draw-confetti');
+      if (!conf) return;
+      const colors = ['#E0B354', '#D98841', '#3AA8A0', '#D9EFE8'];   // 暖金/珊瑚/療癒綠/薄荷（自家色盤）
+      for (let k = 0; k < 26; k++) {
+        const p = document.createElement('i');
+        p.style.left = (4 + Math.random() * 92) + '%';
+        p.style.background = colors[k % colors.length];
+        p.style.animationDelay = (Math.random() * 0.5).toFixed(2) + 's';
+        conf.appendChild(p);
+      }
+    }
     if (act.winner) {
-      wrap.innerHTML = '<div class="draw-win">🎉 <b>' + act.winner + '</b> 抽中了「' + act.prize + '」</div>' +
-        '<div class="qc-num">' + cname() + '已經去恭喜' + (act.winner === '你' ? '你' : '他') + '了，記錄收進家庭記錄簿</div>';
+      wrap.innerHTML = winCardHtml(false);
     } else {
       wrap.innerHTML = '<div class="qc-num">' + all.join('、') + ' 都有份，' + act.when + '由' + cname() + '開獎</div>' +
-        '<button type="button" class="draw-now">等不及了，現在開！</button>';
+        '<button type="button" class="draw-now">現在開獎</button>';
       wrap.querySelector('.draw-now').addEventListener('click', () => {
-        act.winner = all[Math.floor(Math.random() * all.length)];
-        const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.winner = act.winner; saveActs(acts);
-        wrap.remove(); renderDrawBody(act, card);
+        const winner = all[Math.floor(Math.random() * all.length)];
+        act.winner = winner;
+        const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.winner = winner; saveActs(acts);
+        // 儀式①：禮物盒搖＋名字輪盤（轉快轉慢）
+        wrap.innerHTML = '<div class="draw-stage"><div class="ds-gift">' + GIFT + '</div><div class="draw-roll"><span class="dr-name">…</span><small>看看是誰…</small></div></div>';
+        const nameEl = wrap.querySelector('.dr-name');
+        let i = 0, delay = 70;
+        const spin = () => {
+          nameEl.textContent = all[i % all.length]; i++;
+          if (delay < 330) { delay *= 1.14; setTimeout(spin, delay); }
+          else {
+            nameEl.textContent = winner;   // 定格在中獎者
+            setTimeout(() => {
+              // 儀式②：彩帶＋中獎卡（中了什麼、找誰領）
+              wrap.innerHTML = winCardHtml(true);
+              throwConfetti();
+              pushFamilyFeed('「' + act.prize + '」開獎了——<b>' + winner + '</b> 抽中！');
+            }, 620);
+          }
+        };
+        spin();
       });
     }
     card.appendChild(wrap);
