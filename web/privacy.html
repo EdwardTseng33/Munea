@@ -14,10 +14,14 @@
   .privacy-kicker { font-family: var(--display); font-size: 12px; font-weight: 800; letter-spacing: 1.6px; color: var(--teal-d); text-transform: uppercase; margin-bottom: 8px; }
   .privacy-page h1 { font-family: var(--display); font-size: 28px; line-height: 1.25; margin-bottom: 8px; }
   .privacy-updated { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
-  .privacy-section { padding: 20px 0; border-top: 1px solid var(--line); }
-  .privacy-section h2 { font-family: var(--display); font-size: 18px; margin-bottom: 9px; }
-  .privacy-section p, .privacy-section li { font-size: 15px; line-height: 1.75; color: var(--ink-2); }
-  .privacy-section ul { padding-left: 20px; }
+  .privacy-section { padding: 22px 0; border-top: 1px solid var(--line); }
+  .privacy-section h2 { font-family: var(--display); font-size: 17.5px; margin-bottom: 10px; padding-left: 11px; border-left: 3.5px solid var(--teal); line-height: 1.4; }
+  .privacy-section p, .privacy-section li { font-size: 15.5px; line-height: 1.95; letter-spacing: .02em; color: var(--ink-2); text-align: justify; text-justify: inter-ideograph; overflow-wrap: anywhere; }
+  .privacy-section p + p { margin-top: 10px; }
+  .privacy-section strong { color: var(--ink); }
+  .privacy-section ul { padding-left: 6px; list-style: none; }
+  .privacy-section li { position: relative; padding-left: 16px; margin-top: 7px; }
+  .privacy-section li::before { content: ""; position: absolute; left: 0; top: .8em; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
   .privacy-section a { color: var(--teal-d); font-weight: 800; text-decoration: none; }
   .privacy-back { display: inline-flex; align-items: center; margin-top: 24px; color: var(--teal-d); font-family: var(--display); font-weight: 800; text-decoration: none; }
 </style>

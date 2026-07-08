@@ -439,7 +439,7 @@
 
       <h2 class="set-section">關於</h2>
       <div class="set-list">
-        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">1.1.0</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">1.1.1</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
@@ -532,6 +532,7 @@
   <div class="modal-mask" id="chalModal">
     <div class="modal">
       <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>發起活動</h2>
       <p class="modal-sub">選一種活動，找想一起的人，不勉強誰</p>
       <div class="field-label">活動類型</div>
@@ -548,31 +549,24 @@
         <div class="field-label">目標步數（大家一起累積）</div>
         <div class="range-row"><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" /><b id="walkGoalVal">84,000 步</b></div>
         <div class="goal-hint" id="goalHint">3 人一起走 7 天 · 平均每人每天約 4,000 步</div>
+        <div class="field-label">哪一天開始</div>
+        <input class="chal-input" type="date" id="walkStart" aria-label="活動開始日期" />
       </div>
       <div id="quizFields" style="display:none">
         <div class="field-label">要玩幾題</div>
         <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" /><b id="quizNVal">10 題</b></div>
+        <div class="field-label">答題截止（到期自動結算排名）</div>
+        <input class="chal-input" type="date" id="quizDue" aria-label="答題截止日期" />
       </div>
       <div id="eventFields" style="display:none">
         <div class="field-label">要揪什麼</div>
         <input class="chal-input" id="eventName" placeholder="例：阿嬤生日聚餐" />
         <div class="field-label">在哪裡</div>
         <input class="chal-input" id="eventPlace" placeholder="例：老王海鮮餐廳、阿嬤家" />
-        <div class="field-label">哪一天</div>
-        <div class="med-chips" id="evDayChips">
-          <button class="mchip" data-day="today">今天</button>
-          <button class="mchip" data-day="tomorrow">明天</button>
-          <button class="mchip on" data-day="sat">這週六</button>
-          <button class="mchip" data-day="sun">這週日</button>
-          <button class="mchip" data-day="pick">選日期</button>
-        </div>
-        <div class="cal-grid" id="evDatePick" style="display:none"></div>
-        <div class="field-label">時段</div>
-        <div class="med-chips" id="evTimeChips">
-          <button class="mchip" data-t="中午">中午</button>
-          <button class="mchip" data-t="下午">下午</button>
-          <button class="mchip on" data-t="傍晚">傍晚</button>
-          <button class="mchip" data-t="晚上">晚上</button>
+        <div class="field-label">哪一天・幾點（點一下直接選）</div>
+        <div class="dt-row">
+          <input class="chal-input" type="date" id="evDate" aria-label="聚會日期" />
+          <input class="chal-input" type="time" id="evTime" value="18:00" step="300" aria-label="聚會時間" />
         </div>
       </div>
       <div id="voteFields" style="display:none">
@@ -589,10 +583,9 @@
         <div class="field-label">獎品是什麼</div>
         <input class="chal-input" id="drawPrize" maxlength="14" placeholder="例：一支冰淇淋、免洗碗一次" />
         <div class="field-label">什麼時候開獎</div>
-        <div class="med-chips" id="drawWhenChips">
-          <button class="mchip on" data-w="今晚">今晚</button>
-          <button class="mchip" data-w="明晚">明晚</button>
-          <button class="mchip" data-w="週末">週末</button>
+        <div class="dt-row">
+          <input class="chal-input" type="date" id="drawDate" aria-label="開獎日期" />
+          <input class="chal-input" type="time" id="drawTime" value="20:00" step="300" aria-label="開獎時間" />
         </div>
       </div>
       <div class="field-label" id="inviteLabel">找誰一起（可以不選全部）</div>
@@ -620,6 +613,7 @@
   <div class="modal-mask" id="actDetailModal">
     <div class="modal">
       <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <div id="actDetailBody"></div>
     </div>
   </div>
@@ -628,6 +622,7 @@
   <div class="modal-mask" id="interestsModal">
     <div class="modal">
       <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>想聊的話題</h2>
       <p class="modal-sub">挑幾個有興趣的（最多 5 個），<span class="cname">寧寧</span>會幫你留意這些話題的新鮮事，聊起來更對味。之後隨時可以回來改。</p>
       <div class="topic-chips" id="interestPicks"></div>
@@ -639,6 +634,7 @@
   <div class="modal-mask" id="safetyModal">
     <div class="modal">
       <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>安全通知</h2>
       <p class="modal-sub"><span class="cname">寧寧</span>發現健康數據出現危險異常時，會立刻通知你選的家人，請他們打電話確認你的狀況。</p>
       <div class="field-label">誰來當緊急聯絡人（最多 3 位）</div>
@@ -943,6 +939,7 @@
   <div class="modal-mask" id="consentSheet">
     <div class="modal">
       <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span>開始聊之前，先跟你說一聲</span></div>
       <ul class="consent-points">
         <li><i class="cp-dot"></i><div><b>你說的話會加密後送到境外的雲端處理</b><small>全程加密傳輸，只用來聽懂你、記得你——不外流、不販售、不做廣告</small></div></li>
@@ -957,8 +954,9 @@
   <div class="modal-mask" id="versionSheet">
     <div class="modal">
       <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>版本更新</h2>
-      <p class="modal-sub">沐寧 <span id="verCurrent">1.1.0</span><span id="verChannel"></span></p>
+      <p class="modal-sub">沐寧 <span id="verCurrent">1.1.1</span><span id="verChannel"></span></p>
       <div id="changelogList" class="changelog"></div>
       <button type="button" class="consent-go" id="verClose">好，知道了</button>
     </div>
@@ -966,6 +964,7 @@
   <div class="modal-mask" id="medRemindModal">
     <div class="modal">
       <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span id="medDueSay">吃藥時間到囉</span></div>
       <div class="med-pill-card">
         <div class="mpc-row">

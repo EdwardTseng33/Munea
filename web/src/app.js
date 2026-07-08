@@ -872,6 +872,8 @@ const LiveVoice = {
   async start(onListen, onSpeak, onDrop) {
     let url = getLiveVoiceUrl();
     if (!url) return false;
+    // 帶上目前選的角色（決定聲音＋個性；漏帶會永遠是寧寧——7/8 Edward 抓的蟲）
+    try { if (typeof currentChar === 'string' && currentChar) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'char=' + encodeURIComponent(currentChar); } catch (e) {}
     // 把使用者改過的名字帶給語音伺服器，讓 AI 知道自己現在叫什麼
     try { const nm = (typeof cname === 'function' ? cname() : ''); if (nm) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'name=' + encodeURIComponent(nm); } catch (e) {}
     try { const _md = (window.MM && window.MM.currentMood) ? window.MM.currentMood() : ''; if (_md) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'mood=' + encodeURIComponent(_md); } catch (e) {}
@@ -2810,24 +2812,20 @@ function init() {
     if (!chalModal) return;
     const cur = document.querySelector('.chal-type.active');
     applyChalKind(cur ? (cur.dataset.kind || 'walk') : 'walk');
+    // 預填日期：運動=今天開始、問答=後天截止、揪一攤=這週六、抽獎=今天（時間欄各有預設）
+    try {
+      const t0 = new Date();
+      const sat = new Date(t0); sat.setDate(sat.getDate() + (((6 - sat.getDay() + 7) % 7) || 7));
+      const due = new Date(t0); due.setDate(due.getDate() + 2);
+      if ($('#walkStart') && !$('#walkStart').value) $('#walkStart').value = isoOf(t0);
+      if ($('#quizDue') && !$('#quizDue').value) $('#quizDue').value = isoOf(due);
+      if ($('#evDate') && !$('#evDate').value) $('#evDate').value = isoOf(sat);
+      if ($('#drawDate') && !$('#drawDate').value) $('#drawDate').value = isoOf(t0);
+    } catch (e) {}
     chalModal.classList.add('show');
   });
   const WD = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
   function fmtDay(d) { return (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）'; }
-  function resolveEvDate() {
-    const on = document.querySelector('#evDayChips .mchip.on');
-    const now = new Date();
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const k = on ? on.dataset.day : 'sat';
-    if (k === 'tomorrow') d.setDate(d.getDate() + 1);
-    else if (k === 'sat') d.setDate(d.getDate() + (((6 - d.getDay() + 7) % 7) || 7));
-    else if (k === 'sun') d.setDate(d.getDate() + (((0 - d.getDay() + 7) % 7) || 7));
-    else if (k === 'pick') {
-      const on = document.querySelector('#evDatePick .cal-cell.on');
-      if (on) { const pd = new Date(on.dataset.iso + 'T00:00'); if (!isNaN(pd)) return pd; }
-    }
-    return d;
-  }
   function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function buildCalGrid(boxSel) {
     const box = $(boxSel || '#evDatePick');
@@ -3027,11 +3025,16 @@ function init() {
       act.goal = +(($('#walkGoal') && $('#walkGoal').value) || 30000);
       act.days = +(($('#walkDays') && $('#walkDays').value) || 7);
       act.title = '一起運動';
-      const end = new Date(); end.setDate(end.getDate() + act.days);
+      const ws = ($('#walkStart') && $('#walkStart').value) ? new Date($('#walkStart').value + 'T00:00') : new Date();
+      const start = isNaN(ws) ? new Date() : ws;
+      act.startISO = isoOf(start);
+      const end = new Date(start); end.setDate(end.getDate() + act.days);
       act.dateISO = isoOf(end);
     } else if (kind === 'quiz') {
       act.q = +(($('#quizN') && $('#quizN').value) || 10);
       act.title = '機智問答';
+      const qd = ($('#quizDue') && $('#quizDue').value) ? new Date($('#quizDue').value + 'T00:00') : null;
+      if (qd && !isNaN(qd)) { act.dueISO = isoOf(qd); act.dueLabel = fmtDay(qd) + ' 截止'; }
     } else if (kind === 'vote') {
       act.title = (($('#voteQ') && $('#voteQ').value.trim()) || '家庭投票');
       act.opts = ['#vo1', '#vo2', '#vo3'].map(x => ($(x) && $(x).value.trim()) || '').filter(Boolean);
@@ -3041,13 +3044,19 @@ function init() {
     } else if (kind === 'draw') {
       act.prize = (($('#drawPrize') && $('#drawPrize').value.trim()) || '');
       if (!act.prize) { toast('先填獎品，抽起來才有趣'); return; }
-      act.when = ((document.querySelector('#drawWhenChips .mchip.on') || { dataset: {} }).dataset.w || '今晚');
+      const dd0 = ($('#drawDate') && $('#drawDate').value) ? new Date($('#drawDate').value + 'T00:00') : new Date();
+      const dd = isNaN(dd0) ? new Date() : dd0;
+      const dtv = ($('#drawTime') && $('#drawTime').value) || '20:00';
+      act.dateISO = isoOf(dd);
+      act.when = fmtDay(dd) + ' ' + _clock12(dtv);
       act.title = '幸運抽獎';
       if ($('#drawPrize')) $('#drawPrize').value = '';
     } else {
-      const d = resolveEvDate();
-      act.dateISO = isoOf(d);
-      act.dateLabel = fmtDay(d) + ((document.querySelector('#evTimeChips .mchip.on') || { dataset: {} }).dataset.t || '');
+      const ed0 = ($('#evDate') && $('#evDate').value) ? new Date($('#evDate').value + 'T00:00') : null;
+      if (!ed0 || isNaN(ed0)) { toast('先選聚會的日期'); return; }
+      const etv = ($('#evTime') && $('#evTime').value) || '18:00';
+      act.dateISO = isoOf(ed0);
+      act.dateLabel = fmtDay(ed0) + ' ' + _clock12(etv);
       act.title = (($('#eventName') && $('#eventName').value.trim()) || '家庭聚會');
       act.place = (($('#eventPlace') && $('#eventPlace').value.trim()) || '');
     }
@@ -3131,21 +3140,6 @@ function init() {
   if ($('#quizN')) $('#quizN').addEventListener('input', () => {
     paintRange($('#quizN'));
     if ($('#quizNVal')) $('#quizNVal').textContent = $('#quizN').value + ' 題';
-  });
-  // 日期／時段／期間 點選（單選）
-  ['#evDayChips', '#evTimeChips'].forEach(id => {
-    const box = $(id);
-    if (!box) return;
-    box.addEventListener('click', e => {
-      const b2 = e.target.closest('.mchip');
-      if (!b2) return;
-      box.querySelectorAll('.mchip').forEach(x => x.classList.remove('on'));
-      b2.classList.add('on');
-      if (id === '#evDayChips' && $('#evDatePick')) {
-        const g = $('#evDatePick');
-        if (b2.dataset.day === 'pick') { buildCalGrid(); g.style.display = ''; } else { g.style.display = 'none'; }
-      }
-    });
   });
   // 狀態頁三檔切換（今天/本週/本月）
   const statusSeg = $('#statusSeg');
@@ -3263,6 +3257,8 @@ function init() {
       const secs = [...doc.querySelectorAll('.privacy-section')];
       body.innerHTML = secs.map(s2 => '<h4>' + s2.querySelector('h2').textContent + '</h4>' +
         [...s2.querySelectorAll('p, ul')].map(x => x.outerHTML.replace(/<h2.*?<\/h2>/, '')).join('')).join('');
+      // 防呆：閱讀器裡的連結一律轉純文字（點了會把 App 帶去外頁、回不來）
+      body.querySelectorAll('a').forEach(a => { const b2 = document.createElement('strong'); b2.textContent = a.textContent; a.replaceWith(b2); });
     } catch (e2) { body.innerHTML = '<p>暫時讀不到，晚點再試。</p>'; }
     $('#readerBody').closest('.reader-scroll').scrollTop = 0;
   }
@@ -3336,6 +3332,12 @@ function init() {
   if ($('#interestsSkip')) $('#interestsSkip').addEventListener('click', () => closeInterests(true));
   if ($('#interestsModal')) $('#interestsModal').addEventListener('click', e => { if (e.target === $('#interestsModal')) closeInterests(false); });
   renderInterestPicks();
+  // 彈窗通用 X（右上角）：掛 .mx-close 的按鈕一律關掉自己所在的視窗（7/8 Edward 巡檢後補齊）
+  document.querySelectorAll('.mx-close').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    const mk = b.closest('.modal-mask');
+    if (mk) mk.classList.remove('show');
+  }));
   if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openReader('terms'));
   if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openReader('privacy'));
   if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);
