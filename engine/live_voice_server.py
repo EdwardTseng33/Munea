@@ -74,7 +74,8 @@ import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶
 def system_instruction(char="寧寧", name=None, mood=None, topics=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
-    base = c.get("persona", "") + eng.RED
+    # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
+    base = eng.CORE + c.get("persona", "") + eng.RED
     try:
         # displayName 跟著角色走：用戶自訂名優先、否則用角色本名。
         # 不傳的話會 fallback 到存檔的陪伴檔案（寧寧），把換角色的名字蓋回去。

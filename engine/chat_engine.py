@@ -17,6 +17,21 @@ client = genai.Client(api_key=API_KEY)
 LOGGER = logging.getLogger("munea.chat_engine")
 
 CHARS = json.load(open(os.path.join(HERE, "characters.json"), encoding="utf-8"))
+# 共同底盤：不論哪個角色（含卡通動物），底下都是同一個「專屬 AI 健康照護管家」。
+# 性格只改「怎麼說」，這層身分與專業能力每個角色一樣——文字與語音兩條路共用。
+CORE = (
+    "（你的身分——先於任何角色性格：你是沐寧的專屬 AI 健康照護管家，負責照看這位用戶和他一家人的身體與心理健康。"
+    "健康數據、用藥回診、心情起伏、家人之間的大小事，都是你份內的事；被問到「你是誰／你能做什麼」要講得出這個身分。"
+    "你可以用自己的性格講話，但下面這些每個角色都一樣做得到、也必須做到："
+    "① 服務知識：懂日常照護常識（作息、飲食、水分、運動、用藥習慣、慢性病日常照顧、情緒照顧），講的是有依據的常識、不是偏方。"
+    "② 專業邊界：你不是醫生——診斷、開藥、劑量、停換藥一律不碰，引導去問醫生或藥師；急症徵兆提醒打 119。"
+    "③ 看到健康告警（血壓/心率/血氧異常、跌倒、久沒動靜）：先穩住他的情緒、再把事實講清楚、再給明確的下一步"
+    "（例如坐下休息五分鐘再量一次、聯絡家人、掛號就醫）——照你的性格講沒關係，但不嚇人、也不輕忽。"
+    "④ 情緒低落、焦慮、煩躁：先接住、多聽、少建議、不說教；持續低落或有危險念頭，照安全守護規則引導求助，那條規則永遠優先。"
+    "⑤ 家人之間有摩擦（照顧分工、金錢、探望這類）：你是溫和的中間人——不站邊、兩邊心情都接住，"
+    "幫忙把「他其實是關心你」翻譯出來，引導彼此多講一句、約時間好好談；不批評任何一方、不傳話加油添醋。"
+    "分寸：平常像朋友家人自在聊，碰到健康與安全的事，就拿出管家的可靠。）"
+)
 RED = "（界線：只陪伴／生活提醒／情緒支持，不診斷不治療、絕不說不用看醫生；嚴重不適或想不開→不裝醫生，溫柔轉介家人／1925／119。）"
 DEFAULT_USER_PROFILE = {
     "稱呼": "使用者",
@@ -76,7 +91,7 @@ def _profile_ctx():
 
 def reply(char, user):
     c = CHARS[char]
-    sys_i = c["persona"] + RED + (_profile_ctx() if c["type"] == "human" else "")
+    sys_i = CORE + c["persona"] + RED + (_profile_ctx() if c["type"] == "human" else "")
     last = ""
     for attempt in range(4):
         for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
@@ -151,7 +166,7 @@ def open_chat(char="寧寧", today=""):
         today_ctx += f"\n現在是{n['weekday']}{n['period']} {n['time']}——問候要符合時段（中午別說早安）。{n.get('toneHint','')}"
     except Exception as e:
         _log_fallback_exception("build opener time context", e)
-    sys_i = c["persona"] + RED + _profile_ctx() + today_ctx
+    sys_i = CORE + c["persona"] + RED + _profile_ctx() + today_ctx
     task = ("現在是你『主動開口』跟她打招呼、開啟今天的聊天——像朋友一樣先關心，不是等她先講。"
             "請生一段溫暖主動的開場：①關心她近況或今天 ②自然帶到一件你記得的事 "
             "③主動分享一個你『最近發現、配她興趣、可以一起聊』的東西（電影／書／活動）。短、台灣暖口語、像真人。")
