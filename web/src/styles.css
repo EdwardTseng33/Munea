@@ -98,7 +98,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .bc-status { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 15px; font-weight: 700; margin-bottom: 12px; }
 .bc-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 0 rgba(58,168,160,.5); animation: live 1.8s infinite; }
 @keyframes live { 0%{ box-shadow: 0 0 0 0 rgba(58,168,160,.5) } 70%{ box-shadow: 0 0 0 7px rgba(58,168,160,0) } }
-.bc-chip { position: static; width: fit-content; max-width: 100%; background: var(--mint); padding: 9px 13px; border-radius: 16px; font-size: 13px; font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: flex-start; gap: 7px; white-space: normal; line-height: 1.5; }
+.bc-chip { position: static; width: fit-content; max-width: 100%; background: var(--mint); padding: 9px 13px; border-radius: 16px; font-size: 14px; font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: flex-start; gap: 7px; white-space: normal; line-height: 1.5; }
 .bc-chip .ic { margin-top: 2px; flex-shrink: 0; }
 .bc-chip b { color: var(--teal-dd); font-weight: 800; }
 .bc-chip .ic { width: 15px; height: 15px; color: var(--coral); }
@@ -118,7 +118,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
 .task-body { flex: 1; }
 .task-title { font-size: 15px; font-weight: 700; color: var(--ink); }
-.task-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.task-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
 .task-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; color: transparent; transition: .2s; }
 .task-item.done .task-check { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.05); }
 .task-item.done .task-title { color: var(--muted); text-decoration: line-through; }
@@ -302,7 +302,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .wc-say { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); }
 .wc-face { flex: 0 0 32px; width: 32px; height: 32px; border-radius: 10px; overflow: hidden; }
 .wc-face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
-.wc-quote { font-size: 13px; color: rgba(255,255,255,.9); line-height: 18.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-height: 37px; /* 兩行整行邊界保險：引擎若不認 line-clamp 也絕不裁半字 */ }
+.wc-quote { font-size: 14px; color: rgba(255,255,255,.9); line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-height: 40px; /* 兩行整行邊界保險：引擎若不認 line-clamp 也絕不裁半字 */ }
 
 .observe-card { background: var(--surface); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm); display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
 .observe-card .oc-ico { width: 40px; height: 40px; border-radius: 50%; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
@@ -342,7 +342,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-ico { width: 42px; height: 42px; border-radius: 13px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
 .auth-copy { min-width: 0; }
 .auth-title { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 17px; line-height: 1.2; }
-.auth-sub { font-size: 13px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+.auth-sub { font-size: 14px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
 .auth-email { font-size: 13px; color: var(--teal-dd); font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 185px; }
 .auth-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .auth-primary, .auth-secondary, .auth-dev-btn, .auth-email-btn { border: none; font-family: var(--display); font-weight: 800; cursor: pointer; }
@@ -1007,7 +1007,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .pts-used { font-size: 13px; color: var(--muted); margin-left: 6px; }
 .pts-bar { height: 8px; background: var(--cream); border-radius: 100px; margin: 8px 0 6px; overflow: hidden; }
 .pts-bar i { display: block; height: 100%; background: var(--coral); border-radius: 100px; }
-.pts-note { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.pts-note { font-size: 14px; color: var(--muted); line-height: 1.5; }
 
 /* 橫向列「右邊還有」提示：右緣淡出＋小箭頭（捲到底自動消失） */
 .hscroll-wrap { position: relative; }
@@ -1308,8 +1308,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .iv.on { border-color: var(--teal); background: var(--mint); }
 .iv .iv-ava::after { content: ""; position: absolute; right: -3px; bottom: -1px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal-d); border: 2px solid #FFF; transform: scale(0); transition: transform .15s cubic-bezier(.3,1.4,.5,1); background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'); background-size: 9px; background-position: center; background-repeat: no-repeat; }
 .iv.on .iv-ava::after { transform: scale(1); }
-.invite-note { font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
-.goal-hint { font-size: 13px; color: var(--ink-2); margin: 2px 2px 0; }
+.invite-note { font-size: 14px; color: var(--muted); margin: 8px 2px 0; }
+.goal-hint { font-size: 14px; color: var(--ink-2); margin: 2px 2px 0; }
 
 /* 設定頁 · 免責一行（原同意卡收進註冊流程） */
 .set-disclaim { font-size: 13px; color: var(--muted); line-height: 1.65; margin: 4px 4px 20px; }
@@ -1465,7 +1465,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .mr-say span { background: var(--mint); color: var(--teal-dd); padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 16px; font-weight: 700; line-height: 1.5; }
 
 /* 低點數 · 溫柔提醒（不焦慮：講清楚基本陪伴不受影響） */
-.low-strip { display: flex; align-items: center; gap: 8px; background: var(--coral-soft); color: var(--coral-d); border-radius: 12px; padding: 10px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
+.low-strip { display: flex; align-items: center; gap: 8px; background: var(--coral-soft); color: var(--coral-d); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
 .low-strip .ic { width: 16px; height: 16px; flex-shrink: 0; }
 .hud-pill.pts.low { color: #FFC98A; }
 
@@ -1592,8 +1592,8 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* ===== 北歐第二波：看得見的簽名（2026-07-04） ===== */
 /* ① 寧寧的一句話：像她輕輕說的一則訊息（兩行為上限） */
 /* 設計稿：訊息＝純文字（無泡泡）、13.5px/--ink-2、行高 1.5 */
-.bc-msg { margin-top: 2px; background: none; padding: 0; font-size: 13.5px; line-height: 1.5; color: #5A5349; } /* 設計稿訊息暖灰 */
-.bc-msg-t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-height: 41px; }
+.bc-msg { margin-top: 2px; background: none; padding: 0; font-size: 14px; line-height: 1.5; color: #5A5349; } /* 設計稿訊息暖灰 */
+.bc-msg-t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-height: 43px; }
 /* ③ 首頁進場節奏：卡片一張張輕輕浮上（總長 <0.5 秒） */
 #home.screen.active .pad > * { animation: viewIn .3s cubic-bezier(.22,.9,.32,1) both; }
 #home.screen.active .pad > *:nth-child(2) { animation-delay: .05s; }
@@ -1890,7 +1890,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 邀請家人（真流程 v1：邀請碼＋傳送/複製；帳號系統上線後接真碼） */
 .inv-code { display: flex; align-items: center; justify-content: center; border: 1.5px dashed var(--teal-d); background: var(--mint); border-radius: 14px; padding: 14px; margin: 12px 0 14px; font-family: var(--display); font-size: 24px; font-weight: 800; letter-spacing: 3px; color: var(--teal-dd); font-variant-numeric: tabular-nums; }
 .inv-copy { display: block; width: 100%; margin-top: 10px; padding: 12px; border: 1.5px solid var(--teal-d); border-radius: 14px; background: #FFF; color: var(--teal-dd); font-family: var(--display); font-size: 15px; font-weight: 700; cursor: pointer; }
-.inv-note { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 10px; line-height: 1.6; }
+.inv-note { font-size: 14px; color: var(--muted); text-align: center; margin-top: 10px; line-height: 1.6; }
 
 /* 家人個人頁反應鍵列：先收起（Edward 7/5 拍板、功能未定案；恢復＝刪此行） */
 .react-row { display: none; }
@@ -2000,7 +2000,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .fc-leave { display: block; width: 100%; margin-top: 10px; border: none; background: none; color: var(--danger); font-weight: 700; font-size: 14px; padding: 8px; cursor: pointer; }
 .fc-remove.arm { background: var(--coral-soft); color: var(--coral-d); border-color: transparent; }
 .fc-leave.arm { background: var(--coral-soft); border-radius: 999px; }
-.fc-privacy { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.6; margin-top: 14px; }
+.fc-privacy { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; margin-top: 14px; }
 .jc-code { text-align: center; letter-spacing: 3px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
 
 /* 訂閱頁 v2：產品價值 + 適合誰 + 堆疊卡（Edward 7/7 去寧寧、講優勢） */
@@ -2011,7 +2011,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .sv-ic { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 13px; background: var(--mint); display: grid; place-items: center; }
 .sv-ic svg { width: 21px; height: 21px; fill: none; stroke: var(--teal-dd); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sv-txt b { display: block; font-size: 14.5px; font-weight: 800; color: var(--ink); }
-.sv-txt small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-top: 2px; }
+.sv-txt small { display: block; font-size: 14px; color: var(--muted); line-height: 1.55; margin-top: 2px; }
 .sub-sec-label { font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); margin: 4px 2px 12px; }
 .ppk-who { font-size: 12.5px; color: var(--muted); margin: 3px 0 12px; }
 .ppk.sel.pro .ppk-who { color: #8A6410; }

@@ -2824,7 +2824,8 @@ function init() {
       const t0 = new Date();
       const sat = new Date(t0); sat.setDate(sat.getDate() + (((6 - sat.getDay() + 7) % 7) || 7));
       const due = new Date(t0); due.setDate(due.getDate() + 2);
-      if ($('#walkStart') && !$('#walkStart').value) $('#walkStart').value = isoOf(t0);
+      const w7 = new Date(t0); w7.setDate(w7.getDate() + 7);
+      if ($('#walkDue') && !$('#walkDue').value) { $('#walkDue').value = isoOf(w7); if (typeof syncWalkDays === 'function') syncWalkDays(); }
       if ($('#quizDue') && !$('#quizDue').value) $('#quizDue').value = isoOf(due);
       if ($('#voteDue') && !$('#voteDue').value) $('#voteDue').value = isoOf(due);
       if ($('#evDate') && !$('#evDate').value) $('#evDate').value = isoOf(sat);
@@ -2938,7 +2939,7 @@ function init() {
     if (!sheet || !body) return;
     const done = act.status === 'done';
     const chip = done ? '已結束'
-      : act.kind === 'walk' ? '進行中 · ' + act.days + ' 天內'
+      : act.kind === 'walk' ? '進行中 · ' + (act.dueLabel || act.days + ' 天內')
       : act.kind === 'quiz' ? (act.q + ' 題' + (act.dueLabel ? ' · ' + act.dueLabel : ''))
       : act.kind === 'draw' ? (act.when + '開獎')
       : act.kind === 'event' ? (act.dateLabel || '進行中')
@@ -3032,13 +3033,18 @@ function init() {
     const act = { id: Date.now(), kind, names };
     if (kind === 'walk') {
       act.goal = +(($('#walkGoal') && $('#walkGoal').value) || 30000);
-      act.days = +(($('#walkDays') && $('#walkDays').value) || 7);
       act.title = '一起運動';
-      const ws = ($('#walkStart') && $('#walkStart').value) ? new Date($('#walkStart').value + 'T00:00') : new Date();
-      const start = isNaN(ws) ? new Date() : ws;
+      // 挑戰截止（跟其他活動同款日期＋時間）：今天開始、到期自動結算 — Edward 7/9
+      const wd0 = ($('#walkDue') && $('#walkDue').value) ? new Date($('#walkDue').value + 'T00:00') : null;
+      if (!wd0 || isNaN(wd0)) { toast('先選挑戰截止的日期'); return; }
+      const wt = ($('#walkDueTime') && $('#walkDueTime').value) || '20:00';
+      const start = new Date();
       act.startISO = isoOf(start);
-      const end = new Date(start); end.setDate(end.getDate() + act.days);
-      act.dateISO = isoOf(end);
+      const day0 = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      act.days = Math.max(1, Math.round((wd0 - day0) / 86400000));
+      act.dateISO = isoOf(wd0);
+      act.dueTime = wt;
+      act.dueLabel = fmtDay(wd0) + ' ' + _clock12(wt) + ' 截止';
     } else if (kind === 'quiz') {
       act.q = +(($('#quizN') && $('#quizN').value) || 10);
       act.title = '機智問答';
@@ -3153,6 +3159,19 @@ function init() {
   // 拉桿連動
   if ($('#walkGoal')) $('#walkGoal').addEventListener('input', () => updateWalkLabels());
   if ($('#walkDays')) $('#walkDays').addEventListener('input', () => recalcWalk(true));
+  // 挑戰截止一改 → 換算天數（給目標步數建議用）
+  function syncWalkDays() {
+    const el = $('#walkDue');
+    if (!el || !el.value) return;
+    const due = new Date(el.value + 'T00:00');
+    if (isNaN(due)) return;
+    const t = new Date();
+    const day0 = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    const d = Math.min(30, Math.max(1, Math.round((due - day0) / 86400000)));
+    if ($('#walkDays')) $('#walkDays').value = d;
+    recalcWalk(true);
+  }
+  if ($('#walkDue')) $('#walkDue').addEventListener('change', syncWalkDays);
   // 數量改用 −／＋ 按鈕（拉桿藏起來只當存值用；視窗內不再有左右拖移手勢 · Edward 7/9）
   $$('#chalModal .step-btn').forEach(b => b.addEventListener('click', () => {
     const el = document.getElementById(b.dataset.t);
