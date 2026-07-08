@@ -1303,6 +1303,7 @@ function updateMedCount() {
   const el2 = $('#medCountSettings');
   if (el2) el2.textContent = n;
   renderPillTask();
+  if (window.MuneaNotify) window.MuneaNotify.sync(); // 用藥變動 → 重排 App 關著也會響的提醒
 }
 const PILL_SLOT_ORDER = ['早餐後', '午餐後', '晚餐後', '睡前'];
 function pillDateKey() {
@@ -2179,7 +2180,7 @@ function init() {
   const RT_DEF = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
   const RT_LABEL = { b: '早餐', l: '午餐', d: '晚餐', s: '就寢' };
   function loadRoutine() { try { return Object.assign({}, RT_DEF, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) { return Object.assign({}, RT_DEF); } }
-  function saveRoutine(rt) { try { localStorage.setItem('munea.routine', JSON.stringify(rt)); } catch (e) {} syncPush('routine', rt); }
+  function saveRoutine(rt) { try { localStorage.setItem('munea.routine', JSON.stringify(rt)); } catch (e) {} syncPush('routine', rt); if (window.MuneaNotify) window.MuneaNotify.sync(); }
   function shiftTime(t, mins) {
     let [h, m] = t.split(':').map(Number);
     let total = (h * 60 + m + mins + 1440) % 1440;
@@ -2565,9 +2566,20 @@ function init() {
     const card = e.target.closest('.tu-card');
     if (card) { document.querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on'); }
   });
-  if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', () => {
+  if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', async () => {
     const selCard = document.querySelector('.tu-card.on');
     const p = selCard ? +selCard.dataset.p : 0;
+    if (!p) { toast('先選一包點數'); return; }
+    // App 裡走真蘋果付款；點數入帳由 __muneaApplyPurchase 統一做
+    if (window.MuneaStore && window.MuneaStore.available()) {
+      const b = $('#tuBuyBtn');
+      b.disabled = true;
+      const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
+      b.disabled = false;
+      if (r.ok) $('#topUpModal').classList.remove('show');
+      else if (r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      return;
+    }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
     pushWallet();
     renderPoints();
@@ -2644,8 +2656,21 @@ function init() {
     $('#planConfirmText').innerHTML = '訂閱「<b>' + CIRCLE_PLAN_LABEL[_subPlan] + '</b>」· ' + fmtPrice(_subPlan, _subCyc) + '<br>每月 ' + PLAN_POINTS[_subPlan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[_subPlan] + ' 人。';
     $('#planConfirm').style.display = '';
   });
-  if ($('#planYes')) $('#planYes').addEventListener('click', () => {
+  if ($('#planYes')) $('#planYes').addEventListener('click', async () => {
     if (!_planPick) return;
+    // App 裡走真蘋果付款（StoreKit）；網頁預覽維持示範切換
+    if (window.MuneaStore && window.MuneaStore.available()) {
+      const pid = window.MuneaStore.subId(_planPick, _subCyc);
+      const b = $('#planYes');
+      b.disabled = true; b.textContent = '連到 App Store…';
+      const r = await window.MuneaStore.purchase(pid);
+      b.disabled = false; b.textContent = '確認變更';
+      if (r.ok) { $('#planConfirm').style.display = 'none'; _planPick = null; } // 生效與提示由 __muneaApplyPurchase 統一做
+      else if (r.reason === 'cancelled') toast('沒關係，想好再訂就好。');
+      else if (r.reason === 'pending') { toast('付款送出了，等核准後會自動生效。'); $('#planConfirm').style.display = 'none'; _planPick = null; }
+      else toast('付款沒有完成，晚點再試一次就好。');
+      return;
+    }
     try { localStorage.setItem('munea.plan', _planPick); localStorage.removeItem('munea.planNext'); } catch (e2) {}
     $('#planConfirm').style.display = 'none';
     renderPlanState();
@@ -2669,9 +2694,18 @@ function init() {
     $('#subPoints').querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on');
     const p = +card.dataset.p; const cta = $('#tuBuyBtn2'); if (cta) cta.textContent = '直接購買 ' + p.toLocaleString() + ' 點 · NT$' + (PT_PRICE[p] || 0).toLocaleString();
   });
-  if ($('#tuBuyBtn2')) $('#tuBuyBtn2').addEventListener('click', () => {
+  if ($('#tuBuyBtn2')) $('#tuBuyBtn2').addEventListener('click', async () => {
     const sel = document.querySelector('#subPoints .tu-card.on');
     const p = sel ? +sel.dataset.p : 0;
+    if (!p) { toast('先選一包點數'); return; }
+    if (window.MuneaStore && window.MuneaStore.available()) {
+      const b = $('#tuBuyBtn2');
+      b.disabled = true;
+      const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
+      b.disabled = false;
+      if (!r.ok && r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      return;
+    }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
     pushWallet(); renderPoints();
     toast('買好了，' + p.toLocaleString() + ' 點入帳，這批不會過期');
@@ -3122,7 +3156,7 @@ function init() {
     }
     return arr.filter(v => v && v.dateISO).sort((a, b) => (a.dateISO + (a.time || '')).localeCompare(b.dateISO + (b.time || '')));
   }
-  function saveVisits(arr) { try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) {} syncPush('visits', arr); }
+  function saveVisits(arr) { try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) {} syncPush('visits', arr); if (window.MuneaNotify) window.MuneaNotify.sync(); }
   function nextVisit() { const today = isoOf(new Date()); const arr = loadVisits(); return arr.filter(v => v.dateISO >= today)[0] || arr[0] || null; }
   function fmtVisitTime(tv) {  // "14:30" → "下午 2:30"
     const p = String(tv || '09:00').split(':'); const hh = +p[0] || 9, mm = +p[1] || 0;
