@@ -25,11 +25,18 @@ from models import Wav2Lip
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
 from av import VideoFrame
 
+# 畫質修正①：影像傳輸的位元率預設 1Mbps 太細——嘴一動整張被壓糊/馬賽克。
+# 區網 demo 頻寬夠，直接拉高（下限也墊高、防自動降到糊掉）。
+import aiortc.codecs.h264 as _h264
+_h264.MIN_BITRATE = 3_000_000
+_h264.DEFAULT_BITRATE = 8_000_000
+_h264.MAX_BITRATE = 12_000_000
+
 FACE_IMG = r"E:/Claude/Munea/web/avatars/nening-real-female-full.jpg"
 CKPT     = r"E:/voice-poc/models/wav2lip_gan.pth"
 PORT     = 8188
 device = "cuda"; img_size = 96; mel_step = 16; MICROBATCH = 2
-FPS = 25.0                     # 影像節奏；每幀吃 80/FPS=3.2 格聲譜
+FPS = 30.0                     # 跟影像實際節奏一致（aiortc 30fps）；每幀吃 80/FPS 格聲譜
 MEL_PER_FRAME = 80.0 / FPS
 START_DELAY_FRAMES = 6         # 聲音剛到先等 ~0.24s 再開嘴（配合瀏覽器播放緩衝、嘴不超前聲音）
 SR_IN, SR_MEL = 24000, 16000   # 進來 24k（Gemini 原生）→ 內部 16k（Wav2Lip 訓練規格）
@@ -46,6 +53,14 @@ del _det; torch.cuda.empty_cache()
 Y1 = max(0, _rect[1]); Y2 = min(FRAME.shape[0], _rect[3] + 10)
 X1 = max(0, _rect[0]); X2 = min(FRAME.shape[1], _rect[2])
 FACE96 = cv2.resize(FRAME[Y1:Y2, X1:X2], (img_size, img_size))
+# 畫質修正②：生成結果「只貼下半臉＋邊緣羽化」——眼睛/額頭永遠是原圖、接縫看不見
+PATCH_W, PATCH_H = X2 - X1, Y2 - Y1
+_m = np.zeros((PATCH_H, PATCH_W), np.float32)
+_e = max(6, PATCH_W // 12)
+cv2.rectangle(_m, (_e, int(PATCH_H * 0.52)), (PATCH_W - _e, PATCH_H - 3), 1.0, -1)
+_m = cv2.GaussianBlur(_m, (0, 0), _e / 2.0)
+BLEND_MASK = _m[..., None]                     # (H,W,1) 0=原圖 1=生成
+ORIG_PATCH = FRAME[Y1:Y2, X1:X2].astype(np.float32)
 model = Wav2Lip(); _ck = torch.load(CKPT, map_location=device)
 model.load_state_dict({k.replace("module.", ""): v for k, v in _ck["state_dict"].items()})
 model = model.to(device).eval()
@@ -153,7 +168,8 @@ def gen_frames(mel_windows):
     outs = []
     for p in pred:
         fr = FRAME.copy()
-        fr[Y1:Y2, X1:X2] = cv2.resize(p.astype(np.uint8), (X2 - X1, Y2 - Y1))
+        gen = cv2.resize(p.astype(np.uint8), (PATCH_W, PATCH_H)).astype(np.float32)
+        fr[Y1:Y2, X1:X2] = (ORIG_PATCH * (1.0 - BLEND_MASK) + gen * BLEND_MASK).astype(np.uint8)
         outs.append(fr)
     return outs
 
