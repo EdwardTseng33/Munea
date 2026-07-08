@@ -2665,6 +2665,31 @@ function init() {
     toast('買好了，' + p.toLocaleString() + ' 點入帳，這批不會過期');
   });
   renderPlanState();
+  // 蘋果內購（StoreKit）購買成功 → 前端生效的唯一入口。
+  // Mac 原生端付款成功（含沙盒測試）就呼叫這支，傳 App Store Connect 的產品 ID（見金流步驟單第 4 步表）。
+  // 回傳 true=已生效、false=不認得的產品 ID。示範按鈕之後換真金流時，也一律改走這支。
+  window.__muneaApplyPurchase = function (productId) {
+    const pid = String(productId || '');
+    const SUB_PID = {
+      'net.munea.app.plus.monthly': 'plus', 'net.munea.app.plus.yearly': 'plus',
+      'net.munea.app.pro.monthly': 'pro', 'net.munea.app.pro.yearly': 'pro'
+    };
+    const PT_PID = { 'net.munea.app.points.200': 200, 'net.munea.app.points.500': 500, 'net.munea.app.points.1000': 1000, 'net.munea.app.points.1800': 1800 };
+    if (SUB_PID[pid]) {
+      try { localStorage.setItem('munea.plan', SUB_PID[pid]); localStorage.removeItem('munea.planNext'); } catch (e) {}
+      renderPlanState();
+      if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e2) {} }
+      toast('訂閱好了，現在是 ' + CIRCLE_PLAN_LABEL[SUB_PID[pid]] + ' 方案');
+      return true;
+    }
+    if (PT_PID[pid]) {
+      try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + PT_PID[pid])); } catch (e3) {}
+      pushWallet(); renderPoints();
+      toast('買好了，' + PT_PID[pid].toLocaleString() + ' 點入帳，這批不會過期');
+      return true;
+    }
+    return false;
+  };
   const famSwitch = $('#famSwitch');
   if (famSwitch) famSwitch.addEventListener('click', e => {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
