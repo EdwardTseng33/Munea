@@ -1,0 +1,61 @@
+<!-- @dsCard group="V1 暖光演化" -->
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet"><title>V1-Family</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--teal:#3AA8A0;--teal-d:#2E8A83;--teal-dd:#236C66;--coral:#D98841;--coral-d:#A8611E;
+--ink:#3A352E;--ink2:#5A5349;--muted:#8A8175;--cream:#F4F0E8;--mint:#E8F2EE;--mint2:#D9EFE8;
+--line:#EAE3D6;--deep:#36423E;--gold:#C79A3B;--surface:#FFFEFB}
+.frame{width:390px;background:var(--cream);border-radius:30px;overflow:hidden;
+box-shadow:0 24px 70px rgba(0,0,0,.4);font-family:'Noto Sans TC',system-ui,sans-serif;color:var(--ink)}
+.pad{padding:22px 20px 30px}
+.serif{font-family:'Noto Serif TC',Georgia,serif}
+.h1{font-size:27px;font-weight:900;letter-spacing:.5px}
+.kick{font-size:12.5px;font-weight:700;letter-spacing:.12em;color:var(--coral-d);text-transform:uppercase;margin-bottom:3px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 6px 18px -12px rgba(58,53,46,.25)}
+.row{display:flex;align-items:center}
+/* navbar */
+.navwrap{padding:14px 18px 18px}
+.nav{display:flex;align-items:center;justify-content:space-between;background:#2E2A24;border-radius:100px;padding:15px 30px;box-shadow:0 18px 38px -12px rgba(0,0,0,.45)}
+.nav a{color:rgba(255,255,255,.5);display:grid;place-items:center;cursor:pointer}
+.nav a.on{color:#fff}
+.nav a .svg{width:23px;height:23px;stroke-width:2.1}
+.nav .fab{width:58px;height:58px;border-radius:50%;background:var(--teal);display:grid;place-items:center;box-shadow:0 12px 24px -4px rgba(58,168,160,.75);transform:translateY(-16px)}
+.nav .fab .svg{width:26px;height:26px;stroke:#fff;stroke-width:2.2}
+.svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+body{background:#2b2b2b;display:flex;justify-content:center;padding:24px;min-height:100vh}</style></head><body><div class="frame">
+<div class="pad">
+  <div class="serif h1" style="margin-bottom:18px">全家健康圈</div>
+  <div style="display:flex;gap:12px;overflow:hidden;margin-bottom:24px">
+    <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:var(--teal);display:grid;place-items:center;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--teal);color:#fff"><svg class="svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8"/></svg></div><div style="font-size:12.5px;font-weight:800;color:var(--teal-dd);margin-top:6px">全家</div></div>
+    <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#D98841;display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px">嬤</div><div style="font-size:12.5px;color:var(--ink);margin-top:6px">阿嬤</div></div>
+    <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#3AA8A0;display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px">華</div><div style="font-size:12.5px;color:var(--ink);margin-top:6px">美華</div></div>
+    <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#36423E;display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px">明</div><div style="font-size:12.5px;color:var(--ink);margin-top:6px">志明</div></div>
+    <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#B98A2E;display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px">寶</div><div style="font-size:12.5px;color:var(--ink);margin-top:6px">小寶</div></div>
+  </div>
+  <div class="serif" style="font-size:17px;font-weight:900;margin-bottom:12px">家庭活動</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+    <button style="height:50px;border:none;border-radius:14px;background:var(--teal);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px">＋ 發起活動</button>
+    <button style="height:50px;border:1.5px solid var(--teal-d);border-radius:14px;background:#fff;color:var(--teal-dd);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px">📖 記錄簿</button>
+  </div>
+  <!-- 活動卡：走路（含進度環）-->
+  <div class="card" style="padding:16px;margin-bottom:14px">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="font-size:13.5px;font-weight:800;color:var(--coral-d)">🚩 本週 · 一起走路</span><span style="font-size:12px;color:var(--muted);background:var(--cream);padding:3px 10px;border-radius:99px">還剩 2 天</span></div>
+    <div class="row" style="gap:16px;margin-bottom:12px">
+      <svg viewBox="0 0 80 80" style="width:76px;height:76px;flex:0 0 76px"><circle cx="40" cy="40" r="33" fill="none" stroke="var(--mint2)" stroke-width="9"/><circle cx="40" cy="40" r="33" fill="none" stroke="var(--teal)" stroke-width="9" stroke-linecap="round" stroke-dasharray="207" stroke-dashoffset="58" transform="rotate(-90 40 40)"/><text x="40" y="45" text-anchor="middle" font-size="19" font-weight="800" fill="var(--teal-dd)">72%</text></svg>
+      <div style="flex:1"><div class="serif" style="font-size:24px;font-weight:900">21,500<span style="font-size:14px;color:var(--muted);font-weight:400"> / 30,000 步</span></div>
+        <div style="font-size:13px;color:var(--muted);margin-top:4px">還差 8,500 步，今晚一起散個步就到了</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <span style="font-size:12px;background:var(--cream);padding:5px 11px;border-radius:99px"><b style="color:#D98841">嬤</b> 3,850</span>
+      <span style="font-size:12px;background:var(--cream);padding:5px 11px;border-radius:99px"><b style="color:#3AA8A0">華</b> 8,900</span>
+      <span style="font-size:12px;background:var(--cream);padding:5px 11px;border-radius:99px"><b style="color:#B98A2E">寶</b> 8,750</span></div>
+  </div>
+  <!-- 聚餐卡 -->
+  <div class="card" style="padding:16px">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><span style="font-size:13.5px;font-weight:800;color:var(--coral-d)">🍽 揪一攤 · 週六聚餐</span><span style="font-size:12px;color:var(--muted)">7/11 傍晚</span></div>
+    <div class="serif" style="font-size:17px;font-weight:900;margin-bottom:12px">阿嬤生日聚餐 · 老王海鮮</div>
+    <div class="row" style="gap:8px"><span style="font-size:12.5px;background:var(--mint);color:var(--teal-dd);font-weight:700;padding:5px 11px;border-radius:99px">✓ 阿嬤</span>
+      <span style="font-size:12.5px;background:var(--mint);color:var(--teal-dd);font-weight:700;padding:5px 11px;border-radius:99px">✓ 美華</span>
+      <span style="font-size:12.5px;background:var(--cream);color:var(--muted);font-weight:700;padding:5px 11px;border-radius:99px">? 小寶</span></div>
+  </div>
+</div>
+<div class="navwrap"><div class="nav"><a class=""><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg></a><a class=""><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></a><a class="fab"><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></a><a class="on"><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg></a><a class=""><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></a></div></div></div></body></html>

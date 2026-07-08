@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script></helmet>
+<div style="display:flex;gap:28px;align-items:flex-start;font-family:var(--sans)">
+
+  <!-- HOME -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Home 首頁（任務可點按打勾）</p>
+    <div data-screen-label="I-Home" style="width:390px;height:844px;background:#EEF4F1;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);position:relative;display:flex;flex-direction:column">
+      <div style="flex:1;overflow:hidden;padding:22px 18px 0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:13px;color:var(--muted)">7月4日 週六</span>
+          <b style="font-size:13px;color:var(--ink)">晴 26°</b>
+        </div>
+        <h1 style="margin:14px 0 16px;font-family:var(--serif);font-size:28px;font-weight:900;color:var(--ink);line-height:1.3">下午好，<br>陽光正好，出門走走吧</h1>
+        <div style="background:#fff;border:1px solid #E2EBE6;border-radius:24px;padding:16px;box-shadow:0 10px 26px rgba(58,168,160,.14)">
+          <div style="display:flex;gap:12px;align-items:center">
+            <img src="./assets/nening.jpg" alt="寧寧" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:0 0 auto"></img>
+            <div>
+              <b style="font-size:16px;color:var(--ink)">寧寧</b>
+              <p style="margin:2px 0 0;font-size:14px;color:var(--ink-2);line-height:1.45">記得你說，孫子快畢業了——跟我聊聊今天？</p>
+            </div>
+          </div>
+          <button style="margin-top:14px;width:100%;min-height:52px;background:var(--btn-green);color:#fff;border:none;border-radius:18px;font-size:16px;font-weight:800;font-family:var(--sans);cursor:pointer;box-shadow:0 6px 16px rgba(55,160,153,.35)" style-active="transform:scale(.97)">開始聊聊</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 2px 10px">
+          <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--ink)">今天一起完成</h2>
+          <span style="font-size:13px;font-weight:800;color:var(--teal-dd);background:var(--mint);border-radius:999px;padding:4px 12px">{{ doneCount }} / 3</span>
+        </div>
+        <div style="height:10px;border-radius:5px;background:#DCE8E2;margin:0 2px 12px;overflow:hidden">{{ progBar }}</div>
+        <button onClick="{{ tap0 }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:13px 14px;margin-bottom:10px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.98)">
+          <span style="width:40px;height:40px;border-radius:12px;background:var(--mint);color:var(--teal-dd);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800">藥</span>
+          <span style="flex:1"><b style="display:block;font-size:15px;color:var(--ink)">吃脈優</b><span style="font-size:12.5px;color:var(--muted)">午餐後 · 14:00</span></span>
+          <sc-if value="{{ t0 }}" hint-placeholder-val="{{ false }}"><span style="width:32px;height:32px;border-radius:50%;border:2px solid var(--teal);background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;transition:all .2s ease">✓</span></sc-if><sc-if value="{{ t0Not }}" hint-placeholder-val="{{ true }}"><span style="width:32px;height:32px;border-radius:50%;border:2px solid #CBDCD4;background:#fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;transition:all .2s ease"></span></sc-if>
+        </button>
+        <button onClick="{{ tap1 }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:13px 14px;margin-bottom:10px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.98)">
+          <span style="width:40px;height:40px;border-radius:12px;background:var(--coral-soft);color:var(--coral-d);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800">走</span>
+          <span style="flex:1"><b style="display:block;font-size:15px;color:var(--ink)">到公園散步</b><span style="font-size:12.5px;color:var(--muted)">天氣正好 · 16:30</span></span>
+          <sc-if value="{{ t1 }}" hint-placeholder-val="{{ false }}"><span style="width:32px;height:32px;border-radius:50%;border:2px solid var(--teal);background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;transition:all .2s ease">✓</span></sc-if><sc-if value="{{ t1Not }}" hint-placeholder-val="{{ true }}"><span style="width:32px;height:32px;border-radius:50%;border:2px solid #CBDCD4;background:#fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;transition:all .2s ease"></span></sc-if>
+        </button>
+        <button onClick="{{ tap2 }}" style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:13px 14px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.98)">
+          <span style="width:40px;height:40px;border-radius:12px;background:var(--mint);color:var(--teal-dd);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800">聊</span>
+          <span style="flex:1"><b style="display:block;font-size:15px;color:var(--ink)">和寧寧聊聊</b><span style="font-size:12.5px;color:var(--muted)">說說今天的事 · 隨時</span></span>
+          <sc-if value="{{ t2 }}" hint-placeholder-val="{{ false }}"><span style="width:32px;height:32px;border-radius:50%;border:2px solid var(--teal);background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;transition:all .2s ease">✓</span></sc-if><sc-if value="{{ t2Not }}" hint-placeholder-val="{{ true }}"><span style="width:32px;height:32px;border-radius:50%;border:2px solid #CBDCD4;background:#fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;transition:all .2s ease"></span></sc-if>
+        </button>
+        <h2 style="margin:18px 2px 10px;font-size:18px;font-weight:800;color:var(--ink)">幫你留意</h2>
+        <div style="display:flex;gap:10px;overflow:hidden">
+          <div style="flex:0 0 285px;background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:14px;box-shadow:0 6px 16px rgba(58,168,160,.10)">
+            <p style="margin:0 0 10px;font-size:14px;color:var(--ink-2)"><b style="color:var(--ink)">你</b>托寧寧帶話給美華：明天回診</p>
+            <button style="background:var(--mint);border:none;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:800;color:var(--teal-dd);font-family:var(--sans);cursor:pointer" style-active="transform:scale(.96)">回話</button>
+          </div>
+          <div style="flex:0 0 285px;background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:14px;box-shadow:0 6px 16px rgba(58,168,160,.10)">
+            <p style="margin:0 0 10px;font-size:14px;color:var(--ink-2)"><b style="color:var(--ink)">外婆</b>發起的走路活動進行中</p>
+            <button style="background:var(--mint);border:none;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:800;color:var(--teal-dd);font-family:var(--sans);cursor:pointer" style-active="transform:scale(.96)">去看看</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:6px;margin-top:10px">
+          <i style="width:16px;height:6px;border-radius:3px;background:var(--teal)"></i>
+          <i style="width:6px;height:6px;border-radius:3px;background:#CBDCD4"></i>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;padding:10px 14px 16px">
+        <div style="height:60px;background:#fff;border:1px solid #E2EBE6;border-radius:999px;box-shadow:0 10px 26px rgba(46,66,62,.16);display:flex;align-items:center;padding:6px">
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;background:var(--mint)"><b style="font-size:13px;color:var(--teal-dd)">首頁</b></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">聊聊</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">狀態</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">家人</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">設定</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Chat 聊聊（字幕鈕可切換）</p>
+    <div data-screen-label="I-Chat" style="width:390px;height:844px;background:var(--deep);border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);position:relative">
+      <img src="./assets/nening-face.jpg" alt="寧寧" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></img>
+      <div style="position:absolute;top:18px;left:18px;display:flex;align-items:center;gap:8px;background:#FFFDF9;border-radius:999px;padding:8px 14px;box-shadow:var(--shadow-sm)">
+        <i style="width:8px;height:8px;border-radius:50%;background:var(--teal)"></i><b style="font-size:14px;color:var(--ink)">寧寧</b>
+      </div>
+      <div style="position:absolute;top:18px;right:18px;display:flex;gap:8px">
+        <span style="background:#FFFDF9;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--ink);font-family:var(--display)">00:00</span>
+        <span style="background:#FFFDF9;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--teal-dd)">剩 239 點</span>
+      </div>
+      <sc-if value="{{ capOn }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;left:0;right:0;bottom:128px;display:flex;justify-content:center">
+          <span style="background:#FFFDF9;border:1px solid var(--line);border-radius:999px;padding:11px 20px;font-size:16px;font-weight:700;color:var(--ink);box-shadow:var(--shadow)">直接說，我在這裡</span>
+        </div>
+      </sc-if>
+      <div style="position:absolute;left:16px;right:16px;bottom:20px;display:flex;gap:10px;align-items:center">
+        <button onClick="{{ toggleCap }}" style="flex:0 0 auto;display:flex;align-items:center;gap:8px;background:#FFFDF9;border:1px solid var(--line);border-radius:999px;padding:0 14px;min-height:54px;font-size:14px;font-weight:700;color:var(--ink);font-family:var(--sans);cursor:pointer" style-active="transform:scale(.96)">
+          字幕
+          <sc-if value="{{ capOn }}" hint-placeholder-val="{{ true }}"><span style="width:40px;height:22px;border-radius:11px;background:var(--teal);position:relative;transition:background .2s ease"><i style="position:absolute;top:2px;left:20px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s ease"></i></span></sc-if><sc-if value="{{ capOff }}" hint-placeholder-val="{{ false }}"><span style="width:40px;height:22px;border-radius:11px;background:#CFDAD4;position:relative;transition:background .2s ease"><i style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s ease"></i></span></sc-if>
+        </button>
+        <button style="flex:0 0 auto;background:#FFFDF9;border:1px solid var(--line);border-radius:999px;padding:0 16px;min-height:54px;font-size:14px;font-weight:700;color:var(--ink);font-family:var(--sans);cursor:pointer" style-active="transform:scale(.96)">麥克風</button>
+        <button style="flex:1;background:var(--btn-green);border:none;border-radius:999px;min-height:54px;font-size:16px;font-weight:800;color:#fff;font-family:var(--sans);cursor:pointer;box-shadow:0 6px 16px rgba(55,160,153,.4)" style-active="transform:scale(.97)">開始通話</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Status 狀態（分頁可切換）</p>
+    <div data-screen-label="I-Status" style="width:390px;height:844px;background:#EEF4F1;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);display:flex;flex-direction:column">
+      <div style="flex:1;overflow:hidden;padding:22px 18px 0">
+        <h1 style="margin:6px 0 14px;font-family:var(--serif);font-size:28px;font-weight:900;color:var(--ink)">今天的狀態</h1>
+        <div style="display:flex;background:#fff;border:1px solid #E2EBE6;border-radius:999px;padding:5px;gap:4px;box-shadow:0 6px 16px rgba(58,168,160,.10)">
+          <sc-if value="{{ seg0Sel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ setSeg0 }}" style="flex:1;border:none;border-radius:999px;background:var(--btn-green);color:#fff;font-size:14px;font-weight:800;min-height:40px;font-family:var(--sans);cursor:pointer;transition:all .2s ease">今天</button></sc-if><sc-if value="{{ seg0Unsel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ setSeg0 }}" style="flex:1;border:none;border-radius:999px;background:transparent;color:var(--muted);font-size:14px;font-weight:800;min-height:40px;font-family:var(--sans);cursor:pointer;transition:all .2s ease">今天</button></sc-if>
+          <sc-if value="{{ seg1Sel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ setSeg1 }}" style="flex:1;border:none;border-radius:999px;background:var(--btn-green);color:#fff;font-size:14px;font-weight:800;min-height:40px;font-family:var(--sans);cursor:pointer;transition:all .2s ease">本週</button></sc-if><sc-if value="{{ seg1Unsel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ setSeg1 }}" style="flex:1;border:none;border-radius:999px;background:transparent;color:var(--muted);font-size:14px;font-weight:800;min-height:40px;font-family:var(--sans);cursor:pointer;transition:all .2s ease">本週</button></sc-if>
+          <sc-if value="{{ seg2Sel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ setSeg2 }}" style="flex:1;border:none;border-radius:999px;background:var(--btn-green);color:#fff;font-size:14px;font-weight:800;min-height:40px;font-family:var(--sans);cursor:pointer;transition:all .2s ease">本月</button></sc-if><sc-if value="{{ seg2Unsel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ setSeg2 }}" style="flex:1;border:none;border-radius:999px;background:transparent;color:var(--muted);font-size:14px;font-weight:800;min-height:40px;font-family:var(--sans);cursor:pointer;transition:all .2s ease">本月</button></sc-if>
+        </div>
+        <div style="margin-top:14px;background:#fff;border:1px solid #E2EBE6;border-radius:24px;padding:18px 16px;box-shadow:0 10px 26px rgba(58,168,160,.14)">
+          <p style="margin:0;font-size:13px;font-weight:800;color:var(--teal-dd);letter-spacing:1.5px">安心存摺 · {{ segLabel }}</p>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:12px">
+            {{ ring }}
+            <div style="flex:1">
+              <p style="margin:0;font-size:15px;font-weight:700;color:var(--ink)">準時吃藥</p>
+              <p style="margin:6px 0 0;font-size:13.5px;color:var(--ink-2);line-height:1.5">今天心情不錯，膝蓋的痠我記著、也跟美華說了。</p>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+          <button style="background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:14px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.97)">
+            <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--ink)">128<small style="font-size:14px;color:var(--muted);font-weight:600">/82</small></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:13px;color:var(--muted)">血壓 <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--teal-dd);background:var(--mint);border-radius:8px;padding:2px 7px">穩</em></div>
+          </button>
+          <button style="background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:14px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.97)">
+            <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--ink)">7.5<small style="font-size:14px;color:var(--muted);font-weight:600"> 時</small></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:13px;color:var(--muted)">睡眠 <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--teal-dd);background:var(--mint);border-radius:8px;padding:2px 7px">↗ 好</em></div>
+          </button>
+          <button style="background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:14px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.97)">
+            <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--ink)">2<small style="font-size:14px;color:var(--muted);font-weight:600">/3</small></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:13px;color:var(--muted)">用藥 <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--coral-d);background:var(--coral-soft);border-radius:8px;padding:2px 7px">剩 1 次</em></div>
+          </button>
+          <button style="background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:14px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.97)">
+            <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--ink)">20<small style="font-size:14px;color:var(--muted);font-weight:600"> 分</small></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:13px;color:var(--muted)">活動 <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--teal-dd);background:var(--mint);border-radius:8px;padding:2px 7px">↗ 出門</em></div>
+          </button>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button style="flex:1;display:flex;align-items:center;gap:10px;min-height:54px;background:#fff;border:1px solid #E2EBE6;border-radius:18px;padding:0 12px;font-family:var(--sans);cursor:pointer;box-shadow:0 6px 16px rgba(58,168,160,.10)" style-active="transform:scale(.97)">
+            <span style="width:36px;height:36px;border-radius:12px;background:var(--mint);color:var(--teal-dd);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800">藥</span>
+            <span style="flex:1;text-align:left;font-size:14px;font-weight:700;color:var(--ink)">用藥提醒</span>
+            <span style="font-size:13px;color:var(--muted)">›</span>
+          </button>
+          <button style="flex:1;display:flex;align-items:center;gap:10px;min-height:54px;background:#fff;border:1px solid #E2EBE6;border-radius:18px;padding:0 12px;font-family:var(--sans);cursor:pointer;box-shadow:0 6px 16px rgba(58,168,160,.10)" style-active="transform:scale(.97)">
+            <span style="width:36px;height:36px;border-radius:12px;background:var(--coral-soft);color:var(--coral-d);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800">錄</span>
+            <span style="flex:1;text-align:left;font-size:14px;font-weight:700;color:var(--ink)">過去紀錄</span>
+            <span style="font-size:13px;color:var(--muted)">›</span>
+          </button>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;padding:10px 14px 16px">
+        <div style="height:60px;background:#fff;border:1px solid #E2EBE6;border-radius:999px;box-shadow:0 10px 26px rgba(46,66,62,.16);display:flex;align-items:center;padding:6px">
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">首頁</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">聊聊</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;background:var(--mint)"><b style="font-size:13px;color:var(--teal-dd)">狀態</b></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">家人</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">設定</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAMILY -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Family 家人（出席可點按回覆）</p>
+    <div data-screen-label="I-Family" style="width:390px;height:844px;background:#EEF4F1;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);display:flex;flex-direction:column">
+      <div style="flex:1;overflow:hidden;padding:22px 18px 0">
+        <h1 style="margin:6px 0 14px;font-family:var(--serif);font-size:28px;font-weight:900;color:var(--ink)">全家健康圈</h1>
+        <div style="display:flex;gap:12px">
+          <button style="display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;font-family:var(--sans);cursor:pointer" style-active="transform:scale(.94)"><span style="width:48px;height:48px;border-radius:50%;background:var(--mint-2);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--teal-dd)">全家</span><b style="font-size:12px;color:var(--teal-dd)">全家</b></button>
+          <button style="display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;font-family:var(--sans);cursor:pointer" style-active="transform:scale(.94)"><span style="width:48px;height:48px;border-radius:50%;background:#DCEDE9;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--teal-dd)">嬤</span><span style="font-size:12px;color:var(--muted)">阿嬤</span></button>
+          <button style="display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;font-family:var(--sans);cursor:pointer" style-active="transform:scale(.94)"><span style="width:48px;height:48px;border-radius:50%;background:var(--coral-soft);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--coral-d)">華</span><span style="font-size:12px;color:var(--muted)">美華</span></button>
+          <button style="display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;font-family:var(--sans);cursor:pointer" style-active="transform:scale(.94)"><span style="width:48px;height:48px;border-radius:50%;background:#E4E9DC;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#5A6B45">明</span><span style="font-size:12px;color:var(--muted)">志明</span></button>
+          <button style="display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;font-family:var(--sans);cursor:pointer" style-active="transform:scale(.94)"><span style="width:48px;height:48px;border-radius:50%;background:#EFE8D6;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#8A7440">寶</span><span style="font-size:12px;color:var(--muted)">小寶</span></button>
+          <button style="display:flex;flex-direction:column;align-items:center;gap:5px;background:transparent;border:none;font-family:var(--sans);cursor:pointer" style-active="transform:scale(.94)"><span style="width:48px;height:48px;border-radius:50%;background:#fff;border:1px dashed #C4D2CB;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted)">+</span><span style="font-size:12px;color:var(--muted)">邀請</span></button>
+        </div>
+        <div style="margin-top:18px;background:#fff;border:1px solid #E2EBE6;border-radius:24px;padding:16px;box-shadow:0 10px 26px rgba(58,168,160,.14)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <b style="font-size:13px;font-weight:800;color:var(--teal-dd);letter-spacing:1px">本週 · 一起走路</b>
+            <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--coral-d);background:var(--coral-soft);border-radius:999px;padding:3px 10px">還剩 2 天</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 8px">
+            <b style="font-family:var(--display);font-size:30px;font-weight:800;color:var(--ink)">21,500</b>
+            <span style="font-size:14px;color:var(--muted)">/ 30,000 步</span>
+            <span style="margin-left:auto;font-size:12px;font-weight:800;color:var(--teal-dd);background:var(--mint);border-radius:999px;padding:3px 10px">72%</span>
+          </div>
+          <div style="height:10px;border-radius:5px;background:#DCE8E2"><i style="display:block;width:72%;height:10px;border-radius:5px;background:var(--teal)"></i></div>
+          <div style="display:flex;gap:14px;margin-top:12px">
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)"><span style="width:26px;height:26px;border-radius:50%;background:#DCEDE9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--teal-dd)">嬤</span>3,850</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)"><span style="width:26px;height:26px;border-radius:50%;background:var(--coral-soft);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--coral-d)">華</span>8,900</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)"><span style="width:26px;height:26px;border-radius:50%;background:#EFE8D6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#8A7440">寶</span>8,750</span>
+          </div>
+          <button style="margin-top:12px;width:100%;min-height:46px;background:var(--mint);border:none;border-radius:14px;font-size:14px;font-weight:800;color:var(--teal-dd);font-family:var(--sans);cursor:pointer" style-active="transform:scale(.98)">記今天的步數</button>
+        </div>
+        <div style="margin-top:12px;background:#fff;border:1px solid #E2EBE6;border-radius:24px;padding:16px;box-shadow:0 10px 26px rgba(58,168,160,.14)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <b style="font-size:13px;font-weight:800;color:var(--coral-d);letter-spacing:1px">揪一攤 · 週六聚餐</b>
+            <span style="margin-left:auto;font-size:12px;color:var(--muted)">7/11（週六）傍晚</span>
+          </div>
+          <p style="margin:8px 0 12px;font-size:15px;font-weight:700;color:var(--ink)">阿嬤生日聚餐，誰能到？</p>
+          <div style="display:flex;gap:10px">
+            <sc-if value="{{ yesSel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ rsvpYes }}" style="flex:1;min-height:48px;background:var(--btn-green);border:none;border-radius:14px;font-size:14px;font-weight:800;color:#fff;font-family:var(--sans);cursor:pointer;transition:all .2s ease" style-active="transform:scale(.97)">我會到</button></sc-if><sc-if value="{{ yesUnsel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ rsvpYes }}" style="flex:1;min-height:48px;background:#fff;border:1px solid #CBDCD4;border-radius:14px;font-size:14px;font-weight:800;color:var(--teal-dd);font-family:var(--sans);cursor:pointer;transition:all .2s ease" style-active="transform:scale(.97)">我會到</button></sc-if>
+            <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ rsvpNo }}" style="flex:1;min-height:48px;background:var(--ink);border:none;border-radius:14px;font-size:14px;font-weight:800;color:#fff;font-family:var(--sans);cursor:pointer;transition:all .2s ease" style-active="transform:scale(.97)">沒辦法去</button></sc-if><sc-if value="{{ noUnsel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ rsvpNo }}" style="flex:1;min-height:48px;background:#fff;border:1px solid #CBDCD4;border-radius:14px;font-size:14px;font-weight:800;color:var(--muted);font-family:var(--sans);cursor:pointer;transition:all .2s ease" style-active="transform:scale(.97)">沒辦法去</button></sc-if>
+          </div>
+          <p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">嬤・華 會到 · 明 沒空 · 寶 等回覆</p>
+        </div>
+        <h2 style="margin:18px 2px 10px;font-size:18px;font-weight:800;color:var(--ink)">全家狀態</h2>
+        <button style="width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E2EBE6;border-radius:20px;padding:12px 14px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.98)">
+          <span style="width:42px;height:42px;border-radius:50%;background:#DCEDE9;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--teal-dd)">嬤</span>
+          <span style="flex:1"><span style="display:flex;align-items:center;gap:8px"><b style="font-size:15px;color:var(--ink)">阿嬤</b><em style="font-style:normal;font-size:12px;font-weight:700;color:var(--teal-dd);border:1px solid var(--mint-2);border-radius:8px;padding:1px 7px">平穩</em></span><span style="font-size:12.5px;color:var(--muted)">藥已吃 2/3</span></span>
+          <span style="font-size:15px;color:var(--muted)">›</span>
+        </button>
+      </div>
+      <div style="flex:0 0 auto;padding:10px 14px 16px">
+        <div style="height:60px;background:#fff;border:1px solid #E2EBE6;border-radius:999px;box-shadow:0 10px 26px rgba(46,66,62,.16);display:flex;align-items:center;padding:6px">
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">首頁</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">聊聊</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">狀態</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;background:var(--mint)"><b style="font-size:13px;color:var(--teal-dd)">家人</b></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">設定</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Settings 設定（提醒開關可切換）</p>
+    <div data-screen-label="I-Settings" style="width:390px;height:844px;background:#EEF4F1;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);display:flex;flex-direction:column">
+      <div style="flex:1;overflow:hidden;padding:22px 18px 0">
+        <h1 style="margin:6px 0 14px;font-family:var(--serif);font-size:28px;font-weight:900;color:var(--ink)">設定</h1>
+        <div style="background:#fff;border:1px solid #E2EBE6;border-radius:22px;padding:14px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 16px rgba(58,168,160,.10)">
+          <span style="width:48px;height:48px;border-radius:50%;background:#DCEDE9;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--teal-dd)">嬤</span>
+          <div style="flex:1"><b style="font-size:16px;color:var(--ink)">訪客模式</b><div style="font-size:12.5px;color:var(--muted)">登入後設定會跟著你</div></div>
+          <button style="background:var(--btn-green);color:#fff;border:none;border-radius:14px;min-height:44px;padding:0 20px;font-size:14px;font-weight:800;font-family:var(--sans);cursor:pointer;box-shadow:0 4px 12px rgba(55,160,153,.3)" style-active="transform:scale(.96)">登入</button>
+        </div>
+        <p style="margin:18px 2px 8px;font-size:13px;font-weight:800;color:var(--muted);letter-spacing:1.5px">訂閱與點數</p>
+        <div style="background:#fff;border:1px solid #E2EBE6;border-radius:22px;padding:16px;box-shadow:0 6px 16px rgba(58,168,160,.10)">
+          <div style="display:flex;align-items:center"><b style="font-size:16px;color:var(--ink)">高級方案</b><span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--teal-dd);border:1px solid var(--mint-2);border-radius:999px;padding:2px 10px">我的訂閱</span></div>
+          <p style="margin:12px 0 8px;font-size:14px;color:var(--ink)">點數 <b style="font-family:var(--display);font-size:20px">239</b> 點 <span style="font-size:12.5px;color:var(--muted)">每月送 400 · 已用 161</span></p>
+          <div style="height:10px;border-radius:5px;background:#DCE8E2"><i style="display:block;width:40%;height:10px;border-radius:5px;background:var(--teal)"></i></div>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button style="flex:1;background:#fff;border:1px solid #E2EBE6;border-radius:16px;min-height:48px;font-size:14px;font-weight:700;color:var(--ink);font-family:var(--sans);cursor:pointer" style-active="transform:scale(.97)">管理方案</button>
+            <button style="flex:1;background:var(--btn-green);border:none;border-radius:16px;min-height:48px;font-size:14px;font-weight:800;color:#fff;font-family:var(--sans);cursor:pointer;box-shadow:0 4px 12px rgba(55,160,153,.3)" style-active="transform:scale(.97)">加值點數</button>
+          </div>
+        </div>
+        <p style="margin:18px 2px 8px;font-size:13px;font-weight:800;color:var(--muted);letter-spacing:1.5px">AI 陪伴角色</p>
+        <button style="width:100%;background:#fff;border:1px solid #E2EBE6;border-radius:22px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 16px rgba(58,168,160,.10);font-family:var(--sans);cursor:pointer;text-align:left" style-active="transform:scale(.98)">
+          <img src="./assets/nening.jpg" alt="寧寧" style="width:42px;height:42px;border-radius:14px;object-fit:cover"></img>
+          <span style="flex:1"><b style="display:block;font-size:15px;color:var(--ink)">寧寧</b><span style="font-size:12.5px;color:var(--muted)">溫柔型 · 像家人，會照看</span></span>
+          <span style="font-size:15px;color:var(--muted)">›</span>
+        </button>
+        <p style="margin:18px 2px 8px;font-size:13px;font-weight:800;color:var(--muted);letter-spacing:1.5px">健康資料與安全</p>
+        <div style="background:#fff;border:1px solid #E2EBE6;border-radius:22px;box-shadow:0 6px 16px rgba(58,168,160,.10)">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #EEF3F0">
+            <span style="width:38px;height:38px;border-radius:11px;background:var(--mint);color:var(--teal-dd);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800">健</span>
+            <div style="flex:1"><b style="font-size:15px;color:var(--ink)">Apple 健康</b><div style="font-size:12.5px;color:var(--muted)">步數・心率・睡眠</div></div>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--teal-dd);border:1px solid var(--mint-2);border-radius:999px;padding:3px 10px"><i style="width:6px;height:6px;border-radius:50%;background:var(--teal)"></i>已連接</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #EEF3F0">
+            <span style="width:38px;height:38px;border-radius:11px;background:var(--mint);color:var(--teal-dd);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800">藥</span>
+            <div style="flex:1"><b style="font-size:15px;color:var(--ink)">用藥提醒</b><div style="font-size:12.5px;color:var(--muted)">到時間寧寧親口提醒</div></div>
+            <sc-if value="{{ remindOn }}" hint-placeholder-val="{{ true }}"><button onClick="{{ toggleRemind }}" style="width:52px;height:30px;border-radius:15px;border:none;background:var(--teal);position:relative;cursor:pointer;transition:background .2s ease;padding:0"><i style="position:absolute;top:3px;left:25px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:left .2s ease"></i></button></sc-if><sc-if value="{{ remindOff }}" hint-placeholder-val="{{ false }}"><button onClick="{{ toggleRemind }}" style="width:52px;height:30px;border-radius:15px;border:none;background:#CFDAD4;position:relative;cursor:pointer;transition:background .2s ease;padding:0"><i style="position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:left .2s ease"></i></button></sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px">
+            <span style="width:38px;height:38px;border-radius:11px;background:var(--coral-soft);color:var(--coral-d);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800">字</span>
+            <div style="flex:1"><b style="font-size:15px;color:var(--ink)">字體與顯示</b><div style="font-size:12.5px;color:var(--muted)">字級大小與閱讀舒適</div></div>
+            <span style="font-size:13px;color:var(--muted)">標準 ›</span>
+          </div>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;padding:10px 14px 16px">
+        <div style="height:60px;background:#fff;border:1px solid #E2EBE6;border-radius:999px;box-shadow:0 10px 26px rgba(46,66,62,.16);display:flex;align-items:center;padding:6px">
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">首頁</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">聊聊</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">狀態</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px"><span style="font-size:13px;color:var(--muted)">家人</span></span>
+          <span style="flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;background:var(--mint)"><b style="font-size:13px;color:var(--teal-dd)">設定</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tasks: [false, false, false], seg: 0, captions: true, remind: true, rsvp: null };
+
+  toggleTask(i) {
+    this.setState(s => {
+      const tasks = s.tasks.slice();
+      tasks[i] = !tasks[i];
+      return { tasks };
+    });
+  }
+
+  renderVals() {
+    const { tasks, seg, captions, remind, rsvp } = this.state;
+    const vals = {};
+
+    // Tasks (Home)
+    const done = tasks.filter(Boolean).length;
+    vals.doneCount = done;
+    vals.progBar = React.createElement('i', { style: { display: 'block', width: Math.round((done / 3) * 100) + '%', height: '10px', borderRadius: '5px', background: 'var(--teal)', transition: 'width .35s ease' } });
+    tasks.forEach((t, i) => {
+      vals['t' + i] = t;
+      vals['t' + i + 'Not'] = !t;
+      vals['tap' + i] = () => this.toggleTask(i);
+    });
+
+    // Segmented control (Status)
+    const segData = [
+      { label: '今天', num: 23, den: 30, deg: 277 },
+      { label: '本週', num: 6, den: 7, deg: 309 },
+      { label: '本月', num: 23, den: 30, deg: 277 }
+    ];
+    for (let i = 0; i < 3; i++) {
+      vals['seg' + i + 'Sel'] = seg === i;
+      vals['seg' + i + 'Unsel'] = seg !== i;
+      vals['setSeg' + i] = () => this.setState({ seg: i });
+    }
+    vals.segLabel = segData[seg].label;
+    vals.ring = React.createElement(
+      'span',
+      { style: { position: 'relative', width: '88px', height: '88px', borderRadius: '50%', background: 'conic-gradient(var(--teal) ' + segData[seg].deg + 'deg, #DCE8E2 0)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', transition: 'background .35s ease' } },
+      React.createElement(
+        'span',
+        { style: { width: '66px', height: '66px', borderRadius: '50%', background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
+        React.createElement('b', { style: { fontFamily: 'var(--display)', fontSize: '22px', color: 'var(--ink)', lineHeight: 1 } }, segData[seg].num),
+        React.createElement('span', { style: { fontSize: '10px', color: 'var(--muted)' } }, '/ ' + segData[seg].den + ' 天')
+      )
+    );
+
+    // Captions toggle (Chat)
+    vals.capOn = captions;
+    vals.capOff = !captions;
+    vals.toggleCap = () => this.setState(s => ({ captions: !s.captions }));
+
+    // Reminder toggle (Settings)
+    vals.remindOn = remind;
+    vals.remindOff = !remind;
+    vals.toggleRemind = () => this.setState(s => ({ remind: !s.remind }));
+
+    // RSVP (Family)
+    vals.yesSel = rsvp === 'yes';
+    vals.yesUnsel = rsvp !== 'yes';
+    vals.noSel = rsvp === 'no';
+    vals.noUnsel = rsvp !== 'no';
+    vals.rsvpYes = () => this.setState({ rsvp: 'yes' });
+    vals.rsvpNo = () => this.setState({ rsvp: 'no' });
+
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!-- @dsCard group="V1 暖光演化" -->
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet"><title>V1-Home</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--teal:#3AA8A0;--teal-d:#2E8A83;--teal-dd:#236C66;--coral:#D98841;--coral-d:#A8611E;
+--ink:#3A352E;--ink2:#5A5349;--muted:#5A6963;--cream:#F4F0E8;--mint:#E8F2EE;--mint2:#D9EFE8;
+--line:#EAE3D6;--deep:#36423E;--gold:#C79A3B;--surface:#FFFEFB;--pink:#F0A9CB}
+.frame{width:390px;background:var(--cream);border-radius:30px;overflow:hidden;
+box-shadow:0 24px 70px rgba(0,0,0,.4);font-family:'Noto Sans TC',system-ui,sans-serif;color:var(--ink)}
+.pad{padding:22px 20px 30px}
+.serif{font-family:'Noto Serif TC',Georgia,serif}
+.h1{font-size:27px;font-weight:900;letter-spacing:.5px}
+.kick{font-size:12.5px;font-weight:700;letter-spacing:.12em;color:var(--coral);text-transform:uppercase;margin-bottom:3px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 6px 18px -12px rgba(58,53,46,.25)}
+.row{display:flex;align-items:center}
+/* navbar */
+.navwrap{padding:2px 15px 12px}
+.nav{position:relative;display:flex;align-items:flex-end;height:84px;padding:0 22px}
+.navbg{position:absolute;inset:0;width:100%;height:100%;z-index:0;fill:var(--ink);filter:drop-shadow(0 14px 26px rgba(0,0,0,.3))}
+.nav a{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;padding-bottom:12px;color:var(--cream);cursor:pointer;transition:color .15s}
+.nav a.on{color:var(--teal)}
+.nav a .svg{width:20px;height:20px;stroke-width:1.7}
+.nav a span{font-size:10px;font-weight:600;letter-spacing:.05em;line-height:1}
+.nav a.on span{font-weight:800}
+.nav a.mid{color:var(--cream)}
+.nav>.fab{position:absolute;z-index:2;top:11px;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;background:var(--teal);display:grid;place-items:center}
+.nav>.fab .svg{width:20px;height:20px;stroke:#fff;stroke-width:2.2}
+.svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+body{background:#2b2b2b;display:flex;justify-content:center;padding:24px;min-height:100vh}</style></head><body><div class="frame">
+<div class="pad">
+  <div class="row" style="justify-content:space-between;margin-bottom:16px">
+    <span style="font-size:12.5px;color:var(--muted);font-weight:600">7月6日 週一</span>
+    <span style="font-size:12.5px;color:var(--teal-dd);font-weight:700">☀ 晴 27°</span>
+  </div>
+  <div class="kick">晚安</div>
+  <div class="serif h1" style="margin-bottom:16px">今天辛苦了，早點歇</div>
+  <!-- 寧寧陪伴卡 -->
+  <div class="card" style="padding:16px;margin-bottom:14px;display:flex;gap:13px;align-items:center">
+    <div style="flex:0 0 58px;width:58px;height:58px;border-radius:18px;overflow:hidden;background:var(--mint)">
+      <div style="width:100%;height:100%;background:linear-gradient(135deg,#D9EFE8,#EAD9C4);display:grid;place-items:center;font-size:26px">🌸</div></div>
+    <div style="flex:1"><div style="font-weight:900;font-size:16px" class="serif">寧寧</div>
+      <div style="font-size:13.5px;color:var(--ink2);line-height:1.5;margin-top:2px">記得你膝蓋前兩天痠，今天有好一點嗎？睡前想不想聊聊？</div></div>
+  </div>
+  <button style="width:100%;border:none;background:var(--teal);color:#fff;font-weight:700;font-size:15.5px;padding:15px;border-radius:16px;box-shadow:0 10px 22px -8px rgba(58,168,160,.55);margin-bottom:20px">開始聊聊</button>
+  <!-- 智慧照護輪播 -->
+  <div class="card" style="padding:15px 16px;margin-bottom:20px;background:linear-gradient(180deg,#fff,#FCFAF5)">
+    <div class="row" style="justify-content:space-between;margin-bottom:11px">
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--teal-dd)"><svg width="16" height="16" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor"/></svg>寧寧幫你留意</span>
+      <span style="display:flex;gap:5px"><i style="width:16px;height:6px;border-radius:3px;background:var(--teal-dd)"></i><i style="width:6px;height:6px;border-radius:3px;background:#cfc6b6"></i><i style="width:6px;height:6px;border-radius:3px;background:#cfc6b6"></i></span></div>
+    <div class="row" style="gap:12px">
+      <div style="flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg></div>
+      <div style="flex:1"><div style="font-weight:700;font-size:15px">外婆發起的走路活動進行中</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">還差 5,000 步就達標，今晚一起散步？</div></div>
+      <button style="border:1.5px solid var(--teal-d);background:#fff;color:var(--teal-dd);font-weight:800;font-size:13px;padding:7px 13px;border-radius:999px">去看看</button>
+    </div>
+  </div>
+  <!-- 今日三件事 -->
+  <div class="row" style="justify-content:space-between;margin-bottom:12px">
+    <span class="serif" style="font-size:18px;font-weight:900">今天一起完成</span>
+    <span style="font-size:13px;color:var(--teal-dd);font-weight:800;background:var(--mint2);padding:3px 11px;border-radius:999px">1 / 3</span></div>
+  <div class="card" style="overflow:hidden">
+    <div class="row" style="padding:15px 16px;gap:13px;border-bottom:1px solid var(--line)">
+      <div style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></div>
+      <div style="flex:1"><div style="font-weight:700;font-size:15px">吃血壓藥</div><div style="font-size:12.5px;color:var(--muted)">午餐後 · 今天 0/1 次</div></div>
+      <span style="font-size:14px;font-weight:800;color:var(--coral)">14:00</span>
+      <div style="width:26px;height:26px;border-radius:50%;border:2px solid var(--line);margin-left:10px"></div></div>
+    <div class="row" style="padding:15px 16px;gap:13px;border-bottom:1px solid var(--line)">
+      <div style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg></div>
+      <div style="flex:1"><div style="font-weight:700;font-size:15px">到公園散步</div><div style="font-size:12.5px;color:var(--muted)">天氣正好</div></div>
+      <span style="font-size:14px;font-weight:800;color:var(--coral)">16:30</span>
+      <div style="width:26px;height:26px;border-radius:50%;border:2px solid var(--line);margin-left:10px"></div></div>
+    <div class="row" style="padding:15px 16px;gap:13px">
+      <div style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;background:var(--mint2);display:grid;place-items:center;color:var(--teal)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+      <div style="flex:1"><div style="font-weight:700;font-size:15px;color:var(--muted);text-decoration:line-through">和寧寧聊聊</div><div style="font-size:12.5px;color:var(--muted)">聊了今天的事</div></div>
+      <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);display:grid;place-items:center;color:#fff;margin-left:10px">✓</div></div>
+  </div>
+</div>
+<div class="navwrap"><nav class="nav"><svg class="navbg" viewBox="0 0 358 84" preserveAspectRatio="none"><path d="M20,28 L141,28 A8 8 0 0 0 149.3,24 A31 31 0 0 1 208.7,24 A8 8 0 0 0 217,28 L338,28 A20 20 0 0 1 358,48 L358,62 A20 20 0 0 1 338,82 L20,82 A20 20 0 0 1 0,62 L0,48 A20 20 0 0 1 20,28 Z"/></svg><span class="fab"><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><a class="on"><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>首頁</span></a><a><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>狀態</span></a><a class="mid"><span>聊聊</span></a><a><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M15.5 3.13a4 4 0 0 1 0 7.75"/></svg><span>家人</span></a><a><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.3"/><circle cx="9" cy="16" r="2.3"/></svg><span>設定</span></a></nav></div></body></html>

@@ -1,0 +1,75 @@
+<!-- @dsCard group="V1 暖光演化" -->
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet"><title>V1-Status</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--teal:#3AA8A0;--teal-d:#2E8A83;--teal-dd:#236C66;--coral:#D98841;--coral-d:#A8611E;
+--ink:#3A352E;--ink2:#5A5349;--muted:#8A8175;--cream:#F4F0E8;--mint:#E8F2EE;--mint2:#D9EFE8;
+--line:#EAE3D6;--deep:#36423E;--gold:#C79A3B;--surface:#FFFEFB}
+.frame{width:390px;background:var(--cream);border-radius:30px;overflow:hidden;
+box-shadow:0 24px 70px rgba(0,0,0,.4);font-family:'Noto Sans TC',system-ui,sans-serif;color:var(--ink)}
+.pad{padding:22px 20px 30px}
+.serif{font-family:'Noto Serif TC',Georgia,serif}
+.h1{font-size:27px;font-weight:900;letter-spacing:.5px}
+.kick{font-size:12.5px;font-weight:700;letter-spacing:.12em;color:var(--coral-d);text-transform:uppercase;margin-bottom:3px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 6px 18px -12px rgba(58,53,46,.25)}
+.row{display:flex;align-items:center}
+/* navbar */
+.navwrap{padding:14px 18px 18px}
+.nav{display:flex;align-items:center;justify-content:space-between;background:#2E2A24;border-radius:100px;padding:15px 30px;box-shadow:0 18px 38px -12px rgba(0,0,0,.45)}
+.nav a{color:rgba(255,255,255,.5);display:grid;place-items:center;cursor:pointer}
+.nav a.on{color:#fff}
+.nav a .svg{width:23px;height:23px;stroke-width:2.1}
+.nav .fab{width:58px;height:58px;border-radius:50%;background:var(--teal);display:grid;place-items:center;box-shadow:0 12px 24px -4px rgba(58,168,160,.75);transform:translateY(-16px)}
+.nav .fab .svg{width:26px;height:26px;stroke:#fff;stroke-width:2.2}
+.svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+body{background:#2b2b2b;display:flex;justify-content:center;padding:24px;min-height:100vh}</style></head><body><div class="frame">
+<div class="pad">
+  <div class="kick">今天的身體</div>
+  <div class="serif h1" style="margin-bottom:16px">今天的狀態</div>
+  <div class="row" style="background:#fff;border:1px solid var(--line);border-radius:100px;padding:4px;margin-bottom:16px;box-shadow:0 4px 12px -8px rgba(0,0,0,.15)">
+    <span style="flex:1;text-align:center;padding:8px;border-radius:100px;background:var(--teal);color:#fff;font-weight:700;font-size:14px">今天</span>
+    <span style="flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:var(--ink2)">本週</span>
+    <span style="flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:var(--ink2)">本月</span></div>
+  <!-- 存摺深卡 -->
+  <div style="background:var(--deep);border-radius:22px;padding:17px 18px;color:#fff;margin-bottom:12px;box-shadow:0 12px 28px -14px rgba(54,66,62,.9)">
+    <div style="font-size:13.5px;opacity:.9;font-weight:600;margin-bottom:9px">🏅 安心存摺</div>
+    <div style="margin-bottom:9px"><span style="font-size:13px;opacity:.8">這個月 </span><span class="serif" style="font-size:30px;font-weight:900">23</span><span style="font-size:13px;opacity:.7"> / 30 天</span><span style="font-size:14px;opacity:.9"> 準時吃藥</span></div>
+    <div style="height:6px;background:rgba(255,255,255,.16);border-radius:99px;overflow:hidden"><i style="display:block;width:77%;height:100%;background:var(--teal);border-radius:99px"></i></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:13px;padding-top:13px;border-top:1px solid rgba(255,255,255,.14)">
+      <div style="flex:0 0 32px;width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#D9EFE8,#EAD9C4);display:grid;place-items:center;font-size:16px">🌸</div>
+      <div style="font-size:13px;opacity:.92;line-height:1.5">今天心情不錯，膝蓋的痠我記著、也跟美華說了。</div></div>
+  </div>
+  <!-- 四數據磚：卡內迷你圖表（V1 招牌升級）-->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px">
+    <div class="card" style="padding:14px">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><div style="width:34px;height:34px;border-radius:11px;background:var(--teal);display:grid;place-items:center;color:#fff">❤</div>
+        <span style="font-size:11px;font-weight:800;color:var(--teal-dd);background:var(--mint);padding:2px 8px;border-radius:99px">穩</span></div>
+      <div><span class="serif" style="font-size:23px;font-weight:900;color:var(--teal-dd)">128</span><span style="font-size:13px;color:var(--muted)">/82</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">血壓</div>
+      <svg viewBox="0 0 120 30" style="width:100%;height:26px"><polyline points="0,20 20,14 40,17 60,9 80,13 100,7 120,11" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><div style="width:34px;height:34px;border-radius:11px;background:var(--gold);display:grid;place-items:center;color:#fff">🌙</div>
+        <span style="font-size:11px;font-weight:800;color:#8A6410;background:#F6ECD2;padding:2px 8px;border-radius:99px">↗ 好</span></div>
+      <div><span class="serif" style="font-size:23px;font-weight:900;color:#8A6410">7.5</span><span style="font-size:13px;color:var(--muted)"> 時</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">睡眠</div>
+      <svg viewBox="0 0 120 30" style="width:100%;height:26px"><path d="M4 26 a22 22 0 0 1 112 0" fill="none" stroke="#E7D3A0" stroke-width="5" stroke-linecap="round"/><path d="M4 26 a22 22 0 0 1 84 -18" fill="none" stroke="var(--gold)" stroke-width="5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><div style="width:34px;height:34px;border-radius:11px;background:var(--coral);display:grid;place-items:center;color:#fff">💊</div>
+        <span style="font-size:11px;font-weight:800;color:var(--coral-d);background:#F6E4D3;padding:2px 8px;border-radius:99px">剩 1 次</span></div>
+      <div><span class="serif" style="font-size:23px;font-weight:900;color:var(--coral-d)">2</span><span style="font-size:13px;color:var(--muted)">/3</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">用藥</div>
+      <div style="display:flex;gap:6px"><i style="flex:1;height:8px;border-radius:99px;background:var(--coral-d)"></i><i style="flex:1;height:8px;border-radius:99px;background:var(--coral-d)"></i><i style="flex:1;height:8px;border-radius:99px;background:#EAD9C4"></i></div>
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><div style="width:34px;height:34px;border-radius:11px;background:var(--teal-dd);display:grid;place-items:center;color:#fff">👟</div>
+        <span style="font-size:11px;font-weight:800;color:var(--teal-dd);background:var(--mint);padding:2px 8px;border-radius:99px">↗ 出門</span></div>
+      <div><span class="serif" style="font-size:23px;font-weight:900;color:var(--teal-dd)">20</span><span style="font-size:13px;color:var(--muted)"> 分</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">活動</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:26px"><i style="flex:1;height:40%;background:#CDE6DE;border-radius:3px"></i><i style="flex:1;height:60%;background:#CDE6DE;border-radius:3px"></i><i style="flex:1;height:100%;background:var(--teal-dd);border-radius:3px"></i></div>
+    </div>
+  </div>
+  <div class="card" style="padding:14px 16px;display:flex;align-items:center;gap:12px;background:var(--mint)">
+    <span style="font-size:18px">⌚</span><div style="flex:1;font-size:13.5px;color:var(--ink2);line-height:1.5">接上 <b>Apple 健康</b>，步數睡眠自動帶入。<b style="color:var(--teal-d)">管理裝置 ›</b></div></div>
+</div>
+<div class="navwrap"><div class="nav"><a class=""><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg></a><a class="on"><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></a><a class="fab"><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></a><a class=""><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg></a><a class=""><svg class="svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></a></div></div></div></body></html>

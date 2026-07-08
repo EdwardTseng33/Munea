@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script></helmet>
+<div style="display:flex;gap:28px;align-items:flex-start;font-family:var(--sans)">
+
+  <!-- ============ HOME ============ -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Home 首頁</p>
+    <div data-screen-label="B-Home" style="width:390px;height:844px;background:#FCFBF8;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);position:relative">
+      <div style="padding:26px 24px 0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:13px;color:var(--muted);letter-spacing:1px">7月4日 週六 · 晴 26°</span>
+          <span style="font-size:13px;font-weight:700;color:var(--teal-dd)">下午好</span>
+        </div>
+        <h1 style="margin:22px 0 0;font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.5px;line-height:1.35">陽光正好，<br>出門走走吧</h1>
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin:26px 0 22px">
+          <img src="./assets/nening.jpg" alt="寧寧" style="width:84px;height:84px;border-radius:50%;object-fit:cover"></img>
+          <b style="margin-top:10px;font-size:16px;color:var(--ink)">寧寧</b>
+          <p style="margin:6px 0 0;max-width:280px;font-size:14px;color:var(--ink-2);line-height:1.55">記得你說，孫子快畢業了——跟我聊聊今天？</p>
+          <button style="margin-top:14px;min-height:48px;padding:0 44px;background:var(--btn-green);color:#fff;border:none;border-radius:999px;font-size:15px;font-weight:800;font-family:var(--sans);cursor:pointer">開始聊聊</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid #EFEBE2;padding-top:18px">
+          <h2 style="margin:0;font-size:15px;font-weight:800;color:var(--ink);letter-spacing:1px">今天一起完成</h2>
+          <span style="font-size:13px;color:var(--muted);font-family:var(--display)">0 / 3</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid #EFEBE2">
+          <span style="width:24px;height:24px;border-radius:50%;border:1.5px solid #D8D2C6;flex:0 0 auto"></span>
+          <div style="flex:1"><div style="font-size:16px;font-weight:600;color:var(--ink)">吃脈優</div><div style="font-size:12.5px;color:var(--muted)">午餐後 · 今天 0/1 次</div></div>
+          <span style="font-size:14px;font-weight:600;color:var(--teal-dd);font-family:var(--display)">14:00</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid #EFEBE2">
+          <span style="width:24px;height:24px;border-radius:50%;border:1.5px solid #D8D2C6;flex:0 0 auto"></span>
+          <div style="flex:1"><div style="font-size:16px;font-weight:600;color:var(--ink)">到公園散步</div><div style="font-size:12.5px;color:var(--muted)">天氣正好</div></div>
+          <span style="font-size:14px;font-weight:600;color:var(--coral-d);font-family:var(--display)">16:30</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid #EFEBE2">
+          <span style="width:24px;height:24px;border-radius:50%;border:1.5px solid #D8D2C6;flex:0 0 auto"></span>
+          <div style="flex:1"><div style="font-size:16px;font-weight:600;color:var(--ink)">和寧寧聊聊</div><div style="font-size:12.5px;color:var(--muted)">說說今天的事</div></div>
+          <span style="font-size:14px;font-weight:600;color:var(--muted)">隨時</span>
+        </div>
+        <h2 style="margin:20px 0 2px;font-size:15px;font-weight:800;color:var(--ink);letter-spacing:1px">幫你留意</h2>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #EFEBE2">
+          <p style="flex:1;margin:0;font-size:14px;color:var(--ink-2)"><b style="color:var(--ink)">你</b>托寧寧帶話給美華：明天回診</p>
+          <button style="background:transparent;border:1px solid #D8D2C6;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;color:var(--teal-dd);font-family:var(--sans);cursor:pointer">回話</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 0">
+          <p style="flex:1;margin:0;font-size:14px;color:var(--ink-2)"><b style="color:var(--ink)">外婆</b>發起的走路活動進行中</p>
+          <button style="background:transparent;border:1px solid #D8D2C6;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;color:var(--teal-dd);font-family:var(--sans);cursor:pointer">去看看</button>
+        </div>
+      </div>
+      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:16px;display:flex;gap:2px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 24px -8px rgba(31,60,52,.25)">
+        <b style="background:var(--mint);color:var(--teal-dd);border-radius:999px;padding:9px 16px;font-size:13px">首頁</b>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">聊聊</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">狀態</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">家人</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">設定</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CHAT ============ -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Chat 聊聊（通話）</p>
+    <div data-screen-label="B-Chat" style="width:390px;height:844px;background:var(--deep);border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);position:relative">
+      <img src="./assets/nening-face.jpg" alt="寧寧" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></img>
+      <div style="position:absolute;top:20px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px">
+        <b style="background:#fff;border-radius:999px;padding:7px 18px;font-size:14px;color:var(--ink)">寧寧</b>
+        <span style="background:#fff;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--muted);font-family:var(--display)">00:00 · 剩 239 點</span>
+      </div>
+      <div style="position:absolute;left:0;right:0;bottom:150px;display:flex;justify-content:center">
+        <span style="background:#fff;border-radius:999px;padding:10px 22px;font-size:15px;font-weight:600;color:var(--ink)">直接說，我在這裡</span>
+      </div>
+      <div style="position:absolute;left:0;right:0;bottom:24px;display:flex;justify-content:center;align-items:flex-start;gap:22px">
+        <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><button style="width:56px;height:56px;border-radius:50%;background:#fff;border:none;font-size:13px;font-weight:700;color:var(--ink);font-family:var(--sans);cursor:pointer">字幕</button><i style="font-style:normal;font-size:11px;color:#fff;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.4)">開</i></span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><button style="min-width:150px;height:56px;border-radius:999px;background:var(--btn-green);border:none;font-size:16px;font-weight:800;color:#fff;font-family:var(--sans);cursor:pointer">開始通話</button><i style="font-style:normal;font-size:11px;color:transparent">·</i></span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><button style="width:56px;height:56px;border-radius:50%;background:#fff;border:none;font-size:13px;font-weight:700;color:var(--ink);font-family:var(--sans);cursor:pointer">收音</button><i style="font-style:normal;font-size:11px;color:#fff;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.4)">開</i></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STATUS ============ -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Status 狀態</p>
+    <div data-screen-label="B-Status" style="width:390px;height:844px;background:#FCFBF8;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);position:relative">
+      <div style="padding:26px 24px 0">
+        <h1 style="margin:6px 0 16px;font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.5px">今天的狀態</h1>
+        <div style="display:flex;gap:22px;border-bottom:1px solid #EFEBE2">
+          <span style="padding:0 2px 10px;font-size:15px;font-weight:800;color:var(--teal-dd);border-bottom:3px solid var(--teal);margin-bottom:-1px">今天</span>
+          <span style="padding:0 2px 10px;font-size:15px;color:var(--muted)">本週</span>
+          <span style="padding:0 2px 10px;font-size:15px;color:var(--muted)">本月</span>
+        </div>
+        <div style="padding:20px 0 18px;border-bottom:1px solid #EFEBE2">
+          <p style="margin:0;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:2px">安心存摺</p>
+          <p style="margin:8px 0 12px;font-size:16px;color:var(--ink)">這個月 <b style="font-family:var(--display);font-size:36px;font-weight:700;color:var(--teal-dd)">23</b><span style="color:var(--muted)">/30 天</span> 準時吃藥</p>
+          <div style="height:4px;border-radius:2px;background:#EFEBE2"><i style="display:block;width:77%;height:4px;border-radius:2px;background:var(--teal)"></i></div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+            <img src="./assets/nening.jpg" alt="寧寧" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto"></img>
+            <p style="margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.5">今天心情不錯，膝蓋的痠我記著、也跟美華說了。</p>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <div style="padding:18px 14px 16px 0;border-bottom:1px solid #EFEBE2;border-right:1px solid #EFEBE2">
+            <div style="font-size:12.5px;color:var(--muted)">血壓</div>
+            <div style="margin-top:4px;font-family:var(--display);font-size:30px;font-weight:700;color:var(--ink)">128<small style="font-size:15px;color:var(--muted);font-weight:500">/82</small></div>
+            <div style="margin-top:2px;font-size:12.5px;font-weight:700;color:var(--teal-dd)">穩定</div>
+          </div>
+          <div style="padding:18px 0 16px 16px;border-bottom:1px solid #EFEBE2">
+            <div style="font-size:12.5px;color:var(--muted)">睡眠</div>
+            <div style="margin-top:4px;font-family:var(--display);font-size:30px;font-weight:700;color:var(--ink)">7.5<small style="font-size:15px;color:var(--muted);font-weight:500"> 時</small></div>
+            <div style="margin-top:2px;font-size:12.5px;font-weight:700;color:var(--teal-dd)">↗ 比平常好</div>
+          </div>
+          <div style="padding:16px 14px 14px 0;border-right:1px solid #EFEBE2">
+            <div style="font-size:12.5px;color:var(--muted)">用藥</div>
+            <div style="margin-top:4px;font-family:var(--display);font-size:30px;font-weight:700;color:var(--ink)">2<small style="font-size:15px;color:var(--muted);font-weight:500">/3</small></div>
+            <div style="margin-top:2px;font-size:12.5px;font-weight:700;color:var(--coral-d)">剩 1 次 · 14:00</div>
+          </div>
+          <div style="padding:16px 0 14px 16px">
+            <div style="font-size:12.5px;color:var(--muted)">活動</div>
+            <div style="margin-top:4px;font-family:var(--display);font-size:30px;font-weight:700;color:var(--ink)">20<small style="font-size:15px;color:var(--muted);font-weight:500"> 分</small></div>
+            <div style="margin-top:2px;font-size:12.5px;font-weight:700;color:var(--teal-dd)">↗ 有出門</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid #EFEBE2">
+          <div style="display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid #EFEBE2">
+            <span style="flex:1;font-size:15px;font-weight:600;color:var(--ink)">用藥提醒</span>
+            <span style="font-size:13px;color:var(--muted)">1 種藥</span><span style="font-size:15px;color:var(--muted)">›</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid #EFEBE2">
+            <span style="flex:1;font-size:15px;font-weight:600;color:var(--ink)">回診摘要</span>
+            <span style="font-size:15px;color:var(--muted)">›</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:15px 0">
+            <span style="flex:1;font-size:15px;font-weight:600;color:var(--ink)">過去紀錄</span>
+            <span style="font-size:13px;color:var(--muted)">保存 1 年</span><span style="font-size:15px;color:var(--muted)">›</span>
+          </div>
+        </div>
+      </div>
+      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:16px;display:flex;gap:2px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 24px -8px rgba(31,60,52,.25)">
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">首頁</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">聊聊</span>
+        <b style="background:var(--mint);color:var(--teal-dd);border-radius:999px;padding:9px 16px;font-size:13px">狀態</b>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">家人</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">設定</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FAMILY ============ -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Family 家人</p>
+    <div data-screen-label="B-Family" style="width:390px;height:844px;background:#FCFBF8;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);position:relative">
+      <div style="padding:26px 24px 0">
+        <h1 style="margin:6px 0 16px;font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.5px">全家健康圈</h1>
+        <div style="display:flex;gap:16px;padding-bottom:18px;border-bottom:1px solid #EFEBE2">
+          <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff">全家</span><b style="font-size:12px;color:var(--teal-dd)">全家</b></span>
+          <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:#DCEDE9;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--teal-dd)">嬤</span><span style="font-size:12px;color:var(--muted)">阿嬤</span></span>
+          <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:var(--coral-soft);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--coral-d)">華</span><span style="font-size:12px;color:var(--muted)">美華</span></span>
+          <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:#E4E9DC;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#5A6B45">明</span><span style="font-size:12px;color:var(--muted)">志明</span></span>
+          <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:#EFE8D6;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#8A7440">寶</span><span style="font-size:12px;color:var(--muted)">小寶</span></span>
+          <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:transparent;border:1px dashed #D8D2C6;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted)">+</span><span style="font-size:12px;color:var(--muted)">邀請</span></span>
+        </div>
+        <div style="padding:18px 0;border-bottom:1px solid #EFEBE2">
+          <div style="display:flex;align-items:baseline">
+            <span style="font-size:12px;font-weight:800;color:var(--muted);letter-spacing:2px">本週 · 一起走路</span>
+            <span style="margin-left:auto;font-size:12.5px;font-weight:700;color:var(--coral-d)">還剩 2 天</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin:10px 0 12px">
+            <b style="font-family:var(--display);font-size:36px;font-weight:700;color:var(--ink)">21,500</b>
+            <span style="font-size:14px;color:var(--muted)">/ 30,000 步 · 72%</span>
+          </div>
+          <div style="height:4px;border-radius:2px;background:#EFEBE2"><i style="display:block;width:72%;height:4px;border-radius:2px;background:var(--teal)"></i></div>
+          <div style="display:flex;gap:16px;margin-top:12px">
+            <span style="font-size:13px;color:var(--ink-2)">阿嬤 <b style="font-family:var(--display)">3,850</b></span>
+            <span style="font-size:13px;color:var(--ink-2)">美華 <b style="font-family:var(--display)">8,900</b></span>
+            <span style="font-size:13px;color:var(--ink-2)">小寶 <b style="font-family:var(--display)">8,750</b></span>
+          </div>
+          <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">還差 8,500 步，今晚一起散個步就到了</p>
+        </div>
+        <div style="padding:18px 0;border-bottom:1px solid #EFEBE2">
+          <div style="display:flex;align-items:baseline">
+            <span style="font-size:12px;font-weight:800;color:var(--muted);letter-spacing:2px">揪一攤 · 週六聚餐</span>
+            <span style="margin-left:auto;font-size:12.5px;color:var(--muted)">7/11 傍晚</span>
+          </div>
+          <p style="margin:8px 0 10px;font-size:16px;font-weight:600;color:var(--ink)">阿嬤生日聚餐，誰能到？</p>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px">
+            <span style="color:var(--ink)">阿嬤 <b style="color:var(--teal-dd)">會到</b></span>
+            <span style="color:var(--ink)">美華 <b style="color:var(--teal-dd)">會到</b></span>
+            <span style="color:var(--muted)">志明 沒空</span>
+            <span style="color:var(--ink)">小寶 <b style="color:var(--coral-d)">等回覆</b></span>
+          </div>
+        </div>
+        <h2 style="margin:18px 0 2px;font-size:15px;font-weight:800;color:var(--ink);letter-spacing:1px">全家狀態</h2>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #EFEBE2">
+          <span style="width:40px;height:40px;border-radius:50%;background:#DCEDE9;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--teal-dd)">嬤</span>
+          <div style="flex:1;display:flex;align-items:baseline;gap:8px"><b style="font-size:15px;color:var(--ink)">阿嬤</b><span style="font-size:12.5px;color:var(--muted)">藥已吃 2/3</span></div>
+          <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--teal-dd);border:1px solid var(--mint-2);border-radius:999px;padding:2px 9px">平穩</em>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #EFEBE2">
+          <span style="width:40px;height:40px;border-radius:50%;background:var(--coral-soft);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--coral-d)">華</span>
+          <div style="flex:1;display:flex;align-items:baseline;gap:8px"><b style="font-size:15px;color:var(--ink)">美華</b><span style="font-size:12.5px;color:var(--muted)">睡眠偏少</span></div>
+          <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--coral-d);border:1px solid #F0DBC4;border-radius:999px;padding:2px 9px">有點累</em>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #EFEBE2">
+          <span style="width:40px;height:40px;border-radius:50%;background:#E4E9DC;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#5A6B45">明</span>
+          <div style="flex:1;display:flex;align-items:baseline;gap:8px"><b style="font-size:15px;color:var(--ink)">志明</b><span style="font-size:12.5px;color:var(--muted)">這週很規律</span></div>
+          <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--teal-dd);border:1px solid var(--mint-2);border-radius:999px;padding:2px 9px">不錯</em>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 0">
+          <span style="width:40px;height:40px;border-radius:50%;background:#EFE8D6;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#8A7440">寶</span>
+          <div style="flex:1;display:flex;align-items:baseline;gap:8px"><b style="font-size:15px;color:var(--ink)">小寶</b><span style="font-size:12.5px;color:var(--muted)">活蹦亂跳</span></div>
+          <em style="font-style:normal;font-size:12px;font-weight:700;color:var(--teal-dd);border:1px solid var(--mint-2);border-radius:999px;padding:2px 9px">開心</em>
+        </div>
+      </div>
+      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:16px;display:flex;gap:2px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 24px -8px rgba(31,60,52,.25)">
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">首頁</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">聊聊</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">狀態</span>
+        <b style="background:var(--mint);color:var(--teal-dd);border-radius:999px;padding:9px 16px;font-size:13px">家人</b>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">設定</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div style="flex:0 0 auto">
+    <p style="font-family:monospace;font-size:12px;color:#9A958C;margin:0 0 10px 4px">Settings 設定</p>
+    <div data-screen-label="B-Settings" style="width:390px;height:844px;background:#FCFBF8;border-radius:32px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);position:relative">
+      <div style="padding:26px 24px 0">
+        <h1 style="margin:6px 0 16px;font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.5px">設定</h1>
+        <div style="display:flex;align-items:center;gap:14px;padding:6px 0 18px;border-bottom:1px solid #EFEBE2">
+          <span style="width:52px;height:52px;border-radius:50%;background:#DCEDE9;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:var(--teal-dd)">嬤</span>
+          <div style="flex:1"><b style="font-size:16px;color:var(--ink)">訪客模式</b><div style="font-size:12.5px;color:var(--muted)">登入後設定會跟著你</div></div>
+          <button style="background:var(--btn-green);color:#fff;border:none;border-radius:999px;min-height:40px;padding:0 22px;font-size:14px;font-weight:800;font-family:var(--sans);cursor:pointer">登入</button>
+        </div>
+        <p style="margin:18px 0 4px;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:2px">訂閱與點數</p>
+        <div style="padding:10px 0 16px;border-bottom:1px solid #EFEBE2">
+          <div style="display:flex;align-items:baseline"><b style="font-size:16px;color:var(--ink)">高級方案</b><span style="margin-left:auto;font-size:12.5px;color:var(--muted)">我的訂閱</span></div>
+          <p style="margin:10px 0 10px;font-size:14px;color:var(--ink)">點數 <b style="font-family:var(--display);font-size:24px;font-weight:700;color:var(--teal-dd)">239</b> 點 <span style="font-size:12.5px;color:var(--muted)">每月送 400 · 已用 161</span></p>
+          <div style="height:4px;border-radius:2px;background:#EFEBE2"><i style="display:block;width:40%;height:4px;border-radius:2px;background:var(--teal)"></i></div>
+          <p style="margin:10px 0 12px;font-size:12.5px;color:var(--muted)">240 點約可通話 240 分鐘；基本陪伴不限量、不會中斷</p>
+          <div style="display:flex;gap:10px">
+            <button style="flex:1;background:transparent;border:1px solid #D8D2C6;border-radius:999px;min-height:44px;font-size:14px;font-weight:700;color:var(--ink);font-family:var(--sans);cursor:pointer">管理方案</button>
+            <button style="flex:1;background:var(--btn-green);border:none;border-radius:999px;min-height:44px;font-size:14px;font-weight:800;color:#fff;font-family:var(--sans);cursor:pointer">加值點數</button>
+          </div>
+        </div>
+        <p style="margin:18px 0 2px;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:2px">AI 陪伴角色</p>
+        <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #EFEBE2">
+          <img src="./assets/nening.jpg" alt="寧寧" style="width:44px;height:44px;border-radius:50%;object-fit:cover"></img>
+          <div style="flex:1"><b style="font-size:15px;color:var(--ink)">寧寧</b><div style="font-size:12.5px;color:var(--muted)">溫柔型 · 像家人，會照看</div></div>
+          <span style="font-size:15px;color:var(--muted)">›</span>
+        </div>
+        <p style="margin:18px 0 2px;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:2px">健康資料與安全</p>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #EFEBE2">
+          <div style="flex:1"><b style="font-size:15px;color:var(--ink)">Apple 健康</b><div style="font-size:12.5px;color:var(--muted)">步數・心率・睡眠</div></div>
+          <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--teal-dd)"><i style="width:6px;height:6px;border-radius:50%;background:var(--teal)"></i>已連接</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #EFEBE2">
+          <div style="flex:1"><b style="font-size:15px;color:var(--ink)">用藥提醒</b><div style="font-size:12.5px;color:var(--muted)">到時間寧寧親口提醒</div></div>
+          <span style="font-size:13px;color:var(--muted)">1 種藥 ›</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #EFEBE2">
+          <div style="flex:1"><b style="font-size:15px;color:var(--ink)">看診提醒</b><div style="font-size:12.5px;color:var(--muted)">回診前一天提醒你</div></div>
+          <span style="font-size:13px;color:var(--muted)">未設定 ›</span>
+        </div>
+        <p style="margin:18px 0 2px;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:2px">App 體驗</p>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 0">
+          <div style="flex:1"><b style="font-size:15px;color:var(--ink)">字體與顯示</b><div style="font-size:12.5px;color:var(--muted)">字級大小與閱讀舒適</div></div>
+          <span style="font-size:13px;color:var(--muted)">標準 ›</span>
+        </div>
+      </div>
+      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:16px;display:flex;gap:2px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 24px -8px rgba(31,60,52,.25)">
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">首頁</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">聊聊</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">狀態</span>
+        <span style="color:var(--muted);border-radius:999px;padding:9px 16px;font-size:13px">家人</span>
+        <b style="background:var(--mint);color:var(--teal-dd);border-radius:999px;padding:9px 16px;font-size:13px">設定</b>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
