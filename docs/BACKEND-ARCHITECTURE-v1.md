@@ -125,6 +125,7 @@ Prototype coverage:
 - `/app-profile`
 - `/account-bootstrap`
 - `/family/invitations`
+- `/family-members`
 - `/consent-records`
 - `/companion-profile`
 - `/routine-reminders`
@@ -139,7 +140,7 @@ Frontend bridge:
 
 Missing:
 
-- family membership role update route.
+- production UI binding for family membership role updates.
 
 ### Voice, Avatar, And Memory
 

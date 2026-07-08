@@ -191,7 +191,33 @@ assert profile["displayName"] == "Nening"
 assert profile["nameTouched"] is True
 
 def fake_request(method, table, query=None, payload=None, prefer=None):
+    contact_person_id = "88888888-8888-4888-8888-888888888888"
+    local_member_id = "local-family-daughter"
+    if method == "DELETE":
+        if table == "family_memberships":
+            return [{
+                "id": "family-membership-contact",
+                "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+                "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+                "person_id": contact_person_id,
+                "role": "viewer",
+                "permissions": {"originalMemberId": local_member_id, "receiveSafetyAlerts": False},
+                "created_at": "2026-07-08T00:00:00Z",
+                "updated_at": "2026-07-08T00:00:00Z",
+            }]
     if method in ("POST", "PATCH"):
+        if table == "persons":
+            person_id = contact_person_id
+            if query and str(query.get("id", "")).startswith("eq."):
+                person_id = str(query["id"])[3:]
+            return [{**payload, "id": payload.get("id") or person_id, "created_at": "2026-07-08T00:00:00Z", "updated_at": "2026-07-08T00:00:00Z"}]
+        if table == "family_memberships":
+            return [{
+                **payload,
+                "id": payload.get("id") or "family-membership-contact",
+                "created_at": "2026-07-08T00:00:00Z",
+                "updated_at": "2026-07-08T00:00:00Z",
+            }]
         if table == "subscription_ledger":
             return [{**payload, "id": "sub-ledger-1", "updated_at": "2026-06-29T00:00:00Z"}]
         if table == "usage_ledger":
@@ -244,17 +270,23 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "updated_at": "2026-06-29T00:00:00Z",
         }],
         "persons": [{
-            "id": env["MUNEA_SUPABASE_PERSON_ID"],
-            "display_name": "Primary user",
-            "relationship": "self",
+            "id": contact_person_id if query and str(query.get("id", "")) == f"eq.{contact_person_id}" else env["MUNEA_SUPABASE_PERSON_ID"],
+            "display_name": "Daughter" if query and str(query.get("id", "")) == f"eq.{contact_person_id}" else "Primary user",
+            "relationship": "daughter" if query and str(query.get("id", "")) == f"eq.{contact_person_id}" else "self",
         }],
         "family_groups": [{
             "id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"] or "33333333-3333-4333-8333-333333333333",
             "name": "Munea Care Circle",
         }],
         "family_memberships": [{
-            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
-            "role": "primary_user",
+            "id": "family-membership-contact" if query and "permissions->>originalMemberId" in (query or {}) else "family-membership-primary",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+            "person_id": contact_person_id if query and "permissions->>originalMemberId" in (query or {}) else env["MUNEA_SUPABASE_PERSON_ID"],
+            "role": "viewer" if query and "permissions->>originalMemberId" in (query or {}) else "primary_user",
+            "permissions": {"originalMemberId": local_member_id, "receiveSafetyAlerts": False} if query and "permissions->>originalMemberId" in (query or {}) else {"manageCompanion": True},
+            "created_at": "2026-07-08T00:00:00Z",
+            "updated_at": "2026-07-08T00:00:00Z",
         }],
         "companion_profiles": [{
             "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
@@ -582,6 +614,26 @@ assert privacy_store["requests"][0]["type"] == "export"
 privacy_req = adapter.append_privacy_request("account_deletion", {"reason": "test"})
 assert privacy_req["type"] == "account_deletion"
 assert privacy_req["subscriptionNoticeRequired"] is True
+family_members = adapter.load_family_members(limit=10)
+assert family_members[0]["role"] == "primary_user"
+saved_member = adapter.save_family_member({
+    "id": "local-family-daughter",
+    "displayName": "Daughter",
+    "relationship": "daughter",
+    "role": "viewer",
+    "permissions": {"receiveSafetyAlerts": False},
+})
+assert saved_member["id"] == "local-family-daughter"
+assert saved_member["role"] == "viewer"
+updated_member = adapter.update_family_member("local-family-daughter", {
+    "role": "caregiver",
+    "permissions": {"receiveSafetyAlerts": True, "manageReminders": True},
+})
+assert updated_member["role"] == "caregiver"
+assert updated_member["permissions"]["originalMemberId"] == "local-family-daughter"
+assert updated_member["permissions"]["manageReminders"] is True
+removed_member = adapter.remove_family_member("local-family-daughter")
+assert removed_member["id"] == "local-family-daughter"
 routine_reminders = adapter.load_routine_reminders(status="active", limit=10)
 assert routine_reminders[0]["title"] == "Vitamin D after breakfast"
 assert routine_reminders[0]["type"] == "medication"
@@ -978,6 +1030,106 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 print("family invitation cloud bridge OK")
 '@
 Pass "Family invitations can use Supabase while preserving JSON fallback"
+
+Step "Family members cloud bridge contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeFamilyMembersBackend:
+    def enabled(self):
+        return True
+    def load_family_members(self, family_group_id=None, limit=100):
+        assert family_group_id in (None, "family-1")
+        return [{
+            "id": "member-1",
+            "displayName": "Daughter",
+            "relationship": "daughter",
+            "role": "viewer",
+            "permissions": {"receiveSafetyAlerts": False},
+        }]
+    def save_family_member(self, member, family_group_id=None):
+        assert family_group_id == "family-1"
+        assert member["displayName"] == "Son"
+        return {**member, "id": "member-2"}
+    def update_family_member(self, member_id, patch, family_group_id=None):
+        assert member_id == "member-2"
+        assert patch["role"] == "caregiver"
+        return {
+            "id": member_id,
+            "displayName": "Son",
+            "relationship": "son",
+            "role": "caregiver",
+            "permissions": patch.get("permissions") or {},
+        }
+    def remove_family_member(self, member_id, family_group_id=None):
+        assert member_id == "member-2"
+        return {
+            "id": member_id,
+            "displayName": "Son",
+            "relationship": "son",
+            "role": "caregiver",
+            "permissions": {},
+        }
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeFamilyMembersBackend()
+    listed = server.family_members_response({"action": "list", "familyGroupId": "family-1"})
+    assert listed["ok"] is True
+    assert listed["members"][0]["role"] == "viewer"
+    saved = server.family_members_response({"action": "save", "familyGroupId": "family-1", "member": {"displayName": "Son", "relationship": "son", "role": "viewer"}})
+    assert saved["backend"] == "supabase"
+    assert saved["member"]["id"] == "member-2"
+    updated = server.family_members_response({"action": "update", "id": "member-2", "patch": {"role": "caregiver", "permissions": {"manageReminders": True}}})
+    assert updated["backend"] == "supabase"
+    assert updated["member"]["role"] == "caregiver"
+    removed = server.family_members_response({"action": "remove", "id": "member-2"})
+    assert removed["backend"] == "supabase"
+finally:
+    server.data_backend = original_backend
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def load_family_members(self, family_group_id=None, limit=100):
+        return None
+    def save_family_member(self, member, family_group_id=None):
+        return None
+    def update_family_member(self, member_id, patch, family_group_id=None):
+        return None
+    def remove_family_member(self, member_id, family_group_id=None):
+        return None
+    def load_app_profile_store(self):
+        return None
+    def save_app_profile_store(self, store):
+        return None
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
+    server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        saved = server.family_members_response({"action": "save", "member": {"id": "local-son", "displayName": "Son", "relationship": "son", "role": "viewer"}})
+        assert saved["backend"] == "json"
+        listed = server.family_members_response({"action": "list"})
+        assert any(m["id"] == "local-son" for m in listed["members"])
+        updated = server.family_members_response({"action": "update", "id": "local-son", "patch": {"role": "caregiver", "permissions": {"manageReminders": True}}})
+        assert updated["backend"] == "json"
+        assert updated["member"]["role"] == "caregiver"
+        assert updated["member"]["permissions"]["manageReminders"] is True
+        removed = server.family_members_response({"action": "remove", "id": "local-son"})
+        assert removed["backend"] == "json"
+        after = server.family_members_response({"action": "list"})
+        assert all(m["id"] != "local-son" for m in after["members"])
+    finally:
+        server.data_backend = original_backend
+print("family members cloud bridge OK")
+'@
+Pass "Family members can use Supabase while preserving JSON fallback"
 
 Step "Consent records cloud bridge contract"
 Invoke-PythonBlock @'

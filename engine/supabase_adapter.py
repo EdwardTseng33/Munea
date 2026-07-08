@@ -1073,6 +1073,146 @@ class SupabaseAdapter:
             )
         return self.family_activity_participant_row_to_participant(rows[0]) if rows else None
 
+    def load_family_members(self, family_group_id=None, limit=100):
+        if not self.enabled():
+            return None
+        family_group_id = self._resolve_family_group_id(family_group_id)
+        if not self._is_uuid(family_group_id or ""):
+            return None
+        rows = self._select(
+            "family_memberships",
+            {
+                "account_id": f"eq.{self.account_id}",
+                "family_group_id": f"eq.{family_group_id}",
+                "select": "*",
+                "order": "updated_at.desc",
+                "limit": str(limit or 100),
+            },
+        )
+        return [self.family_membership_row_to_member(row) for row in rows or []]
+
+    def save_family_member(self, member, family_group_id=None):
+        if not self.enabled():
+            return None
+        member = member or {}
+        family_group_id = self._resolve_family_group_id(family_group_id)
+        if not self._is_uuid(family_group_id or ""):
+            return None
+        person_payload = self.family_member_to_person_row(member)
+        member_id = member.get("id")
+        existing = self._find_family_membership(member_id, family_group_id)
+        person_id = (existing or {}).get("person_id") or (member_id if self._is_uuid(member_id or "") else None)
+        if person_id:
+            person_rows = self._request(
+                "PATCH",
+                "persons",
+                query={"id": f"eq.{person_id}", "select": "*"},
+                payload=person_payload,
+                prefer="return=representation",
+            )
+            person = person_rows[0] if person_rows else self._first("persons", {"id": f"eq.{person_id}", "select": "*"})
+        else:
+            person_rows = self._request(
+                "POST",
+                "persons",
+                query={"select": "*"},
+                payload=person_payload,
+                prefer="return=representation",
+            )
+            person = person_rows[0] if person_rows else None
+            person_id = (person or {}).get("id")
+        if not person_id:
+            return None
+        payload = self.family_member_to_membership_row(member, family_group_id, person_id)
+        rows = None
+        if existing:
+            rows = self._request(
+                "PATCH",
+                "family_memberships",
+                query={"id": f"eq.{existing.get('id')}", "select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        if not rows:
+            rows = self._request(
+                "POST",
+                "family_memberships",
+                query={"select": "*"},
+                payload=payload,
+                prefer="return=representation",
+            )
+        return self.family_membership_row_to_member(rows[0], person=person) if rows else None
+
+    def update_family_member(self, member_id, patch, family_group_id=None):
+        if not self.enabled() or not member_id:
+            return None
+        family_group_id = self._resolve_family_group_id(family_group_id)
+        existing = self._find_family_membership(member_id, family_group_id)
+        if not existing:
+            return None
+        person_payload, membership_payload = self.family_member_patch_to_rows(patch)
+        person = None
+        if person_payload:
+            person_rows = self._request(
+                "PATCH",
+                "persons",
+                query={"id": f"eq.{existing.get('person_id')}", "select": "*"},
+                payload=person_payload,
+                prefer="return=representation",
+            )
+            person = person_rows[0] if person_rows else None
+        if membership_payload:
+            merged_permissions = {**(existing.get("permissions") or {}), **(membership_payload.get("permissions") or {})}
+            membership_payload = {**membership_payload, "permissions": merged_permissions}
+            rows = self._request(
+                "PATCH",
+                "family_memberships",
+                query={"id": f"eq.{existing.get('id')}", "select": "*"},
+                payload=membership_payload,
+                prefer="return=representation",
+            )
+            existing = rows[0] if rows else existing
+        return self.family_membership_row_to_member(existing, person=person)
+
+    def remove_family_member(self, member_id, family_group_id=None):
+        if not self.enabled() or not member_id:
+            return None
+        family_group_id = self._resolve_family_group_id(family_group_id)
+        existing = self._find_family_membership(member_id, family_group_id)
+        if not existing:
+            return None
+        person = self._first("persons", {"id": f"eq.{existing.get('person_id')}", "select": "*"})
+        rows = self._request(
+            "DELETE",
+            "family_memberships",
+            query={"id": f"eq.{existing.get('id')}", "select": "*"},
+            prefer="return=representation",
+        )
+        return self.family_membership_row_to_member((rows or [existing])[0], person=person)
+
+    def _resolve_family_group_id(self, family_group_id=None):
+        if self._is_uuid(family_group_id or ""):
+            return family_group_id
+        if self._is_uuid(self.family_group_id or ""):
+            return self.family_group_id
+        family_group = self._load_family_group()
+        return (family_group or {}).get("id")
+
+    def _find_family_membership(self, member_id, family_group_id):
+        if not self._is_uuid(family_group_id or "") or not member_id:
+            return None
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "family_group_id": f"eq.{family_group_id}",
+            "select": "*",
+            "limit": "1",
+        }
+        if self._is_uuid(member_id or ""):
+            query["person_id"] = f"eq.{member_id}"
+        else:
+            query["permissions->>originalMemberId"] = f"eq.{member_id}"
+        return self._first("family_memberships", query)
+
     def _load_family_group(self):
         if self._is_uuid(self.family_group_id):
             return self._first("family_groups", {"id": f"eq.{self.family_group_id}", "select": "*"})
@@ -1089,7 +1229,7 @@ class SupabaseAdapter:
         members = []
         for membership in memberships:
             person = self._first("persons", {"id": f"eq.{membership.get('person_id')}", "select": "*"})
-            members.append(self.person_row_to_member(person, role=membership.get("role")))
+            members.append(self.family_membership_row_to_member(membership, person=person))
         return members
 
     def profile_to_companion_row(self, profile):
@@ -1120,6 +1260,65 @@ class SupabaseAdapter:
             "role": role or ("primary_user" if person_id == self.person_id else "family_contact"),
             "displayName": row.get("display_name") or "Primary user",
             "relationship": row.get("relationship") or "self",
+        }
+
+    @staticmethod
+    def _normalize_family_member_role(role):
+        allowed = {"primary_user", "family_contact", "caregiver", "viewer"}
+        return role if role in allowed else "family_contact"
+
+    def family_member_to_person_row(self, member):
+        member = member or {}
+        return {
+            "account_id": member.get("accountId") or member.get("account_id") or self.account_id,
+            "display_name": (member.get("displayName") or member.get("display_name") or "Family member")[:80],
+            "relationship": member.get("relationship") or "family",
+            "locale": member.get("locale") or "zh-TW",
+            "timezone": member.get("timezone") or "Asia/Taipei",
+            "is_primary_care_recipient": bool(member.get("isPrimaryCareRecipient") or member.get("is_primary_care_recipient") or False),
+        }
+
+    def family_member_to_membership_row(self, member, family_group_id, person_id):
+        member = member or {}
+        permissions = dict(member.get("permissions") or {})
+        member_id = member.get("id")
+        if member_id and not self._is_uuid(member_id):
+            permissions.setdefault("originalMemberId", member_id)
+        return {
+            "account_id": member.get("accountId") or member.get("account_id") or self.account_id,
+            "family_group_id": family_group_id,
+            "person_id": person_id,
+            "role": self._normalize_family_member_role(member.get("role")),
+            "permissions": permissions,
+        }
+
+    def family_member_patch_to_rows(self, patch):
+        patch = patch or {}
+        person_payload = {}
+        membership_payload = {}
+        if any(key in patch for key in ("displayName", "display_name")):
+            person_payload["display_name"] = (patch.get("displayName") or patch.get("display_name") or "Family member")[:80]
+        if "relationship" in patch:
+            person_payload["relationship"] = patch.get("relationship") or "family"
+        if "role" in patch:
+            membership_payload["role"] = self._normalize_family_member_role(patch.get("role"))
+        if "permissions" in patch:
+            membership_payload["permissions"] = patch.get("permissions") or {}
+        return person_payload, membership_payload
+
+    def family_membership_row_to_member(self, row, person=None):
+        row = row or {}
+        person = person or self._first("persons", {"id": f"eq.{row.get('person_id')}", "select": "*"}) or {}
+        permissions = row.get("permissions") or {}
+        return {
+            "id": permissions.get("originalMemberId") or row.get("person_id") or person.get("id") or "",
+            "personId": row.get("person_id") or person.get("id") or "",
+            "role": row.get("role") or "family_contact",
+            "displayName": person.get("display_name") or "Family member",
+            "relationship": person.get("relationship") or "family",
+            "permissions": permissions,
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
         }
 
     def billing_store_to_subscription_row(self, store):

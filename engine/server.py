@@ -1749,14 +1749,23 @@ def default_app_profile_store(companion_profile=None):
     }
 
 
+FAMILY_MEMBER_ROLES = {"primary_user", "family_contact", "caregiver", "viewer"}
+
 def normalize_family_member(member):
     member = member or {}
-    member_id = str(member.get("id") or PRIMARY_CARE_RECIPIENT_ID)
+    role = str(member.get("role") or "family_contact")
+    member_id = str(member.get("id") or (PRIMARY_CARE_RECIPIENT_ID if role == "primary_user" else ("local-family-member-" + uuid.uuid4().hex[:10])))
+    permissions = member.get("permissions") or {}
+    if not isinstance(permissions, dict):
+        permissions = {}
     return {
         "id": member_id,
-        "role": str(member.get("role") or ("primary_user" if member_id == PRIMARY_CARE_RECIPIENT_ID else "family_contact")),
+        "role": role if role in FAMILY_MEMBER_ROLES else "family_contact",
         "displayName": str(member.get("displayName") or member.get("display_name") or "Member").strip()[:40] or "Member",
         "relationship": str(member.get("relationship") or "family"),
+        "permissions": permissions,
+        "createdAt": member.get("createdAt") or member.get("created_at"),
+        "updatedAt": member.get("updatedAt") or member.get("updated_at") or utc_now(),
     }
 
 
@@ -1847,6 +1856,107 @@ def save_app_profile_store(data):
     _APP_PROFILE_CACHE["store"] = store  # 存檔後即時更新快取，避免讀到舊值
     _APP_PROFILE_CACHE["ts"] = time.time()
     return store
+
+
+def load_family_members(family_group_id=None, limit=100):
+    try:
+        remote_members = data_backend().load_family_members(family_group_id=family_group_id, limit=limit)
+        if remote_members is not None:
+            return [normalize_family_member(member) for member in remote_members]
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load family members from Supabase", e)
+    store = load_app_profile_store()
+    members = store.get("familyGroup", {}).get("members") or []
+    return [normalize_family_member(member) for member in members][-limit:]
+
+
+def save_family_member(member, family_group_id=None):
+    member = normalize_family_member(member)
+    try:
+        remote_member = data_backend().save_family_member(member, family_group_id=family_group_id)
+        if remote_member is not None:
+            return normalize_family_member(remote_member), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save family member to Supabase", e)
+    store = load_app_profile_store()
+    family_group = store.setdefault("familyGroup", {"id": family_group_id or "local-demo-family", "name": "Munea Care Circle", "members": []})
+    members = [normalize_family_member(m) for m in family_group.get("members", [])]
+    next_members = [m for m in members if m.get("id") != member.get("id")]
+    next_members.append(member)
+    family_group["members"] = next_members[-100:]
+    save_app_profile_store(store)
+    return member, "json"
+
+
+def update_family_member(member_id, patch, family_group_id=None):
+    if not member_id:
+        return None, "member_id_required"
+    patch = patch or {}
+    if patch.get("action") in ("remove", "archive") or patch.get("status") in ("removed", "archived"):
+        try:
+            remote_member = data_backend().remove_family_member(member_id, family_group_id=family_group_id)
+            if remote_member is not None:
+                return normalize_family_member(remote_member), "supabase"
+        except Exception as e:
+            if data_backend().enabled() and not is_missing_table_error(e):
+                raise e
+            log_fallback_exception("remove family member from Supabase", e)
+        store = load_app_profile_store()
+        family_group = store.setdefault("familyGroup", {"id": family_group_id or "local-demo-family", "name": "Munea Care Circle", "members": []})
+        members = [normalize_family_member(m) for m in family_group.get("members", [])]
+        removed = next((m for m in members if m.get("id") == member_id), None)
+        family_group["members"] = [m for m in members if m.get("id") != member_id]
+        save_app_profile_store(store)
+        return (removed, "json") if removed else (None, "not_found")
+    try:
+        remote_member = data_backend().update_family_member(member_id, patch, family_group_id=family_group_id)
+        if remote_member is not None:
+            return normalize_family_member(remote_member), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("update family member in Supabase", e)
+    store = load_app_profile_store()
+    family_group = store.setdefault("familyGroup", {"id": family_group_id or "local-demo-family", "name": "Munea Care Circle", "members": []})
+    members = [normalize_family_member(m) for m in family_group.get("members", [])]
+    updated = None
+    next_members = []
+    for member in members:
+        if member.get("id") == member_id:
+            member = normalize_family_member({
+                **member,
+                **patch,
+                "permissions": {**(member.get("permissions") or {}), **(patch.get("permissions") or {})},
+                "updatedAt": utc_now(),
+            })
+            updated = member
+        next_members.append(member)
+    family_group["members"] = next_members
+    save_app_profile_store(store)
+    return (updated, "json") if updated else (None, "not_found")
+
+
+def family_members_response(data):
+    data = data or {}
+    action = data.get("action") or "list"
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id")
+    if action in ("save", "create", "add", "invite"):
+        member, backend = save_family_member(data.get("member") or data.get("item") or data, family_group_id=family_group_id)
+        return {"ok": True, "member": member, "backend": backend}
+    if action in ("update", "patch", "role", "permissions", "remove", "archive"):
+        member_id = data.get("id") or data.get("memberId") or data.get("member_id") or data.get("personId") or data.get("person_id")
+        patch = data.get("patch") or data
+        if action in ("remove", "archive"):
+            patch = {**patch, "action": action}
+        member, backend = update_family_member(member_id, patch, family_group_id=family_group_id)
+        if member is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "member": member, "backend": backend}
+    return {"ok": True, "members": load_family_members(family_group_id=family_group_id, limit=int(data.get("limit") or 100))}
 
 
 def bootstrap_account_response(data, headers=None):
@@ -3284,7 +3394,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -3345,6 +3455,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":
                 self._json(family_invitations_response(data))
+            elif self.path == "/family-members":
+                self._json(family_members_response(data))
             elif self.path == "/consent-records":
                 self._json(consent_records_response(data))
             elif self.path == "/family/activity":

@@ -80,6 +80,7 @@
 - Added the `/consent-records` backend contract for list/grant/revoke of family sharing and AI/voice capability consent, backed by `consent_records` when SQL 007 exists and JSON fallback before live apply.
 - Added the `/routine-reminders` backend contract for list/save/update/archive of medication, check-in, and routine reminders, backed by the existing `routine_reminders` table with JSON fallback and legacy `/care-schedule` compatibility.
 - Connected the medication and visit reminder UI to `/routine-reminders`: manual settings, chat-created reminders, deletion/archive, and startup hydration now use the backend bridge while preserving localStorage fallback for offline/static preview.
+- Added the `/family-members` backend contract for listing, adding, role/permission updates, and removal of family care-circle members, backed by `family_memberships` + `persons` with JSON fallback through the app profile store.
 
 ## 2026-06-29 Update
 
