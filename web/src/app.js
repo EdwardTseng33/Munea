@@ -1258,6 +1258,20 @@ function renderVisitTask() {
 // 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋走走＋聊聊
 function renderDailyTasks() { renderPillTask(); renderVisitTask(); }
 window.__muneaRenderDailyTasks = renderDailyTasks;
+// Apple 健康的步數 → 首頁走路任務（原生端 health.js 讀到步數後呼叫）
+window.__muneaSetSteps = function (n) {
+  n = Math.max(0, Math.round(+n || 0));
+  const card = document.querySelector('.task-item[data-task="walk"]');
+  if (!card) return;
+  const goal = (window.MuneaHealth && window.MuneaHealth.GOAL) || 500;
+  const sub = document.getElementById('walkSub');
+  const chip = document.getElementById('walkChip');
+  if (sub) sub.textContent = n >= goal ? ('今天走了 ' + n.toLocaleString() + ' 步，達標了') : ('今天走了 ' + n.toLocaleString() + ' / ' + goal + ' 步');
+  if (chip) chip.textContent = n >= goal ? '達標' : (n.toLocaleString() + ' 步');
+  card.dataset.steps = String(n);
+  if (n >= goal) card.classList.add('done'); // 走到目標就自動完成
+  if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
+};
 function renderMedList() { renderMedSlots(); }
 const MED_SLOT_DEF = [
   ['早餐後', 'b', 30], ['午餐後', 'l', 30], ['晚餐後', 'd', 30], ['睡前', 's', -30]
@@ -1886,6 +1900,7 @@ function init() {
   renderPoints();
   updateMedCount();
   renderVisitTask();
+  if (window.MuneaHealth) window.MuneaHealth.boot(); // 之前連過 Apple 健康就靜默帶回今天步數
   renderCareCarousel();
   if ($('#careBody')) $('#careBody').addEventListener('click', e => {
     const b = e.target.closest('.care-btn');
@@ -2099,7 +2114,21 @@ function init() {
     );
   });
   if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView(window.__connectFrom || 'status'));
-  $$('#connect .cn-btn').forEach(b => b.addEventListener('click', () => {
+  $$('#connect .cn-btn').forEach(b => b.addEventListener('click', async () => {
+    // Apple 健康：在 App 裡就真的去要 iPhone 授權；網頁預覽則走原本示範切換
+    if (b.id === 'cnHealthBtn' && window.MuneaHealth && window.MuneaHealth.available()) {
+      b.disabled = true; b.textContent = '連接中…';
+      const r = await window.MuneaHealth.connect();
+      b.disabled = false;
+      if (r && r.ok) {
+        b.classList.add('done'); b.textContent = '✓ 已連接';
+        hint('好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
+      } else {
+        b.textContent = b.dataset.label || '連接';
+        hint(r && r.reason === 'unavailable' ? '這台裝置沒有健康資料可讀。' : '沒有連上，晚點在「連接裝置」再試一次也可以。');
+      }
+      return;
+    }
     const on = b.classList.toggle('done');
     b.textContent = on ? '✓ 已連接' : (b.dataset.label || '連接');
     if (on) { hint('好，連上了，之後健康資料我會自動留意。'); try { localStorage.setItem('munea.devicesOn', '1'); } catch (e2) {} }
