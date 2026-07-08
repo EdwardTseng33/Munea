@@ -2940,6 +2940,7 @@ allowed = {
     "statusTitle",
     "statusToday",
     "statusWeek",
+    "walkDaysVal",
 }
 missing = sorted([r for r in refs if r not in ids and r not in allowed])
 if missing:
