@@ -43,7 +43,8 @@ MEMORY_ITEMS_PATH = os.environ.get("MUNEA_MEMORY_ITEMS_PATH") or os.path.join(HE
 CONVERSATION_SUMMARIES_PATH = os.environ.get("MUNEA_CONVERSATION_SUMMARIES_PATH") or os.path.join(HERE, "conversation_summaries.json")
 PERCEPTION_SNAPSHOTS_PATH = os.environ.get("MUNEA_PERCEPTION_SNAPSHOTS_PATH") or os.path.join(HERE, "perception_snapshots.json")
 RELATIONSHIP_STATES_PATH = os.environ.get("MUNEA_RELATIONSHIP_STATES_PATH") or os.path.join(HERE, "companion_relationship_states.json")
-PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
+# 主要照護對象編號：雲端模式用資料櫃的正式編號（環境變數）、本機示範照舊（7/9 hotfix：帶錯編號會讓資料櫃拒收）
+PRIMARY_CARE_RECIPIENT_ID = os.environ.get("MUNEA_SUPABASE_PERSON_ID") or "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
 ALLOWED_AUDIO_MIMES = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"}
@@ -1378,7 +1379,7 @@ def load_perception_snapshots(query=None, limit=100):
         if remote_snapshots is not None:
             return remote_snapshots
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
+        if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
         log_fallback_exception("load perception snapshots from Supabase", e)
     snapshots = read_json_file(PERCEPTION_SNAPSHOTS_PATH, [])
@@ -1405,7 +1406,7 @@ def append_perception_snapshots(snapshots):
         if remote_snapshots is not None:
             return remote_snapshots
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
+        if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
         log_fallback_exception("append perception snapshots to Supabase", e)
     existing = load_perception_snapshots(limit=1000)

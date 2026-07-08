@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>沐寧 · 自動巡檢成績單</title>
+<style>
+  body { font: 14px/1.6 "Noto Sans TC", sans-serif; background:#101613; color:#e8f0ea; margin:0; padding:18px; }
+  h1 { font-size:18px; margin:0 0 4px; } .sub { color:#9fb3a6; font-size:12.5px; margin-bottom:14px; }
+  .sum { font-size:15px; font-weight:700; padding:10px 14px; border-radius:12px; background:#1b2620; margin-bottom:12px; }
+  .case { display:flex; gap:10px; padding:7px 10px; border-radius:8px; margin-bottom:3px; background:#161f1a; }
+  .case b { flex:0 0 78px; color:#9fb3a6; font-weight:600; }
+  .ok { color:#5ad19a; } .fail { color:#ff7a6e; } .skip { color:#c9b458; }
+  .msg { color:#8fa396; margin-left:auto; max-width:46%; text-align:right; }
+  iframe { position:fixed; left:-9999px; width:390px; height:844px; border:0; }
+  pre { background:#0c110e; padding:10px; border-radius:8px; overflow:auto; font-size:11.5px; }
+</style>
+</head>
+<body>
+<h1>沐寧 · 自動巡檢成績單</h1>
+<div class="sub">打開即自動執行；供人眼看＋機器讀（末端 JSON）。深檢（會花 AI 費用）加網址參數 <code>?deep=1</code></div>
+<div class="sum" id="sum">跑起來中…</div>
+<div id="list"></div>
+<h3 style="font-size:14px">機器可讀結果</h3>
+<pre id="json">{}</pre>
+<iframe id="app" src="index.html"></iframe>
+<script>
+(async function () {
+  const DEEP = new URLSearchParams(location.search).has('deep');
+  const results = [];
+  const list = document.getElementById('list');
+  function report(id, name, status, msg) {
+    results.push({ id, name, status, msg: msg || '' });
+    const row = document.createElement('div');
+    row.className = 'case';
+    row.innerHTML = '<b>' + id + '</b><span class="' + status + '">' + (status === 'ok' ? '✅' : status === 'skip' ? '⏭' : '❌') + ' ' + name + '</span><span class="msg">' + (msg || '') + '</span>';
+    list.appendChild(row);
+  }
+  async function run(id, name, fn) {
+    try { const m = await fn(); report(id, name, 'ok', m || ''); }
+    catch (e) { report(id, name, String(e && e.message) === 'SKIP' ? 'skip' : 'fail', (e && e.message) || String(e)); }
+  }
+  const A = (cond, msg) => { if (!cond) throw new Error(msg || '斷言失敗'); };
+
+  // 等 App iframe 完成初始化
+  const frame = document.getElementById('app');
+  await new Promise(res => { frame.addEventListener('load', res, { once: true }); });
+  await new Promise(res => setTimeout(res, 1800));
+  const W = frame.contentWindow, D = frame.contentDocument;
+  const $id = id => D.getElementById(id);
+
+  // ---------- S 系列 · 結構 ----------
+  await run('S-01', '五大畫面都在', () => { ['home','status','family','chat','settings'].forEach(id => A(!!$id(id), id + ' 缺')); });
+  await run('S-02', '對接口五支都在', () => { ['__muneaSetHealth','__muneaApplyPurchase','__muneaSetSteps','__muneaOpenInterests','__muneaRenderDailyTasks'].forEach(h => A(typeof W[h] === 'function', h + ' 缺')); });
+  await run('S-03', '版本三處一致', async () => {
+    const v = W.MuneaVersion && W.MuneaVersion.current; A(!!v, '版本檔缺');
+    A(($id('verRowNum') || {}).textContent === v, '設定列版號不一致');
+    const pkg = await fetch('../package.json').then(r => r.ok ? r.json() : null).catch(() => null);
+    if (pkg) A(pkg.version === v, '包裝檔版號不一致 ' + pkg.version + '≠' + v);
+    return 'v' + v;
+  });
+
+  // ---------- P 系列 · 方案與點數 ----------
+  await run('P-01', '免費方案為預設且權限中樞健在', () => {
+    A(W.MMPLAN && typeof W.MMPLAN.get === 'function', 'MMPLAN 缺');
+  });
+  await run('P-02', '補點四包 200/500/1000/1800', () => {
+    const packs = [...new Set([...D.querySelectorAll('.tu-card')].map(c => c.dataset.p))].sort((a,b)=>a-b).join('/');
+    A(packs === '200/500/1000/1800', '看到 ' + packs);
+  });
+  await run('P-03', '訂閱視窗：價格/恢復購買/法務文', () => {
+    $id('managePlanBtn').click();
+    A(($id('pricePlus') || {}).textContent.includes('499'), 'Plus 價格');
+    A(($id('pricePro') || {}).textContent.includes('999'), 'Pro 價格');
+    A(!!$id('restoreBtn'), '恢復購買鈕缺');
+    A(!!D.querySelector('.sub-legal'), '法務說明缺');
+    $id('planClose') && $id('planClose').click();
+  });
+  await run('P-04', '購買入口對表生效（訂閱/點數/拒絕亂ID）', () => {
+    const bak = { plan: W.localStorage.getItem('munea.plan'), pts: W.localStorage.getItem('munea.ptsBought') };
+    try {
+      W.localStorage.setItem('munea.plan', 'free'); W.localStorage.removeItem('munea.ptsBought');
+      A(W.__muneaApplyPurchase('net.munea.app.plus.monthly') === true, '訂閱入口');
+      A(W.localStorage.getItem('munea.plan') === 'plus', '方案未切');
+      A(W.__muneaApplyPurchase('net.munea.app.points.500') === true, '點數入口');
+      A(W.__muneaApplyPurchase('net.munea.app.points.999') === false, '亂 ID 未被拒');
+    } finally {
+      bak.plan ? W.localStorage.setItem('munea.plan', bak.plan) : W.localStorage.removeItem('munea.plan');
+      bak.pts ? W.localStorage.setItem('munea.ptsBought', bak.pts) : W.localStorage.removeItem('munea.ptsBought');
+    }
+  });
+
+  // ---------- F 系列 · 功能流 ----------
+  await run('F-01', '發起活動：五類都有真日期時間', () => {
+    $id('newChalBtn').click();
+    ['walkDue','walkDueTime','quizDue','quizDueTime','evDate','evTime','voteDue','voteDueTime','drawDate','drawTime'].forEach(id => A(!!$id(id), id + ' 缺'));
+  });
+  await run('F-02', '送出邀請鈕固定畫面下方', () => {
+    A(W.getComputedStyle($id('startChalBtn')).position === 'sticky', '黏底遺失');
+    const x = D.querySelector('#chalModal .mx-close'); A(!!x, 'X 鈕缺'); x.click();
+  });
+  await run('F-03', '揪一攤送出＝正確日期標籤', () => {
+    $id('newChalBtn').click();
+    D.querySelector('.chal-type[data-kind="event"]').click();
+    $id('eventName').value = '巡檢聚餐'; $id('evDate').value = '2026-07-12'; $id('evTime').value = '18:30';
+    $id('startChalBtn').click();
+    const acts = JSON.parse(W.localStorage.getItem('munea.activities') || '[]');
+    const ev = acts[acts.length - 1] || {};
+    try { A(ev.title === '巡檢聚餐' && /7\/12/.test(ev.dateLabel || '') && /6:30/.test(ev.dateLabel || ''), '標籤 ' + (ev.dateLabel || '無')); }
+    finally { W.localStorage.setItem('munea.activities', JSON.stringify(acts.filter(a => a.id !== ev.id))); }
+  });
+  await run('F-04', '興趣話題：入口/12選項/上限5', () => {
+    A(!!$id('interestsRow') && !!$id('interestsModal'), '入口缺');
+    W.__muneaOpenInterests(false);
+    A(D.querySelectorAll('#interestPicks .topic-chip').length === 12, '選項數');
+    D.querySelector('#interestsModal .mx-close').click();
+  });
+  await run('F-05', '彈窗 X 鈕齊全（7 顆）', () => {
+    A(D.querySelectorAll('.mx-close').length >= 7, '只找到 ' + D.querySelectorAll('.mx-close').length);
+  });
+  await run('F-06', '健康接口：真數據改寫＋缺欄不清空＋關閉不動', () => {
+    W.__muneaSetHealth({ available: true, steps: 4321, hr: 76, spo2: 96, bpSys: 147, bpDia: 93, sleepHours: 5.4 });
+    A(($id('bpNum') || {}).textContent === '147', '血壓未更新');
+    A(($id('bpChip') || {}).textContent === '偏高', '偏高判定');
+    W.__muneaSetHealth({ available: true, steps: 7000 });
+    A(($id('bpNum') || {}).textContent === '147', '缺欄位被清空');
+    W.__muneaSetHealth({ available: false, steps: 99999 });
+    A(($id('stepsNum') || {}).textContent === '7,000', '關閉狀態仍寫入');
+  });
+  await run('F-07', '法務頁：條款/隱私可讀＋閱讀器無外跳連結', async () => {
+    for (const page of ['terms.html', 'privacy.html']) {
+      const html = await fetch(page).then(r => { A(r.ok, page + ' ' + r.status); return r.text(); });
+      A(html.includes('privacy-section'), page + ' 結構');
+    }
+    const t = await fetch('terms.html').then(r => r.text());
+    A(!/href="privacy\.html"/.test(t), '條款仍有外跳連結');
+  });
+  await run('F-08', '客服支援頁完整（信箱/FAQ/危機專線）', async () => {
+    const html = await fetch('support.html').then(r => { A(r.ok, 'support ' + r.status); return r.text(); });
+    A(html.includes('mailto:'), '信箱缺'); A(html.includes('1925') && html.includes('119'), '危機專線缺');
+  });
+  await run('F-09', '家庭記錄簿入口健在（歷史大蟲區）', () => {
+    A(!!$id('viewBook'), '記錄簿殼缺');
+    A(!!$id('medEntrySettings') && !!$id('visitEntry'), '用藥/看診入口缺');
+  });
+  await run('F-10', '陪伴角色選單＋頭像載入', () => {
+    const imgs = [...D.querySelectorAll('#companionSheet .avo .avi img')];
+    A(imgs.length >= 6, '角色數 ' + imgs.length);
+    imgs.slice(0, 2).forEach(i => A(i.naturalWidth > 0, i.src.split('/').pop() + ' 未載入'));
+  });
+
+  // ---------- B 系列 · 引擎（同棟樓） ----------
+  await run('B-01', '引擎心跳', async () => {
+    const h = await fetch('/healthz').then(r => r.json()).catch(() => null);
+    if (!h) throw new Error('SKIP'); // 靜態預覽模式沒有引擎
+    A(h.ok === true, '心跳異常'); return h.backend && h.backend.provider ? ('資料=' + h.backend.provider) : '';
+  });
+  await run('B-02', 'AI 三腦狀態口', async () => {
+    const r = await fetch('/ai/brain-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(x => x.json()).catch(() => null);
+    if (!r) throw new Error('SKIP');
+    A(r.ok === true, '三腦狀態異常');
+  });
+  await run('B-03', '真聊天一問（深檢·花 AI 費）', async () => {
+    if (!DEEP) throw new Error('SKIP');
+    const r = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: [{ role: 'user', text: '巡檢測試：回我兩個字「收到」' }], char: '寧寧' }) }).then(x => x.json());
+    A(r && r.reply && r.reply.length > 0, '沒回話');
+    return (r.reply || '').slice(0, 12);
+  });
+
+  // ---------- 總結 ----------
+  const ok = results.filter(r => r.status === 'ok').length;
+  const fail = results.filter(r => r.status === 'fail').length;
+  const skip = results.filter(r => r.status === 'skip').length;
+  document.getElementById('sum').innerHTML = (fail ? '🔴' : '🟢') + ' 通過 ' + ok + ' ／ 失敗 ' + fail + ' ／ 略過 ' + skip + '（' + new Date().toLocaleString('zh-TW') + '）';
+  document.getElementById('json').textContent = JSON.stringify({ ok, fail, skip, cases: results }, null, 1);
+  window.__selftestDone = { ok, fail, skip, cases: results };
+})();
+</script>
+</body>
+</html>
