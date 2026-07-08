@@ -1411,6 +1411,59 @@ window.__muneaSetSteps = function (n) {
   if (n >= goal) card.classList.add('done'); // 走到目標就自動完成
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 };
+// Apple 健康的完整摘要 → 狀態頁「今天」的真數值（原生端 health.js 讀到後呼叫）
+// s = { available, steps, hr, spo2, bpSys, bpDia, sleepHours }；缺哪項就不動哪項（示範值留著、不清空）
+window.__muneaSetHealth = function (s) {
+  if (!s || s.available === false) return;
+  const num = v => (typeof v === 'number' && isFinite(v) && v > 0) ? v : null;
+  const put = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  const chip = (id, txt, warn) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = txt;
+    el.style.background = warn ? 'var(--coral-soft)' : 'var(--mint)';
+    el.style.color = warn ? 'var(--coral-d)' : 'var(--teal-dd)';
+  };
+  const sys = num(s.bpSys), dia = num(s.bpDia), hr = num(s.hr), spo2 = num(s.spo2),
+        sleep = num(s.sleepHours), steps = num(s.steps);
+  const worry = []; // 給「寧寧的觀察」的注意事項（白話）
+  if (sys && dia) {
+    const hi = sys >= 140 || dia >= 90, lo = sys < 90;
+    put('bpNum', String(Math.round(sys)));
+    put('bpUnit', '/' + Math.round(dia) + ' mmHg');
+    chip('bpChip', hi ? '偏高' : lo ? '偏低' : '穩定', hi || lo);
+    put('bpSub', hi ? '比平常高一點，晚點再量一次' : lo ? '偏低一些，起身動作放慢' : '正常範圍內');
+    if (hi) worry.push('血壓比平常高一點'); if (lo) worry.push('血壓偏低');
+  }
+  if (hr) {
+    const odd = hr < 50 || hr > 100;
+    put('hrNum', String(Math.round(hr)));
+    chip('hrChip', odd ? '注意' : '正常', odd);
+    if (odd) worry.push('心跳' + (hr > 100 ? '偏快' : '偏慢'));
+  }
+  if (spo2) {
+    put('spo2Num', String(Math.round(spo2)));
+    if (spo2 < 95) worry.push('血氧有點低');
+  }
+  if (sleep) {
+    put('sleepNum', String(Math.round(sleep * 10) / 10));
+    if (sleep < 6) worry.push('昨晚睡得少');
+  }
+  if (steps) put('stepsNum', Math.round(steps).toLocaleString());
+  // 寧寧的觀察：有真資料才改寫，一句話講重點
+  const obs = document.getElementById('obsText');
+  if (obs && (sys || hr || sleep)) {
+    const B = t => '<b style="color:#8FD4CC">' + t + '</b>';
+    const bits = [];
+    if (sys && dia) bits.push('血壓 ' + B(Math.round(sys) + '/' + Math.round(dia)));
+    if (hr) bits.push('心率 ' + B(Math.round(hr)));
+    if (sleep) bits.push('睡眠 ' + B((Math.round(sleep * 10) / 10) + ' 小時'));
+    const head = '今天' + bits.join('、') + '，';
+    obs.innerHTML = worry.length
+      ? head + '大致都穩，不過' + B(worry.join('、')) + '，我幫你多留意，先別擔心。'
+      : head + '整體狀態不錯。<span style="color:#8FD4CC;font-weight:700">保持這個節奏就很好</span>，想出門走走我陪你。';
+  }
+};
 function renderMedList() { renderMedSlots(); }
 const MED_SLOT_DEF = [
   ['早餐後', 'b', 30], ['午餐後', 'l', 30], ['晚餐後', 'd', 30], ['睡前', 's', -30]
