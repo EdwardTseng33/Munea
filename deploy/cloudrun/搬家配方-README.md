@@ -30,21 +30,27 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
 ## 第 2 步 · 鑰匙進保險箱（過沙利曼關卡後執行）
 
 ```bash
-# 鑰匙值從 engine/.env.local 拿；不落檔、不進程式庫
-printf "%s" "把鑰匙貼這裡" | gcloud secrets create munea-gemini-key --data-file=-
+# 鑰匙從 .env.local 直灌保險箱——不貼畫面、不進指令歷史、不落檔（沙利曼 Gate 5 條件）
+# 測試/正式各一把：staging 帶後綴、正式另建 munea-gemini-key-prod
+grep -m1 '^GEMINI_API_KEY=' engine/.env.local | cut -d= -f2- | tr -d '
+
+"' |   gcloud secrets create munea-gemini-key-staging --data-file=- --replication-policy=automatic
 ```
+
+> 🔒 沙利曼 Gate 5 硬條件（缺一不部署）：① 鑰匙在 Google 後台設**每日/每分鐘用量上限**（唯一真煞車——網址被掃到也燒不穿）② 測試/正式鑰匙分開命名 ③ 鑰匙不出現在畫面與指令歷史。
+> 上鎖時點：**送審前** staging 改 `--no-allow-unauthenticated`（藍圖 §7）。
 
 ## 第 3 步 · 部署兩個服務（在程式庫根目錄執行）
 
 ```bash
 # 管家腦（聊天/記憶/簡報/守護 · HTTP）
-gcloud run deploy munea-brain --source . --region asia-east1 \
-  --set-secrets GEMINI_API_KEY=munea-gemini-key:latest \
+gcloud run deploy munea-brain-staging --source . --region asia-east1 \
+  --set-secrets GEMINI_API_KEY=munea-gemini-key-staging:latest \
   --memory 1Gi --min-instances 0 --max-instances 3 --allow-unauthenticated
 
 # 語音橋（即時通話 · WebSocket；門牌自動吃 PORT）
-gcloud run deploy munea-voice --source . --region asia-east1 \
-  --set-secrets GEMINI_API_KEY=munea-gemini-key:latest \
+gcloud run deploy munea-voice-staging --source . --region asia-east1 \
+  --set-secrets GEMINI_API_KEY=munea-gemini-key-staging:latest \
   --command sh "--args=-c,python engine/live_voice_server.py" \
   --timeout 3600 --session-affinity --memory 1Gi \
   --min-instances 0 --max-instances 5 --concurrency 40 --allow-unauthenticated
