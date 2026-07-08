@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260708-busy1" />
+  <link rel="stylesheet" href="src/styles.css?v=20260708-relay1" />
 </head>
 <body>
 <div class="app-shell">
@@ -219,7 +219,6 @@
 
       <!-- 全家總覽 -->
       <div class="fam-view active" id="viewAll">
-        <div class="relay-hint"><span class="rh-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></span><div class="rh-tx">有話想傳給家人？在<b>聊聊</b>跟我說「<b>幫我跟○○說…</b>」，我幫你帶到他手機上。</div></div>
         <div class="sec-head"><div><h2>家庭活動</h2></div></div>
         <div class="chal-actions">
           <button class="chal-act new" id="newChalBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>發起活動</button>
@@ -777,7 +776,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="inviteCloseX" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>邀請家人</h2>
-      <p class="modal-sub">家人加入後，互相看得到狀態與關懷摘要；聊天內容永遠不會公開。</p>
+      <p class="modal-sub">家人加入後，互相看得到狀態與關懷摘要；有話想傳給家人，在聊聊跟<span class="cname">寧寧</span>說「幫我跟○○說…」就會帶到；聊天內容永遠不會公開。</p>
       <div class="inv-code" id="invCode">MUNEA-2847</div>
       <button class="modal-btn" id="invShareBtn">用訊息傳邀請</button>
       <button class="inv-copy" id="invCopyBtn" type="button">複製邀請連結</button>
@@ -1104,7 +1103,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260708-busy1"></script>
+  <script type="module" src="src/app.js?v=20260708-relay1"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
