@@ -88,7 +88,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 .bc-avatar { flex: 0 0 58px; width: 58px; height: 58px; border-radius: 18px; position: relative; z-index: 1; background: var(--mint); overflow: hidden; }
 .bc-avatar img { border-radius: 18px; }
-.bc-avatar .ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center 24%; transform: scale(1.03); transform-origin: center top; }
+.bc-avatar .ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center 12%; }
 .bc-avatar .av-stripes { position: absolute; inset: 0; background: none; }
 .bc-avatar .online { position: absolute; right: 4px; bottom: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); border: 3px solid #fff; }
 .bc-info { flex: 1; min-width: 0; }
@@ -1053,7 +1053,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .mood-legend i { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-style: normal; font-size: 13px; margin-right: 4px; vertical-align: -6px; }
 
 /* 首頁寧寧頭像：頭靠上緣（Edward 拍板） */
-.bc-avatar img, .bc-avatar .ava-img { object-position: center top !important; }
+.bc-avatar img, .bc-avatar .ava-img { object-position: center 12% !important; } /* 跟選角色頭像同取景（Edward 7/9） */
 
 /* 通話鈕：像電話——綠色開始、紅色結束 */
 

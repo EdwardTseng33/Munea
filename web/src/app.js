@@ -327,7 +327,7 @@ function syncCompanionUI() {
   const display = companionDisplayName.trim() || t.defaultName;
   const src = 'avatars/' + currentAvatarId + '.png';
   const thumbSrc = t.thumbAsset || src;
-  const homeSrc = t.homeAsset || thumbSrc;
+  const homeSrc = thumbSrc;   // 首頁頭像＝選角色同一張臉、同一種取景（Edward 7/9：不再用另一張 hero 照）
   const fullSrc = t.fullAsset || homeSrc;
   const homeName = $('#companionHomeName'); if (homeName) homeName.textContent = display;
   const chatName = $('#chatName'); if (chatName) chatName.textContent = display;
@@ -885,6 +885,7 @@ const LiveVoice = {
     try { const _ts = loadInterests(); if (_ts.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'topics=' + encodeURIComponent(_ts.join(',')); } catch (e) {}
     this.on = true;
     this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
+    this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
@@ -926,7 +927,13 @@ const LiveVoice = {
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
-            if (o.type === 'ready') { this.ready = true; this._toListening(); }   // 腦開機完成 → 開麥、換成真收音動態
+            if (o.type === 'ready') { this.ready = true; this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 開麥、換成真收音動態；記下「聊過了」
+            if (o.type === 'caption' && o.who === 'user' && o.text && !this._topicSaved) {
+              // 首頁「記得你說…」的在地記憶：抓這通電話你說的第一句話（雲端記憶接上後改由真記憶供應）
+              this._userBuf = (this._userBuf || '') + o.text;
+              const tp = this._userBuf.replace(/\s+/g, '').slice(0, 20);
+              if (tp.length >= 6) { try { localStorage.setItem('munea.lastTopic', tp); } catch (e3) {} this._topicSaved = true; }
+            }
             if (o.type === 'turn_complete') { this._toListening(); this._capBuf = ''; }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
           } catch (e) {}
           return;
@@ -1295,13 +1302,24 @@ function setupAuthControls() {
   const dayN = Math.max(1, now.getDate() - 1);
   const msg = $('#bcMsg');
   if (msg) {
-    const mem = '記得你說，孫子快畢業了';
+    // 首頁招呼語的四個階段（Edward 7/9 拍板設計）：
+    //   ① 還沒聊過（首次進來）→ 自我介紹＋邀請認識
+    //   ② 聊過了、還沒抓到話題 → 「上次聊得很開心」＋時段邀請
+    //   ③ 有記住的話題（目前＝上通電話你說的第一句；雲端記憶接上後換真記憶）→ 「記得你說…」
+    //   ④ 之後每次聊天都會更新話題，這句會一直跟著你們的對話變
+    const nm = (typeof cname === 'function' ? cname() : '寧寧');
+    const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
+    const topic = (localStorage.getItem('munea.lastTopic') || '').trim();
     let ask = '來跟我聊聊今天？';
     if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
     else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
     else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
-    msg.textContent = mem + '——' + ask;
-    const _ih = $('#faceIdleHi'); if (_ih) _ih.textContent = mem + '——' + ask;
+    let line;
+    if (!lastAt) line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
+    else if (topic) line = '記得你說「' + topic + '」——' + ask;
+    else line = '上次跟你聊得很開心——' + ask;
+    msg.textContent = line;
+    const _ih = $('#faceIdleHi'); if (_ih) _ih.textContent = line;
   }
 
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
