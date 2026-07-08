@@ -6,6 +6,7 @@ Supabase service credentials on the backend side and lets server.py keep a JSON
 fallback until the cloud project, auth, and seeded account/person ids are ready.
 """
 import json
+import hashlib
 import os
 import re
 import time
@@ -765,6 +766,52 @@ class SupabaseAdapter:
             )
         return self.family_state_row_to_entry(rows[0]) if rows else None
 
+    def load_family_invitations(self, family_group_id=None, status=None, limit=100):
+        if not self.enabled():
+            return None
+        family_group_id = family_group_id if self._is_uuid(family_group_id or "") else self.family_group_id
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "family_group_id": f"eq.{family_group_id}",
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(limit or 100),
+        }
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("family_invitations", query)
+        return [self.family_invitation_row_to_invitation(row) for row in rows or []]
+
+    def create_family_invitation(self, invitation):
+        if not self.enabled():
+            return None
+        payload = self.family_invitation_to_row(invitation)
+        rows = self._request(
+            "POST",
+            "family_invitations",
+            query={"select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.family_invitation_row_to_invitation(rows[0]) if rows else None
+
+    def update_family_invitation(self, invitation_id, patch):
+        if not self.enabled() or not self._is_uuid(invitation_id or ""):
+            return None
+        payload = self.family_invitation_patch_to_row(patch)
+        if not payload:
+            return self.family_invitation_row_to_invitation(
+                self._first("family_invitations", {"id": f"eq.{invitation_id}", "select": "*"})
+            )
+        rows = self._request(
+            "PATCH",
+            "family_invitations",
+            query={"id": f"eq.{invitation_id}", "select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.family_invitation_row_to_invitation(rows[0]) if rows else None
+
     def load_wellbeing_signals(self, person_id=None, limit=200):
         if not self.enabled():
             return None
@@ -1322,6 +1369,95 @@ class SupabaseAdapter:
                     "familyGroupId": entry.get("familyGroupId"),
                 }
         return store
+
+    @staticmethod
+    def _normalize_family_invitation_status(status):
+        allowed = {"pending", "accepted", "revoked", "expired"}
+        return status if status in allowed else "pending"
+
+    @staticmethod
+    def _hash_invitation_token(token):
+        token = token or ("munea_" + uuid.uuid4().hex)
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def family_invitation_to_row(self, invitation):
+        invitation = invitation or {}
+        metadata = dict(invitation.get("metadata") or {})
+        family_group_id = invitation.get("familyGroupId") or invitation.get("family_group_id") or self.family_group_id
+        inviter_person_id = invitation.get("inviterPersonId") or invitation.get("inviter_person_id") or self.person_id
+        invitee_person_id = invitation.get("inviteePersonId") or invitation.get("invitee_person_id")
+        if family_group_id and not self._is_uuid(family_group_id):
+            metadata.setdefault("originalFamilyGroupId", family_group_id)
+            family_group_id = self.family_group_id
+        if inviter_person_id and not self._is_uuid(inviter_person_id):
+            metadata.setdefault("originalInviterPersonId", inviter_person_id)
+            inviter_person_id = self.person_id
+        if invitee_person_id and not self._is_uuid(invitee_person_id):
+            metadata.setdefault("originalInviteePersonId", invitee_person_id)
+            invitee_person_id = None
+        short_code = str(invitation.get("shortCode") or invitation.get("short_code") or "").strip()
+        if not (len(short_code) == 6 and short_code.isdigit()):
+            short_code = str(uuid.uuid4().int % 1_000_000).zfill(6)
+        token_hash = invitation.get("tokenHash") or invitation.get("token_hash")
+        if not token_hash:
+            token_hash = self._hash_invitation_token(
+                invitation.get("shareToken") or invitation.get("share_token") or invitation.get("token")
+            )
+        return {
+            "account_id": invitation.get("accountId") or invitation.get("account_id") or self.account_id,
+            "family_group_id": family_group_id,
+            "inviter_person_id": inviter_person_id or None,
+            "invitee_person_id": invitee_person_id or None,
+            "token_hash": token_hash,
+            "short_code": short_code,
+            "delivery_hint": invitation.get("deliveryHint") or invitation.get("delivery_hint"),
+            "elder_assisted": bool(invitation.get("elderAssisted") or invitation.get("elder_assisted") or False),
+            "status": self._normalize_family_invitation_status(invitation.get("status")),
+            "expires_at": invitation.get("expiresAt") or invitation.get("expires_at"),
+            "accepted_at": invitation.get("acceptedAt") or invitation.get("accepted_at"),
+            "revoked_at": invitation.get("revokedAt") or invitation.get("revoked_at"),
+            "metadata": metadata,
+        }
+
+    def family_invitation_patch_to_row(self, patch):
+        patch = patch or {}
+        payload = {}
+        if "status" in patch:
+            payload["status"] = self._normalize_family_invitation_status(patch.get("status"))
+            if payload["status"] == "accepted":
+                payload["accepted_at"] = patch.get("acceptedAt") or patch.get("accepted_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            if payload["status"] == "revoked":
+                payload["revoked_at"] = patch.get("revokedAt") or patch.get("revoked_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        if "inviteePersonId" in patch or "invitee_person_id" in patch:
+            invitee_person_id = patch.get("inviteePersonId") or patch.get("invitee_person_id")
+            payload["invitee_person_id"] = invitee_person_id if self._is_uuid(invitee_person_id or "") else None
+        if "metadata" in patch:
+            payload["metadata"] = patch.get("metadata") or {}
+        if "deliveryHint" in patch or "delivery_hint" in patch:
+            payload["delivery_hint"] = patch.get("deliveryHint") or patch.get("delivery_hint")
+        return payload
+
+    @staticmethod
+    def family_invitation_row_to_invitation(row):
+        row = row or {}
+        metadata = row.get("metadata") or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "familyGroupId": row.get("family_group_id") or metadata.get("originalFamilyGroupId"),
+            "inviterPersonId": row.get("inviter_person_id") or metadata.get("originalInviterPersonId"),
+            "inviteePersonId": row.get("invitee_person_id") or metadata.get("originalInviteePersonId"),
+            "shortCode": row.get("short_code") or "",
+            "deliveryHint": row.get("delivery_hint"),
+            "elderAssisted": bool(row.get("elder_assisted", False)),
+            "status": row.get("status") or "pending",
+            "expiresAt": row.get("expires_at"),
+            "acceptedAt": row.get("accepted_at"),
+            "revokedAt": row.get("revoked_at"),
+            "metadata": metadata,
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
 
     @staticmethod
     def _normalize_wellbeing_mood(mood):

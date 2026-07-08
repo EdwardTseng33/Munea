@@ -114,6 +114,7 @@ Errors:
 | `/auth-status` | POST | Verify bearer token and return safe auth context | optional/required by caller | Supabase Auth |
 | `/app-profile` | GET/POST | Account, family group, primary person, companion profile aggregate | required | `accounts`, `persons`, `family_groups`, `family_memberships`, `companion_profiles` |
 | `/account-bootstrap` | POST | Create first account/member/person/family/companion rows after auth | required | `accounts`, `account_members`, `persons`, `family_groups`, `family_memberships`, `companion_profiles` |
+| `/family/invitations` | POST | Create/list/update family invite links and six-digit join codes | required | `family_invitations` |
 | `/companion-profile` | GET/POST | Active companion identity for current person | required | `companion_profiles` |
 | `/family-members` | GET/POST/PATCH | Invite/list/update family contacts | required | `family_memberships`, `persons` |
 | `/routine-reminders` | GET/POST/PATCH | Routine and medication reminders | required | `routine_reminders` |
@@ -122,6 +123,7 @@ Prototype coverage:
 
 - `/app-profile`
 - `/account-bootstrap`
+- `/family/invitations`
 - `/companion-profile`
 
 Frontend bridge:
@@ -133,7 +135,6 @@ Frontend bridge:
 
 Missing:
 
-- family invite/update route.
 - reminder CRUD route.
 
 ### Voice, Avatar, And Memory

@@ -220,6 +220,8 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**payload, "id": "audit-event-1", "created_at": "2026-06-29T00:00:00Z"}]
         if table == "family_state_entries":
             return [{**payload, "id": "family-state-entry-1", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"}]
+        if table == "family_invitations":
+            return [{**payload, "id": payload.get("id") or "55555555-5555-4555-8555-555555555555", "created_at": "2026-07-08T00:00:00Z", "updated_at": "2026-07-08T00:00:00Z"}]
         if table == "wellbeing_signals":
             return [{**payload, "id": "wellbeing-signal-1", "created_at": "2026-07-07T00:00:00Z", "observed_at": payload.get("observed_at") or "2026-07-07T00:00:00Z"}]
         if table == "family_activities":
@@ -412,6 +414,24 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "created_at": "2026-06-29T00:00:00Z",
             "updated_at": "2026-06-29T00:00:00Z",
         }],
+        "family_invitations": [{
+            "id": "55555555-5555-4555-8555-555555555555",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+            "inviter_person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "invitee_person_id": None,
+            "token_hash": "hashed-token",
+            "short_code": "123456",
+            "delivery_hint": "line",
+            "elder_assisted": True,
+            "status": "pending",
+            "expires_at": "2026-07-10T00:00:00Z",
+            "accepted_at": None,
+            "revoked_at": None,
+            "metadata": {"relation": "daughter"},
+            "created_at": "2026-07-08T00:00:00Z",
+            "updated_at": "2026-07-08T00:00:00Z",
+        }],
         "wellbeing_signals": [{
             "id": "wellbeing-signal-1",
             "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
@@ -572,6 +592,33 @@ assert family_state["familyFeed"]["value"][0]["text"] == "Medication checked"
 saved_family_state = adapter.save_family_state_entry("meds", [{"name": "Vitamin D"}])
 assert saved_family_state["key"] == "meds"
 assert saved_family_state["value"][0]["name"] == "Vitamin D"
+invitations = adapter.load_family_invitations(status="pending", limit=10)
+assert invitations[0]["shortCode"] == "123456"
+assert invitations[0]["elderAssisted"] is True
+saved_invitation = adapter.create_family_invitation({
+    "familyGroupId": "local-family",
+    "inviterPersonId": "local-person-self",
+    "shortCode": "654321",
+    "shareToken": "raw-token-once",
+    "deliveryHint": "sms",
+    "elderAssisted": True,
+    "metadata": {"relation": "son"},
+})
+assert saved_invitation["shortCode"] == "654321"
+assert "shareToken" not in saved_invitation
+local_invitation_row = adapter.family_invitation_to_row({
+    "familyGroupId": "local-family",
+    "inviterPersonId": "local-person-self",
+    "inviteePersonId": "local-person-child",
+    "shortCode": "111222",
+    "shareToken": "raw-token-once",
+})
+assert local_invitation_row["family_group_id"] == env["MUNEA_SUPABASE_FAMILY_GROUP_ID"]
+assert local_invitation_row["inviter_person_id"] == env["MUNEA_SUPABASE_PERSON_ID"]
+assert local_invitation_row["invitee_person_id"] is None
+assert local_invitation_row["metadata"]["originalInviteePersonId"] == "local-person-child"
+accepted_invitation = adapter.update_family_invitation("55555555-5555-4555-8555-555555555555", {"status": "accepted"})
+assert accepted_invitation["status"] == "accepted"
 wellbeing = adapter.load_wellbeing_signals(limit=10)
 assert wellbeing[0]["mood"] == "穩定"
 assert wellbeing[0]["moodKey"] == "steady"
@@ -758,6 +805,93 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 print("family state cloud bridge OK")
 '@
 Pass "Family state can use Supabase while preserving JSON fallback"
+
+Step "Family invitation cloud bridge contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeFamilyInvitationBackend:
+    def enabled(self):
+        return True
+    def load_family_invitations(self, family_group_id=None, status=None, limit=100):
+        assert family_group_id in (None, "family-1")
+        assert status in (None, "pending")
+        return [{
+            "id": "invite-1",
+            "familyGroupId": "family-1",
+            "inviterPersonId": "person-1",
+            "shortCode": "123456",
+            "deliveryHint": "line",
+            "elderAssisted": True,
+            "status": "pending",
+            "expiresAt": "2026-07-10T00:00:00Z",
+            "metadata": {"relation": "daughter"},
+        }]
+    def create_family_invitation(self, invitation):
+        assert invitation["shortCode"] == "654321"
+        assert invitation["shareToken"].startswith("munea_") or invitation["shareToken"] == "raw-token-once"
+        return {**invitation, "id": "invite-2"}
+    def update_family_invitation(self, invitation_id, patch):
+        assert invitation_id == "invite-2"
+        assert patch["status"] == "accepted"
+        return {
+            "id": "invite-2",
+            "familyGroupId": "family-1",
+            "inviterPersonId": "person-1",
+            "shortCode": "654321",
+            "status": "accepted",
+            "acceptedAt": "2026-07-08T00:00:00Z",
+        }
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeFamilyInvitationBackend()
+    listed = server.family_invitations_response({"action": "list", "familyGroupId": "family-1", "status": "pending"})
+    assert listed["ok"] is True
+    assert listed["invitations"][0]["shortCode"] == "123456"
+    assert "shareToken" not in listed["invitations"][0]
+    created = server.family_invitations_response({"action": "create", "invitation": {"familyGroupId": "family-1", "inviterPersonId": "person-1", "shortCode": "654321", "shareToken": "raw-token-once"}})
+    assert created["backend"] == "supabase"
+    assert created["invitation"]["id"] == "invite-2"
+    assert created["invitation"]["shareToken"] == "raw-token-once"
+    updated = server.family_invitations_response({"action": "update", "id": "invite-2", "patch": {"status": "accepted"}})
+    assert updated["backend"] == "supabase"
+    assert updated["invitation"]["status"] == "accepted"
+finally:
+    server.data_backend = original_backend
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def load_family_invitations(self, family_group_id=None, status=None, limit=100):
+        return None
+    def create_family_invitation(self, invitation):
+        return None
+    def update_family_invitation(self, invitation_id, patch):
+        return None
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.FAMILY_INVITATIONS_PATH = str(Path(d) / "family_invitations.json")
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        created = server.family_invitations_response({"action": "create", "invitation": {"familyGroupId": "family-1", "shortCode": "222333"}})
+        assert created["backend"] == "json"
+        assert created["invitation"]["shareToken"].startswith("munea_")
+        listed = server.family_invitations_response({"action": "list", "familyGroupId": "family-1"})
+        assert listed["invitations"][0]["shortCode"] == "222333"
+        assert "shareToken" not in listed["invitations"][0]
+        updated = server.family_invitations_response({"action": "update", "id": created["invitation"]["id"], "patch": {"status": "revoked"}})
+        assert updated["backend"] == "json"
+        assert updated["invitation"]["status"] == "revoked"
+    finally:
+        server.data_backend = original_backend
+print("family invitation cloud bridge OK")
+'@
+Pass "Family invitations can use Supabase while preserving JSON fallback"
 
 Step "Family activity cloud bridge contract"
 Invoke-PythonBlock @'

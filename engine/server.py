@@ -34,6 +34,7 @@ BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(
 CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(HERE, "credits_store.json")
 FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.path.join(HERE, "family_state_store.json")
 FAMILY_ACTIVITIES_PATH = os.environ.get("MUNEA_FAMILY_ACTIVITIES_PATH") or os.path.join(HERE, "family_activities.json")
+FAMILY_INVITATIONS_PATH = os.environ.get("MUNEA_FAMILY_INVITATIONS_PATH") or os.path.join(HERE, "family_invitations.json")
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 AUDIT_EVENTS_STORE_PATH = os.environ.get("MUNEA_AUDIT_EVENTS_STORE_PATH") or os.path.join(HERE, "audit_events_store.json")
@@ -480,6 +481,141 @@ def family_state_response(data):
     except Exception:
         state = {}
     return {"ok": True, "state": {k: v.get("value") for k, v in state.items() if isinstance(v, dict)}}
+
+FAMILY_INVITATION_STATUSES = {"pending", "accepted", "revoked", "expired"}
+
+def normalize_family_invitation(invitation):
+    invitation = invitation or {}
+    status = invitation.get("status") or "pending"
+    created_at = invitation.get("createdAt") or invitation.get("created_at") or utc_now()
+    expires_at = invitation.get("expiresAt") or invitation.get("expires_at")
+    if not expires_at:
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=72)).isoformat()
+    short_code = str(invitation.get("shortCode") or invitation.get("short_code") or "").strip()
+    if not (len(short_code) == 6 and short_code.isdigit()):
+        short_code = str(uuid.uuid4().int % 1_000_000).zfill(6)
+    share_token = invitation.get("shareToken") or invitation.get("share_token") or invitation.get("token")
+    token_hash = invitation.get("tokenHash") or invitation.get("token_hash")
+    return {
+        "id": str(invitation.get("id") or ("fam_inv_" + uuid.uuid4().hex[:10])),
+        "accountId": invitation.get("accountId") or invitation.get("account_id") or "local-demo-account",
+        "familyGroupId": invitation.get("familyGroupId") or invitation.get("family_group_id") or "local-demo-family",
+        "inviterPersonId": invitation.get("inviterPersonId") or invitation.get("inviter_person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "inviteePersonId": invitation.get("inviteePersonId") or invitation.get("invitee_person_id"),
+        "shortCode": short_code,
+        "shareToken": share_token,
+        "tokenHash": token_hash or ("local-" + uuid.uuid4().hex),
+        "deliveryHint": invitation.get("deliveryHint") or invitation.get("delivery_hint"),
+        "elderAssisted": bool(invitation.get("elderAssisted") or invitation.get("elder_assisted") or False),
+        "status": status if status in FAMILY_INVITATION_STATUSES else "pending",
+        "expiresAt": expires_at,
+        "acceptedAt": invitation.get("acceptedAt") or invitation.get("accepted_at"),
+        "revokedAt": invitation.get("revokedAt") or invitation.get("revoked_at"),
+        "metadata": invitation.get("metadata") or {},
+        "createdAt": created_at,
+        "updatedAt": invitation.get("updatedAt") or invitation.get("updated_at") or created_at,
+    }
+
+
+def public_family_invitation(invitation, include_share_token=False):
+    invitation = normalize_family_invitation(invitation)
+    public = {k: v for k, v in invitation.items() if k not in {"tokenHash", "shareToken"}}
+    if include_share_token and invitation.get("shareToken"):
+        public["shareToken"] = invitation.get("shareToken")
+    return public
+
+
+def load_family_invitations(family_group_id=None, status=None, limit=100):
+    try:
+        remote_invitations = data_backend().load_family_invitations(family_group_id=family_group_id, status=status, limit=limit)
+        if remote_invitations is not None:
+            return [public_family_invitation(inv) for inv in remote_invitations]
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load family invitations from Supabase", e)
+    invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
+    if not isinstance(invitations, list):
+        invitations = []
+    invitations = [normalize_family_invitation(inv) for inv in invitations]
+    if family_group_id:
+        invitations = [inv for inv in invitations if inv.get("familyGroupId") == family_group_id]
+    if status:
+        invitations = [inv for inv in invitations if inv.get("status") == status]
+    return [public_family_invitation(inv) for inv in invitations[-limit:]]
+
+
+def create_family_invitation(invitation):
+    invitation = invitation or {}
+    share_token = invitation.get("shareToken") or invitation.get("share_token") or ("munea_" + uuid.uuid4().hex)
+    invitation = normalize_family_invitation({**(invitation or {}), "shareToken": share_token, "status": "pending", "updatedAt": utc_now()})
+    try:
+        remote_invitation = data_backend().create_family_invitation(invitation)
+        if remote_invitation is not None:
+            return public_family_invitation({**remote_invitation, "shareToken": share_token}, include_share_token=True), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("create family invitation in Supabase", e)
+    invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
+    if not isinstance(invitations, list):
+        invitations = []
+    invitations.append(invitation)
+    write_json_file(FAMILY_INVITATIONS_PATH, invitations[-1000:])
+    return public_family_invitation(invitation, include_share_token=True), "json"
+
+
+def update_family_invitation(invitation_id, patch):
+    patch = patch or {}
+    status = patch.get("status")
+    if status and status not in FAMILY_INVITATION_STATUSES:
+        return None, "invalid_status"
+    try:
+        remote_invitation = data_backend().update_family_invitation(invitation_id, patch)
+        if remote_invitation is not None:
+            return public_family_invitation(remote_invitation), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("update family invitation in Supabase", e)
+    invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
+    if not isinstance(invitations, list):
+        invitations = []
+    next_invitations = []
+    updated = None
+    for invitation in invitations:
+        current = normalize_family_invitation(invitation)
+        if current.get("id") == invitation_id:
+            now = utc_now()
+            current = normalize_family_invitation({**current, **patch, "updatedAt": now})
+            if current.get("status") == "accepted" and not current.get("acceptedAt"):
+                current["acceptedAt"] = now
+            if current.get("status") == "revoked" and not current.get("revokedAt"):
+                current["revokedAt"] = now
+            updated = current
+        next_invitations.append(current)
+    write_json_file(FAMILY_INVITATIONS_PATH, next_invitations[-1000:])
+    return (public_family_invitation(updated), "json") if updated else (None, "not_found")
+
+
+def family_invitations_response(data):
+    data = data or {}
+    action = data.get("action") or "list"
+    if action == "create":
+        invitation, backend = create_family_invitation(data.get("invitation") or data)
+        return {"ok": True, "invitation": invitation, "backend": backend}
+    if action == "update":
+        invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
+        if not invitation_id:
+            return {"ok": False, "error": "invitation_id_required"}
+        invitation, backend = update_family_invitation(invitation_id, data.get("patch") or data)
+        if invitation is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "invitation": invitation, "backend": backend}
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id")
+    status = data.get("status")
+    limit = int(data.get("limit") or 100)
+    return {"ok": True, "invitations": load_family_invitations(family_group_id=family_group_id, status=status, limit=limit)}
 
 FAMILY_ACTIVITY_TYPES = {"walk", "quiz", "event", "vote", "draw", "custom"}
 FAMILY_ACTIVITY_STATUSES = {"draft", "active", "completed", "archived", "cancelled"}
@@ -2952,6 +3088,8 @@ class H(BaseHTTPRequestHandler):
                     self._json(refresh_living_profile(data.get("personId") or data.get("person_id")))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
+            elif self.path == "/family/invitations":
+                self._json(family_invitations_response(data))
             elif self.path == "/family/activity":
                 self._json(family_activity_response(data))
             elif self.path == "/wellbeing/trend":
