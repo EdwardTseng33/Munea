@@ -40,6 +40,7 @@ PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 AUDIT_EVENTS_STORE_PATH = os.environ.get("MUNEA_AUDIT_EVENTS_STORE_PATH") or os.path.join(HERE, "audit_events_store.json")
 MEMORY_ITEMS_PATH = os.environ.get("MUNEA_MEMORY_ITEMS_PATH") or os.path.join(HERE, "memory_items.json")
+CONVERSATION_SUMMARIES_PATH = os.environ.get("MUNEA_CONVERSATION_SUMMARIES_PATH") or os.path.join(HERE, "conversation_summaries.json")
 PERCEPTION_SNAPSHOTS_PATH = os.environ.get("MUNEA_PERCEPTION_SNAPSHOTS_PATH") or os.path.join(HERE, "perception_snapshots.json")
 RELATIONSHIP_STATES_PATH = os.environ.get("MUNEA_RELATIONSHIP_STATES_PATH") or os.path.join(HERE, "companion_relationship_states.json")
 PRIMARY_CARE_RECIPIENT_ID = "local-person-self"
@@ -345,6 +346,106 @@ def append_memory_items(items):
     existing = load_memory_items(limit=1000)
     save_memory_items(existing + items)
     return items
+
+
+def _string_list(value):
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    return []
+
+
+def normalize_conversation_summary(item=None):
+    item = item or {}
+    summary = item.get("summary") or item.get("text") or ""
+    created_at = item.get("createdAt") or item.get("created_at") or utc_now()
+    return {
+        "id": item.get("id") or ("local-conversation-summary-" + uuid.uuid4().hex[:10]),
+        "accountId": item.get("accountId") or item.get("account_id") or "local-account",
+        "personId": item.get("personId") or item.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "voiceSessionId": item.get("voiceSessionId") or item.get("voice_session_id"),
+        "summary": str(summary).strip(),
+        "memoryTags": _string_list(item.get("memoryTags") or item.get("memory_tags") or item.get("tags")),
+        "safetyRelevant": bool(item.get("safetyRelevant") or item.get("safety_relevant")),
+        "createdAt": created_at,
+        "deletedAt": item.get("deletedAt") or item.get("deleted_at"),
+        "privacy": {
+            "storesRawTranscriptByDefault": False,
+            "retainedRecord": "summary_only",
+        },
+    }
+
+
+def load_conversation_summaries(person_id=None, limit=100, include_deleted=False):
+    try:
+        remote_items = data_backend().load_conversation_summaries(
+            {"personId": person_id, "includeDeleted": include_deleted},
+            limit=limit,
+        )
+        if remote_items is not None:
+            return remote_items
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load conversation summaries from Supabase", e)
+    items = read_json_file(CONVERSATION_SUMMARIES_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    normalized = [normalize_conversation_summary(item) for item in items]
+    if person_id:
+        normalized = [item for item in normalized if item.get("personId") == person_id]
+    if not include_deleted:
+        normalized = [item for item in normalized if not item.get("deletedAt")]
+    return normalized[-limit:]
+
+
+def save_conversation_summaries(items):
+    write_json_file(CONVERSATION_SUMMARIES_PATH, list(items)[-1000:])
+    return items
+
+
+def append_conversation_summary(item):
+    item = normalize_conversation_summary(item)
+    if not item["summary"]:
+        return None
+    try:
+        remote_item = data_backend().save_conversation_summary(item)
+        if remote_item is not None:
+            return remote_item
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("append conversation summary to Supabase", e)
+    existing = load_conversation_summaries(limit=1000, include_deleted=True)
+    existing = [row for row in existing if row.get("id") != item["id"]]
+    existing.append(item)
+    save_conversation_summaries(existing)
+    return item
+
+
+def archive_conversation_summary(summary_id):
+    if not summary_id:
+        return None
+    deleted_at = utc_now()
+    try:
+        remote_item = data_backend().soft_delete_conversation_summary(summary_id, deleted_at)
+        if remote_item is not None:
+            return remote_item
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("archive conversation summary in Supabase", e)
+    items = load_conversation_summaries(limit=1000, include_deleted=True)
+    archived = None
+    for item in items:
+        if item.get("id") == summary_id:
+            item["deletedAt"] = deleted_at
+            archived = item
+            break
+    if archived:
+        save_conversation_summaries(items)
+    return archived
 
 
 LIVING_PROFILE_PATH = os.environ.get("MUNEA_LIVING_PROFILE_PATH") or os.path.join(HERE, "living_profile.json")
@@ -1466,6 +1567,59 @@ def memory_retrieve_response(data):
             return {"ok": True, "brain": "butler", "query": query,
                     "memories": sem, "retriever": "semantic_local", "count": len(sem)}
     return model_router.memory_retrieve_response(data, items)
+
+
+def conversation_summary_response(data):
+    data = data or {}
+    action = (data.get("action") or "list").lower()
+    if action in ("save", "store", "create"):
+        payload = data.get("conversationSummary") or data.get("summaryRecord") or data
+        if isinstance(payload, str):
+            payload = {"summary": payload}
+        payload = {**(payload or {})}
+        payload.setdefault("personId", data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID)
+        payload.setdefault("voiceSessionId", data.get("voiceSessionId") or data.get("voice_session_id"))
+        payload.setdefault("summary", data.get("summary"))
+        if not str(payload.get("summary") or "").strip():
+            return {
+                "ok": False,
+                "error": "summary_required",
+                "message": "Store a concise conversation summary, not raw transcript history.",
+            }
+        summary = append_conversation_summary(payload)
+        if not summary:
+            return {"ok": False, "error": "summary_required"}
+        append_product_event({
+            "eventName": "companion_summary_created",
+            "personId": summary.get("personId"),
+            "properties": {
+                "memoryTags": summary.get("memoryTags") or [],
+                "safetyRelevant": summary.get("safetyRelevant") is True,
+                "rawTranscriptStored": False,
+            },
+        })
+        return {
+            "ok": True,
+            "action": "save",
+            "summary": summary,
+            "privacy": summary.get("privacy") or {"storesRawTranscriptByDefault": False},
+            "backend": data_backend_status(),
+        }
+    if action in ("archive", "delete"):
+        summary_id = data.get("id") or data.get("summaryId") or data.get("summary_id")
+        if not summary_id:
+            return {"ok": False, "error": "summary_id_required"}
+        summary = archive_conversation_summary(summary_id)
+        if not summary:
+            return {"ok": False, "error": "summary_not_found"}
+        return {"ok": True, "action": "archive", "summary": summary, "backend": data_backend_status()}
+    person_id = data.get("personId") or data.get("person_id")
+    summaries = load_conversation_summaries(
+        person_id=person_id,
+        limit=int(data.get("limit") or 100),
+        include_deleted=bool(data.get("includeDeleted") or data.get("include_deleted")),
+    )
+    return {"ok": True, "action": "list", "summaries": summaries, "count": len(summaries), "backend": data_backend_status()}
 
 
 def guardian_evaluate_response(data):
@@ -3009,6 +3163,7 @@ def privacy_export_response(data):
             "familyGroup": load_app_profile_store().get("familyGroup"),
             "primaryCareRecipientId": load_app_profile_store().get("primaryCareRecipientId"),
             "companionProfiles": load_app_profile_store().get("companionProfiles"),
+            "conversationSummaries": load_conversation_summaries(limit=500),
             "billing": load_billing_store(),
             "privacyRequests": load_privacy_requests_store(),
         },
@@ -3394,7 +3549,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -3437,6 +3592,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(memory_extract_response(data))
             elif self.path == "/memory/retrieve":
                 self._json(memory_retrieve_response(data))
+            elif self.path == "/conversation-summary":
+                self._json(conversation_summary_response(data))
             elif self.path == "/butler/post-turn":
                 self._json(butler_post_turn_response(data))
             elif self.path == "/admin/memory-consolidate":

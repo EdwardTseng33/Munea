@@ -233,6 +233,8 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
         if table == "memory_items":
             rows = payload if isinstance(payload, list) else [payload]
             return [{**row, "id": f"memory-item-{idx}", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"} for idx, row in enumerate(rows, start=1)]
+        if table == "conversation_summaries":
+            return [{**payload, "id": payload.get("id") or "99999999-9999-4999-8999-999999999999", "created_at": "2026-07-08T00:00:00Z", "deleted_at": payload.get("deleted_at")}]
         if table == "perception_snapshots":
             rows = payload if isinstance(payload, list) else [payload]
             return [{**row, "id": f"perception-snapshot-{idx}", "created_at": "2026-06-29T00:00:00Z"} for idx, row in enumerate(rows, start=1)]
@@ -365,6 +367,17 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "metadata": {"topic": "video_entertainment"},
             "created_at": "2026-06-29T00:00:00Z",
             "updated_at": "2026-06-29T00:00:00Z",
+        }],
+        "conversation_summaries": [{
+            "id": "99999999-9999-4999-8999-999999999999",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "voice_session_id": None,
+            "summary": "User felt lonely but enjoyed talking about Korean dramas.",
+            "memory_tags": ["emotion", "video_entertainment"],
+            "safety_relevant": False,
+            "created_at": "2026-07-08T00:00:00Z",
+            "deleted_at": None,
         }],
         "perception_snapshots": [{
             "id": "perception-snapshot-1",
@@ -679,6 +692,19 @@ saved_memories = adapter.save_memory_items([{
 }])
 assert saved_memories[0]["type"] == "relationship"
 assert saved_memories[0]["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
+conversation_summaries = adapter.load_conversation_summaries(limit=10)
+assert conversation_summaries[0]["summary"].startswith("User felt lonely")
+assert conversation_summaries[0]["privacy"]["storesRawTranscriptByDefault"] is False
+saved_summary = adapter.save_conversation_summary({
+    "personId": "local-person-self",
+    "summary": "User enjoyed a short check-in and asked to remember Korean dramas.",
+    "memoryTags": ["preference", "video_entertainment"],
+})
+assert saved_summary["summary"].startswith("User enjoyed")
+assert saved_summary["accountId"] == env["MUNEA_SUPABASE_ACCOUNT_ID"]
+assert saved_summary["memoryTags"] == ["preference", "video_entertainment"]
+archived_summary = adapter.soft_delete_conversation_summary("99999999-9999-4999-8999-999999999999", "2026-07-08T01:00:00Z")
+assert archived_summary["deletedAt"] == "2026-07-08T01:00:00Z"
 snapshots = adapter.load_perception_snapshots({"snapshotType": "media_context"}, limit=10)
 assert snapshots[0]["snapshotType"] == "media_context"
 assert snapshots[0]["facts"]["domain"] == "video_entertainment"
@@ -1507,6 +1533,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
     server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
+    server.CONVERSATION_SUMMARIES_PATH = str(Path(d) / "conversation_summaries.json")
     server.PERCEPTION_SNAPSHOTS_PATH = str(Path(d) / "perception_snapshots.json")
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     server.RELATIONSHIP_STATES_PATH = str(Path(d) / "companion_relationship_states.json")
@@ -1540,6 +1567,24 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     retrieved = server.memory_retrieve_response({"query": "Korean drama Netflix daughter", "limit": 5})
     assert retrieved["ok"] is True
     assert retrieved["count"] >= 1
+    missing_summary = server.conversation_summary_response({"action": "save", "history": [{"role": "user", "text": "raw turn"}]})
+    assert missing_summary["ok"] is False
+    assert missing_summary["error"] == "summary_required"
+    saved_conversation_summary = server.conversation_summary_response({
+        "action": "save",
+        "summary": "User felt lonely and enjoyed discussing Korean dramas; no raw transcript retained.",
+        "memoryTags": ["emotion", "video_entertainment"],
+        "safetyRelevant": False,
+    })
+    assert saved_conversation_summary["ok"] is True
+    assert saved_conversation_summary["summary"]["privacy"]["storesRawTranscriptByDefault"] is False
+    listed_conversation_summaries = server.conversation_summary_response({"action": "list"})
+    assert listed_conversation_summaries["count"] == 1
+    summary_id = listed_conversation_summaries["summaries"][0]["id"]
+    archived_conversation_summary = server.conversation_summary_response({"action": "archive", "summaryId": summary_id})
+    assert archived_conversation_summary["ok"] is True
+    assert archived_conversation_summary["summary"]["deletedAt"]
+    assert server.conversation_summary_response({"action": "list"})["count"] == 0
 
     stored_snapshot = server.perception_snapshot_response({
         "action": "store",
@@ -1644,6 +1689,7 @@ user_scoped_paths = [
     "/persona/context",
     "/memory/extract",
     "/memory/retrieve",
+    "/conversation-summary",
     "/butler/post-turn",
     "/guardian/evaluate",
     "/perception/snapshot",
@@ -2823,6 +2869,16 @@ if ($persona.layer -ne "companion_persona") { throw "/persona/context unexpected
 if ($persona.composition.personaOverridesSafety) { throw "/persona/context persona should not override safety" }
 Pass "/persona/context returns companion persona pack"
 
+Step "API /conversation-summary"
+$summaryBody = '{"action":"save","summary":"Smoke user enjoyed a short companion check-in; raw transcript is not retained.","memoryTags":["smoke","companion"],"safetyRelevant":false}'
+$conversationSummary = Invoke-RestMethod -Uri "$BaseUrl/conversation-summary" -Method Post -ContentType "application/json; charset=utf-8" -Body $summaryBody -TimeoutSec 30
+if (-not $conversationSummary.ok) { throw "/conversation-summary returned not ok" }
+if ($conversationSummary.privacy.storesRawTranscriptByDefault) { throw "/conversation-summary should not retain raw transcript by default" }
+$summaryList = Invoke-RestMethod -Uri "$BaseUrl/conversation-summary" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"list","limit":5}' -TimeoutSec 30
+if (-not $summaryList.ok) { throw "/conversation-summary list returned not ok" }
+if ($summaryList.count -lt 1) { throw "/conversation-summary list returned no summaries" }
+Pass "/conversation-summary stores summary-only conversation memory"
+
 Step "API /butler/post-turn"
 $postTurnBody = '{"char":"\u963f\u5b8f","companionProfile":{"templateId":"companion-real-male","displayName":"\u963f\u5b8f"},"analyticsExcluded":true,"history":[{"role":"user","text":"I like Korean dramas and feel lonely recently."},{"role":"model","text":"I am here with you."}]}'
 $postTurn = Invoke-RestMethod -Uri "$BaseUrl/butler/post-turn" -Method Post -ContentType "application/json; charset=utf-8" -Body $postTurnBody -TimeoutSec 30
@@ -2875,6 +2931,7 @@ if ($health.contracts -notcontains "ai-brain-status") { throw "/healthz missing 
 if ($health.contracts -notcontains "persona-context") { throw "/healthz missing persona-context contract" }
 if ($health.contracts -notcontains "memory-extract") { throw "/healthz missing memory-extract contract" }
 if ($health.contracts -notcontains "memory-retrieve") { throw "/healthz missing memory-retrieve contract" }
+if ($health.contracts -notcontains "conversation-summary") { throw "/healthz missing conversation-summary contract" }
 if ($health.contracts -notcontains "butler-post-turn") { throw "/healthz missing butler-post-turn contract" }
 if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missing guardian-evaluate contract" }
 if ($health.contracts -notcontains "perception-topic-plan") { throw "/healthz missing perception-topic-plan contract" }

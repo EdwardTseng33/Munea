@@ -170,6 +170,7 @@ Prototype coverage:
 - `/persona/context`
 - `/memory/extract`
 - `/memory/retrieve`
+- `/conversation-summary`
 - `/butler/post-turn`
 - `/guardian/evaluate`
 

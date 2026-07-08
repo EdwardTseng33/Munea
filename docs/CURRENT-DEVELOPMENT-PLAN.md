@@ -81,6 +81,7 @@
 - Added the `/routine-reminders` backend contract for list/save/update/archive of medication, check-in, and routine reminders, backed by the existing `routine_reminders` table with JSON fallback and legacy `/care-schedule` compatibility.
 - Connected the medication and visit reminder UI to `/routine-reminders`: manual settings, chat-created reminders, deletion/archive, and startup hydration now use the backend bridge while preserving localStorage fallback for offline/static preview.
 - Added the `/family-members` backend contract for listing, adding, role/permission updates, and removal of family care-circle members, backed by `family_memberships` + `persons` with JSON fallback through the app profile store.
+- Added the `/conversation-summary` backend contract for summary-only conversation memory: save/list/archive now uses `conversation_summaries` in Supabase with JSON fallback, explicitly avoiding raw transcript retention by default.
 
 ## 2026-06-29 Update
 

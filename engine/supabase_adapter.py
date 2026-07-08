@@ -720,6 +720,53 @@ class SupabaseAdapter:
             prefer="return=representation",
         )
 
+    def load_conversation_summaries(self, query=None, limit=100):
+        if not self.enabled():
+            return None
+        query = query or {}
+        filters = {
+            "account_id": f"eq.{self.account_id}",
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(limit or 100),
+        }
+        person_id = query.get("personId") or query.get("person_id")
+        if person_id:
+            person_id = person_id if self._is_uuid(person_id or "") else self.person_id
+            filters["person_id"] = f"eq.{person_id}"
+        if not (query.get("includeDeleted") or query.get("include_deleted")):
+            filters["deleted_at"] = "is.null"
+        rows = self._select("conversation_summaries", filters)
+        return [self.conversation_summary_row_to_item(row) for row in rows]
+
+    def save_conversation_summary(self, item):
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "POST",
+            "conversation_summaries",
+            query={"select": "*"},
+            payload=self.conversation_summary_to_row(item),
+            prefer="return=representation",
+        )
+        return self.conversation_summary_row_to_item(rows[0]) if rows else None
+
+    def soft_delete_conversation_summary(self, summary_id, deleted_at):
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "PATCH",
+            "conversation_summaries",
+            query={
+                "id": f"eq.{summary_id}",
+                "account_id": f"eq.{self.account_id}",
+                "select": "*",
+            },
+            payload={"deleted_at": deleted_at},
+            prefer="return=representation",
+        )
+        return self.conversation_summary_row_to_item(rows[0]) if rows else None
+
     def load_perception_snapshots(self, query=None, limit=100):
         if not self.enabled():
             return None
@@ -1621,6 +1668,42 @@ class SupabaseAdapter:
             "metadata": row.get("metadata") or {},
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
+        }
+
+    def conversation_summary_to_row(self, item):
+        item = item or {}
+        person_id = item.get("personId") or item.get("person_id") or self.person_id
+        if person_id and not self._is_uuid(person_id):
+            person_id = self.person_id
+        voice_session_id = item.get("voiceSessionId") or item.get("voice_session_id")
+        if voice_session_id and not self._is_uuid(voice_session_id):
+            voice_session_id = None
+        return {
+            "account_id": item.get("accountId") or item.get("account_id") or self.account_id,
+            "person_id": person_id or None,
+            "voice_session_id": voice_session_id,
+            "summary": item.get("summary") or "",
+            "memory_tags": item.get("memoryTags") or item.get("memory_tags") or item.get("tags") or [],
+            "safety_relevant": bool(item.get("safetyRelevant") or item.get("safety_relevant")),
+        }
+
+    @staticmethod
+    def conversation_summary_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id"),
+            "voiceSessionId": row.get("voice_session_id"),
+            "summary": row.get("summary") or "",
+            "memoryTags": row.get("memory_tags") or [],
+            "safetyRelevant": bool(row.get("safety_relevant")),
+            "createdAt": row.get("created_at"),
+            "deletedAt": row.get("deleted_at"),
+            "privacy": {
+                "storesRawTranscriptByDefault": False,
+                "retainedRecord": "summary_only",
+            },
         }
 
     def perception_snapshot_to_row(self, snapshot):
