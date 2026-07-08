@@ -26,8 +26,8 @@ if errorlevel 1 (
 )
 
 REM --- 影像引擎 :8188（載模型約 15 秒） ---
-REM 底＝待機小影片（會眨眼/微動）。要換底：改下面 MUNEA_AVATAR_SRC 的路徑（影片或照片都吃）
-set "MUNEA_AVATAR_SRC=E:\Claude\Munea\Munea\Lily\1929df67-6645-4821-89a3-b856beef82aa.mp4"
+REM ⚠ 底＝寧寧官方形象（人物識別、不可換臉——Edward 7/8 拍板）。底檔支援照片或影片。
+set "MUNEA_AVATAR_SRC=E:\Claude\Munea\web\avatars\nening-real-female-full.jpg"
 netstat -an | findstr ":8188" | findstr "LISTENING" >nul 2>nul
 if errorlevel 1 (
   echo 啟動影像引擎（載模型約 15 秒）...
