@@ -222,6 +222,8 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             return [{**payload, "id": "family-state-entry-1", "created_at": "2026-06-29T00:00:00Z", "updated_at": "2026-06-29T00:00:00Z"}]
         if table == "family_invitations":
             return [{**payload, "id": payload.get("id") or "55555555-5555-4555-8555-555555555555", "created_at": "2026-07-08T00:00:00Z", "updated_at": "2026-07-08T00:00:00Z"}]
+        if table == "consent_records":
+            return [{**payload, "id": payload.get("id") or "66666666-6666-4666-8666-666666666666", "created_at": "2026-07-08T00:00:00Z"}]
         if table == "wellbeing_signals":
             return [{**payload, "id": "wellbeing-signal-1", "created_at": "2026-07-07T00:00:00Z", "observed_at": payload.get("observed_at") or "2026-07-07T00:00:00Z"}]
         if table == "family_activities":
@@ -432,6 +434,23 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "created_at": "2026-07-08T00:00:00Z",
             "updated_at": "2026-07-08T00:00:00Z",
         }],
+        "consent_records": [{
+            "id": "66666666-6666-4666-8666-666666666666",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
+            "person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "family_group_id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"],
+            "consent_type": "family_link",
+            "consent_version": "v1",
+            "status": "granted",
+            "granted_by_person_id": env["MUNEA_SUPABASE_PERSON_ID"],
+            "source": "smoke",
+            "scope": {"shareMoodWeather": True},
+            "evidence": {"method": "tap"},
+            "granted_at": "2026-07-08T00:00:00Z",
+            "revoked_at": None,
+            "expires_at": None,
+            "created_at": "2026-07-08T00:00:00Z",
+        }],
         "wellbeing_signals": [{
             "id": "wellbeing-signal-1",
             "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
@@ -619,6 +638,31 @@ assert local_invitation_row["invitee_person_id"] is None
 assert local_invitation_row["metadata"]["originalInviteePersonId"] == "local-person-child"
 accepted_invitation = adapter.update_family_invitation("55555555-5555-4555-8555-555555555555", {"status": "accepted"})
 assert accepted_invitation["status"] == "accepted"
+consents = adapter.load_consent_records(consent_type="family_link", status="granted", limit=10)
+assert consents[0]["consentType"] == "family_link"
+assert consents[0]["scope"]["shareMoodWeather"] is True
+saved_consent = adapter.append_consent_record({
+    "personId": "local-person-self",
+    "familyGroupId": "local-family",
+    "consentType": "share_mood_weather",
+    "grantedByPersonId": "local-person-child",
+    "scope": {"visibility": "family_summary"},
+    "evidence": {"method": "tap"},
+    "source": "settings",
+})
+assert saved_consent["consentType"] == "share_mood_weather"
+local_consent_row = adapter.consent_record_to_row({
+    "personId": "local-person-self",
+    "familyGroupId": "local-family",
+    "grantedByPersonId": "local-person-child",
+    "consentType": "capability:voice_emotion",
+})
+assert local_consent_row["person_id"] == env["MUNEA_SUPABASE_PERSON_ID"]
+assert local_consent_row["family_group_id"] == env["MUNEA_SUPABASE_FAMILY_GROUP_ID"]
+assert local_consent_row["scope"]["originalPersonId"] == "local-person-self"
+assert local_consent_row["evidence"]["originalGrantedByPersonId"] == "local-person-child"
+revoked_consent = adapter.revoke_consent_record("66666666-6666-4666-8666-666666666666", patch={"revokedByPersonId": "local-person-self"})
+assert revoked_consent["status"] == "revoked"
 wellbeing = adapter.load_wellbeing_signals(limit=10)
 assert wellbeing[0]["mood"] == "穩定"
 assert wellbeing[0]["moodKey"] == "steady"
@@ -892,6 +936,88 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 print("family invitation cloud bridge OK")
 '@
 Pass "Family invitations can use Supabase while preserving JSON fallback"
+
+Step "Consent records cloud bridge contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+class FakeConsentBackend:
+    def enabled(self):
+        return True
+    def load_consent_records(self, person_id=None, consent_type=None, status=None, limit=100):
+        assert person_id in (None, "person-1")
+        assert consent_type in (None, "family_link")
+        assert status in (None, "granted")
+        return [{
+            "id": "consent-1",
+            "personId": "person-1",
+            "familyGroupId": "family-1",
+            "consentType": "family_link",
+            "consentVersion": "v1",
+            "status": "granted",
+            "scope": {"familyLink": True},
+            "evidence": {"method": "tap"},
+            "grantedAt": "2026-07-08T00:00:00Z",
+        }]
+    def append_consent_record(self, record):
+        assert record["consentType"] == "share_mood_weather"
+        return {**record, "id": "consent-2"}
+    def revoke_consent_record(self, record_id=None, person_id=None, consent_type=None, patch=None):
+        assert record_id == "consent-2" or (person_id == "person-1" and consent_type == "share_mood_weather")
+        return {
+            "id": record_id or "consent-2",
+            "personId": person_id or "person-1",
+            "consentType": consent_type or "share_mood_weather",
+            "status": "revoked",
+            "revokedAt": "2026-07-08T00:01:00Z",
+            "evidence": {"revokedByPersonId": "person-1"},
+        }
+
+original_backend = server.data_backend
+try:
+    server.data_backend = lambda: FakeConsentBackend()
+    listed = server.consent_records_response({"action": "list", "personId": "person-1", "consentType": "family_link", "status": "granted"})
+    assert listed["ok"] is True
+    assert listed["records"][0]["consentType"] == "family_link"
+    granted = server.consent_records_response({"action": "grant", "record": {"personId": "person-1", "consentType": "share_mood_weather", "scope": {"visibility": "family_summary"}}})
+    assert granted["backend"] == "supabase"
+    assert granted["record"]["id"] == "consent-2"
+    revoked = server.consent_records_response({"action": "revoke", "id": "consent-2"})
+    assert revoked["backend"] == "supabase"
+    assert revoked["record"]["status"] == "revoked"
+finally:
+    server.data_backend = original_backend
+
+class DisabledBackend:
+    def enabled(self):
+        return False
+    def load_consent_records(self, person_id=None, consent_type=None, status=None, limit=100):
+        return None
+    def append_consent_record(self, record):
+        return None
+    def revoke_consent_record(self, record_id=None, person_id=None, consent_type=None, patch=None):
+        return None
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.CONSENT_RECORDS_PATH = str(Path(d) / "consent_records.json")
+    try:
+        server.data_backend = lambda: DisabledBackend()
+        granted = server.consent_records_response({"action": "grant", "record": {"personId": "person-1", "consentType": "capability:voice_emotion"}})
+        assert granted["backend"] == "json"
+        listed = server.consent_records_response({"action": "list", "personId": "person-1"})
+        assert listed["records"][0]["consentType"] == "capability:voice_emotion"
+        revoked = server.consent_records_response({"action": "revoke", "personId": "person-1", "consentType": "capability:voice_emotion"})
+        assert revoked["backend"] == "json"
+        assert revoked["record"]["status"] == "revoked"
+    finally:
+        server.data_backend = original_backend
+print("consent records cloud bridge OK")
+'@
+Pass "Consent records can use Supabase while preserving JSON fallback"
 
 Step "Family activity cloud bridge contract"
 Invoke-PythonBlock @'

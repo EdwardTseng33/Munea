@@ -115,6 +115,7 @@ Errors:
 | `/app-profile` | GET/POST | Account, family group, primary person, companion profile aggregate | required | `accounts`, `persons`, `family_groups`, `family_memberships`, `companion_profiles` |
 | `/account-bootstrap` | POST | Create first account/member/person/family/companion rows after auth | required | `accounts`, `account_members`, `persons`, `family_groups`, `family_memberships`, `companion_profiles` |
 | `/family/invitations` | POST | Create/list/update family invite links and six-digit join codes | required | `family_invitations` |
+| `/consent-records` | POST | List, grant, and revoke family sharing / AI capability consent records | required | `consent_records` |
 | `/companion-profile` | GET/POST | Active companion identity for current person | required | `companion_profiles` |
 | `/family-members` | GET/POST/PATCH | Invite/list/update family contacts | required | `family_memberships`, `persons` |
 | `/routine-reminders` | GET/POST/PATCH | Routine and medication reminders | required | `routine_reminders` |
@@ -124,6 +125,7 @@ Prototype coverage:
 - `/app-profile`
 - `/account-bootstrap`
 - `/family/invitations`
+- `/consent-records`
 - `/companion-profile`
 
 Frontend bridge:

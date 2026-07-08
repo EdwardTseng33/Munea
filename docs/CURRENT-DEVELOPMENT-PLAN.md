@@ -77,6 +77,7 @@
 - Preserved JSON fallback for family activities so Claude/UI work can continue before live Supabase SQL 007 is applied.
 - Added smoke coverage for the Supabase adapter and server fallback path, including local-to-Supabase id preservation for future frontend handoff.
 - Added the `/family/invitations` backend contract for list/create/update of family invite links and six-digit elder-friendly codes, backed by `family_invitations` when SQL 007 exists and JSON fallback before live apply.
+- Added the `/consent-records` backend contract for list/grant/revoke of family sharing and AI/voice capability consent, backed by `consent_records` when SQL 007 exists and JSON fallback before live apply.
 
 ## 2026-06-29 Update
 
