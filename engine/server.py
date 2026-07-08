@@ -1622,6 +1622,61 @@ def conversation_summary_response(data):
     return {"ok": True, "action": "list", "summaries": summaries, "count": len(summaries), "backend": data_backend_status()}
 
 
+def _compact_text(value, max_chars=120):
+    text = " ".join(str(value or "").split())
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1].rstrip() + "..."
+
+
+def _summary_tags_from_context(context, text=""):
+    context = context or {}
+    tags = []
+    for item in (context.get("perception") or {}).get("domains", []):
+        domain = item.get("domain")
+        if domain and domain not in tags:
+            tags.append(domain)
+    risk = (context.get("guardian") or {}).get("risk") or {}
+    for category in risk.get("categories") or []:
+        if category and category not in tags:
+            tags.append(category)
+    lower = str(text or "").lower()
+    keyword_tags = [
+        ("family", ["daughter", "son", "family", "mom", "dad", "女兒", "兒子", "家人"]),
+        ("routine", ["medicine", "medication", "reminder", "walk", "藥", "提醒", "散步"]),
+        ("emotion", ["lonely", "sad", "worry", "anxious", "孤單", "難過", "擔心", "焦慮"]),
+        ("video_entertainment", ["drama", "netflix", "movie", "韓劇", "電影"]),
+    ]
+    for tag, keywords in keyword_tags:
+        if tag not in tags and any(keyword.lower() in lower for keyword in keywords):
+            tags.append(tag)
+    return tags[:8]
+
+
+def build_post_turn_conversation_summary(data, context):
+    data = data or {}
+    history = data.get("history") or []
+    text = conversation_text(history)
+    if not text.strip():
+        return None
+    user_turn_count = len([h for h in history if isinstance(h, dict) and (h.get("role") or "user") == "user"])
+    tags = _summary_tags_from_context(context, text)
+    risk = (context.get("guardian") or {}).get("risk") or {}
+    risk_level = risk.get("level") or "none"
+    safety_relevant = risk_level in {"medium", "high", "critical"} or bool(risk.get("requiresHumanEscalation"))
+    topics = ", ".join(tags[:4]) if tags else "general companionship"
+    summary = f"Post-turn companion review covered {topics}; user turns: {user_turn_count}; Guardian risk: {risk_level}."
+    if safety_relevant:
+        summary += " Safety-relevant content was detected for audit-aware follow-up."
+    return normalize_conversation_summary({
+        "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "voiceSessionId": data.get("voiceSessionId") or data.get("voice_session_id"),
+        "summary": _compact_text(summary, 280),
+        "memoryTags": tags,
+        "safetyRelevant": safety_relevant,
+    })
+
+
 def guardian_evaluate_response(data):
     result = model_router.guardian_evaluate_response(data or {})
     if result["risk"]["requiresAuditEvent"]:
@@ -3289,7 +3344,7 @@ def relationship_state_from_turn(data, context, stored_memories):
     })
 
 
-def _post_turn_extract(history, person_id, store=True):
+def _post_turn_extract(history, person_id, store=True, source_summary_id=None):
     """聊完萃取記憶：真萃取（memory_engine，只存長輩事實）優先，失敗退回關鍵字版。
     回傳 dict 相容原本 butler 用法。保留四層 tier。"""
     candidates, extractor = [], "keyword_fallback"
@@ -3316,6 +3371,8 @@ def _post_turn_extract(history, person_id, store=True):
             item = model_router.normalize_memory_item(cand, person_id)
             if cand.get("tier"):
                 item["tier"] = cand["tier"]
+            if source_summary_id:
+                item["sourceConversationSummaryId"] = source_summary_id
             return item
 
         to_store, superseded_ids = [], []
@@ -3384,7 +3441,29 @@ def butler_post_turn_response(data):
     char = data.get("char") or DEFAULT_CHAR
     context = build_reply_context(history, char, data)
     person_id = data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID
-    extract = _post_turn_extract(history, person_id, store=(data.get("storeMemory") is not False))
+    conversation_summary = None
+    if data.get("storeSummary") is not False:
+        summary_record = build_post_turn_conversation_summary(data, context)
+        if summary_record:
+            conversation_summary = append_conversation_summary(summary_record)
+            if conversation_summary:
+                append_product_event({
+                    "eventName": "companion_summary_created",
+                    "personId": conversation_summary.get("personId"),
+                    "properties": {
+                        "memoryTags": conversation_summary.get("memoryTags") or [],
+                        "safetyRelevant": conversation_summary.get("safetyRelevant") is True,
+                        "rawTranscriptStored": False,
+                        "source": "butler_post_turn",
+                        "analyticsExcluded": bool(data.get("analyticsExcluded")),
+                    },
+                })
+    extract = _post_turn_extract(
+        history,
+        person_id,
+        store=(data.get("storeMemory") is not False),
+        source_summary_id=(conversation_summary or {}).get("id"),
+    )
     stored_memories = extract.get("memoryItems") or []
     mood = None
     if data.get("analyzeMood") is not False:
@@ -3424,6 +3503,12 @@ def butler_post_turn_response(data):
             "candidateCount": len(extract.get("candidates") or []),
             "extractor": extract.get("extractor"),
             "storagePolicy": extract.get("storagePolicy"),
+            "sourceConversationSummaryId": (conversation_summary or {}).get("id"),
+        },
+        "conversationSummary": {
+            "created": bool(conversation_summary),
+            "summary": conversation_summary,
+            "privacy": (conversation_summary or {}).get("privacy") or {"storesRawTranscriptByDefault": False},
         },
         "wellbeing": mood,
         "relationshipState": saved_state,

@@ -1634,6 +1634,13 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     assert post_turn["brain"] == "butler"
     assert post_turn["relationshipState"]["personaTemplateId"] == "companion-real-male"
     assert post_turn["privacy"]["storesRawTranscriptByDefault"] is False
+    assert post_turn["conversationSummary"]["created"] is True
+    assert post_turn["conversationSummary"]["summary"]["privacy"]["storesRawTranscriptByDefault"] is False
+    post_turn_summary_id = post_turn["conversationSummary"]["summary"]["id"]
+    assert post_turn["memory"]["sourceConversationSummaryId"] == post_turn_summary_id
+    linked_memories = [item for item in server.load_memory_items(limit=20) if item.get("sourceConversationSummaryId") == post_turn_summary_id]
+    assert linked_memories
+    assert server.conversation_summary_response({"action": "list"})["count"] >= 1
     stored_relationships = server.load_relationship_states({"templateId": "companion-real-male"}, limit=5)
     assert stored_relationships[0]["personaTemplateId"] == "companion-real-male"
     next_persona = server.persona_context_response({
@@ -2886,6 +2893,9 @@ if (-not $postTurn.ok) { throw "/butler/post-turn returned not ok" }
 if ($postTurn.brain -ne "butler") { throw "/butler/post-turn unexpected brain: $($postTurn.brain)" }
 if ($postTurn.privacy.storesRawTranscriptByDefault) { throw "/butler/post-turn should not store raw transcript by default" }
 if ($postTurn.relationshipState.personaTemplateId -ne "companion-real-male") { throw "/butler/post-turn wrong persona template" }
+if (-not $postTurn.conversationSummary.created) { throw "/butler/post-turn did not create a conversation summary" }
+if ($postTurn.conversationSummary.privacy.storesRawTranscriptByDefault) { throw "/butler/post-turn summary should not retain raw transcript" }
+if (-not $postTurn.memory.sourceConversationSummaryId) { throw "/butler/post-turn missing summary linkage on memory" }
 Pass "/butler/post-turn stores memory and relationship state"
 
 Step "API /app-profile"
