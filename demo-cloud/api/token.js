@@ -70,13 +70,15 @@ module.exports = async (req, res) => {
     }
     const now = Date.now();
     const iso = (ms) => new Date(now + ms).toISOString();
+    // 體驗版時長（秒）：Google 端到期硬切斷、前端倒數只是顯示。預設 1 分鐘（+15 秒接通緩衝）。
+    const DEMO_SECONDS = parseInt(process.env.DEMO_SECONDS || "60", 10);
     const r = await fetch("https://generativelanguage.googleapis.com/v1alpha/auth_tokens", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
       body: JSON.stringify({
         uses: 1,
-        expireTime: iso(30 * 60 * 1000),          // 這通電話最長 30 分鐘
-        newSessionExpireTime: iso(2 * 60 * 1000), // 2 分鐘內要撥出去
+        expireTime: iso((DEMO_SECONDS + 15) * 1000), // 通話上限＝體驗秒數＋接通緩衝
+        newSessionExpireTime: iso(60 * 1000),        // 拿到碼 60 秒內要撥出
       }),
     });
     if (!r.ok) {
@@ -91,6 +93,7 @@ module.exports = async (req, res) => {
       model: MODEL,
       voice: c.voice,
       systemInstruction: systemInstruction(char),
+      demoSeconds: DEMO_SECONDS,
     }));
   } catch (e) {
     res.statusCode = 500;
