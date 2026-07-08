@@ -35,6 +35,7 @@ CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(
 FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.path.join(HERE, "family_state_store.json")
 FAMILY_ACTIVITIES_PATH = os.environ.get("MUNEA_FAMILY_ACTIVITIES_PATH") or os.path.join(HERE, "family_activities.json")
 FAMILY_INVITATIONS_PATH = os.environ.get("MUNEA_FAMILY_INVITATIONS_PATH") or os.path.join(HERE, "family_invitations.json")
+CONSENT_RECORDS_PATH = os.environ.get("MUNEA_CONSENT_RECORDS_PATH") or os.path.join(HERE, "consent_records.json")
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
 AUDIT_EVENTS_STORE_PATH = os.environ.get("MUNEA_AUDIT_EVENTS_STORE_PATH") or os.path.join(HERE, "audit_events_store.json")
@@ -616,6 +617,135 @@ def family_invitations_response(data):
     status = data.get("status")
     limit = int(data.get("limit") or 100)
     return {"ok": True, "invitations": load_family_invitations(family_group_id=family_group_id, status=status, limit=limit)}
+
+CONSENT_RECORD_STATUSES = {"granted", "revoked", "expired"}
+
+def normalize_consent_record(record):
+    record = record or {}
+    status = record.get("status") or "granted"
+    consent_type = record.get("consentType") or record.get("consent_type") or "ai_provider_processing"
+    granted_at = record.get("grantedAt") or record.get("granted_at") or record.get("createdAt") or record.get("created_at") or utc_now()
+    return {
+        "id": str(record.get("id") or ("consent_" + uuid.uuid4().hex[:10])),
+        "accountId": record.get("accountId") or record.get("account_id") or "local-demo-account",
+        "personId": record.get("personId") or record.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "familyGroupId": record.get("familyGroupId") or record.get("family_group_id"),
+        "consentType": str(consent_type),
+        "consentVersion": record.get("consentVersion") or record.get("consent_version") or "v1",
+        "status": status if status in CONSENT_RECORD_STATUSES else "granted",
+        "grantedByPersonId": record.get("grantedByPersonId") or record.get("granted_by_person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "source": record.get("source") or "munea-api",
+        "scope": record.get("scope") or {},
+        "evidence": record.get("evidence") or {},
+        "grantedAt": granted_at,
+        "revokedAt": record.get("revokedAt") or record.get("revoked_at"),
+        "expiresAt": record.get("expiresAt") or record.get("expires_at"),
+        "createdAt": record.get("createdAt") or record.get("created_at") or granted_at,
+    }
+
+
+def load_consent_records(person_id=None, consent_type=None, status=None, limit=100):
+    try:
+        remote_records = data_backend().load_consent_records(person_id=person_id, consent_type=consent_type, status=status, limit=limit)
+        if remote_records is not None:
+            return [normalize_consent_record(r) for r in remote_records]
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load consent records from Supabase", e)
+    records = read_json_file(CONSENT_RECORDS_PATH, [])
+    if not isinstance(records, list):
+        records = []
+    records = [normalize_consent_record(r) for r in records]
+    if person_id:
+        records = [r for r in records if r.get("personId") == person_id]
+    if consent_type:
+        records = [r for r in records if r.get("consentType") == consent_type]
+    if status:
+        records = [r for r in records if r.get("status") == status]
+    return records[-limit:]
+
+
+def grant_consent_record(record):
+    record = normalize_consent_record({**(record or {}), "status": "granted", "grantedAt": utc_now()})
+    try:
+        remote_record = data_backend().append_consent_record(record)
+        if remote_record is not None:
+            return normalize_consent_record(remote_record), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("grant consent record in Supabase", e)
+    records = read_json_file(CONSENT_RECORDS_PATH, [])
+    if not isinstance(records, list):
+        records = []
+    records.append(record)
+    write_json_file(CONSENT_RECORDS_PATH, records[-2000:])
+    return record, "json"
+
+
+def revoke_consent_record(record_id=None, person_id=None, consent_type=None, revoked_by_person_id=None):
+    patch = {
+        "status": "revoked",
+        "revokedAt": utc_now(),
+        "revokedByPersonId": revoked_by_person_id or PRIMARY_CARE_RECIPIENT_ID,
+    }
+    try:
+        remote_record = data_backend().revoke_consent_record(record_id, person_id=person_id, consent_type=consent_type, patch=patch)
+        if remote_record is not None:
+            return normalize_consent_record(remote_record), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("revoke consent record in Supabase", e)
+    records = read_json_file(CONSENT_RECORDS_PATH, [])
+    if not isinstance(records, list):
+        records = []
+    next_records = []
+    updated = None
+    for record in records:
+        current = normalize_consent_record(record)
+        matches_id = bool(record_id and current.get("id") == record_id)
+        matches_type = bool((not record_id) and person_id and consent_type and current.get("personId") == person_id and current.get("consentType") == consent_type and current.get("status") == "granted")
+        if matches_id or matches_type:
+            current = normalize_consent_record({
+                **current,
+                "status": "revoked",
+                "revokedAt": patch["revokedAt"],
+                "evidence": {**(current.get("evidence") or {}), "revokedByPersonId": patch["revokedByPersonId"]},
+            })
+            updated = current
+        next_records.append(current)
+    write_json_file(CONSENT_RECORDS_PATH, next_records[-2000:])
+    return (updated, "json") if updated else (None, "not_found")
+
+
+def consent_records_response(data):
+    data = data or {}
+    action = data.get("action") or "list"
+    if action in ("grant", "create"):
+        record, backend = grant_consent_record(data.get("record") or data)
+        return {"ok": True, "record": record, "backend": backend}
+    if action == "revoke":
+        record_id = data.get("id") or data.get("recordId") or data.get("record_id")
+        person_id = data.get("personId") or data.get("person_id")
+        consent_type = data.get("consentType") or data.get("consent_type")
+        if not record_id and not (person_id and consent_type):
+            return {"ok": False, "error": "consent_record_or_type_required"}
+        record, backend = revoke_consent_record(
+            record_id=record_id,
+            person_id=person_id,
+            consent_type=consent_type,
+            revoked_by_person_id=data.get("revokedByPersonId") or data.get("revoked_by_person_id"),
+        )
+        if record is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "record": record, "backend": backend}
+    person_id = data.get("personId") or data.get("person_id")
+    consent_type = data.get("consentType") or data.get("consent_type")
+    status = data.get("status")
+    limit = int(data.get("limit") or 100)
+    return {"ok": True, "records": load_consent_records(person_id=person_id, consent_type=consent_type, status=status, limit=limit)}
 
 FAMILY_ACTIVITY_TYPES = {"walk", "quiz", "event", "vote", "draw", "custom"}
 FAMILY_ACTIVITY_STATUSES = {"draft", "active", "completed", "archived", "cancelled"}
@@ -3029,7 +3159,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "consent-records", "admin-north-star", "admin-usage", "admin-credits", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -3090,6 +3220,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":
                 self._json(family_invitations_response(data))
+            elif self.path == "/consent-records":
+                self._json(consent_records_response(data))
             elif self.path == "/family/activity":
                 self._json(family_activity_response(data))
             elif self.path == "/wellbeing/trend":

@@ -812,6 +812,67 @@ class SupabaseAdapter:
         )
         return self.family_invitation_row_to_invitation(rows[0]) if rows else None
 
+    def load_consent_records(self, person_id=None, consent_type=None, status=None, limit=100):
+        if not self.enabled():
+            return None
+        person_id = person_id if self._is_uuid(person_id or "") else self.person_id
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{person_id}",
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(limit or 100),
+        }
+        if consent_type:
+            query["consent_type"] = f"eq.{consent_type}"
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("consent_records", query)
+        return [self.consent_record_row_to_record(row) for row in rows or []]
+
+    def append_consent_record(self, record):
+        if not self.enabled():
+            return None
+        payload = self.consent_record_to_row(record)
+        rows = self._request(
+            "POST",
+            "consent_records",
+            query={"select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.consent_record_row_to_record(rows[0]) if rows else None
+
+    def revoke_consent_record(self, record_id=None, person_id=None, consent_type=None, patch=None):
+        if not self.enabled():
+            return None
+        target_id = record_id if self._is_uuid(record_id or "") else None
+        if not target_id:
+            lookup_person_id = person_id if self._is_uuid(person_id or "") else self.person_id
+            query = {
+                "account_id": f"eq.{self.account_id}",
+                "person_id": f"eq.{lookup_person_id}",
+                "status": "eq.granted",
+                "select": "*",
+                "order": "created_at.desc",
+                "limit": "1",
+            }
+            if consent_type:
+                query["consent_type"] = f"eq.{consent_type}"
+            rows = self._select("consent_records", query)
+            target_id = (rows[0] or {}).get("id") if rows else None
+        if not target_id:
+            return None
+        payload = self.consent_record_revoke_patch_to_row(patch or {})
+        rows = self._request(
+            "PATCH",
+            "consent_records",
+            query={"id": f"eq.{target_id}", "select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.consent_record_row_to_record(rows[0]) if rows else None
+
     def load_wellbeing_signals(self, person_id=None, limit=200):
         if not self.enabled():
             return None
@@ -1457,6 +1518,80 @@ class SupabaseAdapter:
             "metadata": metadata,
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
+        }
+
+    @staticmethod
+    def _normalize_consent_status(status):
+        allowed = {"granted", "revoked", "expired"}
+        return status if status in allowed else "granted"
+
+    def consent_record_to_row(self, record):
+        record = record or {}
+        scope = dict(record.get("scope") or {})
+        evidence = dict(record.get("evidence") or {})
+        person_id = record.get("personId") or record.get("person_id") or self.person_id
+        family_group_id = record.get("familyGroupId") or record.get("family_group_id") or self.family_group_id
+        granted_by_person_id = record.get("grantedByPersonId") or record.get("granted_by_person_id") or self.person_id
+        if person_id and not self._is_uuid(person_id):
+            scope.setdefault("originalPersonId", person_id)
+            person_id = self.person_id
+        if family_group_id and not self._is_uuid(family_group_id):
+            scope.setdefault("originalFamilyGroupId", family_group_id)
+            family_group_id = self.family_group_id if self._is_uuid(self.family_group_id) else None
+        if granted_by_person_id and not self._is_uuid(granted_by_person_id):
+            evidence.setdefault("originalGrantedByPersonId", granted_by_person_id)
+            granted_by_person_id = self.person_id
+        return {
+            "account_id": record.get("accountId") or record.get("account_id") or self.account_id,
+            "person_id": person_id,
+            "family_group_id": family_group_id or None,
+            "consent_type": record.get("consentType") or record.get("consent_type") or "ai_provider_processing",
+            "consent_version": record.get("consentVersion") or record.get("consent_version") or "v1",
+            "status": self._normalize_consent_status(record.get("status")),
+            "granted_by_person_id": granted_by_person_id or None,
+            "source": record.get("source") or "munea-api",
+            "scope": scope,
+            "evidence": evidence,
+            "granted_at": record.get("grantedAt") or record.get("granted_at") or record.get("createdAt") or record.get("created_at"),
+            "revoked_at": record.get("revokedAt") or record.get("revoked_at"),
+            "expires_at": record.get("expiresAt") or record.get("expires_at"),
+        }
+
+    def consent_record_revoke_patch_to_row(self, patch):
+        patch = patch or {}
+        evidence = dict(patch.get("evidence") or {})
+        revoked_by_person_id = patch.get("revokedByPersonId") or patch.get("revoked_by_person_id")
+        if revoked_by_person_id and not self._is_uuid(revoked_by_person_id):
+            evidence.setdefault("originalRevokedByPersonId", revoked_by_person_id)
+        elif revoked_by_person_id:
+            evidence.setdefault("revokedByPersonId", revoked_by_person_id)
+        return {
+            "status": "revoked",
+            "revoked_at": patch.get("revokedAt") or patch.get("revoked_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "evidence": evidence,
+        }
+
+    @staticmethod
+    def consent_record_row_to_record(row):
+        row = row or {}
+        scope = row.get("scope") or {}
+        evidence = row.get("evidence") or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id") or scope.get("originalPersonId"),
+            "familyGroupId": row.get("family_group_id") or scope.get("originalFamilyGroupId"),
+            "consentType": row.get("consent_type") or "ai_provider_processing",
+            "consentVersion": row.get("consent_version") or "v1",
+            "status": row.get("status") or "granted",
+            "grantedByPersonId": row.get("granted_by_person_id") or evidence.get("originalGrantedByPersonId"),
+            "source": row.get("source") or "munea-api",
+            "scope": scope,
+            "evidence": evidence,
+            "grantedAt": row.get("granted_at"),
+            "revokedAt": row.get("revoked_at"),
+            "expiresAt": row.get("expires_at"),
+            "createdAt": row.get("created_at"),
         }
 
     @staticmethod
