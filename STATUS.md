@@ -194,3 +194,9 @@
 - **排雷 3 顆全固化進配方**：① Dockerfile 必須在根目錄（子資料夾不認、會被亂猜）② 曾用自動猜測打包過的服務、改用配方要帶 --clear-base-image ③ requirements 在 engine/ 下、配方路徑要對。
 - **卡最後一關**：雲端機器讀鑰匙的 IAM 授權（secretAccessor）——自動模式警衛要求本人執行 → 已做 `deploy/cloudrun/發鑰匙權限-點兩下.bat` 給 Edward。權限一發 → 重跑部署即完成試吃檯。
 - **資料櫃驗收 ✅（7/9 凌晨）**：Mac＋Edward 建成 36 表；本機 doctor 實測 **31/31 表 ok＋四項連線測試全過**（appProfile/companionProfile/billing/privacyRequests）→ 搬家條件①達成。版本線已到 **1.2.0**（Mac 升）。
+
+### 2026-07-09 凌晨 · 秒醒式租卡調研＋兩場喚醒實測（Edward 00:30 喊停、留檔明天接續）
+- **市場調研完成**（`docs/自架avatar優化推進方案-2026-07-08.md` §6.1）：秒醒服務真的存在、四路比較表已落檔——A. RunPod 秒醒模式（熱門 0.5–2 秒／冷門 8–30 秒、有直連模式吃長連線）／B. Modal 記憶體快照（數秒–十幾秒、官方有通話範例）／C. Google Cloud Run 顯卡（卡開機 <5 秒、含載模型 ~19 秒）／D. 置物櫃＋新卡（兜底）。推薦 PoC 順序 A→B→C、D 已半實測。
+- **D 路實測（半場完成）**：置物櫃 `munea-locker`（50GB · EUR-IS-1 · 月費約 NT$110 · **保留中**）＋置物櫃版裝機配方 `deploy/runpod-avatar/bootstrap-volume.sh`——**卡 A 裝機進置物櫃 737 秒完成 ✅**（venv＋模型＋cuDNN8＋wake.sh 全在櫃裡）。Edward 喊停時停在「起服務驗證」前一步。**明天只剩下半場**：開全新卡掛櫃 → 跑 `wake.sh` → 掐錶「開卡→臉就緒」（小工具現成：scratchpad `locker_wake_test.py` 階段 B）。
+- **B 路實測（環境全通、差按錶）**：Edward 給了 Modal 帳號（edwardt0303）、鑰匙已接本機（`~/.modal.toml`）；寧寧引擎 Modal 版已寫好 `deploy/modal-avatar/nening_modal.py`（GPU 快照開啟、L40S 卡、沿用全部裝機排雷）；映像雲端建置到最後一層。**明天**：`modal deploy` → `seed_models`（模型進雲端櫃）→ 冷喚醒掐錶。⚠ 已知風險：引擎有背景執行緒、跟快照技術可能相沖——實測見真章，沖了就退而求其次只快照「已載引擎」半熟狀態。
+- **收場確認**：RunPod 零機器＝零燒錢；Modal 零容器在跑；本晚實測費 <US$0.2。看門狗與本機殘留小工具無害（卡已銷毀、它們只會空轉到自然結束）。

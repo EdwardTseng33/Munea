@@ -57,7 +57,15 @@ def create():
     spec = dict(POD_SPEC)
     if "--community" in sys.argv:
         spec["cloudType"] = "COMMUNITY"
-    print(f"開卡：4090 × 1 · {spec['cloudType']} · 磁碟 {spec['containerDiskInGb']}GB ...")
+    # --volume=<id>：掛置物櫃（models/venv 常駐、喚醒不重裝）
+    for a in sys.argv:
+        if a.startswith("--volume="):
+            spec["networkVolumeId"] = a.split("=", 1)[1]
+            spec["volumeMountPath"] = "/workspace"
+            spec["volumeInGb"] = 0
+        if a.startswith("--dc="):
+            spec["dataCenterIds"] = [a.split("=", 1)[1]]
+    print(f"開卡：4090 × 1 · {spec['cloudType']} · 磁碟 {spec['containerDiskInGb']}GB · 置物櫃 {spec.get('networkVolumeId','無')} ...")
     pod = _req("POST", "/pods", spec)
     print(json.dumps(pod, indent=1, ensure_ascii=False)[:800])
     pid = pod.get("id")
@@ -95,6 +103,12 @@ def main():
         print(json.dumps(_req("POST", f"/pods/{sys.argv[2]}/stop"), indent=1)[:400]); print("已暫停（磁碟保留、只付置物費）")
     elif cmd == "start":
         print(json.dumps(_req("POST", f"/pods/{sys.argv[2]}/start"), indent=1)[:600]); print("喚醒指令已送出")
+    elif cmd == "mkvolume":
+        # mkvolume <名字> <GB> <機房>
+        v = _req("POST", "/networkvolumes", {"name": sys.argv[2], "size": int(sys.argv[3]), "dataCenterId": sys.argv[4]})
+        print(json.dumps(v, indent=1)[:400])
+    elif cmd == "volumes":
+        print(json.dumps(_req("GET", "/networkvolumes"), indent=1)[:800])
     elif cmd == "terminate":
         _req("DELETE", f"/pods/{sys.argv[2]}")
         print("已銷毀（計費停止）")
