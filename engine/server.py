@@ -218,6 +218,7 @@ ADMIN_POST_PATHS = {
     "/admin/conversation-summaries",
     "/admin/privacy-requests",
     "/admin/safety-events",
+    "/admin/audit-events",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -2864,6 +2865,19 @@ def default_audit_events_store():
     return {"schemaVersion": 1, "events": [], "updatedAt": utc_now()}
 
 
+def load_audit_events(limit=100):
+    limit = max(1, min(500, int(limit or 100)))
+    try:
+        remote_events = data_backend().load_audit_events(limit=limit)
+        if remote_events is not None:
+            return [normalize_audit_event(event) for event in remote_events][:limit]
+    except Exception as e:
+        log_fallback_exception("load audit events from Supabase", e)
+    store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
+    events = [normalize_audit_event(event) for event in store.get("events", [])]
+    return events[:limit]
+
+
 def normalize_audit_event(event=None):
     event = event or {}
     return {
@@ -2892,6 +2906,69 @@ def append_audit_event(event=None):
     store = {"schemaVersion": 1, "events": events[:1000], "updatedAt": utc_now()}
     write_json_file(AUDIT_EVENTS_STORE_PATH, store)
     return normalized
+
+
+def admin_audit_events_summary(data=None):
+    data = data or {}
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    event_type = data.get("eventType") or data.get("event_type")
+    actor_type = data.get("actorType") or data.get("actor_type")
+    target_table = data.get("targetTable") or data.get("target_table")
+    events = load_audit_events(limit=500)
+    if event_type:
+        events = [event for event in events if event.get("eventType") == event_type]
+    if target_table:
+        events = [event for event in events if event.get("targetTable") == target_table]
+    if actor_type:
+        events = [
+            event for event in events
+            if (event.get("details") or {}).get("actorType") == actor_type
+        ]
+    events = sorted(events, key=lambda event: event.get("createdAt") or "", reverse=True)
+    type_counts = {}
+    actor_counts = {}
+    target_counts = {}
+    for event in events:
+        event_name = event.get("eventType") or "unknown_event"
+        actor_name = (event.get("details") or {}).get("actorType") or "unknown"
+        target_name = event.get("targetTable") or "unknown"
+        type_counts[event_name] = type_counts.get(event_name, 0) + 1
+        actor_counts[actor_name] = actor_counts.get(actor_name, 0) + 1
+        target_counts[target_name] = target_counts.get(target_name, 0) + 1
+    recent = [
+        {
+            "id": event.get("id"),
+            "accountId": event.get("accountId"),
+            "actorUserId": event.get("actorUserId"),
+            "eventType": event.get("eventType"),
+            "targetTable": event.get("targetTable"),
+            "targetId": event.get("targetId"),
+            "details": event.get("details") or {},
+            "createdAt": event.get("createdAt"),
+        }
+        for event in events[:limit]
+    ]
+    return {
+        "ok": True,
+        "count": len(events),
+        "filters": {
+            "eventType": event_type,
+            "actorType": actor_type,
+            "targetTable": target_table,
+            "limit": limit,
+        },
+        "totals": {
+            "byEventType": dict(sorted(type_counts.items())),
+            "byActorType": dict(sorted(actor_counts.items())),
+            "byTargetTable": dict(sorted(target_counts.items())),
+        },
+        "recent": recent,
+        "privacy": {
+            "surface": "admin_audit_event_review",
+            "rawTranscriptRecords": 0,
+        },
+        "backend": data_backend_status(),
+    }
 
 
 def default_billing_store():
@@ -3873,7 +3950,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-safety-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -4002,6 +4079,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_safety_events_summary(data))
+            elif self.path == "/admin/audit-events":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_audit_events_summary(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

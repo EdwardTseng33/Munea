@@ -1715,7 +1715,7 @@ for path in user_scoped_paths:
     verified = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, path, {})
     assert verified["ok"] is True, path
     assert verified["required"] is True, path
-for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/safety-events"]:
+for path in ["/auth-status", "/account-bootstrap", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/safety-events", "/admin/audit-events"]:
     assert server.auth_required_for_path(path) is False, path
     assert server.require_verified_auth({}, path, {})["ok"] is True, path
 assert server.auth_required_for_request("/credits/grant", {}) is False
@@ -1875,6 +1875,15 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
     assert audit["eventType"] == "credits_granted"
     audit_store = server.read_json_file(server.AUDIT_EVENTS_STORE_PATH, {})
     assert audit_store["events"][0]["eventType"] == "credits_granted"
+    audit_admin = server.admin_audit_events_summary({"limit": 10})
+    assert audit_admin["ok"] is True
+    assert audit_admin["count"] == 1
+    assert audit_admin["totals"]["byEventType"]["credits_granted"] == 1
+    assert audit_admin["totals"]["byActorType"]["admin"] == 1
+    assert audit_admin["totals"]["byTargetTable"]["credit_transactions"] == 1
+    assert audit_admin["privacy"]["rawTranscriptRecords"] == 0
+    filtered_audit_admin = server.admin_audit_events_summary({"eventType": "credits_granted"})
+    assert filtered_audit_admin["count"] == 1
     ok, code = server.admin_authorized({})
     assert ok is False
     assert code == "admin_token_not_configured"
@@ -2998,6 +3007,7 @@ if ($health.contracts -notcontains "admin-credits") { throw "/healthz missing ad
 if ($health.contracts -notcontains "admin-conversation-summaries") { throw "/healthz missing admin-conversation-summaries contract" }
 if ($health.contracts -notcontains "admin-privacy-requests") { throw "/healthz missing admin-privacy-requests contract" }
 if ($health.contracts -notcontains "admin-safety-events") { throw "/healthz missing admin-safety-events contract" }
+if ($health.contracts -notcontains "admin-audit-events") { throw "/healthz missing admin-audit-events contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }
 if ($health.contracts -notcontains "account-deletion") { throw "/healthz missing account-deletion contract" }
 Pass "/healthz returns service contracts"
@@ -3084,6 +3094,16 @@ try {
   if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
 }
 Pass "/admin/safety-events is closed without admin token"
+
+Step "API /admin/audit-events gate"
+try {
+  Invoke-RestMethod -Uri "$BaseUrl/admin/audit-events" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"limit":5}' -TimeoutSec 30 | Out-Null
+  throw "/admin/audit-events should require admin token"
+} catch {
+  $message = $_.Exception.Message
+  if ($message -notmatch "403" -and $message -notmatch "Forbidden") { throw }
+}
+Pass "/admin/audit-events is closed without admin token"
 
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30

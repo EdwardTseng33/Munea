@@ -653,6 +653,21 @@ class SupabaseAdapter:
         )
         return self.audit_row_to_event(rows[0]) if rows else None
 
+    def load_audit_events(self, limit=100):
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "GET",
+            "audit_events",
+            query={
+                "account_id": f"eq.{self.account_id}",
+                "select": "*",
+                "order": "created_at.desc",
+                "limit": str(limit or 100),
+            },
+        )
+        return [self.audit_row_to_event(row) for row in rows or []]
+
     def load_product_events(self, since_iso=None, limit=500):
         if not self.enabled():
             return None
