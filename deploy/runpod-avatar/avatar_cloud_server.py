@@ -47,15 +47,21 @@ sdk = StreamSDK(CFG, DATA)
 sdk.setup(SRC, "/root/_live_dummy.mp4")
 
 class FrameSink:
-    """引擎最後一棒：原本寫檔、改成餵影格緩衝（放最新、舊的丟）。"""
+    """引擎最後一棒：原本寫檔、改成「照順序排隊」的影格緩衝（配合進料節流＝順順地演）。"""
     def __init__(self):
-        self.latest = None
+        self.q = collections.deque(maxlen=75)   # 約 3 秒緩衝
         self.count = 0
         self.lock = threading.Lock()
     def __call__(self, frame, fmt="rgb"):
         with self.lock:
-            self.latest = frame
+            self.q.append(frame)
             self.count += 1
+    def pop(self):
+        with self.lock:
+            return self.q.popleft() if self.q else None
+    def clear(self):
+        with self.lock:
+            self.q.clear()
     def close(self):
         pass
 
@@ -65,10 +71,13 @@ print("[init] writer 已接管 → 影格直送通話", flush=True)
 
 # ---------- 聲音進料（持續串流、跨句不重啟引擎） ----------
 class Feeder:
+    """進料節流（D1 同款教訓）：Google 的聲音整坨倒進來，但嘴要照「真實時間」演——
+    每 0.2 秒最多吃一塊，跟用戶「正在聽到的位置」對齊，臉才會順順地講而不是快轉定格。"""
     def __init__(self):
         self.lock = threading.Lock()
         self.acc = np.zeros(CHUNKSIZE[0] * 640, dtype=np.float32)  # 開頭墊靜音（官方餵法）
         self.pos = 0
+        self.t0 = None          # 這一句開始「被聽到」的牆上時間
         self.last_in = 0.0
         threading.Thread(target=self._loop, daemon=True).start()
     def push24k(self, pcm_bytes):
@@ -79,33 +88,45 @@ class Feeder:
         xq = np.interp(np.linspace(0, 1, n_out, endpoint=False),
                        np.linspace(0, 1, len(x), endpoint=False), x).astype(np.float32)
         with self.lock:
+            now = time.time()
+            prefix = CHUNKSIZE[0] * 640
+            if self.t0 is None or (now - self.last_in) > 0.8:
+                # 新的一句：重新對錶（讓「目前吃到的位置」對齊「現在+播放緩衝」）
+                self.t0 = now + 0.25 - max(0, self.pos - prefix) / SR_ENG
             self.acc = np.concatenate([self.acc, xq])
-            self.last_in = time.time()
+            self.last_in = now
     def reset(self):
         with self.lock:
             self.acc = np.zeros(CHUNKSIZE[0] * 640, dtype=np.float32)
             self.pos = 0
+            self.t0 = None
+        sink.clear()
         print("[feeder] reset(插話)", flush=True)
     def _loop(self):
+        prefix = CHUNKSIZE[0] * 640
         while True:
             todo = None
             with self.lock:
-                if len(self.acc) >= self.pos + SPLIT:
-                    todo = self.acc[self.pos:self.pos + SPLIT].copy()
-                    self.pos += HOP
-                    # 記憶體帽：保留最近 60 秒
-                    if self.pos > 60 * SR_ENG:
-                        cut = self.pos - 5 * SR_ENG
-                        self.acc = self.acc[cut:]
-                        self.pos -= cut
+                ready = len(self.acc) >= self.pos + SPLIT
+                if ready and self.t0 is not None:
+                    # 節流：這一塊對應的「聽到時間」還沒到就等
+                    due = self.t0 + max(0, self.pos - prefix) / SR_ENG
+                    if time.time() >= due:
+                        todo = self.acc[self.pos:self.pos + SPLIT].copy()
+                        self.pos += HOP
+                        if self.pos > 60 * SR_ENG:      # 記憶體帽：保留最近一段
+                            cut = self.pos - 5 * SR_ENG
+                            self.acc = self.acc[cut:]
+                            self.pos -= cut
+                            self.t0 += cut / SR_ENG
             if todo is not None:
                 t0 = time.time()
                 sdk.run_chunk(todo, CHUNKSIZE)
                 dt = (time.time() - t0) * 1000
-                if sink.count % 50 == 0:
-                    print(f"[feeder] chunk {dt:.0f}ms frames={sink.count}", flush=True)
+                if sink.count % 100 == 0:
+                    print(f"[feeder] chunk {dt:.0f}ms frames={sink.count} qlen={len(sink.q)}", flush=True)
             else:
-                time.sleep(0.005)
+                time.sleep(0.01)
 
 feeder = Feeder()
 
@@ -123,8 +144,7 @@ class NeningTrack(VideoStreamTrack):
         self.sent = 0
     async def recv(self):
         pts, tb = await self.next_timestamp()
-        with sink.lock:
-            fr = sink.latest
+        fr = sink.pop()          # 照順序一格一格演；沒新格就停在上一格
         if fr is not None:
             self.last = fr
         self.sent += 1
