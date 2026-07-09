@@ -29,6 +29,8 @@
 
 **⑮（7/9 傍晚 Windows）Apple 登入門也開了——兩顆登入鈕全通（實測 apple=開/google=開/email=開）**：①App 身分證勾 Sign In with Apple（主要 App ID）②服務門牌 `net.munea.app.signin` 建好＋網域/回跳綁資料櫃 callback ③簽名鑰匙 Key ID `UPNMK4XW45`（私鑰只能下載一次）④用私鑰生「登入密語」（client secret JWT、ES256、**到期 2027/1/5**）填進資料櫃 Apple 供應商（Client IDs=net.munea.app,net.munea.app.signin）⑤存檔 Successfully updated、Apple＝Enabled。**私鑰/密語/生成小工具已從本機清除**（已進資料櫃、不留地）。⚠ **給 Mac**：App 殼接兩家 OAuth 回跳（自訂 URL scheme／Universal Link 導回 App）＋資料櫃 URL Configuration 允許回跳清單加 App scheme；iOS 原生 Apple 登入建議走原生 ASAuthorization。⚠ **維運**：Apple 登入密語 6 個月到期，**2027/1/5 前**要重生一次（需先在 developer.apple.com 下新的 .p8 或留備份）。
 
+**⑯（7/9 傍晚 Windows）商店頁素材＋文字盤點**：①Edward 供 5 張商店介紹圖（總覽/每日關心/健康情緒/視訊陪伴/全家連結、852×1846）→ 轉 6.5吋送審尺寸 **1284×2778** 存 `App store pic/asc-ready/`（此 App 商店頁截圖格指定 6.5吋、非 6.9吋）②**商店文字已全填**（行銷宣傳文字 108 字、描述、支援 URL＋行銷 URL=munea.net【實測 HTTP 200 活著】、版本 1.0、版權 2026 YU-HSI TSENG）③**截圖上傳被工作階段安全邊界擋**（file_upload 只認自身管的資料夾、不吃本機任意路徑）→ 留 Edward 30 秒拖拉：ASC 版本頁「預覽和截圖」已捲到定位，把 `asc-ready/` 5 張拖進去即可。**商店頁剩**：截圖上傳（Edward 拖）、8 個內購審查截圖、關鍵字複查、App 隱私權標籤、年齡分級問卷、建置版本（Mac 上傳打包檔後選）、送審鈕（Edward 按）。
+
 ### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
 - 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）
 - ⚠ 兩服務**鎖門中**：呼叫要帶 Google 通行證（`gcloud auth print-identity-token`）；開門方式待 Edward 拍板（不擋你手上的真機/付款工作）
