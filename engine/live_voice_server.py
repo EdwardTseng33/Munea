@@ -204,23 +204,25 @@ async def handle(ws):
                 pass
             _diag(cid, "node.ready", ms=round((time.monotonic() - t0) * 1000))
 
-            # 主動開口（治「叫兩三次才回、以為當機」· Edward 2026-07-09）：
-            # 接上腦的第一件事＝請 AI 立刻溫暖打招呼，用戶完全不必先說 hello。
-            try:
-                greet_cue = (
-                    "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
-                    "請你「立刻、主動」用一句溫暖、簡短、口語的話打招呼開場，"
-                    "像老朋友接起電話那樣，例如問對方今天過得好不好。不要等對方先開口。）"
-                )
-                await session.send_client_content(
-                    turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
-                    turn_complete=True,
-                )
-                st["await_first"] = True
-                st["last_in"] = time.monotonic()
-                _diag(cid, "node.proactive_greet")
-            except Exception:
-                pass
+            # 主動開口 cue（治「叫兩三次才回、以為當機」· Edward 2026-07-09）：
+            # 不在 session 開好就立刻送——改由 App 在「聲音＋會動的臉兩邊都就緒」時送 {"type":"greet"} 才觸發，
+            # 這樣她一開口臉就同步在動、不會出現「已在講、臉還沒好」的當機感（Edward 2026-07-09 二次拍板）。
+            async def _do_greet():
+                try:
+                    greet_cue = (
+                        "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
+                        "請你「立刻、主動」用一句溫暖、簡短、口語的話打招呼開場，"
+                        "像老朋友接起電話那樣，例如問對方今天過得好不好。不要等對方先開口。）"
+                    )
+                    await session.send_client_content(
+                        turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
+                        turn_complete=True,
+                    )
+                    st["await_first"] = True
+                    st["last_in"] = time.monotonic()
+                    _diag(cid, "node.proactive_greet")
+                except Exception:
+                    pass
 
             async def from_browser():
                 async for message in ws:
@@ -241,7 +243,9 @@ async def handle(ws):
                         except Exception:
                             continue
                         t = obj.get("type")
-                        if t == "text" and obj.get("text"):
+                        if t == "greet":
+                            await _do_greet()   # App 說「兩邊都就緒了」→ 現在才請她主動開口（聲臉同步開場）
+                        elif t == "text" and obj.get("text"):
                             st["last_in"] = time.monotonic()
                             st["await_first"] = True
                             await session.send_client_content(

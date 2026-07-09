@@ -994,15 +994,17 @@ window.MuneaAvatar = Avatar;
 document.addEventListener('DOMContentLoaded', () => {
   const vid = document.getElementById('faceVid');
   if (vid) vid.addEventListener('playing', () => {
-    const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid');
-    // 會動的雲端臉真的出畫面了 → 這時才收掉待機動態（先前一直播著、不讓照片定格）
-    try { if (typeof FaceIdle !== 'undefined') FaceIdle.stop(); } catch (e) {}
+    // 會動的臉線路通了、有影格了＝「臉就緒」信號。但先不蓋上去——等語音也就緒，
+    // 由 connectCall 兩邊都好才一起亮（撥通中維持待機動畫、不定格·Edward 2026-07-09 二次拍板）。
+    Avatar._facePlaying = true;
+    if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
   });
 });
 
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
-  micLevel: 0, playLevel: 0, onCaption: null, _capBuf: '',
+  micLevel: 0, playLevel: 0, onCaption: null, onReady: null, _capBuf: '',
+  greet() { try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ type: 'greet' })); } catch (e) {} },   // 兩邊都就緒 → 請 AI 主動開口（聲臉同步開場）
   _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
   _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
@@ -1070,7 +1072,7 @@ const LiveVoice = {
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
-            if (o.type === 'ready') { this.ready = true; this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 開麥、換成真收音動態；記下「聊過了」
+            if (o.type === 'ready') { this.ready = true; if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」
             if (o.type === 'caption' && o.who === 'user' && o.text && !this._topicSaved) {
               // 首頁「記得你說…」的在地記憶：抓這通電話你說的第一句話（雲端記憶接上後改由真記憶供應）
               this._userBuf = (this._userBuf || '') + o.text;
@@ -2493,10 +2495,10 @@ function setupHscrollHints() {
 }
 
 function connectCall() {
-  // 治「聲音先出、臉還定住 6 秒」（Edward 2026-07-09）：接通後不定格照片，讓會呼吸的待機動態繼續播，
-  // 等真的會動的雲端臉（faceVid）真的出畫面才無縫蓋過去（見 faceVid 'playing' 事件裡 FaceIdle.stop）。
-  if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();
-  setCallDialing(true);   // 按鈕先進「撥通中···」；真的能講話才變「結束通話」＋開始計時
+  // 撥通中＝保持角色的待機動畫（Edward 2026-07-09 二次拍板：不定格照片、也不動照片）。
+  // 硬規則：聲音＋會動的臉「兩邊都真的就緒」才一起開場——寧可讓用戶等，也不要開場後像當機。
+  if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
+  setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
   let _connectedOnce = false;
   const markConnected = () => { if (_connectedOnce) return; _connectedOnce = true; setCallToggle(true); startCallTimer(); };
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
@@ -2509,21 +2511,44 @@ function connectCall() {
     activeChatStartedAt = Date.now();
     activeChatTurnCount = 0;
     setFaceState('idle');
-    setCallHint('接通中', true);
+    setCallHint('連線中…', true);
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
     const chatEl = document.getElementById('chat');
-    if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：同位置先放載入動態、收音動態等真的接上才出現（Edward 7/9）
-    LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setCallHint('接通中', true); };
-    const onListen = () => { markConnected(); if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻＝接通後才出現（Edward 7/9）
-    const onSpeak = () => { markConnected(); if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };   // 講話波頻＋2D 嘴型都跟她實際聲音（六角色全 avatar · Edward 7/9）
+    if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
+
+    // ===== 兩邊都就緒才開場（Edward 2026-07-09 二次拍板）=====
+    let _voiceReady = false, _faceReady = false, _started = false;
+    const noFace = !getAvatarUrl();          // 沒接雲端臉的角色（或關閉）＝不必等臉
+    if (noFace) _faceReady = true;
+    const beginConversation = () => {
+      if (_started || !_voiceReady || !_faceReady) return;
+      if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }   // 已取消/掛斷 → 別誤開場
+      _started = true;
+      clearTimeout(_gateTimeout);
+      markConnected();                       // 按鈕→結束通話、開始計時
+      // 兩邊都好 → 收待機動畫、亮出會動的臉、請她開口（聲臉一起出）
+      if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }
+      try { FaceIdle.stop(); } catch (e) {}
+      LiveVoice.greet();                     // 現在才請 AI 主動開口
+    };
+    const tryStart = () => beginConversation();
+    window.__muneaOnFaceReady = () => { _faceReady = true; tryStart(); };
+    // 保底：等太久（臉/顯卡接不上）也別讓用戶乾等——最多等 25 秒就用現有的先開場（不硬卡死）
+    const _gateTimeout = setTimeout(() => { _voiceReady = true; _faceReady = true; beginConversation(); }, 25000);
+
+    LiveVoice.onReady = () => { _voiceReady = true; tryStart(); };   // 語音伺服器接上腦＝語音就緒
+    LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setCallHint('連線中…', true); };
+    // 開場後才顯示狀態（撥通中維持待機動畫、不搶戲）
+    const onListen = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };
+    const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
-    // 斷線自動接回：治「她答完一次、線就掉、不再回」——掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
+    // 斷線自動接回：掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
     let _reconnects = 0;
     const onDrop = () => {
       if (!callConnected && !callDialing) return;         // 使用者已掛斷/取消 → 不重連
       if (_reconnects++ > 6) {                            // 接不回了 → 退簡單陪聊，不掛斷
         setCallHint('真語音不太穩，先用簡單方式陪你');
-        markConnected();
+        _voiceReady = true; _faceReady = true; beginConversation();
         openVoiceSession();
         setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
         return;
@@ -2532,11 +2557,11 @@ function connectCall() {
       setTimeout(() => { if (callConnected || callDialing) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
-    Avatar.start();   // 臉同步接通（預醒過通常幾秒內有影像；沒好之前照片頂著、好了無縫蓋上）
+    Avatar.start();   // 同步接臉（進聊聊頁已預醒、多半幾秒內有影像）；'playing' 事件回 __muneaOnFaceReady
     return;
   }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
-  markConnected();   // 簡單陪聊模式＝立即可講
+  markConnected();   // 簡單陪聊模式（無雲端語音）＝立即可講
   openVoiceSession();
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
 }
