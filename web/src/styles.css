@@ -1944,8 +1944,8 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 #status .h1 { font-size: 27px; font-weight: 900; letter-spacing: .5px; }
 #status .card, #family .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
 #status .row, #family .row { display: flex; align-items: center; }
-#status .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
-#status .mnum { font-family: var(--serif); font-weight: 900; line-height: 1; }
+#status .chip, #family .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }  /* 7/9 Edward：家人頁標籤與狀態頁同規範（原只掛 #status、家人頁變螢光方塊） */
+#status .mnum, #family .mnum { font-family: var(--serif); font-weight: 900; line-height: 1; }
 #status .moodface { border: none; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .15s; }
 #status .moodface:hover { transform: translateY(-2px); }
 #status .moodface .fring { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; transition: box-shadow .18s; }

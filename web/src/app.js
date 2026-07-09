@@ -964,6 +964,12 @@ const LiveVoice = {
     try { const _md = (window.MM && window.MM.currentMood) ? window.MM.currentMood() : ''; if (_md) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'mood=' + encodeURIComponent(_md); } catch (e) {}
     // 帶上他挑的興趣話題，讓 AI 開場就聊得對味
     try { const _ts = loadInterests(); if (_ts.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'topics=' + encodeURIComponent(_ts.join(',')); } catch (e) {}
+    // AI 怎麼稱呼「你」＝個人資料的家人稱呼優先、沒填用名稱（7/9 Edward 拍板：不吃帳號）
+    try {
+      const _pp = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
+      const _uad = ((_pp.nick || '').trim() || (_pp.name || '').trim());
+      if (_uad) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'user=' + encodeURIComponent(_uad);
+    } catch (e) {}
     // 薄門通行碼（App 自動帶、用戶無感）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(MUNEA_APP_KEY);
     this.on = true;
@@ -2815,9 +2821,9 @@ function init() {
   // 每位家人的完整看板（Edward 7/9：心情/用藥/血壓/心率/血氧/睡眠/運動量都要有）
   // 家人健康數據（示範）：欄位結構照狀態頁「今天」——血壓/心率雙卡＋血氧/睡眠/運動量三格＋用藥卡
   const PERSON_STATS = {
-    '美華': { bp: { n: '118', u: '/76 mmHg', chip: '正常', warn: 0, sub: '正常範圍內' }, hr: { n: '68', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '98', sleep: '6.2', steps: '8,900', med: null },
+    '美華': { bp: { n: '118', u: '/76 mmHg', chip: '穩定', warn: 0, sub: '正常範圍內' }, hr: { n: '68', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '98', sleep: '6.2', steps: '8,900', med: null },
     '志明': { bp: { n: '132', u: '/86 mmHg', chip: '偏高', warn: 1, sub: '比平常高一點，多留意' }, hr: { n: '75', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '97', sleep: '7.1', steps: '7,400', med: { sub: '1/1 次 · 都記到了', chip: '都吃了', warn: 0 } },
-    '小寶': { bp: { n: '105', u: '/65 mmHg', chip: '正常', warn: 0, sub: '正常範圍內' }, hr: { n: '80', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '99', sleep: '8.8', steps: '11,200', med: null },
+    '小寶': { bp: { n: '105', u: '/65 mmHg', chip: '穩定', warn: 0, sub: '正常範圍內' }, hr: { n: '80', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '99', sleep: '8.8', steps: '11,200', med: null },
   };
   // 每位家人的心情監測（心情卡不再只有阿嬤有）
   const PERSON_MOOD = {
@@ -2831,7 +2837,8 @@ function init() {
     if (!grid) return;
     const d = PERSON_STATS[p];
     if (!d) { grid.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">等' + (p || '家人') + '連上沐寧，健康數據就會出現在這裡</div>'; return; }
-    const chip = (t, warn) => '<span class="chip" style="flex-shrink:0;background:' + (warn ? 'var(--coral-soft)' : 'var(--mint)') + ';color:' + (warn ? 'var(--coral-d)' : 'var(--teal-dd)') + '">' + t + '</span>';
+    // 標籤配色照狀態頁規範：警示=珊瑚、血壓正常=薄荷綠、心率正常=淡珊瑚（7/9 Edward 對齊設計規範）
+    const chip = (t, warn, tone) => { const coral = warn || tone === 'coral'; return '<span class="chip" style="flex-shrink:0;background:' + (coral ? 'var(--coral-soft)' : 'var(--mint)') + ';color:' + (coral ? 'var(--coral-d)' : 'var(--teal-dd)') + '">' + t + '</span>'; };
     const medCard = d.med
       ? '<div class="card" style="padding:14px 15px;margin-bottom:11px"><div class="row" style="justify-content:space-between;gap:10px">' +
         '<div class="row" style="gap:11px;min-width:0"><span style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:' + (d.med.warn ? 'var(--coral)' : 'var(--teal)') + ';display:grid;place-items:center;color:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>' +
@@ -2845,7 +2852,7 @@ function init() {
           '<div><span class="mnum" style="font-size:26px;color:var(--teal-dd)">' + d.bp.n + '</span><span style="font-size:14px;color:var(--muted)">' + d.bp.u + '</span></div>' +
           '<div style="font-size:14px;color:var(--muted);margin-top:6px">' + d.bp.sub + '</div></div>' +
         '<div class="card" style="padding:15px;flex:1">' +
-          '<div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span>' + chip(d.hr.chip, d.hr.warn) + '</div>' +
+          '<div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span>' + chip(d.hr.chip, d.hr.warn, 'coral') + '</div>' +
           '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">心率</div>' +
           '<div><span class="mnum" style="font-size:26px;color:var(--coral-d)">' + d.hr.n + '</span><span style="font-size:14px;color:var(--muted)"> bpm</span></div>' +
           '<div style="font-size:14px;color:var(--muted);margin-top:6px">' + d.hr.sub + '</div></div>' +

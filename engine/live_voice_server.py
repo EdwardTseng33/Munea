@@ -71,7 +71,7 @@ def process_request(connection, request):
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
@@ -110,15 +110,22 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None):
             f"（很重要：用戶把你的名字改成「{nm}」了。從現在起你就叫「{nm}」，"
             f"打招呼、自我介紹、自稱一律用「{nm}」，絕對不要再說自己叫寧寧。）"
         )
+    # 稱呼對方＝個人資料的「家人稱呼／名稱」優先（7/9 Edward 拍板：不吃帳號、不吃舊示範檔）
+    uv = (user or "").strip()
+    if uv:
+        base += (
+            f"（很重要：稱呼對方一律用「{uv}」——這是他自己在個人資料裡填的稱呼，"
+            f"優先於任何記憶或舊資料裡的名字；打招呼與整段對話都用「{uv}」稱呼他、不要叫他別的名字。）"
+        )
     return base
 
 
-def live_config(char="寧寧", name=None, mood=None, topics=None):
+def live_config(char="寧寧", name=None, mood=None, topics=None, user=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood, topics),
+        system_instruction=system_instruction(char, name, mood, topics, user),
         # 即時查詢（Google 搜尋）：聊到店家/景點/影劇/天氣等具體話題先查再答、不編造——跟文字聊天同一套能力
         tools=[types.Tool(google_search=types.GoogleSearch())],
         output_audio_transcription=types.AudioTranscriptionConfig(),
@@ -145,6 +152,7 @@ async def handle(ws):
     name = None
     mood = None
     topics = None
+    user = None
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
@@ -174,6 +182,10 @@ async def handle(ws):
         tvals = _q.get("topics")
         if tvals:
             topics = [t.strip() for t in tvals[0].split(",") if t.strip()][:8] or None
+        # ?user=爸爸：個人資料的「家人稱呼／名稱」→ AI 對他的稱呼（優先於舊資料 · 7/9）
+        uvals = _q.get("user")
+        if uvals and uvals[0].strip():
+            user = uvals[0].strip()[:12]
     except Exception:
         pass
     _CID["n"] += 1
@@ -182,7 +194,7 @@ async def handle(ws):
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
     _diag(cid, "connected", name=name or "-", char=char)
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics)) as session:
+        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user)) as session:
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
             # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
             # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。
