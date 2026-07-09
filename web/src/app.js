@@ -4305,7 +4305,37 @@ function init() {
     if (txt) txt.placeholder = _fbType === 'idea' ? '例：希望可以幫我記血糖、想要台語' : _fbType === 'praise' ? '例：寧寧記得我孫子要結婚，好感動' : '例：聊聊講到一半沒聲音了';
     renderNps();
   }
-  if ($('#feedbackRow')) $('#feedbackRow').addEventListener('click', () => { fbApplyType(); $('#feedbackModal').classList.add('show'); });
+  // 意見回饋附圖（7/9 Edward：文字說不清時附截圖）：選圖→縮到最長邊 1200px、壓成 JPEG→data URL 預覽
+  let _fbImage = null;
+  function fbClearPhoto() {
+    _fbImage = null;
+    const inp = $('#fbPhotoInput'); if (inp) inp.value = '';
+    const pv = $('#fbPhotoPreview'); if (pv) pv.style.display = 'none';
+    const add = $('#fbPhotoAdd'); if (add) add.style.display = '';
+  }
+  if ($('#fbPhotoAdd')) $('#fbPhotoAdd').addEventListener('click', () => $('#fbPhotoInput') && $('#fbPhotoInput').click());
+  if ($('#fbPhotoRemove')) $('#fbPhotoRemove').addEventListener('click', fbClearPhoto);
+  if ($('#fbPhotoInput')) $('#fbPhotoInput').addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1200, scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        _fbImage = cv.toDataURL('image/jpeg', 0.7);   // 壓過通常 <150KB
+        const el = $('#fbPhotoImg'); if (el) el.src = _fbImage;
+        const pv = $('#fbPhotoPreview'); if (pv) pv.style.display = '';
+        const add = $('#fbPhotoAdd'); if (add) add.style.display = 'none';
+      };
+      img.onerror = () => toast('這張圖讀不了，換一張試試');
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+  if ($('#feedbackRow')) $('#feedbackRow').addEventListener('click', () => { fbApplyType(); fbClearPhoto(); $('#feedbackModal').classList.add('show'); });
   if ($('#fbTypes')) $('#fbTypes').addEventListener('click', e => {
     const b = e.target.closest('.topic-chip'); if (!b) return;
     _fbType = b.dataset.t;
@@ -4322,10 +4352,11 @@ function init() {
     if (_fbType !== 'nps' && !text) { toast('說一句就好，我們想聽'); return; }
     const cat = _fbType === 'bug' ? ((document.querySelector('#fbCats .topic-chip.on') || { dataset: {} }).dataset.c || '其他') : '';
     const body = { type: _fbType, category: cat, text: text, score: _fbNps, appVersion: (window.MuneaVersion && window.MuneaVersion.current) || '', plan: (window.MMPLAN && window.MMPLAN.get()) || '' };
+    if (_fbImage) body.image = _fbImage;   // 選填附圖（已壓縮）
     brainPost('/feedback', body);
-    trackProductEvent('feedback_submitted', { type: _fbType, category: cat, score: _fbNps });
+    trackProductEvent('feedback_submitted', { type: _fbType, category: cat, score: _fbNps, hasImage: !!_fbImage });
     $('#feedbackModal').classList.remove('show');
-    if ($('#fbText')) $('#fbText').value = ''; _fbNps = null; const r = $('#npsRow'); if (r) r.querySelectorAll('.nps-btn').forEach(x => x.classList.remove('on'));
+    if ($('#fbText')) $('#fbText').value = ''; _fbNps = null; fbClearPhoto(); const r = $('#npsRow'); if (r) r.querySelectorAll('.nps-btn').forEach(x => x.classList.remove('on'));
     toast(_fbType === 'praise' ? '收到了，寧寧會很開心！' : '收到了，謝謝你——我們會認真看');
   });
 

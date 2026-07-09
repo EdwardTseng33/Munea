@@ -248,13 +248,19 @@
   function renderFeedback(payload) {
     const latest = (payload && payload.latest) || [];
     const nps = payload && payload.nps !== null && payload.nps !== undefined ? payload.nps : "-";
-    const items = latest.slice(0, 6).map((item) => `
+    const items = latest.slice(0, 6).map((item) => {
+      // 附圖（7/9）：只接受 data:image/ 開頭的內嵌小圖，點開看大圖
+      const safeImg = typeof item.image === "string" && item.image.indexOf("data:image/") === 0 ? item.image : "";
+      const imgHtml = safeImg ? `<a href="${safeImg}" target="_blank" rel="noopener"><img src="${safeImg}" alt="附圖" style="margin-top:8px;max-width:160px;max-height:120px;border-radius:8px;border:1px solid #ccc;display:block"></a>` : "";
+      return `
       <div class="item">
-        <strong>${escapeHtml(item.type || "feedback")}${item.score !== null && item.score !== undefined ? ` · ${escapeHtml(item.score)}` : ""}</strong>
+        <strong>${escapeHtml(item.type || "feedback")}${item.score !== null && item.score !== undefined ? ` · ${escapeHtml(item.score)}` : ""}${safeImg ? " · 📎圖" : ""}</strong>
         <div class="meta">${escapeHtml(item.category || "-")} · ${escapeHtml(item.createdAt || "-")}</div>
         <div>${escapeHtml(item.text || "")}</div>
+        ${imgHtml}
       </div>
-    `).join("");
+    `;
+    }).join("");
     $("feedbackPanel").innerHTML = `
       <div class="tag-row">
         ${countMap(payload && payload.totals)}

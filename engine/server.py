@@ -3045,6 +3045,10 @@ def feedback_response(data):
         "plan": str(data.get("plan") or "")[:12],
         "createdAt": utc_now(),
     }
+    # 選擇性附圖（7/9 Edward：文字說不清時附截圖）：用戶端已壓成小圖 data URL；伺服器把關格式與大小
+    img = data.get("image")
+    if isinstance(img, str) and img.startswith("data:image/") and len(img) <= 700000:  # ~700KB 上限（壓過的小圖綽綽有餘）
+        item["image"] = img
     items = read_json_file(FEEDBACK_PATH, [])
     if not isinstance(items, list):
         items = []

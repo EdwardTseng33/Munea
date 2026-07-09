@@ -614,6 +614,9 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .goal-box { background: var(--mint); border-radius: 14px; padding: 14px 16px; margin: 18px 0; font-size: 15px; color: var(--ink-2); line-height: 1.5; }
 .goal-box b { color: var(--teal-dd); font-family: var(--display); }
 .modal-btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm); background: var(--btn-green); color: #fff; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer; }
+/* 意見回饋附圖：選圖鈕（描邊、跟全 App 同一套線條質感）*/
+.fb-photo-add { display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border: 1.5px solid var(--line); border-radius: 100px; background: #fff; color: var(--ink2); font-size: 15px; font-weight: 700; cursor: pointer; }
+.fb-photo-add:active { background: var(--mint); }
 
 /* ===== 聊聊：日常語音陪聊（暖色，跟視訊分開） ===== */
 .chat-screen { background: var(--mint); } /* 聊聊頁＝單一薄荷綠底（Edward 6/27：薄荷綠當其他畫面底色、跟米黃區隔；亦無漸層） */
@@ -1557,6 +1560,12 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .care-btn { flex: 0 0 auto; margin-left: auto; padding: 7px 13px; border-radius: 999px; border: 1.5px solid var(--teal-d); background: #FFF; color: var(--teal-dd); font-size: 13px; font-weight: 800; }
 .care-item { padding-right: 2px; }
 .care-txt { flex: 1 1 auto; }
+/* 家人動態的「移除／檢舉」（蘋果 UGC 審核要求 · 7/9） */
+.care-mod { display: flex; gap: 16px; margin-top: 6px; }
+.care-mod-btn { font-size: 12px; font-weight: 800; color: var(--muted); background: none; border: none; padding: 0; cursor: pointer; }
+.care-mod-btn:active { color: var(--coral-d); }
+/* 家人頁頂：標題＋管理／封鎖入口同一列（7/9） */
+.fam-page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 /* ===== 北歐動態巧思 v1（輕巧不炫技 · 200-400ms） ===== */
 @keyframes viewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
