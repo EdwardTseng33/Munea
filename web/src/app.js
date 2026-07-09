@@ -1082,6 +1082,20 @@ const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
   greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；招呼講完才開麥（乾淨第一句）
+  // 掛斷時把整通對話送去萃取長期記憶（讓「聊聊」講的也記得住 · Edward 2026-07-10）——跟文字聊天同一條記憶入口
+  saveMemory() {
+    try {
+      const t = (this._transcript || []).filter(x => x && (x.text || '').trim());
+      if (t.length < 2) return;   // 至少一來一往才值得記
+      brainPost('/butler/post-turn', {
+        history: t.slice(-24),
+        char: currentChar,
+        companionProfile: savedCompanionProfile,
+        sessionId: activeChatSessionId,
+        ...authAnalyticsContext(),
+      });
+    } catch (e) {}
+  },
   _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
   _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
@@ -1113,6 +1127,7 @@ const LiveVoice = {
     this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
     this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
+    this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
@@ -1156,14 +1171,25 @@ const LiveVoice = {
               if (this.onCaption) this.onCaption(this._capBuf);
             }
             if (o.type === 'ready') { this.ready = true; if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」
-            if (o.type === 'caption' && o.who === 'user' && o.text && !this._topicSaved) {
-              // 首頁「記得你說…」的在地記憶：抓這通電話你說的第一句話（雲端記憶接上後改由真記憶供應）
-              this._userBuf = (this._userBuf || '') + o.text;
-              const tp = this._userBuf.replace(/\s+/g, '').slice(0, 20);
-              if (tp.length >= 6) { try { localStorage.setItem('munea.lastTopic', tp); } catch (e3) {} this._topicSaved = true; }
+            if (o.type === 'caption' && o.who === 'user' && o.text) {
+              this._userTurn = (this._userTurn || '') + o.text;   // 累積「這輪你說的話」→ 掛斷時送去萃取長期記憶（讓聊聊講的也記得住 · Edward 2026-07-10）
+              if (!this._topicSaved) {
+                // 首頁「記得你說…」的在地記憶：抓這通電話你說的第一句話
+                this._userBuf = (this._userBuf || '') + o.text;
+                const tp = this._userBuf.replace(/\s+/g, '').slice(0, 20);
+                if (tp.length >= 6) { try { localStorage.setItem('munea.lastTopic', tp); } catch (e3) {} this._topicSaved = true; }
+              }
             }
             if (o.type === 'turn_complete') {
               if (this._openMicAfterGreet) { this.micOpen = true; this._openMicAfterGreet = false; }   // 招呼講完 → 現在才開麥、換你講（乾淨開場）
+              // 把這一輪（你說的＋她回的）存進聊天記錄 → 掛斷時送去萃取長期記憶
+              try {
+                if (!this._transcript) this._transcript = [];
+                const ut = (this._userTurn || '').trim(), nt = (this._capBuf || '').trim();
+                if (ut) this._transcript.push({ role: 'user', text: ut });
+                if (nt) this._transcript.push({ role: 'assistant', text: nt });
+                this._userTurn = '';
+              } catch (eT) {}
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
             if (o.type === 'action' && o.action) {   // AI 要「幫你做進 App」（設看診/用藥提醒）→ 執行
@@ -1409,6 +1435,8 @@ function completeChatSession(reason = 'ended') {
     turnCount: activeChatTurnCount,
     meaningful: durationMs >= 60000 || activeChatTurnCount >= 3,
   });
+  // 掛斷 → 把這通聊聊的對話送去萃取長期記憶（讓聊聊講的也記得住 · Edward 2026-07-10）
+  try { if (typeof LiveVoice !== 'undefined' && LiveVoice.saveMemory) LiveVoice.saveMemory(); } catch (e) {}
   activeChatSessionId = null;
   activeChatStartedAt = 0;
   activeChatTurnCount = 0;
