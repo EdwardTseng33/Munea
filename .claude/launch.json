@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Munea",
-      "runtimeExecutable": "python3",
+      "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8123", "--directory", "web"],
       "port": 8123
     },

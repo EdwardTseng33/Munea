@@ -19,7 +19,7 @@
     <div class="pad">
       <div class="page-head home-head">
         <h1 class="page-title" id="greetBig">晚上好</h1>
-        <span class="home-meta"><span class="home-date" id="metaDate">—</span><span class="home-sep">·</span><b>☀ 晴 26°</b></span>
+        <span class="home-meta"><span class="home-date" id="metaDate">—</span><span id="homeWxWrap" style="display:none"><span class="home-sep">·</span><b id="homeWx"></b></span></span>
       </div>
 
       <div class="butler-card">
@@ -198,7 +198,7 @@
       <span id="actNote"></span>
     </div>
   </div>
-  <div class="card" style="padding:14px 16px;display:flex;align-items:center;gap:12px;background:var(--mint)">
+  <div class="card" id="stConnectCard" style="padding:14px 16px;display:flex;align-items:center;gap:12px;background:var(--mint);cursor:pointer">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal-d)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="6" y="7" width="12" height="10" rx="3"/><path d="M9 7l.5-3h5l.5 3M9 17l.5 3h5l.5-3M12 10.5v2l1.4.8"/></svg>
     <div style="flex:1;font-size:13.5px;color:var(--ink2);line-height:1.5">接上 <b>Apple 健康</b>，血壓、心率、血氧、活動、睡眠全部自動同步。<b style="color:var(--teal-d)">管理裝置 ›</b></div></div>
     </div>
@@ -314,7 +314,6 @@
         </div>
 
         <div class="react-row" id="reactRow">
-          <button class="react-btn" data-react="按了讚"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M7 10v12M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H7V10l4.4-7.2A2 2 0 0 1 15 5.9z"/></svg></span>按讚</button>
           <button class="react-btn" data-react="送上愛心"><span class="re-ic coral"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>愛心</button>
           <button class="react-btn" data-react="畫了張塗鴉"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span>塗鴉</button>
           <button class="react-btn" data-react="留了語音"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span>語音</button>
@@ -432,7 +431,7 @@
         <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main">Apple 健康<small>步數・心率・睡眠</small></span><span class="sr-on"><span class="d"></span>已連接</span></div>
         <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main">用藥提醒<small>到時間<span class="cname">寧寧</span>親口提醒</small></span><span class="sr-arrow"><b id="medCountSettings">2 種藥</b> ›</span></div>
         <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main">看診提醒<small>回診前一天提醒你</small></span><span class="sr-arrow" id="visitLabel">›</span></div>
-        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>先選好緊急聯絡人 · 自動通知功能開通中</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>異常時記進家人動態 · 推播升級中</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
         <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">我的資料<small>匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進註冊流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
@@ -444,7 +443,7 @@
 
       <h2 class="set-section">關於</h2>
       <div class="set-list">
-        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">1.2.9</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">1.4.0</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
@@ -456,6 +455,8 @@
     <!-- 全屏臉（佔畫面主體、置中偏上、像跟家人視訊）。會動時對嘴；現為靜態圖＋CSS 呼吸眨眼佔位（§6.5 降級層 1-2） -->
     <div class="face-bg">
       <img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧">
+      <!-- 雲端擬真臉（快照秒醒）：接通後即時影像蓋上照片、無縫接手 -->
+      <video id="faceVid" autoplay playsinline muted aria-hidden="true"></video>
       <div class="face-blink"></div>
       <div class="avatar-mouth" id="avatarMouth" aria-hidden="true"><span></span></div>
     </div>
@@ -637,7 +638,7 @@
         <button type="button" class="topic-chip on" data-t="bug">🐞 回報問題</button>
         <button type="button" class="topic-chip" data-t="idea">💡 功能建議</button>
         <button type="button" class="topic-chip" data-t="praise">❤️ 想稱讚</button>
-        <button type="button" class="topic-chip" data-t="nps">📊 打個分數</button>
+        <button type="button" class="topic-chip" data-t="nps">📊 幫沐寧打分數</button>
       </div>
       <div id="fbCatWrap">
         <div class="field-label">是哪一區的問題？</div>
@@ -651,9 +652,9 @@
         </div>
       </div>
       <div id="fbNpsWrap" style="display:none">
-        <div class="field-label">0～10 分，你會多想把沐寧推薦給朋友或家人？</div>
+        <div class="field-label">你會想把沐寧推薦給朋友或家人嗎？點一個分數（0＝完全不會，10＝非常願意）</div>
         <div class="nps-row" id="npsRow"></div>
-        <div class="nps-hint"><span>不太會</span><span>非常會</span></div>
+        <div class="nps-hint"><span>0 完全不會</span><span>10 非常願意</span></div>
       </div>
       <div class="field-label" id="fbTextLabel">想說的話（越具體我們修得越快）</div>
       <textarea class="chal-input" id="fbText" rows="4" maxlength="1000" placeholder="例：聊聊講到一半沒聲音了／希望可以幫我記血糖"></textarea>
@@ -678,10 +679,10 @@
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>安全通知</h2>
-      <p class="modal-sub">先把緊急聯絡人選好。之後<span class="cname">寧寧</span>發現健康數據危險異常時，會通知他們打電話確認你的狀況——<b>自動通知功能正在最後測試，開通時會在這裡告訴你</b>，你現在選好的名單到時候直接生效。</p>
+      <p class="modal-sub"><span class="cname">寧寧</span>發現健康數據危險異常時，會<b>第一時間記進家人動態</b>——家人打開沐寧就看得到、知道該打電話關心你。手機推播與來電通知正在升級中，好了會在這裡告訴你。</p>
       <div class="field-label">誰來當緊急聯絡人（最多 3 位）</div>
       <div class="safety-picks" id="safetyPicks"></div>
-      <div class="field-label">開通後，什麼情況會通知</div>
+      <div class="field-label">什麼情況會通知</div>
       <ul class="safety-triggers">
         <li><span class="st-ic bp"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>血壓過高或過低（如高於 180 或低於 90）</li>
         <li><span class="st-ic hr"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>心率異常（過快或過慢）</li>
@@ -689,7 +690,7 @@
       </ul>
       <div class="safety-flow">
         <div class="sf-step"><b>1</b><span>異常發生，<span class="cname">寧寧</span>先關心你一句、確認你還好嗎</span></div>
-        <div class="sf-step"><b>2</b><span>沒回應或情況嚴重，立刻推播＋來電通知緊急聯絡人</span></div>
+        <div class="sf-step"><b>2</b><span>同時記進家人動態讓家人知道（手機推播升級中）</span></div>
         <div class="sf-step"><b>3</b><span>聯絡人打電話或趕來確認；真的危急請直接撥 119</span></div>
       </div>
       <button class="modal-btn" id="safetySave">存起來</button>
@@ -814,12 +815,12 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="inviteCloseX" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>邀請家人</h2>
-      <p class="modal-sub">家人加入後，互相看得到狀態與關懷摘要；聊天內容永遠不會公開。<b>家人帳號連線功能正式開通中</b>——先把你的專屬邀請碼傳給家人收著，開通後輸入就能直接連上。</p>
+      <p class="modal-sub">家人加入後，互相看得到狀態、關懷摘要與家人動態；聊天內容永遠不會公開。把你的專屬邀請碼傳給家人，他在沐寧的「家人 → 加入照護圈」輸入，你們就連上了。</p>
       <div class="inv-code" id="invCode">MUNEA-····</div>
       <button class="modal-btn" id="invShareBtn">用訊息傳邀請</button>
       <button class="inv-copy" id="invCopyBtn" type="button">複製邀請碼</button>
       <p class="inv-note" id="invLimitNote">目前 Plus 方案 · 照護圈最多 4 人</p>
-      <p class="inv-note">這組邀請碼是你專屬的；誰要加入，你會先在照護圈看到、確認才進來。</p>
+      <p class="inv-note">邀請碼 72 小時內有效；誰加入了，你會在照護圈名單裡看到。</p>
     </div>
   </div>
 
@@ -828,7 +829,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="joinCircleClose" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>加入照護圈</h2>
-      <p class="modal-sub">把家人給你的邀請碼打在這裡。<b>家人帳號連線功能正式開通中</b>，現在先記下你的邀請碼，開通後會自動幫你完成加入。</p>
+      <p class="modal-sub">把家人給你的邀請碼打在這裡，對上就直接進圈——之後你們的動態、關懷摘要都會互相看得到。</p>
       <input class="chal-input jc-code" id="joinCodeInput" placeholder="例：MUNEA-2847" maxlength="16" autocomplete="off" />
       <button class="modal-btn" id="joinCircleBtn" style="margin-top:14px">加入照護圈</button>
     </div>
@@ -1000,7 +1001,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>版本更新</h2>
-      <p class="modal-sub">沐寧 <span id="verCurrent">1.2.9</span><span id="verChannel"></span></p>
+      <p class="modal-sub">沐寧 <span id="verCurrent">1.4.0</span><span id="verChannel"></span></p>
       <div id="changelogList" class="changelog"></div>
       <button type="button" class="consent-go" id="verClose">好，知道了</button>
     </div>
@@ -1400,12 +1401,78 @@ window.MMDEV = function(){
   }
   function sumAvg(arr,d){ var s=0; for(var i=0;i<arr.length;i++) s+=arr[i]; return (s/arr.length).toFixed(d); }
 
+  /* ===== 真數據帳本（munea.healthLog · App 每天自動寫）→ 7/30 分頁優先吃真的 ===== */
+  function mmHL(){ try{ return JSON.parse(localStorage.getItem('munea.healthLog')||'{}'); }catch(e){ return {}; } }
+  function mmWindow(n){ var out=[]; for(var off=n-1;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var iso=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); out.push({iso:iso,d:d}); } return out; }
+  function mmAgg(n){ var log=mmHL(); var days=mmWindow(n); var got=0;
+    days.forEach(function(x){ x.v=log[x.iso]||null; if(x.v) got++; });
+    function avg(k,dec){ var a=[]; days.forEach(function(x){ if(x.v&&typeof x.v[k]==='number') a.push(x.v[k]); }); if(!a.length) return null; var s=0; a.forEach(function(v){s+=v;}); var m=s/a.length; return dec?+m.toFixed(dec):Math.round(m); }
+    return { days:days, n:got, bpS:avg('bpSys'), bpD:avg('bpDia'), hr:avg('hr'), spo2:avg('spo2'), sleep:avg('sleepHours',1), steps:avg('steps') };
+  }
+  function mmMedDayDone(iso){ try{ var m=JSON.parse(localStorage.getItem('munea.medDone.'+iso)); if(!m) return null; var c=0,k; for(k in m){ if(m[k]) c++; } return c; }catch(e){ return null; } }
+  function mmAccNote(el, n){ if(el) el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">數據累積中（第 '+Math.max(n,1)+' 天）<br>每天的數據會自動記下來，這裡會長出趨勢</div>'; }
+  var WDL=['日','一','二','三','四','五','六'];
+  function mmRealTrends(period){
+    var n = (period==='過去7天')?7:30;
+    var agg = mmAgg(n);
+    var actC=document.getElementById('actChart'), slpC=document.getElementById('sleepTrendChart'), medC=document.getElementById('medTrendChart');
+    var stepDays=agg.days.filter(function(x){return x.v&&typeof x.v.steps==='number';});
+    var sleepDays=agg.days.filter(function(x){return x.v&&typeof x.v.sleepHours==='number';});
+    var stepGoal=7000, sleepGoal=7.5;
+    // 活動量
+    if(stepDays.length>=2){
+      if(n===7){
+        var labels=agg.days.map(function(x){return WDL[x.d.getDay()];});
+        var vals=agg.days.map(function(x){return (x.v&&x.v.steps)||0;});
+        actC.innerHTML = barsChartHTML(labels, vals, stepGoal, function(v){return v>=stepGoal?'var(--teal)':'var(--gold)';}, agg.days.length-1);
+      } else {
+        var wl=['第1週','第2週','第3週','第4週'], wv=[0,0,0,0], wc=[0,0,0,0];
+        agg.days.forEach(function(x,idx){ var b=Math.min(3,Math.floor(idx/8)); if(x.v&&typeof x.v.steps==='number'){ wv[b]+=x.v.steps; wc[b]++; } });
+        var wavg=wv.map(function(s,j){return wc[j]?Math.round(s/wc[j]):0;});
+        actC.innerHTML = barsChartHTML(wl, wavg, stepGoal, function(v){return v>=stepGoal?'var(--teal)':'var(--gold)';}, 3);
+      }
+      document.getElementById('actChip').textContent='日均 '+(agg.steps||0).toLocaleString()+' 步';
+      document.getElementById('actNote').textContent='記到 '+stepDays.length+' 天的活動量';
+    } else { mmAccNote(actC, agg.n); document.getElementById('actChip').textContent='累積中'; document.getElementById('actNote').textContent='每天會自動記，越看越準'; }
+    // 睡眠
+    if(sleepDays.length>=2){
+      if(n===7){
+        var sl=agg.days.map(function(x){return WDL[x.d.getDay()];});
+        var sv=agg.days.map(function(x){return (x.v&&x.v.sleepHours)||0;});
+        slpC.innerHTML = barsChartHTML(sl, sv, sleepGoal, function(v){return v>=7.5?'var(--teal)':(v>=6.5?'var(--gold)':'var(--coral)');}, agg.days.length-1);
+      } else {
+        var wl2=['第1週','第2週','第3週','第4週'], sv2=[0,0,0,0], sc2=[0,0,0,0];
+        agg.days.forEach(function(x,idx){ var b=Math.min(3,Math.floor(idx/8)); if(x.v&&typeof x.v.sleepHours==='number'){ sv2[b]+=x.v.sleepHours; sc2[b]++; } });
+        var savg=sv2.map(function(s,j){return sc2[j]?+(s/sc2[j]).toFixed(1):0;});
+        slpC.innerHTML = barsChartHTML(wl2, savg, sleepGoal, function(v){return v>=7.5?'var(--teal)':(v>=6.5?'var(--gold)':'var(--coral)');}, 3);
+      }
+      document.getElementById('sleepTrendChip').textContent='日均 '+(agg.sleep||0)+' 時';
+    } else { mmAccNote(slpC, agg.n); document.getElementById('sleepTrendChip').textContent='累積中'; }
+    // 用藥（吃真吃藥紀錄 munea.medDone.日期）
+    var meds = (typeof mmMeds==='function') ? mmMeds() : [];
+    var medCard = document.getElementById('medTrendCard');
+    if(!meds.length){ if(medCard) medCard.style.display='none'; }
+    else {
+      var total = (typeof mmSlots==='function') ? mmSlots(meds).length : 0;
+      var recDays = agg.days.filter(function(x){ return mmMedDayDone(x.iso)!==null; });
+      if(recDays.length>=2 && total>0){
+        var st=agg.days.map(function(x){ var c=mmMedDayDone(x.iso); if(c===null) return 'miss'; return c>=total?'full':(c>0?'partial':'miss'); });
+        if(n===7){ document.getElementById('medTrendChart').innerHTML = medWeekHTML(agg.days.map(function(x){return WDL[x.d.getDay()];}), st); }
+        else { document.getElementById('medTrendChart').innerHTML = medMonthHTML(st); }
+        var fullN=st.filter(function(t){return t==='full';}).length;
+        document.getElementById('medTrendChip').textContent = n+' 天完整服藥 '+fullN+'/'+n;
+      } else { mmAccNote(document.getElementById('medTrendChart'), agg.n); document.getElementById('medTrendChip').textContent='累積中'; }
+    }
+    return agg;
+  }
+
   function refreshTrendCards(period){
     var show = period !== '今天';
     document.getElementById('medTrendCard').style.display = show ? 'block':'none';
     document.getElementById('sleepTrendCard').style.display = show ? 'block':'none';
     document.getElementById('actCard').style.display = show ? 'block':'none';
     if(!show) return;
+    if(localStorage.getItem('munea.devicesOn')){ mmRealTrends(period); return; }   // 接上裝置＝一律吃真帳本（沒累積就顯示累積中）
     if(period==='過去7天'){
       var days=['一','二','三','四','五','六','日'];
       var steps=[7200,4800,8800,3800,6800,9600,6600], stepGoal=7000;
@@ -1463,6 +1530,23 @@ window.MMDEV = function(){
     }
     document.getElementById('obsText').innerHTML=d.obs.t+' '+d.obs.lead+'<span style="color:#8FD4CC;font-weight:700">'+d.obs.act+'</span>'+d.obs.tail;
     document.getElementById('obsPeriod').textContent=d.obs.p;
+    // 7/30 分頁的「寧寧的觀察」：接上裝置後一律講真數據（累積不足就老實說第幾天）
+    if(period!=='今天' && localStorage.getItem('munea.devicesOn')){
+      var agg2 = mmAgg(period==='過去7天'?7:30);
+      var oel = document.getElementById('obsText');
+      var HLS = 'color:#8FD4CC';
+      if(agg2.n>=2){
+        var ps=[];
+        if(agg2.bpS&&agg2.bpD) ps.push('血壓平均 <b style="'+HLS+'">'+agg2.bpS+'/'+agg2.bpD+'</b>');
+        if(agg2.hr) ps.push('心率 <b style="'+HLS+'">'+agg2.hr+'</b>');
+        if(agg2.sleep) ps.push('睡眠平均 <b style="'+HLS+'">'+agg2.sleep+' 小時</b>');
+        if(agg2.steps!=null) ps.push('日均 <b style="'+HLS+'">'+agg2.steps.toLocaleString()+'</b> 步');
+        oel.innerHTML = '這段時間記到 <b style="'+HLS+'">'+agg2.n+' 天</b>的數據'+(ps.length?('：'+ps.join('、')):'')+'。每天都會自動記下來，看得越久越準。';
+      } else {
+        oel.innerHTML = '數據帳本開張了——今天的數據會自動記成歷史，明天起這裡就開始長出變化（目前累積<b style="'+HLS+'">第 '+Math.max(agg2.n,1)+' 天</b>）。';
+      }
+      document.getElementById('obsPeriod').textContent = period;
+    }
     if(window.MMDEV) window.MMDEV();
   }
 

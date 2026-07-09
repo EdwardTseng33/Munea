@@ -878,6 +878,65 @@ function getLiveVoiceUrl() {
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
   return LIVE_VOICE_URL_DEFAULT;
 }
+// ===== 雲端寧寧擬真臉（快照秒醒 · 7/9 定案主力）=====
+// 平常全睡不計費；進聊聊頁先「預醒」（8–10 秒）、按通話時臉多半已就緒。
+// 連哪裡：localStorage['munea.avatarUrl']（設空字串=關閉臉）；預設＝正式雲端服務。
+const AVATAR_URL_DEFAULT = 'https://edwardt0303--munea-nening-avatar-nening-web.modal.run';
+function getAvatarUrl() {
+  try { const u = localStorage.getItem('munea.avatarUrl'); if (u !== null) return u.replace(/\/$/, ''); } catch (e) {}
+  return AVATAR_URL_DEFAULT;
+}
+const Avatar = {
+  pc: null, ws: null, on: false, _waking: false,
+  wake() {  // 預醒：進聊聊頁就叫床（重複呼叫無害；容器醒著＝這只是 1 次健康探針）
+    const u = getAvatarUrl(); if (!u || this._waking) return;
+    this._waking = true;
+    try { fetch(u + '/health', { mode: 'cors' }).catch(() => {}).finally(() => { this._waking = false; }); }
+    catch (e) { this._waking = false; }
+  },
+  async start() {
+    const u = getAvatarUrl(); if (!u) return false;
+    const vid = document.getElementById('faceVid'); if (!vid) return false;
+    try {
+      this.pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      this.pc.addTransceiver('video', { direction: 'recvonly' });
+      this.pc.ontrack = e => { vid.srcObject = e.streams[0]; };
+      const o = await this.pc.createOffer(); await this.pc.setLocalDescription(o);
+      await new Promise(res => {  // 等收集完連線候選再送（demo-live 同款）
+        if (this.pc.iceGatheringState === 'complete') return res();
+        const chk = () => { if (this.pc.iceGatheringState === 'complete') { this.pc.removeEventListener('icegatheringstatechange', chk); res(); } };
+        this.pc.addEventListener('icegatheringstatechange', chk); setTimeout(res, 3000);
+      });
+      const r = await fetch(u + '/offer', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
+      const a = await r.json(); await this.pc.setRemoteDescription(a);
+      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio');
+      this.ws.binaryType = 'arraybuffer';
+      this.on = true;
+      return true;
+    } catch (e) { this.stop(); return false; }
+  },
+  feed(buf) { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send(buf); } catch (e) {} },
+  reset() { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send('reset'); } catch (e) {} },
+  stop() {
+    this.on = false;
+    try { if (this.ws) this.ws.close(); } catch (e) {}
+    try { if (this.pc) this.pc.close(); } catch (e) {}
+    this.ws = this.pc = null;
+    const vid = document.getElementById('faceVid');
+    if (vid) { try { vid.srcObject = null; } catch (e) {} }
+    const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.remove('livevid');
+  },
+};
+window.MuneaAvatar = Avatar;
+// 有真影格在播才蓋上照片（無縫接手；斷了自動退回照片）
+document.addEventListener('DOMContentLoaded', () => {
+  const vid = document.getElementById('faceVid');
+  if (vid) vid.addEventListener('playing', () => {
+    const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid');
+  });
+});
+
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, _capBuf: '',
@@ -934,6 +993,7 @@ const LiveVoice = {
               // 使用者插話：把還在播/已排隊的舊語音全部停掉，避免兩個聲音疊在一起（真人不會同時兩個聲音）
               (this._srcs || []).forEach(s => { try { s.stop(); } catch (e2) {} });
               this._srcs = []; this.playHead = this.playCtx.currentTime; this.playLevel = 0;
+              Avatar.reset();                                    // 插話：臉也停下舊句、回待機
             }
             if (o.type === 'caption' && o.who === 'nening' && o.text) {   // 寧寧說的話→字幕逐字（累積成一句）
               this._capBuf = (this._capBuf || '') + o.text;
@@ -951,6 +1011,7 @@ const LiveVoice = {
           return;
         }
         if (!this.playCtx) return;
+        Avatar.feed(ev.data);                                      // 同一份聲音餵給雲端臉（對嘴）
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
@@ -975,6 +1036,7 @@ const LiveVoice = {
   stop() {
     this.on = false;
     this.ready = false;
+    try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
@@ -1097,6 +1159,9 @@ function showView(id) {
     renderStatusCharts();
     const strip = $('#srcStrip');
     if (strip) strip.style.display = localStorage.getItem('munea.devicesOn') ? 'none' : '';
+    // 底部「接上 Apple 健康」卡：還沒接才顯示；接上了就收起來（Edward 7/9）
+    const cc = $('#stConnectCard');
+    if (cc) cc.style.display = localStorage.getItem('munea.devicesOn') ? 'none' : '';
     const segBtns = document.querySelectorAll('#statusSeg .seg-btn');
     if (segBtns.length) {
       segBtns.forEach(x => x.classList.toggle('on', x.dataset.v === 'today'));
@@ -1106,6 +1171,7 @@ function showView(id) {
     }
   }
   if (id === 'family') {
+    try { syncPullAll(); } catch (e) {}   // 進家人頁先拉最新動態
     const va = $('#viewAll');
     if (va && !va.classList.contains('active')) {
       $$('#family .fam-view').forEach(v => v.classList.remove('active'));
@@ -1119,7 +1185,7 @@ function showView(id) {
   $('#tabBar').classList.toggle('hidden', overlay);
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === id));
   const el = $('#' + id); if (el) el.scrollTop = 0;
-  if (id === 'chat') enterChat();
+  if (id === 'chat') { Avatar.wake(); enterChat(); }   // 進聊聊頁＝先預醒雲端臉（按通話時多半已就緒）
 }
 
 function authState() {
@@ -1301,6 +1367,44 @@ function setupAuthControls() {
   updateAuthUI();
 }
 
+// 首頁天氣：真的查（open-meteo 免費氣象站、不用鑰匙）——查得到才顯示、查不到整塊不出現，不擺假太陽
+(function homeWeather() {
+  const wrap = document.getElementById('homeWxWrap'), wx = document.getElementById('homeWx');
+  if (!wrap || !wx) return;
+  const CK = 'munea.wxCache';
+  try { const c = JSON.parse(localStorage.getItem(CK) || 'null'); if (c && Date.now() - c.t < 1800000) { wx.textContent = c.text; wrap.style.display = ''; return; } } catch (e) {}
+  function wtxt(code) {
+    const M = [[0, '☀ 晴'], [1, '🌤 晴時多雲'], [2, '⛅ 多雲'], [3, '☁ 陰'], [45, '🌫 有霧'], [51, '🌦 毛毛雨'], [61, '🌧 有雨'], [71, '❄ 下雪'], [80, '🌧 陣雨'], [95, '⛈ 雷雨']];
+    let t = '⛅ 多雲'; for (const [c, s] of M) if (code >= c) t = s; return t;
+  }
+  function ok(text) { wx.textContent = text; wrap.style.display = ''; try { localStorage.setItem(CK, JSON.stringify({ t: Date.now(), text })); } catch (e) {} }
+  function byCoords(lat, lon) {
+    return fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code&timezone=auto')
+      .then(r => r.json()).then(j => {
+        const c = j && j.current;
+        if (!c || typeof c.temperature_2m !== 'number') throw new Error('no-data');
+        ok(wtxt(c.weather_code || 0) + ' ' + Math.round(c.temperature_2m) + '°');
+      });
+  }
+  function byCity(city) {
+    return fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=zh&name=' + encodeURIComponent(city))
+      .then(r => r.json()).then(j => {
+        const g = j && j.results && j.results[0];
+        if (!g) throw new Error('no-city');
+        return byCoords(g.latitude, g.longitude);
+      });
+  }
+  let city = '';
+  try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || 'null'); city = ((p && p.city) || '').trim(); } catch (e) {}
+  const geo = () => new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej(new Error('no-geo'));
+    navigator.geolocation.getCurrentPosition(p => res(p.coords), rej, { timeout: 5000, maximumAge: 1800000 });
+  });
+  (city ? byCity(city) : Promise.reject(new Error('no-profile-city')))
+    .catch(() => geo().then(c => byCoords(c.latitude, c.longitude)))
+    .catch(() => { /* 沒設所在地也拿不到定位＝不顯示天氣，只留日期 */ });
+})();
+
 (function homeGreeting() {
   const now = new Date();
   (function fixDemoEventDate() {
@@ -1477,6 +1581,13 @@ window.__muneaSetSteps = function (n) {
   card.dataset.steps = String(n);
   if (n >= goal) card.classList.add('done'); // 走到目標就自動完成
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
+  // 步數也記進數據日記帳（供 7/30 天真趨勢）
+  try {
+    const day = _todayISO();
+    const log = JSON.parse(localStorage.getItem('munea.healthLog') || '{}');
+    (log[day] = log[day] || {}).steps = n;
+    localStorage.setItem('munea.healthLog', JSON.stringify(log));
+  } catch (e) {}
 };
 // Apple 健康的完整摘要 → 狀態頁「今天」的真數值（原生端 health.js 讀到後呼叫）
 // s = { available, steps, hr, spo2, bpSys, bpDia, sleepHours }；缺哪項就不動哪項（示範值留著、不清空）
@@ -1530,6 +1641,39 @@ window.__muneaSetHealth = function (s) {
       ? head + '大致都穩，不過' + B(worry.join('、')) + '，我幫你多留意，先別擔心。'
       : head + '整體狀態不錯。<span style="color:#8FD4CC;font-weight:700">保持這個節奏就很好</span>，想出門走走我陪你。';
   }
+  // 安全通知（真的動）：數據掉出危險範圍 → 寫進家人動態（雲端同步、家人打開沐寧就看到）；同類 6 小時最多一次
+  try {
+    const danger = [];
+    if (sys && (sys >= 180 || sys < 90)) danger.push('血壓 ' + Math.round(sys) + (dia ? '/' + Math.round(dia) : ''));
+    if (hr && (hr > 120 || hr < 45)) danger.push('心率 ' + Math.round(hr));
+    if (spo2 && spo2 < 90) danger.push('血氧 ' + Math.round(spo2) + '%');
+    if (danger.length) {
+      const last = +(localStorage.getItem('munea.safetyAlertAt') || 0);
+      if (Date.now() - last > 21600000) {
+        localStorage.setItem('munea.safetyAlertAt', String(Date.now()));
+        let who = '家人';
+        try { const pf = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); who = pf.nick || pf.name || '家人'; } catch (e2) {}
+        pushFamilyFeed('⚠️ <b>' + who + '</b>的' + danger.join('、') + '超出安全範圍，打通電話關心一下');
+        try { trackProductEvent('safety_alert_recorded', { kinds: danger.length }); } catch (e2) {}
+      }
+    }
+  } catch (e) {}
+  // 數據日記帳：今天的數據記成歷史（日期為鍵、留 35 天），狀態頁 7/30 天分頁就從這裡長出真趨勢
+  try {
+    const day = _todayISO();
+    const log = JSON.parse(localStorage.getItem('munea.healthLog') || '{}');
+    const cur = log[day] || {};
+    if (sys) cur.bpSys = Math.round(sys);
+    if (dia) cur.bpDia = Math.round(dia);
+    if (hr) cur.hr = Math.round(hr);
+    if (spo2) cur.spo2 = Math.round(spo2);
+    if (sleep) cur.sleepHours = Math.round(sleep * 10) / 10;
+    if (steps) cur.steps = Math.round(steps);
+    log[day] = cur;
+    const keys = Object.keys(log).sort();
+    while (keys.length > 35) delete log[keys.shift()];
+    localStorage.setItem('munea.healthLog', JSON.stringify(log));
+  } catch (e) {}
 };
 function renderMedList() { renderMedSlots(); }
 const MED_SLOT_DEF = [
@@ -1699,14 +1843,32 @@ function setCaption(text, hint) {
 }
 
 let _toastTimer = null;
+// 每台裝置一個身份、每個家庭一個編號：同步時帶上，別人家的動態不會混進來（真帳號上線後改綁帳號）
+function muneaDeviceId() {
+  try {
+    let d = localStorage.getItem('munea.deviceId');
+    if (!d) { d = 'dev-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); localStorage.setItem('munea.deviceId', d); }
+    return d;
+  } catch (e) { return 'dev-anon'; }
+}
+function famGroupId() {
+  try {
+    let g = localStorage.getItem('munea.familyGroupId');
+    if (!g) { g = 'fam-' + muneaDeviceId(); localStorage.setItem('munea.familyGroupId', g); }
+    return g;
+  } catch (e) { return 'fam-anon'; }
+}
+function myProfileName() {
+  try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); return (p.name || p.nick || '').trim(); } catch (e) { return ''; }
+}
 function syncPush(key, value) {
   try {
-    fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', key, value }) }).catch(() => {});
+    fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', key, value, familyGroupId: famGroupId(), personId: muneaDeviceId() }) }).catch(() => {});
   } catch (e) {}
 }
 async function syncPullAll() {
   try {
-    const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'load' }) });
+    const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'load', familyGroupId: famGroupId() }) });
     if (!r.ok) return;
     const st = (await r.json()).state || {};
     const map = { activities: 'munea.activities', familyFeed: 'munea.familyFeed2', meds: 'munea.meds', visit: 'munea.visit', visits: 'munea.visits', routine: 'munea.routine' };
@@ -1714,6 +1876,19 @@ async function syncPullAll() {
       if (st[k] !== undefined && st[k] !== null) {
         try { localStorage.setItem(map[k], JSON.stringify(st[k])); } catch (e) {}
       }
+    }
+    // 圈名單同步（雲端不存「本人」標記，各裝置用自己的名字對回去）
+    if (Array.isArray(st.circle) && st.circle.length) {
+      try {
+        const mine = myProfileName();
+        const arr = st.circle.map(m => ({ name: m.name, init: m.init, tint: m.tint, self: !!mine && m.name === mine }));
+        if (!arr.some(m => m.self)) {
+          const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
+          arr.unshift({ name: mine || p.nick || '我', init: (p.nick || mine || '我')[0], tint: 'p-ama', self: true });
+        }
+        localStorage.setItem('munea.circleMembers', JSON.stringify(arr));
+        if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync();
+      } catch (e) {}
     }
     if (st.wallet && typeof st.wallet.used === 'number') {
       POINTS.used = st.wallet.used;
@@ -2160,6 +2335,7 @@ function connectCall() {
       setTimeout(() => { if (callConnected) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
+    Avatar.start();   // 臉同步接通（預醒過通常幾秒內有影像；沒好之前照片頂著、好了無縫蓋上）
     return;
   }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
@@ -2169,7 +2345,14 @@ function connectCall() {
 
 function init() {
   if (new URLSearchParams(location.search).get('debug')) document.body.classList.add('debug');
+  // 體驗捷徑：網址帶 ?voiceUrl= / ?avatarUrl= → 寫進本機設定後生效（一鍵體驗 bat 用）
+  try {
+    const _q = new URLSearchParams(location.search);
+    if (_q.get('voiceUrl') !== null) localStorage.setItem('munea.liveVoiceUrl', _q.get('voiceUrl'));
+    if (_q.get('avatarUrl') !== null) localStorage.setItem('munea.avatarUrl', _q.get('avatarUrl'));
+  } catch (e) {}
   const __pullPromise = syncPullAll();
+  setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
   document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
   document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
   syncCompanionUI();
@@ -2341,7 +2524,11 @@ function init() {
     { name: '小寶', init: '寶', tint: 'p-bao' }
   ];
   function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : CIRCLE_DEFAULT.slice(); } catch (e) { return CIRCLE_DEFAULT.slice(); } }
-  function saveCircle(a2) { try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {} }
+  function saveCircle(a2) {
+    try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {}
+    syncPush('circle', a2.map(m => ({ name: m.name, init: m.init, tint: m.tint })));   // 圈名單上雲（不帶「本人」標記）
+  }
+  window.__muneaAfterCircleSync = function () { try { renderFamRoster(); renderFcRoster(); updateSafetyCount(); } catch (e) {} };
   function renderFcRoster() {
     const box = $('#fcRoster'); if (!box) return;
     const members = loadCircle(); const plan = circlePlan(); const limit = CIRCLE_LIMITS[plan] || 4;
@@ -2366,12 +2553,34 @@ function init() {
   if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
   if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
-  if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', () => {
+  if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', async () => {
     const code = ($('#joinCodeInput').value || '').trim();
-    if (!code || code.length < 4) { toast('把家人給你的邀請碼打進去（例：MUNEA-2847）'); return; }
-    try { localStorage.setItem('munea.pendingJoinCode', code); } catch (e) {}
-    $('#joinCircleModal').classList.remove('show'); $('#joinCodeInput').value = '';
-    toast('邀請碼記下了！家人帳號連線開通後，會自動幫你完成加入。');
+    if (!code || code.replace(/\D/g, '').length < 4) { toast('把家人給你的邀請碼打進去（例：MUNEA-284753）'); return; }
+    const btn = $('#joinCircleBtn');
+    if (typeof setBtnBusy === 'function') setBtnBusy(btn, '加入中');
+    try {
+      const p = loadPersonProfile();
+      const r = await fetch(brainURL('/family/invitations'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'accept', shortCode: code, inviteePersonId: muneaDeviceId(), inviteeName: p.nick || p.name || '' }) });
+      const j = await r.json();
+      if (j && j.ok && j.invitation && j.invitation.familyGroupId) {
+        try { localStorage.setItem('munea.familyGroupId', j.invitation.familyGroupId); } catch (e) {}
+        // 把自己掛進這家的圈名單（雲端），對方裝置拉回來就看得到你
+        await syncPullAll();
+        const mem = loadCircle();
+        const meName = p.nick || p.name || '我';
+        if (!mem.some(m => m.name === meName)) { mem.push({ name: meName, init: meName[0], tint: 'p-bao', self: true }); saveCircle(mem); }
+        renderFamRoster(); renderFcRoster();
+        $('#joinCircleModal').classList.remove('show'); $('#joinCodeInput').value = '';
+        toast('加入了！你們現在在同一個照護圈，動態會互相看得到。');
+      } else if (j && j.error === 'invitation_expired') {
+        toast('這組邀請碼過期了，請家人重新產一組給你。');
+      } else {
+        toast('找不到這組邀請碼，跟家人核對一下數字。');
+      }
+    } catch (e) {
+      toast('現在連不上雲端，等網路好一點再試一次。');
+    }
+    if (typeof clearBtnBusy === 'function') clearBtnBusy(btn); else if (btn) btn.textContent = '加入照護圈';
   });
   if ($('#fcLeaveBtn')) $('#fcLeaveBtn').addEventListener('click', () => {
     const b = $('#fcLeaveBtn');
@@ -2383,8 +2592,8 @@ function init() {
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); });
-  // 邀請碼：每台裝置一組專屬碼（不再全世界共用同一組示範碼）；家人連線開通後由雲端換發正式碼
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
+  // 邀請碼：跟雲端拿真的（6 位數、72 小時內有效、綁自己的家庭編號）；連不上雲端就先給本機碼並提示
   function myInviteCode() {
     try {
       let c = localStorage.getItem('munea.inviteCode');
@@ -2392,22 +2601,46 @@ function init() {
       return c;
     } catch (e) { return 'MUNEA-0000'; }
   }
-  function fillInvCode() { const el = $('#invCode'); if (el) el.textContent = myInviteCode(); }
+  async function ensureCloudInvite() {
+    // 已有 48 小時內拿到的雲端碼就沿用（雲端碼 72 小時有效，留 24 小時緩衝）
+    try {
+      const at = +(localStorage.getItem('munea.inviteCodeAt') || 0);
+      const cached = localStorage.getItem('munea.inviteCode') || '';
+      if (/^MUNEA-\d{6}$/.test(cached) && Date.now() - at < 172800000) return cached;
+    } catch (e) {}
+    try {
+      const r = await fetch(brainURL('/family/invitations'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', familyGroupId: famGroupId(), inviterPersonId: muneaDeviceId() }) });
+      const j = await r.json();
+      if (j && j.ok && j.invitation && j.invitation.shortCode) {
+        const code = 'MUNEA-' + j.invitation.shortCode;
+        try { localStorage.setItem('munea.inviteCode', code); localStorage.setItem('munea.inviteCodeAt', String(Date.now())); } catch (e) {}
+        return code;
+      }
+    } catch (e) {}
+    return null;   // 連不上雲端
+  }
+  function fillInvCode(withCloud) {
+    const el = $('#invCode'); if (!el) return;
+    el.textContent = myInviteCode();
+    if (!withCloud) return;   // 開 App 只顯示暫存碼；真的打開邀請視窗才跟雲端拿正式碼
+    ensureCloudInvite().then(code => { if (code) el.textContent = code; else el.textContent = myInviteCode() + '（暫用）'; });
+  }
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
   if ($('#inviteCloseX')) $('#inviteCloseX').addEventListener('click', () => $('#inviteFamModal').classList.remove('show'));
+  function shownInvCode() { return ((($('#invCode') || {}).textContent) || myInviteCode()).replace('（暫用）', ''); }
   if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
-    const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + myInviteCode() + '，先收著，等你加入我們一起互相照顧！';
+    const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + shownInvCode() + '，在沐寧的「家人 → 加入照護圈」輸入，我們就連上了！';
     if (navigator.share) { navigator.share({ text }).catch(() => {}); }
     else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
   });
   if ($('#invCopyBtn')) $('#invCopyBtn').addEventListener('click', () => {
-    const code = myInviteCode();
+    const code = shownInvCode();
     (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : Promise.reject()).then(
-      () => toast('邀請碼複製好了，貼給家人收著'),
+      () => toast('邀請碼複製好了，貼給家人'),
       () => toast('你的邀請碼：' + code)
     );
   });
-  fillInvCode();
+  fillInvCode(false);
   if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView(window.__connectFrom || 'status'));
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', async () => {
     // Apple 健康：在 App 裡就真的去要 iPhone 授權；網頁預覽則走原本示範切換
@@ -2440,9 +2673,9 @@ function init() {
     if (!b || b.classList.contains('sent')) return;
     reactRow.querySelectorAll('.react-btn.sent').forEach(x => x.classList.remove('sent'));
     b.classList.add('sent');
-    hint(`心意記下了！家人連線開通後，${cname()}會第一時間轉達。`);
+    hint(`送出去了，${cname()}會在家人動態幫你帶到。`);
     const who = document.getElementById('ptName')?.textContent || '家人';
-    pushFamilyFeed(`<b>你</b>給${who}${b.dataset.react || '送上心意'}（家人連線開通後，${cname()}會親口轉達）`);
+    pushFamilyFeed(`<b>你</b>給${who}${b.dataset.react || '送上心意'}，${cname()}會在下次聊天時帶到`);
   });
 
   // 全家健康圈：切換成員看健康
@@ -2917,7 +3150,7 @@ function init() {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
     const p = b.dataset.person;
     if (p === 'all') showFamAll();
-    else if (p === 'invite') { if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); }
+    else if (p === 'invite') { if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } }
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
   });
   const healthList = $('#healthList');
@@ -2926,6 +3159,8 @@ function init() {
     showFamPerson(r.dataset.person, r.dataset.rel, r.dataset.init, r.dataset.tint);
   });
   renderFamRoster();   // 開頁就以家庭圈名單為準重建家人頁（兩本帳合一）
+  // 狀態頁底部「接上 Apple 健康」卡 → 點了直接進「連接裝置」頁（Edward 7/9：綠字連結要真的能走）
+  if ($('#stConnectCard')) $('#stConnectCard').addEventListener('click', () => { window.__connectFrom = 'status'; showView('connect'); });
   // 週/月趨勢切換
   const TREND = {
     week: {
@@ -3554,7 +3789,7 @@ function init() {
   if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
     $('#safetyModal').classList.remove('show');
     const sel = loadSafety();
-    toast(sel.length ? ('名單記好了：' + sel.join('、') + '。自動通知一開通就會用上。') : '還沒選聯絡人，等你想好再設定就好');
+    toast(sel.length ? ('名單記好了：' + sel.join('、') + '。異常時我會第一時間讓家人知道。') : '還沒選聯絡人，等你想好再設定就好');
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();

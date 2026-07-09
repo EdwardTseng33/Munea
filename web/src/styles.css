@@ -678,6 +678,13 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   display: block;
   /* Edward 2026-07-06：圖片不要有動態——保持完全靜止（呼吸縮放已移除） */
 }
+/* 雲端擬真臉：跟照片同位置同裁切；有真影格才淡入蓋上（照片→活影像無縫） */
+.face-bg video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center top; display: block;
+  opacity: 0; transition: opacity .55s ease; z-index: 1;
+}
+.face-bg.livevid video { opacity: 1; }
 
 /* Edward 2026-07-06：圖片不要有動態——關閉眨眼佔位效果 */
 .face-blink { display: none; }
