@@ -28,11 +28,11 @@ let currentAvatarId = savedCompanionProfile.templateId;
 let companionDisplayName = savedCompanionProfile.displayName;
 let companionNameTouched = savedCompanionProfile.nameTouched;
 // 動物角色（咪咪/旺財）先下架（Edward 2026-07-09：擬真臉引擎做不了卡通動物）——選過的自動回「溫柔型」寧寧、不留半殘狀態
-const REMOVED_AVATARS = new Set(['munea-2d-mimi', 'munea-2d-wangcai']);
+const REMOVED_AVATARS = new Set(['munea-2d-mimi', 'munea-2d-wangcai', 'munea-2d-xiaoyun', 'munea-2d-ayuan']);   // V1 只留兩位擬真真人（Edward 2026-07-10）
 if (REMOVED_AVATARS.has(currentAvatarId)) {
   currentAvatarId = 'nening-real-female';
   savedCompanionProfile.templateId = currentAvatarId;
-  if (['咪咪', '旺財'].indexOf((companionDisplayName || '').trim()) >= 0) { companionDisplayName = '寧寧'; companionNameTouched = false; }
+  if (['咪咪', '旺財', '小昀', '阿原'].indexOf((companionDisplayName || '').trim()) >= 0) { companionDisplayName = '寧寧'; companionNameTouched = false; }
 }
 let currentChar = CompanionProfile.templateFor(currentAvatarId).backendChar; // 後端角色模板，決定腦＋聲音
 let chatHistory = [];            // 多輪對話脈絡
@@ -1026,6 +1026,10 @@ const Avatar = {
       // 中繼＝公開測試中繼（正式上線換自家帳號的中繼、一行換）；munea.avatarRelay=1 可強制全走中繼（診斷用）
       const iceServers = [
         { urls: 'stun:stun.l.google.com:19302' },
+        // 自架可靠中繼站（GCP coturn · 34.81.102.52 · 2026-07-10 Edward 選 B、已實測能轉接）——手機行動網路優先走這台、穩
+        { urls: ['turn:34.81.102.52:3478?transport=udp', 'turn:34.81.102.52:3478?transport=tcp'],
+          username: 'muneaturn', credential: 'munea-turn-a7k2q' },
+        // 免費公用中繼＝備援（自架的萬一掛了還有得用）
         { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
           username: 'openrelayproject', credential: 'openrelayproject' },
       ];

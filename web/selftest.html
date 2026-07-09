@@ -145,7 +145,7 @@
   });
   await run('F-10', '陪伴角色選單＋頭像載入', () => {
     const imgs = [...D.querySelectorAll('#companionSheet .avo .avi img')];
-    A(imgs.length >= 4, '角色數 ' + imgs.length);   // 2026-07-09 動物（咪咪/旺財）下架後＝4 人形角色
+    A(imgs.length >= 2, '角色數 ' + imgs.length);   // 2026-07-10 V1 專攻兩位擬真真人（寧寧/阿宏），插畫+動物暫下架
     imgs.slice(0, 2).forEach(i => A(i.naturalWidth > 0, i.src.split('/').pop() + ' 未載入'));
   });
 
