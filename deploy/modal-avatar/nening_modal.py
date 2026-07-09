@@ -100,6 +100,7 @@ HOP = CHUNKSIZE[1] * 640                           # 3200 樣本 = 0.2s
     experimental_options={"enable_gpu_snapshot": True},
     scaledown_window=120,            # 通話結束 2 分鐘沒人用→睡（快照喚醒 8–10 秒）
     timeout=3600,                    # 允許長通話
+    max_containers=1,                # 方案 B（2026-07-10）：鎖死最多 1 個容器，杜絕「影像線落容器 A、聲音線落容器 B → 臉失聯」。刻意不設 min_containers（維持閒置歸零、不燒 24h GPU）。V1 引擎本就單臉、單容器不減實際承載
 )
 @modal.concurrent(max_inputs=20)     # 同一容器同時受理 offer + 聲音接口 + 探針（不排隊）
 class Nening:

@@ -22,6 +22,7 @@ import json
 import time
 import datetime
 import asyncio
+from urllib.parse import quote
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
@@ -211,6 +212,7 @@ async def handle(ws):
     user = None
     location = None
     allow_reminders = False   # 只有帶 ?cap_rem=1 的新版 App 才開放「幫你設提醒」工具（防舊版假成功）
+    gate_key = ""   # 這通電話用的通行碼（跟 App 一致）；伺服器對伺服器接雲端臉時原封不動帶過去，不必客端再傳一次
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
@@ -218,6 +220,7 @@ async def handle(ws):
         # 薄門（正式上線 · 7/9 Edward 拍板）：環境設了 MUNEA_APP_KEY 就要對通行碼（?key=）。
         # App 自動帶、用戶無感；擋的是「拿到網址直接來撥」的陌生流量。本機沒設＝不啟用、行為不變。
         _gate = os.environ.get("MUNEA_APP_KEY", "").strip()
+        gate_key = _gate   # 存起來給「聲音直接送去雲端臉」那條 server-to-server 連線用（同一把薄門鑰匙）
         if _gate:
             kvals = _q.get("key")
             if not kvals or kvals[0] != _gate:
@@ -256,7 +259,8 @@ async def handle(ws):
     _CID["n"] += 1
     cid = _CID["n"]
     t0 = time.monotonic()
-    st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
+    st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False,
+          "face_ws": None, "face_audio_url": None}   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
     _diag(cid, "connected", name=name or "-", char=char)
     try:
         async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location, allow_reminders)) as session:
@@ -315,6 +319,43 @@ async def handle(ws):
                 except Exception:
                     pass
 
+            async def _face_audio_close(w):
+                # 背景關線，不擋主流程（送/收聲音永遠優先，關雲端臉連線失敗也不能拖累通話）
+                try:
+                    await w.close()
+                except Exception:
+                    pass
+
+            async def _face_audio_off():
+                fw = st.get("face_ws")
+                st["face_ws"] = None
+                st["face_audio_url"] = None
+                if fw:
+                    asyncio.create_task(_face_audio_close(fw))
+                    _diag(cid, "node.faceaudio_off")
+
+            async def _face_audio_on(url):
+                # App 說「聲音直接幫我送去雲端臉」（方案 B · 2026-07-10）：這裡開一條 server-to-server WS 去 Modal 的
+                # /audio，之後 Gemini 吐回來的聲音同一份 byte 也送這條線——不必再繞手機行動網路上行一趟。
+                # 連不上/斷了都不能拖累語音對話：任何失敗都吞掉，對話照常，只是臉那次不會動（等下一次 on 訊息重試）。
+                url = (url or "").strip().rstrip("/")
+                if not url:
+                    return
+                if st.get("face_ws") is not None and st.get("face_audio_url") == url:
+                    return   # 同一顆網址已經開著，不重連（避免重複 on 事件疊連線）
+                await _face_audio_off()   # 先收掉舊的（網址換了，或上一輪殘留）
+                try:
+                    ws_url = url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
+                    ws_url += "/audio?key=" + quote(gate_key, safe="")
+                    fw = await websockets.connect(ws_url, max_size=None, open_timeout=5)
+                    st["face_ws"] = fw
+                    st["face_audio_url"] = url
+                    _diag(cid, "node.faceaudio_on", url=url)
+                except Exception as e:
+                    st["face_ws"] = None
+                    st["face_audio_url"] = None
+                    _diag(cid, "node.faceaudio_err", err=f"{type(e).__name__}:{str(e)[:60]}")
+
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):
@@ -347,6 +388,12 @@ async def handle(ws):
                             )
                         elif t == "audio_end":
                             await session.send_realtime_input(audio_stream_end=True)
+                        elif t == "faceaudio":
+                            # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
+                            if obj.get("on"):
+                                await _face_audio_on(obj.get("url") or "")
+                            else:
+                                await _face_audio_off()
 
             async def from_live():
                 # session.receive() 每輪結束就收（SDK 行為）；外層 while 讓「一輪接完再等下一輪」＝多輪對話不斷
@@ -368,6 +415,13 @@ async def handle(ws):
                             st["out"] += len(data)
                             turn_out += len(data)
                             await ws.send(data)
+                            fw = st.get("face_ws")
+                            if fw is not None:
+                                try:
+                                    await fw.send(data)   # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）
+                                except Exception as e:
+                                    st["face_ws"] = None
+                                    _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
                         sc = getattr(msg, "server_content", None)
                         if sc:
                             ot = getattr(sc, "output_transcription", None)
@@ -379,6 +433,12 @@ async def handle(ws):
                             if getattr(sc, "interrupted", False):
                                 _diag(cid, "node.interrupted")
                                 await ws.send(json.dumps({"type": "interrupted"}))
+                                fw = st.get("face_ws")
+                                if fw is not None:
+                                    try:
+                                        await fw.send("reset")   # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）
+                                    except Exception:
+                                        st["face_ws"] = None
                             if getattr(sc, "turn_complete", False):
                                 ms = round(turn_out / (24000 * 2) * 1000)
                                 _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
@@ -417,6 +477,12 @@ async def handle(ws):
     except Exception as e:
         _diag(cid, "node.error", err=f"{type(e).__name__}:{str(e)[:80]}")
     finally:
+        fw = st.get("face_ws")
+        if fw is not None:
+            try:
+                await fw.close()
+            except Exception:
+                pass
         _diag(cid, "closed", in_bytes=st["in"], out_bytes=st["out"])
 
 
