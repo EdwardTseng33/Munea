@@ -20,6 +20,7 @@ import os
 import sys
 import json
 import time
+import datetime
 import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -71,7 +72,7 @@ def process_request(connection, request):
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
@@ -119,17 +120,70 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             f"（很重要：稱呼對方一律用「{uv}」——這是他自己在個人資料裡填的稱呼，"
             f"優先於任何記憶或舊資料裡的名字；打招呼與整段對話都用「{uv}」稱呼他、不要叫他別的名字。）"
         )
+    # 今天日期時間（台灣時間）——所有版本都給，讓「明天／今晚」算得準（2026-07-09 Edward）
+    tw = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+    wd = "一二三四五六日"[tw.weekday()]
+    base += (
+        f"（現在是台灣時間 {tw.year}-{tw.month:02d}-{tw.day:02d}（星期{wd}）{tw.hour:02d}:{tw.minute:02d}。"
+        "算「明天／後天／今晚／下週三」這類日期時間時，一律以這個現在時間為準換算。）"
+    )
+    # 「幫你設提醒」工具說明——只給接得住的新版 App（能力握手 ?cap_rem=1），舊版不講、免得它亂試假成功
+    if allow_reminders:
+        base += (
+            "（你可以「直接幫他把提醒設進 App」：他說要設看診／回診提醒，就呼叫 set_clinic_reminder；"
+            "他說要設吃藥／用藥提醒，就呼叫 set_medication_reminder。呼叫前若日期、時間、藥名或科別沒聽清楚，"
+            "先用一句話問清楚再設，不要自己亂猜。設好之後用一句溫暖口語的話跟他確認你設了什麼"
+            "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。）"
+        )
     return base
 
 
-def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None):
+# 「幫你設提醒」工具（Gemini Live 函式呼叫）→ 橋接層轉成 {type:action} 給 App 執行（2026-07-09 Edward）
+_REMINDER_TOOLS = types.Tool(function_declarations=[
+    types.FunctionDeclaration(
+        name="set_clinic_reminder",
+        description="使用者要設定看診／回診提醒時呼叫，把提醒建進 App 的看診提醒。",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "title": types.Schema(type=types.Type.STRING, description="看診名稱，例如「台大骨科回診」"),
+                "date": types.Schema(type=types.Type.STRING, description="日期，格式 YYYY-MM-DD（把「明天」等相對日期換算成實際日期）"),
+                "time": types.Schema(type=types.Type.STRING, description="時間，24 小時制 HH:MM，例如下午四點=16:00"),
+            },
+            required=["title", "date", "time"],
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="set_medication_reminder",
+        description="使用者要設定吃藥／用藥提醒時呼叫，把提醒建進 App 的用藥提醒。",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "name": types.Schema(type=types.Type.STRING, description="藥名，例如「止痛藥」「血壓藥」"),
+                "slots": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(type=types.Type.STRING),
+                    description="吃藥時段，只能從這四個挑最接近的：早餐後、午餐後、晚餐後、睡前（例如「晚上七點」對應「晚餐後」）。可多個。",
+                ),
+                "days": types.Schema(type=types.Type.STRING, description="頻率，例如「長期」（每天）或「一次」（只有這次）"),
+            },
+            required=["name", "slots"],
+        ),
+    ),
+])
+
+
+def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
+    # 即時查詢（Google 搜尋）所有版本都有；幫你設提醒（函式呼叫）只給接得住的新版 App（?cap_rem=1）
+    tools = [types.Tool(google_search=types.GoogleSearch())]
+    if allow_reminders:
+        tools.append(_REMINDER_TOOLS)
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood, topics, user, location),
-        # 即時查詢（Google 搜尋）：聊到店家/景點/影劇/天氣等具體話題先查再答、不編造——跟文字聊天同一套能力
-        tools=[types.Tool(google_search=types.GoogleSearch())],
+        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders),
+        tools=tools,
         output_audio_transcription=types.AudioTranscriptionConfig(),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         speech_config=types.SpeechConfig(
@@ -156,6 +210,7 @@ async def handle(ws):
     topics = None
     user = None
     location = None
+    allow_reminders = False   # 只有帶 ?cap_rem=1 的新版 App 才開放「幫你設提醒」工具（防舊版假成功）
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
@@ -193,6 +248,9 @@ async def handle(ws):
         lvals = _q.get("loc")
         if lvals and lvals[0].strip():
             location = lvals[0].strip()[:24]
+        # ?cap_rem=1：這版 App 接得住「AI 幫你設提醒」→ 才給設提醒工具（能力握手 · 2026-07-09 Edward）
+        if _q.get("cap_rem") == ["1"]:
+            allow_reminders = True
     except Exception:
         pass
     _CID["n"] += 1
@@ -201,7 +259,7 @@ async def handle(ws):
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
     _diag(cid, "connected", name=name or "-", char=char)
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location)) as session:
+        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location, allow_reminders)) as session:
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
             # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
             # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。
@@ -299,6 +357,22 @@ async def handle(ws):
                                 turn_out = 0
                                 st["await_first"] = True
                                 await ws.send(json.dumps({"type": "turn_complete"}))
+                        # AI 決定「幫你設提醒」→ 把指令送給 App 執行，並回覆 AI 讓她口頭確認
+                        tc = getattr(msg, "tool_call", None)
+                        if tc and getattr(tc, "function_calls", None):
+                            responses = []
+                            for fc in tc.function_calls:
+                                try:
+                                    fargs = dict(fc.args) if fc.args else {}
+                                except Exception:
+                                    fargs = {}
+                                _diag(cid, "node.tool_call", name=getattr(fc, "name", "?"))
+                                await ws.send(json.dumps({"type": "action", "action": fc.name, "args": fargs}, ensure_ascii=False))
+                                responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response={"status": "ok"}))
+                            try:
+                                await session.send_tool_response(function_responses=responses)
+                            except Exception as e:
+                                _diag(cid, "node.tool_response_err", err=str(e)[:60])
                     if not got:
                         break   # receive() 立刻空 = session 真的結束 → 收線
 

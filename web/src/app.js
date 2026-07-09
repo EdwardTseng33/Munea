@@ -572,6 +572,75 @@ async function refreshRoutineRemindersFromBackend() {
 }
 window.__muneaRoutineReminderSync = { refresh: refreshRoutineRemindersFromBackend, saveMed: syncMedicationReminder, saveVisit: syncVisitReminder };
 
+// ===== 聊聊 AI 幫你把提醒設進 App（跟手動新增走同一份清單 + 同一套雲端/手機通知）· 2026-07-09 Edward =====
+function aiVisitLabel(dateISO, time) {
+  try {
+    const d = new Date(dateISO + 'T00:00');
+    const md = (d.getMonth() + 1) + '/' + d.getDate();
+    const wd = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+    let tstr = '';
+    if (time && /^\d{1,2}:\d{2}$/.test(time)) {
+      const p = time.split(':').map(Number), h = p[0], m = p[1];
+      const ap = h < 12 ? '上午' : '下午', h12 = ((h + 11) % 12) + 1;
+      tstr = ' ' + ap + ' ' + h12 + ':' + String(m).padStart(2, '0');
+    }
+    return md + '（' + wd + '）' + tstr;
+  } catch (e) { return dateISO + (time ? ' ' + time : ''); }
+}
+function aiAddVisitReminder(a) {
+  const title = (String((a && a.title) || '').trim()) || '回診';
+  const dateISO = String((a && a.dateISO) || '').trim();
+  const time = String((a && a.time) || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return { ok: false };
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem('munea.visits') || '[]') || []; } catch (e) {}
+  if (!Array.isArray(arr)) arr = [];
+  const label = aiVisitLabel(dateISO, time);
+  const visit = { id: Date.now(), title, dateISO, time, label };
+  arr.push(visit);
+  try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) {}
+  try { if (typeof syncPush === 'function') syncPush('visits', arr); } catch (e) {}
+  try { syncVisitReminder(visit); } catch (e) {}
+  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+  try { if (window.__muneaRefreshVisitRow) window.__muneaRefreshVisitRow(); } catch (e) {}
+  try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
+  return { ok: true, title, label };
+}
+function aiAddMedReminder(a) {
+  const name = String((a && a.name) || '').trim();
+  const SLOTS = ['早餐後', '午餐後', '晚餐後', '睡前'];
+  let slots = (a && Array.isArray(a.slots)) ? a.slots.filter(s => SLOTS.indexOf(s) >= 0) : [];
+  slots = [...new Set(slots)];
+  if (!name || !slots.length) return { ok: false };
+  const meds = (typeof loadMeds === 'function') ? loadMeds() : [];
+  const med = { name, time: slots.join('、'), days: (a && a.days) || '長期', by: '', photo: '' };
+  ensureMedReminderId(med);
+  meds.push(med);
+  try { localStorage.setItem('munea.meds', JSON.stringify(meds)); } catch (e) {}
+  try { if (typeof syncPush === 'function') syncPush('meds', meds); } catch (e) {}
+  try { syncMedicationReminder(med); } catch (e) {}
+  try { if (typeof updateMedCount === 'function') updateMedCount(); } catch (e) {}
+  try { if (typeof renderMedList === 'function') renderMedList(); } catch (e) {}
+  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+  return { ok: true, name, slots };
+}
+// 聊聊語音收到 AI 的「幫你做進 App」指令 → 執行 + 螢幕輕提示（寧寧的口頭確認由 AI 那頭講）
+function handleVoiceAction(action, args) {
+  args = args || {};
+  if (action === 'set_clinic_reminder') {
+    const r = aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
+    if (typeof toast === 'function') toast(r.ok ? ('看診提醒設好了：' + r.title + ' · ' + r.label) : '看診日期我沒抓到，你再說一次日期好嗎');
+    return r;
+  }
+  if (action === 'set_medication_reminder') {
+    const r = aiAddMedReminder({ name: args.name, slots: args.slots, days: args.days });
+    if (typeof toast === 'function') toast(r.ok ? ('用藥提醒設好了：' + r.slots.join('、') + '吃「' + r.name + '」') : '要什麼時候吃我沒抓到，你再說一次好嗎');
+    return r;
+  }
+  return { ok: false };
+}
+window.__muneaHandleVoiceAction = handleVoiceAction;
+
 /* ===== VoiceProvider：先立合約，之後可換 Gemini Live / Interactions，不綁死 App 核心 ===== */
 function makeSessionId(prefix = 'session') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
@@ -1028,6 +1097,8 @@ const LiveVoice = {
       const _loc = (_pp.city || '').trim();
       if (_loc) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'loc=' + encodeURIComponent(_loc);
     } catch (e) {}
+    // 能力握手：告訴伺服器「這版 App 接得住 AI 幫你設提醒」→ 只有新版才拿到設提醒工具，舊版不會被假成功（2026-07-09 Edward）
+    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
     // 薄門通行碼（App 自動帶、用戶無感）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(MUNEA_APP_KEY);
     this.on = true;
@@ -1087,6 +1158,9 @@ const LiveVoice = {
               if (this._openMicAfterGreet) { this.micOpen = true; this._openMicAfterGreet = false; }   // 招呼講完 → 現在才開麥、換你講（乾淨開場）
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
+            if (o.type === 'action' && o.action) {   // AI 要「幫你做進 App」（設看診/用藥提醒）→ 執行
+              try { if (window.__muneaHandleVoiceAction) window.__muneaHandleVoiceAction(o.action, o.args || {}); } catch (eAct) {}
+            }
           } catch (e) {}
           return;
         }
