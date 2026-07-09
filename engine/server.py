@@ -220,6 +220,7 @@ ADMIN_POST_PATHS = {
     "/admin/credits",
     "/admin/conversation-summaries",
     "/admin/privacy-requests",
+    "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
 }
@@ -4144,7 +4145,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -4278,7 +4279,7 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/admin/feedback":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
-                    self._json_error(401, code, "admin authorization required")
+                    self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_feedback_summary(data))
             elif self.path == "/admin/safety-events":

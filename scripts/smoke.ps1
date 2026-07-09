@@ -1553,6 +1553,44 @@ print("wellbeing cloud bridge OK")
 '@
 Pass "Wellbeing can use Supabase while preserving JSON fallback"
 
+Step "Feedback and NPS admin contract"
+Invoke-PythonBlock @'
+import os, sys, tempfile
+from pathlib import Path
+os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
+sys.path.insert(0, "engine")
+import server
+
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+    server.FEEDBACK_PATH = str(Path(d) / "feedback_store.json")
+    bug = server.feedback_response({
+        "type": "bug",
+        "category": "voice",
+        "text": "Voice stopped after one turn.",
+        "appVersion": "1.2.9",
+        "plan": "plus",
+    })
+    assert bug["ok"] is True
+    promoter = server.feedback_response({"type": "nps", "score": 10, "text": "Very useful"})
+    detractor = server.feedback_response({"type": "nps", "score": 4, "text": "Needs work"})
+    assert promoter["ok"] is True
+    assert detractor["ok"] is True
+    bad = server.feedback_response({"type": "unknown"})
+    assert bad["ok"] is False
+    summary = server.admin_feedback_summary({"limit": 10})
+    assert summary["ok"] is True
+    assert summary["totals"]["bug"] == 1
+    assert summary["totals"]["nps"] == 2
+    assert summary["byCategory"]["voice"] == 1
+    assert summary["nps"] == 0
+    assert summary["npsCount"] == 2
+    assert len(summary["latest"]) == 3
+    only_nps = server.admin_feedback_summary({"type": "nps", "limit": 5})
+    assert len(only_nps["latest"]) == 2
+print("feedback admin OK")
+'@
+Pass "Feedback inbox and NPS summary contracts are valid"
+
 Step "AI service brain and memory contract"
 Invoke-PythonBlock @'
 import os, sys, tempfile
@@ -1784,6 +1822,7 @@ user_scoped_paths = [
     "/butler/post-turn",
     "/guardian/evaluate",
     "/perception/snapshot",
+    "/feedback",
     "/companion-profile",
     "/app-profile",
     "/entitlements",
@@ -1799,7 +1838,7 @@ for path in user_scoped_paths:
     verified = server.require_verified_auth({"Authorization": "Bearer " + dev_token}, path, {})
     assert verified["ok"] is True, path
     assert verified["required"] is True, path
-for path in ["/auth-status", "/account-bootstrap", "/admin/accounts", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/safety-events", "/admin/audit-events"]:
+for path in ["/auth-status", "/account-bootstrap", "/admin/accounts", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/feedback", "/admin/safety-events", "/admin/audit-events"]:
     assert server.auth_required_for_path(path) is False, path
     assert server.require_verified_auth({}, path, {})["ok"] is True, path
 assert server.auth_required_for_request("/credits/grant", {}) is False
@@ -2740,6 +2779,7 @@ required_html = [
     "creditsPanel",
     "safetyPanel",
     "privacyPanel",
+    "feedbackPanel",
     "auditPanel",
     "summariesPanel",
     "src/admin.js",
@@ -2756,6 +2796,7 @@ required_js = [
     "/admin/credits",
     "/admin/conversation-summaries",
     "/admin/privacy-requests",
+    "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
     "localStorage.setItem(ADMIN_BASE_KEY",
@@ -2778,7 +2819,7 @@ if "localStorage.setItem(\"adminToken\"" in js or "localStorage.setItem('adminTo
 for token in ["metric-grid", "admin-grid", "status-pill", "@media"]:
     if token not in css:
         raise SystemExit("Admin console CSS missing responsive token: " + token)
-for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "/admin.html", "/admin/accounts"]:
+for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "/admin.html", "/admin/accounts", "/admin/feedback"]:
     if token not in script:
         raise SystemExit("Admin smoke missing token: " + token)
 staging_smoke = Path("scripts/staging-smoke.ps1").read_text(encoding="utf-8")
@@ -3171,12 +3212,14 @@ if ($health.contracts -notcontains "guardian-evaluate") { throw "/healthz missin
 if ($health.contracts -notcontains "perception-topic-plan") { throw "/healthz missing perception-topic-plan contract" }
 if ($health.contracts -notcontains "perception-snapshot") { throw "/healthz missing perception-snapshot contract" }
 if ($health.contracts -notcontains "product-event") { throw "/healthz missing product-event contract" }
+if ($health.contracts -notcontains "feedback") { throw "/healthz missing feedback contract" }
 if ($health.contracts -notcontains "admin-accounts") { throw "/healthz missing admin-accounts contract" }
 if ($health.contracts -notcontains "admin-north-star") { throw "/healthz missing admin-north-star contract" }
 if ($health.contracts -notcontains "admin-usage") { throw "/healthz missing admin-usage contract" }
 if ($health.contracts -notcontains "admin-credits") { throw "/healthz missing admin-credits contract" }
 if ($health.contracts -notcontains "admin-conversation-summaries") { throw "/healthz missing admin-conversation-summaries contract" }
 if ($health.contracts -notcontains "admin-privacy-requests") { throw "/healthz missing admin-privacy-requests contract" }
+if ($health.contracts -notcontains "admin-feedback") { throw "/healthz missing admin-feedback contract" }
 if ($health.contracts -notcontains "admin-safety-events") { throw "/healthz missing admin-safety-events contract" }
 if ($health.contracts -notcontains "admin-audit-events") { throw "/healthz missing admin-audit-events contract" }
 if ($health.contracts -notcontains "privacy-export") { throw "/healthz missing privacy-export contract" }

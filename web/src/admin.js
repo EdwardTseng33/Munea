@@ -8,6 +8,7 @@
     credits: { path: "/admin/credits", body: { limit: 12 } },
     summaries: { path: "/admin/conversation-summaries", body: { limit: 10 } },
     privacy: { path: "/admin/privacy-requests", body: { limit: 10 } },
+    feedback: { path: "/admin/feedback", body: { limit: 10 } },
     safety: { path: "/admin/safety-events", body: { days: 30, limit: 10 } },
     audit: { path: "/admin/audit-events", body: { limit: 12 } },
   };
@@ -131,6 +132,7 @@
     renderCredits(data.credits);
     renderSafety(data.safety);
     renderPrivacy(data.privacy);
+    renderFeedback(data.feedback);
     renderAudit(data.audit);
     renderSummaries(data.summaries);
   }
@@ -240,6 +242,26 @@
     $("privacyPanel").innerHTML = `
       <div class="tag-row">${countMap(totals.byStatus)}${countMap(totals.byType)}</div>
       ${items || '<div class="muted">No privacy requests.</div>'}
+    `;
+  }
+
+  function renderFeedback(payload) {
+    const latest = (payload && payload.latest) || [];
+    const nps = payload && payload.nps !== null && payload.nps !== undefined ? payload.nps : "-";
+    const items = latest.slice(0, 6).map((item) => `
+      <div class="item">
+        <strong>${escapeHtml(item.type || "feedback")}${item.score !== null && item.score !== undefined ? ` · ${escapeHtml(item.score)}` : ""}</strong>
+        <div class="meta">${escapeHtml(item.category || "-")} · ${escapeHtml(item.createdAt || "-")}</div>
+        <div>${escapeHtml(item.text || "")}</div>
+      </div>
+    `).join("");
+    $("feedbackPanel").innerHTML = `
+      <div class="tag-row">
+        ${countMap(payload && payload.totals)}
+        <span class="tag">NPS ${escapeHtml(nps)}</span>
+        <span class="tag">n ${escapeHtml((payload && payload.npsCount) || 0)}</span>
+      </div>
+      ${items || '<div class="muted">No feedback yet.</div>'}
     `;
   }
 

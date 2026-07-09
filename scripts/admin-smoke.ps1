@@ -179,6 +179,11 @@ if (-not $privacy.ok) {
   throw "/admin/privacy-requests did not return ok:true"
 }
 
+$feedback = Invoke-AdminJson "/admin/feedback" @{ limit = 5 } $adminHeaders
+if (-not $feedback.ok) {
+  throw "/admin/feedback did not return ok:true"
+}
+
 $safety = Invoke-AdminJson "/admin/safety-events" @{ days = 30; limit = 5 } $adminHeaders
 if (-not $safety.ok) {
   throw "/admin/safety-events did not return ok:true"
@@ -189,8 +194,8 @@ if (-not $audit.ok) {
   throw "/admin/audit-events did not return ok:true"
 }
 
-Pass ("admin reads ok: accounts={0}, events={1}, privacy={2}, safety={3}, audit={4}" -f `
-  $accounts.count, $usage.totals.events, $privacy.count, $safety.count, $audit.count)
+Pass ("admin reads ok: accounts={0}, events={1}, privacy={2}, feedback={3}, safety={4}, audit={5}" -f `
+  $accounts.count, $usage.totals.events, $privacy.count, ($feedback.latest.Count), $safety.count, $audit.count)
 
 Write-Host ""
 Write-Host "Admin smoke complete." -ForegroundColor Green
