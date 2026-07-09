@@ -50,7 +50,7 @@
 | 真帳號登入 | 🟡 45% | Windows | 櫃子好了、可以正式接（鑰匙在 Windows）|
 | 推播通知（App 關著也響）| 🟢 80%（7/9 Mac）| Mac | 本機提醒通知完成：吃藥每日到點響＋回診提前 1 小時；用藥/看診/作息變動自動重排；剩真機授權實測 |
 | Apple 健康串接 | 🟢 85%（7/9 Mac 原生完成）| Edward 真機授權 | 原生 HealthKit 外掛＋權限＋網頁橋全好、步數自動進走路任務（達標自動打勾）；剩 Edward 在 App 按「連接」授權一次 |
-| TestFlight 試飛 | 🔴 **手機版落後：現行包 1.2.7（無 avatar）** | **Mac 打新包** | ⚠️ Edward 手機看不到會動的臉＝1.2.7 早於 avatar(1.3.0)；需打包 **1.8.0** 上 TestFlight，含臉/待機動態/數據同步/示範拆除全部。**打包前先跑 gen-auth-config.py 生 auth-config.js**（真帳號鑰匙、不入庫） |
+| TestFlight 試飛 | 🔴 **手機版落後：現行包 1.2.7（無 avatar）** | **Mac 打新包** | ⚠️ Edward 手機看不到會動的臉＝1.2.7 早於 avatar(1.3.0)。**完整步驟單＝[docs/給Mac-打包1.8.0與avatar真機-2026-07-09.md]**（自帶前置/打包/iOS 兩個坑/真機驗收清單、照做即可） |
 | 🆕 手機 avatar 中繼(TURN) | 🔴 缺 | Windows/Mac | 手機 4G/5G 連雲端臉常需 TURN 轉發；公開中繼不穩→需自架 coturn（Cloud Run 無 UDP、要另開小主機或用託管 TURN）。家用 Wi-Fi 直連應可 |
 | 商店頁素材/送審 | 🔴 5% | Edward＋城堡 | App 建好後補文案截圖 |
 
