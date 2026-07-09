@@ -1110,9 +1110,12 @@ function setCallToggle(connected) {
 
 // ===== 待機動態（Edward 7/9 供片）：進聊聊頁播「打招呼」一次 → 「待機」循環；按通話即停回靜態，交給語音＋雲端臉 =====
 const FACE_MOTION = {
-  'nening-real-female': { hello: 'avatars/motion/nening-hello.mp4', idle: 'avatars/motion/nening-idle.mp4' },
-  'companion-real-male': { hello: 'avatars/motion/ahong-hello.mp4', idle: 'avatars/motion/ahong-idle.mp4' },
-  // 其餘四位（小昀/阿原/咪咪/旺財）素材到了照同名規則放 motion/ 後在這裡加一行即可
+  'nening-real-female': { hello: 'avatars/motion/nening-hello.mp4', idles: ['avatars/motion/nening-idle.mp4'] },
+  'companion-real-male': { hello: 'avatars/motion/ahong-hello.mp4', idles: ['avatars/motion/ahong-idle.mp4'] },
+  'munea-2d-xiaoyun': { hello: 'avatars/motion/xiaoyun-hello.mp4', idles: ['avatars/motion/xiaoyun-idle.mp4'] },
+  'munea-2d-ayuan': { hello: 'avatars/motion/ayuan-hello.mp4', idles: ['avatars/motion/ayuan-idle.mp4'] },
+  'munea-2d-mimi': { hello: 'avatars/motion/mimi-hello.mp4', idles: ['avatars/motion/mimi-idle.mp4', 'avatars/motion/mimi-idle2.mp4'] },   // 咪咪有兩段待機（含舔鼻子）輪著播
+  'munea-2d-wangcai': { hello: 'avatars/motion/wangcai-hello.mp4', idles: ['avatars/motion/wangcai-idle.mp4'] },
 };
 function currentFaceTemplate() {
   try {
@@ -1124,8 +1127,9 @@ function currentFaceTemplate() {
   } catch (e) { return 'nening-real-female'; }
 }
 const FaceIdle = {
-  // 雙片交叉淡入（治「打招呼→待機」閃頻）：待機片先在底下備好開播、打招呼片停在最後一格再淡出，全程沒有黑格
-  vA: null, vB: null, cur: null, active: false, _gen: 0,
+  // 輪播引擎：打招呼一次 → 多段待機輪流（咪咪有兩段）。兩支播放器輪班：下一段永遠先在底下備好、
+  // 真的出畫面才交叉淡入，上一段停在最後一格墊著——任何換片點都沒有黑格、不閃頻（Edward 7/9）
+  vA: null, vB: null, active: false, _gen: 0, _front: null, _back: null, _idles: null, _nextIdx: 0,
   _mk(suffix) {
     const img = document.getElementById('faceImg');
     if (!img || !img.parentElement) return null;
@@ -1133,38 +1137,54 @@ const FaceIdle = {
     v.id = 'faceIdle' + suffix; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
     v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .28s ease;pointer-events:none';
     img.insertAdjacentElement('afterend', v);   // 蓋在靜態照上、壓在雲端臉(faceVid)下
+    v.onended = () => { if (FaceIdle.active && v === FaceIdle._front) FaceIdle._swap(); };
     return v;
   },
   ensure() {
-    // 先建 A（打招呼、疊上層）再建 B（待機、墊下層）：後插入的緊貼照片＝畫在下面
     if (!this.vA) this.vA = this._mk('A');
     if (!this.vB) this.vB = this._mk('B');
     return this.vA && this.vB;
+  },
+  _preloadNext() {
+    if (!this._idles || !this._idles.length) return;   // 只有打招呼片：播完停在最後一格
+    // 把下一段待機片裝進待命的那支播放器（單段角色＝同一支片重複裝、換片點一樣淡接）
+    const src = this._idles[this._nextIdx % this._idles.length];
+    this._back.loop = false; this._back.style.opacity = '0'; this._back.src = src;
+    try { this._back.load(); } catch (e) {}
+  },
+  _swap() {
+    const gen = this._gen;
+    const front = this._front, back = this._back;
+    const cross = () => {
+      if (gen !== this._gen) return;
+      back.style.opacity = '1';                                                          // 新片淡入（舊片停最後一格墊著）
+      setTimeout(() => { if (gen === this._gen) front.style.opacity = '0'; }, 200);      // 疊 0.2 秒再讓舊片淡出
+      this._front = back; this._back = front;
+      this._nextIdx++;
+      setTimeout(() => { if (gen === this._gen) this._preloadNext(); }, 650);            // 等淡出完全結束才裝下一段（裝片會重置畫面、不能在交疊中做）
+    };
+    back.play().then(() => requestAnimationFrame(() => requestAnimationFrame(cross))).catch(cross);
   },
   start(tplId) {
     const m = FACE_MOTION[tplId || currentFaceTemplate()];
     if (!this.ensure()) return;
     if (!m) { this.stop(); return; }             // 沒動態素材的角色維持靜態圖
     const gen = ++this._gen;                     // 換角色/重進頁時作廢舊流程
-    this.cur = m; this.active = true;
-    const A = this.vA, B = this.vB;
-    B.loop = true; B.src = m.idle; B.style.opacity = '0'; try { B.load(); } catch (e) {}   // 待機片先備好
+    this.active = true;
+    this._idles = m.idles || []; this._nextIdx = 0;
+    this._front = this.vA; this._back = this.vB;
+    const A = this._front;
     A.loop = false; A.src = m.hello;
+    this._preloadNext();                         // 第一段待機先備好
     const showA = () => { if (gen === this._gen) A.style.opacity = '1'; A.removeEventListener('playing', showA); };
     A.addEventListener('playing', showA);
-    A.onended = () => {
-      if (!this.active || gen !== this._gen) return;
-      const cross = () => { if (gen !== this._gen) return; B.style.opacity = '1'; setTimeout(() => { if (gen === this._gen) A.style.opacity = '0'; }, 120); };
-      // 待機片真的出畫面（開播下一影格）才交叉淡入；打招呼片停在最後一格墊著，不會黑一下
-      B.play().then(() => requestAnimationFrame(() => requestAnimationFrame(cross))).catch(cross);
-    };
     A.play().catch(() => {
       // 被省電規則暫時擋下（例如分頁在背景）：半秒後再試一次，仍不行就維持靜態圖
       setTimeout(() => { if (this.active && gen === this._gen) A.play().catch(() => { if (gen === this._gen) this.stop(); }); }, 600);
     });
   },
   stop() {
-    this.active = false; this.cur = null; this._gen++;
+    this.active = false; this._gen++; this._idles = null;
     [this.vA, this.vB].forEach(v => {
       if (!v) return;
       try { v.pause(); } catch (e) {}
