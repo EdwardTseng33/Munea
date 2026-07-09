@@ -30,7 +30,12 @@ $G run deploy munea-voice-staging --source . --clear-base-image --region asia-ea
   --allow-unauthenticated --quiet
 # ⚠ 同上：語音橋大門也必須公開，否則 App 連不上 WebSocket、聊聊只會打字不講話（2026-07-09 教訓）。
 
-echo "== 冒煙檢查 =="
+echo "== 冒煙檢查（帶憑證·驗服務活著）=="
 TOK=$(cmd //c "gcloud.cmd auth print-identity-token" | tr -d '\r')
 curl -s -m 20 -o /dev/null -w "測試環境·管家腦 / -> %{http_code}\n" -H "Authorization: Bearer $TOK" "https://munea-brain-staging-491603544409.asia-east1.run.app/"
+
+echo "== 門衛檢查（不帶憑證·驗 App 匿名連得進來）=="
+# ⚠ 上面帶憑證的冒煙檢查門鎖了也會過（2026-07-09 就是這樣沒抓到）；這隻用 App 那樣的匿名連線戳，
+#   門被鎖(403)就在 Slack #munea-營運 報警＋附一鍵開門指令。部署後當場驗、不必等用戶回報。
+python tools/door-sentinel.py || echo "⚠ 門衛：有門沒開！照上面警報的一鍵指令開門。"
 echo "DONE · 記得把本次版本與結果記上白板"
