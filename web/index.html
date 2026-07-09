@@ -797,8 +797,9 @@
         <div class="pf-field"><span class="pf-label">生日</span>
           <div class="pf-birth"><select class="chal-input" id="pfBirthY"></select><select class="chal-input" id="pfBirthM"></select></div>
         </div>
-        <div class="pf-field"><span class="pf-label">所在地</span><input class="chal-input" id="pfCity" maxlength="18" placeholder="例：台北市大安區" />
-          <span class="pf-hint">可寫到「區」——天氣、附近餐廳與在地話題會更準</span></div>
+        <div class="pf-field"><span class="pf-label">所在地</span>
+          <div class="pf-birth"><select class="chal-input" id="pfCounty"></select><select class="chal-input" id="pfDistrict"></select></div>
+          <span class="pf-hint">選到「區」——天氣、附近餐廳與在地話題會更準</span></div>
       </div>
       <button class="modal-btn" id="pfSaveBtn" style="margin-top:14px">存好</button>
     </div>
@@ -1114,6 +1115,7 @@
 
 </div>
   <script src="src/version.js?v=20260709-v127"></script>
+  <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
   <script src="src/auth.js?v=20260630-auth"></script>
@@ -1162,7 +1164,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260709-comply1"></script>
+  <script type="module" src="src/app.js?v=20260709-loc-picker"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

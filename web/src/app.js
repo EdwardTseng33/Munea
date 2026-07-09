@@ -2729,6 +2729,45 @@ function init() {
   let _pfPendingAvatar = '';
   const PF_DEF = { name: '', nick: '', birth: '', city: '' };   // 7/9 正式化：不再預設示範身分（陳秀英/阿嬤）——空欄位＋提示字自己填
   function loadPersonProfile() { try { return Object.assign({}, PF_DEF, JSON.parse(localStorage.getItem('munea.personProfile') || '{}')); } catch (e) { return Object.assign({}, PF_DEF); } }
+  // 所在地＝縣市→區 兩層下拉（iPhone 原生滾輪、長輩好按、零錯字 · 2026-07-09 Edward 改用選單）
+  function pfCountyList() { return (window.TW_DISTRICTS ? Object.keys(window.TW_DISTRICTS) : []); }
+  function fillPfDistricts(county, selDist) {
+    const ds = $('#pfDistrict'); if (!ds) return;
+    const list = (window.TW_DISTRICTS && window.TW_DISTRICTS[county]) || [];
+    let h = '<option value="">（區）</option>';
+    for (const d of list) h += '<option value="' + d + '">' + d + '</option>';
+    ds.innerHTML = h;
+    ds.disabled = !county;
+    if (selDist && list.indexOf(selDist) >= 0) ds.value = selDist;
+  }
+  function parsePfCity(city) {   // 舊資料/自由輸入相容：把「台北市大安區」拆回 縣市＋區
+    city = (city || '').trim();
+    for (const c of pfCountyList()) {
+      if (city.indexOf(c) === 0) {
+        const rest = city.slice(c.length);
+        const list = window.TW_DISTRICTS[c] || [];
+        return { county: c, district: (list.indexOf(rest) >= 0 ? rest : '') };
+      }
+    }
+    return { county: '', district: '' };
+  }
+  function fillPfLocation(city) {
+    const cs = $('#pfCounty'); if (!cs) return;
+    if (!cs.options.length) {
+      let h = '<option value="">（縣市）</option>';
+      for (const c of pfCountyList()) h += '<option value="' + c + '">' + c + '</option>';
+      cs.innerHTML = h;
+      cs.addEventListener('change', () => fillPfDistricts(cs.value, ''));
+    }
+    const parsed = parsePfCity(city);
+    cs.value = parsed.county;
+    fillPfDistricts(parsed.county, parsed.district);
+  }
+  function pfLocationValue() {   // 存檔：縣市＋區 合成一個字串（只選縣市也可、有區更準）
+    const c = ($('#pfCounty') && $('#pfCounty').value) || '';
+    const d = ($('#pfDistrict') && $('#pfDistrict').value) || '';
+    return c ? (c + d) : '';
+  }
   function fillPersonProfile() {
     const p = loadPersonProfile();
     if ($('#pfName')) $('#pfName').value = p.name;
@@ -2746,7 +2785,7 @@ function init() {
     const mt = String(p.birth || '').match(/(19|20)(\d{2}).*?(\d{1,2})/);
     if (ys) ys.value = mt ? mt[1] + mt[2] : '1954';
     if (ms) ms.value = mt ? String(+mt[3]) : '3';
-    if ($('#pfCity')) $('#pfCity').value = p.city;
+    fillPfLocation(p.city);
     _pfPendingAvatar = p.avatar || '';
     if (typeof renderPfAvatar === 'function') renderPfAvatar(p.avatar, p.nick);
   }
@@ -2755,7 +2794,7 @@ function init() {
       name: ($('#pfName').value || '').trim() || PF_DEF.name,
       nick: ($('#pfNick').value || '').trim() || PF_DEF.nick,
       birth: ($('#pfBirthY') && $('#pfBirthY').value ? $('#pfBirthY').value + ' 年 ' + $('#pfBirthM').value + ' 月' : PF_DEF.birth),
-      city: ($('#pfCity').value || '').trim() || PF_DEF.city,
+      city: pfLocationValue() || PF_DEF.city,
       avatar: _pfPendingAvatar,
     };
     try { localStorage.setItem('munea.personProfile', JSON.stringify(p)); } catch (e) {}
