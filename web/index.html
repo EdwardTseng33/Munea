@@ -1398,7 +1398,11 @@ window.MMDEV = function(){
     return { days:days, n:got, bpS:avg('bpSys'), bpD:avg('bpDia'), hr:avg('hr'), spo2:avg('spo2'), sleep:avg('sleepHours',1), steps:avg('steps') };
   }
   function mmMedDayDone(iso){ try{ var m=JSON.parse(localStorage.getItem('munea.medDone.'+iso)); if(!m) return null; var c=0,k; for(k in m){ if(m[k]) c++; } return c; }catch(e){ return null; } }
-  function mmAccNote(el, n){ if(el) el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">數據累積中（第 '+Math.max(n,1)+' 天）<br>每天的數據會自動記下來，這裡會長出趨勢</div>'; }
+  function mmIsGuest(){ try{ var a=window.MuneaAuth; var s=a&&a.state?a.state():null; return !s||s.status!=='signed-in'; }catch(e){ return true; } }
+  function mmAccNote(el, n){ if(!el) return;
+    // 7/9 Edward：只有登入會員才記每天的數據→之後才有趨勢；訪客講清楚要登入
+    if(mmIsGuest()){ el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">登入後，我會開始幫你記錄每天的數據<br>之後這裡就會長出「過去 7 天 / 30 天」的趨勢</div>'; return; }
+    el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">數據累積中（第 '+Math.max(n,1)+' 天）<br>每天的數據會自動記下來，這裡會長出趨勢</div>'; }
   var WDL=['日','一','二','三','四','五','六'];
   function mmRealTrends(period){
     var n = (period==='過去7天')?7:30;
