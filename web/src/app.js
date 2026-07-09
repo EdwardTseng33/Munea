@@ -1211,7 +1211,7 @@ const LiveVoice = {
         let ps = 0; for (let k = 0; k < f.length; k++) ps += f[k] * f[k];
         this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
-        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this.playCtx.destination);
+        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._avAnalyser || this.playCtx.destination);   // 延遲量測開時串一顆分析器（透明、不改聲音）
         const now = this.playCtx.currentTime;
         // 有會動的臉在跑時，聲音多等一下跟臉對齊（臉要往返雲端、比聲音慢約 1 秒）→ 聲音+嘴一起出、不再話先出嘴慢半拍（Edward 2026-07-10）。
         // 純語音不接臉＝維持 0.18 秒快起播。等多久可在手機上微調：localStorage['munea.faceSyncMs']（毫秒、預設 900、0~3000）。
@@ -1246,10 +1246,104 @@ const LiveVoice = {
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.ac) this.ac.close(); } catch (e) {}
     try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
+    try { if (window.MuneaAvSyncMeter) MuneaAvSyncMeter.stop(); } catch (e) {}   // 延遲量測器一起收
+    this._avAnalyser = null;                                                      // playCtx 關了→分析器作廢，下通重建
     this.ws = this.ac = this.mic = this.proc = this.playCtx = null;
   },
 };
 window.MuneaLiveVoice = LiveVoice;
+
+// ── 聲↔臉 延遲量測器（Edward 2026-07-10：肉眼抓延遲太累、改用機器量）─────────────────
+// 原理：同一個時鐘下，同時盯「播出去的聲音何時起」＋「臉的嘴巴那塊畫面何時開始動」，
+// 兩個「開始」時間相減＝這句話的延遲秒數。左下角小字直接顯示（近幾句平均＋建議補償值）。
+// 進階：munea.avSyncAuto=1 時，量到多少就自動把「聲音等臉」的時間補到剛好對齊（代價：她回話會慢一點）。
+// 關掉顯示：munea.avSyncMeter=0。這是上線前的除錯讀數，穩定後移除。
+const AvSyncMeter = {
+  on: false, _raf: 0, _video: null, _canvas: null, _ctx: null, _prev: null, _overlay: null,
+  _audioHot: false, _videoHot: false, _pendA: false, _tA: 0, _samples: [], _lastTune: 0,
+  start(videoEl) {
+    if (this.on) return;
+    try {
+      if ((localStorage.getItem('munea.avSyncMeter') || '1') !== '1') return;   // 預設開；設 0 可關掉讀數
+      this._video = videoEl || document.getElementById('faceVid');
+      this._canvas = document.createElement('canvas'); this._canvas.width = 48; this._canvas.height = 48;
+      this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
+      this._overlay = document.createElement('div');
+      this._overlay.style.cssText = 'position:fixed;left:10px;bottom:12px;z-index:99999;background:rgba(12,14,20,.78);color:#fff;font:600 12px/1.5 -apple-system,system-ui,sans-serif;padding:7px 10px;border-radius:10px;pointer-events:none;white-space:pre;letter-spacing:.2px;';
+      this._overlay.textContent = '延遲量測：聽聲音、看嘴巴中…';
+      document.body.appendChild(this._overlay);
+      this._samples = []; this._prev = null; this._audioHot = this._videoHot = this._pendA = false;
+      this.on = true; this._loop();
+    } catch (e) {}
+  },
+  _ensureAnalyser() {
+    if (LiveVoice._avAnalyser || !LiveVoice.playCtx) return LiveVoice._avAnalyser || null;
+    try {
+      const a = LiveVoice.playCtx.createAnalyser(); a.fftSize = 512; a.smoothingTimeConstant = 0.2;
+      a.connect(LiveVoice.playCtx.destination); LiveVoice._avAnalyser = a;   // 之後的每段聲音都會串過它（透明、不改音）
+    } catch (e) {}
+    return LiveVoice._avAnalyser || null;
+  },
+  _audioRms() {
+    const a = this._ensureAnalyser(); if (!a) return 0;
+    const buf = new Uint8Array(a.fftSize); a.getByteTimeDomainData(buf);
+    let s = 0; for (let i = 0; i < buf.length; i += 2) { const v = (buf[i] - 128) / 128; s += v * v; }
+    return Math.sqrt(s / (buf.length / 2));   // 0~1 播出去的聲音能量
+  },
+  _mouthMotion() {
+    const v = this._video; if (!v || !v.videoWidth) return 0;
+    try {
+      const sw = v.videoWidth, sh = v.videoHeight;
+      this._ctx.drawImage(v, sw * 0.28, sh * 0.55, sw * 0.44, sh * 0.30, 0, 0, 48, 48);   // 只取中下段＝嘴巴區
+      const cur = this._ctx.getImageData(0, 0, 48, 48).data; let m = 0, n = 0;
+      if (this._prev) { for (let i = 0; i < cur.length; i += 8) { m += Math.abs(cur[i] - this._prev[i]); n++; } }
+      this._prev = cur;
+      return n ? (m / n / 255) : 0;   // 0~1 嘴巴那塊畫面的變化量
+    } catch (e) { return 0; }
+  },
+  _loop() {
+    if (!this.on) return;
+    const now = performance.now();
+    const ar = this._audioRms(), mm = this._mouthMotion();
+    if (ar > 0.045 && !this._audioHot) { this._audioHot = true; this._tA = now; this._pendA = true; }   // 聲音：靜→起
+    else if (ar < 0.02) this._audioHot = false;
+    if (mm > 0.028 && !this._videoHot) {                                                                  // 嘴巴：靜→動
+      this._videoHot = true;
+      if (this._pendA) {
+        const d = (now - this._tA) / 1000;
+        if (d > 0.05 && d < 5.5) { this._samples.push(d); if (this._samples.length > 6) this._samples.shift(); this._pendA = false; this._render(); this._maybeTune(); }
+      }
+    } else if (mm < 0.014) this._videoHot = false;
+    this._raf = requestAnimationFrame(() => this._loop());
+  },
+  _avg() { const n = this._samples.length; return n ? this._samples.reduce((a, b) => a + b, 0) / n : 0; },
+  _render() {
+    if (!this._overlay) return;
+    const n = this._samples.length, last = n ? this._samples[n - 1] : 0, avg = this._avg();
+    const curW = parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
+    const suggest = Math.max(0, Math.min(2800, Math.round(curW + avg * 1000)));   // 想對齊該把「聲音等臉」設多少
+    const auto = (localStorage.getItem('munea.avSyncAuto') === '1') ? '（自動補償中）' : '';
+    this._overlay.textContent = `臉比聲音慢 ${last.toFixed(1)}s（這句）\n近 ${n} 句平均 ${avg.toFixed(1)}s${auto}\n對齊建議：聲音等臉 ${suggest}ms`;
+  },
+  _maybeTune() {
+    if (localStorage.getItem('munea.avSyncAuto') !== '1') return;   // 預設不自動改、只顯示；開了才自動補
+    if (this._samples.length < 3) return;
+    const now = performance.now(); if (now - this._lastTune < 4000) return;   // 每 4 秒最多調一次、給它時間穩
+    const sorted = this._samples.slice().sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)];
+    const curW = parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
+    const newW = Math.max(0, Math.min(2800, Math.round(curW + med * 1000)));   // D=臉lag−等待 → 等待+=D 一步對齊
+    if (Math.abs(newW - curW) > 120) {
+      try { localStorage.setItem('munea.faceSyncMs', String(newW)); } catch (e) {}
+      this._lastTune = now; this._samples = [];   // 換了等待時間 → 清掉重量、看新的對齊結果
+    }
+  },
+  stop() {
+    this.on = false; if (this._raf) cancelAnimationFrame(this._raf);
+    if (this._overlay) { try { this._overlay.remove(); } catch (e) {} this._overlay = null; }
+    this._prev = null; this._samples = [];
+  },
+};
+window.MuneaAvSyncMeter = AvSyncMeter;
 
 // 聲波波頻：收音／講話都跟著「真實音量」跳；沒聲音就低伏收攏，不再是常亮的假 loading
 const FaceWave = {
@@ -2694,6 +2788,7 @@ function connectCall() {
       try { FaceIdle.stop(); } catch (e) {}
       LiveVoice.greet();                     // 現在才請 AI 主動開口（招呼講完才開麥）
       setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice.micOpen = true; LiveVoice._openMicAfterGreet = false; } }, 6000);   // 保底：招呼若沒正常結束，6 秒後也開麥、不讓你無法說話
+      try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
       const _autoEndCall = () => {
