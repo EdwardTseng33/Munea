@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 沐寧 Munea · 本機 App 伺服器 — 跑真的 App（web/）＋ 接真的角色腦。
-  GET  /                     → web/index.html（完整 App）
+  GET  /                     → web/landing.html（產品介紹官網）；完整 App 在 /index.html
   GET  /<path>               → web/ 底下的靜態檔（js / css / 圖）
   POST /open  {char}         → 該角色「主動先開口」＋語音
   POST /chat  {history,char} → 該角色帶記憶回話＋語音
@@ -4241,7 +4241,7 @@ class H(BaseHTTPRequestHandler):
             })
             return
         if path in ("/", ""):
-            path = "/index.html"
+            path = "/landing.html"   # munea.net 首頁＝產品介紹；App 本體仍在 /index.html（iOS 用本地打包、不經此路由）
         rel = posixpath.normpath(path).lstrip("/")
         full = os.path.normpath(os.path.join(WEB_DIR, rel))
         if not full.startswith(WEB_DIR) or not os.path.isfile(full):   # 防目錄穿越 + 404
