@@ -55,6 +55,7 @@
 </style>
 </head>
 <body>
+<div style="position:sticky;top:0;z-index:50;background:#8A5A2B;color:#fff;text-align:center;padding:9px 14px;font-size:14px;font-weight:700;letter-spacing:.02em">搶先預覽 · 畫面為示範資料——子女端正式版準備中</div>
 <div class="app-shell">
 
 
@@ -226,22 +227,33 @@
 </div>
 
 <script>
-  /* 子女端原型互動（mock；正式版接雲端傳話層 + 推播） · [ENGINE] */
+  /* 子女端搶先預覽（示範資料）：所有按鈕只做畫面示意、不會真的送出任何東西 */
   const $ = (s) => document.querySelector(s);
   function flash(el){ if(el){ el.classList.add('show'); } }
+  function pv(msg){
+    let t = document.getElementById('pvToast');
+    if(!t){ t = document.createElement('div'); t.id = 'pvToast';
+      t.style.cssText = 'position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#1F2926;color:#fff;padding:11px 20px;border-radius:100px;font-size:14.5px;z-index:99;opacity:0;transition:.25s;max-width:86%;text-align:center;box-shadow:0 10px 24px -10px rgba(0,0,0,.4)';
+      document.body.appendChild(t); }
+    t.textContent = msg;
+    requestAnimationFrame(() => t.style.opacity = '1');
+    clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = '0', 2800);
+  }
   $('#relaySend').addEventListener('click', () => {
     const t = $('#relayInput').value.trim();
     if(!t){ $('#relayInput').focus(); return; }
     flash($('#relaySent'));
-    $('#relaySend').textContent = '已送給寧寧';
+    $('#relaySend').textContent = '已示意（示範）';
     $('#relaySend').style.opacity = '.7';
+    pv('這是示範畫面：正式版會由寧寧親口把話帶到');
   });
   $('#cheerBtn').addEventListener('click', () => {
     flash($('#cheerSent'));
-    const b = $('#cheerBtn'); b.style.opacity = '.65'; b.textContent = '讚已送出 ❤';
+    const b = $('#cheerBtn'); b.style.opacity = '.65'; b.textContent = '已示意（示範）';
+    pv('這是示範畫面：正式版會即時送達給媽媽');
   });
   $('#videoBtn').addEventListener('click', () => {
-    alert('（原型）正式版：撥給媽媽端、寧寧先跟她說「美華要跟你視訊，接起來看看」。');
+    pv('視訊功能正式版準備中，先用電話聯繫吧');
   });
   // 訂閱與點數
   document.querySelectorAll('.pack').forEach(p => p.addEventListener('click', () => {
@@ -251,10 +263,11 @@
   }));
   $('#buyBtn').addEventListener('click', () => {
     flash($('#buySent'));
-    const b = $('#buyBtn'); b.style.opacity = '.7'; b.textContent = '已加購 ❤';
+    const b = $('#buyBtn'); b.style.opacity = '.7'; b.textContent = '已示意（示範）';
+    pv('這是示範畫面：正式版才會真的加購');
   });
   const mb = $('#manageBtn');
-  if (mb) mb.addEventListener('click', () => alert('（原型）方案管理：升級到高級 NT$999（2 位長輩）/ 尊榮 NT$1,999（含生動寧寧）、或調整、暫停。'));
+  if (mb) mb.addEventListener('click', () => pv('方案管理正式版準備中'));
 </script>
 </body>
 </html>

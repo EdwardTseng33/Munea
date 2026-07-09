@@ -1600,7 +1600,7 @@ function renderPoints() {
 }
 
 let _callTimerInt = null, _callSec = 0;
-let _lowWarned = false, _zeroSaid = false;
+let _lowWarned = false, _zeroSaid = false, _freeWarned = false;
 let _brainDegraded = false;
 function callBudgetTick() {
   if (window.MMPLAN && window.MMPLAN.isFree()) return;   // 免費用「單次時間試用」、不吃點數
@@ -1645,6 +1645,7 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { chatOpened = false; } catch (e) {}
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
+  toast('今天的免費聊聊時間到了，明天還能再聊');
   if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
 }
 function startCallTimer() {
@@ -1652,7 +1653,21 @@ function startCallTimer() {
   const el = $('#callTimer');
   _callTimerInt = setInterval(() => {
     callBudgetTick();
-    if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.chatTick(); if (window.MMPLAN.chatRemainSec() <= 0) { __muneaFreeChatOut(); return; } }
+    if (window.MMPLAN && window.MMPLAN.isFree()) {
+      window.MMPLAN.chatTick();
+      const _rem = window.MMPLAN.chatRemainSec();
+      // 快到了先溫柔預告（剩 1 分鐘）：畫面提示＋悄悄請角色自然收尾，不再無預警斷線
+      if (_rem > 0 && _rem <= 60 && !_freeWarned) {
+        _freeWarned = true;
+        toast('今天的免費聊聊剩 1 分鐘囉，慢慢說完沒關係');
+        try {
+          if (LiveVoice && LiveVoice.on && LiveVoice.ws && LiveVoice.ws.readyState === 1) {
+            LiveVoice.ws.send(JSON.stringify({ type: 'text', text: '（系統悄悄話，請不要唸出這段、也不要提到系統或倒數：我們這通電話只剩大約一分鐘，請你自然地把話題暖心收個尾，溫柔跟我說今天先聊到這，約我明天再聊。）' }));
+          }
+        } catch (e) {}
+      }
+      if (_rem <= 0) { __muneaFreeChatOut(); return; }
+    }
     _callSec++;
     const m = String(Math.floor(_callSec / 60)).padStart(2, '0');
     const s = String(_callSec % 60).padStart(2, '0');
@@ -1660,7 +1675,7 @@ function startCallTimer() {
   }, 1000);
 }
 function stopCallTimer() {
-  _lowWarned = false; _zeroSaid = false; _brainDegraded = false; if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
+  _lowWarned = false; _zeroSaid = false; _freeWarned = false; _brainDegraded = false; if (_callTimerInt) { clearInterval(_callTimerInt); _callTimerInt = null; } const el = $('#callTimer'); if (el) el.textContent = '00:00'; }
 // 字幕（逐字稿）預設「關」——依產品規劃，聊聊像視訊通話、只留必要狀態；字幕是給重聽長輩的可選輔助。
 let captionsOn = false;
 try { captionsOn = localStorage.getItem('munea.captions') === '1'; } catch (e) {}
@@ -2345,7 +2360,8 @@ function init() {
     const rm = e.target.closest('.fc-remove'); if (!rm) return;
     if (rm.dataset.arm !== '1') { rm.dataset.arm = '1'; rm.classList.add('arm'); rm.textContent = '確定移除'; setTimeout(() => { rm.dataset.arm = ''; rm.classList.remove('arm'); rm.textContent = '移除'; }, 3000); return; }
     saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
-    renderFcRoster(); toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
+    renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
+    toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
   });
   if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
@@ -2353,8 +2369,9 @@ function init() {
   if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', () => {
     const code = ($('#joinCodeInput').value || '').trim();
     if (!code || code.length < 4) { toast('把家人給你的邀請碼打進去（例：MUNEA-2847）'); return; }
+    try { localStorage.setItem('munea.pendingJoinCode', code); } catch (e) {}
     $('#joinCircleModal').classList.remove('show'); $('#joinCodeInput').value = '';
-    toast('邀請碼送出了，對方確認後你就進圈囉。');
+    toast('邀請碼記下了！家人帳號連線開通後，會自動幫你完成加入。');
   });
   if ($('#fcLeaveBtn')) $('#fcLeaveBtn').addEventListener('click', () => {
     const b = $('#fcLeaveBtn');
@@ -2367,20 +2384,30 @@ function init() {
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
   if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) $('#inviteFamModal').classList.add('show'); });
-  const INV_LINK = 'https://munea.net/join?c=MUNEA-2847';
+  // 邀請碼：每台裝置一組專屬碼（不再全世界共用同一組示範碼）；家人連線開通後由雲端換發正式碼
+  function myInviteCode() {
+    try {
+      let c = localStorage.getItem('munea.inviteCode');
+      if (!c) { c = 'MUNEA-' + String(Math.floor(1000 + Math.random() * 9000)); localStorage.setItem('munea.inviteCode', c); }
+      return c;
+    } catch (e) { return 'MUNEA-0000'; }
+  }
+  function fillInvCode() { const el = $('#invCode'); if (el) el.textContent = myInviteCode(); }
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
   if ($('#inviteCloseX')) $('#inviteCloseX').addEventListener('click', () => $('#inviteFamModal').classList.remove('show'));
   if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
-    const text = '來 Munea 沐寧一起互相照顧：' + INV_LINK;
+    const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + myInviteCode() + '，先收著，等你加入我們一起互相照顧！';
     if (navigator.share) { navigator.share({ text }).catch(() => {}); }
     else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
   });
   if ($('#invCopyBtn')) $('#invCopyBtn').addEventListener('click', () => {
-    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(INV_LINK) : Promise.reject()).then(
-      () => toast('邀請連結複製好了，貼給家人就能加入'),
-      () => toast('連結：' + INV_LINK)
+    const code = myInviteCode();
+    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : Promise.reject()).then(
+      () => toast('邀請碼複製好了，貼給家人收著'),
+      () => toast('你的邀請碼：' + code)
     );
   });
+  fillInvCode();
   if ($('#connectBack')) $('#connectBack').addEventListener('click', () => showView(window.__connectFrom || 'status'));
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', async () => {
     // Apple 健康：在 App 裡就真的去要 iPhone 授權；網頁預覽則走原本示範切換
@@ -2413,9 +2440,9 @@ function init() {
     if (!b || b.classList.contains('sent')) return;
     reactRow.querySelectorAll('.react-btn.sent').forEach(x => x.classList.remove('sent'));
     b.classList.add('sent');
-    hint(`好，${cname()}會幫你轉達，你${b.dataset.react}。`);
+    hint(`心意記下了！家人連線開通後，${cname()}會第一時間轉達。`);
     const who = document.getElementById('ptName')?.textContent || '家人';
-    pushFamilyFeed(`<b>你</b>剛剛給${who}${b.dataset.react || '送上心意'}，${cname()}下次聊天會親口告訴${['阿嬤','美華'].includes(who) ? '她' : '他'}`);
+    pushFamilyFeed(`<b>你</b>給${who}${b.dataset.react || '送上心意'}（家人連線開通後，${cname()}會親口轉達）`);
   });
 
   // 全家健康圈：切換成員看健康
@@ -2482,8 +2509,38 @@ function init() {
     if ($('#mcTopics')) $('#mcTopics').innerHTML = m.topics.map(t => '<i>' + t + '</i>').join('');
   }
 
-  const FAM_ORDER = ['美華', '志明', '小寶'];   // 阿嬤＝本人，資料在「狀態」頁，家人頁不重複顯示
+  // 家人頁名單跟「設定 → 全家健康圈」吃同一份資料（兩本帳合一）：圈裡移除了人，這裡自動跟著消失
+  const FAM_REL = { '美華': '女兒 · 45 歲', '志明': '兒子 · 42 歲', '小寶': '孫子 · 12 歲' };
+  const FAM_STATE = {
+    '美華': { pill: 'tired', pillT: '有點累', txt: '活動量達標 · 睡眠偏少', st: 'watch', stT: '留意' },
+    '志明': { pill: 'calm', pillT: '平穩', txt: '作息這週很規律', st: 'ok', stT: '安好' },
+    '小寶': { pill: 'happy', pillT: '開心', txt: '活蹦亂跳', st: 'ok', stT: '安好' },
+  };
+  let FAM_ORDER = ['美華', '志明', '小寶'];   // 本人資料在「狀態」頁，家人頁不重複顯示；實際名單由 renderFamRoster 重算
   let currentPerson = '美華';
+  function famInit(m) { return m.init || (m.name || '')[0] || ''; }
+  function renderFamRoster() {
+    const mem = loadCircle().filter(m => !m.self);
+    FAM_ORDER = mem.map(m => m.name);
+    const fs = $('#famSwitch');
+    if (fs) {
+      const allBtn = fs.querySelector('[data-person="all"]');
+      const invBtn = fs.querySelector('[data-person="invite"]');
+      fs.innerHTML = (allBtn ? allBtn.outerHTML : '') + mem.map(m =>
+        '<button class="fam-switch-item" data-person="' + m.name + '" data-rel="' + (FAM_REL[m.name] || '家人') + '" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '"><span class="fs-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span><span class="fs-name">' + m.name + '</span></button>'
+      ).join('') + (invBtn ? invBtn.outerHTML : '');
+    }
+    const hl = $('#healthList');
+    if (hl) hl.innerHTML = mem.length ? mem.map(m => {
+      const s = FAM_STATE[m.name] || { pill: 'calm', pillT: '平穩', txt: '等他加入連上，就看得到狀態', st: 'ok', stT: '安好' };
+      return '<div class="health-row" data-person="' + m.name + '" data-rel="' + (FAM_REL[m.name] || '家人') + '" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '">' +
+        '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
+        '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state"><em class="mood-pill ' + s.pill + '">' + s.pillT + '</em>' + s.txt + '</div></div>' +
+        '<div class="hr-status ' + s.st + '"><span class="hr-dot"></span><span class="hr-slabel">' + s.stT + '</span></div></div>';
+    }).join('') : '<p class="modal-sub" style="margin:6px 2px">圈裡還沒有家人，點上面「邀請」把家人拉進來。</p>';
+    if (currentPerson && !FAM_ORDER.includes(currentPerson)) { currentPerson = FAM_ORDER[0] || ''; if ($('#viewPerson') && $('#viewPerson').classList.contains('active')) showFamAll(); }
+    renderFamDots();
+  }
   function famItemOf(name) {
     return [...document.querySelectorAll('.fam-switch-item')].find(x => x.dataset.person === name);
   }
@@ -2868,6 +2925,7 @@ function init() {
     const r = e.target.closest('.health-row'); if (!r) return;
     showFamPerson(r.dataset.person, r.dataset.rel, r.dataset.init, r.dataset.tint);
   });
+  renderFamRoster();   // 開頁就以家庭圈名單為準重建家人頁（兩本帳合一）
   // 週/月趨勢切換
   const TREND = {
     week: {
@@ -2904,9 +2962,21 @@ function init() {
   if ($('#reportClose')) $('#reportClose').addEventListener('click', () => $('#reportModal').classList.remove('show'));
   if ($('#reportModal')) $('#reportModal').addEventListener('click', e => { if (e.target === $('#reportModal')) $('#reportModal').classList.remove('show'); });
   if ($('#rptSendBtn')) $('#rptSendBtn').addEventListener('click', () => {
-    $('#reportModal').classList.remove('show');
-    toast('傳給美華了，回診那天她手機一打開就有');
-    pushFamilyFeed('<b>阿嬤</b>把 6 月的回診摘要傳給了美華');
+    // 真的分享出去（系統分享面板：LINE／簡訊／任何家人在用的），不再假裝「已傳送」
+    const rows = [...document.querySelectorAll('#reportModal .rpt-row')].map(r => {
+      const k = r.querySelector('.rpt-k'), b = r.querySelector('b');
+      return (k ? k.textContent : '') + '：' + (b ? b.textContent : '');
+    });
+    const text = '沐寧 · 回診摘要\n' + rows.join('\n');
+    const done = () => { $('#reportModal').classList.remove('show'); pushFamilyFeed('<b>你</b>把回診摘要分享給了家人'); };
+    if (navigator.share) {
+      navigator.share({ text }).then(() => { toast('摘要分享出去了，回診那天記得帶著'); done(); }).catch(() => {});
+    } else {
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject()).then(
+        () => { toast('摘要複製好了，貼給家人就行'); done(); },
+        () => toast('這台裝置不支援分享，晚點在手機上試')
+      );
+    }
   });
 
   // 發起挑戰面板
@@ -3448,16 +3518,27 @@ function init() {
   }
   if ($('#readerBack')) $('#readerBack').addEventListener('click', () => $('#readerPage').classList.remove('show'));
   // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常時通知他們確認
-  const SAFETY_MEMBERS = [{ name: '美華', init: '華', tint: 'p-mei' }, { name: '志明', init: '明', tint: 'p-zhi' }, { name: '小寶', init: '寶', tint: 'p-bao' }];
-  function loadSafety() { try { return JSON.parse(localStorage.getItem('munea.safetyContacts')) || []; } catch (e) { return []; } }
+  // 名單直接吃「設定 → 全家健康圈」同一份資料（單一真相）；圈裡移除了人，這裡自動跟著消失
+  function safetyMembers() { return loadCircle().filter(m => !m.self); }
+  function loadSafety() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('munea.safetyContacts')) || [];
+      const valid = new Set(safetyMembers().map(m => m.name));
+      const sel = raw.filter(n => valid.has(n));
+      if (sel.length !== raw.length) localStorage.setItem('munea.safetyContacts', JSON.stringify(sel));
+      return sel;
+    } catch (e) { return []; }
+  }
   function updateSafetyCount() { const el = $('#safetyCount'); if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.join('、') : ''; } }
   function renderSafety() {
     const picks = $('#safetyPicks'); if (!picks) return;
     const sel = loadSafety();
-    picks.innerHTML = SAFETY_MEMBERS.map(m =>
+    const mem = safetyMembers();
+    picks.innerHTML = mem.length ? mem.map(m =>
       '<button type="button" class="safety-pick' + (sel.includes(m.name) ? ' on' : '') + '" data-name="' + m.name + '">' +
-      '<span class="init-ava ' + m.tint + '">' + m.init + '</span><span class="sp-name">' + m.name + '</span>' +
-      '<span class="sp-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></button>').join('');
+      '<span class="init-ava ' + (m.tint || '') + '">' + (m.init || (m.name || '')[0] || '') + '</span><span class="sp-name">' + m.name + '</span>' +
+      '<span class="sp-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></button>').join('')
+      : '<p class="modal-sub" style="margin:4px 0 0">圈裡還沒有家人。先到「家人」頁邀請家人加入，就能選緊急聯絡人。</p>';
     updateSafetyCount();
   }
   if ($('#safetyPicks')) $('#safetyPicks').addEventListener('click', e => {
@@ -3473,7 +3554,7 @@ function init() {
   if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
     $('#safetyModal').classList.remove('show');
     const sel = loadSafety();
-    toast(sel.length ? ('好，緊急時我會通知 ' + sel.join('、')) : '還沒選聯絡人，等你想好再設定就好');
+    toast(sel.length ? ('名單記好了：' + sel.join('、') + '。自動通知一開通就會用上。') : '還沒選聯絡人，等你想好再設定就好');
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();
