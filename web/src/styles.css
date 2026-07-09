@@ -2168,3 +2168,4 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .walk-p b { flex: 1; color: var(--ink); }
 .walk-p span:last-child { color: var(--teal-dd); font-weight: 700; }
 .rsvp-btn:disabled { opacity: .5; cursor: default; }
+.inv-temp-note { font-size: 13px; line-height: 1.55; color: var(--coral-d); background: var(--coral-soft); border-radius: 12px; padding: 9px 12px; margin: -4px 0 12px; }

@@ -2906,9 +2906,14 @@ function init() {
   }
   function fillInvCode(withCloud) {
     const el = $('#invCode'); if (!el) return;
+    const note = $('#invTempNote');
     el.textContent = myInviteCode();
+    if (note) note.style.display = 'none';
     if (!withCloud) return;   // 開 App 只顯示暫存碼；真的打開邀請視窗才跟雲端拿正式碼
-    ensureCloudInvite().then(code => { if (code) el.textContent = code; else el.textContent = myInviteCode() + '（暫用）'; });
+    ensureCloudInvite().then(code => {
+      if (code) { el.textContent = code; if (note) note.style.display = 'none'; }             // 拿到正式碼＝乾淨顯示
+      else { el.textContent = myInviteCode(); if (note) note.style.display = ''; }             // 連不上＝碼乾淨、改在下方一行說明（不再貼「暫用」）
+    });
   }
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
   if ($('#inviteCloseX')) $('#inviteCloseX').addEventListener('click', () => $('#inviteFamModal').classList.remove('show'));
