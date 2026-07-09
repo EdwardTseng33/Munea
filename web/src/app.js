@@ -1003,8 +1003,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
-  micLevel: 0, playLevel: 0, onCaption: null, onReady: null, _capBuf: '',
-  greet() { try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ type: 'greet' })); } catch (e) {} },   // 兩邊都就緒 → 請 AI 主動開口（聲臉同步開場）
+  micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
+  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；招呼講完才開麥（乾淨第一句）
   _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
   _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
@@ -1029,6 +1029,7 @@ const LiveVoice = {
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(MUNEA_APP_KEY);
     this.on = true;
     this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
+    this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
@@ -1047,7 +1048,7 @@ const LiveVoice = {
         // 半雙工：她說話時暫停送麥克風→治好手機喇叭被麥克風收回去的回音，讓她每一輪都回你
         this.proc.onaudioprocess = e => {
           const inp = e.inputBuffer.getChannelData(0);
-          if (!this.ready) { this.micLevel = 0; return; }         // 腦還在開機：先不送聲音（治「第一句沒回應」——開機期的聲音以前會先塞住再一口氣灌進去）
+          if (!this.micOpen) { this.micLevel = 0; return; }        // 麥克風要等「真正開場」才開（撥通中/等臉那幾秒不收音，免得你的聲音在她招呼前一直灌進去→她一直「我聽見了」· Edward 2026-07-09）
           if (this.speaking) { this.micLevel = 0; return; }       // 她在說＝麥克風靜音＝收音波頻歸零
           let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
           this.micLevel = Math.min(1, Math.sqrt(s / inp.length) * 8);   // 即時音量→收音波頻高度
@@ -1079,7 +1080,10 @@ const LiveVoice = {
               const tp = this._userBuf.replace(/\s+/g, '').slice(0, 20);
               if (tp.length >= 6) { try { localStorage.setItem('munea.lastTopic', tp); } catch (e3) {} this._topicSaved = true; }
             }
-            if (o.type === 'turn_complete') { this._toListening(); this._capBuf = ''; }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
+            if (o.type === 'turn_complete') {
+              if (this._openMicAfterGreet) { this.micOpen = true; this._openMicAfterGreet = false; }   // 招呼講完 → 現在才開麥、換你講（乾淨開場）
+              this._toListening(); this._capBuf = '';
+            }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
           } catch (e) {}
           return;
         }
@@ -1572,13 +1576,9 @@ function setupAuthControls() {
   }
   let city = '';
   try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || 'null'); city = ((p && p.city) || '').trim(); } catch (e) {}
-  const geo = () => new Promise((res, rej) => {
-    if (!navigator.geolocation) return rej(new Error('no-geo'));
-    navigator.geolocation.getCurrentPosition(p => res(p.coords), rej, { timeout: 5000, maximumAge: 1800000 });
-  });
+  // 7/9 隱私修正（送審前）：拿掉精確定位（GPS）備援，只用「個人資料」設定的縣市查天氣——沒設城市就整塊不顯示，不再問使用者要精確位置
   (city ? byCity(city) : Promise.reject(new Error('no-profile-city')))
-    .catch(() => geo().then(c => byCoords(c.latitude, c.longitude)))
-    .catch(() => { /* 沒設所在地也拿不到定位＝不顯示天氣，只留日期 */ });
+    .catch(() => { /* 沒設所在地＝不顯示天氣，只留日期 */ });
 })();
 
 (function homeGreeting() {
@@ -2057,7 +2057,11 @@ function myProfileName() {
 }
 function syncPush(key, value) {
   try {
-    fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', key, value, familyGroupId: famGroupId(), personId: muneaDeviceId() }) }).catch(() => {});
+    // 用藥照片只留本機、不上雲（隱私修正 7/9）：meds 同步前把 base64 照片欄位剝掉，其餘欄位照送
+    const payload = (key === 'meds' && Array.isArray(value))
+      ? value.map(m => { const rest = Object.assign({}, m); delete rest.photo; return rest; })
+      : value;
+    fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', key, value: payload, familyGroupId: famGroupId(), personId: muneaDeviceId() }) }).catch(() => {});
   } catch (e) {}
 }
 async function syncPullAll() {
@@ -2115,9 +2119,11 @@ function buildCareItems() {
   const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
   let _rTitle = '家人帶話給你', _rSub = '';
   if (relayMsg) { const _p = plain(relayMsg); const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/); if (_m) { _rTitle = _m[1].trim() + ' 要我提醒你'; _rSub = _m[2].trim(); } else { _rSub = _p; } }
+  // 蘋果 UGC 審核要求（7/9）：這則若真的來自家人 feed（傳話/愛心/塗鴉…），記下它在陣列裡的位置，卡片才能掛「移除／檢舉」；示範文案（feed 是空的）不算數
+  const _feedIdx = relayMsg ? feed.indexOf(relayMsg) : (feed.length ? 0 : -1);
   const familyItem = relayMsg
-    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: '知道了' }
-    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，' + cname() + '都幫你收著了', btn: '去看看' };
+    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: '知道了', feedIdx: _feedIdx }
+    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，' + cname() + '都幫你收著了', btn: '去看看', feedIdx: _feedIdx };
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
   const act = acts.find(a => a && !a.done && !a.archived);
@@ -2150,7 +2156,9 @@ function renderCareCarousel() {
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
-    '<div class="care-txt"><p>' + (String(it.title).length > 12 ? String(it.title).slice(0, 12) : it.title) + '</p>' + (it.sub ? '<small>' + it.sub + '</small>' : '') + '</div>' +
+    '<div class="care-txt"><p>' + (String(it.title).length > 12 ? String(it.title).slice(0, 12) : it.title) + '</p>' + (it.sub ? '<small>' + it.sub + '</small>' : '') +
+    (typeof it.feedIdx === 'number' && it.feedIdx > -1 ? '<div class="care-mod"><button type="button" class="care-mod-btn" data-remove="' + it.feedIdx + '">移除這則</button><button type="button" class="care-mod-btn" data-report="' + it.feedIdx + '">檢舉</button></div>' : '') +
+    '</div>' +
     (it.btn ? '<button type="button" class="care-btn" data-go="' + it.k + '">' + it.btn + '</button>' : '') +
     '</div>').join('');
   dots.innerHTML = items.map((_, i) => '<i class="' + (i === 0 ? 'on' : '') + '"></i>').join('');
@@ -2184,6 +2192,33 @@ function pushFamilyFeed(text) {
   renderCareCarousel();
 }
 function restoreFamilyFeed() { renderCareCarousel(); }
+// 蘋果 UGC 審核要求（7/9）：家人動態/傳話/塗鴉要能「移除」「檢舉」——都是真動作，不是假成功
+function removeFamilyFeedItem(idx) {
+  const a = loadFeed();
+  if (idx < 0 || idx >= a.length) return;
+  a.splice(idx, 1);
+  try { localStorage.setItem('munea.familyFeed2', JSON.stringify(a)); } catch (e) {}
+  syncPush('familyFeed', a);
+  renderCareCarousel();
+  toast('已經移除這則了');
+}
+function reportFamilyFeedItem(idx) {
+  const a = loadFeed();
+  if (idx < 0 || idx >= a.length) return;
+  const content = plain(a[idx]);
+  try {
+    const log = JSON.parse(localStorage.getItem('munea.feedReported') || '[]');
+    log.unshift({ text: content, at: Date.now() });
+    localStorage.setItem('munea.feedReported', JSON.stringify(log.slice(0, 50)));
+  } catch (e) {}
+  // 真的送進引擎既有的意見收件箱（會叮 #munea-營運、進 /admin/feedback 清單），不是假送出
+  brainPost('/feedback', { type: 'bug', category: '檢舉動態', text: '【檢舉家人動態】' + content, appVersion: (window.MuneaVersion && window.MuneaVersion.current) || '', plan: (window.MMPLAN && window.MMPLAN.get()) || '' });
+  a.splice(idx, 1);
+  try { localStorage.setItem('munea.familyFeed2', JSON.stringify(a)); } catch (e) {}
+  syncPush('familyFeed', a);
+  renderCareCarousel();
+  toast('已收到，我們會處理；這則也先收起來了');
+}
 
 function toast(text) {
   const t = $('#toast');
@@ -2529,7 +2564,8 @@ function connectCall() {
       // 兩邊都好 → 收待機動畫、亮出會動的臉、請她開口（聲臉一起出）
       if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }
       try { FaceIdle.stop(); } catch (e) {}
-      LiveVoice.greet();                     // 現在才請 AI 主動開口
+      LiveVoice.greet();                     // 現在才請 AI 主動開口（招呼講完才開麥）
+      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice.micOpen = true; LiveVoice._openMicAfterGreet = false; } }, 6000);   // 保底：招呼若沒正常結束，6 秒後也開麥、不讓你無法說話
     };
     const tryStart = () => beginConversation();
     window.__muneaOnFaceReady = () => { _faceReady = true; tryStart(); };
@@ -2587,6 +2623,10 @@ function init() {
   if (window.MuneaHealth) window.MuneaHealth.boot(); // 之前連過 Apple 健康就靜默帶回今天步數
   renderCareCarousel();
   if ($('#careBody')) $('#careBody').addEventListener('click', e => {
+    const rm = e.target.closest('[data-remove]');
+    if (rm) { removeFamilyFeedItem(+rm.dataset.remove); return; }
+    const rp = e.target.closest('[data-report]');
+    if (rp) { reportFamilyFeedItem(+rp.dataset.report); return; }
     const b = e.target.closest('.care-btn');
     if (b) showView(b.dataset.go === 'status' ? 'status' : 'family');
   });
@@ -2830,6 +2870,8 @@ function init() {
     toast('已退出這個健康圈。想再回來，請家人重新邀請你。');
   });
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
+  // 移除家人／封鎖入口也放在家人頁顯眼處（不用鑽進設定才找得到，Edward 7/9 UGC 審核要求）——開的是同一個管理視窗
+  if ($('#famManageBtn')) $('#famManageBtn').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
   if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily('要邀請家人連上你，先登入一下（這樣家人才連得到你）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
@@ -4331,9 +4373,25 @@ function init() {
   });
   if ($('#dataDeleteBtn')) $('#dataDeleteBtn').addEventListener('click', () => {
     const b = $('#dataDeleteBtn');
-    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次就整份刪除（無法復原）'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '刪除我的資料'; }, 6000); return; }
-    brainPost('/account-deletion', {}).then(() => { $('#dataModal').classList.remove('show'); toast('刪除申請送出了，我會照規則處理。'); });
+    // 蘋果 5.1.1(v) 帳戶刪除規定（7/9 修正）：兩段確認、按下去要是真的動作——不是只記一張申請單
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次：清除本機資料＋送出刪除申請'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '刪除我的資料'; }, 6000); return; }
     b.dataset.arm = ''; b.textContent = '刪除我的資料';
+    (async () => {
+      // (c) 呼叫後端刪除接口——action:'request' 才會真的記下這筆申請（原本傳空物件、後端不會建單）
+      // ⚠ 給 Mac：後端 /account-deletion 現在只把申請記進 privacy_requests、沒有真的刪 Supabase 帳號與資料，5.1.1(v) 要在那邊補上真刪除才算合規
+      await brainPost('/account-deletion', { action: 'request', reason: 'user_requested_in_app' });
+      // (b) 登出
+      if (typeof signOutAuth === 'function') { try { await signOutAuth(); } catch (e) {} }
+      // (a) 真的清掉本機所有 munea.* 資料（不是假裝清掉）
+      try {
+        const ks = [];
+        for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('munea.') === 0) ks.push(k); }
+        ks.forEach(k => localStorage.removeItem(k));
+      } catch (e) {}
+      $('#dataModal').classList.remove('show');
+      toast('你的資料已從這台裝置清除，帳號與雲端資料刪除已送出處理');
+      setTimeout(() => { location.reload(); }, 1200);
+    })();
   });
   if ($('#consentAgree')) $('#consentAgree').addEventListener('click', () => {
     try { localStorage.setItem('munea.consent.crossborder', new Date().toISOString()); } catch (e) {}
