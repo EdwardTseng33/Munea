@@ -2937,6 +2937,62 @@ def admin_safety_events_summary(data=None):
     }
 
 
+FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
+
+def feedback_response(data):
+    """意見與建議收件箱：type=bug|idea|praise|nps ＋ 分類/內容/分數＋自動情境（版本/方案），供後台篩選整理。"""
+    data = data or {}
+    ftype = str(data.get("type") or "").strip()
+    if ftype not in ("bug", "idea", "praise", "nps", "survey"):
+        return {"ok": False, "error": {"code": "bad_type", "message": "unknown feedback type"}}
+    item = {
+        "id": f"fb_{int(time.time()*1000)}",
+        "type": ftype,
+        "category": str(data.get("category") or "")[:24],       # 聊聊/提醒/家人圈/付費/其他…
+        "text": str(data.get("text") or "")[:2000],
+        "score": (int(data.get("score")) if str(data.get("score") or "").strip().lstrip("-").isdigit() else None),  # NPS 0-10
+        "appVersion": str(data.get("appVersion") or "")[:16],
+        "plan": str(data.get("plan") or "")[:12],
+        "createdAt": utc_now(),
+    }
+    items = read_json_file(FEEDBACK_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items.append(item)
+    write_json_file(FEEDBACK_PATH, items[-5000:])
+    try:
+        label = {"bug": "🐞問題", "idea": "💡建議", "praise": "❤️稱讚", "nps": "📊NPS", "survey": "📋問卷"}.get(ftype, ftype)
+        summary = (item["category"] + " · " if item["category"] else "") + (f"{item['score']} 分" if item["score"] is not None else (item["text"][:60] or ""))
+        notify.ops("feedback_received", f"{label} {summary}")
+    except Exception:
+        pass
+    return {"ok": True, "id": item["id"]}
+
+def admin_feedback_summary(data=None):
+    """後台整理：按類型/分類統計＋最新清單＋NPS 計算（推薦者9-10/中立7-8/批評者0-6）。"""
+    data = data or {}
+    items = read_json_file(FEEDBACK_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    by_type, by_cat = {}, {}
+    nps_scores = []
+    for it in items:
+        by_type[it.get("type") or "?"] = by_type.get(it.get("type") or "?", 0) + 1
+        if it.get("category"):
+            by_cat[it["category"]] = by_cat.get(it["category"], 0) + 1
+        if it.get("type") == "nps" and isinstance(it.get("score"), int):
+            nps_scores.append(it["score"])
+    nps = None
+    if nps_scores:
+        promoters = sum(1 for x in nps_scores if x >= 9)
+        detractors = sum(1 for x in nps_scores if x <= 6)
+        nps = round((promoters - detractors) / len(nps_scores) * 100)
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    ftype = data.get("type")
+    latest = [it for it in reversed(items) if not ftype or it.get("type") == ftype][:limit]
+    return {"ok": True, "totals": by_type, "byCategory": by_cat, "nps": nps, "npsCount": len(nps_scores), "latest": latest}
+
+
 def product_event_response(data):
     event = append_product_event(data)
     try:
@@ -4121,6 +4177,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(decode_voice_note(data))
             elif self.path == "/avatar-session":
                 self._json(avatar_session_response(data))
+            elif self.path == "/feedback":
+                self._json(feedback_response(data))
             elif self.path == "/product-event":
                 self._json(product_event_response(data))
             elif self.path == "/ai/brain-status":
@@ -4217,6 +4275,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_privacy_requests_summary(data))
+            elif self.path == "/admin/feedback":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(401, code, "admin authorization required")
+                else:
+                    self._json(admin_feedback_summary(data))
             elif self.path == "/admin/safety-events":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

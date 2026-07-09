@@ -438,12 +438,13 @@
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進註冊流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
       <h2 class="set-section">App 體驗</h2>
       <div class="set-list">
+        <div class="set-row" id="feedbackRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z"/><path d="M8 10h8M8 13.5h5"/></svg></span><span class="sr-main">意見與建議<small>回報問題、許願新功能、幫沐寧打分數</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="fontRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span><span class="sr-main">字體與顯示<small>字級大小與閱讀舒適</small></span><span class="sr-arrow" id="fontNow">標準 ›</span></div>
       </div>
 
       <h2 class="set-section">關於</h2>
       <div class="set-list">
-        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">1.2.2</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">1.2.8</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
@@ -632,6 +633,40 @@
   </div>
 
   <!-- 安全通知：選 1~3 位家庭圈家人當緊急聯絡人；健康數據危險異常時通知他們確認 -->
+  <div class="modal-mask" id="feedbackModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <h2>意見與建議</h2>
+      <p class="modal-sub">你的每一句話我們都會看。挑一種，說給我們聽。</p>
+      <div class="topic-chips" id="fbTypes">
+        <button type="button" class="topic-chip on" data-t="bug">🐞 回報問題</button>
+        <button type="button" class="topic-chip" data-t="idea">💡 功能建議</button>
+        <button type="button" class="topic-chip" data-t="praise">❤️ 想稱讚</button>
+        <button type="button" class="topic-chip" data-t="nps">📊 打個分數</button>
+      </div>
+      <div id="fbCatWrap">
+        <div class="field-label">是哪一區的問題？</div>
+        <div class="topic-chips" id="fbCats">
+          <button type="button" class="topic-chip on" data-c="聊聊">聊聊</button>
+          <button type="button" class="topic-chip" data-c="健康數據">健康數據</button>
+          <button type="button" class="topic-chip" data-c="提醒">提醒</button>
+          <button type="button" class="topic-chip" data-c="家人圈">家人圈</button>
+          <button type="button" class="topic-chip" data-c="付費">付費</button>
+          <button type="button" class="topic-chip" data-c="其他">其他</button>
+        </div>
+      </div>
+      <div id="fbNpsWrap" style="display:none">
+        <div class="field-label">0～10 分，你會多想把沐寧推薦給朋友或家人？</div>
+        <div class="nps-row" id="npsRow"></div>
+        <div class="nps-hint"><span>不太會</span><span>非常會</span></div>
+      </div>
+      <div class="field-label" id="fbTextLabel">想說的話（越具體我們修得越快）</div>
+      <textarea class="chal-input" id="fbText" rows="4" maxlength="1000" placeholder="例：聊聊講到一半沒聲音了／希望可以幫我記血糖"></textarea>
+      <button class="modal-btn" id="fbSend">送出</button>
+    </div>
+  </div>
+
   <div class="modal-mask" id="interestsModal">
     <div class="modal">
       <div class="modal-grab"></div>
@@ -971,7 +1006,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>版本更新</h2>
-      <p class="modal-sub">沐寧 <span id="verCurrent">1.2.2</span><span id="verChannel"></span></p>
+      <p class="modal-sub">沐寧 <span id="verCurrent">1.2.8</span><span id="verChannel"></span></p>
       <div id="changelogList" class="changelog"></div>
       <button type="button" class="consent-go" id="verClose">好，知道了</button>
     </div>

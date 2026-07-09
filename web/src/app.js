@@ -1638,7 +1638,8 @@ function __muneaPointsOut(){
   stopCallTimer();
   __muneaShowPointsPopup();
 }
-function __muneaFreeChatOut(){
+function __muneaFreeChatOut__setCool() { try { localStorage.setItem('munea.reviewCoolOff', '1'); setTimeout(() => localStorage.removeItem('munea.reviewCoolOff'), 3600000); } catch (e) {} }
+function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { if (typeof LiveVoice !== 'undefined' && LiveVoice && LiveVoice.stop) LiveVoice.stop(); } catch (e) {}
   try { completeChatSession('free_daily_limit'); } catch (e) {}
   try { chatOpened = false; } catch (e) {}
@@ -2174,7 +2175,11 @@ function init() {
   }
   // 關閉聊聊（X）＝有通話先掛斷結算，再回首頁；沒通話就直接回
   if ($('#chatExit')) $('#chatExit').addEventListener('click', () => {
-    if (callConnected) { LiveVoice.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
+    if (callConnected) {
+      LiveVoice.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen();
+      try { const n = +(localStorage.getItem('munea.stat.chatsCompleted') || 0) + 1; localStorage.setItem('munea.stat.chatsCompleted', String(n)); } catch (e2) {}
+      setTimeout(() => window.__muneaMaybeAskReview('chat_completed'), 800);   // 自己掛斷＝好好聊完 → 開心時刻
+    }
     FaceWave.stop();
     showView('home');
   });
@@ -3502,6 +3507,64 @@ function init() {
     b.classList.toggle('on', _intSel.includes(t));
   });
   if ($('#interestsRow')) $('#interestsRow').addEventListener('click', () => window.__muneaOpenInterests(false));
+  // ===== 意見與建議（回報問題/功能建議/稱讚/NPS）→ 引擎收件箱＋Slack 叮一聲 =====
+  let _fbType = 'bug', _fbNps = null;
+  function renderNps() {
+    const row = $('#npsRow'); if (!row || row.dataset.built) return; row.dataset.built = '1';
+    row.innerHTML = Array.from({ length: 11 }, (_, i) => '<button type="button" class="nps-btn" data-n="' + i + '">' + i + '</button>').join('');
+    row.addEventListener('click', e => {
+      const b = e.target.closest('.nps-btn'); if (!b) return;
+      _fbNps = +b.dataset.n;
+      row.querySelectorAll('.nps-btn').forEach(x => x.classList.toggle('on', x === b));
+    });
+  }
+  function fbApplyType() {
+    if ($('#fbCatWrap')) $('#fbCatWrap').style.display = _fbType === 'bug' ? '' : 'none';
+    if ($('#fbNpsWrap')) $('#fbNpsWrap').style.display = _fbType === 'nps' ? '' : 'none';
+    const lbl = $('#fbTextLabel'), txt = $('#fbText');
+    if (lbl) lbl.textContent = _fbType === 'bug' ? '發生了什麼事？（越具體我們修得越快）' : _fbType === 'idea' ? '想要什麼新功能？' : _fbType === 'praise' ? '想稱讚哪裡？我們會轉告寧寧' : '為什麼給這個分數？（可以不填）';
+    if (txt) txt.placeholder = _fbType === 'idea' ? '例：希望可以幫我記血糖、想要台語' : _fbType === 'praise' ? '例：寧寧記得我孫子要結婚，好感動' : '例：聊聊講到一半沒聲音了';
+    renderNps();
+  }
+  if ($('#feedbackRow')) $('#feedbackRow').addEventListener('click', () => { fbApplyType(); $('#feedbackModal').classList.add('show'); });
+  if ($('#fbTypes')) $('#fbTypes').addEventListener('click', e => {
+    const b = e.target.closest('.topic-chip'); if (!b) return;
+    _fbType = b.dataset.t;
+    $('#fbTypes').querySelectorAll('.topic-chip').forEach(x => x.classList.toggle('on', x === b));
+    fbApplyType();
+  });
+  if ($('#fbCats')) $('#fbCats').addEventListener('click', e => {
+    const b = e.target.closest('.topic-chip'); if (!b) return;
+    $('#fbCats').querySelectorAll('.topic-chip').forEach(x => x.classList.toggle('on', x === b));
+  });
+  if ($('#fbSend')) $('#fbSend').addEventListener('click', async () => {
+    const text = ($('#fbText') && $('#fbText').value.trim()) || '';
+    if (_fbType === 'nps' && _fbNps === null) { toast('先點一個 0～10 的分數'); return; }
+    if (_fbType !== 'nps' && !text) { toast('說一句就好，我們想聽'); return; }
+    const cat = _fbType === 'bug' ? ((document.querySelector('#fbCats .topic-chip.on') || { dataset: {} }).dataset.c || '其他') : '';
+    const body = { type: _fbType, category: cat, text: text, score: _fbNps, appVersion: (window.MuneaVersion && window.MuneaVersion.current) || '', plan: (window.MMPLAN && window.MMPLAN.get()) || '' };
+    brainPost('/feedback', body);
+    trackProductEvent('feedback_submitted', { type: _fbType, category: cat, score: _fbNps });
+    $('#feedbackModal').classList.remove('show');
+    if ($('#fbText')) $('#fbText').value = ''; _fbNps = null; const r = $('#npsRow'); if (r) r.querySelectorAll('.nps-btn').forEach(x => x.classList.remove('on'));
+    toast(_fbType === 'praise' ? '收到了，寧寧會很開心！' : '收到了，謝謝你——我們會認真看');
+  });
+
+  // ===== App Store 評分彈窗：只在開心時刻、每版最多一次、負面情境絕不跳 =====
+  // 對接約定（Mac）：原生實作 window.__muneaRequestReview()（蘋果原生評分視窗、系統自控全年上限）
+  window.__muneaMaybeAskReview = function (moment) {
+    try {
+      const ver = (window.MuneaVersion && window.MuneaVersion.current) || '0';
+      if (localStorage.getItem('munea.reviewAsked.' + ver)) return;               // 每版最多一次
+      if (localStorage.getItem('munea.reviewCoolOff') === '1') return;            // 負面情境冷卻（斷線/錯誤後設）
+      const chats = +(localStorage.getItem('munea.stat.chatsCompleted') || 0);
+      const okMoment = (moment === 'chat_completed' && chats >= 3) || moment === 'activity_done';
+      if (!okMoment) return;
+      localStorage.setItem('munea.reviewAsked.' + ver, '1');
+      trackProductEvent('review_prompt_shown', { moment: moment });
+      if (typeof window.__muneaRequestReview === 'function') window.__muneaRequestReview();
+    } catch (e) {}
+  };
   if ($('#interestsSave')) $('#interestsSave').addEventListener('click', () => {
     saveInterests(_intSel);
     trackProductEvent('interests_saved', { count: _intSel.length });
