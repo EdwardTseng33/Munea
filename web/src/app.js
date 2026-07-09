@@ -1326,6 +1326,7 @@ function showView(id) {
   }
   if (id === 'family') {
     try { syncPullAll(); } catch (e) {}   // 進家人頁先拉最新動態
+    if (window.__muneaSweepActs) { try { window.__muneaSweepActs(); } catch (e) {} }   // 順手收掉到期的活動卡（不用重開 App）
     const va = $('#viewAll');
     if (va && !va.classList.contains('active')) {
       $$('#family .fam-view').forEach(v => v.classList.remove('active'));
@@ -3789,22 +3790,39 @@ function init() {
     renderActCard(act);
     hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : kind === 'vote' ? '好，' + cname() + '把問題送出去了，誰投了什麼馬上看得到。' : kind === 'draw' ? '好，' + cname() + '把抽獎報給大家了，' + (act.when || '') + '開獎！' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
   });
-  // 到期自動收卡：先等雲端拉完再整理牆面（避免舊雲端資料蓋回剛收掉的卡）
-  function restoreActsBoot() {
+  // 一張活動卡是不是「到期該收」（含自己發起的、含問答/投票、含沒設日期的殭屍卡）— Edward 7/9 修卡死
+  function actExpired(a) {
+    if (!a) return false;
     const today = isoOf(new Date());
-    const acts = loadActs();
-    const keep = [];
+    const created = a.id ? isoOf(new Date(a.id)) : today;   // id = 建立當下時間
+    const when = a.dateISO || a.dueISO || created;          // 沒設日期就用「建立當天」當基準
     const d3 = new Date(); d3.setDate(d3.getDate() - 3);
     const cutoff = isoOf(d3);
+    if (a.status === 'done') return !!(a.doneISO && a.doneISO < today);   // 完成的：隔天收
+    if (when && when < today) return true;                               // 到期收（不分種類）
+    if (created < cutoff) return true;                                   // 保險：放超過 3 天的殭屍卡一律清
+    return false;
+  }
+  // 開 App 時整理牆面：到期的收進記錄簿、其餘重畫
+  function restoreActsBoot() {
+    const acts = loadActs();
+    const keep = [];
     acts.forEach(a => {
-      if (a.status === 'done' && a.doneISO && a.doneISO < today) {
-        pushFamilyFeed('「' + a.title + '」的排名收進<b>家庭記錄簿</b>了');
-      } else if (a.status !== 'done' && a.kind !== 'quiz' && a.dateISO && a.dateISO < today) {
-        pushFamilyFeed('「' + a.title + '」結束了，那天的紀錄收進<b>家庭記錄簿</b>了');
+      if (actExpired(a)) {
+        pushFamilyFeed('「' + a.title + '」結束了，收進<b>家庭記錄簿</b>了');
       } else { keep.push(a); renderActCard(a); }
     });
     if (keep.length !== acts.length) saveActs(keep);
   }
+  // 進家人頁時再掃一次：不用重開 App，到期卡當場收掉
+  function sweepActsOnView() {
+    const acts = loadActs();
+    const expired = acts.filter(a => actExpired(a));
+    if (!expired.length) return;
+    expired.forEach(a => { const c = document.querySelector('[data-act-id="' + a.id + '"]'); if (c) c.remove(); });
+    saveActs(acts.filter(a => !actExpired(a)));
+  }
+  window.__muneaSweepActs = sweepActsOnView;
   __pullPromise.finally(() => restoreActsBoot());
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
