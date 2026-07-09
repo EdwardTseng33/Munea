@@ -80,16 +80,23 @@
     .center{text-align:center}
     .center .sec-sub{margin-left:auto;margin-right:auto}
 
-    /* ── 功能區（交錯兩欄） ── */
-    .feat{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:56px 0}
-    .feat.rev .txt{order:2}
+    /* ── 官方畫面展示（橫向） ── */
+    .gallery{padding:20px 0 48px}
+    .gallery .rail{display:flex;gap:20px;overflow-x:auto;padding:10px 24px 22px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+    .gallery .rail img{flex:none;width:min(272px,70vw);border-radius:24px;box-shadow:var(--shadow);border:1px solid var(--line);scroll-snap-align:center}
+    .gallery .rail::-webkit-scrollbar{height:8px}
+    .gallery .rail::-webkit-scrollbar-thumb{background:var(--cream-2);border-radius:99px}
+    .gallery .hint{text-align:center;font-size:14px;color:var(--muted);margin-top:2px}
+    /* ── 功能區（純文字·置中單欄） ── */
+    .feat{max-width:720px;margin:0 auto;padding:40px 0;text-align:center}
     .feat .txt h2{font-size:clamp(25px,3vw,32px)}
     .feat .txt p{color:var(--ink-2);margin-top:14px}
-    .feat ul{list-style:none;margin-top:20px;display:grid;gap:12px}
+    .feat ul{list-style:none;margin:22px auto 0;display:grid;gap:12px;text-align:left;max-width:580px}
     .feat li{display:flex;gap:12px;align-items:flex-start}
     .feat li svg{flex:none;width:24px;height:24px;stroke:var(--teal);margin-top:5px}
     .feat li b{font-weight:600}
-    .feat .note{font-size:15px;color:var(--ink-2);background:var(--mint);border-radius:14px;padding:12px 16px;margin-top:20px}
+    .feat .note{font-size:15px;color:var(--ink-2);background:var(--mint);border-radius:14px;padding:12px 16px;margin:20px auto 0;max-width:580px;text-align:left}
+    .feat+.feat{border-top:1px solid var(--line)}
 
     /* ── 六位夥伴 ── */
     .cast{background:var(--cream-2);border-radius:28px;padding:64px 32px}
@@ -191,6 +198,18 @@
     </header>
   </div>
 
+  <!-- 官方畫面展示 -->
+  <section class="gallery" aria-label="App 實際畫面">
+    <div class="rail">
+      <img src="landing-assets/store-1.jpg" alt="沐寧 App：溫暖陪伴的 AI 健康夥伴，聊天、健康、家人一個 App 全面守護" loading="lazy">
+      <img src="landing-assets/store-2.jpg" alt="沐寧 App 首頁：每天都有人主動關心，AI 問候、今日任務、家人留言" loading="lazy">
+      <img src="landing-assets/store-3.jpg" alt="沐寧 App 狀態頁：健康與情緒一眼看懂，血壓、睡眠、心率與心情" loading="lazy">
+      <img src="landing-assets/store-4.jpg" alt="沐寧 App 通話：像視訊一樣自然陪伴，熟悉的臉與聲音更安心" loading="lazy">
+      <img src="landing-assets/store-5.jpg" alt="沐寧 App 家人頁：把家人的關心連在一起，活動挑戰、訊息傳遞、全家健康圈" loading="lazy">
+    </div>
+    <p class="hint">← 左右滑動看更多畫面 →</p>
+  </section>
+
   <!-- 聊聊 -->
   <div class="wrap">
     <section class="feat">
@@ -204,7 +223,6 @@
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span><b>聊著聊著就記下來</b>——提醒、傳話，一句話就設好。</span></li>
         </ul>
       </div>
-      <div class="phone"><div class="scr"><img src="landing-assets/shot-call-wangcai.jpg" alt="沐寧 App 通話畫面：旺財用語音陪你聊天"></div></div>
     </section>
 
     <!-- 全家健康圈 -->
@@ -219,7 +237,6 @@
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M13 4v6h6"/><path d="M6 20a9 9 0 1 1 13-11"/><path d="M6 14l2 2 4-4"/></svg><span><b>一起走路、揪一攤</b>——全家步數挑戰、生日聚餐點名，越玩越親。</span></li>
         </ul>
       </div>
-      <div class="phone"><div class="scr"><img src="landing-assets/shot-family.jpg" alt="沐寧 App 全家健康圈畫面：家庭走路挑戰與聚餐活動"></div></div>
     </section>
 
     <!-- 提醒 -->
@@ -235,7 +252,6 @@
         </ul>
         <p class="note">沐寧只當鬧鐘，不當藥師——藥怎麼吃，聽醫生的。</p>
       </div>
-      <div class="phone"><div class="scr"><img src="landing-assets/shot-reminder.jpg" alt="沐寧 App 用藥提醒設定畫面"></div></div>
     </section>
 
     <!-- 心情與守護 -->
@@ -250,7 +266,6 @@
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span><b>你的故事只屬於你</b>——分享什麼、給誰看，都由你授權決定。</span></li>
         </ul>
       </div>
-      <div class="phone"><div class="scr"><img src="landing-assets/shot-status.jpg" alt="沐寧 App 今天的狀態畫面：心情紀錄與健康數據"></div></div>
     </section>
   </div>
 

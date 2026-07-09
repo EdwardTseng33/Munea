@@ -1,0 +1,62 @@
+name: Deploy website (GitHub Pages)
+
+# 對外官網 munea.net：把 web/ 裡的產品介紹頁與法務頁發佈成靜態網站。
+# App 本體（index.html + 引擎 API）不對外，走 Cloud Run；這裡只發佈行銷/法務頁。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/landing.html'
+      - 'web/privacy.html'
+      - 'web/terms.html'
+      - 'web/support.html'
+      - 'web/src/styles.css'
+      - 'web/landing-assets/**'
+      - 'web/icons/**'
+      - 'web/avatars/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 組裝靜態官網
+        run: |
+          set -e
+          mkdir -p _site/src
+          # 官網首頁＝產品介紹頁
+          cp web/landing.html _site/index.html
+          cp web/landing.html _site/landing.html
+          cp web/privacy.html web/terms.html web/support.html _site/
+          cp web/src/styles.css _site/src/styles.css
+          cp -r web/icons _site/icons
+          cp -r web/avatars _site/avatars
+          cp -r web/landing-assets _site/landing-assets
+          # 自訂網域 + 關閉 Jekyll
+          echo "munea.net" > _site/CNAME
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
