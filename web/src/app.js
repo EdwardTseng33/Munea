@@ -27,6 +27,13 @@ let savedCompanionProfile = CompanionProfile.loadProfile();
 let currentAvatarId = savedCompanionProfile.templateId;
 let companionDisplayName = savedCompanionProfile.displayName;
 let companionNameTouched = savedCompanionProfile.nameTouched;
+// 動物角色（咪咪/旺財）先下架（Edward 2026-07-09：擬真臉引擎做不了卡通動物）——選過的自動回「溫柔型」寧寧、不留半殘狀態
+const REMOVED_AVATARS = new Set(['munea-2d-mimi', 'munea-2d-wangcai']);
+if (REMOVED_AVATARS.has(currentAvatarId)) {
+  currentAvatarId = 'nening-real-female';
+  savedCompanionProfile.templateId = currentAvatarId;
+  if (['咪咪', '旺財'].indexOf((companionDisplayName || '').trim()) >= 0) { companionDisplayName = '寧寧'; companionNameTouched = false; }
+}
 let currentChar = CompanionProfile.templateFor(currentAvatarId).backendChar; // 後端角色模板，決定腦＋聲音
 let chatHistory = [];            // 多輪對話脈絡
 let chatOpened = false;          // 這次進聊聊她有沒有先開過口
@@ -352,6 +359,7 @@ function syncCompanionUI() {
   if (nameInput && document.activeElement !== nameInput && nameInput.value !== display) nameInput.value = display;
   const fimg = $('#faceImg'); if (fimg) { fimg.src = fullSrc; fimg.classList.toggle('sq', !t.fullAsset); }
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
+  $$('.obs-ava img').forEach(i => { i.src = thumbSrc; });   // 狀態頁「○○的觀察」頭像＝跟著選的角色臉（Edward 2026-07-09）
   $$('.cname').forEach(el => { el.textContent = display; });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);

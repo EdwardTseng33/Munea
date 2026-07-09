@@ -87,7 +87,7 @@
   <!-- 寧寧的觀察 -->
   <div style="background:var(--deep);border-radius:20px;padding:14px 16px;margin-bottom:14px;color:#fff">
     <div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
-      <span style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--mint2),var(--coral-soft));display:grid;place-items:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 11c.55-.65 1.55-.65 2.1 0"/><path d="M13.5 11c.55-.65 1.55-.65 2.1 0"/><path d="M9.5 14.2c1.3 1.2 3.7 1.2 5 0"/><circle cx="7.8" cy="13.4" r="1" fill="var(--coral)" stroke="none"/><circle cx="16.2" cy="13.4" r="1" fill="var(--coral)" stroke="none"/></svg></span>
+      <span class="obs-ava" style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;overflow:hidden;flex-shrink:0;background:var(--mint2)"><img class="ava-img" src="avatars/nening-face.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"></span>
       <div style="flex:1">
         <div class="serif" style="font-size:15.5px;font-weight:900"><span class="cname">寧寧</span>的觀察</div>
         <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700">剛剛幫你看過數據</span></div>
@@ -723,8 +723,8 @@
         <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/ahong-face.png" alt="沉穩陪伴型"></span><span class="avl"><b>沉穩型</b><small>像大哥，很可靠</small></span></button>
         <button class="avo" data-ava="munea-2d-xiaoyun"><span class="avi"><img src="avatars/xiaoyun-2d-face.png" alt="開朗陪伴型"></span><span class="avl"><b>開朗型</b><small>像朋友，有朝氣</small></span></button>
         <button class="avo" data-ava="munea-2d-ayuan"><span class="avi"><img src="avatars/ayuan-2d-face.png" alt="隨和陪伴型"></span><span class="avl"><b>隨和型</b><small>鄰家感，好聊天</small></span></button>
-        <button class="avo" data-ava="munea-2d-mimi"><span class="avi"><img src="avatars/munea-2d-mimi-face.png" alt="貓咪陪伴型"></span><span class="avl"><b>貓咪型</b><small>有個性的陪伴</small></span></button>
-        <button class="avo" data-ava="munea-2d-wangcai"><span class="avi"><img src="avatars/munea-2d-wangcai-face.png" alt="狗狗陪伴型"></span><span class="avl"><b>狗狗型</b><small>熱情又黏人</small></span></button>
+        <!-- 貓咪型/狗狗型（咪咪/旺財）暫下架（Edward 2026-07-09）：擬真臉引擎做不了卡通動物、上線前先拿掉；素材與 backendChar 保留待日後補卡通嘴再上 -->
+
       </div>
     </div>
   </div>
@@ -1164,7 +1164,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260709-ai-reminder"></script>
+  <script type="module" src="src/app.js?v=20260709-char4-obsava"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
