@@ -549,52 +549,74 @@ def load_wellbeing_signals(person_id=None, limit=200):
     return signals[-limit:]
 
 
-FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine", "wallet"}
+FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "visits", "routine", "wallet", "circle"}
 
-def family_state_response(data):
-    """家庭共享狀態（原型底座）：單一家庭 key-value；正式版由 Codex 換成雲端表、格式不變。"""
-    data = data or {}
-    action = data.get("action") or "load"
-    if action == "save":
-        key = data.get("key")
-        if key not in FAMILY_STATE_KEYS:
-            return {"ok": False, "error": "key_not_allowed"}
-        try:
-            backend = data_backend()
-            remote_entry = backend.save_family_state_entry(
-                key,
-                data.get("value"),
-                family_group_id=data.get("familyGroupId") or data.get("family_group_id"),
-                updated_by_person_id=data.get("personId") or data.get("person_id"),
-            )
-            if remote_entry is not None:
-                return {"ok": True, "key": key, "backend": "supabase"}
-        except Exception as e:
-            if data_backend().enabled() and not is_missing_table_error(e):
-                raise e
-            log_fallback_exception("save family state to Supabase", e)
-        try:
-            state = read_json_file(FAMILY_STATE_STORE_PATH) or {}
-        except Exception:
-            state = {}
-        state[key] = {"value": data.get("value"), "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
-        write_json_file(FAMILY_STATE_STORE_PATH, state)
-        return {"ok": True, "key": key, "backend": "json"}
+FAMILY_STATE_SUPABASE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine", "wallet"}  # 雲端桌子目前只收這幾把鑰匙
+
+def _looks_like_uuid(v):
     try:
-        remote_state = data_backend().load_family_state_store(
-            family_group_id=data.get("familyGroupId") or data.get("family_group_id")
-        )
-        if remote_state is not None:
-            return {"ok": True, "state": {k: v.get("value") for k, v in remote_state.items() if isinstance(v, dict)}, "backend": "supabase"}
-    except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
-        log_fallback_exception("load family state from Supabase", e)
+        uuid.UUID(str(v))
+        return True
+    except Exception:
+        return False
+
+def _family_state_json_all():
+    """引擎本子：分家記帳 {家庭編號: {key: {value, updatedAt}}}；老格式（扁平）自動搬進 'shared' 這一家。"""
     try:
         state = read_json_file(FAMILY_STATE_STORE_PATH) or {}
     except Exception:
         state = {}
-    return {"ok": True, "state": {k: v.get("value") for k, v in state.items() if isinstance(v, dict)}}
+    if state and any(k in FAMILY_STATE_KEYS for k in state.keys()):
+        state = {"shared": state}
+    return state
+
+def family_state_response(data):
+    """家庭共享狀態：每家一本帳（familyGroupId 分家）。正式編號（UUID）走雲端桌子；
+    試營運的裝置編號走引擎本子——真帳號上線後自動回到雲端桌子、格式不變。"""
+    data = data or {}
+    action = data.get("action") or "load"
+    group = str(data.get("familyGroupId") or data.get("family_group_id") or "shared")
+    group_uuid = group if _looks_like_uuid(group) else None
+    use_supabase = bool(group_uuid) or group == "shared"
+    if action == "save":
+        key = data.get("key")
+        if key not in FAMILY_STATE_KEYS:
+            return {"ok": False, "error": "key_not_allowed"}
+        if use_supabase and key in FAMILY_STATE_SUPABASE_KEYS:
+            try:
+                backend = data_backend()
+                remote_entry = backend.save_family_state_entry(
+                    key,
+                    data.get("value"),
+                    family_group_id=group_uuid,
+                    updated_by_person_id=data.get("personId") or data.get("person_id"),
+                )
+                if remote_entry is not None:
+                    return {"ok": True, "key": key, "backend": "supabase"}
+            except Exception as e:
+                if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
+                    raise e
+                log_fallback_exception("save family state to Supabase", e)
+        allstate = _family_state_json_all()
+        g = allstate.setdefault(group, {})
+        g[key] = {"value": data.get("value"), "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
+        write_json_file(FAMILY_STATE_STORE_PATH, allstate)
+        return {"ok": True, "key": key, "backend": "json"}
+    merged = {}
+    if use_supabase:
+        try:
+            remote_state = data_backend().load_family_state_store(family_group_id=group_uuid)
+            if remote_state is not None:
+                merged.update({k: v.get("value") for k, v in remote_state.items() if isinstance(v, dict)})
+        except Exception as e:
+            if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
+                raise e
+            log_fallback_exception("load family state from Supabase", e)
+    allstate = _family_state_json_all()
+    for k, v in (allstate.get(group) or {}).items():
+        if isinstance(v, dict):
+            merged[k] = v.get("value")
+    return {"ok": True, "state": merged}
 
 FAMILY_INVITATION_STATUSES = {"pending", "accepted", "revoked", "expired"}
 
@@ -645,7 +667,7 @@ def load_family_invitations(family_group_id=None, status=None, limit=100):
         if remote_invitations is not None:
             return [public_family_invitation(inv) for inv in remote_invitations]
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
+        if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
         log_fallback_exception("load family invitations from Supabase", e)
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
@@ -668,7 +690,8 @@ def create_family_invitation(invitation):
         if remote_invitation is not None:
             return public_family_invitation({**remote_invitation, "shareToken": share_token}, include_share_token=True), "supabase"
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
+        # 22P02＝雲端桌子要正式編號（真帳號上線前給的是裝置編號）→ 退引擎本子記帳、功能照常
+        if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
         log_fallback_exception("create family invitation in Supabase", e)
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
@@ -689,7 +712,7 @@ def update_family_invitation(invitation_id, patch):
         if remote_invitation is not None:
             return public_family_invitation(remote_invitation), "supabase"
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
+        if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
         log_fallback_exception("update family invitation in Supabase", e)
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
@@ -717,6 +740,41 @@ def family_invitations_response(data):
     action = data.get("action") or "list"
     if action == "create":
         invitation, backend = create_family_invitation(data.get("invitation") or data)
+        return {"ok": True, "invitation": invitation, "backend": backend}
+    if action == "accept":
+        # 用 6 位邀請碼兌換：找到待接受的邀請 → 標記接受 → 回傳（含 familyGroupId，App 端據此入圈）
+        raw_code = str(data.get("shortCode") or data.get("short_code") or data.get("code") or "")
+        short_code = "".join(ch for ch in raw_code if ch.isdigit())[-6:]
+        if len(short_code) != 6:
+            return {"ok": False, "error": "short_code_required"}
+        candidates = list(load_family_invitations(limit=500))
+        try:
+            local_raw = read_json_file(FAMILY_INVITATIONS_PATH, [])
+            if isinstance(local_raw, list):
+                candidates.extend(public_family_invitation(inv) for inv in local_raw)   # 雲端桌子＋引擎本子都翻
+        except Exception:
+            pass
+        match = None
+        for inv in candidates:
+            if inv.get("shortCode") == short_code and inv.get("status") == "pending":
+                match = inv
+        if not match:
+            return {"ok": False, "error": "invitation_not_found"}
+        try:
+            exp = str(match.get("expiresAt") or "").replace("Z", "+00:00")
+            if exp and datetime.fromisoformat(exp) < datetime.now(timezone.utc):
+                return {"ok": False, "error": "invitation_expired"}
+        except Exception:
+            pass
+        patch = {
+            "status": "accepted",
+            "acceptedAt": utc_now(),
+            "inviteePersonId": data.get("inviteePersonId") or data.get("invitee_person_id"),
+            "metadata": {**(match.get("metadata") or {}), "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24]},
+        }
+        invitation, backend = update_family_invitation(match.get("id"), patch)
+        if invitation is None:
+            return {"ok": False, "error": backend}
         return {"ok": True, "invitation": invitation, "backend": backend}
     if action == "update":
         invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")

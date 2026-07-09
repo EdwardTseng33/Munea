@@ -52,3 +52,5 @@ __pycache__/
 # Slack 投遞口暫存檔（灌完保險箱即刪、永不入庫）
 deploy/cloudrun/ops-webhook.txt
 deploy/cloudrun/alerts-webhook.txt
+
+engine/family_invitations.json

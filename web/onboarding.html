@@ -249,7 +249,6 @@
       <span id="obNextText">開始幫媽媽設定</span>
       <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </button>
-    <button class="ob-btn ghost" id="obDash" style="display:none">我先看看「家人」儀表板</button>
   </div>
 
 </div>
@@ -262,7 +261,6 @@
   const dots = [...document.querySelectorAll('.ob-dots i')];
   const nextBtn = document.getElementById('obNext');
   const nextText = document.getElementById('obNextText');
-  const dashBtn = document.getElementById('obDash');
   const Profile = window.MuneaCompanionProfile;
   const companionNameInput = document.getElementById('companionNameSetup');
   const doneCompanionPreview = document.getElementById('doneCompanionPreview');
@@ -289,7 +287,6 @@
       if (mode === 'self') { if (k) k.textContent = '第 1 步 · 認識你'; if (h) h.textContent = '先讓沐寧認識你'; }
       else { if (k) k.textContent = '第 1 步 · 給誰用'; if (h) h.textContent = '這支手機，是給誰用的？'; }
     }
-    dashBtn.textContent = (mode === 'self') ? '先看看設定' : '搶先看「家人」儀表板（示範）';
   }
 
   function render() {
@@ -297,7 +294,6 @@
     dots.forEach((d, n) => d.classList.toggle('on', n === i));
     nextText.textContent = labelsByMode[mode][i];
     nextBtn.style.display = (i === 0) ? 'none' : 'flex';
-    dashBtn.style.display = (i === last && mode === 'family') ? 'block' : 'none';
     const consentRequired = i === last && aiProviderConsentSetup && !aiProviderConsentSetup.checked;
     nextBtn.disabled = consentRequired;
     nextBtn.setAttribute('aria-disabled', consentRequired ? 'true' : 'false');
@@ -410,10 +406,6 @@
       await bootstrapAccount(profile);
       window.location.href = 'index.html';
     }   // 交給長輩 → 長輩端 App
-  });
-  dashBtn.addEventListener('click', () => {
-    if (!saveAiProviderConsent('web-onboarding-family-dashboard')) { render(); return; }
-    window.location.href = 'family.html';
   });
   if (aiProviderConsentSetup) aiProviderConsentSetup.addEventListener('change', render);
 
