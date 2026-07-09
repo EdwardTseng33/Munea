@@ -25,6 +25,8 @@
 
 **⑬（7/9 中午 Windows）1.6.1→1.7.0 三連發**：①1.6.1 設定頁「給開發者的建議」（改名＋四類型換 stroke 線條圖標＋NPS 改拉桿 Bar 條：填色軌道/32px 圓鈕/大字即時讀數）；②1.6.2 修家人頁 .card/.row 樣式漏套（原只掛 #status → 補 #family、卡片框與並排回歸）＋聊聊待機動畫閃頻（雙片交叉淡入）；③**1.7.0 六角色待機動態全員上線**（Edward 供片全到）——小昀/阿原/咪咪/旺財 hello+idle 接上、咪咪雙待機段（含舔鼻子）輪播；FaceIdle 升級播放清單引擎（兩支播放器輪班、下一段先備好、出畫面才交叉淡入、退場片等淡出完才裝下一段）。九支新片壓完共 ~1.2MB。真機閃頻手感請下一包 TestFlight 驗。selftest 19/19（版本三處 1.7.0）。
 
+**⑭（7/9 傍晚 Windows）Google 登入門打開了（真帳號第二波）**：①Google 雲端同意畫面建好（沐寧 Munea·外部·聯絡信箱）＋網頁登入門牌「Munea 登入（Supabase）」發好（回跳網址=資料櫃 callback）＋**發布狀態推到「實際運作中」**（任何 Google 帳號都能登、不限測試名單）；②資料櫃 Google 供應商已啟用（門牌＋密語填入、Successfully updated 確認、`/auth/v1/settings` 實測 google=開）。**Apple 登入待兩步**：(a) Edward 本人登入 developer.apple.com（票過期、密碼不代打）→ 我接手開能力+Services ID+簽名鑰匙+填資料櫃 (b) **給 Mac**：App 殼要接 OAuth 回跳（自訂 URL scheme 或 Universal Link → 導回 App），並確認資料櫃 URL Configuration 的允許回跳清單含 App scheme。⚠ 安全註記（給沙利曼）：Google 密語建立當下在瀏覽器頁面亮過、有進本機作業記錄——風險低（只在 Edward 本機），要零風險就到門牌頁一鍵停用舊密語換新（App 不受影響、資料櫃改貼新密語即可）。
+
 ### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
 - 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）
 - ⚠ 兩服務**鎖門中**：呼叫要帶 Google 通行證（`gcloud auth print-identity-token`）；開門方式待 Edward 拍板（不擋你手上的真機/付款工作）
