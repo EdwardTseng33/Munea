@@ -48,3 +48,7 @@ __pycache__/
 
 # 素材工作資料夾（288MB 生圖原稿·正確的家在 E:/Claude/image-assets/·防誤入庫 2026-07-08）
 /Munea/
+
+# Slack 投遞口暫存檔（灌完保險箱即刪、永不入庫）
+deploy/cloudrun/ops-webhook.txt
+deploy/cloudrun/alerts-webhook.txt
