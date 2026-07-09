@@ -157,6 +157,27 @@ The command verifies the active gcloud account, project, Cloud Run service readi
 npm run cloudrun:status -- -Strict
 ```
 
+## Admin Console Smoke
+
+After the Admin MVP shell is deployed, verify the internal dashboard and read-only admin endpoints:
+
+```powershell
+npm run smoke:admin -- `
+  -BaseUrl https://YOUR-STAGING-API.example.com `
+  -AdminToken "<STAGING_ADMIN_TOKEN>"
+```
+
+For a locked Cloud Run service, let the script request a short-lived Google identity token from local `gcloud`:
+
+```powershell
+npm run smoke:admin -- `
+  -BaseUrl https://YOUR-LOCKED-CLOUD-RUN-URL `
+  -AdminToken "<STAGING_ADMIN_TOKEN>" `
+  -UseGcloudIdentityToken
+```
+
+This confirms `/admin.html` is served, unauthenticated admin reads are rejected, and the token-gated account, usage, credits, conversation-summary, privacy, safety, and audit read contracts return `ok:true`. The script never prints the admin token.
+
 ## TestFlight Backend Strategy
 
 There are two valid first TestFlight tracks:

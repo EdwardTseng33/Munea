@@ -2729,6 +2729,8 @@ from pathlib import Path
 html = Path("web/admin.html").read_text(encoding="utf-8")
 js = Path("web/src/admin.js").read_text(encoding="utf-8")
 css = Path("web/src/admin.css").read_text(encoding="utf-8")
+script = Path("scripts/admin-smoke.ps1").read_text(encoding="utf-8")
+package = Path("package.json").read_text(encoding="utf-8")
 required_html = [
     "Munea Admin",
     "apiBaseUrl",
@@ -2776,6 +2778,11 @@ if "localStorage.setItem(\"adminToken\"" in js or "localStorage.setItem('adminTo
 for token in ["metric-grid", "admin-grid", "status-pill", "@media"]:
     if token not in css:
         raise SystemExit("Admin console CSS missing responsive token: " + token)
+for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "/admin.html", "/admin/accounts"]:
+    if token not in script:
+        raise SystemExit("Admin smoke missing token: " + token)
+if '"smoke:admin"' not in package:
+    raise SystemExit("package.json missing smoke:admin script")
 print("admin console contract OK")
 '@
 Pass "Admin console is present and keeps secrets out of static assets"
