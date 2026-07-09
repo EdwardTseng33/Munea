@@ -33,6 +33,8 @@
 
 **⑰（7/9 晚 Windows）1.8.3 聊聊接通延遲修兩段（回應 Mac 真機診斷）**：Edward 真機三症狀，Mac 診斷交雲端側、我接。①**「叫2-3次Hello才回」→ AI主動先開口**（`live_voice_server.py`：session 開好立刻送打招呼 cue，寧寧接通就主動問候、用戶不必說hello）——**已交付試吃檯 munea-voice-staging rev 00004、冒煙 HTTP 200**（App 預設就連這條、立即生效）；keep-warm 沒開（NT$600/月爆預算、無真用戶不划算，真上線再議）。②**「聲音先出臉定住6秒」→ 待機動態接住冷啟窗**（client：connectCall 不定格照片、faceVid 真出畫面才 crossfade）。③**臉預建 WebRTC**（把 ICE 挪到通話前）成本可接受、**交 Mac 接**（Avatar.wake 從只打/health→進頁就 Avatar.start）。④A-V sync 嘴慢半拍＝引擎側最硬、獨立一輪工程。selftest 22/22（版本三處 1.8.3）。詳見 `docs/協作看板-雙AI分工.md`。
 
+**⑱（7/9 晚 Windows）1.8.4 臉更快喚醒＋貓狗聲音（Edward 方案二＋語音調整）**：①**方案二＝進聊聊頁就喚醒顯卡**（`Avatar.wake` 升級：一路探 /health 到 `warm=true`、涵蓋冷啟 8-10s、離頁自動停不空燒）——通常讀完招呼按通話時臉已就緒；不阻塞語音（聲音仍即接、臉沒好由待機動態頂著、好了 crossfade）。②**貓狗聲音**：咪咪 Aoede→**Puck**（更高更調皮、古靈精怪小屁孩 style）；旺財維持 **Orus**（低沉、安全音組最低的自由聲）＋小男孩頑皮 style——⚠ Gemini Live 是固定音色、無法真調 pitch，只能選音色＋語氣導引；Edward A/B 後若要更低，唯一更深是 Charon（阿宏用、會撞），需 Edward 拍板是否共用。**已交付試吃檯 munea-voice-staging rev 00005、冒煙 HTTP 200**（貓狗新聲＋主動打招呼都在線上）。③**顯卡連續 1 小時成本**：Modal L4 ≈ US$0.8-1／小時 ≈ **NT$26-32/小時**（+語音橋 Cloud Run 微量）；2 分鐘沒人用自動睡、只在通話期間計費。版本三處 1.8.4。
+
 ### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
 - 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）
 - ⚠ 兩服務**鎖門中**：呼叫要帶 Google 通行證（`gcloud auth print-identity-token`）；開門方式待 Edward 拍板（不擋你手上的真機/付款工作）
