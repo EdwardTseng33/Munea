@@ -2554,6 +2554,7 @@ function init() {
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
   if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
   if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', async () => {
+    if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; }   // 雙保險：免費不能入別人的圈
     const code = ($('#joinCodeInput').value || '').trim();
     if (!code || code.replace(/\D/g, '').length < 4) { toast('把家人給你的邀請碼打進去（例：MUNEA-284753）'); return; }
     const btn = $('#joinCircleBtn');
@@ -2574,6 +2575,8 @@ function init() {
         toast('加入了！你們現在在同一個照護圈，動態會互相看得到。');
       } else if (j && j.error === 'invitation_expired') {
         toast('這組邀請碼過期了，請家人重新產一組給你。');
+      } else if (j && j.error === 'circle_full') {
+        toast('這個照護圈人數已滿，請家人升級方案後再邀請你。');
       } else {
         toast('找不到這組邀請碼，跟家人核對一下數字。');
       }
@@ -2609,7 +2612,7 @@ function init() {
       if (/^MUNEA-\d{6}$/.test(cached) && Date.now() - at < 172800000) return cached;
     } catch (e) {}
     try {
-      const r = await fetch(brainURL('/family/invitations'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', familyGroupId: famGroupId(), inviterPersonId: muneaDeviceId() }) });
+      const r = await fetch(brainURL('/family/invitations'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', familyGroupId: famGroupId(), inviterPersonId: muneaDeviceId(), metadata: { maxMembers: CIRCLE_LIMITS[circlePlan()] || 4, plan: circlePlan() } }) });
       const j = await r.json();
       if (j && j.ok && j.invitation && j.invitation.shortCode) {
         const code = 'MUNEA-' + j.invitation.shortCode;
@@ -3150,7 +3153,12 @@ function init() {
     const b = e.target.closest('.fam-switch-item'); if (!b) return;
     const p = b.dataset.person;
     if (p === 'all') showFamAll();
-    else if (p === 'invite') { if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } }
+    else if (p === 'invite') {
+      // 家人頁的邀請入口也要守門：免費不能邀、滿了不能再邀（跟設定頁同一套規則）
+      if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; }
+      if (loadCircle().length >= (CIRCLE_LIMITS[circlePlan()] || 4)) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; }
+      if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); }
+    }
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
   });
   const healthList = $('#healthList');

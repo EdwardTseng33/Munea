@@ -766,6 +766,16 @@ def family_invitations_response(data):
                 return {"ok": False, "error": "invitation_expired"}
         except Exception:
             pass
+        # 人數上限（邀請單建立時記下邀請方方案的上限）：圈滿了就不給進
+        try:
+            max_members = int(((match.get("metadata") or {}).get("maxMembers")) or 0)
+            if max_members:
+                circle_state = family_state_response({"action": "load", "familyGroupId": match.get("familyGroupId")}).get("state") or {}
+                circle = circle_state.get("circle")
+                if isinstance(circle, list) and len(circle) >= max_members:
+                    return {"ok": False, "error": "circle_full"}
+        except Exception:
+            pass
         patch = {
             "status": "accepted",
             "acceptedAt": utc_now(),
