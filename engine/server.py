@@ -549,9 +549,9 @@ def load_wellbeing_signals(person_id=None, limit=200):
     return signals[-limit:]
 
 
-FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "visits", "routine", "wallet", "circle"}
+FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "visits", "routine", "wallet", "circle", "vitals"}
 
-FAMILY_STATE_SUPABASE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine", "wallet"}  # 雲端桌子目前只收這幾把鑰匙
+FAMILY_STATE_SUPABASE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine", "wallet", "vitals"}  # 雲端桌子收的鑰匙（vitals 需 008 遷移；沒上桌前自動退引擎本子）
 
 def _looks_like_uuid(v):
     try:
@@ -582,24 +582,45 @@ def family_state_response(data):
         key = data.get("key")
         if key not in FAMILY_STATE_KEYS:
             return {"ok": False, "error": "key_not_allowed"}
+        value_to_store = data.get("value")
+        if key == "vitals":
+            # 健康數據＝每人一份（7/9 Edward「數據真同步」）：跟既有帳「按人合併」、
+            # 絕不整包覆蓋——否則兩支手機互相蓋掉對方的數據。進來的格式 {personId: {..當天摘要..}}。
+            incoming = value_to_store if isinstance(value_to_store, dict) else {}
+            current = {}
+            if use_supabase:
+                try:
+                    remote_state = data_backend().load_family_state_store(family_group_id=group_uuid)
+                    ent = (remote_state or {}).get("vitals")
+                    if isinstance(ent, dict) and isinstance(ent.get("value"), dict):
+                        current = dict(ent["value"])
+                except Exception as e:
+                    log_fallback_exception("load vitals for merge", e)
+            if not current:
+                ent = (_family_state_json_all().get(group) or {}).get("vitals") or {}
+                if isinstance(ent.get("value"), dict):
+                    current = dict(ent["value"])
+            current.update(incoming)
+            value_to_store = current
         if use_supabase and key in FAMILY_STATE_SUPABASE_KEYS:
             try:
                 backend = data_backend()
                 remote_entry = backend.save_family_state_entry(
                     key,
-                    data.get("value"),
+                    value_to_store,
                     family_group_id=group_uuid,
                     updated_by_person_id=data.get("personId") or data.get("person_id"),
                 )
                 if remote_entry is not None:
                     return {"ok": True, "key": key, "backend": "supabase"}
             except Exception as e:
-                if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
+                # 23514＝雲端桌子還不認這把鑰匙（vitals 待 008 遷移）→ 安靜退引擎本子、不炸用戶
+                if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e) and "23514" not in str(e):
                     raise e
                 log_fallback_exception("save family state to Supabase", e)
         allstate = _family_state_json_all()
         g = allstate.setdefault(group, {})
-        g[key] = {"value": data.get("value"), "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
+        g[key] = {"value": value_to_store, "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
         write_json_file(FAMILY_STATE_STORE_PATH, allstate)
         return {"ok": True, "key": key, "backend": "json"}
     merged = {}

@@ -1376,26 +1376,10 @@ function enableSheetDrag() {
   window.addEventListener('mousemove', e => { if (active) move(e.clientY); });
   window.addEventListener('mouseup', end);
 }
-function demoAuthOn() {
-  try { return (localStorage.getItem('munea.demoAuth') || 'in') === 'in'; } catch (e) { return true; }
-}
 function updateAuthUI() {
+  // 7/9 正式化：示範假登入（陳秀英）拆除——畫面只反映真實登入狀態
   const state = authState();
   let signedIn = state.status === 'signed-in';
-  // 示範機：未接雲端時，以「陳秀英 · 家庭成員」的已登入狀態展示（登出可切回訪客）
-  if (!signedIn && demoAuthOn()) {
-    const card0 = $('#authCard');
-    if (card0) card0.dataset.authState = 'signed-in';
-    if ($('#authStatusText')) $('#authStatusText').textContent = '陳秀英';
-    if ($('#authProviderText')) $('#authProviderText').textContent = '我的帳號 · 資料已同步';
-    if ($('#authEmailText')) $('#authEmailText').textContent = '';
-    if ($('#authSignInBtn')) $('#authSignInBtn').hidden = true;
-    if ($('#authSignOutBtn')) $('#authSignOutBtn').hidden = false;
-    if ($('#authDevBadge')) $('#authDevBadge').hidden = true;
-    if ($('#authAvatar')) $('#authAvatar').classList.remove('guest');
-    renderAiDiagnostics();
-    return;
-  }
   if ($('#authAvatar')) $('#authAvatar').classList.toggle('guest', !signedIn);
   const card = $('#authCard');
   if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
@@ -1418,11 +1402,9 @@ function updateAuthUI() {
   renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
-  if (isStaticPreview() || authState().configured === false) {
-    try { localStorage.setItem('munea.demoAuth', 'in'); } catch (e) {}
-    closeAuthSheet();
-    updateAuthUI();
-    toast('歡迎回來，陳秀英');
+  // 7/9 正式化：沒設定好就老實說、不再假裝登入成功
+  if (authState().configured === false) {
+    setAuthMessage('登入服務還沒接上，請稍後再試', 'error');
     return;
   }
   const auth = window.MuneaAuth;
@@ -1470,9 +1452,7 @@ function setupAuthControls() {
   if ($('#authSignOutBtn')) $('#authSignOutBtn').addEventListener('click', async () => {
     const state = authState();
     if (state.status === 'signed-in') { await signOutAuth(); return; }
-    try { localStorage.setItem('munea.demoAuth', 'out'); } catch (e) {}
     updateAuthUI();
-    toast('已登出，資料還安全放著；再登入就接回來');
   });
   if ($('#authCloseBtn')) $('#authCloseBtn').addEventListener('click', closeAuthSheet);
   if ($('#authAppleBtn')) $('#authAppleBtn').addEventListener('click', () => signInWithAuthProvider('apple'));
@@ -1718,6 +1698,7 @@ window.__muneaSetHealth = function (s) {
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = txt;
+    el.style.display = '';   // 真數據到了就把標籤點亮（沒接裝置時是藏起來的）
     el.style.background = warn ? 'var(--coral-soft)' : 'var(--mint)';
     el.style.color = warn ? 'var(--coral-d)' : 'var(--teal-dd)';
   };
@@ -1746,7 +1727,11 @@ window.__muneaSetHealth = function (s) {
     put('sleepNum', String(Math.round(sleep * 10) / 10));
     if (sleep < 6) worry.push('昨晚睡得少');
   }
-  if (steps) put('stepsNum', Math.round(steps).toLocaleString());
+  if (steps) {
+    put('stepsNum', Math.round(steps).toLocaleString());
+    // 運動量不足（7/9 Edward 點題）：傍晚後還走不到 3000 步才提、白天不亂催
+    if (new Date().getHours() >= 18 && steps < 3000) worry.push('今天走得比較少');
+  }
   // 寧寧的觀察：有真資料才改寫，一句話講重點
   const obs = document.getElementById('obsText');
   if (obs && (sys || hr || sleep)) {
@@ -1759,6 +1744,7 @@ window.__muneaSetHealth = function (s) {
     obs.innerHTML = worry.length
       ? head + '大致都穩，不過' + B(worry.join('、')) + '，我幫你多留意，先別擔心。'
       : head + '整體狀態不錯。<span style="color:#8FD4CC;font-weight:700">保持這個節奏就很好</span>，想出門走走我陪你。';
+    window.__muneaObsReal = obs.innerHTML;   // 真觀察已寫：分頁切換不得用預設蓋掉
   }
   // 安全通知（真的動）：數據掉出危險範圍 → 寫進家人動態（雲端同步、家人打開沐寧就看到）；同類 6 小時最多一次
   try {
@@ -1792,6 +1778,14 @@ window.__muneaSetHealth = function (s) {
     const keys = Object.keys(log).sort();
     while (keys.length > 35) delete log[keys.shift()];
     localStorage.setItem('munea.healthLog', JSON.stringify(log));
+    // 健康數據真同步（7/9 Edward）：今天這筆＋35 天日記帳推上家人水管（每人一份、雲端按人合併）
+    // ——家人手機的家人頁數據卡與 7/30 天趨勢就都是真的
+    try {
+      const pf = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
+      const mine = {};
+      mine[muneaDeviceId()] = Object.assign({ name: (pf.name || '').trim(), nick: (pf.nick || '').trim(), day, updatedAt: Date.now(), log }, cur);
+      syncPush('vitals', mine);
+    } catch (e2) {}
   } catch (e) {}
 };
 function renderMedList() { renderMedSlots(); }
@@ -1978,6 +1972,7 @@ function famGroupId() {
     return g;
   } catch (e) { return 'fam-anon'; }
 }
+function myFeedName() { try { const p2 = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); return (p2.nick || p2.name || '').trim() || '家人'; } catch (e) { return '家人'; } }
 function myProfileName() {
   try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); return (p.name || p.nick || '').trim(); } catch (e) { return ''; }
 }
@@ -1991,7 +1986,7 @@ async function syncPullAll() {
     const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'load', familyGroupId: famGroupId() }) });
     if (!r.ok) return;
     const st = (await r.json()).state || {};
-    const map = { activities: 'munea.activities', familyFeed: 'munea.familyFeed2', meds: 'munea.meds', visit: 'munea.visit', visits: 'munea.visits', routine: 'munea.routine' };
+    const map = { activities: 'munea.activities', familyFeed: 'munea.familyFeed2', meds: 'munea.meds', visit: 'munea.visit', visits: 'munea.visits', routine: 'munea.routine', vitals: 'munea.famVitals' };
     for (const k in map) {
       if (st[k] !== undefined && st[k] !== null) {
         try { localStorage.setItem(map[k], JSON.stringify(st[k])); } catch (e) {}
@@ -2257,7 +2252,7 @@ function refreshTaskProgress() {
   if (done === items.length && items.length && !window.__celebrated) {
     window.__celebrated = true;
     setTimeout(() => toast('今天' + items.length + '件都完成了，我跟家人說一聲'), 250);
-    if (typeof pushFamilyFeed === 'function') pushFamilyFeed('<b>阿嬤</b>今天把該做的都完成了，給她一個讚');
+    if (typeof pushFamilyFeed === 'function') pushFamilyFeed('<b>' + myFeedName() + '</b>今天把該做的都完成了，給他一個讚');
   }
   const pillTask = document.querySelector('.task-item[data-task="pill"]');
   const pv = $('#statPillVal');
@@ -2584,7 +2579,7 @@ function init() {
     return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
   }
   let _pfPendingAvatar = '';
-  const PF_DEF = { name: '陳秀英', nick: '阿嬤', birth: '1954 年 3 月', city: '台北市' };
+  const PF_DEF = { name: '', nick: '', birth: '', city: '' };   // 7/9 正式化：不再預設示範身分（陳秀英/阿嬤）——空欄位＋提示字自己填
   function loadPersonProfile() { try { return Object.assign({}, PF_DEF, JSON.parse(localStorage.getItem('munea.personProfile') || '{}')); } catch (e) { return Object.assign({}, PF_DEF); } }
   function fillPersonProfile() {
     const p = loadPersonProfile();
@@ -2618,7 +2613,7 @@ function init() {
     try { localStorage.setItem('munea.personProfile', JSON.stringify(p)); } catch (e) {}
     if (typeof applyUserAvatar === 'function') applyUserAvatar();
     $('#profileModal').classList.remove('show');
-    toast('存好了，' + p.name + '，資料我記著。');
+    toast(p.name ? ('存好了，' + p.name + '，資料我記著。') : '存好了，資料我記著。');
   });
   if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
   if ($('#profileClose')) $('#profileClose').addEventListener('click', () => $('#profileModal').classList.remove('show'));
@@ -2626,7 +2621,7 @@ function init() {
   function renderPfAvatar(av, nick) {
     const box = $('#pfAvatar'); if (!box) return;
     if (av) { box.style.backgroundImage = 'url(' + av + ')'; box.textContent = ''; if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = false; }
-    else { box.style.backgroundImage = ''; box.textContent = (nick || '阿嬤').slice(0, 1); if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = true; }
+    else { box.style.backgroundImage = ''; box.textContent = (nick || '我').slice(0, 1); if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = true; }
   }
   function resizeAvatar(file, cb, onErr) {
     if (!looksLikeImage(file)) { if (onErr) onErr(); return; }
@@ -2645,7 +2640,7 @@ function init() {
   window.__muneaApplyUserAvatar = applyUserAvatar;
   if ($('#pfAvatarBtn')) $('#pfAvatarBtn').addEventListener('click', () => { if ($('#pfAvatarFile')) $('#pfAvatarFile').click(); });
   if ($('#pfAvatarFile')) $('#pfAvatarFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#pfAvatar'); if (box) box.classList.add('processing'); resizeAvatar(f, dataUrl => { if (box) box.classList.remove('processing'); _pfPendingAvatar = dataUrl; renderPfAvatar(dataUrl); }, () => { if (box) box.classList.remove('processing'); toast('這張照片讀不到，換一張相簿裡的照片試試'); }); });
-  if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '阿嬤'); });
+  if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '我'); });
   applyUserAvatar();
   // 家庭照護圈
   const CIRCLE_LIMITS = { free: 0, plus: 4, pro: 12 };                       // Plus 最多 4 人、Pro 最多 12 人
@@ -2653,13 +2648,13 @@ function init() {
   const PLAN_POINTS = { free: 0, plus: 200, pro: 500 };                       // 每月贈點
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
-  const CIRCLE_DEFAULT = [
-    { name: '陳秀英', init: '嬤', tint: 'p-ama', self: true },
-    { name: '美華', init: '華', tint: 'p-mei' },
-    { name: '志明', init: '明', tint: 'p-zhi' },
-    { name: '小寶', init: '寶', tint: 'p-bao' }
-  ];
-  function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : CIRCLE_DEFAULT.slice(); } catch (e) { return CIRCLE_DEFAULT.slice(); } }
+  // 7/9 正式化：不再預設示範四人家庭——圈子從「只有本人」開始，家人用邀請碼真的加進來
+  function circleSelfMember() {
+    let nm = '', ini = '我';
+    try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); nm = (p.name || p.nick || '').trim(); ini = ((p.nick || nm || '我')[0]) || '我'; } catch (e) {}
+    return { name: nm || '我', init: ini, tint: 'p-ama', self: true };
+  }
+  function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : [circleSelfMember()]; } catch (e) { return [circleSelfMember()]; } }
   function saveCircle(a2) {
     try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {}
     syncPush('circle', a2.map(m => ({ name: m.name, init: m.init, tint: m.tint })));   // 圈名單上雲（不帶「本人」標記）
@@ -2817,26 +2812,50 @@ function init() {
     pushFamilyFeed(`<b>你</b>給${who}${b.dataset.react || '送上心意'}，${cname()}會在下次聊天時帶到`);
   });
 
-  // 全家健康圈：切換成員看健康
-  // 每位家人的完整看板（Edward 7/9：心情/用藥/血壓/心率/血氧/睡眠/運動量都要有）
-  // 家人健康數據（示範）：欄位結構照狀態頁「今天」——血壓/心率雙卡＋血氧/睡眠/運動量三格＋用藥卡
-  const PERSON_STATS = {
-    '美華': { bp: { n: '118', u: '/76 mmHg', chip: '穩定', warn: 0, sub: '正常範圍內' }, hr: { n: '68', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '98', sleep: '6.2', steps: '8,900', med: null },
-    '志明': { bp: { n: '132', u: '/86 mmHg', chip: '偏高', warn: 1, sub: '比平常高一點，多留意' }, hr: { n: '75', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '97', sleep: '7.1', steps: '7,400', med: { sub: '1/1 次 · 都記到了', chip: '都吃了', warn: 0 } },
-    '小寶': { bp: { n: '105', u: '/65 mmHg', chip: '穩定', warn: 0, sub: '正常範圍內' }, hr: { n: '80', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '99', sleep: '8.8', steps: '11,200', med: null },
-  };
-  // 每位家人的心情監測（心情卡不再只有阿嬤有）
-  const PERSON_MOOD = {
-    '阿嬤': { title: '今天聊得很開心', sub: '和{n}聊了 2 次 · 有一小段有點火氣', obs: '<span>聲音</span> 有精神　<span>聊天</span> 話匣子全開', topics: ['孫子畢業', '推銷電話'] },
-    '美華': { title: '有點忙、心情平穩', sub: '和{n}聊了 1 次 · 語氣平穩', obs: '<span>聲音</span> 平穩　<span>聊天</span> 簡短有條理', topics: ['工作', '晚餐吃什麼'] },
-    '志明': { title: '平常心', sub: '今天還沒跟{n}聊', obs: '<span>上次</span> 昨天晚上　<span>語氣</span> 輕鬆', topics: ['棒球', '爬山'] },
-    '小寶': { title: '活力滿滿', sub: '和{n}聊了 3 次 · 一直笑', obs: '<span>聲音</span> 開心　<span>聊天</span> 話多', topics: ['寶可夢', '學校'] },
-  };
+  // 全家健康圈：切換成員看健康（7/9 正式化：示範看板已拆、一律吃真同步數據）
+  // 家人真數據（7/9 Edward「數據真同步」）：從家人水管拉回的 munea.famVitals 依名字對人
+  function famVitalsFor(name) {
+    try {
+      const all = JSON.parse(localStorage.getItem('munea.famVitals') || '{}');
+      let best = null;
+      for (const pid in all) {
+        const v = all[pid];
+        if (!v || typeof v !== 'object') continue;
+        if ((v.name && v.name === name) || (v.nick && v.nick === name)) {
+          if (!best || (v.updatedAt || 0) > (best.updatedAt || 0)) best = v;
+        }
+      }
+      return best;
+    } catch (e) { return null; }
+  }
+  // 真數據 → 顯示格式（門檻白話跟狀態頁同一套規則）
+  function vitalsToDisplay(v) {
+    if (!v) return null;
+    const sys = +v.bpSys || 0, dia = +v.bpDia || 0, hr = +v.hr || 0, spo2 = +v.spo2 || 0, sleep = +v.sleepHours || 0, steps = +v.steps || 0;
+    const d = { bp: null, hr: null, spo2: null, sleep: null, steps: null, med: null, day: v.day || '' };
+    if (sys && dia) {
+      const hi = sys >= 140 || dia >= 90, lo = sys < 90;
+      d.bp = { n: String(Math.round(sys)), u: '/' + Math.round(dia) + ' mmHg', chip: hi ? '偏高' : lo ? '偏低' : '穩定', warn: (hi || lo) ? 1 : 0, sub: hi ? '比平常高一點，多留意' : lo ? '偏低一些，起身動作放慢' : '正常範圍內' };
+    }
+    if (hr) {
+      const odd = hr < 50 || hr > 100;
+      d.hr = { n: String(Math.round(hr)), chip: odd ? '注意' : '正常', warn: odd ? 1 : 0, sub: '靜息心率' };
+    }
+    if (spo2) d.spo2 = String(Math.round(spo2));
+    if (sleep) d.sleep = String(Math.round(sleep * 10) / 10);
+    if (steps) d.steps = Math.round(steps).toLocaleString();
+    return (d.bp || d.hr || d.spo2 || d.sleep || d.steps) ? d : null;
+  }
   function renderPersonStats(p) {
     const grid = $('#personGrid');
     if (!grid) return;
-    const d = PERSON_STATS[p];
+    const d = vitalsToDisplay(famVitalsFor(p));   // 只認真數據；沒有＝老實說還沒有
     if (!d) { grid.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">等' + (p || '家人') + '連上沐寧，健康數據就會出現在這裡</div>'; return; }
+    if (!d.bp) d.bp = { n: '—', u: '', chip: '未提供', warn: 0, sub: '他的裝置還沒帶到血壓' };
+    if (!d.hr) d.hr = { n: '—', chip: '未提供', warn: 0, sub: '他的裝置還沒帶到心率' };
+    if (!d.spo2) d.spo2 = '—';
+    if (!d.sleep) d.sleep = '—';
+    if (!d.steps) d.steps = '—';
     // 標籤配色照狀態頁規範：警示=珊瑚、血壓正常=薄荷綠、心率正常=淡珊瑚（7/9 Edward 對齊設計規範）
     const chip = (t, warn, tone) => { const coral = warn || tone === 'coral'; return '<span class="chip" style="flex-shrink:0;background:' + (coral ? 'var(--coral-soft)' : 'var(--mint)') + ';color:' + (coral ? 'var(--coral-d)' : 'var(--teal-dd)') + '">' + t + '</span>'; };
     const medCard = d.med
@@ -2866,29 +2885,17 @@ function init() {
       '</div>';
   }
   function renderPersonMood(p) {
-    const m = PERSON_MOOD[p];
-    if (!m) {   // 不認識的成員不擺假觀察
-      if ($('#mcTitle')) $('#mcTitle').textContent = '還沒有觀察';
-      if ($('#mcSub')) $('#mcSub').textContent = '等' + (p || '家人') + '開始用沐寧，觀察會出現在這裡';
-      if ($('#mcObs')) $('#mcObs').innerHTML = '';
-      if ($('#mcTopics')) $('#mcTopics').innerHTML = '';
-      return;
-    }
-    if ($('#mcTitle')) $('#mcTitle').textContent = m.title;
-    if ($('#mcSub')) $('#mcSub').textContent = m.sub.replace('{n}', '沐寧');   // 家人聊的是「他自己的沐寧」，不套我這台的角色名
-    if ($('#mcObs')) $('#mcObs').innerHTML = m.obs;
-    if ($('#mcTopics')) $('#mcTopics').innerHTML = m.topics.map(t => '<i>' + t + '</i>').join('');
+    // 正式版（7/9 Edward 拆示範）：心情觀察只認真資料；跨裝置的心情摘要水管還沒接、一律誠實空狀態
+    if ($('#mcTitle')) $('#mcTitle').textContent = '還沒有觀察';
+    if ($('#mcSub')) $('#mcSub').textContent = '等' + (p || '家人') + '開始用沐寧聊天，觀察會出現在這裡';
+    if ($('#mcObs')) $('#mcObs').innerHTML = '';
+    if ($('#mcTopics')) $('#mcTopics').innerHTML = '';
   }
 
   // 家人頁名單跟「設定 → 全家健康圈」吃同一份資料（兩本帳合一）：圈裡移除了人，這裡自動跟著消失
-  const FAM_REL = { '美華': '女兒 · 45 歲', '志明': '兒子 · 42 歲', '小寶': '孫子 · 12 歲' };
-  const FAM_STATE = {
-    '美華': { pill: 'tired', pillT: '有點累', txt: '活動量達標 · 睡眠偏少', st: 'watch', stT: '留意' },
-    '志明': { pill: 'calm', pillT: '平穩', txt: '作息這週很規律', st: 'ok', stT: '安好' },
-    '小寶': { pill: 'happy', pillT: '開心', txt: '活蹦亂跳', st: 'ok', stT: '安好' },
-  };
-  let FAM_ORDER = ['美華', '志明', '小寶'];   // 本人資料在「狀態」頁，家人頁不重複顯示；實際名單由 renderFamRoster 重算
-  let currentPerson = '美華';
+  // （7/9 拆示範：稱謂/狀態不再寫死——狀態從真數據推、稱謂一律「家人」）
+  let FAM_ORDER = [];   // 本人資料在「狀態」頁，家人頁不重複顯示；實際名單由 renderFamRoster 重算
+  let currentPerson = '';
   function famInit(m) { return m.init || (m.name || '')[0] || ''; }
   function renderFamRoster() {
     const mem = loadCircle().filter(m => !m.self);
@@ -2898,13 +2905,17 @@ function init() {
       const allBtn = fs.querySelector('[data-person="all"]');
       const invBtn = fs.querySelector('[data-person="invite"]');
       fs.innerHTML = (allBtn ? allBtn.outerHTML : '') + mem.map(m =>
-        '<button class="fam-switch-item" data-person="' + m.name + '" data-rel="' + (FAM_REL[m.name] || '家人') + '" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '"><span class="fs-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span><span class="fs-name">' + m.name + '</span></button>'
+        '<button class="fam-switch-item" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '"><span class="fs-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span><span class="fs-name">' + m.name + '</span></button>'
       ).join('') + (invBtn ? invBtn.outerHTML : '');
     }
     const hl = $('#healthList');
     if (hl) hl.innerHTML = mem.length ? mem.map(m => {
-      const s = FAM_STATE[m.name] || { pill: 'calm', pillT: '平穩', txt: '等他加入連上，就看得到狀態', st: 'ok', stT: '安好' };
-      return '<div class="health-row" data-person="' + m.name + '" data-rel="' + (FAM_REL[m.name] || '家人') + '" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '">' +
+      // 7/9 正式化：狀態從真同步數據推（有數據＝安好＋最後更新日；沒有＝老實說等他連上）
+      const rv = famVitalsFor(m.name);
+      const s = rv
+        ? { pill: 'calm', pillT: '平穩', txt: '數據更新於 ' + (rv.day || '近日'), st: 'ok', stT: '安好' }
+        : { pill: 'calm', pillT: '—', txt: '等他加入連上，就看得到狀態', st: 'ok', stT: '未連' };
+      return '<div class="health-row" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '">' +
         '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
         '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state"><em class="mood-pill ' + s.pill + '">' + s.pillT + '</em>' + s.txt + '</div></div>' +
         '<div class="hr-status ' + s.st + '"><span class="hr-dot"></span><span class="hr-slabel">' + s.stT + '</span></div></div>';
@@ -2983,7 +2994,7 @@ function init() {
   if ($('#moodTrendBtn')) $('#moodTrendBtn').addEventListener('click', () => {
     $('#viewPerson').classList.remove('active');
     $('#viewMood').classList.add('active');
-    const n = $('#ptName') ? $('#ptName').textContent : '阿嬤';
+    const n = $('#ptName') ? $('#ptName').textContent : '家人';
     if ($('#moodTitle')) $('#moodTitle').textContent = n + '的心情';
     renderMoodWeek();
     const lg = $('#moodLegend');
@@ -3320,11 +3331,25 @@ function init() {
   // 家人示範數據（正式版＝那位家人自己的沐寧經雲端同步；頁面上方已標「示範資料」）
   const FAM_WD = ['一', '二', '三', '四', '五', '六', '日'];
   const FAM_WL = ['第1週', '第2週', '第3週', '第4週'];
-  const PERSON_TREND = {
-    '美華': { stepsW: [8200, 9100, 7600, 8800, 9600, 10400, 8900], stepsM: [8400, 8900, 8100, 9000], sleepW: [6.4, 6.1, 6.8, 5.9, 6.2, 7.1, 6.2], sleepM: [6.3, 6.5, 6.1, 6.4] },
-    '志明': { stepsW: [6800, 7400, 6900, 7800, 7200, 8100, 7400], stepsM: [7100, 7400, 6800, 7300], sleepW: [7.2, 6.9, 7.4, 7.0, 7.1, 7.6, 7.1], sleepM: [7.0, 7.2, 6.9, 7.1] },
-    '小寶': { stepsW: [10200, 11800, 9600, 12400, 11200, 13000, 11200], stepsM: [11000, 11600, 10400, 11500], sleepW: [8.9, 8.6, 9.1, 8.8, 8.7, 9.2, 8.8], sleepM: [8.8, 8.9, 8.7, 8.9] },
-  };
+  // 7/9 正式化：家人趨勢改吃真同步的 35 天日記帳（沒有資料＝誠實空狀態）
+  function famTrendFor(p) {
+    const v = famVitalsFor(p);
+    const log = v && v.log && typeof v.log === 'object' ? v.log : null;
+    if (!log) return null;
+    const days = Object.keys(log).sort();
+    if (!days.length) return null;
+    const pick = (arr, field) => arr.map(k => +((log[k] || {})[field]) || 0);
+    const w = days.slice(-7);
+    const stepsW = pick(w, 'steps'), sleepW = pick(w, 'sleepHours');
+    // 月＝最近 28 天切 4 週取均（不足老實少幾根）
+    const m = days.slice(-28);
+    const chunk = (arr) => { const out = []; for (let i = 0; i < arr.length; i += 7) { const seg = arr.slice(i, i + 7).filter(Boolean); out.push(seg.length ? Math.round(seg.reduce((a, b) => a + b, 0) / seg.length) : 0); } return out; };
+    const stepsM = chunk(pick(m, 'steps'));
+    const sleepM = chunk(pick(m, 'sleepHours')).map(x => Math.round(x * 10) / 10);
+    const wd = w.map(k => FAM_WD[(new Date(k + 'T12:00:00').getDay() + 6) % 7] || '');
+    if (!stepsW.some(Boolean) && !sleepW.some(Boolean)) return null;
+    return { stepsW, sleepW, stepsM, sleepM, wd };
+  }
   const FAM_STEP_GOAL = 7000, FAM_SLEEP_GOAL = 7.5;
   function famAvg(a, dec) { let s = 0; a.forEach(v => s += v); const m = s / a.length; return dec ? +m.toFixed(dec) : Math.round(m); }
   function famEmptyChart(box, note, name) {
@@ -3334,29 +3359,28 @@ function init() {
   let _famActRange = 'week', _famSleepRange = 'week', _famMoodRange = 'week';
   function renderFamAct() {
     const box = $('#famActChart'), note = $('#trendNote');
-    const t = PERSON_TREND[currentPerson];
-    if (!t) return famEmptyChart(box, note, currentPerson || '家人');
+    const t = famTrendFor(currentPerson);
+    if (!t || !(_famActRange === 'week' ? t.stepsW : t.stepsM).some(Boolean)) return famEmptyChart(box, note, currentPerson || '家人');
     const wk = _famActRange === 'week';
     const vals = wk ? t.stepsW : t.stepsM;
-    if (box) box.innerHTML = famBarsHTML(wk ? FAM_WD : FAM_WL, vals, FAM_STEP_GOAL, v => v >= FAM_STEP_GOAL ? 'var(--teal)' : 'var(--gold)', vals.length - 1);
-    if (note) note.innerHTML = '日均 <b>' + famAvg(vals).toLocaleString() + ' 步</b> · 達標 ' + vals.filter(v => v >= FAM_STEP_GOAL).length + '/' + vals.length + (wk ? ' 天' : ' 週');
+    if (box) box.innerHTML = famBarsHTML(wk ? t.wd : FAM_WL.slice(0, vals.length), vals, FAM_STEP_GOAL, v => v >= FAM_STEP_GOAL ? 'var(--teal)' : 'var(--gold)', vals.length - 1);
+    if (note) note.innerHTML = '日均 <b>' + famAvg(vals).toLocaleString() + ' 步</b> · 達標 ' + vals.filter(v => v >= FAM_STEP_GOAL).length + '/' + vals.length + (wk ? ' 天' : ' 週') + (vals.length < (wk ? 7 : 4) ? ' · 累積中' : '');
   }
   function renderFamSleep() {
     const box = $('#famSleepChart'), note = $('#famSleepNote');
-    const t = PERSON_TREND[currentPerson];
-    if (!t) return famEmptyChart(box, note, currentPerson || '家人');
+    const t = famTrendFor(currentPerson);
+    if (!t || !(_famSleepRange === 'week' ? t.sleepW : t.sleepM).some(Boolean)) return famEmptyChart(box, note, currentPerson || '家人');
     const wk = _famSleepRange === 'week';
     const vals = wk ? t.sleepW : t.sleepM;
-    if (box) box.innerHTML = famBarsHTML(wk ? FAM_WD : FAM_WL, vals, FAM_SLEEP_GOAL, v => v >= 7.5 ? 'var(--teal)' : (v >= 6.5 ? 'var(--gold)' : 'var(--coral)'), vals.length - 1);
-    if (note) note.innerHTML = '平均 <b>' + famAvg(vals, 1) + ' 小時</b>' + (famAvg(vals, 1) >= 7 ? ' · 睡得穩' : ' · 睡得偏少，多留意');
+    if (box) box.innerHTML = famBarsHTML(wk ? t.wd : FAM_WL.slice(0, vals.length), vals, FAM_SLEEP_GOAL, v => v >= 7.5 ? 'var(--teal)' : (v >= 6.5 ? 'var(--gold)' : 'var(--coral)'), vals.length - 1);
+    if (note) note.innerHTML = '平均 <b>' + famAvg(vals.filter(Boolean), 1) + ' 小時</b>' + (famAvg(vals.filter(Boolean), 1) >= 7 ? ' · 睡得穩' : ' · 睡得偏少，多留意');
   }
   // 心情週/月：色點跟狀態頁情緒球同一套顏色
   const FAM_MOOD_COLS = ['#F4B63A', '#2FB7A8', '#5B8FB3', '#6D7F91', '#D98A32', '#E95B4F'];
   const FAM_MOOD_NAME = ['開心', '愉悅', '平靜', '低落', '焦慮', '生氣'];
-  const PERSON_MOOD_SEQ = { '美華': [2, 3, 2, 1, 2, 1, 2], '志明': [2, 2, 1, 2, 2, 2, 1], '小寶': [0, 1, 0, 0, 1, 0, 0] };
   function renderFamMoodRange() {
     const box = $('#mcRangeBody'), note = $('#mcRangeNote');
-    const seq = PERSON_MOOD_SEQ[currentPerson];
+    const seq = null;   // 7/9 正式化：心情軌跡只認真資料；跨裝置心情水管還沒接、一律誠實空狀態
     if (!seq) { if (box) box.innerHTML = ''; if (note) note.textContent = '等' + (currentPerson || '家人') + '開始用沐寧聊天，這裡會長出他的心情軌跡。'; return; }
     if (_famMoodRange === 'week') {
       if (box) box.innerHTML = '<div class="mood-mini">' + seq.map((mi, i) =>
@@ -4245,7 +4269,7 @@ function init() {
       try { done = JSON.parse(localStorage.getItem(todayKey())) || {}; } catch (e) {}
       done[medShowing.key] = true;
       try { localStorage.setItem(todayKey(), JSON.stringify(done)); } catch (e) {}
-      pushFamilyFeed('<b>阿嬤</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
+      pushFamilyFeed('<b>' + myFeedName() + '</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
       trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
     }
     medShowing = null;
@@ -4423,7 +4447,9 @@ function init() {
         : '點數用完了喔——補一些點數就能繼續跟我聊，設定裡就能加值。';
     }
     // 傳話：①「提醒／告訴 某人 …」直接算 ②「跟 某人」必須真的接「說」才算（防「有跟誰約好」這種閒聊誤觸發）
-    const KNOWN_FAM = ['美華', '志明', '小寶', '允辰', '阿嬤', '阿公', '秀英'];
+    // 7/9 正式化：名單改吃真的照護圈成員（不再寫死示範名）；圈外仍有通用中文名比對兜底
+    let KNOWN_FAM = [];
+    try { KNOWN_FAM = (typeof loadCircle === 'function' ? loadCircle() : []).map(m => m.name).filter(Boolean); } catch (e) {}
     let relay0 = null;
     for (const nm of KNOWN_FAM) {
       relay0 = t.match(new RegExp('(提醒|告訴)\\s*(' + nm + ')(說|，|要|來)?\\s*(.{2,30})')) || t.match(new RegExp('(跟)\\s*(' + nm + ')(說)\\s*(.{2,30})'));
