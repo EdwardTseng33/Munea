@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **最後更新：2026-07-09 深夜（Windows 蘇菲 · 1.10.1 修好聊聊「只出字幕不出聲」回歸 · 待 Mac 重打包）**
+> **最後更新：2026-07-09 深夜（Windows 蘇菲 · 🔴→🟢 真凶抓到：語音/管家腦兩道門被部署鎖上→已開門、WebSocket 101 實測通、聊聊現在手機那包直接能講、不用重打包）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -38,6 +38,21 @@
 **⑲（7/9 晚 Windows）1.9.1 聊聊「兩邊都就緒才開場」（Edward 二次拍板）**：修正上一版方向——撥通中＝保持角色**待機動畫**（不定格照片、不動照片）＋「連線中…」；**硬閘門：語音就緒(onReady)＋會動的臉就緒(faceVid playing) 兩邊都到，才 markConnected＋亮 live 臉＋送 greet**（LiveVoice.greet→ws {type:greet}）。語音伺服器 `_do_greet` 改由 App 觸發（不再 session 開好自動打招呼）。25s 保底防臉接不上乾等；取消/掛斷後晚到就緒不誤開場。**已交付試吃檯 rev 00006、冒煙 HTTP 200**。selftest 22/22（三處 1.9.1）。核心＝寧可讓用戶等、不要開場後像當機。
 
 **⑳（7/9 深夜 Windows）1.10.1 修 1.9.1 回歸：聊聊「只出字幕、不出聲、一直我聽見了」**：Edward 真機回報接通後 AI 用打字不講話、一直「我聽見了」。**根因**＝1.9.1 把「語音就緒(ready)」當成開麥時機，但等臉那幾秒麥克風已在收音→用戶/環境音在她招呼前一直灌進 Gemini→她一直被 interrupted 打斷→語音一直被停、只剩字幕，且不停回「我聽見了」。**修法**（純 client、`web/src/app.js`）：新增 `micOpen` 旗標，麥克風改由「她招呼講完(turn_complete)」才開；greet 時設 `_openMicAfterGreet`、6 秒保底防招呼沒正常結束害你不能講。→ 招呼成乾淨第一句、她講完才輪你、聲音不再被打斷。selftest 22/22（三處 1.10.1）。**⚠ 給 Mac（重要）**：這是 App 內程式修正、**要重打一包 TestFlight 才會到 Edward 手機**（語音伺服器 rev 00006 不用動、greet 邏輯已在線上）；目前 TestFlight 那包仍是壞的 1.9.1 client，重打包前聊聊仍會卡。
+
+**㉒（7/9 深夜 Windows 蘇菲）🔴真凶抓到：聊聊不能講話 = 伺服器的門被部署鎖上，不是 App（⑲⑳客戶端修正全是誤診，正式作廢）**：Edward 測 1.11.0/1.11.1 仍不能講。這次不猜、調雲端記錄查證——
+- **鐵證**：① 通話記錄在 Edward 測試時段（20:18-20:21）滿滿「request was not authenticated / Empty Authorization header」；② live 實測語音橋＋管家腦對匿名（App 那樣）請求都回 **403**；③ App `chatReply()` 連不上雲端的本機罐頭預設句正是「我聽見了，你慢慢說，我都在」＝Edward 看到的字。
+- **時間線**：18:15 還有一通完整有聲音的通話（rev 00003）；**19:11 我部署語音伺服器 rev 00006（`--no-allow-unauthenticated`）把 allUsers 公開通行拆掉**→之後 App 全被 403 擋→退本機打字→罐頭句。我後來兩版 client 修正（both-ready gate / micOpen 時機）全是誤診、對真因零作用。
+- **修法**：Edward 授權後 `add-iam-policy-binding allUsers roles/run.invoker` 把**兩道門重新打開**（薄門模式本來就要公開大門＋App 帶 MUNEA_APP_KEY 進門、程式內 MUNEA_REQUIRE_AUTH 再驗）。**實測：語音 WebSocket 101 Switching Protocols、兩服務 root 200**。→ **Edward 現在手機那包（1.11.x）不用重打包、直接能講**。
+- **防再犯**：`scripts/cloud-run-deploy-staging.ps1` + `deploy/cloudrun/更新測試環境.sh` 兩支測試部署腳本的 `--no-allow-unauthenticated` 全改 `--allow-unauthenticated` ＋醒目註解（未來部署不再重鎖門）。**正式環境的門未動**——上線前改走每用戶專屬鑰匙（沙利曼 Gate 5 硬化議題）。
+- ⚠ **給 Mac**：與你無關、不用動；純伺服器端授權修正。臉聲同步（嘴慢半拍）仍是獨立一輪工程、未解。
+
+**㉑（7/9 晚 Windows 蘇菲）App Store 送審體檢＋4 個合規洞修復（Edward「修好完善再送」拍板）**：
+- **ASC 商店頁填好存檔**：主要類別=健康與健身、**免登入可體驗**（取消需要登入）、審查聯絡人（Tseng/Edward/**+886978395227** 國際格式/信箱）、審查說明（英文）、**手動發佈**、隱私權政策 URL（暫用 claude.ai 公開頁 `db866b16-f152-4f3a-9460-ff56dcab1eae`、**待換 munea.net/privacy**）。
+- **深挖 5 個送審會被退/要對齊的洞**（沙利曼 Gate5＋卡西法 Gate1 核實）→ Edward 拍板「都改乾淨、修好再送」。**卡西法已修 4 個前端（實測過、selftest 20 過/0 敗/3 略）**：①天氣拿掉精確 GPS、只用縣市（app.js 1547-1582）②用藥照片同步時剝除、只留本機（syncPush meds 剝 photo）③家人動態每則加「移除/檢舉」＋封鎖入口好找（檢舉暫借 /feedback 收件箱 type:'bug'）④刪除帳號改真的（清 munea.*＋登出＋呼叫 /account-deletion）＋文案改誠實。
+- **隱私正本 `web/privacy.html` 已改誠實完整版**：點名 Google（Gemini）＋Supabase（澳洲機房）、只用縣市不用精確定位、用藥照片本機、可在 App 內刪帳號、不做廣告追蹤、聯絡信箱 edwardt0303@gmail.com。
+- 🔴 **給 Mac（送審前必補）**：(1) **後端 `/account-deletion` 要真的刪 Supabase 帳號與資料**（蘋果 5.1.1(v)、目前只 append_privacy_request 記單、不補仍不合規）(2) 打包 iOS 行銷版號對齊最新（≥1.10.1）＋**商店版本記錄現寫「1.0」、要與打包版一致**（否則掛不上打包檔）(3) `Info.plist` 的 `NSLocationWhenInUseUsageDescription` 可拿掉（不再用 GPS）(4) **把 `web/privacy.html` 發佈到 munea.net/privacy**（官網 Vercel 在 Mac/Codex 側、Windows 發不了；現 munea.net/privacy=404）。
+- ⚠️ **版控/並行注意**：本 session 與另線同時改 app.js——另線 1.10.1（聊聊麥克風打斷修正、commit `fac0adc`）已把我方 JS/HTML 收進 commit；**但 `web/src/styles.css` 尚未提交**（移除/檢舉按鈕＋家人頁管理鈕的樣式在裡面）→ **版控收尾要確認 styles.css 進庫、否則新按鈕沒樣式**。卡西法測試用 8124（8123 被另線佔）。
+- **還缺（Windows 待填 ASC）**：年齡分級＋隱私資料問卷（答案沙利曼備好；因定位/照片改乾淨→無需申報照片/精確定位/診斷，更單純）；8 個付費項目審查截圖；建置版本（Mac 上傳後選）；送審（Edward）。
 
 ### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
 - 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）

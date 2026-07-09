@@ -17,14 +17,18 @@ echo "== 部署 測試環境·管家腦 =="
 $G run deploy munea-brain-staging --source . --clear-base-image --region asia-east1 \
   --set-secrets GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest \
   --set-env-vars "MUNEA_APP_KEY=$KEY" \
-  --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --no-allow-unauthenticated --quiet
+  --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
+# ⚠ 薄門模式：測試環境大門必須「公開」，App 才進得來、程式內再靠 MUNEA_APP_KEY 驗碼守門。
+#   千萬別改回 --no-allow-unauthenticated——那會把大門鎖上、App 全被 403 擋、聊聊退回本機罐頭句（2026-07-09 教訓）。
+#   正式環境的門另議（上線前改走每用戶專屬鑰匙、見 更新正式環境.sh）。
 
 echo "== 部署 測試環境·語音橋 =="
 $G run deploy munea-voice-staging --source . --clear-base-image --region asia-east1 \
   --set-secrets GEMINI_API_KEY=munea-gemini-key-staging:latest \
   --set-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY" \
   --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
-  --no-allow-unauthenticated --quiet
+  --allow-unauthenticated --quiet
+# ⚠ 同上：語音橋大門也必須公開，否則 App 連不上 WebSocket、聊聊只會打字不講話（2026-07-09 教訓）。
 
 echo "== 冒煙檢查 =="
 TOK=$(cmd //c "gcloud.cmd auth print-identity-token" | tr -d '\r')

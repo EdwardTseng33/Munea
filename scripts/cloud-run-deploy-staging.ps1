@@ -125,7 +125,7 @@ try {
     "--min-instances", "0",
     "--max-instances", "2",
     "--concurrency", "40",
-    "--no-allow-unauthenticated",
+    "--allow-unauthenticated",   # 薄門模式：大門公開、App 帶通行碼進、程式內 MUNEA_REQUIRE_AUTH 再驗一道。鎖門(--no-allow-...)會讓 App 連不上、退回本機罐頭句（2026-07-09 教訓：一次部署重鎖門害聊聊整晚不能講）
     "--quiet"
   )
   Invoke-RunDeploy $brainArgs
@@ -146,7 +146,7 @@ try {
       "--min-instances", "0",
       "--max-instances", "2",
       "--concurrency", "20",
-      "--no-allow-unauthenticated",
+      "--allow-unauthenticated",   # 薄門模式：大門公開、App 帶通行碼進、程式內 MUNEA_REQUIRE_AUTH 再驗一道。鎖門(--no-allow-...)會讓 App 連不上、退回本機罐頭句（2026-07-09 教訓：一次部署重鎖門害聊聊整晚不能講）
       "--quiet"
     )
     Invoke-RunDeploy $voiceArgs
