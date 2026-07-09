@@ -2964,8 +2964,8 @@ def feedback_response(data):
         label = {"bug": "🐞問題", "idea": "💡建議", "praise": "❤️稱讚", "nps": "📊NPS", "survey": "📋問卷"}.get(ftype, ftype)
         summary = (item["category"] + " · " if item["category"] else "") + (f"{item['score']} 分" if item["score"] is not None else (item["text"][:60] or ""))
         notify.ops("feedback_received", f"{label} {summary}")
-    except Exception:
-        pass
+    except Exception as notify_error:
+        log_fallback_exception("send feedback notification", notify_error)
     return {"ok": True, "id": item["id"]}
 
 def admin_feedback_summary(data=None):
@@ -4138,7 +4138,7 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
-        if path == "/healthz":
+        if path in ("/healthz", "/healthz/"):
             self._json({
                 "ok": True,
                 "service": "munea-local-engine",

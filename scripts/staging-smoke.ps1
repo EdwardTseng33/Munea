@@ -3,6 +3,8 @@ param(
   [string]$BearerToken = "",
   [string]$AdminToken = "",
   [string]$ProviderToken = "",
+  [string]$IdentityToken = "",
+  [switch]$UseGcloudIdentityToken,
   [switch]$AllowHttp,
   [switch]$AllowJsonBackend,
   [switch]$AllowDeveloperBearer
@@ -37,6 +39,34 @@ function Normalize-BaseUrl($url) {
   return $url.Trim().TrimEnd("/")
 }
 
+function Resolve-Gcloud {
+  $cmd = Get-Command gcloud.cmd -ErrorAction SilentlyContinue
+  if ($cmd) {
+    return $cmd.Source
+  }
+
+  $cmd = Get-Command gcloud -ErrorAction SilentlyContinue
+  if ($cmd) {
+    return $cmd.Source
+  }
+
+  $bundled = Join-Path $env:LOCALAPPDATA "Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd"
+  if (Test-Path $bundled) {
+    return $bundled
+  }
+
+  throw "gcloud was not found. Install Google Cloud SDK or pass -IdentityToken."
+}
+
+function Get-GcloudIdentityToken {
+  $gcloud = Resolve-Gcloud
+  $output = & $gcloud auth print-identity-token 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw ($output -join "`n")
+  }
+  return (($output -join "`n").Trim())
+}
+
 function Get-StatusCode($errorRecord) {
   $response = $errorRecord.Exception.Response
   if ($response -and $response.StatusCode) {
@@ -48,6 +78,30 @@ function Get-StatusCode($errorRecord) {
 function Invoke-JsonPost($path, $body, $headers = @{}) {
   $json = $body | ConvertTo-Json -Depth 20 -Compress
   Invoke-RestMethod -Uri "$BaseUrl$path" -Method Post -ContentType "application/json; charset=utf-8" -Headers $headers -Body $json -TimeoutSec 30
+}
+
+function Merge-Headers($first, $second) {
+  $merged = @{}
+  foreach ($key in $first.Keys) {
+    $merged[$key] = $first[$key]
+  }
+  foreach ($key in $second.Keys) {
+    $merged[$key] = $second[$key]
+  }
+  return $merged
+}
+
+function Get-Health {
+  foreach ($path in @("/healthz", "/healthz/")) {
+    try {
+      return Invoke-RestMethod -Uri "$BaseUrl$path" -Method Get -Headers $identityHeaders -TimeoutSec 30
+    } catch {
+      $status = Get-StatusCode $_
+      if ($status -ne 404 -or $path -eq "/healthz/") {
+        throw
+      }
+    }
+  }
 }
 
 function Expect-HttpError($path, $body, $expectedStatus, $headers = @{}) {
@@ -70,23 +124,35 @@ if ($uri.Scheme -ne "https" -and -not $AllowHttp -and -not $isLocal) {
   throw "Staging smoke requires HTTPS for non-local URLs. Pass -AllowHttp only for local verification."
 }
 
+if ($UseGcloudIdentityToken -and -not $IdentityToken) {
+  $IdentityToken = Get-GcloudIdentityToken
+}
+
+$identityHeaders = @{}
+if ($IdentityToken) {
+  $identityHeaders["X-Serverless-Authorization"] = "Bearer $IdentityToken"
+}
+
 $bearerHeaders = @{}
 if ($BearerToken) {
   $bearerHeaders["Authorization"] = "Bearer $BearerToken"
 }
+$bearerHeaders = Merge-Headers $identityHeaders $bearerHeaders
 
 $adminHeaders = @{}
 if ($AdminToken) {
   $adminHeaders["X-Munea-Admin-Token"] = $AdminToken
 }
+$adminHeaders = Merge-Headers $identityHeaders $adminHeaders
 
 $providerHeaders = @{}
 if ($ProviderToken) {
   $providerHeaders["X-Munea-Provider-Token"] = $ProviderToken
 }
+$providerHeaders = Merge-Headers $identityHeaders $providerHeaders
 
 Step "Health"
-$health = Invoke-RestMethod -Uri "$BaseUrl/healthz" -Method Get -TimeoutSec 30
+$health = Get-Health
 if (-not $health.ok) {
   throw "/healthz did not return ok:true"
 }
@@ -99,12 +165,13 @@ if ($health.backend -and $health.backend.enabled -eq $false -and -not $AllowJson
 Pass "/healthz is reachable and auth-required"
 
 Step "Unauthenticated user gate"
-Expect-HttpError "/credits/balance" @{} 401
-Expect-HttpError "/privacy-export" @{ action = "preview" } 401
+Expect-HttpError "/credits/balance" @{} 401 $identityHeaders
+Expect-HttpError "/privacy-export" @{ action = "preview" } 401 $identityHeaders
 Pass "User-scoped endpoints reject unauthenticated requests"
 
 Step "Invalid auth token"
-$invalidAuth = Invoke-JsonPost "/auth-status" @{} @{ Authorization = "Bearer invalid-staging-smoke-token" }
+$invalidAuthHeaders = Merge-Headers $identityHeaders @{ Authorization = "Bearer invalid-staging-smoke-token" }
+$invalidAuth = Invoke-JsonPost "/auth-status" @{} $invalidAuthHeaders
 if ($invalidAuth.ok) {
   throw "/auth-status accepted an invalid bearer token"
 }
@@ -137,7 +204,7 @@ if ($BearerToken) {
 }
 
 Step "Admin gate"
-Expect-HttpError "/admin/usage" @{ days = 7 } 403
+Expect-HttpError "/admin/usage" @{ days = 7 } 403 $identityHeaders
 if ($AdminToken) {
   $usage = Invoke-JsonPost "/admin/usage" @{ days = 7 } $adminHeaders
   if (-not $usage.ok) {
@@ -153,7 +220,7 @@ if ($AdminToken) {
 }
 
 Step "Provider webhook gate"
-Expect-HttpError "/subscription-event" @{ provider = "revenuecat"; event = @{ type = "STAGING_SMOKE" } } 403
+Expect-HttpError "/subscription-event" @{ provider = "revenuecat"; event = @{ type = "STAGING_SMOKE" } } 403 $identityHeaders
 if ($ProviderToken) {
   $subscription = Invoke-JsonPost "/subscription-event" @{ provider = "revenuecat"; event = @{ type = "STAGING_SMOKE"; status = "active" } } $providerHeaders
   if (-not $subscription.ok) {

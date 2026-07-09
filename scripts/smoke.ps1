@@ -2781,6 +2781,10 @@ for token in ["metric-grid", "admin-grid", "status-pill", "@media"]:
 for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "/admin.html", "/admin/accounts"]:
     if token not in script:
         raise SystemExit("Admin smoke missing token: " + token)
+staging_smoke = Path("scripts/staging-smoke.ps1").read_text(encoding="utf-8")
+for token in ["UseGcloudIdentityToken", "X-Serverless-Authorization", "/healthz/", "Merge-Headers"]:
+    if token not in staging_smoke:
+        raise SystemExit("Staging smoke missing Cloud Run token: " + token)
 if '"smoke:admin"' not in package:
     raise SystemExit("package.json missing smoke:admin script")
 cloudrun_status = Path("scripts/cloud-run-status.ps1").read_text(encoding="utf-8")

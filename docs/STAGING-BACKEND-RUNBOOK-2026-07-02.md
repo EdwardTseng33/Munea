@@ -122,6 +122,14 @@ Run without secrets first:
 npm run smoke:staging -- -BaseUrl https://YOUR-STAGING-API.example.com
 ```
 
+For a locked Cloud Run staging service, include local Google identity so the smoke reaches the app while still testing Munea's own API gates:
+
+```powershell
+npm run smoke:staging -- `
+  -BaseUrl https://YOUR-LOCKED-CLOUD-RUN-URL `
+  -UseGcloudIdentityToken
+```
+
 For scheduled or hosted CI checks, set the URL once and run the same script without repeating arguments:
 
 ```powershell
