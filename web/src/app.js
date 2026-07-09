@@ -914,7 +914,10 @@ const Avatar = {
         const chk = () => { if (this.pc.iceGatheringState === 'complete') { this.pc.removeEventListener('icegatheringstatechange', chk); res(); } };
         this.pc.addEventListener('icegatheringstatechange', chk); setTimeout(res, 3000);
       });
-      const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY), { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      // 帶上目前選的角色（六角色 · 7/9）；角色不吃擬真引擎時服務會說不行 → 自動退回 2D 動畫
+      let _cq = '';
+      try { if (typeof currentChar === 'string' && currentChar) _cq = '&char=' + encodeURIComponent(currentChar); } catch (e) {}
+      const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY) + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
       const a = await r.json(); if (a.error) throw new Error(a.error); await this.pc.setRemoteDescription(a);
       this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY));

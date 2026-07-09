@@ -55,7 +55,23 @@ image = (
     .env({"LD_LIBRARY_PATH": "/opt/cudnn8-pkgs/nvidia/cudnn/lib", "MUNEA_APP_KEY": APP_KEY})
     .add_local_file(r"E:\Claude\Munea\web\avatars\nening-real-female-full.jpg",
                     "/root/nening-real-female-full.jpg")
+    # 六角色底圖（7/9 Edward「6 個角色都要會動」）——底圖跟 App 聊聊頁同一張
+    .add_local_file(r"E:\Claude\Munea\web\avatars\ahong-tall.jpg", "/root/char-ahong.jpg")
+    .add_local_file(r"E:\Claude\Munea\web\avatars\xiaoyun-2d-tall.jpg", "/root/char-xiaoyun.jpg")
+    .add_local_file(r"E:\Claude\Munea\web\avatars\ayuan-2d-tall.jpg", "/root/char-ayuan.jpg")
+    .add_local_file(r"E:\Claude\Munea\web\avatars\mimi-tall.jpg", "/root/char-mimi.jpg")
+    .add_local_file(r"E:\Claude\Munea\web\avatars\wangcai-tall.jpg", "/root/char-wangcai.jpg")
 )
+
+# 角色 → 底圖（key 跟語音橋 ?char= 同一套中文名；App 聊聊頁同圖）
+CHAR_SRC = {
+    "寧寧": "/root/nening-real-female-full.jpg",
+    "阿宏": "/root/char-ahong.jpg",
+    "小昀": "/root/char-xiaoyun.jpg",
+    "阿原": "/root/char-ayuan.jpg",
+    "咪咪": "/root/char-mimi.jpg",
+    "旺財": "/root/char-wangcai.jpg",
+}
 
 
 @app.function(image=image, volumes={"/models": vol}, timeout=3600)
@@ -133,6 +149,8 @@ class Nening:
 
         self.sink = FrameSink()
         self.sdk.writer = self.sink
+        self.char = "寧寧"
+        self.char_lock = threading.Lock()
 
         # 暖跑一塊 0.2s 靜音（觸發所有懶載入、快照拍「全熟」狀態）
         self.sdk.run_chunk(np.zeros(SPLIT, dtype=np.float32), CHUNKSIZE)
@@ -156,9 +174,14 @@ class Nening:
         _h264.MAX_BITRATE = 12_000_000
 
         import cv2
-        _poster = cv2.cvtColor(cv2.imread("/root/nening-real-female-full.jpg"), cv2.COLOR_BGR2RGB)
-        _scale = 960.0 / _poster.shape[0]
-        self.poster = cv2.resize(_poster, (int(_poster.shape[1] * _scale), 960))
+
+        def _load_poster(path):
+            p = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
+            s = 960.0 / p.shape[0]
+            return cv2.resize(p, (int(p.shape[1] * s), 960))
+
+        self._load_poster = _load_poster
+        self.poster = _load_poster(CHAR_SRC[self.char])
         self.pcs = set()
 
         sdk, sink = self.sdk, self.sink
@@ -218,6 +241,36 @@ class Nening:
         self.feeder = Feeder()
         print("[wake] feeder 上工、通話零件就緒", flush=True)
 
+    # ---------- 換角色（六角色 · 7/9）：換底圖重註冊、約 1–2 秒；失敗回舊角色 ----------
+    def _switch(self, char):
+        import numpy as np
+        if not char or char == self.char:
+            return True
+        if char not in CHAR_SRC:
+            return False
+        with self.char_lock:
+            if char == self.char:
+                return True
+            prev = self.char
+            try:
+                self.feeder.reset()
+                self.sdk.setup(CHAR_SRC[char], "/root/_live_dummy.mp4")
+                self.sdk.writer = self.sink          # setup 會換掉出口、要把影格緩衝接回來
+                self.sdk.run_chunk(np.zeros(SPLIT, dtype=np.float32), CHUNKSIZE)  # 暖跑
+                self.char = char
+                self.poster = self._load_poster(CHAR_SRC[char])
+                print(f"[char] {prev} → {char} ok", flush=True)
+                return True
+            except Exception as e:
+                print(f"[char] {char} 不吃這顆引擎（{e}）→ 回 {prev}", flush=True)
+                try:
+                    self.sdk.setup(CHAR_SRC[prev], "/root/_live_dummy.mp4")
+                    self.sdk.writer = self.sink
+                    self.char = prev
+                except Exception:
+                    pass
+                return False
+
     # ---------- 對外：通話服務（網頁接口） ----------
     @modal.asgi_app()
     def web(self):
@@ -259,9 +312,11 @@ class Nening:
                     "load": outer.load_report}
 
         @api.post("/offer")
-        async def offer(payload: dict, key: str = ""):
+        async def offer(payload: dict, key: str = "", char: str = ""):
             if not _pass(key):
                 return {"error": "key required"}
+            if char and not outer._switch(char):
+                return {"error": "char not supported"}   # App 收到會自動退回 2D 動畫、照樣會動
             pc = RTCPeerConnection(RTCConfiguration(
                 iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")]))
             outer.pcs.add(pc)
@@ -299,16 +354,22 @@ class Nening:
 
         return api
 
-    # ---------- 診斷探針（掐錶／巡檢用） ----------
+    # ---------- 診斷探針（掐錶／巡檢／六角色測試用） ----------
     @modal.method()
-    def probe(self):
+    def probe(self, char: str = ""):
         import time
         import numpy as np
+        if char:
+            t_sw = time.time()
+            ok = self._switch(char)
+            sw_s = round(time.time() - t_sw, 1)
+            if not ok:
+                return {"char": char, "supported": False, "switch_s": sw_s}
         t0 = time.time()
         before = self.sink.count
         for _ in range(5):
             self.sdk.run_chunk(np.zeros(SPLIT, dtype=np.float32), CHUNKSIZE)
         dt = time.time() - t0
         time.sleep(1.0)
-        return {"load_report": self.load_report, "chunk_ms": round(dt / 5 * 1000),
-                "frames_delta": self.sink.count - before, "ready": True}
+        return {"char": self.char, "supported": True, "load_report": self.load_report,
+                "chunk_ms": round(dt / 5 * 1000), "frames_delta": self.sink.count - before, "ready": True}
