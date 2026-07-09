@@ -237,13 +237,14 @@
     <div class="hero-media">
       <div class="glow"></div>
       <div class="frame">
-        <video class="hero-face" poster="assets/real-female-hero-poster.jpg" muted playsinline autoplay loop preload="auto" aria-label="沐寧的 AI 夥伴——會動、正在陪你">
-          <source src="assets/realfemale-hero-idle.mp4" type="video/mp4">
+        <video class="hero-face" id="heroVid" poster="assets/real-female-hero-poster.jpg" muted playsinline autoplay preload="auto" aria-label="沐寧的 AI 夥伴——會動、正在陪你">
+          <source src="assets/realfemale-hello.mp4" type="video/mp4">
         </video>
       </div>
       <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span data-en="Reminded Mom to take her meds">已提醒媽媽吃藥</span></div>
       <div class="float-chip fc-2"><span class="ic" style="background:var(--coral-soft);color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span data-en="She remembers what you said">她記得你說的事</span></div>
     </div>
+    <script>(function(){var v=document.getElementById('heroVid');if(!v)return;v.addEventListener('ended',function(){if(v.dataset.i)return;v.dataset.i='1';v.src='assets/realfemale-idle.mp4';v.loop=true;v.play();});})();</script>
   </div>
   <div class="scrollcue"><span class="mouse"></span>SCROLL</div>
 </section>
@@ -391,7 +392,7 @@
     <div class="sec-head reveal">
       <div class="eyebrow center" data-en="See it, hear it">眼見為憑・打開聲音聽聽看</div>
       <h2 data-en="Live Avatar Demo">AI 語音陪聊模擬（Live Avatar Demo）</h2>
-      <p data-en="Both clips below are AI video demos from Munea — not real people, yet with natural expressions and voices. Turn on the sound, hear them speak, and feel what it's like to have someone there.">下面兩段，都是沐寧的 AI 視訊示範——不是真人，卻有自然的表情和聲音。打開聲音，聽她們跟你說說話，感受那份「有人在」的溫度。</p>
+      <p data-en="Both clips below are AI video demos from Munea — not real people, yet with natural expressions and voices. Turn on the sound, hear them speak, and feel what it's like to have someone there.">下面兩段，都是沐寧的 AI 視訊示範——不是真人，卻有自然的表情和聲音。打開聲音，聽他們跟你說說話，感受那份「有人在」的溫度。</p>
     </div>
     <div class="vgrid reveal">
       <figure class="vdemo">
