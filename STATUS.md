@@ -31,6 +31,8 @@
 
 **⑯（7/9 傍晚 Windows）商店頁素材＋文字盤點**：①Edward 供 5 張商店介紹圖（總覽/每日關心/健康情緒/視訊陪伴/全家連結、852×1846）→ 轉 6.5吋送審尺寸 **1284×2778** 存 `App store pic/asc-ready/`（此 App 商店頁截圖格指定 6.5吋、非 6.9吋）②**商店文字已全填**（行銷宣傳文字 108 字、描述、支援 URL＋行銷 URL=munea.net【實測 HTTP 200 活著】、版本 1.0、版權 2026 YU-HSI TSENG）③**截圖上傳被工作階段安全邊界擋**（file_upload 只認自身管的資料夾、不吃本機任意路徑）→ 留 Edward 30 秒拖拉：ASC 版本頁「預覽和截圖」已捲到定位，把 `asc-ready/` 5 張拖進去即可。**商店頁剩**：截圖上傳（Edward 拖）、8 個內購審查截圖、關鍵字複查、App 隱私權標籤、年齡分級問卷、建置版本（Mac 上傳打包檔後選）、送審鈕（Edward 按）。
 
+**⑰（7/9 晚 Windows）1.8.3 聊聊接通延遲修兩段（回應 Mac 真機診斷）**：Edward 真機三症狀，Mac 診斷交雲端側、我接。①**「叫2-3次Hello才回」→ AI主動先開口**（`live_voice_server.py`：session 開好立刻送打招呼 cue，寧寧接通就主動問候、用戶不必說hello）——**已交付試吃檯 munea-voice-staging rev 00004、冒煙 HTTP 200**（App 預設就連這條、立即生效）；keep-warm 沒開（NT$600/月爆預算、無真用戶不划算，真上線再議）。②**「聲音先出臉定住6秒」→ 待機動態接住冷啟窗**（client：connectCall 不定格照片、faceVid 真出畫面才 crossfade）。③**臉預建 WebRTC**（把 ICE 挪到通話前）成本可接受、**交 Mac 接**（Avatar.wake 從只打/health→進頁就 Avatar.start）。④A-V sync 嘴慢半拍＝引擎側最硬、獨立一輪工程。selftest 22/22（版本三處 1.8.3）。詳見 `docs/協作看板-雙AI分工.md`。
+
 ### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
 - 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）
 - ⚠ 兩服務**鎖門中**：呼叫要帶 Google 通行證（`gcloud auth print-identity-token`）；開門方式待 Edward 拍板（不擋你手上的真機/付款工作）

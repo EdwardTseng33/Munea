@@ -980,6 +980,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const vid = document.getElementById('faceVid');
   if (vid) vid.addEventListener('playing', () => {
     const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid');
+    // 會動的雲端臉真的出畫面了 → 這時才收掉待機動態（先前一直播著、不讓照片定格）
+    try { if (typeof FaceIdle !== 'undefined') FaceIdle.stop(); } catch (e) {}
   });
 });
 
@@ -2453,7 +2455,9 @@ function setupHscrollHints() {
 }
 
 function connectCall() {
-  FaceIdle.stop();   // 按下通話：待機動態停、回靜態圖，交給語音＋雲端臉
+  // 治「聲音先出、臉還定住 6 秒」（Edward 2026-07-09）：接通後不定格照片，讓會呼吸的待機動態繼續播，
+  // 等真的會動的雲端臉（faceVid）真的出畫面才無縫蓋過去（見 faceVid 'playing' 事件裡 FaceIdle.stop）。
+  if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();
   setCallDialing(true);   // 按鈕先進「撥通中···」；真的能講話才變「結束通話」＋開始計時
   let _connectedOnce = false;
   const markConnected = () => { if (_connectedOnce) return; _connectedOnce = true; setCallToggle(true); startCallTimer(); };
