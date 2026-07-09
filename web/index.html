@@ -94,7 +94,7 @@
       </div>
       <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff">今天</span>
     </div>
-    <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)">今天血壓 <b style="color:#8FD4CC">128/82</b>、心率平穩，睡眠 <b style="color:#8FD4CC">7.5 小時</b>，整體狀態不錯。 <span style="color:#8FD4CC;font-weight:700">傍晚再散步 10 分鐘</span>，就能達成今天的活動目標。</div>
+    <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)">今天的數據會即時整理在這裡。 <span style="color:#8FD4CC;font-weight:700">接上 Apple 健康或跟我聊聊</span>，我就開始幫你看著。</div>
   </div>
 
   <!-- 情緒監測（產品核心 · 互動 hero）-->
@@ -127,7 +127,7 @@
         <span id="medIcon" style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:var(--coral);display:grid;place-items:center;color:#fff;transition:background .2s"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
         <div style="min-width:0">
           <div style="font-weight:700;font-size:14.5px">用藥狀態</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:1px" id="medSub">血壓藥 · 午餐後 14:00</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:1px" id="medSub">還沒設定用藥，跟寧寧說一聲就好</div>
         </div>
       </div>
       <span class="chip" id="medChip" style="flex-shrink:0;background:var(--coral-soft);color:var(--coral-d)">尚未服用</span>
@@ -137,30 +137,30 @@
     <div class="card" style="padding:15px;flex:1">
       <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="chip" id="bpChip" style="background:var(--mint);color:var(--teal-dd)">穩定</span></div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:3px">血壓</div>
-      <div><span class="mnum" id="bpNum" style="font-size:26px;color:var(--teal-dd)">128</span><span id="bpUnit" style="font-size:12.5px;color:var(--muted)">/82 mmHg</span></div>
+      <div><span class="mnum" id="bpNum" style="font-size:26px;color:var(--teal-dd)">—</span><span id="bpUnit" style="font-size:12.5px;color:var(--muted)"></span></div>
       <div id="bpSub" style="font-size:11.5px;color:var(--muted);margin-top:6px">正常範圍內</div>
     </div>
     <div class="card" style="padding:15px;flex:1">
       <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span><span class="chip" id="hrChip" style="background:var(--coral-soft);color:var(--coral-d)">正常</span></div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:3px">心率</div>
-      <div><span class="mnum" id="hrNum" style="font-size:26px;color:var(--coral-d)">72</span><span id="hrUnit" style="font-size:12.5px;color:var(--muted)"> bpm</span></div>
+      <div><span class="mnum" id="hrNum" style="font-size:26px;color:var(--coral-d)">—</span><span id="hrUnit" style="font-size:12.5px;color:var(--muted)"></span></div>
       <div id="hrSub" style="font-size:11.5px;color:var(--muted);margin-top:6px">靜息心率</div>
     </div>
   </div>
   <div class="card" id="miniStatsCard" style="display:flex;align-items:stretch;padding:0;overflow:hidden;margin-bottom:16px">
     <div style="flex:1;padding:13px 14px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/></svg><span style="font-size:11.5px;color:var(--muted)">血氧</span></div>
-      <div><span class="mnum" id="spo2Num" style="font-size:21px;color:var(--teal-dd)">98</span><span id="spo2Unit" style="font-size:11px;color:var(--muted)"> %</span></div>
+      <div><span class="mnum" id="spo2Num" style="font-size:21px;color:var(--teal-dd)">—</span><span id="spo2Unit" style="font-size:11px;color:var(--muted)"></span></div>
     </div>
     <div style="width:1px;background:var(--line);margin:12px 0"></div>
     <div style="flex:1;padding:13px 14px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg><span style="font-size:11.5px;color:var(--muted)">睡眠</span></div>
-      <div><span class="mnum" id="sleepNum" style="font-size:21px;color:#8A6410">7.5</span><span id="sleepUnit" style="font-size:11px;color:var(--muted)"> 時</span></div>
+      <div><span class="mnum" id="sleepNum" style="font-size:21px;color:#8A6410">—</span><span id="sleepUnit" style="font-size:11px;color:var(--muted)"></span></div>
     </div>
     <div style="width:1px;background:var(--line);margin:12px 0"></div>
     <div style="flex:1;padding:13px 14px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/></svg><span style="font-size:11.5px;color:var(--muted)">步數</span></div>
-      <div><span class="mnum" id="stepsNum" style="font-size:20px;color:var(--teal-dd)">6,500</span><span id="stepsUnit" style="font-size:11px;color:var(--muted)"> 步</span></div>
+      <div><span class="mnum" id="stepsNum" style="font-size:20px;color:var(--teal-dd)">—</span><span id="stepsUnit" style="font-size:11px;color:var(--muted)"></span></div>
     </div>
   </div>
   <div class="card" id="medTrendCard" style="padding:16px;margin-bottom:16px;display:none">
@@ -1250,8 +1250,8 @@ function mmMeds(){ try{ var raw=localStorage.getItem('munea.meds'); var m=raw?JS
 function mmDateKey(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 function mmSlots(meds){ var slots=[]; meds.forEach(function(m){ String(m.time).split('、').forEach(function(raw){ var slot=raw.trim(); if(slot) slots.push({slot:slot,name:m.name,key:slot+'|'+m.name}); }); }); var ord=['早餐後','午餐後','晚餐後','睡前']; slots.sort(function(a,b){return ord.indexOf(a.slot)-ord.indexOf(b.slot);}); return slots; }
 function mmDoneMap(){ try{ return JSON.parse(localStorage.getItem('munea.medDone.'+mmDateKey()))||{}; }catch(e){ return {}; } }
-window.MMMED=function(period){ var card=document.getElementById('medCard'); if(!card) return; if(period&&period!=='今天'){ card.style.display='none'; return; } var chip=document.getElementById('medChip'),icon=document.getElementById('medIcon'),sub=document.getElementById('medSub'); card.style.display='block'; var meds=mmMeds(); if(!meds.length){ if(sub) sub.textContent='還沒設定用藥，跟寧寧說一聲就好'; if(chip){ chip.textContent='去設定'; chip.style.background='var(--mint)'; chip.style.color='var(--teal-dd)'; } if(icon) icon.style.background='#B7BEC2'; return; } var slots=mmSlots(meds),done=mmDoneMap(),total=slots.length,doneN=0,next=null; for(var j=0;j<slots.length;j++){ if(done[slots[j].key]) doneN++; else if(!next) next=slots[j]; } if(next){ if(chip){ chip.textContent='尚未服用'; chip.style.background='var(--coral-soft)'; chip.style.color='var(--coral-d)'; } if(icon) icon.style.background='var(--coral)'; if(sub) sub.textContent=String(next.name).split(/\s+/)[0]+' · '+next.slot+'（今天 '+doneN+'/'+total+'）'; } else { if(chip){ chip.textContent='都完成了'; chip.style.background='var(--mint)'; chip.style.color='var(--teal-dd)'; } if(icon) icon.style.background='var(--teal)'; if(sub) sub.textContent='今天 '+total+' 次都記到了'; } };
-window.MMMEDCLICK=function(){ var meds=mmMeds(); if(!meds.length){ return; } var slots=mmSlots(meds),done=mmDoneMap(),next=null; for(var j=0;j<slots.length;j++){ if(!done[slots[j].key]){ next=slots[j]; break; } } if(next){ done[next.key]=true; } else { var last=slots[slots.length-1]; if(last) delete done[last.key]; } try{ localStorage.setItem('munea.medDone.'+mmDateKey(), JSON.stringify(done)); }catch(e){} window.MMMED('今天'); };
+window.MMMED=function(period){ var card=document.getElementById('medCard'); if(!card) return; if(period&&period!=='今天'){ card.style.display='none'; return; } var chip=document.getElementById('medChip'),icon=document.getElementById('medIcon'),sub=document.getElementById('medSub'); card.style.display='block'; if(chip){chip.style.padding='';chip.style.fontSize='';} var meds=mmMeds(); if(!meds.length){ if(sub) sub.textContent='還沒設定用藥，跟寧寧說一聲就好'; if(chip){ chip.textContent='去設定 ›'; chip.style.background='var(--teal)'; chip.style.color='#fff'; chip.style.padding='6px 13px'; chip.style.fontSize='13px'; } if(icon) icon.style.background='#B7BEC2'; return; } var slots=mmSlots(meds),done=mmDoneMap(),total=slots.length,doneN=0,next=null; for(var j=0;j<slots.length;j++){ if(done[slots[j].key]) doneN++; else if(!next) next=slots[j]; } if(next){ if(chip){ chip.textContent='尚未服用'; chip.style.background='var(--coral-soft)'; chip.style.color='var(--coral-d)'; } if(icon) icon.style.background='var(--coral)'; if(sub) sub.textContent=String(next.name).split(/\s+/)[0]+' · '+next.slot+'（今天 '+doneN+'/'+total+'）'; } else { if(chip){ chip.textContent='都完成了'; chip.style.background='var(--mint)'; chip.style.color='var(--teal-dd)'; } if(icon) icon.style.background='var(--teal)'; if(sub) sub.textContent='今天 '+total+' 次都記到了'; } };
+window.MMMEDCLICK=function(){ var meds=mmMeds(); if(!meds.length){ var mask=document.getElementById('medMgrModal'); if(mask){ if(typeof renderMedList==='function') renderMedList(); mask.classList.add('show'); } return; } var slots=mmSlots(meds),done=mmDoneMap(),next=null; for(var j=0;j<slots.length;j++){ if(!done[slots[j].key]){ next=slots[j]; break; } } if(next){ done[next.key]=true; } else { var last=slots[slots.length-1]; if(last) delete done[last.key]; } try{ localStorage.setItem('munea.medDone.'+mmDateKey(), JSON.stringify(done)); }catch(e){} window.MMMED('今天'); };
 </script>
 
 <!-- MUNEA-HEALTH-EMPTY -->
@@ -1330,46 +1330,27 @@ window.MMDEV = function(){
   var todayMoodHTML = document.getElementById('moodBody').innerHTML;
   window.__todayMoodHTML = todayMoodHTML;
 
-  var weekDays=[
-    {d:'一',k:'平靜',c:'#5B8FB3'},{d:'二',k:'愉悅',c:'#2FB7A8'},{d:'三',k:'開心',c:'#F4B63A'},
-    {d:'四',k:'低落',c:'#6D7F91'},{d:'五',k:'平靜',c:'#5B8FB3'},{d:'六',k:'愉悅',c:'#2FB7A8'},{d:'日',k:'平靜',c:'#5B8FB3'}
-  ];
-  var monthColors=['#5B8FB3','#2FB7A8','#F4B63A','#5B8FB3','#2FB7A8','#5B8FB3','#5B8FB3',
-    '#2FB7A8','#F4B63A','#5B8FB3','#5B8FB3','#2FB7A8','#5B8FB3','#6D7F91',
-    '#D98A32','#6D7F91','#5B8FB3','#2FB7A8','#5B8FB3','#F4B63A','#5B8FB3',
-    '#2FB7A8','#5B8FB3','#F4B63A','#2FB7A8','#5B8FB3','#5B8FB3','#2FB7A8',
-    '#5B8FB3','#F4B63A'];
-
-  function weekMoodHTML(){
-    var dots = weekDays.map(function(w){
-      return '<div style="text-align:center;flex:1"><div style="width:28px;height:28px;border-radius:50%;background:'+w.c+';margin:0 auto"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">'+w.d+'</div></div>';
-    }).join('');
-    return '<div style="display:flex;justify-content:space-between;margin-bottom:12px">'+dots+'</div>'+
-      '<div style="font-size:12.5px;color:var(--ink2);line-height:1.6">這週心情多在<b style="color:var(--teal-dd)">平靜到愉悅</b>之間，週四較低落，已記在觀察裡。</div>';
-  }
-  function monthMoodHTML(){
-    var cells = monthColors.map(function(c){ return '<div style="height:22px;border-radius:5px;background:'+c+'"></div>'; }).join('');
-    return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+cells+'</div>'+
-      '<div style="font-size:12.5px;color:var(--ink2);line-height:1.6">這個月多數天數維持<b style="color:var(--teal-dd)">平靜到愉悅</b>，有 <b style="color:#A8611E">3 天</b>較低落，集中在回診前後。</div>';
-  }
-
+  // （7/9 正式化：示範心情週/月區塊已拆——真版在 MM.renderMood）
   var HL='color:#8FD4CC';
+  function mmTodayLog(){ try{ var lg=JSON.parse(localStorage.getItem('munea.healthLog')||'{}'); return lg[mmDateKey()]||null; }catch(e){ return null; } }
+  // 7/9 正式化：狀態頁不再有寫死示範數字——今天=真日記帳（沒有就 —）、觀察句由真數據改寫
+  function vitalsOf(){
+    var t=mmTodayLog()||{};
+    function n(v,f){ return (v||v===0)?String(f?f(v):v):'—'; }
+    return {
+      bp:{num:n(t.bpSys), unit:(t.bpDia?'/'+t.bpDia+' mmHg':''), chip:'', sub:(t.bpSys?'正常範圍內':'接 Apple 健康帶入')},
+      hr:{num:n(t.hr), unit:(t.hr?' bpm':''), chip:'', sub:(t.hr?'靜息心率':'接 Apple 健康帶入')},
+      spo2:{num:n(t.spo2), unit:(t.spo2?' %':'')}, sleep:{num:n(t.sleepHours), unit:(t.sleepHours?' 時':'')},
+      steps:{num:n(t.steps,function(v){return (+v).toLocaleString();}), unit:(t.steps?' 步':'')}
+    };
+  }
   var data={
-    '今天':{title:'今天的狀態',moodChip:'過去7天 ↗ 平穩',mood:'today',
-      bp:{num:'128',unit:'/82 mmHg',chip:'穩定',sub:'正常範圍內'},
-      hr:{num:'72',unit:' bpm',chip:'正常',sub:'靜息心率'},
-      spo2:{num:'98',unit:' %'},sleep:{num:'7.5',unit:' 時'},steps:{num:'6,500',unit:' 步'},
-      obs:{p:'今天',t:'今天血壓 <b style="'+HL+'">128/82</b>、心率平穩，睡眠 <b style="'+HL+'">7.5 小時</b>，整體狀態不錯。',lead:'',act:'傍晚再散步 10 分鐘',tail:'，就能達成今天的活動目標。'}},
-    '過去7天':{title:'過去7天的狀態',moodChip:'7 天平均',mood:'week',
-      bp:{num:'126',unit:'/80 mmHg',chip:'穩定',sub:'較上週略降'},
-      hr:{num:'71',unit:' bpm',chip:'正常',sub:'7 天平均靜息心率'},
-      spo2:{num:'97',unit:' % 平均'},sleep:{num:'7.2',unit:' 時平均'},steps:{num:'6,800',unit:' 步/日均'},
-      obs:{p:'過去7天',t:'這週情緒多在<b style="'+HL+'">平靜到愉悅</b>之間，用藥準時 <b style="'+HL+'">6/7</b> 次，睡眠多半在 7 小時以上。',lead:'週四睡得比較少、活動量也偏低，建議',act:'固定就寢時間，睡前少滑手機',tail:'。'}},
-    '過去30天':{title:'過去30天的狀態',moodChip:'30 天平均',mood:'month',
-      bp:{num:'127',unit:'/81 mmHg',chip:'穩定',sub:'與上月持平'},
-      hr:{num:'72',unit:' bpm',chip:'正常',sub:'30 天平均靜息心率'},
-      spo2:{num:'97',unit:' % 平均'},sleep:{num:'7.3',unit:' 時平均'},steps:{num:'6,200',unit:' 步/日均'},
-      obs:{p:'過去30天',t:'這個月用藥準時 <b style="'+HL+'">93%</b>、活動量比上月多 <b style="'+HL+'">15%</b>，情緒多維持在平靜到愉悅。',lead:'第 3 週活動量較低，',act:'可以留意近期的活動安排',tail:'。'}}
+    '今天':{title:'今天的狀態',moodChip:'今天',mood:'today',
+      obs:{p:'今天',t:'今天的數據會即時整理在這裡。',lead:'',act:'接上 Apple 健康或跟我聊聊',tail:'，我就開始幫你看著。'}},
+    '過去7天':{title:'過去7天的狀態',moodChip:'7 天',mood:'week',
+      obs:{p:'過去7天',t:'趨勢從你的真實紀錄長出來——記錄越多、整理越準。',lead:'',act:'每天記一點',tail:'，一週後這裡就有你的節奏。'}},
+    '過去30天':{title:'過去30天的狀態',moodChip:'30 天',mood:'month',
+      obs:{p:'過去30天',t:'一個月的健康地圖正在累積。',lead:'',act:'持續記錄',tail:'，我會幫你看出變化。'}}
   };
 
   function refreshMedCard(period){ if(window.MMMED) window.MMMED(period); }
@@ -1520,13 +1501,14 @@ window.MMDEV = function(){
     document.getElementById('vitalsRow').style.display = showVitals?'flex':'none';
     document.getElementById('miniStatsCard').style.display = showVitals?'flex':'none';
     if(showVitals){
+      d=Object.assign({},d,vitalsOf());
       document.getElementById('bpNum').textContent=d.bp.num;
       document.getElementById('bpUnit').textContent=d.bp.unit;
-      document.getElementById('bpChip').textContent=d.bp.chip;
+      if(d.bp.chip){document.getElementById('bpChip').textContent=d.bp.chip;}
       document.getElementById('bpSub').textContent=d.bp.sub;
       document.getElementById('hrNum').textContent=d.hr.num;
       document.getElementById('hrUnit').textContent=d.hr.unit;
-      document.getElementById('hrChip').textContent=d.hr.chip;
+      if(d.hr.chip){document.getElementById('hrChip').textContent=d.hr.chip;}
       document.getElementById('hrSub').textContent=d.hr.sub;
       document.getElementById('spo2Num').textContent=d.spo2.num;
       document.getElementById('spo2Unit').textContent=d.spo2.unit;
@@ -1535,7 +1517,8 @@ window.MMDEV = function(){
       document.getElementById('stepsNum').textContent=d.steps.num;
       document.getElementById('stepsUnit').textContent=d.steps.unit;
     }
-    document.getElementById('obsText').innerHTML=d.obs.t+' '+d.obs.lead+'<span style="color:#8FD4CC;font-weight:700">'+d.obs.act+'</span>'+d.obs.tail;
+    if(period==='今天' && window.__muneaObsReal){ document.getElementById('obsText').innerHTML=window.__muneaObsReal; }
+    else { document.getElementById('obsText').innerHTML=d.obs.t+' '+d.obs.lead+'<span style="color:#8FD4CC;font-weight:700">'+d.obs.act+'</span>'+d.obs.tail; }
     document.getElementById('obsPeriod').textContent=d.obs.p;
     // 7/30 分頁的「寧寧的觀察」：接上裝置後一律講真數據（累積不足就老實說第幾天）
     if(period!=='今天' && localStorage.getItem('munea.devicesOn')){

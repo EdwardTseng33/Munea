@@ -1698,6 +1698,7 @@ window.__muneaSetHealth = function (s) {
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = txt;
+    el.style.display = '';   // 真數據到了就把標籤點亮（沒接裝置時是藏起來的）
     el.style.background = warn ? 'var(--coral-soft)' : 'var(--mint)';
     el.style.color = warn ? 'var(--coral-d)' : 'var(--teal-dd)';
   };
@@ -1726,7 +1727,11 @@ window.__muneaSetHealth = function (s) {
     put('sleepNum', String(Math.round(sleep * 10) / 10));
     if (sleep < 6) worry.push('昨晚睡得少');
   }
-  if (steps) put('stepsNum', Math.round(steps).toLocaleString());
+  if (steps) {
+    put('stepsNum', Math.round(steps).toLocaleString());
+    // 運動量不足（7/9 Edward 點題）：傍晚後還走不到 3000 步才提、白天不亂催
+    if (new Date().getHours() >= 18 && steps < 3000) worry.push('今天走得比較少');
+  }
   // 寧寧的觀察：有真資料才改寫，一句話講重點
   const obs = document.getElementById('obsText');
   if (obs && (sys || hr || sleep)) {
@@ -1739,6 +1744,7 @@ window.__muneaSetHealth = function (s) {
     obs.innerHTML = worry.length
       ? head + '大致都穩，不過' + B(worry.join('、')) + '，我幫你多留意，先別擔心。'
       : head + '整體狀態不錯。<span style="color:#8FD4CC;font-weight:700">保持這個節奏就很好</span>，想出門走走我陪你。';
+    window.__muneaObsReal = obs.innerHTML;   // 真觀察已寫：分頁切換不得用預設蓋掉
   }
   // 安全通知（真的動）：數據掉出危險範圍 → 寫進家人動態（雲端同步、家人打開沐寧就看到）；同類 6 小時最多一次
   try {
