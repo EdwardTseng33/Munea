@@ -4252,6 +4252,12 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            # 薄門（正式上線 · 7/9）：環境設了 MUNEA_APP_KEY 就要帶對 X-Munea-Key（App 自動帶、用戶無感）。
+            # 擋「雲端大門開了之後、陌生人拿網址直接來打」的流量。沒設 key＝不啟用、本機/區網照舊。
+            _door = os.environ.get("MUNEA_APP_KEY", "").strip()
+            if _door and self.headers.get("X-Munea-Key", "").strip() != _door:
+                self._json_error(403, "app_key_required", "App key required")
+                return
             data = self._read_json_body()
             auth_gate = require_verified_auth(self.headers, self.path, data)
             if not auth_gate.get("ok"):

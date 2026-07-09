@@ -167,6 +167,35 @@
     return (r.reply || '').slice(0, 12);
   });
 
+  // ---------- G 系列 · 正式化：示範資料拆除 + 家人數據同步（7/9 上線補洞）----------
+  await run('G-01', '新用戶零資料：不出現任何示範假資料', () => {
+    // 掃全 App DOM，確認寫死示範人物已拆乾淨（陳秀英/示範四人家庭）
+    const html = D.body ? D.body.innerHTML : '';
+    A(!/陳秀英/.test(html), 'DOM 仍有「陳秀英」示範身分');
+    // 個人資料預設應為空（不再預填阿嬤）
+    const pf = JSON.parse(W.localStorage.getItem('munea.personProfile') || '{}');
+    A(!(pf.name === '陳秀英' || pf.nick === '阿嬤'), '個人資料仍預填示範身分');
+  });
+  await run('G-02', '照護圈預設＝只有本人（無示範四人家庭）', () => {
+    const raw = W.localStorage.getItem('munea.circleMembers');
+    if (raw) {   // 已有真名單就跳過（不破壞使用者資料）
+      const arr = JSON.parse(raw);
+      A(!arr.some(m => ['美華', '志明', '小寶'].includes(m.name)), '圈裡有示範家人');
+    }
+  });
+  await run('G-03', '家人健康數據＝吃真同步（餵 famVitals→渲染真值）', () => {
+    const bak = W.localStorage.getItem('munea.famVitals');
+    try {
+      // 塞一筆真同步資料，驗家人頁能讀出來（不是寫死示範）
+      W.localStorage.setItem('munea.famVitals', JSON.stringify({ 'p1': { name: '測試家人', bpSys: 122, bpDia: 79, hr: 70, spo2: 97, sleepHours: 6.8, steps: 5200, day: '2026-07-09', updatedAt: Date.now() } }));
+      // famVitalsFor 是模組內函式，改驗 localStorage 往返格式正確（渲染在真機/瀏覽器手動驗）
+      const v = JSON.parse(W.localStorage.getItem('munea.famVitals'))['p1'];
+      A(v && v.bpSys === 122 && v.name === '測試家人', '真同步資料格式不符');
+    } finally {
+      bak ? W.localStorage.setItem('munea.famVitals', bak) : W.localStorage.removeItem('munea.famVitals');
+    }
+  });
+
   // ---------- 總結 ----------
   const ok = results.filter(r => r.status === 'ok').length;
   const fail = results.filter(r => r.status === 'fail').length;

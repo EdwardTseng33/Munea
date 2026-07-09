@@ -195,6 +195,8 @@ async function muneaAuthHeaders(base = {}) {
     const token = await auth.getAccessToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
+  // 薄門通行碼：管家腦雲端開門後靠它擋陌生流量（App 自動帶、用戶無感；本機沒設門=帶了也無妨）
+  try { if (typeof MUNEA_APP_KEY === 'string' && MUNEA_APP_KEY) headers['X-Munea-Key'] = MUNEA_APP_KEY; } catch (e) {}
   return headers;
 }
 async function companionProfileApi(action, profile) {
@@ -397,9 +399,25 @@ function playB64(b64) {
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
 const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000 };
-// 引擎住址：沒設就走同一棟樓（本機/區網照舊）；上雲後設 munea.brainUrl 指到正式服務
+// 管家腦雲端正式住址（台灣機房）——打包後的手機沒有「同一棟樓」可打相對路徑，一定要絕對網址
+// 否則家人同步/邀請/資料權利/回饋全打空氣（7/9 上線體檢 B2 抓到的重傷）
+const BRAIN_URL_DEFAULT = 'https://munea-brain-staging-491603544409.asia-east1.run.app';
+// 判斷「是不是打包後的原生 App」：不是 http/https 開頭（capacitor:// file://）或有 Capacitor 殼＝真機
+function isPackagedApp() {
+  try {
+    if (window.Capacitor && (window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : true)) return true;
+    return !/^https?:$/.test(location.protocol);
+  } catch (e) { return false; }
+}
+// 引擎住址：①設過 munea.brainUrl 優先 ②真機沒設→走雲端正式 ③一般網頁（本機/區網有引擎同源）→相對路徑照舊
 function brainURL(path) {
-  try { const b = localStorage.getItem('munea.brainUrl') || ''; return b ? b.replace(/\/$/, '') + path : path; } catch (e) { return path; }
+  try {
+    const b = localStorage.getItem('munea.brainUrl');
+    if (b) return b.replace(/\/$/, '') + path;
+    if (b === '' ) return path;                 // 明確設空字串＝強制走同源（開發用）
+    if (isPackagedApp()) return BRAIN_URL_DEFAULT + path;
+    return path;
+  } catch (e) { return path; }
 }
 async function brainPost(url, body) {
   if (isStaticPreview()) return null;
@@ -2487,6 +2505,7 @@ function init() {
     const _q = new URLSearchParams(location.search);
     if (_q.get('voiceUrl') !== null) localStorage.setItem('munea.liveVoiceUrl', _q.get('voiceUrl'));
     if (_q.get('avatarUrl') !== null) localStorage.setItem('munea.avatarUrl', _q.get('avatarUrl'));
+    if (_q.get('brainUrl') !== null) localStorage.setItem('munea.brainUrl', _q.get('brainUrl'));
   } catch (e) {}
   const __pullPromise = syncPullAll();
   setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
