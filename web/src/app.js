@@ -1093,8 +1093,22 @@ window.MuneaFaceWave = FaceWave;
 
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
+let callDialing = false;
+// 撥通中狀態：按鈕顯示「撥通中···」循環；真的接通（她開始聽/說）才變「結束通話」＋開始計時（Edward 7/9）
+function setCallDialing(on) {
+  callDialing = on;
+  const b = $('#callToggle'); if (!b) return;
+  b.classList.toggle('dialing', on);
+  const lbl = $('#callToggleLabel');
+  if (lbl) {
+    if (on) lbl.innerHTML = '撥通中<span class="dial-dots"><i>·</i><i>·</i><i>·</i></span>';
+    else lbl.textContent = callConnected ? '結束通話' : '開始通話';
+  }
+}
 function setCallToggle(connected) {
   callConnected = connected;
+  callDialing = false;
+  const _b0 = $('#callToggle'); if (_b0) _b0.classList.remove('dialing');
   // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
   const fn = document.querySelector('.face-name');
   if (fn) { fn.classList.toggle('off', !connected); const st = fn.querySelector('.fn-status'); if (st) st.textContent = connected ? '在線' : '未在線'; }
@@ -2402,8 +2416,9 @@ function setupHscrollHints() {
 
 function connectCall() {
   FaceIdle.stop();   // 按下通話：待機動態停、回靜態圖，交給語音＋雲端臉
-  setCallToggle(true);
-  startCallTimer();
+  setCallDialing(true);   // 按鈕先進「撥通中···」；真的能講話才變「結束通話」＋開始計時
+  let _connectedOnce = false;
+  const markConnected = () => { if (_connectedOnce) return; _connectedOnce = true; setCallToggle(true); startCallTimer(); };
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
   const box = document.querySelector('.face-caption-box');
   if (box) box.style.display = capOff ? 'none' : '';
@@ -2419,27 +2434,29 @@ function connectCall() {
     const chatEl = document.getElementById('chat');
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：同位置先放載入動態、收音動態等真的接上才出現（Edward 7/9）
     LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setCallHint('接通中', true); };
-    const onListen = () => { if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻跟麥克風
-    const onSpeak = () => { if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };   // 講話波頻＋2D 嘴型都跟她實際聲音（六角色全 avatar · Edward 7/9）
+    const onListen = () => { markConnected(); if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };   // 收音波頻＝接通後才出現（Edward 7/9）
+    const onSpeak = () => { markConnected(); if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };   // 講話波頻＋2D 嘴型都跟她實際聲音（六角色全 avatar · Edward 7/9）
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
     // 斷線自動接回：治「她答完一次、線就掉、不再回」——掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
     let _reconnects = 0;
     const onDrop = () => {
-      if (!callConnected) return;                         // 使用者已掛斷 → 不重連
+      if (!callConnected && !callDialing) return;         // 使用者已掛斷/取消 → 不重連
       if (_reconnects++ > 6) {                            // 接不回了 → 退簡單陪聊，不掛斷
         setCallHint('真語音不太穩，先用簡單方式陪你');
+        markConnected();
         openVoiceSession();
         setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
         return;
       }
       setCallHint('接回來中', true);
-      setTimeout(() => { if (callConnected) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
+      setTimeout(() => { if (callConnected || callDialing) LiveVoice.start(onListen, onSpeak, onDrop); }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
     Avatar.start();   // 臉同步接通（預醒過通常幾秒內有影像；沒好之前照片頂著、好了無縫蓋上）
     return;
   }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
+  markConnected();   // 簡單陪聊模式＝立即可講
   openVoiceSession();
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
 }
@@ -2474,15 +2491,27 @@ function init() {
   }
   // 關閉聊聊（X）＝有通話先掛斷結算，再回首頁；沒通話就直接回
   if ($('#chatExit')) $('#chatExit').addEventListener('click', () => {
-    if (callConnected) {
-      LiveVoice.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen();
-      try { const n = +(localStorage.getItem('munea.stat.chatsCompleted') || 0) + 1; localStorage.setItem('munea.stat.chatsCompleted', String(n)); } catch (e2) {}
-      setTimeout(() => window.__muneaMaybeAskReview('chat_completed'), 800);   // 自己掛斷＝好好聊完 → 開心時刻
+    if (callConnected || callDialing) {
+      const wasConnected = callConnected;
+      LiveVoice.stop(); completeChatSession(wasConnected ? 'user_ended' : 'user_cancelled'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen();
+      if (wasConnected) {
+        try { const n = +(localStorage.getItem('munea.stat.chatsCompleted') || 0) + 1; localStorage.setItem('munea.stat.chatsCompleted', String(n)); } catch (e2) {}
+        setTimeout(() => window.__muneaMaybeAskReview('chat_completed'), 800);   // 自己掛斷＝好好聊完 → 開心時刻
+      }
     }
     FaceWave.stop();
     showView('home');
   });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
+    // 撥通中再按一次＝取消撥號、回到待機
+    if (callDialing && !callConnected) {
+      LiveVoice.stop(); FaceWave.stop(); completeChatSession('user_cancelled'); chatOpened = false;
+      setCallToggle(false); stopCallTimer();
+      const chatEl = document.getElementById('chat'); if (chatEl) chatEl.dataset.state = 'idle';
+      setFaceState('idle'); if (window.__muneaStopListen) window.__muneaStopListen();
+      FaceIdle.start();
+      return;
+    }
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     // 第一次開聊前輕問一次「想聊什麼話題」（可跳過、之後在設定隨時改；只問這一次）
     if (!callConnected && !localStorage.getItem('munea.interestsAsked') && !loadInterests().length && window.__muneaOpenInterests) { window.__muneaOpenInterests(true); return; }
@@ -2903,9 +2932,7 @@ function init() {
     const wasActive = v && v.classList.contains('active');
     $('#viewAll').classList.remove('active');
     if (v) v.classList.add('active');
-    if ($('#ptName')) $('#ptName').textContent = p;   // 名字只在這裡出現一次（不再放稱謂副標）
-    const dn = $('#ptDemoNote');
-    if (dn) dn.textContent = '示範資料 · ' + p + '連上沐寧後，這裡就是他的真實狀態';
+    if ($('#ptName')) $('#ptName').textContent = p;   // 名字只在這裡出現一次（不再放稱謂副標、不放說明文字）
     renderPersonStats(p);
     renderPersonMood(p);   // 心情監測每個人都有（Edward 7/9）
     renderFamTrends();     // 活動量/睡眠/心情圖表跟著換人（跟狀態頁同款圖）

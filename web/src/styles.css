@@ -2078,7 +2078,8 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .step-row .step-val { flex: 1; text-align: center; font-family: var(--display); font-size: 19px; color: var(--teal-dd); min-width: 0; }
 
 /* 撥通中（腦開機）：同位置放載入動態；真收音動態等 ready 才出現（Edward 7/9） */
-.face-screen[data-state="connecting"] .face-wave { display: inline-flex; }
+/* 撥通中不再放收音載入動態（Edward 7/9：不直覺）——波紋等真的接通（聽/說狀態）才出現 */
+.face-screen[data-state="connecting"] .face-wave { display: none; }
 @keyframes wave-boot { 0%, 100% { transform: scaleY(.18); opacity: .45; } 50% { transform: scaleY(.85); opacity: 1; } }
 .face-screen[data-state="connecting"] .face-wave i { animation: wave-boot 1.05s ease-in-out infinite; }
 .face-screen[data-state="connecting"] .face-wave i:nth-child(2) { animation-delay: .09s; }
@@ -2114,17 +2115,16 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .face-screen[data-state="speaking"] .face-bg img { animation-duration: 2.4s; }
 
 /* 家人頁 · 左右切換鍵（Edward 7/9：不能只靠隱藏手勢，要看得到怎麼換人） */
-.pt-nav { width: 42px; height: 42px; border-radius: 999px; border: 1.5px solid var(--mint-2); background: var(--mint);
-  color: var(--teal-dd); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+.pt-nav { width: 44px; height: 44px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface);
+  color: var(--teal-dd); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; box-shadow: var(--shadow-sm); }
 .pt-nav .ic { width: 20px; height: 20px; }
 .pt-nav:disabled { opacity: .32; }
-.pt-nav:active:not(:disabled) { background: var(--mint-2); }
+.pt-nav:active:not(:disabled) { background: var(--mint); }
 /* 心率 / 血氧 磚色（沿用現有色盤語彙） */
 .stat-tile.t-hr .st-ico { background: var(--coral-soft); color: var(--coral-d); }
 .stat-tile.t-spo2 .st-ico { background: var(--mint-2); color: var(--teal-dd); }
 
 /* ===== 家人詳細頁 v1.4.2（Edward 7/9 UIUX 整修）===== */
-.pt-demo-note { font-size: 14px; color: var(--muted); margin: -8px 0 14px; line-height: 1.5; }
 .person-top .pt-nav#personBack { margin-right: 2px; }
 .mc-range { margin-top: 14px; }
 .mc-range .trend-tabs { width: 100%; }
@@ -2136,3 +2136,10 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .mood-mini .mm-lab { font-size: 14px; color: var(--muted); margin-top: 6px; font-weight: 700; }
 .mood-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
 .mood-grid i { height: 22px; border-radius: 5px; display: block; }
+
+/* 撥通中：按鈕上三點循環（真的接通才變「結束通話」）*/
+#callToggle .dial-dots { display: inline-flex; gap: 1px; margin-left: 2px; }
+#callToggle .dial-dots i { font-style: normal; animation: dialDot 1.2s ease-in-out infinite; }
+#callToggle .dial-dots i:nth-child(2) { animation-delay: .2s; }
+#callToggle .dial-dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes dialDot { 0%, 100% { opacity: .25; } 40% { opacity: 1; } }
