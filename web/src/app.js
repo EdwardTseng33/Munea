@@ -1208,7 +1208,17 @@ const LiveVoice = {
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
         const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this.playCtx.destination);
         const now = this.playCtx.currentTime;
-        if (this.playHead < now + 0.02) this.playHead = now + 0.18;
+        // 有會動的臉在跑時，聲音多等一下跟臉對齊（臉要往返雲端、比聲音慢約 1 秒）→ 聲音+嘴一起出、不再話先出嘴慢半拍（Edward 2026-07-10）。
+        // 純語音不接臉＝維持 0.18 秒快起播。等多久可在手機上微調：localStorage['munea.faceSyncMs']（毫秒、預設 900、0~3000）。
+        let _off = 0.18;
+        try {
+          if (typeof Avatar !== 'undefined' && Avatar.on) {
+            let ms = parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
+            if (isNaN(ms) || ms < 0 || ms > 3000) ms = 900;
+            _off = ms / 1000;
+          }
+        } catch (e) {}
+        if (this.playHead < now + 0.02) this.playHead = now + _off;
         s.start(this.playHead); this.playHead += b.duration;
         // 記著正在播的語音，插話時才能一次停乾淨（不留尾巴跟新句疊音）
         if (!this._srcs) this._srcs = [];
