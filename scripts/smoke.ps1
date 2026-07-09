@@ -2787,8 +2787,18 @@ cloudrun_status = Path("scripts/cloud-run-status.ps1").read_text(encoding="utf-8
 for token in ["Readiness", "StrictReadiness", "MUNEA_ADMIN_API_TOKEN", "MUNEA_REQUIRE_AUTH", "/admin.html"]:
     if token not in cloudrun_status:
         raise SystemExit("Cloud Run readiness missing token: " + token)
+cloudrun_deploy = Path("scripts/cloud-run-deploy-staging.ps1").read_text(encoding="utf-8")
+for token in ["git archive", "DryRun", "update-secrets", "MUNEA_REQUIRE_AUTH=1", "MUNEA_ENABLE_DEV_AUTH_BYPASS=false", "munea-admin-token-staging"]:
+    if token not in cloudrun_deploy:
+        raise SystemExit("Cloud Run clean deploy missing token: " + token)
+gcloudignore = Path(".gcloudignore").read_text(encoding="utf-8")
+for token in ["avatar-candidates-9x16/", "avatar-candidates-9x16-final/", "deploy/cloud-run/"]:
+    if token not in gcloudignore:
+        raise SystemExit(".gcloudignore missing local draft exclusion: " + token)
 if '"cloudrun:readiness"' not in package:
     raise SystemExit("package.json missing cloudrun:readiness script")
+if '"cloudrun:deploy:staging"' not in package:
+    raise SystemExit("package.json missing cloudrun:deploy:staging script")
 print("admin console contract OK")
 '@
 Pass "Admin console is present and keeps secrets out of static assets"

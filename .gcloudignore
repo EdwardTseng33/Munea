@@ -3,10 +3,13 @@
 Munea/
 _SalesKit-2026-07/
 avatar-candidates/
+avatar-candidates-9x16/
+avatar-candidates-9x16-final/
 design-import/
 ds-bundle/
 prototypes/
 demo-cloud/
+deploy/cloud-run/
 deploy/runpod-avatar/
 docs/
 ios/

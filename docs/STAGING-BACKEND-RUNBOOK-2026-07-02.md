@@ -186,6 +186,22 @@ npm run smoke:admin -- `
 
 This confirms `/admin.html` is served, unauthenticated admin reads are rejected, and the token-gated account, usage, credits, conversation-summary, privacy, safety, and audit read contracts return `ok:true`. The script never prints the admin token.
 
+## Clean Staging Deploy
+
+Use a clean git snapshot for staging deploys so local scratch files, Avatar PoC folders, and generated media do not enter the Cloud Run build context:
+
+```powershell
+npm run cloudrun:deploy:staging -- -DryRun
+```
+
+When the dry run looks right and staging is allowed to change:
+
+```powershell
+npm run cloudrun:deploy:staging
+```
+
+The script exports committed `HEAD` to a temporary source directory, deploys the brain service from that clean copy, and sets the staging auth flags. It will attach `MUNEA_ADMIN_API_TOKEN` only when the `munea-admin-token-staging` Secret Manager secret already exists. Pass `-IncludeVoice` when the voice service also needs a refresh.
+
 ## TestFlight Backend Strategy
 
 There are two valid first TestFlight tracks:
