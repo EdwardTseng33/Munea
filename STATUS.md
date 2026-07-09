@@ -35,6 +35,8 @@
 
 **⑱（7/9 晚 Windows）1.8.4 臉更快喚醒＋貓狗聲音（Edward 方案二＋語音調整）**：①**方案二＝進聊聊頁就喚醒顯卡**（`Avatar.wake` 升級：一路探 /health 到 `warm=true`、涵蓋冷啟 8-10s、離頁自動停不空燒）——通常讀完招呼按通話時臉已就緒；不阻塞語音（聲音仍即接、臉沒好由待機動態頂著、好了 crossfade）。②**貓狗聲音**：咪咪 Aoede→**Puck**（更高更調皮、古靈精怪小屁孩 style）；旺財維持 **Orus**（低沉、安全音組最低的自由聲）＋小男孩頑皮 style——⚠ Gemini Live 是固定音色、無法真調 pitch，只能選音色＋語氣導引；Edward A/B 後若要更低，唯一更深是 Charon（阿宏用、會撞），需 Edward 拍板是否共用。**已交付試吃檯 munea-voice-staging rev 00005、冒煙 HTTP 200**（貓狗新聲＋主動打招呼都在線上）。③**顯卡連續 1 小時成本**：Modal L4 ≈ US$0.8-1／小時 ≈ **NT$26-32/小時**（+語音橋 Cloud Run 微量）；2 分鐘沒人用自動睡、只在通話期間計費。版本三處 1.8.4。
 
+**⑲（7/9 晚 Windows）1.9.1 聊聊「兩邊都就緒才開場」（Edward 二次拍板）**：修正上一版方向——撥通中＝保持角色**待機動畫**（不定格照片、不動照片）＋「連線中…」；**硬閘門：語音就緒(onReady)＋會動的臉就緒(faceVid playing) 兩邊都到，才 markConnected＋亮 live 臉＋送 greet**（LiveVoice.greet→ws {type:greet}）。語音伺服器 `_do_greet` 改由 App 觸發（不再 session 開好自動打招呼）。25s 保底防臉接不上乾等；取消/掛斷後晚到就緒不誤開場。**已交付試吃檯 rev 00006、冒煙 HTTP 200**。selftest 22/22（三處 1.9.1）。核心＝寧可讓用戶等、不要開場後像當機。
+
 ### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
 - 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）
 - ⚠ 兩服務**鎖門中**：呼叫要帶 Google 通行證（`gcloud auth print-identity-token`）；開門方式待 Edward 拍板（不擋你手上的真機/付款工作）
