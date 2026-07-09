@@ -17,7 +17,7 @@ sed -i 's/np\.atan2/np.arctan2/g' core/aux_models/mediapipe_landmark478.py
 
 echo "== [3/6] Python 依賴（版本全釘死、D1 排雷結論）=="
 pip install -q --no-input "huggingface_hub[cli]" numpy==1.26.4 librosa tqdm filetype imageio imageio-ffmpeg \
-  opencv-python-headless scikit-image cython colored polygraphy soundfile mediapipe einops 2>&1 | tail -1
+  opencv-python-headless scikit-image cython colored polygraphy soundfile mediapipe einops aiohttp aiortc 2>&1 | tail -1
 pip uninstall -q -y onnxruntime onnxruntime-gpu 2>/dev/null || true
 pip install -q --no-input 'onnxruntime-gpu==1.18.1' 2>&1 | tail -1   # CUDA12 相容版
 pip install -q --no-input 'tensorrt==8.6.1.post1' 'cuda-python==12.4.0' 2>&1 | tail -1
