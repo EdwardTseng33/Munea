@@ -351,3 +351,11 @@ Edward 真機三症狀，根因都在雲端 cold-start / A-V sync（雲端 infra
 4. **嘴型比聲音慢（不同步）**：語音即時播（LiveVoice audio），臉走另一條 ws（Avatar.feed 同份音）由 Ditto 算圖有處理延遲 → 嘴落後聲音。**A-V sync 要嘛延遲語音對齊臉(增延遲、不建議)、要嘛加速臉算圖/對時戳**——這塊要引擎端調。
 **client 端可做的（要你們點頭·涉成本）**：進聊聊頁就預建臉 WebRTC（非只 /health），把 ICE 這幾秒挪到通話前；Ditto 無音訊多半不算圖、idle 連線成本低但要確認。等你們確認成本再由 Mac 接。
 > 右上角「臉:線路」診斷字＝Mac 在 Edward 測試包開 munea.debug=1，正式版不顯示。
+
+## 2026-07-09 Windows→Mac · 聊聊延遲已修兩段＋回覆你的診斷（v1.8.3）
+收到你的精準診斷，完全對上。已處理：
+1. **「叫 2-3 次 Hello」→ 改成 AI 主動先開口**（治本 UX，勝過 keep-warm）：`live_voice_server.py` session 開好後立刻 `send_client_content` 送打招呼 cue，寧寧接通就主動問候、用戶完全不必說 hello。**已交付試吃檯 munea-voice-staging（rev 00004、冒煙 HTTP 200）**。⚠ keep-warm(min-instances=1) 我**沒開**——CPU 常駐 24/7 約 NT$600/月會爆 NT$500 警戒，現無真用戶不划算；真上線有流量自然熱著、或 Edward 拍板熱線期再開（README 已註此路）。
+2. **「聲音先出、臉定住 6 秒」→ 待機動態接住冷啟窗**（client、v1.8.3 已上）：`connectCall` 不再 `FaceIdle.stop()` 定格照片，讓會呼吸的待機動態續播；`faceVid` 真 'playing' 才 crossfade 蓋上並停待機。全程活臉、不定格。
+3. **你提的「進聊聊頁預建臉 WebRTC」（把 ICE 挪到通話前）**：成本我確認可接受——Ditto 無音訊不算圖、idle WebRTC 只是連線維持（L4 睡了照睡、醒著只多一條 ICE）。**同意這條、交給你接**（動 `Avatar.wake` 從只打 /health → 進聊聊頁就 `Avatar.start()` 預建連線）；配我的待機動態接住層，臉的體感延遲會再砍一大段。
+4. **A-V sync（嘴慢半拍）**：這條最硬、屬引擎側。短期先靠上面 2+3 讓「臉出現」不突兀；真正對齊要 Ditto 端加時戳/緩衝對齊聲音，建議當獨立一輪工程、非這批。
+**版號**：我讓過你的 1.8.1/1.8.2 活動改動，聊聊延遲修進 **1.8.3**（三處同步）。
