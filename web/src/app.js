@@ -912,7 +912,7 @@ function getAvatarUrl() {
   return AVATAR_URL_DEFAULT;
 }
 const Avatar = {
-  pc: null, ws: null, on: false, _waking: false,
+  pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
   _diag(msg) {  // 診斷小窗（設定 munea.debug=1 才顯示）：手機上排查「臉沒動」用
     try {
       if (localStorage.getItem('munea.debug') !== '1') return;
@@ -920,11 +920,26 @@ const Avatar = {
       if (el) { el.hidden = false; el.textContent = '臉: ' + msg; }
     } catch (e) {}
   },
-  wake() {  // 預醒：進聊聊頁就叫床（重複呼叫無害；容器醒著＝這只是 1 次健康探針）
-    const u = getAvatarUrl(); if (!u || this._waking) return;
-    this._waking = true;
-    try { fetch(u + '/health?key=' + encodeURIComponent(MUNEA_APP_KEY), { mode: 'cors' }).catch(() => {}).finally(() => { this._waking = false; }); }
-    catch (e) { this._waking = false; }
+  // 進聊聊頁就把顯卡叫醒（Edward 2026-07-09 方案二）：連續探健康到「醒了」為止（涵蓋 8-10 秒冷啟），
+  // warm=true 後按通話臉就近乎即到。只在聊聊頁探、離頁就停（不空燒顯卡）。
+  wake() {
+    const u = getAvatarUrl(); if (!u) { this.warm = false; return; }
+    if (this._waking) return;
+    this._waking = true; this.warm = false;
+    const gen = ++this._wakeGen;
+    const onChat = () => { const c = document.getElementById('chat'); return c && c.classList.contains('active'); };
+    const ping = () => fetch(u + '/health?key=' + encodeURIComponent(MUNEA_APP_KEY), { mode: 'cors' })
+      .then(r => (r && r.ok) ? r.json() : null).catch(() => null);
+    const poll = tries => {
+      if (gen !== this._wakeGen) return;                 // 換角色/重進頁 → 舊輪作廢
+      ping().then(j => {
+        if (gen !== this._wakeGen) return;
+        if (j && j.ok) { this.warm = true; this._waking = false; this._diag('顯卡就緒'); return; }  // 醒了、就緒
+        if (tries > 0 && onChat()) { this._diag('喚醒顯卡中…'); setTimeout(() => poll(tries - 1), 1500); }
+        else { this._waking = false; }                   // 離頁或等太久 → 停（按通話時 start 會再喚醒）
+      });
+    };
+    poll(14);   // 最多約 21 秒（冷啟 8-10s 綽綽有餘）
   },
   async start() {
     const u = getAvatarUrl(); if (!u) return false;
