@@ -27,6 +27,8 @@
 
 **⑭（7/9 傍晚 Windows）Google 登入門打開了（真帳號第二波）**：①Google 雲端同意畫面建好（沐寧 Munea·外部·聯絡信箱）＋網頁登入門牌「Munea 登入（Supabase）」發好（回跳網址=資料櫃 callback）＋**發布狀態推到「實際運作中」**（任何 Google 帳號都能登、不限測試名單）；②資料櫃 Google 供應商已啟用（門牌＋密語填入、Successfully updated 確認、`/auth/v1/settings` 實測 google=開）。**Apple 登入待兩步**：(a) Edward 本人登入 developer.apple.com（票過期、密碼不代打）→ 我接手開能力+Services ID+簽名鑰匙+填資料櫃 (b) **給 Mac**：App 殼要接 OAuth 回跳（自訂 URL scheme 或 Universal Link → 導回 App），並確認資料櫃 URL Configuration 的允許回跳清單含 App scheme。⚠ 安全註記（給沙利曼）：Google 密語建立當下在瀏覽器頁面亮過、有進本機作業記錄——風險低（只在 Edward 本機），要零風險就到門牌頁一鍵停用舊密語換新（App 不受影響、資料櫃改貼新密語即可）。
 
+**⑮（7/9 傍晚 Windows）Apple 登入門也開了——兩顆登入鈕全通（實測 apple=開/google=開/email=開）**：①App 身分證勾 Sign In with Apple（主要 App ID）②服務門牌 `net.munea.app.signin` 建好＋網域/回跳綁資料櫃 callback ③簽名鑰匙 Key ID `UPNMK4XW45`（私鑰只能下載一次）④用私鑰生「登入密語」（client secret JWT、ES256、**到期 2027/1/5**）填進資料櫃 Apple 供應商（Client IDs=net.munea.app,net.munea.app.signin）⑤存檔 Successfully updated、Apple＝Enabled。**私鑰/密語/生成小工具已從本機清除**（已進資料櫃、不留地）。⚠ **給 Mac**：App 殼接兩家 OAuth 回跳（自訂 URL scheme／Universal Link 導回 App）＋資料櫃 URL Configuration 允許回跳清單加 App scheme；iOS 原生 Apple 登入建議走原生 ASAuthorization。⚠ **維運**：Apple 登入密語 6 個月到期，**2027/1/5 前**要重生一次（需先在 developer.apple.com 下新的 .p8 或留備份）。
+
 ### 🍎→🌿 Mac 接雲端的資訊包（要用時看這裡）
 - 管家腦 `https://munea-brain-staging-491603544409.asia-east1.run.app`／語音橋 `wss://munea-voice-staging-491603544409.asia-east1.run.app`——App 設 `munea.brainUrl`＋`munea.liveVoiceUrl` 即切（1.1.2 起支援）
 - ⚠ 兩服務**鎖門中**：呼叫要帶 Google 通行證（`gcloud auth print-identity-token`）；開門方式待 Edward 拍板（不擋你手上的真機/付款工作）
