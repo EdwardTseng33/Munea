@@ -207,7 +207,7 @@ class Nening:
                     now = time.time()
                     prefix = CHUNKSIZE[0] * 640
                     if self.t0 is None or (now - self.last_in) > 0.8:
-                        self.t0 = now + 0.25 - max(0, self.pos - prefix) / SR_ENG
+                        self.t0 = now + 0.12 - max(0, self.pos - prefix) / SR_ENG   # 對嘴緩衝 0.25→0.12：嘴提早約 130ms、更貼聲音（Edward 2026-07-10）
                     self.acc = np.concatenate([self.acc, xq])
                     self.last_in = now
             def reset(self):
@@ -274,6 +274,7 @@ class Nening:
     # ---------- 對外：通話服務（網頁接口） ----------
     @modal.asgi_app()
     def web(self):
+        import time
         from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
         from av import VideoFrame
         from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -294,11 +295,18 @@ class Nening:
             def __init__(self):
                 super().__init__()
                 self.last = outer.poster
+                self._active_ts = 0.0
             async def recv(self):
                 pts, tb = await self.next_timestamp()
                 fr = outer.sink.pop()
+                now = time.time()
                 if fr is not None:
                     self.last = fr
+                    self._active_ts = now
+                elif self._active_ts and (now - self._active_ts) > 0.35:
+                    # 講完 0.35 秒沒新畫面 → 回「閉嘴的待機靜態」，不要卡在最後一格開著嘴像當機（Edward 2026-07-10）
+                    self.last = outer.poster
+                    self._active_ts = 0.0
                 vf = VideoFrame.from_ndarray(self.last, format="rgb24")
                 vf.pts = pts
                 vf.time_base = tb
