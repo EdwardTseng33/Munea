@@ -149,6 +149,17 @@ async def handle(ws):
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
         _q = parse_qs(urlparse(path).query)
+        # 薄門（正式上線 · 7/9 Edward 拍板）：環境設了 MUNEA_APP_KEY 就要對通行碼（?key=）。
+        # App 自動帶、用戶無感；擋的是「拿到網址直接來撥」的陌生流量。本機沒設＝不啟用、行為不變。
+        _gate = os.environ.get("MUNEA_APP_KEY", "").strip()
+        if _gate:
+            kvals = _q.get("key")
+            if not kvals or kvals[0] != _gate:
+                try:
+                    await ws.close(code=4403, reason="key required")
+                except Exception:
+                    pass
+                return
         vals = _q.get("name")
         if vals:
             name = vals[0]

@@ -11,11 +11,22 @@
   python probe_wake.py                  # 快照喚醒掐錶（診斷用）
 App 端：localStorage['munea.avatarUrl'] 指到本服務網址（預設已內建）。
 """
+import os
+
 import modal
 
 app = modal.App("munea-nening-avatar")
 
 vol = modal.Volume.from_name("munea-ditto-models", create_if_missing=True)
+
+# 薄門通行碼（正式上線 · 7/9 Edward 拍板）：App 自動帶、用戶無感；擋「拿網址直接來撥」的陌生流量。
+# 部署時從本機 deploy/.munea-app-key 讀（gitignore）；檔不存在＝不啟用門（其他機器照常部署）。
+_KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".munea-app-key")
+APP_KEY = ""
+try:
+    APP_KEY = open(_KEY_FILE, encoding="utf-8").read().strip()
+except Exception:
+    pass
 
 image = (
     modal.Image.from_registry("nvidia/cuda:12.4.1-devel-ubuntu22.04", add_python="3.11")
@@ -41,7 +52,7 @@ image = (
         "from core.utils.blend import blend; print('blend precompiled')\" || echo 'precompile skipped (runtime will compile)'",
     )
     .pip_install("fastapi")
-    .env({"LD_LIBRARY_PATH": "/opt/cudnn8-pkgs/nvidia/cudnn/lib"})
+    .env({"LD_LIBRARY_PATH": "/opt/cudnn8-pkgs/nvidia/cudnn/lib", "MUNEA_APP_KEY": APP_KEY})
     .add_local_file(r"E:\Claude\Munea\web\avatars\nening-real-female-full.jpg",
                     "/root/nening-real-female-full.jpg")
 )
@@ -219,6 +230,12 @@ class Nening:
         api.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
         outer = self
 
+        import os as _os
+        _gate = _os.environ.get("MUNEA_APP_KEY", "").strip()
+
+        def _pass(request_key):
+            return (not _gate) or (request_key == _gate)
+
         class NeningTrack(VideoStreamTrack):
             kind = "video"
             def __init__(self):
@@ -235,12 +252,16 @@ class Nening:
                 return vf
 
         @api.get("/health")
-        def health():
+        def health(key: str = ""):
+            if not _pass(key):
+                return {"ok": False, "error": "key required"}
             return {"ok": True, "engine": "ditto-online-trt-modal", "frames": outer.sink.count,
                     "load": outer.load_report}
 
         @api.post("/offer")
-        async def offer(payload: dict):
+        async def offer(payload: dict, key: str = ""):
+            if not _pass(key):
+                return {"error": "key required"}
             pc = RTCPeerConnection(RTCConfiguration(
                 iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")]))
             outer.pcs.add(pc)
@@ -257,7 +278,10 @@ class Nening:
             return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
 
         @api.websocket("/audio")
-        async def audio_ws(ws: WebSocket):
+        async def audio_ws(ws: WebSocket, key: str = ""):
+            if not _pass(key):
+                await ws.close(code=4403)
+                return
             await ws.accept()
             print("[audio] connected", flush=True)
             try:

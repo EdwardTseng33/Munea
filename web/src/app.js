@@ -872,8 +872,10 @@ function saveInterests(list) { try { localStorage.setItem('munea.interests', JSO
 
 // ===== 真即時語音（Gemini 3.1 Live）：MuneaVoiceProvider 的 live 模式 =====
 // 架構：前端這支 → WebSocket 即時語音橋（engine/live_voice_server.py）。麥克風即時串流上去、聲音即時播回來、可打斷。
-// 連哪裡：localStorage['munea.liveVoiceUrl']，沒設就用下面 DEV 預設（同 Wi-Fi 指到 Mac 引擎；正式版改 hosted 後端）。
-const LIVE_VOICE_URL_DEFAULT = 'ws://192.168.0.107:8201';
+// 連哪裡：localStorage['munea.liveVoiceUrl']，沒設就走正式雲端（台灣機房 · 7/9 Edward 拍板正式上線推進）。
+const LIVE_VOICE_URL_DEFAULT = 'wss://munea-voice-staging-491603544409.asia-east1.run.app';
+// 薄門通行碼：App 自動帶、用戶無感；擋「拿到網址直接來撥」的陌生流量（本機引擎沒開門檢查、帶了也無妨）
+const MUNEA_APP_KEY = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
 function getLiveVoiceUrl() {
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
   return LIVE_VOICE_URL_DEFAULT;
@@ -891,7 +893,7 @@ const Avatar = {
   wake() {  // 預醒：進聊聊頁就叫床（重複呼叫無害；容器醒著＝這只是 1 次健康探針）
     const u = getAvatarUrl(); if (!u || this._waking) return;
     this._waking = true;
-    try { fetch(u + '/health', { mode: 'cors' }).catch(() => {}).finally(() => { this._waking = false; }); }
+    try { fetch(u + '/health?key=' + encodeURIComponent(MUNEA_APP_KEY), { mode: 'cors' }).catch(() => {}).finally(() => { this._waking = false; }); }
     catch (e) { this._waking = false; }
   },
   async start() {
@@ -907,10 +909,10 @@ const Avatar = {
         const chk = () => { if (this.pc.iceGatheringState === 'complete') { this.pc.removeEventListener('icegatheringstatechange', chk); res(); } };
         this.pc.addEventListener('icegatheringstatechange', chk); setTimeout(res, 3000);
       });
-      const r = await fetch(u + '/offer', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY), { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
-      const a = await r.json(); await this.pc.setRemoteDescription(a);
-      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio');
+      const a = await r.json(); if (a.error) throw new Error(a.error); await this.pc.setRemoteDescription(a);
+      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY));
       this.ws.binaryType = 'arraybuffer';
       this.on = true;
       return true;
@@ -954,6 +956,8 @@ const LiveVoice = {
     try { const _md = (window.MM && window.MM.currentMood) ? window.MM.currentMood() : ''; if (_md) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'mood=' + encodeURIComponent(_md); } catch (e) {}
     // 帶上他挑的興趣話題，讓 AI 開場就聊得對味
     try { const _ts = loadInterests(); if (_ts.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'topics=' + encodeURIComponent(_ts.join(',')); } catch (e) {}
+    // 薄門通行碼（App 自動帶、用戶無感）
+    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(MUNEA_APP_KEY);
     this.on = true;
     this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
