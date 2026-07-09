@@ -39,6 +39,17 @@ window.MuneaNotify = (function () {
       if (!t) return;
       items.push({ id: 'med-' + s, title: '該吃藥了', body: s + '的藥：' + slots[s].join('、') + '。吃完回沐寧打個勾，家人就放心了。', hour: t.hour, minute: t.minute, repeats: true });
     });
+    // 家庭活動（揪一攤）：活動前 30 分鐘提醒（Edward 7/9）
+    var acts = [];
+    try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
+    if (Array.isArray(acts)) acts.forEach(function (a) {
+      if (!a || a.kind !== 'event' || !a.dateISO) return;
+      var d = new Date(a.dateISO + 'T' + (a.time || '18:00'));
+      if (isNaN(d)) return;
+      var r = new Date(d.getTime() - 30 * 60 * 1000);
+      if (r <= new Date()) return;
+      items.push({ id: 'act-' + a.id, title: (a.title || '家庭聚會') + ' 快到了', body: '再 30 分鐘：' + (a.title || '聚會') + (a.place ? ' 在 ' + a.place : '') + '，別忘了喔。', year: r.getFullYear(), month: r.getMonth() + 1, day: r.getDate(), hour: r.getHours(), minute: r.getMinutes() });
+    });
     // 回診：提前 1 小時、單次
     var visits = [];
     try { visits = JSON.parse(localStorage.getItem('munea.visits')) || []; } catch (e) {}

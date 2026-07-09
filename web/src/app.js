@@ -3514,7 +3514,7 @@ function init() {
     });
   }
   function loadActs() { try { return JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) { return []; } }
-  function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} syncPush('activities', a); }
+  function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} syncPush('activities', a); if (window.MuneaNotify) window.MuneaNotify.sync(); }
   const FAM_AVA = { '阿嬤': ['嬤', 'p-ama'], '美華': ['華', 'p-mei'], '志明': ['明', 'p-zhi'], '小寶': ['寶', 'p-bao'], '你': ['我', 'p-me'] };
   function buildRankList(act) {
     const rows = Object.entries(act.answers).sort((x, y) => y[1] - x[1]);
@@ -3531,13 +3531,17 @@ function init() {
     const my = act.rsvp && act.rsvp['你'];
     const going = Object.entries(act.rsvp || {}).filter(([, v]) => v === 'go').map(([n]) => n);
     const no = Object.entries(act.rsvp || {}).filter(([, v]) => v === 'no').map(([n]) => n);
+    // 活動時間過了就鎖住（時間點以前才能選、之後只看結果）— Edward 7/9
+    let locked = false;
+    try { if (act.dateISO) { const dt = new Date(act.dateISO + 'T' + (act.time || '23:59')); if (!isNaN(dt) && dt < new Date()) locked = true; } } catch (e) {}
     box.innerHTML =
       '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + (act.dateLabel ? '<br>' + act.dateLabel : '') + '</div>' +
-      '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go">我要去</button>' +
-      '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no">我沒空</button></div>' +
-      '<div class="qc-num">' + (going.length ? '要去的：' + going.join('、') : '還沒有人回「要去」') + (no.length ? '　·　沒空：' + no.join('、') : '') + '；' + cname() + '會幫你問阿嬤跟其他人。</div>';
-    box.querySelector('.rsvp-btns').addEventListener('click', e => {
-      const b = e.target.closest('.rsvp-btn'); if (!b) return;
+      '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go"' + (locked ? ' disabled' : '') + '>我要去</button>' +
+      '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no"' + (locked ? ' disabled' : '') + '>我沒空</button></div>' +
+      '<div class="qc-num">' + (going.length ? '要去的：' + going.join('、') : '還沒有人回「要去」') + (no.length ? '　·　沒空：' + no.join('、') : '') +
+      '；' + (locked ? '活動時間到了，不能再改。' : (my ? '想改隨時再點另一個就好；' : '點一下回覆；') + cname() + '會幫你問阿嬤跟其他人。') + '</div>';
+    if (!locked) box.querySelector('.rsvp-btns').addEventListener('click', e => {
+      const b = e.target.closest('.rsvp-btn'); if (!b || b.disabled) return;
       act.rsvp = act.rsvp || {}; act.rsvp['你'] = b.dataset.r;
       const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.rsvp = act.rsvp; saveActs(acts);
       renderEventBody(act, box);
@@ -3840,6 +3844,7 @@ function init() {
       if (!ed0 || isNaN(ed0)) { toast('先選聚會的日期'); return; }
       const etv = ($('#evTime') && $('#evTime').value) || '18:00';
       act.dateISO = isoOf(ed0);
+      act.time = etv;   // 原始時間：給「活動前 30 分提醒」＋「時間過了鎖 RSVP」用
       act.dateLabel = fmtDay(ed0) + ' ' + _clock12(etv);
       act.title = (($('#eventName') && $('#eventName').value.trim()) || '家庭聚會');
       act.place = (($('#eventPlace') && $('#eventPlace').value.trim()) || '');
@@ -3854,16 +3859,23 @@ function init() {
     hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : kind === 'vote' ? '好，' + cname() + '把問題送出去了，誰投了什麼馬上看得到。' : kind === 'draw' ? '好，' + cname() + '把抽獎報給大家了，' + (act.when || '') + '開獎！' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
   });
   // 一張活動卡是不是「到期該收」（含自己發起的、含問答/投票、含沒設日期的殭屍卡）— Edward 7/9 修卡死
+  // 這個活動「哪天算結束」（揪一攤=活動日、問答/投票=截止、運動=截止、抽獎=開獎日）
+  function actEndISO(a) {
+    if (a.kind === 'quiz' || a.kind === 'vote') return a.dueISO || a.dateISO;
+    return a.dateISO || a.dueISO;
+  }
+  // 到期規則（Edward 7/9）：揪一攤=活動當天過後、隔天 0:00 收；問答/運動=結束後多留一天看成績；殭屍卡放 3 天一律清
   function actExpired(a) {
     if (!a) return false;
     const today = isoOf(new Date());
-    const created = a.id ? isoOf(new Date(a.id)) : today;   // id = 建立當下時間
-    const when = a.dateISO || a.dueISO || created;          // 沒設日期就用「建立當天」當基準
+    const created = a.id ? isoOf(new Date(a.id)) : today;
+    const endBase = (a.status === 'done' ? a.doneISO : actEndISO(a)) || created;
+    const grace = (a.kind === 'quiz' || a.kind === 'walk') ? 1 : 0;   // 問答/運動：結束後多留一天
+    const g = new Date(endBase + 'T00:00'); g.setDate(g.getDate() + grace);
+    const removeAfter = isoOf(g);   // 這天(含)之前留著、隔天 0:00 收
     const d3 = new Date(); d3.setDate(d3.getDate() - 3);
-    const cutoff = isoOf(d3);
-    if (a.status === 'done') return !!(a.doneISO && a.doneISO < today);   // 完成的：隔天收
-    if (when && when < today) return true;                               // 到期收（不分種類）
-    if (created < cutoff) return true;                                   // 保險：放超過 3 天的殭屍卡一律清
+    if (removeAfter < today) return true;
+    if (created < isoOf(d3)) return true;   // 保險：殭屍卡放超過 3 天一律清
     return false;
   }
   // 開 App 時整理牆面：到期的收進記錄簿、其餘重畫

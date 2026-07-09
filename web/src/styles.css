@@ -2158,3 +2158,4 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .walk-p .init-ava { width: 30px; height: 30px; font-size: 13px; flex-shrink: 0; }
 .walk-p b { flex: 1; color: var(--ink); }
 .walk-p span:last-child { color: var(--teal-dd); font-weight: 700; }
+.rsvp-btn:disabled { opacity: .5; cursor: default; }
