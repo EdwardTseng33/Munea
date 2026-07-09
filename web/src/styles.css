@@ -1867,10 +1867,19 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .dt-row .chal-input { flex: 1; min-width: 0; }
 #chalModal #startChalBtn { position: sticky; bottom: 6px; z-index: 5; box-shadow: var(--shadow-sm), 0 -12px 14px -12px rgba(31,41,38,.14); }
 /* 意見與建議：NPS 0-10 大按鈕（長輩好按）＋提示列 */
-.nps-row { display: grid; grid-template-columns: repeat(11, 1fr); gap: 5px; margin: 4px 0 4px; }
-.nps-btn { padding: 11px 0; border: 2px solid var(--line); border-radius: 12px; background: #fff; font-size: 16px; font-weight: 800; color: var(--ink2); cursor: pointer; }
-.nps-btn.on { border-color: var(--teal); background: var(--teal); color: #fff; }
-.nps-hint { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+/* 打分數＝拉桿 Bar 條（Edward 7/9）：填色軌道＋大顆好拉的圓鈕＋上方大字回饋 */
+.nps-bar { margin: 6px 0 4px; }
+.nps-readout { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.nps-readout b { font-family: var(--display); font-size: 34px; font-weight: 900; color: var(--teal-dd); line-height: 1; min-width: 44px; }
+.nps-readout span { font-size: 14.5px; color: var(--muted); font-weight: 600; }
+.nps-slider { --fill: 80%; -webkit-appearance: none; appearance: none; width: 100%; height: 14px; border-radius: 100px; outline: none; margin: 6px 0 10px; cursor: pointer;
+  background: linear-gradient(to right, var(--teal) 0%, var(--teal) var(--fill), var(--mint) var(--fill), var(--mint) 100%); }
+.nps-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 3px solid var(--teal); box-shadow: 0 4px 10px -3px rgba(35,108,102,.45); cursor: grab; }
+.nps-slider::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 3px solid var(--teal); box-shadow: 0 4px 10px -3px rgba(35,108,102,.45); cursor: grab; }
+.nps-hint { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+/* 類型籤：線條 icon ＋ 文字（同全 App stroke 圖標語言） */
+.fb-types .topic-chip { display: inline-flex; align-items: center; gap: 6px; }
+.fb-types .topic-chip .ic { width: 17px; height: 17px; flex-shrink: 0; }
 textarea.chal-input { resize: none; line-height: 1.7; }
 /* 想聊的話題：小圓籤（長輩好按的大觸控） */
 .topic-chips { display: flex; flex-wrap: wrap; gap: 9px; margin: 4px 0 8px; }

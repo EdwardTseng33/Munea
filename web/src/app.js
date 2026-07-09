@@ -3951,13 +3951,18 @@ function init() {
   // ===== 意見與建議（回報問題/功能建議/稱讚/NPS）→ 引擎收件箱＋Slack 叮一聲 =====
   let _fbType = 'bug', _fbNps = null;
   function renderNps() {
-    const row = $('#npsRow'); if (!row || row.dataset.built) return; row.dataset.built = '1';
-    row.innerHTML = Array.from({ length: 11 }, (_, i) => '<button type="button" class="nps-btn" data-n="' + i + '">' + i + '</button>').join('');
-    row.addEventListener('click', e => {
-      const b = e.target.closest('.nps-btn'); if (!b) return;
-      _fbNps = +b.dataset.n;
-      row.querySelectorAll('.nps-btn').forEach(x => x.classList.toggle('on', x === b));
-    });
+    // 拉桿 Bar 條打分（Edward 7/9：不要 11 顆按鈕）：拉或點都行、上方大字即時顯示
+    const s = $('#npsSlider'); if (!s || s.dataset.built) return; s.dataset.built = '1';
+    const WORDS = ['完全不會', '不太會', '不太會', '普通', '普通', '普通', '還可以', '願意', '願意', '非常願意', '非常願意'];
+    const paint = () => {
+      const v = +s.value;
+      s.style.setProperty('--fill', (v * 10) + '%');
+      if ($('#npsVal')) $('#npsVal').textContent = String(v);
+      if ($('#npsWord')) $('#npsWord').textContent = WORDS[v] || '';
+    };
+    const pick = () => { _fbNps = +s.value; paint(); };
+    s.addEventListener('input', pick);
+    s.addEventListener('change', pick);
   }
   function fbApplyType() {
     if ($('#fbCatWrap')) $('#fbCatWrap').style.display = _fbType === 'bug' ? '' : 'none';
@@ -3980,7 +3985,7 @@ function init() {
   });
   if ($('#fbSend')) $('#fbSend').addEventListener('click', async () => {
     const text = ($('#fbText') && $('#fbText').value.trim()) || '';
-    if (_fbType === 'nps' && _fbNps === null) { toast('先點一個 0～10 的分數'); return; }
+    if (_fbType === 'nps' && _fbNps === null) { toast('先拉一下分數條，選個 0～10 的分數'); return; }
     if (_fbType !== 'nps' && !text) { toast('說一句就好，我們想聽'); return; }
     const cat = _fbType === 'bug' ? ((document.querySelector('#fbCats .topic-chip.on') || { dataset: {} }).dataset.c || '其他') : '';
     const body = { type: _fbType, category: cat, text: text, score: _fbNps, appVersion: (window.MuneaVersion && window.MuneaVersion.current) || '', plan: (window.MMPLAN && window.MMPLAN.get()) || '' };
