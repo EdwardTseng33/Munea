@@ -2740,7 +2740,7 @@ function init() {
   function renderPersonMood(p) {
     const m = PERSON_MOOD[p] || PERSON_MOOD['阿嬤'];
     if ($('#mcTitle')) $('#mcTitle').textContent = m.title;
-    if ($('#mcSub')) $('#mcSub').textContent = m.sub.replace('{n}', cname());
+    if ($('#mcSub')) $('#mcSub').textContent = m.sub.replace('{n}', '沐寧');   // 家人聊的是「他自己的沐寧」，不套我這台的角色名
     if ($('#mcObs')) $('#mcObs').innerHTML = m.obs;
     if ($('#mcTopics')) $('#mcTopics').innerHTML = m.topics.map(t => '<i>' + t + '</i>').join('');
   }
@@ -2805,9 +2805,11 @@ function init() {
     $('#viewAll').classList.remove('active');
     if (v) v.classList.add('active');
     if ($('#ptName')) $('#ptName').textContent = p;
-    if ($('#personNavTitle')) $('#personNavTitle').textContent = p;
+    const dn = $('#ptDemoNote');
+    if (dn) dn.textContent = '示範資料 · ' + p + '連上沐寧後，這裡就是他的真實狀態';
     renderPersonStats(p);
     renderPersonMood(p);   // 心情監測每個人都有（Edward 7/9）
+    renderFamTrends();     // 活動量/睡眠/心情圖表跟著換人（跟狀態頁同款圖）
     if ($('#moodToday')) $('#moodToday').style.display = '';
     if ($('#ptRel')) $('#ptRel').textContent = rel || '';
     const pa = $('#ptAv');
@@ -3169,35 +3171,87 @@ function init() {
   renderFamRoster();   // 開頁就以家庭圈名單為準重建家人頁（兩本帳合一）
   // 狀態頁底部「接上 Apple 健康」卡 → 點了直接進「連接裝置」頁（Edward 7/9：綠字連結要真的能走）
   if ($('#stConnectCard')) $('#stConnectCard').addEventListener('click', () => { window.__connectFrom = 'status'; showView('connect'); });
-  // 週/月趨勢切換
-  const TREND = {
-    week: {
-      bars: [
-        { l: '一', h: 55, s: 'soso' }, { l: '二', h: 72, s: 'ok' }, { l: '三', h: 45, s: 'soso' },
-        { l: '四', h: 80, s: 'ok' }, { l: '五', h: 62, s: 'today' }, { l: '六', h: 0, s: 'future' }, { l: '日', h: 0, s: 'future' }],
-      note: '這週到目前 <b>2 天達標</b>；今天已經走 6,200 步，再走一小段就達標了。'
-    },
-    month: {
-      bars: [
-        { l: '第 1 週', h: 64, s: 'ok' }, { l: '第 2 週', h: 78, s: 'ok' }, { l: '第 3 週', h: 42, s: 'soso' }, { l: '第 4 週', h: 70, s: 'today' }],
-      note: '這個月 <b>2 週達標</b>；第 3 週在感冒、少動很正常，這週正在補回來。'
-    }
-  };
-  function renderTrend(range) {
-    const box = $('#trendBars');
-    if (!box) return;
-    const d = TREND[range] || TREND.week;
-    box.innerHTML = d.bars.map(b2 => '<div class="tb ' + b2.s + '"><i style="height:' + Math.max(b2.h, 6) + '%"></i><span>' + b2.l + '</span></div>').join('');
-    if ($('#trendNote')) $('#trendNote').innerHTML = d.note;
+  // ===== 家人頁圖表：跟狀態頁同一款長相（柱狀＋目標虛線），活動量/睡眠/心情 週月直接切 =====
+  function famBarsHTML(labels, values, goal, colorFn, hiIdx) {
+    const max = Math.max(goal, Math.max.apply(null, values)) * 1.15;
+    const goalPct = Math.min(96, Math.round((goal / max) * 100));
+    const bars = values.map((v, i) => {
+      const h = Math.max(6, Math.round((v / max) * 100));
+      const isHi = i === hiIdx;
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;position:relative;z-index:1">' +
+        '<div style="width:100%;max-width:24px;height:' + h + '%;border-radius:7px 7px 3px 3px;background:' + colorFn(v) + '"></div>' +
+        '<div style="font-size:14px;color:' + (isHi ? 'var(--coral-d)' : 'var(--muted)') + ';font-weight:' + (isHi ? '900' : '700') + '">' + labels[i] + '</div></div>';
+    }).join('');
+    return '<div style="position:relative;display:flex;align-items:flex-end;gap:8px;height:96px">' +
+      '<div style="position:absolute;left:0;right:0;bottom:' + goalPct + '%;border-top:1.5px dashed rgba(90,105,99,.4)"></div>' + bars + '</div>';
   }
-  renderTrend('week');
-  const trendTabs = $('#trendTabs');
-  if (trendTabs) trendTabs.addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    trendTabs.querySelectorAll('button').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    renderTrend(b.dataset.range);
-  });
+  // 家人示範數據（正式版＝那位家人自己的沐寧經雲端同步；頁面上方已標「示範資料」）
+  const FAM_WD = ['一', '二', '三', '四', '五', '六', '日'];
+  const FAM_WL = ['第1週', '第2週', '第3週', '第4週'];
+  const PERSON_TREND = {
+    '美華': { stepsW: [8200, 9100, 7600, 8800, 9600, 10400, 8900], stepsM: [8400, 8900, 8100, 9000], sleepW: [6.4, 6.1, 6.8, 5.9, 6.2, 7.1, 6.2], sleepM: [6.3, 6.5, 6.1, 6.4] },
+    '志明': { stepsW: [6800, 7400, 6900, 7800, 7200, 8100, 7400], stepsM: [7100, 7400, 6800, 7300], sleepW: [7.2, 6.9, 7.4, 7.0, 7.1, 7.6, 7.1], sleepM: [7.0, 7.2, 6.9, 7.1] },
+    '小寶': { stepsW: [10200, 11800, 9600, 12400, 11200, 13000, 11200], stepsM: [11000, 11600, 10400, 11500], sleepW: [8.9, 8.6, 9.1, 8.8, 8.7, 9.2, 8.8], sleepM: [8.8, 8.9, 8.7, 8.9] },
+  };
+  const FAM_STEP_GOAL = 7000, FAM_SLEEP_GOAL = 7.5;
+  function famAvg(a, dec) { let s = 0; a.forEach(v => s += v); const m = s / a.length; return dec ? +m.toFixed(dec) : Math.round(m); }
+  function famEmptyChart(box, note, name) {
+    if (box) box.innerHTML = '<div style="padding:16px 2px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">等' + name + '連上沐寧，這裡就會長出他的真數據</div>';
+    if (note) note.textContent = '';
+  }
+  let _famActRange = 'week', _famSleepRange = 'week', _famMoodRange = 'week';
+  function renderFamAct() {
+    const box = $('#famActChart'), note = $('#trendNote');
+    const t = PERSON_TREND[currentPerson];
+    if (!t) return famEmptyChart(box, note, currentPerson || '家人');
+    const wk = _famActRange === 'week';
+    const vals = wk ? t.stepsW : t.stepsM;
+    if (box) box.innerHTML = famBarsHTML(wk ? FAM_WD : FAM_WL, vals, FAM_STEP_GOAL, v => v >= FAM_STEP_GOAL ? 'var(--teal)' : 'var(--gold)', vals.length - 1);
+    if (note) note.innerHTML = '日均 <b>' + famAvg(vals).toLocaleString() + ' 步</b> · 達標 ' + vals.filter(v => v >= FAM_STEP_GOAL).length + '/' + vals.length + (wk ? ' 天' : ' 週');
+  }
+  function renderFamSleep() {
+    const box = $('#famSleepChart'), note = $('#famSleepNote');
+    const t = PERSON_TREND[currentPerson];
+    if (!t) return famEmptyChart(box, note, currentPerson || '家人');
+    const wk = _famSleepRange === 'week';
+    const vals = wk ? t.sleepW : t.sleepM;
+    if (box) box.innerHTML = famBarsHTML(wk ? FAM_WD : FAM_WL, vals, FAM_SLEEP_GOAL, v => v >= 7.5 ? 'var(--teal)' : (v >= 6.5 ? 'var(--gold)' : 'var(--coral)'), vals.length - 1);
+    if (note) note.innerHTML = '平均 <b>' + famAvg(vals, 1) + ' 小時</b>' + (famAvg(vals, 1) >= 7 ? ' · 睡得穩' : ' · 睡得偏少，多留意');
+  }
+  // 心情週/月：色點跟狀態頁情緒球同一套顏色
+  const FAM_MOOD_COLS = ['#F4B63A', '#2FB7A8', '#5B8FB3', '#6D7F91', '#D98A32', '#E95B4F'];
+  const FAM_MOOD_NAME = ['開心', '愉悅', '平靜', '低落', '焦慮', '生氣'];
+  const PERSON_MOOD_SEQ = { '美華': [2, 3, 2, 1, 2, 1, 2], '志明': [2, 2, 1, 2, 2, 2, 1], '小寶': [0, 1, 0, 0, 1, 0, 0] };
+  function renderFamMoodRange() {
+    const box = $('#mcRangeBody'), note = $('#mcRangeNote');
+    const seq = PERSON_MOOD_SEQ[currentPerson];
+    if (!seq) { if (box) box.innerHTML = ''; if (note) note.textContent = '等' + (currentPerson || '家人') + '開始用沐寧聊天，這裡會長出他的心情軌跡。'; return; }
+    if (_famMoodRange === 'week') {
+      if (box) box.innerHTML = '<div class="mood-mini">' + seq.map((mi, i) =>
+        '<div class="mm-day"><div class="mm-dot" style="background:' + FAM_MOOD_COLS[mi] + '"></div><div class="mm-lab">' + FAM_WD[i] + '</div></div>').join('') + '</div>';
+      const cnt = {}; seq.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
+      const main = FAM_MOOD_NAME[+Object.keys(cnt).sort((a, b) => cnt[a] - cnt[b]).pop()];
+      if (note) note.innerHTML = '這週多在<b>' + main + '</b>；顏色跟狀態頁的情緒球同一套。';
+    } else {
+      const cells = Array.from({ length: 30 }, (_, i) => seq[i % seq.length]);
+      if (box) box.innerHTML = '<div class="mood-grid">' + cells.map(mi => '<i style="background:' + FAM_MOOD_COLS[mi] + '"></i>').join('') + '</div>';
+      if (note) note.innerHTML = '這個月的心情地圖；一格一天、顏色跟情緒球同一套。';
+    }
+  }
+  function renderFamTrends() { renderFamAct(); renderFamSleep(); renderFamMoodRange(); }
+  function bindFamTabs(id, setter) {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      el.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      setter(b.dataset.range || b.dataset.r);
+    });
+  }
+  bindFamTabs('#trendTabs', r => { _famActRange = r; renderFamAct(); });
+  bindFamTabs('#sleepTabs', r => { _famSleepRange = r; renderFamSleep(); });
+  bindFamTabs('#mcRangeTabs', r => { _famMoodRange = r; renderFamMoodRange(); });
 
   // 一鍵回診摘要
   const rep = $('#reportBtn');

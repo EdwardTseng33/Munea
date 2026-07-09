@@ -193,8 +193,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .stat-tile .st-ico { grid-row: 1 / 3; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; }
 .stat-tile .st-ico .ic { width: 18px; height: 18px; }
 .stat-tile .st-val { grid-column: 2; font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: -.2px; line-height: 1.15; color: var(--ink); }
-.stat-tile .st-val small { font-size: 13px; color: var(--muted); font-weight: 600; }
-.stat-tile .st-label { grid-column: 2; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 2px; line-height: 1.5; word-break: keep-all; }
+.stat-tile .st-val small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.stat-tile .st-label { grid-column: 2; font-size: 14.5px; font-weight: 500; color: var(--muted); margin-top: 2px; line-height: 1.5; word-break: keep-all; }
 .stat-tile .st-label .st-trend { white-space: nowrap; }   /* 「偏少」等小標籤整塊不斷字 */
 .stat-tile.t-bp .st-ico { background: var(--teal); color: #FFF; }
 .stat-tile.t-bp .st-val { color: var(--teal-dd); }
@@ -512,7 +512,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .health-row .hr-av img { width: 100%; height: 100%; object-fit: cover; }
 .health-row .hr-info { flex: 1; }
 .health-row .hr-name { font-size: 15px; font-weight: 700; color: var(--ink); }
-.health-row .hr-state { font-size: 13px; color: var(--muted); margin-top: 1px; }
+.health-row .hr-state { font-size: 14px; color: var(--muted); margin-top: 1px; }
 .health-row .hr-lights { display: flex; gap: 6px; }
 .health-row .hr-lights .lt { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--mint); color: var(--teal-d); }
 .health-row .hr-lights .lt.warn { background: var(--coral-soft); color: var(--coral); }
@@ -523,7 +523,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .person-top .pt-av { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; }
 .person-top .pt-av img { width: 100%; height: 100%; object-fit: cover; }
 .person-top .pt-name { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--ink); }
-.person-top .pt-rel { font-size: 13px; color: var(--muted); }
+.person-top .pt-rel { font-size: 14.5px; color: var(--muted); }
 .person-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
 
 /* 週月趨勢分析 */
@@ -537,7 +537,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .trend-bars .tb { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; justify-content: flex-end; }
 .trend-bars .tb i { width: 100%; background: var(--mint-2); border-radius: 8px; min-height: 8px; }
 .trend-bars .tb span { font-size: 13px; color: var(--muted); }
-.trend-note { font-size: 13px; color: var(--ink-2); margin-top: 14px; line-height: 1.5; }
+.trend-note { font-size: 14.5px; color: var(--ink-2); margin-top: 14px; line-height: 1.5; }
 .trend-note b { color: var(--teal-dd); }
 
 /* 發起 / 記錄簿 入口 */
@@ -1033,10 +1033,10 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .mc-dot { position: absolute; right: -1px; top: -1px; width: 13px; height: 13px; border-radius: 50%; background: #6E4488; border: 2.5px solid #FFF; display: none; }
 .mc-face.mixed .mc-dot { display: block; }
 .mc-title { font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--ink); }
-.mc-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.mc-obs { font-size: 15px; color: var(--ink); margin: 12px 0 8px; line-height: 1.7; }
+.mc-sub { font-size: 14.5px; color: var(--muted); margin-top: 2px; }
+.mc-obs { font-size: 15px; color: var(--ink); margin: 12px 0 8px; line-height: 1.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mc-obs span { color: var(--muted); margin-right: 2px; }
-.mc-topics i { display: inline-block; font-style: normal; background: var(--mint); color: var(--teal-dd); font-size: 13px; padding: 3px 12px; border-radius: 100px; margin: 0 6px 6px 0; }
+.mc-topics i { display: inline-block; font-style: normal; background: var(--mint); color: var(--teal-dd); font-size: 14px; padding: 3px 12px; border-radius: 100px; margin: 0 6px 6px 0; }
 .mc-more { display: flex; align-items: center; justify-content: space-between; width: 100%; border: none; background: none; border-top: 1px solid var(--line); margin-top: 8px; padding: 12px 2px 2px; font-size: 15px; font-weight: 600; color: var(--teal-dd); cursor: pointer; min-height: 44px; }
 .mc-more .ic { width: 16px; height: 16px; }
 
@@ -1615,7 +1615,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 @media (prefers-reduced-motion: reduce) { #home.screen.active .pad > * { animation: none !important; } }
 
 /* ===== 狀態頁重排（Edward 7/4：層次、圖表、裝置條接好即消失） ===== */
-.st-trend { font-style: normal; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; background: var(--mint); color: var(--teal-dd); }
+.st-trend { font-style: normal; font-size: 14px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; background: var(--mint); color: var(--teal-dd); }
 .st-trend.up { background: var(--mint); color: var(--teal-dd); }
 .st-trend.warn { background: var(--coral-soft); color: var(--coral-d); }
 .st-trend.ok { background: var(--mint); color: var(--teal-dd); }
@@ -2112,3 +2112,17 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 /* 心率 / 血氧 磚色（沿用現有色盤語彙） */
 .stat-tile.t-hr .st-ico { background: var(--coral-soft); color: var(--coral-d); }
 .stat-tile.t-spo2 .st-ico { background: var(--mint-2); color: var(--teal-dd); }
+
+/* ===== 家人詳細頁 v1.4.2（Edward 7/9 UIUX 整修）===== */
+.pt-demo-note { font-size: 14px; color: var(--muted); margin: -8px 0 14px; line-height: 1.5; }
+.person-top .pt-nav#personBack { margin-right: 2px; }
+.mc-range { margin-top: 14px; }
+.mc-range .trend-tabs { width: 100%; }
+.mc-range .trend-tabs button { flex: 1; }
+.mc-range-body { margin-top: 14px; }
+.mood-mini { display: flex; justify-content: space-between; gap: 4px; }
+.mood-mini .mm-day { text-align: center; flex: 1; }
+.mood-mini .mm-dot { width: 28px; height: 28px; border-radius: 50%; margin: 0 auto; }
+.mood-mini .mm-lab { font-size: 14px; color: var(--muted); margin-top: 6px; font-weight: 700; }
+.mood-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
+.mood-grid i { height: 22px; border-radius: 5px; display: block; }
