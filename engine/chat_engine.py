@@ -86,8 +86,26 @@ def _profile_ctx():
     if not os.path.exists(USER_PROFILE_PATH):
         return ""
     p = _read_user_profile()
-    return (f"\n（你正陪伴的人：你都叫她「{p.get('稱呼','')}」、{p.get('年紀','')}歲、住{p.get('住在','')}；"
-            f"喜歡{'、'.join(p.get('喜好', []))}；你記得她說過：{'；'.join(p.get('回憶', []))}。自然帶入、別像念資料。）")
+    # 防呆（Edward 2026-07-09）：沒有任何「真的記得的事」就不要硬塞記憶脈絡——
+    # 免得空殼或殘留示範資料被當成用戶的人生，害寧寧幻覺「你搬家/你腳痛」。
+    memories = [m for m in (p.get("回憶") or []) if str(m).strip()]
+    lives = (p.get("住在") or "").strip()
+    likes = [x for x in (p.get("喜好") or []) if str(x).strip()]
+    if not memories and not lives and not likes:
+        return ""
+    call = (p.get("稱呼") or "").strip()
+    bits = []
+    if call:
+        bits.append(f"你都叫他「{call}」")
+    if str(p.get("年紀") or "").strip():
+        bits.append(f"{p.get('年紀')}歲")
+    if lives:
+        bits.append(f"住{lives}")
+    if likes:
+        bits.append("喜歡" + "、".join(likes))
+    if memories:
+        bits.append("你記得他說過：" + "；".join(memories))
+    return "\n（你正陪伴的人：" + "；".join(bits) + "。自然帶入、別像念資料。）"
 
 def reply(char, user):
     c = CHARS[char]

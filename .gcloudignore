@@ -23,3 +23,7 @@ engine/.env.local
 engine/.env*
 .design-sync/
 Video/
+# 記憶檔不帶上雲（Edward 2026-07-09 幻覺斷根）：大腦一律空白起步、真記憶走雲端資料櫃，防某台機器的示範資料被帶上線
+engine/user_profile.json
+engine/living_profile.json
+engine/memory_items.json
