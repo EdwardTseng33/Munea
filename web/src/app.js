@@ -5086,6 +5086,14 @@ function init() {
   window.__muneaStartListen = startListening;
   window.__muneaStopListen = () => { micMuted = false; try { chatRec && chatRec.stop(); } catch (e) {} };
   if (chatMic) chatMic.addEventListener('click', async () => {
+    // 真即時語音模式（LiveVoice/Gemini）：麥克風鈕＝純靜音開關，絕不碰舊的打字/錄音備援（Edward 2026-07-10：不該有藍色狀態變打字）
+    if (getLiveVoiceUrl() && typeof LiveVoice !== 'undefined' && LiveVoice.on) {
+      micMuted = !micMuted;
+      chatMic.classList.toggle('off', micMuted);
+      try { LiveVoice.micOpen = !micMuted; } catch (e) {}   // 靜音＝停收音；開啟＝恢復（半雙工仍套用：她說話時本就靜音）
+      setCallHint(micMuted ? '麥克風先關著，想說話再點一下' : '我在聽，你說吧');
+      return;
+    }
     if (!SR2) {
       if (chatOn && mediaRec) { mediaRec.stop(); return; }
       await startVoiceCapture();
