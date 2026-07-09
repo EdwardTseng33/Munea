@@ -57,3 +57,4 @@ engine/family_invitations.json
 .munea-app-key
 
 Video/
+web/src/auth-config.js
