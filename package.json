@@ -15,6 +15,7 @@
     "mac:doctor": "bash scripts/mac-day-one-check.sh",
     "ai:doctor": "powershell -ExecutionPolicy Bypass -File scripts/ai-key-doctor.ps1 -AllowMissing",
     "ai:doctor:live": "powershell -ExecutionPolicy Bypass -File scripts/ai-key-doctor.ps1",
+    "cloudrun:readiness": "powershell -ExecutionPolicy Bypass -File scripts/cloud-run-status.ps1 -Readiness",
     "cloudrun:status": "powershell -ExecutionPolicy Bypass -File scripts/cloud-run-status.ps1",
     "supabase:doctor": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --allow-missing",
     "supabase:doctor:live": "powershell -ExecutionPolicy Bypass -File scripts/supabase-doctor.ps1 --live",

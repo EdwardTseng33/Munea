@@ -2783,6 +2783,12 @@ for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_AD
         raise SystemExit("Admin smoke missing token: " + token)
 if '"smoke:admin"' not in package:
     raise SystemExit("package.json missing smoke:admin script")
+cloudrun_status = Path("scripts/cloud-run-status.ps1").read_text(encoding="utf-8")
+for token in ["Readiness", "StrictReadiness", "MUNEA_ADMIN_API_TOKEN", "MUNEA_REQUIRE_AUTH", "/admin.html"]:
+    if token not in cloudrun_status:
+        raise SystemExit("Cloud Run readiness missing token: " + token)
+if '"cloudrun:readiness"' not in package:
+    raise SystemExit("package.json missing cloudrun:readiness script")
 print("admin console contract OK")
 '@
 Pass "Admin console is present and keeps secrets out of static assets"

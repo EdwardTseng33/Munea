@@ -157,6 +157,14 @@ The command verifies the active gcloud account, project, Cloud Run service readi
 npm run cloudrun:status -- -Strict
 ```
 
+When the service is healthy but you need to know whether it is ready for staging QA and Admin MVP use, run:
+
+```powershell
+npm run cloudrun:readiness
+```
+
+Readiness checks the visible environment-variable contract for the brain and voice services and uses a short-lived `gcloud auth print-identity-token` token to verify whether the locked brain service serves `/admin.html`. Use `-StrictReadiness` when the missing staging pieces should fail a release gate.
+
 ## Admin Console Smoke
 
 After the Admin MVP shell is deployed, verify the internal dashboard and read-only admin endpoints:
