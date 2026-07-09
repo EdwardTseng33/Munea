@@ -351,6 +351,8 @@
 <style>
   #livedemo{padding:76px 0;background:var(--mint)}
   #livedemo .sec-head{margin-bottom:38px}
+  #livedemo h2{font-size:clamp(20px,2.8vw,30px);white-space:nowrap;line-height:1.3}
+  @media(max-width:760px){#livedemo h2{white-space:normal;font-size:22px}}
   .vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;max-width:720px;margin:0 auto}
   .vdemo{margin:0}
   .vframe{position:relative;aspect-ratio:1/1;border-radius:22px;overflow:hidden;background:var(--cream-2);border:1px solid var(--line)}
@@ -361,7 +363,7 @@
   .vsound.on{background:var(--ink)}
   .vsound.on .ic-on{display:none}
   .vsound.on .ic-off{display:inline}
-  .vcap{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:14px;padding:0 4px}
+  .vcap{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-top:14px;padding:0 4px}
   .vcap .vlab{font-weight:700;color:var(--ink);font-size:16px}
   .vcap .vhint{font-size:12.5px;color:var(--muted)}
   @media(max-width:640px){.vgrid{grid-template-columns:1fr;max-width:340px}}
@@ -379,14 +381,14 @@
           <video class="vplay" poster="assets/real-female-poster.jpg" muted playsinline autoplay loop preload="auto" aria-label="沐寧 AI 視訊示範・自然女聲"><source src="assets/realfemale-talk-demo.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="開啟聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-en="Sound on">開聲音</span></button>
         </div>
-        <figcaption class="vcap"><span class="vlab" data-en="In a lifelike style">真人風的她</span><span class="vhint" data-en="AI-generated demo">AI 生成・示範</span></figcaption>
+        <figcaption class="vcap"><span class="vlab" data-en="Photorealistic style">擬真少女風格</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
           <video class="vplay" poster="assets/illust-female-poster.jpg" muted playsinline autoplay loop preload="auto" aria-label="沐寧 AI 視訊示範・插畫風女聲"><source src="assets/illustfemale-talk-demo.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="開啟聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-en="Sound on">開聲音</span></button>
         </div>
-        <figcaption class="vcap"><span class="vlab" data-en="In an illustrated style">插畫風的她</span><span class="vhint" data-en="AI-generated demo">AI 生成・示範</span></figcaption>
+        <figcaption class="vcap"><span class="vlab" data-en="Illustrated style">插畫少女風格</span></figcaption>
       </figure>
     </div>
   </div>
