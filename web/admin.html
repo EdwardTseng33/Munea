@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Munea Admin</title>
+  <link rel="stylesheet" href="src/admin.css">
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-header">
+      <div>
+        <p class="eyebrow">Internal Operations</p>
+        <h1>Munea Admin</h1>
+      </div>
+      <div class="status-pill" id="connectionStatus">Not connected</div>
+    </header>
+
+    <section class="connection-panel" aria-label="Admin connection">
+      <label>
+        <span>API URL</span>
+        <input id="apiBaseUrl" type="url" autocomplete="url" spellcheck="false">
+      </label>
+      <label>
+        <span>Admin Token</span>
+        <input id="adminToken" type="password" autocomplete="off" spellcheck="false">
+      </label>
+      <button id="refreshAdmin" type="button">Refresh</button>
+    </section>
+
+    <section class="metric-grid" aria-label="Admin metrics">
+      <article class="metric-card">
+        <span>Meaningful Days</span>
+        <strong id="metricMeaningfulDays">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Active People</span>
+        <strong id="metricActivePeople">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Events</span>
+        <strong id="metricEvents">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Voice Minutes</span>
+        <strong id="metricVoiceMinutes">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Avatar Minutes</span>
+        <strong id="metricAvatarMinutes">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Backend</span>
+        <strong id="metricBackend">-</strong>
+      </article>
+    </section>
+
+    <section class="admin-grid">
+      <article class="panel span-2">
+        <div class="panel-head">
+          <h2>Accounts</h2>
+          <input id="accountQuery" type="search" placeholder="Search account, family, person">
+        </div>
+        <div id="accountsPanel" class="table-wrap muted">No data loaded.</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Credits</h2>
+        </div>
+        <div id="creditsPanel" class="stack muted">No data loaded.</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Safety</h2>
+        </div>
+        <div id="safetyPanel" class="stack muted">No data loaded.</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Privacy Requests</h2>
+        </div>
+        <div id="privacyPanel" class="stack muted">No data loaded.</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Audit Events</h2>
+        </div>
+        <div id="auditPanel" class="stack muted">No data loaded.</div>
+      </article>
+
+      <article class="panel span-2">
+        <div class="panel-head">
+          <h2>Conversation Summaries</h2>
+        </div>
+        <div id="summariesPanel" class="stack muted">No data loaded.</div>
+      </article>
+    </section>
+
+    <section class="raw-panel">
+      <div class="panel-head">
+        <h2>Last Response</h2>
+        <button id="clearRaw" type="button">Clear</button>
+      </div>
+      <pre id="rawOutput">{}</pre>
+    </section>
+  </main>
+
+  <script src="src/admin.js" defer></script>
+</body>
+</html>

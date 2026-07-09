@@ -2945,8 +2945,8 @@ def product_event_response(data):
             props = (event or {}).get("properties") or {}
             summary = props.get("plan") or (str(props.get("points")) + " 點" if props.get("points") else "")
             notify.ops(name, summary)
-    except Exception:
-        pass  # 通知失敗不影響主流程
+    except Exception as e:
+        log_fallback_exception("send product event ops notification", e)
     return {"ok": True, "event": event, "northStar": north_star_summary({"days": 7})}
 
 
@@ -4344,8 +4344,8 @@ class H(BaseHTTPRequestHandler):
         except Exception as e:
             try:
                 notify.alert("engine", getattr(self, "path", "?"), str(e)[:200])
-            except Exception:
-                pass
+            except Exception as notify_error:
+                log_fallback_exception("send engine error alert", notify_error)
             self._json_error(500, "internal_error", "Request could not be processed", e)
 
 

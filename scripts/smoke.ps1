@@ -2598,6 +2598,7 @@ node --check web\src\app.js
 node --check web\src\companion-profile.js
 node --check web\src\auth.js
 node --check web\src\auth-config.example.js
+node --check web\src\admin.js
 Pass "Frontend JavaScript parses"
 
 Step "Frontend AI provider consent contract"
@@ -2721,6 +2722,63 @@ for forbidden in ["SERVICE_ROLE", "service_role"]:
 print("frontend auth bridge OK")
 '@
 Pass "Frontend Auth bridge is present"
+
+Step "Admin console contract"
+Invoke-PythonBlock @'
+from pathlib import Path
+html = Path("web/admin.html").read_text(encoding="utf-8")
+js = Path("web/src/admin.js").read_text(encoding="utf-8")
+css = Path("web/src/admin.css").read_text(encoding="utf-8")
+required_html = [
+    "Munea Admin",
+    "apiBaseUrl",
+    "adminToken",
+    "refreshAdmin",
+    "accountsPanel",
+    "creditsPanel",
+    "safetyPanel",
+    "privacyPanel",
+    "auditPanel",
+    "summariesPanel",
+    "src/admin.js",
+    "src/admin.css",
+]
+missing_html = [token for token in required_html if token not in html]
+if missing_html:
+    raise SystemExit("Admin console missing HTML tokens: " + ", ".join(missing_html))
+required_js = [
+    "X-Munea-Admin-Token",
+    "/admin/accounts",
+    "/admin/north-star",
+    "/admin/usage",
+    "/admin/credits",
+    "/admin/conversation-summaries",
+    "/admin/privacy-requests",
+    "/admin/safety-events",
+    "/admin/audit-events",
+    "localStorage.setItem(ADMIN_BASE_KEY",
+]
+missing_js = [token for token in required_js if token not in js]
+if missing_js:
+    raise SystemExit("Admin console missing JS tokens: " + ", ".join(missing_js))
+for forbidden in [
+    "MUNEA_ADMIN_API_TOKEN",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SERVICE_ROLE",
+    "service_role",
+    "admin-smoke-token",
+    "provider-smoke-token",
+]:
+    if forbidden in html or forbidden in js or forbidden in css:
+        raise SystemExit("Admin console must not embed secret token marker: " + forbidden)
+if "localStorage.setItem(\"adminToken\"" in js or "localStorage.setItem('adminToken'" in js:
+    raise SystemExit("Admin console must not persist admin token in localStorage")
+for token in ["metric-grid", "admin-grid", "status-pill", "@media"]:
+    if token not in css:
+        raise SystemExit("Admin console CSS missing responsive token: " + token)
+print("admin console contract OK")
+'@
+Pass "Admin console is present and keeps secrets out of static assets"
 
 Step "Avatar runtime contract"
 Invoke-PythonBlock @'
