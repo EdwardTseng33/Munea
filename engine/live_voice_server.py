@@ -71,7 +71,7 @@ def process_request(connection, request):
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
@@ -80,6 +80,8 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         # displayName 跟著角色走：用戶自訂名優先、否則用角色本名。
         # 不傳的話會 fallback 到存檔的陪伴檔案（寧寧），把換角色的名字蓋回去。
         data = {"displayName": (name or char)}
+        if location:
+            data["location"] = location  # 所在地（可到區）→ 在地餐廳/景點/話題定位
         if mood:
             data["userMood"] = mood
         if topics:
@@ -120,12 +122,12 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     return base
 
 
-def live_config(char="寧寧", name=None, mood=None, topics=None, user=None):
+def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood, topics, user),
+        system_instruction=system_instruction(char, name, mood, topics, user, location),
         # 即時查詢（Google 搜尋）：聊到店家/景點/影劇/天氣等具體話題先查再答、不編造——跟文字聊天同一套能力
         tools=[types.Tool(google_search=types.GoogleSearch())],
         output_audio_transcription=types.AudioTranscriptionConfig(),
@@ -153,6 +155,7 @@ async def handle(ws):
     mood = None
     topics = None
     user = None
+    location = None
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
@@ -186,6 +189,10 @@ async def handle(ws):
         uvals = _q.get("user")
         if uvals and uvals[0].strip():
             user = uvals[0].strip()[:12]
+        # ?loc=台北市大安區：所在地（可到區）→ 在地餐廳/景點/話題定位（7/9 Edward）
+        lvals = _q.get("loc")
+        if lvals and lvals[0].strip():
+            location = lvals[0].strip()[:24]
     except Exception:
         pass
     _CID["n"] += 1
@@ -194,7 +201,7 @@ async def handle(ws):
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False}
     _diag(cid, "connected", name=name or "-", char=char)
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user)) as session:
+        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location)) as session:
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
             # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
             # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。

@@ -1905,6 +1905,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "dailyBriefing": briefing,                     # 今日簡報（清晨備好的真天氣/空品/行程/暖聞）
         "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
         "interests": interests,                         # 用戶挑的興趣話題（開場方向＋接話素材）
+        "location": str(data.get("location") or "").strip()[:24],  # 所在地（可到區）→ 在地推薦定位
     }
 
 
@@ -1978,6 +1979,18 @@ def reply_context_instruction(context):
         "聊到相關話題時多帶點料、多分享一個真實的亮點或小知識。"
         "但這是參考不是劇本——他想聊別的就跟著他走，別硬拉回來、別一次全部聊完。）"
     ) if _ints else ""
+    _loc = context.get("location") or ""
+    _now_period = (context.get("now") or {}).get("period") or ""
+    location_line = (
+        f"（他住在「{_loc}」。聊到吃飯、附近哪裡好玩、在地活動時，用即時查詢找「{_loc}」真實存在的店家/景點再推薦——"
+        "會考慮現在的時段（例如快到晚餐就推現在還有營業、去得到的；早上就別推只開晚上的），"
+        "講真店名、真特色，不確定就先查、查不到就老實說，絕對不編地址或營業時間。）"
+        + (f"（現在是{_now_period}，推薦餐廳就挑這個時段吃得到的。）" if _now_period else "")
+    ) if _loc else ""
+    culture_line = (
+        "（聊到影劇/戲劇/歌曲/新聞這類會隨時間變的話題：用即時查詢找「最近這一兩週真的在紅、評價不錯」的，"
+        "講得出劇名/歌名與一句為什麼好看好聽；不要憑印象講可能過時或不存在的，不確定就查、查不到就老實說。）"
+    )
     return "\n".join([
         "",
         relationship_line,
@@ -1991,6 +2004,8 @@ def reply_context_instruction(context):
         "（聽出對方的語氣與心情、跟著調整：聽起來累或低落→放柔放慢、不催、多陪；開心→跟著亮起來。這是關心、不是診斷，絕不評斷對方的心理狀態。）",
         mood_recorded_line,
         interests_line,
+        location_line,
+        culture_line,
         "（智慧鏡頭：可溫柔用台灣諺語、生活智慧、簡單的反思提問陪伴；對方有信仰才順著其信仰語彙。絕不捏造經文、不強加宗教、不說教；危機時安全規則優先於一切。）",
         living_line,
         "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",

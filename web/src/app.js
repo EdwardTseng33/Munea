@@ -1024,6 +1024,9 @@ const LiveVoice = {
       const _pp = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
       const _uad = ((_pp.nick || '').trim() || (_pp.name || '').trim());
       if (_uad) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'user=' + encodeURIComponent(_uad);
+      // 所在地（可到區）→ 讓寧寧推薦附近真的吃得到的餐廳、聊在地話題（不再亂猜位置 · 7/9 Edward）
+      const _loc = (_pp.city || '').trim();
+      if (_loc) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'loc=' + encodeURIComponent(_loc);
     } catch (e) {}
     // 薄門通行碼（App 自動帶、用戶無感）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(MUNEA_APP_KEY);
