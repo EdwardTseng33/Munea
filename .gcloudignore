@@ -22,3 +22,4 @@ supabase/
 engine/.env.local
 engine/.env*
 .design-sync/
+Video/

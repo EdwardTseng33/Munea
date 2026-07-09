@@ -353,6 +353,11 @@ function syncCompanionUI() {
   $$('.cname').forEach(el => { el.textContent = display; });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
+  // 在聊聊頁換角色：待機動態跟著換人（通話中不動）
+  try {
+    const chatActive = document.getElementById('chat') && document.getElementById('chat').classList.contains('active');
+    if (chatActive && typeof FaceIdle !== 'undefined' && (typeof callConnected === 'undefined' || !callConnected)) FaceIdle.start();
+  } catch (e) {}
   renderAiDiagnostics();
 }
 function setCompanionName(name, opts) {
@@ -1100,11 +1105,62 @@ function setCallToggle(connected) {
   if (lbl) lbl.textContent = connected ? '結束通話' : '開始通話';
 }
 
+// ===== 待機動態（Edward 7/9 供片）：進聊聊頁播「打招呼」一次 → 「待機」循環；按通話即停回靜態，交給語音＋雲端臉 =====
+const FACE_MOTION = {
+  'nening-real-female': { hello: 'avatars/motion/nening-hello.mp4', idle: 'avatars/motion/nening-idle.mp4' },
+  'companion-real-male': { hello: 'avatars/motion/ahong-hello.mp4', idle: 'avatars/motion/ahong-idle.mp4' },
+  // 其餘四位（小昀/阿原/咪咪/旺財）素材到了照同名規則放 motion/ 後在這裡加一行即可
+};
+function currentFaceTemplate() {
+  try {
+    const P = window.MuneaCompanionProfile;
+    const raw = (typeof currentAvatarId !== 'undefined' && currentAvatarId)
+      ? currentAvatarId
+      : (((P && P.loadProfile ? P.loadProfile() : null) || {}).templateId || '');
+    return P && P.normalizeTemplateId ? P.normalizeTemplateId(raw) : (raw || 'nening-real-female');
+  } catch (e) { return 'nening-real-female'; }
+}
+const FaceIdle = {
+  el: null, cur: null, active: false,
+  ensure() {
+    if (this.el) return this.el;
+    const img = document.getElementById('faceImg');
+    if (!img || !img.parentElement) return null;
+    const v = document.createElement('video');
+    v.id = 'faceIdle'; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
+    v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease;pointer-events:none';
+    img.insertAdjacentElement('afterend', v);   // 蓋在靜態照上、壓在雲端臉(faceVid)下
+    v.addEventListener('ended', () => {         // 打招呼播完 → 接待機循環
+      if (FaceIdle.active && FaceIdle.cur) { v.src = FaceIdle.cur.idle; v.loop = true; v.play().catch(() => {}); }
+    });
+    this.el = v; return v;
+  },
+  start(tplId) {
+    const m = FACE_MOTION[tplId || currentFaceTemplate()];
+    const v = this.ensure();
+    if (!v) return;
+    if (!m) { this.stop(); return; }             // 沒動態素材的角色維持靜態圖
+    this.cur = m; this.active = true;
+    v.loop = false; v.src = m.hello;
+    const show = () => { v.style.opacity = '1'; v.removeEventListener('playing', show); };
+    v.addEventListener('playing', show);
+    v.play().catch(() => {
+      // 被省電規則暫時擋下（例如分頁在背景）：半秒後再試一次，仍不行就維持靜態圖
+      setTimeout(() => { if (FaceIdle.active) v.play().catch(() => { FaceIdle.stop(); }); }, 600);
+    });
+  },
+  stop() {
+    this.active = false; this.cur = null;
+    if (this.el) { try { this.el.pause(); } catch (e) {} this.el.style.opacity = '0'; this.el.removeAttribute('src'); try { this.el.load(); } catch (e) {} }
+  },
+};
+
 async function enterChat() {
   setCallToggle(false);
   const box = document.querySelector('.face-caption-box');
   if (box) box.style.display = 'none';
   setFaceState('idle');
+  if (typeof callConnected === 'undefined' || !callConnected) FaceIdle.start();   // 待機動態輪播（通話中不搶）
 }
 
 async function openVoiceSession() {
@@ -1190,6 +1246,7 @@ function showView(id) {
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === id));
   const el = $('#' + id); if (el) el.scrollTop = 0;
   if (id === 'chat') { Avatar.wake(); enterChat(); }   // 進聊聊頁＝先預醒雲端臉（按通話時多半已就緒）
+  else if (typeof FaceIdle !== 'undefined') FaceIdle.stop();   // 離開聊聊頁＝待機動態停、省電
 }
 
 function authState() {
@@ -1794,6 +1851,7 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
   toast('今天的免費聊聊時間到了，明天還能再聊');
+  try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
   if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
 }
 function startCallTimer() {
@@ -2305,6 +2363,7 @@ function setupHscrollHints() {
 }
 
 function connectCall() {
+  FaceIdle.stop();   // 按下通話：待機動態停、回靜態圖，交給語音＋雲端臉
   setCallToggle(true);
   startCallTimer();
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
@@ -2390,7 +2449,7 @@ function init() {
     // 第一次開聊前輕問一次「想聊什麼話題」（可跳過、之後在設定隨時改；只問這一次）
     if (!callConnected && !localStorage.getItem('munea.interestsAsked') && !loadInterests().length && window.__muneaOpenInterests) { window.__muneaOpenInterests(true); return; }
     if (!callConnected) { connectCall(); }
-    else { LiveVoice.stop(); FaceWave.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); }
+    else { LiveVoice.stop(); FaceWave.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); FaceIdle.start(); }
   });
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
     captionsOn = !captionsOn;

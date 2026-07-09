@@ -1,6 +1,6 @@
 {
   "name": "munea",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "private": true,
   "description": "Munea iOS-first AI health-care companion app prototype.",
   "scripts": {
