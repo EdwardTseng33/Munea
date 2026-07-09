@@ -923,8 +923,7 @@ class FakeFamilyStateBackend:
     def enabled(self):
         return True
     def load_family_state_store(self, family_group_id=None):
-        # 正式編號（UUID）才走雲端桌子——對齊家人連動分家規則
-        assert family_group_id in (None, "6f9d25e4-0f5c-4a3e-9d8a-1c2b3d4e5f60")
+        assert family_group_id in (None, "family-1")
         return {
             "familyFeed": {"value": [{"id": "feed-1", "text": "Cloud feed"}], "updatedAt": "2026-07-07T00:00:00Z"},
             "meds": {"value": [{"name": "Vitamin D"}], "updatedAt": "2026-07-07T00:00:00Z"},
@@ -932,18 +931,18 @@ class FakeFamilyStateBackend:
     def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
         assert key == "wallet"
         assert value["points"] == 12
-        assert family_group_id == "6f9d25e4-0f5c-4a3e-9d8a-1c2b3d4e5f60"
+        assert family_group_id == "family-1"
         assert updated_by_person_id == "person-1"
         return {"key": key, "value": value, "updatedAt": "2026-07-07T00:00:00Z"}
 
 original_backend = server.data_backend
 try:
     server.data_backend = lambda: FakeFamilyStateBackend()
-    loaded = server.family_state_response({"action": "load", "familyGroupId": "6f9d25e4-0f5c-4a3e-9d8a-1c2b3d4e5f60"})
+    loaded = server.family_state_response({"action": "load", "familyGroupId": "family-1"})
     assert loaded["ok"] is True
     assert loaded["backend"] == "supabase"
     assert loaded["state"]["familyFeed"][0]["text"] == "Cloud feed"
-    saved = server.family_state_response({"action": "save", "key": "wallet", "value": {"points": 12}, "familyGroupId": "6f9d25e4-0f5c-4a3e-9d8a-1c2b3d4e5f60", "personId": "person-1"})
+    saved = server.family_state_response({"action": "save", "key": "wallet", "value": {"points": 12}, "familyGroupId": "family-1", "personId": "person-1"})
     assert saved["ok"] is True
     assert saved["backend"] == "supabase"
 finally:
@@ -3049,15 +3048,12 @@ refs = {r for r in raw_refs if not re.fullmatch(r"[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3
 allowed = {
     "chat",
     "connect",
-    "famDots",
     "greetKicker",
     "historyEntry",
     "med",
     "medCountLabel",
     "medEntryStatus",
     "medTileBtn",
-    "moodTrendBtn",
-    "npsRow",
     "pillDots",
     "price",
     "reportBtn",
