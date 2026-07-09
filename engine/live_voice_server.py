@@ -289,6 +289,32 @@ async def handle(ws):
                 except Exception:
                     pass
 
+            # 省點提醒（Edward 2026-07-10）：通話開著但使用者一直沒講話 → 寧寧兩段式溫柔提醒、避免忘了關一直計費。
+            # 語氣＝關心、不催不罵、不提「點數/系統」。level 1=關心還在嗎；level 2=提醒記得關通話。
+            async def _do_nudge(level):
+                try:
+                    if level >= 2:
+                        cue = (
+                            "（系統提示，絕對不要唸出這段、也不要提到系統或點數：使用者還是沒說話。"
+                            "請你用一句溫柔體貼的話提醒他——如果先去忙也沒關係，記得把我們的通話關掉喔，"
+                            "不然會一直開著；想聊隨時再找你就好。語氣是關心、不是催促。）"
+                        )
+                    else:
+                        cue = (
+                            "（系統提示，絕對不要唸出這段、也不要提到系統或點數：使用者已經一小段沒說話了。"
+                            "請你用一句溫柔、簡短、關心的話，輕輕問他是不是忙別的去了、你還在這裡陪他，"
+                            "像老朋友那樣。不要責備、不要唸清單。）"
+                        )
+                    await session.send_client_content(
+                        turns=types.Content(role="user", parts=[types.Part(text=cue)]),
+                        turn_complete=True,
+                    )
+                    st["await_first"] = True
+                    st["last_in"] = time.monotonic()
+                    _diag(cid, "node.idle_nudge", level=level)
+                except Exception:
+                    pass
+
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):
@@ -310,6 +336,8 @@ async def handle(ws):
                         t = obj.get("type")
                         if t == "greet":
                             await _do_greet()   # App 說「兩邊都就緒了」→ 現在才請她主動開口（聲臉同步開場）
+                        elif t == "nudge":
+                            await _do_nudge(int(obj.get("level", 1)))   # App 偵測到使用者一直沒講話 → 寧寧溫柔提醒（省點）
                         elif t == "text" and obj.get("text"):
                             st["last_in"] = time.monotonic()
                             st["await_first"] = True

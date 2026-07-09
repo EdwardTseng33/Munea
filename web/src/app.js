@@ -1086,6 +1086,7 @@ const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
   greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；招呼講完才開麥（乾淨第一句）
+  nudge(level) { try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ type: 'nudge', level: level || 1 })); } catch (e) {} },   // 使用者一直沒講話 → 請 AI 溫柔提醒（省點 · Edward 2026-07-10）
   // 掛斷時把整通對話送去萃取長期記憶（讓「聊聊」講的也記得住 · Edward 2026-07-10）——跟文字聊天同一條記憶入口
   saveMemory() {
     try {
@@ -2693,6 +2694,27 @@ function connectCall() {
       try { FaceIdle.stop(); } catch (e) {}
       LiveVoice.greet();                     // 現在才請 AI 主動開口（招呼講完才開麥）
       setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice.micOpen = true; LiveVoice._openMicAfterGreet = false; } }, 6000);   // 保底：招呼若沒正常結束，6 秒後也開麥、不讓你無法說話
+      // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
+      // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
+      const _autoEndCall = () => {
+        setCallHint('先幫你把通話收起來囉，想聊再找我');
+        try { LiveVoice.stop(); } catch (e) {} try { FaceWave.stop(); } catch (e) {}
+        try { completeChatSession('idle_timeout'); } catch (e) {}
+        chatOpened = false; setCallToggle(false); stopCallTimer();
+        const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
+        setFaceState('idle'); if (window.__muneaStopListen) window.__muneaStopListen();
+        try { FaceIdle.start(); } catch (e) {}
+      };
+      let _idleLast = Date.now(), _idleStage = 0;
+      const _idleMon = setInterval(() => {
+        if (!callConnected && !callDialing) { clearInterval(_idleMon); return; }      // 通話結束 → 自我終止
+        if (LiveVoice.micLevel > 0.08) { _idleLast = Date.now(); _idleStage = 0; return; }   // 使用者在講 → 全歸零
+        if (LiveVoice.speaking) { _idleLast = Date.now(); return; }                    // AI 在講（回應/提醒）→ 時鐘後推、階段保留
+        if (Date.now() - _idleLast < 11000) return;                                    // 還沒到 11 秒真沉默
+        if (_idleStage === 0) { _idleStage = 1; LiveVoice.nudge(1); _idleLast = Date.now(); }        // 關心：還在嗎
+        else if (_idleStage === 1) { _idleStage = 2; LiveVoice.nudge(2); _idleLast = Date.now(); }   // 提醒：記得關通話
+        else { clearInterval(_idleMon); _autoEndCall(); }                              // 第三段沉默 → 自動掛斷
+      }, 1500);
     };
     const tryStart = () => beginConversation();
     window.__muneaOnFaceReady = () => { _faceReady = true; tryStart(); };
