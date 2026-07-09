@@ -3526,6 +3526,69 @@ function init() {
         '<b>' + r2[0] + '</b><span class="rank-score">答對 ' + r2[1] + ' 題</span></div>';
     }).join('') + '</div><div class="qc-life">排名保留一天，明天自動收進記錄簿</div>';
   }
+  // 揪一攤：我要去／我沒空 ＋ 名單（Edward 7/9：補完整互動）
+  function renderEventBody(act, box) {
+    const my = act.rsvp && act.rsvp['你'];
+    const going = Object.entries(act.rsvp || {}).filter(([, v]) => v === 'go').map(([n]) => n);
+    const no = Object.entries(act.rsvp || {}).filter(([, v]) => v === 'no').map(([n]) => n);
+    box.innerHTML =
+      '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + (act.dateLabel ? '<br>' + act.dateLabel : '') + '</div>' +
+      '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go">我要去</button>' +
+      '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no">我沒空</button></div>' +
+      '<div class="qc-num">' + (going.length ? '要去的：' + going.join('、') : '還沒有人回「要去」') + (no.length ? '　·　沒空：' + no.join('、') : '') + '；' + cname() + '會幫你問阿嬤跟其他人。</div>';
+    box.querySelector('.rsvp-btns').addEventListener('click', e => {
+      const b = e.target.closest('.rsvp-btn'); if (!b) return;
+      act.rsvp = act.rsvp || {}; act.rsvp['你'] = b.dataset.r;
+      const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.rsvp = act.rsvp; saveActs(acts);
+      renderEventBody(act, box);
+      toast(b.dataset.r === 'go' ? '好，記下你要去了' : '好，記下你這次沒空');
+    });
+  }
+  // 一起運動：進度條 ＋ 每人步數（你的自動吃 Apple 健康、其他人吃帶回的數據）
+  function renderWalkBody(act, box) {
+    const goal = +act.goal || 30000;
+    const parts = actParts(act);
+    const steps = {};
+    parts.forEach(n => {
+      if (n === '你') {
+        let mine = 0;
+        try { const h = JSON.parse(localStorage.getItem('munea.health.last') || 'null'); if (h && h.s && typeof h.s.steps === 'number') mine = h.s.steps; } catch (e) {}
+        steps[n] = mine || +(act._steps && act._steps['你']) || 0;
+      } else {
+        let s = 0; try { const v = famVitalsFor(n); if (v && v.steps) s = +v.steps; } catch (e) {}
+        steps[n] = s;
+      }
+    });
+    const sum = parts.reduce((s, n) => s + (+steps[n] || 0), 0);
+    const pct = Math.min(100, goal ? Math.round(sum / goal * 100) : 0);
+    const gap = Math.max(0, goal - sum);
+    box.innerHTML =
+      '<div class="walk-bar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="walk-sum"><b>' + sum.toLocaleString() + '</b> / ' + goal.toLocaleString() + ' 步 · ' + (gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步' : '達標了！') + '</div>' +
+      '<div class="walk-people">' + parts.map(n => {
+        const av = FAM_AVA[n] || [(n || '')[0] || '', 'p-me'];
+        return '<div class="walk-p"><span class="init-ava ' + av[1] + '">' + av[0] + '</span><b>' + n + '</b><span>' + (+steps[n] || 0).toLocaleString() + ' 步</span></div>';
+      }).join('') + '</div>' +
+      '<div class="qc-num">你的步數自動從 Apple 健康帶入；' + cname() + '會問其他人今天走多少，' + (act.dueLabel || (act.days + ' 天內')) + '結算。</div>';
+  }
+  // 活動結束時，依種類公布結果進記錄簿（不再只是「結束了」）
+  function announceActEnd(a) {
+    try {
+      if (a.kind === 'quiz' && a.answers && Object.keys(a.answers).length) {
+        const top = Object.entries(a.answers).sort((x, y) => y[1] - x[1])[0];
+        pushFamilyFeed('「' + a.title + '」結算了——<b>' + top[0] + '</b> 答對最多（' + top[1] + ' 題），收進<b>家庭記錄簿</b>');
+      } else if (a.kind === 'vote' && a.votes && Object.keys(a.votes).length) {
+        const tally = {}; Object.values(a.votes).forEach(o => tally[o] = (tally[o] || 0) + 1);
+        const win = Object.entries(tally).sort((x, y) => y[1] - x[1])[0];
+        pushFamilyFeed('「' + a.title + '」投票結束——<b>' + win[0] + '</b> 最多票，收進<b>家庭記錄簿</b>');
+      } else if (a.kind === 'event' && a.rsvp) {
+        const going = Object.entries(a.rsvp).filter(([, v]) => v === 'go').map(([n]) => n);
+        pushFamilyFeed('「' + a.title + '」結束了' + (going.length ? '（' + going.join('、') + ' 有去）' : '') + '，收進<b>家庭記錄簿</b>');
+      } else {
+        pushFamilyFeed('「' + a.title + '」結束了，收進<b>家庭記錄簿</b>');
+      }
+    } catch (e) { pushFamilyFeed('「' + (a.title || '活動') + '」結束了，收進<b>家庭記錄簿</b>'); }
+  }
   function renderActCard(act) {
     const list = document.querySelector('#newChalBtn')?.closest('.pad')?.querySelector('.quest-card');
     if (!list) return;
@@ -3622,8 +3685,8 @@ function init() {
         box.appendChild(qb);
       }
     }
-    else if (act.kind === 'walk') { box.innerHTML = '<div class="ad-note">目標：大家一起走 <b>' + (+act.goal).toLocaleString() + ' 步</b>，' + act.days + ' 天內完成。' + cname() + '會親口問阿嬤要不要一起；開始後每個人走多少都看得到。</div>'; }
-    else if (act.kind === 'event') { box.innerHTML = '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + '<br>' + (act.dateLabel || '') + '，' + cname() + '會親口問阿嬤、幫大家收「去 / 沒空」。</div>'; }
+    else if (act.kind === 'walk') { renderWalkBody(act, box); }
+    else if (act.kind === 'event') { renderEventBody(act, box); }
     if (act.rewards && act.rewards.some(Boolean)) {
       box.insertAdjacentHTML('beforeend', '<div class="ad-sec"><div class="ad-lbl">小獎勵</div><div class="ad-rewards">' + act.rewards.map((r, i) => r ? '<div>第 ' + (i + 1) + ' 名 · ' + r + '</div>' : '').filter(Boolean).join('') + '</div></div>');
     }
@@ -3809,17 +3872,17 @@ function init() {
     const keep = [];
     acts.forEach(a => {
       if (actExpired(a)) {
-        pushFamilyFeed('「' + a.title + '」結束了，收進<b>家庭記錄簿</b>了');
+        announceActEnd(a);
       } else { keep.push(a); renderActCard(a); }
     });
     if (keep.length !== acts.length) saveActs(keep);
   }
-  // 進家人頁時再掃一次：不用重開 App，到期卡當場收掉
+  // 進家人頁時再掃一次：不用重開 App，到期卡當場收掉＋公布結果
   function sweepActsOnView() {
     const acts = loadActs();
     const expired = acts.filter(a => actExpired(a));
     if (!expired.length) return;
-    expired.forEach(a => { const c = document.querySelector('[data-act-id="' + a.id + '"]'); if (c) c.remove(); });
+    expired.forEach(a => { announceActEnd(a); const c = document.querySelector('[data-act-id="' + a.id + '"]'); if (c) c.remove(); });
     saveActs(acts.filter(a => !actExpired(a)));
   }
   window.__muneaSweepActs = sweepActsOnView;
