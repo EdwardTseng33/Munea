@@ -39,6 +39,13 @@
 
 **⑳（7/9 深夜 Windows）1.10.1 修 1.9.1 回歸：聊聊「只出字幕、不出聲、一直我聽見了」**：Edward 真機回報接通後 AI 用打字不講話、一直「我聽見了」。**根因**＝1.9.1 把「語音就緒(ready)」當成開麥時機，但等臉那幾秒麥克風已在收音→用戶/環境音在她招呼前一直灌進 Gemini→她一直被 interrupted 打斷→語音一直被停、只剩字幕，且不停回「我聽見了」。**修法**（純 client、`web/src/app.js`）：新增 `micOpen` 旗標，麥克風改由「她招呼講完(turn_complete)」才開；greet 時設 `_openMicAfterGreet`、6 秒保底防招呼沒正常結束害你不能講。→ 招呼成乾淨第一句、她講完才輪你、聲音不再被打斷。selftest 22/22（三處 1.10.1）。**⚠ 給 Mac（重要）**：這是 App 內程式修正、**要重打一包 TestFlight 才會到 Edward 手機**（語音伺服器 rev 00006 不用動、greet 邏輯已在線上）；目前 TestFlight 那包仍是壞的 1.9.1 client，重打包前聊聊仍會卡。
 
+**㉕（7/9 深夜 Windows 蘇菲）會動的臉·地面真相查證（Edward「趕快補好」）**：實測那顆擬真臉引擎(Modal `_switch`+`probe`)六角色接受度——
+- **引擎吃 4 個人形**：寧寧✓(確認動)、**小昀 probe frames_delta=3 真生畫格✓**、阿原(接受)、阿宏(接受但 probe 靜音 frames_delta=0·需真語音/真機或換更好底圖確認)。
+- **2 隻動物拒絕**：咪咪/旺財 → Ditto 認不出卡通動物臉、`_switch` 拋錯退 2D，而 2D 嘴 `styles.css:702 display:none` → 完全不動。
+- **翻案**：不是「只做寧寧」，是引擎本來就處理 4 人形；Edward 觀察「只有寧寧」很可能沒測小昀/阿原/阿宏。
+- **剩的工**：① 人形（尤其阿宏）真機測會不會動、阿宏若不動＝底圖換更清楚正臉再部署 Modal（我能部署、modal 已登入 edwardt0303）② 2 動物要「卡通嘴」——擬真引擎做不了，走嘴型圖開合換／講話短片(需美術資產·女巫)。App 端 handler 已送 `?char=`、引擎已有 `_switch`，零件在。
+- ⚠ Modal 登入可用、`probe`/部署我這端能跑；真機 WebRTC 視覺仍需 Edward 手機。
+
 **㉔（7/9 深夜 Windows 蘇菲）v1.13.0 聊聊講一句就幫你設提醒進 App（Edward 要「AI 直接做進設定」）**：跟寧寧說「明天下午4點台大骨科回診」「今晚吃止痛藥」→ 她直接把提醒建進 App 的看診/用藥提醒（跟手動同一份清單、接手機通知），並口頭確認設了什麼（走 A 案：設好就明講、可在 App 複查改）。
 - **做法**：語音伺服器加 Gemini Live 函式呼叫 `set_clinic_reminder`/`set_medication_reminder`＋餵「今天台灣日期」算相對時間；收到呼叫→送 `{type:action}` 給 App→App `handleVoiceAction` 走既有 `saveMed`/`saveVisit` 建進清單＋MuneaNotify＋toast。用藥一次性精確時間先映射到最近時段（早/午/晚餐後/睡前），精確任意時間列 task#18 後續。
 - **防假成功（能力握手）**：App 連線帶 `?cap_rem=1`，伺服器只對新版開放設提醒工具；舊版拿不到工具＝寧寧不會嘴上說設好卻沒設。
