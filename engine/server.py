@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 沐寧 Munea · 本機 App 伺服器 — 跑真的 App（web/）＋ 接真的角色腦。
-  GET  /                     → web/index.html（完整 App）
+  GET  /                     → web/landing.html（產品介紹官網）；完整 App 在 /index.html
   GET  /<path>               → web/ 底下的靜態檔（js / css / 圖）
   POST /open  {char}         → 該角色「主動先開口」＋語音
   POST /chat  {history,char} → 該角色帶記憶回話＋語音
@@ -624,11 +624,13 @@ def family_state_response(data):
         write_json_file(FAMILY_STATE_STORE_PATH, allstate)
         return {"ok": True, "key": key, "backend": "json"}
     merged = {}
+    loaded_from_supabase = False
     if use_supabase:
         try:
             remote_state = data_backend().load_family_state_store(family_group_id=group_uuid)
             if remote_state is not None:
                 merged.update({k: v.get("value") for k, v in remote_state.items() if isinstance(v, dict)})
+                loaded_from_supabase = True
         except Exception as e:
             if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
                 raise e
@@ -637,7 +639,7 @@ def family_state_response(data):
     for k, v in (allstate.get(group) or {}).items():
         if isinstance(v, dict):
             merged[k] = v.get("value")
-    return {"ok": True, "state": merged}
+    return {"ok": True, "state": merged, "backend": "supabase" if loaded_from_supabase else "json"}
 
 FAMILY_INVITATION_STATUSES = {"pending", "accepted", "revoked", "expired"}
 
@@ -773,8 +775,8 @@ def family_invitations_response(data):
             local_raw = read_json_file(FAMILY_INVITATIONS_PATH, [])
             if isinstance(local_raw, list):
                 candidates.extend(public_family_invitation(inv) for inv in local_raw)   # 雲端桌子＋引擎本子都翻
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception("read local family invitations", e)
         match = None
         for inv in candidates:
             if inv.get("shortCode") == short_code and inv.get("status") == "pending":
@@ -785,8 +787,8 @@ def family_invitations_response(data):
             exp = str(match.get("expiresAt") or "").replace("Z", "+00:00")
             if exp and datetime.fromisoformat(exp) < datetime.now(timezone.utc):
                 return {"ok": False, "error": "invitation_expired"}
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception("parse family invitation expiry", e)
         # 人數上限（邀請單建立時記下邀請方方案的上限）：圈滿了就不給進
         try:
             max_members = int(((match.get("metadata") or {}).get("maxMembers")) or 0)
@@ -795,8 +797,8 @@ def family_invitations_response(data):
                 circle = circle_state.get("circle")
                 if isinstance(circle, list) and len(circle) >= max_members:
                     return {"ok": False, "error": "circle_full"}
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception("check family circle capacity", e)
         patch = {
             "status": "accepted",
             "acceptedAt": utc_now(),
@@ -4239,7 +4241,7 @@ class H(BaseHTTPRequestHandler):
             })
             return
         if path in ("/", ""):
-            path = "/index.html"
+            path = "/landing.html"   # munea.net 首頁＝產品介紹；App 本體仍在 /index.html（iOS 用本地打包、不經此路由）
         rel = posixpath.normpath(path).lstrip("/")
         full = os.path.normpath(os.path.join(WEB_DIR, rel))
         if not full.startswith(WEB_DIR) or not os.path.isfile(full):   # 防目錄穿越 + 404
