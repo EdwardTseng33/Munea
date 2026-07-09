@@ -895,6 +895,13 @@ function getAvatarUrl() {
 }
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false,
+  _diag(msg) {  // 診斷小窗（設定 munea.debug=1 才顯示）：手機上排查「臉沒動」用
+    try {
+      if (localStorage.getItem('munea.debug') !== '1') return;
+      const el = document.getElementById('avatarDiagnostics');
+      if (el) { el.hidden = false; el.textContent = '臉: ' + msg; }
+    } catch (e) {}
+  },
   wake() {  // 預醒：進聊聊頁就叫床（重複呼叫無害；容器醒著＝這只是 1 次健康探針）
     const u = getAvatarUrl(); if (!u || this._waking) return;
     this._waking = true;
@@ -905,9 +912,20 @@ const Avatar = {
     const u = getAvatarUrl(); if (!u) return false;
     const vid = document.getElementById('faceVid'); if (!vid) return false;
     try {
-      this.pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      // 連線路線（7/9 手機實測補強）：家用網路直連即可；手機行動網路（5G/4G）常要走「中繼站」轉一手
+      // 中繼＝公開測試中繼（正式上線換自家帳號的中繼、一行換）；munea.avatarRelay=1 可強制全走中繼（診斷用）
+      const iceServers = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
+          username: 'openrelayproject', credential: 'openrelayproject' },
+      ];
+      let forceRelay = false;
+      try { forceRelay = localStorage.getItem('munea.avatarRelay') === '1'; } catch (e) {}
+      this.pc = new RTCPeerConnection(forceRelay ? { iceServers, iceTransportPolicy: 'relay' } : { iceServers });
+      this._diag('連線中（中繼' + (forceRelay ? '·強制' : '·備援') + '）');
       this.pc.addTransceiver('video', { direction: 'recvonly' });
-      this.pc.ontrack = e => { vid.srcObject = e.streams[0]; };
+      this.pc.ontrack = e => { vid.srcObject = e.streams[0]; this._diag('影像到了'); };
+      this.pc.addEventListener('iceconnectionstatechange', () => this._diag('線路 ' + this.pc.iceConnectionState));
       const o = await this.pc.createOffer(); await this.pc.setLocalDescription(o);
       await new Promise(res => {  // 等收集完連線候選再送（demo-live 同款）
         if (this.pc.iceGatheringState === 'complete') return res();
