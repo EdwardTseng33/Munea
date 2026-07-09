@@ -42,6 +42,8 @@ cat > /workspace/wake.sh <<'WAKE'
 #!/usr/bin/env bash
 # 全新卡 + 舊置物櫃 → 起臉服務（量測點：本腳本開跑→ /health ok）
 set -e
+# 現場編譯暫存放置物櫃（7/9 實測抓到：不放的話每次喚醒重編、多燒 30-60 秒）
+mkdir -p /workspace/pyxbld && ln -sfn /workspace/pyxbld /root/.pyxbld
 apt-get update -qq && apt-get install -y -qq ffmpeg libgl1 libgles2 libegl1 libopengl0 libglib2.0-0 > /dev/null
 export MUNEA_AVATAR_SRC=/workspace/nening-real-female-full.jpg
 export LD_LIBRARY_PATH=/workspace/cudnn8-pkgs/nvidia/cudnn/lib:${LD_LIBRARY_PATH:-}

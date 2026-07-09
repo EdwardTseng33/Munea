@@ -31,6 +31,13 @@ image = (
         "git clone --depth 1 https://github.com/antgroup/ditto-talkinghead /root/ditto-talkinghead",
         "sed -i 's/np\\.atan2/np.arctan2/g' /root/ditto-talkinghead/core/aux_models/mediapipe_landmark478.py",
     )
+    # ↓ 疊在頂層（不動下面 15 分鐘的大層）：編譯工具＋預編 Cython 拼圖（7/9 實測踩雷：跑時現編、缺工具直接倒）
+    .apt_install("build-essential", "clang")
+    .run_commands(
+        "cd /root/ditto-talkinghead && python -c \"import sys; sys.path.insert(0,'.'); "
+        "import numpy, pyximport; pyximport.install(setup_args={'include_dirs': numpy.get_include()}); "
+        "from core.utils.blend import blend; print('blend precompiled')\" || echo 'precompile skipped (runtime will compile)'",
+    )
     .env({"LD_LIBRARY_PATH": "/opt/cudnn8-pkgs/nvidia/cudnn/lib"})
     .add_local_file(r"E:\Claude\Munea\web\avatars\nening-real-female-full.jpg",
                     "/root/nening-real-female-full.jpg")
@@ -52,7 +59,7 @@ SNAPSHOT_KEY = "v1"  # 改這個字串＝作廢舊快照重拍
 
 @app.cls(
     image=image,
-    gpu="l40s",                      # Ada 世代、跟 4090 同代（TRT 引擎相容）
+    gpu="l4",                        # Ada 世代、跟 4090 同代（TRT 引擎相容）；L40S 要綁卡、PoC 先用 L4
     volumes={"/models": vol},
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
