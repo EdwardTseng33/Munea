@@ -1124,37 +1124,52 @@ function currentFaceTemplate() {
   } catch (e) { return 'nening-real-female'; }
 }
 const FaceIdle = {
-  el: null, cur: null, active: false,
-  ensure() {
-    if (this.el) return this.el;
+  // 雙片交叉淡入（治「打招呼→待機」閃頻）：待機片先在底下備好開播、打招呼片停在最後一格再淡出，全程沒有黑格
+  vA: null, vB: null, cur: null, active: false, _gen: 0,
+  _mk(suffix) {
     const img = document.getElementById('faceImg');
     if (!img || !img.parentElement) return null;
     const v = document.createElement('video');
-    v.id = 'faceIdle'; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
-    v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease;pointer-events:none';
+    v.id = 'faceIdle' + suffix; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
+    v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .28s ease;pointer-events:none';
     img.insertAdjacentElement('afterend', v);   // 蓋在靜態照上、壓在雲端臉(faceVid)下
-    v.addEventListener('ended', () => {         // 打招呼播完 → 接待機循環
-      if (FaceIdle.active && FaceIdle.cur) { v.src = FaceIdle.cur.idle; v.loop = true; v.play().catch(() => {}); }
-    });
-    this.el = v; return v;
+    return v;
+  },
+  ensure() {
+    // 先建 A（打招呼、疊上層）再建 B（待機、墊下層）：後插入的緊貼照片＝畫在下面
+    if (!this.vA) this.vA = this._mk('A');
+    if (!this.vB) this.vB = this._mk('B');
+    return this.vA && this.vB;
   },
   start(tplId) {
     const m = FACE_MOTION[tplId || currentFaceTemplate()];
-    const v = this.ensure();
-    if (!v) return;
+    if (!this.ensure()) return;
     if (!m) { this.stop(); return; }             // 沒動態素材的角色維持靜態圖
+    const gen = ++this._gen;                     // 換角色/重進頁時作廢舊流程
     this.cur = m; this.active = true;
-    v.loop = false; v.src = m.hello;
-    const show = () => { v.style.opacity = '1'; v.removeEventListener('playing', show); };
-    v.addEventListener('playing', show);
-    v.play().catch(() => {
+    const A = this.vA, B = this.vB;
+    B.loop = true; B.src = m.idle; B.style.opacity = '0'; try { B.load(); } catch (e) {}   // 待機片先備好
+    A.loop = false; A.src = m.hello;
+    const showA = () => { if (gen === this._gen) A.style.opacity = '1'; A.removeEventListener('playing', showA); };
+    A.addEventListener('playing', showA);
+    A.onended = () => {
+      if (!this.active || gen !== this._gen) return;
+      const cross = () => { if (gen !== this._gen) return; B.style.opacity = '1'; setTimeout(() => { if (gen === this._gen) A.style.opacity = '0'; }, 120); };
+      // 待機片真的出畫面（開播下一影格）才交叉淡入；打招呼片停在最後一格墊著，不會黑一下
+      B.play().then(() => requestAnimationFrame(() => requestAnimationFrame(cross))).catch(cross);
+    };
+    A.play().catch(() => {
       // 被省電規則暫時擋下（例如分頁在背景）：半秒後再試一次，仍不行就維持靜態圖
-      setTimeout(() => { if (FaceIdle.active) v.play().catch(() => { FaceIdle.stop(); }); }, 600);
+      setTimeout(() => { if (this.active && gen === this._gen) A.play().catch(() => { if (gen === this._gen) this.stop(); }); }, 600);
     });
   },
   stop() {
-    this.active = false; this.cur = null;
-    if (this.el) { try { this.el.pause(); } catch (e) {} this.el.style.opacity = '0'; this.el.removeAttribute('src'); try { this.el.load(); } catch (e) {} }
+    this.active = false; this.cur = null; this._gen++;
+    [this.vA, this.vB].forEach(v => {
+      if (!v) return;
+      try { v.pause(); } catch (e) {}
+      v.style.opacity = '0'; v.removeAttribute('src'); try { v.load(); } catch (e) {}
+    });
   },
 };
 

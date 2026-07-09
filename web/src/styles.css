@@ -1942,8 +1942,8 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 #status { --mint2: var(--mint-2); --ink2: var(--ink-2); }
 #status .serif { font-family: var(--serif); }
 #status .h1 { font-size: 27px; font-weight: 900; letter-spacing: .5px; }
-#status .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
-#status .row { display: flex; align-items: center; }
+#status .card, #family .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
+#status .row, #family .row { display: flex; align-items: center; }
 #status .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
 #status .mnum { font-family: var(--serif); font-weight: 900; line-height: 1; }
 #status .moodface { border: none; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .15s; }
