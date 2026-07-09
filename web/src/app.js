@@ -2687,35 +2687,11 @@ function init() {
 
   // 全家健康圈：切換成員看健康
   // 每位家人的完整看板（Edward 7/9：心情/用藥/血壓/心率/血氧/睡眠/運動量都要有）
+  // 家人健康數據（示範）：欄位結構照狀態頁「今天」——血壓/心率雙卡＋血氧/睡眠/運動量三格＋用藥卡
   const PERSON_STATS = {
-    '阿嬤': [
-      { ic: 'bp', val: '128/82', label: '血壓', tag: '正常', tagCls: 'ok' },
-      { ic: 'hr', val: '72<small> 次/分</small>', label: '心率' },
-      { ic: 'spo2', val: '97<small>%</small>', label: '血氧' },
-      { ic: 'sleep', val: '7.5<small> 小時</small>', label: '昨晚睡眠', tag: '好', tagCls: 'ok' },
-      { ic: 'walk', val: '3,850<small> 步</small>', label: '運動量' },
-      { ic: 'pill', val: '2<small>/3</small>', label: '今天用藥', tag: '剩 1 次', tagCls: 'warn' }],
-    '美華': [
-      { ic: 'bp', val: '118/76', label: '血壓', tag: '正常', tagCls: 'ok' },
-      { ic: 'hr', val: '68<small> 次/分</small>', label: '心率' },
-      { ic: 'spo2', val: '98<small>%</small>', label: '血氧' },
-      { ic: 'sleep', val: '6.2<small> 小時</small>', label: '昨晚睡眠', tag: '偏少', tagCls: 'warn' },
-      { ic: 'walk', val: '8,900<small> 步</small>', label: '運動量', tag: '達標', tagCls: 'ok' },
-      { ic: 'pill', val: '—', label: '沒有設定用藥' }],
-    '志明': [
-      { ic: 'bp', val: '132/86', label: '血壓', tag: '偏高', tagCls: 'warn' },
-      { ic: 'hr', val: '75<small> 次/分</small>', label: '心率' },
-      { ic: 'spo2', val: '97<small>%</small>', label: '血氧' },
-      { ic: 'sleep', val: '7.1<small> 小時</small>', label: '昨晚睡眠' },
-      { ic: 'walk', val: '7,400<small> 步</small>', label: '運動量' },
-      { ic: 'pill', val: '1<small>/1</small>', label: '今天用藥', tag: '都吃了', tagCls: 'ok' }],
-    '小寶': [
-      { ic: 'bp', val: '105/65', label: '血壓', tag: '正常', tagCls: 'ok' },
-      { ic: 'hr', val: '80<small> 次/分</small>', label: '心率' },
-      { ic: 'spo2', val: '99<small>%</small>', label: '血氧' },
-      { ic: 'sleep', val: '8.8<small> 小時</small>', label: '昨晚睡眠', tag: '好', tagCls: 'ok' },
-      { ic: 'walk', val: '11,200<small> 步</small>', label: '運動量', tag: '達標', tagCls: 'ok' },
-      { ic: 'pill', val: '—', label: '沒有設定用藥' }],
+    '美華': { bp: { n: '118', u: '/76 mmHg', chip: '正常', warn: 0, sub: '正常範圍內' }, hr: { n: '68', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '98', sleep: '6.2', steps: '8,900', med: null },
+    '志明': { bp: { n: '132', u: '/86 mmHg', chip: '偏高', warn: 1, sub: '比平常高一點，多留意' }, hr: { n: '75', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '97', sleep: '7.1', steps: '7,400', med: { sub: '1/1 次 · 都記到了', chip: '都吃了', warn: 0 } },
+    '小寶': { bp: { n: '105', u: '/65 mmHg', chip: '正常', warn: 0, sub: '正常範圍內' }, hr: { n: '80', chip: '正常', warn: 0, sub: '靜息心率' }, spo2: '99', sleep: '8.8', steps: '11,200', med: null },
   };
   // 每位家人的心情監測（心情卡不再只有阿嬤有）
   const PERSON_MOOD = {
@@ -2724,25 +2700,47 @@ function init() {
     '志明': { title: '平常心', sub: '今天還沒跟{n}聊', obs: '<span>上次</span> 昨天晚上　<span>語氣</span> 輕鬆', topics: ['棒球', '爬山'] },
     '小寶': { title: '活力滿滿', sub: '和{n}聊了 3 次 · 一直笑', obs: '<span>聲音</span> 開心　<span>聊天</span> 話多', topics: ['寶可夢', '學校'] },
   };
-  const STAT_ICONS = {
-    bp: '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/>',
-    hr: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-    spo2: '<path d="M12 2.7S6 9.2 6 13.5a6 6 0 0 0 12 0C18 9.2 12 2.7 12 2.7z"/>',
-    walk: '<path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/>',
-    sleep: '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
-    pill: '<path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>',
-  };
   function renderPersonStats(p) {
     const grid = $('#personGrid');
     if (!grid) return;
-    const stats = PERSON_STATS[p] || PERSON_STATS['阿嬤'];
-    const TINT = { bp: 't-bp', hr: 't-hr', spo2: 't-spo2', walk: 't-act', sleep: 't-sleep', pill: 't-med' };
-    grid.innerHTML = stats.map(t =>
-      '<div class="stat-tile ' + (TINT[t.ic] || '') + '"><span class="st-ico"><svg class="ic" viewBox="0 0 24 24">' + STAT_ICONS[t.ic] + '</svg></span>' +
-      '<div class="st-val">' + t.val + '</div><div class="st-label">' + t.label + (t.tag ? ' <em class="st-trend ' + (t.tagCls || '') + '">' + t.tag + '</em>' : '') + '</div></div>').join('');
+    const d = PERSON_STATS[p];
+    if (!d) { grid.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">等' + (p || '家人') + '連上沐寧，健康數據就會出現在這裡</div>'; return; }
+    const chip = (t, warn) => '<span class="chip" style="flex-shrink:0;background:' + (warn ? 'var(--coral-soft)' : 'var(--mint)') + ';color:' + (warn ? 'var(--coral-d)' : 'var(--teal-dd)') + '">' + t + '</span>';
+    const medCard = d.med
+      ? '<div class="card" style="padding:14px 15px;margin-bottom:11px"><div class="row" style="justify-content:space-between;gap:10px">' +
+        '<div class="row" style="gap:11px;min-width:0"><span style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:' + (d.med.warn ? 'var(--coral)' : 'var(--teal)') + ';display:grid;place-items:center;color:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>' +
+        '<div style="min-width:0"><div style="font-weight:700;font-size:14.5px">用藥狀態</div><div style="font-size:14px;color:var(--muted);margin-top:1px">' + d.med.sub + '</div></div></div>' + chip(d.med.chip, d.med.warn) + '</div></div>'
+      : '';
+    grid.innerHTML = medCard +
+      '<div class="row" style="gap:11px;margin-bottom:11px;align-items:stretch">' +
+        '<div class="card" style="padding:15px;flex:1">' +
+          '<div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>' + chip(d.bp.chip, d.bp.warn) + '</div>' +
+          '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">血壓</div>' +
+          '<div><span class="mnum" style="font-size:26px;color:var(--teal-dd)">' + d.bp.n + '</span><span style="font-size:14px;color:var(--muted)">' + d.bp.u + '</span></div>' +
+          '<div style="font-size:14px;color:var(--muted);margin-top:6px">' + d.bp.sub + '</div></div>' +
+        '<div class="card" style="padding:15px;flex:1">' +
+          '<div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span>' + chip(d.hr.chip, d.hr.warn) + '</div>' +
+          '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">心率</div>' +
+          '<div><span class="mnum" style="font-size:26px;color:var(--coral-d)">' + d.hr.n + '</span><span style="font-size:14px;color:var(--muted)"> bpm</span></div>' +
+          '<div style="font-size:14px;color:var(--muted);margin-top:6px">' + d.hr.sub + '</div></div>' +
+      '</div>' +
+      '<div class="card" style="display:flex;align-items:stretch;padding:0;overflow:hidden;margin-bottom:16px">' +
+        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/></svg><span style="font-size:14px;color:var(--muted)">血氧</span></div><div><span class="mnum" style="font-size:21px;color:var(--teal-dd)">' + d.spo2 + '</span><span style="font-size:14px;color:var(--muted)"> %</span></div></div>' +
+        '<div style="width:1px;background:var(--line);margin:12px 0"></div>' +
+        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C79A3B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span style="font-size:14px;color:var(--muted)">昨晚睡眠</span></div><div><span class="mnum" style="font-size:21px;color:#8A6410">' + d.sleep + '</span><span style="font-size:14px;color:var(--muted)"> 時</span></div></div>' +
+        '<div style="width:1px;background:var(--line);margin:12px 0"></div>' +
+        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg><span style="font-size:14px;color:var(--muted)">運動量</span></div><div><span class="mnum" style="font-size:21px;color:var(--teal-dd)">' + d.steps + '</span><span style="font-size:14px;color:var(--muted)"> 步</span></div></div>' +
+      '</div>';
   }
   function renderPersonMood(p) {
-    const m = PERSON_MOOD[p] || PERSON_MOOD['阿嬤'];
+    const m = PERSON_MOOD[p];
+    if (!m) {   // 不認識的成員不擺假觀察
+      if ($('#mcTitle')) $('#mcTitle').textContent = '還沒有觀察';
+      if ($('#mcSub')) $('#mcSub').textContent = '等' + (p || '家人') + '開始用沐寧，觀察會出現在這裡';
+      if ($('#mcObs')) $('#mcObs').innerHTML = '';
+      if ($('#mcTopics')) $('#mcTopics').innerHTML = '';
+      return;
+    }
     if ($('#mcTitle')) $('#mcTitle').textContent = m.title;
     if ($('#mcSub')) $('#mcSub').textContent = m.sub.replace('{n}', '沐寧');   // 家人聊的是「他自己的沐寧」，不套我這台的角色名
     if ($('#mcObs')) $('#mcObs').innerHTML = m.obs;
@@ -2808,14 +2806,13 @@ function init() {
     const wasActive = v && v.classList.contains('active');
     $('#viewAll').classList.remove('active');
     if (v) v.classList.add('active');
-    if ($('#ptName')) $('#ptName').textContent = p;
+    if ($('#ptName')) $('#ptName').textContent = p;   // 名字只在這裡出現一次（不再放稱謂副標）
     const dn = $('#ptDemoNote');
     if (dn) dn.textContent = '示範資料 · ' + p + '連上沐寧後，這裡就是他的真實狀態';
     renderPersonStats(p);
     renderPersonMood(p);   // 心情監測每個人都有（Edward 7/9）
     renderFamTrends();     // 活動量/睡眠/心情圖表跟著換人（跟狀態頁同款圖）
     if ($('#moodToday')) $('#moodToday').style.display = '';
-    if ($('#ptRel')) $('#ptRel').textContent = rel || '';
     const pa = $('#ptAv');
     if (pa) { pa.textContent = init || (p || '')[0] || ''; pa.className = 'init-ava init-ava-lg ' + (tint || ''); }
     $$('.fam-switch-item').forEach(b => b.classList.toggle('active', b.dataset.person === p));
@@ -2823,8 +2820,8 @@ function init() {
     const idx = FAM_ORDER.indexOf(p);
     if ($('#ptPrev')) $('#ptPrev').disabled = idx <= 0;
     if ($('#ptNext')) $('#ptNext').disabled = idx < 0 || idx >= FAM_ORDER.length - 1;
-    // 只有「從全家頁進來」才捲到頂；左右換人保持原捲動位置（治晃動 · Edward 7/9）
-    if (v && !wasActive) v.scrollIntoView({ block: 'start' });
+    // 從全家頁進來＝整頁置頂（第一眼就看到這是誰）；左右換人保持原捲動位置（治晃動 · Edward 7/9）
+    if (!wasActive) { const sc = $('#family'); if (sc) sc.scrollTop = 0; }
   }
   function showFamAll() {
     $('#viewPerson').classList.remove('active');
@@ -3235,11 +3232,11 @@ function init() {
         '<div class="mm-day"><div class="mm-dot" style="background:' + FAM_MOOD_COLS[mi] + '"></div><div class="mm-lab">' + FAM_WD[i] + '</div></div>').join('') + '</div>';
       const cnt = {}; seq.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
       const main = FAM_MOOD_NAME[+Object.keys(cnt).sort((a, b) => cnt[a] - cnt[b]).pop()];
-      if (note) note.innerHTML = '這週多在<b>' + main + '</b>；顏色跟狀態頁的情緒球同一套。';
+      if (note) note.innerHTML = '過去 7 天多在<b>' + main + '</b>；顏色跟狀態頁的情緒球同一套。';
     } else {
       const cells = Array.from({ length: 30 }, (_, i) => seq[i % seq.length]);
       if (box) box.innerHTML = '<div class="mood-grid">' + cells.map(mi => '<i style="background:' + FAM_MOOD_COLS[mi] + '"></i>').join('') + '</div>';
-      if (note) note.innerHTML = '這個月的心情地圖；一格一天、顏色跟情緒球同一套。';
+      if (note) note.innerHTML = '過去 30 天的心情地圖；一格一天、顏色跟情緒球同一套。';
     }
   }
   function renderFamTrends() { renderFamAct(); renderFamSleep(); renderFamMoodRange(); }
