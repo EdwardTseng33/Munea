@@ -192,6 +192,15 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
             )
         ),
+        # 聽話靈敏度（Edward 2026-07-10「戶外雜音/旁人聊天被當成我在講」）：
+        # 開口判定調「低靈敏」＝要更明確、對著手機講的人聲才算你在說話——背景雜音/遠處聊天不易誤觸、不再亂打斷她；
+        # 結束判定維持預設；尾端靜音窗 800ms＝長輩講話中間喘口氣不會被急著搶話。
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
+                silence_duration_ms=800,
+            )
+        ),
     )
 
 
