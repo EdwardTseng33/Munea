@@ -3,7 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3AA8A0">
   <title>沐寧 營運後台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/admin.css">
 </head>
 <body>
@@ -44,13 +48,10 @@
 
       <div class="content">
 
-        <!-- 未連線時的引導卡（各頁共用） -->
-        <div id="connectGate" class="connect-gate" hidden>
-          <div class="gate-card">
-            <h2>先連上資料，後台就會亮起來</h2>
-            <p class="muted">到「連線設定」貼上管理通行碼（由蘇菲保管，跟她要一聲就好）。</p>
-            <button type="button" class="primary-btn" id="gotoSettings">前往連線設定</button>
-          </div>
+        <!-- 未連線提示（細長橫幅，不擋住頁面本身） -->
+        <div id="connectGate" class="connect-banner" hidden>
+          <span>🔌 還沒連上資料——下面各區先顯示空的樣子；貼上通行碼就會亮起來。</span>
+          <button type="button" class="primary-btn" id="gotoSettings">前往連線設定</button>
         </div>
 
         <!-- ── 總覽 ─────────────────────────── -->

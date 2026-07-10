@@ -59,7 +59,7 @@
   };
   const PLAN_ZH = { free: "免費版", plus: "Plus", pro: "Pro" };
 
-  const CHART = { green: "#0e8a63", orange: "#b65f2a", prev: "#aab4af", grid: "#e8e6df", ink: "#1d2724", muted: "#65716d" };
+  const CHART = { green: "#1AA093", orange: "#D98841", prev: "#C3BBAA", grid: "#EAE3D6", ink: "#3A352E", muted: "#5A6963" };
 
   // ══ 小工具 ═════════════════════════════════════
   const $ = (id) => document.getElementById(id);
@@ -260,6 +260,7 @@
 
   function showPage() {
     const page = currentPage();
+    // 每頁一律顯示（不再整頁鎖住）——未連線時各區塊自己顯示「連線後就會顯示」
     document.querySelectorAll(".page").forEach((el) => { el.hidden = el.id !== `page-${page}`; });
     document.querySelectorAll("#sideNav a").forEach((a) => a.classList.toggle("on", a.dataset.page === page));
     $("pageTitle").textContent = PAGES[page];
@@ -268,10 +269,9 @@
   }
 
   function updateGate() {
-    const page = currentPage();
-    const needGate = !state.connected && page !== "settings";
-    $("connectGate").hidden = !needGate;
-    if (needGate) $(`page-${page}`).hidden = true;
+    // 只在非設定頁、且未連線時，於內容頂端顯示細長提示橫幅（不擋住頁面）
+    const showBanner = !state.connected && currentPage() !== "settings";
+    $("connectGate").hidden = !showBanner;
   }
 
   // ══ 圖表引擎（純 SVG 手刻） ═════════════════════
@@ -935,6 +935,47 @@
     $("inboxBadge").textContent = inbox;
   }
 
+  // ══ 示範模式（?demo=1，免通行碼看填滿的樣子） ═══
+  function buildDemoData() {
+    const daily = [];
+    const now = new Date();
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000).toISOString().slice(0, 10);
+      const base = 6 + Math.round(4 * Math.sin(i / 5)) + (i < 30 ? 4 : 0);
+      daily.push({ date: d, events: base + 8, meaningfulEvents: base, voiceMinutes: Math.max(0, base * 3.2), avatarMinutes: Math.max(0, (base - 2) * 0.9) });
+    }
+    return {
+      northStar: { ok: true, meaningfulCompanionDays: 42, activePeople: 8, voiceSessionSuccessRate: 0.93, routineCompletions: 55, familyInteractions: 31, eventCount: 900 },
+      usage: { ok: true, windowDays: 90, totals: { events: 900, voiceMinutes: 210, avatarMinutes: 64 }, daily, eventCounts: { voice_session_completed: 120, avatar_session_completed: 40, onboarding_completed: 26, subscription_purchased: 3, points_purchased: 5 }, backend: { provider: "supabase" } },
+      accounts: { ok: true, accounts: [
+        { accountName: "曾家", familyGroup: { name: "曾家大院" }, primaryPerson: { displayName: "曾媽媽" }, companion: { displayName: "寧寧" }, familyMembers: { count: 3 }, updatedAt: "2026-07-09T12:18:00Z" },
+        { accountName: "林家", familyGroup: { name: "林宅" }, primaryPerson: { displayName: "林阿公" }, companion: { displayName: "阿宏" }, familyMembers: { count: 2 }, updatedAt: "2026-07-08T09:00:00Z" } ] },
+      credits: { ok: true, activePlan: "plus", subscription: { status: "active" }, walletSummary: { monthlyRemaining: 120, purchasedRemaining: 30, totalRemaining: 150 }, entitlements: { voice: "on", avatar: "on" } },
+      summaries: { ok: true, recent: [{ createdAt: "2026-07-09T13:00:00Z", summary: "聊到孫子婚禮，心情很好", memoryTags: ["家人", "喜事"], safetyRelevant: false }] },
+      privacy: { ok: true, totals: { byStatus: { pending: 1 }, byType: { account_deletion: 1 } }, recent: [{ type: "account_deletion", status: "pending", requestedAt: "2026-07-08T10:00:00Z", reason: "不想用了" }] },
+      feedback: { ok: true, totals: { bug: 2, praise: 1 }, nps: 9, npsCount: 3, latest: [
+        { type: "praise", createdAt: "2026-07-09T15:00:00Z", text: "寧寧記得我孫子要結婚，好感動", appVersion: "1.15.1" },
+        { type: "bug", category: "聊聊", createdAt: "2026-07-09T16:00:00Z", text: "聲音有時候會斷", appVersion: "1.15.1" } ] },
+      safety: { ok: true, totals: { byRiskLevel: { high: 1, low: 2 }, requiresHumanEscalation: 1 }, recent: [
+        { riskLevel: "high", eventTime: "2026-07-09T20:00:00Z", categories: ["自我傷害詞"] },
+        { riskLevel: "low", eventTime: "2026-07-08T10:00:00Z", categories: ["情緒低落"] } ] },
+      audit: { ok: true, recent: [{ eventType: "credit_grant", targetTable: "credits", createdAt: "2026-07-09T11:00:00Z", targetId: "acc_1" }] },
+    };
+  }
+
+  function enterDemoMode() {
+    state.data = buildDemoData();
+    state.errors = {};
+    state.connected = true;
+    setRaw({ demo: true });
+    $("lastUpdated").textContent = "示範資料（非真實用戶）";
+    setStatus("🧪 示範模式", "warn");
+    $("connectHint").textContent = "現在顯示的是示範資料，方便你看填滿的樣子。要看真資料，貼上通行碼再按「連線看資料」。";
+    renderCurrentPage();
+    updateBadges();
+    updateGate();
+  }
+
   // ══ 啟動 ═══════════════════════════════════════
   function init() {
     $("apiBaseUrl").value = initialBaseUrl();
@@ -984,7 +1025,8 @@
     window.addEventListener("hashchange", showPage);
     showPage();
 
-    if (savedToken) refreshAll();
+    if (/[?&]demo=1/.test(location.search)) enterDemoMode();
+    else if (savedToken) refreshAll();
   }
 
   document.addEventListener("DOMContentLoaded", init);
