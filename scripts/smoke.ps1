@@ -2853,6 +2853,20 @@ print("admin console contract OK")
 '@
 Pass "Admin console is present and keeps secrets out of static assets"
 
+Step "Cloud Run deploy script syntax"
+$deployTokens = $null
+$deployErrors = $null
+[System.Management.Automation.Language.Parser]::ParseFile(
+  (Resolve-Path "scripts\cloud-run-deploy-staging.ps1"),
+  [ref]$deployTokens,
+  [ref]$deployErrors
+) | Out-Null
+if ($deployErrors.Count -gt 0) {
+  $details = ($deployErrors | ForEach-Object { "line $($_.Extent.StartLineNumber): $($_.Message)" }) -join "; "
+  throw "Cloud Run deploy script has syntax errors: $details"
+}
+Pass "Cloud Run deploy script parses"
+
 Step "Avatar runtime contract"
 Invoke-PythonBlock @'
 from pathlib import Path
