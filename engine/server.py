@@ -218,6 +218,7 @@ ADMIN_POST_PATHS = {
     "/admin/north-star",
     "/admin/usage",
     "/admin/credits",
+    "/admin/subscription-metrics",
     "/admin/conversation-summaries",
     "/admin/privacy-requests",
     "/admin/feedback",
@@ -2822,6 +2823,55 @@ def admin_credits_summary(data=None):
     }
 
 
+def admin_subscription_metrics(data=None):
+    """訂閱營運聚合：從 product_events 算能算的真數字（新增訂閱/點數/註冊/轉換率）；
+    MRR 與流失率需要『目前有效訂閱聚合』與『取消事件』，尚未具備時誠實回 None + 原因。"""
+    data = data or {}
+    days = max(1, min(90, int(data.get("days") or 30)))
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days - 1)
+    since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
+    all_events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
+    events = [event for event in all_events if not is_analytics_excluded_event(event)]
+    new_subs = 0
+    subs_by_plan = {}
+    points_purchases = 0
+    points_total = 0.0
+    registrations = 0
+    for event in events:
+        name = event.get("eventName")
+        props = event.get("properties") or {}
+        if name == "subscription_purchased":
+            new_subs += 1
+            plan = str(props.get("plan") or props.get("productId") or "unknown")
+            subs_by_plan[plan] = subs_by_plan.get(plan, 0) + 1
+        elif name == "points_purchased":
+            points_purchases += 1
+            points_total += safe_number(props.get("points"))
+        elif name == "onboarding_completed":
+            registrations += 1
+    conversion = round(new_subs / registrations, 4) if registrations else None
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "newSubscriptions": new_subs,
+        "newSubscriptionsByPlan": dict(sorted(subs_by_plan.items())),
+        "pointsPurchases": points_purchases,
+        "pointsTotal": round(points_total),
+        "registrations": registrations,
+        "freeToPaidConversion": conversion,
+        "mrr": None,
+        "activeSubscribersByPlan": None,
+        "churnRate": None,
+        "pending": {
+            "mrr": "需要跨帳號『目前有效訂閱』聚合（訂閱事件只記新購、不記目前狀態）",
+            "churnRate": "需要 subscription_cancelled / subscription_downgraded 事件（目前只記進、不記出）",
+        },
+        "backend": data_backend_status(),
+    }
+
+
 def admin_conversation_summaries(data=None):
     data = data or {}
     limit = max(1, min(200, int(data.get("limit") or 50)))
@@ -4380,6 +4430,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_credits_summary(data))
+            elif self.path == "/admin/subscription-metrics":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_subscription_metrics(data))
             elif self.path == "/admin/conversation-summaries":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

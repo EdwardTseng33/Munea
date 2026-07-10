@@ -58,6 +58,19 @@
   const DEFAULT_LOCAL_API = "http://127.0.0.1:8200";
   const state = { data: null, errors: {}, connected: false, page: "overview", tabs: {} };
 
+  // codex 後端接口清單（連線時一次抓）
+  const EP_LIST = {
+    northStar: ["/admin/north-star", { days: 30 }],
+    usage: ["/admin/usage", { days: 90 }],
+    accounts: ["/admin/accounts", { limit: 25 }],
+    credits: ["/admin/credits", { limit: 12 }],
+    subscriptionMetrics: ["/admin/subscription-metrics", { days: 30 }],
+    feedback: ["/admin/feedback", { limit: 12 }],
+    safety: ["/admin/safety-events", { days: 30, limit: 20 }],
+    privacy: ["/admin/privacy-requests", { limit: 10 }],
+    audit: ["/admin/audit-events", { limit: 12 }],
+  };
+
   const CHART = { teal: "#1AA093", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7772" };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -621,7 +634,7 @@
     localStorage.setItem(ADMIN_BASE_KEY, base);
     if($("rememberToken")?.checked) localStorage.setItem(ADMIN_TOKEN_KEY, token); else localStorage.removeItem(ADMIN_TOKEN_KEY);
     setStatus("讀取中…","");
-    const EP={ northStar:["/admin/north-star",{days:30}], usage:["/admin/usage",{days:90}], accounts:["/admin/accounts",{limit:25}], credits:["/admin/credits",{limit:12}], feedback:["/admin/feedback",{limit:12}], safety:["/admin/safety-events",{days:30,limit:20}], privacy:["/admin/privacy-requests",{limit:10}], audit:["/admin/audit-events",{limit:12}] };
+    const EP=EP_LIST;
     const keys=Object.keys(EP);
     const results=await Promise.allSettled(keys.map((k)=>postAdmin(base,token,EP[k][0],EP[k][1])));
     const data={},errors={};
@@ -661,8 +674,14 @@
     if(d.accounts&&d.accounts.accounts&&d.accounts.accounts.length){ S.users.roster=d.accounts.accounts.slice(0,20).map((a)=>{ const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{}; return [p.displayName||a.accountName||"用戶", f.name||"–", "–", c.displayName||"–", (m.count||0)+" 人", "活躍中", fmtTime(a.updatedAt||a.createdAt)]; }); }
     // 用量（真：每日通話分鐘）
     if(d.usage&&d.usage.daily&&d.usage.daily.length){ const last7=d.usage.daily.slice(-7); S.overview.callDaily=last7.map((x)=>[shortDate(x.date), Math.round(x.voiceMinutes+x.avatarMinutes)]); S.usage.weekCall=S.overview.callDaily.slice(); }
-    // 訂閱轉換（真：事件計數）
-    if(d.usage&&d.usage.eventCounts){ const ec=d.usage.eventCounts; const paid=ec.subscription_purchased||0, reg=ec.onboarding_completed||ec.person_onboarded||0; if(reg) S.subscription.kpi[3].value=((paid/reg*100).toFixed(1))+"%"; }
+    // 訂閱營運聚合（真：新增訂閱/點數/轉換率，來自 /admin/subscription-metrics）
+    if(d.subscriptionMetrics){ const sm=d.subscriptionMetrics;
+      if(sm.newSubscriptions!=null) S.subscription.kpi[1].value=n(sm.newSubscriptions);
+      if(sm.pointsPurchases!=null) S.subscription.kpi[2].value=n(sm.pointsPurchases)+" 筆";
+      if(sm.freeToPaidConversion!=null){ const c=(sm.freeToPaidConversion*100).toFixed(1)+"%"; S.subscription.kpi[3].value=c; S.overview.kpi[3].value=c; }
+      // MRR 還沒有聚合來源 → 誠實標「待接」
+      S.subscription.kpi[0].value="待接"; S.subscription.kpi[0].sub="需目前有效訂閱聚合"; S.subscription.kpi[0].delta="";
+    } else if(d.usage&&d.usage.eventCounts){ const ec=d.usage.eventCounts; const paid=ec.subscription_purchased||0, reg=ec.onboarding_completed||0; if(reg) S.subscription.kpi[3].value=((paid/reg*100).toFixed(1))+"%"; }
   }
 
   function fbType(t){ return {bug:"問題回報",idea:"功能許願",praise:"稱讚",nps:"打分數"}[t]||"意見"; }
@@ -749,7 +768,7 @@
     if(st){ // 需要 settings 的輸入存在才連；直接用存值連
       const base=initialBaseUrl();
       // 直接連（不需切到設定頁）
-      (async()=>{ try{ const tmpToken=st; const EP={ northStar:["/admin/north-star",{days:30}], usage:["/admin/usage",{days:90}], accounts:["/admin/accounts",{limit:25}], credits:["/admin/credits",{limit:12}], feedback:["/admin/feedback",{limit:12}], safety:["/admin/safety-events",{days:30,limit:20}], privacy:["/admin/privacy-requests",{limit:10}], audit:["/admin/audit-events",{limit:12}] }; const keys=Object.keys(EP); const rs=await Promise.allSettled(keys.map((k)=>postAdmin(base,tmpToken,EP[k][0],EP[k][1]))); const data={},errors={}; rs.forEach((r,i)=>{ if(r.status==="fulfilled")data[keys[i]]=r.value; else errors[keys[i]]="fail"; }); if(Object.keys(data).length){ state.data=data; state.errors=errors; state.connected=true; setStatus("✅ 已連線","ok"); applyLiveData(); updateBanner(); renderSide(); renderPage(state.page); } }catch(e){} })();
+      (async()=>{ try{ const tmpToken=st; const EP=EP_LIST; const keys=Object.keys(EP); const rs=await Promise.allSettled(keys.map((k)=>postAdmin(base,tmpToken,EP[k][0],EP[k][1]))); const data={},errors={}; rs.forEach((r,i)=>{ if(r.status==="fulfilled")data[keys[i]]=r.value; else errors[keys[i]]="fail"; }); if(Object.keys(data).length){ state.data=data; state.errors=errors; state.connected=true; setStatus("✅ 已連線","ok"); applyLiveData(); updateBanner(); renderSide(); renderPage(state.page); } }catch(e){} })();
     }
   }
   document.addEventListener("DOMContentLoaded",init);
