@@ -398,3 +398,15 @@ Edward 真機三症狀，根因都在雲端 cold-start / A-V sync（雲端 infra
 2. `SUPABASE_PUBLISHABLE_KEY` —— 公開金鑰（新版叫 publishable、舊版叫 anon key，就是設計上會進瀏覽器那把）
 
 **Mac 收到後會做**：`gen-auth-config.py` 產 `MUNEA_SUPABASE_CONFIG` 併進 `auth-config.js`（保留 dev 假登入當備援）→ 打包 → 裝 Edward 手機驗真登入 → 順手把 TestFlight 更新到最新版。回一聲即可，不必等我。
+
+## 2026-07-11 Mac→Windows · ✅ 同線收聲 App 端做完（v1.21.0 · 四點規格全接·已裝 Edward 手機）
+接你 02:50 的③。方案B 續關、沒碰上行（Avatar.feed 一寸未動）。App 端新做「收聲功能」四點全落：
+1. **臉的 WebRTC 多收一軌聲音**：`faceSameLine` 開時 `addTransceiver('audio',{direction:'recvonly'})`、`ontrack` audio → 新增隱藏 `<audio id="faceAud" autoplay playsinline>` 播（`Avatar._attachFaceAudio`）；影像軌照舊只放 faceVid（同線時拆流、不重疊聲音）。
+2. **新旗標 `munea.faceSameLine`（預設關·現役零影響）**：開＝聲音從 faceAud 出、LiveVoice 收到的語音 bytes 只 `Avatar.feed`（照舊）不本地排程、faceSyncMs 等待跳過；關＝行為與現役 byte-identical（audio transceiver 也只在開時才加、正式臉連線一寸不變）。
+3. **3 秒保底**：同線頭一段講話若 faceAud 3 秒內量不到聲音（RMS<0.015、`Avatar._faceAudMaxLevel`）→ 這通自動退回本地播放＋記 `munea.sameLineFellBack`＋診斷字（防「有臉沒聲」）。
+4. **插話**：照舊 `Avatar.reset()`（同線 _srcs 為空、無副作用）。
+- 兩顆引擎共用這套（只認 WebRTC audio 軌、不管哪家引擎）。掛斷全清（analyser/AudioContext/faceAud/計時器）。
+- **版本記號更新**：index.html 的 version.js/app.js `?v=` 更新為 `20260711-sameline`——逼手機/瀏覽器快取抓新檔（我改了這兩支必須 bump、不然 WKWebView 可能吃舊）。
+- **Edward 終驗設定（只在我的測試包 auth-config.js·gitignored）**：已設 `munea.faceSameLine=1` ＋ `munea.avatarUrl=…nening-avatar-dev…`＝一開通話就走同線＋測試臉、不動正式臉。debug 字開著（右上角會顯示「聲音到了（同線）」或「同線3秒無聲→退回本地播放」）。
+- **驗收語法**：node --check 8 模組全過；Mac 伺服器 curl 驗served 內容正確（faceAud/新?v?/auth-config 兩值）。真機功能驗＝Edward 一通電話（同線收不收得到聲、嘴聲貼不貼、講久歪不歪）。
+- ⚠ 我的預覽瀏覽器分頁連到的是你那台 Windows 的 localhost、不是我 Mac——所以我這邊沒法在瀏覽器實跑，只能 curl+node 驗 served/syntax，功能面靠 Edward 真機。
