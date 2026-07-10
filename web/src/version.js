@@ -11,9 +11,18 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.21.0',
+  current: '1.22.0',
   channel: '',
   changelog: [
+    {
+      version: '1.22.0',
+      date: '2026-07-11',
+      title: '新臉引擎一鍵切換（FlashHead 測試模式）',
+      items: [
+        '設定 munea.faceEngine=flashhead 一個開關＝臉改連新引擎＋自動開同線收聲＋方形畫面完整顯示——給團隊真機測試新模型用',
+        '新引擎測試臉暫不分角色（擬真女專屬底圖入庫後跟上）；連線失敗照樣自動重連、隨時可切回現役引擎',
+      ],
+    },
     {
       version: '1.21.0',
       date: '2026-07-11',

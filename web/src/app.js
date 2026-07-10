@@ -984,9 +984,15 @@ function getLiveVoiceUrl() {
 // 平常全睡不計費；進聊聊頁先「預醒」（8–10 秒）、按通話時臉多半已就緒。
 // 連哪裡：localStorage['munea.avatarUrl']（設空字串=關閉臉）；預設＝正式雲端服務。
 const AVATAR_URL_DEFAULT = 'https://edwardt0303--munea-nening-avatar-nening-web.modal.run';
+// 新引擎 FlashHead（2026-07-11 Edward 拍板轉正主線）：一個開關切整組測試設定——
+// localStorage['munea.faceEngine']='flashhead' ＝ 臉改連 FlashHead ＋ 自動開同線收聲 ＋ 512 方形畫面。
+const FLASHHEAD_URL_DEFAULT = 'https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run';
+function faceEngine() {
+  try { return localStorage.getItem('munea.faceEngine') || 'ditto'; } catch (e) { return 'ditto'; }
+}
 function getAvatarUrl() {
   try { const u = localStorage.getItem('munea.avatarUrl'); if (u !== null) return u.replace(/\/$/, ''); } catch (e) {}
-  return AVATAR_URL_DEFAULT;
+  return faceEngine() === 'flashhead' ? FLASHHEAD_URL_DEFAULT : AVATAR_URL_DEFAULT;
 }
 // 聲音怎麼送去雲端臉：預設走「舊路＝客戶端自己送」——臉穩、不會因伺服器連不上雲端臉而整個死掉。
 // 2026-07-10 Edward 拍板暫停 B（回穩）：日誌證實 B(伺服器直送)接雲端臉會 timeout、且接上了延遲也沒降。
@@ -999,7 +1005,11 @@ function serverFaceAudioOn() {
 // 預設關＝現役零影響；上行照舊走「手機轉送」（Avatar.feed 一寸不動、不碰 7/10 那顆方案B 雷）。
 // 保底：同線 3 秒沒出聲 → 自動退回本地播放（防「有臉沒聲」，比慢半拍更糟）。
 function faceSameLineOn() {
-  try { return localStorage.getItem('munea.faceSameLine') === '1'; } catch (e) { return false; }
+  try {
+    const v = localStorage.getItem('munea.faceSameLine');
+    if (v !== null) return v === '1';                 // 手動設定最優先（=0 可在 FlashHead 模式下關同線）
+    return faceEngine() === 'flashhead';              // FlashHead 模式預設開同線（它天生兩軌同線）
+  } catch (e) { return false; }
 }
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
@@ -1060,6 +1070,8 @@ const Avatar = {
         if (_sameLine && e.track && e.track.kind === 'audio') { this._attachFaceAudio(e.track); return; }   // 聲音軌 → faceAud
         // 影像軌照舊放 faceVid（同線時只放影像那軌、聲音走 faceAud 不重疊；現役維持 e.streams[0] 一寸不動）
         vid.srcObject = _sameLine && e.track ? new MediaStream([e.track]) : e.streams[0];
+        if (faceEngine() === 'flashhead') { vid.style.objectFit = 'contain'; vid.style.background = '#1c1917'; }   // FlashHead 吐 512 方形：置中完整顯示、不硬拉滿版（貼回全身立繪等擬真女底圖入庫後做）
+        else { vid.style.objectFit = ''; vid.style.background = ''; }
         this._diag('影像到了');
       };
       this.pc.addEventListener('iceconnectionstatechange', () => {
@@ -1089,8 +1101,9 @@ const Avatar = {
         this.pc.addEventListener('icegatheringstatechange', chk); setTimeout(res, 3000);
       });
       // 帶上目前選的角色（六角色 · 7/9）；角色不吃擬真引擎時服務會說不行 → 自動退回 2D 動畫
+      // FlashHead 測試模式不帶角色（它目前只有測試臉、帶中文名會被拒連）——擬真女底圖入庫後再帶
       let _cq = '';
-      try { if (typeof currentChar === 'string' && currentChar) _cq = '&char=' + encodeURIComponent(currentChar); } catch (e) {}
+      try { if (faceEngine() !== 'flashhead' && typeof currentChar === 'string' && currentChar) _cq = '&char=' + encodeURIComponent(currentChar); } catch (e) {}
       const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY) + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
       const a = await r.json(); if (a.error) throw new Error(a.error); await this.pc.setRemoteDescription(a);
