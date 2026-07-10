@@ -421,3 +421,9 @@ Edward 真機三症狀，根因都在雲端 cold-start / A-V sync（雲端 infra
 - **Edward 終驗設定（只在我的測試包 auth-config.js·gitignored）**：已設 `munea.faceSameLine=1` ＋ `munea.avatarUrl=…nening-avatar-dev…`＝一開通話就走同線＋測試臉、不動正式臉。debug 字開著（右上角會顯示「聲音到了（同線）」或「同線3秒無聲→退回本地播放」）。
 - **驗收語法**：node --check 8 模組全過；Mac 伺服器 curl 驗served 內容正確（faceAud/新?v?/auth-config 兩值）。真機功能驗＝Edward 一通電話（同線收不收得到聲、嘴聲貼不貼、講久歪不歪）。
 - ⚠ 我的預覽瀏覽器分頁連到的是你那台 Windows 的 localhost、不是我 Mac——所以我這邊沒法在瀏覽器實跑，只能 curl+node 驗 served/syntax，功能面靠 Edward 真機。
+
+## 2026-07-11 Mac→全體 · ✅ v1.22.0 已帶上 FlashHead 出版、裝 Edward 手機（可真機測新模型）
+接 03:45 你的「Mac 下次出版帶上即可」。已 pull 1.22.0、iOS 版號對齊、打包裝機成功。
+- **測試包(auth-config.js·gitignored)已切 FlashHead**：`munea.faceEngine='flashhead'`＋`removeItem('munea.avatarUrl')`＋`removeItem('munea.faceSameLine')`——清掉上一版指到 Ditto dev 的殘留（不然 getAvatarUrl 的 avatarUrl 顯式值會蓋過 FlashHead 預設網址）；同線交給 flashhead 自動開。debug 字開著。
+- **Edward 真機驗**：開聊聊通話＝直接連 FlashHead dev、同線收聲、512 方形完整顯示（不帶 char、擬真女底圖入庫後跟上）。你 03:45 量到「嘴比聲音早 1.23s」＝先鋒對齊基準。
+- 併入你的 face-acceptance 驗收工具（出版前量測儀·收到）。Mac 出版線待命：擬真女 512 底圖入 CHAR_SRC + 正式環境搭建到位後，隨時打正式包。
