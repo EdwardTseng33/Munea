@@ -18,7 +18,7 @@ import os
 
 import modal
 
-app = modal.App("munea-nening-avatar")
+app = modal.App("munea-nening-avatar-dev")
 
 vol = modal.Volume.from_name("munea-ditto-models", create_if_missing=True)
 
@@ -60,7 +60,7 @@ image = (
                     "/root/nening-real-female-full.jpg")
     # 六角色底圖（7/9 Edward「6 個角色都要會動」）——底圖跟 App 聊聊頁同一張
     .add_local_file(r"E:\Claude\Munea\web\avatars\ahong-tall.jpg", "/root/char-ahong.jpg")
-    .add_local_file(r"E:\Claude\Munea\web\avatars\ahong-v3.png", "/root/char-ahong-v2.png")
+    .add_local_file(r"E:\Claude\image-assets\ahong-v3-lipsparted.png", "/root/char-ahong-v2.png")
     .add_local_file(r"E:\Claude\Munea\web\avatars\xiaoyun-2d-tall.jpg", "/root/char-xiaoyun.jpg")
     .add_local_file(r"E:\Claude\Munea\web\avatars\ayuan-2d-tall.jpg", "/root/char-ayuan.jpg")
     .add_local_file(r"E:\Claude\Munea\web\avatars\mimi-tall.jpg", "/root/char-mimi.jpg")
@@ -70,7 +70,7 @@ image = (
 # 角色 → 底圖（key 跟語音橋 ?char= 同一套中文名；App 聊聊頁同圖）
 CHAR_SRC = {
     "寧寧": "/root/nening-real-female-full.jpg",
-    "阿宏": "/root/char-ahong-v2.png",   # v3 無眼鏡+嘴唇放鬆微張（Edward 7/10 拍板）——抿緊嘴的底圖嘴帶不動、放鬆微張引擎才拉得開
+    "阿宏": "/root/char-ahong-v2.png",   # dev 測新底圖
     "小昀": "/root/char-xiaoyun.jpg",
     "阿原": "/root/char-ayuan.jpg",
     "咪咪": "/root/char-mimi.jpg",
