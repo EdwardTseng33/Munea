@@ -307,9 +307,9 @@ Work items:
 - [x] Add production login UI foundation for Apple, Google, email OTP, sign-out, and local developer entry.
 - [x] Add backend token verification foundation and derive `auth.users.id` from `Authorization: Bearer <access_token>` before Supabase account bootstrap.
 - [ ] Test configured Supabase Auth providers end-to-end.
-- [ ] Test backend token verification against a live Supabase Auth session.
+- [x] Test backend token verification against a live Supabase Auth session.
 - [ ] Convert remaining production endpoints away from body-provided identity fields.
-- [ ] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.
+- [x] Add real local `engine/.env.local` values and run `npm run supabase:doctor:live`.
 - [ ] Apply `supabase/sql/007_family_cloud_state_foundation.sql` to staging/live Supabase and confirm all table checks pass.
 - [ ] Convert SQL draft into official Supabase migration after CLI/MCP authentication.
 

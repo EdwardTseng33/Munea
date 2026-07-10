@@ -114,7 +114,12 @@ Current UI contract:
 Not complete yet:
 
 - Real Supabase provider configuration must still be tested end-to-end.
-- Backend must still verify `Authorization: Bearer <access_token>` and derive `auth.users.id` server-side.
+- Browser session persistence and provider redirect/callback behavior still need device testing.
+
+Backend verification status:
+
+- Backend verifies `Authorization: Bearer <access_token>` through Supabase and derives `auth.users.id` server-side.
+- `npm run smoke:staging:auth` creates an isolated temporary Auth user, verifies the real token and bootstrap identity bridge, then deletes the user.
 
 ## Developer Mode And Test Accounts
 
@@ -267,11 +272,12 @@ Phase 1: Frontend session bridge
 
 Phase 2: Backend auth verification
 
-- Accept `Authorization: Bearer <access_token>`.
-- Verify the token server-side using Supabase auth APIs or JWT validation.
-- Derive `auth_user_id` from the verified token.
-- Remove trust in frontend-provided `authUserId`.
-- Return `auth_required` for missing/invalid tokens.
+- [x] Accept `Authorization: Bearer <access_token>`.
+- [x] Verify the token server-side using Supabase auth APIs.
+- [x] Derive `auth_user_id` from the verified token.
+- [x] Remove trust in frontend-provided `authUserId` during account bootstrap.
+- [x] Return `auth_required` for missing/invalid tokens.
+- [x] Verify the complete backend token path against a live staging Supabase Auth session.
 
 Phase 3: Account bootstrap
 
