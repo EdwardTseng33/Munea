@@ -3,117 +3,169 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Munea Admin</title>
+  <title>沐寧 營運後台</title>
   <link rel="stylesheet" href="src/admin.css">
 </head>
 <body>
   <main class="admin-shell">
     <header class="admin-header">
       <div>
-        <p class="eyebrow">Internal Operations</p>
-        <h1>Munea Admin</h1>
+        <p class="eyebrow">給經營者看的儀表板</p>
+        <h1>沐寧 營運後台</h1>
       </div>
-      <div class="status-pill" id="connectionStatus">Not connected</div>
+      <div class="status-pill" id="connectionStatus">還沒連線</div>
     </header>
 
-    <section class="connection-panel" aria-label="Admin connection">
-      <label>
-        <span>API URL</span>
-        <input id="apiBaseUrl" type="url" autocomplete="url" spellcheck="false">
-      </label>
-      <label>
-        <span>Admin Token</span>
-        <input id="adminToken" type="password" autocomplete="off" spellcheck="false">
-      </label>
-      <button id="refreshAdmin" type="button">Refresh</button>
+    <section class="connection-panel" aria-label="連線設定">
+      <div class="env-line">
+        目前看的是：<strong id="envLabel">－</strong>
+        <button id="toggleAdvanced" type="button" class="link-btn">換一台伺服器</button>
+      </div>
+      <div class="connect-row">
+        <label class="token-field">
+          <span>管理通行碼<small>（由蘇菲保管，跟她要一聲就好）</small></span>
+          <span class="token-input-wrap">
+            <input id="adminToken" type="password" autocomplete="off" spellcheck="false" placeholder="貼上通行碼">
+            <button id="toggleToken" type="button" class="eye-btn" aria-label="顯示或隱藏通行碼">顯示</button>
+          </span>
+        </label>
+        <label class="remember-row">
+          <input id="rememberToken" type="checkbox">
+          <span>記住通行碼（只存在這台電腦的瀏覽器）</span>
+        </label>
+        <button id="refreshAdmin" type="button" class="primary-btn">連線看資料</button>
+      </div>
+      <div class="advanced-row" id="advancedRow" hidden>
+        <label>
+          <span>伺服器網址（進階，平常不用動）</span>
+          <input id="apiBaseUrl" type="url" autocomplete="url" spellcheck="false">
+        </label>
+      </div>
+      <p class="hint" id="connectHint">按「連線看資料」之後，下面每一區就會亮起來。</p>
     </section>
 
-    <section class="metric-grid" aria-label="Admin metrics">
+    <h2 class="group-title">📊 這 30 天的整體狀況</h2>
+    <section class="metric-grid" aria-label="核心指標">
       <article class="metric-card">
-        <span>Meaningful Days</span>
-        <strong id="metricMeaningfulDays">-</strong>
+        <span>有陪到的天數</span>
+        <strong id="metricMeaningfulDays">－</strong>
+        <small>真的有聊上話的「人×天」總數，是我們最重要的指標</small>
       </article>
       <article class="metric-card">
-        <span>Active People</span>
-        <strong id="metricActivePeople">-</strong>
+        <span>使用人數</span>
+        <strong id="metricActivePeople">－</strong>
+        <small>這 30 天有來用沐寧的人</small>
       </article>
       <article class="metric-card">
-        <span>Events</span>
-        <strong id="metricEvents">-</strong>
+        <span>互動次數</span>
+        <strong id="metricEvents">－</strong>
+        <small>聊天、任務、通話等所有互動加總</small>
       </article>
       <article class="metric-card">
-        <span>Voice Minutes</span>
-        <strong id="metricVoiceMinutes">-</strong>
+        <span>語音通話（分鐘）</span>
+        <strong id="metricVoiceMinutes">－</strong>
+        <small>累計講了多久的電話</small>
       </article>
       <article class="metric-card">
-        <span>Avatar Minutes</span>
-        <strong id="metricAvatarMinutes">-</strong>
+        <span>視訊臉（分鐘）</span>
+        <strong id="metricAvatarMinutes">－</strong>
+        <small>「會動的臉」累計用了多久（成本大戶）</small>
       </article>
       <article class="metric-card">
-        <span>Backend</span>
-        <strong id="metricBackend">-</strong>
+        <span>資料存放</span>
+        <strong id="metricBackend">－</strong>
+        <small>用戶資料現在放在哪裡</small>
       </article>
     </section>
 
+    <h2 class="group-title">👥 用戶與方案</h2>
     <section class="admin-grid">
       <article class="panel span-2">
         <div class="panel-head">
-          <h2>Accounts</h2>
-          <input id="accountQuery" type="search" placeholder="Search account, family, person">
+          <div>
+            <h3>帳號總覽</h3>
+            <p class="panel-note">現在有哪些人／家庭在用沐寧</p>
+          </div>
+          <input id="accountQuery" type="search" placeholder="搜尋名字或家庭，按 Enter">
         </div>
-        <div id="accountsPanel" class="table-wrap muted">No data loaded.</div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head">
-          <h2>Credits</h2>
-        </div>
-        <div id="creditsPanel" class="stack muted">No data loaded.</div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head">
-          <h2>Safety</h2>
-        </div>
-        <div id="safetyPanel" class="stack muted">No data loaded.</div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head">
-          <h2>Privacy Requests</h2>
-        </div>
-        <div id="privacyPanel" class="stack muted">No data loaded.</div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head">
-          <h2>Feedback</h2>
-        </div>
-        <div id="feedbackPanel" class="stack muted">No data loaded.</div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head">
-          <h2>Audit Events</h2>
-        </div>
-        <div id="auditPanel" class="stack muted">No data loaded.</div>
+        <div id="accountsPanel" class="table-wrap muted">連線後就會顯示。</div>
       </article>
 
       <article class="panel span-2">
         <div class="panel-head">
-          <h2>Conversation Summaries</h2>
+          <div>
+            <h3>方案與點數</h3>
+            <p class="panel-note">目前方案、這個月還剩多少通話點數</p>
+          </div>
         </div>
-        <div id="summariesPanel" class="stack muted">No data loaded.</div>
+        <div id="creditsPanel" class="stack muted">連線後就會顯示。</div>
       </article>
     </section>
 
-    <section class="raw-panel">
-      <div class="panel-head">
-        <h2>Last Response</h2>
-        <button id="clearRaw" type="button">Clear</button>
+    <h2 class="group-title">🚨 需要留意的事</h2>
+    <section class="admin-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>安全警訊</h3>
+            <p class="panel-note">聊天中出現高風險訊號（例如想不開、求救）會記在這；標紅的要有人跟進</p>
+          </div>
+        </div>
+        <div id="safetyPanel" class="stack muted">連線後就會顯示。</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>隱私申請</h3>
+            <p class="panel-note">用戶按了「刪除帳號」或要資料副本，都會排在這裡等處理</p>
+          </div>
+        </div>
+        <div id="privacyPanel" class="stack muted">連線後就會顯示。</div>
+      </article>
+
+      <article class="panel span-2">
+        <div class="panel-head">
+          <div>
+            <h3>用戶意見</h3>
+            <p class="panel-note">App 裡「幫沐寧打分數」和意見回饋，都送到這裡</p>
+          </div>
+        </div>
+        <div id="feedbackPanel" class="stack muted">連線後就會顯示。</div>
+      </article>
+    </section>
+
+    <h2 class="group-title">📝 紀錄（平常不用看，追問題時用）</h2>
+    <section class="admin-grid">
+      <article class="panel span-2">
+        <div class="panel-head">
+          <div>
+            <h3>聊天摘要</h3>
+            <p class="panel-note">AI 記下的每段聊天重點（已去掉逐字內容，只留摘要）</p>
+          </div>
+        </div>
+        <div id="summariesPanel" class="stack muted">連線後就會顯示。</div>
+      </article>
+
+      <article class="panel span-2">
+        <div class="panel-head">
+          <div>
+            <h3>系統操作紀錄</h3>
+            <p class="panel-note">系統跟管理端動過什麼，給工程師追查用</p>
+          </div>
+        </div>
+        <div id="auditPanel" class="stack muted">連線後就會顯示。</div>
+      </article>
+    </section>
+
+    <details class="raw-panel">
+      <summary>🔧 工程資料（給工程師看的原始回應，平常不用打開）</summary>
+      <div class="panel-head raw-head">
+        <span class="muted" id="rawUpdatedAt"></span>
+        <button id="clearRaw" type="button">清空</button>
       </div>
       <pre id="rawOutput">{}</pre>
-    </section>
+    </details>
   </main>
 
   <script src="src/admin.js" defer></script>

@@ -23,7 +23,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: Inter, "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 button,
@@ -55,11 +55,21 @@ input {
   padding: 8px 12px;
 }
 
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 label span,
 .eyebrow,
-.metric-card span,
+.metric-card > span,
 .muted,
-.meta {
+.meta,
+.panel-note,
+.hint {
   color: var(--muted);
 }
 
@@ -90,31 +100,38 @@ label span,
 
 .eyebrow {
   margin: 0 0 3px;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
 }
 
 h1,
-h2 {
+h2,
+h3 {
   margin: 0;
   letter-spacing: 0;
 }
 
 h1 {
-  font-size: clamp(1.6rem, 3vw, 2.3rem);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
 }
 
-h2 {
-  font-size: 1rem;
+h3 {
+  font-size: 1.05rem;
+}
+
+.group-title {
+  margin: 26px 4px 10px;
+  font-size: 1.05rem;
+  color: var(--ink);
 }
 
 .status-pill {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
-  padding: 7px 12px;
+  padding: 7px 14px;
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .status-pill.ok {
@@ -135,25 +152,108 @@ h2 {
   color: var(--accent-2);
 }
 
+/* ── 連線卡 ───────────────────────────── */
+
 .connection-panel {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(220px, 1fr) auto;
-  gap: 14px;
-  align-items: end;
   margin-top: 18px;
-  padding: 18px;
+  padding: 20px;
+  display: grid;
+  gap: 14px;
 }
 
-.connection-panel label {
+.env-line {
+  font-size: 1rem;
+}
+
+.env-line strong {
+  color: var(--accent);
+}
+
+.link-btn {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  min-height: 0;
+  padding: 0 0 0 10px;
+  font-size: 0.88rem;
+}
+
+.link-btn:hover {
+  color: var(--accent);
+  filter: none;
+}
+
+.connect-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) minmax(220px, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.token-field {
   display: grid;
   gap: 6px;
 }
 
+.token-field small {
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.token-input-wrap {
+  position: relative;
+  display: block;
+}
+
+.token-input-wrap input {
+  padding-right: 64px;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 30px;
+  padding: 0 10px;
+  background: var(--surface-alt);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.primary-btn {
+  font-weight: 700;
+  min-width: 140px;
+}
+
+.advanced-row label {
+  display: grid;
+  gap: 6px;
+  max-width: 640px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ── 指標卡 ───────────────────────────── */
+
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  margin-top: 18px;
 }
 
 .metric-card {
@@ -162,15 +262,24 @@ h2 {
 
 .metric-card strong {
   display: block;
-  margin-top: 8px;
-  font-size: 1.35rem;
+  margin-top: 6px;
+  font-size: 1.6rem;
 }
+
+.metric-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* ── 資料區 ───────────────────────────── */
 
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 18px;
 }
 
 .span-2 {
@@ -185,14 +294,19 @@ h2 {
 
 .panel-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
 }
 
+.panel-note {
+  margin: 3px 0 0;
+  font-size: 0.88rem;
+}
+
 .panel-head input {
-  max-width: 320px;
+  max-width: 300px;
 }
 
 .table-wrap {
@@ -216,6 +330,7 @@ td {
 th {
   color: var(--muted);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .stack {
@@ -240,6 +355,11 @@ th {
   background: rgba(180, 35, 24, 0.05);
 }
 
+.empty-note {
+  color: var(--muted);
+  padding: 6px 2px;
+}
+
 .tag-row {
   display: flex;
   flex-wrap: wrap;
@@ -251,7 +371,7 @@ th {
   border-radius: 999px;
   background: #e7ece8;
   color: #34413d;
-  padding: 3px 8px;
+  padding: 3px 10px;
   font-size: 0.82rem;
 }
 
@@ -265,8 +385,24 @@ th {
   color: var(--danger);
 }
 
+/* ── 工程資料（摺疊） ─────────────────── */
+
 .raw-panel {
-  margin-top: 14px;
+  margin-top: 26px;
+}
+
+.raw-panel summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.raw-panel[open] summary {
+  margin-bottom: 12px;
+}
+
+.raw-head {
+  margin-bottom: 10px;
 }
 
 .raw-panel button {
@@ -286,7 +422,7 @@ pre {
 }
 
 @media (max-width: 920px) {
-  .connection-panel,
+  .connect-row,
   .metric-grid,
   .admin-grid {
     grid-template-columns: 1fr;
@@ -294,6 +430,10 @@ pre {
 
   .span-2 {
     grid-column: auto;
+  }
+
+  .remember-row {
+    padding-bottom: 0;
   }
 }
 
