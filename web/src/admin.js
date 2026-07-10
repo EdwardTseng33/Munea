@@ -1,1033 +1,682 @@
 (function () {
   "use strict";
 
-  // ══ 常數與對照表 ═══════════════════════════════
+  // ══════════ 選單結構（設計稿：5 組 11 頁 + 設定） ══════════
+  const NAV = [
+    { group: "營運總覽", items: [
+      { id: "overview", ico: "◈", label: "總覽儀表板" },
+      { id: "growth", ico: "📈", label: "產品成長指標" },
+    ]},
+    { group: "用戶與守護", items: [
+      { id: "users", ico: "👥", label: "用戶管理" },
+      { id: "safety", ico: "🛡", label: "安全守護警示", badge: "safety" },
+      { id: "reminders", ico: "💊", label: "用藥·回診提醒" },
+      { id: "mood", ico: "💗", label: "心情與健康" },
+    ]},
+    { group: "營收與用量", items: [
+      { id: "subscription", ico: "💳", label: "訂閱與點數" },
+      { id: "usage", ico: "🎙", label: "AI 陪伴用量" },
+    ]},
+    { group: "內容與服務", items: [
+      { id: "characters", ico: "🎭", label: "AI 角色與內容" },
+      { id: "support", ico: "📮", label: "客服與回饋工單", badge: "support" },
+    ]},
+    { group: "系統維運", items: [
+      { id: "system", ico: "🖥", label: "系統狀態告警", badge: "system" },
+    ]},
+    { group: "設定", items: [
+      { id: "settings", ico: "⚙", label: "連線設定" },
+    ]},
+  ];
+  const CRUMB = {};
+  const TITLE = {};
+  NAV.forEach((g) => g.items.forEach((it) => { CRUMB[it.id] = g.group; TITLE[it.id] = it.label; }));
+
+  // ══════════ 狀態 ══════════
   const ADMIN_BASE_KEY = "munea.admin.apiBaseUrl";
   const ADMIN_TOKEN_KEY = "munea.admin.token";
-  const ACK_KEY = "munea.admin.alertAck";
-  const DONE_KEY = "munea.admin.inboxDone";
-  const DEFAULT_LOCAL_API = "http://127.0.0.1:8200";
-
-  const ENDPOINTS = {
-    northStar: { path: "/admin/north-star", body: { days: 30 } },
-    accounts: { path: "/admin/accounts", body: { limit: 25 } },
-    usage: { path: "/admin/usage", body: { days: 90 } },
-    credits: { path: "/admin/credits", body: { limit: 12 } },
-    summaries: { path: "/admin/conversation-summaries", body: { limit: 10 } },
-    privacy: { path: "/admin/privacy-requests", body: { limit: 10 } },
-    feedback: { path: "/admin/feedback", body: { limit: 10 } },
-    safety: { path: "/admin/safety-events", body: { days: 30, limit: 20 } },
-    audit: { path: "/admin/audit-events", body: { limit: 12 } },
-  };
-
-  const PAGES = {
-    overview: "總覽",
-    metrics: "數據看板",
-    subscription: "訂閱營運",
-    members: "會員管理",
-    alerts: "告警中心",
-    inbox: "開發者信箱",
-    records: "系統紀錄",
-    settings: "連線設定",
-  };
-
+  const ACK_KEY = "munea.admin.ack";
   const ASSUME_KEY = "munea.admin.assumptions";
-  const ASSUME_DEFAULTS = { plusPrice: 299, proPrice: 599, plusCount: 0, proCount: 0, newPaid: 0, marketing: 0, lifeMonths: 12 };
+  const DEFAULT_LOCAL_API = "http://127.0.0.1:8200";
+  const state = { data: null, errors: {}, connected: false, page: "overview", tabs: {} };
 
-  // 霍爾判準表：健康門檻（dir=up 越高越好、down 越低越好）
-  const THRESHOLDS = {
-    voiceRate: { good: 0.95, warn: 0.90, dir: "up" },       // 語音接通成功率
-    conversion: { good: 0.08, warn: 0.04, dir: "up" },      // 免費→付費轉換率
-    ltvCac: { good: 3, warn: 1, dir: "up" },                // LTV:CAC 比值（業界通用）
-    nps: { good: 40, warn: 20, dir: "up" },                 // NPS
-  };
-
-  const FEEDBACK_TYPE_ZH = { bug: "問題回報", idea: "功能許願", praise: "稱讚", nps: "打分數" };
-  const PRIVACY_TYPE_ZH = {
-    account_deletion: "刪除帳號", deletion: "刪除帳號", delete: "刪除帳號",
-    export: "資料副本", data_export: "資料副本", correction: "資料更正",
-  };
-  const STATUS_ZH = {
-    pending: "待處理", open: "待處理", received: "已收到", processing: "處理中",
-    in_progress: "處理中", done: "已完成", completed: "已完成", closed: "已結案",
-    rejected: "已婉拒", active: "生效中", expired: "已過期", canceled: "已取消",
-    cancelled: "已取消", none: "沒有訂閱", unknown: "不明",
-  };
-  const RISK_ZH = {
-    critical: "🔴 最高風險", high: "🔴 高風險", medium: "🟡 中風險",
-    moderate: "🟡 中風險", low: "🟢 低風險",
-  };
-  const PLAN_ZH = { free: "免費版", plus: "Plus", pro: "Pro" };
-
-  const CHART = { green: "#1AA093", orange: "#D98841", prev: "#C3BBAA", grid: "#EAE3D6", ink: "#3A352E", muted: "#5A6963" };
-
-  // ══ 小工具 ═════════════════════════════════════
+  const CHART = { teal: "#1AA093", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7772" };
   const $ = (id) => document.getElementById(id);
-
-  const state = { data: null, errors: {}, connected: false, trendDays: 30 };
-
-  function zh(map, value, fallback) {
-    if (value === null || value === undefined || value === "") return fallback || "－";
-    const key = String(value).toLowerCase();
-    return map[key] || String(value);
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  }
-
-  function fmt(value, fallback = "－") {
-    if (value === null || value === undefined || value === "") return fallback;
-    return String(value);
-  }
-
-  function fmtNum(value) {
-    if (value === null || value === undefined || value === "" || isNaN(value)) return "－";
-    const n = Number(value);
-    if (Number.isInteger(n)) return n.toLocaleString("en-US");
-    return (Math.round(n * 10) / 10).toLocaleString("en-US");
-  }
-
-  function fmtMoney(value) {
-    if (value === null || value === undefined || isNaN(value)) return "－";
-    return "NT$" + Math.round(Number(value)).toLocaleString("en-US");
-  }
-
-  function eventCount(name) {
-    const counts = (state.data && state.data.usage && state.data.usage.eventCounts) || {};
-    return Number(counts[name] || 0);
-  }
-
-  // 從幾個可能的事件名裡取第一個有值的計數（引擎命名還在演進）
-  function eventCountAny(names) {
-    for (const n of names) { if (eventCount(n) > 0) return { count: eventCount(n), name: n }; }
-    return { count: 0, name: names[0] };
-  }
-
-  function fmtTime(value) {
-    if (!value) return "－";
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return String(value);
-    try {
-      return new Intl.DateTimeFormat("zh-TW", {
-        timeZone: "Asia/Taipei", month: "numeric", day: "numeric",
-        hour: "2-digit", minute: "2-digit", hour12: false,
-      }).format(date);
-    } catch (e) { return String(value); }
-  }
-
-  function explainError(message) {
-    const text = String(message || "");
-    if (/invalid_admin_token/.test(text)) return "通行碼不對，再檢查一下有沒有貼錯";
-    if (/admin_token_not_configured/.test(text)) return "伺服器那端還沒設定通行碼（要請工程端補設定）";
-    if (/http_401|http_403/.test(text)) return "被大門擋住了（權限不夠或通行碼錯）";
-    if (/http_404/.test(text)) return "這台伺服器沒有這項資料（可能版本太舊）";
-    if (/http_5\d\d/.test(text)) return "伺服器那端出錯了";
-    if (/Failed to fetch|NetworkError|load failed/i.test(text)) return "連不到伺服器（網址不對、服務沒開、或網路問題）";
-    return text;
-  }
-
-  function emptyNote(text) { return `<div class="empty-note">${escapeHtml(text)}</div>`; }
-
-  // 燈號：依門檻回傳 🟢🟡🔴 + 文字
-  function lightFor(value, spec) {
-    if (value === null || value === undefined || isNaN(value)) return { klass: "na", text: "－ 尚無資料" };
-    const good = spec.dir === "up" ? value >= spec.good : value <= spec.good;
-    const warn = spec.dir === "up" ? value >= spec.warn : value <= spec.warn;
-    if (good) return { klass: "good", text: "🟢 健康" };
-    if (warn) return { klass: "warn", text: "🟡 注意" };
-    return { klass: "bad", text: "🔴 危險" };
-  }
-
-  function lightSpan(value, spec) {
-    const l = lightFor(value, spec);
-    return `<span class="light ${l.klass}">${l.text}</span>`;
-  }
-
-  function loadStore(key) {
-    try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
-  }
-  function saveStore(key, obj) { localStorage.setItem(key, JSON.stringify(obj)); }
-
-  // ══ 連線 ═══════════════════════════════════════
-  function initialBaseUrl() {
-    const saved = localStorage.getItem(ADMIN_BASE_KEY);
-    if (saved) return saved;
-    if (location.protocol === "http:" || location.protocol === "https:") return location.origin;
-    return DEFAULT_LOCAL_API;
-  }
-
-  function normalizeBaseUrl(value) { return String(value || "").trim().replace(/\/+$/, ""); }
-
-  function envLabelFor(baseUrl) {
-    const url = String(baseUrl || "");
-    if (/munea-brain-staging/.test(url)) return "雲端試營運（給我們自己測的那台）";
-    if (/127\.0\.0\.1|localhost/.test(url)) return "這台電腦（本機測試）";
-    if (/run\.app/.test(url)) return "雲端伺服器";
-    if (!url) return "－";
-    return url.replace(/^https?:\/\//, "");
-  }
-
-  function updateEnvLabel() {
-    const label = envLabelFor($("apiBaseUrl").value);
-    $("envLabel").textContent = label;
-    $("envChip").textContent = label.replace(/（.*?）/, "");
-  }
-
-  function setStatus(text, klass) {
-    const node = $("connectionStatus");
-    node.textContent = text;
-    node.className = "status-pill" + (klass ? ` ${klass}` : "");
-  }
-
-  function setRaw(payload) {
-    $("rawOutput").textContent = JSON.stringify(payload || {}, null, 2);
-    $("rawUpdatedAt").textContent = payload && Object.keys(payload).length
-      ? `抓取時間：${fmtTime(new Date().toISOString())}` : "";
-  }
-
-  async function postAdmin(baseUrl, token, endpoint, body) {
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8", "X-Munea-Admin-Token": token },
-      body: JSON.stringify(body || {}),
-    });
-    const text = await response.text();
-    let payload = {};
-    try { payload = text ? JSON.parse(text) : {}; }
-    catch (e) { payload = { ok: false, error: { code: "invalid_json", message: text.slice(0, 300) } }; }
-    if (!response.ok || payload.ok === false) {
-      const code = payload.error && payload.error.code ? payload.error.code : `http_${response.status}`;
-      throw new Error(code);
-    }
-    return payload;
-  }
-
-  async function refreshAll() {
-    const baseUrl = normalizeBaseUrl($("apiBaseUrl").value);
-    const token = $("adminToken").value.trim();
-
-    if (!baseUrl) { setStatus("要先填伺服器網址", "error"); location.hash = "#settings"; $("advancedRow").hidden = false; return; }
-    if (!token) { setStatus("要先貼通行碼", "error"); location.hash = "#settings"; $("adminToken").focus(); return; }
-
-    localStorage.setItem(ADMIN_BASE_KEY, baseUrl);
-    if ($("rememberToken").checked) localStorage.setItem(ADMIN_TOKEN_KEY, token);
-    else localStorage.removeItem(ADMIN_TOKEN_KEY);
-    updateEnvLabel();
-    setStatus("讀取中…", "");
-
-    const requests = { ...ENDPOINTS };
-    const q = $("accountQuery").value.trim();
-    requests.accounts = { ...ENDPOINTS.accounts, body: { ...ENDPOINTS.accounts.body, query: q } };
-
-    const entries = Object.entries(requests);
-    const results = await Promise.allSettled(
-      entries.map(async ([key, cfg]) => ({ key, payload: await postAdmin(baseUrl, token, cfg.path, cfg.body) }))
-    );
-
-    const data = {}; const errors = {};
-    results.forEach((result, i) => {
-      const key = entries[i][0];
-      if (result.status === "fulfilled") data[key] = result.value.payload;
-      else errors[key] = (result.reason && result.reason.message) || "request_failed";
-    });
-
-    state.data = data;
-    state.errors = errors;
-    state.connected = Object.keys(data).length > 0;
-    setRaw({ data, errors });
-    $("lastUpdated").textContent = state.connected ? `資料時間 ${fmtTime(new Date().toISOString())}` : "";
-
-    renderCurrentPage();
-    updateBadges();
-    updateGate();
-
-    const failed = Object.keys(errors).length;
-    if (failed === 0) setStatus("✅ 已連上", "ok");
-    else if (failed === entries.length) {
-      setStatus("❌ 連不上", "error");
-      $("connectHint").textContent = `連線失敗：${explainError(errors[Object.keys(errors)[0]])}`;
-    } else setStatus(`⚠ 有 ${failed} 區讀不到`, "warn");
-  }
-
-  // ══ 分頁路由 ═══════════════════════════════════
-  function currentPage() {
-    const hash = (location.hash || "#overview").slice(1);
-    return PAGES[hash] ? hash : "overview";
-  }
-
-  function showPage() {
-    const page = currentPage();
-    // 每頁一律顯示（不再整頁鎖住）——未連線時各區塊自己顯示「連線後就會顯示」
-    document.querySelectorAll(".page").forEach((el) => { el.hidden = el.id !== `page-${page}`; });
-    document.querySelectorAll("#sideNav a").forEach((a) => a.classList.toggle("on", a.dataset.page === page));
-    $("pageTitle").textContent = PAGES[page];
-    updateGate();
-    renderCurrentPage();
-  }
-
-  function updateGate() {
-    // 只在非設定頁、且未連線時，於內容頂端顯示細長提示橫幅（不擋住頁面）
-    const showBanner = !state.connected && currentPage() !== "settings";
-    $("connectGate").hidden = !showBanner;
-  }
-
-  // ══ 圖表引擎（純 SVG 手刻） ═════════════════════
-  const SVG_NS = "http://www.w3.org/2000/svg";
-
-  function niceMax(value) {
-    if (!value || value <= 0) return 4;
-    const raw = value * 1.12;
-    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-    for (const m of [1, 2, 2.5, 4, 5, 8, 10]) {
-      if (m * mag >= raw) return m * mag;
-    }
-    return 10 * mag;
-  }
-
-  function svgEl(tag, attrs) {
-    const el = document.createElementNS(SVG_NS, tag);
-    Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, v));
-    return el;
-  }
-
-  function showTip(html, clientX, clientY) {
-    const tip = $("chartTip");
-    tip.innerHTML = html;
-    tip.hidden = false;
-    const pad = 14;
-    const rect = tip.getBoundingClientRect();
-    let x = clientX + pad; let y = clientY + pad;
-    if (x + rect.width > window.innerWidth - 8) x = clientX - rect.width - pad;
-    if (y + rect.height > window.innerHeight - 8) y = clientY - rect.height - pad;
-    tip.style.left = `${x}px`; tip.style.top = `${y}px`;
-  }
-  function hideTip() { $("chartTip").hidden = true; }
-
-  function shortDate(iso) {
-    const parts = String(iso).split("-");
-    return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : iso;
-  }
-
-  // 折線圖（1-2 條線、滑過出十字線與提示）
-  function buildLineChart(container, opts) {
-    const { series, labels } = opts; // series: [{name,color,values,wash}]
-    const W = 720, H = 250, L = 48, R = 16, T = 16, B = 30;
-    const plotW = W - L - R, plotH = H - T - B;
-    const maxVal = niceMax(Math.max(1, ...series.flatMap((s) => s.values)));
-    const n = labels.length;
-    const x = (i) => L + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
-    const y = (v) => T + plotH - (v / maxVal) * plotH;
-
-    const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
-
-    // 格線＋Y 軸刻度（乾淨數字）
-    for (let t = 0; t <= 4; t++) {
-      const val = (maxVal / 4) * t;
-      const gy = y(val);
-      svg.appendChild(svgEl("line", { x1: L, x2: W - R, y1: gy, y2: gy, stroke: CHART.grid, "stroke-width": 1 }));
-      const tick = svgEl("text", { x: L - 8, y: gy + 4, "text-anchor": "end", "font-size": 11, fill: CHART.muted });
-      tick.textContent = fmtNum(val);
-      svg.appendChild(tick);
-    }
-    // X 軸標籤（約 6 個）
-    const step = Math.max(1, Math.ceil(n / 6));
-    for (let i = 0; i < n; i += step) {
-      const tx = svgEl("text", { x: x(i), y: H - 8, "text-anchor": "middle", "font-size": 11, fill: CHART.muted });
-      tx.textContent = shortDate(labels[i]);
-      svg.appendChild(tx);
-    }
-
-    series.forEach((s) => {
-      const pts = s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
-      if (s.wash) {
-        const area = svgEl("polygon", {
-          points: `${L},${T + plotH} ${pts} ${x(n - 1)},${T + plotH}`,
-          fill: s.color, opacity: 0.1,
-        });
-        svg.appendChild(area);
-      }
-      svg.appendChild(svgEl("polyline", {
-        points: pts, fill: "none", stroke: s.color,
-        "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round",
-      }));
-      // 尾端點（白圈）＋尾端數值標
-      const lastV = s.values[n - 1];
-      svg.appendChild(svgEl("circle", { cx: x(n - 1), cy: y(lastV), r: 4.5, fill: s.color, stroke: "#fff", "stroke-width": 2 }));
-      const endLabel = svgEl("text", { x: x(n - 1) - 6, y: y(lastV) - 10, "text-anchor": "end", "font-size": 11.5, "font-weight": 700, fill: CHART.ink });
-      endLabel.textContent = fmtNum(lastV);
-      svg.appendChild(endLabel);
-    });
-
-    // 滑過層：十字線＋跟著的點
-    const cross = svgEl("line", { x1: 0, x2: 0, y1: T, y2: T + plotH, stroke: CHART.muted, "stroke-width": 1, opacity: 0 });
-    svg.appendChild(cross);
-    const hoverDots = series.map((s) => {
-      const dot = svgEl("circle", { r: 5, fill: s.color, stroke: "#fff", "stroke-width": 2, opacity: 0 });
-      svg.appendChild(dot);
-      return dot;
-    });
-    const overlay = svgEl("rect", { x: L, y: T, width: plotW, height: plotH, fill: "transparent" });
-    overlay.addEventListener("mousemove", (event) => {
-      const rect = svg.getBoundingClientRect();
-      const px = ((event.clientX - rect.left) / rect.width) * W;
-      const i = Math.max(0, Math.min(n - 1, Math.round(((px - L) / plotW) * (n - 1))));
-      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 0.45);
-      const lines = series.map((s, si) => {
-        hoverDots[si].setAttribute("cx", x(i)); hoverDots[si].setAttribute("cy", y(s.values[i])); hoverDots[si].setAttribute("opacity", 1);
-        return `<span style="color:#c9d6cf">${escapeHtml(s.name)}</span>　<b>${fmtNum(s.values[i])}</b>`;
-      });
-      showTip(`<div>${shortDate(labels[i])}</div>${lines.join("<br>")}`, event.clientX, event.clientY);
-    });
-    overlay.addEventListener("mouseleave", () => {
-      cross.setAttribute("opacity", 0);
-      hoverDots.forEach((d) => d.setAttribute("opacity", 0));
-      hideTip();
-    });
-    svg.appendChild(overlay);
-
-    container.innerHTML = "";
-    container.appendChild(svg);
-    if (series.length >= 2) {
-      const legend = document.createElement("div");
-      legend.className = "legend";
-      legend.innerHTML = series.map((s) => `<span class="key"><span class="swatch" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join("");
-      container.appendChild(legend);
-    }
-  }
-
-  // 分組長條圖（本期 vs 前期）
-  function buildCompareBars(container, opts) {
-    const { groups, curName, prevName } = opts; // groups: [{label, cur, prev}]
-    const W = 720, H = 250, L = 48, R = 16, T = 20, B = 30;
-    const plotW = W - L - R, plotH = H - T - B;
-    const maxVal = niceMax(Math.max(1, ...groups.flatMap((g) => [g.cur, g.prev])));
-    const y = (v) => T + plotH - (v / maxVal) * plotH;
-    const band = plotW / groups.length;
-    const barW = Math.min(24, band * 0.22);
-
-    const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
-
-    for (let t = 0; t <= 4; t++) {
-      const val = (maxVal / 4) * t;
-      const gy = y(val);
-      svg.appendChild(svgEl("line", { x1: L, x2: W - R, y1: gy, y2: gy, stroke: CHART.grid, "stroke-width": 1 }));
-      const tick = svgEl("text", { x: L - 8, y: gy + 4, "text-anchor": "end", "font-size": 11, fill: CHART.muted });
-      tick.textContent = fmtNum(val);
-      svg.appendChild(tick);
-    }
-
-    groups.forEach((g, gi) => {
-      const cx = L + band * gi + band / 2;
-      const bars = [
-        { v: g.prev, color: CHART.prev, name: prevName, x: cx - barW - 1 },
-        { v: g.cur, color: CHART.green, name: curName, x: cx + 1 },
-      ];
-      bars.forEach((b) => {
-        const top = y(b.v);
-        const h = Math.max(0, T + plotH - top);
-        const rect = svgEl("path", {
-          // 上端 4px 圓角、底端貼基線方角
-          d: h <= 0.5
-            ? `M ${b.x} ${T + plotH} h ${barW}`
-            : `M ${b.x} ${T + plotH} V ${top + 4} Q ${b.x} ${top} ${b.x + 4} ${top} H ${b.x + barW - 4} Q ${b.x + barW} ${top} ${b.x + barW} ${top + 4} V ${T + plotH} Z`,
-          fill: b.color,
-        });
-        rect.addEventListener("mousemove", (event) => showTip(`<div>${escapeHtml(g.label)} · ${escapeHtml(b.name)}</div><b>${fmtNum(b.v)}</b>`, event.clientX, event.clientY));
-        rect.addEventListener("mouseleave", hideTip);
-        svg.appendChild(rect);
-        const cap = svgEl("text", { x: b.x + barW / 2, y: top - 6, "text-anchor": "middle", "font-size": 11, fill: CHART.muted });
-        cap.textContent = fmtNum(b.v);
-        svg.appendChild(cap);
-      });
-      const lbl = svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle", "font-size": 11.5, fill: CHART.ink });
-      lbl.textContent = g.label;
-      svg.appendChild(lbl);
-    });
-
-    container.innerHTML = "";
-    container.appendChild(svg);
-    const legend = document.createElement("div");
-    legend.className = "legend";
-    legend.innerHTML = `
-      <span class="key"><span class="swatch" style="background:${CHART.green}"></span>${escapeHtml(curName)}</span>
-      <span class="key"><span class="swatch" style="background:${CHART.prev}"></span>${escapeHtml(prevName)}</span>`;
-    container.appendChild(legend);
-  }
-
-  // 迷你趨勢線（KPI 卡用）：整條低調灰、末端綠點
-  function sparkline(values) {
-    const W = 120, H = 32, P = 3;
-    const max = Math.max(1, ...values);
-    const n = values.length;
-    const x = (i) => P + (i / (n - 1)) * (W - P * 2);
-    const y = (v) => H - P - (v / max) * (H - P * 2);
-    const pts = values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
-    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
-      <polyline points="${pts}" fill="none" stroke="${CHART.prev}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${x(n - 1)}" cy="${y(values[n - 1])}" r="3.5" fill="${CHART.green}" stroke="#fff" stroke-width="2"/>
-    </svg>`;
-  }
-
-  // ══ 數據運算：由每日明細算窗口與比較 ═══════════
-  function dailyMap() {
-    const usage = state.data && state.data.usage;
-    const map = {};
-    ((usage && usage.daily) || []).forEach((d) => { map[d.date] = d; });
-    return map;
-  }
-
-  function lastNDates(n, offset = 0) {
-    const out = [];
-    const now = new Date();
-    for (let i = n - 1 + offset; i >= offset; i--) {
-      const d = new Date(now.getTime() - i * 86400000);
-      out.push(d.toISOString().slice(0, 10));
-    }
-    return out;
-  }
-
-  function seriesFor(metric, dates, map) {
-    return dates.map((date) => Number((map[date] || {})[metric] || 0));
-  }
-
-  function sumWindow(metric, n, offset, map) {
-    return seriesFor(metric, lastNDates(n, offset), map).reduce((a, b) => a + b, 0);
-  }
-
-  const COMPARE_METRICS = [
-    { key: "meaningfulEvents", name: "有意義互動" },
-    { key: "events", name: "互動次數" },
-    { key: "voiceMinutes", name: "語音分鐘" },
-    { key: "avatarMinutes", name: "視訊臉分鐘" },
-  ];
-
-  function deltaBadge(cur, prev) {
-    if (!prev && !cur) return '<span class="kpi-delta flat">— 持平</span>';
-    if (!prev) return '<span class="kpi-delta up">▲ 新增</span>';
-    const pct = ((cur - prev) / prev) * 100;
-    if (Math.abs(pct) < 0.5) return '<span class="kpi-delta flat">— 持平</span>';
-    const cls = pct > 0 ? "up" : "down";
-    const arrow = pct > 0 ? "▲" : "▼";
-    return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(pct) >= 100 ? Math.round(Math.abs(pct)) : Math.abs(pct).toFixed(1)}%</span>`;
-  }
-
-  // ══ 各頁渲染 ═══════════════════════════════════
-  function renderCurrentPage() {
-    if (!state.connected) return;
-    const page = currentPage();
-    if (page === "overview") renderOverview();
-    else if (page === "metrics") renderMetrics();
-    else if (page === "subscription") renderSubscription();
-    else if (page === "members") { renderAccounts(); renderCredits(); }
-    else if (page === "alerts") renderAlerts();
-    else if (page === "inbox") renderInbox();
-    else if (page === "records") { renderSummaries(); renderAudit(); }
-    renderErrors();
-  }
-
-  function renderErrors() {
-    const PANEL_BY_ENDPOINT = {
-      accounts: "accountsPanel", credits: "creditsPanel", summaries: "summariesPanel",
-      privacy: "privacyPanel", feedback: "feedbackPanel", safety: "safetyPanel", audit: "auditPanel",
-    };
-    Object.entries(state.errors).forEach(([key, message]) => {
-      const panelId = PANEL_BY_ENDPOINT[key];
-      if (!panelId || !$(panelId)) return;
-      $(panelId).innerHTML = `<div class="item error-item"><strong>這區暫時讀不到</strong><div class="meta">${escapeHtml(explainError(message))}</div></div>`;
-    });
-  }
-
-  function renderOverview() {
-    const north = (state.data && state.data.northStar) || {};
-    $("nsValue").textContent = fmt(north.meaningfulCompanionDays);
-    $("supActive").textContent = fmt(north.activePeople);
-    const vr = north.voiceSessionSuccessRate;
-    if (vr !== null && vr !== undefined) {
-      $("supVoiceRate").innerHTML = `${Math.round(vr * 100)}%${lightSpan(vr, THRESHOLDS.voiceRate)}`;
-    } else {
-      $("supVoiceRate").textContent = "－";
-    }
-    $("supRoutine").textContent = fmt(north.routineCompletions);
-    $("supFamily").textContent = fmt(north.familyInteractions);
-
-    const map = dailyMap();
-    $("kpiGrid").innerHTML = COMPARE_METRICS.map((m) => {
-      const cur = sumWindow(m.key, 7, 0, map);
-      const prev = sumWindow(m.key, 7, 7, map);
-      const spark = seriesFor(m.key, lastNDates(14), map);
-      return `
-        <article class="card kpi-card">
-          <span>${m.name}</span>
-          <div><span class="kpi-value">${fmtNum(cur)}</span>${deltaBadge(cur, prev)}</div>
-          <small>前 7 天：${fmtNum(prev)}</small>
-          <div class="kpi-spark">${sparkline(spark)}</div>
-        </article>`;
-    }).join("");
-
-    // 需要留意：告警＋信箱未處理
-    const openAlerts = openAlertCount();
-    const openInbox = openInboxCount();
-    const rows = [];
-    if (openAlerts > 0) rows.push(`<a class="attn hot" href="#alerts">🚨 有 <b>${openAlerts}</b> 件安全警訊還沒處理（建議 24 小時內跟進）<span class="go">去處理 →</span></a>`);
-    if (openInbox > 0) rows.push(`<a class="attn" href="#inbox">📮 有 <b>${openInbox}</b> 則用戶意見／隱私申請還沒處理<span class="go">去看看 →</span></a>`);
-    if (!rows.length) rows.push('<div class="attn">✅ 目前沒有要人跟進的事——都乾淨。</div>');
-    $("attentionRow").innerHTML = rows.join("");
-  }
-
-  function renderMetrics() {
-    const map = dailyMap();
-    const days = state.trendDays;
-    const dates = lastNDates(days);
-
-    buildLineChart($("trendChart"), {
-      labels: dates,
-      series: [{ name: "有意義互動", color: CHART.green, values: seriesFor("meaningfulEvents", dates, map), wash: true }],
-    });
-    fillTable($("trendTable"), ["日期", "有意義互動"], dates.map((d) => [shortDate(d), fmtNum((map[d] || {}).meaningfulEvents || 0)]));
-
-    buildLineChart($("usageChart"), {
-      labels: dates,
-      series: [
-        { name: "語音分鐘", color: CHART.green, values: seriesFor("voiceMinutes", dates, map) },
-        { name: "視訊臉分鐘", color: CHART.orange, values: seriesFor("avatarMinutes", dates, map) },
+  const esc = (v) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  const n = (v) => (v==null||v===""||isNaN(v))?"–":Number(v).toLocaleString("en-US");
+
+  // ══════════ 設計稿示範數據（預設顯示，讓後台一開就長得像設計稿） ══════════
+  const S = {
+    overview: {
+      highlight: "本月亮點：付費家庭圈成長 <b>+8.4%</b>，AI 通話總時長創新高；有 <b>3 筆</b>安全警示待處理，其中 1 筆為高風險，建議優先確認。",
+      kpi: [
+        { label:"綁定用戶", value:"8,432", delta:"+12.4%", dir:"up", sub:"本月新增 640" },
+        { label:"活躍家庭圈", value:"2,940", delta:"+6.1%", dir:"up", sub:"平均 3.1 人/圈" },
+        { label:"今日通話時長", value:"12,480", unit:"分", delta:"+9.2%", dir:"up", sub:"約 208 小時" },
+        { label:"本月 MRR", value:"1.42M", delta:"+8.4%", dir:"up", sub:"NT$ · 訂閱經常性收入" },
       ],
-    });
-    fillTable($("usageTable"), ["日期", "語音分鐘", "視訊臉分鐘"],
-      dates.map((d) => [shortDate(d), fmtNum((map[d] || {}).voiceMinutes || 0), fmtNum((map[d] || {}).avatarMinutes || 0)]));
+      callDaily: [["週一",9800],["週二",10400],["週三",9100],["週四",11200],["週五",11900],["週六",13600],["週日",12480]],
+      newUsers: [["2月",310],["3月",395],["4月",470],["5月",540],["6月",602],["7月",640]],
+      chars: [["寧寧",38],["小昀",18],["阿宏",14],["咪咪",12],["阿原",11],["旺財",7]],
+    },
+    growth: {
+      highlight:"成長健康度良好：黏著度 38%、次月留存 62% 且逐月改善，<b>LTV:CAC 達 3.4x</b>——口碑（子女帶爸媽）是效率最高、成本最低的獲客來源。",
+      kpi:[
+        { label:"日活躍 DAU", value:"3,180", delta:"+4.2%", dir:"up", sub:"週活躍 6,240 · 月活躍 8,432" },
+        { label:"黏著度", value:"38%", delta:"+2pt", dir:"up", sub:"DAU / MAU" },
+        { label:"次月留存", value:"62%", delta:"+4pt", dir:"up", sub:"逐月世代改善" },
+        { label:"LTV : CAC", value:"3.4x", delta:"+0.3", dir:"up", sub:"回本約 4.2 個月" },
+      ],
+      dau: [["W1",2680],["W2",2740],["W3",2820],["W4",2910],["W5",2980],["W6",3040],["W7",3120],["W8",3180]],
+      cohort: [
+        ["2月",310,[100,58,44,37,33,30]],["3月",395,[100,60,46,39,35,null]],["4月",470,[100,61,47,40,null,null]],
+        ["5月",540,[100,63,49,null,null,null]],["6月",602,[100,64,null,null,null,null]],["7月",640,[100,null,null,null,null,null]],
+      ],
+      channels: [["子女帶爸媽（口碑）",5.8,"CAC NT$820 · 44%"],["App Store 自然",4.1,"CAC NT$1,180 · 27%"],["長照通路合作",3.2,"CAC NT$1,510 · 18%"],["社群廣告",2.4,"CAC NT$1,920 · 11%"]],
+    },
+    users: {
+      kpi:[
+        { label:"總用戶", value:"8,432", delta:"+12.4%", dir:"up", sub:"長輩 5,110 · 家人 3,322" },
+        { label:"今日活躍", value:"3,180", delta:"+4.2%", dir:"up", sub:"活躍率 37.7%" },
+        { label:"低度使用", value:"486", delta:"需關懷", dir:"flat", sub:"7 天內未通話" },
+        { label:"守護中", value:"12", delta:"3 待處理", dir:"flat", sub:"含安全網啟動戶" },
+      ],
+      roster:[
+        ["張阿桃","張家","Pro","寧寧","82 分","活躍中","今天 08:14"],
+        ["李水木","李家","Plus","阿宏","41 分","低度使用","3 天前"],
+        ["吳秀蓮","吳家","Plus","小昀","67 分","守護中","昨天 22:47"],
+        ["王進財","王家","免費","咪咪","12 分","活躍中","今天 10:02"],
+        ["陳美惠","陳家","Pro","寧寧","95 分","活躍中","今天 09:30"],
+        ["林金水","林家","Plus","阿原","38 分","活躍中","昨天 19:10"],
+        ["黃阿玉","黃家","免費","旺財","8 分","低度使用","5 天前"],
+        ["蔡麗雲","蔡家","Plus","小昀","54 分","活躍中","今天 07:50"],
+      ],
+    },
+    safety: {
+      principle:"守護原則：沐寧偵測到不對勁時協助聯繫指定家人並引導撥打 119／1925。系統不做醫療判讀——所有警示皆需真人確認後處理。",
+      kpi:[
+        { label:"待處理警示", value:"3", delta:"1 高風險", dir:"down", sub:"需 30 分內回應" },
+        { label:"平均回應時間", value:"8.4", unit:"分", delta:"-21%", dir:"up", sub:"較上月更快" },
+        { label:"本月已處理", value:"48", delta:"全數關閉", dir:"up", sub:"含 6 筆誤報" },
+        { label:"安全網啟動", value:"12", unit:"戶", delta:"9 戶已聯繫", dir:"flat", sub:"其中 9 戶已聯繫家人" },
+      ],
+      queue:[
+        { risk:"高風險", tone:"bad", title:"情緒危機關鍵字偵測", desc:"凌晨對話中偵測到高風險字句，寧寧已啟動安全網並暫緩結束通話。建議立即由專員確認並聯繫指定家人。", who:"張阿桃 · 張家", time:"今天 06:14", src:"AI 安全網" },
+        { risk:"留意", tone:"warn", title:"連續 3 天未接起晨間問候", desc:"系統連續 3 日晨間主動致電無回應，Apple 健康步數同步亦停滯。建議提醒家人關心。", who:"李水木 · 李家", time:"今天 09:02", src:"活躍度監測" },
+        { risk:"留意", tone:"warn", title:"健康數據異常波動", desc:"心率資料在夜間出現連續高值，超出個人基線。非醫療判讀，僅提示關注並建議諮詢醫師。", who:"吳秀蓮 · 吳家", time:"昨天 22:47", src:"健康同步" },
+      ],
+      resolved:[
+        ["情緒低落連續紀錄","李水木 · 李家 · 處置：已聯繫子女，安排回診","7/8"],
+        ["跌倒關鍵字（誤報）","王進財 · 王家 · 處置：確認為口誤，已關閉","7/7"],
+      ],
+      sop:"危機處理 SOP：① 專員 30 分鐘內確認 → ② 聯繫家庭圈指定聯絡人 → ③ 必要時引導撥打 119／1925 並記錄 → ④ 結案並回填處置。所有紀錄僅授權營運與安全團隊檢視。",
+    },
+    reminders: {
+      kpi:[
+        { label:"整體完成率", value:"84%", delta:"+1%", dir:"up", sub:"寬容不指責" },
+        { label:"用藥提醒", value:"88%", delta:"+2%", dir:"up", sub:"最高完成率" },
+        { label:"回診提醒", value:"81%", delta:"+3%", dir:"up", sub:"含改期協助" },
+        { label:"量測類", value:"74%", delta:"-1%", dir:"down", sub:"血壓·體重" },
+      ],
+      byType:[["用藥提醒",88,"12,840 次","teal"],["回診提醒",81,"2,310 次","teal"],["量血壓",74,"8,920 次","gold"],["喝水·散步",69,"15,600 次","gold"]],
+      trend:[["2月",79],["3月",80],["4月",82],["5月",83],["6月",83],["7月",84]],
+      follow:[["張阿桃","血壓量測 · 本月完成 3/12","32%"],["李水木","用藥提醒 · 連續漏服 3 次","48%"],["王進財","回診提醒 · 已改期待確認","–"]],
+      principle:"沐寧的提醒寬容不指責：漏了明天繼續，不會有紅字歸零。低完成率名單僅供關懷跟進，不作為考核。",
+    },
+    mood: {
+      kpi:[
+        { label:"平均心情球", value:"4.6", unit:"/5", delta:"+0.2", dir:"up", sub:"情緒穩定向好" },
+        { label:"每日記錄率", value:"71%", delta:"+4%", dir:"up", sub:"有記心情的用戶" },
+        { label:"健康同步戶", value:"2,180", delta:"+12%", dir:"up", sub:"Apple 健康連動" },
+        { label:"情緒關注", value:"34", unit:"戶", delta:"已標記", dir:"flat", sub:"連續低落已標記" },
+      ],
+      moodTrend:[["W1",4.3],["W2",4.2],["W3",4.4],["W4",4.3],["W5",4.5],["W6",4.4],["W7",4.5],["W8",4.6],["W9",4.5],["W10",4.6],["W11",4.7],["W12",4.6]],
+      dist:[["很好 😊",42,"teal"],["還不錯 🙂",31,"teal"],["普通 😐",16,"gold"],["有點累 😔",8,"gold"],["難過 😢",3,"coral"]],
+      health:[["步數",86,"teal"],["心率",72,"teal"],["睡眠",58,"gold"],["血壓（手動）",41,"gold"]],
+      watch:[["張阿桃","張家 · 連續 4 天偏低"],["李水木","李家 · 記錄停滯 5 天"],["吳秀蓮","吳家 · 夜間情緒波動"]],
+      principle:"情緒與健康資料只留給用戶與其明確授權的家人，可隨時匯出、刪除。後台呈現為去識別化的彙總與關注提示，非醫療判讀。",
+    },
+    subscription: {
+      kpi:[
+        { label:"本月 MRR", value:"1.42M", delta:"+8.4%", dir:"up", sub:"NT$ 經常性收入" },
+        { label:"付費訂閱", value:"1,860", delta:"+7.2%", dir:"up", sub:"Plus 1,540 · Pro 320" },
+        { label:"點數加購", value:"312K", delta:"+8.3%", dir:"up", sub:"NT$ · 永不過期點數" },
+        { label:"付費轉換率", value:"22.1%", delta:"+1.4%", dir:"up", sub:"免費→付費" },
+      ],
+      mrrTrend:[["2月",108],["3月",116],["4月",124],["5月",131],["6月",134],["7月",142]],
+      dist:[["免費體驗",6572,78,"prev"],["Plus 家庭",1540,18.3,"teal"],["Pro 大家庭",320,3.8,"coral"]],
+      points:[["2月",186],["3月",210],["4月",238],["5月",265],["6月",288],["7月",312]],
+      plans:[
+        ["免費體驗","綁定送 5 分鐘 · 提醒與心情先用起來","NT$0"],
+        ["Plus 家庭首選","每月贈 200 點 · 家庭圈最多 4 人","NT$499/月"],
+        ["Pro 大家庭","每月贈 500 點 · 家庭圈最多 12 人","NT$999/月"],
+      ],
+      ledger:[
+        ["#TX-88214","陳美惠","Pro 訂閱","NT$999","8 分鐘前","已入帳","ok"],
+        ["#TX-88213","黃國棟","點數 500","NT$500","32 分鐘前","待對帳","warn"],
+        ["#TX-88212","林淑芬","Plus 訂閱","NT$499","1 小時前","已入帳","ok"],
+        ["#TX-88210","吳秀蓮","點數 1000","NT$1,000","3 小時前","交易失敗","bad"],
+        ["#TX-88208","王進財","Plus 訂閱","NT$499","今天 09:12","已退款","mute"],
+        ["#TX-88205","蔡麗雲","Pro 訂閱","NT$999","今天 08:40","爭議","bad"],
+        ["#TX-88201","張家家人","點數 200","NT$200","昨天","已入帳","ok"],
+      ],
+    },
+    usage: {
+      kpi:[
+        { label:"本月通話", value:"208K", unit:"分", delta:"+9.2%", dir:"up", sub:"約 3,470 小時" },
+        { label:"平均通話時長", value:"5.7", unit:"分", delta:"+0.4", dir:"up", sub:"每通對話" },
+        { label:"主動致電接起率", value:"82%", delta:"+3%", dir:"up", sub:"晨問候·晚安" },
+        { label:"記憶命中率", value:"76%", delta:"+5%", dir:"up", sub:"接得上上次話題" },
+      ],
+      byPlan:[["免費",26],["Plus",112],["Pro",168]],
+      weekCall: [["週一",9800],["週二",10400],["週三",9100],["週四",11200],["週五",11900],["週六",13600],["週日",12480]],
+      chars:[["寧寧",38],["小昀",18],["阿宏",14],["咪咪",12],["阿原",11],["旺財",7]],
+    },
+    characters: {
+      principle:"角色即產品：六位夥伴各有聲音與個性，名字都能由用戶自訂。此處管理每位夥伴的問候腳本、語氣與上線狀態——溫度是沐寧的護城河。",
+      list:[
+        { i:"寧", name:"寧寧", color:"#37A099", calls:"4,820", quote:"「我記得」是她的口頭禪，最懂你的貼心家人", dur:"6.2", pct:"38%", score:"4.6" },
+        { i:"阿", name:"阿宏", color:"#5B7A72", calls:"1,760", quote:"話不多，但一句就讓人安心的可靠肩膀", dur:"5.1", pct:"14%", score:"4.4" },
+        { i:"小", name:"小昀", color:"#E0B354", calls:"2,290", quote:"開朗元氣，輕快愛笑的正能量", dur:"5.8", pct:"18%", score:"4.7" },
+        { i:"阿", name:"阿原", color:"#8AA34E", calls:"1,410", quote:"像鄰家朋友，聊起來最沒壓力", dur:"6.0", pct:"11%", score:"4.5" },
+        { i:"咪", name:"咪咪", color:"#D98841", calls:"1,520", quote:"傲嬌小貓，嘴上嫌你、心裡想你，喵～", dur:"4.9", pct:"12%", score:"4.3" },
+        { i:"旺", name:"旺財", color:"#C77A2E", calls:"890", quote:"忠誠直球的熱情汪汪，永遠等你回家", dur:"5.4", pct:"7%", score:"4.6" },
+      ],
+      scripts:[["晨間問候","每日 08:00 · 全體 · 「早安！昨晚睡得好嗎？」"],["睡前晚安","每日 21:30 · 全體 · 「今天辛苦了，早點休息喔」"],["用藥提醒銜接","依個人排程 · 「記得吃飯後那顆藥，我陪你」"]],
+    },
+    support: {
+      kpi:[
+        { label:"待處理工單", value:"7", delta:"2 高優先", dir:"down", sub:"需今日回覆" },
+        { label:"平均首次回覆", value:"1.8", unit:"時", delta:"-12%", dir:"up", sub:"較上月更快" },
+        { label:"本月已解決", value:"142", delta:"解決率 96%", dir:"up", sub:"滿意度 4.7/5" },
+        { label:"正向回饋", value:"38", unit:"則", delta:"用戶稱讚", dir:"up", sub:"用戶主動稱讚" },
+      ],
+      tickets:[
+        { title:"點數加購後未入帳", who:"黃國棟 · 計費", pri:"高優先", tone:"bad", time:"8 分鐘前" },
+        { title:"通話中聲音會斷斷續續", who:"陳美惠家人 · 技術", pri:"中優先", tone:"warn", time:"32 分鐘前" },
+        { title:"想把媽媽加入家庭圈", who:"林淑芬 · 家庭圈", pri:"低優先", tone:"mute", time:"1 小時前" },
+        { title:"希望能更改寧寧的稱呼", who:"吳秀蓮 · 角色", pri:"低優先", tone:"mute", time:"2 小時前" },
+        { title:"如何匯出並刪除聊天紀錄", who:"蔡麗雲家人 · 隱私", pri:"中優先", tone:"warn", time:"3 小時前" },
+      ],
+      cats:[["技術問題",34,"teal"],["計費與點數",28,"teal"],["家庭圈設定",20,"gold"],["角色與內容",11,"gold"],["隱私與資料",7,"coral"]],
+      quotes:[
+        ["「媽媽每天都在等寧寧打來，謝謝你們。」","— 黃家 · 子女"],
+        ["「爸爸終於願意量血壓了，用哄的真的有效。」","— 吳家 · 子女"],
+        ["「深夜睡不著時有人陪，很安心。」","— 蔡麗雲"],
+      ],
+    },
+    system: {
+      highlight:"AI 全天候值守：偵測到異常會即時告警，並嘗試自動修復（切換節點、重試佇列）。目前 <b>2 項</b>服務需關注，本週已自動處理 3 起事件。",
+      kpi:[
+        { label:"系統可用率", value:"99.97%", delta:"SLA 99.9%", dir:"up", sub:"近 30 天" },
+        { label:"平均回應延遲", value:"240", unit:"ms", delta:"-8%", dir:"up", sub:"較上週更快" },
+        { label:"錯誤率", value:"0.12%", delta:"+0.04%", dir:"down", sub:"金流回呼拉高" },
+        { label:"AI 偵測告警", value:"5", delta:"3 起自動修復", dir:"flat", sub:"本週" },
+      ],
+      services:[
+        ["即時語音對話","真人般語音 · 全區正常","正常","ok","99.99%","180ms"],
+        ["會動的臉渲染","部分節點延遲偏高","降級","warn","99.80%","420ms"],
+        ["記憶引擎","記得你說過的話","正常","ok","99.97%","90ms"],
+        ["推播·提醒排程","用藥·回診準時觸發","正常","ok","100%","—"],
+        ["金流 / 點數（App Store）","Webhook 失敗率上升","異常","bad","98.90%","—"],
+        ["Apple 健康同步","步數·心率自動帶入","正常","ok","99.95%","320ms"],
+        ["危機安全網偵測","全天候值守中","正常","ok","100%","60ms"],
+      ],
+      events:[
+        { title:"金流 Webhook 失敗率上升至 4.2%", tag:"AI 偵測", status:"處理中", tone:"bad", desc:"AI 偵測到 App Store 交易回呼失敗率超出基線（0.3%→4.2%），部分點數加購未即時入帳。已自動重試佇列並通知工程團隊。", who:"金流 / 點數 · 12 分鐘前" },
+        { title:"會動的臉渲染延遲 +180ms", tag:"AI 偵測", status:"監控中", tone:"warn", desc:"AI 偵測到亞太渲染節點延遲高於門檻，已自動將 30% 流量切往備援節點，體驗影響輕微。", who:"會動的臉 · 34 分鐘前" },
+        { title:"語音服務區域性斷線（已自癒）", tag:"AI 偵測", status:"已恢復", tone:"ok", desc:"AI 偵測到單一節點斷線後自動切換，中斷 42 秒即恢復，無用戶通報。", who:"即時語音 · 2 小時前" },
+      ],
+      repairs:[["自動切換渲染節點","會動的臉延遲 → 切備援","已恢復"],["重試金流回呼佇列","Webhook 失敗 → 自動重送","處理中"],["語音節點自癒","區域斷線 → 42 秒恢復","已恢復"]],
+      principle:"系統告警為 App 技術健康監測（服務可用率、延遲、錯誤、金流回呼等），與「安全守護警示」（長輩危機偵測）分屬不同層級，互不混用。",
+    },
+  };
 
-    const weekGroups = COMPARE_METRICS.map((m) => ({ label: m.name, cur: sumWindow(m.key, 7, 0, map), prev: sumWindow(m.key, 7, 7, map) }));
-    buildCompareBars($("weekCompare"), { groups: weekGroups, curName: "近 7 天", prevName: "前 7 天" });
-    fillTable($("weekTable"), ["指標", "近 7 天", "前 7 天"], weekGroups.map((g) => [g.label, fmtNum(g.cur), fmtNum(g.prev)]));
-
-    const monthGroups = COMPARE_METRICS.map((m) => ({ label: m.name, cur: sumWindow(m.key, 30, 0, map), prev: sumWindow(m.key, 30, 30, map) }));
-    buildCompareBars($("monthCompare"), { groups: monthGroups, curName: "近 30 天", prevName: "前 30 天" });
-    fillTable($("monthTable"), ["指標", "近 30 天", "前 30 天"], monthGroups.map((g) => [g.label, fmtNum(g.cur), fmtNum(g.prev)]));
-  }
-
-  function fillTable(container, headers, rows) {
-    container.innerHTML = `
-      <table>
-        <thead><tr>${headers.map((h, i) => `<th${i ? ' class="num"' : ""}>${escapeHtml(h)}</th>`).join("")}</tr></thead>
-        <tbody>${rows.map((r) => `<tr>${r.map((c, i) => `<td${i ? ' class="num"' : ""}>${escapeHtml(c)}</td>`).join("")}</tr>`).join("")}</tbody>
-      </table>`;
-  }
-
-  // ── 訂閱營運 ──
-  function loadAssumptions() {
-    const saved = loadStore(ASSUME_KEY);
-    return { ...ASSUME_DEFAULTS, ...saved };
-  }
-
-  function readAssumptionsFromInputs() {
-    const a = {
-      plusPrice: Number($("aPlusPrice").value) || 0,
-      proPrice: Number($("aProPrice").value) || 0,
-      plusCount: Number($("aPlusCount").value) || 0,
-      proCount: Number($("aProCount").value) || 0,
-      newPaid: Number($("aNewPaid").value) || 0,
-      marketing: Number($("aMarketing").value) || 0,
-      lifeMonths: Math.max(1, Number($("aLifeMonths").value) || 1),
-    };
-    saveStore(ASSUME_KEY, a);
-    return a;
-  }
-
-  function fillAssumptionInputs(a) {
-    $("aPlusPrice").value = a.plusPrice;
-    $("aProPrice").value = a.proPrice;
-    $("aPlusCount").value = a.plusCount;
-    $("aProCount").value = a.proCount;
-    $("aNewPaid").value = a.newPaid;
-    $("aMarketing").value = a.marketing;
-    $("aLifeMonths").value = a.lifeMonths;
-  }
-
-  function bizCard(label, value, hint, opts) {
+  // ══════════ 元件 builders ══════════
+  function heroBanner(html, opts) {
     opts = opts || {};
-    const needs = opts.needs ? " needs" : "";
-    const light = opts.light !== undefined ? ` ${opts.light}` : "";
-    return `<article class="card kpi-card${needs}">
-      <span>${escapeHtml(label)}</span>
-      <div><span class="kpi-value">${escapeHtml(value)}</span>${light}</div>
-      <span class="kpi-hint">${hint}</span>
-    </article>`;
+    const cta = opts.cta ? `<button type="button" data-goto="${esc(opts.cta.to)}">${esc(opts.cta.label)}</button>` : "";
+    return `<div class="hero-banner ${opts.calm?"calm":""}"><div class="hb-body">${opts.title?`<div class="hb-title">${esc(opts.title)}</div>`:""}<div class="hb-text">${html}</div></div>${cta}</div>`;
+  }
+  function kpiRow(items) {
+    return `<div class="kpi-row">${items.map((k)=>`
+      <div class="kpi ${k.accent?"kpi-accent":""}">
+        <div class="kpi-top"><span class="kpi-label">${esc(k.label)}</span>${k.delta?`<span class="kpi-delta ${k.dir||"flat"}">${esc(k.delta)}</span>`:""}</div>
+        <div class="kpi-value">${esc(k.value)}${k.unit?`<span class="unit">${esc(k.unit)}</span>`:""}</div>
+        ${k.sub?`<div class="kpi-sub">${esc(k.sub)}</div>`:""}
+      </div>`).join("")}</div>`;
+  }
+  function card(title, note, body, headRight) {
+    return `<div class="card"><div class="card-head"><div><h3>${esc(title)}${note?"":""}</h3>${note?`<div class="card-note">${esc(note)}</div>`:""}</div>${headRight||""}</div>${body}</div>`;
+  }
+  function barsList(items, unitMax) {
+    const max = unitMax || Math.max(...items.map((i)=>i[1]), 1);
+    return `<div class="bars-list">${items.map((i)=>{
+      const [name, val, sub, color] = i;
+      const pct = Math.round((val/max)*100);
+      const disp = typeof val==="number" && val<=100 && (String(val).indexOf(".")>-1||sub===undefined) ? val+"%" : n(val);
+      return `<div class="bl"><div class="bl-top"><span class="bl-name">${esc(name)}</span><span class="bl-val">${esc(typeof val==="number"?(val+ (val<=100&&!sub?"%":"")):val)}${sub?`<span class="bl-sub">${esc(sub)}</span>`:""}</span></div><div class="track"><div class="fill ${color||""}" style="width:${pct}%"></div></div></div>`;
+    }).join("")}</div>`;
+  }
+  function principle(text) { return `<div class="principle">${text.indexOf("<")>-1?text:esc(text)}</div>`; }
+  function srcBadge() { return state.connected ? `<span class="srcbadge live">● 真資料</span>` : `<span class="srcbadge demo">● 示範數據</span>`; }
+
+  // ══════════ 圖表引擎（純 SVG） ══════════
+  const NS = "http://www.w3.org/2000/svg";
+  function svg(tag, a){ const e=document.createElementNS(NS,tag); for(const k in a) e.setAttribute(k,a[k]); return e; }
+  function niceMax(v){ if(!v||v<=0) return 4; const raw=v*1.12, mag=Math.pow(10,Math.floor(Math.log10(raw))); for(const m of [1,2,2.5,4,5,8,10]) if(m*mag>=raw) return m*mag; return 10*mag; }
+  function tip(html,x,y){ const t=$("chartTip"); t.innerHTML=html; t.hidden=false; const r=t.getBoundingClientRect(); let px=x+14,py=y+14; if(px+r.width>innerWidth-8)px=x-r.width-14; if(py+r.height>innerHeight-8)py=y-r.height-14; t.style.left=px+"px"; t.style.top=py+"px"; }
+  function hideTip(){ $("chartTip").hidden=true; }
+
+  // 直式長條（單系列 / 或本週vs上週雙系列）
+  function columnChart(box, labels, series, opts) {
+    opts = opts || {};
+    const W=720,H=240,L=44,R=14,T=16,B=30, pw=W-L-R, ph=H-T-B;
+    const all = series.flatMap((s)=>s.values);
+    const max = niceMax(Math.max(1,...all));
+    const y=(v)=>T+ph-(v/max)*ph;
+    const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+    for(let t=0;t<=4;t++){ const val=max/4*t, gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
+    const band=pw/labels.length, groupW=Math.min(band*0.62, series.length*20+ (series.length-1)*4), barW=Math.min(22,(groupW-(series.length-1)*4)/series.length);
+    labels.forEach((lb,i)=>{
+      const cx=L+band*i+band/2, startX=cx-groupW/2;
+      series.forEach((se,si)=>{
+        const v=se.values[i], top=y(v), h=Math.max(0,T+ph-top), x=startX+si*(barW+4);
+        const path=svg("path",{d: h<=0.5?`M ${x} ${T+ph} h ${barW}`:`M ${x} ${T+ph} V ${top+4} Q ${x} ${top} ${x+4} ${top} H ${x+barW-4} Q ${x+barW} ${top} ${x+barW} ${top+4} V ${T+ph} Z`, fill:se.color});
+        path.addEventListener("mousemove",(e)=>tip(`<div>${esc(lb)}${series.length>1?" · "+esc(se.name):""}</div><b>${n(v)}</b>${opts.unit?" "+opts.unit:""}`,e.clientX,e.clientY));
+        path.addEventListener("mouseleave",hideTip);
+        s.appendChild(path);
+      });
+      const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":11,fill:CHART.ink}); tl.textContent=lb; s.appendChild(tl);
+    });
+    box.innerHTML=""; box.appendChild(s);
+    if(series.length>1){ const lg=document.createElement("div"); lg.className="legend"; lg.innerHTML=series.map((se)=>`<span class="key"><span class="swatch" style="background:${se.color}"></span>${esc(se.name)}</span>`).join(""); box.appendChild(lg); }
   }
 
-  function renderSubscription() {
-    const a = readAssumptionsFromInputs();
-    const paidCount = a.plusCount + a.proCount;
-    const mrr = a.plusCount * a.plusPrice + a.proCount * a.proPrice;
-    const arpu = paidCount > 0 ? mrr / paidCount : null;
-    const ltv = arpu !== null ? arpu * a.lifeMonths : null;
-    const cac = a.newPaid > 0 ? a.marketing / a.newPaid : (a.marketing > 0 ? null : 0);
-    const ratio = (ltv !== null && cac && cac > 0) ? ltv / cac : null;
-
-    const biz = [];
-    biz.push(bizCard("每月經常性收入 MRR", fmtMoney(mrr),
-      `Plus ${a.plusCount} 人 × ${fmtMoney(a.plusPrice)} ＋ Pro ${a.proCount} 人 × ${fmtMoney(a.proPrice)}。每月穩定進帳的訂閱錢。`));
-    biz.push(bizCard("每位付費用戶月貢獻 ARPU", arpu !== null ? fmtMoney(arpu) : "－",
-      paidCount > 0 ? `MRR ÷ ${paidCount} 位付費用戶` : "先在上面填目前訂閱人數"));
-    biz.push(bizCard("顧客終身價值 LTV", ltv !== null ? fmtMoney(ltv) : "－",
-      arpu !== null ? `一位付費用戶一輩子帶來的錢 ＝ 月貢獻 × 預估 ${a.lifeMonths} 個月` : "先填訂閱人數"));
-    biz.push(bizCard("獲客成本 CAC", cac === 0 ? "NT$0" : (cac !== null ? fmtMoney(cac) : "－"),
-      a.newPaid > 0 ? `當月廣告花費 ÷ ${a.newPaid} 位新付費用戶` : "填「本月新增付費用戶」＋「行銷花費」才算得出"));
-
-    const ratioLight = ratio !== null ? lightSpan(ratio, THRESHOLDS.ltvCac) : '<span class="light na">－ 尚無資料</span>';
-    biz.push(bizCard("賺回本比值 LTV : CAC", ratio !== null ? `${ratio.toFixed(1)} : 1` : "－ : 1",
-      "一塊錢獲客換回幾塊錢終身價值。業界看 ≥ 3 才算健康、1 以下是每拉一個客都虧。", { light: ratioLight }));
-    biz.push(bizCard("單位經濟毛利", "－",
-      "每位用戶的訂閱＋點數收入，扣掉他用掉的視訊臉／語音成本。", { needs: true, light: '<span class="light na">● 待補追蹤</span>' }));
-
-    $("bizGrid").innerHTML = biz.join("");
-
-    // 用戶轉換（近 30 天，來自事件計數）
-    const usage = state.data && state.data.usage;
-    const windowDays = (usage && usage.windowDays) || 90;
-    const reg = eventCountAny(["person_onboarded", "onboarding_completed", "account_created"]);
-    const paid = eventCountAny(["subscription_purchased", "subscription_started"]);
-    const points = eventCountAny(["points_purchased", "credits_purchased"]);
-    const convRate = reg.count > 0 ? paid.count / reg.count : null;
-
-    const conv = [];
-    conv.push(bizCard("新註冊", reg.count > 0 ? fmtNum(reg.count) : "－",
-      reg.count > 0 ? `近 ${windowDays} 天（來自事件 ${reg.name}）` : "需補追蹤 person_onboarded 事件才有真數字", { needs: reg.count === 0, light: reg.count > 0 ? '<span class="light good">● 系統自動</span>' : '<span class="light na">● 待補追蹤</span>' }));
-    conv.push(bizCard("新增付費訂閱", paid.count > 0 ? fmtNum(paid.count) : "－",
-      paid.count > 0 ? `近 ${windowDays} 天（來自事件 ${paid.name}）` : "上線有人付費後會自動出現", { light: paid.count > 0 ? '<span class="light good">● 系統自動</span>' : '<span class="light na">● 尚無</span>' }));
-    conv.push(bizCard("免費→付費轉換率", convRate !== null ? `${(convRate * 100).toFixed(1)}%` : "－",
-      convRate !== null ? "付費數 ÷ 註冊數" : "要有註冊與付費事件才算得出", { light: convRate !== null ? lightSpan(convRate, THRESHOLDS.conversion) : '<span class="light na">－ 尚無資料</span>' }));
-    conv.push(bizCard("點數加購次數", points.count > 0 ? fmtNum(points.count) : "－",
-      points.count > 0 ? `近 ${windowDays} 天（來自事件 ${points.name}）` : "上線有人加購後會自動出現", { light: points.count > 0 ? '<span class="light good">● 系統自動</span>' : '<span class="light na">● 尚無</span>' }));
-
-    $("convGrid").innerHTML = conv.join("");
-
-    // 待補追蹤清單（霍爾調研）
-    const todos = [
-      ["person_onboarded", "帳號建立時間點——算註冊數、留存 cohort 的起點"],
-      ["subscription_cancelled / downgraded", "訂閱取消、降階——現在只看得到「進」看不到「出」，算不出流失率"],
-      ["trial_quota_exhausted", "免費 5 分鐘試用用完那刻——看多少人真的把試用用完"],
-      ["每筆通話估算成本", "視訊臉／語音每次結束記下成本，才能算單位經濟毛利"],
-      ["safety_event_acknowledged / resolved", "安全警訊處理時間戳——才有回應時效（SLA）可算"],
-    ];
-    $("todoTrack").innerHTML = todos.map(([code, why]) => `
-      <div class="item todo-item">
-        <span class="code">${escapeHtml(code)}</span>
-        <span>${escapeHtml(why)}</span>
-      </div>`).join("");
+  // 折線
+  function lineChart(box, labels, series, opts) {
+    opts=opts||{};
+    const W=720,H=230,L=44,R=16,T=16,B=28, pw=W-L-R, ph=H-T-B;
+    const all=series.flatMap((s)=>s.values); const maxV=opts.maxY||niceMax(Math.max(1,...all)); const minV=opts.minY||0;
+    const nP=labels.length, x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-((v-minV)/(maxV-minV))*ph;
+    const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+    for(let t=0;t<=4;t++){ const val=minV+(maxV-minV)/4*t, gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=(maxV<=5?val.toFixed(1):n(Math.round(val))); s.appendChild(tx); }
+    const step=Math.max(1,Math.ceil(nP/7));
+    for(let i=0;i<nP;i+=step){ const tx=svg("text",{x:x(i),y:H-6,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tx.textContent=labels[i]; s.appendChild(tx); }
+    series.forEach((se)=>{
+      const pts=se.values.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
+      if(se.wash) s.appendChild(svg("polygon",{points:`${L},${T+ph} ${pts} ${x(nP-1)},${T+ph}`,fill:se.color,opacity:.1}));
+      s.appendChild(svg("polyline",{points:pts,fill:"none",stroke:se.color,"stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
+      const lv=se.values[nP-1]; s.appendChild(svg("circle",{cx:x(nP-1),cy:y(lv),r:4.5,fill:se.color,stroke:"#fff","stroke-width":2}));
+    });
+    const overlay=svg("rect",{x:L,y:T,width:pw,height:ph,fill:"transparent"});
+    const cross=svg("line",{x1:0,x2:0,y1:T,y2:T+ph,stroke:CHART.muted,"stroke-width":1,opacity:0}); s.appendChild(cross);
+    const dots=series.map((se)=>{ const d=svg("circle",{r:5,fill:se.color,stroke:"#fff","stroke-width":2,opacity:0}); s.appendChild(d); return d; });
+    overlay.addEventListener("mousemove",(e)=>{ const r=s.getBoundingClientRect(); const px=(e.clientX-r.left)/r.width*W; const i=Math.max(0,Math.min(nP-1,Math.round((px-L)/pw*(nP-1)))); cross.setAttribute("x1",x(i)); cross.setAttribute("x2",x(i)); cross.setAttribute("opacity",.4); const rows=series.map((se,si)=>{dots[si].setAttribute("cx",x(i));dots[si].setAttribute("cy",y(se.values[i]));dots[si].setAttribute("opacity",1);return `<span style="color:#c9d6cf">${esc(se.name)}</span> <b>${se.values[i]}</b>`;}); tip(`<div>${esc(labels[i])}</div>${rows.join("<br>")}`,e.clientX,e.clientY); });
+    overlay.addEventListener("mouseleave",()=>{ cross.setAttribute("opacity",0); dots.forEach((d)=>d.setAttribute("opacity",0)); hideTip(); });
+    s.appendChild(overlay);
+    box.innerHTML=""; box.appendChild(s);
+    if(series.length>1){ const lg=document.createElement("div"); lg.className="legend"; lg.innerHTML=series.map((se)=>`<span class="key"><span class="swatch" style="background:${se.color}"></span>${esc(se.name)}</span>`).join(""); box.appendChild(lg); }
   }
 
-  function renderAccounts() {
-    const payload = state.data && state.data.accounts;
-    const accounts = (payload && payload.accounts) || [];
-    if (!accounts.length) { $("accountsPanel").innerHTML = emptyNote("還沒有帳號資料——正式開放註冊後，這裡會列出每一家。"); return; }
-    const rows = accounts.map((account) => {
-      const family = account.familyGroup || {};
-      const person = account.primaryPerson || {};
-      const companion = account.companion || {};
-      const members = account.familyMembers || {};
-      return `<tr>
-        <td>${escapeHtml(account.accountName || account.accountId)}</td>
-        <td>${escapeHtml(family.name || family.id || "－")}</td>
-        <td>${escapeHtml(person.displayName || person.id || "－")}</td>
-        <td>${escapeHtml(companion.displayName || companion.templateId || "－")}</td>
-        <td class="num">${escapeHtml(members.count || 0)}</td>
-        <td>${escapeHtml(fmtTime(account.updatedAt || account.createdAt))}</td>
-      </tr>`;
-    }).join("");
-    $("accountsPanel").innerHTML = `
-      <table>
-        <thead><tr><th>帳號</th><th>家庭</th><th>主要使用者</th><th>陪伴角色</th><th class="num">家人數</th><th>最近更新</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+  // 甜甜圈
+  function donut(box, segs, centerVal, centerLabel) {
+    const W=180,r=70,cx=90,cy=90,sw=26,C=2*Math.PI*r;
+    const total=segs.reduce((a,s)=>a+s.val,0)||1;
+    const s=svg("svg",{viewBox:`0 0 ${W} ${W}`,width:W,height:W});
+    s.appendChild(svg("circle",{cx,cy,r,fill:"none",stroke:CHART.grid,"stroke-width":sw}));
+    let off=0;
+    segs.forEach((seg)=>{ const frac=seg.val/total, len=frac*C; const c=svg("circle",{cx,cy,r,fill:"none",stroke:seg.color,"stroke-width":sw,"stroke-dasharray":`${len} ${C-len}`,"stroke-dashoffset":-off,transform:`rotate(-90 ${cx} ${cy})`}); s.appendChild(c); off+=len; });
+    const t1=svg("text",{x:cx,y:cy-2,"text-anchor":"middle","font-size":26,"font-weight":700,fill:CHART.ink,"font-family":"Poppins,sans-serif"}); t1.textContent=centerVal; s.appendChild(t1);
+    const t2=svg("text",{x:cx,y:cy+18,"text-anchor":"middle","font-size":11,fill:CHART.muted}); t2.textContent=centerLabel; s.appendChild(t2);
+    const legend=`<div class="donut-legend">${segs.map((seg)=>`<div class="dl"><span class="sw" style="background:${seg.color}"></span><span class="name">${esc(seg.name)}</span><span class="val">${n(seg.val)}</span><span class="pct">${seg.pct}%</span></div>`).join("")}</div>`;
+    box.innerHTML=`<div class="donut-wrap"><div style="flex:0 0 ${W}px">${""}</div>${legend}</div>`;
+    box.querySelector(".donut-wrap>div").appendChild(s);
   }
 
-  function renderCredits() {
-    const payload = state.data && state.data.credits;
-    const wallet = (payload && payload.walletSummary) || {};
-    const subscription = (payload && payload.subscription) || {};
-    const entitlements = (payload && payload.entitlements) || {};
-    $("creditsPanel").innerHTML = `
-      <div class="item">
-        <strong>${escapeHtml(zh(PLAN_ZH, payload && payload.activePlan, "還沒有方案資料"))}</strong>
-        <div class="meta">訂閱狀態：${escapeHtml(zh(STATUS_ZH, subscription.status, "不明"))}</div>
-        <div class="tag-row">
-          <span class="tag">本月額度剩 ${escapeHtml(wallet.monthlyRemaining ?? "－")}</span>
-          <span class="tag">加購剩 ${escapeHtml(wallet.purchasedRemaining ?? "－")}</span>
-          <span class="tag">合計可用 ${escapeHtml(wallet.totalRemaining ?? "－")}</span>
+  const cc = { teal:CHART.teal, coral:CHART.coral, gold:CHART.gold, prev:CHART.prev };
+
+  // ══════════ 頁面渲染 ══════════
+  function chartMount(id){ return `<div class="chart-box" id="${id}"></div>`; }
+  const pending = []; // 待掛載的圖表函式
+
+  function renderPage(id) {
+    pending.length = 0;
+    let html = "";
+    const badge = () => srcBadge();
+    const P = S[id];
+
+    if (id === "overview") {
+      html += heroBanner(P.highlight, { title:"本月概況", cta:{to:"safety", label:"前往守護中心"}, calm:true });
+      html += kpiRow(P.kpi.map((k,i)=>({...k, accent:i===0})));
+      html += `<div class="grid-2">`;
+      html += card("每日 AI 陪伴通話時長", "過去 7 天 · 單位：分鐘", chartMount("ov-call"), badge());
+      html += card("新用戶成長", "近 6 個月綁定帳號 · 月增 6.3%", chartMount("ov-new"), badge());
+      html += `</div>`;
+      html += `<div class="grid-3">`;
+      html += card("提醒完成率", "寬容不指責", `<div class="kpi-value">84%</div><div class="kpi-sub">漏了明天繼續，無紅字歸零</div>`);
+      html += card("平均每日心情球", "情緒穩定向好", `<div class="kpi-value">4.6<span class="unit">/5</span></div><div class="kpi-sub">本週較上週 +0.2</div>`);
+      html += card("六位夥伴使用分布", "本月啟用角色佔比", barsList(P.chars.map((c)=>[c[0],c[1],null,"teal"])));
+      html += `</div>`;
+      pending.push(()=>columnChart($("ov-call"), P.overview_labels||P.callDaily.map(d=>d[0]), [{name:"通話分鐘",color:cc.teal,values:P.callDaily.map(d=>d[1])}], {unit:"分"}));
+      pending.push(()=>columnChart($("ov-new"), P.newUsers.map(d=>d[0]), [{name:"新綁定",color:cc.teal,values:P.newUsers.map(d=>d[1])}]));
+    }
+
+    else if (id === "growth") {
+      html += heroBanner(P.highlight, { title:"成長健康度", calm:true });
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===3})));
+      html += card("每週日活躍 DAU", "近 8 週 · 穩定爬升", chartMount("gr-dau"), badge());
+      html += card("世代留存分析", "顏色越深留存越高 · 新世代留存更好", cohortTable(P.cohort), badge());
+      html += `<div class="grid-2">`;
+      html += card("單位經濟 LTV / CAC", "全體平均 · 單位：NT$", `
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div><div class="kpi-sub">LTV 終身價值</div><div class="kpi-value">4,820</div></div>
+          <div style="font-size:1.4rem;color:var(--muted)">÷</div>
+          <div><div class="kpi-sub">CAC 獲客成本</div><div class="kpi-value">1,410</div></div>
+          <div style="font-size:1.4rem;color:var(--muted)">＝</div>
+          <div><div class="kpi-sub">回本 4.2 月</div><div class="kpi-value" style="color:var(--teal-dd)">3.4x</div></div>
         </div>
+        <div class="kpi-sub" style="margin-top:10px">健康門檻 LTV:CAC ≥ 3x 且回本 &lt; 12 月，目前皆達標。</div>`, badge());
+      html += card("各獲客來源效率", "LTV:CAC 比值 · 括號為佔比", barsList(P.channels.map((c)=>[c[0],c[1],c[2],c[1]>=3?"teal":"gold"]), 6));
+      html += `</div>`;
+      pending.push(()=>columnChart($("gr-dau"), P.dau.map(d=>d[0]), [{name:"DAU",color:cc.teal,values:P.dau.map(d=>d[1])}], {unit:"人"}));
+    }
+
+    else if (id === "users") {
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      const tabs = ["全部","活躍中","低度使用","守護中","免費","Plus","Pro"];
+      html += card("用戶與家庭圈名冊", `顯示 ${P.roster.length} 筆`, tableHTML(
+        ["用戶","家庭圈","方案","常用夥伴","本月通話","狀態","最後互動"],
+        P.roster.map((r)=>[r[0],r[1],planPill(r[2]),r[3],`<span class="num">${r[4]}</span>`,statusPill(r[5]),r[6]]),
+      ), badge());
+    }
+
+    else if (id === "safety") {
+      html += heroBanner(esc(P.principle), { calm:true, title:"守護原則" });
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      html += card("即時佇列 · 待處理警示", "標紅為高風險，需 30 分內回應", queueHTML(P.queue), badge());
+      html += card("近期處理紀錄", "已結案", `<div class="rows">${P.resolved.map((r)=>`<div class="row-item done"><div class="ri-body"><div class="ri-title">${esc(r[0])} <span class="pill mute">已結案</span></div><div class="ri-desc">${esc(r[1])}</div></div><div class="ri-meta">${esc(r[2])}</div></div>`).join("")}</div>`);
+      html += principle(P.sop);
+    }
+
+    else if (id === "reminders") {
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      html += `<div class="grid-2">`;
+      html += card("各類提醒完成率", "本月 · 親口喊你，不是冷鈴聲", barsList(P.byType.map((b)=>[b[0],b[1],b[2],b[3]])), badge());
+      html += card("完成率趨勢", "近 6 個月整體 · 單位：%", chartMount("rm-trend"), badge());
+      html += `</div>`;
+      html += card("需要跟進 · 低完成率名單", "僅供關懷跟進，不作為考核", `<div class="rows">${P.follow.map((f)=>`<div class="row-item tint-warn"><div class="ri-body"><div class="ri-title">${esc(f[0])}</div><div class="ri-desc">${esc(f[1])}</div></div><div class="ri-meta num" style="font-size:1.1rem;font-weight:700">${esc(f[2])}</div><div class="ri-actions"><button class="btn-ghost" type="button">提醒家人</button></div></div>`).join("")}</div>`);
+      html += principle(P.principle);
+      pending.push(()=>lineChart($("rm-trend"), P.trend.map(d=>d[0]), [{name:"完成率",color:cc.teal,values:P.trend.map(d=>d[1]),wash:true}], {minY:60,maxY:100}));
+    }
+
+    else if (id === "mood") {
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      html += card("全體心情趨勢", "近 12 週平均心情球（1–5）", chartMount("md-trend"), badge());
+      html += `<div class="grid-2">`;
+      html += card("心情分布", "本週佔比", barsList(P.dist.map((d)=>[d[0],d[1],null,d[2]])));
+      html += card("健康數據同步", "Apple 健康自動帶入項目", barsList(P.health.map((h)=>[h[0],h[1],null,h[2]])));
+      html += `</div>`;
+      html += card("情緒關注名單", "連續低落心情球 · 已自動標記", `<div class="rows">${P.watch.map((w)=>`<div class="row-item tint-warn"><div class="ri-body"><div class="ri-title">${esc(w[0])}</div><div class="ri-desc">${esc(w[1])}</div></div><div class="ri-actions"><button class="btn-ghost" type="button">關心</button></div></div>`).join("")}</div>`);
+      html += principle(P.principle);
+      pending.push(()=>lineChart($("md-trend"), P.moodTrend.map(d=>d[0]), [{name:"心情球",color:cc.coral,values:P.moodTrend.map(d=>d[1]),wash:true}], {minY:3,maxY:5}));
+    }
+
+    else if (id === "subscription") {
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      html += `<div class="grid-2">`;
+      html += card("MRR 趨勢", "近 6 個月 · 單位：萬 NT$", chartMount("sb-mrr"), badge());
+      html += card("方案分布", "全體用戶訂閱結構", chartMount("sb-dist"), badge());
+      html += `</div>`;
+      html += `<div class="grid-2">`;
+      html += card("每月點數加購額", "單位：千 NT$ · 1 點約 1 分鐘", chartMount("sb-pt"), badge());
+      html += card("方案表現", "月費 · 贈點 · 家庭圈上限", tableHTML(["方案","內容","月費"], P.plans.map((p)=>[`<b>${esc(p[0])}</b>`,esc(p[1]),`<span class="num">${esc(p[2])}</span>`])));
+      html += `</div>`;
+      html += card("金流帳本 · 交易與退款紀錄", "消費糾紛可從此帳本查證：誰付款、時間、是否收到款項", tableHTML(
+        ["交易編號","用戶","項目","金額","時間","收款狀態"],
+        P.ledger.map((t)=>[`<span class="num">${esc(t[0])}</span>`,esc(t[1]),esc(t[2]),`<span class="num">${esc(t[3])}</span>`,esc(t[4]),`<span class="pill ${t[6]}">${esc(t[5])}</span>`]),
+      ), badge());
+      pending.push(()=>columnChart($("sb-mrr"), P.mrrTrend.map(d=>d[0]), [{name:"MRR",color:cc.teal,values:P.mrrTrend.map(d=>d[1])}], {unit:"萬"}));
+      pending.push(()=>columnChart($("sb-pt"), P.points.map(d=>d[0]), [{name:"點數",color:cc.gold,values:P.points.map(d=>d[1])}]));
+      pending.push(()=>donut($("sb-dist"), P.dist.map((d)=>({name:d[0],val:d[1],pct:d[2],color:cc[d[3]]||cc.prev})), "22%", "付費占比"));
+    }
+
+    else if (id === "usage") {
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      html += `<div class="grid-2">`;
+      html += card("各方案平均聊聊時長", "每位用戶 / 月 · 分鐘", barsList(P.byPlan.map((b,i)=>[b[0],b[1],null,["prev","teal","coral"][i]]), 180), badge());
+      html += card("每週通話時長", "週六日為高峰 · 單位：分鐘", chartMount("us-week"), badge());
+      html += `</div>`;
+      html += card("六位夥伴通話量佔比", "本月各角色使用", barsList(P.chars.map((c)=>[c[0],c[1],null,"teal"])));
+      pending.push(()=>columnChart($("us-week"), P.weekCall.map(d=>d[0]), [{name:"通話分鐘",color:cc.teal,values:P.weekCall.map(d=>d[1])}], {unit:"分"}));
+    }
+
+    else if (id === "characters") {
+      html += heroBanner(esc(P.principle), { calm:true, title:"角色即產品" });
+      html += `<div class="char-grid">${P.list.map((c)=>`
+        <div class="char-card">
+          <div class="char-head"><span class="char-ava" style="background:${c.color}">${esc(c.i)}</span><div><div class="char-name">${esc(c.name)}</div><div class="char-status">本月 ${esc(c.calls)} 通 · 上線中</div></div></div>
+          <div class="char-quote">「${esc(c.quote)}」</div>
+          <div class="char-stats"><div class="cs"><div class="v">${esc(c.dur)}</div><div class="l">平均時長</div></div><div class="cs"><div class="v">${esc(c.pct)}</div><div class="l">使用佔比</div></div><div class="cs"><div class="v">${esc(c.score)}</div><div class="l">心情評分</div></div></div>
+          <div class="char-actions"><button class="btn-ghost" type="button">編輯腳本</button><button class="btn-ghost" type="button">語氣設定</button></div>
+        </div>`).join("")}</div>`;
+      html += card("內容排程 · 主動關懷腳本", "全部腳本", `<div class="rows">${P.scripts.map((s)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(s[0])}</div><div class="ri-desc">${esc(s[1])}</div></div><span class="pill ok">啟用中</span></div>`).join("")}</div>`);
+    }
+
+    else if (id === "support") {
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      html += card("收件匣 · 待處理工單", "標紅為高優先，需今日回覆", `<div class="rows">${P.tickets.map((t)=>`<div class="row-item ${t.tone==="bad"?"tint-bad":t.tone==="warn"?"tint-warn":""}"><div class="ri-body"><div class="ri-title">${esc(t.title)}</div><div class="ri-meta">${esc(t.who)} · ${esc(t.time)}</div></div><span class="pill ${t.tone}">${esc(t.pri)}</span><div class="ri-actions"><button type="button">回覆</button></div></div>`).join("")}</div>`, badge());
+      html += `<div class="grid-2">`;
+      html += card("工單分類", "本月佔比", barsList(P.cats.map((c)=>[c[0],c[1],null,c[2]])));
+      html += card("近期正向回饋", "用戶主動的溫暖話語", P.quotes.map((q)=>`<div class="quote-card"><div class="q">${esc(q[0])}</div><div class="who">${esc(q[1])}</div></div>`).join(""));
+      html += `</div>`;
+    }
+
+    else if (id === "system") {
+      html += heroBanner(P.highlight, { title:"AI 全天候值守", cta:{to:"system",label:"重新整理"} });
+      html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
+      html += card("服務健康 · 各服務狀態", "5 / 7 正常", tableHTML(
+        ["服務","狀態","可用率","延遲"],
+        P.services.map((s)=>[`<b>${esc(s[0])}</b><div class="kpi-sub">${esc(s[1])}</div>`,`<span class="pill ${s[3]}">${esc(s[2])}</span>`,`<span class="num">${esc(s[4])}</span>`,`<span class="num">${esc(s[5])}</span>`]),
+      ), badge());
+      html += card("系統告警事件", "AI 偵測 · 自動修復", `<div class="rows">${P.events.map((e)=>`<div class="row-item ${e.tone==="bad"?"tint-bad":e.tone==="warn"?"tint-warn":""}"><div class="ri-body"><div class="ri-title">${esc(e.title)} <span class="pill ${e.tone}">${esc(e.status)}</span></div><div class="ri-desc">${esc(e.desc)}</div><div class="ri-meta">${esc(e.tag)} · ${esc(e.who)}</div></div></div>`).join("")}</div>`);
+      html += card("AI 自動修復紀錄", "本週 AI 值守處置", `<div class="rows">${P.repairs.map((r)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(r[0])}</div><div class="ri-desc">${esc(r[1])}</div></div><span class="pill ${r[2]==="已恢復"?"ok":"warn"}">${esc(r[2])}</span></div>`).join("")}</div>`);
+      html += principle(P.principle);
+    }
+
+    else if (id === "settings") {
+      html += settingsHTML();
+    }
+
+    $("pageRoot").innerHTML = html;
+    pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
+    bindPageEvents(id);
+  }
+
+  // 世代留存熱度表
+  function cohortTable(rows) {
+    const heads = ["加入世代","人數","M0","M1","M2","M3","M4","M5"];
+    const body = rows.map((r)=>{
+      const cells = r[2].map((v)=> v==null?`<td class="r">·</td>`:`<td class="cell" style="background:${cohortColor(v)}">${v}%</td>`).join("");
+      return `<tr><td><b>${esc(r[0])}</b></td><td class="r">${n(r[1])} 人</td>${cells}</tr>`;
+    }).join("");
+    return `<div class="table-wrap"><table class="cohort"><thead><tr>${heads.map((h,i)=>`<th${i>1?' class="r"':''}>${h}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div><div class="kpi-sub" style="margin-top:8px">M0＝加入當月留存 100%；顏色越深留存越高。7 月世代 M1 尚未滿月。</div>`;
+  }
+  function cohortColor(v){ const t=Math.max(0,Math.min(1,(v-25)/75)); const a=0.14+t*0.78; return `rgba(46,138,131,${a.toFixed(2)})`; }
+
+  function tableHTML(cols, rows) {
+    return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r)=>`<tr>${r.map((c)=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+  function queueHTML(q){ return `<div class="rows">${q.map((a)=>`<div class="row-item tint-${a.tone}"><div class="ri-body"><div class="ri-title">${esc(a.title)} <span class="pill ${a.tone}">${esc(a.risk)}</span></div><div class="ri-desc">${esc(a.desc)}</div><div class="ri-meta">${esc(a.who)} · ${esc(a.time)} · ${esc(a.src)}</div></div><div class="ri-actions"><button type="button">立即處理</button><button class="btn-ghost" type="button">指派</button></div></div>`).join("")}</div>`; }
+  function planPill(p){ const c=p==="Pro"?"ok":p==="Plus"?"ok":"mute"; return `<span class="pill ${c}">${esc(p)}</span>`; }
+  function statusPill(s){ const c=s==="守護中"?"bad":s==="低度使用"?"warn":"ok"; return `<span class="pill ${c}">${esc(s)}</span>`; }
+
+  // ══════════ 連線設定頁 ══════════
+  function settingsHTML() {
+    const a = loadAssume();
+    return `
+    ${card("連線", "貼上通行碼、按「連線看真資料」，能連的頁面就會換成真的", `
+      <div class="field"><span>目前看的是：<b id="envLabel">–</b> <button type="button" class="btn-ghost" id="toggleAdv" style="min-height:28px;padding:0 10px">換一台伺服器</button></span></div>
+      <div class="field" id="advRow" hidden><span>伺服器網址（進階，平常不用動）</span><input id="apiBaseUrl" type="url" spellcheck="false"></div>
+      <div class="field"><span>管理通行碼<small>（由蘇菲保管，跟她要一聲就好）</small></span><div class="token-wrap"><input id="adminToken" type="password" autocomplete="off" placeholder="貼上通行碼"><button type="button" class="eye-btn" id="eyeBtn">顯示</button></div></div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="rememberToken"><span>記住通行碼（只存這台電腦的瀏覽器）</span></label>
+      <button type="button" class="primary" id="connectBtn">連線看真資料</button>
+      <div class="kpi-sub" id="connectHint" style="margin-top:10px">連上後，安全警訊、用戶意見、系統健康等有真資料的頁面會換成真的；其餘暫用示範數據並標「示範」。</div>
+    `)}
+    ${card("訂閱試算假設", "填你的預期值，訂閱與成長頁的 MRR/LTV/CAC 可用這組即時試算（上線有真數字會自動接上）", `
+      <div class="assume-grid">
+        <label class="field"><span>Plus 月費 (NT$)</span><input type="number" id="aPlusPrice" value="${a.plusPrice}"></label>
+        <label class="field"><span>Pro 月費 (NT$)</span><input type="number" id="aProPrice" value="${a.proPrice}"></label>
+        <label class="field"><span>目前 Plus 訂閱數</span><input type="number" id="aPlusCount" value="${a.plusCount}"></label>
+        <label class="field"><span>目前 Pro 訂閱數</span><input type="number" id="aProCount" value="${a.proCount}"></label>
+        <label class="field"><span>本月新增付費</span><input type="number" id="aNewPaid" value="${a.newPaid}"></label>
+        <label class="field"><span>當月行銷花費 (NT$)</span><input type="number" id="aMarketing" value="${a.marketing}"></label>
+        <label class="field"><span>預估平均訂閱月數</span><input type="number" id="aLifeMonths" value="${a.lifeMonths}"></label>
       </div>
-      <div class="item">
-        <strong>開通的功能</strong>
-        <div class="tag-row">${Object.keys(entitlements).sort().map((k) => `<span class="tag">${escapeHtml(k)}：${escapeHtml(entitlements[k])}</span>`).join("") || '<span class="tag">還沒有資料</span>'}</div>
-      </div>`;
+      <div id="assumeOut" class="kpi-sub" style="margin-top:12px"></div>
+    `)}
+    ${card("快速前往", "跟後台相關的其他頁面", `<div class="quick-links">
+      <a href="/" target="_blank" rel="noopener">📱 App 本體</a>
+      <a href="/selftest.html" target="_blank" rel="noopener">🧪 自動巡檢成績單</a>
+      <a href="https://munea.net" target="_blank" rel="noopener">🌐 官網 munea.net</a>
+      <a href="https://munea.net/privacy" target="_blank" rel="noopener">📄 隱私權政策</a>
+    </div>`)}
+    <details class="raw-panel card"><summary>🔧 工程資料（原始回應，平常不用打開）</summary><pre id="rawOut">{}</pre></details>`;
   }
 
-  // ── 告警 ──
-  function alertId(event) { return `${event.eventTime || ""}|${event.riskLevel || ""}`; }
+  // ══════════ 連線 / 真資料 ══════════
+  function initialBaseUrl(){ const s=localStorage.getItem(ADMIN_BASE_KEY); if(s) return s; if(location.protocol.startsWith("http")) return location.origin; return DEFAULT_LOCAL_API; }
+  function envLabelFor(u){ if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
+  function setStatus(t,k){ $("statusPill").textContent=t; $("statusPill").className="status-pill"+(k?" "+k:""); $("envRole").textContent = state.connected? "已連線 · "+envLabelFor(localStorage.getItem(ADMIN_BASE_KEY)||"") : (t==="示範模式"?"示範模式":"尚未連線"); }
 
-  function alertList() {
-    const payload = state.data && state.data.safety;
-    return ((payload && payload.recent) || []).slice();
+  async function postAdmin(base, token, path, body){
+    const res = await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json; charset=utf-8","X-Munea-Admin-Token":token},body:JSON.stringify(body||{})});
+    const txt = await res.text(); let p={}; try{ p=txt?JSON.parse(txt):{}; }catch(e){ p={ok:false,error:{code:"invalid_json"}}; }
+    if(!res.ok||p.ok===false){ throw new Error((p.error&&p.error.code)||("http_"+res.status)); }
+    return p;
   }
 
-  function openAlertCount() {
-    const ack = loadStore(ACK_KEY);
-    return alertList().filter((e) => !ack[alertId(e)]).length;
+  async function connect(){
+    const base=($("apiBaseUrl")?.value||initialBaseUrl()).trim().replace(/\/+$/,"");
+    const token=($("adminToken")?.value||"").trim();
+    if(!token){ setStatus("要先貼通行碼","error"); return; }
+    localStorage.setItem(ADMIN_BASE_KEY, base);
+    if($("rememberToken")?.checked) localStorage.setItem(ADMIN_TOKEN_KEY, token); else localStorage.removeItem(ADMIN_TOKEN_KEY);
+    setStatus("讀取中…","");
+    const EP={ northStar:["/admin/north-star",{days:30}], usage:["/admin/usage",{days:90}], accounts:["/admin/accounts",{limit:25}], credits:["/admin/credits",{limit:12}], feedback:["/admin/feedback",{limit:12}], safety:["/admin/safety-events",{days:30,limit:20}], privacy:["/admin/privacy-requests",{limit:10}], audit:["/admin/audit-events",{limit:12}] };
+    const keys=Object.keys(EP);
+    const results=await Promise.allSettled(keys.map((k)=>postAdmin(base,token,EP[k][0],EP[k][1])));
+    const data={},errors={};
+    results.forEach((r,i)=>{ if(r.status==="fulfilled")data[keys[i]]=r.value; else errors[keys[i]]=(r.reason&&r.reason.message)||"fail"; });
+    state.data=data; state.errors=errors; state.connected=Object.keys(data).length>0;
+    if($("rawOut")) $("rawOut").textContent=JSON.stringify({data,errors},null,2);
+    const failed=Object.keys(errors).length;
+    if(failed===0) setStatus("✅ 已連線","ok"); else if(failed===keys.length){ setStatus("❌ 連不上","error"); state.connected=false; } else setStatus("⚠ 部分讀不到","warn");
+    applyLiveData();
+    updateBanner(); renderSide(); renderPage(state.page);
   }
 
-  function renderAlerts() {
-    const payload = (state.data && state.data.safety) || {};
-    const totals = payload.totals || {};
-    const ack = loadStore(ACK_KEY);
-    const filterOn = document.querySelector("#alertFilter button.on");
-    const mode = filterOn ? filterOn.dataset.f : "open";
-
-    const escalation = totals.requiresHumanEscalation || 0;
-    $("alertSummary").innerHTML = `
-      <article class="card mini-stat"><span>要人跟進</span><strong>${escapeHtml(escalation)}</strong><small>建議 24 小時內回應</small></article>
-      <article class="card mini-stat"><span>還沒標記處理</span><strong>${openAlertCount()}</strong><small>下方清單按「標記已處理」</small></article>
-      <article class="card mini-stat"><span>風險分佈（近 30 天）</span><strong style="font-size:1rem;line-height:2.2">${Object.keys(totals.byRiskLevel || {}).sort().map((k) => `${zh(RISK_ZH, k)} ${totals.byRiskLevel[k]}`).join("　") || "沒有警訊"}</strong><small>&nbsp;</small></article>`;
-
-    const order = { critical: 0, high: 1, medium: 2, moderate: 2, low: 3 };
-    let list = alertList().sort((a, b) => {
-      const ackDiff = (ack[alertId(a)] ? 1 : 0) - (ack[alertId(b)] ? 1 : 0);
-      if (ackDiff) return ackDiff;
-      return (order[String(a.riskLevel).toLowerCase()] ?? 9) - (order[String(b.riskLevel).toLowerCase()] ?? 9);
-    });
-    if (mode === "open") list = list.filter((e) => !ack[alertId(e)]);
-
-    if (!list.length) {
-      $("safetyPanel").innerHTML = emptyNote(mode === "open" ? "沒有待處理的警訊——是好消息。" : "這 30 天沒有安全警訊。");
-      return;
+  // 把真資料覆蓋到示範數據上（只覆蓋有對應端點的）
+  function applyLiveData(){
+    if(!state.data) return;
+    const d=state.data;
+    // 安全警示（真）
+    if(d.safety){ const t=d.safety.totals||{}, rec=d.safety.recent||[];
+      S.safety.kpi[0].value=String((t.byRiskLevel?Object.values(t.byRiskLevel).reduce((a,b)=>a+b,0):rec.length)||0);
+      S.safety.kpi[2].value=String(rec.length);
+      if(rec.length){ S.safety.queue = rec.slice(0,6).map((e)=>({ risk:(e.riskLevel||"留意"), tone:(String(e.riskLevel).match(/high|crit/i)?"bad":"warn"), title:(e.categories&&e.categories[0])||"安全訊號", desc:(e.summary||"聊天中偵測到需關注訊號，請真人確認。"), who:(e.personId||"用戶"), time:fmtTime(e.eventTime), src:"AI 安全網" })); }
+      else S.safety.queue=[];
     }
-    $("safetyPanel").innerHTML = list.map((event) => {
-      const id = alertId(event);
-      const done = !!ack[id];
-      return `
-      <div class="item ${done ? "done" : ""}">
-        <strong>${escapeHtml(zh(RISK_ZH, event.riskLevel, event.source || "待查看"))}${done ? "　✅ 已處理" : ""}</strong>
-        <div class="meta">${escapeHtml(fmtTime(event.eventTime))}</div>
-        <div class="tag-row">${(event.categories || []).map((c) => `<span class="tag warn">${escapeHtml(c)}</span>`).join("")}</div>
-        <div class="item-actions">
-          <button type="button" class="${done ? "undo" : ""}" data-ack="${escapeHtml(id)}">${done ? "改回未處理" : "標記已處理"}</button>
-        </div>
-      </div>`;
-    }).join("");
-
-    $("safetyPanel").querySelectorAll("[data-ack]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const store = loadStore(ACK_KEY);
-        const id = btn.dataset.ack;
-        if (store[id]) delete store[id]; else store[id] = new Date().toISOString();
-        saveStore(ACK_KEY, store);
-        renderAlerts(); updateBadges();
-        if (currentPage() === "overview") renderOverview();
-      });
-    });
-  }
-
-  // ── 信箱 ──
-  function inboxId(item) { return `${item.createdAt || item.requestedAt || ""}|${item.type || ""}`; }
-
-  function openInboxCount() {
-    const done = loadStore(DONE_KEY);
-    const fb = ((state.data && state.data.feedback && state.data.feedback.latest) || []).filter((i) => !done[inboxId(i)]).length;
-    const pv = ((state.data && state.data.privacy && state.data.privacy.recent) || []).filter((r) => {
-      const s = String(r.status || "").toLowerCase();
-      return s === "pending" || s === "open" || s === "received" || s === "";
-    }).length;
-    return fb + pv;
-  }
-
-  function renderInbox() {
-    const payload = (state.data && state.data.feedback) || {};
-    const latest = payload.latest || [];
-    const done = loadStore(DONE_KEY);
-    const nps = payload.nps !== null && payload.nps !== undefined ? payload.nps : "－";
-    const filterOn = document.querySelector("#inboxFilter button.on");
-    const mode = filterOn ? filterOn.dataset.f : "open";
-
-    $("inboxSummary").innerHTML = `
-      <article class="card mini-stat"><span>未處理意見</span><strong>${latest.filter((i) => !done[inboxId(i)]).length}</strong><small>處理完在清單打勾</small></article>
-      <article class="card mini-stat"><span>推薦分數 NPS</span><strong>${escapeHtml(nps)}</strong><small>共 ${escapeHtml(payload.npsCount || 0)} 人打分</small></article>
-      <article class="card mini-stat"><span>意見分佈</span><strong style="font-size:1rem;line-height:2.2">${Object.keys(payload.totals || {}).sort().map((k) => `${zh(FEEDBACK_TYPE_ZH, k)} ${payload.totals[k]}`).join("　") || "還沒有"}</strong><small>&nbsp;</small></article>`;
-
-    let list = latest.slice().sort((a, b) => (done[inboxId(a)] ? 1 : 0) - (done[inboxId(b)] ? 1 : 0));
-    if (mode === "open") list = list.filter((i) => !done[inboxId(i)]);
-
-    if (!list.length) {
-      $("feedbackPanel").innerHTML = emptyNote(mode === "open" ? "意見都處理完了。" : "還沒有人留意見——上線後這裡會熱鬧起來。");
-    } else {
-      $("feedbackPanel").innerHTML = list.map((item) => {
-        const id = inboxId(item);
-        const isDone = !!done[id];
-        const safeImg = typeof item.image === "string" && item.image.indexOf("data:image/") === 0 ? item.image : "";
-        const imgHtml = safeImg ? `<a href="${safeImg}" target="_blank" rel="noopener"><img src="${safeImg}" alt="附圖" style="margin-top:8px;max-width:160px;max-height:120px;border-radius:8px;border:1px solid #ccc;display:block"></a>` : "";
-        return `
-        <div class="item ${isDone ? "done" : ""}">
-          <strong>${escapeHtml(zh(FEEDBACK_TYPE_ZH, item.type, "意見"))}${item.score !== null && item.score !== undefined ? `　${escapeHtml(item.score)} 分` : ""}${safeImg ? "　📎有附圖" : ""}${isDone ? "　✅ 已處理" : ""}</strong>
-          <div class="meta">${escapeHtml(item.category || "－")} · ${escapeHtml(fmtTime(item.createdAt))} · App ${escapeHtml(item.appVersion || "?")}</div>
-          <div>${escapeHtml(item.text || "")}</div>
-          ${imgHtml}
-          <div class="item-actions"><button type="button" class="${isDone ? "undo" : ""}" data-done="${escapeHtml(id)}">${isDone ? "改回未處理" : "標記已處理"}</button></div>
-        </div>`;
-      }).join("");
-      $("feedbackPanel").querySelectorAll("[data-done]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const store = loadStore(DONE_KEY);
-          const id = btn.dataset.done;
-          if (store[id]) delete store[id]; else store[id] = new Date().toISOString();
-          saveStore(DONE_KEY, store);
-          renderInbox(); updateBadges();
-        });
-      });
+    // 客服/意見（真）
+    if(d.feedback){ const f=d.feedback, latest=f.latest||[];
+      S.support.kpi[3].value=String((f.totals&&f.totals.praise)||latest.filter(x=>x.type==="praise").length||0);
+      if(latest.length){ S.support.tickets=latest.slice(0,8).map((it)=>({ title:(it.text||"（無內容）").slice(0,40), who:(fbType(it.type))+" · App "+(it.appVersion||"?"), pri:(it.type==="bug"?"待處理":"回饋"), tone:(it.type==="bug"?"warn":"mute"), time:fmtTime(it.createdAt) })); }
+      const praises=latest.filter(x=>x.type==="praise"&&x.text); if(praises.length) S.support.quotes=praises.slice(0,3).map((p)=>[`「${p.text}」`, "— 用戶回饋"]);
     }
-
-    const privacy = (state.data && state.data.privacy) || {};
-    const recent = privacy.recent || [];
-    const totals = privacy.totals || {};
-    const items = recent.slice(0, 8).map((request) => `
-      <div class="item">
-        <strong>${escapeHtml(zh(PRIVACY_TYPE_ZH, request.type, "申請"))}</strong>
-        <div class="meta">${escapeHtml(zh(STATUS_ZH, request.status))} · ${escapeHtml(fmtTime(request.requestedAt))}</div>
-        <div>${escapeHtml(request.reason || "")}</div>
-      </div>`).join("");
-    $("privacyPanel").innerHTML = `
-      <div class="tag-row">${Object.keys(totals.byStatus || {}).sort().map((k) => `<span class="tag">${escapeHtml(zh(STATUS_ZH, k))}：${escapeHtml(totals.byStatus[k])}</span>`).join("")}</div>
-      ${items || emptyNote("目前沒有人申請刪帳號或要資料。")}`;
+    // 用戶名冊（真）
+    if(d.accounts&&d.accounts.accounts&&d.accounts.accounts.length){ S.users.roster=d.accounts.accounts.slice(0,20).map((a)=>{ const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{}; return [p.displayName||a.accountName||"用戶", f.name||"–", "–", c.displayName||"–", (m.count||0)+" 人", "活躍中", fmtTime(a.updatedAt||a.createdAt)]; }); }
+    // 用量（真：每日通話分鐘）
+    if(d.usage&&d.usage.daily&&d.usage.daily.length){ const last7=d.usage.daily.slice(-7); S.overview.callDaily=last7.map((x)=>[shortDate(x.date), Math.round(x.voiceMinutes+x.avatarMinutes)]); S.usage.weekCall=S.overview.callDaily.slice(); }
+    // 訂閱轉換（真：事件計數）
+    if(d.usage&&d.usage.eventCounts){ const ec=d.usage.eventCounts; const paid=ec.subscription_purchased||0, reg=ec.onboarding_completed||ec.person_onboarded||0; if(reg) S.subscription.kpi[3].value=((paid/reg*100).toFixed(1))+"%"; }
   }
 
-  function renderSummaries() {
-    const payload = (state.data && state.data.summaries) || {};
-    const recent = payload.recent || [];
-    const items = recent.slice(0, 8).map((summary) => `
-      <div class="item">
-        <strong>${escapeHtml(fmtTime(summary.createdAt) !== "－" ? fmtTime(summary.createdAt) : (summary.id || "摘要"))}</strong>
-        <div>${escapeHtml(summary.summary || "")}</div>
-        <div class="tag-row">
-          ${(summary.memoryTags || []).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}
-          ${summary.safetyRelevant ? '<span class="tag danger">涉及安全</span>' : ""}
-        </div>
-      </div>`).join("");
-    $("summariesPanel").innerHTML = items || emptyNote("還沒有聊天摘要——有人開始跟沐寧聊天後就會出現。");
+  function fbType(t){ return {bug:"問題回報",idea:"功能許願",praise:"稱讚",nps:"打分數"}[t]||"意見"; }
+  function fmtTime(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);}catch(e){return String(v);} }
+  function shortDate(iso){ const p=String(iso).split("-"); return p.length===3?`${+p[1]}/${+p[2]}`:iso; }
+
+  // ══════════ 訂閱試算 ══════════
+  const ASSUME_DEF={plusPrice:499,proPrice:999,plusCount:0,proCount:0,newPaid:0,marketing:0,lifeMonths:12};
+  function loadAssume(){ try{ return {...ASSUME_DEF, ...JSON.parse(localStorage.getItem(ASSUME_KEY)||"{}")}; }catch(e){ return {...ASSUME_DEF}; } }
+  function calcAssume(){
+    const g=(id)=>Number($(id)?.value)||0;
+    const a={plusPrice:g("aPlusPrice"),proPrice:g("aProPrice"),plusCount:g("aPlusCount"),proCount:g("aProCount"),newPaid:g("aNewPaid"),marketing:g("aMarketing"),lifeMonths:Math.max(1,g("aLifeMonths"))};
+    localStorage.setItem(ASSUME_KEY,JSON.stringify(a));
+    const paid=a.plusCount+a.proCount, mrr=a.plusCount*a.plusPrice+a.proCount*a.proPrice;
+    const arpu=paid?mrr/paid:null, ltv=arpu!=null?arpu*a.lifeMonths:null, cac=a.newPaid?a.marketing/a.newPaid:null, ratio=(ltv!=null&&cac)?ltv/cac:null;
+    if($("assumeOut")) $("assumeOut").innerHTML=`MRR <b>NT$${n(Math.round(mrr))}</b> · ARPU ${arpu!=null?"NT$"+n(Math.round(arpu)):"–"} · LTV ${ltv!=null?"NT$"+n(Math.round(ltv)):"–"} · CAC ${cac!=null?"NT$"+n(Math.round(cac)):"填新增付費+行銷花費"} · <b>LTV:CAC ${ratio!=null?ratio.toFixed(1)+":1"+(ratio>=3?" 🟢":ratio>=1?" 🟡":" 🔴"):"–"}</b>`;
   }
 
-  function renderAudit() {
-    const payload = (state.data && state.data.audit) || {};
-    const recent = payload.recent || [];
-    const items = recent.slice(0, 10).map((event) => `
-      <div class="item">
-        <strong>${escapeHtml(event.eventType || "事件")}</strong>
-        <div class="meta">${escapeHtml(event.targetTable || "－")} · ${escapeHtml(fmtTime(event.createdAt))}</div>
-        <div>${escapeHtml(event.targetId || event.accountId || "")}</div>
-      </div>`).join("");
-    $("auditPanel").innerHTML = items || emptyNote("還沒有操作紀錄。");
+  // ══════════ 導覽 / 事件 ══════════
+  function renderSide(){
+    const badges={ safety:S.safety.kpi[0].value, support:S.support.kpi[0].value, system:"2" };
+    $("sideNav").innerHTML = NAV.map((g)=>`<div class="nav-group"><div class="nav-group-label">${esc(g.group)}</div><div class="side-nav">${g.items.map((it)=>{
+      const b= it.badge? `<span class="nav-badge">${esc(badges[it.badge]||"")}</span>`:"";
+      return `<a href="#${it.id}" data-page="${it.id}"><span class="nav-ico">${it.ico}</span>${esc(it.label)}${b}</a>`;
+    }).join("")}</div></div>`).join("");
+    document.querySelectorAll("#sideNav a").forEach((a)=>a.classList.toggle("on",a.dataset.page===state.page));
   }
 
-  function updateBadges() {
-    const alerts = state.connected ? openAlertCount() : 0;
-    const inbox = state.connected ? openInboxCount() : 0;
-    $("alertBadge").hidden = !alerts;
-    $("alertBadge").textContent = alerts;
-    $("inboxBadge").hidden = !inbox;
-    $("inboxBadge").textContent = inbox;
+  function updateBanner(){ $("connectBanner").hidden = state.connected || state.page==="settings"; }
+
+  function go(id){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id; }
+
+  function show(){
+    const id = (location.hash||"#overview").slice(1);
+    state.page = TITLE[id]?id:"overview";
+    $("crumb").textContent = CRUMB[state.page]||"";
+    $("pageTitle").textContent = TITLE[state.page]||"";
+    document.querySelectorAll("#sideNav a").forEach((a)=>a.classList.toggle("on",a.dataset.page===state.page));
+    updateBanner();
+    renderPage(state.page);
   }
 
-  // ══ 示範模式（?demo=1，免通行碼看填滿的樣子） ═══
-  function buildDemoData() {
-    const daily = [];
-    const now = new Date();
-    for (let i = 89; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 86400000).toISOString().slice(0, 10);
-      const base = 6 + Math.round(4 * Math.sin(i / 5)) + (i < 30 ? 4 : 0);
-      daily.push({ date: d, events: base + 8, meaningfulEvents: base, voiceMinutes: Math.max(0, base * 3.2), avatarMinutes: Math.max(0, (base - 2) * 0.9) });
+  function bindPageEvents(id){
+    // hero CTA
+    $("pageRoot").querySelectorAll("[data-goto]").forEach((b)=>b.addEventListener("click",()=>go(b.dataset.goto)));
+    if(id==="settings"){
+      const base=initialBaseUrl();
+      if($("apiBaseUrl")) $("apiBaseUrl").value=base;
+      if($("envLabel")) $("envLabel").textContent=envLabelFor(base);
+      const st=localStorage.getItem(ADMIN_TOKEN_KEY)||"";
+      if(st&&$("adminToken")){ $("adminToken").value=st; $("rememberToken").checked=true; }
+      $("connectBtn")?.addEventListener("click",connect);
+      $("toggleAdv")?.addEventListener("click",()=>{ $("advRow").hidden=!$("advRow").hidden; });
+      $("eyeBtn")?.addEventListener("click",()=>{ const f=$("adminToken"); const sh=f.type==="text"; f.type=sh?"password":"text"; $("eyeBtn").textContent=sh?"顯示":"隱藏"; });
+      $("apiBaseUrl")?.addEventListener("input",()=>{ if($("envLabel"))$("envLabel").textContent=envLabelFor($("apiBaseUrl").value); });
+      ["aPlusPrice","aProPrice","aPlusCount","aProCount","aNewPaid","aMarketing","aLifeMonths"].forEach((i)=>$(i)?.addEventListener("input",calcAssume));
+      calcAssume();
+      if(state.data&&$("rawOut")) $("rawOut").textContent=JSON.stringify({data:state.data,errors:state.errors},null,2);
     }
-    return {
-      northStar: { ok: true, meaningfulCompanionDays: 42, activePeople: 8, voiceSessionSuccessRate: 0.93, routineCompletions: 55, familyInteractions: 31, eventCount: 900 },
-      usage: { ok: true, windowDays: 90, totals: { events: 900, voiceMinutes: 210, avatarMinutes: 64 }, daily, eventCounts: { voice_session_completed: 120, avatar_session_completed: 40, onboarding_completed: 26, subscription_purchased: 3, points_purchased: 5 }, backend: { provider: "supabase" } },
-      accounts: { ok: true, accounts: [
-        { accountName: "曾家", familyGroup: { name: "曾家大院" }, primaryPerson: { displayName: "曾媽媽" }, companion: { displayName: "寧寧" }, familyMembers: { count: 3 }, updatedAt: "2026-07-09T12:18:00Z" },
-        { accountName: "林家", familyGroup: { name: "林宅" }, primaryPerson: { displayName: "林阿公" }, companion: { displayName: "阿宏" }, familyMembers: { count: 2 }, updatedAt: "2026-07-08T09:00:00Z" } ] },
-      credits: { ok: true, activePlan: "plus", subscription: { status: "active" }, walletSummary: { monthlyRemaining: 120, purchasedRemaining: 30, totalRemaining: 150 }, entitlements: { voice: "on", avatar: "on" } },
-      summaries: { ok: true, recent: [{ createdAt: "2026-07-09T13:00:00Z", summary: "聊到孫子婚禮，心情很好", memoryTags: ["家人", "喜事"], safetyRelevant: false }] },
-      privacy: { ok: true, totals: { byStatus: { pending: 1 }, byType: { account_deletion: 1 } }, recent: [{ type: "account_deletion", status: "pending", requestedAt: "2026-07-08T10:00:00Z", reason: "不想用了" }] },
-      feedback: { ok: true, totals: { bug: 2, praise: 1 }, nps: 9, npsCount: 3, latest: [
-        { type: "praise", createdAt: "2026-07-09T15:00:00Z", text: "寧寧記得我孫子要結婚，好感動", appVersion: "1.15.1" },
-        { type: "bug", category: "聊聊", createdAt: "2026-07-09T16:00:00Z", text: "聲音有時候會斷", appVersion: "1.15.1" } ] },
-      safety: { ok: true, totals: { byRiskLevel: { high: 1, low: 2 }, requiresHumanEscalation: 1 }, recent: [
-        { riskLevel: "high", eventTime: "2026-07-09T20:00:00Z", categories: ["自我傷害詞"] },
-        { riskLevel: "low", eventTime: "2026-07-08T10:00:00Z", categories: ["情緒低落"] } ] },
-      audit: { ok: true, recent: [{ eventType: "credit_grant", targetTable: "credits", createdAt: "2026-07-09T11:00:00Z", targetId: "acc_1" }] },
-    };
   }
 
-  function enterDemoMode() {
-    state.data = buildDemoData();
-    state.errors = {};
-    state.connected = true;
-    setRaw({ demo: true });
-    $("lastUpdated").textContent = "示範資料（非真實用戶）";
-    setStatus("🧪 示範模式", "warn");
-    $("connectHint").textContent = "現在顯示的是示範資料，方便你看填滿的樣子。要看真資料，貼上通行碼再按「連線看資料」。";
-    renderCurrentPage();
-    updateBadges();
-    updateGate();
+  function enterDemo(){ state.connected=false; setStatus("示範模式","warn"); }
+
+  function init(){
+    if(window.MuneaVersion){} // 版本供未來顯示
+    renderSide();
+    $("refreshBtn").addEventListener("click",()=>{ if(state.connected) connect(); else renderPage(state.page); });
+    $("gotoSettings").addEventListener("click",()=>go("settings"));
+    window.addEventListener("hashchange",show);
+    setStatus("示範模式","warn");
+    show();
+    // 記住通行碼就自動連
+    const st=localStorage.getItem(ADMIN_TOKEN_KEY);
+    if(st){ // 需要 settings 的輸入存在才連；直接用存值連
+      const base=initialBaseUrl();
+      // 直接連（不需切到設定頁）
+      (async()=>{ try{ const tmpToken=st; const EP={ northStar:["/admin/north-star",{days:30}], usage:["/admin/usage",{days:90}], accounts:["/admin/accounts",{limit:25}], credits:["/admin/credits",{limit:12}], feedback:["/admin/feedback",{limit:12}], safety:["/admin/safety-events",{days:30,limit:20}], privacy:["/admin/privacy-requests",{limit:10}], audit:["/admin/audit-events",{limit:12}] }; const keys=Object.keys(EP); const rs=await Promise.allSettled(keys.map((k)=>postAdmin(base,tmpToken,EP[k][0],EP[k][1]))); const data={},errors={}; rs.forEach((r,i)=>{ if(r.status==="fulfilled")data[keys[i]]=r.value; else errors[keys[i]]="fail"; }); if(Object.keys(data).length){ state.data=data; state.errors=errors; state.connected=true; setStatus("✅ 已連線","ok"); applyLiveData(); updateBanner(); renderSide(); renderPage(state.page); } }catch(e){} })();
+    }
   }
-
-  // ══ 啟動 ═══════════════════════════════════════
-  function init() {
-    $("apiBaseUrl").value = initialBaseUrl();
-    updateEnvLabel();
-    if (window.MuneaVersion) $("appVer").textContent = `v${window.MuneaVersion.current}`;
-
-    const savedToken = localStorage.getItem(ADMIN_TOKEN_KEY) || "";
-    if (savedToken) { $("adminToken").value = savedToken; $("rememberToken").checked = true; }
-
-    $("refreshAdmin").addEventListener("click", refreshAll);
-    $("connectBtn").addEventListener("click", refreshAll);
-    $("gotoSettings").addEventListener("click", () => { location.hash = "#settings"; });
-    $("accountQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") refreshAll(); });
-    $("clearRaw").addEventListener("click", () => setRaw({}));
-    $("toggleAdvanced").addEventListener("click", () => { $("advancedRow").hidden = !$("advancedRow").hidden; });
-    $("apiBaseUrl").addEventListener("input", updateEnvLabel);
-    $("toggleToken").addEventListener("click", () => {
-      const field = $("adminToken");
-      const showing = field.type === "text";
-      field.type = showing ? "password" : "text";
-      $("toggleToken").textContent = showing ? "顯示" : "隱藏";
-    });
-
-    // 訂閱營運假設：帶入本機存值、改動即時重算
-    fillAssumptionInputs(loadAssumptions());
-    ["aPlusPrice", "aProPrice", "aPlusCount", "aProCount", "aNewPaid", "aMarketing", "aLifeMonths"].forEach((id) => {
-      $(id).addEventListener("input", () => { if (currentPage() === "subscription") renderSubscription(); });
-    });
-    $("resetAssume").addEventListener("click", () => {
-      saveStore(ASSUME_KEY, {});
-      fillAssumptionInputs({ ...ASSUME_DEFAULTS });
-      renderSubscription();
-    });
-
-    // 篩選鈕（範圍／告警／信箱）
-    document.querySelectorAll(".pill-group").forEach((group) => {
-      group.addEventListener("click", (e) => {
-        const btn = e.target.closest("button");
-        if (!btn) return;
-        group.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === btn));
-        if (group.id === "rangePills") { state.trendDays = Number(btn.dataset.days) || 30; renderMetrics(); }
-        else if (group.id === "alertFilter") renderAlerts();
-        else if (group.id === "inboxFilter") renderInbox();
-      });
-    });
-
-    window.addEventListener("hashchange", showPage);
-    showPage();
-
-    if (/[?&]demo=1/.test(location.search)) enterDemoMode();
-    else if (savedToken) refreshAll();
-  }
-
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded",init);
 })();
