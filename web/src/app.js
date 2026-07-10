@@ -1144,6 +1144,8 @@ const LiveVoice = {
     } catch (e) {}
     // 能力握手：告訴伺服器「這版 App 接得住 AI 幫你設提醒」→ 只有新版才拿到設提醒工具，舊版不會被假成功（2026-07-09 Edward）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
+    // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
+    try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
     // 薄門通行碼（App 自動帶、用戶無感）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(MUNEA_APP_KEY);
     this.on = true;
@@ -2801,6 +2803,7 @@ function connectCall() {
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }   // 已取消/掛斷 → 別誤開場
       _started = true;
       clearTimeout(_gateTimeout);
+      try { localStorage.setItem('munea.callCount', String((parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0) + 1)); } catch (e) {}   // 聊過幾通＋1 → 下通開場更像老朋友（熟識度）
       markConnected();                       // 按鈕→結束通話、開始計時
       // 兩邊都好 → 收待機動畫、亮出會動的臉、請她開口（聲臉一起出）
       if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }
@@ -2822,14 +2825,15 @@ function connectCall() {
         try { FaceIdle.start(); } catch (e) {}
       };
       let _idleLast = Date.now(), _idleStage = 0;
+      const _idleGapMs = 30000;   // Edward 2026-07-10 拍板：第一次提醒 30 秒、第二次再過 30 秒（自動收線再 30 秒）
       const _idleMon = setInterval(() => {
         if (!callConnected && !callDialing) { clearInterval(_idleMon); return; }      // 通話結束 → 自我終止
         if (LiveVoice.micLevel > 0.08) { _idleLast = Date.now(); _idleStage = 0; return; }   // 使用者在講 → 全歸零
         if (LiveVoice.speaking) { _idleLast = Date.now(); return; }                    // AI 在講（回應/提醒）→ 時鐘後推、階段保留
-        if (Date.now() - _idleLast < 11000) return;                                    // 還沒到 11 秒真沉默
+        if (Date.now() - _idleLast < _idleGapMs) return;                               // 還沒到 30 秒真沉默
         if (_idleStage === 0) { _idleStage = 1; LiveVoice.nudge(1); _idleLast = Date.now(); }        // 關心：還在嗎
         else if (_idleStage === 1) { _idleStage = 2; LiveVoice.nudge(2); _idleLast = Date.now(); }   // 提醒：記得關通話
-        else { clearInterval(_idleMon); _autoEndCall(); }                              // 第三段沉默 → 自動掛斷
+        else { clearInterval(_idleMon); _autoEndCall(); }                              // 第三段沉默 → 自動收線
       }, 1500);
     };
     const tryStart = () => beginConversation();

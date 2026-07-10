@@ -212,6 +212,7 @@ async def handle(ws):
     user = None
     location = None
     allow_reminders = False   # 只有帶 ?cap_rem=1 的新版 App 才開放「幫你設提醒」工具（防舊版假成功）
+    fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
     gate_key = ""   # 這通電話用的通行碼（跟 App 一致）；伺服器對伺服器接雲端臉時原封不動帶過去，不必客端再傳一次
     try:
         from urllib.parse import urlparse, parse_qs
@@ -254,6 +255,13 @@ async def handle(ws):
         # ?cap_rem=1：這版 App 接得住「AI 幫你設提醒」→ 才給設提醒工具（能力握手 · 2026-07-09 Edward）
         if _q.get("cap_rem") == ["1"]:
             allow_reminders = True
+        # ?fam=N：聊過幾通（熟識度）→ 決定開場話量：越熟話越少（Edward 2026-07-10「隨熟識度思考語句量」）
+        fvals = _q.get("fam")
+        if fvals:
+            try:
+                fam = max(0, min(999, int(fvals[0])))
+            except Exception:
+                pass
     except Exception:
         pass
     _CID["n"] += 1
@@ -278,10 +286,17 @@ async def handle(ws):
             # 這樣她一開口臉就同步在動、不會出現「已在講、臉還沒好」的當機感（Edward 2026-07-09 二次拍板）。
             async def _do_greet():
                 try:
+                    # 話量隨熟識度（Edward 2026-07-10「一開始話太多了」）：越熟越像老朋友、一句就好；
+                    # 不論哪級都硬上限：最多兩句、不連環問、不長篇自我介紹。
+                    if fam >= 3:
+                        _len_rule = "你們已經聊過很多次、很熟了：一句自然的招呼就好（10 個字左右），像老朋友拿起電話那樣隨口，不要自我介紹、不要問超過一個問題。"
+                    elif fam >= 1:
+                        _len_rule = "你們聊過幾次了：一到兩句簡短招呼就好，不要重新自我介紹、不要一次問好幾個問題。"
+                    else:
+                        _len_rule = "這是第一次通話：用一句話說你是誰、再用一句話問候，總共最多兩句、40 個字以內，不要長篇自我介紹。"
                     greet_cue = (
                         "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
-                        "請你「立刻、主動」用一句溫暖、簡短、口語的話打招呼開場，"
-                        "像老朋友接起電話那樣，例如問對方今天過得好不好。不要等對方先開口。）"
+                        "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
                     )
                     await session.send_client_content(
                         turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
