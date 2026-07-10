@@ -201,6 +201,30 @@ class Nening:
         self.pcs = set()
         nening = self   # 閉包用：讓 Feeder._loop 讀得到當前影像連線集合（判斷要不要餵靜音待機）
 
+        # 臉聲同線實驗（Edward 2026-07-11 拍板「先用現有引擎試」）：臉正在演的那段聲音也走同一條
+        # WebRTC 線送回（audio track）、由協定原生對齊——零件移植自先鋒的 flashhead_modal_dev.py
+        class AudioOutBuffer:
+            def __init__(self, sample_rate):
+                self.sample_rate = sample_rate
+                self.frame_samples = int(sample_rate * 0.02)
+                self.lock = threading.Lock()
+                self.buf = np.zeros(0, dtype=np.int16)
+            def push(self, pcm_int16):
+                with self.lock:
+                    self.buf = np.concatenate([self.buf, pcm_int16])
+            def clear(self):
+                with self.lock:
+                    self.buf = np.zeros(0, dtype=np.int16)
+            def pop_frame(self):
+                with self.lock:
+                    if len(self.buf) >= self.frame_samples:
+                        chunk = self.buf[:self.frame_samples]
+                        self.buf = self.buf[self.frame_samples:]
+                        return chunk
+                    return np.zeros(self.frame_samples, dtype=np.int16)
+
+        self.audio_out = AudioOutBuffer(SR_ENG)
+
         sdk, sink = self.sdk, self.sink
 
         class Feeder:
@@ -236,6 +260,7 @@ class Nening:
                     self.pos = 0
                     self.t0 = None
                 sink.clear()
+                nening.audio_out.clear()   # 同線聲音也一起清（插話＝臉聲同步停）
                 print("[feeder] reset(插話)", flush=True)
             def _loop(self):
                 prefix = CHUNKSIZE[0] * 640
@@ -258,6 +283,10 @@ class Nening:
                             self._idle_on = False
                             sink.clear()   # 從待機切回真話：清掉待機積壓的影格，真嘴立刻插到最前面、不排在待機後面（Edward 2026-07-10 延遲修）
                             print("[feeder] 真聲音到了 → 停餵靜音、清待機積壓、接回真句", flush=True)
+                        # 臉聲同線：這塊視窗的「新聲音段」（中段 5 格、扣掉前後文重疊）同步入同線聲音緩衝——
+                        # 跟影格同刻出廠、同一條線送、由協定對齊
+                        _new = todo[CHUNKSIZE[0] * 640: (CHUNKSIZE[0] + CHUNKSIZE[1]) * 640]
+                        nening.audio_out.push(np.clip(_new * 32767.0, -32768, 32767).astype(np.int16))
                         with nening.char_lock:            # 跟換角色互斥：換臉到一半不塞影格（防 setup/run_chunk 對撞把引擎撞壞）
                             sdk.run_chunk(todo, CHUNKSIZE)
                         continue
@@ -319,8 +348,10 @@ class Nening:
     @modal.asgi_app()
     def web(self):
         import time
-        from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
-        from av import VideoFrame
+        import asyncio
+        from fractions import Fraction
+        from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription, VideoStreamTrack, MediaStreamTrack
+        from av import VideoFrame, AudioFrame
         from fastapi import FastAPI, WebSocket, WebSocketDisconnect
         from fastapi.middleware.cors import CORSMiddleware
 
@@ -374,6 +405,31 @@ class Nening:
                 vf.time_base = tb
                 return vf
 
+        class NeningAudioTrack(MediaStreamTrack):
+            # 臉聲同線（Edward 7/11 拍板現有引擎先試）：跟 NeningTrack 共用同一條 WebRTC——
+            # 瀏覽器/手機原生對嘴（視訊通話本來就這樣做）。零件移植自先鋒 flashhead_modal_dev.py。
+            kind = "audio"
+            def __init__(self):
+                super().__init__()
+                self._next_pts = 0
+                self._started = None
+            async def recv(self):
+                sr = outer.audio_out.sample_rate
+                if self._started is None:
+                    self._started = time.time()
+                target_t = self._started + self._next_pts / sr
+                now = time.time()
+                if target_t > now:
+                    await asyncio.sleep(target_t - now)
+                chunk = outer.audio_out.pop_frame()
+                frame = AudioFrame(format="s16", layout="mono", samples=len(chunk))
+                frame.sample_rate = sr
+                frame.pts = self._next_pts
+                frame.time_base = Fraction(1, sr)
+                frame.planes[0].update(chunk.astype("<i2").tobytes())
+                self._next_pts += len(chunk)
+                return frame
+
         @api.get("/health")
         def health(key: str = ""):
             if not _pass(key):
@@ -398,6 +454,7 @@ class Nening:
                     print(f"[offer] pc {pc.connectionState}、移出影像連線集合（剩 {len(outer.pcs)}）", flush=True)
 
             pc.addTrack(NeningTrack())
+            pc.addTrack(NeningAudioTrack())   # 臉聲同線：聲音軌與影像軌同一條線、協定原生對齊
             await pc.setRemoteDescription(RTCSessionDescription(sdp=payload["sdp"], type=payload["type"]))
             ans = await pc.createAnswer()
             await pc.setLocalDescription(ans)
