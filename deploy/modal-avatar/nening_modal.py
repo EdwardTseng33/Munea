@@ -5,6 +5,9 @@
 本檔＝完整通話服務上雲：WebRTC 影像 ＋ /audio 聲音接口 ＋ /health 預醒探針。
 沿用 RunPod 排雷全集（版本釘死、cuDNN8 獨立、numpy2 修正、進料節流、位元率調升）。
 
+7/10 加：通話中沉默時的待機動態——不是 CSS 假漂浮、不是待機影片輪播，是 Ditto 引擎
+自己餵靜音生「嘴閉＋微呼吸/眨眼」的活格（方案 A · Edward 拍板）。見 Feeder._loop 的 idle 分支。
+
 用法：
   modal deploy -m nening_modal          # 蓋映像＋上線（網址見輸出）
   modal run -m nening_modal::seed_models# 首次：模型進雲端櫃
@@ -184,6 +187,7 @@ class Nening:
         self._load_poster = _load_poster
         self.poster = _load_poster(CHAR_SRC[self.char])
         self.pcs = set()
+        nening = self   # 閉包用：讓 Feeder._loop 讀得到當前影像連線集合（判斷要不要餵靜音待機）
 
         sdk, sink = self.sdk, self.sink
 
@@ -196,6 +200,9 @@ class Nening:
                 self.pos = 0
                 self.t0 = None
                 self.last_in = 0.0
+                self._silence = np.zeros(SPLIT, dtype=np.float32)   # 待機餵料：跟真聲音同款 SPLIT 長度靜音塊
+                self._idle_due = 0.0
+                self._idle_on = False
                 threading.Thread(target=self._loop, daemon=True).start()
             def push24k(self, pcm_bytes):
                 x = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
@@ -235,7 +242,21 @@ class Nening:
                                     self.pos -= cut
                                     self.t0 += cut / SR_ENG
                     if todo is not None:
+                        if self._idle_on:
+                            self._idle_on = False
+                            print("[feeder] 真聲音到了 → 停餵靜音、接回真句", flush=True)
                         sdk.run_chunk(todo, CHUNKSIZE)
+                        continue
+                    # 沒有真聲音要處理：通話還開著（至少一條影像連線未關）就餵靜音維持「活的待機」——
+                    # 嘴閉、讓 Ditto 自己產生呼吸/眨眼的自然微動；沒人接通＝不餵、容器照常睡（Edward 2026-07-10 方案 A）
+                    now = time.time()
+                    has_conn = any(pc.connectionState != "closed" for pc in nening.pcs)
+                    if has_conn and now >= self._idle_due:
+                        if not self._idle_on:
+                            self._idle_on = True
+                            print("[feeder] 沒真聲音、通話仍在線 → 開始餵靜音待機動態", flush=True)
+                        sdk.run_chunk(self._silence, CHUNKSIZE)
+                        self._idle_due = now + HOP / SR_ENG
                     else:
                         time.sleep(0.01)
 
@@ -329,6 +350,13 @@ class Nening:
             pc = RTCPeerConnection(RTCConfiguration(
                 iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")]))
             outer.pcs.add(pc)
+
+            @pc.on("connectionstatechange")
+            async def _on_conn_state_change():
+                if pc.connectionState in ("closed", "failed"):
+                    outer.pcs.discard(pc)
+                    print(f"[offer] pc {pc.connectionState}、移出影像連線集合（剩 {len(outer.pcs)}）", flush=True)
+
             pc.addTrack(NeningTrack())
             await pc.setRemoteDescription(RTCSessionDescription(sdp=payload["sdp"], type=payload["type"]))
             ans = await pc.createAnswer()
