@@ -624,10 +624,12 @@ def family_state_response(data):
         write_json_file(FAMILY_STATE_STORE_PATH, allstate)
         return {"ok": True, "key": key, "backend": "json"}
     merged = {}
+    backend_name = "json"
     if use_supabase:
         try:
             remote_state = data_backend().load_family_state_store(family_group_id=group_uuid)
             if remote_state is not None:
+                backend_name = "supabase"
                 merged.update({k: v.get("value") for k, v in remote_state.items() if isinstance(v, dict)})
         except Exception as e:
             if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
@@ -637,7 +639,7 @@ def family_state_response(data):
     for k, v in (allstate.get(group) or {}).items():
         if isinstance(v, dict):
             merged[k] = v.get("value")
-    return {"ok": True, "state": merged}
+    return {"ok": True, "state": merged, "backend": backend_name}
 
 FAMILY_INVITATION_STATUSES = {"pending", "accepted", "revoked", "expired"}
 
@@ -773,8 +775,8 @@ def family_invitations_response(data):
             local_raw = read_json_file(FAMILY_INVITATIONS_PATH, [])
             if isinstance(local_raw, list):
                 candidates.extend(public_family_invitation(inv) for inv in local_raw)   # 雲端桌子＋引擎本子都翻
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception("load local family invitations", e)
         match = None
         for inv in candidates:
             if inv.get("shortCode") == short_code and inv.get("status") == "pending":
@@ -785,8 +787,8 @@ def family_invitations_response(data):
             exp = str(match.get("expiresAt") or "").replace("Z", "+00:00")
             if exp and datetime.fromisoformat(exp) < datetime.now(timezone.utc):
                 return {"ok": False, "error": "invitation_expired"}
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception("parse family invitation expiry", e)
         # 人數上限（邀請單建立時記下邀請方方案的上限）：圈滿了就不給進
         try:
             max_members = int(((match.get("metadata") or {}).get("maxMembers")) or 0)
@@ -795,8 +797,8 @@ def family_invitations_response(data):
                 circle = circle_state.get("circle")
                 if isinstance(circle, list) and len(circle) >= max_members:
                     return {"ok": False, "error": "circle_full"}
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception("check family invitation member limit", e)
         patch = {
             "status": "accepted",
             "acceptedAt": utc_now(),

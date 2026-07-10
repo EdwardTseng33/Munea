@@ -919,11 +919,13 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
+test_group_id = "11111111-1111-4111-8111-111111111111"
+
 class FakeFamilyStateBackend:
     def enabled(self):
         return True
     def load_family_state_store(self, family_group_id=None):
-        assert family_group_id in (None, "family-1")
+        assert family_group_id == test_group_id
         return {
             "familyFeed": {"value": [{"id": "feed-1", "text": "Cloud feed"}], "updatedAt": "2026-07-07T00:00:00Z"},
             "meds": {"value": [{"name": "Vitamin D"}], "updatedAt": "2026-07-07T00:00:00Z"},
@@ -931,18 +933,18 @@ class FakeFamilyStateBackend:
     def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
         assert key == "wallet"
         assert value["points"] == 12
-        assert family_group_id == "family-1"
+        assert family_group_id == test_group_id
         assert updated_by_person_id == "person-1"
         return {"key": key, "value": value, "updatedAt": "2026-07-07T00:00:00Z"}
 
 original_backend = server.data_backend
 try:
     server.data_backend = lambda: FakeFamilyStateBackend()
-    loaded = server.family_state_response({"action": "load", "familyGroupId": "family-1"})
+    loaded = server.family_state_response({"action": "load", "familyGroupId": test_group_id})
     assert loaded["ok"] is True
     assert loaded["backend"] == "supabase"
     assert loaded["state"]["familyFeed"][0]["text"] == "Cloud feed"
-    saved = server.family_state_response({"action": "save", "key": "wallet", "value": {"points": 12}, "familyGroupId": "family-1", "personId": "person-1"})
+    saved = server.family_state_response({"action": "save", "key": "wallet", "value": {"points": 12}, "familyGroupId": test_group_id, "personId": "person-1"})
     assert saved["ok"] is True
     assert saved["backend"] == "supabase"
 finally:
@@ -2800,6 +2802,9 @@ required_js = [
     "/admin/safety-events",
     "/admin/audit-events",
     "localStorage.setItem(ADMIN_BASE_KEY",
+    "Promise.allSettled",
+    "renderEndpointErrors",
+    "Partial:",
 ]
 missing_js = [token for token in required_js if token not in js]
 if missing_js:
@@ -2816,7 +2821,7 @@ for forbidden in [
         raise SystemExit("Admin console must not embed secret token marker: " + forbidden)
 if "localStorage.setItem(\"adminToken\"" in js or "localStorage.setItem('adminToken'" in js:
     raise SystemExit("Admin console must not persist admin token in localStorage")
-for token in ["metric-grid", "admin-grid", "status-pill", "@media"]:
+for token in ["metric-grid", "admin-grid", "status-pill", "status-pill.warn", "error-item", "@media"]:
     if token not in css:
         raise SystemExit("Admin console CSS missing responsive token: " + token)
 for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "/admin.html", "/admin/accounts", "/admin/feedback"]:
@@ -3044,16 +3049,19 @@ html = Path("web/index.html").read_text(encoding="utf-8")
 js = Path("web/src/app.js").read_text(encoding="utf-8")
 ids = set(re.findall(r'id="([^"]+)"', html))
 raw_refs = set(re.findall(r"#([A-Za-z_][\w-]*)", js))
-refs = {r for r in raw_refs if not re.fullmatch(r"[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?(?:[0-9A-Fa-f]{2})?", r)}
+refs = {r for r in raw_refs if r.isascii() and not re.fullmatch(r"[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?(?:[0-9A-Fa-f]{2})?", r)}
 allowed = {
     "chat",
     "connect",
+    "famDots",
     "greetKicker",
     "historyEntry",
     "med",
     "medCountLabel",
     "medEntryStatus",
     "medTileBtn",
+    "moodTrendBtn",
+    "npsRow",
     "pillDots",
     "price",
     "reportBtn",

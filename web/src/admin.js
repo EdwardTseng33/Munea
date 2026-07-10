@@ -12,6 +12,15 @@
     safety: { path: "/admin/safety-events", body: { days: 30, limit: 10 } },
     audit: { path: "/admin/audit-events", body: { limit: 12 } },
   };
+  const PANEL_BY_ENDPOINT = {
+    accounts: "accountsPanel",
+    credits: "creditsPanel",
+    summaries: "summariesPanel",
+    privacy: "privacyPanel",
+    feedback: "feedbackPanel",
+    safety: "safetyPanel",
+    audit: "auditPanel",
+  };
 
   const $ = (id) => document.getElementById(id);
 
@@ -109,20 +118,38 @@
       body: { ...ENDPOINTS.accounts.body, query: accountQuery },
     };
 
-    try {
-      const entries = await Promise.all(
-        Object.entries(requests).map(async ([key, config]) => {
-          const payload = await postAdmin(baseUrl, token, config.path, config.body);
-          return [key, payload];
-        })
-      );
-      const data = Object.fromEntries(entries);
-      renderAll(data);
-      setRaw(data);
+    const requestEntries = Object.entries(requests);
+    const results = await Promise.allSettled(
+      requestEntries.map(async ([key, config]) => ({
+        key,
+        payload: await postAdmin(baseUrl, token, config.path, config.body),
+      }))
+    );
+    const data = {};
+    const errors = {};
+
+    results.forEach((result, index) => {
+      const key = requestEntries[index][0];
+      if (result.status === "fulfilled") {
+        data[key] = result.value.payload;
+      } else {
+        errors[key] = result.reason && result.reason.message
+          ? result.reason.message
+          : `${ENDPOINTS[key].path}: request_failed`;
+      }
+    });
+
+    renderAll(data);
+    renderEndpointErrors(errors);
+    setRaw({ data, errors });
+
+    const failedCount = Object.keys(errors).length;
+    if (failedCount === 0) {
       setStatus("Connected", "ok");
-    } catch (error) {
-      setStatus(error.message || "Request failed", "error");
-      setRaw({ ok: false, error: error.message });
+    } else if (failedCount === requestEntries.length) {
+      setStatus("Connection failed", "error");
+    } else {
+      setStatus(`Partial: ${failedCount} unavailable`, "warn");
     }
   }
 
@@ -135,6 +162,19 @@
     renderFeedback(data.feedback);
     renderAudit(data.audit);
     renderSummaries(data.summaries);
+  }
+
+  function renderEndpointErrors(errors) {
+    Object.entries(errors).forEach(([key, message]) => {
+      const panelId = PANEL_BY_ENDPOINT[key];
+      if (!panelId) return;
+      $(panelId).innerHTML = `
+        <div class="item error-item">
+          <strong>Temporarily unavailable</strong>
+          <div class="meta">${escapeHtml(message)}</div>
+        </div>
+      `;
+    });
   }
 
   function renderMetrics(data) {
