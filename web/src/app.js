@@ -1035,6 +1035,9 @@ const Avatar = {
         // 自架可靠中繼站（GCP coturn · 34.81.102.52 · 2026-07-10 Edward 選 B、已實測能轉接）——手機行動網路優先走這台、穩
         { urls: ['turn:34.81.102.52:3478?transport=udp', 'turn:34.81.102.52:3478?transport=tcp'],
           username: 'muneaturn', credential: 'munea-turn-a7k2q' },
+        // 443 偽裝門（2026-07-11 治「第一通線路 failed」）：走大家都不擋的 443 端口——雲端側開門後生效、開之前這兩條只是白試一下無害
+        { urls: ['turn:34.81.102.52:443?transport=tcp', 'turn:34.81.102.52:443?transport=udp'],
+          username: 'muneaturn', credential: 'munea-turn-a7k2q' },
         // 免費公用中繼＝備援（自架的萬一掛了還有得用）
         { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
           username: 'openrelayproject', credential: 'openrelayproject' },
@@ -1045,7 +1048,26 @@ const Avatar = {
       this._diag('連線中（中繼' + (forceRelay ? '·強制' : '·備援') + '）');
       this.pc.addTransceiver('video', { direction: 'recvonly' });
       this.pc.ontrack = e => { vid.srcObject = e.streams[0]; this._diag('影像到了'); };
-      this.pc.addEventListener('iceconnectionstatechange', () => this._diag('線路 ' + this.pc.iceConnectionState));
+      this.pc.addEventListener('iceconnectionstatechange', () => {
+        this._diag('線路 ' + this.pc.iceConnectionState);
+        // 第一通線路 failed 自救（Edward 2026-07-11）：臉連線失敗＝自動重連一次（等於幫用戶掛掉重撥）——他實測第二通總是成功
+        if (this.pc.iceConnectionState === 'failed' && this.on && Date.now() - (Avatar._lastRetry || 0) > 20000) {
+          Avatar._lastRetry = Date.now();
+          this._diag('線路失敗 → 自動重連一次');
+          try { this.stop(); } catch (e2) {}
+          setTimeout(() => {
+            if (typeof callConnected !== 'undefined' && !callConnected && !callDialing) return;   // 已掛斷就不重連
+            Avatar.start().then(ok => {
+              if (!ok) return;
+              try {   // 通話已開場的情況下臉遲到加入：補亮會動的臉那層（開場那步早跑過、這裡要自己補）
+                const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid');
+                FaceIdle.stop();
+                if (serverFaceAudioOn()) { const au = getAvatarUrl(); if (au) LiveVoice.setFaceAudio(true, au); }
+              } catch (e3) {}
+            });
+          }, 800);
+        }
+      });
       const o = await this.pc.createOffer(); await this.pc.setLocalDescription(o);
       await new Promise(res => {  // 等收集完連線候選再送（demo-live 同款）
         if (this.pc.iceGatheringState === 'complete') return res();
