@@ -95,6 +95,12 @@
   4. 插話 interrupted：照舊 Avatar.reset()（引擎端會同步清同線聲音緩衝、已做好）
 - **真機驗收法**：手機 localStorage 設 `munea.faceSameLine=1` ＋ `munea.avatarUrl=https://edwardt0303--munea-nening-avatar-dev-nening-web.modal.run` → Edward 一通電話看「嘴聲貼不貼、講久歪不歪」。FlashHead 同法（另需 512 貼回合成層、規格見 02:35 段）。
 - 兩顆引擎共用這套收聲功能——做一次、兩邊都吃。
+## 2026-07-11 03:15 Edward 拍板（終局）：果斷換模型 → FlashHead 全面轉正
+
+- **決策**：Ditto 同線版真機測試仍延遲 → Ditto 全面退役程序啟動（正式臉暫留當過渡備援、FlashHead 轉正日下線省成本）。**FlashHead＝唯一主線**（它是唯一在 Edward 手機上通過同步測試的方案）。
+- **量產順序（Edward 定、不變）**：①擬真女（avatar-candidates-9x16-final）把 Realtime Voice+Avatar 整條跑通到「可正式上線品質」②完全沒問題後同法輪其他三位。素材唯一來源鐵律不變。
+- **分工**：先鋒＝FlashHead 引擎優化＋擬真女 512 底圖（B 版裁切規格在你手上）；Windows 蘇菲＝App 端同線收聲＋512 貼回合成（指向 FlashHead）＋正式環境搭建計畫書（Edward 要求比照正式環境整理）＋驗收量測儀；Mac＝App 打包出版線。
+- **過關線（唯一標準）**：Edward 手機實測「嘴聲貼合、講久不歪、體感無明顯延遲」＝可上線品質。
 ## 常用開工流程
 
 1. 先同步最新版：`git pull --rebase`。
