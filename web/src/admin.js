@@ -547,7 +547,7 @@
   // ══════════ 連線 / 真資料 ══════════
   function initialBaseUrl(){ const s=localStorage.getItem(ADMIN_BASE_KEY); if(s) return s; if(location.protocol.startsWith("http")) return location.origin; return DEFAULT_LOCAL_API; }
   function envLabelFor(u){ if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
-  function setStatus(t,k){ $("statusPill").textContent=t; $("statusPill").className="status-pill"+(k?" "+k:""); $("envRole").textContent = state.connected? "已連線 · "+envLabelFor(localStorage.getItem(ADMIN_BASE_KEY)||"") : (t==="示範模式"?"示範模式":"尚未連線"); }
+  function setStatus(t,k){ const r=$("envRole"); if(r) r.textContent = state.connected? "已連線 · "+envLabelFor(localStorage.getItem(ADMIN_BASE_KEY)||"") : "尚未連線"; }
 
   async function postAdmin(base, token, path, body){
     const res = await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json; charset=utf-8","X-Munea-Admin-Token":token},body:JSON.stringify(body||{})});
@@ -627,7 +627,7 @@
     document.querySelectorAll("#sideNav a").forEach((a)=>a.classList.toggle("on",a.dataset.page===state.page));
   }
 
-  function updateBanner(){ $("connectBanner").hidden = state.connected || state.page==="settings"; }
+  function updateBanner(){ /* 示範橫幅已移除（正式串接） */ }
 
   function go(id){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id; }
 
@@ -665,10 +665,8 @@
   function init(){
     if(window.MuneaVersion){} // 版本供未來顯示
     renderSide();
-    $("refreshBtn").addEventListener("click",()=>{ if(state.connected) connect(); else renderPage(state.page); });
-    $("gotoSettings").addEventListener("click",()=>go("settings"));
     window.addEventListener("hashchange",show);
-    setStatus("示範模式","warn");
+    setStatus();
     show();
     // 記住通行碼就自動連
     const st=localStorage.getItem(ADMIN_TOKEN_KEY);
