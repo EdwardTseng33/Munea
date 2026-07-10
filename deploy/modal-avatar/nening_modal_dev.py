@@ -360,7 +360,7 @@ class Nening:
                     _p = (_fd.pos / SR_ENG) if _fd else 0.0
                     _r = (len(_fd.acc) / SR_ENG) if _fd else 0.0
                     _stamp = time.strftime("%H:%M:%S", _tw) + ".%03d  P%.1f/R%.1f q%d" % (int((now % 1) * 1000), _p, _r, len(outer.sink.q))
-                    _y = int(img.shape[0] * 0.62)   # 右側中下：避開 App 自己的量測小窗(左下)與按鈕列(下方)
+                    _y = int(img.shape[0] * 0.08)   # 頂端：避開 App 量測器盯嘴巴的區域(高度55-85%)——烙印落在那會害它誤判嘴一直在動
                     _x = max(10, img.shape[1] - 560)
                     _cv.putText(img, _stamp, (_x, _y), _cv.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 5)
                     _cv.putText(img, _stamp, (_x, _y), _cv.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
