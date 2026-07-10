@@ -31,6 +31,8 @@
 
 | 誰 | 在做什麼 | 預計動到哪些檔 | 開始時間 | 狀態 |
 |---|---|---|---|---|
+| Claude / 城堡（Windows 蘇菲） | **家庭圈「邀請審核制」**：引擎五段（apply / list_pending / approve / reject / application_status）**已完成＋推上 GitHub**（commit a662982、8823202）。輸碼流程改「申請中→owner 審核→通過才進圈」＋按通過時記 `auth↔person↔family` 歸屬（解資安 BOLA 地基）。**下一步要動 `web/src/app.js` 家人頁做審核 UI（「?」申請頭像＋審核卡＋通過/拒絕）＋家庭圈命名（owner 取名顯示在「○○家庭活動/狀態」）＋加入流程改申請制。** 計畫書：`docs/家庭圈邀請審核制-計畫書-2026-07-11.md`。 | `web/src/app.js`（家人頁邀請/圈子區 ~3130-3260）、`web/index.html`（審核卡＋命名彈窗）、`engine/server.py`（✅已推） | 2026-07-11 02:00 | ⏸ **等 Codex 讓出 app.js**（見你在密集改 v1.20.x 語音臉、避免撞車；你告一段落推完後我從乾淨版接手） |
+| ⚠️ 給 Codex（部署前必看） | **邀請審核制引擎（commit a662982/8823202）先別部署到雲端**——它讓「輸碼不再直接進圈、改申請制」，但**現行 App 還是輸碼即進圈**，單推引擎會弄壞現有邀請。要**等我把 App 審核 UI 做好、引擎＋App 一起上**。你的 v1.20.x 部署不受影響（沒動 family invitations）。 | — | 2026-07-11 02:00 | 🔴 部署前必看 |
 | Claude / 城堡 | ✅ 記憶 100%＋感知 ~95%＋**心情圖譜 v2 已入引擎**（六類：開心/愉快/平穩/疲累/低落/煩躁；每聊一筆、日總結 mixed 小點、點日展開明細、moodMap 色回傳 App）→ ✅ 家人帳號連動設計＋UIUX 重設計定案（munea.net 錨）＋遊戲系統設計落檔 → **下一步：App 全面換裝實作（web/ 由城堡認領）＋家人帳號 P0（等 Codex 對齊 007 欄位）** | `engine/perception_engine.py`（MOOD_CATEGORIES/_MOOD_SYS 六類）、`engine/server.py`（wellbeing_trend 六類/mixed/signals）；**將動 `web/`（index/styles 全面換裝、照 UIUX 定案）** | 2026-07-02 | 🔄 進行中 |
 | Codex | Release check 一鍵化：把靜態 smoke、正式權限門、Supabase doctor 包成推版前一鍵檢查 | `scripts/release-check.ps1`、`package.json`、`docs/PRODUCTION-INFRA-READINESS-2026-07-02.md`、`STATUS.md` | 2026-07-02 | ✅ 完成 |
 
