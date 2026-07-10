@@ -32,6 +32,24 @@
   const TITLE = {};
   NAV.forEach((g) => g.items.forEach((it) => { CRUMB[it.id] = g.group; TITLE[it.id] = it.label; }));
 
+  // ══════════ 線條圖標（stroke SVG，對齊 App 設計語言） ══════════
+  const ICON_PATHS = {
+    overview: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    growth: '<path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M17 3.13a4 4 0 0 1 0 7.75"/>',
+    safety: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    reminders: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+    mood: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/>',
+    subscription: '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
+    usage: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/>',
+    characters: '<path d="M12 3l1.6 4.8L18 9l-4.4 1.2L12 15l-1.6-4.8L6 9l4.4-1.2z"/><path d="M18 15l.7 2.1L21 18l-2.3.9L18 21l-.7-2.1L15 18l2.3-.9z"/>',
+    support: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
+    system: '<rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="13" width="20" height="8" rx="2"/><path d="M6 7h.01M6 17h.01"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  };
+  function icon(id, cls){ return `<svg class="${cls||"nav-ico"}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[id]||""}</svg>`; }
+
   // ══════════ 狀態 ══════════
   const ADMIN_BASE_KEY = "munea.admin.apiBaseUrl";
   const ADMIN_TOKEN_KEY = "munea.admin.token";
@@ -384,10 +402,17 @@
 
     else if (id === "users") {
       html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
-      const tabs = ["全部","活躍中","低度使用","守護中","免費","Plus","Pro"];
-      html += card("用戶與家庭圈名冊", `顯示 ${P.roster.length} 筆`, tableHTML(
-        ["用戶","家庭圈","方案","常用夥伴","本月通話","狀態","最後互動"],
-        P.roster.map((r)=>[r[0],r[1],planPill(r[2]),r[3],`<span class="num">${r[4]}</span>`,statusPill(r[5]),r[6]]),
+      const tabsDef = ["全部","活躍中","低度使用","守護中","免費","Plus","Pro"];
+      const active = state.tabs.users || "全部";
+      const rows = P.roster.filter((r)=> active==="全部" ? true : (["免費","Plus","Pro"].includes(active) ? r[2]===active : r[5]===active));
+      const tabsHTML = `<div class="tabs" data-tabs="users">${tabsDef.map((t)=>{
+        const cnt = t==="全部" ? P.roster.length : P.roster.filter((r)=>["免費","Plus","Pro"].includes(t)?r[2]===t:r[5]===t).length;
+        return `<button class="${t===active?"on":""}" data-tab="${esc(t)}">${esc(t)}<span class="n">${cnt}</span></button>`;
+      }).join("")}</div>`;
+      const head = `<div class="rowflex">${tabsHTML}<input class="tbl-search" id="userSearch" type="search" placeholder="搜尋名字或家庭"></div>`;
+      html += card("用戶與家庭圈名冊", `顯示 ${rows.length} 筆`, head + tableHTML(
+        ["用戶","家庭圈","方案","常用夥伴","本月通話","狀態","最後互動",""],
+        rows.map((r,i)=>[esc(r[0]),esc(r[1]),planPill(r[2]),esc(r[3]),`<span class="num">${esc(r[4])}</span>`,statusPill(r[5]),esc(r[6]),`<button class="btn-ghost btn-sm" data-user="${esc(r[0])}">查看</button>`]),
       ), badge());
     }
 
@@ -535,6 +560,22 @@
   function planPill(p){ const c=p==="Pro"?"ok":p==="Plus"?"ok":"mute"; return `<span class="pill ${c}">${esc(p)}</span>`; }
   function statusPill(s){ const c=s==="守護中"?"bad":s==="低度使用"?"warn":"ok"; return `<span class="pill ${c}">${esc(s)}</span>`; }
 
+  // 用戶明細（點名冊「查看」開）
+  function openUserDetail(name){
+    const r=(S.users.roster||[]).find((x)=>x[0]===name); if(!r) return;
+    const fields=[["家庭圈",r[1]],["方案",r[2]],["常用陪伴角色",r[3]],["本月通話",r[4]],["目前狀態",r[5]],["最後互動",r[6]]];
+    const body=`
+      <div class="modal-head"><div><div class="modal-title">${esc(r[0])}</div><div class="muted small">${esc(r[1])} · ${esc(r[2])}</div></div><button class="modal-x" data-close type="button">✕</button></div>
+      <div class="detail-grid">${fields.map((f)=>`<div class="dcell"><div class="dlabel">${esc(f[0])}</div><div class="dval">${esc(f[1])}</div></div>`).join("")}</div>
+      <div class="kpi-sub" style="margin-top:14px">${state.connected?"這是真實用戶資料。":"目前為示範資料——正式連線後這裡是真實用戶的家庭圈、通話與健康摘要。"}為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>`;
+    let m=$("userModal");
+    if(!m){ m=document.createElement("div"); m.id="userModal"; m.className="modal-overlay"; document.body.appendChild(m); }
+    m.innerHTML=`<div class="modal-card">${body}</div>`;
+    m.hidden=false;
+    m.querySelectorAll("[data-close]").forEach((b)=>b.addEventListener("click",()=>{ m.hidden=true; }));
+    m.addEventListener("click",(e)=>{ if(e.target===m) m.hidden=true; });
+  }
+
   // ══════════ 連線設定頁 ══════════
   function settingsHTML() {
     const a = loadAssume();
@@ -652,7 +693,7 @@
     const badges={ safety:S.safety.kpi[0].value, support:S.support.kpi[0].value, system:"2" };
     $("sideNav").innerHTML = NAV.map((g)=>`<div class="nav-group"><div class="nav-group-label">${esc(g.group)}</div><div class="side-nav">${g.items.map((it)=>{
       const b= it.badge? `<span class="nav-badge">${esc(badges[it.badge]||"")}</span>`:"";
-      return `<a href="#${it.id}" data-page="${it.id}"><span class="nav-ico">${it.ico}</span>${esc(it.label)}${b}</a>`;
+      return `<a href="#${it.id}" data-page="${it.id}">${icon(it.id)}<span class="nav-label">${esc(it.label)}</span>${b}</a>`;
     }).join("")}</div></div>`).join("");
     document.querySelectorAll("#sideNav a").forEach((a)=>a.classList.toggle("on",a.dataset.page===state.page));
   }
@@ -674,6 +715,18 @@
   function bindPageEvents(id){
     // hero CTA
     $("pageRoot").querySelectorAll("[data-goto]").forEach((b)=>b.addEventListener("click",()=>go(b.dataset.goto)));
+    // 篩選頁籤
+    $("pageRoot").querySelectorAll("[data-tabs]").forEach((grp)=>grp.addEventListener("click",(e)=>{
+      const b=e.target.closest("[data-tab]"); if(!b) return;
+      state.tabs[grp.dataset.tabs]=b.dataset.tab; renderPage(state.page);
+    }));
+    // 查看用戶明細
+    $("pageRoot").querySelectorAll("[data-user]").forEach((b)=>b.addEventListener("click",()=>openUserDetail(b.dataset.user)));
+    // 名冊搜尋
+    const us=$("userSearch"); if(us) us.addEventListener("input",()=>{
+      const q=us.value.trim();
+      $("pageRoot").querySelectorAll("table tbody tr").forEach((tr)=>{ tr.style.display = (!q || tr.innerText.indexOf(q)>-1) ? "" : "none"; });
+    });
     if(id==="settings"){
       const base=initialBaseUrl();
       if($("apiBaseUrl")) $("apiBaseUrl").value=base;
