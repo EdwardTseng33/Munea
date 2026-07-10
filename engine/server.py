@@ -666,7 +666,7 @@ def family_state_response(data):
             merged[k] = v.get("value")
     return {"ok": True, "state": merged, "backend": backend_name}
 
-FAMILY_INVITATION_STATUSES = {"pending", "accepted", "revoked", "expired"}
+FAMILY_INVITATION_STATUSES = {"pending", "applied", "accepted", "rejected", "revoked", "expired"}
 
 def normalize_family_invitation(invitation):
     invitation = invitation or {}
@@ -783,17 +783,25 @@ def update_family_invitation(invitation_id, patch):
     return (public_family_invitation(updated), "json") if updated else (None, "not_found")
 
 
+def _mask_email(email):
+    email = str(email or "").strip()
+    if "@" not in email:
+        return None
+    name, dom = email.split("@", 1)
+    return ((name[0] + "***") if name else "***") + "@" + dom
+
+
 def family_invitations_response(data, client_ip=None):
     data = data or {}
     action = data.get("action") or "list"
     if action == "create":
         invitation, backend = create_family_invitation(data.get("invitation") or data)
         return {"ok": True, "invitation": invitation, "backend": backend}
-    if action == "accept":
-        # 防爆破（P0-3）：同來源猜錯太多次就暫時擋
+    if action in ("accept", "apply"):
+        # 審核制（2026-07-11 Edward）：輸入邀請碼 → 變「申請中」、不直接進圈；要 owner 按通過才加入。
+        # 防爆破（P0-3）：同來源猜錯太多次就暫時擋。
         if invite_rate_limited(client_ip):
             return {"ok": False, "error": "too_many_attempts"}
-        # 用 6 位邀請碼兌換：找到待接受的邀請 → 標記接受 → 回傳（含 familyGroupId，App 端據此入圈）
         raw_code = str(data.get("shortCode") or data.get("short_code") or data.get("code") or "")
         short_code = "".join(ch for ch in raw_code if ch.isdigit())[-6:]
         if len(short_code) != 6:
@@ -819,26 +827,79 @@ def family_invitations_response(data, client_ip=None):
                 return {"ok": False, "error": "invitation_expired"}
         except Exception as e:
             log_fallback_exception("parse family invitation expiry", e)
-        # 人數上限（邀請單建立時記下邀請方方案的上限）：圈滿了就不給進
+        # 存申請人資訊（名字/person/登入身分），標「申請中」等 owner 審。不回 familyGroupId＝進不了圈。
+        applicant = {
+            "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24],
+            "applicantPersonId": data.get("inviteePersonId") or data.get("invitee_person_id"),
+            "applicantAuthUserId": data.get("authUserId") or data.get("auth_user_id"),
+            "applicantLoginProvider": data.get("loginProvider") or data.get("login_provider"),
+            "applicantEmailMasked": _mask_email(data.get("email") or data.get("applicantEmail")),
+            "appliedAt": utc_now(),
+        }
+        invitation, backend = update_family_invitation(match.get("id"), {
+            "status": "applied",
+            "inviteePersonId": applicant["applicantPersonId"],
+            "metadata": {**(match.get("metadata") or {}), **applicant},
+        })
+        if invitation is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "status": "applied", "pendingApproval": True,
+                "invitationId": invitation.get("id"),
+                "message": "已送出申請，等對方確認後就會加入。"}
+    if action in ("list_pending", "list-pending"):
+        # owner 看有誰在申請：回這個圈 status=applied 的邀請＋申請人資訊（最小揭露）
+        family_group_id = data.get("familyGroupId") or data.get("family_group_id")
+        pending = load_family_invitations(family_group_id=family_group_id, status="applied", limit=100)
+        applicants = [{
+            "invitationId": inv.get("id"),
+            "name": (inv.get("metadata") or {}).get("inviteeName") or "（未填名字）",
+            "loginProvider": (inv.get("metadata") or {}).get("applicantLoginProvider"),
+            "emailMasked": (inv.get("metadata") or {}).get("applicantEmailMasked"),
+            "appliedAt": (inv.get("metadata") or {}).get("appliedAt"),
+        } for inv in pending]
+        return {"ok": True, "applicants": applicants, "count": len(applicants)}
+    if action == "approve":
+        # owner 按通過：再驗人數上限 → 標 accepted ＋ 記歸屬（auth↔person↔family，解 BOLA 地基）→ 回 familyGroupId 讓成員進圈
+        invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
+        if not invitation_id:
+            return {"ok": False, "error": "invitation_id_required"}
+        target = None
+        for inv in load_family_invitations(limit=500):
+            if inv.get("id") == invitation_id:
+                target = inv
+        if not target or target.get("status") != "applied":
+            return {"ok": False, "error": "application_not_found"}
         try:
-            max_members = int(((match.get("metadata") or {}).get("maxMembers")) or 0)
+            max_members = int(((target.get("metadata") or {}).get("maxMembers")) or 0)
             if max_members:
-                circle_state = family_state_response({"action": "load", "familyGroupId": match.get("familyGroupId")}).get("state") or {}
+                circle_state = family_state_response({"action": "load", "familyGroupId": target.get("familyGroupId")}).get("state") or {}
                 circle = circle_state.get("circle")
                 if isinstance(circle, list) and len(circle) >= max_members:
                     return {"ok": False, "error": "circle_full"}
         except Exception as e:
-            log_fallback_exception("check family invitation member limit", e)
-        patch = {
+            log_fallback_exception("check circle limit on approve", e)
+        md = target.get("metadata") or {}
+        invitation, backend = update_family_invitation(invitation_id, {
             "status": "accepted",
             "acceptedAt": utc_now(),
-            "inviteePersonId": data.get("inviteePersonId") or data.get("invitee_person_id"),
-            "metadata": {**(match.get("metadata") or {}), "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24]},
-        }
-        invitation, backend = update_family_invitation(match.get("id"), patch)
+            "metadata": {**md, "approvedAt": utc_now(),
+                         "membership": {"authUserId": md.get("applicantAuthUserId"),
+                                        "personId": target.get("inviteePersonId"),
+                                        "familyGroupId": target.get("familyGroupId")}},
+        })
         if invitation is None:
             return {"ok": False, "error": backend}
-        return {"ok": True, "invitation": invitation, "backend": backend}
+        return {"ok": True, "invitation": invitation, "familyGroupId": target.get("familyGroupId"),
+                "member": {"name": md.get("inviteeName"), "personId": target.get("inviteePersonId")}, "backend": backend}
+    if action == "reject":
+        # owner 按不通過：刪這筆申請（碼作廢）
+        invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
+        if not invitation_id:
+            return {"ok": False, "error": "invitation_id_required"}
+        invitation, backend = update_family_invitation(invitation_id, {"status": "rejected", "revokedAt": utc_now()})
+        if invitation is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "status": "rejected", "invitation": invitation, "backend": backend}
     if action == "update":
         invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
         if not invitation_id:
