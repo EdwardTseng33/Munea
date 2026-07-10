@@ -101,6 +101,11 @@
 - **量產順序（Edward 定、不變）**：①擬真女（avatar-candidates-9x16-final）把 Realtime Voice+Avatar 整條跑通到「可正式上線品質」②完全沒問題後同法輪其他三位。素材唯一來源鐵律不變。
 - **分工**：先鋒＝FlashHead 引擎優化＋擬真女 512 底圖（B 版裁切規格在你手上）；Windows 蘇菲＝App 端同線收聲＋512 貼回合成（指向 FlashHead）＋正式環境搭建計畫書（Edward 要求比照正式環境整理）＋驗收量測儀；Mac＝App 打包出版線。
 - **過關線（唯一標準）**：Edward 手機實測「嘴聲貼合、講久不歪、體感無明顯延遲」＝可上線品質。
+## 2026-07-11 03:45 Windows 蘇菲 · App 一鍵切 FlashHead 已入庫（v1.22.0）＋給先鋒的量測數字
+
+- **App 端完成**：`munea.faceEngine='flashhead'` 一個開關＝連 FlashHead dev＋同線收聲自動開＋512 方形完整顯示；不帶 char（等擬真女底圖）；ditto 模式零改變。**Mac 下次出版帶上即可真機測新模型。**
+- **端到端實測（Windows→FlashHead dev、大坨倒 6s 真語音）**：video+audio 兩軌同線到達 ✓、聲音包 639/影格 322 ✓；**嘴比聲音早 1.23s**（聲音軌起聲 5.45s、嘴動 4.22s）→ 先鋒優化時的對齊基準數字，工具在 scratchpad/sameline_fh_test.py 可重跑。
+- 提醒：擬真女 512 底圖（avatar-candidates-9x16-final、B 版裁切規格）入 CHAR_SRC 後喊一聲，App 端就把 char 帶上＋做貼回全身合成。
 ## 常用開工流程
 
 1. 先同步最新版：`git pull --rebase`。
