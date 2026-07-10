@@ -3,6 +3,7 @@ param(
   [string]$BearerToken = "",
   [string]$AdminToken = "",
   [string]$ProviderToken = "",
+  [string]$AppKey = "",
   [string]$IdentityToken = "",
   [switch]$UseGcloudIdentityToken,
   [switch]$AllowHttp,
@@ -20,6 +21,19 @@ if (-not $BaseUrl) {
 
 if (-not $BaseUrl) {
   throw "Set -BaseUrl or MUNEA_STAGING_API_URL before running staging smoke."
+}
+
+if (-not $AppKey) {
+  $AppKey = $env:MUNEA_STAGING_APP_KEY
+}
+if (-not $AppKey) {
+  $AppKey = $env:MUNEA_APP_KEY
+}
+if (-not $AppKey) {
+  $appKeyPath = Join-Path $root "deploy\.munea-app-key"
+  if (Test-Path -LiteralPath $appKeyPath) {
+    $AppKey = (Get-Content -LiteralPath $appKeyPath -Raw).Trim()
+  }
 }
 
 function Step($name) {
@@ -131,6 +145,9 @@ if ($UseGcloudIdentityToken -and -not $IdentityToken) {
 $identityHeaders = @{}
 if ($IdentityToken) {
   $identityHeaders["X-Serverless-Authorization"] = "Bearer $IdentityToken"
+}
+if ($AppKey) {
+  $identityHeaders["X-Munea-Key"] = $AppKey
 }
 
 $bearerHeaders = @{}

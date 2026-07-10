@@ -1,6 +1,7 @@
 param(
   [string]$BaseUrl = "",
   [string]$AdminToken = "",
+  [string]$AppKey = "",
   [string]$IdentityToken = "",
   [switch]$UseGcloudIdentityToken,
   [switch]$AllowHttp
@@ -24,6 +25,18 @@ if (-not $AdminToken) {
 }
 if (-not $IdentityToken) {
   $IdentityToken = $env:MUNEA_CLOUDRUN_IDENTITY_TOKEN
+}
+if (-not $AppKey) {
+  $AppKey = $env:MUNEA_STAGING_APP_KEY
+}
+if (-not $AppKey) {
+  $AppKey = $env:MUNEA_APP_KEY
+}
+if (-not $AppKey) {
+  $appKeyPath = Join-Path $root "deploy\.munea-app-key"
+  if (Test-Path -LiteralPath $appKeyPath) {
+    $AppKey = (Get-Content -LiteralPath $appKeyPath -Raw).Trim()
+  }
 }
 
 if (-not $BaseUrl) {
@@ -115,6 +128,9 @@ if ($UseGcloudIdentityToken -and -not $IdentityToken) {
 $identityHeaders = @{}
 if ($IdentityToken) {
   $identityHeaders["Authorization"] = "Bearer $IdentityToken"
+}
+if ($AppKey) {
+  $identityHeaders["X-Munea-Key"] = $AppKey
 }
 
 $adminHeaders = @{}

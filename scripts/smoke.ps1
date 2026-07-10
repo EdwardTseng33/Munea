@@ -2824,11 +2824,11 @@ if "localStorage.setItem(\"adminToken\"" in js or "localStorage.setItem('adminTo
 for token in ["metric-grid", "admin-grid", "status-pill", "status-pill.warn", "error-item", "@media"]:
     if token not in css:
         raise SystemExit("Admin console CSS missing responsive token: " + token)
-for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "/admin.html", "/admin/accounts", "/admin/feedback"]:
+for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "MUNEA_STAGING_APP_KEY", "X-Munea-Key", ".munea-app-key", "/admin.html", "/admin/accounts", "/admin/feedback"]:
     if token not in script:
         raise SystemExit("Admin smoke missing token: " + token)
 staging_smoke = Path("scripts/staging-smoke.ps1").read_text(encoding="utf-8")
-for token in ["UseGcloudIdentityToken", "X-Serverless-Authorization", "/healthz/", "Merge-Headers"]:
+for token in ["UseGcloudIdentityToken", "X-Serverless-Authorization", "MUNEA_STAGING_APP_KEY", "X-Munea-Key", ".munea-app-key", "/healthz/", "Merge-Headers"]:
     if token not in staging_smoke:
         raise SystemExit("Staging smoke missing Cloud Run token: " + token)
 if '"smoke:admin"' not in package:
