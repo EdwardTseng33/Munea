@@ -2892,6 +2892,12 @@ function setupHscrollHints() {
 function connectCall() {
   // 撥通中＝保持角色的待機動畫（Edward 2026-07-09 二次拍板：不定格照片、也不動照片）。
   // 硬規則：聲音＋會動的臉「兩邊都真的就緒」才一起開場——寧可讓用戶等，也不要開場後像當機。
+  // 同線聲音的 iPhone 解鎖（2026-07-11）：iPhone 不准「沒經過使用者手指」的聲音自動播——
+  // 同線那軌之前一直被擋、每通都退回本地播放。趁「開始通話」這根手指先讓 faceAud 播一下取得許可。
+  try {
+    const _fa = document.getElementById('faceAud');
+    if (_fa && faceSameLineOn()) { _fa.muted = false; const _p = _fa.play(); if (_p && _p.catch) _p.catch(() => {}); }
+  } catch (e) {}
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
   let _connectedOnce = false;
