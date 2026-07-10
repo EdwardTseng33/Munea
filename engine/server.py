@@ -9,7 +9,7 @@
   POST /companion-profile    → 讀寫陪伴角色 templateId/displayName
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
-import os, sys, json, base64, io, wave, time, posixpath, threading, logging
+import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -48,6 +48,30 @@ RELATIONSHIP_STATES_PATH = os.environ.get("MUNEA_RELATIONSHIP_STATES_PATH") or o
 PRIMARY_CARE_RECIPIENT_ID = os.environ.get("MUNEA_SUPABASE_PERSON_ID") or "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
+
+# 邀請碼防爆破（P0-3）：同來源猜錯太多次就暫時擋。記憶體、只計失敗、成功不算。
+_INVITE_ATTEMPTS = {}
+_INVITE_ATTEMPTS_LOCK = threading.Lock()
+INVITE_MAX_FAILS = 10          # 視窗內最多猜錯次數
+INVITE_FAIL_WINDOW = 600       # 視窗秒數（10 分鐘）
+
+def invite_rate_limited(client_ip):
+    if not client_ip:
+        return False
+    now = time.time()
+    with _INVITE_ATTEMPTS_LOCK:
+        fails = [t for t in _INVITE_ATTEMPTS.get(client_ip, []) if now - t < INVITE_FAIL_WINDOW]
+        _INVITE_ATTEMPTS[client_ip] = fails
+        return len(fails) >= INVITE_MAX_FAILS
+
+def record_invite_failure(client_ip):
+    if not client_ip:
+        return
+    now = time.time()
+    with _INVITE_ATTEMPTS_LOCK:
+        fails = [t for t in _INVITE_ATTEMPTS.get(client_ip, []) if now - t < INVITE_FAIL_WINDOW]
+        fails.append(now)
+        _INVITE_ATTEMPTS[client_ip] = fails
 ALLOWED_AUDIO_MIMES = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"}
 AVATAR_ENGINE_MODES = {"static-css", "2d-viseme", "ditto", "liveavatar"}
 PREMIUM_AVATAR_MODES = {"ditto", "liveavatar"}
@@ -759,17 +783,21 @@ def update_family_invitation(invitation_id, patch):
     return (public_family_invitation(updated), "json") if updated else (None, "not_found")
 
 
-def family_invitations_response(data):
+def family_invitations_response(data, client_ip=None):
     data = data or {}
     action = data.get("action") or "list"
     if action == "create":
         invitation, backend = create_family_invitation(data.get("invitation") or data)
         return {"ok": True, "invitation": invitation, "backend": backend}
     if action == "accept":
+        # 防爆破（P0-3）：同來源猜錯太多次就暫時擋
+        if invite_rate_limited(client_ip):
+            return {"ok": False, "error": "too_many_attempts"}
         # 用 6 位邀請碼兌換：找到待接受的邀請 → 標記接受 → 回傳（含 familyGroupId，App 端據此入圈）
         raw_code = str(data.get("shortCode") or data.get("short_code") or data.get("code") or "")
         short_code = "".join(ch for ch in raw_code if ch.isdigit())[-6:]
         if len(short_code) != 6:
+            record_invite_failure(client_ip)
             return {"ok": False, "error": "short_code_required"}
         candidates = list(load_family_invitations(limit=500))
         try:
@@ -783,6 +811,7 @@ def family_invitations_response(data):
             if inv.get("shortCode") == short_code and inv.get("status") == "pending":
                 match = inv
         if not match:
+            record_invite_failure(client_ip)
             return {"ok": False, "error": "invitation_not_found"}
         try:
             exp = str(match.get("expiresAt") or "").replace("Z", "+00:00")
@@ -3172,7 +3201,7 @@ def admin_authorized(headers):
     if not token:
         return False, "admin_token_not_configured"
     supplied = headers.get("X-Munea-Admin-Token") or headers.get("x-munea-admin-token") or ""
-    if supplied != token:
+    if not hmac.compare_digest(str(supplied), str(token)):
         return False, "invalid_admin_token"
     return True, None
 
@@ -3182,7 +3211,7 @@ def provider_webhook_authorized(headers):
     if not token:
         return False, "provider_token_not_configured"
     supplied = headers.get("X-Munea-Provider-Token") or headers.get("x-munea-provider-token") or ""
-    if supplied != token:
+    if not hmac.compare_digest(str(supplied), str(token)):
         return False, "invalid_provider_token"
     return True, None
 
@@ -3874,27 +3903,20 @@ def append_privacy_request(req_type, data=None):
 
 
 def privacy_export_response(data):
+    # P0-5 止血：不再同步吐出全域資料（原本任何呼叫者都拿到所有人的對話/帳務/隱私單＝洩漏）。
+    # 改成「排入處理、驗證身分後只給本人」——正規 GDPR 匯出流程；真正打包待 auth_user↔person 對應表補上後 scope 到本人。
     action = (data.get("action") or "preview").lower()
     if action in ("request", "create"):
         export_request = append_privacy_request("export", data)
     else:
         export_request = normalize_privacy_request({"type": "export", "status": "preview", "requiresReauth": True})
-
     return {
         "ok": True,
         "request": export_request,
-        "exportPackage": {
-            "generatedAt": utc_now(),
-            "account": load_app_profile_store().get("account"),
-            "familyGroup": load_app_profile_store().get("familyGroup"),
-            "primaryCareRecipientId": load_app_profile_store().get("primaryCareRecipientId"),
-            "companionProfiles": load_app_profile_store().get("companionProfiles"),
-            "conversationSummaries": load_conversation_summaries(limit=500),
-            "billing": load_billing_store(),
-            "privacyRequests": load_privacy_requests_store(),
-        },
-        "format": "json",
-        "productionNote": "Production export should run asynchronously, require authentication, and redact provider secrets/internal logs.",
+        "status": "queued",
+        "requiresReauth": True,
+        "message": "資料匯出已排入處理。為保護你的隱私，我們會確認身分後，只把「你本人」的資料整理好給你，不會在此直接回傳。",
+        "productionNote": "Export is queued; the raw package is prepared per-user after identity verification and scoped to the authenticated owner only.",
     }
 
 
@@ -4375,7 +4397,9 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":
-                self._json(family_invitations_response(data))
+                _xff = self.headers.get("X-Forwarded-For") or ""
+                _cip = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                self._json(family_invitations_response(data, client_ip=_cip))
             elif self.path == "/family-members":
                 self._json(family_members_response(data))
             elif self.path == "/consent-records":

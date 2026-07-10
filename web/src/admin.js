@@ -590,7 +590,7 @@
       <div class="field"><span>目前看的是：<b id="envLabel">–</b> <button type="button" class="btn-ghost" id="toggleAdv" style="min-height:28px;padding:0 10px">換一台伺服器</button></span></div>
       <div class="field" id="advRow" hidden><span>伺服器網址（進階，平常不用動）</span><input id="apiBaseUrl" type="url" spellcheck="false"></div>
       <div class="field"><span>管理通行碼<small>（由蘇菲保管，跟她要一聲就好）</small></span><div class="token-wrap"><input id="adminToken" type="password" autocomplete="off" placeholder="貼上通行碼"><button type="button" class="eye-btn" id="eyeBtn">顯示</button></div></div>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="rememberToken"><span>記住通行碼（只存這台電腦的瀏覽器）</span></label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="rememberToken"><span>記住通行碼（只到關掉這個分頁，較安全）</span></label>
       <button type="button" class="primary" id="connectBtn">連線看真資料</button>
       <div class="kpi-sub" id="connectHint" style="margin-top:10px">連上後，安全警訊、用戶意見、系統健康等有真資料的頁面會換成真的；其餘暫用示範數據並標「示範」。</div>
     `)}
@@ -632,7 +632,8 @@
     const token=($("adminToken")?.value||"").trim();
     if(!token){ setStatus("要先貼通行碼","error"); return; }
     localStorage.setItem(ADMIN_BASE_KEY, base);
-    if($("rememberToken")?.checked) localStorage.setItem(ADMIN_TOKEN_KEY, token); else localStorage.removeItem(ADMIN_TOKEN_KEY);
+    // 通行碼改存 sessionStorage（關掉分頁即消失），縮小外洩風險（沙利曼 P1）
+    if($("rememberToken")?.checked) sessionStorage.setItem(ADMIN_TOKEN_KEY, token); else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     setStatus("讀取中…","");
     const EP=EP_LIST;
     const keys=Object.keys(EP);
@@ -743,7 +744,7 @@
       const base=initialBaseUrl();
       if($("apiBaseUrl")) $("apiBaseUrl").value=base;
       if($("envLabel")) $("envLabel").textContent=envLabelFor(base);
-      const st=localStorage.getItem(ADMIN_TOKEN_KEY)||"";
+      const st=sessionStorage.getItem(ADMIN_TOKEN_KEY)||"";
       if(st&&$("adminToken")){ $("adminToken").value=st; $("rememberToken").checked=true; }
       $("connectBtn")?.addEventListener("click",connect);
       $("toggleAdv")?.addEventListener("click",()=>{ $("advRow").hidden=!$("advRow").hidden; });
@@ -763,8 +764,8 @@
     window.addEventListener("hashchange",show);
     setStatus();
     show();
-    // 記住通行碼就自動連
-    const st=localStorage.getItem(ADMIN_TOKEN_KEY);
+    // 記住通行碼就自動連（sessionStorage：僅本分頁）
+    const st=sessionStorage.getItem(ADMIN_TOKEN_KEY);
     if(st){ // 需要 settings 的輸入存在才連；直接用存值連
       const base=initialBaseUrl();
       // 直接連（不需切到設定頁）
