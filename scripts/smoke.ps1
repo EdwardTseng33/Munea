@@ -2838,7 +2838,7 @@ for token in ["Readiness", "StrictReadiness", "MUNEA_ADMIN_API_TOKEN", "MUNEA_RE
     if token not in cloudrun_status:
         raise SystemExit("Cloud Run readiness missing token: " + token)
 cloudrun_deploy = Path("scripts/cloud-run-deploy-staging.ps1").read_text(encoding="utf-8")
-for token in ["git archive", "DryRun", "update-secrets", "Get-DeploymentValue", "SUPABASE_URL", "MUNEA_REQUIRE_AUTH=1", "MUNEA_ENABLE_DEV_AUTH_BYPASS=false", "munea-admin-token-staging"]:
+for token in ["git archive", "DryRun", "update-secrets", "Get-DeploymentValue", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "MUNEA_REQUIRE_AUTH=1", "MUNEA_ENABLE_DEV_AUTH_BYPASS=false", "munea-admin-token-staging"]:
     if token not in cloudrun_deploy:
         raise SystemExit("Cloud Run clean deploy missing token: " + token)
 gcloudignore = Path(".gcloudignore").read_text(encoding="utf-8")
@@ -2849,23 +2849,31 @@ if '"cloudrun:readiness"' not in package:
     raise SystemExit("package.json missing cloudrun:readiness script")
 if '"cloudrun:deploy:staging"' not in package:
     raise SystemExit("package.json missing cloudrun:deploy:staging script")
+auth_smoke = Path("scripts/staging-auth-smoke.ps1").read_text(encoding="utf-8")
+for token in ["/auth/v1/admin/users", "grant_type=password", "X-Munea-Key", "/auth-status", "/account-bootstrap", "temporary user deleted"]:
+    if token not in auth_smoke:
+        raise SystemExit("Live staging auth smoke missing token: " + token)
+if '"smoke:staging:auth"' not in package:
+    raise SystemExit("package.json missing smoke:staging:auth script")
 print("admin console contract OK")
 '@
 Pass "Admin console is present and keeps secrets out of static assets"
 
-Step "Cloud Run deploy script syntax"
-$deployTokens = $null
-$deployErrors = $null
-[System.Management.Automation.Language.Parser]::ParseFile(
-  (Resolve-Path "scripts\cloud-run-deploy-staging.ps1"),
-  [ref]$deployTokens,
-  [ref]$deployErrors
-) | Out-Null
-if ($deployErrors.Count -gt 0) {
-  $details = ($deployErrors | ForEach-Object { "line $($_.Extent.StartLineNumber): $($_.Message)" }) -join "; "
-  throw "Cloud Run deploy script has syntax errors: $details"
+Step "Operational PowerShell script syntax"
+foreach ($scriptPath in @("scripts\cloud-run-deploy-staging.ps1", "scripts\staging-auth-smoke.ps1")) {
+  $parseTokens = $null
+  $parseErrors = $null
+  [System.Management.Automation.Language.Parser]::ParseFile(
+    (Resolve-Path $scriptPath),
+    [ref]$parseTokens,
+    [ref]$parseErrors
+  ) | Out-Null
+  if ($parseErrors.Count -gt 0) {
+    $details = ($parseErrors | ForEach-Object { "line $($_.Extent.StartLineNumber): $($_.Message)" }) -join "; "
+    throw "$scriptPath has syntax errors: $details"
+  }
 }
-Pass "Cloud Run deploy script parses"
+Pass "Operational PowerShell scripts parse"
 
 Step "Avatar runtime contract"
 Invoke-PythonBlock @'

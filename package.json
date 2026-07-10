@@ -9,6 +9,7 @@
     "smoke:auth": "powershell -ExecutionPolicy Bypass -File scripts/auth-gate-smoke.ps1",
     "smoke:admin": "powershell -ExecutionPolicy Bypass -File scripts/admin-smoke.ps1",
     "smoke:staging": "powershell -ExecutionPolicy Bypass -File scripts/staging-smoke.ps1",
+    "smoke:staging:auth": "powershell -ExecutionPolicy Bypass -File scripts/staging-auth-smoke.ps1",
     "smoke:status": "powershell -ExecutionPolicy Bypass -File scripts/smoke-status.ps1",
     "test:launch": "python engine/test_vitals_sync.py && python engine/test_thin_door.py",
     "release:check": "powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1",
