@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>沐寧 · FlashHead 真機測試</title>
+<style>
+  :root{
+    --box-left: 0%; --box-top: 7.2917%; --box-width: 100%; --box-height: 75%;
+    --feather-top: 5.556%; --feather-bottom: 9.722%; --feather-side: 5.926%;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:system-ui,"Noto Sans TC",sans-serif;background:#0E1A17;color:#fff;overflow:hidden;-webkit-tap-highlight-color:transparent}
+  button{font-family:inherit}
+  .stage{position:relative;height:100dvh;width:100%;overflow:hidden;background:#000;
+    display:flex;align-items:center;justify-content:center}
+  .frame{position:relative;width:min(100%, calc(100dvh * 1080 / 1920));aspect-ratio:1080/1920;overflow:hidden;background:#000}
+  .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .3s}
+  .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .4s;z-index:2}
+  .cover.hide{opacity:0;pointer-events:none}
+  .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:opacity .35s}
+  .overlay.on{opacity:1}
+  .overlay video{width:100%;height:100%;object-fit:fill;display:block}
+  .overlay{
+    -webkit-mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),
+      linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
+    -webkit-mask-composite:source-in,source-over;
+    mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),
+      linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
+    mask-composite:intersect;
+  }
+  .scrim{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to bottom,rgba(4,12,10,.42),rgba(4,12,10,0) 22%,rgba(4,12,10,0) 55%,rgba(4,12,10,.5) 80%,rgba(4,12,10,.82))}
+  .top{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 14px);z-index:6;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .face-name{display:flex;align-items:center;gap:8px;background:rgba(8,18,15,.55);backdrop-filter:blur(10px);padding:8px 14px;border-radius:999px;font-size:15px;font-weight:600}
+  .face-name .dot{width:9px;height:9px;border-radius:50%;background:#9aa4a0;flex:none}
+  .stage.on .face-name .dot{background:#4ED6C4;box-shadow:0 0 0 0 rgba(78,214,196,.6);animation:live 1.9s infinite}
+  @keyframes live{0%{box-shadow:0 0 0 0 rgba(78,214,196,.55)}70%{box-shadow:0 0 0 9px rgba(78,214,196,0)}100%{box-shadow:0 0 0 0 rgba(78,214,196,0)}}
+  .badge{background:rgba(8,18,15,.55);backdrop-filter:blur(10px);padding:7px 12px;border-radius:999px;font-size:12px;font-weight:600;color:#8FE6D8;max-width:60vw;text-align:right}
+  .caps{position:absolute;left:16px;right:16px;bottom:calc(148px + env(safe-area-inset-bottom));z-index:6;text-align:center;pointer-events:none}
+  .cap-ai{margin:0 auto;max-width:560px;background:rgba(8,18,15,.58);backdrop-filter:blur(14px);border-radius:16px;padding:10px 15px;font-size:15.5px;line-height:1.55;min-height:20px}
+  .hint{position:absolute;left:0;right:0;bottom:calc(150px + env(safe-area-inset-bottom));z-index:5;text-align:center;font-size:15px;color:#F6ECE2;text-shadow:0 1px 8px rgba(0,0,0,.6);padding:0 24px}
+  .charbar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 96px);z-index:7;display:flex;justify-content:center;gap:10px}
+  .charbtn{padding:8px 16px;border-radius:999px;border:1.5px solid rgba(255,255,255,.25);background:rgba(8,18,15,.5);backdrop-filter:blur(8px);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer}
+  .charbtn.on{border-color:#3ED4C2;background:rgba(62,212,194,.18);color:#8FE6D8}
+  .charbtn:disabled{opacity:.4}
+  .bar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 26px);z-index:7;display:flex;justify-content:center;align-items:center;gap:18px}
+  .call-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:none;cursor:pointer;min-width:180px;height:58px;border-radius:999px;color:#fff;font-size:17px;font-weight:700;box-shadow:0 10px 26px rgba(0,0,0,.4)}
+  .call-btn:active{transform:scale(.96)}
+  .call-btn.start{background:#1DA47C}
+  .call-btn.end{background:#E2544F;min-width:140px}
+  .tapplay{position:absolute;inset:0;z-index:15;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);flex-direction:column;gap:12px}
+  .tapplay.show{display:flex}
+  .tapplay button{padding:14px 26px;border-radius:999px;border:none;background:#3ED4C2;color:#06231d;font-size:16px;font-weight:800;cursor:pointer}
+  .tapplay span{color:#fff;font-size:13.5px;background:rgba(0,0,0,.4);padding:6px 12px;border-radius:10px}
+  #dbg{position:fixed;top:calc(env(safe-area-inset-top) + 70px);left:10px;right:10px;z-index:40;background:rgba(0,0,0,.72);color:#8fe6b0;font:11px/1.5 monospace;padding:8px 10px;border-radius:8px;max-height:38vh;overflow-y:auto;white-space:pre-wrap;display:none}
+  #dbg.show{display:block}
+  #nomicBtn{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 10px);left:10px;z-index:41;display:none;padding:9px 14px;border-radius:10px;border:none;background:#F6B93B;color:#221a00;font-weight:700;font-size:13px}
+  #nomicBtn.show{display:block}
+  .toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 66px);transform:translateX(-50%);z-index:30;background:rgba(226,84,79,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:13.5px;display:none;max-width:88%;text-align:center}
+  .toast.show{display:block}
+  @media (min-width:700px){ body{background:#081210} }   /* .frame 自己就會依 100dvh 算等比letterbox，.stage 不必再自己夾寬度(舊寫法，2026-07-11 拔除) */
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="frame" id="frame">
+    <img class="bg" id="bgImg" src="flashhead/bg-a05.png" alt="">
+    <video class="cover hide" id="coverVid" muted loop playsinline src="flashhead/greet-a05.mp4"></video>
+    <div class="overlay" id="overlay"><video id="faceVid" autoplay playsinline></video></div>
+    <div class="scrim"></div>
+  </div>
+
+  <div class="top">
+    <div class="face-name"><span class="dot"></span><span id="chName">寧寧</span></div>
+    <div class="badge" id="statusBadge">未連線</div>
+  </div>
+
+  <div class="hint" id="hint">選角色、按開始通話——跟她/他真的講三句話看看</div>
+  <div class="caps" id="caps" style="display:none"><div class="cap-ai" id="capAi"></div></div>
+
+  <div class="tapplay" id="tapplay">
+    <span id="tapplayMsg">畫面卡在自動播放，點一下讓它動</span>
+    <button id="tapplayBtn">點這裡播放</button>
+  </div>
+
+  <div class="charbar">
+    <button class="charbtn on" id="charA05" onclick="pickChar('a05')">寧寧 · 擬真女</button>
+    <button class="charbtn" id="charA06" onclick="pickChar('a06')">阿原 · 擬真男</button>
+  </div>
+  <div class="bar">
+    <button class="call-btn start" id="callBtn">開始通話</button>
+  </div>
+</div><!-- /.stage -->
+<div class="toast" id="toast"></div>
+<pre id="dbg"></pre>
+<button id="nomicBtn">再測一句（nomic）</button>
+<script>
+/* ===== 設定 ===== */
+const AVATAR_HTTP = 'https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run';
+const AVATAR_KEY  = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
+const VOICE_WS_BASE = 'wss://munea-voice-staging-491603544409.asia-east1.run.app/';
+const TEST_LINE = '嗨,你在嗎?我在測試連線。';
+
+const CHARS = {
+  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', greet: 'flashhead/greet-a05.mp4' },
+  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', greet: null },
+};
+let curChar = 'a05';
+
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), hint = $('#hint'), caps = $('#caps'), capAi = $('#capAi');
+const bgImg = $('#bgImg'), overlay = $('#overlay'), faceVid = $('#faceVid'), coverVid = $('#coverVid');
+const statusBadge = $('#statusBadge'), chName = $('#chName'), callBtn = $('#callBtn');
+const tapplay = $('#tapplay'), tapplayMsg = $('#tapplayMsg'), tapplayBtn = $('#tapplayBtn'), nomicBtn = $('#nomicBtn');
+const qs = new URLSearchParams(location.search);
+const showDbg = qs.has('debug');
+const nomic = qs.has('nomic');
+if (showDbg) $('#dbg').classList.add('show');
+if (nomic) nomicBtn.classList.add('show');
+
+/* ===== 錯誤全部 surface：debug buffer 永遠記、視覺面板只在 ?debug=1 顯示；
+   狀態字（statusBadge/hint）永遠更新，不管有沒有開 debug —— 這樣 Edward 平常測也看得到卡在哪 ===== */
+window.__flashheadStats = { round: 0, roundTimes: [], vidFrames: 0, switchMs: null, err: '' };
+window.__flashheadVoiceDiag = null;
+window.__flashheadDiagSent = false;
+const DBGBUF = [];
+function dbgLine(s){
+  const t = new Date().toISOString().slice(11,19);
+  const line = '[' + t + '] ' + s;
+  DBGBUF.push(line);
+  if (DBGBUF.length > 400) DBGBUF.shift();
+  if (showDbg) {
+    const el = $('#dbg');
+    el.textContent += line + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+  try{ console.log('[flashhead]', s); }catch(e){}
+}
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),4600); }
+function setStatus(t){ statusBadge.textContent = t; dbgLine('[status] ' + t); }
+function setHintText(t){ hint.textContent = t; }
+
+/* ===== 診斷回傳（2026-07-11 卡西法）：連線失敗時把 debug buffer + ICE candidate/getStats() 現場
+   自動 POST 回服務端 /diag——Edward 不用截圖，我們直接看 modal app logs 就有完整現場 ===== */
+async function collectPcDiag(pc){
+  if (!pc) return null;
+  const out = { iceConnectionState: pc.iceConnectionState, iceGatheringState: pc.iceGatheringState,
+                connectionState: pc.connectionState, signalingState: pc.signalingState,
+                localCandidates: [], remoteCandidates: [], candidatePairs: [] };
+  try{
+    const stats = await pc.getStats();
+    stats.forEach(r=>{
+      if (r.type === 'local-candidate'){
+        const addr = r.address || r.ip || '';
+        out.localCandidates.push({ type:r.candidateType, protocol:r.protocol, address:addr,
+          port:r.port, mdns: /\.local$/i.test(addr) });
+      } else if (r.type === 'remote-candidate'){
+        out.remoteCandidates.push({ type:r.candidateType, protocol:r.protocol,
+          address:(r.address||r.ip||''), port:r.port });
+      } else if (r.type === 'candidate-pair'){
+        out.candidatePairs.push({ state:r.state, nominated:!!r.nominated,
+          bytesSent:r.bytesSent||0, bytesReceived:r.bytesReceived||0 });
+      }
+    });
+  }catch(e){ out.statsErr = e && e.message || String(e); }
+  return out;
+}
+async function sendDiag(reason){
+  try{
+    const payload = {
+      ts: new Date().toISOString(), reason: reason || '',
+      ua: navigator.userAgent, char: curChar,
+      page: 'flashhead-live-test', build: 'v3-diag-2026-07-11',
+      network: (navigator.connection ? { effectiveType: navigator.connection.effectiveType,
+        downlink: navigator.connection.downlink, rtt: navigator.connection.rtt } : null),
+      attempts: (typeof Face !== 'undefined' && Face._diagAttempts) ? Face._diagAttempts : [],
+      voice: window.__flashheadVoiceDiag,
+      log: DBGBUF.slice(-200),
+    };
+    await fetch(AVATAR_HTTP + '/diag?key=' + encodeURIComponent(AVATAR_KEY), {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
+    });
+    dbgLine('[diag] sent to server ok');
+  }catch(e){ dbgLine('[diag] send failed: ' + (e && e.message || e)); }
+}
+
+window.onerror = function(msg, src, line, col, err){
+  const where = (src||'').split('/').pop() + ':' + line + ':' + col;
+  dbgLine('[FATAL onerror] ' + msg + ' @' + where + (err && err.stack ? ('\n' + err.stack) : ''));
+  failHard('頁面出錯：' + msg);
+  return false;
+};
+window.addEventListener('unhandledrejection', function(ev){
+  const r = ev.reason;
+  const msg = (r && (r.message || r.toString && r.toString())) || String(r);
+  dbgLine('[FATAL unhandledrejection] ' + msg + (r && r.stack ? ('\n' + r.stack) : ''));
+  failHard('連線發生未預期錯誤：' + msg);
+});
+function failHard(userMsg){
+  setStatus('連線失敗');
+  setHintText(userMsg + '——按「開始通話」可以再試一次');
+  toast(userMsg);
+  if (!window.__flashheadDiagSent){ window.__flashheadDiagSent = true; sendDiag(userMsg); }
+  try{ if (typeof onCall !== 'undefined' && onCall) hangup(); }catch(e){}
+}
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(()=> rej(new Error(label + ' 逾時（' + ms + 'ms）')), ms)),
+  ]);
+}
+
+function pickChar(c){
+  if (typeof onCall !== 'undefined' && onCall) { toast('通話中換角色請先掛斷再選（開發中）'); return; }
+  curChar = c;
+  $('#charA05').classList.toggle('on', c==='a05');
+  $('#charA06').classList.toggle('on', c==='a06');
+  bgImg.src = CHARS[c].bg;
+  chName.textContent = CHARS[c].label;
+  // 2026-07-11 卡西法修正（蘇菲 Chrome 複驗抓到的回歸）：待機（未連線）該讓完整立繪(bg)顯示，
+  // cover 不該在選角色時就跳出來蓋滿畫面——只在 dial() 真的按下「開始通話」才現身播招呼片。
+  // 這裡只換 src 待命＋確保停播＋藏起來，不 remove('hide')。
+  coverVid.pause();
+  coverVid.classList.add('hide');
+  if (CHARS[c].greet){ coverVid.src = CHARS[c].greet; coverVid.style.display=''; }
+  else { coverVid.style.display='none'; }
+}
+</script>
+<script>
+/* ===== 臉+聲音（同一條 WebRTC）=====
+ * 修正史（2026-07-10 Edward 真機測試失敗後）：
+ *  1. ICE 直連/STUN 逾時（伺服器端 log 證實：pc 卡在 connecting 逾 2 分鐘才變 failed）
+ *     -> 加 9 秒逾時自動判斷；失敗就整個 pc 重來一次、這次強制走 TURN 中繼（iceTransportPolicy:'relay'）。
+ *  2. iOS Safari 對「非靜音 video.play()」的手勢政策：ontrack 是非同步觸發（隔了好幾個 await/setTimeout），
+ *     跟原始點擊手勢已經斷鏈，play() 很可能被擋且我們原本用空 catch 吞掉——現在失敗會跳「點這裡播放」按鈕，
+ *     使用者一點 = 全新合法手勢，保證播得動。
+ */
+const Face = {
+  pc:null, ws:null, on:false, _playGen:0,
+  iceServers(forceRelay){
+    const list = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: ['turn:34.81.102.52:3478?transport=udp','turn:34.81.102.52:3478?transport=tcp'], username:'muneaturn', credential:'munea-turn-a7k2q' },
+      { urls: ['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp'], username:'openrelayproject', credential:'openrelayproject' },
+    ];
+    return forceRelay ? list.slice(1) : list;
+  },
+  async waitConnected(pc, timeoutMs){
+    if (pc.connectionState === 'connected') return true;
+    return await new Promise(res=>{
+      let done = false;
+      const fin = ok=>{ if(!done){ done=true; pc.removeEventListener('connectionstatechange', onchg); res(ok); } };
+      const onchg = ()=>{
+        dbgLine('[face] connectionState=' + pc.connectionState);
+        if (pc.connectionState === 'connected') fin(true);
+        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') fin(false);
+      };
+      pc.addEventListener('connectionstatechange', onchg);
+      setTimeout(()=> fin(false), timeoutMs);
+    });
+  },
+  _tryPlay(){
+    const myGen = ++this._playGen;
+    const p = faceVid.play();
+    if (p && p.catch) {
+      p.then(()=>{ if (myGen === this._playGen) tapplay.classList.remove('show'); })
+       .catch(e=>{
+         if (myGen !== this._playGen) return;   // 舊一輪 play() 的結果，忽略（防蓋掉使用者剛點亮的畫面）
+         dbgLine('[face] faceVid.play() blocked: ' + e.message + ' -> show tap-to-play');
+         tapplayMsg.textContent = '畫面卡在自動播放，點一下讓它動';
+         tapplay.classList.add('show');
+       });
+    }
+  },
+};
+tapplayBtn.onclick = ()=>{ Face._tryPlay(); coverVid.play().catch(()=>{}); };
+</script>
+<script>
+Face._attempt = async function(char, forceRelay){
+  dbgLine('[face] attempt char=' + char + ' forceRelay=' + forceRelay);
+  const cfg = { iceServers: this.iceServers(forceRelay) };
+  if (forceRelay) cfg.iceTransportPolicy = 'relay';
+  const pc = new RTCPeerConnection(cfg);
+  this.pc = pc;
+  pc.addTransceiver('video', { direction:'recvonly' });
+  pc.addTransceiver('audio', { direction:'recvonly' });
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      const addr = e.candidate.address || (e.candidate.candidate && e.candidate.candidate.split(' ')[4]) || '';
+      const mdnsTag = /\.local$/i.test(addr) ? ' (mdns)' : '';
+      dbgLine('[face] local candidate ' + e.candidate.type + '/' + e.candidate.protocol + ' ' + addr + mdnsTag);
+    }
+    else dbgLine('[face] local candidate gathering done');
+  };
+  let _gotFirstTrack = false;
+  pc.ontrack = e => {
+    dbgLine('[face] ontrack kind=' + e.track.kind);
+    // 影像+聲音各自觸發一次 ontrack（同一條 stream）——只在第一次真的動手（設 srcObject/play），
+    // 不然兩次呼叫 play() 疊在一起，其中一個晚 resolve/reject 會把剛點亮的 tap-to-play 又蓋回去。
+    if (_gotFirstTrack) return;
+    _gotFirstTrack = true;
+    faceVid.srcObject = e.streams[0];
+    faceVid.muted = false;
+    overlay.classList.add('on');
+    coverVid.classList.add('hide');
+    this._tryPlay();
+  };
+  pc.addEventListener('iceconnectionstatechange', ()=> dbgLine('[face] iceConnectionState=' + pc.iceConnectionState));
+
+  setStatus('建立視訊 offer…');
+  const o = await pc.createOffer(); await pc.setLocalDescription(o);
+  setStatus('收集網路候選（ICE gather）…');
+  await new Promise(res=>{
+    if (pc.iceGatheringState==='complete') return res();
+    const chk=()=>{ if (pc.iceGatheringState==='complete'){ pc.removeEventListener('icegatheringstatechange',chk); res(); } };
+    pc.addEventListener('icegatheringstatechange', chk); setTimeout(res, 4500);
+  });
+
+  setStatus('送出連線請求（/offer）…');
+  // 2026-07-11 卡西法：10s->12s（server log 證實過 GPU 排隊時 OPTIONS 預檢可拖到 60-80s，
+  // 這裡拉長一點點只是多留餘裕分辨「根本沒收到答案(冷啟/排隊)」vs「ICE真的連不上」，不是萬靈丹）
+  const r = await withTimeout(fetch(AVATAR_HTTP + '/offer?key=' + encodeURIComponent(AVATAR_KEY) + '&char=' + char, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ sdp:pc.localDescription.sdp, type:pc.localDescription.type }),
+  }), 12000, '/offer 請求');
+  const a = await r.json();
+  if (a.error) throw new Error('face offer: ' + a.error);
+  await pc.setRemoteDescription(a);
+  dbgLine('[face] remote description set');
+
+  setStatus('等待視訊連線建立（ICE connect）…');
+  const ok = await this.waitConnected(pc, 9000);
+  // 2026-07-11 卡西法：不管成功失敗都存一份 getStats() 現場（candidate類型/candidate-pair狀態）——
+  // 失敗時這份就是 /diag 要回傳的核心證據，不用 Edward 截圖
+  const diag = await collectPcDiag(pc);
+  if (!Face._diagAttempts) Face._diagAttempts = [];
+  Face._diagAttempts.push({ forceRelay: !!forceRelay, ok: ok, diag: diag });
+  return ok;
+};
+Face.start = async function(char){
+  this.on = false;
+  Face._diagAttempts = [];
+  let ok = false;
+  try{ ok = await this._attempt(char, false); }
+  catch(e){
+    dbgLine('[face] first attempt threw: ' + (e && e.message || e));
+    const diag = await collectPcDiag(this.pc);
+    Face._diagAttempts.push({ forceRelay:false, ok:false, threw:(e&&e.message)||String(e), diag });
+  }
+  if (!ok) {
+    dbgLine('[face] direct/STUN attempt failed or timed out -> retry forcing TURN relay');
+    setStatus('直連逾時，改走中繼重試…');
+    try{ if (this.pc) this.pc.close(); }catch(e){}
+    // 7/11 卡西法補：iOS Safari(WebKit) 對「pc.close() 後馬上 new RTCPeerConnection()」是已知雷——
+    // 底層網路/連接埠來不及釋放，第二輪 ICE gathering 可能悄悄卡住或收不到候選。緊接著重建連線前
+    // 留一口氣(350ms)給它收尾，桌面 Chrome 不受影響、iOS 這個雷有機會被這個空檔避開。
+    await new Promise(r => setTimeout(r, 350));
+    let ok2 = false;
+    try{ ok2 = await this._attempt(char, true); }
+    catch(e){
+      dbgLine('[face] relay attempt threw: ' + (e && e.message || e));
+      const diag = await collectPcDiag(this.pc);
+      Face._diagAttempts.push({ forceRelay:true, ok:false, threw:(e&&e.message)||String(e), diag });
+    }
+    if (!ok2) {
+      try{ if (this.pc) this.pc.close(); }catch(e){}
+      this.pc = null;
+      throw new Error('視訊連線失敗（直連與中繼都逾時，可能是網路環境擋 UDP）');
+    }
+  }
+  setStatus('視訊連線就緒，開聲音線…');
+  this.ws = new WebSocket(AVATAR_HTTP.replace(/^http/,'ws') + '/audio?key=' + encodeURIComponent(AVATAR_KEY));
+  this.ws.binaryType = 'arraybuffer';
+  this.on = true;
+  const wsOk = await new Promise((res)=>{
+    let done=false;
+    this.ws.onopen = ()=>{ if(!done){done=true;res(true);} };
+    this.ws.onerror = ()=>{ if(!done){done=true;dbgLine('[face] audio ws error'); res(false);} };
+    setTimeout(()=>{ if(!done){done=true; dbgLine('[face] audio ws open timeout, keep going'); res(false);} }, 4000);
+  });
+  dbgLine('[face] connected char=' + char + ' audio_ws_ok=' + wsOk);
+};
+Face.feed = function(buf){ try{ if (this.on && this.ws && this.ws.readyState===1) this.ws.send(buf); }catch(e){ dbgLine('[face] feed err ' + e.message); } };
+Face.reset = function(){ try{ if (this.on && this.ws && this.ws.readyState===1) this.ws.send('reset'); }catch(e){} };
+Face.switchChar = async function(char){
+  const t0 = performance.now();
+  const r = await fetch(AVATAR_HTTP + '/switch?key=' + encodeURIComponent(AVATAR_KEY) + '&char=' + char, { method:'POST' });
+  const j = await r.json();
+  const ms = Math.round(performance.now() - t0);
+  window.__flashheadStats.switchMs = ms;
+  dbgLine('[face] switch -> ' + char + ' ok=' + j.ok + ' round_trip_ms=' + ms);
+  return j;
+};
+Face.stop = function(){
+  this.on = false;
+  try{ if (this.ws) this.ws.close(); }catch(e){}
+  try{ if (this.pc) this.pc.close(); }catch(e){}
+  this.ws = this.pc = null;
+  overlay.classList.remove('on');
+  faceVid.srcObject = null;
+  tapplay.classList.remove('show');
+};
+setInterval(()=>{ if (!Face.pc) return;
+  Face.pc.getStats().then(st=>st.forEach(r=>{ if (r.type==='inbound-rtp' && r.kind==='video') window.__flashheadStats.vidFrames = r.framesDecoded; })).catch(()=>{}); }, 1000);
+
+/* ===== 卡頓量測儀表（2026-07-11 卡西法）：Edward 四測「嘴巴跟語音對上了，剩語音卡卡/斷斷續續」
+ * 這輪要「量出來」不是「猜」——通話中每 5 秒把 getStats() 關鍵指標存下來 + POST 回 /diag，
+ * 一通電話結束就有完整時間軸可以比對「斷點時機」跟伺服器端 /health 的斷糧計數器對不對得上。
+ * 音訊：concealedSamples/concealmentEvents(斷點直接計數器)、jitterBufferDelay、packetsLost、jitter；
+ * 視訊：freezeCount/totalFreezesDuration(臉卡住計數器)、framesDropped；RTT 從 candidate-pair 抓。 */
+async function collectPeriodicStats(){
+  if (!Face.pc) return null;
+  const out = { ts: Date.now(), audio: null, video: null, rtt: null };
+  try{
+    const stats = await Face.pc.getStats();
+    stats.forEach(r=>{
+      if (r.type === 'inbound-rtp' && r.kind === 'audio'){
+        out.audio = {
+          concealedSamples: r.concealedSamples, concealmentEvents: r.concealmentEvents,
+          jitterBufferDelay: r.jitterBufferDelay, jitterBufferEmittedCount: r.jitterBufferEmittedCount,
+          packetsLost: r.packetsLost, packetsReceived: r.packetsReceived, jitter: r.jitter,
+          totalSamplesReceived: r.totalSamplesReceived,
+          insertedSamplesForDeceleration: r.insertedSamplesForDeceleration,
+          removedSamplesForAcceleration: r.removedSamplesForAcceleration,
+        };
+      } else if (r.type === 'inbound-rtp' && r.kind === 'video'){
+        out.video = {
+          freezeCount: r.freezeCount, totalFreezesDuration: r.totalFreezesDuration,
+          framesDropped: r.framesDropped, framesDecoded: r.framesDecoded, framesReceived: r.framesReceived,
+          packetsLost: r.packetsLost, jitter: r.jitter,
+        };
+      } else if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated){
+        out.rtt = r.currentRoundTripTime != null ? Math.round(r.currentRoundTripTime * 1000) : null;
+      }
+    });
+  }catch(e){ out.err = e && e.message || String(e); }
+  return out;
+}
+let _statsTimer = null, _statsSeq = 0;
+window.__flashheadStatsHist = [];
+function startPeriodicStats(){
+  stopPeriodicStats();
+  _statsSeq = 0; window.__flashheadStatsHist = [];
+  _statsTimer = setInterval(async ()=>{
+    const s = await collectPeriodicStats();
+    if (!s) return;
+    _statsSeq++; s.seq = _statsSeq;
+    window.__flashheadStatsHist.push(s);
+    if (window.__flashheadStatsHist.length > 120) window.__flashheadStatsHist.shift();
+    const a = s.audio || {}, v = s.video || {};
+    dbgLine('[stats] #' + s.seq + ' aConceal=' + a.concealmentEvents + '/' + a.concealedSamples
+      + ' aLost=' + a.packetsLost + ' aJitter=' + a.jitter + ' vFreeze=' + v.freezeCount
+      + ' vFreezeDur=' + v.totalFreezesDuration + ' vDropped=' + v.framesDropped + ' rtt=' + s.rtt + 'ms');
+    try{
+      await fetch(AVATAR_HTTP + '/diag?key=' + encodeURIComponent(AVATAR_KEY), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ reason:'periodic-stats', seq:s.seq, char:curChar, stats:s }),
+      });
+    }catch(e){ dbgLine('[stats] periodic diag post failed: ' + (e && e.message || e)); }
+  }, 5000);
+}
+function stopPeriodicStats(){ if (_statsTimer){ clearInterval(_statsTimer); _statsTimer = null; } }
+</script>
+<script>
+const Live = {
+  ws:null, ac:null, mic:null, proc:null, on:false, micLevel:0, speaking:false, _spkT:null,
+  _f2i(f){ const b=new Int16Array(f.length); for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i])); b[i]=s<0?s*0x8000:s*0x7fff;} return b; },
+  _down(buf,inR,outR){ if(outR>=inR)return buf; const r=inR/outR,len=Math.round(buf.length/r),o=new Float32Array(len);
+    let i=0,j=0; while(j<len){const n=Math.round((j+1)*r);let s=0,c=0;for(;i<n&&i<buf.length;i++){s+=buf[i];c++;}o[j++]=c?s/c:0;} return o; },
+  sendTestLine(){ try{ if (this.ws && this.ws.readyState===1) this.ws.send(JSON.stringify({type:'text', text: TEST_LINE})); dbgLine('[voice] nomic test line sent'); }catch(e){} },
+};
+</script>
+<script>
+Live.start = async function(char){
+  let url = VOICE_WS_BASE + '?char=' + encodeURIComponent(char) + '&cap_rem=1&key=' + encodeURIComponent(AVATAR_KEY);
+  this.on = true;
+  setStatus('連語音線…');
+  try{ this.ws = new WebSocket(url); this.ws.binaryType='arraybuffer'; }
+  catch(e){ this.on=false; dbgLine('[voice] WebSocket ctor threw: ' + e.message); return false; }
+  return await new Promise(resolve=>{
+    let done=false; const settle=ok=>{ if(!done){done=true;resolve(ok);} };
+    this.ws.onopen = ()=> dbgLine('[voice] ws open');
+    this.ws.onmessage = async ev=>{
+      if (typeof ev.data === 'string'){
+        let o; try{ o = JSON.parse(ev.data); }catch(e){ return; }
+        if (o.type === 'ready'){
+          dbgLine('[voice] ready, nomic=' + nomic);
+          if (nomic) {
+            setStatus('nomic 模式：跳過麥克風，送測試句');
+            this.sendTestLine();
+            setState('listening'); settle(true);
+          } else {
+            setStatus('要求麥克風權限…');
+            try{ this.mic = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
+            catch(e){ dbgLine('[voice] getUserMedia rejected: ' + e.name + ' ' + e.message); toast('拿不到麥克風（' + e.name + '），請允許權限後重試'); settle(false); this.stop(); return; }
+            this.ac = new AudioContext();
+            const src = this.ac.createMediaStreamSource(this.mic);
+            this.proc = this.ac.createScriptProcessor(4096,1,1);
+            src.connect(this.proc); this.proc.connect(this.ac.destination);
+            this.proc.onaudioprocess = e=>{
+              const inp = e.inputBuffer.getChannelData(0);
+              if (this.speaking){ this.micLevel = 0; return; }
+              let s=0; for(let i=0;i<inp.length;i++) s+=inp[i]*inp[i];
+              this.micLevel = Math.min(1, Math.sqrt(s/inp.length)*8);
+              if (!this.ws || this.ws.readyState!==1) return;
+              this.ws.send(this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer);
+            };
+            this.ws.send(JSON.stringify({type:'greet'}));
+            setState('listening'); settle(true);
+          }
+        }
+        if (o.type === 'diag' && o.firstAudioMs != null) dbgLine('[voice] first_audio ' + o.firstAudioMs + 'ms');
+        if (o.type === 'interrupted'){ dbgLine('[voice] interrupted -> face reset'); Face.reset(); setState('listening'); }
+        if (o.type === 'caption' && o.who === 'nening' && o.text){
+          this._cap = (this._cap||'') + o.text;
+          capAi.textContent = this._cap;
+          // 2026-07-11 卡西法：字幕本來就是診斷用顯示，改預設隱藏，只在 ?debug=1 才秀出來
+          if (showDbg) caps.style.display = 'block';
+          setHintText('');
+        }
+        if (o.type === 'turn_complete'){
+          window.__flashheadStats.round++;
+          const rt = performance.now() - (this._turnT0 || performance.now());
+          window.__flashheadStats.roundTimes.push(Math.round(rt));
+          dbgLine('[voice] turn_complete round=' + window.__flashheadStats.round + ' total_ms=' + Math.round(rt));
+          Face.reset();
+          this._cap = ''; this._turnT0 = null;
+          // 2026-07-11 卡西法（半雙工回音修）：turn_complete只代表語音伺服器「產完了」，喇叭端可能還有
+          // 已經送上WebRTC路上、清不掉的尾音殘留(受限於FlashHead～0.96s一塊的生成粒度，理論上限約1塊)。
+          // 麥克風延遲300ms才重開(這段期間 Live.speaking 仍是true、mic gate 續擋)，減少「喇叭尾音被
+          // 麥克風收回去→AI自問自答」——不是100%保證、但比原本「turn_complete瞬間重開」好很多。
+          clearTimeout(this._micReopenT);
+          this._micReopenT = setTimeout(()=> setState('listening'), 300);
+        }
+        return;
+      }
+      if (!this._turnT0) this._turnT0 = performance.now();
+      clearTimeout(this._micReopenT);   // 2026-07-11：新一輪聲音已到，取消上一輪還沒觸發的延遲重開麥
+      Face.feed(ev.data);
+      setState('speaking');
+    };
+    this.ws.onclose = ()=>{ const was=this.on; dbgLine('[voice] ws closed'); settle(false); if (was){ toast('語音連線斷了'); hangup(); } };
+    this.ws.onerror = ()=>{ dbgLine('[voice] ws error'); settle(false); };
+  });
+};
+Live.stop = function(){
+  this.on = false;
+  clearTimeout(this._micReopenT);
+  try{ if (this.proc) this.proc.disconnect(); }catch(e){}
+  try{ if (this.mic) this.mic.getTracks().forEach(t=>t.stop()); }catch(e){}
+  try{ if (this.ws) this.ws.close(); }catch(e){}
+  try{ if (this.ac) this.ac.close(); }catch(e){}
+  this.ws = this.ac = this.mic = this.proc = null;
+};
+nomicBtn.onclick = ()=> Live.sendTestLine();
+</script>
+<script>
+function setState(st){
+  stage.dataset.state = st;
+  Live.speaking = (st === 'speaking');
+  clearTimeout(Live._spkT);
+  if (st === 'speaking') Live._spkT = setTimeout(()=> setState('listening'), 900);
+}
+
+let onCall = false;
+async function dial(){
+  onCall = true;
+  // 手勢解鎖（2026-07-11 補·對應建議）：在原始點擊當下(還沒 await 任何東西)先摸一下 faceVid，
+  // 讓瀏覽器把「這顆元素被使用者授權播放過」記住——ontrack 非同步觸發時再 play() 才比較可能不用
+  // 使用者再點一次 tap-to-play。這是盡量減少 tap-to-play 出現機率的第一道防線，不保證 100% 免點；
+  // 真的被政策擋下時 tap-to-play 仍在，當最後保底（Chrome 桌面環境已實測會走到這條保底路徑）。
+  try{
+    faceVid.muted = false;
+    const up = faceVid.play();
+    if (up && up.catch) up.catch(()=>{});
+    faceVid.pause();
+  }catch(e){}
+  faceVid.muted = true;
+  callBtn.classList.remove('start'); callBtn.classList.add('end'); callBtn.textContent = '結束通話';
+  stage.classList.add('on'); setStatus('接通中…'); caps.style.display='none'; capAi.textContent='';
+  // 2026-07-11 卡西法修正（蘇菲 Chrome 複驗抓到的回歸）：cover(招呼片)只在「真的按開始通話」這刻現身，
+  // 蓋住真臉線建立前的空白，等 ontrack 抓到真影像才淡出（見下方 pc.ontrack 的 add('hide')）。
+  if (CHARS[curChar].greet){
+    coverVid.src = CHARS[curChar].greet; coverVid.style.display=''; coverVid.currentTime = 0;
+    coverVid.classList.remove('hide');
+    coverVid.play().catch(e=>dbgLine('[cover] play blocked: ' + e.message));
+  }
+  window.__flashheadStats = { round:0, roundTimes:[], vidFrames:0, switchMs:null, err:'' };
+  window.__flashheadDiagSent = false; window.__flashheadVoiceDiag = null;
+  dbgLine('[dial] start curChar=' + curChar + ' nomic=' + nomic);
+  try{
+    // 臉線本身已有內部每步限時（直連+中繼兩輪、offer逾時12s+ICE逾時9s+gather4.5s，最糟約 51s+0.35s冷卻），
+    // 外層設 58s 留緩衝當最後安全網，不能比兩輪加起來短（2026-07-11 卡西法：10s->12s offer timeout 後同步調高）
+    await withTimeout(Face.start(curChar), 58000, '臉線建立整體');
+    // 語音線包含等真人點麥克風權限彈窗的時間，不能跟網路失敗用同一個短阀值，拉到 60s
+    const ok = await withTimeout(Live.start(CHARS[curChar].faceChar), 60000, '語音線建立整體');
+    if (!ok){ dbgLine('[dial] Live.start returned false'); failHard('語音線沒接上'); return; }
+    setStatus('在線'); setHintText('');
+    startPeriodicStats();   // 2026-07-11 卡西法：兩邊都就緒才開始量，量到的才是真通話品質
+  }catch(e){
+    dbgLine('[dial] caught: ' + (e && e.message || e) + (e && e.stack ? ('\n'+e.stack) : ''));
+    failHard(e && e.message || String(e));
+  }
+}
+function hangup(){
+  onCall = false;
+  stopPeriodicStats();
+  Live.stop(); Face.stop();
+  setState('idle'); stage.classList.remove('on');
+  callBtn.classList.add('start'); callBtn.classList.remove('end'); callBtn.textContent = '開始通話';
+  setStatus('未連線'); setHintText('選角色、按開始通話——跟她/他真的講三句話看看'); caps.style.display='none';
+  // 2026-07-11 卡西法修正：掛斷回待機＝藏起 cover、讓完整立繪(bg)顯示——不是又跳出來蓋畫面
+  coverVid.pause();
+  coverVid.classList.add('hide');
+}
+callBtn.onclick = ()=> onCall ? hangup() : dial();
+
+if (qs.get('char') && CHARS[qs.get('char')]) pickChar(qs.get('char'));
+dbgLine('[boot] page ready, showDbg=' + showDbg + ' nomic=' + nomic);
+// 2026-07-11 卡西法：頁面一開就打一次 /health 讓 Modal 容器開始甦醒，比等使用者按「開始通話」
+// 才觸發早幾秒到幾十秒——server log 證實過 GPU 排隊/冷啟時 OPTIONS 預檢可拖到 60-80s，
+// 越早開始暖機，使用者實際按下通話鍵時撞上冷啟窗的機率越低。
+fetch(AVATAR_HTTP + '/health?key=' + encodeURIComponent(AVATAR_KEY)).then(r=>r.json()).then(j=>{
+  dbgLine('[prewarm] health ok engine=' + j.engine + ' uptime_s=' + (j.uptime_s!=null?j.uptime_s:'?'));
+}).catch(e=> dbgLine('[prewarm] health failed: ' + (e && e.message || e)));
+</script>
+</body>
+</html>

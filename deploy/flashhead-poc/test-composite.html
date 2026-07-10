@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlashHead client composite demo</title>
+<style>
+  :root{
+    --box-left: 0%;
+    --box-top: 7.2917%;
+    --box-width: 100%;
+    --box-height: 75%;
+    --feather-top: 5.556%;
+    --feather-bottom: 9.722%;
+    --feather-side: 5.926%;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, "Noto Sans TC", sans-serif;
+    background: #1a1a1a; color: #eee; padding: 24px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #999; font-size: 13px; margin-bottom: 20px; }
+  .layout { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .stage-wrap {
+    position: relative;
+    width: 360px;
+    aspect-ratio: 1080 / 1920;
+    background: #000;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5);
+  }
+  .stage-bg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .overlay {
+    position: absolute;
+    left: var(--box-left);
+    top: var(--box-top);
+    width: var(--box-width);
+    height: var(--box-height);
+    overflow: hidden;
+  }
+  .overlay video, .overlay img {
+    width: 100%; height: 100%;
+    object-fit: fill;
+    display: block;
+  }
+  .overlay {
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0%, black var(--feather-side), black calc(100% - var(--feather-side)), transparent 100%),
+      linear-gradient(to bottom, transparent 0%, black var(--feather-top), black calc(100% - var(--feather-bottom)), transparent 100%);
+    -webkit-mask-composite: source-in, source-over;
+    mask-image:
+      linear-gradient(to right, transparent 0%, black var(--feather-side), black calc(100% - var(--feather-side)), transparent 100%),
+      linear-gradient(to bottom, transparent 0%, black var(--feather-top), black calc(100% - var(--feather-bottom)), transparent 100%);
+    mask-composite: intersect;
+  }
+  .panel {
+    width: 340px; background: #242424; border-radius: 10px; padding: 16px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .panel h2 { font-size: 14px; margin: 0 0 8px; color: #fff; }
+  .panel label { display: block; margin: 10px 0 4px; color: #bbb; }
+  .panel input, .panel select {
+    width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #444;
+    background: #1a1a1a; color: #eee; font-size: 13px;
+  }
+  .panel button {
+    margin-top: 10px; width: 100%; padding: 8px; border-radius: 6px; border: none;
+    background: #4a7cff; color: #fff; font-weight: 600; cursor: pointer; font-size: 13px;
+  }
+  .panel button.secondary { background: #3a3a3a; }
+  .panel button:disabled { opacity: .5; cursor: not-allowed; }
+  #log {
+    margin-top: 12px; background: #111; border-radius: 6px; padding: 8px;
+    font-family: monospace; font-size: 11px; height: 160px; overflow-y: auto; color: #8f8;
+    white-space: pre-wrap;
+  }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
+  .badge.local { background: #3a5a3a; color: #9f9; }
+  .badge.live { background: #5a3a3a; color: #f99; }
+</style>
+</head>
+<body>
+<h1>FlashHead client composite demo <span class="badge local" id="modeBadge">local demo mode</span></h1>
+<div class="sub">B box = source (0,140,1080,1580) -> 1080x1440(3:4). Feather top80/side64/bottom140px converted to percent. Server only sends 512x512 raw frames; compositing back to 9:16 is all CSS on this page.</div>
+
+<div class="layout">
+  <div class="stage-wrap" id="stageWrap">
+    <img class="stage-bg" id="bgImg" src="demo-assets/bg-a05.png" alt="background">
+    <div class="overlay" id="overlayBox">
+      <video id="overlayVideo" autoplay loop muted playsinline src="demo-assets/demo-a05B.mp4"></video>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>1. Local demo (no connection)</h2>
+    <label>Character</label>
+    <select id="localChar">
+      <option value="a05">a05</option>
+      <option value="a06">a06</option>
+    </select>
+    <button class="secondary" onclick="loadLocalDemo()">Apply local demo video</button>
+
+    <h2 style="margin-top:20px">2. Connect to dev service (live)</h2>
+    <label>Modal URL</label>
+    <input id="svcUrl" value="https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run">
+    <label>MUNEA_APP_KEY</label>
+    <input id="svcKey" placeholder="paste key from deploy/.munea-app-key">
+    <label>Character</label>
+    <select id="liveChar">
+      <option value="a05">a05</option>
+      <option value="a06">a06</option>
+    </select>
+    <button onclick="connectLive()">Connect (WebRTC)</button>
+    <button class="secondary" onclick="disconnectLive()">Disconnect</button>
+
+    <h2 style="margin-top:20px">3. Feed audio chunks (wav upload -> ws stream)</h2>
+    <input type="file" id="wavFile" accept="audio/wav">
+    <button class="secondary" onclick="streamWavFile()">Start feeding</button>
+
+    <div id="log"></div>
+  </div>
+</div>
+<script>
+function log(msg) {
+  const el = document.getElementById('log');
+  const t = new Date().toISOString().slice(11,19);
+  el.textContent += "[" + t + "] " + msg + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+
+function loadLocalDemo() {
+  const char = document.getElementById('localChar').value;
+  document.getElementById('bgImg').src = "demo-assets/bg-" + char + ".png";
+  const v = document.getElementById('overlayVideo');
+  v.srcObject = null;
+  v.src = "demo-assets/demo-" + char + "B.mp4";
+  v.play();
+  document.getElementById('modeBadge').textContent = 'local demo mode';
+  document.getElementById('modeBadge').className = 'badge local';
+  log("applied local demo: " + char + " (B-box squished video, testing overlay+feather un-squish)");
+}
+
+let pc = null;
+let ws = null;
+
+async function connectLive() {
+  const base = document.getElementById('svcUrl').value.trim();
+  const key = document.getElementById('svcKey').value.trim();
+  const char = document.getElementById('liveChar').value;
+  document.getElementById('bgImg').src = "demo-assets/bg-" + char + ".png";
+  log("connecting -> " + base + " char=" + char + " ...");
+
+  pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  pc.ontrack = function(ev) {
+    const v = document.getElementById('overlayVideo');
+    v.src = '';
+    v.srcObject = ev.streams[0];
+    v.play();
+    log('got live video track, attached to overlay');
+  };
+  pc.onconnectionstatechange = function() { log('pc state: ' + pc.connectionState); };
+
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  const resp = await fetch(base + "/offer?key=" + encodeURIComponent(key) + "&char=" + char, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }),
+  });
+  const answer = await resp.json();
+  if (answer.error) { log('error: ' + answer.error); return; }
+  await pc.setRemoteDescription(answer);
+  log('WebRTC established, waiting for frames...');
+  document.getElementById('modeBadge').textContent = 'live connect mode';
+  document.getElementById('modeBadge').className = 'badge live';
+
+  ws = new WebSocket(base.replace('https://', 'wss://') + "/audio?key=" + encodeURIComponent(key));
+  ws.onopen = function() { log('/audio ws connected, ready to feed audio chunks'); };
+  ws.onclose = function() { log('/audio ws closed'); };
+}
+
+function disconnectLive() {
+  if (pc) { pc.close(); pc = null; log('pc closed'); }
+  if (ws) { ws.close(); ws = null; }
+}
+
+async function streamWavFile() {
+  const f = document.getElementById('wavFile').files[0];
+  if (!f) { log('no file selected'); return; }
+  if (!ws || ws.readyState !== 1) { log('connect first to open /audio ws'); return; }
+
+  const arrBuf = await f.arrayBuffer();
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const decoded = await audioCtx.decodeAudioData(arrBuf);
+  const targetSr = 24000;
+  const offline = new OfflineAudioContext(1, Math.ceil(decoded.duration * targetSr), targetSr);
+  const src = offline.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offline.destination);
+  src.start();
+  const rendered = await offline.startRendering();
+  const pcmFloat = rendered.getChannelData(0);
+
+  const pcm16 = new Int16Array(pcmFloat.length);
+  for (let i = 0; i < pcmFloat.length; i++) {
+    const s = Math.max(-1, Math.min(1, pcmFloat[i]));
+    pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+
+  const chunkSamples = Math.floor(targetSr * 0.2);
+  log("start feeding " + f.name + " (" + decoded.duration.toFixed(1) + "s, 24kHz, 0.2s per chunk)");
+  let i = 0;
+  const timer = setInterval(function() {
+    if (i >= pcm16.length) { clearInterval(timer); log('feed done'); return; }
+    const chunk = pcm16.subarray(i, i + chunkSamples);
+    ws.send(chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength));
+    i += chunkSamples;
+  }, 200);
+}
+
+window.addEventListener('load', function() { log('page ready. Section 1 shows overlay+feather without needing a connection.'); });
+</script>
+</body>
+</html>

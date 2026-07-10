@@ -59,3 +59,10 @@ engine/family_invitations.json
 Video/
 web/src/auth-config.js
 .munea-turn-cred
+
+# FlashHead PoC 產出（大二進位 demo，不進 repo）
+deploy/flashhead-poc/outputs/
+deploy/flashhead-poc/assets/*.wav
+deploy/flashhead-poc/assets/*.jpg
+deploy/flashhead-poc/assets/*.png
+deploy/flashhead-poc/assets/*.mp4
