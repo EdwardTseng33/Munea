@@ -460,6 +460,8 @@
       <img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧">
       <!-- 雲端擬真臉（快照秒醒）：接通後即時影像蓋上照片、無縫接手 -->
       <video id="faceVid" autoplay playsinline muted aria-hidden="true"></video>
+      <!-- 同線收聲（munea.faceSameLine=1）：臉那條線多帶的聲音軌從這裡播，跟影像天生同步；預設關、現役走本地播放 -->
+      <audio id="faceAud" autoplay playsinline aria-hidden="true" style="display:none"></audio>
       <div class="face-blink"></div>
       <div class="avatar-mouth" id="avatarMouth" aria-hidden="true"><span></span></div>
     </div>
@@ -1113,7 +1115,7 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260709-v127"></script>
+  <script src="src/version.js?v=20260711-sameline"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
@@ -1163,7 +1165,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260710-v1two"></script>
+  <script type="module" src="src/app.js?v=20260711-sameline"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

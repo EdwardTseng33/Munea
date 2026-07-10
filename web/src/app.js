@@ -994,6 +994,13 @@ function getAvatarUrl() {
 function serverFaceAudioOn() {
   try { return localStorage.getItem('munea.serverFaceAudio') === '1'; } catch (e) { return false; }
 }
+// 同線收聲（2026-07-11 · 治「聲音先出、臉慢 3-5 秒」根因＝聲音和影像走兩條線）：
+// 開＝App 從臉的那條線多收一軌聲音、從那裡播（跟影像天生同步、免手動猜 faceSyncMs）。
+// 預設關＝現役零影響；上行照舊走「手機轉送」（Avatar.feed 一寸不動、不碰 7/10 那顆方案B 雷）。
+// 保底：同線 3 秒沒出聲 → 自動退回本地播放（防「有臉沒聲」，比慢半拍更糟）。
+function faceSameLineOn() {
+  try { return localStorage.getItem('munea.faceSameLine') === '1'; } catch (e) { return false; }
+}
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
   _diag(msg) {  // 診斷小窗（設定 munea.debug=1 才顯示）：手機上排查「臉沒動」用
@@ -1047,7 +1054,14 @@ const Avatar = {
       this.pc = new RTCPeerConnection(forceRelay ? { iceServers, iceTransportPolicy: 'relay' } : { iceServers });
       this._diag('連線中（中繼' + (forceRelay ? '·強制' : '·備援') + '）');
       this.pc.addTransceiver('video', { direction: 'recvonly' });
-      this.pc.ontrack = e => { vid.srcObject = e.streams[0]; this._diag('影像到了'); };
+      const _sameLine = faceSameLineOn();
+      if (_sameLine) this.pc.addTransceiver('audio', { direction: 'recvonly' });   // 同線：臉那條線多收一軌聲音（跟影像同步）
+      this.pc.ontrack = e => {
+        if (_sameLine && e.track && e.track.kind === 'audio') { this._attachFaceAudio(e.track); return; }   // 聲音軌 → faceAud
+        // 影像軌照舊放 faceVid（同線時只放影像那軌、聲音走 faceAud 不重疊；現役維持 e.streams[0] 一寸不動）
+        vid.srcObject = _sameLine && e.track ? new MediaStream([e.track]) : e.streams[0];
+        this._diag('影像到了');
+      };
       this.pc.addEventListener('iceconnectionstatechange', () => {
         this._diag('線路 ' + this.pc.iceConnectionState);
         // 第一通線路 failed 自救（Edward 2026-07-11）：臉連線失敗＝自動重連一次（等於幫用戶掛掉重撥）——他實測第二通總是成功
@@ -1092,6 +1106,34 @@ const Avatar = {
   },
   feed(buf) { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send(buf); } catch (e) {} },
   reset() { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send('reset'); } catch (e) {} },
+  // 同線：把臉那條線多帶的聲音軌接到 faceAud 播出，並持續量音量（給 LiveVoice 3 秒保底判斷用）
+  _attachFaceAudio(track) {
+    try {
+      const aud = document.getElementById('faceAud'); if (!aud) return;
+      const ms = new MediaStream([track]);
+      aud.srcObject = ms; aud.muted = false;
+      const p = aud.play(); if (p && p.catch) p.catch(() => {});
+      this._diag('聲音到了（同線）');
+      try {
+        this._faceAudCtx = new AudioContext();
+        const src = this._faceAudCtx.createMediaStreamSource(ms);
+        const an = this._faceAudCtx.createAnalyser(); an.fftSize = 512;
+        src.connect(an); this._faceAudAnalyser = an;   // 只接分析器、不接喇叭（聲音由 <audio> 播、這裡純量）
+        const data = new Uint8Array(an.fftSize);
+        this._faceAudMaxLevel = 0;
+        const loop = () => {
+          if (!this._faceAudAnalyser) return;
+          an.getByteTimeDomainData(data);
+          let s = 0; for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; s += v * v; }
+          const rms = Math.sqrt(s / data.length);
+          this._faceAudLevel = rms;
+          if (rms > (this._faceAudMaxLevel || 0)) this._faceAudMaxLevel = rms;
+          this._faceAudRaf = requestAnimationFrame(loop);
+        };
+        loop();
+      } catch (e) {}
+    } catch (e) {}
+  },
   stop() {
     this.on = false;
     try { if (this.ws) this.ws.close(); } catch (e) {}
@@ -1099,6 +1141,12 @@ const Avatar = {
     this.ws = this.pc = null;
     const vid = document.getElementById('faceVid');
     if (vid) { try { vid.srcObject = null; } catch (e) {} }
+    // 同線收聲一起收
+    try { if (this._faceAudRaf) cancelAnimationFrame(this._faceAudRaf); } catch (e) {}
+    this._faceAudAnalyser = null; this._faceAudRaf = 0; this._faceAudLevel = 0; this._faceAudMaxLevel = 0;
+    try { if (this._faceAudCtx) this._faceAudCtx.close(); } catch (e) {}
+    this._faceAudCtx = null;
+    const aud = document.getElementById('faceAud'); if (aud) { try { aud.srcObject = null; } catch (e) {} }
     const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.remove('livevid');
   },
 };
@@ -1184,6 +1232,8 @@ const LiveVoice = {
       const done = ok => { if (!settled) { settled = true; resolve(ok); } };
       this.ws.onopen = async () => {
         this.playCtx = new AudioContext({ sampleRate: 24000 }); this.playHead = this.playCtx.currentTime;
+        this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
+        try { clearTimeout(this._sameLineWatch); } catch (e) {}
         try { this.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
         catch (e) { setCallHint('拿不到麥克風，請到設定允許'); done(true); return; }
         this.ac = new AudioContext();
@@ -1253,6 +1303,25 @@ const LiveVoice = {
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
         let ps = 0; for (let k = 0; k < f.length; k++) ps += f[k] * f[k];
         this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
+        // 同線模式：聲音改從 faceAud（臉那條線）出、這裡不本地排程播放（也不用等 faceSyncMs）。
+        // 保底：頭一段講話若 3 秒內 faceAud 完全沒出聲 → 判定同線失效、之後這通改回本地播放（防「有臉沒聲」）。
+        if (this._sameLine && this._sameLineFellBack !== true) {
+          if (!this._sameLineWatchStarted) {
+            this._sameLineWatchStarted = true;
+            try { Avatar._faceAudMaxLevel = 0; } catch (e) {}
+            this._sameLineWatch = setTimeout(() => {
+              let mx = 0; try { mx = Avatar._faceAudMaxLevel || 0; } catch (e) {}
+              if (mx < 0.015) {
+                this._sameLineFellBack = true;
+                try { Avatar._diag('同線3秒無聲→退回本地播放'); } catch (e) {}
+                try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
+              }
+            }, 3000);
+          }
+          clearTimeout(this._speakTimer);                          // 換手輪替照舊：她 900ms 沒再吐聲＝講完、開麥
+          this._speakTimer = setTimeout(() => this._toListening(), 900);
+          return;                                                  // 不本地排程（聲音由 faceAud 出）
+        }
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
         const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._avAnalyser || this.playCtx.destination);   // 延遲量測開時串一顆分析器（透明、不改聲音）
         const now = this.playCtx.currentTime;
@@ -1282,6 +1351,7 @@ const LiveVoice = {
   stop() {
     this.on = false;
     this.ready = false;
+    try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { if (serverFaceAudioOn()) this.setFaceAudio(false); } catch (e) {}   // 告訴語音伺服器：不用再送聲音給雲端臉了（舊路關閉時這行不送、行為不變）
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
