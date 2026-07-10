@@ -179,9 +179,12 @@ class Nening:
 
         # 畫質：位元率預設太細、講話會糊（D1 排雷同款）
         import aiortc.codecs.h264 as _h264
-        _h264.MIN_BITRATE = 3_000_000
-        _h264.DEFAULT_BITRATE = 8_000_000
-        _h264.MAX_BITRATE = 12_000_000
+        # 7/10 晚三修（Edward「沒講話嘴還在動」＝畫面塞水管鐵證）：原 8M/上限12M 是有線寬頻等級，
+        # 手機行動網路吞不下 → 畫面塞在傳輸管排隊、固定落後 3-5 秒、講完了還在播舊畫面。
+        # 降到行動網路吞得下的水準（720p 級講話臉 2M 已夠清楚；快取不足時可再降）。
+        _h264.MIN_BITRATE = 600_000
+        _h264.DEFAULT_BITRATE = 2_000_000
+        _h264.MAX_BITRATE = 3_000_000
 
         import cv2
 
