@@ -1168,10 +1168,18 @@ window.MuneaAvatar = Avatar;
 document.addEventListener('DOMContentLoaded', () => {
   const vid = document.getElementById('faceVid');
   if (vid) vid.addEventListener('playing', () => {
-    // 會動的臉線路通了、有影格了＝「臉就緒」信號。但先不蓋上去——等語音也就緒，
-    // 由 connectCall 兩邊都好才一起亮（撥通中維持待機動畫、不定格·Edward 2026-07-09 二次拍板）。
-    Avatar._facePlaying = true;
-    if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
+    // 會動的臉線路通了＝「臉就緒」候選。⚠ 第一通冷開機時 'playing' 會在「真畫面到之前」就響，
+    // 這時亮出來＝整屏粉紅（空畫面被手機渲染成粉色、Edward 2026-07-11 真機抓到）。
+    // 修法：等到「真的解出第一格畫」（畫面有寬度＋播放時間有在走）才發就緒信號。
+    const _confirmRealFrame = (tries) => {
+      if (vid.videoWidth > 0 && vid.currentTime > 0.05) {
+        Avatar._facePlaying = true;
+        if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
+        return;
+      }
+      if (tries > 0) setTimeout(() => _confirmRealFrame(tries - 1), 250);   // 最多再等 25 秒（冷開機窗）——沒真畫面就不亮、待機動畫繼續頂著
+    };
+    _confirmRealFrame(100);
   });
 });
 
@@ -1326,6 +1334,8 @@ const LiveVoice = {
               let mx = 0; try { mx = Avatar._faceAudMaxLevel || 0; } catch (e) {}
               if (mx < 0.015) {
                 this._sameLineFellBack = true;
+                // 關鍵：退回本地播放的同時「把同線那軌靜音」——不然引擎晚點醒過來、兩邊一起出聲＝回答重疊（Edward 2026-07-11 真機抓到）
+                try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
                 try { Avatar._diag('同線3秒無聲→退回本地播放'); } catch (e) {}
                 try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
               }
@@ -2896,7 +2906,8 @@ function connectCall() {
     activeChatStartedAt = Date.now();
     activeChatTurnCount = 0;
     setFaceState('idle');
-    setCallHint('連線中…', true);
+    // 新引擎首通冷開機較久（喚醒優化交先鋒車道）——誠實預告、不讓人以為當機（Edward 2026-07-11「等20秒」）
+    setCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? '新引擎暖身中，首次約需半分鐘…' : '連線中…', true);
     trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
     const chatEl = document.getElementById('chat');
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
