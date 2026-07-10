@@ -988,10 +988,11 @@ function getAvatarUrl() {
   try { const u = localStorage.getItem('munea.avatarUrl'); if (u !== null) return u.replace(/\/$/, ''); } catch (e) {}
   return AVATAR_URL_DEFAULT;
 }
-// 聲音怎麼送去雲端臉：預設走新路（語音伺服器直接送、伺服器對伺服器、省手機上行一趟 · 2026-07-10 Edward 拍板方案 B）。
-// 想退回舊路（客戶端自己送）：localStorage['munea.serverFaceAudio']=0。
+// 聲音怎麼送去雲端臉：預設走「舊路＝客戶端自己送」——臉穩、不會因伺服器連不上雲端臉而整個死掉。
+// 2026-07-10 Edward 拍板暫停 B（回穩）：日誌證實 B(伺服器直送)接雲端臉會 timeout、且接上了延遲也沒降。
+// 想重開 B（實驗）：localStorage['munea.serverFaceAudio']=1。
 function serverFaceAudioOn() {
-  try { return (localStorage.getItem('munea.serverFaceAudio') || '1') === '1'; } catch (e) { return true; }
+  try { return localStorage.getItem('munea.serverFaceAudio') === '1'; } catch (e) { return false; }
 }
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
