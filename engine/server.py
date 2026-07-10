@@ -900,6 +900,22 @@ def family_invitations_response(data, client_ip=None):
         if invitation is None:
             return {"ok": False, "error": backend}
         return {"ok": True, "status": "rejected", "invitation": invitation, "backend": backend}
+    if action in ("application_status", "application-status"):
+        # 申請人用自己的申請單編號查「被核准了嗎」；只有 accepted 才給 familyGroupId（入圈鑰匙）
+        invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
+        if not invitation_id:
+            return {"ok": False, "error": "invitation_id_required"}
+        found = None
+        for inv in load_family_invitations(limit=500):
+            if inv.get("id") == invitation_id:
+                found = inv
+        if not found:
+            return {"ok": True, "status": "not_found"}
+        st = found.get("status")
+        out = {"ok": True, "status": st}
+        if st == "accepted":
+            out["familyGroupId"] = found.get("familyGroupId")
+        return out
     if action == "update":
         invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
         if not invitation_id:
