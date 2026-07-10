@@ -144,6 +144,10 @@ class Nening:
                     self.count += 1
             def pop(self):
                 with self.lock:
+                    # 影格積壓＝嘴巴落後聲音：超過約 8 格（~0.3s）就丟掉最舊的、追到接近最新
+                    # ——不管積壓從哪來（待機殘留、進料爆量、網路抖動），嘴都不會愈拖愈遠（Edward 2026-07-10 延遲修）
+                    while len(self.q) > 8:
+                        self.q.popleft()
                     return self.q.popleft() if self.q else None
             def clear(self):
                 with self.lock:
@@ -244,7 +248,8 @@ class Nening:
                     if todo is not None:
                         if self._idle_on:
                             self._idle_on = False
-                            print("[feeder] 真聲音到了 → 停餵靜音、接回真句", flush=True)
+                            sink.clear()   # 從待機切回真話：清掉待機積壓的影格，真嘴立刻插到最前面、不排在待機後面（Edward 2026-07-10 延遲修）
+                            print("[feeder] 真聲音到了 → 停餵靜音、清待機積壓、接回真句", flush=True)
                         sdk.run_chunk(todo, CHUNKSIZE)
                         continue
                     # 沒有真聲音要處理：通話還開著（至少一條影像連線未關）就餵靜音維持「活的待機」——
