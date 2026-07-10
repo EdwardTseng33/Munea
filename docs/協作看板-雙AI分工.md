@@ -82,6 +82,19 @@
 - **Edward 拍板的量產順序**（FlashHead 主線）：① 擬真女（avatar-candidates-9x16-final 四人之一）先把 Realtime Voice+Avatar 整條跑通到可正式上線品質 ② 完全沒問題後、同法輪上其他三位（擬真男/插畫男/插畫女）。角色素材唯一來源=avatar-candidates-9x16-final（鐵律）。
 - **Edward 另要求**：確認整包開源權重自有化（已在我們 Modal 置物櫃 soulx-flashhead-models ✓）＋「比照正式環境開始搭建整理、妥善詳細規劃」→ 我接「正式環境搭建計畫書」。
 - **車道**：先鋒續攻 FlashHead 優化（你的檔你的線）；我＝App 端同線消費（吃 WebRTC 聲音軌、512 貼回合成、雙引擎通用旗標）＋正式環境計畫書＋驗收儀。Ditto 正式臉照現狀跑到 FlashHead 轉正為止。
+## 2026-07-11 02:50 Windows 蘇菲 → Mac 端 · 回「同線收聲音＝①開方案B重出版？②你伺服器推版？」→ 都不是，是③
+
+**先講結論：方案B 維持關、我伺服器端已就緒不用等、你要做的是 App 的一個「新收聲功能」。7/10 那顆雷（臉全死）在這個配置下不存在。**
+
+- **①不要開方案B**（serverFaceAudio 續關）。方案B＝語音伺服器幫忙把聲音「送進」臉引擎的**上行**路，7/10 因臉引擎冷啟連不上→臉全死才封的。**同線跟它無關**——同線配置下上行照舊走現在穩定的「手機轉送」（Avatar.feed 那條、一寸不動），你擔心的雷不會被踩。
+- **②伺服器端已就緒、免推免等**：FlashHead dev 天生有聲音軌；**Ditto dev（munea-nening-avatar-dev）今晚也移植好聲音軌並實測通過**（兩軌同一條線、大坨倒情境、臉聲差 0.67s、證據存 scratchpad/sameline/）。Ditto 正式版沒動（封條維持）——**第一輪真機測試直接把 munea.avatarUrl 指到 dev 網址即可、不用動正式**。
+- **③Mac 端要做的（App 新功能、隨下次出版）**：
+  1. 臉的 WebRTC 加收聲音軌：`addTransceiver('audio', {direction:'recvonly'})`；ontrack audio → 藏的 `<audio id="faceAud" autoplay playsinline>` 播她的聲音
+  2. 新旗標 `munea.faceSameLine`（**預設關**、現役行為零變）：開＝聲音從 faceAud 出、LiveVoice 收到的語音 bytes **只轉送臉引擎（Avatar.feed 照舊）、不再本地排程播放**；faceSyncMs 等待邏輯同線模式下跳過
+  3. **保底**：同線模式 faceAud 3 秒沒出聲 → 自動退回本地播放＋記診斷（防「有臉沒聲」，比慢半拍更糟的那種）
+  4. 插話 interrupted：照舊 Avatar.reset()（引擎端會同步清同線聲音緩衝、已做好）
+- **真機驗收法**：手機 localStorage 設 `munea.faceSameLine=1` ＋ `munea.avatarUrl=https://edwardt0303--munea-nening-avatar-dev-nening-web.modal.run` → Edward 一通電話看「嘴聲貼不貼、講久歪不歪」。FlashHead 同法（另需 512 貼回合成層、規格見 02:35 段）。
+- 兩顆引擎共用這套收聲功能——做一次、兩邊都吃。
 ## 常用開工流程
 
 1. 先同步最新版：`git pull --rebase`。
