@@ -260,7 +260,11 @@ class Nening:
                     # 那不是沉默；之前這裡沒判斷、靜音塊混進真話裡（1:1 交錯）→ 嘴型被稀釋、影格爆量塞隊 → 女角越講越慢的元凶。
                     now = time.time()
                     with self.lock:
-                        real_silent = (now - self.last_in) > 1.0      # 超過 1 秒沒進真聲音＝真的沒人在講
+                        # ⚠ 再修（7/10 晚二修）：AI 的聲音是「一大坨快速倒進來」的（6 秒話 1 秒多倒完），
+                        # 只看「多久沒進新聲音」會在長句講到一半誤判成沉默、靜音又混進真話 → 嘴被稀釋越講越慢（Edward 手機 3-5s 主嫌）。
+                        # 正解＝「手上的話都演完了」＋「1 秒沒進新料」兩個都成立才算真沉默。
+                        queued = len(self.acc) >= self.pos + SPLIT    # 還有真話沒演完
+                        real_silent = (not queued) and (now - self.last_in) > 1.0
                     has_conn = any(pc.connectionState in ("new", "connecting", "connected") for pc in nening.pcs)   # disconnected/failed/closed 都不算在線（防殭屍連線讓待機永動）
                     if has_conn and real_silent and now >= self._idle_due:
                         if not self._idle_on:
