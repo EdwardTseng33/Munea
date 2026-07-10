@@ -113,6 +113,30 @@
 **交先鋒（引擎車道）兩件**：
 1. **冷開機 ~20-30s**（Edward 首通實測）：快照喚醒疑似沒真正生效（health load_s 仍 27-30）——照你檔頭寫的 eager 快照路線查一下 restore 是否真的走到；目標對齊 Ditto 的 8-10s。
 2. **512→全身合成**：Edward 期望通話畫面=全身直式（現在 contain 顯示被他點名「壓縮到半屏」）。擬真女 512 底圖（avatar-candidates-9x16-final、B 版規格）入 CHAR_SRC 後喊聲，App 端立刻接貼回合成。
+
+## 2026-07-11 04:15 Windows 蘇菲（深度調研線）→ App 主線 · 調研收尾交接（Edward 指令「repo 收尾、給那邊 session 參考接續」）
+
+> 這條分身今晚跑的是「avatar 模型優化深度調研＋FlashHead 獨立手機測試頁」。Edward 已把主戰場交 App(Mac) 主線，本段把調研線成果交接過去、**標明哪些已做過別重做**。
+
+### ① 全部落檔了（commit 7a1430e，不再裸奔）
+看板 02:35 記的「flashhead_modal_dev.py / probe / test_page 670 行裸奔」——**已連同調研文件一起 commit＋push**（20 檔 2275 行；178MB PoC outputs 已 gitignore 擋在外）。App 主線 `git pull` 就有。
+
+### ② 給 App 主線可直接接續（不必重做）
+- **卡頓根因已量出＋儀表已就位**：`/health` 曝露 `gen_compute` p50/p95＋`audio/video_underrun` 計數；`/diag` 收 client `getStats()` 自動回傳。實測 **L4 gen_compute p95=812ms／960ms 預算餘裕僅 15%**、underrun 間隔遞增（1193→1372ms）＝「越講越慢」是**源頭斷糧（GPU 出菜慢）非網路**。Edward 下通真機通話新版 client 會自動回傳 → 比對 `/health` 前後 underrun 差值＝那通的網路成分佔比。
+- **換卡結論（cost/perf）**：RunPod 4090 常駐＝比 L4 便宜 17%（US$0.69/hr）、餘裕 74%（3 倍現在）＝根治候選，**但無 Modal 自動休眠、需自建 scale-to-zero**；Modal L40S 需先綁付款方式（二測就卡這）。免費止血（音訊 pacing +0.3s）已上、但長回合 ~20s 後仍復發（治標）。
+- **⭐ 授權斷奶路線圖（Edward 03:30 拍板）**：`docs/FlashHead-授權覆核-沙利曼-2026-07-10.md` §自研斷奶——閉源自研＋稱「自研優化引擎」**合法**（Apache，僅需法律頁 NOTICE）；**營收到 NT$1 億即啟動斷奶**（換掉 LTX VAE 零件→條款消失）；🚨**蒸餾陷阱**：自養替代零件不可用舊 VAE 輸出當教材（仍算 Derivative）、須從乾淨 teacher(Wan2.1) 或自有素材訓；正式執行前配沙利曼＋真人律師。**Attachment A 紅線（禁 avatar 給醫療建議、須明示 AI 生成）已在 Gate 5 checklist**。
+
+### ③ 服務端點澄清（重要，避免誤解）
+App 主線 `munea.faceEngine='flashhead'` 連的 **munea-flashhead-avatar-dev ＝就是這條線部署的服務**——今晚對它的改動（FIFO 順播佇列、/diag、/health 儀表、pacing +0.3s、同線 video+audio）**都在已入庫的 `flashhead_modal_dev.py`**。測試頁 `flashhead-live-test.html`（同線收聲＋半雙工回音閘＋字幕預設隱藏＋9:16 貼回＋nomic 旁觀）與 App 端接法同源，可互為對照/抄招。
+
+### ④ 已做過、別重做的清單
+競品三家對標（Tavus/Duix/HeyGen 規格表）｜引擎盤點（阿里 LiveAvatar 死路確認/Higgs 觀察/OpenTalking 當參考書/EchoMimicV3 離線工具）｜FlashHead 九關深查｜授權鏈逐零件覆核｜動物臉 PoC（咪咪 FasterLivePortrait 可動、旺財待閉嘴底圖）｜9:16 貼回合成（B框裁切+羽化參數）｜卡頓雙端量測——全在 `docs/avatar-模型優化深度調研-2026-07-10.md` ＋ 授權覆核文件。
+
+### ⑤ 收尾提醒
+- **compile 實驗 app 已 stop 收乾淨**（`munea-flashhead-compile-exp`，一次性、不燒錢）。dev/test-page 保留（scale-to-zero）。
+- **擬真女 512 底圖入 CHAR_SRC 後喊一聲** → App 端就帶 char＋做貼回全身合成。
+- **冷開機 ~20-30s**：快照喚醒疑似沒真生效（health load_s 仍 27-30）→ 引擎車道查 restore、目標對齊 Ditto 8-10s。
+
 ## 常用開工流程
 
 1. 先同步最新版：`git pull --rebase`。
