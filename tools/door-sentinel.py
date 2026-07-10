@@ -27,6 +27,11 @@ DOORS = [
     ("管家腦（家人連線·健康趨勢）", "https://munea-brain-staging-491603544409.asia-east1.run.app/", "munea-brain-staging"),
 ]
 
+# 雲端臉（Modal·亞洲）：健康門要帶通行碼；每天早上摸一下＝順手暖機，
+# 讓當天第一個開聊聊的用戶拿到熱的臉（熱身永遠我們吞、不給用戶吞 · Edward 2026-07-10）
+FACE_URL = "https://edwardt0303--munea-nening-avatar-nening-web.modal.run/health"
+_KEY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "deploy", ".munea-app-key")
+
 
 def sh(args):
     try:
@@ -79,8 +84,22 @@ def main():
         if not ok:
             bad.append(f"🔴 *{name}* → {diagnose(code, svc)}")
 
+    # 雲端臉：帶通行碼探健康＋順手暖機（睡著要 8-10 秒醒、剛上新版可能要 1-2 分鐘熱身→給足時間、別誤報）
+    try:
+        _key = open(_KEY_FILE, encoding="utf-8").read().strip()
+        _req = urllib.request.Request(FACE_URL + "?key=" + urllib.parse.quote(_key), method="GET")
+        with urllib.request.urlopen(_req, timeout=150, context=ssl.create_default_context()) as r:
+            _body = r.read(200).decode("utf-8", "ignore")
+            _face_ok = (r.getcode() == 200 and '"ok": true' in _body.replace('&quot;', '"').replace('ok":true', 'ok": true'))
+    except Exception:
+        _face_ok = False
+    lines.append(f"{'✅' if _face_ok else '🔴'} 會動的臉（聊聊·亞洲）：{'醒了、暖好' if _face_ok else '叫不醒'}")
+    if not _face_ok:
+        bad.append("🔴 *會動的臉* → 💥 健康探測失敗——聊聊會只有聲音沒有臉。"
+                   "看 Modal 主控台 munea-nening-avatar；必要時重新上線：deploy/modal-avatar 下 `modal deploy -m nening_modal`")
+
     if not bad:
-        print(f"門口哨兵 {today}：兩道門都通（200）✅  " + " / ".join(lines))
+        print(f"門口哨兵 {today}：三道門都通 ✅  " + " / ".join(lines))
         return 0
 
     text = (
