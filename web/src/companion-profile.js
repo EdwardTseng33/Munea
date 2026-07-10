@@ -13,9 +13,9 @@
       backendChar: '阿宏',
       defaultName: '阿宏',
       templateLabel: '沉穩型 · 像大哥，很可靠',
-      thumbAsset: 'avatars/ahong-face.png',
-      homeAsset: 'avatars/ahong.png',
-      fullAsset: 'avatars/ahong-tall.jpg',
+      thumbAsset: 'avatars/ahong-v3-face.png',   // v3 無眼鏡（Edward 7/10 拍板）
+      homeAsset: 'avatars/ahong-v3-face.png',
+      fullAsset: 'avatars/ahong-v3.png',
     },
     'munea-2d-xiaoyun': {
       backendChar: '小昀',

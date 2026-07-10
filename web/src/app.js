@@ -1316,7 +1316,7 @@ const AvSyncMeter = {
     const v = this._video; if (!v || !v.videoWidth) return 0;
     try {
       const sw = v.videoWidth, sh = v.videoHeight;
-      this._ctx.drawImage(v, sw * 0.28, sh * 0.55, sw * 0.44, sh * 0.30, 0, 0, 48, 48);   // 只取中下段＝嘴巴區
+      this._ctx.drawImage(v, sw * 0.30, sh * 0.33, sw * 0.40, sh * 0.17, 0, 0, 48, 48);   // 嘴巴區＝高度33-50%（7/10 錄影逐格驗證：55%以下是胸口、之前盯錯位置才一直不出數字）
       const cur = this._ctx.getImageData(0, 0, 48, 48).data; let m = 0, n = 0;
       if (this._prev) { for (let i = 0; i < cur.length; i += 8) { m += Math.abs(cur[i] - this._prev[i]); n++; } }
       this._prev = cur;
@@ -1344,11 +1344,11 @@ const AvSyncMeter = {
     const n = this._samples.length, last = n ? this._samples[n - 1] : 0, avg = this._avg();
     const curW = parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
     const suggest = Math.max(0, Math.min(2800, Math.round(curW + avg * 1000)));   // 想對齊該把「聲音等臉」設多少
-    const auto = (localStorage.getItem('munea.avSyncAuto') === '1') ? '（自動補償中）' : '';
+    const auto = ((localStorage.getItem('munea.avSyncAuto') || '1') === '1') ? '（自動補償中）' : '';   // 7/11 起預設開：量到差多少就自動補多少
     this._overlay.textContent = `臉比聲音慢 ${last.toFixed(1)}s（這句）\n近 ${n} 句平均 ${avg.toFixed(1)}s${auto}\n對齊建議：聲音等臉 ${suggest}ms`;
   },
   _maybeTune() {
-    if (localStorage.getItem('munea.avSyncAuto') !== '1') return;   // 預設不自動改、只顯示；開了才自動補
+    if ((localStorage.getItem('munea.avSyncAuto') || '1') !== '1') return;   // 7/11 起預設開（Edward 拍板對齊為正解）；munea.avSyncAuto=0 可關
     if (this._samples.length < 3) return;
     const now = performance.now(); if (now - this._lastTune < 4000) return;   // 每 4 秒最多調一次、給它時間穩
     const sorted = this._samples.slice().sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)];
@@ -1432,7 +1432,8 @@ function setCallToggle(connected) {
 // ===== 待機動態（Edward 7/9 供片）：進聊聊頁播「打招呼」一次 → 「待機」循環；按通話即停回靜態，交給語音＋雲端臉 =====
 const FACE_MOTION = {
   'nening-real-female': { hello: 'avatars/motion/nening-hello.mp4', idles: ['avatars/motion/nening-idle.mp4'] },
-  'companion-real-male': { hello: 'avatars/motion/ahong-hello.mp4', idles: ['avatars/motion/ahong-idle.mp4'] },
+  // 阿宏待機影片暫下架（7/11）：影片是舊眼鏡版長相、跟 v3 無眼鏡新照不同人——先靜態照頂著，新影片生好再回掛
+  // 'companion-real-male': { hello: 'avatars/motion/ahong-hello.mp4', idles: ['avatars/motion/ahong-idle.mp4'] },
   'munea-2d-xiaoyun': { hello: 'avatars/motion/xiaoyun-hello.mp4', idles: ['avatars/motion/xiaoyun-idle.mp4'] },
   'munea-2d-ayuan': { hello: 'avatars/motion/ayuan-hello.mp4', idles: ['avatars/motion/ayuan-idle.mp4'] },
   'munea-2d-mimi': { hello: 'avatars/motion/mimi-hello.mp4', idles: ['avatars/motion/mimi-idle.mp4', 'avatars/motion/mimi-idle2.mp4'] },   // 咪咪有兩段待機（含舔鼻子）輪著播
@@ -2932,6 +2933,10 @@ function init() {
     FaceWave.stop();
     showView('home');
   });
+  // 滑掉/切走 App＝自動掛斷（Edward 2026-07-10）：離開畫面就走「結束通話」完整收線（停聲音/停臉/停計時/記點），不讓通話在背景白燒點數
+  const _hangupOnLeave = () => { try { if ((callConnected || callDialing) && $('#callToggle')) $('#callToggle').click(); } catch (e) {} };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _hangupOnLeave(); });
+  window.addEventListener('pagehide', _hangupOnLeave);
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     // 撥通中再按一次＝取消撥號、回到待機
     if (callDialing && !callConnected) {
