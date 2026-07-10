@@ -11,9 +11,17 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.17.1',
+  current: '1.17.2',
   channel: '',
   changelog: [
+    {
+      version: '1.17.2',
+      date: '2026-07-10',
+      title: '營運後台 Logo 字樣對齊官網（管理者用）',
+      items: [
+        'Logo 文字改回官網一致的「Munea 沐寧」（nea 為薄荷綠、英文在前），不再自創寫法',
+      ],
+    },
     {
       version: '1.17.1',
       date: '2026-07-10',
