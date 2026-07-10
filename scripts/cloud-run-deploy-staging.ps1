@@ -63,6 +63,26 @@ function Test-SecretExists($name) {
   }
 }
 
+function Get-DeploymentValue($name) {
+  $value = [Environment]::GetEnvironmentVariable($name)
+  if (-not [string]::IsNullOrWhiteSpace($value)) {
+    return $value.Trim()
+  }
+
+  $envPath = Join-Path $root "engine\.env.local"
+  if (-not (Test-Path -LiteralPath $envPath)) {
+    return $null
+  }
+
+  $escapedName = [regex]::Escape($name)
+  foreach ($line in Get-Content -LiteralPath $envPath) {
+    if ($line -match "^\s*$escapedName\s*=\s*(.*)$") {
+      return $matches[1].Trim().Trim('"').Trim("'")
+    }
+  }
+  return $null
+}
+
 function New-CleanSourceFromHead($destination) {
   $zip = Join-Path ([System.IO.Path]::GetTempPath()) ("munea-cloudrun-source-{0}.zip" -f ([guid]::NewGuid().ToString("N")))
   try {
@@ -107,10 +127,35 @@ try {
     Warn "admin secret missing: $AdminSecret; staging admin reads will stay disabled until it is created"
   }
 
+  $supabaseEnv = @{}
+  foreach ($name in @(
+    "SUPABASE_URL",
+    "MUNEA_SUPABASE_ACCOUNT_ID",
+    "MUNEA_SUPABASE_PERSON_ID",
+    "MUNEA_SUPABASE_FAMILY_GROUP_ID"
+  )) {
+    $value = Get-DeploymentValue $name
+    if ([string]::IsNullOrWhiteSpace($value)) {
+      throw "$name is required in the process environment or engine/.env.local before staging deploy"
+    }
+    $supabaseEnv[$name] = $value
+  }
+  Pass "Supabase staging URL and scoped ids are available"
+
   $brainSecrets = "GEMINI_API_KEY=$($GeminiSecret):latest,SUPABASE_SERVICE_ROLE_KEY=$($SupabaseSecret):latest"
   if ($adminSecretExists) {
     $brainSecrets += ",MUNEA_ADMIN_API_TOKEN=$($AdminSecret):latest"
   }
+  $brainEnvVars = @(
+    "MUNEA_DATABASE_PROVIDER=supabase",
+    "MUNEA_ENV_NAME=staging",
+    "MUNEA_REQUIRE_AUTH=1",
+    "MUNEA_ENABLE_DEV_AUTH_BYPASS=false",
+    "SUPABASE_URL=$($supabaseEnv['SUPABASE_URL'])",
+    "MUNEA_SUPABASE_ACCOUNT_ID=$($supabaseEnv['MUNEA_SUPABASE_ACCOUNT_ID'])",
+    "MUNEA_SUPABASE_PERSON_ID=$($supabaseEnv['MUNEA_SUPABASE_PERSON_ID'])",
+    "MUNEA_SUPABASE_FAMILY_GROUP_ID=$($supabaseEnv['MUNEA_SUPABASE_FAMILY_GROUP_ID'])"
+  ) -join ","
 
   Step "Deploy brain staging"
   # Keep Cloud Run public at the edge; MUNEA_REQUIRE_AUTH enforces app-level authentication.
@@ -121,7 +166,7 @@ try {
     "--region", $Region,
     "--project", $ProjectId,
     "--update-secrets", $brainSecrets,
-    "--update-env-vars", "MUNEA_DATABASE_PROVIDER=supabase,MUNEA_ENV_NAME=staging,MUNEA_REQUIRE_AUTH=1,MUNEA_ENABLE_DEV_AUTH_BYPASS=false",
+    "--update-env-vars", $brainEnvVars,
     "--memory", "1Gi",
     "--min-instances", "0",
     "--max-instances", "2",

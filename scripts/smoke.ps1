@@ -2838,7 +2838,7 @@ for token in ["Readiness", "StrictReadiness", "MUNEA_ADMIN_API_TOKEN", "MUNEA_RE
     if token not in cloudrun_status:
         raise SystemExit("Cloud Run readiness missing token: " + token)
 cloudrun_deploy = Path("scripts/cloud-run-deploy-staging.ps1").read_text(encoding="utf-8")
-for token in ["git archive", "DryRun", "update-secrets", "MUNEA_REQUIRE_AUTH=1", "MUNEA_ENABLE_DEV_AUTH_BYPASS=false", "munea-admin-token-staging"]:
+for token in ["git archive", "DryRun", "update-secrets", "Get-DeploymentValue", "SUPABASE_URL", "MUNEA_REQUIRE_AUTH=1", "MUNEA_ENABLE_DEV_AUTH_BYPASS=false", "munea-admin-token-staging"]:
     if token not in cloudrun_deploy:
         raise SystemExit("Cloud Run clean deploy missing token: " + token)
 gcloudignore = Path(".gcloudignore").read_text(encoding="utf-8")
