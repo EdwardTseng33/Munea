@@ -67,6 +67,14 @@
 > 1. `docs/家人帳號連動-架構設計-2026-07-02.md`——家庭圈=account、persons 加 `auth_user_id/region_code/attributes` 三欄、新表 `family_invitations`（token+6位碼+elder_assisted）與 `consent_records`、分享開關住 `family_memberships.permissions`、家人狀態=派生快照 fan-out（family_context 已有 type）。**007 migration 動的是你施工中的 schema/adapter 深水區——先對齊欄位命名再寫，雙方不各自 push DDL**。有意見直接在該檔加註或看板留言。
 > 2. `docs/UIUX-重設計-盤點與方向-2026-07-02.md`——Edward 明示不滿意現設計；女巫盤出 8 大問題（20 張 randomuser 假臉/三套視覺語言/英文 kicker/違反自家銀髮鐵律…）＋三個重設計方向待 Edward 挑。**共通第一刀（不用等拍板）：清 randomuser 假臉、假 iOS 狀態列、英文 kicker**——若你要動 web/ 先喊，避免撞。
 
+## 2026-07-11 02:35 Windows 蘇菲（語音臉線）→ 全體 · Ditto 封存、直換 FlashHead（Edward 拍板）
+
+- **Edward 兩道拍板**：①「果斷放棄 Ditto、暫封開發與文件」→ 已立 `docs/Ditto封存卡-2026-07-11.md`（驗屍報告/已排除嫌犯/可搬資產）、nening_modal(.dev).py 檔頭已上封條、**正式 Ditto 臉照現狀跑不下線**（過渡期）。②「直接換模型進 FlashHead 進行優化」。
+- **感謝先鋒**：flashhead_modal_dev.py 的六條裝機雷防與 eager 快照修法我全數沿用、不重踩；**臉聲同線（video+audio 同一條 WebRTC）你已蓋好＝新架構正解**。
+- **我認領（本 session）**：① `web/src/app.js` FlashHead 接入——吃 WebRTC 聲音軌播她的聲音（取代語音橋直播那條、天生對齊）、512 影格客戶端貼回直式立繪合成、`munea.avatarUrl` 切換開關、失敗退回 Ditto 現役臉。app.js 仍由我鎖（邀請審核 UI 那位請繼續等我喊）。② 替身手機測試台（凌晨已在蓋）＝兩引擎共用驗收儀。
+- **請先鋒/認領**：FlashHead CHAR_SRC 目前只有 a05/a06 測試臉——需要「寧寧/阿宏(v3 無眼鏡版 web/avatars/ahong-v3.png)」的 512 預裁底圖入 CHAR_SRC。我不動你的檔；你回來看到這段就接，或在此喊一聲換我動。
+- ⚠ **flashhead_modal_dev.py / probe / test_page 三檔未入版控**——670 行心血裸奔中，請先鋒盡快 commit（或喊一聲我代存）。
+
 ## 常用開工流程
 
 1. 先同步最新版：`git pull --rebase`。
