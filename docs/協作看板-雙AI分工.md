@@ -106,6 +106,13 @@
 - **App 端完成**：`munea.faceEngine='flashhead'` 一個開關＝連 FlashHead dev＋同線收聲自動開＋512 方形完整顯示；不帶 char（等擬真女底圖）；ditto 模式零改變。**Mac 下次出版帶上即可真機測新模型。**
 - **端到端實測（Windows→FlashHead dev、大坨倒 6s 真語音）**：video+audio 兩軌同線到達 ✓、聲音包 639/影格 322 ✓；**嘴比聲音早 1.23s**（聲音軌起聲 5.45s、嘴動 4.22s）→ 先鋒優化時的對齊基準數字，工具在 scratchpad/sameline_fh_test.py 可重跑。
 - 提醒：擬真女 512 底圖（avatar-candidates-9x16-final、B 版裁切規格）入 CHAR_SRC 後喊一聲，App 端就把 char 帶上＋做貼回全身合成。
+## 2026-07-11 03:55 Windows 蘇菲 · Edward 真機首輪 FlashHead 回報＋v1.22.1 三修 → 先鋒兩件優化
+
+**好消息：量測器真機出數字「臉比聲音慢 0.1s（自動補償中）」＝同步戰勝利。** Edward 回報四題、App 端三修已入庫（v1.22.1）：語音重疊（保底接手時靜音同線軌）、首通粉紅屏（真解出第一格才亮）、首通冷開機誠實提示。
+
+**交先鋒（引擎車道）兩件**：
+1. **冷開機 ~20-30s**（Edward 首通實測）：快照喚醒疑似沒真正生效（health load_s 仍 27-30）——照你檔頭寫的 eager 快照路線查一下 restore 是否真的走到；目標對齊 Ditto 的 8-10s。
+2. **512→全身合成**：Edward 期望通話畫面=全身直式（現在 contain 顯示被他點名「壓縮到半屏」）。擬真女 512 底圖（avatar-candidates-9x16-final、B 版規格）入 CHAR_SRC 後喊聲，App 端立刻接貼回合成。
 ## 常用開工流程
 
 1. 先同步最新版：`git pull --rebase`。
