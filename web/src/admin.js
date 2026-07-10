@@ -393,10 +393,7 @@
         </div>`);
       html += `</div>`;
       html += card("世代留存分析", "顏色越深留存越高 · 新世代留存更好", cohortTable(P.cohort), badge());
-      html += `<div class="grid-2">`;
       html += card("單位經濟 LTV / CAC", "用你在「連線設定」填的試算假設算", ltvCacHTML());
-      html += card("各獲客來源效率", "LTV:CAC 比值 · 括號為佔比（示範）", barsList(P.channels.map((c)=>[c[0],c[1],c[2],c[1]>=3?"teal":"gold"]), 6));
-      html += `</div>`;
       pending.push(()=>columnChart($("gr-dau"), P.dau.map(d=>d[0]), [{name:"DAU",color:cc.teal,values:P.dau.map(d=>d[1])}], {unit:"人"}));
     }
 
@@ -459,10 +456,6 @@
       html += card("每月點數加購額", "單位：千 NT$ · 1 點約 1 分鐘", chartMount("sb-pt"), badge());
       html += card("方案表現", "月費 · 贈點 · 家庭圈上限", tableHTML(["方案","內容","月費"], P.plans.map((p)=>[`<b>${esc(p[0])}</b>`,esc(p[1]),`<span class="num">${esc(p[2])}</span>`])));
       html += `</div>`;
-      html += card("金流帳本 · 交易與退款紀錄", "消費糾紛可從此帳本查證：誰付款、時間、是否收到款項", tableHTML(
-        ["交易編號","用戶","項目","金額","時間","收款狀態"],
-        P.ledger.map((t)=>[`<span class="num">${esc(t[0])}</span>`,esc(t[1]),esc(t[2]),`<span class="num">${esc(t[3])}</span>`,esc(t[4]),`<span class="pill ${t[6]}">${esc(t[5])}</span>`]),
-      ), badge());
       pending.push(()=>columnChart($("sb-mrr"), P.mrrTrend.map(d=>d[0]), [{name:"MRR",color:cc.teal,values:P.mrrTrend.map(d=>d[1])}], {unit:"萬"}));
       pending.push(()=>columnChart($("sb-pt"), P.points.map(d=>d[0]), [{name:"點數",color:cc.gold,values:P.points.map(d=>d[1])}]));
       pending.push(()=>donut($("sb-dist"), P.dist.map((d)=>({name:d[0],val:d[1],pct:d[2],color:cc[d[3]]||cc.prev})), "22%", "付費占比"));
