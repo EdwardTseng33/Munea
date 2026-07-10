@@ -182,9 +182,9 @@ class Nening:
         # 7/10 晚三修（Edward「沒講話嘴還在動」＝畫面塞水管鐵證）：原 8M/上限12M 是有線寬頻等級，
         # 手機行動網路吞不下 → 畫面塞在傳輸管排隊、固定落後 3-5 秒、講完了還在播舊畫面。
         # 降到行動網路吞得下的水準（720p 級講話臉 2M 已夠清楚；快取不足時可再降）。
-        _h264.MIN_BITRATE = 600_000
-        _h264.DEFAULT_BITRATE = 2_000_000
-        _h264.MAX_BITRATE = 3_000_000
+        _h264.MIN_BITRATE = 3_000_000
+        _h264.DEFAULT_BITRATE = 8_000_000
+        _h264.MAX_BITRATE = 12_000_000
 
         import cv2
 
@@ -348,7 +348,24 @@ class Nening:
                     # 講完 0.35 秒沒新畫面 → 回「閉嘴的待機靜態」，不要卡在最後一格開著嘴像當機（Edward 2026-07-10）
                     self.last = outer.poster
                     self._active_ts = 0.0
-                vf = VideoFrame.from_ndarray(self.last, format="rgb24")
+                img = self.last
+                # 全鏈量尺（7/10 晚 · Edward 拍板 A）：把「這格畫面出廠的台灣時間」烙在左下角。
+                # 手機截圖：頂上時鐘 − 角落烙印 ＝ 畫面在路上（壓縮/傳輸/手機緩衝）花的秒數，一張圖破案。
+                # P/R=臉的演出進度/收到的聲音秒數（差距大=生成端塞）、q=出廠口排隊格數。診斷完就拆。
+                try:
+                    import cv2 as _cv
+                    img = img.copy()
+                    _tw = time.gmtime(now + 8 * 3600)
+                    _fd = getattr(outer, "feeder", None)
+                    _p = (_fd.pos / SR_ENG) if _fd else 0.0
+                    _r = (len(_fd.acc) / SR_ENG) if _fd else 0.0
+                    _stamp = time.strftime("%H:%M:%S", _tw) + ".%03d  P%.1f/R%.1f q%d" % (int((now % 1) * 1000), _p, _r, len(outer.sink.q))
+                    _y = img.shape[0] - 16
+                    _cv.putText(img, _stamp, (10, _y), _cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 4)
+                    _cv.putText(img, _stamp, (10, _y), _cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1)
+                except Exception:
+                    pass
+                vf = VideoFrame.from_ndarray(img, format="rgb24")
                 vf.pts = pts
                 vf.time_base = tb
                 return vf
