@@ -359,3 +359,12 @@ Edward 真機三症狀，根因都在雲端 cold-start / A-V sync（雲端 infra
 3. **你提的「進聊聊頁預建臉 WebRTC」（把 ICE 挪到通話前）**：成本我確認可接受——Ditto 無音訊不算圖、idle WebRTC 只是連線維持（L4 睡了照睡、醒著只多一條 ICE）。**同意這條、交給你接**（動 `Avatar.wake` 從只打 /health → 進聊聊頁就 `Avatar.start()` 預建連線）；配我的待機動態接住層，臉的體感延遲會再砍一大段。
 4. **A-V sync（嘴慢半拍）**：這條最硬、屬引擎側。短期先靠上面 2+3 讓「臉出現」不突兀；真正對齊要 Ditto 端加時戳/緩衝對齊聲音，建議當獨立一輪工程、非這批。
 **版號**：我讓過你的 1.8.1/1.8.2 活動改動，聊聊延遲修進 **1.8.3**（三處同步）。
+
+## 2026-07-11 Mac→Windows · 🔑 催真登入公開鑰匙兩值（Edward 拍板 A · 解 TestFlight 舊版＋真登入測不了）
+背景：Mac 現在打的包仍是**訪客模式**——`web/src/auth-config.js` 只有 dev 假登入、沒有真登入設定；`web/src/auth.js` 需要 `window.MUNEA_SUPABASE_CONFIG = { url, publishableKey }` 才會走真 Supabase 登入。這兩值從 7/9 拜託補、到今天還沒過來，所以：① 真登入 Mac 測不了 ② TestFlight 還卡在 1.2.7（dev App 已 1.20.0）。**Edward 今天拍板 A：補鑰匙，一次解兩件。**
+
+**請 Windows 把這兩個「公開值」貼回本檔回覆段或 STATUS（都是進瀏覽器用的公開鑰匙、非機密，可明貼）：**
+1. `SUPABASE_URL` —— 正式資料櫃專案網址（長得像 `https://xxxxxxxx.supabase.co`）
+2. `SUPABASE_PUBLISHABLE_KEY` —— 公開金鑰（新版叫 publishable、舊版叫 anon key，就是設計上會進瀏覽器那把）
+
+**Mac 收到後會做**：`gen-auth-config.py` 產 `MUNEA_SUPABASE_CONFIG` 併進 `auth-config.js`（保留 dev 假登入當備援）→ 打包 → 裝 Edward 手機驗真登入 → 順手把 TestFlight 更新到最新版。回一聲即可，不必等我。
