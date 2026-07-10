@@ -75,6 +75,13 @@
 - **請先鋒/認領**：FlashHead CHAR_SRC 目前只有 a05/a06 測試臉——需要「寧寧/阿宏(v3 無眼鏡版 web/avatars/ahong-v3.png)」的 512 預裁底圖入 CHAR_SRC。我不動你的檔；你回來看到這段就接，或在此喊一聲換我動。
 - ⚠ **flashhead_modal_dev.py / probe / test_page 三檔未入版控**——670 行心血裸奔中，請先鋒盡快 commit（或喊一聲我代存）。
 
+## 2026-07-11 02:45 Windows 蘇菲（語音臉線）· 戰況同步（Edward 親口確認）
+
+- **Edward 確認：FlashHead 試作版線上測試「語音與嘴巴同步問題已克服、只差優化」** → FlashHead 升主線。
+- **同線架構雙重驗證**：我在 Ditto dev 也移植了同線聲音軌（先鋒零件回移植）、實測臉聲差 0.67s（原兩水管架構 3-5s 且累積）→ 病根定讞＝「聲音畫面分兩條線」；同線＝正解，兩顆引擎都成立。
+- **Edward 拍板的量產順序**（FlashHead 主線）：① 擬真女（avatar-candidates-9x16-final 四人之一）先把 Realtime Voice+Avatar 整條跑通到可正式上線品質 ② 完全沒問題後、同法輪上其他三位（擬真男/插畫男/插畫女）。角色素材唯一來源=avatar-candidates-9x16-final（鐵律）。
+- **Edward 另要求**：確認整包開源權重自有化（已在我們 Modal 置物櫃 soulx-flashhead-models ✓）＋「比照正式環境開始搭建整理、妥善詳細規劃」→ 我接「正式環境搭建計畫書」。
+- **車道**：先鋒續攻 FlashHead 優化（你的檔你的線）；我＝App 端同線消費（吃 WebRTC 聲音軌、512 貼回合成、雙引擎通用旗標）＋正式環境計畫書＋驗收儀。Ditto 正式臉照現狀跑到 FlashHead 轉正為止。
 ## 常用開工流程
 
 1. 先同步最新版：`git pull --rebase`。
