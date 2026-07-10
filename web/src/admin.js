@@ -50,22 +50,22 @@
     overview: {
       highlight: "本月亮點：付費家庭圈成長 <b>+8.4%</b>，AI 通話總時長創新高；有 <b>3 筆</b>安全警示待處理，其中 1 筆為高風險，建議優先確認。",
       kpi: [
-        { label:"綁定用戶", value:"8,432", delta:"+12.4%", dir:"up", sub:"本月新增 640" },
-        { label:"活躍家庭圈", value:"2,940", delta:"+6.1%", dir:"up", sub:"平均 3.1 人/圈" },
-        { label:"今日通話時長", value:"12,480", unit:"分", delta:"+9.2%", dir:"up", sub:"約 208 小時" },
-        { label:"本月 MRR", value:"1.42M", delta:"+8.4%", dir:"up", sub:"NT$ · 訂閱經常性收入" },
+        { label:"北極星 · 每週有意義陪伴天數", value:"26,200", delta:"+7.4%", dir:"up", sub:"近 7 天 · 平均每位長輩 4.2 天/週", accent:true, info:"我們最重要的指標。把「某位長輩某天真的有跟沐寧互動」去重後、近 7 天加總。算數的互動：滿 60 秒的語音通話、完成的視訊臉通話、做到的吃藥／回診提醒、家人傳話。只點開看一眼不算。" },
+        { label:"週活躍長輩 WAU", value:"6,240", delta:"+5.1%", dir:"up", sub:"近 7 天有真互動的長輩" },
+        { label:"語音接通成功率", value:"93%", delta:"未達標", dir:"down", sub:"目標 95% · 撥了有講到話的比例", info:"撥出的語音通話裡真的接通、講到話的比例。健康線 ≥ 95%，低於代表撥接體驗有問題。" },
+        { label:"免費→付費轉換率", value:"22.1%", delta:"+1.4%", dir:"up", sub:"免費用戶變成付費的比例", info:"健康線 ≥ 8%（子女代付、付費意願通常較高）。" },
       ],
       callDaily: [["週一",9800],["週二",10400],["週三",9100],["週四",11200],["週五",11900],["週六",13600],["週日",12480]],
       newUsers: [["2月",310],["3月",395],["4月",470],["5月",540],["6月",602],["7月",640]],
       chars: [["寧寧",38],["小昀",18],["阿宏",14],["咪咪",12],["阿原",11],["旺財",7]],
     },
     growth: {
-      highlight:"成長健康度良好：黏著度 38%、次月留存 62% 且逐月改善，<b>LTV:CAC 達 3.4x</b>——口碑（子女帶爸媽）是效率最高、成本最低的獲客來源。",
+      highlight:"成長健康度良好：黏著度 <b>38%</b>、次月留存 <b>62%</b> 且逐月改善。單位經濟（LTV:CAC）要你填了行銷花費才算得出——填在「連線設定」。",
       kpi:[
-        { label:"日活躍 DAU", value:"3,180", delta:"+4.2%", dir:"up", sub:"週活躍 6,240 · 月活躍 8,432" },
-        { label:"黏著度", value:"38%", delta:"+2pt", dir:"up", sub:"DAU / MAU" },
-        { label:"次月留存", value:"62%", delta:"+4pt", dir:"up", sub:"逐月世代改善" },
-        { label:"LTV : CAC", value:"3.4x", delta:"+0.3", dir:"up", sub:"回本約 4.2 個月" },
+        { label:"日活躍 DAU", value:"3,180", delta:"+4.2%", dir:"up", sub:"今天有真互動的人", info:"當日有真互動的不重複人數。" },
+        { label:"週活躍 WAU", value:"6,240", delta:"+3.8%", dir:"up", sub:"近 7 天有真互動的人" },
+        { label:"月活躍 MAU", value:"8,432", delta:"+6.1%", dir:"up", sub:"近 30 天有真互動的人" },
+        { label:"黏著度", value:"38%", delta:"+2pt", dir:"up", sub:"DAU / MAU", info:"黏著度＝日活躍÷月活躍，越高代表用戶越常回來。40% 以上算很黏。" },
       ],
       dau: [["W1",2680],["W2",2740],["W3",2820],["W4",2910],["W5",2980],["W6",3040],["W7",3120],["W8",3180]],
       cohort: [
@@ -241,7 +241,7 @@
   function kpiRow(items) {
     return `<div class="kpi-row">${items.map((k)=>`
       <div class="kpi ${k.accent?"kpi-accent":""}">
-        <div class="kpi-top"><span class="kpi-label">${esc(k.label)}</span>${k.delta?`<span class="kpi-delta ${k.dir||"flat"}">${esc(k.delta)}</span>`:""}</div>
+        <div class="kpi-top"><span class="kpi-label">${esc(k.label)}${k.info?` <span class="kpi-info" title="${esc(k.info)}">ⓘ</span>`:""}</span>${k.delta?`<span class="kpi-delta ${k.dir||"flat"}">${esc(k.delta)}</span>`:""}</div>
         <div class="kpi-value">${esc(k.value)}${k.unit?`<span class="unit">${esc(k.unit)}</span>`:""}</div>
         ${k.sub?`<div class="kpi-sub">${esc(k.sub)}</div>`:""}
       </div>`).join("")}</div>`;
@@ -271,7 +271,7 @@
   // 直式長條（單系列 / 或本週vs上週雙系列）
   function columnChart(box, labels, series, opts) {
     opts = opts || {};
-    const W=720,H=240,L=44,R=14,T=16,B=30, pw=W-L-R, ph=H-T-B;
+    const W=760,H=190,L=44,R=14,T=14,B=28, pw=W-L-R, ph=H-T-B;
     const all = series.flatMap((s)=>s.values);
     const max = niceMax(Math.max(1,...all));
     const y=(v)=>T+ph-(v/max)*ph;
@@ -296,7 +296,7 @@
   // 折線
   function lineChart(box, labels, series, opts) {
     opts=opts||{};
-    const W=720,H=230,L=44,R=16,T=16,B=28, pw=W-L-R, ph=H-T-B;
+    const W=760,H=180,L=44,R=16,T=14,B=26, pw=W-L-R, ph=H-T-B;
     const all=series.flatMap((s)=>s.values); const maxV=opts.maxY||niceMax(Math.max(1,...all)); const minV=opts.minY||0;
     const nP=labels.length, x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-((v-minV)/(maxV-minV))*ph;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
@@ -365,19 +365,19 @@
     else if (id === "growth") {
       html += heroBanner(P.highlight, { title:"成長健康度", calm:true });
       html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===3})));
+      html += `<div class="grid-2">`;
       html += card("每週日活躍 DAU", "近 8 週 · 穩定爬升", chartMount("gr-dau"), badge());
+      html += card("什麼算「活躍用戶」", "看數字前先講清楚定義", `
+        <div class="def-list">
+          <div class="def"><b>活躍</b>＝當天真的有跟沐寧互動的人：滿 60 秒的語音通話、完成視訊臉通話、做到吃藥／回診提醒、家人傳話。<span class="muted">只點開 App 看一眼不算。</span></div>
+          <div class="def"><b>DAU</b> 當日 ／ <b>WAU</b> 近 7 天 ／ <b>MAU</b> 近 30 天，都是「不重複人數」。</div>
+          <div class="def"><b>黏著度</b>＝DAU ÷ MAU，衡量用戶多常回來（40% 以上算很黏）。</div>
+        </div>`);
+      html += `</div>`;
       html += card("世代留存分析", "顏色越深留存越高 · 新世代留存更好", cohortTable(P.cohort), badge());
       html += `<div class="grid-2">`;
-      html += card("單位經濟 LTV / CAC", "全體平均 · 單位：NT$", `
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-          <div><div class="kpi-sub">LTV 終身價值</div><div class="kpi-value">4,820</div></div>
-          <div style="font-size:1.4rem;color:var(--muted)">÷</div>
-          <div><div class="kpi-sub">CAC 獲客成本</div><div class="kpi-value">1,410</div></div>
-          <div style="font-size:1.4rem;color:var(--muted)">＝</div>
-          <div><div class="kpi-sub">回本 4.2 月</div><div class="kpi-value" style="color:var(--teal-dd)">3.4x</div></div>
-        </div>
-        <div class="kpi-sub" style="margin-top:10px">健康門檻 LTV:CAC ≥ 3x 且回本 &lt; 12 月，目前皆達標。</div>`, badge());
-      html += card("各獲客來源效率", "LTV:CAC 比值 · 括號為佔比", barsList(P.channels.map((c)=>[c[0],c[1],c[2],c[1]>=3?"teal":"gold"]), 6));
+      html += card("單位經濟 LTV / CAC", "用你在「連線設定」填的試算假設算", ltvCacHTML());
+      html += card("各獲客來源效率", "LTV:CAC 比值 · 括號為佔比（示範）", barsList(P.channels.map((c)=>[c[0],c[1],c[2],c[1]>=3?"teal":"gold"]), 6));
       html += `</div>`;
       pending.push(()=>columnChart($("gr-dau"), P.dau.map(d=>d[0]), [{name:"DAU",color:cc.teal,values:P.dau.map(d=>d[1])}], {unit:"人"}));
     }
@@ -412,12 +412,14 @@
 
     else if (id === "mood") {
       html += kpiRow(P.kpi.map((k,i)=>({...k,accent:i===0})));
-      html += card("全體心情趨勢", "近 12 週平均心情球（1–5）", chartMount("md-trend"), badge());
       html += `<div class="grid-2">`;
+      html += card("全體心情趨勢", "近 12 週平均心情球（1–5）", chartMount("md-trend"), badge());
       html += card("心情分布", "本週佔比", barsList(P.dist.map((d)=>[d[0],d[1],null,d[2]])));
-      html += card("健康數據同步", "Apple 健康自動帶入項目", barsList(P.health.map((h)=>[h[0],h[1],null,h[2]])));
       html += `</div>`;
+      html += `<div class="grid-2">`;
+      html += card("健康數據同步", "Apple 健康自動帶入項目", barsList(P.health.map((h)=>[h[0],h[1],null,h[2]])));
       html += card("情緒關注名單", "連續低落心情球 · 已自動標記", `<div class="rows">${P.watch.map((w)=>`<div class="row-item tint-warn"><div class="ri-body"><div class="ri-title">${esc(w[0])}</div><div class="ri-desc">${esc(w[1])}</div></div><div class="ri-actions"><button class="btn-ghost" type="button">關心</button></div></div>`).join("")}</div>`);
+      html += `</div>`;
       html += principle(P.principle);
       pending.push(()=>lineChart($("md-trend"), P.moodTrend.map(d=>d[0]), [{name:"心情球",color:cc.coral,values:P.moodTrend.map(d=>d[1]),wash:true}], {minY:3,maxY:5}));
     }
@@ -504,6 +506,28 @@
   }
   function cohortColor(v){ const t=Math.max(0,Math.min(1,(v-25)/75)); const a=0.14+t*0.78; return `rgba(46,138,131,${a.toFixed(2)})`; }
 
+  // 單位經濟：吃「連線設定」填的試算假設（CAC 系統不可能自己知道、一律靠 Edward 填行銷花費）
+  function ltvCacHTML(){
+    const a=loadAssume();
+    const paid=a.plusCount+a.proCount, mrr=a.plusCount*a.plusPrice+a.proCount*a.proPrice;
+    const arpu=paid?mrr/paid:null, ltv=arpu!=null?arpu*a.lifeMonths:null;
+    const cac=a.newPaid?a.marketing/a.newPaid:null;
+    const ratio=(ltv!=null&&cac)?ltv/cac:null, payback=(cac!=null&&arpu)?cac/arpu:null;
+    if(paid===0){
+      return `<div class="empty-note"><b>CAC（獲客成本）＝行銷花費 ÷ 新增付費用戶</b>，這兩個數字只有你知道，系統算不出來——填了才有 LTV:CAC。</div><button class="btn-ghost" data-goto="settings" style="margin-top:12px">去設定填假設</button>`;
+    }
+    const cacBlock=cac!=null?`NT$${n(Math.round(cac))}`:`<span style="color:var(--coral-d)">待填</span>`;
+    const health=ratio!=null?(ratio>=3?" 🟢":ratio>=1?" 🟡":" 🔴"):"";
+    return `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div><div class="kpi-sub">LTV 終身價值</div><div class="kpi-value">${ltv!=null?"NT$"+n(Math.round(ltv)):"–"}</div></div>
+      <div style="font-size:1.4rem;color:var(--muted)">÷</div>
+      <div><div class="kpi-sub">CAC 獲客成本</div><div class="kpi-value">${cacBlock}</div></div>
+      <div style="font-size:1.4rem;color:var(--muted)">＝</div>
+      <div><div class="kpi-sub">${payback!=null?"回本約 "+payback.toFixed(1)+" 月":"回本"}</div><div class="kpi-value" style="color:var(--teal-dd)">${ratio!=null?ratio.toFixed(1)+"x":"–"}${health}</div></div>
+    </div>
+    <div class="kpi-sub" style="margin-top:12px">${cac==null?"CAC 還缺：到「連線設定 → 訂閱試算假設」填「本月新增付費」與「當月行銷花費」。健康門檻 LTV:CAC ≥ 3x。":"數字來自你填的試算假設。健康門檻 LTV:CAC ≥ 3x 且回本 &lt; 12 月。"}</div>`;
+  }
+
   function tableHTML(cols, rows) {
     return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r)=>`<tr>${r.map((c)=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
@@ -580,6 +604,12 @@
   function applyLiveData(){
     if(!state.data) return;
     const d=state.data;
+    // 北極星＋活躍（真）
+    if(d.northStar){ const ns=d.northStar;
+      if(ns.meaningfulCompanionDays!=null) S.overview.kpi[0].value=n(ns.meaningfulCompanionDays);
+      if(ns.activePeople!=null){ S.overview.kpi[1].value=n(ns.activePeople); S.growth.kpi[2].value=n(ns.activePeople); }
+      if(ns.voiceSessionSuccessRate!=null){ const pct=Math.round(ns.voiceSessionSuccessRate*100); S.overview.kpi[2].value=pct+"%"; S.overview.kpi[2].delta=pct>=95?"達標":"未達標"; S.overview.kpi[2].dir=pct>=95?"up":"down"; }
+    }
     // 安全警示（真）
     if(d.safety){ const t=d.safety.totals||{}, rec=d.safety.recent||[];
       S.safety.kpi[0].value=String((t.byRiskLevel?Object.values(t.byRiskLevel).reduce((a,b)=>a+b,0):rec.length)||0);
