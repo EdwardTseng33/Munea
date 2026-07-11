@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260711-v1252" />
+  <link rel="stylesheet" href="src/styles.css?v=20260711-v1253" />
 </head>
 <body>
 <div class="app-shell">
@@ -471,6 +471,9 @@
       <div class="avatar-mouth" id="avatarMouth" aria-hidden="true"><span></span></div>
     </div>
     <div class="face-topscrim" aria-hidden="true"></div>
+    <!-- 內頁真版印章（2026-07-11 Edward「封面新內頁舊」事件後立）：顯示網頁內容的真實版本，
+         不是 iOS 外殼標籤。截圖看這裡＝確認 Mac 有沒有把最新內容真的包進去。 -->
+    <div id="webVerStamp" style="position:absolute;right:10px;bottom:12px;z-index:7;font:600 10px/1.3 system-ui,sans-serif;color:rgba(255,255,255,.5);text-shadow:0 1px 3px rgba(0,0,0,.6);pointer-events:none;letter-spacing:.3px;"></div>
 
 
     <!-- 關閉聊聊：X 鍵，放在原本 navbar「聊聊」的位置（底部中央），按了收掉通話回首頁 -->
@@ -1120,7 +1123,7 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260711-v1252"></script>
+  <script src="src/version.js?v=20260711-v1253"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
@@ -1170,7 +1173,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260711-v1252"></script>
+  <script type="module" src="src/app.js?v=20260711-v1253"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
