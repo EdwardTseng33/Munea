@@ -3017,6 +3017,7 @@ function init() {
     if (_q.get('voiceUrl') !== null) localStorage.setItem('munea.liveVoiceUrl', _q.get('voiceUrl'));
     if (_q.get('avatarUrl') !== null) localStorage.setItem('munea.avatarUrl', _q.get('avatarUrl'));
     if (_q.get('brainUrl') !== null) localStorage.setItem('munea.brainUrl', _q.get('brainUrl'));
+    if (_q.get('faceEngine') !== null) localStorage.setItem('munea.faceEngine', _q.get('faceEngine'));   // 換臉引擎捷徑：?faceEngine=flashhead / ditto（空字串=回預設）
   } catch (e) {}
   const __pullPromise = syncPullAll();
   setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）

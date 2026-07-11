@@ -11,9 +11,18 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.22.2',
+  current: '1.22.3',
   channel: '',
   changelog: [
+    {
+      version: '1.22.3',
+      date: '2026-07-11',
+      title: '換引擎一鍵捷徑（測試新臉不用重包版）',
+      items: [
+        '網址帶 ?faceEngine=flashhead 就能把手機切到新臉引擎（跟 ?avatarUrl= 同一套體驗捷徑）',
+        '搭配雲端 4090 機器測試：臉聲同一條線、換機器只要換網址',
+      ],
+    },
     {
       version: '1.22.2',
       date: '2026-07-11',

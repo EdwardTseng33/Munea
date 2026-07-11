@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """臉聲同線終驗（Ditto dev）：同一條 WebRTC 收「影像軌+聲音軌」，同一時鐘記錄，
 量「聲音軌能量起點 vs 嘴巴動起點」＝真實臉聲差。灌真語音 6s（大坨倒、模擬 Gemini）。"""
-import os, time, json, wave, asyncio
+import os, sys, time, json, wave, asyncio
 import numpy as np, requests, websockets
 from PIL import Image
 from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
 
-BASE = "https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run"
+# 用法：python 驗收-FlashHead同線.py [目標門牌]（不帶=Modal dev；帶了就打指定機器，例 RunPod/Glows）
+BASE = (sys.argv[1].rstrip("/") if len(sys.argv) > 1
+        else "https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run")
 KEY = open(r"E:\Claude\Munea\deploy\.munea-app-key", encoding="utf-8").read().strip()
 WAV = r"E:\Claude\Munea\engine\nening-reply-1.wav"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sameline_fh")
