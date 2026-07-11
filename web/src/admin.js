@@ -353,13 +353,8 @@
   }
   function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼不對"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/http_40[13]/.test(m))return "被大門擋住（權限/通行碼）"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return m; }
 
-  async function connect(){
-    const base=($("apiBaseUrl")?.value||initialBaseUrl()).trim().replace(/\/+$/,"");
-    const token=($("adminToken")?.value||"").trim();
-    if(!token){ setStatus("要先貼通行碼","error"); return; }
-    localStorage.setItem(ADMIN_BASE_KEY, base);
-    if($("rememberToken")?.checked) sessionStorage.setItem(ADMIN_TOKEN_KEY, token); else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-    setStatus("讀取中…","");
+  // 抓所有真資料（登入成功、貼通行碼、開頁自動連線 三處共用）
+  async function loadAll(base, token){
     const keys=Object.keys(EP_LIST);
     const rs=await Promise.allSettled(keys.map((k)=>postAdmin(base,token,EP_LIST[k][0],EP_LIST[k][1])));
     const data={},errors={};
@@ -367,11 +362,72 @@
     state.data=data; state.errors=errors; state.connected=Object.keys(data).length>0;
     if($("rawOut")) $("rawOut").textContent=JSON.stringify({data,errors},null,2);
     if($("lastUpdated")) $("lastUpdated").textContent=state.connected?"資料時間 "+fmtTime(new Date().toISOString()):"";
-    const failed=Object.keys(errors).length;
-    if(failed===0) setStatus("✅ 已連線","ok");
-    else if(failed===keys.length){ setStatus("❌ 連不上","error"); state.connected=false; if($("connectHint"))$("connectHint").textContent="連線失敗："+explainErr(errors[keys[0]]); }
-    else setStatus("⚠ 有 "+failed+" 區讀不到","warn");
     updateBanner(); renderSide(); renderPage(state.page);
+    return { ok: state.connected, failed: Object.keys(errors).length, total: keys.length, firstErr: errors[keys[0]] };
+  }
+
+  async function connect(){
+    const base=($("apiBaseUrl")?.value||initialBaseUrl()).trim().replace(/\/+$/,"");
+    const token=($("adminToken")?.value||"").trim();
+    if(!token){ setStatus("要先貼通行碼","error"); return; }
+    localStorage.setItem(ADMIN_BASE_KEY, base);
+    if($("rememberToken")?.checked) sessionStorage.setItem(ADMIN_TOKEN_KEY, token); else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    setStatus("讀取中…","");
+    const r=await loadAll(base, token);
+    if(r.failed===0) setStatus("✅ 已連線","ok");
+    else if(r.failed===r.total){ setStatus("❌ 連不上","error"); if($("connectHint"))$("connectHint").textContent="連線失敗："+explainErr(r.firstErr); }
+    else setStatus("⚠ 有 "+r.failed+" 區讀不到","warn");
+  }
+
+  // ══════════ 登入門（帳密 → 換後台通行碼） ══════════
+  function loginGateHTML(){
+    return `<div class="login-card">
+      <div class="login-brand">Mu<b>nea</b><span class="login-zh">沐寧</span></div>
+      <div class="login-title">營運後台</div>
+      <p class="login-sub">請輸入帳號與密碼登入</p>
+      <label class="login-field"><span>帳號（Email）</span><input id="loginEmail" type="email" autocomplete="username" placeholder="you@example.com" spellcheck="false"></label>
+      <label class="login-field"><span>密碼</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="密碼"></label>
+      <button type="button" class="login-btn" id="loginBtn">登入</button>
+      <div class="login-hint" id="loginHint"></div>
+      <button type="button" class="login-alt" id="loginAlt">改用通行碼進入（進階）</button>
+    </div>`;
+  }
+  function removeLoginGate(){ const g=$("loginGate"); if(g) g.remove(); }
+  function showLoginGate(){
+    if($("loginGate")) return;
+    const g=document.createElement("div"); g.id="loginGate"; g.className="login-gate"; g.innerHTML=loginGateHTML();
+    document.body.appendChild(g);
+    $("loginBtn")?.addEventListener("click", doLogin);
+    $("loginPassword")?.addEventListener("keydown",(e)=>{ if(e.key==="Enter") doLogin(); });
+    $("loginEmail")?.addEventListener("keydown",(e)=>{ if(e.key==="Enter") $("loginPassword")?.focus(); });
+    $("loginAlt")?.addEventListener("click",()=>{ removeLoginGate(); go("settings"); });
+    setTimeout(()=>$("loginEmail")?.focus(),50);
+  }
+  async function doLogin(){
+    const email=($("loginEmail")?.value||"").trim();
+    const password=($("loginPassword")?.value||"");
+    const hint=$("loginHint");
+    if(!email||!password){ if(hint){ hint.textContent="請輸入帳號和密碼"; hint.className="login-hint err"; } return; }
+    if(hint){ hint.textContent="登入中…"; hint.className="login-hint"; }
+    if($("loginBtn")) $("loginBtn").disabled=true;
+    const base=initialBaseUrl().trim().replace(/\/+$/,"");
+    try{
+      const res=await fetch(base+"/admin/login",{method:"POST",headers:{"Content-Type":"application/json; charset=utf-8"},body:JSON.stringify({email,password})});
+      const p=await res.json().catch(()=>({}));
+      if(p&&p.ok&&p.token){
+        sessionStorage.setItem(ADMIN_TOKEN_KEY, p.token);
+        localStorage.setItem(ADMIN_BASE_KEY, base);
+        removeLoginGate();
+        setStatus("讀取中…","");
+        const r=await loadAll(base, p.token);
+        setStatus(r.ok?"✅ 已連線":"⚠ 連線異常", r.ok?"ok":"warn");
+        if(!r.ok) showLoginGate();
+      } else {
+        const map={too_many_attempts:"錯太多次了，先等 10 分鐘再試",invalid_credentials:"帳號或密碼不對",login_not_configured:"伺服器還沒設定登入（跟蘇菲說一聲）"};
+        if(hint){ hint.textContent=map[p&&p.error]||"登入失敗，再試一次"; hint.className="login-hint err"; }
+      }
+    }catch(e){ if(hint){ hint.textContent="連不到伺服器，稍後再試"; hint.className="login-hint err"; } }
+    finally{ if($("loginBtn")) $("loginBtn").disabled=false; }
   }
 
   // ══════════ 訂閱試算（計算機·設定頁） ══════════
@@ -436,7 +492,8 @@
     setStatus("尚未連線","");
     show();
     const st=sessionStorage.getItem(ADMIN_TOKEN_KEY);
-    if(st){ (async()=>{ try{ const base=initialBaseUrl(); const keys=Object.keys(EP_LIST); const rs=await Promise.allSettled(keys.map((k)=>postAdmin(base,st,EP_LIST[k][0],EP_LIST[k][1]))); const data={},errors={}; rs.forEach((r,i)=>{ if(r.status==="fulfilled")data[keys[i]]=r.value; else errors[keys[i]]="fail"; }); if(Object.keys(data).length){ state.data=data; state.errors=errors; state.connected=true; setStatus("✅ 已連線","ok"); if($("lastUpdated"))$("lastUpdated").textContent="資料時間 "+fmtTime(new Date().toISOString()); updateBanner(); renderSide(); renderPage(state.page); } }catch(e){} })(); }
+    if(st){ (async()=>{ try{ const base=initialBaseUrl(); const r=await loadAll(base, st); if(r.ok){ setStatus("✅ 已連線","ok"); } else { showLoginGate(); } }catch(e){ showLoginGate(); } })(); }
+    else { showLoginGate(); }
   }
   document.addEventListener("DOMContentLoaded",init);
 })();

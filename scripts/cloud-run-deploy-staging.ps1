@@ -6,6 +6,8 @@ param(
   [string]$GeminiSecret = "munea-gemini-key-staging",
   [string]$SupabaseSecret = "munea-supabase-service-staging",
   [string]$AdminSecret = "munea-admin-token-staging",
+  [string]$AdminPasswordSecret = "munea-admin-password",
+  [string]$AdminEmail = "edwardt0303@gmail.com",
   [switch]$IncludeVoice,
   [switch]$DryRun
 )
@@ -143,15 +145,26 @@ try {
   }
   Pass "Supabase staging URL and scoped ids are available"
 
+  $adminPasswordSecretExists = Test-SecretExists $AdminPasswordSecret
+  if ($adminPasswordSecretExists) {
+    Pass "admin password secret exists: $AdminPasswordSecret"
+  } else {
+    Warn "admin password secret missing: $AdminPasswordSecret; email/password login stays disabled until it is created"
+  }
+
   $brainSecrets = "GEMINI_API_KEY=$($GeminiSecret):latest,SUPABASE_SERVICE_ROLE_KEY=$($SupabaseSecret):latest"
   if ($adminSecretExists) {
     $brainSecrets += ",MUNEA_ADMIN_API_TOKEN=$($AdminSecret):latest"
+  }
+  if ($adminPasswordSecretExists) {
+    $brainSecrets += ",MUNEA_ADMIN_PASSWORD=$($AdminPasswordSecret):latest"
   }
   $brainEnvVars = @(
     "MUNEA_DATABASE_PROVIDER=supabase",
     "MUNEA_ENV_NAME=staging",
     "MUNEA_REQUIRE_AUTH=1",
     "MUNEA_ENABLE_DEV_AUTH_BYPASS=false",
+    "MUNEA_ADMIN_EMAIL=$AdminEmail",
     "SUPABASE_URL=$($supabaseEnv['SUPABASE_URL'])",
     "SUPABASE_PUBLISHABLE_KEY=$($supabaseEnv['SUPABASE_PUBLISHABLE_KEY'])",
     "MUNEA_SUPABASE_ACCOUNT_ID=$($supabaseEnv['MUNEA_SUPABASE_ACCOUNT_ID'])",

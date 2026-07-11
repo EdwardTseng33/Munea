@@ -72,6 +72,31 @@ def record_invite_failure(client_ip):
         fails = [t for t in _INVITE_ATTEMPTS.get(client_ip, []) if now - t < INVITE_FAIL_WINDOW]
         fails.append(now)
         _INVITE_ATTEMPTS[client_ip] = fails
+
+# 後台登入防爆破：帳密輸錯太多次就暫時擋（跟邀請碼同一套邏輯、獨立計數）。
+_LOGIN_ATTEMPTS = {}
+_LOGIN_ATTEMPTS_LOCK = threading.Lock()
+LOGIN_MAX_FAILS = 8            # 視窗內最多錯幾次
+LOGIN_FAIL_WINDOW = 600       # 視窗秒數（10 分鐘）
+
+def login_rate_limited(client_ip):
+    if not client_ip:
+        return False
+    now = time.time()
+    with _LOGIN_ATTEMPTS_LOCK:
+        fails = [t for t in _LOGIN_ATTEMPTS.get(client_ip, []) if now - t < LOGIN_FAIL_WINDOW]
+        _LOGIN_ATTEMPTS[client_ip] = fails
+        return len(fails) >= LOGIN_MAX_FAILS
+
+def record_login_failure(client_ip):
+    if not client_ip:
+        return
+    now = time.time()
+    with _LOGIN_ATTEMPTS_LOCK:
+        fails = [t for t in _LOGIN_ATTEMPTS.get(client_ip, []) if now - t < LOGIN_FAIL_WINDOW]
+        fails.append(now)
+        _LOGIN_ATTEMPTS[client_ip] = fails
+
 ALLOWED_AUDIO_MIMES = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"}
 AVATAR_ENGINE_MODES = {"static-css", "2d-viseme", "ditto", "liveavatar"}
 PREMIUM_AVATAR_MODES = {"ditto", "liveavatar"}
@@ -248,6 +273,7 @@ ADMIN_POST_PATHS = {
     "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
+    "/admin/login",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -3304,6 +3330,28 @@ def admin_authorized(headers):
     return True, None
 
 
+def admin_login_response(data=None, client_ip=None):
+    """後台帳密登入門：帳號(email)+密碼對了，才發後台通行碼。
+    密碼存在 Secret Manager（MUNEA_ADMIN_PASSWORD）、不寫在程式裡。
+    比對用 compare_digest 防側錄；同來源錯太多次先擋（防猜）。"""
+    data = data or {}
+    if login_rate_limited(client_ip):
+        return {"ok": False, "error": "too_many_attempts"}
+    email = str(data.get("email") or "").strip().lower()
+    password = str(data.get("password") or "")
+    want_email = str(os.environ.get("MUNEA_ADMIN_EMAIL") or "").strip().lower()
+    want_password = str(os.environ.get("MUNEA_ADMIN_PASSWORD") or "")
+    admin_token = str(os.environ.get("MUNEA_ADMIN_API_TOKEN") or "")
+    if not want_email or not want_password or not admin_token:
+        return {"ok": False, "error": "login_not_configured"}
+    email_ok = hmac.compare_digest(email, want_email)
+    password_ok = hmac.compare_digest(password, want_password)
+    if not (email_ok and password_ok):
+        record_login_failure(client_ip)
+        return {"ok": False, "error": "invalid_credentials"}
+    return {"ok": True, "token": admin_token}
+
+
 def provider_webhook_authorized(headers):
     token = os.environ.get("MUNEA_PROVIDER_WEBHOOK_TOKEN") or ""
     if not token:
@@ -4483,6 +4531,10 @@ class H(BaseHTTPRequestHandler):
                 self._json(conversation_summary_response(data))
             elif self.path == "/butler/post-turn":
                 self._json(butler_post_turn_response(data))
+            elif self.path == "/admin/login":
+                _xff = self.headers.get("X-Forwarded-For") or ""
+                _cip = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                self._json(admin_login_response(data, client_ip=_cip))
             elif self.path == "/admin/memory-consolidate":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

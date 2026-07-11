@@ -347,3 +347,46 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
   .hero-banner { flex-direction: column; align-items: flex-start; }
   .month-pill { display: none; }
 }
+
+/* ══════════ 登入門（帳密） ══════════ */
+.login-gate{
+  position:fixed; inset:0; z-index:9999;
+  display:flex; align-items:center; justify-content:center; padding:24px;
+  background:radial-gradient(120% 120% at 50% 0%, #2A3833 0%, #1F2B27 60%, #17211D 100%);
+}
+.login-card{
+  width:100%; max-width:380px; background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--radius-lg);
+  box-shadow:0 24px 60px -24px rgba(0,0,0,.5);
+  padding:34px 30px 28px; text-align:center;
+}
+.login-brand{ font-family:var(--num); font-weight:600; font-size:26px; letter-spacing:.5px; color:var(--ink); }
+.login-brand b{ color:var(--teal); font-weight:700; }
+.login-zh{ font-family:var(--sans); font-size:16px; color:var(--muted); margin-left:8px; }
+.login-title{ margin-top:14px; font-size:17px; font-weight:600; color:var(--ink); }
+.login-sub{ margin:6px 0 22px; font-size:13px; color:var(--muted); }
+.login-field{ display:block; text-align:left; margin-bottom:14px; }
+.login-field span{ display:block; font-size:12.5px; color:var(--ink-2); margin-bottom:6px; font-weight:500; }
+.login-field input{
+  width:100%; box-sizing:border-box; height:46px; padding:0 14px;
+  border:1px solid var(--line); border-radius:var(--radius-sm);
+  background:var(--bg); color:var(--ink); font-size:15px; font-family:var(--sans);
+  transition:border-color .15s, box-shadow .15s;
+}
+.login-field input:focus{ outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(55,160,153,.15); background:var(--surface); }
+.login-btn{
+  width:100%; height:48px; margin-top:6px;
+  background:var(--teal); color:#fff; border:none; border-radius:var(--radius-sm);
+  font-size:15px; font-weight:600; font-family:var(--sans); cursor:pointer;
+  transition:background .15s, transform .05s;
+}
+.login-btn:hover{ background:var(--teal-d); }
+.login-btn:active{ transform:translateY(1px); }
+.login-btn:disabled{ opacity:.6; cursor:default; }
+.login-hint{ min-height:20px; margin-top:12px; font-size:13px; color:var(--muted); }
+.login-hint.err{ color:var(--danger); }
+.login-alt{
+  margin-top:16px; background:none; border:none; cursor:pointer;
+  color:var(--muted); font-size:12px; text-decoration:underline; font-family:var(--sans);
+}
+.login-alt:hover{ color:var(--ink-2); }
