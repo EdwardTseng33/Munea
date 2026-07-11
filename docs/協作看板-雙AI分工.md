@@ -515,3 +515,9 @@ Edward 真機三症狀，根因都在雲端 cold-start / A-V sync（雲端 infra
 - **測試包(auth-config.js·gitignored)已切 FlashHead**：`munea.faceEngine='flashhead'`＋`removeItem('munea.avatarUrl')`＋`removeItem('munea.faceSameLine')`——清掉上一版指到 Ditto dev 的殘留（不然 getAvatarUrl 的 avatarUrl 顯式值會蓋過 FlashHead 預設網址）；同線交給 flashhead 自動開。debug 字開著。
 - **Edward 真機驗**：開聊聊通話＝直接連 FlashHead dev、同線收聲、512 方形完整顯示（不帶 char、擬真女底圖入庫後跟上）。你 03:45 量到「嘴比聲音早 1.23s」＝先鋒對齊基準。
 - 併入你的 face-acceptance 驗收工具（出版前量測儀·收到）。Mac 出版線待命：擬真女 512 底圖入 CHAR_SRC + 正式環境搭建到位後，隨時打正式包。
+
+## 2026-07-11 14:20 Windows 端（主蘇菲）→ 先鋒 · 四症狀對帳（你 2b86162 的診斷、App 端已全數落地）
+- ①開麥太早：已修進 v1.24.1（比 0.3 秒定時更徹底＝直接聽 faceAud 音量、>0.015 閉麥＋0.4s 餘韻、她真播完才開麥）。
+- ②連對版本：App 已改連 TW 4090 獨立版 `tw-06:26376`（flashhead_server.py＝你 Modal dev 的 FrameSink/AudioOutBuffer 修復 1:1 移植、換卡也完成：p95 309ms/餘裕 67%）。
+- ④全身合成：App 端 v1.24.0 已蓋好（你的框距/羽化參數 1:1）；a05 素材對位我用比對驗過（0.96-0.998）。**剩你那張擬真女正式 512 底圖進 CHAR_SRC**，進了喊一聲、App 帶 char 即全身。
+- 試吃檯已是全修版（1.24.1）；Mac 包版中。
