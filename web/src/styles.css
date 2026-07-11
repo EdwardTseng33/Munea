@@ -700,7 +700,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
    9:16 定比框置中（窄螢幕滿寬、上下留邊）；全身立繪墊底；512 活臉塞進判斷框、四邊羽化融進立繪 */
 .fh-frame {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: min(100%, calc(100dvh * 1080 / 1920)); aspect-ratio: 1080 / 1920;
+  width: max(100%, calc(100dvh * 1080 / 1920)); aspect-ratio: 1080 / 1920;   /* max＝蓋滿整個螢幕、無黑邊（多的裁掉）；Edward 7/11 點名滿版、對齊目標影片 */
   overflow: hidden; background: #0E1A17; z-index: 1;
 }
 .fh-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
