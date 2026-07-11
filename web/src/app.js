@@ -3041,11 +3041,17 @@ function connectCall() {
       clearTimeout(_gateTimeout);
       try { localStorage.setItem('munea.callCount', String((parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0) + 1)); } catch (e) {}   // 聊過幾通＋1 → 下通開場更像老朋友（熟識度）
       markConnected();                       // 按鈕→結束通話、開始計時
-      // 兩邊都好 → 收待機動畫、亮出會動的臉、請她開口（聲臉一起出）
-      if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }
-      try { FaceIdle.stop(); } catch (e) {}
-      LiveVoice.greet();                     // 現在才請 AI 主動開口（招呼講完才開麥）
-      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice.micOpen = true; LiveVoice._openMicAfterGreet = false; } }, 6000);   // 保底：招呼若沒正常結束，6 秒後也開麥、不讓你無法說話
+      // 剛接通管線還沒完全熱（Edward 2026-07-12 建議）：晚 1 秒再切活臉＋請她開口，讓聲音管線先穩、
+      // 免得第一批招呼聲直接掉了（＝當機沒聲）。這 1 秒待機動畫照播，像拿起電話頓一下才開口、很自然。
+      // 配伺服器端「蓄夠水才起播」＝兩層一起顧第一段順暢（不同破法、可疊）。
+      const _greetDelay = 1000;
+      setTimeout(() => {
+        if (!callConnected && !callDialing) return;   // 這 1 秒內掛斷了就別開口
+        if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }   // 亮出會動的臉
+        try { FaceIdle.stop(); } catch (e) {}
+        LiveVoice.greet();                   // 管線穩了才請她主動開口（招呼講完才開麥）
+      }, _greetDelay);
+      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice.micOpen = true; LiveVoice._openMicAfterGreet = false; } }, 6000 + _greetDelay);   // 開麥保底順延（別在她還沒開口就開麥）
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
