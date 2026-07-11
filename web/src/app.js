@@ -1426,8 +1426,8 @@ const LiveVoice = {
               }
             }, 3000);
           }
-          clearTimeout(this._speakTimer);                          // 換手輪替照舊：她 900ms 沒再吐聲＝講完、開麥
-          this._speakTimer = setTimeout(() => this._toListening(), 900);
+          clearTimeout(this._speakTimer);                          // 換手：她沒再吐聲＝講完、開麥
+          this._speakTimer = setTimeout(() => this._toListening(), 2000);   // 放寬 0.9→2 秒：斷續破洞不再被誤判「她講完了」而攔腰切斷（Edward 2026-07-12 被截斷根因）；真講完有 turn_complete 即時接手
           return;                                                  // 不本地排程（聲音由 faceAud 出）
         }
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
@@ -1451,9 +1451,10 @@ const LiveVoice = {
         // 記著正在播的語音，插話時才能一次停乾淨（不留尾巴跟新句疊音）
         if (!this._srcs) this._srcs = [];
         this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); };
-        // 安全網：她若 900ms 沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）
+        // 安全網：她若一段時間沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）。
+        // 放寬 0.9→2 秒：斷續破洞不再被誤判成「講完」把她攔腰切斷（Edward 2026-07-12）；真講完有 turn_complete 即時接手、不靠這條
         clearTimeout(this._speakTimer);
-        this._speakTimer = setTimeout(() => this._toListening(), 900);
+        this._speakTimer = setTimeout(() => this._toListening(), 2000);
       };
       this.ws.onclose = () => { const wasOpen = this.on; done(false); this.stop(); if (wasOpen && onDrop) onDrop(); };
       this.ws.onerror = () => { done(false); };
