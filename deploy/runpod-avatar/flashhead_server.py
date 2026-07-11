@@ -53,6 +53,10 @@ SR_IN, SR_ENG = 24000, 16000
 # 偶爾一塊做慢也不會見底（斷糧）。代價＝首句慢約 0.5s（一次性、非累積），換整段不再斷斷續續。
 AUDIO_PREBUFFER_S = 0.5    # 開口前先墊多少秒才真的放音
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
+# 2026-07-12 第一段斷續根治：原本起播只等固定 0.5s、不看存貨夠不夠——語音腦爆發式到貨時，
+# 0.5s 到了存貨還沒墊夠就開始放、邊放邊生就見底＝第一段破洞。改成「囤夠存貨才起播」+ 上限秒數防全靜音。
+PREBUFFER_START_DEPTH_S = 0.6   # 起播前先囤到 0.6 秒存貨才真的開始放
+PREBUFFER_MAX_WAIT_S = 1.6      # 但最多等 1.6 秒就一定開始放（防存貨墊不夠而整段全靜音＝當機沒聲）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
 FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
@@ -194,6 +198,8 @@ class FlashHead:
                 self.last_push_ts = 0.0
                 self.depth_samples = 0
                 self.hold_until_ts = time.time() + AUDIO_PREBUFFER_S
+                self._playing = False                                    # 這一輪是否已真的起播（起播前先囤夠存貨）
+                self.hold_until_max_ts = time.time() + PREBUFFER_MAX_WAIT_S
             def push(self, pcm_int16):
                 with self.lock:
                     self.buf = np.concatenate([self.buf, pcm_int16])
@@ -204,10 +210,19 @@ class FlashHead:
                     self.buf = np.zeros(0, dtype=np.int16)
                     self.depth_samples = 0
                     self.hold_until_ts = time.time() + AUDIO_PREBUFFER_S
+                    self._playing = False                                # 每輪重置：下一段開口前重新囤夠存貨才起播
+                    self.hold_until_max_ts = time.time() + PREBUFFER_MAX_WAIT_S
             def pop_frame(self):
                 with self.lock:
-                    if time.time() < self.hold_until_ts:
-                        return np.zeros(self.frame_samples, dtype=np.int16)
+                    if not self._playing:
+                        # 起播前：先過最小墊窗(0.5s)，再等「囤夠存貨(0.6s)」或「等太久(1.6s)」才真的開始放——
+                        # 這樣第一段就有墊底存貨、不會邊生邊放就見底破洞（2026-07-12）
+                        if time.time() < self.hold_until_ts:
+                            return np.zeros(self.frame_samples, dtype=np.int16)
+                        depth_s = len(self.buf) / self.sample_rate
+                        if depth_s < PREBUFFER_START_DEPTH_S and time.time() < self.hold_until_max_ts:
+                            return np.zeros(self.frame_samples, dtype=np.int16)
+                        self._playing = True
                     if len(self.buf) >= self.frame_samples:
                         chunk = self.buf[:self.frame_samples]
                         self.buf = self.buf[self.frame_samples:]
