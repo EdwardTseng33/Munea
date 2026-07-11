@@ -351,6 +351,18 @@ Edward 真機檢視聊聊、點出多項 UX/設計問題。已修（動 `web/src
 - 鑰匙收進本機 `.env.local`（`.gitignore` 已排除 `.env*`、**不上傳**）。
 - `gemini-3.1-flash-live-preview` 用此鑰匙連通；請它「用溫暖聲音說：陳奶奶你好，我是寧寧」→ **收到寧寧真聲音 399KB／約 8.3 秒**。核心整條通（鑰匙✓ 模型✓ 生聲音✓）。
 - 真語音伺服器 `engine/live_voice_server.py` 已在 Mac 背景跑（門牌 8201、測試頁 200）；Edward 可瀏覽器 `localhost:8201` 親耳試。
+
+## 2026-07-11 Windows 端（主蘇菲）· 🇹🇼 Glows.ai 台灣 4090 試車 · GPU 換卡評估（Edward 拍板 A 案的驗證輪）
+> 背景：FlashHead 在 Modal L4 上 gen_compute p95 905ms / 預算 960ms（headroom 5.7%）→ 真機講話 5-10 秒截斷、underrun 隨通話累積。Edward 條件式核准換卡（先驗啟動時間/付費方式/是否真是顯卡瓶頸）＋要求調查台灣機房。
+- **機器**：Glows.ai TW-03 · RTX 4090 24GB · ins-wg9983mg · `ssh -p 25408 root@tw-06.access.glows.ai`（鑰匙 `deploy/glows/glows_ed25519`，已 gitignore）。計費 0.49 Credit/hr＝**NT$15.7/hr**（1 Credit=NT$32）。
+- **開機實測 1 分鐘**（Create→Running）；付費=儲值 Credit 制、關機（Release）即停錶；**有 SDK API**（create/delete/snapshot、Bearer token）→ 自動開關機可蓋（sdkdoc.glows.ai）。
+- **網路**：Edward 家→機器 RTT **平均 8ms**（美國 RunPod 4090 是 204ms）；HF 權重 8.9GB 下載 **85 秒**。
+- **環境**：映像 CUDA12.8 Torch2.7.1 Base → conda env `/root/miniconda3/envs/workenv`（py3.11 + torch 2.7.1+cu128 預裝、與先鋒 pin 一字不差）。flash-attn 換 **cp311** wheel（先鋒雷4 配方、只改 python 版本段）。裝機小工具 `/root/install2.sh`、全程 log `/root/install2.log`。
+- **產能碼錶（照 flashhead_modal_dev.py 正式逐塊跑法、poc-mandarin.wav、a05B 底圖）**：
+  eager 模式 **p50 305ms / p95 309ms / max 321ms**（預算 960ms、**headroom 67.8%**、3.15x 即時、78.8 FPS）；pipeline load **3.6s**（Modal L4 要 36s）。
+  → **「講話截斷=顯卡不夠」實錘**：同程式同料，L4 p95 905ms vs 4090 309ms。
+- 進行中：compile 模式碼錶（渦輪、量編譯稅+穩態）＋ drift-long 長跑穩定性。結果出來後出 Glows vs RunPod vs Modal 三方比較報告。
+- ⚠ 提醒：**RunPod 美國那台 callserver 若還開著記得關**（~NT$530/天）；Glows 這台試完 Edward 按 Release 收錶。
 - **下一步（Mac 主線）**：把這條真語音接進 App 聊聊（照分層架構的 `MuneaVoiceProvider`＋WebSocket 橋接約定，不另開路）、手機同 Wi-Fi 連 Mac 引擎、重裝真機 → 驗聊聊 #1/#8/#10。
 
 ## 2026-07-06 Mac 端 · ✅✅ 真語音已接進 App、裝上真機
