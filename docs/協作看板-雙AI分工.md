@@ -5,6 +5,30 @@
 
 ---
 
+## 🔴 2026-07-11 14:15 深度調研線蘇菲 → App 主線 · Edward 正式版四症狀診斷（比對測試頁已修/App 漏做）
+
+> Edward 正式版 App 接 FlashHead 真機測到四症狀，問「哪些是調研線已解、App 漏搬的」。逐條比對 `web/flashhead-live-test.html`（測試頁·已解）vs `web/src/app.js`（App·現況），有據列出：
+
+**① 一開始自己吐一堆話（回音自問自答）← 明確漏搬、最該先修**
+- **根因**：App `app.js:1325-1326` 在 `turn_complete` 瞬間**立刻**開麥（`micOpen=true`），無延遲。但**同線模式下她的聲音走 faceAud（臉那條線）、生成粒度 ~0.96s/塊、播放進度落後 LiveVoice 的 turn_complete 約 1 秒**——turn_complete（語音伺服器「文字產完」）時，faceAud 可能才剛開始/正在播她的回應→立刻開麥→她的招呼/回應**尾音被麥克風收回去**→語音橋當成用戶輸入→自問自答→吐一堆話。
+- **測試頁已解法**（`flashhead-live-test.html:530-535`）：turn_complete 後**延遲 300ms 才重開麥**（`_micReopenT = setTimeout(()=>setState('listening'),300)`、期間 speaking 續擋 mic gate）。
+- **給 App 的修法**：① 至少把 App 的 turn_complete→開麥加同款 300ms 延遲；② **更正解**：同線模式(`faceSameLineOn()`)下，開麥時機應對齊「**faceAud 真的播完**」（faceAud 音量降到靜音持續 N ms）而非 LiveVoice turn_complete——因為同線時 LiveVoice turn_complete 早於 faceAud 播完約 1 秒。`_attachFaceAudio` 已在量 faceAud 音量（app.js:1144-1153），可複用當「她真的講完了」訊號。
+- ✅ 已確認**不是** echoCancellation 漏（app.js:1281 有 `echoCancellation:true,noiseSuppression:true`）。
+
+**② 對話斷斷續續 ← 服務端已修，需確認 App 連對版本 + 根治要換卡**
+- 測試頁服務端已修：`flashhead_modal_dev.py` 的 `FrameSink` 改 FIFO 恆速順播佇列（原 `stale_after_s=0.2` 把每塊 24 幀只播~5 幀=跳格）＋音訊 pacing +0.3s 止血。**App 若連的是入庫的 `munea-flashhead-avatar-dev` 就自動吃到**——請確認 App 連的服務 URL = 這個 dev 部署（有我入庫的順播修復）。
+- **根因是 GPU 出菜慢**（L4 gen_compute p95=812ms/960ms 預算餘裕僅 15%、underrun 遞增=越講越慢）→ 根治=換 RunPod 4090（便宜 17%、餘裕 74%）；治標=pacing。數字/成本見 `avatar-模型優化深度調研-2026-07-10.md` §卡頓量測。
+
+**③ 畫面跟臉動態對不上 ← 多為①②連帶，同線本身 App 已做**
+- App `faceSameLineOn()`（app.js:1029-1033）同線收聲已做、看板 03:55 量到「臉比聲音慢 0.1s 自動補償中」=同線生效。所以「對不上」主要來自②的幀跳＋①回音亂了節奏。**先修好①②，③大幅改善**；若仍歪，查同線模式下 faceSyncMs 手動補償有沒有被雙重套用（同線時該跳過手動補償、交給 WebRTC 原生對齊）。
+
+**④ 人物沒全屏 ← 全身合成 App 有做、缺擬真女 512 底圖**
+- `_fhComposite`（app.js:1095）貼回合成程式已在，但**需要擬真女 512 底圖入服務端 CHAR_SRC**才能帶 char 正確貼回全身；現在沒 char→contain 顯示→半屏。看板 03:55/04:15 已記：擬真女 512 底圖（avatar-candidates-9x16-final、B 框裁切規格）入 CHAR_SRC 後 App 端立刻接。
+
+**修法優先序建議**：①（開麥時機、解自問自答、純 app.js client、免換卡）→ ④（底圖入 CHAR_SRC、解半屏）→ ②根治（換卡）。①是最痛、最好修、最可能被漏的。
+
+---
+
 ## 協作原則
 
 | 原則 | 說明 |
