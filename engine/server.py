@@ -2990,10 +2990,31 @@ def _derive_account_status(last_active_iso, event_count):
     return "off"
 
 
+def _account_points_map(accounts):
+    """每帳號的持有點數（真實錢包餘額）。試營運鎖單戶時用 scoped 錢包餘額；
+    多帳號時各查各的（沒有就 0）。失敗一律回 0、不編。"""
+    points = {}
+    try:
+        store = load_credits_store()
+        total = credit_wallet_summary(store).get("total") or 0
+        store_account = store.get("accountId")
+        single = len(accounts) == 1
+        for acct in accounts:
+            aid = acct.get("accountId") or ""
+            if single or (store_account and aid == store_account):
+                points[aid] = round(float(total), 0)
+            else:
+                points[aid] = 0
+    except Exception as e:
+        log_fallback_exception("load per-account points", e)
+    return points
+
+
 def _enrich_accounts_with_activity(accounts, days=30):
-    """幫每個帳號補真資料：plan / usage（分鐘·最後活躍·事件數）/ status。
+    """幫每個帳號補真資料：plan / usage（分鐘·最後活躍·事件數）/ status / points（持有點數）。
     單帳號 scoped（試營運鎖一戶）時把未歸戶事件併給唯一帳號、誠實不亂攤。"""
     index, unattributed = _account_activity_index(days=days)
+    points_map = _account_points_map(accounts)
     single = len(accounts) == 1
     for acct in accounts:
         aid = acct.get("accountId") or ""
@@ -3018,6 +3039,7 @@ def _enrich_accounts_with_activity(accounts, days=30):
             "lastActiveAt": agg["lastActiveAt"],
         }
         acct["status"] = _derive_account_status(agg["lastActiveAt"], agg["eventCount"])
+        acct["points"] = int(points_map.get(acct.get("accountId") or "", 0) or 0)
     return accounts
 
 
