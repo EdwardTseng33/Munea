@@ -1016,12 +1016,7 @@ function _fhComposite(on, vid) {
     }
   } catch (e) {}
 }
-// 聲音怎麼送去雲端臉：預設走「舊路＝客戶端自己送」——臉穩、不會因伺服器連不上雲端臉而整個死掉。
-// 2026-07-10 Edward 拍板暫停 B（回穩）：日誌證實 B(伺服器直送)接雲端臉會 timeout、且接上了延遲也沒降。
-// 想重開 B（實驗）：localStorage['munea.serverFaceAudio']=1。
-function serverFaceAudioOn() {
-  try { return localStorage.getItem('munea.serverFaceAudio') === '1'; } catch (e) { return false; }
-}
+// （2026-07-11 施工圖①：方案B「伺服器直送雲端臉」整套已拔除——7/10 退役死碼、聲音上行只走客戶端自己送這一條。）
 // 同線收聲（2026-07-11 · 治「聲音先出、臉慢 3-5 秒」根因＝聲音和影像走兩條線）：
 // 開＝App 從臉的那條線多收一軌聲音、從那裡播（跟影像天生同步、免手動猜 faceSyncMs）。
 // 預設關＝現役零影響；上行照舊走「手機轉送」（Avatar.feed 一寸不動、不碰 7/10 那顆方案B 雷）。
@@ -1031,6 +1026,16 @@ function faceSameLineOn() {
     const v = localStorage.getItem('munea.faceSameLine');
     if (v !== null) return v === '1';                 // 手動設定最優先（=0 可在 FlashHead 模式下關同線）
     return faceEngine() === 'flashhead';              // FlashHead 模式預設開同線（它天生兩軌同線）
+  } catch (e) { return false; }
+}
+// 單一真相：「她現在正在出聲嗎」——所有喇叭出口（本地播放/臉那條線）都在這裡認，統一 0.015 門檻＋400ms 餘韻。
+// 以後新增任何聲音出口只改這一個函式（v5.4.24 教訓：4 處各自判斷=bug 再生產線）。
+function speechActive() {
+  try {
+    const now = performance.now();
+    const face = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
+    if ((typeof LiveVoice !== 'undefined' && LiveVoice.speaking) || face > 0.015) window.__muneaSpeechTs = now;
+    return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < 400);
   } catch (e) { return false; }
 }
 const Avatar = {
@@ -1096,7 +1101,7 @@ const Avatar = {
           const _fa2 = document.getElementById('faceAud'); if (_fa2) _fa2.muted = true;
           return;
         }
-        vid.srcObject = _sameLine ? e.streams[0] : e.streams[0];
+        vid.srcObject = e.streams[0];
         if (_sameLine) {
           vid.muted = false;   // 聲音改由影像播放器出（跟先鋒頁同款）
           const _pv = vid.play();
@@ -1128,7 +1133,6 @@ const Avatar = {
               try {   // 通話已開場的情況下臉遲到加入：補亮會動的臉那層（開場那步早跑過、這裡要自己補）
                 const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid');
                 FaceIdle.stop();
-                if (serverFaceAudioOn()) { const au = getAvatarUrl(); if (au) LiveVoice.setFaceAudio(true, au); }
               } catch (e3) {}
             });
           }, 800);
@@ -1147,12 +1151,9 @@ const Avatar = {
       const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY) + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
       const a = await r.json(); if (a.error) throw new Error(a.error); await this.pc.setRemoteDescription(a);
-      // 聲音怎麼送去雲端臉：新路（預設）＝語音伺服器直接送（伺服器對伺服器、省手機上行一趟）、這裡就不必自己開線；
-      // 舊路（munea.serverFaceAudio=0）＝維持原行為，自己開一條 WS 送（下面 feed()/reset() 會用到）
-      if (!serverFaceAudioOn()) {
-        this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY));
-        this.ws.binaryType = 'arraybuffer';
-      }
+      // 聲音上行：App 自己開一條 WS 把語音送去雲端臉（下面 feed()/reset() 會用到）
+      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY));
+      this.ws.binaryType = 'arraybuffer';
       this.on = true;
       return true;
     } catch (e) { this.stop(); return false; }
@@ -1229,15 +1230,6 @@ const LiveVoice = {
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
   greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；招呼講完才開麥（乾淨第一句）
   nudge(level) { try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ type: 'nudge', level: level || 1 })); } catch (e) {} },   // 使用者一直沒講話 → 請 AI 溫柔提醒（省點 · Edward 2026-07-10）
-  setFaceAudio(on, url) {   // 告訴語音伺服器「聲音直接幫我送去雲端臉」——伺服器對伺服器送、不繞手機行動網路上行一趟（方案 B · 2026-07-10）
-    try {
-      if (this.ws && this.ws.readyState === 1) {
-        const msg = { type: 'faceaudio', on: !!on };
-        if (on && url) msg.url = url;
-        this.ws.send(JSON.stringify(msg));
-      }
-    } catch (e) {}
-  },
   // 掛斷時把整通對話送去萃取長期記憶（讓「聊聊」講的也記得住 · Edward 2026-07-10）——跟文字聊天同一條記憶入口
   saveMemory() {
     try {
@@ -1306,13 +1298,7 @@ const LiveVoice = {
         this.proc.onaudioprocess = e => {
           const inp = e.inputBuffer.getChannelData(0);
           if (!this.micOpen) { this.micLevel = 0; return; }        // 麥克風要等「真正開場」才開（撥通中/等臉那幾秒不收音，免得你的聲音在她招呼前一直灌進去→她一直「我聽見了」· Edward 2026-07-09）
-          if (this.speaking) { this.micLevel = 0; return; }       // 她在說＝麥克風靜音＝收音波頻歸零
-          // 同線模式她的聲音走臉那條線（faceAud）播——那也算「她在說」，同樣閉麥＋0.4 秒餘韻。
-          // 不加這條＝她從喇叭聽到自己→當成你在講→自問自答鬼打牆（Edward 7/11 試吃檯抓到）。
-          const _av = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
-          const _nowT = performance.now();
-          if (_av > 0.015) this._faceTalkTs = _nowT;
-          if (this._faceTalkTs && (_nowT - this._faceTalkTs) < 400) { this.micLevel = 0; return; }
+          if (speechActive()) { this.micLevel = 0; return; }       // 她在出聲（本地播放或臉那條線）＝麥克風靜音——單一真相 speechActive()、防喇叭回音自問自答（Edward 7/11）
           let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
           this.micLevel = Math.min(1, Math.sqrt(s / inp.length) * 8);   // 即時音量→收音波頻高度
           if (!this.ws || this.ws.readyState !== 1) return;
@@ -1365,7 +1351,7 @@ const LiveVoice = {
           return;
         }
         if (!this.playCtx) return;
-        if (!serverFaceAudioOn()) Avatar.feed(ev.data);            // 舊路（客戶端自己送）才餵；新路開啟時改由語音伺服器直接送（同一份聲音、對嘴不受影響）
+        Avatar.feed(ev.data);                                      // 同一份聲音餵給雲端臉（對嘴）
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
@@ -1426,7 +1412,6 @@ const LiveVoice = {
     this.on = false;
     this.ready = false;
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
-    try { if (serverFaceAudioOn()) this.setFaceAudio(false); } catch (e) {}   // 告訴語音伺服器：不用再送聲音給雲端臉了（舊路關閉時這行不送、行為不變）
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
@@ -1445,14 +1430,15 @@ window.MuneaLiveVoice = LiveVoice;
 // 原理：同一個時鐘下，同時盯「播出去的聲音何時起」＋「臉的嘴巴那塊畫面何時開始動」，
 // 兩個「開始」時間相減＝這句話的延遲秒數。左下角小字直接顯示（近幾句平均＋建議補償值）。
 // 進階：munea.avSyncAuto=1 時，量到多少就自動把「聲音等臉」的時間補到剛好對齊（代價：她回話會慢一點）。
-// 關掉顯示：munea.avSyncMeter=0。這是上線前的除錯讀數，穩定後移除。
+// 2026-07-11 施工圖②降級為隱藏除錯工具：munea.debug=1 才啟動，預設完全不跑（不建 canvas、不取像素、不顯示浮層）——
+// 預設開著時它每幀取像素白燒長輩舊 iPhone CPU、螢光浮層又像 bug（Edward 抱怨的閃爍元凶）。
 const AvSyncMeter = {
   on: false, _raf: 0, _video: null, _canvas: null, _ctx: null, _prev: null, _overlay: null,
   _audioHot: false, _videoHot: false, _pendA: false, _tA: 0, _samples: [], _lastTune: 0,
   start(videoEl) {
     if (this.on) return;
     try {
-      if ((localStorage.getItem('munea.avSyncMeter') || '1') !== '1') return;   // 預設開；設 0 可關掉讀數
+      if (localStorage.getItem('munea.debug') !== '1') return;   // debug-only：munea.debug=1 才啟動；預設不建 canvas、不取像素、不顯示浮層（2026-07-11 ②）
       this._video = videoEl || document.getElementById('faceVid');
       this._canvas = document.createElement('canvas'); this._canvas.width = 48; this._canvas.height = 48;
       this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
@@ -2989,8 +2975,6 @@ function connectCall() {
       // 兩邊都好 → 收待機動畫、亮出會動的臉、請她開口（聲臉一起出）
       if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }
       try { FaceIdle.stop(); } catch (e) {}
-      // 方案 B 保底：此刻聲音線與影像線都確定就緒，補發一次「聲音直接送去雲端臉」——撥通當下若語音線還沒開好而漏發，這裡補上（伺服器同網址會自動忽略重複、無害）
-      try { if (!noFace && serverFaceAudioOn() && typeof Avatar !== 'undefined' && Avatar.on) { const _au = getAvatarUrl(); if (_au) LiveVoice.setFaceAudio(true, _au); } } catch (e) {}
       LiveVoice.greet();                     // 現在才請 AI 主動開口（招呼講完才開麥）
       setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice.micOpen = true; LiveVoice._openMicAfterGreet = false; } }, 6000);   // 保底：招呼若沒正常結束，6 秒後也開麥、不讓你無法說話
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
@@ -3010,7 +2994,7 @@ function connectCall() {
       const _idleMon = setInterval(() => {
         if (!callConnected && !callDialing) { clearInterval(_idleMon); return; }      // 通話結束 → 自我終止
         if (LiveVoice.micLevel > 0.08) { _idleLast = Date.now(); _idleStage = 0; return; }   // 使用者在講 → 全歸零
-        if (LiveVoice.speaking || (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel > 0.015)) { _idleLast = Date.now(); return; }   // AI 在講（舊喇叭或臉那條線的新喇叭）→ 時鐘後推、階段保留；不加新喇叭＝她講話期間沉默時鐘照走、講完 10 秒就被提醒（Edward 7/11）
+        if (speechActive()) { _idleLast = Date.now(); return; }   // AI 在講（單一真相 speechActive：本地喇叭或臉那條線都認）→ 時鐘後推、階段保留
         if (Date.now() - _idleLast < _idleGapMs) return;                               // 還沒到 30 秒真沉默
         // Edward 2026-07-11 拍板：提醒做不好就拿掉、不要再吵——兩段提醒全停（nudge 不再呼叫），
         // 只留第三段「沉默 90 秒安靜收線」。要復原提醒＝把下兩行換回 LiveVoice.nudge(1)/nudge(2)。
@@ -3044,22 +3028,11 @@ function connectCall() {
       setCallHint('接回來中', true);
       setTimeout(() => {
         if (!callConnected && !callDialing) return;
-        LiveVoice.start(onListen, onSpeak, onDrop).then(ok => {
-          // 斷線接回：語音伺服器是新連線，方案 B 的雲端臉轉送要重講一次（不然接回後臉會停在待機、聲音照常）
-          if (ok && serverFaceAudioOn() && typeof Avatar !== 'undefined' && Avatar.on) {
-            const au = getAvatarUrl();
-            if (au) LiveVoice.setFaceAudio(true, au);
-          }
-        });
+        LiveVoice.start(onListen, onSpeak, onDrop);
       }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
-    Avatar.start().then(ok => {   // 同步接臉（進聊聊頁已預醒、多半幾秒內有影像）；'playing' 事件回 __muneaOnFaceReady
-      if (ok && serverFaceAudioOn()) {
-        const au = getAvatarUrl();
-        if (au) LiveVoice.setFaceAudio(true, au);   // 告訴語音伺服器：聲音直接送去雲端臉（伺服器對伺服器、省手機上行 · 方案 B · 2026-07-10）
-      }
-    }).catch(() => {});
+    Avatar.start().catch(() => {});   // 同步接臉（進聊聊頁已預醒、多半幾秒內有影像）；'playing' 事件回 __muneaOnFaceReady
     return;
   }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
