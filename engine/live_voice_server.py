@@ -73,7 +73,7 @@ def process_request(connection, request):
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
@@ -98,6 +98,13 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "（現在是即時語音通話。剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
         "句子短、口語、一次一兩句、講完停下來等對方回應。）"
     )
+    # 熟識度分寸貫穿整段對話（不只開場）：越不熟越收斂、越熟越自在（Edward 2026-07-12）
+    if fam < 1:
+        base += "（你們還不太熟，這是頭幾通電話：整段對話都要特別收斂——話少、溫和、讓他主導，不要熱情轟炸、不要一直找話題硬聊、不要連環問。他問你、或聊到他有興趣的才多說一點。）"
+    elif fam < 3:
+        base += "（你們聊過幾次、漸漸熟了：可以自在一點，但仍別長篇、別連環問、別硬炒氣氛。）"
+    else:
+        base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
     base += (
         "（你有「即時查詢」工具，聊天時可以真的上網查。聊到餐廳店家、景點旅遊（例如日本哪裡好玩、桃園有什麼好吃的）、"
         "電影影劇、天氣預報、時事、活動檔期這類「講錯會誤導人」的具體話題——先安靜查一下再回，"
@@ -174,7 +181,7 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
 ])
 
 
-def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False):
+def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     # 即時查詢（Google 搜尋）所有版本都有；幫你設提醒（函式呼叫）只給接得住的新版 App（?cap_rem=1）
@@ -183,7 +190,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_REMINDER_TOOLS)
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders),
+        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders, fam),
         tools=tools,
         output_audio_transcription=types.AudioTranscriptionConfig(),
         input_audio_transcription=types.AudioTranscriptionConfig(),
@@ -280,7 +287,7 @@ async def handle(ws):
           "face_ws": None, "face_audio_url": None}   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
     _diag(cid, "connected", name=name or "-", char=char)
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location, allow_reminders)) as session:
+        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location, allow_reminders, fam)) as session:
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
             # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
             # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。
