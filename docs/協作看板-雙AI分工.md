@@ -372,6 +372,13 @@ Edward 真機檢視聊聊、點出多項 UX/設計問題。已修（動 `web/src
   - 驗收工具實測：兩軌同線到齊（視訊 298 格、聲音 591 包）。到貨時間差 -0.98s＝量測工具看「到門口時間」、瀏覽器播放按時間戳對齊（非體感差）；⚠ 順帶發現 coturn 對 RunPod IP 回 403 Forbidden IP（denied-peer 名單？連線仍經 STUN 直連成功；手機測試若 ICE 失敗先查這裡）。
 - **App v1.22.3→1.23.0**（app.js 我的認領鎖）：`?faceEngine=` 體驗捷徑＋**faceEngine 預設 'flashhead'**＋`FLASHHEAD_URL_DEFAULT`→RunPod 常駐機（Modal dev URL 降備援、留註解）。試吃檯已鋪 v1.23.0（munea-brain-staging-00019）。
 - 下一步：Edward 手機開試吃檯真打一通（美國線體感）→ 台灣 Glows 轉正搬家計畫書（自動開關/快照/門牌自動指路）→ Mac 下一版把 1.22.1-1.23.0 帶進殼。
+
+## 2026-07-11 Windows 端（主蘇菲）· 🇹🇼 台灣線轉正 v1.23.1 · 🍎 **Mac 包版交接（Edward 等著在 App 裡測）**
+- **台灣 Glows 新機二號**（Edward 重開）：`ssh -p 26618 root@tw-06.access.glows.ai`（鑰匙 deploy/glows/glows_ed25519）· 對外正門 **`https://tw-06.access.glows.ai:26376`**（TLS 正規、curl 不用 -k）。裝機照 `deploy/glows/install-flashhead.sh` 升級版（含 RunPod 兩雷疫苗：torch cu128 force-reinstall＋hub<1.0）、全綠；服務 `flashhead_server.py` 常駐 8888（**先 kill 預裝 jupyter-lab、它佔 8888**——重建 SOP 新眉角）。
+- **驗收（公網正門）**：連線 ✓、影像 279 格＋聲音 554 包同線到齊 ✓。⚠ 量測工具連跑多輪時 AudioOutBuffer 殘留舊聲音會墊高「出聲」時間（-5.72s 假象）；正式 App 每輪 reset 會清。**優化項（非阻塞）**：flashhead_server.py 可在新 pc 建線時自動 feeder.reset()，清跨通殘留。
+- **App v1.23.1 已上傳＋試吃檯已鋪（munea-brain-staging-00020）**：FLASHHEAD_URL_DEFAULT → 台灣門牌；美國 RunPod / Modal 降備援（註解裡）。faceEngine 預設 flashhead（1.23.0 起）。
+- **🍎 Mac 端接棒（Edward 會來說「包新版裝我手機」）**：拉最新 main（含 web v1.22.1→1.23.1：iPhone 同線出聲解鎖/粉紅畫面閘/雙聲修/faceEngine 捷徑/預設新引擎/台灣門牌）→ `cap sync` → 出包 → devicectl 裝 Edward iPhone。裝完 App 打開聊聊直接是台灣 4090 新引擎、臉聲同線。**驗收重點**：①嘴聲對不對得上 ②連續聊 2 分鐘會不會截斷/越聊越歪 ③第一通等待時間（機器常駐、應無「等半分鐘」）。
+- ⚠ 台灣機門牌是動態的：機器 Release 重開 → 26376 會變 → app.js 那行要跟著改（永久解=搬家計畫書的自動指路）。錶在走：台灣 NT$15.7/hr＋美國備援 NT$22/hr 同時開著，測完體感後決定美國線去留。
 - **下一步（Mac 主線）**：把這條真語音接進 App 聊聊（照分層架構的 `MuneaVoiceProvider`＋WebSocket 橋接約定，不另開路）、手機同 Wi-Fi 連 Mac 引擎、重裝真機 → 驗聊聊 #1/#8/#10。
 
 ## 2026-07-06 Mac 端 · ✅✅ 真語音已接進 App、裝上真機
