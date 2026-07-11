@@ -11,9 +11,19 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.22.3',
+  current: '1.23.0',
   channel: '',
   changelog: [
+    {
+      version: '1.23.0',
+      date: '2026-07-11',
+      title: '新臉引擎直接接進 App（Edward 拍板轉正）',
+      items: [
+        '聊聊的臉預設改走新引擎 FlashHead＋臉聲同一條線（舊引擎 Ditto 退居手動備援）',
+        '臉的雲端改連 24 小時醒著的 4090 專用機——沒有「第一通等半分鐘」、產能餘裕 67%（舊機只有 5.7%）',
+        '想退回舊引擎：手機設定 munea.faceEngine=ditto（一鍵可逆）',
+      ],
+    },
     {
       version: '1.22.3',
       date: '2026-07-11',

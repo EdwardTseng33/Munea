@@ -984,11 +984,13 @@ function getLiveVoiceUrl() {
 // 平常全睡不計費；進聊聊頁先「預醒」（8–10 秒）、按通話時臉多半已就緒。
 // 連哪裡：localStorage['munea.avatarUrl']（設空字串=關閉臉）；預設＝正式雲端服務。
 const AVATAR_URL_DEFAULT = 'https://edwardt0303--munea-nening-avatar-nening-web.modal.run';
-// 新引擎 FlashHead（2026-07-11 Edward 拍板轉正主線）：一個開關切整組測試設定——
-// localStorage['munea.faceEngine']='flashhead' ＝ 臉改連 FlashHead ＋ 自動開同線收聲 ＋ 512 方形畫面。
-const FLASHHEAD_URL_DEFAULT = 'https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run';
+// 新引擎 FlashHead（2026-07-11 Edward 拍板轉正主線；同日「直接接到app裡面」＝預設就走它）：
+// localStorage['munea.faceEngine'] 只剩「手動退回舊引擎」用（設 'ditto'）；不設＝FlashHead。
+// 門牌＝常駐 4090 備援機（美國 RunPod、24 小時醒著、無冷啟等待）；台灣 Glows 機轉正後換這行。
+// Modal 試作版（L4、產能貼預算、會截斷）備援：https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run
+const FLASHHEAD_URL_DEFAULT = 'https://a535qiaoru5bno-8188.proxy.runpod.net';
 function faceEngine() {
-  try { return localStorage.getItem('munea.faceEngine') || 'ditto'; } catch (e) { return 'ditto'; }
+  try { return localStorage.getItem('munea.faceEngine') || 'flashhead'; } catch (e) { return 'flashhead'; }
 }
 function getAvatarUrl() {
   try { const u = localStorage.getItem('munea.avatarUrl'); if (u !== null) return u.replace(/\/$/, ''); } catch (e) {}
