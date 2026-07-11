@@ -737,8 +737,10 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 /* 左上 角色名牌 */
 /* 上排＝乾淨的視訊通話樣式：不用深色膠囊底，改頂部淡壓深＋白字陰影，名字靠左跟計時點數同一列對齊 */
+/* Edward 2026-07-11 拍板：通話畫面＝照片乾乾淨淨鋪滿全螢幕、不要上下漸層紗蓋畫面——
+   頂部壓深整片拿掉，名字/計時的可讀性交給各自的文字陰影（本來就有）。 */
 .face-topscrim { position: absolute; top: 0; left: 0; right: 0; height: 124px; z-index: 5; pointer-events: none;
-  background: linear-gradient(to bottom, rgba(0,0,0,.42), rgba(0,0,0,0)); }
+  background: none; }
 .face-name { position: absolute; left: 20px; top: calc(env(safe-area-inset-top, 0px) + 18px); z-index: 6;
   display: inline-flex; align-items: center; gap: 8px;
   color: #fff; font-family: var(--display); font-weight: 700; font-size: 18px;
