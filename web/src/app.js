@@ -1413,6 +1413,7 @@ const LiveVoice = {
               } catch (e) {}
               const streamAlive = (bytes > 3000) || (alevel > 0.001);   // 連線收到夠多聲音位元組＝真的有聲在傳
               try { Avatar._diagNote('3秒查:量表=' + mx.toFixed(3) + ' 流量=' + bytes + 'B 音量=' + (alevel < 0 ? '無' : alevel.toFixed(3)) + (hasStats ? '' : '(無stats)')); } catch (e) {}
+              try { trackProductEvent('sameline_check', { result: (mx < 0.015 && !streamAlive) ? 'fellback' : 'kept', mx: +(mx || 0).toFixed(3), bytes: bytes, audioLevel: alevel, hasStats: hasStats, trail: (Avatar._diagTrail || []).join(' | ') }); } catch (e) {}   // 回報後台=不用靠截圖也拿得到真機診斷（Codex 2026-07-12 建議）
               if (mx < 0.015 && !streamAlive) {
                 this._sameLineFellBack = true;
                 // 關鍵：退回本地播放的同時「把同線那軌靜音」——不然引擎晚點醒過來、兩邊一起出聲＝回答重疊（Edward 2026-07-11 真機抓到）
