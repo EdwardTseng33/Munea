@@ -3006,8 +3006,10 @@ function connectCall() {
         if (LiveVoice.micLevel > 0.08) { _idleLast = Date.now(); _idleStage = 0; return; }   // 使用者在講 → 全歸零
         if (LiveVoice.speaking || (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel > 0.015)) { _idleLast = Date.now(); return; }   // AI 在講（舊喇叭或臉那條線的新喇叭）→ 時鐘後推、階段保留；不加新喇叭＝她講話期間沉默時鐘照走、講完 10 秒就被提醒（Edward 7/11）
         if (Date.now() - _idleLast < _idleGapMs) return;                               // 還沒到 30 秒真沉默
-        if (_idleStage === 0) { _idleStage = 1; LiveVoice.nudge(1); _idleLast = Date.now(); }        // 關心：還在嗎
-        else if (_idleStage === 1) { _idleStage = 2; LiveVoice.nudge(2); _idleLast = Date.now(); }   // 提醒：記得關通話
+        // Edward 2026-07-11 拍板：提醒做不好就拿掉、不要再吵——兩段提醒全停（nudge 不再呼叫），
+        // 只留第三段「沉默 90 秒安靜收線」。要復原提醒＝把下兩行換回 LiveVoice.nudge(1)/nudge(2)。
+        if (_idleStage === 0) { _idleStage = 1; _idleLast = Date.now(); }
+        else if (_idleStage === 1) { _idleStage = 2; _idleLast = Date.now(); }
         else { clearInterval(_idleMon); _autoEndCall(); }                              // 第三段沉默 → 自動收線
       }, 1500);
     };
