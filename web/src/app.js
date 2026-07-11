@@ -994,6 +994,10 @@ const FLASHHEAD_URL_DEFAULT = 'https://tw-06.access.glows.ai:26376';
 function faceEngine() {
   try { return localStorage.getItem('munea.faceEngine') || 'flashhead'; } catch (e) { return 'flashhead'; }
 }
+// 擬真角色 → 雲端臉引擎代號（2026-07-11 Edward 拍板 launch 兩角色）：寧寧=擬真女=a05、阿宏=擬真男=a06。
+// 其餘（2D 四角色）回空字串＝不接 flashhead 臉、走 2D 動畫。全身立繪底圖也照這個對應換。
+const FLASHHEAD_CHAR_MAP = { '寧寧': 'a05', '阿宏': 'a06' };
+function flashheadCharFor(backendChar) { try { return FLASHHEAD_CHAR_MAP[backendChar] || ''; } catch (e) { return ''; } }
 function getAvatarUrl() {
   try { const u = localStorage.getItem('munea.avatarUrl'); if (u !== null) return u.replace(/\/$/, ''); } catch (e) {}
   return faceEngine() === 'flashhead' ? FLASHHEAD_URL_DEFAULT : AVATAR_URL_DEFAULT;
@@ -1007,6 +1011,9 @@ function _fhComposite(on, vid) {
     if (!frame || !ov || !vid) return;
     if (on) {
       frame.hidden = false;
+      const _bg = document.getElementById('fhBg');   // 全身立繪底圖跟著角色換：擬真女 bg-a05、擬真男 bg-a06
+      const _fc = flashheadCharFor(currentChar) || 'a05';
+      if (_bg && _bg.getAttribute('src') !== 'flashhead/bg-' + _fc + '.png') _bg.src = 'flashhead/bg-' + _fc + '.png';
       if (vid.parentElement !== ov) { ov.appendChild(vid); try { const p = vid.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
       vid.style.objectFit = ''; vid.style.background = '';
     } else {
@@ -1147,7 +1154,14 @@ const Avatar = {
       // 帶上目前選的角色（六角色 · 7/9）；角色不吃擬真引擎時服務會說不行 → 自動退回 2D 動畫
       // FlashHead 測試模式不帶角色（它目前只有測試臉、帶中文名會被拒連）——擬真女底圖入庫後再帶
       let _cq = '';
-      try { if (faceEngine() !== 'flashhead' && typeof currentChar === 'string' && currentChar) _cq = '&char=' + encodeURIComponent(currentChar); } catch (e) {}
+      try {
+        if (faceEngine() === 'flashhead') {
+          const _fc = flashheadCharFor(currentChar);   // 寧寧→a05、阿宏→a06；2D 角色回空＝不帶（服務用預設 a05）
+          if (_fc) _cq = '&char=' + encodeURIComponent(_fc);
+        } else if (typeof currentChar === 'string' && currentChar) {
+          _cq = '&char=' + encodeURIComponent(currentChar);
+        }
+      } catch (e) {}
       const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY) + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
       const a = await r.json(); if (a.error) throw new Error(a.error); await this.pc.setRemoteDescription(a);
