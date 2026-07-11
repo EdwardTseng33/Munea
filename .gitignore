@@ -66,3 +66,5 @@ deploy/flashhead-poc/assets/*.wav
 deploy/flashhead-poc/assets/*.jpg
 deploy/flashhead-poc/assets/*.png
 deploy/flashhead-poc/assets/*.mp4
+deploy/glows/glows_ed25519
+deploy/glows/.env
