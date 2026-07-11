@@ -48,7 +48,11 @@ CKPT_DIR = "/models/soulx-flashhead-1.3b"
 WAV2VEC_DIR = "/models/wav2vec2-base-960h"
 
 SR_IN, SR_ENG = 24000, 16000
-AUDIO_PREBUFFER_S = 0.3   # 止血方案(a)：開口前先墊 0.3s 緩衝（4090 餘裕大、保留當保險）
+# 2026-07-11 斷續根治（官方體檢：零起播緩衝→斷糧）：開口前先墊 0.5s、生成允許往前衝到 1.5s 存貨。
+# 原理：4090 生成比即時快~1.9倍，拔掉「卡即時節奏」的閘門後會自動囤到上限、形成抖動緩衝墊；
+# 偶爾一塊做慢也不會見底（斷糧）。代價＝首句慢約 0.5s（一次性、非累積），換整段不再斷斷續續。
+AUDIO_PREBUFFER_S = 0.5    # 開口前先墊多少秒才真的放音
+MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
 
 
@@ -311,8 +315,10 @@ class FlashHead:
                     todo = None
                     with self.lock:
                         if len(self.acc) >= cs and self.t0 is not None:
-                            due = self.t0 + self.consumed / SR_ENG
-                            if time.time() >= due:
+                            # 斷續根治：不再卡即時節奏(due)，改看「存貨夠不夠」——存貨低於上限就儘量往前生成、
+                            # 建立抖動緩衝墊；滿了才停等播放消化。播放端(FlashHeadAudioTrack)仍照即時 pts 放、不會變快。
+                            ahead_s = outer.audio_out.depth_samples / SR_ENG
+                            if ahead_s < MAX_AHEAD_S:
                                 todo = self.acc[:cs].copy()
                                 self.acc = self.acc[cs:]
                                 self.consumed += cs
