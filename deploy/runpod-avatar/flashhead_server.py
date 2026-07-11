@@ -29,10 +29,12 @@ os.chdir("/root/SoulX-FlashHead")
 
 import torch
 
-# eager 模式（先鋒雷6：compile 在 L4 上是快照炸彈；4090 上是不必要的開機稅）
+# 模式開關（2026-07-11 Edward 真機驗收抓到：實戰載客時 eager 每塊 0.68s、餘裕僅 27%、畫面斷糧 468 次＝嘴定格。
+# 常駐機開機稅只付一次 → 渦輪(compile)划算：MUNEA_FH_COMPILE=1 開、熱身約 2 分鐘、穩態快 ~20%）
 import flash_head.src.pipeline.flash_head_pipeline as _fhp_mod
-_fhp_mod.COMPILE_MODEL = False
-_fhp_mod.COMPILE_VAE = False
+_COMPILE = os.environ.get("MUNEA_FH_COMPILE", "0") == "1"
+_fhp_mod.COMPILE_MODEL = _COMPILE
+_fhp_mod.COMPILE_VAE = _COMPILE
 
 from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
@@ -222,6 +224,10 @@ class FlashHead:
                 self._idle_due = 0.0
                 self._idle_on = False
                 self._round_pending = False
+                # 2026-07-11 A案小刀1：世代號——每次 reset() +1。GPU 上跑到一半的舊塊
+                # 完成時比對世代號，變了就整塊丟棄，不讓上一輪聲畫漏進新一輪
+                # （治「掛斷重撥她一接通就繼續講上一段」「插話後又冒半句舊話」）。
+                self._epoch = 0
                 threading.Thread(target=self._loop, daemon=True).start()
 
             def push24k(self, pcm_bytes):
@@ -234,13 +240,18 @@ class FlashHead:
                 with self.lock:
                     now = time.time()
                     if self.t0 is None or (now - self.last_in) > 0.8:
+                        # 2026-07-11 A案小刀2：0.8s 到貨空窗只當「新一輪開口」計數＋重錨節奏鐘，
+                        # 不再清 self.acc——舊碼在這裡把已到貨還沒消化的話整包丟掉＝「話講一半
+                        # 跳掉／吃字」（語音腦是爆發式到貨，中途卡 0.8s 是常態）。已到貨的真話
+                        # 一律留著讓 _loop 照節奏消化完；真正的 turn 邊界只認 ws "reset" 明確訊號。
+                        # 節奏鐘重錨（t0/consumed 歸位）＝殘餘舊音從現在起接著新音連續放行，一格不丟。
                         self.t0 = now
-                        self.acc = np.zeros(0, dtype=np.float32)
                         self.consumed = 0
                         outer.round_count += 1
                         outer.round_start_ts = now
                         self._round_pending = True
-                        print("[round] #" + str(outer.round_count) + " start", flush=True)
+                        print("[round] #" + str(outer.round_count) + " start (acc keep "
+                              + str(len(self.acc)) + " samples)", flush=True)
                     self.acc = np.concatenate([self.acc, xq])
                     self.last_in = now
 
@@ -249,14 +260,26 @@ class FlashHead:
                     self.acc = np.zeros(0, dtype=np.float32)
                     self.t0 = None
                     self.consumed = 0
+                    # 2026-07-11 A案小刀1：世代號 +1——在 GPU 上跑到一半的舊塊，跑完後
+                    # 看到世代變了就自己丟棄（見 _gen_chunk 尾端比對），舊聲畫進不了新佇列。
+                    self._epoch += 1
+                    # 2026-07-11 A案小刀1：8 秒聲音記憶窗整個歸零重填（官方每輪 run 開始
+                    # audio_dq 就是全零起步）。舊碼留著上一輪最後 0.36s 音尾，新一輪第一塊
+                    # 的嘴型會被舊語音牽著走＝「下一輪開頭嘴亂動／像在接上一段」。
+                    outer.audio_dq.extend([0.0] * outer.audio_dq.maxlen)
                 sink.clear()
                 outer.audio_out.clear()
-                print("[feeder] reset(turn boundary)", flush=True)
+                print("[feeder] reset(turn boundary) epoch=" + str(self._epoch), flush=True)
 
             def _gen_chunk(self, chunk_16k):
                 t_chunk_ready = time.time()
-                outer.audio_dq.extend(chunk_16k.tolist())
-                arr = np.array(outer.audio_dq)
+                # 2026-07-11 A案小刀1：開跑前先記下世代號——跟 audio_dq 進料包在同一把鎖裡，
+                # 這樣「reset 歸零記憶窗」和「這塊進料」一定分出先後：reset 在後＝整窗連這塊
+                # 一起被歸零（塊尾端也會被丟）；reset 在前＝這塊帶新世代號正常走。
+                with self.lock:
+                    chunk_epoch = self._epoch
+                    outer.audio_dq.extend(chunk_16k.tolist())
+                    arr = np.array(outer.audio_dq)
                 emb = get_audio_embedding_(outer.pipeline, arr, outer.audio_start_idx, outer.audio_end_idx)
                 with outer.char_lock:
                     video = run_pipeline_(outer.pipeline, emb)
@@ -265,6 +288,14 @@ class FlashHead:
                 t_frames_ready = time.time()
                 outer.last_gen_compute_ms = round((t_frames_ready - t_chunk_ready) * 1000, 1)
                 outer.gen_compute_ms_hist.append(outer.last_gen_compute_ms)
+                # 2026-07-11 A案小刀1：入佇列前比對世代號——reset 期間在 GPU 上跑完的舊塊
+                # 整塊丟棄（畫面＋聲音都不推），0.96s 舊聲畫再也污染不了剛清空的新一輪
+                # （治「掛斷重撥繼續講上一段」「插話後她又冒出半句舊話」）。
+                with self.lock:
+                    if self._epoch != chunk_epoch:
+                        print("[feeder] stale chunk dropped (epoch " + str(chunk_epoch)
+                              + " -> " + str(self._epoch) + ")", flush=True)
+                        return
                 sink.push_many(frames, t_frames_ready, outer.tgt_fps)
                 pcm16 = np.clip(chunk_16k * 32768.0, -32768, 32767).astype(np.int16)
                 outer.audio_out.push(pcm16)
@@ -472,6 +503,12 @@ class FlashHead:
                 return {"error": "key required"}
             if char and not outer._switch(char):
                 return {"error": "char not supported"}
+            # 2026-07-11 主蘇菲：新通話開線＝把上一通的殘留全部倒掉（音頻緩衝+畫格佇列+進料狀態）。
+            # 不倒＝Edward 實測「掛斷再撥、她一接通就繼續播上一段的話」——殘留聲音直接漏進新通話。
+            try:
+                outer.feeder.reset()
+            except Exception as _e:
+                print(f"[offer] pre-call reset failed: {_e}", flush=True)
             pc = RTCPeerConnection(RTCConfiguration(iceServers=[
                 RTCIceServer(urls="stun:stun.l.google.com:19302"),
                 RTCIceServer(urls=["turn:34.81.102.52:3478?transport=udp", "turn:34.81.102.52:3478?transport=tcp"],
