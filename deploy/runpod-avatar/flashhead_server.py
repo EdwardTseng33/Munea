@@ -53,6 +53,9 @@ SR_IN, SR_ENG = 24000, 16000
 # 偶爾一塊做慢也不會見底（斷糧）。代價＝首句慢約 0.5s（一次性、非累積），換整段不再斷斷續續。
 AUDIO_PREBUFFER_S = 0.5    # 開口前先墊多少秒才真的放音
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
+# 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
+# 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
+FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
 PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
 
 
@@ -289,6 +292,12 @@ class FlashHead:
                     video = run_pipeline_(outer.pipeline, emb)
                 video = video[outer.motion_frames_num:]
                 frames = video.cpu().numpy().astype(np.uint8)
+                if FH_SHARPEN:   # unsharp mask 銳化（實驗·預設關）：每格 = 原圖 + (原圖-模糊)*量
+                    import cv2 as _cv2
+                    for _i in range(frames.shape[0]):
+                        _f = frames[_i]
+                        _blur = _cv2.GaussianBlur(_f, (0, 0), 1.8)
+                        frames[_i] = _cv2.addWeighted(_f, 1.5, _blur, -0.5, 0)
                 t_frames_ready = time.time()
                 outer.last_gen_compute_ms = round((t_frames_ready - t_chunk_ready) * 1000, 1)
                 outer.gen_compute_ms_hist.append(outer.last_gen_compute_ms)
