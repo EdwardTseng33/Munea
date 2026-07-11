@@ -1054,6 +1054,21 @@ const Avatar = {
       if (el) { el.hidden = false; el.textContent = '臉: ' + msg; }
     } catch (e) {}
   },
+  // 黑盒子：記整串同線聲音事件（帶時間），失敗時自動跳出來讓 Edward 截圖抓真兇（2026-07-12）
+  _diagNote(msg, force) {
+    try {
+      if (!Avatar._diagTrail) Avatar._diagTrail = [];
+      const t0 = Avatar._callT0 || Date.now();
+      const el = ((Date.now() - t0) / 1000).toFixed(1);
+      Avatar._diagTrail.push(el + 's ' + msg);
+      if (Avatar._diagTrail.length > 10) Avatar._diagTrail.shift();
+      const on = force || (function () { try { return localStorage.getItem('munea.debug') === '1'; } catch (e) { return false; } })();
+      if (on) {
+        const d = document.getElementById('avatarDiagnostics');
+        if (d) { d.hidden = false; d.style.whiteSpace = 'pre-line'; d.style.maxHeight = '40vh'; d.style.overflow = 'auto'; d.textContent = '聲音診斷:\n' + Avatar._diagTrail.join('\n'); }
+      }
+    } catch (e) {}
+  },
   // 進聊聊頁就把顯卡叫醒（Edward 2026-07-09 方案二）：連續探健康到「醒了」為止（涵蓋 8-10 秒冷啟），
   // warm=true 後按通話臉就近乎即到。只在聊聊頁探、離頁就停（不空燒顯卡）。
   wake() {
@@ -1105,14 +1120,21 @@ const Avatar = {
         // iOS 手勢關卡也只闖一次。faceAud 降級為音量儀表專用（閉麥/沉默計時）、永遠靜音不出聲（防雙聲）。
         if (_sameLine && e.track && e.track.kind === 'audio') {
           this._attachFaceAudio(e.track);
+          try { this._faceAudReceiver = e.receiver; } catch (er) {}
+          try {
+            const _sid = (e.streams && e.streams[0] && e.streams[0].id || '').slice(-4);
+            Avatar._diagNote('聲音軌到 str=' + _sid + ' en=' + e.track.enabled + ' mu=' + e.track.muted);
+          } catch (er) {}
           const _fa2 = document.getElementById('faceAud'); if (_fa2) _fa2.muted = true;
           return;
         }
         vid.srcObject = e.streams[0];
         if (_sameLine) {
           vid.muted = false;   // 聲音改由影像播放器出（跟先鋒頁同款）
+          try { const _sid = (e.streams[0] && e.streams[0].id || '').slice(-4); Avatar._diagNote('影像軌到 str=' + _sid + ' 含音軌=' + (e.streams[0] ? e.streams[0].getAudioTracks().length : '?')); } catch (er) {}
           const _pv = vid.play();
-          if (_pv && _pv.catch) _pv.catch(() => {   // 被 iOS 擋（手勢斷鏈）→ 點畫面一下＝新手勢救回（先鋒 tap-to-play 的 App 版）
+          if (_pv && _pv.then) _pv.then(() => Avatar._diagNote('影音播放:成功')).catch((err) => {   // 被 iOS 擋（手勢斷鏈）→ 點畫面一下＝新手勢救回（先鋒 tap-to-play 的 App 版）
+            Avatar._diagNote('影音播放:被擋(' + (err && err.name) + ')', true);
             try { setCallHint('聲音被擋住了，點一下畫面就好', true); } catch (e2) {}
             try {
               document.getElementById('chat').addEventListener('click', () => {
@@ -1377,15 +1399,29 @@ const LiveVoice = {
           if (!this._sameLineWatchStarted) {
             this._sameLineWatchStarted = true;
             try { Avatar._faceAudMaxLevel = 0; } catch (e) {}
-            this._sameLineWatch = setTimeout(() => {
+            this._sameLineWatch = setTimeout(async () => {
               let mx = 0; try { mx = Avatar._faceAudMaxLevel || 0; } catch (e) {}
-              if (mx < 0.015) {
+              // iPhone 上 Web Audio 讀遠端串流會恆為 0（Safari 已知坑）→ 不能只信量表 mx。
+              // 第二證人：連線「真的有沒有收到聲音位元組」（getStats，iPhone 讀得到）——有流量＝同線活著、別退回。
+              let bytes = 0, alevel = -1, hasStats = false;
+              try {
+                const rcv = Avatar._faceAudReceiver;
+                if (rcv && rcv.getStats) {
+                  const st = await rcv.getStats();
+                  st.forEach(r => { if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { hasStats = true; if (typeof r.bytesReceived === 'number') bytes = r.bytesReceived; if (typeof r.audioLevel === 'number') alevel = r.audioLevel; } });
+                }
+              } catch (e) {}
+              const streamAlive = (bytes > 3000) || (alevel > 0.001);   // 連線收到夠多聲音位元組＝真的有聲在傳
+              try { Avatar._diagNote('3秒查:量表=' + mx.toFixed(3) + ' 流量=' + bytes + 'B 音量=' + (alevel < 0 ? '無' : alevel.toFixed(3)) + (hasStats ? '' : '(無stats)')); } catch (e) {}
+              if (mx < 0.015 && !streamAlive) {
                 this._sameLineFellBack = true;
                 // 關鍵：退回本地播放的同時「把同線那軌靜音」——不然引擎晚點醒過來、兩邊一起出聲＝回答重疊（Edward 2026-07-11 真機抓到）
                 try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
                 try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}   // 聲音改走影像播放器後（1.24.4）：退回時它也要閉嘴、同理防重疊
-                try { Avatar._diag('同線3秒無聲→退回本地播放'); } catch (e) {}
+                try { Avatar._diagNote('判定真沒聲→退回本地(會慢)', true); } catch (e) {}
                 try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
+              } else {
+                try { Avatar._diagNote('同線活著→維持不退回' + (mx < 0.015 ? '(繞過iPhone坑)' : ''), mx < 0.015); } catch (e) {}
               }
             }, 3000);
           }
@@ -2949,11 +2985,28 @@ function connectCall() {
   // 同線聲音的 iPhone 解鎖（2026-07-11）：iPhone 不准「沒經過使用者手指」的聲音自動播——
   // 同線那軌之前一直被擋、每通都退回本地播放。趁「開始通話」這根手指先讓 faceAud 播一下取得許可。
   try {
-    const _fa = document.getElementById('faceAud');
-    if (_fa && faceSameLineOn()) { _fa.muted = false; const _p = _fa.play(); if (_p && _p.catch) _p.catch(() => {}); }
-    // 1.24.4 起聲音改由影像播放器出（一個播放器帶兩軌）——同一根手指也幫它拿「出聲許可」
-    const _fv = document.getElementById('faceVid');
-    if (_fv && faceSameLineOn()) { _fv.muted = false; const _p2 = _fv.play(); if (_p2 && _p2.catch) _p2.catch(() => {}); }
+    Avatar._callT0 = Date.now(); Avatar._diagTrail = [];   // 黑盒子每通歸零
+    Avatar._diagNote('按下開始通話');
+    if (faceSameLineOn()) {
+      const _fv = document.getElementById('faceVid');
+      if (_fv) {
+        // 趁「這根手指」餵一段無聲的真聲音給影像播放器並播——iPhone 才會把「出聲許可」記在它身上；
+        // 之前只對「還沒裝聲音的空播放器」喊 play 不算數（真串流一秒後到、手指許可已過期又被擋）＝延遲根因之一。
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          Avatar._primeCtx = Avatar._primeCtx || new AC();
+          try { if (Avatar._primeCtx.state === 'suspended') Avatar._primeCtx.resume(); } catch (e2) {}
+          const dst = Avatar._primeCtx.createMediaStreamDestination();
+          const g = Avatar._primeCtx.createGain(); g.gain.value = 0;
+          const osc = Avatar._primeCtx.createOscillator(); osc.connect(g); g.connect(dst); osc.start();
+          _fv.srcObject = dst.stream; _fv.muted = false;   // 無聲音軌、不影響待機影片（待機片在另一層）
+          const _p2 = _fv.play();
+          if (_p2 && _p2.then) _p2.then(() => Avatar._diagNote('解鎖影像播放器:成功')).catch((er) => Avatar._diagNote('解鎖:被擋(' + (er && er.name) + ')', true));
+        } catch (e3) { try { _fv.muted = false; const _p3 = _fv.play(); if (_p3 && _p3.catch) _p3.catch(() => {}); } catch (e4) {} Avatar._diagNote('解鎖:改用簡易法'); }
+      }
+      const _fa = document.getElementById('faceAud');
+      if (_fa) { _fa.muted = false; const _p = _fa.play(); if (_p && _p.catch) _p.catch(() => {}); }
+    }
   } catch (e) {}
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
