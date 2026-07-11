@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260711-v1255" />
+  <link rel="stylesheet" href="src/styles.css?v=20260711-v1256" />
 </head>
 <body>
 <div class="app-shell">
@@ -457,7 +457,7 @@
   <section class="screen face-screen" id="chat" data-state="idle">
     <!-- 全屏臉（佔畫面主體、置中偏上、像跟家人視訊）。會動時對嘴；現為靜態圖＋CSS 呼吸眨眼佔位（§6.5 降級層 1-2） -->
     <div class="face-bg">
-      <img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧">
+      <img id="faceImg" src="avatars/nening-v2-full.png" alt="寧寧">
       <!-- FlashHead 全身合成（2026-07-11 先鋒判斷框參數移植）：9:16 定比框＋全身立繪底＋512 活臉羽化貼回 -->
       <div class="fh-frame" id="fhFrame" hidden aria-hidden="true">
         <img class="fh-bg" id="fhBg" src="flashhead/bg-a05.png" alt="">
@@ -1123,7 +1123,7 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260711-v1255"></script>
+  <script src="src/version.js?v=20260711-v1256"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
@@ -1173,7 +1173,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260711-v1255"></script>
+  <script type="module" src="src/app.js?v=20260711-v1256"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
