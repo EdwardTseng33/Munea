@@ -4,7 +4,7 @@
 真人（寧寧/阿宏/小昀/阿原）會帶「記憶」（user_profile.json）；動物（咪咪/旺財）用各自演技聲音。
 用法：GEMINI_API_KEY="..." py chat_engine.py [角色名 角色名 ...]
 """
-import os, sys, json, time, wave, logging
+import os, sys, json, time, wave, logging, re
 from google import genai
 from google.genai import types
 
@@ -23,6 +23,13 @@ CORE = (
     "（你的身分——先於任何角色性格：你是沐寧的專屬 AI 健康照護管家，負責照看這位用戶和他一家人的身體與心理健康。"
     "健康數據、用藥回診、心情起伏、家人之間的大小事，都是你份內的事；被問到「你是誰／你能做什麼」要講得出這個身分。"
     "你可以用自己的性格講話，但下面這些每個角色都一樣做得到、也必須做到："
+    "⓪ 情緒同頻（最先做到、貫穿每一句話，比接話、比熱情更重要）："
+    "開口前先聽懂對方這句話的情緒溫度——是累、是難過、是煩、是擔心、是平淡、還是開心有勁——"
+    "你的語氣、語速、能量就要跟著調到跟他同一個頻率。他在講很累或難過、沉重的事，你要放輕、放慢、多一點停頓，"
+    "先用一句真的有聽進去的話接住他的心情（像『聽起來今天真的很不容易』『這件事擱在心裡，一定很悶吧』），"
+    "**絕不用很high、很跳、一堆驚嘆號的語氣硬聊**——那會讓他覺得你根本沒在聽、沒懂他的感受，比不回還傷人。"
+    "他有精神、開心的時候，你才輕快起來陪他一起高興。共情不是每句都問『你還好嗎』，"
+    "而是語氣真的沉下來、順著他的情緒往下接，讓他感覺被理解。永遠先接住情緒、再談內容（情緒先於資訊）。"
     "① 服務知識：懂日常照護常識（作息、飲食、水分、運動、用藥習慣、慢性病日常照顧、情緒照顧），講的是有依據的常識、不是偏方。"
     "② 專業邊界：你不是醫生——診斷、開藥、劑量、停換藥一律不碰，引導去問醫生或藥師；急症徵兆提醒打 119。"
     "③ 看到健康告警（血壓/心率/血氧異常、跌倒、久沒動靜）：先穩住他的情緒、再把事實講清楚、再給明確的下一步"
@@ -45,6 +52,16 @@ CORE = (
     "分寸：平常像朋友家人自在聊，碰到健康與安全的事，就拿出管家的可靠。）"
 )
 RED = "（界線：只陪伴／生活提醒／情緒支持，不診斷不治療、絕不說不用看醫生；嚴重不適或想不開→不裝醫生，溫柔轉介家人／1925／119。）"
+
+# 清掉模型偶爾漏出的雜訊標記：搜尋引用 [cite: ...] / 舞台指示情緒標 [開心][微笑] 等——這些會被念出來或顯示、破壞沉浸
+_ARTIFACT_RE = re.compile(r"\[\s*cite[^\]]*\]|\[\s*/?citation[^\]]*\]|\[[一-鿿]{1,4}\]", re.IGNORECASE)
+def _clean_reply(t):
+    if not t:
+        return t
+    t = _ARTIFACT_RE.sub("", t)
+    t = re.sub(r"[ \t]{2,}", " ", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    return t.strip()
 DEFAULT_USER_PROFILE = {
     "稱呼": "使用者",
     "年紀": "",
@@ -129,7 +146,7 @@ def reply(char, user):
                 r = client.models.generate_content(
                     model=m, contents=user,
                     config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
-                return r.text.strip()
+                return _clean_reply(r.text)
             except Exception as e:
                 _log_fallback_exception(f"generate chat reply with {m}", e)
                 last = str(e)[:50]
@@ -206,7 +223,7 @@ def open_chat(char="寧寧", today=""):
                 r = client.models.generate_content(
                     model=m, contents=task,
                     config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
-                return r.text.strip()
+                return _clean_reply(r.text)
             except Exception as e:
                 _log_fallback_exception(f"generate proactive opener with {m}", e)
         time.sleep(2 * (attempt + 1))
