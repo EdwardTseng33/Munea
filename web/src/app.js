@@ -1401,8 +1401,11 @@ const LiveVoice = {
         let _off = 0.18;
         try {
           if (typeof Avatar !== 'undefined' && Avatar.on) {
-            let ms = parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
-            if (isNaN(ms) || ms < 0 || ms > 3000) ms = 900;
+            // 舊水管拆除（1.24.6）：新引擎臉快 3 倍、退回本地播放也只等 0.2 秒＝寫死（連校時器寫進手機的舊毒值一併無視）；
+            // 舊引擎照舊 0.9 秒可手調。不拆＝退回狀態聲音被推後最多 3 秒 → 「嘴跑在聲音前面」（Edward 7/11 症狀④機制源）。
+            const _fh = (typeof faceEngine === 'function' && faceEngine() === 'flashhead');
+            let ms = _fh ? 200 : parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
+            if (isNaN(ms) || ms < 0 || ms > 3000) ms = _fh ? 200 : 900;
             _off = ms / 1000;
           }
         } catch (e) {}
@@ -1511,6 +1514,9 @@ const AvSyncMeter = {
     this._overlay.textContent = `臉比聲音慢 ${last.toFixed(1)}s（這句）\n近 ${n} 句平均 ${avg.toFixed(1)}s${auto}\n對齊建議：聲音等臉 ${suggest}ms`;
   },
   _maybeTune() {
+    // 舊水管拆除（1.24.6）：新引擎＝臉聲同線原生對齊、退回也用寫死小等待——校時器只准看、不准動手
+    //（它是舊雙管世界的拐杖，在新世界會把聲音越推越後＝嘴先動的機制源；量測顯示照舊、供機器人成績單用）
+    try { if (typeof faceEngine === 'function' && faceEngine() === 'flashhead') return; } catch (e) {}
     if ((localStorage.getItem('munea.avSyncAuto') || '1') !== '1') return;   // 7/11 起預設開（Edward 拍板對齊為正解）；munea.avSyncAuto=0 可關
     if (this._samples.length < 3) return;
     const now = performance.now(); if (now - this._lastTune < 4000) return;   // 每 4 秒最多調一次、給它時間穩
