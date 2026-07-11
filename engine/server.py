@@ -2913,6 +2913,103 @@ def load_admin_accounts(query=None, limit=50):
     return [local_admin_account_summary()]
 
 
+def _normalize_account_plan(raw):
+    """訂閱事件的方案字串 → 'pro' / 'plus' / 'free'（真資料·認不出當免費）。"""
+    s = str(raw or "").lower()
+    if "pro" in s:
+        return "pro"
+    if "plus" in s or "premium" in s:
+        return "plus"
+    return "free"
+
+
+def _account_activity_index(days=30):
+    """按帳號彙總真實活動：通話+視訊分鐘、最後活躍、事件數、方案。
+    事件沒帶 accountId 的歸到 unattributed；單帳號 scoped 時由呼叫端併回唯一帳號。"""
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=max(1, min(90, int(days))) - 1)
+    since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
+    all_events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=5000)
+    events = [e for e in all_events if not is_analytics_excluded_event(e)]
+    index = {}
+    unattributed = {"voiceMinutes": 0.0, "avatarMinutes": 0.0, "eventCount": 0,
+                    "lastActiveAt": None, "plan": None, "planAt": None}
+
+    def bucket(aid):
+        if not aid:
+            return unattributed
+        return index.setdefault(aid, {"voiceMinutes": 0.0, "avatarMinutes": 0.0, "eventCount": 0,
+                                      "lastActiveAt": None, "plan": None, "planAt": None})
+
+    for e in events:
+        b = bucket(e.get("accountId") or "")
+        b["eventCount"] += 1
+        et = e.get("eventTime")
+        if et and (b["lastActiveAt"] is None or et > b["lastActiveAt"]):
+            b["lastActiveAt"] = et
+        name = e.get("eventName") or ""
+        props = e.get("properties") or {}
+        if name in ("voice_session_completed", "avatar_session_completed"):
+            minutes = safe_number(props.get("durationMinutes") or props.get("duration_minutes"))
+            if not minutes:
+                minutes = safe_number(props.get("durationMs") or props.get("duration_ms")) / 60000
+            key = "voiceMinutes" if name == "voice_session_completed" else "avatarMinutes"
+            b[key] += minutes
+        elif name == "subscription_purchased":
+            plan = props.get("plan") or props.get("productId") or props.get("tier")
+            if plan and (b["planAt"] is None or (et and et > b["planAt"])):
+                b["plan"] = plan
+                b["planAt"] = et
+    return index, unattributed
+
+
+def _derive_account_status(last_active_iso, event_count):
+    """由真實最後活躍時間推活躍狀態：on 活躍中 / idle 低度使用 / off 離線。"""
+    if not last_active_iso or not event_count:
+        return "off"
+    try:
+        last = parse_iso_datetime(last_active_iso)
+        gap_days = (datetime.now(timezone.utc) - last).total_seconds() / 86400
+    except Exception:
+        return "off"
+    if gap_days <= 3:
+        return "on"
+    if gap_days <= 13:
+        return "idle"
+    return "off"
+
+
+def _enrich_accounts_with_activity(accounts, days=30):
+    """幫每個帳號補真資料：plan / usage（分鐘·最後活躍·事件數）/ status。
+    單帳號 scoped（試營運鎖一戶）時把未歸戶事件併給唯一帳號、誠實不亂攤。"""
+    index, unattributed = _account_activity_index(days=days)
+    single = len(accounts) == 1
+    for acct in accounts:
+        aid = acct.get("accountId") or ""
+        agg = dict(index.get(aid) or {"voiceMinutes": 0.0, "avatarMinutes": 0.0,
+                                      "eventCount": 0, "lastActiveAt": None, "plan": None, "planAt": None})
+        if single:
+            agg["voiceMinutes"] += unattributed["voiceMinutes"]
+            agg["avatarMinutes"] += unattributed["avatarMinutes"]
+            agg["eventCount"] += unattributed["eventCount"]
+            if unattributed["lastActiveAt"] and (not agg["lastActiveAt"] or unattributed["lastActiveAt"] > agg["lastActiveAt"]):
+                agg["lastActiveAt"] = unattributed["lastActiveAt"]
+            if unattributed["plan"] and not agg["plan"]:
+                agg["plan"] = unattributed["plan"]
+        voice = round(agg["voiceMinutes"], 1)
+        avatar = round(agg["avatarMinutes"], 1)
+        acct["plan"] = _normalize_account_plan(agg["plan"])
+        acct["usage"] = {
+            "totalMinutes": round(voice + avatar, 1),
+            "voiceMinutes": voice,
+            "avatarMinutes": avatar,
+            "eventCount": int(agg["eventCount"]),
+            "lastActiveAt": agg["lastActiveAt"],
+        }
+        acct["status"] = _derive_account_status(agg["lastActiveAt"], agg["eventCount"])
+    return accounts
+
+
 def admin_accounts_summary(data=None):
     data = data or {}
     limit = max(1, min(200, int(data.get("limit") or 50)))
@@ -2936,6 +3033,7 @@ def admin_accounts_summary(data=None):
             or q in ((account.get("familyGroup") or {}).get("name") or "").lower()
             or q in ((account.get("primaryPerson") or {}).get("displayName") or "").lower()
         ]
+    accounts = _enrich_accounts_with_activity(accounts[:limit], days=int(data.get("days") or 30))
     return {
         "ok": True,
         "count": len(accounts),
@@ -2946,7 +3044,7 @@ def admin_accounts_summary(data=None):
             "personId": person_id,
             "limit": limit,
         },
-        "accounts": accounts[:limit],
+        "accounts": accounts,
         "privacy": {
             "surface": "admin_account_lookup",
             "rawTranscriptRecords": 0,

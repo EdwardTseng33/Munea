@@ -192,26 +192,51 @@
     return html;
   }
 
+  const AV_TINTS=[["var(--coral-soft)","var(--coral-d)"],["var(--mint)","var(--teal-dd)"],["var(--gold-soft)","#9A7B24"],["#E7E9F2","#5A6B8C"],["#F1E4EC","#9C5B84"]];
+  const REL_ZH={ self:"主要使用者", primary_user:"主要使用者", elder:"長輩", senior:"長輩", child:"子女", daughter:"女兒", son:"兒子", family:"家人", caregiver:"照顧者" };
+  function planPill(p){ const m={ pro:["pill pro","Pro"], plus:["pill ok","Plus"], free:["pill mute","免費"] }; const x=m[p]||m.free; return `<span class="${x[0]}">${x[1]}</span>`; }
+  function statusPill(s){ const m={ on:["ok","活躍中"], idle:["warn","低度使用"], off:["mute","離線"], alert:["bad","守護中"] }; const x=m[s]||m.off; return `<span class="pill ${x[0]}"><span class="sdot"></span>${x[1]}</span>`; }
+  function usageCell(u){ u=u||{}; const mins=Math.round(u.totalMinutes||0); if(!mins) return `<span class="muted">—</span>`; const h=Math.min(22,Math.max(6,mins/6)); return `<div class="use-cell"><span class="mini-bars"><i style="height:${Math.round(h*0.5)}px"></i><i style="height:${Math.round(h*0.78)}px"></i><i style="height:${Math.round(h)}px"></i></span><b class="num">${n(mins)}</b><span class="muted small">分</span></div>`; }
+
   function renderUsers(){
     const accts=(D().accounts||{}).accounts||[];
-    const ns=northStar();
+    const safety=D().safety||{}, escalations=(safety.totals||{}).requiresHumanEscalation||0;
+    const single=accts.length===1;
+    const stOf=(a)=> (single&&escalations>0)?"alert":(a.status||"off");
+    const people=accts.reduce((s,a)=>s+((a.familyMembers||{}).count||0),0);
+    const sts=accts.map(stOf), activeC=sts.filter(s=>s==="on").length, idleC=sts.filter(s=>s==="idle").length, guardC=sts.filter(s=>s==="alert").length;
     let html=kpiRow([
-      { label:"帳號數", value:n(accts.length), sub:"目前建立的帳號／家庭" },
-      { label:"活躍人數", value:n(ns.activePeople), sub:"近 30 天有真互動" },
-      { label:"語音接通率", value:ns.voiceSessionSuccessRate==null?"–":pct(ns.voiceSessionSuccessRate), sub:"撥了有講到話" },
-      { label:"家人互動", value:n(ns.familyInteractions), sub:"家庭圈往來次數" },
+      { label:"總用戶", star:true, value:n(accts.length), sub:`家庭圈 ${accts.length} · 成員 ${people} 人` },
+      { label:"今日活躍", value:n(activeC), sub:accts.length?`活躍率 ${pct(activeC/accts.length)}`:"–", info:"近 3 天內有真互動的帳號" },
+      { label:"低度使用", value:n(idleC), sub:"7 天以上沒通話", info:"需要關懷的沉睡帳號" },
+      { label:"守護中", value:n(guardC), sub:"安全警示待處理", info:"有安全守護警示、建議優先確認" },
     ]);
     if(!accts.length){
       html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox("還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
       return html;
     }
-    const q=state.tabs.userSearch||"";
-    const rows=accts.filter((a)=>{ if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return (p.displayName||a.accountName||"").indexOf(q)>-1||(f.name||"").indexOf(q)>-1; });
-    html+=card("用戶與家庭圈名冊", `共 ${accts.length} 筆`,
-      `<div class="rowflex"><span class="muted small">點「查看」看單一用戶</span><input class="tbl-search" id="userSearch" type="search" placeholder="搜尋名字或家庭"></div>`+
-      tableHTML(["帳號","家庭圈","主要使用者","陪伴角色","家人數","最近更新",""],
-        rows.map((a,i)=>{ const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{};
-          return [esc(a.accountName||a.accountId||"–"),esc(f.name||"–"),esc(p.displayName||"–"),esc(c.displayName||c.templateId||"–"),`<span class="num">${n(m.count||0)}</span>`,esc(fmtTime(a.updatedAt||a.createdAt)),`<button class="btn-ghost btn-sm" data-acct="${i}">查看</button>`]; })));
+    const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
+    const planC={free:0,plus:0,pro:0}; accts.forEach((a)=>{ const p=a.plan||"free"; planC[p]=(planC[p]||0)+1; });
+    const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
+    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")).toLowerCase().indexOf(q)>-1; });
+    const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}">${esc(label)} <span class="c">${cnt}</span></button>`;
+    const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span><input class="tbl-search" id="userSearch" type="search" placeholder="搜尋名字或家庭"></div>`;
+    const trows=rows.map((a)=>{ const idx=accts.indexOf(a); const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
+      const nm=p.displayName||a.accountName||"–", initial=(String(nm).trim()[0]||"家");
+      const tint=AV_TINTS[Math.abs(String(nm).split("").reduce((h,ch)=>((h<<5)-h+ch.charCodeAt(0))|0,0))%AV_TINTS.length];
+      const sub=REL_ZH[String(p.relationship||"").toLowerCase()]||"成員";
+      return [
+        `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}</div><div class="u-sub">${esc(sub)}</div></div></div>`,
+        `<span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span>`,
+        planPill(a.plan||"free"),
+        esc(c.displayName||c.templateId||"–"),
+        usageCell(u),
+        statusPill(stOf(a)),
+        `<span class="muted small">${esc(fmtTime(u.lastActiveAt||a.updatedAt||a.createdAt))}</span>`,
+        `<button class="row-act" data-acct="${idx}" title="查看用戶" aria-label="查看用戶">${icon("users","ic")}</button>`,
+      ];
+    });
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}</div></div></div>${tools}${tableHTML(["用戶","家庭","方案","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
     return html;
   }
 
@@ -297,9 +322,15 @@
 
   function openAcctDetail(idx){
     const a=((D().accounts||{}).accounts||[])[idx]; if(!a) return;
-    const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{};
-    const fields=[["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],["陪伴角色",c.displayName||c.templateId||"–"],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)],["最近更新",fmtTime(a.updatedAt)]];
-    const body=`<div class="modal-head"><div><div class="modal-title">${esc(a.accountName||a.accountId||"帳號")}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button">✕</button></div>
+    const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
+    const safety=D().safety||{}, escalations=(safety.totals||{}).requiresHumanEscalation||0;
+    const single=((D().accounts||{}).accounts||[]).length===1;
+    const st=(single&&escalations>0)?"alert":(a.status||"off");
+    const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[a.plan||"free"]||"免費";
+    const stTxt={on:"活躍中",idle:"低度使用",off:"離線",alert:"守護中"}[st]||"離線";
+    const mins=Math.round(u.totalMinutes||0);
+    const fields=[["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]];
+    const body=`<div class="modal-head"><div><div class="modal-title">${esc(p.displayName||a.accountName||"帳號")}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
       <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>`;
     let mo=$("acctModal"); if(!mo){ mo=document.createElement("div"); mo.id="acctModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
@@ -469,6 +500,7 @@
     $("pageRoot").querySelectorAll("[data-goto]").forEach((b)=>b.addEventListener("click",()=>go(b.dataset.goto)));
     $("pageRoot").querySelectorAll("[data-acct]").forEach((b)=>b.addEventListener("click",()=>openAcctDetail(+b.dataset.acct)));
     const us=$("userSearch"); if(us){ us.value=state.tabs.userSearch||""; us.addEventListener("input",()=>{ state.tabs.userSearch=us.value.trim(); renderPage("users"); const el=$("userSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
+    $("pageRoot").querySelectorAll("[data-ufilter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.userFilter=b.dataset.ufilter; renderPage("users"); }));
     if(id==="settings"){
       const base=initialBaseUrl();
       if($("apiBaseUrl")) $("apiBaseUrl").value=base;
