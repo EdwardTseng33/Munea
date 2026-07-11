@@ -11,9 +11,17 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.25.8',
+  current: '1.25.9',
   channel: '',
   changelog: [
+    {
+      version: '1.25.9',
+      date: '2026-07-11',
+      title: '角色選單照片對齊新長相（launch 兩角色定裝）',
+      items: [
+        '角色選擇選單的兩張臉換成新大頭照（選單本就只留擬真女+擬真男）',
+      ],
+    },
     {
       version: '1.25.8',
       date: '2026-07-11',
