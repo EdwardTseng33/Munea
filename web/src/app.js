@@ -1289,6 +1289,12 @@ const LiveVoice = {
           const inp = e.inputBuffer.getChannelData(0);
           if (!this.micOpen) { this.micLevel = 0; return; }        // 麥克風要等「真正開場」才開（撥通中/等臉那幾秒不收音，免得你的聲音在她招呼前一直灌進去→她一直「我聽見了」· Edward 2026-07-09）
           if (this.speaking) { this.micLevel = 0; return; }       // 她在說＝麥克風靜音＝收音波頻歸零
+          // 同線模式她的聲音走臉那條線（faceAud）播——那也算「她在說」，同樣閉麥＋0.4 秒餘韻。
+          // 不加這條＝她從喇叭聽到自己→當成你在講→自問自答鬼打牆（Edward 7/11 試吃檯抓到）。
+          const _av = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
+          const _nowT = performance.now();
+          if (_av > 0.015) this._faceTalkTs = _nowT;
+          if (this._faceTalkTs && (_nowT - this._faceTalkTs) < 400) { this.micLevel = 0; return; }
           let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
           this.micLevel = Math.min(1, Math.sqrt(s / inp.length) * 8);   // 即時音量→收音波頻高度
           if (!this.ws || this.ws.readyState !== 1) return;
