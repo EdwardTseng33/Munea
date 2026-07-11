@@ -1089,9 +1089,27 @@ const Avatar = {
       const _sameLine = faceSameLineOn();
       if (_sameLine) this.pc.addTransceiver('audio', { direction: 'recvonly' });   // 同線：臉那條線多收一軌聲音（跟影像同步）
       this.pc.ontrack = e => {
-        if (_sameLine && e.track && e.track.kind === 'audio') { this._attachFaceAudio(e.track); return; }   // 聲音軌 → faceAud
-        // 影像軌照舊放 faceVid（同線時只放影像那軌、聲音走 faceAud 不重疊；現役維持 e.streams[0] 一寸不動）
-        vid.srcObject = _sameLine && e.track ? new MediaStream([e.track]) : e.streams[0];
+        // 同線＝先鋒真機驗證的做法：一個播放器帶兩軌（影像+聲音同一條 stream）——聲音跟畫面天生綁死、
+        // iOS 手勢關卡也只闖一次。faceAud 降級為音量儀表專用（閉麥/沉默計時）、永遠靜音不出聲（防雙聲）。
+        if (_sameLine && e.track && e.track.kind === 'audio') {
+          this._attachFaceAudio(e.track);
+          const _fa2 = document.getElementById('faceAud'); if (_fa2) _fa2.muted = true;
+          return;
+        }
+        vid.srcObject = _sameLine ? e.streams[0] : e.streams[0];
+        if (_sameLine) {
+          vid.muted = false;   // 聲音改由影像播放器出（跟先鋒頁同款）
+          const _pv = vid.play();
+          if (_pv && _pv.catch) _pv.catch(() => {   // 被 iOS 擋（手勢斷鏈）→ 點畫面一下＝新手勢救回（先鋒 tap-to-play 的 App 版）
+            try { setCallHint('聲音被擋住了，點一下畫面就好', true); } catch (e2) {}
+            try {
+              document.getElementById('chat').addEventListener('click', () => {
+                vid.muted = false; const _p3 = vid.play(); if (_p3 && _p3.catch) _p3.catch(() => {});
+                try { setCallHint(''); } catch (e3) {}
+              }, { once: true });
+            } catch (e4) {}
+          });
+        }
         if (faceEngine() === 'flashhead') { _fhComposite(true, vid); }   // 全身合成：512 活臉貼回 9:16 立繪判斷框（先鋒 7/11 參數）
         else { _fhComposite(false, vid); vid.style.objectFit = ''; vid.style.background = ''; }
         this._diag('影像到了');
@@ -1365,6 +1383,7 @@ const LiveVoice = {
                 this._sameLineFellBack = true;
                 // 關鍵：退回本地播放的同時「把同線那軌靜音」——不然引擎晚點醒過來、兩邊一起出聲＝回答重疊（Edward 2026-07-11 真機抓到）
                 try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
+                try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}   // 聲音改走影像播放器後（1.24.4）：退回時它也要閉嘴、同理防重疊
                 try { Avatar._diag('同線3秒無聲→退回本地播放'); } catch (e) {}
                 try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
               }
@@ -2926,6 +2945,9 @@ function connectCall() {
   try {
     const _fa = document.getElementById('faceAud');
     if (_fa && faceSameLineOn()) { _fa.muted = false; const _p = _fa.play(); if (_p && _p.catch) _p.catch(() => {}); }
+    // 1.24.4 起聲音改由影像播放器出（一個播放器帶兩軌）——同一根手指也幫它拿「出聲許可」
+    const _fv = document.getElementById('faceVid');
+    if (_fv && faceSameLineOn()) { _fv.muted = false; const _p2 = _fv.play(); if (_p2 && _p2.catch) _p2.catch(() => {}); }
   } catch (e) {}
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
