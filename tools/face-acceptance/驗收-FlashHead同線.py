@@ -27,6 +27,8 @@ async def recv_video(tr):
             fr = await asyncio.wait_for(tr.recv(), timeout=5)
         except Exception:
             continue
+        if T0 is None:   # 2026-07-11：T0 還沒定錨（connected 前）先跳過，防 None 相減把收格任務炸死
+            continue
         vframes.append((time.monotonic() - T0, fr.to_ndarray(format="rgb24")))
 
 async def recv_audio(tr):
@@ -34,6 +36,8 @@ async def recv_audio(tr):
         try:
             fr = await asyncio.wait_for(tr.recv(), timeout=5)
         except Exception:
+            continue
+        if T0 is None:   # 同上護欄
             continue
         arr = fr.to_ndarray()   # (channels, samples) or (1,n)
         aframes.append((time.monotonic() - T0, arr.astype(np.int16).flatten(), fr.sample_rate))
