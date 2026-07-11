@@ -320,12 +320,15 @@ class FlashHead:
                         if self._idle_on:
                             self._idle_on = False
                             sink.clear()
+                            outer.audio_out.clear()
                             print("[feeder] real audio arrived, stop idle feed", flush=True)
                         self._gen_chunk(todo)
                         continue
                     now = time.time()
                     with self.lock:
-                        real_silent = (now - self.last_in) > 1.0
+                        # TTS can deliver several seconds of audio in a burst. Arrival silence
+                        # is only real silence after the queued speech is nearly exhausted.
+                        real_silent = (now - self.last_in) > 1.0 and len(self.acc) < cs
                     has_conn = any(pc.connectionState in ("new", "connecting", "connected")
                                   for pc in outer.pcs)
                     if has_conn and real_silent and now >= self._idle_due:
