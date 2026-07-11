@@ -299,6 +299,12 @@ tbody tr:hover { background: var(--cream); }
 .srcbadge.demo { background: var(--coral-soft); color: var(--coral-d); }
 .srcbadge.live { background: var(--mint); color: var(--teal-dd); }
 
+/* 連線提示卡（未連線時主區顯示） */
+.connect-prompt { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 40px 32px; text-align: center; max-width: 480px; margin: 40px auto; }
+.connect-prompt h2 { margin: 0 0 8px; font-size: 1.2rem; }
+.connect-prompt p { margin: 0 0 18px; }
+.kpi-info { cursor: help; color: var(--teal); font-size: .8rem; }
+
 /* 未連線橫幅 */
 .connect-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--coral-soft); border: 1px solid rgba(199,122,46,.28); border-radius: var(--radius); padding: 13px 18px; color: var(--coral-d); font-weight: 600; margin-bottom: 4px; }
 .connect-banner button { background: var(--coral); }

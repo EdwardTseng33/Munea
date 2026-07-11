@@ -827,7 +827,28 @@ def family_invitations_response(data, client_ip=None):
                 return {"ok": False, "error": "invitation_expired"}
         except Exception as e:
             log_fallback_exception("parse family invitation expiry", e)
-        # 存申請人資訊（名字/person/登入身分），標「申請中」等 owner 審。不回 familyGroupId＝進不了圈。
+        # 跟舊版相容：現行 App 送 accept ＝ 舊行為（直接進圈），新審核 UI 送 apply ＝ 申請制。
+        # 兩者可並存，等 App 審核 UI 上線後，accept 再切成也走申請制。
+        if action == "accept":
+            try:
+                max_members = int(((match.get("metadata") or {}).get("maxMembers")) or 0)
+                if max_members:
+                    circle_state = family_state_response({"action": "load", "familyGroupId": match.get("familyGroupId")}).get("state") or {}
+                    circle = circle_state.get("circle")
+                    if isinstance(circle, list) and len(circle) >= max_members:
+                        return {"ok": False, "error": "circle_full"}
+            except Exception as e:
+                log_fallback_exception("check family invitation member limit", e)
+            invitation, backend = update_family_invitation(match.get("id"), {
+                "status": "accepted",
+                "acceptedAt": utc_now(),
+                "inviteePersonId": data.get("inviteePersonId") or data.get("invitee_person_id"),
+                "metadata": {**(match.get("metadata") or {}), "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24]},
+            })
+            if invitation is None:
+                return {"ok": False, "error": backend}
+            return {"ok": True, "invitation": invitation, "backend": backend}
+        # action == "apply"：新審核制——存申請人資訊、標「申請中」等 owner 審。不回 familyGroupId＝進不了圈。
         applicant = {
             "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24],
             "applicantPersonId": data.get("inviteePersonId") or data.get("invitee_person_id"),
