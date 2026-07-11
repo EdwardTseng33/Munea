@@ -123,6 +123,9 @@ class FlashHead:
             def clear(self):
                 with self.lock:
                     self.q.clear()
+            def depth(self):
+                with self.lock:
+                    return len(self.q)
 
         self.sink = FrameSink(self.tgt_fps)
         self.SYNC_BUFFER_MS = 350
@@ -343,7 +346,11 @@ class FlashHead:
                     with self.lock:
                         # TTS can deliver several seconds of audio in a burst. Arrival silence
                         # is only real silence after the queued speech is nearly exhausted.
-                        real_silent = (now - self.last_in) > 1.0 and len(self.acc) < cs
+                        # 待機只能在上一句聲畫都真正播完後開始。舊判斷只看「最近沒到貨」，
+                        # 但 Gemini 會爆發式快送，audio_out 尚有十幾秒尾巴也會被誤判待機；
+                        # 下一批真音到時 clear() 就把句尾切掉，並可能把殘尾帶進下輪。
+                        real_silent = ((now - self.last_in) > 1.0 and len(self.acc) < cs
+                                       and outer.audio_out.depth_samples == 0 and sink.depth() == 0)
                     has_conn = any(pc.connectionState in ("new", "connecting", "connected")
                                   for pc in outer.pcs)
                     if has_conn and real_silent and now >= self._idle_due:

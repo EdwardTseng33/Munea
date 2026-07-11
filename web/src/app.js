@@ -1041,12 +1041,20 @@ function speechActive() {
   try {
     const now = performance.now();
     const face = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
-    if ((typeof LiveVoice !== 'undefined' && LiveVoice.speaking) || face > 0.015) window.__muneaSpeechTs = now;
+    const queued = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil);
+    if ((typeof LiveVoice !== 'undefined' && LiveVoice.speaking) || queued || face > 0.015) window.__muneaSpeechTs = now;
     return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < 400);
   } catch (e) { return false; }
 }
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
+  _videoReady: false, _feedReady: false, _readyNotified: false,
+  _notifyReady() {
+    if (this._readyNotified || !this._videoReady || !this._feedReady) return;
+    this._readyNotified = true;
+    this._diagNote('影像+聲音上行都就緒');
+    if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
+  },
   _diag(msg) {  // 診斷小窗（設定 munea.debug=1 才顯示）：手機上排查「臉沒動」用
     try {
       if (localStorage.getItem('munea.debug') !== '1') return;
@@ -1093,6 +1101,7 @@ const Avatar = {
   async start() {
     const u = getAvatarUrl(); if (!u) return false;
     const vid = document.getElementById('faceVid'); if (!vid) return false;
+    this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     try {
       // 連線路線（7/9 手機實測補強）：家用網路直連即可；手機行動網路（5G/4G）常要走「中繼站」轉一手
       // 中繼＝公開測試中繼（正式上線換自家帳號的中繼、一行換）；munea.avatarRelay=1 可強制全走中繼（診斷用）
@@ -1190,7 +1199,17 @@ const Avatar = {
       // 聲音上行：App 自己開一條 WS 把語音送去雲端臉（下面 feed()/reset() 會用到）
       this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY));
       this.ws.binaryType = 'arraybuffer';
-      this.on = true;
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('avatar audio feed timeout')), 6000);
+        this.ws.onopen = () => {
+          clearTimeout(timer);
+          this.on = true; this._feedReady = true;
+          this._diagNote('聲音上行就緒');
+          this._notifyReady();
+          resolve();
+        };
+        this.ws.onerror = () => { clearTimeout(timer); reject(new Error('avatar audio feed failed')); };
+      });
       return true;
     } catch (e) { this.stop(); return false; }
   },
@@ -1226,6 +1245,7 @@ const Avatar = {
   },
   stop() {
     this.on = false;
+    this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.pc) this.pc.close(); } catch (e) {}
     this.ws = this.pc = null;
@@ -1252,7 +1272,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const _confirmRealFrame = (tries) => {
       if (vid.videoWidth > 0 && vid.currentTime > 0.05) {
         Avatar._facePlaying = true;
-        if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
+        Avatar._videoReady = true;
+        Avatar._notifyReady();
         return;
       }
       if (tries > 0) setTimeout(() => _confirmRealFrame(tries - 1), 250);   // 最多再等 25 秒（冷開機窗）——沒真畫面就不亮、待機動畫繼續頂著
@@ -1283,7 +1304,23 @@ const LiveVoice = {
   _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
   _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
-  _toListening() { clearTimeout(this._speakTimer); this.speaking = false; this.playLevel = 0; if (this.onListen) this.onListen(); },
+  _notePlayout(byteLength) {
+    const now = performance.now();
+    const delay = (this._sameLine && this._sameLineFellBack !== true) ? 1100 : 220;
+    if (!this._playoutUntil || this._playoutUntil < now) this._playoutUntil = now + delay;
+    this._playoutUntil += (byteLength / (24000 * 2)) * 1000;
+  },
+  _toListening() {
+    clearTimeout(this._speakTimer);
+    const remain = Math.max(0, (this._playoutUntil || 0) - performance.now());
+    if (remain > 80) {
+      this._speakTimer = setTimeout(() => this._toListening(), remain + 120);
+      return;
+    }
+    this.speaking = false; this.playLevel = 0;
+    if (this._openMicAfterGreet) { this.micOpen = true; this._openMicAfterGreet = false; }
+    if (this.onListen) this.onListen();
+  },
   async start(onListen, onSpeak, onDrop) {
     let url = getLiveVoiceUrl();
     if (!url) return false;
@@ -1314,6 +1351,7 @@ const LiveVoice = {
     this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
+    this._playoutUntil = 0; this._newAvatarTurn = true;
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
@@ -1353,6 +1391,7 @@ const LiveVoice = {
               (this._srcs || []).forEach(s => { try { s.stop(); } catch (e2) {} });
               this._srcs = []; this.playHead = this.playCtx.currentTime; this.playLevel = 0;
               Avatar.reset();                                    // 插話：臉也停下舊句、回待機
+              this._playoutUntil = performance.now(); this._newAvatarTurn = true;
             }
             if (o.type === 'caption' && o.who === 'nening' && o.text) {   // 寧寧說的話→字幕逐字（累積成一句）
               this._capBuf = (this._capBuf || '') + o.text;
@@ -1369,7 +1408,6 @@ const LiveVoice = {
               }
             }
             if (o.type === 'turn_complete') {
-              if (this._openMicAfterGreet) { this.micOpen = true; this._openMicAfterGreet = false; }   // 招呼講完 → 現在才開麥、換你講（乾淨開場）
               // 把這一輪（你說的＋她回的）存進聊天記錄 → 掛斷時送去萃取長期記憶
               try {
                 if (!this._transcript) this._transcript = [];
@@ -1378,6 +1416,7 @@ const LiveVoice = {
                 if (nt) this._transcript.push({ role: 'assistant', text: nt });
                 this._userTurn = '';
               } catch (eT) {}
+              this._newAvatarTurn = true;
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
             if (o.type === 'action' && o.action) {   // AI 要「幫你做進 App」（設看診/用藥提醒）→ 執行
@@ -1387,6 +1426,12 @@ const LiveVoice = {
           return;
         }
         if (!this.playCtx) return;
+        if (this._newAvatarTurn) {
+          Avatar.reset();                         // 每輪新回答先清上一輪殘音／模型音訊記憶，避免句首帶到上一句尾巴
+          this._newAvatarTurn = false;
+          this._playoutUntil = 0;
+        }
+        this._notePlayout(ev.data.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
         Avatar.feed(ev.data);                                      // 同一份聲音餵給雲端臉（對嘴）
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
@@ -1426,8 +1471,7 @@ const LiveVoice = {
               }
             }, 3000);
           }
-          clearTimeout(this._speakTimer);                          // 換手：她沒再吐聲＝講完、開麥
-          this._speakTimer = setTimeout(() => this._toListening(), 2000);   // 放寬 0.9→2 秒：斷續破洞不再被誤判「她講完了」而攔腰切斷（Edward 2026-07-12 被截斷根因）；真講完有 turn_complete 即時接手
+          this._toListening();                                    // 依實際應播完時間換手，不再用「資料停止到貨」誤判句尾
           return;                                                  // 不本地排程（聲音由 faceAud 出）
         }
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
@@ -1453,8 +1497,7 @@ const LiveVoice = {
         this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); };
         // 安全網：她若一段時間沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）。
         // 放寬 0.9→2 秒：斷續破洞不再被誤判成「講完」把她攔腰切斷（Edward 2026-07-12）；真講完有 turn_complete 即時接手、不靠這條
-        clearTimeout(this._speakTimer);
-        this._speakTimer = setTimeout(() => this._toListening(), 2000);
+        this._toListening();                                      // 本地備援同樣等排程音訊真的播完才開麥
       };
       this.ws.onclose = () => { const wasOpen = this.on; done(false); this.stop(); if (wasOpen && onDrop) onDrop(); };
       this.ws.onerror = () => { done(false); };
@@ -1463,6 +1506,7 @@ const LiveVoice = {
   stop() {
     this.on = false;
     this.ready = false;
+    clearTimeout(this._speakTimer); this._playoutUntil = 0; this._newAvatarTurn = true;
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
@@ -3040,13 +3084,12 @@ function connectCall() {
       _started = true;
       clearTimeout(_gateTimeout);
       try { localStorage.setItem('munea.callCount', String((parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0) + 1)); } catch (e) {}   // 聊過幾通＋1 → 下通開場更像老朋友（熟識度）
-      markConnected();                       // 按鈕→結束通話、開始計時
-      // 剛接通管線還沒完全熱（Edward 2026-07-12 建議）：晚 1 秒再切活臉＋請她開口，讓聲音管線先穩、
-      // 免得第一批招呼聲直接掉了（＝當機沒聲）。這 1 秒待機動畫照播，像拿起電話頓一下才開口、很自然。
-      // 配伺服器端「蓄夠水才起播」＝兩層一起顧第一段順暢（不同破法、可疊）。
-      const _greetDelay = 1000;
+      // 三條管線（腦、影像、Avatar 聲音上行）都就緒後再多等 1.5 秒才開口。
+      // 待機動畫在這段時間繼續播，避免第一批招呼聲先於聲畫管線到達而變形或被吃掉。
+      const _greetDelay = 1500;
       setTimeout(() => {
         if (!callConnected && !callDialing) return;   // 這 1 秒內掛斷了就別開口
+        markConnected();                    // 暖身也完成，現在才從「撥通中」切成真正接通並開始計時
         if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }   // 亮出會動的臉
         try { FaceIdle.stop(); } catch (e) {}
         LiveVoice.greet();                   // 管線穩了才請她主動開口（招呼講完才開麥）
@@ -3080,8 +3123,17 @@ function connectCall() {
     };
     const tryStart = () => beginConversation();
     window.__muneaOnFaceReady = () => { _faceReady = true; tryStart(); };
-    // 保底：等太久（臉/顯卡接不上）也別讓用戶乾等——最多等 25 秒就用現有的先開場（不硬卡死）
-    const _gateTimeout = setTimeout(() => { _voiceReady = true; _faceReady = true; beginConversation(); }, 25000);
+    // 準備逾時絕不「假裝就緒」硬開場。舊規則 25 秒後強制放行，正是顯卡未好就撥通、首句變形的來源。
+    const _gateTimeout = setTimeout(() => {
+      if (_started) return;
+      try { LiveVoice.stop(); } catch (e) {}
+      chatOpened = false; setCallDialing(false); stopCallTimer();
+      const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
+      setFaceState('idle'); setCallHint('目前連線還沒準備好，請稍後再試');
+      try { completeChatSession('readiness_timeout'); } catch (e) {}
+      try { FaceIdle.start(); } catch (e) {}
+      try { trackProductEvent('voice_readiness_timeout', { voiceReady: _voiceReady, faceReady: _faceReady }); } catch (e) {}
+    }, 30000);
 
     LiveVoice.onReady = () => { _voiceReady = true; tryStart(); };   // 語音伺服器接上腦＝語音就緒
     LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setCallHint('連線中…', true); };
