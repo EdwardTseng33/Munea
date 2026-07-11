@@ -363,6 +363,15 @@ Edward 真機檢視聊聊、點出多項 UX/設計問題。已修（動 `web/src
   → **「講話截斷=顯卡不夠」實錘**：同程式同料，L4 p95 905ms vs 4090 309ms。
 - 進行中：compile 模式碼錶（渦輪、量編譯稅+穩態）＋ drift-long 長跑穩定性。結果出來後出 Glows vs RunPod vs Modal 三方比較報告。
 - ⚠ 提醒：**RunPod 美國那台 callserver 若還開著記得關**（~NT$530/天）；Glows 這台試完 Edward 按 Release 收錶。
+
+## 2026-07-11 Windows 端（主蘇菲）· ✅ FlashHead 轉正接進 App（Edward「直接接到app裡面」拍板）
+- **Glows 台灣機**：Edward 已 Release 收錶（試車總花費 ~NT$5）；重建手冊＋配方＋碼錶入庫 `deploy/glows/`（5 分鐘可重建）。
+- **RunPod 美國機轉正為現役臉機**（Edward 拍板「RunPod 當備援、先跑通測試上 app」）：
+  - 裝機照配方（`deploy/runpod-avatar/install-flashhead.sh`）＋兩顆新雷已記錄：①`--ignore-installed` 必開（distutils blinker 拆不掉）＋裝完**必須 `--force-reinstall --no-deps` 校正 torch cu128**（cu126 會被偷換上、單純 --no-deps 重裝會被「已滿足」跳過）②`huggingface_hub` 必須 `<1.0`（1.x 的 `huggingface-cli` 是退休空殼、且 transformers 不相容）＋下載指令改 `hf download`。
+  - **`flashhead_server.py`（獨立版通話服務）入庫**：從 flashhead_modal_dev.py 拆 Modal 包裝、引擎邏輯一行不動；機器無關（RunPod/Glows 通用）。現在常駐 `https://a535qiaoru5bno-8188.proxy.runpod.net`（開機 9s、warm chunk 0.4s、外網 /health 綠）。
+  - 驗收工具實測：兩軌同線到齊（視訊 298 格、聲音 591 包）。到貨時間差 -0.98s＝量測工具看「到門口時間」、瀏覽器播放按時間戳對齊（非體感差）；⚠ 順帶發現 coturn 對 RunPod IP 回 403 Forbidden IP（denied-peer 名單？連線仍經 STUN 直連成功；手機測試若 ICE 失敗先查這裡）。
+- **App v1.22.3→1.23.0**（app.js 我的認領鎖）：`?faceEngine=` 體驗捷徑＋**faceEngine 預設 'flashhead'**＋`FLASHHEAD_URL_DEFAULT`→RunPod 常駐機（Modal dev URL 降備援、留註解）。試吃檯已鋪 v1.23.0（munea-brain-staging-00019）。
+- 下一步：Edward 手機開試吃檯真打一通（美國線體感）→ 台灣 Glows 轉正搬家計畫書（自動開關/快照/門牌自動指路）→ Mac 下一版把 1.22.1-1.23.0 帶進殼。
 - **下一步（Mac 主線）**：把這條真語音接進 App 聊聊（照分層架構的 `MuneaVoiceProvider`＋WebSocket 橋接約定，不另開路）、手機同 Wi-Fi 連 Mac 引擎、重裝真機 → 驗聊聊 #1/#8/#10。
 
 ## 2026-07-06 Mac 端 · ✅✅ 真語音已接進 App、裝上真機
