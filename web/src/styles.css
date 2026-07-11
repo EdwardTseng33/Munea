@@ -684,7 +684,10 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   /* Edward 2026-07-06：圖片不要有動態——保持完全靜止（呼吸縮放已移除） */
 }
 /* 開通話（Ditto 真臉上場）：靜態照淡出藏起來——只留 Ditto 一層、不再有靜態照在底下穿幫疊圖（Edward 2026-07-10） */
-.face-bg.livevid img { opacity: 0; }
+/* ⚠ 2026-07-11 抓到墨綠遮罩真兇：這條原本 `img` 通吃、把 FlashHead 全身立繪(.fh-bg)也設成透明→
+   通話時立繪不見、露出深綠底＝Edward 幾版都在抱怨的「上下墨綠遮罩」。排除 .fh-bg（立繪必須一直亮）。 */
+.face-bg.livevid img:not(.fh-bg) { opacity: 0; }
+.face-bg .fh-frame .fh-bg { opacity: 1 !important; }   /* 全身立繪永遠不透明（它就是背景本人） */
 /* 雲端擬真臉：跟照片同位置同裁切；有真影格才淡入蓋上（照片→活影像無縫） */
 .face-bg video {
   position: absolute; inset: 0; width: 100%; height: 100%;
