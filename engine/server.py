@@ -4396,6 +4396,9 @@ class H(BaseHTTPRequestHandler):
     def _send(self, code, ctype, body):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
+        # 2026-07-11 主蘇菲：原本沒貼任何保鮮標籤 → iPhone Safari 啟發式快取、Edward 連三版更新都看到舊頁
+        # （症狀組合跟三版前完全一致才抓到）。一律要求「每次回來源頭驗一下有沒有新版」，鋪版即刻生效。
+        self.send_header("Cache-Control", "no-cache, must-revalidate")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
