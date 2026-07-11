@@ -62,7 +62,8 @@ async def main():
         await asyncio.sleep(0.1)
     print("[t] connected", flush=True)
     T0 = time.monotonic()
-    aud = await websockets.connect(BASE.replace("https", "wss") + "/audio?key=" + KEY, max_size=None)
+    _ws_base = BASE.replace("https://", "wss://").replace("http://", "ws://")   # https→wss、http(SSH通道)→ws
+    aud = await websockets.connect(_ws_base + "/audio?key=" + KEY, max_size=None)
     await asyncio.sleep(2.0)   # 2 秒待機基準
     w = wave.open(WAV, "rb"); sr = w.getframerate()
     t_speak = time.monotonic() - T0

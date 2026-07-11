@@ -986,9 +986,11 @@ function getLiveVoiceUrl() {
 const AVATAR_URL_DEFAULT = 'https://edwardt0303--munea-nening-avatar-nening-web.modal.run';
 // 新引擎 FlashHead（2026-07-11 Edward 拍板轉正主線；同日「直接接到app裡面」＝預設就走它）：
 // localStorage['munea.faceEngine'] 只剩「手動退回舊引擎」用（設 'ditto'）；不設＝FlashHead。
-// 門牌＝常駐 4090 備援機（美國 RunPod、24 小時醒著、無冷啟等待）；台灣 Glows 機轉正後換這行。
-// Modal 試作版（L4、產能貼預算、會截斷）備援：https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run
-const FLASHHEAD_URL_DEFAULT = 'https://a535qiaoru5bno-8188.proxy.runpod.net';
+// 門牌＝台灣 Glows 4090（2026-07-11 轉正：家→機器 8ms、每塊 0.3s、開機 5s、TLS 正規證書）。
+// ⚠ 這台機器 Release 重開後號碼會變——重開要同步改這行（自動指路機制在搬家計畫書裡）。
+// 備援1（美國 RunPod 4090 常駐）：https://a535qiaoru5bno-8188.proxy.runpod.net
+// 備援2（Modal L4 試作版、產能貼預算會截斷）：https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run
+const FLASHHEAD_URL_DEFAULT = 'https://tw-06.access.glows.ai:26376';
 function faceEngine() {
   try { return localStorage.getItem('munea.faceEngine') || 'flashhead'; } catch (e) { return 'flashhead'; }
 }
