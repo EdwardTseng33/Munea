@@ -3050,6 +3050,16 @@ function init() {
     if (_q.get('avatarUrl') !== null) localStorage.setItem('munea.avatarUrl', _q.get('avatarUrl'));
     if (_q.get('brainUrl') !== null) localStorage.setItem('munea.brainUrl', _q.get('brainUrl'));
     if (_q.get('faceEngine') !== null) localStorage.setItem('munea.faceEngine', _q.get('faceEngine'));   // 換臉引擎捷徑：?faceEngine=flashhead / ditto（空字串=回預設）
+    // 視覺檢查台（機器人測試員的眼睛）：?callmock=1 ＝ 直接擺出「通話中」畫面（全身合成+live 狀態），
+    // 拍照模式瀏覽器拍圖驗「滿版/無紗/無框」——不連線、不出聲、純畫面。
+    if (_q.get('callmock') === '1' || _q.get('photomock') === '1') setTimeout(() => { try {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const _c = document.getElementById('chat'); _c.classList.add('active'); _c.dataset.state = 'speaking';
+      if (_q.get('callmock') === '1') {   // callmock=活臉層；photomock=純底圖照片層（看有沒有上下漸層紗）
+        const _f = document.getElementById('fhFrame'); if (_f) _f.hidden = false;
+        document.querySelector('#chat .face-bg').classList.add('livevid');
+      }
+    } catch (e) {} }, 600);
   } catch (e) {}
   const __pullPromise = syncPullAll();
   setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）

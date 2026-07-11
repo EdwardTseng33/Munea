@@ -11,9 +11,18 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.25.1',
+  current: '1.25.2',
   channel: '',
   changelog: [
+    {
+      version: '1.25.2',
+      date: '2026-07-11',
+      title: '蘇菲裝上「眼睛」：交付前自己先看畫面（不再靠 Edward 挑錯）',
+      items: [
+        '網址帶 ?callmock=1 / ?photomock=1 可擺出通話畫面給拍照工具自檢滿版/無紗',
+        '此版起每個視覺修理，蘇菲先親眼看圖確認才回報',
+      ],
+    },
     {
       version: '1.25.1',
       date: '2026-07-11',
