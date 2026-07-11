@@ -998,6 +998,24 @@ function getAvatarUrl() {
   try { const u = localStorage.getItem('munea.avatarUrl'); if (u !== null) return u.replace(/\/$/, ''); } catch (e) {}
   return faceEngine() === 'flashhead' ? FLASHHEAD_URL_DEFAULT : AVATAR_URL_DEFAULT;
 }
+// FlashHead 全身合成開關（2026-07-11）：開＝把 512 活臉搬進 9:16 全身立繪的判斷框（羽化貼回、先鋒參數）；
+// 關＝活臉搬回原位、恢復照片模式（Ditto/掛斷用）。搬家後補一次 play()——iOS 換位可能暫停。
+function _fhComposite(on, vid) {
+  try {
+    const frame = document.getElementById('fhFrame');
+    const ov = document.getElementById('fhOverlay');
+    if (!frame || !ov || !vid) return;
+    if (on) {
+      frame.hidden = false;
+      if (vid.parentElement !== ov) { ov.appendChild(vid); try { const p = vid.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+      vid.style.objectFit = ''; vid.style.background = '';
+    } else {
+      frame.hidden = true;
+      const bg = document.querySelector('#chat .face-bg');
+      if (bg && vid.parentElement !== bg) { bg.insertBefore(vid, document.getElementById('faceAud')); }
+    }
+  } catch (e) {}
+}
 // 聲音怎麼送去雲端臉：預設走「舊路＝客戶端自己送」——臉穩、不會因伺服器連不上雲端臉而整個死掉。
 // 2026-07-10 Edward 拍板暫停 B（回穩）：日誌證實 B(伺服器直送)接雲端臉會 timeout、且接上了延遲也沒降。
 // 想重開 B（實驗）：localStorage['munea.serverFaceAudio']=1。
@@ -1074,8 +1092,8 @@ const Avatar = {
         if (_sameLine && e.track && e.track.kind === 'audio') { this._attachFaceAudio(e.track); return; }   // 聲音軌 → faceAud
         // 影像軌照舊放 faceVid（同線時只放影像那軌、聲音走 faceAud 不重疊；現役維持 e.streams[0] 一寸不動）
         vid.srcObject = _sameLine && e.track ? new MediaStream([e.track]) : e.streams[0];
-        if (faceEngine() === 'flashhead') { vid.style.objectFit = 'contain'; vid.style.background = '#1c1917'; }   // FlashHead 吐 512 方形：置中完整顯示、不硬拉滿版（貼回全身立繪等擬真女底圖入庫後做）
-        else { vid.style.objectFit = ''; vid.style.background = ''; }
+        if (faceEngine() === 'flashhead') { _fhComposite(true, vid); }   // 全身合成：512 活臉貼回 9:16 立繪判斷框（先鋒 7/11 參數）
+        else { _fhComposite(false, vid); vid.style.objectFit = ''; vid.style.background = ''; }
         this._diag('影像到了');
       };
       this.pc.addEventListener('iceconnectionstatechange', () => {
@@ -1165,6 +1183,7 @@ const Avatar = {
     this._faceAudCtx = null;
     const aud = document.getElementById('faceAud'); if (aud) { try { aud.srcObject = null; } catch (e) {} }
     const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.remove('livevid');
+    _fhComposite(false, document.getElementById('faceVid'));   // 掛斷＝收全身合成、活臉歸位、照片回來
   },
 };
 window.MuneaAvatar = Avatar;

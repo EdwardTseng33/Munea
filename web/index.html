@@ -458,6 +458,11 @@
     <!-- 全屏臉（佔畫面主體、置中偏上、像跟家人視訊）。會動時對嘴；現為靜態圖＋CSS 呼吸眨眼佔位（§6.5 降級層 1-2） -->
     <div class="face-bg">
       <img id="faceImg" src="avatars/nening-real-female-full.jpg" alt="寧寧">
+      <!-- FlashHead 全身合成（2026-07-11 先鋒判斷框參數移植）：9:16 定比框＋全身立繪底＋512 活臉羽化貼回 -->
+      <div class="fh-frame" id="fhFrame" hidden aria-hidden="true">
+        <img class="fh-bg" id="fhBg" src="flashhead/bg-a05.png" alt="">
+        <div class="fh-overlay" id="fhOverlay"></div>
+      </div>
       <!-- 雲端擬真臉（快照秒醒）：接通後即時影像蓋上照片、無縫接手 -->
       <video id="faceVid" autoplay playsinline muted aria-hidden="true"></video>
       <!-- 同線收聲（munea.faceSameLine=1）：臉那條線多帶的聲音軌從這裡播，跟影像天生同步；預設關、現役走本地播放 -->
