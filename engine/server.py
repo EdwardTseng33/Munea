@@ -106,6 +106,7 @@ MEANINGFUL_EVENT_NAMES = {
     "family_message_sent",
     "family_message_viewed",
     "family_dashboard_viewed",
+    "activity_created",
     "avatar_session_completed",
     "companion_summary_created",
 }
@@ -1254,6 +1255,16 @@ def wellbeing_log_response(data):
         "createdAt": utc_now(),
     }
     signal = append_wellbeing_signal(signal)
+    # 追蹤：心情打卡記一筆 product event（後台「心情」面板未來的真資料源；失敗不影響打卡）
+    try:
+        append_product_event({
+            "eventName": "mood_logged",
+            "personId": person_id,
+            "source": "munea-api",
+            "properties": {"mood": mood, "moodKey": data.get("moodKey"), "level": signal.get("level")},
+        })
+    except Exception as e:
+        log_fallback_exception("emit mood_logged product event", e)
     return {"ok": True, "signal": signal}
 
 
@@ -2740,7 +2751,7 @@ def north_star_summary(data=None):
             voice_completed += 1
         elif name == "avatar_session_completed":
             avatar_completed += 1
-        elif name in ("family_interaction_sent", "family_message_sent", "family_message_viewed", "family_dashboard_viewed"):
+        elif name in ("family_interaction_sent", "family_message_sent", "family_message_viewed", "family_dashboard_viewed", "activity_created"):
             family_interactions += 1
         elif name == "routine_reminder_completed":
             routine_completions += 1
