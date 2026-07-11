@@ -5,16 +5,16 @@
       backendChar: '寧寧',
       defaultName: '寧寧',
       templateLabel: '溫柔型 · 像家人，會照看',
-      thumbAsset: 'avatars/nening-face.png',
-      homeAsset: 'avatars/nening-hero.jpg',
+      thumbAsset: 'avatars/nening-v2-face.png',   // 2026-07-11 新長相大頭照
+      homeAsset: 'avatars/nening-v2-face.png',
       fullAsset: 'avatars/nening-v2-full.png',   // 2026-07-11 新長相靜態底圖（配新打招呼/待機影片）
     },
     'companion-real-male': {
       backendChar: '阿宏',
       defaultName: '阿宏',
       templateLabel: '沉穩型 · 像大哥，很可靠',
-      thumbAsset: 'avatars/ahong-v3-face.png',   // v3 無眼鏡（Edward 7/10 拍板）
-      homeAsset: 'avatars/ahong-v3-face.png',
+      thumbAsset: 'avatars/ahong-v2-face.png',   // 2026-07-11 新長相大頭照
+      homeAsset: 'avatars/ahong-v2-face.png',
       fullAsset: 'avatars/ahong-v4-full.png',   // 2026-07-11 新長相靜態底圖（配新打招呼/待機影片）
     },
     'munea-2d-xiaoyun': {

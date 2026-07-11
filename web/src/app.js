@@ -2738,7 +2738,7 @@ function renderMetricDetail(key) {
     `<div class="md-head"><b>${m.name} · 這週</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]}</span></div>` +
     `<div class="md-chart">${bars}</div>` +
     `<div class="md-days">${days.map(d => '<span>' + d + '</span>').join('')}</div>` +
-    `<div class="md-read"><span class="md-face"><img src="avatars/nening-face.png" alt=""></span><span>${m.read}</span></div>`;
+    `<div class="md-read"><span class="md-face"><img src="avatars/nening-v2-face.png" alt=""></span><span>${m.read}</span></div>`;
   box.hidden = false; box.dataset.open = key;
   try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }
