@@ -41,6 +41,8 @@
   const ADMIN_TOKEN_KEY = "munea.admin.token";
   const ASSUME_KEY = "munea.admin.assumptions";
   const DEFAULT_LOCAL_API = "http://127.0.0.1:8200";
+  // 薄門 App key（跟 App 端同一把、擋陌生流量用，非機密）
+  const APP_KEY = "mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5";
   const state = { data: null, errors: {}, connected: false, page: "overview", tabs: {} };
 
   const EP_LIST = {
@@ -346,7 +348,7 @@
   function connectPromptHTML(){ return `<div class="connect-prompt"><h2>貼上通行碼，看真資料</h2><p class="muted">後台只顯示真實數據，還沒有的會顯示空的。到「連線設定」貼上通行碼（跟蘇菲要一聲就好）。</p><button type="button" class="primary" data-goto="settings">前往連線設定</button></div>`; }
 
   async function postAdmin(base, token, path, body){
-    const res=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json; charset=utf-8","X-Munea-Admin-Token":token},body:JSON.stringify(body||{})});
+    const res=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json; charset=utf-8","X-Munea-Key":APP_KEY,"X-Munea-Admin-Token":token},body:JSON.stringify(body||{})});
     const txt=await res.text(); let p={}; try{ p=txt?JSON.parse(txt):{}; }catch(e){ p={ok:false,error:{code:"invalid_json"}}; }
     if(!res.ok||p.ok===false){ throw new Error((p.error&&p.error.code)||("http_"+res.status)); }
     return p;
@@ -412,7 +414,7 @@
     if($("loginBtn")) $("loginBtn").disabled=true;
     const base=initialBaseUrl().trim().replace(/\/+$/,"");
     try{
-      const res=await fetch(base+"/admin/login",{method:"POST",headers:{"Content-Type":"application/json; charset=utf-8"},body:JSON.stringify({email,password})});
+      const res=await fetch(base+"/admin/login",{method:"POST",headers:{"Content-Type":"application/json; charset=utf-8","X-Munea-Key":APP_KEY},body:JSON.stringify({email,password})});
       const p=await res.json().catch(()=>({}));
       if(p&&p.ok&&p.token){
         sessionStorage.setItem(ADMIN_TOKEN_KEY, p.token);
