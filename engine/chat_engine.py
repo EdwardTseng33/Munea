@@ -194,7 +194,8 @@ def speak(char, text, fn):
             r = client.models.generate_content(
                 model=m, contents=content,
                 config=types.GenerateContentConfig(response_modalities=["AUDIO"],
-                    speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
+                    speech_config=types.SpeechConfig(language_code="cmn-TW",   # 台灣華語腔（不設=通用華語/馬來腔）
+                        voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=c["voice"])))))
             pcm = r.candidates[0].content.parts[0].inline_data.data
             with wave.open(fn, "wb") as w:

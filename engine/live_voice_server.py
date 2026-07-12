@@ -385,6 +385,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         output_audio_transcription=types.AudioTranscriptionConfig(),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         speech_config=types.SpeechConfig(
+            language_code="cmn-TW",   # 台灣華語（Edward 2026-07-12：沒設地區→通用華語=馬來腔/「自己」念成jì-jǐ；設 cmn-TW 講台灣腔）
             voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
             )
