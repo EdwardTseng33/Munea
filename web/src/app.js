@@ -1014,6 +1014,11 @@ function _fhComposite(on, vid) {
       const _bg = document.getElementById('fhBg');   // 全身立繪底圖跟著角色換：擬真女 bg-a05、擬真男 bg-a06
       const _fc = flashheadCharFor(currentChar) || 'a05';
       if (_bg && _bg.getAttribute('src') !== 'flashhead/bg-' + _fc + '.png') _bg.src = 'flashhead/bg-' + _fc + '.png';
+      // 每角色不同顯示框（Edward 2026-07-12：男生臉在原圖較高較小→同 640 卻較軟）：
+      // 男生(a06)用裁緊框 top14%/height50%（臉放大、畫素集中臉上=更清），女生(a05)維持 top8%/height60%。
+      // ⚠ 伺服器 char-a06B 條件圖必須用同一組 % 裁切、比例才對齊不變形（見定案手冊）。
+      const _box = (_fc === 'a06') ? { top: '14%', h: '50%' } : { top: '8%', h: '60%' };
+      ov.style.top = _box.top; ov.style.height = _box.h;
       if (vid.parentElement !== ov) { ov.appendChild(vid); try { const p = vid.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
       vid.style.objectFit = ''; vid.style.background = '';
     } else {
