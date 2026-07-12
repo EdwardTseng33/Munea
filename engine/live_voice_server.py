@@ -35,11 +35,35 @@ from websockets.http11 import Response
 from websockets.datastructures import Headers
 
 MODEL = "gemini-3.1-flash-live-preview"
-KEY = os.environ.get("GEMINI_API_KEY")
-if not KEY:
-    sys.exit("需要 GEMINI_API_KEY")
 
-client = genai.Client(api_key=KEY)
+# 多鑰匙分流（2026-07-12）：Gemini Live 對「同一把鑰匙的同時通話數」有配額上限——壓測壓到 30
+# 人時撞的 APIError:1011 就是這個牆（不是我們容器塞爆）。備多把鑰匙（不同 Google 專案、各自
+# 獨立配額），每通電話挑「現在最閒」的那把 → 同時人數上限 ≈ 單把上限 × 鑰匙數。
+# 相容性：只給一把 GEMINI_API_KEY 時＝跟改動前完全一樣、零行為變化；要多把就用逗號分隔的 GEMINI_API_KEYS。
+import threading
+_raw_keys = os.environ.get("GEMINI_API_KEYS") or os.environ.get("GEMINI_API_KEY") or ""
+KEYS = [k.strip() for k in _raw_keys.split(",") if k.strip()]
+if not KEYS:
+    sys.exit("需要 GEMINI_API_KEY（或多把 GEMINI_API_KEYS，逗號分隔）")
+
+_clients = [genai.Client(api_key=k) for k in KEYS]   # 每把鑰匙一個 client
+_key_active = [0] * len(KEYS)                          # 每把鑰匙「現在幾通在用」
+_key_lock = threading.Lock()
+
+def _pick_client():
+    """挑目前 active 最少的鑰匙開這通，回傳 (idx, client) 並把它的計數 +1。"""
+    with _key_lock:
+        idx = min(range(len(_key_active)), key=lambda i: _key_active[i])
+        _key_active[idx] += 1
+        return idx, _clients[idx]
+
+def _release_client(idx):
+    """這通結束→把該鑰匙計數 -1（放回空位給下一通）。"""
+    with _key_lock:
+        if 0 <= idx < len(_key_active) and _key_active[idx] > 0:
+            _key_active[idx] -= 1
+
+client = _clients[0]   # 向後相容：舊碼若引用單一 client，指到第一把
 
 import mimetypes
 
@@ -479,11 +503,13 @@ async def handle(ws):
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
     _diag(cid, "connected", name=name or "-", char=char)
+    _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     try:
         # 組 config 會呼叫 build_reply_context（內含對 Supabase 的同步阻塞查詢，最多 4 秒）——
         # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
         cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam)
-        async with client.aio.live.connect(model=MODEL, config=cfg) as session:
+        _key_idx, _cli = _pick_client()   # 挑現在最閒的一把鑰匙開這通（多鑰匙分流的核心）
+        async with _cli.aio.live.connect(model=MODEL, config=cfg) as session:
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
             # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
             # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。
@@ -715,6 +741,8 @@ async def handle(ws):
     except Exception as e:
         _diag(cid, "node.error", err=f"{type(e).__name__}:{str(e)[:80]}")
     finally:
+        if _key_idx is not None:
+            _release_client(_key_idx)   # 這通結束，把這把鑰匙的空位放回去給下一通
         for t in st.get("bg_tasks", []):
             if not t.done():
                 t.cancel()
