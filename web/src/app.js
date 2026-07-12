@@ -990,7 +990,7 @@ const AVATAR_URL_DEFAULT = 'https://edwardt0303--munea-nening-avatar-nening-web.
 // ⚠ 這台機器 Release 重開後號碼會變——重開要同步改這行（自動指路機制在搬家計畫書裡）。
 // 備援1（美國 RunPod 4090 常駐）：https://a535qiaoru5bno-8188.proxy.runpod.net
 // 備援2（Modal L4 試作版、產能貼預算會截斷）：https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run
-const FLASHHEAD_URL_DEFAULT = 'https://tw-06.access.glows.ai:26376';
+const FLASHHEAD_URL_DEFAULT = 'https://tw-06.access.glows.ai:25220';
 function faceEngine() {
   try { return localStorage.getItem('munea.faceEngine') || 'flashhead'; } catch (e) { return 'flashhead'; }
 }
