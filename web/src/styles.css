@@ -2185,9 +2185,10 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 @keyframes dialDot { 0%, 100% { opacity: .25; } 40% { opacity: 1; } }
 /* 通話鈕：長方形（Edward 2026-07-12：圓鈕不行、回原始長方形設計版）——但固定寬度＝三個文字狀態(開始通話/撥號中/結束通話)都同寬、
    永遠不撐大擠掉左邊的字幕/麥克風；照設計系統的圓角(--radius-sm)/字體(--display)/色。不用太大。 */
-.face-bar .call-btn { flex: 0 0 auto; width: 126px; min-width: 126px; min-height: 52px; padding: 0 14px;
-  border-radius: var(--radius-sm); gap: 7px; font-family: var(--display); font-size: 16px; font-weight: 700; }
-.face-bar .call-btn .ic { width: 22px; height: 22px; }
+.face-bar .call-btn { flex: 0 0 auto; width: 138px; min-width: 138px; min-height: 52px; padding: 0 18px;
+  border-radius: var(--radius-sm); gap: 9px; font-family: var(--display); font-size: 16px; font-weight: 700;
+  justify-content: center; }
+.face-bar .call-btn .ic { width: 20px; height: 20px; flex-shrink: 0; }
 .face-bar .call-btn.dialing { background-color: var(--coral); cursor: progress; }
 #callToggle.dialing .dial-dots i { font-size: .85em; }   /* 撥號中的小三點（含在固定寬內、不撐大） */
 
