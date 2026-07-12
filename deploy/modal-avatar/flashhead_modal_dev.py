@@ -100,7 +100,13 @@ AUDIO_PREBUFFER_S = 0.3
     max_containers=1,
     region="ap-northeast",
 )
-@modal.concurrent(max_inputs=20)
+# 2026-07-12 卡西法（緊急修正，照 docs/多人併發容量架構-2026-07-12.md §8 標「緊急」）：
+# max_inputs=20 是「兩人同時打進同一容器互看臉/聲音混疊」bug 的根源——這支 Modal 測試版
+# 目前還是單例邏輯（沒有像 flashhead_server.py 那樣做 N 槽陣列改造），container 內部
+# 只有一份全域 pipeline/sink/audio_out，max_inputs=20 等於允許 20 個 HTTP 請求同時擠進
+# 同一顆引擎共用那一份狀態。改 max_inputs=1（配 max_containers=1，一容器一路）先安全止血；
+# 若之後把 §3 的 N 槽陣列也搬進這支 Modal 版，才配合放寬成 max_inputs=N。
+@modal.concurrent(max_inputs=1)
 class FlashHead:
 
     # ---------- 睡前(拍進快照)：重活全做完，含觸發 torch.compile 的暖跑 ----------

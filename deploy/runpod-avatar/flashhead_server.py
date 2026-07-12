@@ -6,8 +6,23 @@
 看門狗 / 量測儀表）一行不動照搬，只把 modal.App/@app.cls/@modal.enter/@modal.asgi_app
 換成「開機直接 load → uvicorn 常駐」。
 
+2026-07-12 卡西法：單例 → N 槽改造（照 docs/多人併發容量架構-2026-07-12.md §3.1）。
+引擎邏輯本體（Feeder/FrameSink/AudioOutBuffer/SlotPool/健康快照數學）搬進同目錄的
+flashhead_engine_core.py（零重量依賴，可本機單元測試），這份檔案現在只負責：
+GPU pipeline 的 N 槽載入 + FastAPI 路由怎麼把 session 綁到哪一槽。
+
+**部署提醒（重要）**：這份檔案現在 import 同目錄的 flashhead_engine_core.py——
+scp 上機器時「兩個檔案要一起傳」，只傳這支會在開機時 ImportError。
+
+**MUNEA_FH_SLOTS 相容性鐵律**：環境變數沒設（預設 1）＝跟改造前的單例版行為
+一字不差——429 邏輯、/health capacity 欄位、reset 時機、stale-pc 自癒判斷，
+全部逐行對照原始單例版移植，不是重寫。只有在測試卡上設
+`MUNEA_FH_SLOTS=3` 才會真的啟用多槽（現役 GLOWS 機器沒設這個變數，
+這次改動對它是零風險——沒設變數＝跟改之前一模一樣）。
+
 跑法（機器上要先照 runpod_install.sh / glows_install2.sh 裝好）：
   MUNEA_APP_KEY=<通行碼> python3.12 flashhead_server.py          # 門牌 8188
+  MUNEA_FH_SLOTS=3 MUNEA_APP_KEY=<通行碼> python3.12 flashhead_server.py   # 測試卡開 3 槽
   （RunPod: https://<podId>-8188.proxy.runpod.net 就是對外 https 入口，WS 同線）
 
 模式：eager（不開 torch.compile）——2026-07-11 Glows TW 4090 實測 eager 每塊
@@ -18,7 +33,6 @@ import asyncio
 import collections
 import os
 import sys
-import threading
 import time
 from fractions import Fraction
 
@@ -39,6 +53,9 @@ _fhp_mod.COMPILE_VAE = _COMPILE
 from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
+from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
+                                    health_snapshot, slot_summary, switch_slot_char)
+
 CHAR_SRC = {
     "a05": "/root/char-a05B.png",
     "a06": "/root/char-a06B.png",
@@ -57,10 +74,15 @@ MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
 FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
 PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
+# 2026-07-12 N 槽改造：沒設＝1（跟改造前單例行為一字不差）。只有測試卡明確設
+# MUNEA_FH_SLOTS=3 才會真的多槽——這是本輪任務的核心相容性鐵律。
+N_SLOTS = max(1, int(os.environ.get("MUNEA_FH_SLOTS", "1")))
 
 
 class FlashHead:
-    """跟 Modal 版同名同構——load() 一次、wake() 一次、web() 產出 FastAPI app。"""
+    """跟 Modal 版同名同構——load() 一次、wake() 一次、web() 產出 FastAPI app。
+    2026-07-12 起內部是 N 槽陣列（self.slots），N=1 時對外行為跟改造前單例版
+    完全相同（欄位名稱、429 邏輯、reset 時機一字不差）。"""
 
     def load(self):
         t0 = time.time()
@@ -68,92 +90,67 @@ class FlashHead:
         self._get_audio_embedding = get_audio_embedding
         self._run_pipeline = run_pipeline
 
-        self.pipeline = get_pipeline(world_size=1, ckpt_dir=CKPT_DIR,
+        self.slots = [Slot(i) for i in range(N_SLOTS)]
+        for slot in self.slots:
+            self._load_slot(slot)
+
+        # 頂層彙總（給人看的 log／未來 ops 用；/health 的 "load" 欄位用 slot[0].load_report，
+        # 跟改造前單例版欄位形狀一字不差，不是這個彙總——見 health() 路由）
+        self.load_report = {
+            "slots": N_SLOTS,
+            "per_slot": [s.load_report for s in self.slots],
+            "total_load_s": round(time.time() - t0, 1),
+            "host": "standalone-" + os.uname().nodename,
+        }
+        print("[load]", self.load_report, flush=True)
+
+    def _load_slot(self, slot):
+        t0 = time.time()
+        slot.pipeline = get_pipeline(world_size=1, ckpt_dir=CKPT_DIR,
                                      wav2vec_dir=WAV2VEC_DIR, model_type="lite")
         t1 = time.time()
 
-        self.char = DEFAULT_CHAR
-        get_base_data(self.pipeline, cond_image_path_or_dir=CHAR_SRC[self.char],
+        slot.char = DEFAULT_CHAR
+        get_base_data(slot.pipeline, cond_image_path_or_dir=CHAR_SRC[slot.char],
                       base_seed=42, use_face_crop=False)
         t2 = time.time()
 
         ip = get_infer_params()
-        self.sample_rate = ip["sample_rate"]
-        self.tgt_fps = ip["tgt_fps"]
-        self.frame_num = ip["frame_num"]
-        self.motion_frames_num = ip["motion_frames_num"]
-        self.slice_len = self.frame_num - self.motion_frames_num
-        self.cached_audio_duration = ip["cached_audio_duration"]
-        self.chunk_samples = self.slice_len * self.sample_rate // self.tgt_fps
-        self.audio_end_idx = self.cached_audio_duration * self.tgt_fps
-        self.audio_start_idx = self.audio_end_idx - self.frame_num
-        cached_len_sum = self.sample_rate * self.cached_audio_duration
-        self.audio_dq = collections.deque([0.0] * cached_len_sum, maxlen=cached_len_sum)
-        self.char_lock = threading.Lock()
-
-        class FrameSink:
-            """穩定播放佇列（照抄 Modal 版 7/11 卡西法重寫：純 FIFO ＋ 塞車才修剪）。"""
-            def __init__(self, tgt_fps):
-                self.tgt_fps = tgt_fps
-                self.target_depth = max(1, int(round(tgt_fps * 1.5)))
-                self.max_depth = max(self.target_depth + 1, int(round(tgt_fps * 2.0)))
-                self.q = collections.deque(maxlen=int(round(tgt_fps * 12)))
-                self.count = 0
-                self.lock = threading.Lock()
-                self.last_pop_latency_ms = None
-                self.underrun_count = 0
-            def push_many(self, frames, chunk_gen_ts, tgt_fps):
-                with self.lock:
-                    n = frames.shape[0]
-                    for i in range(n):
-                        self.q.append(frames[i])
-                        self.count += 1
-                    if len(self.q) > self.max_depth:
-                        drop_n = len(self.q) - self.target_depth
-                        for _ in range(drop_n):
-                            self.q.popleft()
-            def pop(self):
-                with self.lock:
-                    depth = len(self.q)
-                    self.last_pop_latency_ms = round(depth / self.tgt_fps * 1000, 1)
-                    if not self.q:
-                        self.underrun_count += 1
-                        return None
-                    return self.q.popleft()
-            def clear(self):
-                with self.lock:
-                    self.q.clear()
-            def depth(self):
-                with self.lock:
-                    return len(self.q)
-
-        self.sink = FrameSink(self.tgt_fps)
-        self.SYNC_BUFFER_MS = 350
-        self.last_gen_compute_ms = None
+        slot.sample_rate = ip["sample_rate"]
+        slot.tgt_fps = ip["tgt_fps"]
+        slot.frame_num = ip["frame_num"]
+        slot.motion_frames_num = ip["motion_frames_num"]
+        slot.slice_len = slot.frame_num - slot.motion_frames_num
+        slot.cached_audio_duration = ip["cached_audio_duration"]
+        slot.chunk_samples = slot.slice_len * slot.sample_rate // slot.tgt_fps
+        slot.audio_end_idx = slot.cached_audio_duration * slot.tgt_fps
+        slot.audio_start_idx = slot.audio_end_idx - slot.frame_num
+        cached_len_sum = slot.sample_rate * slot.cached_audio_duration
+        slot.audio_dq = collections.deque([0.0] * cached_len_sum, maxlen=cached_len_sum)
 
         warm_times = []
         for _ in range(2):
-            silence = np.zeros(self.chunk_samples, dtype=np.float32)
+            silence = np.zeros(slot.chunk_samples, dtype=np.float32)
             tw0 = time.time()
-            self.audio_dq.extend(silence.tolist())
-            arr = np.array(self.audio_dq)
-            emb = get_audio_embedding(self.pipeline, arr, self.audio_start_idx, self.audio_end_idx)
-            video = run_pipeline(self.pipeline, emb)
+            slot.audio_dq.extend(silence.tolist())
+            arr = np.array(slot.audio_dq)
+            emb = get_audio_embedding(slot.pipeline, arr, slot.audio_start_idx, slot.audio_end_idx)
+            video = run_pipeline(slot.pipeline, emb)
             torch.cuda.synchronize()
             warm_times.append(round(time.time() - tw0, 2))
         t3 = time.time()
 
-        self.load_report = {
+        slot.load_report = {
             "pipeline_load_s": round(t1 - t0, 1),
             "base_data_s": round(t2 - t1, 2),
             "warm_chunk_s": warm_times,
             "total_load_s": round(t3 - t0, 1),
-            "chunk_samples": self.chunk_samples,
-            "slice_len_frames": self.slice_len,
-            "chunk_budget_ms": round(self.slice_len / self.tgt_fps * 1000, 1),
+            "chunk_samples": slot.chunk_samples,
+            "slice_len_frames": slot.slice_len,
+            "chunk_budget_ms": round(slot.slice_len / slot.tgt_fps * 1000, 1),
             "host": "standalone-" + os.uname().nodename,
         }
-        print("[load]", self.load_report, flush=True)
+        print("[load] slot" + str(slot.index), slot.load_report, flush=True)
 
     def wake(self):
         import aiortc.codecs.h264 as _h264
@@ -170,247 +167,44 @@ class FlashHead:
             return cv2.resize(p, (512, 512))
 
         self._load_poster = _load_poster
-        self.poster = _load_poster(CHAR_SRC[self.char])
-        self.pcs = set()
-        self.pc_created = {}
-        outer = self
+        self.pool = SlotPool(self.slots)
+        for slot in self.slots:
+            self._wake_slot(slot)
+        print("[wake] " + str(len(self.slots))
+              + " slot(s) ready, audio+video co-release, call components ready", flush=True)
 
-        get_audio_embedding_ = self._get_audio_embedding
-        run_pipeline_ = self._run_pipeline
-        sink = self.sink
+    def _wake_slot(self, slot):
+        slot.poster = self._load_poster(CHAR_SRC[slot.char])
+        slot.pcs = set()
+        slot.pc_created = {}
+        slot.round_count = 0
+        slot.round_start_ts = 0.0
+        slot.round_latencies = collections.deque(maxlen=20)
+        slot.last_gen_compute_ms = None
+        slot.gen_compute_ms_hist = collections.deque(maxlen=100)
+        slot.audio_out = AudioOutBuffer(SR_ENG, prebuffer_s=AUDIO_PREBUFFER_S)
+        slot.sink = FrameSink(slot.tgt_fps)
+        slot.SYNC_BUFFER_MS = 350
+        slot.feeder = Feeder(slot, self._get_audio_embedding, self._run_pipeline,
+                             sr_in=SR_IN, sr_eng=SR_ENG, max_ahead_s=MAX_AHEAD_S,
+                             sharpen=FH_SHARPEN, on_unhealthy=self._on_slot_unhealthy)
 
-        outer.round_count = 0
-        outer.round_start_ts = 0.0
-        outer.round_latencies = collections.deque(maxlen=20)
-        outer.last_gen_compute_ms = None
-        outer.gen_compute_ms_hist = collections.deque(maxlen=100)
+    def _on_slot_unhealthy(self, slot):
+        """故障隔離：一槽連續出錯超過門檻時呼叫——強制把它從准入池釋放，
+        不讓新使用者被配到壞掉的槽，也不讓舊使用者卡在悶死的連線上不自知。"""
+        session = slot.active_session
+        if getattr(self, "pool", None) is not None:
+            self.pool.force_release_slot(slot)
+        print("[capacity] slot" + str(slot.index) + " marked unhealthy, force-released session="
+              + (session[:8] if session else "None"), flush=True)
 
-        class AudioOutBuffer:
-            """語音出線緩衝（照抄 Modal 版：20ms 幀、underrun 儀表、0.3s 暖身墊窗）。"""
-            def __init__(self, sample_rate):
-                self.sample_rate = sample_rate
-                self.frame_samples = int(sample_rate * 0.02)
-                self.lock = threading.Lock()
-                self.buf = np.zeros(0, dtype=np.int16)
-                self.underrun_count = 0
-                self.underrun_gap_ms = collections.deque(maxlen=50)
-                self.last_push_ts = 0.0
-                self.depth_samples = 0
-                self.hold_until_ts = time.time() + AUDIO_PREBUFFER_S
-            def push(self, pcm_int16):
-                with self.lock:
-                    self.buf = np.concatenate([self.buf, pcm_int16])
-                    self.last_push_ts = time.time()
-                    self.depth_samples = len(self.buf)
-            def clear(self):
-                with self.lock:
-                    self.buf = np.zeros(0, dtype=np.int16)
-                    self.depth_samples = 0
-                    self.hold_until_ts = time.time() + AUDIO_PREBUFFER_S
-            def pop_frame(self):
-                with self.lock:
-                    if time.time() < self.hold_until_ts:
-                        return np.zeros(self.frame_samples, dtype=np.int16)
-                    if len(self.buf) >= self.frame_samples:
-                        chunk = self.buf[:self.frame_samples]
-                        self.buf = self.buf[self.frame_samples:]
-                        self.depth_samples = len(self.buf)
-                        return chunk
-                    self.underrun_count += 1
-                    if self.last_push_ts:
-                        self.underrun_gap_ms.append(round((time.time() - self.last_push_ts) * 1000, 1))
-                    self.depth_samples = len(self.buf)
-                    return np.zeros(self.frame_samples, dtype=np.int16)
-
-        outer.audio_out = AudioOutBuffer(SR_ENG)
-
-        class Feeder:
-            def __init__(self):
-                self.lock = threading.Lock()
-                self.acc = np.zeros(0, dtype=np.float32)
-                self.consumed = 0
-                self.t0 = None
-                self.last_in = 0.0
-                self._idle_due = 0.0
-                self._idle_on = False
-                self._round_pending = False
-                self._finish_pending = False
-                # 2026-07-11 A案小刀1：世代號——每次 reset() +1。GPU 上跑到一半的舊塊
-                # 完成時比對世代號，變了就整塊丟棄，不讓上一輪聲畫漏進新一輪
-                # （治「掛斷重撥她一接通就繼續講上一段」「插話後又冒半句舊話」）。
-                self._epoch = 0
-                threading.Thread(target=self._loop, daemon=True).start()
-
-            def push24k(self, pcm_bytes):
-                x = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-                n_out = int(len(x) * SR_ENG / SR_IN)
-                if n_out <= 0:
-                    return
-                xq = np.interp(np.linspace(0, 1, n_out, endpoint=False),
-                               np.linspace(0, 1, len(x), endpoint=False), x).astype(np.float32)
-                with self.lock:
-                    now = time.time()
-                    if self.t0 is None or (now - self.last_in) > 0.8:
-                        # 2026-07-11 A案小刀2：0.8s 到貨空窗只當「新一輪開口」計數＋重錨節奏鐘，
-                        # 不再清 self.acc——舊碼在這裡把已到貨還沒消化的話整包丟掉＝「話講一半
-                        # 跳掉／吃字」（語音腦是爆發式到貨，中途卡 0.8s 是常態）。已到貨的真話
-                        # 一律留著讓 _loop 照節奏消化完；真正的 turn 邊界只認 ws "reset" 明確訊號。
-                        # 節奏鐘重錨（t0/consumed 歸位）＝殘餘舊音從現在起接著新音連續放行，一格不丟。
-                        self.t0 = now
-                        self.consumed = 0
-                        outer.round_count += 1
-                        outer.round_start_ts = now
-                        self._round_pending = True
-                        print("[round] #" + str(outer.round_count) + " start (acc keep "
-                              + str(len(self.acc)) + " samples)", flush=True)
-                    self.acc = np.concatenate([self.acc, xq])
-                    self.last_in = now
-
-            def reset(self):
-                with self.lock:
-                    self.acc = np.zeros(0, dtype=np.float32)
-                    self.t0 = None
-                    self.consumed = 0
-                    # 2026-07-11 A案小刀1：世代號 +1——在 GPU 上跑到一半的舊塊，跑完後
-                    # 看到世代變了就自己丟棄（見 _gen_chunk 尾端比對），舊聲畫進不了新佇列。
-                    self._epoch += 1
-                    self._finish_pending = False
-                    # 2026-07-11 A案小刀1：8 秒聲音記憶窗整個歸零重填（官方每輪 run 開始
-                    # audio_dq 就是全零起步）。舊碼留著上一輪最後 0.36s 音尾，新一輪第一塊
-                    # 的嘴型會被舊語音牽著走＝「下一輪開頭嘴亂動／像在接上一段」。
-                    outer.audio_dq.extend([0.0] * outer.audio_dq.maxlen)
-                sink.clear()
-                outer.audio_out.clear()
-                print("[feeder] reset(turn boundary) epoch=" + str(self._epoch), flush=True)
-
-            def finish(self):
-                """Flush the final sub-chunk after the client confirms this speech turn ended."""
-                with self.lock:
-                    self._finish_pending = bool(len(self.acc))
-                    partial_samples = len(self.acc)
-                if self._finish_pending:
-                    print("[feeder] finish requested partial_samples=" + str(partial_samples), flush=True)
-
-            def _gen_chunk(self, chunk_16k, valid_samples=None):
-                t_chunk_ready = time.time()
-                # 2026-07-11 A案小刀1：開跑前先記下世代號——跟 audio_dq 進料包在同一把鎖裡，
-                # 這樣「reset 歸零記憶窗」和「這塊進料」一定分出先後：reset 在後＝整窗連這塊
-                # 一起被歸零（塊尾端也會被丟）；reset 在前＝這塊帶新世代號正常走。
-                with self.lock:
-                    chunk_epoch = self._epoch
-                    outer.audio_dq.extend(chunk_16k.tolist())
-                    arr = np.array(outer.audio_dq)
-                emb = get_audio_embedding_(outer.pipeline, arr, outer.audio_start_idx, outer.audio_end_idx)
-                with outer.char_lock:
-                    video = run_pipeline_(outer.pipeline, emb)
-                video = video[outer.motion_frames_num:]
-                frames = video.cpu().numpy().astype(np.uint8)
-                if FH_SHARPEN:   # unsharp mask 銳化（實驗·預設關）：每格 = 原圖 + (原圖-模糊)*量
-                    import cv2 as _cv2
-                    for _i in range(frames.shape[0]):
-                        _f = frames[_i]
-                        _blur = _cv2.GaussianBlur(_f, (0, 0), 1.8)
-                        frames[_i] = _cv2.addWeighted(_f, 1.5, _blur, -0.5, 0)
-                t_frames_ready = time.time()
-                outer.last_gen_compute_ms = round((t_frames_ready - t_chunk_ready) * 1000, 1)
-                outer.gen_compute_ms_hist.append(outer.last_gen_compute_ms)
-                # 2026-07-11 A案小刀1：入佇列前比對世代號——reset 期間在 GPU 上跑完的舊塊
-                # 整塊丟棄（畫面＋聲音都不推），0.96s 舊聲畫再也污染不了剛清空的新一輪
-                # （治「掛斷重撥繼續講上一段」「插話後她又冒出半句舊話」）。
-                with self.lock:
-                    if self._epoch != chunk_epoch:
-                        print("[feeder] stale chunk dropped (epoch " + str(chunk_epoch)
-                              + " -> " + str(self._epoch) + ")", flush=True)
-                        return
-                sink.push_many(frames, t_frames_ready, outer.tgt_fps)
-                if valid_samples is None:
-                    valid_samples = len(chunk_16k)
-                pcm16 = np.clip(chunk_16k[:valid_samples] * 32768.0, -32768, 32767).astype(np.int16)
-                outer.audio_out.push(pcm16)
-                if self._round_pending:
-                    self._round_pending = False
-                    lat_ms = round((t_frames_ready - outer.round_start_ts) * 1000, 1)
-                    outer.round_latencies.append(lat_ms)
-                    print("[round] #" + str(outer.round_count) + " first-frame-latency " + str(lat_ms) + "ms", flush=True)
-
-            def _loop(self):
-                cs = outer.chunk_samples
-                while True:
-                    todo = None
-                    with self.lock:
-                        if len(self.acc) >= cs and self.t0 is not None:
-                            # 斷續根治：不再卡即時節奏(due)，改看「存貨夠不夠」——存貨低於上限就儘量往前生成、
-                            # 建立抖動緩衝墊；滿了才停等播放消化。播放端(FlashHeadAudioTrack)仍照即時 pts 放、不會變快。
-                            ahead_s = outer.audio_out.depth_samples / SR_ENG
-                            if ahead_s < MAX_AHEAD_S:
-                                todo = (self.acc[:cs].copy(), cs)
-                                self.acc = self.acc[cs:]
-                                self.consumed += cs
-                        elif self._finish_pending and 0 < len(self.acc) < cs:
-                            valid = len(self.acc)
-                            padded = np.zeros(cs, dtype=np.float32)
-                            padded[:valid] = self.acc
-                            self.acc = np.zeros(0, dtype=np.float32)
-                            self._finish_pending = False
-                            self.consumed += valid
-                            todo = (padded, valid)
-                    if todo is not None:
-                        if self._idle_on:
-                            self._idle_on = False
-                            sink.clear()
-                            outer.audio_out.clear()
-                            print("[feeder] real audio arrived, stop idle feed", flush=True)
-                        self._gen_chunk(todo[0], todo[1])
-                        continue
-                    now = time.time()
-                    with self.lock:
-                        # TTS can deliver several seconds of audio in a burst. Arrival silence
-                        # is only real silence after the queued speech is nearly exhausted.
-                        # 待機只能在上一句聲畫都真正播完後開始。舊判斷只看「最近沒到貨」，
-                        # 但 Gemini 會爆發式快送，audio_out 尚有十幾秒尾巴也會被誤判待機；
-                        # 下一批真音到時 clear() 就把句尾切掉，並可能把殘尾帶進下輪。
-                        real_silent = ((now - self.last_in) > 1.0 and len(self.acc) < cs
-                                       and outer.audio_out.depth_samples == 0 and sink.depth() == 0)
-                    has_conn = any(pc.connectionState in ("new", "connecting", "connected")
-                                  for pc in outer.pcs)
-                    if has_conn and real_silent and now >= self._idle_due:
-                        if not self._idle_on:
-                            self._idle_on = True
-                            print("[feeder] real silence, connection alive, start idle feed", flush=True)
-                        self._gen_chunk(np.zeros(cs, dtype=np.float32))
-                        self._idle_due = now + cs / SR_ENG
-                    else:
-                        time.sleep(0.02)
-
-        self.feeder = Feeder()
-        print("[wake] feeder ready, audio+video co-release, call components ready", flush=True)
-
-    def _switch(self, char):
-        if not char or char == self.char:
-            return True
-        if char not in CHAR_SRC:
-            return False
-        with self.char_lock:
-            if char == self.char:
-                return True
-            prev = self.char
-            try:
-                self.feeder.reset()
-                self._get_base_data(self.pipeline, cond_image_path_or_dir=CHAR_SRC[char],
-                                    base_seed=42, use_face_crop=False)
-                self.char = char
-                self.poster = self._load_poster(CHAR_SRC[char])
-                print(f"[char] {prev} -> {char} ok", flush=True)
-                return True
-            except Exception as e:
-                print(f"[char] {char} switch failed ({e}) -> revert {prev}", flush=True)
-                try:
-                    self._get_base_data(self.pipeline, cond_image_path_or_dir=CHAR_SRC[prev],
-                                        base_seed=42, use_face_crop=False)
-                    self.char = prev
-                except Exception:
-                    pass
-                return False
+    def _switch(self, slot, char):
+        ok = switch_slot_char(slot, char, CHAR_SRC, self._get_base_data, self._load_poster)
+        if ok:
+            print("[char] slot" + str(slot.index) + " -> " + slot.char + " ok", flush=True)
+        else:
+            print("[char] slot" + str(slot.index) + " switch to " + str(char) + " failed", flush=True)
+        return ok
 
     def web(self):
         from aiortc import (MediaStreamError, MediaStreamTrack, RTCConfiguration, RTCIceServer,
@@ -424,7 +218,6 @@ class FlashHead:
         api = FastAPI()
         api.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
         outer = self
-        active = {"session": None, "pc": None, "created": 0.0}
         admission_lock = asyncio.Lock()
 
         _gate = os.environ.get("MUNEA_APP_KEY", "").strip()
@@ -434,24 +227,25 @@ class FlashHead:
 
         async def _release_session(session_id, pc=None):
             async with admission_lock:
-                if active["session"] != session_id:
-                    return
-                if pc is not None and active["pc"] is not pc:
-                    return
-                active.update(session=None, pc=None, created=0.0)
-                try:
-                    outer.feeder.reset()
-                except Exception as e:
-                    print(f"[capacity] release reset failed: {e}", flush=True)
-                print(f"[capacity] released session {session_id[:8]}", flush=True)
+                slot = outer.pool.release(session_id, pc)
+            if slot is None:
+                return
+            try:
+                slot.feeder.reset()
+            except Exception as e:
+                print("[capacity] release reset failed (slot" + str(slot.index) + "): "
+                      + str(e), flush=True)
+            print("[capacity] released session " + session_id[:8] + " (slot" + str(slot.index) + ")",
+                  flush=True)
 
         class FlashHeadTrack(VideoStreamTrack):
             kind = "video"
-            def __init__(self):
+            def __init__(self, slot):
                 super().__init__()
-                self.last = outer.poster
+                self.slot = slot
+                self.last = slot.poster
                 self._active_ts = 0.0
-                self._ptime = 1.0 / outer.tgt_fps
+                self._ptime = 1.0 / slot.tgt_fps
             async def next_timestamp(self):
                 if self.readyState != "live":
                     raise MediaStreamError()
@@ -466,13 +260,13 @@ class FlashHead:
                 return self._timestamp, VIDEO_TIME_BASE
             async def recv(self):
                 pts, tb = await self.next_timestamp()
-                fr = outer.sink.pop()
+                fr = self.slot.sink.pop()
                 now = time.time()
                 if fr is not None:
                     self.last = fr
                     self._active_ts = now
                 elif self._active_ts and (now - self._active_ts) > 0.35:
-                    self.last = outer.poster
+                    self.last = self.slot.poster
                     self._active_ts = 0.0
                 vf = VideoFrame.from_ndarray(self.last, format="rgb24")
                 vf.pts = pts
@@ -481,19 +275,20 @@ class FlashHead:
 
         class FlashHeadAudioTrack(MediaStreamTrack):
             kind = "audio"
-            def __init__(self):
+            def __init__(self, slot):
                 super().__init__()
+                self.slot = slot
                 self._next_pts = 0
                 self._started = None
             async def recv(self):
-                sr = outer.audio_out.sample_rate
+                sr = self.slot.audio_out.sample_rate
                 if self._started is None:
                     self._started = time.time()
                 target_t = self._started + self._next_pts / sr
                 now = time.time()
                 if target_t > now:
                     await asyncio.sleep(target_t - now)
-                chunk = outer.audio_out.pop_frame()
+                chunk = self.slot.audio_out.pop_frame()
                 frame = AudioFrame(format="s16", layout="mono", samples=len(chunk))
                 frame.sample_rate = sr
                 frame.pts = self._next_pts
@@ -506,43 +301,14 @@ class FlashHead:
         def health(key: str = ""):
             if not _pass(key):
                 return {"ok": False, "error": "key required"}
-            import statistics as _stats
-            budget_ms = round(outer.slice_len / outer.tgt_fps * 1000, 1)
-            hist = list(outer.gen_compute_ms_hist)
-            gen_p50 = round(_stats.median(hist), 1) if hist else None
-            gen_p95 = None
-            if hist:
-                srt = sorted(hist)
-                gen_p95 = round(srt[max(0, int(len(srt) * 0.95) - 1)], 1)
-            ao = outer.audio_out
-            return {"ok": True, "engine": "flashhead-lite-standalone", "char": outer.char,
-                    "capacity": {"limit": 1, "active": 1 if active["session"] else 0,
-                                 "available": not bool(active["session"])},
-                    "frames": outer.sink.count, "load": outer.load_report,
-                    "round_count": outer.round_count,
-                    "round_latencies_ms": list(outer.round_latencies),
-                    "uptime_s": round(time.time() - getattr(outer, "wake_ts", time.time()), 1),
-                    "sink_depth": len(outer.sink.q),
-                    "latency_ms": {
-                        "gen_compute_B": outer.last_gen_compute_ms,
-                        "sink_pop_C": outer.sink.last_pop_latency_ms,
-                        "chunk_budget_ms": budget_ms,
-                        "sync_buffer_reserved_ms": outer.SYNC_BUFFER_MS,
-                    },
-                    "gen_compute_ms_rolling": {
-                        "p50": gen_p50, "p95": gen_p95, "budget_ms": budget_ms,
-                        "n_samples": len(hist), "headroom_p95_pct":
-                            (round((1 - gen_p95 / budget_ms) * 100, 1) if gen_p95 else None),
-                    },
-                    "audio_underrun": {
-                        "count": ao.underrun_count,
-                        "recent_gap_ms": list(ao.underrun_gap_ms)[-10:],
-                        "buffer_depth_ms": round(ao.depth_samples / ao.sample_rate * 1000, 1),
-                        "prebuffer_s": AUDIO_PREBUFFER_S,
-                    },
-                    "video_underrun": {
-                        "count": outer.sink.underrun_count,
-                    }}
+            snap = outer.pool.snapshot()
+            primary = outer.slots[0]
+            body = health_snapshot(primary, outer.wake_ts)
+            body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
+                         "capacity": snap})
+            if len(outer.slots) > 1:
+                body["slots"] = [slot_summary(s, outer.wake_ts) for s in outer.slots]
+            return body
 
         @api.post("/diag")
         async def diag(payload: dict, key: str = ""):
@@ -554,8 +320,8 @@ class FlashHead:
             if len(body) > 12000:
                 body = body[:12000] + "...(truncated)"
             print("=" * 70, flush=True)
-            print("[DIAG] client-reported connection diagnostic  server_uptime_s=" + str(uptime_s)
-                  + " round_count=" + str(outer.round_count), flush=True)
+            print("[DIAG] client-reported connection diagnostic  server_uptime_s=" + str(uptime_s),
+                  flush=True)
             print("[DIAG] " + body, flush=True)
             print("=" * 70, flush=True)
             return {"ok": True, "received": True, "server_uptime_s": uptime_s}
@@ -567,24 +333,22 @@ class FlashHead:
             import uuid
             session_id = uuid.uuid4().hex
             async with admission_lock:
-                current_pc = active["pc"]
-                if active["session"]:
-                    if current_pc is None or current_pc.connectionState not in ("closed", "failed"):
-                        return JSONResponse(status_code=429, content={
-                            "error": "avatar capacity full", "code": "capacity_full",
-                            "retryAfter": 5,
-                        })
-                    active.update(session=None, pc=None, created=0.0)
-                active.update(session=session_id, pc=None, created=time.time())
-            if char and not outer._switch(char):
+                slot = outer.pool.admit(session_id)
+            if slot is None:
+                return JSONResponse(status_code=429, content={
+                    "error": "avatar capacity full", "code": "capacity_full",
+                    "retryAfter": 5,
+                })
+            if char and not outer._switch(slot, char):
                 await _release_session(session_id)
                 return {"error": "char not supported"}
             # 2026-07-11 主蘇菲：新通話開線＝把上一通的殘留全部倒掉（音頻緩衝+畫格佇列+進料狀態）。
             # 不倒＝Edward 實測「掛斷再撥、她一接通就繼續播上一段的話」——殘留聲音直接漏進新通話。
             try:
-                outer.feeder.reset()
+                slot.feeder.reset()
             except Exception as _e:
-                print(f"[offer] pre-call reset failed: {_e}", flush=True)
+                print("[offer] pre-call reset failed (slot" + str(slot.index) + "): "
+                      + str(_e), flush=True)
             try:
                 pc = RTCPeerConnection(RTCConfiguration(iceServers=[
                     RTCIceServer(urls="stun:stun.l.google.com:19302"),
@@ -594,23 +358,26 @@ class FlashHead:
             except Exception:
                 await _release_session(session_id)
                 raise
-            active["pc"] = pc
-            outer.pcs.add(pc)
-            outer.pc_created[id(pc)] = time.time()
+            async with admission_lock:
+                if slot.active_session == session_id:
+                    slot.active_pc = pc
+            slot.pcs.add(pc)
+            slot.pc_created[id(pc)] = time.time()
 
             pc_tag = str(id(pc))[-5:]
 
             @pc.on("connectionstatechange")
             async def _on_conn_state_change():
-                age_s = round(time.time() - outer.pc_created.get(id(pc), time.time()), 1)
-                print(f"[offer] pc#{pc_tag} -> {pc.connectionState} (age {age_s}s)", flush=True)
+                age_s = round(time.time() - slot.pc_created.get(id(pc), time.time()), 1)
+                print("[offer] slot" + str(slot.index) + " pc#" + pc_tag + " -> "
+                      + pc.connectionState + " (age " + str(age_s) + "s)", flush=True)
                 if pc.connectionState in ("closed", "failed"):
-                    outer.pcs.discard(pc)
-                    outer.pc_created.pop(id(pc), None)
+                    slot.pcs.discard(pc)
+                    slot.pc_created.pop(id(pc), None)
                     await _release_session(session_id, pc)
 
-            pc.addTrack(FlashHeadTrack())
-            pc.addTrack(FlashHeadAudioTrack())
+            pc.addTrack(FlashHeadTrack(slot))
+            pc.addTrack(FlashHeadAudioTrack(slot))
             try:
                 await pc.setRemoteDescription(RTCSessionDescription(sdp=payload["sdp"], type=payload["type"]))
                 ans = await pc.createAnswer()
@@ -622,8 +389,8 @@ class FlashHead:
                 return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type,
                         "session": session_id}
             except Exception:
-                outer.pcs.discard(pc)
-                outer.pc_created.pop(id(pc), None)
+                slot.pcs.discard(pc)
+                slot.pc_created.pop(id(pc), None)
                 try:
                     await pc.close()
                 finally:
@@ -636,59 +403,67 @@ class FlashHead:
                 while True:
                     await asyncio.sleep(10)
                     now = time.time()
-                    stale = [p for p in list(outer.pcs)
-                             if p.connectionState != "connected"
-                             and now - outer.pc_created.get(id(p), now) > 30]
-                    for p in stale:
-                        print(f"[watchdog] closing stale pc state={p.connectionState}", flush=True)
-                        try:
-                            await p.close()
-                        except Exception as e:
-                            print(f"[watchdog] close err {e}", flush=True)
-                        outer.pcs.discard(p)
-                        outer.pc_created.pop(id(p), None)
-                        if active["pc"] is p:
-                            await _release_session(active["session"], p)
+                    for slot in outer.slots:
+                        stale = [p for p in list(slot.pcs)
+                                 if p.connectionState != "connected"
+                                 and now - slot.pc_created.get(id(p), now) > 30]
+                        for p in stale:
+                            print("[watchdog] slot" + str(slot.index) + " closing stale pc state="
+                                  + p.connectionState, flush=True)
+                            try:
+                                await p.close()
+                            except Exception as e:
+                                print("[watchdog] close err " + str(e), flush=True)
+                            slot.pcs.discard(p)
+                            slot.pc_created.pop(id(p), None)
+                            if slot.active_pc is p:
+                                await _release_session(slot.active_session, p)
             asyncio.create_task(_loop())
 
         @api.post("/switch")
-        async def switch_char(key: str = "", char: str = ""):
+        async def switch_char(key: str = "", char: str = "", slot: int = 0):
             if not _pass(key):
                 return {"error": "key required"}
             if not char:
                 return {"error": "char required"}
+            if slot < 0 or slot >= len(outer.slots):
+                return {"error": "slot out of range"}
             t0 = time.time()
-            ok = outer._switch(char)
-            return {"ok": ok, "char": outer.char, "switch_s": round(time.time() - t0, 3)}
+            target = outer.slots[slot]
+            ok = outer._switch(target, char)
+            return {"ok": ok, "char": target.char, "slot": target.index,
+                    "switch_s": round(time.time() - t0, 3)}
 
         @api.websocket("/audio")
         async def audio_ws(ws: WebSocket, key: str = "", session: str = ""):
             if not _pass(key):
                 await ws.close(code=4403)
                 return
-            # Transition support: builds before v1.27 don't send the session id. They are
-            # still safe because admission above permits only one active peer at a time.
-            if not session and active["session"]:
-                session = active["session"]
-            if not session or session != active["session"]:
+            # Transition support: builds before v1.27 don't send the session id.
+            # 只在單槽（N=1，改造前唯一情境）時保留這個相容路徑——多槽是這輪新加的能力，
+            # 舊版客戶端從沒遇過多槽伺服器，不需要在 N>1 時猜哪一槽。
+            if not session and len(outer.slots) == 1 and outer.slots[0].active_session:
+                session = outer.slots[0].active_session
+            slot = outer.pool.slot_for_session(session) if session else None
+            if slot is None:
                 await ws.close(code=4409, reason="invalid avatar session")
                 return
             await ws.accept()
-            print(f"[audio] connected session={session[:8]}", flush=True)
+            print("[audio] connected session=" + session[:8] + " slot" + str(slot.index), flush=True)
             try:
                 while True:
                     msg = await ws.receive()
                     if msg.get("bytes") is not None:
-                        outer.feeder.push24k(msg["bytes"])
+                        slot.feeder.push24k(msg["bytes"])
                     elif msg.get("text") == "reset":
-                        outer.feeder.reset()
+                        slot.feeder.reset()
                     elif msg.get("text") == "finish":
-                        outer.feeder.finish()
+                        slot.feeder.finish()
                     elif msg.get("type") == "websocket.disconnect":
                         break
             except WebSocketDisconnect:
                 pass
-            print(f"[audio] closed session={session[:8]}", flush=True)
+            print("[audio] closed session=" + session[:8] + " slot" + str(slot.index), flush=True)
 
         return api
 
@@ -699,5 +474,5 @@ if __name__ == "__main__":
     fh.load()
     fh.wake()
     app = fh.web()
-    print(f"[main] serving on 0.0.0.0:{PORT}", flush=True)
+    print("[main] serving on 0.0.0.0:" + str(PORT) + " slots=" + str(N_SLOTS), flush=True)
     uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="warning")

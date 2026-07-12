@@ -10,6 +10,8 @@
 | `bootstrap.sh` | 開卡後一鍵裝機：Ditto + TensorRT + 我們的串流橋 |
 | `.env.example` | 需要的鑰匙清單（真值不進程式庫） |
 | （D1 現場補）`avatar_cloud_server.py` | 雲端版臉服務：Ditto 生成 → WebRTC；沿用本機版的對時/羽化/門禁設計 |
+| `flashhead_server.py` | FlashHead 通話服務（現役引擎，GLOWS 台灣機跑的就是它） |
+| `flashhead_engine_core.py` | 2026-07-12 N 槽改造拆出的引擎核心（零重量依賴、可本機單元測試）——**跟 flashhead_server.py 是一組，scp 上機器要兩個一起傳**，只傳前者會 ImportError 開機失敗。預設 `MUNEA_FH_SLOTS` 不設＝單槽，跟改造前單例版行為一字不差；測試卡要多槽才設這個環境變數。單元測試：`python scripts/test_flashhead_multislot.py`（repo 根目錄跑）。|
 
 ## 開卡規格（拍板）
 

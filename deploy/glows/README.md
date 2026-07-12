@@ -21,7 +21,11 @@
 2. Access → SSH Port 22 拿 `ssh -p <埠> root@tw-XX.access.glows.ai`
 3. 上傳並跑 `install-flashhead.sh`（本目錄；含先鋒 6 雷防雷。⚠ flash-attn 用 **cp311** 版）
    ＋上傳角色底圖 `deploy/flashhead-poc/assets/a0*-inB-512.png` → `/root/char-a0*.png`
-4. 通話服務：跑 `deploy/runpod-avatar/flashhead_server.py`（獨立版、機器無關）
+4. 通話服務：**兩個檔案都要上傳**——`deploy/runpod-avatar/flashhead_server.py` +
+   `deploy/runpod-avatar/flashhead_engine_core.py`（2026-07-12 N 槽改造後拆成兩檔，
+   只傳第一個會 ImportError 開機失敗）。跑 `python3 flashhead_server.py`（獨立版、
+   機器無關）。預設單槽，行為跟改造前一字不差；測試卡要多槽時設
+   `MUNEA_FH_SLOTS=3` 環境變數（未經真機驗證前，正式服務不要設這個變數）。
 5. 驗收：`tools/face-acceptance/驗收-FlashHead同線.py <門牌>`
 
 ## 鑰匙
