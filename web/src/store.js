@@ -3,6 +3,7 @@
    - 付款成功一律走 window.__muneaApplyPurchase(產品ID) 生效（app.js 已備好）。
    - 商品 ID 唯一真相：docs/蘋果內購金流設定-Edward步驟單-2026-07-08.md 第 4 步表。 */
 window.MuneaStore = (function () {
+  var TX_KEY = 'munea.store.processedTransactions.v1';
   var SUB = {
     'plus|month': 'net.munea.app.plus.monthly',
     'plus|year': 'net.munea.app.plus.yearly',
@@ -18,15 +19,34 @@ window.MuneaStore = (function () {
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Store) || null;
   }
-  function apply(pid) {
-    try { if (typeof window.__muneaApplyPurchase === 'function') return window.__muneaApplyPurchase(pid); } catch (e) {}
-    return false;
+  function processedTransactions() {
+    try {
+      var value = JSON.parse(localStorage.getItem(TX_KEY) || '[]');
+      return Array.isArray(value) ? value : [];
+    } catch (e) { return []; }
+  }
+  function apply(transaction) {
+    var data = typeof transaction === 'string' ? { productId: transaction } : (transaction || {});
+    var pid = data.productId || '';
+    var txid = String(data.transactionId || '');
+    var seen = processedTransactions();
+    if (txid && seen.indexOf(txid) >= 0) return { ok: true, duplicate: true };
+    try {
+      if (typeof window.__muneaApplyPurchase !== 'function') return { ok: false };
+      var ok = !!window.__muneaApplyPurchase(pid, data);
+      if (!ok) return { ok: false };
+      if (txid) {
+        seen.push(txid);
+        localStorage.setItem(TX_KEY, JSON.stringify(seen.slice(-200)));
+      }
+      return { ok: true, duplicate: false };
+    } catch (e) { return { ok: false }; }
   }
   // 背景到帳（自動續訂、家人核准後）→ 直接生效
   (function listen() {
     var p = plugin();
     if (p && p.addListener) {
-      try { p.addListener('purchase', function (d) { if (d && d.productId) apply(d.productId); }); } catch (e) {}
+        try { p.addListener('purchase', function (d) { if (d && d.productId) apply(d); }); } catch (e) {}
     }
   })();
 
@@ -38,7 +58,10 @@ window.MuneaStore = (function () {
     try {
       var r = await p.purchase({ productId: pid });
       var st = (r && r.state) || 'error';
-      if (st === 'purchased') { apply(pid); return { ok: true }; }
+      if (st === 'purchased') {
+        var applied = apply(r);
+        return { ok: !!applied.ok, duplicate: !!applied.duplicate, transactionId: r && r.transactionId };
+      }
       return { ok: false, reason: st }; // cancelled / pending / notfound / unverified
     } catch (e) {
       return { ok: false, reason: 'error', message: String(e) };

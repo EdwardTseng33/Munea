@@ -2586,8 +2586,10 @@ assert req["subscriptionNoticeRequired"] is True
 export = server.privacy_export_response({"action": "preview"})
 assert export["ok"] is True
 assert export["request"]["status"] == "preview"
-assert "billing" in export["exportPackage"]
-assert "privacyRequests" in export["exportPackage"]
+assert export["status"] == "queued"
+assert export["requiresReauth"] is True
+assert "exportPackage" not in export
+assert "only" in export["productionNote"].lower()
 
 deletion = server.account_deletion_response({"action": "status"})
 assert deletion["ok"] is True
@@ -3362,8 +3364,10 @@ Pass "/admin/audit-events is closed without admin token"
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30
 if (-not $privacyExport.ok) { throw "/privacy-export returned not ok" }
-if (-not $privacyExport.exportPackage.billing) { throw "/privacy-export missing billing package" }
-Pass "/privacy-export returns local export package"
+if ($privacyExport.exportPackage) { throw "/privacy-export must not return an unscoped data package" }
+if (-not $privacyExport.requiresReauth) { throw "/privacy-export must require account-owner reauthentication" }
+if ($privacyExport.status -ne "queued") { throw "/privacy-export must queue a scoped export" }
+Pass "/privacy-export queues a reauthenticated, owner-scoped export"
 
 Step "API /account-deletion"
 $deletion = Invoke-RestMethod -Uri "$BaseUrl/account-deletion" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"status"}' -TimeoutSec 30

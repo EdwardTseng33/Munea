@@ -9,6 +9,8 @@
 
 ## 一眼總覽
 
+**㊽（7/12 深夜 Codex · 避開 Claude 高併發鎖區，收斂上線帳務／隱私 P0）**：①確認 Claude 正在處理語音多鑰匙、GPU N 槽、Gateway、排隊後端與前端排隊整合，Codex 未碰上述檔案／部署。②**Release Check 隱私匯出舊驗收已修**：產品早已改成「重新驗證本人後排隊匯出」，測試卻仍要求 API 直接回傳全域 billing/privacy package；現改驗「queued＋requiresReauth＋不得含 exportPackage」，隱私 Gate 通過且不退安全止血。③**Apple 點數雙重入帳止血 v1.28.1**：StoreKit 原生層把 `transactionId`／`originalTransactionId` 帶回 Web；`store.js` 按 Apple 唯一交易編號去重，付款回呼＋`Transaction.updates` 同筆只加點一次；Node 模擬同筆重送三次＝實際入帳一次 PASS。④完整 Release Check 已往下推進到下一個既有紅燈：`server.py` 清晨簡報背景執行緒仍有 silent except/pass（line 2069，屬 Claude 高併發／簡報去抖修改區），Codex 未跨線修改，留 Claude 收斂。⑤仍待正式帳務第二階段：後端向 Apple 驗交易、交易編號入 Supabase 唯一鍵、退款／跨裝置對帳；本輪先封最直接的重複加點漏洞。
+
 
 **㊼（7/12 深夜 Windows 蘇菲＋卡西法 · 1~30 人同時聊聊架構——軟體兩半都建好、預設關著不碰現役）**：Edward「專注把多人併發架構做完善」。分兩半並行、互不重工。
 ① **語音半（蘇菲 · commit da86e8a）**：查清今天壓到 30 撞的 `APIError:1011`＝**Gemini Live 對「單把鑰匙同時通話數」的配額牆**（非我方容器資源）。`live_voice_server.py` 改**多鑰匙輪流**（`GEMINI_API_KEYS` 逗號分隔、每通挑最閒的一把、收線還空位）→ 同時人數 ≈ 單把上限 × 鑰匙數；只給一把＝零行為變化（相容）。測：3 把平均分＋單把相容全綠。**今天一把約撐到 20 人**→ Edward 再辦 1~2 把 Google 鑰匙、語音 30 人達標。

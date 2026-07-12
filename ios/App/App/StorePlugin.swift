@@ -26,7 +26,11 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
             for await result in Transaction.updates {
                 if case .verified(let t) = result {
                     await t.finish()
-                    self.notifyListeners("purchase", data: ["productId": t.productID])
+                    self.notifyListeners("purchase", data: [
+                        "productId": t.productID,
+                        "transactionId": String(t.id),
+                        "originalTransactionId": String(t.originalID)
+                    ])
                 }
             }
         }
@@ -66,7 +70,12 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
                     switch verification {
                     case .verified(let t):
                         await t.finish()
-                        call.resolve(["state": "purchased", "productId": t.productID])
+                        call.resolve([
+                            "state": "purchased",
+                            "productId": t.productID,
+                            "transactionId": String(t.id),
+                            "originalTransactionId": String(t.originalID)
+                        ])
                     case .unverified:
                         call.resolve(["state": "unverified", "productId": pid])
                     }
