@@ -9,6 +9,8 @@
 
 ## 一眼總覽
 
+**㊾（7/12 深夜 Codex · 避開 Claude 高併發鎖區，補正式帳號資料隔離 P0）**：①已重讀看板並確認 Claude 正處理語音多鑰匙、GPU N 槽、Gateway、排隊與高併發壓測；Codex 本輪未碰上述部署／語音／Avatar 範圍。②查出正式上線風險：API 雖驗證 Supabase 登入 token，但多數資料存取仍使用 Cloud Run 環境中的固定測試 `account/person/family` ID，可能讓不同登入者落入同一資料範圍。③已加**每次請求的登入者資料綁定**：由 `account_members → persons → family_memberships` 解析該登入者範圍，只在該請求內生效並於結束清除；未完成帳號初始化者 fail closed 回 403，不再退回共用測試帳號。④所有登入後寫入強制使用伺服器解析出的 tenant account，忽略手機竄改的 `accountId`；管理端未綁定請求仍可合法指定目標帳號。⑤新帳號 bootstrap 現同步寫入 `persons.auth_user_id`。⑥新增雙用戶隔離／未知用戶拒絕／偽造 accountId 三組測試，連同既有 vitals 分戶與薄門測試全綠。⑦完整 Release Check 已通過本輪帳號、隱私、帳務等檢查，仍停在 Claude 簡報背景執行緒既有 silent except/pass（目前 line 2085）；未跨鎖區修改。
+
 **㊽（7/12 深夜 Codex · 避開 Claude 高併發鎖區，收斂上線帳務／隱私 P0）**：①確認 Claude 正在處理語音多鑰匙、GPU N 槽、Gateway、排隊後端與前端排隊整合，Codex 未碰上述檔案／部署。②**Release Check 隱私匯出舊驗收已修**：產品早已改成「重新驗證本人後排隊匯出」，測試卻仍要求 API 直接回傳全域 billing/privacy package；現改驗「queued＋requiresReauth＋不得含 exportPackage」，隱私 Gate 通過且不退安全止血。③**Apple 點數雙重入帳止血 v1.28.1**：StoreKit 原生層把 `transactionId`／`originalTransactionId` 帶回 Web；`store.js` 按 Apple 唯一交易編號去重，付款回呼＋`Transaction.updates` 同筆只加點一次；Node 模擬同筆重送三次＝實際入帳一次 PASS。④完整 Release Check 已往下推進到下一個既有紅燈：`server.py` 清晨簡報背景執行緒仍有 silent except/pass（line 2069，屬 Claude 高併發／簡報去抖修改區），Codex 未跨線修改，留 Claude 收斂。⑤仍待正式帳務第二階段：後端向 Apple 驗交易、交易編號入 Supabase 唯一鍵、退款／跨裝置對帳；本輪先封最直接的重複加點漏洞。
 
 

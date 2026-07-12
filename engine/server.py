@@ -9,7 +9,7 @@
   POST /companion-profile    → 讀寫陪伴角色 templateId/displayName
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
-import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac
+import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac, contextvars
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -367,8 +367,24 @@ def write_json_file(path, data):
                     log_fallback_exception(f"remove temp json file {os.path.basename(tmp_path)}", e)
 
 
+REQUEST_DATA_IDENTITY = contextvars.ContextVar("munea_request_data_identity", default=None)
+
+
 def data_backend():
-    return supabase_adapter.make_adapter()
+    return supabase_adapter.make_adapter(identity=REQUEST_DATA_IDENTITY.get())
+
+
+def bind_request_data_identity(auth_gate):
+    if not auth_gate.get("required"):
+        return None
+    auth_user_id = (auth_gate.get("auth") or {}).get("authUserId")
+    base_backend = supabase_adapter.make_adapter()
+    if not base_backend.configured():
+        return None
+    identity = base_backend.resolve_auth_identity(auth_user_id)
+    if not identity:
+        raise PermissionError("account_scope_missing")
+    return REQUEST_DATA_IDENTITY.set(identity)
 
 
 def data_backend_status():
@@ -4671,6 +4687,7 @@ class H(BaseHTTPRequestHandler):
             self._send(200, EXT.get(ext, "application/octet-stream"), f.read())
 
     def do_POST(self):
+        scope_token = None
         try:
             # 薄門（正式上線 · 7/9）：環境設了 MUNEA_APP_KEY 就要帶對 X-Munea-Key（App 自動帶、用戶無感）。
             # 擋「雲端大門開了之後、陌生人拿網址直接來打」的流量。沒設 key＝不啟用、本機/區網照舊。
@@ -4683,6 +4700,7 @@ class H(BaseHTTPRequestHandler):
             if not auth_gate.get("ok"):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
+            scope_token = bind_request_data_identity(auth_gate)
             char = data.get("char") or DEFAULT_CHAR
             if self.path == "/open":
                 t = eng.open_chat(char)
@@ -4935,12 +4953,20 @@ class H(BaseHTTPRequestHandler):
                 self._json_error(415, "unsupported_audio_mime", "Audio MIME type is not supported")
             else:
                 self._json_error(400, "invalid_request", "Request could not be processed", e)
+        except PermissionError as e:
+            if str(e) == "account_scope_missing":
+                self._json_error(403, "account_scope_missing", "This account must be initialized before accessing private data")
+            else:
+                self._json_error(403, "forbidden", "Request is not allowed", e)
         except Exception as e:
             try:
                 notify.alert("engine", getattr(self, "path", "?"), str(e)[:200])
             except Exception as notify_error:
                 log_fallback_exception("send engine error alert", notify_error)
             self._json_error(500, "internal_error", "Request could not be processed", e)
+        finally:
+            if scope_token is not None:
+                REQUEST_DATA_IDENTITY.reset(scope_token)
 
 
 if __name__ == "__main__":

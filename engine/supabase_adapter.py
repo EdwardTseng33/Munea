@@ -54,23 +54,70 @@ def _mark_table_missing(table):
 
 
 class SupabaseAdapter:
-    def __init__(self, env=None):
+    def __init__(self, env=None, identity=None):
         self.env = env or os.environ
+        identity = identity or {}
+        self.request_scoped = bool(identity)
         self.url = (self.env.get("SUPABASE_URL") or "").rstrip("/")
         self.service_key = self.env.get("SUPABASE_SERVICE_ROLE_KEY") or ""
         self.provider = (self.env.get("MUNEA_DATABASE_PROVIDER") or "json").lower()
-        self.account_id = self.env.get("MUNEA_SUPABASE_ACCOUNT_ID") or ""
-        self.person_id = self.env.get("MUNEA_SUPABASE_PERSON_ID") or ""
-        self.family_group_id = self.env.get("MUNEA_SUPABASE_FAMILY_GROUP_ID") or ""
+        self.account_id = identity.get("accountId") or identity.get("account_id") or self.env.get("MUNEA_SUPABASE_ACCOUNT_ID") or ""
+        self.person_id = identity.get("personId") or identity.get("person_id") or self.env.get("MUNEA_SUPABASE_PERSON_ID") or ""
+        self.family_group_id = identity.get("familyGroupId") or identity.get("family_group_id") or self.env.get("MUNEA_SUPABASE_FAMILY_GROUP_ID") or ""
+
+    def configured(self):
+        return self.provider == "supabase" and bool(self.url) and bool(self.service_key)
+
+    def payload_account_id(self, value=None):
+        """Never trust a client-supplied tenant id on an authenticated request."""
+        return self.account_id if self.request_scoped else (value or self.account_id)
 
     def enabled(self):
         return (
-            self.provider == "supabase"
-            and bool(self.url)
-            and bool(self.service_key)
+            self.configured()
             and self._is_uuid(self.account_id)
             and self._is_uuid(self.person_id)
         )
+
+    def resolve_auth_identity(self, auth_user_id):
+        """Resolve an authenticated user to one account-scoped data identity."""
+        if not self.configured():
+            return None
+        if not self._is_uuid(auth_user_id):
+            raise RuntimeError("A valid auth user id is required for account scoping")
+
+        member = self._first(
+            "account_members",
+            {"user_id": f"eq.{auth_user_id}", "status": "eq.active", "select": "*"},
+        )
+        account_id = (member or {}).get("account_id")
+        if not self._is_uuid(account_id):
+            return None
+
+        person = self._first(
+            "persons",
+            {"account_id": f"eq.{account_id}", "auth_user_id": f"eq.{auth_user_id}", "select": "*"},
+        )
+        if not person:
+            person = self._first(
+                "persons",
+                {"account_id": f"eq.{account_id}", "is_primary_care_recipient": "eq.true", "select": "*"},
+            )
+        person_id = (person or {}).get("id")
+        if not self._is_uuid(person_id):
+            return None
+
+        membership = self._first(
+            "family_memberships",
+            {"account_id": f"eq.{account_id}", "person_id": f"eq.{person_id}", "select": "*"},
+        )
+        family_group_id = (membership or {}).get("family_group_id") or ""
+        return {
+            "accountId": account_id,
+            "personId": person_id,
+            "familyGroupId": family_group_id if self._is_uuid(family_group_id) else "",
+            "authUserId": auth_user_id,
+        }
 
     def status(self):
         missing = []
@@ -298,6 +345,7 @@ class SupabaseAdapter:
             payload={
                 "id": person_id,
                 "account_id": account_id,
+                "auth_user_id": auth_user_id,
                 "display_name": display_name,
                 "relationship": data.get("relationship") or "self",
                 "locale": data.get("locale") or "zh-TW",
@@ -1406,7 +1454,7 @@ class SupabaseAdapter:
     def family_member_to_person_row(self, member):
         member = member or {}
         return {
-            "account_id": member.get("accountId") or member.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(member.get("accountId") or member.get("account_id")),
             "display_name": (member.get("displayName") or member.get("display_name") or "Family member")[:80],
             "relationship": member.get("relationship") or "family",
             "locale": member.get("locale") or "zh-TW",
@@ -1421,7 +1469,7 @@ class SupabaseAdapter:
         if member_id and not self._is_uuid(member_id):
             permissions.setdefault("originalMemberId", member_id)
         return {
-            "account_id": member.get("accountId") or member.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(member.get("accountId") or member.get("account_id")),
             "family_group_id": family_group_id,
             "person_id": person_id,
             "role": self._normalize_family_member_role(member.get("role")),
@@ -1541,7 +1589,7 @@ class SupabaseAdapter:
         tx = tx or {}
         tx_type = tx.get("type") or tx.get("transactionType") or tx.get("transaction_type") or "adjustment"
         return {
-            "account_id": tx.get("accountId") or tx.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(tx.get("accountId") or tx.get("account_id")),
             "person_id": tx.get("personId") or tx.get("person_id") or self.person_id,
             "wallet_id": tx.get("walletUuid") or tx.get("wallet_uuid"),
             "transaction_type": tx_type,
@@ -1567,7 +1615,7 @@ class SupabaseAdapter:
         elif event_type == "credits_consume":
             event_type = "credits_consumed"
         return {
-            "account_id": event.get("accountId") or event.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(event.get("accountId") or event.get("account_id")),
             "person_id": event.get("personId") or event.get("person_id") or self.person_id,
             "wallet_id": event.get("walletUuid") or event.get("wallet_uuid"),
             "credit_transaction_id": event.get("creditTransactionUuid") or event.get("credit_transaction_uuid"),
@@ -1677,7 +1725,7 @@ class SupabaseAdapter:
         if not self._is_uuid(actor_user_id):
             actor_user_id = None
         return {
-            "account_id": event.get("accountId") or event.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(event.get("accountId") or event.get("account_id")),
             "actor_user_id": actor_user_id,
             "event_type": event.get("eventType") or event.get("event_type") or "unknown_event",
             "target_table": event.get("targetTable") or event.get("target_table"),
@@ -1719,7 +1767,7 @@ class SupabaseAdapter:
         item = item or {}
         memory_type = item.get("type") or item.get("memoryType") or item.get("memory_type") or "temporary_event"
         return {
-            "account_id": item.get("accountId") or item.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(item.get("accountId") or item.get("account_id")),
             "person_id": item.get("personId") or item.get("person_id") or self.person_id,
             "source_conversation_summary_id": item.get("sourceConversationSummaryId") or item.get("source_conversation_summary_id"),
             "memory_type": memory_type,
@@ -1768,7 +1816,7 @@ class SupabaseAdapter:
         if voice_session_id and not self._is_uuid(voice_session_id):
             voice_session_id = None
         return {
-            "account_id": item.get("accountId") or item.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(item.get("accountId") or item.get("account_id")),
             "person_id": person_id or None,
             "voice_session_id": voice_session_id,
             "summary": item.get("summary") or "",
@@ -1798,7 +1846,7 @@ class SupabaseAdapter:
     def perception_snapshot_to_row(self, snapshot):
         snapshot = snapshot or {}
         return {
-            "account_id": snapshot.get("accountId") or snapshot.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(snapshot.get("accountId") or snapshot.get("account_id")),
             "person_id": snapshot.get("personId") or snapshot.get("person_id") or self.person_id,
             "snapshot_type": snapshot.get("snapshotType") or snapshot.get("snapshot_type") or snapshot.get("type") or "current_topic",
             "observed_at": snapshot.get("observedAt") or snapshot.get("observed_at"),
@@ -1825,7 +1873,7 @@ class SupabaseAdapter:
     def relationship_state_to_row(self, state):
         state = state or {}
         return {
-            "account_id": state.get("accountId") or state.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(state.get("accountId") or state.get("account_id")),
             "person_id": state.get("personId") or state.get("person_id") or self.person_id,
             "companion_profile_id": state.get("companionProfileId") or state.get("companion_profile_id"),
             "persona_template_id": state.get("personaTemplateId") or state.get("persona_template_id") or state.get("templateId") or "nening-real-female",
@@ -1916,7 +1964,7 @@ class SupabaseAdapter:
                 invitation.get("shareToken") or invitation.get("share_token") or invitation.get("token")
             )
         return {
-            "account_id": invitation.get("accountId") or invitation.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(invitation.get("accountId") or invitation.get("account_id")),
             "family_group_id": family_group_id,
             "inviter_person_id": inviter_person_id or None,
             "invitee_person_id": invitee_person_id or None,
@@ -1993,7 +2041,7 @@ class SupabaseAdapter:
             evidence.setdefault("originalGrantedByPersonId", granted_by_person_id)
             granted_by_person_id = self.person_id
         return {
-            "account_id": record.get("accountId") or record.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(record.get("accountId") or record.get("account_id")),
             "person_id": person_id,
             "family_group_id": family_group_id or None,
             "consent_type": record.get("consentType") or record.get("consent_type") or "ai_provider_processing",
@@ -2069,7 +2117,7 @@ class SupabaseAdapter:
             if key in item and item.get(key) is not None:
                 schedule.setdefault(key, item.get(key))
         return {
-            "account_id": item.get("accountId") or item.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(item.get("accountId") or item.get("account_id")),
             "person_id": person_id,
             "title": item.get("title") or item.get("label") or "Routine reminder",
             "reminder_type": self._normalize_routine_reminder_type(item.get("type") or item.get("reminderType") or item.get("reminder_type")),
@@ -2141,7 +2189,7 @@ class SupabaseAdapter:
             if source_key in signal and signal.get(source_key) is not None:
                 facts[facts_key] = signal.get(source_key)
         return {
-            "account_id": signal.get("accountId") or signal.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(signal.get("accountId") or signal.get("account_id")),
             "person_id": person_id,
             "family_group_id": family_group_id or None,
             "signal_date": signal.get("date") or signal.get("signalDate") or signal.get("signal_date"),
@@ -2211,7 +2259,7 @@ class SupabaseAdapter:
             payload.setdefault("originalFamilyGroupId", family_group_id)
             family_group_id = self.family_group_id
         return {
-            "account_id": activity.get("accountId") or activity.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(activity.get("accountId") or activity.get("account_id")),
             "family_group_id": family_group_id,
             "owner_person_id": owner_person_id or None,
             "activity_type": self._normalize_family_activity_type(activity.get("type") or activity.get("activityType") or activity.get("activity_type")),
@@ -2253,7 +2301,7 @@ class SupabaseAdapter:
             contribution.setdefault("originalPersonId", person_id)
             person_id = self.person_id
         return {
-            "account_id": participant.get("accountId") or participant.get("account_id") or self.account_id,
+            "account_id": self.payload_account_id(participant.get("accountId") or participant.get("account_id")),
             "family_activity_id": activity_id,
             "person_id": person_id,
             "role": participant.get("role") or "participant",
@@ -2337,5 +2385,5 @@ class SupabaseAdapter:
         return bool(value and UUID_RE.match(value))
 
 
-def make_adapter(env=None):
-    return SupabaseAdapter(env=env)
+def make_adapter(env=None, identity=None):
+    return SupabaseAdapter(env=env, identity=identity)
