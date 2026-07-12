@@ -128,6 +128,13 @@ NEW_CASES = [
      {"protectionEvent": True, "familyNotificationCandidate": False, "protectionLine": "113"}),
     ("退休金不見了，都不知道去哪了", "high", "protection_event",
      {"protectionEvent": True, "familyNotificationCandidate": False, "protectionLine": "113"}),
+
+    # low：情緒辨識補全（對標 GPT 12 情緒，2026-07-12）——內疚/羞愧/挫折/失落/混亂
+    ("這都怪我，都是我害大家的", "low", "emotional_distress", None),
+    ("我很沒用，好丟臉見不得人", "low", "emotional_distress", None),
+    ("我怎麼努力都做不到，白費", "low", "emotional_distress", None),
+    ("他走了，什麼都沒了、好空虛", "low", "emotional_distress", None),
+    ("我好亂，不知道怎麼辦、理不清", "low", "emotional_distress", None),
 ]
 
 
