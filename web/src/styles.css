@@ -2183,14 +2183,20 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 #callToggle .dial-dots i:nth-child(2) { animation-delay: .2s; }
 #callToggle .dial-dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes dialDot { 0%, 100% { opacity: .25; } 40% { opacity: 1; } }
-/* 撥通中狀態更明顯（Edward 2026-07-12：換色＋脈動特效＋loading 放大）：綠→暮色橘、按鈕呼吸＋外圈光環擴散＝一看就知道「正在連線、等一下」 */
-#callToggle.dialing { background-color: var(--coral) !important; cursor: progress; animation: dialPulse 1.5s ease-in-out infinite; }
-@keyframes dialPulse {
-  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px rgba(217,136,65,.4), 0 0 0 0 rgba(217,136,65,.55); }
-  50%      { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 14px rgba(217,136,65,.6), 0 0 0 12px rgba(217,136,65,0); }
-}
-#callToggle.dialing .dial-dots { gap: 3px; margin-left: 4px; }
-#callToggle.dialing .dial-dots i { font-size: 1.35em; font-weight: 900; }
+/* 通話鈕重做（Edward 2026-07-12：原「撥通中」藥丸又醜、又把左邊字幕/麥克風擠掉）→ 改成跟字幕/麥克風同款圓鈕：
+   三顆一排平衡、寬度固定永遠不擠；撥通中用乾淨的轉圈圈（不再是又肥又跳的點點）。 */
+.face-bar .call-btn { width: 60px; height: 60px; min-height: 60px; padding: 0; border-radius: 50%;
+  flex-direction: column; gap: 2px; font-size: 11px; font-weight: 600; position: relative;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 60%);
+  box-shadow: 0 8px 20px -8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22); }
+.face-bar .call-btn .ic { width: 24px; height: 24px; }
+#callToggle .dial-dots { display: none; }   /* 不再用點點（用 id 蓋過上面 inline-flex 規則）；改用轉圈圈 */
+.face-bar .call-btn.dialing { background-color: var(--coral); cursor: progress; }
+.face-bar .call-btn.dialing .ic { opacity: 0; }      /* 撥通中：藏話筒、改顯轉圈圈 */
+.face-bar .call-btn.dialing::before { content: ""; position: absolute; top: 9px; left: 50%; margin-left: -12px;
+  width: 24px; height: 24px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff;
+  animation: dialSpin .8s linear infinite; }
+@keyframes dialSpin { to { transform: rotate(360deg); } }
 
 /* 揪一攤 RSVP + 一起運動進度（Edward 7/9：三種活動補完整） */
 .rsvp-btns { display: flex; gap: 10px; margin: 12px 0 4px; }
