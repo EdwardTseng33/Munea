@@ -2030,6 +2030,30 @@ def conversation_text(history):
     return "\n".join(parts)
 
 
+# 簡報背景補救的去抖狀態：防止每通新電話都開一條執行緒（高併發下一堆線搶 GIL、拖垮語音主線程 · 2026-07-12 卡西法壓測抓到 10 人斷崖根因）
+_briefing_refresh_state = {"running": False, "last": 0.0}
+
+
+def _maybe_refresh_briefing_bg():
+    """沒有當日簡報時背景補做，但同時只允許一條、且失敗後 5 分鐘內不再狂試——避免每通電話都堆一條註定失敗的執行緒。"""
+    st = _briefing_refresh_state
+    now = time.time()
+    if st["running"] or (now - st["last"] < 300):
+        return
+    st["running"] = True
+    st["last"] = now
+
+    def _run():
+        try:
+            refresh_daily_briefing()
+        except Exception:
+            pass
+        finally:
+            st["running"] = False
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
 def build_reply_context(history, char=DEFAULT_CHAR, data=None):
     data = data or {}
     text = conversation_text(history)
@@ -2059,9 +2083,8 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         now_ctx = {}
     briefing = _latest_daily_briefing()
     if not briefing:
-        # 簡報保鮮：沒有今天的就背景補做（不擋這一次回話——這輪不提天氣、下一輪就有）
-        import threading
-        threading.Thread(target=refresh_daily_briefing, daemon=True).start()
+        # 簡報保鮮：沒有今天的就背景補做（去抖：同時只一條、失敗後 5 分鐘不狂試——高併發下不再拖垮語音）
+        _maybe_refresh_briefing_bg()
     return {
         "persona": persona,
         "guardian": guardian,
