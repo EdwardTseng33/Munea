@@ -2183,6 +2183,14 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 #callToggle .dial-dots i:nth-child(2) { animation-delay: .2s; }
 #callToggle .dial-dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes dialDot { 0%, 100% { opacity: .25; } 40% { opacity: 1; } }
+/* 撥通中狀態更明顯（Edward 2026-07-12：換色＋脈動特效＋loading 放大）：綠→暮色橘、按鈕呼吸＋外圈光環擴散＝一看就知道「正在連線、等一下」 */
+#callToggle.dialing { background-color: var(--coral) !important; cursor: progress; animation: dialPulse 1.5s ease-in-out infinite; }
+@keyframes dialPulse {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px rgba(217,136,65,.4), 0 0 0 0 rgba(217,136,65,.55); }
+  50%      { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 14px rgba(217,136,65,.6), 0 0 0 12px rgba(217,136,65,0); }
+}
+#callToggle.dialing .dial-dots { gap: 3px; margin-left: 4px; }
+#callToggle.dialing .dial-dots i { font-size: 1.35em; font-weight: 900; }
 
 /* 揪一攤 RSVP + 一起運動進度（Edward 7/9：三種活動補完整） */
 .rsvp-btns { display: flex; gap: 10px; margin: 12px 0 4px; }
