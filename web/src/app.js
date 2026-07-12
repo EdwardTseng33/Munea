@@ -3476,7 +3476,7 @@ function init() {
   // 家庭照護圈
   const CIRCLE_LIMITS = { free: 0, plus: 4, pro: 12 };                       // Plus 最多 4 人、Pro 最多 12 人
   const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', pro: 'Pro' };
-  const PLAN_POINTS = { free: 0, plus: 200, pro: 500 };                       // 每月贈點
+  const PLAN_POINTS = { free: 0, plus: 200, pro: 400 };                       // 每月贈點
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
   // 7/9 正式化：不再預設示範四人家庭——圈子從「只有本人」開始，家人用邀請碼真的加進來
@@ -3971,8 +3971,8 @@ function init() {
   });
   // ===== 訂閱頁：比較表 + 月/年繳切換 + 訂閱鈕（金額為暫定、待 Edward 拍板）=====
   // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
-  const SUB_PRICE = { plus: { month: 499, year: 4790 }, pro: { month: 999, year: 9590 } };
-  const PT_PRICE = { 200: 500, 500: 1000, 1000: 2000, 1800: 3000 };   // Edward 7/8 定案：越大包每點越省(2.5/2.0/2.0/1.67)
+  const SUB_PRICE = { plus: { month: 599, year: 5750 }, pro: { month: 1199, year: 11510 } };
+  const PT_PRICE = { 200: 600, 500: 1400, 1000: 2700, 1800: 4700 };   // Edward 7/8 定案：越大包每點越省(3.0/2.8/2.7/2.61)
   let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
   function fmtPrice(plan, cyc) { return 'NT$' + SUB_PRICE[plan][cyc].toLocaleString() + (cyc === 'year' ? '／年' : '／月'); }
   function renderSubUI() {

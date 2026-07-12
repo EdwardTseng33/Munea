@@ -281,8 +281,8 @@
       <div class="kpi-sub" style="margin-top:12px">${esc(p.mrr||"需要「目前有效訂閱」聚合——規劃走 App Store Connect API 拉真訂閱與營收。")}${p.churnRate?"　"+esc(p.churnRate):""}</div>`);
     html+=card("方案表現", "月費 · 贈點 · 家庭圈上限（固定資訊）", tableHTML(["方案","內容","月費"],[
       ["<b>免費體驗</b>","綁定送 5 分鐘 · 提醒與心情先用起來","<span class='num'>NT$0</span>"],
-      ["<b>Plus 家庭</b>","每月贈 200 點 · 家庭圈最多 4 人","<span class='num'>NT$499/月</span>"],
-      ["<b>Pro 大家庭</b>","每月贈 500 點 · 家庭圈最多 12 人","<span class='num'>NT$999/月</span>"],
+      ["<b>Plus 家庭</b>","每月贈 200 點 · 家庭圈最多 4 人","<span class='num'>NT$599/月</span>"],
+      ["<b>Pro 大家庭</b>","每月贈 400 點 · 家庭圈最多 12 人","<span class='num'>NT$1,199/月</span>"],
     ]));
     html+=`<div class="kpi-sub" style="padding:0 4px">想試算 LTV／CAC／回本？到「設定 → 訂閱試算」填你的方案月費與行銷花費。</div>`;
     return html;
@@ -465,7 +465,7 @@
   }
 
   // ══════════ 訂閱試算（計算機·設定頁） ══════════
-  const ASSUME_DEF={plusPrice:499,proPrice:999,plusCount:0,proCount:0,newPaid:0,marketing:0,lifeMonths:12};
+  const ASSUME_DEF={plusPrice:599,proPrice:1199,plusCount:0,proCount:0,newPaid:0,marketing:0,lifeMonths:12};
   function loadAssume(){ try{ return {...ASSUME_DEF, ...JSON.parse(localStorage.getItem(ASSUME_KEY)||"{}")}; }catch(e){ return {...ASSUME_DEF}; } }
   function calcAssume(){
     const g=(id)=>Number($(id)?.value)||0;

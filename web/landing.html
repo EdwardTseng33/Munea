@@ -163,6 +163,16 @@
     .feat .note{font-size:15px;color:var(--ink-2);background:var(--mint);border-radius:14px;padding:13px 17px;margin-top:22px;display:flex;gap:10px;align-items:flex-start}
     .feat .note svg{width:19px;height:19px;stroke:var(--action);fill:none;stroke-width:2;flex:none;margin-top:2px}
 
+    /* ── App Store 實際畫面 gallery ── */
+    .gallery{padding:8px 0}
+    .gal-scroll{display:flex;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;padding:26px 4px 30px;margin:0 -4px;-webkit-overflow-scrolling:touch}
+    .gal-scroll::-webkit-scrollbar{height:8px}
+    .gal-scroll::-webkit-scrollbar-track{background:transparent}
+    .gal-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:100px}
+    .gal-item{flex:0 0 auto;width:clamp(232px,64vw,286px);scroll-snap-align:center;border-radius:26px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--sh-2);background:var(--card)}
+    .gal-item img{width:100%;height:auto;display:block}
+    .gal-hint{text-align:center;font-size:13.5px;color:var(--muted);margin-top:2px}
+
     /* ── 六位夥伴（hover 播放會動的臉） ── */
     .cast{background:var(--cream-2);border-radius:30px;padding:64px 32px}
     .cast-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:20px;margin-top:40px}
@@ -411,6 +421,23 @@
     </section>
   </div>
 
+  <!-- App Store 實際畫面 -->
+  <div class="wrap">
+    <section class="gallery reveal center">
+      <span class="kicker">App Store 實際畫面</span>
+      <h2 class="sec-h">打開沐寧，就是這樣陪你。</h2>
+      <p class="sec-sub">這是沐寧在 App Store 上的樣子——五個畫面，看懂它怎麼陪你和家人。</p>
+      <div class="gal-scroll">
+        <div class="gal-item"><img src="landing-assets/store/store-1.jpg" alt="沐寧 App Store 畫面：溫暖陪伴的 AI 健康夥伴總覽" loading="lazy"></div>
+        <div class="gal-item"><img src="landing-assets/store/store-2.jpg" alt="沐寧 App Store 畫面：每天的關心與提醒" loading="lazy"></div>
+        <div class="gal-item"><img src="landing-assets/store/store-3.jpg" alt="沐寧 App Store 畫面：健康與情緒紀錄" loading="lazy"></div>
+        <div class="gal-item"><img src="landing-assets/store/store-4.jpg" alt="沐寧 App Store 畫面：像視訊一樣自然陪伴" loading="lazy"></div>
+        <div class="gal-item"><img src="landing-assets/store/store-5.jpg" alt="沐寧 App Store 畫面：全家連結在一起" loading="lazy"></div>
+      </div>
+      <p class="gal-hint">← 左右滑動看更多 →</p>
+    </section>
+  </div>
+
   <!-- 六位夥伴 -->
   <div class="wrap">
     <section class="reveal">
@@ -469,22 +496,22 @@
         <div class="plan hot">
           <span class="tag">家庭首選</span>
           <h3>Plus</h3>
-          <div class="price">NT$499<small>／月</small></div>
+          <div class="price">NT$599<small>／月</small></div>
           <ul>
             <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>每月贈 200 點聊聊</li>
             <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>家庭圈最多 4 人</li>
-            <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>年繳約 8 折（NT$4,790／年）</li>
+            <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>年繳約 8 折（NT$5,750／年）</li>
           </ul>
           <p class="hint">一天不到一杯豆漿的錢，天天有人陪爸媽說話</p>
         </div>
         <div class="plan">
           <span class="tag">大家庭</span>
           <h3>Pro</h3>
-          <div class="price">NT$999<small>／月</small></div>
+          <div class="price">NT$1,199<small>／月</small></div>
           <ul>
-            <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>每月贈 500 點聊聊</li>
+            <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>每月贈 400 點聊聊</li>
             <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>家庭圈最多 12 人</li>
-            <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>年繳約 8 折（NT$9,590／年）</li>
+            <li><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>年繳約 8 折（NT$11,510／年）</li>
           </ul>
           <p class="hint">三代同堂，一份方案圈起來</p>
         </div>

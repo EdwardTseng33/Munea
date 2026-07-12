@@ -70,8 +70,8 @@
   });
   await run('P-03', '訂閱視窗：價格/恢復購買/法務文', () => {
     $id('managePlanBtn').click();
-    A(($id('pricePlus') || {}).textContent.includes('499'), 'Plus 價格');
-    A(($id('pricePro') || {}).textContent.includes('999'), 'Pro 價格');
+    A(($id('pricePlus') || {}).textContent.includes('599'), 'Plus 價格');
+    A(($id('pricePro') || {}).textContent.includes('1,199'), 'Pro 價格');
     A(!!$id('restoreBtn'), '恢復購買鈕缺');
     A(!!D.querySelector('.sub-legal'), '法務說明缺');
     $id('planClose') && $id('planClose').click();
