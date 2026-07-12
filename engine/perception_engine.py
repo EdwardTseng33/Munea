@@ -138,6 +138,100 @@ def fetch_weather(region=None):
     return None
 
 
+_WMO_WEATHER_DESC = {
+    0: "晴天", 1: "晴時多雲", 2: "多雲", 3: "陰天",
+    45: "有霧", 48: "有霧",
+    51: "毛毛雨", 53: "毛毛雨", 55: "毛毛雨",
+    56: "凍雨", 57: "凍雨",
+    61: "有雨", 63: "有雨", 65: "大雨",
+    66: "凍雨", 67: "凍雨",
+    71: "下雪", 73: "下雪", 75: "大雪", 77: "陣雪",
+    80: "陣雨", 81: "陣雨", 82: "強陣雨",
+    85: "陣雪", 86: "強陣雪",
+    95: "雷雨", 96: "雷雨", 99: "雷雨",
+}
+
+
+def _weathercode_desc(code):
+    """WMO 天氣代碼（Open-Meteo 用）→ 中文一句描述；查不到回 None（不瞎猜）。"""
+    try:
+        return _WMO_WEATHER_DESC.get(int(code))
+    except (TypeError, ValueError):
+        return None
+
+
+def _weather_cwa_tomorrow(region):
+    """明天天氣（CWA F-C0032-001 今明 36 小時預報、抓 startTime 落在明天日期的區段）。要 CWA_API_KEY。"""
+    key = os.environ.get("CWA_API_KEY")
+    if not key:
+        return None
+    url = ("https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?"
+           + urllib.parse.urlencode({"Authorization": key, "locationName": region}))
+    data = _http_json(url)
+    locs = (((data.get("records") or {}).get("location")) or [])
+    if not locs:
+        return None
+    elems = {e.get("elementName"): e for e in (locs[0].get("weatherElement") or [])}
+    tomorrow = (datetime.datetime.now(TW_TZ) + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+    def value_for_tomorrow(name, field="parameterName"):
+        try:
+            for t in elems[name]["time"]:
+                if str(t.get("startTime", "")).startswith(tomorrow):
+                    return t["parameter"][field]
+        except (KeyError, TypeError):
+            pass
+        return None
+
+    desc = value_for_tomorrow("Wx")
+    tmin = _to_num(value_for_tomorrow("MinT"))
+    tmax = _to_num(value_for_tomorrow("MaxT"))
+    rain = _to_num(value_for_tomorrow("PoP"))
+    if desc is None and tmin is None and tmax is None:
+        return None
+    return {"source": "cwa", "region": region, "desc": desc, "tempMin": tmin, "tempMax": tmax, "rainProb": rain}
+
+
+def _weather_openmeteo_tomorrow(region):
+    """Open-Meteo 免費免鑰匙兜底：明天預報（forecast_days=2、取索引 1＝明天）。"""
+    lat, lon = _COORDS.get(region, _COORDS[DEFAULT_REGION])
+    url = ("https://api.open-meteo.com/v1/forecast?"
+           + urllib.parse.urlencode({
+               "latitude": lat, "longitude": lon,
+               "daily": "temperature_2m_min,temperature_2m_max,precipitation_probability_max,weathercode",
+               "timezone": "Asia/Taipei", "forecast_days": 2,
+           }))
+    data = _http_json(url)
+    daily = data.get("daily") or {}
+
+    def at(k, i=1):
+        v = daily.get(k) or []
+        return v[i] if len(v) > i else None
+
+    tmin = at("temperature_2m_min")
+    tmax = at("temperature_2m_max")
+    rain = at("precipitation_probability_max")
+    code = at("weathercode")
+    if tmin is None and tmax is None:
+        return None
+    return {"source": "open-meteo", "region": region, "desc": _weathercode_desc(code),
+            "tempMin": tmin, "tempMax": tmax, "rainProb": rain}
+
+
+def fetch_tomorrow_preview(region=None):
+    """明天預告：CWA（有鑰匙）優先、Open-Meteo 兜底；都失敗回 None（寧寧就不先講、不瞎編）。
+    給清晨簡報用——讓寧寧能自然說『明天會下雨、記得帶傘』。"""
+    region = region or DEFAULT_REGION
+    for fn in (_weather_cwa_tomorrow, _weather_openmeteo_tomorrow):
+        try:
+            w = fn(region)
+            if w and (w.get("tempMax") is not None or w.get("desc")):
+                return w
+        except Exception:
+            continue
+    return None
+
+
 def _aqi_moenv(region):
     """環境部 AQI（aqx_p_432）。要免費鑰匙 MOENV_API_KEY。"""
     key = os.environ.get("MOENV_API_KEY")
@@ -218,12 +312,16 @@ def _aqi_label(aqi_value):
 
 
 def build_briefing(region=None):
-    """今日簡報：抓真天氣＋真空品 → 一句人話（scoped 最小注入，不塞原始資料）。
-    設計為清晨背景跑；回 dict（facts ＋ briefingLine ＋ careHints）。"""
+    """今日簡報：抓真天氣＋真空品＋明天預告 → 一句人話（scoped 最小注入，不塞原始資料）。
+    設計為清晨背景跑；回 dict（facts ＋ briefingLine ＋ tomorrowLine ＋ careHints）。
+    per-region（上線接法）：region 參數＝要備的縣市；目前試營運單一長輩（單一 MUNEA_REGION）。
+    真帳號多人上線時＝每個長輩各自縣市各備一份：由呼叫端（run_daily_briefing.py／server.refresh_daily_briefing）
+    迴圈每個長輩呼叫 build_briefing(該長輩的縣市) 再各自存各自 personId 的 snapshot，本函式簽章不用改。"""
     region = region or DEFAULT_REGION
     ctx = now_context()
     weather = fetch_weather(region)
     aqi = fetch_aqi(region)
+    tomorrow = fetch_tomorrow_preview(region)
     parts = []
     if weather:
         seg = f"{region}今天"
@@ -238,15 +336,30 @@ def build_briefing(region=None):
     if label:
         parts.append(f"空氣品質{label}")
     hints = care_hints(weather, aqi)
+    tomorrow_line = ""
+    if tomorrow:
+        seg = "明天"
+        if tomorrow.get("desc"):
+            seg += tomorrow["desc"] + "、"
+        if tomorrow.get("tempMin") is not None and tomorrow.get("tempMax") is not None:
+            seg += f"{round(tomorrow['tempMin'])}到{round(tomorrow['tempMax'])}度"
+        rain = tomorrow.get("rainProb")
+        if rain is not None:
+            seg += f"、降雨機率{round(rain)}%"
+            if rain >= 60:
+                seg += "，記得先準備傘"
+        tomorrow_line = seg
     return {
         "date": ctx["date"],
         "weekday": ctx["weekday"],
         "region": region,
         "weather": weather,
         "aqi": aqi,
+        "tomorrow": tomorrow,
         "briefingLine": "，".join(parts) if parts else "",
+        "tomorrowLine": tomorrow_line,
         "careHints": hints,
-        "sources": [s for s in {(weather or {}).get("source"), (aqi or {}).get("source")} if s],
+        "sources": [s for s in {(weather or {}).get("source"), (aqi or {}).get("source"), (tomorrow or {}).get("source")} if s],
     }
 
 
@@ -329,38 +442,63 @@ def analyze_conversation_mood(history):
     }
 
 
-_NEWS_SYS = """你是沐寧的暖新聞選稿員。用搜尋找「今天或最近、適合台灣長輩聊天的 1 則正向軟性新聞」。
-只准：溫馨社會、健康生活（非醫囑）、文化節慶、在地活動、動物、運動賽事佳績。
-絕不准：政治、犯罪、詐騙、災難、疾病恐慌、爭議。找不到合適的就回空。
-只回 JSON：{"line":"一句話新聞（40字內、口語、適合開話題）","topic":"標籤"}；不合適回 {"line":"","topic":""}"""
+# 暖新聞選稿護欄已併入下方 _TOPICS_SYS（本週多元話題、含暖新聞這一類）——fetch_daily_news() 相容舊接口見下。
+_TOPICS_SYS = """你是沐寧的話題選稿員，幫忙準備「這週適合跟台灣長輩聊天」的話題小卡。用搜尋找最近真實、
+多元、對長輩有意義的內容，最多 3 則、類型盡量不重複：
+- 暖新聞（溫馨社會、動物、運動賽事佳績、文化節慶、在地活動）
+- 生活健康（非醫囑的養生小知識、當季飲食、節氣提醒）
+- 懷舊文化（老歌老電影週年、傳統節慶由來、懷舊生活話題）
+絕不准：政治、犯罪、詐騙、災難、疾病恐慌、爭議、任何會引發焦慮的內容。
+找不到夠多真實內容就少給、寧可只給 1-2 則甚至 0 則，絕不編造。
+只回 JSON：{"topics":[{"line":"一句話開場白（40字內、口語、適合當開話題）","topic":"分類標籤（暖新聞/生活健康/懷舊文化）"}]}
+（沒有合適的就回 {"topics":[]}）"""
+
+_NEWS_BANNED_WORDS = ("政治", "詐騙", "詐欺", "命案", "車禍", "地震", "疫情", "戰爭", "槍", "毒")
 
 
-def fetch_daily_news():
-    """每日一則暖新聞（真搜尋、有護欄：只挑正向軟性、找不到寧可不給）。"""
+def fetch_weekly_topics(count=3):
+    """本週話題小卡（真搜尋、多元、有護欄）：暖新聞＋生活健康＋懷舊文化，最多 count 則。
+    找不到夠多寧可少給、絕不編（沿用暖新聞同款 banned 過濾）。整合進清晨簡報、通話中當接話素材。"""
     client = _genai_client()
     if not client:
-        return None
+        return []
     from google.genai import types as gtypes
     try:
         r = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents="請找今天適合台灣長輩的一則正向軟性新聞。",
+            contents=f"請找最近適合台灣長輩聊天的話題，最多 {count} 則、類型盡量不同。",
             config=gtypes.GenerateContentConfig(
-                system_instruction=_NEWS_SYS, temperature=0.3,
+                system_instruction=_TOPICS_SYS, temperature=0.3,
                 tools=[gtypes.Tool(google_search=gtypes.GoogleSearch())]),
         )
         text = r.text or ""
         start, end = text.find("{"), text.rfind("}")
         data = json.loads(text[start:end + 1]) if start >= 0 and end > start else {}
     except Exception:
-        return None
-    line = (data.get("line") or "").strip()
-    if not line or len(line) > 60:
-        return None
-    banned = ("政治", "詐騙", "詐欺", "命案", "車禍", "地震", "疫情", "戰爭", "槍", "毒")
-    if any(b in line for b in banned):
-        return None
-    return {"line": line, "topic": (data.get("topic") or "").strip()[:12], "source": "search"}
+        return []
+    raw = data.get("topics") if isinstance(data, dict) else None
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        line = (item.get("line") or "").strip()
+        if not line or len(line) > 60:
+            continue
+        if any(b in line for b in _NEWS_BANNED_WORDS):
+            continue
+        out.append({"line": line, "topic": (item.get("topic") or "").strip()[:12], "source": "search"})
+        if len(out) >= count:
+            break
+    return out
+
+
+def fetch_daily_news():
+    """相容舊接口：回單一則暖新聞（沿用 fetch_weekly_topics 取第一則、同一套護欄）。
+    新整合請改用 fetch_weekly_topics（備 2-3 則多元話題）。"""
+    topics = fetch_weekly_topics(count=1)
+    return topics[0] if topics else None
 
 
 def fetch_nearby_places(kind="pharmacy", region=None, limit=3):
@@ -393,4 +531,5 @@ def fetch_nearby_places(kind="pharmacy", region=None, limit=3):
 if __name__ == "__main__":
     print("時間感知：", json.dumps(now_context(), ensure_ascii=False))
     b = build_briefing()
-    print("今日簡報：", json.dumps({k: b[k] for k in ("date", "weekday", "region", "briefingLine", "careHints", "sources")}, ensure_ascii=False, indent=2))
+    print("今日簡報：", json.dumps({k: b[k] for k in ("date", "weekday", "region", "briefingLine", "tomorrowLine", "careHints", "sources")}, ensure_ascii=False, indent=2))
+    print("本週話題：", json.dumps(fetch_weekly_topics(count=3), ensure_ascii=False, indent=2))

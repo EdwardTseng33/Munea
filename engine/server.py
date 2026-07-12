@@ -1571,29 +1571,49 @@ def proactive_opening_response(data):
 
 
 def refresh_daily_briefing(region=None, person_id=None):
-    """每日簡報功課：抓真天氣＋真空品 → 一句人話 → 存感知抽屜（帶當天到期）。
-    設計為清晨定時跑（預設 06:30）；也可由管理端手動觸發。"""
+    """每日簡報功課：抓真天氣＋真空品＋明天預告＋本週話題（多則）＋今天回診 → 一句人話 → 存感知抽屜（帶當天到期）。
+    設計為清晨定時跑（預設 06:30、掛 Cloud Scheduler）；也可由管理端手動觸發 POST /admin/daily-briefing。
+    可靠性：每一塊獨立 try/except，任何一塊抓失敗都不崩、不瞎編——部分成功也存（天氣有、話題沒，也存天氣那份）。
+    per-region（上線接法）：region＝這次要備的縣市；目前試營運單一長輩（PRIMARY_CARE_RECIPIENT_ID/MUNEA_REGION）。
+    真帳號多人上線時＝外層加一個迴圈，查全部長輩清單、對每個長輩各自呼叫
+    refresh_daily_briefing(該長輩的縣市, 該長輩 personId)——本函式簽章已支援、不用改；
+    Cloud Scheduler 打的入口也不用改，只要把 /admin/daily-briefing 的 handler 改成呼叫那層迴圈即可。"""
     import perception_engine
     person_id = person_id or PRIMARY_CARE_RECIPIENT_ID
     try:
-        briefing = perception_engine.build_briefing(region)
+        briefing = perception_engine.build_briefing(region)  # 天氣＋空品＋明天預告（內部已零例外、都失敗回 None 不瞎編）
     except Exception as e:
         log_fallback_exception("build daily briefing", e)
         return {"ok": False, "brain": "butler", "action": "daily_briefing", "error": "briefing_failed"}
-    briefing["scheduleToday"] = today_care_items(person_id)  # 今天的回診/重要日子
     try:
-        news = perception_engine.fetch_daily_news()  # 每日一則暖新聞（有護欄、找不到寧可不給）
-        briefing["newsLine"] = (news or {}).get("line") or ""
-    except Exception:
-        briefing["newsLine"] = ""
+        briefing["scheduleToday"] = today_care_items(person_id)  # 今天的回診/重要日子
+    except Exception as e:
+        log_fallback_exception("load today care items for briefing", e)
+        briefing["scheduleToday"] = []
+    try:
+        topics = perception_engine.fetch_weekly_topics(count=3)  # 本週話題（暖新聞＋生活健康＋懷舊，有護欄、找不到寧可少給）
+    except Exception as e:
+        log_fallback_exception("fetch weekly topics for briefing", e)
+        topics = []
+    briefing["topics"] = topics
+    briefing["newsLine"] = topics[0]["line"] if topics else ""  # 相容舊欄位（單則、給還沒升級的讀取端）
     expires = briefing["date"] + "T23:59:59+08:00"  # 當天有效、隔天自然過期
-    append_perception_snapshots([{
-        "personId": person_id,
-        "snapshotType": "daily_briefing",
-        "expiresAt": expires,
-        "facts": briefing,
-        "source": "perception_engine",
-    }])
+    try:
+        append_perception_snapshots([{
+            "personId": person_id,
+            "snapshotType": "daily_briefing",
+            "expiresAt": expires,
+            "facts": briefing,
+            "source": "perception_engine",
+        }])
+    except Exception as e:
+        # 存檔失敗不讓整支 cron 帶著未捕捉例外爆掉（run_daily_briefing.py 才接得到乾淨的 ok:False 訊息）。
+        # ⚠ 已知一個會讓這裡必定失敗的成因：Supabase perception_snapshots.snapshot_type 的 CHECK
+        # constraint 清單裡沒有 'daily_briefing'（見 supabase/sql/009_perception_snapshot_daily_briefing.sql）
+        # ——這正是「23514 check_violation」的根因，要等這支 migration 跑過才會真的存得進去。
+        log_fallback_exception("save daily briefing snapshot", e)
+        return {"ok": False, "brain": "butler", "action": "daily_briefing",
+                "error": "snapshot_save_failed", "briefing": briefing, "expiresAt": expires}
     return {"ok": True, "brain": "butler", "action": "daily_briefing",
             "briefing": briefing, "expiresAt": expires}
 
@@ -2121,16 +2141,22 @@ def reply_context_instruction(context):
                      + (f"時段語氣：{now_ctx.get('toneHint')}。" if now_ctx.get("toneHint") else "") + "）")
     brief = context.get("dailyBriefing") or {}
     brief_line = ""
-    if brief.get("briefingLine") or brief.get("careHints") or brief.get("scheduleToday") or brief.get("newsLine"):
+    _brief_topics = [t for t in (brief.get("topics") or []) if isinstance(t, dict) and t.get("line")]
+    if not _brief_topics and brief.get("newsLine"):  # 相容舊 snapshot（升級前存的、只有單則 newsLine）
+        _brief_topics = [{"line": brief["newsLine"]}]
+    if (brief.get("briefingLine") or brief.get("tomorrowLine") or brief.get("careHints")
+            or brief.get("scheduleToday") or _brief_topics):
         seg = "（今日簡報（已核實的真實資料，可自然帶進關心、不要照唸）："
         if brief.get("briefingLine"):
             seg += brief["briefingLine"] + "。"
+        if brief.get("tomorrowLine"):
+            seg += "明天預告：" + brief["tomorrowLine"] + "。"
         if brief.get("careHints"):
             seg += "關心提示：" + "；".join(brief["careHints"]) + "。"
         if brief.get("scheduleToday"):
             seg += "今天的重要日子：" + "、".join(brief["scheduleToday"]) + "（要記得溫柔提醒）。"
-        if brief.get("newsLine"):
-            seg += "今日暖聞（可當話題）：" + brief["newsLine"]
+        if _brief_topics:
+            seg += "這週可以聊的話題（挑一兩則自然帶入、別一次唸完）：" + "、".join(t["line"] for t in _brief_topics)
         brief_line = seg + "）"
     living = context.get("livingProfile") or {}
     living_parts = []
