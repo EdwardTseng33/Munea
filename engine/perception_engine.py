@@ -442,6 +442,58 @@ def analyze_conversation_mood(history):
     }
 
 
+_GUARDIAN_SEMANTIC_SYS = """你是沐寧的安全判讀助手（陪伴用、非醫療、絕不診斷）。長輩常把危機講得很客氣、拐彎——你的任務是判斷這句話（或最近幾句）有沒有「沒講白、但實際透露」的危機／急症／受暴受剝削訊號。
+例：「我是拖累」「東西都交代好了」「不用管我」＝可能想不開；「走幾步就喘」「悶悶的」＝可能身體急症；「錢被拿走」「簽了名不敢說」＝可能被剝削或受暴。
+只回 JSON：
+{"level":"none|low|high|critical",   // none=沒訊號 low=情緒需關心 high=疑似急症/受暴/精神狀況 critical=疑似想不開/自傷
+ "category":"self_harm|medical_emergency|protection|mental_state|distress|none",
+ "confidence":0-1,                     // 你有多確定（保守估、拿不準給低）
+ "reason":"一句話說為什麼"}
+規則：這是「判讀有沒有值得關心的訊號」不是診斷；寧可保守、拿不準就 none 或 low、confidence 給低；只有明確拐彎透露 high/critical 訊號才給高，且 confidence 要對得起判斷。"""
+
+
+def guardian_semantic_review(text, recent=None):
+    """守護腦第二層：拐彎危機語意判讀（Gemini Flash）。只在第一層規則沒抓到硬危機、但命中軟訊號時才呼叫
+    （見 model_router 的 responsePolicy.softSignalForReview）。
+    回 {level, category, confidence, reason, source} 或 None——沒訊號／沒 key／失敗都回 None，絕不影響第一層規則層。"""
+    if not text or not text.strip():
+        return None
+    client = _genai_client()
+    if not client:
+        return None
+    from google.genai import types as gtypes
+    prompt = text if not recent else ("最近幾句：\n" + "\n".join(str(r) for r in recent[-4:]) + "\n\n最新一句：" + text)
+    try:
+        r = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[gtypes.Content(role="user", parts=[gtypes.Part(text=prompt)])],
+            config=gtypes.GenerateContentConfig(
+                system_instruction=_GUARDIAN_SEMANTIC_SYS, temperature=0.1, response_mime_type="application/json"),
+        )
+        d = json.loads(r.text)
+    except Exception:
+        return None
+    if not isinstance(d, dict):
+        return None
+    level = d.get("level")
+    if level not in ("none", "low", "high", "critical"):
+        return None
+    try:
+        conf = float(d.get("confidence") or 0)
+    except (TypeError, ValueError):
+        conf = 0.0
+    # 雙閘門：只有 high/critical 且信心 ≥ 0.6 才回報動作，其餘一律視為「沒抓到」（保守、避免誤報打擾長輩）
+    if level in ("high", "critical") and conf >= 0.6:
+        return {
+            "level": level,
+            "category": (d.get("category") or "").strip()[:20],
+            "confidence": round(conf, 2),
+            "reason": (d.get("reason") or "").strip()[:60],
+            "source": "semantic_review",
+        }
+    return None
+
+
 # 暖新聞選稿護欄已併入下方 _TOPICS_SYS（本週多元話題、含暖新聞這一類）——fetch_daily_news() 相容舊接口見下。
 _TOPICS_SYS = """你是沐寧的話題選稿員，幫忙準備「這週適合跟台灣長輩聊天」的話題小卡。用搜尋找最近真實、
 多元、對長輩有意義的內容，最多 3 則、類型盡量不重複：

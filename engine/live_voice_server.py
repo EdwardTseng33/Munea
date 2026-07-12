@@ -72,6 +72,7 @@ def process_request(connection, request):
 
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 import notify as guardian_notify  # 守護腦命中 high/critical 時的內部安全告警（Slack #沐寧-告警 kind=voice）；送不出去就默默記日誌，不影響通話
+import perception_engine  # 守護腦第二層：拐彎危機語意判讀（Gemini Flash）——第一層沒抓到硬危機、但有軟訊號苗頭時才升級
 
 
 # ============================================================================
@@ -205,6 +206,31 @@ async def guardian_watch(cid, who, text, st, session):
         categories = tuple(risk.get("categories") or [])
         await asyncio.to_thread(guardian_record_and_alert, who, cid, result)
         if level not in ("high", "critical"):
+            # 第二層：第一層沒抓到硬危機、但用戶的話有「拐彎苗頭」→ 升級便宜 AI 判語意（只判用戶說的、每通上限 5 次、背景跑不擋通話）
+            policy0 = (result or {}).get("responsePolicy") or {}
+            if who == "user" and policy0.get("softSignalForReview") and st.get("semantic_calls", 0) < 5:
+                st["semantic_calls"] = st.get("semantic_calls", 0) + 1
+                sem = await asyncio.to_thread(perception_engine.guardian_semantic_review, text, [st.get("user_buf", "")])
+                if sem and sem.get("level") in ("high", "critical"):
+                    _sem_cat_map = {"self_harm": "self_harm_crisis", "medical_emergency": "medical_emergency_signal",
+                                    "protection": "protection_event", "mental_state": "mental_state_abnormal"}
+                    scat = _sem_cat_map.get(sem.get("category"), sem.get("category") or "semantic")
+                    is_protect = scat == "protection_event"
+                    sem_result = {
+                        "risk": {"level": sem["level"], "categories": [scat],
+                                 "requiresAuditEvent": True, "requiresHumanEscalation": True,
+                                 "protectionEvent": is_protect},
+                        "responsePolicy": {"familyNotificationCandidate": (not is_protect),
+                                           "protectionLine": "113" if is_protect else None},
+                    }
+                    _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
+                    await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result)
+                    key = ("semantic", scat)
+                    if key not in st["user_flagged"]:
+                        st["user_flagged"].add(key)
+                        cue = guardian_redirect_cue((scat,), sem_result["risk"], sem_result["responsePolicy"])
+                        if len(st["pending_cues"]) < 2:
+                            st["pending_cues"].append(cue)
             return
         flagged = st["user_flagged"] if who == "user" else st["ai_flagged"]
         if categories in flagged:
@@ -450,7 +476,7 @@ async def handle(ws):
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
-          "pending_cues": [], "bg_tasks": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集
+          "pending_cues": [], "bg_tasks": [], "semantic_calls": 0}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
     _diag(cid, "connected", name=name or "-", char=char)
     try:
         # 組 config 會呼叫 build_reply_context（內含對 Supabase 的同步阻塞查詢，最多 4 秒）——

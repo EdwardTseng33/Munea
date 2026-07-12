@@ -701,6 +701,16 @@ def guardian_evaluate_response(data):
         "被丟著", "被遺棄", "錢被拿走", "印章被拿", "被騙簽名", "退休金不見",
         "逼我給錢", "拿走我的錢", "騙我的錢",
     ]
+    # 軟訊號：硬規則沒抓到、但「拐彎」透露可能危機/急症/受剝削的苗頭——命中才升級第二層 AI 判語意（省成本、不每句都問）
+    soft_signal_terms = [
+        # 想不開的拐彎（沒明講「想死」）
+        "拖累", "負擔", "麻煩你們", "麻煩大家", "不想麻煩", "交代", "後事",
+        "不用管我", "我走了以後", "沒意思", "沒意義", "厭世", "沒有我",
+        # 身體急症的拐彎（沒明講「胸痛/中風」）
+        "走幾步就", "爬樓梯", "悶悶", "頭暈", "暈暈", "手麻", "腳麻", "使不上力",
+        # 受暴/被剝削的拐彎
+        "簽了名", "拿我的", "錢少了", "不敢說", "不敢講", "怕他知道",
+    ]
 
     lowered = text.lower()
     protection_event = False
@@ -734,6 +744,9 @@ def guardian_evaluate_response(data):
         level = "low"
         action = "supportive_check_in"
 
+    # 第一層沒抓到硬危機、但話裡有拐彎苗頭 → 標記給第二層 AI 判語意（見 perception_engine.guardian_semantic_review）
+    soft_signal_for_review = level in {"none", "low"} and any(k in lowered for k in soft_signal_terms)
+
     return {
         "ok": True,
         "brain": "guardian",
@@ -754,5 +767,6 @@ def guardian_evaluate_response(data):
             "familyNotificationCandidate": level in {"high", "critical"} and not protection_event,
             "doNotReinforceDelusion": "mental_state_abnormal" in categories,
             "protectionLine": "113" if protection_event else None,
+            "softSignalForReview": soft_signal_for_review,
         },
     }
