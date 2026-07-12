@@ -1048,6 +1048,7 @@ function speechActive() {
 }
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
+  _session: '', _lastError: '',
   _videoReady: false, _feedReady: false, _readyNotified: false,
   _notifyReady() {
     if (this._readyNotified || !this._videoReady || !this._feedReady) return;
@@ -1101,6 +1102,7 @@ const Avatar = {
   async start() {
     const u = getAvatarUrl(); if (!u) return false;
     const vid = document.getElementById('faceVid'); if (!vid) return false;
+    this._lastError = ''; this._session = '';
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     try {
       // 連線路線（7/9 手機實測補強）：家用網路直連即可；手機行動網路（5G/4G）常要走「中繼站」轉一手
@@ -1195,9 +1197,16 @@ const Avatar = {
       } catch (e) {}
       const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY) + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
-      const a = await r.json(); if (a.error) throw new Error(a.error); await this.pc.setRemoteDescription(a);
+      const a = await r.json();
+      if (!r.ok || a.error) {
+        this._lastError = a.code || ('http_' + r.status);
+        throw new Error(a.error || 'avatar offer failed');
+      }
+      this._session = a.session || '';
+      if (!this._session) { this._lastError = 'missing_session'; throw new Error('avatar session missing'); }
+      await this.pc.setRemoteDescription(a);
       // 聲音上行：App 自己開一條 WS 把語音送去雲端臉（下面 feed()/reset() 會用到）
-      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY));
+      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY) + '&session=' + encodeURIComponent(this._session));
       this.ws.binaryType = 'arraybuffer';
       await new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('avatar audio feed timeout')), 6000);
@@ -1249,7 +1258,7 @@ const Avatar = {
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.pc) this.pc.close(); } catch (e) {}
-    this.ws = this.pc = null;
+    this.ws = this.pc = null; this._session = '';
     const vid = document.getElementById('faceVid');
     if (vid) { try { vid.srcObject = null; } catch (e) {} }
     // 同線收聲一起收
@@ -3120,7 +3129,7 @@ function connectCall() {
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
 
     // ===== 兩邊都就緒才開場（Edward 2026-07-09 二次拍板）=====
-    let _voiceReady = false, _faceReady = false, _started = false;
+    let _voiceReady = false, _faceReady = false, _started = false, _faceUnavailable = false;
     const noFace = !getAvatarUrl();          // 沒接雲端臉的角色（或關閉）＝不必等臉
     if (noFace) _faceReady = true;
     const beginConversation = () => {
@@ -3135,7 +3144,7 @@ function connectCall() {
       setTimeout(() => {
         if (!callConnected && !callDialing) return;   // 這 1 秒內掛斷了就別開口
         markConnected();                    // 暖身也完成，現在才從「撥通中」切成真正接通並開始計時
-        if (!noFace) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }   // 亮出會動的臉
+        if (!noFace && !_faceUnavailable) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }   // 亮出會動的臉
         try { FaceIdle.stop(); } catch (e) {}
         LiveVoice.greet();                   // 管線穩了才請她主動開口（招呼講完才開麥）
       }, _greetDelay);
@@ -3204,7 +3213,13 @@ function connectCall() {
       }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
-    Avatar.start().catch(() => {});   // 同步接臉（進聊聊頁已預醒、多半幾秒內有影像）；'playing' 事件回 __muneaOnFaceReady
+    Avatar.start().then(ok => {
+      if (ok || Avatar._lastError !== 'capacity_full') return;
+      _faceUnavailable = true; _faceReady = true;
+      setCallHint('影像目前忙碌，先用語音陪你聊', true);
+      try { trackProductEvent('avatar_capacity_fallback', { mode: 'voice_only' }); } catch (e) {}
+      tryStart();
+    }).catch(() => {});   // 影像名額滿時安全降級純語音；其他故障仍由就緒逾時擋下
     return;
   }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');

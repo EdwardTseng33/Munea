@@ -418,16 +418,32 @@ class FlashHead:
         from aiortc.mediastreams import VIDEO_CLOCK_RATE, VIDEO_TIME_BASE
         from av import AudioFrame, VideoFrame
         from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+        from fastapi.responses import JSONResponse
         from fastapi.middleware.cors import CORSMiddleware
 
         api = FastAPI()
         api.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
         outer = self
+        active = {"session": None, "pc": None, "created": 0.0}
+        admission_lock = asyncio.Lock()
 
         _gate = os.environ.get("MUNEA_APP_KEY", "").strip()
 
         def _pass(request_key):
             return (not _gate) or (request_key == _gate)
+
+        async def _release_session(session_id, pc=None):
+            async with admission_lock:
+                if active["session"] != session_id:
+                    return
+                if pc is not None and active["pc"] is not pc:
+                    return
+                active.update(session=None, pc=None, created=0.0)
+                try:
+                    outer.feeder.reset()
+                except Exception as e:
+                    print(f"[capacity] release reset failed: {e}", flush=True)
+                print(f"[capacity] released session {session_id[:8]}", flush=True)
 
         class FlashHeadTrack(VideoStreamTrack):
             kind = "video"
@@ -500,6 +516,8 @@ class FlashHead:
                 gen_p95 = round(srt[max(0, int(len(srt) * 0.95) - 1)], 1)
             ao = outer.audio_out
             return {"ok": True, "engine": "flashhead-lite-standalone", "char": outer.char,
+                    "capacity": {"limit": 1, "active": 1 if active["session"] else 0,
+                                 "available": not bool(active["session"])},
                     "frames": outer.sink.count, "load": outer.load_report,
                     "round_count": outer.round_count,
                     "round_latencies_ms": list(outer.round_latencies),
@@ -546,7 +564,20 @@ class FlashHead:
         async def offer(payload: dict, key: str = "", char: str = ""):
             if not _pass(key):
                 return {"error": "key required"}
+            import uuid
+            session_id = uuid.uuid4().hex
+            async with admission_lock:
+                current_pc = active["pc"]
+                if active["session"]:
+                    if current_pc is None or current_pc.connectionState not in ("closed", "failed"):
+                        return JSONResponse(status_code=429, content={
+                            "error": "avatar capacity full", "code": "capacity_full",
+                            "retryAfter": 5,
+                        })
+                    active.update(session=None, pc=None, created=0.0)
+                active.update(session=session_id, pc=None, created=time.time())
             if char and not outer._switch(char):
+                await _release_session(session_id)
                 return {"error": "char not supported"}
             # 2026-07-11 主蘇菲：新通話開線＝把上一通的殘留全部倒掉（音頻緩衝+畫格佇列+進料狀態）。
             # 不倒＝Edward 實測「掛斷再撥、她一接通就繼續播上一段的話」——殘留聲音直接漏進新通話。
@@ -554,11 +585,16 @@ class FlashHead:
                 outer.feeder.reset()
             except Exception as _e:
                 print(f"[offer] pre-call reset failed: {_e}", flush=True)
-            pc = RTCPeerConnection(RTCConfiguration(iceServers=[
-                RTCIceServer(urls="stun:stun.l.google.com:19302"),
-                RTCIceServer(urls=["turn:34.81.102.52:3478?transport=udp", "turn:34.81.102.52:3478?transport=tcp"],
-                             username="muneaturn", credential="munea-turn-a7k2q"),
-            ]))
+            try:
+                pc = RTCPeerConnection(RTCConfiguration(iceServers=[
+                    RTCIceServer(urls="stun:stun.l.google.com:19302"),
+                    RTCIceServer(urls=["turn:34.81.102.52:3478?transport=udp", "turn:34.81.102.52:3478?transport=tcp"],
+                                 username="muneaturn", credential="munea-turn-a7k2q"),
+                ]))
+            except Exception:
+                await _release_session(session_id)
+                raise
+            active["pc"] = pc
             outer.pcs.add(pc)
             outer.pc_created[id(pc)] = time.time()
 
@@ -571,17 +607,28 @@ class FlashHead:
                 if pc.connectionState in ("closed", "failed"):
                     outer.pcs.discard(pc)
                     outer.pc_created.pop(id(pc), None)
+                    await _release_session(session_id, pc)
 
             pc.addTrack(FlashHeadTrack())
             pc.addTrack(FlashHeadAudioTrack())
-            await pc.setRemoteDescription(RTCSessionDescription(sdp=payload["sdp"], type=payload["type"]))
-            ans = await pc.createAnswer()
-            await pc.setLocalDescription(ans)
-            for _ in range(60):
-                if pc.iceGatheringState == "complete":
-                    break
-                await asyncio.sleep(0.05)
-            return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+            try:
+                await pc.setRemoteDescription(RTCSessionDescription(sdp=payload["sdp"], type=payload["type"]))
+                ans = await pc.createAnswer()
+                await pc.setLocalDescription(ans)
+                for _ in range(60):
+                    if pc.iceGatheringState == "complete":
+                        break
+                    await asyncio.sleep(0.05)
+                return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type,
+                        "session": session_id}
+            except Exception:
+                outer.pcs.discard(pc)
+                outer.pc_created.pop(id(pc), None)
+                try:
+                    await pc.close()
+                finally:
+                    await _release_session(session_id, pc)
+                raise
 
         @api.on_event("startup")
         async def _start_watchdog():
@@ -600,6 +647,8 @@ class FlashHead:
                             print(f"[watchdog] close err {e}", flush=True)
                         outer.pcs.discard(p)
                         outer.pc_created.pop(id(p), None)
+                        if active["pc"] is p:
+                            await _release_session(active["session"], p)
             asyncio.create_task(_loop())
 
         @api.post("/switch")
@@ -613,12 +662,19 @@ class FlashHead:
             return {"ok": ok, "char": outer.char, "switch_s": round(time.time() - t0, 3)}
 
         @api.websocket("/audio")
-        async def audio_ws(ws: WebSocket, key: str = ""):
+        async def audio_ws(ws: WebSocket, key: str = "", session: str = ""):
             if not _pass(key):
                 await ws.close(code=4403)
                 return
+            # Transition support: builds before v1.27 don't send the session id. They are
+            # still safe because admission above permits only one active peer at a time.
+            if not session and active["session"]:
+                session = active["session"]
+            if not session or session != active["session"]:
+                await ws.close(code=4409, reason="invalid avatar session")
+                return
             await ws.accept()
-            print("[audio] connected", flush=True)
+            print(f"[audio] connected session={session[:8]}", flush=True)
             try:
                 while True:
                     msg = await ws.receive()
@@ -632,7 +688,7 @@ class FlashHead:
                         break
             except WebSocketDisconnect:
                 pass
-            print("[audio] closed", flush=True)
+            print(f"[audio] closed session={session[:8]}", flush=True)
 
         return api
 
