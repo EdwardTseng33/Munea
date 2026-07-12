@@ -1,5 +1,16 @@
 # Glows.ai 台灣 4090 · FlashHead 臉引擎（2026-07-11 試車紀錄＋重建手冊）
 
+## 2026-07-13 RTX 6000 Ada 48GB 實測定案
+
+- 測試卡：GLOWS TW-07，Ubuntu 24.04 Docker NV580，RTX 6000 Ada 48GB，0.720 Credit/hr（NT$23.04/hr）。
+- 同版環境：PyTorch 2.7.1+cu128、Flash Attention 2.8.0.post2、SoulX-FlashHead Lite；同一角色圖與 `poc-mandarin.wav`，每塊即時預算 960ms。
+- eager 1 路：p50 257ms／p95 259ms；2 路：p95 543ms（43% 餘裕）；3 路：p95 826ms（僅14% 餘裕，不列正式安全值）；4 路：p95 1116ms（失敗）。
+- compile 1 路：p95 240ms；3 路：p95 735ms（23% 餘裕，峰值18.9GB，**正式安全容量**）；4 路：p95 999ms（失敗，峰值25.3GB）。
+- 結論：瓶頸是300W算力，不是48GB顯存。正式派卡以 **3 sessions/card** 計，容器必須先暖完才進 ready；全新冷編譯約106秒，已有磁碟快取後三路並行暖機約30秒。
+- 成本：3人滿載約 NT$0.128／人／分鐘；與4090安全2人約 NT$0.131／人／分鐘幾乎相同，但單機容量多50%。
+- 重建腳本已修：requirements 必須 `--ignore-installed blinker`；新版 Hugging Face CLI 改用 `hf download`；requirements 會把 torch 換成cu126，最後必須用 `+cu128 --force-reinstall` 校正。
+- 併發碼錶：`deploy/glows/run-concurrent-bench.sh <路數> <塊數> eager|compile`。
+
 ## 一句話結論
 台灣 4090 三關全過：**開機 1 分鐘**、**儲值制關機即停錶（有 SDK 可自動開關）**、
 **「講話截斷＝顯卡不夠」實錘**（同程式同料：Modal L4 p95 905ms vs 這台 309ms，預算 960ms）。
