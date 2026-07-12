@@ -1715,7 +1715,7 @@ function setCallDialing(on) {
   b.classList.toggle('dialing', on);
   const lbl = $('#callToggleLabel');
   if (lbl) {
-    if (on) lbl.innerHTML = '撥通中<span class="dial-dots"><i>·</i><i>·</i><i>·</i></span>';
+    if (on) lbl.innerHTML = '撥號中<span class="dial-dots"><i>·</i><i>·</i><i>·</i></span>';
     else lbl.textContent = callConnected ? '結束通話' : '開始通話';
   }
 }
