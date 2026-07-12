@@ -2135,8 +2135,8 @@ def _maybe_refresh_briefing_bg():
     def _run():
         try:
             refresh_daily_briefing()
-        except Exception:
-            pass
+        except Exception as e:
+            log_fallback_exception("refresh daily briefing in background", e)
         finally:
             st["running"] = False
 

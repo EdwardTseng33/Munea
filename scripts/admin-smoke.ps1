@@ -146,12 +146,21 @@ $adminPage = Invoke-WebRequest -Uri "$BaseUrl/admin.html" -Headers $identityHead
 if ($adminPage.StatusCode -ne 200) {
   throw "/admin.html returned HTTP $($adminPage.StatusCode)"
 }
-foreach ($token in @("Munea Admin", "apiBaseUrl", "adminToken", "refreshAdmin")) {
+foreach ($token in @("Munea", 'id="sideNav"', 'id="pageRoot"', "src/admin.js", "src/admin.css")) {
   if ($adminPage.Content -notmatch [regex]::Escape($token)) {
     throw "/admin.html missing token: $token"
   }
 }
-Pass "/admin.html is reachable"
+$adminScript = Invoke-WebRequest -Uri "$BaseUrl/src/admin.js" -Headers $identityHeaders -UseBasicParsing -TimeoutSec 30
+if ($adminScript.StatusCode -ne 200) {
+  throw "/src/admin.js returned HTTP $($adminScript.StatusCode)"
+}
+foreach ($token in @("apiBaseUrl", "adminToken", "renderSubscription", "/admin/subscription-metrics", "pts-cell")) {
+  if ($adminScript.Content -notmatch [regex]::Escape($token)) {
+    throw "/src/admin.js missing token: $token"
+  }
+}
+Pass "/admin.html and its dynamic console are reachable"
 
 Step "Admin gate"
 Expect-AdminHttpError "/admin/accounts" @{ limit = 1 } 403 $identityHeaders

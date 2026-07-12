@@ -13,6 +13,18 @@
 | `flashhead_server.py` | FlashHead 通話服務（現役引擎，GLOWS 台灣機跑的就是它） |
 | `flashhead_engine_core.py` | 2026-07-12 N 槽改造拆出的引擎核心（零重量依賴、可本機單元測試）——**跟 flashhead_server.py 是一組，scp 上機器要兩個一起傳**，只傳前者會 ImportError 開機失敗。預設 `MUNEA_FH_SLOTS` 不設＝單槽，跟改造前單例版行為一字不差；測試卡要多槽才設這個環境變數。單元測試：`python scripts/test_flashhead_multislot.py`（repo 根目錄跑）。|
 
+## 768（720P級）首發設定
+
+FlashHead實測可用尺寸是32的倍數；720會炸，首發720P級畫質使用 **768×768**。正式切換前必須同時完成：
+
+1. 上傳 `deploy/flashhead-poc/assets/a05-inB-768.png`、`a06-inB-768.png` 到GPU主機。
+2. 啟動時設定 `MUNEA_FH_FRAME_SIZE=768`，並以 `MUNEA_FH_CHAR_A05`／`MUNEA_FH_CHAR_A06` 指向兩張768底圖。
+3. `/health` 的 `output_resolution` 必須回報 `768×768`；服務暖機若實際生成尺寸不符會直接拒絕啟動，避免假升級。
+4. 跑 `python tools/face-acceptance/驗收-FlashHead同線.py <門牌> a05 6 --expect-size 768`，a05／a06都必須通過。
+5. 另跑768下的1／2／3路產能測試；不可沿用512容量數字。餘裕不足時自動降級640，不可降回512冒充720P。
+
+未設 `MUNEA_FH_FRAME_SIZE` 時仍維持512，確保本次程式合併不會自行改動現役服務；正式切換需經看板公告與獨立GPU驗收。
+
 ## 開卡規格（拍板）
 
 - GPU：RTX 4090 24GB（Secure Cloud 優先、按需計費 ~US$0.69/hr）

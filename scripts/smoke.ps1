@@ -2775,17 +2775,10 @@ css = Path("web/src/admin.css").read_text(encoding="utf-8")
 script = Path("scripts/admin-smoke.ps1").read_text(encoding="utf-8")
 package = Path("package.json").read_text(encoding="utf-8")
 required_html = [
-    "Munea Admin",
-    "apiBaseUrl",
-    "adminToken",
-    "refreshAdmin",
-    "accountsPanel",
-    "creditsPanel",
-    "safetyPanel",
-    "privacyPanel",
-    "feedbackPanel",
-    "auditPanel",
-    "summariesPanel",
+    "Munea",
+    'id="sideNav"',
+    'id="pageRoot"',
+    'id="chartTip"',
     "src/admin.js",
     "src/admin.css",
 ]
@@ -2794,10 +2787,12 @@ if missing_html:
     raise SystemExit("Admin console missing HTML tokens: " + ", ".join(missing_html))
 required_js = [
     "X-Munea-Admin-Token",
+    "apiBaseUrl",
+    "adminToken",
     "/admin/accounts",
     "/admin/north-star",
     "/admin/usage",
-    "/admin/credits",
+    "/admin/subscription-metrics",
     "/admin/conversation-summaries",
     "/admin/privacy-requests",
     "/admin/feedback",
@@ -2805,8 +2800,14 @@ required_js = [
     "/admin/audit-events",
     "localStorage.setItem(ADMIN_BASE_KEY",
     "Promise.allSettled",
-    "renderEndpointErrors",
-    "Partial:",
+    "renderOverview",
+    "renderUsers",
+    "renderSafety",
+    "renderSubscription",
+    "renderFeedback",
+    "renderRecords",
+    "settingsHTML",
+    "pts-cell",
 ]
 missing_js = [token for token in required_js if token not in js]
 if missing_js:
@@ -2823,7 +2824,7 @@ for forbidden in [
         raise SystemExit("Admin console must not embed secret token marker: " + forbidden)
 if "localStorage.setItem(\"adminToken\"" in js or "localStorage.setItem('adminToken'" in js:
     raise SystemExit("Admin console must not persist admin token in localStorage")
-for token in ["metric-grid", "admin-grid", "status-pill", "status-pill.warn", "error-item", "@media"]:
+for token in ["layout", "side-nav", "kpi-row", "table-wrap", "status-pill", "status-pill.warn", "error-item", "connect-prompt", "login-gate", "@media"]:
     if token not in css:
         raise SystemExit("Admin console CSS missing responsive token: " + token)
 for token in ["UseGcloudIdentityToken", "MUNEA_ADMIN_API_URL", "MUNEA_STAGING_ADMIN_TOKEN", "MUNEA_STAGING_APP_KEY", "X-Munea-Key", ".munea-app-key", "/admin.html", "/admin/accounts", "/admin/feedback"]:

@@ -313,6 +313,8 @@ def test_health_snapshot_math():
     for ms in [300.0, 310.0, 320.0, 900.0, 305.0]:
         slot.gen_compute_ms_hist.append(ms)
     slot.last_gen_compute_ms = 305.0
+    slot.frame_width = 768
+    slot.frame_height = 768
     slot.round_count = 3
     body = fec.health_snapshot(slot, wake_ts=time.time() - 10)
     assert body["gen_compute_ms_rolling"]["budget_ms"] == 960.0
@@ -325,8 +327,22 @@ def test_health_snapshot_math():
     assert 9.9 <= body["uptime_s"] <= 10.5
     assert body["round_count"] == 3
     assert body["frames"] == 0
+    assert body["output_resolution"] == {"width": 768, "height": 768}
     assert body["video_underrun"]["count"] == 0
     print("test_health_snapshot_math: PASS")
+
+
+def test_frame_size_contract():
+    for value in ("512", 640, "768"):
+        assert fec.parse_frame_size(value) == int(value)
+    for value in (None, "720", 800, "large"):
+        try:
+            fec.parse_frame_size(value)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid frame size must fail: " + repr(value))
+    print("test_frame_size_contract: PASS")
 
 
 def test_force_release_slot_used_by_unhealthy_path():
@@ -358,6 +374,7 @@ def main():
     test_fault_isolation_one_slot_does_not_crash_others()
     test_switch_slot_char_isolation()
     test_health_snapshot_math()
+    test_frame_size_contract()
     test_force_release_slot_used_by_unhealthy_path()
     print("FlashHead multi-slot smoke test: ALL PASS")
 

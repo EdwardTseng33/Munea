@@ -1,19 +1,26 @@
 # -*- coding: utf-8 -*-
-"""臉聲同線終驗（Ditto dev）：同一條 WebRTC 收「影像軌+聲音軌」，同一時鐘記錄，
-量「聲音軌能量起點 vs 嘴巴動起點」＝真實臉聲差。灌真語音 6s（大坨倒、模擬 Gemini）。"""
-import os, sys, time, json, wave, asyncio
+"""FlashHead 臉聲同線終驗：驗解析度、影音雙軌、嘴聲差與句尾完整度。"""
+import argparse, os, time, wave, asyncio
 import numpy as np, requests, websockets
 from PIL import Image
 from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
 
-# 用法：python 驗收-FlashHead同線.py [目標門牌] [角色代號] [送音秒數]
-BASE = (sys.argv[1].rstrip("/") if len(sys.argv) > 1
-        else "https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run")
-CHAR = sys.argv[2] if len(sys.argv) > 2 else "a05"
-DURATION_S = float(sys.argv[3]) if len(sys.argv) > 3 else 6.0
-KEY = open(r"E:\Claude\Munea\deploy\.munea-app-key", encoding="utf-8").read().strip()
-WAV = r"E:\Claude\Munea\engine\nening-reply-1.wav"
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sameline_fh")
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("base", nargs="?", default="https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run")
+PARSER.add_argument("char", nargs="?", default="a05")
+PARSER.add_argument("duration", nargs="?", type=float, default=6.0)
+PARSER.add_argument("--expect-size", type=int, choices=(512, 640, 768))
+PARSER.add_argument("--key-file", default=r"E:\Claude\Munea\deploy\.munea-app-key")
+PARSER.add_argument("--wav", default=r"E:\Claude\Munea\engine\nening-reply-1.wav")
+PARSER.add_argument("--out")
+ARGS = PARSER.parse_args()
+
+BASE = ARGS.base.rstrip("/")
+CHAR = ARGS.char
+DURATION_S = ARGS.duration
+KEY = open(ARGS.key_file, encoding="utf-8").read().strip()
+WAV = ARGS.wav
+OUT = ARGS.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), "sameline_fh")
 os.makedirs(OUT, exist_ok=True)
 ICE = [RTCIceServer(urls="stun:stun.l.google.com:19302"),
        RTCIceServer(urls=["turn:34.81.102.52:3478?transport=udp", "turn:34.81.102.52:3478?transport=tcp"],
@@ -86,6 +93,17 @@ async def main():
     stop["v"] = True
     await aud.close(); await pc.close()
 
+    if not vframes:
+        raise RuntimeError("沒有收到任何WebRTC影像格")
+    received_sizes = sorted({(a.shape[1], a.shape[0]) for _, a in vframes})
+    print("[VIDEO] 收到解析度", received_sizes, flush=True)
+    if len(received_sizes) != 1:
+        raise RuntimeError("同一通話內影像解析度跳動: " + repr(received_sizes))
+    if ARGS.expect_size and received_sizes[0] != (ARGS.expect_size, ARGS.expect_size):
+        raise RuntimeError("預期 " + str(ARGS.expect_size) + "x" + str(ARGS.expect_size)
+                           + "，實收 " + str(received_sizes[0][0]) + "x"
+                           + str(received_sizes[0][1]))
+
     # ── 聲音軌能量時間軸（每收包時刻的 RMS）──
     a_on = None
     for t, arr, _sr in aframes:
@@ -103,7 +121,8 @@ async def main():
         prev = m
     print(f"[RESULT] 聲音軌開始出聲 t={a_on and round(a_on,2)}s · 嘴巴開始動 t={m_on and round(m_on,2)}s "
           f"· 臉聲差={round(m_on - a_on, 2) if (a_on and m_on) else '量不到'}s", flush=True)
-    print(f"[t] 收到影像格 {len(vframes)}、聲音包 {len(aframes)}", flush=True)
+    print(f"[t] 收到影像格 {len(vframes)}、聲音包 {len(aframes)}"
+          f"、解析度 {received_sizes[0][0]}x{received_sizes[0][1]}", flush=True)
     # 存證：聲音軌存 wav、講話中段影格存 3 張
     if aframes:
         srr = aframes[0][2]

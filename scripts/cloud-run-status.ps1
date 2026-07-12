@@ -263,10 +263,10 @@ if ($Readiness) {
       try {
         $identityToken = Get-GcloudIdentityToken
         $adminPage = Invoke-WebRequest -Uri "$brainUrl/admin.html" -Headers @{ Authorization = "Bearer $identityToken" } -UseBasicParsing -TimeoutSec 30
-        if ($adminPage.StatusCode -eq 200 -and $adminPage.Content -match "Munea Admin") {
+        if ($adminPage.StatusCode -eq 200 -and $adminPage.Content -match "Munea" -and $adminPage.Content -match 'id="pageRoot"') {
           Pass "$brainName serves /admin.html"
         } else {
-          ReadinessIssue "$brainName /admin.html did not contain Munea Admin"
+          ReadinessIssue "$brainName /admin.html did not contain the current admin shell"
         }
       } catch {
         $status = ""

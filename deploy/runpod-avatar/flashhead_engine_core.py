@@ -32,6 +32,20 @@ import time
 import numpy as np
 
 
+SUPPORTED_FRAME_SIZES = (512, 640, 768)
+
+
+def parse_frame_size(value):
+    """Validate the square model frame size before any GPU work starts."""
+    try:
+        size = int(value)
+    except (TypeError, ValueError):
+        raise ValueError("MUNEA_FH_FRAME_SIZE must be an integer")
+    if size not in SUPPORTED_FRAME_SIZES or size % 32:
+        raise ValueError("MUNEA_FH_FRAME_SIZE must be one of 512, 640, 768")
+    return size
+
+
 # ---------------------------------------------------------------------------
 # FrameSink / AudioOutBuffer -- copied verbatim from the single-instance file
 # (old flashhead_server.py lines 94-223). Logic untouched, only relocated;
@@ -146,6 +160,8 @@ class Slot:
         self.audio_end_idx = None
         self.audio_start_idx = None
         self.audio_dq = None
+        self.frame_height = None
+        self.frame_width = None
         self.load_report = {}
         # ---- wake() 階段填（每次容器/程序甦醒都跑）----
         self.poster = None
@@ -482,6 +498,10 @@ def health_snapshot(slot, wake_ts=None):
     sink = slot.sink
     return {
         "frames": sink.count if sink else 0,
+        "output_resolution": {
+            "width": slot.frame_width,
+            "height": slot.frame_height,
+        },
         "load": slot.load_report,
         "round_count": slot.round_count,
         "round_latencies_ms": list(slot.round_latencies),

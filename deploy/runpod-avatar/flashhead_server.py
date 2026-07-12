@@ -54,11 +54,12 @@ from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
 from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
-                                    health_snapshot, slot_summary, switch_slot_char)
+                                    health_snapshot, parse_frame_size, slot_summary,
+                                    switch_slot_char)
 
 CHAR_SRC = {
-    "a05": "/root/char-a05B.png",
-    "a06": "/root/char-a06B.png",
+    "a05": os.environ.get("MUNEA_FH_CHAR_A05", "/root/char-a05B.png"),
+    "a06": os.environ.get("MUNEA_FH_CHAR_A06", "/root/char-a06B.png"),
 }
 DEFAULT_CHAR = "a05"
 CKPT_DIR = "/models/soulx-flashhead-1.3b"
@@ -73,6 +74,7 @@ MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
 FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
+FRAME_SIZE = parse_frame_size(os.environ.get("MUNEA_FH_FRAME_SIZE", "512"))
 PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
 # 2026-07-12 N 槽改造：沒設＝1（跟改造前單例行為一字不差）。只有測試卡明確設
 # MUNEA_FH_SLOTS=3 才會真的多槽——這是本輪任務的核心相容性鐵律。
@@ -138,6 +140,11 @@ class FlashHead:
             video = run_pipeline(slot.pipeline, emb)
             torch.cuda.synchronize()
             warm_times.append(round(time.time() - tw0, 2))
+        frame_shape = tuple(int(v) for v in video.shape[-3:])
+        if len(frame_shape) != 3 or frame_shape[0] != FRAME_SIZE or frame_shape[1] != FRAME_SIZE:
+            raise RuntimeError("FlashHead generated " + str(frame_shape)
+                               + " but MUNEA_FH_FRAME_SIZE=" + str(FRAME_SIZE))
+        slot.frame_height, slot.frame_width = frame_shape[0], frame_shape[1]
         t3 = time.time()
 
         slot.load_report = {
@@ -148,6 +155,7 @@ class FlashHead:
             "chunk_samples": slot.chunk_samples,
             "slice_len_frames": slot.slice_len,
             "chunk_budget_ms": round(slot.slice_len / slot.tgt_fps * 1000, 1),
+            "output_resolution": {"width": slot.frame_width, "height": slot.frame_height},
             "host": "standalone-" + os.uname().nodename,
         }
         print("[load] slot" + str(slot.index), slot.load_report, flush=True)
@@ -163,8 +171,11 @@ class FlashHead:
         import cv2
 
         def _load_poster(path):
-            p = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
-            return cv2.resize(p, (512, 512))
+            raw = cv2.imread(path)
+            if raw is None:
+                raise FileNotFoundError("avatar source not found: " + path)
+            p = cv2.cvtColor(raw, cv2.COLOR_BGR2RGB)
+            return cv2.resize(p, (FRAME_SIZE, FRAME_SIZE))
 
         self._load_poster = _load_poster
         self.pool = SlotPool(self.slots)
