@@ -31,9 +31,19 @@ class FakeSupabaseAdapter(SupabaseAdapter):
             for user_id, identity in self.identities.items():
                 if identity[0] != account_id:
                     continue
+                requested_id = query.get("id", "").removeprefix("eq.")
+                if requested_id and requested_id != identity[1]:
+                    continue
                 requested_user = query.get("auth_user_id", "").removeprefix("eq.")
                 if not requested_user or requested_user == user_id:
                     return {"id": identity[1]}
+            return None
+        if table == "family_groups":
+            account_id = query["account_id"].removeprefix("eq.")
+            family_group_id = query["id"].removeprefix("eq.")
+            for identity in self.identities.values():
+                if identity[0] == account_id and identity[2] == family_group_id:
+                    return {"id": family_group_id}
             return None
         if table == "family_memberships":
             account_id = query["account_id"].removeprefix("eq.")
@@ -105,6 +115,18 @@ class AccountScopeTests(unittest.TestCase):
 
         admin_adapter = make_adapter(env=self.env)
         self.assertEqual(admin_adapter.payload_account_id(ACCOUNT_B), ACCOUNT_B)
+
+    def test_scoped_adapter_authorizes_only_owned_objects(self):
+        scope_a = FakeSupabaseAdapter(env=self.env).resolve_auth_identity(USER_A)
+        scoped_a = FakeSupabaseAdapter(env=self.env, identity=scope_a)
+
+        self.assertTrue(scoped_a.owns_account_id(ACCOUNT_A))
+        self.assertTrue(scoped_a.owns_person_id(PERSON_A))
+        self.assertTrue(scoped_a.owns_family_group_id(FAMILY_A))
+        self.assertFalse(scoped_a.owns_account_id(ACCOUNT_B))
+        self.assertFalse(scoped_a.owns_person_id(PERSON_B))
+        self.assertFalse(scoped_a.owns_family_group_id(FAMILY_B))
+        self.assertFalse(scoped_a.owns_person_id("local-device-person"))
 
     def test_owner_account_deletion_removes_data_then_auth_user(self):
         identity = {

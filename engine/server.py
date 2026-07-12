@@ -387,6 +387,58 @@ def bind_request_data_identity(auth_gate):
     return REQUEST_DATA_IDENTITY.set(identity)
 
 
+SCOPE_EXEMPT_PATHS = PUBLIC_POST_PATHS | ADMIN_POST_PATHS | PRIVILEGED_BILLING_POST_PATHS | {"/family/invitations"}
+ACCOUNT_SCOPE_KEYS = {"accountid"}
+FAMILY_SCOPE_KEYS = {"familygroupid"}
+PERSON_SCOPE_KEYS = {
+    "personid",
+    "primarycarerecipientid",
+    "ownerpersonid",
+    "inviterpersonid",
+    "inviteepersonid",
+    "grantedbypersonid",
+    "updatedbypersonid",
+}
+
+
+def _request_scope_values(value):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized_key = str(key).replace("_", "").lower()
+            if normalized_key in ACCOUNT_SCOPE_KEYS | FAMILY_SCOPE_KEYS | PERSON_SCOPE_KEYS:
+                if child not in (None, ""):
+                    yield normalized_key, str(child)
+            elif isinstance(child, (dict, list)):
+                yield from _request_scope_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _request_scope_values(child)
+
+
+def authorize_request_data_scope(path, data, auth_gate):
+    path = str(path or "").split("?", 1)[0]
+    if not auth_gate.get("required") or path in SCOPE_EXEMPT_PATHS:
+        return
+    backend = data_backend()
+    if not backend.enabled():
+        return
+
+    checked = set()
+    for key, value in _request_scope_values(data or {}):
+        pair = (key, value)
+        if pair in checked:
+            continue
+        checked.add(pair)
+        if key in ACCOUNT_SCOPE_KEYS:
+            allowed = backend.owns_account_id(value)
+        elif key in FAMILY_SCOPE_KEYS:
+            allowed = backend.owns_family_group_id(value)
+        else:
+            allowed = backend.owns_person_id(value)
+        if not allowed:
+            raise PermissionError("request_scope_forbidden")
+
+
 def data_backend_status():
     status = data_backend().status()
     status["fallback"] = "json"
@@ -4725,6 +4777,7 @@ class H(BaseHTTPRequestHandler):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
             scope_token = bind_request_data_identity(auth_gate)
+            authorize_request_data_scope(self.path, data, auth_gate)
             char = data.get("char") or DEFAULT_CHAR
             if self.path == "/open":
                 t = eng.open_chat(char)

@@ -73,6 +73,25 @@ class SupabaseAdapter:
         """Never trust a client-supplied tenant id on an authenticated request."""
         return self.account_id if self.request_scoped else (value or self.account_id)
 
+    def owns_account_id(self, account_id):
+        return bool(self.request_scoped and self._is_uuid(account_id) and account_id == self.account_id)
+
+    def owns_person_id(self, person_id):
+        if not self.request_scoped or not self._is_uuid(person_id):
+            return False
+        return bool(self._first(
+            "persons",
+            {"id": f"eq.{person_id}", "account_id": f"eq.{self.account_id}", "select": "id"},
+        ))
+
+    def owns_family_group_id(self, family_group_id):
+        if not self.request_scoped or not self._is_uuid(family_group_id):
+            return False
+        return bool(self._first(
+            "family_groups",
+            {"id": f"eq.{family_group_id}", "account_id": f"eq.{self.account_id}", "select": "id"},
+        ))
+
     def delete_scoped_account(self, auth_user_id):
         """Permanently delete an owner account and its Supabase Auth identity."""
         if not self.enabled() or not self.request_scoped:
