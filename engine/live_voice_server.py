@@ -453,7 +453,10 @@ async def handle(ws):
           "pending_cues": [], "bg_tasks": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集
     _diag(cid, "connected", name=name or "-", char=char)
     try:
-        async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location, allow_reminders, fam)) as session:
+        # 組 config 會呼叫 build_reply_context（內含對 Supabase 的同步阻塞查詢，最多 4 秒）——
+        # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
+        cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam)
+        async with client.aio.live.connect(model=MODEL, config=cfg) as session:
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
             # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
             # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。
