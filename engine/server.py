@@ -21,6 +21,7 @@ import chat_engine as eng
 import supabase_adapter
 import model_router
 import notify
+import apple_store
 from google.genai import types
 
 if not os.environ.get("GEMINI_API_KEY"):
@@ -4125,6 +4126,96 @@ def subscription_event_response(data):
     }
 
 
+def apple_transaction_response(data, auth_gate=None):
+    auth_user_id = ((auth_gate or {}).get("auth") or {}).get("authUserId")
+    try:
+        verified = apple_store.verify_transaction(
+            data.get("signedTransaction") or data.get("signed_transaction"),
+            auth_user_id,
+        )
+    except apple_store.AppleStoreVerificationError as exc:
+        append_audit_event({
+            "eventType": "apple_transaction_rejected",
+            "targetTable": "credit_transactions",
+            "details": {"reason": str(exc), "actorType": "authenticated_user"},
+        })
+        return {"ok": False, "verified": False, "error": {"code": str(exc)}}
+
+    claimed_transaction_id = str(data.get("transactionId") or data.get("transaction_id") or "")
+    if claimed_transaction_id and claimed_transaction_id != verified.transactionId:
+        return {"ok": False, "verified": False, "error": {"code": "apple_transaction_id_mismatch"}}
+
+    grant = None
+    billing = None
+    if verified.kind == "points":
+        grant = credits_grant_response({
+            "amount": verified.points,
+            "walletType": "purchased",
+            "source": "apple_iap",
+            "reason": "verified_storekit_purchase",
+            "provider": "apple_storekit2",
+            "providerTransactionId": verified.transactionId,
+            "idempotencyKey": f"apple:{verified.transactionId}",
+        })
+    elif verified.kind == "subscription":
+        billing = load_billing_store()
+        billing.update({
+            "platform": "ios",
+            "provider": "apple_storekit2",
+            "activePlan": verified.plan,
+            "serverVerificationRequired": False,
+        })
+        billing["subscription"] = {
+            **(billing.get("subscription") or {}),
+            "status": "active",
+            "productId": verified.productId,
+            "originalTransactionId": verified.originalTransactionId,
+            "expiresAt": verified.expiresDate,
+            "lastVerifiedAt": utc_now(),
+        }
+        billing["entitlements"] = {
+            **(billing.get("entitlements") or {}),
+            "voiceCompanion": True,
+            "familyDashboard": True,
+            "routineReminders": True,
+            "realtimeAvatar": True,
+            "familyMembersMax": 4 if verified.plan == "plus" else 12,
+        }
+        billing = save_billing_store(billing)
+        grant = credits_grant_response({
+            "amount": verified.points,
+            "walletType": "included_monthly",
+            "source": "included_monthly",
+            "reason": "verified_storekit_subscription_allowance",
+            "provider": "apple_storekit2",
+            "providerTransactionId": verified.transactionId,
+            "idempotencyKey": f"apple-subscription:{verified.transactionId}",
+        })
+
+    append_audit_event({
+        "eventType": "apple_transaction_verified",
+        "targetTable": "credit_transactions" if verified.kind == "points" else "subscription_ledger",
+        "details": {
+            "actorType": "authenticated_user",
+            "transactionId": verified.transactionId,
+            "productId": verified.productId,
+            "environment": verified.environment,
+            "idempotentReplay": bool((grant or {}).get("idempotentReplay")),
+        },
+    })
+    return {
+        "ok": bool((grant or {}).get("ok")),
+        "verified": True,
+        "productId": verified.productId,
+        "transactionId": verified.transactionId,
+        "originalTransactionId": verified.originalTransactionId,
+        "environment": verified.environment,
+        "idempotentReplay": bool((grant or {}).get("idempotentReplay")),
+        "walletSummary": (grant or {}).get("walletSummary"),
+        "billing": billing,
+    }
+
+
 def normalize_avatar_mode(mode):
     mode = str(mode or "2d-viseme").strip().lower()
     mode = AVATAR_MODE_ALIASES.get(mode, mode)
@@ -4748,7 +4839,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -4966,6 +5057,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(response)
             elif self.path == "/credits/balance":
                 self._json(credits_balance_response(data))
+            elif self.path == "/apple/transaction":
+                self._json(apple_transaction_response(data, auth_gate=auth_gate))
             elif self.path == "/credits/grant":
                 ok, code = privileged_billing_write_authorized(self.headers)
                 if not ok:

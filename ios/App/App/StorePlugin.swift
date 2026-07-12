@@ -15,7 +15,8 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "getProducts", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise)
     ]
 
     private var updatesTask: Task<Void, Never>?
@@ -25,11 +26,11 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
         updatesTask = Task {
             for await result in Transaction.updates {
                 if case .verified(let t) = result {
-                    await t.finish()
                     self.notifyListeners("purchase", data: [
                         "productId": t.productID,
                         "transactionId": String(t.id),
-                        "originalTransactionId": String(t.originalID)
+                        "originalTransactionId": String(t.originalID),
+                        "signedTransaction": result.jwsRepresentation
                     ])
                 }
             }
@@ -64,17 +65,23 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
                     call.resolve(["state": "notfound", "productId": pid])
                     return
                 }
-                let result = try await product.purchase()
+                let accountToken = call.getString("appAccountToken").flatMap(UUID.init(uuidString:))
+                let result: Product.PurchaseResult
+                if let accountToken {
+                    result = try await product.purchase(options: [.appAccountToken(accountToken)])
+                } else {
+                    result = try await product.purchase()
+                }
                 switch result {
                 case .success(let verification):
                     switch verification {
                     case .verified(let t):
-                        await t.finish()
                         call.resolve([
                             "state": "purchased",
                             "productId": t.productID,
                             "transactionId": String(t.id),
-                            "originalTransactionId": String(t.originalID)
+                            "originalTransactionId": String(t.originalID),
+                            "signedTransaction": verification.jwsRepresentation
                         ])
                     case .unverified:
                         call.resolve(["state": "unverified", "productId": pid])
@@ -96,10 +103,36 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func restore(_ call: CAPPluginCall) {
         Task {
             var ids: [String] = []
+            var transactions: [[String: String]] = []
             for await result in Transaction.currentEntitlements {
-                if case .verified(let t) = result { ids.append(t.productID) }
+                if case .verified(let t) = result {
+                    ids.append(t.productID)
+                    transactions.append([
+                        "productId": t.productID,
+                        "transactionId": String(t.id),
+                        "originalTransactionId": String(t.originalID),
+                        "signedTransaction": result.jwsRepresentation
+                    ])
+                }
             }
-            call.resolve(["productIds": ids])
+            call.resolve(["productIds": ids, "transactions": transactions])
+        }
+    }
+
+    @objc func finish(_ call: CAPPluginCall) {
+        guard let rawId = call.getString("transactionId"), let transactionId = UInt64(rawId) else {
+            call.reject("缺 transactionId")
+            return
+        }
+        Task {
+            for await result in Transaction.unfinished {
+                if case .verified(let transaction) = result, transaction.id == transactionId {
+                    await transaction.finish()
+                    call.resolve(["ok": true])
+                    return
+                }
+            }
+            call.resolve(["ok": true, "alreadyFinished": true])
         }
     }
 }

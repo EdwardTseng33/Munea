@@ -1645,7 +1645,7 @@ class SupabaseAdapter:
             },
             "entitlements": row.get("entitlements") or {},
             "usageLedger": usage,
-            "serverVerificationRequired": True,
+            "serverVerificationRequired": not bool(row.get("verified_at")),
             "updatedAt": row.get("updated_at") or row.get("created_at"),
         }
 
