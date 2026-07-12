@@ -652,6 +652,7 @@ def guardian_evaluate_response(data):
         "活著沒意思", "活著沒意義", "活著幹嘛", "撐不下去", "撐不住了",
         "自殺", "自殘", "傷害自己", "結束生命", "結束自己", "了結生命", "一了百了", "解脫算了",
         "沒有我比較好", "不想拖累",
+        "一走了之", "走了算了", "離開這個世界", "不想醒來", "不想再撐", "先走一步", "不想活著了",
     ]
     emergency_terms = [
         "chest pain", "cannot breathe", "can't breathe", "fainted", "fell and cannot get up",
@@ -666,6 +667,8 @@ def guardian_evaluate_response(data):
         "diagnose", "prescribe", "dosage", "stop medication", "treatment",
         "診斷", "確診", "開藥", "處方", "劑量", "停藥", "該吃什麼藥",
         "要不要吃藥", "改藥", "換藥", "能不能治", "怎麼治療",
+        "藥可以停", "可以停藥", "能不能停藥", "藥能停", "藥可以不吃", "可以不吃藥",
+        "吃幾顆", "吃兩顆", "吃三顆", "吃多少", "加一顆", "減半", "藥減半",
     ]
     distress_terms = [
         "lonely", "sad", "anxious", "insomnia", "afraid", "panic", "depressed",
@@ -673,16 +676,50 @@ def guardian_evaluate_response(data):
         "焦慮", "睡不著", "失眠", "害怕", "恐慌", "憂鬱", "心情不好",
         "心情很差", "提不起勁", "沒精神", "好累", "覺得好累",
     ]
+    # 傷害他人（他傷）——歸 critical、category 與自傷區分
+    harm_others_terms = [
+        "想殺了他", "想殺了她", "想殺人", "想傷害他", "想傷害她", "要他死", "讓他死",
+        "想報復", "拿刀砍", "殺死他", "弄死他", "想打死", "把他弄死",
+        "kill him", "kill her", "hurt him", "hurt her", "want to kill someone",
+    ]
+    # 精神狀態異常（被害妄想／幻聽／躁期）——歸 high、action=grounding、回應層不強化妄想
+    psychosis_terms = [
+        "監控我", "監視我", "跟蹤我", "在監視", "電視在看", "電視監控", "被下毒",
+        "有人要害我", "有人害我", "偷裝", "裝了東西監聽", "竊聽我", "被人陷害",
+        "聽到有人叫我", "一直聽到聲音", "有人跟我說話", "看到不存在", "有人在跟蹤",
+        "好幾天不用睡", "都不用睡覺", "我有特殊使命", "我是被選中",
+    ]
+    # 保護事件（家暴／遺棄照護疏忽／財務剝削）——歸 high、轉介 113、不自動通知家庭圈
+    protection_terms = [
+        "他打我", "被打", "會打我", "被推倒", "不敢回家", "被家暴", "打我罵我",
+        "沒人管我", "沒東西吃", "沒人帶我看病", "被鎖在家", "把我鎖", "沒人理我很久",
+        "被丟著", "被遺棄", "錢被拿走", "印章被拿", "被騙簽名", "退休金不見",
+        "逼我給錢", "拿走我的錢", "騙我的錢",
+    ]
 
     lowered = text.lower()
+    protection_event = False
     if any(k in lowered for k in critical_terms):
         categories.append("self_harm_crisis")
+        level = "critical"
+        action = "interrupt_and_escalate"
+    elif any(k in lowered for k in harm_others_terms):
+        categories.append("harm_others_crisis")
         level = "critical"
         action = "interrupt_and_escalate"
     elif any(k in lowered for k in emergency_terms):
         categories.append("medical_emergency_signal")
         level = "high"
         action = "advise_emergency_help"
+    elif any(k in lowered for k in psychosis_terms):
+        categories.append("mental_state_abnormal")
+        level = "high"
+        action = "advise_grounding_and_help"
+    elif any(k in lowered for k in protection_terms):
+        categories.append("protection_event")
+        level = "high"
+        action = "advise_protection_line"
+        protection_event = True
     elif any(k in lowered for k in medical_terms):
         categories.append("medical_boundary")
         level = "medium"
@@ -701,12 +738,16 @@ def guardian_evaluate_response(data):
             "level": level,
             "categories": categories,
             "action": action,
+            "protectionEvent": protection_event,
             "requiresHumanEscalation": level in {"high", "critical"},
             "requiresAuditEvent": level in {"medium", "high", "critical"},
         },
         "responsePolicy": {
             "notMedicalDiagnosis": True,
             "reflexCanContinue": level not in {"high", "critical"},
-            "familyNotificationCandidate": level in {"high", "critical"},
+            # 保護事件加害人可能是家人 → 不自動通知家庭圈，改走 113／可信任第三人
+            "familyNotificationCandidate": level in {"high", "critical"} and not protection_event,
+            "doNotReinforceDelusion": "mental_state_abnormal" in categories,
+            "protectionLine": "113" if protection_event else None,
         },
     }

@@ -71,6 +71,170 @@ def process_request(connection, request):
 
 
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
+import notify as guardian_notify  # 守護腦命中 high/critical 時的內部安全告警（Slack #沐寧-告警 kind=voice）；送不出去就默默記日誌，不影響通話
+
+
+# ============================================================================
+# 守護腦接回語音線（batch 0 - 第二批 - 2026-07-12）
+# ----------------------------------------------------------------------------
+# 語音線是 Gemini Live 直接串流，沒有「先想好再回話」的餘裕，守護腦在這裡只能「並行盯字幕」：
+#   - 用戶字幕（input_transcription）＋寧寧自己的字幕（output_transcription）一到就丟去背景看一眼
+#   - 絕不擋音訊管線：關鍵字判讀（CPU-only）與記錄/告警（會打 Supabase/Slack，有網路 I/O）
+#     一律用 asyncio.to_thread／asyncio.create_task 丟到背景，from_live() 主迴圈永遠先把這一包音訊送出去、
+#     不等守護腦判完
+#   - 命中 high/critical 才動作：一記一筆安全事件（沿用現有 audit/product event 機制，跟 /chat 文字線同一張表、
+#     同一個 admin 後台看得到）二內部安全告警（Slack，不外洩內容，只送等級/類別）三排一句安全導引，等這一輪
+#     自然講完（turn_complete）才送給寧寧，讓她「下一句」自然轉向轉介——不是插話攔截「這一句」（Live API
+#     語意上做不到，中途硬插一個新 turn 會撞正在跑的即時音訊輪，行為未定義，比不做更危險）
+#   - 誠實面對殘留風險：這是「事後極快監聽＋下一句補救」，不是「攔截阻止這一句」。用戶當下正在飛出去的那句話
+#     擋不住；critical 情況下，寧寧本來就有 chat_engine.RED 當底線（session 開場就給了），這一層是加固、不是唯一防線。
+# ============================================================================
+_GUARDIAN_CUE_BY_CATEGORY = {
+    "self_harm_crisis": (
+        "使用者剛剛的話透露出可能想傷害自己／不想活的念頭。接下來這句要溫柔但堅定地接住這份情緒，"
+        "不要說教、不要問「為什麼會這樣想」，改用一兩句安全確認（像是「你現在身邊有沒有人可以陪你」「你現在安全嗎」），"
+        "自然帶到可以撥打安心專線 1925（24 小時）或找信任的家人陪伴；語氣沉穩、不要慌張、一次別講太多。"
+    ),
+    "harm_others_crisis": (
+        "使用者剛剛的話透露出想傷害別人的念頭。接下來這句要保持冷靜、不批判，先關心他和對方現在是否安全、是否獨處，"
+        "不要深究他為什麼這樣想，溫和引導找信任的人或撥打 110/119 協助，不要順著情緒火上加油。"
+    ),
+    "mental_state_abnormal": (
+        "使用者剛剛的話聽起來像是有被監控／被害／幻聽這類感受。接下來這句不要確認也不要否定那件事是不是真的發生，"
+        "先接住他的不安（像「這種感覺一定讓你很不安」），保持中立（像「我沒辦法確認這件事，但我相信你現在的害怕是真的」），"
+        "再溫和拉回安全、鼓勵找信任的人或醫生一起看看；絕對不要追問細節、也不要說「你想太多了」。"
+    ),
+    "protection_event": (
+        "使用者剛剛的話透露出可能被家暴／遺棄照護疏忽／財務剝削。接下來這句先穩穩接住、不追問細節，"
+        "溫和問他現在是否安全、身邊有沒有讓他害怕的人，再告訴他有一支 24 小時保護專線 113 可以幫忙、也會保密，"
+        "問他要不要陪他記下來；這件事先不要建議他去找家人幫忙（傷害他的人可能就是家人），改往 113 或其他信任的人。"
+    ),
+    "medical_emergency_signal": (
+        "使用者剛剛的話像是身體出現緊急狀況（例如胸痛、喘不過氣、昏倒、中風徵兆）。接下來這句要立刻放下其他話題，"
+        "用一兩句關切確認狀況，並堅定建議現在就打 119 或找人幫忙，不要拖、不要輕描淡寫。"
+    ),
+}
+
+
+def guardian_redirect_cue(categories, risk=None, policy=None):
+    """使用者字幕命中 high/critical，排一句安全導引，讓寧寧下一句自然轉向轉介（不是插話攔截這一句）。"""
+    lines = [_GUARDIAN_CUE_BY_CATEGORY[c] for c in categories if c in _GUARDIAN_CUE_BY_CATEGORY]
+    if not lines:
+        lines = ["使用者剛剛的話可能碰到需要謹慎處理的安全界線，接下來這句話要溫和、不批判、把話題帶回安全與尋求真人協助的方向。"]
+    return (
+        "（系統安全提示，絕對不要唸出這段、也不要提到「系統」「安全提示」「守護腦」這些詞：" + "".join(lines) +
+        "這句提示只給你看，不要提到「提示」兩個字，用你自己的口吻自然接下去。）"
+    )
+
+
+def guardian_ai_correction_cue(categories, risk=None, policy=None):
+    """寧寧自己講出來的字幕命中 high/critical，排一句自我校正，讓她下一句悄悄拉回安全（軟提醒，不硬認錯）。
+
+    保守設計：字幕比對是關鍵字層級，寧寧為了同理而覆述使用者原話也可能誤觸，
+    所以這句是「再次確認有做到安全原則」的溫和提醒，即使是誤觸也不會講出奇怪或委屈的話。
+    """
+    return (
+        "（系統安全提示，絕對不要唸出這段：接下來這句話，請再次確認你有做到，不強化任何被監控或被害這類說法、"
+        "不否定他的感受、不建議停藥或給醫療判斷、遇到受暴或被剝削的情況不要主張自己去告訴家人改講 113、"
+        "把話題自然帶回安全與鼓勵尋求真人協助。如果你剛剛已經有做到，就自然接著聊，不用道歉、不用提起這件事。）"
+    )
+
+
+def guardian_scan_text(text):
+    """純函式：一句字幕丟進去，回傳守護腦判讀結果。不做任何 I/O、不碰 session，方便單元測試/語音線模擬。"""
+    try:
+        return server.model_router.guardian_evaluate_response({"text": text, "effort": "quick"})
+    except Exception:
+        return None
+
+
+def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None):
+    """side effect 段（會打 Supabase/Slack，一律在背景執行緒跑）：
+    一記一筆安全事件，沿用既有 audit/product event 機制（跟 /chat 文字線同一張表、同一個 admin 後台看得到），
+    多帶 protectionEvent／familyNotificationCandidate／protectionLine／who／source 幾個欄位，
+    方便未來做「真的推播家人」時直接查得到（現在還沒有主動推播家人的功能，這裡先把料記好）。
+    二內部安全告警（Slack #沐寧-告警），只送等級/類別，不送逐字稿、不送個資。
+    record_fn / alert_fn 可注入假函式做測試（語音線模擬），預設用 server.append_product_event / notify.alert。
+    """
+    risk = (result or {}).get("risk") or {}
+    policy = (result or {}).get("responsePolicy") or {}
+    level = risk.get("level") or "none"
+    categories = risk.get("categories") or []
+    if risk.get("requiresAuditEvent"):
+        rec = record_fn or server.append_product_event
+        try:
+            rec({
+                "eventName": "guardian_risk_evaluated",
+                "source": "live_voice",
+                "properties": {
+                    "riskLevel": level,
+                    "categories": categories,
+                    "analyticsExcluded": True,
+                    "source": "live_voice",
+                    "who": who,
+                    "protectionEvent": bool(risk.get("protectionEvent")),
+                    "familyNotificationCandidate": bool(policy.get("familyNotificationCandidate")),
+                    "protectionLine": policy.get("protectionLine"),
+                },
+            })
+        except Exception as e:
+            _diag(cid, "guardian.record_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+    if risk.get("requiresHumanEscalation"):
+        al = alert_fn or guardian_notify.alert
+        try:
+            al(
+                "voice",
+                "guardian:%s" % ((categories or ["-"])[0]),
+                "level=%s who=%s categories=%s protectionEvent=%s familyNotificationCandidate=%s" % (
+                    level, who, ",".join(categories) or "-",
+                    risk.get("protectionEvent"), policy.get("familyNotificationCandidate"),
+                ),
+            )
+        except Exception as e:
+            _diag(cid, "guardian.alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+
+async def guardian_watch(cid, who, text, st, session):
+    """背景任務：非同步跑守護腦判讀 + 記錄/告警 +（high/critical）排隊安全導引。絕不擋音訊管線。"""
+    try:
+        result = await asyncio.to_thread(guardian_scan_text, text)
+        if not result:
+            return
+        risk = (result or {}).get("risk") or {}
+        level = risk.get("level") or "none"
+        categories = tuple(risk.get("categories") or [])
+        await asyncio.to_thread(guardian_record_and_alert, who, cid, result)
+        if level not in ("high", "critical"):
+            return
+        flagged = st["user_flagged"] if who == "user" else st["ai_flagged"]
+        if categories in flagged:
+            return
+        flagged.add(categories)
+        policy = (result or {}).get("responsePolicy") or {}
+        _diag(cid, "guardian.hit", who=who, level=level, categories=",".join(categories) or "-",
+              protection=risk.get("protectionEvent"), family=policy.get("familyNotificationCandidate"))
+        cue = (guardian_ai_correction_cue if who == "ai" else guardian_redirect_cue)(categories, risk, policy)
+        cues = st["pending_cues"]
+        if len(cues) < 2:
+            cues.append(cue)
+    except Exception as e:
+        _diag(cid, "guardian.watch_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+
+async def guardian_flush_pending_cue(cid, session, st):
+    """在天然的輪替空檔（模型這一輪講完、turn_complete）送出排隊的安全導引，不是插話攔截正在講的這一句。"""
+    pending = st.get("pending_cues") or []
+    st["pending_cues"] = []
+    if not pending:
+        return
+    try:
+        await session.send_client_content(
+            turns=types.Content(role="user", parts=[types.Part(text="\n".join(pending))]),
+            turn_complete=True,
+        )
+        _diag(cid, "guardian.cue_sent", count=len(pending))
+    except Exception as e:
+        _diag(cid, "guardian.cue_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
 def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0):
@@ -284,7 +448,9 @@ async def handle(ws):
     cid = _CID["n"]
     t0 = time.monotonic()
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False,
-          "face_ws": None, "face_audio_url": None}   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
+          "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
+          "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
+          "pending_cues": [], "bg_tasks": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集
     _diag(cid, "connected", name=name or "-", char=char)
     try:
         async with client.aio.live.connect(model=MODEL, config=live_config(char, name, mood, topics, user, location, allow_reminders, fam)) as session:
@@ -458,9 +624,13 @@ async def handle(ws):
                             ot = getattr(sc, "output_transcription", None)
                             if ot and getattr(ot, "text", None):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": ot.text}))
+                                st["ai_buf"] = (st["ai_buf"] + ot.text)[-200:]
+                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
                             it = getattr(sc, "input_transcription", None)
                             if it and getattr(it, "text", None):
                                 await ws.send(json.dumps({"type": "caption", "who": "user", "text": it.text}))
+                                st["user_buf"] = (st["user_buf"] + it.text)[-200:]
+                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
                             if getattr(sc, "interrupted", False):
                                 _diag(cid, "node.interrupted")
                                 await ws.send(json.dumps({"type": "interrupted"}))
@@ -476,6 +646,13 @@ async def handle(ws):
                                 turn_out = 0
                                 st["await_first"] = True
                                 await ws.send(json.dumps({"type": "turn_complete"}))
+                                # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
+                                st["user_buf"] = ""
+                                st["ai_buf"] = ""
+                                st["user_flagged"] = set()
+                                st["ai_flagged"] = set()
+                                if st.get("pending_cues"):
+                                    st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                         # AI 決定「幫你設提醒」→ 把指令送給 App 執行，並回覆 AI 讓她口頭確認
                         tc = getattr(msg, "tool_call", None)
                         if tc and getattr(tc, "function_calls", None):
@@ -508,6 +685,9 @@ async def handle(ws):
     except Exception as e:
         _diag(cid, "node.error", err=f"{type(e).__name__}:{str(e)[:80]}")
     finally:
+        for t in st.get("bg_tasks", []):
+            if not t.done():
+                t.cancel()
         fw = st.get("face_ws")
         if fw is not None:
             try:
