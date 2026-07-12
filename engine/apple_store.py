@@ -14,8 +14,8 @@ PRODUCTS = {
     "net.munea.app.points.1800": {"kind": "points", "points": 1800},
     "net.munea.app.plus.monthly": {"kind": "subscription", "plan": "plus", "monthlyPoints": 200},
     "net.munea.app.plus.yearly": {"kind": "subscription", "plan": "plus", "monthlyPoints": 200},
-    "net.munea.app.pro.monthly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 500},
-    "net.munea.app.pro.yearly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 500},
+    "net.munea.app.pro.monthly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 400},
+    "net.munea.app.pro.yearly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 400},
 }
 
 

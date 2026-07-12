@@ -63,6 +63,19 @@ class AppleStoreVerificationTests(unittest.TestCase):
         self.assertEqual(result.points, 200)
         self.assertEqual(result.kind, "points")
 
+    def test_pro_subscription_uses_current_monthly_allowance(self):
+        result = apple_store.verify_transaction(
+            "header.payload.signature",
+            AUTH_USER,
+            verifiers=[FakeVerifier(decoded_transaction(
+                productId="net.munea.app.pro.monthly",
+                expiresDate=1780000000000,
+            ))],
+        )
+        self.assertEqual(result.plan, "pro")
+        self.assertEqual(result.points, 400)
+        self.assertEqual(result.kind, "subscription")
+
     def test_invalid_signature_fails_closed(self):
         with self.assertRaisesRegex(apple_store.AppleStoreVerificationError, "apple_signature_verification_failed"):
             apple_store.verify_transaction(
