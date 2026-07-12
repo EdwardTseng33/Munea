@@ -1215,6 +1215,7 @@ const Avatar = {
   },
   feed(buf) { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send(buf); } catch (e) {} },
   reset() { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send('reset'); } catch (e) {} },
+  finish() { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send('finish'); } catch (e) {} },
   // 同線：把臉那條線多帶的聲音軌接到 faceAud 播出，並持續量音量（給 LiveVoice 3 秒保底判斷用）
   _attachFaceAudio(track) {
     try {
@@ -1285,6 +1286,33 @@ document.addEventListener('DOMContentLoaded', () => {
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
+  _resumeAudio() {
+    [this.ac, this.playCtx].forEach(ctx => {
+      try { if (ctx && ctx.state === 'suspended') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
+    });
+  },
+  _setMicOpen(open) {
+    this.micOpen = !!open;
+    clearTimeout(this._micWatchT);
+    if (!this.micOpen) return;
+    this._resumeAudio();
+    const sentAtOpen = this._micPackets || 0;
+    this._micWatchT = setTimeout(() => {
+      if (!this.micOpen || (this._micPackets || 0) > sentAtOpen) return;
+      this._resumeAudio();
+      try { trackProductEvent('voice_mic_stalled', { audioState: this.ac && this.ac.state, trackState: this.mic && this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState }); } catch (e) {}
+      setCallHint('收音還沒啟動，請點一下畫面');
+      if (!this._micGestureBound) {
+        this._micGestureBound = true;
+        const recover = () => {
+          this._micGestureBound = false;
+          this._resumeAudio();
+          setCallHint('我在聽，你說吧');
+        };
+        try { document.getElementById('chat').addEventListener('click', recover, { once: true }); } catch (e) {}
+      }
+    }, 1800);
+  },
   greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；招呼講完才開麥（乾淨第一句）
   nudge(level) { try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ type: 'nudge', level: level || 1 })); } catch (e) {} },   // 使用者一直沒講話 → 請 AI 溫柔提醒（省點 · Edward 2026-07-10）
   // 掛斷時把整通對話送去萃取長期記憶（讓「聊聊」講的也記得住 · Edward 2026-07-10）——跟文字聊天同一條記憶入口
@@ -1318,7 +1346,7 @@ const LiveVoice = {
       return;
     }
     this.speaking = false; this.playLevel = 0;
-    if (this._openMicAfterGreet) { this.micOpen = true; this._openMicAfterGreet = false; }
+    if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
     if (this.onListen) this.onListen();
   },
   async start(onListen, onSpeak, onDrop) {
@@ -1351,20 +1379,28 @@ const LiveVoice = {
     this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
-    this._playoutUntil = 0; this._newAvatarTurn = true;
+    this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0;
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
+    // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
+    // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
+    try {
+      this.playCtx = new AudioContext({ sampleRate: 24000 }); this.playHead = this.playCtx.currentTime;
+      this.ac = new AudioContext(); this._resumeAudio();
+    } catch (e) { this.on = false; return false; }
+    const micPromise = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      .then(stream => ({ stream })).catch(error => ({ error }));
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
     return await new Promise(resolve => {
       let settled = false;
       const done = ok => { if (!settled) { settled = true; resolve(ok); } };
       this.ws.onopen = async () => {
-        this.playCtx = new AudioContext({ sampleRate: 24000 }); this.playHead = this.playCtx.currentTime;
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
-        try { this.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-        catch (e) { setCallHint('拿不到麥克風，請到設定允許'); done(true); return; }
-        this.ac = new AudioContext();
+        const micResult = await micPromise;
+        if (!micResult.stream) { setCallHint('拿不到麥克風，請到設定允許'); try { this.ws.close(); } catch (e) {} done(false); return; }
+        this.mic = micResult.stream;
+        this._resumeAudio();
         const src = this.ac.createMediaStreamSource(this.mic);
         this.proc = this.ac.createScriptProcessor(4096, 1, 1);
         src.connect(this.proc); this.proc.connect(this.ac.destination);
@@ -1377,7 +1413,7 @@ const LiveVoice = {
           this.micLevel = Math.min(1, Math.sqrt(s / inp.length) * 8);   // 即時音量→收音波頻高度
           if (!this.ws || this.ws.readyState !== 1) return;
           const buf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
-          this.ws.send(buf);
+          this.ws.send(buf); this._micPackets = (this._micPackets || 0) + 1;
         };
         if (this.onConnecting) this.onConnecting();   // 線接上了、腦還在開機 → 顯示「撥通中」載入動態
         done(true);
@@ -1403,8 +1439,12 @@ const LiveVoice = {
               if (!this._topicSaved) {
                 // 首頁「記得你說…」的在地記憶：抓這通電話你說的第一句話
                 this._userBuf = (this._userBuf || '') + o.text;
-                const tp = this._userBuf.replace(/\s+/g, '').slice(0, 20);
-                if (tp.length >= 6) { try { localStorage.setItem('munea.lastTopic', tp); } catch (e3) {} this._topicSaved = true; }
+                // 只存「乾淨、像一句話」的內容當首頁話題，擋語音辨識亂碼／英數雜訊（Edward 2026-07-12）
+                const clean = this._userBuf.replace(/\s+/g, '');
+                const cjk = (clean.match(/[一-龥]/g) || []).length;
+                const looksClean = clean.length >= 5 && clean.length <= 16 && (cjk / clean.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(clean) && (new Set(clean).size / clean.length) >= 0.5;
+                if (looksClean) { try { localStorage.setItem('munea.lastTopic', clean.slice(0, 16)); } catch (e3) {} this._topicSaved = true; }
+                else if (clean.length >= 24) { this._topicSaved = true; }   // 累積夠長仍不乾淨＝這通沒有適合話題、別硬塞亂碼
               }
             }
             if (o.type === 'turn_complete') {
@@ -1416,6 +1456,7 @@ const LiveVoice = {
                 if (nt) this._transcript.push({ role: 'assistant', text: nt });
                 this._userTurn = '';
               } catch (eT) {}
+              Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
               this._newAvatarTurn = true;
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
@@ -1506,7 +1547,8 @@ const LiveVoice = {
   stop() {
     this.on = false;
     this.ready = false;
-    clearTimeout(this._speakTimer); this._playoutUntil = 0; this._newAvatarTurn = true;
+    clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
+    this.micOpen = false; this._openMicAfterGreet = false;
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
@@ -2097,7 +2139,10 @@ function setupAuthControls() {
     //   ④ 之後每次聊天都會更新話題，這句會一直跟著你們的對話變
     const nm = (typeof cname === 'function' ? cname() : '寧寧');
     const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
-    const topic = (localStorage.getItem('munea.lastTopic') || '').trim();
+    // 顯示前再過濾一次：舊版可能已存過亂碼，不乾淨就當沒話題、退回乾淨招呼（Edward 2026-07-12）
+    const _topicRaw = (localStorage.getItem('munea.lastTopic') || '').trim();
+    const _tcjk = (_topicRaw.match(/[一-龥]/g) || []).length;
+    const topic = (_topicRaw.length >= 5 && _topicRaw.length <= 16 && (_tcjk / _topicRaw.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(_topicRaw) && (new Set(_topicRaw).size / _topicRaw.length) >= 0.5) ? _topicRaw : '';
     let ask = '來跟我聊聊今天？';
     if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
     else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
@@ -2105,7 +2150,7 @@ function setupAuthControls() {
     let line;
     if (!lastAt) line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
     else if (topic) line = '記得你說「' + topic + '」——' + ask;
-    else line = '上次跟你聊得很開心——' + ask;
+    else line = '上次聊得很開心，我都記得你——' + ask;
     msg.textContent = line;
     const _ih = $('#faceIdleHi'); if (_ih) _ih.textContent = line;
   }
@@ -3094,7 +3139,7 @@ function connectCall() {
         try { FaceIdle.stop(); } catch (e) {}
         LiveVoice.greet();                   // 管線穩了才請她主動開口（招呼講完才開麥）
       }, _greetDelay);
-      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice.micOpen = true; LiveVoice._openMicAfterGreet = false; } }, 6000 + _greetDelay);   // 開麥保底順延（別在她還沒開口就開麥）
+      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice._setMicOpen(true); LiveVoice._openMicAfterGreet = false; } }, 6000 + _greetDelay);   // 開麥保底順延（別在她還沒開口就開麥）
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。

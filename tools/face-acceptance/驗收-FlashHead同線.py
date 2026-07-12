@@ -6,9 +6,11 @@ import numpy as np, requests, websockets
 from PIL import Image
 from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
 
-# 用法：python 驗收-FlashHead同線.py [目標門牌]（不帶=Modal dev；帶了就打指定機器，例 RunPod/Glows）
+# 用法：python 驗收-FlashHead同線.py [目標門牌] [角色代號] [送音秒數]
 BASE = (sys.argv[1].rstrip("/") if len(sys.argv) > 1
         else "https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run")
+CHAR = sys.argv[2] if len(sys.argv) > 2 else "a05"
+DURATION_S = float(sys.argv[3]) if len(sys.argv) > 3 else 6.0
 KEY = open(r"E:\Claude\Munea\deploy\.munea-app-key", encoding="utf-8").read().strip()
 WAV = r"E:\Claude\Munea\engine\nening-reply-1.wav"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sameline_fh")
@@ -56,7 +58,7 @@ async def main():
     for _ in range(60):
         if pc.iceGatheringState == "complete": break
         await asyncio.sleep(0.05)
-    r = requests.post(f"{BASE}/offer", params={"key": KEY},
+    r = requests.post(f"{BASE}/offer", params={"key": KEY, "char": CHAR},
                       json={"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}, timeout=30)
     ans = r.json()
     if "error" in ans: print("offer error", ans); return
@@ -73,13 +75,14 @@ async def main():
     t_speak = time.monotonic() - T0
     print(f"[t] === 大坨倒真語音起點 t={t_speak:.2f}s ===", flush=True)
     sent = 0
-    while sent < int(6.0 * sr):
+    while sent < int(DURATION_S * sr):
         raw = w.readframes(int(0.2 * sr))
         if not raw: break
         await aud.send(raw); sent += int(0.2 * sr)
         await asyncio.sleep(0.01)
     w.close()
-    await asyncio.sleep(9.0)   # 讓 6 秒的話演完
+    await aud.send("finish")   # 明確要求服務補算最後不足一個模型 chunk 的句尾
+    await asyncio.sleep(max(4.0, DURATION_S + 3.0))   # 讓整句與最後補算塊演完
     stop["v"] = True
     await aud.close(); await pc.close()
 

@@ -234,6 +234,7 @@ class FlashHead:
                 self._idle_due = 0.0
                 self._idle_on = False
                 self._round_pending = False
+                self._finish_pending = False
                 # 2026-07-11 A案小刀1：世代號——每次 reset() +1。GPU 上跑到一半的舊塊
                 # 完成時比對世代號，變了就整塊丟棄，不讓上一輪聲畫漏進新一輪
                 # （治「掛斷重撥她一接通就繼續講上一段」「插話後又冒半句舊話」）。
@@ -273,6 +274,7 @@ class FlashHead:
                     # 2026-07-11 A案小刀1：世代號 +1——在 GPU 上跑到一半的舊塊，跑完後
                     # 看到世代變了就自己丟棄（見 _gen_chunk 尾端比對），舊聲畫進不了新佇列。
                     self._epoch += 1
+                    self._finish_pending = False
                     # 2026-07-11 A案小刀1：8 秒聲音記憶窗整個歸零重填（官方每輪 run 開始
                     # audio_dq 就是全零起步）。舊碼留著上一輪最後 0.36s 音尾，新一輪第一塊
                     # 的嘴型會被舊語音牽著走＝「下一輪開頭嘴亂動／像在接上一段」。
@@ -281,7 +283,15 @@ class FlashHead:
                 outer.audio_out.clear()
                 print("[feeder] reset(turn boundary) epoch=" + str(self._epoch), flush=True)
 
-            def _gen_chunk(self, chunk_16k):
+            def finish(self):
+                """Flush the final sub-chunk after the client confirms this speech turn ended."""
+                with self.lock:
+                    self._finish_pending = bool(len(self.acc))
+                    partial_samples = len(self.acc)
+                if self._finish_pending:
+                    print("[feeder] finish requested partial_samples=" + str(partial_samples), flush=True)
+
+            def _gen_chunk(self, chunk_16k, valid_samples=None):
                 t_chunk_ready = time.time()
                 # 2026-07-11 A案小刀1：開跑前先記下世代號——跟 audio_dq 進料包在同一把鎖裡，
                 # 這樣「reset 歸零記憶窗」和「這塊進料」一定分出先後：reset 在後＝整窗連這塊
@@ -313,7 +323,9 @@ class FlashHead:
                               + " -> " + str(self._epoch) + ")", flush=True)
                         return
                 sink.push_many(frames, t_frames_ready, outer.tgt_fps)
-                pcm16 = np.clip(chunk_16k * 32768.0, -32768, 32767).astype(np.int16)
+                if valid_samples is None:
+                    valid_samples = len(chunk_16k)
+                pcm16 = np.clip(chunk_16k[:valid_samples] * 32768.0, -32768, 32767).astype(np.int16)
                 outer.audio_out.push(pcm16)
                 if self._round_pending:
                     self._round_pending = False
@@ -331,16 +343,24 @@ class FlashHead:
                             # 建立抖動緩衝墊；滿了才停等播放消化。播放端(FlashHeadAudioTrack)仍照即時 pts 放、不會變快。
                             ahead_s = outer.audio_out.depth_samples / SR_ENG
                             if ahead_s < MAX_AHEAD_S:
-                                todo = self.acc[:cs].copy()
+                                todo = (self.acc[:cs].copy(), cs)
                                 self.acc = self.acc[cs:]
                                 self.consumed += cs
+                        elif self._finish_pending and 0 < len(self.acc) < cs:
+                            valid = len(self.acc)
+                            padded = np.zeros(cs, dtype=np.float32)
+                            padded[:valid] = self.acc
+                            self.acc = np.zeros(0, dtype=np.float32)
+                            self._finish_pending = False
+                            self.consumed += valid
+                            todo = (padded, valid)
                     if todo is not None:
                         if self._idle_on:
                             self._idle_on = False
                             sink.clear()
                             outer.audio_out.clear()
                             print("[feeder] real audio arrived, stop idle feed", flush=True)
-                        self._gen_chunk(todo)
+                        self._gen_chunk(todo[0], todo[1])
                         continue
                     now = time.time()
                     with self.lock:
@@ -606,6 +626,8 @@ class FlashHead:
                         outer.feeder.push24k(msg["bytes"])
                     elif msg.get("text") == "reset":
                         outer.feeder.reset()
+                    elif msg.get("text") == "finish":
+                        outer.feeder.finish()
                     elif msg.get("type") == "websocket.disconnect":
                         break
             except WebSocketDisconnect:

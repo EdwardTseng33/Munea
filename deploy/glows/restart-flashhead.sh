@@ -4,7 +4,7 @@ set -euo pipefail
 PY=/root/miniconda3/envs/workenv/bin/python
 APP=/root/flashhead_server.py
 LOG=/root/flashhead.log
-PATTERN="^${PY} ${APP}$"
+PATTERN="^${PY}( -u)? ${APP}$"
 
 pid="$(pgrep -fo "$PATTERN" || true)"
 if [[ -n "$pid" && -r "/proc/$pid/environ" ]]; then
@@ -16,7 +16,10 @@ if [[ -n "$pid" && -r "/proc/$pid/environ" ]]; then
     kill -0 "$pid" 2>/dev/null || break
     sleep 0.2
   done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -9 "$pid"
+  fi
 fi
 
-nohup "$PY" "$APP" >"$LOG" 2>&1 &
+nohup "$PY" -u "$APP" >"$LOG" 2>&1 &
 echo $! > /root/flashhead.pid
