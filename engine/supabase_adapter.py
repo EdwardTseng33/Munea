@@ -64,6 +64,7 @@ class SupabaseAdapter:
         self.account_id = identity.get("accountId") or identity.get("account_id") or self.env.get("MUNEA_SUPABASE_ACCOUNT_ID") or ""
         self.person_id = identity.get("personId") or identity.get("person_id") or self.env.get("MUNEA_SUPABASE_PERSON_ID") or ""
         self.family_group_id = identity.get("familyGroupId") or identity.get("family_group_id") or self.env.get("MUNEA_SUPABASE_FAMILY_GROUP_ID") or ""
+        self.auth_user_id = identity.get("authUserId") or identity.get("auth_user_id") or ""
 
     def configured(self):
         return self.provider == "supabase" and bool(self.url) and bool(self.service_key)
@@ -71,6 +72,89 @@ class SupabaseAdapter:
     def payload_account_id(self, value=None):
         """Never trust a client-supplied tenant id on an authenticated request."""
         return self.account_id if self.request_scoped else (value or self.account_id)
+
+    def delete_scoped_account(self, auth_user_id):
+        """Permanently delete an owner account and its Supabase Auth identity."""
+        if not self.enabled() or not self.request_scoped:
+            raise RuntimeError("Account deletion requires a request-scoped Supabase identity")
+        if not self._is_uuid(auth_user_id) or auth_user_id != self.auth_user_id:
+            raise PermissionError("account_deletion_identity_mismatch")
+
+        owner = self._first(
+            "account_members",
+            {
+                "account_id": f"eq.{self.account_id}",
+                "user_id": f"eq.{auth_user_id}",
+                "role": "eq.owner",
+                "status": "eq.active",
+                "select": "id",
+            },
+        )
+        if not owner:
+            raise PermissionError("account_deletion_owner_required")
+
+        receipt_hash = hashlib.sha256(f"{self.account_id}:{auth_user_id}".encode("utf-8")).hexdigest()
+        self._request(
+            "POST",
+            "audit_events",
+            query={"select": "id"},
+            payload={
+                "account_id": self.account_id,
+                "actor_user_id": auth_user_id,
+                "event_type": "account_deletion_confirmed",
+                "target_table": "accounts",
+                "target_id": self.account_id,
+                "details": {
+                    "receiptHash": receipt_hash,
+                    "scope": "account_and_cascading_personal_data",
+                },
+            },
+            prefer="return=minimal",
+        )
+        deleted = self._request(
+            "DELETE",
+            "accounts",
+            query={"id": f"eq.{self.account_id}", "select": "id"},
+            prefer="return=representation",
+        )
+        if not deleted:
+            raise RuntimeError("Supabase account deletion did not delete an account row")
+
+        auth_deleted = False
+        auth_error = None
+        try:
+            self._delete_auth_user(auth_user_id)
+            auth_deleted = True
+        except Exception as exc:
+            # Personal tables are already gone. Surface cleanup state without
+            # pretending the Auth identity was removed too.
+            auth_error = type(exc).__name__
+
+        return {
+            "accountDeleted": True,
+            "authUserDeleted": auth_deleted,
+            "cleanupRequired": not auth_deleted,
+            "receiptHash": receipt_hash,
+            "authCleanupError": auth_error,
+        }
+
+    def _delete_auth_user(self, auth_user_id):
+        if not self.configured() or not self._is_uuid(auth_user_id):
+            raise RuntimeError("Supabase Auth admin deletion is not configured")
+        url = f"{self.url}/auth/v1/admin/users/{urllib.parse.quote(auth_user_id)}?should_soft_delete=false"
+        headers = {
+            "apikey": self.service_key,
+            "authorization": f"Bearer {self.service_key}",
+            "content-type": "application/json",
+        }
+        req = urllib.request.Request(url, headers=headers, method="DELETE")
+        try:
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                if resp.status not in (200, 204):
+                    raise RuntimeError(f"Supabase Auth user deletion failed: {resp.status}")
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            raise RuntimeError(f"Supabase Auth user deletion failed: {exc.code} {detail}") from exc
 
     def enabled(self):
         return (

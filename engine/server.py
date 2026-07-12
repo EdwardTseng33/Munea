@@ -4262,11 +4262,35 @@ def privacy_export_response(data):
     }
 
 
-def account_deletion_response(data):
+def account_deletion_response(data, auth_gate=None):
     action = (data.get("action") or "status").lower()
     store = load_privacy_requests_store()
     deletion_requests = [r for r in store["requests"] if r["type"] == "account_deletion"]
     if action in ("request", "create"):
+        backend = data_backend()
+        auth_user_id = ((auth_gate or {}).get("auth") or {}).get("authUserId")
+        if backend.enabled():
+            try:
+                result = backend.delete_scoped_account(auth_user_id)
+            except PermissionError as exc:
+                return {
+                    "ok": False,
+                    "status": "rejected",
+                    "error": {"code": str(exc), "requestId": request_id()},
+                    "requiresReauth": True,
+                }
+            if result.get("cleanupRequired"):
+                notify.alert("privacy", "account-deletion", "Personal data deleted; Supabase Auth cleanup required")
+            return {
+                "ok": True,
+                "status": "completed" if not result.get("cleanupRequired") else "data_deleted_auth_cleanup_required",
+                "accountDeleted": bool(result.get("accountDeleted")),
+                "authUserDeleted": bool(result.get("authUserDeleted")),
+                "cleanupRequired": bool(result.get("cleanupRequired")),
+                "receipt": result.get("receiptHash"),
+                "requiresReauth": False,
+                "subscriptionNoticeRequired": True,
+            }
         deletion = append_privacy_request("account_deletion", data)
         deletion_requests.append(deletion)
     latest = deletion_requests[-1] if deletion_requests else None
@@ -4939,7 +4963,7 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/privacy-export":
                 self._json(privacy_export_response(data))
             elif self.path == "/account-deletion":
-                self._json(account_deletion_response(data))
+                self._json(account_deletion_response(data, auth_gate=auth_gate))
             else:
                 self._send(404, "text/plain; charset=utf-8", b"404")
         except json.JSONDecodeError as e:

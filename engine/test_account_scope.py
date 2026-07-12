@@ -44,6 +44,30 @@ class FakeSupabaseAdapter(SupabaseAdapter):
         return None
 
 
+class FakeDeletionAdapter(SupabaseAdapter):
+    def __init__(self, env, identity, role="owner", auth_delete_fails=False):
+        super().__init__(env=env, identity=identity)
+        self.role = role
+        self.auth_delete_fails = auth_delete_fails
+        self.calls = []
+
+    def _first(self, table, query):
+        if table == "account_members" and self.role == "owner":
+            return {"id": "88888888-8888-4888-8888-888888888888"}
+        return None
+
+    def _request(self, method, table, query=None, payload=None, prefer=None):
+        self.calls.append((method, table, payload))
+        if method == "DELETE" and table == "accounts":
+            return [{"id": self.account_id}]
+        return []
+
+    def _delete_auth_user(self, auth_user_id):
+        self.calls.append(("DELETE", "auth.users", {"id": auth_user_id}))
+        if self.auth_delete_fails:
+            raise RuntimeError("simulated auth cleanup failure")
+
+
 class AccountScopeTests(unittest.TestCase):
     def setUp(self):
         self.env = {
@@ -81,6 +105,50 @@ class AccountScopeTests(unittest.TestCase):
 
         admin_adapter = make_adapter(env=self.env)
         self.assertEqual(admin_adapter.payload_account_id(ACCOUNT_B), ACCOUNT_B)
+
+    def test_owner_account_deletion_removes_data_then_auth_user(self):
+        identity = {
+            "accountId": ACCOUNT_A,
+            "personId": PERSON_A,
+            "familyGroupId": FAMILY_A,
+            "authUserId": USER_A,
+        }
+        adapter = FakeDeletionAdapter(self.env, identity)
+        result = adapter.delete_scoped_account(USER_A)
+
+        self.assertTrue(result["accountDeleted"])
+        self.assertTrue(result["authUserDeleted"])
+        self.assertFalse(result["cleanupRequired"])
+        self.assertEqual([call[:2] for call in adapter.calls], [
+            ("POST", "audit_events"),
+            ("DELETE", "accounts"),
+            ("DELETE", "auth.users"),
+        ])
+
+    def test_non_owner_cannot_delete_family_account(self):
+        identity = {
+            "accountId": ACCOUNT_A,
+            "personId": PERSON_A,
+            "familyGroupId": FAMILY_A,
+            "authUserId": USER_A,
+        }
+        adapter = FakeDeletionAdapter(self.env, identity, role="member")
+        with self.assertRaisesRegex(PermissionError, "account_deletion_owner_required"):
+            adapter.delete_scoped_account(USER_A)
+        self.assertEqual(adapter.calls, [])
+
+    def test_auth_cleanup_failure_is_reported_after_personal_data_deletion(self):
+        identity = {
+            "accountId": ACCOUNT_A,
+            "personId": PERSON_A,
+            "familyGroupId": FAMILY_A,
+            "authUserId": USER_A,
+        }
+        adapter = FakeDeletionAdapter(self.env, identity, auth_delete_fails=True)
+        result = adapter.delete_scoped_account(USER_A)
+        self.assertTrue(result["accountDeleted"])
+        self.assertFalse(result["authUserDeleted"])
+        self.assertTrue(result["cleanupRequired"])
 
 
 if __name__ == "__main__":
