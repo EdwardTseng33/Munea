@@ -29,7 +29,7 @@ PERSONA_TEMPLATES = {
         "wisdomStyle": "simple life reflection when invited",
         "topicBiases": ["daily care", "family connection", "health routines", "gentle interests"],
         "boundaryStyle": "softly redirects medical or crisis requests to safe help",
-        "voiceProfile": "Leda",
+        "voiceProfile": "Despina",
         "avatarAsset": "avatars/nening-real-female-full.jpg",
     },
     "companion-real-male": {
