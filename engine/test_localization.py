@@ -28,6 +28,8 @@ class LocalizationTests(unittest.TestCase):
     def test_taiwanese_copy_and_speech_forms_are_separate(self):
         self.assertEqual(localization.speech_text("你卡早捆喔", "zh-TW"), "你咖紮綑喔")
         self.assertEqual(localization.display_text("你咖紮綑喔", "zh-TW"), "你卡早捆喔")
+        self.assertEqual(localization.display_text("你咖 紮 綑喔", "zh-TW"), "你卡早捆喔")
+        self.assertEqual(localization.display_text("你卡早 捆喔", "zh-TW"), "你卡早捆喔")
 
     def test_taiwanese_pronunciation_is_not_applied_to_other_locales(self):
         self.assertEqual(localization.speech_text("卡早捆", "en"), "卡早捆")

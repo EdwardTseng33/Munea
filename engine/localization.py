@@ -1,5 +1,7 @@
 """Locale policy shared by Munea's API, model prompts, and speech synthesis."""
 
+import re
+
 SUPPORTED_LOCALES = ("zh-TW", "en", "ja", "es")
 DEFAULT_LOCALE = "zh-TW"
 _SPEECH_CODES = {"zh-TW": "cmn-TW", "en": "en-US", "ja": "ja-JP", "es": "es-ES"}
@@ -66,7 +68,11 @@ def display_text(text, locale):
     if normalize_locale(locale) != "zh-TW":
         return value
     for display, spoken in _TAIWANESE_SPEECH_FORMS:
-        value = value.replace(spoken, display)
+        # Live transcription may insert spaces between CJK syllables. Limit
+        # whitespace cleanup to verified terms instead of changing all copy.
+        for form in (spoken, display):
+            pattern = r"\s*".join(re.escape(char) for char in form)
+            value = re.sub(pattern, display, value)
     return value
 
 def taiwanese_pronunciation_instruction(locale):
