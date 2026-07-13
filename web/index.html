@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260712-v1263" />
+  <link rel="stylesheet" href="src/styles.css?v=20260713-mumu-v2" />
 </head>
 <body>
 <div class="app-shell">
@@ -470,6 +470,16 @@
       <div class="face-blink"></div>
       <div class="avatar-mouth" id="avatarMouth" aria-hidden="true"><span></span></div>
     </div>
+    <!-- 撥號準備中才顯示：沐沐是可直接點擊、按住拖動的實際逐格動畫，不是載入圖。 -->
+    <div class="mumu-call-stage" data-mumu-stage aria-label="撥號準備中的沐沐">
+      <p class="mumu-call-status" data-mumu-status aria-live="polite">正在安靜陪你</p>
+      <div class="mumu-actor" data-mumu-actor data-phase="idle" role="img" aria-label="沐沐正在準備連線">
+        <div class="mumu-visual">
+          <img data-mumu-image src="mascot/frames/idle-v2/idle-v2-01.png?v=20260713-v2-grid" alt="">
+        </div>
+      </div>
+      <p class="mumu-call-hint" aria-hidden="true">按住沐沐可拖動・快速左右會轉暈</p>
+    </div>
     <div class="face-topscrim" aria-hidden="true"></div>
     <!-- 內頁真版印章（2026-07-11 Edward「封面新內頁舊」事件後立）：顯示網頁內容的真實版本，
          不是 iOS 外殼標籤。截圖看這裡＝確認 Mac 有沒有把最新內容真的包進去。 -->
@@ -865,10 +875,10 @@
       <h2>加值點數</h2>
       <p class="modal-sub">聊天會用點數；點數用完就先停，補了才能繼續。</p>
       <div class="tu-grid">
-        <button class="tu-card" data-p="200"><b>200 點</b><span class="tu-price">NT$600</span><small class="tu-min">約 200 分鐘</small></button>
-        <button class="tu-card on" data-p="500"><b>500 點</b><span class="tu-price">NT$1,400</span><small class="tu-min">約 500 分鐘</small></button>
-        <button class="tu-card" data-p="1000"><b>1,000 點</b><span class="tu-price">NT$2,700</span><small class="tu-min">約 1,000 分鐘</small></button>
-        <button class="tu-card" data-p="1800"><b>1,800 點</b><span class="tu-price">NT$4,700</span><small class="tu-min">約 1,800 分鐘</small></button>
+        <button class="tu-card" data-p="150"><b>150 點</b><span class="tu-price">NT$500</span><small class="tu-min">約 150 分鐘</small></button>
+        <button class="tu-card on" data-p="300"><b>300 點</b><span class="tu-price">NT$1,000</span><small class="tu-min">約 300 分鐘</small></button>
+        <button class="tu-card" data-p="600"><b>600 點</b><span class="tu-price">NT$2,000</span><small class="tu-min">約 600 分鐘</small></button>
+        <button class="tu-card" data-p="1000"><b>1,000 點</b><span class="tu-price">NT$3,000</span><small class="tu-min">約 1,000 分鐘</small></button>
       </div>
       <button class="modal-btn" id="tuBuyBtn" style="margin-top:14px">直接購買</button>
       <p class="modal-sub" style="margin-top:10px">買的點數不會過期；每月送的先用完，才會用到買的。</p>
@@ -911,7 +921,7 @@
             <span class="ppk-save" id="savePro" style="display:none"></span>
             <div class="ppk-who">多位長輩、想讓全家一起照看</div>
             <ul class="ppk-feats">
-              <li>每月 <b>400</b> 點語音陪聊</li>
+              <li>每月 <b>300</b> 點語音陪聊</li>
               <li>健康 7／30 天趨勢全解鎖</li>
               <li>家庭健康圈最多 <b>12 人</b></li>
             </ul>
@@ -922,7 +932,7 @@
             <span class="ppk-save" id="savePlus" style="display:none"></span>
             <div class="ppk-who">照顧一位長輩，基本照護就夠</div>
             <ul class="ppk-feats">
-              <li>每月 <b>200</b> 點語音陪聊</li>
+              <li>每月 <b>150</b> 點語音陪聊</li>
               <li>健康 7／30 天趨勢全解鎖</li>
               <li>家庭健康圈最多 <b>4 人</b></li>
             </ul>
@@ -938,12 +948,12 @@
       <div id="subPoints" style="display:none">
         <p class="sub-fine" style="margin:4px 0 12px">聊天會用點數；用完就先停、補了再聊。方案每月送的點數先用，才用到你買的。</p>
         <div class="tu-grid">
-          <button class="tu-card" data-p="200" type="button"><b>200 點</b><span class="tu-price">NT$600</span><small class="tu-min">約 200 分鐘</small></button>
-          <button class="tu-card on" data-p="500" type="button"><b>500 點</b><span class="tu-price">NT$1,400</span><small class="tu-min">約 500 分鐘</small></button>
-          <button class="tu-card" data-p="1000" type="button"><b>1,000 點</b><span class="tu-price">NT$2,700</span><small class="tu-min">約 1,000 分鐘</small></button>
-          <button class="tu-card" data-p="1800" type="button"><b>1,800 點</b><span class="tu-price">NT$4,700</span><small class="tu-min">約 1,800 分鐘</small></button>
+          <button class="tu-card" data-p="150" type="button"><b>150 點</b><span class="tu-price">NT$500</span><small class="tu-min">約 150 分鐘</small></button>
+          <button class="tu-card on" data-p="300" type="button"><b>300 點</b><span class="tu-price">NT$1,000</span><small class="tu-min">約 300 分鐘</small></button>
+          <button class="tu-card" data-p="600" type="button"><b>600 點</b><span class="tu-price">NT$2,000</span><small class="tu-min">約 600 分鐘</small></button>
+          <button class="tu-card" data-p="1000" type="button"><b>1,000 點</b><span class="tu-price">NT$3,000</span><small class="tu-min">約 1,000 分鐘</small></button>
         </div>
-        <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">直接購買 500 點 · NT$1,400</button>
+        <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">直接購買 300 點 · NT$1,000</button>
         <p class="sub-fine" style="margin-top:10px">買的點數不會過期。</p>
       </div>
     </div>
@@ -1123,7 +1133,7 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260712-v1263"></script>
+  <script src="src/version.js?v=20260713-mumu-v2"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
@@ -1173,7 +1183,8 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260712-v1263"></script>
+  <script src="src/mumu-interactive.js?v=20260713-mumu-v2"></script>
+  <script type="module" src="src/app.js?v=20260713-mumu-v2"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

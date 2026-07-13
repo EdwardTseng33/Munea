@@ -1014,11 +1014,11 @@ function _fhComposite(on, vid) {
       const _bg = document.getElementById('fhBg');   // 全身立繪底圖跟著角色換：擬真女 bg-a05、擬真男 bg-a06
       const _fc = flashheadCharFor(currentChar) || 'a05';
       if (_bg && _bg.getAttribute('src') !== 'flashhead/bg-' + _fc + '.png') _bg.src = 'flashhead/bg-' + _fc + '.png';
-      // 每角色不同顯示框（Edward 2026-07-12：男生臉在原圖較高較小→同 640 卻較軟）：
-      // 男生(a06)用裁緊框 top14%/height50%（臉放大、畫素集中臉上=更清），女生(a05)維持 top8%/height60%。
-      // ⚠ 伺服器 char-a06B 條件圖必須用同一組 % 裁切、比例才對齊不變形（見定案手冊）。
-      const _box = (_fc === 'a06') ? { top: '14%', h: '50%' } : { top: '8%', h: '60%' };
-      ov.style.top = _box.top; ov.style.height = _box.h;
+      // 模型與畫面都使用同一個原生正方形裁切，避免把人物長方形硬壓成 640x640。
+      // a05 y=190、a06 y=209，來源均為 1080x1920；高度由 CSS aspect-ratio 固定為正方形。
+      const _box = (_fc === 'a06') ? { top: '10.885417%' } : { top: '9.895833%' };
+      ov.style.top = _box.top;
+      ov.style.height = '';
       if (vid.parentElement !== ov) { ov.appendChild(vid); try { const p = vid.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
       vid.style.objectFit = ''; vid.style.background = '';
     } else {
@@ -3476,7 +3476,7 @@ function init() {
   // 家庭照護圈
   const CIRCLE_LIMITS = { free: 0, plus: 4, pro: 12 };                       // Plus 最多 4 人、Pro 最多 12 人
   const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', pro: 'Pro' };
-  const PLAN_POINTS = { free: 0, plus: 200, pro: 400 };                       // 每月贈點
+  const PLAN_POINTS = { free: 0, plus: 150, pro: 300 };                       // 每月贈點
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
   // 7/9 正式化：不再預設示範四人家庭——圈子從「只有本人」開始，家人用邀請碼真的加進來
@@ -3971,8 +3971,8 @@ function init() {
   });
   // ===== 訂閱頁：比較表 + 月/年繳切換 + 訂閱鈕（金額為暫定、待 Edward 拍板）=====
   // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
-  const SUB_PRICE = { plus: { month: 599, year: 5750 }, pro: { month: 1199, year: 11510 } };
-  const PT_PRICE = { 200: 600, 500: 1400, 1000: 2700, 1800: 4700 };   // Edward 7/8 定案：越大包每點越省(3.0/2.8/2.7/2.61)
+  const SUB_PRICE = { plus: { month: 599, year: 5750 }, pro: { month: 1199, year: 11500 } };
+  const PT_PRICE = { 150: 500, 300: 1000, 600: 2000, 1000: 3000 };
   let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
   function fmtPrice(plan, cyc) { return 'NT$' + SUB_PRICE[plan][cyc].toLocaleString() + (cyc === 'year' ? '／年' : '／月'); }
   function renderSubUI() {
@@ -3996,7 +3996,7 @@ function init() {
   function renderPlanState() {
     const plan = circlePlan();
     const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
-    const pts = PLAN_POINTS[plan] || 200;
+    const pts = PLAN_POINTS[plan] || 150;
     const sn = $('#setPlanName'); if (sn) sn.textContent = label + ' 方案';
     // 帳號卡的會員身份標籤（FREE/PLUS/PRO）
     const mb = $('#memBadge');
@@ -4114,7 +4114,7 @@ function init() {
       'net.munea.app.plus.monthly': 'plus', 'net.munea.app.plus.yearly': 'plus',
       'net.munea.app.pro.monthly': 'pro', 'net.munea.app.pro.yearly': 'pro'
     };
-    const PT_PID = { 'net.munea.app.points.200': 200, 'net.munea.app.points.500': 500, 'net.munea.app.points.1000': 1000, 'net.munea.app.points.1800': 1800 };
+    const PT_PID = { 'net.munea.app.points.200': 150, 'net.munea.app.points.500': 300, 'net.munea.app.points.1000': 600, 'net.munea.app.points.1800': 1000 };
     if (SUB_PID[pid]) {
       try { localStorage.setItem('munea.plan', SUB_PID[pid]); localStorage.removeItem('munea.planNext'); } catch (e) {}
       trackProductEvent('subscription_purchased', { productId: pid, plan: SUB_PID[pid] });
