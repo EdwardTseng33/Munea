@@ -30,6 +30,9 @@ _RETRY_MESSAGES = {
 _TAIWANESE_SPEECH_FORMS = (
     ("卡早捆", "咖紮綑"),
 )
+_TAIWANESE_TRANSCRIPTION_ALIASES = (
+    ("較早睏", "卡早捆"),
+)
 
 def normalize_locale(locale):
     raw = str(locale or "").strip().replace("_", "-")
@@ -73,6 +76,9 @@ def display_text(text, locale):
         for form in (spoken, display):
             pattern = r"\s*".join(re.escape(char) for char in form)
             value = re.sub(pattern, display, value)
+    for alias, display in _TAIWANESE_TRANSCRIPTION_ALIASES:
+        pattern = r"\s*".join(re.escape(char) for char in alias)
+        value = re.sub(pattern, display, value)
     return value
 
 def taiwanese_pronunciation_instruction(locale):
