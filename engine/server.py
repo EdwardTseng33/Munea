@@ -4783,7 +4783,7 @@ def butler_post_turn_response(data):
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
-    content = (c["style"] or "") + text
+    content = (c["style"] or "") + localization.speech_text(text, locale)
     for m in ("gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"):
         try:
             r = eng.client.models.generate_content(

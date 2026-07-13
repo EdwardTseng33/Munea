@@ -22,12 +22,15 @@ import json
 import time
 import datetime
 import asyncio
-from urllib.parse import quote
+import uuid
+from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 import chat_engine as eng
+import localization
+from call_control_client import CallControlError, post_internal, verify_call_token
 from google import genai
 from google.genai import types
 import websockets
@@ -84,12 +87,50 @@ def _file_response(rel):
     return Response(200, "OK", h, body)
 
 
+def _chat_test_response():
+    """Serve the full app with a local test-only developer session.
+
+    This route is intentionally separate from the production entry point so
+    normal App and web visitors keep their sign-in requirement.  The launcher
+    only links to this route while a developer runs the local voice service.
+    """
+    fp = os.path.join(WEB, "index.html")
+    try:
+        with open(fp, "rb") as f:
+            body = f.read()
+    except OSError:
+        return Response(404, "Not Found", Headers({"Content-Length": "0"}), b"")
+    marker = b'<script src="src/auth.js'
+    config = (
+        b'<script>window.MUNEA_CHAT_TEST=true;window.MUNEA_DEV_CONFIG={enabled:true,'
+        b'allowNonLocalhost:true,autoSignIn:true,skipOnboarding:true,analyticsExcluded:true,'
+        b'authUserId:"00000000-0000-4000-8000-000000000001",'
+        b'email:"chat-test@munea.local",displayName:"Chat Test"};'
+        b'try{localStorage.setItem("munea.consent.crossborder","1");'
+        b'localStorage.setItem("munea.interestsAsked","1");'
+        b'localStorage.setItem("munea.plan","pro");}catch(e){}'
+        b'window.addEventListener("munea:auth-state",function(e){if(e.detail&&e.detail.status==="signed-in")'
+        b'setTimeout(function(){var b=document.getElementById("startCall");if(b)b.click();},150);},{once:true});</script>\n'
+    )
+    if marker not in body:
+        return Response(500, "Internal Server Error", Headers({"Content-Length": "0"}), b"")
+    body = body.replace(marker, config + marker, 1)
+    h = Headers()
+    h["Content-Type"] = "text/html; charset=utf-8"
+    h["Content-Length"] = str(len(body))
+    return Response(200, "OK", h, body)
+
+
 def process_request(connection, request):
     """非 WebSocket 的請求就當靜態網站服務（測試頁＋臉圖等），讓網頁與語音走同一個門。"""
     if request.headers.get("Upgrade", "").lower() == "websocket":
         return None
     path = request.path.split("?")[0].lstrip("/")
-    if path in ("", "index.html"):
+    if path in ("chat-test", "chat-test/"):
+        return _chat_test_response()
+    if path in ("app", "app/", "app.html"):
+        path = "index.html"
+    elif path in ("", "index.html"):
         path = "live-voice-test.html"
     return _file_response(path)
 
@@ -312,6 +353,7 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "（現在是即時語音通話。剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
         "句子短、口語、一次一兩句、講完停下來等對方回應。）"
     )
+    base += localization.taiwanese_pronunciation_instruction("zh-TW")
     # 熟識度分寸貫穿整段對話（不只開場）：越不熟越收斂、越熟越自在（Edward 2026-07-12）
     if fam < 1:
         base += "（你們還不太熟，這是頭幾通電話：整段對話都要特別收斂——話少、溫和、讓他主導，不要熱情轟炸、不要一直找話題硬聊、不要連環問。他問你、或聊到他有興趣的才多說一點。）"
@@ -444,16 +486,31 @@ async def handle(ws):
     location = None
     allow_reminders = False   # 只有帶 ?cap_rem=1 的新版 App 才開放「幫你設提醒」工具（防舊版假成功）
     fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
-    gate_key = ""   # 這通電話用的通行碼（跟 App 一致）；伺服器對伺服器接雲端臉時原封不動帶過去，不必客端再傳一次
+    gate_key = ""   # Legacy 1.0.1 transition only.
+    call_token = ""
+    call_payload = {}
+    call_release_reason = ""
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
         _q = parse_qs(urlparse(path).query)
+        call_token = (_q.get("token") or [""])[0].strip()
+        token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
+        voice_shard_id = os.environ.get("MUNEA_VOICE_SHARD_ID", "").strip()
+        control_required = os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") == "1"
+        if call_token:
+            call_payload = verify_call_token(call_token, token_secret, voice_shard_id=voice_shard_id)
+        elif control_required:
+            try:
+                await ws.close(code=4403, reason="call token required")
+            except Exception:
+                pass
+            return
         # 薄門（正式上線 · 7/9 Edward 拍板）：環境設了 MUNEA_APP_KEY 就要對通行碼（?key=）。
         # App 自動帶、用戶無感；擋的是「拿到網址直接來撥」的陌生流量。本機沒設＝不啟用、行為不變。
         _gate = os.environ.get("MUNEA_APP_KEY", "").strip()
         gate_key = _gate   # 存起來給「聲音直接送去雲端臉」那條 server-to-server 連線用（同一把薄門鑰匙）
-        if _gate:
+        if _gate and not call_payload:
             kvals = _q.get("key")
             if not kvals or kvals[0] != _gate:
                 try:
@@ -513,6 +570,21 @@ async def handle(ws):
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
             # 以前瀏覽器一開線就送聲音，但這裡開 Gemini session 要 1~3 秒，
             # 那段聲音會先塞在門口、開門後一口氣灌進去，AI 的斷句判斷就亂了。
+            if call_payload:
+                ready_result = await asyncio.to_thread(
+                    post_internal,
+                    os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
+                    os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
+                    "/v1/internal/calls/ready",
+                    {
+                        "call_id": str(call_payload["call_id"]),
+                        "lease_version": int(call_payload["lease_version"]),
+                        "event_id": "voice-ready-" + uuid.uuid4().hex,
+                        "component": "voice",
+                    },
+                )
+                if not ready_result.get("ok"):
+                    raise CallControlError("voice reservation was rejected: " + str(ready_result))
             try:
                 await ws.send(json.dumps({"type": "ready"}))
             except Exception:
@@ -587,7 +659,7 @@ async def handle(ws):
                     asyncio.create_task(_face_audio_close(fw))
                     _diag(cid, "node.faceaudio_off")
 
-            async def _face_audio_on(url):
+            async def _face_audio_on(url, session_id="", token=""):
                 # App 說「聲音直接幫我送去雲端臉」（方案 B · 2026-07-10）：這裡開一條 server-to-server WS 去 Modal 的
                 # /audio，之後 Gemini 吐回來的聲音同一份 byte 也送這條線——不必再繞手機行動網路上行一趟。
                 # 連不上/斷了都不能拖累語音對話：任何失敗都吞掉，對話照常，只是臉那次不會動（等下一次 on 訊息重試）。
@@ -599,7 +671,12 @@ async def handle(ws):
                 await _face_audio_off()   # 先收掉舊的（網址換了，或上一輪殘留）
                 try:
                     ws_url = url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
-                    ws_url += "/audio?key=" + quote(gate_key, safe="")
+                    query = {"session": session_id}
+                    if token:
+                        query["token"] = token
+                    else:
+                        query["key"] = gate_key
+                    ws_url += "/audio?" + urlencode(query)
                     fw = await websockets.connect(ws_url, max_size=None, open_timeout=5)
                     st["face_ws"] = fw
                     st["face_audio_url"] = url
@@ -644,7 +721,11 @@ async def handle(ws):
                         elif t == "faceaudio":
                             # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
                             if obj.get("on"):
-                                await _face_audio_on(obj.get("url") or "")
+                                await _face_audio_on(
+                                    obj.get("url") or "",
+                                    obj.get("session") or "",
+                                    obj.get("token") or call_token,
+                                )
                             else:
                                 await _face_audio_off()
 
@@ -679,8 +760,9 @@ async def handle(ws):
                         if sc:
                             ot = getattr(sc, "output_transcription", None)
                             if ot and getattr(ot, "text", None):
-                                await ws.send(json.dumps({"type": "caption", "who": "nening", "text": ot.text}))
-                                st["ai_buf"] = (st["ai_buf"] + ot.text)[-200:]
+                                caption_text = localization.display_text(ot.text, "zh-TW")
+                                await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
+                                st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
                             it = getattr(sc, "input_transcription", None)
                             if it and getattr(it, "text", None):
@@ -739,8 +821,24 @@ async def handle(ws):
     except websockets.ConnectionClosed:
         pass
     except Exception as e:
+        call_release_reason = "voice_error"
         _diag(cid, "node.error", err=f"{type(e).__name__}:{str(e)[:80]}")
     finally:
+        if call_payload and call_release_reason:
+            try:
+                await asyncio.to_thread(
+                    post_internal,
+                    os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
+                    os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
+                    f"/v1/internal/calls/{call_payload['call_id']}/release",
+                    {
+                        "lease_version": int(call_payload["lease_version"]),
+                        "event_id": "voice-release-" + uuid.uuid4().hex,
+                        "reason": call_release_reason,
+                    },
+                )
+            except Exception as exc:
+                _diag(cid, "node.control_release_err", err=f"{type(exc).__name__}:{str(exc)[:80]}")
         if _key_idx is not None:
             _release_client(_key_idx)   # 這通結束，把這把鑰匙的空位放回去給下一通
         for t in st.get("bg_tasks", []):

@@ -25,6 +25,21 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(localization.opening_message("en").split()[0], "Hi,")
         self.assertIn("conexión", localization.retry_message("es"))
 
+    def test_taiwanese_copy_and_speech_forms_are_separate(self):
+        self.assertEqual(localization.speech_text("你卡早捆喔", "zh-TW"), "你咖紮綑喔")
+        self.assertEqual(localization.display_text("你咖紮綑喔", "zh-TW"), "你卡早捆喔")
+
+    def test_taiwanese_pronunciation_is_not_applied_to_other_locales(self):
+        self.assertEqual(localization.speech_text("卡早捆", "en"), "卡早捆")
+        self.assertEqual(localization.display_text("咖紮綑", "ja"), "咖紮綑")
+
+    def test_live_pronunciation_instruction_is_explicit_and_conservative(self):
+        instruction = localization.taiwanese_pronunciation_instruction("zh-TW")
+        self.assertIn("卡早捆", instruction)
+        self.assertIn("咖紮綑", instruction)
+        self.assertIn("不要自行猜音", instruction)
+        self.assertEqual(localization.taiwanese_pronunciation_instruction("en"), "")
+
 
 if __name__ == "__main__":
     unittest.main()

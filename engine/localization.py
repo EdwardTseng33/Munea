@@ -22,6 +22,13 @@ _RETRY_MESSAGES = {
     "es": "Estoy teniendo un pequeño problema de conexión. ¿Podemos intentarlo de nuevo en un momento?",
 }
 
+# Keep product copy canonical while giving speech synthesis an explicit,
+# user-verified pronunciation. Add entries conservatively: an incorrect
+# phonetic hint is worse than falling back to natural Taiwan Mandarin.
+_TAIWANESE_SPEECH_FORMS = (
+    ("卡早捆", "咖紮綑"),
+)
+
 def normalize_locale(locale):
     raw = str(locale or "").strip().replace("_", "-")
     if raw in SUPPORTED_LOCALES: return raw
@@ -43,3 +50,33 @@ def reply_language_instruction(locale):
     normalized = normalize_locale(locale)
     emergency = " Do not use Taiwan-specific hotline numbers or Taiwan-only service information; tell the person to contact their local emergency service or a trusted person nearby." if normalized != "zh-TW" else ""
     return "\n[Reply language]\n" + _REPLY_INSTRUCTIONS[normalized] + emergency
+
+def speech_text(text, locale):
+    """Return speech-only text without changing stored or displayed copy."""
+    value = str(text or "")
+    if normalize_locale(locale) != "zh-TW":
+        return value
+    for display, spoken in _TAIWANESE_SPEECH_FORMS:
+        value = value.replace(display, spoken)
+    return value
+
+def display_text(text, locale):
+    """Normalize speech transcriptions back to canonical product copy."""
+    value = str(text or "")
+    if normalize_locale(locale) != "zh-TW":
+        return value
+    for display, spoken in _TAIWANESE_SPEECH_FORMS:
+        value = value.replace(spoken, display)
+    return value
+
+def taiwanese_pronunciation_instruction(locale):
+    """Narrow speech policy for native-audio models such as Gemini Live."""
+    if normalize_locale(locale) != "zh-TW":
+        return ""
+    examples = "；".join(f"「{display}」要唸成「{spoken}」" for display, spoken in _TAIWANESE_SPEECH_FORMS)
+    return (
+        "\n[台語發音]\n"
+        "回覆可使用自然的台灣口語。遇到下列台語詞時，畫面文字仍保留原詞，但實際發音必須依照指定讀法："
+        + examples
+        + "。不要按國語逐字朗讀；若不確定其他台語詞的發音，就改用自然台灣華語表達，不要自行猜音。"
+    )
