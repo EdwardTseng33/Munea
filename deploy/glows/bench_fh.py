@@ -9,6 +9,8 @@ import time
 MODE = sys.argv[1] if len(sys.argv) > 1 else "eager"
 WAV = sys.argv[2] if len(sys.argv) > 2 else "/root/poc-mandarin.wav"
 MAXC = int(sys.argv[3]) if len(sys.argv) > 3 else 40
+CHAR = os.environ.get("MUNEA_FH_BENCH_CHAR", "/root/char-a05B.png")
+EXPECT_SIZE = int(os.environ.get("MUNEA_FH_BENCH_SIZE", "0") or 0)
 
 sys.path.insert(0, "/root/SoulX-FlashHead")
 os.chdir("/root/SoulX-FlashHead")
@@ -20,6 +22,11 @@ import flash_head.src.pipeline.flash_head_pipeline as _fhp
 _fhp.COMPILE_MODEL = (MODE == "compile")
 _fhp.COMPILE_VAE = (MODE == "compile")
 
+import flash_head.inference as _fh_inference
+if EXPECT_SIZE:
+    _fh_inference.infer_params["height"] = EXPECT_SIZE
+    _fh_inference.infer_params["width"] = EXPECT_SIZE
+
 from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
@@ -27,7 +34,7 @@ t0 = time.time()
 pipeline = get_pipeline(world_size=1, ckpt_dir="/models/soulx-flashhead-1.3b",
                         wav2vec_dir="/models/wav2vec2-base-960h", model_type="lite")
 t1 = time.time()
-get_base_data(pipeline, cond_image_path_or_dir="/root/char-a05B.png",
+get_base_data(pipeline, cond_image_path_or_dir=CHAR,
               base_seed=42, use_face_crop=False)
 t2 = time.time()
 
@@ -50,6 +57,7 @@ if wsr != sr:
     wav = np.interp(xi, np.linspace(0, 1, len(wav)), wav).astype("float32")
 
 times = []
+output_shapes = set()
 pos = 0
 n = min(len(wav) // chunk, MAXC)
 first_chunk_s = None
@@ -62,6 +70,10 @@ for i in range(n):
     emb = get_audio_embedding(pipeline, arr, start_idx, end_idx)
     video = run_pipeline(pipeline, emb)
     torch.cuda.synchronize()
+    shape = tuple(int(v) for v in video.shape[-3:])
+    output_shapes.add(shape)
+    if EXPECT_SIZE and shape[:2] != (EXPECT_SIZE, EXPECT_SIZE):
+        raise RuntimeError(f"expected {EXPECT_SIZE}x{EXPECT_SIZE}, got {shape}")
     dt = (time.time() - tc0) * 1000
     times.append(dt)
     if i == 0:
@@ -75,6 +87,7 @@ p95 = ts[max(0, int(len(ts) * 0.95) - 1)]
 gpu = torch.cuda.get_device_name(0)
 print("RESULT", {
     "mode": MODE, "gpu": gpu, "wav": os.path.basename(WAV),
+    "char": os.path.basename(CHAR), "output_shapes": sorted(output_shapes),
     "load_s": round(t1 - t0, 1), "base_s": round(t2 - t1, 1),
     "first_chunk_s": first_chunk_s, "chunks": len(times),
     "budget_ms": round(budget, 1),

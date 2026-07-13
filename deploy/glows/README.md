@@ -11,6 +11,15 @@
 - 重建腳本已修：requirements 必須 `--ignore-installed blinker`；新版 Hugging Face CLI 改用 `hf download`；requirements 會把 torch 換成cu126，最後必須用 `+cu128 --force-reinstall` 校正。
 - 併發碼錶：`deploy/glows/run-concurrent-bench.sh <路數> <塊數> eager|compile`。
 
+## 2026-07-13 RTX 4090 24GB／真768實測定案
+
+- 測試卡：GLOWS控制台區域TW-03（SSH access endpoint為tw-06）；a05／a06推論、服務健康與WebRTC實收皆確認768×768。
+- 官方預設仍鎖512，必須同步改`flash_head.inference.infer_params`的height／width；只上傳768底圖仍會輸出512。
+- 單路：eager p95約627–649ms；compile離線p95約588ms。正式服務compile兩角色共16塊p95約759ms，20.9%餘裕，僅勉強跨過20%門檻。
+- 多路：eager 2路p95約1.35s；compile 2路不穩且最差1.19s；compile 3路約1.61–1.79s、峰值23.9GB。**4090真768容量鎖1人／卡。**
+- WebRTC雖收得到影音雙軌，但嘴比聲音早0.78–0.88s，服務有大量underrun；修共同時間軸／緩衝前不能切正式線。
+- 測試instance `ins-5y4knd6r`已於2026-07-13 12:41（台北）Stop & Release；清單顯示本輪累計0.430 Credit，依1 Credit約NT$32估算約NT$13.76。
+
 ## 一句話結論
 台灣 4090 三關全過：**開機 1 分鐘**、**儲值制關機即停錶（有 SDK 可自動開關）**、
 **「講話截斷＝顯卡不夠」實錘**（同程式同料：Modal L4 p95 905ms vs 這台 309ms，預算 960ms）。

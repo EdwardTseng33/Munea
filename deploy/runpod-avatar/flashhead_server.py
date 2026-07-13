@@ -75,6 +75,11 @@ MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
 FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
 FRAME_SIZE = parse_frame_size(os.environ.get("MUNEA_FH_FRAME_SIZE", "512"))
+# SoulX defaults to 512 in infer_params.yaml. Changing only the source image
+# does not change inference resolution, so apply the launch decision here.
+import flash_head.inference as _fh_inference
+_fh_inference.infer_params["height"] = FRAME_SIZE
+_fh_inference.infer_params["width"] = FRAME_SIZE
 PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
 # 2026-07-12 N 槽改造：沒設＝1（跟改造前單例行為一字不差）。只有測試卡明確設
 # MUNEA_FH_SLOTS=3 才會真的多槽——這是本輪任務的核心相容性鐵律。
