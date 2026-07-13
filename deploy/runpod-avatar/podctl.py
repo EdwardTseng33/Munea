@@ -8,7 +8,7 @@
   python podctl.py stop <podId>     # 關卡（保留磁碟、便宜待機）
   python podctl.py terminate <podId># 銷毀（停止一切計費）
 
-鑰匙：同目錄 .env 的 RUNPOD_API_KEY。
+鑰匙：優先讀取目前程序的 RUNPOD_API_KEY；沒有時才讀同目錄 .env。
 """
 import json
 import os
@@ -20,10 +20,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = "https://rest.runpod.io/v1"
 
 def _key():
-    for line in open(os.path.join(HERE, ".env"), encoding="utf-8-sig"):
-        if line.strip().startswith("RUNPOD_API_KEY="):
-            return line.split("=", 1)[1].strip()
-    sys.exit("找不到 RUNPOD_API_KEY（deploy/runpod-avatar/.env）")
+    value = os.environ.get("RUNPOD_API_KEY", "").strip()
+    if value:
+        return value
+    env_path = os.path.join(HERE, ".env")
+    if os.path.exists(env_path):
+        for line in open(env_path, encoding="utf-8-sig"):
+            if line.strip().startswith("RUNPOD_API_KEY="):
+                return line.split("=", 1)[1].strip()
+    sys.exit("找不到 RUNPOD_API_KEY（程序環境變數或 deploy/runpod-avatar/.env）")
 
 def _req(method, path, body=None):
     req = urllib.request.Request(
