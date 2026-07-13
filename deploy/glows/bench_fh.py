@@ -11,9 +11,12 @@ WAV = sys.argv[2] if len(sys.argv) > 2 else "/root/poc-mandarin.wav"
 MAXC = int(sys.argv[3]) if len(sys.argv) > 3 else 40
 CHAR = os.environ.get("MUNEA_FH_BENCH_CHAR", "/root/char-a05B.png")
 EXPECT_SIZE = int(os.environ.get("MUNEA_FH_BENCH_SIZE", "0") or 0)
+FH_ROOT = os.environ.get("MUNEA_FH_ROOT", "/root/SoulX-FlashHead")
+MODEL_DIR = os.environ.get("MUNEA_FH_MODEL_DIR", "/models/soulx-flashhead-1.3b")
+WAV2VEC_DIR = os.environ.get("MUNEA_FH_WAV2VEC_DIR", "/models/wav2vec2-base-960h")
 
-sys.path.insert(0, "/root/SoulX-FlashHead")
-os.chdir("/root/SoulX-FlashHead")
+sys.path.insert(0, FH_ROOT)
+os.chdir(FH_ROOT)
 
 import numpy as np
 import torch
@@ -31,8 +34,8 @@ from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
 t0 = time.time()
-pipeline = get_pipeline(world_size=1, ckpt_dir="/models/soulx-flashhead-1.3b",
-                        wav2vec_dir="/models/wav2vec2-base-960h", model_type="lite")
+pipeline = get_pipeline(world_size=1, ckpt_dir=MODEL_DIR,
+                        wav2vec_dir=WAV2VEC_DIR, model_type="lite")
 t1 = time.time()
 get_base_data(pipeline, cond_image_path_or_dir=CHAR,
               base_seed=42, use_face_crop=False)

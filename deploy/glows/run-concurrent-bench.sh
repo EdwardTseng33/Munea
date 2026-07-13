@@ -5,7 +5,10 @@ N="${1:-2}"
 CHUNKS="${2:-21}"
 MODE="${3:-eager}"
 PY="${PY:-/root/miniconda3/envs/workenv/bin/python}"
-OUT="/workspace/bench-${N}way-${MODE}"
+BENCH="${MUNEA_FH_BENCH_SCRIPT:-/workspace/bench_fh.py}"
+WAV="${MUNEA_FH_BENCH_WAV:-/root/poc-mandarin.wav}"
+OUT_DIR="${MUNEA_FH_BENCH_OUT:-/workspace}"
+OUT="${OUT_DIR}/bench-${N}way-${MODE}"
 MON="${OUT}-gpu.csv"
 DONE="${OUT}.done"
 
@@ -27,7 +30,7 @@ trap cleanup EXIT
 
 PIDS=()
 for i in $(seq 1 "$N"); do
-  "$PY" /workspace/bench_fh.py "$MODE" /root/poc-mandarin.wav "$CHUNKS" \
+  "$PY" "$BENCH" "$MODE" "$WAV" "$CHUNKS" \
     > "${OUT}-${i}.log" 2>&1 &
   PIDS+=("$!")
 done
