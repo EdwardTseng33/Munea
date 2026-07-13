@@ -638,6 +638,11 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .cn-row .cn-desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .cn-row .cn-btn { font-family: var(--display); font-weight: 700; font-size: 15px; color: #fff; background: var(--teal-d); border: none; border-radius: 999px; padding: 9px 17px; cursor: pointer; flex-shrink: 0; }
 .cn-row .cn-btn.done { background: var(--mint); color: var(--teal-dd); }
+.cn-row .cn-btn.disconnect { background: var(--surface); color: var(--danger); border: 1px solid rgba(194,75,68,.32); }
+.cn-row .cn-btn.disconnect.arm { background: rgba(194,75,68,.1); }
+.cn-health-help { margin: 0 4px 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.sr-on.off { color: var(--muted); }
+.sr-on.off .d { background: var(--muted); }
 .cn-note { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 15px 16px; margin-top: 18px; }
 .cn-note .ic { width: 24px; height: 24px; color: var(--gold); flex-shrink: 0; }
 .cn-note p { font-size: 15px; line-height: 1.6; color: var(--ink-2); }
