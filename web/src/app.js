@@ -986,11 +986,14 @@ function getLiveVoiceUrl() {
 const AVATAR_URL_DEFAULT = 'https://edwardt0303--munea-nening-avatar-nening-web.modal.run';
 // 新引擎 FlashHead（2026-07-11 Edward 拍板轉正主線；同日「直接接到app裡面」＝預設就走它）：
 // localStorage['munea.faceEngine'] 只剩「手動退回舊引擎」用（設 'ditto'）；不設＝FlashHead。
-// 門牌＝台灣 Glows 4090（2026-07-11 轉正：家→機器 8ms、每塊 0.3s、開機 5s、TLS 正規證書）。
-// ⚠ 這台機器 Release 重開後號碼會變——重開要同步改這行（自動指路機制在搬家計畫書裡）。
+// 門牌＝台灣 GLOWS RTX 6000 Ada 常駐主卡（640、3 席、2026-07-13 正式驗收）。
+// ⚠ 這台機器 Release 重開後號碼會變；正式 App 下一版會改只認 Call Gateway。
 // 備援1（美國 RunPod 4090 常駐）：https://a535qiaoru5bno-8188.proxy.runpod.net
 // 備援2（Modal L4 試作版、產能貼預算會截斷）：https://edwardt0303--munea-flashhead-avatar-dev-flashhead-web.modal.run
-const FLASHHEAD_URL_DEFAULT = 'https://tw-06.access.glows.ai:26718';
+const FLASHHEAD_URL_DEFAULT = 'https://tw-07.access.glows.ai:26969';
+const RETIRED_FLASHHEAD_URLS = new Set([
+  'https://tw-06.access.glows.ai:26718',
+]);
 function faceEngine() {
   try { return localStorage.getItem('munea.faceEngine') || 'flashhead'; } catch (e) { return 'flashhead'; }
 }
@@ -999,7 +1002,15 @@ function faceEngine() {
 const FLASHHEAD_CHAR_MAP = { '寧寧': 'a05', '阿宏': 'a06' };
 function flashheadCharFor(backendChar) { try { return FLASHHEAD_CHAR_MAP[backendChar] || ''; } catch (e) { return ''; } }
 function getAvatarUrl() {
-  try { const u = localStorage.getItem('munea.avatarUrl'); if (u !== null) return u.replace(/\/$/, ''); } catch (e) {}
+  try {
+    const raw = localStorage.getItem('munea.avatarUrl');
+    if (raw !== null) {
+      const u = raw.replace(/\/$/, '');
+      // 舊版曾把臨時 GLOWS 門牌寫進 localStorage；升版後要自動回到新主卡。
+      if (RETIRED_FLASHHEAD_URLS.has(u)) localStorage.removeItem('munea.avatarUrl');
+      else if (u) return u;
+    }
+  } catch (e) {}
   return faceEngine() === 'flashhead' ? FLASHHEAD_URL_DEFAULT : AVATAR_URL_DEFAULT;
 }
 // FlashHead 全身合成開關（2026-07-11）：開＝把 512 活臉搬進 9:16 全身立繪的判斷框（羽化貼回、先鋒參數）；
@@ -3200,15 +3211,17 @@ function connectCall() {
     const onListen = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };
     const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
-    // 斷線自動接回：掉了就自動重連、通話不中斷；連幾次都接不回才退簡單陪聊
+    // 斷線自動接回：掉了就自動重連；多次失敗則收整通，不退成純語音。
     let _reconnects = 0;
     const onDrop = () => {
       if (!callConnected && !callDialing) return;         // 使用者已掛斷/取消 → 不重連
-      if (_reconnects++ > 6) {                            // 接不回了 → 退簡單陪聊，不掛斷
-        setCallHint('真語音不太穩，先用簡單方式陪你');
-        _voiceReady = true; _faceReady = true; beginConversation();
-        openVoiceSession();
-        setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
+      if (_reconnects++ > 6) {                            // Voice＋Avatar 是同一項服務；任一邊斷線就收整通
+        try { LiveVoice.stop(); } catch (e) {}
+        try { completeChatSession('reconnect_failed'); } catch (e) {}
+        chatOpened = false; setCallDialing(false); setCallToggle(false); stopCallTimer();
+        if (chatEl) chatEl.dataset.state = 'idle';
+        setFaceState('idle'); setCallHint('連線中斷了，請再撥一次');
+        try { FaceIdle.start(); } catch (e) {}
         return;
       }
       setCallHint('接回來中', true);
@@ -3220,11 +3233,14 @@ function connectCall() {
     LiveVoice.start(onListen, onSpeak, onDrop);
     Avatar.start().then(ok => {
       if (ok || Avatar._lastError !== 'capacity_full') return;
-      _faceUnavailable = true; _faceReady = true;
-      setCallHint('影像目前忙碌，先用語音陪你聊', true);
-      try { trackProductEvent('avatar_capacity_fallback', { mode: 'voice_only' }); } catch (e) {}
-      tryStart();
-    }).catch(() => {});   // 影像名額滿時安全降級純語音；其他故障仍由就緒逾時擋下
+      try { LiveVoice.stop(); } catch (e) {}
+      chatOpened = false; setCallDialing(false); stopCallTimer();
+      if (chatEl) chatEl.dataset.state = 'idle';
+      setFaceState('idle'); setCallHint('目前 3 個通話席都在使用中，請稍後再撥');
+      try { completeChatSession('avatar_capacity_full'); } catch (e) {}
+      try { trackProductEvent('avatar_capacity_full', { mode: 'voice_avatar_required' }); } catch (e) {}
+      try { FaceIdle.start(); } catch (e) {}
+    }).catch(() => {});   // 影像滿載不退純語音；下一版接 Gateway 後顯示排隊位置
     return;
   }
   setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');

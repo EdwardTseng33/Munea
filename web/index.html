@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260713-mumu-v2" />
+  <link rel="stylesheet" href="src/styles.css?v=20260713-v101" />
 </head>
 <body>
 <div class="app-shell">
@@ -469,16 +469,6 @@
       <audio id="faceAud" autoplay playsinline aria-hidden="true" style="display:none"></audio>
       <div class="face-blink"></div>
       <div class="avatar-mouth" id="avatarMouth" aria-hidden="true"><span></span></div>
-    </div>
-    <!-- 撥號準備中才顯示：沐沐是可直接點擊、按住拖動的實際逐格動畫，不是載入圖。 -->
-    <div class="mumu-call-stage" data-mumu-stage aria-label="撥號準備中的沐沐">
-      <p class="mumu-call-status" data-mumu-status aria-live="polite">正在安靜陪你</p>
-      <div class="mumu-actor" data-mumu-actor data-phase="idle" role="img" aria-label="沐沐正在準備連線">
-        <div class="mumu-visual">
-          <img data-mumu-image src="mascot/frames/idle-v2/idle-v2-01.png?v=20260713-v2-grid" alt="">
-        </div>
-      </div>
-      <p class="mumu-call-hint" aria-hidden="true">按住沐沐可拖動・快速左右會轉暈</p>
     </div>
     <div class="face-topscrim" aria-hidden="true"></div>
     <!-- 內頁真版印章（2026-07-11 Edward「封面新內頁舊」事件後立）：顯示網頁內容的真實版本，
@@ -1133,7 +1123,7 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260713-mumu-v2"></script>
+  <script src="src/version.js?v=20260713-v101"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
@@ -1183,8 +1173,7 @@
     return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script src="src/mumu-interactive.js?v=20260713-mumu-v2"></script>
-  <script type="module" src="src/app.js?v=20260713-mumu-v2"></script>
+  <script type="module" src="src/app.js?v=20260713-v101"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **最後更新：2026-07-12 深夜（Windows 蘇菲 · 今晚重大進度見 ㊻：語音多人斷崖攻破→30 人乾淨過關(async修 d9ab9cb)｜守護腦第一+二層完整(三類危險詞庫+情緒補全+拐彎危機 AI 判語意)｜清晨備料上線規格(挖到 23514 真根因·009 SQL 待 Edward 貼)｜版本整合 1.28.0｜首頁亂碼修+AI 生成揭露。⚠ 待 Edward 放行：009 SQL/開卡/admin token/Google 配額/Mac 重打包——詳 `docs/開發日報-2026-07-12.md`）**
+> **最後更新：2026-07-13（Codex · GLOWS RTX 6000 Ada 正式主卡已接通，App 1.0.1 已完成 iOS 同步與發版檢查；目前可驗收 1～3 人，第 4 人起的 RunPod 自動擴容仍在收尾）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -10,7 +10,9 @@
 
 ## 一眼總覽
 
-**55－執行中／待一次人工開卡（7/13 Codex · RTX 6000 Ada 真卡 CP 驗證）**：已同步 Claude 最新 `56629ea`，不修改其 GLOWS 自動編排、不碰現役 4090。零成本探測結果：GLOWS SDK token 仍回 `code 176`，Codex Chrome 無法連 Edward 已登入頁面；RunPod Secure／Community 同型卡均回無庫存，確認 RunPod 清單為零、沒有機器也沒有計費。下一步只差 Edward 在 GLOWS TW-04 手動建立 RTX 6000 Ada，提供 Access 頁 SSH 主機＋埠號；Codex 即接手相同 FlashHead 640、底圖／音檔與 `bench_fh.py`，驗 1／2／3 路 p50／p95／headroom、每安全用戶分鐘成本，測完刪卡並交帳。成本硬上限 US$3（約 NT$100）。**包版影響**：純 GPU benchmark，不修改 App／API 契約／版號，不需 `cap sync`、Mac 重打包或雲端部署。
+**56－完成主卡接線／App 1.0.1 待 Mac 真機包版（7/13 Codex）**：① GLOWS RTX 6000 Ada `ins-1y27kl5g` 已成為常駐正式主卡，VocaFrame／FlashHead 640 開 compile、3 席，正式外網門牌 `https://tw-07.access.glows.ai:26969` 健康。② 男女角色雙路與三路同時 WebRTC 均收到 640 影像及音訊，主卡 1～3 人可用。③ App 改接新門牌並會清除舊門牌快取；Voice＋Avatar 維持綁定，滿載／重連失敗不降成純語音。④ npm、Web 與 iOS 行銷版號統一 `1.0.1`，Build Number 保留 `4`；`cap sync ios`、完整 release check、Gateway 9/9、RunPod backup 11/11、Cloud Run Voice 真連線探測全綠。⑤ Windows 無法簽 Apple App；現在需要 Mac／Xcode 真機 Archive 才能交 TestFlight。⑥ 第 4 人起的 Gateway 排隊＋RunPod 4090 自動喚醒尚未接正式 App 流量，RunPod 目前停止，不能宣稱 1～30 人已正式上線。
+
+**55－歷史項目／已由 56 取代（7/13 Codex · RTX 6000 Ada 真卡驗證）**：原本等待人工開卡的阻塞已解除；GLOWS 正式卡、HTTPS 門牌、三席與 App 接線結果以 56 為準。本項保留只作追溯，不再是待辦。
 
 **54－完成交帳（7/13 Codex · 新定價後端同步＋1–30 人容量決策）**：①開工前已公告並避讓 Claude 正在修改的新價格 App／官網／後台檔案；Codex 未碰、未提交 `web/src/app.js`、`web/index.html`、`web/landing.html`、`web/selftest.html`、`web/src/admin.js` 與其定價文件。②實際修改 `engine/apple_store.py`、`engine/test_apple_store.py`，將 Apple Pro 月／年訂閱的伺服器每月補點從舊 500 同步為新定案 400，新增回歸測試；新增 `docs/1-30人即時語音Avatar容量與自動調度決策-2026-07-13.md`，完成 Gemini Live＋GLOWS／RunPod／Modal／Cloud Run GPU 的容量、供應商、自動擴縮、監控與分階段壓測決策。③結論：640 實測每張 4090 安全 2 人，30 人最低 15 張、含一張故障餘裕需 16 張；Gemini 語音橋已測 30 人建立成功但仍需 60 分鐘 soak 與 AI Studio 專案 quota 查證；GLOWS SDK 可自動 create/delete、沒有 pause，所以定位為預測式暖池，Modal／RunPod Serverless 經 WebRTC PoC 後擇一做溢流，RunPod Pod 做災備。④驗證：Apple `9/9`、完整 `npm run test:launch`、Python compile 與 `git diff --check` 全綠；commit `15bb86a`。⑤**包版／部署交帳**：App 版號維持 `1.28.2`，本批不需 `cap sync`、未部署 brain、未動現役語音／顯卡；Claude 的新價 App 顯示仍是本機未提交工作，完成後必須升版並由 Mac 重打包；Apple Store Connect 八商品實際售價仍需 Edward 人工改成 Plus 599／5750、Pro 1199／11510、點數包 600／1400／2700／4700，否則畫面新價但 Apple 仍扣舊價。
 

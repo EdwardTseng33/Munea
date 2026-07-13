@@ -696,6 +696,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 }
 .face-bg.livevid video { opacity: 1; }
 
+/* 撥號準備中以可互動的沐沐接住等待時間；只有 connecting 狀態收手勢。 */
+
 /* Edward 2026-07-06：圖片不要有動態——關閉眨眼佔位效果 */
 .face-blink { display: none; }
 
@@ -707,22 +709,18 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   overflow: hidden; background: #0E1A17; z-index: 1;
 }
 .fh-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-/* 2026-07-11 頭肩框（Edward：AI 工作方形放頭~肩、顯示全身）：框位 top8% h60% 對齊伺服器條件裁切；
-   底部羽化加大到 22%（接縫落在胸口、動區vs靜態立繪、要柔化更長段才不明顯）。改框位＝伺服器 headshoulder 裁切%要同步。 */
+/* 活臉與伺服器條件圖使用同一個 1080x1080 正方形框；只做等比例縮放。
+   單一垂直遮罩避免四邊交叉形成橢圓疊影，左右像素直接與同源背景對齊。 */
 .fh-overlay {
-  position: absolute; left: 0; top: 8%; width: 100%; height: 60%;
-  overflow: hidden; opacity: 0; transition: opacity .35s;
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5.926%, black calc(100% - 5.926%), transparent 100%),
-    linear-gradient(to bottom, transparent 0%, black 5%, black calc(100% - 22%), transparent 100%);
-  -webkit-mask-composite: source-in, source-over;
-  mask-image: linear-gradient(to right, transparent 0%, black 5.926%, black calc(100% - 5.926%), transparent 100%),
-    linear-gradient(to bottom, transparent 0%, black 5%, black calc(100% - 22%), transparent 100%);
-  mask-composite: intersect;
+  position: absolute; left: 0; top: 9.895833%; width: 100%; height: auto; aspect-ratio: 1 / 1;
+  overflow: hidden; opacity: 0; transition: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 82%, transparent 100%);
 }
 .face-bg.livevid .fh-overlay { opacity: 1; }
 .fh-overlay video {
   position: static !important; width: 100% !important; height: 100% !important;
-  object-fit: fill !important; opacity: 1 !important; transition: none !important;
+  object-fit: cover !important; opacity: 1 !important; transition: none !important;
 }
 
 .avatar-mouth { position: absolute; left: 50%; top: 50%; z-index: 2; display: none;
