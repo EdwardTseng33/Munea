@@ -440,81 +440,66 @@
   #tech .ttag{font-family:"Noto Serif TC",serif;font-size:clamp(17px,2.2vw,21px);color:var(--teal-d);font-weight:600;line-height:1.55;margin:4px 0 2px}
   #tech .tintro{color:var(--muted);font-size:16.5px;line-height:1.85;max-width:640px;margin:8px auto 0}
 
-  /* ── 流程圖：服務怎麼送到你手上（深色沉浸面板；第2步改回抽象圖示，跟其餘4步同語言） ── */
-  #tech .tflow-wrap{background:#1F2B27;border-radius:var(--r);padding:48px 36px 36px;margin:36px 0 48px;position:relative}
-  #tech .tflow-cap{display:flex;align-items:center;gap:10px;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mint);margin-bottom:36px}
-  #tech .tflow-cap i{width:20px;height:1.5px;background:var(--mint);opacity:.55}
-  #tech .tflow-row{display:flex;align-items:flex-start;gap:8px;list-style:none;margin:0;padding:0}
-  #tech .tf-node{flex:1 1 0;position:relative;text-align:center;padding:0 8px;box-sizing:border-box}
-  #tech .tf-node::after{content:"";position:absolute;top:60px;left:50%;width:100%;height:2px;background:repeating-linear-gradient(90deg,rgba(250,247,242,.28) 0 6px,transparent 6px 13px);z-index:0}
-  #tech .tf-node:last-child::after{display:none}
-  #tech .tf-num{position:relative;z-index:1;display:block;font-family:"Poppins";font-size:13px;font-weight:700;color:rgba(250,247,242,.55);letter-spacing:.04em;margin-bottom:8px}
-  #tech .tf-ring{position:relative;z-index:1;width:74px;height:74px;border-radius:50%;margin:0 auto 16px;display:grid;place-items:center;background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.16);box-sizing:border-box}
-  #tech .tf-ring svg{width:28px;height:28px;stroke:var(--cream);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  #tech .tf-node b{position:relative;z-index:1;display:block;font-size:16px;color:var(--cream);font-weight:700;line-height:1.5}
-  #tech .tf-peak .tf-ring{background:var(--coral-soft);border-color:var(--coral-soft)}
-  #tech .tf-peak .tf-ring svg{stroke:var(--coral-d)}
-  #tech .tf-peak .tf-num{color:var(--coral)}
+  /* ── A．技術架構：深色沉浸面板當舞台 ── */
+  #tech .arch-wrap{background:#1F2B27;border-radius:var(--r);padding:48px 36px 40px;margin:36px 0 40px}
+  #tech .arch-cap{display:flex;align-items:center;justify-content:center;gap:10px;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mint);margin-bottom:32px}
+  #tech .arch-cap i{width:20px;height:1.5px;background:var(--mint);opacity:.55}
 
-  /* ── 健康 × 心理：原創資料視覺（不是照片、不是清單） ── */
-  #tech .tedit{display:grid;gap:48px;margin:0 0 48px}
-  #tech .ted-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
-  #tech .ted-row.reverse .ted-vis{order:2}
-  #tech .ted-row.reverse .ted-txt{order:1}
-  #tech .ted-graphic{border-radius:var(--r);padding:36px;min-height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-  #tech .ted-health .ted-graphic{background:var(--mint)}
-  #tech .ted-psych .ted-graphic{background:var(--coral-soft)}
-  #tech .tg-cap{font-family:"Poppins";font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px}
-  #tech .ted-health .tg-cap{color:var(--teal-dd)}
-  #tech .ted-psych .tg-cap{color:var(--coral-d)}
-  #tech .tg-art{width:100%;max-width:250px;height:auto;margin-bottom:24px}
-  #tech .tg-pulse polyline{fill:none;stroke:var(--teal-dd);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
-  #tech .tg-pulse circle{fill:var(--teal-dd)}
-  #tech .tg-ripple circle{fill:none;stroke:var(--coral);stroke-width:1.6}
-  #tech .tg-ripple .r1{opacity:.2}
-  #tech .tg-ripple .r2{opacity:.36}
-  #tech .tg-ripple .r3{stroke:var(--coral-d);opacity:.6}
-  #tech .tg-ripple .r4{fill:var(--coral-d);stroke:none;transform-box:fill-box;transform-origin:center;animation:tgpulse 3.2s ease-in-out infinite}
-  @keyframes tgpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
-  @media(prefers-reduced-motion:reduce){#tech .tg-ripple .r4{animation:none}}
-  #tech .tg-line{font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.6;max-width:280px}
-  #tech .ted-eyebrow{display:inline-block;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 13px;border-radius:100px;margin-bottom:24px}
-  #tech .ted-health .ted-eyebrow{color:var(--teal-dd);background:var(--mint)}
-  #tech .ted-psych .ted-eyebrow{color:var(--coral-d);background:var(--coral-soft)}
-  #tech .ted-claim{font-family:"Noto Serif TC",serif;font-size:clamp(22px,2.6vw,29px);font-weight:600;color:var(--ink);line-height:1.55;margin-bottom:24px}
-  #tech .ted-claim b{color:var(--teal-dd);font-weight:600}
-  #tech .ted-psych .ted-claim b{color:var(--coral-d)}
-  #tech .ted-sub{font-size:16.5px;color:var(--muted);line-height:1.85;max-width:460px}
+  #tech .arch-modules{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+  #tech .arch-card{background:rgba(250,247,242,.05);border:1px solid rgba(250,247,242,.14);border-radius:18px;padding:24px}
+  #tech .arch-ic{width:52px;height:52px;border-radius:50%;background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.18);display:grid;place-items:center;margin-bottom:16px}
+  #tech .arch-ic svg{width:24px;height:24px;stroke:var(--cream);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #tech .arch-tag{display:block;font-family:"Poppins";font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,242,.5);margin-bottom:8px}
+  #tech .arch-card h4{font-size:17px;font-weight:700;color:var(--cream);margin-bottom:10px}
+  #tech .arch-card p{font-size:15px;color:rgba(250,247,242,.74);line-height:1.72;margin:0}
 
-  /* ── 三個承諾：獨立信任帶 ── */
-  #tech .tpromise{background:var(--cream-2);border-radius:var(--r);padding:36px;margin:0 0 40px}
-  #tech .tp-cap{display:block;text-align:center;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-dd);margin-bottom:24px}
-  #tech .tp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}
-  #tech .tp-item{text-align:center;padding:0 8px}
-  #tech .tp-ic{width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;margin:0 auto 16px}
-  #tech .tp-ic svg{width:20px;height:20px;stroke:var(--teal-dd);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  #tech .tp-item.psych .tp-ic svg{stroke:var(--coral-d)}
-  #tech .tp-item.peak .tp-ic{background:var(--coral-d)}
-  #tech .tp-item.peak .tp-ic svg{stroke:#fff}
-  #tech .tp-item p{font-size:16px;font-weight:600;color:var(--ink);line-height:1.65;margin:0}
+  #tech .arch-link{display:flex;justify-content:center;margin:0 0 16px}
+  #tech .arch-link svg{width:20px;height:20px;stroke:rgba(250,247,242,.3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  #tech .arch-orch{background:var(--coral-soft);border-radius:18px;padding:24px;margin-bottom:24px;display:flex;gap:18px;align-items:flex-start}
+  #tech .arch-orch .arch-ic{background:var(--coral-d);border-color:var(--coral-d);flex-shrink:0;margin-bottom:0}
+  #tech .arch-orch .arch-ic svg{stroke:#fff}
+  #tech .arch-orch .arch-body .arch-tag{color:var(--coral-d);opacity:1;margin-bottom:6px}
+  #tech .arch-orch h4{color:var(--ink);margin-bottom:8px}
+  #tech .arch-orch p{color:#4A5651}
+
+  #tech .arch-formula{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:24px 0;border-top:1px solid rgba(250,247,242,.14);border-bottom:1px solid rgba(250,247,242,.14);margin-bottom:24px}
+  #tech .af-result{font-family:"Poppins";font-weight:700;font-size:16px;color:var(--cream)}
+  #tech .af-eq{font-family:"Poppins";font-weight:700;font-size:16px;color:rgba(250,247,242,.4)}
+  #tech .af-plus{font-size:14px;color:rgba(250,247,242,.35)}
+  #tech .af-term{font-family:"Poppins";font-size:13.5px;font-weight:600;color:var(--cream);background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.16);padding:6px 14px;border-radius:100px}
+  #tech .af-term.safe{color:var(--coral-d);background:var(--coral-soft);border-color:var(--coral-soft)}
+
+  #tech .arch-pipeline{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}
+  #tech .ap-step{font-family:"Poppins";font-size:12.5px;font-weight:600;color:rgba(250,247,242,.85);background:rgba(250,247,242,.06);border:1px solid rgba(250,247,242,.14);padding:8px 14px;border-radius:100px}
+  #tech .ap-arrow{color:rgba(250,247,242,.32);font-size:14px}
+
+  /* ── B．跟一般通用型 AI 的差別：設計過的對照卡 ── */
+  #tech .cmp{margin-bottom:40px}
+  #tech .cmp-cap{display:block;text-align:center;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-d);margin-bottom:24px}
+  #tech .cmp-table{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  #tech .cmp-labels{display:grid;grid-template-columns:110px 1fr 1fr;padding:16px 0}
+  #tech .cmp-labels .cl-a,#tech .cmp-labels .cl-b{font-family:"Poppins";font-size:12.5px;font-weight:700;padding:0 20px}
+  #tech .cmp-labels .cl-a{color:var(--muted)}
+  #tech .cmp-labels .cl-b{color:var(--teal-d);display:flex;align-items:center;gap:7px}
+  #tech .cmp-labels .cl-b i{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0}
+  #tech .cmp-item{display:grid;grid-template-columns:110px 1fr 1fr;border-top:1px solid var(--line)}
+  #tech .ci-cat{padding:18px 12px 18px 20px;font-family:"Poppins";font-size:12.5px;font-weight:700;color:var(--muted);display:flex;align-items:center}
+  #tech .ci-a,#tech .ci-b{margin:0;padding:18px 20px;font-size:15px;line-height:1.6;display:flex;align-items:center}
+  #tech .ci-a{color:var(--muted)}
+  #tech .ci-b{background:var(--mint);color:var(--ink);font-weight:600}
 
   #tech .tclose{margin:0 auto;text-align:center;font-family:"Noto Serif TC",serif;font-size:clamp(16px,2vw,19px);color:var(--ink);font-weight:600;line-height:1.75;max-width:700px}
 
-  @media(max-width:880px){
-    #tech .ted-row{grid-template-columns:1fr;gap:24px}
-    #tech .ted-row.reverse .ted-vis{order:0}
-    #tech .ted-row.reverse .ted-txt{order:0}
-    #tech .tp-grid{grid-template-columns:1fr;gap:24px}
-  }
   @media(max-width:820px){
-    #tech .tflow-wrap{padding:36px 24px 24px}
-    #tech .tflow-row{flex-direction:column;gap:24px}
-    #tech .tf-node{display:flex;align-items:center;gap:16px;text-align:left;padding:0}
-    #tech .tf-node::after{display:none}
-    #tech .tf-num{margin:0;width:30px;flex-shrink:0}
-    #tech .tf-ring{margin:0;flex-shrink:0;width:58px;height:58px}
-    #tech .tf-ring svg{width:24px;height:24px}
-    #tech .tf-node b{font-size:16px;flex:1}
+    #tech .arch-modules{grid-template-columns:1fr}
+    #tech .arch-orch{flex-direction:column}
+  }
+  @media(max-width:640px){
+    #tech .cmp-labels{display:none}
+    #tech .cmp-item{grid-template-columns:1fr 1fr;border-top:none}
+    #tech .ci-cat{grid-column:1/-1;padding:16px 20px 4px;border-top:1px solid var(--line)}
+    #tech .ci-a,#tech .ci-b{padding:8px 16px 18px;font-size:14px}
   }
 </style>
 <section id="tech">
@@ -523,103 +508,108 @@
       <span class="tbrand"><span class="d"></span>FamilyWellness AI</span>
       <h2 data-en="FamilyWellness AI — your family's health &amp; care companion">家庭健康陪伴照護管家</h2>
       <p class="ttag" data-en="The real-time intelligence that makes company feel truly present.">讓「陪伴」真的像有人在的即時智能。</p>
-      <p class="tintro" data-en="Most AI will chat about anything. FamilyWellness AI does one thing: stay close to your whole family's health and heart — present in real time, and mindful of its limits.">市面上的 AI 什麼都聊——FamilyWellness AI 只做一件事：陪一家人的「健康」與「心情」，平常即時陪著，也守著分寸。</p>
+      <p class="tintro" data-en="She isn&apos;t a general-purpose assistant — she&apos;s a care system where memory, perception, interaction and safety work together. This is what&apos;s underneath, and why she isn&apos;t like other AI.">她不是通用助手，是記憶、感知、交互與安全協同運作的照護系統——這是她的裡子，也是她跟一般 AI 不一樣的地方。</p>
     </div>
 
-    <!-- 服務流程圖：服務怎麼送到你手上 -->
-    <div class="tflow-wrap reveal">
-      <div class="tflow-cap"><i></i><span data-en="How the care reaches you, step by step">服務，怎麼送到你手上</span></div>
-      <ol class="tflow-row">
-        <li class="tf-node">
-          <span class="tf-num">01</span>
-          <span class="tf-ring"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1M12 18v4"/></svg></span>
-          <b data-en="You start talking">開口說話</b>
-        </li>
-        <li class="tf-node">
-          <span class="tf-num">02</span>
-          <span class="tf-ring"><svg viewBox="0 0 24 24"><circle cx="10" cy="12" r="7"/><path d="M7.2 14.2c.8.9 1.8 1.3 2.8 1.3s2-.4 2.8-1.3"/><path d="M7.5 10h.01M12.5 10h.01"/><path d="M18 9a4 4 0 010 6M20.5 7a7 7 0 010 10"/></svg></span>
-          <b data-en="A real face &amp; voice, live">即時真臉真聲</b>
-        </li>
-        <li class="tf-node">
-          <span class="tf-num">03</span>
-          <span class="tf-ring"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span>
-          <b data-en="Hears you, reads your mood">聽懂話、讀情緒</b>
-        </li>
-        <li class="tf-node">
-          <span class="tf-num">04</span>
-          <span class="tf-ring"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span>
-          <b data-en="The right reply &amp; reminder">給對的回應與提醒</b>
-        </li>
-        <li class="tf-node tf-peak">
-          <span class="tf-num">05</span>
-          <span class="tf-ring"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
-          <b data-en="Protection when it&apos;s needed">需要時，啟動守護</b>
-        </li>
-      </ol>
+    <!-- A．技術架構：三大核心服務模組＋幕後指揮 -->
+    <div class="arch-wrap reveal">
+      <div class="arch-cap"><i></i><span data-en="Architecture · how she's put together">技術架構 · 智能怎麼組成</span><i></i></div>
+
+      <div class="arch-modules">
+        <div class="arch-card">
+          <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg></span>
+          <span class="arch-tag">MEMORY · 記憶</span>
+          <h4 data-en="Remembers you">記得你</h4>
+          <p data-en="Every conversation is distilled into four memory layers — core, long-term, recent, today — weighted by importance, newer facts replacing older ones.">把每次對話萃取成核心／長期／近況／當天四層記憶，用重要性排序，新事實覆蓋舊事。</p>
+        </div>
+        <div class="arch-card">
+          <span class="arch-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><path d="M12 5v2M12 17v2M5 12h2M17 12h2M7.1 7.1l1.4 1.4M15.5 15.5l1.4 1.4M16.9 7.1l-1.4 1.4M8.5 15.5l-1.4 1.4"/></svg></span>
+          <span class="arch-tag">PERCEPTION · 感知</span>
+          <h4 data-en="Knows this moment">懂此刻</h4>
+          <p data-en="Every morning she gathers weather, news, key dates and family updates in advance — building today's context before the conversation even starts.">每天清晨主動彙整天氣、時事、重要日子與家人動態，先備好「今天的脈絡」，對話時直接調用。</p>
+        </div>
+        <div class="arch-card">
+          <span class="arch-ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="6.2"/><path d="M6.4 13.8c.7.8 1.6 1.2 2.6 1.2s1.9-.4 2.6-1.2"/><path d="M6.8 10h.01M11.2 10h.01"/><path d="M17 8.5a4.3 4.3 0 010 7"/><path d="M19.3 6.3a7.5 7.5 0 010 11.4"/></svg></span>
+          <span class="arch-tag">INTERACTION · 交互</span>
+          <h4 data-en="How she's with you">怎麼互動</h4>
+          <p data-en="Interruptible real-time voice, a face whose expression and lip-sync track her voice to the millisecond, a character engine that swaps personality and voice, plus a safety layer that can veto any response.">可打斷的即時語音、表情嘴型與聲音毫秒同步的臉、換角色就換一套人格聲線，加上能否決回應的安全層。</p>
+        </div>
+      </div>
+
+      <div class="arch-link"><svg viewBox="0 0 24 24"><path d="M12 4v13M6 12l6 6 6-6"/></svg></div>
+
+      <div class="arch-orch">
+        <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M4 6h6M4 12h10M4 18h6"/><path d="M14 6l6 6-6 6"/></svg></span>
+        <div class="arch-body">
+          <span class="arch-tag">ORCHESTRATION · 幕後</span>
+          <h4 data-en="Behind the scenes: dispatch">指揮調度</h4>
+          <p data-en="All modules merge in real time into a single reply; priority always runs safety, then immediacy, then background — context injection stays minimal, and never steals the spotlight.">把記憶、感知、人格、安全即時整合成一句回話；優先權永遠是安全＞即時＞背景；脈絡注入盡量精簡，不搶戲。</p>
+        </div>
+      </div>
+
+      <div class="arch-formula">
+        <span class="af-result" data-en="Response">回應</span>
+        <span class="af-eq">=</span>
+        <span class="af-term" data-en="Personality">人格</span><span class="af-plus">+</span>
+        <span class="af-term" data-en="Memory">記憶</span><span class="af-plus">+</span>
+        <span class="af-term" data-en="Perception">感知</span><span class="af-plus">+</span>
+        <span class="af-term" data-en="This conversation">當下對話</span><span class="af-plus">+</span>
+        <span class="af-term safe" data-en="Safety">安全</span><span class="af-plus">+</span>
+        <span class="af-term" data-en="Expression">表達</span>
+      </div>
+
+      <div class="arch-pipeline">
+        <span class="ap-step" data-en="You speak">你說話</span><span class="ap-arrow">→</span>
+        <span class="ap-step" data-en="Context assembled live">即時組脈絡</span><span class="ap-arrow">→</span>
+        <span class="ap-step" data-en="Voice reply, face synced">語音回＋臉同步</span><span class="ap-arrow">→</span>
+        <span class="ap-step" data-en="Folded into memory">自動整理進記憶</span><span class="ap-arrow">→</span>
+        <span class="ap-step" data-en="Picks up next time">下次接得上</span>
+      </div>
     </div>
 
-    <!-- 健康 × 心理：一句主張＋原創資料視覺（無照片、無清單） -->
-    <div class="tedit reveal">
-      <article class="ted-row ted-health">
-        <div class="ted-vis">
-          <div class="ted-graphic">
-            <span class="tg-cap">VITALS</span>
-            <svg class="tg-art tg-pulse" viewBox="0 0 260 90" aria-hidden="true">
-              <polyline points="0,50 46,50 58,18 70,80 82,50 150,50 162,18 174,80 186,50 260,50"/>
-              <circle cx="58" cy="18" r="4.5"/>
-              <circle cx="162" cy="18" r="4.5"/>
-            </svg>
-            <p class="tg-line" data-en="Steps, heart rate, blood pressure, sleep — she quietly keeps watch">步數、心率、血壓、睡眠，她都替你留意著</p>
-          </div>
+    <!-- B．跟一般通用型 AI 的差別 -->
+    <div class="cmp reveal">
+      <span class="cmp-cap" data-en="How she's different from a general AI">跟一般通用型 AI，差在哪</span>
+      <div class="cmp-table">
+        <div class="cmp-labels">
+          <span></span>
+          <span class="cl-a" data-en="General AI">一般通用型 AI</span>
+          <span class="cl-b"><i></i><span data-en="Munea FamilyWellness AI">沐寧 FamilyWellness AI</span></span>
         </div>
-        <div class="ted-txt">
-          <span class="ted-eyebrow">HEALTH · 健康</span>
-          <p class="ted-claim" data-en="Whether meds got taken, whether her heart rate shifted — you shouldn&apos;t have to watch the numbers. <b>Someone is watching, for you.</b>">藥有沒有吃、心率有沒有變化——不是要你緊盯數字，<b>是有人，替你看著。</b></p>
-          <p class="ted-sub" data-en="If it&apos;s been quiet too long, she reaches out first. For health concerns, she never reads your numbers or gives advice — only points you to a real doctor.">太久沒聊，也會主動來關心一句。健康問題，她不判讀、不亂給建議，只請你去看真的醫師。</p>
+        <div class="cmp-item">
+          <span class="ci-cat" data-en="Nature">本質</span>
+          <p class="ci-a" data-en="A general assistant that answers anything">一個通用助手，什麼都回</p>
+          <p class="ci-b" data-en="A care system where memory, perception, interaction, safety and personality work together">記憶＋感知＋交互＋安全＋人格，協同運作的照護系統</p>
         </div>
-      </article>
-
-      <article class="ted-row ted-psych reverse">
-        <div class="ted-vis">
-          <div class="ted-graphic">
-            <span class="tg-cap">LISTENING</span>
-            <svg class="tg-art tg-ripple" viewBox="0 0 200 200" aria-hidden="true">
-              <circle class="r1" cx="100" cy="100" r="88"/>
-              <circle class="r2" cx="100" cy="100" r="64"/>
-              <circle class="r3" cx="100" cy="100" r="40"/>
-              <circle class="r4" cx="100" cy="100" r="15"/>
-            </svg>
-            <p class="tg-line" data-en="The feelings behind your words — she can hear them">語氣裡沒說出口的心情，她聽得出來</p>
-          </div>
+        <div class="cmp-item">
+          <span class="ci-cat" data-en="Face / voice">臉／聲音</span>
+          <p class="ci-a" data-en="A text box">文字框</p>
+          <p class="ci-b" data-en="A real face and voice, live like a video call">真臉＋真聲，即時視訊感</p>
         </div>
-        <div class="ted-txt">
-          <span class="ted-eyebrow">MIND · 心情</span>
-          <p class="ted-claim" data-en="She softens her voice when you&apos;re tired, and sits with you while you finish what&apos;s heavy — <b>remembering who and what you care about, so you never have to repeat yourself.</b>">累的時候放輕語氣，難過的時候陪你把話說完——<b>她記得你在乎的人和事，不用重講。</b></p>
-          <p class="ted-sub" data-en="Never judging, never manipulating, never over-promising — your story is always yours alone.">她不評判、不誘導、不亂承諾——你的故事，永遠只屬於你。</p>
+        <div class="cmp-item">
+          <span class="ci-cat" data-en="Character">角色</span>
+          <p class="ci-a" data-en="One assistant">一個助理</p>
+          <p class="ci-b" data-en="A personality with character — switch her, switch the voice and rapport">有個性的角色人格，換角色就換一套人格與聲線</p>
         </div>
-      </article>
-    </div>
-
-    <!-- 三個承諾：獨立信任帶 -->
-    <div class="tpromise reveal">
-      <span class="tp-cap" data-en="Munea's three promises">沐寧的三個承諾</span>
-      <div class="tp-grid">
-        <div class="tp-item health">
-          <span class="tp-ic"><svg viewBox="0 0 24 24"><path d="M6 4h9l4 4v12a1 1 0 01-1 1H6a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M8.5 11h6M8.5 14.5h4"/><path d="M4.5 19.5l14-14"/></svg></span>
-          <p data-en="For health concerns, she never reads your numbers or gives advice — she points you to a real doctor.">健康問題，她不判讀、不亂給建議——請你去看真的醫師。</p>
+        <div class="cmp-item">
+          <span class="ci-cat" data-en="Knowing the moment">懂此刻</span>
+          <p class="ci-a" data-en="Only knows when you ask">你問才知道</p>
+          <p class="ci-b" data-en="Proactively builds today's context every morning">每天主動預建今日情境脈絡</p>
         </div>
-        <div class="tp-item psych">
-          <span class="tp-ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg></span>
-          <p data-en="She never judges, manipulates, or over-promises — your story is always yours alone.">她不評判、不誘導、不亂承諾——你的故事，永遠只屬於你。</p>
+        <div class="cmp-item">
+          <span class="ci-cat" data-en="Boundaries">邊界</span>
+          <p class="ci-a" data-en="May give medical advice carelessly">可能亂給醫療建議</p>
+          <p class="ci-b" data-en="Never diagnoses; medication is only ever a reminder; medical boundaries are kept">不做診斷、用藥只提醒，守住醫療邊界</p>
         </div>
-        <div class="tp-item peak">
-          <span class="tp-ic"><svg viewBox="0 0 24 24"><path d="M20.8 5.6a5 5 0 00-8.8-1.6A5 5 0 003.2 5.6c-1.5 2.3-.8 5.2 3.3 8.4L12 18l5.5-4c4.1-3.2 4.8-6.1 3.3-8.4z"/></svg></span>
-          <p data-en="Companionship isn't counseling or therapy — she stays within her limits, and leaves the professional to the professionals.">陪伴不是諮商、也不是治療——她守著界線，專業的事交給專業的人。</p>
+        <div class="cmp-item">
+          <span class="ci-cat" data-en="Who it's for">為誰做</span>
+          <p class="ci-a" data-en="A general-purpose tool">通用工具</p>
+          <p class="ci-b" data-en="Built for the whole family's physical and emotional wellbeing">為全家人的身心健康而做</p>
         </div>
       </div>
     </div>
 
-    <p class="tclose reveal" data-en="FamilyWellness AI isn't a doctor — it's a wellbeing companion for the whole family, staying close and mindful of its limits.">FamilyWellness AI 不是醫生——是為一家人的身心健康，平常陪著、有分寸地守著的照護管家。</p>
+    <p class="tclose reveal" data-en="FamilyWellness AI — real technology built to do one simple thing: remember you, understand the moment, and respond to you well.">FamilyWellness AI——用真的技術，做一件很簡單的事：記得你、懂此刻、好好回應你。</p>
   </div>
 </section>
 
