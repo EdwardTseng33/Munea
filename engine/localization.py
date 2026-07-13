@@ -79,6 +79,8 @@ def display_text(text, locale):
     for alias, display in _TAIWANESE_TRANSCRIPTION_ALIASES:
         pattern = r"\s*".join(re.escape(char) for char in alias)
         value = re.sub(pattern, display, value)
+    if re.search(r"[\u3400-\u9fff]", value):
+        value = re.sub(r"(?<=[\u3400-\u9fff])\s+(?=[\u3400-\u9fff])", "", value).strip()
     return value
 
 def taiwanese_pronunciation_instruction(locale):

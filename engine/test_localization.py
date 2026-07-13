@@ -31,6 +31,7 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(localization.display_text("你咖 紮 綑喔", "zh-TW"), "你卡早捆喔")
         self.assertEqual(localization.display_text("你卡早 捆喔", "zh-TW"), "你卡早捆喔")
         self.assertEqual(localization.display_text("你較早睏喔", "zh-TW"), "你卡早捆喔")
+        self.assertEqual(localization.display_text("卡早 ", "zh-TW"), "卡早")
 
     def test_taiwanese_pronunciation_is_not_applied_to_other_locales(self):
         self.assertEqual(localization.speech_text("卡早捆", "en"), "卡早捆")
