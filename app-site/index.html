@@ -439,15 +439,18 @@
   #tech .tbrand .d{width:8px;height:8px;border-radius:50%;background:var(--teal)}
   #tech .ttag{font-family:"Noto Serif TC",serif;font-size:clamp(16px,2.1vw,20px);color:var(--teal-d);font-weight:600;line-height:1.5;margin:4px 0 2px}
   #tech .tintro{color:var(--muted);font-size:16.5px;line-height:1.8;max-width:640px;margin-top:6px}
-  /* 服務流程圖 */
-  .tflow{display:flex;align-items:stretch;justify-content:center;gap:6px;flex-wrap:wrap;margin:6px 0 40px}
-  .tflow .tstep2{flex:1 1 0;min-width:148px;max-width:206px;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 15px 20px;text-align:center}
-  .tflow .tsi{width:52px;height:52px;border-radius:15px;background:var(--mint);display:grid;place-items:center;margin:0 auto 13px}
-  .tflow .tsi svg{width:26px;height:26px;stroke:var(--teal-d);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  .tflow .tsn{font-family:"Poppins";font-size:11.5px;font-weight:700;color:var(--teal);letter-spacing:.06em}
-  .tflow .tstep2 b{display:block;font-size:15.5px;color:var(--ink);font-weight:700;line-height:1.5;margin-top:4px}
-  .tflow .tarr{display:flex;align-items:center;color:var(--teal);flex:0 0 auto}
-  .tflow .tarr svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+  /* 服務流程圖 · 巨數字編輯感 + 守護 climax */
+  .tflow{display:flex;gap:6px;margin:28px 0 50px}
+  .tflow .tstep2{flex:1 1 0;position:relative;text-align:center;padding:0 6px}
+  .tflow .tstep2::after{content:"";position:absolute;top:100px;left:50%;width:100%;height:3px;background:repeating-linear-gradient(90deg,var(--teal) 0 7px,transparent 7px 15px);opacity:.5;z-index:0}
+  .tflow .tstep2:last-child::after{display:none}
+  .tflow .tsnum{position:relative;z-index:1;font-family:"Poppins";font-size:clamp(36px,4.2vw,54px);font-weight:800;line-height:1;height:54px;display:flex;align-items:center;justify-content:center;color:var(--teal-d)}
+  .tflow .tscircle{position:relative;z-index:1;width:74px;height:74px;border-radius:50%;background:var(--mint);display:grid;place-items:center;margin:10px auto 16px}
+  .tflow .tscircle svg{width:31px;height:31px;stroke:var(--teal-d);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .tflow .tstep2 b{position:relative;z-index:1;display:block;font-size:16.5px;color:var(--ink);font-weight:700;line-height:1.5}
+  .tflow .tstep2.peak .tsnum{color:var(--coral-d)}
+  .tflow .tstep2.peak .tscircle{background:var(--coral-soft)}
+  .tflow .tstep2.peak .tscircle svg{stroke:var(--coral-d)}
   /* 健康 × 心理：應用與防護 */
   .thp{display:grid;grid-template-columns:1fr 1fr;gap:22px}
   .thp-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:30px 30px 32px}
@@ -466,11 +469,12 @@
   .thp-sub.guard li svg{stroke:var(--coral-d)}
   .tclose{margin:30px auto 0;text-align:center;font-family:"Noto Serif TC",serif;font-size:clamp(16px,2vw,19px);color:var(--ink);font-weight:600;line-height:1.7;max-width:720px}
   @media(max-width:820px){
-    .tflow{flex-direction:column;align-items:stretch;gap:0}
-    .tflow .tstep2{max-width:none;display:flex;align-items:center;gap:15px;text-align:left;padding:15px 18px}
-    .tflow .tsi{margin:0;flex-shrink:0;width:46px;height:46px}
-    .tflow .tstep2 b{margin-top:0}
-    .tflow .tarr{transform:rotate(90deg);height:18px;justify-content:center;margin:3px 0}
+    .tflow{flex-direction:column;gap:14px}
+    .tflow .tstep2{display:flex;align-items:center;gap:16px;text-align:left;padding:0}
+    .tflow .tstep2::after{display:none}
+    .tflow .tsnum{height:auto;font-size:38px;flex-shrink:0;width:48px;justify-content:flex-start}
+    .tflow .tscircle{margin:0;flex-shrink:0;width:58px;height:58px}
+    .tflow .tscircle svg{width:27px;height:27px}
     .thp{grid-template-columns:1fr}
   }
 </style>
@@ -484,15 +488,11 @@
     </div>
     <!-- 服務流程圖：服務怎麼送到用戶手上 -->
     <div class="tflow reveal">
-      <div class="tstep2"><span class="tsi"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1M12 18v4"/></svg></span><span class="tsn">01</span><b data-en="You start talking">開口說話</b></div>
-      <span class="tarr"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-      <div class="tstep2"><span class="tsi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></span><span class="tsn">02</span><b data-en="A real face &amp; voice, live">即時真臉真聲</b></div>
-      <span class="tarr"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-      <div class="tstep2"><span class="tsi"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span class="tsn">03</span><b data-en="Hears you, reads your mood">聽懂話、讀情緒</b></div>
-      <span class="tarr"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-      <div class="tstep2"><span class="tsi"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span><span class="tsn">04</span><b data-en="The right reply &amp; reminder">給對的回應與提醒</b></div>
-      <span class="tarr"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-      <div class="tstep2"><span class="tsi"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="tsn">05</span><b data-en="Protection when it&apos;s needed">需要時，啟動守護</b></div>
+      <div class="tstep2"><span class="tsnum">01</span><span class="tscircle"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1M12 18v4"/></svg></span><b data-en="You start talking">開口說話</b></div>
+      <div class="tstep2"><span class="tsnum">02</span><span class="tscircle"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></span><b data-en="A real face &amp; voice, live">即時真臉真聲</b></div>
+      <div class="tstep2"><span class="tsnum">03</span><span class="tscircle"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><b data-en="Hears you, reads your mood">聽懂話、讀情緒</b></div>
+      <div class="tstep2"><span class="tsnum">04</span><span class="tscircle"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span><b data-en="The right reply &amp; reminder">給對的回應與提醒</b></div>
+      <div class="tstep2 peak"><span class="tsnum">05</span><span class="tscircle"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span><b data-en="Protection when it&apos;s needed">需要時，啟動守護</b></div>
     </div>
 
     <!-- 健康 × 心理：應用與防護 -->
