@@ -1,41 +1,15 @@
 #!/usr/bin/env bash
-# 沐寧 · 更新【測試環境】（城堡主控：任何蘇菲/城堡 session 可跑；跑完證據貼白板）
-# 用法：bash deploy/cloudrun/更新測試環境.sh
+# ⛔ 已退役（2026-07-13）—— 這支腳本原本直接部署+立刻 100% 吃流量，沒有安全閘、
+#    也曾在此腳本裡漏帶完整 env（--set-env-vars 只帶一個值＝把其餘 env 全洗掉，
+#    見 memory：deploy-env-drop-gotcha，2026-07-12 就是這樣弄壞過 staging）。
+#
+# munea-brain-staging / munea-voice-staging 現在是「唯一正式」，不再是「測試」身分，
+# 部署一律走有安全閘的兩步：
+#   1) bash deploy/cloudrun/canary-deploy.sh brain|voice   ← 先出新版、不吃流量、給測試網址
+#   2) bash deploy/cloudrun/promote.sh brain|voice          ← 測過 OK 才切 100% 正式流量
+#
+# 完整說明：docs/單一正式環境-部署SOP-2026-07-13.md
 set -euo pipefail
-cd "$(dirname "$0")/../.."
-export PATH="$LOCALAPPDATA/Google/Cloud SDK/google-cloud-sdk/bin:$PATH"
-G="cmd //c gcloud.cmd"
-
-# 薄門通行碼（跟正式同款）：帶進雲端，開門後 App 帶碼才進得來
-KEY=$(cat deploy/.munea-app-key 2>/dev/null || true)
-[ -n "$KEY" ] || { echo "⛔ 找不到 deploy/.munea-app-key——薄門沒鑰匙不准部署"; exit 1; }
-
-echo "== 更新前快照（可回滾的版本）=="
-$G run revisions list --service munea-brain-staging --region asia-east1 --limit=1 --format="value(name)" || true
-
-echo "== 部署 測試環境·管家腦 =="
-$G run deploy munea-brain-staging --source . --clear-base-image --region asia-east1 \
-  --set-secrets GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest \
-  --set-env-vars "MUNEA_APP_KEY=$KEY" \
-  --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
-# ⚠ 薄門模式：測試環境大門必須「公開」，App 才進得來、程式內再靠 MUNEA_APP_KEY 驗碼守門。
-#   千萬別改回 --no-allow-unauthenticated——那會把大門鎖上、App 全被 403 擋、聊聊退回本機罐頭句（2026-07-09 教訓）。
-#   正式環境的門另議（上線前改走每用戶專屬鑰匙、見 更新正式環境.sh）。
-
-echo "== 部署 測試環境·語音橋 =="
-$G run deploy munea-voice-staging --source . --clear-base-image --region asia-east1 \
-  --set-secrets GEMINI_API_KEY=munea-gemini-key-staging:latest \
-  --set-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY" \
-  --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
-  --allow-unauthenticated --quiet
-# ⚠ 同上：語音橋大門也必須公開，否則 App 連不上 WebSocket、聊聊只會打字不講話（2026-07-09 教訓）。
-
-echo "== 冒煙檢查（帶憑證·驗服務活著）=="
-TOK=$(cmd //c "gcloud.cmd auth print-identity-token" | tr -d '\r')
-curl -s -m 20 -o /dev/null -w "測試環境·管家腦 / -> %{http_code}\n" -H "Authorization: Bearer $TOK" "https://munea-brain-staging-491603544409.asia-east1.run.app/"
-
-echo "== 門衛檢查（不帶憑證·驗 App 匿名連得進來）=="
-# ⚠ 上面帶憑證的冒煙檢查門鎖了也會過（2026-07-09 就是這樣沒抓到）；這隻用 App 那樣的匿名連線戳，
-#   門被鎖(403)就在 Slack #munea-營運 報警＋附一鍵開門指令。部署後當場驗、不必等用戶回報。
-python tools/door-sentinel.py || echo "⚠ 門衛：有門沒開！照上面警報的一鍵指令開門。"
-echo "DONE · 記得把本次版本與結果記上白板"
+echo "⛔ 這支腳本已退役——沒有安全閘、且曾在此腳本內踩過 env-drop 地雷。"
+echo "   請改用 canary-deploy.sh + promote.sh（見本檔開頭註解 / docs/單一正式環境-部署SOP-2026-07-13.md）"
+exit 1
