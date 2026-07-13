@@ -83,6 +83,29 @@ class RequestScopeTests(unittest.TestCase):
                 "required": False,
             })
 
+    def test_verified_new_user_can_reach_account_bootstrap(self):
+        class MissingIdentityBackend:
+            def configured(self):
+                return True
+
+            def resolve_auth_identity(self, _auth_user_id):
+                return None
+
+        with patch.object(server.supabase_adapter, "make_adapter", return_value=MissingIdentityBackend()):
+            self.assertIsNone(server.bind_request_data_identity(AUTH_GATE, allow_missing=True))
+
+    def test_missing_identity_stays_blocked_outside_bootstrap(self):
+        class MissingIdentityBackend:
+            def configured(self):
+                return True
+
+            def resolve_auth_identity(self, _auth_user_id):
+                return None
+
+        with patch.object(server.supabase_adapter, "make_adapter", return_value=MissingIdentityBackend()):
+            with self.assertRaisesRegex(PermissionError, "account_scope_missing"):
+                server.bind_request_data_identity(AUTH_GATE)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -376,7 +376,7 @@ def data_backend():
     return supabase_adapter.make_adapter(identity=REQUEST_DATA_IDENTITY.get())
 
 
-def bind_request_data_identity(auth_gate):
+def bind_request_data_identity(auth_gate, allow_missing=False):
     if not auth_gate.get("required"):
         return None
     auth_user_id = (auth_gate.get("auth") or {}).get("authUserId")
@@ -385,6 +385,8 @@ def bind_request_data_identity(auth_gate):
         return None
     identity = base_backend.resolve_auth_identity(auth_user_id)
     if not identity:
+        if allow_missing:
+            return None
         raise PermissionError("account_scope_missing")
     return REQUEST_DATA_IDENTITY.set(identity)
 
@@ -2613,16 +2615,26 @@ def bootstrap_account_response(data, headers=None):
         if remote_store:
             store = normalize_app_profile_store(remote_store)
             account_id = store.get("account", {}).get("id") or verified_auth_user_id
-            free_trial = ensure_free_signup_trial(account_id)
-            append_product_event({"eventName": "account_bootstrapped", "properties": {"backend": "supabase"}})
-            return {
-                "ok": True,
-                "store": store,
-                "activeCompanionProfile": active_companion_profile(store),
-                "freeTrial": free_trial,
-                "auth": public_auth_context(auth_context),
-                "backend": data_backend_status(),
+            bootstrap_identity = {
+                "accountId": account_id,
+                "personId": store.get("primaryCareRecipientId"),
+                "familyGroupId": (store.get("familyGroup") or {}).get("id") or "",
+                "authUserId": verified_auth_user_id,
             }
+            bootstrap_scope_token = REQUEST_DATA_IDENTITY.set(bootstrap_identity)
+            try:
+                free_trial = ensure_free_signup_trial(account_id)
+                append_product_event({"eventName": "account_bootstrapped", "properties": {"backend": "supabase"}})
+                return {
+                    "ok": True,
+                    "store": store,
+                    "activeCompanionProfile": active_companion_profile(store),
+                    "freeTrial": free_trial,
+                    "auth": public_auth_context(auth_context),
+                    "backend": data_backend_status(),
+                }
+            finally:
+                REQUEST_DATA_IDENTITY.reset(bootstrap_scope_token)
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
@@ -4912,7 +4924,10 @@ class H(BaseHTTPRequestHandler):
             if not auth_gate.get("ok"):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
-            scope_token = bind_request_data_identity(auth_gate)
+            scope_token = bind_request_data_identity(
+                auth_gate,
+                allow_missing=self.path.split("?", 1)[0] == "/account-bootstrap",
+            )
             authorize_request_data_scope(self.path, data, auth_gate)
             char = data.get("char") or DEFAULT_CHAR
             if self.path == "/open":
