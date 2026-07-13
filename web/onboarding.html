@@ -254,6 +254,7 @@
 </div>
 
 <script src="src/companion-profile.js?v=20260629-profile"></script>
+<script src="src/i18n.js?v=20260713-i18n1"></script>
 <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫） -->
 <script src="src/auth.js?v=20260630-auth"></script>
 <script>
@@ -355,9 +356,9 @@
           action: 'create',
           displayName: profile.displayName,
           companionProfile: profile,
-          locale: 'zh-TW',
+          locale: window.MuneaI18n ? window.MuneaI18n.current() : 'zh-TW',
           timezone: 'Asia/Taipei',
-          preferredLanguages: ['zh-TW', 'en'],
+          preferredLanguages: window.MuneaI18n ? window.MuneaI18n.preferredLanguages() : ['zh-TW', 'en'],
           source: 'web-onboarding',
         }),
       });

@@ -115,7 +115,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .task-item + .task-item { border-top: 1px solid var(--line); }
 .task-ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
 .task-ico .ic { width: 21px; height: 21px; }
-.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
+.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.mood { background: #5B8FB3; color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
 .task-body { flex: 1; }
 .task-title { font-size: 15px; font-weight: 700; color: var(--ink); }
 .task-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
@@ -364,6 +364,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .set-row .sr-arrow { margin-left: auto; color: var(--muted); font-size: 15px; }
 .set-row .sr-main { flex: 1; min-width: 0; font-weight: 700; }
 .set-row .sr-main small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.locale-row { cursor: pointer; }
+.locale-row select { margin-left: auto; max-width: 108px; border: 0; background: transparent; color: var(--teal-dd); font: inherit; font-size: 14px; font-weight: 700; text-align: right; }
 .provider-consent-card { margin-top: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid rgba(58,168,160,.14); box-shadow: var(--shadow-sm); }
 .provider-consent-card[data-consent="agreed"] { border-color: rgba(58,168,160,.28); background: #F5FBF8; }
 .provider-consent-head { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
@@ -705,7 +707,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
    9:16 定比框置中（窄螢幕滿寬、上下留邊）；全身立繪墊底；512 活臉塞進判斷框、四邊羽化融進立繪 */
 .fh-frame {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: max(100%, calc(100dvh * 1080 / 1920)); aspect-ratio: 1080 / 1920;   /* max＝蓋滿整個螢幕、無黑邊（多的裁掉）；Edward 7/11 點名滿版、對齊目標影片 */
+  width: 100%; height: 100%; aspect-ratio: 1080 / 1920;
   overflow: hidden; background: #0E1A17; z-index: 1;
 }
 .fh-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

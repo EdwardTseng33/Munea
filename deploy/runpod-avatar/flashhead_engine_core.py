@@ -241,6 +241,10 @@ class Feeder:
 
         self.lock = threading.Lock()
         self.acc = np.zeros(0, dtype=np.float32)
+        # The lip-sync model consumes 16 kHz audio, but listeners should hear
+        # Gemini's original 24 kHz stream. Keep both buffers aligned so model
+        # resampling never becomes the audible output path.
+        self.acc_out = np.zeros(0, dtype=np.float32)
         self.consumed = 0
         self.t0 = None
         self.last_in = 0.0
@@ -275,11 +279,13 @@ class Feeder:
                 print("[round] slot" + str(self.slot.index) + " #" + str(self.slot.round_count)
                       + " start (acc keep " + str(len(self.acc)) + " samples)", flush=True)
             self.acc = np.concatenate([self.acc, xq])
+            self.acc_out = np.concatenate([self.acc_out, x])
             self.last_in = now
 
     def reset(self):
         with self.lock:
             self.acc = np.zeros(0, dtype=np.float32)
+            self.acc_out = np.zeros(0, dtype=np.float32)
             self.t0 = None
             self.consumed = 0
             self._epoch += 1
@@ -318,7 +324,7 @@ class Feeder:
                     print("[feeder] slot" + str(self.slot.index)
                           + " on_unhealthy callback error: " + repr(cb_err), flush=True)
 
-    def _gen_chunk(self, chunk_16k, valid_samples=None):
+    def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None):
         t_chunk_ready = time.time()
         with self.lock:
             chunk_epoch = self._epoch
@@ -355,8 +361,18 @@ class Feeder:
         self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
         if valid_samples is None:
             valid_samples = len(chunk_16k)
-        pcm16 = np.clip(chunk_16k[:valid_samples] * 32768.0, -32768, 32767).astype(np.int16)
-        self.slot.audio_out.push(pcm16)
+        if output_pcm is None:
+            output_samples = int(round(valid_samples * self.sr_in / self.sr_eng))
+            if output_samples > 0 and valid_samples > 0:
+                output_pcm = np.interp(
+                    np.linspace(0, 1, output_samples, endpoint=False),
+                    np.linspace(0, 1, valid_samples, endpoint=False),
+                    chunk_16k[:valid_samples],
+                ).astype(np.float32)
+            else:
+                output_pcm = np.zeros(0, dtype=np.float32)
+        pcm_out = np.clip(output_pcm * 32768.0, -32768, 32767).astype(np.int16)
+        self.slot.audio_out.push(pcm_out)
         if self._round_pending:
             self._round_pending = False
             lat_ms = round((t_frames_ready - self.slot.round_start_ts) * 1000, 1)
@@ -370,19 +386,24 @@ class Feeder:
             todo = None
             with self.lock:
                 if len(self.acc) >= cs and self.t0 is not None:
-                    ahead_s = self.slot.audio_out.depth_samples / self.sr_eng
+                    ahead_s = self.slot.audio_out.depth_samples / self.slot.audio_out.sample_rate
                     if ahead_s < self.max_ahead_s:
-                        todo = (self.acc[:cs].copy(), cs)
+                        output_samples = min(len(self.acc_out), int(round(cs * self.sr_in / self.sr_eng)))
+                        todo = (self.acc[:cs].copy(), cs, self.acc_out[:output_samples].copy())
                         self.acc = self.acc[cs:]
+                        self.acc_out = self.acc_out[output_samples:]
                         self.consumed += cs
                 elif self._finish_pending and 0 < len(self.acc) < cs:
                     valid = len(self.acc)
                     padded = np.zeros(cs, dtype=np.float32)
                     padded[:valid] = self.acc
+                    output_samples = min(len(self.acc_out), int(round(valid * self.sr_in / self.sr_eng)))
+                    output_pcm = self.acc_out[:output_samples].copy()
                     self.acc = np.zeros(0, dtype=np.float32)
+                    self.acc_out = self.acc_out[output_samples:]
                     self._finish_pending = False
                     self.consumed += valid
-                    todo = (padded, valid)
+                    todo = (padded, valid, output_pcm)
             if todo is not None:
                 if self._idle_on:
                     self._idle_on = False
@@ -390,7 +411,7 @@ class Feeder:
                     self.slot.audio_out.clear()
                     print("[feeder] slot" + str(self.slot.index)
                           + " real audio arrived, stop idle feed", flush=True)
-                self._gen_chunk(todo[0], todo[1])
+                self._gen_chunk(todo[0], todo[1], todo[2])
                 continue
             now = time.time()
             with self.lock:
@@ -426,7 +447,21 @@ class SlotPool:
     def active_count(self):
         return sum(1 for s in self.slots if s.active_session is not None)
 
-    def admit(self, session_id):
+    def admit(self, session_id, preferred_index=None):
+        # Durable Call Control reserves a concrete 1-based slot before the App
+        # reaches this worker. Honor that reservation instead of taking any
+        # free slot, otherwise the database and GPU could disagree.
+        if preferred_index is not None:
+            try:
+                slot = self.slots[int(preferred_index)]
+            except (TypeError, ValueError, IndexError):
+                return None
+            if slot.healthy and slot.active_session is None:
+                return self._claim(slot, session_id)
+            pc = slot.active_pc
+            if pc is not None and getattr(pc, "connectionState", None) in ("closed", "failed"):
+                return self._claim(slot, session_id)
+            return None
         # 先找完全空的槽（本機內槽序無關緊要；跨機器的 fullest-first 打包
         # 是 gateway 的活，不是這裡）
         for slot in self.slots:

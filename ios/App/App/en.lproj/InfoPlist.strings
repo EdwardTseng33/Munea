@@ -1,0 +1,7 @@
+"CFBundleDisplayName" = "Munea";
+"NSMicrophoneUsageDescription" = "Munea needs microphone access so you can talk with your AI companion.";
+"NSSpeechRecognitionUsageDescription" = "Munea uses speech recognition to understand what you say to your companion.";
+"NSUserNotificationsUsageDescription" = "Munea sends gentle reminders and family care updates.";
+"NSLocalNetworkUsageDescription" = "Munea connects to a voice service on your local Wi-Fi for real-time conversations.";
+"NSHealthShareUsageDescription" = "Munea reads health data such as steps, heart rate, sleep, blood pressure, and blood oxygen to help you understand daily wellbeing.";
+"NSHealthUpdateUsageDescription" = "Munea currently only reads health data. It will ask for your consent before writing health data in the future.";

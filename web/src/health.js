@@ -45,6 +45,14 @@ window.MuneaHealth = (function () {
     if (typeof s.steps === 'number' && typeof window.__muneaSetSteps === 'function') {
       try { window.__muneaSetSteps(s.steps); } catch (e) {}
     }
+    try {
+      if (typeof p.getHistory === 'function' && typeof window.__muneaSetHealthHistory === 'function') {
+        const history = await p.getHistory({ days: 35 });
+        if (history && history.available !== false && Array.isArray(history.days)) {
+          window.__muneaSetHealthHistory(history.days);
+        }
+      }
+    } catch (e) {}
     try { localStorage.setItem('munea.health.last', JSON.stringify({ t: Date.now(), s: s })); } catch (e) {}
     return s;
   }

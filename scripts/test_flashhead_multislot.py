@@ -31,6 +31,7 @@ MOTION_FRAMES = 2
 SLICE_LEN = 24
 FRAME_NUM = SLICE_LEN + MOTION_FRAMES
 SAMPLE_RATE = 16000
+OUTPUT_SAMPLE_RATE = 24000
 CACHED_AUDIO_DURATION = 8
 CHUNK_SAMPLES = SLICE_LEN * SAMPLE_RATE // TGT_FPS
 
@@ -73,7 +74,7 @@ def make_slot(index, tag):
     slot.pcs = set()
     slot.pc_created = {}
     slot.sink = fec.FrameSink(TGT_FPS)
-    slot.audio_out = fec.AudioOutBuffer(SAMPLE_RATE, prebuffer_s=0.0)  # 測試不等暖身墊窗
+    slot.audio_out = fec.AudioOutBuffer(OUTPUT_SAMPLE_RATE, prebuffer_s=0.0)  # 測試不等暖身墊窗
     return slot
 
 
@@ -127,6 +128,17 @@ def test_admission_release_and_reclaim():
     print("test_admission_release_and_reclaim: PASS")
 
 
+def test_admission_honors_durable_preferred_slot():
+    slots = [make_slot(i, "s%d" % i) for i in range(3)]
+    pool = fec.SlotPool(slots)
+    picked = pool.admit("call-slot-3", preferred_index=2)
+    assert picked is slots[2]
+    assert slots[0].active_session is None and slots[1].active_session is None
+    assert pool.admit("duplicate-slot-3", preferred_index=2) is None
+    assert pool.admit("invalid-slot", preferred_index=99) is None
+    print("test_admission_honors_durable_preferred_slot: PASS")
+
+
 def test_admission_stale_pc_self_heal():
     """逐行對照舊版：pc.connectionState in (closed, failed) 時才可回收；
     pc is None（還在交握中）視為忙碌，不可回收——這條分支決定 429 或放行。"""
@@ -170,9 +182,12 @@ def _drain_all(feeder, n_max=50):
     while len(feeder.acc) >= cs and n < n_max:
         with feeder.lock:
             chunk = feeder.acc[:cs].copy()
+            output_samples = min(len(feeder.acc_out), int(round(cs * feeder.sr_in / feeder.sr_eng)))
+            output_pcm = feeder.acc_out[:output_samples].copy()
             feeder.acc = feeder.acc[cs:]
+            feeder.acc_out = feeder.acc_out[output_samples:]
             feeder.consumed += cs
-        feeder._gen_chunk(chunk, cs)
+        feeder._gen_chunk(chunk, cs, output_pcm)
         n += 1
     return n
 
@@ -215,6 +230,22 @@ def test_cross_slot_isolation():
     assert slot_a.audio_out is not slot_b.audio_out
     assert slot_a.sink is not slot_b.sink
     print("test_cross_slot_isolation: PASS")
+
+
+def test_audible_output_keeps_original_24k_samples():
+    slot = make_slot(0, "s0")
+    emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+    original = (np.sin(np.linspace(0, 20 * np.pi, 40000)) * 12000).astype(np.int16)
+
+    feeder.push24k(original.tobytes())
+    assert _drain_all(feeder, n_max=1) == 1
+
+    expected_samples = int(round(CHUNK_SAMPLES * feeder.sr_in / feeder.sr_eng))
+    assert slot.audio_out.sample_rate == OUTPUT_SAMPLE_RATE
+    assert slot.audio_out.depth_samples == expected_samples
+    assert np.array_equal(slot.audio_out.buf, original[:expected_samples])
+    print("test_audible_output_keeps_original_24k_samples: PASS")
 
 
 def test_fault_isolation_one_slot_does_not_crash_others():
@@ -368,9 +399,11 @@ def test_force_release_slot_used_by_unhealthy_path():
 def main():
     test_admission_find_free_and_full()
     test_admission_release_and_reclaim()
+    test_admission_honors_durable_preferred_slot()
     test_admission_stale_pc_self_heal()
     test_health_n1_shape_matches_capacity_contract()
     test_cross_slot_isolation()
+    test_audible_output_keeps_original_24k_samples()
     test_fault_isolation_one_slot_does_not_crash_others()
     test_switch_slot_char_isolation()
     test_health_snapshot_math()

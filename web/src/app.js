@@ -4,6 +4,9 @@
 
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
+const muneaLocale = () => (window.MuneaI18n ? window.MuneaI18n.current() : 'zh-TW');
+const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.preferredLanguages() : ['zh-TW', 'en']);
+const muneaT = (key, fallback) => (window.MuneaI18n ? window.MuneaI18n.t(key, null, fallback) : fallback);
 
 const OVERLAYS = ['med', 'connect', 'chat'];
 const AVATAR_ENGINE_MODES = Object.freeze({
@@ -313,9 +316,9 @@ function accountBootstrapPayload(action = 'create', extra = {}) {
     action,
     displayName: companionDisplayName.trim() || templateFor().defaultName,
     companionProfile: savedCompanionProfile,
-    locale: 'zh-TW',
+    locale: muneaLocale(),
     timezone: 'Asia/Taipei',
-    preferredLanguages: ['zh-TW', 'en'],
+    preferredLanguages: muneaPreferredLanguages(),
     source: 'web-prototype',
     ...extra,
   };
@@ -330,11 +333,15 @@ async function syncAccountBootstrap(action = 'create', extra = {}) {
     const response = await brainPost('/account-bootstrap', accountBootstrapPayload(action, extra));
     if (response && response.ok) {
       storageSet(ACCOUNT_BOOTSTRAP_KEY, 'true');
+      const store = response.store || {};
+      if (store.primaryCareRecipientId) storageSet('munea.cloudPersonId', store.primaryCareRecipientId);
+      if (store.familyGroup && store.familyGroup.id) storageSet('munea.familyGroupId', store.familyGroup.id);
       if (response.activeCompanionProfile) applyCompanionProfile(response.activeCompanionProfile);
       trackProductEvent('onboarding_completed', {
         bootstrapReason: extra.reason || action,
         bootstrapBackend: response.backend && response.backend.provider ? response.backend.provider : 'json',
       });
+      try { syncPullAll(); } catch (e) {}
     } else if (response && response.error && response.error.code === 'auth_user_required') {
       storageSet(ACCOUNT_BOOTSTRAP_KEY, 'pending-auth');
     }
@@ -363,6 +370,7 @@ function syncCompanionUI() {
   $$('.cname').forEach(el => { el.textContent = display; });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
+  renderCompanionGreeting();
   // 在聊聊頁換角色：待機動態跟著換人（通話中不動）
   try {
     const chatActive = document.getElementById('chat') && document.getElementById('chat').classList.contains('active');
@@ -916,7 +924,7 @@ const voiceProvider = {
     const session = await brainPost('/voice-session', {
       char: currentChar,
       companionProfile: savedCompanionProfile,
-      locale: 'zh-TW',
+      locale: muneaLocale(),
       fallback: VOICE_PROVIDER_MODES.STT_CHAT_TTS,
       ...context,
     });
@@ -924,7 +932,7 @@ const voiceProvider = {
       ok: false,
       provider: VOICE_PROVIDER_MODES.STATIC_FALLBACK,
       fallback: VOICE_PROVIDER_MODES.STT_CHAT_TTS,
-      locale: 'zh-TW',
+      locale: muneaLocale(),
     };
     this.mode = this.session.provider || this.session.fallback || VOICE_PROVIDER_MODES.STT_CHAT_TTS;
     setLatestAiContext(this.session.aiContext, 'voice-session', this.session.relationshipState);
@@ -933,12 +941,12 @@ const voiceProvider = {
   },
   async open(char) {
     if (!this.session) await this.connect({ char });
-    return brainPost('/open', { char });
+    return brainPost('/open', { char, locale: muneaLocale() });
   },
   async sendText({ history, char }) {
     this.setState('thinking');
     try {
-      const response = await brainPost('/chat', { history, char, companionProfile: savedCompanionProfile, userMood: (window.MM && window.MM.currentMood) ? window.MM.currentMood() : '', interests: loadInterests() });
+      const response = await brainPost('/chat', { history, char, locale: muneaLocale(), companionProfile: savedCompanionProfile, userMood: (window.MM && window.MM.currentMood) ? window.MM.currentMood() : '', interests: loadInterests() });
       if (response) setLatestAiContext(response.aiContext, 'chat response', response.relationshipState);
       return response;
     } finally {
@@ -948,7 +956,7 @@ const voiceProvider = {
   async sendVoiceNote({ audio, mime, durationMs, char }) {
     this.setState('uploading');
     try {
-      const response = await brainPost('/voice-note', { char, audio, mime, durationMs, provider: this.mode });
+      const response = await brainPost('/voice-note', { char, locale: muneaLocale(), audio, mime, durationMs, provider: this.mode });
       if (response) setLatestAiContext(response.aiContext, 'voice-note', response.relationshipState);
       return response;
     } finally {
@@ -976,7 +984,101 @@ function saveInterests(list) { try { localStorage.setItem('munea.interests', JSO
 const LIVE_VOICE_URL_DEFAULT = 'wss://munea-voice-staging-491603544409.asia-east1.run.app';
 // 薄門通行碼：App 自動帶、用戶無感；擋「拿到網址直接來撥」的陌生流量（本機引擎沒開門檢查、帶了也無妨）
 const MUNEA_APP_KEY = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
+const CALL_CONTROL_URL_DEFAULT = '';
+const CallControl = {
+  active: null,
+  pending: null,
+  heartbeatTimer: null,
+  cancelled: false,
+  url() {
+    try { return (localStorage.getItem('munea.callControlUrl') || CALL_CONTROL_URL_DEFAULT).replace(/\/$/, ''); }
+    catch (e) { return CALL_CONTROL_URL_DEFAULT; }
+  },
+  async _headers() {
+    const headers = await muneaAuthHeaders({ 'Content-Type': 'application/json' });
+    delete headers['X-Munea-Key'];
+    return headers;
+  },
+  async acquire(characterId) {
+    const base = this.url();
+    if (!base) throw new Error('call_control_not_configured');
+    this.cancelled = false;
+    const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
+    while (!this.cancelled) {
+      const response = await fetch(base + '/v1/calls', {
+        method: 'POST',
+        headers: await this._headers(),
+        body: JSON.stringify({ character_id: characterId || 'default', idempotency_key: idempotencyKey }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error((result && result.detail) || ('call_control_http_' + response.status));
+      if (result.status === 'connect') {
+        this.pending = null;
+        this.active = result;
+        this._startHeartbeat();
+        return result;
+      }
+      if (result.status === 'queued') {
+        this.pending = { call_id: result.call_id, idempotency_key: idempotencyKey };
+        const queue = result.queue || {};
+        setCallHint('目前排第 ' + (queue.position || 1) + ' 位，正在準備通話席位…', true);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        continue;
+      }
+      const reason = result.reason || 'capacity_unavailable';
+      throw new Error(reason);
+    }
+    throw new Error('call_cancelled');
+  },
+  async refreshToken() {
+    if (!this.active) return null;
+    const response = await fetch(this.url() + '/v1/calls/' + encodeURIComponent(this.active.call_id) + '/token', {
+      method: 'POST', headers: await this._headers(),
+      body: JSON.stringify({ lease_version: this.active.lease_version }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.status !== 'connect') throw new Error('call_token_refresh_failed');
+    this.active = Object.assign({}, this.active, result);
+    return this.active;
+  },
+  _startHeartbeat() {
+    clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = setInterval(async () => {
+      const lease = this.active; if (!lease) return;
+      try {
+        const response = await fetch(this.url() + '/v1/calls/' + encodeURIComponent(lease.call_id) + '/heartbeat', {
+          method: 'POST', headers: await this._headers(),
+          body: JSON.stringify({ lease_version: lease.lease_version, event_id: 'app-heartbeat-' + Date.now(), component: 'app' }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.should_end) {
+          try { LiveVoice.stop(); } catch (e) {}
+          try { completeChatSession(result.reason || 'lease_ended'); } catch (e) {}
+        }
+      } catch (e) { /* 45s lease reaper is the final guard; one missed heartbeat is recoverable. */ }
+    }, 15000);
+  },
+  async release(reason) {
+    this.cancelled = true;
+    clearInterval(this.heartbeatTimer); this.heartbeatTimer = null;
+    const lease = this.active; const pending = this.pending;
+    this.active = null; this.pending = null;
+    try {
+      if (lease) {
+        await fetch(this.url() + '/v1/calls/' + encodeURIComponent(lease.call_id) + '/release', {
+          method: 'POST', headers: await this._headers(), keepalive: true,
+          body: JSON.stringify({ lease_version: lease.lease_version, event_id: 'app-release-' + Date.now(), reason: reason || 'ended' }),
+        });
+      } else if (pending) {
+        await fetch(this.url() + '/v1/calls/' + encodeURIComponent(pending.call_id) + '/cancel', {
+          method: 'POST', headers: await this._headers(), keepalive: true,
+        });
+      }
+    } catch (e) { /* Voice/Avatar callbacks and lease TTL provide idempotent cleanup. */ }
+  },
+};
 function getLiveVoiceUrl() {
+  if (CallControl.active && CallControl.active.voice) return CallControl.active.voice.url || '';
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
   return LIVE_VOICE_URL_DEFAULT;
 }
@@ -1002,6 +1104,7 @@ function faceEngine() {
 const FLASHHEAD_CHAR_MAP = { '寧寧': 'a05', '阿宏': 'a06' };
 function flashheadCharFor(backendChar) { try { return FLASHHEAD_CHAR_MAP[backendChar] || ''; } catch (e) { return ''; } }
 function getAvatarUrl() {
+  if (CallControl.active && CallControl.active.worker) return CallControl.active.worker.url || '';
   try {
     const raw = localStorage.getItem('munea.avatarUrl');
     if (raw !== null) {
@@ -1015,6 +1118,16 @@ function getAvatarUrl() {
 }
 // FlashHead 全身合成開關（2026-07-11）：開＝把 512 活臉搬進 9:16 全身立繪的判斷框（羽化貼回、先鋒參數）；
 // 關＝活臉搬回原位、恢復照片模式（Ditto/掛斷用）。搬家後補一次 play()——iOS 換位可能暫停。
+function _fhFitStage(frame) {
+  const host = frame && frame.parentElement;
+  if (!host) return;
+  const hostWidth = host.clientWidth;
+  const hostHeight = host.clientHeight;
+  if (!hostWidth || !hostHeight) return;
+  const scale = Math.max(hostWidth / 1080, hostHeight / 1920);
+  frame.style.width = Math.ceil(1080 * scale) + 'px';
+  frame.style.height = Math.ceil(1920 * scale) + 'px';
+}
 function _fhComposite(on, vid) {
   try {
     const frame = document.getElementById('fhFrame');
@@ -1022,6 +1135,13 @@ function _fhComposite(on, vid) {
     if (!frame || !ov || !vid) return;
     if (on) {
       frame.hidden = false;
+      _fhFitStage(frame);
+      if (!window.__muneaFhStageObserver && typeof ResizeObserver !== 'undefined') {
+        window.__muneaFhStageObserver = new ResizeObserver(() => {
+          if (!frame.hidden) _fhFitStage(frame);
+        });
+        window.__muneaFhStageObserver.observe(frame.parentElement);
+      }
       const _bg = document.getElementById('fhBg');   // 全身立繪底圖跟著角色換：擬真女 bg-a05、擬真男 bg-a06
       const _fc = flashheadCharFor(currentChar) || 'a05';
       if (_bg && _bg.getAttribute('src') !== 'flashhead/bg-' + _fc + '.png') _bg.src = 'flashhead/bg-' + _fc + '.png';
@@ -1123,7 +1243,7 @@ const Avatar = {
     try {
       // 連線路線（7/9 手機實測補強）：家用網路直連即可；手機行動網路（5G/4G）常要走「中繼站」轉一手
       // 中繼＝公開測試中繼（正式上線換自家帳號的中繼、一行換）；munea.avatarRelay=1 可強制全走中繼（診斷用）
-      const iceServers = [
+      const legacyIceServers = [
         { urls: 'stun:stun.l.google.com:19302' },
         // 自架可靠中繼站（GCP coturn · 34.81.102.52 · 2026-07-10 Edward 選 B、已實測能轉接）——手機行動網路優先走這台、穩
         { urls: ['turn:34.81.102.52:3478?transport=udp', 'turn:34.81.102.52:3478?transport=tcp'],
@@ -1135,6 +1255,8 @@ const Avatar = {
         { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
           username: 'openrelayproject', credential: 'openrelayproject' },
       ];
+      const leaseIceServers = CallControl.active && CallControl.active.ice_servers;
+      const iceServers = Array.isArray(leaseIceServers) && leaseIceServers.length ? leaseIceServers : legacyIceServers;
       let forceRelay = false;
       try { forceRelay = localStorage.getItem('munea.avatarRelay') === '1'; } catch (e) {}
       this.pc = new RTCPeerConnection(forceRelay ? { iceServers, iceTransportPolicy: 'relay' } : { iceServers });
@@ -1184,13 +1306,14 @@ const Avatar = {
           try { this.stop(); } catch (e2) {}
           setTimeout(() => {
             if (typeof callConnected !== 'undefined' && !callConnected && !callDialing) return;   // 已掛斷就不重連
-            Avatar.start().then(ok => {
+            const resume = CallControl.active ? CallControl.refreshToken() : Promise.resolve();
+            resume.then(() => Avatar.start()).then(ok => {
               if (!ok) return;
               try {   // 通話已開場的情況下臉遲到加入：補亮會動的臉那層（開場那步早跑過、這裡要自己補）
                 const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid');
                 FaceIdle.stop();
               } catch (e3) {}
-            });
+            }).catch(() => {});
           }, 800);
         }
       });
@@ -1211,7 +1334,9 @@ const Avatar = {
           _cq = '&char=' + encodeURIComponent(currentChar);
         }
       } catch (e) {}
-      const r = await fetch(u + '/offer?key=' + encodeURIComponent(MUNEA_APP_KEY) + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const _leaseToken = CallControl.active && CallControl.active.call_token;
+      const _avatarAuth = _leaseToken ? ('token=' + encodeURIComponent(_leaseToken)) : ('key=' + encodeURIComponent(MUNEA_APP_KEY));
+      const r = await fetch(u + '/offer?' + _avatarAuth + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
       const a = await r.json();
       if (!r.ok || a.error) {
@@ -1222,7 +1347,7 @@ const Avatar = {
       if (!this._session) { this._lastError = 'missing_session'; throw new Error('avatar session missing'); }
       await this.pc.setRemoteDescription(a);
       // 聲音上行：App 自己開一條 WS 把語音送去雲端臉（下面 feed()/reset() 會用到）
-      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?key=' + encodeURIComponent(MUNEA_APP_KEY) + '&session=' + encodeURIComponent(this._session));
+      this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?' + _avatarAuth + '&session=' + encodeURIComponent(this._session));
       this.ws.binaryType = 'arraybuffer';
       await new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('avatar audio feed timeout')), 6000);
@@ -1311,6 +1436,31 @@ document.addEventListener('DOMContentLoaded', () => {
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
+  prime() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        this._micUnavailableReason = (!window.isSecureContext && !['localhost', '127.0.0.1'].includes(location.hostname))
+          ? 'https_required'
+          : 'media_unavailable';
+        return false;
+      }
+      if (!this.playCtx || this.playCtx.state === 'closed') this.playCtx = new AudioContext({ sampleRate: 24000 });
+      this.playHead = this.playCtx.currentTime;
+      if (!this.ac || this.ac.state === 'closed') this.ac = new AudioContext();
+      this._resumeAudio();
+      if (!this._primeMicPromise) {
+        this._primeMicPromise = navigator.mediaDevices.getUserMedia({ audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: false,
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 48000 },
+        } })
+          .then(stream => ({ stream })).catch(error => ({ error }));
+      }
+      return true;
+    } catch (e) { return false; }
+  },
   _resumeAudio() {
     [this.ac, this.playCtx].forEach(ctx => {
       try { if (ctx && ctx.state === 'suspended') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
@@ -1397,8 +1547,11 @@ const LiveVoice = {
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
-    // 薄門通行碼（App 自動帶、用戶無感）
-    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(MUNEA_APP_KEY);
+    // Production uses a short-lived token bound to this call's Voice+Avatar lease.
+    const _callToken = CallControl.active && CallControl.active.call_token;
+    url += (url.indexOf('?') >= 0 ? '&' : '?') + (_callToken
+      ? ('token=' + encodeURIComponent(_callToken))
+      : ('key=' + encodeURIComponent(MUNEA_APP_KEY)));
     this.on = true;
     this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
     this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
@@ -1408,12 +1561,8 @@ const LiveVoice = {
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
     // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
-    try {
-      this.playCtx = new AudioContext({ sampleRate: 24000 }); this.playHead = this.playCtx.currentTime;
-      this.ac = new AudioContext(); this._resumeAudio();
-    } catch (e) { this.on = false; return false; }
-    const micPromise = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
-      .then(stream => ({ stream })).catch(error => ({ error }));
+    if (!this.prime()) { this.on = false; return false; }
+    const micPromise = this._primeMicPromise;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; return false; }
     return await new Promise(resolve => {
@@ -1423,11 +1572,12 @@ const LiveVoice = {
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
         const micResult = await micPromise;
+        this._primeMicPromise = null;
         if (!micResult.stream) { setCallHint('拿不到麥克風，請到設定允許'); try { this.ws.close(); } catch (e) {} done(false); return; }
         this.mic = micResult.stream;
         this._resumeAudio();
         const src = this.ac.createMediaStreamSource(this.mic);
-        this.proc = this.ac.createScriptProcessor(4096, 1, 1);
+        this.proc = this.ac.createScriptProcessor(2048, 1, 1);
         src.connect(this.proc); this.proc.connect(this.ac.destination);
         // 半雙工：她說話時暫停送麥克風→治好手機喇叭被麥克風收回去的回音，讓她每一輪都回你
         this.proc.onaudioprocess = e => {
@@ -1579,6 +1729,8 @@ const LiveVoice = {
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
+    const pendingMic = this._primeMicPromise; this._primeMicPromise = null;
+    if (pendingMic) pendingMic.then(r => { try { if (r && r.stream) r.stream.getTracks().forEach(t => t.stop()); } catch (e) {} });
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.ac) this.ac.close(); } catch (e) {}
     try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
@@ -1848,10 +2000,10 @@ async function openVoiceSession() {
   activeChatStartedAt = Date.now();
   activeChatTurnCount = 0;
   setFaceState('idle');
-  setCallHint('正在連線...');
+  setCallHint(muneaT('voice.connecting', '正在連線...'));
   await prepareAvatarSession();
   trackProductEvent('voice_session_started', {
-    locale: 'zh-TW',
+    locale: muneaLocale(),
     requestedAvatarMode: requestedAvatarMode(),
   });
   const r = await voiceProvider.open(currentChar);
@@ -1861,13 +2013,14 @@ async function openVoiceSession() {
     if (r.audio) playB64(r.audio); else speakChat(r.reply);
     faceSpeak(r.reply);
   } else {
-    const fallback = '我在這裡，今天過得好嗎？想聊什麼都可以。';
-    setCallHint('直接說，我在這裡');
+    const fallback = muneaT('voice.fallback', '我在這裡，今天過得好嗎？想聊什麼都可以。');
+    setCallHint(muneaT('voice.ready', '直接說，我在這裡'));
     faceSpeak(fallback);
   }
 }
 
 function completeChatSession(reason = 'ended') {
+  try { CallControl.release(reason); } catch (e) {}
   if (_callSec > 3) {
     const mins = Math.max(1, Math.round(_callSec / 60));
     POINTS.used = Math.min(POINTS.total, POINTS.used + mins * 1);
@@ -1897,7 +2050,7 @@ function showView(id) {
   // 所有進聊聊的路都經過這個路口——訪客點聊聊＝先引導登入註冊、不進聊天頁
   if (id === 'chat' && !isLoggedIn()) {
     if (typeof openAuthSheet === 'function') openAuthSheet();
-    if (typeof setAuthMessage === 'function') setAuthMessage('登入或註冊就能開始跟寧寧聊天，還能換手機不失憶', 'ok');
+    if (typeof setAuthMessage === 'function') setAuthMessage('請先登入或註冊，就能和' + cname() + '聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'ok');
     try { trackProductEvent('login_gate_shown', { feature: 'chat' }); } catch (e) {}
     return;
   }
@@ -2130,7 +2283,7 @@ function setupAuthControls() {
       });
   }
   function byCity(city) {
-    return fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=zh&name=' + encodeURIComponent(city))
+    return fetch('https://geocoding-api.open-meteo.com/v1/search?count=' + 1 + '&language=' + encodeURIComponent(window.MuneaI18n ? window.MuneaI18n.weatherLanguage() : 'zh') + '&name=' + encodeURIComponent(city))
       .then(r => r.json()).then(j => {
         const g = j && j.results && j.results[0];
         if (!g) throw new Error('no-city');
@@ -2144,6 +2297,34 @@ function setupAuthControls() {
     .catch(() => { /* 沒設所在地＝不顯示天氣，只留日期 */ });
 })();
 
+function renderCompanionGreeting(now = new Date()) {
+  const h = now.getHours();
+  const msg = $('#bcMsg');
+  if (!msg) return;
+  // 首頁招呼語的四個階段（Edward 7/9 拍板設計）：
+  //   ① 還沒聊過（首次進來）→ 自我介紹＋邀請認識
+  //   ② 聊過了、還沒抓到話題 → 「上次聊得很開心」＋時段邀請
+  //   ③ 有記住的話題（目前＝上通電話你說的第一句；雲端記憶接上後換真記憶）→ 「記得你說…」
+  //   ④ 之後每次聊天都會更新話題，這句會一直跟著你們的對話變
+  const nm = (typeof cname === 'function' ? cname() : '寧寧');
+  const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
+  // 顯示前再過濾一次：舊版可能已存過亂碼，不乾淨就當沒話題、退回乾淨招呼（Edward 2026-07-12）
+  const _topicRaw = (localStorage.getItem('munea.lastTopic') || '').trim();
+  const _tcjk = (_topicRaw.match(/[一-龥]/g) || []).length;
+  const topic = (_topicRaw.length >= 5 && _topicRaw.length <= 16 && (_tcjk / _topicRaw.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(_topicRaw) && (new Set(_topicRaw).size / _topicRaw.length) >= 0.5) ? _topicRaw : '';
+  let ask = '來跟我聊聊今天？';
+  if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
+  else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
+  else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
+  let line;
+  if (!lastAt) line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
+  else if (topic) line = '記得你說「' + topic + '」——' + ask;
+  else line = '上次聊得很開心，我都記得你——' + ask;
+  msg.textContent = line;
+  const idleGreeting = $('#faceIdleHi');
+  if (idleGreeting) idleGreeting.textContent = line;
+}
+
 (function homeGreeting() {
   const now = new Date();
   (function fixDemoEventDate() {
@@ -2155,30 +2336,7 @@ function setupAuthControls() {
   })();
   const h = now.getHours();
   const dayN = Math.max(1, now.getDate() - 1);
-  const msg = $('#bcMsg');
-  if (msg) {
-    // 首頁招呼語的四個階段（Edward 7/9 拍板設計）：
-    //   ① 還沒聊過（首次進來）→ 自我介紹＋邀請認識
-    //   ② 聊過了、還沒抓到話題 → 「上次聊得很開心」＋時段邀請
-    //   ③ 有記住的話題（目前＝上通電話你說的第一句；雲端記憶接上後換真記憶）→ 「記得你說…」
-    //   ④ 之後每次聊天都會更新話題，這句會一直跟著你們的對話變
-    const nm = (typeof cname === 'function' ? cname() : '寧寧');
-    const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
-    // 顯示前再過濾一次：舊版可能已存過亂碼，不乾淨就當沒話題、退回乾淨招呼（Edward 2026-07-12）
-    const _topicRaw = (localStorage.getItem('munea.lastTopic') || '').trim();
-    const _tcjk = (_topicRaw.match(/[一-龥]/g) || []).length;
-    const topic = (_topicRaw.length >= 5 && _topicRaw.length <= 16 && (_tcjk / _topicRaw.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(_topicRaw) && (new Set(_topicRaw).size / _topicRaw.length) >= 0.5) ? _topicRaw : '';
-    let ask = '來跟我聊聊今天？';
-    if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
-    else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
-    else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
-    let line;
-    if (!lastAt) line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
-    else if (topic) line = '記得你說「' + topic + '」——' + ask;
-    else line = '上次聊得很開心，我都記得你——' + ask;
-    msg.textContent = line;
-    const _ih = $('#faceIdleHi'); if (_ih) _ih.textContent = line;
-  }
+  renderCompanionGreeting(now);
 
   const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
@@ -2307,8 +2465,8 @@ function renderVisitTask() {
   if (tm) tm.textContent = clk || '今天';
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
-// 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋走走＋聊聊
-function renderDailyTasks() { renderPillTask(); renderVisitTask(); }
+// 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋走走＋心情筆記＋聊聊
+function renderDailyTasks() { renderPillTask(); renderVisitTask(); refreshMoodTask(); }
 window.__muneaRenderDailyTasks = renderDailyTasks;
 // Apple 健康的步數 → 首頁走路任務（原生端 health.js 讀到步數後呼叫）
 window.__muneaSetSteps = function (n) {
@@ -2325,12 +2483,51 @@ window.__muneaSetSteps = function (n) {
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
   // 步數也記進數據日記帳（供 7/30 天真趨勢）
   try {
+    if (!isLoggedIn()) throw 'guest';
     const day = _todayISO();
-    const log = JSON.parse(localStorage.getItem('munea.healthLog') || '{}');
-    (log[day] = log[day] || {}).steps = n;
-    localStorage.setItem('munea.healthLog', JSON.stringify(log));
+    mergeHealthHistory([{ date: day, steps: n }]);
   } catch (e) {}
 };
+
+const HEALTH_LOG_RETENTION_DAYS = 365;
+function mergeHealthHistory(days, syncCloud = true) {
+  if (!isLoggedIn() || !Array.isArray(days)) return {};
+  let log = {};
+  try { log = JSON.parse(localStorage.getItem('munea.healthLog') || '{}') || {}; } catch (e) {}
+  const fields = ['bpSys', 'bpDia', 'hr', 'spo2', 'sleepHours', 'steps'];
+  for (const item of days) {
+    if (!item || !/^\d{4}-\d{2}-\d{2}$/.test(String(item.date || ''))) continue;
+    const current = Object.assign({}, log[item.date] || {});
+    for (const field of fields) {
+      const value = Number(item[field]);
+      if (Number.isFinite(value) && value >= 0) current[field] = value;
+    }
+    if (Object.keys(current).length) log[item.date] = current;
+  }
+  const keys = Object.keys(log).sort();
+  while (keys.length > HEALTH_LOG_RETENTION_DAYS) delete log[keys.shift()];
+  try { localStorage.setItem('munea.healthLog', JSON.stringify(log)); } catch (e) {}
+  if (syncCloud) pushOwnHealthLog(log);
+  return log;
+}
+window.__muneaSetHealthHistory = function (days) { return mergeHealthHistory(days, true); };
+
+function muneaCloudPersonId() {
+  try { return localStorage.getItem('munea.cloudPersonId') || muneaDeviceId(); }
+  catch (e) { return muneaDeviceId(); }
+}
+function pushOwnHealthLog(log) {
+  try {
+    const pf = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
+    const personId = muneaCloudPersonId();
+    const keys = Object.keys(log || {}).sort();
+    const day = keys[keys.length - 1] || _todayISO();
+    const current = (log || {})[day] || {};
+    const mine = {};
+    mine[personId] = Object.assign({ name: (pf.name || '').trim(), nick: (pf.nick || '').trim(), day, updatedAt: Date.now(), log }, current);
+    syncPush('vitals', mine);
+  } catch (e) {}
+}
 // Apple 健康的完整摘要 → 狀態頁「今天」的真數值（原生端 health.js 讀到後呼叫）
 // s = { available, steps, hr, spo2, bpSys, bpDia, sleepHours }；缺哪項就不動哪項（示範值留著、不清空）
 window.__muneaSetHealth = function (s) {
@@ -2406,31 +2603,19 @@ window.__muneaSetHealth = function (s) {
       }
     }
   } catch (e) {}
-  // 數據日記帳：今天的數據記成歷史（日期為鍵、留 35 天），狀態頁 7/30 天分頁就從這裡長出真趨勢
+  // 數據日記帳：今天的數據記成歷史（日期為鍵、留 365 天），狀態頁 7/30 天分頁就從這裡長出真趨勢
   // 7/9 Edward 拍板：只有登入的會員才記每天的數據 → 之後才有 7/30 天趨勢（訪客看得到今天、但不累積歷史）
   try {
     if (!isLoggedIn()) throw 'guest';   // 訪客不記歷史（今日即時數字上面已顯示）
     const day = _todayISO();
-    const log = JSON.parse(localStorage.getItem('munea.healthLog') || '{}');
-    const cur = log[day] || {};
+    const cur = {};
     if (sys) cur.bpSys = Math.round(sys);
     if (dia) cur.bpDia = Math.round(dia);
     if (hr) cur.hr = Math.round(hr);
     if (spo2) cur.spo2 = Math.round(spo2);
     if (sleep) cur.sleepHours = Math.round(sleep * 10) / 10;
     if (steps) cur.steps = Math.round(steps);
-    log[day] = cur;
-    const keys = Object.keys(log).sort();
-    while (keys.length > 35) delete log[keys.shift()];
-    localStorage.setItem('munea.healthLog', JSON.stringify(log));
-    // 健康數據真同步（7/9 Edward）：今天這筆＋35 天日記帳推上家人水管（每人一份、雲端按人合併）
-    // ——家人手機的家人頁數據卡與 7/30 天趨勢就都是真的
-    try {
-      const pf = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
-      const mine = {};
-      mine[muneaDeviceId()] = Object.assign({ name: (pf.name || '').trim(), nick: (pf.nick || '').trim(), day, updatedAt: Date.now(), log }, cur);
-      syncPush('vitals', mine);
-    } catch (e2) {}
+    mergeHealthHistory([Object.assign({ date: day }, cur)]);
   } catch (e) {}
 };
 function renderMedList() { renderMedSlots(); }
@@ -2543,11 +2728,11 @@ function __muneaPointsOut(){
 function __muneaFreeChatOut__setCool() { try { localStorage.setItem('munea.reviewCoolOff', '1'); setTimeout(() => localStorage.removeItem('munea.reviewCoolOff'), 3600000); } catch (e) {} }
 function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { if (typeof LiveVoice !== 'undefined' && LiveVoice && LiveVoice.stop) LiveVoice.stop(); } catch (e) {}
-  try { completeChatSession('free_daily_limit'); } catch (e) {}
+  try { completeChatSession('free_signup_trial_exhausted'); } catch (e) {}
   try { chatOpened = false; } catch (e) {}
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
-  toast('今天的免費聊聊時間到了，明天還能再聊');
+  toast('免費帳號的一次性 5 點體驗已用完');
   try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
   if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
 }
@@ -2562,10 +2747,10 @@ function startCallTimer() {
       // 快到了先溫柔預告（剩 1 分鐘）：畫面提示＋悄悄請角色自然收尾，不再無預警斷線
       if (_rem > 0 && _rem <= 60 && !_freeWarned) {
         _freeWarned = true;
-        toast('今天的免費聊聊剩 1 分鐘囉，慢慢說完沒關係');
+        toast('免費體驗剩約 1 點，慢慢說完沒關係');
         try {
           if (LiveVoice && LiveVoice.on && LiveVoice.ws && LiveVoice.ws.readyState === 1) {
-            LiveVoice.ws.send(JSON.stringify({ type: 'text', text: '（系統悄悄話，請不要唸出這段、也不要提到系統或倒數：我們這通電話只剩大約一分鐘，請你自然地把話題暖心收個尾，溫柔跟我說今天先聊到這，約我明天再聊。）' }));
+            LiveVoice.ws.send(JSON.stringify({ type: 'text', text: '（系統悄悄話，請不要唸出這段、也不要提到系統或倒數：免費體驗只剩大約一分鐘，請自然地把話題暖心收尾，溫柔說今天先聊到這。）' }));
           }
         } catch (e) {}
       }
@@ -2627,12 +2812,14 @@ function syncPush(key, value) {
     const payload = (key === 'meds' && Array.isArray(value))
       ? value.map(m => { const rest = Object.assign({}, m); delete rest.photo; return rest; })
       : value;
-    fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', key, value: payload, familyGroupId: famGroupId(), personId: muneaDeviceId() }) }).catch(() => {});
+    muneaAuthHeaders({ 'Content-Type': 'application/json' }).then(headers => {
+      fetch(brainURL('/family/state'), { method: 'POST', headers, body: JSON.stringify({ action: 'save', key, value: payload, familyGroupId: famGroupId(), personId: muneaCloudPersonId() }) }).catch(() => {});
+    }).catch(() => {});
   } catch (e) {}
 }
 async function syncPullAll() {
   try {
-    const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'load', familyGroupId: famGroupId() }) });
+    const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ action: 'load', familyGroupId: famGroupId() }) });
     if (!r.ok) return;
     const st = (await r.json()).state || {};
     const map = { activities: 'munea.activities', familyFeed: 'munea.familyFeed2', meds: 'munea.meds', visit: 'munea.visit', visits: 'munea.visits', routine: 'munea.routine', vitals: 'munea.famVitals' };
@@ -2640,6 +2827,11 @@ async function syncPullAll() {
       if (st[k] !== undefined && st[k] !== null) {
         try { localStorage.setItem(map[k], JSON.stringify(st[k])); } catch (e) {}
       }
+    }
+    const ownVitals = st.vitals && st.vitals[muneaCloudPersonId()];
+    if (ownVitals && ownVitals.log && typeof ownVitals.log === 'object') {
+      const days = Object.keys(ownVitals.log).map(date => Object.assign({ date }, ownVitals.log[date] || {}));
+      mergeHealthHistory(days, false);
     }
     // 圈名單同步（雲端不存「本人」標記，各裝置用自己的名字對回去）
     if (Array.isArray(st.circle) && st.circle.length) {
@@ -2923,7 +3115,22 @@ const CHEERS = {
   visit: '回診辛苦了，醫生說的我幫你記著，回家歇一下。',
   walk: '出去走走最好了，回來記得喝口水。',
   chat: '謝謝你跟我說這些，我都記下來了。',
+  mood: '今天的心情記好了，謝謝你願意照顧自己的感受。',
 };
+function refreshMoodTask() {
+  const item = document.querySelector('.task-item[data-task="mood"]');
+  if (!item) return;
+  const done = !!(window.MM && typeof window.MM.hasSelfReportToday === 'function' && window.MM.hasSelfReportToday());
+  item.classList.toggle('done', done);
+  const sub = document.getElementById('moodTaskSub');
+  const chip = document.getElementById('moodTaskChip');
+  if (sub) sub.textContent = done ? '今天的心情已記錄' : '記錄今天的心情';
+  if (chip) chip.textContent = done ? '完成' : '隨時';
+  refreshTaskProgress();
+}
+window.__muneaMoodRecorded = function () { refreshMoodTask(); };
+window.__muneaPostMood = function (body) { return brainPost('/wellbeing/log', body || {}); };
+window.__muneaPullMood = function (body) { return brainPost('/wellbeing/recent', body || { limit: 400 }); };
 function refreshTaskProgress() {
   const items = $$('#taskCard .task-item').filter(i => i.style.display !== 'none');
   const done = items.filter(i => i.classList.contains('done')).length;
@@ -2952,6 +3159,15 @@ function refreshTaskProgress() {
 
 let _uncheckArm = null;
 function toggleTask(item) {
+  if (item.dataset.task === 'mood') {
+    showView('status');
+    try { if (window.MM && typeof window.MM.renderMood === 'function') window.MM.renderMood('today'); } catch (e) {}
+    setTimeout(() => {
+      const card = document.getElementById('moodCheckinCard');
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+    return;
+  }
   if (item.classList.contains('done')) {
     // 防手抖：取消「已完成」要按兩次（第一次只提示、3 秒內再按才真的取消）
     if (_uncheckArm === item) {
@@ -3095,7 +3311,7 @@ function setupHscrollHints() {
   window.addEventListener('resize', refreshHscrollHints);
 }
 
-function connectCall() {
+async function connectCall() {
   // 撥通中＝保持角色的待機動畫（Edward 2026-07-09 二次拍板：不定格照片、也不動照片）。
   // 硬規則：聲音＋會動的臉「兩邊都真的就緒」才一起開場——寧可讓用戶等，也不要開場後像當機。
   // 同線聲音的 iPhone 解鎖（2026-07-11）：iPhone 不准「沒經過使用者手指」的聲音自動播——
@@ -3124,8 +3340,28 @@ function connectCall() {
       if (_fa) { _fa.muted = false; const _p = _fa.play(); if (_p && _p.catch) _p.catch(() => {}); }
     }
   } catch (e) {}
+  // Keep the iOS user gesture alive before the queue/network wait starts.
+  if (!LiveVoice.prime()) {
+    setCallHint(LiveVoice._micUnavailableReason === 'https_required'
+      ? '手機／區網測試需要 HTTPS 才能開麥，請改用公開測試連結'
+      : '拿不到麥克風，請到瀏覽器設定允許');
+    return;
+  }
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
+  if (CallControl.url()) {
+    setCallHint('正在安排語音與影像席位…', true);
+    try {
+      await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
+    } catch (e) {
+      LiveVoice.stop(); setCallDialing(false); stopCallTimer();
+      const reason = String(e && e.message || e);
+      setCallHint(reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
+        (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' : '目前通話服務忙碌中，請稍後再試'));
+      try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
+      return;
+    }
+  }
   let _connectedOnce = false;
   const markConnected = () => { if (_connectedOnce) return; _connectedOnce = true; setCallToggle(true); startCallTimer(); };
   const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
@@ -3140,7 +3376,7 @@ function connectCall() {
     setFaceState('idle');
     // 新引擎首通冷開機較久（喚醒優化交先鋒車道）——誠實預告、不讓人以為當機（Edward 2026-07-11「等20秒」）
     setCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? '新引擎暖身中，首次約需半分鐘…' : '連線中…', true);
-    trackProductEvent('voice_session_started', { locale: 'zh-TW', mode: 'live' });
+    trackProductEvent('voice_session_started', { locale: muneaLocale(), mode: 'live' });
     const chatEl = document.getElementById('chat');
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
 
@@ -3227,7 +3463,8 @@ function connectCall() {
       setCallHint('接回來中', true);
       setTimeout(() => {
         if (!callConnected && !callDialing) return;
-        LiveVoice.start(onListen, onSpeak, onDrop);
+        const resume = CallControl.active ? CallControl.refreshToken() : Promise.resolve();
+        resume.then(() => LiveVoice.start(onListen, onSpeak, onDrop)).catch(() => onDrop());
       }, 500);
     };
     LiveVoice.start(onListen, onSpeak, onDrop);
@@ -3350,6 +3587,7 @@ function init() {
     if (detail.status === 'signed-in') closeAuthSheet();
     if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY) === 'true') {
       syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true });
+      try { if (window.MuneaHealth && typeof window.MuneaHealth.refresh === 'function') window.MuneaHealth.refresh(); } catch (e) {}
     }
   });
   loadCompanionProfileFromBackend().finally(() => {
@@ -3364,6 +3602,7 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
+    if (!requireLogin('請先登入或註冊才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'chat')) return;
     if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
     else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
     showView('chat');
@@ -5690,3 +5929,7 @@ function init() {
   if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
 }
 document.addEventListener('DOMContentLoaded', init);
+window.addEventListener('munea:locale-change', () => {
+  voiceProvider.close();
+  if (storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'true') syncAccountBootstrap('update', { force: true, reason: 'locale_updated' });
+});

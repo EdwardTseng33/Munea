@@ -30,16 +30,23 @@ p50 305ms / p95 309ms（預算 960ms、餘裕 67.8%），且開機 5 秒內；co
 60ms 但每次開機要多付 ~2 分鐘熱身稅，4090 上不划算（台灣機碼錶數據見協作看板）。
 """
 import asyncio
+import base64
 import collections
+import hashlib
+import hmac
+import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.request
 from fractions import Fraction
 
 import numpy as np
 
-sys.path.insert(0, "/root/SoulX-FlashHead")
-os.chdir("/root/SoulX-FlashHead")
+FH_REPO = os.path.expanduser(os.environ.get("MUNEA_FH_REPO", "/root/SoulX-FlashHead"))
+sys.path.insert(0, FH_REPO)
+os.chdir(FH_REPO)
 
 import torch
 
@@ -62,8 +69,13 @@ CHAR_SRC = {
     "a06": os.environ.get("MUNEA_FH_CHAR_A06", "/root/char-a06B.png"),
 }
 DEFAULT_CHAR = "a05"
-CKPT_DIR = "/models/soulx-flashhead-1.3b"
-WAV2VEC_DIR = "/models/wav2vec2-base-960h"
+MODEL_ROOT = os.path.expanduser(os.environ.get("MUNEA_FH_MODEL_ROOT", "/models"))
+CKPT_DIR = os.environ.get(
+    "MUNEA_FH_CKPT_DIR", os.path.join(MODEL_ROOT, "soulx-flashhead-1.3b")
+)
+WAV2VEC_DIR = os.environ.get(
+    "MUNEA_FH_WAV2VEC_DIR", os.path.join(MODEL_ROOT, "wav2vec2-base-960h")
+)
 
 SR_IN, SR_ENG = 24000, 16000
 # 2026-07-11 斷續根治（官方體檢：零起播緩衝→斷糧）：開口前先墊 0.5s、生成允許往前衝到 1.5s 存貨。
@@ -84,6 +96,39 @@ PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
 # 2026-07-12 N 槽改造：沒設＝1（跟改造前單例行為一字不差）。只有測試卡明確設
 # MUNEA_FH_SLOTS=3 才會真的多槽——這是本輪任務的核心相容性鐵律。
 N_SLOTS = max(1, int(os.environ.get("MUNEA_FH_SLOTS", "1")))
+
+
+def _decode_call_token(token, secret, expected_worker):
+    if not token or not secret:
+        return None
+    try:
+        encoded, supplied = token.split(".", 1)
+        expected = base64.urlsafe_b64encode(
+            hmac.new(secret.encode("utf-8"), encoded.encode("ascii"), hashlib.sha256).digest()
+        ).rstrip(b"=").decode("ascii")
+        if not hmac.compare_digest(supplied, expected):
+            return None
+        raw = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+        payload = json.loads(raw)
+        if int(payload.get("exp") or 0) < int(time.time()):
+            return None
+        if expected_worker and payload.get("worker_id") != expected_worker:
+            return None
+        return payload
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def _post_json(url, body, bearer, timeout=10):
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Authorization": "Bearer " + bearer},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        raw = response.read()
+        return json.loads(raw) if raw else {}
 
 
 class FlashHead:
@@ -198,7 +243,9 @@ class FlashHead:
         slot.round_latencies = collections.deque(maxlen=20)
         slot.last_gen_compute_ms = None
         slot.gen_compute_ms_hist = collections.deque(maxlen=100)
-        slot.audio_out = AudioOutBuffer(SR_ENG, prebuffer_s=AUDIO_PREBUFFER_S)
+        # Lip-sync inference stays at 16 kHz; WebRTC carries the untouched
+        # 24 kHz Gemini audio for clearer speech and less resampling noise.
+        slot.audio_out = AudioOutBuffer(SR_IN, prebuffer_s=AUDIO_PREBUFFER_S)
         slot.sink = FrameSink(slot.tgt_fps)
         slot.SYNC_BUFFER_MS = 350
         slot.feeder = Feeder(slot, self._get_audio_embedding, self._run_pipeline,
@@ -232,20 +279,80 @@ class FlashHead:
         from fastapi.middleware.cors import CORSMiddleware
 
         api = FastAPI()
-        api.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+        worker_origins = [x.strip() for x in os.environ.get(
+            "MUNEA_WORKER_CORS_ORIGINS",
+            "capacitor://localhost,ionic://localhost,http://localhost,https://localhost",
+        ).split(",") if x.strip()]
+        api.add_middleware(
+            CORSMiddleware, allow_origins=worker_origins,
+            allow_methods=["GET", "POST"], allow_headers=["Content-Type"],
+        )
         outer = self
         admission_lock = asyncio.Lock()
 
         _gate = os.environ.get("MUNEA_APP_KEY", "").strip()
+        _token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
+        _worker_id = os.environ.get("MUNEA_WORKER_ID", "").strip()
+        _call_control = os.environ.get("MUNEA_CALL_CONTROL_URL", "").strip().rstrip("/")
+        _control_token = os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", "").strip()
+        _allow_legacy = os.environ.get("MUNEA_ALLOW_LEGACY_APP_KEY", "1") == "1"
+        _session_control = {}
 
         def _pass(request_key):
             return (not _gate) or (request_key == _gate)
 
-        async def _release_session(session_id, pc=None):
+        def _authorize(request_key, token):
+            if _token_secret:
+                payload = _decode_call_token(token, _token_secret, _worker_id)
+                if payload is not None:
+                    return payload
+                if not (_allow_legacy and _pass(request_key)):
+                    return False
+                return None
+            return None if _pass(request_key) else False
+
+        async def _control_ready(control):
+            if not (control and _call_control and _control_token):
+                return
+            body = {
+                "call_id": control["call_id"],
+                "lease_version": int(control["lease_version"]),
+                "component": "avatar",
+                "event_id": "avatar-ready:" + control["call_id"] + ":" + str(control["lease_version"]),
+            }
+            try:
+                await asyncio.to_thread(
+                    _post_json, _call_control + "/v1/internal/calls/ready", body, _control_token
+                )
+            except Exception as exc:
+                print("[call-control] avatar ready callback failed: " + str(exc), flush=True)
+
+        async def _control_release(control, reason):
+            if not (control and _call_control and _control_token):
+                return
+            call_id = str(control["call_id"])
+            version = int(control["lease_version"])
+            body = {
+                "lease_version": version,
+                "event_id": "avatar-release:" + call_id + ":" + str(version),
+                "reason": reason,
+            }
+            try:
+                await asyncio.to_thread(
+                    _post_json,
+                    _call_control + "/v1/internal/calls/" + call_id + "/release",
+                    body,
+                    _control_token,
+                )
+            except Exception as exc:
+                print("[call-control] avatar release callback failed: " + str(exc), flush=True)
+
+        async def _release_session(session_id, pc=None, reason="avatar_disconnected"):
             async with admission_lock:
                 slot = outer.pool.release(session_id, pc)
             if slot is None:
                 return
+            control = _session_control.pop(session_id, None)
             try:
                 slot.feeder.reset()
             except Exception as e:
@@ -253,6 +360,7 @@ class FlashHead:
                       + str(e), flush=True)
             print("[capacity] released session " + session_id[:8] + " (slot" + str(slot.index) + ")",
                   flush=True)
+            await _control_release(control, reason)
 
         class FlashHeadTrack(VideoStreamTrack):
             kind = "video"
@@ -343,20 +451,26 @@ class FlashHead:
             return {"ok": True, "received": True, "server_uptime_s": uptime_s}
 
         @api.post("/offer")
-        async def offer(payload: dict, key: str = "", char: str = ""):
-            if not _pass(key):
-                return {"error": "key required"}
+        async def offer(payload: dict, key: str = "", char: str = "", token: str = ""):
+            control = _authorize(key, token)
+            if control is False:
+                return JSONResponse(status_code=403, content={"error": "valid call token required"})
             import uuid
             session_id = uuid.uuid4().hex
+            preferred_index = None
+            if control:
+                preferred_index = int(control.get("slot_id") or 0) - 1
             async with admission_lock:
-                slot = outer.pool.admit(session_id)
+                slot = outer.pool.admit(session_id, preferred_index=preferred_index)
             if slot is None:
                 return JSONResponse(status_code=429, content={
                     "error": "avatar capacity full", "code": "capacity_full",
                     "retryAfter": 5,
                 })
+            if control:
+                _session_control[session_id] = control
             if char and not outer._switch(slot, char):
-                await _release_session(session_id)
+                await _release_session(session_id, reason="avatar_character_failed")
                 return {"error": "char not supported"}
             # 2026-07-11 主蘇菲：新通話開線＝把上一通的殘留全部倒掉（音頻緩衝+畫格佇列+進料狀態）。
             # 不倒＝Edward 實測「掛斷再撥、她一接通就繼續播上一段的話」——殘留聲音直接漏進新通話。
@@ -366,13 +480,21 @@ class FlashHead:
                 print("[offer] pre-call reset failed (slot" + str(slot.index) + "): "
                       + str(_e), flush=True)
             try:
-                pc = RTCPeerConnection(RTCConfiguration(iceServers=[
-                    RTCIceServer(urls="stun:stun.l.google.com:19302"),
-                    RTCIceServer(urls=["turn:34.81.102.52:3478?transport=udp", "turn:34.81.102.52:3478?transport=tcp"],
-                                 username="muneaturn", credential="munea-turn-a7k2q"),
-                ]))
+                ice_servers = [RTCIceServer(urls="stun:stun.l.google.com:19302")]
+                turn_urls = (control or {}).get("turn_urls") or []
+                turn_username = (control or {}).get("turn_username") or ""
+                turn_credential = (control or {}).get("turn_credential") or ""
+                if not turn_urls:
+                    turn_urls = [x.strip() for x in os.environ.get("MUNEA_TURN_URLS", "").split(",") if x.strip()]
+                    turn_username = os.environ.get("MUNEA_TURN_USERNAME", "").strip()
+                    turn_credential = os.environ.get("MUNEA_TURN_CREDENTIAL", "").strip()
+                if turn_urls and turn_username and turn_credential:
+                    ice_servers.append(RTCIceServer(
+                        urls=turn_urls, username=turn_username, credential=turn_credential
+                    ))
+                pc = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
             except Exception:
-                await _release_session(session_id)
+                await _release_session(session_id, reason="avatar_pc_create_failed")
                 raise
             async with admission_lock:
                 if slot.active_session == session_id:
@@ -381,12 +503,16 @@ class FlashHead:
             slot.pc_created[id(pc)] = time.time()
 
             pc_tag = str(id(pc))[-5:]
+            ready_reported = {"done": False}
 
             @pc.on("connectionstatechange")
             async def _on_conn_state_change():
                 age_s = round(time.time() - slot.pc_created.get(id(pc), time.time()), 1)
                 print("[offer] slot" + str(slot.index) + " pc#" + pc_tag + " -> "
                       + pc.connectionState + " (age " + str(age_s) + "s)", flush=True)
+                if pc.connectionState == "connected" and not ready_reported["done"]:
+                    ready_reported["done"] = True
+                    await _control_ready(control)
                 if pc.connectionState in ("closed", "failed"):
                     slot.pcs.discard(pc)
                     slot.pc_created.pop(id(pc), None)
@@ -410,7 +536,7 @@ class FlashHead:
                 try:
                     await pc.close()
                 finally:
-                    await _release_session(session_id, pc)
+                    await _release_session(session_id, pc, reason="avatar_offer_failed")
                 raise
 
         @api.on_event("startup")
@@ -433,7 +559,7 @@ class FlashHead:
                             slot.pcs.discard(p)
                             slot.pc_created.pop(id(p), None)
                             if slot.active_pc is p:
-                                await _release_session(slot.active_session, p)
+                                await _release_session(slot.active_session, p, reason="avatar_watchdog_reaped")
             asyncio.create_task(_loop())
 
         @api.post("/switch")
@@ -451,8 +577,9 @@ class FlashHead:
                     "switch_s": round(time.time() - t0, 3)}
 
         @api.websocket("/audio")
-        async def audio_ws(ws: WebSocket, key: str = "", session: str = ""):
-            if not _pass(key):
+        async def audio_ws(ws: WebSocket, key: str = "", session: str = "", token: str = ""):
+            control = _authorize(key, token)
+            if control is False:
                 await ws.close(code=4403)
                 return
             # Transition support: builds before v1.27 don't send the session id.
@@ -463,6 +590,10 @@ class FlashHead:
             slot = outer.pool.slot_for_session(session) if session else None
             if slot is None:
                 await ws.close(code=4409, reason="invalid avatar session")
+                return
+            expected = _session_control.get(session)
+            if expected and (not control or control.get("call_id") != expected.get("call_id")):
+                await ws.close(code=4403, reason="call token mismatch")
                 return
             await ws.accept()
             print("[audio] connected session=" + session[:8] + " slot" + str(slot.index), flush=True)

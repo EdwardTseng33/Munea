@@ -1,0 +1,7 @@
+"CFBundleDisplayName" = "沐寧";
+"NSMicrophoneUsageDescription" = "沐寧需要使用麥克風，讓你能和 AI 陪伴角色說話。";
+"NSSpeechRecognitionUsageDescription" = "沐寧可能使用語音辨識來理解你對陪伴角色說的話。";
+"NSUserNotificationsUsageDescription" = "沐寧會傳送溫和提醒與家庭照護更新。";
+"NSLocalNetworkUsageDescription" = "沐寧會連線到你的本機 Wi-Fi 語音服務，以提供即時對話。";
+"NSHealthShareUsageDescription" = "沐寧會讀取步數、心率、睡眠、血壓與血氧等健康資料，協助你了解每天的身體狀況。";
+"NSHealthUpdateUsageDescription" = "沐寧目前只讀取健康資料；未來如需寫入健康資料，會先徵求你的同意。";

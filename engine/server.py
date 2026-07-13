@@ -18,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from env_loader import load_engine_env
 load_engine_env()
 import chat_engine as eng
+import localization
 import supabase_adapter
 import model_router
 import notify
@@ -2145,6 +2146,7 @@ def _maybe_refresh_briefing_bg():
 
 def build_reply_context(history, char=DEFAULT_CHAR, data=None):
     data = data or {}
+    locale = localization.normalize_locale(data.get("locale"))
     text = conversation_text(history)
     user_mood = (data or {}).get("userMood") or ""   # 情緒球：使用者當下記錄的心情
     interests = [str(t).strip() for t in (data.get("interests") or []) if str(t).strip()][:8]  # 用戶挑的興趣話題
@@ -2185,6 +2187,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
         "interests": interests,                         # 用戶挑的興趣話題（開場方向＋接話素材）
         "location": str(data.get("location") or "").strip()[:24],  # 所在地（可到區）→ 在地推薦定位
+        "locale": locale,
     }
 
 
@@ -2581,6 +2584,7 @@ def family_members_response(data):
 
 def bootstrap_account_response(data, headers=None):
     data = data or {}
+    data = {**data, "locale": localization.normalize_locale(data.get("locale"))}
     action = (data.get("action") or "create").lower()
     backend = data_backend()
     auth_context = verify_auth_context(headers)
@@ -2608,11 +2612,14 @@ def bootstrap_account_response(data, headers=None):
         remote_store = None if action == "preview" else backend.bootstrap_account(bootstrap_payload)
         if remote_store:
             store = normalize_app_profile_store(remote_store)
+            account_id = store.get("account", {}).get("id") or verified_auth_user_id
+            free_trial = ensure_free_signup_trial(account_id)
             append_product_event({"eventName": "account_bootstrapped", "properties": {"backend": "supabase"}})
             return {
                 "ok": True,
                 "store": store,
                 "activeCompanionProfile": active_companion_profile(store),
+                "freeTrial": free_trial,
                 "auth": public_auth_context(auth_context),
                 "backend": data_backend_status(),
             }
@@ -2620,6 +2627,14 @@ def bootstrap_account_response(data, headers=None):
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("bootstrap account through Supabase", e)
+
+    if action in ("update", "patch"):
+        store = load_app_profile_store()
+        account = store.setdefault("account", {})
+        account["locale"] = localization.normalize_locale(data.get("locale") or account.get("locale"))
+        account["preferredLanguages"] = data.get("preferredLanguages") or data.get("preferred_languages") or account.get("preferredLanguages") or [account["locale"]]
+        save_app_profile_store(store)
+        return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store), "auth": public_auth_context(auth_context), "backend": data_backend_status()}
 
     display_name = (data.get("displayName") or data.get("display_name") or "Munea user").strip()[:80] or "Munea user"
     account_id = data.get("accountId") or data.get("account_id") or f"local-account-{uuid.uuid4()}"
@@ -2655,10 +2670,12 @@ def bootstrap_account_response(data, headers=None):
     if action != "preview":
         save_app_profile_store(store)
         append_product_event({"eventName": "account_bootstrapped", "properties": {"backend": "json"}})
+    free_trial = ensure_free_signup_trial(account_id) if action != "preview" else None
     return {
         "ok": True,
         "store": store,
         "activeCompanionProfile": active_companion_profile(store),
+        "freeTrial": free_trial,
         "auth": public_auth_context(auth_context),
         "backend": data_backend_status(),
     }
@@ -3769,7 +3786,9 @@ def default_billing_store():
             "voiceCompanion": True,
             "familyDashboard": True,
             "routineReminders": True,
-            "realtimeAvatar": False,
+            "realtimeAvatar": True,
+            "signupTrialCredits": 5,
+            "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
             "familyMembersMax": 2,
         },
@@ -4000,6 +4019,32 @@ def credits_grant_response(data):
     )
     store = save_credits_store(store)
     return {"ok": True, "transaction": tx, "walletSummary": credit_wallet_summary(store), "credits": store}
+
+
+def ensure_free_signup_trial(account_id):
+    """Grant one account-bound Voice+Avatar trial: 5 credits = about 5 minutes.
+
+    The account id is part of the idempotency key, so bootstrap retries, a new
+    phone, or reinstalling the App cannot mint the trial a second time.
+    """
+    account_id = str(account_id or "").strip()
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_id_required"}}
+    result = credits_grant_response({
+        "amount": 5,
+        "walletType": "purchased",
+        "source": "promo",
+        "reason": "free_signup_voice_avatar_trial",
+        "provider": "munea_signup",
+        "idempotencyKey": f"free-signup-trial:{account_id}",
+    })
+    return {
+        "ok": bool(result.get("ok")),
+        "credits": 5,
+        "minutesApprox": 5,
+        "idempotentReplay": bool(result.get("idempotentReplay")),
+        "walletSummary": result.get("walletSummary"),
+    }
 
 
 def credits_consume_response(data):
@@ -4465,7 +4510,7 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     """帶完整對話脈絡，用該角色的腦＋記憶回話。"""
     base, _ = _sys_for(char)
     context = context or build_reply_context(history, char, data)
-    base = base + reply_context_instruction(context)
+    base = base + reply_context_instruction(context) + localization.reply_language_instruction(context.get("locale"))
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):
@@ -4477,7 +4522,7 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
         contents.append(types.Content(role=(h.get("role") or "user"), parts=[types.Part(text=txt)]))
     # 空對話：不白燒 12 次 Gemini 呼叫，直接回開場引導
     if not contents:
-        return "（嗨，我在的，想聊什麼都可以，先跟我說說今天過得怎麼樣？）"
+        return localization.opening_message(context.get("locale"))
     for _ in range(4):
         for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
             try:
@@ -4488,7 +4533,7 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
             except Exception as e:
                 log_fallback_exception(f"generate chat reply with {m}", e)
         time.sleep(2)
-    return "（不好意思，我這邊連線有點不順，等一下再陪你好不好？）"
+    return localization.retry_message(context.get("locale"))
 
 
 def chat_response(data, char=DEFAULT_CHAR):
@@ -4497,7 +4542,7 @@ def chat_response(data, char=DEFAULT_CHAR):
     t = reply_conv(history, char, data, context)
     return {
         "reply": t,
-        "audio": tts_b64(t, char),
+        "audio": tts_b64(t, char, data.get("locale")),
         "aiContext": ai_context_summary(context),
     }
 
@@ -4723,7 +4768,7 @@ def butler_post_turn_response(data):
     }
 
 
-def tts_b64(text, char=DEFAULT_CHAR):
+def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
     content = (c["style"] or "") + text
@@ -4733,7 +4778,7 @@ def tts_b64(text, char=DEFAULT_CHAR):
                 model=m, contents=content,
                 config=types.GenerateContentConfig(
                     response_modalities=["AUDIO"],
-                    speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
+                    speech_config=types.SpeechConfig(language_code=localization.speech_language_code(locale), voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=c["voice"])))))
             pcm = r.candidates[0].content.parts[0].inline_data.data
             buf = io.BytesIO()
@@ -4775,7 +4820,7 @@ def voice_session(data):
         "ok": True,
         "provider": "stt-chat-tts",
         "fallback": "typed-chat",
-        "locale": data.get("locale") or "zh-TW",
+        "locale": localization.normalize_locale(data.get("locale")),
         "char": char,
         "aiContext": ai_context_summary(context),
         "sessionContext": {
@@ -4871,8 +4916,8 @@ class H(BaseHTTPRequestHandler):
             authorize_request_data_scope(self.path, data, auth_gate)
             char = data.get("char") or DEFAULT_CHAR
             if self.path == "/open":
-                t = eng.open_chat(char)
-                self._json({"reply": t, "audio": tts_b64(t, char)})
+                t = eng.open_chat(char) if localization.normalize_locale(data.get("locale")) == "zh-TW" else reply_conv([], char, data)
+                self._json({"reply": t, "audio": tts_b64(t, char, data.get("locale"))})
             elif self.path == "/chat":
                 self._json(chat_response(data, char))
             elif self.path == "/voice-session":

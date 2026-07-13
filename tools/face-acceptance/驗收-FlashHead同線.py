@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """FlashHead 臉聲同線終驗：驗解析度、影音雙軌、嘴聲差與句尾完整度。"""
 import argparse, os, time, wave, asyncio
+from urllib.parse import quote
 import numpy as np, requests, websockets
 from PIL import Image
 from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
@@ -48,8 +49,20 @@ async def recv_audio(tr):
             continue
         if T0 is None:   # 同上護欄
             continue
-        arr = fr.to_ndarray()   # (channels, samples) or (1,n)
-        aframes.append((time.monotonic() - T0, arr.astype(np.int16).flatten(), fr.sample_rate))
+        arr = fr.to_ndarray()
+        channels = len(fr.layout.channels)
+        if channels > 1:
+            # PyAV may return planar (channels, samples) or packed
+            # (1, samples * channels). Downmix instead of flattening packed
+            # stereo into a fake double-length mono stream.
+            if arr.ndim == 2 and arr.shape[0] == channels:
+                mono = arr.astype(np.float32).mean(axis=0)
+            else:
+                mono = arr.reshape(-1, channels).astype(np.float32).mean(axis=1)
+            arr = np.clip(mono, -32768, 32767).astype(np.int16)
+        else:
+            arr = arr.astype(np.int16).reshape(-1)
+        aframes.append((time.monotonic() - T0, arr, fr.sample_rate))
 
 async def main():
     global T0
@@ -69,6 +82,9 @@ async def main():
                       json={"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}, timeout=30)
     ans = r.json()
     if "error" in ans: print("offer error", ans); return
+    session = ans.get("session", "")
+    if not session:
+        raise RuntimeError("avatar offer missing session id")
     await pc.setRemoteDescription(RTCSessionDescription(sdp=ans["sdp"], type=ans["type"]))
     for _ in range(100):
         if pc.connectionState == "connected": break
@@ -76,7 +92,10 @@ async def main():
     print("[t] connected", flush=True)
     T0 = time.monotonic()
     _ws_base = BASE.replace("https://", "wss://").replace("http://", "ws://")   # https→wss、http(SSH通道)→ws
-    aud = await websockets.connect(_ws_base + "/audio?key=" + KEY, max_size=None)
+    aud = await websockets.connect(
+        _ws_base + "/audio?key=" + quote(KEY) + "&session=" + quote(session),
+        max_size=None,
+    )
     await asyncio.sleep(2.0)   # 2 秒待機基準
     w = wave.open(WAV, "rb"); sr = w.getframerate()
     t_speak = time.monotonic() - T0

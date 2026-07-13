@@ -62,6 +62,12 @@
           <span class="task-time coral" id="walkChip">隨時</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
+        <div class="task-item" data-task="mood">
+          <span class="task-ico mood"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8.5 15s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/></svg></span>
+          <div class="task-body"><div class="task-title">心情筆記</div><div class="task-sub" id="moodTaskSub">記錄今天的心情</div></div>
+          <span class="task-time coral" id="moodTaskChip">隨時</span>
+          <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </div>
         <div class="task-item" data-task="chat">
           <span class="task-ico chat"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></span>
           <div class="task-body"><div class="task-title">和<span class="cname">寧寧</span>聊聊</div><div class="task-sub">說說今天的事</div></div>
@@ -98,7 +104,7 @@
   </div>
 
   <!-- 情緒監測（產品核心 · 互動 hero）-->
-  <div style="position:relative;overflow:hidden;border-radius:22px;padding:18px;margin-bottom:16px;background:var(--mint2);border:1px solid var(--line)">
+  <div id="moodCheckinCard" style="position:relative;overflow:hidden;border-radius:22px;padding:18px;margin-bottom:16px;background:var(--mint2);border:1px solid var(--line)">
     <div class="row" style="justify-content:space-between;margin-bottom:15px">
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="19" height="19" viewBox="0 0 24 24" style="flex-shrink:0" fill="none" stroke="var(--teal-dd)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 14.5c1.2 1.5 5.8 1.5 7 0"/><circle cx="9" cy="10" r=".85" fill="var(--coral)" stroke="none"/><circle cx="15" cy="10" r=".85" fill="var(--coral)" stroke="none"/></svg>
@@ -361,7 +367,7 @@
   <!-- ===== 設定 ===== -->
   <section class="screen" id="settings">
     <div class="pad">
-      <div class="page-head"><h1 class="page-title">設定</h1></div>
+      <div class="page-head"><h1 class="page-title" data-i18n="settings.title">設定</h1></div>
       <h2 class="set-section">帳號</h2>
       <div class="auth-card" id="authCard" data-auth-state="guest">
         <div class="auth-card-main">
@@ -440,6 +446,7 @@
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進註冊流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
       <h2 class="set-section">App 體驗</h2>
       <div class="set-list">
+        <label class="set-row locale-row"><span class="sr-ico" aria-hidden="true">A</span><span class="sr-main"><b data-i18n="settings.language">語言</b><small data-i18n="settings.languageHint">介面、日期格式與陪伴語言</small></span><select id="localeSelect" data-locale-select aria-label="Language"><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="es">Español</option></select></label>
         <div class="set-row" id="feedbackRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z"/><path d="M8 10h8M8 13.5h5"/></svg></span><span class="sr-main">給開發者的建議<small>回報問題、許願新功能、幫沐寧打分數</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="fontRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span><span class="sr-main">字體與顯示<small>字級大小與閱讀舒適</small></span><span class="sr-arrow" id="fontNow">標準 ›</span></div>
       </div>
@@ -1115,15 +1122,16 @@
   <div class="toast" id="toast"></div>
   <nav class="tab-bar" id="tabBar">
     <svg class="navbg" viewBox="0 0 358 84" preserveAspectRatio="none" aria-hidden="true"><path d="M20,28 L143,28 A8 6.5 0 0 0 151,23.5 A29.6 24.1 0 0 1 207,23.5 A8 6.5 0 0 0 215,28 L338,28 A20 20 0 0 1 358,48 L358,62 A20 20 0 0 1 338,82 L20,82 A20 20 0 0 1 0,62 L0,48 A20 20 0 0 1 20,28 Z"/></svg>
-    <button class="tab-btn active" data-view="home"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>首頁</span></button>
-    <button class="tab-btn" data-view="status"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>狀態</span></button>
-    <button class="tab-btn center" data-view="chat"><span class="center-fab"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><span>聊聊</span></button>
-    <button class="tab-btn" data-view="family"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M15.5 3.13a4 4 0 0 1 0 7.75"/></svg><span>家人</span></button>
-    <button class="tab-btn" data-view="settings"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.3"/><circle cx="9" cy="16" r="2.3"/></svg><span>設定</span></button>
+    <button class="tab-btn active" data-view="home"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span data-i18n="tab.home">首頁</span></button>
+    <button class="tab-btn" data-view="status"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span data-i18n="tab.status">狀態</span></button>
+    <button class="tab-btn center" data-view="chat"><span class="center-fab"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><span data-i18n="tab.chat">聊聊</span></button>
+    <button class="tab-btn" data-view="family"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M15.5 3.13a4 4 0 0 1 0 7.75"/></svg><span data-i18n="tab.family">家人</span></button>
+    <button class="tab-btn" data-view="settings"><svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.3"/><circle cx="9" cy="16" r="2.3"/></svg><span data-i18n="tab.settings">設定</span></button>
   </nav>
 
 </div>
   <script src="src/version.js?v=20260713-v101"></script>
+  <script src="src/i18n.js?v=20260713-i18n1"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
@@ -1136,7 +1144,7 @@
      ⚠ 7/7 合併時一度被移除、免費限制失效，此處重建並對齊 Mac 的 Plus/Pro 訂閱畫面。 */
   window.MMPLAN = (function(){
     var RANK={free:0,plus:1,pro:2};
-    var CHAT_FREE_SEC=300; // 免費綁帳號送的單次 5 分鐘體驗（一次性、非每天/每月）
+    var FREE_TRIAL_CREDITS=5, CHAT_FREE_SEC=300; // 1 點約 1 分鐘；綁帳號一次性送 5 點
     function today(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
     function get(){ try{ return localStorage.getItem('munea.plan')||'free'; }catch(e){ return 'free'; } }
     function set(p){ try{ localStorage.setItem('munea.plan',p); }catch(e){} }
@@ -1149,7 +1157,7 @@
     var MSG={
       'family-invite':{t:'邀請家人，升級就解鎖',m:'免費方案可以一起看家人的狀態；想邀請家人進照護圈、大家互相照應，升級 Plus 就可以囉。'},
       'status-history':{t:'看更久的變化，升級解鎖',m:'免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。'},
-      'chat-daily':{t:'免費體驗的 5 分鐘用完了',m:'免費是綁定帳號送的「單次」5 分鐘體驗，用完就沒有囉。想繼續聊，升級 Plus／Pro 就能用點數聊、每月固定送點。'},
+      'chat-daily':{t:'免費的 5 點體驗用完了',m:'免費帳號會收到一次性 5 點，約可聊 5 分鐘；不會每天重置。想繼續聊，升級 Plus／Pro 每月會固定送點。'},
       'join-circle':{t:'加入家人的照護圈，升級解鎖',m:'免費方案可以自己用沐寧、記自己的提醒；想加入家人的照護圈、大家一起看著長輩，升級 Plus 就可以囉。'}
     };
     function upsell(feature){
@@ -1170,10 +1178,10 @@
       var go=document.getElementById('mm-upsell-go');
       if(go) go.addEventListener('click',function(){ m.remove(); var pm=document.getElementById('planModal'); if(pm) pm.classList.add('show'); });
     }
-    return {RANK:RANK,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
+    return {RANK:RANK,FREE_TRIAL_CREDITS:FREE_TRIAL_CREDITS,CHAT_FREE_SEC:CHAT_FREE_SEC,get:get,set:set,atLeast:atLeast,isFree:isFree,chatUsedToday:chatUsedToday,chatTick:chatTick,chatRemainSec:chatRemainSec,upsell:upsell};
   })();
   </script>
-  <script type="module" src="src/app.js?v=20260713-v101"></script>
+  <script type="module" src="src/app.js?v=20260714-v102"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
@@ -1204,17 +1212,18 @@ window.MM = (function(){
   function hourKey(t){ var d=new Date(t); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+'-'+d.getHours(); }
   function state(){ return entries().length? 'active' : 'empty'; }
   function record(i){ var e=load(); var nowH=hourKey(Date.now()), idx=-1; for(var j=e.length-1;j>=0;j--){ if(e[j].src==='self' && hourKey(e[j].t)===nowH){ idx=j; break; } } if(idx>=0){ e[idx].i=i; e[idx].t=Date.now(); } else { e.push({t:Date.now(),i:i,src:'self'}); } save(e); postLog(i); }
+  function hasSelfReportToday(){ var today=keyOf(Date.now()); return entries().some(function(x){ return x.src==='self' && keyOf(x.t)===today; }); }
   // 規則④：當天主色 = 出現最多；平手取最近（自我回報優先）
   function dominant(key){ var a=entries().filter(function(r){return keyOf(r.t)===key;}); if(!a.length) return null; var c={}; a.forEach(function(r){c[r.i]=(c[r.i]||0)+1;}); var mx=0,k; for(k in c){ if(c[k]>mx) mx=c[k]; } for(var j=a.length-1;j>=0;j--){ if(c[a[j].i]===mx) return a[j].i; } return null; }
   var WD=['日','一','二','三','四','五','六'];
 
   // ===== 後端帳本（點的寫進去、聊聊記的讀回來，同一本）=====
   var _logTimer=null,_logMood=null;
-  function postLog(i){ _logMood=i; if(_logTimer) clearTimeout(_logTimer); _logTimer=setTimeout(function(){ var mi=_logMood; try{ fetch('/wellbeing/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mood:MOODS[mi].k,moodKey:mi,level:LEVELS[mi],moodColor:{colorKey:'orb'+mi,bg:MOODS[mi].c,fg:'#fff'}})}).catch(function(){}); }catch(e){} },2500); }
+  function postLog(i){ _logMood=i; if(_logTimer) clearTimeout(_logTimer); _logTimer=setTimeout(function(){ var mi=_logMood; var body={mood:MOODS[mi].k,moodKey:mi,level:LEVELS[mi],moodColor:{colorKey:'orb'+mi,bg:MOODS[mi].c,fg:'#fff'}}; try{ if(typeof window.__muneaPostMood==='function') window.__muneaPostMood(body); else fetch('/wellbeing/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(function(){}); }catch(e){} },2500); }
   function pull(){
     var localSelf=load().filter(function(x){return x.src==='self' && Date.now()-x.t<300000;});
-    return fetch('/wellbeing/recent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:400})})
-      .then(function(r){return r.json();}).then(function(j){
+    var request=(typeof window.__muneaPullMood==='function')?window.__muneaPullMood({limit:400}):fetch('/wellbeing/recent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:400})}).then(function(r){return r.json();});
+    return Promise.resolve(request).then(function(j){
         if(!j||!j.signals) return;
         var server=j.signals.map(function(sg){ var i=(sg.moodKey!=null)?sg.moodKey:(BMAP[sg.mood]!=null?BMAP[sg.mood]:2); var t=sg.createdAt?Date.parse(sg.createdAt):Date.now(); return {t:t,i:i,src:(sg.source==='self-report')?'self':'obs'}; }).filter(function(x){return !isNaN(x.t);});
         // 合併：後端為主 ＋ 保留 5 分內還沒被後端收錄的樂觀打卡
@@ -1250,6 +1259,7 @@ window.MM = (function(){
       setTimeout(function(){ wobble(o); }, 520);               // 球進肚：橡膠氣球彈一下
       if(_tapTimes.length>=3){ setTimeout(function(){ spitBall(f,i); }, 720); }   // 連點吃太多：吐一顆出來
       decorate(); registerBurst();
+      if(typeof window.__muneaMoodRecorded==='function') window.__muneaMoodRecorded(MOODS[i]);
     }; });
   }
   function decorate(){ var orb=document.getElementById('moodOrb'), label=document.getElementById('moodLabel'), note=document.getElementById('moodNote'), chip=document.getElementById('moodChip'); if(!orb||!label) return; var cur=currentEntry(), i=cur?cur.i:null, st=state(); orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent='還沒記錄'; label.style.color='#8A9297'; if(note) note.textContent='點下面的表情，餵情緒球第一口'; } else { label.textContent=MOODS[i].k; label.style.color=MOODS[i].c; if(note) note.textContent=MOODS[i].note; } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent='寧寧從聊天感覺到的'; else sub.textContent='今天'; } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?'還沒記錄':'今天'; }
@@ -1257,7 +1267,7 @@ window.MM = (function(){
   function monthHTML(){ var cells=[],filled=0; for(var off=29;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; cells.push(i); } var grid=cells.map(function(i){ var col=(i==null)?'transparent':MOODS[i].c; var bd=(i==null)?'1.5px dashed #DAD4C6':'none'; return '<div style="height:22px;border-radius:5px;background:'+col+';border:'+bd+'"></div>'; }).join(''); var cap=filled?('這個月記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>，心情地圖正在長出來。'):'每天記一點，一個月後這裡就是你的心情地圖。'; return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+grid+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function renderMood(mood){ var body=document.getElementById('moodBody'), chip=document.getElementById('moodChip'); if(!body) return; function paint(){ var b=document.getElementById('moodBody'); if(!b) return; if(mood==='today'){ if(window.__todayMoodHTML) b.innerHTML=window.__todayMoodHTML; decorate(); bindFaces(); } else if(mood==='week'){ b.innerHTML=weekHTML(); var c=document.getElementById('moodChip'); if(c) c.textContent='過去 7 天'; } else { b.innerHTML=monthHTML(); var c2=document.getElementById('moodChip'); if(c2) c2.textContent='過去 30 天'; } } paint(); pull().then(function(){ paint(); }); }
   function currentMood(){ try{ var i=dominant(keyOf(Date.now())); return (i==null)?'':((MOODS[i]&&MOODS[i].k)||''); }catch(e){ return ''; } }
-  return { renderMood:renderMood, pull:pull, MOODS:MOODS, currentMood:currentMood };
+  return { renderMood:renderMood, pull:pull, MOODS:MOODS, currentMood:currentMood, hasSelfReportToday:hasSelfReportToday };
 })();
 </script>
 
