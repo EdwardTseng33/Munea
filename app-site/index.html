@@ -440,7 +440,7 @@
   #tech .ttag{font-family:"Noto Serif TC",serif;font-size:clamp(17px,2.2vw,21px);color:var(--teal-d);font-weight:600;line-height:1.55;margin:4px 0 2px}
   #tech .tintro{color:var(--muted);font-size:16.5px;line-height:1.85;max-width:640px;margin:8px auto 0}
 
-  /* ── 流程圖：服務怎麼送到你手上（深色沉浸面板，本版不動） ── */
+  /* ── 流程圖：服務怎麼送到你手上（深色沉浸面板；第2步改回抽象圖示，跟其餘4步同語言） ── */
   #tech .tflow-wrap{background:#1F2B27;border-radius:var(--r);padding:48px 36px 36px;margin:36px 0 48px;position:relative}
   #tech .tflow-cap{display:flex;align-items:center;gap:10px;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mint);margin-bottom:36px}
   #tech .tflow-cap i{width:20px;height:1.5px;background:var(--mint);opacity:.55}
@@ -452,24 +452,32 @@
   #tech .tf-ring{position:relative;z-index:1;width:74px;height:74px;border-radius:50%;margin:0 auto 16px;display:grid;place-items:center;background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.16);box-sizing:border-box}
   #tech .tf-ring svg{width:28px;height:28px;stroke:var(--cream);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   #tech .tf-node b{position:relative;z-index:1;display:block;font-size:16px;color:var(--cream);font-weight:700;line-height:1.5}
-  #tech .tf-proof .tf-ring{width:86px;height:86px;background:none;border:2px solid rgba(250,247,242,.4);padding:4px}
-  #tech .tf-proof .tf-ring img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
   #tech .tf-peak .tf-ring{background:var(--coral-soft);border-color:var(--coral-soft)}
   #tech .tf-peak .tf-ring svg{stroke:var(--coral-d)}
   #tech .tf-peak .tf-num{color:var(--coral)}
 
-  /* ── 健康 × 心理：編輯式圖文跨欄（不是清單） ── */
+  /* ── 健康 × 心理：原創資料視覺（不是照片、不是清單） ── */
   #tech .tedit{display:grid;gap:48px;margin:0 0 48px}
   #tech .ted-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
   #tech .ted-row.reverse .ted-vis{order:2}
   #tech .ted-row.reverse .ted-txt{order:1}
-  #tech .ted-vis{position:relative}
-  #tech .ted-portrait{position:relative;border-radius:var(--r);overflow:hidden;border:6px solid #fff;aspect-ratio:4/4.3;background:var(--coral-soft)}
-  #tech .ted-portrait video{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
-  #tech .ted-tag{position:absolute;left:20px;bottom:20px;display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:100px;padding:9px 16px 9px 10px;font-size:13.5px;font-weight:600;color:var(--ink)}
-  #tech .ted-tag .d{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-  #tech .ted-health .ted-tag .d{background:var(--teal)}
-  #tech .ted-psych .ted-tag .d{background:var(--coral)}
+  #tech .ted-graphic{border-radius:var(--r);padding:36px;min-height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  #tech .ted-health .ted-graphic{background:var(--mint)}
+  #tech .ted-psych .ted-graphic{background:var(--coral-soft)}
+  #tech .tg-cap{font-family:"Poppins";font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px}
+  #tech .ted-health .tg-cap{color:var(--teal-dd)}
+  #tech .ted-psych .tg-cap{color:var(--coral-d)}
+  #tech .tg-art{width:100%;max-width:250px;height:auto;margin-bottom:24px}
+  #tech .tg-pulse polyline{fill:none;stroke:var(--teal-dd);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+  #tech .tg-pulse circle{fill:var(--teal-dd)}
+  #tech .tg-ripple circle{fill:none;stroke:var(--coral);stroke-width:1.6}
+  #tech .tg-ripple .r1{opacity:.2}
+  #tech .tg-ripple .r2{opacity:.36}
+  #tech .tg-ripple .r3{stroke:var(--coral-d);opacity:.6}
+  #tech .tg-ripple .r4{fill:var(--coral-d);stroke:none;transform-box:fill-box;transform-origin:center;animation:tgpulse 3.2s ease-in-out infinite}
+  @keyframes tgpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+  @media(prefers-reduced-motion:reduce){#tech .tg-ripple .r4{animation:none}}
+  #tech .tg-line{font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.6;max-width:280px}
   #tech .ted-eyebrow{display:inline-block;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 13px;border-radius:100px;margin-bottom:24px}
   #tech .ted-health .ted-eyebrow{color:var(--teal-dd);background:var(--mint)}
   #tech .ted-psych .ted-eyebrow{color:var(--coral-d);background:var(--coral-soft)}
@@ -478,7 +486,7 @@
   #tech .ted-psych .ted-claim b{color:var(--coral-d)}
   #tech .ted-sub{font-size:16.5px;color:var(--muted);line-height:1.85;max-width:460px}
 
-  /* ── 三個承諾：獨立信任帶，跟上面的「應用」明確分開 ── */
+  /* ── 三個承諾：獨立信任帶 ── */
   #tech .tpromise{background:var(--cream-2);border-radius:var(--r);padding:36px;margin:0 0 40px}
   #tech .tp-cap{display:block;text-align:center;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-dd);margin-bottom:24px}
   #tech .tp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}
@@ -506,7 +514,6 @@
     #tech .tf-num{margin:0;width:30px;flex-shrink:0}
     #tech .tf-ring{margin:0;flex-shrink:0;width:58px;height:58px}
     #tech .tf-ring svg{width:24px;height:24px}
-    #tech .tf-proof .tf-ring{width:64px;height:64px}
     #tech .tf-node b{font-size:16px;flex:1}
   }
 </style>
@@ -519,7 +526,7 @@
       <p class="tintro" data-en="Most AI will chat about anything. FamilyWellness AI does one thing: stay with an elder&apos;s health and heart — present in real time, and watching over them when it matters.">市面上的 AI 什麼都聊——FamilyWellness AI 只做一件事：陪長輩的「健康」與「心情」，平常即時陪著，需要時也守著。</p>
     </div>
 
-    <!-- 服務流程圖：服務怎麼送到你手上（Edward 已核准，維持原樣） -->
+    <!-- 服務流程圖：服務怎麼送到你手上 -->
     <div class="tflow-wrap reveal">
       <div class="tflow-cap"><i></i><span data-en="How the care reaches you, step by step">服務，怎麼送到你手上</span></div>
       <ol class="tflow-row">
@@ -528,9 +535,9 @@
           <span class="tf-ring"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1M12 18v4"/></svg></span>
           <b data-en="You start talking">開口說話</b>
         </li>
-        <li class="tf-node tf-proof">
+        <li class="tf-node">
           <span class="tf-num">02</span>
-          <span class="tf-ring"><img src="assets/real-female-hero-poster.jpg" alt="沐寧的 AI 夥伴" loading="lazy"></span>
+          <span class="tf-ring"><svg viewBox="0 0 24 24"><circle cx="10" cy="12" r="7"/><path d="M7.2 14.2c.8.9 1.8 1.3 2.8 1.3s2-.4 2.8-1.3"/><path d="M7.5 10h.01M12.5 10h.01"/><path d="M18 9a4 4 0 010 6M20.5 7a7 7 0 010 10"/></svg></span>
           <b data-en="A real face &amp; voice, live">即時真臉真聲</b>
         </li>
         <li class="tf-node">
@@ -551,33 +558,44 @@
       </ol>
     </div>
 
-    <!-- 健康 × 心理：一句主張＋一張真實畫面（編輯式跨欄，不是清單） -->
+    <!-- 健康 × 心理：一句主張＋原創資料視覺（無照片、無清單） -->
     <div class="tedit reveal">
       <article class="ted-row ted-health">
         <div class="ted-vis">
-          <div class="ph pane"><div class="dev"><img src="assets/app-status.jpg" alt="沐寧 App 用藥提醒與健康數據畫面" loading="lazy"></div></div>
-          <div class="ted-tag"><span class="d"></span><span data-en="A warm voice, not a cold alarm">親口提醒，不是冷冰冰的鈴聲</span></div>
+          <div class="ted-graphic">
+            <span class="tg-cap">VITALS</span>
+            <svg class="tg-art tg-pulse" viewBox="0 0 260 90" aria-hidden="true">
+              <polyline points="0,50 46,50 58,18 70,80 82,50 150,50 162,18 174,80 186,50 260,50"/>
+              <circle cx="58" cy="18" r="4.5"/>
+              <circle cx="162" cy="18" r="4.5"/>
+            </svg>
+            <p class="tg-line" data-en="Steps, heart rate, blood pressure, sleep — she quietly keeps watch">步數、心率、血壓、睡眠，她都替你留意著</p>
+          </div>
         </div>
         <div class="ted-txt">
           <span class="ted-eyebrow">HEALTH · 健康</span>
           <p class="ted-claim" data-en="Whether meds got taken, whether her heart rate shifted — you shouldn&apos;t have to watch the numbers. <b>Someone is watching, for you.</b>">藥有沒有吃、心率有沒有變化——不是要你緊盯數字，<b>是有人，替你看著。</b></p>
-          <p class="ted-sub" data-en="Steps, heart rate, blood pressure and sleep sync in automatically; if it&apos;s been quiet too long, she reaches out first. For health concerns, she never reads your numbers or gives advice — only points you to a real doctor.">步數、心率、血壓、睡眠自動同步；太久沒聊，也會主動來關心一句。健康問題，她不判讀、不亂給建議，只請你去看真的醫師。</p>
+          <p class="ted-sub" data-en="If it&apos;s been quiet too long, she reaches out first. For health concerns, she never reads your numbers or gives advice — only points you to a real doctor.">太久沒聊，也會主動來關心一句。健康問題，她不判讀、不亂給建議，只請你去看真的醫師。</p>
         </div>
       </article>
 
       <article class="ted-row ted-psych reverse">
         <div class="ted-vis">
-          <div class="ted-portrait">
-            <video muted playsinline autoplay loop preload="auto" poster="assets/real-female-poster.jpg" aria-label="沐寧陪伴中">
-              <source src="assets/realfemale-idle.mp4" type="video/mp4">
-            </video>
+          <div class="ted-graphic">
+            <span class="tg-cap">LISTENING</span>
+            <svg class="tg-art tg-ripple" viewBox="0 0 200 200" aria-hidden="true">
+              <circle class="r1" cx="100" cy="100" r="88"/>
+              <circle class="r2" cx="100" cy="100" r="64"/>
+              <circle class="r3" cx="100" cy="100" r="40"/>
+              <circle class="r4" cx="100" cy="100" r="15"/>
+            </svg>
+            <p class="tg-line" data-en="The feelings behind your words — she can hear them">語氣裡沒說出口的心情，她聽得出來</p>
           </div>
-          <div class="ted-tag"><span class="d"></span><span data-en="She notices when you're tired">她聽得出，你今天累了</span></div>
         </div>
         <div class="ted-txt">
           <span class="ted-eyebrow">MIND · 心情</span>
           <p class="ted-claim" data-en="She softens her voice when you&apos;re tired, and sits with you while you finish what&apos;s heavy — <b>remembering who and what you care about, so you never have to repeat yourself.</b>">累的時候放輕語氣，難過的時候陪你把話說完——<b>她記得你在乎的人和事，不用重講。</b></p>
-          <p class="ted-sub" data-en="She listens to your tone, and the feelings behind your words; never judging, never manipulating, never over-promising — your story is always yours alone.">她聽語氣、也讀話裡沒說出口的情緒；不評判、不誘導、不亂承諾——你的故事，永遠只屬於你。</p>
+          <p class="ted-sub" data-en="Never judging, never manipulating, never over-promising — your story is always yours alone.">她不評判、不誘導、不亂承諾——你的故事，永遠只屬於你。</p>
         </div>
       </article>
     </div>
