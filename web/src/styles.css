@@ -1827,16 +1827,18 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .piv-tx b { display: block; font-size: 15px; font-weight: 800; margin-bottom: 1px; color: var(--ink); }
 
 /* ===== 訂閱頁 v2：整頁照片 hero + 比較表 + 狀態頁式分段控制（一頁看完）===== */
-.sub-hero { position: relative; flex-shrink: 0; text-align: center; padding: calc(env(safe-area-inset-top, 0px) + 30px) 24px 26px; background: radial-gradient(135% 100% at 50% 0%, var(--teal-d) 0%, var(--teal-dd) 50%, var(--deep) 100%); overflow: hidden; }
-.sub-hero::after { content: ''; position: absolute; right: -50px; top: -44px; width: 190px; height: 190px; border-radius: 50%; background: radial-gradient(circle, rgba(224,179,84,.28), transparent 68%); pointer-events: none; }
+.sub-hero { position: relative; flex-shrink: 0; text-align: center; padding: calc(env(safe-area-inset-top, 0px) + 12px) 0 24px; background: var(--mint); overflow: hidden; }
+/* 水彩插圖天生要淺底：深綠底會讓白沙發/米色衣服浮起來發光（Edward 2026-07-14 提供插圖後改）*/
+.sub-hero-art { display: block; width: 100%; max-width: 400px; height: auto; margin: 0 auto 2px; }
 .sub-hero-av { position: relative; display: block; width: 78px; height: 78px; margin: 2px auto 15px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 12px 28px -10px rgba(0,0,0,.55); }
 .sub-hero-av img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
-.sub-x { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 14px; width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(0,0,0,.24); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); display: grid; place-items: center; cursor: pointer; z-index: 2; }
-.sub-x .ic { width: 20px; height: 20px; color: #fff; }
+.sub-x { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px; width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--surface); display: grid; place-items: center; cursor: pointer; z-index: 2; }
+.sub-x:active { background: var(--mint-2); }
+.sub-x .ic { width: 20px; height: 20px; color: var(--ink); }
 /* 照片字幕帶：柔順漸層淡入（照片視覺用漸層＝常規，不是卡片；避免生硬橫切線）*/
-.sub-hero-cap { position: relative; color: #fff; }
+.sub-hero-cap { position: relative; color: var(--ink); padding: 0 24px; }
 .sub-hero-title { font-family: var(--serif); font-size: 25px; font-weight: 900; line-height: 1.2; letter-spacing: .5px; }
-.sub-hero-sub { font-size: 13.5px; margin-top: 6px; color: rgba(255,255,255,.92); }
+.sub-hero-sub { font-size: 13.5px; margin-top: 6px; color: var(--muted); }
 .sub-body { flex: 1; overflow-y: auto; padding: 14px 20px calc(18px + env(safe-area-inset-bottom)); }
 
 .sub-seg { position: relative; display: flex; background: var(--ink); border-radius: 100px; padding: 4px; margin-bottom: 14px; }
