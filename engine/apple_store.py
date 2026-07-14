@@ -37,6 +37,8 @@ class VerifiedAppleTransaction:
     points: int = 0
     plan: str = ""
     expiresDate: str | None = None
+    purchaseDate: str | None = None
+    originalPurchaseDate: str | None = None
 
     def to_dict(self):
         return asdict(self)
@@ -128,4 +130,6 @@ def verify_transaction(signed_transaction, expected_auth_user_id, verifiers=None
         points=int(product.get("points") or product.get("monthlyPoints") or 0),
         plan=str(product.get("plan") or ""),
         expiresDate=_millis_to_iso(getattr(decoded, "expiresDate", None)),
+        purchaseDate=_millis_to_iso(getattr(decoded, "purchaseDate", None)),
+        originalPurchaseDate=_millis_to_iso(getattr(decoded, "originalPurchaseDate", None)),
     )

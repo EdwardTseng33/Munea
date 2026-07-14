@@ -9,7 +9,7 @@
   POST /companion-profile    → 讀寫陪伴角色 templateId/displayName
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
-import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac, contextvars
+import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac, contextvars, calendar
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -2878,6 +2878,22 @@ def parse_iso_datetime(value):
         return datetime.now(timezone.utc)
 
 
+def parse_optional_iso_datetime(value):
+    """Parse persisted billing timestamps without turning bad data into 'now'."""
+    if isinstance(value, datetime):
+        parsed = value
+    elif not value:
+        return None
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def normalize_product_event(data=None):
     data = data or {}
     store = load_app_profile_store()
@@ -3975,6 +3991,45 @@ def normalize_credit_amount(value):
     return max(0, min(amount, 1_000_000))
 
 
+def add_calendar_months(value, months):
+    """Move an aware datetime by calendar months without drifting off month-end."""
+    month_index = value.year * 12 + value.month - 1 + int(months)
+    year, month_zero = divmod(month_index, 12)
+    month = month_zero + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
+
+
+def credit_period_window(anchor, now=None, subscription_expires_at=None):
+    """Return the current monthly billing window anchored to the purchase date."""
+    now = now or datetime.now(timezone.utc)
+    if anchor.tzinfo is None:
+        anchor = anchor.replace(tzinfo=timezone.utc)
+    if now < anchor:
+        start = anchor
+        end = add_calendar_months(anchor, 1)
+    else:
+        offset = (now.year - anchor.year) * 12 + now.month - anchor.month
+        start = add_calendar_months(anchor, offset)
+        if start > now:
+            offset -= 1
+            start = add_calendar_months(anchor, offset)
+        end = add_calendar_months(anchor, offset + 1)
+    if subscription_expires_at and subscription_expires_at < end:
+        end = subscription_expires_at
+    return start, end
+
+
+def credit_wallet_is_available(wallet, now=None):
+    if wallet.get("status") != "active" or float(wallet.get("balance") or 0) <= 0:
+        return False
+    expires_at = wallet.get("expiresAt") or wallet.get("expires_at")
+    if not expires_at:
+        return True
+    expires = parse_optional_iso_datetime(expires_at)
+    return bool(expires and expires > (now or datetime.now(timezone.utc)))
+
+
 def normalize_credit_wallet(data=None, wallet_type="purchased", period=None):
     data = data or {}
     wallet_type = data.get("type") or data.get("walletType") or data.get("wallet_type") or wallet_type
@@ -4043,8 +4098,8 @@ def save_credits_store(data):
 
 def credit_wallet_summary(store):
     wallets = store.get("wallets") or []
-    included = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "included_monthly" and w.get("status") == "active")
-    purchased = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "purchased" and w.get("status") == "active")
+    included = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "included_monthly" and credit_wallet_is_available(w))
+    purchased = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "purchased" and credit_wallet_is_available(w))
     return {
         "includedMonthly": round(included, 4),
         "purchased": round(purchased, 4),
@@ -4053,14 +4108,90 @@ def credit_wallet_summary(store):
     }
 
 
-def find_credit_wallet(store, wallet_type):
+def find_credit_wallet(store, wallet_type, period=None):
     wallets = store.setdefault("wallets", [])
     for wallet in wallets:
-        if wallet.get("type") == wallet_type and wallet.get("status") == "active":
+        if wallet.get("type") == wallet_type and wallet.get("status") == "active" and (wallet_type != "included_monthly" or wallet.get("period") == period):
             return wallet
-    wallet = normalize_credit_wallet({"type": wallet_type}, wallet_type=wallet_type)
+    wallet = normalize_credit_wallet({"type": wallet_type, "period": period}, wallet_type=wallet_type, period=period)
     wallets.append(wallet)
     return wallet
+
+
+def close_included_credit_wallets(store, *, except_period=None, reason="monthly_allowance_expired"):
+    """Expire unused subscription allowance while preserving purchased credits."""
+    changed = False
+    for wallet in store.get("wallets") or []:
+        if wallet.get("type") != "included_monthly" or wallet.get("status") != "active" or wallet.get("period") == except_period:
+            continue
+        remaining = float(wallet.get("balance") or 0)
+        wallet["balance"] = 0
+        wallet["status"] = "closed"
+        changed = True
+        if remaining > 0:
+            append_credit_transaction(
+                store,
+                transaction_type="expire",
+                wallet=wallet,
+                amount=-remaining,
+                source="system",
+                reason=reason,
+                idempotency_key=f"expire:{wallet.get('id')}:{wallet.get('period') or 'none'}",
+            )
+    return changed
+
+
+def monthly_allowance_details(billing, now=None):
+    """Derive the current monthly allowance for both monthly and annual plans."""
+    billing = normalize_billing_store(billing)
+    if subscription_expiry_reason(billing, now=now) or billing.get("activePlan") in (None, "", "free"):
+        return None
+    subscription = billing.get("subscription") or {}
+    entitlements = billing.get("entitlements") or {}
+    product_id = str(subscription.get("productId") or "")
+    product = apple_store.PRODUCTS.get(product_id) or {}
+    amount = normalize_credit_amount(entitlements.get("monthlyCredits") or product.get("monthlyPoints"))
+    if amount <= 0:
+        return None
+    expires = parse_optional_iso_datetime(subscription.get("expiresAt"))
+    if subscription.get("expiresAt") and expires is None:
+        return None
+    anchor_value = entitlements.get("monthlyCreditAnchorAt") or subscription.get("originalPurchaseDate") or subscription.get("purchaseDate")
+    anchor = parse_optional_iso_datetime(anchor_value)
+    if anchor is None and expires:
+        anchor = add_calendar_months(expires, -12 if product_id.endswith(".yearly") else -1)
+    if anchor is None:
+        anchor = parse_optional_iso_datetime(subscription.get("lastVerifiedAt"))
+        if anchor is None:
+            return None
+    start, end = credit_period_window(anchor, now=now, subscription_expires_at=expires)
+    if end <= (now or datetime.now(timezone.utc)):
+        return None
+    return {
+        "amount": amount,
+        "period": start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%MZ") + "/" + end.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
+        "startsAt": start.isoformat().replace("+00:00", "Z"),
+        "expiresAt": end.isoformat().replace("+00:00", "Z"),
+        "originalTransactionId": subscription.get("originalTransactionId") or "subscription",
+    }
+
+
+def ensure_current_monthly_allowance(now=None):
+    billing = load_billing_store()
+    details = monthly_allowance_details(billing, now=now)
+    if not details:
+        return None
+    return credits_grant_response({
+        "amount": details["amount"],
+        "walletType": "included_monthly",
+        "period": details["period"],
+        "expiresAt": details["expiresAt"],
+        "source": "included_monthly",
+        "reason": "subscription_monthly_allowance",
+        "provider": "apple_storekit2",
+        "providerTransactionId": details["originalTransactionId"],
+        "idempotencyKey": f"subscription-allowance:{details['originalTransactionId']}:{details['period']}",
+    })
 
 
 def credit_idempotency_response(store, key):
@@ -4117,6 +4248,7 @@ def tx_fallback_idempotency_key(transaction_type, wallet, amount):
 
 
 def credits_balance_response(data=None):
+    ensure_current_monthly_allowance()
     store = load_credits_store()
     return {
         "ok": True,
@@ -4139,8 +4271,17 @@ def credits_grant_response(data):
     replay = credit_idempotency_response(store, idempotency_key)
     if replay:
         return replay
-    wallet = find_credit_wallet(store, wallet_type)
-    wallet["balance"] = round(float(wallet.get("balance") or 0) + amount, 4)
+    period = data.get("period") if wallet_type == "included_monthly" else None
+    if wallet_type == "included_monthly":
+        period = period or time.strftime("%Y-%m")
+        close_included_credit_wallets(store, except_period=period)
+    wallet = find_credit_wallet(store, wallet_type, period=period)
+    if wallet_type == "included_monthly":
+        wallet["balance"] = amount
+        wallet["expiresAt"] = data.get("expiresAt") or data.get("expires_at") or add_calendar_months(datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0), 1).isoformat().replace("+00:00", "Z")
+        wallet["status"] = "active"
+    else:
+        wallet["balance"] = round(float(wallet.get("balance") or 0) + amount, 4)
     tx = append_credit_transaction(
         store,
         transaction_type="grant",
@@ -4193,6 +4334,7 @@ def ensure_free_signup_trial(account_id):
 
 
 def credits_consume_response(data):
+    ensure_current_monthly_allowance()
     store = load_credits_store()
     amount = normalize_credit_amount(data.get("amount") or data.get("credits"))
     if amount <= 0:
@@ -4212,8 +4354,9 @@ def credits_consume_response(data):
         }
     remaining = amount
     consumed = []
-    for wallet_type in ("included_monthly", "purchased"):
-        wallet = find_credit_wallet(store, wallet_type)
+    available_wallets = [w for w in store.get("wallets") or [] if credit_wallet_is_available(w)]
+    available_wallets.sort(key=lambda w: (0 if w.get("type") == "included_monthly" else 1, w.get("expiresAt") or "9999", w.get("id") or ""))
+    for wallet in available_wallets:
         available = float(wallet.get("balance") or 0)
         if available <= 0:
             continue
@@ -4301,6 +4444,9 @@ def reconcile_billing_expiry(store):
     if not reason:
         return store
     saved = save_billing_store(expire_billing_store(store, reason), reconcile=False)
+    credits = load_credits_store()
+    if close_included_credit_wallets(credits, reason=f"subscription_{reason}"):
+        save_credits_store(credits)
     removed = 0
     try:
         removed = supabase_adapter.make_adapter().remove_external_family_memberships_for_account_unscoped(saved.get("accountId"))
@@ -4423,11 +4569,16 @@ def apple_transaction_response(data, auth_gate=None):
             "familyMembersMax": 4 if verified.plan == "plus" else 12,
             "familyCircleInvite": True,
             "familyCircleJoin": True,
+            "monthlyCredits": verified.points,
+            "monthlyCreditAnchorAt": verified.originalPurchaseDate or verified.purchaseDate,
         }
         billing = save_billing_store(billing)
+        allowance = monthly_allowance_details(billing)
         grant = credits_grant_response({
             "amount": verified.points,
             "walletType": "included_monthly",
+            "period": (allowance or {}).get("period"),
+            "expiresAt": (allowance or {}).get("expiresAt") or verified.expiresDate,
             "source": "included_monthly",
             "reason": "verified_storekit_subscription_allowance",
             "provider": "apple_storekit2",

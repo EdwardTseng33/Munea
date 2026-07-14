@@ -41,4 +41,13 @@ assert(!/authEmailInput|authEmailBtn|電子信箱登入|寄登入信/.test(authS
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'Opening auth sheet must not focus an input or open the keyboard');
 
-console.log('UI contracts OK: social auth, quiet keyboard, latest account card, and challenge controls');
+const subscriptionSheet = html.match(/<div class="reader-page sub-page" id="planModal">([\s\S]*?)<div class="modal-mask" id="visitModal">/)?.[1] || '';
+assert(subscriptionSheet.includes('會員月點數') && subscriptionSheet.includes('每期重新發放，未用完不帶到下期'), 'Subscription plans must explain that monthly credits do not roll over');
+assert(subscriptionSheet.includes('單獨加購點數') && subscriptionSheet.includes('會員到期後仍保留'), 'Subscription plans must distinguish durable purchased credits');
+assert((subscriptionSheet.match(/當期有效・不累積/g) || []).length === 2, 'Every paid plan credit allowance must show its non-rollover label');
+const pointsPane = subscriptionSheet.match(/<div id="subPoints"[\s\S]*?<\/div>\s*<\/div>\s*<div class="plan-confirm-bar"/)?.[0] || '';
+assert(pointsPane.includes('加購點數可持續累積') && pointsPane.includes('會員到期後仍會保留'), 'Points purchase pane must explain purchased-credit retention');
+assert(pointsPane.includes('先使用即將到期的會員月點數，再使用加購點數'), 'Points purchase pane must explain credit deduction order');
+assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {'), 'Credit rule explanation must have dedicated readable styling');
+
+console.log('UI contracts OK: billing credit rules, social auth, quiet keyboard, latest account card, and challenge controls');

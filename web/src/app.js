@@ -3596,6 +3596,8 @@ async function connectCall() {
   setCallHint(developmentDirectCall ? '開發測試直連中…' : '正在安排語音與影像席位…', true);
   if (!developmentDirectCall) {
     try {
+      // 跨月或年繳方案可能在這次通話前進入新點數週期；先向伺服器同步本期額度。
+      try { await refreshServerCredits(); } catch (e0) {}
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
       if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
         throw new Error('paired_service_unavailable');
