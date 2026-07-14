@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。來源分支 `codex/voice-experience-regressions` 已整合最新 `main@4fc021e`（含 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest）及本輪全語音 S2S／ASR／插話／靜音修正。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
+> **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。GitHub `main@ec40412` 已合併 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest，以及 PR #37 的全語音 S2S／ASR／插話／靜音修正；main 的 App／iOS 內容也已和產出 IPA 時的來源逐項比對一致。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
 
 > **最後更新：2026-07-15（Codex · App 1.0.6 Build 11 已完成自動語音驗證、iPhone 開發包與 App Store IPA；等待真人語音 Gate、雲端 canary 與 TestFlight）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
@@ -12,7 +12,7 @@
 
 ## 一眼總覽
 
-**63－App 1.0.6 Build 11／全語音修正與上架候選包（7/15 Codex）**：①✅ 已整合 `main@4fc021e` 與 PR #36；版本固定為 `1.0.6 (Build 11)`。②✅ 純 PCM S2S／台灣繁中 ASR、上下文姓名修正、插話 7/7、30 秒低噪音與句尾保護自動 PASS。③✅ Edward iPhone 已安裝並啟動開發包，保留 Pro、1,000 點與家人假資料。④✅ 正式 Archive／IPA 簽章、版本、Bundle ID、Privacy Manifest、HealthKit、Apple 登入、最新 Web 資源及無開發資料檢查 PASS；54,784,407 bytes，SHA-256 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。⑤✅ 修正正式匯出腳本誤判 Privacy Manifest 陣列的問題並加回歸契約。⑥❌ 真人 10 分鐘長聊、五次插話、五組靜音、開場與發音尚未通過；Voice／Brain 尚未部署，IPA 尚未上傳。
+**63－App 1.0.6 Build 11／全語音修正與上架候選包（7/15 Codex）**：①✅ PR #36／#37 已合併至 `main@ec40412`；版本固定為 `1.0.6 (Build 11)`，main 的 App／iOS 內容與包版來源一致。②✅ 純 PCM S2S／台灣繁中 ASR、上下文姓名修正、插話 7/7、30 秒低噪音與句尾保護自動 PASS。③✅ Edward iPhone 已安裝並啟動開發包，保留 Pro、1,000 點與家人假資料。④✅ 正式 Archive／IPA 簽章、版本、Bundle ID、Privacy Manifest、HealthKit、Apple 登入、最新 Web 資源及無開發資料檢查 PASS；54,784,407 bytes，SHA-256 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。⑤✅ 修正正式匯出腳本誤判 Privacy Manifest 陣列的問題並加回歸契約；PR #37 的 Windows 權限閘、Windows smoke 與 Vercel 全綠。⑥❌ 真人 10 分鐘長聊、五次插話、五組靜音、開場與發音尚未通過；Voice／Brain 尚未部署，IPA 尚未上傳。
 
 **62－App 1.0.5 Build 10／最終 main 雙包版（7/14 Codex）**：①✅ PR #29 點數月週期、PR #23 語音開場緩衝／台語安全閘、PR #30 訂閱頁水彩新設計、PR #31 Gateway 長駐監控、PR #33 訂閱頁捲動／說明卡與 PR #34「一家人」文案均已納入，App 功能來源為 `main@8dfb91f`。②✅ 已修正 UI 契約對新短文案的辨識；`test:launch`、`smoke:no-api`、完整 `release:check`、Gateway 監控 13 項、安全 SQL、Capacitor sync 與 Xcode arm64 真機編譯通過。③✅ Edward iPhone 已覆蓋安裝並啟動 `1.0.5 (10)`；開發 profile 為 TEST、Pro、1,000 點與家庭假資料，包內訂閱頁 HTML／樣式／插圖和最新 main 逐位元一致。④✅ 正式 Archive／IPA 不含測試資料或直連，簽章、版本、Bundle ID、相機／相簿、HealthKit、Apple 登入 entitlement 與最新 Web 資源通過。⑤📦 唯一有效 IPA 54,781,359 bytes，SHA-256 `50093101e35bc7836787a008364cbaaf4961edd7e126064d924e76ebd3a185d3`；所有較早的 1.0.5 產物均已作廢。⑥❌ 長聊斷續、靜音誤接話、Google／Apple 真登入與實際拍照仍待直接操作 Build 10；IPA 尚未上傳 App Store Connect。
 
