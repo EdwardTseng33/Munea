@@ -39,8 +39,9 @@ Credits = metered Voice + Avatar capacity
 ```
 
 - Free trial credits are granted once per account with an idempotency key.
+- Subscription points are a monthly allowance. Each billing period receives a fresh allowance; unused points expire at the period boundary and never roll into the next period, including for yearly subscriptions.
 - Included monthly points are used before purchased points.
-- Purchased points do not expire while the account remains active.
+- Purchased points accumulate and remain available after a subscription ends while the account remains active.
 - Safety, privacy controls, data export, and account deletion are never blocked by points.
 - Paid status, grants, balances, and family limits are server-owned values.
 - The frontend may display a balance but cannot create paid entitlement by itself.
@@ -75,6 +76,8 @@ The current Free / Plus / Pro policy is version 3 in `supabase/sql/013_current_a
 3. Stop the paid call when the server-authoritative balance reaches zero.
 
 Every mutation requires an idempotency key. Apple transaction IDs are provider references and may not be credited twice.
+
+The server derives each allowance window from the verified Apple purchase anchor. When a new period is first observed, it closes the previous `included_monthly` wallet, records any unused amount as expired, and creates one idempotent wallet for the new period. Purchased wallets are never closed by subscription expiry.
 
 ## Launch Gates
 
