@@ -1,133 +1,37 @@
-# Munea multi-agent collaboration protocol
+# Munea 輕量多 Agent 協作方式
 
-## Goal
+## 目的
 
-Multiple Codex, Claude, Mac, Windows, backend, App, deployment, and design sessions may work at the same time without sharing uncommitted files or discovering conflicts only at merge time.
+讓 Claude、Codex、Mac、Windows 與不同 session 可以平行工作，但不要同時修改同一份檔案，也不要到合併時才發現彼此覆蓋。
 
-This protocol makes coordination explicit in the repository. It replaces the old practice of using one large collaboration-board file as a live lock.
+不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。協作資訊放在兩個大家都看得到的地方：
 
-## Sources of truth
+1. `docs/協作看板-雙AI分工.md`：較長或跨模組任務的分工與產品脈絡。
+2. GitHub 開啟中的 PR：目前實際分支、變更檔案、進度與跨電腦交接。
 
-1. `.agent/locks/active/*.json` — current exclusive workstream locks.
-2. GitHub pull requests — implementation scope, review, validation, and handoff.
-3. Product or architecture SSOT documents — durable decisions.
-4. `docs/協作看板-雙AI分工.md` — historical context only; it is not an active lock registry.
+## 開始工作
 
-Chat messages are useful notifications, but they do not replace a merged lock file.
+1. `git fetch origin`，先看協作看板和開啟中的 PR。
+2. 每個 session 使用自己唯一的 branch。同一台電腦已有 dirty checkout 或其他 session 時，另外建立 worktree。
+3. 在任務說明或 Draft PR 列出預計修改的檔案；長時間或跨模組任務再補一筆看板紀錄。
+4. 若已有 session 修改同一檔案，採先後交接：第一位完成並合併，第二位同步最新 `origin/main` 後再接。不要開兩份互相競爭的同檔版本。
+5. 不同檔案可以直接平行，不需要等待或取得鎖。
 
-## When a lock is required
+## 工作中與合併
 
-A lock is required before any tracked-file edit. Read-only inspection, diagnosis, and status reporting do not require a lock.
+- 一個實作任務只需要一個 PR；不另外開鎖定 PR。
+- 小步 commit，只提交自己的範圍，不混入另一個 worktree 或 dirty main 的內容。
+- 不 force push `main`、不 reset 或刪除別人的未完成內容。
+- 合併前同步最新 `origin/main` 並跑相關測試。
+- 發生衝突時，比對兩邊目的後整合；看不懂對方意圖就通知對方，不直接選 ours/theirs。
+- PR 合併後，長期任務在看板標記完成，下一個需要同檔案的 session 再接手。
 
-Scopes are repository-relative exact files or directory prefixes:
+## 跨電腦交接範例
 
-- Exact file: `web/src/app.js`
-- Directory: `app-site/`
+- Windows 正在改 `web/src/app.js`：在 Draft PR 或看板標明。Mac 可以同時處理 `ios/`，但暫不另改 `web/src/app.js`。
+- Windows 的 PR 合併後，Mac 執行 `git fetch origin` 並把自己的 branch 更新到最新 `origin/main`，再開始 App 同檔修改。
+- 如果兩項工作只碰不同檔案，兩邊照常平行並各自開 PR。
 
-Glob characters are intentionally forbidden. Clear prefixes are easier to review and compare reliably.
+## GitHub main 保護
 
-## Mandatory workflow
-
-### 1. Inspect before claiming
-
-```bash
-git fetch origin
-python scripts/agent-lock.py list
-python scripts/agent-lock.py check \
-  --branch codex/example-task \
-  --path web/src/app.js \
-  --path web/src/styles.css
-```
-
-If the check reports an active or stale overlap, stop. Notify the owner using the contact in the lock file. Either wait for release, receive an explicit transfer, or agree on non-overlapping paths.
-
-### 2. Create the isolated branch, then acquire the lock first
-
-Create the feature worktree and branch from current `origin/main`, but do not edit product files yet:
-
-```bash
-git worktree add ../Munea-worktrees/example-task -b codex/example-task origin/main
-cd ../Munea-worktrees/example-task
-```
-
-Generate one lock in that worktree:
-
-```bash
-python scripts/agent-lock.py create \
-  --task-id example-task-20260714 \
-  --owner codex-session-name \
-  --branch codex/example-task \
-  --contact codex-thread-or-pr-url \
-  --lease-hours 24 \
-  --path web/src/app.js \
-  --path web/src/styles.css \
-  --note "Settings account UI"
-```
-
-Commit only that new `.agent/locks/active/*.json` file, open a lock-only PR from the feature branch, and merge it into `main`. Do not start implementation until the lock appears on `origin/main`.
-
-One active lock maps to one implementation branch. Default lease is 24 hours; maximum lease is 7 days. Renew before expiry through another lock-only PR. Expired locks remain blocking until explicitly renewed, transferred, or removed so abandoned work cannot be silently overwritten.
-
-### 3. Sync the same worktree, then implement
-
-After the lock is visible on `main`, update the same feature branch and confirm the lock before editing:
-
-```bash
-git fetch origin
-git rebase origin/main
-python scripts/agent-lock.py check --branch codex/example-task --path web/src/app.js
-```
-
-Never edit in the shared dirty `main` checkout. Never use another agent's worktree. Keep commits scoped and do not reformat unrelated files.
-
-### 4. Coordinate unavoidable overlap
-
-If two tasks truly need the same file, use one of these patterns before either agent edits:
-
-1. **Serial handoff** — current owner commits, pushes, validates, and releases or transfers the lock; the next agent rebases and starts.
-2. **Scope split** — split into different exact files or directory prefixes and update locks before editing.
-3. **Declared stacked branch** — the child branch starts from the parent branch, records the dependency in both PRs, and merges only after the parent. This is exceptional, not the default.
-
-Do not copy partial uncommitted changes between sessions and do not resolve product conflicts by choosing one side of a Git conflict without the other owner's confirmation.
-
-### 5. Finish and release atomically
-
-Before the implementation PR is ready:
-
-```bash
-git fetch origin
-git rebase origin/main
-python scripts/agent-lock.py check --branch codex/example-task --path web/src/app.js
-```
-
-Run relevant tests, remove the branch's own lock file, and open the implementation PR. The coordination CI verifies that:
-
-- the branch had exactly one lock on the PR base;
-- every changed product file is inside that lock;
-- no changed path overlaps another lock;
-- the completion PR removes its own lock;
-- lock-only PRs do not collide with existing locks.
-
-Merge through PR. Never force-push `main` and never use a shared dirty checkout as a merge source.
-
-## User-facing coordination behavior
-
-When work is blocked by another lock, tell the user immediately:
-
-- which task owns the path;
-- which exact files or directory overlap;
-- whether the safe choice is waiting, scope splitting, or serial handoff;
-- what useful non-overlapping work can continue.
-
-When acquiring a broad lock that may affect other sessions, notify those sessions before implementation and ask them to acknowledge. The merged lock remains authoritative even if a chat acknowledgement is delayed.
-
-## Emergency and stale locks
-
-- Do not silently delete another agent's lock.
-- Contact the owner first. If the owner cannot respond, Edward may authorize transfer or removal.
-- A P0 incident does not automatically override an active lock. Record the explicit handoff, preserve the current branch, then transfer the lock.
-- If a session ends unexpectedly, its branch is preserved. The next owner starts only after the lock is explicitly transferred or removed.
-
-## Branch protection requirement
-
-The GitHub check named `agent-coordination` should be required for merges into `main`, together with the existing smoke checks. Requiring the branch to be up to date closes the race where two lock-only PRs were checked against an older `main`.
+`main` 保留最小保護：透過 PR 合併、禁止 force push 與刪除。沒有強制鎖定檢查，也不要求另一位真人核准；目的是避免覆蓋，不是增加流程。

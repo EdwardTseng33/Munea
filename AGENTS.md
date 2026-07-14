@@ -1,23 +1,19 @@
-# Munea Agent Collaboration Rules
+# Munea lightweight collaboration rules
 
-These rules apply to every Codex agent and every task that can edit this repository.
+These rules apply to Codex, Claude, and every computer or session that edits this repository.
 
-Before editing any tracked file:
+Before editing:
 
-1. Read `docs/AGENT-COLLABORATION-PROTOCOL.md` completely.
-2. Fetch `origin/main`; never develop in the shared dirty `main` checkout.
-3. Create a dedicated worktree and a uniquely named branch from current `origin/main`.
-4. Run `python scripts/agent-lock.py list` and check the intended paths.
-5. Acquire a repository lock as described in the protocol. The lock-only PR must be merged to `main` before implementation starts.
-6. If another active or stale lock overlaps any intended path, do not edit those paths. Notify the owner and wait for an explicit handoff or split the scope into non-overlapping paths.
+1. Run `git fetch origin` and read `docs/協作看板-雙AI分工.md` plus the currently open GitHub pull requests.
+2. Use one uniquely named branch per session. When the checkout is dirty or another session is active on the same computer, use a separate worktree.
+3. In the task message, Draft PR, or the board entry for longer work, state the task and the files you expect to change. One implementation task uses one PR; there is no separate lock PR.
+4. If another active task is changing the same file, do not start a competing edit. Let the first task merge, then update from `origin/main` and continue. Different files may proceed in parallel.
 
 While working:
 
-- Stay inside the paths declared by the lock.
-- Do not use another agent's worktree or uncommitted files.
-- Do not force-push, reset, overwrite, delete, or reformat unrelated user or agent changes.
-- Use one feature branch per lock. Stacked branches are allowed only when the dependency is declared and the parent branch merges first.
-- Rebase on current `origin/main` before final validation and PR handoff.
-- The completion PR must remove its own active lock. Git history and the PR are the audit trail.
+- Keep commits small and scoped. Do not reformat or include unrelated files.
+- Do not force-push `main`, reset another branch, overwrite another worktree, or discard changes you do not own.
+- Before merging, update the branch with current `origin/main`, run relevant tests, and review any conflict using both tasks' intent. Never resolve a conflict by blindly choosing one side.
+- Mark longer board entries complete when the PR merges. GitHub PRs are the live cross-computer handoff record.
 
-Read-only inspection does not require a lock. The legacy `docs/協作看板-雙AI分工.md` is historical context, not the live locking authority.
+Read-only inspection does not need a branch or board entry. See `docs/AGENT-COLLABORATION-PROTOCOL.md` for the short workflow and examples.
