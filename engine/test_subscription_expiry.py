@@ -33,7 +33,7 @@ class SubscriptionExpiryTests(unittest.TestCase):
         self.assertEqual(expired["subscription"]["status"], "expired")
         self.assertFalse(expired["entitlements"]["familyCircleInvite"])
         self.assertFalse(expired["entitlements"]["familyCircleJoin"])
-        self.assertEqual(expired["entitlements"]["familyMembersMax"], 0)
+        self.assertEqual(expired["entitlements"]["familyMembersMax"], 1)
 
     def test_reconciliation_removes_external_family_memberships(self):
         past = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()

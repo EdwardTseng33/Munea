@@ -27,6 +27,20 @@ check_cmd node "Install Node.js 22+."
 check_cmd npm "Install npm with Node.js."
 check_cmd npx "Install npm/npx with Node.js."
 
+section "Python runtime"
+if command -v python3 >/dev/null 2>&1; then
+  python_version="$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')"
+  if python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+    printf 'PASS python3: %s (%s)\n' "$(command -v python3)" "$python_version"
+  else
+    printf 'MISSING python3 3.10+: found %s. Install Python 3.12 before running release checks.\n' "$python_version"
+    missing=1
+  fi
+else
+  printf 'MISSING python3: install Python 3.12 before running release checks.\n'
+  missing=1
+fi
+
 section "PowerShell for repo smoke scripts"
 if command -v pwsh >/dev/null 2>&1; then
   printf 'PASS pwsh: %s\n' "$(command -v pwsh)"
@@ -70,12 +84,14 @@ fi
 section "Next commands on Mac"
 cat <<'EOF'
 1. npm install
-2. npm run mac:doctor
-3. npm run smoke:no-api
-4. npm run cap:doctor
-5. npm run cap:add:ios   # skip if ios/App already exists
-6. npm run cap:sync
-7. npm run cap:open:ios
+2. python3 -m venv .venv && .venv/bin/python -m pip install -r engine/requirements.txt
+3. npm run mac:doctor
+4. npm run smoke:no-api
+5. npm run test:launch
+6. npm run cap:doctor
+7. npm run cap:add:ios   # skip if ios/App already exists
+8. npm run cap:sync
+9. npm run cap:open:ios
 EOF
 
 if [ "$missing" -ne 0 ]; then

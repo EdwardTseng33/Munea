@@ -10,7 +10,9 @@ const storage = new Map();
 let serverCalls = 0;
 let applied = 0;
 let finished = 0;
+let managed = 0;
 let serverAllows = true;
+let restoreTransactions = [];
 let appliedPurchase = null;
 let currentTransaction = {
   state: 'purchased',
@@ -24,7 +26,8 @@ const plugin = {
   addListener() {},
   async purchase() { return { ...currentTransaction }; },
   async finish() { finished += 1; return { ok: true }; },
-  async restore() { return { transactions: [] }; }
+  async restore() { return { transactions: restoreTransactions.map(tx => ({ ...tx })) }; },
+  async manageSubscriptions() { managed += 1; return { ok: true }; }
 };
 
 const context = {
@@ -70,6 +73,18 @@ vm.createContext(context);
 vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
 
 (async () => {
+  const expectedPointProducts = {
+    150: 'net.munea.app.points.200',
+    300: 'net.munea.app.points.500',
+    600: 'net.munea.app.points.1000',
+    1000: 'net.munea.app.points.1800'
+  };
+  for (const [points, productId] of Object.entries(expectedPointProducts)) {
+    if (context.window.MuneaStore.ptsId(Number(points)) !== productId) {
+      throw new Error(`point package ${points} is not mapped to ${productId}`);
+    }
+  }
+
   const first = await context.window.MuneaStore.purchase(currentTransaction.productId);
   if (!first.ok || !first.verified || serverCalls !== 1 || applied !== 1 || finished !== 1) {
     throw new Error('verified purchase did not follow verify/apply/finish order');
@@ -99,7 +114,24 @@ vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
     throw new Error('verified subscription expiry was not forwarded to the app UI');
   }
 
-  console.log('Store server verification PASS', { serverCalls, applied, finished });
+  restoreTransactions = [{
+    state: 'purchased',
+    productId: 'net.munea.app.plus.monthly',
+    transactionId: '100000000000004',
+    originalTransactionId: '100000000000004',
+    signedTransaction: 'header.payload.signature'
+  }];
+  const restored = await context.window.MuneaStore.restore();
+  if (!restored.ok || restored.restored !== 'net.munea.app.plus.monthly' || applied !== 3 || finished !== 4) {
+    throw new Error('restore did not verify, apply, and finish the active subscription');
+  }
+
+  const manageResult = await context.window.MuneaStore.manageSubscriptions();
+  if (!manageResult.ok || managed !== 1) {
+    throw new Error('native subscription management was not opened');
+  }
+
+  console.log('Store server verification PASS', { serverCalls, applied, finished, managed });
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

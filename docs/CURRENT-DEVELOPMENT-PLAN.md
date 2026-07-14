@@ -3,6 +3,8 @@
 > Updated: 2026-06-30
 > Purpose: current execution plan for turning the runnable prototype into a first TestFlight path.
 
+> **2026-07-14 current override**: App `1.0.2 (5)` is installed and running on Edward's iPhone. The active plan ladder is Free / Plus / Pro; Plus grants 150 monthly points and Pro grants 300. Older dated sections remain an execution history and cannot override `docs/APP-STORE-PRODUCTION-READINESS.md` or `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`.
+
 ## Current Truth
 
 - Product core: **AI health care + family interaction + `聊聊`**.
@@ -35,7 +37,7 @@
 
 ## 2026-07-01 Update
 
-- Locked the subscription ladder as Free / Plus / Premium / Concierge.
+- Historical note: this date used Free / Plus / Premium / Concierge; it was superseded by the current Free / Plus / Pro ladder.
 - Added `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` as the source of truth for plan names, entitlement gates, credits direction, deduction order, service architecture, prior-plan review, and future product ids.
 - Added `supabase/sql/006_billing_credits_foundation.sql` for `entitlement_policy_versions`, `credit_wallets`, `credit_transactions`, and `credit_ledger`.
 - Added the first local runtime credits API: `/credits/balance`, `/credits/grant`, and `/credits/consume`, backed by `engine/credits_store.json`.
@@ -320,7 +322,7 @@ Goal: make the product safe enough to move toward TestFlight and paid subscripti
 Work items:
 - [x] Add `/entitlements` as backend source of truth for paid feature gates.
 - [x] Add `/subscription-event` placeholder for StoreKit / App Store Server Notifications / RevenueCat webhook flow.
-- [x] Lock Free / Plus / Premium / Concierge as the v1 subscription ladder.
+- [x] Replace the historical ladder with Free / Plus / Pro for App 1.0.2.
 - [x] Add `/healthz` service contract check.
 - [x] Add request-size, audio MIME, audio-size, and safe API error guardrails.
 - [x] Add `/privacy-export` and `/account-deletion` contracts for App Store account/data rights readiness.

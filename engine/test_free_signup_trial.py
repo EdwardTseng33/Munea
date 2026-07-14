@@ -42,6 +42,7 @@ class FreeSignupTrialTests(unittest.TestCase):
         self.assertTrue(entitlements["realtimeAvatar"])
         self.assertEqual(entitlements["signupTrialCredits"], 5)
         self.assertEqual(entitlements["creditMinutes"], 1)
+        self.assertEqual(entitlements["familyMembersMax"], 1)
 
 
 if __name__ == "__main__":

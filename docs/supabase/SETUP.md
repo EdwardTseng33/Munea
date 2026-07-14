@@ -99,7 +99,17 @@ Then run the billing credits foundation:
 supabase/sql/006_billing_credits_foundation.sql
 ```
 
-This adds `entitlement_policy_versions`, `credit_wallets`, `credit_transactions`, and `credit_ledger`. The v1 plan ladder is Free / Plus / Premium / Concierge. Subscriptions remain the base access model; credits are reserved for expensive or bursty add-ons such as premium Avatar/GPU minutes, and every mutation must be server-side and idempotent.
+This adds `entitlement_policy_versions`, `credit_wallets`, `credit_transactions`, and `credit_ledger`. Every mutation must be server-side and idempotent.
+
+Then apply the one-time trial and current App plan policies in order:
+
+```text
+supabase/sql/011_free_signup_trial_policy.sql
+supabase/sql/012_production_security_hardening.sql
+supabase/sql/013_current_app_billing_policy.sql
+```
+
+Policy v3 is the current Free / Plus / Pro contract: Free receives one idempotent 5-point trial, Plus receives 150 monthly points, and Pro receives 300 monthly points.
 
 Then run the family cloud state foundation:
 

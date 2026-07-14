@@ -5,16 +5,29 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Import-Module Microsoft.PowerShell.Management
+Import-Module Microsoft.PowerShell.Utility
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
+if (-not $env:PYTHONPYCACHEPREFIX) {
+  $env:PYTHONPYCACHEPREFIX = Join-Path ([System.IO.Path]::GetTempPath()) "munea-pycache"
+}
 if ($SkipApi) {
   $env:MUNEA_SKIP_ENV_LOCAL = "1"
   Remove-Item Env:MUNEA_DATABASE_PROVIDER -ErrorAction SilentlyContinue
 }
 
 function Resolve-Python {
+  $venvUnixPython = Join-Path $root ".venv/bin/python"
+  if (Test-Path $venvUnixPython) {
+    & $venvUnixPython --version | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      return $venvUnixPython
+    }
+  }
+
   $venvPython = Join-Path $root ".venv\Scripts\python.exe"
   if (Test-Path $venvPython) {
     & $venvPython --version | Out-Null
@@ -23,15 +36,17 @@ function Resolve-Python {
     }
   }
 
-  $pythonCommand = Get-Command python.exe -ErrorAction SilentlyContinue
-  if ($pythonCommand) {
-    & $pythonCommand.Source --version | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-      return $pythonCommand.Source
+  foreach ($candidate in @("python3", "python", "python.exe")) {
+    $pythonCommand = Get-Command $candidate -ErrorAction SilentlyContinue
+    if ($pythonCommand) {
+      & $pythonCommand.Source --version | Out-Null
+      if ($LASTEXITCODE -eq 0) {
+        return $pythonCommand.Source
+      }
     }
   }
 
-  throw "Python runtime not found. Create .venv or add python to PATH."
+  throw "Python runtime not found. Create .venv or add python/python3 to PATH."
 }
 
 function Step($name) {
@@ -69,7 +84,7 @@ function Invoke-PythonBlock {
 }
 
 Step "Python compile"
-& $Python -m py_compile engine\server.py engine\env_loader.py engine\supabase_adapter.py engine\model_router.py engine\chat_engine.py engine\nening_brain.py engine\characters_demo.py scripts\supabase_doctor.py
+& $Python -m py_compile "engine/server.py" "engine/env_loader.py" "engine/supabase_adapter.py" "engine/model_router.py" "engine/chat_engine.py" "engine/nening_brain.py" "engine/characters_demo.py" "scripts/supabase_doctor.py"
 if ($LASTEXITCODE -ne 0) {
   throw "Python compile failed with exit code $LASTEXITCODE"
 }
@@ -92,7 +107,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import chat_engine
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     chat_engine.USER_PROFILE_PATH = str(Path(d) / "user_profile.json")
     profile = chat_engine._read_user_profile()
     assert profile["\u7a31\u547c"] == "\u4f7f\u7528\u8005"
@@ -302,10 +317,10 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
             "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
             "platform": "ios",
             "provider": "revenuecat",
-            "product_id": "munea.premium.monthly",
+            "product_id": "net.munea.app.pro.monthly",
             "original_transaction_id": "1000000000000001",
             "status": "active",
-            "active_plan": "premium",
+            "active_plan": "pro",
             "entitlements": {"voiceCompanion": True, "realtimeAvatar": True},
             "verified_at": "2026-06-29T00:00:00Z",
             "expires_at": "2026-07-29T00:00:00Z",
@@ -571,13 +586,13 @@ assert store["account"]["locale"] == "zh-TW"
 assert store["familyGroup"]["members"][0]["role"] == "primary_user"
 assert store["companionProfiles"][env["MUNEA_SUPABASE_PERSON_ID"]]["displayName"] == "Nening"
 remote_billing = adapter.load_billing_store()
-assert remote_billing["activePlan"] == "premium"
+assert remote_billing["activePlan"] == "pro"
 assert remote_billing["subscription"]["status"] == "active"
 assert remote_billing["usageLedger"]["voiceMinutesUsed"] == 12
 saved_billing = adapter.save_billing_store({
-    "activePlan": "premium",
+    "activePlan": "pro",
     "provider": "revenuecat",
-    "subscription": {"status": "active", "productId": "munea.premium.monthly"},
+    "subscription": {"status": "active", "productId": "net.munea.app.pro.monthly"},
     "entitlements": {"voiceCompanion": True, "realtimeAvatar": True},
     "usageLedger": {"period": "2026-06", "voiceMinutesUsed": 1, "avatarMinutesUsed": 1},
 })
@@ -878,7 +893,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
     server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
@@ -967,7 +982,7 @@ class DisabledBackend:
     def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
         return None
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.FAMILY_STATE_STORE_PATH = str(Path(d) / "family_state_store.json")
     try:
         server.data_backend = lambda: DisabledBackend()
@@ -1062,7 +1077,7 @@ class DisabledBackend:
     def update_family_invitation(self, invitation_id, patch):
         return None
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.FAMILY_INVITATIONS_PATH = str(Path(d) / "family_invitations.json")
     try:
         server.data_backend = lambda: DisabledBackend()
@@ -1153,7 +1168,7 @@ class DisabledBackend:
     def save_app_profile_store(self, store):
         return None
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
     server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     try:
@@ -1225,7 +1240,7 @@ try:
 finally:
     server.data_backend = original_backend
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
     server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     server._APP_PROFILE_CACHE["store"] = None
@@ -1325,7 +1340,7 @@ class DisabledBackend:
     def revoke_consent_record(self, record_id=None, person_id=None, consent_type=None, patch=None):
         return None
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.CONSENT_RECORDS_PATH = str(Path(d) / "consent_records.json")
     try:
         server.data_backend = lambda: DisabledBackend()
@@ -1407,7 +1422,7 @@ class DisabledBackend:
     def update_routine_reminder(self, reminder_id, patch):
         return None
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.CARE_SCHEDULE_PATH = str(Path(d) / "care_schedule.json")
     try:
         server.data_backend = lambda: DisabledBackend()
@@ -1487,7 +1502,7 @@ class DisabledBackend:
     def save_family_activity_participant(self, activity_id, participant):
         return None
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.FAMILY_ACTIVITIES_PATH = str(Path(d) / "family_activities.json")
     try:
         server.data_backend = lambda: DisabledBackend()
@@ -1558,7 +1573,7 @@ class DisabledBackend:
     def append_wellbeing_signal(self, signal):
         return None
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.WELLBEING_PATH = str(Path(d) / "wellbeing_signals.json")
     try:
         server.data_backend = lambda: DisabledBackend()
@@ -1580,7 +1595,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.FEEDBACK_PATH = str(Path(d) / "feedback_store.json")
     bug = server.feedback_response({
         "type": "bug",
@@ -1670,7 +1685,7 @@ assert warm_persona["relationshipState"]["rapportLevel"] == "trusted"
 assert warm_persona["relationshipState"]["relationshipMemory"]["lastTopicDomains"] == ["travel"]
 assert warm_persona["safety"]["reduceHumor"] is True
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.APP_PROFILE_STORE_PATH = str(Path(d) / "app_profile_store.json")
     server.COMPANION_PROFILE_PATH = str(Path(d) / "companion_profile.json")
     server.MEMORY_ITEMS_PATH = str(Path(d) / "memory_items.json")
@@ -1905,7 +1920,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     path = Path(d) / "store.json"
     server.write_json_file(str(path), {"ok": True, "items": [1, 2, 3]})
     loaded = server.read_json_file(str(path), {})
@@ -1925,7 +1940,7 @@ os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     server.AUDIT_EVENTS_STORE_PATH = str(Path(d) / "audit_events_store.json")
     server.CONVERSATION_SUMMARIES_PATH = str(Path(d) / "conversation_summaries.json")
@@ -2045,7 +2060,7 @@ from pathlib import Path
 sys.path.insert(0, "engine")
 from env_loader import load_env_file
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     env_path = Path(d) / ".env.local"
     env_path.write_text("""
 # comment
@@ -2064,7 +2079,7 @@ SUPABASE_SERVICE_ROLE_KEY='secret-test-key'
 print("env loader OK")
 '@
 
-$doctorJson = & $Python scripts\supabase_doctor.py --allow-missing --json | ConvertFrom-Json
+$doctorJson = & $Python (Join-Path $root "scripts/supabase_doctor.py") --allow-missing --json | ConvertFrom-Json
 if (-not $doctorJson.tables -or $doctorJson.tables.Count -lt 5) { throw "Supabase doctor missing table status" }
 if ($doctorJson.tables -notcontains "family_state_entries") { throw "Supabase doctor missing 007 family table status" }
 if ($null -eq $doctorJson.tableChecks) { throw "Supabase doctor missing live table check contract" }
@@ -2085,11 +2100,11 @@ assert billing["entitlements"]["voiceCompanion"] is True
 assert billing["billing"]["serverVerificationRequired"] is True
 
 normalized = server.normalize_billing_store({
-    "activePlan": "premium",
-    "subscription": {"status": "active", "productId": "munea.premium.monthly"},
+    "activePlan": "pro",
+    "subscription": {"status": "active", "productId": "net.munea.app.pro.monthly"},
     "entitlements": {"realtimeAvatar": True, "premiumAvatarMinutesMonthly": 120},
 })
-assert normalized["activePlan"] == "premium"
+assert normalized["activePlan"] == "pro"
 assert normalized["subscription"]["status"] == "active"
 assert normalized["entitlements"]["realtimeAvatar"] is True
 original_load = server.load_billing_store
@@ -2107,9 +2122,21 @@ assert fallback["session"]["selectedMode"] == "2d-viseme"
 assert fallback["session"]["fallbackReason"] == "premium_avatar_not_entitled"
 
 original_save = server.save_billing_store
+original_credits_path = server.CREDITS_STORE_PATH
+with tempfile.TemporaryDirectory() as d:
+    server.CREDITS_STORE_PATH = str(Path(d) / "credits_store.json")
+    server.load_billing_store = lambda: server.default_billing_store()
+    fallback = server.avatar_session_response({"mode": "liveavatar", "estimatedDurationMs": 60000})
+    assert fallback["ok"] is True
+    assert fallback["session"]["requestedMode"] == "liveavatar"
+    assert fallback["session"]["selectedMode"] == "2d-viseme"
+    assert fallback["session"]["fallbackReason"] == "premium_avatar_minutes_and_credits_exhausted"
+server.CREDITS_STORE_PATH = original_credits_path
+server.load_billing_store = original_load
+
 premium_store = server.normalize_billing_store({
-    "activePlan": "premium",
-    "subscription": {"status": "active", "productId": "munea.premium.monthly"},
+    "activePlan": "pro",
+    "subscription": {"status": "active", "productId": "net.munea.app.pro.monthly"},
     "entitlements": {"realtimeAvatar": True, "premiumAvatarMinutesMonthly": 120},
     "usageLedger": {"period": "2026-06", "avatarMinutesUsed": 10},
 })
@@ -2124,12 +2151,12 @@ premium = server.avatar_session_response({"action": "complete", "mode": "ditto",
 assert premium["session"]["selectedMode"] == "ditto"
 assert premium["session"]["usageCommitted"] is True
 assert premium["usageLedger"]["avatarMinutesUsed"] == 12
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     original_credits_path = server.CREDITS_STORE_PATH
     server.CREDITS_STORE_PATH = str(Path(d) / "credits_store.json")
     premium_store.update(server.normalize_billing_store({
-        "activePlan": "premium",
-        "subscription": {"status": "active", "productId": "munea.premium.monthly"},
+        "activePlan": "pro",
+        "subscription": {"status": "active", "productId": "net.munea.app.pro.monthly"},
         "entitlements": {"realtimeAvatar": True, "premiumAvatarMinutesMonthly": 120},
         "usageLedger": {"period": "2026-06", "avatarMinutesUsed": 119},
     }))
@@ -2156,7 +2183,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
 server.load_billing_store = original_load
 server.save_billing_store = original_save
 
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+with tempfile.TemporaryDirectory() as d:
     original_credits_path = server.CREDITS_STORE_PATH
     server.CREDITS_STORE_PATH = str(Path(d) / "credits_store.json")
     balance = server.credits_balance_response({})
@@ -2234,6 +2261,7 @@ analytics = Path("supabase/sql/003_analytics_admin_foundation.sql").read_text(en
 ai_memory = Path("supabase/sql/004_ai_memory_service_foundation.sql").read_text(encoding="utf-8").lower()
 persona_layer = Path("supabase/sql/005_companion_persona_layer.sql").read_text(encoding="utf-8").lower()
 billing_credits = Path("supabase/sql/006_billing_credits_foundation.sql").read_text(encoding="utf-8").lower()
+current_billing = Path("supabase/sql/013_current_app_billing_policy.sql").read_text(encoding="utf-8").lower()
 family_cloud = Path("supabase/sql/007_family_cloud_state_foundation.sql").read_text(encoding="utf-8").lower()
 env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
@@ -2344,7 +2372,7 @@ for table in billing_credit_tables:
     if f"revoke all on public.{table} from anon" not in billing_credits:
         raise SystemExit("Missing billing credits anon revoke: " + table)
 for token in [
-    "array['free', 'plus', 'premium', 'concierge']",
+    "plan_order text[]",
     "included_monthly",
     "purchased",
     "idempotency_key",
@@ -2353,6 +2381,14 @@ for token in [
 ]:
     if token not in billing_credits:
         raise SystemExit("Missing billing credits schema token: " + token)
+for token in [
+    "array['free', 'plus', 'pro']",
+    '"monthlypoints": 150',
+    '"monthlypoints": 300',
+    '"familymembersmax": 12',
+]:
+    if token not in current_billing:
+        raise SystemExit("Missing current billing policy token: " + token)
 family_cloud_tables = [
     "family_invitations",
     "consent_records",
@@ -2470,14 +2506,13 @@ readme = Path("README.md").read_text(encoding="utf-8").lower()
 app_store = Path("docs/APP-STORE-PRODUCTION-READINESS.md").read_text(encoding="utf-8").lower()
 current_plan = Path("docs/CURRENT-DEVELOPMENT-PLAN.md").read_text(encoding="utf-8").lower()
 required = [
-    "free -> plus -> premium -> concierge",
+    "free -> plus -> pro",
     "munea free",
     "munea plus",
-    "munea premium",
-    "munea concierge",
-    "previous planning review",
-    "subscription = trust-building base access",
-    "service architecture",
+    "munea pro",
+    "subscription = base access and trust",
+    "credits = metered voice + avatar capacity",
+    "purchase contract",
     "credits",
     "entitlement",
     "deduction order",
@@ -2485,24 +2520,21 @@ required = [
     "credit_ledger",
     "credit_transactions",
     "entitlement_policy_versions",
-    "munea.concierge.monthly",
     "006_billing_credits_foundation.sql",
+    "013_current_app_billing_policy.sql",
 ]
 missing = [token for token in required if token not in doc]
 if missing:
     raise SystemExit("Billing credits entitlement doc missing: " + ", ".join(missing))
-for token in ["free / plus / premium / concierge", "billing-credits-entitlement-v1.md"]:
+for token in ["free / plus / pro", "billing-credits-entitlement-v1.md"]:
     if token not in readme:
         raise SystemExit("README missing billing plan pointer: " + token)
     if token not in current_plan:
         raise SystemExit("Current development plan missing billing plan pointer: " + token)
-for token in ["free -> plus -> premium -> concierge", "billing-credits-entitlement-v1.md"]:
+for token in ["free / plus / pro", "billing-credits-entitlement-v1.md"]:
     if token not in app_store:
         raise SystemExit("App Store readiness missing billing plan pointer: " + token)
-for token in ["006_billing_credits_foundation.sql", "subscription = base access and trust", "credits = expensive or bursty premium capacity"]:
-    if token not in app_store:
-        raise SystemExit("App Store readiness missing billing credits architecture: " + token)
-for token in ["006_billing_credits_foundation.sql", "credit_wallets", "credit_transactions", "idempotent"]:
+for token in ["006_billing_credits_foundation.sql", "013_current_app_billing_policy.sql", "credit_wallets", "credit_transactions", "idempotent"]:
     if token not in Path("docs/supabase/SETUP.md").read_text(encoding="utf-8").lower():
         raise SystemExit("Supabase setup missing billing credits setup token: " + token)
 print("billing credits entitlement OK")
@@ -2661,11 +2693,18 @@ print("fallback logging contract OK")
 Pass "Backend fallback failures are logged"
 
 Step "Frontend JavaScript syntax"
-node --check web\src\app.js
-node --check web\src\companion-profile.js
-node --check web\src\auth.js
-node --check web\src\auth-config.example.js
-node --check web\src\admin.js
+foreach ($scriptPath in @(
+  "web/src/app.js",
+  "web/src/companion-profile.js",
+  "web/src/auth.js",
+  "web/src/auth-config.example.js",
+  "web/src/admin.js"
+)) {
+  node --check $scriptPath
+  if ($LASTEXITCODE -ne 0) {
+    throw "JavaScript syntax check failed for $scriptPath with exit code $LASTEXITCODE"
+  }
+}
 Pass "Frontend JavaScript parses"
 
 Step "Frontend AI provider consent contract"
@@ -2887,7 +2926,7 @@ print("admin console contract OK")
 Pass "Admin console is present and keeps secrets out of static assets"
 
 Step "Operational PowerShell script syntax"
-foreach ($scriptPath in @("scripts\cloud-run-deploy-staging.ps1", "scripts\staging-auth-smoke.ps1")) {
+foreach ($scriptPath in @("scripts/cloud-run-deploy-staging.ps1", "scripts/staging-auth-smoke.ps1")) {
   $parseTokens = $null
   $parseErrors = $null
   [System.Management.Automation.Language.Parser]::ParseFile(

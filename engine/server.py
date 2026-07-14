@@ -3923,7 +3923,7 @@ def default_billing_store():
             "signupTrialCredits": 5,
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
-            "familyMembersMax": 0,
+            "familyMembersMax": 1,
             "familyCircleInvite": False,
             "familyCircleJoin": False,
         },

@@ -24,6 +24,7 @@ MIGRATIONS = (
     "011_family_invitation_integrity.sql",
     "011_free_signup_trial_policy.sql",
     "012_production_security_hardening.sql",
+    "013_current_app_billing_policy.sql",
 )
 
 

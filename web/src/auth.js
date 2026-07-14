@@ -6,6 +6,7 @@
   let session = null;
   let status = 'guest';
   let lastEvent = 'INITIAL';
+  let nativeAuthListenerPromise = null;
 
   function config() {
     return window.MUNEA_SUPABASE_CONFIG || {};
@@ -53,12 +54,97 @@
 
   function redirectTo(path) {
     const cfg = config();
+    if (isNativeApp()) return cfg.nativeRedirectTo || 'munea://auth/callback';
     if (cfg.redirectTo) return cfg.redirectTo;
     try {
       return new URL(path || 'index.html', window.location.href).toString();
     } catch (e) {
       return window.location.href;
     }
+  }
+
+  function nativePlugin(name) {
+    const capacitor = window.Capacitor;
+    return capacitor && capacitor.Plugins ? capacitor.Plugins[name] || null : null;
+  }
+
+  function isNativeApp() {
+    const capacitor = window.Capacitor;
+    if (!capacitor) return false;
+    if (typeof capacitor.isNativePlatform === 'function') return capacitor.isNativePlatform();
+    return !!(capacitor.Plugins && (capacitor.Plugins.App || capacitor.Plugins.Browser));
+  }
+
+  function authCallbackParams(rawUrl) {
+    try {
+      const parsed = new URL(rawUrl);
+      const query = parsed.searchParams;
+      const hash = new URLSearchParams((parsed.hash || '').replace(/^#/, ''));
+      return {
+        code: query.get('code') || hash.get('code') || '',
+        accessToken: query.get('access_token') || hash.get('access_token') || '',
+        refreshToken: query.get('refresh_token') || hash.get('refresh_token') || '',
+        error: query.get('error_description') || hash.get('error_description') || query.get('error') || hash.get('error') || '',
+      };
+    } catch (e) {
+      return { code: '', accessToken: '', refreshToken: '', error: 'invalid_callback_url' };
+    }
+  }
+
+  async function completeNativeAuth(rawUrl) {
+    if (!/^munea:\/\/auth\/callback(?:[/?#]|$)/i.test(String(rawUrl || ''))) return false;
+    const browser = nativePlugin('Browser');
+    if (browser && typeof browser.close === 'function') {
+      try { await browser.close(); } catch (e) {}
+    }
+    const params = authCallbackParams(rawUrl);
+    if (params.error) {
+      setState('guest', null, 'OAUTH_ERROR');
+      return false;
+    }
+    const supabaseClient = await ensureClient();
+    if (!supabaseClient) return false;
+    try {
+      let result = null;
+      if (params.code && typeof supabaseClient.auth.exchangeCodeForSession === 'function') {
+        result = await supabaseClient.auth.exchangeCodeForSession(params.code);
+      } else if (params.accessToken && params.refreshToken && typeof supabaseClient.auth.setSession === 'function') {
+        result = await supabaseClient.auth.setSession({
+          access_token: params.accessToken,
+          refresh_token: params.refreshToken,
+        });
+      }
+      const nextSession = result && result.data ? result.data.session : null;
+      if (!result || result.error || !nextSession) {
+        setState('guest', null, 'OAUTH_SESSION_FAILED');
+        return false;
+      }
+      setState('signed-in', nextSession, 'SIGNED_IN');
+      return true;
+    } catch (e) {
+      setState('guest', null, 'OAUTH_SESSION_FAILED');
+      return false;
+    }
+  }
+
+  function setupNativeAuthListener() {
+    if (!isNativeApp()) return Promise.resolve(false);
+    if (nativeAuthListenerPromise) return nativeAuthListenerPromise;
+    nativeAuthListenerPromise = (async () => {
+      const app = nativePlugin('App');
+      if (!app || typeof app.addListener !== 'function') return false;
+      await app.addListener('appUrlOpen', event => {
+        if (event && event.url) void completeNativeAuth(event.url);
+      });
+      if (typeof app.getLaunchUrl === 'function') {
+        try {
+          const launch = await app.getLaunchUrl();
+          if (launch && launch.url) await completeNativeAuth(launch.url);
+        } catch (e) {}
+      }
+      return true;
+    })();
+    return nativeAuthListenerPromise;
   }
 
   function setState(nextStatus, nextSession, eventName) {
@@ -131,6 +217,7 @@
   async function init() {
     if (initPromise) return initPromise;
     initPromise = (async () => {
+      await setupNativeAuthListener();
       if (isDeveloperModeAllowed() && devConfig().autoSignIn === true) {
         return signInAsDeveloper({ reason: 'auto_sign_in' });
       }
@@ -158,13 +245,28 @@
     }
     const supabaseClient = await ensureClient();
     if (!supabaseClient) return { ok: false, error: { code: 'auth_not_configured' } };
+    const native = isNativeApp();
+    if (native) await setupNativeAuthListener();
     const result = await supabaseClient.auth.signInWithOAuth({
       provider: normalized,
       options: {
         redirectTo: redirectTo('index.html'),
         scopes: normalized === 'google' ? 'openid email profile' : undefined,
+        skipBrowserRedirect: native,
       },
     });
+    if (!result.error && native) {
+      const browser = nativePlugin('Browser');
+      const authUrl = result && result.data ? result.data.url : '';
+      if (!browser || typeof browser.open !== 'function' || !authUrl) {
+        return { ok: false, error: { code: 'native_oauth_unavailable' } };
+      }
+      try {
+        await browser.open({ url: authUrl, presentationStyle: 'fullscreen' });
+      } catch (e) {
+        return { ok: false, error: { code: 'native_oauth_open_failed' } };
+      }
+    }
     return { ok: !result.error, result, error: result.error || null };
   }
 
@@ -175,6 +277,7 @@
     }
     const supabaseClient = await ensureClient();
     if (!supabaseClient) return { ok: false, error: { code: 'auth_not_configured' } };
+    if (isNativeApp()) await setupNativeAuthListener();
     const result = await supabaseClient.auth.signInWithOtp({
       email: cleanEmail,
       options: {

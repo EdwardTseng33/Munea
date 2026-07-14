@@ -2726,7 +2726,7 @@ function renderMedSlots() {
   }).join('');
 }
 
-const POINTS = { total: 200, used: 60,    // Plus 每月 200 點（Pro 為 500）；切方案時 renderPlanState 會更新 total
+const POINTS = { total: 0, used: 0,    // 方案與雲端錢包載入後再填入，不預設舊方案額度
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
 const LOW_PTS = 30;
 window.__ptsTest = { setUsed: v => { POINTS.used = v; renderPoints(); }, ff: s => { _callSec = s; } };
@@ -2745,7 +2745,7 @@ function renderPoints() {
   if (hud) hud.textContent = '剩 ' + left + ' 點';
   if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
   if ($('#ptsUsed')) $('#ptsUsed').textContent = POINTS.used;
-  if ($('#ptsBar')) $('#ptsBar').style.width = Math.round(POINTS.used / POINTS.total * 100) + '%';
+  if ($('#ptsBar')) $('#ptsBar').style.width = (POINTS.total > 0 ? Math.round(POINTS.used / POINTS.total * 100) : 0) + '%';
   refreshLowState();
 }
 
@@ -3795,7 +3795,7 @@ function init() {
   if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '我'); });
   applyUserAvatar();
   // 家庭照護圈
-  const CIRCLE_LIMITS = { free: 0, plus: 4, pro: 12 };                       // Plus 最多 4 人、Pro 最多 12 人
+  const CIRCLE_LIMITS = { free: 1, plus: 4, pro: 12 };                       // 免費只含本人；Plus 4 人、Pro 12 人
   const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', pro: 'Pro' };
   const PLAN_POINTS = { free: 0, plus: 150, pro: 300 };                       // 每月贈點
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
@@ -4322,7 +4322,7 @@ function init() {
   function renderPlanState() {
     const plan = circlePlan();
     const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
-    const pts = PLAN_POINTS[plan] || 150;
+    const pts = Object.prototype.hasOwnProperty.call(PLAN_POINTS, plan) ? PLAN_POINTS[plan] : PLAN_POINTS.plus;
     const sn = $('#setPlanName'); if (sn) sn.textContent = label + ' 方案';
     // 帳號卡的會員身份標籤（FREE/PLUS/PRO）
     const mb = $('#memBadge');
@@ -4391,12 +4391,16 @@ function init() {
     _planPick = null;
   });
   if ($('#planNo')) $('#planNo').addEventListener('click', () => { $('#planConfirm').style.display = 'none'; _planPick = null; });
-  if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', () => {
+  if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', async () => {
     const b = $('#planCancelBtn');
-    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次確認：這期用完後不再扣款'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '取消訂閱'; }, 6000); return; }
-    b.dataset.arm = ''; b.textContent = '取消訂閱';
-    try { localStorage.setItem('munea.planNext', '取消'); } catch (e2) {}
-    toast('好，這期用完就不再扣款；記憶和資料都會留著，隨時能回來。');
+    if (window.MuneaStore && window.MuneaStore.available() && typeof window.MuneaStore.manageSubscriptions === 'function') {
+      setBtnBusy(b, '開啟 Apple 訂閱');
+      const result = await window.MuneaStore.manageSubscriptions();
+      clearBtnBusy(b, '取消訂閱');
+      if (!result.ok) toast('暫時無法開啟 Apple 訂閱管理，請到 iPhone「設定 → Apple 帳戶 → 訂閱項目」操作');
+      return;
+    }
+    toast('請到 iPhone「設定 → Apple 帳戶 → 訂閱項目」管理或取消訂閱');
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => {
     renderSubUI();
@@ -4405,10 +4409,20 @@ function init() {
   });
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
   // 恢復購買（蘋果硬規定）：原生付款層在（真機）→ 交給它；不在（網頁預覽）→ 誠實說明
-  // Mac 對接約定：原生實作 window.__muneaNativeRestore()，找回的每筆購買逐筆呼叫 __muneaApplyPurchase(產品ID)
-  if ($('#restoreBtn')) $('#restoreBtn').addEventListener('click', () => {
-    if (typeof window.__muneaNativeRestore === 'function') { toast('正在向 Apple 查你的購買紀錄…'); try { window.__muneaNativeRestore(); } catch (e) {} }
-    else toast('會在正式 App 裡向 Apple 找回你買過的方案與點數');
+  // 真機直接走 MuneaStore.restore；每筆交易仍須先經伺服器驗證才套用權益。
+  if ($('#restoreBtn')) $('#restoreBtn').addEventListener('click', async () => {
+    const b = $('#restoreBtn');
+    if (!(window.MuneaStore && window.MuneaStore.available() && typeof window.MuneaStore.restore === 'function')) {
+      toast('恢復購買只能在 iPhone App 內使用');
+      return;
+    }
+    setBtnBusy(b, '正在向 Apple 查詢');
+    const result = await window.MuneaStore.restore();
+    clearBtnBusy(b, '恢復購買');
+    if (result.ok) toast('購買已恢復，方案與帳號權益正在同步');
+    else if (result.reason === 'signin_required') toast('請先登入原本購買時使用的沐寧帳號');
+    else if (result.reason === 'none') toast('這個 Apple 帳號目前沒有可恢復的訂閱');
+    else toast('恢復購買沒有完成，請確認網路後再試一次');
   });
   if ($('#legalTermsLink')) $('#legalTermsLink').addEventListener('click', e => { e.preventDefault(); openReader('terms'); });
   if ($('#legalPrivacyLink')) $('#legalPrivacyLink').addEventListener('click', e => { e.preventDefault(); openReader('privacy'); });
@@ -5412,28 +5426,48 @@ function init() {
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));
   if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));
   if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });
-  if ($('#dataExportBtn')) $('#dataExportBtn').addEventListener('click', () => {
-    brainPost('/privacy-export', {}).then(r => toast(r ? '收到，資料整理好會寄到你的信箱' : '已記下你的申請，資料整理好會寄給你'));
+  if ($('#dataExportBtn')) $('#dataExportBtn').addEventListener('click', async () => {
+    const b = $('#dataExportBtn');
+    if (authState().status !== 'signed-in') { toast('請先登入，才能安全匯出只屬於你的資料'); return; }
+    setBtnBusy(b, '正在送出申請');
+    const result = await brainPost('/privacy-export', { action: 'request' });
+    clearBtnBusy(b, '匯出一份給我');
+    if (result && result.ok && result.status === 'queued') toast('匯出申請已送出；確認身分後會提供只屬於你的資料');
+    else toast('匯出申請沒有送出，請確認網路後再試一次');
   });
   if ($('#dataDeleteBtn')) $('#dataDeleteBtn').addEventListener('click', () => {
     const b = $('#dataDeleteBtn');
-    // 蘋果 5.1.1(v) 帳戶刪除規定（7/9 修正）：兩段確認、按下去要是真的動作——不是只記一張申請單
-    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.textContent = '再按一次：清除本機資料＋送出刪除申請'; setTimeout(() => { b.dataset.arm = ''; b.textContent = '刪除我的資料'; }, 6000); return; }
+    const signedIn = authState().status === 'signed-in';
+    if (b.dataset.arm !== '1') {
+      b.dataset.arm = '1';
+      b.textContent = signedIn ? '再按一次：永久刪除帳號與資料' : '再按一次：清除這台裝置的資料';
+      setTimeout(() => { b.dataset.arm = ''; b.textContent = '刪除我的資料'; }, 6000);
+      return;
+    }
     b.dataset.arm = ''; b.textContent = '刪除我的資料';
     (async () => {
-      // (c) 呼叫後端刪除接口——action:'request' 才會真的記下這筆申請（原本傳空物件、後端不會建單）
-      // ⚠ 給 Mac：後端 /account-deletion 現在只把申請記進 privacy_requests、沒有真的刪 Supabase 帳號與資料，5.1.1(v) 要在那邊補上真刪除才算合規
-      await brainPost('/account-deletion', { action: 'request', reason: 'user_requested_in_app' });
-      // (b) 登出
-      if (typeof signOutAuth === 'function') { try { await signOutAuth(); } catch (e) {} }
-      // (a) 真的清掉本機所有 munea.* 資料（不是假裝清掉）
+      b.disabled = true;
+      b.textContent = signedIn ? '正在永久刪除' : '正在清除';
+      let deletion = null;
+      if (signedIn) {
+        deletion = await brainPost('/account-deletion', { action: 'request', reason: 'user_requested_in_app' });
+        if (!(deletion && deletion.ok && deletion.accountDeleted)) {
+          b.disabled = false;
+          b.textContent = '刪除我的資料';
+          toast('帳號與雲端資料尚未刪除，請確認網路後再試一次');
+          return;
+        }
+        if (typeof signOutAuth === 'function') { try { await signOutAuth(); } catch (e) {} }
+      }
       try {
         const ks = [];
         for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('munea.') === 0) ks.push(k); }
         ks.forEach(k => localStorage.removeItem(k));
       } catch (e) {}
       $('#dataModal').classList.remove('show');
-      toast('你的資料已從這台裝置清除，帳號與雲端資料刪除已送出處理');
+      if (!signedIn) toast('這台裝置上的沐寧資料已清除');
+      else if (deletion.authUserDeleted) toast('帳號與雲端資料已永久刪除；Apple 訂閱需另行取消');
+      else toast('雲端資料已刪除，登入帳號移除正在完成；Apple 訂閱需另行取消');
       setTimeout(() => { location.reload(); }, 1200);
     })();
   });

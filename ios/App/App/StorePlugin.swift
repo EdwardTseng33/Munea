@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import StoreKit
+import UIKit
 
 /// 沐寧 · 蘋果內購（StoreKit 2）原生橋接
 /// 網頁端透過 Capacitor.Plugins.Store 呼叫：
@@ -16,6 +17,7 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getProducts", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "manageSubscriptions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise)
     ]
 
@@ -116,6 +118,22 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
                 }
             }
             call.resolve(["productIds": ids, "transactions": transactions])
+        }
+    }
+
+    @objc func manageSubscriptions(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first else {
+                call.reject("找不到目前的 App 視窗")
+                return
+            }
+            do {
+                try await AppStore.showManageSubscriptions(in: scene)
+                call.resolve(["ok": true])
+            } catch {
+                call.reject(error.localizedDescription)
+            }
         }
     }
 
