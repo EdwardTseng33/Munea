@@ -8,6 +8,17 @@ const muneaLocale = () => (window.MuneaI18n ? window.MuneaI18n.current() : 'zh-T
 const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.preferredLanguages() : ['zh-TW']);
 const muneaT = (key, fallback) => (window.MuneaI18n ? window.MuneaI18n.t(key, null, fallback) : fallback);
 
+function muneaIsCleanZhText(raw) {
+  const s = String(raw == null ? '' : raw).replace(/\s+/g, '');
+  if (!s) return false;
+  if (/[぀-ヿ가-힣Ѐ-ӿ]/.test(s)) return false; // 平假名／片假名／韓文／西里爾（俄文）——出現一個字就擋
+  if (/[a-zA-Z]{3,}/.test(s)) return false; // 連續 3+ 英文字母＝疑似辨識雜訊，不是正常中文夾一兩個英文縮寫
+  const cjk = (s.match(/[一-龥]/g) || []).length;
+  if (cjk / s.length < 0.6) return false; // 中文字比例仍要夠高，防大量符號／數字灌水
+  if (new Set(s).size / s.length < 0.5) return false; // 同字元大量重複＝疑似亂碼
+  return true;
+}
+
 const OVERLAYS = ['med', 'connect', 'chat'];
 const AVATAR_ENGINE_MODES = Object.freeze({
   STATIC_CSS: 'static-css',
@@ -1906,7 +1917,7 @@ const LiveVoice = {
                 // 只存「乾淨、像一句話」的內容當首頁話題，擋語音辨識亂碼／英數雜訊（Edward 2026-07-12）
                 const clean = this._userBuf.replace(/\s+/g, '');
                 const cjk = (clean.match(/[一-龥]/g) || []).length;
-                const looksClean = clean.length >= 5 && clean.length <= 16 && (cjk / clean.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(clean) && (new Set(clean).size / clean.length) >= 0.5;
+                const looksClean = clean.length >= 5 && clean.length <= 16 && muneaIsCleanZhText(clean);   // 改用共用嚴格守門：出現任一日文/韓文/俄文字元就擋（Edward 2026-07-14 事故：「アラ」混在中文裡、比例式守門放行）
                 if (looksClean) { try { localStorage.setItem('munea.lastTopic', clean.slice(0, 16)); } catch (e3) {} this._topicSaved = true; }
                 else if (clean.length >= 24) { this._topicSaved = true; }   // 累積夠長仍不乾淨＝這通沒有適合話題、別硬塞亂碼
               }
@@ -2645,29 +2656,146 @@ function setupAuthControls() {
     .catch(() => { /* 沒設所在地＝不顯示天氣，只留日期 */ });
 })();
 
+function _muneaSameCalendarDate(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function _muneaDaysBetween(a, b) {
+  const A = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
+  const B = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
+  return Math.round((A - B) / 86400000);
+}
+function _muneaDayOfYear(d) {
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+}
+function _muneaAskByHour(h) {
+  if (h >= 18 || h < 5) return '睡前跟我聊聊今天？';
+  if (h >= 5 && h < 11) return '走走回來，說給我聽？';
+  if (h >= 11 && h < 14) return '來跟我聊聊今天？';
+  return '傍晚散個步，回來跟我聊？';
+}
+// 順位 0：只取家人動態最上面一則，格式要真的是「XX要我提醒你：YYY」，內容再過一次乾淨中文守門
+// ——這裡是全家人都看得到的位置，比首頁話題本身更危險（Edward 2026-07-14）
+function _muneaFamilyRelayGreeting() {
+  try {
+    const feed = (typeof loadFeed === 'function') ? loadFeed() : [];
+    const top = feed && feed[0];
+    if (!top) return '';
+    const flat = (typeof plain === 'function') ? plain(top) : String(top).replace(/<[^>]+>/g, '');
+    const m = flat.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/);
+    if (!m) return '';
+    const fromWho = m[1].trim(), body = m[2].trim();
+    if (!fromWho || !body || !muneaIsCleanZhText(body)) return '';
+    return fromWho + '要我提醒你：' + body;
+  } catch (e) { return ''; }
+}
+// 用藥有沒打勾（順位 2-b）：跟 renderPillTask() 同一套算法（今天還沒吃的下一項 / 完成數 / 總數）
+function _muneaPillStatusToday() {
+  try {
+    const meds = (typeof loadMeds === 'function') ? loadMeds() : [];
+    if (!meds.length) return null;
+    let done = {};
+    try { done = JSON.parse(localStorage.getItem('munea.medDone.' + pillDateKey())) || {}; } catch (e2) {}
+    const slots = [];
+    meds.forEach(med => String(med.time).split('、').forEach(raw => {
+      const slot = raw.trim();
+      if (slot) slots.push({ slot, name: med.name, key: slot + '|' + med.name });
+    }));
+    if (!slots.length) return null;
+    const total = slots.length;
+    const doneN = slots.filter(s => done[s.key]).length;
+    const next = slots.find(s => !done[s.key]);
+    return next ? { next, doneN, total } : null;
+  } catch (e) { return null; }
+}
+// 3 天內（含今天）最近一筆回診（順位 2-a）
+function _muneaVisitWithinDays(days) {
+  try {
+    const arr = JSON.parse(localStorage.getItem('munea.visits') || 'null');
+    if (!Array.isArray(arr)) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let best = null, bestDiff = Infinity;
+    arr.forEach(v => {
+      if (!v || !v.dateISO) return;
+      const d = new Date(v.dateISO + 'T00:00');
+      if (isNaN(d)) return;
+      const diff = Math.round((d - today) / 86400000);
+      if (diff >= 0 && diff <= days && diff < bestDiff) { bestDiff = diff; best = v; }
+    });
+    return best;
+  } catch (e) { return null; }
+}
+// 順位 2「今天還沒聊」的內容子選：好幾天沒聊 > 回診 > 用藥 > 天氣 > 家常問候輪替（用當年第幾天 mod 輪替，不連兩天一樣）
+function _muneaNotChattedTodayLine(now, ask) {
+  try {
+    const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
+    const gapDays = lastAt ? _muneaDaysBetween(now, new Date(lastAt)) : null;
+    if (gapDays !== null && gapDays >= 3) {
+      const leads = [
+        gapDays + '天沒聊了，', '有' + gapDays + '天沒聽你說話了，', '隔了' + gapDays + '天沒聊，',
+        gapDays + '天沒你的消息了，', gapDays + '天沒說到話了，', '好些天沒聊了，都' + gapDays + '天了，'
+      ];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    const visit = _muneaVisitWithinDays(3);
+    if (visit) {
+      const vt = visit.title || '回診';
+      const leads = [vt + '快到了，', '別忘了' + vt + '，', vt + '的事，記得，', '要回診了，', vt + '要記得，'];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    const pill = _muneaPillStatusToday();
+    if (pill) {
+      const leads = [
+        pill.next.slot + '的藥吃了嗎，', '記得吃' + pill.next.slot + '的藥，', '別忘了' + pill.next.slot + '的藥，',
+        pill.next.slot + '該吃藥囉，', '藥還沒吃完，'
+      ];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    let wxText = '';
+    try { const c = JSON.parse(localStorage.getItem('munea.wxCache') || 'null'); if (c && c.text) wxText = c.text; } catch (e3) {}
+    if (wxText) {
+      const leads = ['今天' + wxText + '，', wxText + '，出門記得看天氣，'];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    const chat = [
+      '上次聊得很開心，我都記得你——', '今天有什麼新鮮事嗎，', '想到什麼都可以跟我說，',
+      '我在這裡，', '今天過得還好嗎，', '有空的話，', '我一直都在，'
+    ];
+    return chat[_muneaDayOfYear(now) % chat.length] + ask;
+  } catch (e) { return ask; }
+}
+// 順位 3「今天已經聊過」的收尾句：不帶逼問、不再重複問「要不要聊」
+function _muneaChattedTodayLine(now) {
+  const lines = [
+    '今天聊得很開心，我都記得。', '有你陪我聊聊，今天很好。', '想到什麼都可以再找我。',
+    '今天說的話我都記著了。', '先歇著吧，我一直都在。', '謝謝你今天陪我聊天。',
+    '今天先到這裡，想聊隨時找我。', '有你在，今天特別好。'
+  ];
+  return lines[_muneaDayOfYear(now) % lines.length];
+}
 function renderCompanionGreeting(now = new Date()) {
-  const h = now.getHours();
   const msg = $('#bcMsg');
   if (!msg) return;
-  // 首頁招呼語的四個階段（Edward 7/9 拍板設計）：
-  //   ① 還沒聊過（首次進來）→ 自我介紹＋邀請認識
-  //   ② 聊過了、還沒抓到話題 → 「上次聊得很開心」＋時段邀請
-  //   ③ 有記住的話題（目前＝上通電話你說的第一句；雲端記憶接上後換真記憶）→ 「記得你說…」
-  //   ④ 之後每次聊天都會更新話題，這句會一直跟著你們的對話變
   const nm = (typeof cname === 'function' ? cname() : '寧寧');
-  const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
-  // 顯示前再過濾一次：舊版可能已存過亂碼，不乾淨就當沒話題、退回乾淨招呼（Edward 2026-07-12）
-  const _topicRaw = (localStorage.getItem('munea.lastTopic') || '').trim();
-  const _tcjk = (_topicRaw.match(/[一-龥]/g) || []).length;
-  const topic = (_topicRaw.length >= 5 && _topicRaw.length <= 16 && (_tcjk / _topicRaw.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(_topicRaw) && (new Set(_topicRaw).size / _topicRaw.length) >= 0.5) ? _topicRaw : '';
-  let ask = '來跟我聊聊今天？';
-  if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
-  else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
-  else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
-  let line;
-  if (!lastAt) line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
-  else if (topic) line = '記得你說「' + topic + '」——' + ask;
-  else line = '上次聊得很開心，我都記得你——' + ask;
+  const ask = _muneaAskByHour(now.getHours());
+  let line = '';
+  try {
+    const relayLine = _muneaFamilyRelayGreeting();
+    const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
+    if (relayLine) {
+      line = relayLine;
+    } else if (!lastAt) {
+      line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
+    } else if (!_muneaSameCalendarDate(new Date(lastAt), now)) {
+      line = _muneaNotChattedTodayLine(now, ask);
+    } else {
+      line = _muneaChattedTodayLine(now);
+    }
+  } catch (e) {
+    line = nm + '，' + ask;   // 順位 4：任何讀取失敗，只靠 cname() 與時段拼出最保守泛用句
+  }
+  if (!line) line = nm + '，' + ask;
+  if (line.length > 40) line = line.slice(0, 39) + '…';
   msg.textContent = line;
   const idleGreeting = $('#faceIdleHi');
   if (idleGreeting) idleGreeting.textContent = line;
@@ -6168,6 +6296,8 @@ function init() {
       const _msg = relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, '');
       const _pf = (typeof loadPersonProfile === 'function') ? loadPersonProfile() : {};
       const _me = _pf.nick || _pf.name || '家人';   // 暱稱優先、沒暱稱才名字
+      // 傳話會印在對方首頁最顯眼的位置，聽錯就是別人替你出糗、而他無從核對 → push 前先擋（Edward 2026-07-14）
+      if (!muneaIsCleanZhText(_msg)) return '我剛剛沒聽清楚要帶的話，你再跟我說一次要跟' + who + '說什麼？';
       pushFamilyFeed('<b>' + _me + '</b>要我提醒你：' + _msg);
       return '好，我幫你把話帶給' + who + '——他打開沐寧就會看到「' + _me + '要我提醒你：' + _msg + '」。';
     }
