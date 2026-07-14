@@ -5702,11 +5702,33 @@ function init() {
   if ($('#dataExportBtn')) $('#dataExportBtn').addEventListener('click', async () => {
     const b = $('#dataExportBtn');
     if (authState().status !== 'signed-in') { toast('請先登入，才能安全匯出只屬於你的資料'); return; }
-    setBtnBusy(b, '正在送出申請');
+    setBtnBusy(b, '正在整理資料');
     const result = await brainPost('/privacy-export', { action: 'request' });
     clearBtnBusy(b, '匯出一份給我');
-    if (result && result.ok && result.status === 'queued') toast('匯出申請已送出；確認身分後會提供只屬於你的資料');
-    else toast('匯出申請沒有送出，請確認網路後再試一次');
+    if (!(result && result.ok && result.status === 'completed' && result.exportPackage)) {
+      toast('資料副本沒有建立，請確認登入與網路後再試一次');
+      return;
+    }
+    const filename = result.filename || 'munea-personal-data.json';
+    const json = JSON.stringify(result.exportPackage, null, 2);
+    const file = new File([json], filename, { type: 'application/json' });
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ title: '沐寧個人資料副本', files: [file] });
+      } else {
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      }
+      toast('資料副本已建立，只包含你本人與你的帳務資料');
+    } catch (e) {
+      if (e && e.name !== 'AbortError') toast('資料已建立，但分享視窗沒有完成；可以再按一次');
+    }
   });
   if ($('#dataDeleteBtn')) $('#dataDeleteBtn').addEventListener('click', () => {
     const b = $('#dataDeleteBtn');

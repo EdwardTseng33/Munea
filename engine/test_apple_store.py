@@ -16,14 +16,26 @@ AUTH_USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
 
 class FakeVerifier:
-    def __init__(self, decoded=None, error=None):
+    def __init__(self, decoded=None, error=None, notification=None, renewal=None):
         self.decoded = decoded
         self.error = error
+        self.notification = notification
+        self.renewal = renewal
 
     def verify_and_decode_signed_transaction(self, _signed):
         if self.error:
             raise self.error
         return self.decoded
+
+    def verify_and_decode_notification(self, _signed):
+        if self.error:
+            raise self.error
+        return self.notification
+
+    def verify_and_decode_renewal_info(self, _signed):
+        if self.error:
+            raise self.error
+        return self.renewal
 
 
 def decoded_transaction(**overrides):
@@ -157,6 +169,130 @@ class AppleStoreVerificationTests(unittest.TestCase):
             )
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], "apple_transaction_id_mismatch")
+
+    def test_server_notification_verifies_outer_and_nested_jws(self):
+        tx = decoded_transaction(
+            productId="net.munea.app.pro.monthly",
+            expiresDate=1780000000000,
+            purchaseDate=1777000000000,
+            originalPurchaseDate=1777000000000,
+        )
+        renewal = SimpleNamespace(
+            productId="net.munea.app.pro.monthly",
+            originalTransactionId=tx.originalTransactionId,
+            appAccountToken=AUTH_USER,
+            autoRenewStatus=SimpleNamespace(value=1),
+            gracePeriodExpiresDate=None,
+        )
+        notification = SimpleNamespace(
+            notificationType=SimpleNamespace(value="DID_RENEW"),
+            rawNotificationType=None,
+            subtype=None,
+            notificationUUID="notice-1",
+            signedDate=1777000000000,
+            data=SimpleNamespace(
+                signedTransactionInfo="signed.tx.value",
+                signedRenewalInfo="signed.renewal.value",
+                environment=SimpleNamespace(value="Sandbox"),
+                rawEnvironment=None,
+                rawStatus=1,
+            ),
+        )
+        result = apple_store.verify_notification(
+            "header.payload.signature",
+            verifiers=[FakeVerifier(decoded=tx, notification=notification, renewal=renewal)],
+        )
+        self.assertEqual(result.notificationType, "DID_RENEW")
+        self.assertEqual(result.plan, "pro")
+        self.assertEqual(result.points, 300)
+        self.assertEqual(result.appAccountToken, AUTH_USER)
+        self.assertTrue(result.willRenew)
+
+    def test_server_notification_rejects_bad_nested_transaction(self):
+        notification = SimpleNamespace(
+            notificationType=SimpleNamespace(value="DID_RENEW"), rawNotificationType=None,
+            subtype=None, notificationUUID="notice-2", signedDate=None,
+            data=SimpleNamespace(
+                signedTransactionInfo="signed.tx.value", signedRenewalInfo=None,
+                environment=SimpleNamespace(value="Sandbox"), rawEnvironment=None, rawStatus=1,
+            ),
+        )
+        verifier = FakeVerifier(notification=notification)
+        verifier.decoded = None
+        with self.assertRaisesRegex(apple_store.AppleStoreVerificationError, "apple_notification_transaction_verification_failed"):
+            apple_store.verify_notification("header.payload.signature", verifiers=[verifier])
+
+    def test_unmatched_point_refund_never_claws_back_other_purchases(self):
+        credits = server.normalize_credits_store({
+            "wallets": [{"id": "purchased", "type": "purchased", "balance": 90, "status": "active"}],
+            "transactions": [{
+                "id": "other-grant", "type": "grant", "walletId": "purchased", "walletType": "purchased",
+                "amount": 90, "providerTransactionId": "100000000000099", "idempotencyKey": "apple:other",
+            }],
+        })
+        with patch.object(server, "load_credits_store", return_value=credits), \
+             patch.object(server, "save_credits_store") as save_store:
+            response = server.credits_refund_response({
+                "amount": 150, "providerTransactionId": "100000000000001",
+                "idempotencyKey": "apple-refund:notice-unmatched",
+            })
+        self.assertTrue(response["ok"])
+        self.assertFalse(response["matchedOriginalGrant"])
+        self.assertEqual(response["refunded"], 0)
+        self.assertEqual(response["walletSummary"]["purchased"], 90)
+        save_store.assert_not_called()
+
+    def test_point_refund_reversal_restores_only_previously_refunded_credits(self):
+        credits = server.normalize_credits_store({
+            "wallets": [{"id": "purchased", "type": "purchased", "balance": 10, "status": "active"}],
+            "transactions": [{
+                "id": "refund", "type": "refund", "walletId": "purchased", "walletType": "purchased",
+                "amount": -40, "providerTransactionId": "100000000000001", "idempotencyKey": "apple-refund:notice-1:0",
+            }],
+        })
+        with patch.object(server, "load_credits_store", return_value=credits), \
+             patch.object(server, "save_credits_store", side_effect=lambda value: value):
+            response = server.credits_refund_reversal_response({
+                "amount": 150, "providerTransactionId": "100000000000001",
+                "idempotencyKey": "apple-refund-reversed:notice-2",
+            })
+        self.assertTrue(response["ok"])
+        self.assertTrue(response["matchedPriorRefund"])
+        self.assertEqual(response["restored"], 40)
+        self.assertEqual(response["walletSummary"]["purchased"], 50)
+
+    def test_expired_notification_revokes_paid_access_and_monthly_points(self):
+        verified = apple_store.VerifiedAppleNotification(
+            notificationType="EXPIRED", subtype="VOLUNTARY", notificationUUID="notice-expired",
+            signedDate=None, environment="Sandbox", productId="net.munea.app.plus.monthly",
+            transactionId="100000000000002", originalTransactionId="100000000000001",
+            appAccountToken=AUTH_USER, kind="subscription", points=150, plan="plus",
+        )
+        billing = server.normalize_billing_store({
+            "accountId": "11111111-1111-4111-8111-111111111111",
+            "activePlan": "plus", "subscription": {"status": "active"},
+            "entitlements": {"familyCircleInvite": True, "familyCircleJoin": True},
+        })
+        credits = server.normalize_credits_store({
+            "wallets": [
+                {"id": "included", "type": "included_monthly", "balance": 80, "status": "active"},
+                {"id": "purchased", "type": "purchased", "balance": 40, "status": "active"},
+            ]
+        })
+        with patch.object(server, "_apple_notification_identity", return_value={"accountId": billing["accountId"], "personId": "22222222-2222-4222-8222-222222222222", "authUserId": AUTH_USER}), \
+             patch.object(server, "load_billing_store", return_value=billing), \
+             patch.object(server, "save_billing_store", side_effect=lambda value, reconcile=False: value), \
+             patch.object(server, "load_credits_store", return_value=credits), \
+             patch.object(server, "save_credits_store", side_effect=lambda value: value) as save_credits, \
+             patch.object(server.supabase_adapter, "make_adapter") as adapter, \
+             patch.object(server, "append_audit_event"):
+            response = server.apply_verified_apple_notification(verified)
+        self.assertTrue(response["ok"])
+        self.assertEqual(response["billing"]["activePlan"], "free")
+        saved = save_credits.call_args.args[0]
+        self.assertEqual(server.credit_wallet_summary(saved)["includedMonthly"], 0)
+        self.assertEqual(server.credit_wallet_summary(saved)["purchased"], 40)
+        adapter.return_value.remove_external_family_memberships_for_account_unscoped.assert_called_once()
 
 
 if __name__ == "__main__":
