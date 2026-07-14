@@ -18,7 +18,6 @@ echo "== Sync iOS assets =="
 
 # Finder and cloud-provider metadata can invalidate Apple code signatures.
 xattr -cr "$ROOT/ios/App/App"
-xattr -cr "$BUILD_ROOT"
 rm -rf "$ARCHIVE_PATH"
 
 echo "== Create signed App Store archive =="

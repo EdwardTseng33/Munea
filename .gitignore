@@ -58,7 +58,6 @@ engine/family_invitations.json
 .munea-app-key
 
 Video/
-web/src/auth-config.js
 .munea-turn-cred
 
 # FlashHead PoC 產出（大二進位 demo，不進 repo）

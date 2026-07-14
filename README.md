@@ -117,13 +117,13 @@ npm run supabase:doctor:live
 | AI service design | Long-term companion intelligence | `docs/AI-SERVICE-DESIGN-v1.md` defines three-brain model selection, effort profiles, memory lifecycle, perception, Guardian safety, and Supabase memory tables |
 | Account bootstrap | First account/family/person creation after auth | `/account-bootstrap` previews or creates the backend-owned account graph; Supabase path requires verified `auth.users.id` |
 | Companion identity | User-visible name, template, voice, and avatar asset | User can name the companion; template changes appearance / voice / personality without forcing a fixed public name |
-| Subscription entitlement | App Store subscription and usage ledger | `/entitlements` is the backend source of truth for Free / Plus / Premium / Concierge; frontend does not own paid status or Avatar minutes |
+| Subscription entitlement | App Store subscription and usage ledger | `/entitlements` is the backend source of truth for Free / Plus / Pro; frontend does not own paid status, grants, or Avatar minutes |
 | Avatar session | Runtime mode and premium Avatar usage decision | Chat startup calls `/avatar-session`; backend selects `static-css`, `2d-viseme`, `ditto`, or `liveavatar`, with premium fallback and usage ledger recording |
 | Product analytics | North Star and Admin MVP data | Web core emits safe Chat/Voice/Avatar/routine events to `/product-event`; `/admin/north-star` is token-gated and summarizes Weekly Meaningful Companion Days |
-| App shell | App Store delivery | Capacitor iOS shell planned; microphone bridge is the next go/no-go |
-| Auth and onboarding | Progressive account creation | v1 providers are Sign in with Apple, Google, and email magic link/OTP fallback; guest mode can try the companion before persistence/family/health/payment gates require sign-in |
+| App shell | App Store delivery | Capacitor iOS `1.0.2 (5)` builds, signs, archives, exports, and runs on Edward's iPhone |
+| Auth and onboarding | Progressive account creation | Sign in with Apple, Google, and email magic link/OTP are configured; Voice chat and private cloud data require sign-in |
 
-Critical principle: **conversation continuity beats face fidelity**. If avatar rendering is slow or unavailable, the app should keep the voice conversation alive and degrade the face gracefully.
+Critical principle: **Voice + Avatar is one call product**. Capacity, billing, and release gates must treat both resources atomically; the production app does not silently downgrade a paid call to voice-only.
 
 Companion identity is intentionally split: `display_name` is what the user calls the companion, while `template_id`, `avatar_asset`, and `voice_profile` define how that companion looks, sounds, and behaves. This prevents Settings from becoming a repeated "choose a character" flow and keeps future family profiles flexible.
 
@@ -131,9 +131,9 @@ Chat is designed as speech-to-speech by default. The main experience should feel
 
 The prototype now uses one Companion Profile across onboarding, Home, Chat, and Settings. Static preview stores it in local storage; full app mode also syncs it through `/companion-profile`. The local backend now mirrors that profile into `engine/app_profile_store.json`, which keeps account, family group, primary person, and companion profiles in one shape before the same model moves into the production database. Onboarding and Settings also bridge into `/account-bootstrap` with a one-time browser flag, so the first selected companion profile can initialize the account graph without repeatedly recreating it.
 
-For App Store readiness, the local backend also includes `engine/billing_store.json`, `engine/credits_store.json`, `/entitlements`, `/subscription-event`, `/credits/balance`, `/credits/grant`, `/credits/consume`, and `/healthz` contracts. These are prototype contracts for the production StoreKit / App Store Server API / RevenueCat path; production must verify signed subscription and credit events server-side before granting paid entitlements. Billing plan names were re-decided on 2026-07-07: the single source of truth is `docs/方案架構-定案-2026-07-07.md` — **Free / Plus (NT$499) / Pro (NT$999)** with chat points (1 point ≈ 1 minute). Earlier drafts in `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` (Free / Plus / Premium / Concierge) are superseded.
+For App Store readiness, the backend includes `/entitlements`, `/subscription-event`, `/credits/balance`, `/credits/grant`, `/credits/consume`, `/apple/transaction`, and `/healthz`. The current billing source of truth is `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`: **Free / Plus / Pro**, with Plus NT$599 and 150 monthly points, Pro NT$1,199 and 300 monthly points, and one point approximately equal to one Voice + Avatar minute. Direct StoreKit transactions are signature-verified; App Store Server Notifications V2 remains an explicit pre-launch gate.
 
-The production database path is Supabase Postgres with Row Level Security. The first SQL schema draft lives in `supabase/sql/001_initial_munea_schema.sql`; demo seed, analytics/admin foundation, AI memory/service foundation, companion persona layer foundation, and billing credits foundation live in `supabase/sql/002_demo_bootstrap.sql`, `supabase/sql/003_analytics_admin_foundation.sql`, `supabase/sql/004_ai_memory_service_foundation.sql`, `supabase/sql/005_companion_persona_layer.sql`, and `supabase/sql/006_billing_credits_foundation.sql`, with setup notes in `docs/supabase/SETUP.md`. These are SQL Editor-ready; once Supabase CLI is installed and authenticated, convert them into formal migrations.
+The production database path is Supabase Postgres with Row Level Security. SQL changes live under `supabase/sql/`; `006_billing_credits_foundation.sql` creates the billing ledger and `012_current_app_billing_policy.sql` aligns the active policy with Free / Plus / Pro. Setup notes live in `docs/supabase/SETUP.md`.
 
 Backend architecture v1 is tracked in `docs/BACKEND-ARCHITECTURE-v1.md`. It defines the API surface, Supabase/RLS model, subscription entitlement flow, data rights contracts, admin console MVP, and North Star analytics plan.
 
@@ -253,7 +253,7 @@ Munea/
 │   ├── landing.html
 │   └── src/
 ├── supabase/
-│   └── sql/                   # 001-006 schema drafts
+│   └── sql/                   # versioned schema and policy migrations
 └── avatar-candidates/
 ```
 
@@ -263,7 +263,7 @@ For current planning truth, read these first:
 
 1. `docs/00-總綱-從這裡開始.md` — **SSOT entry point / doc map, read this first**
 2. `docs/SPEC-沐寧-v1-2026-06-28.md` — master PRD (12 chapters). Note: §9 billing tier names are superseded, see #3 below and the SSOT page.
-3. `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` — **billing/subscription/credits source of truth** (Free / Plus / Premium / Concierge, credits for add-ons only)
+3. `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` — **billing/subscription/credits source of truth** (Free / Plus / Pro)
 4. `docs/CURRENT-DEVELOPMENT-PLAN.md`
 5. `docs/ARCHITECTURE.md`
 6. `docs/PRODUCT-ARCHITECTURE-AVATAR-FIRST-PLAN.md`

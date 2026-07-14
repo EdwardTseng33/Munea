@@ -198,8 +198,8 @@ try {
   Pass "Subscription event requires privileged provider/admin token"
 
   Step "Entitlement mutation gate"
-  Expect-HttpError "/entitlements" @{ action = "save"; activePlan = "premium" } 403 $devHeaders
-  $entitlements = Invoke-JsonPost "/entitlements" @{ action = "save"; activePlan = "premium"; entitlements = @{ realtimeAvatar = $true } } $adminHeaders
+  Expect-HttpError "/entitlements" @{ action = "save"; activePlan = "pro" } 403 $devHeaders
+  $entitlements = Invoke-JsonPost "/entitlements" @{ action = "save"; activePlan = "pro"; entitlements = @{ realtimeAvatar = $true } } $adminHeaders
   if (-not $entitlements.ok) {
     throw "/entitlements save did not accept admin token"
   }

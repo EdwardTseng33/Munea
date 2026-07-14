@@ -503,18 +503,18 @@ class SupabaseAdapter:
                     "voiceCompanion": True,
                     "familyDashboard": True,
                     "routineReminders": True,
-                    "realtimeAvatar": False,
+                    "realtimeAvatar": True,
                     "premiumAvatarMinutesMonthly": 0,
-                    "familyMembersMax": 2,
+                    "familyMembersMax": 1,
                 },
                 "usageLedger": {
                     "period": time.strftime("%Y-%m"),
                     "voiceMinutesUsed": 0,
-                    "voiceMinutesGranted": 300,
+                    "voiceMinutesGranted": 5,
                     "avatarMinutesUsed": 0,
                     "avatarMinutesGranted": 0,
                     "familyMembersUsed": 1,
-                    "familyMembersGranted": 2,
+                    "familyMembersGranted": 1,
                 },
             })
             self._request(

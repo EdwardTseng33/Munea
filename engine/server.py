@@ -3802,7 +3802,7 @@ def default_billing_store():
             "signupTrialCredits": 5,
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
-            "familyMembersMax": 2,
+            "familyMembersMax": 1,
         },
         "usageLedger": {
             "period": time.strftime("%Y-%m"),

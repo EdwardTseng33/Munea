@@ -13,10 +13,10 @@ window.MuneaStore = (function () {
     'pro|year': 'net.munea.app.pro.yearly'
   };
   var PTS = {
-    200: 'net.munea.app.points.200',
-    500: 'net.munea.app.points.500',
-    1000: 'net.munea.app.points.1000',
-    1800: 'net.munea.app.points.1800'
+    150: 'net.munea.app.points.200',
+    300: 'net.munea.app.points.500',
+    600: 'net.munea.app.points.1000',
+    1000: 'net.munea.app.points.1800'
   };
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Store) || null;
@@ -133,11 +133,23 @@ window.MuneaStore = (function () {
     }
   }
 
+  async function manageSubscriptions() {
+    var p = plugin();
+    if (!p || !p.manageSubscriptions) return { ok: false, reason: 'unsupported' };
+    try {
+      var result = await p.manageSubscriptions();
+      return { ok: !!(result && result.ok) };
+    } catch (e) {
+      return { ok: false, reason: 'error', message: String(e) };
+    }
+  }
+
   return {
     available: function () { return !!plugin(); },
     subId: function (plan, cyc) { return SUB[plan + '|' + cyc] || null; },
     ptsId: function (n) { return PTS[n] || null; },
     purchase: purchase,
-    restore: restore
+    restore: restore,
+    manageSubscriptions: manageSubscriptions
   };
 })();

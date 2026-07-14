@@ -11,7 +11,7 @@
     "smoke:staging": "powershell -ExecutionPolicy Bypass -File scripts/staging-smoke.ps1",
     "smoke:staging:auth": "powershell -ExecutionPolicy Bypass -File scripts/staging-auth-smoke.ps1",
     "smoke:status": "powershell -ExecutionPolicy Bypass -File scripts/smoke-status.ps1",
-    "test:launch": "python engine/test_vitals_sync.py && python engine/test_thin_door.py && python engine/test_account_scope.py && python engine/test_request_scope.py && python engine/test_apple_store.py && python engine/test_free_signup_trial.py && python engine/test_localization.py && node scripts/test-store-verification.js && node scripts/test-health-connection.js",
+    "test:launch": "python engine/test_vitals_sync.py && python engine/test_thin_door.py && python engine/test_account_scope.py && python engine/test_request_scope.py && python engine/test_apple_store.py && python engine/test_free_signup_trial.py && python engine/test_localization.py && node scripts/test-store-verification.js && node scripts/test-health-connection.js && node scripts/test-native-auth.js && node scripts/test-release-settings.js",
     "release:check": "powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1",
     "release:record": "powershell -ExecutionPolicy Bypass -File scripts/release-record.ps1",
     "mac:doctor": "bash scripts/mac-day-one-check.sh",
@@ -34,6 +34,8 @@
     "ios:package": "npm run ios:archive && npm run ios:export"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.0",
+    "@capacitor/browser": "8.0.3",
     "@capacitor/core": "^8.4.1"
   },
   "devDependencies": {

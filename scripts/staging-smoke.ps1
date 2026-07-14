@@ -229,7 +229,7 @@ if ($AdminToken) {
   if (-not $usage.ok) {
     throw "/admin/usage did not accept admin token"
   }
-  $entitlements = Invoke-JsonPost "/entitlements" @{ action = "save"; activePlan = "premium"; entitlements = @{ realtimeAvatar = $true } } $adminHeaders
+  $entitlements = Invoke-JsonPost "/entitlements" @{ action = "save"; activePlan = "pro"; entitlements = @{ realtimeAvatar = $true } } $adminHeaders
   if (-not $entitlements.ok) {
     throw "/entitlements save did not accept admin token"
   }

@@ -6,6 +6,7 @@ window.MUNEA_SUPABASE_CONFIG = {
   // Pin an exact @supabase/supabase-js v2 ESM URL or preload window.supabase before auth.js.
   sdkUrl: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm',
   redirectTo: new URL('index.html', window.location.href).toString(),
+  nativeRedirectTo: 'munea://auth/callback',
 };
 
 // Optional local-only developer mode. Keep disabled in production builds.
