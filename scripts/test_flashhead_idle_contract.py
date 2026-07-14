@@ -4,8 +4,8 @@ Keeps burst-delivered TTS speech from being interleaved with generated idle sile
 
 2026-07-12 卡西法：N 槽改造把這段邏輯搬進 deploy/runpod-avatar/flashhead_engine_core.py
 （原本在 flashhead_server.py 裡）——SOURCE 改指過去。同時修正一個改造前就已經存在的
-過期斷言（"finish" flush 功能上線後 self._gen_chunk(todo) 早就改成
-self._gen_chunk(todo[0], todo[1])，這條字串比對從那時起就沒真的跑過，這次順手修掉）。
+過期斷言（"finish" flush 功能上線後 self._gen_chunk(todo) 已改成
+self._gen_chunk(todo[0], todo[1], todo[2])，測試需跟現行輸出 PCM 參數同步）。
 """
 
 from pathlib import Path
@@ -27,7 +27,10 @@ def main() -> None:
 
     source = SOURCE.read_text(encoding="utf-8")
     assert "(now - self.last_in) > 1.0 and len(self.acc) < cs" in source
-    resume_block = source[source.index("if todo is not None:") : source.index("self._gen_chunk(todo[0], todo[1])")]
+    resume_block = source[
+        source.index("if todo is not None:") :
+        source.index("self._gen_chunk(todo[0], todo[1], todo[2])")
+    ]
     assert "self.slot.audio_out.clear()" in resume_block
     print("FlashHead idle contract: PASS")
 

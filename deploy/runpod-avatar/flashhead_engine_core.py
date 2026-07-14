@@ -93,10 +93,11 @@ class FrameSink:
 
 
 class AudioOutBuffer:
-    """語音出線緩衝（20ms 幀、underrun 儀表、暖身墊窗，照抄單例版邏輯）。
+    """語音出線緩衝（20ms 幀、underrun 儀表、首批資料到達後預緩衝）。
 
     prebuffer_s 從建構子傳入（原本是模組層級常數 AUDIO_PREBUFFER_S=0.5）——
-    改參數化是唯一的行為調整點，呼叫端傳跟舊常數一樣的值就是零差異。
+    第一批資料尚未到達前維持 hold；資料到達後才開始倒數，讓這段時間真的
+    累積成播放存貨，而不是把模型生成時間誤算成預緩衝。
     """
     def __init__(self, sample_rate, prebuffer_s=0.5):
         self.sample_rate = sample_rate
@@ -108,10 +109,14 @@ class AudioOutBuffer:
         self.underrun_gap_ms = collections.deque(maxlen=50)
         self.last_push_ts = 0.0
         self.depth_samples = 0
-        self.hold_until_ts = time.time() + prebuffer_s
+        self.hold_until_ts = float("inf")
+        self._awaiting_first_push = True
 
     def push(self, pcm_int16):
         with self.lock:
+            if len(pcm_int16) and self._awaiting_first_push:
+                self.hold_until_ts = time.time() + self.prebuffer_s
+                self._awaiting_first_push = False
             self.buf = np.concatenate([self.buf, pcm_int16])
             self.last_push_ts = time.time()
             self.depth_samples = len(self.buf)
@@ -120,7 +125,13 @@ class AudioOutBuffer:
         with self.lock:
             self.buf = np.zeros(0, dtype=np.int16)
             self.depth_samples = 0
-            self.hold_until_ts = time.time() + self.prebuffer_s
+            self.hold_until_ts = float("inf")
+            self._awaiting_first_push = True
+
+    def playout_held(self):
+        """True while audio and video must stay on their shared start gate."""
+        with self.lock:
+            return time.time() < self.hold_until_ts
 
     def pop_frame(self):
         with self.lock:

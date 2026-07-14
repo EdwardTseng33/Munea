@@ -408,7 +408,15 @@ class FlashHead:
                 return self._timestamp, VIDEO_TIME_BASE
             async def recv(self):
                 pts, tb = await self.next_timestamp()
-                fr = self.slot.sink.pop()
+                # AudioOutBuffer owns the shared start gate. Keep the poster on
+                # screen without consuming generated frames until audio has a
+                # real prebuffer, then release both tracks on the same clock.
+                if self.slot.audio_out.playout_held():
+                    fr = None
+                    self.last = self.slot.poster
+                    self._active_ts = 0.0
+                else:
+                    fr = self.slot.sink.pop()
                 now = time.time()
                 if fr is not None:
                     self.last = fr

@@ -406,6 +406,13 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     # Keep this last so persona, memory, interests, and older examples can
     # never weaken the Mandarin-only launch rule.
     base += localization.taiwan_mandarin_launch_instruction("zh-TW")
+    base += (
+        "\n[即時語音話量上限]\n"
+        "一般閒聊預設只回答一句、約十五到三十個中文字，講完就停。"
+        "只有對方明確要求解釋、比較或提供做法時，才可以回答兩句；一次仍只談一個重點。"
+        "不要把同理、回顧、建議和追問全部塞在同一輪，也不要為了延續聊天自行補第二個話題。"
+        "危急安全導引與必要的工具操作確認不受句數限制，但仍要短而清楚。"
+    )
     return base
 
 
@@ -692,14 +699,11 @@ async def handle(ws):
             # 這樣她一開口臉就同步在動、不會出現「已在講、臉還沒好」的當機感（Edward 2026-07-09 二次拍板）。
             async def _do_greet():
                 try:
-                    # 話量隨熟識度（Edward 2026-07-10「一開始話太多了」）：越熟越像老朋友、一句就好；
-                    # 不論哪級都硬上限：最多兩句、不連環問、不長篇自我介紹。
-                    if fam >= 3:
-                        _len_rule = "你們已經聊過很多次、很熟了：一句自然的招呼就好（10 個字左右），像老朋友拿起電話那樣隨口，不要自我介紹、不要問超過一個問題。"
-                    elif fam >= 1:
-                        _len_rule = "你們聊過幾次了：一到兩句簡短招呼就好，不要重新自我介紹、不要一次問好幾個問題。"
-                    else:
-                        _len_rule = "這是第一次通話：用一句話說你是誰、再用一句話問候，總共最多兩句、40 個字以內，不要長篇自我介紹。"
+                    # 開場必須比一般回覆更短；熟識度只決定內容，不增加句數。
+                    _len_rule = (
+                        "只說一句八到十六個中文字的自然招呼，說完就停。"
+                        "不要自我介紹、不要補充背景、不要連續問問題；可以完全不問問題。"
+                    )
                     greet_cue = (
                         "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
                         "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
@@ -885,6 +889,10 @@ async def handle(ws):
                             continue
                         t = obj.get("type")
                         if t == "greet":
+                            # App 原本等第一個 AI 音訊封包才開麥，模型稍慢時會吃掉
+                            # 使用者前幾句 Hello。先用既有事件解除收音門檻；接著生成的
+                            # 招呼仍可被正常插話，不新增 App 協定也不碰正在施工的 app.js。
+                            await ws.send(json.dumps({"type": "turn_complete", "phase": "greet_input_ready"}))
                             await _do_greet()   # App 說「兩邊都就緒了」→ 現在才請她主動開口（聲臉同步開場）
                         elif t == "nudge":
                             await _do_nudge(int(obj.get("level", 1)))   # App 偵測到使用者一直沒講話 → 寧寧溫柔提醒（省點）

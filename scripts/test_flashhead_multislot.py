@@ -248,6 +248,35 @@ def test_audible_output_keeps_original_24k_samples():
     print("test_audible_output_keeps_original_24k_samples: PASS")
 
 
+def test_audio_prebuffer_starts_when_first_pcm_arrives():
+    """模型計算時間不能偷吃預緩衝；第一批 PCM 到達後才開始共同起播倒數。"""
+    original_time = fec.time.time
+    clock = [100.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        audio = fec.AudioOutBuffer(OUTPUT_SAMPLE_RATE, prebuffer_s=0.5)
+        assert audio.playout_held() is True
+
+        clock[0] = 103.0
+        pcm = np.arange(audio.frame_samples, dtype=np.int16)
+        audio.push(pcm)
+        assert audio.hold_until_ts == 103.5
+        assert audio.playout_held() is True
+
+        before = audio.depth_samples
+        clock[0] = 103.49
+        assert np.count_nonzero(audio.pop_frame()) == 0
+        assert audio.depth_samples == before, "prebuffer must not consume queued PCM"
+
+        clock[0] = 103.5
+        assert np.array_equal(audio.pop_frame(), pcm)
+        audio.clear()
+        assert audio.playout_held() is True, "each real turn must re-arm the shared gate"
+    finally:
+        fec.time.time = original_time
+    print("test_audio_prebuffer_starts_when_first_pcm_arrives: PASS")
+
+
 def test_fault_isolation_one_slot_does_not_crash_others():
     """故障隔離：槽 A 的 pipeline 連續拋錯 -> 標 unhealthy、觸發 on_unhealthy 回調、
     但不拋例外炸掉呼叫者，且完全不影響槽 B（獨立物件，槽 B 的 feeder/sink 正常運作）。"""
@@ -404,6 +433,7 @@ def main():
     test_health_n1_shape_matches_capacity_contract()
     test_cross_slot_isolation()
     test_audible_output_keeps_original_24k_samples()
+    test_audio_prebuffer_starts_when_first_pcm_arrives()
     test_fault_isolation_one_slot_does_not_crash_others()
     test_switch_slot_char_isolation()
     test_health_snapshot_math()
