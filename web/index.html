@@ -377,7 +377,6 @@
           </span>
           <div class="auth-copy">
             <div class="auth-title-row"><div class="auth-title" id="authStatusText">訪客模式</div><span class="mem-badge free" id="memBadge">FREE</span></div>
-            <div class="auth-sub" id="authProviderText">登入後同步家人、提醒與訂閱</div>
             <div class="auth-email" id="authEmailText"></div>
           </div>
         </div>
@@ -569,7 +568,8 @@
       </div>
       <div id="walkFields">
         <div class="field-label">目標步數（大家一起累積）</div>
-        <div class="step-row"><button type="button" class="step-btn" data-t="walkGoal" data-d="-2" aria-label="減少步數">−</button><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" style="display:none" /><input type="range" id="walkDays" min="1" max="30" step="1" value="7" style="display:none" /><b class="step-val" id="walkGoalVal">84,000 步</b><button type="button" class="step-btn" data-t="walkGoal" data-d="2" aria-label="增加步數">＋</button></div>
+        <div class="range-row"><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" aria-label="調整目標步數" /><b id="walkGoalVal">84,000 步</b></div>
+        <input type="range" id="walkDays" min="1" max="30" step="1" value="7" hidden aria-hidden="true" tabindex="-1" />
         <div class="goal-hint" id="goalHint">3 人一起走 7 天 · 平均每人每天約 4,000 步</div>
         <div class="field-label">挑戰截止（到期自動結算）</div>
         <div class="dt-row">
@@ -579,7 +579,7 @@
       </div>
       <div id="quizFields" style="display:none">
         <div class="field-label">要玩幾題</div>
-        <div class="step-row"><button type="button" class="step-btn" data-t="quizN" data-d="-1" aria-label="減少題數">−</button><input type="range" id="quizN" min="5" max="20" step="5" value="10" style="display:none" /><b class="step-val" id="quizNVal">10 題</b><button type="button" class="step-btn" data-t="quizN" data-d="1" aria-label="增加題數">＋</button></div>
+        <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" aria-label="調整題目數量" /><b id="quizNVal">10 題</b></div>
         <div class="field-label">答題截止（到期自動結算排名）</div>
         <div class="dt-row">
           <input class="chal-input" type="date" id="quizDue" aria-label="答題截止日期" />

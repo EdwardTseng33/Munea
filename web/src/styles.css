@@ -5,7 +5,8 @@
 :root {
   /* 字級規範 v1（UIUX 定案）：頁大標 serif 30 / 區塊標 20 / 卡標 17 / 內文 17 / 說明 15 / 註記 13——不再任意生字級 */
   --fs-page: 24px; --fs-section: 18px; --fs-card: 16px; --fs-body: 16px; --fs-sub: 14px; --fs-note: 12.5px;
-  --fw-title: 700; --fw-em: 600; --fw-body: 400;
+  --fs-action-primary: 16px;
+  --fw-title: 700; --fw-em: 600; --fw-body: 400; --fw-action-primary: 800;
   /* Edward 2026-07-03 定色（munea.net 唯一標準）：薄荷綠 / 暮色橘 / 白 / 石墨黑 */
   --teal: #3AA8A0;          /* 薄荷綠（主） */
   --teal-d: #2E8A83;        /* 薄荷綠·深（按下/文字級） */
@@ -342,11 +343,11 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-ico { width: 42px; height: 42px; border-radius: 13px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
 .auth-copy { min-width: 0; }
 .auth-title { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 17px; line-height: 1.2; }
-.auth-sub { font-size: 14px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
 .auth-email { font-size: 13px; color: var(--teal-dd); font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 185px; }
+.auth-email:empty { display: none; }
 .auth-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .auth-primary, .auth-secondary, .auth-dev-btn, .auth-email-btn { border: none; font-family: var(--display); font-weight: 800; cursor: pointer; }
-.auth-primary { min-width: 72px; height: 40px; border-radius: 13px; color: #fff; background: var(--teal-d); }
+.auth-primary { min-width: 72px; height: 40px; border-radius: 13px; color: #fff; background: var(--teal-d); font-size: var(--fs-action-primary); font-weight: var(--fw-action-primary); }
 .auth-secondary { min-width: 0; height: auto; border-radius: 10px; color: var(--muted); background: transparent; border: none; font-family: var(--sans); font-weight: 600; font-size: 15px; padding: 10px 6px; }
 .auth-dev-badge { font-size: 13px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 999px; padding: 4px 8px; }
 /* 會員身份標籤（帳號卡 · FREE/PLUS/PRO · Edward 7/8） */
@@ -613,7 +614,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .invite-item .iv-check .ic { width: 14px; height: 14px; }
 .goal-box { background: var(--mint); border-radius: 14px; padding: 14px 16px; margin: 18px 0; font-size: 15px; color: var(--ink-2); line-height: 1.5; }
 .goal-box b { color: var(--teal-dd); font-family: var(--display); }
-.modal-btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm); background: var(--btn-green); color: #fff; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer; }
+.modal-btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm); background: var(--btn-green); color: #fff; font-family: var(--display); font-weight: var(--fw-action-primary); font-size: var(--fs-action-primary); cursor: pointer; }
 /* 意見回饋附圖：選圖鈕（描邊、跟全 App 同一套線條質感）*/
 .fb-photo-add { display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border: 1.5px solid var(--line); border-radius: 100px; background: #fff; color: var(--ink2); font-size: 15px; font-weight: 700; cursor: pointer; }
 .fb-photo-add:active { background: var(--mint); }
@@ -1226,6 +1227,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .range-row input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 10px; border-radius: 100px; outline: none; border: 1px solid var(--line); background: linear-gradient(90deg, var(--btn-green) var(--fill, 50%), var(--mint-2) var(--fill, 50%)); }
 .range-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; border-radius: 50%; background: #FFF; border: 3px solid var(--btn-green); box-shadow: 0 2px 6px rgba(31,60,52,.2); cursor: pointer; transition: transform .12s; }
 .range-row input[type=range]:active::-webkit-slider-thumb { transform: scale(1.12); }
+.range-row input[type=range]:focus-visible { outline: 3px solid rgba(58,168,160,.22); outline-offset: 8px; }
 .range-row input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: #FFF; border: 2.5px solid var(--teal-d); cursor: pointer; }
 .range-row b { font-family: var(--display); font-size: 17px; color: var(--teal-dd); min-width: 86px; text-align: right; }
 
@@ -1911,10 +1913,9 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 訂閱法務區：恢復購買＋自動續訂說明（蘋果審核要求、放購買鈕下方） */
 .sub-legal { font-size: 11.5px; line-height: 1.7; color: var(--muted); margin: 10px 2px 4px; text-align: justify; }
 .sub-legal a { color: var(--teal-d); font-weight: 700; text-decoration: none; }
-/* 發起活動：日期時間並排＋送出鈕固定在畫面下方（內容從按鈕底下滑過） */
+/* 發起活動：日期與時間並排；送出鈕留在表單最下方，跟著內容捲動 */
 .dt-row { display: flex; gap: 9px; }
 .dt-row .chal-input { flex: 1; min-width: 0; }
-#chalModal #startChalBtn { position: sticky; bottom: 6px; z-index: 5; box-shadow: var(--shadow-sm), 0 -12px 14px -12px rgba(31,41,38,.14); }
 /* 意見與建議：NPS 0-10 大按鈕（長輩好按）＋提示列 */
 /* 打分數＝拉桿 Bar 條（Edward 7/9）：填色軌道＋大顆好拉的圓鈕＋上方大字回饋 */
 .nps-bar { margin: 6px 0 4px; }
@@ -2125,13 +2126,6 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 /* 聊聊「接通中/接回來中」：提示字尾加轉圈（深色底跟字同色） */
 .cap-busy::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 7px; vertical-align: -1.5px;
   border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: mn-spin .7s linear infinite; }
-
-/* 發起活動 · 數量步進器（Edward 7/9：拉桿退場、統一元件、視窗內不再有左右拖移） */
-.step-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-.step-btn { width: 52px; height: 46px; border-radius: 14px; border: 1.5px solid var(--teal); background: var(--mint);
-  color: var(--teal-dd); font-family: var(--display); font-size: 24px; font-weight: 800; line-height: 1; cursor: pointer; flex-shrink: 0; }
-.step-btn:active { background: var(--mint-2); }
-.step-row .step-val { flex: 1; text-align: center; font-family: var(--display); font-size: 19px; color: var(--teal-dd); min-width: 0; }
 
 /* 撥通中（腦開機）：同位置放載入動態；真收音動態等 ready 才出現（Edward 7/9） */
 /* 撥通中不再放收音載入動態（Edward 7/9：不直覺）——波紋等真的接通（聽/說狀態）才出現 */
