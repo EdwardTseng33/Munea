@@ -36,6 +36,8 @@ def decoded_transaction(**overrides):
         "environment": SimpleNamespace(value="Sandbox"),
         "revocationDate": None,
         "expiresDate": None,
+        "purchaseDate": None,
+        "originalPurchaseDate": None,
     }
     values.update(overrides)
     return SimpleNamespace(**values)

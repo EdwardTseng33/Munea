@@ -1887,6 +1887,8 @@ class SupabaseAdapter:
             event_type = "included_allowance_granted"
         elif event_type == "credits_consume":
             event_type = "credits_consumed"
+        elif event_type == "credits_expire":
+            event_type = "credits_expired"
         return {
             "account_id": self.payload_account_id(event.get("accountId") or event.get("account_id")),
             "person_id": event.get("personId") or event.get("person_id") or self.person_id,
