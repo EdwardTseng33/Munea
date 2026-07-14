@@ -46,6 +46,7 @@ APP_PATH="$VERIFY_DIR/Payload/App.app"
 ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/App.app"
 AUTH_CONFIG_PATH="$APP_PATH/public/src/auth-config.js"
 PRIVACY_MANIFEST_PATH="$APP_PATH/PrivacyInfo.xcprivacy"
+PRIVACY_DATA_TYPE_COUNT="$(plutil -extract NSPrivacyCollectedDataTypes raw "$PRIVACY_MANIFEST_PATH" 2>/dev/null || echo 0)"
 
 codesign --verify --deep --strict "$APP_PATH"
 ENTITLEMENTS="$(codesign -d --entitlements - "$APP_PATH" 2>&1)"
@@ -77,7 +78,7 @@ fi
 
 if [ ! -f "$PRIVACY_MANIFEST_PATH" ] \
   || [ "$(plutil -extract NSPrivacyTracking raw "$PRIVACY_MANIFEST_PATH")" != "false" ] \
-  || [ "$(plutil -extract NSPrivacyCollectedDataTypes raw "$PRIVACY_MANIFEST_PATH" | grep -c NSPrivacyCollectedDataType)" -lt 1 ]; then
+  || [ "${PRIVACY_DATA_TYPE_COUNT:-0}" -lt 1 ]; then
   echo "FAIL exported IPA is missing a valid PrivacyInfo.xcprivacy manifest."
   exit 1
 fi
