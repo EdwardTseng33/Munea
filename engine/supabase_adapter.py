@@ -187,6 +187,110 @@ class SupabaseAdapter:
             "authCleanupError": auth_error,
         }
 
+    def export_scoped_personal_data(self):
+        """Build a portable export for only the authenticated person's data."""
+        if not self.enabled() or not self.request_scoped:
+            raise RuntimeError("Personal export requires a request-scoped Supabase identity")
+        if not self._is_uuid(self.auth_user_id) or not self._is_uuid(self.person_id):
+            raise PermissionError("privacy_export_identity_mismatch")
+
+        def rows(table, query):
+            try:
+                return self._select(table, {**query, "select": query.get("select") or "*"}) or []
+            except Exception as exc:
+                # Older environments may not have every additive migration yet.
+                if getattr(exc, "code", None) == 404 or "404" in str(exc) or "does not exist" in str(exc):
+                    return []
+                raise
+
+        account = rows("accounts", {
+            "id": f"eq.{self.account_id}",
+            "select": "id,name,locale,preferred_languages,created_at,updated_at",
+        })
+        membership = rows("account_members", {
+            "account_id": f"eq.{self.account_id}",
+            "user_id": f"eq.{self.auth_user_id}",
+            "select": "id,account_id,user_id,role,status,created_at,updated_at",
+        })
+        person = rows("persons", {
+            "id": f"eq.{self.person_id}",
+            "account_id": f"eq.{self.account_id}",
+            "select": "id,account_id,display_name,relationship,locale,timezone,is_primary_care_recipient,region_code,attributes,created_at,updated_at",
+        })
+        family_memberships = rows("family_memberships", {
+            "person_id": f"eq.{self.person_id}",
+            "select": "id,account_id,family_group_id,person_id,role,permissions,created_at,updated_at",
+        })
+        family_groups = []
+        for group_id in sorted({row.get("family_group_id") for row in family_memberships if self._is_uuid(row.get("family_group_id") or "")}):
+            family_groups.extend(rows("family_groups", {
+                "id": f"eq.{group_id}",
+                "select": "id,name,created_at,updated_at",
+            }))
+
+        person_tables = {
+            "companionProfiles": ("companion_profiles", "*"),
+            "routineReminders": ("routine_reminders", "*"),
+            "voiceSessions": ("voice_sessions", "*"),
+            "conversationSummaries": ("conversation_summaries", "*"),
+            "safetyEvents": ("safety_events", "*"),
+            "productEvents": ("product_events", "*"),
+            "dailyUserMetrics": ("daily_user_metrics", "*"),
+            "voiceSessionMetrics": ("voice_session_metrics", "*"),
+            "reminderEvents": ("reminder_events", "*"),
+            "familyInteractionEvents": ("family_interaction_events", "*"),
+            "memoryItems": ("memory_items", "id,account_id,person_id,source_conversation_summary_id,memory_type,content,source,confidence,importance,sensitivity,consent_scope,valid_from,valid_until,last_confirmed_at,supersedes_memory_id,metadata,created_at,updated_at"),
+            "perceptionSnapshots": ("perception_snapshots", "*"),
+            "wellbeingSignals": ("wellbeing_signals", "*"),
+            "consentRecords": ("consent_records", "*"),
+            "familyActivityParticipation": ("family_activity_participants", "*"),
+        }
+        personal = {
+            key: rows(table, {
+                "account_id": f"eq.{self.account_id}",
+                "person_id": f"eq.{self.person_id}",
+                "select": select,
+                "order": "created_at.asc",
+                "limit": "5000",
+            })
+            for key, (table, select) in person_tables.items()
+        }
+        account_tables = {
+            "subscription": "subscription_ledger",
+            "usage": "usage_ledger",
+            "creditWallets": "credit_wallets",
+            "creditTransactions": "credit_transactions",
+            "creditLedger": "credit_ledger",
+            "privacyRequests": "privacy_requests",
+        }
+        account_data = {
+            key: rows(table, {
+                "account_id": f"eq.{self.account_id}",
+                "select": "*",
+                "order": "created_at.asc",
+                "limit": "5000",
+            })
+            for key, table in account_tables.items()
+        }
+        account_data["auditEvents"] = rows("audit_events", {
+            "account_id": f"eq.{self.account_id}",
+            "actor_user_id": f"eq.{self.auth_user_id}",
+            "select": "id,event_type,target_table,target_id,details,created_at",
+            "order": "created_at.asc",
+            "limit": "5000",
+        })
+        return {
+            "schemaVersion": 1,
+            "scope": "authenticated_person_and_owned_billing_account",
+            "account": account[0] if account else None,
+            "accountMembership": membership[0] if membership else None,
+            "person": person[0] if person else None,
+            "familyMemberships": family_memberships,
+            "familyGroups": family_groups,
+            "personalData": personal,
+            "billingAndPrivacy": account_data,
+        }
+
     def _delete_auth_user(self, auth_user_id):
         if not self.configured() or not self._is_uuid(auth_user_id):
             raise RuntimeError("Supabase Auth admin deletion is not configured")
@@ -767,6 +871,8 @@ class SupabaseAdapter:
             ),
             "metadata": data.get("metadata") or {},
         }
+        if payload["status"] == "completed":
+            payload["completed_at"] = data.get("completedAt") or data.get("completed_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         rows = self._request(
             "POST",
             "privacy_requests",

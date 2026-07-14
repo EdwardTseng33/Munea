@@ -45,6 +45,7 @@ ditto -x -k "$IPA_PATH" "$VERIFY_DIR"
 APP_PATH="$VERIFY_DIR/Payload/App.app"
 ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/App.app"
 AUTH_CONFIG_PATH="$APP_PATH/public/src/auth-config.js"
+PRIVACY_MANIFEST_PATH="$APP_PATH/PrivacyInfo.xcprivacy"
 
 codesign --verify --deep --strict "$APP_PATH"
 ENTITLEMENTS="$(codesign -d --entitlements - "$APP_PATH" 2>&1)"
@@ -74,6 +75,13 @@ if ! cmp -s "$ROOT/web/index.html" "$APP_PATH/public/index.html" \
   exit 1
 fi
 
+if [ ! -f "$PRIVACY_MANIFEST_PATH" ] \
+  || [ "$(plutil -extract NSPrivacyTracking raw "$PRIVACY_MANIFEST_PATH")" != "false" ] \
+  || [ "$(plutil -extract NSPrivacyCollectedDataTypes raw "$PRIVACY_MANIFEST_PATH" | grep -c NSPrivacyCollectedDataType)" -lt 1 ]; then
+  echo "FAIL exported IPA is missing a valid PrivacyInfo.xcprivacy manifest."
+  exit 1
+fi
+
 if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] \
   || [ "$ACTUAL_BUILD" != "$EXPECTED_BUILD" ] \
   || [ "$ACTUAL_BUNDLE_ID" != "net.munea.app" ] \
@@ -86,6 +94,7 @@ if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] \
 fi
 
 echo "PASS IPA excludes development fixtures and contains the latest Web design assets."
+echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS App Store package exported."
 echo "Output: $FINAL_EXPORT_PATH"

@@ -103,6 +103,7 @@ Step "Chat engine profile is local runtime data"
 Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
+from unittest.mock import patch
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import chat_engine
@@ -1936,6 +1937,7 @@ Step "Product event and North Star contract"
 Invoke-PythonBlock @'
 import os, sys, tempfile
 from pathlib import Path
+from unittest.mock import patch
 os.environ.setdefault("GEMINI_API_KEY", "smoke-test-key")
 sys.path.insert(0, "engine")
 import server
@@ -2000,14 +2002,22 @@ with tempfile.TemporaryDirectory() as d:
     assert conversation_admin["totals"]["rawTranscriptRecords"] == 0
     assert conversation_admin["privacy"]["storesRawTranscriptByDefault"] is False
     assert conversation_admin["topTags"][0]["tag"] in {"emotion", "routine", "video_entertainment"}
-    server.privacy_export_response({"action": "request", "reason": "export smoke"})
+    class FakePrivacyExportBackend:
+        request_scoped = True
+        def enabled(self): return True
+        def export_scoped_personal_data(self):
+            return {"schemaVersion": 1, "scope": "authenticated_person", "person": {"id": "smoke-person"}}
+    with patch.object(server, "data_backend", return_value=FakePrivacyExportBackend()):
+        export = server.privacy_export_response({"action": "request", "reason": "export smoke"})
+    assert export["status"] == "completed"
+    assert export["exportPackage"]["person"]["id"] == "smoke-person"
     server.account_deletion_response({"action": "request", "reason": "delete smoke"})
     privacy_admin = server.admin_privacy_requests_summary({"limit": 10})
     assert privacy_admin["ok"] is True
     assert privacy_admin["count"] == 2
     assert privacy_admin["totals"]["byType"]["export"] == 1
     assert privacy_admin["totals"]["byType"]["account_deletion"] == 1
-    assert privacy_admin["totals"]["reauthRequired"] == 2
+    assert privacy_admin["totals"]["reauthRequired"] == 1
     assert privacy_admin["totals"]["subscriptionNoticeRequired"] == 1
     assert privacy_admin["privacy"]["rawTranscriptRecords"] == 0
     filtered_privacy_admin = server.admin_privacy_requests_summary({"type": "account_deletion"})
@@ -2641,11 +2651,10 @@ assert req["subscriptionNoticeRequired"] is True
 
 export = server.privacy_export_response({"action": "preview"})
 assert export["ok"] is True
-assert export["request"]["status"] == "preview"
-assert export["status"] == "queued"
-assert export["requiresReauth"] is True
+assert export["status"] == "available"
+assert export["requiresReauth"] is False
 assert "exportPackage" not in export
-assert "only" in export["productionNote"].lower()
+assert "JSON" in export["message"]
 
 deletion = server.account_deletion_response({"action": "status"})
 assert deletion["ok"] is True
@@ -3431,10 +3440,10 @@ Pass "/admin/audit-events is closed without admin token"
 Step "API /privacy-export"
 $privacyExport = Invoke-RestMethod -Uri "$BaseUrl/privacy-export" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"preview"}' -TimeoutSec 30
 if (-not $privacyExport.ok) { throw "/privacy-export returned not ok" }
-if ($privacyExport.exportPackage) { throw "/privacy-export must not return an unscoped data package" }
-if (-not $privacyExport.requiresReauth) { throw "/privacy-export must require account-owner reauthentication" }
-if ($privacyExport.status -ne "queued") { throw "/privacy-export must queue a scoped export" }
-Pass "/privacy-export queues a reauthenticated, owner-scoped export"
+if ($privacyExport.exportPackage) { throw "/privacy-export preview must not return personal data without a scoped identity" }
+if ($privacyExport.requiresReauth) { throw "/privacy-export preview should direct signed-in users to immediate delivery" }
+if ($privacyExport.status -ne "available") { throw "/privacy-export preview must advertise the available scoped export" }
+Pass "/privacy-export preview advertises authenticated, immediate scoped delivery"
 
 Step "API /account-deletion"
 $deletion = Invoke-RestMethod -Uri "$BaseUrl/account-deletion" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"action":"status"}' -TimeoutSec 30
