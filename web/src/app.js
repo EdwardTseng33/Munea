@@ -1108,8 +1108,14 @@ const CallControl = {
   generation: 0,
   url() {
     if (usesDevelopmentDirectCall()) return '';
-    try { return (localStorage.getItem('munea.callControlUrl') || CALL_CONTROL_URL_DEFAULT).replace(/\/$/, ''); }
-    catch (e) { return CALL_CONTROL_URL_DEFAULT; }
+    // Production must always use the release Gateway. A stale localStorage
+    // override from an older test build must never route an installed App to
+    // a retired controller or back to direct GPU access.
+    const cfg = developerConfig();
+    if (isDeveloperBypassAllowed() && cfg.callControlUrl) {
+      return String(cfg.callControlUrl).replace(/\/$/, '');
+    }
+    return CALL_CONTROL_URL_DEFAULT;
   },
   async _headers() {
     const headers = await muneaAuthHeaders({ 'Content-Type': 'application/json' });
