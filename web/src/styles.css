@@ -346,7 +346,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-email { font-size: 13px; color: var(--teal-dd); font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 185px; }
 .auth-email:empty { display: none; }
 .auth-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-.auth-primary, .auth-secondary, .auth-dev-btn, .auth-email-btn { border: none; font-family: var(--display); font-weight: 800; cursor: pointer; }
+.auth-primary, .auth-secondary, .auth-dev-btn { border: none; font-family: var(--display); font-weight: 800; cursor: pointer; }
 .auth-primary { min-width: 72px; height: 40px; border-radius: 13px; color: #fff; background: var(--teal-d); font-size: var(--fs-action-primary); font-weight: var(--fw-action-primary); }
 .auth-secondary { min-width: 0; height: auto; border-radius: 10px; color: var(--muted); background: transparent; border: none; font-family: var(--sans); font-weight: 600; font-size: 15px; padding: 10px 6px; }
 .auth-dev-badge { font-size: 13px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 999px; padding: 4px 8px; }
@@ -589,10 +589,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-provider-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 14px; }
 .auth-provider { width: 100%; min-height: 52px; border-radius: 16px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
 .auth-provider .ic { width: 21px; height: 21px; }
-.auth-email-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 10px; }
-.auth-email-row input { min-width: 0; border: 1.5px solid var(--line); border-radius: 15px; background: #fff; padding: 0 13px; font-family: var(--sans); font-size: 15px; color: var(--ink); outline: none; }
-.auth-email-row input:focus { border-color: var(--teal); box-shadow: 0 0 0 4px rgba(58,168,160,.12); }
-.auth-email-btn { min-height: 48px; border-radius: 15px; background: var(--mint); color: var(--teal-dd); font-size: 13px; }
 .auth-dev-btn { width: 100%; margin-top: 10px; min-height: 46px; border-radius: 15px; background: var(--coral-soft); color: var(--coral-d); font-size: 15px; }
 .auth-message { min-height: 20px; font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.4; }
 .auth-message.is-error { color: var(--danger); font-weight: 700; }
@@ -1000,10 +996,6 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* ===== 寧寧呼吸感（首頁小生命） ===== */
 
-/* 登入視窗 · 信箱段說明（原本孤零零一排、長輩看不懂） */
-.auth-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; color: var(--muted); font-size: 13px; }
-.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-.auth-email-hint { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0 0 10px; }
 
 /* 揪一攤（活動投票） */
 .chal-input { width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 12px 14px; font-family: var(--sans); font-size: 17px; color: var(--ink); margin-bottom: 4px; }
@@ -1362,10 +1354,10 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .invite-note { font-size: 14px; color: var(--muted); margin: 8px 2px 0; }
 .goal-hint { font-size: 14px; color: var(--ink-2); margin: 2px 2px 0; }
 
-/* 設定頁 · 免責一行（原同意卡收進註冊流程） */
+/* 設定頁 · 免責一行（原同意卡收進登入流程） */
 .set-disclaim { font-size: 13px; color: var(--muted); line-height: 1.65; margin: 4px 4px 20px; }
 .set-disclaim a { color: var(--teal-dd); font-weight: 600; margin-left: 6px; }
-/* 註冊 · 條款一行 */
+/* 登入 · 條款一行 */
 .auth-terms { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 12px 2px 2px; }
 .auth-terms a { color: var(--teal-dd); font-weight: 600; }
 

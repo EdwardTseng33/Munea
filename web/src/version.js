@@ -11,9 +11,21 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.0.3',
+  current: '1.0.4',
   channel: '',
   changelog: [
+    {
+      version: '1.0.4',
+      date: '2026-07-14',
+      title: '登入精簡與最新設計驗收版',
+      items: [
+        '登入畫面只保留 Google 與 Apple，不再顯示個人 Email 註冊或登入入口',
+        '開啟登入視窗時不會自動展開鍵盤',
+        '開發驗收包加入清楚標示的 Edward 測試帳號、測試點數與家庭資料，正式上架包維持關閉',
+        '整合最新 main 的設定頁、首頁與帳號頭像修正後重新同步 iPhone App 資源',
+        '版本更新為 1.0.4（Build 9）；Google OAuth 品牌名稱待後台儲存與驗證',
+      ],
+    },
     {
       version: '1.0.3',
       date: '2026-07-14',

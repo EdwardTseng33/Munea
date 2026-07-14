@@ -322,23 +322,6 @@
     }
   }
 
-  async function signInWithEmail(email) {
-    const cleanEmail = String(email || '').trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      return { ok: false, error: { code: 'invalid_email' } };
-    }
-    const supabaseClient = await ensureClient();
-    if (!supabaseClient) return { ok: false, error: { code: 'auth_not_configured' } };
-    if (isNativeApp()) await setupNativeAuthListener();
-    const result = await supabaseClient.auth.signInWithOtp({
-      email: cleanEmail,
-      options: {
-        emailRedirectTo: redirectTo('index.html'),
-      },
-    });
-    return { ok: !result.error, result, error: result.error || null };
-  }
-
   async function signInAsDeveloper(overrides = {}) {
     if (!isDeveloperModeAllowed()) {
       return { ok: false, error: { code: 'developer_mode_not_allowed' } };
@@ -382,14 +365,13 @@
 
   window.MuneaAuth = {
     AUTH_STATE_EVENT,
-    providers: Object.freeze({ APPLE: 'apple', GOOGLE: 'google', EMAIL_OTP: 'email_otp' }),
+    providers: Object.freeze({ APPLE: 'apple', GOOGLE: 'google' }),
     init,
     state: publicState,
     isConfigured,
     signInWithProvider,
     signInWithApple: () => signInWithProvider('apple'),
     signInWithGoogle: () => signInWithProvider('google'),
-    signInWithEmail,
     signInAsDeveloper,
     signOut,
     getAccessToken,

@@ -44,6 +44,7 @@ trap 'rm -rf "$VERIFY_DIR"' EXIT
 ditto -x -k "$IPA_PATH" "$VERIFY_DIR"
 APP_PATH="$VERIFY_DIR/Payload/App.app"
 ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/App.app"
+AUTH_CONFIG_PATH="$APP_PATH/public/src/auth-config.js"
 
 codesign --verify --deep --strict "$APP_PATH"
 ENTITLEMENTS="$(codesign -d --entitlements - "$APP_PATH" 2>&1)"
@@ -56,6 +57,22 @@ ACTUAL_BUNDLE_ID="$(plutil -extract CFBundleIdentifier raw "$APP_PATH/Info.plist
 CAMERA_USAGE="$(plutil -extract NSCameraUsageDescription raw "$APP_PATH/Info.plist")"
 PHOTO_USAGE="$(plutil -extract NSPhotoLibraryUsageDescription raw "$APP_PATH/Info.plist")"
 
+if [ ! -f "$AUTH_CONFIG_PATH" ] \
+  || grep -q 'MUNEA_IOS_DEVELOPMENT_PROFILE_START' "$AUTH_CONFIG_PATH" \
+  || ! grep -Eq 'enabled:[[:space:]]*false' "$AUTH_CONFIG_PATH" \
+  || ! grep -Eq 'autoSignIn:[[:space:]]*false' "$AUTH_CONFIG_PATH" \
+  || ! grep -Eq 'seedFixtures:[[:space:]]*false' "$AUTH_CONFIG_PATH"; then
+  echo "FAIL development account or fixtures leaked into the App Store IPA."
+  exit 1
+fi
+
+if ! cmp -s "$ROOT/web/index.html" "$APP_PATH/public/index.html" \
+  || ! cmp -s "$ROOT/web/src/app.js" "$APP_PATH/public/src/app.js" \
+  || ! cmp -s "$ROOT/web/src/styles.css" "$APP_PATH/public/src/styles.css"; then
+  echo "FAIL exported IPA does not contain the latest Web design assets."
+  exit 1
+fi
+
 if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] \
   || [ "$ACTUAL_BUILD" != "$EXPECTED_BUILD" ] \
   || [ "$ACTUAL_BUNDLE_ID" != "net.munea.app" ] \
@@ -67,6 +84,7 @@ if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] \
   exit 1
 fi
 
+echo "PASS IPA excludes development fixtures and contains the latest Web design assets."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS App Store package exported."
 echo "Output: $FINAL_EXPORT_PATH"
