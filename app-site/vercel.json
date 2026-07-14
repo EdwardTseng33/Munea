@@ -1,4 +1,18 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "munea.net" }],
+      "destination": "https://app.munea.net/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.munea.net" }],
+      "destination": "https://app.munea.net/:path*",
+      "statusCode": 301
+    }
+  ]
 }
