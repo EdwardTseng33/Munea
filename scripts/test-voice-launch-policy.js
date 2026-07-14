@@ -3,7 +3,11 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'web', 'src', 'app.js'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
 const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
+const chatEngine = fs.readFileSync(path.join(root, 'engine', 'chat_engine.py'), 'utf8');
+const apiServer = fs.readFileSync(path.join(root, 'engine', 'server.py'), 'utf8');
+const characters = JSON.parse(fs.readFileSync(path.join(root, 'engine', 'characters.json'), 'utf8'));
 
 function expect(condition, message) {
   if (!condition) throw new Error(message);
@@ -21,6 +25,14 @@ expect(app.includes("trackProductEvent('voice_playback_underrun'"),
   'playback underruns are not observable');
 expect(app.includes("trackProductEvent('voice_sameline_warmup'"),
   'Avatar audio warmup outcome is not observable');
+expect(html.includes('src/voice-turn-policy.js'),
+  'the tested local barge-in policy is not loaded before the App module');
+expect(app.includes("this.ws.send(JSON.stringify({ type: 'barge_in' }))"),
+  'local barge-in does not notify the voice bridge');
+expect(app.includes('policy.DEFAULTS.preRollFrames'),
+  'barge-in does not retain microphone pre-roll');
+expect(!app.includes('if (speechActive()) { this.micLevel = 0; return; }'),
+  'assistant playback still disables microphone uplink unconditionally');
 expect(voiceServer.includes('localization.requires_taiwanese_hokkien_fallback(obj["text"])'),
   'explicit Hokkien text requests are not blocked before reaching the conversational model');
 expect(voiceServer.includes('await _arm_language_block("audio_input")'),
@@ -31,5 +43,33 @@ expect(voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLB
   'the deterministic Mandarin fallback does not bypass conversational generation');
 expect(voiceServer.includes('asyncio.to_thread(_hokkien_fallback_pcm, char)'),
   'the deterministic Mandarin fallback is not prewarmed off the call-ready path');
+expect(voiceServer.includes('prefix_padding_ms=300'),
+  'server VAD does not require sustained speech before committing a turn');
+expect(voiceServer.includes('types.LanguageHints(language_codes=["cmn-Hant-TW"])'),
+  'S2S input/output transcription is not explicitly biased to Taiwan Mandarin');
+expect(voiceServer.includes('adaptation_phrases=phrases'),
+  'ASR does not receive call-specific product, person, and topic vocabulary');
+expect(voiceServer.includes('START_OF_ACTIVITY_INTERRUPTS'),
+  'server activity is not explicitly configured to interrupt playback');
+expect(voiceServer.includes('TURN_END_SILENCE_MS = 180'),
+  'voice turns do not carry a final PCM tail guard');
+expect(voiceServer.includes('st["client_barge_in"] = True'),
+  'voice bridge does not suppress stale model audio after local barge-in');
+expect(voiceServer.includes('{"type": "barge_in_ack"}'),
+  'local barge-in can leave the App dropping a newly generated response');
+expect(voiceServer.includes('barge_cancelled and source in ("model_output", "mandarin_pronunciation")'),
+  'a cancelled model turn can replay language-correction audio after barge-in');
+expect(voiceServer.includes('localization.contains_unstable_mandarin_speech'),
+  'user-verified Mandarin mispronunciations do not trigger safe TTS rewriting');
+expect(voiceServer.includes('localization.voice_opening_instruction(fam, topics, location)'),
+  'proactive greetings do not use the rotating opening policy');
+expect(voiceServer.includes('"node.asr_input"'),
+  'ASR/VAD tuning cannot be audited without storing raw transcripts');
+expect(chatEngine.includes('localization.taiwan_mandarin_launch_instruction("zh-TW")'),
+  'the shared text/opening brain can bypass the Mandarin-only persona guard');
+expect(apiServer.includes('localization.assistant_output_text'),
+  'text chat can display residual Hokkien model output');
+expect(Object.values(characters).every(character => character.persona.includes('台灣國語')),
+  'every selectable persona must explicitly use Taiwan Mandarin');
 
-console.log('Voice launch buffering and Hokkien gate policy PASS');
+console.log('Voice launch policy PASS: buffering, language gate, tail guard, varied opening, and barge-in');

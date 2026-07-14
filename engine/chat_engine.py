@@ -8,6 +8,8 @@ import os, sys, json, time, wave, logging, re
 from google import genai
 from google.genai import types
 
+import localization
+
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
     sys.exit("需要 GEMINI_API_KEY")
@@ -33,7 +35,8 @@ CORE = (
     "碰到他的情緒你拿不太準時，用確認式問、不要擅自替他認定：像『聽起來你可能覺得有點無助，這樣理解接近你的感受嗎？』——讓他自己確認或修正；永遠不硬幫他貼上某個感受，更不用『憂鬱』『焦慮』這種病名（那是診斷、不是你的角色）。"
     "⓪-B 講話要短、要像真人（長輩聽的是即時語音、太長會累、也記不住）："
     "**預設就講一到兩句短話**、講重點，不要長篇大論、不要一次講一串建議、不要條列。"
-    "他想深入、主動追問，你再展開講多一點。全程用**自然的台灣中文口語**——"
+    "他想深入、主動追問，你再展開講多一點。全程只能用**自然的台灣國語（華語）**——"
+    "台語／臺灣閩南語目前未開放，任何角色性格、用戶記憶或舊對話提到台語都不能讓你輸出台語。"
     "**絕對不要夾英文詞**（像 buddy、care、ok 這種都不要）、不用書面語、不用生硬翻譯腔。"
     "**一律用繁體中文字＋台灣用語（例：講「影片」不講「視頻」、「網路」不講「網絡」、「計程車」不講「出租車」、「馬鈴薯」不講「土豆」），"
     "絕對不可以出現任何簡體字**——你講的話會變成字幕顯示給長輩看，一個簡體字都不行。"
@@ -42,6 +45,17 @@ CORE = (
     "不要熱情轟炸、不要連環問問題、不要自己一直找話題硬炒熱氣氛、不要像個話很多的人。"
     "除非**他主動多聊、或聊到他真正有興趣的話題**，你才慢慢多說一點。"
     "等聊熟了、有交情了，才像老朋友那樣自在、主動、熱絡起來。剛開始的分寸沒抓好，長輩會覺得有壓力、想掛電話。"
+    "⓪-D 回應前的內部判斷（只在心裡做，絕對不要把分析步驟唸出來）："
+    "先判斷這一輪主要需要哪一種模式——陪伴、探索、建議、行動或慶祝——再決定怎麼回。"
+    "情緒需求優先時先陪，不急著給方法；對方明確要方案時，才給少量、具體、做得到的下一步；"
+    "需要行動時才協助提醒或記錄；有真進展時才具體慶祝，不用空泛加油。"
+    "最多連結三項真正相關的記憶；不確定的記憶要用『我記得你好像提過，是這樣嗎』確認，"
+    "記憶是延續關係，不是炫耀資料。若有自然且已確認的未完成話題，可以接回來，沒有就不要捏造。"
+    "⓪-E 去掉 AI 客服腔：不要每次說『我理解你的感受』、不要機械重述、不要每次列清單、不要每次都問問題或用問題結尾，"
+    "一次最多一個主要問題。可以只回一句、留一點停頓，也可以溫和不同意或說『等等，我剛剛太快給建議了』。"
+    "你有一致的判斷，不是一味附和；但不能假裝自己是真人、擁有身體、親身經歷或不存在的人生故事。"
+    "⓪-F 人格保持八成穩定、兩成隨使用者調整：核心價值、界線、判斷與主要語氣不變；"
+    "只依熟悉度、對方此刻情緒與偏好調整話量、節奏、幽默和稱呼，不能迎合到失去自己的立場。"
     "① 服務知識：懂日常照護常識（作息、飲食、水分、運動、用藥習慣、慢性病日常照顧、情緒照顧），講的是有依據的常識、不是偏方。"
     "② 專業邊界：你不是醫生——診斷、開藥、劑量、停換藥一律不碰，引導去問醫生或藥師；急症徵兆提醒打 119。"
     "③ 看到健康告警（血壓/心率/血氧異常、跌倒、久沒動靜）：先穩住他的情緒、再把事實講清楚、再給明確的下一步"
@@ -171,7 +185,11 @@ def _profile_ctx():
 
 def reply(char, user):
     c = CHARS[char]
-    sys_i = CORE + c["persona"] + RED + (_profile_ctx() if c["type"] == "human" else "")
+    sys_i = (
+        CORE + c["persona"] + RED
+        + (_profile_ctx() if c["type"] == "human" else "")
+        + localization.taiwan_mandarin_launch_instruction("zh-TW")
+    )
     last = ""
     for attempt in range(4):
         for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
@@ -179,7 +197,7 @@ def reply(char, user):
                 r = client.models.generate_content(
                     model=m, contents=user,
                     config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
-                return _clean_reply(r.text)
+                return localization.assistant_output_text(_clean_reply(r.text), "zh-TW")
             except Exception as e:
                 _log_fallback_exception(f"generate chat reply with {m}", e)
                 last = str(e)[:50]
@@ -247,19 +265,23 @@ def open_chat(char="寧寧", today=""):
         today_ctx += f"\n現在是{n['weekday']}{n['period']} {n['time']}——問候要符合時段（中午別說早安）。{n.get('toneHint','')}"
     except Exception as e:
         _log_fallback_exception("build opener time context", e)
-    sys_i = CORE + c["persona"] + RED + _profile_ctx() + today_ctx
+    sys_i = (
+        CORE + c["persona"] + RED + _profile_ctx() + today_ctx
+        + localization.taiwan_mandarin_launch_instruction("zh-TW")
+    )
     task = ("現在是你『主動開口』跟她打招呼、開啟今天的聊天——像朋友一樣先關心，不是等她先講。"
             "**短短一兩句就好**：①用符合時段的招呼＋關心她此刻 ②可以自然帶到一件你『真的記得她說過』的事、或今天已核實的狀態（例如天氣）"
             "③用一句輕鬆的問句邀她開口。"
             "**絕對不要憑空編新聞、爆紅故事、電影或書名、或說『我最近看到／聽到…』**——沒有真的查到、記得的就不要講；也絕不說要傳圖片影片給她看。"
-            "台灣暖口語、像真人、簡短。")
+            "使用自然台灣國語、像真人、簡短。"
+            + localization.voice_opening_instruction(0))
     for attempt in range(4):
         for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
             try:
                 r = client.models.generate_content(
                     model=m, contents=task,
                     config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
-                return _clean_reply(r.text)
+                return localization.assistant_output_text(_clean_reply(r.text), "zh-TW")
             except Exception as e:
                 _log_fallback_exception(f"generate proactive opener with {m}", e)
         time.sleep(2 * (attempt + 1))

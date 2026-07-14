@@ -103,6 +103,8 @@ expect(xcodeProject.includes('PrivacyInfo.xcprivacy in Resources'), 'PrivacyInfo
 expect(privacyManifest.includes('<key>NSPrivacyTracking</key>') && privacyManifest.includes('<false/>'), 'privacy manifest must declare no tracking');
 expect(privacyManifest.includes('NSPrivacyCollectedDataTypeHealth') && privacyManifest.includes('NSPrivacyCollectedDataTypeAudioData'), 'privacy manifest is missing health or audio collection declarations');
 expect(iosExport.includes('PrivacyInfo.xcprivacy'), 'IPA export does not verify the privacy manifest');
+expect(iosExport.includes('PRIVACY_DATA_TYPE_COUNT=') && iosExport.includes('NSPrivacyCollectedDataTypes raw'),
+  'IPA export does not validate the structured privacy data-type count');
 expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
 expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the development Call Control bypass');
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
