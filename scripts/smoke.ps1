@@ -2092,13 +2092,20 @@ normalized = server.normalize_billing_store({
 assert normalized["activePlan"] == "premium"
 assert normalized["subscription"]["status"] == "active"
 assert normalized["entitlements"]["realtimeAvatar"] is True
+original_load = server.load_billing_store
+fallback_store = server.normalize_billing_store({
+    "activePlan": "free",
+    "subscription": {"status": "inactive"},
+    "entitlements": {"realtimeAvatar": False, "premiumAvatarMinutesMonthly": 0},
+})
+server.load_billing_store = lambda: fallback_store
 fallback = server.avatar_session_response({"mode": "liveavatar", "estimatedDurationMs": 60000})
+server.load_billing_store = original_load
 assert fallback["ok"] is True
 assert fallback["session"]["requestedMode"] == "liveavatar"
 assert fallback["session"]["selectedMode"] == "2d-viseme"
 assert fallback["session"]["fallbackReason"] == "premium_avatar_not_entitled"
 
-original_load = server.load_billing_store
 original_save = server.save_billing_store
 premium_store = server.normalize_billing_store({
     "activePlan": "premium",
