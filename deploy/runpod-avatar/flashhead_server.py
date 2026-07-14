@@ -295,6 +295,9 @@ class FlashHead:
         _worker_id = os.environ.get("MUNEA_WORKER_ID", "").strip()
         _call_control = os.environ.get("MUNEA_CALL_CONTROL_URL", "").strip().rstrip("/")
         _control_token = os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", "").strip()
+        _worker_heartbeat_seconds = max(
+            10, int(os.environ.get("MUNEA_WORKER_HEARTBEAT_SECONDS", "30"))
+        )
         _allow_legacy = os.environ.get("MUNEA_ALLOW_LEGACY_APP_KEY", "1") == "1"
         _session_control = {}
 
@@ -346,6 +349,27 @@ class FlashHead:
                 )
             except Exception as exc:
                 print("[call-control] avatar release callback failed: " + str(exc), flush=True)
+
+        async def _worker_heartbeat_loop():
+            if not (_worker_id and _call_control and _control_token):
+                print("[call-control] worker heartbeat disabled (configuration incomplete)",
+                      flush=True)
+                return
+            endpoint = (
+                _call_control + "/v1/internal/workers/" + _worker_id + "/health"
+            )
+            while True:
+                try:
+                    active = int(outer.pool.snapshot().get("active", 0))
+                    await asyncio.to_thread(
+                        _post_json,
+                        endpoint,
+                        {"healthy": True, "active": active},
+                        _control_token,
+                    )
+                except Exception as exc:
+                    print("[call-control] worker heartbeat failed: " + str(exc), flush=True)
+                await asyncio.sleep(_worker_heartbeat_seconds)
 
         async def _release_session(session_id, pc=None, reason="avatar_disconnected"):
             async with admission_lock:
@@ -540,7 +564,7 @@ class FlashHead:
                 raise
 
         @api.on_event("startup")
-        async def _start_watchdog():
+        async def _start_background_tasks():
             async def _loop():
                 while True:
                     await asyncio.sleep(10)
@@ -561,6 +585,7 @@ class FlashHead:
                             if slot.active_pc is p:
                                 await _release_session(slot.active_session, p, reason="avatar_watchdog_reaped")
             asyncio.create_task(_loop())
+            asyncio.create_task(_worker_heartbeat_loop())
 
         @api.post("/switch")
         async def switch_char(key: str = "", char: str = "", slot: int = 0):
