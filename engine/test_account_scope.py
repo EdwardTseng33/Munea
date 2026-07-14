@@ -46,10 +46,10 @@ class FakeSupabaseAdapter(SupabaseAdapter):
                     return {"id": family_group_id}
             return None
         if table == "family_memberships":
-            account_id = query["account_id"].removeprefix("eq.")
             person_id = query["person_id"].removeprefix("eq.")
+            account_id = query.get("account_id", "").removeprefix("eq.")
             for identity in self.identities.values():
-                if identity[:2] == (account_id, person_id):
+                if identity[1] == person_id and (not account_id or identity[0] == account_id):
                     return {"family_group_id": identity[2]}
         return None
 
@@ -102,6 +102,17 @@ class AccountScopeTests(unittest.TestCase):
         self.assertEqual(scoped_b.account_id, ACCOUNT_B)
         self.assertEqual(scoped_b.person_id, PERSON_B)
         self.assertEqual(scoped_b.family_group_id, FAMILY_B)
+
+    def test_modern_secret_key_is_not_sent_as_bearer_jwt(self):
+        env = dict(self.env)
+        env["SUPABASE_SERVICE_ROLE_KEY"] = "sb_secret_modern"
+        headers = SupabaseAdapter(env=env)._service_headers()
+        self.assertEqual(headers["apikey"], "sb_secret_modern")
+        self.assertNotIn("authorization", headers)
+
+    def test_legacy_service_role_key_keeps_bearer_header(self):
+        headers = SupabaseAdapter(env=self.env)._service_headers()
+        self.assertEqual(headers["authorization"], "Bearer test-service-key")
 
     def test_unknown_user_fails_closed(self):
         adapter = FakeSupabaseAdapter(env=self.env)

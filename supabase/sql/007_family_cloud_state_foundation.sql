@@ -32,7 +32,7 @@ create table if not exists public.family_invitations (
   short_code text not null check (short_code ~ '^[0-9]{6}$'),
   delivery_hint text,
   elder_assisted boolean not null default false,
-  status text not null default 'pending' check (status in ('pending', 'accepted', 'revoked', 'expired')),
+  status text not null default 'pending' check (status in ('pending', 'applied', 'accepted', 'rejected', 'revoked', 'expired')),
   expires_at timestamptz not null default (now() + interval '72 hours'),
   accepted_at timestamptz,
   revoked_at timestamptz,
@@ -79,7 +79,7 @@ create table if not exists public.family_state_entries (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references public.accounts(id) on delete cascade,
   family_group_id uuid not null references public.family_groups(id) on delete cascade,
-  state_key text not null check (state_key in ('activities', 'familyFeed', 'meds', 'visit', 'routine', 'wallet')),
+  state_key text not null check (state_key in ('circle', 'activities', 'familyFeed', 'meds', 'visit', 'routine', 'wallet')),
   value jsonb not null default '{}'::jsonb,
   updated_by_person_id uuid references public.persons(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -308,4 +308,3 @@ create index if not exists family_activity_participants_activity_idx
   on public.family_activity_participants(family_activity_id, status);
 
 commit;
-

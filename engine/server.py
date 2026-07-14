@@ -675,7 +675,7 @@ def load_wellbeing_signals(person_id=None, limit=200):
 
 FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "visits", "routine", "wallet", "circle", "vitals"}
 
-FAMILY_STATE_SUPABASE_KEYS = {"activities", "familyFeed", "meds", "visit", "routine", "wallet", "vitals"}  # 雲端桌子收的鑰匙（vitals 需 008 遷移；沒上桌前自動退引擎本子）
+FAMILY_STATE_SUPABASE_KEYS = {"circle", "activities", "familyFeed", "meds", "visit", "routine", "wallet", "vitals"}  # 雲端桌子收的鑰匙（vitals 需 008 遷移；沒上桌前自動退引擎本子）
 
 def _looks_like_uuid(v):
     try:
@@ -702,6 +702,19 @@ def family_state_response(data):
     group = str(data.get("familyGroupId") or data.get("family_group_id") or "shared")
     group_uuid = group if _looks_like_uuid(group) else None
     use_supabase = bool(group_uuid) or group == "shared"
+    # A former subscriber must never retain read access merely because an
+    # asynchronous membership cleanup has not run yet.  Their own free circle
+    # remains usable; only a cross-account circle is denied.
+    if group_uuid:
+        try:
+            backend = data_backend()
+            if backend.enabled():
+                family_account_id = backend.family_group_account_id(group_uuid)
+                billing = load_billing_store()
+                if family_account_id and family_account_id != backend.account_id and billing.get("activePlan") == "free":
+                    return {"ok": False, "error": "family_access_expired"}
+        except Exception as e:
+            log_fallback_exception("check expired cross-family access", e)
     if action == "save":
         key = data.get("key")
         if key not in FAMILY_STATE_KEYS:
@@ -882,6 +895,102 @@ def update_family_invitation(invitation_id, patch):
     return (public_family_invitation(updated), "json") if updated else (None, "not_found")
 
 
+FAMILY_CIRCLE_LIMITS = {"plus": 4, "pro": 12}
+
+
+def family_actor_backend(actor):
+    """Return the authenticated actor's scoped backend, or a safe error code.
+
+    Family-circle membership is sensitive health-adjacent data.  Unlike the
+    prototype's UI-only guard, all membership mutations require a verified
+    account which has already been bootstrapped into Supabase.
+    """
+    auth_user_id = str((actor or {}).get("authUserId") or "")
+    backend = data_backend()
+    if not auth_user_id:
+        return None, "auth_required"
+    if not backend.enabled() or not backend.request_scoped:
+        return None, "family_cloud_identity_required"
+    if backend.auth_user_id != auth_user_id:
+        return None, "family_identity_mismatch"
+    return backend, None
+
+
+def family_plan_entitlement(backend):
+    """Get a server-verified plan and member limit; never trust client plan data."""
+    try:
+        billing = normalize_billing_store(backend.load_billing_store() or {})
+    except Exception as e:
+        log_fallback_exception("load family entitlement", e)
+        return None, "family_entitlement_unavailable"
+    plan = str(billing.get("activePlan") or "free").lower()
+    subscription = billing.get("subscription") or {}
+    if plan not in FAMILY_CIRCLE_LIMITS or subscription.get("status") != "active" or billing.get("serverVerificationRequired", True):
+        return None, "family_plan_required"
+    return {"plan": plan, "maxMembers": FAMILY_CIRCLE_LIMITS[plan]}, None
+
+
+def find_pending_family_invitation_by_code(short_code):
+    """Locate an exact one-time code without exposing another family's list."""
+    try:
+        remote = supabase_adapter.make_adapter().find_pending_family_invitation_by_short_code(short_code)
+        if remote is not None:
+            return public_family_invitation(remote), "supabase"
+    except Exception as e:
+        log_fallback_exception("find family invitation by code", e)
+    invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
+    matches = [normalize_family_invitation(inv) for inv in invitations if isinstance(inv, dict)
+               and str(inv.get("shortCode") or "") == short_code
+               and str(inv.get("status") or "pending") == "pending"]
+    return (public_family_invitation(matches[0]), "json") if len(matches) == 1 else (None, "not_found")
+
+
+def update_family_invitation_after_code_exchange(invitation_id, patch):
+    """Server-side update paired with the exact-code lookup above."""
+    try:
+        remote = supabase_adapter.make_adapter().update_family_invitation_by_id_unscoped(invitation_id, patch)
+        if remote is not None:
+            return public_family_invitation(remote), "supabase"
+    except Exception as e:
+        log_fallback_exception("complete family invitation exchange", e)
+    # JSON is only the development fallback. Production reaches the scoped
+    # Supabase update above after verified authentication.
+    invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
+    next_invitations, updated = [], None
+    for invitation in invitations if isinstance(invitations, list) else []:
+        current = normalize_family_invitation(invitation)
+        if current.get("id") == invitation_id:
+            current = normalize_family_invitation({**current, **(patch or {}), "updatedAt": utc_now()})
+            updated = current
+        next_invitations.append(current)
+    if updated is not None:
+        write_json_file(FAMILY_INVITATIONS_PATH, next_invitations[-1000:])
+        return public_family_invitation(updated), "json"
+    return None, "not_found"
+
+
+def family_circle_member_count(family_group_id):
+    try:
+        remote_count = supabase_adapter.make_adapter().count_family_members_unscoped(family_group_id)
+        if remote_count is not None:
+            return remote_count
+    except Exception as e:
+        log_fallback_exception("load family circle for capacity check", e)
+    state = _family_state_json_all().get(family_group_id) or {}
+    circle = (state.get("circle") or {}).get("value")
+    return len(circle) if isinstance(circle, list) else 0
+
+
+def add_family_member_after_invitation(family_group_id, person_id):
+    try:
+        member = supabase_adapter.make_adapter().add_family_member_after_invitation_unscoped(family_group_id, person_id)
+        if member is not None:
+            return member, None
+    except Exception as e:
+        log_fallback_exception("add accepted family member", e)
+    return None, "family_membership_provision_failed"
+
+
 def _mask_email(email):
     email = str(email or "").strip()
     if "@" not in email:
@@ -890,12 +999,32 @@ def _mask_email(email):
     return ((name[0] + "***") if name else "***") + "@" + dom
 
 
-def family_invitations_response(data, client_ip=None):
+def family_invitations_response(data, client_ip=None, actor=None):
     data = data or {}
-    action = data.get("action") or "list"
+    action = str(data.get("action") or "list").lower()
+    backend, actor_error = family_actor_backend(actor)
+    if actor_error:
+        return {"ok": False, "error": actor_error}
     if action == "create":
-        invitation, backend = create_family_invitation(data.get("invitation") or data)
-        return {"ok": True, "invitation": invitation, "backend": backend}
+        if not backend.is_account_owner():
+            return {"ok": False, "error": "family_owner_required"}
+        entitlement, entitlement_error = family_plan_entitlement(backend)
+        if entitlement_error:
+            return {"ok": False, "error": entitlement_error}
+        # Derive all authority-bearing fields server-side.  In particular, a
+        # browser cannot forge a larger limit, another family id, or another
+        # person's identity by editing the request body.
+        invitation, storage_backend = create_family_invitation({
+            "familyGroupId": backend.family_group_id,
+            "inviterPersonId": backend.person_id,
+            "metadata": {
+                "plan": entitlement["plan"],
+                "maxMembers": entitlement["maxMembers"],
+                "ownerAuthUserId": backend.auth_user_id,
+                "ownerPersonId": backend.person_id,
+            },
+        })
+        return {"ok": True, "invitation": invitation, "backend": storage_backend}
     if action in ("accept", "apply"):
         # 審核制（2026-07-11 Edward）：輸入邀請碼 → 變「申請中」、不直接進圈；要 owner 按通過才加入。
         # 防爆破（P0-3）：同來源猜錯太多次就暫時擋。
@@ -906,17 +1035,7 @@ def family_invitations_response(data, client_ip=None):
         if len(short_code) != 6:
             record_invite_failure(client_ip)
             return {"ok": False, "error": "short_code_required"}
-        candidates = list(load_family_invitations(limit=500))
-        try:
-            local_raw = read_json_file(FAMILY_INVITATIONS_PATH, [])
-            if isinstance(local_raw, list):
-                candidates.extend(public_family_invitation(inv) for inv in local_raw)   # 雲端桌子＋引擎本子都翻
-        except Exception as e:
-            log_fallback_exception("load local family invitations", e)
-        match = None
-        for inv in candidates:
-            if inv.get("shortCode") == short_code and inv.get("status") == "pending":
-                match = inv
+        match, _match_backend = find_pending_family_invitation_by_code(short_code)
         if not match:
             record_invite_failure(client_ip)
             return {"ok": False, "error": "invitation_not_found"}
@@ -926,49 +1045,57 @@ def family_invitations_response(data, client_ip=None):
                 return {"ok": False, "error": "invitation_expired"}
         except Exception as e:
             log_fallback_exception("parse family invitation expiry", e)
+        entitlement, entitlement_error = family_plan_entitlement(backend)
+        if entitlement_error:
+            return {"ok": False, "error": entitlement_error}
         # 跟舊版相容：現行 App 送 accept ＝ 舊行為（直接進圈），新審核 UI 送 apply ＝ 申請制。
         # 兩者可並存，等 App 審核 UI 上線後，accept 再切成也走申請制。
         if action == "accept":
             try:
                 max_members = int(((match.get("metadata") or {}).get("maxMembers")) or 0)
-                if max_members:
-                    circle_state = family_state_response({"action": "load", "familyGroupId": match.get("familyGroupId")}).get("state") or {}
-                    circle = circle_state.get("circle")
-                    if isinstance(circle, list) and len(circle) >= max_members:
-                        return {"ok": False, "error": "circle_full"}
+                if max_members and family_circle_member_count(match.get("familyGroupId")) >= max_members:
+                    return {"ok": False, "error": "circle_full"}
             except Exception as e:
                 log_fallback_exception("check family invitation member limit", e)
-            invitation, backend = update_family_invitation(match.get("id"), {
+            member, member_error = add_family_member_after_invitation(match.get("familyGroupId"), backend.person_id)
+            if member_error:
+                return {"ok": False, "error": member_error}
+            invitation, storage_backend = update_family_invitation_after_code_exchange(match.get("id"), {
                 "status": "accepted",
                 "acceptedAt": utc_now(),
-                "inviteePersonId": data.get("inviteePersonId") or data.get("invitee_person_id"),
-                "metadata": {**(match.get("metadata") or {}), "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24]},
+                "inviteePersonId": backend.person_id,
+                "metadata": {**(match.get("metadata") or {}),
+                             "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24],
+                             "inviteeAuthUserId": backend.auth_user_id,
+                             "inviteePlan": entitlement["plan"]},
             })
             if invitation is None:
-                return {"ok": False, "error": backend}
-            return {"ok": True, "invitation": invitation, "backend": backend}
+                return {"ok": False, "error": storage_backend}
+            return {"ok": True, "invitation": invitation, "backend": storage_backend}
         # action == "apply"：新審核制——存申請人資訊、標「申請中」等 owner 審。不回 familyGroupId＝進不了圈。
         applicant = {
             "inviteeName": str(data.get("inviteeName") or data.get("invitee_name") or "")[:24],
-            "applicantPersonId": data.get("inviteePersonId") or data.get("invitee_person_id"),
-            "applicantAuthUserId": data.get("authUserId") or data.get("auth_user_id"),
+            "applicantPersonId": backend.person_id,
+            "applicantAuthUserId": backend.auth_user_id,
             "applicantLoginProvider": data.get("loginProvider") or data.get("login_provider"),
             "applicantEmailMasked": _mask_email(data.get("email") or data.get("applicantEmail")),
             "appliedAt": utc_now(),
         }
-        invitation, backend = update_family_invitation(match.get("id"), {
+        invitation, storage_backend = update_family_invitation_after_code_exchange(match.get("id"), {
             "status": "applied",
-            "inviteePersonId": applicant["applicantPersonId"],
+            "inviteePersonId": backend.person_id,
             "metadata": {**(match.get("metadata") or {}), **applicant},
         })
         if invitation is None:
-            return {"ok": False, "error": backend}
+            return {"ok": False, "error": storage_backend}
         return {"ok": True, "status": "applied", "pendingApproval": True,
                 "invitationId": invitation.get("id"),
                 "message": "已送出申請，等對方確認後就會加入。"}
     if action in ("list_pending", "list-pending"):
         # owner 看有誰在申請：回這個圈 status=applied 的邀請＋申請人資訊（最小揭露）
         family_group_id = data.get("familyGroupId") or data.get("family_group_id")
+        if not backend.is_account_owner() or family_group_id != backend.family_group_id:
+            return {"ok": False, "error": "family_owner_required"}
         pending = load_family_invitations(family_group_id=family_group_id, status="applied", limit=100)
         applicants = [{
             "invitationId": inv.get("id"),
@@ -989,12 +1116,12 @@ def family_invitations_response(data, client_ip=None):
                 target = inv
         if not target or target.get("status") != "applied":
             return {"ok": False, "error": "application_not_found"}
+        if not backend.is_account_owner() or (target.get("metadata") or {}).get("ownerAuthUserId") != backend.auth_user_id:
+            return {"ok": False, "error": "family_owner_required"}
         try:
             max_members = int(((target.get("metadata") or {}).get("maxMembers")) or 0)
             if max_members:
-                circle_state = family_state_response({"action": "load", "familyGroupId": target.get("familyGroupId")}).get("state") or {}
-                circle = circle_state.get("circle")
-                if isinstance(circle, list) and len(circle) >= max_members:
+                if max_members and family_circle_member_count(target.get("familyGroupId")) >= max_members:
                     return {"ok": False, "error": "circle_full"}
         except Exception as e:
             log_fallback_exception("check circle limit on approve", e)
@@ -1016,6 +1143,9 @@ def family_invitations_response(data, client_ip=None):
         invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
         if not invitation_id:
             return {"ok": False, "error": "invitation_id_required"}
+        target = next((inv for inv in load_family_invitations(limit=500) if inv.get("id") == invitation_id), None)
+        if not target or not backend.is_account_owner() or (target.get("metadata") or {}).get("ownerAuthUserId") != backend.auth_user_id:
+            return {"ok": False, "error": "family_owner_required"}
         invitation, backend = update_family_invitation(invitation_id, {"status": "rejected", "revokedAt": utc_now()})
         if invitation is None:
             return {"ok": False, "error": backend}
@@ -1031,23 +1161,14 @@ def family_invitations_response(data, client_ip=None):
                 found = inv
         if not found:
             return {"ok": True, "status": "not_found"}
+        if (found.get("metadata") or {}).get("applicantAuthUserId") != backend.auth_user_id:
+            return {"ok": False, "error": "application_forbidden"}
         st = found.get("status")
         out = {"ok": True, "status": st}
         if st == "accepted":
             out["familyGroupId"] = found.get("familyGroupId")
         return out
-    if action == "update":
-        invitation_id = data.get("id") or data.get("invitationId") or data.get("invitation_id")
-        if not invitation_id:
-            return {"ok": False, "error": "invitation_id_required"}
-        invitation, backend = update_family_invitation(invitation_id, data.get("patch") or data)
-        if invitation is None:
-            return {"ok": False, "error": backend}
-        return {"ok": True, "invitation": invitation, "backend": backend}
-    family_group_id = data.get("familyGroupId") or data.get("family_group_id")
-    status = data.get("status")
-    limit = int(data.get("limit") or 100)
-    return {"ok": True, "invitations": load_family_invitations(family_group_id=family_group_id, status=status, limit=limit)}
+    return {"ok": False, "error": "family_invitation_action_not_allowed"}
 
 CONSENT_RECORD_STATUSES = {"granted", "revoked", "expired"}
 
@@ -3802,7 +3923,9 @@ def default_billing_store():
             "signupTrialCredits": 5,
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
-            "familyMembersMax": 2,
+            "familyMembersMax": 0,
+            "familyCircleInvite": False,
+            "familyCircleJoin": False,
         },
         "usageLedger": {
             "period": time.strftime("%Y-%m"),
@@ -4042,6 +4165,16 @@ def ensure_free_signup_trial(account_id):
     account_id = str(account_id or "").strip()
     if not account_id:
         return {"ok": False, "error": {"code": "account_id_required"}}
+    backend = data_backend()
+    if backend.enabled():
+        result = backend.grant_free_signup_trial()
+        return {
+            "ok": bool(result.get("ok")),
+            "credits": int(result.get("credits") or 5),
+            "minutesApprox": 5,
+            "idempotentReplay": bool(result.get("idempotentReplay")),
+            "walletSummary": {"total": float(result.get("balance") or 0)},
+        }
     result = credits_grant_response({
         "amount": 5,
         "walletType": "purchased",
@@ -4127,17 +4260,68 @@ def normalize_billing_store(data=None):
     }
 
 
+def subscription_expiry_reason(store, now=None):
+    """Return a terminal entitlement reason using the server clock."""
+    store = normalize_billing_store(store)
+    subscription = store.get("subscription") or {}
+    status = str(subscription.get("status") or "inactive").lower()
+    plan = str(store.get("activePlan") or "free").lower()
+    if plan in ("", "free"):
+        return None
+    if status in {"expired", "revoked", "inactive"}:
+        return status
+    expires_at = subscription.get("expiresAt")
+    if not expires_at:
+        return None
+    try:
+        expires = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+        if expires <= (now or datetime.now(timezone.utc)):
+            return "expired"
+    except (TypeError, ValueError):
+        return None
+    return None
+
+
+def expire_billing_store(store, reason):
+    store = normalize_billing_store(store)
+    free = default_billing_store()
+    return normalize_billing_store({
+        **store,
+        "activePlan": "free",
+        "subscription": {**(store.get("subscription") or {}), "status": "revoked" if reason == "revoked" else "expired", "willRenew": False},
+        "entitlements": {**free["entitlements"], "familyDashboard": True},
+        "serverVerificationRequired": False,
+        "expiryReason": reason,
+    })
+
+
+def reconcile_billing_expiry(store):
+    """Fail closed at expiry and revoke paid-only cross-family access."""
+    reason = subscription_expiry_reason(store)
+    if not reason:
+        return store
+    saved = save_billing_store(expire_billing_store(store, reason), reconcile=False)
+    removed = 0
+    try:
+        removed = supabase_adapter.make_adapter().remove_external_family_memberships_for_account_unscoped(saved.get("accountId"))
+    except Exception as e:
+        log_fallback_exception("remove expired external family memberships", e)
+    append_audit_event({"eventType": "subscription_expired_access_revoked", "targetTable": "subscription_ledger",
+                        "details": {"reason": reason, "externalFamilyMembershipsRemoved": removed}})
+    return saved
+
+
 def load_billing_store():
     try:
         remote_store = data_backend().load_billing_store()
         if remote_store:
-            return normalize_billing_store(remote_store)
+            return reconcile_billing_expiry(normalize_billing_store(remote_store))
     except Exception as e:
         log_fallback_exception("load billing store from Supabase", e)
-    return normalize_billing_store(read_json_file(BILLING_STORE_PATH, {}))
+    return reconcile_billing_expiry(normalize_billing_store(read_json_file(BILLING_STORE_PATH, {})))
 
 
-def save_billing_store(data):
+def save_billing_store(data, reconcile=True):
     store = normalize_billing_store({**data, "updatedAt": utc_now()})
     try:
         remote_store = data_backend().save_billing_store(store)
@@ -4146,7 +4330,7 @@ def save_billing_store(data):
     except Exception as e:
         log_fallback_exception("save billing store to Supabase", e)
     write_json_file(BILLING_STORE_PATH, store)
-    return store
+    return reconcile_billing_expiry(store) if reconcile else store
 
 
 def entitlements_response(data):
@@ -4237,6 +4421,8 @@ def apple_transaction_response(data, auth_gate=None):
             "routineReminders": True,
             "realtimeAvatar": True,
             "familyMembersMax": 4 if verified.plan == "plus" else 12,
+            "familyCircleInvite": True,
+            "familyCircleJoin": True,
         }
         billing = save_billing_store(billing)
         grant = credits_grant_response({
@@ -4920,7 +5106,17 @@ class H(BaseHTTPRequestHandler):
                 self._json_error(403, "app_key_required", "App key required")
                 return
             data = self._read_json_body()
+            request_path = self.path.split("?", 1)[0]
             auth_gate = require_verified_auth(self.headers, self.path, data)
+            # Family-circle invites always require a verified identity, even in
+            # local/demo mode where most endpoints may allow a guest preview.
+            # A join code is never an authentication credential.
+            if request_path == "/family/invitations":
+                family_auth = verify_auth_context(self.headers)
+                if not family_auth.get("ok"):
+                    self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
+                    return
+                auth_gate = {"ok": True, "required": True, "auth": public_auth_context(family_auth)}
             if not auth_gate.get("ok"):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
@@ -4978,7 +5174,7 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/family/invitations":
                 _xff = self.headers.get("X-Forwarded-For") or ""
                 _cip = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
-                self._json(family_invitations_response(data, client_ip=_cip))
+                self._json(family_invitations_response(data, client_ip=_cip, actor=auth_gate.get("auth")))
             elif self.path == "/family-members":
                 self._json(family_members_response(data))
             elif self.path == "/consent-records":
