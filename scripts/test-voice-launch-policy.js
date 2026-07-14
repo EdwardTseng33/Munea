@@ -67,6 +67,8 @@ expect(voiceServer.includes('await asyncio.wait_for(future, timeout=8)') && voic
   'voice tools can still report success without waiting for the App write receipt');
 expect(voiceServer.includes('name="send_family_relay"') && voiceServer.includes('st["relay_greet_id"]'),
   'verified family relays are not available to the voice model opening');
+expect(voiceServer.includes('verify_family_relay_proof(relay)') && voiceServer.includes('hmac.compare_digest'),
+  'the voice bridge can trust unsigned or client-tampered family relay content');
 expect(voiceServer.includes('{"type": "relay_spoken"'),
   'the App cannot acknowledge a relay only after the spoken opening finishes');
 expect(voiceServer.includes('{"type": "relay_interrupted"') && app.includes("this._finishRelay('release')"),

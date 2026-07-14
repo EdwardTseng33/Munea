@@ -8,9 +8,11 @@ from unittest.mock import patch
 
 os.environ.setdefault("GEMINI_API_KEY", "family-relay-test-key")
 os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
+os.environ["MUNEA_FAMILY_RELAY_SIGNING_SECRET"] = "family-relay-unit-secret"
 sys.path.insert(0, os.path.dirname(__file__))
 
 import server  # noqa: E402
+import live_voice_server  # noqa: E402
 from supabase_adapter import SupabaseAdapter  # noqa: E402
 
 
@@ -65,6 +67,8 @@ class FamilyRelayTests(unittest.TestCase):
         claimed = self.response(RECIPIENT, {"action": "claim"})["relay"]
         self.assertEqual(claimed["content"], "晚上早點睡，不要又熬夜了")
         self.assertEqual(claimed["status"], "claimed")
+        self.assertTrue(live_voice_server.verify_family_relay_proof(claimed))
+        self.assertFalse(live_voice_server.verify_family_relay_proof({**claimed, "content": "被竄改的話"}))
 
         wrong = self.response(RECIPIENT, {"action": "ack", "id": claimed["id"], "claimToken": "wrong"})
         self.assertFalse(wrong["ok"])

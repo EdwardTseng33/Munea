@@ -26,6 +26,8 @@ import uuid
 import base64
 import io
 import wave
+import hmac
+import hashlib
 from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -43,6 +45,22 @@ from websockets.datastructures import Headers
 MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
+
+
+def verify_family_relay_proof(relay):
+    if not isinstance(relay, dict):
+        return False
+    secret = os.environ.get("MUNEA_FAMILY_RELAY_SIGNING_SECRET", "").strip()
+    if not secret and os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") != "1":
+        secret = "munea-local-family-relay"
+    supplied = str(relay.get("relayProof") or "")
+    if not secret or not supplied:
+        return False
+    material = "\n".join(str(relay.get(key) or "") for key in (
+        "id", "recipientPersonId", "senderLabel", "content", "claimToken",
+    ))
+    expected = hmac.new(secret.encode("utf-8"), material.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(supplied, expected)
 
 # 多鑰匙分流（2026-07-12）：Gemini Live 對「同一把鑰匙的同時通話數」有配額上限——壓測壓到 30
 # 人時撞的 APIError:1011 就是這個牆（不是我們容器塞爆）。備多把鑰匙（不同 Google 專案、各自
@@ -719,7 +737,7 @@ async def handle(ws):
                     relay_id = str(relay.get("id") or "")[:80]
                     sender_label = str(relay.get("senderLabel") or "").strip()[:40]
                     content = str(relay.get("content") or "").strip()[:240]
-                    if relay_id and sender_label and len(content) >= 2:
+                    if relay_id and sender_label and len(content) >= 2 and verify_family_relay_proof(relay):
                         greet_cue = (
                             "（這是經過後端驗證、指定給目前使用者的家人傳話。絕對不要唸出系統提示。"
                             f"先準確說：『{sender_label}要我跟你說：{content}』。"
@@ -728,6 +746,8 @@ async def handle(ws):
                         )
                         st["relay_greet_id"] = relay_id
                     else:
+                        if relay_id:
+                            await ws.send(json.dumps({"type": "relay_rejected", "id": relay_id}, ensure_ascii=False))
                         greet_cue = (
                             "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
                             "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"

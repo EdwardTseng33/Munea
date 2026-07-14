@@ -9,7 +9,7 @@
   POST /companion-profile    → 讀寫陪伴角色 templateId/displayName
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
-import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac, contextvars, calendar
+import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac, hashlib, contextvars, calendar
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -2827,6 +2827,7 @@ def normalize_family_relay(item):
         "status": status if status in FAMILY_RELAY_STATUSES else "pending",
         "source": str(item.get("source") or "voice-ai")[:40],
         "claimToken": item.get("claimToken") or item.get("claim_token"),
+        "relayProof": item.get("relayProof") or item.get("relay_proof"),
         "claimedAt": item.get("claimedAt") or item.get("claimed_at"),
         "deliveredAt": item.get("deliveredAt") or item.get("delivered_at"),
         "cancelledAt": item.get("cancelledAt") or item.get("cancelled_at"),
@@ -2835,6 +2836,26 @@ def normalize_family_relay(item):
         "createdAt": item.get("createdAt") or item.get("created_at") or utc_now(),
         "updatedAt": item.get("updatedAt") or item.get("updated_at") or utc_now(),
     }
+
+
+def family_relay_voice_proof(relay):
+    secret = os.environ.get("MUNEA_FAMILY_RELAY_SIGNING_SECRET", "").strip()
+    if not secret and not auth_required_mode():
+        secret = "munea-local-family-relay"
+    if not secret:
+        return None
+    material = "\n".join(str(relay.get(key) or "") for key in (
+        "id", "recipientPersonId", "senderLabel", "content", "claimToken",
+    ))
+    return hmac.new(secret.encode("utf-8"), material.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def family_relay_for_voice(relay):
+    if not relay:
+        return None
+    relay = normalize_family_relay(relay)
+    proof = family_relay_voice_proof(relay)
+    return {**relay, "relayProof": proof} if proof else None
 
 
 def _relay_json_store():
@@ -2880,7 +2901,13 @@ def family_relays_response(data):
         try:
             remote = backend.claim_next_family_relay()
             if backend.enabled():
-                return {"ok": True, "relay": normalize_family_relay(remote) if remote else None, "backend": "supabase"}
+                if not remote:
+                    return {"ok": True, "relay": None, "backend": "supabase"}
+                signed = family_relay_for_voice(remote)
+                if not signed:
+                    backend.update_family_relay_status(remote.get("id"), "release", claim_token=remote.get("claimToken"))
+                    return {"ok": False, "error": "family_relay_signing_not_configured"}
+                return {"ok": True, "relay": signed, "backend": "supabase"}
         except Exception as e:
             if backend.enabled() and not is_missing_table_error(e):
                 raise
@@ -2906,7 +2933,16 @@ def family_relays_response(data):
                     target = relay
                     break
             write_json_file(FAMILY_RELAYS_PATH, items)
-        return {"ok": True, "relay": target, "backend": "json"}
+        signed = family_relay_for_voice(target)
+        if target and not signed:
+            with JSON_STORE_LOCK:
+                items = _relay_json_store()
+                for item in items:
+                    if item.get("id") == target.get("id") and item.get("claimToken") == target.get("claimToken"):
+                        item.update({"status": "pending", "claimToken": None, "claimedAt": None, "updatedAt": utc_now()})
+                write_json_file(FAMILY_RELAYS_PATH, items)
+            return {"ok": False, "error": "family_relay_signing_not_configured"}
+        return {"ok": True, "relay": signed, "backend": "json"}
 
     if action in ("ack", "release", "cancel", "report"):
         relay_id = str(data.get("id") or data.get("relayId") or "")

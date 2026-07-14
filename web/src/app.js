@@ -2057,6 +2057,7 @@ const LiveVoice = {
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
             if (o.type === 'relay_spoken' && o.id) { this._relaySpokenId = o.id; rememberSpokenFamilyRelay(this._pendingRelay); }
             if (o.type === 'relay_interrupted' && o.id && this._pendingRelay && o.id === this._pendingRelay.id) this._finishRelay('release');
+            if (o.type === 'relay_rejected' && o.id && this._pendingRelay && o.id === this._pendingRelay.id) this._finishRelay('release');
             if (o.type === 'action' && o.action) {   // AI 要「幫你做進 App」（設看診/用藥提醒）→ 執行
               let result = { ok: false, error: 'app_action_unavailable' };
               try {
