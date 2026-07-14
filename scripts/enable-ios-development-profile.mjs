@@ -25,6 +25,7 @@ window.MUNEA_DEV_CONFIG = {
   autoSignIn: true,
   skipOnboarding: true,
   seedFixtures: true,
+  bypassCallControl: true,
   analyticsExcluded: true,
   authUserId: '00000000-0000-4000-8000-000000000104',
   email: 'edward.dev@munea.local',

@@ -715,6 +715,10 @@ function isDeveloperBypassAllowed() {
   const cfg = developerConfig();
   return cfg.enabled === true && (cfg.allowNonLocalhost === true || isLocalDevHost());
 }
+function usesDevelopmentDirectCall() {
+  const cfg = developerConfig();
+  return isDeveloperBypassAllowed() && cfg.bypassCallControl === true;
+}
 function developerFixtureDate(daysAgo) {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
@@ -1103,6 +1107,7 @@ const CallControl = {
   cancelled: false,
   generation: 0,
   url() {
+    if (usesDevelopmentDirectCall()) return '';
     try { return (localStorage.getItem('munea.callControlUrl') || CALL_CONTROL_URL_DEFAULT).replace(/\/$/, ''); }
     catch (e) { return CALL_CONTROL_URL_DEFAULT; }
   },
@@ -3586,22 +3591,25 @@ async function connectCall() {
     return;
   }
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
+  const developmentDirectCall = usesDevelopmentDirectCall();
   setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
-  setCallHint('正在安排語音與影像席位…', true);
-  try {
-    const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
-    if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
-      throw new Error('paired_service_unavailable');
+  setCallHint(developmentDirectCall ? '開發測試直連中…' : '正在安排語音與影像席位…', true);
+  if (!developmentDirectCall) {
+    try {
+      const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
+      if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
+        throw new Error('paired_service_unavailable');
+      }
+    } catch (e) {
+      const reason = String(e && e.message || e);
+      try { await CallControl.release(reason); } catch (e2) {}
+      LiveVoice.stop(); setCallDialing(false); stopCallTimer();
+      setCallHint(reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
+        (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
+          (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')));
+      try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
+      return;
     }
-  } catch (e) {
-    const reason = String(e && e.message || e);
-    try { await CallControl.release(reason); } catch (e2) {}
-    LiveVoice.stop(); setCallDialing(false); stopCallTimer();
-    setCallHint(reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
-      (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
-        (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')));
-    try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
-    return;
   }
   let _connectedOnce = false;
   const markConnected = () => { if (_connectedOnce) return; _connectedOnce = true; setCallToggle(true); startCallTimer(); };
@@ -3630,8 +3638,8 @@ async function connectCall() {
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }   // 已取消/掛斷 → 別誤開場
       _activationInFlight = true;
       try {
-        setCallHint('語音與影像已就緒，正在完成安全接通…', true);
-        await CallControl.waitUntilActive(15000);
+        setCallHint(developmentDirectCall ? '開發測試管線已就緒…' : '語音與影像已就緒，正在完成安全接通…', true);
+        if (!developmentDirectCall) await CallControl.waitUntilActive(15000);
       } catch (e) {
         _activationInFlight = false;
         clearTimeout(_gateTimeout);
