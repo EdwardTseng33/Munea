@@ -17,6 +17,23 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(localization.speech_language_code("ja"), "ja-JP")
         self.assertEqual(localization.speech_language_code("es"), "es-ES")
 
+    def test_asr_transcription_uses_taiwan_traditional_copy(self):
+        self.assertEqual(
+            localization.canonicalize_transcription("我 想 了 园 艺 。 明 天 下 午 要 回 诊 。"),
+            "我想了園藝。明天下午要回診。",
+        )
+        self.assertEqual(localization.canonicalize_transcription("hello world", "en"), "hello world")
+
+    def test_asr_name_aliases_require_active_call_context(self):
+        self.assertEqual(
+            localization.reconcile_context_transcription("我叫阿紅", ["阿宏"]),
+            "我叫阿宏",
+        )
+        self.assertEqual(
+            localization.reconcile_context_transcription("我叫阿紅", ["爸爸"]),
+            "我叫阿紅",
+        )
+
     def test_non_taiwanese_prompt_never_assumes_taiwan_hotlines(self):
         self.assertIn("Do not use Taiwan-specific hotline numbers", localization.reply_language_instruction("es"))
         self.assertNotIn("Do not use Taiwan-specific hotline numbers", localization.reply_language_instruction("zh-TW"))
@@ -24,14 +41,12 @@ class LocalizationTests(unittest.TestCase):
     def test_opening_and_retry_messages_follow_locale(self):
         self.assertEqual(localization.opening_message("en").split()[0], "Hi,")
         self.assertIn("conexión", localization.retry_message("es"))
+        self.assertNotIn("今天過得怎麼樣", localization.opening_message("zh-TW"))
 
-    def test_taiwanese_copy_and_speech_forms_are_separate(self):
+    def test_disabled_hokkien_is_rewritten_to_mandarin_for_speech_and_display(self):
         self.assertEqual(localization.speech_text("你卡早捆喔", "zh-TW"), "你早點睡喔")
-        self.assertEqual(localization.display_text("你咖紮綑喔", "zh-TW"), "你卡早捆喔")
-        self.assertEqual(localization.display_text("你咖 紮 綑喔", "zh-TW"), "你卡早捆喔")
-        self.assertEqual(localization.display_text("你卡早 捆喔", "zh-TW"), "你卡早捆喔")
-        self.assertEqual(localization.display_text("你較早睏喔", "zh-TW"), "你卡早捆喔")
-        self.assertEqual(localization.display_text("卡早 ", "zh-TW"), "卡早")
+        self.assertEqual(localization.display_text("你咖紮綑喔", "zh-TW"), "你早點睡喔")
+        self.assertEqual(localization.display_text("食飽未？拍謝喔", "zh-TW"), "吃飽了嗎？不好意思喔")
 
     def test_taiwanese_pronunciation_is_not_applied_to_other_locales(self):
         self.assertEqual(localization.speech_text("卡早捆", "en"), "卡早捆")
@@ -55,8 +70,11 @@ class LocalizationTests(unittest.TestCase):
         instruction = localization.taiwan_mandarin_launch_instruction("zh-TW")
         self.assertIn("只能使用自然、清楚的台灣華語", instruction)
         self.assertIn("不要主動講台語", instruction)
+        self.assertIn("人設、記憶、喜好、舊對話或範例", instruction)
         self.assertIn("可以用國語再說一次嗎", instruction)
         self.assertIn("絕對不要猜意思", instruction)
+        self.assertIn("不要說「興趣」，改說「喜好」", instruction)
+        self.assertIn("不要說「濃醇」，改說「厚實」", instruction)
         self.assertEqual(localization.taiwan_mandarin_launch_instruction("en"), "")
 
     def test_reply_instruction_includes_launch_language_gate(self):
@@ -72,8 +90,42 @@ class LocalizationTests(unittest.TestCase):
     def test_hokkien_utterance_heuristic_is_conservative(self):
         self.assertTrue(localization.looks_like_taiwanese_hokkien("拍謝，我閣咧學"))
         self.assertTrue(localization.looks_like_taiwanese_hokkien("阮欲甲你講話"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien("我咧等你"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien("呷飽未"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien("伊欲去食飯"))
         self.assertFalse(localization.looks_like_taiwanese_hokkien("今天要記得早點休息"))
+        self.assertFalse(localization.looks_like_taiwanese_hokkien("這本書很著名，值得和大家共同分享"))
+        self.assertFalse(localization.looks_like_taiwanese_hokkien("這個安排真的令人滿足"))
+        self.assertFalse(localization.looks_like_taiwanese_hokkien("勇敢說出自己的想法嘛"))
         self.assertFalse(localization.looks_like_taiwanese_hokkien(localization.TAIWANESE_HOKKIEN_FALLBACK))
+
+    def test_assistant_output_gate_maps_known_terms_and_blocks_residual_hokkien(self):
+        self.assertEqual(
+            localization.assistant_output_text("食飽未？拍謝喔", "zh-TW"),
+            "吃飽了嗎？不好意思喔",
+        )
+        blocked = localization.assistant_output_text("阮今仔日真歡喜", "zh-TW")
+        self.assertEqual(blocked, localization.TAIWANESE_HOKKIEN_OUTPUT_FALLBACK)
+        self.assertNotIn("阮", blocked)
+
+    def test_unstable_mandarin_terms_use_speech_safe_paraphrases(self):
+        self.assertTrue(localization.contains_unstable_mandarin_speech("聊聊你的興趣"))
+        self.assertTrue(localization.contains_unstable_mandarin_speech("味道很濃醇"))
+        self.assertEqual(
+            localization.speech_text("聊聊你的興趣，這杯咖啡很濃醇", "zh-TW"),
+            "聊聊你的喜好，這杯咖啡很厚實",
+        )
+
+    def test_opening_policy_rotates_and_bans_generic_mood_questions(self):
+        openings = [
+            localization.voice_opening_instruction(i, ["懷舊老歌", "園藝花草"], "台北市")
+            for i in range(4)
+        ]
+        self.assertEqual(len(set(openings)), 4)
+        for opening in openings:
+            self.assertIn("禁止使用", opening)
+            self.assertIn("有開心嗎", opening)
+            self.assertIn("最多兩句", opening)
 
 
 if __name__ == "__main__":

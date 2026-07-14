@@ -41,6 +41,8 @@ from websockets.http11 import Response
 from websockets.datastructures import Headers
 
 MODEL = "gemini-3.1-flash-live-preview"
+TURN_END_SILENCE_MS = 180
+TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
 
 # 多鑰匙分流（2026-07-12）：Gemini Live 對「同一把鑰匙的同時通話數」有配額上限——壓測壓到 30
 # 人時撞的 APIError:1011 就是這個牆（不是我們容器塞爆）。備多把鑰匙（不同 Google 專案、各自
@@ -356,7 +358,6 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "（現在是即時語音通話。剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
         "句子短、口語、一次一兩句、講完停下來等對方回應。）"
     )
-    base += localization.taiwan_mandarin_launch_instruction("zh-TW")
     # 熟識度分寸貫穿整段對話（不只開場）：越不熟越收斂、越熟越自在（Edward 2026-07-12）
     if fam < 1:
         base += "（你們還不太熟，這是頭幾通電話：整段對話都要特別收斂——話少、溫和、讓他主導，不要熱情轟炸、不要一直找話題硬聊、不要連環問。他問你、或聊到他有興趣的才多說一點。）"
@@ -402,6 +403,9 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "先用一句話問清楚再設，不要自己亂猜。設好之後用一句溫暖口語的話跟他確認你設了什麼"
             "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。）"
         )
+    # Keep this last so persona, memory, interests, and older examples can
+    # never weaken the Mandarin-only launch rule.
+    base += localization.taiwan_mandarin_launch_instruction("zh-TW")
     return base
 
 
@@ -440,6 +444,41 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
 ])
 
 
+_ASR_PRODUCT_PHRASES = (
+    "沐寧", "Munea", "寧寧", "阿宏", "小昀", "阿原", "咪咪", "旺財",
+    "家人圈", "回診", "看診", "用藥提醒", "吃藥提醒", "血壓", "血糖",
+    "血氧", "心率", "健康紀錄", "興趣", "濃醇",
+)
+
+
+def asr_adaptation_phrases(char=None, name=None, user=None, topics=None, location=None):
+    """Build bounded Taiwan-Mandarin ASR hints from this call's real context."""
+    # Put call-specific proper nouns first. Names are the hardest terms to
+    # recover from homophones, while generic care vocabulary is easier for ASR.
+    values = [
+        user,
+        f"我叫{user}" if user else None,
+        f"我是{user}" if user else None,
+        name,
+        char,
+        location,
+        *(topics or []),
+        *_ASR_PRODUCT_PHRASES,
+    ]
+    phrases = []
+    seen = set()
+    for raw in values:
+        value = str(raw or "").strip()[:48]
+        key = value.casefold()
+        if not value or key in seen:
+            continue
+        seen.add(key)
+        phrases.append(value)
+        if len(phrases) >= 28:
+            break
+    return phrases
+
+
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
@@ -447,12 +486,17 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     tools = [types.Tool(google_search=types.GoogleSearch())]
     if allow_reminders:
         tools.append(_REMINDER_TOOLS)
+    phrases = asr_adaptation_phrases(char, name, user, topics, location)
+    transcription_config = types.AudioTranscriptionConfig(
+        language_hints=types.LanguageHints(language_codes=["cmn-Hant-TW"]),
+        adaptation_phrases=phrases,
+    )
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
         system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders, fam),
         tools=tools,
-        output_audio_transcription=types.AudioTranscriptionConfig(),
-        input_audio_transcription=types.AudioTranscriptionConfig(),
+        output_audio_transcription=transcription_config,
+        input_audio_transcription=transcription_config,
         speech_config=types.SpeechConfig(
             language_code="cmn-TW",   # 台灣華語（Edward 2026-07-12：沒設地區→通用華語=馬來腔/「自己」念成jì-jǐ；設 cmn-TW 講台灣腔）
             voice_config=types.VoiceConfig(
@@ -461,12 +505,16 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         ),
         # 聽話靈敏度（Edward 2026-07-10「戶外雜音/旁人聊天被當成我在講」）：
         # 開口判定調「低靈敏」＝要更明確、對著手機講的人聲才算你在說話——背景雜音/遠處聊天不易誤觸、不再亂打斷她；
-        # 結束判定維持預設；尾端靜音窗 800ms＝長輩講話中間喘口氣不會被急著搶話。
+        # 結束判定同樣用低靈敏；尾端靜音窗 800ms＝長輩講話中間喘口氣不會被急著搶話。
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
                 start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
+                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
+                prefix_padding_ms=300,
                 silence_duration_ms=800,
-            )
+            ),
+            activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
+            turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
         ),
     )
 
@@ -599,13 +647,17 @@ async def handle(ws):
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
-          "language_block": False, "language_block_source": None}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
+          "language_block": False, "language_block_source": None,
+          "blocked_output_text": "", "language_retry_count": 0,
+          "client_barge_in": False, "asr_turns": 0, "asr_chars": 0,
+          "barge_in_count": 0, "language_block_count": 0}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     try:
         # 組 config 會呼叫 build_reply_context（內含對 Supabase 的同步阻塞查詢，最多 4 秒）——
         # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
         cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam)
+        asr_context_terms = [char, name, user, location, *(topics or [])]
         _key_idx, _cli = _pick_client()   # 挑現在最閒的一把鑰匙開這通（多鑰匙分流的核心）
         async with _cli.aio.live.connect(model=MODEL, config=cfg) as session:
             # 腦真正接上了才跟瀏覽器說 ready——治「第一句沒回應」：
@@ -651,6 +703,7 @@ async def handle(ws):
                     greet_cue = (
                         "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
                         "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
+                        + localization.voice_opening_instruction(fam, topics, location)
                     )
                     await session.send_client_content(
                         turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
@@ -730,6 +783,22 @@ async def handle(ws):
                     st["face_audio_url"] = None
                     _diag(cid, "node.faceaudio_err", err=f"{type(e).__name__}:{str(e)[:60]}")
 
+            async def _forward_audio(chunk):
+                if not chunk:
+                    return
+                st["out"] += len(chunk)
+                await ws.send(chunk)
+                fw = st.get("face_ws")
+                if fw is not None:
+                    try:
+                        await fw.send(chunk)
+                    except Exception:
+                        st["face_ws"] = None
+
+            async def _send_turn_tail():
+                await _forward_audio(TURN_END_SILENCE_PCM)
+                _diag(cid, "node.turn_tail", ms=TURN_END_SILENCE_MS)
+
             async def _send_hokkien_fallback(source):
                 """Bypass the conversational model and speak one fixed Mandarin sentence."""
                 caption = localization.TAIWANESE_HOKKIEN_FALLBACK
@@ -742,23 +811,51 @@ async def handle(ws):
                 if pcm:
                     for offset in range(0, len(pcm), 4800):
                         chunk = pcm[offset:offset + 4800]
-                        st["out"] += len(chunk)
-                        await ws.send(chunk)
-                        fw = st.get("face_ws")
-                        if fw is not None:
-                            try:
-                                await fw.send(chunk)
-                            except Exception:
-                                st["face_ws"] = None
+                        await _forward_audio(chunk)
                         await asyncio.sleep(0)
+                    await _send_turn_tail()
                 await ws.send(json.dumps({"type": "turn_complete"}))
                 _diag(cid, "node.language_fallback", source=source, out_bytes=len(pcm))
+
+            async def _send_safe_mandarin_tts(text, source):
+                caption = localization.display_text(localization.speech_text(text, "zh-TW"), "zh-TW").strip()
+                if not caption:
+                    caption = "我換個比較清楚的說法。"
+                await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption}))
+                try:
+                    encoded = await asyncio.to_thread(server.tts_b64, caption, char, "zh-TW")
+                    with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
+                        pcm = wav.readframes(wav.getnframes())
+                except Exception as e:
+                    pcm = b""
+                    _diag(cid, "node.safe_mandarin_tts_err", err=f"{type(e).__name__}:{str(e)[:60]}")
+                for offset in range(0, len(pcm), 4800):
+                    await _forward_audio(pcm[offset:offset + 4800])
+                    await asyncio.sleep(0)
+                if pcm:
+                    await _send_turn_tail()
+                await ws.send(json.dumps({"type": "turn_complete"}))
+                _diag(cid, "node.safe_mandarin_tts", source=source, out_bytes=len(pcm))
+
+            async def _retry_mandarin_output():
+                cue = (
+                    "（最高優先系統修正，絕對不要唸出提示內容：上一個回答因為含有未開放的台語而沒有播放。"
+                    "請立刻保留原意重新回答，只能使用自然台灣華語，不可出現任何台語字詞、羅馬字或模仿發音；"
+                    "不要解釋為什麼重說，也不要提到系統。）"
+                    + localization.taiwan_mandarin_pronunciation_guard_instruction("zh-TW")
+                )
+                await session.send_client_content(
+                    turns=types.Content(role="user", parts=[types.Part(text=cue)]),
+                    turn_complete=True,
+                )
+                _diag(cid, "node.language_retry")
 
             async def _arm_language_block(source):
                 if st.get("language_block"):
                     return
                 st["language_block"] = True
                 st["language_block_source"] = source
+                st["language_block_count"] += 1
                 await ws.send(json.dumps({"type": "interrupted"}))
                 fw = st.get("face_ws")
                 if fw is not None:
@@ -803,6 +900,17 @@ async def handle(ws):
                                 )
                         elif t == "audio_end":
                             await session.send_realtime_input(audio_stream_end=True)
+                        elif t == "barge_in":
+                            st["client_barge_in"] = True
+                            st["barge_in_count"] += 1
+                            await ws.send(json.dumps({"type": "barge_in_ack"}))
+                            fw = st.get("face_ws")
+                            if fw is not None:
+                                try:
+                                    await fw.send("reset")
+                                except Exception:
+                                    st["face_ws"] = None
+                            _diag(cid, "node.client_barge_in")
                         elif t == "faceaudio":
                             # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
                             if obj.get("on"):
@@ -825,14 +933,28 @@ async def handle(ws):
                         if sc:
                             it_pre = getattr(sc, "input_transcription", None)
                             if it_pre and getattr(it_pre, "text", None):
-                                if localization.requires_taiwanese_hokkien_fallback(it_pre.text):
+                                transcript = localization.reconcile_context_transcription(
+                                    it_pre.text, asr_context_terms, "zh-TW"
+                                )
+                                st["asr_turns"] += 1
+                                st["asr_chars"] += len(transcript)
+                                if st.get("client_barge_in"):
+                                    st["client_barge_in"] = False
+                                    _diag(cid, "node.client_barge_in_heard")
+                                is_hokkien = localization.requires_taiwanese_hokkien_fallback(transcript)
+                                _diag(cid, "node.asr_input", chars=len(transcript), language_block=is_hokkien)
+                                if is_hokkien:
                                     await _arm_language_block("audio_input")
                             ot_pre = getattr(sc, "output_transcription", None)
                             if ot_pre and getattr(ot_pre, "text", None):
-                                if localization.looks_like_taiwanese_hokkien(ot_pre.text):
+                                output_text = localization.canonicalize_transcription(ot_pre.text, "zh-TW")
+                                st["blocked_output_text"] = (st["blocked_output_text"] + output_text)[-600:]
+                                if localization.looks_like_taiwanese_hokkien(output_text):
                                     await _arm_language_block("model_output")
+                                elif localization.contains_unstable_mandarin_speech(output_text):
+                                    await _arm_language_block("mandarin_pronunciation")
                         data = getattr(msg, "data", None)
-                        if data and not st.get("language_block"):
+                        if data and not st.get("language_block") and not st.get("client_barge_in"):
                             if st["await_first"] and st["last_in"] is not None:
                                 lat = round((time.monotonic() - st["last_in"]) * 1000)
                                 st["await_first"] = False
@@ -852,19 +974,23 @@ async def handle(ws):
                                     st["face_ws"] = None
                                     _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
                         elif data:
-                            _diag(cid, "node.language_audio_suppressed", out_bytes=len(data))
+                            reason = "language" if st.get("language_block") else "barge_in"
+                            _diag(cid, "node.audio_suppressed", reason=reason, out_bytes=len(data))
                         if sc:
                             ot = getattr(sc, "output_transcription", None)
                             if ot and getattr(ot, "text", None):
                                 caption_text = localization.display_text(ot.text, "zh-TW")
-                                if not st.get("language_block"):
+                                if not st.get("language_block") and not st.get("client_barge_in"):
                                     await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                     st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
                                     st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
                             it = getattr(sc, "input_transcription", None)
                             if it and getattr(it, "text", None):
-                                await ws.send(json.dumps({"type": "caption", "who": "user", "text": it.text}))
-                                st["user_buf"] = (st["user_buf"] + it.text)[-200:]
+                                user_text = localization.reconcile_context_transcription(
+                                    it.text, asr_context_terms, "zh-TW"
+                                )
+                                await ws.send(json.dumps({"type": "caption", "who": "user", "text": user_text}))
+                                st["user_buf"] = (st["user_buf"] + user_text)[-200:]
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
                             if getattr(sc, "interrupted", False) and not st.get("language_block"):
                                 _diag(cid, "node.interrupted")
@@ -878,15 +1004,34 @@ async def handle(ws):
                             if getattr(sc, "turn_complete", False):
                                 ms = round(turn_out / (24000 * 2) * 1000)
                                 _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
+                                barge_cancelled = bool(st.get("client_barge_in"))
+                                if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
+                                    await _send_turn_tail()
                                 turn_out = 0
                                 st["await_first"] = True
                                 if st.get("language_block"):
                                     source = st.get("language_block_source") or "unknown"
+                                    blocked_text = st.get("blocked_output_text") or ""
                                     st["language_block"] = False
                                     st["language_block_source"] = None
-                                    await _send_hokkien_fallback(source)
+                                    st["blocked_output_text"] = ""
+                                    # Clear the cancelled turn on the App before
+                                    # sending a safe replacement turn.
+                                    await ws.send(json.dumps({"type": "turn_complete"}))
+                                    if barge_cancelled and source in ("model_output", "mandarin_pronunciation"):
+                                        _diag(cid, "node.language_replacement_skipped", reason="barge_in", source=source)
+                                    elif source == "model_output" and st.get("language_retry_count", 0) < 1:
+                                        st["language_retry_count"] = st.get("language_retry_count", 0) + 1
+                                        await _retry_mandarin_output()
+                                    elif source == "mandarin_pronunciation":
+                                        await _send_safe_mandarin_tts(blocked_text, source)
+                                    else:
+                                        await _send_hokkien_fallback(source)
                                 else:
                                     await ws.send(json.dumps({"type": "turn_complete"}))
+                                    st["language_retry_count"] = 0
+                                    st["blocked_output_text"] = ""
+                                st["client_barge_in"] = False
                                 # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
                                 st["user_buf"] = ""
                                 st["ai_buf"] = ""
@@ -953,7 +1098,11 @@ async def handle(ws):
                 await fw.close()
             except Exception:
                 pass
-        _diag(cid, "closed", in_bytes=st["in"], out_bytes=st["out"])
+        _diag(
+            cid, "closed", in_bytes=st["in"], out_bytes=st["out"],
+            asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
+            barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
+        )
 
 
 async def main():

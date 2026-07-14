@@ -4851,7 +4851,7 @@ def account_deletion_response(data, auth_gate=None):
 def _sys_for(char):
     """組這個角色的系統人格：人格 + 醫療界線 +（真人才帶）記憶側寫。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
-    base = c["persona"] + eng.RED  # 收斂：記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
+    base = eng.CORE + c["persona"] + eng.RED  # 記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
     return base, c
 
 
@@ -4888,7 +4888,10 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
 def chat_response(data, char=DEFAULT_CHAR):
     history = data.get("history", [])
     context = build_reply_context(history, char, data)
-    t = reply_conv(history, char, data, context)
+    t = localization.assistant_output_text(
+        reply_conv(history, char, data, context),
+        context.get("locale"),
+    )
     return {
         "reply": t,
         "audio": tts_b64(t, char, data.get("locale")),
@@ -4900,40 +4903,75 @@ def relationship_state_from_turn(data, context, stored_memories):
     data = data or {}
     context = context or {}
     persona = context.get("persona") or {}
-    text = conversation_text(data.get("history") or [])
+    history = data.get("history") or []
+    text = conversation_text(history)
+    previous = persona.get("relationshipState") or {}
+    previous_memory = previous.get("relationshipMemory") or {}
     topic_domains = [
         item.get("domain")
         for item in (context.get("perception") or {}).get("domains", [])
         if item.get("domain")
     ]
-    turn_count = len([h for h in (data.get("history") or []) if h.get("role") == "user"])
+    user_turns = [
+        str(h.get("text") or h.get("content") or "").strip()
+        for h in history
+        if h.get("role") == "user" and str(h.get("text") or h.get("content") or "").strip()
+    ]
+    turn_count = len(user_turns)
+    meaningful_turn_count = len([turn for turn in user_turns if len(turn) >= 4])
     sensitive_count = len([m for m in stored_memories if m.get("sensitivity") in {"sensitive", "restricted"}])
     has_emotional_memory = any(m.get("type") == "emotion" for m in stored_memories)
-    rapport = "new"
-    if turn_count >= 3 or stored_memories:
-        rapport = "familiar"
-    if turn_count >= 6 or has_emotional_memory:
-        rapport = "trusted"
-    if turn_count >= 10 and has_emotional_memory:
-        rapport = "close"
+
+    effective_interactions = int(previous_memory.get("effectiveInteractionCount") or 0)
+    if meaningful_turn_count:
+        effective_interactions += 1
+    cumulative_turns = int(previous_memory.get("meaningfulTurnCount") or 0) + meaningful_turn_count
+    cumulative_memories = int(previous_memory.get("storedMemoryCount") or 0) + len(stored_memories)
+    shared_depth = int(previous_memory.get("sharedDepthScore") or 0)
+    if has_emotional_memory or sensitive_count:
+        shared_depth += 1
+    if any(len(turn) >= 80 for turn in user_turns):
+        shared_depth += 1
+
+    candidate_rapport = "new"
+    if effective_interactions >= 3 or cumulative_turns >= 8 or cumulative_memories >= 3:
+        candidate_rapport = "familiar"
+    if effective_interactions >= 8 and (shared_depth >= 2 or cumulative_memories >= 8):
+        candidate_rapport = "trusted"
+    if effective_interactions >= 20 and shared_depth >= 5 and cumulative_memories >= 15:
+        candidate_rapport = "close"
+    rapport_order = {"new": 0, "familiar": 1, "trusted": 2, "close": 3}
+    previous_rapport = previous.get("rapportLevel") or "new"
+    rapport = max((previous_rapport, candidate_rapport), key=lambda item: rapport_order.get(item, 0))
+    previous_boundaries = previous.get("userBoundaries") or {}
+    previous_tone = previous.get("toneOverrides") or {}
+
     return normalize_relationship_state({
+        "accountId": previous.get("accountId"),
         "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
         "personaTemplateId": persona.get("templateId") or "nening-real-female",
-        "preferredAddress": data.get("preferredAddress") or data.get("preferred_address"),
+        "companionProfileId": previous.get("companionProfileId"),
+        "preferredAddress": data.get("preferredAddress") or data.get("preferred_address") or previous.get("preferredAddress"),
         "rapportLevel": rapport,
         "toneOverrides": {
+            **previous_tone,
             "reduceHumor": sensitive_count > 0 or has_emotional_memory,
             "preferShortResponses": len(text) > 1200,
             "speechFirst": True,
         },
         "userBoundaries": {
+            **previous_boundaries,
             "noRawTranscriptRetention": True,
             "medicalAdviceBoundary": True,
         },
         "relationshipMemory": {
+            **previous_memory,
             "lastTopicDomains": topic_domains[:5],
             "lastMeaningfulTurnCount": turn_count,
-            "storedMemoryCount": len(stored_memories),
+            "meaningfulTurnCount": cumulative_turns,
+            "effectiveInteractionCount": effective_interactions,
+            "sharedDepthScore": shared_depth,
+            "storedMemoryCount": cumulative_memories,
             "lastSafetyLevel": ((context.get("guardian") or {}).get("risk") or {}).get("level", "none"),
             "updatedFrom": "butler_post_turn",
         },
@@ -5279,6 +5317,7 @@ class H(BaseHTTPRequestHandler):
             char = data.get("char") or DEFAULT_CHAR
             if self.path == "/open":
                 t = eng.open_chat(char) if localization.normalize_locale(data.get("locale")) == "zh-TW" else reply_conv([], char, data)
+                t = localization.assistant_output_text(t, data.get("locale"))
                 self._json({"reply": t, "audio": tts_b64(t, char, data.get("locale"))})
             elif self.path == "/chat":
                 self._json(chat_response(data, char))

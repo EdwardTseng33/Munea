@@ -1662,7 +1662,42 @@ const LiveVoice = {
       }
     }, 1800);
   },
-  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；招呼講完才開麥（乾淨第一句）
+  _sendMicBuffer(buf) {
+    if (!this.ws || this.ws.readyState !== 1 || !buf) return;
+    this.ws.send(buf);
+    this._micPackets = (this._micPackets || 0) + 1;
+  },
+  _resetBargeInDetector() {
+    const policy = window.MuneaVoiceTurnPolicy;
+    const floor = this._bargeState && this._bargeState.noiseFloor;
+    this._bargeState = policy ? policy.createState(floor) : null;
+    this._bargePreRoll = [];
+    this._bargeInActive = false;
+  },
+  _stopAssistantPlayback() {
+    clearTimeout(this._speakTimer);
+    (this._srcs || []).forEach(source => { try { source.stop(); } catch (e) {} });
+    this._srcs = [];
+    if (this.playCtx) this.playHead = this.playCtx.currentTime;
+    this.playLevel = 0;
+    this.speaking = false;
+    this._playoutUntil = performance.now();
+    this._newAvatarTurn = true;
+    this._turnHasScheduledAudio = false;
+    this._capBuf = '';
+    this._setFaceAudioMuted(true);
+    Avatar.reset();
+  },
+  _beginBargeIn(rms, threshold) {
+    if (this._bargeInActive) return;
+    this._bargeInActive = true;
+    this._dropAssistantAudio = true;
+    this._stopAssistantPlayback();
+    try { this.ws.send(JSON.stringify({ type: 'barge_in' })); } catch (e) {}
+    try { trackProductEvent('voice_barge_in_local', { rms: +rms.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
+    if (this.onListen) this.onListen();
+  },
+  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；第一個聲音到達就開啟插話偵測
   nudge(level) { try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ type: 'nudge', level: level || 1 })); } catch (e) {} },   // 使用者一直沒講話 → 請 AI 溫柔提醒（省點 · Edward 2026-07-10）
   // 掛斷時把整通對話送去萃取長期記憶（讓「聊聊」講的也記得住 · Edward 2026-07-10）——跟文字聊天同一條記憶入口
   saveMemory() {
@@ -1777,6 +1812,7 @@ const LiveVoice = {
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
     this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0;
     this._playbackTurn = 0; this._playbackUnderruns = 0; this._turnHasScheduledAudio = false;
+    this._dropAssistantAudio = false; this._resetBargeInDetector();
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
     // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
@@ -1800,16 +1836,38 @@ const LiveVoice = {
         const src = this.ac.createMediaStreamSource(this.mic);
         this.proc = this.ac.createScriptProcessor(2048, 1, 1);
         src.connect(this.proc); this.proc.connect(this.ac.destination);
-        // 半雙工：她說話時暫停送麥克風→治好手機喇叭被麥克風收回去的回音，讓她每一輪都回你
+        // Echo cancellation handles normal speaker leakage. While the assistant
+        // speaks, a sustained near-field voice opens a short pre-roll path so
+        // the user can barge in without streaming every speaker echo frame.
         this.proc.onaudioprocess = e => {
           const inp = e.inputBuffer.getChannelData(0);
           if (!this.micOpen) { this.micLevel = 0; return; }        // 麥克風要等「真正開場」才開（撥通中/等臉那幾秒不收音，免得你的聲音在她招呼前一直灌進去→她一直「我聽見了」· Edward 2026-07-09）
-          if (speechActive()) { this.micLevel = 0; return; }       // 她在出聲（本地播放或臉那條線）＝麥克風靜音——單一真相 speechActive()、防喇叭回音自問自答（Edward 7/11）
           let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
-          this.micLevel = Math.min(1, Math.sqrt(s / inp.length) * 8);   // 即時音量→收音波頻高度
-          if (!this.ws || this.ws.readyState !== 1) return;
+          const rms = Math.sqrt(s / inp.length);
+          this.micLevel = Math.min(1, rms * 8);   // 即時音量→收音波頻高度
           const buf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
-          this.ws.send(buf); this._micPackets = (this._micPackets || 0) + 1;
+          const speakerActive = speechActive();
+          const policy = window.MuneaVoiceTurnPolicy;
+          const frameMs = (inp.length / this.ac.sampleRate) * 1000;
+
+          if (speakerActive && this._bargeInActive) {
+            this._sendMicBuffer(buf);
+            return;
+          }
+          if (speakerActive && policy) {
+            this._bargePreRoll.push(buf);
+            while (this._bargePreRoll.length > policy.DEFAULTS.preRollFrames) this._bargePreRoll.shift();
+            const observed = policy.observe(this._bargeState, rms, frameMs, true);
+            this._bargeState = observed.state;
+            if (!observed.shouldInterrupt) return;
+            this._beginBargeIn(rms, observed.threshold);
+            const preRoll = this._bargePreRoll.splice(0);
+            preRoll.forEach(frame => this._sendMicBuffer(frame));
+            return;
+          }
+          if (speakerActive) { this.micLevel = 0; return; }
+          if (policy) this._bargeState = policy.observe(this._bargeState, rms, frameMs, false).state;
+          this._sendMicBuffer(buf);
         };
         if (this.onConnecting) this.onConnecting();   // 線接上了、腦還在開機 → 顯示「撥通中」載入動態
         done(true);
@@ -1819,13 +1877,17 @@ const LiveVoice = {
           try {
             const o = JSON.parse(ev.data);
             if (o.type === 'interrupted' && this.playCtx) {
-              // 使用者插話：把還在播/已排隊的舊語音全部停掉，避免兩個聲音疊在一起（真人不會同時兩個聲音）
-              (this._srcs || []).forEach(s => { try { s.stop(); } catch (e2) {} });
-              this._srcs = []; this.playHead = this.playCtx.currentTime; this.playLevel = 0;
-              Avatar.reset();                                    // 插話：臉也停下舊句、回待機
-              this._playoutUntil = performance.now(); this._newAvatarTurn = true;
+              this._dropAssistantAudio = true;
+              this._stopAssistantPlayback();
             }
-            if (o.type === 'caption' && o.who === 'nening' && o.text) {   // 寧寧說的話→字幕逐字（累積成一句）
+            if (o.type === 'barge_in_ack') {
+              // The server owns suppression of the cancelled model turn. This
+              // also covers audio that had already queued locally on the phone.
+              this._dropAssistantAudio = false;
+              this._capBuf = '';
+              this._resetBargeInDetector();
+            }
+            if (o.type === 'caption' && o.who === 'nening' && o.text && !this._dropAssistantAudio) {   // 寧寧說的話→字幕逐字（累積成一句）
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
@@ -1844,15 +1906,19 @@ const LiveVoice = {
               }
             }
             if (o.type === 'turn_complete') {
+              const interruptedTurn = !!this._dropAssistantAudio;
+              this._dropAssistantAudio = false;
+              this._resetBargeInDetector();
               // 把這一輪（你說的＋她回的）存進聊天記錄 → 掛斷時送去萃取長期記憶
-              try {
+              try { if (!interruptedTurn) {
                 if (!this._transcript) this._transcript = [];
                 const ut = (this._userTurn || '').trim(), nt = (this._capBuf || '').trim();
                 if (ut) this._transcript.push({ role: 'user', text: ut });
                 if (nt) this._transcript.push({ role: 'assistant', text: nt });
                 this._userTurn = '';
-              } catch (eT) {}
-              Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
+              } } catch (eT) {}
+              if (interruptedTurn) Avatar.reset();
+              else Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
               if (this._sameLineWarmup) this._sameLineWarmupPending = true;
               this._newAvatarTurn = true;
               this._toListening(); this._capBuf = '';
@@ -1864,8 +1930,11 @@ const LiveVoice = {
           return;
         }
         if (!this.playCtx) return;
+        if (this._dropAssistantAudio) return;
         if (this._newAvatarTurn) {
           Avatar.reset();                         // 每輪新回答先清上一輪殘音／模型音訊記憶，避免句首帶到上一句尾巴
+          if (this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true) this._setFaceAudioMuted(false);
+          if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
           this._newAvatarTurn = false;
           this._playoutUntil = 0;
           this._playbackTurn = (this._playbackTurn || 0) + 1;
@@ -1944,7 +2013,7 @@ const LiveVoice = {
         s.start(this.playHead); this.playHead += b.duration;
         // 記著正在播的語音，插話時才能一次停乾淨（不留尾巴跟新句疊音）
         if (!this._srcs) this._srcs = [];
-        this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); };
+        this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); this._toListening(); };
         // 安全網：她若一段時間沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）。
         // 放寬 0.9→2 秒：斷續破洞不再被誤判成「講完」把她攔腰切斷（Edward 2026-07-12）；真講完有 turn_complete 即時接手、不靠這條
         this._toListening();                                      // 本地備援同樣等排程音訊真的播完才開麥
@@ -1959,6 +2028,7 @@ const LiveVoice = {
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     this.micOpen = false; this._openMicAfterGreet = false;
     this._sameLineWarmup = false; this._sameLineWarmupPending = false;
+    this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
