@@ -18,6 +18,13 @@ function muneaIsCleanZhText(raw) {
   if (new Set(s).size / s.length < 0.5) return false; // 同字元大量重複＝疑似亂碼
   return true;
 }
+// 顯示前再守一次門（Edward 2026-07-15 事故：首頁招呼卡以外，用藥/看診/留意卡都還在印未過濾的存檔文字）
+// 存檔時就算漏接、或手機裡已經存著舊的髒資料，畫面上都不該印出來——不乾淨就退回 fallback，不留原文
+function muneaSafeDisplayText(raw, fallback) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return fallback;
+  return muneaIsCleanZhText(s) ? s : fallback;
+}
 
 const OVERLAYS = ['med', 'connect', 'chat'];
 const AVATAR_ENGINE_MODES = Object.freeze({
@@ -659,7 +666,8 @@ function aiVisitLabel(dateISO, time) {
   } catch (e) { return dateISO + (time ? ' ' + time : ''); }
 }
 function aiAddVisitReminder(a) {
-  const title = (String((a && a.title) || '').trim()) || '回診';
+  const rawTitle = String((a && a.title) || '').trim();
+  const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : '回診';   // AI 語音辨識可能夾雜外文雜訊，存檔前先守門（Edward 2026-07-15 事故：aiAddVisitReminder / aiAddMedReminder 原本沒接共用守門）
   const dateISO = String((a && a.dateISO) || '').trim();
   const time = String((a && a.time) || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return { ok: false };
@@ -678,7 +686,8 @@ function aiAddVisitReminder(a) {
   return { ok: true, title, label };
 }
 function aiAddMedReminder(a) {
-  const name = String((a && a.name) || '').trim();
+  const rawName = String((a && a.name) || '').trim();
+  const name = (rawName && muneaIsCleanZhText(rawName)) ? rawName : '';   // 藥名不乾淨寧可拒收、讓 AI 再問一次，不存假名字（Edward 2026-07-15 事故）
   const SLOTS = ['早餐後', '午餐後', '晚餐後', '睡前'];
   let slots = (a && Array.isArray(a.slots)) ? a.slots.filter(s => SLOTS.indexOf(s) >= 0) : [];
   slots = [...new Set(slots)];
@@ -2739,7 +2748,7 @@ function _muneaNotChattedTodayLine(now, ask) {
     }
     const visit = _muneaVisitWithinDays(3);
     if (visit) {
-      const vt = visit.title || '回診';
+      const vt = muneaSafeDisplayText(visit.title, '') || muneaSafeDisplayText(visit.label, '') || '回診';   // 招呼卡引用看診標題前守門（Edward 2026-07-15 事故）
       const leads = [vt + '快到了，', '別忘了' + vt + '，', vt + '的事，記得，', '要回診了，', vt + '要記得，'];
       return leads[_muneaDayOfYear(now) % leads.length] + ask;
     }
@@ -2898,7 +2907,7 @@ function renderPillTask() {
   const doneN = slots.filter(s => done[s.key]).length;
   const next = slots.find(s => !done[s.key]);
   if (next) {
-    title.textContent = '吃' + String(next.name).split(/\s+/)[0]; // 標題用短名、全名在用藥管理
+    title.textContent = '吃' + muneaSafeDisplayText(String(next.name).split(/\s+/)[0], '藥'); // 標題用短名、全名在用藥管理；短名守門（Edward 2026-07-15 事故）
     sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
     card.classList.remove('done');
   } else {
@@ -2950,7 +2959,7 @@ function renderVisitTask() {
   if (!v) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
   card.style.display = '';
   const t = $('#visitTaskTitle'), s = $('#visitTaskSub'), tm = $('#visitTaskTime');
-  if (t) t.textContent = v.title || v.label || '回診';
+  if (t) t.textContent = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診';   // 今天一起完成的回診卡標題守門（Edward 2026-07-15 事故）
   if (s) s.textContent = _visitDayShort(v) || '記得帶健保卡';
   if (tm) tm.textContent = _clock24(v.time) || '今天';
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
@@ -3123,7 +3132,7 @@ function showMedPhoto(url, name) {
   if (!url) return;
   let lb = document.getElementById('medLightbox');
   if (!lb) { lb = document.createElement('div'); lb.id = 'medLightbox'; lb.className = 'med-lightbox'; document.body.appendChild(lb); lb.addEventListener('click', ev => { if (ev.target === lb || ev.target.classList.contains('mlb-close')) lb.classList.remove('show'); }); }
-  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + (name || '') + '</div><button type="button" class="mlb-close">關閉</button></div>';
+  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + muneaSafeDisplayText(name, '') + '</div><button type="button" class="mlb-close">關閉</button></div>';   // 藥物照片燈箱名稱守門（Edward 2026-07-15 事故）
   lb.classList.add('show');
 }
 function canvasToJpeg(cv) { let q = 0.82; let url = cv.toDataURL('image/jpeg', q); while (url.length > 180000 && q > 0.4) { q -= 0.16; url = cv.toDataURL('image/jpeg', q); } return url; }
@@ -3143,7 +3152,7 @@ function renderMedSlots() {
     const slot = def[0], k = def[1], off = def[2];
     const inSlot = meds.filter(m => String(m.time).split('、').map(x => x.trim()).includes(slot));
     const rows = inSlot.length
-      ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + m.name + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')
+      ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + muneaSafeDisplayText(m.name, '藥') + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
       : '<div class="ms-empty">這個時段沒有藥</div>';
     return '<div class="ms-group"><div class="ms-head"><b>' + slot + '</b>' +
       '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
@@ -3383,22 +3392,35 @@ function buildCareItems() {
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
   const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
-  let _rTitle = '家人帶話給你', _rSub = '';
-  if (relayMsg) { const _p = plain(relayMsg); const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/); if (_m) { _rTitle = _m[1].trim() + ' 要我提醒你'; _rSub = _m[2].trim(); } else { _rSub = _p; } }
+  // 留意卡是首頁會轉動輪播的位置、比招呼卡更容易被看到——family feed 原文一律要過守門才能顯示（Edward 2026-07-15 事故：這裡漏接、招呼卡另一條路徑已守）
+  let _rTitle = '家人帶話給你', _rSub = '', _relayClean = false;
+  if (relayMsg) {
+    const _p = plain(relayMsg);
+    const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/);
+    if (_m) {
+      const _whoSafe = muneaSafeDisplayText(_m[1].trim(), '');
+      const _bodySafe = muneaSafeDisplayText(_m[2].trim(), '');
+      if (_whoSafe && _bodySafe) { _rTitle = _whoSafe + ' 要我提醒你'; _rSub = _bodySafe; _relayClean = true; }
+    } else {
+      const _safeP = muneaSafeDisplayText(_p, '');
+      if (_safeP) { _rSub = _safeP; _relayClean = true; }
+    }
+  }
   // 蘋果 UGC 審核要求（7/9）：這則若真的來自家人 feed（傳話/愛心/塗鴉…），記下它在陣列裡的位置，卡片才能掛「移除／檢舉」；示範文案（feed 是空的）不算數
   const _feedIdx = relayMsg ? feed.indexOf(relayMsg) : (feed.length ? 0 : -1);
-  const familyItem = relayMsg
+  const _feed0Safe = feed[0] ? muneaSafeDisplayText(plain(feed[0]), '') : '';
+  const familyItem = _relayClean
     ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: '知道了', feedIdx: _feedIdx }
-    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，' + cname() + '都幫你收著了', btn: '去看看', feedIdx: _feedIdx };
+    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: _feed0Safe || ('美華說週末回去看你，' + cname() + '都幫你收著了'), btn: '去看看', feedIdx: _feedIdx };
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
   const act = acts.find(a => a && !a.done && !a.archived);
   if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
     const goal = +(act.steps || act.goal || 8000);
     const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: (act.owner || '家人') + '發起的走路活動', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績', btn: '去看看' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: muneaSafeDisplayText(act.owner, '家人') + '發起的走路活動', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績', btn: '去看看' });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
   } else if (act) {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: (act.owner || '家人') + '發起了活動', sub: '「' + (act.title || '家庭活動') + '」進行中，看看大家的進度', btn: '去看看' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: muneaSafeDisplayText(act.owner, '家人') + '發起了活動', sub: '「' + muneaSafeDisplayText(act.title, '家庭活動') + '」進行中，看看大家的進度', btn: '去看看' });
   } else {
     items.push({ k: 'family', tone: 'coral', icon: 'walk', title: '外婆發起的走路活動', sub: '還差 5,000 步就達標，今晚一起走走？', btn: '去看看' });
   }
@@ -3410,7 +3432,7 @@ function buildCareItems() {
     const today = isoOf(new Date());
     v = arr.filter(x => x && x.dateISO && x.dateISO >= today).sort((a, b) => a.dateISO.localeCompare(b.dateISO))[0] || null;
   } catch (e) {}
-  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', title: (v.title ? v.title : (v.label || '回診')) + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' });
+  if (v && v.dateISO) { const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診'; items.push({ k: 'status', tone: '', icon: 'cal', title: _vTitle + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' }); }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
   items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   return items;
 }
@@ -5633,7 +5655,7 @@ function init() {
     const box = $('#visitList'); if (!box) return;
     const arr = loadVisits();
     box.innerHTML = arr.length ? ('<div class="field-label">已排的看診</div>' + arr.map(v =>
-      '<div class="visit-item"><div class="vi-info"><b>' + (v.title || '回診') + '</b><span>' + (v.label || '') + '</span></div><button type="button" class="vi-del" data-id="' + v.id + '">刪除</button></div>').join('')) : '';
+      '<div class="visit-item"><div class="vi-info"><b>' + muneaSafeDisplayText(v.title, '回診') + '</b><span>' + (v.label || '') + '</span></div><button type="button" class="vi-del" data-id="' + v.id + '">刪除</button></div>').join('')) : '';   // 看診管理清單標題守門（Edward 2026-07-15 事故）
   }
   if ($('#visitList')) $('#visitList').addEventListener('click', e => {
     const b = e.target.closest('.vi-del'); if (!b) return;
@@ -6074,11 +6096,11 @@ function init() {
   function fireMedReminder(med) {
     medShowing = med;
     if ($('#medDueDesc')) $('#medDueDesc').textContent = med.time + '的提醒 · 配溫開水就可以';
-    if ($('#medDueName')) $('#medDueName').textContent = med.name;
+    if ($('#medDueName')) $('#medDueName').textContent = muneaSafeDisplayText(med.name, '藥');   // 用藥提醒彈窗名稱守門（Edward 2026-07-15 事故）
     if ($('#medDueSay')) $('#medDueSay').textContent = med.time + '的藥，時間到囉';
     $('#medRemindModal').classList.add('show');
     // A6：寧寧親口說（App 開著時；打包後升級推播）
-    try { if (typeof speakChat === 'function') speakChat(med.time + '的' + med.name + '，時間到囉。吃完跟我說一聲。'); } catch (e) {}
+    try { if (typeof speakChat === 'function') speakChat(med.time + '的' + muneaSafeDisplayText(med.name, '藥') + '，時間到囉。吃完跟我說一聲。'); } catch (e) {}
   }
   function checkDueMeds() {
     if (Date.now() < medSnoozeUntil || medShowing) return;
