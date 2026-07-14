@@ -362,7 +362,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .set-row.set-info { cursor: default; }
 .set-row.set-info .sr-main small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 .set-row .sr-ico { width: 38px; height: 38px; border-radius: 11px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
-.set-row .sr-arrow { margin-left: auto; color: var(--muted); font-size: 15px; }
+.set-row .sr-arrow { margin-left: auto; color: var(--muted); font-size: 15px; flex-shrink: 0; white-space: nowrap; }
 .set-row .sr-main { flex: 1; min-width: 0; font-weight: 700; }
 .set-row .sr-main small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 2px; line-height: 1.35; }
 .provider-consent-card { margin-top: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid rgba(58,168,160,.14); box-shadow: var(--shadow-sm); }
@@ -1460,6 +1460,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .auth-ava .auth-ava-placeholder { width: 26px; height: 26px; stroke-width: 2; }
 .auth-ava.has-photo .auth-ava-placeholder { display: none; }
 .auth-ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+/* 未登入時這張空照片必須真的消失——否則它佔掉格子、把人形往下擠（Edward 2026-07-14 catch「要在圓的中間」）*/
+.auth-ava-img[hidden] { display: none; }
 
 /* 方案四檔 */
 .tier-list { display: flex; flex-direction: column; gap: 8px; }
