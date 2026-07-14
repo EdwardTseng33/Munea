@@ -26,7 +26,7 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("conexión", localization.retry_message("es"))
 
     def test_taiwanese_copy_and_speech_forms_are_separate(self):
-        self.assertEqual(localization.speech_text("你卡早捆喔", "zh-TW"), "你咖紮綑喔")
+        self.assertEqual(localization.speech_text("你卡早捆喔", "zh-TW"), "你早點睡喔")
         self.assertEqual(localization.display_text("你咖紮綑喔", "zh-TW"), "你卡早捆喔")
         self.assertEqual(localization.display_text("你咖 紮 綑喔", "zh-TW"), "你卡早捆喔")
         self.assertEqual(localization.display_text("你卡早 捆喔", "zh-TW"), "你卡早捆喔")
@@ -43,6 +43,26 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("咖紮綑", instruction)
         self.assertIn("不要自行猜音", instruction)
         self.assertEqual(localization.taiwanese_pronunciation_instruction("en"), "")
+
+    def test_taiwanese_hokkien_is_disabled_below_release_threshold(self):
+        self.assertFalse(localization.taiwanese_hokkien_release_enabled())
+        self.assertLess(
+            localization.TAIWANESE_HOKKIEN_VALIDATED_SCORE,
+            localization.TAIWANESE_HOKKIEN_MIN_RELEASE_SCORE,
+        )
+
+    def test_taiwan_mandarin_launch_instruction_fails_safe(self):
+        instruction = localization.taiwan_mandarin_launch_instruction("zh-TW")
+        self.assertIn("只能使用自然、清楚的台灣華語", instruction)
+        self.assertIn("不要主動講台語", instruction)
+        self.assertIn("可以用國語再說一次嗎", instruction)
+        self.assertIn("絕對不要猜意思", instruction)
+        self.assertEqual(localization.taiwan_mandarin_launch_instruction("en"), "")
+
+    def test_reply_instruction_includes_launch_language_gate(self):
+        instruction = localization.reply_language_instruction("zh-TW")
+        self.assertIn("繁體台灣中文", instruction)
+        self.assertIn("首發語言限制", instruction)
 
 
 if __name__ == "__main__":

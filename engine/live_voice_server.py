@@ -353,7 +353,7 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "（現在是即時語音通話。剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
         "句子短、口語、一次一兩句、講完停下來等對方回應。）"
     )
-    base += localization.taiwanese_pronunciation_instruction("zh-TW")
+    base += localization.taiwan_mandarin_launch_instruction("zh-TW")
     # 熟識度分寸貫穿整段對話（不只開場）：越不熟越收斂、越熟越自在（Edward 2026-07-12）
     if fam < 1:
         base += "（你們還不太熟，這是頭幾通電話：整段對話都要特別收斂——話少、溫和、讓他主導，不要熱情轟炸、不要一直找話題硬聊、不要連環問。他問你、或聊到他有興趣的才多說一點。）"

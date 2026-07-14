@@ -1550,9 +1550,52 @@ const LiveVoice = {
   _f2i(f) { const b = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { let s = Math.max(-1, Math.min(1, f[i])); b[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return b; },
   _down(buf, inR, outR) { if (outR >= inR) return buf; const r = inR / outR, len = Math.round(buf.length / r), o = new Float32Array(len); let i = 0, j = 0; while (j < len) { const n = Math.round((j + 1) * r); let s = 0, c = 0; for (; i < n && i < buf.length; i++) { s += buf[i]; c++; } o[j++] = c ? s / c : 0; } return o; },
   _toSpeaking() { if (this.speaking) return; this.speaking = true; if (this.onSpeak) this.onSpeak(); },
+  _playbackLeadSeconds() {
+    // The first answer arrives while the iPhone audio route and Avatar WebRTC
+    // jitter buffer are still settling. A 480 ms queue is intentionally used
+    // for that first turn; later turns keep the existing low-latency behavior.
+    const base = (this._playbackTurn || 0) <= 1 ? 0.48 : 0.22;
+    return Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08);
+  },
+  _setFaceAudioMuted(muted) {
+    ['faceAud', 'faceVid'].forEach(id => {
+      try { const el = document.getElementById(id); if (el) el.muted = !!muted; } catch (e) {}
+    });
+  },
+  async _finishSameLineWarmup() {
+    if (!this._sameLineWarmupPending || !this.on) return;
+    this._sameLineWarmupPending = false;
+    let bytes = 0, audioLevel = -1, hasStats = false;
+    try {
+      const receiver = Avatar._faceAudReceiver;
+      if (receiver && receiver.getStats) {
+        const stats = await receiver.getStats();
+        stats.forEach(r => {
+          if (r.type !== 'inbound-rtp' || (r.kind !== 'audio' && r.mediaType !== 'audio')) return;
+          hasStats = true;
+          if (typeof r.bytesReceived === 'number') bytes = r.bytesReceived;
+          if (typeof r.audioLevel === 'number') audioLevel = r.audioLevel;
+        });
+      }
+    } catch (e) {}
+    const stable = hasStats && (bytes > 12000 || audioLevel > 0.001);
+    if (stable) {
+      this._sameLineWarmup = false;
+      this._setFaceAudioMuted(false);
+      try { trackProductEvent('voice_sameline_warmup', { result: 'ready', bytes, audioLevel }); } catch (e) {}
+    } else {
+      // If iOS cannot prove the remote track is stable, keep the deterministic
+      // local Web Audio path for this call instead of risking choppy speech.
+      this._sameLineWarmup = false;
+      this._sameLineFellBack = true;
+      this._setFaceAudioMuted(true);
+      try { trackProductEvent('voice_sameline_warmup', { result: 'local_fallback', bytes, audioLevel, hasStats }); } catch (e) {}
+    }
+  },
   _notePlayout(byteLength) {
     const now = performance.now();
-    const delay = (this._sameLine && this._sameLineFellBack !== true) ? 1100 : 220;
+    const useSameLine = this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true;
+    const delay = useSameLine ? 1100 : Math.round(this._playbackLeadSeconds() * 1000);
     if (!this._playoutUntil || this._playoutUntil < now) this._playoutUntil = now + delay;
     this._playoutUntil += (byteLength / (24000 * 2)) * 1000;
   },
@@ -1564,6 +1607,7 @@ const LiveVoice = {
       return;
     }
     this.speaking = false; this.playLevel = 0;
+    if (this._sameLineWarmupPending) this._finishSameLineWarmup();
     if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
     if (this.onListen) this.onListen();
   },
@@ -1601,6 +1645,7 @@ const LiveVoice = {
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
     this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0;
+    this._playbackTurn = 0; this._playbackUnderruns = 0; this._turnHasScheduledAudio = false;
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
     // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
@@ -1613,6 +1658,8 @@ const LiveVoice = {
       const done = ok => { if (!settled) { settled = true; resolve(ok); } };
       this.ws.onopen = async () => {
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
+        this._sameLineWarmup = this._sameLine; this._sameLineWarmupPending = false;
+        if (this._sameLineWarmup) this._setFaceAudioMuted(true);
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
         const micResult = await micPromise;
         this._primeMicPromise = null;
@@ -1675,6 +1722,7 @@ const LiveVoice = {
                 this._userTurn = '';
               } catch (eT) {}
               Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
+              if (this._sameLineWarmup) this._sameLineWarmupPending = true;
               this._newAvatarTurn = true;
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
@@ -1689,8 +1737,12 @@ const LiveVoice = {
           Avatar.reset();                         // 每輪新回答先清上一輪殘音／模型音訊記憶，避免句首帶到上一句尾巴
           this._newAvatarTurn = false;
           this._playoutUntil = 0;
+          this._playbackTurn = (this._playbackTurn || 0) + 1;
+          this._playbackUnderruns = 0;
+          this._turnHasScheduledAudio = false;
         }
         this._notePlayout(ev.data.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
+        if (this._sameLineWarmup) this._setFaceAudioMuted(true);
         Avatar.feed(ev.data);                                      // 同一份聲音餵給雲端臉（對嘴）
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
@@ -1699,7 +1751,7 @@ const LiveVoice = {
         this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
         // 同線模式：聲音改從 faceAud（臉那條線）出、這裡不本地排程播放（也不用等 faceSyncMs）。
         // 保底：頭一段講話若 3 秒內 faceAud 完全沒出聲 → 判定同線失效、之後這通改回本地播放（防「有臉沒聲」）。
-        if (this._sameLine && this._sameLineFellBack !== true) {
+        if (this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true) {
           if (!this._sameLineWatchStarted) {
             this._sameLineWatchStarted = true;
             try { Avatar._faceAudMaxLevel = 0; } catch (e) {}
@@ -1749,7 +1801,15 @@ const LiveVoice = {
             _off = ms / 1000;
           }
         } catch (e) {}
-        if (this.playHead < now + 0.02) this.playHead = now + _off;
+        _off = Math.max(_off, this._playbackLeadSeconds());
+        if (!this._turnHasScheduledAudio) {
+          this.playHead = now + _off;
+          this._turnHasScheduledAudio = true;
+        } else if (this.playHead < now + 0.06) {
+          this._playbackUnderruns = (this._playbackUnderruns || 0) + 1;
+          this.playHead = now + this._playbackLeadSeconds();
+          try { trackProductEvent('voice_playback_underrun', { turn: this._playbackTurn, count: this._playbackUnderruns }); } catch (e) {}
+        }
         s.start(this.playHead); this.playHead += b.duration;
         // 記著正在播的語音，插話時才能一次停乾淨（不留尾巴跟新句疊音）
         if (!this._srcs) this._srcs = [];
@@ -1767,6 +1827,7 @@ const LiveVoice = {
     this.ready = false;
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     this.micOpen = false; this._openMicAfterGreet = false;
+    this._sameLineWarmup = false; this._sameLineWarmupPending = false;
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
