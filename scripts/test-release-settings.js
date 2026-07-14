@@ -29,12 +29,14 @@ const iosExport = read('scripts/ios-export-app-store.sh');
 const iosDevProfile = read('scripts/enable-ios-development-profile.mjs');
 const auth = read('web/src/auth.js');
 const infoPlist = read('ios/App/App/Info.plist');
+const privacyManifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 const reviewNotes = read('docs/送審資料包-2026-07-09.md');
 
 expect(!app.includes('__muneaNativeRestore'), 'restore button still calls the retired native global');
 expect(app.includes('window.MuneaStore.restore()'), 'restore button is not wired to MuneaStore.restore');
 expect(app.includes('window.MuneaStore.manageSubscriptions()'), 'cancel button is not wired to Apple subscription management');
 expect(app.includes("brainPost('/privacy-export', { action: 'request' })"), 'data export does not create a request');
+expect(app.includes('result.exportPackage') && app.includes("navigator.share") && app.includes("a.download = filename"), 'data export does not deliver the generated JSON file');
 expect(app.includes('deletion && deletion.ok && deletion.accountDeleted'), 'local data can be cleared before cloud deletion succeeds');
 expect(app.includes('const POINTS = { total: 0, used: 0'), 'point wallet still starts with a stale paid-plan allowance');
 expect(app.includes('plus: 150, pro: 300'), 'current subscription grants are missing from the app');
@@ -97,6 +99,10 @@ expect(iosExport.includes('codesign -d --entitlements - "$APP_PATH"'), 'IPA expo
 expect(!iosExport.includes('codesign -d --entitlements :-'), 'IPA export uses deprecated codesign entitlement syntax');
 expect(iosExport.includes('com.apple.developer.applesignin'), 'IPA export does not verify Apple sign-in entitlement');
 expect(iosExport.includes('NSCameraUsageDescription') && iosExport.includes('NSPhotoLibraryUsageDescription'), 'IPA export does not verify photo privacy usage strings');
+expect(xcodeProject.includes('PrivacyInfo.xcprivacy in Resources'), 'PrivacyInfo.xcprivacy is not bundled by the Xcode target');
+expect(privacyManifest.includes('<key>NSPrivacyTracking</key>') && privacyManifest.includes('<false/>'), 'privacy manifest must declare no tracking');
+expect(privacyManifest.includes('NSPrivacyCollectedDataTypeHealth') && privacyManifest.includes('NSPrivacyCollectedDataTypeAudioData'), 'privacy manifest is missing health or audio collection declarations');
+expect(iosExport.includes('PrivacyInfo.xcprivacy'), 'IPA export does not verify the privacy manifest');
 expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
 expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the development Call Control bypass');
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');

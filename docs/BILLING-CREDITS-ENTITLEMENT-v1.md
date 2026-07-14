@@ -86,7 +86,8 @@ The server derives each allowance window from the verified Apple purchase anchor
 - ✅ Restore purchases only restores active subscriptions and re-verifies them on the server.
 - ✅ The current Supabase policy migration is defined.
 - ❌ Policy version 3 still needs to be applied and verified in the only production Supabase project.
-- ❌ App Store Server Notifications V2 renewal, expiration, cancellation, refund, and revocation handling is not yet production-complete.
+- ✅ App Store Server Notifications V2 JWS verification and renewal, expiration, cancellation, grace-period, refund, refund-reversal, and revocation state transitions are implemented with idempotent credit handling.
+- ❌ The V2 endpoint still needs Brain deployment, App Store Connect production/Sandbox URL configuration, a TEST notification, and real Sandbox lifecycle acceptance.
 - ❌ StoreKit Sandbox purchase, renewal, cancellation, refund, and restore still need real-device acceptance tests.
 - ❌ Server-authoritative per-minute call deduction is not yet a completed end-to-end production gate.
 

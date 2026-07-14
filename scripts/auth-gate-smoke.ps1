@@ -197,6 +197,10 @@ try {
   }
   Pass "Subscription event requires privileged provider/admin token"
 
+  Step "Apple signed notification gate"
+  Expect-HttpError "/apple/notifications" @{ signedPayload = "not-a-jws" } 400
+  Pass "Apple notification endpoint reaches JWS verification without bearer or custom provider token"
+
   Step "Entitlement mutation gate"
   Expect-HttpError "/entitlements" @{ action = "save"; activePlan = "pro" } 403 $devHeaders
   $entitlements = Invoke-JsonPost "/entitlements" @{ action = "save"; activePlan = "pro"; entitlements = @{ realtimeAvatar = $true } } $adminHeaders

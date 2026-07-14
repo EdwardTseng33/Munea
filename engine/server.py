@@ -264,7 +264,7 @@ def verify_auth_context(headers=None):
     return verify_supabase_access_token(token)
 
 
-PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap"}
+PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap", "/apple/notifications"}
 ADMIN_POST_PATHS = {
     "/admin/accounts",
     "/admin/north-star",
@@ -4297,6 +4297,120 @@ def credits_grant_response(data):
     return {"ok": True, "transaction": tx, "walletSummary": credit_wallet_summary(store), "credits": store}
 
 
+def credits_refund_response(data):
+    """Idempotently claw back an Apple point-pack grant without going negative."""
+    store = load_credits_store()
+    provider_transaction_id = str(data.get("providerTransactionId") or data.get("provider_transaction_id") or "")
+    idempotency_key = str(data.get("idempotencyKey") or data.get("idempotency_key") or f"apple-refund:{provider_transaction_id}")
+    replay = credit_idempotency_response(store, idempotency_key)
+    if replay:
+        return replay
+    original = next((
+        tx for tx in store.get("transactions", [])
+        if tx.get("providerTransactionId") == provider_transaction_id and tx.get("type") == "grant"
+    ), None)
+    requested = normalize_credit_amount(data.get("amount") or (original or {}).get("amount"))
+    if not provider_transaction_id or not original:
+        return {
+            "ok": True,
+            "matchedOriginalGrant": False,
+            "refunded": 0,
+            "refundDeficit": requested,
+            "walletSummary": credit_wallet_summary(store),
+            "credits": store,
+        }
+    if requested <= 0:
+        return {
+            "ok": True,
+            "matchedOriginalGrant": False,
+            "refunded": 0,
+            "refundDeficit": 0,
+            "walletSummary": credit_wallet_summary(store),
+        }
+    remaining = requested
+    transactions = []
+    wallets = [wallet for wallet in store.get("wallets", []) if wallet.get("type") == "purchased" and wallet.get("status") == "active"]
+    if original:
+        wallets.sort(key=lambda wallet: 0 if wallet.get("id") == original.get("walletId") else 1)
+    for index, wallet in enumerate(wallets):
+        available = max(0, float(wallet.get("balance") or 0))
+        take = min(available, remaining)
+        if take <= 0:
+            continue
+        wallet["balance"] = round(available - take, 4)
+        remaining = round(remaining - take, 4)
+        transactions.append(append_credit_transaction(
+            store,
+            transaction_type="refund",
+            wallet=wallet,
+            amount=-take,
+            source="apple_storekit2",
+            reason=data.get("reason") or "apple_purchase_refunded",
+            idempotency_key=f"{idempotency_key}:{index}",
+            provider="apple_storekit2",
+            provider_transaction_id=provider_transaction_id,
+        ))
+        if remaining <= 0:
+            break
+    store = save_credits_store(store)
+    return {
+        "ok": True,
+        "matchedOriginalGrant": bool(original),
+        "refunded": round(requested - remaining, 4),
+        "refundDeficit": round(remaining, 4),
+        "transactions": transactions,
+        "walletSummary": credit_wallet_summary(store),
+        "credits": store,
+    }
+
+
+def credits_refund_reversal_response(data):
+    """Restore only credits that this Apple transaction previously clawed back."""
+    store = load_credits_store()
+    provider_transaction_id = str(data.get("providerTransactionId") or data.get("provider_transaction_id") or "")
+    idempotency_key = str(data.get("idempotencyKey") or data.get("idempotency_key") or f"apple-refund-reversed:{provider_transaction_id}")
+    replay = credit_idempotency_response(store, idempotency_key)
+    if replay:
+        return replay
+    prior_refunds = [
+        tx for tx in store.get("transactions", [])
+        if tx.get("providerTransactionId") == provider_transaction_id and tx.get("type") == "refund"
+    ]
+    refundable = round(sum(abs(float(tx.get("amount") or 0)) for tx in prior_refunds), 4)
+    requested = normalize_credit_amount(data.get("amount") or refundable)
+    restored = min(requested, refundable)
+    if not provider_transaction_id or restored <= 0:
+        return {
+            "ok": True,
+            "matchedPriorRefund": False,
+            "restored": 0,
+            "walletSummary": credit_wallet_summary(store),
+            "credits": store,
+        }
+    wallet = find_credit_wallet(store, "purchased")
+    wallet["balance"] = round(float(wallet.get("balance") or 0) + restored, 4)
+    transaction = append_credit_transaction(
+        store,
+        transaction_type="refund_reversal",
+        wallet=wallet,
+        amount=restored,
+        source="apple_storekit2",
+        reason=data.get("reason") or "apple_refund_reversed",
+        idempotency_key=idempotency_key,
+        provider="apple_storekit2",
+        provider_transaction_id=provider_transaction_id,
+    )
+    store = save_credits_store(store)
+    return {
+        "ok": True,
+        "matchedPriorRefund": True,
+        "restored": restored,
+        "transaction": transaction,
+        "walletSummary": credit_wallet_summary(store),
+        "credits": store,
+    }
+
+
 def ensure_free_signup_trial(account_id):
     """Grant one account-bound Voice+Avatar trial: 5 credits = about 5 minutes.
 
@@ -4509,8 +4623,190 @@ def subscription_event_response(data):
         "ok": True,
         "accepted": True,
         "serverVerificationRequired": True,
-        "note": "Local prototype only. Production must verify Apple signedTransactionInfo / signedRenewalInfo server-side.",
+        "note": "Legacy provider event accepted. Apple production events use /apple/notifications with JWS verification.",
     }
+
+
+APPLE_ACTIVE_NOTIFICATION_TYPES = {
+    "SUBSCRIBED", "DID_RENEW", "OFFER_REDEEMED", "RENEWAL_EXTENDED", "REFUND_REVERSED",
+}
+APPLE_TERMINAL_NOTIFICATION_TYPES = {"EXPIRED", "GRACE_PERIOD_EXPIRED", "REFUND", "REVOKE"}
+
+
+def _apple_notification_identity(app_account_token):
+    base = supabase_adapter.make_adapter()
+    if not base.configured():
+        return None
+    return base.resolve_auth_identity(app_account_token)
+
+
+def _activate_apple_subscription(verified):
+    billing = load_billing_store()
+    billing.update({
+        "platform": "ios",
+        "provider": "apple_storekit2",
+        "activePlan": verified.plan,
+        "serverVerificationRequired": False,
+        "rawEventRef": verified.notificationUUID,
+    })
+    billing["subscription"] = {
+        **(billing.get("subscription") or {}),
+        "status": "active",
+        "productId": verified.productId,
+        "originalTransactionId": verified.originalTransactionId,
+        "expiresAt": verified.expiresDate,
+        "purchaseDate": verified.purchaseDate,
+        "originalPurchaseDate": verified.originalPurchaseDate,
+        "willRenew": bool(verified.willRenew) if verified.willRenew is not None else True,
+        "lastVerifiedAt": utc_now(),
+    }
+    billing["entitlements"] = {
+        **(billing.get("entitlements") or {}),
+        "voiceCompanion": True,
+        "familyDashboard": True,
+        "routineReminders": True,
+        "realtimeAvatar": True,
+        "familyMembersMax": 4 if verified.plan == "plus" else 12,
+        "familyCircleInvite": True,
+        "familyCircleJoin": True,
+        "monthlyCredits": verified.points,
+        "monthlyCreditAnchorAt": verified.originalPurchaseDate or verified.purchaseDate,
+    }
+    billing = save_billing_store(billing)
+    allowance = monthly_allowance_details(billing)
+    grant = None
+    if allowance:
+        grant = credits_grant_response({
+            "amount": allowance["amount"],
+            "walletType": "included_monthly",
+            "period": allowance["period"],
+            "expiresAt": allowance["expiresAt"],
+            "source": "included_monthly",
+            "reason": "app_store_server_notification_allowance",
+            "provider": "apple_storekit2",
+            "providerTransactionId": verified.transactionId or verified.originalTransactionId,
+            "idempotencyKey": f"apple-subscription:{verified.transactionId or verified.originalTransactionId}:{allowance['period']}",
+        })
+    return billing, grant
+
+
+def apply_verified_apple_notification(verified):
+    if verified.notificationType == "TEST":
+        return {"ok": True, "accepted": True, "test": True, "notificationUUID": verified.notificationUUID}
+    if not verified.appAccountToken:
+        return {"ok": False, "retryable": True, "error": {"code": "apple_notification_account_token_missing"}}
+    try:
+        identity = _apple_notification_identity(verified.appAccountToken)
+    except Exception as exc:
+        log_fallback_exception("resolve Apple notification account", exc)
+        return {"ok": False, "retryable": True, "error": {"code": "apple_notification_account_resolution_failed"}}
+    if not identity:
+        return {"ok": False, "retryable": True, "error": {"code": "apple_notification_account_unresolved"}}
+
+    token = REQUEST_DATA_IDENTITY.set(identity)
+    try:
+        billing = None
+        credit_result = None
+        event_type = verified.notificationType
+        if verified.kind == "points":
+            if event_type in {"REFUND", "REVOKE"}:
+                credit_result = credits_refund_response({
+                    "amount": verified.points,
+                    "providerTransactionId": verified.transactionId,
+                    "idempotencyKey": f"apple-refund:{verified.notificationUUID or verified.transactionId}",
+                })
+            elif event_type == "REFUND_REVERSED":
+                credit_result = credits_refund_reversal_response({
+                    "amount": verified.points,
+                    "providerTransactionId": verified.transactionId,
+                    "idempotencyKey": f"apple-refund-reversed:{verified.notificationUUID or verified.transactionId}",
+                })
+        elif verified.kind == "subscription":
+            if event_type in APPLE_ACTIVE_NOTIFICATION_TYPES:
+                billing, credit_result = _activate_apple_subscription(verified)
+            elif event_type == "DID_CHANGE_RENEWAL_STATUS":
+                billing = load_billing_store()
+                billing["rawEventRef"] = verified.notificationUUID
+                billing["subscription"] = {
+                    **(billing.get("subscription") or {}),
+                    "willRenew": bool(verified.willRenew),
+                    "lastVerifiedAt": utc_now(),
+                }
+                billing = save_billing_store(billing)
+            elif event_type == "DID_FAIL_TO_RENEW" and verified.gracePeriodExpiresDate:
+                billing = load_billing_store()
+                billing["rawEventRef"] = verified.notificationUUID
+                billing["subscription"] = {
+                    **(billing.get("subscription") or {}),
+                    "status": "grace_period",
+                    "expiresAt": verified.gracePeriodExpiresDate,
+                    "willRenew": True,
+                    "lastVerifiedAt": utc_now(),
+                }
+                billing = save_billing_store(billing)
+            elif event_type == "DID_FAIL_TO_RENEW" and verified.expiresDate and (
+                parse_optional_iso_datetime(verified.expiresDate) or datetime.min.replace(tzinfo=timezone.utc)
+            ) > datetime.now(timezone.utc):
+                billing = load_billing_store()
+                billing["rawEventRef"] = verified.notificationUUID
+                billing["subscription"] = {
+                    **(billing.get("subscription") or {}),
+                    "status": "active",
+                    "expiresAt": verified.expiresDate,
+                    "willRenew": False,
+                    "lastVerifiedAt": utc_now(),
+                }
+                billing = save_billing_store(billing)
+            elif event_type in APPLE_TERMINAL_NOTIFICATION_TYPES or event_type == "DID_FAIL_TO_RENEW":
+                reason = "revoked" if event_type in {"REFUND", "REVOKE"} else "expired"
+                billing = load_billing_store()
+                billing["rawEventRef"] = verified.notificationUUID
+                billing = save_billing_store(expire_billing_store(billing, reason), reconcile=False)
+                credits = load_credits_store()
+                if close_included_credit_wallets(credits, reason=f"apple_{event_type.lower()}"):
+                    save_credits_store(credits)
+                try:
+                    supabase_adapter.make_adapter().remove_external_family_memberships_for_account_unscoped(billing.get("accountId"))
+                except Exception as exc:
+                    log_fallback_exception("remove Apple-expired external family memberships", exc)
+
+        append_audit_event({
+            "eventType": "apple_server_notification_applied",
+            "targetTable": "subscription_ledger" if verified.kind == "subscription" else "credit_transactions",
+            "details": {
+                "actorType": "apple_app_store_server",
+                "notificationUUID": verified.notificationUUID,
+                "notificationType": verified.notificationType,
+                "subtype": verified.subtype,
+                "transactionId": verified.transactionId,
+                "productId": verified.productId,
+                "environment": verified.environment,
+            },
+        })
+        return {
+            "ok": True,
+            "accepted": True,
+            "notificationUUID": verified.notificationUUID,
+            "notificationType": verified.notificationType,
+            "billing": billing,
+            "walletSummary": (credit_result or {}).get("walletSummary"),
+            "idempotentReplay": bool((credit_result or {}).get("idempotentReplay")),
+        }
+    finally:
+        REQUEST_DATA_IDENTITY.reset(token)
+
+
+def apple_notification_response(data):
+    try:
+        verified = apple_store.verify_notification(data.get("signedPayload") or data.get("signed_payload"))
+    except apple_store.AppleStoreVerificationError as exc:
+        append_audit_event({
+            "eventType": "apple_server_notification_rejected",
+            "targetTable": "subscription_ledger",
+            "details": {"reason": str(exc), "actorType": "apple_app_store_server"},
+        })
+        return {"ok": False, "retryable": False, "error": {"code": str(exc)}}
+    return apply_verified_apple_notification(verified)
 
 
 def apple_transaction_response(data, auth_gate=None):
@@ -4782,20 +5078,53 @@ def append_privacy_request(req_type, data=None):
 
 
 def privacy_export_response(data):
-    # P0-5 止血：不再同步吐出全域資料（原本任何呼叫者都拿到所有人的對話/帳務/隱私單＝洩漏）。
-    # 改成「排入處理、驗證身分後只給本人」——正規 GDPR 匯出流程；真正打包待 auth_user↔person 對應表補上後 scope 到本人。
     action = (data.get("action") or "preview").lower()
-    if action in ("request", "create"):
-        export_request = append_privacy_request("export", data)
-    else:
-        export_request = normalize_privacy_request({"type": "export", "status": "preview", "requiresReauth": True})
+    if action not in ("request", "create", "download"):
+        return {
+            "ok": True,
+            "status": "available",
+            "requiresReauth": False,
+            "message": "登入後可立即建立只屬於你的 JSON 資料副本。",
+        }
+    backend = data_backend()
+    if not backend.enabled() or not backend.request_scoped:
+        return {
+            "ok": False,
+            "status": "unavailable",
+            "error": {"code": "privacy_export_account_scope_required"},
+            "requiresReauth": True,
+        }
+    try:
+        package = backend.export_scoped_personal_data()
+    except PermissionError as exc:
+        return {"ok": False, "status": "rejected", "error": {"code": str(exc)}, "requiresReauth": True}
+    generated_at = utc_now()
+    package = {
+        "exportedAt": generated_at,
+        "format": "Munea Personal Data Export v1",
+        **package,
+    }
+    export_request = append_privacy_request("export", {
+        **data,
+        "status": "completed",
+        "completedAt": generated_at,
+        "requiresReauth": False,
+        "metadata": {
+            "format": "json",
+            "scope": package.get("scope"),
+            "schemaVersion": package.get("schemaVersion"),
+        },
+    })
+    filename_date = generated_at[:10].replace("-", "")
     return {
         "ok": True,
         "request": export_request,
-        "status": "queued",
-        "requiresReauth": True,
-        "message": "資料匯出已排入處理。為保護你的隱私，我們會確認身分後，只把「你本人」的資料整理好給你，不會在此直接回傳。",
-        "productionNote": "Export is queued; the raw package is prepared per-user after identity verification and scoped to the authenticated owner only.",
+        "status": "completed",
+        "requiresReauth": False,
+        "filename": f"munea-personal-data-{filename_date}.json",
+        "mediaType": "application/json",
+        "exportPackage": package,
+        "message": "你的資料副本已建立完成。",
     }
 
 
@@ -5271,7 +5600,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -5291,11 +5620,13 @@ class H(BaseHTTPRequestHandler):
             # 薄門（正式上線 · 7/9）：環境設了 MUNEA_APP_KEY 就要帶對 X-Munea-Key（App 自動帶、用戶無感）。
             # 擋「雲端大門開了之後、陌生人拿網址直接來打」的流量。沒設 key＝不啟用、本機/區網照舊。
             _door = os.environ.get("MUNEA_APP_KEY", "").strip()
-            if _door and self.headers.get("X-Munea-Key", "").strip() != _door:
+            request_path = self.path.split("?", 1)[0]
+            # Apple cannot attach our app key. This one public webhook is instead
+            # authenticated by Apple's nested JWS signatures before any mutation.
+            if _door and request_path != "/apple/notifications" and self.headers.get("X-Munea-Key", "").strip() != _door:
                 self._json_error(403, "app_key_required", "App key required")
                 return
             data = self._read_json_body()
-            request_path = self.path.split("?", 1)[0]
             auth_gate = require_verified_auth(self.headers, self.path, data)
             # Family-circle invites always require a verified identity, even in
             # local/demo mode where most endpoints may allow a guest preview.
@@ -5505,6 +5836,17 @@ class H(BaseHTTPRequestHandler):
                 self._json(credits_balance_response(data))
             elif self.path == "/apple/transaction":
                 self._json(apple_transaction_response(data, auth_gate=auth_gate))
+            elif self.path == "/apple/notifications":
+                response = apple_notification_response(data)
+                if response.get("ok"):
+                    self._json(response)
+                else:
+                    error = response.get("error") or {}
+                    self._json_error(
+                        503 if response.get("retryable") else 400,
+                        error.get("code") or "apple_notification_rejected",
+                        "App Store notification could not be applied",
+                    )
             elif self.path == "/credits/grant":
                 ok, code = privileged_billing_write_authorized(self.headers)
                 if not ok:
