@@ -231,6 +231,7 @@ class SupabaseAdapter:
         person_tables = {
             "companionProfiles": ("companion_profiles", "*"),
             "routineReminders": ("routine_reminders", "*"),
+            "medicationDoseEvents": ("medication_dose_events", "*"),
             "voiceSessions": ("voice_sessions", "*"),
             "conversationSummaries": ("conversation_summaries", "*"),
             "safetyEvents": ("safety_events", "*"),
@@ -403,6 +404,7 @@ class SupabaseAdapter:
                 "family_state_entries",
                 "family_activities",
                 "family_activity_participants",
+                "medication_dose_events",
             ],
         }
 
@@ -961,6 +963,39 @@ class SupabaseAdapter:
             prefer="return=representation",
         )
         return self.routine_reminder_row_to_item(rows[0]) if rows else None
+
+    def load_medication_doses(self, person_id=None, start_date=None, end_date=None, limit=1000):
+        if not self.enabled():
+            return None
+        person_id = person_id if self._is_uuid(person_id or "") else self.person_id
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{person_id}",
+            "select": "*",
+            "order": "scheduled_date.desc,updated_at.desc",
+            "limit": str(max(1, min(5000, int(limit or 1000)))),
+        }
+        if start_date:
+            query["scheduled_date"] = f"gte.{str(start_date)[:10]}"
+        if end_date:
+            # PostgREST cannot express both bounds with one dict key, so the
+            # upper bound is applied after the account/person-scoped query.
+            query["and"] = f"(scheduled_date.lte.{str(end_date)[:10]})"
+        rows = self._select("medication_dose_events", query)
+        return [self.medication_dose_row_to_item(row) for row in rows or []]
+
+    def save_medication_dose(self, item):
+        if not self.enabled():
+            return None
+        payload = self.medication_dose_to_row(item)
+        rows = self._request(
+            "POST",
+            "medication_dose_events",
+            query={"on_conflict": "account_id,person_id,dose_key", "select": "*"},
+            payload=payload,
+            prefer="resolution=merge-duplicates,return=representation",
+        )
+        return self.medication_dose_row_to_item(rows[0]) if rows else None
 
     def append_product_event(self, event):
         if not self.enabled():
@@ -1606,7 +1641,6 @@ class SupabaseAdapter:
         rows = self._select(
             "family_memberships",
             {
-                "account_id": f"eq.{self.account_id}",
                 "family_group_id": f"eq.{family_group_id}",
                 "select": "*",
                 "order": "updated_at.desc",
@@ -1614,6 +1648,129 @@ class SupabaseAdapter:
             },
         )
         return [self.family_membership_row_to_member(row) for row in rows or []]
+
+    def _family_member_exists(self, family_group_id, person_id):
+        if not self._is_uuid(family_group_id or "") or not self._is_uuid(person_id or ""):
+            return False
+        return bool(self._first("family_memberships", {
+            "family_group_id": f"eq.{family_group_id}",
+            "person_id": f"eq.{person_id}",
+            "select": "id",
+        }))
+
+    def create_family_relay(self, relay):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        relay = relay or {}
+        family_group_id = self._resolve_family_group_id(relay.get("familyGroupId") or relay.get("family_group_id"))
+        recipient_person_id = relay.get("recipientPersonId") or relay.get("recipient_person_id")
+        if not self.owns_family_group_id(family_group_id):
+            raise PermissionError("family_relay_group_forbidden")
+        if not self._family_member_exists(family_group_id, self.person_id):
+            raise PermissionError("family_relay_sender_not_member")
+        if not self._family_member_exists(family_group_id, recipient_person_id):
+            raise PermissionError("family_relay_recipient_not_member")
+        if recipient_person_id == self.person_id:
+            raise ValueError("family_relay_recipient_self")
+        sender_person = self._first("persons", {"id": f"eq.{self.person_id}", "select": "display_name,relationship"}) or {}
+        recipient_person = self._first("persons", {"id": f"eq.{recipient_person_id}", "select": "display_name,relationship"}) or {}
+        payload = self.family_relay_to_row({
+            **relay,
+            "accountId": self.family_group_account_id(family_group_id),
+            "familyGroupId": family_group_id,
+            "senderPersonId": self.person_id,
+            "senderLabel": sender_person.get("display_name") or sender_person.get("relationship") or "家人",
+            "recipientLabel": recipient_person.get("display_name") or recipient_person.get("relationship") or "家人",
+            "status": "pending",
+        })
+        rows = self._request(
+            "POST", "family_relay_messages", query={"select": "*"},
+            payload=payload, prefer="return=representation",
+        )
+        return self.family_relay_row_to_relay(rows[0]) if rows else None
+
+    def load_family_relays(self, direction="received", status=None, limit=50):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        query = {
+            "family_group_id": f"eq.{self.family_group_id}",
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(max(1, min(100, int(limit or 50)))),
+        }
+        if direction == "sent":
+            query["sender_person_id"] = f"eq.{self.person_id}"
+        else:
+            query["recipient_person_id"] = f"eq.{self.person_id}"
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("family_relay_messages", query)
+        return [self.family_relay_row_to_relay(row) for row in rows or []]
+
+    def claim_next_family_relay(self):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        # A force-quit can prevent the App from sending release. Requeue only
+        # this recipient's old claim so one crashed call cannot strand it.
+        stale_before = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(time.time() - 600))
+        self._request(
+            "PATCH", "family_relay_messages",
+            query={
+                "family_group_id": f"eq.{self.family_group_id}",
+                "recipient_person_id": f"eq.{self.person_id}",
+                "status": "eq.claimed", "claimed_at": f"lt.{stale_before}",
+            },
+            payload={"status": "pending", "claim_token": None, "claimed_at": None},
+        )
+        pending = self._select("family_relay_messages", {
+            "family_group_id": f"eq.{self.family_group_id}",
+            "recipient_person_id": f"eq.{self.person_id}",
+            "status": "eq.pending",
+            "expires_at": f"gt.{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
+            "select": "*",
+            "order": "created_at.asc",
+            "limit": "1",
+        })
+        if not pending:
+            return None
+        relay_id = pending[0].get("id")
+        token = str(uuid.uuid4())
+        rows = self._request(
+            "PATCH", "family_relay_messages",
+            query={"id": f"eq.{relay_id}", "recipient_person_id": f"eq.{self.person_id}", "status": "eq.pending", "select": "*"},
+            payload={"status": "claimed", "claim_token": token, "claimed_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())},
+            prefer="return=representation",
+        )
+        return self.family_relay_row_to_relay(rows[0]) if rows else None
+
+    def update_family_relay_status(self, relay_id, action, claim_token=None):
+        if not self.enabled() or not self.request_scoped or not self._is_uuid(relay_id or ""):
+            return None
+        current = self._first("family_relay_messages", {"id": f"eq.{relay_id}", "select": "*"})
+        if not current:
+            return None
+        is_sender = current.get("sender_person_id") == self.person_id
+        is_recipient = current.get("recipient_person_id") == self.person_id
+        if action == "cancel":
+            if not is_sender or current.get("status") not in ("pending", "claimed"):
+                raise PermissionError("family_relay_cancel_forbidden")
+            patch = {"status": "cancelled", "cancelled_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+        elif action == "report":
+            if not is_recipient:
+                raise PermissionError("family_relay_report_forbidden")
+            patch = {"status": "reported"}
+        elif action in ("ack", "release"):
+            if not is_recipient or current.get("status") != "claimed" or not claim_token or current.get("claim_token") != claim_token:
+                raise PermissionError("family_relay_claim_forbidden")
+            patch = ({"status": "delivered", "delivered_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+                     if action == "ack" else {"status": "pending", "claim_token": None, "claimed_at": None})
+        else:
+            raise ValueError("family_relay_action_invalid")
+        rows = self._request(
+            "PATCH", "family_relay_messages",
+            query={"id": f"eq.{relay_id}", "select": "*"}, payload=patch, prefer="return=representation",
+        )
+        return self.family_relay_row_to_relay(rows[0]) if rows else None
 
     def save_family_member(self, member, family_group_id=None):
         if not self.enabled():
@@ -1880,6 +2037,44 @@ class SupabaseAdapter:
             "displayName": person.get("display_name") or "Family member",
             "relationship": person.get("relationship") or "family",
             "permissions": permissions,
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def family_relay_to_row(self, relay):
+        relay = relay or {}
+        return {
+            "account_id": relay.get("accountId") or relay.get("account_id"),
+            "family_group_id": relay.get("familyGroupId") or relay.get("family_group_id"),
+            "sender_person_id": relay.get("senderPersonId") or relay.get("sender_person_id"),
+            "recipient_person_id": relay.get("recipientPersonId") or relay.get("recipient_person_id"),
+            "sender_label": str(relay.get("senderLabel") or relay.get("sender_label") or "家人")[:40],
+            "recipient_label": str(relay.get("recipientLabel") or relay.get("recipient_label") or "家人")[:40],
+            "content": str(relay.get("content") or "").strip()[:240],
+            "status": relay.get("status") or "pending",
+            "source": str(relay.get("source") or "voice-ai")[:40],
+            "metadata": relay.get("metadata") if isinstance(relay.get("metadata"), dict) else {},
+        }
+
+    @staticmethod
+    def family_relay_row_to_relay(row):
+        row = row or {}
+        return {
+            "id": row.get("id"),
+            "accountId": row.get("account_id"),
+            "familyGroupId": row.get("family_group_id"),
+            "senderPersonId": row.get("sender_person_id"),
+            "recipientPersonId": row.get("recipient_person_id"),
+            "senderLabel": row.get("sender_label") or "家人",
+            "recipientLabel": row.get("recipient_label") or "家人",
+            "content": row.get("content") or "",
+            "status": row.get("status") or "pending",
+            "source": row.get("source") or "voice-ai",
+            "claimToken": row.get("claim_token"),
+            "claimedAt": row.get("claimed_at"),
+            "deliveredAt": row.get("delivered_at"),
+            "expiresAt": row.get("expires_at"),
+            "metadata": row.get("metadata") or {},
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
         }
@@ -2537,6 +2732,63 @@ class SupabaseAdapter:
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
             "deletedAt": row.get("deleted_at"),
+        }
+
+    @staticmethod
+    def _normalize_medication_dose_status(status):
+        allowed = {"scheduled", "taken", "snoozed", "skipped", "missed"}
+        return status if status in allowed else "scheduled"
+
+    def medication_dose_to_row(self, item):
+        item = item or {}
+        metadata = dict(item.get("metadata") or {})
+        person_id = item.get("personId") or item.get("person_id") or self.person_id
+        reminder_id = item.get("reminderId") or item.get("reminder_id")
+        if person_id and not self._is_uuid(person_id):
+            metadata.setdefault("originalPersonId", person_id)
+            person_id = self.person_id
+        if reminder_id and not self._is_uuid(reminder_id):
+            metadata.setdefault("originalReminderId", reminder_id)
+            reminder_id = None
+        return {
+            "account_id": self.payload_account_id(item.get("accountId") or item.get("account_id")),
+            "person_id": person_id,
+            "routine_reminder_id": reminder_id or None,
+            "dose_key": str(item.get("doseKey") or item.get("dose_key") or "")[:240],
+            "medication_name": str(item.get("medicationName") or item.get("medication_name") or "用藥")[:160],
+            "slot_label": str(item.get("slot") or item.get("slotLabel") or item.get("slot_label") or "")[:80],
+            "scheduled_date": item.get("scheduledDate") or item.get("scheduled_date"),
+            "scheduled_at": item.get("scheduledAt") or item.get("scheduled_at"),
+            "expected_count": max(0, min(100, int(item.get("expectedCount") or item.get("expected_count") or 0))),
+            "status": self._normalize_medication_dose_status(item.get("status")),
+            "taken_at": item.get("takenAt") or item.get("taken_at"),
+            "source": str(item.get("source") or "munea-app")[:80],
+            "timezone": str(item.get("timezone") or "Asia/Taipei")[:80],
+            "metadata": metadata,
+        }
+
+    @staticmethod
+    def medication_dose_row_to_item(row):
+        row = row or {}
+        metadata = row.get("metadata") or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id") or metadata.get("originalPersonId"),
+            "reminderId": row.get("routine_reminder_id") or metadata.get("originalReminderId"),
+            "doseKey": row.get("dose_key") or "",
+            "medicationName": row.get("medication_name") or "用藥",
+            "slot": row.get("slot_label") or "",
+            "scheduledDate": row.get("scheduled_date"),
+            "scheduledAt": row.get("scheduled_at"),
+            "expectedCount": row.get("expected_count") or 0,
+            "status": row.get("status") or "scheduled",
+            "takenAt": row.get("taken_at"),
+            "source": row.get("source") or "munea-api",
+            "timezone": row.get("timezone") or "Asia/Taipei",
+            "metadata": metadata,
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
         }
 
     @staticmethod

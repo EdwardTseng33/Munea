@@ -1,5 +1,9 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
+> **2026-07-15 Voice canary 真機包覆蓋**：Edward iPhone 15 Pro 已覆蓋安裝並啟動 `1.0.8 (Build 13)`；在 1.0.7 Draft 整合功能上加入同線單播放器、當日開場去重，開發包固定連到已通過開場音訊探測的 Voice canary。完整 `test:launch`、Capacitor sync、Xcode 建置、包內內容、安裝與啟動均 PASS；Pro、1,000 點與家人假資料保留。嘴型／聲音、斷續、雙音、話量／能量、同日三次開場與重複撥號仍須 Edward 真機驗收，本包不是正式 `main`／App Store 候選。
+>
+> **1.0.7 來源保留**：整合基準仍是 `origin/main@3fd6095 → PR #41@7caab46 → PR #42@93e882d`，包含用藥紀錄一致化、指定家人傳話與提醒成功回執；PR／migration／Brain 正式部署仍未完成。
+
 > **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。GitHub `main@ec40412` 已合併 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest，以及 PR #37 的全語音 S2S／ASR／插話／靜音修正；main 的 App／iOS 內容也已和產出 IPA 時的來源逐項比對一致。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
 
 > **最後更新：2026-07-15（Codex · App 1.0.6 Build 11 已完成自動語音驗證、iPhone 開發包與 App Store IPA；等待真人語音 Gate、雲端 canary 與 TestFlight）**
@@ -11,6 +15,8 @@
 ---
 
 ## 一眼總覽
+
+**64－AI 家庭傳話＋語音提醒成功回執（7/15 Codex，PR #42 待合併）**：①家庭傳話改為 `family_relay_messages` 收件人專屬佇列，AI 先複誦確認、對方下一通聊聊最多播一則並標明傳話者；播完才 ack，插話／斷線 release，強制關閉的舊 claim 10 分鐘後自動回收，同機另留播畢 receipt 防網路斷線重複播。②家庭圈名單保留正式 `personId`，伺服器逐筆驗證 sender／recipient 都在同一家庭，其他家人無法領取；Supabase authenticated client 只有 participant select，所有 mutation 走已驗證後端；Brain claim 另以 `MUNEA_FAMILY_RELAY_SIGNING_SECRET` 簽章，Voice 驗簽後才朗讀，App 不能偽造署名／內容。③語音的用藥／看診提醒與傳話工具加入 request ID 回執，Gemini 必須等 App 寫入結果，成功才可口頭確認，失敗／8 秒逾時不能假成功；看診日期時間、用藥名稱時段會驗證，重送採穩定 ID 去重。④`test:launch` 全綠，新增家庭傳話 3 組測試；PR #42 疊在 PR #41，尚未部署 Supabase migration／Brain／Voice，也未 cap sync 或重打包；部署時 Brain＋Voice 必須設定同一份 relay signing secret。App 版號暫維持 1.0.6，合併到下一候選版時需一起升版與重包。
 
 **63－App 1.0.6 Build 11／全語音修正與上架候選包（7/15 Codex）**：①✅ PR #36／#37 已合併至 `main@ec40412`；版本固定為 `1.0.6 (Build 11)`，main 的 App／iOS 內容與包版來源一致。②✅ 純 PCM S2S／台灣繁中 ASR、上下文姓名修正、插話 7/7、30 秒低噪音與句尾保護自動 PASS。③✅ Edward iPhone 已安裝並啟動開發包，保留 Pro、1,000 點與家人假資料。④✅ 正式 Archive／IPA 簽章、版本、Bundle ID、Privacy Manifest、HealthKit、Apple 登入、最新 Web 資源及無開發資料檢查 PASS；54,784,407 bytes，SHA-256 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。⑤✅ 修正正式匯出腳本誤判 Privacy Manifest 陣列的問題並加回歸契約；PR #37 的 Windows 權限閘、Windows smoke 與 Vercel 全綠。⑥❌ 真人 10 分鐘長聊、五次插話、五組靜音、開場與發音尚未通過；Voice／Brain 尚未部署，IPA 尚未上傳。
 

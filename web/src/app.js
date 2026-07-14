@@ -544,9 +544,9 @@ function ensureVisitReminderId(visit) {
   return visit.id;
 }
 function syncMedicationReminder(med) {
-  if (!med || !med.name) return;
+  if (!med || !med.name) return Promise.resolve(null);
   ensureMedReminderId(med);
-  routineRemindersPost({
+  return routineRemindersPost({
     action: 'save',
     reminder: {
       id: med.id,
@@ -565,9 +565,9 @@ function syncMedicationReminder(med) {
   });
 }
 function syncVisitReminder(visit) {
-  if (!visit || !visit.dateISO) return;
+  if (!visit || !visit.dateISO) return Promise.resolve(null);
   ensureVisitReminderId(visit);
-  routineRemindersPost({
+  return routineRemindersPost({
     action: 'save',
     reminder: {
       id: visit.id,
@@ -643,6 +643,102 @@ async function refreshRoutineRemindersFromBackend() {
 }
 window.__muneaRoutineReminderSync = { refresh: refreshRoutineRemindersFromBackend, saveMed: syncMedicationReminder, saveVisit: syncVisitReminder };
 
+function localFamilyRelayMembers() {
+  try {
+    const items = JSON.parse(localStorage.getItem('munea.circleMembers') || '[]');
+    return Array.isArray(items) ? items : [];
+  } catch (e) { return []; }
+}
+async function refreshFamilyRelayMembers() {
+  if (!isLoggedIn()) return localFamilyRelayMembers();
+  const data = await brainPost('/family-members', { action: 'list', familyGroupId: famGroupId(), limit: 100 });
+  const remote = data && Array.isArray(data.members) ? data.members : [];
+  if (!remote.length) return localFamilyRelayMembers();
+  const old = localFamilyRelayMembers();
+  const mine = muneaCloudPersonId();
+  const members = remote.map((m, index) => {
+    const name = String(m.displayName || m.name || '').trim() || '家人';
+    const previous = old.find(x => x.personId === m.personId || x.name === name) || {};
+    return {
+      name,
+      relationship: m.relationship || previous.relationship || '家人',
+      personId: m.personId || m.id,
+      init: previous.init || name[0],
+      tint: previous.tint || ['p-ama', 'p-ma', 'p-ba', 'p-jie'][index % 4],
+      self: (m.personId || m.id) === mine,
+    };
+  });
+  try { localStorage.setItem('munea.circleMembers', JSON.stringify(members)); } catch (e) {}
+  if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync();
+  return members;
+}
+function relayNameKey(value) {
+  return String(value || '').replace(/[\s　]/g, '').replace(/^(我的|我們家)/, '').toLowerCase();
+}
+async function createFamilyRelay(recipientName, message) {
+  const who = String(recipientName || '').trim().slice(0, 40);
+  const content = String(message || '').trim().replace(/^[，,：:]*/, '').slice(0, 240);
+  if (!isLoggedIn()) return { ok: false, error: 'login_required' };
+  if (!who || content.length < 2) return { ok: false, error: 'recipient_or_message_required' };
+  if (!muneaIsCleanZhText(content)) return { ok: false, error: 'message_not_clean_zh' };
+  let members = await refreshFamilyRelayMembers();
+  const key = relayNameKey(who);
+  const matches = members.filter(m => !m.self && m.personId && [m.name, m.relationship].some(v => relayNameKey(v) === key));
+  if (matches.length !== 1) {
+    const error = matches.length > 1 ? 'recipient_ambiguous' : 'recipient_not_in_family_circle';
+    if (typeof toast === 'function') toast(matches.length > 1 ? '家庭圈裡有同名家人，請說完整名稱' : '家庭圈裡找不到「' + who + '」，請先確認家人名稱');
+    return { ok: false, error };
+  }
+  const target = matches[0];
+  const data = await brainPost('/family-relays', {
+    action: 'create',
+    relay: {
+      familyGroupId: famGroupId(),
+      recipientPersonId: target.personId,
+      recipientLabel: target.name,
+      senderLabel: myFeedName(),
+      content,
+      source: 'voice-ai',
+    },
+  });
+  if (!data || !data.ok || !data.relay) {
+    if (typeof toast === 'function') toast('這句話還沒送出去，請再試一次');
+    return { ok: false, error: (data && data.error) || 'relay_write_failed' };
+  }
+  if (typeof toast === 'function') toast('已請' + cname() + '在' + target.name + '下次聊聊時轉達');
+  return { ok: true, relayId: data.relay.id, recipientName: target.name, message: content };
+}
+async function claimNextFamilyRelay() {
+  if (!isLoggedIn()) return null;
+  const data = await brainPost('/family-relays', { action: 'claim' });
+  const relay = data && data.ok && data.relay ? data.relay : null;
+  if (!relay) return null;
+  try {
+    const receipts = JSON.parse(localStorage.getItem('munea.familyRelayReceipts') || '{}') || {};
+    if (receipts[relay.id]) {
+      const acknowledged = await finishFamilyRelayClaim(relay, 'ack');
+      if (acknowledged) { delete receipts[relay.id]; localStorage.setItem('munea.familyRelayReceipts', JSON.stringify(receipts)); }
+      return null;
+    }
+  } catch (e) {}
+  return relay;
+}
+function rememberSpokenFamilyRelay(relay) {
+  if (!relay || !relay.id) return;
+  try {
+    const receipts = JSON.parse(localStorage.getItem('munea.familyRelayReceipts') || '{}') || {};
+    receipts[relay.id] = Date.now();
+    const recent = Object.entries(receipts).sort((a, b) => b[1] - a[1]).slice(0, 30);
+    localStorage.setItem('munea.familyRelayReceipts', JSON.stringify(Object.fromEntries(recent)));
+  } catch (e) {}
+}
+async function finishFamilyRelayClaim(relay, action) {
+  if (!relay || !relay.id || !relay.claimToken) return false;
+  const data = await brainPost('/family-relays', { action, id: relay.id, claimToken: relay.claimToken });
+  return !!(data && data.ok);
+}
+window.__muneaFamilyRelays = { create: createFamilyRelay, claim: claimNextFamilyRelay, finish: finishFamilyRelayClaim, refreshMembers: refreshFamilyRelayMembers };
+
 // ===== 聊聊 AI 幫你把提醒設進 App（跟手動新增走同一份清單 + 同一套雲端/手機通知）· 2026-07-09 Edward =====
 function aiVisitLabel(dateISO, time) {
   try {
@@ -658,57 +754,67 @@ function aiVisitLabel(dateISO, time) {
     return md + '（' + wd + '）' + tstr;
   } catch (e) { return dateISO + (time ? ' ' + time : ''); }
 }
-function aiAddVisitReminder(a) {
+async function aiAddVisitReminder(a) {
   const title = (String((a && a.title) || '').trim()) || '回診';
   const dateISO = String((a && a.dateISO) || '').trim();
   const time = String((a && a.time) || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return { ok: false };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
+  const when = new Date(dateISO + 'T' + time + ':00');
+  if (Number.isNaN(when.getTime()) || when.getTime() < Date.now() - 60000) return { ok: false, error: 'reminder_time_in_past' };
   let arr = [];
   try { arr = JSON.parse(localStorage.getItem('munea.visits') || '[]') || []; } catch (e) {}
   if (!Array.isArray(arr)) arr = [];
   const label = aiVisitLabel(dateISO, time);
-  const visit = { id: Date.now(), title, dateISO, time, label };
+  const visit = { title, dateISO, time, label };
+  ensureVisitReminderId(visit);
+  arr = arr.filter(v => String(v && v.id) !== String(visit.id));
   arr.push(visit);
-  try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) {}
+  try { localStorage.setItem('munea.visits', JSON.stringify(arr)); } catch (e) { return { ok: false, error: 'local_write_failed' }; }
   try { if (typeof syncPush === 'function') syncPush('visits', arr); } catch (e) {}
-  try { syncVisitReminder(visit); } catch (e) {}
+  let cloud = null;
+  try { cloud = await syncVisitReminder(visit); } catch (e) {}
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
   try { if (window.__muneaRefreshVisitRow) window.__muneaRefreshVisitRow(); } catch (e) {}
   try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
-  return { ok: true, title, label };
+  return { ok: true, title, label, reminderId: visit.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
 }
-function aiAddMedReminder(a) {
+async function aiAddMedReminder(a) {
   const name = String((a && a.name) || '').trim();
   const SLOTS = ['早餐後', '午餐後', '晚餐後', '睡前'];
   let slots = (a && Array.isArray(a.slots)) ? a.slots.filter(s => SLOTS.indexOf(s) >= 0) : [];
   slots = [...new Set(slots)];
-  if (!name || !slots.length) return { ok: false };
+  if (!name || !slots.length) return { ok: false, error: 'medication_name_or_slots_required' };
   const meds = (typeof loadMeds === 'function') ? loadMeds() : [];
   const med = { name, time: slots.join('、'), days: (a && a.days) || '長期', by: '', photo: '' };
   ensureMedReminderId(med);
-  meds.push(med);
-  try { localStorage.setItem('munea.meds', JSON.stringify(meds)); } catch (e) {}
-  try { if (typeof syncPush === 'function') syncPush('meds', meds); } catch (e) {}
-  try { syncMedicationReminder(med); } catch (e) {}
+  const nextMeds = meds.filter(m => String(m && m.id) !== String(med.id));
+  nextMeds.push(med);
+  try { localStorage.setItem('munea.meds', JSON.stringify(nextMeds)); } catch (e) { return { ok: false, error: 'local_write_failed' }; }
+  try { if (typeof syncPush === 'function') syncPush('meds', nextMeds); } catch (e) {}
+  let cloud = null;
+  try { cloud = await syncMedicationReminder(med); } catch (e) {}
   try { if (typeof updateMedCount === 'function') updateMedCount(); } catch (e) {}
   try { if (typeof renderMedList === 'function') renderMedList(); } catch (e) {}
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
-  return { ok: true, name, slots };
+  return { ok: true, name, slots, reminderId: med.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
 }
 // 聊聊語音收到 AI 的「幫你做進 App」指令 → 執行 + 螢幕輕提示（寧寧的口頭確認由 AI 那頭講）
-function handleVoiceAction(action, args) {
+async function handleVoiceAction(action, args) {
   args = args || {};
   if (action === 'set_clinic_reminder') {
-    const r = aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
+    const r = await aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
     if (typeof toast === 'function') toast(r.ok ? ('看診提醒設好了：' + r.title + ' · ' + r.label) : '看診日期我沒抓到，你再說一次日期好嗎');
     return r;
   }
   if (action === 'set_medication_reminder') {
-    const r = aiAddMedReminder({ name: args.name, slots: args.slots, days: args.days });
+    const r = await aiAddMedReminder({ name: args.name, slots: args.slots, days: args.days });
     if (typeof toast === 'function') toast(r.ok ? ('用藥提醒設好了：' + r.slots.join('、') + '吃「' + r.name + '」') : '要什麼時候吃我沒抓到，你再說一次好嗎');
     return r;
   }
-  return { ok: false };
+  if (action === 'send_family_relay') {
+    return await createFamilyRelay(args.recipientName, args.message);
+  }
+  return { ok: false, error: 'unsupported_action' };
 }
 window.__muneaHandleVoiceAction = handleVoiceAction;
 
@@ -1270,6 +1376,10 @@ const CallControl = {
 };
 function getLiveVoiceUrl() {
   if (CallControl.active) return (CallControl.active.voice && CallControl.active.voice.url) || '';
+  try {
+    const cfg = devAuthConfig();
+    if (isDeveloperBypassAllowed() && cfg.voiceUrl) return String(cfg.voiceUrl);
+  } catch (e) {}
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
   return LIVE_VOICE_URL_DEFAULT;
 }
@@ -1562,7 +1672,9 @@ const Avatar = {
     try {
       const aud = document.getElementById('faceAud'); if (!aud) return;
       const ms = new MediaStream([track]);
-      aud.srcObject = ms; aud.muted = false;
+      // faceAud 只做音量儀表；真正聲音固定由 faceVid 播放。
+      // 如果這裡也解除靜音，同一遠端音軌會被兩個 media element 同時播放而重疊。
+      aud.srcObject = ms; aud.muted = true;
       const p = aud.play(); if (p && p.catch) p.catch(() => {});
       this._diag('聲音到了（同線）');
       try {
@@ -1714,7 +1826,33 @@ const LiveVoice = {
     try { trackProductEvent('voice_barge_in_local', { rms: +rms.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
     if (this.onListen) this.onListen();
   },
-  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet' })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；第一個聲音到達就開啟插話偵測
+  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet', relay: this._pendingRelay || null })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；若有指定給本人的家人傳話，先準確轉達
+  async prepareRelay() {
+    if (this._pendingRelay) return this._pendingRelay;
+    this._relaySpokenId = null;
+    try { this._pendingRelay = await claimNextFamilyRelay(); } catch (e) { this._pendingRelay = null; }
+    return this._pendingRelay;
+  },
+  async _finishRelay(action) {
+    const relay = this._pendingRelay;
+    if (!relay || this._relayFinishing) return false;
+    this._relayFinishing = true;
+    let ok = false;
+    try { ok = await finishFamilyRelayClaim(relay, action); } catch (e) {}
+    this._relayFinishing = false;
+    if (ok || action === 'release') this._pendingRelay = null;
+    if (action === 'ack' && ok) {
+      this._relaySpokenId = null;
+      try {
+        const receipts = JSON.parse(localStorage.getItem('munea.familyRelayReceipts') || '{}') || {};
+        delete receipts[relay.id]; localStorage.setItem('munea.familyRelayReceipts', JSON.stringify(receipts));
+      } catch (e) {}
+    } else if (action === 'ack' && this._pendingRelay) {
+      clearTimeout(this._relayAckRetry);
+      this._relayAckRetry = setTimeout(() => this._finishRelay('ack'), 5000);
+    }
+    return ok;
+  },
   nudge(level) { try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ type: 'nudge', level: level || 1 })); } catch (e) {} },   // 使用者一直沒講話 → 請 AI 溫柔提醒（省點 · Edward 2026-07-10）
   // 掛斷時把整通對話送去萃取長期記憶（讓「聊聊」講的也記得住 · Edward 2026-07-10）——跟文字聊天同一條記憶入口
   saveMemory() {
@@ -1741,9 +1879,9 @@ const LiveVoice = {
     return Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08);
   },
   _setFaceAudioMuted(muted) {
-    ['faceAud', 'faceVid'].forEach(id => {
-      try { const el = document.getElementById(id); if (el) el.muted = !!muted; } catch (e) {}
-    });
+    // faceAud 永久靜音，只當 analyser 的 MediaStream 來源；faceVid 是唯一同線播放器。
+    try { const meter = document.getElementById('faceAud'); if (meter) meter.muted = true; } catch (e) {}
+    try { const player = document.getElementById('faceVid'); if (player) player.muted = !!muted; } catch (e) {}
   },
   async _finishSameLineWarmup() {
     if (!this._sameLineWarmupPending || !this.on) return;
@@ -1790,6 +1928,7 @@ const LiveVoice = {
       return;
     }
     this.speaking = false; this.playLevel = 0;
+    if (this._relaySpokenId && this._pendingRelay && this._relaySpokenId === this._pendingRelay.id) this._finishRelay('ack');
     if (this._sameLineWarmupPending) this._finishSameLineWarmup();
     if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
     if (this.onListen) this.onListen();
@@ -1817,6 +1956,19 @@ const LiveVoice = {
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
+    // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。
+    try {
+      if (this._openingSessionId !== activeChatSessionId) {
+        const now = new Date();
+        const day = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+        let daily = {}; try { daily = JSON.parse(localStorage.getItem('munea.dailyCallOpening') || '{}') || {}; } catch (e2) {}
+        this._openingSessionId = activeChatSessionId;
+        this._openingDayKey = day;
+        this._openingDayCall = daily.day === day ? Math.max(0, parseInt(daily.count || '0', 10) || 0) : 0;
+        this._openingRecorded = false;
+      }
+      url += '&day_call=' + Math.max(0, this._openingDayCall || 0);
+    } catch (e) {}
     // Production uses a short-lived token bound to this call's Voice+Avatar lease.
     const _callToken = CallControl.active && CallControl.active.call_token;
     url += (url.indexOf('?') >= 0 ? '&' : '?') + (_callToken
@@ -1889,7 +2041,7 @@ const LiveVoice = {
         if (this.onConnecting) this.onConnecting();   // 線接上了、腦還在開機 → 顯示「撥通中」載入動態
         done(true);
       };
-      this.ws.onmessage = ev => {
+      this.ws.onmessage = async ev => {
         if (typeof ev.data === 'string') {
           try {
             const o = JSON.parse(ev.data);
@@ -1940,8 +2092,21 @@ const LiveVoice = {
               this._newAvatarTurn = true;
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
+            if (o.type === 'relay_spoken' && o.id) { this._relaySpokenId = o.id; rememberSpokenFamilyRelay(this._pendingRelay); }
+            if (o.type === 'relay_interrupted' && o.id && this._pendingRelay && o.id === this._pendingRelay.id) this._finishRelay('release');
+            if (o.type === 'relay_rejected' && o.id && this._pendingRelay && o.id === this._pendingRelay.id) this._finishRelay('release');
             if (o.type === 'action' && o.action) {   // AI 要「幫你做進 App」（設看診/用藥提醒）→ 執行
-              try { if (window.__muneaHandleVoiceAction) window.__muneaHandleVoiceAction(o.action, o.args || {}); } catch (eAct) {}
+              let result = { ok: false, error: 'app_action_unavailable' };
+              try {
+                if (window.__muneaHandleVoiceAction) result = await window.__muneaHandleVoiceAction(o.action, o.args || {});
+              } catch (eAct) { result = { ok: false, error: String(eAct && eAct.message || 'app_action_failed') }; }
+              try {
+                if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({
+                  type: 'action_result', id: o.id, action: o.action, ok: !!(result && result.ok),
+                  result: result && result.ok ? result : undefined,
+                  error: result && !result.ok ? (result.error || 'app_action_failed') : undefined,
+                }));
+              } catch (eAck) {}
             }
           } catch (e) {}
           return;
@@ -1966,8 +2131,8 @@ const LiveVoice = {
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
         let ps = 0; for (let k = 0; k < f.length; k++) ps += f[k] * f[k];
         this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
-        // 同線模式：聲音改從 faceAud（臉那條線）出、這裡不本地排程播放（也不用等 faceSyncMs）。
-        // 保底：頭一段講話若 3 秒內 faceAud 完全沒出聲 → 判定同線失效、之後這通改回本地播放（防「有臉沒聲」）。
+        // 同線模式：聲音只從 faceVid（臉那條線）出，faceAud 只量測、永久靜音。
+        // 保底：頭一段講話若 3 秒內完全沒收到同線音軌 → 之後這通改回本地播放。
         if (this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true) {
           if (!this._sameLineWatchStarted) {
             this._sameLineWatchStarted = true;
@@ -2040,6 +2205,7 @@ const LiveVoice = {
     });
   },
   stop() {
+    if (this._pendingRelay) this._finishRelay(this._relaySpokenId ? 'ack' : 'release');
     this.on = false;
     this.ready = false;
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
@@ -2394,6 +2560,7 @@ function showView(id) {
   $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
   if (id === 'status') {
     renderStatusCharts();
+    if (typeof window.__muneaRefreshMedicationUi === 'function') window.__muneaRefreshMedicationUi();
     const strip = $('#srcStrip');
     if (strip) strip.style.display = localStorage.getItem('munea.devicesOn') ? 'none' : '';
     // 底部「接上 Apple 健康」卡：還沒接才顯示；接上了就收起來（Edward 7/9）
@@ -2884,19 +3051,27 @@ function renderPillTask() {
     return;
   }
   card.style.display = '';
-  let done = {};
-  try { done = JSON.parse(localStorage.getItem('munea.medDone.' + pillDateKey())) || {}; } catch (e) {}
-  const slots = [];
-  for (const med of meds) {
-    for (const raw of String(med.time).split('、')) {
-      const slot = raw.trim();
-      if (slot) slots.push({ slot, name: med.name, key: slot + '|' + med.name, photo: med.photo || '' });
+  let slots = [];
+  if (window.MuneaMedication) {
+    slots = window.MuneaMedication.dayEvents(meds, pillDateKey()).map(event => ({
+      ...event,
+      name: event.medicationName,
+      key: event.slot + '|' + event.medicationName,
+    }));
+  } else {
+    let done = {};
+    try { done = JSON.parse(localStorage.getItem('munea.medDone.' + pillDateKey())) || {}; } catch (e) {}
+    for (const med of meds) {
+      for (const raw of String(med.time).split('、')) {
+        const slot = raw.trim();
+        if (slot) slots.push({ slot, name: med.name, key: slot + '|' + med.name, photo: med.photo || '', status: done[slot + '|' + med.name] ? 'taken' : 'scheduled' });
+      }
     }
+    slots.sort((a, b) => PILL_SLOT_ORDER.indexOf(a.slot) - PILL_SLOT_ORDER.indexOf(b.slot));
   }
-  slots.sort((a, b) => PILL_SLOT_ORDER.indexOf(a.slot) - PILL_SLOT_ORDER.indexOf(b.slot));
   const total = slots.length;
-  const doneN = slots.filter(s => done[s.key]).length;
-  const next = slots.find(s => !done[s.key]);
+  const doneN = slots.filter(s => s.status === 'taken').length;
+  const next = slots.find(s => s.status !== 'taken' && s.status !== 'skipped');
   if (next) {
     title.textContent = '吃' + String(next.name).split(/\s+/)[0]; // 標題用短名、全名在用藥管理
     sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
@@ -3345,7 +3520,7 @@ async function syncPullAll() {
     if (Array.isArray(st.circle) && st.circle.length) {
       try {
         const mine = myProfileName();
-        const arr = st.circle.map(m => ({ name: m.name, init: m.init, tint: m.tint, self: !!mine && m.name === mine }));
+        const arr = st.circle.map(m => ({ name: m.name, personId: m.personId || m.id, relationship: m.relationship, init: m.init, tint: m.tint, self: !!mine && m.name === mine }));
         if (!arr.some(m => m.self)) {
           const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
           arr.unshift({ name: mine || p.nick || '我', init: (p.nick || mine || '我')[0], tint: 'p-ama', self: true });
@@ -3354,6 +3529,7 @@ async function syncPullAll() {
         if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync();
       } catch (e) {}
     }
+    try { await refreshFamilyRelayMembers(); } catch (e) {}
     if (st.wallet && typeof st.wallet.used === 'number') {
       POINTS.used = st.wallet.used;
       try { localStorage.setItem('munea.ptsBought', String(st.wallet.bought || 0)); } catch (e) {}
@@ -3363,6 +3539,28 @@ async function syncPullAll() {
     if (typeof renderVisitRow === 'function') try { renderVisitRow(); } catch (e) {}
     renderCareCarousel();
   } catch (e) {}
+}
+function configureMedicationService() {
+  if (!window.MuneaMedication) return Promise.resolve([]);
+  const scope = isLoggedIn() ? muneaCloudPersonId() : 'guest';
+  return window.MuneaMedication.configure({
+    scope,
+    meds: loadMeds,
+    post: body => brainPost('/medication-doses', body),
+  }).catch(() => []);
+}
+function handleMedicationChange(event) {
+  const dose = event && event.detail ? event.detail : {};
+  renderPillTask();
+  if (typeof window.__muneaRefreshMedicationUi === 'function') window.__muneaRefreshMedicationUi();
+  if (dose.status !== 'taken' || ['cloud-refresh', 'configured', 'schedule', 'legacy-import'].includes(dose.source)) return;
+  trackProductEvent('routine_reminder_completed', {
+    reminderType: 'medication',
+    doseKey: dose.doseKey || '',
+    source: dose.source || 'app',
+  });
+  // 家庭圈只分享服藥時段，不分享藥名，兼顧照護與用藥隱私。
+  pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot || '這次') + '服藥，' + cname() + '有看著');
 }
 function streakLine(n) {
   if (n >= 10) return '這個月有 <b>' + n + ' 天</b>準時吃藥，很穩，繼續保持';
@@ -3652,11 +3850,14 @@ function refreshTaskProgress() {
   const pillTask = document.querySelector('.task-item[data-task="pill"]');
   const pv = $('#statPillVal');
   const pdone = pillTask && pillTask.classList.contains('done');
-  if (pv && pillTask) pv.innerHTML = (pdone ? '3' : '2') + '<small>/3</small>';
+  const medSummary = window.MuneaMedication ? window.MuneaMedication.daySummary(pillDateKey(), loadMeds()) : null;
+  const medTaken = medSummary ? medSummary.taken : (pdone ? 3 : 2);
+  const medExpected = medSummary ? medSummary.expected : 3;
+  if (pv && pillTask) pv.innerHTML = medTaken + '<small>/' + medExpected + '</small>';
   const dots = document.querySelectorAll('#pillDots i');
-  if (dots.length) dots.forEach((d2, i2) => d2.classList.toggle('f', i2 < (pdone ? 3 : 2)));
+  if (dots.length) dots.forEach((d2, i2) => d2.classList.toggle('f', i2 < medTaken));
   const hint = $('#statPillHint');
-  if (hint) { hint.textContent = pdone ? '都吃了' : '剩 1 次'; hint.className = 'st-trend ' + (pdone ? 'ok' : 'warn'); }
+  if (hint) { const remaining = Math.max(0, medExpected - medTaken); hint.textContent = remaining ? ('剩 ' + remaining + ' 次') : '都吃了'; hint.className = 'st-trend ' + (remaining ? 'warn' : 'ok'); }
   const prog = $('.task-progress');
   if (!prog) return;
   const label = prog.childNodes[prog.childNodes.length - 1];
@@ -3667,6 +3868,23 @@ function refreshTaskProgress() {
 
 let _uncheckArm = null;
 function toggleTask(item) {
+  if (item.dataset.task === 'pill' && window.MuneaMedication) {
+    if (item.classList.contains('done')) {
+      // 防手抖：完成整天用藥後，第二次確認才取消最後一筆。
+      if (_uncheckArm === item) {
+        _uncheckArm = null;
+        window.MuneaMedication.undoLast(loadMeds(), 'home-undo');
+        toast('好，已取消最後一筆服藥紀錄。');
+      } else {
+        _uncheckArm = item;
+        toast('今天的藥已完成，再按一次才會取消最後一筆。');
+        setTimeout(() => { if (_uncheckArm === item) _uncheckArm = null; }, 3000);
+      }
+      return;
+    }
+    window.MuneaMedication.markNext(loadMeds(), 'home');
+    return;
+  }
   if (item.dataset.task === 'mood') {
     showView('status');
     try { if (window.MM && typeof window.MM.renderMood === 'function') window.MM.renderMood('today'); } catch (e) {}
@@ -3855,6 +4073,8 @@ async function connectCall() {
       : '拿不到麥克風，請到瀏覽器設定允許');
     return;
   }
+  // 先領取一則「指定給本人」的家人傳話；沒有訊息或暫時離線都不阻擋通話。
+  try { await LiveVoice.prepareRelay(); } catch (e) {}
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   const developmentDirectCall = usesDevelopmentDirectCall();
   setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
@@ -3924,6 +4144,12 @@ async function connectCall() {
       _started = true;
       clearTimeout(_gateTimeout);
       try { localStorage.setItem('munea.callCount', String((parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0) + 1)); } catch (e) {}   // 聊過幾通＋1 → 下通開場更像老朋友（熟識度）
+      try {
+        if (!LiveVoice._openingRecorded && LiveVoice._openingDayKey) {
+          localStorage.setItem('munea.dailyCallOpening', JSON.stringify({ day: LiveVoice._openingDayKey, count: (LiveVoice._openingDayCall || 0) + 1 }));
+          LiveVoice._openingRecorded = true;
+        }
+      } catch (e) {}
       // 三條管線（腦、影像、Avatar 聲音上行）都就緒後再多等 1.5 秒才開口。
       // 待機動畫在這段時間繼續播，避免第一批招呼聲先於聲畫管線到達而變形或被吃掉。
       const _greetDelay = 1500;
@@ -4041,7 +4267,9 @@ function init() {
     } catch (e) {} }, 600);
   } catch (e) {}
   try { const _vs = document.getElementById('webVerStamp'); if (_vs && window.MuneaVersion) _vs.textContent = '內頁 v' + MuneaVersion.current; } catch (e) {}   // 內頁真版印章：通話畫面角落顯示網頁內容真版本（防 iOS 外殼標籤新、內頁舊）
+  window.addEventListener('munea:medication-change', handleMedicationChange);
   const __pullPromise = syncPullAll();
+  const __medicationPromise = Promise.resolve(__pullPromise).then(configureMedicationService);
   refreshServerPlanEntitlement();
   refreshServerCredits();
   setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
@@ -4131,6 +4359,7 @@ function init() {
       syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true });
       try { if (window.MuneaHealth && typeof window.MuneaHealth.refresh === 'function') window.MuneaHealth.refresh(); } catch (e) {}
     }
+    configureMedicationService();
   });
   loadCompanionProfileFromBackend().finally(() => {
     if (storageGet(ONBOARDING_COMPLETED_KEY) === 'true' || storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'pending-auth') {
@@ -4287,7 +4516,7 @@ function init() {
   function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : [circleSelfMember()]; } catch (e) { return [circleSelfMember()]; } }
   function saveCircle(a2) {
     try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {}
-    syncPush('circle', a2.map(m => ({ name: m.name, init: m.init, tint: m.tint })));   // 圈名單上雲（不帶「本人」標記）
+    syncPush('circle', a2.map(m => ({ name: m.name, personId: m.personId, relationship: m.relationship, init: m.init, tint: m.tint })));   // 本人標記不上雲；personId 保留給指定收件人的傳話
   }
   window.__muneaAfterCircleSync = function () { try { renderFamRoster(); renderFcRoster(); updateSafetyCount(); } catch (e) {} };
   function renderFcRoster() {
@@ -6098,12 +6327,17 @@ function init() {
   window.__fireMedNow = () => { const m = loadMeds()[0]; if (m) fireMedReminder({ ...m, time: String(m.time).split('、')[0], key: 'test|' + m.name }); };
   if ($('#medTaken')) $('#medTaken').addEventListener('click', () => {
     if (medShowing) {
-      let done = {};
-      try { done = JSON.parse(localStorage.getItem(todayKey())) || {}; } catch (e) {}
-      done[medShowing.key] = true;
-      try { localStorage.setItem(todayKey(), JSON.stringify(done)); } catch (e) {}
-      pushFamilyFeed('<b>' + myFeedName() + '</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
-      trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
+      if (window.MuneaMedication) {
+        const dose = window.MuneaMedication.findDose(loadMeds(), medShowing.key, pillDateKey());
+        if (dose) window.MuneaMedication.setStatus(dose, 'taken', 'notification');
+      } else {
+        let done = {};
+        try { done = JSON.parse(localStorage.getItem(todayKey())) || {}; } catch (e) {}
+        done[medShowing.key] = true;
+        try { localStorage.setItem(todayKey(), JSON.stringify(done)); } catch (e) {}
+        pushFamilyFeed('<b>' + myFeedName() + '</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
+        trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
+      }
     }
     medShowing = null;
     $('#medRemindModal').classList.remove('show');
@@ -6270,6 +6504,7 @@ function init() {
     if (dm) { let d = new Date(now.getFullYear(), +dm[1] - 1, +dm[2]); if (d < base) d = new Date(now.getFullYear() + 1, +dm[1] - 1, +dm[2]); return d; }
     return null;
   }
+  let _pendingFamilyRelayDraft = null;
   function parseChatIntent(t) {
     // 聊聊代辦：講一句、寧寧直接把 app 設定做好（原型版；真腦版走同一批動作）
     // 問點數：用真錢包數字回答、順帶安心話（不推銷）
@@ -6294,12 +6529,10 @@ function init() {
       let who = relay0[2].replace(/[要說來]$/, '');
       if (who.length < 2) who = relay0[2];
       const _msg = relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, '');
-      const _pf = (typeof loadPersonProfile === 'function') ? loadPersonProfile() : {};
-      const _me = _pf.nick || _pf.name || '家人';   // 暱稱優先、沒暱稱才名字
       // 傳話會印在對方首頁最顯眼的位置，聽錯就是別人替你出糗、而他無從核對 → push 前先擋（Edward 2026-07-14）
       if (!muneaIsCleanZhText(_msg)) return '我剛剛沒聽清楚要帶的話，你再跟我說一次要跟' + who + '說什麼？';
-      pushFamilyFeed('<b>' + _me + '</b>要我提醒你：' + _msg);
-      return '好，我幫你把話帶給' + who + '——他打開沐寧就會看到「' + _me + '要我提醒你：' + _msg + '」。';
+      _pendingFamilyRelayDraft = { recipientName: who, message: _msg };
+      return '我確認一下：你要我跟' + who + '說「' + _msg + '」，對嗎？';
     }
     // ===== 用藥提醒：聽到「幫我記得／提醒我…吃藥」→ 直接建好 =====
     const medTrig = /(提醒|記得|記錄|紀錄|幫我記|幫我排|安排|叫我)/.test(t);
@@ -6351,6 +6584,20 @@ function init() {
   window.__chatTest = t => { const r = parseChatIntent(t); return r || chatReply(t); };
   window.__chatSay = t => chatHandle(t);
   async function chatHandle(t) {
+    if (_pendingFamilyRelayDraft && /^(對|是|好|可以|沒錯|正確|嗯)/.test(String(t || '').trim())) {
+      const draft = _pendingFamilyRelayDraft;
+      _pendingFamilyRelayDraft = null;
+      const sent = await createFamilyRelay(draft.recipientName, draft.message);
+      speakChat(sent.ok
+        ? ('好，' + draft.recipientName + '下次打開聊聊時，我會先說「' + draft.message + '」。')
+        : '這句話目前還沒送出去，請先確認家庭圈成員名稱，再跟我說一次。');
+      return;
+    }
+    if (_pendingFamilyRelayDraft && /^(不|不是|取消|不要)/.test(String(t || '').trim())) {
+      _pendingFamilyRelayDraft = null;
+      speakChat('好，我先不傳。');
+      return;
+    }
     const acted = parseChatIntent(t);
     if (acted) { speakChat(acted); return; }
     setCallHint('我聽見了');
