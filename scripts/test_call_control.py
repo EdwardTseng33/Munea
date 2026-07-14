@@ -56,6 +56,7 @@ class FakeDurable:
         self.heartbeats = []
         self.releases = []
         self.ready_events = []
+        self.worker_updates = []
 
     def authenticate(self, bearer):
         assert bearer == "valid-user-token"
@@ -95,6 +96,10 @@ class FakeDurable:
 
     def upsert_voice_shard(self, row):
         return row
+
+    def update_worker(self, worker_id, values):
+        self.worker_updates.append((worker_id, values))
+        return {"worker_id": worker_id, **values}
 
 
 def test_http_v2_contract():
@@ -143,6 +148,13 @@ def test_http_v2_contract():
     assert ready["ok"] is True
     denied = client.post("/v1/internal/reap", headers={"Authorization": "Bearer wrong"})
     assert denied.status_code == 403
+    worker_health = client.post(
+        "/v1/internal/workers/runpod-test/health",
+        headers={"Authorization": "Bearer unit-admin"},
+        json={"healthy": True, "active": 0},
+    )
+    assert worker_health.status_code == 200
+    assert "active_leases" not in gs.DURABLE.worker_updates[-1][1]
     assert client.get("/metrics").status_code == 403
     metrics = client.get("/metrics", headers={"Authorization": "Bearer unit-admin"})
     assert metrics.status_code == 200 and "munea_calls_active 1" in metrics.text

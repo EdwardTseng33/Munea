@@ -135,6 +135,9 @@ def backup_update_spec() -> dict[str, Any]:
 
 
 def update_pod(pod_id: str, spec: dict[str, Any]) -> dict[str, Any]:
+    """Update a stopped Pod's boot configuration without exposing credentials."""
+    if not pod_id or not spec:
+        raise RunPodError("pod id and update spec are required")
     return request("PATCH", f"/pods/{pod_id}", spec)
 
 

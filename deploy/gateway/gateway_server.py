@@ -394,8 +394,9 @@ def durable_worker_health(worker_id: str, body: DurableWorkerHealthBody,
         "status": "ready" if body.healthy else "unhealthy",
         "last_heartbeat_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
-    if body.active is not None:
-        values["active_leases"] = max(0, body.active)
+    # active_leases is the durable admission ledger. A worker heartbeat reports
+    # physical media sessions, which can legitimately lag reservations while a
+    # call is connecting. Never let telemetry erase reserved capacity.
     try:
         return {"ok": True, "worker": _durable().update_worker(worker_id, values)}
     except CallControlError as exc:

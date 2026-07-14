@@ -23,6 +23,9 @@ def test_production_app_uses_gateway_by_default() -> None:
     ) in APP
     assert "if (CallControl.url()) {" not in APP
     assert "await CallControl.acquire(" in APP
+    call_control = APP[APP.index("const CallControl = {"):APP.index("function getLiveVoiceUrl()")]
+    assert "localStorage.getItem('munea.callControlUrl')" not in call_control
+    assert "isDeveloperBypassAllowed() && cfg.callControlUrl" in call_control
 
 
 def test_cancelled_acquire_disposes_returned_capacity() -> None:

@@ -160,7 +160,14 @@ class OperationLock:
 
 def _http_json(method: str, url: str, body: dict[str, Any] | None = None,
                timeout: int = 10, headers: dict[str, str] | None = None) -> dict[str, Any]:
-    request_headers = {"Content-Type": "application/json"}
+    # RunPod's public proxy sits behind Cloudflare and can reject urllib's
+    # default Python user agent even while the same healthy endpoint works in
+    # browsers. Identify the controller explicitly for reliable health gates.
+    request_headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Munea-Capacity-Controller/1.0",
+    }
     request_headers.update(headers or {})
     request = urllib.request.Request(
         url,
@@ -462,7 +469,8 @@ class BackupController:
             desired, reason = desired_backup_pods(snapshot, self.config)
             registered_ids = {
                 str(w.get("worker_id") or "").removeprefix("runpod-")
-                for w in backups if w.get("worker_id")
+                for w in backups
+                if w.get("worker_id") and str(w.get("status") or "") != "terminated"
             }
             scale_up_ok = (
                 now - float(state.get("last_scale_up_ts") or 0)

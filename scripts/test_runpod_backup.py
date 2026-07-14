@@ -68,6 +68,7 @@ class FakeProvider:
         self.ensure_calls = 0
         self.down_calls = []
         self.pods = []
+        self.last_excluded = set()
 
     def list(self):
         return [dict(pod) for pod in self.pods]
@@ -75,6 +76,7 @@ class FakeProvider:
     def ensure_ready_many(self, count, timeout_s, poll_s, exclude_ids=None):
         self.ensure_calls += count
         excluded = set(exclude_ids or ())
+        self.last_excluded = excluded
         pods = []
         index = 1
         while len(pods) < count:
@@ -204,6 +206,19 @@ def test_queue_opens_and_registers_one_backup():
         assert result["reason"] == "queue_waiting"
         assert provider.ensure_calls == 1
         assert gateway.calls[-1] == ("register", "runpod-pod-1")
+
+
+def test_terminated_gateway_record_does_not_block_pod_reuse():
+    with tempfile.TemporaryDirectory() as tmp:
+        retired = backup(active=0)
+        retired.update({"healthy": False, "enabled": False, "status": "terminated"})
+        gateway = FakeGateway([primary(active=3), retired], queue_depth=1)
+        provider = FakeProvider()
+        controller = rb.BackupController(make_config(tmp), gateway, provider, Clock(),
+                                         probe=probe_counts(primary_active=3))
+        result = controller.run_once()
+        assert result["action"] == "scaled_up"
+        assert "pod-1" not in provider.last_excluded
 
 
 def test_observe_mode_never_spends():
@@ -376,6 +391,7 @@ def main():
             test_stopped_pod_without_host_is_recreated_from_template,
             test_primary_free_does_not_open_backup,
             test_queue_opens_and_registers_one_backup,
+            test_terminated_gateway_record_does_not_block_pod_reuse,
             test_observe_mode_never_spends,
             test_primary_outage_opens_backup,
             test_idle_backup_drains_then_stops,
