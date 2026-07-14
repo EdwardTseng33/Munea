@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新可測包**：獨立分支 `codex/release-integration-1.0.8` 以 `origin/main@5e27a10` 為基底，已統一整合用藥紀錄、家庭傳話、單播放器、同日開場去重與 Voice／Avatar 暖機修正，版本維持 `1.0.8 (Build 13)`。完整 `test:launch`、Voice／Avatar 專項、Capacitor sync、Xcode 26.6 實機簽章、包內來源核對、iPhone 覆蓋安裝與啟動均 PASS；Edward iPhone 已回報安裝版本 `1.0.8 (13)`。本包保留 Pro、1,000 點、三位家人假資料與 Voice canary 直連，只供開發驗收；尚未合併 main，也不是 App Store 候選包。
+> **2026-07-15 最新可測包**：獨立分支 `codex/release-integration-1.0.9` 以最新 `origin/main@d0215a3` 為基底，已統一整合看診／用藥／家庭資料外文守門、用藥紀錄、家庭傳話、單播放器、同日開場去重與 Voice／Avatar 暖機修正，版本為 `1.0.9 (Build 14)`。完整 `test:launch`、Voice／Avatar 專項、Capacitor sync、Xcode 26.6 實機簽章、包內來源核對、iPhone 覆蓋安裝與啟動均 PASS；Edward iPhone 已回報安裝版本 `1.0.9 (14)`。本包保留 Pro、1,000 點、三位家人假資料與 Voice canary 直連，只供開發驗收；尚未合併 main，也不是 App Store 候選包。
 >
 > **2026-07-15 聲畫回歸覆蓋**：Voice revision `00035-lur` 已以 0% 流量 canary 建立，開場在 1.578 秒後有效出聲並完成回合；但 Mac 合成 ASR 探針仍 FAIL，因此沒有升為 100% 正式流量。GLOWS Avatar 已配對更新 server/core，首段改為真實 PCM 到達後 1 秒共同暖機、後續回合 0.5 秒；對外健康 3/3、active=0。Edward iPhone 已安裝並啟動 `1.0.8 (Build 13)` 開發包，固定連 Voice canary，包含單播放器防雙音與同日開場去重。嘴型／斷續／雙音／話量能量／多次撥號全部等待 Edward 真機 Gate，目前仍是 ❌。
 >
