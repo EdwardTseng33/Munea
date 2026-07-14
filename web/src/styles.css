@@ -364,8 +364,6 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .set-row .sr-arrow { margin-left: auto; color: var(--muted); font-size: 15px; }
 .set-row .sr-main { flex: 1; min-width: 0; font-weight: 700; }
 .set-row .sr-main small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 2px; line-height: 1.35; }
-.locale-row { cursor: pointer; }
-.locale-row select { margin-left: auto; max-width: 108px; border: 0; background: transparent; color: var(--teal-dd); font: inherit; font-size: 14px; font-weight: 700; text-align: right; }
 .provider-consent-card { margin-top: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid rgba(58,168,160,.14); box-shadow: var(--shadow-sm); }
 .provider-consent-card[data-consent="agreed"] { border-color: rgba(58,168,160,.28); background: #F5FBF8; }
 .provider-consent-head { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
@@ -1049,6 +1047,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-name { font-size: 17px; font-weight: 700; color: var(--ink); }
 .plan-price { color: var(--teal-dd); font-weight: 600; font-size: 15px; margin-left: 4px; }
 .plan-payer { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.plan-renewal { margin: 8px 0 0; color: var(--teal-d); font-size: 13px; font-weight: 700; line-height: 1.5; }
 .plan-btn { border: none; background: var(--mint); color: var(--teal-dd); font-size: 15px; font-weight: 600; padding: 11px 20px; border-radius: 16px; min-height: 48px; cursor: pointer; }
 .plan-btn.ghost { border: 1px solid var(--teal-d); }
 .plan-divider { height: 1px; background: var(--line); margin: 14px 0; }
@@ -1454,9 +1453,11 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .mm-cell.on { outline: 2px solid var(--teal-d); outline-offset: 1px; }
 
 /* 帳號卡 · 頭像走家人系統 */
-.auth-ava { flex-shrink: 0; }
-.auth-ava .init-ava { width: 44px; height: 44px; border-radius: 50%; font-size: 17px; }
-.auth-ava.guest .init-ava { background: var(--cream-2); color: var(--muted); filter: grayscale(1); }
+.auth-ava { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: var(--mint); color: var(--teal-d); }
+.auth-ava.guest { background: var(--cream-2); color: var(--muted); }
+.auth-ava .auth-ava-placeholder { width: 25px; height: 25px; stroke-width: 1.8; }
+.auth-ava.has-photo .auth-ava-placeholder { display: none; }
+.auth-ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 
 /* 方案四檔 */
 .tier-list { display: flex; flex-direction: column; gap: 8px; }
@@ -2022,12 +2023,19 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .face-exit:active { transform: translateX(-50%) scale(.9); }
 
 /* 個人資料頭像上傳（Edward 7/7） */
-.pf-avatar-row { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
-.pf-avatar { flex: 0 0 72px; width: 72px; height: 72px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); display: grid; place-items: center; font-family: var(--serif); font-weight: 900; font-size: 30px; overflow: hidden; background-size: cover; background-position: center; }
-.pf-avatar-side { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
-.pf-avatar-btn { border: 1.5px solid var(--teal-d); background: #fff; color: var(--teal-dd); font-weight: 700; font-size: 14px; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
+.pf-avatar-row { display: flex; align-items: center; gap: 18px; margin: 2px 0 14px; }
+.pf-avatar-wrap { position: relative; flex: 0 0 78px; width: 78px; height: 78px; }
+.pf-avatar { width: 78px; height: 78px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); display: grid; place-items: center; overflow: hidden; background-size: cover; background-position: center; }
+.pf-avatar .pf-avatar-placeholder { width: 32px; height: 32px; stroke-width: 1.7; }
+.pf-avatar.has-photo .pf-avatar-placeholder { display: none; }
+.pf-avatar-side { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-width: 0; }
+.pf-avatar-btn { min-height: 44px; border: 1.5px solid var(--teal-d); background: #fff; color: var(--teal-dd); font-weight: 700; font-size: 14px; padding: 9px 18px; border-radius: 999px; cursor: pointer; }
 .pf-avatar-btn:active { transform: scale(.97); }
-.pf-avatar-clear { border: none; background: none; color: var(--muted); font-size: 12.5px; cursor: pointer; padding: 0; text-align: left; }
+.pf-avatar-clear { position: absolute; right: -10px; bottom: -9px; width: 44px; height: 44px; border: 4px solid var(--surface); border-radius: 50%; background: var(--ink-2); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; box-shadow: 0 4px 12px rgba(31,42,41,.2); }
+.pf-avatar-clear[hidden] { display: none; }
+.pf-avatar-clear .ic { width: 17px; height: 17px; stroke-width: 2.2; }
+.pf-avatar-clear:active { transform: scale(.94); }
+.pf-avatar-clear:focus-visible, .pf-avatar-btn:focus-visible { outline: 3px solid rgba(58,168,160,.28); outline-offset: 2px; }
 .pf-avatar-hint { font-size: 12px; color: var(--muted); }
 
 /* 用藥時段時間：可直接點選（Edward 7/7） */

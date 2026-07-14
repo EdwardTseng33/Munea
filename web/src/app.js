@@ -5,7 +5,7 @@
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const muneaLocale = () => (window.MuneaI18n ? window.MuneaI18n.current() : 'zh-TW');
-const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.preferredLanguages() : ['zh-TW', 'en']);
+const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.preferredLanguages() : ['zh-TW']);
 const muneaT = (key, fallback) => (window.MuneaI18n ? window.MuneaI18n.t(key, null, fallback) : fallback);
 
 const OVERLAYS = ['med', 'connect', 'chat'];
@@ -447,6 +447,49 @@ async function brainPost(url, body) {
     return await r.json();
   } catch (e) { return null; }
   finally { clearTimeout(to); }
+}
+
+async function refreshServerPlanEntitlement() {
+  // The server is authoritative: this also reflects an expiry detected while
+  // the app was closed, rather than preserving a stale local paid-plan badge.
+  if (!isLoggedIn()) return null;
+  const result = await brainPost('/entitlements', { action: 'load' });
+  renderSubscriptionEndDate(result && result.billing && result.billing.subscription);
+  const plan = result && result.billing && result.billing.activePlan;
+  if (!['free', 'plus', 'pro'].includes(plan)) return result;
+  try { localStorage.setItem('munea.plan', plan); } catch (e) {}
+  try { renderPlanState(); renderFcRoster(); } catch (e) {}
+  return result;
+}
+
+function renderSubscriptionEndDate(subscription) {
+  const el = $('#setPlanRenewalDate');
+  if (!el) return;
+  const expiresAt = subscription && subscription.expiresAt;
+  const expires = expiresAt ? new Date(expiresAt) : null;
+  const active = subscription && subscription.status === 'active';
+  if (!active || !expires || Number.isNaN(expires.getTime())) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  const date = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(expires);
+  el.textContent = '訂閱到期日：' + date;
+  el.hidden = false;
+}
+
+function subscriptionSuccessMessage(plan, subscription) {
+  const planLabel = ({ plus: 'Plus', pro: 'Pro' })[plan] || '你的';
+  const expires = subscription && subscription.expiresAt ? new Date(subscription.expiresAt) : null;
+  if (subscription && subscription.status === 'active' && expires && !Number.isNaN(expires.getTime())) {
+    const date = new Intl.DateTimeFormat('zh-TW', {
+      timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(expires);
+    return '謝謝你訂閱 ' + planLabel + '！方案已啟用；到期日 ' + date + ' 已顯示在設定。';
+  }
+  return '謝謝你訂閱 ' + planLabel + '！方案已啟用；到期日會顯示在設定的方案卡。';
 }
 
 async function routineRemindersPost(body) {
@@ -2116,6 +2159,40 @@ function authProviderLabel(provider) {
   if (key === 'dev-bypass') return 'Developer';
   return 'Munea';
 }
+function localPersonAvatar() {
+  try { return (JSON.parse(localStorage.getItem('munea.personProfile') || '{}')).avatar || ''; } catch (e) { return ''; }
+}
+function renderAuthAvatar(state = authState(), signedIn = state.status === 'signed-in') {
+  const box = $('#authAvatar');
+  const img = $('#authAvatarImg');
+  if (!box || !img) return;
+  const meta = state && state.user && state.user.user_metadata ? state.user.user_metadata : {};
+  const accountPhoto = signedIn ? (state.avatarUrl || meta.avatar_url || meta.picture || meta.photo_url || '') : '';
+  const uploadedPhoto = signedIn ? localPersonAvatar() : '';
+  const source = accountPhoto || uploadedPhoto;
+  box.classList.toggle('guest', !signedIn);
+  box.classList.toggle('has-photo', !!source);
+  if (!source) {
+    img.hidden = true;
+    img.removeAttribute('src');
+    img.dataset.source = '';
+    img.onerror = null;
+    return;
+  }
+  img.hidden = false;
+  img.dataset.source = accountPhoto ? 'account' : 'local';
+  img.onerror = () => {
+    if (img.dataset.source === 'account' && uploadedPhoto && uploadedPhoto !== img.src) {
+      img.dataset.source = 'local';
+      img.src = uploadedPhoto;
+      return;
+    }
+    img.hidden = true;
+    img.removeAttribute('src');
+    box.classList.remove('has-photo');
+  };
+  img.src = source;
+}
 function setAuthMessage(text = '', type = '') {
   const el = $('#authMessage');
   if (!el) return;
@@ -2177,7 +2254,7 @@ function updateAuthUI() {
   // 7/9 正式化：示範假登入（陳秀英）拆除——畫面只反映真實登入狀態
   const state = authState();
   let signedIn = state.status === 'signed-in';
-  if ($('#authAvatar')) $('#authAvatar').classList.toggle('guest', !signedIn);
+  renderAuthAvatar(state, signedIn);
   const card = $('#authCard');
   if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
   const status = $('#authStatusText');
@@ -2978,13 +3055,13 @@ function reportFamilyFeedItem(idx) {
   toast('已收到，我們會處理；這則也先收起來了');
 }
 
-function toast(text) {
+function toast(text, duration = 2600) {
   const t = $('#toast');
   if (!t) return;
   t.textContent = text;
   t.classList.add('show');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
 
 // 版本顯示 + 「版本更新」彈窗（讀 window.MuneaVersion 這個單一真相）
@@ -3508,6 +3585,7 @@ function init() {
   } catch (e) {}
   try { const _vs = document.getElementById('webVerStamp'); if (_vs && window.MuneaVersion) _vs.textContent = '內頁 v' + MuneaVersion.current; } catch (e) {}   // 內頁真版印章：通話畫面角落顯示網頁內容真版本（防 iOS 外殼標籤新、內頁舊）
   const __pullPromise = syncPullAll();
+  refreshServerPlanEntitlement();
   setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
   document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
   document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
@@ -3706,8 +3784,9 @@ function init() {
   if ($('#profileModal')) $('#profileModal').addEventListener('click', e => { if (e.target === $('#profileModal')) $('#profileModal').classList.remove('show'); });
   function renderPfAvatar(av, nick) {
     const box = $('#pfAvatar'); if (!box) return;
-    if (av) { box.style.backgroundImage = 'url(' + av + ')'; box.textContent = ''; if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = false; }
-    else { box.style.backgroundImage = ''; box.textContent = (nick || '我').slice(0, 1); if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = true; }
+    box.style.backgroundImage = av ? 'url(' + av + ')' : '';
+    box.classList.toggle('has-photo', !!av);
+    if ($('#pfAvatarClear')) $('#pfAvatarClear').hidden = !av;
   }
   function resizeAvatar(file, cb, onErr) {
     if (!looksLikeImage(file)) { if (onErr) onErr(); return; }
@@ -3722,6 +3801,7 @@ function init() {
       if (av) { el.style.backgroundImage = 'url(' + av + ')'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.style.color = 'transparent'; }
       else { el.style.backgroundImage = ''; el.style.color = ''; }
     });
+    renderAuthAvatar(authState(), isLoggedIn());
   }
   window.__muneaApplyUserAvatar = applyUserAvatar;
   if ($('#pfAvatarBtn')) $('#pfAvatarBtn').addEventListener('click', () => { if ($('#pfAvatarFile')) $('#pfAvatarFile').click(); });
@@ -3779,8 +3859,9 @@ function init() {
     if (typeof setBtnBusy === 'function') setBtnBusy(btn, '加入中');
     try {
       const p = loadPersonProfile();
-      const r = await fetch(brainURL('/family/invitations'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'accept', shortCode: code, inviteePersonId: muneaDeviceId(), inviteeName: p.nick || p.name || '' }) });
-      const j = await r.json();
+      // Use the common API helper so the verified bearer token is sent.  A
+      // join code proves an invitation, never the caller's identity.
+      const j = await brainPost('/family/invitations', { action: 'accept', shortCode: code, inviteeName: p.nick || p.name || '' });
       if (j && j.ok && j.invitation && j.invitation.familyGroupId) {
         try { localStorage.setItem('munea.familyGroupId', j.invitation.familyGroupId); } catch (e) {}
         // 把自己掛進這家的圈名單（雲端），對方裝置拉回來就看得到你
@@ -3817,13 +3898,6 @@ function init() {
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
   if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily('要邀請家人連上你，先登入一下（這樣家人才連得到你）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
   // 邀請碼：跟雲端拿真的（6 位數、72 小時內有效、綁自己的家庭編號）；連不上雲端就先給本機碼並提示
-  function myInviteCode() {
-    try {
-      let c = localStorage.getItem('munea.inviteCode');
-      if (!c) { c = 'MUNEA-' + String(Math.floor(1000 + Math.random() * 9000)); localStorage.setItem('munea.inviteCode', c); }
-      return c;
-    } catch (e) { return 'MUNEA-0000'; }
-  }
   async function ensureCloudInvite() {
     // 已有 48 小時內拿到的雲端碼就沿用（雲端碼 72 小時有效，留 24 小時緩衝）
     try {
@@ -3832,8 +3906,9 @@ function init() {
       if (/^MUNEA-\d{6}$/.test(cached) && Date.now() - at < 172800000) return cached;
     } catch (e) {}
     try {
-      const r = await fetch(brainURL('/family/invitations'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', familyGroupId: famGroupId(), inviterPersonId: muneaDeviceId(), metadata: { maxMembers: CIRCLE_LIMITS[circlePlan()] || 4, plan: circlePlan() } }) });
-      const j = await r.json();
+      // Plan, circle id, owner and member limit are derived on the server.
+      // Do not send client-controlled authority fields with an invite request.
+      const j = await brainPost('/family/invitations', { action: 'create' });
       if (j && j.ok && j.invitation && j.invitation.shortCode) {
         const code = 'MUNEA-' + j.invitation.shortCode;
         try { localStorage.setItem('munea.inviteCode', code); localStorage.setItem('munea.inviteCodeAt', String(Date.now())); } catch (e) {}
@@ -3845,24 +3920,34 @@ function init() {
   function fillInvCode(withCloud) {
     const el = $('#invCode'); if (!el) return;
     const note = $('#invTempNote');
-    el.textContent = myInviteCode();
+    // There is no offline invitation mode: a locally generated code cannot
+    // carry verified identity, entitlement or membership provisioning.
+    el.textContent = withCloud ? '建立中…' : '—';
     if (note) note.style.display = 'none';
-    if (!withCloud) return;   // 開 App 只顯示暫存碼；真的打開邀請視窗才跟雲端拿正式碼
+    if (!withCloud) return;
     ensureCloudInvite().then(code => {
       if (code) { el.textContent = code; if (note) note.style.display = 'none'; }             // 拿到正式碼＝乾淨顯示
-      else { el.textContent = myInviteCode(); if (note) note.style.display = ''; }             // 連不上＝碼乾淨、改在下方一行說明（不再貼「暫用」）
+      else {
+        el.textContent = '—';
+        if (note) { note.textContent = '需要連上雲端並完成帳號驗證，才能建立安全的邀請碼。'; note.style.display = ''; }
+      }
     });
   }
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
   if ($('#inviteCloseX')) $('#inviteCloseX').addEventListener('click', () => $('#inviteFamModal').classList.remove('show'));
-  function shownInvCode() { return ((($('#invCode') || {}).textContent) || myInviteCode()).replace('（暫用）', ''); }
+  function shownInvCode() {
+    const code = ((($('#invCode') || {}).textContent) || '').trim();
+    return /^MUNEA-\d{6}$/.test(code) ? code : '';
+  }
   if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
+    if (!shownInvCode()) { toast('邀請碼還沒建立好，請確認網路與登入狀態。'); return; }
     const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + shownInvCode() + '，在沐寧的「家人 → 加入照護圈」輸入，我們就連上了！';
     if (navigator.share) { navigator.share({ text }).catch(() => {}); }
     else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
   });
   if ($('#invCopyBtn')) $('#invCopyBtn').addEventListener('click', () => {
     const code = shownInvCode();
+    if (!code) { toast('邀請碼還沒建立好，請確認網路與登入狀態。'); return; }
     (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : Promise.reject()).then(
       () => toast('邀請碼複製好了，貼給家人'),
       () => toast('你的邀請碼：' + code)
@@ -4316,7 +4401,7 @@ function init() {
     $('#planConfirm').style.display = 'none';
     renderPlanState();
     if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e3) {} }
-    toast('訂閱好了，現在是 ' + CIRCLE_PLAN_LABEL[_planPick] + ' 方案');
+    toast(subscriptionSuccessMessage(_planPick), 4200);
     _planPick = null;
   });
   if ($('#planNo')) $('#planNo').addEventListener('click', () => { $('#planConfirm').style.display = 'none'; _planPick = null; });
@@ -4327,7 +4412,11 @@ function init() {
     try { localStorage.setItem('munea.planNext', '取消'); } catch (e2) {}
     toast('好，這期用完就不再扣款；記憶和資料都會留著，隨時能回來。');
   });
-  if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => { renderSubUI(); $('#planModal').classList.add('show'); });
+  if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => {
+    renderSubUI();
+    $('#planModal').classList.add('show');
+    void refreshServerPlanEntitlement();
+  });
   if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
   // 恢復購買（蘋果硬規定）：原生付款層在（真機）→ 交給它；不在（網頁預覽）→ 誠實說明
   // Mac 對接約定：原生實作 window.__muneaNativeRestore()，找回的每筆購買逐筆呼叫 __muneaApplyPurchase(產品ID)
@@ -4363,7 +4452,7 @@ function init() {
   // 蘋果內購（StoreKit）購買成功 → 前端生效的唯一入口。
   // Mac 原生端付款成功（含沙盒測試）就呼叫這支，傳 App Store Connect 的產品 ID（見金流步驟單第 4 步表）。
   // 回傳 true=已生效、false=不認得的產品 ID。示範按鈕之後換真金流時，也一律改走這支。
-  window.__muneaApplyPurchase = function (productId) {
+  window.__muneaApplyPurchase = function (productId, purchase) {
     const pid = String(productId || '');
     const SUB_PID = {
       'net.munea.app.plus.monthly': 'plus', 'net.munea.app.plus.yearly': 'plus',
@@ -4373,9 +4462,11 @@ function init() {
     if (SUB_PID[pid]) {
       try { localStorage.setItem('munea.plan', SUB_PID[pid]); localStorage.removeItem('munea.planNext'); } catch (e) {}
       trackProductEvent('subscription_purchased', { productId: pid, plan: SUB_PID[pid] });
+      renderSubscriptionEndDate(purchase && purchase.billing && purchase.billing.subscription);
       renderPlanState();
       if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e2) {} }
-      toast('訂閱好了，現在是 ' + CIRCLE_PLAN_LABEL[SUB_PID[pid]] + ' 方案');
+      void refreshServerPlanEntitlement();
+      toast(subscriptionSuccessMessage(SUB_PID[pid], purchase && purchase.billing && purchase.billing.subscription), 4200);
       return true;
     }
     if (PT_PID[pid]) {
