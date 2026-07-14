@@ -263,3 +263,27 @@ Recommended order:
 6. Only after that, prepare App Store Connect metadata, support URL, privacy URL, subscriptions, and reviewer notes.
 
 The detailed Mac-side handoff lives in `docs/TESTFLIGHT-MAC-HANDOFF-2026-07-02.md`.
+
+## Mac Release Preflight - 2026-07-14
+
+Current release candidate: `1.0.2 (5)`, bundle id `net.munea.app`.
+
+Passed:
+
+- `npm run smoke:no-api`, `npm run test:launch`, and full `npm run release:check` including the auth gate.
+- Account/person request isolation, Apple transaction idempotency, one-time signup credits, localization, and Apple Health connection-state contracts.
+- Capacitor 8.4.1 doctor and iOS asset sync.
+- Xcode 26.6 simulator build, install, launch, and nonblank home screen.
+- Signed archive and App Store IPA export.
+- Exported IPA signature, version, bundle id, no-encryption declaration, and HealthKit entitlement.
+- Capacitor and Cordova privacy manifests are present and valid in the exported app.
+- Public privacy and support pages: `https://app.munea.net/privacy` and `https://app.munea.net/support`.
+- Tracked-file secret pattern scan found no private keys or common provider tokens.
+
+Still required before upload or review:
+
+- Confirm whether App Store Connect already contains build number `5`; increment before upload if it does.
+- Run Apple/Google sign-in, StoreKit sandbox purchase/restore, notifications, HealthKit permission/denial, microphone, Bluetooth/audio route, and reinstall/history restore on a real iPhone.
+- Load production Supabase credentials and run the live doctor/account flow; the local Mac release check used the safe JSON fallback.
+- Complete App Store Connect privacy labels, age rating, pricing, screenshots, review notes, and demo account.
+- Point apex `munea.net` away from the GoDaddy parking page. Use the verified `app.munea.net` URLs for submission until DNS is fixed.

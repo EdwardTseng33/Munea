@@ -12,6 +12,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Import-Module Microsoft.PowerShell.Management
+Import-Module Microsoft.PowerShell.Utility
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
