@@ -1456,8 +1456,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 
 /* 帳號卡 · 頭像走家人系統 */
 .auth-ava { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: var(--mint); color: var(--teal-d); }
-.auth-ava.guest { background: var(--cream-2); color: var(--muted); }
-.auth-ava .auth-ava-placeholder { width: 25px; height: 25px; stroke-width: 1.8; }
+.auth-ava.guest { background: var(--mint); color: var(--teal-d); }
+.auth-ava .auth-ava-placeholder { width: 26px; height: 26px; stroke-width: 2; }
 .auth-ava.has-photo .auth-ava-placeholder { display: none; }
 .auth-ava-img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 
