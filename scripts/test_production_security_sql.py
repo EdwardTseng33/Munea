@@ -8,6 +8,7 @@ SQL = (ROOT / "supabase" / "sql" / "012_production_security_hardening.sql").read
 ADAPTER = (ROOT / "engine" / "supabase_adapter.py").read_text(encoding="utf-8")
 SERVER = (ROOT / "engine" / "server.py").read_text(encoding="utf-8")
 BUNDLE = (ROOT / "scripts" / "build_supabase_production_bundle.py").read_text(encoding="utf-8")
+LAUNCH_UPGRADE = (ROOT / "scripts" / "build_supabase_launch_upgrade.py").read_text(encoding="utf-8")
 
 
 required_sql = (
@@ -23,4 +24,7 @@ assert not missing, "Missing production SQL hardening: " + ", ".join(missing)
 assert '"rpc/munea_grant_free_signup_trial"' in ADAPTER
 assert "backend.grant_free_signup_trial()" in SERVER
 assert '"012_production_security_hardening.sql"' in BUNDLE
+assert '"012_production_security_hardening.sql"' in LAUNCH_UPGRADE
+assert '"010_realtime_call_control.sql"' in LAUNCH_UPGRADE
+assert "001_initial_munea_schema.sql" not in LAUNCH_UPGRADE
 print("production security SQL contract: PASS")

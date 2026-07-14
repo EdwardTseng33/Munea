@@ -255,5 +255,11 @@ class MonitorCycleTests(unittest.TestCase):
         self.assertEqual(len(delivered), 1)
 
 
+class ObserveModeTests(unittest.TestCase):
+    def test_observe_only_notifier_never_delivers(self) -> None:
+        notifier = monitor.ObserveOnlyNotifier()
+        self.assertFalse(notifier.send("queue", "Queue alert", fields={"depth": 2}))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
