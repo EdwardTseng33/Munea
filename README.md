@@ -133,7 +133,7 @@ The prototype now uses one Companion Profile across onboarding, Home, Chat, and 
 
 For App Store readiness, the backend includes `/entitlements`, `/subscription-event`, `/credits/balance`, `/credits/grant`, `/credits/consume`, `/apple/transaction`, and `/healthz`. The current billing source of truth is `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`: **Free / Plus / Pro**, with Plus NT$599 and 150 monthly points, Pro NT$1,199 and 300 monthly points, and one point approximately equal to one Voice + Avatar minute. Direct StoreKit transactions are signature-verified; App Store Server Notifications V2 remains an explicit pre-launch gate.
 
-The production database path is Supabase Postgres with Row Level Security. SQL changes live under `supabase/sql/`; `006_billing_credits_foundation.sql` creates the billing ledger and `012_current_app_billing_policy.sql` aligns the active policy with Free / Plus / Pro. Setup notes live in `docs/supabase/SETUP.md`.
+The production database path is Supabase Postgres with Row Level Security. SQL changes live under `supabase/sql/`; `006_billing_credits_foundation.sql` creates the billing ledger and `013_current_app_billing_policy.sql` aligns the active policy with Free / Plus / Pro. Setup notes live in `docs/supabase/SETUP.md`.
 
 Backend architecture v1 is tracked in `docs/BACKEND-ARCHITECTURE-v1.md`. It defines the API surface, Supabase/RLS model, subscription entitlement flow, data rights contracts, admin console MVP, and North Star analytics plan.
 

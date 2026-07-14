@@ -156,6 +156,8 @@
 
   function publicState() {
     const user = session && session.user ? session.user : null;
+    const userMetadata = user && user.user_metadata ? user.user_metadata : {};
+    const avatarUrl = userMetadata.avatar_url || userMetadata.picture || userMetadata.photo_url || null;
     return {
       configured: isConfigured(),
       developerMode: isDeveloperModeAllowed() && !!(session && session.developer),
@@ -166,6 +168,7 @@
       authUserId: user ? user.id : null,
       email: user ? user.email || null : null,
       provider: user && user.app_metadata ? user.app_metadata.provider || null : null,
+      avatarUrl,
     };
   }
 

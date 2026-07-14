@@ -1,6 +1,11 @@
 const fs = require('fs');
 const vm = require('vm');
 
+const appSource = fs.readFileSync('web/src/app.js', 'utf8');
+if (!appSource.includes("el.textContent = '訂閱到期日：' + date")) {
+  throw new Error('settings plan card must keep the verified subscription expiry date visible');
+}
+
 const storage = new Map();
 let serverCalls = 0;
 let applied = 0;
@@ -8,6 +13,7 @@ let finished = 0;
 let managed = 0;
 let serverAllows = true;
 let restoreTransactions = [];
+let appliedPurchase = null;
 let currentTransaction = {
   state: 'purchased',
   productId: 'net.munea.app.points.200',
@@ -37,7 +43,15 @@ const context = {
       ok: serverAllows,
       async json() {
         return serverAllows
-          ? { ok: true, verified: true, walletSummary: { purchased: 200 }, idempotentReplay: serverCalls > 1 }
+          ? {
+              ok: true,
+              verified: true,
+              walletSummary: { purchased: 200 },
+              idempotentReplay: serverCalls > 1,
+              billing: currentTransaction.productId.includes('.plus.')
+                ? { subscription: { status: 'active', expiresAt: '2026-08-14T00:00:00Z' } }
+                : null
+            }
           : { ok: false, verified: false, error: { code: 'apple_signature_verification_failed' } };
       }
     };
@@ -48,7 +62,7 @@ const context = {
       state() { return { authUserId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }; },
       async getAccessToken() { return 'test-access-token'; }
     },
-    __muneaApplyPurchase() { applied += 1; return true; }
+    __muneaApplyPurchase(_productId, purchase) { applied += 1; appliedPurchase = purchase; return true; }
   }
 };
 context.window.window = context.window;
@@ -89,15 +103,26 @@ vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
   }
 
   serverAllows = true;
+  currentTransaction = {
+    ...currentTransaction,
+    productId: 'net.munea.app.plus.monthly',
+    transactionId: '100000000000003'
+  };
+  const subscription = await context.window.MuneaStore.purchase(currentTransaction.productId);
+  if (!subscription.ok || applied !== 2 || finished !== 3 || !appliedPurchase.billing ||
+      appliedPurchase.billing.subscription.expiresAt !== '2026-08-14T00:00:00Z') {
+    throw new Error('verified subscription expiry was not forwarded to the app UI');
+  }
+
   restoreTransactions = [{
     state: 'purchased',
     productId: 'net.munea.app.plus.monthly',
-    transactionId: '100000000000003',
-    originalTransactionId: '100000000000003',
+    transactionId: '100000000000004',
+    originalTransactionId: '100000000000004',
     signedTransaction: 'header.payload.signature'
   }];
   const restored = await context.window.MuneaStore.restore();
-  if (!restored.ok || restored.restored !== 'net.munea.app.plus.monthly' || applied !== 2 || finished !== 3) {
+  if (!restored.ok || restored.restored !== 'net.munea.app.plus.monthly' || applied !== 3 || finished !== 4) {
     throw new Error('restore did not verify, apply, and finish the active subscription');
   }
 

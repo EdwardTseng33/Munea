@@ -66,7 +66,7 @@ The foundation is created by `supabase/sql/006_billing_credits_foundation.sql`:
 - `credit_transactions`
 - `credit_ledger`
 
-The current Free / Plus / Pro policy is version 3 in `supabase/sql/012_current_app_billing_policy.sql`. It supersedes the plan names and limits stored by earlier policy versions without rewriting migration history.
+The current Free / Plus / Pro policy is version 3 in `supabase/sql/013_current_app_billing_policy.sql`. It supersedes the plan names and limits stored by earlier policy versions without rewriting migration history.
 
 ## Deduction Order
 

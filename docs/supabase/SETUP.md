@@ -105,7 +105,8 @@ Then apply the one-time trial and current App plan policies in order:
 
 ```text
 supabase/sql/011_free_signup_trial_policy.sql
-supabase/sql/012_current_app_billing_policy.sql
+supabase/sql/012_production_security_hardening.sql
+supabase/sql/013_current_app_billing_policy.sql
 ```
 
 Policy v3 is the current Free / Plus / Pro contract: Free receives one idempotent 5-point trial, Plus receives 150 monthly points, and Pro receives 300 monthly points.

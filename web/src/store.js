@@ -73,6 +73,7 @@ window.MuneaStore = (function () {
       if (!verified.ok) return verified;
       if (txid && seen.indexOf(txid) >= 0) { await finish(data); return { ok: true, duplicate: true, verified: true }; }
       if (typeof window.__muneaApplyPurchase !== 'function') return { ok: false };
+      if (verified.payload && verified.payload.billing) data.billing = verified.payload.billing;
       var ok = !!window.__muneaApplyPurchase(pid, data);
       if (!ok) return { ok: false };
       var wallet = verified.payload && verified.payload.walletSummary;

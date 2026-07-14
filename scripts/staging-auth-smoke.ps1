@@ -82,8 +82,10 @@ $BaseUrl = $BaseUrl.TrimEnd("/")
 $SupabaseUrl = $SupabaseUrl.TrimEnd("/")
 $adminHeaders = @{
   apikey = $ServiceRoleKey
-  Authorization = "Bearer $ServiceRoleKey"
   "Content-Type" = "application/json; charset=utf-8"
+}
+if (-not $ServiceRoleKey.StartsWith("sb_secret_")) {
+  $adminHeaders.Authorization = "Bearer $ServiceRoleKey"
 }
 $serverUserAgent = "Munea-Staging-Auth-Smoke/1.0"
 $userId = $null

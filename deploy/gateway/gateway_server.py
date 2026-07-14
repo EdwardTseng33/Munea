@@ -14,27 +14,55 @@ Client 端串接規格：deploy/gateway/CLIENT-INTERFACE.md（給 Codex 接 app.
 外部腳本呼叫這裡的登記端點）——要真的自動開關 RunPod/Glows 卡，需要真卡環境才能接線
 測試，這輪不碰（照任務邊界：不開真卡、不花 GPU 錢）。
 """
+import base64
+import hashlib
+import hmac
 import os
 import time
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from call_control_store import CallControlError, SupabaseCallStore, issue_call_token
 from gateway_core import Gateway, VoicePool
 
 app = FastAPI(title="munea-chat-gateway")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+_CORS_ORIGINS = [x.strip() for x in os.environ.get(
+    "MUNEA_GATEWAY_CORS_ORIGINS",
+    "capacitor://localhost,ionic://localhost,http://localhost,https://localhost",
+).split(",") if x.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_CORS_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Munea-Admin-Token"],
+)
 
 # 語音池上限：首波先用保守值頂著，等 6.3 節純語音壓測結果回填真數字
 # （環境變數可覆蓋，不必改程式碼重部署）。
 _VOICE_LIMIT = int(os.environ.get("MUNEA_GATEWAY_VOICE_LIMIT", "5"))
-_QUEUE_MAX_DEPTH = int(os.environ.get("MUNEA_GATEWAY_QUEUE_MAX_DEPTH", "20"))
+_QUEUE_MAX_DEPTH = int(os.environ.get("MUNEA_GATEWAY_QUEUE_MAX_DEPTH", "30"))
 GW = Gateway(voice=VoicePool(limit=_VOICE_LIMIT))
 GW.queue.max_depth = _QUEUE_MAX_DEPTH
 
+_PRIMARY_URL = os.environ.get("MUNEA_PRIMARY_AVATAR_URL", "").rstrip("/")
+if _PRIMARY_URL:
+    GW.workers.register(
+        os.environ.get("MUNEA_PRIMARY_WORKER_ID", "glows-primary"),
+        _PRIMARY_URL,
+        slots=int(os.environ.get("MUNEA_PRIMARY_AVATAR_SLOTS", "2")),
+        region=os.environ.get("MUNEA_PRIMARY_AVATAR_REGION", "TW"),
+        kind="glows",
+    )
+
 _GATE = os.environ.get("MUNEA_GATEWAY_KEY", "").strip()
 _ADMIN_GATE = os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", "").strip()
+_CALL_TOKEN_SECRET = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
+_TURN_SECRET = os.environ.get("MUNEA_TURN_SECRET", "").strip()
+_TURN_URLS = [x.strip() for x in os.environ.get("MUNEA_TURN_URLS", "").split(",") if x.strip()]
+_REQUIRE_DURABLE = os.environ.get("MUNEA_GATEWAY_REQUIRE_DURABLE", "0") == "1"
+DURABLE = SupabaseCallStore.from_env()
 
 
 def _client_ok(key):
@@ -70,11 +98,336 @@ class VoiceActiveBody(BaseModel):
     active: int
 
 
+class CallRequestV2Body(BaseModel):
+    character_id: str
+    idempotency_key: str
+    person_id: str | None = None
+
+
+class CallLeaseV2Body(BaseModel):
+    lease_version: int
+    event_id: str
+    reason: str = "completed"
+
+
+class CallClaimV2Body(BaseModel):
+    lease_version: int
+
+
+class CallHeartbeatV2Body(BaseModel):
+    lease_version: int
+    event_id: str
+    component: str = "app"
+
+
+class CallReadyV2Body(BaseModel):
+    call_id: str
+    lease_version: int
+    event_id: str
+    component: str
+
+
+class DurableWorkerBody(BaseModel):
+    worker_id: str
+    url: str
+    provider: str
+    region: str
+    capacity: int
+    status: str = "ready"
+    provider_instance_id: str | None = None
+    profile_id: str | None = None
+    hourly_cost: float | None = None
+    active_leases: int | None = None
+
+
+class DurableWorkerHealthBody(BaseModel):
+    healthy: bool = True
+    active: int | None = None
+
+
+class DurableWorkerStateBody(BaseModel):
+    status: str
+
+
+class DurableVoiceShardBody(BaseModel):
+    shard_id: str
+    url: str
+    provider: str = "gemini-live"
+    region: str = "asia-east1"
+    capacity: int
+    status: str = "ready"
+
+
+def _bearer(authorization: str) -> str:
+    prefix = "bearer "
+    if not authorization or not authorization.lower().startswith(prefix):
+        raise HTTPException(status_code=401, detail="bearer token required")
+    token = authorization[len(prefix):].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="bearer token required")
+    return token
+
+
+def _durable() -> SupabaseCallStore:
+    if DURABLE is None:
+        raise HTTPException(status_code=503, detail="durable call control is not configured")
+    return DURABLE
+
+
+def _admin_bearer(authorization: str, x_munea_admin_token: str) -> None:
+    supplied = ""
+    if authorization.lower().startswith("bearer "):
+        supplied = authorization[7:].strip()
+    supplied = supplied or x_munea_admin_token.strip()
+    if not _ADMIN_GATE or supplied != _ADMIN_GATE:
+        raise HTTPException(status_code=403, detail="admin token required")
+
+
+def _decorate_connect(result: dict, user_id: str) -> dict:
+    if result.get("status") != "connect":
+        return result
+    worker = result.get("worker") or {}
+    if not _CALL_TOKEN_SECRET:
+        raise HTTPException(status_code=503, detail="call token signer is not configured")
+    token_payload = {
+        "call_id": str(result.get("call_id") or ""),
+        "user_id": user_id,
+        "worker_id": str(worker.get("worker_id") or ""),
+        "voice_shard_id": str((result.get("voice") or {}).get("shard_id") or ""),
+        "slot_id": int(result.get("slot_id") or 0),
+        "lease_version": int(result.get("lease_version") or 0),
+    }
+    if _TURN_SECRET and _TURN_URLS:
+        turn_username = str(int(time.time()) + 120) + ":" + user_id
+        turn_credential = base64.b64encode(
+            hmac.new(_TURN_SECRET.encode("utf-8"), turn_username.encode("utf-8"), hashlib.sha1).digest()
+        ).decode("ascii")
+        token_payload.update({
+            "turn_urls": _TURN_URLS,
+            "turn_username": turn_username,
+            "turn_credential": turn_credential,
+        })
+        result["ice_servers"] = [{
+            "urls": _TURN_URLS, "username": turn_username, "credential": turn_credential,
+        }]
+    result["call_token"] = issue_call_token(token_payload, _CALL_TOKEN_SECRET, ttl_seconds=90)
+    result["token_expires_in"] = 90
+    return result
+
+
 @app.get("/health")
-def health(key: str = ""):
-    if not _client_ok(key):
+def health(key: str = "", authorization: str = Header(default="")):
+    admin_ok = bool(_ADMIN_GATE) and _bearer(authorization) == _ADMIN_GATE
+    if not (_client_ok(key) or admin_ok):
         return {"ok": False, "error": "key required"}
-    return {"ok": True, "engine": "munea-chat-gateway", "snapshot": GW.snapshot()}
+    durable_snapshot = None
+    durable_error = ""
+    if DURABLE is not None:
+        try:
+            durable_snapshot = DURABLE.snapshot()
+        except CallControlError as exc:
+            durable_error = str(exc)
+    durable_ready = DURABLE is not None and durable_snapshot is not None
+    return {
+        "ok": durable_ready if _REQUIRE_DURABLE else True,
+        "engine": "munea-chat-gateway",
+        "mode": "durable" if DURABLE is not None else "legacy-memory",
+        "durable_ready": durable_ready,
+        "durable_error": durable_error,
+        "snapshot": durable_snapshot if durable_snapshot is not None else GW.snapshot(),
+    }
+
+
+@app.get("/metrics", response_class=Response)
+def metrics(authorization: str = Header(default=""),
+            x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    try:
+        snapshot = _durable().snapshot()
+    except Exception:
+        snapshot = GW.snapshot()
+    values = {
+        "munea_calls_active": snapshot.get("active_calls", 0),
+        "munea_calls_connecting": snapshot.get("connecting_calls", 0),
+        "munea_call_queue_depth": snapshot.get("queue_depth", 0),
+        "munea_avatar_capacity": snapshot.get("avatar_capacity", 0),
+        "munea_avatar_active": snapshot.get("avatar_active", 0),
+        "munea_voice_capacity": snapshot.get("voice_capacity", 0),
+        "munea_voice_active": snapshot.get("voice_active", 0),
+    }
+    body = "\n".join(f"{name} {float(value or 0):g}" for name, value in values.items()) + "\n"
+    return Response(body, media_type="text/plain; version=0.0.4")
+
+
+# ---------------------------------------------------------------------------
+# Durable v2 Call Control. Client authentication is the user's Supabase JWT;
+# provider/admin credentials never ship inside the App.
+# ---------------------------------------------------------------------------
+@app.post("/v1/calls")
+def calls_v2(body: CallRequestV2Body, authorization: str = Header(default="")):
+    store = _durable()
+    try:
+        user = store.authenticate(_bearer(authorization))
+        result = store.request_call(
+            user_id=user.user_id,
+            person_id=body.person_id,
+            character_id=body.character_id,
+            idempotency_key=body.idempotency_key,
+            queue_max=_QUEUE_MAX_DEPTH,
+        )
+        return _decorate_connect(result, user.user_id)
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/calls/{call_id}/heartbeat")
+def call_heartbeat_v2(call_id: str, body: CallHeartbeatV2Body,
+                      authorization: str = Header(default="")):
+    store = _durable()
+    try:
+        user = store.authenticate(_bearer(authorization))
+        return store.heartbeat(
+            call_id=call_id, lease_version=body.lease_version, component="app",
+            event_id=body.event_id, user_id=user.user_id,
+        )
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/calls/{call_id}/release")
+def call_release_v2(call_id: str, body: CallLeaseV2Body,
+                    authorization: str = Header(default="")):
+    store = _durable()
+    try:
+        user = store.authenticate(_bearer(authorization))
+        return store.release(
+            call_id=call_id, lease_version=body.lease_version,
+            event_id=body.event_id, reason=body.reason, user_id=user.user_id,
+        )
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/calls/{call_id}/cancel")
+def call_cancel_v2(call_id: str, authorization: str = Header(default="")):
+    store = _durable()
+    try:
+        user = store.authenticate(_bearer(authorization))
+        return store.cancel(call_id=call_id, user_id=user.user_id)
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/calls/{call_id}/token")
+def call_token_v2(call_id: str, body: CallClaimV2Body,
+                  authorization: str = Header(default="")):
+    store = _durable()
+    try:
+        user = store.authenticate(_bearer(authorization))
+        result = store.claim(
+            call_id=call_id, lease_version=body.lease_version, user_id=user.user_id,
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=409, detail=str(result.get("reason") or "stale lease"))
+        return _decorate_connect(result, user.user_id)
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/internal/calls/ready")
+def call_ready_v2(body: CallReadyV2Body, authorization: str = Header(default=""),
+                  x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    try:
+        return _durable().ready(
+            call_id=body.call_id, lease_version=body.lease_version,
+            component=body.component, event_id=body.event_id,
+        )
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/internal/calls/{call_id}/release")
+def call_internal_release_v2(call_id: str, body: CallLeaseV2Body,
+                             authorization: str = Header(default=""),
+                             x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    try:
+        return _durable().release(
+            call_id=call_id, lease_version=body.lease_version,
+            event_id=body.event_id, reason=body.reason, user_id=None,
+        )
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/internal/reap")
+def call_reap_v2(authorization: str = Header(default=""),
+                 x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    try:
+        return {"ok": True, "reaped": _durable().reap()}
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/internal/workers")
+def durable_worker_upsert(body: DurableWorkerBody, authorization: str = Header(default=""),
+                          x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    row = body.dict(exclude_none=True)
+    row["last_heartbeat_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if row.get("status") == "ready":
+        row["ready_at"] = row["last_heartbeat_at"]
+    try:
+        return {"ok": True, "worker": _durable().upsert_worker(row)}
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/internal/workers/{worker_id}/health")
+def durable_worker_health(worker_id: str, body: DurableWorkerHealthBody,
+                          authorization: str = Header(default=""),
+                          x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    values = {
+        "status": "ready" if body.healthy else "unhealthy",
+        "last_heartbeat_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    if body.active is not None:
+        values["active_leases"] = max(0, body.active)
+    try:
+        return {"ok": True, "worker": _durable().update_worker(worker_id, values)}
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/internal/workers/{worker_id}/state")
+def durable_worker_state(worker_id: str, body: DurableWorkerStateBody,
+                         authorization: str = Header(default=""),
+                         x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    if body.status not in ("ready", "draining", "unhealthy", "terminated"):
+        raise HTTPException(status_code=422, detail="invalid worker status")
+    try:
+        return {"ok": True, "worker": _durable().update_worker(worker_id, {
+            "status": body.status,
+            "last_heartbeat_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        })}
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/v1/internal/voice-shards")
+def durable_voice_upsert(body: DurableVoiceShardBody, authorization: str = Header(default=""),
+                         x_munea_admin_token: str = Header(default="")):
+    _admin_bearer(authorization, x_munea_admin_token)
+    row = body.dict(exclude_none=True)
+    row["last_heartbeat_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    try:
+        return {"ok": True, "voice_shard": _durable().upsert_voice_shard(row)}
+    except CallControlError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

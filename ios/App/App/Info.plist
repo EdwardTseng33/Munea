@@ -24,13 +24,10 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>zh-Hant</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>zh-Hant</string>
-		<string>en</string>
-		<string>ja</string>
-		<string>es</string>
 	</array>
 	<key>CFBundleDisplayName</key>
         <string>沐寧</string>

@@ -30,7 +30,7 @@ from env_loader import load_engine_env
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 import chat_engine as eng
 import localization
-from call_control_client import CallControlError, post_internal, verify_call_token
+from call_control_client import post_internal, verify_call_token
 from google import genai
 from google.genai import types
 import websockets
@@ -490,22 +490,35 @@ async def handle(ws):
     call_token = ""
     call_payload = {}
     call_release_reason = ""
+    _q = {}
     try:
         from urllib.parse import urlparse, parse_qs
         path = getattr(getattr(ws, "request", None), "path", None) or getattr(ws, "path", "") or ""
         _q = parse_qs(urlparse(path).query)
-        call_token = (_q.get("token") or [""])[0].strip()
-        token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
-        voice_shard_id = os.environ.get("MUNEA_VOICE_SHARD_ID", "").strip()
-        control_required = os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") == "1"
-        if call_token:
-            call_payload = verify_call_token(call_token, token_secret, voice_shard_id=voice_shard_id)
-        elif control_required:
+    except Exception:
+        pass
+
+    call_token = (_q.get("token") or [""])[0].strip()
+    control_required = os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") == "1"
+    if call_token or control_required:
+        if not call_token:
             try:
                 await ws.close(code=4403, reason="call token required")
             except Exception:
                 pass
             return
+        try:
+            token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
+            voice_shard_id = os.environ.get("MUNEA_VOICE_SHARD_ID", "").strip()
+            call_payload = verify_call_token(call_token, token_secret, voice_shard_id=voice_shard_id)
+        except Exception:
+            try:
+                await ws.close(code=4403, reason="invalid call token")
+            except Exception:
+                pass
+            return
+
+    try:
         # 薄門（正式上線 · 7/9 Edward 拍板）：環境設了 MUNEA_APP_KEY 就要對通行碼（?key=）。
         # App 自動帶、用戶無感；擋的是「拿到網址直接來撥」的陌生流量。本機沒設＝不啟用、行為不變。
         _gate = os.environ.get("MUNEA_APP_KEY", "").strip()

@@ -293,6 +293,7 @@ def fake_request(method, table, query=None, payload=None, prefer=None):
         }],
         "family_groups": [{
             "id": env["MUNEA_SUPABASE_FAMILY_GROUP_ID"] or "33333333-3333-4333-8333-333333333333",
+            "account_id": env["MUNEA_SUPABASE_ACCOUNT_ID"],
             "name": "Munea Care Circle",
         }],
         "family_memberships": [{
@@ -937,8 +938,16 @@ import server
 test_group_id = "11111111-1111-4111-8111-111111111111"
 
 class FakeFamilyStateBackend:
+    account_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     def enabled(self):
         return True
+    def family_group_account_id(self, family_group_id):
+        assert family_group_id == test_group_id
+        return self.account_id
+    def load_billing_store(self):
+        store = server.default_billing_store()
+        store["accountId"] = self.account_id
+        return store
     def load_family_state_store(self, family_group_id=None):
         assert family_group_id == test_group_id
         return {
@@ -996,8 +1005,20 @@ sys.path.insert(0, "engine")
 import server
 
 class FakeFamilyInvitationBackend:
+    request_scoped = True
+    auth_user_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    person_id = "22222222-2222-4222-8222-222222222222"
+    family_group_id = "33333333-3333-4333-8333-333333333333"
     def enabled(self):
         return True
+    def is_account_owner(self):
+        return True
+    def load_billing_store(self):
+        return {
+            "activePlan": "plus",
+            "serverVerificationRequired": False,
+            "subscription": {"status": "active"},
+        }
     def load_family_invitations(self, family_group_id=None, status=None, limit=100):
         assert family_group_id in (None, "family-1")
         assert status in (None, "pending")
@@ -1013,8 +1034,10 @@ class FakeFamilyInvitationBackend:
             "metadata": {"relation": "daughter"},
         }]
     def create_family_invitation(self, invitation):
-        assert invitation["shortCode"] == "654321"
-        assert invitation["shareToken"].startswith("munea_") or invitation["shareToken"] == "raw-token-once"
+        assert invitation["familyGroupId"] == self.family_group_id
+        assert invitation["inviterPersonId"] == self.person_id
+        assert invitation["metadata"]["maxMembers"] == 4
+        assert invitation["metadata"]["ownerAuthUserId"] == self.auth_user_id
         return {**invitation, "id": "invite-2"}
     def update_family_invitation(self, invitation_id, patch):
         assert invitation_id == "invite-2"
@@ -1030,22 +1053,21 @@ class FakeFamilyInvitationBackend:
 
 original_backend = server.data_backend
 try:
-    server.data_backend = lambda: FakeFamilyInvitationBackend()
-    listed = server.family_invitations_response({"action": "list", "familyGroupId": "family-1", "status": "pending"})
-    assert listed["ok"] is True
-    assert listed["invitations"][0]["shortCode"] == "123456"
-    assert "shareToken" not in listed["invitations"][0]
-    created = server.family_invitations_response({"action": "create", "invitation": {"familyGroupId": "family-1", "inviterPersonId": "person-1", "shortCode": "654321", "shareToken": "raw-token-once"}})
+    backend = FakeFamilyInvitationBackend()
+    server.data_backend = lambda: backend
+    denied = server.family_invitations_response({"action": "create"})
+    assert denied["error"] == "auth_required"
+    created = server.family_invitations_response(
+        {"action": "create", "familyGroupId": "forged-family", "inviterPersonId": "forged-person"},
+        actor={"authUserId": backend.auth_user_id},
+    )
     assert created["backend"] == "supabase"
     assert created["invitation"]["id"] == "invite-2"
-    assert created["invitation"]["shareToken"] == "raw-token-once"
-    updated = server.family_invitations_response({"action": "update", "id": "invite-2", "patch": {"status": "accepted"}})
-    assert updated["backend"] == "supabase"
-    assert updated["invitation"]["status"] == "accepted"
 finally:
     server.data_backend = original_backend
 
 class DisabledBackend:
+    request_scoped = False
     def enabled(self):
         return False
     def load_family_invitations(self, family_group_id=None, status=None, limit=100):
@@ -1059,20 +1081,15 @@ with tempfile.TemporaryDirectory() as d:
     server.FAMILY_INVITATIONS_PATH = str(Path(d) / "family_invitations.json")
     try:
         server.data_backend = lambda: DisabledBackend()
-        created = server.family_invitations_response({"action": "create", "invitation": {"familyGroupId": "family-1", "shortCode": "222333"}})
-        assert created["backend"] == "json"
-        assert created["invitation"]["shareToken"].startswith("munea_")
-        listed = server.family_invitations_response({"action": "list", "familyGroupId": "family-1"})
-        assert listed["invitations"][0]["shortCode"] == "222333"
-        assert "shareToken" not in listed["invitations"][0]
-        updated = server.family_invitations_response({"action": "update", "id": created["invitation"]["id"], "patch": {"status": "revoked"}})
-        assert updated["backend"] == "json"
-        assert updated["invitation"]["status"] == "revoked"
+        unavailable = server.family_invitations_response(
+            {"action": "create"}, actor={"authUserId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
+        )
+        assert unavailable["error"] == "family_cloud_identity_required"
     finally:
         server.data_backend = original_backend
 print("family invitation cloud bridge OK")
 '@
-Pass "Family invitations can use Supabase while preserving JSON fallback"
+Pass "Family invitations require verified cloud identity and server entitlements"
 
 Step "Family members cloud bridge contract"
 Invoke-PythonBlock @'
@@ -2091,6 +2108,19 @@ assert normalized["activePlan"] == "pro"
 assert normalized["subscription"]["status"] == "active"
 assert normalized["entitlements"]["realtimeAvatar"] is True
 original_load = server.load_billing_store
+fallback_store = server.normalize_billing_store({
+    "activePlan": "free",
+    "subscription": {"status": "inactive"},
+    "entitlements": {"realtimeAvatar": False, "premiumAvatarMinutesMonthly": 0},
+})
+server.load_billing_store = lambda: fallback_store
+fallback = server.avatar_session_response({"mode": "liveavatar", "estimatedDurationMs": 60000})
+server.load_billing_store = original_load
+assert fallback["ok"] is True
+assert fallback["session"]["requestedMode"] == "liveavatar"
+assert fallback["session"]["selectedMode"] == "2d-viseme"
+assert fallback["session"]["fallbackReason"] == "premium_avatar_not_entitled"
+
 original_save = server.save_billing_store
 original_credits_path = server.CREDITS_STORE_PATH
 with tempfile.TemporaryDirectory() as d:
@@ -2231,7 +2261,7 @@ analytics = Path("supabase/sql/003_analytics_admin_foundation.sql").read_text(en
 ai_memory = Path("supabase/sql/004_ai_memory_service_foundation.sql").read_text(encoding="utf-8").lower()
 persona_layer = Path("supabase/sql/005_companion_persona_layer.sql").read_text(encoding="utf-8").lower()
 billing_credits = Path("supabase/sql/006_billing_credits_foundation.sql").read_text(encoding="utf-8").lower()
-current_billing = Path("supabase/sql/012_current_app_billing_policy.sql").read_text(encoding="utf-8").lower()
+current_billing = Path("supabase/sql/013_current_app_billing_policy.sql").read_text(encoding="utf-8").lower()
 family_cloud = Path("supabase/sql/007_family_cloud_state_foundation.sql").read_text(encoding="utf-8").lower()
 env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
@@ -2491,7 +2521,7 @@ required = [
     "credit_transactions",
     "entitlement_policy_versions",
     "006_billing_credits_foundation.sql",
-    "012_current_app_billing_policy.sql",
+    "013_current_app_billing_policy.sql",
 ]
 missing = [token for token in required if token not in doc]
 if missing:
@@ -2504,7 +2534,7 @@ for token in ["free / plus / pro", "billing-credits-entitlement-v1.md"]:
 for token in ["free / plus / pro", "billing-credits-entitlement-v1.md"]:
     if token not in app_store:
         raise SystemExit("App Store readiness missing billing plan pointer: " + token)
-for token in ["006_billing_credits_foundation.sql", "012_current_app_billing_policy.sql", "credit_wallets", "credit_transactions", "idempotent"]:
+for token in ["006_billing_credits_foundation.sql", "013_current_app_billing_policy.sql", "credit_wallets", "credit_transactions", "idempotent"]:
     if token not in Path("docs/supabase/SETUP.md").read_text(encoding="utf-8").lower():
         raise SystemExit("Supabase setup missing billing credits setup token: " + token)
 print("billing credits entitlement OK")

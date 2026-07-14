@@ -1,5 +1,5 @@
 -- Align the entitlement policy with the customer-visible Munea 1.0.2 plans.
--- Run after 011_free_signup_trial_policy.sql.
+-- Run after 012_production_security_hardening.sql.
 
 begin;
 
