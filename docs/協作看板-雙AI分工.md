@@ -1,7 +1,17 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
-> **2026-07-14 起，本檔只保留歷史脈絡，不再作即時鎖。** 動手前讀 `AGENTS.md`／`CLAUDE.md` 與 [多 agent 協作協議](AGENT-COLLABORATION-PROTOCOL.md)；`.agent/locks/active/*.json` 才是目前誰能修改哪些路徑的權威。
+> **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
+
+### 簡單判斷
+
+| 狀況 | 做法 |
+|---|---|
+| 不同 session 修改不同檔案 | 直接平行，各自 branch／PR。 |
+| 兩邊需要修改同一檔案 | 第一位先完成合併；第二位同步最新 main 後再接。 |
+| 長時間或跨模組工作 | 在本看板留一筆「誰／任務／branch／檔案／狀態」。 |
+| 短小修正 | PR 或任務說明列出檔案即可，不必增加看板負擔。 |
+| 發生 Git 衝突 | 比對兩邊意圖後整合；不直接選一邊覆蓋。 |
 
 ---
 
