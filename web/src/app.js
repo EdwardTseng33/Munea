@@ -1358,6 +1358,10 @@ const CallControl = {
 };
 function getLiveVoiceUrl() {
   if (CallControl.active) return (CallControl.active.voice && CallControl.active.voice.url) || '';
+  try {
+    const cfg = devAuthConfig();
+    if (isDeveloperBypassAllowed() && cfg.voiceUrl) return String(cfg.voiceUrl);
+  } catch (e) {}
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
   return LIVE_VOICE_URL_DEFAULT;
 }
@@ -1650,7 +1654,9 @@ const Avatar = {
     try {
       const aud = document.getElementById('faceAud'); if (!aud) return;
       const ms = new MediaStream([track]);
-      aud.srcObject = ms; aud.muted = false;
+      // faceAud 只做音量儀表；真正聲音固定由 faceVid 播放。
+      // 如果這裡也解除靜音，同一遠端音軌會被兩個 media element 同時播放而重疊。
+      aud.srcObject = ms; aud.muted = true;
       const p = aud.play(); if (p && p.catch) p.catch(() => {});
       this._diag('聲音到了（同線）');
       try {
@@ -1855,9 +1861,9 @@ const LiveVoice = {
     return Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08);
   },
   _setFaceAudioMuted(muted) {
-    ['faceAud', 'faceVid'].forEach(id => {
-      try { const el = document.getElementById(id); if (el) el.muted = !!muted; } catch (e) {}
-    });
+    // faceAud 永久靜音，只當 analyser 的 MediaStream 來源；faceVid 是唯一同線播放器。
+    try { const meter = document.getElementById('faceAud'); if (meter) meter.muted = true; } catch (e) {}
+    try { const player = document.getElementById('faceVid'); if (player) player.muted = !!muted; } catch (e) {}
   },
   async _finishSameLineWarmup() {
     if (!this._sameLineWarmupPending || !this.on) return;
@@ -1932,6 +1938,19 @@ const LiveVoice = {
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
+    // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。
+    try {
+      if (this._openingSessionId !== activeChatSessionId) {
+        const now = new Date();
+        const day = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+        let daily = {}; try { daily = JSON.parse(localStorage.getItem('munea.dailyCallOpening') || '{}') || {}; } catch (e2) {}
+        this._openingSessionId = activeChatSessionId;
+        this._openingDayKey = day;
+        this._openingDayCall = daily.day === day ? Math.max(0, parseInt(daily.count || '0', 10) || 0) : 0;
+        this._openingRecorded = false;
+      }
+      url += '&day_call=' + Math.max(0, this._openingDayCall || 0);
+    } catch (e) {}
     // Production uses a short-lived token bound to this call's Voice+Avatar lease.
     const _callToken = CallControl.active && CallControl.active.call_token;
     url += (url.indexOf('?') >= 0 ? '&' : '?') + (_callToken
@@ -2094,8 +2113,8 @@ const LiveVoice = {
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
         let ps = 0; for (let k = 0; k < f.length; k++) ps += f[k] * f[k];
         this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
-        // 同線模式：聲音改從 faceAud（臉那條線）出、這裡不本地排程播放（也不用等 faceSyncMs）。
-        // 保底：頭一段講話若 3 秒內 faceAud 完全沒出聲 → 判定同線失效、之後這通改回本地播放（防「有臉沒聲」）。
+        // 同線模式：聲音只從 faceVid（臉那條線）出，faceAud 只量測、永久靜音。
+        // 保底：頭一段講話若 3 秒內完全沒收到同線音軌 → 之後這通改回本地播放。
         if (this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true) {
           if (!this._sameLineWatchStarted) {
             this._sameLineWatchStarted = true;
@@ -3990,6 +4009,12 @@ async function connectCall() {
       _started = true;
       clearTimeout(_gateTimeout);
       try { localStorage.setItem('munea.callCount', String((parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0) + 1)); } catch (e) {}   // 聊過幾通＋1 → 下通開場更像老朋友（熟識度）
+      try {
+        if (!LiveVoice._openingRecorded && LiveVoice._openingDayKey) {
+          localStorage.setItem('munea.dailyCallOpening', JSON.stringify({ day: LiveVoice._openingDayKey, count: (LiveVoice._openingDayCall || 0) + 1 }));
+          LiveVoice._openingRecorded = true;
+        }
+      } catch (e) {}
       // 三條管線（腦、影像、Avatar 聲音上行）都就緒後再多等 1.5 秒才開口。
       // 待機動畫在這段時間繼續播，避免第一批招呼聲先於聲畫管線到達而變形或被吃掉。
       const _greetDelay = 1500;

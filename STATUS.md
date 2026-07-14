@@ -1,6 +1,8 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 整合測試包覆蓋**：Edward iPhone 15 Pro 已覆蓋安裝並成功啟動 `1.0.7 (Build 12)` 開發包；來源為 `origin/main@3fd6095 → PR #41@7caab46 → PR #42@93e882d`，包含用藥紀錄一致化、指定家人傳話與提醒成功回執。完整 `test:launch`、Capacitor sync、開發資料隔離、Xcode 實機簽章與包內內容核對均 PASS。此包仍是 Draft 功能整合測試包，不是正式 `main`／App Store 候選；Supabase migration、Brain／Voice 部署與真人功能 Gate 尚未完成。
+> **2026-07-15 Voice canary 真機包覆蓋**：Edward iPhone 15 Pro 已覆蓋安裝並啟動 `1.0.8 (Build 13)`；在 1.0.7 Draft 整合功能上加入同線單播放器、當日開場去重，開發包固定連到已通過開場音訊探測的 Voice canary。完整 `test:launch`、Capacitor sync、Xcode 建置、包內內容、安裝與啟動均 PASS；Pro、1,000 點與家人假資料保留。嘴型／聲音、斷續、雙音、話量／能量、同日三次開場與重複撥號仍須 Edward 真機驗收，本包不是正式 `main`／App Store 候選。
+>
+> **1.0.7 來源保留**：整合基準仍是 `origin/main@3fd6095 → PR #41@7caab46 → PR #42@93e882d`，包含用藥紀錄一致化、指定家人傳話與提醒成功回執；PR／migration／Brain 正式部署仍未完成。
 
 > **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。GitHub `main@ec40412` 已合併 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest，以及 PR #37 的全語音 S2S／ASR／插話／靜音修正；main 的 App／iOS 內容也已和產出 IPA 時的來源逐項比對一致。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
 

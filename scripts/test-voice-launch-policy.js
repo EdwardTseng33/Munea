@@ -25,6 +25,15 @@ expect(app.includes("trackProductEvent('voice_playback_underrun'"),
   'playback underruns are not observable');
 expect(app.includes("trackProductEvent('voice_sameline_warmup'"),
   'Avatar audio warmup outcome is not observable');
+expect(app.includes("const meter = document.getElementById('faceAud'); if (meter) meter.muted = true") &&
+  app.includes("const player = document.getElementById('faceVid'); if (player) player.muted = !!muted"),
+  'same-line audio can be unmuted on two media elements and play twice');
+expect(app.includes('aud.srcObject = ms; aud.muted = true'),
+  'the analyser-only faceAud element can briefly emit duplicate audio');
+expect(app.includes("localStorage.getItem('munea.dailyCallOpening')") && app.includes("url += '&day_call='"),
+  'same-day calls do not carry a dedicated rotating opening index');
+expect(app.includes("localStorage.setItem('munea.dailyCallOpening'") && app.includes('LiveVoice._openingRecorded = true'),
+  'completed calls do not advance the same-day opening route');
 expect(html.includes('src/voice-turn-policy.js'),
   'the tested local barge-in policy is not loaded before the App module');
 expect(app.includes("this.ws.send(JSON.stringify({ type: 'barge_in' }))"),
