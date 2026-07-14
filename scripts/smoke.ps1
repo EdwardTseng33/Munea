@@ -2783,8 +2783,6 @@ required_auth_ui = [
     "authSignOutBtn",
     "authAppleBtn",
     "authGoogleBtn",
-    "authEmailInput",
-    "authEmailBtn",
     "authDeveloperBtn",
 ]
 missing_auth_ui = [token for token in required_auth_ui if token not in index]
@@ -2794,9 +2792,7 @@ required_auth = [
     "window.MuneaAuth",
     "signInWithApple",
     "signInWithGoogle",
-    "signInWithEmail",
     "signInAsDeveloper",
-    "signInWithOtp",
     "signInWithOAuth",
     "getAccessToken",
     "signOut",
@@ -2816,7 +2812,7 @@ for token in ["src/auth.js", "MuneaAuth"]:
 for token in ["muneaAuthHeaders", "Authorization", "Bearer", "munea:auth-state"]:
     if token not in app:
         raise SystemExit("app.js missing auth API bridge: " + token)
-for token in ["setupAuthControls", "updateAuthUI", "signInWithAuthProvider", "signInWithEmailLink", "signOutAuth"]:
+for token in ["setupAuthControls", "updateAuthUI", "signInWithAuthProvider", "signOutAuth"]:
     if token not in app:
         raise SystemExit("app.js missing auth UI controller: " + token)
 for token in ["MUNEA_DEV_CONFIG", "skipOnboarding", "analyticsExcluded", "accountType", "developerMode"]:
