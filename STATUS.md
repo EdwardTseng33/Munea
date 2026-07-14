@@ -12,7 +12,7 @@
 
 ## 一眼總覽
 
-**64－AI 家庭傳話＋語音提醒成功回執（7/15 Codex，分支待合併）**：①家庭傳話改為 `family_relay_messages` 收件人專屬佇列，AI 先複誦確認、對方下一通聊聊最多播一則並標明傳話者；播完才 ack，插話／斷線 release，強制關閉的舊 claim 10 分鐘後自動回收，同機另留播畢 receipt 防網路斷線重複播。②家庭圈名單保留正式 `personId`，伺服器逐筆驗證 sender／recipient 都在同一家庭，其他家人無法領取；Supabase authenticated client 只有 participant select，所有 mutation 走已驗證後端。③語音的用藥／看診提醒與傳話工具加入 request ID 回執，Gemini 必須等 App 寫入結果，成功才可口頭確認，失敗／8 秒逾時不能假成功；看診日期時間、用藥名稱時段會驗證，重送採穩定 ID 去重。④`test:launch` 全綠，新增家庭傳話 3 組測試；分支 `codex/family-relay-voice` 疊在 PR #41，尚未部署 Supabase migration／Brain／Voice，也未 cap sync 或重打包，App 版號暫維持 1.0.6，合併到下一候選版時需一起升版與重包。
+**64－AI 家庭傳話＋語音提醒成功回執（7/15 Codex，PR #42 待合併）**：①家庭傳話改為 `family_relay_messages` 收件人專屬佇列，AI 先複誦確認、對方下一通聊聊最多播一則並標明傳話者；播完才 ack，插話／斷線 release，強制關閉的舊 claim 10 分鐘後自動回收，同機另留播畢 receipt 防網路斷線重複播。②家庭圈名單保留正式 `personId`，伺服器逐筆驗證 sender／recipient 都在同一家庭，其他家人無法領取；Supabase authenticated client 只有 participant select，所有 mutation 走已驗證後端。③語音的用藥／看診提醒與傳話工具加入 request ID 回執，Gemini 必須等 App 寫入結果，成功才可口頭確認，失敗／8 秒逾時不能假成功；看診日期時間、用藥名稱時段會驗證，重送採穩定 ID 去重。④`test:launch` 全綠，新增家庭傳話 3 組測試；PR #42 疊在 PR #41，尚未部署 Supabase migration／Brain／Voice，也未 cap sync 或重打包，App 版號暫維持 1.0.6，合併到下一候選版時需一起升版與重包。
 
 **63－App 1.0.6 Build 11／全語音修正與上架候選包（7/15 Codex）**：①✅ PR #36／#37 已合併至 `main@ec40412`；版本固定為 `1.0.6 (Build 11)`，main 的 App／iOS 內容與包版來源一致。②✅ 純 PCM S2S／台灣繁中 ASR、上下文姓名修正、插話 7/7、30 秒低噪音與句尾保護自動 PASS。③✅ Edward iPhone 已安裝並啟動開發包，保留 Pro、1,000 點與家人假資料。④✅ 正式 Archive／IPA 簽章、版本、Bundle ID、Privacy Manifest、HealthKit、Apple 登入、最新 Web 資源及無開發資料檢查 PASS；54,784,407 bytes，SHA-256 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。⑤✅ 修正正式匯出腳本誤判 Privacy Manifest 陣列的問題並加回歸契約；PR #37 的 Windows 權限閘、Windows smoke 與 Vercel 全綠。⑥❌ 真人 10 分鐘長聊、五次插話、五組靜音、開場與發音尚未通過；Voice／Brain 尚未部署，IPA 尚未上傳。
 
