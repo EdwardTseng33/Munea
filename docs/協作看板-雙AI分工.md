@@ -1,7 +1,7 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
-> 動手前先讀這頁 + `docs/00-總綱-從這裡開始.md`，並更新下方「現在誰在做什麼」。
+> **2026-07-14 起，本檔只保留歷史脈絡，不再作即時鎖。** 動手前讀 `AGENTS.md`／`CLAUDE.md` 與 [多 agent 協作協議](AGENT-COLLABORATION-PROTOCOL.md)；`.agent/locks/active/*.json` 才是目前誰能修改哪些路徑的權威。
 
 ---
 

@@ -1,0 +1,33 @@
+name: Agent coordination
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  agent-coordination:
+    name: agent-coordination
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch current base
+        run: git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+
+      - name: Validate branch lock and changed paths
+        run: >-
+          python scripts/agent-lock.py ci
+          --base-ref "origin/${{ github.base_ref }}"
+          --head-ref HEAD
+          --branch "${{ github.head_ref }}"
+
+      - name: Run lock unit tests
+        run: python scripts/test-agent-lock.py
