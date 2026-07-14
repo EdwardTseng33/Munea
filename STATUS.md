@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-14 現況覆蓋**：App 最新開發驗收包與 App Store 候選包為 `1.0.4 (Build 9)`，來源為含 PR #20、#21、#18 的 `main@6f69b567` 加本輪開發包隔離修正。最新設計、正式 Call Control、拍照閃退修復、Apple 原生登入、Google PKCE、Apple／Google only 登入與不自動開鍵盤均已整合。Edward iPhone 已安裝測試版，含 Edward 測試帳號、Pro、1,000 點與家人假資料；正式 IPA 已另外重建並驗證不含測試後門或開發直連。Mac 的「iPhone 鏡像輸出」已設定，能辨識配對手機並已建立即時連線。實際拍照、Apple／Google 真帳號登入與真 token Gateway 通話仍待手機操作；Google Cloud 品牌名稱已填為「Munea App」，但尚未儲存／送驗。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
+> **2026-07-14 現況覆蓋**：App 最新開發驗收包與 App Store 候選包為 `1.0.4 (Build 9)`，來源為含 PR #20、#21、#18 的 `main@6f69b567` 加本輪開發包隔離修正。最新設計、正式 Call Control、拍照閃退修復、Apple 原生登入、Google PKCE、Apple／Google only 登入與不自動開鍵盤均已整合。Edward iPhone 已安裝測試版，含 Edward 測試帳號、Pro、1,000 點與家人假資料；正式 IPA 已另外重建並驗證不含測試後門或開發直連。Mac 的「iPhone 鏡像輸出」已設定，能辨識配對手機並已建立即時連線；依 Apple 官方限制，iPhone 相機、麥克風、Face ID 與通話不能透過鏡像驗收，仍須直接操作手機。實際拍照、Apple／Google 真帳號登入與真 token Gateway 通話仍待手機操作；Google Cloud 品牌名稱已填為「Munea App」，但尚未儲存／送驗。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
 
 > **最後更新：2026-07-13（Codex · GLOWS RTX 6000 Ada 正式主卡已接通，App 1.0.1 已完成 iOS 同步與發版檢查；目前可驗收 1～3 人，第 4 人起的 RunPod 自動擴容仍在收尾）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
@@ -12,7 +12,7 @@
 
 ## 一眼總覽
 
-**60－iPhone 鏡像真機驗收環境（7/14 Codex）**：①✅ Mac「iPhone 鏡像輸出」可啟動並辨識配對 iPhone，設定完成。②✅ 已建立即時鏡像工作階段，Mac 可取得 iPhone 主畫面與 App 切換器控制。③鏡像完成只代表後續可由 Mac 操作真機，不等於 Apple／Google 登入、實際拍照、HealthKit、通知或 StoreKit 已通過；這些 Gate 維持逐項實測後才打勾。④本次只同步文件，不改 App、不升版、不重包。
+**60－iPhone 鏡像真機驗收環境（7/14 Codex）**：①✅ Mac「iPhone 鏡像輸出」可啟動並辨識配對 iPhone，設定完成。②✅ 已建立即時鏡像工作階段，Mac 可取得 iPhone 主畫面與 App 切換器控制。③⚠️ Apple 官方明確限制鏡像不可使用 iPhone 相機、麥克風、Face ID 或通話；鏡像可協助一般畫面操作，但拍照、語音通話與需要 Face ID 的流程仍須直接拿手機驗收。④Apple／Google 登入、HealthKit、通知與 StoreKit 等 Gate 維持逐項實測後才打勾。⑤本次只同步文件，不改 App、不升版、不重包。
 
 **59－App 1.0.4 Build 9／真正 main 最新設計與雙包版（7/14 Codex）**：①來源更新為 `main@6f69b567`，PR #20 帳號卡新設計、PR #21 正式 Call Control 與 PR #18 登入／拍照修正均已同步。②正式 App 強制走 Gateway；只有腳本產生的 Edward 開發包可直連，解決測試帳號沒有真 token 會被 401 卡住，Release 防漏已加。③Edward iPhone 已覆蓋安裝並啟動 `1.0.4 (9)`，顯示 TEST、Pro、1,000 點、媽媽／爸爸／姊姊與健康／活動資料。④正式 IPA 無測試帳號、假資料、自動登入或開發直連；簽章、版本、權限、HealthKit、Apple 登入 entitlement 與真正 main Web 資源全數 PASS。⑤Call Control 10 項、`test:launch`、完整 `release:check`、登入權限閘與 390px 畫面驗收均 PASS。⑥Google 品牌儲存／驗證、Apple／Google 真登入、真 token Gateway 通話與實際拍照仍是人工 Gate。⑦唯一有效候選 IPA 為 54,672,615 bytes，SHA-256 `919180bc9b6e1b84a8b835bd779b10258f4217c2cd4b86602c4a6a56a9c82934`。
 
