@@ -11,6 +11,7 @@
     "smoke:staging": "powershell -ExecutionPolicy Bypass -File scripts/staging-smoke.ps1",
     "smoke:staging:auth": "powershell -ExecutionPolicy Bypass -File scripts/staging-auth-smoke.ps1",
     "smoke:status": "powershell -ExecutionPolicy Bypass -File scripts/smoke-status.ps1",
+    "test:ui-contracts": "node scripts/test-ui-contracts.js",
     "test:launch": "python engine/test_vitals_sync.py && python engine/test_thin_door.py && python engine/test_account_scope.py && python engine/test_request_scope.py && python engine/test_apple_store.py && node scripts/test-store-verification.js",
     "release:check": "powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1",
     "release:record": "powershell -ExecutionPolicy Bypass -File scripts/release-record.ps1",

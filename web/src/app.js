@@ -2151,14 +2151,6 @@ function authState() {
   const auth = window.MuneaAuth;
   return auth && typeof auth.state === 'function' ? auth.state() : { status: 'guest' };
 }
-function authProviderLabel(provider) {
-  const key = String(provider || '').toLowerCase();
-  if (key === 'apple') return 'Apple';
-  if (key === 'google') return 'Google';
-  if (key === 'email' || key === 'email_otp') return 'Email';
-  if (key === 'dev-bypass') return 'Developer';
-  return 'Munea';
-}
 function localPersonAvatar() {
   try { return (JSON.parse(localStorage.getItem('munea.personProfile') || '{}')).avatar || ''; } catch (e) { return ''; }
 }
@@ -2259,12 +2251,6 @@ function updateAuthUI() {
   if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
   const status = $('#authStatusText');
   if (status) status.textContent = signedIn ? '已登入' : '訪客模式';
-  const provider = $('#authProviderText');
-  if (provider) {
-    if (signedIn && state.developerMode) provider.textContent = '開發測試帳號，數據不列入營運統計';
-    else if (signedIn) provider.textContent = `${authProviderLabel(state.provider)} 帳號同步中`;
-    else provider.textContent = state.configured === false ? '登入尚未連到雲端設定' : '登入後同步家人、提醒與訂閱';
-  }
   const email = $('#authEmailText');
   if (email) email.textContent = signedIn && state.email ? state.email : '';
   const signIn = $('#authSignInBtn');
@@ -5111,16 +5097,6 @@ function init() {
     recalcWalk(true);
   }
   if ($('#walkDue')) $('#walkDue').addEventListener('change', syncWalkDays);
-  // 數量改用 −／＋ 按鈕（拉桿藏起來只當存值用；視窗內不再有左右拖移手勢 · Edward 7/9）
-  $$('#chalModal .step-btn').forEach(b => b.addEventListener('click', () => {
-    const el = document.getElementById(b.dataset.t);
-    if (!el) return;
-    const st = (+el.step || 1) * (+b.dataset.d || 1);
-    el.value = Math.min(+el.max, Math.max(+el.min, (+el.value || 0) + st));
-    if (b.dataset.t === 'walkDays') { recalcWalk(true); return; }
-    if (b.dataset.t === 'quizN' && $('#quizNVal')) $('#quizNVal').textContent = el.value + ' 題';
-    updateWalkLabels();
-  }));
   if ($('#quizN')) $('#quizN').addEventListener('input', () => {
     paintRange($('#quizN'));
     if ($('#quizNVal')) $('#quizNVal').textContent = $('#quizN').value + ' 題';
