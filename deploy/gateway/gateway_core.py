@@ -141,7 +141,7 @@ class QueueEntry:
 class CallQueue:
     """§5.2 FIFO 排隊。等待時間預估＝近期滾動平均通話時長 × 排隊位置——不用精確保證，
     目的只是不讓人乾等沒訊息。佇列已滿＝唯一保留的真拒絕出口（§5.2 第4點）。"""
-    def __init__(self, max_depth=20, avg_call_s_default=120.0):
+    def __init__(self, max_depth=30, avg_call_s_default=120.0):
         self.max_depth = max_depth
         self._q = collections.deque()
         self._by_client = {}
