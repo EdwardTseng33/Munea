@@ -69,6 +69,17 @@ class SupabaseAdapter:
     def configured(self):
         return self.provider == "supabase" and bool(self.url) and bool(self.service_key)
 
+    def _service_headers(self):
+        headers = {
+            "apikey": self.service_key,
+            "content-type": "application/json",
+        }
+        # New Supabase secret keys are opaque API keys. Legacy service_role
+        # keys are JWTs and still require the bearer header.
+        if not self.service_key.startswith("sb_secret_"):
+            headers["authorization"] = f"Bearer {self.service_key}"
+        return headers
+
     def payload_account_id(self, value=None):
         """Never trust a client-supplied tenant id on an authenticated request."""
         return self.account_id if self.request_scoped else (value or self.account_id)
@@ -87,9 +98,28 @@ class SupabaseAdapter:
     def owns_family_group_id(self, family_group_id):
         if not self.request_scoped or not self._is_uuid(family_group_id):
             return False
+        # A member invited into another account's circle legitimately operates
+        # on that circle while retaining their own billing account.
+        if family_group_id == self.family_group_id:
+            return True
         return bool(self._first(
             "family_groups",
             {"id": f"eq.{family_group_id}", "account_id": f"eq.{self.account_id}", "select": "id"},
+        ))
+
+    def is_account_owner(self):
+        """Whether the authenticated, request-scoped user owns this account."""
+        if not self.request_scoped or not self._is_uuid(self.auth_user_id):
+            return False
+        return bool(self._first(
+            "account_members",
+            {
+                "account_id": f"eq.{self.account_id}",
+                "user_id": f"eq.{self.auth_user_id}",
+                "role": "eq.owner",
+                "status": "eq.active",
+                "select": "id",
+            },
         ))
 
     def delete_scoped_account(self, auth_user_id):
@@ -161,11 +191,7 @@ class SupabaseAdapter:
         if not self.configured() or not self._is_uuid(auth_user_id):
             raise RuntimeError("Supabase Auth admin deletion is not configured")
         url = f"{self.url}/auth/v1/admin/users/{urllib.parse.quote(auth_user_id)}?should_soft_delete=false"
-        headers = {
-            "apikey": self.service_key,
-            "authorization": f"Bearer {self.service_key}",
-            "content-type": "application/json",
-        }
+        headers = self._service_headers()
         req = urllib.request.Request(url, headers=headers, method="DELETE")
         try:
             with urllib.request.urlopen(req, timeout=4) as resp:
@@ -210,9 +236,12 @@ class SupabaseAdapter:
         if not self._is_uuid(person_id):
             return None
 
+        # A person may retain their own subscription account while joining one
+        # other family's circle.  The latest membership is the active circle;
+        # the initial self-membership remains as the user's standalone fallback.
         membership = self._first(
             "family_memberships",
-            {"account_id": f"eq.{account_id}", "person_id": f"eq.{person_id}", "select": "*"},
+            {"person_id": f"eq.{person_id}", "select": "*", "order": "created_at.desc", "limit": "1"},
         )
         family_group_id = (membership or {}).get("family_group_id") or ""
         return {
@@ -626,6 +655,18 @@ class SupabaseAdapter:
             {"account_id": f"eq.{self.account_id}", "select": "*", "order": "created_at.asc", "limit": "500"},
         )
         return self.credits_rows_to_store(wallets, transactions, ledger)
+
+    def grant_free_signup_trial(self):
+        """Atomically grant the one-time account signup trial in Postgres."""
+        result = self._request(
+            "POST",
+            "rpc/munea_grant_free_signup_trial",
+            payload={
+                "p_account_id": self.account_id,
+                "p_person_id": self.person_id if self._is_uuid(self.person_id) else None,
+            },
+        )
+        return result or {}
 
     def save_credits_store(self, store):
         if not self.enabled():
@@ -1053,7 +1094,6 @@ class SupabaseAdapter:
         rows = self._select(
             "family_state_entries",
             {
-                "account_id": f"eq.{self.account_id}",
                 "family_group_id": f"eq.{family_group_id}",
                 "select": "*",
                 "order": "updated_at.desc",
@@ -1064,9 +1104,13 @@ class SupabaseAdapter:
     def save_family_state_entry(self, key, value, family_group_id=None, updated_by_person_id=None):
         if not self.enabled():
             return None
+        family_group_id = family_group_id or self.family_group_id
+        family_account_id = self.family_group_account_id(family_group_id)
+        if not self._is_uuid(family_account_id or ""):
+            return None
         payload = {
-            "account_id": self.account_id,
-            "family_group_id": family_group_id or self.family_group_id,
+            "account_id": family_account_id,
+            "family_group_id": family_group_id,
             "state_key": key,
             "value": value,
             "updated_by_person_id": updated_by_person_id or self.person_id,
@@ -1094,6 +1138,15 @@ class SupabaseAdapter:
             )
         return self.family_state_row_to_entry(rows[0]) if rows else None
 
+    def family_group_account_id(self, family_group_id):
+        if not self._is_uuid(family_group_id or ""):
+            return None
+        if family_group_id == self.family_group_id:
+            row = self._first("family_groups", {"id": f"eq.{family_group_id}", "select": "account_id"})
+        else:
+            row = self._first("family_groups", {"id": f"eq.{family_group_id}", "select": "account_id"})
+        return (row or {}).get("account_id")
+
     def load_family_invitations(self, family_group_id=None, status=None, limit=100):
         if not self.enabled():
             return None
@@ -1109,6 +1162,123 @@ class SupabaseAdapter:
             query["status"] = f"eq.{status}"
         rows = self._select("family_invitations", query)
         return [self.family_invitation_row_to_invitation(row) for row in rows or []]
+
+    def find_pending_family_invitation_by_short_code(self, short_code):
+        """Server-only lookup for the one-time join-code exchange.
+
+        This deliberately does not use the caller's account scope: the applicant
+        belongs to a different account until the exchange succeeds.  It returns
+        only an exact, still-pending code and is called only after authentication
+        and entitlement checks in server.py.
+        """
+        if not self.enabled() or not (len(str(short_code or "")) == 6 and str(short_code).isdigit()):
+            return None
+        rows = self._select("family_invitations", {
+            "short_code": f"eq.{short_code}",
+            "status": "eq.pending",
+            "select": "*",
+            "limit": "2",
+        })
+        if len(rows or []) != 1:
+            return None
+        return self.family_invitation_row_to_invitation(rows[0])
+
+    def update_family_invitation_by_id_unscoped(self, invitation_id, patch):
+        """Server-only mutation paired with exact-code lookup above."""
+        if not self.enabled() or not self._is_uuid(invitation_id or ""):
+            return None
+        payload = self.family_invitation_patch_to_row(patch)
+        if not payload:
+            return self.family_invitation_row_to_invitation(
+                self._first("family_invitations", {"id": f"eq.{invitation_id}", "select": "*"})
+            )
+        rows = self._request(
+            "PATCH",
+            "family_invitations",
+            query={"id": f"eq.{invitation_id}", "select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.family_invitation_row_to_invitation(rows[0]) if rows else None
+
+    def load_family_circle_unscoped(self, family_group_id):
+        """Read the server-owned member roster for a capacity check."""
+        if not self.enabled() or not self._is_uuid(family_group_id or ""):
+            return None
+        rows = self._select("family_state_entries", {
+            "family_group_id": f"eq.{family_group_id}",
+            "state_key": "eq.circle",
+            "select": "*",
+            "limit": "1",
+        })
+        if not rows:
+            return []
+        value = rows[0].get("value")
+        return value if isinstance(value, list) else []
+
+    def count_family_members_unscoped(self, family_group_id):
+        if not self.enabled() or not self._is_uuid(family_group_id or ""):
+            return None
+        rows = self._select("family_memberships", {
+            "family_group_id": f"eq.{family_group_id}",
+            "select": "id",
+            "limit": "100",
+        })
+        return len(rows or [])
+
+    def add_family_member_after_invitation_unscoped(self, family_group_id, person_id):
+        """Attach the authenticated invitee to the inviter's group exactly once."""
+        if not self.enabled() or not self._is_uuid(family_group_id or "") or not self._is_uuid(person_id or ""):
+            return None
+        group = self._first("family_groups", {"id": f"eq.{family_group_id}", "select": "account_id"}) or {}
+        account_id = group.get("account_id")
+        if not self._is_uuid(account_id or ""):
+            return None
+        existing = self._first("family_memberships", {
+            "family_group_id": f"eq.{family_group_id}",
+            "person_id": f"eq.{person_id}",
+            "select": "*",
+        })
+        if existing:
+            return self.family_membership_row_to_member(existing)
+        rows = self._request(
+            "POST",
+            "family_memberships",
+            query={"select": "*"},
+            payload={
+                "account_id": account_id,
+                "family_group_id": family_group_id,
+                "person_id": person_id,
+                "role": "family_contact",
+                "permissions": {"familyCircleMember": True, "view_family_dashboard": True},
+            },
+            prefer="return=representation",
+        )
+        return self.family_membership_row_to_member(rows[0]) if rows else None
+
+    def remove_external_family_memberships_for_account_unscoped(self, account_id):
+        """Remove an expired subscriber from circles owned by other accounts."""
+        if not self.enabled() or not self._is_uuid(account_id or ""):
+            return 0
+        people = self._select("persons", {"account_id": f"eq.{account_id}", "select": "id"})
+        removed = 0
+        for person in people or []:
+            person_id = person.get("id")
+            if not self._is_uuid(person_id or ""):
+                continue
+            memberships = self._select("family_memberships", {"person_id": f"eq.{person_id}", "select": "*"})
+            for membership in memberships or []:
+                # Preserve the member's own circle.  Cross-account rows are
+                # created only by the accepted-invitation flow.
+                if membership.get("account_id") == account_id:
+                    continue
+                self._request(
+                    "DELETE", "family_memberships",
+                    query={"id": f"eq.{membership.get('id')}", "select": "id"},
+                    prefer="return=representation",
+                )
+                removed += 1
+        return removed
 
     def create_family_invitation(self, invitation):
         if not self.enabled():
@@ -2035,7 +2205,7 @@ class SupabaseAdapter:
 
     @staticmethod
     def _normalize_family_invitation_status(status):
-        allowed = {"pending", "accepted", "revoked", "expired"}
+        allowed = {"pending", "applied", "accepted", "rejected", "revoked", "expired"}
         return status if status in allowed else "pending"
 
     @staticmethod
@@ -2458,11 +2628,7 @@ class SupabaseAdapter:
         if query_string:
             url = f"{url}?{query_string}"
         body = json.dumps(payload).encode("utf-8") if payload is not None else None
-        headers = {
-            "apikey": self.service_key,
-            "authorization": f"Bearer {self.service_key}",
-            "content-type": "application/json",
-        }
+        headers = self._service_headers()
         if prefer:
             headers["prefer"] = prefer
         req = urllib.request.Request(url, data=body, headers=headers, method=method)
