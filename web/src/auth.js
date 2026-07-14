@@ -167,6 +167,7 @@
       userId: user ? user.id : null,
       authUserId: user ? user.id : null,
       email: user ? user.email || null : null,
+      name: userMetadata.name || userMetadata.full_name || userMetadata.displayName || null,
       provider: user && user.app_metadata ? user.app_metadata.provider || null : null,
       avatarUrl,
     };
