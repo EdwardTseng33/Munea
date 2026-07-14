@@ -43,19 +43,30 @@ VERIFY_DIR="$(mktemp -d /private/tmp/munea-ipa-verify.XXXXXX)"
 trap 'rm -rf "$VERIFY_DIR"' EXIT
 ditto -x -k "$IPA_PATH" "$VERIFY_DIR"
 APP_PATH="$VERIFY_DIR/Payload/App.app"
+ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/App.app"
 
 codesign --verify --deep --strict "$APP_PATH"
-ENTITLEMENTS="$(codesign -d --entitlements :- "$APP_PATH" 2>&1)"
+ENTITLEMENTS="$(codesign -d --entitlements - "$APP_PATH" 2>&1)"
 
 EXPECTED_VERSION="$(node -p "require('./package.json').version")"
+EXPECTED_BUILD="$(plutil -extract CFBundleVersion raw "$ARCHIVE_APP_PATH/Info.plist")"
 ACTUAL_VERSION="$(plutil -extract CFBundleShortVersionString raw "$APP_PATH/Info.plist")"
+ACTUAL_BUILD="$(plutil -extract CFBundleVersion raw "$APP_PATH/Info.plist")"
 ACTUAL_BUNDLE_ID="$(plutil -extract CFBundleIdentifier raw "$APP_PATH/Info.plist")"
+CAMERA_USAGE="$(plutil -extract NSCameraUsageDescription raw "$APP_PATH/Info.plist")"
+PHOTO_USAGE="$(plutil -extract NSPhotoLibraryUsageDescription raw "$APP_PATH/Info.plist")"
 
-if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] || [ "$ACTUAL_BUNDLE_ID" != "net.munea.app" ] || ! grep -q '<key>com.apple.developer.healthkit</key><true/>' <<<"$ENTITLEMENTS"; then
-  echo "FAIL exported IPA metadata or HealthKit entitlement is incorrect."
+if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] \
+  || [ "$ACTUAL_BUILD" != "$EXPECTED_BUILD" ] \
+  || [ "$ACTUAL_BUNDLE_ID" != "net.munea.app" ] \
+  || [ -z "$CAMERA_USAGE" ] \
+  || [ -z "$PHOTO_USAGE" ] \
+  || ! grep -q 'com.apple.developer.healthkit' <<<"$ENTITLEMENTS" \
+  || ! grep -q 'com.apple.developer.applesignin' <<<"$ENTITLEMENTS"; then
+  echo "FAIL exported IPA metadata, privacy usage strings, or entitlements are incorrect."
   exit 1
 fi
 
-echo "PASS IPA signature, version, bundle id, and HealthKit entitlement verified."
+echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS App Store package exported."
 echo "Output: $FINAL_EXPORT_PATH"

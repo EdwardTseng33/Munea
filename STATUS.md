@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-14 現況覆蓋**：App 最新開發驗收包為 `1.0.3 (Build 7)`，已補齊拍照與照片圖庫權限並覆蓋安裝到 Edward iPhone；Mac 真機編譯、安裝、版本查詢與啟動存活均已通過，實際點「拍照」仍待 Edward 在手機完成最後操作驗收。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
+> **2026-07-14 現況覆蓋**：App 最新開發驗收包為 `1.0.3 (Build 8)`，已包含拍照閃退修復與 Apple 原生登入，並覆蓋安裝到 Edward iPhone；Mac 完整測試、真機編譯、Apple entitlement、安裝、版本查詢與啟動存活均已通過。實際拍照、Apple 真帳號登入與 Google 真帳號登入仍待手機操作；Google 登入品牌目前仍顯示 Supabase 專案碼，尚未改為「Munea App」。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
 
 > **最後更新：2026-07-13（Codex · GLOWS RTX 6000 Ada 正式主卡已接通，App 1.0.1 已完成 iOS 同步與發版檢查；目前可驗收 1～3 人，第 4 人起的 RunPod 自動擴容仍在收尾）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
@@ -12,7 +12,9 @@
 
 ## 一眼總覽
 
-**57－拍照閃退修復／App 1.0.3 Build 7 真機包（7/14 Codex）**：①根因是 iOS `Info.plist` 缺少相機與照片圖庫用途說明，Web 照片欄位叫出系統相機時會被 iOS 直接終止。②已補 `NSCameraUsageDescription`／`NSPhotoLibraryUsageDescription`，新增發佈契約防回歸，行銷版本維持 1.0.3、Build 升為 7。③plist、`test:launch`、`smoke:no-api`、Capacitor sync、Xcode arm64 真機編譯均 PASS；成品內版本、Build 與兩段權限文字逐項 PASS。④Build 7 已覆蓋安裝到 Edward iPhone 15 Pro，安裝、啟動與程序存活 PASS。⑤最後真機 Gate：Edward 實際在個人頭像／用藥照片／意見回饋任一入口點「拍照」，確認先出現授權或相機畫面且不閃退；未操作前不標完整通過。⑥App Store Archive／IPA 目前仍是 Build 6，待登入修正一起完成後再重做 Build 7 正式包，避免重複出包。
+**58－Apple 原生登入／App 1.0.3 Build 8 真機包（7/14 Codex）**：①公開驗證確認 Google 可開登入頁，但畫面顯示 Supabase 專案碼；Apple 網頁 OAuth 直接回 `Invalid client id or web redirect url`。②iPhone Apple 登入已改用 `AuthenticationServices` 原生系統視窗，nonce 雜湊交給 Apple、原 nonce 與 ID token 交 Supabase `signInWithIdToken`，不再使用壞掉的 Apple 網頁 OAuth。③加入 Sign in with Apple entitlement、原生 Capacitor 橋與首次登入姓名保存；Google PKCE 深連結流程保持不變。④`test:launch`、`smoke:no-api`、完整 `release:check`、原生登入契約、Capacitor sync、Xcode arm64 真機編譯與新 provisioning profile 均 PASS；簽章明確含 `com.apple.developer.applesignin=Default`。⑤Build 8 已覆蓋安裝，版本與啟動程序存活 PASS。⑥Build 8 Release Archive 與 App Store IPA 已匯出，IPA 的簽章、版本／Build、Bundle ID、相機／照片用途說明、HealthKit 與 Apple 登入 entitlement 全數 PASS。⑦未通過：Apple／Google 真帳號仍需手機完成一次；Google Cloud OAuth Branding 需改「Munea App」並發布／驗證，等待 Edward 允許操作已登入 Chrome；候選 IPA 暫不上傳、不送審。
+
+**57－拍照閃退修復／App 1.0.3 Build 7 真機包（7/14 Codex）**：①根因是 iOS `Info.plist` 缺少相機與照片圖庫用途說明，Web 照片欄位叫出系統相機時會被 iOS 直接終止。②已補 `NSCameraUsageDescription`／`NSPhotoLibraryUsageDescription`，新增發佈契約防回歸，行銷版本維持 1.0.3、Build 升為 7。③plist、`test:launch`、`smoke:no-api`、Capacitor sync、Xcode arm64 真機編譯均 PASS；成品內版本、Build 與兩段權限文字逐項 PASS。④Build 7 已覆蓋安裝到 Edward iPhone 15 Pro，安裝、啟動與程序存活 PASS。⑤最後真機 Gate：Edward 實際在個人頭像／用藥照片／意見回饋任一入口點「拍照」，確認先出現授權或相機畫面且不閃退；未操作前不標完整通過。⑥本包已由同時包含 Apple 原生登入的 Build 8 取代；正式 Archive／IPA 也已改以 Build 8 產出。
 
 **56－完成主卡接線／App 1.0.1 待 Mac 真機包版（7/13 Codex）**：① GLOWS RTX 6000 Ada `ins-1y27kl5g` 已成為常駐正式主卡，VocaFrame／FlashHead 640 開 compile、3 席，正式外網門牌 `https://tw-07.access.glows.ai:26969` 健康。② 男女角色雙路與三路同時 WebRTC 均收到 640 影像及音訊，主卡 1～3 人可用。③ App 改接新門牌並會清除舊門牌快取；Voice＋Avatar 維持綁定，滿載／重連失敗不降成純語音。④ npm、Web 與 iOS 行銷版號統一 `1.0.1`，Build Number 保留 `4`；`cap sync ios`、完整 release check、Gateway 9/9、RunPod backup 11/11、Cloud Run Voice 真連線探測全綠。⑤ Windows 無法簽 Apple App；現在需要 Mac／Xcode 真機 Archive 才能交 TestFlight。⑥ 第 4 人起的 Gateway 排隊＋RunPod 4090 自動喚醒尚未接正式 App 流量，RunPod 目前停止，不能宣稱 1～30 人已正式上線。
 

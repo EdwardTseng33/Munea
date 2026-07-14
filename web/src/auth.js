@@ -246,6 +246,7 @@
     const supabaseClient = await ensureClient();
     if (!supabaseClient) return { ok: false, error: { code: 'auth_not_configured' } };
     const native = isNativeApp();
+    if (native && normalized === 'apple') return signInWithNativeApple(supabaseClient);
     if (native) await setupNativeAuthListener();
     const result = await supabaseClient.auth.signInWithOAuth({
       provider: normalized,
@@ -268,6 +269,57 @@
       }
     }
     return { ok: !result.error, result, error: result.error || null };
+  }
+
+  async function signInWithNativeApple(supabaseClient) {
+    const apple = nativePlugin('AppleSignIn');
+    if (!apple || typeof apple.signIn !== 'function') {
+      return { ok: false, error: { code: 'native_apple_unavailable' } };
+    }
+    if (!supabaseClient.auth || typeof supabaseClient.auth.signInWithIdToken !== 'function') {
+      return { ok: false, error: { code: 'apple_id_token_unsupported' } };
+    }
+    try {
+      const credential = await apple.signIn();
+      if (!credential || credential.state === 'cancelled') {
+        return { ok: false, cancelled: true, error: { code: 'apple_sign_in_cancelled' } };
+      }
+      if (!credential.identityToken || !credential.nonce) {
+        return { ok: false, error: { code: 'apple_identity_token_missing' } };
+      }
+      const result = await supabaseClient.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+        nonce: credential.nonce,
+      });
+      const nextSession = result && result.data ? result.data.session : null;
+      if (result.error || !nextSession) {
+        return { ok: false, result, error: result.error || { code: 'apple_session_missing' } };
+      }
+
+      const fullName = String(credential.fullName || [credential.givenName, credential.familyName].filter(Boolean).join(' ')).trim();
+      if (fullName && typeof supabaseClient.auth.updateUser === 'function') {
+        try {
+          await supabaseClient.auth.updateUser({
+            data: {
+              full_name: fullName,
+              given_name: credential.givenName || '',
+              family_name: credential.familyName || '',
+            },
+          });
+        } catch (e) {}
+      }
+      setState('signed-in', nextSession, 'SIGNED_IN');
+      return { ok: true, result, session: nextSession };
+    } catch (e) {
+      return {
+        ok: false,
+        error: {
+          code: e && e.code ? e.code : 'native_apple_sign_in_failed',
+          message: e && e.message ? e.message : 'Apple sign in failed',
+        },
+      };
+    }
   }
 
   async function signInWithEmail(email) {
