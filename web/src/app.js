@@ -2147,6 +2147,27 @@ function requireLogin(reasonText, feature) {
   } catch (e) { return true; }   // 判斷出錯就不擋（不因把關 bug 卡死使用者）
 }
 function requireLoginForFamily(reasonText) { return requireLogin(reasonText, 'family'); }
+// 登入後帳號卡標題顯示什麼（Edward 2026-07-14 問）：優先真名（Google／Apple 登入都會給），
+// 沒名字就用 email 的 @ 前面那段，再沒有才退回「已登入」。
+function authDisplayName(state) {
+  if (!state) return '';
+  if (state.name) return String(state.name).trim();
+  if (state.email) return String(state.email).split('@')[0];
+  return '';
+}
+// 帳號卡右上角「唯一」的身份標籤（Edward 2026-07-14：只留一顆、統一右上，不要兩顆）
+// 開發測試帳號 → TEST；否則 FREE / PLUS / PRO
+let _memBadgePlan = 'free';
+function renderMemBadge(plan) {
+  if (plan) _memBadgePlan = String(plan).toLowerCase();
+  const mb = $('#memBadge');
+  if (!mb) return;
+  let dev = false;
+  try { dev = !!authState().developerMode; } catch (e) {}
+  const key = dev ? 'test' : _memBadgePlan;
+  mb.textContent = dev ? 'TEST' : key.toUpperCase();
+  mb.className = 'mem-badge ' + key;
+}
 function authState() {
   const auth = window.MuneaAuth;
   return auth && typeof auth.state === 'function' ? auth.state() : { status: 'guest' };
@@ -2250,15 +2271,14 @@ function updateAuthUI() {
   const card = $('#authCard');
   if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
   const status = $('#authStatusText');
-  if (status) status.textContent = signedIn ? '已登入' : '訪客模式';
+  if (status) status.textContent = signedIn ? (authDisplayName(state) || '已登入') : '訪客模式';
   const email = $('#authEmailText');
   if (email) email.textContent = signedIn && state.email ? state.email : '';
   const signIn = $('#authSignInBtn');
   if (signIn) signIn.hidden = signedIn;
   const signOut = $('#authSignOutBtn');
   if (signOut) signOut.hidden = !signedIn;
-  const devBadge = $('#authDevBadge');
-  if (devBadge) devBadge.hidden = !(signedIn && state.developerMode);
+  renderMemBadge();
   renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
@@ -4338,9 +4358,8 @@ function init() {
     const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
     const pts = Object.prototype.hasOwnProperty.call(PLAN_POINTS, plan) ? PLAN_POINTS[plan] : PLAN_POINTS.plus;
     const sn = $('#setPlanName'); if (sn) sn.textContent = label + ' 方案';
-    // 帳號卡的會員身份標籤（FREE/PLUS/PRO）
-    const mb = $('#memBadge');
-    if (mb) { mb.textContent = String(plan).toUpperCase(); mb.className = 'mem-badge ' + plan; }
+    // 帳號卡右上角唯一的身份標籤（開發測試帳號會蓋成 TEST）
+    renderMemBadge(plan);
     const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
     if (POINTS.total !== pts) { POINTS.total = pts; if (POINTS.used > pts) POINTS.used = Math.round(pts * 0.3); }
     if (typeof renderPoints === 'function') renderPoints();
