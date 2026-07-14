@@ -3,7 +3,7 @@
 > Updated: 2026-06-30
 > Purpose: current execution plan for turning the runnable prototype into a first TestFlight path.
 
-> **2026-07-14 current override**: App `1.0.3 (6)` is the current integrated release target. The active plan ladder is Free / Plus / Pro; Plus grants 150 monthly points and Pro grants 300. Older dated sections remain an execution history and cannot override `docs/APP-STORE-PRODUCTION-READINESS.md` or `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`.
+> **2026-07-14 current override**: App `1.0.3 (6)` is packaged and running on Edward's iPhone. The active plan ladder is Free / Plus / Pro; Plus grants 150 monthly points and Pro grants 300. Older dated sections remain an execution history and cannot override `docs/APP-STORE-PRODUCTION-READINESS.md` or `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`.
 
 ## Current Truth
 
