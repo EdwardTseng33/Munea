@@ -1827,19 +1827,23 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .piv-tx b { display: block; font-size: 15px; font-weight: 800; margin-bottom: 1px; color: var(--ink); }
 
 /* ===== 訂閱頁 v2：整頁照片 hero + 比較表 + 狀態頁式分段控制（一頁看完）===== */
-.sub-hero { position: relative; flex-shrink: 0; text-align: center; padding: calc(env(safe-area-inset-top, 0px) + 12px) 0 24px; background: var(--mint); overflow: hidden; }
+/* 不給底色：跟頁面同一塊奶油底，插圖下方不再出現第二個色塊（Edward 2026-07-14）*/
+.sub-hero { position: relative; flex-shrink: 0; text-align: center; padding: calc(env(safe-area-inset-top, 0px) + 12px) 0 24px; overflow: hidden; }
 /* 水彩插圖天生要淺底：深綠底會讓白沙發/米色衣服浮起來發光（Edward 2026-07-14 提供插圖後改）*/
 .sub-hero-art { display: block; width: 100%; max-width: 400px; height: auto; margin: 0 auto 2px; }
 .sub-hero-av { position: relative; display: block; width: 78px; height: 78px; margin: 2px auto 15px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 12px 28px -10px rgba(0,0,0,.55); }
 .sub-hero-av img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
-.sub-x { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px; width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--surface); display: grid; place-items: center; cursor: pointer; z-index: 2; }
+/* 釘住：頂部區塊會被滑走，✕ 不能跟著不見、不然使用者關不掉（Edward 2026-07-14）*/
+.sub-x { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px; width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--surface); display: grid; place-items: center; cursor: pointer; z-index: 2; }
 .sub-x:active { background: var(--mint-2); }
 .sub-x .ic { width: 20px; height: 20px; color: var(--ink); }
 /* 照片字幕帶：柔順漸層淡入（照片視覺用漸層＝常規，不是卡片；避免生硬橫切線）*/
 .sub-hero-cap { position: relative; color: var(--ink); padding: 0 24px; }
 .sub-hero-title { font-family: var(--serif); font-size: 25px; font-weight: 900; line-height: 1.2; letter-spacing: .5px; }
 .sub-hero-sub { font-size: 13.5px; margin-top: 6px; color: var(--muted); }
-.sub-body { flex: 1; overflow-y: auto; padding: 14px 20px calc(18px + env(safe-area-inset-bottom)); }
+/* 整頁一起捲：原本頂部區塊釘死不動、只有這塊自己捲（Edward 2026-07-14：要能被滑走）*/
+.sub-page { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.sub-page .sub-body { flex: none; overflow-y: visible; padding: 14px 20px calc(18px + env(safe-area-inset-bottom)); }
 
 .sub-seg { position: relative; display: flex; background: var(--ink); border-radius: 100px; padding: 4px; margin-bottom: 14px; }
 .sseg-thumb { position: absolute; top: 4px; left: 4px; width: calc((100% - 8px) / 2); height: calc(100% - 8px); background: var(--teal); border-radius: 100px; transition: transform .3s cubic-bezier(.4,0,.2,1); z-index: 0; }
@@ -1905,12 +1909,15 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .sub-fine { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
 
 /* 點數規則：同一張頁面直接說清楚月點數與加購點數，不把關鍵限制藏在法務小字。 */
-.credit-rules { margin: 0 0 14px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 9px; }
-.cr-row { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ink2); font-size: 13px; line-height: 1.45; }
+.credit-rules { margin: 0 0 14px; padding: 4px 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
+.credit-rules .cr-row { padding: 11px 0; }
+.credit-rules .cr-row + .cr-row { border-top: 1px solid var(--line); }
+/* 標題固定寬 → 所有說明對齊同一條垂直線（原本標題長度不一、說明起點像鋸齒）Edward 2026-07-14 */
+.cr-row { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ink2); font-size: 13px; line-height: 1.45; white-space: nowrap; }
 .cr-row > span:last-child { min-width: 0; }
-.cr-row b { color: var(--ink); font-weight: 800; }
-.cr-row i { display: inline-block; width: 1px; height: 13px; margin: 0 9px -2px; background: var(--teal); opacity: .7; }
-.cr-row small { display: block; margin-top: 2px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.cr-row b { flex: 0 0 5.6em; color: var(--ink); font-weight: 800; }
+.cr-note { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.cr-row i { flex: 0 0 1px; width: 1px; height: 13px; margin: 0; background: var(--teal); opacity: .7; }
 .cr-ic { flex: 0 0 29px; width: 29px; height: 29px; border-radius: 9px; display: grid; place-items: center; color: var(--teal-dd); background: var(--mint); }
 .cr-ic .ic { width: 18px; height: 18px; }
 .ppk-rule { display: inline-block; margin-left: 5px; padding: 2px 7px; border-radius: 999px; background: rgba(31,45,41,.06); color: var(--muted); font-size: 10.5px; font-weight: 700; white-space: nowrap; vertical-align: 1px; }

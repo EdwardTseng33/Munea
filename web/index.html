@@ -920,11 +920,15 @@
         <div class="credit-rules" aria-label="點數使用規則">
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
-            <span><b>會員月點數</b><i></i>每期重新發放，未用完不帶到下期</span>
+            <b>會員月點數</b><i></i><span class="cr-note">每期重發，不累積</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
-            <span><b>單獨加購點數</b><i></i>可累積，會員到期後仍保留</span>
+            <b>加購點數</b><i></i><span class="cr-note">可累積，不會過期</span>
+          </div>
+          <div class="cr-row">
+            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 3-4"/></svg></span>
+            <b>扣點順序</b><i></i><span class="cr-note">先扣月點數，再扣加購</span>
           </div>
         </div>
         <div class="plan-pick" id="planPick">
@@ -960,7 +964,7 @@
       </div>
       <!-- 點數購買 -->
       <div id="subPoints" style="display:none">
-        <p class="sub-fine" style="margin:4px 0 12px">聊天會用點數；用完就先停、補了再聊。方案每月送的點數先用，才用到你買的。</p>
+        <p class="sub-fine" style="margin:4px 0 12px">聊天會用點數；用完就先停、補了再聊。</p>
         <div class="tu-grid">
           <button class="tu-card" data-p="150" type="button"><b>150 點</b><span class="tu-price">NT$500</span><small class="tu-min">約 150 分鐘</small></button>
           <button class="tu-card on" data-p="300" type="button"><b>300 點</b><span class="tu-price">NT$1,000</span><small class="tu-min">約 300 分鐘</small></button>
@@ -970,12 +974,16 @@
         <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">直接購買 300 點 · NT$1,000</button>
         <div class="credit-rules points-rules" aria-label="加購點數使用規則">
           <div class="cr-row">
+            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
+            <b>會員月點數</b><i></i><span class="cr-note">每期重發，不累積</span>
+          </div>
+          <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
-            <span><b>加購點數可持續累積</b><small>沒有使用期限，會員到期後仍會保留，也能繼續用於聊聊。</small></span>
+            <b>加購點數</b><i></i><span class="cr-note">可累積，不會過期</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 3-4"/></svg></span>
-            <span><b>扣點順序</b><small>先使用即將到期的會員月點數，再使用加購點數。</small></span>
+            <b>扣點順序</b><i></i><span class="cr-note">先扣月點數，再扣加購</span>
           </div>
         </div>
       </div>
