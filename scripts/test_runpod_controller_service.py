@@ -23,6 +23,7 @@ def main() -> None:
     assert '"--min-instances", "1"' in DEPLOY
     assert '"--max-instances", "1"' in DEPLOY
     assert '"--no-cpu-throttling"' in DEPLOY
+    assert '"--memory", "512Mi"' in DEPLOY
     assert "munea-runpod-api-key" in DEPLOY
     assert "uvicorn controller_service:app" in DOCKERFILE
     print("RunPod controller service contract: ALL PASS")
