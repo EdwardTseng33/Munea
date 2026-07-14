@@ -53,4 +53,11 @@ assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {
 assert(html.includes('立即建立只屬於你的 JSON 資料副本'), 'Data export sheet must explain immediate scoped delivery');
 assert(app.includes('result.exportPackage') && app.includes('navigator.canShare') && app.includes('a.download = filename'), 'Data export must share or download the generated JSON package');
 
-console.log('UI contracts OK: billing credit rules, social auth, quiet keyboard, latest account card, and challenge controls');
+assert(html.includes('src/medication.js'), 'App shell must load the shared medication occurrence service');
+assert(app.includes("item.dataset.task === 'pill' && window.MuneaMedication"), 'Home medication checkbox must use the shared occurrence service');
+assert(app.includes("window.MuneaMedication.setStatus(dose, 'taken', 'notification')"), 'Reminder completion must use the shared occurrence service');
+const deviceEmptyState = html.match(/window\.MMDEV = function\(\)\{[\s\S]*?\n\};/)?.[0] || '';
+assert(deviceEmptyState && !deviceEmptyState.includes('medTrendChart'), 'Medication history must not be hidden by Apple Health empty state');
+assert(html.includes('用藥紀錄是 Munea 自己的帳本，不依賴 Apple Health'), 'Medication trend must remain independent from Apple Health');
+
+console.log('UI contracts OK: billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, and challenge controls');

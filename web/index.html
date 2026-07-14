@@ -1167,6 +1167,7 @@
   <script src="src/health.js?v=20260714-health2"></script>
   <script src="src/store.js?v=20260708-store"></script>
   <script src="src/notify.js?v=20260708-notify"></script>
+  <script src="src/medication.js?v=20260715-med1"></script>
   <script>
   /* 方案／權限判斷中心（單一真相 · 兩邊都讀得到）· Edward 7/7：登入預設 free；付費 Plus / Pro。
      ⚠ 7/7 合併時一度被移除、免費限制失效，此處重建並對齊 Mac 的 Plus/Pro 訂閱畫面。 */
@@ -1306,9 +1307,12 @@ window.MM = (function(){
 function mmMeds(){ try{ var raw=localStorage.getItem('munea.meds'); var m=raw?JSON.parse(raw):[]; return Array.isArray(m)?m:[]; }catch(e){ return []; } }
 function mmDateKey(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 function mmSlots(meds){ var slots=[]; meds.forEach(function(m){ String(m.time).split('、').forEach(function(raw){ var slot=raw.trim(); if(slot) slots.push({slot:slot,name:m.name,key:slot+'|'+m.name}); }); }); var ord=['早餐後','午餐後','晚餐後','睡前']; slots.sort(function(a,b){return ord.indexOf(a.slot)-ord.indexOf(b.slot);}); return slots; }
-function mmDoneMap(){ try{ return JSON.parse(localStorage.getItem('munea.medDone.'+mmDateKey()))||{}; }catch(e){ return {}; } }
+function mmDoneMap(){
+  if(window.MuneaMedication){ var events=window.MuneaMedication.dayEvents(mmMeds(),mmDateKey()),out={}; events.forEach(function(e){ if(e.status==='taken') out[e.slot+'|'+e.medicationName]=true; }); return out; }
+  try{ return JSON.parse(localStorage.getItem('munea.medDone.'+mmDateKey()))||{}; }catch(e){ return {}; }
+}
 window.MMMED=function(period){ var card=document.getElementById('medCard'); if(!card) return; if(period&&period!=='今天'){ card.style.display='none'; return; } var chip=document.getElementById('medChip'),icon=document.getElementById('medIcon'),sub=document.getElementById('medSub'); card.style.display='block'; if(chip){chip.style.padding='';chip.style.fontSize='';} var meds=mmMeds(); if(!meds.length){ if(sub) sub.textContent='還沒設定用藥，跟寧寧說一聲就好'; if(chip){ chip.textContent='去設定 ›'; chip.style.background='var(--teal)'; chip.style.color='#fff'; chip.style.padding='6px 13px'; chip.style.fontSize='13px'; } if(icon) icon.style.background='#B7BEC2'; return; } var slots=mmSlots(meds),done=mmDoneMap(),total=slots.length,doneN=0,next=null; for(var j=0;j<slots.length;j++){ if(done[slots[j].key]) doneN++; else if(!next) next=slots[j]; } if(next){ if(chip){ chip.textContent='尚未服用'; chip.style.background='var(--coral-soft)'; chip.style.color='var(--coral-d)'; } if(icon) icon.style.background='var(--coral)'; if(sub) sub.textContent=String(next.name).split(/\s+/)[0]+' · '+next.slot+'（今天 '+doneN+'/'+total+'）'; } else { if(chip){ chip.textContent='都完成了'; chip.style.background='var(--mint)'; chip.style.color='var(--teal-dd)'; } if(icon) icon.style.background='var(--teal)'; if(sub) sub.textContent='今天 '+total+' 次都記到了'; } };
-window.MMMEDCLICK=function(){ var meds=mmMeds(); if(!meds.length){ var mask=document.getElementById('medMgrModal'); if(mask){ if(typeof renderMedList==='function') renderMedList(); mask.classList.add('show'); } return; } var slots=mmSlots(meds),done=mmDoneMap(),next=null; for(var j=0;j<slots.length;j++){ if(!done[slots[j].key]){ next=slots[j]; break; } } if(next){ done[next.key]=true; } else { var last=slots[slots.length-1]; if(last) delete done[last.key]; } try{ localStorage.setItem('munea.medDone.'+mmDateKey(), JSON.stringify(done)); }catch(e){} window.MMMED('今天'); };
+window.MMMEDCLICK=function(){ var meds=mmMeds(); if(!meds.length){ var mask=document.getElementById('medMgrModal'); if(mask){ if(typeof renderMedList==='function') renderMedList(); mask.classList.add('show'); } return; } if(window.MuneaMedication){ window.MuneaMedication.toggleNext(meds,'status'); return; } var slots=mmSlots(meds),done=mmDoneMap(),next=null; for(var j=0;j<slots.length;j++){ if(!done[slots[j].key]){ next=slots[j]; break; } } if(next){ done[next.key]=true; } else { var last=slots[slots.length-1]; if(last) delete done[last.key]; } try{ localStorage.setItem('munea.medDone.'+mmDateKey(), JSON.stringify(done)); }catch(e){} window.MMMED('今天'); };
 </script>
 
 <!-- MUNEA-HEALTH-EMPTY -->
@@ -1324,8 +1328,8 @@ window.MMDEV = function(){
   T('bpNum','—'); T('bpUnit',''); T('bpSub','接 Apple 健康帶入'); hide('bpChip');
   T('hrNum','—'); T('hrUnit',''); T('hrSub','接 Apple 健康帶入'); hide('hrChip');
   T('spo2Num','—'); T('spo2Unit',''); T('sleepNum','—'); T('sleepUnit',''); T('stepsNum','—'); T('stepsUnit','');
-  ['medTrendChart','sleepTrendChart','actChart'].forEach(function(id){ var el=document.getElementById(id); if(el && el.offsetParent!==null){ el.innerHTML='<div style="padding:16px 2px;font-size:12.5px;color:var(--muted);text-align:center">接上 Apple 健康後，這裡會長出你的趨勢</div>'; } });
-  hide('medTrendChip'); hide('sleepTrendChip'); hide('actChip');
+  ['sleepTrendChart','actChart'].forEach(function(id){ var el=document.getElementById(id); if(el && el.offsetParent!==null){ el.innerHTML='<div style="padding:16px 2px;font-size:12.5px;color:var(--muted);text-align:center">接上 Apple 健康後，這裡會長出你的趨勢</div>'; } });
+  hide('sleepTrendChip'); hide('actChip');
 };
 </script>
 
@@ -1454,7 +1458,10 @@ window.MMDEV = function(){
     function avg(k,dec){ var a=[]; days.forEach(function(x){ if(x.v&&typeof x.v[k]==='number') a.push(x.v[k]); }); if(!a.length) return null; var s=0; a.forEach(function(v){s+=v;}); var m=s/a.length; return dec?+m.toFixed(dec):Math.round(m); }
     return { days:days, n:got, bpS:avg('bpSys'), bpD:avg('bpDia'), hr:avg('hr'), spo2:avg('spo2'), sleep:avg('sleepHours',1), steps:avg('steps') };
   }
-  function mmMedDayDone(iso){ try{ var m=JSON.parse(localStorage.getItem('munea.medDone.'+iso)); if(!m) return null; var c=0,k; for(k in m){ if(m[k]) c++; } return c; }catch(e){ return null; } }
+  function mmMedDaySummary(iso){
+    if(window.MuneaMedication) return window.MuneaMedication.daySummary(iso,mmMeds());
+    try{ var m=JSON.parse(localStorage.getItem('munea.medDone.'+iso)); if(!m) return null; var c=0,k; for(k in m){ if(m[k]) c++; } return {taken:c,expected:mmSlots(mmMeds()).length,status:c>0?'partial':'miss'}; }catch(e){ return null; }
+  }
   function mmIsGuest(){ try{ var a=window.MuneaAuth; var s=a&&a.state?a.state():null; return !s||s.status!=='signed-in'; }catch(e){ return true; } }
   function mmAccNote(el, n){ if(!el) return;
     // 7/9 Edward：只有登入會員才記每天的數據→之後才有趨勢；訪客講清楚要登入
@@ -1503,14 +1510,14 @@ window.MMDEV = function(){
     if(!meds.length){ if(medCard) medCard.style.display='none'; }
     else {
       var total = (typeof mmSlots==='function') ? mmSlots(meds).length : 0;
-      var recDays = agg.days.filter(function(x){ return mmMedDayDone(x.iso)!==null; });
+      var recDays = agg.days.filter(function(x){ return mmMedDaySummary(x.iso)!==null; });
       if(recDays.length>=2 && total>0){
-        var st=agg.days.map(function(x){ var c=mmMedDayDone(x.iso); if(c===null) return 'miss'; return c>=total?'full':(c>0?'partial':'miss'); });
+        var st=agg.days.map(function(x){ var s=mmMedDaySummary(x.iso); if(!s) return 'miss'; if(s.status==='pending') return x.iso===mmDateKey()?'partial':'miss'; return s.status; });
         if(n===7){ document.getElementById('medTrendChart').innerHTML = medWeekHTML(agg.days.map(function(x){return WDL[x.d.getDay()];}), st); }
         else { document.getElementById('medTrendChart').innerHTML = medMonthHTML(st); }
         var fullN=st.filter(function(t){return t==='full';}).length;
         document.getElementById('medTrendChip').textContent = n+' 天完整服藥 '+fullN+'/'+n;
-      } else { mmAccNote(document.getElementById('medTrendChart'), agg.n); document.getElementById('medTrendChip').textContent='累積中'; }
+      } else { mmAccNote(document.getElementById('medTrendChart'), recDays.length); document.getElementById('medTrendChip').textContent='累積中'; }
     }
     return agg;
   }
@@ -1521,33 +1528,8 @@ window.MMDEV = function(){
     document.getElementById('sleepTrendCard').style.display = show ? 'block':'none';
     document.getElementById('actCard').style.display = show ? 'block':'none';
     if(!show) return;
-    if(localStorage.getItem('munea.devicesOn')){ mmRealTrends(period); return; }   // 接上裝置＝一律吃真帳本（沒累積就顯示累積中）
-    if(period==='過去7天'){
-      var days=['一','二','三','四','五','六','日'];
-      var steps=[7200,4800,8800,3800,6800,9600,6600], stepGoal=7000;
-      var sleep=[7.4,7.8,7.6,5.8,7.3,8.1,7.0], sleepGoal=7.5;
-      var taken=['full','full','partial','miss','full','full','full'];
-      document.getElementById('actChart').innerHTML = barsChartHTML(days, steps, stepGoal, function(v){return v>=stepGoal?'var(--teal)':'var(--gold)';}, 3);
-      document.getElementById('actChip').textContent='日均 '+Math.round(steps.reduce(function(a,b){return a+b;},0)/steps.length).toLocaleString()+' 步';
-      document.getElementById('actNote').textContent='週四活動量偏低';
-      document.getElementById('sleepTrendChart').innerHTML = barsChartHTML(days, sleep, sleepGoal, function(v){return v>=7.5?'var(--teal)':(v>=6.5?'var(--gold)':'var(--coral)');}, 3);
-      document.getElementById('sleepTrendChip').textContent='日均 '+sumAvg(sleep,1)+' 時';
-      document.getElementById('medTrendChart').innerHTML = medWeekHTML(days, taken);
-      document.getElementById('medTrendChip').textContent='7 天完整服藥 '+taken.filter(function(t){return t==='full';}).length+'/7';
-    } else if(period==='過去30天'){
-      var wl=['第1週','第2週','第3週','第4週'];
-      var stepsW=[6000,7200,5000,6600], stepGoal=7000;
-      var sleepW=[7.1,7.5,6.9,7.3], sleepGoal=7.5;
-      document.getElementById('actChart').innerHTML = barsChartHTML(wl, stepsW, stepGoal, function(v){return v>=stepGoal?'var(--teal)':'var(--gold)';}, 2);
-      document.getElementById('actChip').textContent='日均 '+Math.round(stepsW.reduce(function(a,b){return a+b;},0)/stepsW.length).toLocaleString()+' 步';
-      document.getElementById('actNote').textContent='第3週活動量偏低';
-      document.getElementById('sleepTrendChart').innerHTML = barsChartHTML(wl, sleepW, sleepGoal, function(v){return v>=7.5?'var(--teal)':(v>=6.5?'var(--gold)':'var(--coral)');}, 2);
-      document.getElementById('sleepTrendChip').textContent='日均 '+sumAvg(sleepW,1)+' 時';
-      var monthTaken=[]; for(var i=0;i<30;i++) monthTaken.push(i===13?'miss':((i===8||i===21)?'partial':'full'));
-      document.getElementById('medTrendChart').innerHTML = medMonthHTML(monthTaken);
-      var fullCount = monthTaken.filter(function(c){return c==='full';}).length;
-      document.getElementById('medTrendChip').textContent='30 天完整服藥 '+fullCount+'/30';
-    }
+    // 用藥紀錄是 Munea 自己的帳本，不依賴 Apple Health；健康裝置只影響睡眠與活動量。
+    mmRealTrends(period);
   }
 
   function render(period){
@@ -1616,6 +1598,8 @@ window.MMDEV = function(){
   refreshMedCard('今天');
   refreshTrendCards('今天');
   if(window.MMDEV) window.MMDEV();
+  window.__muneaRefreshMedicationUi=function(){ render('今天'); };
+  window.addEventListener('munea:medication-change',function(){ window.__muneaRefreshMedicationUi(); });
 })();
 </script>
 </body>

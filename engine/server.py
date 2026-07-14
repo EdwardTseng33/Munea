@@ -636,6 +636,7 @@ def _invalidate_memory_items(ids):
 
 WELLBEING_PATH = os.environ.get("MUNEA_WELLBEING_PATH") or os.path.join(HERE, "wellbeing_signals.json")
 CARE_SCHEDULE_PATH = os.environ.get("MUNEA_CARE_SCHEDULE_PATH") or os.path.join(HERE, "care_schedule.json")
+MEDICATION_DOSES_PATH = os.environ.get("MUNEA_MEDICATION_DOSES_PATH") or os.path.join(HERE, "medication_doses.json")
 
 
 def append_wellbeing_signal(signal):
@@ -1712,6 +1713,108 @@ def routine_reminders_response(data):
     status = data.get("status")
     limit = int(data.get("limit") or 100)
     return {"ok": True, "reminders": load_routine_reminders(person_id=person_id, status=status, limit=limit)}
+
+
+MEDICATION_DOSE_STATUSES = {"scheduled", "taken", "snoozed", "skipped", "missed"}
+
+
+def normalize_medication_dose(item):
+    item = item or {}
+    status = item.get("status") or "scheduled"
+    scheduled_date = str(item.get("scheduledDate") or item.get("scheduled_date") or utc_now()[:10])[:10]
+    try:
+        datetime.strptime(scheduled_date, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        scheduled_date = utc_now()[:10]
+    try:
+        expected_count = int(item.get("expectedCount") or item.get("expected_count") or 0)
+    except (TypeError, ValueError):
+        expected_count = 0
+    dose_key = str(item.get("doseKey") or item.get("dose_key") or "").strip()[:240]
+    return {
+        "id": str(item.get("id") or ("md_" + uuid.uuid4().hex[:16])),
+        "accountId": item.get("accountId") or item.get("account_id") or "local-demo-account",
+        "personId": item.get("personId") or item.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "reminderId": item.get("reminderId") or item.get("reminder_id"),
+        "doseKey": dose_key,
+        "medicationName": str(item.get("medicationName") or item.get("medication_name") or "用藥")[:160],
+        "slot": str(item.get("slot") or item.get("slotLabel") or item.get("slot_label") or "")[:80],
+        "scheduledDate": scheduled_date,
+        "scheduledAt": item.get("scheduledAt") or item.get("scheduled_at"),
+        "expectedCount": max(0, min(100, expected_count)),
+        "status": status if status in MEDICATION_DOSE_STATUSES else "scheduled",
+        "takenAt": item.get("takenAt") or item.get("taken_at") if status == "taken" else None,
+        "source": str(item.get("source") or "munea-app")[:80],
+        "timezone": str(item.get("timezone") or "Asia/Taipei")[:80],
+        "metadata": item.get("metadata") if isinstance(item.get("metadata"), dict) else {},
+        "createdAt": item.get("createdAt") or item.get("created_at") or utc_now(),
+        "updatedAt": item.get("updatedAt") or item.get("updated_at") or utc_now(),
+    }
+
+
+def load_medication_doses(person_id=None, start_date=None, end_date=None, limit=1000):
+    limit = max(1, min(5000, int(limit or 1000)))
+    try:
+        remote_items = data_backend().load_medication_doses(
+            person_id=person_id, start_date=start_date, end_date=end_date, limit=limit
+        )
+        if remote_items is not None:
+            return [normalize_medication_dose(item) for item in remote_items]
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load medication doses from Supabase", e)
+    items = read_json_file(MEDICATION_DOSES_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [normalize_medication_dose(item) for item in items]
+    if person_id:
+        items = [item for item in items if item.get("personId") == person_id]
+    if start_date:
+        items = [item for item in items if item.get("scheduledDate", "") >= str(start_date)[:10]]
+    if end_date:
+        items = [item for item in items if item.get("scheduledDate", "") <= str(end_date)[:10]]
+    items.sort(key=lambda item: (item.get("scheduledDate") or "", item.get("updatedAt") or ""), reverse=True)
+    return items[:limit]
+
+
+def save_medication_dose(item):
+    dose = normalize_medication_dose({**(item or {}), "updatedAt": utc_now()})
+    if not dose.get("doseKey"):
+        return None, "dose_key_required"
+    try:
+        remote_item = data_backend().save_medication_dose(dose)
+        if remote_item is not None:
+            return normalize_medication_dose(remote_item), "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save medication dose to Supabase", e)
+    items = load_medication_doses(limit=5000)
+    identity = (dose.get("personId"), dose.get("doseKey"))
+    next_items = [item for item in items if (item.get("personId"), item.get("doseKey")) != identity]
+    next_items.append(dose)
+    write_json_file(MEDICATION_DOSES_PATH, next_items[-10000:])
+    return dose, "json"
+
+
+def medication_doses_response(data):
+    data = data or {}
+    action = (data.get("action") or "list").lower()
+    if action in ("save", "upsert", "record"):
+        dose, backend = save_medication_dose(data.get("dose") or data.get("item") or data)
+        if dose is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "dose": dose, "backend": backend}
+    return {
+        "ok": True,
+        "doses": load_medication_doses(
+            person_id=data.get("personId") or data.get("person_id"),
+            start_date=data.get("startDate") or data.get("start_date"),
+            end_date=data.get("endDate") or data.get("end_date"),
+            limit=data.get("limit") or 1000,
+        ),
+    }
 
 
 def proactive_opening_response(data):
@@ -5600,7 +5703,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "medication-doses", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -5704,6 +5807,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(family_activity_response(data))
             elif self.path == "/routine-reminders":
                 self._json(routine_reminders_response(data))
+            elif self.path == "/medication-doses":
+                self._json(medication_doses_response(data))
             elif self.path == "/wellbeing/trend":
                 self._json(wellbeing_trend_response(data))
             elif self.path == "/wellbeing/log":
