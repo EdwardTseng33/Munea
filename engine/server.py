@@ -38,6 +38,7 @@ CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(
 FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.path.join(HERE, "family_state_store.json")
 FAMILY_ACTIVITIES_PATH = os.environ.get("MUNEA_FAMILY_ACTIVITIES_PATH") or os.path.join(HERE, "family_activities.json")
 FAMILY_INVITATIONS_PATH = os.environ.get("MUNEA_FAMILY_INVITATIONS_PATH") or os.path.join(HERE, "family_invitations.json")
+FAMILY_RELAYS_PATH = os.environ.get("MUNEA_FAMILY_RELAYS_PATH") or os.path.join(HERE, "family_relay_messages.json")
 CONSENT_RECORDS_PATH = os.environ.get("MUNEA_CONSENT_RECORDS_PATH") or os.path.join(HERE, "consent_records.json")
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
@@ -391,7 +392,7 @@ def bind_request_data_identity(auth_gate, allow_missing=False):
     return REQUEST_DATA_IDENTITY.set(identity)
 
 
-SCOPE_EXEMPT_PATHS = PUBLIC_POST_PATHS | ADMIN_POST_PATHS | PRIVILEGED_BILLING_POST_PATHS | {"/family/invitations"}
+SCOPE_EXEMPT_PATHS = PUBLIC_POST_PATHS | ADMIN_POST_PATHS | PRIVILEGED_BILLING_POST_PATHS | {"/family/invitations", "/family-relays"}
 ACCOUNT_SCOPE_KEYS = {"accountid"}
 FAMILY_SCOPE_KEYS = {"familygroupid"}
 PERSON_SCOPE_KEYS = {
@@ -2806,6 +2807,156 @@ def family_members_response(data):
             return {"ok": False, "error": backend}
         return {"ok": True, "member": member, "backend": backend}
     return {"ok": True, "members": load_family_members(family_group_id=family_group_id, limit=int(data.get("limit") or 100))}
+
+
+FAMILY_RELAY_STATUSES = {"pending", "claimed", "delivered", "cancelled", "reported", "expired"}
+
+
+def normalize_family_relay(item):
+    item = item or {}
+    status = item.get("status") or "pending"
+    return {
+        "id": str(item.get("id") or uuid.uuid4()),
+        "accountId": item.get("accountId") or item.get("account_id"),
+        "familyGroupId": item.get("familyGroupId") or item.get("family_group_id") or "local-family",
+        "senderPersonId": item.get("senderPersonId") or item.get("sender_person_id") or PRIMARY_CARE_RECIPIENT_ID,
+        "recipientPersonId": item.get("recipientPersonId") or item.get("recipient_person_id"),
+        "senderLabel": str(item.get("senderLabel") or item.get("sender_label") or "家人").strip()[:40] or "家人",
+        "recipientLabel": str(item.get("recipientLabel") or item.get("recipient_label") or "家人").strip()[:40] or "家人",
+        "content": str(item.get("content") or "").strip()[:240],
+        "status": status if status in FAMILY_RELAY_STATUSES else "pending",
+        "source": str(item.get("source") or "voice-ai")[:40],
+        "claimToken": item.get("claimToken") or item.get("claim_token"),
+        "claimedAt": item.get("claimedAt") or item.get("claimed_at"),
+        "deliveredAt": item.get("deliveredAt") or item.get("delivered_at"),
+        "cancelledAt": item.get("cancelledAt") or item.get("cancelled_at"),
+        "expiresAt": item.get("expiresAt") or item.get("expires_at") or (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        "metadata": item.get("metadata") if isinstance(item.get("metadata"), dict) else {},
+        "createdAt": item.get("createdAt") or item.get("created_at") or utc_now(),
+        "updatedAt": item.get("updatedAt") or item.get("updated_at") or utc_now(),
+    }
+
+
+def _relay_json_store():
+    items = read_json_file(FAMILY_RELAYS_PATH, [])
+    return [normalize_family_relay(item) for item in items] if isinstance(items, list) else []
+
+
+def family_relays_response(data):
+    data = data or {}
+    action = str(data.get("action") or "list").lower()
+    backend = data_backend()
+    actor_person_id = backend.person_id or PRIMARY_CARE_RECIPIENT_ID
+
+    if action in ("create", "send"):
+        raw = data.get("relay") or data.get("item") or data
+        relay = normalize_family_relay({
+            **raw,
+            "senderPersonId": actor_person_id,
+            "familyGroupId": backend.family_group_id or raw.get("familyGroupId") or raw.get("family_group_id"),
+            "status": "pending",
+        })
+        if len(relay["content"]) < 2:
+            return {"ok": False, "error": "family_relay_content_required"}
+        if not relay.get("recipientPersonId"):
+            return {"ok": False, "error": "family_relay_recipient_required"}
+        if relay.get("recipientPersonId") == actor_person_id:
+            return {"ok": False, "error": "family_relay_recipient_self"}
+        try:
+            remote = backend.create_family_relay(relay)
+            if remote is not None:
+                return {"ok": True, "relay": normalize_family_relay(remote), "backend": "supabase"}
+        except Exception as e:
+            if backend.enabled() and not is_missing_table_error(e):
+                raise
+            log_fallback_exception("create family relay in Supabase", e)
+        with JSON_STORE_LOCK:
+            items = _relay_json_store()
+            items.append(relay)
+            write_json_file(FAMILY_RELAYS_PATH, items[-1000:])
+        return {"ok": True, "relay": relay, "backend": "json"}
+
+    if action == "claim":
+        try:
+            remote = backend.claim_next_family_relay()
+            if backend.enabled():
+                return {"ok": True, "relay": normalize_family_relay(remote) if remote else None, "backend": "supabase"}
+        except Exception as e:
+            if backend.enabled() and not is_missing_table_error(e):
+                raise
+            log_fallback_exception("claim family relay in Supabase", e)
+        now = datetime.now(timezone.utc)
+        with JSON_STORE_LOCK:
+            items = _relay_json_store()
+            target = None
+            for relay in sorted(items, key=lambda item: item.get("createdAt") or ""):
+                if relay.get("recipientPersonId") == actor_person_id and relay.get("status") == "claimed":
+                    try:
+                        claimed_at = datetime.fromisoformat(str(relay.get("claimedAt") or "").replace("Z", "+00:00"))
+                    except ValueError:
+                        claimed_at = now - timedelta(minutes=11)
+                    if claimed_at < now - timedelta(minutes=10):
+                        relay.update({"status": "pending", "claimToken": None, "claimedAt": None, "updatedAt": utc_now()})
+                try:
+                    expires = datetime.fromisoformat(str(relay.get("expiresAt") or "").replace("Z", "+00:00"))
+                except ValueError:
+                    expires = now + timedelta(days=1)
+                if relay.get("recipientPersonId") == actor_person_id and relay.get("status") == "pending" and expires > now:
+                    relay.update({"status": "claimed", "claimToken": str(uuid.uuid4()), "claimedAt": utc_now(), "updatedAt": utc_now()})
+                    target = relay
+                    break
+            write_json_file(FAMILY_RELAYS_PATH, items)
+        return {"ok": True, "relay": target, "backend": "json"}
+
+    if action in ("ack", "release", "cancel", "report"):
+        relay_id = str(data.get("id") or data.get("relayId") or "")
+        claim_token = data.get("claimToken") or data.get("claim_token")
+        try:
+            remote = backend.update_family_relay_status(relay_id, action, claim_token=claim_token)
+            if remote is not None:
+                return {"ok": True, "relay": normalize_family_relay(remote), "backend": "supabase"}
+            if backend.enabled():
+                return {"ok": False, "error": "family_relay_not_found"}
+        except Exception as e:
+            if backend.enabled() and not is_missing_table_error(e):
+                raise
+            log_fallback_exception("update family relay in Supabase", e)
+        with JSON_STORE_LOCK:
+            items = _relay_json_store()
+            target = next((item for item in items if item.get("id") == relay_id), None)
+            if not target:
+                return {"ok": False, "error": "family_relay_not_found"}
+            if action in ("ack", "release"):
+                if target.get("recipientPersonId") != actor_person_id or target.get("status") != "claimed" or target.get("claimToken") != claim_token:
+                    return {"ok": False, "error": "family_relay_claim_forbidden"}
+                target.update({"status": "delivered", "deliveredAt": utc_now()} if action == "ack" else {"status": "pending", "claimToken": None, "claimedAt": None})
+            elif action == "cancel":
+                if target.get("senderPersonId") != actor_person_id or target.get("status") not in ("pending", "claimed"):
+                    return {"ok": False, "error": "family_relay_cancel_forbidden"}
+                target.update({"status": "cancelled", "cancelledAt": utc_now()})
+            elif action == "report":
+                if target.get("recipientPersonId") != actor_person_id:
+                    return {"ok": False, "error": "family_relay_report_forbidden"}
+                target["status"] = "reported"
+            target["updatedAt"] = utc_now()
+            write_json_file(FAMILY_RELAYS_PATH, items)
+        return {"ok": True, "relay": target, "backend": "json"}
+
+    direction = "sent" if data.get("direction") == "sent" else "received"
+    status = data.get("status")
+    limit = max(1, min(100, int(data.get("limit") or 50)))
+    try:
+        remote = backend.load_family_relays(direction=direction, status=status, limit=limit)
+        if remote is not None:
+            return {"ok": True, "relays": [normalize_family_relay(item) for item in remote], "backend": "supabase"}
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise
+        log_fallback_exception("load family relays from Supabase", e)
+    items = _relay_json_store()
+    key = "senderPersonId" if direction == "sent" else "recipientPersonId"
+    items = [item for item in items if item.get(key) == actor_person_id and (not status or item.get("status") == status)]
+    return {"ok": True, "relays": list(reversed(items[-limit:])), "backend": "json"}
 
 
 def bootstrap_account_response(data, headers=None):
@@ -5703,7 +5854,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "consent-records", "routine-reminders", "medication-doses", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
             })
             return
@@ -5734,7 +5885,7 @@ class H(BaseHTTPRequestHandler):
             # Family-circle invites always require a verified identity, even in
             # local/demo mode where most endpoints may allow a guest preview.
             # A join code is never an authentication credential.
-            if request_path == "/family/invitations":
+            if request_path in ("/family/invitations", "/family-relays"):
                 family_auth = verify_auth_context(self.headers)
                 if not family_auth.get("ok"):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
@@ -5801,6 +5952,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(family_invitations_response(data, client_ip=_cip, actor=auth_gate.get("auth")))
             elif self.path == "/family-members":
                 self._json(family_members_response(data))
+            elif self.path == "/family-relays":
+                self._json(family_relays_response(data))
             elif self.path == "/consent-records":
                 self._json(consent_records_response(data))
             elif self.path == "/family/activity":
