@@ -1,10 +1,14 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 Voice canary 真機包覆蓋**：Edward iPhone 15 Pro 已覆蓋安裝並啟動 `1.0.8 (Build 13)`；在 1.0.7 Draft 整合功能上加入同線單播放器、當日開場去重，開發包固定連到已通過開場音訊探測的 Voice canary。完整 `test:launch`、Capacitor sync、Xcode 建置、包內內容、安裝與啟動均 PASS；Pro、1,000 點與家人假資料保留。嘴型／聲音、斷續、雙音、話量／能量、同日三次開場與重複撥號仍須 Edward 真機驗收，本包不是正式 `main`／App Store 候選。
+> **2026-07-15 最新整合中**：獨立分支 `codex/release-integration-1.0.8` 以 `origin/main@5e27a10` 為基底，正在統一整合用藥紀錄、家庭傳話、單播放器、同日開場去重與 Voice／Avatar 暖機修正，維持 `1.0.8 (Build 13)`。完成全套測試、Xcode 重建與手機覆蓋安裝前，不標示為最新可測包。
 >
-> **1.0.7 來源保留**：整合基準仍是 `origin/main@3fd6095 → PR #41@7caab46 → PR #42@93e882d`，包含用藥紀錄一致化、指定家人傳話與提醒成功回執；PR／migration／Brain 正式部署仍未完成。
+> **2026-07-15 聲畫回歸覆蓋**：Voice revision `00035-lur` 已以 0% 流量 canary 建立，開場在 1.578 秒後有效出聲並完成回合；但 Mac 合成 ASR 探針仍 FAIL，因此沒有升為 100% 正式流量。GLOWS Avatar 已配對更新 server/core，首段改為真實 PCM 到達後 1 秒共同暖機、後續回合 0.5 秒；對外健康 3/3、active=0。Edward iPhone 已安裝並啟動 `1.0.8 (Build 13)` 開發包，固定連 Voice canary，包含單播放器防雙音與同日開場去重。嘴型／斷續／雙音／話量能量／多次撥號全部等待 Edward 真機 Gate，目前仍是 ❌。
+>
+> **功能來源保留**：1.0.8 整合包含 PR #41／#42 的用藥紀錄一致化、指定家人傳話與提醒成功回執；PR、Supabase 014／015 migration 與 Brain 正式部署仍未完成。
 
 > **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。GitHub `main@ec40412` 已合併 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest，以及 PR #37 的全語音 S2S／ASR／插話／靜音修正；main 的 App／iOS 內容也已和產出 IPA 時的來源逐項比對一致。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
+
+> 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
 > **最後更新：2026-07-15（Codex · App 1.0.6 Build 11 已完成自動語音驗證、iPhone 開發包與 App Store IPA；等待真人語音 Gate、雲端 canary 與 TestFlight）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：

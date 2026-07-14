@@ -426,6 +426,16 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     # Keep this last so persona, memory, interests, and older examples can
     # never weaken the Mandarin-only launch rule.
     base += localization.taiwan_mandarin_launch_instruction("zh-TW")
+    base += (
+        "\n[即時語音話量上限]\n"
+        "一般閒聊預設只回答一句、約十五到三十個中文字，講完就停。"
+        "只有對方明確要求解釋、比較或提供做法時，才可以回答兩句；一次仍只談一個重點。"
+        "不要把同理、回顧、建議和追問全部塞在同一輪，也不要為了延續聊天自行補第二個話題。"
+        "危急安全導引與必要的工具操作確認不受句數限制，但仍要短而清楚。"
+        "\n[即時語音能量]\n"
+        "預設比對方穩一點、慢一點，像熟朋友自然說話；不要高亢、大聲熱場、連續驚嘆或用過多感嘆號。"
+        "對方很有精神時才可以小幅跟上，開場仍保持沉穩。"
+    )
     return base
 
 
@@ -593,6 +603,7 @@ async def handle(ws):
     location = None
     allow_reminders = False   # 只有帶 ?cap_rem=1 的新版 App 才開放「幫你設提醒」工具（防舊版假成功）
     fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
+    day_call = None           # 當日第幾通（0-based）：只負責開場路線去重，不改變關係熟識度
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
@@ -670,6 +681,12 @@ async def handle(ws):
                 fam = max(0, min(999, int(fvals[0])))
             except Exception:
                 pass
+        dvals = _q.get("day_call")
+        if dvals:
+            try:
+                day_call = max(0, min(99, int(dvals[0])))
+            except Exception:
+                pass
     except Exception:
         pass
     _CID["n"] += 1
@@ -683,7 +700,9 @@ async def handle(ws):
           "language_block": False, "language_block_source": None,
           "blocked_output_text": "", "language_retry_count": 0,
           "client_barge_in": False, "asr_turns": 0, "asr_chars": 0,
-          "barge_in_count": 0, "language_block_count": 0}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
+          "barge_in_count": 0, "language_block_count": 0,
+          "greet_requested": False, "opening_voice_detected": False,
+          "opening_window_complete": False}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     try:
@@ -725,14 +744,11 @@ async def handle(ws):
             # 這樣她一開口臉就同步在動、不會出現「已在講、臉還沒好」的當機感（Edward 2026-07-09 二次拍板）。
             async def _do_greet(relay=None):
                 try:
-                    # 話量隨熟識度（Edward 2026-07-10「一開始話太多了」）：越熟越像老朋友、一句就好；
-                    # 不論哪級都硬上限：最多兩句、不連環問、不長篇自我介紹。
-                    if fam >= 3:
-                        _len_rule = "你們已經聊過很多次、很熟了：一句自然的招呼就好（10 個字左右），像老朋友拿起電話那樣隨口，不要自我介紹、不要問超過一個問題。"
-                    elif fam >= 1:
-                        _len_rule = "你們聊過幾次了：一到兩句簡短招呼就好，不要重新自我介紹、不要一次問好幾個問題。"
-                    else:
-                        _len_rule = "這是第一次通話：用一句話說你是誰、再用一句話問候，總共最多兩句、40 個字以內，不要長篇自我介紹。"
+                    # 開場必須比一般回覆更短；熟識度與同日通數只決定內容，不增加句數。
+                    _len_rule = (
+                        "只說一句八到十六個中文字的自然招呼，說完就停。"
+                        "不要自我介紹、不要補充背景、不要連續問問題；可以完全不問問題。"
+                    )
                     relay = relay if isinstance(relay, dict) else {}
                     relay_id = str(relay.get("id") or "")[:80]
                     sender_label = str(relay.get("senderLabel") or "").strip()[:40]
@@ -751,7 +767,7 @@ async def handle(ws):
                         greet_cue = (
                             "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
                             "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
-                            + localization.voice_opening_instruction(fam, topics, location)
+                            + localization.voice_opening_instruction(fam, topics, location, day_call)
                         )
                     await session.send_client_content(
                         turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
@@ -762,6 +778,19 @@ async def handle(ws):
                     _diag(cid, "node.proactive_greet")
                 except Exception:
                     pass
+
+            async def _warm_then_greet(relay=None):
+                # 留一秒給 iPhone 音訊路徑與 Avatar 共同暖機。這段時間麥克風已開；
+                # 如果對方真的已開口，就不再同時塞一段主動問候跟他搶話。
+                await asyncio.sleep(1.0)
+                st["opening_window_complete"] = True
+                if st.get("opening_voice_detected"):
+                    relay_id = str((relay or {}).get("id") or "")[:80] if isinstance(relay, dict) else ""
+                    if relay_id:
+                        await ws.send(json.dumps({"type": "relay_interrupted", "id": relay_id}, ensure_ascii=False))
+                    _diag(cid, "node.proactive_greet_skipped", reason="user_spoke_during_warmup")
+                    return
+                await _do_greet(relay)
 
             # 省點提醒（Edward 2026-07-10）：通話開著但使用者一直沒講話 → 寧寧兩段式溫柔提醒、避免忘了關一直計費。
             # 語氣＝關心、不催不罵、不提「點數/系統」。level 1=關心還在嗎；level 2=提醒記得關通話。
@@ -920,6 +949,16 @@ async def handle(ws):
                         st["in"] += n
                         st["last_in"] = time.monotonic()
                         st["await_first"] = True
+                        if st.get("greet_requested") and not st.get("opening_window_complete") and not st.get("opening_voice_detected"):
+                            try:
+                                samples = memoryview(message).cast("h")
+                                if samples:
+                                    rms = (sum(int(v) * int(v) for v in samples) / len(samples)) ** 0.5
+                                    if rms >= 700:
+                                        st["opening_voice_detected"] = True
+                                        _diag(cid, "node.opening_voice_detected", rms=round(rms))
+                            except Exception:
+                                pass
                         if not st["first_mic"]:
                             st["first_mic"] = True
                             _diag(cid, "node.mic_uplink", ms=round((st["last_in"] - t0) * 1000))
@@ -933,7 +972,16 @@ async def handle(ws):
                             continue
                         t = obj.get("type")
                         if t == "greet":
-                            await _do_greet(obj.get("relay"))   # App 說「兩邊都就緒了」→ 現在才請她主動開口（聲臉同步開場）
+                            # App 原本等第一個 AI 音訊封包才開麥，模型稍慢時會吃掉
+                            # 使用者前幾句 Hello。先用既有事件解除收音門檻；接著生成的
+                            # 招呼仍可被正常插話，不新增 App 協定也不碰正在施工的 app.js。
+                            if st.get("greet_requested"):
+                                _diag(cid, "node.proactive_greet_ignored", reason="duplicate_request")
+                                continue
+                            st["greet_requested"] = True
+                            await ws.send(json.dumps({"type": "turn_complete", "phase": "greet_input_ready"}))
+                            greet_task = asyncio.create_task(_warm_then_greet(obj.get("relay")))
+                            st["bg_tasks"].append(greet_task)
                         elif t == "action_result":
                             action_id = str(obj.get("id") or "")
                             pending = st["action_results"].get(action_id)

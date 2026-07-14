@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'web', 'src', 'app.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
 const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
+const avatarServer = fs.readFileSync(path.join(root, 'deploy', 'runpod-avatar', 'flashhead_server.py'), 'utf8');
 const chatEngine = fs.readFileSync(path.join(root, 'engine', 'chat_engine.py'), 'utf8');
 const apiServer = fs.readFileSync(path.join(root, 'engine', 'server.py'), 'utf8');
 const characters = JSON.parse(fs.readFileSync(path.join(root, 'engine', 'characters.json'), 'utf8'));
@@ -70,7 +71,7 @@ expect(voiceServer.includes('barge_cancelled and source in ("model_output", "man
   'a cancelled model turn can replay language-correction audio after barge-in');
 expect(voiceServer.includes('localization.contains_unstable_mandarin_speech'),
   'user-verified Mandarin mispronunciations do not trigger safe TTS rewriting');
-expect(voiceServer.includes('localization.voice_opening_instruction(fam, topics, location)'),
+expect(voiceServer.includes('localization.voice_opening_instruction(fam, topics, location, day_call)'),
   'proactive greetings do not use the rotating opening policy');
 expect(voiceServer.includes('await asyncio.wait_for(future, timeout=8)') && voiceServer.includes('"app_write_timeout"'),
   'voice tools can still report success without waiting for the App write receipt');
@@ -82,6 +83,20 @@ expect(voiceServer.includes('{"type": "relay_spoken"'),
   'the App cannot acknowledge a relay only after the spoken opening finishes');
 expect(voiceServer.includes('{"type": "relay_interrupted"') && app.includes("this._finishRelay('release')"),
   'an interrupted relay can remain claimed instead of returning to the next-call queue');
+expect(voiceServer.includes('"phase": "greet_input_ready"'),
+  'the microphone remains closed while the proactive greeting is being generated');
+expect(voiceServer.includes('await asyncio.sleep(1.0)') && voiceServer.includes('node.proactive_greet_skipped'),
+  'opening speech can overlap the proactive greeting instead of using the one-second warmup window');
+expect(voiceServer.includes('"greet_requested": False') && voiceServer.includes('node.proactive_greet_ignored'),
+  'duplicate greet requests can start overlapping model turns');
+expect(voiceServer.includes('[即時語音話量上限]') && voiceServer.includes('一般閒聊預設只回答一句'),
+  'live voice does not enforce the one-sentence default');
+expect(voiceServer.includes('[即時語音能量]') && voiceServer.includes('預設比對方穩一點'),
+  'live voice opening can still default to a high-energy delivery');
+expect(avatarServer.includes('self.slot.audio_out.playout_held()'),
+  'Avatar video can start consuming frames before the audio prebuffer releases');
+expect(avatarServer.includes('OPENING_PREBUFFER_S = 1.0') && avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
+  'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
 expect(chatEngine.includes('localization.taiwan_mandarin_launch_instruction("zh-TW")'),

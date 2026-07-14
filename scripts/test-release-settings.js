@@ -31,6 +31,7 @@ const auth = read('web/src/auth.js');
 const infoPlist = read('ios/App/App/Info.plist');
 const privacyManifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 const reviewNotes = read('docs/送審資料包-2026-07-09.md');
+const canaryDeploy = read('deploy/cloudrun/canary-deploy.sh');
 
 expect(!app.includes('__muneaNativeRestore'), 'restore button still calls the retired native global');
 expect(app.includes('window.MuneaStore.restore()'), 'restore button is not wired to MuneaStore.restore');
@@ -110,5 +111,9 @@ expect(iosExport.includes('PRIVACY_DATA_TYPE_COUNT=') && iosExport.includes('NSP
 expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
 expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the development Call Control bypass');
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
+expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLOUD=(gcloud)'), 'canary deploy is not compatible with macOS gcloud');
+expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost Windows gcloud compatibility');
+expect(canaryDeploy.includes('MUNEA_GCP_PROJECT') && canaryDeploy.includes('--project "$PROJECT"'), 'canary deploy does not pin the Google Cloud project');
+expect(canaryDeploy.includes('MUNEA_APP_KEY') && canaryDeploy.includes('--no-traffic'), 'canary deploy is missing its app gate or zero-traffic safety gate');
 
 console.log('Release settings contracts PASS');
