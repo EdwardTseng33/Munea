@@ -8,6 +8,10 @@ function expect(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function hasUsageDescription(plist, key) {
+  return new RegExp(`<key>${key}</key>\\s*<string>[^<]{8,}</string>`).test(plist);
+}
+
 const app = read('web/src/app.js');
 const admin = read('web/src/admin.js');
 const index = read('web/index.html');
@@ -64,5 +68,7 @@ expect(auth.includes("skipBrowserRedirect: native"), 'native OAuth still uses th
 expect(auth.includes("app.addListener('appUrlOpen'"), 'native OAuth callback listener is missing');
 expect(auth.includes('exchangeCodeForSession'), 'native OAuth PKCE code exchange is missing');
 expect(infoPlist.includes('<string>munea</string>'), 'iOS OAuth callback URL scheme is missing');
+expect(hasUsageDescription(infoPlist, 'NSCameraUsageDescription'), 'iOS camera usage description is missing');
+expect(hasUsageDescription(infoPlist, 'NSPhotoLibraryUsageDescription'), 'iOS photo library usage description is missing');
 
 console.log('Release settings contracts PASS');

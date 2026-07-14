@@ -6,6 +6,10 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Munea needs microphone access so you can talk with your AI health companion.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>沐寧需要使用相機，讓你主動拍攝個人頭像、用藥照片或意見回饋附件。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>沐寧只會讀取你主動選取的照片，讓你設定個人頭像、用藥照片或附加意見回饋圖片。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Munea may use speech recognition to help turn your voice into companion responses.</string>
 	<key>NSUserNotificationsUsageDescription</key>
