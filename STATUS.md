@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-14 現況覆蓋**：App 最新開發驗收包與 App Store 候選包為 `1.0.4 (Build 9)`。最新 `main` 設計、拍照閃退修復、Apple 原生登入、Google PKCE、Apple／Google only 登入與不自動開鍵盤均已整合。Edward iPhone 已安裝測試版，含 Edward 測試帳號、Pro、1,000 點與家人假資料；正式 IPA 已另外重建並驗證不含任何測試後門。實際拍照與 Apple／Google 真帳號登入仍待手機操作；Google Cloud 品牌名稱已填為「Munea App」，但尚未儲存／送驗。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
+> **2026-07-14 現況覆蓋**：App 最新開發驗收包與 App Store 候選包為 `1.0.4 (Build 9)`，來源為含 PR #20、#21、#18 的 `main@6f69b567` 加本輪開發包隔離修正。最新設計、正式 Call Control、拍照閃退修復、Apple 原生登入、Google PKCE、Apple／Google only 登入與不自動開鍵盤均已整合。Edward iPhone 已安裝測試版，含 Edward 測試帳號、Pro、1,000 點與家人假資料；正式 IPA 已另外重建並驗證不含測試後門或開發直連。實際拍照、Apple／Google 真帳號登入與真 token Gateway 通話仍待手機操作；Google Cloud 品牌名稱已填為「Munea App」，但尚未儲存／送驗。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
 
 > **最後更新：2026-07-13（Codex · GLOWS RTX 6000 Ada 正式主卡已接通，App 1.0.1 已完成 iOS 同步與發版檢查；目前可驗收 1～3 人，第 4 人起的 RunPod 自動擴容仍在收尾）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
@@ -12,7 +12,7 @@
 
 ## 一眼總覽
 
-**59－App 1.0.4 Build 9／最新設計與雙包版（7/14 Codex）**：①合併 `origin/main@c945150`，PR #14 首頁／設定與 PR #20 帳號卡四項新設計已同步進 iOS。②消費者登入只留 Apple／Google，移除 Email OTP／註冊；登入視窗無輸入框、不會自動開鍵盤。③Edward iPhone 測試版自動進 Edward 測試帳號，顯示 Pro、1,000 點、媽媽／爸爸／姊姊與健康／活動資料；家人卡 `undefined` 已修。④正式 IPA 另行重建，測試帳號／假資料／自動登入零洩漏；簽章、版本、權限、HealthKit、Apple 登入 entitlement 與最新 Web 資源全數 PASS。⑤`test:launch`、`smoke:no-api`、完整 `release:check`、登入權限閘與響應式畫面驗收均 PASS。⑥Google Cloud 已填「Munea App」但尚未儲存，且品牌仍需 Google 驗證才會顯示；Apple／Google 真帳號與實際拍照仍是人工 Gate。⑦合併 PR #20 後的正式候選 IPA 為 54,671,339 bytes，SHA-256 `c8730d286d52f84197479548b0101361414f8fc707fde8574cb3e6288fc6eb67`。
+**59－App 1.0.4 Build 9／真正 main 最新設計與雙包版（7/14 Codex）**：①來源更新為 `main@6f69b567`，PR #20 帳號卡新設計、PR #21 正式 Call Control 與 PR #18 登入／拍照修正均已同步。②正式 App 強制走 Gateway；只有腳本產生的 Edward 開發包可直連，解決測試帳號沒有真 token 會被 401 卡住，Release 防漏已加。③Edward iPhone 已覆蓋安裝並啟動 `1.0.4 (9)`，顯示 TEST、Pro、1,000 點、媽媽／爸爸／姊姊與健康／活動資料。④正式 IPA 無測試帳號、假資料、自動登入或開發直連；簽章、版本、權限、HealthKit、Apple 登入 entitlement 與真正 main Web 資源全數 PASS。⑤Call Control 10 項、`test:launch`、完整 `release:check`、登入權限閘與 390px 畫面驗收均 PASS。⑥Google 品牌儲存／驗證、Apple／Google 真登入、真 token Gateway 通話與實際拍照仍是人工 Gate。⑦唯一有效候選 IPA 為 54,672,615 bytes，SHA-256 `919180bc9b6e1b84a8b835bd779b10258f4217c2cd4b86602c4a6a56a9c82934`。
 
 **58－Apple 原生登入／App 1.0.3 Build 8 真機包（7/14 Codex）**：①公開驗證確認 Google 可開登入頁，但畫面顯示 Supabase 專案碼；Apple 網頁 OAuth 直接回 `Invalid client id or web redirect url`。②iPhone Apple 登入已改用 `AuthenticationServices` 原生系統視窗，nonce 雜湊交給 Apple、原 nonce 與 ID token 交 Supabase `signInWithIdToken`，不再使用壞掉的 Apple 網頁 OAuth。③加入 Sign in with Apple entitlement、原生 Capacitor 橋與首次登入姓名保存；Google PKCE 深連結流程保持不變。④`test:launch`、`smoke:no-api`、完整 `release:check`、原生登入契約、Capacitor sync、Xcode arm64 真機編譯與新 provisioning profile 均 PASS；簽章明確含 `com.apple.developer.applesignin=Default`。⑤Build 8 已覆蓋安裝，版本與啟動程序存活 PASS。⑥Build 8 Release Archive 與 App Store IPA 已匯出，IPA 的簽章、版本／Build、Bundle ID、相機／照片用途說明、HealthKit 與 Apple 登入 entitlement 全數 PASS。⑦未通過：Apple／Google 真帳號仍需手機完成一次；Google Cloud OAuth Branding 需改「Munea App」並發布／驗證，等待 Edward 允許操作已登入 Chrome；候選 IPA 暫不上傳、不送審。
 

@@ -66,9 +66,11 @@ expect(/https:\/\/[a-z0-9-]+\.supabase\.co/.test(authConfig), 'Supabase project 
 expect(authConfig.includes('sb_publishable_'), 'Supabase publishable key is missing');
 expect(!/service[_-]?role|SUPABASE_SERVICE_ROLE_KEY/i.test(authConfig), 'server-only Supabase key leaked into browser config');
 expect(/enabled:\s*false/.test(authConfig) && /seedFixtures:\s*false/.test(authConfig), 'production auth config must keep developer fixtures disabled');
+expect(/bypassCallControl:\s*false/.test(authConfig), 'production auth config must require Call Control');
 expect(!authConfig.includes('MUNEA_IOS_DEVELOPMENT_PROFILE_START'), 'development profile leaked into production Web source');
 expect(iosDevProfile.includes('ios/App/App/public/src/auth-config.js'), 'iOS development profile must target generated assets only');
 expect(iosDevProfile.includes('Refusing to enable the development profile in the production Web source'), 'development profile lacks production source guard');
+expect(iosDevProfile.includes('bypassCallControl: true'), 'iOS development profile does not enable its isolated direct-call path');
 expect(!index.includes('id="authEmailInput"') && !index.includes('id="authEmailBtn"'), 'consumer app still exposes email sign-in controls');
 expect(!auth.includes('signInWithOtp') && !auth.includes('signInWithEmail'), 'email OTP auth remains exposed in the consumer auth module');
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
@@ -96,6 +98,7 @@ expect(!iosExport.includes('codesign -d --entitlements :-'), 'IPA export uses de
 expect(iosExport.includes('com.apple.developer.applesignin'), 'IPA export does not verify Apple sign-in entitlement');
 expect(iosExport.includes('NSCameraUsageDescription') && iosExport.includes('NSPhotoLibraryUsageDescription'), 'IPA export does not verify photo privacy usage strings');
 expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
+expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the development Call Control bypass');
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
 
 console.log('Release settings contracts PASS');

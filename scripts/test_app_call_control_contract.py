@@ -10,6 +10,10 @@ VOICE_DEPLOY = (ROOT / "scripts" / "cloud-run-deploy-staging.ps1").read_text(
     encoding="utf-8"
 )
 VERCEL_CONFIG = (ROOT / "app-site" / "vercel.json").read_text(encoding="utf-8")
+AUTH_CONFIG = (ROOT / "web" / "src" / "auth-config.js").read_text(encoding="utf-8")
+DEV_PROFILE = (ROOT / "scripts" / "enable-ios-development-profile.mjs").read_text(
+    encoding="utf-8"
+)
 
 
 def test_production_app_uses_gateway_by_default() -> None:
@@ -26,6 +30,15 @@ def test_cancelled_acquire_disposes_returned_capacity() -> None:
     assert "generation !== this.generation" in APP
     assert "await this._disposeResult(result, 'cancelled_during_acquire')" in APP
     assert "this.generation += 1;" in APP
+
+
+def test_development_profile_bypass_does_not_weaken_release() -> None:
+    assert "bypassCallControl: false" in AUTH_CONFIG
+    assert "bypassCallControl: true" in DEV_PROFILE
+    assert "function usesDevelopmentDirectCall()" in APP
+    assert "if (usesDevelopmentDirectCall()) return '';" in APP
+    assert "if (!developmentDirectCall)" in APP
+    assert "if (!developmentDirectCall) await CallControl.waitUntilActive(15000);" in APP
 
 
 def test_voice_and_avatar_are_a_single_required_service() -> None:
@@ -77,6 +90,7 @@ def main() -> None:
     tests = [
         test_production_app_uses_gateway_by_default,
         test_cancelled_acquire_disposes_returned_capacity,
+        test_development_profile_bypass_does_not_weaken_release,
         test_voice_and_avatar_are_a_single_required_service,
         test_connected_ui_waits_for_server_active_lease,
         test_gateway_billing_replaces_local_point_mutation,
