@@ -3,6 +3,18 @@
   "trailingSlash": false,
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "munea.net" }],
+      "destination": "https://app.munea.net/",
+      "statusCode": 301
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.munea.net" }],
+      "destination": "https://app.munea.net/",
+      "statusCode": 301
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "munea.net" }],
       "destination": "https://app.munea.net/:path*",
