@@ -2515,6 +2515,21 @@ function _clock12(tv) {
   const ap = hh < 12 ? '上午' : '下午'; const h12 = ((hh + 11) % 12) + 1;
   return ap + ' ' + h12 + (mm ? ':' + String(mm).padStart(2, '0') : '');
 }
+// 24 小時制，跟用藥任務的「14:00」一致（Edward 2026-07-14）
+function _clock24(tv) {
+  const p = String(tv || '').split(':'); const hh = +p[0], mm = +p[1] || 0;
+  if (isNaN(hh)) return '';
+  return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+// 只要「7/14（週二）」——不帶標題、不帶時間（Edward 2026-07-14）
+function _visitDayShort(v) {
+  if (!v) return '';
+  if (v.dateISO) {
+    const d = new Date(v.dateISO + 'T00:00');
+    if (!isNaN(d.getTime())) return (d.getMonth() + 1) + '/' + d.getDate() + '（' + ['週日', '週一', '週二', '週三', '週四', '週五', '週六'][d.getDay()] + '）';
+  }
+  return String(v.label || '').split(/\s*[上下]午/)[0].trim();  // 舊資料兜底
+}
 function renderVisitTask() {
   const card = document.getElementById('visitTask');
   if (!card) return;
@@ -2522,10 +2537,9 @@ function renderVisitTask() {
   if (!v) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
   card.style.display = '';
   const t = $('#visitTaskTitle'), s = $('#visitTaskSub'), tm = $('#visitTaskTime');
-  const clk = v.time ? _clock12(v.time) : '';
   if (t) t.textContent = v.title || v.label || '回診';
-  if (s) s.textContent = [clk, v.label].filter(Boolean).join(' · ') || '記得帶健保卡';
-  if (tm) tm.textContent = clk || '今天';
+  if (s) s.textContent = _visitDayShort(v) || '記得帶健保卡';
+  if (tm) tm.textContent = _clock24(v.time) || '今天';
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
 // 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋走走＋心情筆記＋聊聊
@@ -5147,7 +5161,7 @@ function init() {
   function renderVisitRow() {
     const v = nextVisit();
     const lb = $('#visitLabel');
-    if (lb) lb.textContent = v ? ((v.title ? v.title + ' · ' : '') + (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' ›') : '›';
+    if (lb) lb.textContent = v ? _visitDayShort(v) : '';
     // 看診有增減時，同步首頁「今天一起完成」的回診任務（只在當天顯示）
     if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks();
   }
