@@ -8,7 +8,12 @@ param(
   [string]$AdminSecret = "munea-admin-token-staging",
   [string]$AdminPasswordSecret = "munea-admin-password",
   [string]$AdminEmail = "edwardt0303@gmail.com",
+  [string]$CallControlUrl = "https://munea-call-control-fiu65jd4da-de.a.run.app",
+  [string]$GatewayAdminSecret = "munea-gateway-admin-key",
+  [string]$CallTokenSecret = "munea-call-token-secret",
+  [string]$VoiceShardId = "voice-asia-east1-primary",
   [switch]$IncludeVoice,
+  [switch]$RequireCallControl,
   [switch]$DryRun
 )
 
@@ -195,15 +200,37 @@ try {
 
   if ($IncludeVoice) {
     Step "Deploy voice staging"
+    foreach ($secretName in @($GatewayAdminSecret, $CallTokenSecret)) {
+      if (-not (Test-SecretExists $secretName)) {
+        throw "required voice secret is missing: $secretName"
+      }
+    }
+
+    $callControlRequired = if ($RequireCallControl) { "1" } else { "0" }
+    $voiceSecrets = @(
+      "GEMINI_API_KEY=$($GeminiSecret):latest",
+      "MUNEA_GATEWAY_ADMIN_KEY=$($GatewayAdminSecret):latest",
+      "MUNEA_CALL_TOKEN_SECRET=$($CallTokenSecret):latest"
+    ) -join ","
+    $voiceEnvVars = @(
+      "MUNEA_SERVICE=voice",
+      "MUNEA_ENV_NAME=staging",
+      "MUNEA_CALL_CONTROL_URL=$CallControlUrl",
+      "MUNEA_CALL_CONTROL_REQUIRED=$callControlRequired",
+      "MUNEA_VOICE_SHARD_ID=$VoiceShardId"
+    ) -join ","
+
     # Voice needs the same public edge so the app can establish its session.
+    # Keep Call Control optional during the old-App transition; require it only
+    # after the Gateway-only build is distributed.
     $voiceArgs = @(
       "run", "deploy", $VoiceService,
       "--source", $tempRoot,
       "--clear-base-image",
       "--region", $Region,
       "--project", $ProjectId,
-      "--update-secrets", "GEMINI_API_KEY=$($GeminiSecret):latest",
-      "--update-env-vars", "MUNEA_SERVICE=voice,MUNEA_ENV_NAME=staging",
+      "--update-secrets", $voiceSecrets,
+      "--update-env-vars", $voiceEnvVars,
       "--timeout", "3600",
       "--session-affinity",
       "--memory", "1Gi",
