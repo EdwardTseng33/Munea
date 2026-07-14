@@ -29,5 +29,7 @@ expect(voiceServer.includes('if data and not st.get("language_block")'),
   'Hokkien model audio can still reach the client after the language gate triggers');
 expect(voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK'),
   'the deterministic Mandarin fallback does not bypass conversational generation');
+expect(voiceServer.includes('asyncio.to_thread(_hokkien_fallback_pcm, char)'),
+  'the deterministic Mandarin fallback is not prewarmed off the call-ready path');
 
 console.log('Voice launch buffering and Hokkien gate policy PASS');

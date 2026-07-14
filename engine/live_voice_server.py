@@ -478,6 +478,7 @@ def _diag(cid, event, **kv):
 
 _CID = {"n": 0}
 _HOKKIEN_FALLBACK_PCM = {}
+_HOKKIEN_FALLBACK_LOCK = threading.Lock()
 
 
 def _hokkien_fallback_pcm(char):
@@ -486,16 +487,20 @@ def _hokkien_fallback_pcm(char):
     cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
     if cached is not None:
         return cached
-    encoded = server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW")
-    if not encoded:
-        _HOKKIEN_FALLBACK_PCM[cache_key] = b""
-        return b""
-    with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-        if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-            raise ValueError("unexpected Hokkien fallback audio format")
-        pcm = wav.readframes(wav.getnframes())
-    _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
-    return pcm
+    with _HOKKIEN_FALLBACK_LOCK:
+        cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
+        if cached is not None:
+            return cached
+        encoded = server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW")
+        if not encoded:
+            _HOKKIEN_FALLBACK_PCM[cache_key] = b""
+            return b""
+        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
+            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
+                raise ValueError("unexpected Hokkien fallback audio format")
+            pcm = wav.readframes(wav.getnframes())
+        _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
+        return pcm
 
 
 async def handle(ws):
@@ -626,6 +631,9 @@ async def handle(ws):
             except Exception:
                 pass
             _diag(cid, "node.ready", ms=round((time.monotonic() - t0) * 1000))
+            # Prepare the fixed Mandarin fallback off the critical path. The
+            # first Hokkien-gate response should not pay a cold TTS request.
+            st["bg_tasks"].append(asyncio.create_task(asyncio.to_thread(_hokkien_fallback_pcm, char)))
 
             # 主動開口 cue（治「叫兩三次才回、以為當機」· Edward 2026-07-09）：
             # 不在 session 開好就立刻送——改由 App 在「聲音＋會動的臉兩邊都就緒」時送 {"type":"greet"} 才觸發，
