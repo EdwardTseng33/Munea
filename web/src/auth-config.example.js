@@ -14,6 +14,7 @@ window.MUNEA_DEV_CONFIG = {
   enabled: false,
   autoSignIn: false,
   skipOnboarding: false,
+  seedFixtures: false,
   analyticsExcluded: true,
   authUserId: '00000000-0000-4000-8000-000000000001',
   email: 'developer@munea.local',

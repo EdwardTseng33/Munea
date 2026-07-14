@@ -8,6 +8,10 @@ function expect(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function hasUsageDescription(plist, key) {
+  return new RegExp(`<key>${key}</key>\\s*<string>[^<]{8,}</string>`).test(plist);
+}
+
 const app = read('web/src/app.js');
 const admin = read('web/src/admin.js');
 const index = read('web/index.html');
@@ -17,6 +21,12 @@ const appleStore = read('engine/apple_store.py');
 const billingPolicy = read('supabase/sql/013_current_app_billing_policy.sql');
 const authConfig = read('web/src/auth-config.js');
 const swiftStore = read('ios/App/App/StorePlugin.swift');
+const swiftAppleSignIn = read('ios/App/App/AppleSignInPlugin.swift');
+const appEntitlements = read('ios/App/App/App.entitlements');
+const viewController = read('ios/App/App/MuneaViewController.swift');
+const xcodeProject = read('ios/App/App.xcodeproj/project.pbxproj');
+const iosExport = read('scripts/ios-export-app-store.sh');
+const iosDevProfile = read('scripts/enable-ios-development-profile.mjs');
 const auth = read('web/src/auth.js');
 const infoPlist = read('ios/App/App/Info.plist');
 const reviewNotes = read('docs/送審資料包-2026-07-09.md');
@@ -55,6 +65,14 @@ expect(authConfig.includes('window.MUNEA_SUPABASE_CONFIG'), 'public Supabase aut
 expect(/https:\/\/[a-z0-9-]+\.supabase\.co/.test(authConfig), 'Supabase project URL is missing');
 expect(authConfig.includes('sb_publishable_'), 'Supabase publishable key is missing');
 expect(!/service[_-]?role|SUPABASE_SERVICE_ROLE_KEY/i.test(authConfig), 'server-only Supabase key leaked into browser config');
+expect(/enabled:\s*false/.test(authConfig) && /seedFixtures:\s*false/.test(authConfig), 'production auth config must keep developer fixtures disabled');
+expect(!authConfig.includes('MUNEA_IOS_DEVELOPMENT_PROFILE_START'), 'development profile leaked into production Web source');
+expect(iosDevProfile.includes('ios/App/App/public/src/auth-config.js'), 'iOS development profile must target generated assets only');
+expect(iosDevProfile.includes('Refusing to enable the development profile in the production Web source'), 'development profile lacks production source guard');
+expect(!index.includes('id="authEmailInput"') && !index.includes('id="authEmailBtn"'), 'consumer app still exposes email sign-in controls');
+expect(!auth.includes('signInWithOtp') && !auth.includes('signInWithEmail'), 'email OTP auth remains exposed in the consumer auth module');
+const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+expect(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'auth sheet still opens the keyboard automatically');
 
 expect(swiftStore.includes('CAPPluginMethod(name: "manageSubscriptions"'), 'native subscription management method is not registered');
 expect(swiftStore.includes('AppStore.showManageSubscriptions'), 'native subscription management sheet is not implemented');
@@ -63,6 +81,21 @@ expect(reviewNotes.includes('Voice chat and\n   private account data require sig
 expect(auth.includes("skipBrowserRedirect: native"), 'native OAuth still uses the embedded WebView');
 expect(auth.includes("app.addListener('appUrlOpen'"), 'native OAuth callback listener is missing');
 expect(auth.includes('exchangeCodeForSession'), 'native OAuth PKCE code exchange is missing');
+expect(auth.includes("nativePlugin('AppleSignIn')"), 'native Apple plugin bridge is missing');
+expect(auth.includes('signInWithIdToken'), 'native Apple ID token is not exchanged with Supabase');
 expect(infoPlist.includes('<string>munea</string>'), 'iOS OAuth callback URL scheme is missing');
+expect(hasUsageDescription(infoPlist, 'NSCameraUsageDescription'), 'iOS camera usage description is missing');
+expect(hasUsageDescription(infoPlist, 'NSPhotoLibraryUsageDescription'), 'iOS photo library usage description is missing');
+expect(swiftAppleSignIn.includes('ASAuthorizationAppleIDProvider'), 'native Sign in with Apple request is missing');
+expect(swiftAppleSignIn.includes('request.nonce = self.sha256(nonce)'), 'native Apple nonce binding is missing');
+expect(appEntitlements.includes('com.apple.developer.applesignin'), 'Sign in with Apple entitlement is missing');
+expect(viewController.includes('registerPluginInstance(AppleSignInPlugin())'), 'native Apple plugin is not registered');
+expect(xcodeProject.includes('AppleSignInPlugin.swift in Sources'), 'native Apple plugin is not compiled by Xcode');
+expect(iosExport.includes('codesign -d --entitlements - "$APP_PATH"'), 'IPA export still uses the retired entitlements output syntax');
+expect(!iosExport.includes('codesign -d --entitlements :-'), 'IPA export uses deprecated codesign entitlement syntax');
+expect(iosExport.includes('com.apple.developer.applesignin'), 'IPA export does not verify Apple sign-in entitlement');
+expect(iosExport.includes('NSCameraUsageDescription') && iosExport.includes('NSPhotoLibraryUsageDescription'), 'IPA export does not verify photo privacy usage strings');
+expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
+expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
 
 console.log('Release settings contracts PASS');

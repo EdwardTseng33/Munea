@@ -1,6 +1,6 @@
 {
   "name": "munea",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Munea iOS-first AI health-care companion app prototype.",
   "scripts": {
@@ -14,7 +14,7 @@
     "test:seo": "node scripts/test-app-site-seo.js",
     "test:call-control-app": "python scripts/test_app_call_control_contract.py",
     "test:ui-contracts": "node scripts/test-ui-contracts.js",
-    "test:launch": "python engine/test_vitals_sync.py && python engine/test_thin_door.py && python engine/test_account_scope.py && python engine/test_request_scope.py && python engine/test_apple_store.py && python engine/test_free_signup_trial.py && python engine/test_family_invitation_access.py && python engine/test_subscription_expiry.py && python engine/test_localization.py && node scripts/test-store-verification.js && node scripts/test-health-connection.js && node scripts/test-native-auth.js && node scripts/test-release-settings.js && node scripts/test-ui-contracts.js",
+    "test:launch": "python engine/test_vitals_sync.py && python engine/test_thin_door.py && python engine/test_account_scope.py && python engine/test_request_scope.py && python engine/test_apple_store.py && python engine/test_free_signup_trial.py && python engine/test_family_invitation_access.py && python engine/test_subscription_expiry.py && python engine/test_localization.py && node scripts/test-store-verification.js && node scripts/test-health-connection.js && node scripts/test-native-auth.js && node scripts/test-development-profile.js && node scripts/test-release-settings.js && node scripts/test-ui-contracts.js",
     "release:check": "powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1",
     "release:record": "powershell -ExecutionPolicy Bypass -File scripts/release-record.ps1",
     "mac:doctor": "bash scripts/mac-day-one-check.sh",
@@ -34,6 +34,7 @@
     "ios:build": "bash scripts/ios-simulator-build.sh",
     "ios:archive": "bash scripts/ios-archive.sh",
     "ios:export": "bash scripts/ios-export-app-store.sh",
+    "ios:dev-profile": "node scripts/enable-ios-development-profile.mjs",
     "ios:package": "npm run ios:archive && npm run ios:export"
   },
   "dependencies": {

@@ -53,6 +53,7 @@ const ACCOUNT_BOOTSTRAP_KEY = 'munea.accountBootstrapped.v1';
 const ONBOARDING_COMPLETED_KEY = 'munea.onboardingCompleted.v1';
 const AI_PROVIDER_CONSENT_KEY = 'munea.aiProviderConsent.v1';
 const AI_PROVIDER_CONSENT_VERSION = '2026-07-02-ai-provider-v1';
+const DEV_FIXTURE_MARKER_KEY = 'munea.developmentFixtures.v1';
 
 /* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
@@ -326,7 +327,7 @@ function accountBootstrapPayload(action = 'create', extra = {}) {
   return payload;
 }
 async function syncAccountBootstrap(action = 'create', extra = {}) {
-  if (isStaticPreview() || accountBootstrapSyncing) return null;
+  if (isStaticPreview() || isDeveloperBypassAllowed() || accountBootstrapSyncing) return null;
   if (action !== 'preview' && storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'true' && !extra.force) return null;
   accountBootstrapSyncing = true;
   try {
@@ -714,10 +715,77 @@ function isDeveloperBypassAllowed() {
   const cfg = developerConfig();
   return cfg.enabled === true && (cfg.allowNonLocalhost === true || isLocalDevHost());
 }
+function developerFixtureDate(daysAgo) {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() - daysAgo);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function developerFixtureVitals(name, offset) {
+  const log = {};
+  for (let daysAgo = 27; daysAgo >= 0; daysAgo--) {
+    const rhythm = 27 - daysAgo + offset;
+    log[developerFixtureDate(daysAgo)] = {
+      steps: 5200 + (rhythm % 7) * 510,
+      sleepHours: +(6.3 + (rhythm % 5) * 0.3).toFixed(1),
+      hr: 66 + (rhythm % 8),
+      spo2: 96 + (rhythm % 3),
+      bpSys: 116 + (rhythm % 7),
+      bpDia: 72 + (rhythm % 5),
+    };
+  }
+  const latest = log[developerFixtureDate(0)];
+  return { name, nick: name, day: '今天', updatedAt: Date.now(), ...latest, log };
+}
+function seedDeveloperFixtures(cfg) {
+  if (cfg.seedFixtures !== true) return;
+  const fixtureVersion = cfg.fixtureVersion || 'v1';
+  if (storageGet(DEV_FIXTURE_MARKER_KEY) === fixtureVersion && cfg.resetFixturesOnLaunch !== true) return;
+  const profileName = cfg.profileName || 'Edward';
+  const members = [
+    { name: profileName, init: profileName[0] || '我', tint: 'p-me', self: true },
+    { name: '媽媽', init: '媽', tint: 'p-ama', self: false },
+    { name: '爸爸', init: '爸', tint: 'p-zhi', self: false },
+    { name: '姊姊', init: '姊', tint: 'p-mei', self: false },
+  ];
+  storageSet('munea.personProfile', JSON.stringify({ name: profileName, nick: profileName, birth: '1990 年 3 月', city: '台北市中山區', avatar: '' }));
+  storageSet('munea.plan', cfg.plan || 'pro');
+  storageSet('munea.ptsBought', String(Number.isFinite(+cfg.purchasedPoints) ? +cfg.purchasedPoints : 700));
+  storageSet('munea.familyGroupId', 'fam-edward-development');
+  storageSet('munea.cloudPersonId', 'dev-edward-person');
+  storageSet('munea.circleMembers', JSON.stringify(members));
+  storageSet('munea.famVitals', JSON.stringify({
+    'dev-family-mother': developerFixtureVitals('媽媽', 0),
+    'dev-family-father': developerFixtureVitals('爸爸', 2),
+    'dev-family-sister': developerFixtureVitals('姊姊', 4),
+  }));
+  storageSet('munea.familyFeed2', JSON.stringify([
+    '<b>媽媽</b>要我提醒你：週末回家一起吃飯',
+    '<b>爸爸</b>今天走了 7,200 步，狀態很穩',
+    '<b>姊姊</b>傳了一個愛心，晚點想和你聊聊',
+  ]));
+  const activityEnd = new Date();
+  activityEnd.setDate(activityEnd.getDate() + 2);
+  storageSet('munea.activities', JSON.stringify([{
+    id: Date.now(),
+    kind: 'walk',
+    owner: profileName,
+    names: ['媽媽', '爸爸', '姊姊'],
+    title: '全家一起走路',
+    goal: 30000,
+    startISO: developerFixtureDate(0),
+    days: 2,
+    dateISO: developerFixtureDate(-2),
+    dueTime: '20:00',
+    dueLabel: `${activityEnd.getMonth() + 1}/${activityEnd.getDate()} 20:00 截止`,
+  }]));
+  storageSet(DEV_FIXTURE_MARKER_KEY, fixtureVersion);
+}
 function applyDeveloperBypass() {
   const cfg = developerConfig();
   if (!isDeveloperBypassAllowed()) return;
   if (cfg.skipOnboarding === true) storageSet(ONBOARDING_COMPLETED_KEY, 'true');
+  seedDeveloperFixtures(cfg);
 }
 function authAnalyticsContext() {
   const auth = window.MuneaAuth;
@@ -2162,10 +2230,10 @@ function completeChatSession(reason = 'ended') {
 
 function showView(id) {
   // 聊聊要登入才能用（7/9 Edward 拍板 A：免費 5 分鐘要綁帳號才守得住、不怕重裝重置）
-  // 所有進聊聊的路都經過這個路口——訪客點聊聊＝先引導登入註冊、不進聊天頁
+  // 所有進聊聊的路都經過這個路口——訪客點聊聊＝先引導 Google／Apple 登入、不進聊天頁
   if (id === 'chat' && !isLoggedIn()) {
     if (typeof openAuthSheet === 'function') openAuthSheet();
-    if (typeof setAuthMessage === 'function') setAuthMessage('請先登入或註冊，就能和' + cname() + '聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'ok');
+    if (typeof setAuthMessage === 'function') setAuthMessage('請先使用 Google 或 Apple 登入，就能和' + cname() + '聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'ok');
     try { trackProductEvent('login_gate_shown', { feature: 'chat' }); } catch (e) {}
     return;
   }
@@ -2293,8 +2361,6 @@ function openAuthSheet() {
   setAuthMessage('');
   const devBtn = $('#authDeveloperBtn');
   if (devBtn) devBtn.hidden = !isDeveloperBypassAllowed();
-  const input = $('#authEmailInput');
-  if (input) setTimeout(() => input.focus(), 180);
 }
 function closeAuthSheet() {
   const sheet = $('#authSheet');
@@ -2368,18 +2434,6 @@ async function signInWithAuthProvider(provider) {
   if (result && result.ok) return setAuthMessage('請在瀏覽器或系統視窗完成登入', 'ok');
   setAuthMessage(result && result.error && result.error.code === 'auth_not_configured' ? '尚未連接 Supabase 登入設定' : '登入暫時無法啟動', 'error');
 }
-async function signInWithEmailLink() {
-  const input = $('#authEmailInput');
-  const email = input ? input.value.trim() : '';
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setAuthMessage('請輸入有效 email', 'error');
-  const auth = window.MuneaAuth;
-  if (!auth || typeof auth.signInWithEmail !== 'function') return setAuthMessage('Email 登入尚未啟用', 'error');
-  setAuthMessage('正在寄送登入連結...', 'ok');
-  trackProductEvent('auth_sign_in_started', { provider: 'email_otp' });
-  const result = await auth.signInWithEmail(email);
-  if (result && result.ok) return setAuthMessage('登入連結已寄出', 'ok');
-  setAuthMessage(result && result.error && result.error.code === 'auth_not_configured' ? '尚未連接 Supabase 登入設定' : '登入連結暫時無法寄送', 'error');
-}
 async function signInDeveloperMode() {
   const auth = window.MuneaAuth;
   if (!auth || typeof auth.signInAsDeveloper !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
@@ -2409,10 +2463,7 @@ function setupAuthControls() {
   if ($('#authCloseBtn')) $('#authCloseBtn').addEventListener('click', closeAuthSheet);
   if ($('#authAppleBtn')) $('#authAppleBtn').addEventListener('click', () => signInWithAuthProvider('apple'));
   if ($('#authGoogleBtn')) $('#authGoogleBtn').addEventListener('click', () => signInWithAuthProvider('google'));
-  if ($('#authEmailBtn')) $('#authEmailBtn').addEventListener('click', signInWithEmailLink);
   if ($('#authDeveloperBtn')) $('#authDeveloperBtn').addEventListener('click', signInDeveloperMode);
-  const email = $('#authEmailInput');
-  if (email) email.addEventListener('keydown', e => { if (e.key === 'Enter') signInWithEmailLink(); });
   const sheet = $('#authSheet');
   if (sheet) sheet.addEventListener('click', e => { if (e.target === sheet) closeAuthSheet(); });
   updateAuthUI();
@@ -2992,6 +3043,7 @@ function myProfileName() {
   try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); return (p.name || p.nick || '').trim(); } catch (e) { return ''; }
 }
 function syncPush(key, value) {
+  if (isDeveloperBypassAllowed()) return;
   try {
     // 用藥照片只留本機、不上雲（隱私修正 7/9）：meds 同步前把 base64 照片欄位剝掉，其餘欄位照送
     const payload = (key === 'meds' && Array.isArray(value))
@@ -3003,6 +3055,7 @@ function syncPush(key, value) {
   } catch (e) {}
 }
 async function syncPullAll() {
+  if (isDeveloperBypassAllowed()) return;
   try {
     const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ action: 'load', familyGroupId: famGroupId() }) });
     if (!r.ok) return;
@@ -3816,7 +3869,7 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
-    if (!requireLogin('請先登入或註冊才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'chat')) return;
+    if (!requireLogin('請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'chat')) return;
     if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
     else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
     showView('chat');
@@ -4927,8 +4980,8 @@ function init() {
       goal = '';
       note = '';
     } else {
-      chip = act.dateLabel;
-      goal = act.title + (act.place ? ' · ' + act.place : '') + '，誰能到？';
+      chip = act.dateLabel || act.dueLabel || '進行中';
+      goal = (act.title || '家庭活動') + (act.place ? ' · ' + act.place : '') + '，誰能到？';
       note = cname() + '會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
     }
     const rwLine = act.rewards && act.rewards.some(Boolean)
@@ -4939,7 +4992,7 @@ function init() {
       delete act._rankHtml;
     } else {
       card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
-        (act.kind === 'event' ? '揪一攤 · ' + act.title : act.kind === 'vote' ? '投票 · ' + act.title : act.kind === 'draw' ? '抽獎 · ' + act.prize : '邀請已送出 · ' + act.title) +
+        (act.kind === 'event' ? '揪一攤 · ' + (act.title || '家庭活動') : act.kind === 'vote' ? '投票 · ' + (act.title || '家庭投票') : act.kind === 'draw' ? '抽獎 · ' + (act.prize || '家庭抽獎') : '邀請已送出 · ' + (act.title || '家庭活動')) +
         '<span class="qc-days">' + chip + '</span></div>' +
         (goal ? '<div class="qc-goal">' + goal + '</div>' : '') +
         (note ? '<div class="qc-num">' + note + '</div>' : '') + rwLine;

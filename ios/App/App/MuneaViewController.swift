@@ -7,5 +7,6 @@ class MuneaViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(HealthPlugin())
         bridge?.registerPluginInstance(StorePlugin())
         bridge?.registerPluginInstance(NotifyPlugin())
+        bridge?.registerPluginInstance(AppleSignInPlugin())
     }
 }

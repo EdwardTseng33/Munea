@@ -4,8 +4,11 @@ const vm = require('vm');
 let appUrlOpen = null;
 let browserOpened = '';
 let browserClosed = 0;
-let oauthRequest = null;
+const oauthRequests = [];
 let exchangedCode = '';
+let appleNativeCalls = 0;
+let appleIdTokenRequest = null;
+let appleProfileUpdate = null;
 
 const signedInSession = {
   access_token: 'access-token',
@@ -22,8 +25,24 @@ const client = {
     async getSession() { return { data: { session: null }, error: null }; },
     onAuthStateChange() {},
     async signInWithOAuth(request) {
-      oauthRequest = request;
+      oauthRequests.push(request);
       return { data: { url: 'https://example.supabase.co/oauth' }, error: null };
+    },
+    async signInWithIdToken(request) {
+      appleIdTokenRequest = request;
+      return {
+        data: {
+          session: {
+            ...signedInSession,
+            user: { ...signedInSession.user, app_metadata: { provider: 'apple' } },
+          },
+        },
+        error: null,
+      };
+    },
+    async updateUser(request) {
+      appleProfileUpdate = request;
+      return { data: { user: signedInSession.user }, error: null };
     },
     async exchangeCodeForSession(code) {
       exchangedCode = code;
@@ -61,6 +80,19 @@ const windowObject = {
         async open(options) { browserOpened = options.url; },
         async close() { browserClosed += 1; },
       },
+      AppleSignIn: {
+        async signIn() {
+          appleNativeCalls += 1;
+          return {
+            state: 'authorized',
+            identityToken: 'apple-identity-token',
+            nonce: 'raw-apple-nonce',
+            givenName: 'Munea',
+            familyName: 'Tester',
+            fullName: 'Munea Tester',
+          };
+        },
+      },
     },
   },
   dispatchEvent() {},
@@ -87,8 +119,8 @@ function expect(condition, message) {
 
   const started = await windowObject.MuneaAuth.signInWithGoogle();
   expect(started.ok, 'native Google OAuth did not start');
-  expect(oauthRequest.options.redirectTo === 'munea://auth/callback', 'native OAuth redirect is not the app deep link');
-  expect(oauthRequest.options.skipBrowserRedirect === true, 'native OAuth would still navigate the embedded WebView');
+  expect(oauthRequests[0].options.redirectTo === 'munea://auth/callback', 'native OAuth redirect is not the app deep link');
+  expect(oauthRequests[0].options.skipBrowserRedirect === true, 'native OAuth would still navigate the embedded WebView');
   expect(browserOpened === 'https://example.supabase.co/oauth', 'OAuth URL was not opened with the native browser');
 
   await appUrlOpen({ url: 'munea://auth/callback?code=pkce-code' });
@@ -97,7 +129,17 @@ function expect(condition, message) {
   expect(browserClosed === 1, 'native browser was not closed after callback');
   expect(windowObject.MuneaAuth.state().status === 'signed-in', 'native callback did not publish a signed-in session');
 
-  console.log('Native OAuth deep-link PASS');
+  const apple = await windowObject.MuneaAuth.signInWithApple();
+  expect(apple.ok, 'native Apple sign in did not complete');
+  expect(appleNativeCalls === 1, 'native Apple plugin was not called exactly once');
+  expect(oauthRequests.length === 1, 'Apple incorrectly used the browser OAuth path');
+  expect(appleIdTokenRequest && appleIdTokenRequest.provider === 'apple', 'Apple ID token was not sent to Supabase');
+  expect(appleIdTokenRequest.token === 'apple-identity-token', 'Apple identity token was changed');
+  expect(appleIdTokenRequest.nonce === 'raw-apple-nonce', 'Apple raw nonce was not sent to Supabase');
+  expect(appleProfileUpdate && appleProfileUpdate.data.full_name === 'Munea Tester', 'first Apple profile name was not saved');
+  expect(windowObject.MuneaAuth.state().provider === 'apple', 'Apple session was not published');
+
+  console.log('Native Google OAuth and Apple ID token PASS');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;
