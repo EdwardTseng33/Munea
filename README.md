@@ -120,7 +120,7 @@ npm run supabase:doctor:live
 | Subscription entitlement | App Store subscription and usage ledger | `/entitlements` is the backend source of truth for Free / Plus / Pro; frontend does not own paid status, grants, or Avatar minutes |
 | Avatar session | Runtime mode and premium Avatar usage decision | Chat startup calls `/avatar-session`; backend selects `static-css`, `2d-viseme`, `ditto`, or `liveavatar`, with premium fallback and usage ledger recording |
 | Product analytics | North Star and Admin MVP data | Web core emits safe Chat/Voice/Avatar/routine events to `/product-event`; `/admin/north-star` is token-gated and summarizes Weekly Meaningful Companion Days |
-| App shell | App Store delivery | Capacitor iOS `1.0.2 (5)` builds, signs, archives, exports, and runs on Edward's iPhone |
+| App shell | App Store delivery | Capacitor iOS `1.0.3 (6)` builds, signs, archives, exports, and runs on Edward's iPhone |
 | Auth and onboarding | Progressive account creation | Sign in with Apple, Google, and email magic link/OTP are configured; Voice chat and private cloud data require sign-in |
 
 Critical principle: **Voice + Avatar is one call product**. Capacity, billing, and release gates must treat both resources atomically; the production app does not silently downgrade a paid call to voice-only.
