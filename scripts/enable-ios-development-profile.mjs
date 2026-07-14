@@ -33,7 +33,7 @@ window.MUNEA_DEV_CONFIG = {
   profileName: 'Edward',
   plan: 'pro',
   purchasedPoints: 700,
-  fixtureVersion: '1.0.4-build9-family-v2',
+  fixtureVersion: '1.0.5-build10-family-v2',
 };
 ${endMarker}`;
 

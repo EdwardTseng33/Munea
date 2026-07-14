@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-14 現況覆蓋**：App 最新開發驗收包與 App Store 候選包為 `1.0.4 (Build 9)`，來源為含 PR #20、#21、#18 的 `main@6f69b567` 加本輪開發包隔離修正。最新設計、正式 Call Control、拍照閃退修復、Apple 原生登入、Google PKCE、Apple／Google only 登入與不自動開鍵盤均已整合。Edward iPhone 已安裝測試版，含 Edward 測試帳號、Pro、1,000 點與家人假資料；正式 IPA 已另外重建並驗證不含測試後門或開發直連。Mac 的「iPhone 鏡像輸出」已設定，能辨識配對手機並已建立即時連線；依 Apple 官方限制，iPhone 相機、麥克風、Face ID 與通話不能透過鏡像驗收，仍須直接操作手機。Edward 最新 10 分鐘聊聊實測新增兩項紅燈：句尾約 4～5 次短暫斷續，以及偶爾在完全沒說話時被模型誤認為有發言並自行接話；已掛入 Draft PR #23，未修完前不可升 Build 10 正式流量。實際拍照、Apple／Google 真帳號登入與真 token Gateway 通話仍待手機操作；Google Cloud 品牌名稱已填為「Munea App」，但尚未儲存／送驗。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
+> **2026-07-14 現況覆蓋**：App 最新開發驗收包與 App Store 候選包為 `1.0.5 (Build 10)`，以已合併 PR #29／#23／#30／#31 的 `main@fac3a49` 為功能來源。點數月週期、語音開場緩衝、台語安全閘、訂閱頁水彩新設計、Gateway 長駐監控、正式 Call Control、拍照修正、Apple 原生登入、Google PKCE、Apple／Google only 登入與不自動開鍵盤均已整合。Edward iPhone 已覆蓋安裝並啟動真正最新 1.0.5，開發 profile 設為 TEST、Pro、1,000 點與家人假資料；正式 IPA 已獨立重建並驗證不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `47c324464d483b8d01753f5840210029050a5d5e1a65aac8a81d6072679a8848`。自動測試與 Xcode 包版通過，但 10 分鐘長聊斷續與靜音誤接話仍待 Build 10 實機驗證，未通過前不升語音正式流量。實際拍照、Apple／Google 真帳號登入與真 token Gateway 通話仍待手機操作；Google Cloud 品牌名稱已填為「Munea App」，但尚未儲存／送驗。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方 7/13 以前的價格、點數與包版內容是歷史日誌，不可當目前設定。
 
 > **最後更新：2026-07-13（Codex · GLOWS RTX 6000 Ada 正式主卡已接通，App 1.0.1 已完成 iOS 同步與發版檢查；目前可驗收 1～3 人，第 4 人起的 RunPod 自動擴容仍在收尾）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
@@ -12,7 +12,9 @@
 
 ## 一眼總覽
 
-**61－聊聊長聊斷續／靜音誤接話紅燈（7/14 Edward 實測、Codex 稽核）**：①❌ Build 9 連聊約 10 分鐘，句尾約 4～5 次短暫斷續。②❌ 偶爾使用者完全沒說話、畫面也未顯示收到語音，模型卻自行認定使用者說了內容並接續話題。③程式稽核指出：播放緩衝每輪歸零、Avatar 同線只做開場品質檢查；麥克風開啟後持續上送底噪，只依賴雲端 VAD。④兩項已加入 Draft PR #23 的合併條件：10 分鐘零可辨識斷裂、30 秒靜音五組不得產生使用者 turn、長聊品質下降須下一輪安全切回本機播放。⑤本輪先完成診斷與協作交接；程式修正、Build 10 包版與真機驗收仍未完成。
+**62－App 1.0.5 Build 10／真正最新 main 雙包版（7/14 Codex）**：①✅ PR #29 點數月週期、PR #23 語音開場緩衝／台語安全閘、PR #30 訂閱頁水彩新設計與 PR #31 Gateway 長駐監控均已納入，功能來源為 `main@fac3a49`。②✅ `test:launch`、`smoke:no-api`、完整 `release:check`、Gateway 監控 13 項、安全 SQL、Capacitor sync 與 Xcode arm64 真機編譯通過。③✅ Edward iPhone 已覆蓋安裝並啟動 `1.0.5 (10)`；開發 profile 為 TEST、Pro、1,000 點與家庭假資料，包內訂閱頁 HTML／樣式／插圖和最新 main 一致。④✅ 正式 Archive／IPA 不含測試資料或直連，簽章、版本、Bundle ID、相機／相簿、HealthKit、Apple 登入 entitlement 與最新 Web 資源通過。⑤📦 唯一有效 IPA 54,781,117 bytes，SHA-256 `47c324464d483b8d01753f5840210029050a5d5e1a65aac8a81d6072679a8848`；較早的 `7e9562de…` 產物已作廢。⑥❌ 長聊斷續、靜音誤接話、Google／Apple 真登入與實際拍照仍待直接操作 Build 10；IPA 尚未上傳 App Store Connect。
+
+**61－聊聊長聊斷續／靜音誤接話紅燈（7/14 Edward 實測、Codex 稽核）**：①❌ Build 9 連聊約 10 分鐘，句尾約 4～5 次短暫斷續。②❌ 偶爾使用者完全沒說話、畫面也未顯示收到語音，模型卻自行認定使用者說了內容並接續話題。③✅ PR #23 已合併，Build 10 已安裝，開場緩衝與台語安全閘的自動測試通過。④❌ PR #23 尚未涵蓋長聊持續 RTP／播放降級與本機靜音防誤觸；10 分鐘零斷裂、30 秒靜音五組不得產生使用者 turn 仍未實測。⑤語音 canary 維持 0% 流量，Build 10 真機通過前不宣稱修好。
 
 **60－iPhone 鏡像真機驗收環境（7/14 Codex）**：①✅ Mac「iPhone 鏡像輸出」可啟動並辨識配對 iPhone，設定完成。②✅ 已建立即時鏡像工作階段，Mac 可取得 iPhone 主畫面與 App 切換器控制。③⚠️ Apple 官方明確限制鏡像不可使用 iPhone 相機、麥克風、Face ID 或通話；鏡像可協助一般畫面操作，但拍照、語音通話與需要 Face ID 的流程仍須直接拿手機驗收。④Apple／Google 登入、HealthKit、通知與 StoreKit 等 Gate 維持逐項實測後才打勾。⑤本次只同步文件，不改 App、不升版、不重包。
 
