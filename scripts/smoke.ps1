@@ -3167,6 +3167,13 @@ print("index ids", len(ids))
 '@
 Pass "Frontend id refs are valid"
 
+Step "App Call Control contract"
+& $Python "scripts/test_app_call_control_contract.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "App Call Control contract failed with exit code $LASTEXITCODE"
+}
+Pass "App Call Control production and development paths are valid"
+
 Step "Git diff check"
 git diff --check
 Pass "No whitespace errors"

@@ -12,5 +12,6 @@ window.MUNEA_DEV_CONFIG = {
   autoSignIn: false,
   skipOnboarding: false,
   seedFixtures: false,
+  bypassCallControl: false,
   analyticsExcluded: true,
 };

@@ -12,6 +12,7 @@ const sourceHashBefore = crypto.createHash('sha256').update(sourceConfigBefore).
 
 assert.match(sourceConfigBefore, /enabled:\s*false/, 'Production auth config must keep developer mode disabled');
 assert.match(sourceConfigBefore, /seedFixtures:\s*false/, 'Production auth config must keep fixtures disabled');
+assert.match(sourceConfigBefore, /bypassCallControl:\s*false/, 'Production auth config must require Call Control');
 assert.doesNotMatch(sourceConfigBefore, /MUNEA_IOS_DEVELOPMENT_PROFILE_START/, 'Development override leaked into production Web source');
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'munea-dev-profile-'));
@@ -33,6 +34,7 @@ assert.strictEqual(config.enabled, true);
 assert.strictEqual(config.autoSignIn, true);
 assert.strictEqual(config.skipOnboarding, true);
 assert.strictEqual(config.seedFixtures, true);
+assert.strictEqual(config.bypassCallControl, true);
 assert.strictEqual(config.analyticsExcluded, true);
 assert.strictEqual(config.displayName, 'Edward 測試帳號');
 assert.strictEqual(config.plan, 'pro');
@@ -49,5 +51,7 @@ for (const token of ['seedDeveloperFixtures', 'Edward', '媽媽', '爸爸', '姊
 assert.match(app, /kind:\s*'walk'/);
 assert.match(app, /names:\s*\['媽媽', '爸爸', '姊姊'\]/);
 assert.doesNotMatch(app, /type:\s*'walk'/);
+assert.match(app, /function usesDevelopmentDirectCall\(\)/);
+assert.match(app, /if \(!developmentDirectCall\) await CallControl\.waitUntilActive\(15000\)/);
 
-console.log('Development profile PASS: isolated auto sign-in, points, and family fixtures');
+console.log('Development profile PASS: isolated auto sign-in, points, family fixtures, and direct test calls');

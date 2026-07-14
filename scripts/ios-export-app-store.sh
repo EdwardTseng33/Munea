@@ -61,7 +61,8 @@ if [ ! -f "$AUTH_CONFIG_PATH" ] \
   || grep -q 'MUNEA_IOS_DEVELOPMENT_PROFILE_START' "$AUTH_CONFIG_PATH" \
   || ! grep -Eq 'enabled:[[:space:]]*false' "$AUTH_CONFIG_PATH" \
   || ! grep -Eq 'autoSignIn:[[:space:]]*false' "$AUTH_CONFIG_PATH" \
-  || ! grep -Eq 'seedFixtures:[[:space:]]*false' "$AUTH_CONFIG_PATH"; then
+  || ! grep -Eq 'seedFixtures:[[:space:]]*false' "$AUTH_CONFIG_PATH" \
+  || ! grep -Eq 'bypassCallControl:[[:space:]]*false' "$AUTH_CONFIG_PATH"; then
   echo "FAIL development account or fixtures leaked into the App Store IPA."
   exit 1
 fi
