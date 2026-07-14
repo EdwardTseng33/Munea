@@ -66,7 +66,7 @@ $argsList = @(
   "--update-secrets", "RUNPOD_API_KEY=$($RunPodSecret):latest,MUNEA_GATEWAY_ADMIN_KEY=$($GatewayAdminSecret):latest,MUNEA_AVATAR_APP_KEY=$($AvatarAppKeySecret):latest",
   "--env-vars-file", $envFile,
   "--cpu", "1",
-  "--memory", "256Mi",
+  "--memory", "512Mi",
   "--min-instances", "1",
   "--max-instances", "1",
   "--concurrency", "1",
