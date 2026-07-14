@@ -272,6 +272,17 @@ def test_audio_prebuffer_starts_when_first_pcm_arrives():
         assert np.array_equal(audio.pop_frame(), pcm)
         audio.clear()
         assert audio.playout_held() is True, "each real turn must re-arm the shared gate"
+
+        audio.arm_prebuffer(1.0)
+        clock[0] = 104.0
+        audio.push(pcm)
+        assert audio.hold_until_ts == 105.0
+        assert audio.last_prebuffer_s == 1.0
+        audio.clear()
+        clock[0] = 106.0
+        audio.push(pcm)
+        assert audio.hold_until_ts == 106.5, "opening delay must be one-shot"
+        assert audio.last_prebuffer_s == 0.5
     finally:
         fec.time.time = original_time
     print("test_audio_prebuffer_starts_when_first_pcm_arrives: PASS")

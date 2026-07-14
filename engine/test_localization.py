@@ -125,7 +125,11 @@ class LocalizationTests(unittest.TestCase):
         for opening in openings:
             self.assertIn("禁止使用", opening)
             self.assertIn("有開心嗎", opening)
-            self.assertIn("最多兩句", opening)
+            self.assertIn("只能一句", opening)
+        self.assertNotEqual(
+            localization.voice_opening_instruction(8, ["懷舊老歌"], "台北市", 0),
+            localization.voice_opening_instruction(8, ["懷舊老歌"], "台北市", 1),
+        )
 
 
 if __name__ == "__main__":

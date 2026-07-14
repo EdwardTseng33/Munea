@@ -102,6 +102,9 @@ class AudioOutBuffer:
     def __init__(self, sample_rate, prebuffer_s=0.5):
         self.sample_rate = sample_rate
         self.prebuffer_s = prebuffer_s
+        self.default_prebuffer_s = prebuffer_s
+        self.next_prebuffer_s = prebuffer_s
+        self.last_prebuffer_s = prebuffer_s
         self.frame_samples = int(sample_rate * 0.02)
         self.lock = threading.Lock()
         self.buf = np.zeros(0, dtype=np.int16)
@@ -115,7 +118,10 @@ class AudioOutBuffer:
     def push(self, pcm_int16):
         with self.lock:
             if len(pcm_int16) and self._awaiting_first_push:
-                self.hold_until_ts = time.time() + self.prebuffer_s
+                delay = self.next_prebuffer_s
+                self.last_prebuffer_s = delay
+                self.next_prebuffer_s = self.default_prebuffer_s
+                self.hold_until_ts = time.time() + delay
                 self._awaiting_first_push = False
             self.buf = np.concatenate([self.buf, pcm_int16])
             self.last_push_ts = time.time()
@@ -127,6 +133,12 @@ class AudioOutBuffer:
             self.depth_samples = 0
             self.hold_until_ts = float("inf")
             self._awaiting_first_push = True
+            self.next_prebuffer_s = self.default_prebuffer_s
+
+    def arm_prebuffer(self, seconds):
+        """Use a one-shot playout delay for the next PCM turn only."""
+        with self.lock:
+            self.next_prebuffer_s = max(0.0, float(seconds))
 
     def playout_held(self):
         """True while audio and video must stay on their shared start gate."""
@@ -569,7 +581,9 @@ def health_snapshot(slot, wake_ts=None):
             "count": ao.underrun_count if ao else 0,
             "recent_gap_ms": list(ao.underrun_gap_ms)[-10:] if ao else [],
             "buffer_depth_ms": round(ao.depth_samples / ao.sample_rate * 1000, 1) if ao else 0,
-            "prebuffer_s": ao.prebuffer_s if ao else None,
+            "prebuffer_s": ao.default_prebuffer_s if ao else None,
+            "last_prebuffer_s": ao.last_prebuffer_s if ao else None,
+            "next_prebuffer_s": ao.next_prebuffer_s if ao else None,
         },
         "video_underrun": {"count": sink.underrun_count if sink else 0},
     }
