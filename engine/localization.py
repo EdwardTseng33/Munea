@@ -24,6 +24,27 @@ _RETRY_MESSAGES = {
     "es": "Estoy teniendo un pequeño problema de conexión. ¿Podemos intentarlo de nuevo en un momento?",
 }
 
+# Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current
+# Live provider does not list Taiwanese Hokkien as a supported language, so a
+# pronunciation example must never be mistaken for end-to-end language support.
+# Raise this score only after a representative human-listening ASR/TTS benchmark
+# reaches the product threshold below.
+TAIWANESE_HOKKIEN_MIN_RELEASE_SCORE = 0.80
+TAIWANESE_HOKKIEN_VALIDATED_SCORE = 0.0
+TAIWANESE_HOKKIEN_FALLBACK = "不好意思，這句台語我沒有聽清楚，可以用國語再說一次嗎？"
+
+_TAIWANESE_HOKKIEN_REQUEST_RE = re.compile(
+    r"(?:用|說|講|改用|請用).{0,8}(?:台語|臺語|閩南語|河洛話|Hokkien)"
+    r"|(?:台語|臺語|閩南語|河洛話|Hokkien).{0,10}(?:說|講|回答|介紹|聊天|對話)",
+    re.IGNORECASE,
+)
+_TAIWANESE_HOKKIEN_STRONG_PHRASES = (
+    "食飽未", "拍謝", "歹勢", "按怎", "毋知", "袂使", "無要緊", "足感心",
+)
+_TAIWANESE_HOKKIEN_LEXEMES = (
+    "阮", "恁", "伊", "佮", "攏", "毋", "袂", "咧", "欲", "閣", "嘛", "矣",
+)
+
 # Keep product copy canonical while giving speech synthesis an explicit,
 # user-verified pronunciation. Add entries conservatively: an incorrect
 # phonetic hint is worse than falling back to natural Taiwan Mandarin.
@@ -32,6 +53,11 @@ _TAIWANESE_SPEECH_FORMS = (
 )
 _TAIWANESE_TRANSCRIPTION_ALIASES = (
     ("較早睏", "卡早捆"),
+)
+_TAIWANESE_MANDARIN_FALLBACKS = (
+    ("卡早捆", "早點睡"),
+    ("咖紮綑", "早點睡"),
+    ("較早睏", "早點睡"),
 )
 
 def normalize_locale(locale):
@@ -54,12 +80,57 @@ def reply_language_instruction(locale):
     """A narrow addition to the existing safety/persona prompt, never a replacement."""
     normalized = normalize_locale(locale)
     emergency = " Do not use Taiwan-specific hotline numbers or Taiwan-only service information; tell the person to contact their local emergency service or a trusted person nearby." if normalized != "zh-TW" else ""
-    return "\n[Reply language]\n" + _REPLY_INSTRUCTIONS[normalized] + emergency
+    launch_guard = taiwan_mandarin_launch_instruction(normalized) if normalized == "zh-TW" else ""
+    return "\n[Reply language]\n" + _REPLY_INSTRUCTIONS[normalized] + emergency + launch_guard
+
+
+def taiwanese_hokkien_release_enabled():
+    return TAIWANESE_HOKKIEN_VALIDATED_SCORE >= TAIWANESE_HOKKIEN_MIN_RELEASE_SCORE
+
+
+def requests_taiwanese_hokkien(text):
+    """Return True for an explicit request that the assistant speak Hokkien."""
+    if taiwanese_hokkien_release_enabled():
+        return False
+    return bool(_TAIWANESE_HOKKIEN_REQUEST_RE.search(str(text or "")))
+
+
+def looks_like_taiwanese_hokkien(text):
+    """Conservative launch heuristic for a Hokkien utterance or generated reply."""
+    if taiwanese_hokkien_release_enabled():
+        return False
+    value = str(text or "")
+    if any(phrase in value for phrase in _TAIWANESE_HOKKIEN_STRONG_PHRASES):
+        return True
+    return sum(1 for token in _TAIWANESE_HOKKIEN_LEXEMES if token in value) >= 2
+
+
+def requires_taiwanese_hokkien_fallback(text):
+    return requests_taiwanese_hokkien(text) or looks_like_taiwanese_hokkien(text)
+
+
+def taiwan_mandarin_launch_instruction(locale):
+    """Fail-safe release policy until Taiwanese Hokkien is independently validated."""
+    if normalize_locale(locale) != "zh-TW":
+        return ""
+    if taiwanese_hokkien_release_enabled():
+        return taiwanese_pronunciation_instruction(locale)
+    return (
+        "\n[首發語言限制]\n"
+        "只能使用自然、清楚的台灣華語（國語）回答，不要主動講台語／臺灣閩南語，也不要假裝自己聽懂。"
+        "如果對方使用台語，而你無法非常確定完整意思，請用台灣華語簡短說："
+        "「不好意思，這句台語我沒有聽清楚，可以用國語再說一次嗎？」"
+        "絕對不要猜意思、亂翻譯或拼湊台語發音。"
+    )
 
 def speech_text(text, locale):
     """Return speech-only text without changing stored or displayed copy."""
     value = str(text or "")
     if normalize_locale(locale) != "zh-TW":
+        return value
+    if not taiwanese_hokkien_release_enabled():
+        for source, mandarin in _TAIWANESE_MANDARIN_FALLBACKS:
+            value = value.replace(source, mandarin)
         return value
     for display, spoken in _TAIWANESE_SPEECH_FORMS:
         value = value.replace(display, spoken)
