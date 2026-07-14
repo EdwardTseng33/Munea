@@ -23,6 +23,9 @@ import time
 import datetime
 import asyncio
 import uuid
+import base64
+import io
+import wave
 from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -474,6 +477,25 @@ def _diag(cid, event, **kv):
 
 
 _CID = {"n": 0}
+_HOKKIEN_FALLBACK_PCM = {}
+
+
+def _hokkien_fallback_pcm(char):
+    """Generate and cache exact Mandarin-only fallback audio for each companion."""
+    cache_key = str(char or "")
+    cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
+    if cached is not None:
+        return cached
+    encoded = server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW")
+    if not encoded:
+        _HOKKIEN_FALLBACK_PCM[cache_key] = b""
+        return b""
+    with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
+        if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
+            raise ValueError("unexpected Hokkien fallback audio format")
+        pcm = wav.readframes(wav.getnframes())
+    _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
+    return pcm
 
 
 async def handle(ws):
@@ -571,7 +593,8 @@ async def handle(ws):
     st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
-          "pending_cues": [], "bg_tasks": [], "semantic_calls": 0}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
+          "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
+          "language_block": False, "language_block_source": None}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     try:
@@ -699,6 +722,44 @@ async def handle(ws):
                     st["face_audio_url"] = None
                     _diag(cid, "node.faceaudio_err", err=f"{type(e).__name__}:{str(e)[:60]}")
 
+            async def _send_hokkien_fallback(source):
+                """Bypass the conversational model and speak one fixed Mandarin sentence."""
+                caption = localization.TAIWANESE_HOKKIEN_FALLBACK
+                await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption}))
+                try:
+                    pcm = await asyncio.to_thread(_hokkien_fallback_pcm, char)
+                except Exception as e:
+                    pcm = b""
+                    _diag(cid, "node.language_fallback_tts_err", err=f"{type(e).__name__}:{str(e)[:60]}")
+                if pcm:
+                    for offset in range(0, len(pcm), 4800):
+                        chunk = pcm[offset:offset + 4800]
+                        st["out"] += len(chunk)
+                        await ws.send(chunk)
+                        fw = st.get("face_ws")
+                        if fw is not None:
+                            try:
+                                await fw.send(chunk)
+                            except Exception:
+                                st["face_ws"] = None
+                        await asyncio.sleep(0)
+                await ws.send(json.dumps({"type": "turn_complete"}))
+                _diag(cid, "node.language_fallback", source=source, out_bytes=len(pcm))
+
+            async def _arm_language_block(source):
+                if st.get("language_block"):
+                    return
+                st["language_block"] = True
+                st["language_block_source"] = source
+                await ws.send(json.dumps({"type": "interrupted"}))
+                fw = st.get("face_ws")
+                if fw is not None:
+                    try:
+                        await fw.send("reset")
+                    except Exception:
+                        st["face_ws"] = None
+                _diag(cid, "node.language_block", source=source)
+
             async def from_browser():
                 async for message in ws:
                     if isinstance(message, (bytes, bytearray)):
@@ -725,10 +786,13 @@ async def handle(ws):
                         elif t == "text" and obj.get("text"):
                             st["last_in"] = time.monotonic()
                             st["await_first"] = True
-                            await session.send_client_content(
-                                turns=types.Content(role="user", parts=[types.Part(text=obj["text"])]),
-                                turn_complete=True,
-                            )
+                            if localization.requires_taiwanese_hokkien_fallback(obj["text"]):
+                                await _send_hokkien_fallback("text_input")
+                            else:
+                                await session.send_client_content(
+                                    turns=types.Content(role="user", parts=[types.Part(text=obj["text"])]),
+                                    turn_complete=True,
+                                )
                         elif t == "audio_end":
                             await session.send_realtime_input(audio_stream_end=True)
                         elif t == "faceaudio":
@@ -749,8 +813,18 @@ async def handle(ws):
                     got = False
                     async for msg in session.receive():
                         got = True
+                        sc = getattr(msg, "server_content", None)
+                        if sc:
+                            it_pre = getattr(sc, "input_transcription", None)
+                            if it_pre and getattr(it_pre, "text", None):
+                                if localization.requires_taiwanese_hokkien_fallback(it_pre.text):
+                                    await _arm_language_block("audio_input")
+                            ot_pre = getattr(sc, "output_transcription", None)
+                            if ot_pre and getattr(ot_pre, "text", None):
+                                if localization.looks_like_taiwanese_hokkien(ot_pre.text):
+                                    await _arm_language_block("model_output")
                         data = getattr(msg, "data", None)
-                        if data:
+                        if data and not st.get("language_block"):
                             if st["await_first"] and st["last_in"] is not None:
                                 lat = round((time.monotonic() - st["last_in"]) * 1000)
                                 st["await_first"] = False
@@ -769,20 +843,22 @@ async def handle(ws):
                                 except Exception as e:
                                     st["face_ws"] = None
                                     _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
-                        sc = getattr(msg, "server_content", None)
+                        elif data:
+                            _diag(cid, "node.language_audio_suppressed", out_bytes=len(data))
                         if sc:
                             ot = getattr(sc, "output_transcription", None)
                             if ot and getattr(ot, "text", None):
                                 caption_text = localization.display_text(ot.text, "zh-TW")
-                                await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
-                                st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
-                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
+                                if not st.get("language_block"):
+                                    await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
+                                    st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
+                                    st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
                             it = getattr(sc, "input_transcription", None)
                             if it and getattr(it, "text", None):
                                 await ws.send(json.dumps({"type": "caption", "who": "user", "text": it.text}))
                                 st["user_buf"] = (st["user_buf"] + it.text)[-200:]
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
-                            if getattr(sc, "interrupted", False):
+                            if getattr(sc, "interrupted", False) and not st.get("language_block"):
                                 _diag(cid, "node.interrupted")
                                 await ws.send(json.dumps({"type": "interrupted"}))
                                 fw = st.get("face_ws")
@@ -796,7 +872,13 @@ async def handle(ws):
                                 _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
                                 turn_out = 0
                                 st["await_first"] = True
-                                await ws.send(json.dumps({"type": "turn_complete"}))
+                                if st.get("language_block"):
+                                    source = st.get("language_block_source") or "unknown"
+                                    st["language_block"] = False
+                                    st["language_block_source"] = None
+                                    await _send_hokkien_fallback(source)
+                                else:
+                                    await ws.send(json.dumps({"type": "turn_complete"}))
                                 # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
                                 st["user_buf"] = ""
                                 st["ai_buf"] = ""

@@ -31,6 +31,19 @@ _RETRY_MESSAGES = {
 # reaches the product threshold below.
 TAIWANESE_HOKKIEN_MIN_RELEASE_SCORE = 0.80
 TAIWANESE_HOKKIEN_VALIDATED_SCORE = 0.0
+TAIWANESE_HOKKIEN_FALLBACK = "不好意思，這句台語我沒有聽清楚，可以用國語再說一次嗎？"
+
+_TAIWANESE_HOKKIEN_REQUEST_RE = re.compile(
+    r"(?:用|說|講|改用|請用).{0,8}(?:台語|臺語|閩南語|河洛話|Hokkien)"
+    r"|(?:台語|臺語|閩南語|河洛話|Hokkien).{0,10}(?:說|講|回答|介紹|聊天|對話)",
+    re.IGNORECASE,
+)
+_TAIWANESE_HOKKIEN_STRONG_PHRASES = (
+    "食飽未", "拍謝", "歹勢", "按怎", "毋知", "袂使", "無要緊", "足感心",
+)
+_TAIWANESE_HOKKIEN_LEXEMES = (
+    "阮", "恁", "伊", "佮", "攏", "毋", "袂", "咧", "欲", "閣", "嘛", "矣",
+)
 
 # Keep product copy canonical while giving speech synthesis an explicit,
 # user-verified pronunciation. Add entries conservatively: an incorrect
@@ -73,6 +86,27 @@ def reply_language_instruction(locale):
 
 def taiwanese_hokkien_release_enabled():
     return TAIWANESE_HOKKIEN_VALIDATED_SCORE >= TAIWANESE_HOKKIEN_MIN_RELEASE_SCORE
+
+
+def requests_taiwanese_hokkien(text):
+    """Return True for an explicit request that the assistant speak Hokkien."""
+    if taiwanese_hokkien_release_enabled():
+        return False
+    return bool(_TAIWANESE_HOKKIEN_REQUEST_RE.search(str(text or "")))
+
+
+def looks_like_taiwanese_hokkien(text):
+    """Conservative launch heuristic for a Hokkien utterance or generated reply."""
+    if taiwanese_hokkien_release_enabled():
+        return False
+    value = str(text or "")
+    if any(phrase in value for phrase in _TAIWANESE_HOKKIEN_STRONG_PHRASES):
+        return True
+    return sum(1 for token in _TAIWANESE_HOKKIEN_LEXEMES if token in value) >= 2
+
+
+def requires_taiwanese_hokkien_fallback(text):
+    return requests_taiwanese_hokkien(text) or looks_like_taiwanese_hokkien(text)
 
 
 def taiwan_mandarin_launch_instruction(locale):

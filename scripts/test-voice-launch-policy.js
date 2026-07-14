@@ -3,6 +3,7 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'web', 'src', 'app.js'), 'utf8');
+const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
 
 function expect(condition, message) {
   if (!condition) throw new Error(message);
@@ -20,5 +21,13 @@ expect(app.includes("trackProductEvent('voice_playback_underrun'"),
   'playback underruns are not observable');
 expect(app.includes("trackProductEvent('voice_sameline_warmup'"),
   'Avatar audio warmup outcome is not observable');
+expect(voiceServer.includes('localization.requires_taiwanese_hokkien_fallback(obj["text"])'),
+  'explicit Hokkien text requests are not blocked before reaching the conversational model');
+expect(voiceServer.includes('await _arm_language_block("audio_input")'),
+  'recognized Hokkien audio is not blocked at the server boundary');
+expect(voiceServer.includes('if data and not st.get("language_block")'),
+  'Hokkien model audio can still reach the client after the language gate triggers');
+expect(voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK'),
+  'the deterministic Mandarin fallback does not bypass conversational generation');
 
-console.log('Voice launch buffering policy PASS');
+console.log('Voice launch buffering and Hokkien gate policy PASS');

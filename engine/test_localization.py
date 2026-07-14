@@ -64,6 +64,17 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("繁體台灣中文", instruction)
         self.assertIn("首發語言限制", instruction)
 
+    def test_explicit_hokkien_speaking_request_is_blocked(self):
+        self.assertTrue(localization.requests_taiwanese_hokkien("請用完整台語自我介紹，並講三句台語"))
+        self.assertTrue(localization.requests_taiwanese_hokkien("改用 Hokkien 回答"))
+        self.assertFalse(localization.requests_taiwanese_hokkien("這句台語我沒有聽清楚"))
+
+    def test_hokkien_utterance_heuristic_is_conservative(self):
+        self.assertTrue(localization.looks_like_taiwanese_hokkien("拍謝，我閣咧學"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien("阮欲甲你講話"))
+        self.assertFalse(localization.looks_like_taiwanese_hokkien("今天要記得早點休息"))
+        self.assertFalse(localization.looks_like_taiwanese_hokkien(localization.TAIWANESE_HOKKIEN_FALLBACK))
+
 
 if __name__ == "__main__":
     unittest.main()
