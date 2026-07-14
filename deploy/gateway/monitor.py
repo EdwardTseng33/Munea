@@ -11,7 +11,7 @@ import sys
 import time
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Callable, Mapping
+from typing import Callable, Mapping, Protocol
 
 from slack_notify import DEDUP_SECONDS, SlackNotifier, default_state_path
 
@@ -24,6 +24,29 @@ UTILIZATION_THRESHOLD = 0.80
 
 class MonitorConfigError(ValueError):
     """Raised when monitor configuration is incomplete or invalid."""
+
+
+class AlertNotifier(Protocol):
+    def send(
+        self,
+        key: str,
+        message: str,
+        *,
+        fields: Mapping[str, object] | None = None,
+    ) -> bool: ...
+
+
+class ObserveOnlyNotifier:
+    """Record alert decisions in logs without contacting Slack."""
+
+    def send(
+        self,
+        key: str,
+        message: str,
+        *,
+        fields: Mapping[str, object] | None = None,
+    ) -> bool:
+        return False
 
 
 @dataclass(frozen=True)
@@ -276,7 +299,7 @@ class GatewayMonitor:
     def __init__(
         self,
         client: GatewayClient,
-        notifier: SlackNotifier,
+        notifier: AlertNotifier,
         *,
         stale_heartbeat_seconds: float = DEFAULT_STALE_HEARTBEAT_SECONDS,
         clock: Callable[[], float] = time.time,
@@ -339,10 +362,11 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         os.environ.get("MUNEA_GATEWAY_HEARTBEAT_STALE_SECONDS", str(DEFAULT_STALE_HEARTBEAT_SECONDS)),
     )
     gateway_url = os.environ.get("MUNEA_GATEWAY_URL", "")
+    notify = _env_bool("MUNEA_GATEWAY_MONITOR_NOTIFY")
     webhook_url = os.environ.get("MUNEA_SLACK_ALERT_WEBHOOK", "")
     if not gateway_url.strip():
         raise MonitorConfigError("MUNEA_GATEWAY_URL is required")
-    if not webhook_url.strip():
+    if notify and not webhook_url.strip():
         raise MonitorConfigError("MUNEA_SLACK_ALERT_WEBHOOK is required")
     state_path = os.environ.get("MUNEA_GATEWAY_MONITOR_STATE_FILE", default_state_path()).strip()
     client = GatewayClient(
@@ -350,12 +374,16 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         admin_key=os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
         timeout_seconds=timeout,
     )
-    notifier = SlackNotifier(
-        webhook_url,
-        timeout_seconds=timeout,
-        state_path=state_path or None,
-        dedup_seconds=DEDUP_SECONDS,
-    )
+    notifier: AlertNotifier
+    if notify:
+        notifier = SlackNotifier(
+            webhook_url,
+            timeout_seconds=timeout,
+            state_path=state_path or None,
+            dedup_seconds=DEDUP_SECONDS,
+        )
+    else:
+        notifier = ObserveOnlyNotifier()
     return GatewayMonitor(client, notifier, stale_heartbeat_seconds=stale), interval
 
 
