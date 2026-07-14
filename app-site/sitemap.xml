@@ -3,4 +3,5 @@
   <url><loc>https://app.munea.net/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://app.munea.net/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://app.munea.net/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://app.munea.net/support</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>
