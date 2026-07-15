@@ -240,5 +240,43 @@ class PersonScopeTest(unittest.TestCase):
             summaries[-1].get("personId"), server.PRIMARY_CARE_RECIPIENT_ID)
 
 
+class VoiceBrainBridgeTest(unittest.TestCase):
+    """B 路線：Voice 掛斷交 Brain 代存、開場向 Brain 要重點。
+    Brain 端點以內部密語為啟用條件（不受 MUNEA_VOICE_CALL_MEMORY 管）。"""
+
+    def test_brain_endpoints_work_even_when_master_flag_off(self):
+        _reset_summaries()
+        with patch.dict(os.environ, {"MUNEA_VOICE_CALL_MEMORY": ""}):
+            stored = server.voice_call_memory_response({
+                "turns": [{"role": "user", "content": "我今天去看醫生"},
+                          {"role": "assistant", "content": "檢查還順利嗎"}],
+                "char": "寧寧", "voiceSessionId": "live-9",
+            })
+            self.assertTrue(stored["ok"] and stored["stored"])
+            recap = server.voice_call_recap_response({})
+            self.assertIn("上次聊天", recap["recapLine"])
+
+    def test_brain_endpoint_unknown_identity_falls_back_to_default_person(self):
+        _reset_summaries()
+        # json 模式 resolve_auth_identity 回 None → identityResolved=False、走預設人
+        result = server.voice_call_memory_response({
+            "userId": "99999999-9999-4999-8999-999999999999",
+            "turns": [{"role": "user", "content": "喂"}],
+        })
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["identityResolved"])
+
+    def test_brain_channel_config_requires_both_url_and_secret(self):
+        env = {"MUNEA_BRAIN_INTERNAL_URL": "http://brain", "MUNEA_VOICE_BRAIN_SECRET": "s3"}
+        with patch.dict(os.environ, env):
+            self.assertEqual(live_voice_server._brain_memory_config(), ("http://brain", "s3"))
+        with patch.dict(os.environ, {"MUNEA_BRAIN_INTERNAL_URL": "http://brain",
+                                     "MUNEA_VOICE_BRAIN_SECRET": ""}):
+            self.assertEqual(live_voice_server._brain_memory_config(), (None, None))
+        with patch.dict(os.environ, {"MUNEA_BRAIN_INTERNAL_URL": "",
+                                     "MUNEA_VOICE_BRAIN_SECRET": "s3"}):
+            self.assertEqual(live_voice_server._brain_memory_config(), (None, None))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
