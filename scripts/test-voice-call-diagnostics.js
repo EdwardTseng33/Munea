@@ -55,7 +55,7 @@ const terminal = reports.find(item => item.eventName === 'voice_call_diagnostic'
 assert(terminal, 'terminal diagnostic summary must be reported');
 assert(terminal.properties.stages.some(stage => stage.stage === 'voice_socket_open'));
 
-diag.start({ appVersion: '1.0.18' });
+diag.start({ appVersion: '1.0.19' });
 const cancelled = diag.end('cancelled', { reason: 'user_cancelled' });
 assert.strictEqual(cancelled.outcome, 'cancelled');
 
