@@ -29,9 +29,13 @@ for char in CHARS:
 
     cut = remove(src, session=session)  # RGBA，同尺寸
 
-    # 邊緣輕羽化 1px：疊回同源底圖時邊界完全隱形
+    # 邊緣處理（2026-07-16 Edward 抓到呼吸時輪廓出現深色描邊後改）：
+    # ① 剪裁往內收 2px（MinFilter 5）——丟掉輪廓最外圈「人＋背景混色」的髒邊，
+    #    起伏時就不會有深邊滑到亮背景上形成描邊；露出的縫由底下同源原圖天然補上
+    # ② 再柔邊 1.5px：過渡自然、不見硬切
     r, g, b, a = cut.split()
-    a = a.filter(ImageFilter.GaussianBlur(1.0))
+    a = a.filter(ImageFilter.MinFilter(5))
+    a = a.filter(ImageFilter.GaussianBlur(1.5))
     cut = Image.merge("RGBA", (r, g, b, a))
 
     cut.save(out_path, optimize=True)
