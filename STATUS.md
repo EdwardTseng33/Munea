@@ -18,7 +18,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-16（Codex · App 1.0.24 Build 30 iPhone-only 正式 Archive／IPA／安全 Gate／App Store Connect 上傳、手機安裝與啟動均 PASS，Apple 處理中。尚未送審；Voice 伺服器新規則未部署，真人 Gate、真登入、拍照、金流、APNs、App Privacy 與審核元資料仍未通過）**
+> **最後更新：2026-07-16（Mac 蘇菲 · PR #95／#96／#99 併入 main、#94 收掉、80 條舊分支清理完＝開啟 PR 歸零，詳 87 號。App 最新候選 1.0.24 Build 30 已上傳 App Store Connect、Apple 處理中；尚未送審；Voice 伺服器新規則未部署，真人 Gate、真登入、拍照、金流、APNs、App Privacy 與審核元資料仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -27,6 +27,8 @@
 ---
 
 ## 一眼總覽
+
+**87－🧹 PR 清帳＋分支大掃除（7/16 Mac 蘇菲 · Edward 拍板 A 案）**：①✅ #99（試用點數測試假紅燈修復＝83 號）、#95（聊聊兩修＝85 號）、#96（1.0.24 Build 30＝86 號）三張全併入 main；STATUS.md 撞號各自改編、內容零改動。②✅ #94 收掉——內容已由 #96 完整帶進 main（逐檔比對一致、僅剩舊版號差異）。③✅ 遠端 80 條舊分支清除——逐條驗證「內容已全在 main」或「有 PR 紀錄可回查」（GitHub PR 頁保留完整底帳）才刪。④⚠ 留 1 條 `origin/calcifer-voice-actions`（7/15 最後動、無 PR 紀錄、含引擎語音動作 ack／事件能力測試／AI 記事擷取小工具等獨有內容）＝刪了就真沒了，待認領或棄置後再清。⑤開啟 PR 歸零；本輪未動 App／引擎程式、不影響包版、未部署雲端。
 
 **86－App 1.0.24 Build 30／撥號前暖機整合雙包版（7/16 Codex，PR #96 · 原編號 84 與 main 撞號、併帳改 86）**：①✅ 從 `main@2c72057` 建立隔離 worktree，完整承接 PR #94。②✅ Xcode Build 升 30、fixture 同步，行銷版號維持 1.0.24、iPhone-only。③✅ `test:launch`、Release Check、Capacitor sync、Xcode 原生檢查、Release Archive、App Store export 全過。④✅ 正式 IPA 58,864,007 bytes，SHA-256 `fc3a9a593291793854aefa91c202e58116bcecf1d917d3e001cf77da1287a71a`；02:58 App Store Connect 上傳成功。⑤✅ Edward iPhone 15 Pro 已安裝、啟動並回讀 `1.0.24 (30)`，開發包保留 TEST／Pro／1,000 點／家人假資料。⑥✅ App 暖機為一次性、60 秒防抖、不輪詢、不預佔席位；App 收音守門也在包內。⑦❌ Voice 伺服器新規則、真人 Gate、真登入、拍照、StoreKit、APNs、App Privacy 與送審資料未完成。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
