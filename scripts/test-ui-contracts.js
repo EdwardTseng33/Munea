@@ -4,10 +4,15 @@ const html = fs.readFileSync('web/index.html', 'utf8');
 const app = fs.readFileSync('web/src/app.js', 'utf8');
 const auth = fs.readFileSync('web/src/auth.js', 'utf8');
 const css = fs.readFileSync('web/src/styles.css', 'utf8');
+const versionSource = fs.readFileSync('web/src/version.js', 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+assert(/id="verRowNum">—<\/span>/.test(html) && /id="verCurrent">—<\/span>/.test(html), 'Version UI placeholders must not contain a stale semantic version');
+assert(!/id="(?:verRowNum|verCurrent)">\d+\.\d+\.\d+<\/span>/.test(html), 'Version UI must not hard-code a fallback release number');
+assert(versionSource.includes('window.MuneaApplyVersionToStaticUi') && versionSource.includes("['verRowNum', 'verCurrent']"), 'The version SSOT must bind both static version labels immediately');
 
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');
@@ -62,4 +67,4 @@ assert(html.includes('用藥紀錄是 Munea 自己的帳本，不依賴 Apple He
 assert(app.includes("type: 'action_result'") && app.includes("await window.__muneaHandleVoiceAction"), 'Voice AI must wait for the App action result before confirming reminders');
 assert(app.includes("action: 'claim'") && app.includes("action === 'send_family_relay'"), 'Family relay must use a recipient-specific claim queue and the voice action bridge');
 
-console.log('UI contracts OK: billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, and challenge controls');
+console.log('UI contracts OK: version SSOT, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, and challenge controls');
