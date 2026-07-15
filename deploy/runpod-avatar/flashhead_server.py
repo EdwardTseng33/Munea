@@ -82,6 +82,7 @@ SR_IN, SR_ENG = 24000, 16000
 # 原理：4090 生成比即時快~1.9倍，拔掉「卡即時節奏」的閘門後會自動囤到上限、形成抖動緩衝墊；
 # 偶爾一塊做慢也不會見底（斷糧）。代價＝首句慢約 0.5s（一次性、非累積），換整段不再斷斷續續。
 AUDIO_PREBUFFER_S = 0.5    # 開口前先墊多少秒才真的放音
+OPENING_PREBUFFER_S = 1.0  # 每通首段多留 1 秒讓 iPhone/WebRTC 暖機；後續回合回到 0.5 秒
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
@@ -408,7 +409,15 @@ class FlashHead:
                 return self._timestamp, VIDEO_TIME_BASE
             async def recv(self):
                 pts, tb = await self.next_timestamp()
-                fr = self.slot.sink.pop()
+                # AudioOutBuffer owns the shared start gate. Keep the poster on
+                # screen without consuming generated frames until audio has a
+                # real prebuffer, then release both tracks on the same clock.
+                if self.slot.audio_out.playout_held():
+                    fr = None
+                    self.last = self.slot.poster
+                    self._active_ts = 0.0
+                else:
+                    fr = self.slot.sink.pop()
                 now = time.time()
                 if fr is not None:
                     self.last = fr
@@ -500,6 +509,7 @@ class FlashHead:
             # 不倒＝Edward 實測「掛斷再撥、她一接通就繼續播上一段的話」——殘留聲音直接漏進新通話。
             try:
                 slot.feeder.reset()
+                slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)
             except Exception as _e:
                 print("[offer] pre-call reset failed (slot" + str(slot.index) + "): "
                       + str(_e), flush=True)

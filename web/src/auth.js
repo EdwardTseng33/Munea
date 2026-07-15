@@ -254,6 +254,7 @@
       options: {
         redirectTo: redirectTo('index.html'),
         scopes: normalized === 'google' ? 'openid email profile' : undefined,
+        queryParams: normalized === 'google' ? { prompt: 'select_account' } : undefined,
         skipBrowserRedirect: native,
       },
     });
@@ -345,7 +346,7 @@
       setState('guest', null, 'SIGNED_OUT');
       return { ok: true };
     }
-    const result = await supabaseClient.auth.signOut();
+    const result = await supabaseClient.auth.signOut({ scope: 'local' });
     if (!result.error) setState('guest', null, 'SIGNED_OUT');
     return { ok: !result.error, result, error: result.error || null };
   }

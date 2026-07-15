@@ -212,18 +212,22 @@ def taiwan_mandarin_pronunciation_guard_instruction(locale):
     )
 
 
-def voice_opening_instruction(familiarity=0, topics=None, location=None):
+def voice_opening_instruction(familiarity=0, topics=None, location=None, opening_index=None):
     """Rotate concrete opening directions instead of repeating mood check-ins."""
     try:
         familiarity = max(0, int(familiarity or 0))
     except (TypeError, ValueError):
         familiarity = 0
+    try:
+        route_index = familiarity if opening_index is None else max(0, int(opening_index or 0))
+    except (TypeError, ValueError):
+        route_index = familiarity
     liked = [str(topic).strip() for topic in (topics or []) if str(topic).strip()]
     place = str(location or "").strip()
     routes = (
         "只做一句短招呼，直接告訴對方你在，接著把話權留給對方；這次不要先問問題。",
         (
-            "從對方喜歡的主題「" + liked[familiarity % len(liked)] + "」挑一個具體、輕鬆的小切口，"
+            "從對方喜歡的主題「" + liked[route_index % len(liked)] + "」挑一個具體、輕鬆的小切口，"
             "但不要假裝知道他今天做過什麼。"
         ) if liked else "用一個具體又輕鬆的生活小題目開場，不問心情、不盤問近況。",
         (
@@ -233,9 +237,9 @@ def voice_opening_instruction(familiarity=0, topics=None, location=None):
     )
     forbidden = "「今天開心嗎」「有開心嗎」「心情好嗎」「今天過得怎麼樣」「最近好嗎」"
     return (
-        "本通開場路線：" + routes[familiarity % len(routes)]
+        "本通開場路線：" + routes[route_index % len(routes)]
         + " 禁止使用或改寫成這些制式問候：" + forbidden
-        + "。不要每通都先查問情緒或近況；開場最多兩句，講完就停。"
+        + "。不要每通都先查問情緒或近況；開場只能一句，講完就停。"
     )
 
 

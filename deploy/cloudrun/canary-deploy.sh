@@ -9,9 +9,25 @@
 #   完整說明見 docs/單一正式環境-部署SOP-2026-07-13.md
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-export PATH="$LOCALAPPDATA/Google/Cloud SDK/google-cloud-sdk/bin:$PATH"
-G="cmd //c gcloud.cmd"
 REGION="asia-east1"
+PROJECT="${MUNEA_GCP_PROJECT:-gen-lang-client-0229303523}"
+
+resolve_gcloud() {
+  if command -v gcloud >/dev/null 2>&1; then
+    GCLOUD=(gcloud)
+  elif command -v gcloud.cmd >/dev/null 2>&1; then
+    GCLOUD=(cmd //c gcloud.cmd)
+  else
+    echo "⛔ 找不到 gcloud；請先將 Google Cloud SDK 加入 PATH"
+    exit 1
+  fi
+}
+
+gcloud_run() {
+  "${GCLOUD[@]}" "$@"
+}
+
+resolve_gcloud
 
 WHAT="${1:-}"
 case "$WHAT" in
@@ -21,11 +37,14 @@ case "$WHAT" in
 esac
 
 # 薄門通行碼：App 帶這把碼才進得來門
-KEY=$(cat deploy/.munea-app-key 2>/dev/null || true)
-[ -n "$KEY" ] || { echo "⛔ 找不到 deploy/.munea-app-key——薄門沒鑰匙不准部署"; exit 1; }
+KEY="${MUNEA_APP_KEY:-}"
+if [ -z "$KEY" ] && [ -f deploy/.munea-app-key ]; then
+  KEY=$(cat deploy/.munea-app-key)
+fi
+[ -n "$KEY" ] || { echo "⛔ 找不到 MUNEA_APP_KEY 或 deploy/.munea-app-key——薄門沒鑰匙不准部署"; exit 1; }
 
 echo "== 更新前快照（回滾用）=="
-$G run revisions list --service "$SVC" --region "$REGION" --limit=1 --format="value(name)" || true
+gcloud_run run revisions list --service "$SVC" --region "$REGION" --project "$PROJECT" --limit=1 --format="value(name)" || true
 
 echo "== 只打包 committed 程式碼（git archive HEAD）=="
 echo "   不用『--source .』——工作目錄裡有別的 agent 正在動的未提交檔（例：web/app.js），"
@@ -40,15 +59,15 @@ TAG="canary-$(date +%m%d-%H%M)"
 #   一定要用 --update-env-vars / --update-secrets（合併），不要用 --set-env-vars / --set-secrets
 #   （那兩個是「先清空全部、再設」——只帶一兩個值會把其餘 env/secrets 全洗掉，服務會壞）。
 if [ "$WHAT" = "brain" ]; then
-  echo "== 部署 $SVC（管家腦・--no-traffic + --tag=$TAG，不影響目前正式流量）=="
-  $G run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" \
+  echo "== 部署 ${SVC}（管家腦・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
+  gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest,MUNEA_ADMIN_API_TOKEN=munea-admin-token-staging:latest,MUNEA_ADMIN_PASSWORD=munea-admin-password:latest" \
-    --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=staging|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|SUPABASE_URL=https://uhmpmystjjdqqxlpsthc.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_Ou8sb6J8yFHMgC1Mcz2eyw_sT2CprIZ|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
+    --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=staging|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|SUPABASE_URL=https://fespbkdwafueyonppzwq.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_fP-PoA531waoIOmxl8tsWg_kCeZQD0e|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
     --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
 else
-  echo "== 部署 $SVC（語音橋・--no-traffic + --tag=$TAG，不影響目前正式流量）=="
-  $G run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" \
+  echo "== 部署 ${SVC}（語音橋・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
+  gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest" \
     --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging" \
@@ -60,10 +79,10 @@ rm -rf "$TMP"
 
 echo
 echo "== 新版測試網址（帶 tag、不影響目前正式流量）=="
-$G run services describe "$SVC" --region "$REGION" --format="value(status.traffic)"
+gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format="value(status.traffic)"
 echo
 echo "測試網址（規則：https://<tag>---<服務網域>）："
-DOMAIN=$($G run services describe "$SVC" --region "$REGION" --format="value(status.url)" | sed 's#https://##')
+DOMAIN=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format="value(status.url)" | sed 's#https://##')
 echo "  https://${TAG}---${DOMAIN}"
 echo
 echo "測過 OK 後執行：bash deploy/cloudrun/promote.sh $WHAT"

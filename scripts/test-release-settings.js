@@ -31,6 +31,8 @@ const auth = read('web/src/auth.js');
 const infoPlist = read('ios/App/App/Info.plist');
 const privacyManifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 const reviewNotes = read('docs/送審資料包-2026-07-09.md');
+const canaryDeploy = read('deploy/cloudrun/canary-deploy.sh');
+const gatewayDeploy = read('scripts/cloud-run-deploy-gateway.ps1');
 
 expect(!app.includes('__muneaNativeRestore'), 'restore button still calls the retired native global');
 expect(app.includes('window.MuneaStore.restore()'), 'restore button is not wired to MuneaStore.restore');
@@ -65,6 +67,8 @@ expect(billingPolicy.includes('"monthlyPoints": 150') && billingPolicy.includes(
 
 expect(authConfig.includes('window.MUNEA_SUPABASE_CONFIG'), 'public Supabase auth config is missing');
 expect(/https:\/\/[a-z0-9-]+\.supabase\.co/.test(authConfig), 'Supabase project URL is missing');
+expect(authConfig.includes('fespbkdwafueyonppzwq'), 'production App/Web config is not pinned to Tokyo Supabase');
+expect(!authConfig.includes('uhmpmystjjdqqxlpsthc'), 'Sydney Supabase leaked into production App/Web config');
 expect(authConfig.includes('sb_publishable_'), 'Supabase publishable key is missing');
 expect(!/service[_-]?role|SUPABASE_SERVICE_ROLE_KEY/i.test(authConfig), 'server-only Supabase key leaked into browser config');
 expect(/enabled:\s*false/.test(authConfig) && /seedFixtures:\s*false/.test(authConfig), 'production auth config must keep developer fixtures disabled');
@@ -73,6 +77,8 @@ expect(!authConfig.includes('MUNEA_IOS_DEVELOPMENT_PROFILE_START'), 'development
 expect(iosDevProfile.includes('ios/App/App/public/src/auth-config.js'), 'iOS development profile must target generated assets only');
 expect(iosDevProfile.includes('Refusing to enable the development profile in the production Web source'), 'development profile lacks production source guard');
 expect(iosDevProfile.includes('bypassCallControl: true'), 'iOS development profile does not enable its isolated direct-call path');
+expect(iosDevProfile.includes("voiceUrl: 'wss://canary-0715-0405---munea-voice-staging"), 'iOS development profile is not pinned to the validated Voice canary');
+expect(!authConfig.includes('canary-0715-0405'), 'Voice canary leaked into production auth configuration');
 expect(!index.includes('id="authEmailInput"') && !index.includes('id="authEmailBtn"'), 'consumer app still exposes email sign-in controls');
 expect(!auth.includes('signInWithOtp') && !auth.includes('signInWithEmail'), 'email OTP auth remains exposed in the consumer auth module');
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
@@ -108,5 +114,11 @@ expect(iosExport.includes('PRIVACY_DATA_TYPE_COUNT=') && iosExport.includes('NSP
 expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
 expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the development Call Control bypass');
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
+expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLOUD=(gcloud)'), 'canary deploy is not compatible with macOS gcloud');
+expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost Windows gcloud compatibility');
+expect(canaryDeploy.includes('MUNEA_GCP_PROJECT') && canaryDeploy.includes('--project "$PROJECT"'), 'canary deploy does not pin the Google Cloud project');
+expect(canaryDeploy.includes('MUNEA_APP_KEY') && canaryDeploy.includes('--no-traffic'), 'canary deploy is missing its app gate or zero-traffic safety gate');
+expect(canaryDeploy.includes('fespbkdwafueyonppzwq') && !canaryDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Cloud Run canary deploy is not pinned to Tokyo Supabase');
+expect(gatewayDeploy.includes('fespbkdwafueyonppzwq') && !gatewayDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Gateway deploy is not pinned to Tokyo Supabase');
 
 console.log('Release settings contracts PASS');

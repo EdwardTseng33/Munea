@@ -9,6 +9,7 @@ let exchangedCode = '';
 let appleNativeCalls = 0;
 let appleIdTokenRequest = null;
 let appleProfileUpdate = null;
+let signOutRequest = null;
 
 const signedInSession = {
   access_token: 'access-token',
@@ -49,7 +50,10 @@ const client = {
       return { data: { session: signedInSession }, error: null };
     },
     async signInWithOtp() { return { data: {}, error: null }; },
-    async signOut() { return { error: null }; },
+    async signOut(request) {
+      signOutRequest = request;
+      return { error: null };
+    },
   },
 };
 
@@ -121,6 +125,7 @@ function expect(condition, message) {
   expect(started.ok, 'native Google OAuth did not start');
   expect(oauthRequests[0].options.redirectTo === 'munea://auth/callback', 'native OAuth redirect is not the app deep link');
   expect(oauthRequests[0].options.skipBrowserRedirect === true, 'native OAuth would still navigate the embedded WebView');
+  expect(oauthRequests[0].options.queryParams.prompt === 'select_account', 'Google OAuth would silently reuse the previous account');
   expect(browserOpened === 'https://example.supabase.co/oauth', 'OAuth URL was not opened with the native browser');
 
   await appUrlOpen({ url: 'munea://auth/callback?code=pkce-code' });
@@ -138,6 +143,11 @@ function expect(condition, message) {
   expect(appleIdTokenRequest.nonce === 'raw-apple-nonce', 'Apple raw nonce was not sent to Supabase');
   expect(appleProfileUpdate && appleProfileUpdate.data.full_name === 'Munea Tester', 'first Apple profile name was not saved');
   expect(windowObject.MuneaAuth.state().provider === 'apple', 'Apple session was not published');
+
+  const signedOut = await windowObject.MuneaAuth.signOut();
+  expect(signedOut.ok, 'local sign out did not complete');
+  expect(signOutRequest && signOutRequest.scope === 'local', 'sign out would revoke sessions on other devices');
+  expect(windowObject.MuneaAuth.state().status === 'guest', 'local sign out did not publish guest state');
 
   console.log('Native Google OAuth and Apple ID token PASS');
 })().catch(error => {
