@@ -748,17 +748,13 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   position: static !important; width: 100% !important; height: 100% !important;
   object-fit: cover !important; opacity: 1 !important; transition: none !important;
 }
-/* ===== 聊聊人物呼吸感（2026-07-16 Edward 拍板方案 B 分層呼吸）=====
-   底圖(.fh-bg)釘死不動＝背景板；人物去背層＋活臉框(.fh-person)焊同一組做細微起伏，
-   活臉跟身體永遠對齊、AI 生成端零感知——跟舊「底圖動、活臉沒跟著動」的媒合崩潰是不同路。
-   幅度只放大不縮小（1→1.005、從畫面底部往上頂＝胸口起伏）：底圖上的人永遠被人物層蓋住，
-   邊緣疊在同源像素上，所以不需要另補乾淨背景、也看不出接縫。 */
-.fh-person { position: absolute; inset: 0; transform-origin: 50% 100%; animation: fhBreathe 4.6s ease-in-out infinite; will-change: transform; }
+/* ===== 聊聊人物層（2026-07-16 03:01 Edward 拍板：通話中「照片式呼吸」退役）=====
+   起伏動畫整組拿掉——通話中的自然律動（眨眼、頭肩微動）改由顯卡引擎接手：
+   engine core 的 idle feed 在真靜音超過 1 秒時自動餵靜音讓模型持續生成、
+   真聲音一來立刻讓位（deploy/runpod-avatar/flashhead_engine_core.py）。
+   分層結構與去背素材保留備用（1.0.23 已隨包出貨、拿掉不省空間、留著可逆）。 */
+.fh-person { position: absolute; inset: 0; }
 .fh-person-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-@keyframes fhBreathe { 0%, 100% { transform: scaleY(1); } 42% { transform: scaleY(1.005); } 58% { transform: scaleY(1.0046); } }
-/* 她講話時呼吸暫停：頭肩動態讓給引擎輸出獨佔、不疊兩種動（Edward 7/16 舊坑提醒） */
-.face-screen[data-state="speaking"] .fh-person { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) { .fh-person { animation: none; } }
 
 .avatar-mouth { position: absolute; left: 50%; top: 50%; z-index: 2; display: none;
   width: 58px; height: 24px; transform: translate(-50%, -50%);
