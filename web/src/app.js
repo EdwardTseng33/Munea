@@ -1415,6 +1415,33 @@ function getLiveVoiceUrl() {
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
   return LIVE_VOICE_URL_DEFAULT;
 }
+// ===== 撥號前連線暖身 · 第一階段（2026-07-16 Edward「撥號前暖機 接續推進」）=====
+// App 一開、回前景時，先把三條線（顯卡／語音／通話總機）的 DNS＋TLS 握手做完，
+// 順便輕拍一下雲端讓沉睡的服務開始醒（雲端冷啟、顯卡快照喚醒都吃這第一下）——
+// 使用者按「聊聊」時就省掉這些前置秒數。一次性、60 秒防抖、不輪詢：
+// 尊重 7/9「只在聊聊頁探、不空燒顯卡」拍板，持續探測仍只在聊聊頁（Avatar.wake）。
+let _connWarmLast = 0;
+function preDialConnWarm(reason) {
+  try {
+    const now = Date.now();
+    if (now - _connWarmLast < 60000) return;
+    _connWarmLast = now;
+    let n = 0;
+    try {
+      const a = getAvatarUrl();
+      if (a) { n++; fetch(a.replace(/\/$/, '') + '/health?key=' + encodeURIComponent(MUNEA_APP_KEY), { mode: 'cors', cache: 'no-store' }).catch(() => {}); }
+    } catch (e) {}
+    try {
+      const v = getLiveVoiceUrl();
+      if (v) { n++; fetch(v.split('?')[0].replace(/^ws/, 'http').replace(/\/$/, '') + '/health', { mode: 'no-cors', cache: 'no-store' }).catch(() => {}); }
+    } catch (e) {}
+    try {
+      const c = CallControl.url();
+      if (c) { n++; fetch(c + '/health', { mode: 'no-cors', cache: 'no-store' }).catch(() => {}); }
+    } catch (e) {}
+    try { trackProductEvent('conn_prewarm', { reason, targets: n }); } catch (e) {}
+  } catch (e) {}
+}
 // ===== 雲端寧寧擬真臉（快照秒醒 · 7/9 定案主力）=====
 // 平常全睡不計費；進聊聊頁先「預醒」（8–10 秒）、按通話時臉多半已就緒。
 // 連哪裡：localStorage['munea.avatarUrl']（設空字串=關閉臉）；預設＝正式雲端服務。
@@ -7252,3 +7279,10 @@ window.addEventListener('munea:locale-change', () => {
   voiceProvider.close();
   if (storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'true') syncAccountBootstrap('update', { force: true, reason: 'locale_updated' });
 });
+// 撥號前暖機第一階段的兩個時機：開機（讓開機要緊的請求先跑、延後 2.5 秒）＋回前景
+try { setTimeout(() => preDialConnWarm('boot'), 2500); } catch (e) {}
+try {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') preDialConnWarm('resume');
+  });
+} catch (e) {}

@@ -358,7 +358,7 @@
 				APS_ENVIRONMENT = development;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				GOOGLE_IOS_CLIENT_ID = "491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah.apps.googleusercontent.com";
 				GOOGLE_REVERSED_IOS_CLIENT_ID = "com.googleusercontent.apps.491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah";
 				GOOGLE_SERVER_CLIENT_ID = "491603544409-u0bl2ij69mh1m4buhmsuato5d2p5rtua.apps.googleusercontent.com";
@@ -385,7 +385,7 @@
 				APS_ENVIRONMENT = production;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				GOOGLE_IOS_CLIENT_ID = "491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah.apps.googleusercontent.com";
 				GOOGLE_REVERSED_IOS_CLIENT_ID = "com.googleusercontent.apps.491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah";
 				GOOGLE_SERVER_CLIENT_ID = "491603544409-u0bl2ij69mh1m4buhmsuato5d2p5rtua.apps.googleusercontent.com";
