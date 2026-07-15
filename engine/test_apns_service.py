@@ -52,9 +52,13 @@ class APNSServiceTests(unittest.TestCase):
         self.assertNotIn("降血壓藥", alert["body"])
         self.assertEqual(payload["deepLink"], "munea://medications/dose-1")
 
-    def test_user_can_opt_in_to_sensitive_lock_screen_content(self):
+    def test_sensitive_opt_in_flag_is_ignored(self):
+        # 2026-07-15 Edward 拍板拿掉「鎖定畫面內容」開關：推播一律通用文案、
+        # 藥名/健康細節只在 App 內看；就算舊裝置還帶著 opt-in 旗標也不理會。
         payload = apns_service.build_payload(self.delivery(show_sensitive_content=True))
-        self.assertIn("降血壓藥", payload["aps"]["alert"]["title"])
+        alert = payload["aps"]["alert"]
+        self.assertNotIn("降血壓藥", alert["title"] + alert["body"])
+        self.assertEqual(alert["title"], "沐寧提醒")
 
     def test_apns_response_classification(self):
         self.assertEqual(apns_service.classify_response(200, {}, {"apns-id": "abc"})["status"], "accepted")

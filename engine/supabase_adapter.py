@@ -1776,6 +1776,54 @@ class SupabaseAdapter:
         )
         return self.family_relay_row_to_relay(rows[0]) if rows else None
 
+    def load_notification_settings(self, person_id=None):
+        """通知中心設定（migration 017）。沒存過回 None（上層套預設值）。"""
+        if not self.enabled():
+            return None
+        person = person_id if self._is_uuid(person_id) else self.person_id
+        if not self._is_uuid(person):
+            return None
+        row = self._first("notification_settings",
+                          {"person_id": f"eq.{person}", "select": "*"})
+        if not row:
+            return None
+        return {
+            "personId": row.get("person_id"),
+            "pushEnabled": bool(row.get("push_enabled")),
+            "categories": row.get("categories") or {},
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def save_notification_settings(self, settings):
+        if not self.enabled():
+            return None
+        settings = settings or {}
+        person = settings.get("personId") or settings.get("person_id")
+        if not self._is_uuid(person):
+            person = self.person_id
+        if not self._is_uuid(person):
+            return None
+        payload = {
+            "person_id": person,
+            "push_enabled": bool(settings.get("pushEnabled")),
+            "categories": settings.get("categories") or {},
+            "updated_at": settings.get("updatedAt")
+            or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        rows = self._request(
+            "POST", "notification_settings",
+            query={"select": "*", "on_conflict": "person_id"},
+            payload=payload,
+            prefer="resolution=merge-duplicates,return=representation",
+        )
+        row = rows[0] if rows else payload
+        return {
+            "personId": row.get("person_id"),
+            "pushEnabled": bool(row.get("push_enabled")),
+            "categories": row.get("categories") or {},
+            "updatedAt": row.get("updated_at"),
+        }
+
     def load_push_devices(self, include_invalid=False, limit=20):
         if not self.enabled() or not self.request_scoped:
             return None

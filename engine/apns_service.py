@@ -96,9 +96,11 @@ class APNSTokenProvider:
 
 def build_payload(delivery):
     delivery = delivery or {}
-    show_sensitive = bool(delivery.get("show_sensitive_content") or delivery.get("showSensitiveContent"))
+    # 鎖屏隱私內建（2026-07-15 Edward 拍板拿掉「鎖定畫面內容」開關）：
+    # 推播一律用不含藥名／健康數值／訊息內文的 public 文案，細節只在 App 內看；
+    # 不再理會裝置的 showSensitiveContent 旗標。
     sensitivity = delivery.get("sensitivity") or "private"
-    if sensitivity == "public" or show_sensitive:
+    if sensitivity == "public":
         title = delivery.get("title") or "沐寧提醒"
         body = delivery.get("body") or "你有一則新提醒。"
     else:
@@ -198,12 +200,26 @@ class APNSSender:
                 client.close()
 
 
-def drain_outbox(adapter, sender=None, limit=50):
+def drain_outbox(adapter, sender=None, limit=50, push_allowed_fn=None):
     sender = sender or APNSSender()
     deliveries = adapter.claim_notification_deliveries(limit=limit) or []
     summary = {"claimed": len(deliveries), "accepted": 0, "failed": 0, "invalidToken": 0, "suppressed": 0}
     results = []
     for delivery in deliveries:
+        # 通知中心設定（總開關＋分類）：收件人自己關掉的類別，發送前壓下、不出手機。
+        # 查不到收件人一律放行（fail-open）——設定功能故障不該讓救命提醒消失。
+        if push_allowed_fn is not None:
+            try:
+                allowed = push_allowed_fn(delivery)
+            except Exception:
+                allowed = True
+            if not allowed:
+                adapter.complete_notification_delivery(
+                    delivery.get("delivery_id") or delivery.get("deliveryId"),
+                    "suppressed", error_code="push_disabled_by_settings")
+                summary["suppressed"] += 1
+                results.append({"status": "suppressed"})
+                continue
         try:
             result = sender.send(delivery)
         except Exception as error:
