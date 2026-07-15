@@ -359,8 +359,8 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 20;
-				GOOGLE_IOS_CLIENT_ID = MISSING_GOOGLE_IOS_CLIENT_ID;
-				GOOGLE_REVERSED_IOS_CLIENT_ID = MISSING_GOOGLE_REVERSED_IOS_CLIENT_ID;
+				GOOGLE_IOS_CLIENT_ID = "491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah.apps.googleusercontent.com";
+				GOOGLE_REVERSED_IOS_CLIENT_ID = "com.googleusercontent.apps.491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah";
 				GOOGLE_SERVER_CLIENT_ID = "491603544409-u0bl2ij69mh1m4buhmsuato5d2p5rtua.apps.googleusercontent.com";
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -386,8 +386,8 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 20;
-				GOOGLE_IOS_CLIENT_ID = MISSING_GOOGLE_IOS_CLIENT_ID;
-				GOOGLE_REVERSED_IOS_CLIENT_ID = MISSING_GOOGLE_REVERSED_IOS_CLIENT_ID;
+				GOOGLE_IOS_CLIENT_ID = "491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah.apps.googleusercontent.com";
+				GOOGLE_REVERSED_IOS_CLIENT_ID = "com.googleusercontent.apps.491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah";
 				GOOGLE_SERVER_CLIENT_ID = "491603544409-u0bl2ij69mh1m4buhmsuato5d2p5rtua.apps.googleusercontent.com";
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
