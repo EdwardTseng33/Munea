@@ -6073,12 +6073,24 @@ def butler_post_turn_response(data):
 VOICE_CALL_RECAP_WINDOW_HOURS = 12
 
 
-def persist_voice_call_turns(turns, char=None, voice_session_id=None):
+def _voice_call_memory_enabled():
+    """通話記憶回寫＋開場接續的總開關，預設關（跟多鑰匙/N 槽同一守則：預設不影響現役）。
+    為什麼不能預設開：現行 Voice 的 Cloud Run 部署沒有 Supabase 環境變數，
+    data_backend 會落到「容器本機 JSON」——所有來電者共用一份、容器回收即蒸發、
+    跟 brain 正式記憶庫不相通。單人測試（Edward 現階段）可以開；
+    多用戶正式開放前必須先把儲存接到 brain/Supabase 並用 call token 身分隔離。"""
+    return os.environ.get("MUNEA_VOICE_CALL_MEMORY", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def persist_voice_call_turns(turns, char=None, voice_session_id=None, person_id=None):
     """語音通話收線後，把整通的字幕逐字稿交給既有的聊後管線
     （對話摘要＋記憶萃取對帳＋心情訊號），跟文字聊天走同一套腦。
     turns: [{"role": "user"|"assistant", "content": str}, ...]
-    對方整通沒說話（或 ASR 全空）就不存，避免累積空摘要；
+    person_id：有 call token 就帶 "voice-<user_id>" 做人別隔離；沒有（開發包直連）
+    落回主要照護對象。對方整通沒說話（或 ASR 全空）就不存，避免累積空摘要；
     收線路徑不能炸，所有失敗都吞下並記 fallback log。"""
+    if not _voice_call_memory_enabled():
+        return None
     history = []
     for turn in turns or []:
         if not isinstance(turn, dict):
@@ -6096,9 +6108,11 @@ def persist_voice_call_turns(turns, char=None, voice_session_id=None):
         return butler_post_turn_response({
             "history": history[-120:],
             "char": char or DEFAULT_CHAR,
-            # 與 recent_call_recap_line 讀取同一 scope：語音行程目前沒有 per-call
-            # 用戶身分，收發都鎖主要照護對象；多用戶正式前必須接 call token 身分。
-            "personId": PRIMARY_CARE_RECIPIENT_ID,
+            # 與 recent_call_recap_line 讀取同一 scope：Gateway 正式路徑的 call token
+            # 帶 user_id → "voice-<user_id>" 人別隔離；開發包直連沒 token 才落回
+            # 主要照護對象。（Supabase 模式 adapter 會把非 uuid person 壓回 env person，
+            # 所以多用戶上 Supabase 前仍須完成正式身分接線——看板紅線。）
+            "personId": person_id or PRIMARY_CARE_RECIPIENT_ID,
             # 語音線的 cid 是整數流水號、不是 voice_sessions 的 uuid：
             # 一律轉字串，Supabase 端 conversation_summary_to_row 對非 uuid 會自動落 None，
             # 本機 JSON 保留字串方便對 log。整數直接丟進去會在 UUID_RE.match 炸 TypeError。
@@ -6110,15 +6124,17 @@ def persist_voice_call_turns(turns, char=None, voice_session_id=None):
         return None
 
 
-def recent_call_recap_line(now=None):
+def recent_call_recap_line(now=None, person_id=None):
     """上次聊天若還在視窗內，回一段開場接續指令（只講距今多久），
     讓下一通不再重問剛答過的日常問題。沒有近況或超過視窗回空字串。
-    注意：①只讀主要照護對象（PRIMARY_CARE_RECIPIENT_ID）的摘要——語音行程目前
-    沒有 per-call 用戶身分，多用戶正式上線前必須先把 call token 身分接進語音線；
+    注意：①person_id 必須跟 persist_voice_call_turns 同一 scope（token 的
+    "voice-<user_id>" 或主要照護對象），否則 A 的上次聊天會講給 B 聽；
     ②不注入 memoryTags——那是內部英文 slug、可能含守護腦風險分類，不能進 prompt。"""
+    if not _voice_call_memory_enabled():
+        return ""
     try:
         items = load_conversation_summaries(
-            person_id=PRIMARY_CARE_RECIPIENT_ID, limit=10)
+            person_id=person_id or PRIMARY_CARE_RECIPIENT_ID, limit=10)
     except Exception as e:
         log_fallback_exception("load recent call recap", e)
         return ""

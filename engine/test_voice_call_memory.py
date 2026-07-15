@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("GEMINI_API_KEY", "voice-memory-test-key")
 os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
+os.environ["MUNEA_VOICE_CALL_MEMORY"] = "1"   # 功能總開關預設關；測試明確打開
 _TMP = tempfile.mkdtemp(prefix="munea-voice-memory-")
 for _env, _name in (
     ("MUNEA_MEMORY_ITEMS_PATH", "memory_items.json"),
@@ -195,6 +196,48 @@ class RecentCallRecapLineTest(unittest.TestCase):
         })
         line = server.recent_call_recap_line()
         self.assertIn("3 小時", line)
+
+
+class FeatureGateTest(unittest.TestCase):
+    """總開關預設關：現行 Voice 部署沒有 Supabase env，落地是容器本機 JSON
+    （全來電者共用、回收即失），沒明確開啟前收發都必須是 no-op。"""
+
+    def test_disabled_flag_makes_persist_and_recap_noop(self):
+        _reset_summaries()
+        server.append_conversation_summary({"summary": "fresh call"})
+        with patch.dict(os.environ, {"MUNEA_VOICE_CALL_MEMORY": ""}):
+            with patch.object(server, "butler_post_turn_response") as post_turn:
+                self.assertIsNone(server.persist_voice_call_turns(
+                    [{"role": "user", "content": "喂"}]))
+            post_turn.assert_not_called()
+            self.assertEqual(server.recent_call_recap_line(), "")
+        # 重新打開就恢復
+        self.assertIn("上次聊天", server.recent_call_recap_line())
+
+
+class PersonScopeTest(unittest.TestCase):
+    """收線回寫與開場接續必須同 scope 隔離：A 的上次聊天不能講給 B 聽。"""
+
+    def test_recap_only_sees_same_person_scope(self):
+        _reset_summaries()
+        server.persist_voice_call_turns(
+            [{"role": "user", "content": "我今天去復健"},
+             {"role": "assistant", "content": "辛苦了"}],
+            voice_session_id="call-a", person_id="voice-user-a")
+        line_a = server.recent_call_recap_line(person_id="voice-user-a")
+        line_b = server.recent_call_recap_line(person_id="voice-user-b")
+        self.assertIn("上次聊天", line_a)
+        self.assertEqual(line_b, "")
+
+    def test_persist_without_scope_falls_back_to_primary(self):
+        _reset_summaries()
+        server.persist_voice_call_turns(
+            [{"role": "user", "content": "喂喂"},
+             {"role": "assistant", "content": "我在"}],
+            voice_session_id="call-dev")
+        summaries = server.load_conversation_summaries(limit=5)
+        self.assertEqual(
+            summaries[-1].get("personId"), server.PRIMARY_CARE_RECIPIENT_ID)
 
 
 if __name__ == "__main__":
