@@ -2,6 +2,7 @@
   const AUTH_STATE_EVENT = 'munea:auth-state';
   const ALLOWED_OAUTH_PROVIDERS = new Set(['apple', 'google']);
   let client = null;
+  let clientPromise = null;
   let initPromise = null;
   let session = null;
   let status = 'guest';
@@ -147,11 +148,24 @@
     return nativeAuthListenerPromise;
   }
 
+  function sameSession(left, right) {
+    if (left === right) return true;
+    if (!left || !right) return false;
+    const leftUserId = left.user && left.user.id ? left.user.id : '';
+    const rightUserId = right.user && right.user.id ? right.user.id : '';
+    return leftUserId === rightUserId &&
+      String(left.access_token || '') === String(right.access_token || '');
+  }
+
   function setState(nextStatus, nextSession, eventName) {
+    const normalizedSession = nextSession || null;
+    const changed = status !== nextStatus || !sameSession(session, normalizedSession);
     status = nextStatus;
-    session = nextSession || null;
+    session = normalizedSession;
     lastEvent = eventName || lastEvent;
+    if (!changed) return false;
     window.dispatchEvent(new CustomEvent(AUTH_STATE_EVENT, { detail: publicState() }));
+    return true;
   }
 
   function publicState() {
@@ -193,26 +207,31 @@
 
   async function ensureClient() {
     if (client) return client;
-    const cfg = config();
-    if (!isConfigured()) {
-      setState('guest', null, 'UNCONFIGURED');
-      return null;
-    }
-    const createClient = await loadFactory(cfg);
-    if (!createClient) {
-      setState('unconfigured', null, 'SDK_MISSING');
-      return null;
-    }
-    client = createClient(cfg.url, publishableKey(cfg), {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce',
-        ...(cfg.authOptions || {}),
-      },
-    });
-    return client;
+    if (clientPromise) return clientPromise;
+    clientPromise = (async () => {
+      const cfg = config();
+      if (!isConfigured()) {
+        setState('guest', null, 'UNCONFIGURED');
+        return null;
+      }
+      const createClient = await loadFactory(cfg);
+      if (!createClient) {
+        setState('unconfigured', null, 'SDK_MISSING');
+        return null;
+      }
+      client = createClient(cfg.url, publishableKey(cfg), {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+          ...(cfg.authOptions || {}),
+        },
+      });
+      return client;
+    })();
+    try { return await clientPromise; }
+    finally { clientPromise = null; }
   }
 
   async function init() {
@@ -358,9 +377,7 @@
     try {
       const result = await supabaseClient.auth.getSession();
       const currentSession = result && result.data ? result.data.session : null;
-      if (currentSession !== session) {
-        setState(currentSession ? 'signed-in' : 'guest', currentSession, 'SESSION_REFRESHED');
-      }
+      setState(currentSession ? 'signed-in' : 'guest', currentSession, 'SESSION_REFRESHED');
       return currentSession && currentSession.access_token ? currentSession.access_token : null;
     } catch (e) {
       setState('guest', null, 'SESSION_UNAVAILABLE');
