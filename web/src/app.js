@@ -820,6 +820,13 @@ async function handleVoiceAction(action, args) {
     if (typeof toast === 'function') toast(r.ok ? ('用藥提醒設好了：' + r.slots.join('、') + '吃「' + r.name + '」') : '要什麼時候吃我沒抓到，你再說一次好嗎');
     return r;
   }
+  if (action === 'set_personal_event') {
+    // 約會/聚餐/出遊 → 揪一攤活動帳本（7/16 Edward：這類事不准再進看診/用藥）
+    const fn = window.__muneaAddPersonalEvent;
+    const r = fn ? await fn({ title: args.title, dateISO: args.date, time: args.time, place: args.place }) : { ok: false, error: 'unsupported_action' };
+    if (typeof toast === 'function') toast(r.ok ? ('行程記好了：' + r.title + ' · ' + r.label) : '日期時間我沒抓到，你再說一次好嗎');
+    return r;
+  }
   if (action === 'send_family_relay') {
     return await createFamilyRelay(args.recipientName, args.message);
   }
@@ -2114,6 +2121,8 @@ const LiveVoice = {
     } catch (e) {}
     // 能力握手：告訴伺服器「這版 App 接得住 AI 幫你設提醒」→ 只有新版才拿到設提醒工具，舊版不會被假成功（2026-07-09 Edward）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
+    // 能力握手：「接得住 AI 幫你記行程」（揪一攤）→ 約會/聚餐不再被硬塞成看診提醒（2026-07-16 Edward）
+    url += '&cap_evt=1';
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
     // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。
@@ -3316,8 +3325,29 @@ function renderVisitTask() {
   if (tm) tm.textContent = _clock24(v.time) || '今天';
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
-// 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋走走＋心情筆記＋聊聊
-function renderDailyTasks() { renderPillTask(); renderVisitTask(); refreshMoodTask(); }
+// 行程（揪一攤約會/聚餐）跟回診同一條規矩：只在「當天」進今日任務（Edward 7/16「今天的行程才顯示今天」）
+function eventToday() {
+  let arr = null;
+  try { arr = JSON.parse(localStorage.getItem('munea.activities') || 'null'); } catch (e) {}
+  if (!Array.isArray(arr)) return null;
+  const today = _todayISO();
+  return arr.filter(a => a && a.kind === 'event' && a.dateISO === today)
+    .sort((x, y) => String(x.time || '').localeCompare(String(y.time || '')))[0] || null;
+}
+function renderEventTask() {
+  const card = document.getElementById('eventTask');
+  if (!card) return;
+  const ev = eventToday();
+  if (!ev) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
+  card.style.display = '';
+  const t = $('#eventTaskTitle'), s = $('#eventTaskSub'), tm = $('#eventTaskTime');
+  if (t) t.textContent = muneaSafeDisplayText(ev.title, '') || '和家人的約';
+  if (s) s.textContent = muneaSafeDisplayText(ev.place, '') || '記得準時赴約';
+  if (tm) tm.textContent = _clock24(ev.time) || '今天';
+  if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
+}
+// 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋行程（當天才有）＋走走＋心情筆記＋聊聊
+function renderDailyTasks() { renderPillTask(); renderVisitTask(); renderEventTask(); refreshMoodTask(); }
 window.__muneaRenderDailyTasks = renderDailyTasks;
 // Apple 健康的步數 → 首頁走路任務（原生端 health.js 讀到步數後呼叫）
 window.__muneaSetSteps = function (n) {
@@ -4059,6 +4089,7 @@ function speakChat(text) {
 const CHEERS = {
   pill: '藥吃了，你真棒，我幫你記到存摺裡，美華也看得到。',
   visit: '回診辛苦了，醫生說的我幫你記著，回家歇一下。',
+  event: '這個約赴完了吧？跟喜歡的人吃頓飯最好了，回來跟我說說。',
   walk: '出去走走最好了，回來記得喝口水。',
   chat: '謝謝你跟我說這些，我都記下來了。',
   mood: '今天的心情記好了，謝謝你願意照顧自己的感受。',
@@ -5780,6 +5811,28 @@ function init() {
   }
   function loadActs() { try { return JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) { return []; } }
   function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} syncPush('activities', a); if (window.MuneaNotify) window.MuneaNotify.sync(); }
+  // 聊聊 AI 記行程（7/16 Edward「約吃飯被設成看診」）：約會/聚餐/出遊走揪一攤這本帳，
+  // 同步與「活動前 30 分提醒」都沿用現成水管（saveActs 內建）；看診/用藥帳本完全不碰
+  window.__muneaAddPersonalEvent = async function (a) {
+    const rawTitle = String((a && a.title) || '').trim();
+    const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : '和家人的約';
+    const dateISO = String((a && a.dateISO) || '').trim();
+    const time = String((a && a.time) || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
+    const when = new Date(dateISO + 'T' + time + ':00');
+    if (Number.isNaN(when.getTime()) || when.getTime() < Date.now() - 60000) return { ok: false, error: 'event_time_in_past' };
+    const rawPlace = String((a && a.place) || '').trim();
+    const act = {
+      id: Date.now(), kind: 'event', names: [], owner: myFeedName(),
+      title, place: (rawPlace && muneaIsCleanZhText(rawPlace)) ? rawPlace : '',
+      dateISO, time, dateLabel: fmtDay(when) + ' ' + _clock12(time),
+    };
+    const acts = loadActs(); acts.push(act); saveActs(acts);
+    try { renderActCard(act); } catch (e) {}
+    try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
+    try { trackProductEvent('activity_created', { kind: 'event', source: 'voice-ai' }); } catch (e) {}
+    return { ok: true, title, label: act.dateLabel };
+  };
   const FAM_AVA = { '阿嬤': ['嬤', 'p-ama'], '美華': ['華', 'p-mei'], '志明': ['明', 'p-zhi'], '小寶': ['寶', 'p-bao'], '你': ['我', 'p-me'] };
   function buildRankList(act) {
     const rows = Object.entries(act.answers).sort((x, y) => y[1] - x[1]);

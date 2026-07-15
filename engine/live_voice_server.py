@@ -367,7 +367,7 @@ def _capture_call_turns(st, max_turns=120, max_chars=600):
         del turns[:-max_turns]
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
@@ -467,7 +467,22 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "先用一句話問清楚再設，不要自己亂猜。只有工具回覆 status=ok 才能說設好了；若回覆 error，誠實說沒有設成功並請他重試。"
             "他要傳話給家庭圈成員時，先用一句話複誦收件人與完整內容，得到確認後才呼叫 send_family_relay；不要自行添加、刪改或猜測內容。"
             "設好之後用一句溫暖口語的話跟他確認你設了什麼"
-            "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。）"
+            "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。"
+            "「分類鐵律」：看診提醒只能用在真的要去醫院、診所看醫生；用藥提醒只能用在吃藥。"
+            "約會、聚餐、出遊、家人來訪這類行程「絕對不可以」設成看診或用藥提醒——分類錯了會讓 App 講出很奇怪的話。）"
+        )
+    if allow_events:
+        base += (
+            "（他說要記「約會、聚餐、出遊、活動、家人來訪」這類行程時，呼叫 set_personal_event 幫他記進 App 的家庭活動。"
+            "時間換算成 24 小時制要用常識：吃飯、晚餐、約會講「7點」通常是晚上 19:00、不是早上；"
+            "聽不出上午或晚上，就先用一句話問清楚再設。"
+            "現在若是深夜或凌晨，他說「明天」時先跟他確認是「等天亮的那個白天」還是「再隔一天」，確認完再換算日期。"
+            "呼叫前用一句話跟他確認日期、時間、名目；工具回 status=ok 才能說記好了。）"
+        )
+    elif allow_reminders:
+        base += (
+            "（這一版 App 還記不了約會、聚餐這類行程。他想記行程時，誠實說你這邊還記不了、"
+            "請他到「家人」頁用「發起活動」自己建一個，千萬不要拿看診或用藥提醒充數。）"
         )
     # Keep this last so persona, memory, interests, and older examples can
     # never weaken the Mandarin-only launch rule.
@@ -562,6 +577,25 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
     ),
 ])
 
+# 「幫你記行程」工具（2026-07-16 Edward：約吃飯被硬塞成看診提醒）→ App 寫進揪一攤活動帳本。
+# 只給帶 ?cap_evt=1 的新版 App（能力握手），舊版不聲明、AI 也會被指示誠實說記不了。
+_EVENT_TOOLS = types.Tool(function_declarations=[
+    types.FunctionDeclaration(
+        name="set_personal_event",
+        description="使用者要記「約會、聚餐、出遊、活動、家人來訪」這類行程時呼叫，記進 App 的家庭活動。看診用 set_clinic_reminder、吃藥用 set_medication_reminder，不可混用。",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "title": types.Schema(type=types.Type.STRING, description="行程名目，例如「和老婆吃飯」「孫子來訪」"),
+                "date": types.Schema(type=types.Type.STRING, description="日期，格式 YYYY-MM-DD（把「明天」等相對日期換算成實際日期；深夜凌晨要先跟使用者確認是哪一天）"),
+                "time": types.Schema(type=types.Type.STRING, description="時間，24 小時制 HH:MM。用常識判斷：吃飯約會講「7點」通常是 19:00"),
+                "place": types.Schema(type=types.Type.STRING, description="地點，沒講就留空"),
+            },
+            required=["title", "date", "time"],
+        ),
+    ),
+])
+
 _LIVE_LOOKUP_TOOL = types.Tool(function_declarations=[
     types.FunctionDeclaration(
         name=live_lookup.TOOL_NAME,
@@ -616,7 +650,7 @@ def asr_adaptation_phrases(char=None, name=None, user=None, topics=None, locatio
     return phrases
 
 
-def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None):
+def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     # 即時查詢改成可攔截的函式：Voice 先播放過場，再用獨立 Google Search
@@ -624,6 +658,8 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     tools = [_LIVE_LOOKUP_TOOL]
     if allow_reminders:
         tools.append(_REMINDER_TOOLS)
+    if allow_events:
+        tools.append(_EVENT_TOOLS)
     phrases = asr_adaptation_phrases(char, name, user, topics, location)
     transcription_config = types.AudioTranscriptionConfig(
         language_hints=types.LanguageHints(language_codes=["cmn-Hant-TW"]),
@@ -631,7 +667,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders, fam, memory_scope),
+        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders, fam, memory_scope, allow_events),
         tools=tools,
         output_audio_transcription=transcription_config,
         input_audio_transcription=transcription_config,
@@ -751,6 +787,7 @@ async def handle(ws):
     user = None
     location = None
     allow_reminders = False   # 只有帶 ?cap_rem=1 的新版 App 才開放「幫你設提醒」工具（防舊版假成功）
+    allow_events = False      # 只有帶 ?cap_evt=1 的新版 App 才開放「幫你記行程」工具（2026-07-16）
     fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
     day_call = None           # 當日第幾通（0-based）：只負責開場路線去重，不改變關係熟識度
     gate_key = ""   # Legacy 1.0.1 transition only.
@@ -823,6 +860,9 @@ async def handle(ws):
         # ?cap_rem=1：這版 App 接得住「AI 幫你設提醒」→ 才給設提醒工具（能力握手 · 2026-07-09 Edward）
         if _q.get("cap_rem") == ["1"]:
             allow_reminders = True
+        # ?cap_evt=1：這版 App 接得住「AI 幫你記行程」→ 才給記行程工具（能力握手 · 2026-07-16 Edward「約吃飯被設成看診」）
+        if _q.get("cap_evt") == ["1"]:
+            allow_events = True
         # ?fam=N：聊過幾通（熟識度）→ 決定開場話量：越熟話越少（Edward 2026-07-10「隨熟識度思考語句量」）
         fvals = _q.get("fam")
         if fvals:
@@ -872,7 +912,7 @@ async def handle(ws):
         st["lookup_cue_task"] = lookup_cue_future
         # 組 config 會呼叫 build_reply_context（內含對 Supabase 的同步阻塞查詢，最多 4 秒）——
         # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
-        cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam, memory_scope)
+        cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam, memory_scope, allow_events)
         asr_context_terms = [char, name, user, location, *(topics or [])]
         _key_idx, _cli = _pick_client()   # 挑現在最閒的一把鑰匙開這通（多鑰匙分流的核心）
         async with _cli.aio.live.connect(model=MODEL, config=cfg) as session:
