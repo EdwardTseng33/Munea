@@ -343,7 +343,7 @@
       setState('guest', null, 'SIGNED_OUT');
       return { ok: true };
     }
-    const result = await supabaseClient.auth.signOut();
+    const result = await supabaseClient.auth.signOut({ scope: 'local' });
     if (!result.error) setState('guest', null, 'SIGNED_OUT');
     return { ok: !result.error, result, error: result.error || null };
   }

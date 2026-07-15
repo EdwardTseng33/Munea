@@ -9,6 +9,7 @@ let exchangedCode = '';
 let appleNativeCalls = 0;
 let appleIdTokenRequest = null;
 let appleProfileUpdate = null;
+let signOutRequest = null;
 
 const signedInSession = {
   access_token: 'access-token',
@@ -49,7 +50,10 @@ const client = {
       return { data: { session: signedInSession }, error: null };
     },
     async signInWithOtp() { return { data: {}, error: null }; },
-    async signOut() { return { error: null }; },
+    async signOut(request) {
+      signOutRequest = request;
+      return { error: null };
+    },
   },
 };
 
@@ -139,6 +143,11 @@ function expect(condition, message) {
   expect(appleIdTokenRequest.nonce === 'raw-apple-nonce', 'Apple raw nonce was not sent to Supabase');
   expect(appleProfileUpdate && appleProfileUpdate.data.full_name === 'Munea Tester', 'first Apple profile name was not saved');
   expect(windowObject.MuneaAuth.state().provider === 'apple', 'Apple session was not published');
+
+  const signedOut = await windowObject.MuneaAuth.signOut();
+  expect(signedOut.ok, 'local sign out did not complete');
+  expect(signOutRequest && signOutRequest.scope === 'local', 'sign out would revoke sessions on other devices');
+  expect(windowObject.MuneaAuth.state().status === 'guest', 'local sign out did not publish guest state');
 
   console.log('Native Google OAuth and Apple ID token PASS');
 })().catch(error => {
