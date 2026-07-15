@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import server  # noqa: E402
 import live_voice_server  # noqa: E402
+import call_control_client  # noqa: E402
 
 
 def _reset_summaries():
@@ -276,6 +277,29 @@ class VoiceBrainBridgeTest(unittest.TestCase):
         with patch.dict(os.environ, {"MUNEA_BRAIN_INTERNAL_URL": "",
                                      "MUNEA_VOICE_BRAIN_SECRET": "s3"}):
             self.assertEqual(live_voice_server._brain_memory_config(), (None, None))
+
+    def test_internal_post_carries_brain_secret_and_app_door_key(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return b'{"ok": true}'
+
+        with patch.object(call_control_client.urllib.request, "urlopen",
+                          return_value=FakeResponse()) as urlopen:
+            result = call_control_client.post_internal(
+                "https://brain.example", "brain-secret", "/voice/call-recap",
+                {"userId": "user-1"}, app_key="app-door-key")
+
+        request = urlopen.call_args.args[0]
+        headers = {key.lower(): value for key, value in request.header_items()}
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(headers["authorization"], "Bearer brain-secret")
+        self.assertEqual(headers["x-munea-key"], "app-door-key")
 
 
 if __name__ == "__main__":
