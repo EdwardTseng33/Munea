@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 📱 **2026-07-16 02:38 最新包版**：`1.0.24 (Build 29)` 維持 **iPhone-only**（Debug／Release `TARGETED_DEVICE_FAMILY = 1`），整合 PR #92 的 App 收音守門、開場前兩輪較嚴格收音、上一通記憶防編造與說話節制。正式 Archive、IPA 防漏與 `UIDeviceFamily=[1]` 驗證均 PASS；02:32 App Store Connect 上傳成功，Apple 處理中。開發測試版已安裝並成功啟動於 Edward iPhone 15 Pro，手機回讀 `1.0.24 (29)` PASS。正式 IPA 58,863,291 bytes，SHA-256 `773fa6a8ffb6b7062e2e0d9ecff056f3eb2ef09f20715d881bb96ff7bf8cb074`。來源 PR #93／commit `90d083a`，CI 全綠、待最終合併。**App 端收音守門已進包；Voice 伺服器人格／記憶調校尚未部署。App Privacy 仍必須填完，不能選「不收集資料」。**
+> 📱 **2026-07-16 03:00 最新包版**：`1.0.24 (Build 30)` 維持 **iPhone-only**，在 Build 29 上加入 PR #94 的撥號前三線暖機：App 開啟 2.5 秒後與回前景時，對 Avatar／Voice／Call Control 做一次性健康握手，60 秒防抖、不輪詢、不預佔席位。正式 Archive、IPA 防漏與 `UIDeviceFamily=[1]` 均 PASS；02:58 App Store Connect 上傳成功，Apple 處理中。開發測試版已安裝並成功啟動於 Edward iPhone 15 Pro，手機回讀 `1.0.24 (30)` PASS。正式 IPA 58,864,007 bytes，SHA-256 `fc3a9a593291793854aefa91c202e58116bcecf1d917d3e001cf77da1287a71a`。來源 PR #96／commit `843a57a`。**App 暖機與收音守門已進包；Voice 伺服器人格／記憶調校尚未部署。App Privacy 仍必須填完。**
 >
 > 🎯 **2026-07-16 01:25 打包手牌（Edward 拍板「打包吧」· Windows 蘇菲立牌）**：PR #86 已併入 main（merge `402bbd5`）＝ **1.0.23 待打包**。內容：通知中心改全螢幕子頁＋推播開關與 iPhone 權限雙向連動＋安全通知通知對象接回＋測試通知移除＋家人頁心情/平安燈標籤分工＋心情粗標籤入家庭帳本＋聊聊人物呼吸感＋聊聊記行程（`set_personal_event`）。**Mac 接手三件**：① `git pull` 後照常打包（npm install → cap sync ios → Xcode Archive；iOS 行銷版號對 `1.0.23`）② **Voice 要一起重新部署**——`engine/live_voice_server.py` 新增記行程工具與分類鐵律，不部署則「約吃飯被設成看診」在真機上仍會發生（部署節奏尊重現行 canary/真人 Gate 規矩、由 Mac 線判斷）③ 上傳/安裝後回報本板。詳見一眼總覽 77／77.1／78。**✅ 呼吸素材描邊修正已併**（PR #89 · merge `e0d0d88` · 01:50）：Edward 預覽抓到的輪廓深色描邊已修（人物層內收 2px＋柔邊 1.5px、外圈變暗 -65%、Edward 已收修正版預覽）——Mac 直接 pull main 打包即可，素材已是乾淨版。
 >
@@ -14,11 +14,11 @@
 >
 > **東京正式環境**：Supabase migrations 014–016 與 `36/36` tables ✅；正式 Brain revision `00053-foj` 已 100% 指向東京，健康檢查、iPhone `capacitor://localhost` CORS 204 與陌生來源 403 均 ✅；Voice 修正版 `00037-huf` 保持 0% canary，真人 Gate ❌，不得升正式流量；APNs 生產金鑰仍缺，真推播 ❌。雪梨專案與舊 revision 完整保留，RunPod／GLOWS 未操作。
 
-> **2026-07-16 現況覆蓋**：目前正式候選版是 `1.0.24 (Build 29)`，來源 PR #93／`90d083a`，只支援 iPhone。正式 Archive／IPA 已驗證 production APNs、Apple 登入、HealthKit、Privacy Manifest、東京 Supabase、最新 Web 資源、`UIDeviceFamily=[1]` 與 `get-task-allow=false`，且不含 TEST／Pro／點數／家人假資料、自動登入、Call Control bypass、雪梨 ref、service-role 或私鑰；App Store Connect 已收件並處理中。App 端收音守門已包入；Voice 伺服器人格／記憶調校仍待部署。真人 10 分鐘長聊、五次插話／靜音、Google／Apple 真登入、拍照、StoreKit、APNs 真推播、App Privacy 與審核元資料仍是 ❌ 未通過，因此尚不可送審。
+> **2026-07-16 現況覆蓋**：目前正式候選版是 `1.0.24 (Build 30)`，來源 PR #96／`843a57a`，只支援 iPhone。正式 Archive／IPA 已驗證 production APNs、Apple 登入、HealthKit、Privacy Manifest、東京 Supabase、最新 Web 資源、`UIDeviceFamily=[1]` 與 `get-task-allow=false`，且不含 TEST／Pro／點數／家人假資料、自動登入、Call Control bypass、雪梨 ref、service-role 或私鑰；App Store Connect 已收件並處理中。App 端暖機與收音守門已包入；Voice 伺服器人格／記憶調校仍待部署。真人 10 分鐘長聊、五次插話／靜音、Google／Apple 真登入、拍照、StoreKit、APNs 真推播、App Privacy 與審核元資料仍是 ❌ 未通過，因此尚不可送審。
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-16（Codex · App 1.0.24 Build 29 iPhone-only 正式 Archive／IPA／安全 Gate／App Store Connect 上傳、手機安裝與啟動均 PASS，Apple 處理中。尚未送審；Voice 伺服器新規則未部署，真人 Gate、真登入、拍照、金流、APNs、App Privacy 與審核元資料仍未通過）**
+> **最後更新：2026-07-16（Codex · App 1.0.24 Build 30 iPhone-only 正式 Archive／IPA／安全 Gate／App Store Connect 上傳、手機安裝與啟動均 PASS，Apple 處理中。尚未送審；Voice 伺服器新規則未部署，真人 Gate、真登入、拍照、金流、APNs、App Privacy 與審核元資料仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -27,6 +27,8 @@
 ---
 
 ## 一眼總覽
+
+**84－App 1.0.24 Build 30／撥號前暖機整合雙包版（7/16 Codex，PR #96）**：①✅ 從 `main@2c72057` 建立隔離 worktree，完整承接 PR #94；狀態撞號改列 83。②✅ Xcode Build 升 30、fixture 同步，行銷版號維持 1.0.24、iPhone-only。③✅ `test:launch`、Release Check、Capacitor sync、Xcode 原生檢查、Release Archive、App Store export 全過。④✅ 正式 IPA 58,864,007 bytes，SHA-256 `fc3a9a593291793854aefa91c202e58116bcecf1d917d3e001cf77da1287a71a`；02:58 App Store Connect 上傳成功。⑤✅ Edward iPhone 15 Pro 已安裝、啟動並回讀 `1.0.24 (30)`，開發包保留 TEST／Pro／1,000 點／家人假資料。⑥✅ App 暖機為一次性、60 秒防抖、不輪詢、不預佔席位；App 收音守門也在包內。⑦❌ Voice 伺服器新規則、真人 Gate、真登入、拍照、StoreKit、APNs、App Privacy 與送審資料未完成。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
 **82－App 1.0.24 Build 29／PR #92 整合雙包版（7/16 Codex，PR #93）**：①✅ 從 `main@820b136` 建立隔離 worktree，完整承接 PR #92；只解 `STATUS.md` 編號衝突，未直接修改另一個 session 分支。②✅ App／npm／Xcode／fixture 對齊 `1.0.24 (29)`，維持 iPhone-only。③✅ 完整 `test:launch`、Release Check、Capacitor sync、Xcode 原生檢查、Release Archive、App Store export 與 GitHub CI 全過。④✅ 正式 IPA 58,863,291 bytes，SHA-256 `773fa6a8ffb6b7062e2e0d9ecff056f3eb2ef09f20715d881bb96ff7bf8cb074`；02:32 App Store Connect 上傳成功，Apple 處理中。⑤✅ Edward iPhone 15 Pro 已安裝、啟動並回讀 `1.0.24 (29)`；開發包為 TEST／Pro／1,000 點／家人假資料。⑥⚠ App 端 1.8 秒收音守門與開場 300ms 門檻已生效；Voice 人格、上一通記憶防編造與 `set_personal_event` 仍需 Voice 部署。⑦❌ 真人長聊／插話、真登入、拍照、StoreKit、APNs、App Privacy 與送審資料未完成。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
