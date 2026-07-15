@@ -10,6 +10,9 @@ let appleNativeCalls = 0;
 let appleIdTokenRequest = null;
 let appleProfileUpdate = null;
 let signOutRequest = null;
+let createClientCalls = 0;
+let currentSession = null;
+const authEvents = [];
 
 const signedInSession = {
   access_token: 'access-token',
@@ -23,7 +26,10 @@ const signedInSession = {
 
 const client = {
   auth: {
-    async getSession() { return { data: { session: null }, error: null }; },
+    async getSession() {
+      const cloned = currentSession ? { ...currentSession, user: { ...currentSession.user } } : null;
+      return { data: { session: cloned }, error: null };
+    },
     onAuthStateChange() {},
     async signInWithOAuth(request) {
       oauthRequests.push(request);
@@ -31,13 +37,13 @@ const client = {
     },
     async signInWithIdToken(request) {
       appleIdTokenRequest = request;
+      currentSession = {
+        ...signedInSession,
+        access_token: 'apple-access-token',
+        user: { ...signedInSession.user, app_metadata: { provider: 'apple' } },
+      };
       return {
-        data: {
-          session: {
-            ...signedInSession,
-            user: { ...signedInSession.user, app_metadata: { provider: 'apple' } },
-          },
-        },
+        data: { session: currentSession },
         error: null,
       };
     },
@@ -47,7 +53,8 @@ const client = {
     },
     async exchangeCodeForSession(code) {
       exchangedCode = code;
-      return { data: { session: signedInSession }, error: null };
+      currentSession = signedInSession;
+      return { data: { session: currentSession }, error: null };
     },
     async signInWithOtp() { return { data: {}, error: null }; },
     async signOut(request) {
@@ -69,7 +76,7 @@ const windowObject = {
     nativeRedirectTo: 'munea://auth/callback',
   },
   MUNEA_DEV_CONFIG: { enabled: false },
-  supabase: { createClient() { return client; } },
+  supabase: { createClient() { createClientCalls += 1; return client; } },
   Capacitor: {
     isNativePlatform() { return true; },
     Plugins: {
@@ -99,7 +106,7 @@ const windowObject = {
       },
     },
   },
-  dispatchEvent() {},
+  dispatchEvent(event) { authEvents.push(event); },
 };
 
 const context = {
@@ -118,7 +125,12 @@ function expect(condition, message) {
 }
 
 (async () => {
-  await windowObject.MuneaAuth.init();
+  await Promise.all([
+    windowObject.MuneaAuth.init(),
+    windowObject.MuneaAuth.getAccessToken(),
+    windowObject.MuneaAuth.getAccessToken(),
+  ]);
+  expect(createClientCalls === 1, 'concurrent auth calls created multiple Supabase clients');
   expect(typeof appUrlOpen === 'function', 'native appUrlOpen listener was not registered');
 
   const started = await windowObject.MuneaAuth.signInWithGoogle();
@@ -133,6 +145,9 @@ function expect(condition, message) {
   expect(exchangedCode === 'pkce-code', 'PKCE authorization code was not exchanged');
   expect(browserClosed === 1, 'native browser was not closed after callback');
   expect(windowObject.MuneaAuth.state().status === 'signed-in', 'native callback did not publish a signed-in session');
+  const eventsAfterSignIn = authEvents.length;
+  expect(await windowObject.MuneaAuth.getAccessToken() === 'access-token', 'signed-in access token was not returned');
+  expect(authEvents.length === eventsAfterSignIn, 'equivalent Supabase session caused a duplicate auth-state event');
 
   const apple = await windowObject.MuneaAuth.signInWithApple();
   expect(apple.ok, 'native Apple sign in did not complete');

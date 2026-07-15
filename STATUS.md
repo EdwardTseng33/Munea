@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新整合候選**：PR #41、#42、#52 已依序進入 `main@1215d8b`；PR #51 的 `1.0.10 (Build 15)` 最終來源已再合入該 main，完整保留東京 Supabase `fespbkdwafueyonppzwq`、Google 強制選擇帳號、本機登出、用藥同步、家庭傳話與通知平台。完整 `test:launch`、東京／雪梨 marker、後端 secret 防漏、Capacitor sync、Xcode 26.6 原生檢查、全新 arm64 實機簽章與包內來源核對均 PASS。這只代表程式與包版候選通過；014／015／016 migration、Brain／Voice、APNs secret／排程與 App Store 上傳尚未執行，Google／Apple、拍照、StoreKit、APNs 真推播及全語音真人 Gate 仍是 ❌。
+> **2026-07-15 最新 main／整合候選**：`main@8338f9d` 已包含 #41 → #42 → #52 → #51；獨立分支 `codex/integrate-pr54-package-1.0.11` 再完整整合 #54，並完成 `1.0.11 (Build 16)` 頁面卡死修正。真機確認 1.0.10 會在短時間製造超過兩萬次 HealthKit bridge 呼叫；1.0.11 改為單次同步＋60 秒冷卻並去除重複登入事件後，啟動只出現 1 次摘要與 1 次歷史讀取，後續 10 秒無重複。完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 簽章與包內版本／東京／開發資料／secret 防漏均 PASS；Edward iPhone 已安裝 `1.0.11 (16)` 開發包。#54 Voice 記憶仍預設關閉、尚未部署；Google／Apple、拍照、StoreKit、APNs 真推播、頁面真人連續操作及全語音 Gate 仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.10 Build 15 已裝 iPhone、Gateway 已正式切東京；等待真人登入／拍照／金流／全語音 Gate）**
+> **最後更新：2026-07-15（Codex · App 1.0.11 Build 16 已裝 iPhone，HealthKit 呼叫風暴已通過真機診斷；等待頁面真人操作與登入／拍照／金流／全語音 Gate）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,10 @@
 ---
 
 ## 一眼總覽
+
+**66－App 1.0.11 Build 16／頁面卡死修正＋#54 整合（7/15 Codex）**：①🔴 1.0.10 真機根因確認：HealthKit 摘要／歷史 bridge 在短時間超過兩萬次，塞住 WebView，並伴隨重複 Supabase client 警告。②✅ `health.js` 加單次執行與 60 秒冷卻；`auth.js` 共用 client 建立 Promise，等價 session 不再重播登入事件。③✅ #54 通話記憶回寫與上一通重點已保留在整合歷史；`MUNEA_VOICE_CALL_MEMORY` 預設關閉，未部署 Voice。④✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、兩份 arm64 簽章建置與包內安全檢查 PASS。⑤✅ 正式設定包真機啟動只讀 Health 摘要／歷史各一次，觀察 10 秒無重複；最終 Edward 開發包已安裝，版本 `1.0.11 (16)`，保留 Pro、每月 300 點＋加購 700 點及家人假資料。⑥❌ iPhone 鏡像因手機使用中無法代操作，連續切頁真人 Gate、Google／Apple、拍照、StoreKit、APNs 與全語音仍待 Edward 操作。
+
+**65－通話記憶回寫＋開場「上一通重點」（7/15 Claude · 純後端、不影響包版）**：①根因＝記憶萃取只掛在文字 `/chat` 聊後流程，語音線（產品唯一對話面）伺服器端收線不寫記憶；App 端 `saveMemory()` 有送但插話輪會丟、掛斷瞬間失敗靜默、ASR 沒觸發整通不存；且下一通開場從不查「上一通何時、聊過什麼」→ Edward 1.0.10 實測「20 分鐘後再打還被問吃飯沒」。②✅ 伺服器端（字幕源頭）收線回寫：每輪字幕收進整通紀錄，收線交 `butler_post_turn_response` 同一套腦（摘要＋記憶對帳＋心情），沒說話跳過、失敗不炸收線。③✅ 開場注入「上一通重點」：12 小時內剛聊過→自然接續、不重問已答過的日常問題。④✅ 對抗式審查（15 agents 三鏡頭＋逐項反駁）抓到並修掉的真問題：history 欄位名讓真萃取看到空對話、整數 voiceSessionId 在正式 Supabase 每通炸 TypeError、memoryTags（內部 slug 含風險分類）原樣進 prompt、以及**部署現實**——現行 Voice 服務沒有 Supabase env，落地是容器本機 JSON（全來電者共用、回收即失、與 brain 不相通）。⑤🔒 因此照「預設關」守則收尾：`MUNEA_VOICE_CALL_MEMORY=1` 才生效、沒開＝現役零影響；call token `user_id` 人別隔離已就緒（A 的上次聊天不會講給 B，有測試鎖住）。⑥✅ 新測試 17/17＋完整 `test:launch` 全綠，已掛進 launch 鏈。⑦⚠️ 開啟步驟＝部署 Voice ＋設 `MUNEA_VOICE_CALL_MEMORY=1`（單人測試階段安全）；多用戶前必須把儲存接到 brain／Supabase；App 端 `saveMemory()` 建議 `app.js` 解鎖後移除；記憶品質仍受 ASR 紅燈（VAD 低靈敏）牽制。分支疊在 `codex/tokyo-app-package-1.0.10` 上（PR #54），不與開啟中 PR 撞檔。
 
 **64－AI 家庭傳話＋語音提醒成功回執（7/15 Codex，PR #42 待合併）**：①家庭傳話改為 `family_relay_messages` 收件人專屬佇列，AI 先複誦確認、對方下一通聊聊最多播一則並標明傳話者；播完才 ack，插話／斷線 release，強制關閉的舊 claim 10 分鐘後自動回收，同機另留播畢 receipt 防網路斷線重複播。②家庭圈名單保留正式 `personId`，伺服器逐筆驗證 sender／recipient 都在同一家庭，其他家人無法領取；Supabase authenticated client 只有 participant select，所有 mutation 走已驗證後端；Brain claim 另以 `MUNEA_FAMILY_RELAY_SIGNING_SECRET` 簽章，Voice 驗簽後才朗讀，App 不能偽造署名／內容。③語音的用藥／看診提醒與傳話工具加入 request ID 回執，Gemini 必須等 App 寫入結果，成功才可口頭確認，失敗／8 秒逾時不能假成功；看診日期時間、用藥名稱時段會驗證，重送採穩定 ID 去重。④`test:launch` 全綠，新增家庭傳話 3 組測試；PR #42 疊在 PR #41，尚未部署 Supabase migration／Brain／Voice，也未 cap sync 或重打包；部署時 Brain＋Voice 必須設定同一份 relay signing secret。App 版號暫維持 1.0.6，合併到下一候選版時需一起升版與重包。
 

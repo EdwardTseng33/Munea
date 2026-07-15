@@ -33,7 +33,7 @@ window.MUNEA_DEV_CONFIG = {
   profileName: 'Edward',
   plan: 'pro',
   purchasedPoints: 700,
-  fixtureVersion: '1.0.10-build15-tokyo-v1',
+  fixtureVersion: '1.0.11-build16-tokyo-v1',
   voiceUrl: 'wss://canary-0715-0405---munea-voice-staging-fiu65jd4da-de.a.run.app',
 };
 ${endMarker}`;

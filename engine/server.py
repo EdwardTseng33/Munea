@@ -6069,6 +6069,162 @@ def butler_post_turn_response(data):
     }
 
 
+# 語音通話「上一通接得上」視窗：超過就當成新的一天/新的話頭，不再提上一通。
+VOICE_CALL_RECAP_WINDOW_HOURS = 12
+
+
+def _voice_call_memory_enabled():
+    """通話記憶回寫＋開場接續的總開關，預設關（跟多鑰匙/N 槽同一守則：預設不影響現役）。
+    為什麼不能預設開：現行 Voice 的 Cloud Run 部署沒有 Supabase 環境變數，
+    data_backend 會落到「容器本機 JSON」——所有來電者共用一份、容器回收即蒸發、
+    跟 brain 正式記憶庫不相通。單人測試（Edward 現階段）可以開；
+    多用戶正式開放前必須先把儲存接到 brain/Supabase 並用 call token 身分隔離。"""
+    return os.environ.get("MUNEA_VOICE_CALL_MEMORY", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def persist_voice_call_turns(turns, char=None, voice_session_id=None, person_id=None):
+    """語音通話收線後，把整通的字幕逐字稿交給既有的聊後管線
+    （對話摘要＋記憶萃取對帳＋心情訊號），跟文字聊天走同一套腦。
+    turns: [{"role": "user"|"assistant", "content": str}, ...]
+    person_id：有 call token 就帶 "voice-<user_id>" 做人別隔離；沒有（開發包直連）
+    落回主要照護對象。對方整通沒說話（或 ASR 全空）就不存，避免累積空摘要；
+    收線路徑不能炸，所有失敗都吞下並記 fallback log。"""
+    if not _voice_call_memory_enabled():
+        return None
+    return _persist_voice_call_turns_core(turns, char, voice_session_id, person_id)
+
+
+def _persist_voice_call_turns_core(turns, char=None, voice_session_id=None, person_id=None):
+    """persist 的核心（不含總開關）：給 Voice→Brain 內部端點用——
+    內部密語（MUNEA_VOICE_BRAIN_SECRET）設了就代表刻意啟用，不再疊第二道旗標。"""
+    history = []
+    for turn in turns or []:
+        if not isinstance(turn, dict):
+            continue
+        content = str(turn.get("content") or turn.get("text") or "").strip()
+        if not content:
+            continue
+        role = "assistant" if turn.get("role") == "assistant" else "user"
+        # text 與 content 都給：真萃取（memory_engine）與心情分析讀 text、
+        # 摘要（conversation_text）兩者皆可，缺一邊就會有管線看到空對話。
+        history.append({"role": role, "text": content[:600], "content": content[:600]})
+    if not any(item["role"] == "user" for item in history):
+        return None
+    try:
+        return butler_post_turn_response({
+            "history": history[-120:],
+            "char": char or DEFAULT_CHAR,
+            # 與 recent_call_recap_line 讀取同一 scope：Gateway 正式路徑的 call token
+            # 帶 user_id → "voice-<user_id>" 人別隔離；開發包直連沒 token 才落回
+            # 主要照護對象。（Supabase 模式 adapter 會把非 uuid person 壓回 env person，
+            # 所以多用戶上 Supabase 前仍須完成正式身分接線——看板紅線。）
+            "personId": person_id or PRIMARY_CARE_RECIPIENT_ID,
+            # 語音線的 cid 是整數流水號、不是 voice_sessions 的 uuid：
+            # 一律轉字串，Supabase 端 conversation_summary_to_row 對非 uuid 會自動落 None，
+            # 本機 JSON 保留字串方便對 log。整數直接丟進去會在 UUID_RE.match 炸 TypeError。
+            "voiceSessionId": (None if voice_session_id is None else str(voice_session_id)),
+            "source": "live_voice",
+        })
+    except Exception as e:
+        log_fallback_exception("persist voice call turns", e)
+        return None
+
+
+def recent_call_recap_line(now=None, person_id=None):
+    """上次聊天若還在視窗內，回一段開場接續指令（只講距今多久），
+    讓下一通不再重問剛答過的日常問題。沒有近況或超過視窗回空字串。
+    注意：①person_id 必須跟 persist_voice_call_turns 同一 scope（token 的
+    "voice-<user_id>" 或主要照護對象），否則 A 的上次聊天會講給 B 聽；
+    ②不注入 memoryTags——那是內部英文 slug、可能含守護腦風險分類，不能進 prompt。"""
+    if not _voice_call_memory_enabled():
+        return ""
+    return _recent_call_recap_line_core(now, person_id)
+
+
+def _recent_call_recap_line_core(now=None, person_id=None):
+    """recap 的核心（不含總開關）：給 Voice→Brain 內部端點用。"""
+    try:
+        items = load_conversation_summaries(
+            person_id=person_id or PRIMARY_CARE_RECIPIENT_ID, limit=10)
+    except Exception as e:
+        log_fallback_exception("load recent call recap", e)
+        return ""
+    latest = None
+    latest_ts = None
+    for item in items or []:
+        if not item.get("summary") or item.get("deletedAt"):
+            continue
+        try:
+            ts = calendar.timegm(time.strptime(
+                str(item.get("createdAt") or "")[:19], "%Y-%m-%dT%H:%M:%S"))
+        except (ValueError, TypeError):
+            continue
+        if latest_ts is None or ts > latest_ts:
+            latest, latest_ts = item, ts
+    if latest is None:
+        return ""
+    now_ts = now if now is not None else time.time()
+    minutes = max(0, int((now_ts - latest_ts) // 60))
+    if minutes > VOICE_CALL_RECAP_WINDOW_HOURS * 60:
+        return ""
+    ago = f"{minutes} 分鐘" if minutes < 60 else f"{minutes // 60} 小時"
+    return (
+        f"（重要：你們上次聊天大約 {ago} 前才結束。"
+        "這通要像老朋友剛聊過又想到什麼再打來，自然接續就好——"
+        "剛剛已經問過、他也回答過的日常問題（例如吃飯了沒、睡得好不好、心情好不好）"
+        "不要當開場再問一次，除非他自己先提起；也不要假裝完全沒聊過。）"
+    )
+
+
+def _voice_identity_scope(user_id):
+    """Voice→Brain 內部端點：把 call token 的已驗證 user_id 解析成帳號範圍身分。
+    回 (contextvar token, personId)；本機 json 模式或查無帳號回 (None, None) → 走預設人。
+    綁進 REQUEST_DATA_IDENTITY 後，資料櫃的所有讀寫都落在該用戶自己的範圍——
+    這就是「員工A代存、順便認人」的正式身分接線。"""
+    if not user_id:
+        return None, None
+    try:
+        identity = supabase_adapter.make_adapter(identity=None).resolve_auth_identity(user_id)
+    except Exception as e:
+        log_fallback_exception("resolve voice call identity", e)
+        return None, None
+    if not identity:
+        return None, None
+    token = REQUEST_DATA_IDENTITY.set(identity)
+    return token, identity.get("personId")
+
+
+def voice_call_memory_response(data):
+    """POST /voice/call-memory（內部密語驗證後才會進來）：
+    Voice 掛斷時把整通字幕交給 Brain 代存——Brain 有 Supabase 鑰匙、認得用戶，
+    資料落東京正式庫而不是 Voice 容器的便條紙。"""
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        result = _persist_voice_call_turns_core(
+            data.get("turns"), char=data.get("char"),
+            voice_session_id=data.get("voiceSessionId"), person_id=person)
+        return {"ok": True, "stored": bool(result),
+                "identityResolved": bool(person)}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
+def voice_call_recap_response(data):
+    """POST /voice/call-recap（內部密語驗證後才會進來）：
+    Voice 開場前向 Brain 要「上次聊天重點」，讀的是該用戶自己的正式紀錄。"""
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        return {"ok": True,
+                "recapLine": _recent_call_recap_line_core(person_id=person),
+                "identityResolved": bool(person)}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
@@ -6213,6 +6369,21 @@ class H(BaseHTTPRequestHandler):
                 self._json_error(403, "app_key_required", "App key required")
                 return
             data = self._read_json_body()
+            # Voice→Brain 內部通道（通話記憶）：Voice 沒有用戶的登入 token，
+            # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
+            # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
+            if request_path in ("/voice/call-memory", "/voice/call-recap"):
+                _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
+                _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
+                if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
+                    self._json_error(403, "voice_internal_secret_required",
+                                     "Voice internal secret is missing or wrong")
+                    return
+                if request_path == "/voice/call-memory":
+                    self._json(voice_call_memory_response(data))
+                else:
+                    self._json(voice_call_recap_response(data))
+                return
             auth_gate = require_verified_auth(self.headers, self.path, data)
             # Family-circle invites always require a verified identity, even in
             # local/demo mode where most endpoints may allow a guest preview.
