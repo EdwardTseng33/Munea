@@ -1,6 +1,8 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新可測包**：獨立分支 `codex/release-integration-1.0.9` 以最新 `origin/main@d0215a3` 為基底，已統一整合看診／用藥／家庭資料外文守門、用藥紀錄、家庭傳話、單播放器、同日開場去重與 Voice／Avatar 暖機修正，版本為 `1.0.9 (Build 14)`。完整 `test:launch`、Voice／Avatar 專項、Capacitor sync、Xcode 26.6 實機簽章、包內來源核對、iPhone 覆蓋安裝與啟動均 PASS；Edward iPhone 已回報安裝版本 `1.0.9 (14)`。本包保留 Pro、1,000 點、三位家人假資料與 Voice canary 直連，只供開發驗收；尚未合併 main，也不是 App Store 候選包。
+> **2026-07-15 最新可測包**：獨立分支 `codex/tokyo-app-package-1.0.10` 已同步 `origin/main@d17ea6a` 與 1.0.9 整合內容，App／Web 正式 Supabase source 改為東京 `fespbkdwafueyonppzwq`，版本為 `1.0.10 (Build 15)`。完整 `test:launch`、東京／雪梨 marker 防漏、Capacitor sync、Xcode 26.6 實機簽章、包內來源與 secret 防漏均 PASS；Edward iPhone 已覆蓋安裝、啟動並回報 `Munea 1.0.10 (15)`。本包保留 Pro、1,000 點、三位家人假資料與 Voice canary 直連，只供開發驗收；尚未合併 main，也不是 App Store 候選包。
+>
+> **2026-07-15 東京 Gateway 狀態**：`munea-call-control` 東京 revision `00008-bek` 已建立，使用 Secret Manager v2；0% 流量 Canary 的 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0。正式 100% 流量切換仍待 Edward 明確批准，因此線上 Gateway 目前仍使用雪梨 revision；舊 revision 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
 > **2026-07-15 聲畫回歸覆蓋**：Voice revision `00035-lur` 已以 0% 流量 canary 建立，開場在 1.578 秒後有效出聲並完成回合；但 Mac 合成 ASR 探針仍 FAIL，因此沒有升為 100% 正式流量。GLOWS Avatar 已配對更新 server/core，首段改為真實 PCM 到達後 1 秒共同暖機、後續回合 0.5 秒；對外健康 3/3、active=0。Edward iPhone 已安裝並啟動 `1.0.8 (Build 13)` 開發包，固定連 Voice canary，包含單播放器防雙音與同日開場去重。嘴型／斷續／雙音／話量能量／多次撥號全部等待 Edward 真機 Gate，目前仍是 ❌。
 >
@@ -10,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.6 Build 11 已完成自動語音驗證、iPhone 開發包與 App Store IPA；等待真人語音 Gate、雲端 canary 與 TestFlight）**
+> **最後更新：2026-07-15（Codex · App 1.0.10 Build 15 東京開發包已裝 iPhone；等待 Gateway 正式流量授權與真人登入／拍照／金流／全語音 Gate）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
