@@ -22,7 +22,7 @@ assert(entitlements.includes('aps-environment'), 'Push entitlement is required')
 assert(project.includes('com.apple.Push'), 'Xcode target must enable Push Notifications capability');
 assert(project.includes('APS_ENVIRONMENT = development') && project.includes('APS_ENVIRONMENT = production'), 'Debug and release APNs environments must be explicit');
 assert(web.includes("api('/push/devices'"), 'Web bridge must register device tokens with the backend');
-assert(html.includes('src/notify.js?v=20260715-notification-center'), 'Notification UI changes must invalidate the stale WebView script cache');
+assert(html.includes('src/notify.js?v=20260715-v1022'), 'Notification UI changes must invalidate the stale WebView script cache');
 assert(web.includes("api('/notifications'"), 'Web bridge must mark opened notifications in the durable inbox');
 assert(web.includes('notificationInboxModal') && web.includes('openNotificationInbox'), 'App must expose a durable notification inbox');
 assert(web.includes("api('/notifications/settings'") && web.includes("action: 'set'"), 'Notification switches must persist through the backend settings API');
