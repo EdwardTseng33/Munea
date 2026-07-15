@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新手機測試包**：以最新 `main@c6e52a4` 建立 PR #70 的 `1.0.14 (Build 19)`，完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 開發簽章建置與包內版本／東京／測試資料／secret 防漏均 PASS。Edward iPhone 已透過 Wi-Fi 覆蓋安裝，手機回讀 `1.0.14 (19)` 且啟動 PASS。這一包保留 1.0.13 的開場暖機、黑屏保護與聲畫同步修正，並同步 PR #69 最新通知後端來源；PR #71 只改定價文件，不改 App 二進位。但 Voice 真人 Gate 與通知 App 畫面仍未通過。正式 App Store 包與上傳不在本輪。
+> **2026-07-15 最新手機測試包**：`1.0.15 (Build 20)` 已修正設定頁誤顯示 `1.10.1`。根因是 HTML 殘留舊版 fallback，且正式版號要等完整 App 初始化後段才覆蓋；現在改由唯一版本檔載入後立即更新設定列與版本視窗，並新增禁止硬編碼版號的回歸測試。完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 開發簽章建置與包內版本／東京／測試資料／secret 防漏均 PASS。Edward iPhone 已透過 Wi-Fi 覆蓋安裝，手機回讀 `1.0.15 (20)` 且啟動 PASS。設定頁實際目視仍需 Edward 確認；Voice 真人 Gate 與通知 App 畫面等紅燈不變。正式 App Store 包與上傳不在本輪。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.14 Build 19 已無線安裝並啟動 iPhone。自動驗證通過；Voice 真人 Gate 與 APNs／登入／拍照／金流仍未通過）**
+> **最後更新：2026-07-15（Codex · App 1.0.15 Build 20 已修正版本誤顯示並無線安裝 iPhone。自動驗證通過；設定頁目視、Voice 真人 Gate 與 APNs／登入／拍照／金流仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**70－App 1.0.15 Build 20／設定頁版號誤顯示修正（7/15 Codex）**：①❌ Edward 真機看到設定頁 `1.10.1`；手機系統實際安裝是 `1.0.14 (19)`，判定為 App 畫面顯示錯誤。②✅ 已移除設定列與版本視窗硬編碼 fallback，改由 `version.js` 載入後立即綁定唯一正式版號，不再等待完整 App 初始化；新增 UI 契約禁止同類回歸。③✅ App／npm／Xcode／開發 fixture 統一為 `1.0.15 (Build 20)`；完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 開發簽章與成品安全檢查全部通過。④✅ Edward iPhone 已無線覆蓋安裝，手機系統回讀 `1.0.15 (20)` 並成功啟動。⑤❌ 設定頁實際目視等待 Edward 確認；Voice、APNs、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳仍未通過。本輪未部署 Brain／Voice，未操作 RunPod／GLOWS。
 
 **69－App 1.0.14 Build 19／最新 main 開發測試包（7/15 Codex，PR #70）**：①✅ 來源為 `main@c6e52a4`，包含 1.0.13 開場暖機／黑屏保護／單一聲畫時鐘與 PR #69 通知後端；PR #71 只有定價文件勘誤，不改 App 二進位。App 顯示、npm、Xcode 與開發 fixture 統一升為 `1.0.14 (Build 19)`。②✅ 完整 `test:launch` 通過，包含 Voice 記憶 21 項、語氣 6 項、通知設定 8 項、APNs 5 項、登入、金流、帳號隔離、家庭同步與 UI 契約。③✅ Capacitor sync、Xcode 原生檢查與 arm64 Apple Development 簽章建置通過；包內 Tokyo Supabase、Pro、1,000 點、家人假資料、Apple 登入、HealthKit、開發推播 entitlement 與 backend secret 防漏均通過。④✅ Edward iPhone 已無線覆蓋安裝，手機回讀 `1.0.14 (19)` 且啟動 PASS。⑤❌ PR #69 只完成通知後端，不代表 migration 017／Brain 已部署或通知 App 畫面完成；Voice 真人 Gate、APNs 正式推播、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳仍未通過。⑥本輪未部署 Brain／Voice，未操作 RunPod／GLOWS。
 

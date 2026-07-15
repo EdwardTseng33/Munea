@@ -11,9 +11,20 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.0.14',
+  current: '1.0.15',
   channel: '',
   changelog: [
+    {
+      version: '1.0.15',
+      date: '2026-07-15',
+      title: '版本顯示修正版',
+      items: [
+        '設定頁與版本更新視窗現在會直接讀取同一份正式版號，不再顯示舊的 1.10.1',
+        '版本文字在版本檔載入後立即更新，不必等待整個 App 完成初始化',
+        '新增自動檢查，禁止設定頁再放入固定舊版號',
+        '測試帳號仍保留 Pro、1,000 點與家人測試資料，方便直接驗證',
+      ],
+    },
     {
       version: '1.0.14',
       date: '2026-07-15',
@@ -1187,3 +1198,16 @@ window.MuneaVersion = {
     },
   ],
 };
+
+window.MuneaApplyVersionToStaticUi = function () {
+  const current = window.MuneaVersion && window.MuneaVersion.current;
+  if (!current) return;
+  ['verRowNum', 'verCurrent'].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = current;
+  });
+};
+window.MuneaApplyVersionToStaticUi();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.MuneaApplyVersionToStaticUi, { once: true });
+}
