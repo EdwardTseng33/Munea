@@ -11,6 +11,7 @@
 """
 import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac, hashlib, contextvars, calendar
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 import uuid
@@ -283,6 +284,7 @@ ADMIN_POST_PATHS = {
     "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
+    "/admin/voice-diagnostics",
     "/admin/notifications/drain",
     "/admin/login",
 }
@@ -4394,6 +4396,95 @@ def product_event_response(data):
     return {"ok": True, "event": event, "northStar": north_star_summary({"days": 7})}
 
 
+def safe_diagnostic_duration_ms(value):
+    try:
+        return max(0, int(float(value or 0)))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def safe_diagnostic_endpoint(value):
+    raw = str(value or "").strip()[:512]
+    if not raw:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(raw)
+        if not parsed.scheme or not parsed.hostname:
+            return raw.split("?", 1)[0].split("#", 1)[0][:160]
+        hostname = parsed.hostname
+        if ":" in hostname and not hostname.startswith("["):
+            hostname = f"[{hostname}]"
+        netloc = hostname
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+        return urllib.parse.urlunsplit((parsed.scheme, netloc, parsed.path, "", ""))[:160]
+    except (TypeError, ValueError):
+        return raw.split("?", 1)[0].split("#", 1)[0].split("@", 1)[-1][:160]
+
+
+def admin_voice_diagnostics_summary(data=None):
+    """Summarize call traces without exposing audio, captions, tokens, or SDP."""
+    data = data or {}
+    days = max(1, min(30, int(data.get("days") or 7)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    events = load_product_events(since_iso=since.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=5000)
+    traces = []
+    by_outcome = {}
+    by_failed_stage = {}
+    by_last_success = {}
+    total_ms = []
+    for event in events:
+        if event.get("eventName") != "voice_call_diagnostic":
+            continue
+        props = event.get("properties") if isinstance(event.get("properties"), dict) else {}
+        outcome = str(props.get("outcome") or "unknown")[:40]
+        failed_stage = str(props.get("firstFailedStage") or "")[:80]
+        last_success = str(props.get("lastSuccessfulStage") or "")[:80]
+        duration_ms = safe_diagnostic_duration_ms(props.get("totalMs"))
+        context = props.get("context") if isinstance(props.get("context"), dict) else {}
+        by_outcome[outcome] = by_outcome.get(outcome, 0) + 1
+        if failed_stage:
+            by_failed_stage[failed_stage] = by_failed_stage.get(failed_stage, 0) + 1
+        if last_success:
+            by_last_success[last_success] = by_last_success.get(last_success, 0) + 1
+        total_ms.append(duration_ms)
+        traces.append({
+            "callId": str(props.get("callId") or event.get("sessionId") or "")[:96],
+            "eventTime": event.get("eventTime") or event.get("createdAt"),
+            "outcome": outcome,
+            "reason": str(props.get("reason") or "")[:96],
+            "firstFailedStage": failed_stage,
+            "lastSuccessfulStage": last_success,
+            "totalMs": duration_ms,
+            "appVersion": str(context.get("appVersion") or "")[:24],
+            "routeMode": str(context.get("routeMode") or "")[:40],
+            "voiceEndpoint": safe_diagnostic_endpoint(context.get("voiceEndpoint")),
+            "avatarEndpoint": safe_diagnostic_endpoint(context.get("avatarEndpoint")),
+        })
+    traces.sort(key=lambda item: item.get("eventTime") or "", reverse=True)
+    successful = sum(by_outcome.get(name, 0) for name in ("connected", "completed"))
+    return {
+        "ok": True,
+        "windowDays": days,
+        "count": len(traces),
+        "successRate": round(successful / len(traces), 4) if traces else None,
+        "totals": {
+            "byOutcome": dict(sorted(by_outcome.items())),
+            "byFailedStage": dict(sorted(by_failed_stage.items(), key=lambda item: (-item[1], item[0]))),
+            "byLastSuccessfulStage": dict(sorted(by_last_success.items(), key=lambda item: (-item[1], item[0]))),
+            "averageTotalMs": round(sum(total_ms) / len(total_ms)) if total_ms else None,
+        },
+        "recent": traces[:limit],
+        "privacy": {
+            "rawAudioStored": False,
+            "rawTranscriptStored": False,
+            "credentialsStored": False,
+        },
+        "backend": data_backend_status(),
+    }
+
+
 def admin_authorized(headers):
     token = os.environ.get("MUNEA_ADMIN_API_TOKEN") or ""
     if not token:
@@ -6453,7 +6544,7 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
                 "notificationPush": apns_status(),
             })
@@ -6665,6 +6756,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_audit_events_summary(data))
+            elif self.path == "/admin/voice-diagnostics":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_voice_diagnostics_summary(data))
             elif self.path == "/admin/notifications/drain":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

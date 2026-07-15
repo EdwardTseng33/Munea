@@ -35,6 +35,25 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("俗諺", self.src)
         self.assertIn("不確定的史實先用即時查詢確認", self.src)
 
+    def test_live_search_is_server_controlled_and_observable(self):
+        self.assertIn("Voice 伺服器會先替你播放", self.src)
+        self.assertIn("禁止先沉默查詢", self.src)
+        self.assertNotIn("先安靜查一下再回", self.src)
+        self.assertIn("tools = [_LIVE_LOOKUP_TOOL]", self.src)
+        self.assertIn("if function_name == live_lookup.TOOL_NAME", self.src)
+        tool_flow = self.src[self.src.index("if function_name == live_lookup.TOOL_NAME"):]
+        self.assertLess(tool_flow.index("response = await _run_live_lookup"),
+                        tool_flow.index("else:"))
+        self.assertLess(tool_flow.index("else:"), tool_flow.index('"type": "action"'))
+        flow = self.src[self.src.index("async def _run_live_lookup"):]
+        self.assertLess(flow.index("await _send_lookup_cue()"),
+                        flow.index("search_current_information(_cli"))
+        for event in ("node.lookup_started", "node.lookup_cue_sent", "node.lookup_done",
+                      "node.lookup_failed", "node.lookup_answer_audio"):
+            self.assertIn(event, self.src)
+        self.assertIn("asyncio.wait_for(", flow)
+        self.assertIn('lookups=st["lookup_count"]', self.src)
+
     def test_emotion_holding_three_steps_present(self):
         """接住→引導歸因→量身建議 三步流程與六種情緒接法（Edward 2026-07-15）。"""
         self.assertIn("[接住情緒與陪伴引導]", self.src)

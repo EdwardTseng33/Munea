@@ -18,12 +18,24 @@ expect(app.includes('const base = (this._playbackTurn || 0) <= 1 ? 0.48 : 0.22')
   'first-turn playback buffer is not larger than steady-state buffering');
 expect(app.includes('Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08)'),
   'playback buffer does not adapt after an underrun');
+expect(app.includes('const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100 : 600'),
+  'same-line playback still blocks later user turns with the opening delay');
+expect(app.includes('const tailMs = sameLine ? 120 : 400'),
+  'same-line speech tail does not release the microphone promptly');
+expect(app.includes('this._assistantAudioPendingBytes < 960') && app.includes("trackProductEvent('voice_tiny_audio_buffered'"),
+  'sub-frame assistant audio can still start a false playback turn');
+expect(app.includes("trackProductEvent('voice_user_speech_unrecognized'") && app.includes("trackProductEvent('voice_user_speech_recognized'"),
+  'user speech recognition gaps are not observable without transcripts');
+expect(app.includes('const cfg = developerConfig();') && !app.includes('devAuthConfig()'),
+  'development Voice endpoint is read through an undefined config helper');
 expect(app.includes('this._sameLineWarmup = this._sameLine'),
   'Avatar same-line audio does not start in warmup mode');
 expect(app.includes('prepareOpeningAudioPath(waitMs = 1000)') && app.includes('new Int16Array(24000).buffer'),
   'Avatar same-line audio is not warmed independently before the greeting');
-expect(app.includes("stage: 'before_greet'") && app.includes("result: stable ? 'ready' : 'blocked'"),
-  'unstable opening audio is not blocked before the greeting');
+expect(app.includes("stage: 'before_greet'") && app.includes("'pending_first_audio'") && app.includes("'local_fallback'"),
+  'inconclusive silent warmup does not preserve same-line verification and local fallback modes');
+expect(app.includes("return { mode, verified: stable, receiverAttached }") && !app.includes("opening_audio_not_ready"),
+  'an inconclusive silent warmup can still tear down an otherwise healthy call');
 expect(!app.includes('_sameLineWarmupPending'),
   'the first assistant answer is still being consumed as the audio warmup');
 expect(app.includes('await LiveVoice.prepareOpeningAudioPath(1000)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(1000)') < app.indexOf('LiveVoice.greet()'),
@@ -109,6 +121,19 @@ expect(avatarServer.includes('OPENING_PREBUFFER_S = 1.0') && avatarServer.includ
   'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
+expect(voiceServer.includes('tools = [_LIVE_LOOKUP_TOOL]') &&
+  voiceServer.includes('if function_name == live_lookup.TOOL_NAME') &&
+  voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
+  'current-information lookup can still bypass the controlled Voice tool path');
+const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
+expect(lookupFlow.indexOf('await _send_lookup_cue()') >= 0 &&
+  lookupFlow.indexOf('await _send_lookup_cue()') < lookupFlow.indexOf('search_current_information(_cli') &&
+  lookupFlow.includes('asyncio.wait_for('),
+  'lookup network I/O can start before the spoken cue or run without a timeout');
+expect(['node.lookup_started', 'node.lookup_cue_sent', 'node.lookup_done',
+  'node.lookup_failed', 'node.lookup_answer_audio'].every(event => voiceServer.includes(event)) &&
+  voiceServer.includes('lookups=st["lookup_count"]'),
+  'controlled lookup stages are not observable in Voice diagnostics');
 expect(chatEngine.includes('localization.taiwan_mandarin_launch_instruction("zh-TW")'),
   'the shared text/opening brain can bypass the Mandarin-only persona guard');
 expect(apiServer.includes('localization.assistant_output_text'),

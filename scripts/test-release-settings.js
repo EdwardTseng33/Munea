@@ -78,7 +78,7 @@ expect(!authConfig.includes('MUNEA_IOS_DEVELOPMENT_PROFILE_START'), 'development
 expect(iosDevProfile.includes('ios/App/App/public/src/auth-config.js'), 'iOS development profile must target generated assets only');
 expect(iosDevProfile.includes('Refusing to enable the development profile in the production Web source'), 'development profile lacks production source guard');
 expect(iosDevProfile.includes('bypassCallControl: true'), 'iOS development profile does not enable its isolated direct-call path');
-expect(iosDevProfile.includes("voiceUrl: 'wss://canary-0715-0405---munea-voice-staging"), 'iOS development profile is not pinned to the validated Voice canary');
+expect(iosDevProfile.includes("voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app'"), 'iOS development profile is not pinned to the current Voice staging endpoint');
 expect(!authConfig.includes('canary-0715-0405'), 'Voice canary leaked into production auth configuration');
 expect(!index.includes('id="authEmailInput"') && !index.includes('id="authEmailBtn"'), 'consumer app still exposes email sign-in controls');
 expect(!auth.includes('signInWithOtp') && !auth.includes('signInWithEmail'), 'email OTP auth remains exposed in the consumer auth module');

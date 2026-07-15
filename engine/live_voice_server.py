@@ -36,6 +36,7 @@ from env_loader import load_engine_env
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 import chat_engine as eng
 import localization
+import live_lookup
 from call_control_client import post_internal, verify_call_token
 from google import genai
 from google.genai import types
@@ -46,6 +47,8 @@ from websockets.datastructures import Headers
 MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
+LOOKUP_CUE_TAIL_MS = 80
+LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
 
 
 def verify_family_relay_proof(relay):
@@ -427,14 +430,14 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     else:
         base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
     base += (
-        "（你有「即時查詢」工具，聊天時可以真的上網查。聊到餐廳店家、景點旅遊（例如日本哪裡好玩、桃園有什麼好吃的）、"
-        "電影影劇、天氣預報、時事、活動檔期這類「講錯會誤導人」的具體話題——先安靜查一下再回，"
+        "（你有 search_current_information 即時查詢工具。聊到餐廳店家、景點旅遊（例如日本哪裡好玩、桃園有什麼好吃的）、"
+        "電影影劇、天氣預報、時事、活動檔期這類「講錯會誤導人」的具體話題，直接呼叫工具；"
+        "不要自己先說過場、也不要先生成答案，Voice 伺服器會先替你播放「我幫你查一下」，再執行查詢。工具回來後才回答，"
         "只講查到的真店名、真地點、真資訊；用「我聽很多人推薦…」「那邊最有名的是…」這種像自己去過或朋友推薦的口吻，"
         "自然分享一兩個亮點就好，順便帶一個有意思的小知識或典故更好。不要唸清單、不要報網址、不要像導覽機。"
         "查不到或不確定就老實說「這我不太確定，我幫你查查看」——寧可少講，絕對不可以自己編店名、地址、價格或營業時間。"
         "天氣要講就查當地真的預報再講。"
-        "要查東西時，先自然講一句短的過場再查（例如「喔這我知道有個好地方，等我想一下」），"
-        "別讓對方對著沒聲音的電話等好幾秒。）"
+        "工具回覆 error 時只要簡短說現在沒查到，不可拿舊印象補答案；禁止先沉默查詢，也不要在還沒查完時假裝已經知道答案。）"
     )
     nm = (name or "").strip()
     if nm and nm not in ("寧寧", "沐寧", "munea", "Munea"):
@@ -559,6 +562,24 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
     ),
 ])
 
+_LIVE_LOOKUP_TOOL = types.Tool(function_declarations=[
+    types.FunctionDeclaration(
+        name=live_lookup.TOOL_NAME,
+        description=(
+            "查詢需要最新或精確外部資料的問題，例如餐廳店家、地點景點、天氣、交通、新聞、"
+            "活動檔期、營業時間與近期影劇資訊。需要這些資料時直接呼叫，不要先自行回答。"
+        ),
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "query": types.Schema(type=types.Type.STRING, description="要查證的完整問題，保留地名與條件"),
+                "location": types.Schema(type=types.Type.STRING, description="問題相關地點；沒有就留空"),
+            },
+            required=["query"],
+        ),
+    ),
+])
+
 
 _ASR_PRODUCT_PHRASES = (
     "沐寧", "Munea", "寧寧", "阿宏", "小昀", "阿原", "咪咪", "旺財",
@@ -598,8 +619,9 @@ def asr_adaptation_phrases(char=None, name=None, user=None, topics=None, locatio
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
-    # 即時查詢（Google 搜尋）所有版本都有；幫你設提醒（函式呼叫）只給接得住的新版 App（?cap_rem=1）
-    tools = [types.Tool(google_search=types.GoogleSearch())]
+    # 即時查詢改成可攔截的函式：Voice 先播放過場，再用獨立 Google Search
+    # 查證後把材料交回 Live。內建搜尋只有結果 metadata，無法保證搜尋前已出聲。
+    tools = [_LIVE_LOOKUP_TOOL]
     if allow_reminders:
         tools.append(_REMINDER_TOOLS)
     phrases = asr_adaptation_phrases(char, name, user, topics, location)
@@ -635,6 +657,22 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
 
 
+async def search_current_information(search_client, query, location=None):
+    """Run one bounded, grounded lookup outside the Live session."""
+    clean_query = live_lookup.normalize_query(query)
+    if not clean_query:
+        raise ValueError("lookup query is empty")
+    response = await search_client.aio.models.generate_content(
+        model=os.environ.get("MUNEA_LOOKUP_MODEL", "gemini-2.5-flash"),
+        contents=live_lookup.build_request(clean_query, location),
+        config=types.GenerateContentConfig(
+            temperature=0.2,
+            tools=[types.Tool(google_search=types.GoogleSearch())],
+        ),
+    )
+    return live_lookup.extract_result(response)
+
+
 def _diag(cid, event, **kv):
     parts = " ".join(f"{k}={v}" for k, v in kv.items())
     print(f"[diag] c{cid} {event} {parts}".rstrip(), flush=True)
@@ -642,9 +680,12 @@ def _diag(cid, event, **kv):
 
 _CID = {"n": 0}
 _HOKKIEN_FALLBACK_PCM = {}
+_LOOKUP_CUE_PCM = {}
 # 通話記憶回寫專用池：跟 to_thread 的共用池分開，收線的多秒萃取不排擠 session 建立。
 _CALL_MEMORY_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=4, thread_name_prefix="call-memory")
+_VOICE_CUE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=2, thread_name_prefix="voice-cue")
 
 
 def _brain_memory_config():
@@ -654,6 +695,7 @@ def _brain_memory_config():
     secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
     return (url, secret) if url and secret else (None, None)
 _HOKKIEN_FALLBACK_LOCK = threading.Lock()
+_LOOKUP_CUE_LOCK = threading.Lock()
 
 
 def _hokkien_fallback_pcm(char):
@@ -675,6 +717,28 @@ def _hokkien_fallback_pcm(char):
                 raise ValueError("unexpected Hokkien fallback audio format")
             pcm = wav.readframes(wav.getnframes())
         _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
+        return pcm
+
+
+def _lookup_cue_pcm(char):
+    """Generate once per companion so a lookup can acknowledge before network I/O."""
+    cache_key = str(char or "")
+    cached = _LOOKUP_CUE_PCM.get(cache_key)
+    if cached is not None:
+        return cached
+    with _LOOKUP_CUE_LOCK:
+        cached = _LOOKUP_CUE_PCM.get(cache_key)
+        if cached is not None:
+            return cached
+        encoded = server.tts_b64(live_lookup.CUE_TEXT, char, "zh-TW")
+        if not encoded:
+            _LOOKUP_CUE_PCM[cache_key] = b""
+            return b""
+        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
+            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
+                raise ValueError("unexpected lookup cue audio format")
+            pcm = wav.readframes(wav.getnframes())
+        _LOOKUP_CUE_PCM[cache_key] = pcm
         return pcm
 
 
@@ -788,6 +852,10 @@ async def handle(ws):
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
           "opening_window_complete": False,
+          "user_turn_started_at": None,
+          "lookup_count": 0, "lookup_sources": 0, "lookup_failures": 0,
+          "lookup_requested_at": None, "lookup_result_at": None,
+          "lookup_waiting_answer": False, "lookup_cue_task": None,
           "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
@@ -797,6 +865,11 @@ async def handle(ws):
     if call_payload and call_payload.get("user_id"):
         memory_scope = f"voice-{call_payload['user_id']}"
     try:
+        # Start before the Live handshake. In normal calls the fixed spoken cue
+        # is cached by the time the user can ask the first lookup question.
+        lookup_cue_future = asyncio.get_running_loop().run_in_executor(
+            _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char)
+        st["lookup_cue_task"] = lookup_cue_future
         # 組 config 會呼叫 build_reply_context（內含對 Supabase 的同步阻塞查詢，最多 4 秒）——
         # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
         cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam, memory_scope)
@@ -827,7 +900,7 @@ async def handle(ws):
                 pass
             _diag(cid, "node.ready", ms=round((time.monotonic() - t0) * 1000))
             # Prepare the fixed Mandarin fallback off the critical path. The
-            # first Hokkien-gate response should not pay a cold TTS request.
+            # lookup cue already started before the Live handshake above.
             st["bg_tasks"].append(asyncio.create_task(asyncio.to_thread(_hokkien_fallback_pcm, char)))
 
             # 主動開口 cue（治「叫兩三次才回、以為當機」· Edward 2026-07-09）：
@@ -962,6 +1035,108 @@ async def handle(ws):
                         await fw.send(chunk)
                     except Exception:
                         st["face_ws"] = None
+
+            async def _mark_first_audio(source):
+                if not st.get("await_first") or st.get("last_in") is None:
+                    return
+                latency_ms = round((time.monotonic() - st["last_in"]) * 1000)
+                st["await_first"] = False
+                _diag(cid, "node.first_audio", latency_ms=latency_ms, source=source)
+                try:
+                    await ws.send(json.dumps({"type": "diag", "firstAudioMs": latency_ms}))
+                except Exception:
+                    pass
+
+            async def _send_lookup_cue():
+                cue_started = time.monotonic()
+                await ws.send(json.dumps({
+                    "type": "caption", "who": "nening", "text": live_lookup.CUE_TEXT,
+                }, ensure_ascii=False))
+                try:
+                    cue_task = st.get("lookup_cue_task")
+                    pcm = await cue_task if cue_task is not None else await asyncio.get_running_loop().run_in_executor(
+                        _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char)
+                except Exception as exc:
+                    pcm = b""
+                    _diag(cid, "node.lookup_cue_failed", err=f"{type(exc).__name__}:{str(exc)[:60]}")
+                first_chunk = True
+                for offset in range(0, len(pcm), 4800):
+                    await _forward_audio(pcm[offset:offset + 4800])
+                    if first_chunk:
+                        first_chunk = False
+                        await _mark_first_audio("lookup_cue")
+                    await asyncio.sleep(0)
+                if pcm:
+                    await _forward_audio(LOOKUP_CUE_TAIL_PCM)
+                _diag(
+                    cid, "node.lookup_cue_sent", audio=bool(pcm), out_bytes=len(pcm),
+                    latency_ms=round((time.monotonic() - cue_started) * 1000),
+                )
+                return bool(pcm)
+
+            async def _run_live_lookup(fargs, cue_already_spoken=False):
+                query = live_lookup.normalize_query((fargs or {}).get("query"))
+                lookup_location = str((fargs or {}).get("location") or location or "").strip()[:80]
+                st["lookup_count"] += 1
+                st["lookup_requested_at"] = time.monotonic()
+                asr_started = st.get("user_turn_started_at")
+                _diag(
+                    cid, "node.lookup_requested", query_chars=len(query),
+                    has_location=bool(lookup_location),
+                    asr_to_lookup_ms=(round((st["lookup_requested_at"] - asr_started) * 1000)
+                                      if asr_started else 0),
+                )
+                if not query:
+                    st["lookup_failures"] += 1
+                    st["lookup_result_at"] = time.monotonic()
+                    st["lookup_waiting_answer"] = True
+                    _diag(cid, "node.lookup_failed", reason="empty_query", latency_ms=0)
+                    return {"status": "error", "error": "lookup_query_empty"}
+
+                if cue_already_spoken:
+                    cue_audio = True
+                    _diag(cid, "node.lookup_cue_sent", audio="model", out_bytes=0, latency_ms=0)
+                else:
+                    cue_audio = await _send_lookup_cue()
+                network_started = time.monotonic()
+                _diag(cid, "node.lookup_started", cue_audio=cue_audio)
+                try:
+                    result = await asyncio.wait_for(
+                        search_current_information(_cli, query, lookup_location),
+                        timeout=float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "8")),
+                    )
+                except asyncio.TimeoutError:
+                    st["lookup_failures"] += 1
+                    st["lookup_result_at"] = time.monotonic()
+                    st["lookup_waiting_answer"] = True
+                    _diag(
+                        cid, "node.lookup_failed", reason="timeout",
+                        latency_ms=round((time.monotonic() - network_started) * 1000),
+                    )
+                    return {"status": "error", "error": "lookup_timeout"}
+                except Exception as exc:
+                    st["lookup_failures"] += 1
+                    st["lookup_result_at"] = time.monotonic()
+                    st["lookup_waiting_answer"] = True
+                    _diag(
+                        cid, "node.lookup_failed", reason=type(exc).__name__,
+                        latency_ms=round((time.monotonic() - network_started) * 1000),
+                    )
+                    return {"status": "error", "error": "lookup_failed"}
+
+                st["lookup_sources"] += result["sources"]
+                st["lookup_result_at"] = time.monotonic()
+                st["lookup_waiting_answer"] = True
+                _diag(
+                    cid, "node.lookup_done", sources=result["sources"],
+                    result_chars=len(result["text"]),
+                    latency_ms=round((st["lookup_result_at"] - network_started) * 1000),
+                )
+                return {
+                    "status": "ok",
+                    "answerMaterial": result["text"],
+                    "sourceCount": result["sources"],
+                }
 
             async def _send_turn_tail():
                 await _forward_audio(TURN_END_SILENCE_PCM)
@@ -1125,6 +1300,8 @@ async def handle(ws):
                         if sc:
                             it_pre = getattr(sc, "input_transcription", None)
                             if it_pre and getattr(it_pre, "text", None):
+                                if st.get("user_turn_started_at") is None:
+                                    st["user_turn_started_at"] = time.monotonic()
                                 transcript = localization.reconcile_context_transcription(
                                     it_pre.text, asr_context_terms, "zh-TW"
                                 )
@@ -1147,14 +1324,17 @@ async def handle(ws):
                                     await _arm_language_block("mandarin_pronunciation")
                         data = getattr(msg, "data", None)
                         if data and not st.get("language_block") and not st.get("client_barge_in"):
-                            if st["await_first"] and st["last_in"] is not None:
-                                lat = round((time.monotonic() - st["last_in"]) * 1000)
-                                st["await_first"] = False
-                                _diag(cid, "node.first_audio", latency_ms=lat)
-                                try:
-                                    await ws.send(json.dumps({"type": "diag", "firstAudioMs": lat}))
-                                except Exception:
-                                    pass
+                            await _mark_first_audio("model")
+                            if st.get("lookup_waiting_answer"):
+                                now = time.monotonic()
+                                requested_at = st.get("lookup_requested_at") or now
+                                result_at = st.get("lookup_result_at") or now
+                                _diag(
+                                    cid, "node.lookup_answer_audio",
+                                    total_ms=round((now - requested_at) * 1000),
+                                    after_result_ms=round((now - result_at) * 1000),
+                                )
+                                st["lookup_waiting_answer"] = False
                             st["out"] += len(data)
                             turn_out += len(data)
                             await ws.send(data)
@@ -1198,6 +1378,9 @@ async def handle(ws):
                                 _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
                                 barge_cancelled = bool(st.get("client_barge_in"))
                                 completed_audio = bool(turn_out and not st.get("language_block") and not barge_cancelled)
+                                if st.get("lookup_waiting_answer"):
+                                    _diag(cid, "node.lookup_answer_missing", out_bytes=turn_out)
+                                    st["lookup_waiting_answer"] = False
                                 if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
                                     await _send_turn_tail()
                                 turn_out = 0
@@ -1229,6 +1412,7 @@ async def handle(ws):
                                     st["language_retry_count"] = 0
                                     st["blocked_output_text"] = ""
                                 st["client_barge_in"] = False
+                                st["user_turn_started_at"] = None
                                 # 通話記憶：這一輪講完，先把雙方字幕收進整通紀錄再清緩衝（收線時交聊後管線）
                                 _capture_call_turns(st)
                                 # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
@@ -1238,7 +1422,7 @@ async def handle(ws):
                                 st["ai_flagged"] = set()
                                 if st.get("pending_cues"):
                                     st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
-                        # AI 決定「幫你設提醒」→ 把指令送給 App 執行，並回覆 AI 讓她口頭確認
+                        # 即時查詢由 Voice 自己執行；提醒／傳話才交給 App 寫入。
                         tc = getattr(msg, "tool_call", None)
                         if tc and getattr(tc, "function_calls", None):
                             responses = []
@@ -1247,21 +1431,28 @@ async def handle(ws):
                                     fargs = dict(fc.args) if fc.args else {}
                                 except Exception:
                                     fargs = {}
+                                function_name = str(getattr(fc, "name", "") or "")
                                 action_id = str(getattr(fc, "id", None) or uuid.uuid4().hex)
-                                _diag(cid, "node.tool_call", name=getattr(fc, "name", "?"), action_id=action_id)
-                                future = asyncio.get_running_loop().create_future()
-                                st["action_results"][action_id] = future
-                                await ws.send(json.dumps({"type": "action", "id": action_id, "action": fc.name, "args": fargs}, ensure_ascii=False))
-                                try:
-                                    app_result = await asyncio.wait_for(future, timeout=8)
-                                    result = app_result.get("result") if isinstance(app_result.get("result"), dict) else {}
-                                    response = {"status": "ok", **result} if app_result.get("ok") else {
-                                        "status": "error", "error": str(app_result.get("error") or "app_write_failed")[:120]
-                                    }
-                                except asyncio.TimeoutError:
-                                    response = {"status": "error", "error": "app_write_timeout"}
-                                finally:
-                                    st["action_results"].pop(action_id, None)
+                                _diag(cid, "node.tool_call", name=function_name or "?", action_id=action_id)
+                                if function_name == live_lookup.TOOL_NAME:
+                                    response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)
+                                else:
+                                    future = asyncio.get_running_loop().create_future()
+                                    st["action_results"][action_id] = future
+                                    await ws.send(json.dumps({
+                                        "type": "action", "id": action_id,
+                                        "action": function_name, "args": fargs,
+                                    }, ensure_ascii=False))
+                                    try:
+                                        app_result = await asyncio.wait_for(future, timeout=8)
+                                        result = app_result.get("result") if isinstance(app_result.get("result"), dict) else {}
+                                        response = {"status": "ok", **result} if app_result.get("ok") else {
+                                            "status": "error", "error": str(app_result.get("error") or "app_write_failed")[:120]
+                                        }
+                                    except asyncio.TimeoutError:
+                                        response = {"status": "error", "error": "app_write_timeout"}
+                                    finally:
+                                        st["action_results"].pop(action_id, None)
                                 responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response=response))
                             try:
                                 await session.send_tool_response(function_responses=responses)
@@ -1367,6 +1558,8 @@ async def handle(ws):
             cid, "closed", in_bytes=st["in"], out_bytes=st["out"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
             barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
+            lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
+            lookup_failures=st["lookup_failures"],
         )
 
 

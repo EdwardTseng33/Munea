@@ -1043,6 +1043,19 @@ function trackProductEvent(eventName, properties = {}) {
     properties: safeProperties,
   });
 }
+const VoiceCallDiagnostics = window.MuneaVoiceDiagnostics || null;
+if (VoiceCallDiagnostics) {
+  VoiceCallDiagnostics.setReporter((eventName, properties) => trackProductEvent(eventName, properties));
+}
+function voiceCallMark(stage, status, details) {
+  try { return VoiceCallDiagnostics && VoiceCallDiagnostics.mark(stage, status, details); } catch (e) { return null; }
+}
+function voiceCallFail(stage, error, details) {
+  try { return VoiceCallDiagnostics && VoiceCallDiagnostics.fail(stage, error, details); } catch (e) { return null; }
+}
+function voiceCallEnd(outcome, reason, details) {
+  try { return VoiceCallDiagnostics && VoiceCallDiagnostics.end(outcome, { reason, ...(details || {}) }); } catch (e) { return null; }
+}
 function postTurnReview() {
   if (isStaticPreview() || !chatHistory.length) return Promise.resolve(null);
   return brainPost('/butler/post-turn', {
@@ -1386,7 +1399,7 @@ const CallControl = {
 function getLiveVoiceUrl() {
   if (CallControl.active) return (CallControl.active.voice && CallControl.active.voice.url) || '';
   try {
-    const cfg = devAuthConfig();
+    const cfg = developerConfig();
     if (isDeveloperBypassAllowed() && cfg.voiceUrl) return String(cfg.voiceUrl);
   } catch (e) {}
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
@@ -1489,7 +1502,9 @@ function speechActive() {
     const face = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
     const queued = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil);
     if ((typeof LiveVoice !== 'undefined' && LiveVoice.speaking) || queued || face > 0.015) window.__muneaSpeechTs = now;
-    return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < 400);
+    const sameLine = typeof LiveVoice !== 'undefined' && LiveVoice._sameLine && LiveVoice._sameLineFellBack !== true;
+    const tailMs = sameLine ? 120 : 400;
+    return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs);
   } catch (e) { return false; }
 }
 const Avatar = {
@@ -1500,6 +1515,7 @@ const Avatar = {
     if (this._readyNotified || !this._videoReady || !this._feedReady) return;
     this._readyNotified = true;
     this._diagNote('影像+聲音上行都就緒');
+    voiceCallMark('avatar_ready', 'pass');
     if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
   },
   showLiveFrame() {
@@ -1558,6 +1574,7 @@ const Avatar = {
   async start() {
     const u = getAvatarUrl(); if (!u) return false;
     const vid = document.getElementById('faceVid'); if (!vid) return false;
+    voiceCallMark('avatar_start', 'pass', { endpoint: u, engine: faceEngine() });
     this._lastError = ''; this._session = '';
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     this._faceAudReceiver = null;
@@ -1595,6 +1612,7 @@ const Avatar = {
         if (e.track && !this._renderStream.getTracks().some(track => track.id === e.track.id)) this._renderStream.addTrack(e.track);
         if (vid.srcObject !== this._renderStream) vid.srcObject = this._renderStream;
         if (_sameLine && e.track && e.track.kind === 'audio') {
+          voiceCallMark('avatar_audio_track', 'pass', { enabled: e.track.enabled, muted: e.track.muted });
           this._attachFaceAudio(e.track);
           try { this._faceAudReceiver = e.receiver; } catch (er) {}
           try {
@@ -1605,6 +1623,7 @@ const Avatar = {
           const _pa = vid.play(); if (_pa && _pa.catch) _pa.catch(() => {});
           return;
         }
+        if (e.track && e.track.kind === 'video') voiceCallMark('avatar_video_track', 'pass');
         if (_sameLine) {
           vid.muted = true;   // 招呼前的 1 秒路徑暖機通過後才解除；第一句不再拿來試播。
           try { Avatar._diagNote('影像軌到 合成流含音軌=' + this._renderStream.getAudioTracks().length); } catch (er) {}
@@ -1625,6 +1644,9 @@ const Avatar = {
       };
       this.pc.addEventListener('iceconnectionstatechange', () => {
         this._diag('線路 ' + this.pc.iceConnectionState);
+        const iceState = this.pc.iceConnectionState;
+        if (iceState === 'failed') voiceCallFail('avatar_ice', iceState);
+        else voiceCallMark('avatar_ice_' + iceState, 'pass');
         // 第一通線路 failed 自救（Edward 2026-07-11）：臉連線失敗＝自動重連一次（等於幫用戶掛掉重撥）——他實測第二通總是成功
         if (this.pc.iceConnectionState === 'failed' && this.on && Date.now() - (Avatar._lastRetry || 0) > 20000) {
           Avatar._lastRetry = Date.now();
@@ -1662,6 +1684,7 @@ const Avatar = {
       } catch (e) {}
       const _leaseToken = CallControl.active && CallControl.active.call_token;
       const _avatarAuth = _leaseToken ? ('token=' + encodeURIComponent(_leaseToken)) : ('key=' + encodeURIComponent(MUNEA_APP_KEY));
+      voiceCallMark('avatar_offer_requested', 'pass', { endpoint: u, authMode: _leaseToken ? 'call_token' : 'app_key' });
       const r = await fetch(u + '/offer?' + _avatarAuth + _cq, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: this.pc.localDescription.sdp, type: this.pc.localDescription.type }) });
       const a = await r.json();
@@ -1671,6 +1694,7 @@ const Avatar = {
       }
       this._session = a.session || '';
       if (!this._session) { this._lastError = 'missing_session'; throw new Error('avatar session missing'); }
+      voiceCallMark('avatar_offer_accepted', 'pass', { httpStatus: r.status });
       await this.pc.setRemoteDescription(a);
       // 聲音上行：App 自己開一條 WS 把語音送去雲端臉（下面 feed()/reset() 會用到）
       this.ws = new WebSocket(u.replace(/^http/, 'ws') + '/audio?' + _avatarAuth + '&session=' + encodeURIComponent(this._session));
@@ -1681,13 +1705,18 @@ const Avatar = {
           clearTimeout(timer);
           this.on = true; this._feedReady = true;
           this._diagNote('聲音上行就緒');
+          voiceCallMark('avatar_audio_feed_open', 'pass');
           this._notifyReady();
           resolve();
         };
         this.ws.onerror = () => { clearTimeout(timer); reject(new Error('avatar audio feed failed')); };
       });
       return true;
-    } catch (e) { this.stop(); return false; }
+    } catch (e) {
+      voiceCallFail('avatar_start', this._lastError || e, { endpoint: u });
+      this.stop();
+      return false;
+    }
   },
   feed(buf) { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send(buf); } catch (e) {} },
   reset() { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send('reset'); } catch (e) {} },
@@ -1754,6 +1783,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (vid.videoWidth > 0 && vid.currentTime > 0.05) {
         Avatar._facePlaying = true;
         Avatar._videoReady = true;
+        voiceCallMark('avatar_first_frame', 'pass', { width: vid.videoWidth, height: vid.videoHeight });
         Avatar._notifyReady();
         return;
       }
@@ -1822,6 +1852,75 @@ const LiveVoice = {
     if (!this.ws || this.ws.readyState !== 1 || !buf) return;
     this.ws.send(buf);
     this._micPackets = (this._micPackets || 0) + 1;
+    if (!this._firstMicPacketRecorded) {
+      this._firstMicPacketRecorded = true;
+      voiceCallMark('microphone_first_packet', 'pass', { bytes: buf.byteLength || 0 });
+    }
+  },
+  _noteUserMicActivity(rms, frameMs, speakerActive) {
+    if (speakerActive || !this.micOpen) { this._userSpeechMs = 0; return; }
+    const floor = Math.max(0, Number(this._bargeState && this._bargeState.noiseFloor) || 0.006);
+    const threshold = Math.min(0.04, Math.max(0.018, floor * 3));
+    if (rms >= threshold) {
+      this._userSpeechQuietMs = 0;
+      this._userSpeechMs = (this._userSpeechMs || 0) + frameMs;
+      this._userSpeechPeak = Math.max(this._userSpeechPeak || 0, rms);
+      if (!this._userSpeechLatched && this._userSpeechMs >= 150) {
+        this._userSpeechLatched = true;
+        this._pendingUserSpeech = { startedAt: performance.now(), peakRms: this._userSpeechPeak, threshold };
+        try { trackProductEvent('voice_user_speech_detected', { peakRms: +this._userSpeechPeak.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
+        clearTimeout(this._userSpeechWatchT);
+        this._userSpeechWatchT = setTimeout(() => {
+          const pending = this._pendingUserSpeech;
+          if (!pending) return;
+          this._pendingUserSpeech = null;
+          try { trackProductEvent('voice_user_speech_unrecognized', { waitMs: Math.round(performance.now() - pending.startedAt), peakRms: +pending.peakRms.toFixed(4) }); } catch (e) {}
+        }, 4000);
+      }
+      return;
+    }
+    this._userSpeechMs = Math.max(0, (this._userSpeechMs || 0) - frameMs * 1.5);
+    if (!this._userSpeechLatched) return;
+    this._userSpeechQuietMs = (this._userSpeechQuietMs || 0) + frameMs;
+    if (this._userSpeechQuietMs >= 600) {
+      this._userSpeechLatched = false;
+      this._userSpeechQuietMs = 0;
+      this._userSpeechPeak = 0;
+    }
+  },
+  _ackUserSpeech() {
+    const pending = this._pendingUserSpeech;
+    if (!pending) return;
+    this._pendingUserSpeech = null;
+    clearTimeout(this._userSpeechWatchT);
+    try { trackProductEvent('voice_user_speech_recognized', { waitMs: Math.round(performance.now() - pending.startedAt), peakRms: +pending.peakRms.toFixed(4) }); } catch (e) {}
+  },
+  _takeAssistantAudio(data) {
+    if (!(data instanceof ArrayBuffer) || data.byteLength < 2 || data.byteLength % 2 !== 0) return null;
+    if (this._assistantAudioStarted) return data;
+    if (!this._assistantAudioPending) this._assistantAudioPending = [];
+    this._assistantAudioPending.push(new Uint8Array(data));
+    this._assistantAudioPendingBytes = (this._assistantAudioPendingBytes || 0) + data.byteLength;
+    if (this._assistantAudioPendingBytes < 960) {
+      if (!this._tinyAudioRecorded) {
+        this._tinyAudioRecorded = true;
+        try { trackProductEvent('voice_tiny_audio_buffered', { bytes: this._assistantAudioPendingBytes, minimumBytes: 960 }); } catch (e) {}
+      }
+      return null;
+    }
+    const combined = new Uint8Array(this._assistantAudioPendingBytes);
+    let offset = 0;
+    this._assistantAudioPending.forEach(chunk => { combined.set(chunk, offset); offset += chunk.byteLength; });
+    this._assistantAudioPending = [];
+    this._assistantAudioPendingBytes = 0;
+    this._assistantAudioStarted = true;
+    return combined.buffer;
+  },
+  _resetAssistantAudioGate() {
+    this._assistantAudioPending = [];
+    this._assistantAudioPendingBytes = 0;
+    this._assistantAudioStarted = false;
+    this._tinyAudioRecorded = false;
   },
   _resetBargeInDetector() {
     const policy = window.MuneaVoiceTurnPolicy;
@@ -1841,6 +1940,7 @@ const LiveVoice = {
     this._newAvatarTurn = true;
     this._turnHasScheduledAudio = false;
     this._capBuf = '';
+    this._resetAssistantAudioGate();
     this._setFaceAudioMuted(true);
     Avatar.reset();
   },
@@ -1853,7 +1953,7 @@ const LiveVoice = {
     try { trackProductEvent('voice_barge_in_local', { rms: +rms.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
     if (this.onListen) this.onListen();
   },
-  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet', relay: this._pendingRelay || null })); this._openMicAfterGreet = true; } } catch (e) {} },   // 請 AI 主動開口；若有指定給本人的家人傳話，先準確轉達
+  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet', relay: this._pendingRelay || null })); voiceCallMark('greeting_requested', 'pass'); this._openMicAfterGreet = true; } } catch (e) { voiceCallFail('greeting_requested', e); } },   // 請 AI 主動開口；若有指定給本人的家人傳話，先準確轉達
   async prepareRelay() {
     if (this._pendingRelay) return this._pendingRelay;
     this._relaySpokenId = null;
@@ -1929,7 +2029,7 @@ const LiveVoice = {
   async prepareOpeningAudioPath(waitMs = 1000) {
     if (!this._sameLine) {
       this._sameLineWarmup = false;
-      return true;
+      return { mode: 'local_audio', verified: true, receiverAttached: false };
     }
     this._sameLineWarmup = true;
     this._setFaceAudioMuted(true);
@@ -1948,8 +2048,15 @@ const LiveVoice = {
     const after = await this._faceAudioSnapshot();
     const deltaBytes = Math.max(0, after.bytes - before.bytes);
     const stable = after.hasStats && (deltaBytes > 600 || after.audioLevel > 0.001);
+    const receiverAttached = !!Avatar._faceAudReceiver;
     this._sameLineWarmup = false;
     if (stable) {
+      this._sameLineFellBack = false;
+      this._setFaceAudioMuted(false);
+    } else if (receiverAttached) {
+      // FlashHead may suppress a silent warmup packet even though the WebRTC
+      // audio receiver is ready. Let the first real answer verify the route;
+      // the existing three-second watchdog still falls back if it stays mute.
       this._sameLineFellBack = false;
       this._setFaceAudioMuted(false);
     } else {
@@ -1957,13 +2064,15 @@ const LiveVoice = {
       this._setFaceAudioMuted(true);
     }
     try { Avatar.reset(); } catch (e) {}
-    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : 'blocked', bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, stage: 'before_greet' }); } catch (e) {}
-    return stable;
+    const mode = stable ? 'sameline_verified' : (receiverAttached ? 'pending_first_audio' : 'local_fallback');
+    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_greet' }); } catch (e) {}
+    return { mode, verified: stable, receiverAttached };
   },
   _notePlayout(byteLength) {
     const now = performance.now();
     const useSameLine = this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true;
-    const delay = useSameLine ? 1100 : Math.round(this._playbackLeadSeconds() * 1000);
+    const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100 : 600;
+    const delay = useSameLine ? sameLineDelay : Math.round(this._playbackLeadSeconds() * 1000);
     if (!this._playoutUntil || this._playoutUntil < now) this._playoutUntil = now + delay;
     this._playoutUntil += (byteLength / (24000 * 2)) * 1000;
   },
@@ -1981,7 +2090,7 @@ const LiveVoice = {
   },
   async start(onListen, onSpeak, onDrop) {
     let url = getLiveVoiceUrl();
-    if (!url) return false;
+    if (!url) { voiceCallFail('voice_endpoint', 'missing_voice_url'); return false; }
     // 帶上目前選的角色（決定聲音＋個性；漏帶會永遠是寧寧——7/8 Edward 抓的蟲）
     try { if (typeof currentChar === 'string' && currentChar) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'char=' + encodeURIComponent(currentChar); } catch (e) {}
     // 把使用者改過的名字帶給語音伺服器，讓 AI 知道自己現在叫什麼
@@ -2020,6 +2129,7 @@ const LiveVoice = {
     url += (url.indexOf('?') >= 0 ? '&' : '?') + (_callToken
       ? ('token=' + encodeURIComponent(_callToken))
       : ('key=' + encodeURIComponent(MUNEA_APP_KEY)));
+    voiceCallMark('voice_socket_connecting', 'pass', { endpoint: url, authMode: _callToken ? 'call_token' : 'app_key' });
     this.on = true;
     this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
     this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
@@ -2027,26 +2137,35 @@ const LiveVoice = {
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
     this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0;
     this._playbackTurn = 0; this._playbackUnderruns = 0; this._turnHasScheduledAudio = false;
+    this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
+    this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
+    this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
+    clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
     // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
-    if (!this.prime()) { this.on = false; return false; }
+    if (!this.prime()) { this.on = false; voiceCallFail('microphone_requested', this._micUnavailableReason || 'microphone_prime_failed'); return false; }
     const micPromise = this._primeMicPromise;
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
-    catch (e) { this.on = false; return false; }
+    catch (e) { this.on = false; voiceCallFail('voice_socket_construct', e, { endpoint: url }); return false; }
     return await new Promise(resolve => {
       let settled = false;
       const done = ok => { if (!settled) { settled = true; resolve(ok); } };
       this.ws.onopen = async () => {
+        voiceCallMark('voice_socket_open', 'pass', { endpoint: url });
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
         this._sameLineWarmup = this._sameLine;
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
         const micResult = await micPromise;
         this._primeMicPromise = null;
-        if (!micResult.stream) { setCallHint('拿不到麥克風，請到設定允許'); try { this.ws.close(); } catch (e) {} done(false); return; }
+        if (!micResult.stream) {
+          voiceCallFail('microphone_ready', micResult.error || 'microphone_unavailable');
+          setCallHint('拿不到麥克風，請到設定允許'); try { this.ws.close(); } catch (e) {} done(false); return;
+        }
         this.mic = micResult.stream;
+        voiceCallMark('microphone_ready', 'pass', { trackState: this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState });
         this._resumeAudio();
         const src = this.ac.createMediaStreamSource(this.mic);
         this.proc = this.ac.createScriptProcessor(2048, 1, 1);
@@ -2064,6 +2183,7 @@ const LiveVoice = {
           const speakerActive = speechActive();
           const policy = window.MuneaVoiceTurnPolicy;
           const frameMs = (inp.length / this.ac.sampleRate) * 1000;
+          this._noteUserMicActivity(rms, frameMs, speakerActive);
 
           if (speakerActive && this._bargeInActive) {
             this._sendMicBuffer(buf);
@@ -2103,11 +2223,14 @@ const LiveVoice = {
               this._resetBargeInDetector();
             }
             if (o.type === 'caption' && o.who === 'nening' && o.text && !this._dropAssistantAudio) {   // 寧寧說的話→字幕逐字（累積成一句）
+              if (!this._firstAssistantCaptionRecorded) { this._firstAssistantCaptionRecorded = true; voiceCallMark('assistant_first_caption', 'pass'); }
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
-            if (o.type === 'ready') { this.ready = true; if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」
+            if (o.type === 'ready') { this.ready = true; voiceCallMark('voice_ready', 'pass'); if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」
             if (o.type === 'caption' && o.who === 'user' && o.text) {
+              this._ackUserSpeech();
+              if (!this._firstUserCaptionRecorded) { this._firstUserCaptionRecorded = true; voiceCallMark('asr_first_caption', 'pass'); }
               this._userTurn = (this._userTurn || '') + o.text;   // 累積「這輪你說的話」→ 掛斷時送去萃取長期記憶（讓聊聊講的也記得住 · Edward 2026-07-10）
               if (!this._topicSaved) {
                 // 首頁「記得你說…」的在地記憶：抓這通電話你說的第一句話
@@ -2135,6 +2258,7 @@ const LiveVoice = {
               if (interruptedTurn) Avatar.reset();
               else Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
               this._newAvatarTurn = true;
+              this._resetAssistantAudioGate();
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
             if (o.type === 'relay_spoken' && o.id) { this._relaySpokenId = o.id; rememberSpokenFamilyRelay(this._pendingRelay); }
@@ -2158,6 +2282,12 @@ const LiveVoice = {
         }
         if (!this.playCtx) return;
         if (this._dropAssistantAudio) return;
+        const audioData = this._takeAssistantAudio(ev.data);
+        if (!audioData) return;
+        if (!this._firstAudioRecorded) {
+          this._firstAudioRecorded = true;
+          voiceCallMark('voice_first_audio', 'pass', { bytes: audioData.byteLength });
+        }
         if (this._newAvatarTurn) {
           Avatar.reset();                         // 每輪新回答先清上一輪殘音／模型音訊記憶，避免句首帶到上一句尾巴
           if (this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true) this._setFaceAudioMuted(false);
@@ -2168,11 +2298,11 @@ const LiveVoice = {
           this._playbackUnderruns = 0;
           this._turnHasScheduledAudio = false;
         }
-        this._notePlayout(ev.data.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
+        this._notePlayout(audioData.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
-        Avatar.feed(ev.data);                                      // 同一份聲音餵給雲端臉（對嘴）
+        Avatar.feed(audioData);                                    // 同一份聲音餵給雲端臉（對嘴）
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
-        const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
+        const i16 = new Int16Array(audioData), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
         let ps = 0; for (let k = 0; k < f.length; k++) ps += f[k] * f[k];
         this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
@@ -2245,17 +2375,22 @@ const LiveVoice = {
         // 放寬 0.9→2 秒：斷續破洞不再被誤判成「講完」把她攔腰切斷（Edward 2026-07-12）；真講完有 turn_complete 即時接手、不靠這條
         this._toListening();                                      // 本地備援同樣等排程音訊真的播完才開麥
       };
-      this.ws.onclose = () => { const wasOpen = this.on; done(false); this.stop(); if (wasOpen && onDrop) onDrop(); };
-      this.ws.onerror = () => { done(false); };
+      this.ws.onclose = event => {
+        const wasOpen = this.on;
+        if (wasOpen) voiceCallFail('voice_socket_closed', 'ws_' + (event.code || 0), { closeCode: event.code || 0, closeReason: event.reason || '', wasClean: !!event.wasClean });
+        done(false); this.stop(); if (wasOpen && onDrop) onDrop();
+      };
+      this.ws.onerror = () => { voiceCallFail('voice_socket_error', 'websocket_error', { endpoint: url }); done(false); };
     });
   },
   stop() {
     if (this._pendingRelay) this._finishRelay(this._relaySpokenId ? 'ack' : 'release');
     this.on = false;
     this.ready = false;
-    clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
+    clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); clearTimeout(this._userSpeechWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     this.micOpen = false; this._openMicAfterGreet = false;
     this._sameLineWarmup = false;
+    this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
@@ -2555,6 +2690,14 @@ async function openVoiceSession() {
 function completeChatSession(reason = 'ended') {
   const trackedSession = Boolean(activeChatSessionId && activeChatStartedAt);
   const serverAuthoritative = Boolean(CallControl.url());
+  const completedReasons = new Set(['ended', 'user_ended', 'idle_timeout', 'out_of_points', 'free_signup_trial_exhausted']);
+  const diagnosticOutcome = reason === 'user_cancelled'
+    ? 'cancelled'
+    : (callConnected && completedReasons.has(reason) ? 'completed' : 'failed');
+  voiceCallEnd(diagnosticOutcome, reason, {
+    connected: callConnected,
+    durationMs: activeChatStartedAt ? Math.max(0, Date.now() - activeChatStartedAt) : 0,
+  });
   try {
     const releaseResult = CallControl.release(reason);
     if (serverAuthoritative && releaseResult && releaseResult.then) {
@@ -4123,6 +4266,16 @@ function setupHscrollHints() {
 async function connectCall() {
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
+  try {
+    if (VoiceCallDiagnostics) VoiceCallDiagnostics.start({
+      appVersion: window.MuneaVersion && window.MuneaVersion.current,
+      routeMode: developmentDirectCall ? 'development_direct' : 'gateway',
+      gatewayEndpoint: CallControl.url(),
+      voiceEndpoint: getLiveVoiceUrl(),
+      avatarEndpoint: getAvatarUrl(),
+      faceEngine: faceEngine(),
+    });
+  } catch (e) {}
   setCallDialing(true);
   // 撥通中＝保持角色的待機動畫（Edward 2026-07-09 二次拍板：不定格照片、也不動照片）。
   // 硬規則：聲音＋會動的臉「兩邊都真的就緒」才一起開場——寧可讓用戶等，也不要開場後像當機。
@@ -4153,8 +4306,11 @@ async function connectCall() {
     }
   } catch (e) {}
   // Keep the iOS user gesture alive before the queue/network wait starts.
+  voiceCallMark('microphone_requested', 'pass');
   if (!LiveVoice.prime()) {
     setCallDialing(false);
+    voiceCallFail('microphone_requested', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
+    voiceCallEnd('failed', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     setCallHint(LiveVoice._micUnavailableReason === 'https_required'
       ? '手機／區網測試需要 HTTPS 才能開麥，請改用公開測試連結'
       : '拿不到麥克風，請到瀏覽器設定允許');
@@ -4173,14 +4329,22 @@ async function connectCall() {
   setCallHint(developmentDirectCall ? '開發測試直連中…' : '正在安排語音與影像席位…', true);
   if (!developmentDirectCall) {
     try {
+      voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       // 跨月或年繳方案可能在這次通話前進入新點數週期；先向伺服器同步本期額度。
       try { await refreshServerCredits(); } catch (e0) {}
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
       if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
         throw new Error('paired_service_unavailable');
       }
+      voiceCallMark('gateway_assigned', 'pass', {
+        gatewayCallId: lease.call_id || '',
+        voiceEndpoint: lease.voice.url,
+        avatarEndpoint: lease.worker.url,
+      });
     } catch (e) {
       const reason = String(e && e.message || e);
+      voiceCallFail('gateway_assigned', reason, { endpoint: CallControl.url() });
+      voiceCallEnd('failed', reason);
       try { await CallControl.release(reason); } catch (e2) {}
       LiveVoice.stop(); setCallDialing(false); stopCallTimer();
       setCallHint(reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
@@ -4201,6 +4365,7 @@ async function connectCall() {
     activeChatSessionId = makeSessionId('voice');
     activeChatStartedAt = Date.now();
     activeChatTurnCount = 0;
+    voiceCallMark('app_session_created', 'pass', { sessionId: activeChatSessionId });
     setFaceState('idle');
     // 新引擎首通冷開機較久（喚醒優化交先鋒車道）——誠實預告、不讓人以為當機（Edward 2026-07-11「等20秒」）
     setCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? '新引擎暖身中，首次約需半分鐘…' : '連線中…', true);
@@ -4217,9 +4382,11 @@ async function connectCall() {
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }   // 已取消/掛斷 → 別誤開場
       _activationInFlight = true;
       try {
+        voiceCallMark('gateway_activation_wait', 'pass');
         setCallHint(developmentDirectCall ? '開發測試管線已就緒…' : '語音與影像已就緒，正在完成安全接通…', true);
         if (!developmentDirectCall) await CallControl.waitUntilActive(15000);
       } catch (e) {
+        voiceCallFail('gateway_activation', e);
         _activationInFlight = false;
         clearTimeout(_gateTimeout);
         try { LiveVoice.stop(); } catch (e2) {}
@@ -4233,20 +4400,15 @@ async function connectCall() {
       }
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
       setCallHint('聲音與畫面暖機中…', true);
-      const audioPathReady = noFace ? true : await LiveVoice.prepareOpeningAudioPath(1000);
-      if (!audioPathReady) {
-        _activationInFlight = false;
-        clearTimeout(_gateTimeout);
-        try { LiveVoice.stop(); } catch (e2) {}
-        try { FaceWave.stop(); } catch (e2) {}
-        try { completeChatSession('opening_audio_not_ready'); } catch (e2) {}
-        chatOpened = false; setCallDialing(false); stopCallTimer();
-        const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
-        setFaceState('idle'); setCallHint('聲音與畫面還沒同步好，請再撥一次');
-        try { FaceIdle.start(); } catch (e2) {}
-        try { trackProductEvent('voice_opening_audio_blocked'); } catch (e2) {}
-        return;
-      }
+      voiceCallMark('opening_audio_warmup', 'pass');
+      const openingAudio = noFace
+        ? { mode: 'no_avatar', verified: true, receiverAttached: false }
+        : await LiveVoice.prepareOpeningAudioPath(1000);
+      // Silent warmup is advisory: some Avatar workers do not emit RTP for
+      // zero PCM. A connected receiver continues on the same-line route and
+      // real opening audio is checked by the watchdog; no receiver uses local
+      // playback immediately. Neither case should tear down a healthy call.
+      voiceCallMark('opening_audio_ready', 'pass', openingAudio);
       await new Promise(resolve => setTimeout(resolve, 250));
       _activationInFlight = false;
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
@@ -4260,6 +4422,7 @@ async function connectCall() {
         }
       } catch (e) {}
       markConnected();                       // 1 秒獨立暖機完成，現在才切成真正接通並開始計時
+      voiceCallMark('call_connected', 'pass');
       if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
       try { FaceIdle.stop(); } catch (e) {}
       LiveVoice.greet();                     // 暖機不再消耗第一句；招呼從已驗證的唯一影音播放器開始
@@ -4295,6 +4458,7 @@ async function connectCall() {
     // 準備逾時絕不「假裝就緒」硬開場。舊規則 25 秒後強制放行，正是顯卡未好就撥通、首句變形的來源。
     const _gateTimeout = setTimeout(() => {
       if (_started) return;
+      voiceCallFail('readiness_gate', 'readiness_timeout', { voiceReady: _voiceReady, faceReady: _faceReady });
       try { LiveVoice.stop(); } catch (e) {}
       chatOpened = false; setCallDialing(false); stopCallTimer();
       const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
@@ -4330,7 +4494,9 @@ async function connectCall() {
         resume.then(() => LiveVoice.start(onListen, onSpeak, onDrop)).catch(() => onDrop());
       }, 500);
     };
-    LiveVoice.start(onListen, onSpeak, onDrop);
+    LiveVoice.start(onListen, onSpeak, onDrop).then(ok => {
+      if (!ok && callDialing) voiceCallFail('voice_start', 'voice_start_failed');
+    }).catch(error => voiceCallFail('voice_start', error));
     Avatar.start().then(ok => {
       if (ok || Avatar._lastError !== 'capacity_full') return;
       try { LiveVoice.stop(); } catch (e) {}
