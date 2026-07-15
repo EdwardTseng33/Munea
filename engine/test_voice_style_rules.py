@@ -43,6 +43,21 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertNotIn("你是真人", self.src)
         self.assertNotIn("你是一個真人", self.src)
 
+    def test_name_addressing_restraint(self):
+        """2026-07-16 Edward「回話會一直叫用戶名稱」：名字要用對、頻率要像真人。"""
+        self.assertIn("打招呼時用一次就好", self.src)
+        self.assertIn("大多數回合直接說話、不加稱呼", self.src)
+        self.assertIn("每一句都叫他的名字非常不自然", self.src)
+        # 舊的過頭寫法（模型讀成「每句都要叫」）不得回歸
+        self.assertNotIn("整段對話都用", self.src)
+
+    def test_voice_only_reality_rule(self):
+        """2026-07-16 Edward 抓到「怎麼突然傳貼圖」幻覺：純語音現實邊界必須封死。"""
+        self.assertIn("現實邊界", self.src)
+        self.assertIn("純語音通話", self.src)
+        self.assertIn("沒有貼圖", self.src)
+        self.assertIn("不要猜測他做了什麼動作", self.src)
+
     def test_story_moral_rule_present(self):
         self.assertIn("[說故事與在地內容]", self.src)
         self.assertIn("寓意", self.src)
