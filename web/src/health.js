@@ -5,7 +5,11 @@
    對接文件：docs/Apple健康串接-給Mac的實作說明-2026-07-08.md */
 window.MuneaHealth = (function () {
   const GOAL = 500; // 走路任務目標步數（跟首頁「今天走 500 步」一致）
+  const REFRESH_COOLDOWN_MS = 60000;
   let disconnectArmTimer = null;
+  let refreshPromise = null;
+  let lastRefreshAt = 0;
+  let lastSummary = null;
 
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Health) || null;
@@ -56,7 +60,7 @@ window.MuneaHealth = (function () {
       const r = await p.requestAuthorization();
       if (r && r.available === false) return { ok: false, reason: 'unavailable' }; // 這台沒有健康資料
       try { localStorage.setItem('munea.devicesOn', '1'); } catch (e) {}
-      const s = await refresh();
+      const s = await refresh({ force: true });
       emitConnectionState();
       return { ok: true, summary: s };
     } catch (e) {
@@ -65,30 +69,40 @@ window.MuneaHealth = (function () {
   }
 
   // 讀最新健康摘要，餵回網頁
-  async function refresh() {
+  async function refresh(options) {
     if (!connected()) return null;
     const p = plugin();
     if (!p) return null;
-    let s = null;
-    try { s = await p.getSummary(); } catch (e) { return null; }
-    if (!connected()) return null;
-    if (!s || s.available === false) return null;
-    // 狀態頁血壓/心率/睡眠等欄位：交給 Windows 端留的接口
-    try { if (typeof window.__muneaSetHealth === 'function') window.__muneaSetHealth(s); } catch (e) {}
-    // 步數 → 首頁走路任務（app.js 的接口）
-    if (typeof s.steps === 'number' && typeof window.__muneaSetSteps === 'function') {
-      try { window.__muneaSetSteps(s.steps); } catch (e) {}
-    }
-    try {
-      if (typeof p.getHistory === 'function' && typeof window.__muneaSetHealthHistory === 'function') {
-        const history = await p.getHistory({ days: 35 });
-        if (connected() && history && history.available !== false && Array.isArray(history.days)) {
-          window.__muneaSetHealthHistory(history.days);
-        }
+    if (refreshPromise) return refreshPromise;
+    const force = !!(options && options.force);
+    if (!force && lastRefreshAt && Date.now() - lastRefreshAt < REFRESH_COOLDOWN_MS) return lastSummary;
+
+    lastRefreshAt = Date.now();
+    refreshPromise = (async function () {
+      let s = null;
+      try { s = await p.getSummary(); } catch (e) { return null; }
+      if (!connected()) return null;
+      if (!s || s.available === false) return null;
+      lastSummary = s;
+      // 狀態頁血壓/心率/睡眠等欄位：交給 Windows 端留的接口
+      try { if (typeof window.__muneaSetHealth === 'function') window.__muneaSetHealth(s); } catch (e) {}
+      // 步數 → 首頁走路任務（app.js 的接口）
+      if (typeof s.steps === 'number' && typeof window.__muneaSetSteps === 'function') {
+        try { window.__muneaSetSteps(s.steps); } catch (e) {}
       }
-    } catch (e) {}
-    try { localStorage.setItem('munea.health.last', JSON.stringify({ t: Date.now(), s: s })); } catch (e) {}
-    return s;
+      try {
+        if (typeof p.getHistory === 'function' && typeof window.__muneaSetHealthHistory === 'function') {
+          const history = await p.getHistory({ days: 35 });
+          if (connected() && history && history.available !== false && Array.isArray(history.days)) {
+            window.__muneaSetHealthHistory(history.days);
+          }
+        }
+      } catch (e) {}
+      try { localStorage.setItem('munea.health.last', JSON.stringify({ t: Date.now(), s: s })); } catch (e) {}
+      return s;
+    })();
+    try { return await refreshPromise; }
+    finally { refreshPromise = null; }
   }
 
   function disconnect() {
@@ -132,5 +146,5 @@ window.MuneaHealth = (function () {
 
   bindConnectionUi();
 
-  return { GOAL: GOAL, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative };
+  return { GOAL: GOAL, REFRESH_COOLDOWN_MS: REFRESH_COOLDOWN_MS, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative };
 })();

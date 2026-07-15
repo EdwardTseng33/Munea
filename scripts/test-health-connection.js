@@ -37,16 +37,20 @@ const elements = {
 elements.cnHealthBtn.dataset.label = '連接';
 
 let summaryReads = 0;
+let historyReads = 0;
 global.document = { getElementById: id => elements[id] || null };
 global.CustomEvent = function (name, options) { this.type = name; this.detail = options.detail; };
 global.window = global;
 window.dispatchEvent = () => {};
+window.__muneaSetHealth = () => {};
+window.__muneaSetSteps = () => {};
+window.__muneaSetHealthHistory = () => {};
 window.Capacitor = {
   isNativePlatform: () => true,
   Plugins: { Health: {
     requestAuthorization: async () => ({ granted: true, available: true }),
     getSummary: async () => { summaryReads += 1; return { available: true, steps: 1234 }; },
-    getHistory: async () => ({ available: true, days: [] }),
+    getHistory: async () => { historyReads += 1; return { available: true, days: [] }; },
   } },
 };
 
@@ -64,6 +68,20 @@ vm.runInThisContext(fs.readFileSync('web/src/health.js', 'utf8'), { filename: 'h
   assert.strictEqual(elements.cnHealthBtn.textContent, '解除連接');
   assert.strictEqual(elements.healthSettingsStateLabel.textContent, '已連接');
   assert.strictEqual(summaryReads, 1);
+  assert.strictEqual(historyReads, 1);
+
+  await Promise.all([
+    MuneaHealth.refresh({ force: true }),
+    MuneaHealth.refresh({ force: true }),
+    MuneaHealth.refresh({ force: true }),
+  ]);
+  assert.strictEqual(summaryReads, 2, 'concurrent HealthKit refreshes must share one native request');
+  assert.strictEqual(historyReads, 2, 'concurrent HealthKit history reads must share one native request');
+  await MuneaHealth.refresh();
+  MuneaHealth.boot();
+  await new Promise(resolve => setTimeout(resolve, 1));
+  assert.strictEqual(summaryReads, 2, 'cooldown must suppress repeated startup/auth refreshes');
+  assert.strictEqual(historyReads, 2, 'cooldown must suppress repeated history reads');
   const savedHistory = values.get('munea.health.last');
 
   const click = elements.cnHealthBtn.listeners.click;
@@ -78,6 +96,6 @@ vm.runInThisContext(fs.readFileSync('web/src/health.js', 'utf8'), { filename: 'h
   assert.strictEqual(values.get('munea.health.last'), savedHistory);
 
   await MuneaHealth.refresh();
-  assert.strictEqual(summaryReads, 1, 'disconnect must stop future HealthKit reads');
+  assert.strictEqual(summaryReads, 2, 'disconnect must stop future HealthKit reads');
   console.log('Apple Health connection state: ALL PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });
