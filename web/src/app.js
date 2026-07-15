@@ -5434,10 +5434,25 @@ function init() {
   // 發起挑戰面板
   const chalModal = $('#chalModal');
   const closeChal = () => chalModal && chalModal.classList.remove('show');
+  // 「找誰一起」吃全家健康圈真名單（排除本人）、開窗時重畫；圈空時給邀請引導——不再用寫死的示範四人（7/15 修）
+  function chalEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function renderInviteList() {
+    const box = $('#inviteList'); if (!box) return;
+    const mem = loadCircle().filter(m => !m.self);
+    if (!mem.length) {
+      box.innerHTML = '<div class="iv-empty">圈裡還沒有家人。先到家人頁「邀請家人加入」，之後就能在這裡找他們一起。</div>';
+      return;
+    }
+    box.innerHTML = mem.map(m =>
+      '<button type="button" class="iv on" data-name="' + chalEsc(m.name) + '"><span class="iv-ava"><span class="init-ava ' + chalEsc(m.tint || '') + '">' + chalEsc(famInit(m)) + '</span></span>' + chalEsc(m.name) + '</button>'
+    ).join('');
+  }
   if ($('#newChalBtn')) $('#newChalBtn').addEventListener('click', () => {
     if (!chalModal) return;
+    renderInviteList();
     const cur = document.querySelector('.chal-type.active');
     applyChalKind(cur ? (cur.dataset.kind || 'walk') : 'walk');
+    recalcWalk(true);   // 名單重畫後人數會變，目標步數建議跟著重算
     // 預填日期：運動=今天開始、問答=後天截止、揪一攤=這週六、抽獎=今天（時間欄各有預設）
     try {
       const t0 = new Date();
@@ -5757,7 +5772,7 @@ function init() {
     const kind = type ? (type.dataset.kind || 'walk') : 'walk';
     const ons = $$('#inviteList .iv.on');
     const names = ons.map(x => x.dataset.name).filter(Boolean);
-    if (!names.length) { toast('先選至少一位家人一起'); return; }
+    if (!names.length) { toast(loadCircle().some(m => !m.self) ? '先選至少一位家人一起' : '圈裡還沒有家人，先到家人頁邀請家人加入'); return; }
     const act = { id: Date.now(), kind, names };
     if (kind === 'walk') {
       act.goal = +(($('#walkGoal') && $('#walkGoal').value) || 30000);
@@ -5860,7 +5875,7 @@ function init() {
     saveActs(acts.filter(a => !actExpired(a)));
   }
   window.__muneaSweepActs = sweepActsOnView;
-  Promise.resolve(__pullPromise).finally(() => restoreActsBoot());   // syncPullAll() 開發者略過/背景分頁時回 undefined，裸 .finally 炸掉整段 init（同 4373 行包法）
+  Promise.resolve(__pullPromise).finally(() => restoreActsBoot());   // syncPullAll 可能不回 Promise（頁面隱藏啟動等）；不包住整個 init 會從這裡斷頭（7/15 修）
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
   const inviteList = $('#inviteList');
