@@ -5592,7 +5592,7 @@ function init() {
       '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go"' + (locked ? ' disabled' : '') + '>我要去</button>' +
       '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no"' + (locked ? ' disabled' : '') + '>我沒空</button></div>' +
       '<div class="qc-num">' + (going.length ? '要去的：' + going.join('、') : '還沒有人回「要去」') + (no.length ? '　·　沒空：' + no.join('、') : '') +
-      '；' + (locked ? '活動時間到了，不能再改。' : (my ? '想改隨時再點另一個就好；' : '點一下回覆；') + cname() + '會幫你問阿嬤跟其他人。') + '</div>';
+      '；' + (locked ? '活動時間到了，不能再改。' : (my ? '想改隨時再點另一個就好；' : '點一下回覆；') + cname() + '會幫你問不方便滑手機的家人跟其他人。') + '</div>';
     if (!locked) box.querySelector('.rsvp-btns').addEventListener('click', e => {
       const b = e.target.closest('.rsvp-btn'); if (!b || b.disabled) return;
       act.rsvp = act.rsvp || {}; act.rsvp['你'] = b.dataset.r;
@@ -5665,7 +5665,7 @@ function init() {
     } else if (act.kind === 'walk') {
       chip = act.days + ' 天內';
       goal = '大家一起走 ' + (+act.goal).toLocaleString() + ' 步';
-      note = cname() + '會親口問阿嬤要不要一起；開始後每個人走多少都看得到';
+      note = cname() + '會親口問不方便滑手機的家人要不要一起；開始後每個人走多少都看得到';
     } else if (act.kind === 'quiz') {
       chip = act.q + ' 題';
       if (act.myDone && act.answers && act.answers['你'] !== undefined) {
@@ -5686,7 +5686,7 @@ function init() {
     } else {
       chip = act.dateLabel || act.dueLabel || '進行中';
       goal = (act.title || '家庭活動') + (act.place ? ' · ' + act.place : '') + '，誰能到？';
-      note = cname() + '會親口問阿嬤、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
+      note = cname() + '會親口問不方便滑手機的家人、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
     }
     const rwLine = act.rewards && act.rewards.some(Boolean)
       ? '<div class="qc-prize"><span class="qp-ico">🏅</span><div class="qp-txt">' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '<small>獎品提供：' + (act.owner || '你') + '</small></div></div>'
@@ -5792,7 +5792,8 @@ function init() {
     const AWARD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></svg>';
     const GIFT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9"/><path d="M7.5 8a2.5 2.5 0 1 1 0-5C10 3 12 5.5 12 8c0-2.5 2-5 4.5-5a2.5 2.5 0 1 1 0 5"/></svg>';
     function winCardHtml(pop) {
-      const claim = act.winner === '你' ? '獎品就是你的了，跟家人說一聲' : '獎品請找阿嬤領';
+      const giver = muneaSafeDisplayText(act.owner, '你');   // 出獎人守門；真用戶開的抽獎多半沒填 owner → 退回「你」
+      const claim = act.winner === '你' ? '獎品就是你的了，跟家人說一聲' : (giver !== '你' ? '獎品請找' + giver + '領' : '獎品由你提供，記得拿給' + muneaSafeDisplayText(act.winner, '中獎的家人'));
       return '<div class="draw-stage"><div class="draw-confetti"></div><div class="draw-win-card' + (pop ? '' : ' nopop') + '">' +
         '<span class="dw-ico">' + AWARD + '</span>' +
         '<div class="dw-name">' + act.winner + ' 抽中了</div>' +
@@ -5909,7 +5910,7 @@ function init() {
     trackProductEvent('activity_created', { kind: kind });
     closeChal();
     renderActCard(act);
-    hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : kind === 'vote' ? '好，' + cname() + '把問題送出去了，誰投了什麼馬上看得到。' : kind === 'draw' ? '好，' + cname() + '把抽獎報給大家了，' + (act.when || '') + '開獎！' : '好，邀請發出去了，' + cname() + '會親口問阿嬤，等大家答應就開始。');
+    hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : kind === 'vote' ? '好，' + cname() + '把問題送出去了，誰投了什麼馬上看得到。' : kind === 'draw' ? '好，' + cname() + '把抽獎報給大家了，' + (act.when || '') + '開獎！' : '好，邀請發出去了，' + cname() + '會親口問不方便滑手機的家人，等大家答應就開始。');
   });
   // 一張活動卡是不是「到期該收」（含自己發起的、含問答/投票、含沒設日期的殭屍卡）— Edward 7/9 修卡死
   // 這個活動「哪天算結束」（揪一攤=活動日、問答/投票=截止、運動=截止、抽獎=開獎日）
@@ -5984,7 +5985,7 @@ function init() {
   }
   if (inviteList) inviteList.addEventListener('click', e => { const it = e.target.closest('.iv'); if (it) { it.classList.toggle('on'); recalcWalk(true); } });
   // 挑戰類型選擇
-  const INVITE_NOTES = () => ({ walk: '阿嬤那份，' + cname() + '會親口問她', quiz: '阿嬤用說的就能玩；其他人手機作答', event: cname() + '親口問阿嬤；其他人回「去／沒空」', vote: '阿嬤那票，' + cname() + '會唸選項給她聽、幫她投', draw: '人人有機會；開獎時' + cname() + '會告訴每個人' });
+  const INVITE_NOTES = () => ({ walk: '不方便滑手機的家人，' + cname() + '會親口問', quiz: '不方便滑手機的家人，用說的就能玩；其他人手機作答', event: cname() + '親口問不方便滑手機的家人；其他人回「去／沒空」', vote: cname() + '會唸選項給不方便滑手機的家人聽，幫忙投', draw: '人人有機會；開獎時' + cname() + '會告訴每個人' });
   function applyChalKind(kind) {
     if ($('#inviteNote')) $('#inviteNote').textContent = INVITE_NOTES()[kind] || '';
     if ($('#walkFields')) $('#walkFields').style.display = kind === 'walk' ? '' : 'none';
