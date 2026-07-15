@@ -1494,13 +1494,23 @@ function speechActive() {
 }
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
-  _session: '', _lastError: '',
+  _session: '', _lastError: '', _renderStream: null,
   _videoReady: false, _feedReady: false, _readyNotified: false,
   _notifyReady() {
     if (this._readyNotified || !this._videoReady || !this._feedReady) return;
     this._readyNotified = true;
     this._diagNote('影像+聲音上行都就緒');
     if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
+  },
+  showLiveFrame() {
+    if (!this._videoReady) return false;
+    const vid = document.getElementById('faceVid');
+    const bg = document.querySelector('#chat .face-bg');
+    if (!vid || !bg) return false;
+    if (faceEngine() === 'flashhead') _fhComposite(true, vid);
+    else _fhComposite(false, vid);
+    bg.classList.add('livevid');
+    return true;
   },
   _diag(msg) {  // 診斷小窗（設定 munea.debug=1 才顯示）：手機上排查「臉沒動」用
     try {
@@ -1550,6 +1560,10 @@ const Avatar = {
     const vid = document.getElementById('faceVid'); if (!vid) return false;
     this._lastError = ''; this._session = '';
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
+    this._faceAudReceiver = null;
+    this._renderStream = new MediaStream();
+    vid.srcObject = this._renderStream;
+    vid.muted = true;
     try {
       // 連線路線（7/9 手機實測補強）：家用網路直連即可；手機行動網路（5G/4G）常要走「中繼站」轉一手
       // 中繼＝公開測試中繼（正式上線換自家帳號的中繼、一行換）；munea.avatarRelay=1 可強制全走中繼（診斷用）
@@ -1575,8 +1589,11 @@ const Avatar = {
       const _sameLine = faceSameLineOn();
       if (_sameLine) this.pc.addTransceiver('audio', { direction: 'recvonly' });   // 同線：臉那條線多收一軌聲音（跟影像同步）
       this.pc.ontrack = e => {
-        // 同線＝先鋒真機驗證的做法：一個播放器帶兩軌（影像+聲音同一條 stream）——聲音跟畫面天生綁死、
-        // iOS 手勢關卡也只闖一次。faceAud 降級為音量儀表專用（閉麥/沉默計時）、永遠靜音不出聲（防雙聲）。
+        // WebRTC 不保證 audio/video 的 ontrack 事件帶同一個 MediaStream 物件。
+        // 明確把兩軌合進同一個 render stream，交給唯一播放器 faceVid，避免有影無聲或兩路時鐘漂移。
+        if (!this._renderStream) this._renderStream = new MediaStream();
+        if (e.track && !this._renderStream.getTracks().some(track => track.id === e.track.id)) this._renderStream.addTrack(e.track);
+        if (vid.srcObject !== this._renderStream) vid.srcObject = this._renderStream;
         if (_sameLine && e.track && e.track.kind === 'audio') {
           this._attachFaceAudio(e.track);
           try { this._faceAudReceiver = e.receiver; } catch (er) {}
@@ -1585,12 +1602,12 @@ const Avatar = {
             Avatar._diagNote('聲音軌到 str=' + _sid + ' en=' + e.track.enabled + ' mu=' + e.track.muted);
           } catch (er) {}
           const _fa2 = document.getElementById('faceAud'); if (_fa2) _fa2.muted = true;
+          const _pa = vid.play(); if (_pa && _pa.catch) _pa.catch(() => {});
           return;
         }
-        vid.srcObject = e.streams[0];
         if (_sameLine) {
-          vid.muted = false;   // 聲音改由影像播放器出（跟先鋒頁同款）
-          try { const _sid = (e.streams[0] && e.streams[0].id || '').slice(-4); Avatar._diagNote('影像軌到 str=' + _sid + ' 含音軌=' + (e.streams[0] ? e.streams[0].getAudioTracks().length : '?')); } catch (er) {}
+          vid.muted = true;   // 招呼前的 1 秒路徑暖機通過後才解除；第一句不再拿來試播。
+          try { Avatar._diagNote('影像軌到 合成流含音軌=' + this._renderStream.getAudioTracks().length); } catch (er) {}
           const _pv = vid.play();
           if (_pv && _pv.then) _pv.then(() => Avatar._diagNote('影音播放:成功')).catch((err) => {   // 被 iOS 擋（手勢斷鏈）→ 點畫面一下＝新手勢救回（先鋒 tap-to-play 的 App 版）
             Avatar._diagNote('影音播放:被擋(' + (err && err.name) + ')', true);
@@ -1603,9 +1620,8 @@ const Avatar = {
             } catch (e4) {}
           });
         }
-        if (faceEngine() === 'flashhead') { _fhComposite(true, vid); }   // 全身合成：512 活臉貼回 9:16 立繪判斷框（先鋒 7/11 參數）
-        else { _fhComposite(false, vid); vid.style.objectFit = ''; vid.style.background = ''; }
-        this._diag('影像到了');
+        // 不在 ontrack 當下切畫面；第一個有效影格確認後，開場閘才會呼叫 showLiveFrame()。
+        this._diag('影像軌到了，等待第一格');
       };
       this.pc.addEventListener('iceconnectionstatechange', () => {
         this._diag('線路 ' + this.pc.iceConnectionState);
@@ -1620,7 +1636,7 @@ const Avatar = {
             resume.then(() => Avatar.start()).then(ok => {
               if (!ok) return;
               try {   // 通話已開場的情況下臉遲到加入：補亮會動的臉那層（開場那步早跑過、這裡要自己補）
-                const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid');
+                Avatar.showLiveFrame();
                 FaceIdle.stop();
               } catch (e3) {}
             }).catch(() => {});
@@ -1714,6 +1730,8 @@ const Avatar = {
     this.ws = this.pc = null; this._session = '';
     const vid = document.getElementById('faceVid');
     if (vid) { try { vid.srcObject = null; } catch (e) {} }
+    this._renderStream = null;
+    this._faceAudReceiver = null;
     // 同線收聲一起收
     try { if (this._faceAudRaf) cancelAnimationFrame(this._faceAudRaf); } catch (e) {}
     this._faceAudAnalyser = null; this._faceAudRaf = 0; this._faceAudLevel = 0; this._faceAudMaxLevel = 0;
@@ -1892,9 +1910,7 @@ const LiveVoice = {
     try { const meter = document.getElementById('faceAud'); if (meter) meter.muted = true; } catch (e) {}
     try { const player = document.getElementById('faceVid'); if (player) player.muted = !!muted; } catch (e) {}
   },
-  async _finishSameLineWarmup() {
-    if (!this._sameLineWarmupPending || !this.on) return;
-    this._sameLineWarmupPending = false;
+  async _faceAudioSnapshot() {
     let bytes = 0, audioLevel = -1, hasStats = false;
     try {
       const receiver = Avatar._faceAudReceiver;
@@ -1908,19 +1924,41 @@ const LiveVoice = {
         });
       }
     } catch (e) {}
-    const stable = hasStats && (bytes > 12000 || audioLevel > 0.001);
+    return { bytes, audioLevel, hasStats };
+  },
+  async prepareOpeningAudioPath(waitMs = 1000) {
+    if (!this._sameLine) {
+      this._sameLineWarmup = false;
+      return true;
+    }
+    this._sameLineWarmup = true;
+    this._setFaceAudioMuted(true);
+    const receiverDeadline = Date.now() + 600;
+    while (this.on && !Avatar._faceAudReceiver && Date.now() < receiverDeadline) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    const before = await this._faceAudioSnapshot();
+    // 暖機資料不屬於對話，不送 Gemini；只讓 Avatar 的影音 RTP 與 iPhone 播放路徑先穩定一秒。
+    try {
+      Avatar.reset();
+      Avatar.feed(new Int16Array(24000).buffer);
+      Avatar.finish();
+    } catch (e) {}
+    await new Promise(resolve => setTimeout(resolve, Math.max(1000, waitMs || 0)));
+    const after = await this._faceAudioSnapshot();
+    const deltaBytes = Math.max(0, after.bytes - before.bytes);
+    const stable = after.hasStats && (deltaBytes > 600 || after.audioLevel > 0.001);
+    this._sameLineWarmup = false;
     if (stable) {
-      this._sameLineWarmup = false;
+      this._sameLineFellBack = false;
       this._setFaceAudioMuted(false);
-      try { trackProductEvent('voice_sameline_warmup', { result: 'ready', bytes, audioLevel }); } catch (e) {}
     } else {
-      // If iOS cannot prove the remote track is stable, keep the deterministic
-      // local Web Audio path for this call instead of risking choppy speech.
-      this._sameLineWarmup = false;
       this._sameLineFellBack = true;
       this._setFaceAudioMuted(true);
-      try { trackProductEvent('voice_sameline_warmup', { result: 'local_fallback', bytes, audioLevel, hasStats }); } catch (e) {}
     }
+    try { Avatar.reset(); } catch (e) {}
+    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : 'blocked', bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, stage: 'before_greet' }); } catch (e) {}
+    return stable;
   },
   _notePlayout(byteLength) {
     const now = performance.now();
@@ -1938,7 +1976,6 @@ const LiveVoice = {
     }
     this.speaking = false; this.playLevel = 0;
     if (this._relaySpokenId && this._pendingRelay && this._relaySpokenId === this._pendingRelay.id) this._finishRelay('ack');
-    if (this._sameLineWarmupPending) this._finishSameLineWarmup();
     if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
     if (this.onListen) this.onListen();
   },
@@ -2003,7 +2040,7 @@ const LiveVoice = {
       const done = ok => { if (!settled) { settled = true; resolve(ok); } };
       this.ws.onopen = async () => {
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
-        this._sameLineWarmup = this._sameLine; this._sameLineWarmupPending = false;
+        this._sameLineWarmup = this._sameLine;
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
         const micResult = await micPromise;
@@ -2097,7 +2134,6 @@ const LiveVoice = {
               } } catch (eT) {}
               if (interruptedTurn) Avatar.reset();
               else Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
-              if (this._sameLineWarmup) this._sameLineWarmupPending = true;
               this._newAvatarTurn = true;
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
@@ -2219,7 +2255,7 @@ const LiveVoice = {
     this.ready = false;
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     this.micOpen = false; this._openMicAfterGreet = false;
-    this._sameLineWarmup = false; this._sameLineWarmupPending = false;
+    this._sameLineWarmup = false;
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
@@ -3502,6 +3538,7 @@ const _syncPushLastSent = new Map();
 let _syncPullPromise = null;
 let _syncPullCompletedAt = 0;
 let _familySyncTimer = null;
+let _familyVisibilityBound = false;
 function syncPush(key, value) {
   if (isDeveloperBypassAllowed()) return;
   try {
@@ -4170,7 +4207,7 @@ async function connectCall() {
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
 
     // ===== 兩邊都就緒才開場（Edward 2026-07-09 二次拍板）=====
-    let _voiceReady = false, _faceReady = false, _started = false, _faceUnavailable = false, _activationInFlight = false;
+    let _voiceReady = false, _faceReady = false, _started = false, _activationInFlight = false;
     const noFace = !getAvatarUrl();          // 沒接雲端臉的角色（或關閉）＝不必等臉
     if (noFace) _faceReady = true;
     const beginConversation = async () => {
@@ -4192,6 +4229,23 @@ async function connectCall() {
         try { FaceIdle.start(); } catch (e2) {}
         return;
       }
+      if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
+      setCallHint('聲音與畫面暖機中…', true);
+      const audioPathReady = noFace ? true : await LiveVoice.prepareOpeningAudioPath(1000);
+      if (!audioPathReady) {
+        _activationInFlight = false;
+        clearTimeout(_gateTimeout);
+        try { LiveVoice.stop(); } catch (e2) {}
+        try { FaceWave.stop(); } catch (e2) {}
+        try { completeChatSession('opening_audio_not_ready'); } catch (e2) {}
+        chatOpened = false; setCallDialing(false); stopCallTimer();
+        const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
+        setFaceState('idle'); setCallHint('聲音與畫面還沒同步好，請再撥一次');
+        try { FaceIdle.start(); } catch (e2) {}
+        try { trackProductEvent('voice_opening_audio_blocked'); } catch (e2) {}
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 250));
       _activationInFlight = false;
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
       _started = true;
@@ -4203,17 +4257,11 @@ async function connectCall() {
           LiveVoice._openingRecorded = true;
         }
       } catch (e) {}
-      // 三條管線（腦、影像、Avatar 聲音上行）都就緒後再多等 1.5 秒才開口。
-      // 待機動畫在這段時間繼續播，避免第一批招呼聲先於聲畫管線到達而變形或被吃掉。
-      const _greetDelay = 1500;
-      setTimeout(() => {
-        if (!callConnected && !callDialing) return;   // 這 1 秒內掛斷了就別開口
-        markConnected();                    // 暖身也完成，現在才從「撥通中」切成真正接通並開始計時
-        if (!noFace && !_faceUnavailable) { const bg = document.querySelector('#chat .face-bg'); if (bg) bg.classList.add('livevid'); }   // 亮出會動的臉
-        try { FaceIdle.stop(); } catch (e) {}
-        LiveVoice.greet();                   // 管線穩了才請她主動開口（招呼講完才開麥）
-      }, _greetDelay);
-      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice._setMicOpen(true); LiveVoice._openMicAfterGreet = false; } }, 6000 + _greetDelay);   // 開麥保底順延（別在她還沒開口就開麥）
+      markConnected();                       // 1 秒獨立暖機完成，現在才切成真正接通並開始計時
+      if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
+      try { FaceIdle.stop(); } catch (e) {}
+      LiveVoice.greet();                     // 暖機不再消耗第一句；招呼從已驗證的唯一影音播放器開始
+      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice._setMicOpen(true); LiveVoice._openMicAfterGreet = false; } }, 6000);   // 開麥保底（別在她還沒開口就開麥）
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
@@ -4327,9 +4375,12 @@ function init() {
   refreshServerCredits();
   if (_familySyncTimer) clearInterval(_familySyncTimer);
   _familySyncTimer = setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') syncPullAll({ minIntervalMs: 30000 });
-  });
+  if (!_familyVisibilityBound) {
+    _familyVisibilityBound = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') syncPullAll({ minIntervalMs: 30000 });
+    });
+  }
   document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
   document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
   syncCompanionUI();
