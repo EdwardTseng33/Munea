@@ -1,18 +1,18 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新 main／整合候選**：`main@8338f9d` 已包含 #41 → #42 → #52 → #51；獨立分支 `codex/integrate-pr54-package-1.0.11` 再完整整合 #54，並完成 `1.0.11 (Build 16)` 頁面卡死修正。真機確認 1.0.10 會在短時間製造超過兩萬次 HealthKit bridge 呼叫；1.0.11 改為單次同步＋60 秒冷卻並去除重複登入事件後，啟動只出現 1 次摘要與 1 次歷史讀取，後續 10 秒無重複。完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 簽章與包內版本／東京／開發資料／secret 防漏均 PASS；Edward iPhone 已安裝 `1.0.11 (16)` 開發包。#54 Voice 記憶仍預設關閉、尚未部署；Google／Apple、拍照、StoreKit、APNs 真推播、頁面真人連續操作及全語音 Gate 仍是 ❌。
+> **2026-07-15 最新 main／整合候選**：`origin/main@a0dc280` 已包含 #41、#42、#51、#52、#54、#56、#57、#58、#59、#60；PR #61／`codex/tokyo-production-rollout@bee069d` 補齊東京正式 Brain、Voice 安全記憶路由與 `1.0.12 (Build 17)`。完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 簽章建置與包內版本／東京／開發資料／secret 防漏均 PASS。Edward iPhone 已無線覆蓋安裝，手機回讀版本 `1.0.12 (17)`，啟動持續運行 10 秒 PASS；正式 App Store 包與上傳不在本輪。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
 > **2026-07-15 聲畫回歸覆蓋**：Voice revision `00035-lur` 已以 0% 流量 canary 建立，開場在 1.578 秒後有效出聲並完成回合；但 Mac 合成 ASR 探針仍 FAIL，因此沒有升為 100% 正式流量。GLOWS Avatar 已配對更新 server/core，首段改為真實 PCM 到達後 1 秒共同暖機、後續回合 0.5 秒；對外健康 3/3、active=0。Edward iPhone 已安裝並啟動 `1.0.8 (Build 13)` 開發包，固定連 Voice canary，包含單播放器防雙音與同日開場去重。嘴型／斷續／雙音／話量能量／多次撥號全部等待 Edward 真機 Gate，目前仍是 ❌。
 >
-> **功能來源保留**：#41 用藥紀錄一致化、#42 指定家人傳話與提醒成功回執、#52 通知平台程式均已進 main；Supabase 014／015／016 migration、Brain／Voice 正式部署與 APNs 生產設定仍未完成。
+> **東京正式環境**：Supabase migrations 014–016 與 `36/36` tables ✅；正式 Brain revision `00050-jen` 已 100% 指向東京並連續健康檢查 ✅；Voice 修正版 `00037-huf` 保持 0% canary，因 Edward 真機回報撥通後約 10 秒嚴重卡頓／重複，真人 Gate ❌，不得升正式流量；APNs 生產金鑰仍缺，真推播 ❌。雪梨專案與舊 revision 完整保留，RunPod／GLOWS 未操作。
 
 > **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。GitHub `main@ec40412` 已合併 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest，以及 PR #37 的全語音 S2S／ASR／插話／靜音修正；main 的 App／iOS 內容也已和產出 IPA 時的來源逐項比對一致。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.11 Build 16 已裝 iPhone，HealthKit 呼叫風暴已通過真機診斷；等待頁面真人操作與登入／拍照／金流／全語音 Gate）**
+> **最後更新：2026-07-15（Codex · App 1.0.12 Build 17 已無線安裝並啟動 iPhone。東京資料與 Brain 通過；Voice／APNs／登入／拍照／金流真人 Gate 未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**67－App 1.0.12 Build 17／東京正式 Brain＋Voice canary（7/15 Codex，PR #61）**：①✅ Supabase migrations 014–016 已套用東京，Doctor `36/36` tables、RLS／RPC 路徑通過；雪梨保留。②✅ Brain `00050-jen` 已 100% 正式流量，Tokyo URL、service-role secret、Voice-Brain secret 與健康檢查通過；舊 revision 保留 0% 回復。③❌ Voice `00037-huf` 僅 0% canary；Gateway／Brain／call-token 設定正確，但自動探針未完成音訊回合，且 Edward 實測 1.0.11 前 10 秒嚴重卡頓／重複，因此未升正式 Voice。④✅ `1.0.12 (17)` 開發包已完成 Capacitor sync、完整測試、直向全螢幕契約、Xcode arm64 簽章建置與包內東京／測試資料／secret 防漏檢查；保留 Pro、1,000 點與家人假資料。⑤✅ Edward iPhone 已無線覆蓋安裝，手機回讀 `1.0.12 (17)`，啟動持續運行 10 秒 PASS。⑥❌ APNs 金鑰、Google／Apple 真登入、拍照、StoreKit、全語音真人 Gate 與 App Store 上傳仍未通過。
 
 **66－App 1.0.11 Build 16／頁面卡死修正＋#54 整合（7/15 Codex）**：①🔴 1.0.10 真機根因確認：HealthKit 摘要／歷史 bridge 在短時間超過兩萬次，塞住 WebView，並伴隨重複 Supabase client 警告。②✅ `health.js` 加單次執行與 60 秒冷卻；`auth.js` 共用 client 建立 Promise，等價 session 不再重播登入事件。③✅ #54 通話記憶回寫與上一通重點已保留在整合歷史；`MUNEA_VOICE_CALL_MEMORY` 預設關閉，未部署 Voice。④✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、兩份 arm64 簽章建置與包內安全檢查 PASS。⑤✅ 正式設定包真機啟動只讀 Health 摘要／歷史各一次，觀察 10 秒無重複；最終 Edward 開發包已安裝，版本 `1.0.11 (16)`，保留 Pro、每月 300 點＋加購 700 點及家人假資料。⑥❌ iPhone 鏡像因手機使用中無法代操作，連續切頁真人 Gate、Google／Apple、拍照、StoreKit、APNs 與全語音仍待 Edward 操作。
 
