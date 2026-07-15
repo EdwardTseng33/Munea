@@ -5860,7 +5860,7 @@ function init() {
     saveActs(acts.filter(a => !actExpired(a)));
   }
   window.__muneaSweepActs = sweepActsOnView;
-  __pullPromise.finally(() => restoreActsBoot());
+  Promise.resolve(__pullPromise).finally(() => restoreActsBoot());   // syncPullAll() 開發者略過/背景分頁時回 undefined，裸 .finally 炸掉整段 init（同 4373 行包法）
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
   const inviteList = $('#inviteList');
