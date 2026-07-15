@@ -22,6 +22,16 @@ expect(app.includes('const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100
   'same-line playback still blocks later user turns with the opening delay');
 expect(app.includes('const tailMs = sameLine ? 120 : 400'),
   'same-line speech tail does not release the microphone promptly');
+expect(app.includes('this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs'),
+  'post-speech microphone guard window is not armed while the assistant speaks');
+expect(app.includes('performance.now() < (this._postGuardUntil || 0)'),
+  'mic frames stream raw during assistant mid-sentence stalls (post-speech guard missing)');
+expect(app.includes('sustainMs: policy.DEFAULTS.openingSustainMs'),
+  'opening turns do not tighten barge-in sustain while echo cancellation converges');
+expect(apiServer.includes('不要編造') && !apiServer.includes('自然接續就好'),
+  'call recap wording invites the model to fabricate last-call content');
+expect(voiceServer.includes('這是一通新接起的電話'),
+  'voice base prompt lacks the new-call no-fabricated-memory red line');
 expect(app.includes('this._assistantAudioPendingBytes < 960') && app.includes("trackProductEvent('voice_tiny_audio_buffered'"),
   'sub-frame assistant audio can still start a false playback turn');
 expect(app.includes("trackProductEvent('voice_user_speech_unrecognized'") && app.includes("trackProductEvent('voice_user_speech_recognized'"),

@@ -173,6 +173,13 @@ class RecentCallRecapLineTest(unittest.TestCase):
         # memoryTags 是內部英文 slug、可能含守護腦風險分類，絕不能進 prompt
         self.assertNotIn("self_harm", line)
         self.assertNotIn("diet", line)
+        # 三道閘（2026-07-16 Edward「再撥還在講上一通＋幻覺」）：recap 只知道時間、
+        # 不知道內容，措辭必須明講「不知道內容、不准編、不主動宣稱記得」。
+        self.assertIn("不知道", line)
+        self.assertIn("不要編造", line)
+        self.assertIn("不要主動宣稱", line)
+        # 舊版「自然接續」等於邀請模型編上一通內容，不得回歸
+        self.assertNotIn("自然接續", line)
 
     def test_recap_expired_returns_empty(self):
         _reset_summaries()
