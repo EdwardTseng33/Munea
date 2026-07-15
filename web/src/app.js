@@ -560,12 +560,13 @@ function syncMedicationReminder(med) {
       title: med.name,
       type: 'medication',
       status: 'active',
+      // \u7528\u85e5\u7167\u7247\u53ea\u7559\u672c\u6a5f\u3001\u4e0d\u4e0a\u96f2\uff08\u96b1\u79c1\u653f\u7b56\u5c0d\u5916\u627f\u8afe\uff09\uff1aschedule \u4e0d\u542b photo \u6b04\u4f4d\u3002
+      // \u7167\u7247\u7559\u5728 localStorage['munea.meds']\uff0c\u7531 refreshRoutineRemindersFromBackend \u5728\u96f2\u7aef\u5408\u4f75\u6642\u8cbc\u56de\u3002
       schedule: {
         slotLabels: splitReminderSlots(med.time),
         times: medScheduleTimes(med),
         days: med.days || '\u9577\u671f',
         by: med.by || '',
-        photo: med.photo || '',
         source: 'munea-web'
       }
     }
@@ -598,13 +599,14 @@ function reminderToLocalMed(reminder) {
   const schedule = reminder.schedule || {};
   const labels = Array.isArray(schedule.slotLabels) ? schedule.slotLabels : splitReminderSlots(schedule.slotLabels || '');
   const fallbackLabels = Array.isArray(schedule.times) ? schedule.times.map(x => x && x.label).filter(Boolean) : [];
+  // \u4e0d\u5f9e\u96f2\u7aef\u8b80 photo\uff1a\u7167\u7247\u662f\u672c\u6a5f\u8cc7\u6599\uff0c\u96f2\u7aef\u4e0d\u8a72\u6709\u3002\u820a\u5e33\u865f\u82e5\u9084\u6709\u6b98\u7559\u7684 schedule.photo \u4e5f\u4e00\u5f8b\u5ffd\u7565\u3002
   return {
     id: reminder.id,
     name: reminder.title || '\u85e5',
     time: (labels.length ? labels : fallbackLabels).join('\u3001'),
     days: schedule.days || schedule.repeat || '\u9577\u671f',
     by: schedule.by || '\u96f2\u7aef',
-    photo: schedule.photo || ''
+    photo: ''
   };
 }
 function reminderToLocalVisit(reminder) {
@@ -632,10 +634,23 @@ async function refreshRoutineRemindersFromBackend() {
   const data = await routineRemindersPost({ action: 'list', status: 'active', limit: 200 });
   const reminders = data && Array.isArray(data.reminders) ? data.reminders : [];
   if (!reminders.length) return;
-  const remoteMeds = reminders.filter(r => r && r.type === 'medication').map(reminderToLocalMed).filter(m => m.name && m.time);
   const remoteVisits = reminders.filter(r => r && r.type === 'check_in').map(reminderToLocalVisit).filter(v => v.dateISO);
+  const localMeds = loadMeds();
+  const medKey = m => m.id || (m.name + '|' + m.time);
+  // 雲端沒有照片（照片只留本機），而 mergeByReminderKey 是遠端優先——
+  // 若不在這裡把本機照片貼回同一筆藥，使用者的藥品照片會在每次雲端同步後消失。
+  const localPhotoByKey = new Map();
+  localMeds.forEach(m => { const k = medKey(m); if (k && m.photo) localPhotoByKey.set(k, m.photo); });
+  const remoteMeds = reminders
+    .filter(r => r && r.type === 'medication')
+    .map(reminderToLocalMed)
+    .filter(m => m.name && m.time)
+    .map(m => {
+      const photo = localPhotoByKey.get(medKey(m));
+      return photo ? Object.assign({}, m, { photo }) : m;
+    });
   if (remoteMeds.length) {
-    const merged = mergeByReminderKey(remoteMeds, loadMeds(), m => m.id || (m.name + '|' + m.time));
+    const merged = mergeByReminderKey(remoteMeds, localMeds, medKey);
     try { localStorage.setItem('munea.meds', JSON.stringify(merged)); } catch (e) {}
     updateMedCount();
   }
