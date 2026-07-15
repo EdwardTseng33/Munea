@@ -22,6 +22,7 @@ import json
 import time
 import datetime
 import asyncio
+import concurrent.futures
 import uuid
 import base64
 import io
@@ -351,6 +352,18 @@ async def guardian_flush_pending_cue(cid, session, st):
         _diag(cid, "guardian.cue_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
+def _capture_call_turns(st, max_turns=120, max_chars=600):
+    """把這一輪的雙方字幕（守護腦滑動窗）收進整通紀錄 call_turns。
+    在每輪 turn_done 清緩衝前呼叫一次、收線時再補最後一輪；只留最近 max_turns 段防爆。"""
+    for role, key in (("user", "user_buf"), ("assistant", "ai_buf")):
+        text = (st.get(key) or "").strip()
+        if text:
+            st.setdefault("call_turns", []).append({"role": role, "content": text[:max_chars]})
+    turns = st.get("call_turns")
+    if turns and len(turns) > max_turns:
+        del turns[:-max_turns]
+
+
 def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
@@ -368,6 +381,11 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             data["interests"] = topics  # 用戶挑的興趣話題（?topics=）→ 開場/接話的方向
         ctx = server.build_reply_context([], char, data)
         base += server.reply_context_instruction(ctx)
+    except Exception:
+        pass
+    try:
+        # 上一通剛聊過（12 小時內）→ 開場自然接續、不重問剛答過的日常問題（Edward 7/15：20 分鐘後再打還被問吃飯沒）
+        base += server.recent_call_recap_line()
     except Exception:
         pass
     if c.get("type") == "animal" and c.get("style"):
@@ -568,6 +586,9 @@ def _diag(cid, event, **kv):
 
 _CID = {"n": 0}
 _HOKKIEN_FALLBACK_PCM = {}
+# 通話記憶回寫專用池：跟 to_thread 的共用池分開，收線的多秒萃取不排擠 session 建立。
+_CALL_MEMORY_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4, thread_name_prefix="call-memory")
 _HOKKIEN_FALLBACK_LOCK = threading.Lock()
 
 
@@ -702,7 +723,8 @@ async def handle(ws):
           "client_barge_in": False, "asr_turns": 0, "asr_chars": 0,
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
-          "opening_window_complete": False}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）
+          "opening_window_complete": False,
+          "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     try:
@@ -1138,6 +1160,8 @@ async def handle(ws):
                                     st["language_retry_count"] = 0
                                     st["blocked_output_text"] = ""
                                 st["client_barge_in"] = False
+                                # 通話記憶：這一輪講完，先把雙方字幕收進整通紀錄再清緩衝（收線時交聊後管線）
+                                _capture_call_turns(st)
                                 # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
                                 st["user_buf"] = ""
                                 st["ai_buf"] = ""
@@ -1217,6 +1241,37 @@ async def handle(ws):
                 await fw.close()
             except Exception:
                 pass
+        # 通話記憶回寫：補收最後一輪字幕，把整通交給文字聊天同一套聊後管線
+        # （對話摘要＋記憶萃取對帳＋心情訊號）。下一通開場才接得上這通聊過什麼。
+        # 對方整通沒說話（ASR 全空）persist 會自動略過。執行方式的三個講究：
+        # ①走「專用」執行緒池，不佔 to_thread 的共用池——共用池同時服務 session 建立
+        #   （7/12 的 30 人斷崖就是主迴圈被卡出來的，不能讓收線的多秒萃取去排擠開新通）；
+        # ②await 到存完才讓 handler 返回——Voice 的 Cloud Run 沒開 CPU 常駐，
+        #   handler 一返回連線就關、CPU 會被節流，純背景 thread 可能餓死存不進去；
+        # ③handler 被取消（服務關閉）時改用 executor.submit 收尾（非 daemon、關機前會跑完），
+        #   這通才不會白聊。
+        try:
+            _capture_call_turns(st)
+            if st.get("call_turns"):
+                turns_snapshot = list(st["call_turns"])
+
+                def _persist_call_memory(turns=turns_snapshot, call_id=cid, call_char=char):
+                    try:
+                        result = server.persist_voice_call_turns(
+                            turns, call_char, f"live-{call_id}")
+                        _diag(call_id, "node.call_memory_saved",
+                              turns=len(turns), stored=bool(result))
+                    except Exception as exc:
+                        _diag(call_id, "node.call_memory_err",
+                              err=f"{type(exc).__name__}:{str(exc)[:60]}")
+
+                # run_in_executor 一呼叫就已提交，函式一定會被池跑完
+                # （非 daemon、直譯器關閉前會等）；就算這裡被取消也只是不等結果，
+                # 不可以再 submit 一次，會存兩份。
+                await asyncio.get_running_loop().run_in_executor(
+                    _CALL_MEMORY_EXECUTOR, _persist_call_memory)
+        except Exception as exc:
+            _diag(cid, "node.call_memory_err", err=f"{type(exc).__name__}:{str(exc)[:60]}")
         _diag(
             cid, "closed", in_bytes=st["in"], out_bytes=st["out"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
