@@ -6069,6 +6069,86 @@ def butler_post_turn_response(data):
     }
 
 
+# 語音通話「上一通接得上」視窗：超過就當成新的一天/新的話頭，不再提上一通。
+VOICE_CALL_RECAP_WINDOW_HOURS = 12
+
+
+def persist_voice_call_turns(turns, char=None, voice_session_id=None):
+    """語音通話收線後，把整通的字幕逐字稿交給既有的聊後管線
+    （對話摘要＋記憶萃取對帳＋心情訊號），跟文字聊天走同一套腦。
+    turns: [{"role": "user"|"assistant", "content": str}, ...]
+    對方整通沒說話（或 ASR 全空）就不存，避免累積空摘要；
+    收線路徑不能炸，所有失敗都吞下並記 fallback log。"""
+    history = []
+    for turn in turns or []:
+        if not isinstance(turn, dict):
+            continue
+        content = str(turn.get("content") or turn.get("text") or "").strip()
+        if not content:
+            continue
+        role = "assistant" if turn.get("role") == "assistant" else "user"
+        # text 與 content 都給：真萃取（memory_engine）與心情分析讀 text、
+        # 摘要（conversation_text）兩者皆可，缺一邊就會有管線看到空對話。
+        history.append({"role": role, "text": content[:600], "content": content[:600]})
+    if not any(item["role"] == "user" for item in history):
+        return None
+    try:
+        return butler_post_turn_response({
+            "history": history[-120:],
+            "char": char or DEFAULT_CHAR,
+            # 與 recent_call_recap_line 讀取同一 scope：語音行程目前沒有 per-call
+            # 用戶身分，收發都鎖主要照護對象；多用戶正式前必須接 call token 身分。
+            "personId": PRIMARY_CARE_RECIPIENT_ID,
+            # 語音線的 cid 是整數流水號、不是 voice_sessions 的 uuid：
+            # 一律轉字串，Supabase 端 conversation_summary_to_row 對非 uuid 會自動落 None，
+            # 本機 JSON 保留字串方便對 log。整數直接丟進去會在 UUID_RE.match 炸 TypeError。
+            "voiceSessionId": (None if voice_session_id is None else str(voice_session_id)),
+            "source": "live_voice",
+        })
+    except Exception as e:
+        log_fallback_exception("persist voice call turns", e)
+        return None
+
+
+def recent_call_recap_line(now=None):
+    """上次聊天若還在視窗內，回一段開場接續指令（只講距今多久），
+    讓下一通不再重問剛答過的日常問題。沒有近況或超過視窗回空字串。
+    注意：①只讀主要照護對象（PRIMARY_CARE_RECIPIENT_ID）的摘要——語音行程目前
+    沒有 per-call 用戶身分，多用戶正式上線前必須先把 call token 身分接進語音線；
+    ②不注入 memoryTags——那是內部英文 slug、可能含守護腦風險分類，不能進 prompt。"""
+    try:
+        items = load_conversation_summaries(
+            person_id=PRIMARY_CARE_RECIPIENT_ID, limit=10)
+    except Exception as e:
+        log_fallback_exception("load recent call recap", e)
+        return ""
+    latest = None
+    latest_ts = None
+    for item in items or []:
+        if not item.get("summary") or item.get("deletedAt"):
+            continue
+        try:
+            ts = calendar.timegm(time.strptime(
+                str(item.get("createdAt") or "")[:19], "%Y-%m-%dT%H:%M:%S"))
+        except (ValueError, TypeError):
+            continue
+        if latest_ts is None or ts > latest_ts:
+            latest, latest_ts = item, ts
+    if latest is None:
+        return ""
+    now_ts = now if now is not None else time.time()
+    minutes = max(0, int((now_ts - latest_ts) // 60))
+    if minutes > VOICE_CALL_RECAP_WINDOW_HOURS * 60:
+        return ""
+    ago = f"{minutes} 分鐘" if minutes < 60 else f"{minutes // 60} 小時"
+    return (
+        f"（重要：你們上次聊天大約 {ago} 前才結束。"
+        "這通要像老朋友剛聊過又想到什麼再打來，自然接續就好——"
+        "剛剛已經問過、他也回答過的日常問題（例如吃飯了沒、睡得好不好、心情好不好）"
+        "不要當開場再問一次，除非他自己先提起；也不要假裝完全沒聊過。）"
+    )
+
+
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
