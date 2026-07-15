@@ -8,6 +8,24 @@ const muneaLocale = () => (window.MuneaI18n ? window.MuneaI18n.current() : 'zh-T
 const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.preferredLanguages() : ['zh-TW']);
 const muneaT = (key, fallback) => (window.MuneaI18n ? window.MuneaI18n.t(key, null, fallback) : fallback);
 
+function muneaIsCleanZhText(raw) {
+  const s = String(raw == null ? '' : raw).replace(/\s+/g, '');
+  if (!s) return false;
+  if (/[぀-ヿ가-힣Ѐ-ӿ]/.test(s)) return false; // 平假名／片假名／韓文／西里爾（俄文）——出現一個字就擋
+  if (/[a-zA-Z]{3,}/.test(s)) return false; // 連續 3+ 英文字母＝疑似辨識雜訊，不是正常中文夾一兩個英文縮寫
+  const cjk = (s.match(/[一-龥]/g) || []).length;
+  if (cjk / s.length < 0.6) return false; // 中文字比例仍要夠高，防大量符號／數字灌水
+  if (new Set(s).size / s.length < 0.5) return false; // 同字元大量重複＝疑似亂碼
+  return true;
+}
+// 顯示前再守一次門（Edward 2026-07-15 事故：首頁招呼卡以外，用藥/看診/留意卡都還在印未過濾的存檔文字）
+// 存檔時就算漏接、或手機裡已經存著舊的髒資料，畫面上都不該印出來——不乾淨就退回 fallback，不留原文
+function muneaSafeDisplayText(raw, fallback) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return fallback;
+  return muneaIsCleanZhText(s) ? s : fallback;
+}
+
 const OVERLAYS = ['med', 'connect', 'chat'];
 const AVATAR_ENGINE_MODES = Object.freeze({
   STATIC_CSS: 'static-css',
@@ -743,7 +761,8 @@ function aiVisitLabel(dateISO, time) {
   } catch (e) { return dateISO + (time ? ' ' + time : ''); }
 }
 async function aiAddVisitReminder(a) {
-  const title = (String((a && a.title) || '').trim()) || '回診';
+  const rawTitle = String((a && a.title) || '').trim();
+  const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : '回診';   // AI 語音辨識可能夾雜外文雜訊，存檔前先守門（Edward 2026-07-15 事故：aiAddVisitReminder / aiAddMedReminder 原本沒接共用守門）
   const dateISO = String((a && a.dateISO) || '').trim();
   const time = String((a && a.time) || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
@@ -767,7 +786,8 @@ async function aiAddVisitReminder(a) {
   return { ok: true, title, label, reminderId: visit.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
 }
 async function aiAddMedReminder(a) {
-  const name = String((a && a.name) || '').trim();
+  const rawName = String((a && a.name) || '').trim();
+  const name = (rawName && muneaIsCleanZhText(rawName)) ? rawName : '';   // 藥名不乾淨寧可拒收、讓 AI 再問一次，不存假名字（Edward 2026-07-15 事故）
   const SLOTS = ['早餐後', '午餐後', '晚餐後', '睡前'];
   let slots = (a && Array.isArray(a.slots)) ? a.slots.filter(s => SLOTS.indexOf(s) >= 0) : [];
   slots = [...new Set(slots)];
@@ -1213,8 +1233,14 @@ const CallControl = {
   generation: 0,
   url() {
     if (usesDevelopmentDirectCall()) return '';
-    try { return (localStorage.getItem('munea.callControlUrl') || CALL_CONTROL_URL_DEFAULT).replace(/\/$/, ''); }
-    catch (e) { return CALL_CONTROL_URL_DEFAULT; }
+    // Production must always use the release Gateway. A stale localStorage
+    // override from an older test build must never route an installed App to
+    // a retired controller or back to direct GPU access.
+    const cfg = developerConfig();
+    if (isDeveloperBypassAllowed() && cfg.callControlUrl) {
+      return String(cfg.callControlUrl).replace(/\/$/, '');
+    }
+    return CALL_CONTROL_URL_DEFAULT;
   },
   async _headers() {
     const headers = await muneaAuthHeaders({ 'Content-Type': 'application/json' });
@@ -2032,7 +2058,7 @@ const LiveVoice = {
                 // 只存「乾淨、像一句話」的內容當首頁話題，擋語音辨識亂碼／英數雜訊（Edward 2026-07-12）
                 const clean = this._userBuf.replace(/\s+/g, '');
                 const cjk = (clean.match(/[一-龥]/g) || []).length;
-                const looksClean = clean.length >= 5 && clean.length <= 16 && (cjk / clean.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(clean) && (new Set(clean).size / clean.length) >= 0.5;
+                const looksClean = clean.length >= 5 && clean.length <= 16 && muneaIsCleanZhText(clean);   // 改用共用嚴格守門：出現任一日文/韓文/俄文字元就擋（Edward 2026-07-14 事故：「アラ」混在中文裡、比例式守門放行）
                 if (looksClean) { try { localStorage.setItem('munea.lastTopic', clean.slice(0, 16)); } catch (e3) {} this._topicSaved = true; }
                 else if (clean.length >= 24) { this._topicSaved = true; }   // 累積夠長仍不乾淨＝這通沒有適合話題、別硬塞亂碼
               }
@@ -2786,29 +2812,146 @@ function setupAuthControls() {
     .catch(() => { /* 沒設所在地＝不顯示天氣，只留日期 */ });
 })();
 
+function _muneaSameCalendarDate(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function _muneaDaysBetween(a, b) {
+  const A = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
+  const B = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
+  return Math.round((A - B) / 86400000);
+}
+function _muneaDayOfYear(d) {
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+}
+function _muneaAskByHour(h) {
+  if (h >= 18 || h < 5) return '睡前跟我聊聊今天？';
+  if (h >= 5 && h < 11) return '走走回來，說給我聽？';
+  if (h >= 11 && h < 14) return '來跟我聊聊今天？';
+  return '傍晚散個步，回來跟我聊？';
+}
+// 順位 0：只取家人動態最上面一則，格式要真的是「XX要我提醒你：YYY」，內容再過一次乾淨中文守門
+// ——這裡是全家人都看得到的位置，比首頁話題本身更危險（Edward 2026-07-14）
+function _muneaFamilyRelayGreeting() {
+  try {
+    const feed = (typeof loadFeed === 'function') ? loadFeed() : [];
+    const top = feed && feed[0];
+    if (!top) return '';
+    const flat = (typeof plain === 'function') ? plain(top) : String(top).replace(/<[^>]+>/g, '');
+    const m = flat.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/);
+    if (!m) return '';
+    const fromWho = m[1].trim(), body = m[2].trim();
+    if (!fromWho || !body || !muneaIsCleanZhText(body)) return '';
+    return fromWho + '要我提醒你：' + body;
+  } catch (e) { return ''; }
+}
+// 用藥有沒打勾（順位 2-b）：跟 renderPillTask() 同一套算法（今天還沒吃的下一項 / 完成數 / 總數）
+function _muneaPillStatusToday() {
+  try {
+    const meds = (typeof loadMeds === 'function') ? loadMeds() : [];
+    if (!meds.length) return null;
+    let done = {};
+    try { done = JSON.parse(localStorage.getItem('munea.medDone.' + pillDateKey())) || {}; } catch (e2) {}
+    const slots = [];
+    meds.forEach(med => String(med.time).split('、').forEach(raw => {
+      const slot = raw.trim();
+      if (slot) slots.push({ slot, name: med.name, key: slot + '|' + med.name });
+    }));
+    if (!slots.length) return null;
+    const total = slots.length;
+    const doneN = slots.filter(s => done[s.key]).length;
+    const next = slots.find(s => !done[s.key]);
+    return next ? { next, doneN, total } : null;
+  } catch (e) { return null; }
+}
+// 3 天內（含今天）最近一筆回診（順位 2-a）
+function _muneaVisitWithinDays(days) {
+  try {
+    const arr = JSON.parse(localStorage.getItem('munea.visits') || 'null');
+    if (!Array.isArray(arr)) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let best = null, bestDiff = Infinity;
+    arr.forEach(v => {
+      if (!v || !v.dateISO) return;
+      const d = new Date(v.dateISO + 'T00:00');
+      if (isNaN(d)) return;
+      const diff = Math.round((d - today) / 86400000);
+      if (diff >= 0 && diff <= days && diff < bestDiff) { bestDiff = diff; best = v; }
+    });
+    return best;
+  } catch (e) { return null; }
+}
+// 順位 2「今天還沒聊」的內容子選：好幾天沒聊 > 回診 > 用藥 > 天氣 > 家常問候輪替（用當年第幾天 mod 輪替，不連兩天一樣）
+function _muneaNotChattedTodayLine(now, ask) {
+  try {
+    const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
+    const gapDays = lastAt ? _muneaDaysBetween(now, new Date(lastAt)) : null;
+    if (gapDays !== null && gapDays >= 3) {
+      const leads = [
+        gapDays + '天沒聊了，', '有' + gapDays + '天沒聽你說話了，', '隔了' + gapDays + '天沒聊，',
+        gapDays + '天沒你的消息了，', gapDays + '天沒說到話了，', '好些天沒聊了，都' + gapDays + '天了，'
+      ];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    const visit = _muneaVisitWithinDays(3);
+    if (visit) {
+      const vt = muneaSafeDisplayText(visit.title, '') || muneaSafeDisplayText(visit.label, '') || '回診';   // 招呼卡引用看診標題前守門（Edward 2026-07-15 事故）
+      const leads = [vt + '快到了，', '別忘了' + vt + '，', vt + '的事，記得，', '要回診了，', vt + '要記得，'];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    const pill = _muneaPillStatusToday();
+    if (pill) {
+      const leads = [
+        pill.next.slot + '的藥吃了嗎，', '記得吃' + pill.next.slot + '的藥，', '別忘了' + pill.next.slot + '的藥，',
+        pill.next.slot + '該吃藥囉，', '藥還沒吃完，'
+      ];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    let wxText = '';
+    try { const c = JSON.parse(localStorage.getItem('munea.wxCache') || 'null'); if (c && c.text) wxText = c.text; } catch (e3) {}
+    if (wxText) {
+      const leads = ['今天' + wxText + '，', wxText + '，出門記得看天氣，'];
+      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+    }
+    const chat = [
+      '上次聊得很開心，我都記得你——', '今天有什麼新鮮事嗎，', '想到什麼都可以跟我說，',
+      '我在這裡，', '今天過得還好嗎，', '有空的話，', '我一直都在，'
+    ];
+    return chat[_muneaDayOfYear(now) % chat.length] + ask;
+  } catch (e) { return ask; }
+}
+// 順位 3「今天已經聊過」的收尾句：不帶逼問、不再重複問「要不要聊」
+function _muneaChattedTodayLine(now) {
+  const lines = [
+    '今天聊得很開心，我都記得。', '有你陪我聊聊，今天很好。', '想到什麼都可以再找我。',
+    '今天說的話我都記著了。', '先歇著吧，我一直都在。', '謝謝你今天陪我聊天。',
+    '今天先到這裡，想聊隨時找我。', '有你在，今天特別好。'
+  ];
+  return lines[_muneaDayOfYear(now) % lines.length];
+}
 function renderCompanionGreeting(now = new Date()) {
-  const h = now.getHours();
   const msg = $('#bcMsg');
   if (!msg) return;
-  // 首頁招呼語的四個階段（Edward 7/9 拍板設計）：
-  //   ① 還沒聊過（首次進來）→ 自我介紹＋邀請認識
-  //   ② 聊過了、還沒抓到話題 → 「上次聊得很開心」＋時段邀請
-  //   ③ 有記住的話題（目前＝上通電話你說的第一句；雲端記憶接上後換真記憶）→ 「記得你說…」
-  //   ④ 之後每次聊天都會更新話題，這句會一直跟著你們的對話變
   const nm = (typeof cname === 'function' ? cname() : '寧寧');
-  const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
-  // 顯示前再過濾一次：舊版可能已存過亂碼，不乾淨就當沒話題、退回乾淨招呼（Edward 2026-07-12）
-  const _topicRaw = (localStorage.getItem('munea.lastTopic') || '').trim();
-  const _tcjk = (_topicRaw.match(/[一-龥]/g) || []).length;
-  const topic = (_topicRaw.length >= 5 && _topicRaw.length <= 16 && (_tcjk / _topicRaw.length) >= 0.6 && !/[a-zA-Z]{3,}/.test(_topicRaw) && (new Set(_topicRaw).size / _topicRaw.length) >= 0.5) ? _topicRaw : '';
-  let ask = '來跟我聊聊今天？';
-  if (h >= 18 || h < 5) ask = '睡前跟我聊聊今天？';
-  else if (h >= 5 && h < 11) ask = '走走回來，說給我聽？';
-  else if (h >= 14) ask = '傍晚散個步，回來跟我聊？';
-  let line;
-  if (!lastAt) line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
-  else if (topic) line = '記得你說「' + topic + '」——' + ask;
-  else line = '上次聊得很開心，我都記得你——' + ask;
+  const ask = _muneaAskByHour(now.getHours());
+  let line = '';
+  try {
+    const relayLine = _muneaFamilyRelayGreeting();
+    const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
+    if (relayLine) {
+      line = relayLine;
+    } else if (!lastAt) {
+      line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
+    } else if (!_muneaSameCalendarDate(new Date(lastAt), now)) {
+      line = _muneaNotChattedTodayLine(now, ask);
+    } else {
+      line = _muneaChattedTodayLine(now);
+    }
+  } catch (e) {
+    line = nm + '，' + ask;   // 順位 4：任何讀取失敗，只靠 cname() 與時段拼出最保守泛用句
+  }
+  if (!line) line = nm + '，' + ask;
+  if (line.length > 40) line = line.slice(0, 39) + '…';
   msg.textContent = line;
   const idleGreeting = $('#faceIdleHi');
   if (idleGreeting) idleGreeting.textContent = line;
@@ -2919,7 +3062,7 @@ function renderPillTask() {
   const doneN = slots.filter(s => s.status === 'taken').length;
   const next = slots.find(s => s.status !== 'taken' && s.status !== 'skipped');
   if (next) {
-    title.textContent = '吃' + String(next.name).split(/\s+/)[0]; // 標題用短名、全名在用藥管理
+    title.textContent = '吃' + muneaSafeDisplayText(String(next.name).split(/\s+/)[0], '藥'); // 標題用短名、全名在用藥管理；短名守門（Edward 2026-07-15 事故）
     sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
     card.classList.remove('done');
   } else {
@@ -2971,7 +3114,7 @@ function renderVisitTask() {
   if (!v) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
   card.style.display = '';
   const t = $('#visitTaskTitle'), s = $('#visitTaskSub'), tm = $('#visitTaskTime');
-  if (t) t.textContent = v.title || v.label || '回診';
+  if (t) t.textContent = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診';   // 今天一起完成的回診卡標題守門（Edward 2026-07-15 事故）
   if (s) s.textContent = _visitDayShort(v) || '記得帶健保卡';
   if (tm) tm.textContent = _clock24(v.time) || '今天';
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
@@ -3144,7 +3287,7 @@ function showMedPhoto(url, name) {
   if (!url) return;
   let lb = document.getElementById('medLightbox');
   if (!lb) { lb = document.createElement('div'); lb.id = 'medLightbox'; lb.className = 'med-lightbox'; document.body.appendChild(lb); lb.addEventListener('click', ev => { if (ev.target === lb || ev.target.classList.contains('mlb-close')) lb.classList.remove('show'); }); }
-  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + (name || '') + '</div><button type="button" class="mlb-close">關閉</button></div>';
+  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + muneaSafeDisplayText(name, '') + '</div><button type="button" class="mlb-close">關閉</button></div>';   // 藥物照片燈箱名稱守門（Edward 2026-07-15 事故）
   lb.classList.add('show');
 }
 function canvasToJpeg(cv) { let q = 0.82; let url = cv.toDataURL('image/jpeg', q); while (url.length > 180000 && q > 0.4) { q -= 0.16; url = cv.toDataURL('image/jpeg', q); } return url; }
@@ -3164,7 +3307,7 @@ function renderMedSlots() {
     const slot = def[0], k = def[1], off = def[2];
     const inSlot = meds.filter(m => String(m.time).split('、').map(x => x.trim()).includes(slot));
     const rows = inSlot.length
-      ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + m.name + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')
+      ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + muneaSafeDisplayText(m.name, '藥') + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
       : '<div class="ms-empty">這個時段沒有藥</div>';
     return '<div class="ms-group"><div class="ms-head"><b>' + slot + '</b>' +
       '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
@@ -3427,22 +3570,35 @@ function buildCareItems() {
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
   const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
-  let _rTitle = '家人帶話給你', _rSub = '';
-  if (relayMsg) { const _p = plain(relayMsg); const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/); if (_m) { _rTitle = _m[1].trim() + ' 要我提醒你'; _rSub = _m[2].trim(); } else { _rSub = _p; } }
+  // 留意卡是首頁會轉動輪播的位置、比招呼卡更容易被看到——family feed 原文一律要過守門才能顯示（Edward 2026-07-15 事故：這裡漏接、招呼卡另一條路徑已守）
+  let _rTitle = '家人帶話給你', _rSub = '', _relayClean = false;
+  if (relayMsg) {
+    const _p = plain(relayMsg);
+    const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/);
+    if (_m) {
+      const _whoSafe = muneaSafeDisplayText(_m[1].trim(), '');
+      const _bodySafe = muneaSafeDisplayText(_m[2].trim(), '');
+      if (_whoSafe && _bodySafe) { _rTitle = _whoSafe + ' 要我提醒你'; _rSub = _bodySafe; _relayClean = true; }
+    } else {
+      const _safeP = muneaSafeDisplayText(_p, '');
+      if (_safeP) { _rSub = _safeP; _relayClean = true; }
+    }
+  }
   // 蘋果 UGC 審核要求（7/9）：這則若真的來自家人 feed（傳話/愛心/塗鴉…），記下它在陣列裡的位置，卡片才能掛「移除／檢舉」；示範文案（feed 是空的）不算數
   const _feedIdx = relayMsg ? feed.indexOf(relayMsg) : (feed.length ? 0 : -1);
-  const familyItem = relayMsg
+  const _feed0Safe = feed[0] ? muneaSafeDisplayText(plain(feed[0]), '') : '';
+  const familyItem = _relayClean
     ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: '知道了', feedIdx: _feedIdx }
-    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: feed[0] ? plain(feed[0]) : '美華說週末回去看你，' + cname() + '都幫你收著了', btn: '去看看', feedIdx: _feedIdx };
+    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: _feed0Safe || ('美華說週末回去看你，' + cname() + '都幫你收著了'), btn: '去看看', feedIdx: _feedIdx };
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
   const act = acts.find(a => a && !a.done && !a.archived);
   if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
     const goal = +(act.steps || act.goal || 8000);
     const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: (act.owner || '家人') + '發起的走路活動', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績', btn: '去看看' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: muneaSafeDisplayText(act.owner, '家人') + '發起的走路活動', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績', btn: '去看看' });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
   } else if (act) {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: (act.owner || '家人') + '發起了活動', sub: '「' + (act.title || '家庭活動') + '」進行中，看看大家的進度', btn: '去看看' });
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: muneaSafeDisplayText(act.owner, '家人') + '發起了活動', sub: '「' + muneaSafeDisplayText(act.title, '家庭活動') + '」進行中，看看大家的進度', btn: '去看看' });
   } else {
     items.push({ k: 'family', tone: 'coral', icon: 'walk', title: '外婆發起的走路活動', sub: '還差 5,000 步就達標，今晚一起走走？', btn: '去看看' });
   }
@@ -3454,7 +3610,7 @@ function buildCareItems() {
     const today = isoOf(new Date());
     v = arr.filter(x => x && x.dateISO && x.dateISO >= today).sort((a, b) => a.dateISO.localeCompare(b.dateISO))[0] || null;
   } catch (e) {}
-  if (v && v.dateISO) items.push({ k: 'status', tone: '', icon: 'cal', title: (v.title ? v.title : (v.label || '回診')) + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' });
+  if (v && v.dateISO) { const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診'; items.push({ k: 'status', tone: '', icon: 'cal', title: _vTitle + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' }); }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
   items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   return items;
 }
@@ -5702,7 +5858,7 @@ function init() {
     const box = $('#visitList'); if (!box) return;
     const arr = loadVisits();
     box.innerHTML = arr.length ? ('<div class="field-label">已排的看診</div>' + arr.map(v =>
-      '<div class="visit-item"><div class="vi-info"><b>' + (v.title || '回診') + '</b><span>' + (v.label || '') + '</span></div><button type="button" class="vi-del" data-id="' + v.id + '">刪除</button></div>').join('')) : '';
+      '<div class="visit-item"><div class="vi-info"><b>' + muneaSafeDisplayText(v.title, '回診') + '</b><span>' + (v.label || '') + '</span></div><button type="button" class="vi-del" data-id="' + v.id + '">刪除</button></div>').join('')) : '';   // 看診管理清單標題守門（Edward 2026-07-15 事故）
   }
   if ($('#visitList')) $('#visitList').addEventListener('click', e => {
     const b = e.target.closest('.vi-del'); if (!b) return;
@@ -6143,11 +6299,11 @@ function init() {
   function fireMedReminder(med) {
     medShowing = med;
     if ($('#medDueDesc')) $('#medDueDesc').textContent = med.time + '的提醒 · 配溫開水就可以';
-    if ($('#medDueName')) $('#medDueName').textContent = med.name;
+    if ($('#medDueName')) $('#medDueName').textContent = muneaSafeDisplayText(med.name, '藥');   // 用藥提醒彈窗名稱守門（Edward 2026-07-15 事故）
     if ($('#medDueSay')) $('#medDueSay').textContent = med.time + '的藥，時間到囉';
     $('#medRemindModal').classList.add('show');
     // A6：寧寧親口說（App 開著時；打包後升級推播）
-    try { if (typeof speakChat === 'function') speakChat(med.time + '的' + med.name + '，時間到囉。吃完跟我說一聲。'); } catch (e) {}
+    try { if (typeof speakChat === 'function') speakChat(med.time + '的' + muneaSafeDisplayText(med.name, '藥') + '，時間到囉。吃完跟我說一聲。'); } catch (e) {}
   }
   function checkDueMeds() {
     if (Date.now() < medSnoozeUntil || medShowing) return;
@@ -6369,6 +6525,8 @@ function init() {
       let who = relay0[2].replace(/[要說來]$/, '');
       if (who.length < 2) who = relay0[2];
       const _msg = relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, '');
+      // 傳話會印在對方首頁最顯眼的位置，聽錯就是別人替你出糗、而他無從核對 → push 前先擋（Edward 2026-07-14）
+      if (!muneaIsCleanZhText(_msg)) return '我剛剛沒聽清楚要帶的話，你再跟我說一次要跟' + who + '說什麼？';
       _pendingFamilyRelayDraft = { recipientName: who, message: _msg };
       return '我確認一下：你要我跟' + who + '說「' + _msg + '」，對嗎？';
     }

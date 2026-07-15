@@ -137,6 +137,15 @@ class SlackNotifier:
             raise SlackNotifyError(f"could not persist alert dedup state: {exc}") from exc
         return True
 
+    def clear(self, key: str) -> None:
+        """Forget a resolved key so a later recurrence can notify immediately."""
+        if key in self._last_sent:
+            self._last_sent.pop(key, None)
+            try:
+                self._save_state()
+            except OSError as exc:
+                raise SlackNotifyError(f"could not persist alert dedup state: {exc}") from exc
+
 
 def default_state_path() -> str:
     return os.path.join(tempfile.gettempdir(), "munea-gateway-monitor-dedup.json")
