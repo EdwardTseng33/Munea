@@ -2,17 +2,19 @@
 
 > **2026-07-15 最新 App 包**：`1.0.22 (Build 27)` 已整合 PR #82 聊聊穩定／診斷與 PR #83 通知中心，完成完整測試、Capacitor sync、Xcode 原生檢查、arm64 開發簽章、包內安全檢查，並安裝至 Edward iPhone；手機回讀版號與啟動均 PASS。聊聊查資料可控狀態機尚未部署 Voice，手機仍走舊查詢路徑；開頭 Hello、10 分鐘長聊、漏收音、真推播及登入／拍照／金流真人 Gate 仍是 ❌。
 >
+> **2026-07-16 App Store Connect**：`1.0.22 (Build 27)` 已完成正式 Release Archive、App Store IPA 匯出與防漏檢查，並於 00:42 上傳成功；Apple 回執為 `Upload succeeded`／`package is processing`。正式 IPA 為 55,539,118 bytes，SHA-256 `ddc46e5c70a42863bbab6a8ab4922ee436666740f2bb89600795bd476a8347e6`。目前是「Apple 已收件、處理中」，不是已送審或已通過審核。
+>
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
 > **2026-07-15 聲畫回歸覆蓋**：Voice revision `00035-lur` 已以 0% 流量 canary 建立，開場在 1.578 秒後有效出聲並完成回合；但 Mac 合成 ASR 探針仍 FAIL，因此沒有升為 100% 正式流量。GLOWS Avatar 已配對更新 server/core，首段改為真實 PCM 到達後 1 秒共同暖機、後續回合 0.5 秒；對外健康 3/3、active=0。Edward iPhone 已安裝並啟動 `1.0.8 (Build 13)` 開發包，固定連 Voice canary，包含單播放器防雙音與同日開場去重。嘴型／斷續／雙音／話量能量／多次撥號全部等待 Edward 真機 Gate，目前仍是 ❌。
 >
 > **東京正式環境**：Supabase migrations 014–016 與 `36/36` tables ✅；正式 Brain revision `00053-foj` 已 100% 指向東京，健康檢查、iPhone `capacitor://localhost` CORS 204 與陌生來源 403 均 ✅；Voice 修正版 `00037-huf` 保持 0% canary，真人 Gate ❌，不得升正式流量；APNs 生產金鑰仍缺，真推播 ❌。雪梨專案與舊 revision 完整保留，RunPod／GLOWS 未操作。
 
-> **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。GitHub `main@ec40412` 已合併 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest，以及 PR #37 的全語音 S2S／ASR／插話／靜音修正；main 的 App／iOS 內容也已和產出 IPA 時的來源逐項比對一致。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
+> **2026-07-16 現況覆蓋**：目前正式候選版是 `1.0.22 (Build 27)`，來源 `main@9414234`。正式 Archive／IPA 已驗證 production APNs、Apple 登入、HealthKit、Privacy Manifest、東京 Supabase、最新 Web 資源與 `get-task-allow=false`，且不含 TEST／Pro／點數／家人假資料、自動登入、Call Control bypass、雪梨 ref、service-role 或私鑰；App Store Connect 已收件並處理中。真人 10 分鐘長聊、五次插話／靜音、Google／Apple 真登入、拍照、StoreKit、APNs 真推播與審核元資料仍是 ❌ 未通過，因此尚不可送審。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.22 Build 27 已整合 PR #82／#83，完整測試、Xcode 簽章、iPhone 安裝／版號回讀／啟動均 PASS。Voice 查資料新版尚未部署；Voice 真人 Gate、Google／Apple 真登入、拍照、金流與 APNs 仍未通過）**
+> **最後更新：2026-07-16（Codex · App 1.0.22 Build 27 正式 Archive／IPA／安全 Gate／App Store Connect 上傳均 PASS，Apple 處理中。尚未送審；Voice 真人 Gate、Google／Apple 真登入、拍照、金流、APNs 與審核元資料仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +23,8 @@
 ---
 
 ## 一眼總覽
+
+**77－App 1.0.22 Build 27／正式 App Store Connect 上傳（7/16 Codex，PR #85）**：①✅ 使用獨立 worktree，來源 `main@9414234`；共享 dirty main 未操作。②✅ 完整 `test:launch`、Release Check、Capacitor sync、Xcode 原生檢查、Release Archive 與 App Store export 通過。③✅ 正式 IPA 55,539,118 bytes，SHA-256 `ddc46e5c70a42863bbab6a8ab4922ee436666740f2bb89600795bd476a8347e6`；`1.0.22 (27)`、arm64、production APNs、Apple 登入、HealthKit、Privacy Manifest、東京設定與最新 Web 資源通過，且無開發 fixture、雪梨 ref、service-role、私鑰或除錯權限。④✅ 00:42 App Store Connect 上傳成功，Apple 顯示 package processing。⑤❌ 尚未確認 Apple 處理完成／TestFlight 可用，且 Voice 真人 Gate、真登入、拍照、StoreKit、APNs 與審核元資料仍未通過；因此未送審。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
 **76－App 1.0.22 Build 27／最新 main 通知中心整合包（7/15 Codex）**：①✅ 來源為 `origin/main@0e88a9e`，PR #82 聊聊穩定／診斷與 PR #83 通知中心均已合併，當時 GitHub 開啟 PR 為 0。②✅ App／npm／Xcode／開發 fixture 統一為 `1.0.22 (27)`，保留 Pro、1,000 點與家人假資料；通知中心可分用藥、看診、家人、安全四類控制。③✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 Apple Development 簽章及成品東京／fixture／secret 防漏全部 PASS。④✅ Edward iPhone 已安裝、手機回讀 `1.0.22 (27)` 並啟動 PASS。⑤❌ Voice 查資料狀態機尚未部署，手機仍使用舊查詢路徑；通知 App 畫面、APNs 四類真推播、Voice 長聊、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳仍待真人／正式 Gate。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
