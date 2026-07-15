@@ -114,6 +114,9 @@ expect(viewController.includes('registerPluginInstance(GoogleSignInPlugin())'), 
 expect(xcodeProject.includes('AppleSignInPlugin.swift in Sources'), 'native Apple plugin is not compiled by Xcode');
 expect(xcodeProject.includes('GoogleSignInPlugin.swift in Sources') && xcodeProject.includes('GoogleSignIn-iOS'), 'Google Sign-In SDK is not linked by Xcode');
 expect(infoPlist.includes('<key>GIDClientID</key>') && infoPlist.includes('<key>GIDServerClientID</key>'), 'Google iOS client configuration is missing');
+expect(!xcodeProject.includes('MISSING_GOOGLE_'), 'production Google iOS client configuration still contains placeholders');
+expect(xcodeProject.includes('491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah.apps.googleusercontent.com'), 'production Google iOS client ID is missing');
+expect(xcodeProject.includes('com.googleusercontent.apps.491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah'), 'production Google callback scheme is missing');
 expect(iosExport.includes('codesign -d --entitlements - "$APP_PATH"'), 'IPA export still uses the retired entitlements output syntax');
 expect(!iosExport.includes('codesign -d --entitlements :-'), 'IPA export uses deprecated codesign entitlement syntax');
 expect(iosExport.includes('com.apple.developer.applesignin'), 'IPA export does not verify Apple sign-in entitlement');

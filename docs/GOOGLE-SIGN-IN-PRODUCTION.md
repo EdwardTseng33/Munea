@@ -21,9 +21,9 @@ Branding:
 Clients:
 
 1. Keep the current Web client used by Supabase.
-2. Create an iOS OAuth client named `Munea App iOS` with bundle ID `net.munea.app`.
-3. Put the generated client ID in both Debug and Release `GOOGLE_IOS_CLIENT_ID` build settings.
-4. Set `GOOGLE_REVERSED_IOS_CLIENT_ID` to `com.googleusercontent.apps.` plus the portion before `.apps.googleusercontent.com`.
+2. The iOS OAuth client `Munea App iOS` is registered for bundle ID `net.munea.app`.
+3. Debug and Release use client ID `491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah.apps.googleusercontent.com`.
+4. The callback scheme is `com.googleusercontent.apps.491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah`.
 
 The client ID and reversed client ID are public application identifiers, not client secrets. Never add the Web client secret to the App or repository.
 
