@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新可測包**：獨立分支 `codex/tokyo-app-package-1.0.10` 已同步 `origin/main@d17ea6a` 與 1.0.9 整合內容，App／Web 正式 Supabase source 改為東京 `fespbkdwafueyonppzwq`，版本為 `1.0.10 (Build 15)`。目前 Edward iPhone 安裝的是「真帳號／正式 Gateway QA 包」：東京／雪梨 marker、防開發 profile、防 Gateway 繞過、後端 secret 防漏、Capacitor sync、Xcode 26.6 簽章與安裝啟動均 PASS；Google／Apple 登入與真 token 撥號等待 Edward 手機操作。原 Pro、1,000 點、三位家人與 Voice canary fixture 包仍保留在 Mac 產物，真人 Gate 後可直接裝回；尚未合併 main，也不是 App Store 候選包。
+> **2026-07-15 最新可測包**：獨立分支 `codex/tokyo-app-package-1.0.10` 已同步 `origin/main@d17ea6a` 與 1.0.9 整合內容，App／Web 正式 Supabase source 改為東京 `fespbkdwafueyonppzwq`，版本為 `1.0.10 (Build 15)`。目前 Edward iPhone 安裝的是「真帳號／正式 Gateway QA 包」：Google OAuth 已強制顯示帳號選擇、登出改為只清除本機 session，完整 `test:launch`、東京／雪梨 marker、防開發 profile、防 Gateway 繞過、後端 secret 防漏、Capacitor sync、Xcode 26.6 簽章與安裝啟動均 PASS；Google 帳號選擇畫面、Apple 登入與真 token 撥號仍等待 Edward 手機確認。原 Pro、1,000 點、三位家人與 Voice canary fixture 包仍保留在 Mac 產物，真人 Gate 後可直接裝回；尚未合併 main，也不是 App Store 候選包。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
