@@ -221,6 +221,65 @@ def test_terminated_gateway_record_does_not_block_pod_reuse():
         assert "pod-1" not in provider.last_excluded
 
 
+def test_stopped_runpod_is_retired_without_health_probe():
+    with tempfile.TemporaryDirectory() as tmp:
+        stopped = backup(active=0)
+        gateway = FakeGateway([primary(active=0), stopped])
+        provider = FakeProvider()
+        provider.pods = [{"id": "pod-1", "desiredStatus": "EXITED"}]
+        probes = []
+        controller = rb.BackupController(
+            make_config(tmp), gateway, provider, Clock(),
+            probe=lambda url, key: probes.append(url) or {
+                "ok": True, "capacity": {"active": 0},
+            },
+        )
+        result = controller.run_once()
+        assert result["action"] == "no_change"
+        assert probes == ["https://glows"]
+        assert ("unregister", "runpod-pod-1") in gateway.calls
+        assert not any(
+            call[:3] == ("health", "runpod-pod-1", False)
+            for call in gateway.calls
+        )
+
+
+def test_terminated_runpod_is_skipped_without_health_probe():
+    with tempfile.TemporaryDirectory() as tmp:
+        retired = backup(active=0)
+        retired.update({"healthy": False, "enabled": False, "status": "terminated"})
+        gateway = FakeGateway([primary(active=0), retired])
+        provider = FakeProvider()
+        probes = []
+        controller = rb.BackupController(
+            make_config(tmp), gateway, provider, Clock(),
+            probe=lambda url, key: probes.append(url) or {
+                "ok": True, "capacity": {"active": 0},
+            },
+        )
+        result = controller.run_once()
+        assert result["action"] == "no_change"
+        assert probes == ["https://glows"]
+        assert not any(call[0] == "health" and call[1] == "runpod-pod-1" for call in gateway.calls)
+
+
+def test_running_runpod_is_still_health_checked():
+    with tempfile.TemporaryDirectory() as tmp:
+        gateway = FakeGateway([primary(active=0), backup(active=0)])
+        provider = FakeProvider()
+        provider.pods = [{"id": "pod-1", "desiredStatus": "RUNNING"}]
+        probes = []
+        controller = rb.BackupController(
+            make_config(tmp), gateway, provider, Clock(),
+            probe=lambda url, key: probes.append(url) or {
+                "ok": True, "capacity": {"active": 0},
+            },
+        )
+        controller.run_once()
+        assert probes == ["https://glows", "https://runpod-1"]
+        assert ("health", "runpod-pod-1", True, 0) in gateway.calls
+
+
 def test_observe_mode_never_spends():
     with tempfile.TemporaryDirectory() as tmp:
         gateway = FakeGateway([primary(active=3)], queue_depth=1)
@@ -392,6 +451,9 @@ def main():
             test_primary_free_does_not_open_backup,
             test_queue_opens_and_registers_one_backup,
             test_terminated_gateway_record_does_not_block_pod_reuse,
+            test_stopped_runpod_is_retired_without_health_probe,
+            test_terminated_runpod_is_skipped_without_health_probe,
+            test_running_runpod_is_still_health_checked,
             test_observe_mode_never_spends,
             test_primary_outage_opens_backup,
             test_idle_backup_drains_then_stops,
