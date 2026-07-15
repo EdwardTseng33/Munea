@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新手機測試包**：`1.0.15 (Build 20)` 已修正設定頁誤顯示 `1.10.1`。根因是 HTML 殘留舊版 fallback，且正式版號要等完整 App 初始化後段才覆蓋；現在改由唯一版本檔載入後立即更新設定列與版本視窗，並新增禁止硬編碼版號的回歸測試。完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 開發簽章建置與包內版本／東京／測試資料／secret 防漏均 PASS。Edward iPhone 已透過 Wi-Fi 覆蓋安裝，手機回讀 `1.0.15 (20)` 且啟動 PASS。設定頁實際目視仍需 Edward 確認；Voice 真人 Gate 與通知 App 畫面等紅燈不變。正式 App Store 包與上傳不在本輪。
+> **2026-07-15 最新修正候選**：Edward 真機確認 `1.0.16 (Build 21)` 隱私彈窗已可進入，但聊聊仍無法撥通，且按下後約數秒才顯示撥號中。根因之一已確認：測試帳號被當成登入狀態，撥號前會拿假 token 呼叫家人傳話 API，固定等滿 Brain 的 6 秒 timeout，且 UI 狀態更新排在這段等待後。`1.0.17 (Build 22)` 改為按下即進撥號中、測試帳號略過無效傳話查詢、正式帳號最多等 1.2 秒；Voice Canary WebSocket 握手與 GLOWS `3/3` 空席健康檢查 PASS。1.0.17 尚待完整測試、包版、手機安裝與真人撥通，未完成前仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.15 Build 20 已修正版本誤顯示並無線安裝 iPhone。自動驗證通過；設定頁目視、Voice 真人 Gate 與 APNs／登入／拍照／金流仍未通過）**
+> **最後更新：2026-07-15（Codex · App 1.0.16 Build 21 已修正聊聊隱私彈窗初始化阻斷並無線安裝 iPhone。啟動與自動驗證通過；彈窗真人點測、Voice 真人 Gate 與 APNs／登入／拍照／金流仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**71－App 1.0.16 Build 21／聊聊隱私彈窗阻斷修正（7/15 Codex）**：①❌ Edward 在 1.0.15 真機確認「我知道了」、右上 X、完整隱私三個入口全部無反應，無法聊聊。②✅ iPhone 啟動日誌定位根因：開發測試帳號略過家庭同步時 `syncPullAll()` 回傳空值，後段 `__pullPromise.finally` 直接拋錯，讓後續處理器全未綁定。③✅ 同步流程改為安全 Promise；隱私彈窗同意／關閉／App 內隱私頁／返回改在主初始化前獨立綁定，完整隱私不再外開視窗。④✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 簽章、東京／測試資料／secret 防漏通過。⑤✅ Edward iPhone 已無線安裝並回讀 `1.0.16 (21)`，啟動日誌不再出現 JS 錯誤。⑥❌ iPhone 鏡像因手機使用中無法操作，三個入口與真正撥號仍等待 Edward 真人重測；Voice、APNs、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳紅燈不變。本輪未部署 Brain／Voice，未操作 RunPod／GLOWS。
 
 **70－App 1.0.15 Build 20／設定頁版號誤顯示修正（7/15 Codex）**：①❌ Edward 真機看到設定頁 `1.10.1`；手機系統實際安裝是 `1.0.14 (19)`，判定為 App 畫面顯示錯誤。②✅ 已移除設定列與版本視窗硬編碼 fallback，改由 `version.js` 載入後立即綁定唯一正式版號，不再等待完整 App 初始化；新增 UI 契約禁止同類回歸。③✅ App／npm／Xcode／開發 fixture 統一為 `1.0.15 (Build 20)`；完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 開發簽章與成品安全檢查全部通過。④✅ Edward iPhone 已無線覆蓋安裝，手機系統回讀 `1.0.15 (20)` 並成功啟動。⑤❌ 設定頁實際目視等待 Edward 確認；Voice、APNs、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳仍未通過。本輪未部署 Brain／Voice，未操作 RunPod／GLOWS。
 
@@ -190,7 +192,7 @@
 **㉑（7/9 晚 Windows 蘇菲）App Store 送審體檢＋4 個合規洞修復（Edward「修好完善再送」拍板）**：
 - **ASC 商店頁填好存檔**：主要類別=健康與健身、**免登入可體驗**（取消需要登入）、審查聯絡人（Tseng/Edward/**+886978395227** 國際格式/信箱）、審查說明（英文）、**手動發佈**、隱私權政策 URL（暫用 claude.ai 公開頁 `db866b16-f152-4f3a-9460-ff56dcab1eae`、**待換 munea.net/privacy**）。
 - **深挖 5 個送審會被退/要對齊的洞**（沙利曼 Gate5＋卡西法 Gate1 核實）→ Edward 拍板「都改乾淨、修好再送」。**卡西法已修 4 個前端（實測過、selftest 20 過/0 敗/3 略）**：①天氣拿掉精確 GPS、只用縣市（app.js 1547-1582）②用藥照片同步時剝除、只留本機（syncPush meds 剝 photo）③家人動態每則加「移除/檢舉」＋封鎖入口好找（檢舉暫借 /feedback 收件箱 type:'bug'）④刪除帳號改真的（清 munea.*＋登出＋呼叫 /account-deletion）＋文案改誠實。
-- **隱私正本 `web/privacy.html` 已改誠實完整版**：點名 Google（Gemini）＋Supabase（澳洲機房）、只用縣市不用精確定位、用藥照片本機、可在 App 內刪帳號、不做廣告追蹤、聯絡信箱 edwardt0303@gmail.com。
+- **隱私正本 `web/privacy.html` 已改誠實完整版**：點名 Google（Gemini）＋Supabase（目前正式資料機房為日本東京）、只用縣市不用精確定位、用藥照片本機、可在 App 內刪帳號、不做廣告追蹤、聯絡信箱 edwardt0303@gmail.com。
 - 🔴 **給 Mac（送審前必補）**：(1) **後端 `/account-deletion` 要真的刪 Supabase 帳號與資料**（蘋果 5.1.1(v)、目前只 append_privacy_request 記單、不補仍不合規）(2) 打包 iOS 行銷版號對齊最新（≥1.10.1）＋**商店版本記錄現寫「1.0」、要與打包版一致**（否則掛不上打包檔）(3) `Info.plist` 的 `NSLocationWhenInUseUsageDescription` 可拿掉（不再用 GPS）(4) **把 `web/privacy.html` 發佈到 munea.net/privacy**（官網 Vercel 在 Mac/Codex 側、Windows 發不了；現 munea.net/privacy=404）。
 - ⚠️ **版控/並行注意**：本 session 與另線同時改 app.js——另線 1.10.1（聊聊麥克風打斷修正、commit `fac0adc`）已把我方 JS/HTML 收進 commit；**但 `web/src/styles.css` 尚未提交**（移除/檢舉按鈕＋家人頁管理鈕的樣式在裡面）→ **版控收尾要確認 styles.css 進庫、否則新按鈕沒樣式**。卡西法測試用 8124（8123 被另線佔）。
 - **還缺（Windows 待填 ASC）**：年齡分級＋隱私資料問卷（答案沙利曼備好；因定位/照片改乾淨→無需申報照片/精確定位/診斷，更單純）；8 個付費項目審查截圖；建置版本（Mac 上傳後選）；送審（Edward）。

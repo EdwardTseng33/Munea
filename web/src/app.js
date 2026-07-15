@@ -4128,6 +4128,9 @@ function setupHscrollHints() {
 }
 
 async function connectCall() {
+  // Give immediate, cancellable feedback before any optional network work.
+  const developmentDirectCall = usesDevelopmentDirectCall();
+  setCallDialing(true);
   // 撥通中＝保持角色的待機動畫（Edward 2026-07-09 二次拍板：不定格照片、也不動照片）。
   // 硬規則：聲音＋會動的臉「兩邊都真的就緒」才一起開場——寧可讓用戶等，也不要開場後像當機。
   // 同線聲音的 iPhone 解鎖（2026-07-11）：iPhone 不准「沒經過使用者手指」的聲音自動播——
@@ -4158,16 +4161,22 @@ async function connectCall() {
   } catch (e) {}
   // Keep the iOS user gesture alive before the queue/network wait starts.
   if (!LiveVoice.prime()) {
+    setCallDialing(false);
     setCallHint(LiveVoice._micUnavailableReason === 'https_required'
       ? '手機／區網測試需要 HTTPS 才能開麥，請改用公開測試連結'
       : '拿不到麥克風，請到瀏覽器設定允許');
     return;
   }
-  // 先領取一則「指定給本人」的家人傳話；沒有訊息或暫時離線都不阻擋通話。
-  try { await LiveVoice.prepareRelay(); } catch (e) {}
+  // 家人傳話是附加功能：正式帳號最多等 1.2 秒；開發假登入直接略過，不能卡住主要通話。
+  if (!developmentDirectCall) {
+    try {
+      await Promise.race([
+        LiveVoice.prepareRelay(),
+        new Promise(resolve => setTimeout(resolve, 1200)),
+      ]);
+    } catch (e) {}
+  }
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
-  const developmentDirectCall = usesDevelopmentDirectCall();
-  setCallDialing(true);   // 按鈕「撥通中···」；兩邊都就緒才變「結束通話」＋開始計時
   setCallHint(developmentDirectCall ? '開發測試直連中…' : '正在安排語音與影像席位…', true);
   if (!developmentDirectCall) {
     try {
@@ -4347,6 +4356,74 @@ async function connectCall() {
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
 }
 
+async function openInAppReader(kind, options) {
+  const page = kind === 'terms' ? 'terms.html' : 'privacy.html';
+  const reader = $('#readerPage');
+  const body = $('#readerBody');
+  if (!reader || !body) return;
+  $('#readerTitle').textContent = kind === 'terms' ? '使用條款' : '隱私權政策';
+  reader.dataset.returnToConsent = options && options.returnToConsent ? '1' : '';
+  body.innerHTML = '<p>讀取中…</p>';
+  reader.classList.add('show');
+  reader.setAttribute('aria-hidden', 'false');
+  try {
+    const html = await fetch(page).then(r => r.text());
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const secs = [...doc.querySelectorAll('.privacy-section')];
+    body.innerHTML = secs.map(s2 => '<h4>' + s2.querySelector('h2').textContent + '</h4>' +
+      [...s2.querySelectorAll('p, ul')].map(x => x.outerHTML.replace(/<h2.*?<\/h2>/, '')).join('')).join('');
+    body.querySelectorAll('a').forEach(a => { const b2 = document.createElement('strong'); b2.textContent = a.textContent; a.replaceWith(b2); });
+  } catch (e) {
+    body.innerHTML = '<p>暫時讀不到，晚點再試。</p>';
+  }
+  const scroll = body.closest('.reader-scroll');
+  if (scroll) scroll.scrollTop = 0;
+}
+
+function closeInAppReader() {
+  const reader = $('#readerPage');
+  if (!reader) return;
+  const returnToConsent = reader.dataset.returnToConsent === '1';
+  reader.dataset.returnToConsent = '';
+  reader.classList.remove('show');
+  reader.setAttribute('aria-hidden', 'true');
+  if (returnToConsent) {
+    const sheet = $('#consentSheet');
+    if (sheet) sheet.classList.add('show');
+  }
+}
+
+function setupCriticalConsentControls() {
+  const sheet = $('#consentSheet');
+  if (!sheet || sheet.dataset.controlsBound === '1') return;
+  sheet.dataset.controlsBound = '1';
+
+  const close = sheet.querySelector('.mx-close');
+  if (close) close.addEventListener('click', e => {
+    e.stopPropagation();
+    sheet.classList.remove('show');
+  });
+  const agree = $('#consentAgree');
+  if (agree) agree.addEventListener('click', () => {
+    try { localStorage.setItem('munea.consent.crossborder', new Date().toISOString()); } catch (e) {}
+    try { trackProductEvent('crossborder_consent_given', {}); } catch (e) {}
+    sheet.classList.remove('show');
+    connectCall();
+  });
+  const detail = $('#consentDetail');
+  if (detail) detail.addEventListener('click', e => {
+    e.preventDefault();
+    sheet.classList.remove('show');
+    openInAppReader('privacy', { returnToConsent: true });
+  });
+  const readerBack = $('#readerBack');
+  if (readerBack && readerBack.dataset.controlsBound !== '1') {
+    readerBack.dataset.controlsBound = '1';
+    readerBack.addEventListener('click', closeInAppReader);
+  }
+}
+document.addEventListener('DOMContentLoaded', setupCriticalConsentControls);
+
 function init() {
   if (new URLSearchParams(location.search).get('debug')) document.body.classList.add('debug');
   // 體驗捷徑：網址帶 ?voiceUrl= / ?avatarUrl= → 寫進本機設定後生效（一鍵體驗 bat 用）
@@ -4369,8 +4446,8 @@ function init() {
   } catch (e) {}
   try { const _vs = document.getElementById('webVerStamp'); if (_vs && window.MuneaVersion) _vs.textContent = '內頁 v' + MuneaVersion.current; } catch (e) {}   // 內頁真版印章：通話畫面角落顯示網頁內容真版本（防 iOS 外殼標籤新、內頁舊）
   window.addEventListener('munea:medication-change', handleMedicationChange);
-  const __pullPromise = syncPullAll();
-  const __medicationPromise = Promise.resolve(__pullPromise).then(configureMedicationService);
+  const __pullPromise = Promise.resolve(syncPullAll());
+  const __medicationPromise = __pullPromise.then(configureMedicationService);
   refreshServerPlanEntitlement();
   refreshServerCredits();
   if (_familySyncTimer) clearInterval(_familySyncTimer);
@@ -5238,8 +5315,8 @@ function init() {
     else if (result.reason === 'none') toast('這個 Apple 帳號目前沒有可恢復的訂閱');
     else toast('恢復購買沒有完成，請確認網路後再試一次');
   });
-  if ($('#legalTermsLink')) $('#legalTermsLink').addEventListener('click', e => { e.preventDefault(); openReader('terms'); });
-  if ($('#legalPrivacyLink')) $('#legalPrivacyLink').addEventListener('click', e => { e.preventDefault(); openReader('privacy'); });
+  if ($('#legalTermsLink')) $('#legalTermsLink').addEventListener('click', e => { e.preventDefault(); openInAppReader('terms'); });
+  if ($('#legalPrivacyLink')) $('#legalPrivacyLink').addEventListener('click', e => { e.preventDefault(); openInAppReader('privacy'); });
   // 點數購買
   if ($('#subPoints')) $('#subPoints').addEventListener('click', e => {
     const card = e.target.closest('.tu-card'); if (!card) return;
@@ -6047,25 +6124,7 @@ function init() {
     toast('好，改成「' + nm + '」了');
   });
   applyFontScale();
-  // 條款／隱私：App 內白色內頁（左上返回、內容可滑）
-  async function openReader(kind) {
-    const page = kind === 'terms' ? 'terms.html' : 'privacy.html';
-    $('#readerTitle').textContent = kind === 'terms' ? '使用條款' : '隱私權政策';
-    const body = $('#readerBody');
-    body.innerHTML = '<p>讀取中…</p>';
-    $('#readerPage').classList.add('show');
-    try {
-      const html = await fetch(page).then(r => r.text());
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const secs = [...doc.querySelectorAll('.privacy-section')];
-      body.innerHTML = secs.map(s2 => '<h4>' + s2.querySelector('h2').textContent + '</h4>' +
-        [...s2.querySelectorAll('p, ul')].map(x => x.outerHTML.replace(/<h2.*?<\/h2>/, '')).join('')).join('');
-      // 防呆：閱讀器裡的連結一律轉純文字（點了會把 App 帶去外頁、回不來）
-      body.querySelectorAll('a').forEach(a => { const b2 = document.createElement('strong'); b2.textContent = a.textContent; a.replaceWith(b2); });
-    } catch (e2) { body.innerHTML = '<p>暫時讀不到，晚點再試。</p>'; }
-    $('#readerBody').closest('.reader-scroll').scrollTop = 0;
-  }
-  if ($('#readerBack')) $('#readerBack').addEventListener('click', () => $('#readerPage').classList.remove('show'));
+  // 條款／隱私閱讀器由最早期控制綁定，避免其他初始化失敗時連返回都不能操作。
   // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常時通知他們確認
   // 名單直接吃「設定 → 全家健康圈」同一份資料（單一真相）；圈裡移除了人，這裡自動跟著消失
   function safetyMembers() { return loadCircle().filter(m => !m.self); }
@@ -6247,8 +6306,8 @@ function init() {
     const mk = b.closest('.modal-mask');
     if (mk) mk.classList.remove('show');
   }));
-  if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openReader('terms'));
-  if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openReader('privacy'));
+  if ($('#termsRow')) $('#termsRow').addEventListener('click', () => openInAppReader('terms'));
+  if ($('#privacyPolicyRow')) $('#privacyPolicyRow').addEventListener('click', () => openInAppReader('privacy'));
   if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);
   if ($('#verClose')) $('#verClose').addEventListener('click', () => $('#versionSheet').classList.remove('show'));
   applyAppVersion();
@@ -6322,13 +6381,6 @@ function init() {
       setTimeout(() => { location.reload(); }, 1200);
     })();
   });
-  if ($('#consentAgree')) $('#consentAgree').addEventListener('click', () => {
-    try { localStorage.setItem('munea.consent.crossborder', new Date().toISOString()); } catch (e) {}
-    trackProductEvent('crossborder_consent_given', {});
-    $('#consentSheet').classList.remove('show');
-    connectCall();
-  });
-  if ($('#consentDetail')) $('#consentDetail').addEventListener('click', () => { window.open('privacy.html', '_blank'); });
   const authTermsLink = document.querySelector('.auth-terms a');
   if (authTermsLink) authTermsLink.addEventListener('click', e => { e.preventDefault(); closeAuthSheet(); openLegal('terms'); });
   if ($('#historyEntry')) $('#historyEntry').addEventListener('click', () => { rcInit(); $('#historyModal').classList.add('show'); });

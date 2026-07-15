@@ -5,6 +5,7 @@ const app = fs.readFileSync('web/src/app.js', 'utf8');
 const auth = fs.readFileSync('web/src/auth.js', 'utf8');
 const css = fs.readFileSync('web/src/styles.css', 'utf8');
 const versionSource = fs.readFileSync('web/src/version.js', 'utf8');
+const privacy = fs.readFileSync('web/privacy.html', 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -13,6 +14,20 @@ function assert(condition, message) {
 assert(/id="verRowNum">—<\/span>/.test(html) && /id="verCurrent">—<\/span>/.test(html), 'Version UI placeholders must not contain a stale semantic version');
 assert(!/id="(?:verRowNum|verCurrent)">\d+\.\d+\.\d+<\/span>/.test(html), 'Version UI must not hard-code a fallback release number');
 assert(versionSource.includes('window.MuneaApplyVersionToStaticUi') && versionSource.includes("['verRowNum', 'verCurrent']"), 'The version SSOT must bind both static version labels immediately');
+
+assert(app.includes('const __pullPromise = Promise.resolve(syncPullAll());'), 'Family sync bypass must still produce a safe promise for downstream initialization');
+const criticalConsentSetup = app.match(/function setupCriticalConsentControls\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(criticalConsentSetup.includes("$('#consentAgree')") && criticalConsentSetup.includes("sheet.querySelector('.mx-close')"), 'Consent agree and close controls must be bound by the critical early setup');
+assert(criticalConsentSetup.includes("$('#consentDetail')") && criticalConsentSetup.includes("openInAppReader('privacy', { returnToConsent: true })"), 'Consent privacy detail must open the in-App reader and return to consent');
+assert(criticalConsentSetup.includes("$('#readerBack')") && criticalConsentSetup.includes('closeInAppReader'), 'The in-App privacy reader must retain a working back control');
+assert(app.indexOf("document.addEventListener('DOMContentLoaded', setupCriticalConsentControls)") < app.indexOf("document.addEventListener('DOMContentLoaded', init)"), 'Critical consent controls must bind before the main App initialization');
+assert(!app.includes("window.open('privacy.html', '_blank')"), 'Consent privacy detail must not leave the App in a new window');
+assert(privacy.includes('目前機房位於日本東京'), 'Privacy disclosure must identify the current Tokyo data region');
+assert(!privacy.includes('目前機房位於澳洲'), 'Privacy disclosure must not retain the retired Sydney production region');
+const connectCall = app.match(/async function connectCall\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(connectCall.indexOf('setCallDialing(true)') < connectCall.indexOf('LiveVoice.prime()'), 'Call button must enter dialing state before microphone or network preparation');
+assert(connectCall.includes('if (!developmentDirectCall)') && connectCall.includes('Promise.race([') && connectCall.includes('setTimeout(resolve, 1200)'), 'Family relay lookup must not block development calls or delay production dialing indefinitely');
+assert(/if \(!LiveVoice\.prime\(\)\) \{\s*setCallDialing\(false\)/.test(connectCall), 'Microphone failure must leave the dialing state');
 
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');
@@ -67,4 +82,4 @@ assert(html.includes('用藥紀錄是 Munea 自己的帳本，不依賴 Apple He
 assert(app.includes("type: 'action_result'") && app.includes("await window.__muneaHandleVoiceAction"), 'Voice AI must wait for the App action result before confirming reminders');
 assert(app.includes("action: 'claim'") && app.includes("action === 'send_family_relay'"), 'Family relay must use a recipient-specific claim queue and the voice action bridge');
 
-console.log('UI contracts OK: version SSOT, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, and challenge controls');
+console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, and challenge controls');
