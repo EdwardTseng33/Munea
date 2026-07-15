@@ -386,7 +386,20 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     try:
         # 上一通剛聊過（12 小時內）→ 開場自然接續、不重問剛答過的日常問題（Edward 7/15：20 分鐘後再打還被問吃飯沒）
         # memory_scope＝這通的人別隔離鍵（token 的 voice-<user_id>），跟收線回寫同一 scope。
-        base += server.recent_call_recap_line(person_id=memory_scope)
+        # 正式路線（B）：Brain 通道設定齊全＋這通有已驗證用戶 → 向 Brain 要該用戶自己的
+        # 「上次聊天重點」（讀東京正式庫）；否則退回 Voice 本機模式。
+        brain_url, brain_secret = _brain_memory_config()
+        recap = ""
+        if brain_url and memory_scope and memory_scope.startswith("voice-"):
+            try:
+                resp = post_internal(brain_url, brain_secret, "/voice/call-recap",
+                                     {"userId": memory_scope[len("voice-"):]}, timeout=3)
+                recap = str((resp or {}).get("recapLine") or "")
+            except Exception:
+                recap = ""
+        if not recap:
+            recap = server.recent_call_recap_line(person_id=memory_scope)
+        base += recap
     except Exception:
         pass
     if c.get("type") == "animal" and c.get("style"):
@@ -590,6 +603,14 @@ _HOKKIEN_FALLBACK_PCM = {}
 # 通話記憶回寫專用池：跟 to_thread 的共用池分開，收線的多秒萃取不排擠 session 建立。
 _CALL_MEMORY_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=4, thread_name_prefix="call-memory")
+
+
+def _brain_memory_config():
+    """Voice→Brain 通話記憶通道設定：(brain 網址, 內部密語)。兩個都設了才啟用；
+    沒設就退回 Voice 本機模式（單人測試用、仍受 MUNEA_VOICE_CALL_MEMORY 總開關管）。"""
+    url = os.environ.get("MUNEA_BRAIN_INTERNAL_URL", "").strip()
+    secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
+    return (url, secret) if url and secret else (None, None)
 _HOKKIEN_FALLBACK_LOCK = threading.Lock()
 
 
@@ -1258,15 +1279,35 @@ async def handle(ws):
         #   這通才不會白聊。
         try:
             _capture_call_turns(st)
-            if st.get("call_turns") and server._voice_call_memory_enabled():
+            # 啟用條件二擇一：本機模式總開關（MUNEA_VOICE_CALL_MEMORY）或
+            # Brain 通道已設定（設定密語＝刻意啟用，不疊第二道旗標）。
+            if st.get("call_turns") and (
+                    server._voice_call_memory_enabled() or _brain_memory_config()[0]):
                 turns_snapshot = list(st["call_turns"])
 
                 def _persist_call_memory(turns=turns_snapshot, call_id=cid,
                                          call_char=char, scope=memory_scope):
+                    # 正式路線（B）優先：交給 Brain 代存（進東京正式庫、認得用戶）；
+                    # Brain 沒設定或這通沒有已驗證用戶 → 退回 Voice 本機模式；
+                    # Brain 呼叫失敗也退回本機，這通至少不白聊。
+                    brain_url, brain_secret = _brain_memory_config()
+                    if brain_url and scope and scope.startswith("voice-"):
+                        try:
+                            resp = post_internal(
+                                brain_url, brain_secret, "/voice/call-memory",
+                                {"userId": scope[len("voice-"):], "turns": turns,
+                                 "char": call_char, "voiceSessionId": f"live-{call_id}"})
+                            _diag(call_id, "node.call_memory_saved", via="brain",
+                                  turns=len(turns), stored=bool((resp or {}).get("stored")),
+                                  identity=bool((resp or {}).get("identityResolved")))
+                            return
+                        except Exception as exc:
+                            _diag(call_id, "node.call_memory_brain_err",
+                                  err=f"{type(exc).__name__}:{str(exc)[:60]}")
                     try:
                         result = server.persist_voice_call_turns(
                             turns, call_char, f"live-{call_id}", person_id=scope)
-                        _diag(call_id, "node.call_memory_saved",
+                        _diag(call_id, "node.call_memory_saved", via="local",
                               turns=len(turns), stored=bool(result))
                     except Exception as exc:
                         _diag(call_id, "node.call_memory_err",
