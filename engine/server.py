@@ -6091,6 +6091,12 @@ def persist_voice_call_turns(turns, char=None, voice_session_id=None, person_id=
     收線路徑不能炸，所有失敗都吞下並記 fallback log。"""
     if not _voice_call_memory_enabled():
         return None
+    return _persist_voice_call_turns_core(turns, char, voice_session_id, person_id)
+
+
+def _persist_voice_call_turns_core(turns, char=None, voice_session_id=None, person_id=None):
+    """persist 的核心（不含總開關）：給 Voice→Brain 內部端點用——
+    內部密語（MUNEA_VOICE_BRAIN_SECRET）設了就代表刻意啟用，不再疊第二道旗標。"""
     history = []
     for turn in turns or []:
         if not isinstance(turn, dict):
@@ -6132,6 +6138,11 @@ def recent_call_recap_line(now=None, person_id=None):
     ②不注入 memoryTags——那是內部英文 slug、可能含守護腦風險分類，不能進 prompt。"""
     if not _voice_call_memory_enabled():
         return ""
+    return _recent_call_recap_line_core(now, person_id)
+
+
+def _recent_call_recap_line_core(now=None, person_id=None):
+    """recap 的核心（不含總開關）：給 Voice→Brain 內部端點用。"""
     try:
         items = load_conversation_summaries(
             person_id=person_id or PRIMARY_CARE_RECIPIENT_ID, limit=10)
@@ -6163,6 +6174,55 @@ def recent_call_recap_line(now=None, person_id=None):
         "剛剛已經問過、他也回答過的日常問題（例如吃飯了沒、睡得好不好、心情好不好）"
         "不要當開場再問一次，除非他自己先提起；也不要假裝完全沒聊過。）"
     )
+
+
+def _voice_identity_scope(user_id):
+    """Voice→Brain 內部端點：把 call token 的已驗證 user_id 解析成帳號範圍身分。
+    回 (contextvar token, personId)；本機 json 模式或查無帳號回 (None, None) → 走預設人。
+    綁進 REQUEST_DATA_IDENTITY 後，資料櫃的所有讀寫都落在該用戶自己的範圍——
+    這就是「員工A代存、順便認人」的正式身分接線。"""
+    if not user_id:
+        return None, None
+    try:
+        identity = supabase_adapter.make_adapter(identity=None).resolve_auth_identity(user_id)
+    except Exception as e:
+        log_fallback_exception("resolve voice call identity", e)
+        return None, None
+    if not identity:
+        return None, None
+    token = REQUEST_DATA_IDENTITY.set(identity)
+    return token, identity.get("personId")
+
+
+def voice_call_memory_response(data):
+    """POST /voice/call-memory（內部密語驗證後才會進來）：
+    Voice 掛斷時把整通字幕交給 Brain 代存——Brain 有 Supabase 鑰匙、認得用戶，
+    資料落東京正式庫而不是 Voice 容器的便條紙。"""
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        result = _persist_voice_call_turns_core(
+            data.get("turns"), char=data.get("char"),
+            voice_session_id=data.get("voiceSessionId"), person_id=person)
+        return {"ok": True, "stored": bool(result),
+                "identityResolved": bool(person)}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
+def voice_call_recap_response(data):
+    """POST /voice/call-recap（內部密語驗證後才會進來）：
+    Voice 開場前向 Brain 要「上次聊天重點」，讀的是該用戶自己的正式紀錄。"""
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        return {"ok": True,
+                "recapLine": _recent_call_recap_line_core(person_id=person),
+                "identityResolved": bool(person)}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
 
 
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
@@ -6309,6 +6369,21 @@ class H(BaseHTTPRequestHandler):
                 self._json_error(403, "app_key_required", "App key required")
                 return
             data = self._read_json_body()
+            # Voice→Brain 內部通道（通話記憶）：Voice 沒有用戶的登入 token，
+            # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
+            # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
+            if request_path in ("/voice/call-memory", "/voice/call-recap"):
+                _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
+                _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
+                if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
+                    self._json_error(403, "voice_internal_secret_required",
+                                     "Voice internal secret is missing or wrong")
+                    return
+                if request_path == "/voice/call-memory":
+                    self._json(voice_call_memory_response(data))
+                else:
+                    self._json(voice_call_recap_response(data))
+                return
             auth_gate = require_verified_auth(self.headers, self.path, data)
             # Family-circle invites always require a verified identity, even in
             # local/demo mode where most endpoints may allow a guest preview.
