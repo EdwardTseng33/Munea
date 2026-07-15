@@ -22,12 +22,14 @@ assert(entitlements.includes('aps-environment'), 'Push entitlement is required')
 assert(project.includes('com.apple.Push'), 'Xcode target must enable Push Notifications capability');
 assert(project.includes('APS_ENVIRONMENT = development') && project.includes('APS_ENVIRONMENT = production'), 'Debug and release APNs environments must be explicit');
 assert(web.includes("api('/push/devices'"), 'Web bridge must register device tokens with the backend');
-assert(html.includes('src/notify.js?v=20260715-v1022'), 'Notification UI changes must invalidate the stale WebView script cache');
+assert(html.includes('src/notify.js?v=20260716-v1023'), 'Notification UI changes must invalidate the stale WebView script cache');
 assert(web.includes("api('/notifications'"), 'Web bridge must mark opened notifications in the durable inbox');
 assert(web.includes('notificationInboxModal') && web.includes('openNotificationInbox'), 'App must expose a durable notification inbox');
 assert(web.includes("api('/notifications/settings'") && web.includes("action: 'set'"), 'Notification switches must persist through the backend settings API');
 assert(web.includes('controller.abort()') && web.includes('}, 5000)'), 'Notification settings API must not hold App startup indefinitely');
-assert(web.includes('notificationCenterRow') && web.includes('notificationSettingsModal'), 'Settings must expose one notification-center row and its switch sheet');
+assert(web.includes('notificationCenterRow') && web.includes('notificationSettingsPage'), 'Settings must expose one notification-center row and its full-screen sub-page');
+assert(web.includes('reader-page notification-page'), 'Notification center must be a full-screen sub-page, not a bottom sheet (2026-07-16 Edward)');
+assert(web.includes('notificationSafetyContacts') && web.includes('munea.safetyContacts'), 'Notification center must expose the safety emergency-contact entry');
 for (const category of ['medication', 'clinic', 'family', 'safety']) {
   assert(web.includes(`data-notification-setting=\"${category}\"`), `Notification center must expose the ${category} switch`);
 }
@@ -35,7 +37,9 @@ assert(web.includes("anchor.hidden = true") && web.includes("anchor.style.displa
 assert(web.includes('enabledNotificationItems()'), 'Category switches must filter native local schedules too');
 assert(web.includes('munea.notification.settings.pending.v1') && web.includes('這支手機已更新；雲端尚未同步'), 'Failed backend saves must remain queued and visible instead of reporting false success');
 assert(!web.includes("if (items.length && status.status === 'not_determined')"), 'Notification permission must only be requested by the master switch');
-assert(web.includes('isDevelopmentProfile()') && web.includes('testAction.hidden = !isDevelopmentProfile()'), 'Test notifications must stay hidden outside development profiles');
+assert(!web.includes('sendTestNotification') && !web.includes('notificationTestAction') && !web.includes('傳送測試通知'), 'Production web bundle must not contain any test-notification action (2026-07-16 Edward)');
+assert(web.includes('resumePermissionSync') && web.includes('visibilitychange'), 'Returning from iOS Settings must re-check permission and auto-complete the pending enable');
+assert(web.includes('munea.notification.enableIntent.v1'), 'The enable intent must survive the round-trip to iOS Settings');
 assert(web.includes("action: 'unregister'"), 'Notification bridge must support device unregister');
 assert(auth.includes('unregisterBeforeSignOut'), 'Sign-out must detach the current APNs device before the session is cleared');
 assert(web.includes('munea://medications') && web.includes('munea://visits') && web.includes('munea://relay'), 'Required deep links must be routed');

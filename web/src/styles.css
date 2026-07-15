@@ -379,6 +379,13 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .notification-switch:disabled { opacity: .42; cursor: default; }
 .notification-switch:focus-visible { outline: 3px solid rgba(58,168,160,.25); outline-offset: 2px; }
 .notification-privacy-note { margin: 14px 2px 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+/* 通知中心全螢幕子頁（7/16 改版：不再彈窗，沿用 reader-page 版型） */
+.notification-page-scroll { padding-top: 6px; }
+.notification-page-sub { margin: 2px 2px 12px; color: var(--muted); font-size: 14.5px; }
+.notification-safety-contacts { cursor: pointer; }
+.notification-safety-contacts small { overflow-wrap: anywhere; }
+.notification-row-arrow { flex: 0 0 auto; color: var(--muted); font-size: 20px; line-height: 1; }
+#safetyModal { z-index: 70; }   /* 緊急聯絡人小窗要蓋在通知中心子頁（z-index 60）上面 */
 .notification-test-action { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--teal-d); border-radius: 12px; background: transparent; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
 .notification-save-state { min-height: 20px; margin-top: 8px; text-align: center; color: var(--teal-d); font-size: 12.5px; }
 .provider-consent-card { margin-top: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid rgba(58,168,160,.14); box-shadow: var(--shadow-sm); }
@@ -741,6 +748,17 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   position: static !important; width: 100% !important; height: 100% !important;
   object-fit: cover !important; opacity: 1 !important; transition: none !important;
 }
+/* ===== 聊聊人物呼吸感（2026-07-16 Edward 拍板方案 B 分層呼吸）=====
+   底圖(.fh-bg)釘死不動＝背景板；人物去背層＋活臉框(.fh-person)焊同一組做細微起伏，
+   活臉跟身體永遠對齊、AI 生成端零感知——跟舊「底圖動、活臉沒跟著動」的媒合崩潰是不同路。
+   幅度只放大不縮小（1→1.005、從畫面底部往上頂＝胸口起伏）：底圖上的人永遠被人物層蓋住，
+   邊緣疊在同源像素上，所以不需要另補乾淨背景、也看不出接縫。 */
+.fh-person { position: absolute; inset: 0; transform-origin: 50% 100%; animation: fhBreathe 4.6s ease-in-out infinite; will-change: transform; }
+.fh-person-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+@keyframes fhBreathe { 0%, 100% { transform: scaleY(1); } 42% { transform: scaleY(1.005); } 58% { transform: scaleY(1.0046); } }
+/* 她講話時呼吸暫停：頭肩動態讓給引擎輸出獨佔、不疊兩種動（Edward 7/16 舊坑提醒） */
+.face-screen[data-state="speaking"] .fh-person { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .fh-person { animation: none; } }
 
 .avatar-mouth { position: absolute; left: 50%; top: 50%; z-index: 2; display: none;
   width: 58px; height: 24px; transform: translate(-50%, -50%);
@@ -1749,11 +1767,14 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 #family .sec-head { margin: 14px 0 12px; }
 #family .sec-head h2 { font-size: 17px; }
 /* 全家狀態：心情做成有顏色的小藥丸、一眼分辨 */
-.mood-pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-right: 4px; }
+.mood-pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-right: 4px; display: inline-flex; align-items: center; gap: 3px; vertical-align: -3px; }
+.mood-pill .ic { width: 13px; height: 13px; }
 .mood-pill.calm { background: var(--mint-2); color: var(--teal-dd); }
 .mood-pill.happy { background: var(--coral-soft); color: var(--coral-d); }
+.mood-pill.glad { background: #F6ECD4; color: #9A6E14; }
 .mood-pill.tired { background: #F6E7C8; color: #8A6410; }
 .mood-pill.down { background: #E4EAF0; color: #46566A; }
+.mood-pill.upset { background: #ECE1F0; color: #6E4488; }
 /* 成員列按下去的小彈跳（活著的感覺） */
 .health-row:active { transform: scale(.985); }
 .health-row { transition: transform .12s ease; }
@@ -2148,6 +2169,8 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .health-row .hr-status.watch .hr-slabel { color: #8A6410; }
 .health-row .hr-status.alert .hr-dot { background: var(--danger); box-shadow: 0 0 0 3px rgba(229,91,77,.2); }
 .health-row .hr-status.alert .hr-slabel { color: var(--danger); }
+.health-row .hr-status.off .hr-dot { background: #C9CFC6; }
+.health-row .hr-status.off .hr-slabel { color: var(--muted); }
 
 /* 家人傳話提示（Edward 2026-07-07） */
 .relay-hint { display: flex; gap: 11px; align-items: center; background: var(--mint); border: 1px solid var(--mint-2); border-radius: 15px; padding: 12px 14px; margin-bottom: 16px; }
