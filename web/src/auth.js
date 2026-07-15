@@ -254,6 +254,7 @@
       options: {
         redirectTo: redirectTo('index.html'),
         scopes: normalized === 'google' ? 'openid email profile' : undefined,
+        queryParams: normalized === 'google' ? { prompt: 'select_account' } : undefined,
         skipBrowserRedirect: native,
       },
     });

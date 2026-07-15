@@ -121,6 +121,7 @@ function expect(condition, message) {
   expect(started.ok, 'native Google OAuth did not start');
   expect(oauthRequests[0].options.redirectTo === 'munea://auth/callback', 'native OAuth redirect is not the app deep link');
   expect(oauthRequests[0].options.skipBrowserRedirect === true, 'native OAuth would still navigate the embedded WebView');
+  expect(oauthRequests[0].options.queryParams.prompt === 'select_account', 'Google OAuth would silently reuse the previous account');
   expect(browserOpened === 'https://example.supabase.co/oauth', 'OAuth URL was not opened with the native browser');
 
   await appUrlOpen({ url: 'munea://auth/callback?code=pkce-code' });
