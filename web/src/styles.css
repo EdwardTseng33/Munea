@@ -384,7 +384,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .notification-page-sub { margin: 2px 2px 12px; color: var(--muted); font-size: 14.5px; }
 .notification-safety-contacts { cursor: pointer; }
 .notification-safety-contacts small { overflow-wrap: anywhere; }
-.notification-row-arrow { flex: 0 0 auto; color: var(--muted); font-size: 20px; line-height: 1; }
+.notification-setting-row > .notification-row-arrow { flex: 0 0 auto; color: var(--muted); font-size: 20px; line-height: 1; }   /* 要贏過上面 > span 的 flex:1、箭頭才貼右邊 */
 #safetyModal { z-index: 70; }   /* 緊急聯絡人小窗要蓋在通知中心子頁（z-index 60）上面 */
 .notification-test-action { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--teal-d); border-radius: 12px; background: transparent; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
 .notification-save-state { min-height: 20px; margin-top: 8px; text-align: center; color: var(--teal-d); font-size: 12.5px; }
