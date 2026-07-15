@@ -231,6 +231,7 @@ class SupabaseAdapter:
         person_tables = {
             "companionProfiles": ("companion_profiles", "*"),
             "routineReminders": ("routine_reminders", "*"),
+            "medicationDoseEvents": ("medication_dose_events", "*"),
             "voiceSessions": ("voice_sessions", "*"),
             "conversationSummaries": ("conversation_summaries", "*"),
             "safetyEvents": ("safety_events", "*"),
@@ -403,6 +404,7 @@ class SupabaseAdapter:
                 "family_state_entries",
                 "family_activities",
                 "family_activity_participants",
+                "medication_dose_events",
             ],
         }
 
@@ -961,6 +963,39 @@ class SupabaseAdapter:
             prefer="return=representation",
         )
         return self.routine_reminder_row_to_item(rows[0]) if rows else None
+
+    def load_medication_doses(self, person_id=None, start_date=None, end_date=None, limit=1000):
+        if not self.enabled():
+            return None
+        person_id = person_id if self._is_uuid(person_id or "") else self.person_id
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{person_id}",
+            "select": "*",
+            "order": "scheduled_date.desc,updated_at.desc",
+            "limit": str(max(1, min(5000, int(limit or 1000)))),
+        }
+        if start_date:
+            query["scheduled_date"] = f"gte.{str(start_date)[:10]}"
+        if end_date:
+            # PostgREST cannot express both bounds with one dict key, so the
+            # upper bound is applied after the account/person-scoped query.
+            query["and"] = f"(scheduled_date.lte.{str(end_date)[:10]})"
+        rows = self._select("medication_dose_events", query)
+        return [self.medication_dose_row_to_item(row) for row in rows or []]
+
+    def save_medication_dose(self, item):
+        if not self.enabled():
+            return None
+        payload = self.medication_dose_to_row(item)
+        rows = self._request(
+            "POST",
+            "medication_dose_events",
+            query={"on_conflict": "account_id,person_id,dose_key", "select": "*"},
+            payload=payload,
+            prefer="resolution=merge-duplicates,return=representation",
+        )
+        return self.medication_dose_row_to_item(rows[0]) if rows else None
 
     def append_product_event(self, event):
         if not self.enabled():
@@ -2537,6 +2572,63 @@ class SupabaseAdapter:
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
             "deletedAt": row.get("deleted_at"),
+        }
+
+    @staticmethod
+    def _normalize_medication_dose_status(status):
+        allowed = {"scheduled", "taken", "snoozed", "skipped", "missed"}
+        return status if status in allowed else "scheduled"
+
+    def medication_dose_to_row(self, item):
+        item = item or {}
+        metadata = dict(item.get("metadata") or {})
+        person_id = item.get("personId") or item.get("person_id") or self.person_id
+        reminder_id = item.get("reminderId") or item.get("reminder_id")
+        if person_id and not self._is_uuid(person_id):
+            metadata.setdefault("originalPersonId", person_id)
+            person_id = self.person_id
+        if reminder_id and not self._is_uuid(reminder_id):
+            metadata.setdefault("originalReminderId", reminder_id)
+            reminder_id = None
+        return {
+            "account_id": self.payload_account_id(item.get("accountId") or item.get("account_id")),
+            "person_id": person_id,
+            "routine_reminder_id": reminder_id or None,
+            "dose_key": str(item.get("doseKey") or item.get("dose_key") or "")[:240],
+            "medication_name": str(item.get("medicationName") or item.get("medication_name") or "用藥")[:160],
+            "slot_label": str(item.get("slot") or item.get("slotLabel") or item.get("slot_label") or "")[:80],
+            "scheduled_date": item.get("scheduledDate") or item.get("scheduled_date"),
+            "scheduled_at": item.get("scheduledAt") or item.get("scheduled_at"),
+            "expected_count": max(0, min(100, int(item.get("expectedCount") or item.get("expected_count") or 0))),
+            "status": self._normalize_medication_dose_status(item.get("status")),
+            "taken_at": item.get("takenAt") or item.get("taken_at"),
+            "source": str(item.get("source") or "munea-app")[:80],
+            "timezone": str(item.get("timezone") or "Asia/Taipei")[:80],
+            "metadata": metadata,
+        }
+
+    @staticmethod
+    def medication_dose_row_to_item(row):
+        row = row or {}
+        metadata = row.get("metadata") or {}
+        return {
+            "id": row.get("id") or "",
+            "accountId": row.get("account_id") or "",
+            "personId": row.get("person_id") or metadata.get("originalPersonId"),
+            "reminderId": row.get("routine_reminder_id") or metadata.get("originalReminderId"),
+            "doseKey": row.get("dose_key") or "",
+            "medicationName": row.get("medication_name") or "用藥",
+            "slot": row.get("slot_label") or "",
+            "scheduledDate": row.get("scheduled_date"),
+            "scheduledAt": row.get("scheduled_at"),
+            "expectedCount": row.get("expected_count") or 0,
+            "status": row.get("status") or "scheduled",
+            "takenAt": row.get("taken_at"),
+            "source": row.get("source") or "munea-api",
+            "timezone": row.get("timezone") or "Asia/Taipei",
+            "metadata": metadata,
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
         }
 
     @staticmethod
