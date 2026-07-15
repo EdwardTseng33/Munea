@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新修正候選**：Edward 真機確認 `1.0.16 (Build 21)` 隱私彈窗已可進入，但聊聊仍無法撥通，且按下後約數秒才顯示撥號中。根因之一已確認：測試帳號被當成登入狀態，撥號前會拿假 token 呼叫家人傳話 API，固定等滿 Brain 的 6 秒 timeout，且 UI 狀態更新排在這段等待後。`1.0.17 (Build 22)` 改為按下即進撥號中、測試帳號略過無效傳話查詢、正式帳號最多等 1.2 秒；Voice Canary WebSocket 握手與 GLOWS `3/3` 空席健康檢查 PASS。1.0.17 尚待完整測試、包版、手機安裝與真人撥通，未完成前仍是 ❌。
+> **2026-07-15 最新修正候選**：`1.0.17 (Build 22)` 已完成自動測試、GoogleSignIn 9.1.0 原生編譯、arm64 簽章建置並透過 Wi-Fi 安裝 Edward iPhone，手機回讀版本正確且啟動 PASS。撥號按鈕改為按下即顯示「撥號中」；開發帳號略過會卡 6 秒的無效傳話查詢，正式帳號最多等 1.2 秒。PR #73、#74 已合併；#75、#76 的目標內容已進 1.0.17 整合候選，但原 PR 尚未合併／關閉。實際撥通與 Google 真登入仍待 Edward 真人 Gate，因此仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.16 Build 21 已修正聊聊隱私彈窗初始化阻斷並無線安裝 iPhone。啟動與自動驗證通過；彈窗真人點測、Voice 真人 Gate 與 APNs／登入／拍照／金流仍未通過）**
+> **最後更新：2026-07-15（Codex · App 1.0.17 Build 22 已完成撥號即時回饋、Google 原生登入整合、Xcode 簽章與 iPhone 無線安裝。自動 Gate 通過；Voice／Google 真人 Gate 與 APNs／Apple 登入／拍照／金流仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**72－App 1.0.17 Build 22／撥號延遲修正＋Google 原生登入整合（7/15 Codex）**：①✅ 按下聊聊立即顯示撥號中；開發測試帳號略過會卡滿 6 秒的無效家人傳話查詢，正式帳號最多等 1.2 秒。②✅ 隱私彈窗 Promise、早期綁定與 App 內完整隱私修正保留。③✅ PR #73、#74 已合併；#76 功能與 #75 GoogleSignIn 9.1.0／正式 iOS client／callback 已整合至本候選，但原 #75、#76 尚待整合 PR 進 main 後關閉，現在仍不是「全部 PR 已合併」。④✅ Node launch 契約、JS 語法、Capacitor sync、Google 套件解析、Xcode arm64 簽章與成品安全檢查 PASS。⑤✅ Edward iPhone 已無線安裝並回讀 `1.0.17 (22)`、啟動 PASS；包內為東京 Supabase、Pro、1,000 點與家人假資料。⑥❌ 實際撥通／開場／聲畫同步、Google 真選帳登入、Apple 登入、拍照、StoreKit、APNs 與 App Store 上傳仍待真人 Gate。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
 **71－App 1.0.16 Build 21／聊聊隱私彈窗阻斷修正（7/15 Codex）**：①❌ Edward 在 1.0.15 真機確認「我知道了」、右上 X、完整隱私三個入口全部無反應，無法聊聊。②✅ iPhone 啟動日誌定位根因：開發測試帳號略過家庭同步時 `syncPullAll()` 回傳空值，後段 `__pullPromise.finally` 直接拋錯，讓後續處理器全未綁定。③✅ 同步流程改為安全 Promise；隱私彈窗同意／關閉／App 內隱私頁／返回改在主初始化前獨立綁定，完整隱私不再外開視窗。④✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 簽章、東京／測試資料／secret 防漏通過。⑤✅ Edward iPhone 已無線安裝並回讀 `1.0.16 (21)`，啟動日誌不再出現 JS 錯誤。⑥❌ iPhone 鏡像因手機使用中無法操作，三個入口與真正撥號仍等待 Edward 真人重測；Voice、APNs、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳紅燈不變。本輪未部署 Brain／Voice，未操作 RunPod／GLOWS。
 
