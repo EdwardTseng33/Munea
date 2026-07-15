@@ -345,64 +345,88 @@ window.MuneaNotify = (function () {
     if (state) state.textContent = notificationMasterOn() ? '已開啟' : '已關閉';
   }
 
-  function isDevelopmentProfile() {
-    return !!(window.MUNEA_DEV_CONFIG && window.MUNEA_DEV_CONFIG.enabled === true);
+  // 通知中心＝全螢幕子頁（7/16 Edward：內容多、不做彈窗）；沿用條款/方案同一套 reader-page 版型
+  function ensureNotificationSettings() {
+    var page = document.getElementById('notificationSettingsPage');
+    if (page) return page;
+    page = document.createElement('div');
+    page.className = 'reader-page notification-page';
+    page.id = 'notificationSettingsPage';
+    page.setAttribute('aria-hidden', 'true');
+    page.innerHTML = '<div class="nav-head"><button class="nav-back" id="notificationSettingsBack" type="button" aria-label="返回設定"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">通知中心</span><span></span></div>' +
+      '<div class="reader-scroll notification-page-scroll"><p class="notification-page-sub">選擇哪些事情要提醒你</p>' +
+      '<div class="notification-setting-list">' +
+      '<div class="notification-setting-row notification-master-row"><span><b>App 推播通知</b><small id="notificationPermissionMessage">開啟後才會收到提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="App 推播通知"><i></i></button></div>' +
+      '<p class="notification-setting-heading">提醒類型</p>' +
+      '<div class="notification-setting-row"><span><b>用藥提醒</b><small>到時間提醒你查看與確認</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="medication" aria-label="用藥提醒"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>看診提醒</b><small>回診與看診行程提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="clinic" aria-label="看診提醒"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>家人消息</b><small>家人傳話、邀請與家庭活動</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="family" aria-label="家人消息"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>安全通知</b><small>只控制你自己手機；家人守護通知不受影響</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="safety" aria-label="安全通知"><i></i></button></div>' +
+      '<div class="notification-setting-row notification-safety-contacts" id="notificationSafetyContacts" role="button" tabindex="0"><span><b>安全通知的通知對象</b><small id="notificationSafetyContactsState">還沒設定緊急聯絡人</small></span><span class="notification-row-arrow">›</span></div>' +
+      '</div>' +
+      '<p class="notification-privacy-note">鎖定畫面不顯示藥名、健康數值或家人訊息內容。</p>' +
+      '<p class="notification-save-state" id="notificationSaveState" aria-live="polite"></p></div>';
+    document.body.appendChild(page);
+    page.querySelector('#notificationSettingsBack').addEventListener('click', closeNotificationSettings);
+    page.addEventListener('click', function (event) {
+      var toggle = event.target.closest('[data-notification-setting]');
+      if (toggle) { void changeNotificationSetting(toggle.dataset.notificationSetting); return; }
+      if (event.target.closest('#notificationSafetyContacts')) openSafetyContacts();
+    });
+    page.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && event.target.closest('#notificationSafetyContacts')) openSafetyContacts();
+    });
+    return page;
   }
 
-  function ensureNotificationSettings() {
-    var mask = document.getElementById('notificationSettingsModal');
-    if (mask) return mask;
-    mask = document.createElement('div');
-    mask.className = 'modal-mask';
-    mask.id = 'notificationSettingsModal';
-    mask.setAttribute('aria-hidden', 'true');
-    mask.innerHTML = '<div class="modal notification-settings-modal" role="dialog" aria-modal="true" aria-labelledby="notificationSettingsTitle"><div class="modal-grab"></div><div class="auth-modal-head"><div><h2 id="notificationSettingsTitle">通知中心</h2><p class="modal-sub">選擇哪些事情要提醒你</p></div><button class="auth-close" id="notificationSettingsClose" type="button" aria-label="關閉">×</button></div><div class="notification-setting-list"><div class="notification-setting-row notification-master-row"><span><b>App 推播通知</b><small id="notificationPermissionMessage">開啟後才會收到提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="App 推播通知"><i></i></button></div><p class="notification-setting-heading">提醒類型</p><div class="notification-setting-row"><span><b>用藥提醒</b><small>到時間提醒你查看與確認</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="medication" aria-label="用藥提醒"><i></i></button></div><div class="notification-setting-row"><span><b>看診提醒</b><small>回診與看診行程提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="clinic" aria-label="看診提醒"><i></i></button></div><div class="notification-setting-row"><span><b>家人消息</b><small>家人傳話、邀請與家庭活動</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="family" aria-label="家人消息"><i></i></button></div><div class="notification-setting-row"><span><b>安全通知</b><small>只控制你自己手機；家人守護通知不受影響</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="safety" aria-label="安全通知"><i></i></button></div></div><p class="notification-privacy-note">鎖定畫面不顯示藥名、健康數值或家人訊息內容。</p><button class="notification-test-action" id="notificationTestAction" type="button" hidden>傳送測試通知</button><p class="notification-save-state" id="notificationSaveState" aria-live="polite"></p></div>';
-    document.body.appendChild(mask);
-    function close() {
-      mask.classList.remove('show');
-      mask.setAttribute('aria-hidden', 'true');
-    }
-    mask.addEventListener('click', function (event) {
-      if (event.target === mask) close();
-      var toggle = event.target.closest('[data-notification-setting]');
-      if (toggle) void changeNotificationSetting(toggle.dataset.notificationSetting);
-    });
-    mask.querySelector('#notificationSettingsClose').addEventListener('click', close);
-    mask.querySelector('#notificationTestAction').addEventListener('click', async function () {
-      var label = mask.querySelector('#notificationSaveState');
-      if (label) label.textContent = '正在傳送測試通知…';
-      var result = await sendTestNotification();
-      if (label) label.textContent = result && result.scheduled !== false ? '測試通知已排程' : '測試通知未送出';
-    });
-    return mask;
+  function closeNotificationSettings() {
+    var page = document.getElementById('notificationSettingsPage');
+    if (!page) return;
+    page.classList.remove('show');
+    page.setAttribute('aria-hidden', 'true');
+  }
+
+  // 「通知對象」＝重用 app.js 既有的緊急聯絡人設定窗（單一名單、單一真相）
+  function openSafetyContacts() {
+    var row = document.getElementById('safetyRow');
+    if (row) row.click();
+  }
+
+  function safetyContactNames() {
+    try { return (JSON.parse(localStorage.getItem('munea.safetyContacts')) || []).filter(function (n) { return typeof n === 'string' && n; }); }
+    catch (e) { return []; }
   }
 
   function renderNotificationSettings() {
-    var mask = document.getElementById('notificationSettingsModal');
-    if (!mask) return;
+    var page = document.getElementById('notificationSettingsPage');
+    if (!page) return;
     var masterOn = notificationMasterOn();
-    mask.querySelectorAll('[data-notification-setting]').forEach(function (button) {
+    page.querySelectorAll('[data-notification-setting]').forEach(function (button) {
       var key = button.dataset.notificationSetting;
       var on = key === 'pushEnabled' ? masterOn : !!_notificationSettings.categories[key];
       button.setAttribute('aria-checked', on ? 'true' : 'false');
       button.classList.toggle('on', on);
       button.disabled = _settingsSaving || (key !== 'pushEnabled' && !masterOn);
     });
-    var permissionMessage = mask.querySelector('#notificationPermissionMessage');
+    var permissionMessage = page.querySelector('#notificationPermissionMessage');
     if (permissionMessage) {
       permissionMessage.textContent = _permission.status === 'denied'
-        ? '已被 iPhone 關閉，點開關前往系統設定'
+        ? '已被 iPhone 關閉，點開關前往系統設定；回來會自動接上'
         : (masterOn ? '重要提醒會送到這支手機' : '開啟時才會詢問 iPhone 通知權限');
     }
-    var testAction = mask.querySelector('#notificationTestAction');
-    if (testAction) testAction.hidden = !isDevelopmentProfile();
+    var contactsState = page.querySelector('#notificationSafetyContactsState');
+    if (contactsState) {
+      var names = safetyContactNames();
+      contactsState.textContent = names.length ? '會通知：' + names.join('、') : '還沒設定緊急聯絡人';
+    }
   }
 
   async function openNotificationSettings() {
-    var mask = ensureNotificationSettings();
-    mask.classList.add('show');
-    mask.setAttribute('aria-hidden', 'false');
+    var page = ensureNotificationSettings();
+    page.classList.add('show');
+    page.setAttribute('aria-hidden', 'false');
     renderNotificationSettings();
+    void resumePermissionSync();
     if (!_settingsLoaded) await loadNotificationSettings();
   }
 
@@ -422,6 +446,32 @@ window.MuneaNotify = (function () {
     return false;
   }
 
+  // 「想開通知」的意向旗：使用者按了開關但 iPhone 權限還沒給 → 記 30 分鐘；
+  // 他去系統設定打開、回到沐寧時（resumePermissionSync）就自動把 App 內的開關接上，不用再按一次。
+  var ENABLE_INTENT_KEY = 'munea.notification.enableIntent.v1';
+  function setEnableIntent() { try { localStorage.setItem(ENABLE_INTENT_KEY, String(Date.now())); } catch (e) {} }
+  function clearEnableIntent() { try { localStorage.removeItem(ENABLE_INTENT_KEY); } catch (e) {} }
+  function hasEnableIntent() {
+    try {
+      var at = Number(localStorage.getItem(ENABLE_INTENT_KEY) || 0);
+      return at > 0 && (Date.now() - at) < 30 * 60 * 1000;
+    } catch (e) { return false; }
+  }
+
+  async function enablePushNow(message) {
+    clearEnableIntent();
+    var saved = await saveNotificationSettings({ pushEnabled: true });
+    var native = plugin();
+    if (native && typeof native.registerRemoteNotifications === 'function') {
+      try {
+        var registration = await native.registerRemoteNotifications();
+        if (registration && registration.token) await registerToken(registration);
+      } catch (e) {}
+    }
+    if (message) message.textContent = saved.synced ? '通知已開啟' : '這支手機已開啟；雲端尚未同步';
+    return saved;
+  }
+
   async function changeNotificationSetting(key) {
     if (_settingsSaving) return;
     _settingsSaving = true;
@@ -431,19 +481,21 @@ window.MuneaNotify = (function () {
     try {
       if (key === 'pushEnabled') {
         var enable = !notificationMasterOn();
-        if (enable && _permission.status === 'denied') {
-          if (message) message.textContent = '請在 iPhone 設定中允許沐寧通知';
-          await window.MuneaNotify.openSettings();
-          return;
+        if (enable) {
+          if (!_permission.granted && _permission.status !== 'denied') await requestPermission();
+          if (!_permission.granted) {
+            setEnableIntent();
+            if (message) message.textContent = '請在 iPhone 設定中允許沐寧通知；回到沐寧會自動開啟';
+            await window.MuneaNotify.openSettings();
+            return;
+          }
+          await enablePushNow(message);
+        } else {
+          clearEnableIntent();
+          var saved = await saveNotificationSettings({ pushEnabled: false });
+          var deviceSynced = await disableCurrentDevice();
+          if (message) message.textContent = saved.synced && deviceSynced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
         }
-        if (enable && !_permission.granted) await requestPermission();
-        if (enable && !_permission.granted) {
-          if (message) message.textContent = '尚未取得通知權限';
-          return;
-        }
-        var saved = await saveNotificationSettings({ pushEnabled: enable });
-        var deviceSynced = enable ? true : await disableCurrentDevice();
-        if (message) message.textContent = saved.synced && deviceSynced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
       } else {
         if (!notificationMasterOn() || !Object.prototype.hasOwnProperty.call(_notificationSettings.categories, key)) return;
         var categories = {};
@@ -656,22 +708,20 @@ window.MuneaNotify = (function () {
     return _permission;
   }
 
-  async function sendTestNotification() {
-    var native = plugin();
-    if (!native) return { scheduled: false, error: 'native_only' };
-    var status = await refreshPermission();
-    if (!status.granted) status = await requestPermission();
-    if (!status.granted || typeof native.scheduleTestNotification !== 'function') return { scheduled: false };
+  // 回到前景就跟 iPhone 對一次權限帳：系統設定剛開了通知＋剛才有「想開」意向 → 自動接上，不用再按一次
+  var _resumeSyncBusy = false;
+  async function resumePermissionSync() {
+    if (_resumeSyncBusy || !plugin()) return;
+    _resumeSyncBusy = true;
     try {
-      var result = await native.scheduleTestNotification();
-      _lastSync = result || { scheduled: true };
+      var status = await refreshPermission();
+      if (status.granted && !_notificationSettings.pushEnabled && hasEnableIntent()) {
+        await enablePushNow(document.getElementById('notificationSaveState'));
+        sync();
+      }
       renderSettingsRows();
-      return result;
-    } catch (error) {
-      _lastSync = { error: true };
-      renderSettingsRows();
-      return { scheduled: false, error: String(error && error.message || error) };
-    }
+      renderNotificationSettings();
+    } finally { _resumeSyncBusy = false; }
   }
 
   function sync() {
@@ -728,6 +778,14 @@ window.MuneaNotify = (function () {
   function bootWhenReady() {
     restoreNotificationSettings();
     renderSettingsRows();
+    // App 從系統設定回來（或從背景回前景）→ 重新對一次 iPhone 權限帳
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') void resumePermissionSync();
+    });
+    try {
+      var appPlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+      if (appPlugin && typeof appPlugin.addListener === 'function') appPlugin.addListener('resume', function () { void resumePermissionSync(); });
+    } catch (e) {}
     if (_pendingOpen) void handleOpen(_pendingOpen);
     void boot();
   }
@@ -745,7 +803,6 @@ window.MuneaNotify = (function () {
     list: function (options) { return api('/notifications', Object.assign({ action: 'list' }, options || {})); },
     mark: function (id, action) { return api('/notifications', { id: id, action: action || 'read' }); },
     openInbox: openNotificationInbox,
-    sendTest: sendTestNotification,
     unregisterBeforeSignOut: unregisterBeforeSignOut
   };
 })();

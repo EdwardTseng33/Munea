@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260715-v1022" />
+  <link rel="stylesheet" href="src/styles.css?v=20260716-v1023" />
 </head>
 <body>
 <div class="app-shell">
@@ -54,6 +54,13 @@
           <span class="task-ico visit"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>
           <div class="task-body"><div class="task-title" id="visitTaskTitle">回診</div><div class="task-sub" id="visitTaskSub">今天</div></div>
           <span class="task-time coral" id="visitTaskTime">今天</span>
+          <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </div>
+        <!-- 行程卡（7/16 Edward）：揪一攤的約會/聚餐「當天」才出現在今天一起完成 -->
+        <div class="task-item" data-task="event" id="eventTask" style="display:none">
+          <span class="task-ico visit"><svg class="ic" viewBox="0 0 24 24"><path d="M9 20H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M17.8 21.2c1.2-1.2 3.2-3 3.2-4.6a2 2 0 0 0-3.4-1.4l-.6.6-.6-.6a2 2 0 0 0-3.4 1.4c0 1.6 2 3.4 3.2 4.6l.8.8z"/></svg></span>
+          <div class="task-body"><div class="task-title" id="eventTaskTitle">行程</div><div class="task-sub" id="eventTaskSub">今天</div></div>
+          <span class="task-time coral" id="eventTaskTime">今天</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
         <div class="task-item" data-task="walk">
@@ -439,7 +446,11 @@
       <!-- FlashHead 全身合成（2026-07-11 先鋒判斷框參數移植）：9:16 定比框＋全身立繪底＋512 活臉羽化貼回 -->
       <div class="fh-frame" id="fhFrame" hidden aria-hidden="true">
         <img class="fh-bg" id="fhBg" src="flashhead/bg-a05.png" alt="">
-        <div class="fh-overlay" id="fhOverlay"></div>
+        <!-- 呼吸組（2026-07-16 Edward 拍板方案 B 分層呼吸）：人物去背層＋活臉框焊同一組微起伏；底圖釘死當背景板 -->
+        <div class="fh-person" id="fhPerson">
+          <img class="fh-person-img" id="fhPersonImg" src="flashhead/person-a05.png" alt="">
+          <div class="fh-overlay" id="fhOverlay"></div>
+        </div>
       </div>
       <!-- 雲端擬真臉（快照秒醒）：接通後即時影像蓋上照片、無縫接手 -->
       <video id="faceVid" autoplay playsinline muted aria-hidden="true"></video>
@@ -1123,7 +1134,7 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260715-v1022"></script>
+  <script src="src/version.js?v=20260716-v1023"></script>
   <script src="src/i18n.js?v=20260714-zh-only1"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
@@ -1131,7 +1142,7 @@
   <script src="src/auth.js?v=20260715-auth2"></script>
   <script src="src/health.js?v=20260715-health3"></script>
   <script src="src/store.js?v=20260708-store"></script>
-  <script src="src/notify.js?v=20260715-v1022"></script>
+  <script src="src/notify.js?v=20260716-v1023"></script>
   <script src="src/medication.js?v=20260715-med1"></script>
   <script>
   /* 方案／權限判斷中心（單一真相 · 兩邊都讀得到）· Edward 7/7：登入預設 free；付費 Plus / Pro。
@@ -1177,7 +1188,7 @@
   </script>
   <script src="src/voice-turn-policy.js?v=20260714-v106"></script>
   <script src="src/voice-call-diagnostics.js?v=20260715-v1"></script>
-  <script type="module" src="src/app.js?v=20260715-v1022"></script>
+  <script type="module" src="src/app.js?v=20260716-v1023"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

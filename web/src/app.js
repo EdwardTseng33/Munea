@@ -820,6 +820,13 @@ async function handleVoiceAction(action, args) {
     if (typeof toast === 'function') toast(r.ok ? ('用藥提醒設好了：' + r.slots.join('、') + '吃「' + r.name + '」') : '要什麼時候吃我沒抓到，你再說一次好嗎');
     return r;
   }
+  if (action === 'set_personal_event') {
+    // 約會/聚餐/出遊 → 揪一攤活動帳本（7/16 Edward：這類事不准再進看診/用藥）
+    const fn = window.__muneaAddPersonalEvent;
+    const r = fn ? await fn({ title: args.title, dateISO: args.date, time: args.time, place: args.place }) : { ok: false, error: 'unsupported_action' };
+    if (typeof toast === 'function') toast(r.ok ? ('行程記好了：' + r.title + ' · ' + r.label) : '日期時間我沒抓到，你再說一次好嗎');
+    return r;
+  }
   if (action === 'send_family_relay') {
     return await createFamilyRelay(args.recipientName, args.message);
   }
@@ -865,7 +872,10 @@ function developerFixtureVitals(name, offset) {
     };
   }
   const latest = log[developerFixtureDate(0)];
-  return { name, nick: name, day: '今天', updatedAt: Date.now(), ...latest, log };
+  // 開發示範也帶今日心情標籤（跟正式資料同格式），讓家人頁左「心情」右「平安燈」的分工看得出來
+  const fixtureMoods = [['開心', 'happy'], ['平穩', 'calm'], ['疲累', 'tired']];
+  const mm = fixtureMoods[((offset / 2) | 0) % fixtureMoods.length];
+  return { name, nick: name, day: '今天', updatedAt: Date.now(), mood: { label: mm[0], key: mm[1], date: developerFixtureDate(0) }, ...latest, log };
 }
 function seedDeveloperFixtures(cfg) {
   if (cfg.seedFixtures !== true) return;
@@ -1468,6 +1478,8 @@ function _fhComposite(on, vid) {
       const _bg = document.getElementById('fhBg');   // 全身立繪底圖跟著角色換：擬真女 bg-a05、擬真男 bg-a06
       const _fc = flashheadCharFor(currentChar) || 'a05';
       if (_bg && _bg.getAttribute('src') !== 'flashhead/bg-' + _fc + '.png') _bg.src = 'flashhead/bg-' + _fc + '.png';
+      const _pi = document.getElementById('fhPersonImg');   // 呼吸用人物去背層跟著換（與底圖同版位、由 scripts/build_flashhead_person_layer.py 產）
+      if (_pi && _pi.getAttribute('src') !== 'flashhead/person-' + _fc + '.png') _pi.src = 'flashhead/person-' + _fc + '.png';
       // 模型與畫面都使用同一個原生正方形裁切，避免把人物長方形硬壓成 640x640。
       // a05 y=190、a06 y=209，來源均為 1080x1920；高度由 CSS aspect-ratio 固定為正方形。
       const _box = (_fc === 'a06') ? { top: '10.885417%' } : { top: '9.895833%' };
@@ -2109,6 +2121,8 @@ const LiveVoice = {
     } catch (e) {}
     // 能力握手：告訴伺服器「這版 App 接得住 AI 幫你設提醒」→ 只有新版才拿到設提醒工具，舊版不會被假成功（2026-07-09 Edward）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
+    // 能力握手：「接得住 AI 幫你記行程」（揪一攤）→ 約會/聚餐不再被硬塞成看診提醒（2026-07-16 Edward）
+    url += '&cap_evt=1';
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
     // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。
@@ -3311,8 +3325,29 @@ function renderVisitTask() {
   if (tm) tm.textContent = _clock24(v.time) || '今天';
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
-// 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋走走＋心情筆記＋聊聊
-function renderDailyTasks() { renderPillTask(); renderVisitTask(); refreshMoodTask(); }
+// 行程（揪一攤約會/聚餐）跟回診同一條規矩：只在「當天」進今日任務（Edward 7/16「今天的行程才顯示今天」）
+function eventToday() {
+  let arr = null;
+  try { arr = JSON.parse(localStorage.getItem('munea.activities') || 'null'); } catch (e) {}
+  if (!Array.isArray(arr)) return null;
+  const today = _todayISO();
+  return arr.filter(a => a && a.kind === 'event' && a.dateISO === today)
+    .sort((x, y) => String(x.time || '').localeCompare(String(y.time || '')))[0] || null;
+}
+function renderEventTask() {
+  const card = document.getElementById('eventTask');
+  if (!card) return;
+  const ev = eventToday();
+  if (!ev) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
+  card.style.display = '';
+  const t = $('#eventTaskTitle'), s = $('#eventTaskSub'), tm = $('#eventTaskTime');
+  if (t) t.textContent = muneaSafeDisplayText(ev.title, '') || '和家人的約';
+  if (s) s.textContent = muneaSafeDisplayText(ev.place, '') || '記得準時赴約';
+  if (tm) tm.textContent = _clock24(ev.time) || '今天';
+  if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
+}
+// 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋行程（當天才有）＋走走＋心情筆記＋聊聊
+function renderDailyTasks() { renderPillTask(); renderVisitTask(); renderEventTask(); refreshMoodTask(); }
 window.__muneaRenderDailyTasks = renderDailyTasks;
 // Apple 健康的步數 → 首頁走路任務（原生端 health.js 讀到步數後呼叫）
 window.__muneaSetSteps = function (n) {
@@ -3370,9 +3405,18 @@ function pushOwnHealthLog(log) {
     const day = keys[keys.length - 1] || _todayISO();
     const current = (log || {})[day] || {};
     const mine = {};
-    mine[personId] = Object.assign({ name: (pf.name || '').trim(), nick: (pf.nick || '').trim(), day, updatedAt: Date.now(), log }, current);
+    // 7/16 心情真串接：今日粗心情標籤（只有詞＋色，不含聊天內容）跟健康數據走同一條家庭帳本水管
+    const mood = myMoodToday();
+    mine[personId] = Object.assign({ name: (pf.name || '').trim(), nick: (pf.nick || '').trim(), day, updatedAt: Date.now(), log }, current, mood ? { mood } : {});
     syncPush('vitals', mine);
   } catch (e) {}
+}
+// 自己的今日心情摘要（loadMoodWeekReal 寫入）：只留 {label, key, date} 粗標籤、觀察細節不出這支手機
+function myMoodToday() {
+  try {
+    const m = JSON.parse(localStorage.getItem('munea.myMoodToday') || 'null');
+    return (m && m.key && m.date === _todayISO()) ? m : null;
+  } catch (e) { return null; }
 }
 // Apple 健康的完整摘要 → 狀態頁「今天」的真數值（原生端 health.js 讀到後呼叫）
 // s = { available, steps, hr, spo2, bpSys, bpDia, sleepHours }；缺哪項就不動哪項（示範值留著、不清空）
@@ -4045,6 +4089,7 @@ function speakChat(text) {
 const CHEERS = {
   pill: '藥吃了，你真棒，我幫你記到存摺裡，美華也看得到。',
   visit: '回診辛苦了，醫生說的我幫你記著，回家歇一下。',
+  event: '這個約赴完了吧？跟喜歡的人吃頓飯最好了，回來跟我說說。',
   walk: '出去走走最好了，回來記得喝口水。',
   chat: '謝謝你跟我說這些，我都記下來了。',
   mood: '今天的心情記好了，謝謝你願意照顧自己的感受。',
@@ -4171,6 +4216,7 @@ async function loadMoodWeekReal() {
     const wd = ['日', '一', '二', '三', '四', '五', '六'];
     const now = new Date();
     const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    try { cacheMyMoodToday(daily, todayIso); } catch (e) {}
     return daily.map(x => ({
       d: x.date === todayIso ? '今天' : wd[new Date(x.date + 'T00:00').getDay()],
       mood: MOOD_ZH2KEY[x.mood] || 'calm',
@@ -4179,6 +4225,29 @@ async function loadMoodWeekReal() {
     })).filter(x => x.chats.length);
   } catch (e) { return null; }
 }
+// 7/16 心情真串接：把「今天的粗心情標籤」存本機＋（變了就）補推一次家庭帳本。
+// 為什麼只有粗標籤：心情觀察細節（聊了什麼、每句觀察）留在本人手機與本人帳，家人只看得到「開心／平穩／疲累」這種詞——隱私線在這裡。
+function cacheMyMoodToday(daily, todayIso) {
+  const today = (daily || []).find(x => x && x.date === todayIso);
+  if (!today || !today.mood) return;
+  const record = { label: today.mood, key: MOOD_ZH2KEY[today.mood] || 'calm', date: todayIso };
+  let prev = null;
+  try { prev = JSON.parse(localStorage.getItem('munea.myMoodToday') || 'null'); } catch (e) {}
+  try { localStorage.setItem('munea.myMoodToday', JSON.stringify(record)); } catch (e) {}
+  if (!isLoggedIn()) return;
+  if (!prev || prev.key !== record.key || prev.date !== record.date) {
+    let log = {};
+    try { log = JSON.parse(localStorage.getItem('munea.healthLog') || '{}') || {}; } catch (e) {}
+    pushOwnHealthLog(log);   // 沒接健康裝置也照推：帳本按人合併、家人至少看得到心情
+  }
+}
+// 一個 session 只跟引擎拿一次心情週報（狀態頁心情卡與家庭心情同步共用同一份）
+function fetchMoodWeekOnce() {
+  if (!window.__moodRealPromise) window.__moodRealPromise = loadMoodWeekReal();
+  return window.__moodRealPromise;
+}
+// 開機閒時抓一次：家人頁的心情同步不必等使用者自己點進狀態頁
+setTimeout(() => { try { if (isLoggedIn()) fetchMoodWeekOnce(); } catch (e) {} }, 3000);
 function moodFaceSvg(key, size) {
   const m = MOODS[key] || MOODS.calm;
   return '<svg class="ic" viewBox="0 0 24 24" style="color:' + m.fg + ';width:' + size + 'px;height:' + size + 'px"><circle cx="12" cy="12" r="9"/><path d="' + m.face + '"/></svg>';
@@ -4196,12 +4265,9 @@ function renderMoodWeek() {
   }).join('');
   wrap.querySelectorAll('.md').forEach(b => b.addEventListener('click', () => showMoodDay(+b.dataset.i)));
   showMoodDay(MOOD_WEEK.length - 1);
-  if (!window.__moodFetched) {
-    window.__moodFetched = true;
-    loadMoodWeekReal().then(real => {
-      if (real && real.length >= 3) { MOOD_WEEK = real; renderMoodWeek(); }
-    });
-  }
+  fetchMoodWeekOnce().then(real => {
+    if (real && real.length >= 3 && MOOD_WEEK !== real) { MOOD_WEEK = real; renderMoodWeek(); }
+  });
 }
 function showMoodDay(i) {
   const day = MOOD_WEEK[i];
@@ -5044,6 +5110,16 @@ function init() {
       return best;
     } catch (e) { return null; }
   }
+  // 家人「心情」標籤（7/16 Edward 拆混淆）：只認他自己裝置同步上來的當天／昨天粗標籤；
+  // 沒有＝整顆不顯示——不再擺一顆人人相同的「平穩」，跟右邊的平安燈徹底分工
+  function famMoodFor(rv) {
+    const m = rv && rv.mood;
+    if (!m || !m.key || !MOODS[m.key]) return null;
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yesterIso = y.getFullYear() + '-' + String(y.getMonth() + 1).padStart(2, '0') + '-' + String(y.getDate()).padStart(2, '0');
+    if (m.date !== _todayISO() && m.date !== yesterIso) return null;
+    return { key: m.key, label: MOODS[m.key].label };
+  }
   // 真數據 → 顯示格式（門檻白話跟狀態頁同一套規則）
   function vitalsToDisplay(v) {
     if (!v) return null;
@@ -5101,9 +5177,12 @@ function init() {
       '</div>';
   }
   function renderPersonMood(p) {
-    // 正式版（7/9 Edward 拆示範）：心情觀察只認真資料；跨裝置的心情摘要水管還沒接、一律誠實空狀態
-    if ($('#mcTitle')) $('#mcTitle').textContent = '還沒有觀察';
-    if ($('#mcSub')) $('#mcSub').textContent = '等' + (p || '家人') + '開始用沐寧聊天，觀察會出現在這裡';
+    // 7/16 心情真串接：家庭帳本帶回來的「當天粗心情標籤」可以顯示；聊天觀察細節仍留在本人手機、這裡誠實不編
+    const mood = famMoodFor(famVitalsFor(p));
+    if ($('#mcTitle')) $('#mcTitle').textContent = mood ? '今天心情看起來「' + mood.label + '」' : '還沒有觀察';
+    if ($('#mcSub')) $('#mcSub').textContent = mood
+      ? '這是' + (p || '家人') + '的沐寧從聊天觀察到的大致心情；聊了什麼只留在他自己的手機'
+      : '等' + (p || '家人') + '開始用沐寧聊天，觀察會出現在這裡';
     if ($('#mcObs')) $('#mcObs').innerHTML = '';
     if ($('#mcTopics')) $('#mcTopics').innerHTML = '';
   }
@@ -5126,15 +5205,20 @@ function init() {
     }
     const hl = $('#healthList');
     if (hl) hl.innerHTML = mem.length ? mem.map(m => {
-      // 7/9 正式化：狀態從真同步數據推（有數據＝安好＋最後更新日；沒有＝老實說等他連上）
+      // 7/16 標籤分工重整（Edward「兩個標籤會混淆」）：
+      // 左＝心情（臉＋詞、來自他自己的沐寧聊天觀察、當天才顯示、沒有就不擺）
+      // 右＝平安燈（有同步數據且都在留意範圍→安好；有超標→需留意；還沒連→未連）
       const rv = famVitalsFor(m.name);
-      const s = rv
-        ? { pill: 'calm', pillT: '平穩', txt: '數據更新於 ' + (rv.day || '近日'), st: 'ok', stT: '安好' }
-        : { pill: 'calm', pillT: '—', txt: '等他加入連上，就看得到狀態', st: 'ok', stT: '未連' };
+      const d = rv ? vitalsToDisplay(rv) : null;
+      const warn = !!(d && ((d.bp && d.bp.warn) || (d.hr && d.hr.warn) || (rv && +rv.spo2 && +rv.spo2 < 90)));
+      const mood = famMoodFor(rv);
+      const st = rv ? (warn ? { cls: 'watch', label: '需留意' } : { cls: 'ok', label: '安好' }) : { cls: 'off', label: '未連' };
+      const pill = mood ? '<em class="mood-pill ' + mood.key + '">' + moodFaceSvg(mood.key, 13) + mood.label + '</em>' : '';
+      const txt = rv ? '數據更新於 ' + (rv.day || '近日') : '等他加入連上，就看得到狀態';
       return '<div class="health-row" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '">' +
         '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
-        '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state"><em class="mood-pill ' + s.pill + '">' + s.pillT + '</em>' + s.txt + '</div></div>' +
-        '<div class="hr-status ' + s.st + '"><span class="hr-dot"></span><span class="hr-slabel">' + s.stT + '</span></div></div>';
+        '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
+        '<div class="hr-status ' + st.cls + '"><span class="hr-dot"></span><span class="hr-slabel">' + st.label + '</span></div></div>';
     }).join('') : '<p class="modal-sub" style="margin:6px 2px">圈裡還沒有家人，點上面「邀請」把家人拉進來。</p>';
     if (currentPerson && !FAM_ORDER.includes(currentPerson)) { currentPerson = FAM_ORDER[0] || ''; if ($('#viewPerson') && $('#viewPerson').classList.contains('active')) showFamAll(); }
     renderFamDots();
@@ -5727,6 +5811,28 @@ function init() {
   }
   function loadActs() { try { return JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) { return []; } }
   function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} syncPush('activities', a); if (window.MuneaNotify) window.MuneaNotify.sync(); }
+  // 聊聊 AI 記行程（7/16 Edward「約吃飯被設成看診」）：約會/聚餐/出遊走揪一攤這本帳，
+  // 同步與「活動前 30 分提醒」都沿用現成水管（saveActs 內建）；看診/用藥帳本完全不碰
+  window.__muneaAddPersonalEvent = async function (a) {
+    const rawTitle = String((a && a.title) || '').trim();
+    const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : '和家人的約';
+    const dateISO = String((a && a.dateISO) || '').trim();
+    const time = String((a && a.time) || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
+    const when = new Date(dateISO + 'T' + time + ':00');
+    if (Number.isNaN(when.getTime()) || when.getTime() < Date.now() - 60000) return { ok: false, error: 'event_time_in_past' };
+    const rawPlace = String((a && a.place) || '').trim();
+    const act = {
+      id: Date.now(), kind: 'event', names: [], owner: myFeedName(),
+      title, place: (rawPlace && muneaIsCleanZhText(rawPlace)) ? rawPlace : '',
+      dateISO, time, dateLabel: fmtDay(when) + ' ' + _clock12(time),
+    };
+    const acts = loadActs(); acts.push(act); saveActs(acts);
+    try { renderActCard(act); } catch (e) {}
+    try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
+    try { trackProductEvent('activity_created', { kind: 'event', source: 'voice-ai' }); } catch (e) {}
+    return { ok: true, title, label: act.dateLabel };
+  };
   const FAM_AVA = { '阿嬤': ['嬤', 'p-ama'], '美華': ['華', 'p-mei'], '志明': ['明', 'p-zhi'], '小寶': ['寶', 'p-bao'], '你': ['我', 'p-me'] };
   function buildRankList(act) {
     const rows = Object.entries(act.answers).sort((x, y) => y[1] - x[1]);
