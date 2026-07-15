@@ -43,6 +43,14 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
+			<string>net.munea.app.google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_IOS_CLIENT_ID)</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
 			<string>net.munea.app.auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
@@ -50,6 +58,10 @@
 			</array>
 		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
+	<key>GIDServerClientID</key>
+	<string>$(GOOGLE_SERVER_CLIENT_ID)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

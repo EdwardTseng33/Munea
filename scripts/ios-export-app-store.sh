@@ -58,6 +58,9 @@ ACTUAL_BUILD="$(plutil -extract CFBundleVersion raw "$APP_PATH/Info.plist")"
 ACTUAL_BUNDLE_ID="$(plutil -extract CFBundleIdentifier raw "$APP_PATH/Info.plist")"
 CAMERA_USAGE="$(plutil -extract NSCameraUsageDescription raw "$APP_PATH/Info.plist")"
 PHOTO_USAGE="$(plutil -extract NSPhotoLibraryUsageDescription raw "$APP_PATH/Info.plist")"
+GOOGLE_IOS_CLIENT_ID="$(plutil -extract GIDClientID raw "$APP_PATH/Info.plist" 2>/dev/null || true)"
+GOOGLE_SERVER_CLIENT_ID="$(plutil -extract GIDServerClientID raw "$APP_PATH/Info.plist" 2>/dev/null || true)"
+GOOGLE_URL_TYPES="$(plutil -extract CFBundleURLTypes xml1 -o - "$APP_PATH/Info.plist" 2>/dev/null || true)"
 
 if [ ! -f "$AUTH_CONFIG_PATH" ] \
   || grep -q 'MUNEA_IOS_DEVELOPMENT_PROFILE_START' "$AUTH_CONFIG_PATH" \
@@ -80,6 +83,18 @@ if [ ! -f "$PRIVACY_MANIFEST_PATH" ] \
   || [ "$(plutil -extract NSPrivacyTracking raw "$PRIVACY_MANIFEST_PATH")" != "false" ] \
   || [ "${PRIVACY_DATA_TYPE_COUNT:-0}" -lt 1 ]; then
   echo "FAIL exported IPA is missing a valid PrivacyInfo.xcprivacy manifest."
+  exit 1
+fi
+
+if [[ ! "$GOOGLE_IOS_CLIENT_ID" =~ ^491603544409-[a-z0-9]+\.apps\.googleusercontent\.com$ ]] \
+  || [ "$GOOGLE_SERVER_CLIENT_ID" != "491603544409-u0bl2ij69mh1m4buhmsuato5d2p5rtua.apps.googleusercontent.com" ]; then
+  echo "FAIL exported IPA is missing the production Google iOS/server client IDs."
+  exit 1
+fi
+
+GOOGLE_REVERSED_CLIENT_ID="com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID%.apps.googleusercontent.com}"
+if ! grep -Fq "$GOOGLE_REVERSED_CLIENT_ID" <<<"$GOOGLE_URL_TYPES"; then
+  echo "FAIL exported IPA is missing the Google Sign-In callback URL scheme."
   exit 1
 fi
 
