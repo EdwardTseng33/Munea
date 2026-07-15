@@ -441,9 +441,9 @@
       <h2 class="set-section">健康資料與安全</h2>
       <div class="set-list">
         <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main">Apple 健康<small>步數・心率・睡眠</small></span><span class="sr-on" id="healthSettingsState"><span class="d"></span><span id="healthSettingsStateLabel">未連接</span></span></div>
-        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main">用藥提醒<small>到時間<span class="cname">寧寧</span>親口提醒</small></span><span class="sr-arrow"><b id="medCountSettings">2 種藥</b> ›</span></div>
+        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main">用藥提醒<small>到時間通知你，開啟 App 可查看與確認</small></span><span class="sr-arrow"><b id="medCountSettings">2 種藥</b> ›</span></div>
         <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main">看診提醒<small>回診前一天提醒你</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
-        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>異常時記進家人動態 · 推播升級中</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>同步到需留意的數據時，通知你選定的家人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
         <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">我的資料<small>匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進登入流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
@@ -524,7 +524,7 @@
 
       <div class="cn-intro">
         <svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg>
-        <p>連上 <b>Apple 健康</b>，寧寧就能接到步數、心跳、睡眠等資料（手錶和其他裝置的資料都會自動匯進來），有重要狀況會第一時間提醒你，<b>不用手動記錄</b>。</p>
+        <p>連上 <b>Apple 健康</b>，每次開啟沐寧時會同步步數、心跳、睡眠等資料；同步到需要留意的變化時會提醒你。這不是即時或醫療級監測。</p>
       </div>
 
       <div class="cn-row">
@@ -712,7 +712,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>安全通知</h2>
-      <p class="modal-sub"><span class="cname">寧寧</span>發現健康數據危險異常時，會<b>第一時間記進家人動態</b>——家人打開沐寧就看得到、知道該打電話關心你。手機推播與來電通知正在升級中，好了會在這裡告訴你。</p>
+      <p class="modal-sub">當你開啟沐寧並同步到超出留意範圍的健康數據時，事件會保留在通知中心，並通知你選定的家人。這不是即時或醫療級監測。</p>
       <div class="field-label">誰來當緊急聯絡人（最多 3 位）</div>
       <div class="safety-picks" id="safetyPicks"></div>
       <div class="field-label">什麼情況會通知</div>
@@ -723,7 +723,7 @@
       </ul>
       <div class="safety-flow">
         <div class="sf-step"><b>1</b><span>異常發生，<span class="cname">寧寧</span>先關心你一句、確認你還好嗎</span></div>
-        <div class="sf-step"><b>2</b><span>同時記進家人動態讓家人知道（手機推播升級中）</span></div>
+        <div class="sf-step"><b>2</b><span>記進通知中心，並通知你選定的家人</span></div>
         <div class="sf-step"><b>3</b><span>聯絡人打電話或趕來確認；真的危急請直接撥 119</span></div>
       </div>
       <button class="modal-btn" id="safetySave">存起來</button>
@@ -1093,7 +1093,7 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <h2>用藥提醒</h2>
-      <p class="modal-sub">設定好，<span class="cname">寧寧</span>到時間會親口提醒你，也會記下有沒有吃。<br><span class="cname">寧寧</span>只當鬧鐘，不是藥師，藥怎麼吃，聽醫生的。</p>
+      <p class="modal-sub">設定好，到時間會用系統通知提醒你；開啟 App 後可確認是否已服用。<br><span class="cname">寧寧</span>只協助提醒，不是藥師，藥怎麼吃請聽醫生的。</p>
       <div id="medSlots"></div>
       <div class="field-label sect-new">新增一種藥</div>
       <input class="chal-input" id="medName" placeholder="藥名照藥袋抄（例：脈優）" />
