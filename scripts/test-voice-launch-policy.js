@@ -121,14 +121,19 @@ expect(avatarServer.includes('OPENING_PREBUFFER_S = 1.0') && avatarServer.includ
   'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
-expect(voiceServer.includes('過場聲音送出後才呼叫即時查詢') &&
-  voiceServer.includes('禁止先沉默查詢') &&
-  !voiceServer.includes('先安靜查一下再回'),
-  'Google Search can still leave the caller in unexplained silence');
-expect(voiceServer.includes('getattr(sc, "grounding_metadata", None)') &&
-  voiceServer.includes('"node.lookup_grounded"') &&
+expect(voiceServer.includes('tools = [_LIVE_LOOKUP_TOOL]') &&
+  voiceServer.includes('if function_name == live_lookup.TOOL_NAME') &&
+  voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
+  'current-information lookup can still bypass the controlled Voice tool path');
+const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
+expect(lookupFlow.indexOf('await _send_lookup_cue()') >= 0 &&
+  lookupFlow.indexOf('await _send_lookup_cue()') < lookupFlow.indexOf('search_current_information(_cli') &&
+  lookupFlow.includes('asyncio.wait_for('),
+  'lookup network I/O can start before the spoken cue or run without a timeout');
+expect(['node.lookup_started', 'node.lookup_cue_sent', 'node.lookup_done',
+  'node.lookup_failed', 'node.lookup_answer_audio'].every(event => voiceServer.includes(event)) &&
   voiceServer.includes('lookups=st["lookup_count"]'),
-  'Live search use and latency are not observable in Voice diagnostics');
+  'controlled lookup stages are not observable in Voice diagnostics');
 expect(chatEngine.includes('localization.taiwan_mandarin_launch_instruction("zh-TW")'),
   'the shared text/opening brain can bypass the Mandarin-only persona guard');
 expect(apiServer.includes('localization.assistant_output_text'),
