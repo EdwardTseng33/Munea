@@ -20,8 +20,18 @@ expect(app.includes('Math.min(0.72, base + Math.min(3, this._playbackUnderruns |
   'playback buffer does not adapt after an underrun');
 expect(app.includes('this._sameLineWarmup = this._sameLine'),
   'Avatar same-line audio does not start in warmup mode');
-expect(app.includes("result: 'local_fallback'"),
-  'unstable Avatar audio does not fail safe to local playback');
+expect(app.includes('prepareOpeningAudioPath(waitMs = 1000)') && app.includes('new Int16Array(24000).buffer'),
+  'Avatar same-line audio is not warmed independently before the greeting');
+expect(app.includes("stage: 'before_greet'") && app.includes("result: stable ? 'ready' : 'blocked'"),
+  'unstable opening audio is not blocked before the greeting');
+expect(!app.includes('_sameLineWarmupPending'),
+  'the first assistant answer is still being consumed as the audio warmup');
+expect(app.includes('await LiveVoice.prepareOpeningAudioPath(1000)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(1000)') < app.indexOf('LiveVoice.greet()'),
+  'the greeting can start before the one-second audio warmup');
+expect(app.includes('this._renderStream.addTrack(e.track)') && app.includes('vid.srcObject = this._renderStream'),
+  'Avatar audio and video tracks are not combined on the single playback clock');
+expect(app.includes('showLiveFrame()') && app.includes("bg.classList.add('livevid')") && app.includes('Avatar.showLiveFrame();'),
+  'the live Avatar can be exposed before the first validated frame');
 expect(app.includes("trackProductEvent('voice_playback_underrun'"),
   'playback underruns are not observable');
 expect(app.includes("trackProductEvent('voice_sameline_warmup'"),

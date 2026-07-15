@@ -8,6 +8,7 @@ const checks = [
   ['pull cooldown', 'Date.now() - _syncPullCompletedAt < minIntervalMs'],
   ['background pull pause', "document.visibilityState === 'hidden'"],
   ['single family polling timer', 'if (_familySyncTimer) clearInterval(_familySyncTimer)'],
+  ['single foreground listener', 'if (!_familyVisibilityBound)'],
   ['push coalescing', '_syncPushTimers.has(key)'],
   ['identical push suppression', 'Date.now() - previous.at < 30000'],
 ];
