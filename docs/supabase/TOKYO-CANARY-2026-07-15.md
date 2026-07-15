@@ -1,6 +1,6 @@
 # Munea Supabase 東京搬遷 Canary 與正式切換
 
-更新時間：2026-07-15 12:18 CST
+更新時間：2026-07-15 12:28 CST
 
 ## 專案與安全邊界
 
@@ -8,7 +8,7 @@
 - 目的：`fespbkdwafueyonppzwq`（Tokyo / `ap-northeast-1`）
 - 方案：Supabase Pro，東京專案 Healthy、nano compute、排程備份已啟用
 - 正式 App／Web source：已切換至東京 URL／publishable key
-- 正式 backend：本機 production env 已切換至東京 service role；未找到可識別的正式 Brain hosted target。另確認 Cloud Run Gateway `munea-call-control` 會直接使用 Supabase control-plane，東京 0% 流量 Canary 已通過，正式流量切換待 Edward 明確批准
+- 正式 backend：本機 production env 已切換至東京 service role；未找到可識別的正式 Brain hosted target。Cloud Run Gateway `munea-call-control` 直接使用 Supabase control-plane，東京 revision `00008-bek` 已通過 Canary 並在 Edward 明確批准後切為 100% 正式流量
 - 雪梨專案：保留且未修改、未刪除
 - RunPod／GLOWS：主機、模型、卡片與流量完全未操作；migration 010 只建立 Supabase control-plane schema 與 RPC
 
@@ -82,7 +82,7 @@
 - Munea 設定頁由「訪客模式」更新為「已登入／Google 帳號同步中」並顯示正確登入帳號，證明 Web Auth callback 與 session persistence PASS，Edward 不需再次輸入帳密。
 - Canary 階段沒有更動 production URL／keys；後續正式切換結果如下。
 
-### 7. 正式切換結果：App／Web／本機 Backend PASS；Gateway 正式流量待授權
+### 7. 正式切換結果：App／Web／本機 Backend／Gateway PASS
 
 - 新 project ref：`fespbkdwafueyonppzwq`；App／Web production source 已使用 `https://fespbkdwafueyonppzwq.supabase.co` 與東京 publishable key。
 - formal-source iOS Simulator build PASS；bundle 內只找到東京 project marker，native callback URL scheme 為 `munea`。
@@ -90,8 +90,8 @@
 - 東京 Data API 以 backend role 唯讀測試 HTTP 200；`npm run supabase:doctor:live` PASS，31/31 tables 可用，`appProfile / companionProfile / billing / privacyRequests` 全部 PASS。
 - 本機正式 engine `/healthz` PASS：`authRequired=true`、`backend.provider=supabase`、`backend.enabled=true`、`missing=[]`。
 - native OAuth callback smoke PASS、完整 `smoke:no-api` PASS；Google／Apple Auth、RLS、資料、RPC、健康、記憶、訂閱、點數的 Canary 證據仍維持有效。
-- 正式 Brain hosted target 仍未識別；本機與未來 backend deployment 必須使用同一組東京 `SUPABASE_URL`／publishable／service-role env。另發現 Cloud Run Gateway `munea-call-control` 正式 revision 仍連雪梨，因其直接讀寫通話席位 control-plane，已新增東京 service-role secret v2 並建立 0% 流量 revision `munea-call-control-00008-bek`。
-- Gateway 東京 Canary 的 `ok=true`、`mode=durable`、`durable_ready=true`、席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；正式 100% 流量提升尚未獲得 Edward 明確批准，所以線上仍由雪梨 revision 服務。舊 revision 與 secret v1 保留作回復。
+- 正式 Brain hosted target 仍未識別；本機與未來 backend deployment 必須使用同一組東京 `SUPABASE_URL`／publishable／service-role env。Cloud Run Gateway 原正式 revision 連雪梨，因其直接讀寫通話席位 control-plane，已新增東京 service-role secret v2 並建立 revision `munea-call-control-00008-bek`。
+- Gateway 東京 Canary 的 `ok=true`、`mode=durable`、`durable_ready=true`、席位 snapshot 與過期席位清理 RPC 均 PASS；Edward 明確批准後已升為 100% 正式流量。切換後正式網址連續三次 health 與清理 RPC 仍 PASS，Avatar／Voice 容量各 3、active 0。舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。
 - repo iOS project 與實體 iPhone 都已對齊 `1.0.10 (15)`；本輪沒有建立 App Store Archive／IPA，也沒有上傳 TestFlight／App Store。東京真機登入、拍照、StoreKit Sandbox 與全語音體驗仍是 release Gate。
 
 ## 回復方案
@@ -108,6 +108,6 @@
 
 1. Web Canary 已完成；使用關閉開發自動登入的真機包完成 Google／Apple native deep-link QA，避免用目前的 fixture 驗收包誤判正式登入狀態。
 2. 取得 active StoreKit／RevenueCat entitlement 後補 live 訂閱驗證；目前 24 筆 ledger 都是 inactive。
-3. Edward 明確批准後，將已驗證的 Gateway 東京 Canary 升正式流量，立刻複查 health 與真 token 撥號；未批准前保持 0%。
+3. Gateway 已升東京正式流量；使用東京真實登入 token 完成一次 App 撥號、heartbeat 與 release 真人 Gate。
 4. 真機 Gate 通過後再產生或上傳正式 release archive。
 5. 雪梨至少保留一個觀察期；未經 Edward 另行明確批准，不得刪除雪梨專案。
