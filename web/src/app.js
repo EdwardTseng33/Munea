@@ -3496,6 +3496,12 @@ function myFeedName() { try { const p2 = JSON.parse(localStorage.getItem('munea.
 function myProfileName() {
   try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); return (p.name || p.nick || '').trim(); } catch (e) { return ''; }
 }
+const _syncPushTimers = new Map();
+const _syncPushBodies = new Map();
+const _syncPushLastSent = new Map();
+let _syncPullPromise = null;
+let _syncPullCompletedAt = 0;
+let _familySyncTimer = null;
 function syncPush(key, value) {
   if (isDeveloperBypassAllowed()) return;
   try {
@@ -3503,14 +3509,33 @@ function syncPush(key, value) {
     const payload = (key === 'meds' && Array.isArray(value))
       ? value.map(m => { const rest = Object.assign({}, m); delete rest.photo; return rest; })
       : value;
-    muneaAuthHeaders({ 'Content-Type': 'application/json' }).then(headers => {
-      fetch(brainURL('/family/state'), { method: 'POST', headers, body: JSON.stringify({ action: 'save', key, value: payload, familyGroupId: famGroupId(), personId: muneaCloudPersonId() }) }).catch(() => {});
-    }).catch(() => {});
+    const body = JSON.stringify({ action: 'save', key, value: payload, familyGroupId: famGroupId(), personId: muneaCloudPersonId() });
+    const previous = _syncPushLastSent.get(key);
+    if (previous && previous.body === body && Date.now() - previous.at < 30000) return;
+    _syncPushBodies.set(key, body);
+    if (_syncPushTimers.has(key)) clearTimeout(_syncPushTimers.get(key));
+    _syncPushTimers.set(key, setTimeout(() => {
+      _syncPushTimers.delete(key);
+      const pendingBody = _syncPushBodies.get(key);
+      _syncPushBodies.delete(key);
+      if (!pendingBody) return;
+      muneaAuthHeaders({ 'Content-Type': 'application/json' }).then(headers => {
+        fetch(brainURL('/family/state'), { method: 'POST', headers, body: pendingBody })
+          .then(response => { if (response.ok) _syncPushLastSent.set(key, { body: pendingBody, at: Date.now() }); })
+          .catch(() => {});
+      }).catch(() => {});
+    }, 350));
   } catch (e) {}
 }
-async function syncPullAll() {
+function syncPullAll(options) {
   if (isDeveloperBypassAllowed()) return;
-  try {
+  const opts = options || {};
+  const minIntervalMs = Number.isFinite(opts.minIntervalMs) ? opts.minIntervalMs : 30000;
+  if (!opts.force && typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+  if (_syncPullPromise) return _syncPullPromise;
+  if (!opts.force && Date.now() - _syncPullCompletedAt < minIntervalMs) return Promise.resolve();
+  _syncPullPromise = (async () => {
+   try {
     const r = await fetch(brainURL('/family/state'), { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ action: 'load', familyGroupId: famGroupId() }) });
     if (!r.ok) return;
     const st = (await r.json()).state || {};
@@ -3547,7 +3572,13 @@ async function syncPullAll() {
     if (typeof renderPoints === 'function') renderPoints();
     if (typeof renderVisitRow === 'function') try { renderVisitRow(); } catch (e) {}
     renderCareCarousel();
-  } catch (e) {}
+   } catch (e) {
+   } finally {
+     _syncPullCompletedAt = Date.now();
+     _syncPullPromise = null;
+   }
+  })();
+  return _syncPullPromise;
 }
 function configureMedicationService() {
   if (!window.MuneaMedication) return Promise.resolve([]);
@@ -4294,7 +4325,11 @@ function init() {
   const __medicationPromise = Promise.resolve(__pullPromise).then(configureMedicationService);
   refreshServerPlanEntitlement();
   refreshServerCredits();
-  setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
+  if (_familySyncTimer) clearInterval(_familySyncTimer);
+  _familySyncTimer = setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') syncPullAll({ minIntervalMs: 30000 });
+  });
   document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
   document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
   syncCompanionUI();
