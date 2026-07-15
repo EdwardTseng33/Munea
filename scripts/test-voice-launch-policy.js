@@ -18,6 +18,16 @@ expect(app.includes('const base = (this._playbackTurn || 0) <= 1 ? 0.48 : 0.22')
   'first-turn playback buffer is not larger than steady-state buffering');
 expect(app.includes('Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08)'),
   'playback buffer does not adapt after an underrun');
+expect(app.includes('const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100 : 600'),
+  'same-line playback still blocks later user turns with the opening delay');
+expect(app.includes('const tailMs = sameLine ? 120 : 400'),
+  'same-line speech tail does not release the microphone promptly');
+expect(app.includes('this._assistantAudioPendingBytes < 960') && app.includes("trackProductEvent('voice_tiny_audio_buffered'"),
+  'sub-frame assistant audio can still start a false playback turn');
+expect(app.includes("trackProductEvent('voice_user_speech_unrecognized'") && app.includes("trackProductEvent('voice_user_speech_recognized'"),
+  'user speech recognition gaps are not observable without transcripts');
+expect(app.includes('const cfg = developerConfig();') && !app.includes('devAuthConfig()'),
+  'development Voice endpoint is read through an undefined config helper');
 expect(app.includes('this._sameLineWarmup = this._sameLine'),
   'Avatar same-line audio does not start in warmup mode');
 expect(app.includes('prepareOpeningAudioPath(waitMs = 1000)') && app.includes('new Int16Array(24000).buffer'),

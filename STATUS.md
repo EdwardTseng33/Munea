@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新修正候選**：`1.0.20 (Build 25)` 已完成完整測試、Capacitor sync、Xcode arm64 簽章建置並安裝 Edward iPhone，手機回讀版號與啟動 PASS。1.0.19 的 4 次診斷證實 Voice、麥克風與 Avatar 都已連上，實際失敗是 App 把「一秒靜音暖機沒有產生 RTP」誤判為服務故障並主動掛斷；1.0.20 保留暖機，但改由第一句真人聲音複驗或立即切本機聲音保底。實際撥通、第一句完整、開頭流暢、無雙音與聲畫同步仍待 Edward 真人 Gate，因此仍是 ❌。
+> **2026-07-15 最新修正候選**：`1.0.21 (Build 26)` 已完成完整測試、Capacitor sync、Xcode arm64 開發簽章建置，安裝至 Edward iPhone 並回讀版號、啟動 PASS。1.0.20 真機證實可撥通且嘴型大致對齊；1.0.21 改為不讓 `2 bytes` 假音訊啟動播放，縮短後續回合多餘的收音封鎖，並新增不含錄音／逐字稿的漏辨識事件。開頭 Hello、10 分鐘長聊與使用者說話是否穩定仍待 Edward 真人 Gate，因此體驗項目仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.20 Build 25 已修正開場靜音暖機誤判，完成完整測試、Xcode 簽章與 iPhone 安裝。自動 Gate 通過；Voice 真人撥通／聲畫體驗、Google／Apple 真登入、拍照、金流與 APNs 仍未通過）**
+> **最後更新：2026-07-15（Codex · App 1.0.21 Build 26 已完成開場假音訊、後續收音換手與漏辨識診斷修正，完整測試、Xcode 簽章、iPhone 安裝／版號回讀／啟動均 PASS。Voice 開場、10 分鐘長聊與漏收音真人 Gate，Google／Apple 真登入、拍照、金流與 APNs 仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**75－App 1.0.21 Build 26／長聊斷續與漏收音修正（7/15 Codex，PR #82）**：①✅ 1.0.20 真機可撥通、嘴型大致對齊；❌ Hello 仍斷續、長聊偶發斷續、使用者偶發需重複說話。②✅ 手機診斷找到首個音訊僅 `2 bytes`；App 現在累積至至少 20ms 才啟動起播。③✅ 同線第一句保留 1.1s 對嘴等待，後續回合改 0.6s，聲音餘韻改 0.12s，減少誤把使用者當成插話而壓掉。④✅ 新增 `detected/recognized/unrecognized` 收音事件，不保存錄音或逐字稿。⑤✅ 修正開發版 Voice URL 設定未生效，1.0.21 維持目前可撥通 staging，不切慢速舊 canary。⑥✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 簽章、東京／測試資料／secret 防漏 PASS；iPhone 已安裝、回讀 `1.0.21 (26)` 並啟動。⑦❌ 三項語音真人 Gate 待 Edward 重測；GLOWS 有 1.83–2.05s 偶發運算尖峰，服務端緩衝修正尚未 canary，本輪未部署／重啟 Brain、Voice、Gateway、RunPod 或 GLOWS。
 
 **74－App 1.0.20 Build 25／聊聊開場暖機誤判修正（7/15 Codex，PR #82）**：①❌ Edward 確認 1.0.19 仍無法撥通。②✅ 手機 4/4 筆診斷一致：麥克風、Voice WebSocket／ready、Avatar offer／ICE／首格都 PASS，第一個失敗站是 `opening_audio_ready`；Firebase Hosting 與服務全面離線不是本次根因。③✅ App 不再要求純靜音必須產生 Avatar RTP 才准接通；已有音訊接收軌就由第一句複驗，缺軌立即走本機聲音保底。④✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 簽章與包內東京／測試資料／secret 防漏 PASS。⑤✅ Edward iPhone 已安裝、回讀 `1.0.20 (25)` 並啟動。⑥❌ 撥通、首句、開頭流暢、雙音與嘴型同步待 Edward 真人 Gate；未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 

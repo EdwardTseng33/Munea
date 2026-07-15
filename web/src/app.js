@@ -1399,7 +1399,7 @@ const CallControl = {
 function getLiveVoiceUrl() {
   if (CallControl.active) return (CallControl.active.voice && CallControl.active.voice.url) || '';
   try {
-    const cfg = devAuthConfig();
+    const cfg = developerConfig();
     if (isDeveloperBypassAllowed() && cfg.voiceUrl) return String(cfg.voiceUrl);
   } catch (e) {}
   try { const u = localStorage.getItem('munea.liveVoiceUrl'); if (u !== null) return u; } catch (e) {}
@@ -1502,7 +1502,9 @@ function speechActive() {
     const face = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
     const queued = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil);
     if ((typeof LiveVoice !== 'undefined' && LiveVoice.speaking) || queued || face > 0.015) window.__muneaSpeechTs = now;
-    return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < 400);
+    const sameLine = typeof LiveVoice !== 'undefined' && LiveVoice._sameLine && LiveVoice._sameLineFellBack !== true;
+    const tailMs = sameLine ? 120 : 400;
+    return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs);
   } catch (e) { return false; }
 }
 const Avatar = {
@@ -1855,6 +1857,71 @@ const LiveVoice = {
       voiceCallMark('microphone_first_packet', 'pass', { bytes: buf.byteLength || 0 });
     }
   },
+  _noteUserMicActivity(rms, frameMs, speakerActive) {
+    if (speakerActive || !this.micOpen) { this._userSpeechMs = 0; return; }
+    const floor = Math.max(0, Number(this._bargeState && this._bargeState.noiseFloor) || 0.006);
+    const threshold = Math.min(0.04, Math.max(0.018, floor * 3));
+    if (rms >= threshold) {
+      this._userSpeechQuietMs = 0;
+      this._userSpeechMs = (this._userSpeechMs || 0) + frameMs;
+      this._userSpeechPeak = Math.max(this._userSpeechPeak || 0, rms);
+      if (!this._userSpeechLatched && this._userSpeechMs >= 150) {
+        this._userSpeechLatched = true;
+        this._pendingUserSpeech = { startedAt: performance.now(), peakRms: this._userSpeechPeak, threshold };
+        try { trackProductEvent('voice_user_speech_detected', { peakRms: +this._userSpeechPeak.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
+        clearTimeout(this._userSpeechWatchT);
+        this._userSpeechWatchT = setTimeout(() => {
+          const pending = this._pendingUserSpeech;
+          if (!pending) return;
+          this._pendingUserSpeech = null;
+          try { trackProductEvent('voice_user_speech_unrecognized', { waitMs: Math.round(performance.now() - pending.startedAt), peakRms: +pending.peakRms.toFixed(4) }); } catch (e) {}
+        }, 4000);
+      }
+      return;
+    }
+    this._userSpeechMs = Math.max(0, (this._userSpeechMs || 0) - frameMs * 1.5);
+    if (!this._userSpeechLatched) return;
+    this._userSpeechQuietMs = (this._userSpeechQuietMs || 0) + frameMs;
+    if (this._userSpeechQuietMs >= 600) {
+      this._userSpeechLatched = false;
+      this._userSpeechQuietMs = 0;
+      this._userSpeechPeak = 0;
+    }
+  },
+  _ackUserSpeech() {
+    const pending = this._pendingUserSpeech;
+    if (!pending) return;
+    this._pendingUserSpeech = null;
+    clearTimeout(this._userSpeechWatchT);
+    try { trackProductEvent('voice_user_speech_recognized', { waitMs: Math.round(performance.now() - pending.startedAt), peakRms: +pending.peakRms.toFixed(4) }); } catch (e) {}
+  },
+  _takeAssistantAudio(data) {
+    if (!(data instanceof ArrayBuffer) || data.byteLength < 2 || data.byteLength % 2 !== 0) return null;
+    if (this._assistantAudioStarted) return data;
+    if (!this._assistantAudioPending) this._assistantAudioPending = [];
+    this._assistantAudioPending.push(new Uint8Array(data));
+    this._assistantAudioPendingBytes = (this._assistantAudioPendingBytes || 0) + data.byteLength;
+    if (this._assistantAudioPendingBytes < 960) {
+      if (!this._tinyAudioRecorded) {
+        this._tinyAudioRecorded = true;
+        try { trackProductEvent('voice_tiny_audio_buffered', { bytes: this._assistantAudioPendingBytes, minimumBytes: 960 }); } catch (e) {}
+      }
+      return null;
+    }
+    const combined = new Uint8Array(this._assistantAudioPendingBytes);
+    let offset = 0;
+    this._assistantAudioPending.forEach(chunk => { combined.set(chunk, offset); offset += chunk.byteLength; });
+    this._assistantAudioPending = [];
+    this._assistantAudioPendingBytes = 0;
+    this._assistantAudioStarted = true;
+    return combined.buffer;
+  },
+  _resetAssistantAudioGate() {
+    this._assistantAudioPending = [];
+    this._assistantAudioPendingBytes = 0;
+    this._assistantAudioStarted = false;
+    this._tinyAudioRecorded = false;
+  },
   _resetBargeInDetector() {
     const policy = window.MuneaVoiceTurnPolicy;
     const floor = this._bargeState && this._bargeState.noiseFloor;
@@ -1873,6 +1940,7 @@ const LiveVoice = {
     this._newAvatarTurn = true;
     this._turnHasScheduledAudio = false;
     this._capBuf = '';
+    this._resetAssistantAudioGate();
     this._setFaceAudioMuted(true);
     Avatar.reset();
   },
@@ -2003,7 +2071,8 @@ const LiveVoice = {
   _notePlayout(byteLength) {
     const now = performance.now();
     const useSameLine = this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true;
-    const delay = useSameLine ? 1100 : Math.round(this._playbackLeadSeconds() * 1000);
+    const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100 : 600;
+    const delay = useSameLine ? sameLineDelay : Math.round(this._playbackLeadSeconds() * 1000);
     if (!this._playoutUntil || this._playoutUntil < now) this._playoutUntil = now + delay;
     this._playoutUntil += (byteLength / (24000 * 2)) * 1000;
   },
@@ -2070,6 +2139,8 @@ const LiveVoice = {
     this._playbackTurn = 0; this._playbackUnderruns = 0; this._turnHasScheduledAudio = false;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
+    this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
+    clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
     // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
@@ -2112,6 +2183,7 @@ const LiveVoice = {
           const speakerActive = speechActive();
           const policy = window.MuneaVoiceTurnPolicy;
           const frameMs = (inp.length / this.ac.sampleRate) * 1000;
+          this._noteUserMicActivity(rms, frameMs, speakerActive);
 
           if (speakerActive && this._bargeInActive) {
             this._sendMicBuffer(buf);
@@ -2157,6 +2229,7 @@ const LiveVoice = {
             }
             if (o.type === 'ready') { this.ready = true; voiceCallMark('voice_ready', 'pass'); if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」
             if (o.type === 'caption' && o.who === 'user' && o.text) {
+              this._ackUserSpeech();
               if (!this._firstUserCaptionRecorded) { this._firstUserCaptionRecorded = true; voiceCallMark('asr_first_caption', 'pass'); }
               this._userTurn = (this._userTurn || '') + o.text;   // 累積「這輪你說的話」→ 掛斷時送去萃取長期記憶（讓聊聊講的也記得住 · Edward 2026-07-10）
               if (!this._topicSaved) {
@@ -2185,6 +2258,7 @@ const LiveVoice = {
               if (interruptedTurn) Avatar.reset();
               else Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
               this._newAvatarTurn = true;
+              this._resetAssistantAudioGate();
               this._toListening(); this._capBuf = '';
             }   // 她講完 → 換你講、麥克風重開、字幕緩衝清空
             if (o.type === 'relay_spoken' && o.id) { this._relaySpokenId = o.id; rememberSpokenFamilyRelay(this._pendingRelay); }
@@ -2208,9 +2282,11 @@ const LiveVoice = {
         }
         if (!this.playCtx) return;
         if (this._dropAssistantAudio) return;
+        const audioData = this._takeAssistantAudio(ev.data);
+        if (!audioData) return;
         if (!this._firstAudioRecorded) {
           this._firstAudioRecorded = true;
-          voiceCallMark('voice_first_audio', 'pass', { bytes: ev.data.byteLength });
+          voiceCallMark('voice_first_audio', 'pass', { bytes: audioData.byteLength });
         }
         if (this._newAvatarTurn) {
           Avatar.reset();                         // 每輪新回答先清上一輪殘音／模型音訊記憶，避免句首帶到上一句尾巴
@@ -2222,11 +2298,11 @@ const LiveVoice = {
           this._playbackUnderruns = 0;
           this._turnHasScheduledAudio = false;
         }
-        this._notePlayout(ev.data.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
+        this._notePlayout(audioData.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
-        Avatar.feed(ev.data);                                      // 同一份聲音餵給雲端臉（對嘴）
+        Avatar.feed(audioData);                                    // 同一份聲音餵給雲端臉（對嘴）
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
-        const i16 = new Int16Array(ev.data), f = new Float32Array(i16.length);
+        const i16 = new Int16Array(audioData), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
         let ps = 0; for (let k = 0; k < f.length; k++) ps += f[k] * f[k];
         this.playLevel = Math.min(1, Math.sqrt(ps / f.length) * 3.4);   // 即時音量→講話波頻高度
@@ -2311,9 +2387,10 @@ const LiveVoice = {
     if (this._pendingRelay) this._finishRelay(this._relaySpokenId ? 'ack' : 'release');
     this.on = false;
     this.ready = false;
-    clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
+    clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); clearTimeout(this._userSpeechWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     this.micOpen = false; this._openMicAfterGreet = false;
     this._sameLineWarmup = false;
+    this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
