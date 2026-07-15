@@ -1,5 +1,7 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
+> 🎯 **2026-07-16 01:25 打包手牌（Edward 拍板「打包吧」· Windows 蘇菲立牌）**：PR #86 已併入 main（merge `402bbd5`）＝ **1.0.23 待打包**。內容：通知中心改全螢幕子頁＋推播開關與 iPhone 權限雙向連動＋安全通知通知對象接回＋測試通知移除＋家人頁心情/平安燈標籤分工＋心情粗標籤入家庭帳本＋聊聊人物呼吸感＋聊聊記行程（`set_personal_event`）。**Mac 接手三件**：① `git pull` 後照常打包（npm install → cap sync ios → Xcode Archive；iOS 行銷版號對 `1.0.23`）② **Voice 要一起重新部署**——`engine/live_voice_server.py` 新增記行程工具與分類鐵律，不部署則「約吃飯被設成看診」在真機上仍會發生（部署節奏尊重現行 canary/真人 Gate 規矩、由 Mac 線判斷）③ 上傳/安裝後回報本板。詳見一眼總覽 77／77.1／78。
+>
 > **2026-07-15 最新 App 包**：`1.0.22 (Build 27)` 已整合 PR #82 聊聊穩定／診斷與 PR #83 通知中心，完成完整測試、Capacitor sync、Xcode 原生檢查、arm64 開發簽章、包內安全檢查，並安裝至 Edward iPhone；手機回讀版號與啟動均 PASS。聊聊查資料可控狀態機尚未部署 Voice，手機仍走舊查詢路徑；開頭 Hello、10 分鐘長聊、漏收音、真推播及登入／拍照／金流真人 Gate 仍是 ❌。
 >
 > **2026-07-16 App Store Connect**：`1.0.22 (Build 27)` 已完成正式 Release Archive、App Store IPA 匯出與防漏檢查，並於 00:42 上傳成功；Apple 回執為 `Upload succeeded`／`package is processing`。正式 IPA 為 55,539,118 bytes，SHA-256 `ddc46e5c70a42863bbab6a8ab4922ee436666740f2bb89600795bd476a8347e6`。目前是「Apple 已收件、處理中」，不是已送審或已通過審核。
