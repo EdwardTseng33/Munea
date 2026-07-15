@@ -405,6 +405,7 @@ class SupabaseAdapter:
                 "family_activities",
                 "family_activity_participants",
                 "medication_dose_events",
+                "family_relay_messages",
                 "push_devices",
                 "notification_events",
                 "notification_deliveries",

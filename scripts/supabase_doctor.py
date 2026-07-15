@@ -62,6 +62,17 @@ SCHEMA_TABLES = {
         "family_activities",
         "family_activity_participants",
     },
+    "supabase/sql/014_medication_dose_events.sql": {
+        "medication_dose_events",
+    },
+    "supabase/sql/015_family_relay_messages.sql": {
+        "family_relay_messages",
+    },
+    "supabase/sql/016_notification_platform.sql": {
+        "push_devices",
+        "notification_events",
+        "notification_deliveries",
+    },
 }
 
 

@@ -69,8 +69,8 @@ else
   echo "== 部署 ${SVC}（語音橋・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
-    --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
-    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
+    --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
+    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=1,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
     --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
     --allow-unauthenticated --quiet
 fi
