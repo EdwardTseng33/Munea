@@ -42,6 +42,14 @@ assert(sendIndex > rewardIndex, 'Send invitation button must remain after the fo
 assert(!/#(?:chalModal\s+)?#?startChalBtn[^\{]*\{[^\}]*position\s*:\s*(?:sticky|fixed)/s.test(css), 'Send invitation button must scroll with form content');
 assert(!app.includes("$$('#chalModal .step-btn')"), 'Challenge stepper event handlers must stay removed');
 
+const familyActivitySection = html.match(/id="newChalBtn"[\s\S]*?<div class="sec-head"><div><h2>全家狀態/)?.[0] || '';
+assert(familyActivitySection.includes('id="actEmpty"'), 'Family activities must keep a real empty-state anchor');
+assert(!familyActivitySection.includes('class="quest-card'), 'Family activities must not ship hard-coded demo cards');
+assert(!html.includes('id="demoEventDate"') && !app.includes('fixDemoEventDate'), 'Retired demo activity dates must stay removed');
+assert(app.includes('function updateActEmpty()') && app.includes('empty.parentNode.insertBefore(card, empty.nextSibling)'), 'Real activity cards must render from the empty-state anchor');
+assert((app.match(/updateActEmpty\(\);/g) || []).length >= 4, 'Family activity empty state must update after render, delete, restore, and expiry');
+assert(/\.quest-empty\s*\{[^}]*border:[^}]*dashed/s.test(css), 'Family activity empty state must remain visibly styled');
+
 assert(!html.includes('id="authProviderText"'), 'Account card subtitle must stay removed');
 assert(css.includes('--fs-action-primary: 16px;'), 'Primary action typography token must stay at 16px');
 assert(/\.auth-primary\s*\{[^}]*font-size:\s*var\(--fs-action-primary\)/s.test(css), 'Sign-in button must use the primary action typography token');
@@ -82,4 +90,4 @@ assert(html.includes('用藥紀錄是 Munea 自己的帳本，不依賴 Apple He
 assert(app.includes("type: 'action_result'") && app.includes("await window.__muneaHandleVoiceAction"), 'Voice AI must wait for the App action result before confirming reminders');
 assert(app.includes("action: 'claim'") && app.includes("action === 'send_family_relay'"), 'Family relay must use a recipient-specific claim queue and the voice action bridge');
 
-console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, and challenge controls');
+console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, and real family activities');

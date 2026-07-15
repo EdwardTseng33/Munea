@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新修正候選**：`1.0.17 (Build 22)` 已完成自動測試、GoogleSignIn 9.1.0 原生編譯、arm64 簽章建置並透過 Wi-Fi 安裝 Edward iPhone，手機回讀版本正確且啟動 PASS。撥號按鈕改為按下即顯示「撥號中」；開發帳號略過會卡 6 秒的無效傳話查詢，正式帳號最多等 1.2 秒。PR #73、#74、#76、#77 已合併；#75 內容由 #77 完整取代後關閉，GitHub 開啟中 PR 為 0。實際撥通與 Google 真登入仍待 Edward 真人 Gate，因此仍是 ❌。
+> **2026-07-15 最新修正候選**：`1.0.18 (Build 23)` 已完成全部 Node App 契約、GoogleSignIn 9.1.0、Xcode arm64 簽章建置並透過 Wi-Fi 安裝 Edward iPhone，手機回讀版本正確且啟動 PASS。除 1.0.17 的隱私、撥號即時回饋與 Google 原生登入外，另整合 PR #78，移除家人頁三張寫死假活動卡並加入真活動空狀態。實際撥通、開場順暢／聲畫同步與 Google 真登入仍待 Edward 真人 Gate，因此仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.17 Build 22 已完成撥號即時回饋、Google 原生登入整合、Xcode 簽章與 iPhone 無線安裝。自動 Gate 通過；Voice／Google 真人 Gate 與 APNs／Apple 登入／拍照／金流仍未通過）**
+> **最後更新：2026-07-15（Codex · App 1.0.18 Build 23 已整合家人頁真活動空狀態、聊聊修正與 Google 原生登入，完成 Xcode 簽章與 iPhone 無線安裝。自動 Gate 通過；Voice／Google 真人 Gate 與 APNs／Apple 登入／拍照／金流仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**73－App 1.0.18 Build 23／家人頁假活動清理＋最新 PR 整合（7/15 Codex）**：①✅ PR #78 的三張寫死假活動卡、假步數／排行與假日期更新已移除，改為真活動空狀態；新增／刪除／還原／到期後會同步更新。②✅ 因 App 內容在 1.0.17 包版後改變，依規則升為 `1.0.18 (23)`，不沿用同版號。③✅ Node App 契約、JS 語法、Capacitor sync、GoogleSignIn 9.1.0、Xcode arm64 簽章與成品安全檢查 PASS。④✅ Edward iPhone 已無線安裝、回讀 `1.0.18 (23)` 並啟動；包內為東京、Pro、1,000 點與家人假資料。⑤🔄 PR #79 完整包含 #78 並作為 main 整合候選；合併後 #78 關閉為 superseded。⑥❌ Voice／Google 真人 Gate、Apple 登入、拍照、StoreKit、APNs 與 App Store 上傳未通過。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
 **72－App 1.0.17 Build 22／撥號延遲修正＋Google 原生登入整合（7/15 Codex）**：①✅ 按下聊聊立即顯示撥號中；開發測試帳號略過會卡滿 6 秒的無效家人傳話查詢，正式帳號最多等 1.2 秒。②✅ 隱私彈窗 Promise、早期綁定與 App 內完整隱私修正保留。③✅ PR #73、#74、#76、#77 已合併；#75 的 Google 原生登入內容由 #77 完整取代後關閉，開啟中 PR 為 0，所有更新內容已進 main。④✅ Node launch 契約、JS 語法、Capacitor sync、Google 套件解析、Xcode arm64 簽章與成品安全檢查 PASS。⑤✅ Edward iPhone 已無線安裝並回讀 `1.0.17 (22)`、啟動 PASS；包內為東京 Supabase、Pro、1,000 點與家人假資料。⑥❌ 實際撥通／開場／聲畫同步、Google 真選帳登入、Apple 登入、拍照、StoreKit、APNs 與 App Store 上傳仍待真人 Gate。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
