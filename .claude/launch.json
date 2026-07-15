@@ -8,6 +8,12 @@
       "port": 8123
     },
     {
+      "name": "munea-qa-8126",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8126", "--directory", "web"],
+      "port": 8126
+    },
+    {
       "name": "munea-demo",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-u", "engine/live_voice_server.py"],
