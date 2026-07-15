@@ -1350,6 +1350,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .iv.on { border-color: var(--teal); background: var(--mint); }
 .iv .iv-ava::after { content: ""; position: absolute; right: -3px; bottom: -1px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal-d); border: 2px solid #FFF; transform: scale(0); transition: transform .15s cubic-bezier(.3,1.4,.5,1); background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'); background-size: 9px; background-position: center; background-repeat: no-repeat; }
 .iv.on .iv-ava::after { transform: scale(1); }
+.iv-empty { grid-column: 1 / -1; border: 1.5px dashed var(--line); background: var(--surface); border-radius: 14px; padding: 14px 12px; font-size: 14px; color: var(--muted); text-align: center; line-height: 1.5; }
 .invite-note { font-size: 14px; color: var(--muted); margin: 8px 2px 0; }
 .goal-hint { font-size: 14px; color: var(--ink-2); margin: 2px 2px 0; }
 

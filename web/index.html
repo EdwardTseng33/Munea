@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260714-credit-rules" />
+  <link rel="stylesheet" href="src/styles.css?v=20260715-invite-real" />
 </head>
 <body>
 <div class="app-shell">
@@ -623,12 +623,8 @@
       </div>
       <div class="field-label" id="inviteLabel">找誰一起（可以不選全部）</div>
       <!-- 注意：Edward 2026-07-02 拍板「運動邀請不顯示份額」；份額只是內部能力分配，改 applyChalKind 前必查 -->
-      <div class="invite-row" id="inviteList">
-        <button type="button" class="iv on" data-name="阿嬤"><span class="iv-ava"><span class="init-ava p-ama">嬤</span></span>阿嬤</button>
-        <button type="button" class="iv on" data-name="美華"><span class="iv-ava"><span class="init-ava p-mei">華</span></span>美華</button>
-        <button type="button" class="iv" data-name="志明"><span class="iv-ava"><span class="init-ava p-zhi">明</span></span>志明</button>
-        <button type="button" class="iv on" data-name="小寶"><span class="iv-ava"><span class="init-ava p-bao">寶</span></span>小寶</button>
-      </div>
+      <!-- 名單由 app.js renderInviteList() 依全家健康圈真實成員產生（開窗時重畫；圈空時顯示邀請引導）-->
+      <div class="invite-row" id="inviteList"></div>
       <div class="invite-note" id="inviteNote">阿嬤那份，寧寧會親口問她</div>
       <div id="rewardFields">
       <div class="field-label">設個小獎勵（想到就填，不填也行）</div>
@@ -1211,7 +1207,7 @@
   })();
   </script>
   <script src="src/voice-turn-policy.js?v=20260714-v106"></script>
-  <script type="module" src="src/app.js?v=20260714-v106"></script>
+  <script type="module" src="src/app.js?v=20260715-invite-real"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
