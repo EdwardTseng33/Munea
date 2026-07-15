@@ -1641,7 +1641,6 @@ class SupabaseAdapter:
         rows = self._select(
             "family_memberships",
             {
-                "account_id": f"eq.{self.account_id}",
                 "family_group_id": f"eq.{family_group_id}",
                 "select": "*",
                 "order": "updated_at.desc",
@@ -1649,6 +1648,129 @@ class SupabaseAdapter:
             },
         )
         return [self.family_membership_row_to_member(row) for row in rows or []]
+
+    def _family_member_exists(self, family_group_id, person_id):
+        if not self._is_uuid(family_group_id or "") or not self._is_uuid(person_id or ""):
+            return False
+        return bool(self._first("family_memberships", {
+            "family_group_id": f"eq.{family_group_id}",
+            "person_id": f"eq.{person_id}",
+            "select": "id",
+        }))
+
+    def create_family_relay(self, relay):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        relay = relay or {}
+        family_group_id = self._resolve_family_group_id(relay.get("familyGroupId") or relay.get("family_group_id"))
+        recipient_person_id = relay.get("recipientPersonId") or relay.get("recipient_person_id")
+        if not self.owns_family_group_id(family_group_id):
+            raise PermissionError("family_relay_group_forbidden")
+        if not self._family_member_exists(family_group_id, self.person_id):
+            raise PermissionError("family_relay_sender_not_member")
+        if not self._family_member_exists(family_group_id, recipient_person_id):
+            raise PermissionError("family_relay_recipient_not_member")
+        if recipient_person_id == self.person_id:
+            raise ValueError("family_relay_recipient_self")
+        sender_person = self._first("persons", {"id": f"eq.{self.person_id}", "select": "display_name,relationship"}) or {}
+        recipient_person = self._first("persons", {"id": f"eq.{recipient_person_id}", "select": "display_name,relationship"}) or {}
+        payload = self.family_relay_to_row({
+            **relay,
+            "accountId": self.family_group_account_id(family_group_id),
+            "familyGroupId": family_group_id,
+            "senderPersonId": self.person_id,
+            "senderLabel": sender_person.get("display_name") or sender_person.get("relationship") or "家人",
+            "recipientLabel": recipient_person.get("display_name") or recipient_person.get("relationship") or "家人",
+            "status": "pending",
+        })
+        rows = self._request(
+            "POST", "family_relay_messages", query={"select": "*"},
+            payload=payload, prefer="return=representation",
+        )
+        return self.family_relay_row_to_relay(rows[0]) if rows else None
+
+    def load_family_relays(self, direction="received", status=None, limit=50):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        query = {
+            "family_group_id": f"eq.{self.family_group_id}",
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(max(1, min(100, int(limit or 50)))),
+        }
+        if direction == "sent":
+            query["sender_person_id"] = f"eq.{self.person_id}"
+        else:
+            query["recipient_person_id"] = f"eq.{self.person_id}"
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("family_relay_messages", query)
+        return [self.family_relay_row_to_relay(row) for row in rows or []]
+
+    def claim_next_family_relay(self):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        # A force-quit can prevent the App from sending release. Requeue only
+        # this recipient's old claim so one crashed call cannot strand it.
+        stale_before = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(time.time() - 600))
+        self._request(
+            "PATCH", "family_relay_messages",
+            query={
+                "family_group_id": f"eq.{self.family_group_id}",
+                "recipient_person_id": f"eq.{self.person_id}",
+                "status": "eq.claimed", "claimed_at": f"lt.{stale_before}",
+            },
+            payload={"status": "pending", "claim_token": None, "claimed_at": None},
+        )
+        pending = self._select("family_relay_messages", {
+            "family_group_id": f"eq.{self.family_group_id}",
+            "recipient_person_id": f"eq.{self.person_id}",
+            "status": "eq.pending",
+            "expires_at": f"gt.{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
+            "select": "*",
+            "order": "created_at.asc",
+            "limit": "1",
+        })
+        if not pending:
+            return None
+        relay_id = pending[0].get("id")
+        token = str(uuid.uuid4())
+        rows = self._request(
+            "PATCH", "family_relay_messages",
+            query={"id": f"eq.{relay_id}", "recipient_person_id": f"eq.{self.person_id}", "status": "eq.pending", "select": "*"},
+            payload={"status": "claimed", "claim_token": token, "claimed_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())},
+            prefer="return=representation",
+        )
+        return self.family_relay_row_to_relay(rows[0]) if rows else None
+
+    def update_family_relay_status(self, relay_id, action, claim_token=None):
+        if not self.enabled() or not self.request_scoped or not self._is_uuid(relay_id or ""):
+            return None
+        current = self._first("family_relay_messages", {"id": f"eq.{relay_id}", "select": "*"})
+        if not current:
+            return None
+        is_sender = current.get("sender_person_id") == self.person_id
+        is_recipient = current.get("recipient_person_id") == self.person_id
+        if action == "cancel":
+            if not is_sender or current.get("status") not in ("pending", "claimed"):
+                raise PermissionError("family_relay_cancel_forbidden")
+            patch = {"status": "cancelled", "cancelled_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+        elif action == "report":
+            if not is_recipient:
+                raise PermissionError("family_relay_report_forbidden")
+            patch = {"status": "reported"}
+        elif action in ("ack", "release"):
+            if not is_recipient or current.get("status") != "claimed" or not claim_token or current.get("claim_token") != claim_token:
+                raise PermissionError("family_relay_claim_forbidden")
+            patch = ({"status": "delivered", "delivered_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+                     if action == "ack" else {"status": "pending", "claim_token": None, "claimed_at": None})
+        else:
+            raise ValueError("family_relay_action_invalid")
+        rows = self._request(
+            "PATCH", "family_relay_messages",
+            query={"id": f"eq.{relay_id}", "select": "*"}, payload=patch, prefer="return=representation",
+        )
+        return self.family_relay_row_to_relay(rows[0]) if rows else None
 
     def save_family_member(self, member, family_group_id=None):
         if not self.enabled():
@@ -1915,6 +2037,44 @@ class SupabaseAdapter:
             "displayName": person.get("display_name") or "Family member",
             "relationship": person.get("relationship") or "family",
             "permissions": permissions,
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def family_relay_to_row(self, relay):
+        relay = relay or {}
+        return {
+            "account_id": relay.get("accountId") or relay.get("account_id"),
+            "family_group_id": relay.get("familyGroupId") or relay.get("family_group_id"),
+            "sender_person_id": relay.get("senderPersonId") or relay.get("sender_person_id"),
+            "recipient_person_id": relay.get("recipientPersonId") or relay.get("recipient_person_id"),
+            "sender_label": str(relay.get("senderLabel") or relay.get("sender_label") or "家人")[:40],
+            "recipient_label": str(relay.get("recipientLabel") or relay.get("recipient_label") or "家人")[:40],
+            "content": str(relay.get("content") or "").strip()[:240],
+            "status": relay.get("status") or "pending",
+            "source": str(relay.get("source") or "voice-ai")[:40],
+            "metadata": relay.get("metadata") if isinstance(relay.get("metadata"), dict) else {},
+        }
+
+    @staticmethod
+    def family_relay_row_to_relay(row):
+        row = row or {}
+        return {
+            "id": row.get("id"),
+            "accountId": row.get("account_id"),
+            "familyGroupId": row.get("family_group_id"),
+            "senderPersonId": row.get("sender_person_id"),
+            "recipientPersonId": row.get("recipient_person_id"),
+            "senderLabel": row.get("sender_label") or "家人",
+            "recipientLabel": row.get("recipient_label") or "家人",
+            "content": row.get("content") or "",
+            "status": row.get("status") or "pending",
+            "source": row.get("source") or "voice-ai",
+            "claimToken": row.get("claim_token"),
+            "claimedAt": row.get("claimed_at"),
+            "deliveredAt": row.get("delivered_at"),
+            "expiresAt": row.get("expires_at"),
+            "metadata": row.get("metadata") or {},
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
         }

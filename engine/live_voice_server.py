@@ -26,6 +26,8 @@ import uuid
 import base64
 import io
 import wave
+import hmac
+import hashlib
 from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -43,6 +45,22 @@ from websockets.datastructures import Headers
 MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
+
+
+def verify_family_relay_proof(relay):
+    if not isinstance(relay, dict):
+        return False
+    secret = os.environ.get("MUNEA_FAMILY_RELAY_SIGNING_SECRET", "").strip()
+    if not secret and os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") != "1":
+        secret = "munea-local-family-relay"
+    supplied = str(relay.get("relayProof") or "")
+    if not secret or not supplied:
+        return False
+    material = "\n".join(str(relay.get(key) or "") for key in (
+        "id", "recipientPersonId", "senderLabel", "content", "claimToken",
+    ))
+    expected = hmac.new(secret.encode("utf-8"), material.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(supplied, expected)
 
 # 多鑰匙分流（2026-07-12）：Gemini Live 對「同一把鑰匙的同時通話數」有配額上限——壓測壓到 30
 # 人時撞的 APIError:1011 就是這個牆（不是我們容器塞爆）。備多把鑰匙（不同 Google 專案、各自
@@ -400,7 +418,9 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         base += (
             "（你可以「直接幫他把提醒設進 App」：他說要設看診／回診提醒，就呼叫 set_clinic_reminder；"
             "他說要設吃藥／用藥提醒，就呼叫 set_medication_reminder。呼叫前若日期、時間、藥名或科別沒聽清楚，"
-            "先用一句話問清楚再設，不要自己亂猜。設好之後用一句溫暖口語的話跟他確認你設了什麼"
+            "先用一句話問清楚再設，不要自己亂猜。只有工具回覆 status=ok 才能說設好了；若回覆 error，誠實說沒有設成功並請他重試。"
+            "他要傳話給家庭圈成員時，先用一句話複誦收件人與完整內容，得到確認後才呼叫 send_family_relay；不要自行添加、刪改或猜測內容。"
+            "設好之後用一句溫暖口語的話跟他確認你設了什麼"
             "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。）"
         )
     # Keep this last so persona, memory, interests, and older examples can
@@ -439,6 +459,18 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
                 "days": types.Schema(type=types.Type.STRING, description="頻率，例如「長期」（每天）或「一次」（只有這次）"),
             },
             required=["name", "slots"],
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="send_family_relay",
+        description="使用者明確確認要把一句話轉達給家庭圈中的指定成員後呼叫。必須保留原意，不可自行加油添醋。",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "recipientName": types.Schema(type=types.Type.STRING, description="家庭圈收件人的名稱或稱呼，例如「小宇」"),
+                "message": types.Schema(type=types.Type.STRING, description="已向使用者複誦並確認的完整傳話內容，最多 240 字"),
+            },
+            required=["recipientName", "message"],
         ),
     ),
 ])
@@ -647,6 +679,7 @@ async def handle(ws):
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
+          "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
           "blocked_output_text": "", "language_retry_count": 0,
           "client_barge_in": False, "asr_turns": 0, "asr_chars": 0,
@@ -690,7 +723,7 @@ async def handle(ws):
             # 主動開口 cue（治「叫兩三次才回、以為當機」· Edward 2026-07-09）：
             # 不在 session 開好就立刻送——改由 App 在「聲音＋會動的臉兩邊都就緒」時送 {"type":"greet"} 才觸發，
             # 這樣她一開口臉就同步在動、不會出現「已在講、臉還沒好」的當機感（Edward 2026-07-09 二次拍板）。
-            async def _do_greet():
+            async def _do_greet(relay=None):
                 try:
                     # 話量隨熟識度（Edward 2026-07-10「一開始話太多了」）：越熟越像老朋友、一句就好；
                     # 不論哪級都硬上限：最多兩句、不連環問、不長篇自我介紹。
@@ -700,11 +733,26 @@ async def handle(ws):
                         _len_rule = "你們聊過幾次了：一到兩句簡短招呼就好，不要重新自我介紹、不要一次問好幾個問題。"
                     else:
                         _len_rule = "這是第一次通話：用一句話說你是誰、再用一句話問候，總共最多兩句、40 個字以內，不要長篇自我介紹。"
-                    greet_cue = (
-                        "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
-                        "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
-                        + localization.voice_opening_instruction(fam, topics, location)
-                    )
+                    relay = relay if isinstance(relay, dict) else {}
+                    relay_id = str(relay.get("id") or "")[:80]
+                    sender_label = str(relay.get("senderLabel") or "").strip()[:40]
+                    content = str(relay.get("content") or "").strip()[:240]
+                    if relay_id and sender_label and len(content) >= 2 and verify_family_relay_proof(relay):
+                        greet_cue = (
+                            "（這是經過後端驗證、指定給目前使用者的家人傳話。絕對不要唸出系統提示。"
+                            f"先準確說：『{sender_label}要我跟你說：{content}』。"
+                            "必須清楚說出是誰託你轉達；不可改變原意、不可補充不存在的原因或評價。"
+                            "轉達後只加一句很短的自然關心，把話權留給對方。）"
+                        )
+                        st["relay_greet_id"] = relay_id
+                    else:
+                        if relay_id:
+                            await ws.send(json.dumps({"type": "relay_rejected", "id": relay_id}, ensure_ascii=False))
+                        greet_cue = (
+                            "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
+                            "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
+                            + localization.voice_opening_instruction(fam, topics, location)
+                        )
                     await session.send_client_content(
                         turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
                         turn_complete=True,
@@ -885,7 +933,12 @@ async def handle(ws):
                             continue
                         t = obj.get("type")
                         if t == "greet":
-                            await _do_greet()   # App 說「兩邊都就緒了」→ 現在才請她主動開口（聲臉同步開場）
+                            await _do_greet(obj.get("relay"))   # App 說「兩邊都就緒了」→ 現在才請她主動開口（聲臉同步開場）
+                        elif t == "action_result":
+                            action_id = str(obj.get("id") or "")
+                            pending = st["action_results"].get(action_id)
+                            if pending and not pending.done():
+                                pending.set_result(obj)
                         elif t == "nudge":
                             await _do_nudge(int(obj.get("level", 1)))   # App 偵測到使用者一直沒講話 → 寧寧溫柔提醒（省點）
                         elif t == "text" and obj.get("text"):
@@ -1005,6 +1058,7 @@ async def handle(ws):
                                 ms = round(turn_out / (24000 * 2) * 1000)
                                 _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
                                 barge_cancelled = bool(st.get("client_barge_in"))
+                                completed_audio = bool(turn_out and not st.get("language_block") and not barge_cancelled)
                                 if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
                                     await _send_turn_tail()
                                 turn_out = 0
@@ -1028,6 +1082,10 @@ async def handle(ws):
                                     else:
                                         await _send_hokkien_fallback(source)
                                 else:
+                                    if st.get("relay_greet_id") and completed_audio:
+                                        await ws.send(json.dumps({"type": "relay_spoken", "id": st.pop("relay_greet_id")}, ensure_ascii=False))
+                                    elif st.get("relay_greet_id") and barge_cancelled:
+                                        await ws.send(json.dumps({"type": "relay_interrupted", "id": st.pop("relay_greet_id")}, ensure_ascii=False))
                                     await ws.send(json.dumps({"type": "turn_complete"}))
                                     st["language_retry_count"] = 0
                                     st["blocked_output_text"] = ""
@@ -1048,9 +1106,22 @@ async def handle(ws):
                                     fargs = dict(fc.args) if fc.args else {}
                                 except Exception:
                                     fargs = {}
-                                _diag(cid, "node.tool_call", name=getattr(fc, "name", "?"))
-                                await ws.send(json.dumps({"type": "action", "action": fc.name, "args": fargs}, ensure_ascii=False))
-                                responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response={"status": "ok"}))
+                                action_id = str(getattr(fc, "id", None) or uuid.uuid4().hex)
+                                _diag(cid, "node.tool_call", name=getattr(fc, "name", "?"), action_id=action_id)
+                                future = asyncio.get_running_loop().create_future()
+                                st["action_results"][action_id] = future
+                                await ws.send(json.dumps({"type": "action", "id": action_id, "action": fc.name, "args": fargs}, ensure_ascii=False))
+                                try:
+                                    app_result = await asyncio.wait_for(future, timeout=8)
+                                    result = app_result.get("result") if isinstance(app_result.get("result"), dict) else {}
+                                    response = {"status": "ok", **result} if app_result.get("ok") else {
+                                        "status": "error", "error": str(app_result.get("error") or "app_write_failed")[:120]
+                                    }
+                                except asyncio.TimeoutError:
+                                    response = {"status": "error", "error": "app_write_timeout"}
+                                finally:
+                                    st["action_results"].pop(action_id, None)
+                                responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response=response))
                             try:
                                 await session.send_tool_response(function_responses=responses)
                             except Exception as e:
