@@ -9,6 +9,11 @@
     noiseMultiplier: 4,
     sustainMs: 150,
     preRollFrames: 6,
+    // 講完後守門期（2026-07-16）：她停口後這段時間內，收音仍走「持續人聲才放行」，
+    // 蓋住 GLOWS 偶發 1.8~2s 供聲卡點的句中空檔——回音/噪音不再裸流上去被當成插話。
+    postSpeechGuardMs: 1800,
+    // 開場前兩輪 iPhone 回音消除尚未收斂、回音殘留最強：插話所需持續人聲拉長一級。
+    openingSustainMs: 300,
   });
 
   function createState(noiseFloor) {

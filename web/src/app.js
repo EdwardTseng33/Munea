@@ -2198,15 +2198,19 @@ const LiveVoice = {
           const policy = window.MuneaVoiceTurnPolicy;
           const frameMs = (inp.length / this.ac.sampleRate) * 1000;
           this._noteUserMicActivity(rms, frameMs, speakerActive);
+          // 開場前兩輪 iPhone 回音消除還沒收斂、回音殘留最強 → 插話判定拉嚴一級（openingSustainMs）
+          const sustainOpts = policy && (this._playbackTurn || 0) <= 1
+            ? { sustainMs: policy.DEFAULTS.openingSustainMs } : undefined;
 
           if (speakerActive && this._bargeInActive) {
             this._sendMicBuffer(buf);
             return;
           }
           if (speakerActive && policy) {
+            this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
             this._bargePreRoll.push(buf);
             while (this._bargePreRoll.length > policy.DEFAULTS.preRollFrames) this._bargePreRoll.shift();
-            const observed = policy.observe(this._bargeState, rms, frameMs, true);
+            const observed = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
             this._bargeState = observed.state;
             if (!observed.shouldInterrupt) return;
             this._beginBargeIn(rms, observed.threshold);
@@ -2215,6 +2219,20 @@ const LiveVoice = {
             return;
           }
           if (speakerActive) { this.micLevel = 0; return; }
+          // 講完後守門期（治「前 10 秒斷續/怪收音」）：她句中停頓（GLOWS 偶發 1.8~2s 供聲卡點）
+          // 或剛講完的空檔，收音不裸放行——不然回音/環境噪音會被上游當成有人講話、把她打斷。
+          // 真人講話走跟插話同一套「持續人聲＋預捲」判定，開頭字由預捲補回、不掉字。
+          if (policy && performance.now() < (this._postGuardUntil || 0)) {
+            this._bargePreRoll.push(buf);
+            while (this._bargePreRoll.length > policy.DEFAULTS.preRollFrames) this._bargePreRoll.shift();
+            const guarded = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
+            this._bargeState = guarded.state;
+            if (!guarded.shouldInterrupt) return;
+            this._postGuardUntil = 0;
+            const preRoll = this._bargePreRoll.splice(0);
+            preRoll.forEach(frame => this._sendMicBuffer(frame));
+            return;
+          }
           if (policy) this._bargeState = policy.observe(this._bargeState, rms, frameMs, false).state;
           this._sendMicBuffer(buf);
         };
