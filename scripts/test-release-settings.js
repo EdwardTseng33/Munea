@@ -117,6 +117,8 @@ expect(infoPlist.includes('<key>GIDClientID</key>') && infoPlist.includes('<key>
 expect(!xcodeProject.includes('MISSING_GOOGLE_'), 'production Google iOS client configuration still contains placeholders');
 expect(xcodeProject.includes('491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah.apps.googleusercontent.com'), 'production Google iOS client ID is missing');
 expect(xcodeProject.includes('com.googleusercontent.apps.491603544409-kutae0qdkjijqvguqtnh0ndf3ssn78ah'), 'production Google callback scheme is missing');
+expect((xcodeProject.match(/TARGETED_DEVICE_FAMILY = 1;/g) || []).length === 2, 'Debug and Release must both support iPhone only');
+expect(!xcodeProject.includes('TARGETED_DEVICE_FAMILY = "1,2";'), 'iPad support leaked back into the Xcode target');
 expect(iosExport.includes('codesign -d --entitlements - "$APP_PATH"'), 'IPA export still uses the retired entitlements output syntax');
 expect(!iosExport.includes('codesign -d --entitlements :-'), 'IPA export uses deprecated codesign entitlement syntax');
 expect(iosExport.includes('com.apple.developer.applesignin'), 'IPA export does not verify Apple sign-in entitlement');
@@ -131,6 +133,7 @@ expect(iosExport.includes('PRIVACY_DATA_TYPE_COUNT=') && iosExport.includes('NSP
 expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
 expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the development Call Control bypass');
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
+expect(iosExport.includes('UIDeviceFamily') && iosExport.includes('IPA supports iPhone only'), 'IPA export does not enforce iPhone-only packaging');
 expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLOUD=(gcloud)'), 'canary deploy is not compatible with macOS gcloud');
 expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost Windows gcloud compatibility');
 expect(canaryDeploy.includes('MUNEA_GCP_PROJECT') && canaryDeploy.includes('--project "$PROJECT"'), 'canary deploy does not pin the Google Cloud project');
