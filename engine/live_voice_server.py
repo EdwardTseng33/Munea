@@ -428,13 +428,14 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
     base += (
         "（你有「即時查詢」工具，聊天時可以真的上網查。聊到餐廳店家、景點旅遊（例如日本哪裡好玩、桃園有什麼好吃的）、"
-        "電影影劇、天氣預報、時事、活動檔期這類「講錯會誤導人」的具體話題——先安靜查一下再回，"
+        "電影影劇、天氣預報、時事、活動檔期這類「講錯會誤導人」的具體話題——一定先說一句不超過十個字的自然過場，"
+        "讓對方知道你正在查；過場聲音送出後才呼叫即時查詢，查完再回答，"
         "只講查到的真店名、真地點、真資訊；用「我聽很多人推薦…」「那邊最有名的是…」這種像自己去過或朋友推薦的口吻，"
         "自然分享一兩個亮點就好，順便帶一個有意思的小知識或典故更好。不要唸清單、不要報網址、不要像導覽機。"
         "查不到或不確定就老實說「這我不太確定，我幫你查查看」——寧可少講，絕對不可以自己編店名、地址、價格或營業時間。"
         "天氣要講就查當地真的預報再講。"
-        "要查東西時，先自然講一句短的過場再查（例如「喔這我知道有個好地方，等我想一下」），"
-        "別讓對方對著沒聲音的電話等好幾秒。）"
+        "要查東西時可說「我幫你看一下」或「等我查一下」；禁止先沉默查詢，"
+        "也不要在還沒查完時假裝已經知道答案。）"
     )
     nm = (name or "").strip()
     if nm and nm not in ("寧寧", "沐寧", "munea", "Munea"):
@@ -788,6 +789,8 @@ async def handle(ws):
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
           "opening_window_complete": False,
+          "user_turn_started_at": None, "lookup_grounding_seen": False,
+          "lookup_count": 0, "lookup_sources": 0,
           "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
@@ -1125,6 +1128,8 @@ async def handle(ws):
                         if sc:
                             it_pre = getattr(sc, "input_transcription", None)
                             if it_pre and getattr(it_pre, "text", None):
+                                if st.get("user_turn_started_at") is None:
+                                    st["user_turn_started_at"] = time.monotonic()
                                 transcript = localization.reconcile_context_transcription(
                                     it_pre.text, asr_context_terms, "zh-TW"
                                 )
@@ -1145,6 +1150,21 @@ async def handle(ws):
                                     await _arm_language_block("model_output")
                                 elif localization.contains_unstable_mandarin_speech(output_text):
                                     await _arm_language_block("mandarin_pronunciation")
+                            grounding = getattr(sc, "grounding_metadata", None)
+                            if grounding is not None and not st.get("lookup_grounding_seen"):
+                                queries = getattr(grounding, "web_search_queries", None) or []
+                                chunks = getattr(grounding, "grounding_chunks", None) or []
+                                query_count = len(queries)
+                                source_count = len(chunks)
+                                started = st.get("user_turn_started_at") or st.get("last_in")
+                                latency_ms = round((time.monotonic() - started) * 1000) if started else 0
+                                st["lookup_grounding_seen"] = True
+                                st["lookup_count"] += 1
+                                st["lookup_sources"] += source_count
+                                _diag(
+                                    cid, "node.lookup_grounded", queries=query_count,
+                                    sources=source_count, latency_ms=latency_ms,
+                                )
                         data = getattr(msg, "data", None)
                         if data and not st.get("language_block") and not st.get("client_barge_in"):
                             if st["await_first"] and st["last_in"] is not None:
@@ -1229,6 +1249,8 @@ async def handle(ws):
                                     st["language_retry_count"] = 0
                                     st["blocked_output_text"] = ""
                                 st["client_barge_in"] = False
+                                st["user_turn_started_at"] = None
+                                st["lookup_grounding_seen"] = False
                                 # 通話記憶：這一輪講完，先把雙方字幕收進整通紀錄再清緩衝（收線時交聊後管線）
                                 _capture_call_turns(st)
                                 # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
@@ -1367,6 +1389,7 @@ async def handle(ws):
             cid, "closed", in_bytes=st["in"], out_bytes=st["out"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
             barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
+            lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
         )
 
 

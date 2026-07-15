@@ -35,6 +35,14 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("俗諺", self.src)
         self.assertIn("不確定的史實先用即時查詢確認", self.src)
 
+    def test_live_search_speaks_before_lookup_and_records_grounding(self):
+        self.assertIn("過場聲音送出後才呼叫即時查詢", self.src)
+        self.assertIn("禁止先沉默查詢", self.src)
+        self.assertNotIn("先安靜查一下再回", self.src)
+        self.assertIn('getattr(sc, "grounding_metadata", None)', self.src)
+        self.assertIn('"node.lookup_grounded"', self.src)
+        self.assertIn('lookups=st["lookup_count"]', self.src)
+
     def test_emotion_holding_three_steps_present(self):
         """接住→引導歸因→量身建議 三步流程與六種情緒接法（Edward 2026-07-15）。"""
         self.assertIn("[接住情緒與陪伴引導]", self.src)

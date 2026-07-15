@@ -121,6 +121,14 @@ expect(avatarServer.includes('OPENING_PREBUFFER_S = 1.0') && avatarServer.includ
   'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
+expect(voiceServer.includes('過場聲音送出後才呼叫即時查詢') &&
+  voiceServer.includes('禁止先沉默查詢') &&
+  !voiceServer.includes('先安靜查一下再回'),
+  'Google Search can still leave the caller in unexplained silence');
+expect(voiceServer.includes('getattr(sc, "grounding_metadata", None)') &&
+  voiceServer.includes('"node.lookup_grounded"') &&
+  voiceServer.includes('lookups=st["lookup_count"]'),
+  'Live search use and latency are not observable in Voice diagnostics');
 expect(chatEngine.includes('localization.taiwan_mandarin_launch_instruction("zh-TW")'),
   'the shared text/opening brain can bypass the Mandarin-only persona guard');
 expect(apiServer.includes('localization.assistant_output_text'),
