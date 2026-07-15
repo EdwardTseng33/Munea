@@ -24,6 +24,7 @@ import model_router
 import notify
 import apple_store
 import notification_service
+import apns_service
 from google.genai import types
 
 if not os.environ.get("GEMINI_API_KEY"):
@@ -281,6 +282,7 @@ ADMIN_POST_PATHS = {
     "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
+    "/admin/notifications/drain",
     "/admin/login",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
@@ -2060,6 +2062,35 @@ def notification_events_response(data):
         "unreadCount": sum(1 for item in items if not item.get("readAt")),
         "backend": backend,
     }
+
+
+def apns_status():
+    try:
+        return apns_service.APNSConfig.from_env().status()
+    except (OSError, ValueError) as error:
+        return {
+            "enabled": False,
+            "missing": ["valid MUNEA_APNS_PRIVATE_KEY_PATH"],
+            "error": type(error).__name__,
+        }
+
+
+def drain_notification_outbox_response(data=None):
+    data = data or {}
+    try:
+        config = apns_service.APNSConfig.from_env()
+    except OSError:
+        return {"ok": False, "error": "apns_private_key_unreadable", "apns": apns_status()}
+    if not config.configured():
+        return {"ok": False, "error": "apns_not_configured", "apns": config.status()}
+    backend = data_backend()
+    if not backend.enabled():
+        return {"ok": False, "error": "notification_backend_not_configured"}
+    return apns_service.drain_outbox(
+        backend,
+        sender=apns_service.APNSSender(config=config),
+        limit=max(1, min(int(data.get("limit") or 50), 200)),
+    )
 
 
 def proactive_opening_response(data):
@@ -6156,6 +6187,7 @@ class H(BaseHTTPRequestHandler):
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
                 "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
+                "notificationPush": apns_status(),
             })
             return
         if path in ("/", ""):
@@ -6348,6 +6380,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_audit_events_summary(data))
+            elif self.path == "/admin/notifications/drain":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(drain_notification_outbox_response(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":
