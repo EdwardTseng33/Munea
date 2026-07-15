@@ -9,7 +9,7 @@ PACKAGE = (ROOT / "package.json").read_text(encoding="utf-8")
 VOICE_DEPLOY = (ROOT / "scripts" / "cloud-run-deploy-staging.ps1").read_text(
     encoding="utf-8"
 )
-VERCEL_CONFIG = (ROOT / "app-site" / "vercel.json").read_text(encoding="utf-8")
+FIREBASE_CONFIG = (ROOT / "firebase.json").read_text(encoding="utf-8")
 AUTH_CONFIG = (ROOT / "web" / "src" / "auth-config.js").read_text(encoding="utf-8")
 DEV_PROFILE = (ROOT / "scripts" / "enable-ios-development-profile.mjs").read_text(
     encoding="utf-8"
@@ -84,9 +84,10 @@ def test_voice_deploy_wires_call_control_without_breaking_old_app() -> None:
     assert "$callControlRequired = if ($RequireCallControl)" in VOICE_DEPLOY
 
 
-def test_vercel_preview_comments_are_silent() -> None:
-    assert '"github"' in VERCEL_CONFIG
-    assert '"silent": true' in VERCEL_CONFIG
+def test_public_site_uses_firebase_instead_of_vercel() -> None:
+    assert '"target": "public"' in FIREBASE_CONFIG
+    assert '"public": "app-site"' in FIREBASE_CONFIG
+    assert not (ROOT / "app-site" / "vercel.json").exists()
 
 
 def main() -> None:
@@ -100,7 +101,7 @@ def main() -> None:
         test_app_cannot_mark_provider_components_ready,
         test_retired_agent_lock_script_is_not_exposed,
         test_voice_deploy_wires_call_control_without_breaking_old_app,
-        test_vercel_preview_comments_are_silent,
+        test_public_site_uses_firebase_instead_of_vercel,
     ]
     for test in tests:
         test()
