@@ -3,7 +3,7 @@ param(
   [string]$Region = "asia-east1",
   [string]$Service = "munea-call-control",
   [string]$ServiceAccount = "munea-call-control@gen-lang-client-0229303523.iam.gserviceaccount.com",
-  [string]$SupabaseUrl = "https://uhmpmystjjdqqxlpsthc.supabase.co",
+  [string]$SupabaseUrl = "https://fespbkdwafueyonppzwq.supabase.co",
   [string]$SupabaseServiceSecret = "munea-supabase-service-staging",
   [string]$AdminKeySecret = "munea-gateway-admin-key",
   [string]$CallTokenSecret = "munea-call-token-secret",

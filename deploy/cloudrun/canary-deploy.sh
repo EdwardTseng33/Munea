@@ -63,7 +63,7 @@ if [ "$WHAT" = "brain" ]; then
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest,MUNEA_ADMIN_API_TOKEN=munea-admin-token-staging:latest,MUNEA_ADMIN_PASSWORD=munea-admin-password:latest" \
-    --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=staging|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|SUPABASE_URL=https://uhmpmystjjdqqxlpsthc.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_Ou8sb6J8yFHMgC1Mcz2eyw_sT2CprIZ|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
+    --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=staging|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|SUPABASE_URL=https://fespbkdwafueyonppzwq.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_fP-PoA531waoIOmxl8tsWg_kCeZQD0e|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
     --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
 else
   echo "== 部署 ${SVC}（語音橋・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="

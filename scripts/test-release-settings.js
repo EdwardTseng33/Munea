@@ -32,6 +32,7 @@ const infoPlist = read('ios/App/App/Info.plist');
 const privacyManifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 const reviewNotes = read('docs/送審資料包-2026-07-09.md');
 const canaryDeploy = read('deploy/cloudrun/canary-deploy.sh');
+const gatewayDeploy = read('scripts/cloud-run-deploy-gateway.ps1');
 
 expect(!app.includes('__muneaNativeRestore'), 'restore button still calls the retired native global');
 expect(app.includes('window.MuneaStore.restore()'), 'restore button is not wired to MuneaStore.restore');
@@ -66,6 +67,8 @@ expect(billingPolicy.includes('"monthlyPoints": 150') && billingPolicy.includes(
 
 expect(authConfig.includes('window.MUNEA_SUPABASE_CONFIG'), 'public Supabase auth config is missing');
 expect(/https:\/\/[a-z0-9-]+\.supabase\.co/.test(authConfig), 'Supabase project URL is missing');
+expect(authConfig.includes('fespbkdwafueyonppzwq'), 'production App/Web config is not pinned to Tokyo Supabase');
+expect(!authConfig.includes('uhmpmystjjdqqxlpsthc'), 'Sydney Supabase leaked into production App/Web config');
 expect(authConfig.includes('sb_publishable_'), 'Supabase publishable key is missing');
 expect(!/service[_-]?role|SUPABASE_SERVICE_ROLE_KEY/i.test(authConfig), 'server-only Supabase key leaked into browser config');
 expect(/enabled:\s*false/.test(authConfig) && /seedFixtures:\s*false/.test(authConfig), 'production auth config must keep developer fixtures disabled');
@@ -115,5 +118,7 @@ expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLO
 expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost Windows gcloud compatibility');
 expect(canaryDeploy.includes('MUNEA_GCP_PROJECT') && canaryDeploy.includes('--project "$PROJECT"'), 'canary deploy does not pin the Google Cloud project');
 expect(canaryDeploy.includes('MUNEA_APP_KEY') && canaryDeploy.includes('--no-traffic'), 'canary deploy is missing its app gate or zero-traffic safety gate');
+expect(canaryDeploy.includes('fespbkdwafueyonppzwq') && !canaryDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Cloud Run canary deploy is not pinned to Tokyo Supabase');
+expect(gatewayDeploy.includes('fespbkdwafueyonppzwq') && !gatewayDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Gateway deploy is not pinned to Tokyo Supabase');
 
 console.log('Release settings contracts PASS');
