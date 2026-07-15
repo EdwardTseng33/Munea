@@ -120,7 +120,7 @@ expect(canaryDeploy.includes('MUNEA_GCP_PROJECT') && canaryDeploy.includes('--pr
 expect(canaryDeploy.includes('MUNEA_APP_KEY') && canaryDeploy.includes('--no-traffic'), 'canary deploy is missing its app gate or zero-traffic safety gate');
 expect(canaryDeploy.includes('fespbkdwafueyonppzwq') && !canaryDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Cloud Run canary deploy is not pinned to Tokyo Supabase');
 expect(canaryDeploy.includes('MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest') && canaryDeploy.includes('MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging'), 'Voice canary deploy is missing the Brain memory channel');
-expect(canaryDeploy.includes('MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest') && canaryDeploy.includes('MUNEA_CALL_CONTROL_REQUIRED=1'), 'Voice canary deploy is missing mandatory Call Control verification');
+expect(canaryDeploy.includes('MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest') && canaryDeploy.includes('MUNEA_VOICE_CALL_CONTROL_REQUIRED:-1') && canaryDeploy.includes('MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED'), 'Voice canary deploy is missing safe-default Call Control verification');
 expect(canaryDeploy.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01'), 'Voice canary deploy is not aligned with the formal Gateway shard');
 expect(gatewayDeploy.includes('fespbkdwafueyonppzwq') && !gatewayDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Gateway deploy is not pinned to Tokyo Supabase');
 

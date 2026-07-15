@@ -11,6 +11,11 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 REGION="asia-east1"
 PROJECT="${MUNEA_GCP_PROJECT:-gen-lang-client-0229303523}"
+VOICE_CALL_CONTROL_REQUIRED="${MUNEA_VOICE_CALL_CONTROL_REQUIRED:-1}"
+case "$VOICE_CALL_CONTROL_REQUIRED" in
+  0|1) ;;
+  *) echo "⛔ MUNEA_VOICE_CALL_CONTROL_REQUIRED 只能是 0 或 1"; exit 1 ;;
+esac
 
 resolve_gcloud() {
   if command -v gcloud >/dev/null 2>&1; then
@@ -70,7 +75,7 @@ else
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
-    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=1,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
+    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
     --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
     --allow-unauthenticated --quiet
 fi
