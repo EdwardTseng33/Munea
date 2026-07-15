@@ -44,17 +44,28 @@ def verify_call_token(token: str, secret: str, *, voice_shard_id: str = "") -> d
         raise CallControlError("malformed call token") from exc
 
 
-def post_internal(base_url: str, admin_key: str, path: str, body: dict[str, Any], timeout: int = 8) -> dict[str, Any]:
+def post_internal(
+    base_url: str,
+    admin_key: str,
+    path: str,
+    body: dict[str, Any],
+    timeout: int = 8,
+    *,
+    app_key: str = "",
+) -> dict[str, Any]:
     if not base_url or not admin_key:
         raise CallControlError("call control callback is not configured")
+    headers = {
+        "Authorization": "Bearer " + admin_key,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    if app_key:
+        headers["X-Munea-Key"] = app_key
     request = urllib.request.Request(
         base_url.rstrip("/") + path,
         data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Authorization": "Bearer " + admin_key,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
+        headers=headers,
         method="POST",
     )
     try:

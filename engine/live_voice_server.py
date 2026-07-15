@@ -401,8 +401,10 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         recap = ""
         if brain_url and memory_scope and memory_scope.startswith("voice-"):
             try:
-                resp = post_internal(brain_url, brain_secret, "/voice/call-recap",
-                                     {"userId": memory_scope[len("voice-"):]}, timeout=3)
+                resp = post_internal(
+                    brain_url, brain_secret, "/voice/call-recap",
+                    {"userId": memory_scope[len("voice-"):]}, timeout=3,
+                    app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
                 recap = str((resp or {}).get("recapLine") or "")
             except Exception:
                 recap = ""
@@ -1336,7 +1338,8 @@ async def handle(ws):
                             resp = post_internal(
                                 brain_url, brain_secret, "/voice/call-memory",
                                 {"userId": scope[len("voice-"):], "turns": turns,
-                                 "char": call_char, "voiceSessionId": f"live-{call_id}"})
+                                 "char": call_char, "voiceSessionId": f"live-{call_id}"},
+                                app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
                             _diag(call_id, "node.call_memory_saved", via="brain",
                                   turns=len(turns), stored=bool((resp or {}).get("stored")),
                                   identity=bool((resp or {}).get("identityResolved")))

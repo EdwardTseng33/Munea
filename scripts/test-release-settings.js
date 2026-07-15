@@ -96,6 +96,11 @@ expect(auth.includes('signInWithIdToken'), 'native Apple ID token is not exchang
 expect(infoPlist.includes('<string>munea</string>'), 'iOS OAuth callback URL scheme is missing');
 expect(hasUsageDescription(infoPlist, 'NSCameraUsageDescription'), 'iOS camera usage description is missing');
 expect(hasUsageDescription(infoPlist, 'NSPhotoLibraryUsageDescription'), 'iOS photo library usage description is missing');
+expect(/<key>UIRequiresFullScreen<\/key>\s*<true\s*\/>/.test(infoPlist), 'portrait-only iOS app must require full screen');
+const iphoneOrientations = infoPlist.match(/<key>UISupportedInterfaceOrientations<\/key>\s*<array>([\s\S]*?)<\/array>/)?.[1] || '';
+const ipadOrientations = infoPlist.match(/<key>UISupportedInterfaceOrientations~ipad<\/key>\s*<array>([\s\S]*?)<\/array>/)?.[1] || '';
+expect(iphoneOrientations.includes('UIInterfaceOrientationPortrait') && !iphoneOrientations.includes('Landscape'), 'iPhone orientation must be portrait-only');
+expect(ipadOrientations.includes('UIInterfaceOrientationPortrait') && !ipadOrientations.includes('Landscape'), 'iPad orientation must be portrait-only');
 expect(swiftAppleSignIn.includes('ASAuthorizationAppleIDProvider'), 'native Sign in with Apple request is missing');
 expect(swiftAppleSignIn.includes('request.nonce = self.sha256(nonce)'), 'native Apple nonce binding is missing');
 expect(appEntitlements.includes('com.apple.developer.applesignin'), 'Sign in with Apple entitlement is missing');
@@ -119,6 +124,9 @@ expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost
 expect(canaryDeploy.includes('MUNEA_GCP_PROJECT') && canaryDeploy.includes('--project "$PROJECT"'), 'canary deploy does not pin the Google Cloud project');
 expect(canaryDeploy.includes('MUNEA_APP_KEY') && canaryDeploy.includes('--no-traffic'), 'canary deploy is missing its app gate or zero-traffic safety gate');
 expect(canaryDeploy.includes('fespbkdwafueyonppzwq') && !canaryDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Cloud Run canary deploy is not pinned to Tokyo Supabase');
+expect(canaryDeploy.includes('MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest') && canaryDeploy.includes('MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging'), 'Voice canary deploy is missing the Brain memory channel');
+expect(canaryDeploy.includes('MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest') && canaryDeploy.includes('MUNEA_VOICE_CALL_CONTROL_REQUIRED:-1') && canaryDeploy.includes('MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED'), 'Voice canary deploy is missing safe-default Call Control verification');
+expect(canaryDeploy.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01'), 'Voice canary deploy is not aligned with the formal Gateway shard');
 expect(gatewayDeploy.includes('fespbkdwafueyonppzwq') && !gatewayDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Gateway deploy is not pinned to Tokyo Supabase');
 
 console.log('Release settings contracts PASS');
