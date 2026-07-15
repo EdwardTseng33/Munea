@@ -89,5 +89,19 @@ const meds = [
   assert(remoteCalls.some(call => call.action === 'list'), 'Signed-in configuration must pull cloud history');
   assert.strictEqual(remoteCalls.filter(call => call.action === 'save' && call.dose.scheduledDate === today).length, 3, 'Every scheduled occurrence must be idempotently upserted');
 
+  const finiteStart = new Date();
+  finiteStart.setDate(finiteStart.getDate() - 8);
+  const finiteMeds = [{ id: 'finite-med', name: '短期藥', time: '早餐後', days: '7 天', startDate: MuneaMedication.dateKey(finiteStart) }];
+  assert.strictEqual(MuneaMedication.slotsFor(finiteMeds, today).length, 0, 'Finite medication must stop producing doses after its treatment end date');
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowKey = MuneaMedication.dateKey(tomorrow);
+  const tomorrowIsoWeekday = ((tomorrow.getDay() + 6) % 7) + 1;
+  const weeklyMeds = [{ id: 'weekly-med', name: '每週藥', time: '睡前', weekdays: [tomorrowIsoWeekday] }];
+  assert.strictEqual(MuneaMedication.slotsFor(weeklyMeds, tomorrowKey).length, 1, 'Selected weekday must produce a scheduled dose');
+  const dayAfter = new Date(tomorrow); dayAfter.setDate(dayAfter.getDate() + 1);
+  assert.strictEqual(MuneaMedication.slotsFor(weeklyMeds, MuneaMedication.dateKey(dayAfter)).length, 0, 'Unselected weekday must not produce a dose');
+
   console.log('Medication service data chain: ALL PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });

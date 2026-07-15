@@ -55,6 +55,11 @@ deploy/cloudrun/ops-webhook.txt
 deploy/cloudrun/alerts-webhook.txt
 
 engine/family_invitations.json
+engine/family_relay_messages.json
+engine/medication_doses.json
+engine/push_devices.json
+engine/notification_events.json
+engine/notification_deliveries.json
 .munea-app-key
 
 Video/
