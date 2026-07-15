@@ -3015,13 +3015,6 @@ function renderCompanionGreeting(now = new Date()) {
 
 (function homeGreeting() {
   const now = new Date();
-  (function fixDemoEventDate() {
-    const chip = document.getElementById('demoEventDate');
-    if (!chip) return;
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    d.setDate(d.getDate() + (((6 - d.getDay() + 7) % 7) || 7));
-    chip.textContent = (d.getMonth() + 1) + '/' + d.getDate() + '（週六）傍晚';
-  })();
   const h = now.getHours();
   const dayN = Math.max(1, now.getDate() - 1);
   renderCompanionGreeting(now);
@@ -5569,9 +5562,16 @@ function init() {
       }
     } catch (e) { pushFamilyFeed('「' + (a.title || '活動') + '」結束了，收進<b>家庭記錄簿</b>'); }
   }
+  // 空狀態 #actEmpty＝唯一插入錨點（示範卡 7/15 拆掉後，頁上可能一張卡都沒有）
+  function updateActEmpty() {
+    const empty = document.getElementById('actEmpty');
+    if (!empty) return;
+    const pad = empty.closest('.pad');
+    empty.style.display = pad && pad.querySelector('.quest-card') ? 'none' : '';
+  }
   function renderActCard(act) {
-    const list = document.querySelector('#newChalBtn')?.closest('.pad')?.querySelector('.quest-card');
-    if (!list) return;
+    const empty = document.getElementById('actEmpty');
+    if (!empty) return;
     const card = document.createElement('div');
     card.className = 'quest-card pending';
     let chip, goal, note;
@@ -5628,7 +5628,8 @@ function init() {
     card.style.cursor = 'pointer';
     card.dataset.actId = act.id;
     card.addEventListener('click', () => openActDetail(act, card));
-    list.parentNode.insertBefore(card, list);
+    empty.parentNode.insertBefore(card, empty.nextSibling);   // 貼著錨點插＝新卡永遠在最上面（跟舊行為一致）
+    updateActEmpty();
   }
   function actParts(act) { return ['你'].concat(act.names || []); }
   function avatarsHtml(names) {
@@ -5677,6 +5678,7 @@ function init() {
       if (del.dataset.arm !== '1') { del.dataset.arm = '1'; del.classList.add('arm'); del.querySelector('span').textContent = '確定刪除？再點一下'; setTimeout(() => { del.dataset.arm = ''; del.classList.remove('arm'); const s = del.querySelector('span'); if (s) s.textContent = '刪除這個活動'; }, 3200); return; }
       const acts = loadActs().filter(a => a.id !== act.id); saveActs(acts);
       const c = card || document.querySelector('[data-act-id="' + act.id + '"]'); if (c) c.remove();
+      updateActEmpty();
       sheet.classList.remove('show');
       toast('活動刪除了');
     });
@@ -5864,6 +5866,7 @@ function init() {
       } else { keep.push(a); renderActCard(a); }
     });
     if (keep.length !== acts.length) saveActs(keep);
+    updateActEmpty();
   }
   // 進家人頁時再掃一次：不用重開 App，到期卡當場收掉＋公布結果
   function sweepActsOnView() {
@@ -5872,6 +5875,7 @@ function init() {
     if (!expired.length) return;
     expired.forEach(a => { announceActEnd(a); const c = document.querySelector('[data-act-id="' + a.id + '"]'); if (c) c.remove(); });
     saveActs(acts.filter(a => !actExpired(a)));
+    updateActEmpty();
   }
   window.__muneaSweepActs = sweepActsOnView;
   Promise.resolve(__pullPromise).finally(() => restoreActsBoot());   // syncPullAll 可能不回 Promise（頁面隱藏啟動等）；不包住整個 init 會從這裡斷頭（7/15 修）

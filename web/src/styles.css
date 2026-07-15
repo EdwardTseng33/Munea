@@ -443,6 +443,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 
 /* ===== 家庭任務卡（家人頁 · 合作型） ===== */
 .quest-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 16px 16px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+.quest-empty { border: 1.5px dashed var(--line); border-radius: var(--radius-md); padding: 18px 16px; margin-bottom: 12px; text-align: center; font-size: 14px; color: var(--muted); line-height: 1.7; }
 /* 發起人刪除鈕：卡片底部低調膠囊；點一下進「確認」紅色態、再點才刪（防誤刪）*/
 .qc-del { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
 .qc-del .ic { width: 15px; height: 15px; }
