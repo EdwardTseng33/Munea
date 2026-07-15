@@ -24,6 +24,24 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("[句尾收法]", self.src)
         self.assertIn("不要每句話的結尾都反問", self.src)
         self.assertIn("陳述句自然收尾", self.src)
+        # 2026-07-16 Edward「回話少一點反問」：要有硬規矩、不能只有「大多數」
+        self.assertIn("不准連續兩輪都用問題收尾", self.src)
+
+    def test_opening_ramp_rule_present(self):
+        """2026-07-16 Edward「最剛開始聊話不要太多、太熱情」：開場升溫必須無條件生效。"""
+        self.assertIn("[開場升溫]", self.src)
+        self.assertIn("前三輪每輪最多一句話", self.src)
+        self.assertIn("不要一接通就高能量歡迎", self.src)
+        self.assertIn("不管你們多熟", self.src)
+
+    def test_video_call_persona_frame_present(self):
+        """2026-07-16 Edward「像與真實世界的人視訊聊天」：相處框架要在、且是行為比喻不是身分宣稱。"""
+        self.assertIn("真實世界裡兩個人的視訊聊天", self.src)
+        self.assertIn("像一個自然、有人味的人", self.src)
+        self.assertIn("不是你表演、他觀看", self.src)
+        # 只准「像真人」、不准「是真人」：身分誠實紅線在底層 CORE，這裡不得出現身分宣稱
+        self.assertNotIn("你是真人", self.src)
+        self.assertNotIn("你是一個真人", self.src)
 
     def test_story_moral_rule_present(self):
         self.assertIn("[說故事與在地內容]", self.src)
