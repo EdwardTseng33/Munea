@@ -52,6 +52,7 @@ MEMORY_ITEMS_PATH = os.environ.get("MUNEA_MEMORY_ITEMS_PATH") or os.path.join(HE
 CONVERSATION_SUMMARIES_PATH = os.environ.get("MUNEA_CONVERSATION_SUMMARIES_PATH") or os.path.join(HERE, "conversation_summaries.json")
 PERCEPTION_SNAPSHOTS_PATH = os.environ.get("MUNEA_PERCEPTION_SNAPSHOTS_PATH") or os.path.join(HERE, "perception_snapshots.json")
 RELATIONSHIP_STATES_PATH = os.environ.get("MUNEA_RELATIONSHIP_STATES_PATH") or os.path.join(HERE, "companion_relationship_states.json")
+NOTIFICATION_SETTINGS_PATH = os.environ.get("MUNEA_NOTIFICATION_SETTINGS_PATH") or os.path.join(HERE, "notification_settings.json")
 # 主要照護對象編號：雲端模式用資料櫃的正式編號（環境變數）、本機示範照舊（7/9 hotfix：帶錯編號會讓資料櫃拒收）
 PRIMARY_CARE_RECIPIENT_ID = os.environ.get("MUNEA_SUPABASE_PERSON_ID") or "local-person-self"
 MAX_JSON_BODY_BYTES = 1_000_000
@@ -1833,6 +1834,69 @@ def _notification_identity():
     }
 
 
+def load_notification_settings(person_id=None):
+    """通知中心設定（總開關＋分類）。沒存過＝預設值（推播關、分類全開）。"""
+    identity = _notification_identity()
+    person = person_id or identity.get("personId") or PRIMARY_CARE_RECIPIENT_ID
+    backend = data_backend()
+    if backend.enabled():
+        try:
+            row = backend.load_notification_settings(person)
+            if row is not None:
+                return notification_service.normalize_notification_settings(row)
+        except Exception as e:
+            if not is_missing_table_error(e):
+                raise
+            log_fallback_exception("load notification settings", e)
+    items = read_json_file(NOTIFICATION_SETTINGS_PATH, {})
+    row = items.get(person) if isinstance(items, dict) else None
+    settings = notification_service.normalize_notification_settings(row or {})
+    settings["personId"] = person
+    return settings
+
+
+def save_notification_settings(patch, person_id=None):
+    """只收 pushEnabled 與四個分類；其他欄位一律忽略。冪等。"""
+    current = load_notification_settings(person_id)
+    merged = dict(current)
+    if isinstance(patch, dict):
+        if "pushEnabled" in patch:
+            merged["pushEnabled"] = bool(patch["pushEnabled"])
+        cats = patch.get("categories")
+        if isinstance(cats, dict):
+            merged["categories"] = {
+                **current["categories"],
+                **{k: bool(v) for k, v in cats.items()
+                   if k in notification_service.NOTIFICATION_CATEGORIES},
+            }
+    merged["updatedAt"] = utc_now()
+    backend = data_backend()
+    if backend.enabled():
+        try:
+            saved = backend.save_notification_settings(merged)
+            if saved is not None:
+                return notification_service.normalize_notification_settings(saved)
+        except Exception as e:
+            if not is_missing_table_error(e):
+                raise
+            log_fallback_exception("save notification settings", e)
+    items = read_json_file(NOTIFICATION_SETTINGS_PATH, {})
+    if not isinstance(items, dict):
+        items = {}
+    items[merged["personId"]] = merged
+    write_json_file(NOTIFICATION_SETTINGS_PATH, items)
+    return merged
+
+
+def notification_settings_response(data):
+    data = data or {}
+    if str(data.get("action") or "get") == "set":
+        settings = save_notification_settings(data)
+    else:
+        settings = load_notification_settings()
+    return {"ok": True, "settings": settings}
+
+
 def load_push_devices(include_invalid=False, limit=20):
     backend = data_backend()
     if backend.enabled():
@@ -1966,6 +2030,10 @@ def enqueue_notification_event(item, recipient_person_id=None, actor_person_id=N
     devices = read_json_file(PUSH_DEVICES_PATH, [])
     deliveries = read_json_file(NOTIFICATION_DELIVERIES_PATH, [])
     deliveries = deliveries if isinstance(deliveries, list) else []
+    # 通知中心設定：收件人關掉的類別只寫事件、不建推播投遞
+    recipient_settings = load_notification_settings(event.get("recipientPersonId"))
+    if not notification_service.push_allowed(recipient_settings, event.get("eventType")):
+        devices = []
     for raw in devices if isinstance(devices, list) else []:
         device = notification_service.normalize_device(raw)
         if (device.get("personId") == event.get("recipientPersonId")
@@ -2090,6 +2158,12 @@ def drain_notification_outbox_response(data=None):
         backend,
         sender=apns_service.APNSSender(config=config),
         limit=max(1, min(int(data.get("limit") or 50), 200)),
+        # 發送前照收件人的通知中心設定過濾；查不到收件人 fail-open（見 drain_outbox）
+        push_allowed_fn=lambda d: notification_service.push_allowed(
+            load_notification_settings(
+                d.get("recipient_person_id") or d.get("recipientPersonId")),
+            d.get("event_type") or d.get("eventType"),
+        ) if (d.get("recipient_person_id") or d.get("recipientPersonId")) else True,
     )
 
 
@@ -6426,7 +6500,7 @@ class H(BaseHTTPRequestHandler):
             # Family-circle invites always require a verified identity, even in
             # local/demo mode where most endpoints may allow a guest preview.
             # A join code is never an authentication credential.
-            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications"):
+            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings"):
                 family_auth = verify_auth_context(self.headers)
                 if not family_auth.get("ok"):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
@@ -6505,6 +6579,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(medication_doses_response(data))
             elif self.path == "/push/devices":
                 self._json(push_devices_response(data))
+            elif self.path == "/notifications/settings":
+                self._json(notification_settings_response(data))
             elif self.path == "/notifications":
                 self._json(notification_events_response(data))
             elif self.path == "/wellbeing/trend":

@@ -19,6 +19,50 @@ EVENT_TYPES = {
     "health_alert",
 }
 SENSITIVITY_LEVELS = {"public", "private", "health_sensitive"}
+
+# 通知中心（2026-07-15 Edward 定稿）：總開關＋分類開關。
+# 分類：medication=用藥提醒、clinic=看診提醒、family=家人消息、safety=安全通知。
+NOTIFICATION_CATEGORIES = ("medication", "clinic", "family", "safety")
+CATEGORY_BY_EVENT_TYPE = {
+    "medication_due": "medication",
+    "medication_missed": "medication",
+    "clinic_upcoming": "clinic",
+    "family_relay": "family",
+    "family_activity": "family",
+    "invitation_applied": "family",
+    "invitation_decided": "family",
+    "health_alert": "safety",
+}
+
+
+def normalize_notification_settings(item=None):
+    item = item or {}
+    cats = item.get("categories") or {}
+    if "pushEnabled" in item:
+        push_enabled = item.get("pushEnabled")
+    elif "push_enabled" in item:
+        push_enabled = item.get("push_enabled")
+    else:
+        # 設定層是「覆蓋層」：沒存過設定＝不阻擋（預設放行）。
+        # 「預設關」的 UX 由 App 實現——總開關沒開就不註冊裝置、iOS 也沒授權，
+        # 本來就推不到；伺服器端若再預設擋，會出現「用戶開了開關卻收不到」的雙重門。
+        push_enabled = True
+    return {
+        "personId": item.get("personId") or item.get("person_id"),
+        "pushEnabled": bool(push_enabled),
+        "categories": {c: bool(cats.get(c, True)) for c in NOTIFICATION_CATEGORIES},
+        "updatedAt": item.get("updatedAt") or item.get("updated_at") or utc_now(),
+    }
+
+
+def push_allowed(settings, event_type):
+    """這則事件可不可以推到「本人手機」。只管本人裝置——家人告警是發給
+    家人那個收件人、走家人自己的設定，所以長輩關掉安全通知不會關掉家人端的守護告警。"""
+    settings = normalize_notification_settings(settings)
+    if not settings["pushEnabled"]:
+        return False
+    category = CATEGORY_BY_EVENT_TYPE.get(str(event_type or ""), "family")
+    return settings["categories"].get(category, True)
 PERMISSION_STATUSES = {"not_determined", "denied", "authorized", "provisional", "ephemeral"}
 DELIVERY_ACTIONS = {"opened", "actioned"}
 HEX_TOKEN_RE = re.compile(r"^[0-9a-fA-F]{32,256}$")
