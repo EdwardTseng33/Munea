@@ -22,8 +22,10 @@ expect(app.includes('this._sameLineWarmup = this._sameLine'),
   'Avatar same-line audio does not start in warmup mode');
 expect(app.includes('prepareOpeningAudioPath(waitMs = 1000)') && app.includes('new Int16Array(24000).buffer'),
   'Avatar same-line audio is not warmed independently before the greeting');
-expect(app.includes("stage: 'before_greet'") && app.includes("result: stable ? 'ready' : 'blocked'"),
-  'unstable opening audio is not blocked before the greeting');
+expect(app.includes("stage: 'before_greet'") && app.includes("'pending_first_audio'") && app.includes("'local_fallback'"),
+  'inconclusive silent warmup does not preserve same-line verification and local fallback modes');
+expect(app.includes("return { mode, verified: stable, receiverAttached }") && !app.includes("opening_audio_not_ready"),
+  'an inconclusive silent warmup can still tear down an otherwise healthy call');
 expect(!app.includes('_sameLineWarmupPending'),
   'the first assistant answer is still being consumed as the audio warmup');
 expect(app.includes('await LiveVoice.prepareOpeningAudioPath(1000)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(1000)') < app.indexOf('LiveVoice.greet()'),

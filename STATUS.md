@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新修正候選**：`1.0.18 (Build 23)` 已完成全部 Node App 契約、GoogleSignIn 9.1.0、Xcode arm64 簽章建置並透過 Wi-Fi 安裝 Edward iPhone，手機回讀版本正確且啟動 PASS。除 1.0.17 的隱私、撥號即時回饋與 Google 原生登入外，另整合已合併 PR #78，移除家人頁三張寫死假活動卡並加入真活動空狀態；版本／測試／包版交帳由 PR #81 收斂。實際撥通、開場順暢／聲畫同步與 Google 真登入仍待 Edward 真人 Gate，因此仍是 ❌。
+> **2026-07-15 最新修正候選**：`1.0.20 (Build 25)` 已完成完整測試、Capacitor sync、Xcode arm64 簽章建置並安裝 Edward iPhone，手機回讀版號與啟動 PASS。1.0.19 的 4 次診斷證實 Voice、麥克風與 Avatar 都已連上，實際失敗是 App 把「一秒靜音暖機沒有產生 RTP」誤判為服務故障並主動掛斷；1.0.20 保留暖機，但改由第一句真人聲音複驗或立即切本機聲音保底。實際撥通、第一句完整、開頭流暢、無雙音與聲畫同步仍待 Edward 真人 Gate，因此仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.18 Build 23 已整合家人頁真活動空狀態、聊聊修正與 Google 原生登入，完成 Xcode 簽章與 iPhone 無線安裝。自動 Gate 通過；Voice／Google 真人 Gate 與 APNs／Apple 登入／拍照／金流仍未通過）**
+> **最後更新：2026-07-15（Codex · App 1.0.20 Build 25 已修正開場靜音暖機誤判，完成完整測試、Xcode 簽章與 iPhone 安裝。自動 Gate 通過；Voice 真人撥通／聲畫體驗、Google／Apple 真登入、拍照、金流與 APNs 仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**74－App 1.0.20 Build 25／聊聊開場暖機誤判修正（7/15 Codex，PR #82）**：①❌ Edward 確認 1.0.19 仍無法撥通。②✅ 手機 4/4 筆診斷一致：麥克風、Voice WebSocket／ready、Avatar offer／ICE／首格都 PASS，第一個失敗站是 `opening_audio_ready`；Firebase Hosting 與服務全面離線不是本次根因。③✅ App 不再要求純靜音必須產生 Avatar RTP 才准接通；已有音訊接收軌就由第一句複驗，缺軌立即走本機聲音保底。④✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 簽章與包內東京／測試資料／secret 防漏 PASS。⑤✅ Edward iPhone 已安裝、回讀 `1.0.20 (25)` 並啟動。⑥❌ 撥通、首句、開頭流暢、雙音與嘴型同步待 Edward 真人 Gate；未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
 **73－App 1.0.18 Build 23／家人頁假活動清理＋最新 PR 整合（7/15 Codex）**：①✅ PR #78 的三張寫死假活動卡、假步數／排行與假日期更新已移除，改為真活動空狀態；新增／刪除／還原／到期後會同步更新。②✅ 因 App 內容在 1.0.17 包版後改變，依規則升為 `1.0.18 (23)`，不沿用同版號。③✅ Node App 契約、JS 語法、Capacitor sync、GoogleSignIn 9.1.0、Xcode arm64 簽章與成品安全檢查 PASS。④✅ Edward iPhone 已無線安裝、回讀 `1.0.18 (23)` 並啟動；包內為東京、Pro、1,000 點與家人假資料。⑤🔄 #78 與舊 #79 已由並行 session 合併；PR #81 補齊 1.0.18 版號、測試與包版交帳。⑥❌ Voice／Google 真人 Gate、Apple 登入、拍照、StoreKit、APNs 與 App Store 上傳未通過。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 

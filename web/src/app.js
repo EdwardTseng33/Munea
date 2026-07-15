@@ -1961,7 +1961,7 @@ const LiveVoice = {
   async prepareOpeningAudioPath(waitMs = 1000) {
     if (!this._sameLine) {
       this._sameLineWarmup = false;
-      return true;
+      return { mode: 'local_audio', verified: true, receiverAttached: false };
     }
     this._sameLineWarmup = true;
     this._setFaceAudioMuted(true);
@@ -1980,8 +1980,15 @@ const LiveVoice = {
     const after = await this._faceAudioSnapshot();
     const deltaBytes = Math.max(0, after.bytes - before.bytes);
     const stable = after.hasStats && (deltaBytes > 600 || after.audioLevel > 0.001);
+    const receiverAttached = !!Avatar._faceAudReceiver;
     this._sameLineWarmup = false;
     if (stable) {
+      this._sameLineFellBack = false;
+      this._setFaceAudioMuted(false);
+    } else if (receiverAttached) {
+      // FlashHead may suppress a silent warmup packet even though the WebRTC
+      // audio receiver is ready. Let the first real answer verify the route;
+      // the existing three-second watchdog still falls back if it stays mute.
       this._sameLineFellBack = false;
       this._setFaceAudioMuted(false);
     } else {
@@ -1989,8 +1996,9 @@ const LiveVoice = {
       this._setFaceAudioMuted(true);
     }
     try { Avatar.reset(); } catch (e) {}
-    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : 'blocked', bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, stage: 'before_greet' }); } catch (e) {}
-    return stable;
+    const mode = stable ? 'sameline_verified' : (receiverAttached ? 'pending_first_audio' : 'local_fallback');
+    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_greet' }); } catch (e) {}
+    return { mode, verified: stable, receiverAttached };
   },
   _notePlayout(byteLength) {
     const now = performance.now();
@@ -4316,22 +4324,14 @@ async function connectCall() {
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
       setCallHint('聲音與畫面暖機中…', true);
       voiceCallMark('opening_audio_warmup', 'pass');
-      const audioPathReady = noFace ? true : await LiveVoice.prepareOpeningAudioPath(1000);
-      if (!audioPathReady) {
-        voiceCallFail('opening_audio_ready', 'opening_audio_not_ready');
-        _activationInFlight = false;
-        clearTimeout(_gateTimeout);
-        try { LiveVoice.stop(); } catch (e2) {}
-        try { FaceWave.stop(); } catch (e2) {}
-        try { completeChatSession('opening_audio_not_ready'); } catch (e2) {}
-        chatOpened = false; setCallDialing(false); stopCallTimer();
-        const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
-        setFaceState('idle'); setCallHint('聲音與畫面還沒同步好，請再撥一次');
-        try { FaceIdle.start(); } catch (e2) {}
-        try { trackProductEvent('voice_opening_audio_blocked'); } catch (e2) {}
-        return;
-      }
-      voiceCallMark('opening_audio_ready', 'pass');
+      const openingAudio = noFace
+        ? { mode: 'no_avatar', verified: true, receiverAttached: false }
+        : await LiveVoice.prepareOpeningAudioPath(1000);
+      // Silent warmup is advisory: some Avatar workers do not emit RTP for
+      // zero PCM. A connected receiver continues on the same-line route and
+      // real opening audio is checked by the watchdog; no receiver uses local
+      // playback immediately. Neither case should tear down a healthy call.
+      voiceCallMark('opening_audio_ready', 'pass', openingAudio);
       await new Promise(resolve => setTimeout(resolve, 250));
       _activationInFlight = false;
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
