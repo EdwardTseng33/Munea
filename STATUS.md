@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新整合候選**：PR #41、#42、#52 已依序進入 `main@1215d8b`；PR #51 的 `1.0.10 (Build 15)` 最終來源已再合入該 main，完整保留東京 Supabase `fespbkdwafueyonppzwq`、Google 強制選擇帳號、本機登出、用藥同步、家庭傳話與通知平台。完整 `test:launch`、東京／雪梨 marker、後端 secret 防漏、Capacitor sync、Xcode 26.6 原生檢查、全新 arm64 實機簽章與包內來源核對均 PASS。這只代表程式與包版候選通過；014／015／016 migration、Brain／Voice、APNs secret／排程與 App Store 上傳尚未執行，Google／Apple、拍照、StoreKit、APNs 真推播及全語音真人 Gate 仍是 ❌。
+> **2026-07-15 最新 main／整合候選**：PR #41、#42、#52、#51 已依序以 merge commit 進入 `main@5155e4e`；目前正式程式版本為 `1.0.10 (Build 15)`，完整保留東京 Supabase `fespbkdwafueyonppzwq`、Google 強制選擇帳號、本機登出、用藥同步、家庭傳話與通知平台。完整 `test:launch`、兩個 Windows CI、東京／雪梨 marker、後端 secret 防漏、Capacitor sync、Xcode 26.6 原生檢查、全新 arm64 實機簽章與包內來源核對均 PASS。這只代表程式與包版候選通過；014／015／016 migration、Brain／Voice、APNs secret／排程與 App Store 上傳尚未執行，Google／Apple、拍照、StoreKit、APNs 真推播及全語音真人 Gate 仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
