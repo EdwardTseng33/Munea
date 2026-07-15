@@ -9,6 +9,13 @@ window.MuneaNotify = (function () {
   var _lastToken = null;
   var _pendingOpen = null;
   var _lastSync = null;
+  var _settingsLoaded = false;
+  var _settingsSaving = false;
+  var _settingsPending = false;
+  var _notificationSettings = {
+    pushEnabled: false,
+    categories: { medication: true, clinic: true, family: true, safety: true }
+  };
 
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Notify) || null;
@@ -35,10 +42,94 @@ window.MuneaNotify = (function () {
     if (!token) return null;
     var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
     try { if (typeof MUNEA_APP_KEY === 'string' && MUNEA_APP_KEY) headers['X-Munea-Key'] = MUNEA_APP_KEY; } catch (e) {}
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeout = controller ? setTimeout(function () { controller.abort(); }, 5000) : null;
     try {
-      var response = await fetch(brainUrl(path), { method: 'POST', headers: headers, body: JSON.stringify(body || {}) });
+      var options = { method: 'POST', headers: headers, body: JSON.stringify(body || {}) };
+      if (controller) options.signal = controller.signal;
+      var response = await fetch(brainUrl(path), options);
       return response.ok ? await response.json() : null;
     } catch (e) { return null; }
+    finally { if (timeout) clearTimeout(timeout); }
+  }
+
+  function normalizeNotificationSettings(value) {
+    var source = value && typeof value === 'object' ? value : {};
+    var categories = source.categories && typeof source.categories === 'object' ? source.categories : {};
+    return {
+      pushEnabled: !!source.pushEnabled,
+      categories: {
+        medication: categories.medication !== false,
+        clinic: categories.clinic !== false,
+        family: categories.family !== false,
+        safety: categories.safety !== false
+      }
+    };
+  }
+
+  function cacheNotificationSettings() {
+    try { localStorage.setItem('munea.notification.settings.v1', JSON.stringify(_notificationSettings)); } catch (e) {}
+  }
+
+  function setNotificationSettingsPending(pending) {
+    _settingsPending = !!pending;
+    try {
+      if (_settingsPending) localStorage.setItem('munea.notification.settings.pending.v1', '1');
+      else localStorage.removeItem('munea.notification.settings.pending.v1');
+    } catch (e) {}
+  }
+
+  function restoreNotificationSettings() {
+    try {
+      var cached = JSON.parse(localStorage.getItem('munea.notification.settings.v1') || 'null');
+      if (cached) _notificationSettings = normalizeNotificationSettings(cached);
+      _settingsPending = localStorage.getItem('munea.notification.settings.pending.v1') === '1';
+    } catch (e) {}
+  }
+
+  async function loadNotificationSettings() {
+    restoreNotificationSettings();
+    var result = null;
+    if (_settingsPending) {
+      result = await api('/notifications/settings', {
+        action: 'set', pushEnabled: _notificationSettings.pushEnabled,
+        categories: _notificationSettings.categories
+      });
+      if (result && result.settings) setNotificationSettingsPending(false);
+    } else {
+      result = await api('/notifications/settings', { action: 'get' });
+    }
+    if (result && result.settings) {
+      _notificationSettings = normalizeNotificationSettings(result.settings);
+      cacheNotificationSettings();
+    }
+    _settingsLoaded = true;
+    renderSettingsRows();
+    renderNotificationSettings();
+    return _notificationSettings;
+  }
+
+  async function saveNotificationSettings(patch) {
+    var next = normalizeNotificationSettings({
+      pushEnabled: Object.prototype.hasOwnProperty.call(patch || {}, 'pushEnabled') ? patch.pushEnabled : _notificationSettings.pushEnabled,
+      categories: Object.assign({}, _notificationSettings.categories, patch && patch.categories || {})
+    });
+    _notificationSettings = next;
+    cacheNotificationSettings();
+    renderSettingsRows();
+    renderNotificationSettings();
+    var result = await api('/notifications/settings', {
+      action: 'set', pushEnabled: next.pushEnabled, categories: next.categories
+    });
+    var synced = !!(result && result.settings);
+    setNotificationSettingsPending(!synced);
+    if (result && result.settings) {
+      _notificationSettings = normalizeNotificationSettings(result.settings);
+      cacheNotificationSettings();
+      renderSettingsRows();
+      renderNotificationSettings();
+    }
+    return { settings: _notificationSettings, synced: synced };
   }
 
   function routineTimes() {
@@ -198,6 +289,22 @@ window.MuneaNotify = (function () {
     return items;
   }
 
+  function notificationCategory(eventType) {
+    var categories = {
+      medication_due: 'medication', medication_missed: 'medication',
+      clinic_upcoming: 'clinic', family_relay: 'family', family_invitation: 'family',
+      family_activity: 'family', health_alert: 'safety'
+    };
+    return categories[String(eventType || '')] || 'family';
+  }
+
+  function enabledNotificationItems() {
+    if (!_notificationSettings.pushEnabled) return [];
+    return buildItems().filter(function (item) {
+      return _notificationSettings.categories[notificationCategory(item.eventType)] !== false;
+    });
+  }
+
   function emitPermission() {
     try { window.dispatchEvent(new CustomEvent('munea:notification-permission', { detail: Object.assign({}, _permission) })); } catch (e) {}
     renderSettingsRows();
@@ -207,79 +314,148 @@ window.MuneaNotify = (function () {
     return '<span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>';
   }
 
+  function removeLegacySettingsRows() {
+    ['notificationPermissionRow', 'notificationPrivacyRow', 'notificationTestRow', 'notificationInboxRow'].forEach(function (id) {
+      var element = document.getElementById(id);
+      if (element) element.remove();
+    });
+  }
+
+  function notificationMasterOn() {
+    return !!(_notificationSettings.pushEnabled && _permission.granted);
+  }
+
   function renderSettingsRows() {
     var anchor = document.getElementById('safetyRow');
     if (!anchor || !anchor.parentNode) return;
-    var medicationCopy = document.querySelector('#medEntrySettings .sr-main small');
-    if (medicationCopy) medicationCopy.textContent = '到時間通知你，開啟 App 可查看與確認';
-    var safetyCopy = document.querySelector('#safetyRow .sr-main small');
-    if (safetyCopy) safetyCopy.textContent = '異常事件保留在通知中心，並通知授權家人';
-    var row = document.getElementById('notificationPermissionRow');
+    removeLegacySettingsRows();
+    anchor.hidden = true;
+    anchor.style.display = 'none';
+    var row = document.getElementById('notificationCenterRow');
     if (!row) {
       row = document.createElement('div');
       row.className = 'set-row';
-      row.id = 'notificationPermissionRow';
+      row.id = 'notificationCenterRow';
       row.style.cursor = 'pointer';
-      row.innerHTML = settingsIcon() + '<span class="sr-main">通知與提醒<small id="notificationPermissionHelp"></small></span><span class="sr-arrow"><b id="notificationPermissionLabel"></b> ›</span>';
+      row.innerHTML = settingsIcon() + '<span class="sr-main">通知中心<small>用藥、看診、家人與安全通知</small></span><span class="sr-arrow"><b id="notificationCenterState"></b> ›</span>';
       anchor.parentNode.insertBefore(row, anchor);
-      row.addEventListener('click', function () {
-        if (_permission.status === 'denied') void window.MuneaNotify.openSettings();
-        else if (!_permission.granted) void requestPermission().then(sync);
-      });
+      row.addEventListener('click', function () { void openNotificationSettings(); });
     }
-    var label = document.getElementById('notificationPermissionLabel');
-    var help = document.getElementById('notificationPermissionHelp');
-    if (label) label.textContent = _permission.granted ? '已開啟' : '未開啟';
-    if (help) help.textContent = _permission.status === 'denied' ? '已被拒絕，點此到 iPhone 設定開啟' : (_permission.granted ? '用藥、看診與家人消息會通知你' : '開啟後才不會錯過重要提醒');
+    var state = document.getElementById('notificationCenterState');
+    if (state) state.textContent = notificationMasterOn() ? '已開啟' : '已關閉';
+  }
 
-    var privacy = document.getElementById('notificationPrivacyRow');
-    if (_permission.granted && !privacy) {
-      privacy = document.createElement('div');
-      privacy.className = 'set-row';
-      privacy.id = 'notificationPrivacyRow';
-      privacy.style.cursor = 'pointer';
-      privacy.innerHTML = '<span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">鎖定畫面內容<small>預設隱藏藥名與健康細節</small></span><span class="sr-on" id="notificationPrivacyState"><span class="d"></span><span id="notificationPrivacyLabel"></span></span>';
-      anchor.parentNode.insertBefore(privacy, anchor);
-      privacy.addEventListener('click', function () {
-        var enabled = localStorage.getItem('munea.notification.showSensitive') === '1';
-        localStorage.setItem('munea.notification.showSensitive', enabled ? '0' : '1');
-        renderSettingsRows();
-        sync();
-        if (_lastToken) void registerToken(_lastToken);
-      });
-    } else if (!_permission.granted && privacy) privacy.remove();
-    if (privacy) {
-      var detailed = localStorage.getItem('munea.notification.showSensitive') === '1';
-      var state = document.getElementById('notificationPrivacyState');
-      var privacyLabel = document.getElementById('notificationPrivacyLabel');
-      if (state) state.classList.toggle('on', detailed);
-      if (privacyLabel) privacyLabel.textContent = detailed ? '顯示詳細' : '保護隱私';
+  function isDevelopmentProfile() {
+    return !!(window.MUNEA_DEV_CONFIG && window.MUNEA_DEV_CONFIG.enabled === true);
+  }
+
+  function ensureNotificationSettings() {
+    var mask = document.getElementById('notificationSettingsModal');
+    if (mask) return mask;
+    mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.id = 'notificationSettingsModal';
+    mask.setAttribute('aria-hidden', 'true');
+    mask.innerHTML = '<div class="modal notification-settings-modal" role="dialog" aria-modal="true" aria-labelledby="notificationSettingsTitle"><div class="modal-grab"></div><div class="auth-modal-head"><div><h2 id="notificationSettingsTitle">通知中心</h2><p class="modal-sub">選擇哪些事情要提醒你</p></div><button class="auth-close" id="notificationSettingsClose" type="button" aria-label="關閉">×</button></div><div class="notification-setting-list"><div class="notification-setting-row notification-master-row"><span><b>App 推播通知</b><small id="notificationPermissionMessage">開啟後才會收到提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="App 推播通知"><i></i></button></div><p class="notification-setting-heading">提醒類型</p><div class="notification-setting-row"><span><b>用藥提醒</b><small>到時間提醒你查看與確認</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="medication" aria-label="用藥提醒"><i></i></button></div><div class="notification-setting-row"><span><b>看診提醒</b><small>回診與看診行程提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="clinic" aria-label="看診提醒"><i></i></button></div><div class="notification-setting-row"><span><b>家人消息</b><small>家人傳話、邀請與家庭活動</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="family" aria-label="家人消息"><i></i></button></div><div class="notification-setting-row"><span><b>安全通知</b><small>只控制你自己手機；家人守護通知不受影響</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="safety" aria-label="安全通知"><i></i></button></div></div><p class="notification-privacy-note">鎖定畫面不顯示藥名、健康數值或家人訊息內容。</p><button class="notification-test-action" id="notificationTestAction" type="button" hidden>傳送測試通知</button><p class="notification-save-state" id="notificationSaveState" aria-live="polite"></p></div>';
+    document.body.appendChild(mask);
+    function close() {
+      mask.classList.remove('show');
+      mask.setAttribute('aria-hidden', 'true');
     }
+    mask.addEventListener('click', function (event) {
+      if (event.target === mask) close();
+      var toggle = event.target.closest('[data-notification-setting]');
+      if (toggle) void changeNotificationSetting(toggle.dataset.notificationSetting);
+    });
+    mask.querySelector('#notificationSettingsClose').addEventListener('click', close);
+    mask.querySelector('#notificationTestAction').addEventListener('click', async function () {
+      var label = mask.querySelector('#notificationSaveState');
+      if (label) label.textContent = '正在傳送測試通知…';
+      var result = await sendTestNotification();
+      if (label) label.textContent = result && result.scheduled !== false ? '測試通知已排程' : '測試通知未送出';
+    });
+    return mask;
+  }
 
-    var testRow = document.getElementById('notificationTestRow');
-    if (_permission.granted && !testRow) {
-      testRow = document.createElement('div');
-      testRow.className = 'set-row';
-      testRow.id = 'notificationTestRow';
-      testRow.style.cursor = 'pointer';
-      testRow.innerHTML = '<span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg></span><span class="sr-main">測試通知<small id="notificationSyncStatus">立即傳送一則安全的測試通知</small></span><span class="sr-arrow">傳送 ›</span>';
-      anchor.parentNode.insertBefore(testRow, anchor);
-      testRow.addEventListener('click', function () { void sendTestNotification(); });
-    } else if (!_permission.granted && testRow) testRow.remove();
-    var syncStatus = document.getElementById('notificationSyncStatus');
-    if (syncStatus && _lastSync) {
-      syncStatus.textContent = _lastSync.error ? '最近一次排程失敗，請再試一次' : ('最近排程 ' + Number(_lastSync.scheduled || 0) + ' 則提醒');
+  function renderNotificationSettings() {
+    var mask = document.getElementById('notificationSettingsModal');
+    if (!mask) return;
+    var masterOn = notificationMasterOn();
+    mask.querySelectorAll('[data-notification-setting]').forEach(function (button) {
+      var key = button.dataset.notificationSetting;
+      var on = key === 'pushEnabled' ? masterOn : !!_notificationSettings.categories[key];
+      button.setAttribute('aria-checked', on ? 'true' : 'false');
+      button.classList.toggle('on', on);
+      button.disabled = _settingsSaving || (key !== 'pushEnabled' && !masterOn);
+    });
+    var permissionMessage = mask.querySelector('#notificationPermissionMessage');
+    if (permissionMessage) {
+      permissionMessage.textContent = _permission.status === 'denied'
+        ? '已被 iPhone 關閉，點開關前往系統設定'
+        : (masterOn ? '重要提醒會送到這支手機' : '開啟時才會詢問 iPhone 通知權限');
     }
+    var testAction = mask.querySelector('#notificationTestAction');
+    if (testAction) testAction.hidden = !isDevelopmentProfile();
+  }
 
-    var inbox = document.getElementById('notificationInboxRow');
-    if (!inbox) {
-      inbox = document.createElement('div');
-      inbox.className = 'set-row';
-      inbox.id = 'notificationInboxRow';
-      inbox.style.cursor = 'pointer';
-      inbox.innerHTML = '<span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M3 14h4l2 3h6l2-3h4"/></svg></span><span class="sr-main">通知中心<small>提醒、家人傳話與照護事件都會保留</small></span><span class="sr-arrow"><b id="notificationUnreadCount"></b> ›</span>';
-      anchor.parentNode.insertBefore(inbox, anchor);
-      inbox.addEventListener('click', function () { void openNotificationInbox(); });
+  async function openNotificationSettings() {
+    var mask = ensureNotificationSettings();
+    mask.classList.add('show');
+    mask.setAttribute('aria-hidden', 'false');
+    renderNotificationSettings();
+    if (!_settingsLoaded) await loadNotificationSettings();
+  }
+
+  async function disableCurrentDevice() {
+    var deviceId = null;
+    try { deviceId = localStorage.getItem('munea.pushDeviceId'); } catch (e) {}
+    if (!deviceId) {
+      _lastToken = null;
+      return true;
+    }
+    var result = await api('/push/devices', { action: 'unregister', id: deviceId });
+    if (result && result.ok) {
+      _lastToken = null;
+      try { localStorage.removeItem('munea.pushDeviceId'); } catch (e) {}
+      return true;
+    }
+    return false;
+  }
+
+  async function changeNotificationSetting(key) {
+    if (_settingsSaving) return;
+    _settingsSaving = true;
+    renderNotificationSettings();
+    var message = document.getElementById('notificationSaveState');
+    if (message) message.textContent = '';
+    try {
+      if (key === 'pushEnabled') {
+        var enable = !notificationMasterOn();
+        if (enable && _permission.status === 'denied') {
+          if (message) message.textContent = '請在 iPhone 設定中允許沐寧通知';
+          await window.MuneaNotify.openSettings();
+          return;
+        }
+        if (enable && !_permission.granted) await requestPermission();
+        if (enable && !_permission.granted) {
+          if (message) message.textContent = '尚未取得通知權限';
+          return;
+        }
+        var saved = await saveNotificationSettings({ pushEnabled: enable });
+        var deviceSynced = enable ? true : await disableCurrentDevice();
+        if (message) message.textContent = saved.synced && deviceSynced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
+      } else {
+        if (!notificationMasterOn() || !Object.prototype.hasOwnProperty.call(_notificationSettings.categories, key)) return;
+        var categories = {};
+        categories[key] = !_notificationSettings.categories[key];
+        var categorySaved = await saveNotificationSettings({ categories: categories });
+        if (message) message.textContent = categorySaved.synced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
+      }
+      sync();
+    } finally {
+      _settingsSaving = false;
+      renderSettingsRows();
+      renderNotificationSettings();
     }
   }
 
@@ -306,7 +482,7 @@ window.MuneaNotify = (function () {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Taipei',
         permissionStatus: status.status,
         notificationsEnabled: !!status.granted,
-        showSensitiveContent: localStorage.getItem('munea.notification.showSensitive') === '1'
+        showSensitiveContent: false
       }
     });
     if (result && result.device && result.device.id) {
@@ -503,29 +679,34 @@ window.MuneaNotify = (function () {
     if (!native) return;
     clearTimeout(_syncTimer);
     _syncTimer = setTimeout(async function () {
-      var items = buildItems();
       var status = await refreshPermission();
-      if (items.length && status.status === 'not_determined') status = await requestPermission();
       if (!status.granted) return;
+      var items = enabledNotificationItems();
       try {
         _lastSync = await native.sync({
           items: items,
-          showSensitiveContent: localStorage.getItem('munea.notification.showSensitive') === '1'
+          showSensitiveContent: false
         });
         renderSettingsRows();
+        renderNotificationSettings();
       } catch (e) {
         _lastSync = { error: true };
         renderSettingsRows();
+        renderNotificationSettings();
       }
     }, 800);
   }
 
   async function boot() {
     var native = plugin();
+    var status = _permission;
     if (native) {
       await setupListeners();
-      var status = await refreshPermission();
-      if (status.granted && typeof native.registerRemoteNotifications === 'function') {
+      status = await refreshPermission();
+    }
+    await loadNotificationSettings();
+    if (native) {
+      if (_notificationSettings.pushEnabled && status.granted && typeof native.registerRemoteNotifications === 'function') {
         var registration = await native.registerRemoteNotifications();
         if (registration && registration.token) await registerToken(registration);
       }
@@ -537,7 +718,7 @@ window.MuneaNotify = (function () {
 
   window.addEventListener('munea:auth-state', function (event) {
     if (event.detail && event.detail.status === 'signed-in') {
-      if (_lastToken) void registerToken(_lastToken);
+      if (_notificationSettings.pushEnabled && _lastToken) void registerToken(_lastToken);
       void boot();
     } else {
       var badge = document.getElementById('notificationUnreadCount');
@@ -545,6 +726,7 @@ window.MuneaNotify = (function () {
     }
   });
   function bootWhenReady() {
+    restoreNotificationSettings();
     renderSettingsRows();
     if (_pendingOpen) void handleOpen(_pendingOpen);
     void boot();

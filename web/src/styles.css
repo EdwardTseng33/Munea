@@ -364,6 +364,23 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .set-row .sr-arrow { margin-left: auto; color: var(--muted); font-size: 15px; flex-shrink: 0; white-space: nowrap; }
 .set-row .sr-main { flex: 1; min-width: 0; font-weight: 700; }
 .set-row .sr-main small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.notification-settings-modal { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+.notification-setting-list { border-top: 1px solid var(--line); }
+.notification-setting-row { min-height: 68px; display: flex; align-items: center; gap: 16px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+.notification-setting-row > span { flex: 1; min-width: 0; }
+.notification-setting-row b { display: block; font-family: var(--display); font-size: 16px; color: var(--ink); }
+.notification-setting-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.notification-master-row { min-height: 76px; }
+.notification-setting-heading { margin: 18px 2px 2px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.notification-switch { width: 50px; height: 30px; flex: 0 0 50px; position: relative; border: 0; border-radius: 999px; background: var(--line); padding: 0; cursor: pointer; transition: background .18s ease; }
+.notification-switch i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 7px rgba(20,35,32,.2); transition: transform .18s ease; }
+.notification-switch.on { background: var(--teal); }
+.notification-switch.on i { transform: translateX(20px); }
+.notification-switch:disabled { opacity: .42; cursor: default; }
+.notification-switch:focus-visible { outline: 3px solid rgba(58,168,160,.25); outline-offset: 2px; }
+.notification-privacy-note { margin: 14px 2px 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.notification-test-action { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--teal-d); border-radius: 12px; background: transparent; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
+.notification-save-state { min-height: 20px; margin-top: 8px; text-align: center; color: var(--teal-d); font-size: 12.5px; }
 .provider-consent-card { margin-top: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid rgba(58,168,160,.14); box-shadow: var(--shadow-sm); }
 .provider-consent-card[data-consent="agreed"] { border-color: rgba(58,168,160,.28); background: #F5FBF8; }
 .provider-consent-head { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
