@@ -1,12 +1,12 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新可測包**：獨立分支 `codex/tokyo-app-package-1.0.10` 已同步 `origin/main@d17ea6a` 與 1.0.9 整合內容，App／Web 正式 Supabase source 改為東京 `fespbkdwafueyonppzwq`，版本為 `1.0.10 (Build 15)`。目前 Edward iPhone 安裝的是「真帳號／正式 Gateway QA 包」：Google OAuth 已強制顯示帳號選擇、登出改為只清除本機 session，完整 `test:launch`、東京／雪梨 marker、防開發 profile、防 Gateway 繞過、後端 secret 防漏、Capacitor sync、Xcode 26.6 簽章與安裝啟動均 PASS；Google 帳號選擇畫面、Apple 登入與真 token 撥號仍等待 Edward 手機確認。原 Pro、1,000 點、三位家人與 Voice canary fixture 包仍保留在 Mac 產物，真人 Gate 後可直接裝回；尚未合併 main，也不是 App Store 候選包。
+> **2026-07-15 最新整合候選**：PR #41、#42、#52 已依序進入 `main@1215d8b`；PR #51 的 `1.0.10 (Build 15)` 最終來源已再合入該 main，完整保留東京 Supabase `fespbkdwafueyonppzwq`、Google 強制選擇帳號、本機登出、用藥同步、家庭傳話與通知平台。完整 `test:launch`、東京／雪梨 marker、後端 secret 防漏、Capacitor sync、Xcode 26.6 原生檢查、全新 arm64 實機簽章與包內來源核對均 PASS。這只代表程式與包版候選通過；014／015／016 migration、Brain／Voice、APNs secret／排程與 App Store 上傳尚未執行，Google／Apple、拍照、StoreKit、APNs 真推播及全語音真人 Gate 仍是 ❌。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
 > **2026-07-15 聲畫回歸覆蓋**：Voice revision `00035-lur` 已以 0% 流量 canary 建立，開場在 1.578 秒後有效出聲並完成回合；但 Mac 合成 ASR 探針仍 FAIL，因此沒有升為 100% 正式流量。GLOWS Avatar 已配對更新 server/core，首段改為真實 PCM 到達後 1 秒共同暖機、後續回合 0.5 秒；對外健康 3/3、active=0。Edward iPhone 已安裝並啟動 `1.0.8 (Build 13)` 開發包，固定連 Voice canary，包含單播放器防雙音與同日開場去重。嘴型／斷續／雙音／話量能量／多次撥號全部等待 Edward 真機 Gate，目前仍是 ❌。
 >
-> **功能來源保留**：1.0.8 整合包含 PR #41／#42 的用藥紀錄一致化、指定家人傳話與提醒成功回執；PR、Supabase 014／015 migration 與 Brain 正式部署仍未完成。
+> **功能來源保留**：#41 用藥紀錄一致化、#42 指定家人傳話與提醒成功回執、#52 通知平台程式均已進 main；Supabase 014／015／016 migration、Brain／Voice 正式部署與 APNs 生產設定仍未完成。
 
 > **2026-07-15 現況覆蓋**：目前候選版是 `1.0.6 (Build 11)`。GitHub `main@ec40412` 已合併 PR #36 的訂閱通知、本人資料匯出與 Privacy Manifest，以及 PR #37 的全語音 S2S／ASR／插話／靜音修正；main 的 App／iOS 內容也已和產出 IPA 時的來源逐項比對一致。Edward iPhone 已覆蓋安裝並成功啟動開發包，保留 TEST、Pro、1,000 點與家人假資料；正式 App Store IPA 也已獨立匯出，確認不含測試帳號、假資料、自動登入或開發直連，SHA-256 為 `a95b637202913a7a56715ac46750697f88c30383d54211150283f4de3774d9ca`。固定 PCM 語音的 S2S、台灣繁中 ASR、插話、30 秒低噪音與句尾保護均自動 PASS；但真人 10 分鐘長聊、五次插話、五組靜音、開場變化與發音仍是 ❌ 未通過，Voice／Brain 新版也尚未部署，IPA 尚未上傳 App Store Connect。正式方案為 Free／Plus／Pro；Plus 150 點、Pro 300 點，現行 App 定價已由 Edward 確認正確。下方舊版本、價格與包版內容只是歷史紀錄。
 
