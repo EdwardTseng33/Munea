@@ -22,6 +22,8 @@
 
 ## 一眼總覽
 
+**77－🔒 開工認領（7/16 凌晨 Windows 蘇菲 · 分支 `feat/notif-center-and-family-status`）**：Edward 7/16 指示兩案：①全家狀態「平穩／安好」雙標籤混淆——UIUX 重設計＋心情資料真串接（家庭帳本 vitals 多帶今日心情標籤、引擎零改動）②通知中心四修——改全螢幕子頁（沿用 reader-page 版型、不再彈窗）、推播開關與 iPhone 系統權限雙向連動（回 App 自動補開）、安全通知「通知對象（緊急聯絡人）」入口接回通知中心內、傳送測試通知正式版整顆移除。**認領檔案範圍**：`web/src/notify.js`、`web/src/app.js`（家人頁 renderFamRoster／pushOwnHealthLog／loadMoodWeekReal 區）、`web/src/styles.css`、`web/index.html`（快取戳記＋safetyModal 層級）、`web/src/version.js`、`package.json`、`scripts/test-notification-platform.js`。**預計版號 1.0.23**（UX 修正＋既有功能收尾、沿用 1.0.x 車次）。**需 `cap sync`＋Mac 重打包**；不動 `ios/` 原生、不動 engine、不部署雲端。走 PR 不直推 main。
+
 **76－App 1.0.22 Build 27／最新 main 通知中心整合包（7/15 Codex）**：①✅ 來源為 `origin/main@0e88a9e`，PR #82 聊聊穩定／診斷與 PR #83 通知中心均已合併，當時 GitHub 開啟 PR 為 0。②✅ App／npm／Xcode／開發 fixture 統一為 `1.0.22 (27)`，保留 Pro、1,000 點與家人假資料；通知中心可分用藥、看診、家人、安全四類控制。③✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 Apple Development 簽章及成品東京／fixture／secret 防漏全部 PASS。④✅ Edward iPhone 已安裝、手機回讀 `1.0.22 (27)` 並啟動 PASS。⑤❌ Voice 查資料狀態機尚未部署，手機仍使用舊查詢路徑；通知 App 畫面、APNs 四類真推播、Voice 長聊、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳仍待真人／正式 Gate。本輪未部署 Brain／Voice／Gateway，未操作 RunPod／GLOWS。
 
 **75－App 1.0.21 Build 26／長聊斷續與漏收音修正（7/15 Codex，PR #82）**：①✅ 1.0.20 真機可撥通、嘴型大致對齊；❌ Hello 仍斷續、長聊偶發斷續、使用者偶發需重複說話。②✅ 手機診斷找到首個音訊僅 `2 bytes`；App 現在累積至至少 20ms 才啟動起播。③✅ 同線第一句保留 1.1s 對嘴等待，後續回合改 0.6s，聲音餘韻改 0.12s，減少誤把使用者當成插話而壓掉。④✅ 新增 `detected/recognized/unrecognized` 收音事件，不保存錄音或逐字稿。⑤✅ 修正開發版 Voice URL 設定未生效，1.0.21 維持目前可撥通 staging，不切慢速舊 canary。⑥✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 簽章、東京／測試資料／secret 防漏 PASS；iPhone 已安裝、回讀 `1.0.21 (26)` 並啟動。⑦❌ 三項語音真人 Gate 待 Edward 重測；GLOWS 有 1.83–2.05s 偶發運算尖峰，服務端緩衝修正尚未 canary，本輪未部署／重啟 Brain、Voice、Gateway、RunPod 或 GLOWS。
