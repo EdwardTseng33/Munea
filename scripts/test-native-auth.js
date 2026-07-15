@@ -7,8 +7,10 @@ let browserClosed = 0;
 const oauthRequests = [];
 let exchangedCode = '';
 let appleNativeCalls = 0;
-let appleIdTokenRequest = null;
-let appleProfileUpdate = null;
+let googleNativeCalls = 0;
+let googleNativeSignOutCalls = 0;
+let lastIdTokenRequest = null;
+let lastProfileUpdate = null;
 let signOutRequest = null;
 let createClientCalls = 0;
 let currentSession = null;
@@ -36,11 +38,11 @@ const client = {
       return { data: { url: 'https://example.supabase.co/oauth' }, error: null };
     },
     async signInWithIdToken(request) {
-      appleIdTokenRequest = request;
+      lastIdTokenRequest = request;
       currentSession = {
         ...signedInSession,
-        access_token: 'apple-access-token',
-        user: { ...signedInSession.user, app_metadata: { provider: 'apple' } },
+        access_token: `${request.provider}-access-token`,
+        user: { ...signedInSession.user, app_metadata: { provider: request.provider } },
       };
       return {
         data: { session: currentSession },
@@ -48,7 +50,7 @@ const client = {
       };
     },
     async updateUser(request) {
-      appleProfileUpdate = request;
+      lastProfileUpdate = request;
       return { data: { user: signedInSession.user }, error: null };
     },
     async exchangeCodeForSession(code) {
@@ -104,6 +106,23 @@ const windowObject = {
           };
         },
       },
+      GoogleSignIn: {
+        async signIn() {
+          googleNativeCalls += 1;
+          return {
+            state: 'authorized',
+            identityToken: 'google-identity-token',
+            givenName: 'Munea',
+            familyName: 'Tester',
+            fullName: 'Munea Tester',
+            avatarUrl: 'https://example.com/avatar.png',
+          };
+        },
+        async signOut() {
+          googleNativeSignOutCalls += 1;
+          return { ok: true };
+        },
+      },
     },
   },
   dispatchEvent(event) { authEvents.push(event); },
@@ -134,37 +153,41 @@ function expect(condition, message) {
   expect(typeof appUrlOpen === 'function', 'native appUrlOpen listener was not registered');
 
   const started = await windowObject.MuneaAuth.signInWithGoogle();
-  expect(started.ok, 'native Google OAuth did not start');
-  expect(oauthRequests[0].options.redirectTo === 'munea://auth/callback', 'native OAuth redirect is not the app deep link');
-  expect(oauthRequests[0].options.skipBrowserRedirect === true, 'native OAuth would still navigate the embedded WebView');
-  expect(oauthRequests[0].options.queryParams.prompt === 'select_account', 'Google OAuth would silently reuse the previous account');
-  expect(browserOpened === 'https://example.supabase.co/oauth', 'OAuth URL was not opened with the native browser');
-
-  await appUrlOpen({ url: 'munea://auth/callback?code=pkce-code' });
-  await new Promise(resolve => setTimeout(resolve, 0));
-  expect(exchangedCode === 'pkce-code', 'PKCE authorization code was not exchanged');
-  expect(browserClosed === 1, 'native browser was not closed after callback');
-  expect(windowObject.MuneaAuth.state().status === 'signed-in', 'native callback did not publish a signed-in session');
+  expect(started.ok, 'native Google Sign-In did not complete');
+  expect(googleNativeCalls === 1, 'native Google plugin was not called exactly once');
+  expect(oauthRequests.length === 0, 'native Google incorrectly used the browser OAuth path');
+  expect(browserOpened === '', 'native Google opened the Supabase browser flow');
+  expect(lastIdTokenRequest && lastIdTokenRequest.provider === 'google', 'Google ID token was not sent to Supabase');
+  expect(lastIdTokenRequest.token === 'google-identity-token', 'Google identity token was changed');
+  expect(lastProfileUpdate && lastProfileUpdate.data.full_name === 'Munea Tester', 'Google profile name was not saved');
+  expect(lastProfileUpdate.data.avatar_url === 'https://example.com/avatar.png', 'Google profile photo was not saved');
+  expect(windowObject.MuneaAuth.state().status === 'signed-in', 'native Google session was not published');
+  expect(windowObject.MuneaAuth.state().provider === 'google', 'native Google provider was not published');
   const eventsAfterSignIn = authEvents.length;
-  expect(await windowObject.MuneaAuth.getAccessToken() === 'access-token', 'signed-in access token was not returned');
+  expect(await windowObject.MuneaAuth.getAccessToken() === 'google-access-token', 'signed-in access token was not returned');
   expect(authEvents.length === eventsAfterSignIn, 'equivalent Supabase session caused a duplicate auth-state event');
+
+  const googleSignedOut = await windowObject.MuneaAuth.signOut();
+  expect(googleSignedOut.ok, 'Google local sign out did not complete');
+  expect(googleNativeSignOutCalls === 1, 'native Google session was not cleared on sign out');
 
   const apple = await windowObject.MuneaAuth.signInWithApple();
   expect(apple.ok, 'native Apple sign in did not complete');
   expect(appleNativeCalls === 1, 'native Apple plugin was not called exactly once');
-  expect(oauthRequests.length === 1, 'Apple incorrectly used the browser OAuth path');
-  expect(appleIdTokenRequest && appleIdTokenRequest.provider === 'apple', 'Apple ID token was not sent to Supabase');
-  expect(appleIdTokenRequest.token === 'apple-identity-token', 'Apple identity token was changed');
-  expect(appleIdTokenRequest.nonce === 'raw-apple-nonce', 'Apple raw nonce was not sent to Supabase');
-  expect(appleProfileUpdate && appleProfileUpdate.data.full_name === 'Munea Tester', 'first Apple profile name was not saved');
+  expect(oauthRequests.length === 0, 'Apple incorrectly used the browser OAuth path');
+  expect(lastIdTokenRequest && lastIdTokenRequest.provider === 'apple', 'Apple ID token was not sent to Supabase');
+  expect(lastIdTokenRequest.token === 'apple-identity-token', 'Apple identity token was changed');
+  expect(lastIdTokenRequest.nonce === 'raw-apple-nonce', 'Apple raw nonce was not sent to Supabase');
+  expect(lastProfileUpdate && lastProfileUpdate.data.full_name === 'Munea Tester', 'first Apple profile name was not saved');
   expect(windowObject.MuneaAuth.state().provider === 'apple', 'Apple session was not published');
 
   const signedOut = await windowObject.MuneaAuth.signOut();
   expect(signedOut.ok, 'local sign out did not complete');
   expect(signOutRequest && signOutRequest.scope === 'local', 'sign out would revoke sessions on other devices');
+  expect(googleNativeSignOutCalls === 1, 'Apple sign out incorrectly cleared Google Sign-In again');
   expect(windowObject.MuneaAuth.state().status === 'guest', 'local sign out did not publish guest state');
 
-  console.log('Native Google OAuth and Apple ID token PASS');
+  console.log('Native Google and Apple ID token PASS');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;
