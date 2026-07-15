@@ -41,4 +41,10 @@ if ! xcodebuild \
   exit 1
 fi
 
+if ! grep -Eq '^[[:space:]]*TARGETED_DEVICE_FAMILY = 1$' "$OUTPUT"; then
+  echo "FAIL Xcode target must support iPhone only (TARGETED_DEVICE_FAMILY = 1)."
+  exit 1
+fi
+
 echo "PASS build settings resolved: $OUTPUT"
+echo "PASS Xcode target supports iPhone only."

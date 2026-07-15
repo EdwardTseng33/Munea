@@ -61,6 +61,7 @@ PHOTO_USAGE="$(plutil -extract NSPhotoLibraryUsageDescription raw "$APP_PATH/Inf
 GOOGLE_IOS_CLIENT_ID="$(plutil -extract GIDClientID raw "$APP_PATH/Info.plist" 2>/dev/null || true)"
 GOOGLE_SERVER_CLIENT_ID="$(plutil -extract GIDServerClientID raw "$APP_PATH/Info.plist" 2>/dev/null || true)"
 GOOGLE_URL_TYPES="$(plutil -extract CFBundleURLTypes xml1 -o - "$APP_PATH/Info.plist" 2>/dev/null || true)"
+DEVICE_FAMILIES="$(plutil -extract UIDeviceFamily json -o - "$APP_PATH/Info.plist" 2>/dev/null || true)"
 
 if [ ! -f "$AUTH_CONFIG_PATH" ] \
   || grep -q 'MUNEA_IOS_DEVELOPMENT_PROFILE_START' "$AUTH_CONFIG_PATH" \
@@ -109,8 +110,14 @@ if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ] \
   exit 1
 fi
 
+if [ "$DEVICE_FAMILIES" != '[1]' ]; then
+  echo "FAIL exported IPA must support iPhone only; UIDeviceFamily=$DEVICE_FAMILIES"
+  exit 1
+fi
+
 echo "PASS IPA excludes development fixtures and contains the latest Web design assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
+echo "PASS IPA supports iPhone only."
 echo "PASS App Store package exported."
 echo "Output: $FINAL_EXPORT_PATH"
