@@ -1,0 +1,80 @@
+{
+  "hosting": {
+    "target": "public",
+    "public": "app-site",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "vercel.json"
+    ],
+    "trailingSlash": false,
+    "redirects": [
+      {
+        "regex": "/privacy\\.html",
+        "destination": "/privacy",
+        "type": 301
+      },
+      {
+        "regex": "/terms\\.html",
+        "destination": "/terms",
+        "type": 301
+      },
+      {
+        "regex": "/support\\.html",
+        "destination": "/support",
+        "type": 301
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/privacy",
+        "destination": "/privacy.html"
+      },
+      {
+        "source": "/terms",
+        "destination": "/terms.html"
+      },
+      {
+        "source": "/support",
+        "destination": "/support.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "SAMEORIGIN"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=()"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(css|js|jpg|jpeg|png|webp|gif|svg|mp4|woff2)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
+      }
+    ]
+  }
+}

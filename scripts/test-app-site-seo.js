@@ -9,6 +9,10 @@ function read(relativePath) {
   return fs.readFileSync(path.join(appSite, relativePath), "utf8");
 }
 
+function readRoot(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), "utf8");
+}
+
 function countMatches(value, pattern) {
   return [...value.matchAll(pattern)].length;
 }
@@ -17,31 +21,53 @@ const verificationFile = "googleaa0c51d3d9781eb5.html";
 const verificationToken = "google-site-verification: googleaa0c51d3d9781eb5.html";
 assert.equal(read(verificationFile).trim(), verificationToken);
 
-const vercelConfig = JSON.parse(read("vercel.json"));
+const firebaseRc = JSON.parse(readRoot(".firebaserc"));
+assert.equal(firebaseRc.projects?.default, "gen-lang-client-0229303523");
+assert.deepEqual(
+  firebaseRc.targets?.["gen-lang-client-0229303523"]?.hosting?.public,
+  ["munea-public"],
+);
+
+const firebaseConfig = JSON.parse(readRoot("firebase.json"));
+const hosting = firebaseConfig.hosting;
+assert.equal(hosting.target, "public");
+assert.equal(hosting.public, "app-site");
 assert.equal(
-  Object.hasOwn(vercelConfig, "cleanUrls"),
+  Object.hasOwn(hosting, "cleanUrls"),
   false,
   "cleanUrls redirects the exact Google verification file away from its .html URL",
 );
-assert.equal(vercelConfig.trailingSlash, false);
+assert.equal(hosting.trailingSlash, false);
+assert.ok(hosting.ignore.includes("vercel.json"));
 
 const publicPages = ["privacy", "terms", "support"];
 for (const page of publicPages) {
   assert.ok(
-    vercelConfig.redirects?.some(
+    hosting.redirects?.some(
       (route) =>
-        route.source === `/${page}.html` &&
+        route.regex === `/${page}\\.html` &&
         route.destination === `/${page}` &&
-        route.permanent === true,
+        route.type === 301,
     ),
     `Missing permanent redirect for /${page}.html`,
   );
   assert.ok(
-    vercelConfig.rewrites?.some(
+    hosting.rewrites?.some(
       (route) => route.source === `/${page}` && route.destination === `/${page}.html`,
     ),
     `Missing clean public route for /${page}`,
   );
+}
+
+const globalHeaders = hosting.headers?.find((entry) => entry.source === "**")?.headers || [];
+for (const key of [
+  "Strict-Transport-Security",
+  "X-Content-Type-Options",
+  "X-Frame-Options",
+  "Referrer-Policy",
+  "Permissions-Policy",
+]) {
+  assert.ok(globalHeaders.some((header) => header.key === key), `Missing hosting header ${key}`);
 }
 
 const sitemap = read("sitemap.xml");

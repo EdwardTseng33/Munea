@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "gen-lang-client-0229303523"
+  },
+  "targets": {
+    "gen-lang-client-0229303523": {
+      "hosting": {
+        "public": [
+          "munea-public"
+        ]
+      }
+    }
+  }
+}
