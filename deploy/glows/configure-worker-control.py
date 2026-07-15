@@ -9,10 +9,19 @@ from pathlib import Path
 
 
 ALLOWED_KEYS = {
+    "MUNEA_APP_KEY",
     "MUNEA_ALLOW_LEGACY_APP_KEY",
     "MUNEA_CALL_CONTROL_URL",
     "MUNEA_CALL_TOKEN_SECRET",
+    "MUNEA_FH_CHAR_A05",
+    "MUNEA_FH_CHAR_A06",
+    "MUNEA_FH_CKPT_DIR",
+    "MUNEA_FH_FRAME_SIZE",
+    "MUNEA_FH_REPO",
+    "MUNEA_FH_SLOTS",
+    "MUNEA_FH_WAV2VEC_DIR",
     "MUNEA_GATEWAY_ADMIN_KEY",
+    "MUNEA_PYTHON_BIN",
     "MUNEA_WORKER_HEARTBEAT_SECONDS",
     "MUNEA_WORKER_ID",
 }
@@ -44,7 +53,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--env-file", type=Path, required=True)
     args = parser.parse_args()
-    raw = json.load(sys.stdin)
+    # PowerShell pipelines can prefix UTF-8 JSON with a BOM. Accept it so the
+    # same secret-safe configurator works from both Windows and Linux hosts.
+    raw = json.loads(sys.stdin.buffer.read().decode("utf-8-sig"))
     values = {str(key): str(value) for key, value in raw.items()}
     changed = update_env(args.env_file, values)
     print("updated control settings: " + ",".join(changed))

@@ -11,6 +11,7 @@ import sys
 import time
 import urllib.request
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Mapping, Protocol
 
 from slack_notify import DEDUP_SECONDS, SlackNotifier, default_state_path
@@ -35,6 +36,8 @@ class AlertNotifier(Protocol):
         fields: Mapping[str, object] | None = None,
     ) -> bool: ...
 
+    def clear(self, key: str) -> None: ...
+
 
 class ObserveOnlyNotifier:
     """Record alert decisions in logs without contacting Slack."""
@@ -47,6 +50,9 @@ class ObserveOnlyNotifier:
         fields: Mapping[str, object] | None = None,
     ) -> bool:
         return False
+
+    def clear(self, key: str) -> None:
+        return None
 
 
 @dataclass(frozen=True)
@@ -273,16 +279,20 @@ def evaluate_alerts(
                 continue
             worker_id = str(worker.get("worker_id") or f"index-{index}")
             status = str(worker.get("status") or "unknown").lower()
+            terminal_statuses = {"terminated", "stopped", "exited", "disabled"}
             if status == "unhealthy":
                 alerts.append(Alert(
                     f"worker_unhealthy:{worker_id}",
                     "critical",
                     f"GPU worker {worker_id} reports unhealthy",
-                    {"status": status},
+                    {
+                        "provider": worker.get("provider") or worker.get("kind") or "unknown",
+                        "status": status,
+                    },
                 ))
             heartbeat_value = worker.get("last_heartbeat_at")
             heartbeat = _timestamp(heartbeat_value)
-            if status != "terminated" and heartbeat_value not in (None, "") and heartbeat is not None:
+            if status not in terminal_statuses and heartbeat_value not in (None, "") and heartbeat is not None:
                 age = max(0.0, current - heartbeat)
                 if age > stale_heartbeat_seconds:
                     alerts.append(Alert(
@@ -303,11 +313,42 @@ class GatewayMonitor:
         *,
         stale_heartbeat_seconds: float = DEFAULT_STALE_HEARTBEAT_SECONDS,
         clock: Callable[[], float] = time.time,
+        lifecycle_state_path: str | os.PathLike[str] | None = None,
     ) -> None:
         self.client = client
         self.notifier = notifier
         self.stale_heartbeat_seconds = stale_heartbeat_seconds
         self.clock = clock
+        self.lifecycle_state_path = Path(lifecycle_state_path) if lifecycle_state_path else None
+        self._active_alerts = self._load_lifecycle_state()
+
+    def _load_lifecycle_state(self) -> dict[str, dict[str, object]]:
+        if self.lifecycle_state_path is None:
+            return {}
+        try:
+            raw = json.loads(self.lifecycle_state_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, OSError, ValueError, TypeError):
+            return {}
+        if not isinstance(raw, dict):
+            return {}
+        return {
+            str(key): dict(value)
+            for key, value in raw.items()
+            if isinstance(value, dict)
+        }
+
+    def _save_lifecycle_state(self) -> None:
+        if self.lifecycle_state_path is None:
+            return
+        self.lifecycle_state_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.lifecycle_state_path.with_suffix(
+            self.lifecycle_state_path.suffix + ".tmp"
+        )
+        temporary.write_text(
+            json.dumps(self._active_alerts, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temporary, self.lifecycle_state_path)
 
     def run_once(self) -> dict[str, object]:
         result = self.client.poll()
@@ -318,17 +359,57 @@ class GatewayMonitor:
         )
         sent: list[str] = []
         suppressed: list[str] = []
+        recovered: list[str] = []
         notification_errors: dict[str, str] = {}
+        next_active: dict[str, dict[str, object]] = {}
         for alert in alerts:
+            previous = self._active_alerts.get(alert.key) or {}
+            alert_state = {
+                "severity": alert.severity,
+                "summary": alert.summary,
+                "fields": dict(alert.fields),
+                "notified": bool(previous.get("notified")),
+            }
+            if alert_state["notified"]:
+                suppressed.append(alert.key)
+                next_active[alert.key] = alert_state
+                continue
             try:
                 delivered = self.notifier.send(alert.key, alert.slack_message(), fields=alert.fields)
             except Exception as exc:
                 notification_errors[alert.key] = str(exc)
+                next_active[alert.key] = alert_state
                 continue
             (sent if delivered else suppressed).append(alert.key)
+            alert_state["notified"] = True
+            next_active[alert.key] = alert_state
+
+        for key in sorted(set(self._active_alerts) - set(next_active)):
+            previous = self._active_alerts[key]
+            if not previous.get("notified"):
+                continue
+            recovery_key = "recovered:" + key
+            recovery_fields = dict(previous.get("fields") or {})
+            recovery_fields["previous_severity"] = previous.get("severity") or "unknown"
+            try:
+                delivered = self.notifier.send(
+                    recovery_key,
+                    f"[Munea Gateway][RECOVERED] {previous.get('summary') or key}",
+                    fields=recovery_fields,
+                )
+                (recovered if delivered else suppressed).append(recovery_key)
+                self.notifier.clear(key)
+                self.notifier.clear(recovery_key)
+            except Exception as exc:
+                notification_errors[recovery_key] = str(exc)
+
+        self._active_alerts = next_active
+        self._save_lifecycle_state()
         return {
             "alert_keys": [alert.key for alert in alerts],
+            "active_alert_keys": sorted(next_active),
             "notification_errors": notification_errors,
+            "recovered": recovered,
             "sent": sent,
             "suppressed": suppressed,
         }
@@ -369,6 +450,10 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
     if notify and not webhook_url.strip():
         raise MonitorConfigError("MUNEA_SLACK_ALERT_WEBHOOK is required")
     state_path = os.environ.get("MUNEA_GATEWAY_MONITOR_STATE_FILE", default_state_path()).strip()
+    lifecycle_path = os.environ.get(
+        "MUNEA_GATEWAY_MONITOR_LIFECYCLE_FILE",
+        os.path.join(os.path.dirname(state_path), "munea-gateway-monitor-lifecycle.json"),
+    ).strip()
     client = GatewayClient(
         gateway_url,
         admin_key=os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
@@ -384,7 +469,12 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         )
     else:
         notifier = ObserveOnlyNotifier()
-    return GatewayMonitor(client, notifier, stale_heartbeat_seconds=stale), interval
+    return GatewayMonitor(
+        client,
+        notifier,
+        stale_heartbeat_seconds=stale,
+        lifecycle_state_path=lifecycle_path or None,
+    ), interval
 
 
 def _parser() -> argparse.ArgumentParser:

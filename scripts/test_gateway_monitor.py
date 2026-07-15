@@ -167,6 +167,7 @@ class EvaluationTests(unittest.TestCase):
             {"worker_id": "invalid", "status": "ready", "last_heartbeat_at": "not-a-time"},
             {"worker_id": "fresh", "status": "ready", "last_heartbeat_at": NOW - 120},
             {"worker_id": "terminated", "status": "terminated", "last_heartbeat_at": NOW - 999},
+            {"worker_id": "stopped", "status": "stopped", "last_heartbeat_at": NOW - 999},
         ]
         self.assertEqual(monitor.evaluate_alerts(result, now=NOW), [])
 
@@ -233,6 +234,18 @@ class SlackNotifierTests(unittest.TestCase):
             self.assertFalse(second.send("durable", "Durable alert"))
             self.assertEqual(len(sent), 1)
 
+    def test_clear_allows_immediate_recurrence(self) -> None:
+        sent: list[bytes] = []
+        notifier = slack_notify.SlackNotifier(
+            "https://hooks.slack.test/a",
+            clock=lambda: 1000.0,
+            transport=lambda url, payload, timeout: sent.append(payload),
+        )
+        self.assertTrue(notifier.send("worker", "Worker alert"))
+        notifier.clear("worker")
+        self.assertTrue(notifier.send("worker", "Worker alert again"))
+        self.assertEqual(len(sent), 2)
+
 
 class MonitorCycleTests(unittest.TestCase):
     def test_run_once_reports_sent_then_suppressed(self) -> None:
@@ -253,6 +266,63 @@ class MonitorCycleTests(unittest.TestCase):
         self.assertEqual(first["sent"], ["queue_depth_nonzero"])
         self.assertEqual(second["suppressed"], ["queue_depth_nonzero"])
         self.assertEqual(len(delivered), 1)
+
+    def test_alert_lifecycle_sends_problem_and_recovery_once(self) -> None:
+        class Client:
+            def __init__(self) -> None:
+                self.queue_depth = 2.0
+
+            def poll(self) -> monitor.PollResult:
+                return healthy_result(munea_call_queue_depth=self.queue_depth)
+
+        client = Client()
+        delivered: list[dict[str, str]] = []
+        notifier = slack_notify.SlackNotifier(
+            "https://hooks.slack.test/a",
+            clock=lambda: NOW,
+            transport=lambda url, payload, timeout: delivered.append(json.loads(payload)),
+        )
+        gateway_monitor = monitor.GatewayMonitor(client, notifier, clock=lambda: NOW)
+
+        first = gateway_monitor.run_once()
+        second = gateway_monitor.run_once()
+        client.queue_depth = 0.0
+        recovery = gateway_monitor.run_once()
+        after_recovery = gateway_monitor.run_once()
+        client.queue_depth = 1.0
+        recurrence = gateway_monitor.run_once()
+
+        self.assertEqual(first["sent"], ["queue_depth_nonzero"])
+        self.assertEqual(second["suppressed"], ["queue_depth_nonzero"])
+        self.assertEqual(recovery["recovered"], ["recovered:queue_depth_nonzero"])
+        self.assertEqual(after_recovery["recovered"], [])
+        self.assertEqual(recurrence["sent"], ["queue_depth_nonzero"])
+        self.assertEqual(len(delivered), 3)
+        self.assertIn("[RECOVERED]", delivered[1]["text"])
+
+    def test_lifecycle_state_survives_monitor_recreation(self) -> None:
+        class Client:
+            @staticmethod
+            def poll() -> monitor.PollResult:
+                return healthy_result(munea_call_queue_depth=2.0)
+
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            lifecycle = Path(temporary_dir) / "lifecycle.json"
+            delivered: list[bytes] = []
+            notifier = slack_notify.SlackNotifier(
+                "https://hooks.slack.test/a",
+                clock=lambda: NOW,
+                transport=lambda url, payload, timeout: delivered.append(payload),
+            )
+            first = monitor.GatewayMonitor(
+                Client(), notifier, clock=lambda: NOW, lifecycle_state_path=lifecycle,
+            )
+            self.assertEqual(first.run_once()["sent"], ["queue_depth_nonzero"])
+            second = monitor.GatewayMonitor(
+                Client(), notifier, clock=lambda: NOW + 9999, lifecycle_state_path=lifecycle,
+            )
+            self.assertEqual(second.run_once()["suppressed"], ["queue_depth_nonzero"])
+            self.assertEqual(len(delivered), 1)
 
 
 class ObserveModeTests(unittest.TestCase):

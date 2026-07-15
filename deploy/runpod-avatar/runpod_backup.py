@@ -160,7 +160,14 @@ class OperationLock:
 
 def _http_json(method: str, url: str, body: dict[str, Any] | None = None,
                timeout: int = 10, headers: dict[str, str] | None = None) -> dict[str, Any]:
-    request_headers = {"Content-Type": "application/json"}
+    # RunPod's public proxy sits behind Cloudflare and can reject urllib's
+    # default Python user agent even while the same healthy endpoint works in
+    # browsers. Identify the controller explicitly for reliable health gates.
+    request_headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "Munea-Capacity-Controller/1.0",
+    }
     request_headers.update(headers or {})
     request = urllib.request.Request(
         url,
@@ -427,13 +434,42 @@ class BackupController:
     def _backup_workers(self, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
         return [w for w in _workers(snapshot) if w.get("kind") == "runpod"]
 
-    def _refresh_health(self, snapshot: dict[str, Any], state: dict[str, Any]) -> None:
+    def _refresh_health(
+        self,
+        snapshot: dict[str, Any],
+        state: dict[str, Any],
+        managed_pods: list[dict[str, Any]] | None = None,
+    ) -> None:
         failures = state.setdefault("probe_failures", {})
+        pod_status = {
+            str(pod.get("id") or ""): str(pod.get("desiredStatus") or "").upper()
+            for pod in (managed_pods or [])
+            if pod.get("id")
+        }
+        terminal_worker_statuses = {"terminated", "stopped", "exited", "disabled"}
         for worker in _workers(snapshot):
             worker_id = str(worker.get("worker_id") or "")
             url = str(worker.get("url") or "")
             if not worker_id or not url:
                 continue
+            worker_status = str(worker.get("status") or "").lower()
+            if worker_status in terminal_worker_statuses:
+                failures.pop(worker_id, None)
+                continue
+            if worker.get("kind") == "runpod" and managed_pods is not None:
+                pod_id = worker_id.removeprefix("runpod-")
+                desired_status = pod_status.get(pod_id)
+                if desired_status and desired_status != "RUNNING":
+                    failures.pop(worker_id, None)
+                    worker.update({
+                        "status": "terminated",
+                        "healthy": False,
+                        "enabled": False,
+                        "active": 0,
+                    })
+                    if self.config.mode == "active":
+                        self.gateway.unregister(worker_id)
+                    continue
             try:
                 health = self.probe(url, self.config.worker_key)
                 failures[worker_id] = 0
@@ -456,13 +492,15 @@ class BackupController:
             state = self.state.load()
             now = self.now()
             snapshot = self.gateway.snapshot()
-            self._refresh_health(snapshot, state)
+            managed_pods = self.provider.list() if self.config.mode == "active" else None
+            self._refresh_health(snapshot, state, managed_pods)
             backups = self._backup_workers(snapshot)
             ready_backups = [w for w in backups if w.get("healthy") and w.get("enabled")]
             desired, reason = desired_backup_pods(snapshot, self.config)
             registered_ids = {
                 str(w.get("worker_id") or "").removeprefix("runpod-")
-                for w in backups if w.get("worker_id")
+                for w in backups
+                if w.get("worker_id") and str(w.get("status") or "") != "terminated"
             }
             scale_up_ok = (
                 now - float(state.get("last_scale_up_ts") or 0)
@@ -528,7 +566,6 @@ class BackupController:
                     "worker_ids": [worker_id for worker_id, _ in registered],
                 }
 
-            managed_pods = self.provider.list() if self.config.mode == "active" else []
             if desired <= len(ready_backups) and managed_pods:
                 running_orphans = [
                     p for p in managed_pods
