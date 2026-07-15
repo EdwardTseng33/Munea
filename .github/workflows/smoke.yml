@@ -16,6 +16,9 @@ jobs:
     name: Windows smoke without API server
     runs-on: windows-latest
     timeout-minutes: 15
+    outputs:
+      static-smoke-outcome: ${{ steps.static-smoke.outcome }}
+      supabase-doctor-outcome: ${{ steps.supabase-doctor.outcome }}
 
     steps:
       - name: Checkout
@@ -81,6 +84,8 @@ jobs:
     name: Windows auth gate smoke
     runs-on: windows-latest
     timeout-minutes: 15
+    outputs:
+      auth-gate-outcome: ${{ steps.auth-gate-smoke.outcome }}
 
     steps:
       - name: Checkout
@@ -121,3 +126,57 @@ jobs:
           } else {
             "[warn] Auth gate smoke reported issues. Push runs are soft-failed to avoid notification noise; pull_request and workflow_dispatch remain strict." >> $env:GITHUB_STEP_SUMMARY
           }
+
+  notify-main-failure:
+    name: Notify Slack when main checks need attention
+    needs:
+      - smoke-no-api
+      - auth-gate
+    if: >-
+      ${{
+        always() &&
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main' &&
+        (
+          needs['smoke-no-api'].outputs['static-smoke-outcome'] != 'success' ||
+          needs['smoke-no-api'].outputs['supabase-doctor-outcome'] != 'success' ||
+          needs['auth-gate'].outputs['auth-gate-outcome'] != 'success'
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Send one Slack summary
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.MUNEA_SLACK_ALERT_WEBHOOK }}
+          STATIC_SMOKE: ${{ needs['smoke-no-api'].outputs['static-smoke-outcome'] }}
+          SUPABASE_DOCTOR: ${{ needs['smoke-no-api'].outputs['supabase-doctor-outcome'] }}
+          AUTH_GATE: ${{ needs['auth-gate'].outputs['auth-gate-outcome'] }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          webhook = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+          if not webhook:
+              raise SystemExit("MUNEA_SLACK_ALERT_WEBHOOK is not configured")
+          message = "\n".join([
+              "[Munea CI][WARNING] main 分支檢查需要處理",
+              f"Smoke: {os.environ['STATIC_SMOKE']}",
+              f"Supabase doctor: {os.environ['SUPABASE_DOCTOR']}",
+              f"Auth gate: {os.environ['AUTH_GATE']}",
+              f"查看結果: {os.environ['RUN_URL']}",
+          ])
+          request = urllib.request.Request(
+              webhook,
+              data=json.dumps({"text": message}, ensure_ascii=False).encode("utf-8"),
+              headers={"Content-Type": "application/json; charset=utf-8"},
+              method="POST",
+          )
+          with urllib.request.urlopen(request, timeout=10) as response:
+              if response.status < 200 or response.status >= 300:
+                  raise SystemExit(f"Slack webhook returned HTTP {response.status}")
+          PY
