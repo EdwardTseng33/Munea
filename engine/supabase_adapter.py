@@ -405,6 +405,9 @@ class SupabaseAdapter:
                 "family_activities",
                 "family_activity_participants",
                 "medication_dose_events",
+                "push_devices",
+                "notification_events",
+                "notification_deliveries",
             ],
         }
 
@@ -1772,6 +1775,169 @@ class SupabaseAdapter:
         )
         return self.family_relay_row_to_relay(rows[0]) if rows else None
 
+    def load_push_devices(self, include_invalid=False, limit=20):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{self.person_id}",
+            "select": "*",
+            "order": "last_seen_at.desc",
+            "limit": str(max(1, min(int(limit or 20), 100))),
+        }
+        if not include_invalid:
+            query["invalidated_at"] = "is.null"
+        rows = self._select("push_devices", query)
+        return [self.push_device_row_to_device(row) for row in rows or []]
+
+    def upsert_push_device(self, device):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        payload = self.push_device_to_row(device)
+        if not payload.get("token") or not payload.get("token_hash"):
+            raise ValueError("push_token_invalid")
+        existing = self._first("push_devices", {
+            "token_hash": f"eq.{payload['token_hash']}",
+            "environment": f"eq.{payload['environment']}",
+            "bundle_id": f"eq.{payload['bundle_id']}",
+            "select": "*",
+        })
+        rows = None
+        if existing:
+            rows = self._request(
+                "PATCH", "push_devices",
+                query={"id": f"eq.{existing.get('id')}", "select": "*"},
+                payload={**payload, "invalidated_at": None},
+                prefer="return=representation",
+            )
+        if not rows:
+            rows = self._request(
+                "POST", "push_devices", query={"select": "*"}, payload=payload,
+                prefer="return=representation",
+            )
+        return self.push_device_row_to_device(rows[0]) if rows else None
+
+    def disable_push_device(self, device_id=None, token_hash=None):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "person_id": f"eq.{self.person_id}",
+            "select": "*",
+        }
+        if self._is_uuid(device_id or ""):
+            query["id"] = f"eq.{device_id}"
+        elif token_hash:
+            query["token_hash"] = f"eq.{token_hash}"
+        else:
+            raise ValueError("push_device_id_required")
+        rows = self._request(
+            "PATCH", "push_devices", query=query,
+            payload={
+                "notifications_enabled": False,
+                "invalidated_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            },
+            prefer="return=representation",
+        )
+        return self.push_device_row_to_device(rows[0]) if rows else None
+
+    def enqueue_notification_event(self, event):
+        if not self.enabled():
+            return None
+        payload = self.notification_event_to_rpc(event)
+        rows = self._request(
+            "POST", "rpc/enqueue_notification_event", payload=payload,
+            prefer="return=representation",
+        )
+        if isinstance(rows, dict):
+            return self.notification_event_row_to_event(rows)
+        return self.notification_event_row_to_event(rows[0]) if rows else None
+
+    def load_notification_events(self, unread_only=False, include_archived=False, event_type=None, limit=100):
+        if not self.enabled() or not self.request_scoped:
+            return None
+        query = {
+            "account_id": f"eq.{self.account_id}",
+            "recipient_person_id": f"eq.{self.person_id}",
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(max(1, min(int(limit or 100), 500))),
+        }
+        if unread_only:
+            query["read_at"] = "is.null"
+        if not include_archived:
+            query["archived_at"] = "is.null"
+        if event_type:
+            query["event_type"] = f"eq.{event_type}"
+        rows = self._select("notification_events", query)
+        return [self.notification_event_row_to_event(row) for row in rows or []]
+
+    def mark_notification_event(self, event_id, action):
+        if not self.enabled() or not self.request_scoped or not self._is_uuid(event_id or ""):
+            return None
+        current = self._first("notification_events", {
+            "id": f"eq.{event_id}",
+            "account_id": f"eq.{self.account_id}",
+            "recipient_person_id": f"eq.{self.person_id}",
+            "select": "*",
+        })
+        if not current:
+            return None
+        now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        if action == "read":
+            patch = {"read_at": current.get("read_at") or now}
+        elif action == "archive":
+            patch = {"archived_at": current.get("archived_at") or now}
+        elif action == "opened":
+            patch = {"read_at": current.get("read_at") or now}
+        elif action == "actioned":
+            patch = {"read_at": current.get("read_at") or now, "acted_at": current.get("acted_at") or now}
+        else:
+            raise ValueError("notification_action_invalid")
+        rows = self._request(
+            "PATCH", "notification_events",
+            query={"id": f"eq.{event_id}", "select": "*"},
+            payload=patch, prefer="return=representation",
+        )
+        if action in ("opened", "actioned"):
+            delivery_patch = {"status": action, f"{action}_at": now}
+            self._request(
+                "PATCH", "notification_deliveries",
+                query={"event_id": f"eq.{event_id}"}, payload=delivery_patch,
+                prefer="return=minimal",
+            )
+        return self.notification_event_row_to_event(rows[0]) if rows else None
+
+    def claim_notification_deliveries(self, limit=50):
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "POST", "rpc/claim_notification_deliveries",
+            payload={"p_limit": max(1, min(int(limit or 50), 200))},
+            prefer="return=representation",
+        )
+        return rows or []
+
+    def complete_notification_delivery(self, delivery_id, status, apns_id=None,
+                                       error_code=None, error_detail=None, retry_after_seconds=None):
+        if not self.enabled() or not self._is_uuid(delivery_id or ""):
+            return None
+        payload = {
+            "p_delivery_id": delivery_id,
+            "p_status": status,
+            "p_apns_id": apns_id,
+            "p_error_code": error_code,
+            "p_error_detail": error_detail,
+            "p_retry_after_seconds": retry_after_seconds,
+        }
+        rows = self._request(
+            "POST", "rpc/complete_notification_delivery", payload=payload,
+            prefer="return=representation",
+        )
+        if isinstance(rows, dict):
+            return rows
+        return rows[0] if rows else None
+
     def save_family_member(self, member, family_group_id=None):
         if not self.enabled():
             return None
@@ -2075,6 +2241,111 @@ class SupabaseAdapter:
             "deliveredAt": row.get("delivered_at"),
             "expiresAt": row.get("expires_at"),
             "metadata": row.get("metadata") or {},
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def push_device_to_row(self, device):
+        device = device or {}
+        token = str(device.get("token") or "").strip().replace(" ", "").replace("<", "").replace(">", "")
+        token_hash = str(device.get("tokenHash") or device.get("token_hash") or "").strip()
+        if token and not token_hash:
+            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        permission = device.get("permissionStatus") or device.get("permission_status") or "not_determined"
+        environment = device.get("environment") if device.get("environment") in ("sandbox", "production") else "production"
+        enabled = device.get("notificationsEnabled")
+        if enabled is None:
+            enabled = device.get("notifications_enabled", permission in ("authorized", "provisional"))
+        return {
+            "account_id": self.account_id,
+            "person_id": self.person_id,
+            "auth_user_id": self.auth_user_id,
+            "platform": "ios",
+            "environment": environment,
+            "bundle_id": str(device.get("bundleId") or device.get("bundle_id") or "net.munea.app")[:160],
+            "token": token,
+            "token_hash": token_hash,
+            "app_version": str(device.get("appVersion") or device.get("app_version") or "")[:40] or None,
+            "locale": str(device.get("locale") or "zh-TW")[:40],
+            "timezone": str(device.get("timezone") or "Asia/Taipei")[:80],
+            "permission_status": permission,
+            "notifications_enabled": bool(enabled),
+            "show_sensitive_content": bool(device.get("showSensitiveContent") or device.get("show_sensitive_content")),
+            "last_seen_at": device.get("lastSeenAt") or device.get("last_seen_at") or time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            "metadata": device.get("metadata") if isinstance(device.get("metadata"), dict) else {},
+        }
+
+    @staticmethod
+    def push_device_row_to_device(row):
+        row = row or {}
+        return {
+            "id": row.get("id"),
+            "accountId": row.get("account_id"),
+            "personId": row.get("person_id"),
+            "authUserId": row.get("auth_user_id"),
+            "platform": row.get("platform") or "ios",
+            "environment": row.get("environment") or "production",
+            "bundleId": row.get("bundle_id"),
+            "token": row.get("token"),
+            "tokenHash": row.get("token_hash"),
+            "appVersion": row.get("app_version"),
+            "locale": row.get("locale") or "zh-TW",
+            "timezone": row.get("timezone") or "Asia/Taipei",
+            "permissionStatus": row.get("permission_status") or "not_determined",
+            "notificationsEnabled": bool(row.get("notifications_enabled")),
+            "showSensitiveContent": bool(row.get("show_sensitive_content")),
+            "lastSeenAt": row.get("last_seen_at"),
+            "invalidatedAt": row.get("invalidated_at"),
+            "metadata": row.get("metadata") or {},
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    @staticmethod
+    def notification_event_to_rpc(event):
+        event = event or {}
+        return {
+            "p_recipient_person_id": event.get("recipientPersonId") or event.get("recipient_person_id"),
+            "p_event_type": event.get("eventType") or event.get("event_type"),
+            "p_title": event.get("title"),
+            "p_body": event.get("body"),
+            "p_public_title": event.get("publicTitle") or event.get("public_title") or "沐寧提醒",
+            "p_public_body": event.get("publicBody") or event.get("public_body") or "你的健康提醒到了，解鎖後查看。",
+            "p_sensitivity": event.get("sensitivity") or "private",
+            "p_deep_link": event.get("deepLink") or event.get("deep_link") or "munea://notifications",
+            "p_actor_person_id": event.get("actorPersonId") or event.get("actor_person_id"),
+            "p_family_group_id": event.get("familyGroupId") or event.get("family_group_id"),
+            "p_resource_type": event.get("resourceType") or event.get("resource_type"),
+            "p_resource_id": event.get("resourceId") or event.get("resource_id"),
+            "p_dedupe_key": event.get("dedupeKey") or event.get("dedupe_key") or None,
+            "p_metadata": event.get("metadata") if isinstance(event.get("metadata"), dict) else {},
+            "p_expires_at": event.get("expiresAt") or event.get("expires_at"),
+        }
+
+    @staticmethod
+    def notification_event_row_to_event(row):
+        row = row or {}
+        return {
+            "id": row.get("id"),
+            "accountId": row.get("account_id"),
+            "recipientPersonId": row.get("recipient_person_id"),
+            "actorPersonId": row.get("actor_person_id"),
+            "familyGroupId": row.get("family_group_id"),
+            "eventType": row.get("event_type"),
+            "resourceType": row.get("resource_type"),
+            "resourceId": row.get("resource_id"),
+            "title": row.get("title") or "沐寧提醒",
+            "body": row.get("body") or "",
+            "publicTitle": row.get("public_title") or "沐寧提醒",
+            "publicBody": row.get("public_body") or "你的健康提醒到了，解鎖後查看。",
+            "sensitivity": row.get("sensitivity") or "private",
+            "deepLink": row.get("deep_link") or "munea://notifications",
+            "dedupeKey": row.get("dedupe_key"),
+            "metadata": row.get("metadata") or {},
+            "expiresAt": row.get("expires_at"),
+            "readAt": row.get("read_at"),
+            "archivedAt": row.get("archived_at"),
+            "actedAt": row.get("acted_at"),
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
         }

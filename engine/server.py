@@ -23,6 +23,8 @@ import supabase_adapter
 import model_router
 import notify
 import apple_store
+import notification_service
+import apns_service
 from google.genai import types
 
 if not os.environ.get("GEMINI_API_KEY"):
@@ -39,6 +41,9 @@ FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.
 FAMILY_ACTIVITIES_PATH = os.environ.get("MUNEA_FAMILY_ACTIVITIES_PATH") or os.path.join(HERE, "family_activities.json")
 FAMILY_INVITATIONS_PATH = os.environ.get("MUNEA_FAMILY_INVITATIONS_PATH") or os.path.join(HERE, "family_invitations.json")
 FAMILY_RELAYS_PATH = os.environ.get("MUNEA_FAMILY_RELAYS_PATH") or os.path.join(HERE, "family_relay_messages.json")
+PUSH_DEVICES_PATH = os.environ.get("MUNEA_PUSH_DEVICES_PATH") or os.path.join(HERE, "push_devices.json")
+NOTIFICATION_EVENTS_PATH = os.environ.get("MUNEA_NOTIFICATION_EVENTS_PATH") or os.path.join(HERE, "notification_events.json")
+NOTIFICATION_DELIVERIES_PATH = os.environ.get("MUNEA_NOTIFICATION_DELIVERIES_PATH") or os.path.join(HERE, "notification_deliveries.json")
 CONSENT_RECORDS_PATH = os.environ.get("MUNEA_CONSENT_RECORDS_PATH") or os.path.join(HERE, "consent_records.json")
 PRIVACY_REQUESTS_PATH = os.environ.get("MUNEA_PRIVACY_REQUESTS_PATH") or os.path.join(HERE, "privacy_requests.json")
 PRODUCT_EVENTS_PATH = os.environ.get("MUNEA_PRODUCT_EVENTS_PATH") or os.path.join(HERE, "product_events.json")
@@ -277,6 +282,7 @@ ADMIN_POST_PATHS = {
     "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
+    "/admin/notifications/drain",
     "/admin/login",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
@@ -1818,6 +1824,275 @@ def medication_doses_response(data):
     }
 
 
+def _notification_identity():
+    identity = REQUEST_DATA_IDENTITY.get() or {}
+    return {
+        "accountId": identity.get("accountId") or identity.get("account_id"),
+        "personId": identity.get("personId") or identity.get("person_id"),
+        "authUserId": identity.get("authUserId") or identity.get("auth_user_id"),
+    }
+
+
+def load_push_devices(include_invalid=False, limit=20):
+    backend = data_backend()
+    if backend.enabled():
+        items = backend.load_push_devices(include_invalid=include_invalid, limit=limit)
+        return [notification_service.public_device(item) for item in items or []], "supabase"
+    identity = _notification_identity()
+    items = read_json_file(PUSH_DEVICES_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [notification_service.normalize_device(item) for item in items]
+    if identity.get("accountId"):
+        items = [item for item in items if item.get("accountId") == identity.get("accountId")]
+    if identity.get("personId"):
+        items = [item for item in items if item.get("personId") == identity.get("personId")]
+    if not include_invalid:
+        items = [item for item in items if not item.get("invalidatedAt")]
+    items.sort(key=lambda item: item.get("lastSeenAt") or "", reverse=True)
+    return [notification_service.public_device(item) for item in items[:max(1, min(int(limit or 20), 100))]], "json"
+
+
+def save_push_device(item):
+    identity = _notification_identity()
+    device = notification_service.normalize_device(item, identity=identity)
+    error = notification_service.validate_device(device)
+    if error:
+        return None, error
+    backend = data_backend()
+    if backend.enabled():
+        saved = backend.upsert_push_device(device)
+        return notification_service.public_device(saved), "supabase"
+    items = read_json_file(PUSH_DEVICES_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    existing = None
+    next_items = []
+    for raw in items:
+        current = notification_service.normalize_device(raw)
+        same_token = (
+            current.get("tokenHash") == device.get("tokenHash")
+            and current.get("environment") == device.get("environment")
+            and current.get("bundleId") == device.get("bundleId")
+        )
+        if same_token:
+            existing = current
+            continue
+        next_items.append(current)
+    device["id"] = (existing or {}).get("id") or str(uuid.uuid4())
+    device["createdAt"] = (existing or {}).get("createdAt") or notification_service.utc_now()
+    device["updatedAt"] = notification_service.utc_now()
+    device["invalidatedAt"] = None
+    next_items.append(device)
+    write_json_file(PUSH_DEVICES_PATH, next_items[-100:])
+    return notification_service.public_device(device), "json"
+
+
+def disable_push_device(device_id=None, token_hash=None):
+    backend = data_backend()
+    if backend.enabled():
+        item = backend.disable_push_device(device_id=device_id, token_hash=token_hash)
+        return (notification_service.public_device(item), "supabase") if item else (None, "push_device_not_found")
+    identity = _notification_identity()
+    items = read_json_file(PUSH_DEVICES_PATH, [])
+    updated = None
+    next_items = []
+    for raw in items if isinstance(items, list) else []:
+        item = notification_service.normalize_device(raw)
+        owns = (
+            (not identity.get("accountId") or item.get("accountId") == identity.get("accountId"))
+            and (not identity.get("personId") or item.get("personId") == identity.get("personId"))
+        )
+        matches = item.get("id") == device_id or (token_hash and item.get("tokenHash") == token_hash)
+        if owns and matches:
+            item["notificationsEnabled"] = False
+            item["invalidatedAt"] = notification_service.utc_now()
+            item["updatedAt"] = notification_service.utc_now()
+            updated = item
+        next_items.append(item)
+    write_json_file(PUSH_DEVICES_PATH, next_items[-100:])
+    return (notification_service.public_device(updated), "json") if updated else (None, "push_device_not_found")
+
+
+def push_devices_response(data):
+    data = data or {}
+    action = str(data.get("action") or "list").lower()
+    if action in ("register", "save", "update_permission"):
+        device, backend = save_push_device(data.get("device") or data)
+        if device is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "device": device, "backend": backend}
+    if action in ("unregister", "disable"):
+        item, backend = disable_push_device(
+            device_id=data.get("id") or data.get("deviceId") or data.get("device_id"),
+            token_hash=data.get("tokenHash") or data.get("token_hash"),
+        )
+        if item is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "device": item, "backend": backend}
+    devices, backend = load_push_devices(
+        include_invalid=bool(data.get("includeInvalid") or data.get("include_invalid")),
+        limit=data.get("limit") or 20,
+    )
+    return {"ok": True, "devices": devices, "backend": backend}
+
+
+def enqueue_notification_event(item, recipient_person_id=None, actor_person_id=None):
+    raw_event_type = str((item or {}).get("eventType") or (item or {}).get("event_type") or "").strip()
+    if raw_event_type not in notification_service.EVENT_TYPES:
+        return None, "notification_event_type_invalid"
+    event = notification_service.normalize_event(
+        item, recipient_person_id=recipient_person_id, actor_person_id=actor_person_id
+    )
+    error = notification_service.validate_event(event)
+    if error:
+        return None, error
+    backend = data_backend()
+    if backend.enabled():
+        saved = backend.enqueue_notification_event(event)
+        return notification_service.normalize_event(saved), "supabase"
+    events = read_json_file(NOTIFICATION_EVENTS_PATH, [])
+    if not isinstance(events, list):
+        events = []
+    if event.get("dedupeKey"):
+        existing = next((candidate for candidate in events
+                         if candidate.get("recipientPersonId") == event.get("recipientPersonId")
+                         and candidate.get("dedupeKey") == event.get("dedupeKey")), None)
+        if existing:
+            return notification_service.normalize_event(existing), "json"
+    events.append(event)
+    write_json_file(NOTIFICATION_EVENTS_PATH, events[-10000:])
+
+    devices = read_json_file(PUSH_DEVICES_PATH, [])
+    deliveries = read_json_file(NOTIFICATION_DELIVERIES_PATH, [])
+    deliveries = deliveries if isinstance(deliveries, list) else []
+    for raw in devices if isinstance(devices, list) else []:
+        device = notification_service.normalize_device(raw)
+        if (device.get("personId") == event.get("recipientPersonId")
+                and device.get("notificationsEnabled")
+                and not device.get("invalidatedAt")
+                and device.get("permissionStatus") in ("authorized", "provisional")):
+            delivery_key = f"{event['id']}:{device['id']}:apns"
+            if any(candidate.get("deliveryKey") == delivery_key for candidate in deliveries):
+                continue
+            deliveries.append({
+                "id": str(uuid.uuid4()),
+                "deliveryKey": delivery_key,
+                "eventId": event["id"],
+                "deviceId": device["id"],
+                "channel": "apns",
+                "status": "queued",
+                "attemptCount": 0,
+                "nextAttemptAt": notification_service.utc_now(),
+                "createdAt": notification_service.utc_now(),
+            })
+    write_json_file(NOTIFICATION_DELIVERIES_PATH, deliveries[-20000:])
+    return event, "json"
+
+
+def load_notification_events(unread_only=False, include_archived=False, event_type=None, limit=100):
+    backend = data_backend()
+    if backend.enabled():
+        items = backend.load_notification_events(
+            unread_only=unread_only, include_archived=include_archived,
+            event_type=event_type, limit=limit,
+        )
+        return [notification_service.normalize_event(item) for item in items or []], "supabase"
+    identity = _notification_identity()
+    items = read_json_file(NOTIFICATION_EVENTS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [notification_service.normalize_event(item) for item in items]
+    if identity.get("personId"):
+        items = [item for item in items if item.get("recipientPersonId") == identity.get("personId")]
+    if unread_only:
+        items = [item for item in items if not item.get("readAt")]
+    if not include_archived:
+        items = [item for item in items if not item.get("archivedAt")]
+    if event_type:
+        items = [item for item in items if item.get("eventType") == event_type]
+    items.sort(key=lambda item: item.get("createdAt") or "", reverse=True)
+    return items[:max(1, min(int(limit or 100), 500))], "json"
+
+
+def update_notification_event(event_id, action):
+    backend = data_backend()
+    if backend.enabled():
+        item = backend.mark_notification_event(event_id, action)
+        return (notification_service.normalize_event(item), "supabase") if item else (None, "notification_not_found")
+    identity = _notification_identity()
+    items = read_json_file(NOTIFICATION_EVENTS_PATH, [])
+    updated = None
+    next_items = []
+    for raw in items if isinstance(items, list) else []:
+        item = notification_service.normalize_event(raw)
+        if item.get("id") == event_id and (
+            not identity.get("personId") or item.get("recipientPersonId") == identity.get("personId")
+        ):
+            item = notification_service.mark_event(item, action)
+            updated = item
+        next_items.append(item)
+    write_json_file(NOTIFICATION_EVENTS_PATH, next_items[-10000:])
+    return (updated, "json") if updated else (None, "notification_not_found")
+
+
+def notification_events_response(data):
+    data = data or {}
+    action = str(data.get("action") or "list").lower()
+    if action in ("read", "archive", "opened", "actioned"):
+        event_id = data.get("id") or data.get("eventId") or data.get("event_id")
+        if not event_id:
+            return {"ok": False, "error": "notification_id_required"}
+        try:
+            item, backend = update_notification_event(event_id, action)
+        except ValueError as error:
+            return {"ok": False, "error": str(error)}
+        if item is None:
+            return {"ok": False, "error": backend}
+        return {"ok": True, "notification": item, "backend": backend}
+    items, backend = load_notification_events(
+        unread_only=bool(data.get("unreadOnly") or data.get("unread_only")),
+        include_archived=bool(data.get("includeArchived") or data.get("include_archived")),
+        event_type=data.get("eventType") or data.get("event_type"),
+        limit=data.get("limit") or 100,
+    )
+    return {
+        "ok": True,
+        "notifications": items,
+        "unreadCount": sum(1 for item in items if not item.get("readAt")),
+        "backend": backend,
+    }
+
+
+def apns_status():
+    try:
+        return apns_service.APNSConfig.from_env().status()
+    except (OSError, ValueError) as error:
+        return {
+            "enabled": False,
+            "missing": ["valid MUNEA_APNS_PRIVATE_KEY_PATH"],
+            "error": type(error).__name__,
+        }
+
+
+def drain_notification_outbox_response(data=None):
+    data = data or {}
+    try:
+        config = apns_service.APNSConfig.from_env()
+    except OSError:
+        return {"ok": False, "error": "apns_private_key_unreadable", "apns": apns_status()}
+    if not config.configured():
+        return {"ok": False, "error": "apns_not_configured", "apns": config.status()}
+    backend = data_backend()
+    if not backend.enabled():
+        return {"ok": False, "error": "notification_backend_not_configured"}
+    return apns_service.drain_outbox(
+        backend,
+        sender=apns_service.APNSSender(config=config),
+        limit=max(1, min(int(data.get("limit") or 50), 200)),
+    )
+
+
 def proactive_opening_response(data):
     """主動開口引擎（感知層的靈魂 · 借 ElliQ「先算了才開口」）：
     分數 = 時段合適度 × 今天已開口次數退頻 × 心情調節 × 今日關懷素材加成。夠高才開口、低分就安靜。"""
@@ -2895,7 +3170,27 @@ def family_relays_response(data):
             items = _relay_json_store()
             items.append(relay)
             write_json_file(FAMILY_RELAYS_PATH, items[-1000:])
-        return {"ok": True, "relay": relay, "backend": "json"}
+        notification, notification_backend = enqueue_notification_event({
+            "eventType": "family_relay",
+            "recipientPersonId": relay.get("recipientPersonId"),
+            "actorPersonId": relay.get("senderPersonId"),
+            "familyGroupId": relay.get("familyGroupId"),
+            "resourceType": "family_relay_message",
+            "resourceId": relay.get("id"),
+            "title": f"{relay.get('senderLabel') or '家人'}捎來一則話",
+            "body": relay.get("content"),
+            "publicTitle": "沐寧提醒",
+            "publicBody": "家人捎來一則訊息，解鎖後收聽。",
+            "sensitivity": "private",
+            "deepLink": f"munea://relay/{relay.get('id')}",
+            "dedupeKey": f"family-relay:{relay.get('id')}",
+            "expiresAt": relay.get("expiresAt"),
+            "metadata": {"source": relay.get("source")},
+        })
+        return {
+            "ok": True, "relay": relay, "backend": "json",
+            "notificationQueued": bool(notification), "notificationBackend": notification_backend,
+        }
 
     if action == "claim":
         try:
@@ -5890,8 +6185,9 @@ class H(BaseHTTPRequestHandler):
                 "service": "munea-local-engine",
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
+                "notificationPush": apns_status(),
             })
             return
         if path in ("/", ""):
@@ -5921,7 +6217,7 @@ class H(BaseHTTPRequestHandler):
             # Family-circle invites always require a verified identity, even in
             # local/demo mode where most endpoints may allow a guest preview.
             # A join code is never an authentication credential.
-            if request_path in ("/family/invitations", "/family-relays"):
+            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications"):
                 family_auth = verify_auth_context(self.headers)
                 if not family_auth.get("ok"):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
@@ -5998,6 +6294,10 @@ class H(BaseHTTPRequestHandler):
                 self._json(routine_reminders_response(data))
             elif self.path == "/medication-doses":
                 self._json(medication_doses_response(data))
+            elif self.path == "/push/devices":
+                self._json(push_devices_response(data))
+            elif self.path == "/notifications":
+                self._json(notification_events_response(data))
             elif self.path == "/wellbeing/trend":
                 self._json(wellbeing_trend_response(data))
             elif self.path == "/wellbeing/log":
@@ -6080,6 +6380,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_audit_events_summary(data))
+            elif self.path == "/admin/notifications/drain":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(drain_notification_outbox_response(data))
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

@@ -41,13 +41,55 @@
     return String((med && (med.id || med.reminderId)) || (med && med.name) || 'medication');
   }
 
+  function medicationStartStore() {
+    try {
+      const value = JSON.parse(localStorage.getItem('munea.medStartDates.v1') || '{}');
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch (e) { return {}; }
+  }
+
+  function scheduledOn(med, day, starts) {
+    med = med || {};
+    const identity = medIdentity(med) + '|' + String(med.time || '');
+    const durationMatch = String(med.days || '').match(/(7|14|30|90)/);
+    let start = med.startDate || med.start_date || starts[identity];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(start || ''))) {
+      // Legacy long-term medicines predate this field and must keep their history.
+      // Finite treatments start when first created unless an explicit date exists.
+      start = (durationMatch || med.endDate || med.end_date) ? dateKey() : '2000-01-01';
+      starts[identity] = start;
+    }
+    if (day < start) return false;
+    let end = med.endDate || med.end_date || null;
+    if (!end) {
+      if (durationMatch) {
+        const value = new Date(start + 'T12:00:00');
+        value.setDate(value.getDate() + Number(durationMatch[1]) - 1);
+        end = dateKey(value);
+      }
+    }
+    if (end && day > end) return false;
+    const weekdays = Array.isArray(med.weekdays) ? med.weekdays : [];
+    if (weekdays.length) {
+      const value = new Date(day + 'T12:00:00');
+      const jsDay = value.getDay();
+      const isoDay = ((jsDay + 6) % 7) + 1;
+      const numeric = weekdays.map(Number).filter(Number.isFinite);
+      const usesJsDays = numeric.includes(0);
+      if (!numeric.includes(usesJsDays ? jsDay : isoDay)) return false;
+    }
+    return true;
+  }
+
   function doseKey(day, med, slot) {
     return [day, medIdentity(med), String(slot || '').trim()].join('|');
   }
 
   function slotsFor(meds, day) {
     const out = [];
+    const starts = medicationStartStore();
     (Array.isArray(meds) ? meds : []).forEach(med => {
+      if (!scheduledOn(med, day, starts)) return;
       String((med && med.time) || '').split('、').forEach(raw => {
         const slot = raw.trim();
         if (!slot) return;
@@ -62,6 +104,7 @@
         });
       });
     });
+    try { localStorage.setItem('munea.medStartDates.v1', JSON.stringify(starts)); } catch (e) {}
     const order = ['早餐後', '午餐後', '晚餐後', '睡前'];
     out.sort((a, b) => {
       const ai = order.indexOf(a.slot), bi = order.indexOf(b.slot);

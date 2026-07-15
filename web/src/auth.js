@@ -334,6 +334,9 @@
   }
 
   async function signOut() {
+    if (window.MuneaNotify && typeof window.MuneaNotify.unregisterBeforeSignOut === 'function') {
+      try { await window.MuneaNotify.unregisterBeforeSignOut(); } catch (e) {}
+    }
     if (session && session.developer) {
       setState('guest', null, 'SIGNED_OUT');
       return { ok: true };
