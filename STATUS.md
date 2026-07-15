@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新 main／手機測試包**：PR #67 已合併為 `main@f73fa975`；`1.0.13 (Build 18)` 已完成完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 開發簽章建置與包內版本／東京／測試資料／secret 防漏檢查。Edward iPhone 已透過 Wi-Fi 覆蓋安裝，手機回讀 `1.0.13 (18)` 且啟動 PASS。這一包針對 1.0.12 首次撥通 Hi 後卡住、角色不動、嘴型不同步與撥號黑閃修正聲畫開場；但真人聊聊 Gate 仍是 ❌，必須由 Edward 重測後才能放行 Voice。正式 App Store 包與上傳不在本輪。
+> **2026-07-15 最新手機測試包**：以最新 `main@c6e52a4` 建立 PR #70 的 `1.0.14 (Build 19)`，完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 開發簽章建置與包內版本／東京／測試資料／secret 防漏均 PASS。Edward iPhone 已透過 Wi-Fi 覆蓋安裝，手機回讀 `1.0.14 (19)` 且啟動 PASS。這一包保留 1.0.13 的開場暖機、黑屏保護與聲畫同步修正，並同步 PR #69 最新通知後端來源；PR #71 只改定價文件，不改 App 二進位。但 Voice 真人 Gate 與通知 App 畫面仍未通過。正式 App Store 包與上傳不在本輪。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
@@ -12,7 +12,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-15（Codex · App 1.0.13 Build 18 已無線安裝並啟動 iPhone。自動驗證通過；Voice 真人 Gate 與 APNs／登入／拍照／金流仍未通過）**
+> **最後更新：2026-07-15（Codex · App 1.0.14 Build 19 已無線安裝並啟動 iPhone。自動驗證通過；Voice 真人 Gate 與 APNs／登入／拍照／金流仍未通過）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -21,6 +21,8 @@
 ---
 
 ## 一眼總覽
+
+**69－App 1.0.14 Build 19／最新 main 開發測試包（7/15 Codex，PR #70）**：①✅ 來源為 `main@c6e52a4`，包含 1.0.13 開場暖機／黑屏保護／單一聲畫時鐘與 PR #69 通知後端；PR #71 只有定價文件勘誤，不改 App 二進位。App 顯示、npm、Xcode 與開發 fixture 統一升為 `1.0.14 (Build 19)`。②✅ 完整 `test:launch` 通過，包含 Voice 記憶 21 項、語氣 6 項、通知設定 8 項、APNs 5 項、登入、金流、帳號隔離、家庭同步與 UI 契約。③✅ Capacitor sync、Xcode 原生檢查與 arm64 Apple Development 簽章建置通過；包內 Tokyo Supabase、Pro、1,000 點、家人假資料、Apple 登入、HealthKit、開發推播 entitlement 與 backend secret 防漏均通過。④✅ Edward iPhone 已無線覆蓋安裝，手機回讀 `1.0.14 (19)` 且啟動 PASS。⑤❌ PR #69 只完成通知後端，不代表 migration 017／Brain 已部署或通知 App 畫面完成；Voice 真人 Gate、APNs 正式推播、Google／Apple 真登入、拍照、StoreKit 與 App Store 上傳仍未通過。⑥本輪未部署 Brain／Voice，未操作 RunPod／GLOWS。
 
 **68－App 1.0.13 Build 18／1.0.12 開場聲畫紅燈修正候選（7/15 Codex，PR #67）**：①❌ Edward 真機確認 1.0.12 首次撥通說 Hi 後卡住、角色不動、數秒後嘴型與聲音不同步、首次撥號黑色閃屏；真人結果優先，Voice 不升流量。②✅ App 改為同一個 `MediaStream` 驅動臉部影像與聲音、隱藏的 `faceAud` 只保留分析用途，避免雙播放器與不同時鐘；第一個有效影格到達前維持待機角色，避免黑屏切換。③✅ 打招呼前先送 1 秒靜音 PCM 暖機並確認 Avatar 音訊 RTP 已流動；開場通道不穩時阻擋打招呼，不再讓 Hi 在尚未就緒時播放。④✅ 納入 PR #62 的 Brain CORS 與家庭同步限流，另補前景監聽只綁一次。⑤✅ 完整 `test:launch`、Capacitor sync、Xcode 原生檢查、arm64 簽章建置與包內 Tokyo／測試資料／secret 防漏通過；Edward iPhone 已無線安裝、回讀 `1.0.13 (18)`、啟動 PASS。⑥❌ 嘴型、開場順暢、角色動作與黑閃仍需 Edward 實機重測；Google／Apple 真登入、拍照、StoreKit、APNs 與 App Store 上傳也未通過。
 
