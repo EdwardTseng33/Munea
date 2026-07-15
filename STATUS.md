@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> **2026-07-15 最新 main／整合候選**：`origin/main@a0dc280` 已包含 #41、#42、#51、#52、#54、#56、#57、#58、#59、#60；PR #61／`codex/tokyo-production-rollout@bee069d` 補齊東京正式 Brain、Voice 安全記憶路由與 `1.0.12 (Build 17)`。完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 簽章建置與包內版本／東京／開發資料／secret 防漏均 PASS。Edward iPhone 已無線覆蓋安裝，手機回讀版本 `1.0.12 (17)`，啟動持續運行 10 秒 PASS；正式 App Store 包與上傳不在本輪。
+> **2026-07-15 最新 main／正式手機包**：`origin/main@24ad60e` 已合併 #41、#42、#51、#52、#54、#56、#57、#58、#59、#60、#61，包含東京正式 Brain、Voice 安全記憶路由與 `1.0.12 (Build 17)`。完整 `test:launch`、Capacitor sync、Xcode 26.6 原生檢查、arm64 簽章建置與包內版本／東京／開發資料／secret 防漏均 PASS。Edward iPhone 已無線覆蓋安裝，手機回讀版本 `1.0.12 (17)`，啟動持續運行 10 秒 PASS；正式 App Store 包與上傳不在本輪。
 >
 > **2026-07-15 東京 Gateway 狀態**：Edward 已明確批准，`munea-call-control` 東京 revision `00008-bek` 已切為 100% 正式流量，使用 Secret Manager v2。切換後正式網址連續三次 durable health、東京席位 snapshot 與過期席位清理 RPC 均 PASS，Avatar／Voice 容量各 3、active 0；舊雪梨 revision `00006-kav` 與 secret v1 保留作回復。RunPod／GLOWS 主機、模型、卡片與流量完全未修改。
 >
