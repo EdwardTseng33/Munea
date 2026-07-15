@@ -267,6 +267,7 @@
     if (!supabaseClient) return { ok: false, error: { code: 'auth_not_configured' } };
     const native = isNativeApp();
     if (native && normalized === 'apple') return signInWithNativeApple(supabaseClient);
+    if (native && normalized === 'google') return signInWithNativeGoogle(supabaseClient);
     if (native) await setupNativeAuthListener();
     const result = await supabaseClient.auth.signInWithOAuth({
       provider: normalized,
@@ -290,6 +291,53 @@
       }
     }
     return { ok: !result.error, result, error: result.error || null };
+  }
+
+  async function signInWithNativeGoogle(supabaseClient) {
+    const google = nativePlugin('GoogleSignIn');
+    if (!google || typeof google.signIn !== 'function') {
+      return { ok: false, error: { code: 'native_google_unavailable' } };
+    }
+    if (!supabaseClient.auth || typeof supabaseClient.auth.signInWithIdToken !== 'function') {
+      return { ok: false, error: { code: 'google_id_token_unsupported' } };
+    }
+    try {
+      const credential = await google.signIn();
+      if (!credential || credential.state === 'cancelled') {
+        return { ok: false, cancelled: true, error: { code: 'google_sign_in_cancelled' } };
+      }
+      if (!credential.identityToken) {
+        return { ok: false, error: { code: 'google_identity_token_missing' } };
+      }
+      const result = await supabaseClient.auth.signInWithIdToken({
+        provider: 'google',
+        token: credential.identityToken,
+      });
+      const nextSession = result && result.data ? result.data.session : null;
+      if (result.error || !nextSession) {
+        return { ok: false, result, error: result.error || { code: 'google_session_missing' } };
+      }
+
+      const metadata = {};
+      const fullName = String(credential.fullName || [credential.givenName, credential.familyName].filter(Boolean).join(' ')).trim();
+      if (fullName) metadata.full_name = fullName;
+      if (credential.givenName) metadata.given_name = credential.givenName;
+      if (credential.familyName) metadata.family_name = credential.familyName;
+      if (credential.avatarUrl) metadata.avatar_url = credential.avatarUrl;
+      if (Object.keys(metadata).length && typeof supabaseClient.auth.updateUser === 'function') {
+        try { await supabaseClient.auth.updateUser({ data: metadata }); } catch (e) {}
+      }
+      setState('signed-in', nextSession, 'SIGNED_IN');
+      return { ok: true, result, session: nextSession };
+    } catch (e) {
+      return {
+        ok: false,
+        error: {
+          code: e && e.code ? e.code : 'native_google_sign_in_failed',
+          message: e && e.message ? e.message : 'Google sign in failed',
+        },
+      };
+    }
   }
 
   async function signInWithNativeApple(supabaseClient) {
@@ -353,6 +401,7 @@
   }
 
   async function signOut() {
+    const signedInProvider = publicState().provider;
     if (window.MuneaNotify && typeof window.MuneaNotify.unregisterBeforeSignOut === 'function') {
       try { await window.MuneaNotify.unregisterBeforeSignOut(); } catch (e) {}
     }
@@ -366,7 +415,15 @@
       return { ok: true };
     }
     const result = await supabaseClient.auth.signOut({ scope: 'local' });
-    if (!result.error) setState('guest', null, 'SIGNED_OUT');
+    if (!result.error) {
+      if (isNativeApp() && signedInProvider === 'google') {
+        const google = nativePlugin('GoogleSignIn');
+        if (google && typeof google.signOut === 'function') {
+          try { await google.signOut(); } catch (e) {}
+        }
+      }
+      setState('guest', null, 'SIGNED_OUT');
+    }
     return { ok: !result.error, result, error: result.error || null };
   }
 
