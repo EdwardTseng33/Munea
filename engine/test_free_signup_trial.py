@@ -10,6 +10,13 @@ sys.path.insert(0, os.path.dirname(__file__))
 import server
 
 
+class DisabledDataBackend:
+    """Keep the grant on the JSON path even when engine/.env.local points at Supabase."""
+
+    def enabled(self):
+        return False
+
+
 class FreeSignupTrialTests(unittest.TestCase):
     def test_grant_is_five_credits_and_account_idempotent(self):
         store = server.default_credits_store()
@@ -22,7 +29,8 @@ class FreeSignupTrialTests(unittest.TestCase):
             store.update(server.normalize_credits_store(updated))
             return server.normalize_credits_store(store)
 
-        with patch.object(server, "load_credits_store", side_effect=load), \
+        with patch.object(server, "data_backend", return_value=DisabledDataBackend()), \
+             patch.object(server, "load_credits_store", side_effect=load), \
              patch.object(server, "save_credits_store", side_effect=save):
             first = server.ensure_free_signup_trial("account-a")
             replay = server.ensure_free_signup_trial("account-a")
