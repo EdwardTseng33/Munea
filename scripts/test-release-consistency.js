@@ -8,7 +8,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { inspectReleaseConsistency } = require("./check-release-consistency.js");
 
-function fixture({ source = "1.0.26", lock = source, web = source, changelog = web, ios = "1.0.25", builds = ["32", "32"] } = {}) {
+function fixture({ source = "1.0.27", lock = source, web = source, changelog = web, ios = source, builds = ["34", "34"] } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "munea-release-consistency-"));
   fs.mkdirSync(path.join(root, "web/src"), { recursive: true });
   fs.mkdirSync(path.join(root, "ios/App/App.xcodeproj"), { recursive: true });
@@ -32,8 +32,19 @@ function runCase(name, fn) {
   process.stdout.write(`PASS ${name}\n`);
 }
 
-runCase("post-submission source can advance without changing the frozen iOS binary", () => {
+runCase("aligned source and iOS metadata pass strict mode", () => {
   const root = fixture();
+  const report = inspectReleaseConsistency({ root, strictIos: true });
+  assert.equal(report.ok, true);
+  assert.equal(report.releaseState, "aligned");
+  assert.equal(report.sourceVersion, "1.0.27");
+  assert.equal(report.iosVersion, "1.0.27");
+  assert.equal(report.iosBuild, "34");
+  return root;
+});
+
+runCase("post-submission source can advance without changing the frozen iOS binary", () => {
+  const root = fixture({ source: "1.0.27", ios: "1.0.26", builds: ["33", "33"] });
   const report = inspectReleaseConsistency({ root });
   assert.equal(report.ok, true);
   assert.equal(report.releaseState, "post-submission-development");
@@ -42,23 +53,15 @@ runCase("post-submission source can advance without changing the frozen iOS bina
 });
 
 runCase("strict iOS packaging blocks version drift", () => {
-  const root = fixture();
+  const root = fixture({ source: "1.0.27", ios: "1.0.26", builds: ["33", "33"] });
   const report = inspectReleaseConsistency({ root, strictIos: true });
   assert.equal(report.ok, false);
   assert.equal(report.releaseState, "blocked-for-ios-release");
   return root;
 });
 
-runCase("fully aligned release passes strict mode", () => {
-  const root = fixture({ ios: "1.0.26" });
-  const report = inspectReleaseConsistency({ root, strictIos: true });
-  assert.equal(report.ok, true);
-  assert.equal(report.releaseState, "aligned");
-  return root;
-});
-
 runCase("package lock drift fails", () => {
-  const root = fixture({ lock: "1.0.25" });
+  const root = fixture({ lock: "1.0.26" });
   const report = inspectReleaseConsistency({ root });
   assert.equal(report.ok, false);
   assert.match(report.errors.join("\n"), /Source versions disagree/);
@@ -66,7 +69,7 @@ runCase("package lock drift fails", () => {
 });
 
 runCase("web changelog head drift fails", () => {
-  const root = fixture({ changelog: "1.0.25" });
+  const root = fixture({ changelog: "1.0.26" });
   const report = inspectReleaseConsistency({ root });
   assert.equal(report.ok, false);
   assert.match(report.errors.join("\n"), /Source versions disagree/);
@@ -74,7 +77,7 @@ runCase("web changelog head drift fails", () => {
 });
 
 runCase("Xcode build configurations must agree", () => {
-  const root = fixture({ builds: ["32", "33"] });
+  const root = fixture({ builds: ["33", "34"] });
   const report = inspectReleaseConsistency({ root });
   assert.equal(report.ok, false);
   assert.match(report.errors.join("\n"), /CURRENT_PROJECT_VERSION/);
