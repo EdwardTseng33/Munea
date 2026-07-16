@@ -1,14 +1,14 @@
-# Munea 上線健康度 69→90 Scorecard
+# Munea 上線健康度 73→90 Scorecard
 
 評估日期：2026-07-16（Asia/Taipei）
 
-Repo 基準：`origin/main@58c0870`
+Repo 基準：`origin/main@2dca5b8`
 
 評估範圍：送審中的 iOS App、Brain／Voice／Gateway／Avatar、API、底層程式、Supabase migrations、Repo 資料結構、產品與版本文件、AI／服務狀態，以及 staging 營運後台。
 
 ## Executive Summary
 
-- **目前整體健康度為 69/100，六個面向都尚未達 90。** 最新 main 已把 source、lockfile 與 iOS next binary 對齊到 `1.0.26 (Build 33)`，但「可運作」仍未全面升級成「可證明、可回滾、可持續營運」。
+- **目前整體健康度為 73/100，六個面向都尚未達 90。** 最新 main 已把 source、lockfile 與 iOS next binary 對齊到 `1.0.26 (Build 33)`，並合併 API release metadata、migration governance 與 admin hardening；但這三項的程式合併不等於 staging／production 已部署或 live DB 已對帳，「可運作」仍未全面升級成「可證明、可回滾、可持續營運」。
 - **最大風險仍是跨時間線的產品真相漂移。** 使用者先前確認 `1.0.25 (Build 32)` 已進 App Store 審核；最新 repo 則明確記錄 `1.0.26 (Build 33)` 已完成 Archive／IPA 與手機開發版換裝、但尚未上傳。這兩件事可以同時成立，但 App Store readiness、Current Plan、Architecture、README 與 Backlog 尚未共享同一狀態模型。
 - **送審包與 next binary 必須分開管理。** 本報告保留 `1.0.25 (Build 32)` 作為已送審稽核起點；目前 main 與下一包則是 `1.0.26 (Build 33)`。Brain／Voice 若推進，只能採向下相容、canary、探測通過後再切流量的方式，且必須持續驗證 Build 32 相容性。
 - **營運後台已納入正式產品面。** staging 後台頁面可達，但 live `version.js` 顯示 `1.0.12`，`admin.html`／`admin.js` 也與 `origin/main` 不同；目前只能證明「舊後台殼可開」，不能證明「最新後台已部署且所有營運資料可信」。
@@ -19,13 +19,22 @@ Repo 基準：`origin/main@58c0870`
 
 | 面向 | 目前分數 | 是否達 90 | 核心判斷 |
 |---|---:|:---:|---|
-| 1. 架構健康度 | 79 | 否 | 分層與容量地基存在，但跨服務營運證據、production 邊界與失效演練不足 |
-| 2. API 健康度 | 80 | 否 | 權限與端點覆蓋不弱，但缺部署版本身分、統一契約與硬性 main gate |
-| 3. App 與後端底層代碼健康度 | 75 | 否 | 測試量充足，但核心檔過大、CI push 可 soft-fail、版本狀態未制度化 |
-| 4. Repo 資料結構健康度 | 63 | 否 | source／lockfile 已對齊，但 migration 重號、資產混放與歷史文件失控仍影響判讀 |
+| 1. 架構健康度 | 80 | 否 | release identity 與部署 stamping 已進 main，但跨服務營運證據、production 邊界與失效演練不足 |
+| 2. API 健康度 | 84 | 否 | health／version metadata 與測試已進 main，但 live 仍 404，統一契約與硬性 main gate 仍不足 |
+| 3. App 與後端底層代碼健康度 | 77 | 否 | 新增 metadata、migration、admin 契約測試，但核心檔過大、CI push 可 soft-fail |
+| 4. Repo 資料結構健康度 | 70 | 否 | migration manifest／checksum CI 已進 main，但尚未與 live DB head 對帳，資產與歷史文件仍混雜 |
 | 5. 產品資料／版本／功能／設計／AI／服務對焦 | 52 | 否 | STATUS 已區分 Build 32 與 33，但其他「權威文件」及 live 服務仍未同步 |
-| 6. 營運後台健康度 | 67 | 否 | 後台與管理 API 已存在，但 live 資產落後、操作員身分與資料新鮮度證據不足 |
-| **等權總分** | **69** | **否** | **距 90 還有 21 分；先修真相與 gate，再擴功能** |
+| 6. 營運後台健康度 | 72 | 否 | 安全、失敗狀態與 smoke 契約已進 main，但 live 資產落後、操作員身分與資料新鮮度證據不足 |
+| **等權總分** | **73** | **否** | **距 90 還有 17 分；先完成部署、對帳與真相 gate，再擴功能** |
+
+### 本輪分數調整理由（相對 69 分基線）
+
+- 架構 `79→80`：#112 已把 Brain／Voice release identity 與部署 stamping 合併進 main；尚無新 revision 部署與流量驗證，只加程式準備度。
+- API `80→84`：#112 的 `/healthz`、`/version`、安全 release metadata 與契約測試已進 main；live Brain／Voice 仍回 404，因此不計部署與 SLO 分。
+- App／後端代碼 `75→77`：三個 PR 增加 service metadata、migration governance、admin console 契約與自動測試；大型單檔與 smoke soft-fail 尚未解。
+- Repo `63→70`：#113 已把 19 個 migration 的 manifest、checksum、歷史重號 allowlist、檢查器與獨立 CI 合併進 main；仍缺 live DB applied head 對帳，不能視為 schema 已完全一致。
+- 產品對焦維持 `52`：程式狀態更清楚，但 App Store、current docs、live API、live admin 與實際 service revision 的跨面真相沒有新同步證據。
+- 營運後台 `67→72`：#114 的 host guard、timeout／retry／partial failure、logout、accessibility 與 9 endpoint smoke 契約已進 main；live 後台仍是 `1.0.12`，未取得登入後資料與操作員身分驗證。
 
 ## 本次採用的 release truth
 
@@ -37,9 +46,10 @@ Repo 基準：`origin/main@58c0870`
 | Brain／Voice Cloud Run | 2026-07-16 已執行 strict readiness；Brain／Voice Ready、必要 env、Secret Manager accessor 與 admin shell 檢查通過 | 證明基礎服務可用，不等於全部 API／真人 App E2E／SLO 已達標 |
 | staging 營運後台 | 使用者提供 URL 回 HTTP 200；live `version.js=1.0.12`，live `admin.html`／`admin.js` 與 main 不同 | 部署漂移，未達可追溯營運版本門檻 |
 | staging Brain／Voice API | Cloud Run revision 顯示 Ready；alias 與 canonical URL 的 `/healthz`、`/version` 實測皆回 HTTP 404 | 基礎設施存活不等於應用健康；線上缺少可追溯的 release／health contract |
-| 本輪健康修復分支 | release gate、API metadata、migration governance、admin hardening 均在獨立未合併工作中 | **一律不計入 main 現況分數**；合併、測試、部署後才可加分 |
+| 已合併 main 的健康修復 | #112 API metadata、#113 migration governance、#114 admin hardening 已依序合併至 `origin/main@2dca5b8` | 已計入程式碼與治理準備度；API／admin 尚未部署、migration 尚未與 live DB head 對帳，**不得當作 live 已修復** |
+| 尚未合併的 release gate | `codex/health90-control-20260716` 的 release consistency 與 smoke hard-fail 尚未發布到 main | 不計入 main 分數；必須在合併與 CI 通過後再重評 |
 
-## 1. 架構健康度 — 79/100
+## 1. 架構健康度 — 80/100
 
 **判斷：架構不是從零開始，真正缺的是 production 化的證明鏈。**
 
@@ -49,10 +59,11 @@ Repo 基準：`origin/main@58c0870`
 - `deploy/gateway/gateway_core.py` 已有 worker capacity、voice capacity、排隊、heartbeat、release 與 queue advancement；`deploy/runpod-avatar/flashhead_server.py` 已有多 slot、admission lock、call token 與 unhealthy slot 回收。
 - `engine/supabase_adapter.py` 與 `supabase/sql/001...018` 已建立帳號、家庭、AI memory、billing、notification、audit 等正式資料邊界；prototype JSON fallback 讓本機仍可跑。
 - `scripts/cloud-run-status.ps1` 已能檢查服務 Ready、必要 env、Secret Manager 權限與 `/admin.html` shell。
+- #112 已將 Brain／Voice release metadata、`/healthz`／`/version` 與部署版號／commit stamping 合併進 main，讓下一個 canary revision 具備可追溯的服務身分。
 
 ### 主要問題
 
-- production／staging／canary／App Store review binary 的拓撲沒有一份機器可讀的 release manifest；目前要跨 `STATUS.md`、App Store readiness、Cloud Run 與程式預設值人工拼圖。
+- production／staging／canary／App Store review binary 的拓撲仍沒有一份跨 App、API、DB、admin 的機器可讀 release manifest；#112 只補齊服務 metadata，整體仍要跨 `STATUS.md`、App Store readiness、Cloud Run 與程式預設值人工拼圖。
 - Brain 主程式與 App 主程式仍是大型單體；服務分層存在，但模組邊界與責任邊界尚未反映到程式尺寸與獨立發布能力。
 - JSON fallback 對開發有價值，但尚缺 production 模式「不得悄悄落回本機資料」的全面 gate 與告警證據。
 - Gateway／Voice／Avatar 的容量控制已有演算法，仍缺跨 replica／程序重啟／部分網路分割下的原子性、復原與重複指派演練紀錄。
@@ -79,9 +90,9 @@ Repo 基準：`origin/main@58c0870`
 - production 故障演練證明：單服務 rollback、worker 掉線、DB 暫斷、重複請求都不造成越權、重複扣點、重複指派或資料遺失。
 - production 不存在無告警的 JSON fallback；所有關鍵資料路徑都有明確 authoritative store。
 
-## 2. API 健康度 — 80/100
+## 2. API 健康度 — 84/100
 
-**判斷：API 功能與權限地基已相當完整，但缺少可部署、可比較的契約身分。**
+**判斷：API 功能、權限與 release metadata 已在 main 形成良好地基，但尚未部署成可在線比較的契約身分。**
 
 ### 現有證據
 
@@ -89,11 +100,11 @@ Repo 基準：`origin/main@58c0870`
 - `require_verified_auth`、request-scoped identity、family invite 強制身份、admin／provider token 分流、HMAC constant-time compare、JSON body size limit 與 Apple JWS webhook 例外路徑均已存在。
 - Admin endpoints 未帶 admin token 會拒絕；`scripts/admin-smoke.ps1` 會檢查 shell、無 token 403，以及有 token時的 accounts／north-star／usage／credits／privacy／safety／audit 讀取。
 - Repo 有 23 支 `engine/test_*.py` 與 15 支 `scripts/test-*`，`test:launch` 已涵蓋 auth、account scope、privacy、Store、family、notification、voice 等重要路徑。
+- #112 已在 main 為 Brain／Voice 加入安全的 release metadata，以及 HTTP `/healthz`／`/version`；部署腳本也會注入 source version 與 commit，且有 metadata／部署設定契約測試。
 
 ### 主要問題
 
-- main 的 `/healthz` 只回 `service: munea-local-engine`、時間、runtime 與 contract 清單，沒有 git SHA、release version、revision、environment role 或 API contract version；無法把異常精準對到部署。
-- 線上 staging 更明確暴露可觀測性落差：Brain／Voice 的 alias 與 canonical URL 對 `/healthz`、`/version` 都回 HTTP 404。Cloud Run Ready 目前只能證明容器 revision 可服務，不能證明應用 contract、模型依賴或 release identity 健康。
+- main 已具備 git SHA、release version、revision、environment 等 release metadata，但尚未部署到 staging；線上 Brain／Voice 的 alias 與 canonical URL 對 `/healthz`、`/version` 仍都回 HTTP 404。Cloud Run Ready 目前只能證明既有容器 revision 可服務，不能證明新 contract、模型依賴或 release identity 已上線。
 - 成功回應仍有多種 shape，與架構文件宣稱的統一 `{ok,data}` envelope 不完全一致；錯誤契約相對一致，成功契約尚未鎖定。
 - API 沒有一份由程式生成或 CI 驗證的 OpenAPI／contract inventory；文件與 handler 容易各自演進。
 - `.github/workflows/smoke.yml` 在 `push` 對 static smoke、Supabase doctor、auth gate 使用 soft-fail；main 可在關鍵檢查失敗時維持綠色表象。
@@ -103,7 +114,7 @@ Repo 基準：`origin/main@58c0870`
 
 **P0**
 
-1. Brain／Voice health metadata 回傳 service、source version、git SHA、revision、environment、contract version；不得包含 secret。
+1. 將 main 的 Brain／Voice health／version metadata 以零流量 canary 部署，驗證 service、source version、git SHA、revision、environment 與 contract version 均對應 exact commit，且不包含 secret；通過後才切流量。
 2. 將 release consistency、auth gate、static smoke 與 migration manifest 變成 main／PR 的硬 gate；失敗必須阻擋合併或部署。
 3. 建立 critical endpoint matrix：每支 endpoint 的 auth、scope、idempotency、rate limit、PII、source of truth、error envelope 與測試 case。
 4. 以凍結 `1.0.25 (32)` App 做向下相容 contract probe，確保 backend 變更不要求新 client 欄位。
@@ -120,7 +131,7 @@ Repo 基準：`origin/main@58c0870`
 - API contract inventory 與實際 routes 在 CI 零漂移；成功／錯誤 envelope 有版本策略。
 - 連續 7 天量測符合已核定 SLO，並完成至少一次 timeout、provider failure、DB failure 與 rollback 演練。
 
-## 3. App 與後端底層代碼健康度 — 75/100
+## 3. App 與後端底層代碼健康度 — 77/100
 
 **判斷：有大量針對真問題的測試，但可維護性與 release gate 還沒有跟上功能成長速度。**
 
@@ -130,6 +141,7 @@ Repo 基準：`origin/main@58c0870`
 - iOS 已有 Archive、防漏、Capacitor parts check 等打包 gate；Build 31 缺原生零件的事故已轉成自動阻擋。
 - 目前核心檔規模：`web/src/app.js` 約 7,263 行、`engine/server.py` 約 6,334 行、`engine/live_voice_server.py` 約 1,553 行。
 - main 目前 `package.json=1.0.26`、`package-lock.json=1.0.26`、`web/src/version.js=1.0.26`、iOS Debug／Release=`1.0.26 (33)`；STATUS 也明確記錄 Build 33 尚未上傳。
+- #112／#113／#114 已把 service metadata、migration integrity 與 admin console 的正負向契約測試帶進 main，增加 release／schema／營運介面的回歸保護。
 
 ### 主要問題
 
@@ -160,7 +172,7 @@ Repo 基準：`origin/main@58c0870`
 - 核心 bounded contexts 有獨立模組與 owner，重大功能不再集中修改 6k–7k 行單檔。
 - critical code 有可見 coverage／flaky／duration 趨勢，真人／live E2E 有固定 deployment gate。
 
-## 4. Repo 資料結構健康度 — 63/100
+## 4. Repo 資料結構健康度 — 70/100
 
 **判斷：資料很多，但 authority、runtime 與歷史資產沒有被清楚分層，已增加發版判讀成本。**
 
@@ -170,21 +182,21 @@ Repo 基準：`origin/main@58c0870`
 - `package.json`、`package-lock.json` root／package entry、`web/src/version.js` 與 iOS next binary 已對齊 `1.0.26`，修掉一項可由 repo 直接判讀的版本 metadata 漂移。
 - 頂層同時存在 runtime (`engine/`, `web/`, `ios/`, `deploy/`, `supabase/`)、設計匯入、原型、App Store 圖、SalesKit、voice samples 與多套文件。
 - Supabase migrations 從 `001` 到 `018`，但存在兩個 `011`：`011_family_invitation_integrity.sql` 與 `011_free_signup_trial_policy.sql`。
+- #113 已在 main 建立 `supabase/migration-manifest.json`，涵蓋 19 個 SQL 的 LF-normalized SHA256、migration 類型與兩個歷史 `011` 的有序 allowlist；checker、7 個治理測試與 path-filtered CI 會阻擋未登記漂移。
 - Repo 已有協作看板、上架狀態、架構與主題規格；問題不是沒有文件，而是沒有可靠的 authority index、有效期與機器檢查。
 
 ### 主要問題
 
-- migration 重號讓「已套用到哪一版」無法只靠序號回答；沒有 canonical manifest／checksum／legacy exception。
+- migration 重號已由 canonical manifest／checksum／legacy allowlist 治理，但「live 專案實際套用到哪個 checksum」仍未對帳；目前只能證明 repo 內順序與內容受控，不能證明 live schema 一致。
 - `docs/` 數量大，歷史決策與 current truth 混在同一閱讀路徑；「保留歷史」常靠段落警告，無自動失效機制。
 - 設計匯入與 bundle 共 225 個 tracked files，約佔全 repo 26%；加上 prototype、SalesKit、App Store 素材，使 runtime checkout、CODEOWNERS 與搜尋結果噪音偏高。
 - 頂層資料夾缺少一致的 owner、生命週期（runtime／source asset／generated／archive）與發版影響標記。
-- migration governance 修復仍在獨立分支，尚未合併，不能視為 main 已解。
 
 ### 優化方向
 
 **P0**
 
-1. 建立 canonical migration manifest：排序、檔名、checksum、依賴、legacy duplicate `011` 的明確處理與 live applied state；CI 每次必驗。
+1. 保持 canonical migration manifest／checksum CI 為硬 gate，並新增 live applied state 對帳：精確比對 Supabase migration head、檔名與 checksum，任何缺漏或內容差異即阻擋部署。
 2. 建立 `docs` authority index：每個主題只能有一份 current SSOT，其餘標 `historical`、`supersededBy`、最後驗證日與 owner。
 3. 在 repo map 標示每個頂層資料夾是否進包、是否部署、是否生成、是否可封存，避免設計／銷售資產被誤認 runtime 依賴。
 
@@ -244,7 +256,7 @@ Repo 基準：`origin/main@58c0870`
 - 每個 P0 功能都有 `in binary`、`backend deployed`、`DB ready`、`human verified` 的分離證據，不再用單一「完成」代替。
 - AI persona、TTS、realtime voice、locale 與服務 revision 有自動 contract test 及一次真實端到端驗收。
 
-## 6. 營運後台健康度 — 67/100
+## 6. 營運後台健康度 — 72/100
 
 **判斷：後台已經是可見產品，不再是「未建」；但目前 live 版本、操作員身分與資料可信度不足以支撐 90 分營運。**
 
@@ -255,6 +267,7 @@ Repo 基準：`origin/main@58c0870`
 - 管理讀取以 `X-Munea-Admin-Token` 與 constant-time compare 保護；login 密碼由環境／Secret Manager 提供，且有來源失敗次數限制。
 - `scripts/admin-smoke.ps1` 可檢查後台 shell、無 token 403 與 privileged reads；Cloud Run strict readiness 已確認 admin shell 與必要 admin env 存在。
 - 後台 live `version.js=1.0.12`，而 main 是 `1.0.26`；live `admin.html`／`admin.js` 也與 main 不同。
+- #114 已在 main 修正 refresh 後 token 遺失，加入同源／localhost／明示 HTTPS host guard、timeout、retry、partial failure、logout、可及性與 9 endpoint smoke 契約；這些是已合併程式能力，尚不是 live 驗證結果。
 
 ### 主要問題
 
@@ -262,7 +275,7 @@ Repo 基準：`origin/main@58c0870`
 - live 後台缺 git SHA、Cloud Run revision、部署時間、schema head 與 data freshness；營運者無法知道畫面是不是最新或資料是否落後。
 - `/admin/login` 是共享 email／password 後回傳共用 admin API token，前端存於 sessionStorage；缺 per-operator identity、MFA／SSO、RBAC 與可歸責的操作員 audit identity。
 - 目前是 staging Cloud Run 直達網址；看板所列 `admin.munea.net` 與第二道 access control 尚未形成已驗證 production ingress。
-- 管理介面與 API 的 source drift 已發生；admin hardening 修復仍在未合併分支，不能算成 main 或 live 已解。
+- 管理介面與 API 的 source drift 已發生；admin hardening 雖已進 main，但 live asset 仍是舊版，不能算成 staging 或 production 已解。
 - 後台可同時讀 Supabase 與 JSON fallback；若沒有醒目標出來源，營運者可能把 prototype／fallback 資料誤認為正式數據。
 
 ### 優化方向
@@ -287,14 +300,14 @@ Repo 基準：`origin/main@58c0870`
 - privileged admin smoke、敏感欄位遮罩、權限負向測試與資料來源檢查連續 7 天通過。
 - Safety／privacy／billing／voice 事件具有 SLA、owner、處理狀態與閉環證據，且營運數字排除 internal／QA／demo 流量。
 
-## 從 69 推到 90 的執行順序
+## 從 73 推到 90 的執行順序
 
 ### P0-A：先建立真相與阻擋線，不動送審包
 
 1. 登記 App review binary `1.0.25 (32)` 與 next binary `1.0.26 (33)` 為兩條獨立 lane；禁止互相覆寫狀態。
 2. 合併 release consistency／hard CI gate；目前 source／lock／iOS next binary 已對齊，後續由 strict gate 防止再次漂移。
-3. 合併 API health metadata 與 backward-compatibility probes。
-4. 合併 migration manifest／checksum gate，並對帳 live schema head。
+3. API health metadata 已合併；下一步部署零流量 canary，跑 backward-compatibility probes，確認 live `/healthz`／`/version` 不再 404。
+4. migration manifest／checksum gate 已合併；下一步對帳 live schema head 與 checksum，差異未清零前不宣稱 DB ready。
 5. 更新所有 current SSOT，讓 App Store、功能、設計、AI、服務與 admin 使用同一狀態詞彙。
 
 ### P0-B：canary 驗證 live，不直接切正式
@@ -313,10 +326,10 @@ Repo 基準：`origin/main@58c0870`
 ## 本輪分工與計分邊界
 
 - `codex/health90-control-20260716`：release consistency、CI hard gate、送審凍結版與 next source 的版本判讀。
-- `codex/health90-api-observability-20260716`：Brain／Voice service metadata 與 health contract。
-- `codex/health90-schema-governance-20260716`：migration manifest、checksum 與 duplicate `011` governance。
-- 獨立 admin hardening 工作：營運後台的部署版本、權限與 smoke 強化。
-- 本文件只記錄 `origin/main@58c0870` 與本日 live 驗證。main 的 Build 33／lockfile 改善已計入，但上述獨立健康修復工作在 **merge + CI + canary／live 驗證** 前不能預支成 90；目前總分為 69。
+- #112（原 `codex/health90-api-observability-20260716`）已合併：Brain／Voice service metadata 與 health contract；尚未部署。
+- #113（原 `codex/health90-schema-governance-20260716`）已合併：migration manifest、checksum 與 duplicate `011` governance；尚未與 live DB head 對帳。
+- #114 已合併：營運後台權限、失敗狀態、accessibility 與 smoke 強化；尚未部署，live 仍為 `1.0.12`。
+- 本文件記錄 `origin/main@2dca5b8` 與本日既有 live 驗證。三項合併已計入程式／治理分，但 **merge 不等於 deploy，manifest 不等於 live schema 已對帳**；目前總分為 73。
 
 ## 仍需外部確認的問題
 
