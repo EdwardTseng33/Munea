@@ -73,6 +73,9 @@ SCHEMA_TABLES = {
         "notification_events",
         "notification_deliveries",
     },
+    "supabase/sql/017_notification_settings.sql": {
+        "notification_settings",
+    },
 }
 
 
@@ -86,6 +89,37 @@ def safe_url(url):
     if not parsed.netloc:
         return ""
     return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def classify_table_error(exc):
+    """Classify live failures so only an actual missing table recommends SQL."""
+    kind = getattr(exc, "error_kind", None)
+    message = str(exc)
+    if kind == "missing_table" or "PGRST205" in message:
+        return "missing"
+    if kind == "permission" or "42501" in message or "permission denied" in message.lower():
+        return "permission"
+    if kind == "configuration" or "not fully configured" in message.lower():
+        return "configuration"
+    if kind == "unreachable" or "unreachable" in message.lower() or "circuit open" in message.lower():
+        return "unreachable"
+    return "error"
+
+
+def failed_table_check(table, exc):
+    item = {
+        "table": table,
+        "ok": False,
+        "status": classify_table_error(exc),
+        "error": str(exc)[:180],
+    }
+    error_code = getattr(exc, "error_code", None)
+    status_code = getattr(exc, "status_code", None)
+    if error_code:
+        item["errorCode"] = error_code
+    if status_code:
+        item["httpStatus"] = status_code
+    return item
 
 
 def doctor(live=False):
@@ -113,9 +147,9 @@ def doctor(live=False):
         for table in status["tables"]:
             try:
                 adapter.check_table(table)
-                result["tableChecks"].append({"table": table, "ok": True})
+                result["tableChecks"].append({"table": table, "ok": True, "status": "ok"})
             except Exception as exc:
-                result["tableChecks"].append({"table": table, "ok": False, "error": str(exc)[:180]})
+                result["tableChecks"].append(failed_table_check(table, exc))
 
         checks = [
             ("appProfile", adapter.load_app_profile_store),
@@ -133,8 +167,12 @@ def doctor(live=False):
             all(check["ok"] for check in result["tableChecks"])
             and all(check["ok"] for check in result["liveChecks"])
         )
-        failed_tables = [check["table"] for check in result["tableChecks"] if not check["ok"]]
-        result["recommendedSqlFiles"] = schema_files_for_tables(failed_tables)
+        missing_tables = [
+            check["table"]
+            for check in result["tableChecks"]
+            if check.get("status") == "missing"
+        ]
+        result["recommendedSqlFiles"] = schema_files_for_tables(missing_tables)
 
     return result
 
@@ -156,7 +194,10 @@ def print_text(result):
             failed_tables = [check for check in result["tableChecks"] if not check["ok"]]
             print(f"- table checks: {len(result['tableChecks']) - len(failed_tables)}/{len(result['tableChecks'])} ok")
             for check in failed_tables:
-                print(f"  - {check['table']}: failed ({check.get('error', 'failed')})")
+                print(
+                    f"  - {check['table']}: {check.get('status', 'failed')} "
+                    f"({check.get('error', 'failed')})"
+                )
             if result.get("recommendedSqlFiles"):
                 print("- recommended SQL apply order:")
                 for path in result["recommendedSqlFiles"]:
