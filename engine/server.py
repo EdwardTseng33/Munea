@@ -1604,6 +1604,9 @@ def normalize_routine_reminder(item):
     status = item.get("status") or "active"
     title = item.get("title") or item.get("label") or "Routine reminder"
     schedule = dict(item.get("schedule") or {})
+    # 用藥照片只留使用者裝置本機、不進雲端（隱私政策對外承諾）。
+    # 伺服器端強制剝除，因為已安裝的舊版 App 仍會在 schedule 夾帶 base64 照片。
+    schedule.pop("photo", None)
     for key in ("date", "weekday", "time", "times", "dosage", "note", "repeat"):
         if key in item and item.get(key) is not None:
             schedule.setdefault(key, item.get(key))

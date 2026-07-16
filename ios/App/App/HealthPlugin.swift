@@ -8,7 +8,9 @@ import HealthKit
 ///   requestAuthorization()  → 跳系統授權視窗（讀取）
 ///   getSummary()            → 回傳今天步數 + 最近心率/血氧/血壓 + 昨晚睡眠時數
 ///   getHistory(days)        → 回傳逐日摘要，供換機與歷史趨勢合併
-/// 只讀不寫（第一版）。資料留在裝置端，交給網頁決定怎麼呈現。
+/// 只讀不寫（第一版）。本外掛本身不上傳，但網頁端會把讀到的數值同步到雲端
+/// （app.js → POST /family/state → family_state_entries），供授權的家人查看。
+/// 因此健康／健身資料在 App Privacy 問卷申報為「有收集、與身分連結、不用於追蹤」。
 @objc(HealthPlugin)
 public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "HealthPlugin"
