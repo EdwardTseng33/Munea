@@ -32,6 +32,23 @@ _MISSING_TABLES = {}
 _MISSING_TTL = 30.0
 
 
+class SupabaseRequestError(RuntimeError):
+    """Structured REST failure without weakening existing RuntimeError callers."""
+
+    def __init__(
+        self,
+        message,
+        *,
+        error_kind="http_error",
+        status_code=None,
+        error_code=None,
+    ):
+        super().__init__(message)
+        self.error_kind = error_kind
+        self.status_code = status_code
+        self.error_code = error_code
+
+
 def _circuit_open():
     return time.time() < _CIRCUIT["open_until"]
 
@@ -409,6 +426,7 @@ class SupabaseAdapter:
                 "push_devices",
                 "notification_events",
                 "notification_deliveries",
+                "notification_settings",
             ],
         }
 
@@ -418,6 +436,7 @@ class SupabaseAdapter:
         select_columns = {
             "companion_persona_templates": "template_id",
             "entitlement_policy_versions": "policy_key",
+            "notification_settings": "person_id",
         }
         column = select_columns.get(table, "id")
         self._request("GET", table, query={"select": column, "limit": "1"})
@@ -3307,13 +3326,24 @@ class SupabaseAdapter:
 
     def _request(self, method, table, query=None, payload=None, prefer=None):
         if not self.enabled():
-            raise RuntimeError("Supabase adapter is not fully configured")
+            raise SupabaseRequestError(
+                "Supabase adapter is not fully configured",
+                error_kind="configuration",
+            )
         # 斷路器：雲端連不上時，20 秒內同一波後續呼叫直接秒退（走本地備份），
         # 不再每次苦等 4 秒逾時。防「單一請求連問十幾次、累加成數分鐘卡死」。
         if _circuit_open():
-            raise RuntimeError("Supabase circuit open: recent connection failure, using local fallback")
+            raise SupabaseRequestError(
+                "Supabase circuit open: recent connection failure, using local fallback",
+                error_kind="unreachable",
+            )
         if _table_known_missing(table):
-            raise RuntimeError(f"Supabase table '{table}' known missing (PGRST205 cached), using local fallback")
+            raise SupabaseRequestError(
+                f"Supabase table '{table}' known missing (PGRST205 cached), using local fallback",
+                error_kind="missing_table",
+                status_code=404,
+                error_code="PGRST205",
+            )
         query_string = urllib.parse.urlencode(query or {})
         url = f"{self.url}/rest/v1/{table}"
         if query_string:
@@ -3332,13 +3362,36 @@ class SupabaseAdapter:
             # HTTP 層有明確快速回應（如缺表 404）：不觸發斷路器（本來就快），但視為連線成功可用
             _reset_circuit()
             detail = e.read().decode("utf-8", "replace")[:300]
-            if e.code == 404 and "PGRST205" in detail:
+            error_code = None
+            try:
+                parsed_detail = json.loads(detail)
+                if isinstance(parsed_detail, dict):
+                    error_code = parsed_detail.get("code")
+            except (TypeError, ValueError):
+                pass
+            if e.code == 404 and (error_code == "PGRST205" or "PGRST205" in detail):
                 _mark_table_missing(table)  # 記著這張表缺，30 秒內同批呼叫秒退
-            raise RuntimeError(f"Supabase {method} {table} failed: {e.code} {detail}") from e
+                error_code = "PGRST205"
+            if e.code == 401:
+                error_kind = "configuration"
+            elif e.code == 403:
+                error_kind = "permission"
+            elif e.code == 404 and error_code == "PGRST205":
+                error_kind = "missing_table"
+            elif error_code == "42501":
+                error_kind = "permission"
+            else:
+                error_kind = "http_error"
+            raise SupabaseRequestError(
+                f"Supabase {method} {table} failed: {e.code} {detail}",
+                error_kind=error_kind,
+                status_code=e.code,
+                error_code=error_code,
+            ) from e
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             # 連線層失敗（逾時 / 連不上 / 被重置）：開啟斷路器，讓同批後續呼叫秒退
             _trip_circuit()
-            raise RuntimeError(f"Supabase {method} {table} unreachable: {type(e).__name__}") from e
+            raise SupabaseRequestError(f"Supabase {method} {table} unreachable: {type(e).__name__}", error_kind="unreachable") from e
 
     @staticmethod
     def _is_uuid(value):
