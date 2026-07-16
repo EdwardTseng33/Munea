@@ -29,7 +29,7 @@ Repo 基準：`origin/main@741fec7`
 
 ### 本輪分數調整理由（相對前一版 75 分）
 
-- 架構 `83→84`：#130 將 watchdog 從六個目標擴為八個並即時探測 8/8 PASS；但 GitHub 排程／Slack 告警鏈仍缺首次實跑證據，production 與 Voice 真鏈路亦未完成。
+- 架構 `83→84`：#130 將 watchdog 從六個目標擴為八個，GitHub Actions `workflow_dispatch` 在 main@741fec7 完整 PASS；cron 首次準點觸發與失敗路徑 Slack 投遞仍未演練，production 與 Voice 真鏈路亦未完成。
 - API `84→87`：Brain root 與 invalid Apple JWS probe 通過，Brain／Voice `/version` 可對到 `8ee91cb`，#115 為 12 條 AI 燒錢入口加入 429 限流；但 canary 早於 #115，且 Voice 真 Gateway lease／Call Token／Gemini media 均未驗。
 - App／後端代碼 `83→84`：#133 增加 admin response header contract、live smoke hard gate並通過完整 `test:launch`；大型單檔、coverage 與真人 Voice Gate 未解。
 - Repo `70→64`：本輪取得 live 證據後確認 Tokyo observable head 僅 `016`，repo/local 已到 `018`，且 Sydney 環境指向殘留；這是已確認的資料平面漂移，必須扣分。
@@ -49,7 +49,7 @@ Repo 基準：`origin/main@741fec7`
 | staging 營運後台 | exact-main 0% canary 的 shell、dynamic console、九個 unauth 403 與 privileged reads PASS；accounts=1、audit=2，其餘觀察值為 0 | 證明權限門與讀取路徑可用；零值不證明事件／privacy／feedback／safety 埋點完整 |
 | admin HTTP headers | 0% canary 上 CSP、X-Frame-Options=DENY、X-Content-Type-Options=nosniff、Referrer-Policy=no-referrer 全 PASS | Phase A 已完成；100% traffic 尚未包含此 revision，Phase B identity／MFA／RBAC 未完成 |
 | Supabase schema | repo／local head=`018`；Tokyo observable head=`016`；`017` 不存在、`018` 尚未清理；工作環境 `engine/.env.local` 仍指 Sydney | manifest 不能替代 live applied state；Tokyo migration 與環境清理為 P0 |
-| #115／#130／#133 | AI rate limit、八服務 watchdog 與 admin headers 已合併至 main；Brain 0% canary 已包含 exact main | 已計入程式與治理分；尚未 promotion，watchdog 排程／Slack 告警鏈仍缺首次實跑 |
+| #115／#130／#133 | AI rate limit、八服務 watchdog 與 admin headers 已合併至 main；Brain 0% canary 已包含 exact main；watchdog workflow_dispatch run 29505204065 PASS | 已計入程式與治理分；尚未 promotion，cron 準點觸發與失敗路徑 Slack 投遞仍待演練 |
 
 ## 1. 架構健康度 — 84/100
 
