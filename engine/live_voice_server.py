@@ -33,6 +33,7 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
+from voice_echo_guard import frame_rms, in_output_window, should_drop_uplink_frame
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -931,7 +932,7 @@ async def handle(ws):
     _CID["n"] += 1
     cid = _CID["n"]
     t0 = time.monotonic()
-    st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False,
+    st = {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -1118,6 +1119,7 @@ async def handle(ws):
                 if not chunk:
                     return
                 st["out"] += len(chunk)
+                st["last_out"] = time.monotonic()
                 await ws.send(chunk)
                 fw = st.get("face_ws")
                 if fw is not None:
@@ -1318,6 +1320,15 @@ async def handle(ws):
                         if not st["first_mic"]:
                             st["first_mic"] = True
                             _diag(cid, "node.mic_uplink", ms=round((st["last_in"] - t0) * 1000))
+                        # 回音濾網（病歷 a 快藥）：她出聲期間＋殘響窗內，低能量上行＝喇叭漏回來的
+                        # 自己聲音 → 丟棄；正常音量直說天生高於門檻、插話照常穿透。voice_echo_guard.py。
+                        _eg_now = time.monotonic()
+                        if in_output_window(_eg_now, st.get("last_out")) and should_drop_uplink_frame(
+                                _eg_now, st.get("last_out"), frame_rms(message)):
+                            st["echo_dropped"] += 1
+                            if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
+                                _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
+                            continue
                         await session.send_realtime_input(
                             audio=types.Blob(data=bytes(message), mime_type="audio/pcm;rate=16000")
                         )
@@ -1427,6 +1438,7 @@ async def handle(ws):
                                 st["lookup_waiting_answer"] = False
                             st["out"] += len(data)
                             turn_out += len(data)
+                            st["last_out"] = time.monotonic()
                             await ws.send(data)
                             fw = st.get("face_ws")
                             if fw is not None:
@@ -1486,7 +1498,9 @@ async def handle(ws):
                                     await ws.send(json.dumps({"type": "turn_complete"}))
                                     if barge_cancelled and source in ("model_output", "mandarin_pronunciation"):
                                         _diag(cid, "node.language_replacement_skipped", reason="barge_in", source=source)
-                                    elif source == "model_output" and st.get("language_retry_count", 0) < 1:
+                                    elif source in ("model_output", "mandarin_pronunciation") and st.get("language_retry_count", 0) < 1:
+                                        # 病歷 d（聲線變）：先讓模型用「她自己的聲音」重講國語版；
+                                        # 重講仍被攔才換安全配音（不同引擎、聲線不同＝最後手段）。
                                         st["language_retry_count"] = st.get("language_retry_count", 0) + 1
                                         await _retry_mandarin_output()
                                     elif source == "mandarin_pronunciation":
@@ -1645,7 +1659,7 @@ async def handle(ws):
         except Exception as exc:
             _diag(cid, "node.call_memory_err", err=f"{type(exc).__name__}:{str(exc)[:60]}")
         _diag(
-            cid, "closed", in_bytes=st["in"], out_bytes=st["out"],
+            cid, "closed", in_bytes=st["in"], out_bytes=st["out"], echo_dropped=st["echo_dropped"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
             barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
