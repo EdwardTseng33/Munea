@@ -22,11 +22,12 @@ resolve_gcloud() {
 }
 
 resolve_python() {
-  if command -v python3 >/dev/null 2>&1; then
+  # Windows 陷阱：python3 常是微軟商店空殼（叫了靜默失敗）——必須真跑一次 print 驗證可用
+  if command -v python3 >/dev/null 2>&1 && python3 -c "print()" >/dev/null 2>&1; then
     PYTHON=(python3)
   elif [ -x /usr/bin/python3 ]; then
     PYTHON=(/usr/bin/python3)
-  elif command -v python >/dev/null 2>&1; then
+  elif command -v python >/dev/null 2>&1 && python -c "print()" >/dev/null 2>&1; then
     PYTHON=(python)
   else
     echo "⛔ 找不到 Python；無法安全解析 Cloud Run 狀態"
