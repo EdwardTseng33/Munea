@@ -162,6 +162,23 @@ $adminPage = Invoke-WebRequest -Uri "$BaseUrl/admin.html" -Headers $identityHead
 if ($adminPage.StatusCode -ne 200) {
   throw "/admin.html returned HTTP $($adminPage.StatusCode)"
 }
+$requiredSecurityHeaders = [ordered]@{
+  "X-Content-Type-Options" = "nosniff"
+  "X-Frame-Options" = "DENY"
+  "Referrer-Policy" = "no-referrer"
+}
+foreach ($entry in $requiredSecurityHeaders.GetEnumerator()) {
+  $actual = [string]$adminPage.Headers[$entry.Key]
+  if ($actual -ne $entry.Value) {
+    throw "/admin.html header $($entry.Key) was '$actual', expected '$($entry.Value)'"
+  }
+}
+$contentSecurityPolicy = [string]$adminPage.Headers["Content-Security-Policy"]
+foreach ($directive in @("default-src 'none'", "frame-ancestors 'none'", "script-src 'self'")) {
+  if ($contentSecurityPolicy -notmatch [regex]::Escape($directive)) {
+    throw "/admin.html Content-Security-Policy missing directive: $directive"
+  }
+}
 foreach ($token in @("Munea", 'id="sideNav"', 'id="pageRoot"', 'id="statusPill"', 'id="refreshBtn"', 'aria-live="polite"', "src/admin.js", "src/admin.css")) {
   if ($adminPage.Content -notmatch [regex]::Escape($token)) {
     throw "/admin.html missing token: $token"

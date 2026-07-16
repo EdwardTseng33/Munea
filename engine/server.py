@@ -6551,6 +6551,41 @@ def cors_origins():
     return {origin.strip().rstrip("/") for origin in configured.split(",") if origin.strip()}
 
 
+ADMIN_CONTENT_SECURITY_POLICY = "; ".join(
+    (
+        "default-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        "object-src 'none'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src https://fonts.gstatic.com",
+        "img-src 'self' data:",
+        "connect-src 'self' https://*.run.app https://*.a.run.app",
+    )
+)
+
+
+def admin_security_headers(path, content_type=""):
+    clean_path = str(path or "").split("?", 1)[0].split("#", 1)[0]
+    is_admin_surface = (
+        clean_path in {"/admin", "/admin.html", "/src/admin.js", "/src/admin.css", "/src/version.js"}
+        or clean_path.startswith("/admin/")
+    )
+    if not is_admin_surface:
+        return {}
+
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "no-referrer",
+    }
+    if clean_path in {"/admin", "/admin.html"} or "text/html" in str(content_type).lower():
+        headers["Content-Security-Policy"] = ADMIN_CONTENT_SECURITY_POLICY
+    return headers
+
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -6558,7 +6593,9 @@ class H(BaseHTTPRequestHandler):
     def _send(self, code, ctype, body, extra_headers=None):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
-        for name, value in (extra_headers or {}).items():
+        response_headers = dict(extra_headers or {})
+        response_headers.update(admin_security_headers(getattr(self, "path", ""), ctype))
+        for name, value in response_headers.items():
             self.send_header(name, str(value))
         origin = (self.headers.get("Origin") or "").strip().rstrip("/")
         if origin and origin in cors_origins():
@@ -6585,6 +6622,8 @@ class H(BaseHTTPRequestHandler):
             "Authorization, Content-Type, X-Munea-Key, X-Munea-Admin-Token, X-Munea-Provider-Token",
         )
         self.send_header("Access-Control-Max-Age", "600")
+        for name, value in admin_security_headers(getattr(self, "path", "")).items():
+            self.send_header(name, value)
         self.send_header("Content-Length", "0")
         self.end_headers()
 
