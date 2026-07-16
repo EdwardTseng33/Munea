@@ -1,16 +1,16 @@
-# Munea 上線健康度 68→90 Scorecard
+# Munea 上線健康度 69→90 Scorecard
 
 評估日期：2026-07-16（Asia/Taipei）
 
-Repo 基準：`origin/main@250d28b`
+Repo 基準：`origin/main@58c0870`
 
 評估範圍：送審中的 iOS App、Brain／Voice／Gateway／Avatar、API、底層程式、Supabase migrations、Repo 資料結構、產品與版本文件、AI／服務狀態，以及 staging 營運後台。
 
 ## Executive Summary
 
-- **目前整體健康度為 68/100，六個面向都尚未達 90。** 架構與 API 已有可用地基，但「可運作」還沒有全面升級成「可證明、可回滾、可持續營運」。
-- **最大風險是版本與產品真相漂移。** 使用者已確認一版正在 App Store 審核，但 repo 內的上架文件仍同時出現 Build 32、Build 30、「處理中」與「不可送審」；其他權威文件仍寫舊 App 版號、舊產品階段與「Admin 未建」。
-- **送審包必須凍結，不因本輪健康度修復而重包。** 本次把 `1.0.25 (Build 32)` 視為已送審的凍結二進位；`main` 的 `1.0.26` 是送審後的下一版來源。Brain／Voice 若推進，只能採向下相容、canary、探測通過後再切流量的方式。
+- **目前整體健康度為 69/100，六個面向都尚未達 90。** 最新 main 已把 source、lockfile 與 iOS next binary 對齊到 `1.0.26 (Build 33)`，但「可運作」仍未全面升級成「可證明、可回滾、可持續營運」。
+- **最大風險仍是跨時間線的產品真相漂移。** 使用者先前確認 `1.0.25 (Build 32)` 已進 App Store 審核；最新 repo 則明確記錄 `1.0.26 (Build 33)` 已完成 Archive／IPA 與手機開發版換裝、但尚未上傳。這兩件事可以同時成立，但 App Store readiness、Current Plan、Architecture、README 與 Backlog 尚未共享同一狀態模型。
+- **送審包與 next binary 必須分開管理。** 本報告保留 `1.0.25 (Build 32)` 作為已送審稽核起點；目前 main 與下一包則是 `1.0.26 (Build 33)`。Brain／Voice 若推進，只能採向下相容、canary、探測通過後再切流量的方式，且必須持續驗證 Build 32 相容性。
 - **營運後台已納入正式產品面。** staging 後台頁面可達，但 live `version.js` 顯示 `1.0.12`，`admin.html`／`admin.js` 也與 `origin/main` 不同；目前只能證明「舊後台殼可開」，不能證明「最新後台已部署且所有營運資料可信」。
 
 ## 評分方法與結論
@@ -22,19 +22,18 @@ Repo 基準：`origin/main@250d28b`
 | 1. 架構健康度 | 79 | 否 | 分層與容量地基存在，但跨服務營運證據、production 邊界與失效演練不足 |
 | 2. API 健康度 | 80 | 否 | 權限與端點覆蓋不弱，但缺部署版本身分、統一契約與硬性 main gate |
 | 3. App 與後端底層代碼健康度 | 75 | 否 | 測試量充足，但核心檔過大、CI push 可 soft-fail、版本狀態未制度化 |
-| 4. Repo 資料結構健康度 | 62 | 否 | migration 與 docs 有結構，但重號、資產混放與歷史文件失控已影響判讀 |
-| 5. 產品資料／版本／功能／設計／AI／服務對焦 | 45 | 否 | 多份「權威文件」互相衝突，無法由 repo 單獨回答現在到底上了什麼 |
+| 4. Repo 資料結構健康度 | 63 | 否 | source／lockfile 已對齊，但 migration 重號、資產混放與歷史文件失控仍影響判讀 |
+| 5. 產品資料／版本／功能／設計／AI／服務對焦 | 52 | 否 | STATUS 已區分 Build 32 與 33，但其他「權威文件」及 live 服務仍未同步 |
 | 6. 營運後台健康度 | 67 | 否 | 後台與管理 API 已存在，但 live 資產落後、操作員身分與資料新鮮度證據不足 |
-| **等權總分** | **68** | **否** | **距 90 還有 22 分；先修真相與 gate，再擴功能** |
+| **等權總分** | **69** | **否** | **距 90 還有 21 分；先修真相與 gate，再擴功能** |
 
 ## 本次採用的 release truth
 
 | 對象 | 目前可信狀態 | 判讀 |
 |---|---|---|
-| App Store 二進位 | 使用者確認已有一版進入 App Store 審核；repo 的最新打包記錄是 `1.0.25 (Build 32)` | 本輪凍結，不改 iOS 行銷版號、Build 或包內資產 |
-| `origin/main` Web／產品來源 | `package.json` 與 `web/src/version.js` 是 `1.0.26` | 視為送審後下一版開發，不應反向覆蓋送審包狀態 |
-| lockfile | `package-lock.json` 仍是 `1.0.25` | main 的來源版本一致性目前不通過 |
-| iOS project | `MARKETING_VERSION=1.0.25`、`CURRENT_PROJECT_VERSION=32` | 與凍結送審包一致；與下一版 source 不同本身可接受，但需由 release state 明確描述 |
+| App Store 審核二進位（稽核起點） | 使用者先前確認 `1.0.25 (Build 32)` 已進入 App Store 審核；repo readiness 仍保留 Build 32 上傳成功／處理中紀錄 | 視為不可變更的既有二進位；精確 Apple state 仍以 App Store Connect 為準 |
+| `origin/main` Web／產品來源 | `package.json`、`package-lock.json` root／package entry 與 `web/src/version.js` 均為 `1.0.26` | source 與 lockfile 已恢復一致 |
+| iOS next binary | Debug／Release 均為 `MARKETING_VERSION=1.0.26`、`CURRENT_PROJECT_VERSION=33`；STATUS 記錄 Archive／IPA 與手機開發版換裝完成，但尚未上傳 | 這是 Build 32 之後的 next binary，不得被誤寫成目前 App Store 審核包 |
 | Brain／Voice Cloud Run | 2026-07-16 已執行 strict readiness；Brain／Voice Ready、必要 env、Secret Manager accessor 與 admin shell 檢查通過 | 證明基礎服務可用，不等於全部 API／真人 App E2E／SLO 已達標 |
 | staging 營運後台 | 使用者提供 URL 回 HTTP 200；live `version.js=1.0.12`，live `admin.html`／`admin.js` 與 main 不同 | 部署漂移，未達可追溯營運版本門檻 |
 | staging Brain／Voice API | Cloud Run revision 顯示 Ready；alias 與 canonical URL 的 `/healthz`、`/version` 實測皆回 HTTP 404 | 基礎設施存活不等於應用健康；線上缺少可追溯的 release／health contract |
@@ -130,14 +129,14 @@ Repo 基準：`origin/main@250d28b`
 - `test:launch` 已串起 Python 與 Node 驗收，涵蓋用藥照片隱私、family relays、voice memory／diagnostics、APNs、薄門、CORS、account scope、Store、privacy export、localization 與 UI contracts。
 - iOS 已有 Archive、防漏、Capacitor parts check 等打包 gate；Build 31 缺原生零件的事故已轉成自動阻擋。
 - 目前核心檔規模：`web/src/app.js` 約 7,263 行、`engine/server.py` 約 6,334 行、`engine/live_voice_server.py` 約 1,553 行。
-- main 目前 `package.json=1.0.26`、`web/src/version.js=1.0.26`、`package-lock.json=1.0.25`、iOS=`1.0.25 (32)`。
+- main 目前 `package.json=1.0.26`、`package-lock.json=1.0.26`、`web/src/version.js=1.0.26`、iOS Debug／Release=`1.0.26 (33)`；STATUS 也明確記錄 Build 33 尚未上傳。
 
 ### 主要問題
 
 - `app.js` 與 `server.py` 同時承載多個 bounded context，改一個家庭、語音或營運需求容易觸發大範圍回歸與多人衝突。
 - 現有測試多為契約／回歸 script；缺少可追蹤的 statement／branch coverage、flaky test 指標、耗時分層與最小 critical suite。
 - push gate 可 soft-fail，代表測試存在但不能保證 main 永遠滿足它。
-- 版本差異目前混合兩種概念：送審包凍結是合理差異，lockfile 落後則是不合理差異；repo 沒有工具自動分辨兩者。
+- source／lockfile／next iOS binary 的直接版號不一致已修正；但 repo 仍缺工具把「Build 32 審核中」與「Build 33 尚未上傳」建模成兩條合法 release lane，後續文件仍可能互相覆蓋。
 - 開發 fallback、staging URL 與正式行為仍在同一批程式中，容易出現「測試可跑，但出貨指向錯環境」。
 
 ### 優化方向
@@ -147,7 +146,7 @@ Repo 基準：`origin/main@250d28b`
 1. 合併並啟用 release consistency gate：source／lock／Web 必須一致；iOS 可因 review freeze 落後，但需由 manifest 明示，下次包版使用 strict-iOS 阻擋。
 2. 把 main push 的 static／auth／Supabase gate 改為硬失敗；通知降噪不能以放過紅燈實現。
 3. 固定一套 10–15 分鐘 critical CI：登入、family scope、subscription、privacy、Voice contract、migration、admin gate；較慢真人／live probe 放 deployment gate。
-4. 送審期間不得修改 iOS package；任何 backend 合併都需跑 `1.0.25 (32)` compatibility fixture。
+4. 不得把 next binary 的狀態覆寫到既有審核包；任何 backend 合併都需跑 `1.0.25 (32)` compatibility fixture，Build 33 上傳前另跑 strict release gate。
 
 **P1**
 
@@ -161,13 +160,14 @@ Repo 基準：`origin/main@250d28b`
 - 核心 bounded contexts 有獨立模組與 owner，重大功能不再集中修改 6k–7k 行單檔。
 - critical code 有可見 coverage／flaky／duration 趨勢，真人／live E2E 有固定 deployment gate。
 
-## 4. Repo 資料結構健康度 — 62/100
+## 4. Repo 資料結構健康度 — 63/100
 
 **判斷：資料很多，但 authority、runtime 與歷史資產沒有被清楚分層，已增加發版判讀成本。**
 
 ### 現有證據
 
-- Repo 共 851 個 tracked files；其中 `docs/` 167 個、`design-import/` 145 個、`ds-bundle/` 80 個。
+- Repo 共 852 個 tracked files；其中 `docs/` 168 個、`design-import/` 145 個、`ds-bundle/` 80 個。
+- `package.json`、`package-lock.json` root／package entry、`web/src/version.js` 與 iOS next binary 已對齊 `1.0.26`，修掉一項可由 repo 直接判讀的版本 metadata 漂移。
 - 頂層同時存在 runtime (`engine/`, `web/`, `ios/`, `deploy/`, `supabase/`)、設計匯入、原型、App Store 圖、SalesKit、voice samples 與多套文件。
 - Supabase migrations 從 `001` 到 `018`，但存在兩個 `011`：`011_family_invitation_integrity.sql` 與 `011_free_signup_trial_policy.sql`。
 - Repo 已有協作看板、上架狀態、架構與主題規格；問題不是沒有文件，而是沒有可靠的 authority index、有效期與機器檢查。
@@ -200,13 +200,14 @@ Repo 基準：`origin/main@250d28b`
 - 每個頂層目錄都有 owner、生命週期與 release impact；generated／archive 資產不污染 runtime gate。
 - 新 session 能在 10 分鐘內從 repo map 找到目前版本、服務、schema、設計與營運權威來源。
 
-## 5. 產品資料／版本／功能／設計／AI／服務對焦 — 45/100
+## 5. 產品資料／版本／功能／設計／AI／服務對焦 — 52/100
 
 **判斷：這是目前離 90 最遠、也最容易造成錯誤決策的面向。**
 
 ### 現有證據
 
-- `docs/APP-STORE-PRODUCTION-READINESS.md` 開頭正確記錄 `1.0.25 (Build 32)` 已上傳，但內文仍多次寫 Build 30，並在「上傳決策」寫「已上傳、不可送審」；使用者已確認目前已有一版進 App Store 審核。
+- `STATUS.md` 現在清楚區分兩條時間線：Build 32 已上傳、Build 33 已完成 Archive／IPA 與手機開發版換裝但未上傳；source、lockfile 與 iOS next binary 也已對齊 `1.0.26 (33)`。
+- `docs/APP-STORE-PRODUCTION-READINESS.md` 開頭仍只記錄 `1.0.25 (Build 32)` 已上傳，內文多次寫 Build 30，並在「上傳決策」寫「已上傳、不可送審」；同時沒有反映使用者先前確認 Build 32 已進審核，以及 Build 33 已成為 next binary 的最新 repo 事實。
 - `docs/CURRENT-DEVELOPMENT-PLAN.md` 首行仍是 Updated 2026-06-30；7/14 override 寫 App `1.0.3 (6)`，進度表仍寫 first TestFlight path 30–35%、not ready。
 - `docs/BACKEND-ARCHITECTURE-v1.md` Updated 2026-06-29，前段仍寫「Admin and analytics are not built yet」，但同文件後段與程式已列出完整 Admin endpoints，staging 後台也已可達。
 - `BACKLOG.md` 標記日期 2026-06-28，仍把 realtime voice、moving face、iPhone package、Health、reminders、credits、family linkage 等大量已施工項目列為未做。
@@ -216,7 +217,7 @@ Repo 基準：`origin/main@250d28b`
 
 ### 主要問題
 
-- 「現在版本」「Apple 狀態」「功能是否上線」「服務是否部署」沒有共享狀態機；uploaded、processing、TestFlight、submitted for review、approved、released 被混用。
+- STATUS 已開始正確分出「review binary」與「next binary」，但「現在版本」「Apple 狀態」「功能是否上線」「服務是否部署」仍沒有跨文件共享狀態機；uploaded、processing、TestFlight、submitted for review、approved、released 仍可能被其他 current 文件混用。
 - 產品功能常以「程式存在」「PR 合併」「staging deployed」「App binary 內含」「真人驗收通過」任一狀態代表完成，造成文件彼此看似都對、合在一起卻衝突。
 - 設計、AI persona、TTS、realtime voice、backend service 與 App package 沒有同一個 compatibility matrix；新規則寫進 main 不代表送審包或 live service 已吃到。
 - 舊版本資訊散落在 current 文件頂部，會直接誤導接手 session、營運與發版決策。
@@ -286,12 +287,12 @@ Repo 基準：`origin/main@250d28b`
 - privileged admin smoke、敏感欄位遮罩、權限負向測試與資料來源檢查連續 7 天通過。
 - Safety／privacy／billing／voice 事件具有 SLA、owner、處理狀態與閉環證據，且營運數字排除 internal／QA／demo 流量。
 
-## 從 68 推到 90 的執行順序
+## 從 69 推到 90 的執行順序
 
 ### P0-A：先建立真相與阻擋線，不動送審包
 
-1. 凍結並登記 App review binary `1.0.25 (32)`；將 `main 1.0.26` 標成 next source。
-2. 合併 release consistency／hard CI gate，修正 lockfile 與 source 版號一致性；iOS 僅下次包版才 strict 對齊。
+1. 登記 App review binary `1.0.25 (32)` 與 next binary `1.0.26 (33)` 為兩條獨立 lane；禁止互相覆寫狀態。
+2. 合併 release consistency／hard CI gate；目前 source／lock／iOS next binary 已對齊，後續由 strict gate 防止再次漂移。
 3. 合併 API health metadata 與 backward-compatibility probes。
 4. 合併 migration manifest／checksum gate，並對帳 live schema head。
 5. 更新所有 current SSOT，讓 App Store、功能、設計、AI、服務與 admin 使用同一狀態詞彙。
@@ -315,11 +316,11 @@ Repo 基準：`origin/main@250d28b`
 - `codex/health90-api-observability-20260716`：Brain／Voice service metadata 與 health contract。
 - `codex/health90-schema-governance-20260716`：migration manifest、checksum 與 duplicate `011` governance。
 - 獨立 admin hardening 工作：營運後台的部署版本、權限與 smoke 強化。
-- 本文件只記錄 `origin/main@250d28b` 與本日 live 驗證。上述工作在 **merge + CI + canary／live 驗證** 前，總分仍維持 68，不能預支成 90。
+- 本文件只記錄 `origin/main@58c0870` 與本日 live 驗證。main 的 Build 33／lockfile 改善已計入，但上述獨立健康修復工作在 **merge + CI + canary／live 驗證** 前不能預支成 90；目前總分為 69。
 
 ## 仍需外部確認的問題
 
-1. App Store Connect 的精確狀態是 `Waiting for Review`、`In Review` 或其他狀態，以及實際選用的 Build 是否確為 32。
+1. App Store Connect 的精確狀態是 `Waiting for Review`、`In Review` 或其他狀態，以及先前已送審項目實際選用的 Build 是否確為 32；Build 33 依最新 repo 證據尚未上傳。
 2. staging 後台目前 privileged reads 是否全部來自正確 Supabase project，而非 JSON fallback；各指標最後資料時間為何。
 3. 送審包實際使用的 Brain／Voice／Gateway URL 與 revision；`main` 的後端變更是否對該包完全向下相容。
 4. production ingress、資料區域、on-call owner、SLO 與 rollback 權限由誰最終負責。
