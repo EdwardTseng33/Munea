@@ -1,6 +1,8 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 📱 **2026-07-16 20:25 最新包版**：`1.0.28 (Build 35)` **iPhone-only**，在 Build 34 上收 **背後防護批次**（#115 AI 限流護欄＋#119 服務看門狗＋#125 領證測試模式；App 畫面功能無變動、依 Edward 指示升版收版籍）。14 支 node 測試全綠、正式 Archive、五道防漏、`UIDeviceFamily=[1]` 均 PASS。正式 IPA 58,869,813 bytes，SHA-256 `37c7944f193856275871ee0b8a360c6b95915da01f4ef23eea6c8f3d45c66c95`。來源分支 `release/1.0.28-build35`（PR #128）。**上傳與送審維持凍結（Edward 拍板）**。Edward iPhone 已換裝 Build 35 開發版（回讀 `1.0.28 (35)`、雙釘測試機）。詳 100 號。
+> 📱 **2026-07-16 23:15 最新包版**：`1.0.29 (Build 36)` **iPhone-only**，在 Build 35 上修 **情緒監測卡整卡變死**（雲端 moodKey 壞編號三層防護＋雲端讀回 0 值誤退修正，詳 102 號）。14 支 node 測試全綠、正式 Archive、五道防漏、`UIDeviceFamily=[1]` 均 PASS。正式 IPA 58,870,523 bytes，SHA-256 `10b39956432104f368e20ea73c2820465d741ebb96adbe8d3fb89461c913fe13`。來源分支 `fix/mood-card-bad-moodkey-brick`（PR #138）。**上傳與送審維持凍結（Edward 拍板）**。Edward iPhone 已換裝 Build 36（回讀 `1.0.29 (36)`、雙釘測試機）。
+>
+> 📱 **2026-07-16 20:25 前一包**：`1.0.28 (Build 35)` **iPhone-only**，在 Build 34 上收 **背後防護批次**（#115 AI 限流護欄＋#119 服務看門狗＋#125 領證測試模式；App 畫面功能無變動、依 Edward 指示升版收版籍）。14 支 node 測試全綠、正式 Archive、五道防漏、`UIDeviceFamily=[1]` 均 PASS。正式 IPA 58,869,813 bytes，SHA-256 `37c7944f193856275871ee0b8a360c6b95915da01f4ef23eea6c8f3d45c66c95`。來源分支 `release/1.0.28-build35`（PR #128）。**上傳與送審維持凍結（Edward 拍板）**。Edward iPhone 已換裝 Build 35 開發版（回讀 `1.0.28 (35)`、雙釘測試機）。詳 100 號。
 >
 > 📱 **2026-07-16 19:45 前一包**：`1.0.27 (Build 34)` **iPhone-only**，在 Build 33 上加入 **PR #118 App 三橋預設改指真正式**（聊天／購買憑證／推播登記不再指測試機）＋ #114 管理台強化＋出貨防呆鎖。零件比對、正式 Archive、五道防漏、`UIDeviceFamily=[1]` 均 PASS。正式 IPA 58,869,581 bytes，SHA-256 `2379d02a92e1c190d06808771801e29f64001ec30700111ea18f5653d14dd467`。來源分支 `release/1.0.27-build34`（PR #124）。**上傳與送審維持凍結（Edward 拍板）**。Edward iPhone 已換裝 Build 34 開發版（回讀 `1.0.27 (34)`、開發包雙釘測試機＝接 95 號今日新版 Voice/Brain）。詳 96 號。
 >
@@ -24,7 +26,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-16 20:25（Mac 蘇菲 · 1.0.28 Build 35 打包完成＋Edward 手機已換裝開發版，詳 100 號。後端三張 PR（限流護欄／看門狗／領證測試模式）已全數併入主線。上傳／送審維持凍結；候選版籍 Build 32／34／35 待 Edward 點名。真人 Gate、真登入、拍照、金流、APNs 與審核元資料仍未通過、App Privacy「發佈」待 Edward 按）**
+> **最後更新：2026-07-16 23:15（Mac 蘇菲 · 情緒監測卡變磚修復＋1.0.29 Build 36 已換裝 Edward 手機，詳 102 號。雲端讀回修正待下次 Brain 部署帶上。上傳／送審維持凍結；候選版籍 Build 32／34／35／36 待點名（建議 36）。真人 Gate、真登入、拍照、金流、APNs 與審核元資料仍未通過、App Privacy「發佈」待 Edward 按）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -33,6 +35,8 @@
 ---
 
 ## 一眼總覽
+
+**102－🔴→✅ 情緒監測卡「整卡變死」修復＋1.0.29 Build 36 換裝（7/16 23:1X Mac 蘇菲 · PR #138 · Edward 真機回報）**：①🔴 **症狀**：狀態頁情緒監測卡點六顆表情完全沒反應、動態失效；重開 App 也一樣。②**根因（瀏覽器毒資料重現確認）**：雲端讀回 `wellbeing_row_to_signal` 用 `or` 讀 facts.moodKey → **moodKey=0（開心）被當成沒有值、退回英文 mood 字串**；App 端把字串當 0-5 編號存進本機快取 → 重畫卡片時 `MOODS[i].c` 炸掉 → 按鍵綁定沒掛回 → 整卡死＋壞值持久化。**為何今天爆**：19:08 測試機 Brain/Voice 切新版後開始寫入此類心情紀錄（91-95 號鏈）。③✅ **修法三層＋根治**：a. App 端 `normMoodKey` 統一消毒——快取載入自癒（開 App 即修復已中毒手機）＋雲端資料先消毒再存（轉不了的跳過）b. `decorate()` 防呆：怪值當「還沒記錄」、卡片永不再死 c. 雲端 `_wellbeing_mood_key` None-safe＋英文詞→編號（**生效待下次 Brain 部署**；App 端修復不依賴它）。④✅ **驗證**：瀏覽器同款毒資料先重現原死法、修復版卡片復活（點生氣變生氣、週/月視圖往返後仍可操作）；新增 UI 契約 5 條＋`engine/test_wellbeing_mood_key.py`（掛進 test:launch）；node 14 支全綠。⑤✅ 版號 1.0.29（Build 36）四處齊＋package-lock（CI 新 release-consistency 防呆抓到、已補）；正式 Archive＋五道防漏 PASS，IPA 58,870,523 bytes，SHA-256 `10b39956432104f368e20ea73c2820465d741ebb96adbe8d3fb89461c913fe13`（上傳／送審照舊凍結）。⑥✅ Edward iPhone 已換裝 `1.0.29 (36)`、啟動成功；**開 App 後中毒快取即自癒、情緒卡應恢復可點**——請 Edward 真機驗一下。⑦另補：打包途中曾誤用行注釋吃掉單行長函式後半段、自查 node --check 六個內嵌區塊抓回（已修、契約測試含蓋）。
 
 **101－✅ 看門狗巡邏名單補上正式兩台（7/16 20:15 Mac 蘇菲 · 分支 `sophie-watchdog-prod-targets` · 純後端、不影響包版）**：承接 99 號④「正式 Brain 建好後加回巡邏名單（程式內已留註記位）」——94 號正式兩台（PR #118）已建好服役，看門狗名單補齊：①✅ `munea-brain` 正式（`/healthz/`＋JSON ok=true；**App Store 正式通知網址所在的那台**＝92 號死信箱復活後從此有人盯）與 `munea-voice` 正式（根路徑 200）進巡邏名單、判定規則比照 staging 兩筆；巡邏對象 6→8。②✅ 契約測試 19→24 項全綠（新增 5 條鎖：名單含正式兩台、Brain 正式走 /healthz/＋ok、Voice 正式走根路徑、**正式門牌不得指 staging**）。③✅ 加名單前先真戳兩台門牌、再整輪真巡邏 **8 服務全綠**（正式 Brain 200＋ok=true、正式 Voice 200）＝加進去不會第一輪就誤報。④只動 2 檔（巡邏小工具＋契約測試）＋看板/狀態板紀錄；不動 App／engine／雲端設定與流量；staging 兩筆與其餘 4 個巡邏對象照舊。
 
