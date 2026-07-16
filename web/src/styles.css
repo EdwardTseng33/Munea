@@ -689,7 +689,9 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
    §6 單一全屏管家臉（S2S 視訊聊天感）
    臉全屏主體 / 狀態提示 / 超大結束鈕固定，不把逐字稿當主畫面
    ============================================================ */
-.face-screen { position: relative; background: #0E1A17; overflow: hidden; }
+/* 底色改跟場景同色系（2026-07-16 治「第一通黑閃」）：iPhone 首通冷開機建影像圖層時偶爾會露出頁底色一格，
+   近黑色看起來就是「黑色閃頻」；改暖底色後就算露出也不刺眼。上層立繪／照片都是不透明、平常看不到這層。 */
+.face-screen { position: relative; background: #C9AE96; overflow: hidden; }
 .face-screen.active { display: block; }
 .screen.face-screen { padding-bottom: 0; }
 
@@ -732,7 +734,8 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .fh-frame {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: 100%; height: 100%; aspect-ratio: 1080 / 1920;
-  overflow: hidden; background: #0E1A17; z-index: 1;
+  /* 底色跟 .face-bg 同色系（2026-07-16 治「第一通黑閃」）：立繪萬一還沒畫上來，露出的是暖底色、不是近黑 */
+  overflow: hidden; background: #C9AE96; z-index: 1;
 }
 .fh-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 /* 活臉與伺服器條件圖使用同一個 1080x1080 正方形框；只做等比例縮放。

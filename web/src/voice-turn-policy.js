@@ -8,7 +8,11 @@
     maxRms: 0.07,
     noiseMultiplier: 4,
     sustainMs: 150,
-    preRollFrames: 6,
+    // 預捲必須「蓋得住」對應的持續人聲門檻，開頭的字才補得回來（2026-07-16 Edward「回長話第一句沒反應」）：
+    // 一格 ≈ 42.7ms（2048 樣本 @48kHz）。平常門檻 150ms → 10 格 ≈ 427ms；
+    // 開場門檻 300ms（openingSustainMs）→ 用 openingPreRollFrames 18 格 ≈ 768ms，含起音爬升與中途小停頓的餘裕。
+    preRollFrames: 10,
+    openingPreRollFrames: 18,
     // 講完後守門期（2026-07-16）：她停口後這段時間內，收音仍走「持續人聲才放行」，
     // 蓋住 GLOWS 偶發 1.8~2s 供聲卡點的句中空檔——回音/噪音不再裸流上去被當成插話。
     postSpeechGuardMs: 1800,
