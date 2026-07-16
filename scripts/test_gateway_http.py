@@ -95,8 +95,20 @@ def main():
 
         user_health = client.get("/health", headers={"Authorization": "Bearer valid-user-token"})
         assert user_health.status_code == 200 and user_health.json()["durable_ready"] is True
+        assert user_health.json() == {"ok": True, "durable_ready": True}
+        for sensitive_key in ("snapshot", "engine", "mode", "durable_error"):
+            assert sensitive_key not in user_health.json()
+
+        user_metrics = client.get("/metrics", headers={"Authorization": "Bearer valid-user-token"})
+        assert user_metrics.status_code == 403
+        user_admin = client.post("/v1/internal/reap", headers={"Authorization": "Bearer valid-user-token"})
+        assert user_admin.status_code == 403
+
         admin_health = client.get("/health", headers={"Authorization": "Bearer private-admin-key"})
         assert admin_health.status_code == 200 and admin_health.json()["ok"] is True
+        assert "snapshot" in admin_health.json() and admin_health.json()["mode"] == "durable"
+        client_health = client.get("/health", params={"key": "private-legacy-key"})
+        assert client_health.status_code == 200 and "snapshot" in client_health.json()
         assert durable.authenticated == ["invalid-user-token", "valid-user-token"]
     finally:
         gs._GATE = original_gate

@@ -179,6 +179,8 @@ $previousGatewayUrlEnv = [Environment]::GetEnvironmentVariable("MUNEA_GATEWAY_UR
 $previousAppKeyEnv = [Environment]::GetEnvironmentVariable("MUNEA_APP_KEY", "Process")
 $userId = ""
 $accountId = ""
+$probeMarker = ""
+$expectedAccountName = ""
 $accessToken = ""
 $password = ""
 $tokenResponse = $null
@@ -188,6 +190,8 @@ $cleanupFailures = New-Object System.Collections.Generic.List[string]
 try {
   Step "Create isolated Supabase Auth user"
   $suffix = [guid]::NewGuid().ToString("N")
+  $probeMarker = "voice-chain-$suffix"
+  $expectedAccountName = "Voice Chain Probe $probeMarker"
   $email = "munea-voice-chain-$suffix@example.com"
   $password = "Munea-$suffix!Aa1"
   $createBody = @{
@@ -197,6 +201,7 @@ try {
     user_metadata = @{
       munea_test_account = $true
       purpose = "voice_chain_probe"
+      probe_marker = $probeMarker
     }
   } | ConvertTo-Json -Depth 5 -Compress
   $created = Invoke-RestMethod -Uri "$SupabaseUrl/auth/v1/admin/users" -Method Post `
@@ -227,8 +232,8 @@ try {
   }
   $bootstrapBody = @{
     action = "create"
-    accountName = "Voice Chain Probe"
-    displayName = "Voice Chain Probe"
+    accountName = $expectedAccountName
+    displayName = $expectedAccountName
     locale = "zh-TW"
     companionProfile = @{
       templateId = "nening-real-female"
@@ -278,18 +283,61 @@ try {
 
   if (-not $accountId -and $userId) {
     try {
-      $membershipUri = "$SupabaseUrl/rest/v1/account_members?user_id=eq.$([uri]::EscapeDataString($userId))&select=account_id&limit=1"
+      $membershipUri = "$SupabaseUrl/rest/v1/account_members?user_id=eq.$([uri]::EscapeDataString($userId))&select=account_id,user_id&limit=2"
       $memberships = @(Invoke-RestMethod -Uri $membershipUri -Method Get -Headers $adminHeaders `
         -UserAgent $serverUserAgent -TimeoutSec 30)
-      if ($memberships.Count -gt 0) {
+      if ($memberships.Count -eq 1 -and [string]$memberships[0].user_id -eq $userId) {
         $accountId = [string]$memberships[0].account_id
+      } elseif ($memberships.Count -gt 1) {
+        throw "temporary user resolved to multiple accounts"
       }
     } catch {
       $cleanupFailures.Add("temporary account lookup failed")
     }
   }
 
+  $accountDeleteAuthorized = $false
   if ($accountId) {
+    try {
+      Step "Verify isolated account ownership before cleanup"
+      if (-not $userId -or -not $probeMarker -or -not $expectedAccountName) {
+        throw "temporary account cleanup markers are incomplete"
+      }
+      $accountIdFilter = [uri]::EscapeDataString($accountId)
+      $userIdFilter = [uri]::EscapeDataString($userId)
+      $membershipUri = "$SupabaseUrl/rest/v1/account_members?account_id=eq.$accountIdFilter&user_id=eq.$userIdFilter&select=account_id,user_id&limit=2"
+      $memberships = @(Invoke-RestMethod -Uri $membershipUri -Method Get -Headers $adminHeaders `
+        -UserAgent $serverUserAgent -TimeoutSec 30)
+      if ($memberships.Count -ne 1 -or [string]$memberships[0].account_id -ne $accountId -or
+          [string]$memberships[0].user_id -ne $userId) {
+        throw "temporary account is not uniquely owned by the disposable Auth user"
+      }
+
+      $accountCheckUri = "$SupabaseUrl/rest/v1/accounts?id=eq.$accountIdFilter&select=id,name&limit=2"
+      $accounts = @(Invoke-RestMethod -Uri $accountCheckUri -Method Get -Headers $adminHeaders `
+        -UserAgent $serverUserAgent -TimeoutSec 30)
+      if ($accounts.Count -ne 1 -or [string]$accounts[0].id -ne $accountId -or
+          [string]$accounts[0].name -ne $expectedAccountName) {
+        throw "temporary account marker did not match the disposable probe"
+      }
+
+      $authLookup = Invoke-RestMethod -Uri "$SupabaseUrl/auth/v1/admin/users/$userId" -Method Get `
+        -Headers $adminHeaders -UserAgent $serverUserAgent -TimeoutSec 30
+      $verifiedUser = if ($authLookup.user) { $authLookup.user } else { $authLookup }
+      if ([string]$verifiedUser.id -ne $userId -or
+          -not [bool]$verifiedUser.user_metadata.munea_test_account -or
+          [string]$verifiedUser.user_metadata.purpose -ne "voice_chain_probe" -or
+          [string]$verifiedUser.user_metadata.probe_marker -ne $probeMarker) {
+        throw "temporary Auth user marker did not match the disposable probe"
+      }
+      $accountDeleteAuthorized = $true
+      Pass "isolated account ownership and probe markers verified"
+    } catch {
+      $cleanupFailures.Add("temporary account ownership verification failed")
+    }
+  }
+
+  if ($accountId -and $accountDeleteAuthorized) {
     try {
       Step "Delete isolated staging account"
       $accountUri = "$SupabaseUrl/rest/v1/accounts?id=eq.$([uri]::EscapeDataString($accountId))"

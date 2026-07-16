@@ -245,6 +245,14 @@ def health(key: str = "", authorization: str = Header(default="")):
         except CallControlError as exc:
             durable_error = str(exc)
     durable_ready = DURABLE is not None and durable_snapshot is not None
+    client_gate_ok = bool(key) and _client_ok(key)
+    if user_ok and not admin_ok and not client_gate_ok:
+        # A normal user's JWT is enough to prove the durable Gateway is ready
+        # for their call, but it must never expose fleet topology or capacity.
+        return {
+            "ok": durable_ready,
+            "durable_ready": durable_ready,
+        }
     return {
         "ok": durable_ready if _REQUIRE_DURABLE else True,
         "engine": "munea-chat-gateway",
