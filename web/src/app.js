@@ -5788,7 +5788,7 @@ function init() {
     if (note) note.innerHTML = '平均 <b>' + famAvg(vals.filter(Boolean), 1) + ' 小時</b>' + (famAvg(vals.filter(Boolean), 1) >= 7 ? ' · 睡得穩' : ' · 睡得偏少，多留意');
   }
   // 心情週/月：色點跟狀態頁情緒球同一套顏色
-  const FAM_MOOD_COLS = ['#F4B63A', '#2FB7A8', '#5B8FB3', '#6D7F91', '#D98A32', '#E95B4F'];
+  const FAM_MOOD_COLS = ['#F4B63A', '#2FB7A8', '#236C66', '#6D7F91', '#D98A32', '#E95B4F'];
   const FAM_MOOD_NAME = ['開心', '愉悅', '平靜', '低落', '焦慮', '生氣'];
   function renderFamMoodRange() {
     const box = $('#mcRangeBody'), note = $('#mcRangeNote');

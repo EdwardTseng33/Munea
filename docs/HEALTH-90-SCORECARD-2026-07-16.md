@@ -2,13 +2,13 @@
 
 評估日期：2026-07-16（Asia/Taipei）
 
-Repo 基準：`origin/main@0f1d091`
+Repo 基準：`origin/main@aa35afd`
 
 評估範圍：送審中的 iOS App、Brain／Voice／Gateway／Avatar、API、底層程式、Supabase migrations、Repo 資料結構、產品與版本文件、AI／服務狀態，以及 staging 營運後台。
 
 ## Executive Summary
 
-- **目前整體健康度為 75/100，六個面向都尚未達 90。** 最新 main 已將 source、lockfile、Web 與 iOS next binary 對齊為 `1.0.27 (Build 34)`；release consistency／main smoke hard gate、AI endpoint rate limit 與六服務 watchdog 均已合併。分數沒有大幅上升，因為 production 尚未部署新版 metadata、Tokyo schema 明確落後、Voice 真鏈路未驗證，且後台指標完整性／新鮮度尚未證明。
+- **目前整體健康度為 75/100，六個面向都尚未達 90。** 最新 main 已將 source、lockfile、Web 與 iOS next binary 對齊為 `1.0.28 (Build 35)`；release consistency／main smoke hard gate、AI endpoint rate limit 與六服務 watchdog 均已合併。分數沒有大幅上升，因為 production 尚未部署新版 metadata、Tokyo schema 明確落後、Voice 真鏈路未驗證，且後台指標完整性／新鮮度尚未證明。
 - **staging canary 已可追溯，但仍是 0% 流量且落後目前 main。** Brain `00057-rad` 與 Voice `00041-puy` 的 `/version` 均回 `1.0.27`、commit `8ee91cb`、environment `staging`；Brain root 與 invalid Apple JWS probe 通過，Voice deployment probe 通過。它們證明部署身分 gate 可用，但尚未包含後續合併的 rate limit／watchdog，也不代表 production 或真人 Voice 已可用。
 - **最大 P0 已從「未知」變成「已知漂移」。** Repo／local migration head 為 `018`，Tokyo observable head 為 `016`；`017` 尚未在 Tokyo 出現、`018` 尚未完成清理，且工作環境的 `engine/.env.local` 仍指 Sydney。任何依賴 017／018 的功能都不能標 DB ready。
 - **營運後台已取得完整 smoke，但資料可信度與瀏覽器防護仍不足。** shell、dynamic console、九個無 token API 403 與 privileged reads 均通過；特權資料回傳 accounts=1、audit=2，其餘 events／privacy／feedback／safety 為 0。零值不能證明埋點完整，且 CSP、X-Frame-Options、X-Content-Type-Options 與 Referrer-Policy response headers 全部缺失。
@@ -23,7 +23,7 @@ Repo 基準：`origin/main@0f1d091`
 | 2. API 健康度 | 87 | 否 | canary metadata、Brain probes 與 AI endpoint rate limit 已進 main；Voice 缺 access token且 production 仍是舊版 |
 | 3. App 與後端底層代碼健康度 | 83 | 否 | release consistency、hard CI、rate limit 與 watchdog 已進 main；核心檔、coverage 與 Voice 真人 Gate 仍不足 |
 | 4. Repo 資料結構健康度 | 64 | 否 | migration manifest 存在，但 Tokyo 只到 016、017／018 未完成，工作環境仍殘留 Sydney 指向 |
-| 5. 產品資料／版本／功能／設計／AI／服務對焦 | 59 | 否 | main／Build 34 狀態更清楚，但 review binary、production 1.0.26、staging 8ee91cb 與 DB head 尚未同版 |
+| 5. 產品資料／版本／功能／設計／AI／服務對焦 | 59 | 否 | main／Build 35 狀態更清楚，但 review binary、production 1.0.26、staging 8ee91cb 與 DB head 尚未同版 |
 | 6. 營運後台健康度 | 75 | 否 | shell、dynamic console、九個 403 與 privileged reads 通過，但零值可信度未知且四項安全 headers 全缺 |
 | **等權總分** | **75** | **否** | **距 90 還有 15 分；production、Voice、Tokyo DB 與 admin security 仍有 P0** |
 
@@ -31,9 +31,9 @@ Repo 基準：`origin/main@0f1d091`
 
 - 架構 `80→83`：#123 與 staging 0% canary 證明 revision identity 可追溯，#118 建立正式服務 lane，#119 watchdog 已覆蓋六個現役服務；production 尚未部署新版，Voice／Gateway／Gemini media 未完成真鏈路。
 - API `84→87`：Brain root 與 invalid Apple JWS probe 通過，Brain／Voice `/version` 可對到 `8ee91cb`，#115 為 12 條 AI 燒錢入口加入 429 限流；但 canary 早於 #115，且 Voice 真 Gateway lease／Call Token／Gemini media 均未驗。
-- App／後端代碼 `77→83`：#120 已把 release consistency 與 main smoke改為 hard gate，#115／#119 的 rate limit、watchdog 與測試鏈亦已進 main；`1.0.27 (34)` 四處對齊。大型單檔、coverage 與真人 Voice Gate 未解。
+- App／後端代碼 `77→83`：#120 已把 release consistency 與 main smoke改為 hard gate，#115／#119 的 rate limit、watchdog 與測試鏈亦已進 main；`1.0.28 (35)` 四處對齊。大型單檔、coverage 與真人 Voice Gate 未解。
 - Repo `70→64`：本輪取得 live 證據後確認 Tokyo observable head 僅 `016`，repo/local 已到 `018`，且 Sydney 環境指向殘留；這是已確認的資料平面漂移，必須扣分。
-- 產品對焦 `52→59`：main 與 Build 34 的 release lane更清楚，rate limit／watchdog 已由 `coded` 進到 `merged`；但 App Store review binary、production `1.0.26`、staging canary `8ee91cb`、目前 main `0f1d091`、Tokyo `016` 仍是不同時間線。
+- 產品對焦 `52→59`：main 與 Build 35 的 release lane更清楚，rate limit／watchdog 已由 `coded` 進到 `merged`；但 App Store review binary、production `1.0.26`、staging canary `8ee91cb`、目前 main `aa35afd`、Tokyo `016` 仍是不同時間線。
 - 營運後台 `72→75`：dynamic console、九個 unauth 403 與帶 Secret Manager token 的 privileged reads 均通過；多個核心指標為 0，埋點完整度未證明，且四項 response security headers 全缺，限制加分。
 
 ## 本次採用的 release truth
@@ -41,11 +41,11 @@ Repo 基準：`origin/main@0f1d091`
 | 對象 | 目前可信狀態 | 判讀 |
 |---|---|---|
 | App Store 審核二進位（稽核起點） | 使用者先前確認 `1.0.25 (Build 32)` 已進入 App Store 審核；repo readiness 仍保留 Build 32 上傳成功／處理中紀錄 | 視為不可變更的既有二進位；精確 Apple state 仍以 App Store Connect 為準 |
-| `origin/main` Web／產品來源 | `package.json`、lockfile、`web/src/version.js` 與 iOS Debug／Release 均為 `1.0.27 (Build 34)` | source 與 next binary 已一致；Build 34 已包版／手機換裝但維持不上傳、不送審 |
-| main CI／release gate | #120 release consistency、#123 deployment identity、#115 rate limit、#119 watchdog 均已合併；目前 main `0f1d091` | 已計入程式與發版治理分；不等於 cloud deployment 或真人 E2E |
+| `origin/main` Web／產品來源 | `package.json`、lockfile、`web/src/version.js` 與 iOS Debug／Release 均為 `1.0.28 (Build 35)` | source 與 next binary 已一致；Build 35 已包版／手機換裝但維持不上傳、不送審 |
+| main CI／release gate | #120 release consistency、#123 deployment identity、#115 rate limit、#119 watchdog 均已合併；目前 main `aa35afd` | 已計入程式與發版治理分；不等於 cloud deployment 或真人 E2E |
 | staging Brain 0% canary | revision `00057-rad`；`/version` 回 `1.0.27`、commit `8ee91cb`、env `staging`；root 與 invalid Apple JWS probe PASS | exact revision 身分與基本 backward-compatibility 有證據，仍未承接使用者流量 |
 | staging Voice 0% canary | revision `00041-puy`；`/version` 同為 `1.0.27`／`8ee91cb`／staging；deployment probe PASS | 缺 `MUNEA_ACCESS_TOKEN`，真 Gateway lease／Call Token／Gemini media 未測，不可標 Voice ready |
-| production Brain／Voice | 正式 URL 仍回 `1.0.26`，新版 metadata 尚未部署 | App 預設已指 production，但 production 尚未追上 main／Build 34，屬 P0 release drift |
+| production Brain／Voice | 正式 URL 仍回 `1.0.26`，新版 metadata 尚未部署 | App 預設已指 production，但 production 尚未追上 main／Build 35，屬 P0 release drift |
 | staging 營運後台 | shell、dynamic console、九個 unauth 403 與 privileged reads PASS；accounts=1、audit=2，其餘觀察值為 0 | 證明權限門與讀取路徑可用；零值不證明事件／privacy／feedback／safety 埋點完整 |
 | admin HTTP headers | CSP、X-Frame-Options、X-Content-Type-Options、Referrer-Policy 全缺 | 瀏覽器層防護未達 production admin 基線 |
 | Supabase schema | repo／local head=`018`；Tokyo observable head=`016`；`017` 不存在、`018` 尚未清理；工作環境 `engine/.env.local` 仍指 Sydney | manifest 不能替代 live applied state；Tokyo migration 與環境清理為 P0 |
@@ -114,7 +114,7 @@ Repo 基準：`origin/main@0f1d091`
 
 ### 主要問題
 
-- staging 0% canary 已證明新版 metadata 可部署，但 production 正式 URL 仍是 `1.0.26`，尚未證明 production revision 與 main／Build 34 同版。
+- staging 0% canary 已證明新版 metadata 可部署，但 production 正式 URL 仍是 `1.0.26`，尚未證明 production revision 與 main／Build 35 同版。
 - Voice canary 缺 `MUNEA_ACCESS_TOKEN`；deployment probe 沒有覆蓋真 Gateway lease、Call Token 與 Gemini media，不能把容器可啟動當作 Voice API 可用。
 - 成功回應仍有多種 shape，與架構文件宣稱的統一 `{ok,data}` envelope 不完全一致；錯誤契約相對一致，成功契約尚未鎖定。
 - API 沒有一份由程式生成或 CI 驗證的 OpenAPI／contract inventory；文件與 handler 容易各自演進。
@@ -151,7 +151,7 @@ Repo 基準：`origin/main@0f1d091`
 - `test:launch` 已串起 Python 與 Node 驗收，涵蓋用藥照片隱私、family relays、voice memory／diagnostics、APNs、薄門、CORS、account scope、Store、privacy export、localization 與 UI contracts。
 - iOS 已有 Archive、防漏、Capacitor parts check 等打包 gate；Build 31 缺原生零件的事故已轉成自動阻擋。
 - 目前核心檔規模：`web/src/app.js` 約 7,263 行、`engine/server.py` 約 6,334 行、`engine/live_voice_server.py` 約 1,553 行。
-- main 目前 `package.json`、lockfile、`web/src/version.js`、iOS Debug／Release 均為 `1.0.27 (34)`；Build 34 已完成包版與手機換裝，但依決策不上傳、不送審。
+- main 目前 `package.json`、lockfile、`web/src/version.js`、iOS Debug／Release 均為 `1.0.28 (35)`；Build 35 已完成包版與手機換裝，但依決策不上傳、不送審。
 - #112／#113／#114 已把 service metadata、migration integrity 與 admin console 的正負向契約測試帶進 main，增加 release／schema／營運介面的回歸保護。
 - #120 的 release consistency、static smoke、Supabase doctor 與 auth gate 已成為 main 硬性檢查；本輪 main CI success。
 - #115／#119 已在 rebase 後保留 release consistency、rate-limit、watchdog 三組測試意圖並合併。
@@ -161,7 +161,7 @@ Repo 基準：`origin/main@0f1d091`
 - `app.js` 與 `server.py` 同時承載多個 bounded context，改一個家庭、語音或營運需求容易觸發大範圍回歸與多人衝突。
 - 現有測試多為契約／回歸 script；缺少可追蹤的 statement／branch coverage、flaky test 指標、耗時分層與最小 critical suite。
 - hard gate 已進 main，但尚無 30 天穩定度、flaky／coverage／duration 趨勢，不能只用單次 main CI success 推定長期健康。
-- release consistency 已能阻擋直接版號漂移；但 review binary 與 Build 34 next binary 仍需 release-state 明確建模，避免文件互相覆蓋。
+- release consistency 已能阻擋直接版號漂移；但 review binary 與 Build 35 next binary 仍需 release-state 明確建模，避免文件互相覆蓋。
 - 開發 fallback、staging URL 與正式行為仍在同一批程式中，容易出現「測試可跑，但出貨指向錯環境」。
 - Voice deployment probe 未覆蓋真媒體鏈；Tokyo schema 落後與 Sydney env 殘留也代表程式 gate 尚未完整約束 runtime 資料環境。
 
@@ -172,7 +172,7 @@ Repo 基準：`origin/main@0f1d091`
 1. release consistency 與 hard CI 已合併；下一步把 review binary、next binary、production revision、Tokyo migration head 納入同一 release-state gate。
 2. 將 production deployment identity、Voice 真媒體鏈與 Tokyo live schema probe 加入 promotion gate，避免「main 綠、runtime 漂移」。
 3. 固定一套 10–15 分鐘 critical CI：登入、family scope、subscription、privacy、Voice contract、migration、admin gate；較慢真人／live probe 放 deployment gate。
-4. 不得把 next binary 的狀態覆寫到既有審核包；任何 backend 合併都需跑 `1.0.25 (32)` compatibility fixture，Build 34 若未來要上傳須另跑 strict release gate。
+4. 不得把 next binary 的狀態覆寫到既有審核包；任何 backend 合併都需跑 `1.0.25 (32)` compatibility fixture，Build 35 若未來要上傳須另跑 strict release gate。
 
 **P1**
 
@@ -193,7 +193,7 @@ Repo 基準：`origin/main@0f1d091`
 ### 現有證據
 
 - Repo 共 852 個 tracked files；其中 `docs/` 168 個、`design-import/` 145 個、`ds-bundle/` 80 個。
-- `package.json`、lockfile、`web/src/version.js` 與 iOS next binary 已對齊 `1.0.27 (34)`，release consistency gate 可阻擋直接 metadata 漂移。
+- `package.json`、lockfile、`web/src/version.js` 與 iOS next binary 已對齊 `1.0.28 (35)`，release consistency gate 可阻擋直接 metadata 漂移。
 - 頂層同時存在 runtime (`engine/`, `web/`, `ios/`, `deploy/`, `supabase/`)、設計匯入、原型、App Store 圖、SalesKit、voice samples 與多套文件。
 - Supabase migrations 從 `001` 到 `018`，但存在兩個 `011`：`011_family_invitation_integrity.sql` 與 `011_free_signup_trial_policy.sql`。
 - #113 已在 main 建立 `supabase/migration-manifest.json`，涵蓋 19 個 SQL 的 LF-normalized SHA256、migration 類型與兩個歷史 `011` 的有序 allowlist；checker、7 個治理測試與 path-filtered CI 會阻擋未登記漂移。
@@ -237,14 +237,14 @@ Repo 基準：`origin/main@0f1d091`
 
 ### 現有證據
 
-- `STATUS.md` 現在清楚區分兩條時間線：Build 32 已上傳／送審，Build 34 已完成包版與手機換裝但依決策不上傳；source、lockfile、Web 與 iOS next binary 對齊 `1.0.27 (34)`。
-- `docs/APP-STORE-PRODUCTION-READINESS.md` 與 STATUS 對 Build 34 的不上傳決策已有更新，但 App Store Connect 的精確 review state 仍須以外部事實確認；不能用 repo 的 next binary 狀態覆寫 Apple 上既有 Build 32。
+- `STATUS.md` 現在清楚區分兩條時間線：Build 32 已上傳／送審，Build 35 已完成包版與手機換裝但依決策不上傳；source、lockfile、Web 與 iOS next binary 對齊 `1.0.28 (35)`。
+- `docs/APP-STORE-PRODUCTION-READINESS.md` 與 STATUS 對 Build 35 的不上傳決策已有更新，但 App Store Connect 的精確 review state 仍須以外部事實確認；不能用 repo 的 next binary 狀態覆寫 Apple 上既有 Build 32。
 - `docs/CURRENT-DEVELOPMENT-PLAN.md` 首行仍是 Updated 2026-06-30；7/14 override 寫 App `1.0.3 (6)`，進度表仍寫 first TestFlight path 30–35%、not ready。
 - `docs/BACKEND-ARCHITECTURE-v1.md` Updated 2026-06-29，前段仍寫「Admin and analytics are not built yet」，但同文件後段與程式已列出完整 Admin endpoints，staging 後台也已可達。
 - `BACKLOG.md` 標記日期 2026-06-28，仍把 realtime voice、moving face、iPhone package、Health、reminders、credits、family linkage 等大量已施工項目列為未做。
 - `docs/00-總綱-從這裡開始.md` 仍寫 App `1.0.2 (5)`，README 寫 iOS `1.0.3 (6)`；`docs/BILLING-CREDITS-ENTITLEMENT-v1.md` 也以 `1.0.2` 作更新基準。
 - `docs/AI-SERVICE-DESIGN-v1.md` Updated 2026-07-01；其設計方向仍有價值，但未與本日 Brain／Voice revision、實際 model、persona contract、fallback 與部署狀態形成同一份 service catalog。
-- staging Brain／Voice 0% canary 是 `1.0.27@8ee91cb`，目前 main 已前進到 `0f1d091`，production 正式 URL仍是 `1.0.26`；Tokyo schema 又停在 `016`。App、main、staging、production、DB 五個 release component 尚未同版。
+- staging Brain／Voice 0% canary 是 `1.0.27@8ee91cb`，目前 main 已前進到 `1.0.28@aa35afd`，production 正式 URL仍是 `1.0.26`；Tokyo schema 又停在 `016`。App、main、staging、production、DB 五個 release component 尚未同版。
 
 ### 主要問題
 
@@ -262,7 +262,7 @@ Repo 基準：`origin/main@0f1d091`
 2. 立即對齊 App Store readiness、STATUS、Current Plan、Backend Architecture、總綱、README、Backlog；歷史內容移到明確 history 區，不再讓舊狀態出現在 current summary。
 3. 建立 feature status vocabulary：`planned / coded / merged / staged / deployed / in-review-binary / production / verified`，所有功能、AI、設計與服務只能選明確狀態並附 evidence。
 4. App Store 狀態由使用者／App Store Connect 回報更新；文件不可用舊 Build 的「不可送審」覆蓋已發生的送審事實。
-5. release-state 明列 `main=1.0.27`、`next binary=Build 34`、`production API=1.0.26`、`staging canary=1.0.27@8ee91cb`、`Tokyo DB=016`，直到各 gate 完成才逐項升級狀態。
+5. release-state 明列 `main=1.0.28`、`next binary=Build 35`、`production API=1.0.26`、`staging canary=1.0.27@8ee91cb`、`Tokyo DB=016`，直到各 gate 完成才逐項升級狀態。
 
 **P1**
 
@@ -328,7 +328,7 @@ Repo 基準：`origin/main@0f1d091`
 
 ### P0-A：先建立真相與阻擋線，不動送審包
 
-1. 登記 App review binary `1.0.25 (32)` 與 next binary `1.0.27 (34)` 為兩條獨立 lane；禁止互相覆寫狀態。
+1. 登記 App review binary `1.0.25 (32)` 與 next binary `1.0.28 (35)` 為兩條獨立 lane；禁止互相覆寫狀態。
 2. hard CI 已進 main；下一步將 production revision、Voice 真鏈路與 Tokyo migration head 納入 promotion gate。
 3. staging 0% canary identity 已通過；補 Voice access token 與真媒體鏈 probe 後，才可部署同 commit production。
 4. 依 issue #126 完成 Tokyo 017／018 與 Sydney env 清理；差異未清零前不宣稱 DB ready。
