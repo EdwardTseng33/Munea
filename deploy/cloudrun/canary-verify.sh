@@ -41,6 +41,9 @@ gcloud_run() {
 
 WHAT="${1:-}"
 TAG="${2:-}"
+PROFILE="${3:-staging}"
+EXPECTED_VERSION="${4:-}"
+EXPECTED_COMMIT="${5:-}"
 case "$WHAT" in
   brain) SVC="munea-brain-staging" ;;
   voice) SVC="munea-voice-staging" ;;
@@ -48,6 +51,13 @@ case "$WHAT" in
 esac
 [ -n "$TAG" ] || { echo "⛔ 缺少 canary tag"; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "⛔ 找不到 curl"; exit 1; }
+case "$PROFILE:$WHAT" in
+  staging:brain) EXPECTED_ENV="staging"; EXPECTED_SERVICE="munea-brain" ;;
+  staging:voice) EXPECTED_ENV="staging"; EXPECTED_SERVICE="munea-voice" ;;
+  production:brain) SVC="munea-brain"; EXPECTED_ENV="production"; EXPECTED_SERVICE="munea-brain" ;;
+  production:voice) SVC="munea-voice"; EXPECTED_ENV="production"; EXPECTED_SERVICE="munea-voice" ;;
+  *) echo "invalid profile: $PROFILE"; exit 1 ;;
+esac
 resolve_gcloud
 resolve_python
 
@@ -76,6 +86,27 @@ READY="$(gcloud_run run revisions describe "$REVISION" --region "$REGION" --proj
 
 ROOT_CODE="$(curl --retry 3 --retry-delay 1 -sS -o /dev/null -w '%{http_code}' "$CANARY_URL/")"
 [ "$ROOT_CODE" = "200" ] || { echo "⛔ $CANARY_URL/ 回 $ROOT_CODE"; exit 1; }
+
+VERSION_JSON="$(curl --retry 3 --retry-delay 1 -fsS "$CANARY_URL/version")"
+printf '%s' "$VERSION_JSON" | "${PYTHON[@]}" -c '
+import json, sys
+payload = json.load(sys.stdin)
+release = payload.get("release") or {}
+expected = {
+    "schema": "munea.service-release.v1",
+    "service": sys.argv[1],
+    "environment": sys.argv[2],
+    "revision": sys.argv[3],
+}
+if sys.argv[4]:
+    expected["version"] = sys.argv[4]
+if sys.argv[5]:
+    expected["commit"] = sys.argv[5].lower()
+errors = [f"{key}={release.get(key)!r}, expected {value!r}" for key, value in expected.items() if release.get(key) != value]
+if payload.get("ok") is not True or errors:
+    raise SystemExit("release_metadata_mismatch: " + "; ".join(errors))
+' "$EXPECTED_SERVICE" "$EXPECTED_ENV" "$REVISION" "$EXPECTED_VERSION" "$EXPECTED_COMMIT"
+unset VERSION_JSON
 
 if [ "$WHAT" = "brain" ]; then
   NOTIFICATION_CODE="$(curl --retry 2 --retry-delay 1 -sS -o /dev/null -w '%{http_code}' \
