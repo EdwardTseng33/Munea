@@ -36,6 +36,7 @@ assert.strictEqual(config.skipOnboarding, true);
 assert.strictEqual(config.seedFixtures, true);
 assert.strictEqual(config.bypassCallControl, true);
 assert.strictEqual(config.analyticsExcluded, true);
+assert.strictEqual(config.fixtureVersion, '1.0.26-build33-tokyo-v1');
 assert.strictEqual(config.displayName, 'Edward 測試帳號');
 assert.strictEqual(config.plan, 'pro');
 assert.strictEqual(config.purchasedPoints, 700);
