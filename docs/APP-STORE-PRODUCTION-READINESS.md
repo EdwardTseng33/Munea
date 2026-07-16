@@ -2,7 +2,7 @@
 
 更新：2026-07-16
 
-> 本文件是 `1.0.25 (Build 31)` 上線狀態的唯一摘要。2026-07-16 12:23 已完成 iPhone-only 正式 Archive、IPA 防漏驗證與 App Store Connect 上傳；Apple 回執為 `Upload succeeded`／`package is processing`。這代表 Apple 已收件，不代表 TestFlight 已完成處理、已送審或已通過審核。**Build 31 含 PR #101 用藥照片隱私修補（照片只留裝置、伺服器強制剝除），取代 Build 30 成為送審候選——Build 30 上架行為與隱私政策不符、不得送審。**舊成本、定價與原型文件只保留決策歷史，不可覆蓋目前 App、`web/src/version.js`、StoreKit 對應及 Edward 的最新定案。帳單細則以 `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` 為準。
+> 本文件是 `1.0.25 (Build 32)` 上線狀態的唯一摘要。2026-07-16 12:40 已完成 iPhone-only 正式 Archive、IPA 防漏驗證與 App Store Connect 上傳；Apple 回執為 `Upload succeeded`／`package is processing`。這代表 Apple 已收件，不代表 TestFlight 已完成處理、已送審或已通過審核。**Build 32 含 PR #101 用藥照片隱私修補（照片只留裝置、伺服器強制剝除），為現任送審候選——Build 30（缺隱私修補、上架行為與隱私政策不符）與 Build 31（缺 @capacitor/app／browser 兩原生零件）皆不得送審。**舊成本、定價與原型文件只保留決策歷史，不可覆蓋目前 App、`web/src/version.js`、StoreKit 對應及 Edward 的最新定案。帳單細則以 `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` 為準。
 
 目前方案：Free / Plus / Pro。
 
@@ -11,12 +11,12 @@
 | 項目 | 現況 |
 |---|---|
 | App 版本 | `1.0.25` |
-| Build | `31` |
+| Build | `32` |
 | Bundle ID | `net.munea.app` |
 | 支援裝置 | ✅ iPhone-only；Debug／Release `TARGETED_DEVICE_FAMILY=1`，IPA `UIDeviceFamily=[1]` |
-| 候選 IPA | ✅ 已匯出；58,830,747 bytes，SHA-256 `3b4275c94ff0cdee017771d8755f4e0805bcfcafcbb52a65ab967c3b25d666b2` |
-| 候選來源 | ✅ PR #102；基於 main（含 PR #101 用藥照片隱私修補、通話律動交影像引擎、#95／#96 全部內容） |
-| App Store Connect | ✅ 2026-07-16 12:23（Asia/Taipei）上傳成功；Apple 處理中 |
+| 候選 IPA | ✅ 已匯出；58,864,646 bytes，SHA-256 `e8b3c598c973daf5b62d1efffb09587b195708fb9cc60fb4bc9786c33de1732c` |
+| 候選來源 | ✅ 分支 `release/1.0.25-build32`；基於 main（含 PR #101 用藥照片隱私修補、通話律動交影像引擎、#95／#96 全部內容）；已二進位驗證含 @capacitor/app／browser |
+| App Store Connect | ✅ 2026-07-16 12:40（Asia/Taipei）上傳成功；Apple 處理中 |
 | iOS 最低版本 | iOS 15 |
 | 定位 | AI 身心健康陪伴與家庭照護，不提供診斷、治療或緊急服務 |
 
