@@ -3259,8 +3259,7 @@ function renderCompanionGreeting(now = new Date()) {
   if (!line) line = nm + '，' + ask;
   if (line.length > 40) line = line.slice(0, 39) + '…';
   msg.textContent = line;
-  const idleGreeting = $('#faceIdleHi');
-  if (idleGreeting) idleGreeting.textContent = line;
+  // 聊聊頁人物畫面上的那顆字泡（faceIdleHi）已整個拿掉（Edward 2026-07-16）——首頁卡片這行照舊
 }
 
 (function homeGreeting() {
@@ -3771,7 +3770,6 @@ function applyCaptionState() {
   const chat = document.getElementById('chat');
   if (b) { b.classList.toggle('off', !captionsOn); b.setAttribute('aria-pressed', captionsOn ? 'true' : 'false'); }
   if (chat) chat.classList.toggle('captions-on', captionsOn);
-  const ih = document.getElementById('faceIdleHi'); if (ih) ih.style.display = captionsOn ? '' : 'none';  // 字幕關→開場那串招呼字也不顯示（Edward 2026-07-07）
   if (!captionsOn) { const box = document.querySelector('.face-caption-box'); if (box) box.remove(); }
 }
 function setCaption(text, hint) {
