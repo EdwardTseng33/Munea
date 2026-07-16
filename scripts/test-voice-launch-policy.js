@@ -22,6 +22,8 @@ expect(app.includes('const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100
   'same-line playback still blocks later user turns with the opening delay');
 expect(app.includes('const tailMs = sameLine ? 120 : 400'),
   'same-line speech tail does not release the microphone promptly');
+expect(app.includes('function preDialConnWarm') && app.includes("preDialConnWarm('boot')") && app.includes("preDialConnWarm('resume')"),
+  'pre-dial connection warmup is not wired at boot and foreground resume');
 expect(app.includes('this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs'),
   'post-speech microphone guard window is not armed while the assistant speaks');
 expect(app.includes('performance.now() < (this._postGuardUntil || 0)'),
