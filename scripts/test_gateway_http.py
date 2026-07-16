@@ -64,6 +64,45 @@ def main():
     r = client.post("/v1/call/request", params={"client_id": "overflow"})
     assert r.json()["status"] == "reject" and r.json()["reason"] == "queue_full"
 
+    class HealthDurable:
+        def __init__(self):
+            self.authenticated = []
+
+        def authenticate(self, bearer):
+            self.authenticated.append(bearer)
+            if bearer != "valid-user-token":
+                raise gs.CallControlError("invalid bearer token")
+            return object()
+
+        def snapshot(self):
+            return {"active_calls": 0, "queue_depth": 0}
+
+    original_gate = gs._GATE
+    original_admin_gate = gs._ADMIN_GATE
+    original_durable = gs.DURABLE
+    try:
+        durable = HealthDurable()
+        gs._GATE = "private-legacy-key"
+        gs._ADMIN_GATE = "private-admin-key"
+        gs.DURABLE = durable
+
+        denied = client.get("/health")
+        assert denied.status_code == 401
+        wrong_key = client.get("/health", params={"key": "public-app-key"})
+        assert wrong_key.status_code == 401
+        invalid_user = client.get("/health", headers={"Authorization": "Bearer invalid-user-token"})
+        assert invalid_user.status_code == 401
+
+        user_health = client.get("/health", headers={"Authorization": "Bearer valid-user-token"})
+        assert user_health.status_code == 200 and user_health.json()["durable_ready"] is True
+        admin_health = client.get("/health", headers={"Authorization": "Bearer private-admin-key"})
+        assert admin_health.status_code == 200 and admin_health.json()["ok"] is True
+        assert durable.authenticated == ["invalid-user-token", "valid-user-token"]
+    finally:
+        gs._GATE = original_gate
+        gs._ADMIN_GATE = original_admin_gate
+        gs.DURABLE = original_durable
+
     print("Gateway HTTP-layer smoke test: ALL PASS")
 
 

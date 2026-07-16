@@ -165,8 +165,11 @@ def validate_voice_canary_url(value):
     return "wss://" + hostname
 
 
-def get_json(url, timeout):
-    request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "munea-voice-chain-probe/1"})
+def get_json(url, timeout, bearer=""):
+    headers = {"Accept": "application/json", "User-Agent": "munea-voice-chain-probe/1"}
+    if bearer:
+        headers["Authorization"] = "Bearer " + bearer
+    request = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(request, timeout=timeout) as response:
         body = json.loads(response.read().decode("utf-8"))
         return response.status, body
@@ -272,13 +275,15 @@ def release_gateway_lease(report, gateway_url, access_token, lease, timeout):
         report.add("gateway_release", "FAIL", started, type(error).__name__, gateway_url)
 
 
-def probe_http_health(report, name, base_url, app_key, timeout, durable=False):
+def probe_http_health(report, name, base_url, app_key, timeout, durable=False, bearer=""):
     started = time.monotonic()
     if not base_url:
         report.add(name, "SKIP", started, "endpoint is not configured")
         return
     try:
-        status, body = get_json(with_query(base_url.rstrip("/") + "/health", key=app_key), timeout)
+        status, body = get_json(
+            with_query(base_url.rstrip("/") + "/health", key=app_key), timeout, bearer=bearer
+        )
         ok = status == 200 and body.get("ok") is True
         if durable:
             ok = ok and body.get("durable_ready") is True and body.get("mode") == "durable"
@@ -296,33 +301,39 @@ async def run_probe(args):
     avatar_url = args.avatar_url or os.environ.get("MUNEA_AVATAR_URL") or config["avatar_url"]
     gateway_url = args.gateway_url or os.environ.get("MUNEA_GATEWAY_URL") or config["gateway_url"]
     app_key = args.app_key or os.environ.get("MUNEA_APP_KEY") or config["app_key"]
-    access_token = args.access_token or os.environ.get("MUNEA_ACCESS_TOKEN") or ""
+    access_token = os.environ.get("MUNEA_ACCESS_TOKEN") or ""
     voice_canary_url = getattr(args, "voice_canary_url", "") or ""
     report = ProbeReport(args.profile, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
-    probe_http_health(report, "gateway_health", gateway_url, app_key, args.timeout, durable=True)
-    lease = acquire_gateway_lease(report, gateway_url, access_token, args.timeout) if args.profile == "production" else None
-    if lease:
-        voice_url = voice_canary_url or lease["voice"]["url"]
-        avatar_url = lease["worker"]["url"]
-        if voice_canary_url:
+    lease = None
+    try:
+        probe_http_health(
+            report, "gateway_health", gateway_url, app_key, args.timeout,
+            durable=True, bearer=access_token,
+        )
+        lease = acquire_gateway_lease(report, gateway_url, access_token, args.timeout) if args.profile == "production" else None
+        if lease:
+            voice_url = voice_canary_url or lease["voice"]["url"]
+            avatar_url = lease["worker"]["url"]
+            if voice_canary_url:
+                started = time.monotonic()
+                report.add("voice_route", "PASS", started, "Gateway call token routed to explicit 0% canary", voice_url)
+            await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
+        elif args.profile == "development":
+            await probe_voice_ready(report, voice_url, app_key, args.timeout)
+        else:
             started = time.monotonic()
-            report.add("voice_route", "PASS", started, "Gateway call token routed to explicit 0% canary", voice_url)
-        await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
-    elif args.profile == "development":
-        await probe_voice_ready(report, voice_url, app_key, args.timeout)
-    else:
+            report.add("voice_ready", "SKIP", started, "production Voice needs a Gateway call token")
+        probe_http_health(report, "avatar_health", avatar_url, app_key, args.timeout)
         started = time.monotonic()
-        report.add("voice_ready", "SKIP", started, "production Voice needs a Gateway call token")
-    probe_http_health(report, "avatar_health", avatar_url, app_key, args.timeout)
-    started = time.monotonic()
-    report.add(
-        "real_device_media_gate",
-        "SKIP",
-        started,
-        "microphone, WebRTC offer, first frame/audio and ASR are recorded by the installed App trace",
-    )
-    release_gateway_lease(report, gateway_url, access_token, lease, args.timeout)
+        report.add(
+            "real_device_media_gate",
+            "SKIP",
+            started,
+            "microphone, WebRTC offer, first frame/audio and ASR are recorded by the installed App trace",
+        )
+    finally:
+        release_gateway_lease(report, gateway_url, access_token, lease, args.timeout)
     return report
 
 
@@ -352,7 +363,6 @@ def main():
     )
     parser.add_argument("--avatar-url", default="")
     parser.add_argument("--app-key", default="")
-    parser.add_argument("--access-token", default="")
     parser.add_argument("--timeout", type=float, default=12.0)
     parser.add_argument("--json-output", default="")
     args = parser.parse_args()

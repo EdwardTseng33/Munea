@@ -2,6 +2,7 @@
 
 import asyncio
 import importlib.util
+import os
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -35,6 +36,34 @@ def main():
             raise AssertionError("unsafe Voice canary URL was accepted: " + unsafe)
         except ValueError:
             pass
+
+    captured_request = {}
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b'{"ok":true}'
+
+    original_urlopen = probe.urllib.request.urlopen
+    try:
+        def fake_urlopen(request, timeout):
+            captured_request.update(headers=dict(request.header_items()), timeout=timeout)
+            return FakeResponse()
+
+        probe.urllib.request.urlopen = fake_urlopen
+        status, payload = probe.get_json("https://gateway.example/health", 7, bearer="user-access-token")
+        assert status == 200 and payload["ok"] is True
+        assert captured_request["headers"]["Authorization"] == "Bearer user-access-token"
+        assert captured_request["timeout"] == 7
+    finally:
+        probe.urllib.request.urlopen = original_urlopen
 
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -86,7 +115,8 @@ def main():
             "app_key": "public-client-key",
         }
 
-    def fake_health(report, name, base_url, app_key, timeout, durable=False):
+    def fake_health(report, name, base_url, app_key, timeout, durable=False, bearer=""):
+        seen[name + "_bearer"] = bearer
         report.add(name, "PASS", probe.time.monotonic(), "ok", base_url)
 
     def fake_lease(report, gateway_url, access_token, timeout):
@@ -119,13 +149,61 @@ def main():
         avatar_url="",
         gateway_url="",
         app_key="",
-        access_token="real-access-token",
         timeout=12,
     )
-    canary_report = asyncio.run(probe.run_probe(args))
-    assert canary_report.passed is True
-    assert seen == {"voice_url": canary, "call_token": "signed-call-token", "released": "call-1"}
+    previous_access_token = os.environ.get("MUNEA_ACCESS_TOKEN")
+    os.environ["MUNEA_ACCESS_TOKEN"] = "real-access-token"
+    try:
+        canary_report = asyncio.run(probe.run_probe(args))
+        assert canary_report.passed is True
+    finally:
+        if previous_access_token is None:
+            os.environ.pop("MUNEA_ACCESS_TOKEN", None)
+        else:
+            os.environ["MUNEA_ACCESS_TOKEN"] = previous_access_token
+    assert seen == {
+        "gateway_health_bearer": "real-access-token",
+        "avatar_health_bearer": "",
+        "voice_url": canary,
+        "call_token": "signed-call-token",
+        "released": "call-1",
+    }
     assert any(stage.name == "voice_route" and stage.status == "PASS" for stage in canary_report.stages)
+
+    async def failing_voice_ready(report, voice_url, app_key, timeout, call_token=""):
+        raise RuntimeError("unexpected Voice failure")
+
+    seen.clear()
+    probe.probe_voice_ready = failing_voice_ready
+    os.environ["MUNEA_ACCESS_TOKEN"] = "real-access-token"
+    try:
+        try:
+            asyncio.run(probe.run_probe(args))
+            raise AssertionError("unexpected Voice failure should propagate")
+        except RuntimeError as error:
+            assert str(error) == "unexpected Voice failure"
+    finally:
+        if previous_access_token is None:
+            os.environ.pop("MUNEA_ACCESS_TOKEN", None)
+        else:
+            os.environ["MUNEA_ACCESS_TOKEN"] = previous_access_token
+    assert seen["released"] == "call-1"
+    assert seen["gateway_health_bearer"] == "real-access-token"
+    assert "avatar_health_bearer" not in seen
+
+    wrapper = SOURCE.with_name("voice-chain-auth-probe.ps1").read_text(encoding="utf-8")
+    assert "Refusing to run while MUNEA_ACCESS_TOKEN is already set" in wrapper
+    assert "auth/v1/admin/users" in wrapper and "grant_type=password" in wrapper
+    assert 'action = "create"' in wrapper and 'purpose = "voice_chain_probe"' in wrapper
+    assert "/rest/v1/accounts?id=eq." in wrapper and "account_members?user_id=eq." in wrapper
+    assert 'SetEnvironmentVariable("MUNEA_ACCESS_TOKEN", $accessToken, "Process")' in wrapper
+    assert 'SetEnvironmentVariable("MUNEA_ACCESS_TOKEN", $null, "Process")' in wrapper
+    assert 'SetEnvironmentVariable("MUNEA_GATEWAY_ADMIN_KEY", $null, "Process")' in wrapper
+    assert "--access-token" not in wrapper
+    assert "--access-token" not in SOURCE.read_text(encoding="utf-8")
+    assert "munea-gateway-admin-key" not in wrapper
+    assert "VoiceCanaryUrl must be a query-free wss://canary-*" in wrapper
+    assert "fespbkdwafueyonppzwq.supabase.co" in wrapper
     print("Voice chain probe contracts: PASS")
 
 
