@@ -4,6 +4,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'web', 'src', 'app.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
+const styles = fs.readFileSync(path.join(root, 'web', 'src', 'styles.css'), 'utf8');
 const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
 const avatarServer = fs.readFileSync(path.join(root, 'deploy', 'runpod-avatar', 'flashhead_server.py'), 'utf8');
 const chatEngine = fs.readFileSync(path.join(root, 'engine', 'chat_engine.py'), 'utf8');
@@ -75,6 +76,14 @@ expect(app.includes("this.ws.send(JSON.stringify({ type: 'barge_in' }))"),
   'local barge-in does not notify the voice bridge');
 expect(app.includes('policy.DEFAULTS.preRollFrames'),
   'barge-in does not retain microphone pre-roll');
+expect(app.includes('policy.DEFAULTS.openingPreRollFrames'),
+  'opening turns do not retain the longer pre-roll that covers the stricter opening sustain gate (first-sentence loss)');
+expect(app.includes('function _fhPreParentVid') && app.includes('_fhPreParentVid();'),
+  'dialing does not pre-parent the live face player into the frame, so connecting rebuilds the video layer (first-call black flash)');
+expect(app.includes('function _fhWarmArt') && app.includes('_fhWarmArt();') && app.includes('img.decode()'),
+  'full-body art is not decoded before connecting (first-call dark flash while the PNG decodes)');
+expect(styles.includes('.fh-frame') && !styles.includes('background: #0E1A17'),
+  'the face frame still uses a near-black backdrop that reads as a black flash before art paints');
 expect(!app.includes('if (speechActive()) { this.micLevel = 0; return; }'),
   'assistant playback still disables microphone uplink unconditionally');
 expect(voiceServer.includes('localization.requires_taiwanese_hokkien_fallback(obj["text"])'),

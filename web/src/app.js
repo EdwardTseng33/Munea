@@ -1503,6 +1503,31 @@ function _fhFitStage(frame) {
   frame.style.width = Math.ceil(1080 * scale) + 'px';
   frame.style.height = Math.ceil(1920 * scale) + 'px';
 }
+// 臉框素材預熱（2026-07-16 治「第一通黑閃」）：進聊聊頁／按撥號就先把全身立繪換成對的角色並解碼，
+// 不要等接通那刻才裝圖——第一通冷開機時圖還沒解碼、臉框深色底會先露出來閃一下。
+function _fhWarmArt() {
+  try {
+    if (faceEngine() !== 'flashhead') return;
+    const _fc = flashheadCharFor(currentChar) || 'a05';
+    [['fhBg', 'flashhead/bg-'], ['fhPersonImg', 'flashhead/person-']].forEach(([id, prefix]) => {
+      const img = document.getElementById(id);
+      if (!img) return;
+      const want = prefix + _fc + '.png';
+      if (img.getAttribute('src') !== want) img.src = want;
+      if (img.decode) { const p = img.decode(); if (p && p.catch) p.catch(() => {}); }
+    });
+  } catch (e) {}
+}
+// 撥號時就先把雲端臉播放器放進臉框（2026-07-16 治「第一通黑閃」）：接通那刻才搬 DOM 會讓影像圖層
+// 整個重建、黑一格才回來；先搬好（臉框還藏著、看不見），接通時 _fhComposite 的搬移就變成不動作＝零重建。
+function _fhPreParentVid() {
+  try {
+    if (faceEngine() !== 'flashhead') return;
+    const ov = document.getElementById('fhOverlay');
+    const vid = document.getElementById('faceVid');
+    if (ov && vid && vid.parentElement !== ov) ov.appendChild(vid);
+  } catch (e) {}
+}
 function _fhComposite(on, vid) {
   try {
     const frame = document.getElementById('fhFrame');
@@ -2241,8 +2266,12 @@ const LiveVoice = {
           const frameMs = (inp.length / this.ac.sampleRate) * 1000;
           this._noteUserMicActivity(rms, frameMs, speakerActive);
           // 開場前兩輪 iPhone 回音消除還沒收斂、回音殘留最強 → 插話判定拉嚴一級（openingSustainMs）
-          const sustainOpts = policy && (this._playbackTurn || 0) <= 1
+          const _opening = (this._playbackTurn || 0) <= 1;
+          const sustainOpts = policy && _opening
             ? { sustainMs: policy.DEFAULTS.openingSustainMs } : undefined;
+          // 預捲格數跟著門檻走：門檻拉長（開場 300ms）預捲也要跟著蓋過去，不然判定成功時開頭已被丟掉
+          // ＝「回長話第一句沒反應」根因之一（2026-07-16 Edward 真機三訴②）
+          const _preFrames = policy ? (_opening ? policy.DEFAULTS.openingPreRollFrames : policy.DEFAULTS.preRollFrames) : 6;
 
           if (speakerActive && this._bargeInActive) {
             this._sendMicBuffer(buf);
@@ -2251,7 +2280,7 @@ const LiveVoice = {
           if (speakerActive && policy) {
             this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
             this._bargePreRoll.push(buf);
-            while (this._bargePreRoll.length > policy.DEFAULTS.preRollFrames) this._bargePreRoll.shift();
+            while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
             const observed = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
             this._bargeState = observed.state;
             if (!observed.shouldInterrupt) return;
@@ -2266,7 +2295,7 @@ const LiveVoice = {
           // 真人講話走跟插話同一套「持續人聲＋預捲」判定，開頭字由預捲補回、不掉字。
           if (policy && performance.now() < (this._postGuardUntil || 0)) {
             this._bargePreRoll.push(buf);
-            while (this._bargePreRoll.length > policy.DEFAULTS.preRollFrames) this._bargePreRoll.shift();
+            while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
             const guarded = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
             this._bargeState = guarded.state;
             if (!guarded.shouldInterrupt) return;
@@ -2732,6 +2761,7 @@ async function enterChat() {
   const box = document.querySelector('.face-caption-box');
   if (box) box.style.display = 'none';
   setFaceState('idle');
+  _fhWarmArt();   // 全身立繪先換對角色並解碼（第一通接通時不再有解碼空窗＝不黑閃）
   if (typeof callConnected === 'undefined' || !callConnected) FaceIdle.start();   // 待機動態輪播（通話中不搶）
 }
 
@@ -4410,6 +4440,8 @@ async function connectCall() {
   try {
     Avatar._callT0 = Date.now(); Avatar._diagTrail = [];   // 黑盒子每通歸零
     Avatar._diagNote('按下開始通話');
+    _fhWarmArt();        // 立繪再保險解碼一次（進頁時沒跑到也補得上）
+    _fhPreParentVid();   // 播放器先進臉框：接通時不再搬 DOM＝不重建圖層、不黑一格（第一通黑閃修正）
     if (faceSameLineOn()) {
       const _fv = document.getElementById('faceVid');
       if (_fv) {

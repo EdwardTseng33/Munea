@@ -26,7 +26,15 @@ assert.strictEqual(
   true,
   'sustained near-field speech must trigger barge-in',
 );
-assert.strictEqual(policy.DEFAULTS.preRollFrames, 6, 'barge-in must retain microphone pre-roll');
+// 預捲必須蓋得住門檻（2026-07-16 Edward「回長話第一句沒反應」）：一格 ≈ 42.7ms，
+// 判定成功那刻，門檻那段時間內的聲音都要還在暫存裡，開頭的字才補得回來。
+const FRAME_MS = 42.7;
+assert(policy.DEFAULTS.preRollFrames * FRAME_MS >= policy.DEFAULTS.sustainMs + 100,
+  'pre-roll must cover the normal sustain window plus onset margin');
+assert(policy.DEFAULTS.openingPreRollFrames * FRAME_MS >= policy.DEFAULTS.openingSustainMs + 200,
+  'opening pre-roll must cover the stricter opening sustain window plus onset margin');
+assert(policy.DEFAULTS.openingPreRollFrames > policy.DEFAULTS.preRollFrames,
+  'opening turns must retain more pre-roll than normal turns');
 
 const quiet = policy.observe(policy.createState(0.01), 0.006, 42.7, false);
 assert(quiet.state.noiseFloor < 0.01, 'listening silence should adapt the local noise floor');
