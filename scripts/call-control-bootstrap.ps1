@@ -4,7 +4,8 @@ param(
   [string]$AdminSecret = "munea-gateway-admin-key",
   [string]$AvatarUrl = "https://tw-07.access.glows.ai:26969",
   [string]$AvatarWorkerId = "glows-rtx6000ada-tw07",
-  [string]$VoiceUrl = "wss://munea-voice-staging-491603544409.asia-east1.run.app",
+  # 7/16 Edward 拍板 B 案：總機發牌預設指真正式語音（測試要打 staging 請顯式帶 -VoiceUrl）
+  [string]$VoiceUrl = "wss://munea-voice-491603544409.asia-east1.run.app",
   [string]$VoiceShardId = "gemini-live-asia-east1-01",
   [int]$CommittedCapacity = 3
 )
