@@ -165,6 +165,8 @@ expect(Object.values(characters).every(character => character.persona.includes('
 // ── 收音管先建後招呼＋上行/死線看門（2026-07-16 蟲 b/c：mic_uplink 5-6 秒、整通 in_bytes=0、死線乾等 30 秒）──
 expect(app.includes('this._sendMicBuffer(this._silentUplinkFrame(inp.length))'),
   'closed-mic frames stop feeding the uplink, so the server sees in_bytes=0 until the greeting finishes');
+expect(app.includes('nowMs - this._silentKeepaliveAt >= 500'),
+  'gated-mic keepalive is not rate-limited to one small packet per 500ms (full-rate silence burns Gemini input tokens during opening/mute)');
 expect(!app.includes('if (!this.micOpen) { this.micLevel = 0; return; }'),
   'the microphone pipeline waits for the greeting again instead of sending silent standby frames');
 expect(app.includes('const micPipelineReady = this._setupMicPipeline(micPromise);') &&

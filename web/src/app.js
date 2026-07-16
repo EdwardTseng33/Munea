@@ -2189,11 +2189,18 @@ const LiveVoice = {
     this.proc.onaudioprocess = e => {
       const inp = e.inputBuffer.getChannelData(0);
       if (!this.micOpen) {
-        // 收音管不等人（2026-07-16 蟲 b 根治）：還沒「正式開麥」也持續送全零靜音包，讓上行從
-        // WebSocket open 那一刻就是活的——伺服器不再看到 in_bytes=0、看門狗能分辨「管線死了」跟「還沒開麥」。
+        // 收音管不等人（2026-07-16 蟲 b 根治）：還沒「正式開麥」也讓上行從 WebSocket open 那一刻
+        // 就是活的——伺服器不再看到 in_bytes=0、看門狗能分辨「管線死了」跟「還沒開麥」。
+        // 降頻保活（PR #136 review 帳單題）：守門期間不全速灌靜音，每 500ms 才送一小包全零
+        // （42.7ms 音訊 ≈ 1 token；只為保活＋uplink 偵測）；開麥後才全速送真音訊——
+        // 開場與按靜音期間的 Gemini 輸入 token 從每分鐘 ~1500 降到 ~128、幾乎不增帳。
         // 內容守門照舊：開麥前送的是全零、不是真收音，你的聲音絕不會在她招呼前灌進去（Edward 2026-07-09 規則不變）。
         this.micLevel = 0;
-        this._sendMicBuffer(this._silentUplinkFrame(inp.length));
+        const nowMs = performance.now();
+        if (!this._silentKeepaliveAt || nowMs - this._silentKeepaliveAt >= 500) {
+          this._silentKeepaliveAt = nowMs;
+          this._sendMicBuffer(this._silentUplinkFrame(inp.length));
+        }
         return;
       }
       let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
@@ -2386,7 +2393,7 @@ const LiveVoice = {
     this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
-    this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0; this._micRebuilds = 0;
+    this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0; this._micRebuilds = 0; this._silentKeepaliveAt = 0;
     this._playbackTurn = 0; this._playbackUnderruns = 0; this._turnHasScheduledAudio = false;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
