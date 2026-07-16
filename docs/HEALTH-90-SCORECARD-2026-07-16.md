@@ -37,6 +37,7 @@ Repo 基準：`origin/main@250d28b`
 | iOS project | `MARKETING_VERSION=1.0.25`、`CURRENT_PROJECT_VERSION=32` | 與凍結送審包一致；與下一版 source 不同本身可接受，但需由 release state 明確描述 |
 | Brain／Voice Cloud Run | 2026-07-16 已執行 strict readiness；Brain／Voice Ready、必要 env、Secret Manager accessor 與 admin shell 檢查通過 | 證明基礎服務可用，不等於全部 API／真人 App E2E／SLO 已達標 |
 | staging 營運後台 | 使用者提供 URL 回 HTTP 200；live `version.js=1.0.12`，live `admin.html`／`admin.js` 與 main 不同 | 部署漂移，未達可追溯營運版本門檻 |
+| staging Brain／Voice API | Cloud Run revision 顯示 Ready；alias 與 canonical URL 的 `/healthz`、`/version` 實測皆回 HTTP 404 | 基礎設施存活不等於應用健康；線上缺少可追溯的 release／health contract |
 | 本輪健康修復分支 | release gate、API metadata、migration governance、admin hardening 均在獨立未合併工作中 | **一律不計入 main 現況分數**；合併、測試、部署後才可加分 |
 
 ## 1. 架構健康度 — 79/100
@@ -93,6 +94,7 @@ Repo 基準：`origin/main@250d28b`
 ### 主要問題
 
 - main 的 `/healthz` 只回 `service: munea-local-engine`、時間、runtime 與 contract 清單，沒有 git SHA、release version、revision、environment role 或 API contract version；無法把異常精準對到部署。
+- 線上 staging 更明確暴露可觀測性落差：Brain／Voice 的 alias 與 canonical URL 對 `/healthz`、`/version` 都回 HTTP 404。Cloud Run Ready 目前只能證明容器 revision 可服務，不能證明應用 contract、模型依賴或 release identity 健康。
 - 成功回應仍有多種 shape，與架構文件宣稱的統一 `{ok,data}` envelope 不完全一致；錯誤契約相對一致，成功契約尚未鎖定。
 - API 沒有一份由程式生成或 CI 驗證的 OpenAPI／contract inventory；文件與 handler 容易各自演進。
 - `.github/workflows/smoke.yml` 在 `push` 對 static smoke、Supabase doctor、auth gate 使用 soft-fail；main 可在關鍵檢查失敗時維持綠色表象。
