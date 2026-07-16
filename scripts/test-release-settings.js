@@ -33,6 +33,7 @@ const infoPlist = read('ios/App/App/Info.plist');
 const privacyManifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 const reviewNotes = read('docs/送審資料包-2026-07-09.md');
 const canaryDeploy = read('deploy/cloudrun/canary-deploy.sh');
+const cloudRunDeploy = read('scripts/cloud-run-deploy-staging.ps1');
 const gatewayDeploy = read('scripts/cloud-run-deploy-gateway.ps1');
 
 expect(!app.includes('__muneaNativeRestore'), 'restore button still calls the retired native global');
@@ -142,6 +143,12 @@ expect(canaryDeploy.includes('fespbkdwafueyonppzwq') && !canaryDeploy.includes('
 expect(canaryDeploy.includes('MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest') && canaryDeploy.includes('MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging'), 'Voice canary deploy is missing the Brain memory channel');
 expect(canaryDeploy.includes('MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest') && canaryDeploy.includes('MUNEA_VOICE_CALL_CONTROL_REQUIRED:-1') && canaryDeploy.includes('MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED'), 'Voice canary deploy is missing safe-default Call Control verification');
 expect(canaryDeploy.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01'), 'Voice canary deploy is not aligned with the formal Gateway shard');
+expect(canaryDeploy.includes('RELEASE_COMMIT="$(git rev-parse HEAD)"') && canaryDeploy.includes('git archive --format=tar "$RELEASE_COMMIT"'), 'canary deploy release commit is not tied to its source archive');
+expect(canaryDeploy.includes('require(process.argv[1]).version') && (canaryDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length === 2, 'canary deploy does not inject the committed package version into Brain and Voice');
+expect((canaryDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).length === 2 && !/^\s*--set-env-vars/m.test(canaryDeploy), 'canary deploy does not safely merge the source commit into Brain and Voice');
+expect(cloudRunDeploy.includes('$gitCommit = (& git rev-parse HEAD).Trim()') && cloudRunDeploy.includes('New-CleanSourceFromCommit $tempRoot $gitCommit'), 'PowerShell deploy release commit is not tied to its source archive');
+expect(cloudRunDeploy.includes('ConvertFrom-Json') && (cloudRunDeploy.match(/MUNEA_RELEASE_VERSION=\$releaseVersion/g) || []).length === 2, 'PowerShell deploy does not inject the committed package version into Brain and Voice');
+expect((cloudRunDeploy.match(/MUNEA_RELEASE_COMMIT=\$gitCommit/g) || []).length === 2 && !/^\s*"--set-env-vars"/m.test(cloudRunDeploy), 'PowerShell deploy does not safely merge the source commit into Brain and Voice');
 expect(gatewayDeploy.includes('fespbkdwafueyonppzwq') && !gatewayDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Gateway deploy is not pinned to Tokyo Supabase');
 
 console.log('Release settings contracts PASS');

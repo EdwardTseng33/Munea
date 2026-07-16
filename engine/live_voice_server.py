@@ -34,6 +34,7 @@ from urllib.parse import urlencode
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
+from service_metadata import build_service_metadata
 import chat_engine as eng
 import localization
 import live_lookup
@@ -99,6 +100,16 @@ import mimetypes
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.normpath(os.path.join(HERE, "..", "web"))
+VOICE_RELEASE_METADATA = build_service_metadata("munea-voice")
+
+
+def _json_response(payload):
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    headers = Headers()
+    headers["Content-Type"] = "application/json; charset=utf-8"
+    headers["Cache-Control"] = "no-store"
+    headers["Content-Length"] = str(len(body))
+    return Response(200, "OK", headers, body)
 
 
 def _file_response(rel):
@@ -153,6 +164,15 @@ def process_request(connection, request):
     if request.headers.get("Upgrade", "").lower() == "websocket":
         return None
     path = request.path.split("?")[0].lstrip("/")
+    if path in ("version", "version/"):
+        return _json_response({"ok": True, "release": VOICE_RELEASE_METADATA})
+    if path in ("healthz", "healthz/"):
+        return _json_response({
+            "ok": True,
+            "service": "munea-voice",
+            "release": VOICE_RELEASE_METADATA,
+            "runtime": {"transport": "websocket"},
+        })
     if path in ("chat-test", "chat-test/"):
         return _chat_test_response()
     if path in ("app", "app/", "app.html"):
