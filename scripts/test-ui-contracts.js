@@ -90,6 +90,14 @@ assert(html.includes('用藥紀錄是 Munea 自己的帳本，不依賴 Apple He
 assert(app.includes("type: 'action_result'") && app.includes("await window.__muneaHandleVoiceAction"), 'Voice AI must wait for the App action result before confirming reminders');
 assert(app.includes("action: 'claim'") && app.includes("action === 'send_family_relay'"), 'Family relay must use a recipient-specific claim queue and the voice action bridge');
 
+// 邀請碼拒絕理由要講人話（2026-07-17 Edward 指示：不能全混成「連上雲端並完成帳號驗證」一句）
+assert(app.includes('INVITE_FAIL_TEXT'), 'Invite failures must map server reasons to plain-language text');
+assert(app.includes('先登入帳號，才能邀請家人') && app.includes('網路不通，請檢查連線後再試一次') && app.includes('只有家庭健康圈的圈主能建立邀請碼'), 'Invite failure texts must cover sign-in, owner and network reasons');
+assert(/family_plan_required.*upsell|upsell\('family-invite'\)/s.test(app.match(/function fillInvCode[\s\S]*?\n  \}/)?.[0] || ''), 'Plan-gated invite failures must open the same upgrade sheet as the entry gate');
+assert(!app.includes('需要連上雲端並完成帳號驗證'), 'The old catch-all invite error sentence must stay dead');
+assert(/id="invTempNote" style="display:none"><\/p>/.test(html), 'Invite note must start empty; the stale offline-temp-code copy must stay removed');
+assert(app.includes('function syncAccountScopedCaches') && app.includes("removeItem('munea.inviteCode')") && app.includes("removeItem('munea.plan')"), 'Switching accounts must clear the previous account\'s plan and invite-code cache');
+
 // 情緒監測卡防磚（2026-07-16 真機事故）：後端 moodKey 曾以英文字串回來，重畫時炸掉＝按鍵綁定消失、整卡死掉
 assert(html.includes('function normMoodKey'), 'Mood card must normalize every mood key before use');
 assert(/var server=j\.signals\.map\(function\(sg\)\{ var i=normMoodKey\(sg\.moodKey\)/.test(html), 'Cloud mood signals must pass through normMoodKey before merging');
