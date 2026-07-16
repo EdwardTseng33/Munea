@@ -33,6 +33,7 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
+from voice_echo_guard import frame_rms, in_output_window, should_drop_uplink_frame
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -744,19 +745,37 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
 
 
 async def search_current_information(search_client, query, location=None):
-    """Run one bounded, grounded lookup outside the Live session."""
+    """Run one bounded, grounded lookup outside the Live session.
+
+    2026-07-16 事故夜實測：gemini-2.5-flash 晚間尖峰整批回 503（客滿）＝「我幫你查一下」
+    之後永遠沒下文。改成備胎鏈：主模型客滿/超時/查回來沒有真來源 → 立刻換下一顆；
+    gemini-3.1-flash-lite 實測走同一套查詢流程 2-3 秒、帶真來源。每顆模型有自己的時限、
+    總預算由 MUNEA_LOOKUP_TIMEOUT_SECONDS 管。"""
     clean_query = live_lookup.normalize_query(query)
     if not clean_query:
         raise ValueError("lookup query is empty")
-    response = await search_client.aio.models.generate_content(
-        model=os.environ.get("MUNEA_LOOKUP_MODEL", "gemini-2.5-flash"),
-        contents=live_lookup.build_request(clean_query, location),
-        config=types.GenerateContentConfig(
-            temperature=0.2,
-            tools=[types.Tool(google_search=types.GoogleSearch())],
-        ),
-    )
-    return live_lookup.extract_result(response)
+    models = [m.strip() for m in os.environ.get(
+        "MUNEA_LOOKUP_MODEL", "gemini-2.5-flash,gemini-3.1-flash-lite").split(",") if m.strip()]
+    per_model_s = float(os.environ.get("MUNEA_LOOKUP_PER_MODEL_SECONDS", "6"))
+    last_exc = None
+    for model in models:
+        try:
+            response = await asyncio.wait_for(
+                search_client.aio.models.generate_content(
+                    model=model,
+                    contents=live_lookup.build_request(clean_query, location),
+                    config=types.GenerateContentConfig(
+                        temperature=0.2,
+                        tools=[types.Tool(google_search=types.GoogleSearch())],
+                    ),
+                ),
+                timeout=per_model_s,
+            )
+            return live_lookup.extract_result(response)
+        except Exception as exc:
+            last_exc = exc
+            print(f"[diag] lookup_model_failover model={model} err={type(exc).__name__}:{str(exc)[:60]}", flush=True)
+    raise last_exc if last_exc else RuntimeError("lookup_all_models_failed")
 
 
 def _diag(cid, event, **kv):
@@ -803,6 +822,32 @@ def _hokkien_fallback_pcm(char):
                 raise ValueError("unexpected Hokkien fallback audio format")
             pcm = wav.readframes(wav.getnframes())
         _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
+        return pcm
+
+
+LOOKUP_WAIT_TEXT = "還在幫你找喔，再等我一下。"
+_LOOKUP_WAIT_PCM = {}
+
+
+def _lookup_wait_pcm(char):
+    """查詢超過幾秒還沒回來時的安撫短句（每角色生成一次、之後用快取）。"""
+    cache_key = str(char or "")
+    cached = _LOOKUP_WAIT_PCM.get(cache_key)
+    if cached is not None:
+        return cached
+    with _LOOKUP_CUE_LOCK:
+        cached = _LOOKUP_WAIT_PCM.get(cache_key)
+        if cached is not None:
+            return cached
+        encoded = server.tts_b64(LOOKUP_WAIT_TEXT, char, "zh-TW")
+        if not encoded:
+            _LOOKUP_WAIT_PCM[cache_key] = b""
+            return b""
+        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
+            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
+                raise ValueError("unexpected lookup wait audio format")
+            pcm = wav.readframes(wav.getnframes())
+        _LOOKUP_WAIT_PCM[cache_key] = pcm
         return pcm
 
 
@@ -931,7 +976,7 @@ async def handle(ws):
     _CID["n"] += 1
     cid = _CID["n"]
     t0 = time.monotonic()
-    st = {"in": 0, "out": 0, "last_in": None, "await_first": True, "first_mic": False,
+    st = {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -946,6 +991,7 @@ async def handle(ws):
           "lookup_count": 0, "lookup_sources": 0, "lookup_failures": 0,
           "lookup_requested_at": None, "lookup_result_at": None,
           "lookup_waiting_answer": False, "lookup_cue_task": None,
+          "lookup_cue_at": 0.0, "lookup_fail_streak": 0, "lookup_block_until": 0.0,
           "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
@@ -1118,6 +1164,7 @@ async def handle(ws):
                 if not chunk:
                     return
                 st["out"] += len(chunk)
+                st["last_out"] = time.monotonic()
                 await ws.send(chunk)
                 fw = st.get("face_ws")
                 if fw is not None:
@@ -1155,7 +1202,10 @@ async def handle(ws):
                     if first_chunk:
                         first_chunk = False
                         await _mark_first_audio("lookup_cue")
-                    await asyncio.sleep(0)
+                    else:
+                        # 跟上說話速度慢慢送（0.1 秒的音、隔 0.08 秒送下一塊）：
+                        # 一口氣灌爆會把同線的臉部聲畫節拍打亂＝Edward 聽到的「這句很卡」。
+                        await asyncio.sleep(0.08)
                 if pcm:
                     await _forward_audio(LOOKUP_CUE_TAIL_PCM)
                 _diag(
@@ -1183,17 +1233,59 @@ async def handle(ws):
                     _diag(cid, "node.lookup_failed", reason="empty_query", latency_ms=0)
                     return {"status": "error", "error": "lookup_query_empty"}
 
+                # 重試斷路器（7/16 深夜「一直重複我幫你查一下」事故）：查詢一直失敗時，
+                # 模型會自動重試工具、每次重試又念一次過場句＝每 8 秒折磨一輪。
+                # 連兩敗 → 120 秒冷卻：不查、不念、直接叫模型認錯收尾。
+                _lk_now = time.monotonic()
+                if st.get("lookup_block_until", 0) > _lk_now:
+                    _diag(cid, "node.lookup_suppressed", cooldown_s=round(st["lookup_block_until"] - _lk_now))
+                    return {
+                        "status": "error", "error": "lookup_unavailable",
+                        "instruction": "查詢服務暫時沒有回應。請直接用一句話跟用戶說現在查不到、"
+                                       "建議晚點再問，然後繼續原本的聊天。不要再呼叫查詢工具。",
+                    }
+
                 if cue_already_spoken:
                     cue_audio = True
                     _diag(cid, "node.lookup_cue_sent", audio="model", out_bytes=0, latency_ms=0)
+                elif _lk_now - st.get("lookup_cue_at", 0) < 30:
+                    # 過場句 30 秒內不重播（重試時默默查、不再「我幫你查一下」轟炸）
+                    cue_audio = False
+                    _diag(cid, "node.lookup_cue_skipped", reason="recently_played")
                 else:
+                    st["lookup_cue_at"] = _lk_now
                     cue_audio = await _send_lookup_cue()
                 network_started = time.monotonic()
                 _diag(cid, "node.lookup_started", cue_audio=cue_audio)
+
+                async def _send_wait_cue():
+                    # 查太久（備胎鏈換手時）不讓長輩對著沉默等：5.5 秒還沒回來就先安撫一句
+                    await asyncio.sleep(5.5)
+                    try:
+                        pcm = await asyncio.get_running_loop().run_in_executor(
+                            _VOICE_CUE_EXECUTOR, _lookup_wait_pcm, char)
+                    except Exception:
+                        pcm = b""
+                    if not pcm:
+                        return
+                    await ws.send(json.dumps({
+                        "type": "caption", "who": "nening", "text": LOOKUP_WAIT_TEXT,
+                    }, ensure_ascii=False))
+                    first = True
+                    for offset in range(0, len(pcm), 4800):
+                        await _forward_audio(pcm[offset:offset + 4800])
+                        if first:
+                            first = False
+                        else:
+                            await asyncio.sleep(0.08)
+                    _diag(cid, "node.lookup_wait_cue_sent", out_bytes=len(pcm))
+
+                wait_cue_task = asyncio.create_task(_send_wait_cue())
+                st["bg_tasks"].append(wait_cue_task)
                 try:
                     result = await asyncio.wait_for(
                         search_current_information(_cli, query, lookup_location),
-                        timeout=float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "8")),
+                        timeout=float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "13")),
                     )
                 except asyncio.TimeoutError:
                     st["lookup_failures"] += 1
@@ -1203,7 +1295,14 @@ async def handle(ws):
                         cid, "node.lookup_failed", reason="timeout",
                         latency_ms=round((time.monotonic() - network_started) * 1000),
                     )
-                    return {"status": "error", "error": "lookup_timeout"}
+                    st["lookup_fail_streak"] = st.get("lookup_fail_streak", 0) + 1
+                    if st["lookup_fail_streak"] >= 2:
+                        st["lookup_block_until"] = time.monotonic() + 120
+                    return {
+                        "status": "error", "error": "lookup_timeout",
+                        "instruction": "查詢沒有回應。請用一句話跟用戶說現在查不到、之後再幫忙看，"
+                                       "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                    }
                 except Exception as exc:
                     st["lookup_failures"] += 1
                     st["lookup_result_at"] = time.monotonic()
@@ -1212,8 +1311,20 @@ async def handle(ws):
                         cid, "node.lookup_failed", reason=type(exc).__name__,
                         latency_ms=round((time.monotonic() - network_started) * 1000),
                     )
-                    return {"status": "error", "error": "lookup_failed"}
+                    st["lookup_fail_streak"] = st.get("lookup_fail_streak", 0) + 1
+                    if st["lookup_fail_streak"] >= 2:
+                        st["lookup_block_until"] = time.monotonic() + 120
+                    return {
+                        "status": "error", "error": "lookup_failed",
+                        "instruction": "查詢出了點狀況。請用一句話跟用戶說現在查不到、之後再幫忙看，"
+                                       "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                    }
+                finally:
+                    # 查詢一有結果（成功或失敗）就取消「還在找」安撫句——別讓它插在答案中間
+                    wait_cue_task.cancel()
 
+                st["lookup_fail_streak"] = 0
+                st["lookup_block_until"] = 0.0
                 st["lookup_sources"] += result["sources"]
                 st["lookup_result_at"] = time.monotonic()
                 st["lookup_waiting_answer"] = True
@@ -1262,9 +1373,13 @@ async def handle(ws):
                 except Exception as e:
                     pcm = b""
                     _diag(cid, "node.safe_mandarin_tts_err", err=f"{type(e).__name__}:{str(e)[:60]}")
+                first = True
                 for offset in range(0, len(pcm), 4800):
                     await _forward_audio(pcm[offset:offset + 4800])
-                    await asyncio.sleep(0)
+                    if first:
+                        first = False
+                    else:
+                        await asyncio.sleep(0.08)   # 配速同過場音：不灌爆同線聲畫節拍
                 if pcm:
                     await _send_turn_tail()
                 await ws.send(json.dumps({"type": "turn_complete"}))
@@ -1318,6 +1433,15 @@ async def handle(ws):
                         if not st["first_mic"]:
                             st["first_mic"] = True
                             _diag(cid, "node.mic_uplink", ms=round((st["last_in"] - t0) * 1000))
+                        # 回音濾網（病歷 a 快藥）：她出聲期間＋殘響窗內，低能量上行＝喇叭漏回來的
+                        # 自己聲音 → 丟棄；正常音量直說天生高於門檻、插話照常穿透。voice_echo_guard.py。
+                        _eg_now = time.monotonic()
+                        if in_output_window(_eg_now, st.get("last_out")) and should_drop_uplink_frame(
+                                _eg_now, st.get("last_out"), frame_rms(message)):
+                            st["echo_dropped"] += 1
+                            if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
+                                _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
+                            continue
                         await session.send_realtime_input(
                             audio=types.Blob(data=bytes(message), mime_type="audio/pcm;rate=16000")
                         )
@@ -1427,6 +1551,7 @@ async def handle(ws):
                                 st["lookup_waiting_answer"] = False
                             st["out"] += len(data)
                             turn_out += len(data)
+                            st["last_out"] = time.monotonic()
                             await ws.send(data)
                             fw = st.get("face_ws")
                             if fw is not None:
@@ -1486,7 +1611,9 @@ async def handle(ws):
                                     await ws.send(json.dumps({"type": "turn_complete"}))
                                     if barge_cancelled and source in ("model_output", "mandarin_pronunciation"):
                                         _diag(cid, "node.language_replacement_skipped", reason="barge_in", source=source)
-                                    elif source == "model_output" and st.get("language_retry_count", 0) < 1:
+                                    elif source in ("model_output", "mandarin_pronunciation") and st.get("language_retry_count", 0) < 1:
+                                        # 病歷 d（聲線變）：先讓模型用「她自己的聲音」重講國語版；
+                                        # 重講仍被攔才換安全配音（不同引擎、聲線不同＝最後手段）。
                                         st["language_retry_count"] = st.get("language_retry_count", 0) + 1
                                         await _retry_mandarin_output()
                                     elif source == "mandarin_pronunciation":
@@ -1645,7 +1772,7 @@ async def handle(ws):
         except Exception as exc:
             _diag(cid, "node.call_memory_err", err=f"{type(exc).__name__}:{str(exc)[:60]}")
         _diag(
-            cid, "closed", in_bytes=st["in"], out_bytes=st["out"],
+            cid, "closed", in_bytes=st["in"], out_bytes=st["out"], echo_dropped=st["echo_dropped"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
             barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
