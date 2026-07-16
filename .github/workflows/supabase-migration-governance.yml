@@ -1,0 +1,45 @@
+name: Supabase migration governance
+
+on:
+  push:
+    paths:
+      - "supabase/sql/**"
+      - "supabase/migration-manifest.json"
+      - "scripts/check_supabase_migrations.py"
+      - "scripts/test_supabase_migration_governance.py"
+      - ".github/workflows/supabase-migration-governance.yml"
+  pull_request:
+    paths:
+      - "supabase/sql/**"
+      - "supabase/migration-manifest.json"
+      - "scripts/check_supabase_migrations.py"
+      - "scripts/test_supabase_migration_governance.py"
+      - ".github/workflows/supabase-migration-governance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migration-governance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-integrity:
+    name: Offline manifest integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check canonical migration manifest
+        run: python -B scripts/check_supabase_migrations.py
+
+      - name: Test migration governance failures
+        run: python -B scripts/test_supabase_migration_governance.py
