@@ -2072,8 +2072,7 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 
 /* 聊聊待命態溫度（女巫 Top #2 · 2026-07-07） */
 .face-name .fn-status { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.82); }
-.face-idle-hi { position: absolute; left: 50%; bottom: calc(200px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 6; display: none; max-width: calc(100% - 56px); text-align: center; background: rgba(8,18,15,.5); backdrop-filter: blur(14px); color: rgba(255,255,255,.95); font-family: var(--sans); font-size: 16px; font-weight: 600; line-height: 1.5; padding: 12px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 14px 30px -18px rgba(0,0,0,.6); }
-.face-screen[data-state="idle"] .face-idle-hi { display: block; }
+/* .face-idle-hi 招呼字泡已拿掉（Edward 2026-07-16）——樣式一併清除 */
 .face-screen[data-state="idle"] .avatar-mouth { opacity: 0; }
 
 /* 聊聊沉浸式：左上離開鍵（navbar 收起後的出口） */
