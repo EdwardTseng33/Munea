@@ -3189,6 +3189,21 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pass "App Call Control production and development paths are valid"
 
+# Keep these auth-boundary tests in smoke:no-api so PR CI executes them.
+Step "Voice chain probe security contract"
+& $Python "scripts/test_voice_chain_probe.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "Voice chain probe security contract failed with exit code $LASTEXITCODE"
+}
+Pass "Voice chain probe cleanup and credential boundaries are valid"
+
+Step "Gateway HTTP auth surface contract"
+& $Python "scripts/test_gateway_http.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "Gateway HTTP auth surface contract failed with exit code $LASTEXITCODE"
+}
+Pass "Gateway user health redaction and admin boundaries are valid"
+
 Step "Git diff check"
 git diff --check
 Pass "No whitespace errors"
