@@ -19,6 +19,7 @@ jobs:
     outputs:
       static-smoke-outcome: ${{ steps.static-smoke.outcome }}
       supabase-doctor-outcome: ${{ steps.supabase-doctor.outcome }}
+      release-consistency-outcome: ${{ steps.release-consistency.outcome }}
 
     steps:
       - name: Checkout
@@ -47,7 +48,6 @@ jobs:
 
       - name: Run static smoke
         id: static-smoke
-        continue-on-error: ${{ github.event_name == 'push' }}
         env:
           GEMINI_API_KEY: smoke-test-key
           MUNEA_SKIP_ENV_LOCAL: "1"
@@ -60,12 +60,12 @@ jobs:
           if ("${{ steps.static-smoke.outcome }}" -eq "success") {
             "[ok] Static smoke passed." >> $env:GITHUB_STEP_SUMMARY
           } else {
-            "[warn] Static smoke reported issues. Push runs are soft-failed to avoid notification noise; pull_request and workflow_dispatch remain strict." >> $env:GITHUB_STEP_SUMMARY
+            "[error] Static smoke failed and blocks this run." >> $env:GITHUB_STEP_SUMMARY
           }
 
       - name: Run Supabase doctor without secrets
         id: supabase-doctor
-        continue-on-error: ${{ github.event_name == 'push' }}
+        if: always()
         env:
           MUNEA_SKIP_ENV_LOCAL: "1"
         run: npm run supabase:doctor
@@ -77,7 +77,22 @@ jobs:
           if ("${{ steps.supabase-doctor.outcome }}" -eq "success") {
             "[ok] Supabase doctor passed without secrets." >> $env:GITHUB_STEP_SUMMARY
           } else {
-            "[warn] Supabase doctor reported issues. Push runs are soft-failed to avoid notification noise; pull_request and workflow_dispatch remain strict." >> $env:GITHUB_STEP_SUMMARY
+            "[error] Supabase doctor failed and blocks this run." >> $env:GITHUB_STEP_SUMMARY
+          }
+
+      - name: Run release consistency gate
+        id: release-consistency
+        if: always()
+        run: node scripts/check-release-consistency.js
+
+      - name: Summarize release consistency
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.release-consistency.outcome }}" -eq "success") {
+            "[ok] Release consistency passed." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "[error] Release consistency failed and blocks this run." >> $env:GITHUB_STEP_SUMMARY
           }
 
   auth-gate:
@@ -111,7 +126,6 @@ jobs:
 
       - name: Run auth gate smoke
         id: auth-gate-smoke
-        continue-on-error: ${{ github.event_name == 'push' }}
         env:
           GEMINI_API_KEY: smoke-test-key
           MUNEA_SKIP_ENV_LOCAL: "1"
@@ -124,7 +138,7 @@ jobs:
           if ("${{ steps.auth-gate-smoke.outcome }}" -eq "success") {
             "[ok] Auth gate smoke passed." >> $env:GITHUB_STEP_SUMMARY
           } else {
-            "[warn] Auth gate smoke reported issues. Push runs are soft-failed to avoid notification noise; pull_request and workflow_dispatch remain strict." >> $env:GITHUB_STEP_SUMMARY
+            "[error] Auth gate smoke failed and blocks this run." >> $env:GITHUB_STEP_SUMMARY
           }
 
   notify-main-failure:
@@ -140,6 +154,7 @@ jobs:
         (
           needs['smoke-no-api'].outputs['static-smoke-outcome'] != 'success' ||
           needs['smoke-no-api'].outputs['supabase-doctor-outcome'] != 'success' ||
+          needs['smoke-no-api'].outputs['release-consistency-outcome'] != 'success' ||
           needs['auth-gate'].outputs['auth-gate-outcome'] != 'success'
         )
       }}
@@ -152,6 +167,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.MUNEA_SLACK_ALERT_WEBHOOK }}
           STATIC_SMOKE: ${{ needs['smoke-no-api'].outputs['static-smoke-outcome'] }}
           SUPABASE_DOCTOR: ${{ needs['smoke-no-api'].outputs['supabase-doctor-outcome'] }}
+          RELEASE_CONSISTENCY: ${{ needs['smoke-no-api'].outputs['release-consistency-outcome'] }}
           AUTH_GATE: ${{ needs['auth-gate'].outputs['auth-gate-outcome'] }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -167,6 +183,7 @@ jobs:
               "[Munea CI][WARNING] main 分支檢查需要處理",
               f"Smoke: {os.environ['STATIC_SMOKE']}",
               f"Supabase doctor: {os.environ['SUPABASE_DOCTOR']}",
+              f"Release consistency: {os.environ['RELEASE_CONSISTENCY']}",
               f"Auth gate: {os.environ['AUTH_GATE']}",
               f"查看結果: {os.environ['RUN_URL']}",
           ])
