@@ -13,8 +13,14 @@ LOG_PATH="/private/tmp/munea-ios-archive.log"
 
 mkdir -p "$DERIVED_DATA" "$SOURCE_PACKAGES" "$(dirname "$ARCHIVE_PATH")"
 
+echo "== Check declared Capacitor parts exist in node_modules =="
+bash "$ROOT/scripts/ios-capacitor-parts-check.sh" pre-sync
+
 echo "== Sync iOS assets =="
 "$ROOT/node_modules/.bin/cap" sync ios
+
+echo "== Check native parts survived cap sync =="
+bash "$ROOT/scripts/ios-capacitor-parts-check.sh" post-sync
 
 # Finder and cloud-provider metadata can invalidate Apple code signatures.
 xattr -cr "$ROOT/ios/App/App"
