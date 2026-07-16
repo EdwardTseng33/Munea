@@ -107,6 +107,63 @@ def record_login_failure(client_ip):
         fails.append(now)
         _LOGIN_ATTEMPTS[client_ip] = fails
 
+# AI 端點限流（上線護欄 · 7/16）：聊天/語音/記憶/感知這些每一下都燒 AI 費用的入口，
+# 加「同一個人對同一條端點、每分鐘上限」。App key 是全 App 共用的一把鑰匙、CORS 擋不住
+# 非瀏覽器客戶端——沒有這道閘＝拿到鑰匙的人可以無限灌爆 LLM 帳單。
+# 已驗證用戶以 authUserId 計、未驗證（本機/示範模式）退回來源 IP 計。
+AI_RATE_LIMITED_PATHS = {
+    "/open",
+    "/chat",
+    "/voice-note",
+    "/persona/context",
+    "/memory/extract",
+    "/memory/retrieve",
+    "/conversation-summary",
+    "/butler/post-turn",
+    "/guardian/evaluate",
+    "/perception/topic-plan",
+    "/perception/snapshot",
+    "/proactive/opening",
+}
+AI_RATE_WINDOW = 60            # 滑動視窗秒數
+AI_RATE_DEFAULT_LIMIT = 60     # 視窗內同一 actor 對同一端點的次數上限
+_AI_RATE_HITS = {}
+_AI_RATE_LOCK = threading.Lock()
+_AI_RATE_PRUNE_THRESHOLD = 5000
+
+
+def ai_rate_limit_enabled():
+    return str(os.environ.get("MUNEA_AI_RATE_LIMIT_ENABLED", "1")).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def ai_rate_limit_per_minute():
+    raw = os.environ.get("MUNEA_AI_RATE_LIMIT_PER_MINUTE", "")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = AI_RATE_DEFAULT_LIMIT
+    return max(1, value) if value else AI_RATE_DEFAULT_LIMIT
+
+
+def ai_rate_limited(actor_key, path, now=None):
+    """視窗內超額回 (True, 建議等待秒數)，否則記一筆並回 (False, 0)。"""
+    if not ai_rate_limit_enabled() or not actor_key:
+        return False, 0
+    now = time.time() if now is None else now
+    limit = ai_rate_limit_per_minute()
+    bucket = f"{actor_key}|{path}"
+    with _AI_RATE_LOCK:
+        if len(_AI_RATE_HITS) > _AI_RATE_PRUNE_THRESHOLD:
+            for key in [k for k, hits in _AI_RATE_HITS.items() if not hits or now - hits[-1] >= AI_RATE_WINDOW]:
+                _AI_RATE_HITS.pop(key, None)
+        hits = [t for t in _AI_RATE_HITS.get(bucket, []) if now - t < AI_RATE_WINDOW]
+        if len(hits) >= limit:
+            _AI_RATE_HITS[bucket] = hits
+            return True, max(1, int(AI_RATE_WINDOW - (now - hits[0])) + 1)
+        hits.append(now)
+        _AI_RATE_HITS[bucket] = hits
+        return False, 0
+
 ALLOWED_AUDIO_MIMES = {"audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"}
 AVATAR_ENGINE_MODES = {"static-css", "2d-viseme", "ditto", "liveavatar"}
 PREMIUM_AVATAR_MODES = {"ditto", "liveavatar"}
@@ -6496,9 +6553,11 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
-    def _send(self, code, ctype, body):
+    def _send(self, code, ctype, body, extra_headers=None):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, str(value))
         origin = (self.headers.get("Origin") or "").strip().rstrip("/")
         if origin and origin in cors_origins():
             self.send_header("Access-Control-Allow-Origin", origin)
@@ -6530,12 +6589,12 @@ class H(BaseHTTPRequestHandler):
     def _json(self, obj):
         self._send(200, "application/json; charset=utf-8", json.dumps(obj, ensure_ascii=False).encode())
 
-    def _json_error(self, code, err_code, message="Request could not be processed", detail=None):
+    def _json_error(self, code, err_code, message="Request could not be processed", detail=None, extra_headers=None):
         rid = request_id()
         body = {"ok": False, "error": {"code": err_code, "message": message, "requestId": rid}}
         if detail and os.environ.get("MUNEA_DEBUG_API") == "1":
             body["error"]["detail"] = str(detail)[:160]
-        self._send(code, "application/json; charset=utf-8", json.dumps(body, ensure_ascii=False).encode())
+        self._send(code, "application/json; charset=utf-8", json.dumps(body, ensure_ascii=False).encode(), extra_headers=extra_headers)
 
     def _read_json_body(self):
         ln = int(self.headers.get("Content-Length", 0))
@@ -6608,6 +6667,17 @@ class H(BaseHTTPRequestHandler):
             if not auth_gate.get("ok"):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
+            # AI 端點限流：驗完身分、還沒碰資料櫃/LLM 之前就擋，超額的請求不花後面任何成本。
+            if request_path in AI_RATE_LIMITED_PATHS:
+                _actor = (auth_gate.get("auth") or {}).get("authUserId")
+                if not _actor:
+                    _xff = self.headers.get("X-Forwarded-For") or ""
+                    _actor = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                _limited, _retry_after = ai_rate_limited(_actor, request_path)
+                if _limited:
+                    self._json_error(429, "rate_limited", "Too many requests, please slow down",
+                                     extra_headers={"Retry-After": _retry_after})
+                    return
             scope_token = bind_request_data_identity(
                 auth_gate,
                 allow_missing=self.path.split("?", 1)[0] == "/account-bootstrap",
