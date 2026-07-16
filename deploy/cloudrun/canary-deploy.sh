@@ -90,5 +90,8 @@ echo "測試網址（規則：https://<tag>---<服務網域>）："
 DOMAIN=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format="value(status.url)" | sed 's#https://##')
 echo "  https://${TAG}---${DOMAIN}"
 echo
+echo "== 自動驗證 0% canary（不切正式流量）=="
+bash deploy/cloudrun/canary-verify.sh "$WHAT" "$TAG"
+echo
 echo "測過 OK 後執行：bash deploy/cloudrun/promote.sh $WHAT"
 echo "不 OK：什麼都不用做——沒 promote 就沒切流量，現在的正式版完全沒被動到。"
