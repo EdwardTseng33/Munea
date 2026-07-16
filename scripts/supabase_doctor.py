@@ -94,15 +94,23 @@ def safe_url(url):
 def classify_table_error(exc):
     """Classify live failures so only an actual missing table recommends SQL."""
     kind = getattr(exc, "error_kind", None)
+    error_code = getattr(exc, "error_code", None)
+    status_code = getattr(exc, "status_code", None)
     message = str(exc)
-    if kind == "missing_table" or "PGRST205" in message:
-        return "missing"
-    if kind == "permission" or "42501" in message or "permission denied" in message.lower():
-        return "permission"
-    if kind == "configuration" or "not fully configured" in message.lower():
+    if status_code == 401 or kind == "configuration":
         return "configuration"
+    if status_code == 403 or kind == "permission":
+        return "permission"
+    if kind == "missing_table":
+        return "missing"
     if kind == "unreachable" or "unreachable" in message.lower() or "circuit open" in message.lower():
         return "unreachable"
+    if status_code == 404 and (error_code == "PGRST205" or "PGRST205" in message):
+        return "missing"
+    if "42501" in message or "permission denied" in message.lower():
+        return "permission"
+    if "not fully configured" in message.lower():
+        return "configuration"
     return "error"
 
 

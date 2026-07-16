@@ -117,8 +117,10 @@ class SupabaseDoctorContractTests(unittest.TestCase):
         cases = [
             (404, "PGRST205", "table missing", "missing_table"),
             (403, "42501", "permission denied", "permission"),
-            (401, "42501", "permission denied", "permission"),
+            (401, "42501", "permission denied", "configuration"),
             (401, "PGRST301", "invalid API key", "configuration"),
+            (401, "PGRST205", "table missing", "configuration"),
+            (403, "PGRST205", "table missing", "permission"),
         ]
         for status, code, message, expected in cases:
             with self.subTest(status=status, code=code):
@@ -161,6 +163,18 @@ class SupabaseDoctorContractTests(unittest.TestCase):
                 error_kind="configuration",
                 status_code=401,
                 error_code="PGRST301",
+            ),
+            supabase_adapter.SupabaseRequestError(
+                "PGRST205 table missing",
+                error_kind="configuration",
+                status_code=401,
+                error_code="PGRST205",
+            ),
+            supabase_adapter.SupabaseRequestError(
+                "PGRST205 table missing",
+                error_kind="permission",
+                status_code=403,
+                error_code="PGRST205",
             ),
         ]
         for failure in cases:

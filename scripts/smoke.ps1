@@ -2096,6 +2096,12 @@ if ($null -eq $doctorJson.tableChecks) { throw "Supabase doctor missing live tab
 if ($doctorJson.hasServiceRoleKey -and ($doctorJson | ConvertTo-Json -Compress) -match "secret-test-key") { throw "Supabase doctor leaked service key" }
 Pass "Environment loader and Supabase doctor are safe"
 
+& $Python -B (Join-Path $root "scripts/test_supabase_doctor.py")
+if ($LASTEXITCODE -ne 0) {
+  throw "Supabase doctor contract tests failed with exit code $LASTEXITCODE"
+}
+Pass "Supabase doctor error classification contract"
+
 Step "Billing and entitlement contract"
 Invoke-PythonBlock @'
 import os, sys, tempfile

@@ -3372,12 +3372,14 @@ class SupabaseAdapter:
             if e.code == 404 and (error_code == "PGRST205" or "PGRST205" in detail):
                 _mark_table_missing(table)  # 記著這張表缺，30 秒內同批呼叫秒退
                 error_code = "PGRST205"
-            if error_code == "PGRST205":
-                error_kind = "missing_table"
-            elif e.code == 403 or error_code == "42501":
-                error_kind = "permission"
-            elif e.code == 401:
+            if e.code == 401:
                 error_kind = "configuration"
+            elif e.code == 403:
+                error_kind = "permission"
+            elif e.code == 404 and error_code == "PGRST205":
+                error_kind = "missing_table"
+            elif error_code == "42501":
+                error_kind = "permission"
             else:
                 error_kind = "http_error"
             raise SupabaseRequestError(
