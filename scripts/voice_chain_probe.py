@@ -4,6 +4,11 @@
 This checks service readiness without pretending to replace the iPhone media
 gate. The installed App's voice-call diagnostics cover microphone, WebRTC,
 first frame, first audio, ASR, and playback stages with the same stage names.
+
+For a zero-traffic Voice revision, use --profile production together with
+--voice-canary-url. The probe still acquires a real Gateway lease and call token,
+routes only the Voice WebSocket to the allowlisted tagged revision, then releases
+the lease. It never treats that ready handshake as a real-device media PASS.
 """
 
 from __future__ import annotations
@@ -129,6 +134,35 @@ def with_query(url, **values):
         if value and key not in query:
             query[key] = value
     return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urllib.parse.urlencode(query), parsed.fragment))
+
+
+def validate_voice_canary_url(value):
+    """Allow a call token override only to this project's tagged Voice service."""
+    value = str(value or "").strip().rstrip("/")
+    if not value:
+        return ""
+    parsed = urllib.parse.urlsplit(value)
+    hostname = (parsed.hostname or "").lower()
+    allowed_suffixes = (
+        "---munea-voice-staging-fiu65jd4da-de.a.run.app",
+        "---munea-voice-staging-491603544409.asia-east1.run.app",
+    )
+    safe = (
+        parsed.scheme == "wss"
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.port is None
+        and parsed.path in ("", "/")
+        and not parsed.query
+        and not parsed.fragment
+        and hostname.startswith("canary-")
+        and any(hostname.endswith(suffix) for suffix in allowed_suffixes)
+    )
+    if not safe:
+        raise ValueError(
+            "Voice canary URL must be a query-free wss://canary-* tag for this project's munea-voice-staging service"
+        )
+    return "wss://" + hostname
 
 
 def get_json(url, timeout):
@@ -263,13 +297,17 @@ async def run_probe(args):
     gateway_url = args.gateway_url or os.environ.get("MUNEA_GATEWAY_URL") or config["gateway_url"]
     app_key = args.app_key or os.environ.get("MUNEA_APP_KEY") or config["app_key"]
     access_token = args.access_token or os.environ.get("MUNEA_ACCESS_TOKEN") or ""
+    voice_canary_url = getattr(args, "voice_canary_url", "") or ""
     report = ProbeReport(args.profile, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
     probe_http_health(report, "gateway_health", gateway_url, app_key, args.timeout, durable=True)
     lease = acquire_gateway_lease(report, gateway_url, access_token, args.timeout) if args.profile == "production" else None
     if lease:
-        voice_url = lease["voice"]["url"]
+        voice_url = voice_canary_url or lease["voice"]["url"]
         avatar_url = lease["worker"]["url"]
+        if voice_canary_url:
+            started = time.monotonic()
+            report.add("voice_route", "PASS", started, "Gateway call token routed to explicit 0% canary", voice_url)
         await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
     elif args.profile == "development":
         await probe_voice_ready(report, voice_url, app_key, args.timeout)
@@ -307,12 +345,23 @@ def main():
     parser.add_argument("--root", default=str(ROOT))
     parser.add_argument("--gateway-url", default="")
     parser.add_argument("--voice-url", default="")
+    parser.add_argument(
+        "--voice-canary-url",
+        default=os.environ.get("MUNEA_VOICE_CANARY_URL", ""),
+        help="Production-only tagged Voice canary URL; still obtains a real Gateway call token first",
+    )
     parser.add_argument("--avatar-url", default="")
     parser.add_argument("--app-key", default="")
     parser.add_argument("--access-token", default="")
     parser.add_argument("--timeout", type=float, default=12.0)
     parser.add_argument("--json-output", default="")
     args = parser.parse_args()
+    if args.voice_canary_url and args.profile != "production":
+        parser.error("--voice-canary-url requires --profile production")
+    try:
+        args.voice_canary_url = validate_voice_canary_url(args.voice_canary_url)
+    except ValueError as error:
+        parser.error(str(error))
     report = asyncio.run(run_probe(args))
     print_report(report)
     if args.json_output:
