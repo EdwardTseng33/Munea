@@ -10,8 +10,9 @@
 喇叭漏音大好幾倍，正常音量就穿得過門檻＝插話照樣可用、不必取捨。
 
 可調可關：MUNEA_VOICE_ECHO_GUARD（預設開）／MUNEA_VOICE_ECHO_GUARD_RMS
-（預設 700、跟開場人聲偵測同一把尺）／MUNEA_VOICE_ECHO_GUARD_TAIL_MS（預設 1500，
-蓋住同線播放落後伺服器出聲約 1 秒的殘響窗）。
+（預設 1150 · 7/16 首晚實戰：700 攔到 10-12 塊/通但大聲外放的漏音仍穿過＝幽靈插話，
+調高一級）／MUNEA_VOICE_ECHO_GUARD_TAIL_MS（預設 2500 · 同線播放落後出聲可達 2 秒、
+1500 蓋不滿她話尾的回音）。
 """
 import os
 
@@ -37,11 +38,11 @@ def guard_enabled():
 
 
 def guard_rms_threshold():
-    return _env_int("MUNEA_VOICE_ECHO_GUARD_RMS", 700)
+    return _env_int("MUNEA_VOICE_ECHO_GUARD_RMS", 1150)
 
 
 def guard_tail_ms():
-    return _env_int("MUNEA_VOICE_ECHO_GUARD_TAIL_MS", 1500)
+    return _env_int("MUNEA_VOICE_ECHO_GUARD_TAIL_MS", 2500)
 
 
 def frame_rms(frame):

@@ -48,6 +48,13 @@ def main():
     check("她沒講話+低能量→放行", should_drop_uplink_frame(10.0, 5.0, 300, enabled=True, tail_ms=1500, threshold=700) is False)
     check("濾網關閉→一律放行", should_drop_uplink_frame(10.0, 9.9, 0, enabled=False, tail_ms=1500, threshold=700) is False)
 
+    # 預設值鎖（7/16 首晚實戰調參：700/1500 攔不住大聲外放）
+    for k in ("MUNEA_VOICE_ECHO_GUARD_RMS", "MUNEA_VOICE_ECHO_GUARD_TAIL_MS"):
+        os.environ.pop(k, None)
+    from voice_echo_guard import guard_rms_threshold, guard_tail_ms
+    check("預設門檻=1150", guard_rms_threshold() == 1150)
+    check("預設殘響窗=2500ms", guard_tail_ms() == 2500)
+
     # 防刪除契約：伺服器真的接了線（防有人改壞）
     root = os.path.dirname(os.path.abspath(__file__))
     srv = open(os.path.join(root, "live_voice_server.py"), encoding="utf-8").read()
@@ -56,6 +63,13 @@ def main():
     check("收線總帳含回音丟棄數", "echo_dropped=st" in srv)
     check("發音級攔截先讓她自己重講(同聲線)", 'source in ("model_output", "mandarin_pronunciation")' in srv)
     check("重講再被攔才換安全配音", "_send_safe_mandarin_tts(blocked_text, source)" in srv)
+
+    # 契約：查詢備胎鏈＋安撫句＋配速（7/16 晚 gemini-2.5-flash 整批客滿事故後立）
+    check("查詢有備胎鏈", "lookup_model_failover" in srv and "gemini-3.1-flash-lite" in srv)
+    check("查太久先安撫一句", "lookup_wait_cue_sent" in srv and "LOOKUP_WAIT_TEXT" in srv)
+    check("結果一到取消安撫句", "wait_cue_task.cancel()" in srv)
+    check("過場音配速不灌爆", srv.count("await asyncio.sleep(0.08)") >= 3)
+    check("查詢總預算 13 秒", 'MUNEA_LOOKUP_TIMEOUT_SECONDS", "13"' in srv)
 
     print()
     if FAILS:
