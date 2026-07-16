@@ -143,12 +143,26 @@ if ($AdminToken) {
   $adminHeaders["X-Munea-Admin-Token"] = $AdminToken
 }
 
+# Must stay in lockstep with EP_LIST in web/src/admin.js. The static comparison
+# below makes a newly added console endpoint fail smoke until it is covered here.
+$adminReadBodies = [ordered]@{
+  "/admin/north-star" = @{ days = 30 }
+  "/admin/usage" = @{ days = 30 }
+  "/admin/accounts" = @{ limit = 5 }
+  "/admin/subscription-metrics" = @{ days = 30 }
+  "/admin/feedback" = @{ limit = 5 }
+  "/admin/safety-events" = @{ days = 30; limit = 5 }
+  "/admin/privacy-requests" = @{ limit = 5 }
+  "/admin/conversation-summaries" = @{ limit = 5 }
+  "/admin/audit-events" = @{ limit = 5 }
+}
+
 Step "Admin page"
 $adminPage = Invoke-WebRequest -Uri "$BaseUrl/admin.html" -Headers $identityHeaders -UseBasicParsing -TimeoutSec 30
 if ($adminPage.StatusCode -ne 200) {
   throw "/admin.html returned HTTP $($adminPage.StatusCode)"
 }
-foreach ($token in @("Munea", 'id="sideNav"', 'id="pageRoot"', "src/admin.js", "src/admin.css")) {
+foreach ($token in @("Munea", 'id="sideNav"', 'id="pageRoot"', 'id="statusPill"', 'id="refreshBtn"', 'aria-live="polite"', "src/admin.js", "src/admin.css")) {
   if ($adminPage.Content -notmatch [regex]::Escape($token)) {
     throw "/admin.html missing token: $token"
   }
@@ -157,16 +171,24 @@ $adminScript = Invoke-WebRequest -Uri "$BaseUrl/src/admin.js" -Headers $identity
 if ($adminScript.StatusCode -ne 200) {
   throw "/src/admin.js returned HTTP $($adminScript.StatusCode)"
 }
-foreach ($token in @("apiBaseUrl", "adminToken", "renderSubscription", "/admin/subscription-metrics", "pts-cell")) {
+foreach ($token in @("apiBaseUrl", "adminToken", "renderSubscription", "/admin/subscription-metrics", "pts-cell", "MUNEA_ADMIN_APP_KEY", "REQUEST_TIMEOUT_MS", "normalizeAdminBaseUrl")) {
   if ($adminScript.Content -notmatch [regex]::Escape($token)) {
     throw "/src/admin.js missing token: $token"
   }
 }
+$consolePaths = @([regex]::Matches($adminScript.Content, '(?m)^\s+\w+:\s*\["(?<path>/admin/[^"?]+)"') | ForEach-Object { $_.Groups["path"].Value })
+$missingSmokeCoverage = @($consolePaths | Where-Object { -not $adminReadBodies.Contains($_) })
+$staleSmokeCoverage = @($adminReadBodies.Keys | Where-Object { $_ -notin $consolePaths })
+if ($missingSmokeCoverage.Count -or $staleSmokeCoverage.Count) {
+  throw ("Admin endpoint coverage drift. missingInSmoke=[{0}] staleInSmoke=[{1}]" -f ($missingSmokeCoverage -join ","), ($staleSmokeCoverage -join ","))
+}
 Pass "/admin.html and its dynamic console are reachable"
 
 Step "Admin gate"
-Expect-AdminHttpError "/admin/accounts" @{ limit = 1 } 403 $identityHeaders
-Pass "/admin/accounts rejects requests without admin token"
+foreach ($entry in $adminReadBodies.GetEnumerator()) {
+  Expect-AdminHttpError $entry.Key $entry.Value 403 $identityHeaders
+}
+Pass "all console read endpoints reject requests without admin token"
 
 if (-not $AdminToken) {
   Skip "Admin token not provided; skipped privileged admin read checks"
@@ -176,50 +198,25 @@ if (-not $AdminToken) {
 }
 
 Step "Admin reads"
-$accounts = Invoke-AdminJson "/admin/accounts" @{ limit = 5 } $adminHeaders
-if (-not $accounts.ok) {
-  throw "/admin/accounts did not return ok:true"
-}
-
-$northStar = Invoke-AdminJson "/admin/north-star" @{ days = 30 } $adminHeaders
-if (-not $northStar.ok) {
-  throw "/admin/north-star did not return ok:true"
-}
-
-$usage = Invoke-AdminJson "/admin/usage" @{ days = 30 } $adminHeaders
-if (-not $usage.ok) {
-  throw "/admin/usage did not return ok:true"
+$adminResults = @{}
+foreach ($entry in $adminReadBodies.GetEnumerator()) {
+  $result = Invoke-AdminJson $entry.Key $entry.Value $adminHeaders
+  if (-not $result.ok) {
+    throw "$($entry.Key) did not return ok:true"
+  }
+  $adminResults[$entry.Key] = $result
 }
 
 $credits = Invoke-AdminJson "/admin/credits" @{ limit = 5 } $adminHeaders
 if (-not $credits.ok) {
   throw "/admin/credits did not return ok:true"
 }
-
-$summaries = Invoke-AdminJson "/admin/conversation-summaries" @{ limit = 5 } $adminHeaders
-if (-not $summaries.ok) {
-  throw "/admin/conversation-summaries did not return ok:true"
-}
-
-$privacy = Invoke-AdminJson "/admin/privacy-requests" @{ limit = 5 } $adminHeaders
-if (-not $privacy.ok) {
-  throw "/admin/privacy-requests did not return ok:true"
-}
-
-$feedback = Invoke-AdminJson "/admin/feedback" @{ limit = 5 } $adminHeaders
-if (-not $feedback.ok) {
-  throw "/admin/feedback did not return ok:true"
-}
-
-$safety = Invoke-AdminJson "/admin/safety-events" @{ days = 30; limit = 5 } $adminHeaders
-if (-not $safety.ok) {
-  throw "/admin/safety-events did not return ok:true"
-}
-
-$audit = Invoke-AdminJson "/admin/audit-events" @{ limit = 5 } $adminHeaders
-if (-not $audit.ok) {
-  throw "/admin/audit-events did not return ok:true"
-}
+$accounts = $adminResults["/admin/accounts"]
+$usage = $adminResults["/admin/usage"]
+$privacy = $adminResults["/admin/privacy-requests"]
+$feedback = $adminResults["/admin/feedback"]
+$safety = $adminResults["/admin/safety-events"]
+$audit = $adminResults["/admin/audit-events"]
 
 Pass ("admin reads ok: accounts={0}, events={1}, privacy={2}, feedback={3}, safety={4}, audit={5}" -f `
   $accounts.count, $usage.totals.events, $privacy.count, ($feedback.latest.Count), $safety.count, $audit.count)
