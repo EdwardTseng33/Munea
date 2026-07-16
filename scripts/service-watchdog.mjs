@@ -11,10 +11,19 @@
 // 單次失敗會隔 10 秒重試一次才算倒（避免單一網路抖動誤報）。
 
 export const TARGETS = [
-  // ⚠ 2026-07-16 實查：雲端目前「沒有」munea-brain 正式服務（gcloud run services list 只有
-  // staging）——現役 App 連的就是 munea-brain-staging。等部署列車建立正式 Brain 服務後，
-  // 在這裡加回：{ name: "Brain 正式（管家腦）", url: "https://munea-brain-<新門牌>/healthz/",
-  // expect: [200], check: "json-ok" }。先放著只會每 5 分鐘空叫。
+  // 2026-07-16 PR #118 重建正式兩台（STATUS 94 號）：munea-brain／munea-voice 已服役，
+  // App Store 正式通知網址（/apple/notifications）也指這台 Brain——倒了要第一時間知道。
+  {
+    name: "Brain 正式（munea-brain＝正式 App 後端）",
+    url: "https://munea-brain-491603544409.asia-east1.run.app/healthz/",
+    expect: [200],
+    check: "json-ok",
+  },
+  {
+    name: "Voice 正式（munea-voice）",
+    url: "https://munea-voice-491603544409.asia-east1.run.app/",
+    expect: [200], // websocket 服務的 HTTP 門面；能回頁面＝程序活著
+  },
   {
     name: "Brain 管家腦（munea-brain-staging＝現役 App 後端）",
     url: "https://munea-brain-staging-491603544409.asia-east1.run.app/healthz/",

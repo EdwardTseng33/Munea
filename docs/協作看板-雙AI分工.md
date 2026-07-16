@@ -81,6 +81,7 @@
 
 | 分支 | 內容 | 驗過沒 | 推的時間 |
 |---|---|---|---|
+| `sophie-watchdog-prod-targets` | 看門狗巡邏名單補上正式兩台（99 號④預留位補齊）：`munea-brain` 正式走 `/healthz/`＋ok=true、`munea-voice` 正式走根路徑，判定規則比照 staging 兩筆；契約測試加 5 條鎖（含「正式門牌不得指 staging」）。純後端 2 檔＋紀錄；不影響包版。詳 STATUS 100 號。 | ✅ 契約 24 項全過＋真巡邏 8 服務全綠（正式 Brain healthz 200＋ok、正式 Voice 根 200） | 2026-07-16 20:15 |
 | `sophie-service-watchdog` | 服務看門狗：每 5 分鐘巡 6 個現役服務、倒了發告警到既有 Slack 線。純後端工具 4 檔（巡邏小工具＋契約測試＋定時工作流＋測試串接）；不影響包版。順帶重大發現：正式 `munea-brain` 服務不存在、App Store 正式通知網址指向空門牌（詳 STATUS 95 號②）。 | ✅ 契約 19 項全過＋真巡邏 6 服務全綠＋完整 `test:launch` 全綠 | 2026-07-16 19:05 |
 | `sophie-ai-rate-limit` | AI 端點限流護欄（聊天/語音/記憶/感知 12 條燒錢入口、同人同端點每分鐘 60 次上限、超額回 429）。純後端 3 檔：`engine/server.py`＋新測試＋`package.json` 測試串接；不影響包版、下次 Brain 部署自動生效。詳 STATUS 94 號。 | ✅ 新測試 13 項全過（含有牙驗證）＋完整 `test:launch` 全綠 | 2026-07-16 18:45 |
 

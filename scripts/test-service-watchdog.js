@@ -25,6 +25,15 @@ async function main() {
   check("名單含 RunPod 控制器", names.includes("RunPod"));
   check("名單含公開網站", names.includes("app.munea.net"));
 
+  // 契約 1b：正式兩台（2026-07-16 PR #118 重建、STATUS 94 號）判定規則比照 staging
+  const brainProd = TARGETS.find((t) => t.name.includes("Brain 正式"));
+  const voiceProd = TARGETS.find((t) => t.name.includes("Voice 正式"));
+  check("名單含 Brain 正式", Boolean(brainProd));
+  check("名單含 Voice 正式", Boolean(voiceProd));
+  check("Brain 正式走 /healthz/＋要 ok=true", brainProd?.url.endsWith("/healthz/") && brainProd?.check === "json-ok" && JSON.stringify(brainProd?.expect) === "[200]");
+  check("Voice 正式走根路徑、預期 200", voiceProd?.url.endsWith(".run.app/") && JSON.stringify(voiceProd?.expect) === "[200]");
+  check("正式門牌不得指 staging", Boolean(brainProd && voiceProd) && !brainProd.url.includes("staging") && !voiceProd.url.includes("staging"));
+
   // 契約 2：Gateway 匿名 401＝活著（200 反而算異常＝門沒鎖）
   const gw = TARGETS.find((t) => t.name.includes("Gateway"));
   check("Gateway 預期 401", JSON.stringify(gw.expect) === "[401]");
