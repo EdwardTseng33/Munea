@@ -3116,6 +3116,17 @@ class SupabaseAdapter:
         allowed = {"happy", "pleasant", "steady", "tired", "low", "irritated", "mixed", "unknown"}
         return mood if mood in allowed else "unknown"
 
+    # 英文 mood 詞 → App 六色編號（0開心/1愉悅/2平靜/3低落/4焦慮/5生氣）；mixed/unknown 沒有安全對應、回 None
+    _WELLBEING_MOOD_TO_KEY = {"happy": 0, "pleasant": 1, "steady": 2, "tired": 3, "low": 3, "irritated": 4}
+
+    @classmethod
+    def _wellbeing_mood_key(cls, facts, row):
+        # moodKey=0（開心）是合法值：不能用 `or` 判斷、否則 0 被當成沒有值退回英文字，App 端會拿到字串編號
+        key = (facts or {}).get("moodKey")
+        if key is not None:
+            return key
+        return cls._WELLBEING_MOOD_TO_KEY.get((row or {}).get("mood"))
+
     def wellbeing_signal_to_row(self, signal):
         signal = signal or {}
         mood = signal.get("mood")
@@ -3170,7 +3181,7 @@ class SupabaseAdapter:
             "signalType": row.get("signal_type") or "mood",
             "source": row.get("source") or "munea-api",
             "mood": mood,
-            "moodKey": facts.get("moodKey") or row.get("mood"),
+            "moodKey": SupabaseAdapter._wellbeing_mood_key(facts, row),
             "moodColor": facts.get("moodColor") or {},
             "level": row.get("level"),
             "levelLabel": facts.get("levelLabel") or mood,
