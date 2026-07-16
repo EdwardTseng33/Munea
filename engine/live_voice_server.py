@@ -652,7 +652,8 @@ _LIVE_LOOKUP_TOOL = types.Tool(function_declarations=[
         name=live_lookup.TOOL_NAME,
         description=(
             "查詢需要最新或精確外部資料的問題，例如餐廳店家、地點景點、天氣、交通、新聞、"
-            "活動檔期、營業時間與近期影劇資訊。需要這些資料時直接呼叫，不要先自行回答。"
+            "活動檔期、營業時間與近期影劇資訊。需要這些資料時：先用一句自然的話順著對方的"
+            "話題回應（例如「南港喔，我幫你看看」），說完立刻呼叫本工具；不要自行編造答案。"
         ),
         parameters=types.Schema(
             type=types.Type.OBJECT,
@@ -839,6 +840,10 @@ def _lookup_wait_pcm(char):
         cached = _LOOKUP_WAIT_PCM.get(cache_key)
         if cached is not None:
             return cached
+        same_voice = _gemini_tts_pcm(LOOKUP_WAIT_TEXT, char)
+        if same_voice:
+            _LOOKUP_WAIT_PCM[cache_key] = same_voice
+            return same_voice
         encoded = server.tts_b64(LOOKUP_WAIT_TEXT, char, "zh-TW")
         if not encoded:
             _LOOKUP_WAIT_PCM[cache_key] = b""
@@ -851,6 +856,41 @@ def _lookup_wait_pcm(char):
         return pcm
 
 
+def _char_voice_name(char):
+    try:
+        c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
+        return c.get("voice") or "Leda"
+    except Exception:
+        return "Leda"
+
+
+def _gemini_tts_pcm(text, char):
+    """用她本人的聲線唸一句話（同 voice_name 的官方配音通道 · 7/16 實測 24kHz 原生同規格）。
+    失敗回空 bytes、呼叫端自動退回舊配音——聲線一致是體驗、不是可用性前提。"""
+    try:
+        _, cli = _pick_client()
+        r = cli.models.generate_content(
+            model=os.environ.get("MUNEA_CUE_TTS_MODEL", "gemini-2.5-flash-preview-tts"),
+            contents=text,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=_char_voice_name(char)))),
+            ),
+        )
+        part = r.candidates[0].content.parts[0]
+        blob = getattr(part, "inline_data", None)
+        data = getattr(blob, "data", b"") or b""
+        mime = str(getattr(blob, "mime_type", "") or "")
+        if isinstance(data, str):
+            data = base64.b64decode(data)
+        if data and "rate=24000" in mime:
+            return bytes(data)
+        return b""
+    except Exception:
+        return b""
+
+
 def _lookup_cue_pcm(char):
     """Generate once per companion so a lookup can acknowledge before network I/O."""
     cache_key = str(char or "")
@@ -861,6 +901,10 @@ def _lookup_cue_pcm(char):
         cached = _LOOKUP_CUE_PCM.get(cache_key)
         if cached is not None:
             return cached
+        same_voice = _gemini_tts_pcm(live_lookup.CUE_TEXT, char)
+        if same_voice:
+            _LOOKUP_CUE_PCM[cache_key] = same_voice
+            return same_voice
         encoded = server.tts_b64(live_lookup.CUE_TEXT, char, "zh-TW")
         if not encoded:
             _LOOKUP_CUE_PCM[cache_key] = b""
@@ -1367,9 +1411,11 @@ async def handle(ws):
                     caption = "我換個比較清楚的說法。"
                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption}))
                 try:
-                    encoded = await asyncio.to_thread(server.tts_b64, caption, char, "zh-TW")
-                    with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-                        pcm = wav.readframes(wav.getnframes())
+                    pcm = await asyncio.to_thread(_gemini_tts_pcm, caption, char)
+                    if not pcm:
+                        encoded = await asyncio.to_thread(server.tts_b64, caption, char, "zh-TW")
+                        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
+                            pcm = wav.readframes(wav.getnframes())
                 except Exception as e:
                     pcm = b""
                     _diag(cid, "node.safe_mandarin_tts_err", err=f"{type(e).__name__}:{str(e)[:60]}")
