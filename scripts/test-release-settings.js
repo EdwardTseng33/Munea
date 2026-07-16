@@ -33,6 +33,7 @@ const infoPlist = read('ios/App/App/Info.plist');
 const privacyManifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 const reviewNotes = read('docs/送審資料包-2026-07-09.md');
 const canaryDeploy = read('deploy/cloudrun/canary-deploy.sh');
+const prodDeploy = read('deploy/cloudrun/prod-deploy.sh');
 const cloudRunDeploy = read('scripts/cloud-run-deploy-staging.ps1');
 const gatewayDeploy = read('scripts/cloud-run-deploy-gateway.ps1');
 
@@ -81,6 +82,23 @@ expect(iosDevProfile.includes('Refusing to enable the development profile in the
 expect(iosDevProfile.includes('bypassCallControl: true'), 'iOS development profile does not enable its isolated direct-call path');
 expect(iosDevProfile.includes("voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app'"), 'iOS development profile is not pinned to the current Voice staging endpoint');
 expect(!authConfig.includes('canary-0715-0405'), 'Voice canary leaked into production auth configuration');
+
+// 7/16 Edward 拍板 B 案：正式包預設必指真正式（munea-brain / munea-voice）；預設再出現 -staging＝紅燈
+const notifyBridge = read('web/src/notify.js');
+const PROD_BRAIN_URL = 'https://munea-brain-491603544409.asia-east1.run.app';
+const PROD_VOICE_URL = 'wss://munea-voice-491603544409.asia-east1.run.app';
+expect(app.includes(`const BRAIN_URL_DEFAULT = '${PROD_BRAIN_URL}'`), 'packaged Brain default must point to production munea-brain');
+expect(app.includes(`const LIVE_VOICE_URL_DEFAULT = '${PROD_VOICE_URL}'`), 'packaged Voice default must point to production munea-voice');
+expect(store.includes(`var BRAIN_URL = '${PROD_BRAIN_URL}'`), 'StoreKit receipt verification must point to production Brain');
+expect(notifyBridge.includes(`var BRAIN_URL_DEFAULT = '${PROD_BRAIN_URL}'`), 'notification bridge must point to production Brain');
+expect(!/BRAIN_URL_DEFAULT = 'https:\/\/munea-brain-staging/.test(app), 'packaged Brain default regressed to the staging service');
+expect(!/LIVE_VOICE_URL_DEFAULT = 'wss:\/\/munea-voice-staging/.test(app), 'packaged Voice default regressed to the staging service');
+expect(iosDevProfile.includes("brainUrl: 'https://munea-brain-staging-491603544409.asia-east1.run.app'"), 'iOS development profile must pin Brain to the staging service');
+expect(app.includes('dev.enabled === true && dev.brainUrl'), 'app does not honor the development Brain pin');
+expect(store.includes('dev.enabled === true && dev.brainUrl'), 'StoreKit bridge does not honor the development Brain pin');
+expect(notifyBridge.includes('dev.enabled === true && dev.brainUrl'), 'notification bridge does not honor the development Brain pin');
+const callControlBootstrap = read('scripts/call-control-bootstrap.ps1');
+expect(callControlBootstrap.includes(`"${PROD_VOICE_URL}"`), 'Call Control shard bootstrap must default to the production Voice service');
 expect(!index.includes('id="authEmailInput"') && !index.includes('id="authEmailBtn"'), 'consumer app still exposes email sign-in controls');
 expect(!auth.includes('signInWithOtp') && !auth.includes('signInWithEmail'), 'email OTP auth remains exposed in the consumer auth module');
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
@@ -146,6 +164,10 @@ expect(canaryDeploy.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01'), 
 expect(canaryDeploy.includes('RELEASE_COMMIT="$(git rev-parse HEAD)"') && canaryDeploy.includes('git archive --format=tar "$RELEASE_COMMIT"'), 'canary deploy release commit is not tied to its source archive');
 expect(canaryDeploy.includes('require(process.argv[1]).version') && (canaryDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length === 2, 'canary deploy does not inject the committed package version into Brain and Voice');
 expect((canaryDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).length === 2 && !/^\s*--set-env-vars/m.test(canaryDeploy), 'canary deploy does not safely merge the source commit into Brain and Voice');
+expect(prodDeploy.includes('RELEASE_COMMIT="$(git rev-parse HEAD)"') && prodDeploy.includes('git archive --format=tar "$RELEASE_COMMIT"'), 'production deploy release commit is not tied to its source archive');
+expect(prodDeploy.includes('require(process.argv[1]).version') && (prodDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length === 2, 'production deploy does not inject the committed package version into Brain and Voice');
+expect((prodDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).length === 2 && !/^\s*--set-env-vars/m.test(prodDeploy), 'production deploy does not safely merge the source commit into Brain and Voice');
+expect(prodDeploy.includes('canary-verify.sh "$WHAT" "$TAG" production "$RELEASE_VERSION" "$RELEASE_COMMIT"'), 'production deploy does not verify its zero-traffic release metadata');
 expect(cloudRunDeploy.includes('$gitCommit = (& git rev-parse HEAD).Trim()') && cloudRunDeploy.includes('New-CleanSourceFromCommit $tempRoot $gitCommit'), 'PowerShell deploy release commit is not tied to its source archive');
 expect(cloudRunDeploy.includes('ConvertFrom-Json') && (cloudRunDeploy.match(/MUNEA_RELEASE_VERSION=\$releaseVersion/g) || []).length === 2, 'PowerShell deploy does not inject the committed package version into Brain and Voice');
 expect((cloudRunDeploy.match(/MUNEA_RELEASE_COMMIT=\$gitCommit/g) || []).length === 2 && !/^\s*"--set-env-vars"/m.test(cloudRunDeploy), 'PowerShell deploy does not safely merge the source commit into Brain and Voice');

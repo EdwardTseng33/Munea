@@ -1,0 +1,154 @@
+{
+  "manifest_version": 1,
+  "migration_directory": "supabase/sql",
+  "checksum": {
+    "algorithm": "sha256",
+    "normalization": "lf-v1"
+  },
+  "allowed_types": [
+    "schema",
+    "data-cleanup",
+    "seed"
+  ],
+  "legacy_duplicate_identities": {
+    "011": [
+      "011_family_invitation_integrity.sql",
+      "011_free_signup_trial_policy.sql"
+    ]
+  },
+  "migrations": [
+    {
+      "order": 1,
+      "identity": "001",
+      "filename": "001_initial_munea_schema.sql",
+      "type": "schema",
+      "sha256": "d6b204ba6bef4840c5d9158420fcc07375c66140cd685a8df112e70162033415"
+    },
+    {
+      "order": 2,
+      "identity": "002",
+      "filename": "002_demo_bootstrap.sql",
+      "type": "seed",
+      "sha256": "a78e84ca00c29247220cd141dddc86a796b27218d5629ab1014e7611a132484e"
+    },
+    {
+      "order": 3,
+      "identity": "003",
+      "filename": "003_analytics_admin_foundation.sql",
+      "type": "schema",
+      "sha256": "ddb148b22c01a48d517410f0d6671b2f323363f2287033190099d8110476f350"
+    },
+    {
+      "order": 4,
+      "identity": "004",
+      "filename": "004_ai_memory_service_foundation.sql",
+      "type": "schema",
+      "sha256": "a5051e1ad8e6f95cbf0e58e4b2c66c75643b23005088ef5614f10fdb9d5ac792"
+    },
+    {
+      "order": 5,
+      "identity": "005",
+      "filename": "005_companion_persona_layer.sql",
+      "type": "schema",
+      "sha256": "100f41b54317e3f3447bce5ef1941dcb0367ea309e994fd894f5c76b53a98f3b"
+    },
+    {
+      "order": 6,
+      "identity": "006",
+      "filename": "006_billing_credits_foundation.sql",
+      "type": "schema",
+      "sha256": "70be65aa80d41c8c13cc79a24b0ff07488824c2e177fe732018e9d158f8d66d9"
+    },
+    {
+      "order": 7,
+      "identity": "007",
+      "filename": "007_family_cloud_state_foundation.sql",
+      "type": "schema",
+      "sha256": "831361daf02a5a0165515f796587d0a9d42f6dcf73f547f7885e779faece445b"
+    },
+    {
+      "order": 8,
+      "identity": "008",
+      "filename": "008_family_vitals_state.sql",
+      "type": "schema",
+      "sha256": "6fdf4d029de49087455578716fc1a0c7fe60ddeb2727d5d2b3cf365db4657bf3"
+    },
+    {
+      "order": 9,
+      "identity": "009",
+      "filename": "009_perception_snapshot_daily_briefing.sql",
+      "type": "schema",
+      "sha256": "5865bd513f1b3e3bc65f8384a71f3fd701342eef2eece72c509a15b22c469611"
+    },
+    {
+      "order": 10,
+      "identity": "010",
+      "filename": "010_realtime_call_control.sql",
+      "type": "schema",
+      "sha256": "7030930e158bc255f3d888461a4459826360ec936d6de1a276fd514aa5d48ac1"
+    },
+    {
+      "order": 11,
+      "identity": "011",
+      "filename": "011_family_invitation_integrity.sql",
+      "type": "schema",
+      "sha256": "763915e27afd88c3a61875916bc18641f3fc453bb46c2f53bef65d46ed4937ec"
+    },
+    {
+      "order": 12,
+      "identity": "011",
+      "filename": "011_free_signup_trial_policy.sql",
+      "type": "seed",
+      "sha256": "d8ff4221315d2236496c6bcf362a41e88a6aab0e15e24aa08f31622470db50ef"
+    },
+    {
+      "order": 13,
+      "identity": "012",
+      "filename": "012_production_security_hardening.sql",
+      "type": "schema",
+      "sha256": "6f9449c3f0d4a40246f593114efca48980f804c4fde0ea9d6dce9e6251001e7c"
+    },
+    {
+      "order": 14,
+      "identity": "013",
+      "filename": "013_current_app_billing_policy.sql",
+      "type": "seed",
+      "sha256": "32d379884c5d5448c17edfb8e5497549ec97e293c823474b65e8a6e5963b5563"
+    },
+    {
+      "order": 15,
+      "identity": "014",
+      "filename": "014_medication_dose_events.sql",
+      "type": "schema",
+      "sha256": "66250ad303ebb75600721b2f950d39cf3ef584cf0344252fdfbdc22618665af2"
+    },
+    {
+      "order": 16,
+      "identity": "015",
+      "filename": "015_family_relay_messages.sql",
+      "type": "schema",
+      "sha256": "f93eab1e7586728a72a66879b64bb03393dea2a0042f3a4323ad8c119eaf6124"
+    },
+    {
+      "order": 17,
+      "identity": "016",
+      "filename": "016_notification_platform.sql",
+      "type": "schema",
+      "sha256": "ed77461cd7dbff78df993523cb0838d47b5aab30ed423d0370892a34a71409ec"
+    },
+    {
+      "order": 18,
+      "identity": "017",
+      "filename": "017_notification_settings.sql",
+      "type": "schema",
+      "sha256": "0acca9b0fcb654f3876101ab09bf34486156143763cc7261f673180d7cab8b09"
+    },
+    {
+      "order": 19,
+      "identity": "018",
+      "filename": "018_strip_medication_photos.sql",
+      "type": "data-cleanup",
+      "sha256": "219f75977b92366967b66edde16588c39ae8545daf9ae29aca20618ba88e9348"
+    }
+  ]
+}

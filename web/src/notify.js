@@ -2,7 +2,7 @@
 window.MuneaNotify = (function () {
   'use strict';
 
-  var BRAIN_URL_DEFAULT = 'https://munea-brain-staging-491603544409.asia-east1.run.app';
+  var BRAIN_URL_DEFAULT = 'https://munea-brain-491603544409.asia-east1.run.app';
   var _syncTimer = null;
   var _listenersReady = false;
   var _permission = { status: 'not_determined', granted: false, canAsk: true, canOpenSettings: false };
@@ -31,6 +31,8 @@ window.MuneaNotify = (function () {
       var override = localStorage.getItem('munea.brainUrl');
       if (override) return override.replace(/\/$/, '') + path;
       if (override === '') return path;
+      var dev = window.MUNEA_DEV_CONFIG || {};  // 開發包釘測試機（正式包沒這塊設定）
+      if (dev.enabled === true && dev.brainUrl) return String(dev.brainUrl).replace(/\/$/, '') + path;
       return isNative() ? BRAIN_URL_DEFAULT + path : path;
     } catch (e) { return path; }
   }

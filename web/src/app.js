@@ -436,7 +436,8 @@ function playB64(b64) {
 const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000 };
 // 管家腦雲端正式住址（台灣機房）——打包後的手機沒有「同一棟樓」可打相對路徑，一定要絕對網址
 // 否則家人同步/邀請/資料權利/回饋全打空氣（7/9 上線體檢 B2 抓到的重傷）
-const BRAIN_URL_DEFAULT = 'https://munea-brain-staging-491603544409.asia-east1.run.app';
+// 7/16 Edward 拍板 B 案：正式包指真正式 munea-brain（測試機 -staging 留給開發包與 canary）
+const BRAIN_URL_DEFAULT = 'https://munea-brain-491603544409.asia-east1.run.app';
 // 判斷「是不是打包後的原生 App」：不是 http/https 開頭（capacitor:// file://）或有 Capacitor 殼＝真機
 function isPackagedApp() {
   try {
@@ -450,6 +451,8 @@ function brainURL(path) {
     const b = localStorage.getItem('munea.brainUrl');
     if (b) return b.replace(/\/$/, '') + path;
     if (b === '' ) return path;                 // 明確設空字串＝強制走同源（開發用）
+    const dev = window.MUNEA_DEV_CONFIG || {};  // 開發包釘測試機（同 voiceUrl 那條線、正式包沒這塊設定）
+    if (dev.enabled === true && dev.brainUrl) return String(dev.brainUrl).replace(/\/$/, '') + path;
     if (isPackagedApp()) return BRAIN_URL_DEFAULT + path;
     return path;
   } catch (e) { return path; }
@@ -1260,7 +1263,7 @@ function saveInterests(list) { try { localStorage.setItem('munea.interests', JSO
 // ===== 真即時語音（Gemini 3.1 Live）：MuneaVoiceProvider 的 live 模式 =====
 // 架構：前端這支 → WebSocket 即時語音橋（engine/live_voice_server.py）。麥克風即時串流上去、聲音即時播回來、可打斷。
 // 連哪裡：localStorage['munea.liveVoiceUrl']，沒設就走正式雲端（台灣機房 · 7/9 Edward 拍板正式上線推進）。
-const LIVE_VOICE_URL_DEFAULT = 'wss://munea-voice-staging-491603544409.asia-east1.run.app';
+const LIVE_VOICE_URL_DEFAULT = 'wss://munea-voice-491603544409.asia-east1.run.app';
 // 薄門通行碼：App 自動帶、用戶無感；擋「拿到網址直接來撥」的陌生流量（本機引擎沒開門檢查、帶了也無妨）
 const MUNEA_APP_KEY = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
 const CALL_CONTROL_URL_DEFAULT = 'https://munea-call-control-fiu65jd4da-de.a.run.app';
@@ -3256,8 +3259,7 @@ function renderCompanionGreeting(now = new Date()) {
   if (!line) line = nm + '，' + ask;
   if (line.length > 40) line = line.slice(0, 39) + '…';
   msg.textContent = line;
-  const idleGreeting = $('#faceIdleHi');
-  if (idleGreeting) idleGreeting.textContent = line;
+  // 聊聊頁人物畫面上的那顆字泡（faceIdleHi）已整個拿掉（Edward 2026-07-16）——首頁卡片這行照舊
 }
 
 (function homeGreeting() {
@@ -3768,7 +3770,6 @@ function applyCaptionState() {
   const chat = document.getElementById('chat');
   if (b) { b.classList.toggle('off', !captionsOn); b.setAttribute('aria-pressed', captionsOn ? 'true' : 'false'); }
   if (chat) chat.classList.toggle('captions-on', captionsOn);
-  const ih = document.getElementById('faceIdleHi'); if (ih) ih.style.display = captionsOn ? '' : 'none';  // 字幕關→開場那串招呼字也不顯示（Edward 2026-07-07）
   if (!captionsOn) { const box = document.querySelector('.face-caption-box'); if (box) box.remove(); }
 }
 function setCaption(text, hint) {

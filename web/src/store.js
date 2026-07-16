@@ -4,7 +4,7 @@
    - 商品 ID 唯一真相：docs/蘋果內購金流設定-Edward步驟單-2026-07-08.md 第 4 步表。 */
 window.MuneaStore = (function () {
   var TX_KEY = 'munea.store.processedTransactions.v1';
-  var BRAIN_URL = 'https://munea-brain-staging-491603544409.asia-east1.run.app';
+  var BRAIN_URL = 'https://munea-brain-491603544409.asia-east1.run.app';
   var APP_KEY = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
   var SUB = {
     'plus|month': 'net.munea.app.plus.monthly',
@@ -28,7 +28,13 @@ window.MuneaStore = (function () {
     } catch (e) { return []; }
   }
   function brainBase() {
-    try { return (localStorage.getItem('munea.brainUrl') || BRAIN_URL).replace(/\/$/, ''); } catch (e) { return BRAIN_URL; }
+    try {
+      var override = localStorage.getItem('munea.brainUrl');
+      if (override) return override.replace(/\/$/, '');
+      var dev = window.MUNEA_DEV_CONFIG || {};  // 開發包釘測試機（正式包沒這塊設定）
+      if (dev.enabled === true && dev.brainUrl) return String(dev.brainUrl).replace(/\/$/, '');
+      return BRAIN_URL;
+    } catch (e) { return BRAIN_URL; }
   }
   async function verify(transaction) {
     var auth = window.MuneaAuth;
