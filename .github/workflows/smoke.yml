@@ -83,7 +83,11 @@ jobs:
       - name: Run release consistency gate
         id: release-consistency
         if: always()
-        run: node scripts/check-release-consistency.js
+        shell: pwsh
+        run: |
+          node scripts/test-release-consistency.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-release-consistency.js
 
       - name: Summarize release consistency
         if: always()

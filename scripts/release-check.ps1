@@ -30,6 +30,10 @@ foreach ($name in $envNames) {
 
 try {
   Step "Release consistency"
+  & node scripts/test-release-consistency.js
+  if ($LASTEXITCODE -ne 0) {
+    throw "Release consistency tests failed with exit code $LASTEXITCODE"
+  }
   & node scripts/check-release-consistency.js
   if ($LASTEXITCODE -ne 0) {
     throw "Release consistency failed with exit code $LASTEXITCODE"
