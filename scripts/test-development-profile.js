@@ -55,4 +55,26 @@ assert.doesNotMatch(app, /type:\s*'walk'/);
 assert.match(app, /function usesDevelopmentDirectCall\(\)/);
 assert.match(app, /if \(!developmentDirectCall\) await CallControl\.waitUntilActive\(15000\)/);
 
-console.log('Development profile PASS: isolated auto sign-in, points, family fixtures, and direct test calls');
+// --gateway 模式（2026-07-16 聊聊門禁事故後補）：真登入＋走總機領證，不直連、不自動登入、不種假資料
+const gatewayConfigPath = path.join(tempDir, 'auth-config-gateway.js');
+fs.writeFileSync(gatewayConfigPath, 'window.MUNEA_DEV_CONFIG = { enabled: false, seedFixtures: false };\n', 'utf8');
+const gatewayResult = spawnSync(process.execPath, ['scripts/enable-ios-development-profile.mjs', gatewayConfigPath, '--gateway'], {
+  cwd: process.cwd(),
+  encoding: 'utf8',
+});
+assert.strictEqual(gatewayResult.status, 0, gatewayResult.stderr || 'Gateway development profile command failed');
+const gatewayGenerated = fs.readFileSync(gatewayConfigPath, 'utf8');
+const gatewayContext = { window: {} };
+vm.runInNewContext(gatewayGenerated, gatewayContext);
+const gatewayConfig = gatewayContext.window.MUNEA_DEV_CONFIG;
+assert.strictEqual(gatewayConfig.enabled, true, 'Gateway profile keeps developer diagnostics on');
+assert.strictEqual(gatewayConfig.bypassCallControl, false, 'Gateway profile must route calls through Call Control');
+assert.strictEqual(gatewayConfig.autoSignIn, false, 'Gateway profile must not auto sign in the fixture account');
+assert.strictEqual(gatewayConfig.seedFixtures, false, 'Gateway profile must not seed fixture data over a real account');
+assert.strictEqual(gatewayConfig.analyticsExcluded, true, 'Gateway profile is still a dev build for analytics');
+assert.strictEqual(gatewayConfig.authUserId, undefined, 'Gateway profile must not carry the fixture identity');
+assert.match(gatewayConfig.fixtureVersion, /gateway/, 'Gateway profile is tagged so packages are distinguishable');
+// 位址優先序防呆：有領到證時語音位址一定用證上的（app.js:getLiveVoiceUrl 第一行）
+assert.match(app, /if \(CallControl\.active\) return \(CallControl\.active\.voice && CallControl\.active\.voice\.url\) \|\| ''/);
+
+console.log('Development profile PASS: isolated auto sign-in, points, family fixtures, direct test calls, and gateway mode');
