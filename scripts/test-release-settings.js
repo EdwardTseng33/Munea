@@ -80,6 +80,23 @@ expect(iosDevProfile.includes('Refusing to enable the development profile in the
 expect(iosDevProfile.includes('bypassCallControl: true'), 'iOS development profile does not enable its isolated direct-call path');
 expect(iosDevProfile.includes("voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app'"), 'iOS development profile is not pinned to the current Voice staging endpoint');
 expect(!authConfig.includes('canary-0715-0405'), 'Voice canary leaked into production auth configuration');
+
+// 7/16 Edward 拍板 B 案：正式包預設必指真正式（munea-brain / munea-voice）；預設再出現 -staging＝紅燈
+const notifyBridge = read('web/src/notify.js');
+const PROD_BRAIN_URL = 'https://munea-brain-491603544409.asia-east1.run.app';
+const PROD_VOICE_URL = 'wss://munea-voice-491603544409.asia-east1.run.app';
+expect(app.includes(`const BRAIN_URL_DEFAULT = '${PROD_BRAIN_URL}'`), 'packaged Brain default must point to production munea-brain');
+expect(app.includes(`const LIVE_VOICE_URL_DEFAULT = '${PROD_VOICE_URL}'`), 'packaged Voice default must point to production munea-voice');
+expect(store.includes(`var BRAIN_URL = '${PROD_BRAIN_URL}'`), 'StoreKit receipt verification must point to production Brain');
+expect(notifyBridge.includes(`var BRAIN_URL_DEFAULT = '${PROD_BRAIN_URL}'`), 'notification bridge must point to production Brain');
+expect(!/BRAIN_URL_DEFAULT = 'https:\/\/munea-brain-staging/.test(app), 'packaged Brain default regressed to the staging service');
+expect(!/LIVE_VOICE_URL_DEFAULT = 'wss:\/\/munea-voice-staging/.test(app), 'packaged Voice default regressed to the staging service');
+expect(iosDevProfile.includes("brainUrl: 'https://munea-brain-staging-491603544409.asia-east1.run.app'"), 'iOS development profile must pin Brain to the staging service');
+expect(app.includes('dev.enabled === true && dev.brainUrl'), 'app does not honor the development Brain pin');
+expect(store.includes('dev.enabled === true && dev.brainUrl'), 'StoreKit bridge does not honor the development Brain pin');
+expect(notifyBridge.includes('dev.enabled === true && dev.brainUrl'), 'notification bridge does not honor the development Brain pin');
+const callControlBootstrap = read('scripts/call-control-bootstrap.ps1');
+expect(callControlBootstrap.includes(`"${PROD_VOICE_URL}"`), 'Call Control shard bootstrap must default to the production Voice service');
 expect(!index.includes('id="authEmailInput"') && !index.includes('id="authEmailBtn"'), 'consumer app still exposes email sign-in controls');
 expect(!auth.includes('signInWithOtp') && !auth.includes('signInWithEmail'), 'email OTP auth remains exposed in the consumer auth module');
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';

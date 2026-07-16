@@ -35,6 +35,7 @@ window.MUNEA_DEV_CONFIG = {
   purchasedPoints: 700,
   fixtureVersion: '1.0.24-build30-tokyo-v1',
   voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app',
+  brainUrl: 'https://munea-brain-staging-491603544409.asia-east1.run.app',
 };
 ${endMarker}`;
 
