@@ -181,4 +181,14 @@ expect(app.includes("this._armDeadLineWatch('ready_timeout', 10000)") &&
   app.includes("'dead_line_reconnect'"),
   'a dead line can leave the user waiting for the 30-second readiness gate instead of auto-reconnecting');
 
+// ── 臉部影像流看門（2026-07-16 Edward 真機：嘴巴卡頓後畫面凍住不再動、ICE 未 failed 就沒人管）──
+expect(app.includes('Avatar._armFaceWatch();') && app.includes("'face_stream_stalled'"),
+  'a frozen face stream (frames stop while ICE stays connected) has no watchdog');
+expect(app.includes('只在「有聲音輸出但無新幀」時累計'),
+  'the face watchdog can misfire during idle periods where engine idle-feed frames are legitimately sparse');
+expect(app.includes('(this._faceRebuilds || 0) >= 2'),
+  'face stream rebuilds are not capped at two attempts before degrading');
+expect(app.includes("'face_fallback_voice_only'") && app.includes('LiveVoice._sameLineFellBack = true;'),
+  'voice-only degradation is missing or leaves same-line audio dead when the face is torn down');
+
 console.log('Voice launch policy PASS: buffering, language gate, tail guard, varied opening, and barge-in');

@@ -1833,9 +1833,86 @@ const Avatar = {
       } catch (e) {}
     } catch (e) {}
   },
+  // ── 臉部影像流看門（2026-07-16 Edward 真機：嘴巴卡頓→整個畫面凍住不再動；伺服器 faceaudio_send_err=0
+  //    ＝凍在 App 端影像流。既有恢復只有「ICE 變 failed 才重連」，幀流停掉但 ICE 還 connected 時沒人管）──
+  // 判停邏輯：只在「有聲音輸出（speechActive＝LiveVoice 自己收到的音訊帳，不依賴臉）但連續 4 秒沒有新幀」
+  // 時判 stall——靜默期引擎 idle feed 幀本來就疏、不累計、不誤判。
+  _frameProgress() {
+    const vid = document.getElementById('faceVid');
+    if (!vid) return -1;
+    try {
+      if (vid.getVideoPlaybackQuality) {
+        const q = vid.getVideoPlaybackQuality();
+        if (q && typeof q.totalVideoFrames === 'number' && q.totalVideoFrames > 0) return q.totalVideoFrames;
+      }
+    } catch (e) {}
+    if (typeof vid.webkitDecodedFrameCount === 'number' && vid.webkitDecodedFrameCount > 0) return vid.webkitDecodedFrameCount;
+    return vid.currentTime || 0;   // 最後備援：MediaStream 的 currentTime（幀停走時多數瀏覽器跟著停）
+  },
+  _armFaceWatch() {
+    clearInterval(this._faceWatchT);
+    try {
+      const sessionKey = String((typeof activeChatSessionId !== 'undefined' && activeChatSessionId) || 'unknown');
+      if (this._faceWatchSession !== sessionKey) { this._faceWatchSession = sessionKey; this._faceRebuilds = 0; this._faceFellBack = false; }
+    } catch (e) {}
+    this._faceStallMs = 0;
+    this._faceProgressLast = -1;
+    this._faceWatchT = setInterval(() => this._faceWatchTick(1000), 1000);
+  },
+  _faceWatchTick(stepMs) {
+    if (!this.on) { clearInterval(this._faceWatchT); return; }
+    const progress = this._frameProgress();
+    if (progress !== this._faceProgressLast) { this._faceProgressLast = progress; this._faceStallMs = 0; return; }   // 有新幀＝健康
+    if (!speechActive()) return;   // 只在「有聲音輸出但無新幀」時累計（靜默期 idle feed 幀疏、不算 stall）
+    this._faceStallMs += stepMs;
+    if (this._faceStallMs < 4000) return;
+    this._faceStallMs = 0;
+    voiceCallFail('face_stream_stalled', 'no_new_frames_4s_while_audio', { rebuilds: this._faceRebuilds || 0 });
+    try { trackProductEvent('face_stream_stalled', { rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
+    try { this._diagNote('臉凍住(有聲4秒無新幀)', true); } catch (e) {}
+    if ((this._faceRebuilds || 0) >= 2) { this._fallbackVoiceOnly('stall_after_rebuilds'); return; }   // 重建額度用完 → 降級純語音
+    this._faceRebuilds = (this._faceRebuilds || 0) + 1;
+    this._rebuildFace();
+  },
+  // 重建臉部連線：沿用「第一通線路 failed 自救」同一條路（refreshToken → 重新 /offer → 補亮）。
+  _rebuildFace() {
+    try { this.stop(); } catch (e) {}
+    setTimeout(() => {
+      if (typeof callConnected !== 'undefined' && !callConnected && !callDialing) return;   // 已掛斷就不重連
+      const resume = CallControl.active ? CallControl.refreshToken() : Promise.resolve();
+      resume.then(() => Avatar.start()).then(ok => {
+        if (!ok) { Avatar._fallbackVoiceOnly('rebuild_failed'); return; }
+        try {   // 通話已開場、臉重新加入：補亮會動的臉那層（開場那步早跑過、這裡自己補）
+          Avatar.showLiveFrame();
+          FaceIdle.stop();
+        } catch (e) {}
+      }).catch(() => { try { Avatar._fallbackVoiceOnly('rebuild_failed'); } catch (e) {} });
+    }, 800);
+  },
+  // 第二次重建仍失敗/仍凍 → 降級成純語音繼續通話（不整通當掉）：同線聲音改走本地播放、收掉臉、立繪待機頂上。
+  _fallbackVoiceOnly(reason) {
+    if (this._faceFellBack) return;
+    this._faceFellBack = true;
+    voiceCallMark('face_fallback_voice_only', 'pass', { reason: String(reason || 'face_stream_stalled'), rebuilds: this._faceRebuilds || 0 });
+    try { trackProductEvent('face_fallback_voice_only', { reason: String(reason || ''), rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
+    try { this._diagNote('臉救不回→降級純語音繼續', true); } catch (e) {}
+    // 關鍵：同線模式的聲音出口在臉那條線上——不切回本地播放，臉一收聲音會跟著死。
+    try {
+      if (typeof LiveVoice !== 'undefined' && LiveVoice._sameLine) {
+        LiveVoice._sameLineFellBack = true;
+        try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
+      }
+    } catch (e) {}
+    try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
+    try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
+    try { this.stop(); } catch (e) {}   // 收 WebRTC＋恢復照片層（stop 內含 _fhComposite(false)）
+    try { FaceIdle.start(); } catch (e) {}   // 立繪待機動畫頂上，不留凍格
+    try { setCallHint('畫面先休息一下，我們用聲音繼續聊'); } catch (e) {}
+  },
   stop() {
     this.on = false;
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
+    try { clearInterval(this._faceWatchT); } catch (e) {} this._faceStallMs = 0;   // 臉部看門一起收
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.pc) this.pc.close(); } catch (e) {}
     this.ws = this.pc = null; this._session = '';
@@ -1867,6 +1944,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Avatar._videoReady = true;
         voiceCallMark('avatar_first_frame', 'pass', { width: vid.videoWidth, height: vid.videoHeight });
         Avatar._notifyReady();
+        Avatar._armFaceWatch();   // 首幀確認就開臉部看門（重建成功回來也會重新武裝）：有聲 4 秒無新幀＝凍住
         return;
       }
       if (tries > 0) setTimeout(() => _confirmRealFrame(tries - 1), 250);   // 最多再等 25 秒（冷開機窗）——沒真畫面就不亮、待機動畫繼續頂著
