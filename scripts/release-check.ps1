@@ -29,6 +29,17 @@ foreach ($name in $envNames) {
 }
 
 try {
+  Step "Release consistency"
+  & node scripts/test-release-consistency.js
+  if ($LASTEXITCODE -ne 0) {
+    throw "Release consistency tests failed with exit code $LASTEXITCODE"
+  }
+  & node scripts/check-release-consistency.js
+  if ($LASTEXITCODE -ne 0) {
+    throw "Release consistency failed with exit code $LASTEXITCODE"
+  }
+  Pass "Source metadata and iOS baseline are internally consistent"
+
   $env:GEMINI_API_KEY = $env:GEMINI_API_KEY
   if (-not $env:GEMINI_API_KEY) {
     $env:GEMINI_API_KEY = "smoke-test-key"

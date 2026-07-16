@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+import asyncio
 import importlib.util
 import sys
 import tempfile
+from types import SimpleNamespace
 from pathlib import Path
 
 
@@ -17,6 +19,22 @@ def main():
     assert probe.redact_endpoint("wss://voice.example/ws?token=secret") == "wss://voice.example/ws"
     assert "secret" not in probe.redact_endpoint("https://avatar.example/offer?key=secret")
     assert probe.redact_endpoint("wss://user:secret@voice.example/ws?token=hidden") == "wss://voice.example/ws"
+
+    canary = "wss://canary-0716-1804---munea-voice-staging-fiu65jd4da-de.a.run.app"
+    assert probe.validate_voice_canary_url(canary + "/") == canary
+    legacy_canary = "wss://canary-0716-1804---munea-voice-staging-491603544409.asia-east1.run.app"
+    assert probe.validate_voice_canary_url(legacy_canary) == legacy_canary
+    for unsafe in (
+        "ws://canary-0716-1804---munea-voice-staging-fiu65jd4da-de.a.run.app",
+        "wss://voice.example",
+        canary + "?token=caller-supplied",
+        "wss://canary-x---munea-voice-staging-other-project.a.run.app",
+    ):
+        try:
+            probe.validate_voice_canary_url(unsafe)
+            raise AssertionError("unsafe Voice canary URL was accepted: " + unsafe)
+        except ValueError:
+            pass
 
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -57,6 +75,57 @@ def main():
     assert production.passed is False
     assert production.first_failure == ""
     assert production.first_blocker == "gateway_lease"
+
+    seen = {}
+
+    def fake_profile(profile, root):
+        return {
+            "voice_url": "wss://production.voice",
+            "avatar_url": "https://avatar",
+            "gateway_url": "https://gateway",
+            "app_key": "public-client-key",
+        }
+
+    def fake_health(report, name, base_url, app_key, timeout, durable=False):
+        report.add(name, "PASS", probe.time.monotonic(), "ok", base_url)
+
+    def fake_lease(report, gateway_url, access_token, timeout):
+        report.add("gateway_lease", "PASS", probe.time.monotonic(), "lease assigned", gateway_url)
+        return {
+            "call_id": "call-1",
+            "lease_version": 1,
+            "call_token": "signed-call-token",
+            "voice": {"url": "wss://production.voice"},
+            "worker": {"url": "https://avatar"},
+        }
+
+    async def fake_voice_ready(report, voice_url, app_key, timeout, call_token=""):
+        seen.update(voice_url=voice_url, call_token=call_token)
+        report.add("voice_ready", "PASS", probe.time.monotonic(), "ready", voice_url)
+
+    def fake_release(report, gateway_url, access_token, lease, timeout):
+        seen["released"] = lease["call_id"]
+
+    probe.load_repo_profile = fake_profile
+    probe.probe_http_health = fake_health
+    probe.acquire_gateway_lease = fake_lease
+    probe.probe_voice_ready = fake_voice_ready
+    probe.release_gateway_lease = fake_release
+    args = SimpleNamespace(
+        profile="production",
+        root=".",
+        voice_url="",
+        voice_canary_url=canary,
+        avatar_url="",
+        gateway_url="",
+        app_key="",
+        access_token="real-access-token",
+        timeout=12,
+    )
+    canary_report = asyncio.run(probe.run_probe(args))
+    assert canary_report.passed is True
+    assert seen == {"voice_url": canary, "call_token": "signed-call-token", "released": "call-1"}
+    assert any(stage.name == "voice_route" and stage.status == "PASS" for stage in canary_report.stages)
     print("Voice chain probe contracts: PASS")
 
 

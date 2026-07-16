@@ -18,6 +18,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from env_loader import load_engine_env
 load_engine_env()
+from service_metadata import build_service_metadata
 import chat_engine as eng
 import localization
 import supabase_adapter
@@ -33,6 +34,7 @@ if not os.environ.get("GEMINI_API_KEY"):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.normpath(os.path.join(HERE, "..", "web"))
+BRAIN_RELEASE_METADATA = build_service_metadata("munea-brain")
 DEFAULT_CHAR = "寧寧"
 COMPANION_PROFILE_PATH = os.environ.get("MUNEA_COMPANION_PROFILE_PATH") or os.path.join(HERE, "companion_profile.json")
 APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
@@ -6605,10 +6607,14 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path in ("/version", "/version/"):
+            self._json({"ok": True, "release": BRAIN_RELEASE_METADATA})
+            return
         if path in ("/healthz", "/healthz/"):
             self._json({
                 "ok": True,
                 "service": "munea-local-engine",
+                "release": BRAIN_RELEASE_METADATA,
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
                 "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],

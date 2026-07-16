@@ -92,10 +92,10 @@ function Get-DeploymentValue($name) {
   return $null
 }
 
-function New-CleanSourceFromHead($destination) {
+function New-CleanSourceFromCommit($destination, $commit) {
   $zip = Join-Path ([System.IO.Path]::GetTempPath()) ("munea-cloudrun-source-{0}.zip" -f ([guid]::NewGuid().ToString("N")))
   try {
-    & git archive --format=zip -o $zip HEAD
+    & git archive --format=zip -o $zip $commit
     if ($LASTEXITCODE -ne 0) {
       throw "git archive failed"
     }
@@ -117,17 +117,26 @@ function Invoke-RunDeploy($argsList) {
 }
 
 $Gcloud = Resolve-Gcloud
-$gitHead = (& git rev-parse --short HEAD).Trim()
+$gitCommit = (& git rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) {
   throw "Could not read git HEAD"
 }
+if ($gitCommit -notmatch '^[0-9a-fA-F]{40,64}$') {
+  throw "Git HEAD is not a valid release commit"
+}
+$gitHead = $gitCommit.Substring(0, 12)
 
 Step "Clean source"
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("munea-cloudrun-source-{0}" -f ([guid]::NewGuid().ToString("N")))
 New-Item -ItemType Directory -Force -Path $tempRoot | Out-Null
 try {
-  New-CleanSourceFromHead $tempRoot
-  Pass "prepared committed git HEAD $gitHead at $tempRoot"
+  New-CleanSourceFromCommit $tempRoot $gitCommit
+  $releasePackage = Get-Content -Raw -LiteralPath (Join-Path $tempRoot "package.json") | ConvertFrom-Json
+  $releaseVersion = ([string]$releasePackage.version).Trim()
+  if ($releaseVersion -notmatch '^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$') {
+    throw "Committed package.json has an invalid release version"
+  }
+  Pass "prepared committed release v$releaseVersion at $gitHead in $tempRoot"
 
   $adminSecretExists = Test-SecretExists $AdminSecret
   if ($adminSecretExists) {
@@ -169,6 +178,8 @@ try {
   $brainEnvVars = @(
     "MUNEA_DATABASE_PROVIDER=supabase",
     "MUNEA_ENV_NAME=staging",
+    "MUNEA_RELEASE_VERSION=$releaseVersion",
+    "MUNEA_RELEASE_COMMIT=$gitCommit",
     "MUNEA_REQUIRE_AUTH=1",
     "MUNEA_ENABLE_DEV_AUTH_BYPASS=false",
     "MUNEA_ADMIN_EMAIL=$AdminEmail",
@@ -215,6 +226,8 @@ try {
     $voiceEnvVars = @(
       "MUNEA_SERVICE=voice",
       "MUNEA_ENV_NAME=staging",
+      "MUNEA_RELEASE_VERSION=$releaseVersion",
+      "MUNEA_RELEASE_COMMIT=$gitCommit",
       "MUNEA_CALL_CONTROL_URL=$CallControlUrl",
       "MUNEA_CALL_CONTROL_REQUIRED=$callControlRequired",
       "MUNEA_VOICE_SHARD_ID=$VoiceShardId"
