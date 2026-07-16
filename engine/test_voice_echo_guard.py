@@ -71,6 +71,13 @@ def main():
     check("過場音配速不灌爆", srv.count("await asyncio.sleep(0.08)") >= 3)
     check("查詢總預算 13 秒", 'MUNEA_LOOKUP_TIMEOUT_SECONDS", "13"' in srv)
 
+    # 契約：重試斷路器（7/16 深夜「一直重複我幫你查一下」事故後立）
+    check("連兩敗進冷卻", 'st["lookup_fail_streak"] >= 2' in srv and "lookup_block_until" in srv)
+    check("冷卻期內不查不念", "node.lookup_suppressed" in srv)
+    check("過場句30秒不重播", "node.lookup_cue_skipped" in srv)
+    check("失敗時明令說查不到", srv.count("不要再呼叫查詢工具") >= 3)
+    check("成功歸零斷路器", 'st["lookup_fail_streak"] = 0' in srv)
+
     print()
     if FAILS:
         print(f"❌ {len(FAILS)} 項未過：" + "、".join(FAILS))

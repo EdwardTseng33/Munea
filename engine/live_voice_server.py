@@ -991,6 +991,7 @@ async def handle(ws):
           "lookup_count": 0, "lookup_sources": 0, "lookup_failures": 0,
           "lookup_requested_at": None, "lookup_result_at": None,
           "lookup_waiting_answer": False, "lookup_cue_task": None,
+          "lookup_cue_at": 0.0, "lookup_fail_streak": 0, "lookup_block_until": 0.0,
           "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
     _diag(cid, "connected", name=name or "-", char=char)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
@@ -1232,10 +1233,27 @@ async def handle(ws):
                     _diag(cid, "node.lookup_failed", reason="empty_query", latency_ms=0)
                     return {"status": "error", "error": "lookup_query_empty"}
 
+                # 重試斷路器（7/16 深夜「一直重複我幫你查一下」事故）：查詢一直失敗時，
+                # 模型會自動重試工具、每次重試又念一次過場句＝每 8 秒折磨一輪。
+                # 連兩敗 → 120 秒冷卻：不查、不念、直接叫模型認錯收尾。
+                _lk_now = time.monotonic()
+                if st.get("lookup_block_until", 0) > _lk_now:
+                    _diag(cid, "node.lookup_suppressed", cooldown_s=round(st["lookup_block_until"] - _lk_now))
+                    return {
+                        "status": "error", "error": "lookup_unavailable",
+                        "instruction": "查詢服務暫時沒有回應。請直接用一句話跟用戶說現在查不到、"
+                                       "建議晚點再問，然後繼續原本的聊天。不要再呼叫查詢工具。",
+                    }
+
                 if cue_already_spoken:
                     cue_audio = True
                     _diag(cid, "node.lookup_cue_sent", audio="model", out_bytes=0, latency_ms=0)
+                elif _lk_now - st.get("lookup_cue_at", 0) < 30:
+                    # 過場句 30 秒內不重播（重試時默默查、不再「我幫你查一下」轟炸）
+                    cue_audio = False
+                    _diag(cid, "node.lookup_cue_skipped", reason="recently_played")
                 else:
+                    st["lookup_cue_at"] = _lk_now
                     cue_audio = await _send_lookup_cue()
                 network_started = time.monotonic()
                 _diag(cid, "node.lookup_started", cue_audio=cue_audio)
@@ -1277,7 +1295,14 @@ async def handle(ws):
                         cid, "node.lookup_failed", reason="timeout",
                         latency_ms=round((time.monotonic() - network_started) * 1000),
                     )
-                    return {"status": "error", "error": "lookup_timeout"}
+                    st["lookup_fail_streak"] = st.get("lookup_fail_streak", 0) + 1
+                    if st["lookup_fail_streak"] >= 2:
+                        st["lookup_block_until"] = time.monotonic() + 120
+                    return {
+                        "status": "error", "error": "lookup_timeout",
+                        "instruction": "查詢沒有回應。請用一句話跟用戶說現在查不到、之後再幫忙看，"
+                                       "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                    }
                 except Exception as exc:
                     st["lookup_failures"] += 1
                     st["lookup_result_at"] = time.monotonic()
@@ -1286,11 +1311,20 @@ async def handle(ws):
                         cid, "node.lookup_failed", reason=type(exc).__name__,
                         latency_ms=round((time.monotonic() - network_started) * 1000),
                     )
-                    return {"status": "error", "error": "lookup_failed"}
+                    st["lookup_fail_streak"] = st.get("lookup_fail_streak", 0) + 1
+                    if st["lookup_fail_streak"] >= 2:
+                        st["lookup_block_until"] = time.monotonic() + 120
+                    return {
+                        "status": "error", "error": "lookup_failed",
+                        "instruction": "查詢出了點狀況。請用一句話跟用戶說現在查不到、之後再幫忙看，"
+                                       "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                    }
                 finally:
                     # 查詢一有結果（成功或失敗）就取消「還在找」安撫句——別讓它插在答案中間
                     wait_cue_task.cancel()
 
+                st["lookup_fail_streak"] = 0
+                st["lookup_block_until"] = 0.0
                 st["lookup_sources"] += result["sources"]
                 st["lookup_result_at"] = time.monotonic()
                 st["lookup_waiting_answer"] = True
