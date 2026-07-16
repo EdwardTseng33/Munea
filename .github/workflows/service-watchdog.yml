@@ -1,0 +1,36 @@
+name: Service watchdog
+
+# 服務看門狗：每 5 分鐘巡 Brain／Voice／Gateway／公開網站，倒了發 Slack 告警。
+# 判定規則與對象清單在 scripts/service-watchdog.mjs；契約測試 scripts/test-service-watchdog.js。
+# 注意：排程只在預設分支生效；告警用既有 MUNEA_SLACK_ALERT_WEBHOOK（與 CI 紅燈同一條線）。
+# 已知取捨（P1 再補）：服務持續倒著時每輪都會再發一次告警（無狀態去重）——服務倒了本來就該吵。
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: service-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Patrol services
+        env:
+          MUNEA_SLACK_ALERT_WEBHOOK: ${{ secrets.MUNEA_SLACK_ALERT_WEBHOOK }}
+        run: node scripts/service-watchdog.mjs
