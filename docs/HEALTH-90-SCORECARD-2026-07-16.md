@@ -1,17 +1,17 @@
-# Munea 上線健康度 75→90 Scorecard
+# Munea 上線健康度 77→90 Scorecard
 
 評估日期：2026-07-16（Asia/Taipei）
 
-Repo 基準：`origin/main@aa35afd`
+Repo 基準：`origin/main@741fec7`
 
 評估範圍：送審中的 iOS App、Brain／Voice／Gateway／Avatar、API、底層程式、Supabase migrations、Repo 資料結構、產品與版本文件、AI／服務狀態，以及 staging 營運後台。
 
 ## Executive Summary
 
-- **目前整體健康度為 75/100，六個面向都尚未達 90。** 最新 main 已將 source、lockfile、Web 與 iOS next binary 對齊為 `1.0.28 (Build 35)`；release consistency／main smoke hard gate、AI endpoint rate limit 與六服務 watchdog 均已合併。分數沒有大幅上升，因為 production 尚未部署新版 metadata、Tokyo schema 明確落後、Voice 真鏈路未驗證，且後台指標完整性／新鮮度尚未證明。
-- **staging canary 已可追溯，但仍是 0% 流量且落後目前 main。** Brain `00057-rad` 與 Voice `00041-puy` 的 `/version` 均回 `1.0.27`、commit `8ee91cb`、environment `staging`；Brain root 與 invalid Apple JWS probe 通過，Voice deployment probe 通過。它們證明部署身分 gate 可用，但尚未包含後續合併的 rate limit／watchdog，也不代表 production 或真人 Voice 已可用。
+- **目前整體健康度為 77/100，六個面向都尚未達 90。** 最新 main 已將 source、lockfile、Web 與 iOS next binary 對齊為 `1.0.28 (Build 35)`；release consistency／main smoke hard gate、AI endpoint rate limit、八服務 watchdog 與營運後台安全標頭均已合併。分數仍受 production 版本落後、Tokyo schema 漂移、Voice 真鏈路未驗證，以及後台指標完整性／新鮮度未證明所限制。
+- **Brain staging canary 已精確追上 main，但仍維持 0% 流量。** Brain `00058-jid` 的 `/version` 回 `1.0.28`、commit `741fec79c67a...`、environment `staging`，root、invalid Apple JWS、四項安全標頭與完整 privileged admin smoke 均通過；Voice `00041-puy` 仍是 `1.0.27@8ee91cb`，且真 Gateway lease／Call Token／Gemini media 鏈路尚未驗證。
 - **最大 P0 已從「未知」變成「已知漂移」。** Repo／local migration head 為 `018`，Tokyo observable head 為 `016`；`017` 尚未在 Tokyo 出現、`018` 尚未完成清理，且工作環境的 `engine/.env.local` 仍指 Sydney。任何依賴 017／018 的功能都不能標 DB ready。
-- **營運後台已取得完整 smoke，但資料可信度與瀏覽器防護仍不足。** shell、dynamic console、九個無 token API 403 與 privileged reads 均通過；特權資料回傳 accounts=1、audit=2，其餘 events／privacy／feedback／safety 為 0。零值不能證明埋點完整，且 CSP、X-Frame-Options、X-Content-Type-Options 與 Referrer-Policy response headers 全部缺失。
+- **營運後台的瀏覽器防護已在 exact-main 0% canary 驗收，但尚未進 100% 流量。** CSP、X-Frame-Options、X-Content-Type-Options、Referrer-Policy、九個無 token API 403 與 privileged reads 均通過；特權資料回傳 accounts=1、audit=2，其餘 events／privacy／feedback／safety 為 0。零值仍不能證明埋點完整，且 per-operator identity／MFA／RBAC 尚未完成。
 
 ## 評分方法與結論
 
@@ -19,22 +19,22 @@ Repo 基準：`origin/main@aa35afd`
 
 | 面向 | 目前分數 | 是否達 90 | 核心判斷 |
 |---|---:|:---:|---|
-| 1. 架構健康度 | 83 | 否 | staging canary 身分、production lane 與六服務 watchdog 已建立，但 production 尚未更新、Voice／Gateway 真鏈路未驗證 |
+| 1. 架構健康度 | 84 | 否 | exact-main Brain canary、production lane 與八服務 watchdog 已建立，但 production 尚未更新、Voice／Gateway 真鏈路未驗證 |
 | 2. API 健康度 | 87 | 否 | canary metadata、Brain probes 與 AI endpoint rate limit 已進 main；Voice 缺 access token且 production 仍是舊版 |
-| 3. App 與後端底層代碼健康度 | 83 | 否 | release consistency、hard CI、rate limit 與 watchdog 已進 main；核心檔、coverage 與 Voice 真人 Gate 仍不足 |
+| 3. App 與後端底層代碼健康度 | 84 | 否 | release consistency、hard CI、rate limit、watchdog 與 admin header contract 已進 main；核心檔、coverage 與 Voice 真人 Gate 仍不足 |
 | 4. Repo 資料結構健康度 | 64 | 否 | migration manifest 存在，但 Tokyo 只到 016、017／018 未完成，工作環境仍殘留 Sydney 指向 |
-| 5. 產品資料／版本／功能／設計／AI／服務對焦 | 59 | 否 | main／Build 35 狀態更清楚，但 review binary、production 1.0.26、staging 8ee91cb 與 DB head 尚未同版 |
-| 6. 營運後台健康度 | 75 | 否 | shell、dynamic console、九個 403 與 privileged reads 通過，但零值可信度未知且四項安全 headers 全缺 |
-| **等權總分** | **75** | **否** | **距 90 還有 15 分；production、Voice、Tokyo DB 與 admin security 仍有 P0** |
+| 5. 產品資料／版本／功能／設計／AI／服務對焦 | 60 | 否 | main／Build 35 與 Brain canary 已對齊，但 review binary、production 1.0.26、Voice 8ee91cb 與 DB head 尚未同版 |
+| 6. 營運後台健康度 | 83 | 否 | exact-main 0% canary 的頁面、403、privileged reads 與四項安全 headers 通過；資料可信度及操作員身分仍不足 |
+| **等權總分** | **77** | **否** | **距 90 還有 13 分；production、Voice、Tokyo DB、admin identity 與資料可信度仍是主要阻塞** |
 
-### 本輪分數調整理由（相對 73 分報告）
+### 本輪分數調整理由（相對前一版 75 分）
 
-- 架構 `80→83`：#123 與 staging 0% canary 證明 revision identity 可追溯，#118 建立正式服務 lane，#119 watchdog 已覆蓋六個現役服務；production 尚未部署新版，Voice／Gateway／Gemini media 未完成真鏈路。
+- 架構 `83→84`：#130 將 watchdog 從六個目標擴為八個，GitHub Actions `workflow_dispatch` 在 main@741fec7 完整 PASS；cron 首次準點觸發與失敗路徑 Slack 投遞仍未演練，production 與 Voice 真鏈路亦未完成。
 - API `84→87`：Brain root 與 invalid Apple JWS probe 通過，Brain／Voice `/version` 可對到 `8ee91cb`，#115 為 12 條 AI 燒錢入口加入 429 限流；但 canary 早於 #115，且 Voice 真 Gateway lease／Call Token／Gemini media 均未驗。
-- App／後端代碼 `77→83`：#120 已把 release consistency 與 main smoke改為 hard gate，#115／#119 的 rate limit、watchdog 與測試鏈亦已進 main；`1.0.28 (35)` 四處對齊。大型單檔、coverage 與真人 Voice Gate 未解。
+- App／後端代碼 `83→84`：#133 增加 admin response header contract、live smoke hard gate並通過完整 `test:launch`；大型單檔、coverage 與真人 Voice Gate 未解。
 - Repo `70→64`：本輪取得 live 證據後確認 Tokyo observable head 僅 `016`，repo/local 已到 `018`，且 Sydney 環境指向殘留；這是已確認的資料平面漂移，必須扣分。
-- 產品對焦 `52→59`：main 與 Build 35 的 release lane更清楚，rate limit／watchdog 已由 `coded` 進到 `merged`；但 App Store review binary、production `1.0.26`、staging canary `8ee91cb`、目前 main `aa35afd`、Tokyo `016` 仍是不同時間線。
-- 營運後台 `72→75`：dynamic console、九個 unauth 403 與帶 Secret Manager token 的 privileged reads 均通過；多個核心指標為 0，埋點完整度未證明，且四項 response security headers 全缺，限制加分。
+- 產品對焦 `59→60`：Brain canary 已對齊 main `741fec7` 與 `1.0.28`；但 App Store review binary、production `1.0.26`、Voice canary `8ee91cb` 與 Tokyo `016` 仍是不同時間線。
+- 營運後台 `75→83`：#133 已合併，exact-main 0% canary 的四項 response security headers、dynamic console、九個 unauth 403 與 Secret Manager token privileged reads 均通過；尚未 promote，且 per-operator identity／MFA／RBAC、資料新鮮度與埋點完整度仍未證明。
 
 ## 本次採用的 release truth
 
@@ -42,16 +42,16 @@ Repo 基準：`origin/main@aa35afd`
 |---|---|---|
 | App Store 審核二進位（稽核起點） | 使用者先前確認 `1.0.25 (Build 32)` 已進入 App Store 審核；repo readiness 仍保留 Build 32 上傳成功／處理中紀錄 | 視為不可變更的既有二進位；精確 Apple state 仍以 App Store Connect 為準 |
 | `origin/main` Web／產品來源 | `package.json`、lockfile、`web/src/version.js` 與 iOS Debug／Release 均為 `1.0.28 (Build 35)` | source 與 next binary 已一致；Build 35 已包版／手機換裝但維持不上傳、不送審 |
-| main CI／release gate | #120 release consistency、#123 deployment identity、#115 rate limit、#119 watchdog 均已合併；目前 main `aa35afd` | 已計入程式與發版治理分；不等於 cloud deployment 或真人 E2E |
-| staging Brain 0% canary | revision `00057-rad`；`/version` 回 `1.0.27`、commit `8ee91cb`、env `staging`；root 與 invalid Apple JWS probe PASS | exact revision 身分與基本 backward-compatibility 有證據，仍未承接使用者流量 |
+| main CI／release gate | #120 release consistency、#123 deployment identity、#115 rate limit、#130 八服務 watchdog、#133 admin headers 均已合併；目前 main `741fec7` | 已計入程式與發版治理分；不等於 production deployment 或真人 E2E |
+| staging Brain 0% canary | revision `00058-jid`；`/version` 回 `1.0.28`、commit `741fec79c67a...`、env `staging`；root、invalid Apple JWS、admin headers 與 privileged smoke PASS | exact-main revision 與後台 Phase A 有 live 證據，仍未承接使用者流量 |
 | staging Voice 0% canary | revision `00041-puy`；`/version` 同為 `1.0.27`／`8ee91cb`／staging；deployment probe PASS | 缺 `MUNEA_ACCESS_TOKEN`，真 Gateway lease／Call Token／Gemini media 未測，不可標 Voice ready |
 | production Brain／Voice | 正式 URL 仍回 `1.0.26`，新版 metadata 尚未部署 | App 預設已指 production，但 production 尚未追上 main／Build 35，屬 P0 release drift |
-| staging 營運後台 | shell、dynamic console、九個 unauth 403 與 privileged reads PASS；accounts=1、audit=2，其餘觀察值為 0 | 證明權限門與讀取路徑可用；零值不證明事件／privacy／feedback／safety 埋點完整 |
-| admin HTTP headers | CSP、X-Frame-Options、X-Content-Type-Options、Referrer-Policy 全缺 | 瀏覽器層防護未達 production admin 基線 |
+| staging 營運後台 | exact-main 0% canary 的 shell、dynamic console、九個 unauth 403 與 privileged reads PASS；accounts=1、audit=2，其餘觀察值為 0 | 證明權限門與讀取路徑可用；零值不證明事件／privacy／feedback／safety 埋點完整 |
+| admin HTTP headers | 0% canary 上 CSP、X-Frame-Options=DENY、X-Content-Type-Options=nosniff、Referrer-Policy=no-referrer 全 PASS | Phase A 已完成；100% traffic 尚未包含此 revision，Phase B identity／MFA／RBAC 未完成 |
 | Supabase schema | repo／local head=`018`；Tokyo observable head=`016`；`017` 不存在、`018` 尚未清理；工作環境 `engine/.env.local` 仍指 Sydney | manifest 不能替代 live applied state；Tokyo migration 與環境清理為 P0 |
-| #115／#119 | AI rate limit 與六服務 watchdog 已依序合併至 main | 已計入程式與治理分；staging canary 建於 `8ee91cb`，尚未包含這兩項 runtime 變更 |
+| #115／#130／#133 | AI rate limit、八服務 watchdog 與 admin headers 已合併至 main；Brain 0% canary 已包含 exact main；watchdog workflow_dispatch run 29505204065 PASS | 已計入程式與治理分；尚未 promotion，cron 準點觸發與失敗路徑 Slack 投遞仍待演練 |
 
-## 1. 架構健康度 — 83/100
+## 1. 架構健康度 — 84/100
 
 **判斷：架構不是從零開始，真正缺的是 production 化的證明鏈。**
 
@@ -108,7 +108,7 @@ Repo 基準：`origin/main@aa35afd`
 - Admin endpoints 未帶 admin token 會拒絕；`scripts/admin-smoke.ps1` 會檢查 shell、無 token 403，以及有 token時的 accounts／north-star／usage／credits／privacy／safety／audit 讀取。
 - Repo 有 23 支 `engine/test_*.py` 與 15 支 `scripts/test-*`，`test:launch` 已涵蓋 auth、account scope、privacy、Store、family、notification、voice 等重要路徑。
 - #112 已在 main 為 Brain／Voice 加入安全的 release metadata，以及 HTTP `/healthz`／`/version`；部署腳本也會注入 source version 與 commit，且有 metadata／部署設定契約測試。
-- Brain 0% canary `00057-rad` 與 Voice `00041-puy` 的 `/version` 均可對到 `1.0.27@8ee91cb`；Brain root 與 invalid Apple JWS probe PASS，Voice deployment probe PASS。
+- Brain 0% canary `00058-jid` 可對到 exact main `1.0.28@741fec7`，root、invalid Apple JWS 與 admin smoke PASS；Voice `00041-puy` 仍是 `1.0.27@8ee91cb`，deployment probe PASS。
 - #120 已將 release consistency 與 main smoke 轉成 hard gate，且本輪 main CI success；先前「push 可 soft-fail」缺口已在 main 修正。
 - #115 已為 12 條 AI 成本入口加入每分鐘限流與 429 契約，並把對應測試納入 launch chain。
 
@@ -142,7 +142,7 @@ Repo 基準：`origin/main@aa35afd`
 - API contract inventory 與實際 routes 在 CI 零漂移；成功／錯誤 envelope 有版本策略。
 - 連續 7 天量測符合已核定 SLO，並完成至少一次 timeout、provider failure、DB failure 與 rollback 演練。
 
-## 3. App 與後端底層代碼健康度 — 83/100
+## 3. App 與後端底層代碼健康度 — 84/100
 
 **判斷：有大量針對真問題的測試，但可維護性與 release gate 還沒有跟上功能成長速度。**
 
@@ -231,7 +231,7 @@ Repo 基準：`origin/main@aa35afd`
 - 每個頂層目錄都有 owner、生命週期與 release impact；generated／archive 資產不污染 runtime gate。
 - 新 session 能在 10 分鐘內從 repo map 找到目前版本、服務、schema、設計與營運權威來源。
 
-## 5. 產品資料／版本／功能／設計／AI／服務對焦 — 59/100
+## 5. 產品資料／版本／功能／設計／AI／服務對焦 — 60/100
 
 **判斷：這是目前離 90 最遠、也最容易造成錯誤決策的面向。**
 
@@ -244,7 +244,7 @@ Repo 基準：`origin/main@aa35afd`
 - `BACKLOG.md` 標記日期 2026-06-28，仍把 realtime voice、moving face、iPhone package、Health、reminders、credits、family linkage 等大量已施工項目列為未做。
 - `docs/00-總綱-從這裡開始.md` 仍寫 App `1.0.2 (5)`，README 寫 iOS `1.0.3 (6)`；`docs/BILLING-CREDITS-ENTITLEMENT-v1.md` 也以 `1.0.2` 作更新基準。
 - `docs/AI-SERVICE-DESIGN-v1.md` Updated 2026-07-01；其設計方向仍有價值，但未與本日 Brain／Voice revision、實際 model、persona contract、fallback 與部署狀態形成同一份 service catalog。
-- staging Brain／Voice 0% canary 是 `1.0.27@8ee91cb`，目前 main 已前進到 `1.0.28@aa35afd`，production 正式 URL仍是 `1.0.26`；Tokyo schema 又停在 `016`。App、main、staging、production、DB 五個 release component 尚未同版。
+- staging Brain 0% canary 已是 exact-main `1.0.28@741fec7`，Voice canary 仍是 `1.0.27@8ee91cb`，production 正式 URL仍是 `1.0.26`；Tokyo schema 又停在 `016`。App、main、Voice、production、DB 五個 release component 尚未同版。
 
 ### 主要問題
 
@@ -277,7 +277,7 @@ Repo 基準：`origin/main@aa35afd`
 - 每個 P0 功能都有 `in binary`、`backend deployed`、`DB ready`、`human verified` 的分離證據，不再用單一「完成」代替。
 - AI persona、TTS、realtime voice、locale 與服務 revision 有自動 contract test 及一次真實端到端驗收。
 
-## 6. 營運後台健康度 — 75/100
+## 6. 營運後台健康度 — 83/100
 
 **判斷：後台已經是可見產品，不再是「未建」；但目前 live 版本、操作員身分與資料可信度不足以支撐 90 分營運。**
 
@@ -293,7 +293,7 @@ Repo 基準：`origin/main@aa35afd`
 
 ### 主要問題
 
-- HTTP response 缺 CSP、X-Frame-Options、X-Content-Type-Options 與 Referrer-Policy；即使 API token gate 正常，瀏覽器層仍缺 clickjacking、MIME sniffing 與 referrer 洩漏防護。
+- Phase A 安全標頭已在 0% canary 通過，但 100% traffic revision 尚未包含；仍需在不影響正式流量的前提下完成 promotion 決策與回歸。
 - live 後台缺 git SHA、Cloud Run revision、部署時間、schema head 與 data freshness；營運者無法知道畫面是不是最新或資料是否落後。
 - `/admin/login` 是共享 email／password 後回傳共用 admin API token，前端存於 sessionStorage；缺 per-operator identity、MFA／SSO、RBAC 與可歸責的操作員 audit identity。
 - 目前是 staging Cloud Run 直達網址；看板所列 `admin.munea.net` 與第二道 access control 尚未形成已驗證 production ingress。
@@ -304,7 +304,7 @@ Repo 基準：`origin/main@aa35afd`
 
 **P0**
 
-1. 依 issue #127 補齊 CSP、X-Frame-Options、X-Content-Type-Options、Referrer-Policy，並加入自動 header contract 與 deployment smoke。
+1. ✅ issue #127 Phase A：CSP、X-Frame-Options、X-Content-Type-Options、Referrer-Policy、自動 header contract 與 0% canary deployment smoke 已完成；保持 issue 開啟追蹤 Phase B。
 2. 後台頁首顯示 environment、source version、git SHA、Cloud Run revision、部署時間、migration head、資料最新時間與 backend source。
 3. 以 exact asset hash 部署 main 對應後台；deployment gate 驗證 `admin.html`、`admin.js`、`version.js` 與 API metadata 同一 release manifest。
 4. 依 issue #127 增加第二道存取控制（Cloud Run IAM／IAP 或公司 SSO），再用 per-operator session、MFA、RBAC 與 audit actor 取代共享長效 token 的人員登入模式。
@@ -324,7 +324,7 @@ Repo 基準：`origin/main@aa35afd`
 - privileged admin smoke、敏感欄位遮罩、權限負向測試與資料來源檢查連續 7 天通過。
 - Safety／privacy／billing／voice 事件具有 SLA、owner、處理狀態與閉環證據，且營運數字排除 internal／QA／demo 流量。
 
-## 從 74 推到 90 的執行順序
+## 從 77 推到 90 的執行順序
 
 ### P0-A：先建立真相與阻擋線，不動送審包
 
@@ -353,7 +353,7 @@ Repo 基準：`origin/main@aa35afd`
 - #112（原 `codex/health90-api-observability-20260716`）已合併：Brain／Voice service metadata 與 health contract；尚未部署。
 - #113（原 `codex/health90-schema-governance-20260716`）已合併：migration manifest、checksum 與 duplicate `011` governance；尚未與 live DB head 對帳。
 - #114 已合併：營運後台權限、失敗狀態、accessibility 與 smoke 強化；尚未部署，live 仍為 `1.0.12`。
-- 本文件記錄 `origin/main@2dca5b8` 與本日既有 live 驗證。三項合併已計入程式／治理分，但 **merge 不等於 deploy，manifest 不等於 live schema 已對帳**；目前總分為 73。
+- 本文件已刷新至 `origin/main@741fec7` 與 Brain `00058-jid` 的 0% canary live 驗證。已合併與 canary 驗收均計入程式／治理分，但 **0% canary 不等於 production traffic，manifest 不等於 live schema 已對帳**；目前總分為 77。
 
 ## 仍需外部確認的問題
 
