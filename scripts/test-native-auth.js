@@ -342,10 +342,42 @@ async function testGatewayAccountBootstrapRecovery() {
   expect(googleSignedOut.ok, 'Google local sign out did not complete');
   expect(googleNativeSignOutCalls === 1, 'native Google session was not cleared on sign out');
 
+  const nativeGoogleSignIn = windowObject.Capacitor.Plugins.GoogleSignIn.signIn;
+  windowObject.Capacitor.Plugins.GoogleSignIn.signIn = async () => {
+    googleNativeCalls += 1;
+    return { state: 'cancelled' };
+  };
+  const cancelledGoogle = await windowObject.MuneaAuth.signInWithGoogle();
+  expect(!cancelledGoogle.ok && cancelledGoogle.cancelled, 'cancelled native Google Sign-In was not preserved');
+  expect(oauthRequests.length === 0, 'cancelled native Google Sign-In incorrectly opened the browser fallback');
+
+  windowObject.Capacitor.Plugins.GoogleSignIn.signIn = async () => {
+    googleNativeCalls += 1;
+    const error = new Error('native Google unavailable');
+    error.code = 'google_sign_in_failed';
+    throw error;
+  };
+  const fallbackGoogle = await windowObject.MuneaAuth.signInWithGoogle();
+  expect(fallbackGoogle.ok, 'native Google failure did not start the browser OAuth fallback');
+  expect(fallbackGoogle.authPath === 'browser-oauth', 'Google fallback did not identify the browser OAuth path');
+  expect(fallbackGoogle.fallbackFrom === 'google_sign_in_failed', 'Google fallback lost the native failure code');
+  expect(oauthRequests.length === 1, 'Google fallback did not issue exactly one OAuth request');
+  expect(oauthRequests[0].provider === 'google', 'Google fallback used the wrong OAuth provider');
+  expect(oauthRequests[0].options.redirectTo === 'munea://auth/callback', 'Google fallback lost the native callback');
+  expect(oauthRequests[0].options.skipBrowserRedirect === true, 'Google fallback would navigate the embedded WebView');
+  expect(oauthRequests[0].options.queryParams.prompt === 'select_account', 'Google fallback does not force account selection');
+  expect(browserOpened === 'https://example.supabase.co/oauth', 'Google fallback did not open the system browser');
+  await appUrlOpen({ url: 'munea://auth/callback?code=google-fallback-code' });
+  await new Promise(resolve => setImmediate(resolve));
+  expect(exchangedCode === 'google-fallback-code', 'Google fallback callback did not exchange the PKCE code');
+  expect(browserClosed === 1, 'Google fallback callback did not close the system browser');
+  expect(windowObject.MuneaAuth.state().status === 'signed-in', 'Google fallback did not publish the signed-in session');
+  windowObject.Capacitor.Plugins.GoogleSignIn.signIn = nativeGoogleSignIn;
+
   const apple = await windowObject.MuneaAuth.signInWithApple();
   expect(apple.ok, 'native Apple sign in did not complete');
   expect(appleNativeCalls === 1, 'native Apple plugin was not called exactly once');
-  expect(oauthRequests.length === 0, 'Apple incorrectly used the browser OAuth path');
+  expect(oauthRequests.length === 1, 'Apple incorrectly used the browser OAuth path');
   expect(lastIdTokenRequest && lastIdTokenRequest.provider === 'apple', 'Apple ID token was not sent to Supabase');
   expect(lastIdTokenRequest.token === 'apple-identity-token', 'Apple identity token was changed');
   expect(lastIdTokenRequest.nonce === 'raw-apple-nonce', 'Apple raw nonce was not sent to Supabase');

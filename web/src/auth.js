@@ -273,7 +273,31 @@
     if (!supabaseClient) return { ok: false, error: { code: 'auth_not_configured' } };
     const native = isNativeApp();
     if (native && normalized === 'apple') return signInWithNativeApple(supabaseClient);
-    if (native && normalized === 'google') return signInWithNativeGoogle(supabaseClient);
+    if (native && normalized === 'google') {
+      const nativeResult = await signInWithNativeGoogle(supabaseClient);
+      const nativeCode = String(nativeResult && nativeResult.error && nativeResult.error.code || 'native_google_sign_in_failed');
+      if (nativeResult && (nativeResult.ok || nativeResult.cancelled || nativeCode === 'google_sign_in_in_progress')) {
+        return { ...nativeResult, authPath: 'native-google' };
+      }
+      const fallbackResult = await signInWithBrowserOAuth(supabaseClient, normalized, true);
+      if (fallbackResult && fallbackResult.ok) {
+        return { ...fallbackResult, authPath: 'browser-oauth', fallbackFrom: nativeCode };
+      }
+      return {
+        ...fallbackResult,
+        authPath: 'browser-oauth',
+        fallbackFrom: nativeCode,
+        error: {
+          ...(fallbackResult && fallbackResult.error ? fallbackResult.error : {}),
+          code: String(fallbackResult && fallbackResult.error && fallbackResult.error.code || 'google_oauth_fallback_failed'),
+          nativeCode,
+        },
+      };
+    }
+    return signInWithBrowserOAuth(supabaseClient, normalized, native);
+  }
+
+  async function signInWithBrowserOAuth(supabaseClient, normalized, native) {
     if (native) await setupNativeAuthListener();
     const result = await supabaseClient.auth.signInWithOAuth({
       provider: normalized,
@@ -296,7 +320,7 @@
         return { ok: false, error: { code: 'native_oauth_open_failed' } };
       }
     }
-    return { ok: !result.error, result, error: result.error || null };
+    return { ok: !result.error, result, error: result.error || null, authPath: native ? 'browser-oauth' : 'web-oauth' };
   }
 
   async function signInWithNativeGoogle(supabaseClient) {
