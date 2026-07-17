@@ -412,6 +412,14 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             data["userMood"] = mood
         if topics:
             data["interests"] = topics  # 用戶挑的興趣話題（?topics=）→ 開場/接話的方向
+        # 他自己的身體狀況：一定要在組說明書「之前」拿到，不然她那段會先印成「你什麼都看不到」。
+        # 為什麼向 Brain 要而不自己撈：Voice 這台沒有雲端鑰匙、也認不出來電者是誰
+        # （所有來電者會落到同一個預設身分）。健康資料最不能認錯人——把 A 的血壓講給 B 聽，
+        # 比不講嚴重得多。所以 Brain 認人、Brain 撈，Voice 只拿結果。
+        # 要不到就不塞：build_reply_context 撈不到 → 空的 → 圍籬告訴她「你看不到、不准編」。
+        health_ctx = _brain_health_context(memory_scope)
+        if health_ctx:
+            data["healthContext"] = health_ctx
         ctx = server.build_reply_context([], char, data)
         base += server.reply_context_instruction(ctx)
     except Exception:
@@ -800,6 +808,29 @@ def _brain_memory_config():
     url = os.environ.get("MUNEA_BRAIN_INTERNAL_URL", "").strip()
     secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
     return (url, secret) if url and secret else (None, None)
+
+
+def _brain_health_context(memory_scope):
+    """向 Brain 要「這位來電者自己的身體狀況」（跟要『上次聊天』同一條路）。
+
+    memory_scope＝這通的人別隔離鍵（`voice-<已驗證的 user_id>`），跟收線回寫同一個。
+    拿不到就回 None——不塞任何東西，讓她那段印成「你什麼都看不到、不准編」。
+    失敗只能往「她不知道」倒，絕不能往「她以為自己看得到」倒。
+    """
+    brain_url, brain_secret = _brain_memory_config()
+    if not (brain_url and memory_scope and str(memory_scope).startswith("voice-")):
+        return None
+    try:
+        resp = post_internal(
+            brain_url, brain_secret, "/voice/health-context",
+            {"userId": str(memory_scope)[len("voice-"):]}, timeout=3,
+            app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
+    except Exception:
+        return None                       # Brain 不通 → 當作看不到（不是當作沒事）
+    ctx = (resp or {}).get("healthContext")
+    if not isinstance(ctx, dict) or not ctx.get("facts"):
+        return None                       # 認不出人 / 沒資料 → 一樣走圍籬
+    return ctx
 _HOKKIEN_FALLBACK_LOCK = threading.Lock()
 _LOOKUP_CUE_LOCK = threading.Lock()
 
