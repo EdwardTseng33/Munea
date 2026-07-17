@@ -1,6 +1,6 @@
 # Munea Billing, Credits, and Entitlements
 
-Updated: 2026-07-14 for App `1.0.2`
+Updated: 2026-07-18 for App `1.0.40 (Build 47)`
 
 This document is the billing source of truth for the current app. Historical plan names such as Premium and Concierge are retired and must not be used by code, migrations, tests, or App Store metadata.
 
@@ -69,7 +69,7 @@ The foundation is created by `supabase/sql/006_billing_credits_foundation.sql`:
 - `credit_transactions`
 - `credit_ledger`
 
-The current Free / Plus / Pro policy is version 3 in `supabase/sql/013_current_app_billing_policy.sql`. It supersedes the plan names and limits stored by earlier policy versions without rewriting migration history.
+The current Free / Plus / Pro policy is version 4 in `supabase/sql/019_pricing_plus100_pro200.sql`. Version 3 remains historical migration evidence in `supabase/sql/013_current_app_billing_policy.sql`; migration history must not be rewritten.
 
 ## Deduction Order
 
@@ -87,7 +87,7 @@ The server derives each allowance window from the verified Apple purchase anchor
 - ✅ Current Product IDs and grants are covered by automated tests.
 - ✅ Restore purchases only restores active subscriptions and re-verifies them on the server.
 - ✅ The current Supabase policy migration is defined.
-- ❌ Policy version 3 still needs to be applied and verified in the only production Supabase project.
+- ❌ Policy version 4 (`019`) still needs an approved backup, migration-ledger entry, application to the Tokyo Supabase project, and a read-only post-apply verification. Its presence in source or the migration manifest is not live-database proof.
 - ✅ App Store Server Notifications V2 JWS verification and renewal, expiration, cancellation, grace-period, refund, refund-reversal, and revocation state transitions are implemented with idempotent credit handling.
 - ❌ The V2 endpoint still needs Brain deployment, App Store Connect production/Sandbox URL configuration, a TEST notification, and real Sandbox lifecycle acceptance.
 - ❌ StoreKit Sandbox purchase, renewal, cancellation, refund, and restore still need real-device acceptance tests.
