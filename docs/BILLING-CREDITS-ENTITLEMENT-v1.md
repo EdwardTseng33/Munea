@@ -13,10 +13,10 @@ Free -> Plus -> Pro
 | Plan | Customer price | Included points | Family circle |
 |---|---:|---:|---:|
 | Munea Free | NT$0 | One-time 5-point signup trial | Account owner only |
-| Munea Plus monthly | NT$599 | 150 per month | Up to 4 people |
-| Munea Plus yearly | NT$5,750 | 150 per month | Up to 4 people |
-| Munea Pro monthly | NT$1,199 | 300 per month | Up to 12 people |
-| Munea Pro yearly | NT$11,500 | 300 per month | Up to 12 people |
+| Munea Plus monthly | NT$599 | 100 per month | Up to 4 people |
+| Munea Plus yearly | NT$5,750 | 100 per month | Up to 4 people |
+| Munea Pro monthly | NT$1,199 | 200 per month | Up to 12 people |
+| Munea Pro yearly | NT$11,500 | 200 per month | Up to 12 people |
 
 One point is approximately one Voice + Avatar call minute. The server wallet and call-control ledger, not the browser countdown, must enforce the final balance.
 
@@ -24,12 +24,14 @@ One point is approximately one Voice + Avatar call minute. The server wallet and
 
 Apple Product IDs are immutable identifiers. Their numeric suffixes are historical and do not equal the current grant.
 
+Pack pricing rule (Edward, 2026-07-17): packs are always priced above the subscription per-minute anchor (NT$6/min), because the subscription price includes product features while packs are pure extra minutes.
+
 | Grant | Price | App Store Product ID |
 |---:|---:|---|
-| 150 | NT$500 | `net.munea.app.points.200` |
-| 300 | NT$1,000 | `net.munea.app.points.500` |
-| 600 | NT$2,000 | `net.munea.app.points.1000` |
-| 1,000 | NT$3,000 | `net.munea.app.points.1800` |
+| 100 | NT$790 | `net.munea.app.points.200` |
+| 300 | NT$2,190 | `net.munea.app.points.500` |
+| 600 | NT$4,190 | `net.munea.app.points.1000` |
+| 1,000 | NT$6,490 | `net.munea.app.points.1800` |
 
 ## Billing Rules
 

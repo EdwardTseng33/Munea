@@ -74,7 +74,7 @@ class AppleStoreVerificationTests(unittest.TestCase):
             verifiers=[FakeVerifier(decoded_transaction())],
         )
         self.assertEqual(result.productId, "net.munea.app.points.200")
-        self.assertEqual(result.points, 150)
+        self.assertEqual(result.points, 100)
         self.assertEqual(result.kind, "points")
 
     def test_pro_subscription_uses_current_monthly_allowance(self):
@@ -87,7 +87,7 @@ class AppleStoreVerificationTests(unittest.TestCase):
             ))],
         )
         self.assertEqual(result.plan, "pro")
-        self.assertEqual(result.points, 300)
+        self.assertEqual(result.points, 200)
         self.assertEqual(result.kind, "subscription")
 
     def test_invalid_signature_fails_closed(self):
@@ -130,13 +130,13 @@ class AppleStoreVerificationTests(unittest.TestCase):
             appAccountToken=AUTH_USER,
             environment="Sandbox",
             kind="points",
-            points=150,
+            points=100,
         )
         captured = {}
 
         def fake_grant(data):
             captured.update(data)
-            return {"ok": True, "walletSummary": {"purchased": 150}, "idempotentReplay": False}
+            return {"ok": True, "walletSummary": {"purchased": 100}, "idempotentReplay": False}
 
         with patch.object(server.apple_store, "verify_transaction", return_value=verified), \
              patch.object(server, "credits_grant_response", side_effect=fake_grant), \
@@ -150,7 +150,7 @@ class AppleStoreVerificationTests(unittest.TestCase):
         self.assertTrue(response["verified"])
         self.assertEqual(captured["idempotencyKey"], "apple:100000000000001")
         self.assertEqual(captured["source"], "apple_iap")
-        self.assertEqual(captured["amount"], 150)
+        self.assertEqual(captured["amount"], 100)
 
     def test_claimed_transaction_id_must_match_signed_jws(self):
         verified = apple_store.VerifiedAppleTransaction(
@@ -160,7 +160,7 @@ class AppleStoreVerificationTests(unittest.TestCase):
             appAccountToken=AUTH_USER,
             environment="Sandbox",
             kind="points",
-            points=150,
+            points=100,
         )
         with patch.object(server.apple_store, "verify_transaction", return_value=verified):
             response = server.apple_transaction_response(
@@ -204,7 +204,7 @@ class AppleStoreVerificationTests(unittest.TestCase):
         )
         self.assertEqual(result.notificationType, "DID_RENEW")
         self.assertEqual(result.plan, "pro")
-        self.assertEqual(result.points, 300)
+        self.assertEqual(result.points, 200)
         self.assertEqual(result.appAccountToken, AUTH_USER)
         self.assertTrue(result.willRenew)
 
@@ -266,7 +266,7 @@ class AppleStoreVerificationTests(unittest.TestCase):
             notificationType="EXPIRED", subtype="VOLUNTARY", notificationUUID="notice-expired",
             signedDate=None, environment="Sandbox", productId="net.munea.app.plus.monthly",
             transactionId="100000000000002", originalTransactionId="100000000000001",
-            appAccountToken=AUTH_USER, kind="subscription", points=150, plan="plus",
+            appAccountToken=AUTH_USER, kind="subscription", points=100, plan="plus",
         )
         billing = server.normalize_billing_store({
             "accountId": "11111111-1111-4111-8111-111111111111",

@@ -74,7 +74,7 @@ vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
 
 (async () => {
   const expectedPointProducts = {
-    150: 'net.munea.app.points.200',
+    100: 'net.munea.app.points.200',
     300: 'net.munea.app.points.500',
     600: 'net.munea.app.points.1000',
     1000: 'net.munea.app.points.1800'

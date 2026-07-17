@@ -88,12 +88,12 @@ class MonthlyCreditAllowanceTests(unittest.TestCase):
                 "expiresAt": "2027-01-31T10:00:00Z",
             },
             "entitlements": {
-                "monthlyCredits": 300,
+                "monthlyCredits": 200,
                 "monthlyCreditAnchorAt": "2026-01-31T10:00:00Z",
             },
         })
         details = server.monthly_allowance_details(billing, now=datetime(2026, 2, 15, tzinfo=timezone.utc))
-        self.assertEqual(details["amount"], 300)
+        self.assertEqual(details["amount"], 200)
         self.assertIn("2026-01-31T10:00Z/2026-02-28T10:00Z", details["period"])
         march = server.monthly_allowance_details(billing, now=datetime(2026, 3, 15, tzinfo=timezone.utc))
         self.assertIn("2026-02-28T10:00Z/2026-03-31T10:00Z", march["period"])
