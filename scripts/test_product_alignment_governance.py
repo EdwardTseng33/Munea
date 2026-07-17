@@ -8,13 +8,14 @@ import shutil
 import sys
 import tempfile
 import unittest
+from datetime import timedelta
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from check_product_alignment import validate
+from check_product_alignment import _taipei_today, validate
 
 
 COPIED_PATHS = [
@@ -82,6 +83,12 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
         authority["authorities"].append(dict(authority["authorities"][0]))
         self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
         self.assert_has_error("authority topic is duplicated: docs-entry")
+
+    def test_future_authority_date_fails_in_product_timezone(self) -> None:
+        authority = self.read_json("docs/CURRENT-AUTHORITIES.json")
+        authority["updated"] = (_taipei_today() + timedelta(days=1)).isoformat()
+        self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
+        self.assert_has_error("authority index updated date cannot be in the future")
 
     def test_stale_release_state_source_fails(self) -> None:
         self.replace(

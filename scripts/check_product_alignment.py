@@ -6,7 +6,7 @@ from __future__ import annotations
 import ast
 import json
 import re
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +26,12 @@ REQUIRED_TOPICS = {
     "cloudrun-topology",
     "collaboration",
 }
+
+
+def _taipei_today() -> date:
+    """Return the product governance date without depending on runner locale."""
+
+    return datetime.now(timezone(timedelta(hours=8))).date()
 
 
 def _read(root: Path, relative_path: str | Path) -> str:
@@ -84,9 +90,10 @@ def validate(repo_root: Path = ROOT) -> list[str]:
     updated = authority.get("updated")
     try:
         updated_date = date.fromisoformat(str(updated))
-        if updated_date > date.today():
+        governance_today = _taipei_today()
+        if updated_date > governance_today:
             errors.append("authority index updated date cannot be in the future")
-        if (date.today() - updated_date).days > 45:
+        if (governance_today - updated_date).days > 45:
             errors.append("authority index is older than 45 days")
     except ValueError:
         errors.append("authority index updated must be YYYY-MM-DD")
