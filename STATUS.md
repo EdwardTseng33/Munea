@@ -6,7 +6,9 @@
 >
 > 🛠️ **2026-07-17 15:09 待包版**：實機日誌確認 Build 42 開發者 Gateway 模式於 06:57–06:58 三次 `/v1/calls` 均為 `401 invalid_token`；App 送出前驗證沒有攔住 Gateway 實際拒絕。`1.0.36 (Build 43)` 已補「401 後強制刷新＋同一 idempotency key 只重試一次」、拒絕本機 developer 假 token、無法恢復時明確要求重新登入。完整 `test:launch` 與 PR #161 兩個 GitHub smoke 均 PASS；分支 `codex/fix-dev-gateway-401-retry-20260717`，待合併／Mac `cap sync`、Archive、Export 與實機重試。Brain／Voice／Gateway 不需重新部署。
 >
-> 📱 **2026-07-17 18:38 最新包版**：`1.0.38 (Build 45)` **iPhone-only**，收 #168 Google 登入 PKCE 備援＋快取戳記補跳。五道防漏 PASS、IPA 58,881,258 bytes，SHA-256 `2f381da48e08280879a1cd49dfb348829de13f69441fd70eb140c0833b56c3a1`。**18:38 已上傳 App Store Connect＝現任送審候選（詳 118 號）**。Edward iPhone＝44 驗證版（45 待手機解鎖補裝）。
+> 📱 **2026-07-17 19:14 最新包版**：`1.0.39 (Build 46)` **iPhone-only**，收 #170 資產新舊綁定＋出貨資產門。五道防漏 PASS、IPA 58,881,348 bytes，SHA-256 `8d0f290387f9d94f761c05f3c124acfe74a59f8ccc4bcf70d9daf385912d318e`。**19:14 已上傳 App Store Connect＝現任送審候選（詳 119 號）**。Edward iPhone＝44 驗證版（46 待手機回來換裝）。
+>
+> 📱 **2026-07-17 18:38 前一包**：`1.0.38 (Build 45)` **iPhone-only**，收 #168 Google 登入 PKCE 備援＋快取戳記補跳。五道防漏 PASS、IPA 58,881,258 bytes，SHA-256 `2f381da48e08280879a1cd49dfb348829de13f69441fd70eb140c0833b56c3a1`。**18:38 已上傳 App Store Connect＝現任送審候選（詳 118 號）**。Edward iPhone＝44 驗證版（45 待手機解鎖補裝）。
 >
 > 📱 **2026-07-17 16:23 前一包**：`1.0.37 (Build 44)` **iPhone-only**，收 #164 真登入開戶修正（修 15:34「點數不足」拒接）。五道防漏 PASS、IPA 58,880,616 bytes，SHA-256 `9b51586f9f8e0e6320a4ba5f2b039de1120483cd365753e3f0c0f1ab55155342`。**16:23 已上傳 App Store Connect＝現任送審候選（詳 117 號）**。Edward iPhone 換裝驗證版同版。
 >
@@ -50,7 +52,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-17 18:5X（Mac 蘇菲 · #168 收版＋1.0.38 Build 45 已上傳＝現任送審候選，詳 118 號。手機＝44 驗證版、45 待解鎖補裝。領證通話＋沙盒購買續等 Edward 驗。「發佈」／送審由 Edward 按）**
+> **最後更新：2026-07-17 19:1X（Mac 蘇菲 · #170 收版＋1.0.39 Build 46 已上傳＝現任送審候選，詳 119 號。手機＝44 驗證版、46 待換裝後跑 #166 真機撥通 Gate。「發佈」／送審由 Edward 按）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -60,7 +62,9 @@
 
 ## 一眼總覽
 
-**119－💰 定價改版：Plus 100 點／Pro 200 點＋點數包 100/300/600/1000 新價（7/17 19:2X Windows 蘇菲 · Edward 拍板 · 分支 `feat/pricing-100-200-repack` · 1.0.39 待打包）**：①**Edward 拍板三刀**：a. Plus 599 贈點 150→**100**、Pro 1,199 贈點 300→**200**（月費不變＝每分鐘 6 元錨；行情查證兩路後定案：跟我們同型的真臉視訊服務實付 6.5–13 元/分、我們原 4 元/分偏便宜端、未上線改價零成本）b. 點數包規格 150/300/600/1000 → **100/300/600/1000**（小包＝Plus 一個月的量）c. **點數包新價全部貴過訂閱**（790／2,190／4,190／6,490＝7.9→6.49 元/分）——Edward 原則「訂閱本身含功能價值、點數是純加分鐘、理當更貴」；順帶把「狂買點取代 Pro」封死（Pro 另有 12 人照護圈護城河）。②✅ 三邊對帳一次改齊：App 畫面（index.html 兩組點數卡＋方案卡文案＋CTA）、App 邏輯（PLAN_POINTS／PT_PRICE／PT_PID／store.js 對照）、雲端（apple_store.py 商品贈點＋新 SQL `019_pricing_plus100_pro200.sql` 政策第 4 版）、管理台方案表、防呆網（release-settings／store-verification／smoke 全部釘到新真相——**改前防呆網真的紅燈抓到、改完轉綠＝機關有牙**）。③✅ 驗證：`test:launch` 全套全綠（Python＋node 含 release-settings／ui-contracts）。④✅ 版號 1.0.39 四處齊（version.js＋changelog、package.json、index.html 戳記 v1039；Xcode 行銷版號待 Mac）。⑤**Mac 車道**：`cap sync`＋重打包 1.0.39（Build 46）。⑥**Edward 三件**：a. App Store Connect 四個點數包改價 **790／2,190／4,190／6,490**（商品編號不變：points.200=100 點、points.500=300、points.1000=600、points.1800=1000；商品顯示名稱若寫舊點數一併改）b. Supabase 跑 `019_pricing_plus100_pro200.sql` c. 訂閱商品價不動、若商品描述寫「每月 150/300 點」要改 100/200。⑦**雲端**：apple_store.py 改動＝下次 Brain 部署自動帶上（未部署前雲端入帳仍按舊贈點、送審前必部署）。⑧蘋果商品編號與實際點數對不上是歷史包袱（112 號⑤既記）、對照表已全部更新。
+**120－💰 定價改版：Plus 100 點／Pro 200 點＋點數包 100/300/600/1000 新價（7/17 19:2X Windows 蘇菲 · Edward 拍板 · 分支 `feat/pricing-100-200-repack` · 1.0.40 待打包）**：①**Edward 拍板三刀**：a. Plus 599 贈點 150→**100**、Pro 1,199 贈點 300→**200**（月費不變＝每分鐘 6 元錨；行情查證兩路後定案：跟我們同型的真臉視訊服務實付 6.5–13 元/分、我們原 4 元/分偏便宜端、未上線改價零成本）b. 點數包規格 150/300/600/1000 → **100/300/600/1000**（小包＝Plus 一個月的量）c. **點數包新價全部貴過訂閱**（790／2,190／4,190／6,490＝7.9→6.49 元/分）——Edward 原則「訂閱本身含功能價值、點數是純加分鐘、理當更貴」；順帶把「狂買點取代 Pro」封死（Pro 另有 12 人照護圈護城河）。②✅ 三邊對帳一次改齊：App 畫面（index.html 兩組點數卡＋方案卡文案＋CTA）、App 邏輯（PLAN_POINTS／PT_PRICE／PT_PID／store.js 對照）、雲端（apple_store.py 商品贈點＋新 SQL `019_pricing_plus100_pro200.sql` 政策第 4 版）、管理台方案表、防呆網（release-settings／store-verification／smoke 全部釘到新真相——**改前防呆網真的紅燈抓到、改完轉綠＝機關有牙**）。③✅ 驗證：`test:launch` 全套全綠（Python＋node 含 release-settings／ui-contracts）。④✅ 版號 1.0.40 四處齊（讓號：1.0.39 已被 Google 登入修復用掉）（version.js＋changelog、package.json、index.html 戳記 v1040；Xcode 行銷版號待 Mac）。⑤**Mac 車道**：`cap sync`＋重打包 1.0.40（Build 47）。⑥**Edward 三件**：a. App Store Connect 四個點數包改價 **790／2,190／4,190／6,490**（商品編號不變：points.200=100 點、points.500=300、points.1000=600、points.1800=1000；商品顯示名稱若寫舊點數一併改）b. Supabase 跑 `019_pricing_plus100_pro200.sql` c. 訂閱商品價不動、若商品描述寫「每月 150/300 點」要改 100/200。⑦**雲端**：apple_store.py 改動＝下次 Brain 部署自動帶上（未部署前雲端入帳仍按舊贈點、送審前必部署）。⑧蘋果商品編號與實際點數對不上是歷史包袱（112 號⑤既記）、對照表已全部更新。
+
+**119－✅ 1.0.39 Build 46 已上傳 App Store Connect（7/17 19:14 Mac 蘇菲 · Edward「合併/包版 1.0.38」延伸 · 收 #170）**：①✅ 驗收後收 #170 交棒單：Build 45 真機仍冒退役登入字串＝手機可能跑舊網頁資產——**資產新舊綁定版本身分（v1039）、出貨檢查新增「舊資產／舊登入字串／缺 PKCE 備援」直接紅燈**；版號 1.0.39 (Build 46) 四處齊。②✅ node 15 支全綠、五道防漏（含新資產門）PASS；IPA 58,881,348 bytes，SHA-256 `8d0f290387f9d94f761c05f3c124acfe74a59f8ccc4bcf70d9daf385912d318e`；19:14 上傳成功——**現任送審候選＝1.0.39 (Build 46)**。③🟡 手機仍連不上（鎖屏／不在座位、三輪重試）：Edward iPhone 停在 `1.0.37 (44)` 驗證版；46 的裝機包備好、手機回來 30 秒換裝。④依 #166 永久 Gate：46 未過真機撥通驗收前、不得標 App E2E ready。
 
 **118－✅ App 1.0.38 Build 45 已上傳 App Store Connect（7/17 18:38 Mac 蘇菲 · PR #169 · Edward「合併/包版」）**：①✅ 收 #168 Google 登入 PKCE 備援（另一車道已直併主線、但沒跳版）——本班補跳 1.0.38/Build 45 四處齊＋lock；**快取戳記從 1035 補跳 1038**（43/44 兩包漏跳、不致命但補正）。②✅ node 15 支全綠、五道防漏 PASS；IPA 58,881,258 bytes，SHA-256 `2f381da48e08280879a1cd49dfb348829de13f69441fd70eb140c0833b56c3a1`；18:38 上傳成功——**現任送審候選＝1.0.38 (Build 45)**。③🟡 手機換裝：驗證版建好但裝機時手機連線失敗（多半螢幕鎖著）——手機目前仍是 `1.0.37 (44)` 驗證版（開戶修正在包內、可先測通話）；解鎖後 Mac 補裝 45。
 

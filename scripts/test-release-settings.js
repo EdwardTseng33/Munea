@@ -37,6 +37,15 @@ const prodDeploy = read('deploy/cloudrun/prod-deploy.sh');
 const cloudRunDeploy = read('scripts/cloud-run-deploy-staging.ps1');
 const gatewayDeploy = read('scripts/cloud-run-deploy-gateway.ps1');
 
+const packageVersion = JSON.parse(read('package.json')).version;
+const expectedAssetToken = `v${packageVersion.replace(/\./g, '')}`;
+for (const asset of ['styles.css', 'version.js', 'auth.js', 'app.js']) {
+  const escaped = asset.replace('.', '\\.');
+  const match = index.match(new RegExp(`src/${escaped}\\?v=([^"']+)`));
+  expect(match && match[1].endsWith(`-${expectedAssetToken}`),
+    `${asset} cache identity is not aligned to App ${packageVersion}`);
+}
+
 expect(!app.includes('__muneaNativeRestore'), 'restore button still calls the retired native global');
 expect(app.includes('window.MuneaStore.restore()'), 'restore button is not wired to MuneaStore.restore');
 expect(app.includes('window.MuneaStore.manageSubscriptions()'), 'cancel button is not wired to Apple subscription management');
@@ -117,6 +126,7 @@ expect(auth.includes("provider: 'google'") && auth.includes('google_identity_tok
 expect(auth.includes('signInWithBrowserOAuth') && auth.includes("fallbackFrom: nativeCode"), 'native Google failure does not fall back to browser OAuth');
 expect(app.includes("auth_sign_in_fallback_started") && app.includes("auth_sign_in_failed"), 'Google sign-in fallback diagnostics are missing');
 expect(app.includes('Google 登入失敗（${code}）'), 'Google sign-in failure still hides the diagnostic code');
+expect(!app.includes('登入暫時無法啟動'), 'retired generic Google sign-in failure text remains in the App bundle');
 expect(auth.includes('signInWithIdToken'), 'native Apple ID token is not exchanged with Supabase');
 expect(infoPlist.includes('<string>munea</string>'), 'iOS OAuth callback URL scheme is missing');
 expect(hasUsageDescription(infoPlist, 'NSCameraUsageDescription'), 'iOS camera usage description is missing');
