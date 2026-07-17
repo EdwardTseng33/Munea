@@ -3,13 +3,23 @@
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 
+### 進行中：Build 43 真登入 0 點、免費體驗未補與開發包模式混用（2026-07-17 Codex）
+
+- 任務／證據：iPhone 15:34 真實登入有效時，Brain API 已回 200，但沒有任何 `/account-bootstrap`；App 產品事件在 15:34:16、15:34:22 明確記錄兩次 `insufficient_credits`，資料庫再確認 active 錢包餘額為 0、一次性免費 5 點發放紀錄為空，因此沒有建立 lease／heartbeat。`--gateway` QA profile 的 `enabled: true` 被舊判斷誤認為 fixture bypass，直接跳過本應冪等補齊帳號與免費體驗的 bootstrap。
+- Branch：`codex/fix-call-bootstrap-dev-profile-20260717`
+- 預計檔案：`web/src/app.js`、`scripts/test-native-auth.js`、`scripts/test_app_call_control_contract.py`、版本鏈、`STATUS.md` 與本看板。
+- 明確避讓：不修改／不部署 Brain、Voice、Gateway、RunPod、GLOWS、AI 聊聊內容或營運後台。
+- 修正方向：真實登入必須完成且等待帳戶 bootstrap，讓既有後端冪等補發一次性免費 5 點；Gateway 回 `account_not_ready` 時再以同一 idempotency key 補建後只重試一次。Mac 明確使用 `ios:dev-profile:direct`（自動測試帳號、不跳登入）或 `ios:dev-profile:gateway`（真登入＋總機驗證），不再靠記憶手打 `--gateway`。
+- 包版影響：預計 `1.0.37 (Build 44)`；需 Mac `cap sync` 後分別產出正確 profile 的實機驗證包／Release 候選，不需重新部署任何雲端服務。
+- 狀態：Draft PR #164；完整 `test:launch`、`release:check`、動態 Gateway 復原測試與兩種 profile 契約均 PASS，待 CI／審查／合併後由 Mac 包 Build 44。
+
 ### 進行中：Build 42 開發者 Gateway 模式 401 自動復原（2026-07-17 Codex）
 
 - 任務／證據：iPhone 06:57–06:58 三次 `/v1/calls` 均為 `401 invalid_token`；補上 Gateway 回 401 後強制刷新 session 並以同一 idempotency key 重試一次，失敗時明確要求重新登入。
 - Branch：`codex/fix-dev-gateway-401-retry-20260717`
 - 預計檔案：`web/src/auth.js`、`web/src/app.js`、`scripts/test-native-auth.js`、相關 release／版本與狀態檔。
 - 包版影響：影響 App Web bundle，預計 `1.0.36 (Build 43)`；需要 `cap sync` 與 Mac 重新 Archive／Export，不需要重新部署 Brain／Voice／Gateway。
-- 狀態：Draft PR #161；程式、完整 `test:launch` 與兩個 GitHub smoke 均已通過，待合併；Mac 後續依 PR 重新包 Build 43。其他 session 請先不要修改上述檔案。
+- 狀態：✅ PR #161 已於 15:24 合併，Build 43 已完成包版；後續實機發現的是上方獨立的帳戶 bootstrap 缺口。
 
 ### 簡單判斷
 

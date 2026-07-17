@@ -225,6 +225,68 @@ async function testGateway401Recovery() {
   expect(requests[1].options.body.includes('stable-idempotency-key'), 'Gateway retry lost the idempotency key');
 }
 
+async function testGatewayAccountBootstrapRecovery() {
+  const appSource = fs.readFileSync('web/src/app.js', 'utf8');
+  const start = appSource.indexOf('const CallControl = {');
+  const end = appSource.indexOf('\nfunction getLiveVoiceUrl()', start);
+  const requests = [];
+  let bootstrapCalls = 0;
+  const responses = [
+    {
+      ok: true,
+      status: 200,
+      async json() { return { status: 'reject', reason: 'account_not_ready' }; },
+    },
+    {
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          status: 'connect', call_id: 'call-after-bootstrap', lease_version: 1,
+          voice: { url: 'wss://voice.example' }, worker: { url: 'https://avatar.example' },
+        };
+      },
+    },
+  ];
+  const callContext = {
+    console,
+    CALL_CONTROL_URL_DEFAULT: 'https://gateway.example',
+    usesDevelopmentDirectCall() { return false; },
+    developerConfig() { return {}; },
+    isDeveloperBypassAllowed() { return false; },
+    async muneaAuthHeaders(headers) {
+      return { ...headers, Authorization: 'Bearer valid-token' };
+    },
+    async syncAccountBootstrap(action, extra) {
+      bootstrapCalls += 1;
+      expect(action === 'create', 'account recovery used the wrong bootstrap action');
+      expect(extra && extra.force === true, 'account recovery did not force server verification');
+      return { ok: true };
+    },
+    window: { crypto: { randomUUID() { return 'account-recovery-idempotency-key'; } } },
+    async fetch(url, options) {
+      requests.push({ url, options });
+      return responses.shift();
+    },
+    voiceCallMark() {},
+    setCallHint() {},
+    clearInterval() {},
+    setInterval() { return 1; },
+  };
+  callContext.globalThis = callContext;
+  vm.createContext(callContext);
+  vm.runInContext(
+    appSource.slice(start, end).replace('const CallControl =', 'globalThis.CallControl ='),
+    callContext,
+  );
+  const lease = await callContext.CallControl.acquire('nening');
+  expect(lease && lease.status === 'connect', 'Gateway did not connect after account bootstrap');
+  expect(bootstrapCalls === 1, 'account_not_ready did not trigger exactly one bootstrap');
+  expect(requests.length === 2, 'account_not_ready did not retry exactly once');
+  expect(requests[0].options.body === requests[1].options.body,
+    'account bootstrap retry changed the idempotent request body');
+}
+
 (async () => {
   await Promise.all([
     windowObject.MuneaAuth.init(),
@@ -297,8 +359,9 @@ async function testGateway401Recovery() {
   expect(windowObject.MuneaAuth.state().status === 'guest', 'local sign out did not publish guest state');
 
   await testGateway401Recovery();
+  await testGatewayAccountBootstrapRecovery();
 
-  console.log('Native auth and Gateway 401 recovery PASS');
+  console.log('Native auth, Gateway 401 recovery, and account bootstrap recovery PASS');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

@@ -1,5 +1,7 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
+> 🛠️ **2026-07-17 15:34 實機續查／Build 44 修復中**：Build 43 的 401 換證已生效；真實登入有效時 Brain API 與 Gateway 都曾回 200，但 App 事件精確記錄 15:34:16／15:34:22 兩次 `insufficient_credits`。資料庫唯讀確認該帳號 active 錢包餘額 0、一次性免費 5 點發放紀錄為空；同時 `--gateway` QA profile 的 `enabled: true` 被 App 誤判為 fixture bypass，整段沒呼叫本應補齊帳號與免費體驗的 `/account-bootstrap`，所以沒有 lease／heartbeat。新修復讓真實登入必做且等待 bootstrap，`account_not_ready` 時補建並用同一 idempotency key 只重試一次；Mac 新增明確的 `ios:dev-profile:direct`（自動測試帳號、不跳登入）與 `ios:dev-profile:gateway`（真登入）命令。目標 `1.0.37 (Build 44)`，Draft PR #164；只需重新包 App，不需部署 Brain／Voice／Gateway。
+>
 > 🛠️ **2026-07-17 15:09 待包版**：實機日誌確認 Build 42 開發者 Gateway 模式於 06:57–06:58 三次 `/v1/calls` 均為 `401 invalid_token`；App 送出前驗證沒有攔住 Gateway 實際拒絕。`1.0.36 (Build 43)` 已補「401 後強制刷新＋同一 idempotency key 只重試一次」、拒絕本機 developer 假 token、無法恢復時明確要求重新登入。完整 `test:launch` 與 PR #161 兩個 GitHub smoke 均 PASS；分支 `codex/fix-dev-gateway-401-retry-20260717`，待合併／Mac `cap sync`、Archive、Export 與實機重試。Brain／Voice／Gateway 不需重新部署。
 >
 > 📱 **2026-07-17 15:27 最新包版**：`1.0.36 (Build 43)` **iPhone-only**，收 #161 總機拒證自動換證重試（修 Edward 14:57 領證通話 401 撥不通）。五道防漏 PASS、IPA 58,879,928 bytes，SHA-256 `369651cbb4fe5b7d5ecef67a39d7dbc7809ea021ca37df9ed192e533d3c2652f`。**15:27 已上傳 App Store Connect＝現任送審候選（詳 115 號）**。Edward iPhone 換裝驗證版同版。

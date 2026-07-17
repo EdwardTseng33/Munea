@@ -33,7 +33,7 @@ window.MUNEA_DEV_CONFIG = {
   seedFixtures: false,
   bypassCallControl: false,
   analyticsExcluded: true,
-  fixtureVersion: '1.0.26-build33-tokyo-gateway-v1',
+  fixtureVersion: '1.0.37-build44-tokyo-gateway-v1',
   voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app',
   brainUrl: 'https://munea-brain-staging-491603544409.asia-east1.run.app',
 };
@@ -52,7 +52,7 @@ window.MUNEA_DEV_CONFIG = {
   profileName: 'Edward',
   plan: 'pro',
   purchasedPoints: 700,
-  fixtureVersion: '1.0.26-build33-tokyo-v1',
+  fixtureVersion: '1.0.37-build44-tokyo-v1',
   voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app',
   brainUrl: 'https://munea-brain-staging-491603544409.asia-east1.run.app',
 };

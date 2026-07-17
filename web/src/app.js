@@ -60,7 +60,7 @@ let chatHistory = [];            // 多輪對話脈絡
 let chatOpened = false;          // 這次進聊聊她有沒有先開過口
 let chatAudio = null;
 let companionBackendSyncing = false;
-let accountBootstrapSyncing = false;
+let accountBootstrapPromise = null;
 let activeChatSessionId = null;
 let activeChatStartedAt = 0;
 let activeChatTurnCount = 0;
@@ -68,6 +68,7 @@ let latestAiContext = null;
 let latestAiContextSource = 'not loaded';
 let latestRelationshipState = null;
 const ACCOUNT_BOOTSTRAP_KEY = 'munea.accountBootstrapped.v1';
+const ACCOUNT_BOOTSTRAP_USER_KEY = 'munea.accountBootstrappedUser.v1';
 const ONBOARDING_COMPLETED_KEY = 'munea.onboardingCompleted.v1';
 const AI_PROVIDER_CONSENT_KEY = 'munea.aiProviderConsent.v1';
 const AI_PROVIDER_CONSENT_VERSION = '2026-07-02-ai-provider-v1';
@@ -345,13 +346,26 @@ function accountBootstrapPayload(action = 'create', extra = {}) {
   return payload;
 }
 async function syncAccountBootstrap(action = 'create', extra = {}) {
-  if (isStaticPreview() || isDeveloperBypassAllowed() || accountBootstrapSyncing) return null;
-  if (action !== 'preview' && storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'true' && !extra.force) return null;
-  accountBootstrapSyncing = true;
-  try {
+  // Only the fixture/direct-call profile skips cloud account creation. The
+  // Gateway QA profile is still a real Supabase user and must be bootstrapped.
+  if (isStaticPreview() || usesDevelopmentDirectCall()) return null;
+  const authUserId = currentAuthUserId();
+  const cachedForCurrentUser = Boolean(
+    authUserId &&
+    storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'true' &&
+    storageGet(ACCOUNT_BOOTSTRAP_USER_KEY) === authUserId
+  );
+  if (action !== 'preview' && cachedForCurrentUser && !extra.force) {
+    return { ok: true, cached: true };
+  }
+  // Sign-in, app init and call preflight may arrive together. They must await
+  // the same write instead of letting the call race ahead of account_members.
+  if (accountBootstrapPromise) return accountBootstrapPromise;
+  accountBootstrapPromise = (async () => {
     const response = await brainPost('/account-bootstrap', accountBootstrapPayload(action, extra));
     if (response && response.ok) {
       storageSet(ACCOUNT_BOOTSTRAP_KEY, 'true');
+      if (authUserId) storageSet(ACCOUNT_BOOTSTRAP_USER_KEY, authUserId);
       const store = response.store || {};
       if (store.primaryCareRecipientId) storageSet('munea.cloudPersonId', store.primaryCareRecipientId);
       if (store.familyGroup && store.familyGroup.id) storageSet('munea.familyGroupId', store.familyGroup.id);
@@ -365,8 +379,11 @@ async function syncAccountBootstrap(action = 'create', extra = {}) {
       storageSet(ACCOUNT_BOOTSTRAP_KEY, 'pending-auth');
     }
     return response;
+  })();
+  try {
+    return await accountBootstrapPromise;
   } finally {
-    accountBootstrapSyncing = false;
+    accountBootstrapPromise = null;
   }
 }
 function syncCompanionUI() {
@@ -1313,6 +1330,7 @@ const CallControl = {
     const generation = ++this.generation;
     this.cancelled = false;
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
+    let accountRecoveryAttempted = false;
     while (!this.cancelled) {
       const response = await this._fetch(base + '/v1/calls', {
         method: 'POST',
@@ -1338,6 +1356,15 @@ const CallControl = {
         continue;
       }
       const reason = result.reason || 'capacity_unavailable';
+      if (reason === 'account_not_ready' && !accountRecoveryAttempted) {
+        accountRecoveryAttempted = true;
+        voiceCallMark('gateway_account_recovery', 'pass', { endpoint: this.url() });
+        const bootstrap = await syncAccountBootstrap('create', {
+          reason: 'gateway_account_not_ready',
+          force: true,
+        });
+        if (bootstrap && bootstrap.ok) continue;
+      }
       throw new Error(reason);
     }
     throw new Error('call_cancelled');
@@ -4726,6 +4753,11 @@ async function connectCall() {
   if (!developmentDirectCall) {
     try {
       voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
+      // A verified Auth session is not enough for Call Control: its durable
+      // lease RPC also requires the account_members/person graph. Await the
+      // idempotent bootstrap so a fresh login cannot race the first call.
+      const accountReady = await syncAccountBootstrap('create', { reason: 'call_preflight' });
+      if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');
       // 跨月或年繳方案可能在這次通話前進入新點數週期；先向伺服器同步本期額度。
       try { await refreshServerCredits(); } catch (e0) {}
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
@@ -4745,9 +4777,10 @@ async function connectCall() {
       try { await CallControl.release(reason); } catch (e2) {}
       LiveVoice.stop(); setCallDialing(false); stopCallTimer();
       setCallHint(authRequired ? '登入狀態已失效，請重新登入後再撥' :
+        (reason.indexOf('account_not_ready') >= 0 ? '帳號正在完成初始化，請稍後再撥一次' :
         (reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
           (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
-          (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試'))));
+          (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
       try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
       return;
@@ -5093,13 +5126,14 @@ function init() {
     updateAuthUI();
     if (detail.status === 'signed-in') {
       closeAuthSheet();
-      refreshServerCredits();
+      syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true })
+        .then(result => { if (result && result.ok) refreshServerCredits(); })
+        .catch(() => {});
     } else {
       POINTS.serverRemaining = null;
       renderPoints();
     }
-    if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY) === 'true') {
-      syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true });
+    if (detail.status === 'signed-in') {
       try { if (window.MuneaHealth && typeof window.MuneaHealth.refresh === 'function') window.MuneaHealth.refresh(); } catch (e) {}
     }
     configureMedicationService();
