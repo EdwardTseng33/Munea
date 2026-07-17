@@ -1833,9 +1833,86 @@ const Avatar = {
       } catch (e) {}
     } catch (e) {}
   },
+  // ── 臉部影像流看門（2026-07-16 Edward 真機：嘴巴卡頓→整個畫面凍住不再動；伺服器 faceaudio_send_err=0
+  //    ＝凍在 App 端影像流。既有恢復只有「ICE 變 failed 才重連」，幀流停掉但 ICE 還 connected 時沒人管）──
+  // 判停邏輯：只在「有聲音輸出（speechActive＝LiveVoice 自己收到的音訊帳，不依賴臉）但連續 4 秒沒有新幀」
+  // 時判 stall——靜默期引擎 idle feed 幀本來就疏、不累計、不誤判。
+  _frameProgress() {
+    const vid = document.getElementById('faceVid');
+    if (!vid) return -1;
+    try {
+      if (vid.getVideoPlaybackQuality) {
+        const q = vid.getVideoPlaybackQuality();
+        if (q && typeof q.totalVideoFrames === 'number' && q.totalVideoFrames > 0) return q.totalVideoFrames;
+      }
+    } catch (e) {}
+    if (typeof vid.webkitDecodedFrameCount === 'number' && vid.webkitDecodedFrameCount > 0) return vid.webkitDecodedFrameCount;
+    return vid.currentTime || 0;   // 最後備援：MediaStream 的 currentTime（幀停走時多數瀏覽器跟著停）
+  },
+  _armFaceWatch() {
+    clearInterval(this._faceWatchT);
+    try {
+      const sessionKey = String((typeof activeChatSessionId !== 'undefined' && activeChatSessionId) || 'unknown');
+      if (this._faceWatchSession !== sessionKey) { this._faceWatchSession = sessionKey; this._faceRebuilds = 0; this._faceFellBack = false; }
+    } catch (e) {}
+    this._faceStallMs = 0;
+    this._faceProgressLast = -1;
+    this._faceWatchT = setInterval(() => this._faceWatchTick(1000), 1000);
+  },
+  _faceWatchTick(stepMs) {
+    if (!this.on) { clearInterval(this._faceWatchT); return; }
+    const progress = this._frameProgress();
+    if (progress !== this._faceProgressLast) { this._faceProgressLast = progress; this._faceStallMs = 0; return; }   // 有新幀＝健康
+    if (!speechActive()) return;   // 只在「有聲音輸出但無新幀」時累計（靜默期 idle feed 幀疏、不算 stall）
+    this._faceStallMs += stepMs;
+    if (this._faceStallMs < 4000) return;
+    this._faceStallMs = 0;
+    voiceCallFail('face_stream_stalled', 'no_new_frames_4s_while_audio', { rebuilds: this._faceRebuilds || 0 });
+    try { trackProductEvent('face_stream_stalled', { rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
+    try { this._diagNote('臉凍住(有聲4秒無新幀)', true); } catch (e) {}
+    if ((this._faceRebuilds || 0) >= 2) { this._fallbackVoiceOnly('stall_after_rebuilds'); return; }   // 重建額度用完 → 降級純語音
+    this._faceRebuilds = (this._faceRebuilds || 0) + 1;
+    this._rebuildFace();
+  },
+  // 重建臉部連線：沿用「第一通線路 failed 自救」同一條路（refreshToken → 重新 /offer → 補亮）。
+  _rebuildFace() {
+    try { this.stop(); } catch (e) {}
+    setTimeout(() => {
+      if (typeof callConnected !== 'undefined' && !callConnected && !callDialing) return;   // 已掛斷就不重連
+      const resume = CallControl.active ? CallControl.refreshToken() : Promise.resolve();
+      resume.then(() => Avatar.start()).then(ok => {
+        if (!ok) { Avatar._fallbackVoiceOnly('rebuild_failed'); return; }
+        try {   // 通話已開場、臉重新加入：補亮會動的臉那層（開場那步早跑過、這裡自己補）
+          Avatar.showLiveFrame();
+          FaceIdle.stop();
+        } catch (e) {}
+      }).catch(() => { try { Avatar._fallbackVoiceOnly('rebuild_failed'); } catch (e) {} });
+    }, 800);
+  },
+  // 第二次重建仍失敗/仍凍 → 降級成純語音繼續通話（不整通當掉）：同線聲音改走本地播放、收掉臉、立繪待機頂上。
+  _fallbackVoiceOnly(reason) {
+    if (this._faceFellBack) return;
+    this._faceFellBack = true;
+    voiceCallMark('face_fallback_voice_only', 'pass', { reason: String(reason || 'face_stream_stalled'), rebuilds: this._faceRebuilds || 0 });
+    try { trackProductEvent('face_fallback_voice_only', { reason: String(reason || ''), rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
+    try { this._diagNote('臉救不回→降級純語音繼續', true); } catch (e) {}
+    // 關鍵：同線模式的聲音出口在臉那條線上——不切回本地播放，臉一收聲音會跟著死。
+    try {
+      if (typeof LiveVoice !== 'undefined' && LiveVoice._sameLine) {
+        LiveVoice._sameLineFellBack = true;
+        try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
+      }
+    } catch (e) {}
+    try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
+    try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
+    try { this.stop(); } catch (e) {}   // 收 WebRTC＋恢復照片層（stop 內含 _fhComposite(false)）
+    try { FaceIdle.start(); } catch (e) {}   // 立繪待機動畫頂上，不留凍格
+    try { setCallHint('畫面先休息一下，我們用聲音繼續聊'); } catch (e) {}
+  },
   stop() {
     this.on = false;
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
+    try { clearInterval(this._faceWatchT); } catch (e) {} this._faceStallMs = 0;   // 臉部看門一起收
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.pc) this.pc.close(); } catch (e) {}
     this.ws = this.pc = null; this._session = '';
@@ -1867,6 +1944,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Avatar._videoReady = true;
         voiceCallMark('avatar_first_frame', 'pass', { width: vid.videoWidth, height: vid.videoHeight });
         Avatar._notifyReady();
+        Avatar._armFaceWatch();   // 首幀確認就開臉部看門（重建成功回來也會重新武裝）：有聲 4 秒無新幀＝凍住
         return;
       }
       if (tries > 0) setTimeout(() => _confirmRealFrame(tries - 1), 250);   // 最多再等 25 秒（冷開機窗）——沒真畫面就不亮、待機動畫繼續頂著
@@ -1936,7 +2014,7 @@ const LiveVoice = {
     this._micPackets = (this._micPackets || 0) + 1;
     if (!this._firstMicPacketRecorded) {
       this._firstMicPacketRecorded = true;
-      voiceCallMark('microphone_first_packet', 'pass', { bytes: buf.byteLength || 0 });
+      voiceCallMark('microphone_first_packet', 'pass', { bytes: buf.byteLength || 0, silent: buf === this._silentBuf });
     }
   },
   _noteUserMicActivity(rms, frameMs, speakerActive) {
@@ -2170,6 +2248,180 @@ const LiveVoice = {
     if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
     if (this.onListen) this.onListen();
   },
+  // 全零靜音包（正式開麥前餵給上行）：長度跟真收音包一致。內容永遠是 0，你的聲音絕不會提早上傳。
+  _silentUplinkFrame(inputLen) {
+    const rate = (this.ac && this.ac.sampleRate) || 48000;
+    const len = Math.max(1, Math.round(inputLen * 16000 / rate));
+    if (!this._silentBuf || this._silentBufLen !== len) { this._silentBufLen = len; this._silentBuf = new Int16Array(len).buffer; }
+    return this._silentBuf;
+  },
+  // 把「麥克風 → 降採樣 → 上行」的送音迴圈接上目前的 mic stream（start 建管、看門狗重建都走這裡）。
+  _attachMicProcessor() {
+    const src = this.ac.createMediaStreamSource(this.mic);
+    this._micSrc = src;
+    this.proc = this.ac.createScriptProcessor(2048, 1, 1);
+    src.connect(this.proc); this.proc.connect(this.ac.destination);
+    // Echo cancellation handles normal speaker leakage. While the assistant
+    // speaks, a sustained near-field voice opens a short pre-roll path so
+    // the user can barge in without streaming every speaker echo frame.
+    this.proc.onaudioprocess = e => {
+      const inp = e.inputBuffer.getChannelData(0);
+      if (!this.micOpen) {
+        // 收音管不等人（2026-07-16 蟲 b 根治）：還沒「正式開麥」也讓上行從 WebSocket open 那一刻
+        // 就是活的——伺服器不再看到 in_bytes=0、看門狗能分辨「管線死了」跟「還沒開麥」。
+        // 降頻保活（PR #136 review 帳單題）：守門期間不全速灌靜音，每 500ms 才送一小包全零
+        // （42.7ms 音訊 ≈ 1 token；只為保活＋uplink 偵測）；開麥後才全速送真音訊——
+        // 開場與按靜音期間的 Gemini 輸入 token 從每分鐘 ~1500 降到 ~128、幾乎不增帳。
+        // 內容守門照舊：開麥前送的是全零、不是真收音，你的聲音絕不會在她招呼前灌進去（Edward 2026-07-09 規則不變）。
+        this.micLevel = 0;
+        const nowMs = performance.now();
+        if (!this._silentKeepaliveAt || nowMs - this._silentKeepaliveAt >= 500) {
+          this._silentKeepaliveAt = nowMs;
+          this._sendMicBuffer(this._silentUplinkFrame(inp.length));
+        }
+        return;
+      }
+      let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
+      const rms = Math.sqrt(s / inp.length);
+      this.micLevel = Math.min(1, rms * 8);   // 即時音量→收音波頻高度
+      const buf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
+      const speakerActive = speechActive();
+      const policy = window.MuneaVoiceTurnPolicy;
+      const frameMs = (inp.length / this.ac.sampleRate) * 1000;
+      this._noteUserMicActivity(rms, frameMs, speakerActive);
+      // 開場前兩輪 iPhone 回音消除還沒收斂、回音殘留最強 → 插話判定拉嚴一級（openingSustainMs）
+      const _opening = (this._playbackTurn || 0) <= 1;
+      const sustainOpts = policy && _opening
+        ? { sustainMs: policy.DEFAULTS.openingSustainMs } : undefined;
+      // 預捲格數跟著門檻走：門檻拉長（開場 300ms）預捲也要跟著蓋過去，不然判定成功時開頭已被丟掉
+      // ＝「回長話第一句沒反應」根因之一（2026-07-16 Edward 真機三訴②）
+      const _preFrames = policy ? (_opening ? policy.DEFAULTS.openingPreRollFrames : policy.DEFAULTS.preRollFrames) : 6;
+
+      if (speakerActive && this._bargeInActive) {
+        this._sendMicBuffer(buf);
+        return;
+      }
+      if (speakerActive && policy) {
+        this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
+        this._bargePreRoll.push(buf);
+        while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
+        const observed = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
+        this._bargeState = observed.state;
+        if (!observed.shouldInterrupt) return;
+        this._beginBargeIn(rms, observed.threshold);
+        const preRoll = this._bargePreRoll.splice(0);
+        preRoll.forEach(frame => this._sendMicBuffer(frame));
+        return;
+      }
+      if (speakerActive) { this.micLevel = 0; return; }
+      // 講完後守門期（治「前 10 秒斷續/怪收音」）：她句中停頓（GLOWS 偶發 1.8~2s 供聲卡點）
+      // 或剛講完的空檔，收音不裸放行——不然回音/環境噪音會被上游當成有人講話、把她打斷。
+      // 真人講話走跟插話同一套「持續人聲＋預捲」判定，開頭字由預捲補回、不掉字。
+      if (policy && performance.now() < (this._postGuardUntil || 0)) {
+        this._bargePreRoll.push(buf);
+        while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
+        const guarded = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
+        this._bargeState = guarded.state;
+        if (!guarded.shouldInterrupt) return;
+        this._postGuardUntil = 0;
+        const preRoll = this._bargePreRoll.splice(0);
+        preRoll.forEach(frame => this._sendMicBuffer(frame));
+        return;
+      }
+      if (policy) this._bargeState = policy.observe(this._bargeState, rms, frameMs, false).state;
+      this._sendMicBuffer(buf);
+    };
+  },
+  // 收音管「先建後招呼」（2026-07-16 蟲 b 根治）：getUserMedia 一回來就把送音迴圈建好待命，
+  // 不等 WebSocket onopen、更不等她招呼講完——管線本身不等任何人，守門只管內容。
+  async _setupMicPipeline(micPromise) {
+    try {
+      const micResult = await micPromise;
+      if (this._primeMicPromise === micPromise) this._primeMicPromise = null;
+      if (!micResult || !micResult.stream) return { ok: false, error: (micResult && micResult.error) || 'microphone_unavailable' };
+      if (!this.on) { try { micResult.stream.getTracks().forEach(t => t.stop()); } catch (e) {} return { ok: false, error: 'call_cancelled' }; }
+      this.mic = micResult.stream;
+      voiceCallMark('microphone_ready', 'pass', { trackState: this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState });
+      this._resumeAudio();
+      this._attachMicProcessor();
+      return { ok: true };
+    } catch (e) { return { ok: false, error: e }; }
+  },
+  // 收音管重建（看門狗用）：3 秒一包都沒送出＝音訊圖真的死了（iOS AudioContext 卡住／軌道悶掉），
+  // 整組拆掉重來：新 getUserMedia＋新送音迴圈；AudioContext 卡死就換一顆新的。
+  async _rebuildMicPipeline() {
+    this._micRebuilds = (this._micRebuilds || 0) + 1;
+    const attempt = this._micRebuilds;
+    try { if (this.proc) this.proc.disconnect(); } catch (e) {}
+    try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
+    try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
+    this.proc = null; this._micSrc = null; this.mic = null;
+    try {
+      if (this.ac && this.ac.state !== 'running') {
+        const wedged = this.ac;
+        this.ac = new AudioContext();
+        try { wedged.close(); } catch (e) {}
+      }
+    } catch (e) {}
+    this._resumeAudio();
+    let stream = null, error = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: false,
+        channelCount: { ideal: 1 },
+        sampleRate: { ideal: 48000 },
+      } });
+    } catch (err) { error = err; }
+    if (!this.on) { try { if (stream) stream.getTracks().forEach(t => t.stop()); } catch (e) {} return false; }
+    if (!stream) { voiceCallFail('microphone_uplink_rebuilt', error || 'rebuild_getusermedia_failed', { attempt }); return false; }
+    this.mic = stream;
+    try { this._attachMicProcessor(); } catch (e) { voiceCallFail('microphone_uplink_rebuilt', e, { attempt }); return false; }
+    voiceCallMark('microphone_uplink_rebuilt', 'pass', { attempt });
+    try { trackProductEvent('voice_mic_uplink_rebuilt', { attempt }); } catch (e) {}
+    if (this.micOpen) setCallHint('我在聽，你說吧');   // 重建成功、正在收音 → 蓋掉稍早的「請點一下畫面」提示
+    return true;
+  },
+  // 收音管看門（蟲 b「整通零上行」根治）：WebSocket open 後 3 秒還沒送出第一包（開麥前也該有靜音包）
+  // ＝管線根本沒活 → 記診斷並自動重建，最多 2 次；之後留給既有「點一下畫面」手勢兜底。
+  _armUplinkWatch() {
+    clearTimeout(this._uplinkWatchT);
+    this._uplinkWatchT = setTimeout(async () => {
+      if (!this.on || !this.ws || this.ws.readyState !== 1) return;
+      if ((this._micPackets || 0) > 0) return;                      // 有包＝管線活著，看門收工
+      voiceCallFail('microphone_uplink_slow', 'no_uplink_3000ms', { rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state });
+      try { trackProductEvent('voice_mic_uplink_stalled', { rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state }); } catch (e) {}
+      if ((this._micRebuilds || 0) >= 2) return;                    // 重建額度用完 → 不再重試
+      await this._rebuildMicPipeline();
+      if (this.on) this._armUplinkWatch();                          // 重建後再看 3 秒，確認真的有包流出
+    }, 3000);
+  },
+  // 死線看門（蟲 c 根治 · 2026-07-16 鐵證：connected→ready 後 30 秒 closed、in/out 都 0、連開場白都沒觸發）：
+  // phase='ready_timeout'：open 後 10 秒連 ready 都沒等到（半死 socket / 腦開機卡死）；
+  // phase='no_audio_both_ways'：ready 後 5 秒她的開場音訊沒來、上行也一包沒送出（雙向死線）。
+  // 兩者都不讓用戶乾等 30 秒 readiness gate——關掉 socket 走既有 onDrop 自動重連路，一通最多重接一次。
+  // 健康通話不會誤殺：收音管先建後招呼，open 後零點幾秒就有上行（至少是靜音包）。
+  _armDeadLineWatch(phase, waitMs) {
+    clearTimeout(this._deadLineWatchT);
+    this._deadLineWatchT = setTimeout(() => {
+      if (!this.on || !this.ws || this.ws.readyState !== 1) return;
+      const lineAlive = phase === 'ready_timeout'
+        ? !!this.ready
+        : (this._firstAudioRecorded || (this._micPackets || 0) > 0);   // 任一方向有聲＝線是活的
+      if (lineAlive) return;
+      const sessionKey = String((typeof activeChatSessionId !== 'undefined' && activeChatSessionId) || 'unknown');
+      if (this._deadLineSessionId === sessionKey) {
+        voiceCallFail('dead_line_reconnect', 'dead_line_persisted', { phase });
+        return;   // 這通已重接過仍是死線 → 交給 30 秒 readiness gate 收整通、不無限重接
+      }
+      this._deadLineSessionId = sessionKey;
+      voiceCallFail('dead_line_reconnect', phase + '_' + waitMs + 'ms');
+      try { trackProductEvent('voice_dead_line_reconnect', { phase }); } catch (e) {}
+      setCallHint('線路沒接好，我重接一次…', true);
+      try { this.ws.close(); } catch (e) { try { this.stop(); } catch (e2) {} }   // close → onclose → onDrop 自動重連
+    }, waitMs);
+  },
   async start(onListen, onSpeak, onDrop) {
     let url = getLiveVoiceUrl();
     if (!url) { voiceCallFail('voice_endpoint', 'missing_voice_url'); return false; }
@@ -2219,7 +2471,7 @@ const LiveVoice = {
     this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
-    this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0;
+    this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0; this._micRebuilds = 0; this._silentKeepaliveAt = 0;
     this._playbackTurn = 0; this._playbackUnderruns = 0; this._turnHasScheduledAudio = false;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
@@ -2231,6 +2483,9 @@ const LiveVoice = {
     // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
     if (!this.prime()) { this.on = false; voiceCallFail('microphone_requested', this._micUnavailableReason || 'microphone_prime_failed'); return false; }
     const micPromise = this._primeMicPromise;
+    // 收音管先建後招呼（蟲 b 根治）：管線跟 WebSocket 握手「並行」建，不再等 onopen 才動工。
+    // 送音迴圈建好就開始跑（ws 還沒 open 時 _sendMicBuffer 自然丟包），open 那一刻立即有上行。
+    const micPipelineReady = this._setupMicPipeline(micPromise);
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; voiceCallFail('voice_socket_construct', e, { endpoint: url }); return false; }
     return await new Promise(resolve => {
@@ -2242,74 +2497,14 @@ const LiveVoice = {
         this._sameLineWarmup = this._sameLine;
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
-        const micResult = await micPromise;
-        this._primeMicPromise = null;
-        if (!micResult.stream) {
-          voiceCallFail('microphone_ready', micResult.error || 'microphone_unavailable');
+        const micSetup = await micPipelineReady;   // 管線多半早就建好了，這裡只是收結果
+        if (!micSetup.ok) {
+          voiceCallFail('microphone_ready', micSetup.error || 'microphone_unavailable');
           setCallHint('拿不到麥克風，請到設定允許'); try { this.ws.close(); } catch (e) {} done(false); return;
         }
-        this.mic = micResult.stream;
-        voiceCallMark('microphone_ready', 'pass', { trackState: this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState });
         this._resumeAudio();
-        const src = this.ac.createMediaStreamSource(this.mic);
-        this.proc = this.ac.createScriptProcessor(2048, 1, 1);
-        src.connect(this.proc); this.proc.connect(this.ac.destination);
-        // Echo cancellation handles normal speaker leakage. While the assistant
-        // speaks, a sustained near-field voice opens a short pre-roll path so
-        // the user can barge in without streaming every speaker echo frame.
-        this.proc.onaudioprocess = e => {
-          const inp = e.inputBuffer.getChannelData(0);
-          if (!this.micOpen) { this.micLevel = 0; return; }        // 麥克風要等「真正開場」才開（撥通中/等臉那幾秒不收音，免得你的聲音在她招呼前一直灌進去→她一直「我聽見了」· Edward 2026-07-09）
-          let s = 0; for (let i = 0; i < inp.length; i++) s += inp[i] * inp[i];
-          const rms = Math.sqrt(s / inp.length);
-          this.micLevel = Math.min(1, rms * 8);   // 即時音量→收音波頻高度
-          const buf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
-          const speakerActive = speechActive();
-          const policy = window.MuneaVoiceTurnPolicy;
-          const frameMs = (inp.length / this.ac.sampleRate) * 1000;
-          this._noteUserMicActivity(rms, frameMs, speakerActive);
-          // 開場前兩輪 iPhone 回音消除還沒收斂、回音殘留最強 → 插話判定拉嚴一級（openingSustainMs）
-          const _opening = (this._playbackTurn || 0) <= 1;
-          const sustainOpts = policy && _opening
-            ? { sustainMs: policy.DEFAULTS.openingSustainMs } : undefined;
-          // 預捲格數跟著門檻走：門檻拉長（開場 300ms）預捲也要跟著蓋過去，不然判定成功時開頭已被丟掉
-          // ＝「回長話第一句沒反應」根因之一（2026-07-16 Edward 真機三訴②）
-          const _preFrames = policy ? (_opening ? policy.DEFAULTS.openingPreRollFrames : policy.DEFAULTS.preRollFrames) : 6;
-
-          if (speakerActive && this._bargeInActive) {
-            this._sendMicBuffer(buf);
-            return;
-          }
-          if (speakerActive && policy) {
-            this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
-            this._bargePreRoll.push(buf);
-            while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
-            const observed = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
-            this._bargeState = observed.state;
-            if (!observed.shouldInterrupt) return;
-            this._beginBargeIn(rms, observed.threshold);
-            const preRoll = this._bargePreRoll.splice(0);
-            preRoll.forEach(frame => this._sendMicBuffer(frame));
-            return;
-          }
-          if (speakerActive) { this.micLevel = 0; return; }
-          // 講完後守門期（治「前 10 秒斷續/怪收音」）：她句中停頓（GLOWS 偶發 1.8~2s 供聲卡點）
-          // 或剛講完的空檔，收音不裸放行——不然回音/環境噪音會被上游當成有人講話、把她打斷。
-          // 真人講話走跟插話同一套「持續人聲＋預捲」判定，開頭字由預捲補回、不掉字。
-          if (policy && performance.now() < (this._postGuardUntil || 0)) {
-            this._bargePreRoll.push(buf);
-            while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
-            const guarded = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
-            this._bargeState = guarded.state;
-            if (!guarded.shouldInterrupt) return;
-            this._postGuardUntil = 0;
-            const preRoll = this._bargePreRoll.splice(0);
-            preRoll.forEach(frame => this._sendMicBuffer(frame));
-            return;
-          }
-          if (policy) this._bargeState = policy.observe(this._bargeState, rms, frameMs, false).state;
-          this._sendMicBuffer(buf);
-        };
+        this._armUplinkWatch();                        // open 後 3 秒沒有第一包 → 自動重建收音管（最多 2 次）
+        this._armDeadLineWatch('ready_timeout', 10000);   // open 後 10 秒連 ready 都沒到 → 死線重接
         if (this.onConnecting) this.onConnecting();   // 線接上了、腦還在開機 → 顯示「撥通中」載入動態
         done(true);
       };
@@ -2333,7 +2528,7 @@ const LiveVoice = {
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
-            if (o.type === 'ready') { this.ready = true; voiceCallMark('voice_ready', 'pass'); if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」
+            if (o.type === 'ready') { this.ready = true; voiceCallMark('voice_ready', 'pass'); this._armDeadLineWatch('no_audio_both_ways', 5000); if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」；ready 後 5 秒雙向無聲＝死線重接
             if (o.type === 'caption' && o.who === 'user' && o.text) {
               this._ackUserSpeech();
               if (!this._firstUserCaptionRecorded) { this._firstUserCaptionRecorded = true; voiceCallMark('asr_first_caption', 'pass'); }
@@ -2494,6 +2689,7 @@ const LiveVoice = {
     this.on = false;
     this.ready = false;
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); clearTimeout(this._userSpeechWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
+    clearTimeout(this._uplinkWatchT); clearTimeout(this._deadLineWatchT);   // 收音管看門＋死線看門一起收
     this.micOpen = false; this._openMicAfterGreet = false;
     this._sameLineWarmup = false;
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
@@ -2502,6 +2698,7 @@ const LiveVoice = {
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
+    try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
     const pendingMic = this._primeMicPromise; this._primeMicPromise = null;
     if (pendingMic) pendingMic.then(r => { try { if (r && r.stream) r.stream.getTracks().forEach(t => t.stop()); } catch (e) {} });
@@ -2510,7 +2707,7 @@ const LiveVoice = {
     try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
     try { if (window.MuneaAvSyncMeter) MuneaAvSyncMeter.stop(); } catch (e) {}   // 延遲量測器一起收
     this._avAnalyser = null;                                                      // playCtx 關了→分析器作廢，下通重建
-    this.ws = this.ac = this.mic = this.proc = this.playCtx = null;
+    this.ws = this.ac = this.mic = this.proc = this._micSrc = this.playCtx = null;
   },
 };
 window.MuneaLiveVoice = LiveVoice;
