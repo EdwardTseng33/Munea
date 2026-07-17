@@ -66,13 +66,21 @@ class VoiceStyleRulesTest(unittest.TestCase):
     def test_taiwan_first_content_rule_present(self):
         self.assertIn("預設以台灣為主", self.src)
         self.assertIn("俗諺", self.src)
-        self.assertIn("不確定的史實先用即時查詢確認", self.src)
+        # 2026-07-17 通話中即時查詢預設關掉後，「先查證再講史實」已經做不到。
+        # 但這條守的原意沒變——**不要編史實**——只是改成「不確定就不要講、讓他自己講」。
+        self.assertIn("不確定的史實就不要講", self.src)
+        self.assertIn("也不要編", self.src)
 
     def test_live_search_is_server_controlled_and_observable(self):
+        """即時查詢預設已關（2026-07-17 Edward 拍板），但程式全留著、一個環境變數就回來。
+        本條守的是「**萬一開回來**，那條路仍然必須是伺服器控制、先出聲、可觀測」——
+        契約不變，只是工具改成有條件掛載。"""
         self.assertIn("Voice 伺服器會先替你播放", self.src)
         self.assertIn("禁止先沉默查詢", self.src)
         self.assertNotIn("先安靜查一下再回", self.src)
-        self.assertIn("tools = [_LIVE_LOOKUP_TOOL]", self.src)
+        # 舊寫法 tools = [_LIVE_LOOKUP_TOOL]（無條件掛）→ 改成有條件掛
+        self.assertIn("if live_lookup_enabled():", self.src)
+        self.assertIn("tools.append(_LIVE_LOOKUP_TOOL)", self.src)
         self.assertIn("if function_name == live_lookup.TOOL_NAME", self.src)
         tool_flow = self.src[self.src.index("if function_name == live_lookup.TOOL_NAME"):]
         self.assertLess(tool_flow.index("response = await _run_live_lookup"),
