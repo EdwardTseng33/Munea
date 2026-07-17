@@ -1,5 +1,11 @@
 @echo off
 chcp 65001 >nul
+echo [STOP] 這個舊雙擊工具已退役，未修改 Cloud Run IAM。
+echo        staging / production 角色與公開邊界請看 deploy\cloudrun\SERVICE-TOPOLOGY.md。
+echo        所有部署必須走 canary-deploy.sh 或 prod-deploy.sh。
+pause
+exit /b 1
+
 REM ============================================
 REM  沐寧 · 正式開門（7/9 Edward 拍板「正式上線方式推進」）
 REM  做一件事：把雲端語音橋的大門打開（讓 App 直連、不用再帶 Google 通行證）

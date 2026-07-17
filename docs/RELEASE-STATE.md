@@ -87,7 +87,7 @@ Repo manifests prove intended files and checksums; they do not prove live applic
 - App Store Connect is authoritative for the selected review Build and review status. Repo files currently cannot prove either value.
 - `STATUS.md` records Build 39 as uploaded and processing with review submission still pending; the user previously confirmed that one build was submitted. App Store Connect evidence is required to determine whether these statements refer to different builds. `docs/APP-STORE-PRODUCTION-READINESS.md` still summarizes Build 33 / Build 32.
 - The collaboration board contains historical environment statements. It is an activity log, not a release authority.
-- Some Cloud Run scripts still call the `-staging` services the only production pair, while current App defaults and `prod-deploy.sh` point to the non-suffixed production services. This is a deployment-control conflict, not a naming preference.
+- Cloud Run source topology is now governed by `deploy/cloudrun/SERVICE-TOPOLOGY.md`: non-suffixed Brain/Voice are production, suffixed services are staging, and traffic promotion is exact-revision only. This source contract does not prove that a new revision was deployed or promoted.
 - The AI design documents name Claude-backed Butler/Guardian and an independent moderation layer, while executable source currently combines deterministic policy with Google GenAI paths in chat, memory, perception, and Guardian semantic review. No production Anthropic or OpenAI-moderation adapter call was found in the declared router path.
 
 ## Unknowns that block a 90-point release assessment

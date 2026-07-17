@@ -1,5 +1,7 @@
 # Munea App Store 上線狀態
 
+> ⛔ **Historical snapshot / do not execute（2026-07-17）**：本文件記錄 Build 33 時點，已落後目前送審與 Cloud Run 拓撲；下方任何把 production URL 改到 `-staging` 的指令均已失效，不得操作。當前跨面狀態先看 [`RELEASE-STATE.md`](./RELEASE-STATE.md)，Cloud Run 服務角色與部署入口只看 [`deploy/cloudrun/SERVICE-TOPOLOGY.md`](../deploy/cloudrun/SERVICE-TOPOLOGY.md)，App Store 審核 Build／狀態仍須以 App Store Connect 為準。
+
 更新：2026-07-16
 
 > 本文件是 `1.0.26 (Build 33)` 發版準備的唯一摘要。Build 33 已完成 iPhone-only Release Archive、IPA 防漏驗證與 Edward iPhone 開發包安裝；2026-07-16 18:05 Edward 決定先留在手機驗證，**不上傳 App Store Connect、不送審**。Apple 目前收到的最新可用候選仍是 `1.0.25 (Build 32)`，但真人 Voice、真登入、拍照、StoreKit、APNs 與審核資料尚未完成，因此也不可送審。Build 30（缺隱私修補）與 Build 31（缺原生零件）已作廢。舊成本、定價與原型文件只保留決策歷史，不可覆蓋目前 App、`web/src/version.js`、StoreKit 對應及 Edward 的最新定案。帳單細則以 `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` 為準。
