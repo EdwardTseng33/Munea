@@ -11,9 +11,17 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.0.37',
+  current: '1.0.38',
   channel: '',
   changelog: [
+    {
+      version: '1.0.38',
+      date: '2026-07-17',
+      title: 'Google 登入更穩',
+      items: [
+        'Google 登入偶爾轉圈回不來的問題修復：握手失敗時自動換一條安全通道重走，不用重開 App',
+      ],
+    },
     {
       version: '1.0.37',
       date: '2026-07-17',
