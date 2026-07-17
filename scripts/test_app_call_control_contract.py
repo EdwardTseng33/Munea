@@ -35,6 +35,16 @@ def test_cancelled_acquire_disposes_returned_capacity() -> None:
     assert "this.generation += 1;" in APP
 
 
+def test_gateway_401_forces_one_session_recovery_path() -> None:
+    call_control = APP[APP.index("const CallControl = {"):APP.index("function getLiveVoiceUrl()")]
+    assert "async _fetch(endpoint, options = {})" in call_control
+    assert "if (response.status !== 401) return response;" in call_control
+    assert "auth.recoverRejectedSession()" in call_control
+    assert "return send(true);" in call_control
+    assert "idempotency_key: idempotencyKey" in call_control
+    assert "登入狀態已失效，請重新登入後再撥" in APP
+
+
 def test_development_profile_bypass_does_not_weaken_release() -> None:
     assert "bypassCallControl: false" in AUTH_CONFIG
     assert "bypassCallControl: true" in DEV_PROFILE
@@ -94,6 +104,7 @@ def main() -> None:
     tests = [
         test_production_app_uses_gateway_by_default,
         test_cancelled_acquire_disposes_returned_capacity,
+        test_gateway_401_forces_one_session_recovery_path,
         test_development_profile_bypass_does_not_weaken_release,
         test_voice_and_avatar_are_a_single_required_service,
         test_connected_ui_waits_for_server_active_lease,

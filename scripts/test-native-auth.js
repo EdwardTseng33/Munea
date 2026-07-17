@@ -163,6 +163,68 @@ function expect(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function testGateway401Recovery() {
+  const appSource = fs.readFileSync('web/src/app.js', 'utf8');
+  const start = appSource.indexOf('const CallControl = {');
+  const end = appSource.indexOf('\nfunction getLiveVoiceUrl()', start);
+  expect(start >= 0 && end > start, 'CallControl source could not be isolated');
+  const requests = [];
+  let recoverCalls = 0;
+  const responses = [
+    { ok: false, status: 401, async json() { return { detail: 'authentication_required' }; } },
+    {
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          status: 'connect', call_id: 'call-1', lease_version: 1,
+          voice: { url: 'wss://voice.example' }, worker: { url: 'https://avatar.example' },
+        };
+      },
+    },
+  ];
+  const callContext = {
+    console,
+    CALL_CONTROL_URL_DEFAULT: 'https://gateway.example',
+    usesDevelopmentDirectCall() { return false; },
+    developerConfig() { return {}; },
+    isDeveloperBypassAllowed() { return false; },
+    async muneaAuthHeaders(headers) {
+      return { ...headers, Authorization: 'Bearer stale-token', 'X-Munea-Key': 'door-key' };
+    },
+    window: {
+      crypto: { randomUUID() { return 'stable-idempotency-key'; } },
+      MuneaAuth: {
+        async recoverRejectedSession() {
+          recoverCalls += 1;
+          return 'fresh-token';
+        },
+      },
+    },
+    async fetch(url, options) {
+      requests.push({ url, options });
+      return responses.shift();
+    },
+    voiceCallMark() {},
+    setCallHint() {},
+    clearInterval() {},
+    setInterval() { return 1; },
+  };
+  callContext.globalThis = callContext;
+  vm.createContext(callContext);
+  const callControlSource = appSource.slice(start, end)
+    .replace('const CallControl =', 'globalThis.CallControl =');
+  vm.runInContext(callControlSource, callContext);
+  const lease = await callContext.CallControl.acquire('nening');
+  expect(lease && lease.status === 'connect', 'Gateway retry did not return the recovered lease');
+  expect(requests.length === 2, 'Gateway 401 did not perform exactly one retry');
+  expect(recoverCalls === 1, 'Gateway 401 did not force exactly one session recovery');
+  expect(requests[0].options.headers.Authorization === 'Bearer stale-token', 'first request did not use the current token');
+  expect(requests[1].options.headers.Authorization === 'Bearer fresh-token', 'retry did not use the recovered token');
+  expect(requests[0].options.body === requests[1].options.body, 'Gateway retry changed the idempotent request body');
+  expect(requests[1].options.body.includes('stable-idempotency-key'), 'Gateway retry lost the idempotency key');
+}
+
 (async () => {
   await Promise.all([
     windowObject.MuneaAuth.init(),
@@ -202,6 +264,18 @@ function expect(condition, message) {
     'the refreshed access token was not retained');
   expect(getUserCalls === verifiedCalls, 'a verified access token was revalidated on every API call');
 
+  currentSession = {
+    ...signedInSession,
+    access_token: 'gateway-rejected-access-token',
+    refresh_token: 'gateway-rejected-refresh-token',
+    user: { ...signedInSession.user },
+  };
+  expect(await windowObject.MuneaAuth.getAccessToken() === 'gateway-rejected-access-token',
+    'the SDK-valid test token was not cached before the Gateway rejection');
+  expect(await windowObject.MuneaAuth.recoverRejectedSession() === 'refreshed-access-token',
+    'a Gateway-rejected token did not force a session refresh');
+  expect(refreshSessionCalls === 2, 'Gateway rejection did not trigger exactly one additional forced refresh');
+
   const googleSignedOut = await windowObject.MuneaAuth.signOut();
   expect(googleSignedOut.ok, 'Google local sign out did not complete');
   expect(googleNativeSignOutCalls === 1, 'native Google session was not cleared on sign out');
@@ -222,7 +296,9 @@ function expect(condition, message) {
   expect(googleNativeSignOutCalls === 1, 'Apple sign out incorrectly cleared Google Sign-In again');
   expect(windowObject.MuneaAuth.state().status === 'guest', 'local sign out did not publish guest state');
 
-  console.log('Native Google and Apple ID token PASS');
+  await testGateway401Recovery();
+
+  console.log('Native auth and Gateway 401 recovery PASS');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

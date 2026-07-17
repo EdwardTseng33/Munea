@@ -1284,10 +1284,28 @@ const CallControl = {
     }
     return CALL_CONTROL_URL_DEFAULT;
   },
-  async _headers() {
+  async _headers(forceRefresh = false) {
+    if (forceRefresh) {
+      const auth = window.MuneaAuth;
+      const token = auth && typeof auth.recoverRejectedSession === 'function'
+        ? await auth.recoverRejectedSession()
+        : null;
+      if (!token) throw new Error('authentication_required');
+      return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+    }
     const headers = await muneaAuthHeaders({ 'Content-Type': 'application/json' });
     delete headers['X-Munea-Key'];
     return headers;
+  },
+  async _fetch(endpoint, options = {}) {
+    const send = async forceRefresh => fetch(endpoint, {
+      ...options,
+      headers: { ...(options.headers || {}), ...(await this._headers(forceRefresh)) },
+    });
+    const response = await send(false);
+    if (response.status !== 401) return response;
+    voiceCallMark('gateway_auth_recovery', 'pass', { endpoint: this.url() });
+    return send(true);
   },
   async acquire(characterId) {
     const base = this.url();
@@ -1296,9 +1314,8 @@ const CallControl = {
     this.cancelled = false;
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
     while (!this.cancelled) {
-      const response = await fetch(base + '/v1/calls', {
+      const response = await this._fetch(base + '/v1/calls', {
         method: 'POST',
-        headers: await this._headers(),
         body: JSON.stringify({ character_id: characterId || 'default', idempotency_key: idempotencyKey }),
       });
       const result = await response.json().catch(() => ({}));
@@ -1330,7 +1347,7 @@ const CallControl = {
     try {
       const isLease = result.status === 'connect' && result.lease_version;
       const suffix = isLease ? '/release' : '/cancel';
-      const options = { method: 'POST', headers: await this._headers(), keepalive: true };
+      const options = { method: 'POST', keepalive: true };
       if (isLease) {
         options.body = JSON.stringify({
           lease_version: result.lease_version,
@@ -1338,14 +1355,14 @@ const CallControl = {
           reason: reason || 'cancelled',
         });
       }
-      const response = await fetch(this.url() + '/v1/calls/' + encodeURIComponent(result.call_id) + suffix, options);
+      const response = await this._fetch(this.url() + '/v1/calls/' + encodeURIComponent(result.call_id) + suffix, options);
       return await response.json().catch(() => null);
     } catch (e) { return null; }
   },
   async refreshToken() {
     if (!this.active) return null;
-    const response = await fetch(this.url() + '/v1/calls/' + encodeURIComponent(this.active.call_id) + '/token', {
-      method: 'POST', headers: await this._headers(),
+    const response = await this._fetch(this.url() + '/v1/calls/' + encodeURIComponent(this.active.call_id) + '/token', {
+      method: 'POST',
       body: JSON.stringify({ lease_version: this.active.lease_version }),
     });
     const result = await response.json().catch(() => ({}));
@@ -1356,8 +1373,8 @@ const CallControl = {
   async _heartbeatOnce() {
     const lease = this.active;
     if (!lease) throw new Error('call_lease_missing');
-    const response = await fetch(this.url() + '/v1/calls/' + encodeURIComponent(lease.call_id) + '/heartbeat', {
-      method: 'POST', headers: await this._headers(),
+    const response = await this._fetch(this.url() + '/v1/calls/' + encodeURIComponent(lease.call_id) + '/heartbeat', {
+      method: 'POST',
       body: JSON.stringify({
         lease_version: lease.lease_version,
         event_id: 'app-heartbeat-' + Date.now() + '-' + Math.random(),
@@ -1409,14 +1426,14 @@ const CallControl = {
     this.active = null; this.pending = null;
     try {
       if (lease) {
-        const response = await fetch(this.url() + '/v1/calls/' + encodeURIComponent(lease.call_id) + '/release', {
-          method: 'POST', headers: await this._headers(), keepalive: true,
+        const response = await this._fetch(this.url() + '/v1/calls/' + encodeURIComponent(lease.call_id) + '/release', {
+          method: 'POST', keepalive: true,
           body: JSON.stringify({ lease_version: lease.lease_version, event_id: 'app-release-' + Date.now() + '-' + Math.random(), reason: reason || 'ended' }),
         });
         return await response.json().catch(() => null);
       } else if (pending) {
-        const response = await fetch(this.url() + '/v1/calls/' + encodeURIComponent(pending.call_id) + '/cancel', {
-          method: 'POST', headers: await this._headers(), keepalive: true,
+        const response = await this._fetch(this.url() + '/v1/calls/' + encodeURIComponent(pending.call_id) + '/cancel', {
+          method: 'POST', keepalive: true,
         });
         return await response.json().catch(() => null);
       }
@@ -4722,13 +4739,16 @@ async function connectCall() {
       });
     } catch (e) {
       const reason = String(e && e.message || e);
+      const authRequired = reason.indexOf('authentication_required') >= 0;
       voiceCallFail('gateway_assigned', reason, { endpoint: CallControl.url() });
       voiceCallEnd('failed', reason);
       try { await CallControl.release(reason); } catch (e2) {}
       LiveVoice.stop(); setCallDialing(false); stopCallTimer();
-      setCallHint(reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
-        (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
-          (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')));
+      setCallHint(authRequired ? '登入狀態已失效，請重新登入後再撥' :
+        (reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
+          (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
+          (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試'))));
+      if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
       try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
       return;
     }
