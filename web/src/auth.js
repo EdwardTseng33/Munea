@@ -443,21 +443,26 @@
       /invalid jwt|jwt expired|token.*expired|invalid refresh token/.test(message);
   }
 
-  async function validateOrRefreshSession(supabaseClient, currentSession) {
+  async function validateOrRefreshSession(supabaseClient, currentSession, options = {}) {
     if (!currentSession || !currentSession.access_token) return null;
+    const forceRefresh = options.forceRefresh === true;
     const token = String(currentSession.access_token);
-    if (verifiedAccessToken === token) return currentSession;
+    if (!forceRefresh && verifiedAccessToken === token) return currentSession;
     if (!supabaseClient.auth || typeof supabaseClient.auth.getUser !== 'function') return currentSession;
-    if (tokenValidation && tokenValidation.token === token) return tokenValidation.promise;
+    if (tokenValidation && tokenValidation.token === token && tokenValidation.forceRefresh === forceRefresh) {
+      return tokenValidation.promise;
+    }
 
     const promise = (async () => {
       let validation = null;
-      try { validation = await supabaseClient.auth.getUser(token); }
-      catch (error) {
-        // A network outage must not erase an otherwise refreshable local
-        // session. Gateway availability is reported separately.
-        if (!isCredentialRejection(error)) return currentSession;
-        validation = { error };
+      if (!forceRefresh) {
+        try { validation = await supabaseClient.auth.getUser(token); }
+        catch (error) {
+          // A network outage must not erase an otherwise refreshable local
+          // session. Gateway availability is reported separately.
+          if (!isCredentialRejection(error)) return currentSession;
+          validation = { error };
+        }
       }
       if (validation && !validation.error && validation.data && validation.data.user) {
         verifiedAccessToken = token;
@@ -488,10 +493,37 @@
       }
       return null;
     })();
-    tokenValidation = { token, promise };
+    tokenValidation = { token, forceRefresh, promise };
     try { return await promise; }
     finally {
       if (tokenValidation && tokenValidation.promise === promise) tokenValidation = null;
+    }
+  }
+
+  async function recoverRejectedSession() {
+    // A fixture identity is valid only for the explicit direct-call profile.
+    // Never send its local placeholder token through the real Gateway.
+    if (session && session.developer) {
+      setState('guest', null, 'DEV_SESSION_REJECTED');
+      return null;
+    }
+    const supabaseClient = await ensureClient();
+    if (!supabaseClient) return null;
+    try {
+      const result = await supabaseClient.auth.getSession();
+      const loadedSession = result && result.data ? result.data.session : null;
+      const recovered = await validateOrRefreshSession(supabaseClient, loadedSession, { forceRefresh: true });
+      if (recovered && recovered.access_token) {
+        setState('signed-in', recovered, 'SESSION_RECOVERED');
+        return recovered.access_token;
+      }
+      try { await supabaseClient.auth.signOut({ scope: 'local' }); } catch (e) {}
+      setState('guest', null, 'SESSION_REJECTED');
+      return null;
+    } catch (e) {
+      try { await supabaseClient.auth.signOut({ scope: 'local' }); } catch (e2) {}
+      setState('guest', null, 'SESSION_REJECTED');
+      return null;
     }
   }
 
@@ -524,6 +556,7 @@
     signInAsDeveloper,
     signOut,
     getAccessToken,
+    recoverRejectedSession,
   };
 
   init();

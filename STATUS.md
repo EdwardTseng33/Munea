@@ -1,5 +1,7 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
+> 🛠️ **2026-07-17 15:09 待包版**：實機日誌確認 Build 42 開發者 Gateway 模式於 06:57–06:58 三次 `/v1/calls` 均為 `401 invalid_token`；App 送出前驗證沒有攔住 Gateway 實際拒絕。`1.0.36 (Build 43)` 已補「401 後強制刷新＋同一 idempotency key 只重試一次」、拒絕本機 developer 假 token、無法恢復時明確要求重新登入。完整 `test:launch` 與 PR #161 兩個 GitHub smoke 均 PASS；分支 `codex/fix-dev-gateway-401-retry-20260717`，待合併／Mac `cap sync`、Archive、Export 與實機重試。Brain／Voice／Gateway 不需重新部署。
+>
 > 📱 **2026-07-17 14:53 最新包版**：`1.0.35 (Build 42)` **iPhone-only**，收 #158 登入證過期自動換新＋總機 401/503 分流＋出貨檢查加嚴。五道防漏 PASS、IPA 58,879,299 bytes，SHA-256 `4233f3bed2889f73b6c7124a870c70d591ae7e3075d1c233fe2e2a68c077c600`。**14:53 已上傳 App Store Connect＝現任送審候選（詳 114 號）**。Edward iPhone 換裝驗證版同版。
 >
 > 📱 **2026-07-17 14:36 前一包**：`1.0.34 (Build 41)` **iPhone-only**，收 #156 免費不賣點數＋餘額可見。五道防漏 PASS、IPA 58,878,425 bytes，SHA-256 `de0da67d4a1dcbc16db9d3d7d44d37672866b5f7ac2cd88eafca77efe880d078`。**14:35 已上傳 App Store Connect＝現任送審候選（詳 113 號）**。Edward iPhone 換裝驗證版同版。

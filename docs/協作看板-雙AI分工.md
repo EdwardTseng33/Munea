@@ -3,6 +3,14 @@
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 
+### 進行中：Build 42 開發者 Gateway 模式 401 自動復原（2026-07-17 Codex）
+
+- 任務／證據：iPhone 06:57–06:58 三次 `/v1/calls` 均為 `401 invalid_token`；補上 Gateway 回 401 後強制刷新 session 並以同一 idempotency key 重試一次，失敗時明確要求重新登入。
+- Branch：`codex/fix-dev-gateway-401-retry-20260717`
+- 預計檔案：`web/src/auth.js`、`web/src/app.js`、`scripts/test-native-auth.js`、相關 release／版本與狀態檔。
+- 包版影響：影響 App Web bundle，預計 `1.0.36 (Build 43)`；需要 `cap sync` 與 Mac 重新 Archive／Export，不需要重新部署 Brain／Voice／Gateway。
+- 狀態：Draft PR #161；程式、完整 `test:launch` 與兩個 GitHub smoke 均已通過，待合併；Mac 後續依 PR 重新包 Build 43。其他 session 請先不要修改上述檔案。
+
 ### 簡單判斷
 
 | 狀況 | 做法 |
