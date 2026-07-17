@@ -9,7 +9,7 @@
 - Branch：`codex/fix-dev-gateway-401-retry-20260717`
 - 預計檔案：`web/src/auth.js`、`web/src/app.js`、`scripts/test-native-auth.js`、相關 release／版本與狀態檔。
 - 包版影響：影響 App Web bundle，預計 `1.0.36 (Build 43)`；需要 `cap sync` 與 Mac 重新 Archive／Export，不需要重新部署 Brain／Voice／Gateway。
-- 狀態：程式與完整 `test:launch` 已通過，待 Draft PR／合併；Mac 後續依 PR 重新包 Build 43。其他 session 請先不要修改上述檔案。
+- 狀態：Draft PR #161；程式、完整 `test:launch` 與兩個 GitHub smoke 均已通過，待合併；Mac 後續依 PR 重新包 Build 43。其他 session 請先不要修改上述檔案。
 
 ### 簡單判斷
 
