@@ -17,6 +17,7 @@
     "hosting:deploy": "npm run test:hosting && npx firebase-tools@15.23.0 deploy --only hosting:public --project gen-lang-client-0229303523",
     "test:call-control-app": "python scripts/test_app_call_control_contract.py",
     "test:ui-contracts": "node scripts/test-ui-contracts.js",
+    "test:product-alignment": "python scripts/check_product_alignment.py && python scripts/test_product_alignment_governance.py",
     "test:voice-launch-policy": "node scripts/test-voice-launch-policy.js",
     "test:voice-diagnostics": "node scripts/test-voice-call-diagnostics.js",
     "voice:s2s-probe": "python engine/voice_s2s_probe.py",

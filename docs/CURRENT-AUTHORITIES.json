@@ -1,0 +1,71 @@
+{
+  "schema": "munea.docs-authority.v1",
+  "updated": "2026-07-18",
+  "authorities": [
+    {
+      "topic": "docs-entry",
+      "path": "docs/00-總綱-從這裡開始.md",
+      "ownerRole": "Product / Documentation"
+    },
+    {
+      "topic": "product-spec",
+      "path": "docs/SPEC-沐寧-v1-2026-06-28.md",
+      "ownerRole": "Product"
+    },
+    {
+      "topic": "billing-entitlements",
+      "path": "docs/BILLING-CREDITS-ENTITLEMENT-v1.md",
+      "ownerRole": "Product / Billing"
+    },
+    {
+      "topic": "quality-confidence",
+      "path": "docs/PRODUCT-QUALITY-CONFIDENCE.md",
+      "ownerRole": "CTO / Release"
+    },
+    {
+      "topic": "release-state",
+      "path": "docs/RELEASE-STATE.md",
+      "ownerRole": "Release / Platform"
+    },
+    {
+      "topic": "product-alignment",
+      "path": "docs/PRODUCT-ALIGNMENT-REGISTER.md",
+      "ownerRole": "Product / Architecture"
+    },
+    {
+      "topic": "ai-design-intent",
+      "path": "docs/AI-SERVICE-DESIGN-v1.md",
+      "ownerRole": "AI / Product"
+    },
+    {
+      "topic": "ai-provider-reality",
+      "path": "docs/PRODUCT-ALIGNMENT-REGISTER.md",
+      "ownerRole": "AI / Platform"
+    },
+    {
+      "topic": "backend-architecture",
+      "path": "docs/BACKEND-ARCHITECTURE-v1.md",
+      "ownerRole": "Backend / Platform"
+    },
+    {
+      "topic": "cloudrun-topology",
+      "path": "deploy/cloudrun/SERVICE-TOPOLOGY.md",
+      "ownerRole": "Platform"
+    },
+    {
+      "topic": "collaboration",
+      "path": "docs/協作看板-雙AI分工.md",
+      "ownerRole": "Engineering"
+    }
+  ],
+  "historical": [
+    {
+      "path": "docs/HEALTH-90-SCORECARD-2026-07-16.md",
+      "supersededBy": "docs/PRODUCT-QUALITY-CONFIDENCE.md"
+    },
+    {
+      "path": "docs/APP-STORE-PRODUCTION-READINESS.md",
+      "supersededBy": "docs/RELEASE-STATE.md"
+    }
+  ]
+}

@@ -40,6 +40,17 @@ try {
   }
   Pass "Source metadata and iOS baseline are internally consistent"
 
+  Step "Product alignment governance"
+  & python scripts/check_product_alignment.py
+  if ($LASTEXITCODE -ne 0) {
+    throw "Product alignment governance failed with exit code $LASTEXITCODE"
+  }
+  & python scripts/check_supabase_migrations.py
+  if ($LASTEXITCODE -ne 0) {
+    throw "Supabase migration governance failed with exit code $LASTEXITCODE"
+  }
+  Pass "Current authorities, product alignment, and migration manifest are consistent"
+
   $env:GEMINI_API_KEY = $env:GEMINI_API_KEY
   if (-not $env:GEMINI_API_KEY) {
     $env:GEMINI_API_KEY = "smoke-test-key"
