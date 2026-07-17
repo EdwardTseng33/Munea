@@ -1,8 +1,8 @@
 # Munea Product Alignment Register
 
-更新：`2026-07-18 00:25 Asia/Taipei`
+更新：`2026-07-18 01:38 Asia/Taipei`
 
-來源基準：`origin/main@a53655c`
+來源基準：`origin/main@9f43287`
 
 本表回答產品承諾、App、source、AI、服務、資料與真人驗收是否仍描述同一個產品。易變的版本／revision 以 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 為準，品質分數以 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md) 為準。
 
@@ -20,12 +20,13 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source／upload lane | `1.0.40 (Build 47)`；Plus 100、Pro 200，點數包 100／300／600／1000 | Build 47 已上傳、iPhone 已安裝；selected review Build／Apple state 未確認 | `partial` | App Store Connect 截圖／狀態＋關鍵旅程真機 Gate |
-| Draft Build 48 | #174 0 點預檢；#175 TEST 購買與 Apple mismatch UX | Draft、未進 main、未包版、未真機驗收 | `partial` | 依序整合、同一 Build 打包與驗收 |
-| Production Brain | current source `1.0.40` | `1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
+| App source lane | `1.0.41 (Build 48)`；package、Web 與 iOS 已在 main 對齊 | 尚無 Archive／upload／iPhone 證據；latest uploaded 仍是 `1.0.40 (Build 47)` | `aligned-source` | 整合 intended fixes 後再跑 strict package／human Gate |
+| App Store lane | latest uploaded `1.0.40 (Build 47)` | 已上傳、iPhone 已安裝；selected review Build／Apple state未確認 | `partial` | App Store Connect 截圖／狀態＋關鍵旅程真機 Gate |
+| Draft call／purchase fixes | #174 0 點預檢；#175 TEST 購買與 Apple mismatch UX | base 落後 main；main 已獨立使用 `1.0.41 (48)`，未 rebase 前不能算進 Build 48 | `partial` | 依序 rebase／整合，再鎖定 next candidate |
+| Production Brain | current source `1.0.41` | `1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
 | Production Voice | current source 含較新的 Voice／call contract | `1.0.31@500c819` | `runtime-behind` | authenticated canary＋installed-iPhone Voice Gate |
 | Production Gateway | App 正式路徑要求 Gateway | auth boundary 可觀察；release identity／真 client trace 未知 | `partial` | release identity＋lease／ready／cleanup trace |
-| Staging Brain／Voice | current main `1.0.40` | 兩者皆 `1.0.34@136dc81` | `runtime-behind` | 僅在有核准變更時 canary；驗證 exact commit |
+| Staging Brain／Voice | current main `1.0.41` | 兩者皆 `1.0.34@136dc81` | `runtime-behind` | 僅在有核准變更時 canary；驗證 exact commit |
 | Avatar fleet | FlashHead／Call Control contract 存在 | serving worker identity、capacity freshness與真 App path 未列入 release snapshot | `unknown` | Gateway-to-worker identity＋長聊／故障 Gate |
 
 ## Product, AI, data, and operations alignment
@@ -35,7 +36,7 @@
 | Pricing / entitlement | [`BILLING-CREDITS-ENTITLEMENT-v1.md`](./BILLING-CREDITS-ENTITLEMENT-v1.md)：Plus 100、Pro 200、packs 100／300／600／1000；policy v4 | App Store 商品與 Tokyo `019` 未證明；production Brain 落後 App source | `blocked` | ASC 商品＋DB ledger／post-check＋Sandbox purchase |
 | Google login | 原生優先＋PKCE fallback 已進 Build 47 | 缺 Build 47 選帳／callback／session／登出重登完整紀錄 | `partial` | exact-build iPhone acceptance |
 | Purchase / membership | StoreKit 與 server verification contract 存在 | 使用者回報身份不變、後續不可見；#175 尚 Draft；Apple account-token mismatch 需帳號處理 | `blocked` | TEST local simulation＋新 Sandbox Apple ID 真交易 |
-| 0-credit call UX | 應先查點數，0 點顯示原因，不進「撥通中」 | Build 47 未含 #174 | `blocked` | Build 48 0 點真人 Gate |
+| 0-credit call UX | 應先查點數，0 點顯示原因，不進「撥通中」 | latest uploaded Build 47 未含 #174；Draft 尚未 rebase | `blocked` | next candidate 0 點真人 Gate |
 | Authenticated Voice＋Avatar | 永久 App E2E Gate 已寫入 Release State／協作看板 | 沒有 exact Build＋production identities 的完整成功紀錄 | `blocked` | 有點數真帳號完整 call＋cleanup |
 | Reflex / realtime voice | Gemini Live path、turn policy與 Guardian gate 存在 | production Voice 落後、model/config與真人體感未綁 release evidence | `partial` | safe model metadata＋真人長聊 |
 | Butler | 產品文件曾宣告 Claude Sonnet；可執行路徑仍混合 deterministic／Google GenAI | provider authority、成本、安全與 deployed trace 不一致 | `blocked` | 拍板 provider SSOT，對齊 adapter／測試／telemetry／文件 |
@@ -48,10 +49,10 @@
 | Drift | Current action |
 |---|---|
 | 2026-07-16 Health scorecard 仍顯示 77、Build 38 與舊 runtime | 已標 historical；current score 改由 `PRODUCT-QUALITY-CONFIDENCE.md` 管理 |
-| Release State／Alignment Register 停在 Build 39 | 本輪更新為 Build 47、Draft Build 48與 2026-07-18 runtime evidence |
+| source 版號前進時 current 文件立刻過期 | 本輪新增 `CURRENT-AUTHORITIES.json`、alignment validator、負向測試、CI 與 release gate；latest source `1.0.41 (48)`、latest uploaded `1.0.40 (47)` 分 lane |
 | `019` SQL 存在但 migration manifest 未列 | 本輪補入 checksum 與 order 20；需 CI／review 通過後才算 merged governance |
 | Billing SSOT 方案已改，但 data model 段落仍稱 policy v3 | 本輪改為 policy v4／migration `019`，保留 v3 為歷史 migration |
-| App `1.0.40` 與 production Brain `1.0.36`／Voice `1.0.31` | 不以盲目部署消除版號差；以 compatibility canary＋App E2E 決定 rollout |
+| App source `1.0.41` 與 production Brain `1.0.36`／Voice `1.0.31` | 不以盲目部署消除版號差；以 compatibility canary＋App E2E 決定 rollout |
 
 ## 90-point alignment gates
 

@@ -6,12 +6,12 @@
 
 ### 進行中：產品品質信心 SSOT／migration 治理（2026-07-18 Codex）
 
-- Branch：`codex/product-quality-confidence-20260718`；獨立 worktree，基準 `origin/main@a53655c`。
-- 範圍：`docs/PRODUCT-QUALITY-CONFIDENCE.md`、`docs/RELEASE-STATE.md`、`docs/PRODUCT-ALIGNMENT-REGISTER.md`、`docs/HEALTH-90-SCORECARD-2026-07-16.md`、`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`、`docs/00-總綱-從這裡開始.md`、`supabase/migration-manifest.json` 與本看板。
-- 目標：改用證據成熟度與 P0 硬上限評分；對焦 Build 47、Draft Build 48、production／staging runtime；補登 main 已存在但 manifest 漏列的 `019`。
+- Branch：`codex/product-quality-confidence-20260718`；獨立 worktree，已同步基準 `origin/main@9f43287`。
+- 範圍：既有品質／release／對焦／帳務文件、`docs/CURRENT-AUTHORITIES.json`、`scripts/check_product_alignment.py`、對應治理測試與 GitHub workflow、`scripts/release-check.ps1`、`package.json`、`supabase/migration-manifest.json` 與本看板。
+- 目標：改用證據成熟度與 P0 硬上限評分；對焦 latest main `1.0.41 (Build 48)` 與 latest uploaded `1.0.40 (Build 47)`；補登 `019`，再將 current SSOT、版本、定價、AI provider reality 與歷史文件轉成機器化漂移阻擋。
 - 線上邊界：純 repo／文件治理；不改 App runtime、不部署 Cloud Run、不切流量、不執行 Supabase SQL。live 檢查僅公開端點唯讀。
 - 驗收：migration governance、release consistency、文件連結／版本漂移檢查與 scoped diff；完成 PR 後再更新狀態。
-- 狀態：✅ scoped checks、markdown links 與完整 `npm.cmd run release:check` PASS；commit `ade226b` 已推，Draft PR #176。這只完成 source governance，不解除 Build 48 真機、App Store 商品、Tokyo migration 或營運後台資料 Gate。
+- 狀態：✅ current-authority／版本／定價／AI provider reality／historical marker 的負向測試與 CI gate 已建立，完整 `npm.cmd run release:check` PASS；Draft PR #176。合併後 Repo／資料治理 `62→69`、產品對焦 `58→66`；仍不解除 Build 48 真機、App Store 商品、Tokyo migration 或營運後台資料 Gate。
 
 ### 進行中：Build 44 Google 登入「暫時無法啟動」修復（2026-07-17 Codex）
 

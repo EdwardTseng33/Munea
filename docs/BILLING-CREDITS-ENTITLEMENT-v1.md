@@ -1,6 +1,6 @@
 # Munea Billing, Credits, and Entitlements
 
-Updated: 2026-07-18 for App `1.0.40 (Build 47)`
+Updated: 2026-07-18. Current source is `1.0.41 (Build 48)`; the latest confirmed App Store upload is `1.0.40 (Build 47)`.
 
 This document is the billing source of truth for the current app. Historical plan names such as Premium and Concierge are retired and must not be used by code, migrations, tests, or App Store metadata.
 
