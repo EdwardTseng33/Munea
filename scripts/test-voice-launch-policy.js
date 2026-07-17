@@ -162,4 +162,33 @@ expect(apiServer.includes('localization.assistant_output_text'),
 expect(Object.values(characters).every(character => character.persona.includes('台灣國語')),
   'every selectable persona must explicitly use Taiwan Mandarin');
 
+// ── 收音管先建後招呼＋上行/死線看門（2026-07-16 蟲 b/c：mic_uplink 5-6 秒、整通 in_bytes=0、死線乾等 30 秒）──
+expect(app.includes('this._sendMicBuffer(this._silentUplinkFrame(inp.length))'),
+  'closed-mic frames stop feeding the uplink, so the server sees in_bytes=0 until the greeting finishes');
+expect(app.includes('nowMs - this._silentKeepaliveAt >= 500'),
+  'gated-mic keepalive is not rate-limited to one small packet per 500ms (full-rate silence burns Gemini input tokens during opening/mute)');
+expect(!app.includes('if (!this.micOpen) { this.micLevel = 0; return; }'),
+  'the microphone pipeline waits for the greeting again instead of sending silent standby frames');
+expect(app.includes('const micPipelineReady = this._setupMicPipeline(micPromise);') &&
+  app.indexOf('const micPipelineReady = this._setupMicPipeline(micPromise);') < app.indexOf('this.ws = new WebSocket(url)'),
+  'the microphone pipeline is no longer built in parallel with (before) the WebSocket handshake');
+expect(app.includes('this._armUplinkWatch()') && app.includes("'microphone_uplink_slow'") && app.includes("'microphone_uplink_rebuilt'"),
+  'the 3-second uplink watchdog with automatic pipeline rebuild is missing');
+expect(app.includes('(this._micRebuilds || 0) >= 2'),
+  'uplink pipeline rebuilds are not capped at two attempts');
+expect(app.includes("this._armDeadLineWatch('ready_timeout', 10000)") &&
+  app.includes("this._armDeadLineWatch('no_audio_both_ways', 5000)") &&
+  app.includes("'dead_line_reconnect'"),
+  'a dead line can leave the user waiting for the 30-second readiness gate instead of auto-reconnecting');
+
+// ── 臉部影像流看門（2026-07-16 Edward 真機：嘴巴卡頓後畫面凍住不再動、ICE 未 failed 就沒人管）──
+expect(app.includes('Avatar._armFaceWatch();') && app.includes("'face_stream_stalled'"),
+  'a frozen face stream (frames stop while ICE stays connected) has no watchdog');
+expect(app.includes('只在「有聲音輸出但無新幀」時累計'),
+  'the face watchdog can misfire during idle periods where engine idle-feed frames are legitimately sparse');
+expect(app.includes('(this._faceRebuilds || 0) >= 2'),
+  'face stream rebuilds are not capped at two attempts before degrading');
+expect(app.includes("'face_fallback_voice_only'") && app.includes('LiveVoice._sameLineFellBack = true;'),
+  'voice-only degradation is missing or leaves same-line audio dead when the face is torn down');
+
 console.log('Voice launch policy PASS: buffering, language gate, tail guard, varied opening, and barge-in');
