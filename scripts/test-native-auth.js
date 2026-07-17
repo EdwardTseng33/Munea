@@ -14,6 +14,9 @@ let lastProfileUpdate = null;
 let signOutRequest = null;
 let createClientCalls = 0;
 let currentSession = null;
+let getUserCalls = 0;
+let refreshSessionCalls = 0;
+const rejectedTokens = new Set();
 const authEvents = [];
 
 const signedInSession = {
@@ -31,6 +34,23 @@ const client = {
     async getSession() {
       const cloned = currentSession ? { ...currentSession, user: { ...currentSession.user } } : null;
       return { data: { session: cloned }, error: null };
+    },
+    async getUser(token) {
+      getUserCalls += 1;
+      if (rejectedTokens.has(token)) {
+        return { data: { user: null }, error: { status: 403, code: 'bad_jwt', message: 'invalid JWT' } };
+      }
+      return { data: { user: currentSession && currentSession.user ? currentSession.user : signedInSession.user }, error: null };
+    },
+    async refreshSession() {
+      refreshSessionCalls += 1;
+      currentSession = {
+        ...signedInSession,
+        access_token: 'refreshed-access-token',
+        refresh_token: 'refreshed-refresh-token',
+        user: { ...signedInSession.user },
+      };
+      return { data: { session: currentSession }, error: null };
     },
     onAuthStateChange() {},
     async signInWithOAuth(request) {
@@ -166,6 +186,21 @@ function expect(condition, message) {
   const eventsAfterSignIn = authEvents.length;
   expect(await windowObject.MuneaAuth.getAccessToken() === 'google-access-token', 'signed-in access token was not returned');
   expect(authEvents.length === eventsAfterSignIn, 'equivalent Supabase session caused a duplicate auth-state event');
+
+  rejectedTokens.add('rejected-access-token');
+  currentSession = {
+    ...signedInSession,
+    access_token: 'rejected-access-token',
+    refresh_token: 'stale-refresh-token',
+    user: { ...signedInSession.user },
+  };
+  expect(await windowObject.MuneaAuth.getAccessToken() === 'refreshed-access-token',
+    'a server-rejected access token was not refreshed before an API call');
+  expect(refreshSessionCalls === 1, 'a rejected access token did not trigger exactly one refresh');
+  const verifiedCalls = getUserCalls;
+  expect(await windowObject.MuneaAuth.getAccessToken() === 'refreshed-access-token',
+    'the refreshed access token was not retained');
+  expect(getUserCalls === verifiedCalls, 'a verified access token was revalidated on every API call');
 
   const googleSignedOut = await windowObject.MuneaAuth.signOut();
   expect(googleSignedOut.ok, 'Google local sign out did not complete');

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # 沐寧 · Cloud Run 0% canary 結構驗證
-# 用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag>
+# 用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag> staging|production <version> <commit>
 #
-# 只驗證部署層：tag 指向 Ready revision、正式流量仍為 0%、HTTP 入口可用。
+# 只驗證部署層：tag 指向 Ready revision、該 revision 流量為 0%、HTTP 入口與 release identity 可用。
 # Voice 的 Call Token、Gemini 音訊、ASR、插話與真人體感仍須另外跑真機 Gate。
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -47,7 +47,7 @@ EXPECTED_COMMIT="${5:-}"
 case "$WHAT" in
   brain) SVC="munea-brain-staging" ;;
   voice) SVC="munea-voice-staging" ;;
-  *) echo "用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag>"; exit 1 ;;
+  *) echo "用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag> staging|production <version> <commit>"; exit 1 ;;
 esac
 [ -n "$TAG" ] || { echo "⛔ 缺少 canary tag"; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "⛔ 找不到 curl"; exit 1; }
@@ -81,8 +81,15 @@ CANARY_URL="$(printf '%s\n' "$CANARY_META" | sed -n '3p')"
 [ -n "$REVISION" ] && [ -n "$CANARY_URL" ] || { echo "⛔ canary metadata 不完整"; exit 1; }
 [ "$PERCENT" = "0" ] || { echo "⛔ $REVISION 已承接 $PERCENT% 流量，不是安全的 0% canary"; exit 1; }
 
-READY="$(gcloud_run run revisions describe "$REVISION" --region "$REGION" --project "$PROJECT" --format='value(status.conditions[0].type,status.conditions[0].status)')"
-[ "$READY" = $'Ready\tTrue' ] || { echo "⛔ $REVISION 尚未 Ready：$READY"; exit 1; }
+REVISION_JSON="$(gcloud_run run revisions describe "$REVISION" --region "$REGION" --project "$PROJECT" --format=json)"
+READY="$(printf '%s' "$REVISION_JSON" | "${PYTHON[@]}" -c '
+import json, sys
+data = json.load(sys.stdin)
+ready = next((item for item in data.get("status", {}).get("conditions", []) if item.get("type") == "Ready"), None)
+print((ready or {}).get("status", ""))
+')"
+unset REVISION_JSON
+[ "$READY" = "True" ] || { echo "⛔ $REVISION 尚未 Ready：$READY"; exit 1; }
 
 ROOT_CODE="$(curl --retry 3 --retry-delay 1 -sS -o /dev/null -w '%{http_code}' "$CANARY_URL/")"
 [ "$ROOT_CODE" = "200" ] || { echo "⛔ $CANARY_URL/ 回 $ROOT_CODE"; exit 1; }
@@ -122,4 +129,5 @@ else
   echo "✅ Voice canary 部署層 PASS：$REVISION · 0% · root 200"
   echo "⚠️ 尚未涵蓋：正式 Call Token、Gemini 音訊、ASR、插話、靜音與真人體感。"
 fi
+echo "revision=$REVISION"
 echo "canary_url=$CANARY_URL"

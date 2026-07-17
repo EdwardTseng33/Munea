@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-# 沐寧 · Canary 部署（安全閘 1/2）—— 新版只生出來、不吃流量，測過才切
+# 沐寧 · staging canary 部署（安全閘 1/2）—— 新版先不接 staging 預設流量
 # 用法：bash deploy/cloudrun/canary-deploy.sh brain   （或 voice）
 #
-# 2026-07-13 收斂：munea-brain-staging / munea-voice-staging 是「唯一正式」
-#   （單人開發不用兩套環境；App 本就打這兩個網址）。名字仍帶 -staging 字樣，
-#   只是外觀沿用，不是「測試」身分——改名要重建服務，非上線必要、之後有空再清。
-#   舊「正式」（無 -staging 字尾的 munea-brain / munea-voice）已停更、已退役。
-#   完整說明見 docs/單一正式環境-部署SOP-2026-07-13.md
+# 服務角色以 deploy/cloudrun/SERVICE-TOPOLOGY.md 為準：
+#   munea-brain-staging / munea-voice-staging = staging（開發包、預演、真人驗證）
+#   munea-brain / munea-voice                 = production（App Store 包預設）
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 REGION="asia-east1"
@@ -65,20 +63,20 @@ RELEASE_VERSION=$(node -p "require(process.argv[1]).version" "$TMP/package.json"
 [[ "$RELEASE_VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$ ]] || { echo "⛔ 無效的 release version"; exit 1; }
 echo "   打包來源：${RELEASE_COMMIT:0:12} · v${RELEASE_VERSION} · $(git log -1 --format=%s "$RELEASE_COMMIT")"
 
-TAG="canary-$(date +%m%d-%H%M)"
+TAG="stg-$(date +%m%d-%H%M%S)-${RELEASE_COMMIT:0:7}"
 
 # ⚠ env-drop 地雷（2026-07-12 踩過、memory: deploy-env-drop-gotcha）：
 #   一定要用 --update-env-vars / --update-secrets（合併），不要用 --set-env-vars / --set-secrets
 #   （那兩個是「先清空全部、再設」——只帶一兩個值會把其餘 env/secrets 全洗掉，服務會壞）。
 if [ "$WHAT" = "brain" ]; then
-  echo "== 部署 ${SVC}（管家腦・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
+  echo "== 部署 ${SVC}（管家腦・--no-traffic + --tag=${TAG}，不影響 staging 預設流量）=="
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest,MUNEA_ADMIN_API_TOKEN=munea-admin-token-staging:latest,MUNEA_ADMIN_PASSWORD=munea-admin-password:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
     --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=staging|MUNEA_RELEASE_VERSION=$RELEASE_VERSION|MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|SUPABASE_URL=https://fespbkdwafueyonppzwq.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_fP-PoA531waoIOmxl8tsWg_kCeZQD0e|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
     --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
 else
-  echo "== 部署 ${SVC}（語音橋・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
+  echo "== 部署 ${SVC}（語音橋・--no-traffic + --tag=${TAG}，不影響 staging 預設流量）=="
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
@@ -90,15 +88,16 @@ fi
 rm -rf "$TMP"
 
 echo
-echo "== 新版測試網址（帶 tag、不影響目前正式流量）=="
+echo "== 新版測試網址（帶 tag、不影響 staging 預設流量）=="
 gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format="value(status.traffic)"
 echo
 echo "測試網址（規則：https://<tag>---<服務網域>）："
 DOMAIN=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format="value(status.url)" | sed 's#https://##')
 echo "  https://${TAG}---${DOMAIN}"
 echo
-echo "== 自動驗證 0% canary（不切正式流量）=="
+echo "== 自動驗證 0% canary（不切 staging 預設流量）=="
 bash deploy/cloudrun/canary-verify.sh "$WHAT" "$TAG" staging "$RELEASE_VERSION" "$RELEASE_COMMIT"
 echo
-echo "測過 OK 後執行：bash deploy/cloudrun/promote.sh $WHAT"
-echo "不 OK：什麼都不用做——沒 promote 就沒切流量，現在的正式版完全沒被動到。"
+echo "真人測過 OK 後，只能用這組 exact release 證據切 staging 流量："
+echo "  bash deploy/cloudrun/promote.sh staging $WHAT $TAG $RELEASE_VERSION $RELEASE_COMMIT"
+echo "不 OK：什麼都不用做——沒 promote 就沒切流量，staging 預設版完全沒被動到。"

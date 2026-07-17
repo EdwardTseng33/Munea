@@ -152,6 +152,8 @@ expect(iosExport.includes('PRIVACY_DATA_TYPE_COUNT=') && iosExport.includes('NSP
 expect(iosExport.includes('development account or fixtures leaked into the App Store IPA'), 'IPA export does not reject development fixtures');
 expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the development Call Control bypass');
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
+expect(iosExport.includes('$ROOT/web/src/auth.js') && iosExport.includes('$ROOT/web/src/auth-config.js'), 'IPA export does not verify current authentication assets');
+expect(iosExport.includes('fespbkdwafueyonppzwq') && iosExport.includes('uhmpmystjjdqqxlpsthc'), 'IPA export does not enforce the Tokyo Supabase auth configuration');
 expect(iosExport.includes('UIDeviceFamily') && iosExport.includes('IPA supports iPhone only'), 'IPA export does not enforce iPhone-only packaging');
 expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLOUD=(gcloud)'), 'canary deploy is not compatible with macOS gcloud');
 expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost Windows gcloud compatibility');

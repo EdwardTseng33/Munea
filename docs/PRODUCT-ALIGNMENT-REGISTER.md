@@ -71,7 +71,7 @@ Confirmed owners: none. Roles below are suggested accountability roles, not assi
 - `docs/00-總綱-從這裡開始.md` still mixes Ditto-era Avatar language with the current FlashHead default and describes Butler/Guardian model plans more strongly than the executable provider path supports.
 - `docs/AVATAR-RUNTIME-QA.md` still describes a static/2D-era runtime and does not represent the current FlashHead/Gateway production path.
 - `docs/BILLING-CREDITS-ENTITLEMENT-v1.md` contains deployment wording that is behind the current production Brain endpoint state; live payment verification remains separate.
-- Cloud Run scripts disagree about whether the suffixed staging pair or non-suffixed pair is production. Current App defaults and `prod-deploy.sh` use the non-suffixed pair; conflicting comments and entrypoints must not override verified runtime and source behavior.
+- Cloud Run service roles and repo entrypoints are now routed through `deploy/cloudrun/SERVICE-TOPOLOGY.md`; retired duplicate entrypoints fail closed and promotion is bound to exact release identity. Runtime deployment and human verification remain separate evidence.
 
 ## 90-point acceptance gates
 

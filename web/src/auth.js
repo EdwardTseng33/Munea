@@ -8,6 +8,8 @@
   let status = 'guest';
   let lastEvent = 'INITIAL';
   let nativeAuthListenerPromise = null;
+  let verifiedAccessToken = '';
+  let tokenValidation = null;
 
   function config() {
     return window.MUNEA_SUPABASE_CONFIG || {};
@@ -159,6 +161,10 @@
 
   function setState(nextStatus, nextSession, eventName) {
     const normalizedSession = nextSession || null;
+    const nextAccessToken = normalizedSession && normalizedSession.access_token
+      ? String(normalizedSession.access_token)
+      : '';
+    if (verifiedAccessToken && verifiedAccessToken !== nextAccessToken) verifiedAccessToken = '';
     const changed = status !== nextStatus || !sameSession(session, normalizedSession);
     status = nextStatus;
     session = normalizedSession;
@@ -427,14 +433,78 @@
     return { ok: !result.error, result, error: result.error || null };
   }
 
+  function isCredentialRejection(error) {
+    if (!error) return false;
+    const statusCode = Number(error.status || error.statusCode || 0);
+    const code = String(error.code || error.error_code || '').toLowerCase();
+    const message = String(error.message || '').toLowerCase();
+    return statusCode === 401 || statusCode === 403 ||
+      ['bad_jwt', 'invalid_jwt', 'refresh_token_not_found', 'refresh_token_already_used'].includes(code) ||
+      /invalid jwt|jwt expired|token.*expired|invalid refresh token/.test(message);
+  }
+
+  async function validateOrRefreshSession(supabaseClient, currentSession) {
+    if (!currentSession || !currentSession.access_token) return null;
+    const token = String(currentSession.access_token);
+    if (verifiedAccessToken === token) return currentSession;
+    if (!supabaseClient.auth || typeof supabaseClient.auth.getUser !== 'function') return currentSession;
+    if (tokenValidation && tokenValidation.token === token) return tokenValidation.promise;
+
+    const promise = (async () => {
+      let validation = null;
+      try { validation = await supabaseClient.auth.getUser(token); }
+      catch (error) {
+        // A network outage must not erase an otherwise refreshable local
+        // session. Gateway availability is reported separately.
+        if (!isCredentialRejection(error)) return currentSession;
+        validation = { error };
+      }
+      if (validation && !validation.error && validation.data && validation.data.user) {
+        verifiedAccessToken = token;
+        return currentSession;
+      }
+      if (validation && validation.error && !isCredentialRejection(validation.error)) return currentSession;
+      if (typeof supabaseClient.auth.refreshSession !== 'function') return null;
+
+      let refreshed = null;
+      try { refreshed = await supabaseClient.auth.refreshSession(); }
+      catch (error) {
+        if (!isCredentialRejection(error)) return currentSession;
+        return null;
+      }
+      const nextSession = refreshed && refreshed.data ? refreshed.data.session : null;
+      if (!nextSession || refreshed.error || !nextSession.access_token) return null;
+
+      const refreshedToken = String(nextSession.access_token);
+      try {
+        const recheck = await supabaseClient.auth.getUser(refreshedToken);
+        if (recheck && !recheck.error && recheck.data && recheck.data.user) {
+          verifiedAccessToken = refreshedToken;
+          return nextSession;
+        }
+        if (recheck && recheck.error && !isCredentialRejection(recheck.error)) return nextSession;
+      } catch (error) {
+        if (!isCredentialRejection(error)) return nextSession;
+      }
+      return null;
+    })();
+    tokenValidation = { token, promise };
+    try { return await promise; }
+    finally {
+      if (tokenValidation && tokenValidation.promise === promise) tokenValidation = null;
+    }
+  }
+
   async function getAccessToken() {
     if (session && session.developer) return session.access_token || null;
     const supabaseClient = await ensureClient();
     if (!supabaseClient) return null;
     try {
       const result = await supabaseClient.auth.getSession();
-      const currentSession = result && result.data ? result.data.session : null;
-      setState(currentSession ? 'signed-in' : 'guest', currentSession, 'SESSION_REFRESHED');
+      const loadedSession = result && result.data ? result.data.session : null;
+      const currentSession = await validateOrRefreshSession(supabaseClient, loadedSession);
+      setState(currentSession ? 'signed-in' : 'guest', currentSession,
+        currentSession ? 'SESSION_REFRESHED' : 'SESSION_REJECTED');
       return currentSession && currentSession.access_token ? currentSession.access_token : null;
     } catch (e) {
       setState('guest', null, 'SESSION_UNAVAILABLE');

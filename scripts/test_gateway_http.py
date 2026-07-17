@@ -70,8 +70,10 @@ def main():
 
         def authenticate(self, bearer):
             self.authenticated.append(bearer)
+            if bearer == "backend-error-token":
+                raise gs.CallControlError("upstream auth unavailable")
             if bearer != "valid-user-token":
-                raise gs.CallControlError("invalid bearer token")
+                raise gs.CallControlAuthError("invalid_token")
             return object()
 
         def snapshot(self):
@@ -92,6 +94,17 @@ def main():
         assert wrong_key.status_code == 401
         invalid_user = client.get("/health", headers={"Authorization": "Bearer invalid-user-token"})
         assert invalid_user.status_code == 401
+        invalid_call = client.post("/v1/calls", headers={"Authorization": "Bearer invalid-user-token"}, json={
+            "character_id": "nening", "idempotency_key": "invalid-auth-probe",
+        })
+        assert invalid_call.status_code == 401
+        assert invalid_call.json() == {"detail": "authentication_required"}
+        assert "Supabase" not in invalid_call.text and "token" not in invalid_call.text
+        backend_error = client.post("/v1/calls", headers={"Authorization": "Bearer backend-error-token"}, json={
+            "character_id": "nening", "idempotency_key": "auth-backend-probe",
+        })
+        assert backend_error.status_code == 503
+        assert backend_error.json() == {"detail": "authentication_verification_unavailable"}
 
         user_health = client.get("/health", headers={"Authorization": "Bearer valid-user-token"})
         assert user_health.status_code == 200 and user_health.json()["durable_ready"] is True
@@ -109,7 +122,9 @@ def main():
         assert "snapshot" in admin_health.json() and admin_health.json()["mode"] == "durable"
         client_health = client.get("/health", params={"key": "private-legacy-key"})
         assert client_health.status_code == 200 and "snapshot" in client_health.json()
-        assert durable.authenticated == ["invalid-user-token", "valid-user-token"]
+        assert durable.authenticated == [
+            "invalid-user-token", "invalid-user-token", "backend-error-token", "valid-user-token"
+        ]
     finally:
         gs._GATE = original_gate
         gs._ADMIN_GATE = original_admin_gate

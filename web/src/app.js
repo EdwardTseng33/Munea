@@ -2865,7 +2865,7 @@ function setCallToggle(connected) {
   b.classList.toggle('start', !connected);
   b.classList.toggle('end', connected);
   const pts = document.querySelector('.hud-pill.pts');
-  if (pts) pts.style.display = connected ? 'none' : '';
+  if (pts) pts.style.display = (connected || ptsPillHidden()) ? 'none' : '';   // 通話中讓畫面乾淨；免費 0 點不掛牌
   const lbl = $('#callToggleLabel');
   if (lbl) lbl.textContent = connected ? '結束通話' : '開始通話';
 }
@@ -3869,16 +3869,23 @@ function ptsLeft() {
     : POINTS.total - POINTS.used + POINTS.bought;
 }
 function refreshLowState() {
+  // 「點數快用完了、到這裡加值」只對付費會員成立：免費不吃點數、也沒有加值鈕可按，
+  // 對他們喊這句＝叫他去按一個不存在的鈕（免費 0 點時 0 < 30 會誤觸發、原本就在發生）。
+  const low = !(window.MMPLAN && window.MMPLAN.isFree()) && ptsLeft() < LOW_PTS;
   const pts = document.querySelector('.hud-pill.pts');
-  if (pts) pts.classList.toggle('low', ptsLeft() < LOW_PTS);
+  if (pts) pts.classList.toggle('low', low);
   const strip = document.getElementById('lowPtsStrip');
-  if (strip) strip.style.display = ptsLeft() < LOW_PTS ? '' : 'none';
+  if (strip) strip.style.display = low ? '' : 'none';
 }
 function pushWallet() { syncPush('wallet', { grant: POINTS.total, used: POINTS.used, bought: POINTS.bought }); }
+// 點數牌：只要手上有點就一定看得到餘額（Edward 7/17 拍板）。
+// 只有「免費 + 真的 0 點」才收起來——免費走一次性 5 分鐘體驗、不吃點數，
+// 這時掛「剩 0 點」會被誤會成「沒點數不能聊」。
+function ptsPillHidden() { return !!(window.MMPLAN && window.MMPLAN.isFree()) && ptsLeft() <= 0; }
 function renderPoints() {
   const left = ptsLeft();
   const hud = document.querySelector('.hud-pill.pts');
-  if (hud) hud.textContent = '剩 ' + left + ' 點';
+  if (hud) { hud.textContent = '剩 ' + left + ' 點'; hud.style.display = ptsPillHidden() ? 'none' : ''; }
   if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
   if ($('#ptsUsed')) $('#ptsUsed').textContent = POINTS.used;
   if ($('#ptsBar')) $('#ptsBar').style.width = (POINTS.total > 0 ? Math.round(POINTS.used / POINTS.total * 100) : 0) + '%';
@@ -5773,8 +5780,23 @@ function init() {
       if (_subPlan === cur) cta.textContent = '你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案';
       else cta.textContent = (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? '升級 ' : '改用 ') + CIRCLE_PLAN_LABEL[_subPlan] + ' · ' + fmtPrice(_subPlan, _subCyc);
     }
+    // 免費不能買點數（Edward 7/17 拍板 Ⓐ）：點數是會員的東西，免費走一次性 5 分鐘體驗、不吃點數。
+    // 只剩一個分頁的切換器像壞掉 → 整個收起來，免費只看得到訂閱方案。訂閱後才長出來。
+    const seg = $('#subSeg');
+    if (seg) seg.style.display = cur === 'free' ? 'none' : '';
+    if (cur === 'free') showSubPane('plans');
     // 確認欄開著就跟著重畫，畫面寫的跟等下要扣的永遠一致
     if (typeof syncPlanConfirm === 'function') syncPlanConfirm();
+  }
+  // 切換「訂閱方案 / 點數購買」：唯一入口，免費被上面擋住不會走到 points
+  function showSubPane(pane) {
+    document.querySelectorAll('.sseg-btn').forEach((x, i) => {
+      const on = x.dataset.pane === pane;
+      x.classList.toggle('on', on);
+      if (on) { const th = $('#ssegThumb'); if (th) th.style.transform = 'translateX(' + (i * 100) + '%)'; }
+    });
+    if ($('#subPlans')) $('#subPlans').style.display = pane === 'plans' ? '' : 'none';
+    if ($('#subPoints')) $('#subPoints').style.display = pane === 'points' ? '' : 'none';
   }
   function renderPlanState() {
     const plan = circlePlan();
@@ -5787,26 +5809,31 @@ function init() {
     if (POINTS.total !== pts) { POINTS.total = pts; if (POINTS.used > pts) POINTS.used = Math.round(pts * 0.3); }
     if (typeof renderPoints === 'function') renderPoints();
     const _isFreeP = plan === 'free';
+    // 免費方案不吃點數（走一次性 5 分鐘體驗）＝一律不能買點數。
+    // 但「訂閱過→買過點→退訂掉回免費」的人手上真的還有點：那些點看得到、留著、訂閱回來就能用。
+    const _leftover = _isFreeP ? POINTS.bought : 0;
     const _card = document.querySelector('.plan-card');
     if (_card) {
       const _lbl = _card.querySelector('.pts-label'), _bar = _card.querySelector('.pts-bar'), _note = _card.querySelector('.pts-note');
-      if (_lbl) _lbl.style.display = _isFreeP ? 'none' : '';
+      const _used = _card.querySelector('.pts-used');
+      // 免費沒有月贈點 → 餘額只在「還有買過的點沒用完」時露出來，且不顯示「每月送／已用」與進度條
+      if (_lbl) _lbl.style.display = (!_isFreeP || _leftover > 0) ? '' : 'none';
+      if (_used) _used.style.display = _isFreeP ? 'none' : '';
       if (_bar) _bar.style.display = _isFreeP ? 'none' : '';
-      if (_note) _note.textContent = _isFreeP
-        ? '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。'
-        : (pts + ' 點約可聊 ' + pts + ' 分鐘；聊天用點數，用完補一下就能繼續。');
+      if (_note) _note.textContent = !_isFreeP
+        ? (pts + ' 點約可聊 ' + pts + ' 分鐘；聊天用點數，用完補一下就能繼續。')
+        : (_leftover > 0
+          ? '你還有 ' + _leftover + ' 點沒用完，會一直留著 · 訂閱 Plus／Pro 就能繼續用這些點聊天。'
+          : '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。');
     }
     const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
     const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = _isFreeP ? '升級方案' : '訂閱方案';
     renderSubUI();
   }
   // 分段 tab（訂閱方案 / 點數購買）
-  document.querySelectorAll('.sseg-btn').forEach((b, i) => b.addEventListener('click', () => {
-    document.querySelectorAll('.sseg-btn').forEach(x => x.classList.toggle('on', x === b));
-    const th = $('#ssegThumb'); if (th) th.style.transform = 'translateX(' + (i * 100) + '%)';
-    const pane = b.dataset.pane;
-    if ($('#subPlans')) $('#subPlans').style.display = pane === 'plans' ? '' : 'none';
-    if ($('#subPoints')) $('#subPoints').style.display = pane === 'points' ? '' : 'none';
+  document.querySelectorAll('.sseg-btn').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.pane === 'points' && circlePlan() === 'free') return;   // 雙保險：免費點不到點數購買
+    showSubPane(b.dataset.pane);
   }));
   // 月/年繳
   document.querySelectorAll('.scyc-btn').forEach((b, i) => b.addEventListener('click', () => {

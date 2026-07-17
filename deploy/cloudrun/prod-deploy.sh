@@ -7,7 +7,7 @@
 #   munea-brain-staging / munea-voice-staging ＝ 真測試機（開發包、canary 驗證用）
 #
 # 紀律：這支只准部署「已在測試機 canary 驗證過（真人測過）」的版本。
-#   流程＝ canary-deploy.sh（測試機出新版）→ 真人驗證 OK → 這支（正式出新版）→ 印出的切流量指令
+#   流程＝ canary-deploy.sh（測試機出新版）→ 真人驗證 OK → 這支（正式出新版）→ exact revision promote
 #
 # ⚠ env-drop 地雷（2026-07-12 踩過、memory: deploy-env-drop-gotcha）：
 #   一律 --update-env-vars / --update-secrets（合併語意），絕不用 --set-*（會把其餘 env 全洗掉）。
@@ -43,10 +43,6 @@ if [ -z "$KEY" ] && [ -f deploy/.munea-app-key ]; then
 fi
 [ -n "$KEY" ] || { echo "⛔ 找不到 MUNEA_APP_KEY 或 deploy/.munea-app-key——薄門沒鑰匙不准部署"; exit 1; }
 
-echo "== 更新前快照（回滾用）=="
-PREV=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format="value(status.latestReadyRevisionName)" 2>/dev/null || true)
-echo "   目前正式版本：${PREV:-（服務尚未存在）}"
-
 echo "== 只打包 committed 程式碼（git archive HEAD）=="
 TMP=$(mktemp -d)
 RELEASE_COMMIT="$(git rev-parse HEAD)"
@@ -56,7 +52,7 @@ RELEASE_VERSION=$(node -p "require(process.argv[1]).version" "$TMP/package.json"
 [[ "$RELEASE_VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$ ]] || { echo "invalid release version"; exit 1; }
 echo "   source: ${RELEASE_COMMIT:0:12} · v${RELEASE_VERSION} · $(git log -1 --format=%s "$RELEASE_COMMIT")"
 
-TAG="prod-$(date +%m%d-%H%M)"
+TAG="prod-$(date +%m%d-%H%M%S)-${RELEASE_COMMIT:0:7}"
 
 if [ "$WHAT" = "brain" ]; then
   echo "== 部署 ${SVC}（正式管家腦・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
@@ -84,7 +80,5 @@ echo "  https://${TAG}---${DOMAIN}"
 echo
 bash deploy/cloudrun/canary-verify.sh "$WHAT" "$TAG" production "$RELEASE_VERSION" "$RELEASE_COMMIT"
 echo
-echo "測過 OK 後切 100% 正式流量："
-echo "  gcloud run services update-traffic $SVC --region $REGION --project $PROJECT --to-latest"
-echo "切錯要退回上一版："
-echo "  gcloud run services update-traffic $SVC --region $REGION --project $PROJECT --to-revisions ${PREV:-<上一版名稱>}=100"
+echo "真人與正式 Gate 都確認 OK 後，只能用這組 exact release 證據切 production 流量："
+echo "  bash deploy/cloudrun/promote.sh production $WHAT $TAG $RELEASE_VERSION $RELEASE_COMMIT"
