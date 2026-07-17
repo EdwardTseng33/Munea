@@ -60,11 +60,14 @@ def test_location_is_background_not_topic():
     check("有接回既有禁語原則（跟「出去走走」同一個錯）", "出去走走" in inst)
 
 
-def test_only_search_when_he_asks():
+def test_he_asks_she_says_she_doesnt_know():
+    """他問附近的事 → 她查不了 → 老實說不知道、把話丟回給他（不是硬掰一個店名）。"""
     inst = instructions_with_location()
-    check("明令只有他自己開口問才查", "只有他自己開口問" in inst)
-    check("要先問清楚是哪一家、不亂推", "哪一家" in inst)
+    check("他問了 → 明令老實說查不了", "你查不了，就老實說" in inst)
+    check("給了人話的說法（不知道欸、你要不要打去問問看）",
+          "這我就不知道了欸" in inst and "打去問問看" in inst)
     check("有點出長輩是要「確認」不是要「發現」", "確認" in inst and "發現" in inst)
+    check("引導他自己講（他比你熟）", "你都去哪一家" in inst)
 
 
 def test_no_unconditional_restaurant_nudge():
@@ -89,25 +92,76 @@ def test_location_still_reaches_her():
     check("對照組：仍講明地點是拿來把天氣講對的", "天氣講對" in inst)
 
 
-# ---- 二、語音端：查詢工具的閘門 ----
-def test_voice_tool_gate():
+# ---- 二、通話中不再即時查（2026-07-17 Edward 拍板拿掉）----
+def test_live_lookup_off_by_default():
+    """預設關：她手上根本沒有那個工具，就不會叫、也就不會播「我幫你查一下」、不會卡 9 秒。"""
     import live_voice_server as lv
+    os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
+    check("預設就是關的", lv.live_lookup_enabled() is False)
+
+    cfg = lv.live_config(char="寧寧", name="寧寧", location="臺北市大安區")
+    names = [f.name for t in (cfg.tools or []) for f in (t.function_declarations or [])]
+    check("她手上沒有即時查詢這個工具", "search_current_information" not in names)
+
+
+def test_she_knows_she_cannot_search():
+    """她必須知道自己查不了——不然會亂承諾「我幫你查一下」然後查不了、長輩一直等。"""
+    import live_voice_server as lv
+    os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
     inst = lv.system_instruction(char="寧寧", name="寧寧", location="臺北市大安區")
-    check("查詢工具：要他真的問才查", "他自己開口問" in inst)
-    check("查詢工具：明令她不要自己把話題帶過去再查", "不要把話題帶到那邊" in inst)
-    check("查詢工具：明講「聊到」不算、要他真的問", "「聊到」不算" in inst)
-    check("查詢工具：有講代價（查一次好幾秒、他在乾等）", "乾等" in inst)
-    check("查詢工具：舊的鬆閘門不得復活",
-          "聊到餐廳店家、景點旅遊（例如日本哪裡好玩、桃園有什麼好吃的）、" not in inst)
+
+    check("明講她沒辦法上網查", "你沒有辦法上網查東西" in inst)
+    check("**點名禁止**講「我幫你查一下」", "我幫你查一下" in inst and "絕對不要說" in inst)
+    check("禁止其他變體（我查查看／我找找看／等我一下）",
+          all(w in inst for w in ["我查查看", "我找找看", "等我一下"]))
+    check("有講為什麼禁（講了就是空頭支票、長輩會一直等）", "空頭支票" in inst)
+    check("告訴她即時資訊唯一的來源＝今日簡報", "今日簡報" in inst)
+    check("簡報沒有的 → 老實說不知道（給了人話說法）", "這我就不知道了欸" in inst)
+    check("寧可不知道也不准憑印象編", "絕對不可以憑印象編" in inst)
+    check("接回產品原則：那是客服、不是朋友", "那是客服" in inst)
+    check("她看不到舊的工具說明（不會以為自己有工具）",
+          "search_current_information" not in inst)
+
+
+def test_lookup_can_be_switched_back():
+    """對照組：一個字就能退回舊行為（程式沒被砍掉、Edward 覺得她太笨隨時可開）。"""
+    import importlib
+    import live_voice_server as lv
+    os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1"
+    try:
+        importlib.reload(lv)
+        check("對照組：開關打開 → 工具回來", lv.live_lookup_enabled() is True)
+        cfg = lv.live_config(char="寧寧", name="寧寧")
+        names = [f.name for t in (cfg.tools or []) for f in (t.function_declarations or [])]
+        check("對照組：工具真的回到她手上（證明不是砍掉、是關掉）",
+              "search_current_information" in names)
+        inst = lv.system_instruction(char="寧寧", name="寧寧")
+        check("對照組：說明書也跟著回舊版", "你有 search_current_information" in inst)
+    finally:
+        os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
+        importlib.reload(lv)
+
+
+def test_core_no_longer_claims_a_search_tool():
+    """共同底盤（文字聊天也吃這份）不得再宣稱她有查詢工具——
+    文字聊天那條路**從來就沒有給過工具**，那句話一直是假的。"""
+    import chat_engine as ce
+    check("共同底盤不再說「用你的即時查詢工具」", "用你的即時查詢工具" not in ce.CORE)
+    check("共同底盤明講她不會自己上網查", "你不會自己上網查" in ce.CORE)
+    check("共同底盤指向今日簡報當唯一來源", "今日簡報" in ce.CORE)
+    check("捏造紅線還在（沒被我改掉）", "絕不自己捏造颱風、災情、數字或事件" in ce.CORE)
 
 
 def main():
     test_location_is_background_not_topic()
-    test_only_search_when_he_asks()
+    test_he_asks_she_says_she_doesnt_know()
     test_no_unconditional_restaurant_nudge()
     test_no_location_no_line()
     test_location_still_reaches_her()
-    test_voice_tool_gate()
+    test_live_lookup_off_by_default()
+    test_she_knows_she_cannot_search()
+    test_lookup_can_be_switched_back()
+    test_core_no_longer_claims_a_search_tool()
 
     print()
     if FAILS:
