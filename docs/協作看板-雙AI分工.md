@@ -11,6 +11,7 @@
 - 明確避讓：不修改／不部署 Brain、Voice、Gateway、RunPod、GLOWS、AI 聊聊內容或營運後台。
 - 修正方向：真實登入必須完成且等待帳戶 bootstrap，讓既有後端冪等補發一次性免費 5 點；Gateway 回 `account_not_ready` 時再以同一 idempotency key 補建後只重試一次。Mac 明確使用 `ios:dev-profile:direct`（自動測試帳號、不跳登入）或 `ios:dev-profile:gateway`（真登入＋總機驗證），不再靠記憶手打 `--gateway`。
 - 包版影響：預計 `1.0.37 (Build 44)`；需 Mac `cap sync` 後分別產出正確 profile 的實機驗證包／Release 候選，不需重新部署任何雲端服務。
+- 狀態：Draft PR #164；完整 `test:launch`、`release:check`、動態 Gateway 復原測試與兩種 profile 契約均 PASS，待 CI／審查／合併後由 Mac 包 Build 44。
 
 ### 進行中：Build 42 開發者 Gateway 模式 401 自動復原（2026-07-17 Codex）
 
