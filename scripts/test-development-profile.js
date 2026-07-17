@@ -36,7 +36,7 @@ assert.strictEqual(config.skipOnboarding, true);
 assert.strictEqual(config.seedFixtures, true);
 assert.strictEqual(config.bypassCallControl, true);
 assert.strictEqual(config.analyticsExcluded, true);
-assert.strictEqual(config.fixtureVersion, '1.0.26-build33-tokyo-v1');
+assert.strictEqual(config.fixtureVersion, '1.0.37-build44-tokyo-v1');
 assert.strictEqual(config.displayName, 'Edward 測試帳號');
 assert.strictEqual(config.plan, 'pro');
 assert.strictEqual(config.purchasedPoints, 700);
@@ -46,6 +46,9 @@ const sourceHashAfter = crypto.createHash('sha256').update(fs.readFileSync(sourc
 assert.strictEqual(sourceHashAfter, sourceHashBefore, 'Development profile command modified production Web source');
 
 const app = fs.readFileSync('web/src/app.js', 'utf8');
+const packageScripts = JSON.parse(fs.readFileSync('package.json', 'utf8')).scripts;
+assert.strictEqual(packageScripts['ios:dev-profile:direct'], 'node scripts/enable-ios-development-profile.mjs');
+assert.strictEqual(packageScripts['ios:dev-profile:gateway'], 'node scripts/enable-ios-development-profile.mjs --gateway');
 for (const token of ['seedDeveloperFixtures', 'Edward', '媽媽', '爸爸', '姊姊', 'munea.famVitals', 'munea.familyFeed2']) {
   assert(app.includes(token), `Missing development fixture contract: ${token}`);
 }
@@ -73,7 +76,8 @@ assert.strictEqual(gatewayConfig.autoSignIn, false, 'Gateway profile must not au
 assert.strictEqual(gatewayConfig.seedFixtures, false, 'Gateway profile must not seed fixture data over a real account');
 assert.strictEqual(gatewayConfig.analyticsExcluded, true, 'Gateway profile is still a dev build for analytics');
 assert.strictEqual(gatewayConfig.authUserId, undefined, 'Gateway profile must not carry the fixture identity');
-assert.match(gatewayConfig.fixtureVersion, /gateway/, 'Gateway profile is tagged so packages are distinguishable');
+assert.strictEqual(gatewayConfig.fixtureVersion, '1.0.37-build44-tokyo-gateway-v1',
+  'Gateway profile is tagged so packages are distinguishable');
 // 位址優先序防呆：有領到證時語音位址一定用證上的（app.js:getLiveVoiceUrl 第一行）
 assert.match(app, /if \(CallControl\.active\) return \(CallControl\.active\.voice && CallControl\.active\.voice\.url\) \|\| ''/);
 
