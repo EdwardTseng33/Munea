@@ -26,6 +26,20 @@
 - 發生衝突時，比對兩邊目的後整合；看不懂對方意圖就通知對方，不直接選 ours/theirs。
 - PR 合併後，長期任務在看板標記完成，下一個需要同檔案的 session 再接手。
 
+## 聊聊撥通 App 端到端硬 Gate
+
+凡是可能影響聊聊通話鏈的變更，都要在任務／PR 標記「call-path risk」。範圍包含 App／WebView、iOS 包版、登入、onboarding／account bootstrap、方案／點數、Gateway／Call Control、Voice、Avatar／GPU、服務 URL／環境變數、權限、CORS、部署與 fallback；不能因為只改後端、文件宣稱「不影響 App」，就省略最終 App 驗收。
+
+單元測試、瀏覽器測試頁、服務 `/health`、WebSocket／API 探針都只是前置檢查，不能代替下列真機 Gate：
+
+1. 使用本次實際要驗的版本、Build、profile 與環境，完成 `cap sync`、安裝並啟動 iPhone App。
+2. 在 App 內進入聊聊並按下通話，確認麥克風權限、登入／帳戶初始化／點數與 Gateway 領席（或明確記錄的 developer-direct 路徑）通過。
+3. 確認 Voice 與 Avatar 都 ready、聽得到開場；使用 iPhone 麥克風說一句話，伺服器收到上行，App 聽得到 AI 回話且看得到預期畫面／字幕。
+4. 主動掛斷，確認通話、麥克風、WebSocket 與 Gateway lease／GPU 席位正確釋放。
+5. 在 PR 與 `STATUS.md` 或 `docs/RELEASE-STATE.md` 記錄：版本／Build、profile、環境與服務 revision、裝置、時間、結果及日誌／診斷證據。
+
+developer-direct 包只能驗直連測試路，不能替代真登入＋Gateway／Release 路徑。若當下沒有實體 App 可測，狀態只能寫 `App E2E pending`；可以保留 staged／merged 事實，但不得宣稱 verified、可上線、可送審或任務完成。
+
 ## 跨電腦交接範例
 
 - Windows 正在改 `web/src/app.js`：在 Draft PR 或看板標明。Mac 可以同時處理 `ios/`，但暫不另改 `web/src/app.js`。

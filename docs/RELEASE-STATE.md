@@ -99,6 +99,14 @@ Repo manifests prove intended files and checksums; they do not prove live applic
 - Serving admin privileged API behavior, data source, and metric freshness.
 - A live authenticated Voice chain covering Gateway lease, Call Token, Gemini media, cleanup, and release.
 
+## Chat-call App end-to-end release gate
+
+Any source, configuration, package, data, or deployment change that could affect chat-call setup or media flow remains `App E2E pending` until the exact affected build/profile passes in the installed iPhone App. Browser pages, unit tests, service health, CI, and synthetic Voice-chain probes are necessary prechecks but are not App verification.
+
+Required success path: App call tap → microphone permission/prime → Auth and account bootstrap → credits/entitlements → Gateway lease or explicitly scoped developer-direct route → Voice and Avatar ready → audible opening → real iPhone microphone uplink → audible and visible AI response → clean hangup and lease/GPU release.
+
+The evidence record must include App version/build, package profile, device, environment and Brain/Voice/Gateway/Avatar revision, verification time, outcome, and diagnostic/log reference. A developer-direct build never certifies the production Gateway path. If the gate has not run or any stage fails, `merged`/`deployed` may still be recorded, but `verified`, release-ready, App Store-ready, and task-complete must not be claimed.
+
 ## Update rules
 
 1. Verify the authoritative system for the field being changed: Git for source, App Store Connect for Apple state, Cloud Run and service metadata for runtime, and the approved migration ledger plus live probe for database state.
