@@ -24,6 +24,7 @@ REQUIRED_TOPICS = {
     "ai-provider-reality",
     "backend-architecture",
     "cloudrun-topology",
+    "runtime-evidence",
     "collaboration",
 }
 
@@ -129,6 +130,14 @@ def validate(repo_root: Path = ROOT) -> list[str]:
         errors.append("required authority topics are missing: " + ", ".join(missing_topics))
     if unexpected_topics:
         errors.append("authority topics are not governed: " + ", ".join(unexpected_topics))
+
+    runtime_evidence = topics.get("runtime-evidence", {})
+    if runtime_evidence.get("path") != "docs/RELEASE-EVIDENCE-LATEST.json":
+        errors.append("runtime evidence must be owned by RELEASE-EVIDENCE-LATEST.json")
+    if runtime_evidence.get("volatileMaxAgeHours") != 24:
+        errors.append("runtime evidence authority must declare a 24-hour freshness window")
+    if runtime_evidence.get("captureCommand") != "python scripts/release_evidence.py capture":
+        errors.append("runtime evidence authority must declare the safe capture command")
 
     historical = authority.get("historical")
     if not isinstance(historical, list):

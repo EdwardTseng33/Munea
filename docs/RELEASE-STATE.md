@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-18 01:38 Asia/Taipei`
+Snapshot time: `2026-07-18 02:10 Asia/Taipei`
 
-Source baseline: `origin/main@9f43287`
+Source baseline: `origin/main@b94a631`
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -26,7 +26,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.41 (Build 48)` | `origin/main` 的 package、lockfile、Web changelog 與 iOS Debug／Release 一致；本輪沒有 Archive、upload 或 iPhone 安裝證據 | `package.json`; `web/src/version.js`; Xcode project; PR #177/#178 | 2026-07-18 01:38 |
+| Latest source | `1.0.41 (Build 48)` | `origin/main` 的 package、lockfile、Web changelog、iOS Debug／Release與品質治理一致；本輪沒有 Archive、upload 或 iPhone 安裝證據 | `package.json`; `web/src/version.js`; Xcode project; PR #176/#177/#178 | 2026-07-18 02:10 |
 | Latest uploaded App | `1.0.40 (Build 47)` | STATUS 記錄 IPA 五道防漏、20:44 上傳成功與 Edward iPhone 安裝／啟動成功；不以 later source 覆寫此成品事實 | `STATUS.md`; PR #172/#173 | 2026-07-17 20:44 |
 | App Store selected review lane | Exact Build／Apple state `unknown` | Build 47 已上傳不等於已選用、已送審、審核中或核准；只能由 App Store Connect 或使用者明確證據更新 | App Store Connect required | 2026-07-18 |
 | Draft call／purchase fixes | #174／#175 originally intended `1.0.41 (Build 48)` | main 已獨立前進到同版號／Build；兩個 Draft 的 base 落後，必須先 rebase，才能決定是否併入尚未出貨的 Build 48。#175 目前 stacked on #174 | PR #174; PR #175 | 2026-07-18 01:38 |
@@ -35,13 +35,13 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Environment | Service | Serving identity observed from public endpoint | Interpretation | Evidence time |
 |---|---|---|---|---|
-| production | Brain | `1.0.36@d6a72a16`, `munea-brain-00004-leb` | `/version` 200；落後 latest source `1.0.41`，不能假設含最新定價或 Draft 修正 | 2026-07-18 00:20 |
-| production | Voice | `1.0.31@500c819f`, `munea-voice-00002-sub` | `/version` 200；明顯落後 source，真人通話仍需 App E2E | 2026-07-18 00:20 |
+| production | Brain | `1.0.36@d6a72a16`, `munea-brain-00004-leb` | `/version` 200；落後 latest source `1.0.41`，不能假設含最新定價或 Draft 修正 | 2026-07-18 02:10 |
+| production | Voice | `1.0.31@500c819f`, `munea-voice-00002-sub` | `/version` 200；明顯落後 source，真人通話仍需 App E2E | 2026-07-18 02:10 |
 | production | Call Control / Gateway | release identity `unknown` | 公開 `/health` 無憑證回 401，auth boundary 正常；authenticated lease／cleanup 與 source commit 未證明 | 2026-07-18 00:20 |
-| staging | Brain | `1.0.34@136dc81b`, `munea-brain-staging-00061-dow` | service URL `/version` 200；不是 production，也落後 main | 2026-07-18 00:18 |
-| staging | Voice | `1.0.34@136dc81b`, `munea-voice-staging-00051-qom` | service URL `/version` 200；不是 production，也落後 main | 2026-07-18 00:18 |
+| staging | Brain | `1.0.34@136dc81b`, `munea-brain-staging-00061-dow` | `/version` 200；Cloud Run metadata Ready，必要 env-name／Secret IAM contract PASS；不是 production，也落後 main | 2026-07-18 02:10 |
+| staging | Voice | `1.0.34@136dc81b`, `munea-voice-staging-00051-qom` | `/version` 200；Cloud Run metadata Ready，必要 env-name／Secret IAM contract PASS；不是 production，也落後 main | 2026-07-18 02:10 |
 
-`/version` 是 runtime identity authority。Cloud Run Ready、0% canary、source equivalence 或 App 預設 URL 都不能替代 serving identity 與真實 client trace。
+`/version` 是 runtime identity authority。上述 5 個公開 target 的 safe observation、target-config hash、capture time 與 capture source commit 保存在 [`RELEASE-EVIDENCE-LATEST.json`](./RELEASE-EVIDENCE-LATEST.json)，以 [`RELEASE-EVIDENCE-TARGETS.json`](./RELEASE-EVIDENCE-TARGETS.json) 及 `python scripts/release_evidence.py check --max-age-hours 24` 驗 freshness。Cloud Run Ready、0% canary、source equivalence或 App 預設 URL 都不能替代 serving identity 與真實 client trace。
 
 ## Database and billing policy
 
@@ -59,9 +59,9 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Item | Current state | Interpretation |
 |---|---|---|
-| URL | staging `/admin.html` 回 200 | shell reachable |
+| URL | staging `/admin.html` 回 200；body hash 與必要 asset tokens 已進 manifest | shell reachable；不代表 privileged data 正確 |
 | Serving identity | 跟隨 staging Brain `1.0.34@136dc81b` | 與 latest source `1.0.41` 不同版 |
-| Browser security | CSP 與 `X-Frame-Options: DENY` 已觀察 | 只證明 delivery headers |
+| Browser security | `nosniff`、`DENY`、`no-referrer` 已進 manifest；9 個 console read endpoints 無 token 均回 403 | delivery 與未授權拒絕 PASS；不代表具名 RBAC／MFA |
 | Privileged APIs / data source / freshness | `unknown` | 未以具名 operator 做 read-only smoke；不能把空值當成零事件 |
 | Operator security | per-operator identity／MFA／RBAC `unknown` | shared secret 或登入畫面本身不等於可稽核權限 |
 

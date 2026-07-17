@@ -28,6 +28,8 @@ COPIED_PATHS = [
     "supabase/sql/019_pricing_plus100_pro200.sql",
     "supabase/migration-manifest.json",
     "docs/CURRENT-AUTHORITIES.json",
+    "docs/RELEASE-EVIDENCE-TARGETS.json",
+    "docs/RELEASE-EVIDENCE-LATEST.json",
     "docs/00-總綱-從這裡開始.md",
     "docs/SPEC-沐寧-v1-2026-06-28.md",
     "docs/BILLING-CREDITS-ENTITLEMENT-v1.md",

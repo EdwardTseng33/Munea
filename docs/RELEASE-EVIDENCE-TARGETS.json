@@ -1,0 +1,48 @@
+{
+  "schema": "munea.release-evidence-targets.v1",
+  "targets": [
+    {
+      "id": "production-brain-version",
+      "kind": "service-version",
+      "url": "https://munea-brain-491603544409.asia-east1.run.app/version",
+      "expectedService": "munea-brain",
+      "expectedEnvironment": "production"
+    },
+    {
+      "id": "production-voice-version",
+      "kind": "service-version",
+      "url": "https://munea-voice-491603544409.asia-east1.run.app/version",
+      "expectedService": "munea-voice",
+      "expectedEnvironment": "production"
+    },
+    {
+      "id": "staging-brain-version",
+      "kind": "service-version",
+      "url": "https://munea-brain-staging-491603544409.asia-east1.run.app/version",
+      "expectedService": "munea-brain",
+      "expectedEnvironment": "staging"
+    },
+    {
+      "id": "staging-voice-version",
+      "kind": "service-version",
+      "url": "https://munea-voice-staging-491603544409.asia-east1.run.app/version",
+      "expectedService": "munea-voice",
+      "expectedEnvironment": "staging"
+    },
+    {
+      "id": "staging-admin-shell",
+      "kind": "admin-shell",
+      "url": "https://munea-brain-staging-491603544409.asia-east1.run.app/admin.html",
+      "requiredHeaders": {
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "referrer-policy": "no-referrer"
+      },
+      "requiredBodyTokens": [
+        "Munea",
+        "id=\"pageRoot\"",
+        "src/admin.js"
+      ]
+    }
+  ]
+}

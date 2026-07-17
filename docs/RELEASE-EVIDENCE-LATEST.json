@@ -1,0 +1,89 @@
+{
+  "schema": "munea.release-evidence.v1",
+  "capturedAt": "2026-07-17T18:10:23Z",
+  "capturedBySourceCommit": "b94a631eed37c4c8bf666ba4c52fc8948d10bc7d",
+  "sourceVersion": "1.0.41",
+  "targetConfigSha256": "f46dd0bc7f8d25997c5429d4612ae18b5ce1bfe125ac282992b5b24cfc1311c9",
+  "results": [
+    {
+      "id": "production-brain-version",
+      "kind": "service-version",
+      "url": "https://munea-brain-491603544409.asia-east1.run.app/version",
+      "ok": true,
+      "status": 200,
+      "observed": {
+        "schema": "munea.service-release.v1",
+        "service": "munea-brain",
+        "version": "1.0.36",
+        "commit": "d6a72a16eaef984f8461795eedd6beb06c207777",
+        "revision": "munea-brain-00004-leb",
+        "environment": "production"
+      }
+    },
+    {
+      "id": "production-voice-version",
+      "kind": "service-version",
+      "url": "https://munea-voice-491603544409.asia-east1.run.app/version",
+      "ok": true,
+      "status": 200,
+      "observed": {
+        "schema": "munea.service-release.v1",
+        "service": "munea-voice",
+        "version": "1.0.31",
+        "commit": "500c819f367db689c571968872037bfa0f11a7fa",
+        "revision": "munea-voice-00002-sub",
+        "environment": "production"
+      }
+    },
+    {
+      "id": "staging-brain-version",
+      "kind": "service-version",
+      "url": "https://munea-brain-staging-491603544409.asia-east1.run.app/version",
+      "ok": true,
+      "status": 200,
+      "observed": {
+        "schema": "munea.service-release.v1",
+        "service": "munea-brain",
+        "version": "1.0.34",
+        "commit": "136dc81bb9faf4ca329e12af0fd3e6b4460ef4e6",
+        "revision": "munea-brain-staging-00061-dow",
+        "environment": "staging"
+      }
+    },
+    {
+      "id": "staging-voice-version",
+      "kind": "service-version",
+      "url": "https://munea-voice-staging-491603544409.asia-east1.run.app/version",
+      "ok": true,
+      "status": 200,
+      "observed": {
+        "schema": "munea.service-release.v1",
+        "service": "munea-voice",
+        "version": "1.0.34",
+        "commit": "136dc81bb9faf4ca329e12af0fd3e6b4460ef4e6",
+        "revision": "munea-voice-staging-00051-qom",
+        "environment": "staging"
+      }
+    },
+    {
+      "id": "staging-admin-shell",
+      "kind": "admin-shell",
+      "url": "https://munea-brain-staging-491603544409.asia-east1.run.app/admin.html",
+      "ok": true,
+      "status": 200,
+      "observed": {
+        "headers": {
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY",
+          "referrer-policy": "no-referrer"
+        },
+        "bodySha256": "b7ee85448bf53ad6faca9616846d9c01a711bc84bfbe000ba299e7bf64fc872a",
+        "checkedBodyTokens": [
+          "Munea",
+          "id=\"pageRoot\"",
+          "src/admin.js"
+        ]
+      }
+    }
+  ]
+}
