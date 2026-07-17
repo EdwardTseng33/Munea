@@ -17,6 +17,7 @@ Client 端串接規格：deploy/gateway/CLIENT-INTERFACE.md（給 Codex 接 app.
 import base64
 import hashlib
 import hmac
+import logging
 import os
 import time
 
@@ -24,10 +25,11 @@ from fastapi import FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from call_control_store import CallControlError, SupabaseCallStore, issue_call_token
+from call_control_store import CallControlAuthError, CallControlError, SupabaseCallStore, issue_call_token
 from gateway_core import Gateway, VoicePool
 
 app = FastAPI(title="munea-chat-gateway")
+logger = logging.getLogger("munea.gateway")
 _CORS_ORIGINS = [x.strip() for x in os.environ.get(
     "MUNEA_GATEWAY_CORS_ORIGINS",
     "capacitor://localhost,ionic://localhost,http://localhost,https://localhost",
@@ -181,6 +183,19 @@ def _durable() -> SupabaseCallStore:
     return DURABLE
 
 
+def _authenticate_user(store: SupabaseCallStore, authorization: str):
+    try:
+        return store.authenticate(_bearer(authorization))
+    except CallControlAuthError as exc:
+        # Log only a bounded category. Never write the bearer token or the
+        # upstream Supabase response into Cloud Run logs/client responses.
+        logger.warning("call_auth_rejected reason=%s", exc.reason)
+        raise HTTPException(status_code=401, detail="authentication_required") from exc
+    except CallControlError as exc:
+        logger.error("call_auth_verification_unavailable")
+        raise HTTPException(status_code=503, detail="authentication_verification_unavailable") from exc
+
+
 def _admin_bearer(authorization: str, x_munea_admin_token: str) -> None:
     supplied = ""
     if authorization.lower().startswith("bearer "):
@@ -291,8 +306,8 @@ def metrics(authorization: str = Header(default=""),
 @app.post("/v1/calls")
 def calls_v2(body: CallRequestV2Body, authorization: str = Header(default="")):
     store = _durable()
+    user = _authenticate_user(store, authorization)
     try:
-        user = store.authenticate(_bearer(authorization))
         result = store.request_call(
             user_id=user.user_id,
             person_id=body.person_id,
@@ -309,8 +324,8 @@ def calls_v2(body: CallRequestV2Body, authorization: str = Header(default="")):
 def call_heartbeat_v2(call_id: str, body: CallHeartbeatV2Body,
                       authorization: str = Header(default="")):
     store = _durable()
+    user = _authenticate_user(store, authorization)
     try:
-        user = store.authenticate(_bearer(authorization))
         return store.heartbeat(
             call_id=call_id, lease_version=body.lease_version, component="app",
             event_id=body.event_id, user_id=user.user_id,
@@ -323,8 +338,8 @@ def call_heartbeat_v2(call_id: str, body: CallHeartbeatV2Body,
 def call_release_v2(call_id: str, body: CallLeaseV2Body,
                     authorization: str = Header(default="")):
     store = _durable()
+    user = _authenticate_user(store, authorization)
     try:
-        user = store.authenticate(_bearer(authorization))
         return store.release(
             call_id=call_id, lease_version=body.lease_version,
             event_id=body.event_id, reason=body.reason, user_id=user.user_id,
@@ -336,8 +351,8 @@ def call_release_v2(call_id: str, body: CallLeaseV2Body,
 @app.post("/v1/calls/{call_id}/cancel")
 def call_cancel_v2(call_id: str, authorization: str = Header(default="")):
     store = _durable()
+    user = _authenticate_user(store, authorization)
     try:
-        user = store.authenticate(_bearer(authorization))
         return store.cancel(call_id=call_id, user_id=user.user_id)
     except CallControlError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -347,8 +362,8 @@ def call_cancel_v2(call_id: str, authorization: str = Header(default="")):
 def call_token_v2(call_id: str, body: CallClaimV2Body,
                   authorization: str = Header(default="")):
     store = _durable()
+    user = _authenticate_user(store, authorization)
     try:
-        user = store.authenticate(_bearer(authorization))
         result = store.claim(
             call_id=call_id, lease_version=body.lease_version, user_id=user.user_id,
         )

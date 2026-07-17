@@ -19,6 +19,23 @@ class CallControlError(RuntimeError):
     pass
 
 
+class CallControlAuthError(CallControlError):
+    """A caller credential was rejected; safe to report as HTTP 401."""
+
+    def __init__(self, reason: str = "invalid_token"):
+        self.reason = reason
+        super().__init__(reason)
+
+
+class SupabaseHTTPError(CallControlError):
+    """Supabase returned an HTTP error without leaking its response to clients."""
+
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = int(status_code)
+        self.detail = detail
+        super().__init__(f"Supabase HTTP {self.status_code}: {detail}")
+
+
 def _b64url(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
@@ -95,20 +112,27 @@ class SupabaseCallStore:
                 return json.loads(raw) if raw else {}
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:1000]
-            raise CallControlError(f"Supabase HTTP {exc.code}: {detail}") from exc
+            raise SupabaseHTTPError(exc.code, detail) from exc
         except (urllib.error.URLError, json.JSONDecodeError) as exc:
             raise CallControlError(f"Supabase request failed: {exc}") from exc
 
     def authenticate(self, bearer: str) -> AuthenticatedUser:
         if not bearer:
-            raise CallControlError("bearer token required")
-        data = self._json("GET", self.url + "/auth/v1/user", headers={
-            "apikey": self.anon_key,
-            "Authorization": "Bearer " + bearer,
-        })
+            raise CallControlAuthError("bearer_token_required")
+        try:
+            data = self._json("GET", self.url + "/auth/v1/user", headers={
+                "apikey": self.anon_key,
+                "Authorization": "Bearer " + bearer,
+            })
+        except SupabaseHTTPError as exc:
+            if exc.status_code in (401, 403):
+                detail = exc.detail.lower()
+                reason = "token_expired" if "expired" in detail else "invalid_token"
+                raise CallControlAuthError(reason) from exc
+            raise
         user_id = str((data or {}).get("id") or "")
         if not user_id:
-            raise CallControlError("invalid bearer token")
+            raise CallControlAuthError("invalid_token")
         return AuthenticatedUser(user_id=user_id, email=str((data or {}).get("email") or ""))
 
     def _service_headers(self, prefer: str = "") -> dict[str, str]:

@@ -13,7 +13,9 @@ sys.path.insert(0, str(GATEWAY))
 
 from call_control_store import (  # noqa: E402
     AuthenticatedUser,
+    CallControlAuthError,
     CallControlError,
+    SupabaseHTTPError,
     SupabaseCallStore,
     issue_call_token,
     verify_call_token,
@@ -48,6 +50,31 @@ def test_supabase_service_key_headers():
     legacy = SupabaseCallStore("https://example.supabase.co", "legacy.jwt.service-role")
     legacy_headers = legacy._service_headers()
     assert legacy_headers["Authorization"] == "Bearer legacy.jwt.service-role"
+
+
+def test_auth_error_classification():
+    store = SupabaseCallStore("https://example.supabase.co", "service-role", "publishable")
+
+    def rejected(*_args, **_kwargs):
+        raise SupabaseHTTPError(403, '{"error_code":"bad_jwt","msg":"token is expired"}')
+
+    store._json = rejected
+    try:
+        store.authenticate("expired-secret-token")
+        raise AssertionError("expired user JWT must be classified as an auth rejection")
+    except CallControlAuthError as exc:
+        assert exc.reason == "token_expired"
+        assert "expired-secret-token" not in str(exc)
+
+    def unavailable(*_args, **_kwargs):
+        raise SupabaseHTTPError(500, "temporary upstream failure")
+
+    store._json = unavailable
+    try:
+        store.authenticate("otherwise-valid-token")
+        raise AssertionError("Supabase 500 must remain a service failure")
+    except SupabaseHTTPError as exc:
+        assert exc.status_code == 500
 
 
 class FakeDurable:
@@ -180,6 +207,7 @@ def test_sql_contract():
 def main():
     test_short_lived_call_token()
     test_supabase_service_key_headers()
+    test_auth_error_classification()
     test_http_v2_contract()
     test_sql_contract()
     print("Durable Call Control contract: ALL PASS")
