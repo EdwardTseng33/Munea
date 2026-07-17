@@ -2,6 +2,7 @@
 
 import asyncio
 import importlib.util
+import os
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -35,6 +36,99 @@ def main():
             raise AssertionError("unsafe Voice canary URL was accepted: " + unsafe)
         except ValueError:
             pass
+
+    captured_request = {}
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b'{"ok":true}'
+
+    original_urlopen = probe.urllib.request.urlopen
+    try:
+        def fake_urlopen(request, timeout):
+            captured_request.update(headers=dict(request.header_items()), timeout=timeout)
+            return FakeResponse()
+
+        probe.urllib.request.urlopen = fake_urlopen
+        status, payload = probe.get_json("https://gateway.example/health", 7, bearer="user-access-token")
+        assert status == 200 and payload["ok"] is True
+        assert captured_request["headers"]["Authorization"] == "Bearer user-access-token"
+        assert captured_request["timeout"] == 7
+    finally:
+        probe.urllib.request.urlopen = original_urlopen
+
+    sanitized = probe.ProbeReport("production", "2026-07-15T00:00:00Z")
+    original_get_json = probe.get_json
+    try:
+        probe.get_json = lambda *_args, **_kwargs: (200, {"ok": True, "durable_ready": True})
+        probe.probe_http_health(
+            sanitized, "gateway_health", "https://gateway.example", "", 7,
+            durable=True, bearer="user-access-token",
+        )
+    finally:
+        probe.get_json = original_get_json
+    assert sanitized.stages[-1].status == "PASS"
+
+    original_post_json = probe.post_json
+    malformed_calls = []
+    try:
+        def malformed_post(url, payload, timeout, bearer=""):
+            malformed_calls.append((url, payload, bearer))
+            if url.endswith("/v1/calls"):
+                return 200, {
+                    "status": "connect",
+                    "call_id": "call-malformed",
+                    "lease_version": 7,
+                    "voice": {"url": "wss://voice.example"},
+                    "worker": {"url": "https://avatar.example"},
+                }
+            assert url.endswith("/v1/calls/call-malformed/release")
+            return 200, {"ok": True}
+
+        probe.post_json = malformed_post
+        malformed_report = probe.ProbeReport("production", "2026-07-15T00:00:00Z")
+        assert probe.acquire_gateway_lease(
+            malformed_report, "https://gateway.example", "user-access-token", 2,
+        ) is None
+    finally:
+        probe.post_json = original_post_json
+    assert malformed_calls[-1][0].endswith("/v1/calls/call-malformed/release")
+    assert malformed_calls[-1][1]["lease_version"] == 7
+    assert any(stage.name == "gateway_cleanup" and stage.status == "PASS" for stage in malformed_report.stages)
+
+    queued_calls = []
+    original_monotonic = probe.time.monotonic
+    original_sleep = probe.time.sleep
+    ticks = iter((0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0))
+    try:
+        def queued_post(url, payload, timeout, bearer=""):
+            queued_calls.append((url, payload, bearer))
+            if url.endswith("/v1/calls"):
+                return 200, {"status": "queued", "call_id": "call-queued"}
+            assert url.endswith("/v1/calls/call-queued/cancel")
+            return 200, {"ok": True}
+
+        probe.post_json = queued_post
+        probe.time.monotonic = lambda: next(ticks, 2.0)
+        probe.time.sleep = lambda _seconds: None
+        queued_report = probe.ProbeReport("production", "2026-07-15T00:00:00Z")
+        assert probe.acquire_gateway_lease(
+            queued_report, "https://gateway.example", "user-access-token", 1,
+        ) is None
+    finally:
+        probe.post_json = original_post_json
+        probe.time.monotonic = original_monotonic
+        probe.time.sleep = original_sleep
+    assert queued_calls[-1][0].endswith("/v1/calls/call-queued/cancel")
+    assert any(stage.name == "gateway_cleanup" and stage.status == "PASS" for stage in queued_report.stages)
 
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -76,6 +170,12 @@ def main():
     assert production.first_failure == ""
     assert production.first_blocker == "gateway_lease"
 
+    unreleased = probe.ProbeReport("production", "2026-07-15T00:00:00Z")
+    for stage in ("gateway_health", "gateway_lease", "voice_ready", "avatar_health"):
+        unreleased.add(stage, "PASS", started)
+    unreleased.add("gateway_release", "FAIL", started, "release failed")
+    assert unreleased.passed is False and unreleased.first_failure == "gateway_release"
+
     seen = {}
 
     def fake_profile(profile, root):
@@ -86,7 +186,8 @@ def main():
             "app_key": "public-client-key",
         }
 
-    def fake_health(report, name, base_url, app_key, timeout, durable=False):
+    def fake_health(report, name, base_url, app_key, timeout, durable=False, bearer=""):
+        seen[name + "_bearer"] = bearer
         report.add(name, "PASS", probe.time.monotonic(), "ok", base_url)
 
     def fake_lease(report, gateway_url, access_token, timeout):
@@ -105,6 +206,7 @@ def main():
 
     def fake_release(report, gateway_url, access_token, lease, timeout):
         seen["released"] = lease["call_id"]
+        report.add("gateway_release", "PASS", probe.time.monotonic(), "released", gateway_url)
 
     probe.load_repo_profile = fake_profile
     probe.probe_http_health = fake_health
@@ -119,13 +221,67 @@ def main():
         avatar_url="",
         gateway_url="",
         app_key="",
-        access_token="real-access-token",
         timeout=12,
     )
-    canary_report = asyncio.run(probe.run_probe(args))
-    assert canary_report.passed is True
-    assert seen == {"voice_url": canary, "call_token": "signed-call-token", "released": "call-1"}
+    previous_access_token = os.environ.get("MUNEA_ACCESS_TOKEN")
+    os.environ["MUNEA_ACCESS_TOKEN"] = "real-access-token"
+    try:
+        canary_report = asyncio.run(probe.run_probe(args))
+        assert canary_report.passed is True
+    finally:
+        if previous_access_token is None:
+            os.environ.pop("MUNEA_ACCESS_TOKEN", None)
+        else:
+            os.environ["MUNEA_ACCESS_TOKEN"] = previous_access_token
+    assert seen == {
+        "gateway_health_bearer": "real-access-token",
+        "avatar_health_bearer": "",
+        "voice_url": canary,
+        "call_token": "signed-call-token",
+        "released": "call-1",
+    }
     assert any(stage.name == "voice_route" and stage.status == "PASS" for stage in canary_report.stages)
+
+    async def failing_voice_ready(report, voice_url, app_key, timeout, call_token=""):
+        raise RuntimeError("unexpected Voice failure")
+
+    seen.clear()
+    probe.probe_voice_ready = failing_voice_ready
+    os.environ["MUNEA_ACCESS_TOKEN"] = "real-access-token"
+    try:
+        try:
+            asyncio.run(probe.run_probe(args))
+            raise AssertionError("unexpected Voice failure should propagate")
+        except RuntimeError as error:
+            assert str(error) == "unexpected Voice failure"
+    finally:
+        if previous_access_token is None:
+            os.environ.pop("MUNEA_ACCESS_TOKEN", None)
+        else:
+            os.environ["MUNEA_ACCESS_TOKEN"] = previous_access_token
+    assert seen["released"] == "call-1"
+    assert seen["gateway_health_bearer"] == "real-access-token"
+    assert "avatar_health_bearer" not in seen
+
+    wrapper = SOURCE.with_name("voice-chain-auth-probe.ps1").read_text(encoding="utf-8")
+    assert "Refusing to run while MUNEA_ACCESS_TOKEN is already set" in wrapper
+    assert "auth/v1/admin/users" in wrapper and "grant_type=password" in wrapper
+    assert 'action = "create"' in wrapper and 'purpose = "voice_chain_probe"' in wrapper
+    assert 'probe_marker = $probeMarker' in wrapper
+    assert 'accountName = $expectedAccountName' in wrapper
+    assert "account_members?account_id=eq.$accountIdFilter&user_id=eq.$userIdFilter" in wrapper
+    assert "accounts?id=eq.$accountIdFilter&select=id,name" in wrapper
+    assert 'if ($accountId -and $accountDeleteAuthorized)' in wrapper
+    assert 'user_metadata.probe_marker -ne $probeMarker' in wrapper
+    assert wrapper.index("Verify isolated account ownership before cleanup") < wrapper.index("Delete isolated staging account")
+    assert 'SetEnvironmentVariable("MUNEA_ACCESS_TOKEN", $accessToken, "Process")' in wrapper
+    assert 'SetEnvironmentVariable("MUNEA_ACCESS_TOKEN", $null, "Process")' in wrapper
+    assert 'SetEnvironmentVariable("MUNEA_GATEWAY_ADMIN_KEY", $null, "Process")' in wrapper
+    assert "--access-token" not in wrapper
+    assert "--access-token" not in SOURCE.read_text(encoding="utf-8")
+    assert "munea-gateway-admin-key" not in wrapper
+    assert "VoiceCanaryUrl must be a query-free wss://canary-*" in wrapper
+    assert "fespbkdwafueyonppzwq.supabase.co" in wrapper
     print("Voice chain probe contracts: PASS")
 
 

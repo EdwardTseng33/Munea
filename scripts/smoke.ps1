@@ -2096,6 +2096,12 @@ if ($null -eq $doctorJson.tableChecks) { throw "Supabase doctor missing live tab
 if ($doctorJson.hasServiceRoleKey -and ($doctorJson | ConvertTo-Json -Compress) -match "secret-test-key") { throw "Supabase doctor leaked service key" }
 Pass "Environment loader and Supabase doctor are safe"
 
+& $Python -B (Join-Path $root "scripts/test_supabase_doctor.py")
+if ($LASTEXITCODE -ne 0) {
+  throw "Supabase doctor contract tests failed with exit code $LASTEXITCODE"
+}
+Pass "Supabase doctor error classification contract"
+
 Step "Billing and entitlement contract"
 Invoke-PythonBlock @'
 import os, sys, tempfile
@@ -3182,6 +3188,21 @@ if ($LASTEXITCODE -ne 0) {
   throw "App Call Control contract failed with exit code $LASTEXITCODE"
 }
 Pass "App Call Control production and development paths are valid"
+
+# Keep these auth-boundary tests in smoke:no-api so PR CI executes them.
+Step "Voice chain probe security contract"
+& $Python "scripts/test_voice_chain_probe.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "Voice chain probe security contract failed with exit code $LASTEXITCODE"
+}
+Pass "Voice chain probe cleanup and credential boundaries are valid"
+
+Step "Gateway HTTP auth surface contract"
+& $Python "scripts/test_gateway_http.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "Gateway HTTP auth surface contract failed with exit code $LASTEXITCODE"
+}
+Pass "Gateway user health redaction and admin boundaries are valid"
 
 Step "Git diff check"
 git diff --check

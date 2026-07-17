@@ -64,6 +64,57 @@ def main():
     r = client.post("/v1/call/request", params={"client_id": "overflow"})
     assert r.json()["status"] == "reject" and r.json()["reason"] == "queue_full"
 
+    class HealthDurable:
+        def __init__(self):
+            self.authenticated = []
+
+        def authenticate(self, bearer):
+            self.authenticated.append(bearer)
+            if bearer != "valid-user-token":
+                raise gs.CallControlError("invalid bearer token")
+            return object()
+
+        def snapshot(self):
+            return {"active_calls": 0, "queue_depth": 0}
+
+    original_gate = gs._GATE
+    original_admin_gate = gs._ADMIN_GATE
+    original_durable = gs.DURABLE
+    try:
+        durable = HealthDurable()
+        gs._GATE = "private-legacy-key"
+        gs._ADMIN_GATE = "private-admin-key"
+        gs.DURABLE = durable
+
+        denied = client.get("/health")
+        assert denied.status_code == 401
+        wrong_key = client.get("/health", params={"key": "public-app-key"})
+        assert wrong_key.status_code == 401
+        invalid_user = client.get("/health", headers={"Authorization": "Bearer invalid-user-token"})
+        assert invalid_user.status_code == 401
+
+        user_health = client.get("/health", headers={"Authorization": "Bearer valid-user-token"})
+        assert user_health.status_code == 200 and user_health.json()["durable_ready"] is True
+        assert user_health.json() == {"ok": True, "durable_ready": True}
+        for sensitive_key in ("snapshot", "engine", "mode", "durable_error"):
+            assert sensitive_key not in user_health.json()
+
+        user_metrics = client.get("/metrics", headers={"Authorization": "Bearer valid-user-token"})
+        assert user_metrics.status_code == 403
+        user_admin = client.post("/v1/internal/reap", headers={"Authorization": "Bearer valid-user-token"})
+        assert user_admin.status_code == 403
+
+        admin_health = client.get("/health", headers={"Authorization": "Bearer private-admin-key"})
+        assert admin_health.status_code == 200 and admin_health.json()["ok"] is True
+        assert "snapshot" in admin_health.json() and admin_health.json()["mode"] == "durable"
+        client_health = client.get("/health", params={"key": "private-legacy-key"})
+        assert client_health.status_code == 200 and "snapshot" in client_health.json()
+        assert durable.authenticated == ["invalid-user-token", "valid-user-token"]
+    finally:
+        gs._GATE = original_gate
+        gs._ADMIN_GATE = original_admin_gate
+        gs.DURABLE = original_durable
+
     print("Gateway HTTP-layer smoke test: ALL PASS")
 
 

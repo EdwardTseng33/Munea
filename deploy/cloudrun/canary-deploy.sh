@@ -11,7 +11,10 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 REGION="asia-east1"
 PROJECT="${MUNEA_GCP_PROJECT:-gen-lang-client-0229303523}"
-VOICE_CALL_CONTROL_REQUIRED="${MUNEA_VOICE_CALL_CONTROL_REQUIRED:-1}"
+# 2026-07-16 事故夜鐵律（STATUS 102 號⑤）：預設 0＝雙門（有證驗證、沒證走通行碼薄門）。
+# 現役 App（含 Edward 開發包）走薄門直連；改回 1（一律要證）的時機＝App 全面走總機
+# 領證的包出貨且真人驗過、Edward 拍板後。7/16 18:04 事故＝部署時吃到舊預設 1、薄門被焊死。
+VOICE_CALL_CONTROL_REQUIRED="${MUNEA_VOICE_CALL_CONTROL_REQUIRED:-0}"
 case "$VOICE_CALL_CONTROL_REQUIRED" in
   0|1) ;;
   *) echo "⛔ MUNEA_VOICE_CALL_CONTROL_REQUIRED 只能是 0 或 1"; exit 1 ;;

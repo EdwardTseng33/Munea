@@ -159,7 +159,10 @@ expect(canaryDeploy.includes('MUNEA_GCP_PROJECT') && canaryDeploy.includes('--pr
 expect(canaryDeploy.includes('MUNEA_APP_KEY') && canaryDeploy.includes('--no-traffic'), 'canary deploy is missing its app gate or zero-traffic safety gate');
 expect(canaryDeploy.includes('fespbkdwafueyonppzwq') && !canaryDeploy.includes('uhmpmystjjdqqxlpsthc'), 'Cloud Run canary deploy is not pinned to Tokyo Supabase');
 expect(canaryDeploy.includes('MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest') && canaryDeploy.includes('MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging'), 'Voice canary deploy is missing the Brain memory channel');
-expect(canaryDeploy.includes('MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest') && canaryDeploy.includes('MUNEA_VOICE_CALL_CONTROL_REQUIRED:-1') && canaryDeploy.includes('MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED'), 'Voice canary deploy is missing safe-default Call Control verification');
+// 2026-07-16 事故夜改判（STATUS 102 號⑤ · Edward 拍板）：預設 0＝雙門（帶證驗證、沒證走通行碼薄門）。
+// 舊預設 1 在 18:04 部署時把現役 App 的直連薄門焊死＝聊聊全面撥不通 70 分鐘。
+// 收緊回 1 的時機＝App 全面走總機領證的包出貨且真人驗過、Edward 再拍板（屆時改回此鎖）。
+expect(canaryDeploy.includes('MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest') && canaryDeploy.includes('MUNEA_VOICE_CALL_CONTROL_REQUIRED:-0') && canaryDeploy.includes('MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED'), 'Voice canary deploy is missing dual-door Call Control default (STATUS 102-5)');
 expect(canaryDeploy.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01'), 'Voice canary deploy is not aligned with the formal Gateway shard');
 expect(canaryDeploy.includes('RELEASE_COMMIT="$(git rev-parse HEAD)"') && canaryDeploy.includes('git archive --format=tar "$RELEASE_COMMIT"'), 'canary deploy release commit is not tied to its source archive');
 expect(canaryDeploy.includes('require(process.argv[1]).version') && (canaryDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length === 2, 'canary deploy does not inject the committed package version into Brain and Voice');
