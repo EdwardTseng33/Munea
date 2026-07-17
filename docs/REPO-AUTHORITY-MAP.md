@@ -50,6 +50,7 @@ Confirmed owners: none. Role names below are suggested accountability roles, not
 
 | Scope | File | Level | Current interpretation |
 |---|---|---|---|
+| Cloud Run service topology | `deploy/cloudrun/SERVICE-TOPOLOGY.md` | `authority` for service roles and repo entrypoints | Defines production/staging names, active deploy/promote lanes, retired paths, release identity and rollback rules. Live Cloud Run state and `/version` remain runtime authority. |
 | Cross-surface release truth | `docs/RELEASE-STATE.md` | `authority` | Current version, App lanes, live revisions, DB frontier, admin state, conflicts, and unknowns. Volatile facts require timestamps. |
 | Product implementation alignment | `docs/PRODUCT-ALIGNMENT-REGISTER.md` | `authority` for alignment mapping and gates | Maps product promises to source, deployment evidence, verification state, and next gate. Exact versions and runtime revisions are timestamped references governed by `docs/RELEASE-STATE.md`; this register cannot override App Store Connect, Cloud Run, or the database ledger. |
 | Repo cleanup evidence | `docs/REPO-CLEANUP-INVENTORY.md` | `snapshot` / supporting | Caller and lifecycle inventory for safe cleanup. It grants no permission to delete, move, or archive a path. |
@@ -94,7 +95,7 @@ The first cleanup phase must not:
 ## Safe follow-up queue
 
 1. Refresh `docs/APP-STORE-PRODUCTION-READINESS.md` against App Store Connect and the selected review Build in a dedicated PR.
-2. Resolve the conflicting Cloud Run topology comments and scripts in a Platform-owned PR with routing tests; do not delete a script based on wording alone.
+2. Keep the Cloud Run topology contract and retired-entrypoint guards in CI; any later script deletion requires caller evidence and a separate Platform review.
 3. Refresh `docs/CURRENT-DEVELOPMENT-PLAN.md`, `README.md`, and `BACKLOG.md` only after each topic owner confirms scope and successor documents.
 4. Add a machine-readable release-state schema and CI validator after the manual fields stabilize.
 5. Establish confirmed ownership / `CODEOWNERS` separately; do not infer people from historical authorship.

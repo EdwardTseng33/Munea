@@ -1,4 +1,6 @@
-# ☁️ 沐寧引擎 · 雲端搬家配方（Google Cloud Run · 台灣機房）
+# ☁️ 沐寧引擎 · 雲端搬家配方（歷史首搬紀錄）
+
+> ⛔ **Historical / do not execute（2026-07-17）**：本文保留 2026-07-08/09 首搬背景，以下命令缺少目前要求的 committed-source、0% canary、exact revision、project 與 release identity 安全閘。現行服務角色與唯一操作入口請看 [`SERVICE-TOPOLOGY.md`](./SERVICE-TOPOLOGY.md)。
 
 > 2026-07-08 蘇菲備。目標：聊聊引擎從「家裡電腦」搬進 Google 台灣機房（彰化 asia-east1），成為正式服務。
 > 雲端專案已就位：**Munea**（編號 `gen-lang-client-0229303523`、帳單與 NT$500 警戒已設）。

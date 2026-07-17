@@ -18,7 +18,7 @@ async function main() {
 
   // 契約 1：巡邏名單涵蓋現役後端服務＋公開網站
   const names = TARGETS.map((t) => t.name).join("|");
-  check("名單含 Brain（現役後端）", names.includes("Brain 管家腦"));
+  check("名單含 Brain 測試環境", names.includes("Brain 測試環境"));
   check("名單含 Voice", names.includes("Voice"));
   check("名單含 Gateway 總機", names.includes("Gateway 通話總機"));
   check("名單含容量看守", names.includes("容量看守"));
@@ -43,7 +43,7 @@ async function main() {
   check("Gateway 回 200→異常（門沒鎖）", gwOpen.ok === false);
 
   // 契約 3：Brain 要 200＋JSON ok=true
-  const brain = TARGETS.find((t) => t.name.includes("Brain 管家腦"));
+  const brain = TARGETS.find((t) => t.name.includes("Brain 測試環境"));
   const brainOk = await checkTarget(brain, async () => fakeResponse(200, '{"ok": true}'), 0);
   check("Brain 200+ok=true→正常", brainOk.ok === true);
   const brainBad = await checkTarget(brain, async () => fakeResponse(200, '{"ok": false}'), 0);
@@ -65,7 +65,7 @@ async function main() {
   const failures = results.filter((r) => !r.ok);
   check("巡邏結果只挑出倒的", failures.length === 1 && failures[0].name.includes("Brain"));
   const text = buildAlertText(failures);
-  check("告警文字含服務名", text.includes("Brain 管家腦"));
+  check("告警文字含服務名", text.includes("Brain 測試環境"));
   check("告警文字含網址", text.includes(brain.url));
 
   // 契約 7：發告警走 webhook POST；沒設 webhook 回 false 不炸

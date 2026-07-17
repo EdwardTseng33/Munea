@@ -17,6 +17,19 @@ param(
   [switch]$DryRun
 )
 
+# RETIRED / FAIL-CLOSED (2026-07-17)
+# This file remains at its historical path so old npm commands and bookmarks fail with
+# an actionable message instead of silently using a second deployment lane. The code
+# below is intentionally unreachable until it is removed in a separately reviewed cleanup.
+Write-Error @"
+This staging deploy entrypoint is retired because it bypasses the canonical 0% canary gate.
+No Cloud Run command was executed.
+Use: bash deploy/cloudrun/canary-deploy.sh brain|voice
+Then use the exact promote command printed by that script.
+Authority: deploy/cloudrun/SERVICE-TOPOLOGY.md
+"@
+exit 1
+
 $ErrorActionPreference = "Stop"
 Import-Module Microsoft.PowerShell.Management
 Import-Module Microsoft.PowerShell.Utility

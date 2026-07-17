@@ -25,13 +25,13 @@ export const TARGETS = [
     expect: [200], // websocket 服務的 HTTP 門面；能回頁面＝程序活著
   },
   {
-    name: "Brain 管家腦（munea-brain-staging＝現役 App 後端）",
+    name: "Brain 測試環境（munea-brain-staging）",
     url: "https://munea-brain-staging-491603544409.asia-east1.run.app/healthz/",
     expect: [200],
     check: "json-ok", // 回應要是 JSON 且 ok=true（新舊部署版本都支援 /healthz/）
   },
   {
-    name: "Voice 語音橋",
+    name: "Voice 測試環境（munea-voice-staging）",
     url: "https://munea-voice-staging-491603544409.asia-east1.run.app/",
     expect: [200], // websocket 服務的 HTTP 門面；能回頁面＝程序活著
   },
