@@ -5,6 +5,7 @@
 > **這是聊聊服務的架構歷史文件。**
 > 最後更新：2026-07-08 深夜（Windows 蘇菲 · Edward 交辦「整份記錄好、讓每次迭代都知道狀態與方向」）
 > **使用規矩**：任何人（兩台電腦、任何 AI session）要動聊聊之前先讀這份；改完必須回來更新「迭代狀態表」那節＋ STATUS.md，然後上傳。規則類改動要 Edward 拍板。
+> **永久 App Gate（2026-07-17 Edward 拍板）**：任何可能影響聊聊撥通的功能開發、優化、設定或部署，最後都必須在安裝版 iPhone App 完成端到端撥通驗收；瀏覽器、單元測試、服務健康與合成探針不能代替。沒有 App 證據只能標 `App E2E pending`，不得宣稱完成或可上線。
 > **分類原則（2026-07-08 起）**：每個修改先問「引擎的事（語音/記憶/查證機制→改一次全市場受益）還是場景包的事（話術/角色/邊界文字→改文字包不碰引擎）」——拆法見《聊聊模組化-多市場應用藍圖》。
 
 ---
@@ -127,6 +128,18 @@ engine/live_voice_server.py（:8201）      engine/server.py（:8200）
 - 唯一真相：`方案架構-定案-2026-07-07.md`（改方案先改那份）
 
 ## 11. 品質驗收怎麼跑（每次迭代照做）
+
+### 11.1 必做：安裝版 iPhone App 撥通 Gate
+
+只要變更可能碰到 App／Auth／帳戶初始化／點數／Gateway／Voice／Avatar／GPU／網址環境／權限／CORS／部署／fallback，完成前都必須用受影響的實際 profile 驗收：
+
+`App 內按通話 → 麥克風可用 → 登入／bootstrap／點數通過 → Gateway 領席或已聲明的直連路徑 → Voice＋Avatar ready → 聽到開場 → iPhone 真實上行一句話 → AI 聲音與畫面／字幕回到 App → 掛斷並釋放 lease／GPU 席位`。
+
+- developer-direct 只能證明直連測試路；涉及正式路徑時，必須另驗真登入＋Gateway 或精確 Release binary。
+- 記錄版本／Build、profile、環境、Brain／Voice／Gateway／Avatar revision、iPhone 型號、時間、結果與診斷證據。
+- 任何一站失敗都要定位精確 blocker；不可用「其他測試全綠」抵銷。沒有實體 App 可測時只標 `App E2E pending`。
+
+### 11.2 自動化與探針前置檢查
 
 ```bash
 # 1. 開語音橋（吃 .env.local 鑰匙）
