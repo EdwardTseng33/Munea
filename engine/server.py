@@ -346,6 +346,12 @@ ADMIN_POST_PATHS = {
     "/admin/voice-diagnostics",
     "/admin/notifications/drain",
     "/admin/login",
+    # 維護入口（2026-07-17 補）：晨料備製與記憶整理是定時鬧鐘（Cloud Scheduler）用
+    # 管理鑰匙呼叫的，沒有用戶登入證可帶——漏列在這裡＝鬧鐘永遠被會員門擋下。
+    # 三個入口的處理端本來就各自再驗一次管理鑰匙（admin_authorized），不是開放門。
+    "/admin/daily-briefing",
+    "/admin/memory-consolidate",
+    "/admin/memory-living-profile",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
