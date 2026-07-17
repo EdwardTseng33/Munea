@@ -662,9 +662,25 @@ def archive_conversation_summary(summary_id):
 LIVING_PROFILE_PATH = os.environ.get("MUNEA_LIVING_PROFILE_PATH") or os.path.join(HERE, "living_profile.json")
 
 
-def load_living_profile():
+def load_living_profile(person_id=None):
+    """「這位長輩現在是誰」的側寫——只能給本人看。
+
+    這支原本沒有「是誰的」概念：一個檔、全站共用、每一輪都塞進她腦裡。
+    而檔案裡躺的是示範假資料（一位 72 歲、有高血壓和膝蓋痛的奶奶）——
+    等於誰來聊天，她都把那個人的病史當成對方的講回去。第二個用戶一進來就是真的外洩。
+
+    改成蓋章制：側寫存的時候要蓋「這是誰的」；沒蓋章、或蓋的是別人，一律不給。
+    寧可她說「我還不夠認識你」，也不能拿別人的高血壓當成他的。
+    """
     prof = read_json_file(LIVING_PROFILE_PATH, {})
-    return prof if isinstance(prof, dict) else {}
+    if not isinstance(prof, dict) or not prof:
+        return {}
+    person_id = person_id or _current_person_id()
+    if not person_id:
+        return {}                      # 認不出是誰 → 不給任何人的側寫
+    if prof.get("personId") != person_id:
+        return {}                      # 沒蓋章 or 是別人的 → 不給
+    return prof
 
 
 def save_living_profile(profile):
@@ -684,9 +700,78 @@ def refresh_living_profile(person_id=None):
         profile = {}
     if profile:
         profile["updatedAt"] = utc_now()
+        # 蓋章「這張側寫是誰的」——沒蓋章的側寫不會被端到任何人面前（見 load_living_profile）
+        profile["personId"] = person_id or _current_person_id() or ""
         save_living_profile(profile)
     return {"ok": bool(profile), "brain": "butler", "action": "living_profile",
             "profile": profile, "basedOnMemories": len(items)}
+
+
+# 她看不到身體數據時的圍籬——寫死一份在這，給「連 health_context 都掛了」時當保險。
+# 為什麼要有備份：這道圍籬是唯一擋著她憑空編「你今天血壓有點高喔」的東西，
+# 不能因為某支程式壞掉就消失。失敗只能往「她不知道」倒。
+HEALTH_FENCE_WHEN_BLIND = (
+    "（他的身體狀況：**你現在什麼都看不到**——他的血壓、心跳、血氧、睡眠、吃藥紀錄"
+    "都沒有傳到你這裡。所以**絕對不要講任何他的健康數字、不要說「你今天血壓有點高」"
+    "「你最近睡不好喔」這種你根本不知道的話**（講了就是捏造，長輩會當真、傷害信任）。"
+    "他自己告訴你的、或你們聊過的，才可以接話。想知道就問他。）"
+)
+
+
+def _current_person_id():
+    """現在在跟誰講話——只認已驗證的身分，不認外面傳進來的欄位（那可以偽造）。"""
+    return (REQUEST_DATA_IDENTITY.get() or {}).get("personId") or None
+
+
+def _current_family_group_id():
+    return (REQUEST_DATA_IDENTITY.get() or {}).get("familyGroupId") or None
+
+
+def load_health_context(person_id=None, family_group_id=None):
+    """這個人自己的身體狀況 → 她心裡知道的事實（檔位 2「知道但不多嘴」）。
+
+    資料其實早就在了：手機把 Apple 健康的血壓/心跳/血氧/睡眠/步數同步進家庭帳本、
+    用藥有自己的紀錄、心情趨勢也算好了。問題是這些全都是「存起來給家人看」的——
+    水管是「長輩 → 雲端 → 家人畫面」，AI 站在水管外面。這支就是把她接上去。
+
+    兩條原則：
+    - 認不出是誰就回空。寧可她說「我不知道」，也不能把別人的血壓當成他的。
+    - 哪一段撈不到就當那段沒有。上游圍籬會據此告訴她「這塊你不知道、不准編」。
+    """
+    person_id = person_id or _current_person_id()
+    if not person_id:
+        return {"facts": [], "notable": [], "hasData": False}
+    family_group_id = family_group_id or _current_family_group_id()
+
+    try:
+        import perception_engine
+        today = (perception_engine.now_context() or {}).get("date") or ""
+    except Exception:
+        today = ""
+
+    vitals_entry, doses, trend = None, None, None
+    try:
+        state = family_state_response({"action": "load", "familyGroupId": family_group_id or "shared"})
+        vitals = (state.get("state") or {}).get("vitals") or {}
+        if isinstance(vitals, dict):
+            vitals_entry = vitals.get(person_id)
+    except Exception as e:
+        log_fallback_exception("load vitals for health context", e)
+    try:
+        doses = load_medication_doses(person_id=person_id, start_date=today, end_date=today, limit=50)
+    except Exception as e:
+        log_fallback_exception("load medication doses for health context", e)
+    try:
+        trend = wellbeing_trend_response({"personId": person_id, "days": 7})
+    except Exception as e:
+        log_fallback_exception("load wellbeing trend for health context", e)
+
+    try:
+        import health_context
+        return health_context.build(vitals_entry=vitals_entry, doses=doses, mood_trend=trend, today=today)
+    except Exception as e:
+        log_fallback_exception("build health context", e)
+        return {"facts": [], "notable": [], "hasData": False}
 
 
 def _invalidate_memory_items(ids):
@@ -2828,6 +2913,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "memories": memories,
         "perception": perception,
         "livingProfile": load_living_profile(),
+        "healthContext": load_health_context(person_id=data.get("personId")),  # 他自己的身體數據（檔位 2）
         "now": now_ctx,                                # 真時間（台灣、時段、語氣提示）
         "dailyBriefing": briefing,                     # 今日簡報（清晨備好的真天氣/空品/行程/暖聞）
         "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
@@ -2892,6 +2978,14 @@ def reply_context_instruction(context):
         "（這位長輩現在是誰（活的側寫，拿來自然關心、別照唸出來）：\n"
         + "\n".join(f"- {p}" for p in living_parts) + "\n）"
     ) if living_parts else ""
+    try:
+        import health_context as _hc
+        health_line = _hc.instruction_block(context.get("healthContext") or {})
+    except Exception as e:
+        # 這裡壞掉就退回「你什麼都看不到」那道圍籬——寫死在這、不依賴剛剛壞掉的那支。
+        # 失敗方向只能往「她不知道」倒，絕不能往「她以為自己看得到」倒。
+        log_fallback_exception("render health context block", e)
+        health_line = HEALTH_FENCE_WHEN_BLIND
     memory_lines = [
         f"- {item.get('type')}: {item.get('content')}"
         for item in memories[:5]
@@ -2942,6 +3036,7 @@ def reply_context_instruction(context):
         culture_line,
         "（智慧鏡頭：可溫柔用台灣諺語、生活智慧、簡單的反思提問陪伴；對方有信仰才順著其信仰語彙。絕不捏造經文、不強加宗教、不說教；危機時安全規則優先於一切。）",
         living_line,
+        health_line,
         "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
         "（即時感知需求：\n" + ("\n".join(domain_lines) if domain_lines else "- 此輪不需要外部即時事實。") + "\n）",
         "（醫療紅線，最高優先：不診斷、不開藥、不建議劑量或顆數、不說停藥換藥、不說不用看醫生。被問到藥怎麼吃、吃幾顆、能不能吃、要不要停，一律溫柔回：這要請醫生或藥師決定，並主動提議幫忙記下來回診時問。身體急症徵兆一律提醒聯絡 119。不主動顯示逐字稿；沒有資料來源就說不能確認、不編造。）",
