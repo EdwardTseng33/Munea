@@ -75,8 +75,16 @@ fi
 
 if ! cmp -s "$ROOT/web/index.html" "$APP_PATH/public/index.html" \
   || ! cmp -s "$ROOT/web/src/app.js" "$APP_PATH/public/src/app.js" \
+  || ! cmp -s "$ROOT/web/src/auth.js" "$APP_PATH/public/src/auth.js" \
+  || ! cmp -s "$ROOT/web/src/auth-config.js" "$AUTH_CONFIG_PATH" \
   || ! cmp -s "$ROOT/web/src/styles.css" "$APP_PATH/public/src/styles.css"; then
   echo "FAIL exported IPA does not contain the latest Web design assets."
+  exit 1
+fi
+
+if ! grep -Fq 'fespbkdwafueyonppzwq' "$AUTH_CONFIG_PATH" \
+  || grep -Fq 'uhmpmystjjdqqxlpsthc' "$AUTH_CONFIG_PATH"; then
+  echo "FAIL exported IPA auth configuration is not pinned to Tokyo Supabase."
   exit 1
 fi
 
@@ -115,7 +123,7 @@ if [ "$DEVICE_FAMILIES" != '[1]' ]; then
   exit 1
 fi
 
-echo "PASS IPA excludes development fixtures and contains the latest Web design assets."
+echo "PASS IPA excludes development fixtures and contains the latest Web and authentication assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS IPA supports iPhone only."
