@@ -126,6 +126,26 @@ assert(/#planClose'\)\.addEventListener\('click', \(\) => \{\s*hidePlanConfirm\(
 assert(/#managePlanBtn'\)\.addEventListener\('click', \(\) => \{\s*hidePlanConfirm\(\);/.test(app), 'Opening the plan page must start from a clean confirm state');
 assert(app.includes("body.style.paddingBottom = (bar.offsetHeight + 18)"), 'Content must be padded so the fixed bar never buries the subscription terms');
 
+// 免費不能買點數（Edward 2026-07-17 拍板 Ⓐ）：免費走一次性 5 分鐘體驗、不吃點數，
+// 賣他點數＝收了錢給不出東西（蘋果也會擋）。但已經買過的點必須看得到、留著。
+const renderPlanStateBody = app.match(/function renderPlanState\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(renderPlanStateBody, 'renderPlanState must remain a readable single function');
+assert(renderSubUiBody.includes("seg.style.display = cur === 'free' ? 'none' : ''"), 'Free members must not see the points-purchase switcher at all');
+assert(renderSubUiBody.includes("if (cur === 'free') showSubPane('plans')"), 'Free members must be forced onto the subscription pane');
+assert(/dataset\.pane === 'points' && circlePlan\(\) === 'free'\) return;/.test(app), 'Clicking the points tab must be blocked for free members as a second guard');
+assert(app.includes('function showSubPane'), 'Pane switching must go through one function so the free guard cannot be bypassed');
+assert(renderPlanStateBody.includes("_tBtn.style.display = _isFreeP ? 'none' : ''"), 'The top-up button must stay hidden for free members');
+// 只要有點數就一定看得到餘額（Edward 親訓）
+assert(renderPlanStateBody.includes('const _leftover = _isFreeP ? POINTS.bought : 0'), 'Leftover purchased points must be computed for free members');
+assert(renderPlanStateBody.includes("_lbl.style.display = (!_isFreeP || _leftover > 0) ? '' : 'none'"), 'Any member holding points must still see the balance');
+assert(renderPlanStateBody.includes('你還有 ') && renderPlanStateBody.includes('訂閱 Plus／Pro 就能繼續用這些點聊天'), 'Free members with leftover points must be told the points are kept and how to use them');
+const ptsPillHiddenBody = app.match(/function ptsPillHidden\(\) \{[^}]*\}/)?.[0] || '';
+assert(/isFree\(\)\) && ptsLeft\(\) <= 0/.test(ptsPillHiddenBody), 'The chat points chip may only hide when a free member truly has zero points');
+// 「點數快用完、去加值」只對付費成立（免費 0 點時 0 < 30 會誤觸發、且加值鈕根本是藏的）
+const refreshLowStateBody = app.match(/function refreshLowState\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(/const low = !\(window\.MMPLAN && window\.MMPLAN\.isFree\(\)\) && ptsLeft\(\) < LOW_PTS;/.test(refreshLowStateBody), 'The low-points warning must never fire for free members');
+assert(!/strip\.style\.display = ptsLeft\(\) < LOW_PTS/.test(app), 'The plan-blind low-points warning must stay dead');
+
 // 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）
 assert(app.includes('function planPurchaseFailMessage'), 'Purchase failures must map reasons to plain-language text');
 assert(app.includes('先登入帳號，才能訂閱。') && app.includes('這個方案現在還不能買') && app.includes('付款過了，但還沒對上帳'), 'Purchase failure texts must cover sign-in, unavailable product and unverified payment');
