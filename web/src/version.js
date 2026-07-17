@@ -11,9 +11,17 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.0.40',
+  current: '1.0.41',
   channel: '',
   changelog: [
+    {
+      version: '1.0.41',
+      date: '2026-07-18',
+      title: '聊聊畫面小修',
+      items: [
+        '通話畫面角落的開發版本標籤，正式版不再顯示（本來只給打包時驗版用）',
+      ],
+    },
     {
       version: '1.0.40',
       date: '2026-07-17',

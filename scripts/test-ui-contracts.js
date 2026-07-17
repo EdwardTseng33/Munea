@@ -15,6 +15,15 @@ assert(/id="verRowNum">—<\/span>/.test(html) && /id="verCurrent">—<\/span>/.
 assert(!/id="(?:verRowNum|verCurrent)">\d+\.\d+\.\d+<\/span>/.test(html), 'Version UI must not hard-code a fallback release number');
 assert(versionSource.includes('window.MuneaApplyVersionToStaticUi') && versionSource.includes("['verRowNum', 'verCurrent']"), 'The version SSOT must bind both static version labels immediately');
 
+// 內頁真版印章（通話畫面角落）只准開發包／瀏覽器預覽顯示；正式包一律藏（2026-07-18 Edward A）。
+// 這是給打包驗版用的除錯標籤，長輩看到只會困惑。若哪天有人把 gate 拿掉、變回無條件顯示，這裡亮紅燈。
+const verStampBlock = app.match(/const _vs = document\.getElementById\('webVerStamp'\);[\s\S]{0,320}?\n\s*\} catch/)?.[0] || '';
+assert(verStampBlock.length > 0, 'webVerStamp assignment block not found (內頁真版印章)');
+assert(/isDeveloperBypassAllowed\(\)/.test(verStampBlock) && /!isPackagedApp\(\)/.test(verStampBlock),
+  '內頁真版印章必須只在開發包或非打包預覽顯示——正式包不得出現除錯版本角標');
+assert(/_showStamp \? \('內頁 v' \+ MuneaVersion\.current\) : ''/.test(verStampBlock),
+  '內頁真版印章正式包必須清空（三元運算 else 分支要給空字串，不能留舊值）');
+
 assert(app.includes('const __pullPromise = Promise.resolve(syncPullAll());'), 'Family sync bypass must still produce a safe promise for downstream initialization');
 const criticalConsentSetup = app.match(/function setupCriticalConsentControls\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert(criticalConsentSetup.includes("$('#consentAgree')") && criticalConsentSetup.includes("sheet.querySelector('.mx-close')"), 'Consent agree and close controls must be bound by the critical early setup');
