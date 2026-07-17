@@ -1,6 +1,8 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 📱 **2026-07-17 14:36 最新包版**：`1.0.34 (Build 41)` **iPhone-only**，收 #156 免費不賣點數＋餘額可見。五道防漏 PASS、IPA 58,878,425 bytes，SHA-256 `de0da67d4a1dcbc16db9d3d7d44d37672866b5f7ac2cd88eafca77efe880d078`。**14:35 已上傳 App Store Connect＝現任送審候選（詳 113 號）**。Edward iPhone 換裝驗證版同版。
+> 📱 **2026-07-17 14:53 最新包版**：`1.0.35 (Build 42)` **iPhone-only**，收 #158 登入證過期自動換新＋總機 401/503 分流＋出貨檢查加嚴。五道防漏 PASS、IPA 58,879,299 bytes，SHA-256 `4233f3bed2889f73b6c7124a870c70d591ae7e3075d1c233fe2e2a68c077c600`。**14:53 已上傳 App Store Connect＝現任送審候選（詳 114 號）**。Edward iPhone 換裝驗證版同版。
+>
+> 📱 **2026-07-17 14:36 前一包**：`1.0.34 (Build 41)` **iPhone-only**，收 #156 免費不賣點數＋餘額可見。五道防漏 PASS、IPA 58,878,425 bytes，SHA-256 `de0da67d4a1dcbc16db9d3d7d44d37672866b5f7ac2cd88eafca77efe880d078`。**14:35 已上傳 App Store Connect＝現任送審候選（詳 113 號）**。Edward iPhone 換裝驗證版同版。
 >
 > 📱 **2026-07-17 13:57 前一包**：`1.0.33 (Build 40)` **iPhone-only**，在 Build 39 上收 **#153 訂閱確認欄修正**（釘回手機下方、畫面寫什麼就扣什麼、付款失敗照理由講人話）。15 支測試全綠、五道防漏 PASS。IPA 58,877,297 bytes，SHA-256 `75539cd7aede2aa96e2188de8130adcd06ddfcb678a2acc32e7dade15a776c48`。**13:57 已上傳 App Store Connect、Apple 處理中＝現任送審候選（詳 111 號）**。Edward iPhone 換裝「真登入驗證版」同版。
 >
@@ -36,7 +38,7 @@
 
 > 📋 **完整版本紀錄**：[`docs/版本紀錄-1.0.6-Build11-2026-07-15.md`](docs/版本紀錄-1.0.6-Build11-2026-07-15.md)。App 保留 1.0.6；GLOWS Avatar `/offer` HTTP 500 已修復，根因是部署只更新 server、漏同步配套 engine。真 WebRTC offer 已回 200／session，3/3 槽位恢復；Edward 手機真人撥通仍待驗收。
 
-> **最後更新：2026-07-17 14:36（Mac 蘇菲 · #156 併＋1.0.34 Build 41 已上傳 App Store Connect＝現任送審候選，詳 113 號。Edward 手機＝真登入驗證版同版。沙盒購買待 Edward 登沙盒測試員帳號後重試。「發佈」／送審由 Edward 按）**
+> **最後更新：2026-07-17 14:53（Mac 蘇菲 · #158 驗收併＋1.0.35 Build 42 已上傳 App Store Connect＝現任送審候選，詳 114 號。Edward 手機＝驗證版同版。沙盒購買／領證通話待 Edward 驗。「發佈」／送審由 Edward 按）**
 > 🔒 **同步規矩（兩台電腦＋所有 AI 都要遵守）**：
 > ① 開工第一件事 `git pull`＋讀這份 ② 做完大事就更新這板＋上傳 ③ 產品規則只認「唯一真相文件」（下表）、不要憑記憶改 ④ 兩台別同時改同一塊（Windows=前端/商業規則、Mac=雲端/原生/打包）。
 > ⑤ **版號紀律（7/8 Edward 拍板）**：每次真的動到 App 就升版——修 bug 進第三碼、加功能進中間碼；三處一起動（`web/src/version.js` 版號＋更新內容、`package.json`、打包時 iOS 行銷版號對齊）。
@@ -45,6 +47,8 @@
 ---
 
 ## 一眼總覽
+
+**114－✅ App 1.0.35 Build 42 已上傳 App Store Connect＋手機換裝驗證版（7/17 14:53 Mac 蘇菲 · PR #159 · Edward「推進更新合併並更版App」）**：①✅ 驗收後收 #158（草稿檢查綠、內容完整）：總機把「登入證被拒」與「服務故障」分流（401/503）、App 登入證過期自動換新一次再撥、出貨檢查加嚴（IPA 必含最新登入零件與東京設定）——**對 103 號「聊聊撥不通」族再補一刀**。②✅ 15 支 node 測試全綠、五道防漏 PASS（含新加嚴那道）；IPA 58,879,299 bytes，SHA-256 `4233f3bed2889f73b6c7124a870c70d591ae7e3075d1c233fe2e2a68c077c600`。③✅ 14:53 上傳成功——**現任送審候選＝1.0.35 (Build 42)**。④✅ Edward iPhone 換裝驗證版 `1.0.35 (42)`（--gateway）；沙盒購買／領證通話兩件驗證續等 Edward 手指。
 
 **113－✅ App 1.0.34 Build 41 已上傳 App Store Connect＋手機換裝驗證版（7/17 14:36 Mac 蘇菲 · Edward「接續合併包版」）**：①✅ 合併 #156 免費不賣點數＋餘額一定看得到（CI 紅燈＝package-lock 又漏跳、補 lock＋Xcode 1.0.34/Build 41 後轉綠——**這是連續第三次同款紅燈、下次 Windows 跳版請一併跑 npm install --package-lock-only**）。②✅ 15 支 node 測試全綠、五道防漏 PASS；IPA 58,878,425 bytes，SHA-256 `de0da67d4a1dcbc16db9d3d7d44d37672866b5f7ac2cd88eafca77efe880d078`。③✅ 14:35 上傳成功 `Upload succeeded`／處理中——**現任送審候選＝1.0.34 (Build 41)**（比 40 多：免費不賣點數＋付款前餘額可見）。④✅ Edward iPhone 換裝「真登入驗證版」`1.0.34 (41)`（--gateway）——沙盒購買與領證通話兩件驗證繼續、卡沙盒帳號那關（設定→App Store→沙盒帳號登入測試員）。
 
