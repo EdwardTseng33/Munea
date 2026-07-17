@@ -5300,7 +5300,7 @@ function init() {
   // 家庭照護圈
   const CIRCLE_LIMITS = { free: 1, plus: 4, pro: 12 };                       // 免費只含本人；Plus 4 人、Pro 12 人
   const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', pro: 'Pro' };
-  const PLAN_POINTS = { free: 0, plus: 150, pro: 300 };                       // 每月贈點
+  const PLAN_POINTS = { free: 0, plus: 100, pro: 200 };                       // 每月贈點（2026-07-17 Edward 拍板：每分鐘 6 元錨）
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
   // 7/9 正式化：不再預設示範四人家庭——圈子從「只有本人」開始，家人用邀請碼真的加進來
@@ -5833,7 +5833,7 @@ function init() {
   // ===== 訂閱頁：比較表 + 月/年繳切換 + 訂閱鈕（金額為暫定、待 Edward 拍板）=====
   // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
   const SUB_PRICE = { plus: { month: 599, year: 5750 }, pro: { month: 1199, year: 11500 } };
-  const PT_PRICE = { 150: 500, 300: 1000, 600: 2000, 1000: 3000 };
+  const PT_PRICE = { 100: 790, 300: 2190, 600: 4190, 1000: 6490 };            // 加購一律貴過訂閱 6 元/分（訂閱含功能價值、點數是純加分鐘）
   let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
   function fmtPrice(plan, cyc) { return 'NT$' + SUB_PRICE[plan][cyc].toLocaleString() + (cyc === 'year' ? '／年' : '／月'); }
   function renderSubUI() {
@@ -6056,7 +6056,7 @@ function init() {
       'net.munea.app.plus.monthly': 'plus', 'net.munea.app.plus.yearly': 'plus',
       'net.munea.app.pro.monthly': 'pro', 'net.munea.app.pro.yearly': 'pro'
     };
-    const PT_PID = { 'net.munea.app.points.200': 150, 'net.munea.app.points.500': 300, 'net.munea.app.points.1000': 600, 'net.munea.app.points.1800': 1000 };
+    const PT_PID = { 'net.munea.app.points.200': 100, 'net.munea.app.points.500': 300, 'net.munea.app.points.1000': 600, 'net.munea.app.points.1800': 1000 };
     if (SUB_PID[pid]) {
       try { localStorage.setItem('munea.plan', SUB_PID[pid]); localStorage.removeItem('munea.planNext'); } catch (e) {}
       trackProductEvent('subscription_purchased', { productId: pid, plan: SUB_PID[pid] });

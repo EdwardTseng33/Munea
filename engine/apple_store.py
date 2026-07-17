@@ -10,15 +10,16 @@ APP_APPLE_ID = 6788658125
 PRODUCTS = {
     # Product IDs cannot be renamed after creation in App Store Connect. Their
     # numeric suffixes are legacy identifiers; these values are the current
-    # customer-visible grants from Edward's 2026-07-13 pricing update.
-    "net.munea.app.points.200": {"kind": "points", "points": 150},
+    # customer-visible grants from Edward's 2026-07-17 pricing update
+    # (Plus 100 / Pro 200 monthly points; packs 100/300/600/1000).
+    "net.munea.app.points.200": {"kind": "points", "points": 100},
     "net.munea.app.points.500": {"kind": "points", "points": 300},
     "net.munea.app.points.1000": {"kind": "points", "points": 600},
     "net.munea.app.points.1800": {"kind": "points", "points": 1000},
-    "net.munea.app.plus.monthly": {"kind": "subscription", "plan": "plus", "monthlyPoints": 150},
-    "net.munea.app.plus.yearly": {"kind": "subscription", "plan": "plus", "monthlyPoints": 150},
-    "net.munea.app.pro.monthly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 300},
-    "net.munea.app.pro.yearly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 300},
+    "net.munea.app.plus.monthly": {"kind": "subscription", "plan": "plus", "monthlyPoints": 100},
+    "net.munea.app.plus.yearly": {"kind": "subscription", "plan": "plus", "monthlyPoints": 100},
+    "net.munea.app.pro.monthly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 200},
+    "net.munea.app.pro.yearly": {"kind": "subscription", "plan": "pro", "monthlyPoints": 200},
 }
 
 

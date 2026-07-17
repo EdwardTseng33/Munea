@@ -2277,7 +2277,7 @@ analytics = Path("supabase/sql/003_analytics_admin_foundation.sql").read_text(en
 ai_memory = Path("supabase/sql/004_ai_memory_service_foundation.sql").read_text(encoding="utf-8").lower()
 persona_layer = Path("supabase/sql/005_companion_persona_layer.sql").read_text(encoding="utf-8").lower()
 billing_credits = Path("supabase/sql/006_billing_credits_foundation.sql").read_text(encoding="utf-8").lower()
-current_billing = Path("supabase/sql/013_current_app_billing_policy.sql").read_text(encoding="utf-8").lower()
+current_billing = Path("supabase/sql/019_pricing_plus100_pro200.sql").read_text(encoding="utf-8").lower()
 family_cloud = Path("supabase/sql/007_family_cloud_state_foundation.sql").read_text(encoding="utf-8").lower()
 env_example = Path("docs/supabase/munea-env.example.txt").read_text(encoding="utf-8")
 required_tables = [
@@ -2399,8 +2399,8 @@ for token in [
         raise SystemExit("Missing billing credits schema token: " + token)
 for token in [
     "array['free', 'plus', 'pro']",
-    '"monthlypoints": 150',
-    '"monthlypoints": 300',
+    '"monthlypoints": 100',
+    '"monthlypoints": 200',
     '"familymembersmax": 12',
 ]:
     if token not in current_billing:

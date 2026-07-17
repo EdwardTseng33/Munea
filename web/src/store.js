@@ -13,7 +13,7 @@ window.MuneaStore = (function () {
     'pro|year': 'net.munea.app.pro.yearly'
   };
   var PTS = {
-    150: 'net.munea.app.points.200',
+    100: 'net.munea.app.points.200',
     300: 'net.munea.app.points.500',
     600: 'net.munea.app.points.1000',
     1000: 'net.munea.app.points.1800'
