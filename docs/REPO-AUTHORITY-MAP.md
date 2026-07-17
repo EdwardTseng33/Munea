@@ -2,7 +2,7 @@
 
 This map classifies repository areas and documents without moving or deleting them. It defines where to look first and which files must not be treated as current runtime truth.
 
-Snapshot baseline: `origin/main@23395f0`
+Snapshot baseline: `origin/main@ad3c2e8`
 
 Confirmed owners: none. Role names below are suggested accountability roles, not assignments to a person.
 
@@ -29,7 +29,7 @@ Confirmed owners: none. Role names below are suggested accountability roles, not
 | `.github/` | CI, watchdog and repository automation | High | Platform / Release | Gate changes require independent review. |
 | root deployment files | `Dockerfile`, `firebase.json`, Capacitor and package metadata | Critical | Platform / Release | Keep at stable paths; these can affect packaging or deployment. |
 | `app-site/` | Public website runtime | High | Growth / Web | Separate from the iOS App WebView runtime. |
-| `demo-cloud/` | Executable demo environment | Low production impact | Demo | Do not present as production behavior. |
+| `demo-cloud/` | Executable demo environment | Not App production; external demo impact is unknown | Demo | Do not present as production behavior or move until external consumers are verified. |
 | `scripts/`, `tools/` | Tests, release checks and operations tooling | Up to Critical | Engineering / Release | A tool used by a hard gate is release-critical even if it is not runtime code. |
 | `codex-skills/`, `.claude/` | Agent and collaboration tooling | Medium; can become High | Engineering | Preserve until callers and workflows are inventoried. |
 
@@ -51,9 +51,11 @@ Confirmed owners: none. Role names below are suggested accountability roles, not
 | Scope | File | Level | Current interpretation |
 |---|---|---|---|
 | Cross-surface release truth | `docs/RELEASE-STATE.md` | `authority` | Current version, App lanes, live revisions, DB frontier, admin state, conflicts, and unknowns. Volatile facts require timestamps. |
+| Product implementation alignment | `docs/PRODUCT-ALIGNMENT-REGISTER.md` | `authority` for alignment mapping and gates | Maps product promises to source, deployment evidence, verification state, and next gate. Exact versions and runtime revisions are timestamped references governed by `docs/RELEASE-STATE.md`; this register cannot override App Store Connect, Cloud Run, or the database ledger. |
+| Repo cleanup evidence | `docs/REPO-CLEANUP-INVENTORY.md` | `snapshot` / supporting | Caller and lifecycle inventory for safe cleanup. It grants no permission to delete, move, or archive a path. |
 | Activity and execution history | `STATUS.md` | `historical` / supporting log | Append-only evidence and handoff history. It is not the single current release answer. |
 | Documentation navigation | `docs/00-總綱-從這裡開始.md` | routing `authority`, `current-stale` | Controls documentation routing, but its date and document counts are outdated. Content authority for each topic remains with the routed topic file. Do not rewrite in this collision-avoidance PR. |
-| App Store checklist | `docs/APP-STORE-PRODUCTION-READINESS.md` | `supporting`, `current-stale` | Detailed release checklist; currently summarizes Build 33 / Build 32 while source is Build 38. App Store Connect remains authoritative for Apple state. |
+| App Store checklist | `docs/APP-STORE-PRODUCTION-READINESS.md` | `supporting`, `current-stale` | Detailed release checklist; its recorded candidate and source lanes are behind current source. App Store Connect remains authoritative for Apple state. |
 | Development plan | `docs/CURRENT-DEVELOPMENT-PLAN.md` | `supporting`, `current-stale` | Declares a current plan but contains early-version progress. Refresh separately with product owner review. |
 | Backend architecture | `docs/BACKEND-ARCHITECTURE-v1.md` | `supporting` | Architecture reference; parts predate the current admin and production topology. |
 | Health assessment | `docs/HEALTH-90-SCORECARD-2026-07-16.md` | `snapshot` | Evidence-based assessment at its stated baseline, not a live release registry. |
@@ -66,6 +68,7 @@ Confirmed owners: none. Role names below are suggested accountability roles, not
 
 - Cross-surface source, binary, runtime, database, and admin state are not aligned. The exact volatile values belong only in `docs/RELEASE-STATE.md`.
 - App Store readiness, current-development, and overview documents contain stale version or progress statements; this map records their lifecycle, not replacement release facts.
+- Product claims, implementation state, deployment state, and human verification are separate columns in `docs/PRODUCT-ALIGNMENT-REGISTER.md`; none may be inferred from another.
 - Architecture, health, activity logs, and feature plans answer different questions but were previously read as interchangeable SSOTs.
 - Repo migration authority and live database evidence differ. See `docs/RELEASE-STATE.md`; repo source authority never implies live application.
 - There is no confirmed `CODEOWNERS` mapping, so role suggestions must not be presented as assigned owners.
@@ -75,13 +78,14 @@ Confirmed owners: none. Role names below are suggested accountability roles, not
 The first cleanup phase may:
 
 - add authority and lifecycle labels;
+- add caller and external-consumer evidence to `docs/REPO-CLEANUP-INVENTORY.md`;
 - add `supersededBy`, verification date, and scope notes after topic-owner review;
 - add freshness checks for files explicitly declared current;
 - create an approved migration ledger and release-state validator in later scoped PRs.
 
 The first cleanup phase must not:
 
-- move or delete runtime, design, prototype, sales, App Store, or unclassified assets;
+- move or delete runtime, design, prototype, demo, externally published, sales, App Store, or unclassified assets;
 - rewrite `STATUS.md` history;
 - archive a dated file merely because its filename is old;
 - invent owners, App Store state, deployment identity, or database application state;
@@ -90,10 +94,11 @@ The first cleanup phase must not:
 ## Safe follow-up queue
 
 1. Refresh `docs/APP-STORE-PRODUCTION-READINESS.md` against App Store Connect and the selected review Build in a dedicated PR.
-2. Refresh `docs/CURRENT-DEVELOPMENT-PLAN.md`, `README.md`, and `BACKLOG.md` only after each topic owner confirms scope and successor documents.
-3. Add a machine-readable release-state schema and CI validator after the manual fields stabilize.
-4. Establish confirmed ownership / `CODEOWNERS` separately; do not infer people from historical authorship.
-5. Inventory external consumers before moving design bundles, prototypes, sales assets, App Store images, voice samples, or root assets.
+2. Resolve the conflicting Cloud Run topology comments and scripts in a Platform-owned PR with routing tests; do not delete a script based on wording alone.
+3. Refresh `docs/CURRENT-DEVELOPMENT-PLAN.md`, `README.md`, and `BACKLOG.md` only after each topic owner confirms scope and successor documents.
+4. Add a machine-readable release-state schema and CI validator after the manual fields stabilize.
+5. Establish confirmed ownership / `CODEOWNERS` separately; do not infer people from historical authorship.
+6. Complete external-consumer checks in `docs/REPO-CLEANUP-INVENTORY.md` before moving design bundles, prototypes, sales assets, App Store images, voice samples, or root assets.
 
 ## Change protocol
 

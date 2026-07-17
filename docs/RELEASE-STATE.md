@@ -2,13 +2,13 @@
 
 This file is the current cross-surface release snapshot. It answers what is in source, what is packaged, what is serving traffic, and what is still unknown. It does not replace deployment logs, `STATUS.md`, App Store Connect, Cloud Run, or a database migration ledger.
 
-Snapshot time: `2026-07-17 12:24 Asia/Taipei`
+Snapshot time: `2026-07-17 13:00 Asia/Taipei`
 
-Source verified at: `2026-07-17 12:15 Asia/Taipei`
+Source verified at: `2026-07-17 13:00 Asia/Taipei`
 
-Runtime last refreshed at: `2026-07-17 12:24 Asia/Taipei` (per-row evidence times control)
+Runtime last refreshed at: `2026-07-17 12:43 Asia/Taipei` (per-row evidence times control)
 
-Source baseline: `origin/main@23395f0`
+Source baseline: `origin/main@ad3c2e8`
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -31,8 +31,8 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| App Store review lane | Exact Build `unknown` | User confirmed that one build was submitted for review. Repo evidence only proves that `1.0.25 (Build 32)` was uploaded and entered processing; it does not prove which Build is selected or the current Apple state. | User statement; `STATUS.md`; `docs/APP-STORE-PRODUCTION-READINESS.md` | 2026-07-17 |
-| Next source / binary | `1.0.31 (Build 38)` | Source, Web, package metadata, and iOS Debug / Release agree. Archive and iPhone installation are recorded; upload is explicitly frozen. | `package.json`; `web/src/version.js`; `ios/App/App.xcodeproj/project.pbxproj`; `STATUS.md` | 2026-07-17 |
+| App Store review lane | Exact Build `unknown` | User confirmed that one build was submitted for review. Repo evidence separately proves that Build 32 was uploaded earlier and Build 39 was uploaded at 12:45 and entered processing; neither proves which Build, if any, is currently selected for review or the current Apple state. | User statement; `STATUS.md`; `docs/APP-STORE-PRODUCTION-READINESS.md` | 2026-07-17 |
+| Latest source / upload candidate | `1.0.32 (Build 39)` | Source, Web, package metadata, and iOS Debug / Release agree. Archive and Edward's iPhone installation are recorded. Upload succeeded at 12:45 and Apple processing is recorded; repo evidence says review submission is still pending. | `package.json`; `web/src/version.js`; `ios/App/App.xcodeproj/project.pbxproj`; `STATUS.md`; PR #150; PR #151 | 2026-07-17 13:00 |
 
 The review lane is tracked independently and may only be updated from App Store Connect or explicit user-confirmed evidence. The next-binary lane must not overwrite its state.
 
@@ -40,9 +40,9 @@ The review lane is tracked independently and may only be updated from App Store 
 
 | Environment | Service | Traffic revision | Release identity | State and interpretation | Evidence time |
 |---|---|---|---|---|---|
-| staging | Brain | `munea-brain-staging-00055-vuc` receives 100% of this service's routing | `unknown`; serving `/version` returns 404 | Cloud Run routing is verified; actual staging workload and source version / commit are unknown. | 2026-07-17 12:01 |
+| staging | Brain | `munea-brain-staging-00059-jeh` receives 100% of this service's routing | `1.0.31@962a667a52da` | Cloud Run routing and identity are verified. The commit is the open PR #149 head and is not in `origin/main`; actual staging workload is unknown. | 2026-07-17 12:43 |
 | staging | Brain canary | `munea-brain-staging-00058-jid` at 0% | `1.0.28@741fec79c67a` | Exact-revision canary only. It is not current main and carries no default traffic. | 2026-07-17 12:01 |
-| staging | Voice | `munea-voice-staging-00049-pob` receives 100% of this service's routing | `1.0.30@736593a6b382` | Cloud Run routing is verified; actual staging workload is unknown. The commit is an ancestor of current main, but the runtime is behind App source `1.0.31`. | 2026-07-17 12:01 |
+| staging | Voice | `munea-voice-staging-00049-pob` receives 100% of this service's routing | `1.0.30@736593a6b382` | Cloud Run routing is verified; actual staging workload is unknown. Release metadata is older, but `live_voice_server.py` is content-equivalent to current main. | 2026-07-17 12:43 |
 | production | Brain | `munea-brain-00002-sul` receives 100% of this service's routing | `1.0.31@500c819f367d` | Deployed to the named production service with a verified release identity. Actual App / user workload is unknown, so this is not evidence that the review binary uses it. | 2026-07-17 12:24 |
 | production | Voice | `munea-voice-00002-sub` receives 100% of this service's routing | `1.0.31@500c819f367d` | Deployed to the named production service with a verified release identity. Actual App / user workload is unknown, so this is not evidence that the review binary uses it. | 2026-07-17 12:24 |
 | production | Call Control / Gateway | `munea-call-control-00008-bek` receives 100% of this service's routing | Source version / commit `unknown` | Anonymous `/health` correctly rejects with 401. Actual client traffic and public release identity are unknown. | 2026-07-17 12:01 |
@@ -66,27 +66,29 @@ Repo manifests prove intended files and checksums; they do not prove live applic
 | Item | Current state | Interpretation |
 |---|---|---|
 | Serving URL | `https://munea-brain-staging-491603544409.asia-east1.run.app/admin.html#overview` returns 200 | Reachable does not prove asset or API identity. |
-| Serving revision | Follows staging Brain 100% revision `00055-vuc` | `/version` is 404; current asset commit is unknown. |
-| Security headers on serving traffic | CSP, frame protection, `nosniff`, and referrer policy are absent | Phase A headers are not on the serving staging revision. |
-| Verified admin canary | Brain `00058-jid` at 0%, `1.0.28@741fec7` | Header contract and privileged smoke passed on this canary only. It is not default traffic. |
-| Privileged data source / freshness | `unknown` | Must prove Tokyo Supabase source, last-event timestamps, and fallback status before the console can be treated as operational truth. |
+| Serving revision | Follows staging Brain 100% revision `00059-jeh`, `1.0.31@962a667` | Asset identity is now observable, but the commit is still the unmerged PR #149 head. |
+| Security headers on serving traffic | CSP, `X-Frame-Options: DENY`, `nosniff`, and `Referrer-Policy: no-referrer` are present | Header delivery is verified on the serving staging revision. |
+| Privileged API and data freshness | `unknown` | Public shell and headers do not prove privileged endpoints, Tokyo Supabase source, last-event timestamps, or fallback status. |
 
 ## Critical feature rollout states
 
 | Capability | Current state | Missing proof |
 |---|---|---|
 | Voice same-voice transition cue (#145) | `merged`; `deployed` to staging Voice `00049-pob`; current production Voice identity `500c819` predates #145 | Deploy an exact commit containing #145 to production; prove the review binary uses production Voice; human Voice gate |
+| Voice microphone/uplink recovery (#136) | Included in `1.0.32 (Build 39)`, archived and installed on Edward's iPhone | Human call gate for immediate uplink, auto-rebuild, and dead-line recovery |
 | Authenticated Voice-chain probe (#139) | `merged` with CI and release-check coverage | Controlled live wrapper run; Gateway deployment if required by the approved rollout |
-| Notification settings migration (#140 / migration 017) | Code and doctor gate `merged`; database state is not deployed | Approved Tokyo backup, ledger, migration execution, and post-apply verification |
-| Admin security headers (#133) | `merged`, `staged` on 0% Brain canary | Serving-traffic promotion decision and post-promotion smoke |
+| Notification settings migration (#140 / migration 017) | Code and doctor gate `merged`; live table is missing, so settings silently fall back to container-local JSON and are not durable | Approved Tokyo backup, ledger, migration execution, and post-apply verification |
+| Admin security headers (#133) | Present on serving staging Brain `00059-jeh` | Privileged API smoke and operational data-freshness proof |
+| Daily briefing maintenance entry (#149) | Open PR head `962a667` is deployed to serving staging Brain before merge | Merge/rebase decision, tests on final main commit, scheduler configuration, and authenticated execution proof |
 | App Store server notification receiver | `deployed` on production Brain; an empty POST is rejected with 400 | Signed Apple TEST notification receipt and Sandbox lifecycle verification |
 
 ## Known conflicts
 
 - App Store Connect is authoritative for the selected review Build and review status. Repo files currently cannot prove either value.
-- `STATUS.md` records Build 38 as not uploaded; `docs/APP-STORE-PRODUCTION-READINESS.md` still summarizes Build 33 / Build 32 and is stale for the next-binary lane.
+- `STATUS.md` records Build 39 as uploaded and processing with review submission still pending; the user previously confirmed that one build was submitted. App Store Connect evidence is required to determine whether these statements refer to different builds. `docs/APP-STORE-PRODUCTION-READINESS.md` still summarizes Build 33 / Build 32.
 - The collaboration board contains historical environment statements. It is an activity log, not a release authority.
-- The health scorecard includes evidence from a 0% admin canary. That evidence must not be interpreted as serving-traffic capability.
+- Some Cloud Run scripts still call the `-staging` services the only production pair, while current App defaults and `prod-deploy.sh` point to the non-suffixed production services. This is a deployment-control conflict, not a naming preference.
+- The AI design documents name Claude-backed Butler/Guardian and an independent moderation layer, while executable source currently combines deterministic policy with Google GenAI paths in chat, memory, perception, and Guardian semantic review. No production Anthropic or OpenAI-moderation adapter call was found in the declared router path.
 
 ## Unknowns that block a 90-point release assessment
 
@@ -94,7 +96,7 @@ Repo manifests prove intended files and checksums; they do not prove live applic
 - Actual App / client routing to production Brain and Voice, including the review binary's configured targets.
 - Production Gateway source commit and actual client traffic.
 - Tokyo migration `018` applied state and authoritative ledger.
-- Serving admin asset identity, privileged data source, and metric freshness.
+- Serving admin privileged API behavior, data source, and metric freshness.
 - A live authenticated Voice chain covering Gateway lease, Call Token, Gemini media, cleanup, and release.
 
 ## Update rules
