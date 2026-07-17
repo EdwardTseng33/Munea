@@ -45,6 +45,9 @@ ditto -x -k "$IPA_PATH" "$VERIFY_DIR"
 APP_PATH="$VERIFY_DIR/Payload/App.app"
 ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/App.app"
 AUTH_CONFIG_PATH="$APP_PATH/public/src/auth-config.js"
+PACKAGED_INDEX_PATH="$APP_PATH/public/index.html"
+PACKAGED_APP_JS_PATH="$APP_PATH/public/src/app.js"
+PACKAGED_AUTH_JS_PATH="$APP_PATH/public/src/auth.js"
 PRIVACY_MANIFEST_PATH="$APP_PATH/PrivacyInfo.xcprivacy"
 PRIVACY_DATA_TYPE_COUNT="$(plutil -extract NSPrivacyCollectedDataTypes raw "$PRIVACY_MANIFEST_PATH" 2>/dev/null || echo 0)"
 
@@ -52,6 +55,7 @@ codesign --verify --deep --strict "$APP_PATH"
 ENTITLEMENTS="$(codesign -d --entitlements - "$APP_PATH" 2>&1)"
 
 EXPECTED_VERSION="$(node -p "require('./package.json').version")"
+EXPECTED_ASSET_TOKEN="v${EXPECTED_VERSION//./}"
 EXPECTED_BUILD="$(plutil -extract CFBundleVersion raw "$ARCHIVE_APP_PATH/Info.plist")"
 ACTUAL_VERSION="$(plutil -extract CFBundleShortVersionString raw "$APP_PATH/Info.plist")"
 ACTUAL_BUILD="$(plutil -extract CFBundleVersion raw "$APP_PATH/Info.plist")"
@@ -79,6 +83,21 @@ if ! cmp -s "$ROOT/web/index.html" "$APP_PATH/public/index.html" \
   || ! cmp -s "$ROOT/web/src/auth-config.js" "$AUTH_CONFIG_PATH" \
   || ! cmp -s "$ROOT/web/src/styles.css" "$APP_PATH/public/src/styles.css"; then
   echo "FAIL exported IPA does not contain the latest Web design assets."
+  exit 1
+fi
+
+for asset_regex in 'styles\.css' 'version\.js' 'auth\.js' 'app\.js'; do
+  if ! grep -Eq "src/${asset_regex}\\?v=[^\"]*-${EXPECTED_ASSET_TOKEN}\"" "$PACKAGED_INDEX_PATH"; then
+    echo "FAIL exported IPA cache identity is stale for $asset_regex (expected $EXPECTED_ASSET_TOKEN)."
+    exit 1
+  fi
+done
+
+if grep -Fq '登入暫時無法啟動' "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq 'Google 登入失敗（${code}）' "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq 'signInWithBrowserOAuth' "$PACKAGED_AUTH_JS_PATH" \
+  || ! grep -Fq 'fallbackFrom: nativeCode' "$PACKAGED_AUTH_JS_PATH"; then
+  echo "FAIL exported IPA is missing the current Google sign-in fallback or diagnostic bundle."
   exit 1
 fi
 
