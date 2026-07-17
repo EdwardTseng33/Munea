@@ -2886,8 +2886,18 @@ window.MuneaFaceWave = FaceWave;
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
 let callDialing = false;
+let callPreflightPending = false;
+function setCallPreflightPending(on, pendingLabel = '確認可用點數中…') {
+  callPreflightPending = on;
+  const b = $('#callToggle'); if (!b) return;
+  b.setAttribute('aria-busy', on ? 'true' : 'false');
+  const lbl = $('#callToggleLabel');
+  if (lbl && on) lbl.textContent = pendingLabel;
+  else if (lbl && !callDialing) lbl.textContent = callConnected ? '結束通話' : '開始通話';
+}
 // 撥通中狀態：按鈕顯示「撥通中···」循環；真的接通（她開始聽/說）才變「結束通話」＋開始計時（Edward 7/9）
 function setCallDialing(on) {
+  if (on) setCallPreflightPending(false);
   callDialing = on;
   const b = $('#callToggle'); if (!b) return;
   b.classList.toggle('dialing', on);
@@ -2900,6 +2910,7 @@ function setCallDialing(on) {
 function setCallToggle(connected) {
   callConnected = connected;
   callDialing = false;
+  setCallPreflightPending(false);
   const _b0 = $('#callToggle'); if (_b0) _b0.classList.remove('dialing');
   // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
   const fn = document.querySelector('.face-name');
@@ -3998,6 +4009,13 @@ function __muneaShowPointsPopup(){
   var go=document.getElementById('mm-pts-go');
   if(go) go.addEventListener('click',function(){ m.remove(); var tm=document.getElementById('topUpModal'); if(tm) tm.classList.add('show'); });
 }
+function __muneaShowCallCreditBlocked(){
+  if (window.MMPLAN && window.MMPLAN.isFree()) {
+    window.MMPLAN.upsell('chat-daily');
+    return;
+  }
+  __muneaShowPointsPopup();
+}
 function __muneaPointsOut(){
   try { if (typeof LiveVoice !== 'undefined' && LiveVoice && LiveVoice.stop) LiveVoice.stop(); } catch (e) {}
   try { completeChatSession('out_of_points'); } catch (e) {}
@@ -4704,6 +4722,8 @@ function setupHscrollHints() {
 }
 
 async function connectCall() {
+  if (callPreflightPending || callDialing || callConnected) return;
+  setCallPreflightPending(true);
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
   try {
@@ -4716,7 +4736,6 @@ async function connectCall() {
       faceEngine: faceEngine(),
     });
   } catch (e) {}
-  setCallDialing(true);
   // 撥通中＝保持角色的待機動畫（Edward 2026-07-09 二次拍板：不定格照片、也不動照片）。
   // 硬規則：聲音＋會動的臉「兩邊都真的就緒」才一起開場——寧可讓用戶等，也不要開場後像當機。
   // 同線聲音的 iPhone 解鎖（2026-07-11）：iPhone 不准「沒經過使用者手指」的聲音自動播——
@@ -4750,7 +4769,7 @@ async function connectCall() {
   // Keep the iOS user gesture alive before the queue/network wait starts.
   voiceCallMark('microphone_requested', 'pass');
   if (!LiveVoice.prime()) {
-    setCallDialing(false);
+    setCallPreflightPending(false);
     voiceCallFail('microphone_requested', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     voiceCallEnd('failed', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     setCallHint(LiveVoice._micUnavailableReason === 'https_required'
@@ -4768,21 +4787,34 @@ async function connectCall() {
     } catch (e) {}
   }
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
-  setCallHint(developmentDirectCall ? '開發測試直連中…' : '正在安排語音與影像席位…', true);
-  if (!developmentDirectCall) {
+  if (developmentDirectCall) {
+    setCallDialing(true);
+    setCallHint('開發測試直連中…', true);
+  } else {
+    setCallHint('正在確認帳號與可用點數…', true);
     try {
-      voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       // A verified Auth session is not enough for Call Control: its durable
       // lease RPC also requires the account_members/person graph. Await the
       // idempotent bootstrap so a fresh login cannot race the first call.
       const accountReady = await syncAccountBootstrap('create', { reason: 'call_preflight' });
       if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');
       // 跨月或年繳方案可能在這次通話前進入新點數週期；先向伺服器同步本期額度。
-      try { await refreshServerCredits(); } catch (e0) {}
+      let creditState = null;
+      try { creditState = await refreshServerCredits(); } catch (e0) {}
+      const rawAvailableCredits = creditState && creditState.walletSummary && creditState.walletSummary.total;
+      const availableCredits = Number(rawAvailableCredits);
+      if (rawAvailableCredits !== null && rawAvailableCredits !== undefined && rawAvailableCredits !== '' && Number.isFinite(availableCredits)) {
+        voiceCallMark('credits_checked', availableCredits > 0 ? 'pass' : 'fail', { remaining: Math.max(0, availableCredits) });
+        if (availableCredits <= 0) throw new Error('insufficient_credits');
+      }
+      setCallPreflightPending(true, '正在安排通話…');
+      setCallHint('正在安排語音與影像席位…', true);
+      voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
       if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
         throw new Error('paired_service_unavailable');
       }
+      setCallDialing(true);
       voiceCallMark('gateway_assigned', 'pass', {
         gatewayCallId: lease.call_id || '',
         voiceEndpoint: lease.voice.url,
@@ -4794,13 +4826,14 @@ async function connectCall() {
       voiceCallFail('gateway_assigned', reason, { endpoint: CallControl.url() });
       voiceCallEnd('failed', reason);
       try { await CallControl.release(reason); } catch (e2) {}
-      LiveVoice.stop(); setCallDialing(false); stopCallTimer();
+      LiveVoice.stop(); setCallPreflightPending(false); setCallDialing(false); stopCallTimer();
       setCallHint(authRequired ? '登入狀態已失效，請重新登入後再撥' :
         (reason.indexOf('account_not_ready') >= 0 ? '帳號正在完成初始化，請稍後再撥一次' :
         (reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
           (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
           (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
+      if (reason.indexOf('insufficient_credits') >= 0) setTimeout(__muneaShowCallCreditBlocked, 0);
       try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
       return;
     }

@@ -60,6 +60,17 @@ def test_real_login_bootstraps_before_gateway_and_recovers_once() -> None:
     assert "if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY)" not in APP
 
 
+def test_zero_credits_stop_before_dialing_and_gateway() -> None:
+    connect_call = APP[APP.index("async function connectCall()") : APP.index("async function openInAppReader")]
+    refresh_index = connect_call.index("creditState = await refreshServerCredits()")
+    zero_index = connect_call.index("throw new Error('insufficient_credits')")
+    dialing_index = connect_call.index("setCallDialing(true)", zero_index)
+    acquire_index = connect_call.index("await CallControl.acquire(")
+    assert refresh_index < zero_index < acquire_index < dialing_index
+    assert "setTimeout(__muneaShowCallCreditBlocked, 0)" in connect_call
+    assert "setCallPreflightPending(false); setCallDialing(false)" in connect_call
+
+
 def test_development_profile_bypass_does_not_weaken_release() -> None:
     assert "bypassCallControl: false" in AUTH_CONFIG
     assert "bypassCallControl: true" in DEV_PROFILE
@@ -121,6 +132,7 @@ def main() -> None:
         test_cancelled_acquire_disposes_returned_capacity,
         test_gateway_401_forces_one_session_recovery_path,
         test_real_login_bootstraps_before_gateway_and_recovers_once,
+        test_zero_credits_stop_before_dialing_and_gateway,
         test_development_profile_bypass_does_not_weaken_release,
         test_voice_and_avatar_are_a_single_required_service,
         test_connected_ui_waits_for_server_active_lease,

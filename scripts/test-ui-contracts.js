@@ -25,9 +25,16 @@ assert(!app.includes("window.open('privacy.html', '_blank')"), 'Consent privacy 
 assert(privacy.includes('目前機房位於日本東京'), 'Privacy disclosure must identify the current Tokyo data region');
 assert(!privacy.includes('目前機房位於澳洲'), 'Privacy disclosure must not retain the retired Sydney production region');
 const connectCall = app.match(/async function connectCall\(\) \{[\s\S]*?\n\}/)?.[0] || '';
-assert(connectCall.indexOf('setCallDialing(true)') < connectCall.indexOf('LiveVoice.prime()'), 'Call button must enter dialing state before microphone or network preparation');
+assert(connectCall.indexOf('LiveVoice.prime()') < connectCall.indexOf('setCallDialing(true)'), 'Call button must not show dialing before microphone and credit preflight');
+const creditRefreshIndex = connectCall.indexOf('creditState = await refreshServerCredits()');
+const zeroCreditIndex = connectCall.indexOf("throw new Error('insufficient_credits')");
+const gatewayAcquireIndex = connectCall.indexOf('await CallControl.acquire(');
+const productionDialingIndex = connectCall.indexOf('setCallDialing(true)', zeroCreditIndex);
+assert(creditRefreshIndex >= 0 && creditRefreshIndex < zeroCreditIndex, 'Server credit balance must be checked before a zero-credit call is rejected');
+assert(zeroCreditIndex >= 0 && zeroCreditIndex < gatewayAcquireIndex && gatewayAcquireIndex < productionDialingIndex, 'Production dialing must start only after credits and Gateway acceptance');
+assert(connectCall.includes('setTimeout(__muneaShowCallCreditBlocked, 0)'), 'Credit rejection must open the explanatory credit or plan dialog');
 assert(connectCall.includes('if (!developmentDirectCall)') && connectCall.includes('Promise.race([') && connectCall.includes('setTimeout(resolve, 1200)'), 'Family relay lookup must not block development calls or delay production dialing indefinitely');
-assert(/if \(!LiveVoice\.prime\(\)\) \{\s*setCallDialing\(false\)/.test(connectCall), 'Microphone failure must leave the dialing state');
+assert(/if \(!LiveVoice\.prime\(\)\) \{\s*setCallPreflightPending\(false\)/.test(connectCall), 'Microphone failure must leave the preflight state without showing dialing');
 
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');
