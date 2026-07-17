@@ -1,0 +1,86 @@
+name: Deploy Cloud Run (manual)
+
+# 手動觸發的雲端部署線（2026-07-17 Mac 蘇菲建）：
+# 借官網發佈既有的 Workload Identity 信任通道跑既有部署小工具。
+# 只能手動觸發（workflow_dispatch）、一次一台服務；服務帳號權限不足時
+# 會在 auth/deploy 步驟乾淨失敗，不影響現役流量。
+# 部署規矩不變（docs/單一正式環境-部署SOP＋prod-deploy.sh 注釋）：
+#   staging-canary → 驗證 → staging-promote；prod-canary → 真人/Gate OK → prod-promote(帶 exact 證據)
+# MUNEA_APP_KEY＝App 出貨內建的薄門通行碼（web/src/store.js 內既有值、非機密）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "要部署哪台（brain 或 voice）"
+        required: true
+        type: choice
+        options: [brain, voice]
+      step:
+        description: "staging-canary/staging-promote＝測試機；prod-canary/prod-promote＝正式"
+        required: true
+        type: choice
+        options: [staging-canary, staging-promote, prod-canary, prod-promote]
+      promote_args:
+        description: "promote 專用：<TAG> <version> <commit>（canary 輸出的 exact 證據）"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-cloudrun-${{ inputs.service }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: ${{ inputs.step }} ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/491603544409/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: firebase-hosting-deployer@gen-lang-client-0229303523.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Derive app key from shipped source
+        run: echo "MUNEA_APP_KEY=$(grep -o 'mnk_[a-f0-9]*' web/src/store.js | head -1)" >> "$GITHUB_ENV"
+
+      - name: Staging canary (no traffic)
+        if: inputs.step == 'staging-canary'
+        env:
+          MUNEA_VOICE_CALL_CONTROL_REQUIRED: "0"
+        run: bash deploy/cloudrun/canary-deploy.sh ${{ inputs.service }}
+
+      - name: Staging promote (100% traffic, exact release evidence)
+        if: inputs.step == 'staging-promote'
+        run: |
+          [ -n "${{ inputs.promote_args }}" ] || { echo "缺 promote_args：<TAG> <version> <commit>"; exit 1; }
+          echo yes | bash deploy/cloudrun/promote.sh staging ${{ inputs.service }} ${{ inputs.promote_args }}
+
+      - name: Production canary (no traffic + verify)
+        if: inputs.step == 'prod-canary'
+        run: bash deploy/cloudrun/prod-deploy.sh ${{ inputs.service }}
+
+      - name: Production promote (exact release evidence)
+        if: inputs.step == 'prod-promote'
+        run: |
+          [ -n "${{ inputs.promote_args }}" ] || { echo "缺 promote_args：<TAG> <version> <commit>"; exit 1; }
+          echo yes | bash deploy/cloudrun/promote.sh production ${{ inputs.service }} ${{ inputs.promote_args }}
