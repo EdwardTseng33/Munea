@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260716-v1028" />
+  <link rel="stylesheet" href="src/styles.css?v=20260717-v1031" />
 </head>
 <body>
 <div class="app-shell">
@@ -828,7 +828,7 @@
       <h2>邀請家人</h2>
       <p class="modal-sub">家人加入後，互相看得到狀態、關懷摘要與家人動態；聊天內容永遠不會公開。把你的專屬邀請碼傳給家人，他在沐寧的「家人 → 加入照護圈」輸入，你們就連上了。</p>
       <div class="inv-code" id="invCode">MUNEA-····</div>
-      <p class="inv-temp-note" id="invTempNote" style="display:none">還沒連上網路，這是暫時的號碼；<b>連上後會自動換成正式邀請碼</b>再傳給家人喔。</p>
+      <p class="inv-temp-note" id="invTempNote" style="display:none"></p><!-- 建立不了時，這裡照雲端回的理由顯示人話（見 app.js INVITE_FAIL_TEXT） -->
       <button class="modal-btn" id="invShareBtn">用訊息傳邀請</button>
       <button class="inv-copy" id="invCopyBtn" type="button">複製邀請碼</button>
       <p class="inv-note" id="invLimitNote">目前 Plus 方案 · 照護圈最多 4 人</p>
@@ -1188,7 +1188,7 @@
   </script>
   <script src="src/voice-turn-policy.js?v=20260716-v1024"></script>
   <script src="src/voice-call-diagnostics.js?v=20260715-v1"></script>
-  <script type="module" src="src/app.js?v=20260716-v1028"></script>
+  <script type="module" src="src/app.js?v=20260717-v1031"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
@@ -1209,7 +1209,11 @@ window.MM = (function(){
   var SH='radial-gradient(circle at 35% 30%,rgba(255,255,255,.42),rgba(255,255,255,0) 62%),';
   var HOUR=3600000, GRACE=12000, PWIN=600000, PN=10, PCOOL=1800000, LOG='munea.moodLog';
   var spitTimes=[], lastPopup=0;
-  function load(){ try{ var a=JSON.parse(localStorage.getItem(LOG))||[]; return a.map(function(x){ if(!x.src) x.src='self'; return x; }); }catch(e){return [];} }
+  // 後端英文 mood 詞 → 六色編號（後端 moodKey=0 曾被誤退成英文字，見 supabase_adapter wellbeing_row_to_signal）
+  var EMAP={happy:0,pleasant:1,steady:2,calm:2,tired:3,low:3,down:3,irritated:4,anxious:4,angry:5,upset:4};
+  // 任何來源的心情編號一律先過這關：0-5 整數才算數，英文/中文詞轉編號，轉不了回 null（呼叫端跳過該筆）
+  function normMoodKey(v){ if(typeof v==='number'&&v>=0&&v<=5&&v===Math.floor(v)) return v; if(typeof v==='string'){ var n=parseInt(v,10); if(!isNaN(n)&&String(n)===v.trim()&&n>=0&&n<=5) return n; if(EMAP[v]!=null) return EMAP[v]; if(BMAP[v]!=null) return BMAP[v]; } return null; }
+  function load(){ try{ var a=JSON.parse(localStorage.getItem(LOG))||[]; var out=[]; for(var k=0;k<a.length;k++){ var x=a[k]; if(!x) continue; var ni=normMoodKey(x.i); if(ni==null) continue; x.i=ni; if(!x.src) x.src='self'; out.push(x); } return out; }catch(e){return [];} }
   function save(a){ try{localStorage.setItem(LOG,JSON.stringify(a));}catch(e){} }
   function entries(){ return load().sort(function(a,b){return a.t-b.t;}); }
   function lastSelf(){ var e=entries(); for(var j=e.length-1;j>=0;j--){ if(e[j].src==='self') return e[j]; } return null; }
@@ -1232,7 +1236,7 @@ window.MM = (function(){
     var request=(typeof window.__muneaPullMood==='function')?window.__muneaPullMood({limit:400}):fetch('/wellbeing/recent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:400})}).then(function(r){return r.json();});
     return Promise.resolve(request).then(function(j){
         if(!j||!j.signals) return;
-        var server=j.signals.map(function(sg){ var i=(sg.moodKey!=null)?sg.moodKey:(BMAP[sg.mood]!=null?BMAP[sg.mood]:2); var t=sg.createdAt?Date.parse(sg.createdAt):Date.now(); return {t:t,i:i,src:(sg.source==='self-report')?'self':'obs'}; }).filter(function(x){return !isNaN(x.t);});
+        var server=j.signals.map(function(sg){ var i=normMoodKey(sg.moodKey); if(i==null) i=normMoodKey(sg.mood); var t=sg.createdAt?Date.parse(sg.createdAt):Date.now(); return {t:t,i:i,src:(sg.source==='self-report')?'self':'obs'}; }).filter(function(x){return !isNaN(x.t)&&x.i!=null;});
         // 合併：後端為主 ＋ 保留 5 分內還沒被後端收錄的樂觀打卡
         var merged=server.slice();
         localSelf.forEach(function(ls){ var dup=server.some(function(sv){return sv.src==='self'&&Math.abs(sv.t-ls.t)<120000&&sv.i===ls.i;}); if(!dup) merged.push(ls); });
@@ -1269,7 +1273,7 @@ window.MM = (function(){
       if(typeof window.__muneaMoodRecorded==='function') window.__muneaMoodRecorded(MOODS[i]);
     }; });
   }
-  function decorate(){ var orb=document.getElementById('moodOrb'), label=document.getElementById('moodLabel'), note=document.getElementById('moodNote'), chip=document.getElementById('moodChip'); if(!orb||!label) return; var cur=currentEntry(), i=cur?cur.i:null, st=state(); orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent='還沒記錄'; label.style.color='#8A9297'; if(note) note.textContent='點下面的表情，餵情緒球第一口'; } else { label.textContent=MOODS[i].k; label.style.color=MOODS[i].c; if(note) note.textContent=MOODS[i].note; } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent='寧寧從聊天感覺到的'; else sub.textContent='今天'; } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?'還沒記錄':'今天'; }
+  function decorate(){ var orb=document.getElementById('moodOrb'), label=document.getElementById('moodLabel'), note=document.getElementById('moodNote'), chip=document.getElementById('moodChip'); if(!orb||!label) return; var cur=currentEntry(), i=cur?cur.i:null, st=state(); if(i!=null&&!MOODS[i]) i=null; /* 防呆：怪編號一律當「還沒記錄」、絕不讓卡片死 */ orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent='還沒記錄'; label.style.color='#8A9297'; if(note) note.textContent='點下面的表情，餵情緒球第一口'; } else { label.textContent=MOODS[i].k; label.style.color=MOODS[i].c; if(note) note.textContent=MOODS[i].note; } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent='寧寧從聊天感覺到的'; else sub.textContent='今天'; } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?'還沒記錄':'今天'; }
   function weekHTML(){ var days=[],filled=0; for(var off=6;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; days.push({lab:WD[d.getDay()],i:i}); } var dots=days.map(function(x){ var col=(x.i==null)?'transparent':MOODS[x.i].c; var bd=(x.i==null)?'2px dashed #D2CCBE':'none'; return '<div style="text-align:center;flex:1"><div style="width:28px;height:28px;border-radius:50%;margin:0 auto;background:'+col+';border:'+bd+'"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">'+x.lab+'</div></div>'; }).join(''); var cap=filled?('這週記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>的心情，繼續保持。'):'每天記一點，這裡會慢慢長出你的心情軌跡。'; return '<div style="display:flex;justify-content:space-between;margin-bottom:12px">'+dots+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function monthHTML(){ var cells=[],filled=0; for(var off=29;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; cells.push(i); } var grid=cells.map(function(i){ var col=(i==null)?'transparent':MOODS[i].c; var bd=(i==null)?'1.5px dashed #DAD4C6':'none'; return '<div style="height:22px;border-radius:5px;background:'+col+';border:'+bd+'"></div>'; }).join(''); var cap=filled?('這個月記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>，心情地圖正在長出來。'):'每天記一點，一個月後這裡就是你的心情地圖。'; return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+grid+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function renderMood(mood){ var body=document.getElementById('moodBody'), chip=document.getElementById('moodChip'); if(!body) return; function paint(){ var b=document.getElementById('moodBody'); if(!b) return; if(mood==='today'){ if(window.__todayMoodHTML) b.innerHTML=window.__todayMoodHTML; decorate(); bindFaces(); } else if(mood==='week'){ b.innerHTML=weekHTML(); var c=document.getElementById('moodChip'); if(c) c.textContent='過去 7 天'; } else { b.innerHTML=monthHTML(); var c2=document.getElementById('moodChip'); if(c2) c2.textContent='過去 30 天'; } } paint(); pull().then(function(){ paint(); }); }

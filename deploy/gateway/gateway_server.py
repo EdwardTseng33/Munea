@@ -168,6 +168,13 @@ def _bearer(authorization: str) -> str:
     return token
 
 
+def _optional_bearer(authorization: str) -> str:
+    prefix = "bearer "
+    if not authorization or not authorization.lower().startswith(prefix):
+        return ""
+    return authorization[len(prefix):].strip()
+
+
 def _durable() -> SupabaseCallStore:
     if DURABLE is None:
         raise HTTPException(status_code=503, detail="durable call control is not configured")
@@ -217,9 +224,19 @@ def _decorate_connect(result: dict, user_id: str) -> dict:
 
 @app.get("/health")
 def health(key: str = "", authorization: str = Header(default="")):
-    admin_ok = bool(_ADMIN_GATE) and _bearer(authorization) == _ADMIN_GATE
-    if not (_client_ok(key) or admin_ok):
-        return {"ok": False, "error": "key required"}
+    supplied_bearer = _optional_bearer(authorization)
+    admin_ok = bool(_ADMIN_GATE) and bool(supplied_bearer) and hmac.compare_digest(
+        supplied_bearer, _ADMIN_GATE
+    )
+    user_ok = False
+    if supplied_bearer and not admin_ok and DURABLE is not None:
+        try:
+            DURABLE.authenticate(supplied_bearer)
+            user_ok = True
+        except CallControlError:
+            pass
+    if not (_client_ok(key) or admin_ok or user_ok):
+        raise HTTPException(status_code=401, detail="valid bearer token or client key required")
     durable_snapshot = None
     durable_error = ""
     if DURABLE is not None:
@@ -228,6 +245,14 @@ def health(key: str = "", authorization: str = Header(default="")):
         except CallControlError as exc:
             durable_error = str(exc)
     durable_ready = DURABLE is not None and durable_snapshot is not None
+    client_gate_ok = bool(key) and _client_ok(key)
+    if user_ok and not admin_ok and not client_gate_ok:
+        # A normal user's JWT is enough to prove the durable Gateway is ready
+        # for their call, but it must never expose fleet topology or capacity.
+        return {
+            "ok": durable_ready,
+            "durable_ready": durable_ready,
+        }
     return {
         "ok": durable_ready if _REQUIRE_DURABLE else True,
         "engine": "munea-chat-gateway",

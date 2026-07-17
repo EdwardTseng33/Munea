@@ -3213,9 +3213,25 @@ function enableSheetDrag() {
   window.addEventListener('mousemove', e => { if (active) move(e.clientY); });
   window.addEventListener('mouseup', end);
 }
+function syncAccountScopedCaches(state) {
+  // 換帳號（含登出）就清掉「跟上一個帳號綁定」的本機殘留：
+  // 方案等級與邀請碼都是伺服器按帳號算的，殘留會讓人走進註定失敗的畫面
+  // （例：測試帳號的 Pro 殘留讓真帳號穿過免費門、到雲端才被擋）。
+  try {
+    const uid = String((state && (state.authUserId || state.userId)) || '');
+    const last = localStorage.getItem('munea.lastAuthUser') || '';
+    if (uid === last) return;
+    localStorage.setItem('munea.lastAuthUser', uid);
+    localStorage.removeItem('munea.inviteCode');
+    localStorage.removeItem('munea.inviteCodeAt');
+    localStorage.removeItem('munea.plan');
+    if (uid && typeof refreshServerPlanEntitlement === 'function') refreshServerPlanEntitlement();
+  } catch (e) {}
+}
 function updateAuthUI() {
   // 7/9 正式化：示範假登入（陳秀英）拆除——畫面只反映真實登入狀態
   const state = authState();
+  syncAccountScopedCaches(state);
   let signedIn = state.status === 'signed-in';
   renderAuthAvatar(state, signedIn);
   const card = $('#authCard');
@@ -5296,7 +5312,7 @@ function init() {
     try {
       const at = +(localStorage.getItem('munea.inviteCodeAt') || 0);
       const cached = localStorage.getItem('munea.inviteCode') || '';
-      if (/^MUNEA-\d{6}$/.test(cached) && Date.now() - at < 172800000) return cached;
+      if (/^MUNEA-\d{6}$/.test(cached) && Date.now() - at < 172800000) return { code: cached, error: null };
     } catch (e) {}
     try {
       // Plan, circle id, owner and member limit are derived on the server.
@@ -5305,11 +5321,21 @@ function init() {
       if (j && j.ok && j.invitation && j.invitation.shortCode) {
         const code = 'MUNEA-' + j.invitation.shortCode;
         try { localStorage.setItem('munea.inviteCode', code); localStorage.setItem('munea.inviteCodeAt', String(Date.now())); } catch (e) {}
-        return code;
+        return { code, error: null };
       }
+      // 雲端有回但拒絕：把理由帶回去，畫面照理由講人話（不再混成一句）
+      if (j && j.error) return { code: null, error: String(j.error) };
     } catch (e) {}
-    return null;   // 連不上雲端
+    return { code: null, error: 'network' };   // 連不上雲端
   }
+  // 雲端拒絕理由 → 給用戶看的人話（2026-07-17 Edward 指示：說法要照理由講、不能一句混）
+  const INVITE_FAIL_TEXT = {
+    auth_required: '先登入帳號，才能邀請家人。',
+    family_cloud_identity_required: '先登入帳號，才能邀請家人。',
+    family_owner_required: '只有家庭健康圈的圈主能建立邀請碼。',
+    family_plan_required: '邀請家人是付費方案的功能，升級後就能建立邀請碼。',
+    network: '網路不通，請檢查連線後再試一次。',
+  };
   function fillInvCode(withCloud) {
     const el = $('#invCode'); if (!el) return;
     const note = $('#invTempNote');
@@ -5318,12 +5344,16 @@ function init() {
     el.textContent = withCloud ? '建立中…' : '—';
     if (note) note.style.display = 'none';
     if (!withCloud) return;
-    ensureCloudInvite().then(code => {
-      if (code) { el.textContent = code; if (note) note.style.display = 'none'; }             // 拿到正式碼＝乾淨顯示
-      else {
-        el.textContent = '—';
-        if (note) { note.textContent = '需要連上雲端並完成帳號驗證，才能建立安全的邀請碼。'; note.style.display = ''; }
+    ensureCloudInvite().then(r => {
+      if (r.code) { el.textContent = r.code; if (note) note.style.display = 'none'; return; }  // 拿到正式碼＝乾淨顯示
+      el.textContent = '—';
+      if (r.error === 'family_plan_required' && window.MMPLAN && typeof window.MMPLAN.upsell === 'function') {
+        // 跟入口那道門同一套：方案不夠就直接帶去看升級方案，不留人在死畫面
+        const mask = $('#inviteFamModal'); if (mask) mask.classList.remove('show');
+        window.MMPLAN.upsell('family-invite');
+        return;
       }
+      if (note) { note.textContent = INVITE_FAIL_TEXT[r.error] || INVITE_FAIL_TEXT.network; note.style.display = ''; }
     });
   }
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
@@ -5333,14 +5363,14 @@ function init() {
     return /^MUNEA-\d{6}$/.test(code) ? code : '';
   }
   if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
-    if (!shownInvCode()) { toast('邀請碼還沒建立好，請確認網路與登入狀態。'); return; }
+    if (!shownInvCode()) { toast('邀請碼還沒建立好，先看畫面上寫的原因處理一下。'); return; }
     const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + shownInvCode() + '，在沐寧的「家人 → 加入照護圈」輸入，我們就連上了！';
     if (navigator.share) { navigator.share({ text }).catch(() => {}); }
     else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
   });
   if ($('#invCopyBtn')) $('#invCopyBtn').addEventListener('click', () => {
     const code = shownInvCode();
-    if (!code) { toast('邀請碼還沒建立好，請確認網路與登入狀態。'); return; }
+    if (!code) { toast('邀請碼還沒建立好，先看畫面上寫的原因處理一下。'); return; }
     (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : Promise.reject()).then(
       () => toast('邀請碼複製好了，貼給家人'),
       () => toast('你的邀請碼：' + code)

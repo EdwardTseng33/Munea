@@ -58,7 +58,7 @@ class ProbeReport:
     @property
     def passed(self):
         required = ("voice_ready", "avatar_health") if self.profile == "development" else (
-            "gateway_health", "gateway_lease", "voice_ready", "avatar_health",
+            "gateway_health", "gateway_lease", "voice_ready", "avatar_health", "gateway_release",
         )
         statuses = {stage.name: stage.status for stage in self.stages}
         return all(statuses.get(name) == "PASS" for name in required)
@@ -70,7 +70,7 @@ class ProbeReport:
     @property
     def first_blocker(self):
         required = ("voice_ready", "avatar_health") if self.profile == "development" else (
-            "gateway_health", "gateway_lease", "voice_ready", "avatar_health",
+            "gateway_health", "gateway_lease", "voice_ready", "avatar_health", "gateway_release",
         )
         statuses = {stage.name: stage.status for stage in self.stages}
         return next((name for name in required if statuses.get(name) != "PASS"), "")
@@ -165,8 +165,11 @@ def validate_voice_canary_url(value):
     return "wss://" + hostname
 
 
-def get_json(url, timeout):
-    request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "munea-voice-chain-probe/1"})
+def get_json(url, timeout, bearer=""):
+    headers = {"Accept": "application/json", "User-Agent": "munea-voice-chain-probe/1"}
+    if bearer:
+        headers["Authorization"] = "Bearer " + bearer
+    request = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(request, timeout=timeout) as response:
         body = json.loads(response.read().decode("utf-8"))
         return response.status, body
@@ -226,6 +229,7 @@ def acquire_gateway_lease(report, gateway_url, access_token, timeout):
         return None
     idempotency_key = "probe-" + str(uuid.uuid4())
     deadline = time.monotonic() + timeout
+    pending_lease = None
     try:
         while time.monotonic() < deadline:
             _, lease = post_json(
@@ -234,22 +238,67 @@ def acquire_gateway_lease(report, gateway_url, access_token, timeout):
                 min(timeout, 12),
                 bearer=access_token,
             )
+            if isinstance(lease, dict) and lease.get("call_id"):
+                pending_lease = lease
+            if not isinstance(lease, dict):
+                report.add("gateway_lease", "FAIL", started, "Gateway returned a malformed lease payload", gateway_url)
+                cleanup_failed_gateway_lease(report, gateway_url, access_token, pending_lease, timeout)
+                return None
             if lease.get("status") == "connect":
                 if not (lease.get("call_token") and (lease.get("voice") or {}).get("url") and (lease.get("worker") or {}).get("url")):
                     report.add("gateway_lease", "FAIL", started, "connect response is missing paired endpoints or call token", gateway_url)
+                    cleanup_failed_gateway_lease(report, gateway_url, access_token, pending_lease, timeout)
                     return None
                 report.add("gateway_lease", "PASS", started, "paired Voice and Avatar lease assigned", gateway_url)
                 return lease
             if lease.get("status") != "queued":
                 report.add("gateway_lease", "FAIL", started, lease.get("reason") or "unexpected Gateway response", gateway_url)
+                cleanup_failed_gateway_lease(report, gateway_url, access_token, pending_lease, timeout)
                 return None
             time.sleep(1.5)
         report.add("gateway_lease", "FAIL", started, "Gateway queue timed out", gateway_url)
+        cleanup_failed_gateway_lease(report, gateway_url, access_token, pending_lease, timeout)
     except urllib.error.HTTPError as error:
         report.add("gateway_lease", "FAIL", started, f"HTTP {error.code}", gateway_url)
+        cleanup_failed_gateway_lease(report, gateway_url, access_token, pending_lease, timeout)
     except Exception as error:
         report.add("gateway_lease", "FAIL", started, type(error).__name__, gateway_url)
+        cleanup_failed_gateway_lease(report, gateway_url, access_token, pending_lease, timeout)
     return None
+
+
+def cleanup_failed_gateway_lease(report, gateway_url, access_token, lease, timeout):
+    """Best-effort cleanup for leases that cannot be returned to run_probe()."""
+    if not isinstance(lease, dict) or not lease.get("call_id"):
+        return False
+    started = time.monotonic()
+    call_id = urllib.parse.quote(str(lease["call_id"]))
+    try:
+        if lease.get("status") == "connect" and lease.get("lease_version") is not None:
+            post_json(
+                gateway_url.rstrip("/") + "/v1/calls/" + call_id + "/release",
+                {
+                    "lease_version": lease["lease_version"],
+                    "event_id": "probe-abort-" + str(uuid.uuid4()),
+                    "reason": "diagnostic_probe_invalid_response",
+                },
+                timeout,
+                bearer=access_token,
+            )
+            detail = "partial connect lease released"
+        else:
+            post_json(
+                gateway_url.rstrip("/") + "/v1/calls/" + call_id + "/cancel",
+                {},
+                timeout,
+                bearer=access_token,
+            )
+            detail = "queued diagnostic lease cancelled"
+        report.add("gateway_cleanup", "PASS", started, detail, gateway_url)
+        return True
+    except Exception as error:
+        report.add("gateway_cleanup", "FAIL", started, type(error).__name__, gateway_url)
+        return False
 
 
 def release_gateway_lease(report, gateway_url, access_token, lease, timeout):
@@ -272,16 +321,18 @@ def release_gateway_lease(report, gateway_url, access_token, lease, timeout):
         report.add("gateway_release", "FAIL", started, type(error).__name__, gateway_url)
 
 
-def probe_http_health(report, name, base_url, app_key, timeout, durable=False):
+def probe_http_health(report, name, base_url, app_key, timeout, durable=False, bearer=""):
     started = time.monotonic()
     if not base_url:
         report.add(name, "SKIP", started, "endpoint is not configured")
         return
     try:
-        status, body = get_json(with_query(base_url.rstrip("/") + "/health", key=app_key), timeout)
+        status, body = get_json(
+            with_query(base_url.rstrip("/") + "/health", key=app_key), timeout, bearer=bearer
+        )
         ok = status == 200 and body.get("ok") is True
         if durable:
-            ok = ok and body.get("durable_ready") is True and body.get("mode") == "durable"
+            ok = ok and body.get("durable_ready") is True
         detail = "ok" if ok else str(body.get("error") or body.get("durable_error") or "health returned not-ready")
         report.add(name, "PASS" if ok else "FAIL", started, detail, base_url)
     except urllib.error.HTTPError as error:
@@ -296,33 +347,39 @@ async def run_probe(args):
     avatar_url = args.avatar_url or os.environ.get("MUNEA_AVATAR_URL") or config["avatar_url"]
     gateway_url = args.gateway_url or os.environ.get("MUNEA_GATEWAY_URL") or config["gateway_url"]
     app_key = args.app_key or os.environ.get("MUNEA_APP_KEY") or config["app_key"]
-    access_token = args.access_token or os.environ.get("MUNEA_ACCESS_TOKEN") or ""
+    access_token = os.environ.get("MUNEA_ACCESS_TOKEN") or ""
     voice_canary_url = getattr(args, "voice_canary_url", "") or ""
     report = ProbeReport(args.profile, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
-    probe_http_health(report, "gateway_health", gateway_url, app_key, args.timeout, durable=True)
-    lease = acquire_gateway_lease(report, gateway_url, access_token, args.timeout) if args.profile == "production" else None
-    if lease:
-        voice_url = voice_canary_url or lease["voice"]["url"]
-        avatar_url = lease["worker"]["url"]
-        if voice_canary_url:
+    lease = None
+    try:
+        probe_http_health(
+            report, "gateway_health", gateway_url, app_key, args.timeout,
+            durable=True, bearer=access_token,
+        )
+        lease = acquire_gateway_lease(report, gateway_url, access_token, args.timeout) if args.profile == "production" else None
+        if lease:
+            voice_url = voice_canary_url or lease["voice"]["url"]
+            avatar_url = lease["worker"]["url"]
+            if voice_canary_url:
+                started = time.monotonic()
+                report.add("voice_route", "PASS", started, "Gateway call token routed to explicit 0% canary", voice_url)
+            await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
+        elif args.profile == "development":
+            await probe_voice_ready(report, voice_url, app_key, args.timeout)
+        else:
             started = time.monotonic()
-            report.add("voice_route", "PASS", started, "Gateway call token routed to explicit 0% canary", voice_url)
-        await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
-    elif args.profile == "development":
-        await probe_voice_ready(report, voice_url, app_key, args.timeout)
-    else:
+            report.add("voice_ready", "SKIP", started, "production Voice needs a Gateway call token")
+        probe_http_health(report, "avatar_health", avatar_url, app_key, args.timeout)
         started = time.monotonic()
-        report.add("voice_ready", "SKIP", started, "production Voice needs a Gateway call token")
-    probe_http_health(report, "avatar_health", avatar_url, app_key, args.timeout)
-    started = time.monotonic()
-    report.add(
-        "real_device_media_gate",
-        "SKIP",
-        started,
-        "microphone, WebRTC offer, first frame/audio and ASR are recorded by the installed App trace",
-    )
-    release_gateway_lease(report, gateway_url, access_token, lease, args.timeout)
+        report.add(
+            "real_device_media_gate",
+            "SKIP",
+            started,
+            "microphone, WebRTC offer, first frame/audio and ASR are recorded by the installed App trace",
+        )
+    finally:
+        release_gateway_lease(report, gateway_url, access_token, lease, args.timeout)
     return report
 
 
@@ -352,7 +409,6 @@ def main():
     )
     parser.add_argument("--avatar-url", default="")
     parser.add_argument("--app-key", default="")
-    parser.add_argument("--access-token", default="")
     parser.add_argument("--timeout", type=float, default=12.0)
     parser.add_argument("--json-output", default="")
     args = parser.parse_args()
