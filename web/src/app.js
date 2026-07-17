@@ -3303,8 +3303,27 @@ async function signInWithAuthProvider(provider) {
   trackProductEvent('auth_sign_in_started', { provider });
   const method = provider === 'apple' ? auth.signInWithApple : auth.signInWithGoogle;
   const result = method ? await method() : { ok: false, error: { code: 'unsupported_provider' } };
-  if (result && result.ok) return setAuthMessage('請在瀏覽器或系統視窗完成登入', 'ok');
-  setAuthMessage(result && result.error && result.error.code === 'auth_not_configured' ? '尚未連接 Supabase 登入設定' : '登入暫時無法啟動', 'error');
+  const code = String(result && result.error && result.error.code || 'unknown').replace(/[^a-z0-9_.-]/gi, '').slice(0, 64) || 'unknown';
+  const fallbackFrom = String(result && result.fallbackFrom || '').replace(/[^a-z0-9_.-]/gi, '').slice(0, 64);
+  if (result && result.ok) {
+    if (fallbackFrom) {
+      trackProductEvent('auth_sign_in_fallback_started', { provider, from: fallbackFrom, path: result.authPath || '' });
+      return setAuthMessage('原生登入未啟動，已改用安全登入頁', 'ok');
+    }
+    return setAuthMessage('請在瀏覽器或系統視窗完成登入', 'ok');
+  }
+  trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom });
+  const messages = {
+    auth_not_configured: '尚未連接 Supabase 登入設定',
+    google_sign_in_cancelled: '已取消 Google 登入',
+    google_sign_in_in_progress: 'Google 登入正在進行中',
+    native_google_unavailable: 'Google 登入元件未載入，請更新 App',
+    google_ios_client_id_missing: 'Google 登入設定缺失，請更新 App',
+    google_sign_in_view_unavailable: '目前無法開啟 Google 登入畫面',
+    native_oauth_unavailable: '無法開啟 Google 安全登入頁',
+    native_oauth_open_failed: 'Google 安全登入頁開啟失敗',
+  };
+  setAuthMessage(messages[code] || `Google 登入失敗（${code}）`, code === 'google_sign_in_cancelled' ? 'info' : 'error');
 }
 async function signInDeveloperMode() {
   const auth = window.MuneaAuth;

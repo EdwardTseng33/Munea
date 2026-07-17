@@ -4,6 +4,14 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 進行中：Build 44 Google 登入「暫時無法啟動」修復（2026-07-17 Codex）
+
+- 真機證據：Edward 在送審候選 `1.0.37 (Build 44)` 點 Google 登入，App 顯示「登入暫時無法啟動」；Google 登入真人 Gate 改判 FAIL，Build 44 不得視為 Google 登入已驗收。
+- Branch：`codex/fix-google-login-fallback-20260717`
+- 預計檔案：`web/src/auth.js`、`web/src/app.js`、`scripts/test-native-auth.js`、`scripts/test-release-settings.js`、`STATUS.md` 與本看板。
+- 修正方向：原生 Google 選帳仍是第一順位；除使用者取消／登入已在進行中外，原生 bridge、SDK、ID token 或 Supabase 換證失敗時，自動切到既有的系統瀏覽器 PKCE＋`munea://auth/callback` 安全備援。UI 顯示安全錯誤碼並記錄產品事件，不再把所有根因吃成同一句。
+- 明確避讓：不修改 Apple 登入、Brain、Voice、Gateway、RunPod、GLOWS、定價或 App Store 後台。此修正影響 App Web bundle，合併後需 Mac `cap sync`、新 Build、安裝版 iPhone 完成 Google 選帳／回 App／session／登出重登，再驗真 token 聊聊撥通。
+
 ### 進行中：Build 43 真登入 0 點、免費體驗未補與開發包模式混用（2026-07-17 Codex）
 
 - 任務／證據：iPhone 15:34 真實登入有效時，Brain API 已回 200，但沒有任何 `/account-bootstrap`；App 產品事件在 15:34:16、15:34:22 明確記錄兩次 `insufficient_credits`，資料庫再確認 active 錢包餘額為 0、一次性免費 5 點發放紀錄為空，因此沒有建立 lease／heartbeat。`--gateway` QA profile 的 `enabled: true` 被舊判斷誤認為 fixture bypass，直接跳過本應冪等補齊帳號與免費體驗的 bootstrap。

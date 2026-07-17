@@ -114,6 +114,9 @@ expect(auth.includes('exchangeCodeForSession'), 'native OAuth PKCE code exchange
 expect(auth.includes("nativePlugin('AppleSignIn')"), 'native Apple plugin bridge is missing');
 expect(auth.includes("nativePlugin('GoogleSignIn')"), 'native Google plugin bridge is missing');
 expect(auth.includes("provider: 'google'") && auth.includes('google_identity_token_missing'), 'native Google ID token is not exchanged with Supabase');
+expect(auth.includes('signInWithBrowserOAuth') && auth.includes("fallbackFrom: nativeCode"), 'native Google failure does not fall back to browser OAuth');
+expect(app.includes("auth_sign_in_fallback_started") && app.includes("auth_sign_in_failed"), 'Google sign-in fallback diagnostics are missing');
+expect(app.includes('Google 登入失敗（${code}）'), 'Google sign-in failure still hides the diagnostic code');
 expect(auth.includes('signInWithIdToken'), 'native Apple ID token is not exchanged with Supabase');
 expect(infoPlist.includes('<string>munea</string>'), 'iOS OAuth callback URL scheme is missing');
 expect(hasUsageDescription(infoPlist, 'NSCameraUsageDescription'), 'iOS camera usage description is missing');
