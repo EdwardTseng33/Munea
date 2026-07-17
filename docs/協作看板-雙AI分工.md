@@ -11,6 +11,7 @@
 - 預計檔案：`web/src/auth.js`、`web/src/app.js`、`scripts/test-native-auth.js`、`scripts/test-release-settings.js`、`STATUS.md` 與本看板。
 - 修正方向：原生 Google 選帳仍是第一順位；除使用者取消／登入已在進行中外，原生 bridge、SDK、ID token 或 Supabase 換證失敗時，自動切到既有的系統瀏覽器 PKCE＋`munea://auth/callback` 安全備援。UI 顯示安全錯誤碼並記錄產品事件，不再把所有根因吃成同一句。
 - 明確避讓：不修改 Apple 登入、Brain、Voice、Gateway、RunPod、GLOWS、定價或 App Store 後台。此修正影響 App Web bundle，合併後需 Mac `cap sync`、新 Build、安裝版 iPhone 完成 Google 選帳／回 App／session／登出重登，再驗真 token 聊聊撥通。
+- 狀態：PR #168；原生成功／取消／故障備援／PKCE 回 App 契約、Release settings、完整 `release:check` 均 PASS，等待 GitHub CI 與合併。App 真機仍為 `App E2E pending`。
 
 ### 進行中：Build 43 真登入 0 點、免費體驗未補與開發包模式混用（2026-07-17 Codex）
 

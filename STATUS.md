@@ -1,6 +1,6 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 🔴 **2026-07-17 Google 登入真機 Gate FAIL／修復中**：Edward 在送審候選 `1.0.37 (Build 44)` 點 Google 登入，App 顯示「登入暫時無法啟動」。外部 Google iOS client／callback 與東京 Supabase provider 公開探測正常，但 App 把原生 bridge、SDK、ID token、Supabase 換證等所有錯誤都吃成同一句，且原生路徑失敗後沒有使用既有系統瀏覽器 PKCE 備援。分支 `codex/fix-google-login-fallback-20260717` 修正為原生選帳優先、非取消型失敗自動切 `munea://auth/callback` 安全備援，並顯示／記錄安全錯誤碼。Build 44 的 Google 登入不得標 PASS；合併後需 Mac `cap sync`、新 Build、安裝版 iPhone 完成選帳→回 App→session→登出重登，再以真 token 驗聊聊撥通。
+> 🔴 **2026-07-17 Google 登入真機 Gate FAIL／修復中**：Edward 在送審候選 `1.0.37 (Build 44)` 點 Google 登入，App 顯示「登入暫時無法啟動」。外部 Google iOS client／callback 與東京 Supabase provider 公開探測正常，但 App 把原生 bridge、SDK、ID token、Supabase 換證等所有錯誤都吃成同一句，且原生路徑失敗後沒有使用既有系統瀏覽器 PKCE 備援。PR #168（`codex/fix-google-login-fallback-20260717`）修正為原生選帳優先、非取消型失敗自動切 `munea://auth/callback` 安全備援，並顯示／記錄安全錯誤碼；完整 `release:check` PASS。Build 44 的 Google 登入不得標 PASS；合併後需 Mac `cap sync`、新 Build、安裝版 iPhone 完成選帳→回 App→session→登出重登，再以真 token 驗聊聊撥通。
 >
 > 🛠️ **2026-07-17 15:34 實機續查／Build 44 修復中**：Build 43 的 401 換證已生效；真實登入有效時 Brain API 與 Gateway 都曾回 200，但 App 事件精確記錄 15:34:16／15:34:22 兩次 `insufficient_credits`。資料庫唯讀確認該帳號 active 錢包餘額 0、一次性免費 5 點發放紀錄為空；同時 `--gateway` QA profile 的 `enabled: true` 被 App 誤判為 fixture bypass，整段沒呼叫本應補齊帳號與免費體驗的 `/account-bootstrap`，所以沒有 lease／heartbeat。新修復讓真實登入必做且等待 bootstrap，`account_not_ready` 時補建並用同一 idempotency key 只重試一次；Mac 新增明確的 `ios:dev-profile:direct`（自動測試帳號、不跳登入）與 `ios:dev-profile:gateway`（真登入）命令。目標 `1.0.37 (Build 44)`，Draft PR #164；只需重新包 App，不需部署 Brain／Voice／Gateway。
 >
