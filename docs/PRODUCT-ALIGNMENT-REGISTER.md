@@ -1,8 +1,8 @@
 # Munea Product Alignment Register
 
-更新：`2026-07-18 01:38 Asia/Taipei`
+更新：`2026-07-18 02:10 Asia/Taipei`
 
-來源基準：`origin/main@9f43287`
+來源基準：`origin/main@b94a631`
 
 本表回答產品承諾、App、source、AI、服務、資料與真人驗收是否仍描述同一個產品。易變的版本／revision 以 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 為準，品質分數以 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md) 為準。
 
@@ -23,10 +23,10 @@
 | App source lane | `1.0.41 (Build 48)`；package、Web 與 iOS 已在 main 對齊 | 尚無 Archive／upload／iPhone 證據；latest uploaded 仍是 `1.0.40 (Build 47)` | `aligned-source` | 整合 intended fixes 後再跑 strict package／human Gate |
 | App Store lane | latest uploaded `1.0.40 (Build 47)` | 已上傳、iPhone 已安裝；selected review Build／Apple state未確認 | `partial` | App Store Connect 截圖／狀態＋關鍵旅程真機 Gate |
 | Draft call／purchase fixes | #174 0 點預檢；#175 TEST 購買與 Apple mismatch UX | base 落後 main；main 已獨立使用 `1.0.41 (48)`，未 rebase 前不能算進 Build 48 | `partial` | 依序 rebase／整合，再鎖定 next candidate |
-| Production Brain | current source `1.0.41` | `1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
-| Production Voice | current source 含較新的 Voice／call contract | `1.0.31@500c819` | `runtime-behind` | authenticated canary＋installed-iPhone Voice Gate |
+| Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
+| Production Voice | current source 含較新的 Voice／call contract | 02:10 manifest：`1.0.31@500c819` | `runtime-behind` | authenticated canary＋installed-iPhone Voice Gate |
 | Production Gateway | App 正式路徑要求 Gateway | auth boundary 可觀察；release identity／真 client trace 未知 | `partial` | release identity＋lease／ready／cleanup trace |
-| Staging Brain／Voice | current main `1.0.41` | 兩者皆 `1.0.34@136dc81` | `runtime-behind` | 僅在有核准變更時 canary；驗證 exact commit |
+| Staging Brain／Voice | current main `1.0.41` | 02:10 manifest：兩者皆 `1.0.34@136dc81`；Cloud Run metadata Ready | `runtime-behind` | 僅在有核准變更時 canary；驗證 exact commit |
 | Avatar fleet | FlashHead／Call Control contract 存在 | serving worker identity、capacity freshness與真 App path 未列入 release snapshot | `unknown` | Gateway-to-worker identity＋長聊／故障 Gate |
 
 ## Product, AI, data, and operations alignment
@@ -42,7 +42,7 @@
 | Butler | 產品文件曾宣告 Claude Sonnet；可執行路徑仍混合 deterministic／Google GenAI | provider authority、成本、安全與 deployed trace 不一致 | `blocked` | 拍板 provider SSOT，對齊 adapter／測試／telemetry／文件 |
 | Guardian | deterministic rules＋semantic review source 存在 | 多 provider safety claim、red-team與 production audit evidence 不完整 | `partial` | provider authority＋red-team＋audit freshness |
 | Migration / data | source head `019`，manifest 本輪補登 | live `017`／`018`／`019` 無新 ledger；不能由 source 推論 live | `blocked` | backup／approval／apply／read-only post-check |
-| Operations console | staging shell 200，CSP／DENY 可觀察 | privileged source、freshness、RBAC／MFA、empty-state truth 未驗 | `partial` | 具名 operator read-only smoke＋freshness SLA |
+| Operations console | staging shell／asset hash／security headers 已進 manifest；9 個 read endpoints 無 token 全回 403 | privileged source、data freshness、RBAC／MFA、empty-state truth 未驗 | `partial` | 具名 operator read-only smoke＋freshness SLA |
 
 ## Confirmed drift to remove
 
@@ -53,6 +53,7 @@
 | `019` SQL 存在但 migration manifest 未列 | 本輪補入 checksum 與 order 20；需 CI／review 通過後才算 merged governance |
 | Billing SSOT 方案已改，但 data model 段落仍稱 policy v3 | 本輪改為 policy v4／migration `019`，保留 v3 為歷史 migration |
 | App source `1.0.41` 與 production Brain `1.0.36`／Voice `1.0.31` | 不以盲目部署消除版號差；以 compatibility canary＋App E2E 決定 rollout |
+| runtime identity 靠人工抄寫，無 freshness／target config 綁定 | 新增 `RELEASE-EVIDENCE-TARGETS.json`、secret-free capture、latest manifest、24 小時 strict check 與 CI 負向測試 |
 
 ## 90-point alignment gates
 

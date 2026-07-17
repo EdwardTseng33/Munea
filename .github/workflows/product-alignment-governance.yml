@@ -11,6 +11,8 @@ on:
       - "package-lock.json"
       - "scripts/check_product_alignment.py"
       - "scripts/test_product_alignment_governance.py"
+      - "scripts/release_evidence.py"
+      - "scripts/test_release_evidence.py"
       - "scripts/check-release-consistency.js"
       - "scripts/test-store-verification.js"
       - "supabase/migration-manifest.json"
@@ -28,6 +30,8 @@ on:
       - "package-lock.json"
       - "scripts/check_product_alignment.py"
       - "scripts/test_product_alignment_governance.py"
+      - "scripts/release_evidence.py"
+      - "scripts/test_release_evidence.py"
       - "scripts/check-release-consistency.js"
       - "scripts/test-store-verification.js"
       - "supabase/migration-manifest.json"
@@ -68,6 +72,12 @@ jobs:
 
       - name: Test alignment governance failures
         run: python -B scripts/test_product_alignment_governance.py
+
+      - name: Check committed runtime evidence contract
+        run: python -B scripts/release_evidence.py check
+
+      - name: Test runtime evidence safety and freshness rules
+        run: python -B scripts/test_release_evidence.py
 
       - name: Check release version and Build alignment
         run: node scripts/check-release-consistency.js --strict-ios

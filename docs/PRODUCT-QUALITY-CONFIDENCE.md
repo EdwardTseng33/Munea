@@ -1,8 +1,8 @@
 # Munea 產品品質信心
 
-更新：`2026-07-18 01:38 Asia/Taipei`
+更新：`2026-07-18 02:10 Asia/Taipei`
 
-來源基準：`origin/main@9f43287`
+來源基準：`origin/main@b94a631`
 
 本文件是目前「能不能放心把這一版交給使用者」的評分 SSOT。它不取代 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 的版本／部署事實，也不把程式存在、測試通過、已合併、已部署或真機通過混成同一個「完成」。
 
@@ -22,11 +22,13 @@
 | 2. API／服務可靠性與安全 | 15% | 80 | 12.0 | release identity、權限與契約測試良好；Gateway identity、authenticated call trace 與一致監控端點仍不足 |
 | 3. App 與後端程式品質 | 20% | 64 | 12.8 | release gate 強，但 #174／#175 尚未合併、包版與真機驗收，關鍵旅程不得標 verified |
 | 4. Repo／資料／migration 治理 | 15% | **62→69** | 10.35 | `019` manifest、current authority index、負向治理測試、CI 與 release gate 已補齊；live `017`／`018`／`019` 無 ledger，受 69 分上限限制 |
-| 5. 產品／版本／AI／服務對焦 | 20% | **58→66** | 13.2 | source／uploaded／runtime 分 lane，版本、定價、AI provider reality 與 historical marker 轉成機器 gate；外部 App Store、runtime、DB 與真機仍未同版 |
+| 5. 產品／版本／AI／服務對焦 | 20% | **58→66→69** | 13.8 | source／uploaded／runtime 分 lane；5 個公開 runtime／admin target 已產生 24 小時 freshness manifest 並接入 CI；App Store、Gateway／Avatar、DB 與真機仍未同版，受 69 分上限限制 |
 | 6. 營運後台與可觀測性 | 15% | 74 | 11.1 | staging 後台 shell 與安全 headers 可用；特權資料來源、新鮮度、RBAC／MFA 與 7 日營運指標未證明 |
-| **加權結果** | **100%** |  | **71.15，硬上限後 69** | **兩個低分項實質上升；整體仍被 P0 真機關鍵旅程限制** |
+| **加權結果** | **100%** |  | **71.75，硬上限後 69** | **兩個低分項持續上升；整體仍被 P0 真機關鍵旅程限制** |
 
-本輪加分只計入可重現的 source／automated governance：`docs/CURRENT-AUTHORITIES.json`、product-alignment validator、五組負向測試、GitHub workflow，以及 release check 內的 alignment／migration gate。未把文件改字當成 runtime 或真人分數。
+本輪加分只計入可重現證據：12 個 current authorities、product-alignment validator、7 個 alignment 負向測試、6 個 release-evidence 安全／freshness 測試、GitHub workflow，以及 2026-07-18 02:10 對 4 個公開 `/version` 與 staging admin shell 的 secret-free capture。未把文件改字或 Cloud Run Ready 當成真人分數。
+
+產品對焦 `69` 是有效期分數：release decision 時若 `npm run release:evidence:check` 因超過 24 小時失敗，且未重新 capture，該面向回退到 `66`，不得沿用本次 runtime 證據。
 
 ### 每個面向如何得分
 
@@ -52,15 +54,15 @@
 
 | 證據 | 2026-07-18 判讀 |
 |---|---|
-| Latest source | `1.0.41 (Build 48)`；source、Web、package 與 iOS 已在 `origin/main@9f43287` 對齊，但本輪沒有 Archive／upload／iPhone 證據 |
+| Latest source | `1.0.41 (Build 48)`；source、Web、package、iOS 與品質治理已在 `origin/main@b94a631` 對齊，但本輪沒有 Archive／upload／iPhone 證據 |
 | Latest uploaded App | `1.0.40 (Build 47)`；STATUS 記錄 20:44 上傳成功與 Edward iPhone 換裝成功 |
 | App Store | Build 47 已上傳；精確 selected Build 與 Apple review state 未由本輪 App Store Connect 證據確認，因此保持 `unknown` |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；Draft #175：TEST 本機購買模擬與 Apple account-token mismatch 說明。兩者 base 落後 latest main，未計為 merged／packaged／human verified |
-| Production Brain | 公開 `/version` 回 `1.0.36@d6a72a1`，revision `munea-brain-00004-leb` |
-| Production Voice | 公開 `/version` 回 `1.0.31@500c819`，revision `munea-voice-00002-sub` |
-| Staging Brain／Voice | 服務端點分別回 `1.0.34@136dc81`，revisions `00061-dow`／`00051-qom` |
+| Production Brain | 02:10 secret-free manifest：公開 `/version` 回 `1.0.36@d6a72a1`，revision `munea-brain-00004-leb` |
+| Production Voice | 02:10 secret-free manifest：公開 `/version` 回 `1.0.31@500c819`，revision `munea-voice-00002-sub` |
+| Staging Brain／Voice | 02:10 secret-free manifest：兩者皆回 `1.0.34@136dc81`，revisions `00061-dow`／`00051-qom`；Cloud Run metadata 顯示 Ready 與必要 env-name／Secret IAM contract 完整 |
 | Gateway | 公開 `/health` 無憑證回 401，證明 auth boundary；release identity 與真實 App lease／cleanup trace仍未知 |
-| 營運後台 | staging `/admin.html` 回 200，CSP 與 `X-Frame-Options: DENY` 存在；privileged metrics、Tokyo source 與 freshness 未驗 |
+| 營運後台 | staging `/admin.html` 回 200；security headers／asset hash 已寫入 manifest，且 9 個 read endpoints 全部拒絕無 token 請求；privileged metrics、Tokyo source 與 data freshness 未驗 |
 | Repo migration | source 已有 `019_pricing_plus100_pro200.sql`；本輪修正其原先未列入 manifest 的治理缺口。這不代表 Tokyo 已套用 |
 | Live DB | `017`／`018`／`019` 本輪沒有新的 approved ledger 與 live read-only proof，全部不得標 ready |
 
@@ -87,10 +89,10 @@
 
 ### P1：把單次驗收變成可持續信心
 
-1. 為 production Brain／Voice／Gateway／Avatar 建立單一 release manifest 與 signed App E2E attestation。
+1. ✅ 已為 production／staging Brain、Voice 與 staging admin shell 建立 secret-free release evidence manifest；下一步納入 Gateway／Avatar identity、App Store、DB head 與 signed App E2E attestation。
 2. 後台顯示 source project、service revision、DB head、資料最後事件時間、fallback 狀態與指標定義版本。
 3. 建立 7 日 dashboard：登入成功率、購買驗證成功率、call setup success、p95 接通時間、通話中斷率、點數扣除／退款異常、admin data freshness。
-4. ✅ 已把 current authority、版本／Build、定價、AI provider reality、historical marker 與 migration manifest 加入 CI／release gate；下一步把 runtime／DB evidence 轉成簽章 attestation。
+4. ✅ 已把 current authority、版本／Build、定價、AI provider reality、historical marker、migration manifest 與 runtime evidence contract 加入 CI／release gate；DB evidence 與人工作業仍需具名／簽章 attestation。
 
 ## 90 分的最低條件
 

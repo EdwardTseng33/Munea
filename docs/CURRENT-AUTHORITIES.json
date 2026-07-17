@@ -53,6 +53,13 @@
       "ownerRole": "Platform"
     },
     {
+      "topic": "runtime-evidence",
+      "path": "docs/RELEASE-EVIDENCE-LATEST.json",
+      "ownerRole": "Release / Platform",
+      "volatileMaxAgeHours": 24,
+      "captureCommand": "python scripts/release_evidence.py capture"
+    },
+    {
       "topic": "collaboration",
       "path": "docs/協作看板-雙AI分工.md",
       "ownerRole": "Engineering"
