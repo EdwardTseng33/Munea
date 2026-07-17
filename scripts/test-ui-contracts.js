@@ -105,4 +105,29 @@ assert(/x\.i!=null/.test(html), 'Cloud mood rows without a safe key must be drop
 assert(/var ni=normMoodKey\(x\.i\); if\(ni==null\) continue;/.test(html), 'Cached mood entries must be sanitized on load so a poisoned cache heals itself');
 assert(/if\(i!=null&&!MOODS\[i\]\) i=null;/.test(html), 'Mood card decorate must survive an unknown mood key instead of dying');
 
+// 訂閱確認欄（2026-07-17 Edward 真機回報）：整頁會捲（.sub-page overflow-y:auto），
+// absolute 會跟著內容捲走、浮到畫面中間；fixed 才真的釘在手機下方。
+const planConfirmCss = css.match(/\.plan-confirm-bar \{[^}]*\}/)?.[0] || '';
+assert(planConfirmCss, 'Plan confirm bar must keep a dedicated style rule');
+assert(/position:\s*fixed/.test(planConfirmCss), 'Plan confirm bar must be fixed to the phone bottom; absolute scrolls away inside the scrollable plan page');
+assert(!/position:\s*absolute/.test(planConfirmCss), 'The old absolute positioning must stay dead — it floated the bar into mid-screen');
+assert(/\.sub-page \{[^}]*overflow-y:\s*auto/.test(css), 'The plan page scrolls as a whole; this is why the confirm bar cannot be absolute');
+
+// 畫面寫什麼＝就扣什麼：確認欄開著時改方案／月年繳，不重畫就會扣錯商品
+assert(app.includes('function planConfirmHtml') && app.includes('function syncPlanConfirm'), 'Plan confirm text must be re-rendered from a single source, not snapshotted once');
+const renderSubUiBody = app.match(/function renderSubUI\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(renderSubUiBody, 'renderSubUI must remain a readable single function');
+assert(renderSubUiBody.includes('syncPlanConfirm()'), 'Changing plan or billing cycle must re-sync the open confirm bar');
+const showPlanConfirmBody = app.match(/function showPlanConfirm\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(showPlanConfirmBody.includes('_planPick = _subPlan;'), 'The picked plan must always follow the currently selected plan');
+assert(!/\$\('#planConfirm'\)\.style\.display = ''/.test(app), 'Plan confirm bar must only be opened through showPlanConfirm');
+assert((app.match(/\$\('#planConfirm'\)\.style\.display = 'none'/g) || []).length === 0, 'Plan confirm bar must only be closed through hidePlanConfirm');
+assert(/#planClose'\)\.addEventListener\('click', \(\) => \{\s*hidePlanConfirm\(\);/.test(app), 'Closing the plan page must drop a half-finished confirm bar');
+assert(/#managePlanBtn'\)\.addEventListener\('click', \(\) => \{\s*hidePlanConfirm\(\);/.test(app), 'Opening the plan page must start from a clean confirm state');
+assert(app.includes("body.style.paddingBottom = (bar.offsetHeight + 18)"), 'Content must be padded so the fixed bar never buries the subscription terms');
+
+// 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）
+assert(app.includes('function planPurchaseFailMessage'), 'Purchase failures must map reasons to plain-language text');
+assert(app.includes('先登入帳號，才能訂閱。') && app.includes('這個方案現在還不能買') && app.includes('付款過了，但還沒對上帳'), 'Purchase failure texts must cover sign-in, unavailable product and unverified payment');
+
 console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, and real family activities');

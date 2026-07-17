@@ -5773,6 +5773,8 @@ function init() {
       if (_subPlan === cur) cta.textContent = '你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案';
       else cta.textContent = (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? '升級 ' : '改用 ') + CIRCLE_PLAN_LABEL[_subPlan] + ' · ' + fmtPrice(_subPlan, _subCyc);
     }
+    // 確認欄開著就跟著重畫，畫面寫的跟等下要扣的永遠一致
+    if (typeof syncPlanConfirm === 'function') syncPlanConfirm();
   }
   function renderPlanState() {
     const plan = circlePlan();
@@ -5814,13 +5816,51 @@ function init() {
   }));
   // 選方案欄
   document.querySelectorAll('.ppk').forEach(c => c.addEventListener('click', () => { _subPlan = c.dataset.t; renderSubUI(); }));
+  // ===== 確認欄：畫面寫什麼＝就扣什麼（唯一真相＝_subPlan／_subCyc）=====
+  // 舊寫法在開欄當下把方案抄進 _planPick 就不再更新：欄開著時改選方案或月/年繳，
+  // 欄位文字與實際扣款會對不上（選 Plus 卻扣 Pro、寫月費卻扣年費）。一律重畫、不留舊值。
+  function planConfirmHtml(plan, cyc) {
+    return '訂閱「<b>' + CIRCLE_PLAN_LABEL[plan] + '</b>」· ' + fmtPrice(plan, cyc)
+      + '<br>每月 ' + PLAN_POINTS[plan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[plan] + ' 人。';
+  }
+  function planConfirmOpen() { const b = $('#planConfirm'); return !!b && b.style.display !== 'none'; }
+  // 付款失敗要講「為什麼」，不要全部混成一句（同邀請碼 105 號的教訓）
+  function planPurchaseFailMessage(reason) {
+    if (reason === 'signin_required') return '先登入帳號，才能訂閱。';
+    if (reason === 'server_unavailable') return '網路不通，請檢查連線後再試一次。';
+    if (reason === 'notfound') return '這個方案現在還不能買，我們正在開通，晚點再試。';
+    if (reason === 'unsupported') return '這個版本還不能付款，更新 App 後再試。';
+    if (reason === 'unverified' || reason === 'server_verification_failed' || reason === 'signed_transaction_missing') {
+      return '付款過了，但還沒對上帳。先別重複付款，稍等會自動生效。';
+    }
+    return '付款沒有完成，晚點再試一次就好。';
+  }
+  function showPlanConfirm() {
+    const bar = $('#planConfirm'); if (!bar) return;
+    _planPick = _subPlan;
+    $('#planConfirmText').innerHTML = planConfirmHtml(_subPlan, _subCyc);
+    bar.style.display = '';
+    // 欄是釘在畫面下方的，內容要墊高，最底下的條款連結與按鈕才不會被蓋住（蘋果要求條款看得到）
+    const body = document.querySelector('#planModal .sub-body');
+    if (body) body.style.paddingBottom = (bar.offsetHeight + 18) + 'px';
+  }
+  function hidePlanConfirm() {
+    _planPick = null;
+    const bar = $('#planConfirm'); if (bar) bar.style.display = 'none';
+    const body = document.querySelector('#planModal .sub-body');
+    if (body) body.style.paddingBottom = '';
+  }
+  // 欄開著時改選方案／月年繳 → 跟著重畫；選回目前方案就收起來（沒東西好確認）
+  function syncPlanConfirm() {
+    if (!planConfirmOpen()) return;
+    if (_subPlan === circlePlan()) { hidePlanConfirm(); return; }
+    showPlanConfirm();
+  }
   // 訂閱鈕
   if ($('#subCta')) $('#subCta').addEventListener('click', () => {
     const cur = circlePlan();
     if (_subPlan === cur) { toast('你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案'); return; }
-    _planPick = _subPlan;
-    $('#planConfirmText').innerHTML = '訂閱「<b>' + CIRCLE_PLAN_LABEL[_subPlan] + '</b>」· ' + fmtPrice(_subPlan, _subCyc) + '<br>每月 ' + PLAN_POINTS[_subPlan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[_subPlan] + ' 人。';
-    $('#planConfirm').style.display = '';
+    showPlanConfirm();
   });
   if ($('#planYes')) $('#planYes').addEventListener('click', async () => {
     if (!_planPick) return;
@@ -5831,20 +5871,20 @@ function init() {
       setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(pid);
       clearBtnBusy(b, '確認變更');
-      if (r.ok) { $('#planConfirm').style.display = 'none'; _planPick = null; } // 生效與提示由 __muneaApplyPurchase 統一做
+      if (r.ok) { hidePlanConfirm(); } // 生效與提示由 __muneaApplyPurchase 統一做
       else if (r.reason === 'cancelled') toast('沒關係，想好再訂就好。');
-      else if (r.reason === 'pending') { toast('付款送出了，等核准後會自動生效。'); $('#planConfirm').style.display = 'none'; _planPick = null; }
-      else toast('付款沒有完成，晚點再試一次就好。');
+      else if (r.reason === 'pending') { toast('付款送出了，等核准後會自動生效。'); hidePlanConfirm(); }
+      else toast(planPurchaseFailMessage(r.reason), 4200);
       return;
     }
-    try { localStorage.setItem('munea.plan', _planPick); localStorage.removeItem('munea.planNext'); } catch (e2) {}
-    $('#planConfirm').style.display = 'none';
+    const picked = _planPick;
+    try { localStorage.setItem('munea.plan', picked); localStorage.removeItem('munea.planNext'); } catch (e2) {}
+    hidePlanConfirm();
     renderPlanState();
     if (typeof renderFcRoster === 'function') { try { renderFcRoster(); } catch (e3) {} }
-    toast(subscriptionSuccessMessage(_planPick), 4200);
-    _planPick = null;
+    toast(subscriptionSuccessMessage(picked), 4200);
   });
-  if ($('#planNo')) $('#planNo').addEventListener('click', () => { $('#planConfirm').style.display = 'none'; _planPick = null; });
+  if ($('#planNo')) $('#planNo').addEventListener('click', () => hidePlanConfirm());
   if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', async () => {
     const b = $('#planCancelBtn');
     if (window.MuneaStore && window.MuneaStore.available() && typeof window.MuneaStore.manageSubscriptions === 'function') {
@@ -5857,11 +5897,15 @@ function init() {
     toast('請到 iPhone「設定 → Apple 帳戶 → 訂閱項目」管理或取消訂閱');
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => {
+    hidePlanConfirm();       // 每次進來都從乾淨狀態開始，不留上次挑到一半的確認欄
     renderSubUI();
     $('#planModal').classList.add('show');
     void refreshServerPlanEntitlement();
   });
-  if ($('#planClose')) $('#planClose').addEventListener('click', () => $('#planModal').classList.remove('show'));
+  if ($('#planClose')) $('#planClose').addEventListener('click', () => {
+    hidePlanConfirm();       // 關頁面＝放棄這次變更，別讓它下次開頁還掛在那
+    $('#planModal').classList.remove('show');
+  });
   // 恢復購買（蘋果硬規定）：原生付款層在（真機）→ 交給它；不在（網頁預覽）→ 誠實說明
   // 真機直接走 MuneaStore.restore；每筆交易仍須先經伺服器驗證才套用權益。
   if ($('#restoreBtn')) $('#restoreBtn').addEventListener('click', async () => {

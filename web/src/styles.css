@@ -1755,7 +1755,9 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* ===== 方案完整子頁 ===== */
 .plan-scroll { padding-top: 8px; }
 .plan-current { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 16px; margin-bottom: 16px; }
-.plan-confirm-bar { position: absolute; left: 0; right: 0; bottom: 0; background: #FFF; border-top: 1px solid var(--line);
+/* 釘在手機下方：這頁整頁會捲（.sub-page overflow-y:auto），absolute 會跟著內容捲走、
+   浮到畫面中間（7/14 頂部可滑走改動的副作用）。fixed 才真的釘住——同 .sub-x 的作法。 */
+.plan-confirm-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; background: #FFF; border-top: 1px solid var(--line);
   padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 18px -12px rgba(31,60,52,.18); }
 .plan-confirm-bar p { font-size: 14px; color: var(--ink); margin-bottom: 10px; }
 .plan-confirm-bar .pc-actions { display: flex; gap: 10px; }
