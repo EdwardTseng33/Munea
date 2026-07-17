@@ -2913,7 +2913,10 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "memories": memories,
         "perception": perception,
         "livingProfile": load_living_profile(),
-        "healthContext": load_health_context(person_id=data.get("personId")),  # 他自己的身體數據（檔位 2）
+        # 他自己的身體數據（檔位 2）。語音那條路的 Voice 程式沒有雲端鑰匙、也認不出來電者，
+        # 所以它會先向 Brain 要好、從 data 餵進來（跟「上次聊天」同一個模子）。
+        # 餵不進來（Brain 不通、認不出人）就自己撈；撈不到就是空的——圍籬會告訴她「你看不到」。
+        "healthContext": data.get("healthContext") or load_health_context(person_id=data.get("personId")),
         "now": now_ctx,                                # 真時間（台灣、時段、語氣提示）
         "dailyBriefing": briefing,                     # 今日簡報（清晨備好的真天氣/空品/行程/暖聞）
         "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
@@ -6558,6 +6561,27 @@ def voice_call_recap_response(data):
             REQUEST_DATA_IDENTITY.reset(scope_token)
 
 
+def voice_health_context_response(data):
+    """POST /voice/health-context（內部密語驗證後才會進來）：
+    Voice 開場前向 Brain 要「這位來電者自己的身體狀況」。
+
+    為什麼要繞這一圈：Voice 那台沒有雲端鑰匙、也認不出電話那頭是誰
+    （所有來電者共用一個預設身分）。健康資料是最不能認錯人的東西——
+    把 A 的血壓講給 B 聽，比不講嚴重得多。所以一律由 Brain 認人、Brain 撈、
+    Voice 只拿結果，跟「上次聊天」「收線回寫記憶」走同一個模子。
+
+    認不出人就回空：Voice 收到空的 → 圍籬告訴她「你什麼都看不到、不准編」。
+    """
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        ctx = load_health_context() if person else {"facts": [], "notable": [], "hasData": False}
+        return {"ok": True, "healthContext": ctx, "identityResolved": bool(person)}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
@@ -6788,17 +6812,19 @@ class H(BaseHTTPRequestHandler):
             # Voice→Brain 內部通道（通話記憶）：Voice 沒有用戶的登入 token，
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
-            if request_path in ("/voice/call-memory", "/voice/call-recap"):
+            if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context"):
                 _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
                 _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
                 if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
                     self._json_error(403, "voice_internal_secret_required",
                                      "Voice internal secret is missing or wrong")
                     return
-                if request_path == "/voice/call-memory":
-                    self._json(voice_call_memory_response(data))
-                else:
-                    self._json(voice_call_recap_response(data))
+                _voice_internal = {
+                    "/voice/call-memory": voice_call_memory_response,
+                    "/voice/call-recap": voice_call_recap_response,
+                    "/voice/health-context": voice_health_context_response,
+                }
+                self._json(_voice_internal[request_path](data))
                 return
             auth_gate = require_verified_auth(self.headers, self.path, data)
             # Family-circle invites always require a verified identity, even in
