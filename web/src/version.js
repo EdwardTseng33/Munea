@@ -11,9 +11,17 @@
  *   大改版／正式上線 → 進最前碼 （1.x   → 2.0.0）
  */
 window.MuneaVersion = {
-  current: '1.0.38',
+  current: '1.0.39',
   channel: '',
   changelog: [
+    {
+      version: '1.0.39',
+      date: '2026-07-17',
+      title: 'Google 登入更新確實進包',
+      items: [
+        '覆蓋安裝後不再沿用舊登入程式，並在打包時確認安全登入備援與錯誤代碼已放入 App',
+      ],
+    },
     {
       version: '1.0.38',
       date: '2026-07-17',
