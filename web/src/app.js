@@ -3163,7 +3163,7 @@ function authDisplayName(state) {
   return '';
 }
 // 帳號卡右上角「唯一」的身份標籤（Edward 2026-07-14：只留一顆、統一右上，不要兩顆）
-// 開發測試帳號 → TEST；否則 FREE / PLUS / PRO
+// 開發測試帳號 → TEST · FREE/PLUS/PRO；否則 FREE / PLUS / PRO
 let _memBadgePlan = 'free';
 function renderMemBadge(plan) {
   if (plan) _memBadgePlan = String(plan).toLowerCase();
@@ -3172,7 +3172,7 @@ function renderMemBadge(plan) {
   let dev = false;
   try { dev = !!authState().developerMode; } catch (e) {}
   const key = dev ? 'test' : _memBadgePlan;
-  mb.textContent = dev ? 'TEST' : key.toUpperCase();
+  mb.textContent = dev ? ('TEST · ' + (_memBadgePlan || 'free').toUpperCase()) : key.toUpperCase();
   mb.className = 'mem-badge ' + key;
 }
 function authState() {
@@ -5854,7 +5854,7 @@ function init() {
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
       if (r.ok) $('#topUpModal').classList.remove('show');
-      else if (r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      else if (r.reason !== 'cancelled') toast(planPurchaseFailMessage(r.reason), 5200);
       return;
     }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
@@ -5890,6 +5890,8 @@ function init() {
     // 只剩一個分頁的切換器像壞掉 → 整個收起來，免費只看得到訂閱方案。訂閱後才長出來。
     const seg = $('#subSeg');
     if (seg) seg.style.display = cur === 'free' ? 'none' : '';
+    const unlock = $('#pointsUnlockNotice');
+    if (unlock) unlock.style.display = cur === 'free' ? '' : 'none';
     if (cur === 'free') showSubPane('plans');
     // 確認欄開著就跟著重畫，畫面寫的跟等下要扣的永遠一致
     if (typeof syncPlanConfirm === 'function') syncPlanConfirm();
@@ -5960,6 +5962,8 @@ function init() {
   // 付款失敗要講「為什麼」，不要全部混成一句（同邀請碼 105 號的教訓）
   function planPurchaseFailMessage(reason) {
     if (reason === 'signin_required') return '先登入帳號，才能訂閱。';
+    if (reason === 'apple_account_token_mismatch') return '這筆 Apple 訂閱已綁定另一個沐寧帳號。請登入原帳號；測試版請先重置 Sandbox 購買紀錄。先不要重複付款。';
+    if (reason === 'authentication_required' || reason === 'invalid_auth_token') return '登入狀態無法驗證，請重新登入真實 Google／Apple 帳號後再試。';
     if (reason === 'server_unavailable') return '網路不通，請檢查連線後再試一次。';
     if (reason === 'notfound') return '這個方案現在還不能買，我們正在開通，晚點再試。';
     if (reason === 'unsupported') return '這個版本還不能付款，更新 App 後再試。';
@@ -6052,6 +6056,7 @@ function init() {
     clearBtnBusy(b, '恢復購買');
     if (result.ok) toast('購買已恢復，方案與帳號權益正在同步');
     else if (result.reason === 'signin_required') toast('請先登入原本購買時使用的沐寧帳號');
+    else if (result.reason === 'apple_account_token_mismatch') toast(planPurchaseFailMessage(result.reason), 5200);
     else if (result.reason === 'none') toast('這個 Apple 帳號目前沒有可恢復的訂閱');
     else toast('恢復購買沒有完成，請確認網路後再試一次');
   });
@@ -6072,7 +6077,7 @@ function init() {
       setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
-      if (!r.ok && r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      if (!r.ok && r.reason !== 'cancelled') toast(planPurchaseFailMessage(r.reason), 5200);
       return;
     }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
