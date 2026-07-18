@@ -143,6 +143,44 @@ def test_voice_health_and_version_preserve_websocket_upgrades():
     assert live_voice_server.process_request(None, upgrade) is None
 
 
+def test_voice_chat_test_fails_closed_in_managed_environments():
+    class DummyClient:
+        pass
+
+    with mock.patch("google.genai.Client", return_value=DummyClient()):
+        import live_voice_server
+
+    assert live_voice_server._chat_test_enabled({}) is False
+    assert live_voice_server._chat_test_enabled({"MUNEA_ENABLE_CHAT_TEST": "1"}) is True
+    assert live_voice_server._chat_test_enabled({
+        "MUNEA_ENABLE_CHAT_TEST": "true",
+        "K_SERVICE": "munea-voice",
+    }) is False
+    assert live_voice_server._chat_test_enabled({
+        "MUNEA_ENABLE_CHAT_TEST": "yes",
+        "MUNEA_ENV_NAME": "production",
+    }) is False
+    assert live_voice_server._chat_test_enabled({
+        "MUNEA_ENABLE_CHAT_TEST": "on",
+        "MUNEA_ENVIRONMENT": "staging",
+    }) is False
+
+    request = SimpleNamespace(path="/chat-test", headers={})
+    with mock.patch.object(live_voice_server, "_chat_test_enabled", return_value=False), \
+            mock.patch.object(live_voice_server, "_chat_test_response") as render:
+        response = live_voice_server.process_request(None, request)
+    assert response.status_code == 404
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.body == b""
+    render.assert_not_called()
+
+    with mock.patch.object(live_voice_server, "_chat_test_enabled", return_value=True):
+        response = live_voice_server.process_request(None, request)
+    assert response.status_code == 200
+    assert b"window.MUNEA_CHAT_TEST=true" in response.body
+    assert b"window.MUNEA_DEV_CONFIG={enabled:true" in response.body
+
+
 def main():
     tests = [
         test_injected_release_identity_wins_and_is_allowlisted,
@@ -150,6 +188,7 @@ def main():
         test_invalid_public_values_fail_closed,
         test_brain_health_and_version_expose_the_same_release,
         test_voice_health_and_version_preserve_websocket_upgrades,
+        test_voice_chat_test_fails_closed_in_managed_environments,
     ]
     for test in tests:
         test()

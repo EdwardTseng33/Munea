@@ -31,6 +31,7 @@ FIELDS = {
 AUTH_STRENGTH = {
     "public": 0,
     "public-test-surface": 0,
+    "opt-in-noncloud-test-surface": 3,
     "developer-only": 0,
     "operator-credentials": 1,
     "legacy-key": 1,
@@ -192,7 +193,7 @@ def _auth(route: Route) -> str:
     if route.method == "WS":
         return "call-token-or-app-key"
     if route.path == "/chat-test":
-        return "public-test-surface"
+        return "opt-in-noncloud-test-surface"
     return "public"
 
 
@@ -210,6 +211,8 @@ def _criticality(route: Route) -> str:
     if route.surface == "brain" and route.path in critical_brain:
         return "critical"
     if route.path in {"/health", "/healthz", "/version", "/metrics"}:
+        return "high"
+    if route.surface == "voice" and route.path == "/chat-test":
         return "high"
     if route.path.startswith(("/admin/", "/v1/admin/", "/v1/internal/", "/family", "/notifications", "/push/")):
         return "high"
@@ -281,6 +284,8 @@ def _tests(route: Route) -> list[str]:
             return ["scripts/test_voice_chain_probe.py", "scripts/test_voice_call_token_auth.py"]
         if path in {"/healthz", "/version"}:
             return ["engine/test_service_metadata.py"]
+        if path == "/chat-test":
+            return ["engine/test_service_metadata.py"]
         return []
     if path in {"/healthz", "/version"}:
         return ["engine/test_service_metadata.py"]
@@ -329,6 +334,7 @@ def build_inventory(root: Path = ROOT, routes: Iterable[Route] | None = None) ->
         "policyNotes": [
             "AST extraction governs route existence, method, path, and surface only; auth is a reviewed declaration.",
             "Listed route tests own auth behavior and downgrade evidence; an empty tests list means no claimed coverage.",
+            "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere.",
         ],
         "routeCounts": counts,
         "routes": [metadata(route) for route in actual],

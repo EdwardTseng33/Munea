@@ -7,7 +7,8 @@
   },
   "policyNotes": [
     "AST extraction governs route existence, method, path, and surface only; auth is a reviewed declaration.",
-    "Listed route tests own auth behavior and downgrade evidence; an empty tests list means no claimed coverage."
+    "Listed route tests own auth behavior and downgrade evidence; an empty tests list means no claimed coverage.",
+    "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
     "brain": 67,
@@ -1239,13 +1240,15 @@
       "surface": "voice",
       "method": "GET",
       "path": "/chat-test",
-      "auth": "public-test-surface",
-      "criticality": "standard",
+      "auth": "opt-in-noncloud-test-surface",
+      "criticality": "high",
       "idempotency": "safe",
       "rateLimit": "none",
       "pii": "conversation",
       "envelope": "html",
-      "tests": []
+      "tests": [
+        "engine/test_service_metadata.py"
+      ]
     },
     {
       "surface": "voice",
