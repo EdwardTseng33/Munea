@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-18 Tokyo live DB probe refresh`; public runtime observations remain from `02:10 Asia/Taipei`
+Snapshot time: `2026-07-18 17:23 Asia/Taipei` (pricing Brain rollout and public runtime refresh)
 
-Source baseline: `origin/main@b9a5719`
+Source baseline: `origin/main@9d30e8b`
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -35,11 +35,11 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Environment | Service | Serving identity observed from public endpoint | Interpretation | Evidence time |
 |---|---|---|---|---|
-| production | Brain | `1.0.36@d6a72a16`, `munea-brain-00004-leb` | `/version` 200；落後 latest source `1.0.41`，不能假設含最新定價或 Draft 修正 | 2026-07-18 02:10 |
+| production | Brain | `1.0.40@fa14e4c`, `munea-brain-00006-faw` | `/version` 200；100% traffic 已由 exact-revision promotion 切換。此 revision 與 uploaded Build 47 同 commit，含 Apple Product ID 不變的 100／300／600／1000 點數包與 Plus 100／Pro 200 入帳 mapping；不含 Draft #174／#175。安全 smoke 與新 revision ERROR log 檢查 PASS，真人 Sandbox purchase 仍 pending | 2026-07-18 17:23 |
 | production | Voice | `1.0.31@500c819f`, `munea-voice-00002-sub` | `/version` 200；明顯落後 source，真人通話仍需 App E2E | 2026-07-18 02:10 |
 | production | Call Control / Gateway | release identity `unknown` | 公開 `/health` 無憑證回 401，auth boundary 正常；authenticated lease／cleanup 與 source commit 未證明 | 2026-07-18 00:20 |
-| staging | Brain | `1.0.34@136dc81b`, `munea-brain-staging-00061-dow` | `/version` 200；Cloud Run metadata Ready，必要 env-name／Secret IAM contract PASS；不是 production，也落後 main | 2026-07-18 02:10 |
-| staging | Voice | `1.0.34@136dc81b`, `munea-voice-staging-00051-qom` | `/version` 200；Cloud Run metadata Ready，必要 env-name／Secret IAM contract PASS；不是 production，也落後 main | 2026-07-18 02:10 |
+| staging | Brain | `1.0.40@fa14e4c`, `munea-brain-staging-00063-tod` | `/version` 200；pricing exact revision 100% serving，安全 smoke PASS；不是 production，且不代表真人購買驗收 | 2026-07-18 17:23 |
+| staging | Voice | `1.0.41@906732ab`, `munea-voice-staging-00053-xow` | `/version` 200；公開 identity 已刷新；不是 production，真人通話仍需 App E2E | 2026-07-18 17:23 |
 
 `/version` 是 runtime identity authority。上述 5 個公開 target 的 safe observation、target-config hash、capture time 與 capture source commit 保存在 [`RELEASE-EVIDENCE-LATEST.json`](./RELEASE-EVIDENCE-LATEST.json)，以 [`RELEASE-EVIDENCE-TARGETS.json`](./RELEASE-EVIDENCE-TARGETS.json) 及 `python scripts/release_evidence.py check --max-age-hours 24` 驗 freshness。Cloud Run Ready、0% canary、source equivalence或 App 預設 URL 都不能替代 serving identity 與真實 client trace。
 
@@ -62,7 +62,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Item | Current state | Interpretation |
 |---|---|---|
 | URL | staging `/admin.html` 回 200；body hash 與必要 asset tokens 已進 manifest | shell reachable；不代表 privileged data 正確 |
-| Serving identity | 跟隨 staging Brain `1.0.34@136dc81b` | 與 latest source `1.0.41` 不同版 |
+| Serving identity | 跟隨 staging Brain `1.0.40@fa14e4c` | admin shell 公開 hash／headers PASS；與 latest source `1.0.41` 不同版，privileged data 仍未證明 |
 | Browser security | `nosniff`、`DENY`、`no-referrer` 已進 manifest；9 個 console read endpoints 無 token 均回 403 | delivery 與未授權拒絕 PASS；不代表具名 RBAC／MFA |
 | Privileged APIs / data source / freshness | source contract `merged`；runtime `unknown` | #183 已加入 provenance／fallback／freshness unknown metadata，但 staging Brain 尚未部署；不能把空值當成零事件 |
 | Operator security | per-operator identity／MFA／RBAC `unknown` | shared secret 或登入畫面本身不等於可稽核權限 |
@@ -76,7 +76,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Developer purchase / Apple account mismatch UX | #175 `tested`, Draft，stacked on #174 | 整合後包版；TEST 不觸發 Apple；真帳號 mismatch 不重複扣款 |
 | Subscription / points purchase | Build 47 使用者回報身份與購買後續無法完成 | Sandbox Apple ID、server verification、entitlement／wallet refresh E2E |
 | Authenticated chat call | synthetic／contract evidence 存在 | exact Build＋production Gateway／Voice／Avatar 的安裝版 iPhone 完整路徑 |
-| Pricing policy v4 | source／App 已對齊 100／200 與新點數包 | App Store price／description、Tokyo `019`、Brain serving code與 Sandbox purchase |
+| Pricing policy v4 | source／uploaded Build 47／production Brain 已對齊；Apple Product ID 維持原值，Brain 實際 grant mapping 為點數包 100／300／600／1000、Plus 100、Pro 200 | App Store price／description、Tokyo `019` 與登入後 Sandbox purchase／wallet refresh 真人驗收；DB policy mismatch 不參與目前 `/apple/transaction` 的 `verified.points` 入帳路徑，但仍需治理對焦 |
 | Managed-cloud `/chat-test` | #182 已合併，source 預設 404 | Voice 尚未部署；production／staging live GET 仍須重新驗證 404 |
 
 ## Chat-call App E2E release gate
