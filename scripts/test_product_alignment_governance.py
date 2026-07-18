@@ -34,6 +34,7 @@ COPIED_PATHS = [
     "docs/RELEASE-EVIDENCE-TARGETS.json",
     "docs/RELEASE-EVIDENCE-LATEST.json",
     "docs/00-總綱-從這裡開始.md",
+    "docs/CURRENT-DEVELOPMENT-PLAN.md",
     "docs/SPEC-沐寧-v1-2026-06-28.md",
     "docs/BILLING-CREDITS-ENTITLEMENT-v1.md",
     "docs/PRODUCT-QUALITY-CONFIDENCE.md",
@@ -103,6 +104,14 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
         self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
         self.assert_has_error("API contracts must be owned by API-CONTRACT-INVENTORY.json")
 
+    def test_development_plan_authority_cannot_drift(self) -> None:
+        authority = self.read_json("docs/CURRENT-AUTHORITIES.json")
+        for entry in authority["authorities"]:
+            if entry["topic"] == "development-plan":
+                entry["path"] = "docs/RELEASE-STATE.md"
+        self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
+        self.assert_has_error("Development plan must be owned by CURRENT-DEVELOPMENT-PLAN.md")
+
     def test_admin_data_quality_authority_cannot_drift(self) -> None:
         authority = self.read_json("docs/CURRENT-AUTHORITIES.json")
         for entry in authority["authorities"]:
@@ -126,6 +135,22 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
             "| Latest source | `1.0.40 (Build 47)`",
         )
         self.assert_has_error("current source marker is stale in docs/RELEASE-STATE.md")
+
+    def test_stale_development_plan_source_fails(self) -> None:
+        self.replace(
+            "docs/CURRENT-DEVELOPMENT-PLAN.md",
+            "> **Current source:** `1.0.41 (Build 48)`",
+            "> **Current source:** `1.0.40 (Build 47)`",
+        )
+        self.assert_has_error("current source marker is stale in docs/CURRENT-DEVELOPMENT-PLAN.md")
+
+    def test_stale_development_plan_pricing_fails(self) -> None:
+        self.replace(
+            "docs/CURRENT-DEVELOPMENT-PLAN.md",
+            "> **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000.",
+            "> **Approved points:** Plus 150 / Pro 300; packs 100 / 300 / 600 / 1,000.",
+        )
+        self.assert_has_error("current development plan is missing governance token")
 
     def test_historical_document_without_marker_fails(self) -> None:
         self.replace(
