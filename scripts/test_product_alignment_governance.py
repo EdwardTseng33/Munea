@@ -29,6 +29,7 @@ COPIED_PATHS = [
     "supabase/migration-manifest.json",
     "docs/CURRENT-AUTHORITIES.json",
     "docs/API-CONTRACT-INVENTORY.json",
+    "docs/ADMIN-DATA-QUALITY-CONTRACT.md",
     "docs/RELEASE-EVIDENCE-TARGETS.json",
     "docs/RELEASE-EVIDENCE-LATEST.json",
     "docs/00-總綱-從這裡開始.md",
@@ -100,6 +101,14 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
                 entry["path"] = "docs/BACKEND-ARCHITECTURE-v1.md"
         self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
         self.assert_has_error("API contracts must be owned by API-CONTRACT-INVENTORY.json")
+
+    def test_admin_data_quality_authority_cannot_drift(self) -> None:
+        authority = self.read_json("docs/CURRENT-AUTHORITIES.json")
+        for entry in authority["authorities"]:
+            if entry["topic"] == "admin-data-quality":
+                entry["path"] = "docs/BACKEND-ARCHITECTURE-v1.md"
+        self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
+        self.assert_has_error("Admin data quality must be owned by ADMIN-DATA-QUALITY-CONTRACT.md")
 
     def test_stale_release_state_source_fails(self) -> None:
         self.replace(

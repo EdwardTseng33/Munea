@@ -24,6 +24,7 @@ REQUIRED_TOPICS = {
     "ai-provider-reality",
     "backend-architecture",
     "api-contracts",
+    "admin-data-quality",
     "cloudrun-topology",
     "runtime-evidence",
     "collaboration",
@@ -143,6 +144,10 @@ def validate(repo_root: Path = ROOT) -> list[str]:
     api_contracts = topics.get("api-contracts", {})
     if api_contracts.get("path") != "docs/API-CONTRACT-INVENTORY.json":
         errors.append("API contracts must be owned by API-CONTRACT-INVENTORY.json")
+
+    admin_data_quality = topics.get("admin-data-quality", {})
+    if admin_data_quality.get("path") != "docs/ADMIN-DATA-QUALITY-CONTRACT.md":
+        errors.append("Admin data quality must be owned by ADMIN-DATA-QUALITY-CONTRACT.md")
 
     historical = authority.get("historical")
     if not isinstance(historical, list):

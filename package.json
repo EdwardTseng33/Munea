@@ -18,6 +18,7 @@
     "test:call-control-app": "python scripts/test_app_call_control_contract.py",
     "test:ui-contracts": "node scripts/test-ui-contracts.js",
     "test:api-contracts": "python scripts/api_contract_inventory.py check && python scripts/test_api_contract_inventory.py",
+    "test:admin-data-quality": "python engine/test_admin_data_quality.py && node scripts/test-admin-console.js",
     "test:product-alignment": "python scripts/check_product_alignment.py && python scripts/test_product_alignment_governance.py && python scripts/release_evidence.py check && python scripts/test_release_evidence.py",
     "release:evidence:capture": "python scripts/release_evidence.py capture",
     "release:evidence:check": "python scripts/release_evidence.py check --max-age-hours 24",

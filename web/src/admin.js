@@ -42,6 +42,7 @@
   const ASSUME_KEY = "munea.admin.assumptions";
   const DEFAULT_LOCAL_API = "http://127.0.0.1:8200";
   const REQUEST_TIMEOUT_MS = 15000;
+  const ADMIN_DATA_META_SCHEMA = "munea.admin-data-meta.v1";
   const KNOWN_ADMIN_HOSTS = ["munea-brain-staging-491603544409.asia-east1.run.app"];
   // 相容目前已部署的薄門；它不是管理憑證。部署端可在載入本檔前設定
   // window.MUNEA_ADMIN_APP_KEY，下一步即可把這個相容值從靜態資產移除。
@@ -93,6 +94,23 @@
   const subM = () => D().subscriptionMetrics || {};
   const daily = () => usage().daily || [];
   const ecount = () => usage().eventCounts || {};
+
+  function missingDataMeta(endpointKey){
+    return {schema:ADMIN_DATA_META_SCHEMA,metricVersion:"unknown",generatedAt:null,dataAsOf:null,status:"unverified",degraded:true,degradationReasons:["metadata_missing"],freshness:{status:"unknown",reason:"metadata_missing"},sources:[],endpointKey};
+  }
+  function normalizeDataMeta(payload,endpointKey){
+    const meta=payload&&payload.meta;
+    if(!meta||meta.schema!==ADMIN_DATA_META_SCHEMA) return missingDataMeta(endpointKey);
+    return Object.assign(missingDataMeta(endpointKey),meta,{endpointKey});
+  }
+  function dataQualitySummary(){
+    const entries=Object.entries(state.data||{}),metas=entries.map(([key,payload])=>normalizeDataMeta(payload,key));
+    const degraded=metas.filter((meta)=>meta.degraded===true);
+    const missing=metas.filter((meta)=>(meta.degradationReasons||[]).includes("metadata_missing"));
+    const empty=metas.filter((meta)=>meta.status==="empty");
+    const timestamps=metas.map((meta)=>meta.dataAsOf).filter(Boolean).sort();
+    return {total:metas.length,degraded:degraded.length,missing:missing.length,empty:empty.length,dataAsOf:timestamps.length?timestamps[timestamps.length-1]:null};
+  }
 
   function fmtMoney(v){ return (v==null||isNaN(v))?"–":"NT$"+Math.round(Number(v)).toLocaleString("en-US"); }
   function pct(v){ return (v==null||isNaN(v))?"–":Math.round(Number(v)*100)+"%"; }
@@ -183,6 +201,17 @@
     const first=state.errors[failed[0]];
     return `<div class="ops-notice error" role="alert"><strong>營運資料載入失敗</strong>${esc(explainErr(first))}。請確認連線與權限後重試。 <button type="button" class="btn-ghost" data-retry>重新整理</button> <button type="button" class="btn-ghost" data-goto="settings">連線設定</button></div>`;
   }
+  function dataQualityNoticeHTML(){
+    if(!state.connected) return "";
+    const q=dataQualitySummary();
+    if(q.missing){
+      return `<div class="ops-notice warn" role="status"><strong>資料可信度未驗證</strong>${q.missing} 個區域的後端尚未提供來源與資料截止時間；數字可供查看，但不能當成已確認的新鮮資料。</div>`;
+    }
+    if(q.degraded){
+      return `<div class="ops-notice warn" role="status"><strong>資料來源降級</strong>${q.degraded} 個區域正在使用 fallback／prototype 資料；0 不代表正式資料真的為 0。${q.dataAsOf?` 可觀測紀錄最新時間 ${esc(fmtTime(q.dataAsOf))}。`:""}</div>`;
+    }
+    return `<div class="ops-notice warn" role="status"><strong>來源已確認，新鮮度仍未知</strong>後端已回報資料來源與版本，但尚無上游 watermark，不能把查詢時間當成資料更新時間。${q.dataAsOf?` 可觀測紀錄最新時間 ${esc(fmtTime(q.dataAsOf))}。`:""}</div>`;
+  }
   function renderPage(id){
     pending.length=0;
     let html="";
@@ -193,7 +222,7 @@
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
     else if (id==="settings") html=settingsHTML();
-    $("pageRoot").innerHTML=connectionNoticeHTML()+html;
+    $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
     pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
     bindPageEvents(id);
   }
@@ -452,12 +481,21 @@
     try{
       const rs=await Promise.allSettled(keys.map((k)=>postAdmin(safeBase,token,EP_LIST[k][0],EP_LIST[k][1])));
       const data={},errors={};
-      rs.forEach((r,i)=>{ if(r.status==="fulfilled")data[keys[i]]=r.value; else errors[keys[i]]=(r.reason&&r.reason.message)||"fail"; });
+      rs.forEach((r,i)=>{
+        if(r.status==="fulfilled"){
+          const payload=r.value||{};
+          payload.meta=normalizeDataMeta(payload,keys[i]);
+          data[keys[i]]=payload;
+        }else errors[keys[i]]=(r.reason&&r.reason.message)||"fail";
+      });
       state.data=data; state.errors=errors; state.connected=Object.keys(data).length>0;
       const errValues=Object.values(errors);
       if(!state.connected&&errValues.length&&errValues.every((m)=>/invalid_admin_token/.test(m))){ storageRemove(sessionStorage,ADMIN_TOKEN_KEY); state.token=""; }
       if($("rawOut")) $("rawOut").textContent=JSON.stringify({data,errors},null,2);
-      if($("lastUpdated")) $("lastUpdated").textContent=state.connected?"更新 "+fmtTime(new Date().toISOString()):"";
+      if($("lastUpdated")){
+        const q=dataQualitySummary(),queryTime=new Date().toISOString();
+        $("lastUpdated").textContent=state.connected?(`查詢 ${fmtTime(queryTime)} · 紀錄最新時間 ${q.dataAsOf?fmtTime(q.dataAsOf):"未提供"}`):"";
+      }
       updateBanner(); renderSide(); renderPage(state.page);
       return { ok: state.connected, failed: errValues.length, total: keys.length, firstErr: errValues[0] };
     }finally{ setBusy(false); }

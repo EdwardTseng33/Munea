@@ -53,6 +53,11 @@
       "ownerRole": "Backend / Platform"
     },
     {
+      "topic": "admin-data-quality",
+      "path": "docs/ADMIN-DATA-QUALITY-CONTRACT.md",
+      "ownerRole": "Data / Operations / Backend"
+    },
+    {
       "topic": "cloudrun-topology",
       "path": "deploy/cloudrun/SERVICE-TOPOLOGY.md",
       "ownerRole": "Platform"
