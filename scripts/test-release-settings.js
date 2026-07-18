@@ -92,6 +92,16 @@ expect(iosDevProfile.includes('bypassCallControl: true'), 'iOS development profi
 expect(iosDevProfile.includes("voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app'"), 'iOS development profile is not pinned to the current Voice staging endpoint');
 expect(!authConfig.includes('canary-0715-0405'), 'Voice canary leaked into production auth configuration');
 
+// 2026-07-18 全庫連結盤點收尾（卡西法）：gen-auth-config.py 是 auth-config.js 的正式產生器，
+// 若它的樣板漏掉 environment/seedFixtures/bypassCallControl 欄位，下次重跑就會把正式檔案覆蓋成缺欄位版本，
+// 讓 IPA export 的東京／開發假資料守門失去依據。這裡直接盯著產生器原始碼、防止樣板被默默改回舊版。
+const genAuthConfig = read('scripts/gen-auth-config.py');
+expect(genAuthConfig.includes('fespbkdwafueyonppzwq'), 'gen-auth-config.py does not assert the Tokyo Supabase project before generating auth-config.js');
+expect(genAuthConfig.includes('TOKYO_SUPABASE_PROJECT_REF not in url'), 'gen-auth-config.py does not abort when SUPABASE_URL is not Tokyo');
+expect(genAuthConfig.includes("environment: 'production-tokyo'"), 'gen-auth-config.py template drops the production-tokyo environment marker');
+expect(genAuthConfig.includes('seedFixtures: false'), 'gen-auth-config.py template drops seedFixtures: false');
+expect(genAuthConfig.includes('bypassCallControl: false'), 'gen-auth-config.py template drops bypassCallControl: false');
+
 // 7/16 Edward 拍板 B 案：正式包預設必指真正式（munea-brain / munea-voice）；預設再出現 -staging＝紅燈
 const notifyBridge = read('web/src/notify.js');
 const PROD_BRAIN_URL = 'https://munea-brain-491603544409.asia-east1.run.app';
@@ -167,6 +177,8 @@ expect(iosExport.includes('bypassCallControl'), 'IPA export does not reject the 
 expect(iosExport.includes('exported IPA does not contain the latest Web design assets'), 'IPA export does not verify current Web design assets');
 expect(iosExport.includes('$ROOT/web/src/auth.js') && iosExport.includes('$ROOT/web/src/auth-config.js'), 'IPA export does not verify current authentication assets');
 expect(iosExport.includes('fespbkdwafueyonppzwq') && iosExport.includes('uhmpmystjjdqqxlpsthc'), 'IPA export does not enforce the Tokyo Supabase auth configuration');
+expect(iosExport.includes('BRAIN_URL_DEFAULT') && iosExport.includes('LIVE_VOICE_URL_DEFAULT') && iosExport.includes('CALL_CONTROL_URL_DEFAULT'), 'IPA export does not verify the production Brain/Voice/Call-control default endpoints');
+expect(iosExport.includes('munea-brain-staging') && iosExport.includes('munea-voice-staging'), 'IPA export does not reject staging Brain/Voice endpoints from shipping in the App Store package');
 expect(iosExport.includes('UIDeviceFamily') && iosExport.includes('IPA supports iPhone only'), 'IPA export does not enforce iPhone-only packaging');
 expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLOUD=(gcloud)'), 'canary deploy is not compatible with macOS gcloud');
 expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost Windows gcloud compatibility');
