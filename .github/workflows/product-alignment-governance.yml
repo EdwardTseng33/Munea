@@ -1,0 +1,89 @@
+name: Product alignment governance
+
+on:
+  push:
+    paths:
+      - "docs/**"
+      - "deploy/cloudrun/SERVICE-TOPOLOGY.md"
+      - "engine/apple_store.py"
+      - "ios/App/App.xcodeproj/project.pbxproj"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/check_product_alignment.py"
+      - "scripts/test_product_alignment_governance.py"
+      - "scripts/release_evidence.py"
+      - "scripts/test_release_evidence.py"
+      - "scripts/check-release-consistency.js"
+      - "scripts/test-store-verification.js"
+      - "supabase/migration-manifest.json"
+      - "supabase/sql/**"
+      - "web/src/app.js"
+      - "web/src/version.js"
+      - ".github/workflows/product-alignment-governance.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "deploy/cloudrun/SERVICE-TOPOLOGY.md"
+      - "engine/apple_store.py"
+      - "ios/App/App.xcodeproj/project.pbxproj"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/check_product_alignment.py"
+      - "scripts/test_product_alignment_governance.py"
+      - "scripts/release_evidence.py"
+      - "scripts/test_release_evidence.py"
+      - "scripts/check-release-consistency.js"
+      - "scripts/test-store-verification.js"
+      - "supabase/migration-manifest.json"
+      - "supabase/sql/**"
+      - "web/src/app.js"
+      - "web/src/version.js"
+      - ".github/workflows/product-alignment-governance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-alignment-governance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-governance:
+    name: Current truth and drift gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Check product alignment authorities
+        run: python -B scripts/check_product_alignment.py
+
+      - name: Test alignment governance failures
+        run: python -B scripts/test_product_alignment_governance.py
+
+      - name: Check committed runtime evidence contract
+        run: python -B scripts/release_evidence.py check
+
+      - name: Test runtime evidence safety and freshness rules
+        run: python -B scripts/test_release_evidence.py
+
+      - name: Check release version and Build alignment
+        run: node scripts/check-release-consistency.js --strict-ios
+
+      - name: Check migration manifest integrity
+        run: python -B scripts/check_supabase_migrations.py
+
+      - name: Check StoreKit product mapping and verification order
+        run: node scripts/test-store-verification.js

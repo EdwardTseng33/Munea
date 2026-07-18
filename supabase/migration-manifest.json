@@ -149,6 +149,13 @@
       "filename": "018_strip_medication_photos.sql",
       "type": "data-cleanup",
       "sha256": "219f75977b92366967b66edde16588c39ae8545daf9ae29aca20618ba88e9348"
+    },
+    {
+      "order": 20,
+      "identity": "019",
+      "filename": "019_pricing_plus100_pro200.sql",
+      "type": "seed",
+      "sha256": "2350ec98107d3ea30952d000b5f8839a635a2ceed4007133f2f82c2b031e741b"
     }
   ]
 }

@@ -1,5 +1,7 @@
 # Munea 上線健康度 77→90 Scorecard
 
+> 🗄️ **Historical snapshot / do not use as the current score（2026-07-18）**：本檔保留 2026-07-16 的評估證據與推理，不再代表目前版本、runtime 或整體分數。現行產品品質信心只看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；跨 App／服務／DB 的易變事實只看 [`RELEASE-STATE.md`](./RELEASE-STATE.md)。舊分數 `77/100` 不得抄到新報告。
+
 評估日期：2026-07-16（Asia/Taipei）
 
 Repo 基準：`origin/main@88ddc10`
