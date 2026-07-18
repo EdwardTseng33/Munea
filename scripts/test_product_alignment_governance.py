@@ -27,6 +27,7 @@ COPIED_PATHS = [
     "engine/apple_store.py",
     "supabase/sql/019_pricing_plus100_pro200.sql",
     "supabase/migration-manifest.json",
+    "supabase/deployment-ledger.json",
     "docs/CURRENT-AUTHORITIES.json",
     "docs/API-CONTRACT-INVENTORY.json",
     "docs/ADMIN-DATA-QUALITY-CONTRACT.md",
@@ -109,6 +110,14 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
                 entry["path"] = "docs/BACKEND-ARCHITECTURE-v1.md"
         self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
         self.assert_has_error("Admin data quality must be owned by ADMIN-DATA-QUALITY-CONTRACT.md")
+
+    def test_database_deployment_ledger_authority_cannot_drift(self) -> None:
+        authority = self.read_json("docs/CURRENT-AUTHORITIES.json")
+        for entry in authority["authorities"]:
+            if entry["topic"] == "database-deployment-ledger":
+                entry["path"] = "docs/RELEASE-STATE.md"
+        self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
+        self.assert_has_error("Database deployment state must be owned by supabase/deployment-ledger.json")
 
     def test_stale_release_state_source_fails(self) -> None:
         self.replace(

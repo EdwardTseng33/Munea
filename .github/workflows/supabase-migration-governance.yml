@@ -5,15 +5,25 @@ on:
     paths:
       - "supabase/sql/**"
       - "supabase/migration-manifest.json"
+      - "supabase/deployment-ledger.json"
       - "scripts/check_supabase_migrations.py"
       - "scripts/test_supabase_migration_governance.py"
+      - "scripts/check_supabase_deployment_ledger.py"
+      - "scripts/test_supabase_deployment_ledger.py"
+      - "scripts/supabase_deployment_probe.py"
+      - "scripts/test_supabase_deployment_probe.py"
       - ".github/workflows/supabase-migration-governance.yml"
   pull_request:
     paths:
       - "supabase/sql/**"
       - "supabase/migration-manifest.json"
+      - "supabase/deployment-ledger.json"
       - "scripts/check_supabase_migrations.py"
       - "scripts/test_supabase_migration_governance.py"
+      - "scripts/check_supabase_deployment_ledger.py"
+      - "scripts/test_supabase_deployment_ledger.py"
+      - "scripts/supabase_deployment_probe.py"
+      - "scripts/test_supabase_deployment_probe.py"
       - ".github/workflows/supabase-migration-governance.yml"
 
 permissions:
@@ -43,3 +53,12 @@ jobs:
 
       - name: Test migration governance failures
         run: python -B scripts/test_supabase_migration_governance.py
+
+      - name: Check environment deployment ledger
+        run: python -B scripts/check_supabase_deployment_ledger.py
+
+      - name: Test deployment ledger fail-closed rules
+        run: python -B scripts/test_supabase_deployment_ledger.py
+
+      - name: Test read-only deployment probe contract
+        run: python -B scripts/test_supabase_deployment_probe.py
