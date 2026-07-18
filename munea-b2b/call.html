@@ -20,7 +20,7 @@
     display:flex;align-items:center;justify-content:center}
   .frame{position:relative;width:var(--frame-w);height:100dvh;overflow:hidden;background:#C9AE96;border-radius:18px}
   .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .3s}
-  .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .4s;z-index:2}
+  .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .28s ease;z-index:2}
   .cover.hide{opacity:0;pointer-events:none}
   .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:opacity .35s}
   .overlay.on{opacity:1}
@@ -93,7 +93,8 @@
 <div class="stage" id="stage">
   <div class="frame" id="frame">
     <img class="bg" id="bgImg" src="flashhead/bg-a05.png" alt="">
-    <video class="cover hide" id="coverVid" muted loop playsinline src="flashhead/greet-a05.mp4"></video>
+    <video class="cover hide" id="coverVid" muted playsinline preload="auto"></video>
+    <video class="cover hide" id="coverVidNext" muted playsinline preload="auto"></video>
     <div class="overlay" id="overlay"><video id="faceVid" autoplay playsinline></video></div>
     <div class="scrim"></div>
   </div>
@@ -157,14 +158,15 @@ let CAP_SECONDS = 180;      // 體驗上限（伺服器可調）
 const TEST_LINE = '嗨,你在嗎?我在測試連線。';
 
 const CHARS = {
-  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', greet: 'flashhead/greet-a05.mp4' },
-  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', greet: null },
+  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4' },
+  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4' },
 };
 let curChar = 'a05';
 
 const $ = s => document.querySelector(s);
 const stage = $('#stage'), hint = $('#hint'), caps = $('#caps'), capAi = $('#capAi');
-const bgImg = $('#bgImg'), overlay = $('#overlay'), faceVid = $('#faceVid'), coverVid = $('#coverVid');
+const bgImg = $('#bgImg'), overlay = $('#overlay'), faceVid = $('#faceVid');
+const coverVid = $('#coverVid'), coverVidNext = $('#coverVidNext');
 const statusBadge = $('#statusBadge'), chName = $('#chName'), callBtn = $('#callBtn'), callLabel = $('#callLabel');
 const callTimer = $('#callTimer'), capRemaining = $('#capRemaining');
 const captionToggle = $('#captionToggle'), micToggle = $('#micToggle'), closeBtn = $('#closeBtn');
@@ -278,19 +280,94 @@ function withTimeout(promise, ms, label){
  * 做法：把原本只在「接通中過場」短暫出現的招呼片(greet-a05.mp4)，改成密語門過關那刻就開始播、
  * 一路 loop 到真人臉線接上為止；掛斷後也回到這個待機循環，不是又變回死照片。
  * a06(阿原)目前沒有招呼片素材，維持靜態立繪待機——這是素材缺口，不是程式邏輯限制。 */
-function startIdleLoop(){
-  coverVid.pause();
-  if (CHARS[curChar].greet){
-    coverVid.src = CHARS[curChar].greet;
-    coverVid.style.display = '';
-    coverVid.currentTime = 0;
-    coverVid.classList.remove('hide');
-    coverVid.play().catch(e=> dbgLine('[idle] coverVid autoplay blocked: ' + (e && e.message || e)));
-  } else {
-    coverVid.style.display = 'none';
-    coverVid.classList.add('hide');
-  }
-}
+const IdleMotion = {
+  active: false, gen: 0, front: coverVid, back: coverVidNext, cfg: null,
+  _bind(video){
+    video.muted = true;
+    video.playsInline = true;
+    video.loop = false;
+    video.onended = ()=>{
+      if (this.active && video === this.front) this._advance(this.gen);
+    };
+  },
+  _prepare(video, src){
+    video.pause();
+    video.loop = false;
+    video.setAttribute('src', src);
+    video.currentTime = 0;
+    try{ video.load(); }catch(e){}
+  },
+  _play(video, gen, label){
+    const show = ()=>{
+      video.removeEventListener('playing', show);
+      if (this.active && gen === this.gen) video.classList.remove('hide');
+    };
+    video.addEventListener('playing', show);
+    video.play().catch(e=>{
+      video.removeEventListener('playing', show);
+      if (!this.active || gen !== this.gen) return;
+      dbgLine('[idle] ' + label + ' autoplay blocked: ' + (e && e.message || e));
+      setTimeout(()=>{
+        if (this.active && gen === this.gen) video.play().catch(()=>{});
+      }, 600);
+    });
+  },
+  _advance(gen){
+    if (!this.active || gen !== this.gen || !this.cfg) return;
+    const outgoing = this.front;
+    const incoming = this.back;
+    if (incoming.getAttribute('src') !== this.cfg.idle) this._prepare(incoming, this.cfg.idle);
+    else incoming.currentTime = 0;
+    const reveal = ()=>{
+      incoming.removeEventListener('playing', reveal);
+      if (!this.active || gen !== this.gen) return;
+      incoming.classList.remove('hide');
+      setTimeout(()=> outgoing.classList.add('hide'), 200);
+      this.front = incoming;
+      this.back = outgoing;
+      setTimeout(()=>{
+        if (this.active && gen === this.gen) this._prepare(this.back, this.cfg.idle);
+      }, 650);
+    };
+    incoming.addEventListener('playing', reveal);
+    incoming.play().catch(e=>{
+      incoming.removeEventListener('playing', reveal);
+      dbgLine('[idle] transition failed: ' + (e && e.message || e));
+      incoming.classList.remove('hide');
+      outgoing.classList.add('hide');
+      this.front = incoming;
+      this.back = outgoing;
+    });
+  },
+  start(){
+    this.stop();
+    this.cfg = CHARS[curChar];
+    if (!this.cfg || !this.cfg.hello || !this.cfg.idle) return;
+    const gen = ++this.gen;
+    this.active = true;
+    this.front = coverVid;
+    this.back = coverVidNext;
+    this._bind(this.front);
+    this._bind(this.back);
+    this._prepare(this.front, this.cfg.hello);
+    this._prepare(this.back, this.cfg.idle);
+    this._play(this.front, gen, 'hello');
+    dbgLine('[idle] hello -> idle char=' + curChar);
+  },
+  ensureRunning(){ if (!this.active) this.start(); },
+  resume(){ if (this.active && this.front) this.front.play().catch(()=>{}); },
+  stop(){
+    this.active = false;
+    this.gen++;
+    this.cfg = null;
+    [coverVid, coverVidNext].forEach(video=>{
+      video.pause();
+      video.classList.add('hide');
+      video.removeAttribute('src');
+      try{ video.load(); }catch(e){}
+    });
+  },
+};
 function pickChar(c){
   if (typeof onCall !== 'undefined' && onCall) { toast('通話中換角色請先掛斷再選'); return; }
   curChar = c;
@@ -298,7 +375,7 @@ function pickChar(c){
   $('#charA06').classList.toggle('on', c==='a06');
   bgImg.src = CHARS[c].bg;
   chName.textContent = CHARS[c].label;
-  startIdleLoop();
+  IdleMotion.start();
 }
 </script>
 <script>
@@ -316,7 +393,7 @@ async function bootstrapKeys(pass){
   capRemaining.textContent = '體驗 ' + clockText(CAP_SECONDS);
   dbgLine('[gate] keys ready, cap=' + CAP_SECONDS + 's');
   prewarm();
-  startIdleLoop();   // 密語一過，寧寧立刻在畫面裡活過來、開始待機動畫（不等按下開始通話）
+  IdleMotion.start();   // 與聊聊 App 相同：先打招呼一次，再進入循環待機。
 }
 function prewarm(){
   if (!AVATAR_HTTP || !AVATAR_KEY) return;
@@ -404,7 +481,7 @@ const Face = {
     }
   },
 };
-tapplayBtn.onclick = ()=>{ Face._tryPlay(); coverVid.play().catch(()=>{}); };
+tapplayBtn.onclick = ()=>{ Face._tryPlay(); IdleMotion.resume(); };
 
 Face._attempt = async function(char, forceRelay){
   dbgLine('[face] attempt char=' + char + ' forceRelay=' + forceRelay);
@@ -428,7 +505,7 @@ Face._attempt = async function(char, forceRelay){
     faceVid.srcObject = e.streams[0];
     faceVid.muted = false;
     overlay.classList.add('on');
-    coverVid.classList.add('hide');
+    IdleMotion.stop();
     this._tryPlay();
   };
   pc.addEventListener('iceconnectionstatechange', ()=> dbgLine('[face] iceConnectionState=' + pc.iceConnectionState));
@@ -739,7 +816,7 @@ async function wakeAvatarService(){
     }catch(e){
       dbgLine('[wake] health attempt=' + attempt + ' failed: ' + (e && e.message || e));
     }
-    if (attempt === 1){ setStatus('正在喚醒寧寧，稍等一下…'); setHintText('她剛睡醒，馬上就好'); }
+    if (attempt === 1){ setStatus('正在喚醒' + CHARS[curChar].label + '，稍等一下…'); setHintText(CHARS[curChar].label + '剛醒來，馬上就好'); }
     if (!onCall) return false;   // 這期間使用者按了結束通話，別再繼續敲
     await new Promise(res=> setTimeout(res, pollMs));
   }
@@ -758,7 +835,7 @@ async function attemptConnect(tryNo){
     if (!onCall) return;
     setStatus('撥號中…');
     setHintText(tryNo === 1 ? '正在接通，稍等一下' : '正在重新接通');
-    startIdleLoop();   // 保底：確保待機動畫這時候還在播，不是空白畫面
+    IdleMotion.ensureRunning();   // 冷啟動期間持續播放待機，不重播招呼。
     window.__flashheadStats = { round:0, roundTimes:[], vidFrames:0, switchMs:null, err:'' };
     window.__flashheadDiagSent = false; window.__flashheadVoiceDiag = null;
     dbgLine('[dial] attempt=' + tryNo + ' curChar=' + curChar + ' nomic=' + nomic);
@@ -799,7 +876,7 @@ async function dial(){
   faceVid.muted = true;
   callBtn.classList.remove('start'); callBtn.classList.add('end'); callLabel.textContent = '結束通話';
   stage.classList.add('on'); setStatus('撥號中…'); caps.style.display='none'; capAi.textContent='';
-  startIdleLoop();   // 待機動畫從密語過關就在播了，這裡保底重播一次招呼，像電話正在接通的感覺
+  IdleMotion.ensureRunning();   // 保留目前待機動態，等第一幀即時 Avatar 接手。
   await attemptConnect(1);
 }
 function hangup(preserveMessage=false){
@@ -811,7 +888,7 @@ function hangup(preserveMessage=false){
   callBtn.classList.add('start'); callBtn.classList.remove('end'); callLabel.textContent = '開始通話';
   if (!preserveMessage){ setStatus('未在線'); setHintText(''); }
   caps.style.display='none';
-  startIdleLoop();   // 掛斷回到待機動畫（寧寧還在鏡頭裡等你），不是變回死照片
+  IdleMotion.start();   // 掛斷後重新執行聊聊的「打招呼 → 待機」模式。
 }
 callBtn.onclick = ()=> onCall ? hangup() : dial();
 

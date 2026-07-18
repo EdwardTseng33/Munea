@@ -6,6 +6,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const target = process.env.B2B_CALL_URL || 'https://munea-b2b.vercel.app/call.html?debug=1';
 const passphrase = process.env.B2B_DEMO_PASS;
 const screenshotPath = process.env.B2B_CALL_SCREENSHOT || 'b2b-call-browser.png';
+const helloScreenshotPath = process.env.B2B_CALL_HELLO_SCREENSHOT || '';
 const callConfig = process.env.B2B_CALL_CONFIG_JSON ? JSON.parse(process.env.B2B_CALL_CONFIG_JSON) : null;
 const testChar = process.env.B2B_TEST_CHAR || 'a05';
 const captureIdle = process.env.B2B_CAPTURE_IDLE === '1';
@@ -63,13 +64,21 @@ try {
   await page.waitForFunction(expected => typeof curChar !== 'undefined' && curChar === expected, testChar);
 
   if (captureIdle) {
+    await page.waitForFunction(() => typeof IdleMotion !== 'undefined' && IdleMotion.active && IdleMotion.front && !IdleMotion.front.classList.contains('hide'));
+    const helloSrc = await page.evaluate(() => IdleMotion.front.currentSrc);
+    if (helloScreenshotPath) {
+      await page.waitForTimeout(900);
+      await page.screenshot({ path: helloScreenshotPath, fullPage: true });
+    }
+    await page.waitForFunction(() => typeof IdleMotion !== 'undefined' && IdleMotion.active && /-idle\.mp4(?:$|\?)/.test(IdleMotion.front.currentSrc), null, { timeout: 20_000 });
+    const idleSrc = await page.evaluate(() => IdleMotion.front.currentSrc);
     await page.locator('#captionToggle').click();
     const captionOn = await page.locator('#captionToggle').evaluate(node => node.classList.contains('on'));
     await page.locator('#captionToggle').click();
     await page.locator('#micToggle').click();
     const micOff = await page.locator('#micToggle').evaluate(node => node.classList.contains('off'));
     await page.locator('#micToggle').click();
-    controlInteractions = { captionOn, micOff };
+    controlInteractions = { captionOn, micOff, helloSrc, idleSrc };
   } else {
     await page.locator('#callBtn').click();
     await page.waitForFunction(() => {
@@ -94,6 +103,7 @@ try {
     voiceReady: typeof DBGBUF !== 'undefined' && DBGBUF.some(line => line.includes('[voice] ready')),
     hasMic: typeof Live === 'undefined' ? false : Boolean(Live.mic),
     frames: window.__flashheadStats?.vidFrames || 0,
+    idleMotionActive: typeof IdleMotion === 'undefined' ? null : IdleMotion.active,
     controls: ['captionToggle','micToggle','callBtn','closeBtn'].every(id => Boolean(document.getElementById(id))),
     attempts: typeof Face === 'undefined' ? [] : Face._diagAttempts,
     logs: typeof DBGBUF === 'undefined' ? [] : DBGBUF,
@@ -106,8 +116,8 @@ try {
 
 process.stdout.write(`${JSON.stringify({ target, result, consoleErrors: consoleLines.filter(line => /error|failed/i.test(line)) }, null, 2)}\n`);
 
-const idleFailed = captureIdle && (!result || result.selectedChar !== testChar || result.status !== '未在線' || !result.controls || !result.controlInteractions?.captionOn || !result.controlInteractions?.micOff);
-const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || !result.hasMic || result.frames < 1);
+const idleFailed = captureIdle && (!result || result.selectedChar !== testChar || result.status !== '未在線' || !result.controls || !result.controlInteractions?.captionOn || !result.controlInteractions?.micOff || !/-hello\.mp4(?:$|\?)/.test(result.controlInteractions?.helloSrc || '') || !/-idle\.mp4(?:$|\?)/.test(result.controlInteractions?.idleSrc || ''));
+const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || !result.hasMic || result.frames < 1 || result.idleMotionActive !== false);
 if (idleFailed || callFailed) {
   process.exitCode = 1;
 }

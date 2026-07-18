@@ -40,4 +40,37 @@ The combined image is large enough to inspect the top status/metrics row and low
 
 - P3: a production-owned TURN-over-TLS endpoint on port 443 would improve restrictive corporate-network compatibility; this is transport resilience, not a visual mismatch.
 
+## Motion follow-up QA — App-style pre-call sequence
+
+- Source visual truth: `web/avatars/motion/nening-hello.mp4`, `web/avatars/motion/nening-idle.mp4`, `web/avatars/motion/ahong-hello.mp4`, and `web/avatars/motion/ahong-idle.mp4`. Their SHA-256 hashes match the four files supplied in `C:\Users\Administrator\Desktop\Video`.
+- Implementation screenshots: `b2b-motion-female-hello-v2.png`, `b2b-motion-female-idle-v3.png`, `b2b-motion-male-hello-v2.png`, and `b2b-motion-male-idle-v3.png` in the Codex visualization folder.
+- Combined comparison evidence: `C:\Users\Administrator\.codex\visualizations\2026\07\18\019f7344-5f07-71a2-a700-60eb918bd6cc\b2b-motion-design-qa-comparison.png`.
+- Viewport: 430 x 932.
+- States: female hello, female idle, male hello, and male idle, all unlocked and not connected.
+
+The comparison places each original App motion frame beside the B2B implementation at the same viewport. Subject, crop, scale, sharpness, background, color, and animation frame match because the exact supplied App videos are used. The B2B status row, role rail, and call controls are intentional UI overlays and remain clear without obscuring the face.
+
+### Motion fidelity surfaces
+
+- Fonts and typography: unchanged from the previously passed call-screen QA; the overlays remain legible across both characters and motion states.
+- Spacing and layout rhythm: 430 x 932 cover crop matches the source; the top row, role rail, call bar, and close control remain stable during hello-to-idle transitions.
+- Colors and visual tokens: source video colors are preserved with no filters; App-style teal, charcoal, white, and offline gray overlays remain consistent.
+- Image quality and asset fidelity: exact App MP4 assets are shipped, with no regenerated or approximated motion. Two preloaded video surfaces crossfade to prevent a blank frame at the hello-to-idle boundary.
+- Copy and content: role labels and call controls remain unchanged; no animation-specific text was added.
+
+### Motion interaction evidence
+
+- Female sequence resolved `nening-hello.mp4` then `nening-idle.mp4`.
+- Male sequence resolved `ahong-hello.mp4` then `ahong-idle.mp4` after switching roles.
+- Caption and microphone controls remained functional in both idle states.
+- Expected behavior matches the App: hello plays once, idle repeats, role switching restarts that role's sequence, and live Avatar replaces idle motion only after the realtime video track arrives.
+
+### Motion comparison history
+
+1. Earlier B2B build: P1 behavior mismatch — the female greeting video looped continuously and the male role had no pre-call motion.
+2. Fix: added both supplied hello/idle pairs and implemented the App's hello-to-idle sequence with two preloaded video surfaces.
+3. Post-fix comparison: all four source/implementation states use the same subject, frame, and crop; no actionable P0/P1/P2 mismatch remains.
+
+Focused region comparison was not needed because the subject, face, hands, crop edges, and all persistent UI controls are clearly visible at native 430 x 932 in the combined evidence.
+
 final result: passed

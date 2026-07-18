@@ -34,4 +34,15 @@ assert.match(call, /id="closeBtn"/);
 assert.match(call, /id="callTimer">00:00/);
 assert.doesNotMatch(call, /寧寧 · 擬真女|阿原 · 擬真男|回 Munea 合作介紹頁/);
 
+assert.match(call, /id="coverVid"/);
+assert.match(call, /id="coverVidNext"/);
+assert.match(call, /assets\/nening-hello\.mp4/);
+assert.match(call, /assets\/nening-idle\.mp4/);
+assert.match(call, /assets\/ahong-hello\.mp4/);
+assert.match(call, /assets\/ahong-idle\.mp4/);
+assert.match(call, /hello -> idle char=/);
+for (const asset of ['nening-hello.mp4', 'nening-idle.mp4', 'ahong-hello.mp4', 'ahong-idle.mp4']) {
+  assert.ok(fs.existsSync(new URL(`./assets/${asset}`, import.meta.url)), `${asset} should be shipped`);
+}
+
 console.log('PASS munea-b2b static pre-sales and voice-only contracts');
