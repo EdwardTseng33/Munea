@@ -48,6 +48,11 @@
       "ownerRole": "Backend / Platform"
     },
     {
+      "topic": "api-contracts",
+      "path": "docs/API-CONTRACT-INVENTORY.json",
+      "ownerRole": "Backend / Platform"
+    },
+    {
       "topic": "cloudrun-topology",
       "path": "deploy/cloudrun/SERVICE-TOPOLOGY.md",
       "ownerRole": "Platform"

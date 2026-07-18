@@ -23,6 +23,7 @@ REQUIRED_TOPICS = {
     "ai-design-intent",
     "ai-provider-reality",
     "backend-architecture",
+    "api-contracts",
     "cloudrun-topology",
     "runtime-evidence",
     "collaboration",
@@ -138,6 +139,10 @@ def validate(repo_root: Path = ROOT) -> list[str]:
         errors.append("runtime evidence authority must declare a 24-hour freshness window")
     if runtime_evidence.get("captureCommand") != "python scripts/release_evidence.py capture":
         errors.append("runtime evidence authority must declare the safe capture command")
+
+    api_contracts = topics.get("api-contracts", {})
+    if api_contracts.get("path") != "docs/API-CONTRACT-INVENTORY.json":
+        errors.append("API contracts must be owned by API-CONTRACT-INVENTORY.json")
 
     historical = authority.get("historical")
     if not isinstance(historical, list):

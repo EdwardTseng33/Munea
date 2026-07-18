@@ -28,6 +28,7 @@ COPIED_PATHS = [
     "supabase/sql/019_pricing_plus100_pro200.sql",
     "supabase/migration-manifest.json",
     "docs/CURRENT-AUTHORITIES.json",
+    "docs/API-CONTRACT-INVENTORY.json",
     "docs/RELEASE-EVIDENCE-TARGETS.json",
     "docs/RELEASE-EVIDENCE-LATEST.json",
     "docs/00-總綱-從這裡開始.md",
@@ -91,6 +92,14 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
         authority["updated"] = (_taipei_today() + timedelta(days=1)).isoformat()
         self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
         self.assert_has_error("authority index updated date cannot be in the future")
+
+    def test_api_contract_authority_cannot_drift(self) -> None:
+        authority = self.read_json("docs/CURRENT-AUTHORITIES.json")
+        for entry in authority["authorities"]:
+            if entry["topic"] == "api-contracts":
+                entry["path"] = "docs/BACKEND-ARCHITECTURE-v1.md"
+        self.write_json("docs/CURRENT-AUTHORITIES.json", authority)
+        self.assert_has_error("API contracts must be owned by API-CONTRACT-INVENTORY.json")
 
     def test_stale_release_state_source_fails(self) -> None:
         self.replace(

@@ -4,6 +4,15 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 進行中：API route inventory／CI 漂移 Gate（2026-07-18 Codex）
+
+- Branch：`codex/api-contract-inventory-20260718`；獨立 worktree，基準 `origin/main@f4eb466`。
+- 預計檔案：新增 `docs/API-CONTRACT-INVENTORY.json`、`scripts/api_contract_inventory.py`、`scripts/test_api_contract_inventory.py`；修改 `package.json`、`scripts/release-check.ps1`、`.github/workflows/smoke.yml`、本看板；只有 current authority 治理需要時才調整對應 authority／validator／測試。
+- 目標：從 Brain、Gateway、Voice source 抽取真實 routes，與 committed inventory 的 method／surface／auth／criticality／idempotency／rate-limit／PII／envelope／test IDs 零漂移；新增未登錄、刪除殘留、auth downgrade、重複 route、critical route 缺測試時由 CI／release gate 阻擋。
+- 證據邊界：AST 只推導 route existence／method／path／surface；`auth` 是需 review 的治理聲明，實際 auth 行為與 downgrade 證據由 inventory 列出的 route tests 負責。沒有測試的公開 test surface 明確保留 `tests: []`，不得假報覆蓋。
+- 明確避讓：不碰 Draft #174／#175、`web/src/app.js`、iOS、StoreKit、App runtime 或任何 Brain／Gateway／Voice handler；不部署、不切流量、不讀寫 live DB。
+- 驗收：inventory validator、負向治理測試、release gate、GitHub smoke workflow 接線與 scoped diff；完成主 agent review 前不 push、不開 PR。
+
 ### 已完成：release runtime／營運後台唯讀證據 Gate（2026-07-18 Codex）
 
 - Branch：`codex/quality-evidence-gates-20260718`；基準 `origin/main@b94a631`。
