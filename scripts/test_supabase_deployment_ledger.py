@@ -26,6 +26,7 @@ class SupabaseDeploymentLedgerTests(unittest.TestCase):
             "supabase/deployment-ledger.json",
             "docs/supabase/DEPLOYMENT-LEDGER.md",
             "docs/supabase/evidence/2026-07-18-local-target-mismatch.json",
+            "docs/supabase/evidence/2026-07-18-tokyo-live-blockers.json",
             "docs/supabase/TOKYO-CANARY-2026-07-15.md",
             "docs/RELEASE-STATE.md",
             "STATUS.md",
@@ -77,6 +78,7 @@ class SupabaseDeploymentLedgerTests(unittest.TestCase):
         ledger = self.read_ledger()
         item = ledger["environments"][0]["migrations"][17]
         item["status"] = "verified"
+        item.pop("evidenceRef", None)
         self.write_ledger(ledger)
         self.assert_has_error("verified evidence for 017_notification_settings.sql")
         self.assert_has_error("verified migration must bind a source commit")
@@ -99,7 +101,7 @@ class SupabaseDeploymentLedgerTests(unittest.TestCase):
 
     def test_unknown_state_cannot_carry_verification_evidence(self) -> None:
         ledger = self.read_ledger()
-        ledger["environments"][0]["migrations"][19]["verifiedAt"] = "2026-07-18T00:00:00Z"
+        ledger["environments"][0]["migrations"][19]["status"] = "unknown"
         self.write_ledger(ledger)
         self.assert_has_error("unknown migration cannot carry verification evidence")
 
@@ -107,9 +109,20 @@ class SupabaseDeploymentLedgerTests(unittest.TestCase):
         ledger = self.read_ledger()
         attempt = ledger["environments"][0]["latestProbeAttempt"]
         attempt["status"] = "verified"
-        attempt["requestIssued"] = True
         self.write_ledger(ledger)
-        self.assert_has_error("verified probe observation must match environment projectRef")
+        self.assert_has_error("verified probe evidence must be ok")
+
+    def test_probe_summary_must_match_evidence(self) -> None:
+        ledger = self.read_ledger()
+        ledger["environments"][0]["latestProbeAttempt"]["requestIssued"] = False
+        self.write_ledger(ledger)
+        self.assert_has_error("latestProbeAttempt requestIssued does not match evidence")
+
+    def test_blocked_migration_evidence_must_exist(self) -> None:
+        ledger = self.read_ledger()
+        ledger["environments"][0]["migrations"][17]["evidenceRef"] = "docs/supabase/evidence/missing.json"
+        self.write_ledger(ledger)
+        self.assert_has_error("blocked evidence for 017_notification_settings.sql does not exist")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+{
+  "schema": "munea.supabase-deployment-observation.v1",
+  "capturedAt": "2026-07-18T07:12:52Z",
+  "sourceCommit": "b9a57197dd83a292b651a2c2f3fe5448fbc40329",
+  "targetProjectRef": "fespbkdwafueyonppzwq",
+  "observedProjectRef": "fespbkdwafueyonppzwq",
+  "readOnly": true,
+  "requestIssued": true,
+  "ok": false,
+  "ledgerPromotionAllowed": false,
+  "promotionBlockers": [
+    "018_requires_approved_backup_and_full_before_after_evidence"
+  ],
+  "checks": {
+    "017_notification_settings": {
+      "tableReachable": false,
+      "error": "http_404"
+    },
+    "018_strip_medication_photos": {
+      "photoKeyRows": 0,
+      "partialOnly": true,
+      "reason": "data_image_scan_and_approved_before_after_record_still_required"
+    },
+    "019_pricing_plus100_pro200": {
+      "policyV4Matches": false
+    }
+  }
+}

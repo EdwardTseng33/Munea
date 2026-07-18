@@ -36,18 +36,20 @@ def _read_json(path: Path, label: str, errors: list[str]) -> dict[str, Any] | No
     return value
 
 
-def _safe_evidence(root: Path, value: Any, label: str, errors: list[str]) -> None:
+def _safe_evidence(root: Path, value: Any, label: str, errors: list[str]) -> Path | None:
     if not isinstance(value, str) or not value or Path(value).is_absolute():
         errors.append(f"{label} must be a repository-relative file")
-        return
+        return None
     target = (root / value).resolve()
     try:
         target.relative_to(root)
     except ValueError:
         errors.append(f"{label} escapes the repository")
-        return
+        return None
     if not target.is_file():
         errors.append(f"{label} does not exist: {value}")
+        return None
+    return target
 
 
 def _iso_datetime(value: Any, label: str, errors: list[str]) -> None:
@@ -136,6 +138,8 @@ def validate(repo_root: Path = ROOT) -> list[str]:
             elif status == "blocked":
                 if not isinstance(item.get("blocker"), str) or not item["blocker"].strip():
                     errors.append(f"blocked migration must name a blocker: {filename}")
+                if "evidenceRef" in item:
+                    _safe_evidence(root, item.get("evidenceRef"), f"blocked evidence for {filename}", errors)
             elif status == "verified":
                 _safe_evidence(root, item.get("evidenceRef"), f"verified evidence for {filename}", errors)
                 _iso_datetime(item.get("verifiedAt"), f"verifiedAt for {filename}", errors)
@@ -187,7 +191,7 @@ def validate(repo_root: Path = ROOT) -> list[str]:
         if not isinstance(observation, dict):
             errors.append(f"{label} lastObservation must be an object")
         else:
-            if observation.get("status") not in {"historical-only", "verified"}:
+            if observation.get("status") not in {"historical-only", "partial", "verified"}:
                 errors.append(f"{label} lastObservation status is invalid")
             _iso_datetime(observation.get("observedAt"), f"{label} observedAt", errors)
             _safe_evidence(root, observation.get("evidenceRef"), f"{label} observation evidence", errors)
@@ -200,9 +204,16 @@ def validate(repo_root: Path = ROOT) -> list[str]:
                 if probe_attempt.get("status") not in {"blocked", "verified"}:
                     errors.append(f"{label} latestProbeAttempt status is invalid")
                 _iso_datetime(probe_attempt.get("capturedAt"), f"{label} latestProbeAttempt capturedAt", errors)
-                _safe_evidence(root, probe_attempt.get("evidenceRef"), f"{label} latestProbeAttempt evidence", errors)
+                evidence_path = _safe_evidence(
+                    root,
+                    probe_attempt.get("evidenceRef"),
+                    f"{label} latestProbeAttempt evidence",
+                    errors,
+                )
                 if probe_attempt.get("readOnly") is not True:
                     errors.append(f"{label} latestProbeAttempt must be read-only")
+                if not COMMIT.fullmatch(str(probe_attempt.get("sourceCommit") or "")):
+                    errors.append(f"{label} latestProbeAttempt must bind a source commit")
                 for field in ("targetProjectRef", "observedProjectRef"):
                     if not PROJECT_REF.fullmatch(str(probe_attempt.get(field) or "")):
                         errors.append(f"{label} latestProbeAttempt {field} is invalid")
@@ -215,6 +226,26 @@ def validate(repo_root: Path = ROOT) -> list[str]:
                         errors.append(f"{label} verified probe must issue read-only requests")
                 elif not isinstance(probe_attempt.get("reason"), str) or not probe_attempt["reason"].strip():
                     errors.append(f"{label} blocked probe must name a reason")
+
+                if evidence_path is not None and evidence_path.suffix.lower() == ".json":
+                    evidence = _read_json(evidence_path, f"{label} latestProbeAttempt evidence JSON", errors)
+                    if evidence is not None:
+                        if evidence.get("schema") != "munea.supabase-deployment-observation.v1":
+                            errors.append(f"{label} latestProbeAttempt evidence schema is invalid")
+                        for field in (
+                            "capturedAt",
+                            "sourceCommit",
+                            "targetProjectRef",
+                            "observedProjectRef",
+                            "readOnly",
+                            "requestIssued",
+                        ):
+                            if probe_attempt.get(field) != evidence.get(field):
+                                errors.append(f"{label} latestProbeAttempt {field} does not match evidence")
+                        if probe_attempt.get("status") == "verified" and evidence.get("ok") is not True:
+                            errors.append(f"{label} verified probe evidence must be ok")
+                        if probe_attempt.get("status") == "blocked" and evidence.get("ok") is not False:
+                            errors.append(f"{label} blocked probe evidence must not be ok")
 
         rollback = environment.get("rollback")
         if not isinstance(rollback, dict):
