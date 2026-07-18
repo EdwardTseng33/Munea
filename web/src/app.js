@@ -5087,7 +5087,17 @@ function init() {
       }
     } catch (e) {} }, 600);
   } catch (e) {}
-  try { const _vs = document.getElementById('webVerStamp'); if (_vs && window.MuneaVersion) _vs.textContent = '內頁 v' + MuneaVersion.current; } catch (e) {}   // 內頁真版印章：通話畫面角落顯示網頁內容真版本（防 iOS 外殼標籤新、內頁舊）
+  // 內頁真版印章：通話畫面角落顯示網頁內容真版本（防 iOS 外殼標籤新、內頁舊）。
+  // 2026-07-18 Edward 拍板 A：只有開發包／我們自己在瀏覽器測時顯示，正式包一律藏——
+  // 這是給打包驗版用的除錯標籤，長輩看到只會困惑（正式包＝沒有 MUNEA_DEV_CONFIG）。
+  try {
+    const _vs = document.getElementById('webVerStamp');
+    if (_vs && window.MuneaVersion) {
+      const _showStamp = (typeof isDeveloperBypassAllowed === 'function' && isDeveloperBypassAllowed())
+        || (typeof isPackagedApp === 'function' && !isPackagedApp());
+      _vs.textContent = _showStamp ? ('內頁 v' + MuneaVersion.current) : '';
+    }
+  } catch (e) {}
   window.addEventListener('munea:medication-change', handleMedicationChange);
   const __pullPromise = Promise.resolve(syncPullAll());
   const __medicationPromise = __pullPromise.then(configureMedicationService);
