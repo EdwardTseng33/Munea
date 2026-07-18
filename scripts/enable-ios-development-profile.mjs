@@ -10,6 +10,10 @@ const args = process.argv.slice(2);
 // 不直連語音橋、不自動登入測試帳號、不種假資料——用真帳號走正式領證流程，
 // 專門用來驗「通話許可證」新門禁的端到端。預設（不帶 flag）＝原本的直連測試包、行為不變。
 const gatewayMode = args.includes('--gateway');
+// 2026-07-18 專用真測試帳號施工：帳密只從 build-time env 注入，絕不寫死在原始碼裡；
+// 沒設定時留空字串（signInWithTestAccount 會回 test_account_credentials_missing、不會硬撞總機）。
+const testAccountEmail = process.env.MUNEA_TEST_ACCOUNT_EMAIL || '';
+const testAccountPassword = process.env.MUNEA_TEST_ACCOUNT_PASSWORD || '';
 const positional = args.filter(a => !a.startsWith('--'));
 const target = path.resolve(positional[0] || 'ios/App/App/public/src/auth-config.js');
 const productionConfig = path.resolve('web/src/auth-config.js');
@@ -34,6 +38,8 @@ window.MUNEA_DEV_CONFIG = {
   bypassCallControl: false,
   analyticsExcluded: true,
   fixtureVersion: '1.0.37-build44-tokyo-gateway-v1',
+  testAccountEmail: ${JSON.stringify(testAccountEmail)},
+  testAccountPassword: ${JSON.stringify(testAccountPassword)},
   voiceUrl: 'wss://munea-voice-staging-491603544409.asia-east1.run.app',
   brainUrl: 'https://munea-brain-staging-491603544409.asia-east1.run.app',
 };

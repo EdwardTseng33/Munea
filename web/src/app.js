@@ -887,6 +887,11 @@ function usesDevelopmentDirectCall() {
   const cfg = developerConfig();
   return isDeveloperBypassAllowed() && cfg.bypassCallControl === true;
 }
+// --gateway 開發包（2026-07-18 專用真測試帳號施工）：開發者模式開著、但不走本機直連假資料，
+// 走真總機領證——這時「開發者鈕」該叫真帳號登入，不是造假證 session。
+function isGatewayDeveloperProfile() {
+  return isDeveloperBypassAllowed() && !usesDevelopmentDirectCall();
+}
 function developerFixtureDate(daysAgo) {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
@@ -3216,7 +3221,13 @@ function openAuthSheet() {
   sheet.setAttribute('aria-hidden', 'false');
   setAuthMessage('');
   const devBtn = $('#authDeveloperBtn');
-  if (devBtn) devBtn.hidden = !isDeveloperBypassAllowed();
+  if (devBtn) {
+    devBtn.hidden = !isDeveloperBypassAllowed();
+    if (!devBtn.hidden) {
+      const label = isGatewayDeveloperProfile() ? devBtn.dataset.labelGateway : devBtn.dataset.labelDefault;
+      if (label) devBtn.textContent = label;
+    }
+  }
 }
 function closeAuthSheet() {
   const sheet = $('#authSheet');
@@ -3327,7 +3338,25 @@ async function signInWithAuthProvider(provider) {
 }
 async function signInDeveloperMode() {
   const auth = window.MuneaAuth;
-  if (!auth || typeof auth.signInAsDeveloper !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
+  if (!auth) return setAuthMessage('開發者模式尚未啟用', 'error');
+  // --gateway profile：真帳號真登入拿真 JWT、過總機驗證——不是造假證（Build 43 安全洞已補死，永不重開）。
+  if (isGatewayDeveloperProfile()) {
+    if (typeof auth.signInWithTestAccount !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
+    const result = await auth.signInWithTestAccount({ reason: 'settings_auth_sheet_gateway' });
+    if (result && result.ok) {
+      trackProductEvent('auth_developer_signed_in', { provider: 'test-account' });
+      updateAuthUI();
+      closeAuthSheet();
+      return;
+    }
+    const code = String((result && result.error && result.error.code) || 'unknown');
+    setAuthMessage(
+      code === 'test_account_credentials_missing' ? '測試帳號憑證未設定' : `測試帳號登入失敗（${code}）`,
+      'error',
+    );
+    return;
+  }
+  if (typeof auth.signInAsDeveloper !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
   const result = await auth.signInAsDeveloper({ reason: 'settings_auth_sheet' });
   if (result && result.ok) {
     trackProductEvent('auth_developer_signed_in', { provider: 'dev-bypass' });
