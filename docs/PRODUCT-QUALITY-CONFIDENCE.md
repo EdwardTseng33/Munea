@@ -1,8 +1,8 @@
 # Munea 產品品質信心
 
-更新：`2026-07-18 Asia/Taipei（#181–#183 合併後 source governance refresh）`
+更新：`2026-07-18 Asia/Taipei（#185 合併後東京 live DB probe refresh）`
 
-來源基準：`origin/main@608e7e2`
+來源基準：`origin/main@b9a5719`
 
 本文件是目前「能不能放心把這一版交給使用者」的評分 SSOT。它不取代 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 的版本／部署事實，也不把程式存在、測試通過、已合併、已部署或真機通過混成同一個「完成」。
 
@@ -10,7 +10,7 @@
 
 **目前產品品質信心：69/100，未達 90。**
 
-這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181 已建立 94-route API inventory、#182 已將 managed-cloud `/chat-test` 改為 fail-closed、#183 已補 admin data provenance／freshness contract，三者都已合併；但尚未部署與完成對應 live Gate。Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄；latest source 是 `1.0.41 (Build 48)`，latest uploaded 仍是 `1.0.40 (Build 47)`，#174／#175 仍是 Draft PR。production Brain `1.0.36`、production Voice `1.0.31`、staging `1.0.34` 與 DB migration 狀態仍不是同一條 release timeline。
+這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#183 與 #185 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract 與 DB deployment ledger；但 source governance 不等於部署。東京 live probe 已進一步證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 仍缺核准備份與完整前後檢查。Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄；latest source 是 `1.0.41 (Build 48)`，latest uploaded 仍是 `1.0.40 (Build 47)`，#174／#175 仍是 Draft PR。
 
 在任何 P0 關鍵旅程失敗或缺少真機閉環時，整體分數最高只能是 69。自動測試全綠可以提高工程信心，不能解除這個上限。
 
@@ -21,12 +21,12 @@
 | 1. 架構與復原能力 | 15% | 78 | 11.7 | 服務分層、canary 與 rollback 基礎存在；缺 7 日 SLO、完整故障演練及 App 真鏈路證據 |
 | 2. API／服務可靠性與安全 | 15% | **80→84** | 12.6 | 94-route inventory、critical test target 與 managed-cloud `/chat-test` fail-closed 已進 main；缺 7 日 SLO、Gateway identity、authenticated call trace 與 Voice 部署驗收 |
 | 3. App 與後端程式品質 | 20% | 64 | 12.8 | release gate 強，但 #174／#175 尚未合併、包版與真機驗收，關鍵旅程不得標 verified |
-| 4. Repo／資料／migration 治理 | 15% | **62→69（raw 74）** | 10.35 | manifest、逐環境 deployment ledger、15 項 authority 與負向 CI gate 已齊；東京僅有 17 筆 historical claims，`017`／`019` unknown、`018` blocked，因 live 未驗仍受 69 分上限限制 |
+| 4. Repo／資料／migration 治理 | 15% | **62→69（raw 74）** | 10.35 | manifest、逐環境 ledger、15 項 authority、負向 CI 與東京 secret-safe live probe 已齊；17 筆 historical claims、`017`／`018`／`019` 全為 blocked，`verifiedHead=null`，因此仍受 69 分上限限制 |
 | 5. 產品／版本／AI／服務對焦 | 20% | **58→66→69** | 13.8 | source／uploaded／runtime 分 lane；5 個公開 runtime／admin target 已產生 24 小時 freshness manifest 並接入 CI；App Store、Gateway／Avatar、DB 與真機仍未同版，受 69 分上限限制 |
 | 6. 營運後台與可觀測性 | 15% | 74 | 11.1 | data provenance／fallback／freshness unknown contract 已合併但尚未部署；特權資料來源、RBAC／MFA 與 7 日營運指標未證明 |
 | **加權結果** | **100%** |  | **72.35，硬上限後 69** | **工程／治理 raw 信心持續上升；整體仍被 P0 真機與 live DB 證據限制** |
 
-本輪只計入可重現證據：15 個 current authorities、94-route inventory、API／deployment-ledger 負向測試、admin data contract、GitHub workflow，以及 2026-07-18 02:10 對 4 個公開 `/version` 與 staging admin shell 的既有 secret-free capture。未把文件改字、historical claim、Cloud Run Ready 或合併本身當成 runtime／真人分數。
+本輪只計入可重現證據：15 個 current authorities、94-route inventory、API／deployment-ledger 負向測試、admin data contract、GitHub workflow、2026-07-18 02:10 的公開 runtime capture，以及 07:12 UTC 東京 DB GET-only probe。負向 live 結果提高的是事實可信度，不代表 runtime 健康改善，因此本輪不加分。
 
 產品對焦 `69` 是有效期分數：release decision 時若 `npm run release:evidence:check` 因超過 24 小時失敗，且未重新 capture，該面向回退到 `66`，不得沿用本次 runtime 證據。
 
@@ -54,17 +54,17 @@
 
 | 證據 | 2026-07-18 判讀 |
 |---|---|
-| Latest source | `1.0.41 (Build 48)`；source、Web、package、iOS 與品質治理已在 `origin/main@608e7e2` 對齊，包含 #181–#183，但本輪沒有 Archive／upload／iPhone 或服務部署證據 |
+| Latest source | `1.0.41 (Build 48)`；source、Web、package、iOS 與品質治理已在 `origin/main@b9a5719` 對齊，包含 #181–#183 與 #185，但本輪沒有 Archive／upload／iPhone 或服務部署證據 |
 | Latest uploaded App | `1.0.40 (Build 47)`；STATUS 記錄 20:44 上傳成功與 Edward iPhone 換裝成功 |
 | App Store | Build 47 已上傳；精確 selected Build 與 Apple review state 未由本輪 App Store Connect 證據確認，因此保持 `unknown` |
-| 待驗修正 | Draft #174：0 點不進入「撥通中」；Draft #175：TEST 本機購買模擬與 Apple account-token mismatch 說明。兩者仍需同步 `origin/main@608e7e2` 與完成 Mac／iPhone Gate，未計為 merged／packaged／human verified |
+| 待驗修正 | Draft #174：0 點不進入「撥通中」；Draft #175：TEST 本機購買模擬與 Apple account-token mismatch 說明。兩者仍需同步 `origin/main@b9a5719` 與完成 Mac／iPhone Gate，未計為 merged／packaged／human verified |
 | Production Brain | 02:10 secret-free manifest：公開 `/version` 回 `1.0.36@d6a72a1`，revision `munea-brain-00004-leb` |
 | Production Voice | 02:10 secret-free manifest：公開 `/version` 回 `1.0.31@500c819`，revision `munea-voice-00002-sub` |
 | Staging Brain／Voice | 02:10 secret-free manifest：兩者皆回 `1.0.34@136dc81`，revisions `00061-dow`／`00051-qom`；Cloud Run metadata 顯示 Ready 與必要 env-name／Secret IAM contract 完整 |
 | Gateway | 公開 `/health` 無憑證回 401，證明 auth boundary；release identity 與真實 App lease／cleanup trace仍未知 |
 | 營運後台 | staging `/admin.html` 回 200；#183 的 provenance／fallback／freshness unknown contract 已進 main，但 staging Brain 尚未部署該 source；privileged metrics、Tokyo source 與 operator RBAC 未驗 |
 | Repo migration | manifest 有 20 支 migration；`supabase/deployment-ledger.json` 已逐支對應東京 project ref、checksum、狀態與 rollback claim。這是 source governance，不代表 Tokyo 已套用 |
-| Live DB | ledger 明示 `historical-claim=17`、`unknown=2`（017／019）、`blocked=1`（018）；`verifiedHead=null`。東京唯讀 probe 因本機 env 指向 Sydney 而在發出請求前 fail closed，沒有取得 live DB 證據 |
+| Live DB | ledger 明示 `historical-claim=17`、`unknown=0`、`blocked=3`；`verifiedHead=null`。07:12 UTC 東京 GET-only probe 證實 `017` 回 404、`019` 無符合的 active v4 100／200 policy；`018` photo-key=0 仍只是 partial |
 
 ## 關鍵旅程信心
 
@@ -85,7 +85,7 @@
 2. iPhone 分別驗：Google 真帳號、TEST 身分、0 點真帳號、有點數真帳號、Sandbox Apple ID。記錄 Build、profile、Brain／Voice／Gateway／Avatar revision、時間與結果。
 3. Apple account-token mismatch 必須以換／重置 Sandbox 帳號解決；不得放寬伺服器綁定，也不得重複扣款測試。
 4. App Store Connect 的商品售價／描述與 latest uploaded Build 47 畫面一致後，才能決定 selected Build；若改送後續 Build，必須重新核對商品、成品與 review state。
-5. 以核准的 backup／ledger 流程處理 Tokyo `017`／`018`／`019`，逐支做 read-only post-check；本文件更新不能代替執行證據。
+5. 依核准流程補套 Tokyo `017` 與 `019`，完成後重跑 read-only post-check；`018` 必須先取得 backup／approval／完整 pre-check，不能因 photo-key=0 跳過。文件更新不能代替執行證據。
 
 ### P1：把單次驗收變成可持續信心
 

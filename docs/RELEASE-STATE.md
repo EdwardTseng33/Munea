@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-18 source governance refresh`; runtime observations remain from `02:10 Asia/Taipei`
+Snapshot time: `2026-07-18 Tokyo live DB probe refresh`; public runtime observations remain from `02:10 Asia/Taipei`
 
-Source baseline: `origin/main@608e7e2`
+Source baseline: `origin/main@b9a5719`
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -26,10 +26,10 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.41 (Build 48)` | `origin/main` 的 package、lockfile、Web changelog、iOS Debug／Release與品質治理一致；#181–#183 已合併，本輪沒有 Archive、upload、iPhone 安裝或服務部署證據 | `package.json`; `web/src/version.js`; Xcode project; PR #176–#183 | 2026-07-18 |
+| Latest source | `1.0.41 (Build 48)` | `origin/main` 的 package、lockfile、Web changelog、iOS Debug／Release與品質治理一致；#181–#183、#185 已合併，本輪沒有 Archive、upload、iPhone 安裝或服務部署證據 | `package.json`; `web/src/version.js`; Xcode project; PR #176–#185 | 2026-07-18 |
 | Latest uploaded App | `1.0.40 (Build 47)` | STATUS 記錄 IPA 五道防漏、20:44 上傳成功與 Edward iPhone 安裝／啟動成功；不以 later source 覆寫此成品事實 | `STATUS.md`; PR #172/#173 | 2026-07-17 20:44 |
 | App Store selected review lane | Exact Build／Apple state `unknown` | Build 47 已上傳不等於已選用、已送審、審核中或核准；只能由 App Store Connect 或使用者明確證據更新 | App Store Connect required | 2026-07-18 |
-| Draft call／purchase fixes | #174／#175 originally intended `1.0.41 (Build 48)` | main 已前進到 `608e7e2`；兩個 Draft 必須同步 latest main 並完成 Mac／iPhone Gate，才能決定是否併入尚未出貨的 Build 48。#175 目前 stacked on #174 | PR #174; PR #175 | 2026-07-18 |
+| Draft call／purchase fixes | #174／#175 originally intended `1.0.41 (Build 48)` | main 已前進到 `b9a5719`；兩個 Draft 必須同步 latest main 並完成 Mac／iPhone Gate，才能決定是否併入尚未出貨的 Build 48。#175 目前 stacked on #174 | PR #174; PR #175 | 2026-07-18 |
 
 ## Runtime services
 
@@ -48,11 +48,11 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Item | Current state | Interpretation |
 |---|---|---|
 | Repo migration head | `019` | `019_pricing_plus100_pro200.sql` 存在；本輪補入 migration manifest。這只證明 source governance |
-| Environment deployment ledger | `supabase/deployment-ledger.json` | 東京 20 支 migration 逐支對應 manifest checksum；17 筆 historical claim、2 筆 unknown、1 筆 blocked；`verifiedHead=null` |
-| Tokyo applied `017` | `unknown / previously missing` | 本輪沒有新的 approved migration ledger 或 live read-only proof |
-| Tokyo applied `018` | `blocked` | destructive cleanup 必須先有 approval、backup、pre-check／post-check，再執行與驗證 |
-| Tokyo applied `019` | `unknown` | App source／Build 47 顯示新方案不代表 DB policy v4 已套用 |
-| Latest Tokyo probe attempt | `blocked before request` | 2026-07-18 probe 發現共享本機 backend env 指向 Sydney project ref，未發出 REST request；這是 local config drift，不可推論 production runtime source |
+| Environment deployment ledger | `supabase/deployment-ledger.json` | 東京 20 支 migration 逐支對應 manifest checksum；17 筆 historical claim、0 筆 unknown、3 筆 blocked；`verifiedHead=null` |
+| Tokyo applied `017` | `blocked / HTTP 404` | 07:12 UTC GET-only probe 對正確東京 project 發出請求，`notification_settings` 不可到達；需核准套用後重驗 |
+| Tokyo applied `018` | `blocked / partial photo-key=0` | destructive cleanup 仍需 approval、backup、完整 data-image pre-check／post-check；單一欄位零筆不能升格 |
+| Tokyo applied `019` | `blocked / policy mismatch` | policy table 可查，但沒有符合 active v4 Plus 100／Pro 200 的資料；需核准套用後重驗 |
+| Latest Tokyo probe attempt | `blocked after read-only requests` | target／observed project 都是東京 `fespbkdwafueyonppzwq`；使用 Cloud Run 現行 Secret reference，沒有顯示密鑰、個資或執行寫入 |
 | App Store product prices / descriptions | `unknown` | STATUS 記錄為 Build 47 送審前置；App Store Connect 才是權威 |
 
 任何 SQL 檔、manifest、CI PASS、historical claim 或文件聲明都不能標成 live applied。台帳由 [`supabase/deployment-ledger.json`](../supabase/deployment-ledger.json) 管理，更新規則見 [`docs/supabase/DEPLOYMENT-LEDGER.md`](./supabase/DEPLOYMENT-LEDGER.md)。
@@ -92,7 +92,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 - App Store Connect selected Build、商品價格／描述與 review state。
 - Latest source／next candidate 四條關鍵旅程的 installed-iPhone acceptance。
 - Production Gateway／Avatar release identity 與真實 client trace。
-- Tokyo ledger 已存在，但 `017`／`019` 仍 unknown、`018` blocked，且 verified head 仍為 null。
+- Tokyo ledger 已存在且 live blocker 已具名；`017`／`018`／`019` 都是 blocked，verified head 仍為 null。
 - Admin privileged source／freshness／RBAC evidence。
 - 7 日以上登入、購買、call setup、通話中斷、扣點、API latency/error 與資料 freshness SLO。
 
