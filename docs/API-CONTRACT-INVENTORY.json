@@ -1,0 +1,1294 @@
+{
+  "schema": "munea.api-contract-inventory.v1",
+  "sources": {
+    "brain": "engine/server.py",
+    "gateway": "deploy/gateway/gateway_server.py",
+    "voice": "engine/live_voice_server.py"
+  },
+  "policyNotes": [
+    "AST extraction governs route existence, method, path, and surface only; auth is a reviewed declaration.",
+    "Listed route tests own auth behavior and downgrade evidence; an empty tests list means no claimed coverage."
+  ],
+  "routeCounts": {
+    "brain": 67,
+    "gateway": 23,
+    "voice": 4
+  },
+  "routes": [
+    {
+      "surface": "brain",
+      "method": "GET",
+      "path": "/healthz",
+      "auth": "public",
+      "criticality": "high",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "none",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_service_metadata.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "GET",
+      "path": "/version",
+      "auth": "public",
+      "criticality": "high",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "none",
+      "envelope": "munea.service-release.v1",
+      "tests": [
+        "engine/test_service_metadata.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/account-bootstrap",
+      "auth": "user-or-developer",
+      "criticality": "critical",
+      "idempotency": "provider-or-operation-key",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/auth-gate-smoke.ps1",
+        "scripts/test-native-auth.js"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/account-deletion",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_privacy_export.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/accounts",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/audit-events",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/conversation-summaries",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/credits",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/daily-briefing",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/feedback",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/login",
+      "auth": "operator-credentials",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/memory-consolidate",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/memory-living-profile",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/north-star",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/notifications/drain",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/privacy-requests",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/safety-events",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/subscription-metrics",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/usage",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/voice-diagnostics",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/ai/brain-status",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/app-profile",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/apple/notifications",
+      "auth": "provider-jws",
+      "criticality": "critical",
+      "idempotency": "provider-or-operation-key",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_apple_store.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/apple/transaction",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "provider-or-operation-key",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_apple_store.py",
+        "scripts/test-store-verification.js"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/auth-status",
+      "auth": "public",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/auth-gate-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/avatar-session",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/butler/post-turn",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/care-schedule",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/chat",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/companion-profile",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/consent-records",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/conversation-summary",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/credits/balance",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "required-key",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/credits/consume",
+      "auth": "operator",
+      "criticality": "critical",
+      "idempotency": "required-key",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_call_control_sql.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/credits/grant",
+      "auth": "operator",
+      "criticality": "critical",
+      "idempotency": "required-key",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_call_control_sql.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/dev/page-capture",
+      "auth": "developer-only",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/entitlements",
+      "auth": "user-and-operator-write",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test-store-verification.js",
+        "engine/test_subscription_expiry.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/family-members",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/family-relays",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/family/activity",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/family/invitations",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/family/state",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/feedback",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/guardian/evaluate",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/medication-doses",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/memory/extract",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/memory/retrieve",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/notifications",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/notifications/settings",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/open",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/perception/snapshot",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/perception/topic-plan",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/persona/context",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/privacy-export",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_privacy_export.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/proactive/opening",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/product-event",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/push/devices",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/routine-reminders",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/subscription-event",
+      "auth": "provider-or-operator",
+      "criticality": "critical",
+      "idempotency": "provider-or-operation-key",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_subscription_expiry.py",
+        "scripts/test-store-verification.js"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/voice-note",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "actor-per-route-minute",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/voice-session",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/voice/call-memory",
+      "auth": "internal",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_voice_call_memory.py",
+        "scripts/test_voice_chain_probe.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/voice/call-recap",
+      "auth": "internal",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_voice_call_memory.py",
+        "scripts/test_voice_chain_probe.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/voice/health-context",
+      "auth": "internal",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_voice_health_context.py",
+        "scripts/test_voice_chain_probe.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/wellbeing/log",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/wellbeing/recent",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/wellbeing/trend",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "gateway",
+      "method": "GET",
+      "path": "/health",
+      "auth": "user-or-client-key-or-operator",
+      "criticality": "high",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "none",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "GET",
+      "path": "/metrics",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "none",
+      "envelope": "prometheus-text",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "GET",
+      "path": "/v1/call/poll",
+      "auth": "legacy-key",
+      "criticality": "standard",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/admin/voice/active",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/admin/worker/register",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/admin/worker/{worker_id}/enabled",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/admin/worker/{worker_id}/health",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/admin/worker/{worker_id}/unregister",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/call/cancel",
+      "auth": "legacy-key",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/call/release",
+      "auth": "legacy-key",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/call/request",
+      "auth": "legacy-key",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/calls",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "required-key",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/calls/{call_id}/cancel",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "required-event",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/calls/{call_id}/heartbeat",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "required-event",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/calls/{call_id}/release",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "required-event",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/calls/{call_id}/token",
+      "auth": "user",
+      "criticality": "critical",
+      "idempotency": "required-event",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/internal/calls/ready",
+      "auth": "operator",
+      "criticality": "critical",
+      "idempotency": "required-event",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/internal/calls/{call_id}/release",
+      "auth": "operator",
+      "criticality": "critical",
+      "idempotency": "required-event",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/internal/reap",
+      "auth": "operator",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/internal/voice-shards",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/internal/workers",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/internal/workers/{worker_id}/health",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "gateway",
+      "method": "POST",
+      "path": "/v1/internal/workers/{worker_id}/state",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "operations",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/test_gateway_http.py",
+        "scripts/test_call_control.py"
+      ]
+    },
+    {
+      "surface": "voice",
+      "method": "GET",
+      "path": "/chat-test",
+      "auth": "public-test-surface",
+      "criticality": "standard",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "html",
+      "tests": []
+    },
+    {
+      "surface": "voice",
+      "method": "GET",
+      "path": "/healthz",
+      "auth": "public",
+      "criticality": "high",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "none",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_service_metadata.py"
+      ]
+    },
+    {
+      "surface": "voice",
+      "method": "GET",
+      "path": "/version",
+      "auth": "public",
+      "criticality": "high",
+      "idempotency": "safe",
+      "rateLimit": "none",
+      "pii": "none",
+      "envelope": "munea.service-release.v1",
+      "tests": [
+        "engine/test_service_metadata.py"
+      ]
+    },
+    {
+      "surface": "voice",
+      "method": "WS",
+      "path": "/",
+      "auth": "call-token-or-app-key",
+      "criticality": "critical",
+      "idempotency": "connection-scoped",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "websocket-events",
+      "tests": [
+        "scripts/test_voice_chain_probe.py",
+        "scripts/test_voice_call_token_auth.py"
+      ]
+    }
+  ]
+}

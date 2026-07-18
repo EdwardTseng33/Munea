@@ -63,6 +63,9 @@ jobs:
             "[error] Static smoke failed and blocks this run." >> $env:GITHUB_STEP_SUMMARY
           }
 
+      - name: Run API contract inventory gate
+        run: npm run test:api-contracts
+
       - name: Run Supabase doctor without secrets
         id: supabase-doctor
         if: always()
