@@ -1,0 +1,13 @@
+{
+  "schema": "munea.supabase-deployment-observation.v1",
+  "capturedAt": "2026-07-18T06:56:42Z",
+  "sourceCommit": "608e7e230f3568f11e26cc930b54ffa286f2eb79",
+  "targetProjectRef": "fespbkdwafueyonppzwq",
+  "observedProjectRef": "uhmpmystjjdqqxlpsthc",
+  "readOnly": true,
+  "requestIssued": false,
+  "ok": false,
+  "ledgerPromotionAllowed": false,
+  "checks": {},
+  "error": "target_project_mismatch"
+}

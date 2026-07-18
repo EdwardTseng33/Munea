@@ -58,6 +58,11 @@
       "ownerRole": "Data / Operations / Backend"
     },
     {
+      "topic": "database-deployment-ledger",
+      "path": "supabase/deployment-ledger.json",
+      "ownerRole": "Data / Platform"
+    },
+    {
       "topic": "cloudrun-topology",
       "path": "deploy/cloudrun/SERVICE-TOPOLOGY.md",
       "ownerRole": "Platform"

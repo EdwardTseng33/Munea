@@ -25,6 +25,7 @@ REQUIRED_TOPICS = {
     "backend-architecture",
     "api-contracts",
     "admin-data-quality",
+    "database-deployment-ledger",
     "cloudrun-topology",
     "runtime-evidence",
     "collaboration",
@@ -148,6 +149,10 @@ def validate(repo_root: Path = ROOT) -> list[str]:
     admin_data_quality = topics.get("admin-data-quality", {})
     if admin_data_quality.get("path") != "docs/ADMIN-DATA-QUALITY-CONTRACT.md":
         errors.append("Admin data quality must be owned by ADMIN-DATA-QUALITY-CONTRACT.md")
+
+    deployment_ledger = topics.get("database-deployment-ledger", {})
+    if deployment_ledger.get("path") != "supabase/deployment-ledger.json":
+        errors.append("Database deployment state must be owned by supabase/deployment-ledger.json")
 
     historical = authority.get("historical")
     if not isinstance(historical, list):

@@ -1,0 +1,169 @@
+{
+  "schema": "munea.supabase-deployment-ledger.v1",
+  "updated": "2026-07-18",
+  "documentationRef": "docs/supabase/DEPLOYMENT-LEDGER.md",
+  "statusVocabulary": [
+    "unknown",
+    "historical-claim",
+    "verified",
+    "blocked"
+  ],
+  "environments": [
+    {
+      "id": "production-tokyo",
+      "role": "production",
+      "projectRef": "fespbkdwafueyonppzwq",
+      "region": "ap-northeast-1",
+      "verifiedHead": null,
+      "lastObservation": {
+        "status": "historical-only",
+        "observedAt": "2026-07-15T12:28:00+08:00",
+        "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+      },
+      "latestProbeAttempt": {
+        "status": "blocked",
+        "capturedAt": "2026-07-18T06:56:42Z",
+        "targetProjectRef": "fespbkdwafueyonppzwq",
+        "observedProjectRef": "uhmpmystjjdqqxlpsthc",
+        "readOnly": true,
+        "requestIssued": false,
+        "reason": "target_project_mismatch",
+        "evidenceRef": "docs/supabase/evidence/2026-07-18-local-target-mismatch.json"
+      },
+      "migrations": [
+        {
+          "filename": "001_initial_munea_schema.sql",
+          "sha256": "d6b204ba6bef4840c5d9158420fcc07375c66140cd685a8df112e70162033415",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "002_demo_bootstrap.sql",
+          "sha256": "a78e84ca00c29247220cd141dddc86a796b27218d5629ab1014e7611a132484e",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "003_analytics_admin_foundation.sql",
+          "sha256": "ddb148b22c01a48d517410f0d6671b2f323363f2287033190099d8110476f350",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "004_ai_memory_service_foundation.sql",
+          "sha256": "a5051e1ad8e6f95cbf0e58e4b2c66c75643b23005088ef5614f10fdb9d5ac792",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "005_companion_persona_layer.sql",
+          "sha256": "100f41b54317e3f3447bce5ef1941dcb0367ea309e994fd894f5c76b53a98f3b",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "006_billing_credits_foundation.sql",
+          "sha256": "70be65aa80d41c8c13cc79a24b0ff07488824c2e177fe732018e9d158f8d66d9",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "007_family_cloud_state_foundation.sql",
+          "sha256": "831361daf02a5a0165515f796587d0a9d42f6dcf73f547f7885e779faece445b",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "008_family_vitals_state.sql",
+          "sha256": "6fdf4d029de49087455578716fc1a0c7fe60ddeb2727d5d2b3cf365db4657bf3",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "009_perception_snapshot_daily_briefing.sql",
+          "sha256": "5865bd513f1b3e3bc65f8384a71f3fd701342eef2eece72c509a15b22c469611",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "010_realtime_call_control.sql",
+          "sha256": "7030930e158bc255f3d888461a4459826360ec936d6de1a276fd514aa5d48ac1",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "011_family_invitation_integrity.sql",
+          "sha256": "763915e27afd88c3a61875916bc18641f3fc453bb46c2f53bef65d46ed4937ec",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "011_free_signup_trial_policy.sql",
+          "sha256": "d8ff4221315d2236496c6bcf362a41e88a6aab0e15e24aa08f31622470db50ef",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "012_production_security_hardening.sql",
+          "sha256": "6f9449c3f0d4a40246f593114efca48980f804c4fde0ea9d6dce9e6251001e7c",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "013_current_app_billing_policy.sql",
+          "sha256": "32d379884c5d5448c17edfb8e5497549ec97e293c823474b65e8a6e5963b5563",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "014_medication_dose_events.sql",
+          "sha256": "66250ad303ebb75600721b2f950d39cf3ef584cf0344252fdfbdc22618665af2",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "015_family_relay_messages.sql",
+          "sha256": "f93eab1e7586728a72a66879b64bb03393dea2a0042f3a4323ad8c119eaf6124",
+          "status": "historical-claim",
+          "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md"
+        },
+        {
+          "filename": "016_notification_platform.sql",
+          "sha256": "ed77461cd7dbff78df993523cb0838d47b5aab30ed423d0370892a34a71409ec",
+          "status": "historical-claim",
+          "evidenceRef": "STATUS.md"
+        },
+        {
+          "filename": "017_notification_settings.sql",
+          "sha256": "0acca9b0fcb654f3876101ab09bf34486156143763cc7261f673180d7cab8b09",
+          "status": "unknown"
+        },
+        {
+          "filename": "018_strip_medication_photos.sql",
+          "sha256": "219f75977b92366967b66edde16588c39ae8545daf9ae29aca20618ba88e9348",
+          "status": "blocked",
+          "blocker": "approved_backup_and_before_after_counts_missing",
+          "requiresApproval": true
+        },
+        {
+          "filename": "019_pricing_plus100_pro200.sql",
+          "sha256": "2350ec98107d3ea30952d000b5f8839a635a2ceed4007133f2f82c2b031e741b",
+          "status": "unknown"
+        }
+      ],
+      "rollback": {
+        "projectRef": "uhmpmystjjdqqxlpsthc",
+        "region": "ap-southeast-2",
+        "status": "historical-claim",
+        "lastObservedAt": "2026-07-15T12:28:00+08:00",
+        "evidenceRef": "docs/supabase/TOKYO-CANARY-2026-07-15.md",
+        "requirements": [
+          "preserve-both-projects",
+          "restore-backend-secrets",
+          "restore-gateway-revision",
+          "force-user-reauthentication"
+        ]
+      }
+    }
+  ]
+}
