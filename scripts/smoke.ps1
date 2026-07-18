@@ -2874,6 +2874,9 @@ required_js = [
     "/admin/audit-events",
     "localStorage.setItem(ADMIN_BASE_KEY",
     "Promise.allSettled",
+    "munea.admin-data-meta.v1",
+    "dataQualityNoticeHTML",
+    "metadata_missing",
     "renderOverview",
     "renderUsers",
     "renderSafety",
@@ -2934,6 +2937,14 @@ if '"smoke:staging:auth"' not in package:
     raise SystemExit("package.json missing smoke:staging:auth script")
 print("admin console contract OK")
 '@
+& python engine/test_admin_data_quality.py
+if ($LASTEXITCODE -ne 0) {
+  throw "Admin data quality contract tests failed with exit code $LASTEXITCODE"
+}
+& node scripts/test-admin-console.js
+if ($LASTEXITCODE -ne 0) {
+  throw "Admin console contract tests failed with exit code $LASTEXITCODE"
+}
 Pass "Admin console is present and keeps secrets out of static assets"
 
 Step "Operational PowerShell script syntax"
