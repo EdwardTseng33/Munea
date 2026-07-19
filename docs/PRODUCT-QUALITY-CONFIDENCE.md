@@ -1,8 +1,8 @@
 # Munea 產品品質信心
 
-更新：`2026-07-18 Asia/Taipei（production Brain pricing rollout 與 current-plan alignment refresh）`
+更新：`2026-07-19 Asia/Taipei（service SLO evidence contract；7 日資料仍收集中）`
 
-來源基準：`origin/main@c0b43d5`
+來源基準：`origin/main@6a6a0d3`
 
 本文件是目前「能不能放心把這一版交給使用者」的評分 SSOT。它不取代 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 的版本／部署事實，也不把程式存在、測試通過、已合併、已部署或真機通過混成同一個「完成」。
 
@@ -10,7 +10,7 @@
 
 **目前產品品質信心：69/100，未達 90。**
 
-這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#183 與 #185 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract 與 DB deployment ledger；#187 已記錄 production Brain exact Build 47 pricing/grant mapping 上線。這解除了 production Brain 點數 mapping 的版本矛盾，但不等於真人購買已通過。東京 live probe 仍證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 缺核准備份與完整前後檢查。Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄；latest source 是 `1.0.41 (Build 48)`，latest uploaded 仍是 `1.0.40 (Build 47)`，#174／#175 仍是 Draft PR。
+這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#183 與 #185 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract 與 DB deployment ledger；#187 已記錄 production Brain exact Build 47 pricing/grant mapping 上線。本輪再補服務 watchdog 延遲快照與明確 2,016 格分母的 7 日彙總契約，但資料尚未累積滿 7 日，因此不加分。東京 live probe 仍證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 缺核准備份與完整前後檢查。Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄；latest source 是 `1.0.41 (Build 48)`，latest uploaded 仍是 `1.0.40 (Build 47)`，#174／#175 仍是 Draft PR。
 
 在任何 P0 關鍵旅程失敗或缺少真機閉環時，整體分數最高只能是 69。自動測試全綠可以提高工程信心，不能解除這個上限。
 
@@ -18,15 +18,15 @@
 
 | 面向 | 權重 | 目前分數 | 加權貢獻 | 判斷 |
 |---|---:|---:|---:|---|
-| 1. 架構與復原能力 | 15% | 78 | 11.7 | 服務分層、canary 與 rollback 基礎存在；缺 7 日 SLO、完整故障演練及 App 真鏈路證據 |
-| 2. API／服務可靠性與安全 | 15% | **80→84** | 12.6 | 94-route inventory、critical test target 與 managed-cloud `/chat-test` fail-closed 已進 main；缺 7 日 SLO、Gateway identity、authenticated call trace 與 Voice 部署驗收 |
+| 1. 架構與復原能力 | 15% | 78 | 11.7 | 服務分層、canary、rollback 與 5 分鐘 watchdog 存在；7 日保守可用率開始收集，仍缺完整週期、故障演練及 App 真鏈路證據 |
+| 2. API／服務可靠性與安全 | 15% | **80→84** | 12.6 | 94-route inventory、critical test target、managed-cloud `/chat-test` fail-closed 與 synthetic SLO 分母已建立；仍缺完整 7 日、Gateway identity、authenticated call trace 與 Voice 部署驗收 |
 | 3. App 與後端程式品質 | 20% | 64 | 12.8 | release gate 強，但 #174／#175 尚未合併、包版與真機驗收，關鍵旅程不得標 verified |
 | 4. Repo／資料／migration 治理 | 15% | **62→69（raw 74）** | 10.35 | manifest、逐環境 ledger、16 項 authority、current-plan 負向 CI 與東京 secret-safe live probe 已齊；17 筆 historical claims、`017`／`018`／`019` 全為 blocked，`verifiedHead=null`，因此仍受 69 分上限限制 |
 | 5. 產品／版本／AI／服務對焦 | 20% | **58→66→69** | 13.8 | source／uploaded／runtime 分 lane；current plan 與文件入口不再覆蓋 release SSOT，production Brain 已對齊 Build 47 pricing mapping；App Store、Voice／Gateway／Avatar、DB 與真機仍未同版，受 69 分上限限制 |
 | 6. 營運後台與可觀測性 | 15% | 74 | 11.1 | data provenance／fallback／freshness unknown contract 已合併但尚未部署；特權資料來源、RBAC／MFA 與 7 日營運指標未證明 |
 | **加權結果** | **100%** |  | **72.35，硬上限後 69** | **工程／治理 raw 信心持續上升；整體仍被 P0 真機與 live DB 證據限制** |
 
-本輪只計入可重現證據：16 個 current authorities、94-route inventory、API／deployment-ledger／current-plan 負向測試、admin data contract、GitHub workflow、2026-07-18 17:23 的公開 runtime capture、production Brain exact-revision rollout smoke，以及 07:12 UTC 東京 DB GET-only probe。文件矛盾被移除、Brain mapping 已部署，但 P0 真人與 live DB Gate 沒有新增通過項，因此總分與各 hard-capped 分數不調高。
+本輪只計入可重現證據：16 個 current authorities、94-route inventory、API／deployment-ledger／current-plan 負向測試、admin data contract、GitHub workflow、service SLO schema／分母負向測試、2026-07-18 17:23 的公開 runtime capture、production Brain exact-revision rollout smoke，以及 07:12 UTC 東京 DB GET-only probe。文件矛盾被移除、Brain mapping 已部署，SLO 收集管線有 source 證據；但尚未累積 7 日，P0 真人與 live DB Gate 也沒有新增通過項，因此總分與各 hard-capped 分數不調高。
 
 產品對焦 `69` 是有效期分數：release decision 時若 `npm run release:evidence:check` 因超過 24 小時失敗，且未重新 capture，該面向回退到 `66`，不得沿用本次 runtime 證據。
 
@@ -62,6 +62,7 @@
 | Production Voice | 17:23 secret-free manifest：公開 `/version` 回 `1.0.31@500c819f`，revision `munea-voice-00002-sub`；仍明顯落後 source，真人通話需 App E2E |
 | Staging Brain／Voice | 17:23 secret-free manifest：Brain `1.0.40@fa14e4c`／`00063-tod`，Voice `1.0.41@906732ab`／`00053-xow`；這是 runtime identity，不代表真人購買或通話驗收 |
 | Gateway | 公開 `/health` 無憑證回 401，證明 auth boundary；release identity 與真實 App lease／cleanup trace仍未知 |
+| 服務 SLO | 5 分鐘 watchdog 已存在；新增每日 `current-snapshot.json` 與 `rolling-7d.json` 契約，分母為 2,016 個 scheduled slots、漏跑計入保守不可用。首次真 API 驗證：2026-07-18 00:00Z 起 24 小時僅 `18/288` 格完成；observed success 100%，但 coverage／保守可用率僅 6.25%。8 端點單輪全通過，Voice 單樣本偏慢；尚不能加分 |
 | 營運後台 | staging `/admin.html` 回 200；#183 的 provenance／fallback／freshness unknown contract 已進 main，但 staging Brain 尚未部署該 source；privileged metrics、Tokyo source 與 operator RBAC 未驗 |
 | Repo migration | manifest 有 20 支 migration；`supabase/deployment-ledger.json` 已逐支對應東京 project ref、checksum、狀態與 rollback claim。這是 source governance，不代表 Tokyo 已套用 |
 | Live DB | ledger 明示 `historical-claim=17`、`unknown=0`、`blocked=3`；`verifiedHead=null`。07:12 UTC 東京 GET-only probe 證實 `017` 回 404、`019` 無符合的 active v4 100／200 policy；`018` photo-key=0 仍只是 partial |
@@ -91,7 +92,7 @@
 
 1. ✅ 已為 production／staging Brain、Voice 與 staging admin shell 建立 secret-free release evidence manifest；下一步納入 Gateway／Avatar identity、App Store、verified DB head 與 signed App E2E attestation。
 2. ✅ 後台 source 已能顯示資料來源、紀錄時間、fallback 與 metric version；仍需部署 Brain、具名 operator smoke，以及接入 verified DB head／service revision。
-3. 建立 7 日 dashboard：登入成功率、購買驗證成功率、call setup success、p95 接通時間、通話中斷率、點數扣除／退款異常、admin data freshness。
+3. 🟡 已建立 control-plane 7 日證據 schema、明確分母、每日 artifact 與漏跑保守計算；仍需累積完整 7 日，並補登入成功率、購買驗證成功率、call setup success、p95 接通時間、通話中斷率、點數扣除／退款異常、admin data freshness。synthetic latency 不得冒充正式流量 p95。
 4. ✅ 已把 current authority、版本／Build、定價、AI provider reality、historical marker、migration manifest、deployment ledger 與 runtime evidence contract 加入 CI／release gate；DB verified evidence 與人工作業仍需具名／簽章 attestation。
 
 ## 90 分的最低條件
