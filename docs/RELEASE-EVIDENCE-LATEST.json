@@ -1,7 +1,7 @@
 {
   "schema": "munea.release-evidence.v1",
-  "capturedAt": "2026-07-17T18:10:23Z",
-  "capturedBySourceCommit": "b94a631eed37c4c8bf666ba4c52fc8948d10bc7d",
+  "capturedAt": "2026-07-18T09:24:08Z",
+  "capturedBySourceCommit": "9d30e8b03b08962f06125271290d00dd671382f2",
   "sourceVersion": "1.0.41",
   "targetConfigSha256": "f46dd0bc7f8d25997c5429d4612ae18b5ce1bfe125ac282992b5b24cfc1311c9",
   "results": [
@@ -14,9 +14,9 @@
       "observed": {
         "schema": "munea.service-release.v1",
         "service": "munea-brain",
-        "version": "1.0.36",
-        "commit": "d6a72a16eaef984f8461795eedd6beb06c207777",
-        "revision": "munea-brain-00004-leb",
+        "version": "1.0.40",
+        "commit": "fa14e4c374ad059e20e7df513b33229bd1fe2c9e",
+        "revision": "munea-brain-00006-faw",
         "environment": "production"
       }
     },
@@ -44,9 +44,9 @@
       "observed": {
         "schema": "munea.service-release.v1",
         "service": "munea-brain",
-        "version": "1.0.34",
-        "commit": "136dc81bb9faf4ca329e12af0fd3e6b4460ef4e6",
-        "revision": "munea-brain-staging-00061-dow",
+        "version": "1.0.40",
+        "commit": "fa14e4c374ad059e20e7df513b33229bd1fe2c9e",
+        "revision": "munea-brain-staging-00063-tod",
         "environment": "staging"
       }
     },
@@ -59,9 +59,9 @@
       "observed": {
         "schema": "munea.service-release.v1",
         "service": "munea-voice",
-        "version": "1.0.34",
-        "commit": "136dc81bb9faf4ca329e12af0fd3e6b4460ef4e6",
-        "revision": "munea-voice-staging-00051-qom",
+        "version": "1.0.41",
+        "commit": "906732abc24528db77355fdb378d660337cba093",
+        "revision": "munea-voice-staging-00053-xow",
         "environment": "staging"
       }
     },

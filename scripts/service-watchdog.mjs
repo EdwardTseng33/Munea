@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+
 // 服務看門狗（2026-07-16 · 上線前後端完善度）
 //
 // 守的線：Brain／Voice／Gateway／公開網站倒了，5 分鐘內有人知道——
@@ -66,12 +69,18 @@ function sleep(ms) {
 }
 
 async function probeOnce(target, fetchImpl) {
+  const startedAt = performance.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetchImpl(target.url, { signal: controller.signal, redirect: "follow" });
     if (!target.expect.includes(res.status)) {
-      return { ok: false, detail: `回應碼 ${res.status}（預期 ${target.expect.join("/")}）` };
+      return {
+        ok: false,
+        status: res.status,
+        latencyMs: Math.round(performance.now() - startedAt),
+        detail: `回應碼 ${res.status}（預期 ${target.expect.join("/")}）`,
+      };
     }
     if (target.check === "json-ok") {
       const body = await res.text();
@@ -79,16 +88,36 @@ async function probeOnce(target, fetchImpl) {
       try {
         parsed = JSON.parse(body);
       } catch {
-        return { ok: false, detail: "回應不是 JSON" };
+        return {
+          ok: false,
+          status: res.status,
+          latencyMs: Math.round(performance.now() - startedAt),
+          detail: "回應不是 JSON",
+        };
       }
       if (parsed?.ok !== true) {
-        return { ok: false, detail: "回應 JSON 沒有 ok=true" };
+        return {
+          ok: false,
+          status: res.status,
+          latencyMs: Math.round(performance.now() - startedAt),
+          detail: "回應 JSON 沒有 ok=true",
+        };
       }
     }
-    return { ok: true, detail: `回應碼 ${res.status}` };
+    return {
+      ok: true,
+      status: res.status,
+      latencyMs: Math.round(performance.now() - startedAt),
+      detail: `回應碼 ${res.status}`,
+    };
   } catch (err) {
     const reason = err?.name === "AbortError" ? `逾時（>${TIMEOUT_MS / 1000} 秒沒回）` : `連不上（${err?.message || err}`.slice(0, 120) + "）";
-    return { ok: false, detail: reason };
+    return {
+      ok: false,
+      status: null,
+      latencyMs: Math.round(performance.now() - startedAt),
+      detail: reason,
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -96,15 +125,62 @@ async function probeOnce(target, fetchImpl) {
 
 export async function checkTarget(target, fetchImpl, retryDelayMs = RETRY_DELAY_MS) {
   const first = await probeOnce(target, fetchImpl);
-  if (first.ok) return { name: target.name, url: target.url, ...first };
+  if (first.ok) {
+    return {
+      name: target.name,
+      url: target.url,
+      ...first,
+      attempts: 1,
+      recoveredAfterRetry: false,
+      totalLatencyMs: first.latencyMs,
+    };
+  }
   await sleep(retryDelayMs);
   const second = await probeOnce(target, fetchImpl);
   return {
     name: target.name,
     url: target.url,
     ...second,
+    attempts: 2,
+    recoveredAfterRetry: second.ok,
+    totalLatencyMs: first.latencyMs + second.latencyMs,
     detail: second.ok ? `${second.detail}（第一次 ${first.detail}、重試後恢復）` : `${second.detail}（重試仍失敗）`,
   };
+}
+
+export function buildSnapshot(results, capturedAt = new Date().toISOString()) {
+  const targets = results.map((result) => ({
+    name: result.name,
+    url: result.url,
+    ok: result.ok,
+    status: result.status,
+    latencyMs: result.latencyMs,
+    totalLatencyMs: result.totalLatencyMs,
+    attempts: result.attempts,
+    recoveredAfterRetry: result.recoveredAfterRetry,
+    detail: result.detail,
+  }));
+
+  return {
+    schema: "munea.service-watchdog.snapshot.v1",
+    capturedAt,
+    evidenceType: "synthetic-control-plane",
+    cadence: "single-round",
+    summary: {
+      targetCount: targets.length,
+      passed: targets.filter((target) => target.ok).length,
+      failed: targets.filter((target) => !target.ok).length,
+      recoveredAfterRetry: targets.filter((target) => target.recoveredAfterRetry).length,
+    },
+    targets,
+  };
+}
+
+export async function writeSnapshot(snapshotPath, snapshot) {
+  const outputPath = resolve(snapshotPath);
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  return outputPath;
 }
 
 export async function runChecks(targets, fetchImpl, retryDelayMs = RETRY_DELAY_MS) {
@@ -130,7 +206,16 @@ export async function sendAlert(text, webhookUrl, fetchImpl) {
   return res.ok;
 }
 
-async function main() {
+function readOption(flag) {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) return null;
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
+  return value;
+}
+
+export async function main() {
+  const snapshotPath = readOption("--snapshot");
   if (process.argv.includes("--dry-run")) {
     console.log("巡邏對象（dry-run、不打網路）：");
     for (const t of TARGETS) console.log(`  ${t.name} → ${t.url}（預期 ${t.expect.join("/")}${t.check === "json-ok" ? "＋ok=true" : ""}）`);
@@ -138,6 +223,10 @@ async function main() {
   }
   const results = await runChecks(TARGETS, fetch);
   for (const r of results) console.log(`${r.ok ? "  OK  " : " FAIL "}${r.name}：${r.detail}`);
+  if (snapshotPath) {
+    const outputPath = await writeSnapshot(snapshotPath, buildSnapshot(results));
+    console.log(`SNAPSHOT ${outputPath}`);
+  }
   const failures = results.filter((r) => !r.ok);
   if (!failures.length) {
     console.log("✅ 全部服務正常");

@@ -11,6 +11,7 @@ let serverCalls = 0;
 let applied = 0;
 let finished = 0;
 let managed = 0;
+let nativePurchases = 0;
 let serverAllows = true;
 let restoreTransactions = [];
 let appliedPurchase = null;
@@ -24,7 +25,7 @@ let currentTransaction = {
 
 const plugin = {
   addListener() {},
-  async purchase() { return { ...currentTransaction }; },
+  async purchase() { nativePurchases += 1; return { ...currentTransaction }; },
   async finish() { finished += 1; return { ok: true }; },
   async restore() { return { transactions: restoreTransactions.map(tx => ({ ...tx })) }; },
   async manageSubscriptions() { managed += 1; return { ok: true }; }
@@ -57,6 +58,7 @@ const context = {
     };
   },
   window: {
+    MUNEA_DEV_CONFIG: { enabled: false },
     Capacitor: { Plugins: { Store: plugin } },
     MuneaAuth: {
       state() { return { authUserId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }; },
@@ -131,7 +133,20 @@ vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
     throw new Error('native subscription management was not opened');
   }
 
-  console.log('Store server verification PASS', { serverCalls, applied, finished, managed });
+  const callsBeforeSimulation = serverCalls;
+  const nativeBeforeSimulation = nativePurchases;
+  context.window.MUNEA_DEV_CONFIG = { enabled: true };
+  context.window.MuneaAuth.state = () => ({
+    authUserId: '00000000-0000-4000-8000-000000000104',
+    developerMode: true
+  });
+  const simulated = await context.window.MuneaStore.purchase('net.munea.app.pro.monthly');
+  if (!simulated.ok || !simulated.simulated || serverCalls !== callsBeforeSimulation ||
+      nativePurchases !== nativeBeforeSimulation || applied !== 4) {
+    throw new Error('developer purchase must simulate locally without Apple charge or server verification');
+  }
+
+  console.log('Store server verification PASS', { serverCalls, applied, finished, managed, nativePurchases });
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

@@ -21,6 +21,17 @@ window.MuneaStore = (function () {
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Store) || null;
   }
+  function isDeveloperSimulation(state) {
+    var dev = window.MUNEA_DEV_CONFIG || {};
+    return dev.enabled === true && state && state.developerMode === true;
+  }
+  function applyDeveloperSimulation(pid) {
+    if (typeof window.__muneaApplyPurchase !== 'function') {
+      return { ok: false, reason: 'developer_simulation_unavailable' };
+    }
+    var ok = !!window.__muneaApplyPurchase(pid, { developmentSimulation: true });
+    return { ok: ok, simulated: ok, verified: false, reason: ok ? '' : 'badid' };
+  }
   function processedTransactions() {
     try {
       var value = JSON.parse(localStorage.getItem(TX_KEY) || '[]');
@@ -109,6 +120,9 @@ window.MuneaStore = (function () {
     if (!pid) return { ok: false, reason: 'badid' };
     try {
       var authState = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
+      // TEST 身分沒有可由伺服器驗證的真實會員 token，不能拿去綁 Apple 交易。
+      // 開發包在本機模擬方案／點數，既可驗 UI，也不會誤扣 Sandbox 或污染正式帳。
+      if (isDeveloperSimulation(authState)) return applyDeveloperSimulation(pid);
       var r = await p.purchase({ productId: pid, appAccountToken: authState.authUserId || '' });
       var st = (r && r.state) || 'error';
       if (st === 'purchased') {

@@ -116,6 +116,23 @@ if ! grep -Fq 'fespbkdwafueyonppzwq' "$AUTH_CONFIG_PATH" \
   exit 1
 fi
 
+# 2026-07-18 全庫連結盤點收尾（卡西法）：上面只釘死 Supabase 是東京，
+# 沒釘管家腦（Brain）／語音與通話門控（Voice／Call-control）——這裡補第二道門：
+# 正式 IPA 的 app.js 必須含正式預設端點，且整包絕不能出現 -staging 網址，
+# 否則就是把測試機路由帶進 App Store 正式包。
+if [ ! -f "$PACKAGED_APP_JS_PATH" ] \
+  || ! grep -Fq "BRAIN_URL_DEFAULT = 'https://munea-brain-491603544409.asia-east1.run.app'" "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq "LIVE_VOICE_URL_DEFAULT = 'wss://munea-voice-491603544409.asia-east1.run.app'" "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq "CALL_CONTROL_URL_DEFAULT = 'https://munea-call-control-fiu65jd4da-de.a.run.app'" "$PACKAGED_APP_JS_PATH"; then
+  echo "FAIL exported IPA app.js is missing the production Brain/Voice/Call-control default endpoints."
+  exit 1
+fi
+
+if grep -RFq -e 'munea-brain-staging' -e 'munea-voice-staging' "$APP_PATH"; then
+  echo "FAIL exported IPA contains a staging Brain/Voice endpoint (munea-brain-staging / munea-voice-staging) and must never ship in the App Store package."
+  exit 1
+fi
+
 if [ ! -f "$PRIVACY_MANIFEST_PATH" ] \
   || [ "$(plutil -extract NSPrivacyTracking raw "$PRIVACY_MANIFEST_PATH")" != "false" ] \
   || [ "${PRIVACY_DATA_TYPE_COUNT:-0}" -lt 1 ]; then
@@ -154,6 +171,7 @@ fi
 echo "PASS IPA excludes development fixtures and contains the latest Web and authentication assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
+echo "PASS IPA app.js is pinned to production Brain/Voice/Call-control endpoints with no staging leak."
 echo "PASS IPA supports iPhone only."
 echo "PASS App Store package exported."
 echo "Output: $FINAL_EXPORT_PATH"
