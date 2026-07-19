@@ -4,7 +4,7 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
-### 進行中：服務 7 日 SLO 證據／保守分母（2026-07-19 Codex）
+### 已完成：服務 7 日 SLO 證據／保守分母（2026-07-19 Codex · PR #193）
 
 - Branch：`codex/service-slo-evidence-20260719`；獨立 worktree，基準 `origin/main@6a6a0d3`。
 - 檔案：`scripts/service-watchdog.mjs`、`scripts/test-service-watchdog.js`、新增 `scripts/service-slo-report.mjs`、新增 `.github/workflows/service-slo-report.yml`、`docs/SERVICE-SLO-EVIDENCE.md`、`docs/PRODUCT-QUALITY-CONFIDENCE.md` 與本看板。
@@ -12,6 +12,7 @@
 - 線上邊界：只有公開端點匿名 GET 與 GitHub Actions read；不部署、不切流量、不寫 DB、不碰 App／Auth／購買／點數／聊聊／Voice／Gateway handler 或營運後台資料。
 - 分數邊界：source／automated evidence 成立不等於 7 日資料成立；合併主線後才開始時計，未滿 168 小時不加分。synthetic latency 不得冒充正式流量 p95 或 App 通話驗收。
 - 驗收：既有 watchdog 契約、2,016 分母負向測試、漏跑保守計算、artifact 無密鑰／用戶資料、完整 release gate 與 scoped diff。
+- 狀態：✅ 本機契約 40 項、完整 `release:check`、真 GitHub history API、8 端點唯讀 snapshot 與 PR #193 GitHub checks 全過；PR 合併即啟用每日 artifact。首次 24 小時 history 只有 `18/288` 格完成，observed success 100% 但保守可用率 6.25%，因此分數維持 69，固定頻率正式監控另案處理。
 
 ### 進行中：API route inventory／CI 漂移 Gate（2026-07-18 Codex）
 
