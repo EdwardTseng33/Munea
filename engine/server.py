@@ -19,6 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from env_loader import load_engine_env
 load_engine_env()
 from service_metadata import build_service_metadata
+from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
 import localization
 import supabase_adapter
@@ -589,26 +590,45 @@ def normalize_conversation_summary(item=None):
 
 
 def load_conversation_summaries(person_id=None, limit=100, include_deleted=False):
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_items = data_backend().load_conversation_summaries(
+        remote_items = backend.load_conversation_summaries(
             {"personId": person_id, "includeDeleted": include_deleted},
             limit=limit,
         )
         if remote_items is not None:
+            record_admin_data_source(
+                "conversation_summaries",
+                "supabase",
+                record_count=len(remote_items),
+                data_as_of=latest_record_timestamp(remote_items),
+            )
             return remote_items
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
+        if backend.enabled() and not is_missing_table_error(e):
             raise e
         log_fallback_exception("load conversation summaries from Supabase", e)
     items = read_json_file(CONVERSATION_SUMMARIES_PATH, [])
     if not isinstance(items, list):
         items = []
+    raw_items = list(items)
     normalized = [normalize_conversation_summary(item) for item in items]
     if person_id:
         normalized = [item for item in normalized if item.get("personId") == person_id]
     if not include_deleted:
         normalized = [item for item in normalized if not item.get("deletedAt")]
-    return normalized[-limit:]
+    normalized = normalized[-limit:]
+    record_admin_data_source(
+        "conversation_summaries",
+        "json",
+        record_count=len(normalized),
+        data_as_of=latest_record_timestamp(raw_items),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return normalized
 
 
 def save_conversation_summaries(items):
@@ -3774,18 +3794,39 @@ def normalize_product_events_store(data=None):
 
 
 def load_product_events(since_iso=None, limit=500):
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_events = data_backend().load_product_events(since_iso=since_iso, limit=limit)
+        remote_events = backend.load_product_events(since_iso=since_iso, limit=limit)
         if remote_events is not None:
-            return [normalize_product_event(e) for e in remote_events]
+            normalized_remote = [normalize_product_event(e) for e in remote_events]
+            record_admin_data_source(
+                "product_events",
+                "supabase",
+                record_count=len(normalized_remote),
+                data_as_of=latest_record_timestamp(remote_events),
+            )
+            return normalized_remote
     except Exception as e:
         log_fallback_exception("load product events from Supabase", e)
-    store = normalize_product_events_store(read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store()))
+    raw_store = read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store())
+    raw_events = raw_store.get("events", []) if isinstance(raw_store, dict) else []
+    store = normalize_product_events_store(raw_store)
     events = store["events"]
     if since_iso:
         since = parse_iso_datetime(since_iso)
         events = [e for e in events if parse_iso_datetime(e.get("eventTime")) >= since]
-    return events[:limit]
+    events = events[:limit]
+    record_admin_data_source(
+        "product_events",
+        "json",
+        record_count=len(events),
+        data_as_of=latest_record_timestamp(raw_events),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return events
 
 
 def truthy(value):
@@ -4040,13 +4081,32 @@ def local_admin_account_summary():
 
 
 def load_admin_accounts(query=None, limit=50):
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_accounts = data_backend().load_admin_accounts(query=query, limit=limit)
+        remote_accounts = backend.load_admin_accounts(query=query, limit=limit)
         if remote_accounts is not None:
-            return [normalize_admin_account_summary(account) for account in remote_accounts]
+            normalized_remote = [normalize_admin_account_summary(account) for account in remote_accounts]
+            record_admin_data_source(
+                "accounts",
+                "supabase",
+                record_count=len(normalized_remote),
+                data_as_of=latest_record_timestamp(normalized_remote),
+            )
+            return normalized_remote
     except Exception as e:
         log_fallback_exception("load admin accounts from Supabase", e)
-    return [local_admin_account_summary()]
+    local_accounts = [local_admin_account_summary()]
+    record_admin_data_source(
+        "accounts",
+        "json",
+        record_count=len(local_accounts),
+        data_as_of=latest_record_timestamp(local_accounts),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return local_accounts
 
 
 def _normalize_account_plan(raw):
@@ -4544,6 +4604,15 @@ def admin_feedback_summary(data=None):
     items = read_json_file(FEEDBACK_PATH, [])
     if not isinstance(items, list):
         items = []
+    record_admin_data_source(
+        "feedback",
+        "json",
+        record_count=len(items),
+        data_as_of=latest_record_timestamp(items),
+        authority="prototype",
+        degraded=True,
+        degradation_reason="primary_adapter_not_implemented",
+    )
     by_type, by_cat = {}, {}
     nps_scores = []
     for it in items:
@@ -4742,15 +4811,35 @@ def default_audit_events_store():
 
 def load_audit_events(limit=100):
     limit = max(1, min(500, int(limit or 100)))
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_events = data_backend().load_audit_events(limit=limit)
+        remote_events = backend.load_audit_events(limit=limit)
         if remote_events is not None:
-            return [normalize_audit_event(event) for event in remote_events][:limit]
+            normalized_remote = [normalize_audit_event(event) for event in remote_events][:limit]
+            record_admin_data_source(
+                "audit_events",
+                "supabase",
+                record_count=len(normalized_remote),
+                data_as_of=latest_record_timestamp(remote_events[:limit]),
+            )
+            return normalized_remote
     except Exception as e:
         log_fallback_exception("load audit events from Supabase", e)
     store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
-    events = [normalize_audit_event(event) for event in store.get("events", [])]
-    return events[:limit]
+    raw_events = store.get("events", []) if isinstance(store, dict) else []
+    events = [normalize_audit_event(event) for event in raw_events]
+    events = events[:limit]
+    record_admin_data_source(
+        "audit_events",
+        "json",
+        record_count=len(events),
+        data_as_of=latest_record_timestamp(raw_events[:limit]),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return events
 
 
 def normalize_audit_event(event=None):
@@ -5005,13 +5094,33 @@ def normalize_credits_store(data=None):
 
 
 def load_credits_store():
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_store = data_backend().load_credits_store()
+        remote_store = backend.load_credits_store()
         if remote_store:
-            return normalize_credits_store(remote_store)
+            store = normalize_credits_store(remote_store)
+            record_admin_data_source(
+                "credits",
+                "supabase",
+                record_count=len(store.get("wallets") or []) + len(store.get("transactions") or []) + len(store.get("ledger") or []),
+                data_as_of=remote_store.get("updatedAt") or remote_store.get("updated_at"),
+            )
+            return store
     except Exception as e:
         log_fallback_exception("load credits store from Supabase", e)
-    return normalize_credits_store(read_json_file(CREDITS_STORE_PATH, {}))
+    raw_store = read_json_file(CREDITS_STORE_PATH, {})
+    store = normalize_credits_store(raw_store)
+    record_admin_data_source(
+        "credits",
+        "json",
+        record_count=len(store.get("wallets") or []) + len(store.get("transactions") or []) + len(store.get("ledger") or []),
+        data_as_of=(raw_store.get("updatedAt") or raw_store.get("updated_at")) if isinstance(raw_store, dict) else None,
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return store
 
 
 def save_credits_store(data):
@@ -5502,13 +5611,33 @@ def reconcile_billing_expiry(store):
 
 
 def load_billing_store():
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_store = data_backend().load_billing_store()
+        remote_store = backend.load_billing_store()
         if remote_store:
-            return reconcile_billing_expiry(normalize_billing_store(remote_store))
+            store = reconcile_billing_expiry(normalize_billing_store(remote_store))
+            record_admin_data_source(
+                "billing",
+                "supabase",
+                record_count=1 if store.get("accountId") else 0,
+                data_as_of=remote_store.get("updatedAt") or remote_store.get("updated_at"),
+            )
+            return store
     except Exception as e:
         log_fallback_exception("load billing store from Supabase", e)
-    return reconcile_billing_expiry(normalize_billing_store(read_json_file(BILLING_STORE_PATH, {})))
+    raw_store = read_json_file(BILLING_STORE_PATH, {})
+    store = reconcile_billing_expiry(normalize_billing_store(raw_store))
+    record_admin_data_source(
+        "billing",
+        "json",
+        record_count=1 if store.get("accountId") else 0,
+        data_as_of=(raw_store.get("updatedAt") or raw_store.get("updated_at")) if isinstance(raw_store, dict) else None,
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return store
 
 
 def save_billing_store(data, reconcile=True):
@@ -5977,13 +6106,37 @@ def normalize_privacy_requests_store(data=None):
 
 
 def load_privacy_requests_store():
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_store = data_backend().load_privacy_requests_store()
+        remote_store = backend.load_privacy_requests_store()
         if remote_store:
-            return normalize_privacy_requests_store(remote_store)
+            store = normalize_privacy_requests_store(remote_store)
+            requests = store.get("requests") or []
+            raw_requests = remote_store.get("requests") or []
+            record_admin_data_source(
+                "privacy_requests",
+                "supabase",
+                record_count=len(requests),
+                data_as_of=latest_record_timestamp(raw_requests),
+            )
+            return store
     except Exception as e:
         log_fallback_exception("load privacy requests from Supabase", e)
-    return normalize_privacy_requests_store(read_json_file(PRIVACY_REQUESTS_PATH, {}))
+    raw_store = read_json_file(PRIVACY_REQUESTS_PATH, {})
+    store = normalize_privacy_requests_store(raw_store)
+    requests = store.get("requests") or []
+    raw_requests = raw_store.get("requests", []) if isinstance(raw_store, dict) else []
+    record_admin_data_source(
+        "privacy_requests",
+        "json",
+        record_count=len(requests),
+        data_as_of=latest_record_timestamp(raw_requests),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return store
 
 
 def save_privacy_requests_store(data):
@@ -6965,67 +7118,67 @@ class H(BaseHTTPRequestHandler):
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_accounts_summary(data))
+                    self._json(admin_contract_response("munea.admin.accounts.v1", lambda: admin_accounts_summary(data)))
             elif self.path == "/admin/north-star":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(north_star_summary(data))
+                    self._json(admin_contract_response("munea.admin.north-star.v1", lambda: north_star_summary(data)))
             elif self.path == "/admin/usage":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_usage_summary(data))
+                    self._json(admin_contract_response("munea.admin.usage.v1", lambda: admin_usage_summary(data)))
             elif self.path == "/admin/credits":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_credits_summary(data))
+                    self._json(admin_contract_response("munea.admin.credits.v1", lambda: admin_credits_summary(data)))
             elif self.path == "/admin/subscription-metrics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_subscription_metrics(data))
+                    self._json(admin_contract_response("munea.admin.subscription-metrics.v1", lambda: admin_subscription_metrics(data)))
             elif self.path == "/admin/conversation-summaries":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_conversation_summaries(data))
+                    self._json(admin_contract_response("munea.admin.conversation-summaries.v1", lambda: admin_conversation_summaries(data)))
             elif self.path == "/admin/privacy-requests":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_privacy_requests_summary(data))
+                    self._json(admin_contract_response("munea.admin.privacy-requests.v1", lambda: admin_privacy_requests_summary(data)))
             elif self.path == "/admin/feedback":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_feedback_summary(data))
+                    self._json(admin_contract_response("munea.admin.feedback.v1", lambda: admin_feedback_summary(data)))
             elif self.path == "/admin/safety-events":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_safety_events_summary(data))
+                    self._json(admin_contract_response("munea.admin.safety-events.v1", lambda: admin_safety_events_summary(data)))
             elif self.path == "/admin/audit-events":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_audit_events_summary(data))
+                    self._json(admin_contract_response("munea.admin.audit-events.v1", lambda: admin_audit_events_summary(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_voice_diagnostics_summary(data))
+                    self._json(admin_contract_response("munea.admin.voice-diagnostics.v1", lambda: admin_voice_diagnostics_summary(data)))
             elif self.path == "/admin/notifications/drain":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

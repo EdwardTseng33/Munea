@@ -2,7 +2,7 @@
 
 This map classifies repository areas and documents without moving or deleting them. It defines where to look first and which files must not be treated as current runtime truth.
 
-Snapshot baseline: `origin/main@ad3c2e8`
+Snapshot baseline: `origin/main@c0b43d5`
 
 Confirmed owners: none. Role names below are suggested accountability roles, not assignments to a person.
 
@@ -55,9 +55,9 @@ Confirmed owners: none. Role names below are suggested accountability roles, not
 | Product implementation alignment | `docs/PRODUCT-ALIGNMENT-REGISTER.md` | `authority` for alignment mapping and gates | Maps product promises to source, deployment evidence, verification state, and next gate. Exact versions and runtime revisions are timestamped references governed by `docs/RELEASE-STATE.md`; this register cannot override App Store Connect, Cloud Run, or the database ledger. |
 | Repo cleanup evidence | `docs/REPO-CLEANUP-INVENTORY.md` | `snapshot` / supporting | Caller and lifecycle inventory for safe cleanup. It grants no permission to delete, move, or archive a path. |
 | Activity and execution history | `STATUS.md` | `historical` / supporting log | Append-only evidence and handoff history. It is not the single current release answer. |
-| Documentation navigation | `docs/00-總綱-從這裡開始.md` | routing `authority`, `current-stale` | Controls documentation routing, but its date and document counts are outdated. Content authority for each topic remains with the routed topic file. Do not rewrite in this collision-avoidance PR. |
+| Documentation navigation | `docs/00-總綱-從這裡開始.md` | routing `authority` | Its 2026-07-18 current override and current snapshot route version, pricing, runtime, DB and quality facts to the topic authorities. Older counts and dated sections remain historical context and cannot override those files. |
 | App Store checklist | `docs/APP-STORE-PRODUCTION-READINESS.md` | `supporting`, `current-stale` | Detailed release checklist; its recorded candidate and source lanes are behind current source. App Store Connect remains authoritative for Apple state. |
-| Development plan | `docs/CURRENT-DEVELOPMENT-PLAN.md` | `supporting`, `current-stale` | Declares a current plan but contains early-version progress. Refresh separately with product owner review. |
+| Development plan | `docs/CURRENT-DEVELOPMENT-PLAN.md` | `authority` for current execution order | The 2026-07-18 header states the source／uploaded lanes, approved points, P0 gates and next actions. Dated sections below it are preserved execution history and cannot override release, quality or billing authorities. The path is machine-governed as `development-plan`. |
 | Backend architecture | `docs/BACKEND-ARCHITECTURE-v1.md` | `supporting` | Architecture reference; parts predate the current admin and production topology. |
 | Health assessment | `docs/HEALTH-90-SCORECARD-2026-07-16.md` | `snapshot` | Evidence-based assessment at its stated baseline, not a live release registry. |
 | Voice experience plan | `docs/聊聊查資料與清晨備料-體驗計畫-2026-07-16.md` | `supporting`; declared feature SSOT, routing pending | PR #144 is merged, but this file must be routed by the documentation navigation authority before it is treated as the discoverable feature authority. It never controls global release state. |
@@ -68,7 +68,7 @@ Confirmed owners: none. Role names below are suggested accountability roles, not
 ## Confirmed conflicts
 
 - Cross-surface source, binary, runtime, database, and admin state are not aligned. The exact volatile values belong only in `docs/RELEASE-STATE.md`.
-- App Store readiness, current-development, and overview documents contain stale version or progress statements; this map records their lifecycle, not replacement release facts.
+- App Store readiness, README and backlog still contain stale version or progress statements. The development-plan header and documentation-entry current snapshot were refreshed on 2026-07-18, but neither may replace volatile facts in `docs/RELEASE-STATE.md`.
 - Product claims, implementation state, deployment state, and human verification are separate columns in `docs/PRODUCT-ALIGNMENT-REGISTER.md`; none may be inferred from another.
 - Architecture, health, activity logs, and feature plans answer different questions but were previously read as interchangeable SSOTs.
 - Repo migration authority and live database evidence differ. See `docs/RELEASE-STATE.md`; repo source authority never implies live application.
@@ -96,7 +96,7 @@ The first cleanup phase must not:
 
 1. Refresh `docs/APP-STORE-PRODUCTION-READINESS.md` against App Store Connect and the selected review Build in a dedicated PR.
 2. Keep the Cloud Run topology contract and retired-entrypoint guards in CI; any later script deletion requires caller evidence and a separate Platform review.
-3. Refresh `docs/CURRENT-DEVELOPMENT-PLAN.md`, `README.md`, and `BACKLOG.md` only after each topic owner confirms scope and successor documents.
+3. ✅ Refresh the `docs/CURRENT-DEVELOPMENT-PLAN.md` current header and machine-govern its path／source／pricing boundary; refresh `README.md` and `BACKLOG.md` only after each topic owner confirms scope and successor documents.
 4. Add a machine-readable release-state schema and CI validator after the manual fields stabilize.
 5. Establish confirmed ownership / `CODEOWNERS` separately; do not infer people from historical authorship.
 6. Complete external-consumer checks in `docs/REPO-CLEANUP-INVENTORY.md` before moving design bundles, prototypes, sales assets, App Store images, voice samples, or root assets.

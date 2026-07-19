@@ -12,7 +12,16 @@
   button{font-family:inherit}
 
   /* ===== 通話舞台 ===== */
-  .stage{position:relative;height:100dvh;width:100%;overflow:hidden}
+  /* 2026-07-18 卡西法 bug fix（Edward 抓到：撥號中/接通時人物頭像太大、頭頂被裁掉）：
+     舊版只有 height:100dvh + width:100%（或桌機 max-width:460px），完全沒跟著視窗高度
+     鎖比例——視窗不夠高時，stage 的寬高比會比來源照片(全部 1080x1920＝9:16)更「寬」，
+     底下 .face-bg img 的 object-fit:cover 只好把照片放大裁切去填滿高度，頭頂就切掉了
+     （900x650 視窗實測：頭髮頂端整個切齊畫面邊緣；1000x550 更誇張，裁掉原圖近 6% 高度）。
+     根治：stage 寬度永遠不超過「用目前高度反推的 9:16 寬」——這樣 stage 本身的長寬比
+     永遠 ≤ 來源照片比例，cover 最多只會裁左右兩側（安全，臉在正中央不受影響），
+     不會再裁到頭頂；兩側多的空間用 margin:auto 置中留白，不影響手機直式滿版體驗
+     （真手機視窗本來就比 9:16 更窄長，這個上限天生不會生效、行為不變）。 */
+  .stage{position:relative;height:100dvh;width:100%;max-width:calc(100dvh * 9 / 16);margin:0 auto;overflow:hidden;background:#0E1A17}
   .face-bg{position:absolute;inset:0;overflow:hidden}
   .face-bg img{width:100%;height:100%;object-fit:cover;object-position:center 18%;
     transform:scale(var(--zoom,1)) translateY(var(--bob,0px));transition:transform .18s ease-out;will-change:transform}
@@ -108,7 +117,10 @@
     color:#8fe6b0;font:12px/1.5 monospace;padding:6px 9px;border-radius:8px;max-width:92vw}
 
   @media (min-width:700px){ /* 桌機投影：舞台置中收窄、像手機直式 */
-    .stage{max-width:460px;margin:0 auto;border-radius:0}
+    /* 2026-07-18 卡西法：桌機原本的 460px 上限跟上面新加的 9:16 比例上限取更小值——
+       視窗夠高時維持原本「460px 手機卡片」觀感，視窗不夠高時改由比例上限接手縮窄，
+       兩者都生效、不衝突。 */
+    .stage{max-width:min(460px, calc(100dvh * 9 / 16));border-radius:0}
     body{background:#081210}
   }
 </style>
@@ -280,6 +292,10 @@ const Live = {
         try{ this.mic = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
         catch(e){ toast('拿不到麥克風——請允許權限後再試一次'); settle(false); this.stop(); return; }
         this.ac = new AudioContext();
+        // 2026-07-18 卡西法：AudioContext 若在 suspended 狀態下建立(部分瀏覽器/情境的自動播放限制)，
+        // 整條收音圖完全不會跑、onaudioprocess 永遠不觸發——麥克風表面上「已取得」但實際一個位元組
+        // 都沒送出去。成本近乎 0 的防呆(只有真的卡在 suspended 才會動作)，同 munea-b2b/call.html 同批修法。
+        if (this.ac.state === 'suspended'){ const rp = this.ac.resume(); if (rp && rp.catch) rp.catch(()=>{}); }
         const src=this.ac.createMediaStreamSource(this.mic);
         this.proc=this.ac.createScriptProcessor(4096,1,1);
         src.connect(this.proc); this.proc.connect(this.ac.destination);

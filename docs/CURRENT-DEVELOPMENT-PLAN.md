@@ -1,9 +1,15 @@
 # Munea Current Development Plan
 
-> Updated: 2026-06-30
-> Purpose: current execution plan for turning the runnable prototype into a first TestFlight path.
+> Updated: 2026-07-18
+> Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **2026-07-14 current override**: App `1.0.3 (6)` is packaged and running on Edward's iPhone. The active plan ladder is Free / Plus / Pro; Plus grants 150 monthly points and Pro grants 300. Older dated sections remain an execution history and cannot override `docs/APP-STORE-PRODUCTION-READINESS.md` or `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`.
+> **Current source:** `1.0.41 (Build 48)`
+>
+> **Latest uploaded App:** `1.0.40 (Build 47)`; the exact selected Build and Apple review state remain `unknown` until App Store Connect evidence is recorded.
+>
+> **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000. Existing App Store Product IDs stay unchanged.
+>
+> **Authority boundary:** exact volatile App／runtime／DB facts live in `docs/RELEASE-STATE.md`; quality score and 90-point gates live in `docs/PRODUCT-QUALITY-CONFIDENCE.md`; billing rules live in `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`. The dated sections below are historical execution records and cannot override this current header or those authorities.
 
 ## Current Truth
 
@@ -11,21 +17,31 @@
 - First market wedge: family/older-adult care, but Munea is not an "elderly-only app."
 - Language priority: **Taiwan Mandarin first, English second**.
 - Taiwanese Hokkien: research only for now; no v1/v2 commitment and no self-trained language model.
-- Voice direction: Gemini 3.1 Flash Live direction, subject to live API integration testing.
+- Voice direction: Gemini Live is the current realtime provider direction; exact production Voice identity and App E2E status must be read from `docs/RELEASE-STATE.md`.
 - App delivery: iOS first through Capacitor; Android later.
 - Compliance line: companion and life reminder, not diagnosis, treatment, prescription, or therapy.
+- Release truth: source, uploaded App, App Store selection, Cloud Run runtime, DB application and human iPhone verification are separate states and must never be inferred from one another.
 
 ## Progress Snapshot
 
 | Track | Status | Progress |
 |---|---|---:|
-| Product direction / PRD | Current authority exists in README + SPEC | 85-90% |
-| Runnable web prototype | Home, status, chat, family, settings, onboarding, landing | 65-70% |
-| Prototype AI engine | Local Python Gemini chat/TTS demo works | 35-45% |
-| iOS shell | Capacitor config scaffolded; native project still requires Mac/Xcode | 5-10% |
-| Data backend | Supabase schema 001-007 + adapter table audit exist; live env/schema apply still pending | 45-55% |
-| Real-time avatar | Avatar Runtime now consumes backend `/avatar-session`; engine PoCs still pending | 35-45% |
-| First TestFlight path | Not ready yet | 30-35% |
+| Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
+| App source | `1.0.41 (Build 48)` is current source; no Archive／upload／iPhone evidence for Build 48 | `merged, not packaged` |
+| Uploaded App | `1.0.40 (Build 47)` was uploaded and installed; selected review lane remains unknown | `packaged, human gates pending` |
+| Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
+| Production Voice／Gateway／Avatar | Voice is behind source; Gateway／Avatar exact release identity and installed-App trace are not closed | `partial / unknown` |
+| Tokyo database | Repo migration head is `019`; `017`／`018`／`019` are blocked and `verifiedHead=null` | `blocked` |
+| Four P0 journeys | Google session, membership／points purchase, zero-credit preflight and credited chat-call lack one-Build iPhone evidence | `0/4 verified` |
+| Overall release confidence | Raw engineering evidence is above the hard cap, but P0 human／live-data gates remain open | `69/100` |
+
+## Current Execution Order
+
+1. Rebase and review the open App fixes (#174／#175) and test-account access work (#188) without treating Draft or CI evidence as packaged success.
+2. On Mac／iPhone, record one-candidate-Build evidence for Google session, membership／points purchase, zero-credit preflight and credited `聊聊` end to end.
+3. Reconcile App Store selected Build, product price／description and Sandbox purchase result before changing release state.
+4. Apply Tokyo `017`／`019` only through the approved migration process; `018` requires backup, approval and full pre/post checks.
+5. Collect at least seven days of login, purchase, call setup, disconnect, credit-ledger, API and admin-freshness indicators before claiming 90.
 
 ## 2026-06-30 Update
 

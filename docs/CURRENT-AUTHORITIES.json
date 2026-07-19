@@ -8,6 +8,11 @@
       "ownerRole": "Product / Documentation"
     },
     {
+      "topic": "development-plan",
+      "path": "docs/CURRENT-DEVELOPMENT-PLAN.md",
+      "ownerRole": "Product / Engineering"
+    },
+    {
       "topic": "product-spec",
       "path": "docs/SPEC-沐寧-v1-2026-06-28.md",
       "ownerRole": "Product"
@@ -46,6 +51,21 @@
       "topic": "backend-architecture",
       "path": "docs/BACKEND-ARCHITECTURE-v1.md",
       "ownerRole": "Backend / Platform"
+    },
+    {
+      "topic": "api-contracts",
+      "path": "docs/API-CONTRACT-INVENTORY.json",
+      "ownerRole": "Backend / Platform"
+    },
+    {
+      "topic": "admin-data-quality",
+      "path": "docs/ADMIN-DATA-QUALITY-CONTRACT.md",
+      "ownerRole": "Data / Operations / Backend"
+    },
+    {
+      "topic": "database-deployment-ledger",
+      "path": "supabase/deployment-ledger.json",
+      "ownerRole": "Data / Platform"
     },
     {
       "topic": "cloudrun-topology",

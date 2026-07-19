@@ -103,6 +103,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.normpath(os.path.join(HERE, "..", "web"))
 VOICE_RELEASE_METADATA = build_service_metadata("munea-voice")
 
+_CHAT_TEST_TRUE_VALUES = {"1", "true", "yes", "on"}
+_CHAT_TEST_CLOUD_MARKERS = ("K_SERVICE", "K_REVISION", "K_CONFIGURATION")
+_CHAT_TEST_BLOCKED_ENVIRONMENTS = {"production", "prod", "staging", "stage"}
+
 
 def _json_response(payload):
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -126,12 +130,36 @@ def _file_response(rel):
     return Response(200, "OK", h, body)
 
 
-def _chat_test_response():
-    """Serve the full app with a local test-only developer session.
+def _chat_test_enabled(environ=None):
+    """Allow the developer bootstrap only for an explicit non-cloud test run."""
+    env = os.environ if environ is None else environ
+    enabled = str(env.get("MUNEA_ENABLE_CHAT_TEST") or "").strip().lower()
+    if enabled not in _CHAT_TEST_TRUE_VALUES:
+        return False
+    if any(str(env.get(marker) or "").strip() for marker in _CHAT_TEST_CLOUD_MARKERS):
+        return False
+    environment = str(
+        env.get("MUNEA_ENV_NAME")
+        or env.get("MUNEA_ENVIRONMENT")
+        or env.get("ENVIRONMENT")
+        or env.get("NODE_ENV")
+        or ""
+    ).strip().lower()
+    return environment not in _CHAT_TEST_BLOCKED_ENVIRONMENTS
 
-    This route is intentionally separate from the production entry point so
-    normal App and web visitors keep their sign-in requirement.  The launcher
-    only links to this route while a developer runs the local voice service.
+
+def _chat_test_not_found():
+    headers = Headers()
+    headers["Cache-Control"] = "no-store"
+    headers["Content-Length"] = "0"
+    return Response(404, "Not Found", headers, b"")
+
+
+def _chat_test_response():
+    """Serve the full app with an explicitly enabled developer session.
+
+    ``process_request`` must keep this route disabled in managed cloud
+    environments and unless ``MUNEA_ENABLE_CHAT_TEST=1`` is present.
     """
     fp = os.path.join(WEB, "index.html")
     try:
@@ -175,6 +203,8 @@ def process_request(connection, request):
             "runtime": {"transport": "websocket"},
         })
     if path in ("chat-test", "chat-test/"):
+        if not _chat_test_enabled():
+            return _chat_test_not_found()
         return _chat_test_response()
     if path in ("app", "app/", "app.html"):
         path = "index.html"
