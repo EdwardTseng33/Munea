@@ -152,6 +152,7 @@ async function main() {
         "param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Remaining)",
         "if ($Remaining -contains 'list-configs') { Write-Output '[{\"name\":\"projects/test/uptimeCheckConfigs/fake-brain\",\"displayName\":\"Munea Brain prod health\",\"monitoredResource\":{\"labels\":{\"host\":\"munea-brain-491603544409.asia-east1.run.app\"}},\"userLabels\":{\"managed_by\":\"munea_repo\",\"component\":\"service_slo\",\"target_id\":\"brain-prod\"}}]'; exit 0 }",
         "if (($Remaining -contains 'update') -and -not ($Remaining -contains '--set-status-codes')) { [Console]::Error.WriteLine('update missing --set-status-codes'); exit 2 }",
+        "if (($Remaining -contains 'update') -and ($Remaining -contains '--update-user-labels')) { [Console]::Error.WriteLine('update must preserve create-time user labels'); exit 2 }",
         "if (($Remaining -contains 'create') -and -not ($Remaining -contains '--status-codes')) { [Console]::Error.WriteLine('create missing --status-codes'); exit 2 }",
         "[Console]::Error.WriteLine('Created uptime fake-success')",
         "exit 0",
@@ -162,7 +163,7 @@ async function main() {
         "-GcloudPath", fakeGcloud,
         "-Apply",
       ], { cwd: process.cwd(), encoding: "utf8" });
-      check("gcloud create/update 旗標與成功 stderr 均可完成 apply", fakeApply.status === 0 && fakeApply.stdout.includes("ENSURE update brain-prod") && fakeApply.stdout.includes("APPLIED: ensured 8 uptime checks"));
+      check("gcloud update 保留建立期 labels，create/update 旗標與成功 stderr 均可完成 apply", fakeApply.status === 0 && fakeApply.stdout.includes("ENSURE update brain-prod") && fakeApply.stdout.includes("APPLIED: ensured 8 uptime checks"));
     } finally {
       rmSync(fakeDir, { recursive: true, force: true });
     }
