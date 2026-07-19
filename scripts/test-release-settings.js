@@ -26,6 +26,7 @@ const swiftGoogleSignIn = read('ios/App/App/GoogleSignInPlugin.swift');
 const appEntitlements = read('ios/App/App/App.entitlements');
 const viewController = read('ios/App/App/MuneaViewController.swift');
 const xcodeProject = read('ios/App/App.xcodeproj/project.pbxproj');
+const iosArchive = read('scripts/ios-archive.sh');
 const iosExport = read('scripts/ios-export-app-store.sh');
 const iosDevProfile = read('scripts/enable-ios-development-profile.mjs');
 const auth = read('web/src/auth.js');
@@ -179,6 +180,12 @@ expect(iosExport.includes('$ROOT/web/src/auth.js') && iosExport.includes('$ROOT/
 expect(iosExport.includes('fespbkdwafueyonppzwq') && iosExport.includes('uhmpmystjjdqqxlpsthc'), 'IPA export does not enforce the Tokyo Supabase auth configuration');
 expect(iosExport.includes('BRAIN_URL_DEFAULT') && iosExport.includes('LIVE_VOICE_URL_DEFAULT') && iosExport.includes('CALL_CONTROL_URL_DEFAULT'), 'IPA export does not verify the production Brain/Voice/Call-control default endpoints');
 expect(iosExport.includes('munea-brain-staging') && iosExport.includes('munea-voice-staging'), 'IPA export does not reject staging Brain/Voice endpoints from shipping in the App Store package');
+for (const nonAppAsset of ['admin.html', 'flashhead-live-test.html', 'src/admin.js', 'src/admin.css']) {
+  expect(iosArchive.includes(`"${nonAppAsset}"`), `iOS archive does not prune non-App asset: ${nonAppAsset}`);
+  expect(iosExport.includes(`"${nonAppAsset}"`), `IPA export does not reject non-App asset: ${nonAppAsset}`);
+}
+expect(iosArchive.includes('Remove non-App web tools from the iOS bundle'), 'iOS archive does not declare the non-App asset pruning step');
+expect(iosExport.includes('exported IPA contains non-App web tooling'), 'IPA export does not fail closed when non-App tooling is packaged');
 expect(iosExport.includes('UIDeviceFamily') && iosExport.includes('IPA supports iPhone only'), 'IPA export does not enforce iPhone-only packaging');
 expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLOUD=(gcloud)'), 'canary deploy is not compatible with macOS gcloud');
 expect(canaryDeploy.includes('GCLOUD=(cmd //c gcloud.cmd)'), 'canary deploy lost Windows gcloud compatibility');
