@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AUTHORITY_PATH = Path("docs/CURRENT-AUTHORITIES.json")
 REQUIRED_TOPICS = {
     "docs-entry",
+    "development-plan",
     "product-spec",
     "billing-entitlements",
     "quality-confidence",
@@ -23,6 +24,9 @@ REQUIRED_TOPICS = {
     "ai-design-intent",
     "ai-provider-reality",
     "backend-architecture",
+    "api-contracts",
+    "admin-data-quality",
+    "database-deployment-ledger",
     "cloudrun-topology",
     "runtime-evidence",
     "collaboration",
@@ -139,6 +143,22 @@ def validate(repo_root: Path = ROOT) -> list[str]:
     if runtime_evidence.get("captureCommand") != "python scripts/release_evidence.py capture":
         errors.append("runtime evidence authority must declare the safe capture command")
 
+    development_plan = topics.get("development-plan", {})
+    if development_plan.get("path") != "docs/CURRENT-DEVELOPMENT-PLAN.md":
+        errors.append("Development plan must be owned by CURRENT-DEVELOPMENT-PLAN.md")
+
+    api_contracts = topics.get("api-contracts", {})
+    if api_contracts.get("path") != "docs/API-CONTRACT-INVENTORY.json":
+        errors.append("API contracts must be owned by API-CONTRACT-INVENTORY.json")
+
+    admin_data_quality = topics.get("admin-data-quality", {})
+    if admin_data_quality.get("path") != "docs/ADMIN-DATA-QUALITY-CONTRACT.md":
+        errors.append("Admin data quality must be owned by ADMIN-DATA-QUALITY-CONTRACT.md")
+
+    deployment_ledger = topics.get("database-deployment-ledger", {})
+    if deployment_ledger.get("path") != "supabase/deployment-ledger.json":
+        errors.append("Database deployment state must be owned by supabase/deployment-ledger.json")
+
     historical = authority.get("historical")
     if not isinstance(historical, list):
         errors.append("authority index historical must be an array")
@@ -205,6 +225,25 @@ def validate(repo_root: Path = ROOT) -> list[str]:
                 errors.append(f"current source marker is stale in {path_value}: expected {marker}")
         except (OSError, UnicodeError) as exc:
             errors.append(f"current source document cannot be read: {path_value}: {exc}")
+
+    try:
+        development_plan_source = _read(root, "docs/CURRENT-DEVELOPMENT-PLAN.md")
+        development_plan_header = development_plan_source.split("## 2026-06-30 Update", 1)[0]
+        source_marker = f"> **Current source:** {expected_build}"
+        if source_marker not in development_plan_header:
+            errors.append(
+                "current source marker is stale in docs/CURRENT-DEVELOPMENT-PLAN.md: "
+                f"expected {source_marker}"
+            )
+        development_plan_tokens = [
+            "> **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000.",
+            "The dated sections below are historical execution records and cannot override this current header",
+        ]
+        for token in development_plan_tokens:
+            if token not in development_plan_header:
+                errors.append(f"current development plan is missing governance token: {token}")
+    except (OSError, UnicodeError) as exc:
+        errors.append(f"current development plan cannot be read: {exc}")
 
     expected_products = {
         "net.munea.app.points.200": {"kind": "points", "points": 100},

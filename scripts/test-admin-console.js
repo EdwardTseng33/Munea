@@ -42,6 +42,10 @@ for (const token of [
   "aria-current",
   "aria-modal",
   "data-retry",
+  "munea.admin-data-meta.v1",
+  "dataAsOf",
+  "metadata_missing",
+  "dataQualityNoticeHTML",
 ]) {
   assert(js.includes(token), `admin.js missing health/security contract: ${token}`);
 }

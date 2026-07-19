@@ -16,6 +16,11 @@ on:
       - "scripts/check-release-consistency.js"
       - "scripts/test-store-verification.js"
       - "supabase/migration-manifest.json"
+      - "supabase/deployment-ledger.json"
+      - "scripts/check_supabase_deployment_ledger.py"
+      - "scripts/test_supabase_deployment_ledger.py"
+      - "scripts/supabase_deployment_probe.py"
+      - "scripts/test_supabase_deployment_probe.py"
       - "supabase/sql/**"
       - "web/src/app.js"
       - "web/src/version.js"
@@ -35,6 +40,11 @@ on:
       - "scripts/check-release-consistency.js"
       - "scripts/test-store-verification.js"
       - "supabase/migration-manifest.json"
+      - "supabase/deployment-ledger.json"
+      - "scripts/check_supabase_deployment_ledger.py"
+      - "scripts/test_supabase_deployment_ledger.py"
+      - "scripts/supabase_deployment_probe.py"
+      - "scripts/test_supabase_deployment_probe.py"
       - "supabase/sql/**"
       - "web/src/app.js"
       - "web/src/version.js"
@@ -84,6 +94,9 @@ jobs:
 
       - name: Check migration manifest integrity
         run: python -B scripts/check_supabase_migrations.py
+
+      - name: Check database deployment ledger integrity
+        run: python -B scripts/check_supabase_deployment_ledger.py
 
       - name: Check StoreKit product mapping and verification order
         run: node scripts/test-store-verification.js

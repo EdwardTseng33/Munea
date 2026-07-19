@@ -1,0 +1,57 @@
+name: Service SLO evidence
+
+# 每日產生兩份不含密鑰／用戶資料的證據：
+# 1. 當下 synthetic watchdog 延遲快照；2. 過去 7 日 5 分鐘排程 run 的保守可用率。
+# 這是 control-plane 證據，不替代 App 真機通話、登入、購買等 E2E 驗收。
+
+on:
+  schedule:
+    - cron: "17 16 * * *" # 台北時間每日 00:17
+  workflow_dispatch: {}
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: service-slo-evidence
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Verify evidence contracts
+        run: node scripts/test-service-watchdog.js
+
+      - name: Capture current synthetic latency snapshot
+        id: current
+        continue-on-error: true
+        run: node scripts/service-watchdog.mjs --snapshot dist/service-slo/current-snapshot.json
+
+      - name: Build rolling 7-day schedule report
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/service-slo-report.mjs --output dist/service-slo/rolling-7d.json
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-slo-evidence-${{ github.run_id }}
+          path: dist/service-slo/*.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve current outage signal
+        if: always() && steps.current.outcome != 'success'
+        run: exit 1

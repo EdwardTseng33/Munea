@@ -49,6 +49,18 @@ try {
   if ($LASTEXITCODE -ne 0) {
     throw "Supabase migration governance failed with exit code $LASTEXITCODE"
   }
+  & python scripts/check_supabase_deployment_ledger.py
+  if ($LASTEXITCODE -ne 0) {
+    throw "Supabase deployment ledger governance failed with exit code $LASTEXITCODE"
+  }
+  & python scripts/test_supabase_deployment_ledger.py
+  if ($LASTEXITCODE -ne 0) {
+    throw "Supabase deployment ledger tests failed with exit code $LASTEXITCODE"
+  }
+  & python scripts/test_supabase_deployment_probe.py
+  if ($LASTEXITCODE -ne 0) {
+    throw "Supabase deployment probe contract tests failed with exit code $LASTEXITCODE"
+  }
   & python scripts/release_evidence.py check
   if ($LASTEXITCODE -ne 0) {
     throw "Release evidence governance failed with exit code $LASTEXITCODE"
@@ -57,7 +69,18 @@ try {
   if ($LASTEXITCODE -ne 0) {
     throw "Release evidence tests failed with exit code $LASTEXITCODE"
   }
-  Pass "Current authorities, product alignment, runtime evidence, and migration manifest are consistent"
+  Pass "Current authorities, product alignment, runtime evidence, migration manifest, and deployment ledger are consistent"
+
+  Step "API contract inventory"
+  & python scripts/api_contract_inventory.py check
+  if ($LASTEXITCODE -ne 0) {
+    throw "API contract inventory failed with exit code $LASTEXITCODE"
+  }
+  & python scripts/test_api_contract_inventory.py
+  if ($LASTEXITCODE -ne 0) {
+    throw "API contract inventory governance tests failed with exit code $LASTEXITCODE"
+  }
+  Pass "Brain, Gateway, and Voice route contracts are registered without drift"
 
   $env:GEMINI_API_KEY = $env:GEMINI_API_KEY
   if (-not $env:GEMINI_API_KEY) {

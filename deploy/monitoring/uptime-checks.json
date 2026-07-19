@@ -1,0 +1,85 @@
+{
+  "schema": "munea.cloud-monitoring.uptime.v1",
+  "project": "gen-lang-client-0229303523",
+  "periodMinutes": 5,
+  "timeoutSeconds": 15,
+  "regions": [
+    "asia-pacific",
+    "europe",
+    "usa-oregon"
+  ],
+  "targets": [
+    {
+      "id": "brain-prod",
+      "displayName": "Munea Brain prod health",
+      "environment": "production",
+      "host": "munea-brain-491603544409.asia-east1.run.app",
+      "path": "/healthz/",
+      "statusCodes": [200],
+      "jsonOk": true
+    },
+    {
+      "id": "voice-prod",
+      "displayName": "Munea Voice prod surface",
+      "environment": "production",
+      "host": "munea-voice-491603544409.asia-east1.run.app",
+      "path": "/",
+      "statusCodes": [200],
+      "jsonOk": false
+    },
+    {
+      "id": "brain-staging",
+      "displayName": "Munea Brain staging health",
+      "environment": "staging",
+      "host": "munea-brain-staging-491603544409.asia-east1.run.app",
+      "path": "/healthz/",
+      "statusCodes": [200],
+      "jsonOk": true
+    },
+    {
+      "id": "voice-staging",
+      "displayName": "Munea Voice staging surface",
+      "environment": "staging",
+      "host": "munea-voice-staging-491603544409.asia-east1.run.app",
+      "path": "/",
+      "statusCodes": [200],
+      "jsonOk": false
+    },
+    {
+      "id": "gateway-control",
+      "displayName": "Munea Gateway auth boundary",
+      "environment": "shared",
+      "host": "munea-call-control-fiu65jd4da-de.a.run.app",
+      "path": "/health",
+      "statusCodes": [401],
+      "jsonOk": false
+    },
+    {
+      "id": "gateway-monitor",
+      "displayName": "Munea Gateway monitor lock",
+      "environment": "shared",
+      "host": "munea-gateway-monitor-fiu65jd4da-de.a.run.app",
+      "path": "/",
+      "statusCodes": [403],
+      "jsonOk": false
+    },
+    {
+      "id": "runpod-controller",
+      "displayName": "Munea RunPod controller health",
+      "environment": "shared",
+      "host": "munea-runpod-controller-fiu65jd4da-de.a.run.app",
+      "path": "/",
+      "statusCodes": [200],
+      "jsonOk": true
+    },
+    {
+      "id": "public-web",
+      "displayName": "Munea public web",
+      "environment": "production",
+      "host": "app.munea.net",
+      "path": "/",
+      "statusCodes": [200],
+      "jsonOk": false
+    }
+  ]
+}
