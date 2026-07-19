@@ -1,45 +1,50 @@
-/* 沐寧 營運後台 · 對齊 Claude Design 設計稿（設計稿為準）
-   底 #FAF7F2 / 側欄 #1F2B27 256px / 主色 #37A099 / 卡 18px圓角+#E7E0D6邊+柔陰影 / Noto Sans TC + Poppins */
+/* 沐寧 營運後台 · 色票對齊品牌正本 ds-bundle / web/src/styles.css（2026-07-20）
+   側欄 #36423E 石墨綠 / 主色 #3AA8A0 · 按鈕 #37A099 / 卡 18px圓角+#EAE3D6邊+柔陰影 / Noto Sans TC + Poppins */
 :root {
   color-scheme: light;
   --bg: #FAF7F2;
   --surface: #FFFFFF;
   --cream: #F4F0E8;
   --mint: #E8F2EE;
-  --mint-2: #DCEEE9;
-  --teal: #37A099;
+  --mint-2: #D9EFE8;
+  --teal: #3AA8A0;
   --teal-d: #2E8A83;
   --teal-dd: #236C66;
+  --btn-green: #37A099;
   --coral: #D98841;
   --coral-d: #A8611E;
   --coral-soft: #F8E9D8;
   --gold: #E0B354;
   --gold-soft: #F6EAD0;
-  --ink: #33403D;
+  --ink: #3A352E;
   --ink-2: #4A5651;
-  --muted: #6B7772;
-  --line: #E7E0D6;
+  --muted: #5A6963;
+  --line: #EAE3D6;
   --line-soft: #EFE9DF;
-  --deep: #1F2B27;
-  --deep-2: #2A3833;
+  --deep: #36423E;
+  --deep-2: #3F4C47;
+  --deep-card: #485751;
   --deep-ink: #E7EFEB;
   --deep-muted: #8FA8A0;
   --ok: #2E8A83;
   --warn: #C77A2E;
-  --danger: #D9534A;
+  --danger: #E55B4D;
   --danger-soft: #FBEBE9;
   /* 圖表 */
-  --c-teal: #1AA093;
+  --c-teal: #3AA8A0;
   --c-coral: #D98841;
   --c-gold: #E0B354;
   --c-prev: #C9C0B0;
   --c-grid: #ECE6DA;
   --radius: 18px;
-  --radius-sm: 12px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
   --radius-lg: 22px;
-  --shadow: 0 2px 8px -4px rgba(31,60,52,.09);
+  --radius-xl: 24px;
+  --shadow: 0 6px 16px -8px rgba(31,60,52,.12);
+  --shadow-sm: 0 2px 8px -4px rgba(31,60,52,.08);
   --shadow-md: 0 8px 22px -12px rgba(31,60,52,.16);
-  --shadow-lg: 0 14px 30px -14px rgba(31,60,52,.2);
+  --shadow-lg: 0 10px 24px -12px rgba(31,60,52,.15);
   --sans: "Noto Sans TC", -apple-system, "PingFang TC", system-ui, sans-serif;
   --num: "Poppins", "Noto Sans TC", sans-serif;
   --serif: "Noto Serif TC", Georgia, serif;
@@ -53,8 +58,8 @@ body {
 }
 button, input, select { font: inherit; }
 button {
-  border: 0; border-radius: 999px; background: var(--teal); color: #fff;
-  padding: 0 16px; min-height: 38px; cursor: pointer; font-weight: 600;
+  border: 0; border-radius: 999px; background: var(--btn-green); color: #fff;
+  padding: 0 16px; min-height: 38px; cursor: pointer; font-family: var(--num); font-weight: 700;
   transition: transform .12s, box-shadow .2s, background .2s, opacity .2s;
 }
 button:hover { box-shadow: var(--shadow); }

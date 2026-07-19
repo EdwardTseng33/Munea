@@ -61,7 +61,7 @@
     audit: ["/admin/audit-events", { limit: 20 }],
   };
 
-  const CHART = { teal: "#1AA093", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7772" };
+  const CHART = { teal: "#3AA8A0", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#3A352E", muted: "#5A6963" };
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
