@@ -2,7 +2,10 @@
 // 守的線：判定規則不被改壞——200/401 預期碼、json ok=true、逾時重試、告警文字與 7 日分母。
 // 跑法：node scripts/test-service-watchdog.js
 const FAILS = [];
-const { readFileSync } = require("node:fs");
+const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require("node:fs");
+const { tmpdir } = require("node:os");
+const { join } = require("node:path");
+const { spawnSync } = require("node:child_process");
 
 function check(name, cond) {
   console.log((cond ? "  OK  " : " FAIL ") + name);
@@ -140,6 +143,28 @@ async function main() {
   check("Cloud uptime apply 必須明確開關", /\[switch\]\$Apply/.test(uptimeScript) && /if \(\$Apply\)/.test(uptimeScript) && /PLAN ONLY: no Cloud Monitoring resources were changed/.test(uptimeScript));
   check("Cloud uptime project 釘死且不自動刪除", uptimeScript.includes("gen-lang-client-0229303523") && !/uptime[\"',\s]+delete/i.test(uptimeScript));
   check("Cloud uptime host drift 必須人工 migration", /Host drift[\s\S]*explicit reviewed migration/.test(uptimeScript));
+
+  if (process.platform === "win32") {
+    const fakeDir = mkdtempSync(join(tmpdir(), "munea-fake-gcloud-"));
+    const fakeGcloud = join(fakeDir, "gcloud.ps1");
+    try {
+      writeFileSync(fakeGcloud, [
+        "param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Remaining)",
+        "if ($Remaining -contains 'list-configs') { Write-Output '[]'; exit 0 }",
+        "[Console]::Error.WriteLine('Created uptime fake-success')",
+        "exit 0",
+      ].join("\n"), "utf8");
+      const fakeApply = spawnSync("powershell", [
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "scripts/cloud-monitoring-uptime.ps1",
+        "-GcloudPath", fakeGcloud,
+        "-Apply",
+      ], { cwd: process.cwd(), encoding: "utf8" });
+      check("gcloud 成功 stderr 不得讓 apply 中止", fakeApply.status === 0 && fakeApply.stdout.includes("APPLIED: ensured 8 uptime checks"));
+    } finally {
+      rmSync(fakeDir, { recursive: true, force: true });
+    }
+  }
 
   console.log();
   if (FAILS.length) {

@@ -1,5 +1,6 @@
 param(
   [string]$ManifestPath = "",
+  [string]$GcloudPath = "",
   [switch]$Apply
 )
 
@@ -25,6 +26,9 @@ if (@($manifest.regions).Count -lt 3) {
 }
 
 function Resolve-Gcloud {
+  if ($GcloudPath) {
+    return (Resolve-Path -LiteralPath $GcloudPath).Path
+  }
   $command = Get-Command gcloud.cmd -ErrorAction SilentlyContinue
   if ($command) { return $command.Source }
   $command = Get-Command gcloud -ErrorAction SilentlyContinue
@@ -38,8 +42,17 @@ function Resolve-Gcloud {
 
 function Invoke-Gcloud {
   param([string[]]$Arguments)
-  $output = & $script:Gcloud @Arguments 2>&1
-  if ($LASTEXITCODE -ne 0) {
+  $previousPreference = $ErrorActionPreference
+  try {
+    # Windows gcloud writes successful create/update notices to stderr.
+    # Capture them, but decide failure exclusively from the native exit code.
+    $ErrorActionPreference = "Continue"
+    $output = & $script:Gcloud @Arguments 2>&1
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousPreference
+  }
+  if ($exitCode -ne 0) {
     throw "gcloud failed: $($output -join [Environment]::NewLine)"
   }
   return $output
