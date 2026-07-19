@@ -121,6 +121,26 @@ async function main() {
   check("artifact 即使事故也會上傳", /Upload evidence artifact[\s\S]*?if:\s*always\(\)/.test(workflow));
   check("事故不會被 continue-on-error 吃掉", /Preserve current outage signal[\s\S]*?steps\.current\.outcome != 'success'/.test(workflow));
 
+  // 契約 11：Cloud Monitoring manifest 與 watchdog 同一組 8 targets，且預設只能 plan
+  const uptimeManifest = JSON.parse(readFileSync("deploy/monitoring/uptime-checks.json", "utf8"));
+  check("Cloud uptime schema／project 固定", uptimeManifest.schema === "munea.cloud-monitoring.uptime.v1" && uptimeManifest.project === "gen-lang-client-0229303523");
+  check("Cloud uptime 為 5 分鐘／三區／15 秒", uptimeManifest.periodMinutes === 5 && uptimeManifest.timeoutSeconds === 15 && uptimeManifest.regions.length === 3);
+  check("Cloud uptime target id 唯一", new Set(uptimeManifest.targets.map((target) => target.id)).size === uptimeManifest.targets.length);
+  const cloudTargets = uptimeManifest.targets.map((target) => ({
+    url: `https://${target.host}${target.path}`,
+    expect: target.statusCodes,
+    check: target.jsonOk ? "json-ok" : undefined,
+  }));
+  const targetContract = (target) => `${target.url}|${target.expect.join(",")}|${target.check || ""}`;
+  check("Cloud uptime 與 Node watchdog 8 targets 完全對齊", cloudTargets.length === 8 && JSON.stringify(cloudTargets.map(targetContract).sort()) === JSON.stringify(TARGETS.map(targetContract).sort()));
+  const monthlyExecutions = cloudTargets.length * uptimeManifest.regions.length * (60 / uptimeManifest.periodMinutes) * 24 * 30;
+  check("Cloud uptime 月執行數低於官方 100 萬免費額度", monthlyExecutions === 207360 && monthlyExecutions < 1000000);
+
+  const uptimeScript = readFileSync("scripts/cloud-monitoring-uptime.ps1", "utf8");
+  check("Cloud uptime apply 必須明確開關", /\[switch\]\$Apply/.test(uptimeScript) && /if \(\$Apply\)/.test(uptimeScript) && /PLAN ONLY: no Cloud Monitoring resources were changed/.test(uptimeScript));
+  check("Cloud uptime project 釘死且不自動刪除", uptimeScript.includes("gen-lang-client-0229303523") && !/uptime[\"',\s]+delete/i.test(uptimeScript));
+  check("Cloud uptime host drift 必須人工 migration", /Host drift[\s\S]*explicit reviewed migration/.test(uptimeScript));
+
   console.log();
   if (FAILS.length) {
     console.log(`❌ ${FAILS.length} 項未過：` + FAILS.join("、"));
