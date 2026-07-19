@@ -1,8 +1,8 @@
 # Munea 產品品質信心
 
-更新：`2026-07-19 Asia/Taipei（Cloud Monitoring 8 checks live；三區 metrics 收集中）`
+更新：`2026-07-19 Asia/Taipei（Cloud Monitoring 8 checks live；1 人＋AI 輕量治理）`
 
-來源基準：`origin/main@3ba1cc4`
+來源基準：`origin/main@5a4c30a`
 
 本文件是目前「能不能放心把這一版交給使用者」的評分 SSOT。它不取代 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 的版本／部署事實，也不把程式存在、測試通過、已合併、已部署或真機通過混成同一個「完成」。
 
@@ -14,6 +14,27 @@
 
 在任何 P0 關鍵旅程失敗或缺少真機閉環時，整體分數最高只能是 69。自動測試全綠可以提高工程信心，不能解除這個上限。
 
+## 1 人＋AI 的治理前提
+
+Munea 的健康度是衡量「能否安全、快速、持續地把產品交給使用者」，不是衡量流程像不像大型企業。治理的價值來自降低事故、產品漂移與返工；文件數、會議數、Gate 數、人工核准數本身一律不加分。
+
+- **一個事實一個 SSOT**：已有 authority 就更新原文件，不為同一事實再建報表；重複或互相矛盾的文件反而降低 Repo／產品對焦分數。
+- **一次產證、多處引用**：CI、runtime manifest、監測與真機紀錄應自動產生或直接引用；不要求人工把同一結果重抄到多份文件。
+- **風險決定 Gate，不是檔案數或企業慣例**：未觸及的 Gate 明確標示不適用即可，不得因未跑無關的全套流程扣分。
+- **可逆變更優先自主推進**：AI 可在使用者授權範圍內完成分支、測試、PR、canary／唯讀驗證與回滾準備；只有不可逆、會花錢、會影響外部使用者／資料／商店審核／憑證的動作才需要額外人工確認。
+- **Gate 要能刪除**：任何新增 Gate 必須寫出具名風險、觸發條件、最小證據與解除／自動化方式；無法說明降低哪個風險的流程視為治理債務。
+
+### 最小風險分級
+
+| 等級 | 典型範圍 | 最小驗收；不額外加碼 |
+|---|---|---|
+| L0 文件／註解／不改行為 | SSOT 更正、說明、連結 | scoped diff＋格式／連結檢查；不跑真機、不跑全套 release gate |
+| L1 可逆程式變更、非 P0 | 內部重構、獨立 UI、工具 | 相關單元／契約測試＋CI；一個 branch／PR，不要求無關 E2E |
+| L2 runtime／設定／資料相容性 | 可回滾部署、服務設定、schema 相容新增 | plan／preview 或 canary＋具名 smoke＋rollback；只驗受影響旅程 |
+| L3 P0／不可逆／外部承諾 | 登入、購買、點數、聊聊、隱私資料、破壞性 migration、App Store | 完整受影響 E2E、前後檢查與人工確認；聊聊依永久 iPhone Gate |
+
+若低風險任務的流程時間長於實作本身，且不能指出被降低的具名風險，先簡化流程而不是再補一層規定。健康度 90 分也必須同時代表產品能穩定前進，而不是只有證據齊全但交付停滯。
+
 ## 評分模型
 
 | 面向 | 權重 | 目前分數 | 加權貢獻 | 判斷 |
@@ -21,7 +42,7 @@
 | 1. 架構與復原能力 | 15% | 78 | 11.7 | 服務分層、canary、rollback 與 5 分鐘 watchdog 存在；7 日保守可用率開始收集，仍缺完整週期、故障演練及 App 真鏈路證據 |
 | 2. API／服務可靠性與安全 | 15% | **80→84** | 12.6 | 94-route inventory、critical test target、managed-cloud `/chat-test` fail-closed 與 synthetic SLO 分母已建立；仍缺完整 7 日、Gateway identity、authenticated call trace 與 Voice 部署驗收 |
 | 3. App 與後端程式品質 | 20% | 64 | 12.8 | release gate 強，但 #174／#175 尚未合併、包版與真機驗收，關鍵旅程不得標 verified |
-| 4. Repo／資料／migration 治理 | 15% | **62→69（raw 74）** | 10.35 | manifest、逐環境 ledger、16 項 authority、current-plan 負向 CI 與東京 secret-safe live probe 已齊；17 筆 historical claims、`017`／`018`／`019` 全為 blocked，`verifiedHead=null`，因此仍受 69 分上限限制 |
+| 4. Repo／資料／migration 治理 | 15% | **62→69（raw 74）** | 10.35 | manifest、逐環境 ledger、16 項 authority、current-plan 負向 CI 與東京 secret-safe live probe 已齊；治理採一事實一 SSOT、風險分級與自動證據，不以文件／Gate 數量加分；17 筆 historical claims、`017`／`018`／`019` 全為 blocked，`verifiedHead=null`，因此仍受 69 分上限限制 |
 | 5. 產品／版本／AI／服務對焦 | 20% | **58→66→69** | 13.8 | source／uploaded／runtime 分 lane；current plan 與文件入口不再覆蓋 release SSOT，production Brain 已對齊 Build 47 pricing mapping；App Store、Voice／Gateway／Avatar、DB 與真機仍未同版，受 69 分上限限制 |
 | 6. 營運後台與可觀測性 | 15% | 74 | 11.1 | data provenance／fallback／freshness unknown contract 已合併但尚未部署；特權資料來源、RBAC／MFA 與 7 日營運指標未證明 |
 | **加權結果** | **100%** |  | **72.35，硬上限後 69** | **工程／治理 raw 信心持續上升；整體仍被 P0 真機與 live DB 證據限制** |
@@ -33,6 +54,8 @@
 ### 每個面向如何得分
 
 每個面向都依相同證據梯度計分：
+
+這是證據成熟度，不是每個任務都必須依序手動跑完五層。只評估該面向目前已具備的真實證據；低風險變更不需要為了「湊層級」製造無關 artifact 或真人驗收。
 
 | 證據層 | 配分 | 必要證據 |
 |---|---:|---|
@@ -102,6 +125,7 @@
 - 沒有已知 P0；所有 P1 都有 owner、到期日、monitor 或 rollback。
 - 至少 7 日 SLO／告警／freshness 資料可信，並完成一次不造成錯扣點、重複 lease 或資料遺失的故障／回滾演練。
 - current SSOT 零個已知版本、價格、點數、AI provider、功能狀態或服務部署矛盾。
+- L0／L1 變更不被無關的 release／真機 Gate 阻塞；同一證據不需人工重複維護，關鍵 Gate 已自動化或只在風險觸發時執行。
 
 ## 更新規則
 
@@ -109,3 +133,4 @@
 2. volatile runtime 證據超過 24 小時，發版決策前必須重查。
 3. 任一真人回報 FAIL，立即降回 FAIL；修正 PR 在重新包版與真機通過前不得恢復分數。
 4. 每次改分數都要列出原分數、新分數、證據、仍缺證據與是否觸發硬上限。
+5. 新增文件、表格、審批或 Gate 本身不加分；若造成重複 SSOT、無關阻塞或長期人工同步，應列為治理債務並優先刪減／自動化。
