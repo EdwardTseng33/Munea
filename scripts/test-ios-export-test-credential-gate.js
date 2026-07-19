@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const scriptSource = fs.readFileSync('scripts/ios-export-app-store.sh', 'utf8');
+const scriptSource = fs.readFileSync('scripts/ios-export-app-store.sh', 'utf8').replace(/\r\n/g, '\n');
 const gateStart = scriptSource.indexOf('TEST_ACCOUNT_CREDENTIAL_PATTERN=');
 assert.ok(gateStart >= 0, 'could not locate the test-account credential gate in ios-export-app-store.sh');
 const gateEnd = scriptSource.indexOf('\nfi\n', gateStart);
@@ -21,8 +21,13 @@ function runGate(authConfigContents) {
   const authConfigPath = path.join(tempDir, 'auth-config.js');
   fs.writeFileSync(authConfigPath, authConfigContents, 'utf8');
   const wrapper = `set -euo pipefail\nAUTH_CONFIG_PATH="$1"\n${gateBlock}\necho GATE_DID_NOT_TRIGGER\n`;
-  const result = spawnSync('bash', ['-c', wrapper, 'bash', authConfigPath], { encoding: 'utf8' });
+  const gitBash = process.platform === 'win32'
+    ? path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Git', 'bin', 'bash.exe')
+    : '';
+  const bash = gitBash && fs.existsSync(gitBash) ? gitBash : 'bash';
+  const result = spawnSync(bash, ['-c', wrapper, 'bash', authConfigPath], { encoding: 'utf8' });
   fs.rmSync(tempDir, { recursive: true, force: true });
+  if (result.error) throw result.error;
   return result;
 }
 
