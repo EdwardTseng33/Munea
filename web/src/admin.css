@@ -328,7 +328,9 @@ tbody tr:hover { background: var(--cream); }
 
 /* 未連線橫幅 */
 .connect-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--coral-soft); border: 1px solid rgba(199,122,46,.28); border-radius: var(--radius); padding: 13px 18px; color: var(--coral-d); font-weight: 600; margin-bottom: 4px; }
+.connect-banner[hidden] { display: none; }
 .connect-banner button { background: var(--coral); }
+.ops-notice.info { border: 1px solid rgba(46,138,131,.28); background: var(--mint); color: var(--teal-dd); }
 
 /* 設定頁 */
 .field { display: grid; gap: 6px; margin-bottom: 14px; }
@@ -370,6 +372,12 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
   .topbar-right { gap: 7px; }
   .status-pill { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
   .topbar-action { padding: 0 10px; }
+  #sideNav { display: flex; flex-direction: row; align-items: center; gap: 2px; }
+  .nav-group { flex: none; }
+  .tbl-card table { min-width: 820px; }
+  .u-nm, .u-fam { white-space: nowrap; }
+  .tbl-card .table-wrap { position: relative; }
+  .tbl-card .table-wrap::after { content: ""; position: absolute; top: 0; right: 0; width: 22px; height: 100%; background: linear-gradient(90deg, transparent, var(--surface)); pointer-events: none; }
 }
 
 /* ══════════ 登入門（帳密） ══════════ */
@@ -446,10 +454,10 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .pill.pro{ background:var(--gold-soft); color:#8A6A1C; }
 
 .row-act{
-  display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px;
-  border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--muted); cursor:pointer; transition:all .14s;
+  display:inline-flex; align-items:center; gap:4px; min-height:32px; padding:0 12px;
+  border:1px solid var(--line); border-radius:9px; background:var(--surface); color:var(--teal-dd); font-size:.85rem; font-weight:700; cursor:pointer; transition:all .14s; white-space:nowrap;
 }
-.row-act:hover{ border-color:var(--teal); color:var(--teal); background:var(--mint); }
-.row-act .ic{ width:17px; height:17px; }
+.row-act:hover{ border-color:var(--teal); color:var(--teal-dd); background:var(--mint); }
+.row-act .ic{ width:14px; height:14px; }
 .pts-cell{ white-space:nowrap; }
 .pts-cell .num{ font-size:1rem; color:var(--ink); }

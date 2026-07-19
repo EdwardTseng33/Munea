@@ -156,12 +156,13 @@
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":chartLabel});
     for(let t=0;t<=4;t++){ const val=max/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
     const band=pw/labels.length, groupW=Math.min(band*0.62,series.length*20+(series.length-1)*4), barW=Math.min(22,(groupW-(series.length-1)*4)/series.length);
+    const lstep=Math.max(1,Math.ceil(labels.length/8));
     labels.forEach((lb,i)=>{ const cx=L+band*i+band/2,startX=cx-groupW/2;
       series.forEach((se,si)=>{ const v=se.values[i],top=y(v),x=startX+si*(barW+4),h=Math.max(0,T+ph-top);
         const path=svg("path",{d:h<=0.5?`M ${x} ${T+ph} h ${barW}`:`M ${x} ${T+ph} V ${top+4} Q ${x} ${top} ${x+4} ${top} H ${x+barW-4} Q ${x+barW} ${top} ${x+barW} ${top+4} V ${T+ph} Z`,fill:se.color});
         path.addEventListener("mousemove",(e)=>tip(`<div>${esc(lb)}${series.length>1?" · "+esc(se.name):""}</div><b>${n(v)}</b>${opts.unit?" "+opts.unit:""}`,e.clientX,e.clientY));
         path.addEventListener("mouseleave",hideTip); s.appendChild(path); });
-      const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":11,fill:CHART.ink}); tl.textContent=lb; s.appendChild(tl); });
+      if(i%lstep===0||i===labels.length-1){ const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tl.textContent=lb; s.appendChild(tl); } });
     box.innerHTML=""; box.appendChild(s);
     if(series.length>1){ const lg=document.createElement("div"); lg.className="legend"; lg.innerHTML=series.map((se)=>`<span class="key"><span class="swatch" style="background:${se.color}"></span>${esc(se.name)}</span>`).join(""); box.appendChild(lg); }
   }
@@ -202,15 +203,16 @@
     return `<div class="ops-notice error" role="alert"><strong>營運資料載入失敗</strong>${esc(explainErr(first))}。請確認連線與權限後重試。 <button type="button" class="btn-ghost" data-retry>重新整理</button> <button type="button" class="btn-ghost" data-goto="settings">連線設定</button></div>`;
   }
   function dataQualityNoticeHTML(){
-    if(!state.connected) return "";
+    if(!state.connected||state.page!=="overview") return "";
     const q=dataQualitySummary();
+    const asof=q.dataAsOf?`資料更新到 ${esc(fmtTime(q.dataAsOf))}`:"資料更新時間待確認";
     if(q.missing){
-      return `<div class="ops-notice warn" role="status"><strong>資料可信度未驗證</strong>${q.missing} 個區域的後端尚未提供來源與資料截止時間；數字可供查看，但不能當成已確認的新鮮資料。</div>`;
+      return `<div class="ops-notice warn" role="status"><strong>部分數字還沒標明來源</strong>有 ${q.missing} 個區塊還沒回報數字是從哪來、算到哪一刻；可以先看，但別當成已確認的最新值。</div>`;
     }
     if(q.degraded){
-      return `<div class="ops-notice warn" role="status"><strong>資料來源降級</strong>${q.degraded} 個區域正在使用 fallback／prototype 資料；0 不代表正式資料真的為 0。${q.dataAsOf?` 可觀測紀錄最新時間 ${esc(fmtTime(q.dataAsOf))}。`:""}</div>`;
+      return `<div class="ops-notice warn" role="status"><strong>部分數字目前是暫代資料</strong>有 ${q.degraded} 個區塊用的是測試／備援資料，顯示 0 不代表真的是 0。${q.dataAsOf?` ${asof}。`:""}</div>`;
     }
-    return `<div class="ops-notice warn" role="status"><strong>來源已確認，新鮮度仍未知</strong>後端已回報資料來源與版本，但尚無上游 watermark，不能把查詢時間當成資料更新時間。${q.dataAsOf?` 可觀測紀錄最新時間 ${esc(fmtTime(q.dataAsOf))}。`:""}</div>`;
+    return `<div class="ops-notice info" role="status"><strong>${asof}</strong>之後有新的會再抓進來。</div>`;
   }
   function renderPage(id){
     pending.length=0;
@@ -298,7 +300,7 @@
         usageCell(u),
         statusPill(stOf(a)),
         `<span class="muted small">${esc(fmtTime(u.lastActiveAt||a.updatedAt||a.createdAt))}</span>`,
-        `<button type="button" class="row-act" data-acct="${idx}" title="查看用戶" aria-label="查看 ${esc(nm)} 的用戶明細">${icon("users","ic")}</button>`,
+        `<button type="button" class="row-act" data-acct="${idx}" aria-label="查看 ${esc(nm)} 的用戶明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
       ];
     });
     html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}</div></div></div>${tools}${tableHTML(["用戶","家庭","方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
