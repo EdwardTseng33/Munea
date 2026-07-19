@@ -22,6 +22,27 @@ echo "== Sync iOS assets =="
 echo "== Check native parts survived cap sync =="
 bash "$ROOT/scripts/ios-capacitor-parts-check.sh" post-sync
 
+echo "== Remove non-App web tools from the iOS bundle =="
+for relative_path in \
+  "admin.html" \
+  "flashhead-live-test.html" \
+  "src/admin.js" \
+  "src/admin.css"; do
+  rm -f "$ROOT/ios/App/App/public/$relative_path"
+done
+
+for relative_path in \
+  "admin.html" \
+  "flashhead-live-test.html" \
+  "src/admin.js" \
+  "src/admin.css"; do
+  if [ -e "$ROOT/ios/App/App/public/$relative_path" ]; then
+    echo "FAIL non-App web tool remained in the iOS bundle: $relative_path"
+    exit 1
+  fi
+done
+echo "PASS cloud admin and FlashHead test assets excluded from the iOS bundle."
+
 # Finder and cloud-provider metadata can invalidate Apple code signatures.
 xattr -cr "$ROOT/ios/App/App"
 rm -rf "$ARCHIVE_PATH"
