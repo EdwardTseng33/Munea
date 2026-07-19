@@ -92,7 +92,6 @@ function New-CreateArguments {
 
 function New-UpdateArguments {
   param([object]$Target, [string]$CheckId)
-  $labels = "managed_by=munea_repo,component=service_slo,target_id=$($Target.id),environment=$($Target.environment)"
   $arguments = @(
     "monitoring", "uptime", "update", $CheckId,
     "--project", [string]$manifest.project,
@@ -105,7 +104,6 @@ function New-UpdateArguments {
     "--timeout", [string]$manifest.timeoutSeconds,
     "--set-regions", (@($manifest.regions) -join ","),
     "--validate-ssl", "true",
-    "--update-user-labels", $labels,
     "--format", "value(name)",
     "--quiet"
   )
