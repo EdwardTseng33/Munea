@@ -27,6 +27,13 @@ GitHub Actions cron 不保證準時或每次執行，因此它保留作為 repo 
 - 每月預估 `8 × 3 × 12 × 24 × 30 = 207,360` executions，低於 [Google Cloud Monitoring pricing](https://cloud.google.com/stackdriver/pricing) 所列每專案每月 100 萬 uptime-check executions 免費額度。若 target、區域或頻率改變，必須重算。
 - Cloud Monitoring 的 metrics 用於正式 coverage／latency 趨勢；現有 Gateway monitor 每 60 秒檢查容量並走 Slack，GitHub watchdog 繼續作為跨控制面的備援。尚未建立 Cloud Monitoring alert policy，不得宣稱八個 uptime checks 已有即時通知閉環。
 
+### 2026-07-19 live 啟用證據
+
+- PR #194 建立 repo-managed manifest／plan/apply 控制面；PR #195、#196、#197 補齊 Windows gcloud 成功 stderr、create/update 狀態碼旗標與 update 保留建立期 identity labels 的回歸保護。
+- `gen-lang-client-0229303523` 已啟用 **8 個 checks**，全部為 5 分鐘、15 秒 timeout、`ASIA_PACIFIC`／`EUROPE`／`USA_OREGON` 三區；再次 plan 為 **8 update、0 create、0 delete**。
+- Monitoring `check_passed` 最近 30 分鐘已出現 **24 條時序（8 checks × 3 checker locations）**，新加坡、比利時、奧勒岡的最新樣本全為 `true`。這證明固定頻率控制面已運作，但資料尚未滿 7 日，所以健康度仍不加分。
+- 套用只改 Cloud Monitoring 控制面；沒有 App 重包、Cloud Run revision／流量切換、DB migration、購買／點數或聊聊通話路徑變更。
+
 部署腳本預設只有 plan，不會修改雲端：
 
 ```powershell
@@ -57,7 +64,7 @@ PR 合併、plan review 通過後，才可明確加入 `-Apply`。腳本只 crea
 - GitHub Actions 真實 history API 相容性通過；2026-07-18 00:00Z 至 2026-07-19 00:00Z 共完成 `18/288` 個 scheduled slots。
 - 已完成的 18 次皆成功，所以「已觀測成功率」為 `100%`；但排程覆蓋率與保守可用率都只有 `6.25%`。這證明只報成功率會誤導，也代表目前 GitHub 排程不能作為 5 分鐘 SLO 的充分證據。
 - 2026-07-19 04:16Z 單輪 8 個端點全數通過；單次 synthetic latency 中正式 Voice 約 `8,709 ms`、staging Voice 約 `3,568 ms`，其餘約 `54–262 ms`。這可能包含冷啟動，只有一個樣本，不是 p95，也不是通話接通時間。
-- 優先後續：啟用 repo-managed Cloud Monitoring uptime checks，確認三區 metrics 產生；再以 Cloud Monitoring 時序取代 GitHub schedule 作為正式 7 日分母。告警通知仍需另外完成與既有 Slack 相容的 relay／channel，不能把 Slack incoming webhook 直接當作 Cloud Monitoring incident webhook。
+- 優先後續：讓已啟用的 repo-managed Cloud Monitoring uptime checks 累積完整 7 日，再以 Cloud Monitoring 時序取代 GitHub schedule 作為正式 7 日分母。告警通知仍需另外完成與既有 Slack 相容的 relay／channel，不能把 Slack incoming webhook 直接當作 Cloud Monitoring incident webhook。
 
 ## 延遲的正確說法
 

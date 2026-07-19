@@ -1,8 +1,8 @@
 # Munea 產品品質信心
 
-更新：`2026-07-19 Asia/Taipei（Cloud Monitoring fixed-cadence plan；尚未 apply）`
+更新：`2026-07-19 Asia/Taipei（Cloud Monitoring 8 checks live；三區 metrics 收集中）`
 
-來源基準：`origin/main@c12195e`
+來源基準：`origin/main@3ba1cc4`
 
 本文件是目前「能不能放心把這一版交給使用者」的評分 SSOT。它不取代 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 的版本／部署事實，也不把程式存在、測試通過、已合併、已部署或真機通過混成同一個「完成」。
 
@@ -10,7 +10,7 @@
 
 **目前產品品質信心：69/100，未達 90。**
 
-這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#183 與 #185 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract 與 DB deployment ledger；#187 已記錄 production Brain exact Build 47 pricing/grant mapping 上線。本輪再補服務 watchdog 延遲快照與明確 2,016 格分母的 7 日彙總契約，但資料尚未累積滿 7 日，因此不加分。東京 live probe 仍證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 缺核准備份與完整前後檢查。Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄；latest source 是 `1.0.41 (Build 48)`，latest uploaded 仍是 `1.0.40 (Build 47)`，#174／#175 仍是 Draft PR。
+這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#183 與 #185 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract 與 DB deployment ledger；#187 已記錄 production Brain exact Build 47 pricing/grant mapping 上線。PR #193–#197 已補服務 watchdog、明確 2,016 格分母與 Cloud Monitoring 固定頻率控制面；live 已有 8 checks × 3 地區的 24 條 `check_passed` 時序且最新樣本全過，但資料尚未累積滿 7 日，因此不加分。東京 live probe 仍證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 缺核准備份與完整前後檢查。Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄；latest source 是 `1.0.41 (Build 48)`，latest uploaded 仍是 `1.0.40 (Build 47)`，#174／#175 仍是 Draft PR。
 
 在任何 P0 關鍵旅程失敗或缺少真機閉環時，整體分數最高只能是 69。自動測試全綠可以提高工程信心，不能解除這個上限。
 
@@ -62,7 +62,7 @@
 | Production Voice | 17:23 secret-free manifest：公開 `/version` 回 `1.0.31@500c819f`，revision `munea-voice-00002-sub`；仍明顯落後 source，真人通話需 App E2E |
 | Staging Brain／Voice | 17:23 secret-free manifest：Brain `1.0.40@fa14e4c`／`00063-tod`，Voice `1.0.41@906732ab`／`00053-xow`；這是 runtime identity，不代表真人購買或通話驗收 |
 | Gateway | 公開 `/health` 無憑證回 401，證明 auth boundary；release identity 與真實 App lease／cleanup trace仍未知 |
-| 服務 SLO | 5 分鐘 GitHub watchdog／每日 artifact 已進 main；首次完整 7 日報表只有 `43/2,016` 格、coverage 2.133%。Cloud Monitoring 三區 5 分鐘 manifest／plan-only 腳本已建立但尚未 apply；在 8 checks 真正建立、metrics 可查並累積 7 日以前不能加分 |
+| 服務 SLO | 5 分鐘 GitHub watchdog／每日 artifact 已進 main；首次完整 7 日報表只有 `43/2,016` 格、coverage 2.133%。Cloud Monitoring 三區 5 分鐘 **8 checks 已 live**，最近 30 分鐘已有 24 條 `check_passed` 時序且最新樣本全過；仍須累積完整 7 日，現在不能加分 |
 | 營運後台 | staging `/admin.html` 回 200；#183 的 provenance／fallback／freshness unknown contract 已進 main，但 staging Brain 尚未部署該 source；privileged metrics、Tokyo source 與 operator RBAC 未驗 |
 | Repo migration | manifest 有 20 支 migration；`supabase/deployment-ledger.json` 已逐支對應東京 project ref、checksum、狀態與 rollback claim。這是 source governance，不代表 Tokyo 已套用 |
 | Live DB | ledger 明示 `historical-claim=17`、`unknown=0`、`blocked=3`；`verifiedHead=null`。07:12 UTC 東京 GET-only probe 證實 `017` 回 404、`019` 無符合的 active v4 100／200 policy；`018` photo-key=0 仍只是 partial |
@@ -92,7 +92,7 @@
 
 1. ✅ 已為 production／staging Brain、Voice 與 staging admin shell 建立 secret-free release evidence manifest；下一步納入 Gateway／Avatar identity、App Store、verified DB head 與 signed App E2E attestation。
 2. ✅ 後台 source 已能顯示資料來源、紀錄時間、fallback 與 metric version；仍需部署 Brain、具名 operator smoke，以及接入 verified DB head／service revision。
-3. 🟡 GitHub schedule 分母已證實 coverage 不足；已建立 8 targets × 3 regions × 5 分鐘的 Cloud Monitoring manifest 與安全 plan/apply 腳本，但尚未 apply。啟用、確認 metrics 並累積完整 7 日後，才可取代 GitHub schedule 作正式 control-plane 分母；仍需補登入、購買、call setup、p95 接通、通話中斷、點數／退款與 admin freshness。synthetic latency 不得冒充正式流量 p95。
+3. 🟡 GitHub schedule 分母已證實 coverage 不足；8 targets × 3 regions × 5 分鐘的 Cloud Monitoring checks 已啟用並確認 metrics 產生。累積完整 7 日後才可取代 GitHub schedule 作正式 control-plane 分母；仍需補登入、購買、call setup、p95 接通、通話中斷、點數／退款與 admin freshness。synthetic latency 不得冒充正式流量 p95。
 4. ✅ 已把 current authority、版本／Build、定價、AI provider reality、historical marker、migration manifest、deployment ledger 與 runtime evidence contract 加入 CI／release gate；DB verified evidence 與人工作業仍需具名／簽章 attestation。
 
 ## 90 分的最低條件
