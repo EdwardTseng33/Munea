@@ -100,7 +100,7 @@ function New-UpdateArguments {
     "--path", [string]$Target.path,
     "--port", "443",
     "--request-method", "get",
-    "--status-codes", (@($Target.statusCodes) -join ","),
+    "--set-status-codes", (@($Target.statusCodes) -join ","),
     "--period", [string]$manifest.periodMinutes,
     "--timeout", [string]$manifest.timeoutSeconds,
     "--set-regions", (@($manifest.regions) -join ","),
