@@ -374,6 +374,8 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/invoice/mark-sent",
     "/admin/enterprise/invoice/mark-paid",
     "/admin/enterprise/monthly-close",
+    "/admin/enterprise/billing-settings",
+    "/admin/enterprise/billing-settings/save",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -1199,6 +1201,18 @@ def _mask_email(email):
         return None
     name, dom = email.split("@", 1)
     return ((name[0] + "***") if name else "***") + "@" + dom
+
+
+def _mask_account_tail(value, keep=4):
+    """收款帳號等敏感值只留末幾碼——企業席次開票/收款設定異動要留 audit_events，
+    但不把完整帳號複製進第二張表（比照需求單 5.2 payment_note「匯款帳號末五碼」
+    同一個遮罩慣例）。"""
+    value = str(value or "").strip()
+    if not value:
+        return None
+    if len(value) <= keep:
+        return value
+    return "*" * (len(value) - keep) + value[-keep:]
 
 
 def family_invitations_response(data, client_ip=None, actor=None):
@@ -6098,6 +6112,36 @@ def enterprise_monthly_close_response(data=None):
     }
 
 
+
+# ── 開票／收款設定（單列表 · 2026-07-20 二次需求）──
+# 一樣是薄薄一層：實際讀寫在 enterprise_seats.get_billing_settings()／
+# save_billing_settings()，這裡只做參數解析與回應包裝。
+
+def enterprise_billing_settings_response(data=None):
+    """/admin/enterprise/billing-settings：讀開票／收款設定。
+    isConfigured=false 時前端／enterprise_billing.py 產請款單都要顯示明顯提示，
+    不能靜默印出空白（settings 各欄位本身可能是 None，那是正常狀態，不是錯誤）。"""
+    settings = enterprise_seats.get_billing_settings()
+    return {
+        "ok": True,
+        "settings": settings,
+        "isConfigured": enterprise_seats.is_billing_settings_configured(settings),
+    }
+
+
+def enterprise_billing_settings_save_response(data=None, actor="admin"):
+    """/admin/enterprise/billing-settings/save：存開票／收款設定。改收款帳號是敏感動作，
+    audit_events 由呼叫端（do_POST 路由層）負責寫，見對應的 elif 區塊
+   （只記遮罩後的帳號末四碼，不把完整帳號複製進 audit_events）。"""
+    data = data or {}
+    payload = data.get("settings") if isinstance(data.get("settings"), dict) else data
+    saved = enterprise_seats.save_billing_settings(payload, updated_by=actor)
+    return {
+        "ok": True,
+        "settings": saved,
+        "isConfigured": enterprise_seats.is_billing_settings_configured(saved),
+    }
+
 def default_billing_store():
     return {
         "schemaVersion": 1,
@@ -8490,6 +8534,36 @@ class H(BaseHTTPRequestHandler):
                             "eventType": "enterprise_monthly_close_run",
                             "targetTable": "enterprise_invoices",
                             "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {}), "period": response.get("period")},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/billing-settings":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_billing_settings_response(data))
+            elif self.path == "/admin/enterprise/billing-settings/save":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    actor_name = str(data.get("updatedBy") or data.get("updated_by") or "admin")[:120]
+                    response = enterprise_billing_settings_save_response(data, actor=actor_name)
+                    if response.get("ok"):
+                        saved = response.get("settings") or {}
+                        # 改收款帳號是敏感動作，一定要留紀錄——但只記遮罩後的末四碼，
+                        # 不把完整帳號複製進 audit_events（那張表沒必要再存一份敏感值）。
+                        append_audit_event({
+                            "eventType": "enterprise_billing_settings_updated",
+                            "targetTable": "enterprise_billing_settings",
+                            "details": {
+                                **privileged_actor_context(self.headers),
+                                "updatedBy": saved.get("updatedBy"),
+                                "issuerCompanyName": saved.get("issuerCompanyName"),
+                                "bankName": saved.get("bankName"),
+                                "bankAccountNoMasked": _mask_account_tail(saved.get("bankAccountNo")),
+                                "isConfigured": response.get("isConfigured"),
+                            },
                         })
                     self._json(response)
             elif self.path == "/companion-profile":
