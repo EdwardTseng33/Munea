@@ -430,6 +430,54 @@
     return { ok: true, session: devSession, state: publicState() };
   }
 
+  // --gateway 開發包用：真帳號真密碼走 Supabase 正式登入（拿真東京 JWT），
+  // 過總機驗證後才能撥通——跟上面 makeDeveloperSession()（本機假證）是完全不同的兩條路。
+  // 帳密只從 build-time 注入的 devConfig().testAccountEmail/testAccountPassword 讀，
+  // 絕不寫死在原始碼；正式包出貨門（ios-export-app-store.sh）會擋含這兩個欄位的 IPA。
+  function testAccountCredentials(overrides = {}) {
+    const cfg = devConfig();
+    return {
+      email: String(overrides.email || cfg.testAccountEmail || ''),
+      password: String(overrides.password || cfg.testAccountPassword || ''),
+    };
+  }
+
+  async function signInWithTestAccount(overrides = {}) {
+    if (!isDeveloperModeAllowed()) {
+      return { ok: false, error: { code: 'developer_mode_not_allowed' } };
+    }
+    const { email, password } = testAccountCredentials(overrides);
+    if (!email || !password) {
+      return { ok: false, error: { code: 'test_account_credentials_missing' } };
+    }
+    const supabaseClient = await ensureClient();
+    if (!supabaseClient) return { ok: false, error: { code: 'auth_not_configured' } };
+    if (!supabaseClient.auth || typeof supabaseClient.auth.signInWithPassword !== 'function') {
+      return { ok: false, error: { code: 'password_sign_in_unavailable' } };
+    }
+    try {
+      const result = await supabaseClient.auth.signInWithPassword({ email, password });
+      const nextSession = result && result.data ? result.data.session : null;
+      if (result.error || !nextSession || !nextSession.access_token) {
+        const error = result && result.error;
+        return {
+          ok: false,
+          error: {
+            code: String((error && (error.code || error.error_code)) || 'test_account_sign_in_failed'),
+            message: (error && error.message) || '',
+          },
+        };
+      }
+      setState('signed-in', nextSession, 'TEST_ACCOUNT_SIGNED_IN');
+      return { ok: true, session: nextSession, state: publicState() };
+    } catch (error) {
+      return {
+        ok: false,
+        error: { code: 'test_account_sign_in_error', message: String((error && error.message) || error) },
+      };
+    }
+  }
+
   async function signOut() {
     const signedInProvider = publicState().provider;
     if (window.MuneaNotify && typeof window.MuneaNotify.unregisterBeforeSignOut === 'function') {
@@ -578,6 +626,7 @@
     signInWithApple: () => signInWithProvider('apple'),
     signInWithGoogle: () => signInWithProvider('google'),
     signInAsDeveloper,
+    signInWithTestAccount,
     signOut,
     getAccessToken,
     recoverRejectedSession,

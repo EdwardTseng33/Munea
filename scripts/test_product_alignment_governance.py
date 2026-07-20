@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -71,6 +72,21 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def current_source_label(self) -> str:
+        """回傳現行版本標記（例如 `1.0.42 (Build 48)`）。
+
+        版號一律從 package.json 與 iOS 專案讀出來，不要寫死在測試裡——
+        2026-07-20 從 1.0.41 跳到 1.0.42 時，這裡的硬編碼讓 CI 整批變紅，
+        但真正的治理邏輯其實完全正常。
+        """
+        version = self.read_json("package.json")["version"]
+        pbxproj = (self.repo_root / "ios/App/App.xcodeproj/project.pbxproj").read_text(
+            encoding="utf-8"
+        )
+        build_match = re.search(r"CURRENT_PROJECT_VERSION = (\d+);", pbxproj)
+        self.assertIsNotNone(build_match, "iOS CURRENT_PROJECT_VERSION not found")
+        return f"{version} (Build {build_match.group(1)})"
+
     def replace(self, relative_path: str, before: str, after: str) -> None:
         path = self.repo_root / relative_path
         source = path.read_text(encoding="utf-8")
@@ -131,7 +147,7 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
     def test_stale_release_state_source_fails(self) -> None:
         self.replace(
             "docs/RELEASE-STATE.md",
-            "| Latest source | `1.0.41 (Build 48)`",
+            f"| Latest source | `{self.current_source_label()}`",
             "| Latest source | `1.0.40 (Build 47)`",
         )
         self.assert_has_error("current source marker is stale in docs/RELEASE-STATE.md")
@@ -139,7 +155,7 @@ class ProductAlignmentGovernanceTests(unittest.TestCase):
     def test_stale_development_plan_source_fails(self) -> None:
         self.replace(
             "docs/CURRENT-DEVELOPMENT-PLAN.md",
-            "> **Current source:** `1.0.41 (Build 48)`",
+            f"> **Current source:** `{self.current_source_label()}`",
             "> **Current source:** `1.0.40 (Build 47)`",
         )
         self.assert_has_error("current source marker is stale in docs/CURRENT-DEVELOPMENT-PLAN.md")

@@ -34,9 +34,22 @@ assert(!app.includes("window.open('privacy.html', '_blank')"), 'Consent privacy 
 assert(privacy.includes('目前機房位於日本東京'), 'Privacy disclosure must identify the current Tokyo data region');
 assert(!privacy.includes('目前機房位於澳洲'), 'Privacy disclosure must not retain the retired Sydney production region');
 const connectCall = app.match(/async function connectCall\(\) \{[\s\S]*?\n\}/)?.[0] || '';
-assert(connectCall.indexOf('setCallDialing(true)') < connectCall.indexOf('LiveVoice.prime()'), 'Call button must enter dialing state before microphone or network preparation');
+assert(connectCall.indexOf('LiveVoice.prime()') < connectCall.indexOf('setCallDialing(true)'), 'Call button must not show dialing before microphone and credit preflight');
+const creditRefreshIndex = connectCall.indexOf('creditState = await refreshServerCredits()');
+const zeroCreditIndex = connectCall.indexOf("throw new Error('insufficient_credits')");
+const gatewayAcquireIndex = connectCall.indexOf('await CallControl.acquire(');
+const productionDialingIndex = connectCall.indexOf('setCallDialing(true)', zeroCreditIndex);
+assert(creditRefreshIndex >= 0 && creditRefreshIndex < zeroCreditIndex, 'Server credit balance must be checked before a zero-credit call is rejected');
+assert(zeroCreditIndex >= 0 && zeroCreditIndex < gatewayAcquireIndex && gatewayAcquireIndex < productionDialingIndex, 'Production dialing must start only after credits and Gateway acceptance');
+assert(connectCall.includes('setTimeout(__muneaShowCallCreditBlocked, 0)'), 'Credit rejection must open the explanatory credit or plan dialog');
 assert(connectCall.includes('if (!developmentDirectCall)') && connectCall.includes('Promise.race([') && connectCall.includes('setTimeout(resolve, 1200)'), 'Family relay lookup must not block development calls or delay production dialing indefinitely');
-assert(/if \(!LiveVoice\.prime\(\)\) \{\s*setCallDialing\(false\)/.test(connectCall), 'Microphone failure must leave the dialing state');
+assert(/if \(!LiveVoice\.prime\(\)\) \{\s*setCallPreflightPending\(false\)/.test(connectCall), 'Microphone failure must leave the preflight state without showing dialing');
+
+// 點數是否足夠只在後端靜默判斷；畫面不得出現「查點數」字樣，只維持一般撥號觀感（Edward 2026-07-20拍板）。
+assert(!connectCall.includes('確認可用點數中') && !connectCall.includes('正在確認帳號與可用點數'), 'Credit preflight must run silently: the button and caption must not show checking-credits copy to the caller');
+assert(!/setCallPreflightPending\([^)]*點數/.test(connectCall) && !/setCallHint\([^)]*點數/.test(connectCall), 'No preflight busy label or caption may mention credits while the check is still running');
+// 開發者 Gateway 模式（真登入、非直連）測試帳號不能被 0 點卡住；正式用戶（非開發者旁路）依然照擋。
+assert(connectCall.includes("if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');"), 'Only the developer Gateway profile may skip the zero-credit block; production callers must still be stopped');
 
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');
@@ -140,6 +153,8 @@ assert(app.includes("body.style.paddingBottom = (bar.offsetHeight + 18)"), 'Cont
 const renderPlanStateBody = app.match(/function renderPlanState\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
 assert(renderPlanStateBody, 'renderPlanState must remain a readable single function');
 assert(renderSubUiBody.includes("seg.style.display = cur === 'free' ? 'none' : ''"), 'Free members must not see the points-purchase switcher at all');
+assert(renderSubUiBody.includes("unlock.style.display = cur === 'free' ? '' : 'none'"), 'Free members must be told when points purchasing unlocks');
+assert(html.includes('訂閱成功後，會員身分會立即更新，並開放「點數購買」'), 'The subscription page must explain the points-purchase follow-up');
 assert(renderSubUiBody.includes("if (cur === 'free') showSubPane('plans')"), 'Free members must be forced onto the subscription pane');
 assert(/dataset\.pane === 'points' && circlePlan\(\) === 'free'\) return;/.test(app), 'Clicking the points tab must be blocked for free members as a second guard');
 assert(app.includes('function showSubPane'), 'Pane switching must go through one function so the free guard cannot be bypassed');
@@ -158,5 +173,7 @@ assert(!/strip\.style\.display = ptsLeft\(\) < LOW_PTS/.test(app), 'The plan-bli
 // 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）
 assert(app.includes('function planPurchaseFailMessage'), 'Purchase failures must map reasons to plain-language text');
 assert(app.includes('先登入帳號，才能訂閱。') && app.includes('這個方案現在還不能買') && app.includes('付款過了，但還沒對上帳'), 'Purchase failure texts must cover sign-in, unavailable product and unverified payment');
+assert(app.includes("reason === 'apple_account_token_mismatch'") && app.includes('先不要重複付款'), 'An Apple account-token mismatch must explain the account binding and stop repeat payment');
+assert(app.includes("'TEST · ' + (_memBadgePlan || 'free').toUpperCase()"), 'Developer badges must expose the simulated FREE/PLUS/PRO identity');
 
 console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, and real family activities');

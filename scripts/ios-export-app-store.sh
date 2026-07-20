@@ -88,6 +88,15 @@ if [ ! -f "$AUTH_CONFIG_PATH" ] \
   exit 1
 fi
 
+# 2026-07-18 專用真測試帳號施工（沙利曼 Gate 0 安全鐵律）：上面那道門查的是「有沒有整包 dev profile 標記」，
+# 這道門單獨查「測試憑證欄位/樣式有沒有殘留」——就算未來有人動了上面那道門的邏輯或標記被拿掉，
+# 這裡仍是最後一道防線，絕不讓 testAccountEmail/testAccountPassword 或 @munea.net 測試帳密進 App Store 包。
+TEST_ACCOUNT_CREDENTIAL_PATTERN='testAccountEmail|testAccountPassword|signInWithPassword|@munea\.net'
+if [ -f "$AUTH_CONFIG_PATH" ] && grep -Eq "$TEST_ACCOUNT_CREDENTIAL_PATTERN" "$AUTH_CONFIG_PATH"; then
+  echo "FAIL exported IPA auth configuration contains test account credentials (testAccountEmail/testAccountPassword/@munea.net) and must never ship in the App Store package."
+  exit 1
+fi
+
 if ! cmp -s "$ROOT/web/index.html" "$APP_PATH/public/index.html" \
   || ! cmp -s "$ROOT/web/src/app.js" "$APP_PATH/public/src/app.js" \
   || ! cmp -s "$ROOT/web/src/auth.js" "$APP_PATH/public/src/auth.js" \

@@ -60,6 +60,38 @@ def test_real_login_bootstraps_before_gateway_and_recovers_once() -> None:
     assert "if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY)" not in APP
 
 
+def test_zero_credits_stop_before_dialing_and_gateway() -> None:
+    connect_call = APP[APP.index("async function connectCall()") : APP.index("async function openInAppReader")]
+    refresh_index = connect_call.index("creditState = await refreshServerCredits()")
+    zero_index = connect_call.index("throw new Error('insufficient_credits')")
+    dialing_index = connect_call.index("setCallDialing(true)", zero_index)
+    acquire_index = connect_call.index("await CallControl.acquire(")
+    assert refresh_index < zero_index < acquire_index < dialing_index
+    assert "setTimeout(__muneaShowCallCreditBlocked, 0)" in connect_call
+    assert "setCallPreflightPending(false); setCallDialing(false)" in connect_call
+
+
+def test_credit_preflight_stays_silent_for_the_caller() -> None:
+    # Edward 2026-07-20: checking credits is a backend concern, not something a
+    # caller should see mid-dial. The screen must keep its ordinary dialing look.
+    connect_call = APP[APP.index("async function connectCall()") : APP.index("async function openInAppReader")]
+    assert "確認可用點數中" not in connect_call
+    assert "正在確認帳號與可用點數" not in connect_call
+    assert "voiceCallMark('credits_checked'" in connect_call
+
+
+def test_developer_gateway_profile_bypasses_zero_credit_block_silently() -> None:
+    # Edward 2026-07-20: the real-login (gateway, non-direct-call) developer
+    # profile must not be stopped by zero credits so test accounts stay usable;
+    # production callers (isGatewayDeveloperProfile() false) are unaffected.
+    connect_call = APP[APP.index("async function connectCall()") : APP.index("async function openInAppReader")]
+    assert "function isGatewayDeveloperProfile()" in APP
+    assert (
+        "if (availableCredits <= 0 && !isGatewayDeveloperProfile()) "
+        "throw new Error('insufficient_credits');"
+    ) in connect_call
+
+
 def test_development_profile_bypass_does_not_weaken_release() -> None:
     assert "bypassCallControl: false" in AUTH_CONFIG
     assert "bypassCallControl: true" in DEV_PROFILE
@@ -121,6 +153,9 @@ def main() -> None:
         test_cancelled_acquire_disposes_returned_capacity,
         test_gateway_401_forces_one_session_recovery_path,
         test_real_login_bootstraps_before_gateway_and_recovers_once,
+        test_zero_credits_stop_before_dialing_and_gateway,
+        test_credit_preflight_stays_silent_for_the_caller,
+        test_developer_gateway_profile_bypasses_zero_credit_block_silently,
         test_development_profile_bypass_does_not_weaken_release,
         test_voice_and_avatar_are_a_single_required_service,
         test_connected_ui_waits_for_server_active_lease,

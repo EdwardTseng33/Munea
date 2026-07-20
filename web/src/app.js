@@ -887,6 +887,11 @@ function usesDevelopmentDirectCall() {
   const cfg = developerConfig();
   return isDeveloperBypassAllowed() && cfg.bypassCallControl === true;
 }
+// --gateway 開發包（2026-07-18 專用真測試帳號施工）：開發者模式開著、但不走本機直連假資料，
+// 走真總機領證——這時「開發者鈕」該叫真帳號登入，不是造假證 session。
+function isGatewayDeveloperProfile() {
+  return isDeveloperBypassAllowed() && !usesDevelopmentDirectCall();
+}
 function developerFixtureDate(daysAgo) {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
@@ -2886,8 +2891,18 @@ window.MuneaFaceWave = FaceWave;
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
 let callDialing = false;
+let callPreflightPending = false;
+function setCallPreflightPending(on, pendingLabel = '連線中…') {
+  callPreflightPending = on;
+  const b = $('#callToggle'); if (!b) return;
+  b.setAttribute('aria-busy', on ? 'true' : 'false');
+  const lbl = $('#callToggleLabel');
+  if (lbl && on) lbl.textContent = pendingLabel;
+  else if (lbl && !callDialing) lbl.textContent = callConnected ? '結束通話' : '開始通話';
+}
 // 撥通中狀態：按鈕顯示「撥通中···」循環；真的接通（她開始聽/說）才變「結束通話」＋開始計時（Edward 7/9）
 function setCallDialing(on) {
+  if (on) setCallPreflightPending(false);
   callDialing = on;
   const b = $('#callToggle'); if (!b) return;
   b.classList.toggle('dialing', on);
@@ -2900,6 +2915,7 @@ function setCallDialing(on) {
 function setCallToggle(connected) {
   callConnected = connected;
   callDialing = false;
+  setCallPreflightPending(false);
   const _b0 = $('#callToggle'); if (_b0) _b0.classList.remove('dialing');
   // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
   const fn = document.querySelector('.face-name');
@@ -3152,7 +3168,7 @@ function authDisplayName(state) {
   return '';
 }
 // 帳號卡右上角「唯一」的身份標籤（Edward 2026-07-14：只留一顆、統一右上，不要兩顆）
-// 開發測試帳號 → TEST；否則 FREE / PLUS / PRO
+// 開發測試帳號 → TEST · FREE/PLUS/PRO；否則 FREE / PLUS / PRO
 let _memBadgePlan = 'free';
 function renderMemBadge(plan) {
   if (plan) _memBadgePlan = String(plan).toLowerCase();
@@ -3161,7 +3177,7 @@ function renderMemBadge(plan) {
   let dev = false;
   try { dev = !!authState().developerMode; } catch (e) {}
   const key = dev ? 'test' : _memBadgePlan;
-  mb.textContent = dev ? 'TEST' : key.toUpperCase();
+  mb.textContent = dev ? ('TEST · ' + (_memBadgePlan || 'free').toUpperCase()) : key.toUpperCase();
   mb.className = 'mem-badge ' + key;
 }
 function authState() {
@@ -3216,7 +3232,13 @@ function openAuthSheet() {
   sheet.setAttribute('aria-hidden', 'false');
   setAuthMessage('');
   const devBtn = $('#authDeveloperBtn');
-  if (devBtn) devBtn.hidden = !isDeveloperBypassAllowed();
+  if (devBtn) {
+    devBtn.hidden = !isDeveloperBypassAllowed();
+    if (!devBtn.hidden) {
+      const label = isGatewayDeveloperProfile() ? devBtn.dataset.labelGateway : devBtn.dataset.labelDefault;
+      if (label) devBtn.textContent = label;
+    }
+  }
 }
 function closeAuthSheet() {
   const sheet = $('#authSheet');
@@ -3327,7 +3349,25 @@ async function signInWithAuthProvider(provider) {
 }
 async function signInDeveloperMode() {
   const auth = window.MuneaAuth;
-  if (!auth || typeof auth.signInAsDeveloper !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
+  if (!auth) return setAuthMessage('開發者模式尚未啟用', 'error');
+  // --gateway profile：真帳號真登入拿真 JWT、過總機驗證——不是造假證（Build 43 安全洞已補死，永不重開）。
+  if (isGatewayDeveloperProfile()) {
+    if (typeof auth.signInWithTestAccount !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
+    const result = await auth.signInWithTestAccount({ reason: 'settings_auth_sheet_gateway' });
+    if (result && result.ok) {
+      trackProductEvent('auth_developer_signed_in', { provider: 'test-account' });
+      updateAuthUI();
+      closeAuthSheet();
+      return;
+    }
+    const code = String((result && result.error && result.error.code) || 'unknown');
+    setAuthMessage(
+      code === 'test_account_credentials_missing' ? '測試帳號憑證未設定' : `測試帳號登入失敗（${code}）`,
+      'error',
+    );
+    return;
+  }
+  if (typeof auth.signInAsDeveloper !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
   const result = await auth.signInAsDeveloper({ reason: 'settings_auth_sheet' });
   if (result && result.ok) {
     trackProductEvent('auth_developer_signed_in', { provider: 'dev-bypass' });
@@ -3997,6 +4037,13 @@ function __muneaShowPointsPopup(){
   m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-pts-no') m.remove(); });
   var go=document.getElementById('mm-pts-go');
   if(go) go.addEventListener('click',function(){ m.remove(); var tm=document.getElementById('topUpModal'); if(tm) tm.classList.add('show'); });
+}
+function __muneaShowCallCreditBlocked(){
+  if (window.MMPLAN && window.MMPLAN.isFree()) {
+    window.MMPLAN.upsell('chat-daily');
+    return;
+  }
+  __muneaShowPointsPopup();
 }
 function __muneaPointsOut(){
   try { if (typeof LiveVoice !== 'undefined' && LiveVoice && LiveVoice.stop) LiveVoice.stop(); } catch (e) {}
@@ -4704,6 +4751,8 @@ function setupHscrollHints() {
 }
 
 async function connectCall() {
+  if (callPreflightPending || callDialing || callConnected) return;
+  setCallPreflightPending(true);
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
   try {
@@ -4716,7 +4765,6 @@ async function connectCall() {
       faceEngine: faceEngine(),
     });
   } catch (e) {}
-  setCallDialing(true);
   // 撥通中＝保持角色的待機動畫（Edward 2026-07-09 二次拍板：不定格照片、也不動照片）。
   // 硬規則：聲音＋會動的臉「兩邊都真的就緒」才一起開場——寧可讓用戶等，也不要開場後像當機。
   // 同線聲音的 iPhone 解鎖（2026-07-11）：iPhone 不准「沒經過使用者手指」的聲音自動播——
@@ -4750,7 +4798,7 @@ async function connectCall() {
   // Keep the iOS user gesture alive before the queue/network wait starts.
   voiceCallMark('microphone_requested', 'pass');
   if (!LiveVoice.prime()) {
-    setCallDialing(false);
+    setCallPreflightPending(false);
     voiceCallFail('microphone_requested', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     voiceCallEnd('failed', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     setCallHint(LiveVoice._micUnavailableReason === 'https_required'
@@ -4768,21 +4816,37 @@ async function connectCall() {
     } catch (e) {}
   }
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
-  setCallHint(developmentDirectCall ? '開發測試直連中…' : '正在安排語音與影像席位…', true);
-  if (!developmentDirectCall) {
+  if (developmentDirectCall) {
+    setCallDialing(true);
+    setCallHint('開發測試直連中…', true);
+  } else {
+    // 點數是否足夠這件事只在後端靜默判斷，畫面維持一般撥號觀感，不對用戶顯示「查點數」字樣（Edward 2026-07-20拍板）。
+    setCallHint('連線中…', true);
     try {
-      voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       // A verified Auth session is not enough for Call Control: its durable
       // lease RPC also requires the account_members/person graph. Await the
       // idempotent bootstrap so a fresh login cannot race the first call.
       const accountReady = await syncAccountBootstrap('create', { reason: 'call_preflight' });
       if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');
       // 跨月或年繳方案可能在這次通話前進入新點數週期；先向伺服器同步本期額度。
-      try { await refreshServerCredits(); } catch (e0) {}
+      let creditState = null;
+      try { creditState = await refreshServerCredits(); } catch (e0) {}
+      const rawAvailableCredits = creditState && creditState.walletSummary && creditState.walletSummary.total;
+      const availableCredits = Number(rawAvailableCredits);
+      if (rawAvailableCredits !== null && rawAvailableCredits !== undefined && rawAvailableCredits !== '' && Number.isFinite(availableCredits)) {
+        voiceCallMark('credits_checked', availableCredits > 0 ? 'pass' : 'fail', { remaining: Math.max(0, availableCredits) });
+        // 開發者 Gateway 模式（真登入、非直連）：仍照查、照記錄，但 0 點不擋——Edward 講了幾百遍卡在這裡測不了聊聊。
+        // 正式用戶（非開發者旁路）完全不受影響，0 點依然照擋。
+        if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');
+      }
+      setCallPreflightPending(true, '正在安排通話…');
+      setCallHint('正在安排語音與影像席位…', true);
+      voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
       if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
         throw new Error('paired_service_unavailable');
       }
+      setCallDialing(true);
       voiceCallMark('gateway_assigned', 'pass', {
         gatewayCallId: lease.call_id || '',
         voiceEndpoint: lease.voice.url,
@@ -4794,13 +4858,14 @@ async function connectCall() {
       voiceCallFail('gateway_assigned', reason, { endpoint: CallControl.url() });
       voiceCallEnd('failed', reason);
       try { await CallControl.release(reason); } catch (e2) {}
-      LiveVoice.stop(); setCallDialing(false); stopCallTimer();
+      LiveVoice.stop(); setCallPreflightPending(false); setCallDialing(false); stopCallTimer();
       setCallHint(authRequired ? '登入狀態已失效，請重新登入後再撥' :
         (reason.indexOf('account_not_ready') >= 0 ? '帳號正在完成初始化，請稍後再撥一次' :
         (reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
           (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
           (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
+      if (reason.indexOf('insufficient_credits') >= 0) setTimeout(__muneaShowCallCreditBlocked, 0);
       try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
       return;
     }
@@ -5831,7 +5896,7 @@ function init() {
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
       if (r.ok) $('#topUpModal').classList.remove('show');
-      else if (r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      else if (r.reason !== 'cancelled') toast(planPurchaseFailMessage(r.reason), 5200);
       return;
     }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
@@ -5867,6 +5932,8 @@ function init() {
     // 只剩一個分頁的切換器像壞掉 → 整個收起來，免費只看得到訂閱方案。訂閱後才長出來。
     const seg = $('#subSeg');
     if (seg) seg.style.display = cur === 'free' ? 'none' : '';
+    const unlock = $('#pointsUnlockNotice');
+    if (unlock) unlock.style.display = cur === 'free' ? '' : 'none';
     if (cur === 'free') showSubPane('plans');
     // 確認欄開著就跟著重畫，畫面寫的跟等下要扣的永遠一致
     if (typeof syncPlanConfirm === 'function') syncPlanConfirm();
@@ -5937,6 +6004,8 @@ function init() {
   // 付款失敗要講「為什麼」，不要全部混成一句（同邀請碼 105 號的教訓）
   function planPurchaseFailMessage(reason) {
     if (reason === 'signin_required') return '先登入帳號，才能訂閱。';
+    if (reason === 'apple_account_token_mismatch') return '這筆 Apple 訂閱已綁定另一個沐寧帳號。請登入原帳號；測試版請先重置 Sandbox 購買紀錄。先不要重複付款。';
+    if (reason === 'authentication_required' || reason === 'invalid_auth_token') return '登入狀態無法驗證，請重新登入真實 Google／Apple 帳號後再試。';
     if (reason === 'server_unavailable') return '網路不通，請檢查連線後再試一次。';
     if (reason === 'notfound') return '這個方案現在還不能買，我們正在開通，晚點再試。';
     if (reason === 'unsupported') return '這個版本還不能付款，更新 App 後再試。';
@@ -6029,6 +6098,7 @@ function init() {
     clearBtnBusy(b, '恢復購買');
     if (result.ok) toast('購買已恢復，方案與帳號權益正在同步');
     else if (result.reason === 'signin_required') toast('請先登入原本購買時使用的沐寧帳號');
+    else if (result.reason === 'apple_account_token_mismatch') toast(planPurchaseFailMessage(result.reason), 5200);
     else if (result.reason === 'none') toast('這個 Apple 帳號目前沒有可恢復的訂閱');
     else toast('恢復購買沒有完成，請確認網路後再試一次');
   });
@@ -6049,7 +6119,7 @@ function init() {
       setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
-      if (!r.ok && r.reason !== 'cancelled') toast('付款沒有完成，晚點再試一次就好。');
+      if (!r.ok && r.reason !== 'cancelled') toast(planPurchaseFailMessage(r.reason), 5200);
       return;
     }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}

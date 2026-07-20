@@ -64,6 +64,7 @@ fs.writeFileSync(gatewayConfigPath, 'window.MUNEA_DEV_CONFIG = { enabled: false,
 const gatewayResult = spawnSync(process.execPath, ['scripts/enable-ios-development-profile.mjs', gatewayConfigPath, '--gateway'], {
   cwd: process.cwd(),
   encoding: 'utf8',
+  env: { ...process.env, MUNEA_TEST_ACCOUNT_EMAIL: 'dev@munea.net', MUNEA_TEST_ACCOUNT_PASSWORD: 'correct-horse-battery-staple' },
 });
 assert.strictEqual(gatewayResult.status, 0, gatewayResult.stderr || 'Gateway development profile command failed');
 const gatewayGenerated = fs.readFileSync(gatewayConfigPath, 'utf8');
@@ -78,6 +79,28 @@ assert.strictEqual(gatewayConfig.analyticsExcluded, true, 'Gateway profile is st
 assert.strictEqual(gatewayConfig.authUserId, undefined, 'Gateway profile must not carry the fixture identity');
 assert.strictEqual(gatewayConfig.fixtureVersion, '1.0.37-build44-tokyo-gateway-v1',
   'Gateway profile is tagged so packages are distinguishable');
+assert.strictEqual(gatewayConfig.testAccountEmail, 'dev@munea.net',
+  'Gateway profile did not receive the build-time test account email');
+assert.strictEqual(gatewayConfig.testAccountPassword, 'correct-horse-battery-staple',
+  'Gateway profile did not receive the build-time test account password');
+
+const gatewayNoEnvConfigPath = path.join(tempDir, 'auth-config-gateway-noenv.js');
+fs.writeFileSync(gatewayNoEnvConfigPath, 'window.MUNEA_DEV_CONFIG = { enabled: false, seedFixtures: false };\n', 'utf8');
+const noEnvEnv = { ...process.env };
+delete noEnvEnv.MUNEA_TEST_ACCOUNT_EMAIL;
+delete noEnvEnv.MUNEA_TEST_ACCOUNT_PASSWORD;
+const gatewayNoEnvResult = spawnSync(process.execPath, ['scripts/enable-ios-development-profile.mjs', gatewayNoEnvConfigPath, '--gateway'], {
+  cwd: process.cwd(),
+  encoding: 'utf8',
+  env: noEnvEnv,
+});
+assert.strictEqual(gatewayNoEnvResult.status, 0, gatewayNoEnvResult.stderr || 'Gateway development profile command failed without env');
+const gatewayNoEnvContext = { window: {} };
+vm.runInNewContext(fs.readFileSync(gatewayNoEnvConfigPath, 'utf8'), gatewayNoEnvContext);
+assert.strictEqual(gatewayNoEnvContext.window.MUNEA_DEV_CONFIG.testAccountEmail, '',
+  'Gateway profile without env injection must default to an empty test account email, not leak a hardcoded value');
+assert.strictEqual(gatewayNoEnvContext.window.MUNEA_DEV_CONFIG.testAccountPassword, '',
+  'Gateway profile without env injection must default to an empty test account password, not leak a hardcoded value');
 // 位址優先序防呆：有領到證時語音位址一定用證上的（app.js:getLiveVoiceUrl 第一行）
 assert.match(app, /if \(CallControl\.active\) return \(CallControl\.active\.voice && CallControl\.active\.voice\.url\) \|\| ''/);
 
