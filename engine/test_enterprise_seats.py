@@ -21,6 +21,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.dirname(__file__))
 
 import enterprise_seats as es
+import enterprise_billing as eb
 
 
 class FakeBackend:
@@ -401,3 +402,80 @@ class ImportPreviewFiveCategoriesTests(EnterpriseSeatsTestBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CrossModuleInvoicePaidConsistencyTests(EnterpriseSeatsTestBase):
+    """跨模組整合測試：走 enterprise_billing.py 真正的 mark-sent／mark-paid 流程
+   （不經 server.py HTTP 層，直接呼叫兩支模組的公開函式），驗證
+    enterprise_seats.assert_client_has_paid_invoice() 認得到 enterprise_billing.py
+    寫進去的請款單狀態——這是蘇菲要求「兩邊認定的已付款狀態一致」的真實驗證，
+    不是憑印象宣稱。兩邊在 Supabase 未啟用時都退本地 JSON 檔，這裡把兩支模組的
+    INVOICES_PATH 指到同一個暫存檔，模擬本機／測試環境下真的共用同一份資料。"""
+
+    def setUp(self):
+        super().setUp()
+        self._orig_billing_invoices_path = eb.INVOICES_PATH
+        shared_invoices_path = os.path.join(self.tmp_dir, "invoices.json")
+        eb.INVOICES_PATH = shared_invoices_path
+        es.INVOICES_PATH = shared_invoices_path
+
+    def tearDown(self):
+        eb.INVOICES_PATH = self._orig_billing_invoices_path
+        super().tearDown()
+
+    def test_grant_blocked_until_billing_module_marks_invoice_paid(self):
+        """故意不 mock _backend()——兩支模組都用真正的「Supabase 未啟用」退路徑
+       （測試環境本來就沒設 Supabase），才是真的在驗證『兩邊本地備援讀寫同一份資料』，
+        不是又造一個假後端自欺欺人。"""
+        client = self.make_client(plan_tier="plus")
+        seat = self.make_active_seat(client["id"])
+        period_start, period_end = eb.billing_period_for(2026, 7)
+
+        # 1) 月結產出 draft 請款單（enterprise_billing.py 真的函式，不重寫邏輯）
+        invoice = eb.generate_monthly_invoice(client, [seat], period_start, period_end, persist=True)
+        self.assertEqual(invoice["status"], "draft")
+
+        # 2) draft 階段：授予應該被鐵律 2 擋下
+        with self.assertRaises(ValueError) as ctx:
+            es.grant_enterprise_membership(seat["id"])
+        self.assertEqual(str(ctx.exception), "enterprise_invoice_not_paid")
+
+        # 3) mark-sent：draft -> issued（比照 server.py enterprise_invoice_mark_sent_response 的邏輯）
+        issued = dict(invoice)
+        issued["status"] = "issued"
+        issued["sentAt"] = "2026-08-01T00:00:00Z"
+        eb.save_invoice(issued)
+
+        # 4) issued 階段：仍未付款，還是要被擋下
+        with self.assertRaises(ValueError):
+            es.grant_enterprise_membership(seat["id"])
+
+        # 5) mark-paid：issued -> paid（比照 server.py enterprise_invoice_mark_paid_response 的邏輯）
+        paid = dict(issued)
+        paid["status"] = "paid"
+        paid["paidAt"] = "2026-08-05T00:00:00Z"
+        paid["paidAmountTwd"] = paid.get("totalTwd")
+        eb.save_invoice(paid)
+
+        # 6) 已入帳：這次應該放行，且真的寫進本地備援的 subscription_ledger 紀錄
+        result = es.grant_enterprise_membership(seat["id"])
+        self.assertTrue(result["granted"])
+        self.assertEqual(result["ledger"]["grantRef"], seat["id"])
+
+    def test_invoiced_status_from_billing_module_also_unlocks_grant(self):
+        """mark-paid 若同時帶發票號碼，enterprise_billing 那邊會把狀態落到 invoiced——
+        鐵律 2 一樣要放行（PAID_INVOICE_STATUSES 含 invoiced）。"""
+        client = self.make_client(plan_tier="plus")
+        seat = self.make_active_seat(client["id"])
+        period_start, period_end = eb.billing_period_for(2026, 7)
+
+        invoice = eb.generate_monthly_invoice(client, [seat], period_start, period_end, persist=True)
+        invoiced = dict(invoice)
+        invoiced["status"] = "invoiced"
+        invoiced["paidAt"] = "2026-08-05T00:00:00Z"
+        invoiced["invoiceNumber"] = "AB12345678"
+        invoiced["invoiceIssuedAt"] = "2026-08-06T00:00:00Z"
+        eb.save_invoice(invoiced)
+
+        result = es.grant_enterprise_membership(seat["id"])
+        self.assertTrue(result["granted"])
