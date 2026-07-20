@@ -24,6 +24,7 @@ assert.doesNotMatch(index, /\/api\/chat|speechSynthesis|chatTxt|文字聊聊/);
 assert.doesNotMatch(index, /台灣首創|這個領域的.{0,4}領先者|150 小時/);
 
 assert.match(call, /&demo=1&key=/);
+assert.match(call, />DEMO 1\.0\.1<\/div>/);
 assert.match(call, /avatarToken/);
 assert.match(call, /\/offer\?token=/);
 assert.match(call, /\/audio\?token=/);

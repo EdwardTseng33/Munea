@@ -91,6 +91,7 @@
   .toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 66px);transform:translateX(-50%);z-index:30;background:rgba(226,84,79,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:13.5px;display:none;max-width:88%;text-align:center}
   .toast.show{display:block}
   .toast.soft{background:rgba(29,164,124,.92)}
+  .demo-version{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:6;color:rgba(255,255,255,.58);font-size:9px;font-weight:650;letter-spacing:.04em;text-shadow:0 1px 5px rgba(0,0,0,.48);pointer-events:none}
   @media (min-width:700px){
     .frame{border-radius:28px;box-shadow:0 28px 70px rgba(0,0,0,.45)}
   }
@@ -107,6 +108,7 @@
       <canvas id="faceCanvas" width="512" height="512"></canvas>
     </div>
     <div class="scrim"></div>
+    <div class="demo-version" aria-label="Demo 版本 1.0.1">DEMO 1.0.1</div>
   </div>
 
   <div class="top">
