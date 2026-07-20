@@ -8,12 +8,11 @@
 <link rel="icon" href="assets/paining-logo.png">
 <style>
   :root{
-    /* 2026-07-18 卡西法 bug fix：舊版 --box-top 7.2917% + 100%x75% 矩形框 + object-fit:fill 拉伸 +
-       四邊羽化，是抄一份跟目前 flashhead/bg-a05.png、bg-a06.png 沒對準的舊校準值——正式 App 端
-       （web/src/app.js _fhComposite、web/src/styles.css .fh-overlay）2026-07-11 已改成「跟模型
-       輸出同源的 1080x1080 正方形框、單一垂直羽化、object-fit:cover」，且 a05/a06 的 top 各不同
-       （見下方 CHARS.overlayTop + pickChar）。這裡直接對齊該正式校準值，舊變數不再重複宣告。 */
     --frame-w:min(100vw, calc(100dvh * 1080 / 1920));
+    /* FlashHead receives the App portrait crop (0,140,1080,1440) resized to 512x512.
+       Restore that exact rectangle here so generated pixels return to their original coordinates. */
+    --box-left:0%; --box-top:7.291667%; --box-width:100%; --box-height:75%;
+    --feather-top:5.556%; --feather-bottom:9.722%; --feather-side:5.926%;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -28,18 +27,14 @@
   .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .3s;z-index:0}
   .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .28s ease;z-index:2}
   .cover.hide{opacity:0;pointer-events:none}
-  /* 2026-07-18 卡西法：正方形判斷框(1:1) + 單一垂直羽化 + object-fit:cover + z-index 高於待機動畫層，
-     1:1 移植 web/src/styles.css .fh-overlay（同一組 bg-a05/bg-a06 素材、同一組模型輸出解析度——
-     不是本頁另外亂測的數字）。原本沒設 z-index 導致 .cover(z:2) 蓋在真臉框上面：接通瞬間待機動畫
-     淡出、真臉淡入，兩層不同尺寸/位置疊在一起 = Edward 看到的「動態框位置跑掉、失焦、重疊」。
-     transition:none 比照正式版——避免疊圖淡出/淡入的雙重曝光那 0.3 秒鬼影。
-     top 依角色不同、由 pickChar() 設定 style.top（見下方 CHARS.overlayTop）。 */
-  .overlay{position:absolute;left:0;top:9.895833%;width:100%;height:auto;aspect-ratio:1/1;overflow:hidden;opacity:0;transition:none;z-index:3}
+  .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:none;z-index:3}
   .overlay.on{opacity:1}
-  .overlay video{width:100% !important;height:100% !important;object-fit:cover !important;display:block}
+  .overlay video{width:100% !important;height:100% !important;object-fit:fill !important;display:block}
   .overlay{
-    -webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 4%,black 82%,transparent 100%);
-    mask-image:linear-gradient(to bottom,transparent 0%,black 4%,black 82%,transparent 100%);
+    -webkit-mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
+    -webkit-mask-composite:source-in,source-over;
+    mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
+    mask-composite:intersect;
   }
   .scrim{position:absolute;inset:0;pointer-events:none;z-index:4;background:linear-gradient(to bottom,rgba(24,20,16,.12),transparent 18%,transparent 72%,rgba(22,22,18,.14))}
   .top{position:absolute;left:max(17px, calc((100vw - var(--frame-w))/2 + 17px));right:max(17px, calc((100vw - var(--frame-w))/2 + 17px));top:calc(env(safe-area-inset-top) + 22px);z-index:6;display:flex;justify-content:space-between;align-items:center;gap:12px;text-shadow:0 1px 7px rgba(0,0,0,.48)}
@@ -170,10 +165,8 @@ let CAP_SECONDS = 180;      // 體驗上限（伺服器可調）
 const TEST_LINE = '嗨,你在嗎?我在測試連線。';
 
 const CHARS = {
-  // overlayTop：1080x1920 底圖上、模型輸出的1080x1080正方形判斷框起始 y（190/1920、209/1920）
-  // ——跟 App 端 web/src/app.js _fhComposite() 的 _box 常數同源、不是本頁另外亂測的數字。
-  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4', overlayTop: '9.895833%' },
-  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4', overlayTop: '10.885417%' },
+  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4' },
+  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4' },
 };
 let curChar = 'a05';
 
@@ -389,7 +382,6 @@ function pickChar(c){
   $('#charA06').classList.toggle('on', c==='a06');
   bgImg.src = CHARS[c].bg;
   chName.textContent = CHARS[c].label;
-  overlay.style.top = CHARS[c].overlayTop || '9.895833%';
   IdleMotion.start();
 }
 </script>

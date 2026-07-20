@@ -53,6 +53,7 @@ except Exception:
 
 FLASH_ATTN_WHL = "flash_attn-2.8.0.post2+cu12torch2.7cxx11abiTRUE-cp312-cp312-linux_x86_64.whl"
 FLASH_ATTN_URL = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.0.post2/" + FLASH_ATTN_WHL
+CHAR_ASSET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -72,8 +73,10 @@ image = (
                  index_url="https://download.pytorch.org/whl/cu128", extra_options="--no-deps")
     .pip_install("fastapi", "aiortc", "aiohttp", "av")
     .env({"MUNEA_APP_KEY": APP_KEY})
-    .add_local_file(r"E:\Claude\Munea\deploy\flashhead-poc\assets\a05-inB-512.png", "/root/char-a05B.png")
-    .add_local_file(r"E:\Claude\Munea\deploy\flashhead-poc\assets\a06-inB-512.png", "/root/char-a06B.png")
+    # v2 crops come from the same bg-a05/bg-a06 portraits shipped in the App.
+    # Source box: x=0, y=140, w=1080, h=1440, resized to 512x512 for FlashHead.
+    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a05-inB-512-v2.png"), "/root/char-a05B.png")
+    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a06-inB-512-v2.png"), "/root/char-a06B.png")
 )
 
 CHAR_SRC = {

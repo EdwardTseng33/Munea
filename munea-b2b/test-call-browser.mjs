@@ -105,6 +105,17 @@ try {
     frames: window.__flashheadStats?.vidFrames || 0,
     idleMotionActive: typeof IdleMotion === 'undefined' ? null : IdleMotion.active,
     controls: ['captionToggle','micToggle','callBtn','closeBtn'].every(id => Boolean(document.getElementById(id))),
+    overlayGeometry: (() => {
+      const frame = document.getElementById('frame')?.getBoundingClientRect();
+      const box = document.getElementById('overlay')?.getBoundingClientRect();
+      const video = document.getElementById('faceVid');
+      if (!frame || !box || !video) return null;
+      return {
+        topPct: ((box.top - frame.top) / frame.height) * 100,
+        heightPct: (box.height / frame.height) * 100,
+        objectFit: getComputedStyle(video).objectFit,
+      };
+    })(),
     attempts: typeof Face === 'undefined' ? [] : Face._diagAttempts,
     logs: typeof DBGBUF === 'undefined' ? [] : DBGBUF,
   }));
@@ -117,7 +128,8 @@ try {
 process.stdout.write(`${JSON.stringify({ target, result, consoleErrors: consoleLines.filter(line => /error|failed/i.test(line)) }, null, 2)}\n`);
 
 const idleFailed = captureIdle && (!result || result.selectedChar !== testChar || result.status !== '未在線' || !result.controls || !result.controlInteractions?.captionOn || !result.controlInteractions?.micOff || !/-hello\.mp4(?:$|\?)/.test(result.controlInteractions?.helloSrc || '') || !/-idle\.mp4(?:$|\?)/.test(result.controlInteractions?.idleSrc || ''));
-const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || !result.hasMic || result.frames < 1 || result.idleMotionActive !== false);
+const geometryFailed = !result?.overlayGeometry || Math.abs(result.overlayGeometry.topPct - 7.291667) > 0.1 || Math.abs(result.overlayGeometry.heightPct - 75) > 0.1 || result.overlayGeometry.objectFit !== 'fill';
+const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || !result.hasMic || result.frames < 1 || result.idleMotionActive !== false || geometryFailed);
 if (idleFailed || callFailed) {
   process.exitCode = 1;
 }
