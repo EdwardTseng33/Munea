@@ -344,6 +344,7 @@ ADMIN_POST_PATHS = {
     "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
+    "/admin/medication-adherence",
     "/admin/voice-diagnostics",
     "/admin/notifications/drain",
     "/admin/login",
@@ -4563,6 +4564,143 @@ def admin_safety_events_summary(data=None):
     }
 
 
+def _dose_adherence_rate(taken, skipped, missed):
+    """依從率＝做到 ÷（做到＋跳過＋漏服）；分母 0（還沒有結果）誠實回 None，不冒充 0。"""
+    denom = taken + skipped + missed
+    if denom <= 0:
+        return None
+    return round(taken / denom, 4)
+
+
+def load_admin_medication_dose_events(days=30, limit=3000):
+    """後台跨帳號用藥事件：Supabase service-role 全表查詢（不篩 account_id），失敗退回本地 JSON。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(5000, int(limit or 3000)))
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days - 1)
+    since_date = since.strftime("%Y-%m-%d")
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_medication_doses(since_date=since_date, limit=limit)
+        if remote_items is not None:
+            normalized_remote = [normalize_medication_dose(item) for item in remote_items]
+            record_admin_data_source(
+                "medication_dose_events",
+                "supabase",
+                record_count=len(normalized_remote),
+                data_as_of=latest_record_timestamp(normalized_remote),
+            )
+            return normalized_remote, since_date
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin medication doses from Supabase", e)
+    items = read_json_file(MEDICATION_DOSES_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [normalize_medication_dose(item) for item in items]
+    items = [item for item in items if (item.get("scheduledDate") or "") >= since_date]
+    items = items[:limit]
+    record_admin_data_source(
+        "medication_dose_events",
+        "json",
+        record_count=len(items),
+        data_as_of=latest_record_timestamp(items),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return items, since_date
+
+
+def admin_medication_adherence(data=None):
+    """用藥與回診：依從率＋每日趨勢＋需要關心的人（連續漏服）。
+    只講『有沒有照提醒做到』，不做診斷或醫療建議——真正的健康判讀交給家人與醫療團隊。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    items, since_date = load_admin_medication_dose_events(days=days, limit=3000)
+
+    totals = {"scheduled": 0, "taken": 0, "snoozed": 0, "skipped": 0, "missed": 0}
+    daily = {}
+    people = {}
+
+    for item in items:
+        status = item.get("status") or "scheduled"
+        if status in totals:
+            totals[status] += 1
+        date = str(item.get("scheduledDate") or "")[:10]
+        if date:
+            bucket = daily.setdefault(date, {"date": date, "taken": 0, "missed": 0, "skipped": 0})
+            if status in bucket:
+                bucket[status] += 1
+        person_id = item.get("personId") or ""
+        account_id = item.get("accountId") or ""
+        key = person_id or (("account:" + account_id) if account_id else "unknown")
+        person = people.setdefault(key, {
+            "personId": person_id or None,
+            "accountId": account_id or None,
+            "taken": 0, "missed": 0, "skipped": 0,
+            "_days": {},
+        })
+        if status in ("taken", "missed", "skipped"):
+            person[status] += 1
+        if date:
+            day = person["_days"].setdefault(date, {"taken": 0, "missed": 0, "skipped": 0})
+            if status in day:
+                day[status] += 1
+
+    daily_list = [daily[d] for d in sorted(daily.keys())]
+
+    person_ids = [p.get("personId") for p in people.values() if p.get("personId")]
+    display_names = {}
+    try:
+        backend = data_backend()
+        if backend.enabled() and person_ids:
+            display_names = backend.load_persons_by_ids(person_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load person display names for medication adherence", e)
+
+    people_list = []
+    for entry in people.values():
+        day_map = entry.pop("_days")
+        streak = 0
+        for dt in sorted(day_map.keys(), reverse=True):
+            day = day_map[dt]
+            if day["taken"] > 0 or day["skipped"] > 0:
+                break
+            if day["missed"] > 0:
+                streak += 1
+                continue
+            # 全是還沒到期的 scheduled/snoozed：不算、也不打斷連續漏服計算
+        entry["missedStreak"] = streak
+        entry["adherenceRate"] = _dose_adherence_rate(entry["taken"], entry["skipped"], entry["missed"])
+        pid = entry.get("personId")
+        if pid and display_names.get(pid):
+            entry["displayName"] = display_names.get(pid)
+        people_list.append(entry)
+
+    def sort_key(p):
+        rate = p.get("adherenceRate")
+        return (-(p.get("missedStreak") or 0), rate if rate is not None else 2)
+
+    people_list.sort(key=sort_key)
+    people_list = people_list[:limit]
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_date,
+        "totals": totals,
+        "adherenceRate": _dose_adherence_rate(totals["taken"], totals["skipped"], totals["missed"]),
+        "daily": daily_list,
+        "people": people_list,
+        "principle": "這裡只看『有沒有照提醒做到』，不做診斷或醫療建議；需要關心請家人直接跟長輩確認或聯繫醫療團隊。",
+        "backend": data_backend_status(),
+    }
+
+
 FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
 
 def feedback_response(data):
@@ -7173,6 +7311,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_contract_response("munea.admin.audit-events.v1", lambda: admin_audit_events_summary(data)))
+            elif self.path == "/admin/medication-adherence":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.medication-adherence.v1", lambda: admin_medication_adherence(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

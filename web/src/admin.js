@@ -9,6 +9,7 @@
     { group: "用戶與守護", items: [
       { id: "users", label: "用戶管理" },
       { id: "safety", label: "安全守護警示", badge: "safety" },
+      { id: "medication", label: "用藥與回診" },
     ]},
     { group: "營收", items: [
       { id: "subscription", label: "訂閱與點數" },
@@ -31,6 +32,7 @@
     subscription: '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
     feedback: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
     records: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    medication: '<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   };
@@ -60,6 +62,7 @@
     privacy: ["/admin/privacy-requests", { limit: 20 }],
     summaries: ["/admin/conversation-summaries", { limit: 20 }],
     audit: ["/admin/audit-events", { limit: 20 }],
+    medication: ["/admin/medication-adherence", { days: 30, limit: 50 }],
   };
 
   const CHART = { teal: "#3AA8A0", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#3A352E", muted: "#5A6963" };
@@ -96,6 +99,7 @@
   const creditsSummary = () => D().credits || {};
   const daily = () => usage().daily || [];
   const ecount = () => usage().eventCounts || {};
+  const medication = () => D().medication || {};
 
   function missingDataMeta(endpointKey){
     return {schema:ADMIN_DATA_META_SCHEMA,metricVersion:"unknown",generatedAt:null,dataAsOf:null,status:"unverified",degraded:true,degradationReasons:["metadata_missing"],freshness:{status:"unknown",reason:"metadata_missing"},sources:[],endpointKey};
@@ -223,6 +227,7 @@
     if (id==="overview") html=renderOverview();
     else if (id==="users") html=renderUsers();
     else if (id==="safety") html=renderSafety();
+    else if (id==="medication") html=renderMedication();
     else if (id==="subscription") html=renderSubscription();
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
@@ -329,6 +334,52 @@
       }).join("")}</div>`);
     }
     html+=principle("危機處理 SOP：① 專員 30 分鐘內確認 → ② 聯繫家庭圈指定聯絡人 → ③ 必要時引導撥打 119／1925 並記錄 → ④ 結案回填。所有紀錄僅授權營運與安全團隊檢視。");
+    return html;
+  }
+
+  function renderMedication(){
+    const m=medication(), t=m.totals||{}, win=m.windowDays||30, rate=m.adherenceRate;
+    const accts=(D().accounts||{}).accounts||[];
+    const acctIndex={}; accts.forEach((a)=>{ if(a.accountId) acctIndex[a.accountId]=a; });
+    const people=(m.people||[]).map((p)=>{
+      const acct=acctIndex[p.accountId]||{};
+      const familyName=(acct.familyGroup||{}).name||"–";
+      const displayName=p.displayName||(acct.primaryPerson||{}).displayName||"長輩";
+      return Object.assign({}, p, { familyName, displayName });
+    });
+    const concerning=people.filter((p)=>(p.missedStreak||0)>=2).length;
+    let html=kpiRow([
+      { label:"依從率", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · 做到 ÷（做到＋跳過＋漏服）`, star:true },
+      { label:"做到次數", value:n(t.taken||0), sub:`近 ${win} 天次數` },
+      { label:"漏服次數", value:n(t.missed||0), sub:`近 ${win} 天次數` },
+      { label:"需要關心", value:n(concerning), sub:"連續漏服 2 天以上", info:"連續兩天以上沒做到提醒的人，建議家人主動關心一下" },
+    ]);
+    html+=principle(m.principle||"這裡只看「有沒有照提醒做到」，不做診斷或醫療建議——真的擔心，請家人直接跟長輩確認或聯繫醫療團隊。");
+    const totalEvents=Object.values(t).reduce((a,b)=>a+(Number(b)||0),0);
+    if(!totalEvents){
+      html+=card("用藥依從率趨勢", `近 ${win} 天每日做到 vs 漏服`, emptyBox("還沒有用藥紀錄——有人開始用提醒後就會出現。"));
+      return html;
+    }
+    const dl=m.daily||[], labels=dl.map((d)=>shortDate(d.date));
+    html+=card("用藥依從率趨勢", `近 ${win} 天每日做到 vs 漏服`, chartMount("md-trend"));
+    pending.push(()=>columnChart($("md-trend"), labels, [
+      { name:"做到", color:cc.teal, values:dl.map((d)=>Math.round(d.taken||0)) },
+      { name:"漏服", color:cc.coral, values:dl.map((d)=>Math.round(d.missed||0)) },
+    ], { empty:"還沒有用藥紀錄——有人開始用提醒後就會出現。" }));
+    const sorted=people.slice().sort((a,b)=>{
+      const streakDiff=(b.missedStreak||0)-(a.missedStreak||0);
+      if(streakDiff) return streakDiff;
+      const ar=a.adherenceRate==null?-1:a.adherenceRate, br=b.adherenceRate==null?-1:b.adherenceRate;
+      return ar-br;
+    });
+    html+=card("用藥名單", "依從率低或連續漏服多的排前面", sorted.length?tableHTML(["長輩","家庭","做到","漏服","依從率","連續漏服"], sorted.map((p)=>[
+      `<b>${esc(p.displayName)}</b>`,
+      esc(p.familyName),
+      n(p.taken||0),
+      n(p.missed||0),
+      p.adherenceRate==null?"–":pct(p.adherenceRate),
+      p.missedStreak?`<span class="pill ${p.missedStreak>=2?"bad":"warn"}">${n(p.missedStreak)} 天</span>`:`<span class="muted">—</span>`,
+    ])):emptyBox("還沒有用藥紀錄——有人開始用提醒後就會出現。"));
     return html;
   }
 

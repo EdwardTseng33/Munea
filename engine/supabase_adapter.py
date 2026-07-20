@@ -513,6 +513,35 @@ class SupabaseAdapter:
             summaries.append(self.admin_account_rows_to_summary(account, family_group, primary_person, memberships, companion))
         return summaries
 
+    def load_admin_medication_doses(self, since_date=None, limit=3000):
+        """後台跨帳號用藥依從率：不依 account_id 篩選、service-role 全表查詢近 N 天服藥事件。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 3000)))
+        filters = {
+            "select": "*",
+            "order": "scheduled_date.desc,updated_at.desc",
+            "limit": str(limit),
+        }
+        if since_date:
+            filters["scheduled_date"] = f"gte.{str(since_date)[:10]}"
+        rows = self._select("medication_dose_events", filters)
+        return [self.medication_dose_row_to_item(row) for row in rows or []]
+
+    def load_persons_by_ids(self, person_ids):
+        """後台名單顯示用：批次查 person display_name（只回顯示名，不含其他個資）。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(pid) for pid in (person_ids or []) if pid and self._is_uuid(str(pid))})
+        if not ids:
+            return {}
+        rows = self._select("persons", {
+            "id": f"in.({','.join(ids)})",
+            "select": "id,display_name",
+            "limit": str(len(ids)),
+        })
+        return {row.get("id"): row.get("display_name") for row in rows or [] if row.get("id")}
+
     def save_app_profile_store(self, store):
         if not self.enabled():
             return None
