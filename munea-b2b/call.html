@@ -9,10 +9,10 @@
 <style>
   :root{
     --frame-w:min(100vw, calc(100dvh * 1080 / 1920));
-    /* FlashHead receives the App portrait crop (0,140,1080,1440) resized to 512x512.
-       Restore that exact rectangle here so generated pixels return to their original coordinates. */
-    --box-left:0%; --box-top:7.291667%; --box-width:100%; --box-height:75%;
-    --feather-top:5.556%; --feather-bottom:9.722%; --feather-side:5.926%;
+    /* Match the production App's native 1080x1080 FlashHead square. The two
+       characters use different source Y offsets; pickChar() sets --box-top. */
+    --box-left:0%; --box-top:9.895833%; --box-width:100%; --box-height:56.25%;
+    --feather-top:4%; --feather-bottom-start:82%;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -27,16 +27,14 @@
   .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .3s;z-index:0}
   .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .28s ease;z-index:2}
   .cover.hide{opacity:0;pointer-events:none}
-  .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:none;z-index:3}
+  .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:opacity .18s linear;z-index:3}
   .overlay.on{opacity:1}
-  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:fill !important;display:block}
+  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:cover !important;display:block}
   .overlay:not(.stream) canvas{display:none}
   .overlay.stream video{display:none}
   .overlay{
-    -webkit-mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
-    -webkit-mask-composite:source-in,source-over;
-    mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
-    mask-composite:intersect;
+    -webkit-mask-image:linear-gradient(to bottom,transparent 0%,black var(--feather-top),black var(--feather-bottom-start),transparent 100%);
+    mask-image:linear-gradient(to bottom,transparent 0%,black var(--feather-top),black var(--feather-bottom-start),transparent 100%);
   }
   .scrim{position:absolute;inset:0;pointer-events:none;z-index:4;background:linear-gradient(to bottom,rgba(24,20,16,.12),transparent 18%,transparent 72%,rgba(22,22,18,.14))}
   .top{position:absolute;left:max(17px, calc((100vw - var(--frame-w))/2 + 17px));right:max(17px, calc((100vw - var(--frame-w))/2 + 17px));top:calc(env(safe-area-inset-top) + 22px);z-index:6;display:flex;justify-content:space-between;align-items:center;gap:12px;text-shadow:0 1px 7px rgba(0,0,0,.48)}
@@ -93,6 +91,7 @@
   .toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 66px);transform:translateX(-50%);z-index:30;background:rgba(226,84,79,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:13.5px;display:none;max-width:88%;text-align:center}
   .toast.show{display:block}
   .toast.soft{background:rgba(29,164,124,.92)}
+  .demo-version{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:6;color:rgba(255,255,255,.58);font-size:9px;font-weight:650;letter-spacing:.04em;text-shadow:0 1px 5px rgba(0,0,0,.48);pointer-events:none}
   @media (min-width:700px){
     .frame{border-radius:28px;box-shadow:0 28px 70px rgba(0,0,0,.45)}
   }
@@ -109,6 +108,7 @@
       <canvas id="faceCanvas" width="512" height="512"></canvas>
     </div>
     <div class="scrim"></div>
+    <div class="demo-version" aria-label="Demo 版本 1.0.1">DEMO 1.0.1</div>
   </div>
 
   <div class="top">
@@ -171,17 +171,9 @@ let CAP_SECONDS = 180;      // 體驗上限（伺服器可調）
 const TEST_LINE = '嗨,你在嗎?我在測試連線。';
 
 const CHARS = {
-  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4' },
-  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4' },
+  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4', overlayTop: '9.895833%' },
+  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4', overlayTop: '10.885417%' },
 };
-const FALLBACK_AVATAR_RENDER_CONTRACT = {
-  version: 'app-flashhead-portrait-v1',
-  canvas: { width: 1080, height: 1920 },
-  source_crop: { x: 0, y: 140, width: 1080, height: 1440 },
-  model_input: { width: 512, height: 512 },
-  fit: 'fill',
-};
-let avatarRenderContract = FALLBACK_AVATAR_RENDER_CONTRACT;
 let curChar = 'a05';
 
 const $ = s => document.querySelector(s);
@@ -200,26 +192,18 @@ const showDbg = qs.has('debug');
 const nomic = qs.has('nomic');
 if (showDbg) $('#dbg').classList.add('show');
 
-function applyAvatarRenderContract(raw){
-  const c = raw || FALLBACK_AVATAR_RENDER_CONTRACT;
-  const canvas = c.canvas || {};
-  const crop = c.source_crop || {};
-  const cw = Number(canvas.width), ch = Number(canvas.height);
-  const x = Number(crop.x), y = Number(crop.y), w = Number(crop.width), h = Number(crop.height);
-  const valid = [cw,ch,x,y,w,h].every(Number.isFinite) && cw > 0 && ch > 0 && w > 0 && h > 0 &&
-    x >= 0 && y >= 0 && x + w <= cw && y + h <= ch && c.fit === 'fill';
-  if (!valid) throw new Error('invalid avatar render contract');
-  avatarRenderContract = c;
+function applyAvatarRenderContract(){
+  const c = CHARS[curChar];
   const root = document.documentElement.style;
-  root.setProperty('--box-left', (x / cw * 100) + '%');
-  root.setProperty('--box-top', (y / ch * 100) + '%');
-  root.setProperty('--box-width', (w / cw * 100) + '%');
-  root.setProperty('--box-height', (h / ch * 100) + '%');
-  faceVid.style.objectFit = c.fit;
-  faceCanvas.style.objectFit = c.fit;
-  try{ dbgLine('[contract] ' + c.version + ' crop=' + [x,y,w,h].join(',')); }catch(e){}
+  root.setProperty('--box-left', '0%');
+  root.setProperty('--box-top', c.overlayTop);
+  root.setProperty('--box-width', '100%');
+  root.setProperty('--box-height', '56.25%');
+  faceVid.style.objectFit = 'cover';
+  faceCanvas.style.objectFit = 'cover';
+  try{ dbgLine('[contract] app square char=' + curChar + ' top=' + c.overlayTop); }catch(e){}
 }
-applyAvatarRenderContract(FALLBACK_AVATAR_RENDER_CONTRACT);
+applyAvatarRenderContract();
 
 /* ===== 錯誤全部 surface（沿用真機測試版作法） ===== */
 window.__flashheadStats = { round: 0, roundTimes: [], vidFrames: 0, audioBytes: 0, switchMs: null, err: '' };
@@ -418,6 +402,7 @@ function pickChar(c){
   $('#charA06').classList.toggle('on', c==='a06');
   bgImg.src = CHARS[c].bg;
   chName.textContent = CHARS[c].label;
+  applyAvatarRenderContract();
   IdleMotion.start();
 }
 </script>
@@ -445,7 +430,7 @@ function prewarm(){
   if (!AVATAR_HTTP || !AVATAR_TOKEN) return;
   if (avatarPrewarmPromise) return avatarPrewarmPromise;
   avatarPrewarmPromise = fetch(AVATAR_HTTP + '/health?token=' + encodeURIComponent(AVATAR_TOKEN)).then(r=>r.json()).then(j=>{
-    if (j.avatar_render_contract) applyAvatarRenderContract(j.avatar_render_contract);
+    applyAvatarRenderContract();
     dbgLine('[prewarm] health ok engine=' + j.engine + ' uptime_s=' + (j.uptime_s!=null?j.uptime_s:'?'));
     return true;
   }).catch(e=>{
@@ -484,7 +469,8 @@ gateInput.addEventListener('keydown', e=>{ if (e.key === 'Enter') tryGate(); });
 <script>
 /* ===== 臉+聲音（同一條 WebRTC）——沿用 2026-07-10/11 真機修正史，勿隨意改動 ===== */
 const Face = {
-  pc:null, ws:null, on:false, _playGen:0,
+  pc:null, ws:null, on:false, _playGen:0, _renderStream:null,
+  _audioReceiver:null, _videoReady:false,
   iceServers(forceRelay){
     const credentials = { username:'muneaturn', credential:'munea-turn-a7k2q' };
     if (forceRelay) {
@@ -539,7 +525,9 @@ const Face = {
         stats.forEach(r=>{ if (r.type === 'inbound-rtp' && r.kind === 'video') frames = Math.max(frames, r.framesDecoded || 0); });
       }catch(e){}
       if (baseline === -1){ baseline = frames; baselineAt = performance.now(); }
-      else if (frames - baseline >= 3 && performance.now() - baselineAt >= 220){
+      // Do not reveal the encoder's first low-quality ramp frames. At 25 FPS,
+      // 18 decoded frames is roughly 0.7s of H.264/bitrate warm-up.
+      else if (frames - baseline >= 18 && performance.now() - baselineAt >= 700){
         dbgLine('[face] stable frames after ' + Math.round(performance.now()-started) + 'ms');
         return true;
       }
@@ -584,6 +572,13 @@ Face._attempt = async function(char, forceRelay){
   if (forceRelay) cfg.iceTransportPolicy = 'relay';
   const pc = new RTCPeerConnection(cfg);
   this.pc = pc;
+  this._renderStream = new MediaStream();
+  this._audioReceiver = null;
+  this._videoReady = false;
+  faceVid.srcObject = this._renderStream;
+  // Keep the proven App behavior: warm both remote tracks while muted, then
+  // reveal/unmute only after the shared opening path has settled.
+  faceVid.muted = true;
   pc.addTransceiver('video', { direction:'recvonly' });
   pc.addTransceiver('audio', { direction:'recvonly' });
   pc.onicecandidate = e => {
@@ -596,9 +591,15 @@ Face._attempt = async function(char, forceRelay){
   };
   pc.ontrack = e => {
     dbgLine('[face] ontrack kind=' + e.track.kind);
-    if (e.track.kind !== 'video') return;
-    faceVid.srcObject = e.streams[0];
-    faceVid.muted = false;
+    // Ported from the App's verified same-line path. Browsers do not promise
+    // that audio/video ontrack events expose the same MediaStream object.
+    // Explicitly merge both tracks so one media element owns one A/V clock.
+    if (!this._renderStream) this._renderStream = new MediaStream();
+    if (e.track && !this._renderStream.getTracks().some(track => track.id === e.track.id)) {
+      this._renderStream.addTrack(e.track);
+    }
+    if (faceVid.srcObject !== this._renderStream) faceVid.srcObject = this._renderStream;
+    if (e.track.kind === 'audio') this._audioReceiver = e.receiver;
     this._tryPlay();
     /* 2026-07-18 卡西法：掀開真臉框／停待機動畫延後到偵測到「幀率已穩定」才做（見下方
        waitForStableFrames + _attempt 內呼叫處）——接通瞬間只等到第一幀就掀開，掀開的常常
@@ -635,9 +636,9 @@ Face._attempt = async function(char, forceRelay){
     ok = await this.waitForFirstFrame(pc, 5000);
     dbgLine('[face] first video frame=' + ok);
     if (ok){
-      await this.waitForStableFrames(pc, 1200);
-      overlay.classList.add('on');
-      IdleMotion.stop();
+      await this.waitForStableFrames(pc, 1600);
+      this._videoReady = true;
+      dbgLine('[face] video path stable; keep idle cover until A/V warm-up completes');
     }
   }
   const diag = await collectPcDiag(pc);
@@ -704,26 +705,31 @@ Face.start = async function(char){
   // Production demo uses the same WebRTC path as the app. Keep the old frame
   // stream path only as an explicit diagnostic fallback.
   if (qs.has('stream')) return this.startStream(char);
+  this.transport = 'webrtc';
   this.on = false;
   Face._diagAttempts = [];
+  // Match the App: direct/STUN first with Taiwan TURN as the automatic fallback.
+  // `?debug=1&relay=1` remains available for controlled network A/B checks.
+  const relayFirst = showDbg && qs.has('relay');
   let ok = false;
-  try{ ok = await this._attempt(char, false); }
+  try{ ok = await this._attempt(char, relayFirst); }
   catch(e){
     dbgLine('[face] first attempt threw: ' + (e && e.message || e));
     const diag = await collectPcDiag(this.pc);
-    Face._diagAttempts.push({ forceRelay:false, ok:false, threw:(e&&e.message)||String(e), diag });
+    Face._diagAttempts.push({ forceRelay:relayFirst, ok:false, threw:(e&&e.message)||String(e), diag });
   }
   if (!ok) {
-    dbgLine('[face] direct/STUN attempt failed or timed out -> retry forcing TURN relay');
-    setStatus('直連逾時，改走中繼重試…', true);
+    const fallbackRelay = !relayFirst;
+    dbgLine('[face] first network path failed -> retry forceRelay=' + fallbackRelay);
+    setStatus(fallbackRelay ? '直連逾時，改走中繼重試…' : '中繼逾時，改走直連重試…', true);
     try{ if (this.pc) this.pc.close(); }catch(e){}
     await new Promise(r => setTimeout(r, 350));
     let ok2 = false;
-    try{ ok2 = await this._attempt(char, true); }
+    try{ ok2 = await this._attempt(char, fallbackRelay); }
     catch(e){
       dbgLine('[face] relay attempt threw: ' + (e && e.message || e));
       const diag = await collectPcDiag(this.pc);
-      Face._diagAttempts.push({ forceRelay:true, ok:false, threw:(e&&e.message)||String(e), diag });
+      Face._diagAttempts.push({ forceRelay:fallbackRelay, ok:false, threw:(e&&e.message)||String(e), diag });
     }
     if (!ok2) {
       try{ if (this.pc) this.pc.close(); }catch(e){}
@@ -734,6 +740,14 @@ Face.start = async function(char){
   setStatus('視訊就緒，接聲音線…', true);
   this.ws = new WebSocket(AVATAR_HTTP.replace(/^http/,'ws') + '/audio?token=' + encodeURIComponent(AVATAR_TOKEN));
   this.ws.binaryType = 'arraybuffer';
+  this.ws.onmessage = ev=>{
+    if (typeof ev.data !== 'string') return;
+    let msg; try{ msg = JSON.parse(ev.data); }catch(e){ return; }
+    if (msg.type === 'playout_start') {
+      dbgLine('[face] server playout start generation=' + msg.generation);
+      Live.releaseLocalPlayout();
+    }
+  };
   this.on = true;
   const wsOk = await new Promise((res)=>{
     let done=false;
@@ -742,6 +756,34 @@ Face.start = async function(char){
     setTimeout(()=>{ if(!done){done=true; dbgLine('[face] audio ws open timeout, keep going'); res(false);} }, 4000);
   });
   dbgLine('[face] connected char=' + char + ' audio_ws_ok=' + wsOk);
+  return true;
+};
+Face.prepareOpeningPath = async function(){
+  if (this.transport !== 'webrtc') return true;
+  if (!this._videoReady || !this._audioReceiver) {
+    throw new Error('影音雙軌尚未就緒');
+  }
+  setStatus('正在穩定影音…');
+  setHintText('畫面保持待機，完成後自動接通');
+  dbgLine('[face] opening A/V warm-up start');
+  faceVid.muted = true;
+  this._tryPlay();
+  // Same technique as the App: a private one-second silent turn warms the
+  // 640 model, encoder, WebRTC jitter buffer and remote audio renderer before
+  // the greeting. It never reaches Voice/Gemini and is never audible.
+  this.reset();
+  this.feed(new Int16Array(24000).buffer);
+  this.finish();
+  await new Promise(resolve => setTimeout(resolve, 3200));
+  this.reset();
+  if (!this.on) throw new Error('影音暖機期間連線中斷');
+  overlay.classList.add('on');
+  IdleMotion.stop();
+  // Voice audio is played locally from the reliable Taiwan WebSocket after the
+  // RunPod playout marker. Keep the lossy trans-Pacific WebRTC audio muted.
+  faceVid.muted = true;
+  this._tryPlay();
+  dbgLine('[face] opening A/V warm-up complete; one player owns both tracks');
   return true;
 };
 Face.feed = function(buf){
@@ -768,6 +810,9 @@ Face.stop = function(){
   try{ if (this.ws) this.ws.close(); }catch(e){}
   try{ if (this.pc) this.pc.close(); }catch(e){}
   this.stream = this.ws = this.pc = null;
+  this._renderStream = null;
+  this._audioReceiver = null;
+  this._videoReady = false;
   this.transport = null;
   overlay.classList.remove('on','stream');
   faceVid.srcObject = null;
@@ -789,6 +834,7 @@ async function collectPeriodicStats(){
           concealedSamples: r.concealedSamples, concealmentEvents: r.concealmentEvents,
           jitterBufferDelay: r.jitterBufferDelay, jitterBufferEmittedCount: r.jitterBufferEmittedCount,
           packetsLost: r.packetsLost, packetsReceived: r.packetsReceived, jitter: r.jitter,
+          bytesReceived: r.bytesReceived,
           totalSamplesReceived: r.totalSamplesReceived,
           insertedSamplesForDeceleration: r.insertedSamplesForDeceleration,
           removedSamplesForAcceleration: r.removedSamplesForAcceleration,
@@ -797,7 +843,11 @@ async function collectPeriodicStats(){
         out.video = {
           freezeCount: r.freezeCount, totalFreezesDuration: r.totalFreezesDuration,
           framesDropped: r.framesDropped, framesDecoded: r.framesDecoded, framesReceived: r.framesReceived,
-          packetsLost: r.packetsLost, jitter: r.jitter,
+          frameWidth: r.frameWidth, frameHeight: r.frameHeight, framesPerSecond: r.framesPerSecond,
+          bytesReceived: r.bytesReceived, totalDecodeTime: r.totalDecodeTime,
+          keyFramesDecoded: r.keyFramesDecoded, qpSum: r.qpSum,
+          nackCount: r.nackCount, pliCount: r.pliCount, firCount: r.firCount,
+          packetsLost: r.packetsLost, packetsReceived: r.packetsReceived, jitter: r.jitter,
         };
       } else if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated){
         out.rtt = r.currentRoundTripTime != null ? Math.round(r.currentRoundTripTime * 1000) : null;
@@ -829,7 +879,7 @@ function stopPeriodicStats(){ if (_statsTimer){ clearInterval(_statsTimer); _sta
 </script>
 <script>
 const Live = {
-  ws:null, ac:null, playCtx:null, playHead:0, playSources:[], mic:null, proc:null, on:false, micLevel:0, speaking:false, _spkT:null, _activated:false,
+  ws:null, ac:null, playCtx:null, playHead:0, playSources:[], _pendingPcm:[], _localPlayoutOn:false, mic:null, proc:null, on:false, micLevel:0, speaking:false, _spkT:null, _activated:false,
   _f2i(f){ const b=new Int16Array(f.length); for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i])); b[i]=s<0?s*0x8000:s*0x7fff;} return b; },
   _down(buf,inR,outR){ if(outR>=inR)return buf; const r=inR/outR,len=Math.round(buf.length/r),o=new Float32Array(len);
     let i=0,j=0; while(j<len){const n=Math.round((j+1)*r);let s=0,c=0;for(;i<n&&i<buf.length;i++){s+=buf[i];c++;}o[j++]=c?s/c:0;} return o; },
@@ -841,7 +891,13 @@ const Live = {
     }catch(e){ dbgLine('[voice] playback prime failed: ' + e.message); return false; }
   },
   playPcm(buf){
-    if (Face.transport !== 'stream') return;
+    if (Face.transport === 'webrtc' && !this._localPlayoutOn){
+      this._pendingPcm.push(buf.slice(0));
+      return;
+    }
+    this._schedulePcm(buf, Face.transport === 'stream' ? 0.82 : 0.02);
+  },
+  _schedulePcm(buf, initialDelay){
     if (!this.playCtx && !this.primePlayback()) return;
     const i16 = new Int16Array(buf), f32 = new Float32Array(i16.length);
     for (let i=0;i<i16.length;i++) f32[i] = i16[i] / 0x8000;
@@ -850,15 +906,23 @@ const Live = {
     const src = this.playCtx.createBufferSource();
     src.buffer = audio; src.connect(this.playCtx.destination);
     const now = this.playCtx.currentTime;
-    this.playHead = Math.max(this.playHead || 0, now + (this.playHead > now ? 0.03 : 0.82));
+    this.playHead = Math.max(this.playHead || 0, now + (this.playHead > now ? 0.03 : initialDelay));
     src.start(this.playHead);
     this.playHead += audio.duration;
     this.playSources.push(src);
     src.onended = ()=>{ const i=this.playSources.indexOf(src); if(i>=0)this.playSources.splice(i,1); };
   },
+  releaseLocalPlayout(){
+    if (Face.transport !== 'webrtc' || this._localPlayoutOn) return;
+    this._localPlayoutOn = true;
+    const pending = this._pendingPcm.splice(0);
+    for (const pcm of pending) this._schedulePcm(pcm, 0.02);
+  },
   stopPlayback(){
     for (const src of this.playSources.splice(0)){ try{ src.stop(); }catch(e){} }
     this.playHead = 0;
+    this._pendingPcm = [];
+    this._localPlayoutOn = false;
   },
   sendTestLine(){ try{ if (this.ws && this.ws.readyState===1) this.ws.send(JSON.stringify({type:'text', text: TEST_LINE})); dbgLine('[voice] nomic test line sent'); }catch(e){} },
   activate(){
@@ -948,7 +1012,11 @@ Live.start = async function(char){
         }
         return;
       }
-      if (!this._turnT0) this._turnT0 = performance.now();
+      if (!this._turnT0){
+        this._turnT0 = performance.now();
+        this._pendingPcm = [];
+        this._localPlayoutOn = Face.transport !== 'webrtc';
+      }
       clearTimeout(this._micReopenT);
       window.__flashheadStats.audioBytes += ev.data.byteLength || 0;
       Face.feed(ev.data);
@@ -1101,6 +1169,8 @@ async function attemptConnect(tryNo){
     if (!onCall) return;
     if (!voiceOk) throw new Error('語音線沒接上');
     if (!faceOk) throw new Error('臉線沒接上');
+    await Face.prepareOpeningPath();
+    if (!onCall) return;
     if (!Live.activate()) throw new Error('語音線無法開始對話');
     dbgLine('[dial] readiness gate passed total_ms=' + Math.round(performance.now() - connectT0));
     stage.classList.add('connected');

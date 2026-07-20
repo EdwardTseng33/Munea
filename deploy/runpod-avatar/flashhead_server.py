@@ -685,6 +685,24 @@ class FlashHead:
                 return
             await ws.accept()
             print("[audio] connected session=" + session[:8] + " slot" + str(slot.index), flush=True)
+            notifier_stop = asyncio.Event()
+
+            async def _notify_playout_start():
+                last_generation = slot.audio_out.playout_marker()[0]
+                while not notifier_stop.is_set():
+                    generation, release_ts = slot.audio_out.playout_marker()
+                    if generation > last_generation and release_ts != float("inf"):
+                        delay = max(0.0, release_ts - time.time())
+                        if delay:
+                            await asyncio.sleep(delay)
+                        current_generation, current_release_ts = slot.audio_out.playout_marker()
+                        if current_generation == generation and time.time() >= current_release_ts:
+                            await ws.send_json({"type": "playout_start", "generation": generation})
+                            last_generation = generation
+                            continue
+                    await asyncio.sleep(0.01)
+
+            notifier_task = asyncio.create_task(_notify_playout_start())
             try:
                 while True:
                     msg = await ws.receive()
@@ -698,6 +716,13 @@ class FlashHead:
                         break
             except WebSocketDisconnect:
                 pass
+            finally:
+                notifier_stop.set()
+                notifier_task.cancel()
+                try:
+                    await notifier_task
+                except (asyncio.CancelledError, WebSocketDisconnect):
+                    pass
             print("[audio] closed session=" + session[:8] + " slot" + str(slot.index), flush=True)
 
         return api
