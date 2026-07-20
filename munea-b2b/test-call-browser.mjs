@@ -346,7 +346,8 @@ try {
 process.stdout.write(`${JSON.stringify({ target, result, consoleErrors: consoleLines.filter(line => /error|failed/i.test(line)) }, null, 2)}\n`);
 
 const idleFailed = captureIdle && (!result || result.selectedChar !== testChar || result.status !== '未在線' || !result.controls || !result.controlInteractions?.captionOn || !result.controlInteractions?.micOff || !/-hello\.mp4(?:$|\?)/.test(result.controlInteractions?.helloSrc || '') || !/-idle\.mp4(?:$|\?)/.test(result.controlInteractions?.idleSrc || ''));
-const geometryFailed = !result?.overlayGeometry || Math.abs(result.overlayGeometry.topPct - 9.895833) > 0.1 || Math.abs(result.overlayGeometry.heightPct - 56.25) > 0.1 || result.overlayGeometry.objectFit !== 'cover';
+// 展示間走自己的實驗格（demo-*），不再跟正式 App 的 a05/a06 共用約定——2026-07-21 分家。
+const geometryFailed = !result?.overlayGeometry || result?.avatarRenderContract?.version !== 'demo-flashhead-portrait-v1' || Math.abs(result.overlayGeometry.topPct - 7.291667) > 0.1 || Math.abs(result.overlayGeometry.heightPct - 75) > 0.1 || result.overlayGeometry.objectFit !== 'fill';
 const timeline = result?.mockConnectTimeline || [];
 const at = event => timeline.find(item => item.event === event)?.at;
 const parallelFailed = mockConnect && (!(at('wake_ready') <= at('voice_start')) || !(at('wake_ready') <= at('face_start')) || Math.abs(at('voice_start') - at('face_start')) > 100 || !(at('voice_ready') <= at('av_warmup_start')) || !(at('face_ready') <= at('av_warmup_start')) || !(at('av_warmup_start') < at('av_warmup_ready')) || result?.voiceActivated !== true);

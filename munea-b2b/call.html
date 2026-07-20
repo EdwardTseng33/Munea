@@ -170,10 +170,22 @@ let VOICE_WS_BASE = null;
 let CAP_SECONDS = 180;      // 體驗上限（伺服器可調）
 const TEST_LINE = '嗨,你在嗎?我在測試連線。';
 
+/* 展示間跟正式 App 分家（2026-07-21）：faceCode 帶 d = 臉引擎的「實驗格」條件圖。
+   這裡怎麼改裁切、怎麼試高解析度，都動不到正式 App 的 a05/a06。
+   voice 那條線照舊用中文角色名，跟臉的代號無關。 */
 const CHARS = {
-  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4', overlayTop: '9.895833%' },
-  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4', overlayTop: '10.885417%' },
+  a05: { faceChar: '寧寧', faceCode: 'a05d', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4' },
+  a06: { faceChar: '阿原', faceCode: 'a06d', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4' },
 };
+function faceCodeFor(c){ return (CHARS[c] && CHARS[c].faceCode) || c; }
+const FALLBACK_AVATAR_RENDER_CONTRACT = {
+  version: 'demo-flashhead-portrait-v1',
+  canvas: { width: 1080, height: 1920 },
+  source_crop: { x: 0, y: 140, width: 1080, height: 1440 },
+  model_input: { width: 512, height: 512 },
+  fit: 'fill',
+};
+let avatarRenderContract = FALLBACK_AVATAR_RENDER_CONTRACT;
 let curChar = 'a05';
 
 const $ = s => document.querySelector(s);
@@ -192,18 +204,26 @@ const showDbg = qs.has('debug');
 const nomic = qs.has('nomic');
 if (showDbg) $('#dbg').classList.add('show');
 
-function applyAvatarRenderContract(){
-  const c = CHARS[curChar];
+function applyAvatarRenderContract(raw){
+  const c = raw || FALLBACK_AVATAR_RENDER_CONTRACT;
+  const canvas = c.canvas || {};
+  const crop = c.source_crop || {};
+  const cw = Number(canvas.width), ch = Number(canvas.height);
+  const x = Number(crop.x), y = Number(crop.y), w = Number(crop.width), h = Number(crop.height);
+  const valid = [cw,ch,x,y,w,h].every(Number.isFinite) && cw > 0 && ch > 0 && w > 0 && h > 0 &&
+    x >= 0 && y >= 0 && x + w <= cw && y + h <= ch && c.fit === 'fill';
+  if (!valid) throw new Error('invalid avatar render contract');
+  avatarRenderContract = c;
   const root = document.documentElement.style;
-  root.setProperty('--box-left', '0%');
-  root.setProperty('--box-top', c.overlayTop);
-  root.setProperty('--box-width', '100%');
-  root.setProperty('--box-height', '56.25%');
-  faceVid.style.objectFit = 'cover';
-  faceCanvas.style.objectFit = 'cover';
-  try{ dbgLine('[contract] app square char=' + curChar + ' top=' + c.overlayTop); }catch(e){}
+  root.setProperty('--box-left', (x / cw * 100) + '%');
+  root.setProperty('--box-top', (y / ch * 100) + '%');
+  root.setProperty('--box-width', (w / cw * 100) + '%');
+  root.setProperty('--box-height', (h / ch * 100) + '%');
+  faceVid.style.objectFit = c.fit;
+  faceCanvas.style.objectFit = c.fit;
+  try{ dbgLine('[contract] ' + c.version + ' crop=' + [x,y,w,h].join(',')); }catch(e){}
 }
-applyAvatarRenderContract();
+applyAvatarRenderContract(FALLBACK_AVATAR_RENDER_CONTRACT);
 
 /* ===== 錯誤全部 surface（沿用真機測試版作法） ===== */
 window.__flashheadStats = { round: 0, roundTimes: [], vidFrames: 0, audioBytes: 0, switchMs: null, err: '' };
@@ -1164,7 +1184,7 @@ async function attemptConnect(tryNo){
       setStatus('撥號中…'); setHintText('正在接通，稍等一下');
     }
     const voicePromise = withTimeout(Live.start(CHARS[curChar].faceChar), 60000, '語音線建立整體');
-    const facePromise = withTimeout(Face.start(curChar), 65000, '臉線建立整體');
+    const facePromise = withTimeout(Face.start(faceCodeFor(curChar)), 65000, '臉線建立整體');
     const [voiceOk, faceOk] = await Promise.all([voicePromise, facePromise]);
     if (!onCall) return;
     if (!voiceOk) throw new Error('語音線沒接上');
