@@ -11,6 +11,7 @@
     "smoke:staging": "powershell -ExecutionPolicy Bypass -File scripts/staging-smoke.ps1",
     "smoke:staging:auth": "powershell -ExecutionPolicy Bypass -File scripts/staging-auth-smoke.ps1",
     "smoke:status": "powershell -ExecutionPolicy Bypass -File scripts/smoke-status.ps1",
+    "service:slo:cloud": "node scripts/cloud-monitoring-slo-report.mjs",
     "test:seo": "node scripts/test-app-site-seo.js",
     "test:hosting": "npm run test:seo && npx firebase-tools@15.23.0 emulators:exec --only hosting \"node scripts/test-firebase-hosting-live.js\"",
     "hosting:serve": "npx firebase-tools@15.23.0 emulators:start --only hosting",

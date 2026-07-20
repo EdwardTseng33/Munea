@@ -142,10 +142,19 @@ expect(avatarServer.includes('OPENING_PREBUFFER_S = 1.0') && avatarServer.includ
   'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
-expect(voiceServer.includes('tools = [_LIVE_LOOKUP_TOOL]') &&
+const liveConfigStart = voiceServer.indexOf('def live_config(');
+const liveConfigEnd = voiceServer.indexOf('async def search_current_information(', liveConfigStart + 1);
+const liveConfig = voiceServer.slice(liveConfigStart, liveConfigEnd);
+expect(liveConfigStart >= 0 && liveConfigEnd > liveConfigStart &&
+  liveConfig.includes('tools = []') &&
+  liveConfig.includes('if live_lookup_enabled():') &&
+  liveConfig.includes('tools.append(_LIVE_LOOKUP_TOOL)') &&
+  liveConfig.includes('tools=tools') &&
+  !liveConfig.includes('google_search=types.GoogleSearch()') &&
+  voiceServer.includes('name=live_lookup.TOOL_NAME') &&
   voiceServer.includes('if function_name == live_lookup.TOOL_NAME') &&
   voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
-  'current-information lookup can still bypass the controlled Voice tool path');
+  'current-information lookup can still bypass the feature-gated controlled Voice tool path');
 const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
 expect(lookupFlow.indexOf('await _send_lookup_cue()') >= 0 &&
   lookupFlow.indexOf('await _send_lookup_cue()') < lookupFlow.indexOf('search_current_information(_cli') &&

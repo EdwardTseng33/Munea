@@ -51,6 +51,17 @@ PACKAGED_AUTH_JS_PATH="$APP_PATH/public/src/auth.js"
 PRIVACY_MANIFEST_PATH="$APP_PATH/PrivacyInfo.xcprivacy"
 PRIVACY_DATA_TYPE_COUNT="$(plutil -extract NSPrivacyCollectedDataTypes raw "$PRIVACY_MANIFEST_PATH" 2>/dev/null || echo 0)"
 
+for relative_path in \
+  "admin.html" \
+  "flashhead-live-test.html" \
+  "src/admin.js" \
+  "src/admin.css"; do
+  if [ -e "$APP_PATH/public/$relative_path" ]; then
+    echo "FAIL exported IPA contains non-App web tooling: $relative_path"
+    exit 1
+  fi
+done
+
 codesign --verify --deep --strict "$APP_PATH"
 ENTITLEMENTS="$(codesign -d --entitlements - "$APP_PATH" 2>&1)"
 
@@ -160,6 +171,7 @@ if [ "$DEVICE_FAMILIES" != '[1]' ]; then
 fi
 
 echo "PASS IPA excludes development fixtures and contains the latest Web and authentication assets."
+echo "PASS IPA excludes cloud admin and FlashHead test assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS IPA app.js is pinned to production Brain/Voice/Call-control endpoints with no staging leak."
