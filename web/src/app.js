@@ -4839,8 +4839,9 @@ async function connectCall() {
         // 正式用戶（非開發者旁路）完全不受影響，0 點依然照擋。
         if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');
       }
-      setCallPreflightPending(true, '正在安排通話…');
-      setCallHint('正在安排語音與影像席位…', true);
+      // 撥號中就是撥號中：不把「安排通話／安排席位」這種後台調度字眼推到畫面上，
+      // 按鈕與字幕一路維持「連線中…」直到真的進入撥號（Edward 2026-07-20 拍板）。
+      setCallPreflightPending(true);
       voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
       if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
@@ -4899,7 +4900,7 @@ async function connectCall() {
       _activationInFlight = true;
       try {
         voiceCallMark('gateway_activation_wait', 'pass');
-        setCallHint(developmentDirectCall ? '開發測試管線已就緒…' : '語音與影像已就緒，正在完成安全接通…', true);
+        setCallHint(developmentDirectCall ? '開發測試管線已就緒…' : '連線中…', true);
         if (!developmentDirectCall) await CallControl.waitUntilActive(15000);
       } catch (e) {
         voiceCallFail('gateway_activation', e);
