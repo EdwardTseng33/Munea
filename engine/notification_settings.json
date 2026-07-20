@@ -8,7 +8,7 @@
       "family": true,
       "safety": false
     },
-    "updatedAt": "2026-07-20T18:19:06Z"
+    "updatedAt": "2026-07-20T18:33:38Z"
   },
   "family-1": {
     "personId": "family-1",
@@ -19,7 +19,7 @@
       "family": true,
       "safety": true
     },
-    "updatedAt": "2026-07-20T18:19:06Z"
+    "updatedAt": "2026-07-20T18:33:38Z"
   },
   "local-person-self": {
     "personId": "local-person-self",
@@ -30,7 +30,7 @@
       "family": true,
       "safety": true
     },
-    "updatedAt": "2026-07-20T18:19:06Z"
+    "updatedAt": "2026-07-20T18:33:38Z"
   },
   "person-y": {
     "personId": "person-y",
@@ -41,6 +41,6 @@
       "family": true,
       "safety": true
     },
-    "updatedAt": "2026-07-20T18:19:06Z"
+    "updatedAt": "2026-07-20T18:33:38Z"
   }
 }

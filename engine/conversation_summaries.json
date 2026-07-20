@@ -1,6 +1,6 @@
 [
   {
-    "id": "local-conversation-summary-f73cc5f2a2",
+    "id": "local-conversation-summary-4859b9ba2e",
     "accountId": "local-account",
     "personId": "local-person-self",
     "voiceSessionId": "live-9",
@@ -9,7 +9,7 @@
       "news_current_affairs"
     ],
     "safetyRelevant": false,
-    "createdAt": "2026-07-20T18:19:11Z",
+    "createdAt": "2026-07-20T18:33:42Z",
     "deletedAt": null,
     "privacy": {
       "storesRawTranscriptByDefault": false,
