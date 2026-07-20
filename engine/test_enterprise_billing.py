@@ -20,8 +20,13 @@ os.environ["MUNEA_ENTERPRISE_INVOICES_PATH"] = os.path.join(_TMP, "enterprise_in
 os.environ["MUNEA_ENTERPRISE_CLIENTS_PATH"] = os.path.join(_TMP, "enterprise_clients_store.json")
 os.environ["MUNEA_ENTERPRISE_SEATS_PATH"] = os.path.join(_TMP, "enterprise_seats_store.json")
 os.environ["MUNEA_ENTERPRISE_SEAT_EVENTS_PATH"] = os.path.join(_TMP, "enterprise_seat_events_store.json")
+# 故意指到一個不存在的檔案：get_billing_settings() 讀不到本地備援時回「核心欄位皆空」，
+# 剛好符合大部分測試想要的預設狀態（尚未設定）；要測「已設定」的情境時用 settings= 注入，
+# 不用真的寫這個檔案。
+os.environ["MUNEA_ENTERPRISE_BILLING_SETTINGS_PATH"] = os.path.join(_TMP, "enterprise_billing_settings_store.json")
 sys.path.insert(0, os.path.dirname(__file__))
 
+import enterprise_seats  # noqa: E402
 import enterprise_billing as eb  # noqa: E402
 
 
@@ -716,6 +721,146 @@ class InvoiceSupabaseFieldRoundTripTests(unittest.TestCase):
         row = eb._invoice_item_to_supabase_row(draft)
         self.assertEqual(row["paid_amount_twd"], 0)
         self.assertIsNotNone(row["paid_amount_twd"])
+
+
+
+def make_billing_settings(**overrides):
+    """需求單二次補充（2026-07-20）：開票方／收款帳戶設定，跟 enterprise_seats.py
+    normalize_billing_settings() 走同一套 camelCase 欄位，確保跟真實資料路徑形狀一致。"""
+    payload = {
+        "issuerCompanyName": "借用抬頭股份有限公司",
+        "issuerTaxId": "87654321",
+        "issuerAddress": "台北市大安區借用路 99 號",
+        "issuerPhone": "02-1234-5678",
+        "issuerContactName": "陳小華",
+        "bankName": "測試銀行",
+        "bankBranch": "測試分行",
+        "bankAccountName": "借用抬頭股份有限公司",
+        "bankAccountNo": "1234567890123",
+        "paymentTermsDays": 15,
+        "invoiceFooterNote": "本單為代收轉付性質，如有疑問請洽窗口。",
+    }
+    payload.update(overrides)
+    return enterprise_seats.normalize_billing_settings(payload)
+
+
+class ComputeDueDateSettingsTests(unittest.TestCase):
+    """付款期限可由後台 paymentTermsDays 設定，讀不到／無效值退回 15。"""
+
+    def test_default_still_15_days_when_no_override_given(self):
+        _, period_end = JULY
+        self.assertEqual(eb.compute_due_date(period_end), date(2026, 8, 15))
+
+    def test_custom_payment_terms_days_is_respected(self):
+        _, period_end = JULY
+        self.assertEqual(eb.compute_due_date(period_end, 30), date(2026, 8, 30))
+
+    def test_invalid_payment_terms_days_falls_back_to_default(self):
+        _, period_end = JULY
+        for bad_value in (None, 0, -5, "15", 15.5, True):
+            with self.subTest(bad_value=bad_value):
+                self.assertEqual(eb.compute_due_date(period_end, bad_value), date(2026, 8, 15))
+
+
+class BuildInvoiceDraftUsesSettingsTests(unittest.TestCase):
+    """build_invoice_draft() 用注入的 settings 算 dueDate，不用重新查一次。"""
+
+    def test_due_date_follows_injected_payment_terms_days(self):
+        period_start, period_end = JULY
+        client = make_client(unitPriceTwd=3000)
+        seats = [make_seat("a", "active", activated_at="2026-01-01T00:00:00Z")]
+        settings = make_billing_settings(paymentTermsDays=20)
+        draft = eb.build_invoice_draft(client, seats, period_start, period_end, settings=settings)
+        self.assertEqual(draft["dueDate"], "2026-08-20")
+
+    def test_no_settings_injected_falls_back_to_default_due_date(self):
+        period_start, period_end = JULY
+        client = make_client(unitPriceTwd=3000)
+        seats = [make_seat("a", "active", activated_at="2026-01-01T00:00:00Z")]
+        draft = eb.build_invoice_draft(client, seats, period_start, period_end)
+        self.assertEqual(draft["dueDate"], "2026-08-15")
+
+
+class RenderInvoiceHtmlBillingSettingsTests(unittest.TestCase):
+    """需求單二次補充：開票方／收款帳戶不能寫死，且未設定時不准靜默印空白。"""
+
+    def _draft(self):
+        period_start, period_end = JULY
+        client = make_client(unitPriceTwd=3000)
+        seats = [make_seat("a", "active", activated_at="2026-01-01T00:00:00Z")]
+        return eb.build_invoice_draft(client, seats, period_start, period_end), client
+
+    def test_unconfigured_settings_shows_prominent_warning_not_blank(self):
+        draft, client = self._draft()
+        empty_settings = enterprise_seats.normalize_billing_settings(None)
+        self.assertFalse(enterprise_seats.is_billing_settings_configured(empty_settings))
+        rendered = eb.render_invoice_html(draft, client, settings=empty_settings)
+        self.assertIn("尚未設定開票資訊", rendered)
+        self.assertIn("尚未設定收款帳戶", rendered)
+        self.assertIn('class="warning-banner"', rendered)  # 警示區塊真的被插入，不是只有樣式表定義
+        # 沒設定時不准出現正常欄位的標籤（那些欄位本來就沒有東西可印，
+        # 印出來只會是「統一編號：—」這種看起來像故障、不是明顯警示的空白）
+        self.assertNotIn("匯款銀行：", rendered)
+        self.assertNotIn("戶名：", rendered)
+
+    def test_default_no_settings_argument_also_shows_warning(self):
+        """呼叫端完全不傳 settings（既有呼叫慣例）時，內部即時查目前設定；
+        測試環境的本地備援檔不存在，等於尚未設定，一樣要印警示，不能悄悄印空白。"""
+        draft, client = self._draft()
+        rendered = eb.render_invoice_html(draft, client)
+        self.assertIn("尚未設定開票資訊", rendered)
+
+    def test_configured_settings_shows_real_issuer_and_bank_info(self):
+        draft, client = self._draft()
+        settings = make_billing_settings()
+        rendered = eb.render_invoice_html(draft, client, settings=settings)
+        self.assertNotIn("尚未設定開票資訊", rendered)
+        self.assertNotIn("尚未設定收款帳戶", rendered)
+        # 樣式表本身永遠定義 .warning-banner 這個 class（CSS 規則不代表有用到），
+        # 真正要驗證的是「有沒有實際插入這個警示區塊」，查 class 屬性的用法而不是查
+        # class 名稱這個子字串（子字串一定會命中樣式表，不能拿來判斷警示有沒有顯示）。
+        self.assertNotIn('class="warning-banner"', rendered)
+        self.assertIn("借用抬頭股份有限公司", rendered)
+        self.assertIn("87654321", rendered)
+        self.assertIn("測試銀行", rendered)
+        self.assertIn("測試分行", rendered)
+        self.assertIn("1234567890123", rendered)
+        self.assertIn("本單為代收轉付性質，如有疑問請洽窗口。", rendered)
+
+    def test_configured_but_optional_fields_blank_shows_dash_not_warning(self):
+        """核心四欄（抬頭／銀行／戶名／帳號）都填了，選填欄位（電話／聯絡人／分行／
+        備註）沒填——這是正常狀態，不該觸發警示，只是那幾行顯示「—」。"""
+        draft, client = self._draft()
+        settings = make_billing_settings(issuerPhone=None, issuerContactName=None, bankBranch=None, invoiceFooterNote=None)
+        rendered = eb.render_invoice_html(draft, client, settings=settings)
+        self.assertNotIn("尚未設定開票資訊", rendered)
+        self.assertIn("電話：—", rendered)
+        self.assertIn("聯絡人：—", rendered)
+
+    def test_bank_account_number_never_appears_in_log_output(self):
+        """帳號是敏感資料，請款單上要印完整帳號給客戶匯款，但不准寫進任何記錄檔／
+        稽核紀錄——用 assertNoLogs 直接驗證這次呼叫完全沒有觸發任何 log 輸出
+        （不是『log 了但沒印帳號』，是這整條路徑本來就不該 log 任何東西）。"""
+        draft, client = self._draft()
+        settings = make_billing_settings(bankAccountNo="9999888877776666")
+        try:
+            with self.assertNoLogs(eb.LOGGER):
+                rendered = eb.render_invoice_html(draft, client, settings=settings)
+        except AttributeError:
+            # assertNoLogs 是 Python 3.10+ 才有；用備援寫法確認同一件事：
+            # 直接掛一個 handler 攔截所有 log record，檢查帳號字串沒出現在任何一筆裡。
+            import logging
+            records = []
+            handler = logging.Handler()
+            handler.emit = lambda record: records.append(record.getMessage())
+            eb.LOGGER.addHandler(handler)
+            try:
+                rendered = eb.render_invoice_html(draft, client, settings=settings)
+            finally:
+                eb.LOGGER.removeHandler(handler)
+            for message in records:
+                self.assertNotIn("9999888877776666", message)
+        self.assertIn("9999888877776666", rendered)  # 帳號本來就該出現在請款單本文裡
 
 
 if __name__ == "__main__":
