@@ -5892,7 +5892,10 @@ def enterprise_client_save_response(data=None):
 
 
 def enterprise_client_detail_response(data=None):
-    """3.6 /admin/enterprise/client/detail：公司資料＋席次明細＋收款紀錄。"""
+    """3.6 /admin/enterprise/client/detail：公司資料＋席次明細＋收款紀錄＋可下載的
+    月報／請款單清單（需求單 3.5「單一公司」畫面最後一塊：2026-07-20 三次需求接通）。
+    reports 清單失敗不能讓整頁明細掛掉（下載是加分項、不是這支接口的主要用途），
+    這裡單獨包一層 try/except，壞掉時回空清單，前端會顯示『還沒有可下載的文件』。"""
     data = data or {}
     client_id = str(data.get("clientId") or data.get("client_id") or data.get("id") or "").strip()
     if not client_id:
@@ -5900,6 +5903,12 @@ def enterprise_client_detail_response(data=None):
     detail = enterprise_seats.client_detail(client_id)
     if not detail:
         return {"ok": False, "error": {"code": "enterprise_client_not_found"}}
+    detail = dict(detail)
+    try:
+        detail["reports"] = enterprise_billing.list_downloadable_documents(client_id, detail.get("client"))
+    except Exception as exc:
+        log_fallback_exception(f"list downloadable documents for enterprise client {client_id}", exc)
+        detail["reports"] = []
     return {"ok": True, **detail}
 
 
@@ -5999,7 +6008,14 @@ def enterprise_invoices_response(data=None):
 def enterprise_invoice_mark_sent_response(data=None):
     """3.6 /admin/enterprise/invoice/mark-sent：標記已寄出（記 sent_at），同時是需求單
     4.2「產出後狀態為 draft，由我們人工確認後才轉 issued」的那個人工放行動作——
-    3.6 接口清單沒有另外列一個「轉 issued」端點，這裡一併做，狀態流才走得通。"""
+    3.6 接口清單沒有另外列一個「轉 issued」端點，這裡一併做，狀態流才走得通。
+
+    2026-07-20 三次需求：這一刻也是請款單 HTML 的凍結時機——draft 階段
+    render_invoice_html() 一直即時讀最新開票／收款設定，但一旦按下「已寄出」，
+    當下畫面就此凍結存進 invoiceHtmlSnapshot；之後不管收款設定再怎麼改，這張已經
+    寄出去的單重新下載時，看到的都是「當初真的印給客戶的那個版本」（見
+    enterprise_billing.get_invoice_html() 的完整決策理由）。找不到公司資料（理論上
+    不會發生，僅防呆）就不寫快照，下載時會退回即時重繪，不讓整個標記動作因此失敗。"""
     data = data or {}
     invoice_id = str(data.get("invoiceId") or data.get("invoice_id") or "").strip()
     if not invoice_id:
@@ -6012,6 +6028,12 @@ def enterprise_invoice_mark_sent_response(data=None):
     updated = dict(invoice)
     updated["status"] = "issued"
     updated["sentAt"] = data.get("sentAt") or data.get("sent_at") or utc_now()
+    client = enterprise_seats.get_client(invoice.get("enterpriseClientId"))
+    if client:
+        try:
+            updated["invoiceHtmlSnapshot"] = enterprise_billing.render_invoice_html(updated, client)
+        except Exception as exc:
+            log_fallback_exception(f"freeze invoice html snapshot for {invoice_id}", exc)
     saved = enterprise_billing.save_invoice(updated)
     return {"ok": True, "invoice": saved}
 
