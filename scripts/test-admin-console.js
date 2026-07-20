@@ -20,16 +20,20 @@ assert(smokeBlock, "admin smoke must declare adminReadBodies");
 const smokePaths = matches(smokeBlock[1], /^\s+"(?<path>\/admin\/[^"?]+)"\s*=/gm);
 assert.deepStrictEqual(smokePaths.sort(), consolePaths.sort(), "admin smoke must cover every EP_LIST endpoint exactly");
 
+// 2026-07-20：「連線設定」概念移除後，狀態列不再有 statusPill／connectBanner，
+// 改由 lastUpdated 常駐顯示「資料更新到 X」，未登入一律走帳密登入門。
 for (const token of [
-  'id="statusPill"',
+  'id="lastUpdated"',
   'aria-live="polite"',
   'id="refreshBtn"',
   'id="logoutBtn"',
-  'id="connectBanner"',
   'class="skip-link"',
   'aria-label="主要功能"',
 ]) {
   assert(html.includes(token), `admin.html missing operational/accessibility contract: ${token}`);
+}
+for (const token of ['id="connectBanner"', 'id="statusPill"', 'id="currentPeriod"']) {
+  assert(!html.includes(token), `admin.html must not reintroduce removed connection UI: ${token}`);
 }
 
 for (const token of [
