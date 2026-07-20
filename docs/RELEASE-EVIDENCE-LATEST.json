@@ -1,8 +1,8 @@
 {
   "schema": "munea.release-evidence.v1",
-  "capturedAt": "2026-07-19T16:21:26Z",
-  "capturedBySourceCommit": "00d3eb38b49314220b2697e4e244c60a533ac50a",
-  "sourceVersion": "1.0.41",
+  "capturedAt": "2026-07-20T08:46:24Z",
+  "capturedBySourceCommit": "7788a4f83f662a5cb9784e33b46d7d561806865f",
+  "sourceVersion": "1.0.42",
   "targetConfigSha256": "f46dd0bc7f8d25997c5429d4612ae18b5ce1bfe125ac282992b5b24cfc1311c9",
   "results": [
     {
