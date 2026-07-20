@@ -8,6 +8,7 @@ apt-get install -y coturn
 
 # 取這台機器的對外 IP（中繼站要對外宣告用）
 EXTIP=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
+INTIP=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip")
 
 cat > /etc/turnserver.conf <<EOF
 listening-port=3478
@@ -26,10 +27,12 @@ no-multicast-peers
 denied-peer-ip=0.0.0.0-0.255.255.255
 denied-peer-ip=10.0.0.0-10.255.255.255
 denied-peer-ip=192.168.0.0-192.168.255.255
+# Allow relay-to-relay traffic on this TURN host while keeping other private peers denied.
+allowed-peer-ip=${INTIP}
 EOF
 
 # 允許服務啟動
 echo "TURNSERVER_ENABLED=1" > /etc/default/coturn
 systemctl enable coturn
 systemctl restart coturn
-echo "coturn started, external-ip=${EXTIP}" > /var/log/munea-turn-boot.log
+echo "coturn started, external-ip=${EXTIP}, internal-ip=${INTIP}" > /var/log/munea-turn-boot.log
