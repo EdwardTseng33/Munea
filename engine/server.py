@@ -24,6 +24,7 @@ import chat_engine as eng
 import localization
 import supabase_adapter
 import enterprise_seats
+import enterprise_billing
 import model_router
 import notify
 import apple_store
@@ -369,6 +370,10 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/seats/import-commit",
     "/admin/enterprise/seats/export",
     "/admin/enterprise/seats/grant",
+    "/admin/enterprise/invoices",
+    "/admin/enterprise/invoice/mark-sent",
+    "/admin/enterprise/invoice/mark-paid",
+    "/admin/enterprise/monthly-close",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -5953,6 +5958,146 @@ def enterprise_seats_grant_response(data=None):
     return {"ok": True, **result}
 
 
+
+# ── 請款單／月結四條接口（需求單 3.6 最後一批）──
+# 薄薄一層：路由與參數驗證在這裡，計費／請款單產出／月報產出全部呼叫
+# engine/enterprise_billing.py 既有的公開函式，不重寫一份計費邏輯。
+
+def enterprise_invoices_response(data=None):
+    """3.6 /admin/enterprise/invoices：請款單列表，含狀態、逾期天數、累計欠款。"""
+    data = data or {}
+    client_id = data.get("clientId") or data.get("client_id")
+    status = data.get("status")
+    limit = data.get("limit")
+    invoices = enterprise_billing.list_invoices(client_id=client_id, status=status, limit=limit or 500)
+    enriched = [
+        {**inv, "overdueDays": enterprise_billing.compute_overdue_days(inv)}
+        for inv in invoices
+    ]
+    return {
+        "ok": True,
+        "invoices": enriched,
+        "count": len(enriched),
+        "outstandingTwd": enterprise_billing.compute_outstanding_total(invoices),
+    }
+
+
+def enterprise_invoice_mark_sent_response(data=None):
+    """3.6 /admin/enterprise/invoice/mark-sent：標記已寄出（記 sent_at），同時是需求單
+    4.2「產出後狀態為 draft，由我們人工確認後才轉 issued」的那個人工放行動作——
+    3.6 接口清單沒有另外列一個「轉 issued」端點，這裡一併做，狀態流才走得通。"""
+    data = data or {}
+    invoice_id = str(data.get("invoiceId") or data.get("invoice_id") or "").strip()
+    if not invoice_id:
+        return {"ok": False, "error": {"code": "invoice_id_required"}}
+    invoice = enterprise_billing.get_invoice(invoice_id)
+    if not invoice:
+        return {"ok": False, "error": {"code": "enterprise_invoice_not_found"}}
+    if invoice.get("status") != "draft":
+        return {"ok": False, "error": {"code": "invoice_not_in_draft_status", "currentStatus": invoice.get("status")}}
+    updated = dict(invoice)
+    updated["status"] = "issued"
+    updated["sentAt"] = data.get("sentAt") or data.get("sent_at") or utc_now()
+    saved = enterprise_billing.save_invoice(updated)
+    return {"ok": True, "invoice": saved}
+
+
+def enterprise_invoice_mark_paid_response(data=None):
+    """3.6 /admin/enterprise/invoice/mark-paid：已入帳＝開通開關（需求單 5.1）。
+    填 paid_at／paid_amount_twd／payment_note；成功之後
+    enterprise_seats.assert_client_has_paid_invoice() 讀到 status=paid（或 invoiced）
+    才會放行 grant——這裡跟那邊認定的「已付款」狀態一致，不是各自定義一套。
+    若同時帶 invoiceNumber（發票已開立），狀態直接落到 invoiced，因為 3.6 接口清單
+    沒有另外列一個「轉 invoiced」端點，比照 mark-sent 的同一個道理一併處理。"""
+    data = data or {}
+    invoice_id = str(data.get("invoiceId") or data.get("invoice_id") or "").strip()
+    if not invoice_id:
+        return {"ok": False, "error": {"code": "invoice_id_required"}}
+    invoice = enterprise_billing.get_invoice(invoice_id)
+    if not invoice:
+        return {"ok": False, "error": {"code": "enterprise_invoice_not_found"}}
+    if invoice.get("status") != "issued":
+        return {"ok": False, "error": {"code": "invoice_not_in_issued_status", "currentStatus": invoice.get("status")}}
+    paid_amount = data.get("paidAmountTwd")
+    if paid_amount is None:
+        paid_amount = data.get("paid_amount_twd")
+    updated = dict(invoice)
+    updated["paidAt"] = data.get("paidAt") or data.get("paid_at") or utc_now()
+    updated["paidAmountTwd"] = paid_amount if paid_amount is not None else invoice.get("totalTwd")
+    updated["paymentNote"] = data.get("paymentNote") or data.get("payment_note")
+    invoice_number = data.get("invoiceNumber") or data.get("invoice_number")
+    if invoice_number:
+        updated["invoiceNumber"] = invoice_number
+        updated["invoiceIssuedAt"] = data.get("invoiceIssuedAt") or data.get("invoice_issued_at") or utc_now()
+        updated["status"] = "invoiced"
+    else:
+        updated["status"] = "paid"
+    saved = enterprise_billing.save_invoice(updated)
+    return {"ok": True, "invoice": saved}
+
+
+def enterprise_monthly_close_response(data=None):
+    """3.6 /admin/enterprise/monthly-close：跑月結，產出請款單(draft)＋月報。
+    逾期 7 天以上的公司不產月報——enterprise_billing.run_monthly_close_for_client()
+    內部已經接住 ClientOverdueBlockedError、換成 reportBlocked 欄位回傳，這裡不重複判斷；
+    另外逐家客戶包一層 try/except，任何其他非預期例外也只影響那一家，不讓整批月結中斷。"""
+    data = data or {}
+    try:
+        period_start, period_end = enterprise_billing.resolve_billing_period(
+            year=data.get("year"), month=data.get("month"),
+        )
+    except (TypeError, ValueError):
+        return {"ok": False, "error": {"code": "invalid_billing_period"}}
+
+    client_id = data.get("clientId") or data.get("client_id")
+    if client_id:
+        client = enterprise_seats.get_client(client_id)
+        if not client:
+            return {"ok": False, "error": {"code": "enterprise_client_not_found"}}
+        clients = [client]
+    else:
+        clients = enterprise_seats.list_clients()
+
+    persist_invoice = data.get("persistInvoice")
+    persist_invoice = True if persist_invoice is None else bool(persist_invoice)
+
+    results = []
+    for client in clients:
+        cid = client.get("id")
+        try:
+            seats = enterprise_seats.list_seats(client_id=cid)
+            outcome = enterprise_billing.run_monthly_close_for_client(
+                client, seats, period_start, period_end, persist_invoice=persist_invoice,
+            )
+            invoice = outcome.get("invoice") or {}
+            report = outcome.get("report")
+            results.append({
+                "clientId": cid,
+                "clientName": client.get("name"),
+                "ok": True,
+                "invoice": invoice,
+                "invoiceHtml": enterprise_billing.render_invoice_html(invoice, client),
+                "reportBlocked": outcome.get("reportBlocked"),
+                "report": report,
+                "reportHtml": enterprise_billing.render_esg_report_html(report) if report else None,
+            })
+        except Exception as exc:
+            log_fallback_exception(f"monthly close for enterprise client {cid}", exc)
+            results.append({"clientId": cid, "clientName": client.get("name"), "ok": False, "error": str(exc)})
+
+    return {
+        "ok": True,
+        "period": {"start": period_start.isoformat(), "end": period_end.isoformat()},
+        "results": results,
+        "summary": {
+            "total": len(results),
+            "succeeded": sum(1 for r in results if r.get("ok")),
+            "reportBlocked": sum(1 for r in results if r.get("reportBlocked")),
+            "failed": sum(1 for r in results if not r.get("ok")),
+        },
+    }
+
+
 def default_billing_store():
     return {
         "schemaVersion": 1,
@@ -8293,6 +8438,58 @@ class H(BaseHTTPRequestHandler):
                             "eventType": "enterprise_seats_grant_attempted",
                             "targetTable": "subscription_ledger",
                             "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/invoices":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_invoices_response(data))
+            elif self.path == "/admin/enterprise/invoice/mark-sent":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_invoice_mark_sent_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_invoice_marked_sent",
+                            "targetTable": "enterprise_invoices",
+                            "targetId": (response.get("invoice") or {}).get("id"),
+                            "details": {**privileged_actor_context(self.headers), "invoiceNo": (response.get("invoice") or {}).get("invoiceNo")},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/invoice/mark-paid":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_invoice_mark_paid_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_invoice_marked_paid",
+                            "targetTable": "enterprise_invoices",
+                            "targetId": (response.get("invoice") or {}).get("id"),
+                            "details": {
+                                **privileged_actor_context(self.headers),
+                                "invoiceNo": (response.get("invoice") or {}).get("invoiceNo"),
+                                "status": (response.get("invoice") or {}).get("status"),
+                                "paidAmountTwd": (response.get("invoice") or {}).get("paidAmountTwd"),
+                            },
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/monthly-close":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_monthly_close_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_monthly_close_run",
+                            "targetTable": "enterprise_invoices",
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {}), "period": response.get("period")},
                         })
                     self._json(response)
             elif self.path == "/companion-profile":
