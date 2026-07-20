@@ -85,6 +85,17 @@ CHAR_SRC = {
 }
 DEFAULT_CHAR = "a05"
 
+# Single render contract shared with every FlashHead client. The condition
+# image is the App portrait crop below, resized to the model's square input.
+# Clients must invert this transform when compositing the generated video.
+AVATAR_RENDER_CONTRACT = {
+    "version": "app-flashhead-portrait-v1",
+    "canvas": {"width": 1080, "height": 1920},
+    "source_crop": {"x": 0, "y": 140, "width": 1080, "height": 1440},
+    "model_input": {"width": 512, "height": 512},
+    "fit": "fill",
+}
+
 SNAPSHOT_KEY = "v2-flashhead-eager"  # v1 用 compile 模式、Modal GPU 快照失敗(CUDA graph 存不進去)；v2 改 eager
 
 SR_IN, SR_ENG = 24000, 16000
@@ -550,6 +561,7 @@ class FlashHead:
                 gen_p95 = round(srt[max(0, int(len(srt) * 0.95) - 1)], 1)
             ao = outer.audio_out
             return {"ok": True, "engine": "flashhead-lite-modal", "char": outer.char,
+                    "avatar_render_contract": AVATAR_RENDER_CONTRACT,
                     "frames": outer.sink.count, "load": outer.load_report,
                     "round_count": outer.round_count,
                     "round_latencies_ms": list(outer.round_latencies),

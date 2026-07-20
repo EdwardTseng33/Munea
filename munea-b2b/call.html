@@ -168,6 +168,14 @@ const CHARS = {
   a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4' },
   a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4' },
 };
+const FALLBACK_AVATAR_RENDER_CONTRACT = {
+  version: 'app-flashhead-portrait-v1',
+  canvas: { width: 1080, height: 1920 },
+  source_crop: { x: 0, y: 140, width: 1080, height: 1440 },
+  model_input: { width: 512, height: 512 },
+  fit: 'fill',
+};
+let avatarRenderContract = FALLBACK_AVATAR_RENDER_CONTRACT;
 let curChar = 'a05';
 
 const $ = s => document.querySelector(s);
@@ -184,6 +192,26 @@ const qs = new URLSearchParams(location.search);
 const showDbg = qs.has('debug');
 const nomic = qs.has('nomic');
 if (showDbg) $('#dbg').classList.add('show');
+
+function applyAvatarRenderContract(raw){
+  const c = raw || FALLBACK_AVATAR_RENDER_CONTRACT;
+  const canvas = c.canvas || {};
+  const crop = c.source_crop || {};
+  const cw = Number(canvas.width), ch = Number(canvas.height);
+  const x = Number(crop.x), y = Number(crop.y), w = Number(crop.width), h = Number(crop.height);
+  const valid = [cw,ch,x,y,w,h].every(Number.isFinite) && cw > 0 && ch > 0 && w > 0 && h > 0 &&
+    x >= 0 && y >= 0 && x + w <= cw && y + h <= ch && c.fit === 'fill';
+  if (!valid) throw new Error('invalid avatar render contract');
+  avatarRenderContract = c;
+  const root = document.documentElement.style;
+  root.setProperty('--box-left', (x / cw * 100) + '%');
+  root.setProperty('--box-top', (y / ch * 100) + '%');
+  root.setProperty('--box-width', (w / cw * 100) + '%');
+  root.setProperty('--box-height', (h / ch * 100) + '%');
+  faceVid.style.objectFit = c.fit;
+  try{ dbgLine('[contract] ' + c.version + ' crop=' + [x,y,w,h].join(',')); }catch(e){}
+}
+applyAvatarRenderContract(FALLBACK_AVATAR_RENDER_CONTRACT);
 
 /* ===== 錯誤全部 surface（沿用真機測試版作法） ===== */
 window.__flashheadStats = { round: 0, roundTimes: [], vidFrames: 0, switchMs: null, err: '' };
@@ -405,6 +433,7 @@ async function bootstrapKeys(pass){
 function prewarm(){
   if (!AVATAR_HTTP || !AVATAR_KEY) return;
   fetch(AVATAR_HTTP + '/health?key=' + encodeURIComponent(AVATAR_KEY)).then(r=>r.json()).then(j=>{
+    if (j.avatar_render_contract) applyAvatarRenderContract(j.avatar_render_contract);
     dbgLine('[prewarm] health ok engine=' + j.engine + ' uptime_s=' + (j.uptime_s!=null?j.uptime_s:'?'));
   }).catch(e=> dbgLine('[prewarm] health failed: ' + (e && e.message || e)));
 }
@@ -619,6 +648,7 @@ Face.start = async function(char){
     setTimeout(()=>{ if(!done){done=true; dbgLine('[face] audio ws open timeout, keep going'); res(false);} }, 4000);
   });
   dbgLine('[face] connected char=' + char + ' audio_ws_ok=' + wsOk);
+  return true;
 };
 Face.feed = function(buf){ try{ if (this.on && this.ws && this.ws.readyState===1) this.ws.send(buf); }catch(e){ dbgLine('[face] feed err ' + e.message); } };
 Face.reset = function(){ try{ if (this.on && this.ws && this.ws.readyState===1) this.ws.send('reset'); }catch(e){} };
@@ -686,11 +716,20 @@ function stopPeriodicStats(){ if (_statsTimer){ clearInterval(_statsTimer); _sta
 </script>
 <script>
 const Live = {
-  ws:null, ac:null, mic:null, proc:null, on:false, micLevel:0, speaking:false, _spkT:null,
+  ws:null, ac:null, mic:null, proc:null, on:false, micLevel:0, speaking:false, _spkT:null, _activated:false,
   _f2i(f){ const b=new Int16Array(f.length); for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i])); b[i]=s<0?s*0x8000:s*0x7fff;} return b; },
   _down(buf,inR,outR){ if(outR>=inR)return buf; const r=inR/outR,len=Math.round(buf.length/r),o=new Float32Array(len);
     let i=0,j=0; while(j<len){const n=Math.round((j+1)*r);let s=0,c=0;for(;i<n&&i<buf.length;i++){s+=buf[i];c++;}o[j++]=c?s/c:0;} return o; },
   sendTestLine(){ try{ if (this.ws && this.ws.readyState===1) this.ws.send(JSON.stringify({type:'text', text: TEST_LINE})); dbgLine('[voice] nomic test line sent'); }catch(e){} },
+  activate(){
+    if (this._activated || !this.ws || this.ws.readyState !== 1) return false;
+    this._activated = true;
+    if (nomic) this.sendTestLine();
+    else this.ws.send(JSON.stringify({type:'greet'}));
+    setState('listening');
+    dbgLine('[voice] activated after avatar readiness gate');
+    return true;
+  },
   async primeMic(){
     if (nomic) return true;
     if (this.mic && this.mic.active) return true;
@@ -710,6 +749,7 @@ Live.start = async function(char){
   // 訪客體驗不得宣告 App reminder/event 能力，也不得載入或回寫正式用戶資料。
   let url = VOICE_WS_BASE + '?char=' + encodeURIComponent(char) + '&demo=1&key=' + encodeURIComponent(AVATAR_KEY);
   this.on = true;
+  this._activated = false;
   setStatus('連語音線…', true);
   try{ this.ws = new WebSocket(url); this.ws.binaryType='arraybuffer'; }
   catch(e){ this.on=false; dbgLine('[voice] WebSocket ctor threw: ' + e.message); return false; }
@@ -722,9 +762,8 @@ Live.start = async function(char){
         if (o.type === 'ready'){
           dbgLine('[voice] ready, nomic=' + nomic);
           if (nomic) {
-            setStatus('nomic 模式：跳過麥克風，送測試句', true);
-            this.sendTestLine();
-            setState('listening'); settle(true);
+            setStatus('nomic 模式：語音線就緒', true);
+            settle(true);
           } else {
             setStatus('確認麥克風…', true);
             try{ await this.primeMic(); }
@@ -740,14 +779,13 @@ Live.start = async function(char){
             src.connect(this.proc); this.proc.connect(this.ac.destination);
             this.proc.onaudioprocess = e=>{
               const inp = e.inputBuffer.getChannelData(0);
-              if (this.speaking){ this.micLevel = 0; return; }
+              if (!this._activated || this.speaking){ this.micLevel = 0; return; }
               let s=0; for(let i=0;i<inp.length;i++) s+=inp[i]*inp[i];
               this.micLevel = Math.min(1, Math.sqrt(s/inp.length)*8);
               if (!this.ws || this.ws.readyState!==1) return;
               this.ws.send(this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer);
             };
-            this.ws.send(JSON.stringify({type:'greet'}));
-            setState('listening'); settle(true);
+            settle(true);
           }
         }
         if (o.type === 'diag' && o.firstAudioMs != null) dbgLine('[voice] first_audio ' + o.firstAudioMs + 'ms');
@@ -781,6 +819,7 @@ Live.start = async function(char){
 };
 Live.stop = function(){
   this.on = false;
+  this._activated = false;
   clearTimeout(this._micReopenT);
   try{ if (this.proc) this.proc.disconnect(); }catch(e){}
   try{ if (this.mic) this.mic.getTracks().forEach(t=>t.stop()); }catch(e){}
@@ -866,6 +905,7 @@ async function wakeAvatarService(){
       const r = await withTimeout(fetch(AVATAR_HTTP + '/health?key=' + encodeURIComponent(AVATAR_KEY)), 6000, '喚醒探測');
       if (r.ok){
         const j = await r.json().catch(()=>({}));
+        if (j.avatar_render_contract) applyAvatarRenderContract(j.avatar_render_contract);
         dbgLine('[wake] health ok attempt=' + attempt + ' engine=' + j.engine + ' uptime_s=' + (j.uptime_s!=null?j.uptime_s:'?'));
         return true;
       }
@@ -888,7 +928,6 @@ async function attemptConnect(tryNo){
   if (!onCall) return;
   try{
     if (tryNo === 1) await Live.primeMic();
-    if (tryNo === 1) await wakeAvatarService();
     if (!onCall) return;
     setStatus('撥號中…');
     setHintText(tryNo === 1 ? '正在接通，稍等一下' : '正在重新接通');
@@ -896,10 +935,16 @@ async function attemptConnect(tryNo){
     window.__flashheadStats = { round:0, roundTimes:[], vidFrames:0, switchMs:null, err:'' };
     window.__flashheadDiagSent = false; window.__flashheadVoiceDiag = null;
     dbgLine('[dial] attempt=' + tryNo + ' curChar=' + curChar + ' nomic=' + nomic);
-    await withTimeout(Face.start(curChar), 65000, '臉線建立整體');
+    const connectT0 = performance.now();
+    const voicePromise = withTimeout(Live.start(CHARS[curChar].faceChar), 60000, '語音線建立整體');
+    const facePromise = (tryNo === 1 ? wakeAvatarService() : Promise.resolve(true))
+      .then(()=> withTimeout(Face.start(curChar), 65000, '臉線建立整體'));
+    const [voiceOk, faceOk] = await Promise.all([voicePromise, facePromise]);
     if (!onCall) return;
-    const ok = await withTimeout(Live.start(CHARS[curChar].faceChar), 60000, '語音線建立整體');
-    if (!ok) throw new Error('語音線沒接上');
+    if (!voiceOk) throw new Error('語音線沒接上');
+    if (!faceOk) throw new Error('臉線沒接上');
+    if (!Live.activate()) throw new Error('語音線無法開始對話');
+    dbgLine('[dial] readiness gate passed total_ms=' + Math.round(performance.now() - connectT0));
     stage.classList.add('connected');
     setStatus('在線'); setHintText('');
     startPeriodicStats();

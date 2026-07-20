@@ -10,6 +10,7 @@ const helloScreenshotPath = process.env.B2B_CALL_HELLO_SCREENSHOT || '';
 const callConfig = process.env.B2B_CALL_CONFIG_JSON ? JSON.parse(process.env.B2B_CALL_CONFIG_JSON) : null;
 const testChar = process.env.B2B_TEST_CHAR || 'a05';
 const captureIdle = process.env.B2B_CAPTURE_IDLE === '1';
+const mockConnect = process.env.B2B_MOCK_CONNECT === '1';
 const viewport = {
   width: Number(process.env.B2B_VIEWPORT_WIDTH || 430),
   height: Number(process.env.B2B_VIEWPORT_HEIGHT || 932),
@@ -63,6 +64,40 @@ try {
   if (testChar === 'a06') await page.locator('#charA06').click();
   await page.waitForFunction(expected => typeof curChar !== 'undefined' && curChar === expected, testChar);
 
+  if (mockConnect) {
+    await page.evaluate(() => {
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+      window.__mockConnectTimeline = [];
+      wakeAvatarService = async () => {
+        window.__mockConnectTimeline.push({ event: 'wake_start', at: performance.now() });
+        await wait(120);
+        window.__mockConnectTimeline.push({ event: 'wake_ready', at: performance.now() });
+        return true;
+      };
+      Live.start = async () => {
+        window.__mockConnectTimeline.push({ event: 'voice_start', at: performance.now() });
+        await wait(20);
+        Live.on = true;
+        Live.ws = { readyState: WebSocket.OPEN, send(){}, close(){} };
+        dbgLine('[voice] ready mock');
+        window.__mockConnectTimeline.push({ event: 'voice_ready', at: performance.now() });
+        return true;
+      };
+      Face.start = async () => {
+        window.__mockConnectTimeline.push({ event: 'face_start', at: performance.now() });
+        await wait(160);
+        Face.on = true;
+        Face.ws = { readyState: WebSocket.OPEN, send(){}, close(){} };
+        Face.pc = { connectionState: 'connected', close(){}, getStats: async () => new Map() };
+        window.__flashheadStats.vidFrames = 1;
+        overlay.classList.add('on');
+        IdleMotion.stop();
+        window.__mockConnectTimeline.push({ event: 'face_ready', at: performance.now() });
+        return true;
+      };
+    });
+  }
+
   if (captureIdle) {
     await page.waitForFunction(() => typeof IdleMotion !== 'undefined' && IdleMotion.active && IdleMotion.front && !IdleMotion.front.classList.contains('hide'));
     const helloSrc = await page.evaluate(() => IdleMotion.front.currentSrc);
@@ -104,6 +139,9 @@ try {
     hasMic: typeof Live === 'undefined' ? false : Boolean(Live.mic),
     frames: window.__flashheadStats?.vidFrames || 0,
     idleMotionActive: typeof IdleMotion === 'undefined' ? null : IdleMotion.active,
+    avatarRenderContract: typeof avatarRenderContract === 'undefined' ? null : avatarRenderContract,
+    voiceActivated: typeof Live === 'undefined' ? null : Live._activated,
+    mockConnectTimeline: window.__mockConnectTimeline || null,
     controls: ['captionToggle','micToggle','callBtn','closeBtn'].every(id => Boolean(document.getElementById(id))),
     overlayGeometry: (() => {
       const frame = document.getElementById('frame')?.getBoundingClientRect();
@@ -128,8 +166,11 @@ try {
 process.stdout.write(`${JSON.stringify({ target, result, consoleErrors: consoleLines.filter(line => /error|failed/i.test(line)) }, null, 2)}\n`);
 
 const idleFailed = captureIdle && (!result || result.selectedChar !== testChar || result.status !== '未在線' || !result.controls || !result.controlInteractions?.captionOn || !result.controlInteractions?.micOff || !/-hello\.mp4(?:$|\?)/.test(result.controlInteractions?.helloSrc || '') || !/-idle\.mp4(?:$|\?)/.test(result.controlInteractions?.idleSrc || ''));
-const geometryFailed = !result?.overlayGeometry || Math.abs(result.overlayGeometry.topPct - 7.291667) > 0.1 || Math.abs(result.overlayGeometry.heightPct - 75) > 0.1 || result.overlayGeometry.objectFit !== 'fill';
-const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || !result.hasMic || result.frames < 1 || result.idleMotionActive !== false || geometryFailed);
+const geometryFailed = !result?.overlayGeometry || result?.avatarRenderContract?.version !== 'app-flashhead-portrait-v1' || Math.abs(result.overlayGeometry.topPct - 7.291667) > 0.1 || Math.abs(result.overlayGeometry.heightPct - 75) > 0.1 || result.overlayGeometry.objectFit !== 'fill';
+const timeline = result?.mockConnectTimeline || [];
+const at = event => timeline.find(item => item.event === event)?.at;
+const parallelFailed = mockConnect && (!(at('voice_start') < at('wake_ready')) || !(at('voice_ready') < at('face_start')) || result?.voiceActivated !== true);
+const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || !result.hasMic || result.frames < 1 || result.idleMotionActive !== false || geometryFailed || parallelFailed);
 if (idleFailed || callFailed) {
   process.exitCode = 1;
 }
