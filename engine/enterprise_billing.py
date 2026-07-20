@@ -297,6 +297,11 @@ def is_seat_billable(seat, period_start, period_end):
     if status in NON_BILLABLE_SEAT_STATUSES:
         return False
 
+    # 期間兩端也走 _parse_date：席次時間本來就會轉，期間卻只吃 date 物件，
+    # 呼叫端傳 ISO 字串（例如從接口帶下來）會炸 TypeError。兩邊統一轉，不挑格式。
+    period_start = _parse_date(period_start) or period_start
+    period_end = _parse_date(period_end) or period_end
+
     activated_at = _parse_date(seat.get("activatedAt"))
     if not activated_at:
         return False  # 從沒生效過（active/grace/released 理論上一定有 activatedAt，這裡防呆）
@@ -1052,6 +1057,11 @@ def build_esg_report(client, all_seats, period_start, period_end, *, invoices=No
     - 逾期 7 天以上的公司直接擋下（丟 ClientOverdueBlockedError，帶原因），不是靜靜回空報告
     - 產出前一定跑 4.4 隱私鐵律檢查——這兩關都不是「可選」，呼叫端不能繞過
     """
+    # 期間在入口一次轉成 date，底下各區塊就不必各自防呆。
+    # 原本只吃 date 物件，呼叫端傳 ISO 字串會在深處炸 TypeError（訊息還看不出是哪裡傳錯）。
+    period_start = _parse_date(period_start) or period_start
+    period_end = _parse_date(period_end) or period_end
+
     client_id = client.get("id")
     overdue_days = client_overdue_days(client_id, invoices=invoices, today=today)
     if overdue_days >= OVERDUE_GRACE_DAYS:
