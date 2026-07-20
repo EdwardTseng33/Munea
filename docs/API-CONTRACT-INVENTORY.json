@@ -11,7 +11,7 @@
     "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
-    "brain": 85,
+    "brain": 88,
     "gateway": 23,
     "voice": 4
   },
@@ -133,6 +133,20 @@
       "surface": "brain",
       "method": "POST",
       "path": "/admin/credits",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/credits/grant",
       "auth": "operator",
       "criticality": "high",
       "idempotency": "operation-defined",
@@ -511,6 +525,34 @@
       "surface": "brain",
       "method": "POST",
       "path": "/admin/subscription-metrics",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/subscription/extend-days",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "billing",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/subscription/set-plan",
       "auth": "operator",
       "criticality": "high",
       "idempotency": "operation-defined",

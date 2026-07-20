@@ -513,3 +513,11 @@ tr.tr-overdue { background: var(--danger-soft); }
 /* 漏斗「0 戶」不用空灰條——虛線軌道明白表示「還沒開始」而不是壞掉 */
 .bars-list .track.is-empty { border: 1px dashed var(--line); background: transparent; }
 .bars-list .bl-val.is-zero { color: var(--muted); }
+/* 用戶明細彈窗：發點數／改方案 動作面板（2026-07-20 補） */
+.modal-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+.modal-subpanel{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+.modal-subtitle{ font-weight:700; margin-bottom:12px; }
+.modal-subactions{ display:flex; gap:10px; margin-top:4px; }
+.modal-subhint{ min-height:20px; margin-top:10px; font-size:13px; color:var(--muted); }
+.modal-subhint.err{ color:var(--danger); }
+.modal-subhint.ok{ color:var(--teal-dd); font-weight:600; }

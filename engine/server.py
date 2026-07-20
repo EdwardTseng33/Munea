@@ -353,6 +353,11 @@ ADMIN_POST_PATHS = {
     "/admin/mood-trend",
     "/admin/bond-depth",
     "/admin/voice-diagnostics",
+    # 會員維運操作（2026-07-20 補）：後台手動發點數／改方案，一律走 admin_authorized 管理鑰匙，
+    # 不是自助 API；單次金額上限與稽核紀錄見 admin_grant_credits_response / admin_set_plan_response。
+    "/admin/credits/grant",
+    "/admin/subscription/set-plan",
+    "/admin/subscription/extend-days",
     "/admin/notifications/drain",
     "/admin/login",
     # 維護入口（2026-07-17 補）：晨料備製與記憶整理是定時鬧鐘（Cloud Scheduler）用
@@ -7144,6 +7149,290 @@ def entitlements_response(data):
     }
 
 
+# ══════════ 後台會員維運：手動發點數／改方案（2026-07-20 補） ══════════
+# 這兩支只給營運後台用，不是自助 API；不動 Apple 購買驗證那條路（_activate_apple_subscription
+# 一行都沒改），也不動既有的 /credits/grant、/entitlements 自助流程。
+ADMIN_CREDIT_GRANT_MAX = 2000  # 單次發點上限：防手滑打錯位數（例如打成 50000）
+ADMIN_ALLOWED_PLANS = {"free", "plus", "pro"}
+ADMIN_PLAN_MONTHLY_CREDITS = {"plus": 100, "pro": 200}
+ADMIN_PLAN_FAMILY_MEMBERS_MAX = {"plus": 4, "pro": 12}
+
+
+def _resolve_admin_target_identity(account_id):
+    """管理端指定帳號 ID，查真實帳號表拿 primaryPerson，組出可切換的資料身分。
+    查不到、或查到的 accountId 對不上，一律回 None，防手滑打錯帳號 ID、誤發到別人身上。"""
+    account_id = str(account_id or "").strip()
+    if not account_id:
+        return None
+    try:
+        found = admin_accounts_summary({"query": account_id, "limit": 5}).get("accounts") or []
+    except Exception as e:
+        log_fallback_exception("resolve admin target account", e)
+        found = []
+    account = next((a for a in found if a.get("accountId") == account_id), None)
+    if not account:
+        return None
+    person_id = (account.get("primaryPerson") or {}).get("id") or ""
+    if not person_id:
+        return None
+    return {
+        "accountName": account.get("accountName") or (account.get("primaryPerson") or {}).get("displayName") or "",
+        "identity": {"accountId": account_id, "personId": person_id},
+    }
+
+
+def admin_grant_credits_response(data, headers=None):
+    """後台手動發點給指定帳號。單次上限 2000 點，防手滑，每次都寫稽核，
+    記誰、何時、對誰、多少、為什麼、發放前後餘額。點數一律進加購錢包，
+    不動每月贈點錢包，那個是訂閱方案自己算的，管理端不能亂動。"""
+    data = data or {}
+    account_id = str(data.get("accountId") or data.get("account_id") or "").strip()
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_id_required"}}
+    amount = normalize_credit_amount(data.get("amount") or data.get("credits"))
+    if amount <= 0:
+        return {"ok": False, "error": {"code": "invalid_credit_amount"}}
+    if amount > ADMIN_CREDIT_GRANT_MAX:
+        return {"ok": False, "error": {"code": "amount_exceeds_admin_limit", "limit": ADMIN_CREDIT_GRANT_MAX}}
+    target = _resolve_admin_target_identity(account_id)
+    if not target:
+        return {"ok": False, "error": {"code": "account_not_found"}}
+    reason = str(data.get("reason") or "admin_manual_grant")[:120]
+    token = REQUEST_DATA_IDENTITY.set(target["identity"])
+    try:
+        before = credit_wallet_summary(load_credits_store())
+        result = credits_grant_response({
+            "amount": amount,
+            "walletType": "purchased",
+            "source": "admin_manual",
+            "reason": reason,
+            "provider": "munea_admin_console",
+            "idempotencyKey": "admin-grant:%s:%d" % (account_id, int(time.time() * 1000)),
+        })
+    finally:
+        REQUEST_DATA_IDENTITY.reset(token)
+    if not result.get("ok"):
+        return result
+    after = result.get("walletSummary") or {}
+    append_audit_event({
+        "eventType": "admin_credits_granted",
+        "accountId": account_id,
+        "targetTable": "credit_transactions",
+        "details": {
+            **privileged_actor_context(headers or {}),
+            "accountId": account_id,
+            "accountName": target.get("accountName"),
+            "amount": amount,
+            "reason": reason,
+            "balanceBefore": before.get("total"),
+            "balanceAfter": after.get("total"),
+        },
+    })
+    result["accountId"] = account_id
+    result["accountName"] = target.get("accountName")
+    return result
+
+
+def admin_set_plan_response(data, headers=None):
+    """後台手動改指定帳號的方案，免費、Plus 或 Pro，只走這裡改，不動 Apple 購買驗證那條路。
+    改成付費方案會照該方案立即發放當月贈點，跟真訂閱開通待遇一致；改回免費會把每月贈點錢包關掉，
+    使用者已加購的點數，也就是 purchased 錢包，永遠不動、不清空。每次都寫稽核，記改前改後方案。"""
+    data = data or {}
+    account_id = str(data.get("accountId") or data.get("account_id") or "").strip()
+    plan = str(data.get("plan") or "").strip().lower()
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_id_required"}}
+    if plan not in ADMIN_ALLOWED_PLANS:
+        return {"ok": False, "error": {"code": "invalid_plan"}}
+    target = _resolve_admin_target_identity(account_id)
+    if not target:
+        return {"ok": False, "error": {"code": "account_not_found"}}
+    token = REQUEST_DATA_IDENTITY.set(target["identity"])
+    grant = None
+    try:
+        billing = load_billing_store()
+        previous_plan = billing.get("activePlan") or "free"
+        subscription = dict(billing.get("subscription") or {})
+        now_iso = utc_now()
+        if plan == "free":
+            subscription.update({"status": "inactive", "willRenew": False, "lastVerifiedAt": now_iso})
+            billing = {
+                **billing,
+                "activePlan": "free",
+                "subscription": subscription,
+                "entitlements": {**default_billing_store()["entitlements"], "familyDashboard": True},
+                "serverVerificationRequired": False,
+            }
+            billing = save_billing_store(billing, reconcile=False)
+            credits = load_credits_store()
+            if close_included_credit_wallets(credits, reason="admin_plan_downgraded"):
+                save_credits_store(credits)
+        else:
+            subscription.update({"status": "active", "willRenew": False, "lastVerifiedAt": now_iso})
+            provider = billing.get("provider") if billing.get("provider") == "apple_storekit2" else "manual-admin-grant"
+            billing = {
+                **billing,
+                "activePlan": plan,
+                "provider": provider,
+                "subscription": subscription,
+                "entitlements": {
+                    **(billing.get("entitlements") or {}),
+                    "voiceCompanion": True,
+                    "familyDashboard": True,
+                    "routineReminders": True,
+                    "realtimeAvatar": True,
+                    "familyCircleInvite": True,
+                    "familyCircleJoin": True,
+                    "familyMembersMax": ADMIN_PLAN_FAMILY_MEMBERS_MAX[plan],
+                    "monthlyCredits": ADMIN_PLAN_MONTHLY_CREDITS[plan],
+                    "monthlyCreditAnchorAt": now_iso,
+                },
+                "serverVerificationRequired": False,
+            }
+            billing = save_billing_store(billing)
+            allowance = monthly_allowance_details(billing)
+            if allowance:
+                grant = credits_grant_response({
+                    "amount": allowance["amount"],
+                    "walletType": "included_monthly",
+                    "period": allowance["period"],
+                    "expiresAt": allowance["expiresAt"],
+                    "source": "included_monthly",
+                    "reason": "admin_plan_change_allowance",
+                    "provider": "munea_admin_console",
+                    "idempotencyKey": "admin-plan-change:%s:%s:%d" % (account_id, allowance["period"], int(time.time() * 1000)),
+                })
+    finally:
+        REQUEST_DATA_IDENTITY.reset(token)
+    append_audit_event({
+        "eventType": "admin_plan_changed",
+        "accountId": account_id,
+        "targetTable": "subscription_ledger",
+        "details": {
+            **privileged_actor_context(headers or {}),
+            "accountId": account_id,
+            "accountName": target.get("accountName"),
+            "previousPlan": previous_plan,
+            "newPlan": plan,
+        },
+    })
+    return {
+        "ok": True,
+        "accountId": account_id,
+        "accountName": target.get("accountName"),
+        "previousPlan": previous_plan,
+        "activePlan": plan,
+        "billing": billing,
+        "walletSummary": (grant or {}).get("walletSummary"),
+    }
+
+
+ADMIN_EXTEND_DAYS_MAX = 365  # 單次延長上限：防手滑打成 9999 天
+
+
+def admin_extend_subscription_response(data, headers=None):
+    """後台手動延長指定帳號的訂閱到期日（Plus／Pro 才有意義；免費帳號沒有到期日概念，
+    直接擋下、請先改方案）。從目前到期日往後加；若已過期或本來沒有到期日，從現在起算。
+    支援 dryRun（不落地，只回目前到期日／延長後預覽，給前端二次確認用的畫面資料）。
+
+    跟 Apple 購買驗證的關係（刻意不共用、不打架）：
+    - 這支完全不碰 _activate_apple_subscription、不改 productId／originalTransactionId／
+      provider——真實 Apple 訂閱的到期日永遠以蘋果最近一次通知／驗證結果為準。
+    - 對一個「目前就是真實 Apple 訂閱在計費」的帳號使用本功能，等同管理端在 Apple 的到期日
+      上再加碼幾天；但只要蘋果之後又送一次通知（例如下次自動續訂、或 App 重新驗證收據），
+      _activate_apple_subscription 會用 Apple 的 verified.expiresDate 整個覆寫回去，
+      屆時管理端加的天數就會被蓋掉、不會保留。這是刻意的取捨：Apple 訂閱的到期日必須以
+      Apple 為單一事實來源，管理端延長只在兩次 Apple 同步之間暫時有效，不做另一套「加成天數」
+      的獨立帳本去對抗 Apple（那樣兩邊真的会打架、更難排查）。回應會帶
+      appleManagedSubscription 旗標，前端會在確認視窗多提示一句，讓操作的人知情。
+    - 對「不是真實 Apple 在計費」的帳號（免費體驗手動升級、企業／測試帳號、
+      provider=manual-admin-grant 或本來就沒有 provider）——這支是唯一會動到期日的地方，
+      延長會穩定生效，不會被任何背景流程蓋掉，這才是本功能主要服務的情境
+      （客訴補償／行銷體驗／合作夥伴試用／內部測試帳號）。
+    """
+    data = data or {}
+    account_id = str(data.get("accountId") or data.get("account_id") or "").strip()
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_id_required"}}
+    dry_run = bool(data.get("dryRun") or data.get("dry_run"))
+    raw_days = data.get("days")
+    days = None
+    if raw_days not in (None, ""):
+        try:
+            days = int(raw_days)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": {"code": "invalid_days"}}
+        if days <= 0 or days > ADMIN_EXTEND_DAYS_MAX:
+            return {"ok": False, "error": {"code": "days_out_of_range", "limit": ADMIN_EXTEND_DAYS_MAX}}
+    if not dry_run and not days:
+        return {"ok": False, "error": {"code": "days_required"}}
+    target = _resolve_admin_target_identity(account_id)
+    if not target:
+        return {"ok": False, "error": {"code": "account_not_found"}}
+    reason = str(data.get("reason") or "admin_manual_extension")[:120]
+    token = REQUEST_DATA_IDENTITY.set(target["identity"])
+    try:
+        billing = load_billing_store()
+        plan = billing.get("activePlan") or "free"
+        if plan not in ("plus", "pro"):
+            return {
+                "ok": False,
+                "error": {"code": "plan_not_eligible_for_extension"},
+                "accountId": account_id,
+                "accountName": target.get("accountName"),
+                "activePlan": plan,
+            }
+        subscription = dict(billing.get("subscription") or {})
+        apple_managed = billing.get("provider") == "apple_storekit2"
+        now = datetime.now(timezone.utc)
+        current_expires_raw = subscription.get("expiresAt")
+        current_expires = parse_optional_iso_datetime(current_expires_raw)
+        status = str(subscription.get("status") or "inactive")
+        was_lapsed = bool(
+            status in {"expired", "revoked", "inactive"} or not current_expires or current_expires <= now
+        )
+        base = now if was_lapsed else current_expires
+        preview = {
+            "accountId": account_id,
+            "accountName": target.get("accountName"),
+            "activePlan": plan,
+            "appleManagedSubscription": apple_managed,
+            "previousExpiresAt": current_expires_raw,
+            "wasLapsedOrMissing": was_lapsed,
+            "newExpiresAt": None,
+        }
+        if days:
+            new_expires_iso = (base + timedelta(days=days)).isoformat().replace("+00:00", "Z")
+            preview["newExpiresAt"] = new_expires_iso
+        if dry_run:
+            return {"ok": True, "dryRun": True, **preview}
+        subscription["expiresAt"] = preview["newExpiresAt"]
+        subscription["status"] = "active"
+        subscription["lastVerifiedAt"] = utc_now()
+        if was_lapsed:
+            subscription["willRenew"] = False
+        billing = {**billing, "subscription": subscription}
+        billing = save_billing_store(billing)
+    finally:
+        REQUEST_DATA_IDENTITY.reset(token)
+    append_audit_event({
+        "eventType": "admin_subscription_extended",
+        "accountId": account_id,
+        "targetTable": "subscription_ledger",
+        "details": {
+            **privileged_actor_context(headers or {}),
+            "accountId": account_id,
+            "accountName": target.get("accountName"),
+            "days": days,
+            "reason": reason,
+            "previousExpiresAt": preview["previousExpiresAt"],
+            "newExpiresAt": preview["newExpiresAt"],
+            "appleManagedSubscription": apple_managed,
+        },
+    })
+    return {"ok": True, **preview}
+
+
 def subscription_event_response(data):
     event = data.get("event") or {}
     if not isinstance(event, dict):
@@ -8828,8 +9117,6 @@ class H(BaseHTTPRequestHandler):
                     response = enterprise_billing_settings_save_response(data, actor=actor_name)
                     if response.get("ok"):
                         saved = response.get("settings") or {}
-                        # 改收款帳號是敏感動作，一定要留紀錄——但只記遮罩後的末四碼，
-                        # 不把完整帳號複製進 audit_events（那張表沒必要再存一份敏感值）。
                         append_audit_event({
                             "eventType": "enterprise_billing_settings_updated",
                             "targetTable": "enterprise_billing_settings",
@@ -8843,6 +9130,39 @@ class H(BaseHTTPRequestHandler):
                             },
                         })
                     self._json(response)
+            elif self.path == "/admin/credits/grant":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = admin_grant_credits_response(data, self.headers)
+                    if response.get("ok"):
+                        self._json(response)
+                    else:
+                        error = response.get("error") or {}
+                        self._json_error(400, error.get("code") or "credit_grant_failed", "Credit grant could not be applied")
+            elif self.path == "/admin/subscription/set-plan":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = admin_set_plan_response(data, self.headers)
+                    if response.get("ok"):
+                        self._json(response)
+                    else:
+                        error = response.get("error") or {}
+                        self._json_error(400, error.get("code") or "plan_change_failed", "Plan change could not be applied")
+            elif self.path == "/admin/subscription/extend-days":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = admin_extend_subscription_response(data, self.headers)
+                    if response.get("ok"):
+                        self._json(response)
+                    else:
+                        error = response.get("error") or {}
+                        self._json_error(400, error.get("code") or "subscription_extension_failed", "Subscription extension could not be applied")
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":
