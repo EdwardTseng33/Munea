@@ -739,13 +739,6 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1200);
   }
-  function parseSeatCsv(text){
-    const lines=String(text||"").split(/\r?\n/).map((l)=>l.trim()).filter(Boolean);
-    if(!lines.length) return [];
-    let rows=lines.map((l)=>l.split(",").map((c)=>c.trim()));
-    if(rows.length && /^email$/i.test(rows[0][0]||"")) rows=rows.slice(1);
-    return rows.map((r)=>({ email:r[0]||"", note:r[1]||"" })).filter((r)=>r.email);
-  }
 
   // 重大動作二次確認彈窗（如「已入帳」）——跟 openAcctDetail 同一套 inert/焦點回歸寫法
   function openConfirmModal(opts){
