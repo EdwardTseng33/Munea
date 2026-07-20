@@ -418,7 +418,7 @@ def _capture_call_turns(st, max_turns=120, max_chars=600):
         del turns[:-max_turns]
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
@@ -432,7 +432,17 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     )
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
     base += eng.CORE + c.get("persona", "") + eng.RED
+    if demo_mode:
+        base += (
+            "（最高優先：這是 B2B 網站的匿名訪客體驗，不是正式使用者會話。"
+            "你不知道對方身分，也沒有任何使用者記憶、健康資料、家庭圈、提醒或行程權限。"
+            "不得宣稱記得對方、看得到他的資料、已替他建立提醒或已通知任何人；"
+            "不要主動詢問姓名、電話、地址、病歷或其他個人資料。"
+            "簡短自我介紹後自然陪聊；若對方問正式功能，說明完整版本可在場域診斷中展示。）"
+        )
     try:
+        if demo_mode:
+            raise RuntimeError("anonymous demo has no reply context")
         # displayName 跟著角色走：用戶自訂名優先、否則用角色本名。
         # 不傳的話會 fallback 到存檔的陪伴檔案（寧寧），把換角色的名字蓋回去。
         data = {"displayName": (name or char)}
@@ -455,6 +465,8 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     except Exception:
         pass
     try:
+        if demo_mode:
+            raise RuntimeError("anonymous demo has no prior-call recap")
         # 上一通剛聊過（12 小時內）→ 開場自然接續、不重問剛答過的日常問題（Edward 7/15：20 分鐘後再打還被問吃飯沒）
         # memory_scope＝這通的人別隔離鍵（token 的 voice-<user_id>），跟收線回寫同一 scope。
         # 正式路線（B）：Brain 通道設定齊全＋這通有已驗證用戶 → 向 Brain 要該用戶自己的
@@ -506,7 +518,8 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     else:
         base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
     if live_lookup_enabled():
-        base += (
+        if not demo_mode:
+            base += (
             "（你有 search_current_information 即時查詢工具。**他自己開口問**餐廳店家、景點旅遊"
             "（例如日本哪裡好玩、桃園有什麼好吃的）、電影影劇、天氣預報、時事、活動檔期這類"
             "「講錯會誤導人」的具體事情時，才呼叫工具；"
@@ -518,8 +531,8 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "查不到或不確定就老實說「這我不太確定，我幫你查查看」——寧可少講，絕對不可以自己編店名、地址、價格或營業時間。"
             "天氣要講就查當地真的預報再講。"
             "工具回覆 error 時只要簡短說現在沒查到，不可拿舊印象補答案；禁止先沉默查詢，也不要在還沒查完時假裝已經知道答案。）"
-        )
-    else:
+            )
+    if not live_lookup_enabled() or demo_mode:
         # 即時查詢關掉時（預設）：她必須知道自己沒有這個能力，不然會亂承諾「我幫你查」然後查不了。
         # 這段的方向跟⑦「不捏造家人的話」、健康圍籬一樣：不知道就說不知道，絕不憑印象編。
         base += (
@@ -768,7 +781,7 @@ def asr_adaptation_phrases(char=None, name=None, user=None, topics=None, locatio
     return phrases
 
 
-def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False):
+def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     # 通話中即時查詢：預設關（2026-07-17 Edward 拍板）。
@@ -790,10 +803,11 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     # 退回舊行為：MUNEA_VOICE_LIVE_LOOKUP=1（程式全留著、一個字就回去）。
     tools = []
     if live_lookup_enabled():
-        tools.append(_LIVE_LOOKUP_TOOL)
-    if allow_reminders:
+        if not demo_mode:
+            tools.append(_LIVE_LOOKUP_TOOL)
+    if allow_reminders and not demo_mode:
         tools.append(_REMINDER_TOOLS)
-    if allow_events:
+    if allow_events and not demo_mode:
         tools.append(_EVENT_TOOLS)
     phrases = asr_adaptation_phrases(char, name, user, topics, location)
     transcription_config = types.AudioTranscriptionConfig(
@@ -802,7 +816,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders, fam, memory_scope, allow_events),
+        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders, fam, memory_scope, allow_events, demo_mode),
         tools=tools,
         output_audio_transcription=transcription_config,
         input_audio_transcription=transcription_config,
@@ -1038,6 +1052,7 @@ async def handle(ws):
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
+    demo_mode = False
     call_release_reason = ""
     _q = {}
     try:
@@ -1046,6 +1061,8 @@ async def handle(ws):
         _q = parse_qs(urlparse(path).query)
     except Exception:
         pass
+
+    demo_mode = _q.get("demo") == ["1"]
 
     call_token = (_q.get("token") or [""])[0].strip()
     control_required = os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") == "1"
@@ -1103,10 +1120,10 @@ async def handle(ws):
         if lvals and lvals[0].strip():
             location = lvals[0].strip()[:24]
         # ?cap_rem=1：這版 App 接得住「AI 幫你設提醒」→ 才給設提醒工具（能力握手 · 2026-07-09 Edward）
-        if _q.get("cap_rem") == ["1"]:
+        if _q.get("cap_rem") == ["1"] and not demo_mode:
             allow_reminders = True
         # ?cap_evt=1：這版 App 接得住「AI 幫你記行程」→ 才給記行程工具（能力握手 · 2026-07-16 Edward「約吃飯被設成看診」）
-        if _q.get("cap_evt") == ["1"]:
+        if _q.get("cap_evt") == ["1"] and not demo_mode:
             allow_events = True
         # ?fam=N：聊過幾通（熟識度）→ 決定開場話量：越熟話越少（Edward 2026-07-10「隨熟識度思考語句量」）
         fvals = _q.get("fam")
@@ -1143,7 +1160,7 @@ async def handle(ws):
           "lookup_waiting_answer": False, "lookup_cue_task": None,
           "lookup_cue_at": 0.0, "lookup_fail_streak": 0, "lookup_block_until": 0.0,
           "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
-    _diag(cid, "connected", name=name or "-", char=char)
+    _diag(cid, "connected", name=name or "-", char=char, demo=demo_mode)
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     # 通話記憶的人別隔離鍵：Gateway 正式路徑的 call token 帶已驗證的 user_id；
     # 開發包直連沒 token → None（server 端落回主要照護對象）。收線回寫與開場接續共用同一 scope。
@@ -1158,7 +1175,7 @@ async def handle(ws):
         st["lookup_cue_task"] = lookup_cue_future
         # 組 config 會呼叫 build_reply_context（內含對 Supabase 的同步阻塞查詢，最多 4 秒）——
         # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
-        cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam, memory_scope, allow_events)
+        cfg = await asyncio.to_thread(live_config, char, name, mood, topics, user, location, allow_reminders, fam, memory_scope, allow_events, demo_mode)
         asr_context_terms = [char, name, user, location, *(topics or [])]
         _key_idx, _cli = _pick_client()   # 挑現在最閒的一把鑰匙開這通（多鑰匙分流的核心）
         async with _cli.aio.live.connect(model=MODEL, config=cfg) as session:
@@ -1883,7 +1900,7 @@ async def handle(ws):
             _capture_call_turns(st)
             # 啟用條件二擇一：本機模式總開關（MUNEA_VOICE_CALL_MEMORY）或
             # Brain 通道已設定（設定密語＝刻意啟用，不疊第二道旗標）。
-            if st.get("call_turns") and (
+            if not demo_mode and st.get("call_turns") and (
                     server._voice_call_memory_enabled() or _brain_memory_config()[0]):
                 turns_snapshot = list(st["call_turns"])
 
