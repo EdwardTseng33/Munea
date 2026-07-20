@@ -9,10 +9,10 @@
 <style>
   :root{
     --frame-w:min(100vw, calc(100dvh * 1080 / 1920));
-    /* FlashHead receives the App portrait crop (0,140,1080,1440) resized to 512x512.
-       Restore that exact rectangle here so generated pixels return to their original coordinates. */
-    --box-left:0%; --box-top:7.291667%; --box-width:100%; --box-height:75%;
-    --feather-top:5.556%; --feather-bottom:9.722%; --feather-side:5.926%;
+    /* Match the production App's native 1080x1080 FlashHead square. The two
+       characters use different source Y offsets; pickChar() sets --box-top. */
+    --box-left:0%; --box-top:9.895833%; --box-width:100%; --box-height:56.25%;
+    --feather-top:4%; --feather-bottom-start:82%;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -29,14 +29,12 @@
   .cover.hide{opacity:0;pointer-events:none}
   .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:opacity .18s linear;z-index:3}
   .overlay.on{opacity:1}
-  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:fill !important;display:block}
+  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:cover !important;display:block}
   .overlay:not(.stream) canvas{display:none}
   .overlay.stream video{display:none}
   .overlay{
-    -webkit-mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
-    -webkit-mask-composite:source-in,source-over;
-    mask-image:linear-gradient(to right,transparent 0%,black var(--feather-side),black calc(100% - var(--feather-side)),transparent 100%),linear-gradient(to bottom,transparent 0%,black var(--feather-top),black calc(100% - var(--feather-bottom)),transparent 100%);
-    mask-composite:intersect;
+    -webkit-mask-image:linear-gradient(to bottom,transparent 0%,black var(--feather-top),black var(--feather-bottom-start),transparent 100%);
+    mask-image:linear-gradient(to bottom,transparent 0%,black var(--feather-top),black var(--feather-bottom-start),transparent 100%);
   }
   .scrim{position:absolute;inset:0;pointer-events:none;z-index:4;background:linear-gradient(to bottom,rgba(24,20,16,.12),transparent 18%,transparent 72%,rgba(22,22,18,.14))}
   .top{position:absolute;left:max(17px, calc((100vw - var(--frame-w))/2 + 17px));right:max(17px, calc((100vw - var(--frame-w))/2 + 17px));top:calc(env(safe-area-inset-top) + 22px);z-index:6;display:flex;justify-content:space-between;align-items:center;gap:12px;text-shadow:0 1px 7px rgba(0,0,0,.48)}
@@ -171,17 +169,9 @@ let CAP_SECONDS = 180;      // 體驗上限（伺服器可調）
 const TEST_LINE = '嗨,你在嗎?我在測試連線。';
 
 const CHARS = {
-  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4' },
-  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4' },
+  a05: { faceChar: '寧寧', label: '寧寧', bg: 'flashhead/bg-a05.png', hello: 'assets/nening-hello.mp4', idle: 'assets/nening-idle.mp4', overlayTop: '9.895833%' },
+  a06: { faceChar: '阿原', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4', overlayTop: '10.885417%' },
 };
-const FALLBACK_AVATAR_RENDER_CONTRACT = {
-  version: 'app-flashhead-portrait-v1',
-  canvas: { width: 1080, height: 1920 },
-  source_crop: { x: 0, y: 140, width: 1080, height: 1440 },
-  model_input: { width: 512, height: 512 },
-  fit: 'fill',
-};
-let avatarRenderContract = FALLBACK_AVATAR_RENDER_CONTRACT;
 let curChar = 'a05';
 
 const $ = s => document.querySelector(s);
@@ -200,26 +190,18 @@ const showDbg = qs.has('debug');
 const nomic = qs.has('nomic');
 if (showDbg) $('#dbg').classList.add('show');
 
-function applyAvatarRenderContract(raw){
-  const c = raw || FALLBACK_AVATAR_RENDER_CONTRACT;
-  const canvas = c.canvas || {};
-  const crop = c.source_crop || {};
-  const cw = Number(canvas.width), ch = Number(canvas.height);
-  const x = Number(crop.x), y = Number(crop.y), w = Number(crop.width), h = Number(crop.height);
-  const valid = [cw,ch,x,y,w,h].every(Number.isFinite) && cw > 0 && ch > 0 && w > 0 && h > 0 &&
-    x >= 0 && y >= 0 && x + w <= cw && y + h <= ch && c.fit === 'fill';
-  if (!valid) throw new Error('invalid avatar render contract');
-  avatarRenderContract = c;
+function applyAvatarRenderContract(){
+  const c = CHARS[curChar];
   const root = document.documentElement.style;
-  root.setProperty('--box-left', (x / cw * 100) + '%');
-  root.setProperty('--box-top', (y / ch * 100) + '%');
-  root.setProperty('--box-width', (w / cw * 100) + '%');
-  root.setProperty('--box-height', (h / ch * 100) + '%');
-  faceVid.style.objectFit = c.fit;
-  faceCanvas.style.objectFit = c.fit;
-  try{ dbgLine('[contract] ' + c.version + ' crop=' + [x,y,w,h].join(',')); }catch(e){}
+  root.setProperty('--box-left', '0%');
+  root.setProperty('--box-top', c.overlayTop);
+  root.setProperty('--box-width', '100%');
+  root.setProperty('--box-height', '56.25%');
+  faceVid.style.objectFit = 'cover';
+  faceCanvas.style.objectFit = 'cover';
+  try{ dbgLine('[contract] app square char=' + curChar + ' top=' + c.overlayTop); }catch(e){}
 }
-applyAvatarRenderContract(FALLBACK_AVATAR_RENDER_CONTRACT);
+applyAvatarRenderContract();
 
 /* ===== 錯誤全部 surface（沿用真機測試版作法） ===== */
 window.__flashheadStats = { round: 0, roundTimes: [], vidFrames: 0, audioBytes: 0, switchMs: null, err: '' };
@@ -418,6 +400,7 @@ function pickChar(c){
   $('#charA06').classList.toggle('on', c==='a06');
   bgImg.src = CHARS[c].bg;
   chName.textContent = CHARS[c].label;
+  applyAvatarRenderContract();
   IdleMotion.start();
 }
 </script>
@@ -445,7 +428,7 @@ function prewarm(){
   if (!AVATAR_HTTP || !AVATAR_TOKEN) return;
   if (avatarPrewarmPromise) return avatarPrewarmPromise;
   avatarPrewarmPromise = fetch(AVATAR_HTTP + '/health?token=' + encodeURIComponent(AVATAR_TOKEN)).then(r=>r.json()).then(j=>{
-    if (j.avatar_render_contract) applyAvatarRenderContract(j.avatar_render_contract);
+    applyAvatarRenderContract();
     dbgLine('[prewarm] health ok engine=' + j.engine + ' uptime_s=' + (j.uptime_s!=null?j.uptime_s:'?'));
     return true;
   }).catch(e=>{
