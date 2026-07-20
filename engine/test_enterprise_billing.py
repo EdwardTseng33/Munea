@@ -339,6 +339,10 @@ class ESGReportSuppressionTests(unittest.TestCase):
         for key in ("companionship", "care", "familyValue"):
             section = report["sections"][key]
             self.assertTrue(section["suppressed"], f"{key} should be suppressed with cohort<5")
+            # sampleSize 本身也是「該組數字」，遮蔽時要換成粗粒度標記，不留精確整數
+            # （例如「這家公司只有 3 個人」）——2026-07-20 補：光看 suppressed 旗標不夠，
+            # sampleSize 也要真的被清掉，見 enforce_privacy_guard() 規則 3b。
+            self.assertEqual(section["sampleSize"], eb.SUPPRESSED_SAMPLE_SIZE_LABEL)
             for field, value in section.items():
                 if field in ("sampleSize", "suppressed"):
                     continue
@@ -458,9 +462,12 @@ class PrivacyGuardRule2ConversationLeakTests(unittest.TestCase):
 
 
 class PrivacyGuardRule3SmallGroupTests(unittest.TestCase):
-    """規則 3：分組人數 < 5 時不單獨呈現——故意讓一個小樣本區塊宣稱沒有被遮蔽，應被擋下。"""
+    """規則 3：分組人數 < 5 時不單獨呈現——要真的遮蔽，不是只標注 suppressed 就算數。
+    2026-07-20 補：蘇菲 review 發現原本的檢查只查「有沒有標 suppressed」，沒查
+    「標了 suppressed 之後數字是不是真的被清掉」——這一段補上那道漏掉的防線。"""
 
     def test_small_sample_claimed_unsuppressed_is_blocked(self):
+        """漏標的情況：sampleSize < 5 卻沒標 suppressed。"""
         report = copy.deepcopy(valid_report_fixture(cohort_size=6))
         report["sections"]["companionship"]["sampleSize"] = 3
         report["sections"]["companionship"]["suppressed"] = False
@@ -468,10 +475,40 @@ class PrivacyGuardRule3SmallGroupTests(unittest.TestCase):
             eb.enforce_privacy_guard(report)
         self.assertIn("規則3", str(ctx.exception))
 
-    def test_correctly_suppressed_small_sample_passes(self):
+    def test_suppressed_flag_true_but_metric_number_still_present_is_blocked(self):
+        """故意違反 → 應被擋下：標了 suppressed=True，但其中一個行為指標數字沒被清掉
+        （只標注、沒有真的遮蔽）——這正是 4.4 規則 3『要有實際的遮蔽邏輯，不是只標注』
+        要擋的情況，也是這次補的洞本身。"""
         report = copy.deepcopy(valid_report_fixture(cohort_size=3))
-        # build_esg_report 本來就會正確標記 suppressed=True，這裡只是再次確認守門有放行
         self.assertTrue(report["sections"]["companionship"]["suppressed"])
+        # 模擬「忘記把數字清成 None」的 bug：suppressed 旗標是對的，數字卻還留著
+        report["sections"]["companionship"]["avgCallMinutes"] = 12.5
+        with self.assertRaises(eb.PrivacyViolationError) as ctx:
+            eb.enforce_privacy_guard(report)
+        self.assertIn("規則3", str(ctx.exception))
+        self.assertIn("avgCallMinutes", str(ctx.exception))
+
+    def test_suppressed_flag_true_but_raw_sampleSize_int_still_present_is_blocked(self):
+        """故意違反 → 應被擋下：sampleSize 沒被換成 SUPPRESSED_SAMPLE_SIZE_LABEL、
+        還留著精確整數（例如 3）——sampleSize 本身也算『該組數字』，不能因為
+        其他指標都清乾淨了就放過它，見 build_esg_report() 對 sampleSize 的遮蔽決定。"""
+        report = copy.deepcopy(valid_report_fixture(cohort_size=3))
+        self.assertEqual(report["sections"]["care"]["sampleSize"], eb.SUPPRESSED_SAMPLE_SIZE_LABEL)
+        report["sections"]["care"]["sampleSize"] = 3  # 故意還原成精確整數
+        with self.assertRaises(eb.PrivacyViolationError) as ctx:
+            eb.enforce_privacy_guard(report)
+        self.assertIn("規則3", str(ctx.exception))
+        self.assertIn("sampleSize", str(ctx.exception))
+
+    def test_correctly_suppressed_small_sample_passes(self):
+        """正確對照組：sampleSize 已換成 <5 標記、所有行為指標數字都清成 None、
+        suppressed=True——這是 build_esg_report() 對小樣本公司的正常輸出，應該通過。"""
+        report = copy.deepcopy(valid_report_fixture(cohort_size=3))
+        # build_esg_report 本來就會正確標記 suppressed=True 並把 sampleSize 換成 <5，
+        # 這裡只是再次確認守門有放行，不是誤殺正常報告。
+        self.assertTrue(report["sections"]["companionship"]["suppressed"])
+        self.assertEqual(report["sections"]["companionship"]["sampleSize"], eb.SUPPRESSED_SAMPLE_SIZE_LABEL)
+        self.assertIsNone(report["sections"]["companionship"]["avgCallMinutes"])
         self.assertTrue(eb.enforce_privacy_guard(report))
 
 
