@@ -1076,6 +1076,68 @@ class SupabaseAdapter:
             "updatedAt": row.get("updated_at"),
         }
 
+    # ── 開票／收款設定（單列表 · 2026-07-20 二次需求）──
+    # 讀取入口見 engine/enterprise_seats.py 的 get_billing_settings()／
+    # save_billing_settings()；enterprise_billing.py 產請款單時要呼叫那兩個函式，
+    # 不直接呼叫這裡（跟其餘 enterprise_* 方法同一個分層原則）。
+
+    def get_enterprise_billing_settings(self):
+        if not self.enabled():
+            return None
+        row = self._first("enterprise_billing_settings", {"select": "*", "limit": "1"})
+        return self.enterprise_billing_settings_row_to_item(row) if row else {}
+
+    def save_enterprise_billing_settings(self, settings):
+        """單列表用 on_conflict=singleton 做 upsert——第一次寫是 insert，
+        之後每次存都是同一列覆寫，不會累積多筆。"""
+        if not self.enabled():
+            return None
+        payload = self.enterprise_billing_settings_to_row(settings)
+        payload["singleton"] = True
+        rows = self._request(
+            "POST", "enterprise_billing_settings",
+            query={"on_conflict": "singleton", "select": "*"},
+            payload=payload, prefer="resolution=merge-duplicates,return=representation",
+        )
+        return self.enterprise_billing_settings_row_to_item(rows[0]) if rows else None
+
+    @staticmethod
+    def enterprise_billing_settings_to_row(settings):
+        settings = settings or {}
+        return {
+            "issuer_company_name": settings.get("issuerCompanyName") or settings.get("issuer_company_name"),
+            "issuer_tax_id": settings.get("issuerTaxId") or settings.get("issuer_tax_id"),
+            "issuer_address": settings.get("issuerAddress") or settings.get("issuer_address"),
+            "issuer_phone": settings.get("issuerPhone") or settings.get("issuer_phone"),
+            "issuer_contact_name": settings.get("issuerContactName") or settings.get("issuer_contact_name"),
+            "bank_name": settings.get("bankName") or settings.get("bank_name"),
+            "bank_branch": settings.get("bankBranch") or settings.get("bank_branch"),
+            "bank_account_name": settings.get("bankAccountName") or settings.get("bank_account_name"),
+            "bank_account_no": settings.get("bankAccountNo") or settings.get("bank_account_no"),
+            "payment_terms_days": int(settings.get("paymentTermsDays") or settings.get("payment_terms_days") or 15),
+            "invoice_footer_note": settings.get("invoiceFooterNote") or settings.get("invoice_footer_note"),
+            "updated_by": settings.get("updatedBy") or settings.get("updated_by"),
+        }
+
+    @staticmethod
+    def enterprise_billing_settings_row_to_item(row):
+        row = row or {}
+        return {
+            "issuerCompanyName": row.get("issuer_company_name"),
+            "issuerTaxId": row.get("issuer_tax_id"),
+            "issuerAddress": row.get("issuer_address"),
+            "issuerPhone": row.get("issuer_phone"),
+            "issuerContactName": row.get("issuer_contact_name"),
+            "bankName": row.get("bank_name"),
+            "bankBranch": row.get("bank_branch"),
+            "bankAccountName": row.get("bank_account_name"),
+            "bankAccountNo": row.get("bank_account_no"),
+            "paymentTermsDays": row.get("payment_terms_days") or 15,
+            "invoiceFooterNote": row.get("invoice_footer_note"),
+            "updatedAt": row.get("updated_at"),
+            "updatedBy": row.get("updated_by"),
+        }
+
     def save_app_profile_store(self, store):
         if not self.enabled():
             return None

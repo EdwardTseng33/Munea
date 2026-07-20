@@ -1072,3 +1072,86 @@ def client_detail(client_id):
         "seats": seats,
         "invoices": billing["invoices"],
     }
+
+
+# ---- 開票／收款設定（單列表 · 2026-07-20 二次需求 · Edward 親提）----
+# 背景：Edward 目前是一人公司，開發票要借用另一家公司的抬頭，開票方資訊
+# （抬頭／統編／收款銀行）不能寫死、未來會換。原本 enterprise_billing.py 用環境變數
+# MUNEA_ENTERPRISE_REMIT_INFO 頂著一個假字串，現在改成後台可填的一列設定。
+#
+# 給 enterprise_billing.py 用的入口（那支檔案的責任是把請款單上寫死的字串換成這份
+# 設定，不在本檔範圍）：
+#   enterprise_seats.get_billing_settings()              -> 讀目前設定（一定回 dict，不是 None）
+#   enterprise_seats.is_billing_settings_configured(...)  -> 核心欄位是否都填了；
+#     沒填時請款單／後台要顯示明顯提示，不能靜默印出空白（沒填不是錯誤，是還沒設定）
+
+BILLING_SETTINGS_PATH = os.environ.get("MUNEA_ENTERPRISE_BILLING_SETTINGS_PATH") or os.path.join(HERE, "enterprise_billing_settings_store.json")
+DEFAULT_PAYMENT_TERMS_DAYS = 15  # 對應需求單 4.2「次月 15 日前」既有邏輯的預設值，可調
+# 核心欄位：任一沒填就視為「尚未設定開票資訊」——抬頭／收款銀行／戶名／帳號缺一不可，
+# 沒有這些請款單印出來也沒意義（統編／電話／聯絡人／備註算選填，不影響 configured 判定）。
+BILLING_SETTINGS_REQUIRED_FIELDS = ("issuerCompanyName", "bankName", "bankAccountName", "bankAccountNo")
+
+
+def normalize_billing_settings(item=None):
+    item = item or {}
+    return {
+        "issuerCompanyName": item.get("issuerCompanyName") or item.get("issuer_company_name"),
+        "issuerTaxId": item.get("issuerTaxId") or item.get("issuer_tax_id"),
+        "issuerAddress": item.get("issuerAddress") or item.get("issuer_address"),
+        "issuerPhone": item.get("issuerPhone") or item.get("issuer_phone"),
+        "issuerContactName": item.get("issuerContactName") or item.get("issuer_contact_name"),
+        "bankName": item.get("bankName") or item.get("bank_name"),
+        "bankBranch": item.get("bankBranch") or item.get("bank_branch"),
+        "bankAccountName": item.get("bankAccountName") or item.get("bank_account_name"),
+        "bankAccountNo": item.get("bankAccountNo") or item.get("bank_account_no"),
+        "paymentTermsDays": int(
+            item.get("paymentTermsDays") or item.get("payment_terms_days") or DEFAULT_PAYMENT_TERMS_DAYS
+        ),
+        "invoiceFooterNote": item.get("invoiceFooterNote") or item.get("invoice_footer_note"),
+        "updatedAt": item.get("updatedAt") or item.get("updated_at"),
+        "updatedBy": item.get("updatedBy") or item.get("updated_by"),
+    }
+
+
+def get_billing_settings():
+    """唯一讀取入口。回傳一定是 normalize_billing_settings() 過的 dict，沒設定過就是
+    核心欄位皆空——不是 None、呼叫端不必先判斷 None，直接用 is_billing_settings_configured()
+    決定要不要顯示警示。"""
+    backend = _backend()
+    try:
+        remote = backend.get_enterprise_billing_settings()
+        if remote is not None:
+            return normalize_billing_settings(remote)
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback("load enterprise billing settings from Supabase", exc)
+    local = _read_json_file(BILLING_SETTINGS_PATH, None)
+    return normalize_billing_settings(local)
+
+
+def is_billing_settings_configured(settings=None):
+    """需求單二次補充：沒設定完就不准靜默印空白，呼叫端（後台／請款單 HTML）用這個
+    決定要不要顯示『尚未設定開票資訊』提示。不傳 settings 就自己查目前的；
+    server.py 已經查過一次時可以把查到的傳進來，不必重複打一次。"""
+    settings = settings if settings is not None else get_billing_settings()
+    if not settings:
+        return False
+    return all((settings.get(field) or "").strip() for field in BILLING_SETTINGS_REQUIRED_FIELDS)
+
+
+def save_billing_settings(payload, updated_by="admin"):
+    settings = normalize_billing_settings(payload)
+    settings["updatedAt"] = _utc_now()
+    settings["updatedBy"] = updated_by or "admin"
+    backend = _backend()
+    try:
+        remote = backend.save_enterprise_billing_settings(settings)
+        if remote is not None:
+            return normalize_billing_settings(remote)
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback("save enterprise billing settings to Supabase", exc)
+    _write_json_file(BILLING_SETTINGS_PATH, settings)
+    return settings
