@@ -103,6 +103,16 @@ create table if not exists public.enterprise_invoices (
   updated_at timestamptz not null default now()
 );
 
+-- 2.1 補充（2026-07-20 二次需求 · 蘇菲協調後拍板）：client_code 讓請款單號
+-- （MU-YYYYMM-<公司代碼>）更好認、可被人挑選（例如公司英文簡稱）。選填、非強制——
+-- engine/enterprise_billing.py 的 derive_client_code() 目前仍預設用 client.id 前 8 碼
+-- 當代碼（穩定、不必處理中文轉拼音），這欄留給之後要接手改成「優先讀這欄、沒有才退回
+-- id 前 8 碼」時用，本次不強制耦合兩邊改動。
+alter table public.enterprise_clients
+  add column if not exists client_code text;
+create unique index if not exists enterprise_clients_client_code_uidx
+  on public.enterprise_clients(client_code) where client_code is not null;
+
 -- 2.5 會員資格授予的來源標記：非 Apple 來源的授予必須指出處。
 alter table public.subscription_ledger
   add column if not exists grant_ref uuid references public.enterprise_seats(id) on delete set null;
