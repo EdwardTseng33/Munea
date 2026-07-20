@@ -839,6 +839,7 @@ class SupabaseAdapter:
         client = client or {}
         return {
             "name": str(client.get("name") or "").strip()[:200],
+            "client_code": client.get("clientCode") or client.get("client_code"),
             "tax_id": client.get("taxId") or client.get("tax_id"),
             "billing_address": client.get("billingAddress") or client.get("billing_address"),
             "contact_name": client.get("contactName") or client.get("contact_name"),
@@ -860,6 +861,7 @@ class SupabaseAdapter:
         return {
             "id": row.get("id") or "",
             "name": row.get("name") or "",
+            "clientCode": row.get("client_code"),
             "taxId": row.get("tax_id"),
             "billingAddress": row.get("billing_address"),
             "contactName": row.get("contact_name"),

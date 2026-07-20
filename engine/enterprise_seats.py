@@ -37,6 +37,11 @@ CLIENTS_PATH = os.environ.get("MUNEA_ENTERPRISE_CLIENTS_PATH") or os.path.join(H
 SEATS_PATH = os.environ.get("MUNEA_ENTERPRISE_SEATS_PATH") or os.path.join(HERE, "enterprise_seats_store.json")
 SEAT_EVENTS_PATH = os.environ.get("MUNEA_ENTERPRISE_SEAT_EVENTS_PATH") or os.path.join(HERE, "enterprise_seat_events_store.json")
 LOCAL_GRANTS_PATH = os.environ.get("MUNEA_ENTERPRISE_LOCAL_GRANTS_PATH") or os.path.join(HERE, "enterprise_local_grants_store.json")
+# 跟 engine/enterprise_billing.py 用同一個環境變數／同一個預設檔名（不 import 那支檔案，
+# 避免循環 import；只是讀同一份本機備援檔）——Supabase 未啟用時，
+# assert_client_has_paid_invoice() 才能看到 mark-paid 端點剛寫進本地檔的請款單狀態，
+# 不然本機／測試模式下永遠查不到、鐵律 2 會一路誤擋（安全但沒用）。
+INVOICES_PATH = os.environ.get("MUNEA_ENTERPRISE_INVOICES_PATH") or os.path.join(HERE, "enterprise_invoices_store.json")
 
 CLIENT_PLAN_TIERS = ("plus", "pro")
 CLIENT_STATUSES = ("active", "expiring", "ended")
@@ -142,6 +147,10 @@ def normalize_client(item=None):
     return {
         "id": item.get("id") or "",
         "name": str(item.get("name") or "").strip()[:200],
+        # 選填、非強制（2026-07-20 二次需求）：給請款單號一個比 id 前 8 碼好認的代碼；
+        # 沒填就是 None，enterprise_billing.py 的 derive_client_code() 目前仍走
+        # id 前 8 碼那條路，兩邊本次不強制耦合。
+        "clientCode": item.get("clientCode") or item.get("client_code"),
         "taxId": item.get("taxId") or item.get("tax_id"),
         "billingAddress": item.get("billingAddress") or item.get("billing_address"),
         "contactName": item.get("contactName") or item.get("contact_name"),
@@ -561,11 +570,25 @@ def validate_subscription_grant_ref(provider, grant_ref):
 PAID_INVOICE_STATUSES = ("paid", "invoiced")
 
 
+def _read_local_invoices(client_id=None):
+    """讀 enterprise_billing.py 本地備援檔（同一個環境變數／預設路徑，不 import 該模組）。
+    Supabase 未啟用時的最後一道查詢——沒有這層，本機模式下 mark-paid 之後
+    grant_enterprise_membership 永遠查不到剛入帳的請款單，鐵律 2 會一路誤擋。"""
+    items = _read_json_file(INVOICES_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    if client_id:
+        items = [i for i in items if i.get("enterpriseClientId") == client_id]
+    items.sort(key=lambda i: i.get("periodStart") or "", reverse=True)
+    return items
+
+
 def client_latest_invoice(client_id):
     """該公司「當期」請款單，即依 period_start 排序最新一張（見 supabase_adapter.py
     load_enterprise_invoices 的 order）。請款單的產生與收款登記屬 engine/enterprise_billing.py，
-    這裡只唯讀。Supabase 未啟用或表還沒建時一律回 None——安全預設視為未付款
-   （鐵律 2 寧可誤擋、不可誤放）。"""
+    這裡只唯讀。Supabase 啟用但查不到任何請款單時，安全預設視為未付款（鐵律 2 寧可
+    誤擋、不可誤放）；Supabase 未啟用（本機／測試）才退到本地備援檔，讓 mark-paid
+    寫進去的狀態真的能被看見。"""
     backend = _backend()
     try:
         invoices = backend.load_enterprise_invoices(client_id=client_id, limit=1)
@@ -575,7 +598,8 @@ def client_latest_invoice(client_id):
         if backend.enabled() and not _is_missing_table_error(exc):
             raise
         _log_fallback(f"load enterprise invoices for {client_id}", exc)
-    return None
+    local = _read_local_invoices(client_id=client_id)
+    return local[0] if local else None
 
 
 def assert_client_has_paid_invoice(client_id):
@@ -969,16 +993,19 @@ def _client_status_light(client, overdue_days):
 
 def _client_billing_snapshot(client_id):
     """唯讀彙總：累計欠款（未 paid/invoiced/void 的請款單金額加總）、最大逾期天數。
-    寫入（產出請款單、標已寄出或已入帳）屬 engine/enterprise_billing.py 的責任。"""
+    寫入（產出請款單、標已寄出或已入帳）屬 engine/enterprise_billing.py 的責任。
+    Supabase 未啟用時退到本地備援檔（同 client_latest_invoice 的理由）。"""
     backend = _backend()
-    invoices = []
+    invoices = None
     try:
-        invoices = backend.load_enterprise_invoices(client_id=client_id, limit=200) or []
+        invoices = backend.load_enterprise_invoices(client_id=client_id, limit=200)
     except Exception as exc:
         if backend.enabled() and not _is_missing_table_error(exc):
             raise
         _log_fallback(f"load enterprise invoices for {client_id}", exc)
-        invoices = []
+        invoices = None
+    if invoices is None:
+        invoices = _read_local_invoices(client_id=client_id)
     outstanding = 0.0
     overdue_days = 0
     today = datetime.now(timezone.utc).date()
