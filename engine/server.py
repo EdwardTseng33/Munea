@@ -23,6 +23,7 @@ from admin_data_quality import admin_contract_response, latest_record_timestamp,
 import chat_engine as eng
 import localization
 import supabase_adapter
+import enterprise_seats
 import model_router
 import notify
 import apple_store
@@ -359,6 +360,15 @@ ADMIN_POST_PATHS = {
     "/admin/daily-briefing",
     "/admin/memory-consolidate",
     "/admin/memory-living-profile",
+    # 企業席次（B2B）後台：需求單 3.6 接口清單（不含請款單相關端點，
+    # 那是 engine/enterprise_billing.py 的責任範圍，另案加入 ADMIN_POST_PATHS）。
+    "/admin/enterprise/clients",
+    "/admin/enterprise/client/save",
+    "/admin/enterprise/client/detail",
+    "/admin/enterprise/seats/import-preview",
+    "/admin/enterprise/seats/import-commit",
+    "/admin/enterprise/seats/export",
+    "/admin/enterprise/seats/grant",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -5828,6 +5838,121 @@ def admin_audit_events_summary(data=None):
     }
 
 
+# ── 企業席次（B2B）後台接口：企業席次·後台管理與月結 需求單 3.6 ──
+# 資料層／狀態機／三條鐵律都在 engine/enterprise_seats.py，這裡只是接口層：
+# 驗證管理權杖、解析請求、呼叫資料層、包成既有 admin 接口慣用的 {"ok": true, ...} 格式。
+# 請款單相關端點（/admin/enterprise/invoices、invoice/mark-sent、invoice/mark-paid、
+# monthly-close）不在這裡實作——那是 engine/enterprise_billing.py 的責任範圍。
+
+def enterprise_clients_response(data=None):
+    """3.6 /admin/enterprise/clients：企業客戶列表。"""
+    data = data or {}
+    clients = enterprise_seats.clients_overview(query=data.get("query"), status=data.get("status"))
+    return {"ok": True, "clients": clients, "count": len(clients)}
+
+
+def enterprise_client_save_response(data=None):
+    """3.6 /admin/enterprise/client/save：新建／編輯公司（2.1 全部欄位）。
+    有帶 id 時視為部分更新——先讀現有資料，用請求帶的欄位覆蓋後再整列存回
+   （upsert_client 本身是整列覆寫語意，見 enterprise_seats.py 的註解）。"""
+    data = data or {}
+    client_id = str(data.get("id") or "").strip()
+    if client_id:
+        existing = enterprise_seats.get_client(client_id)
+        if not existing:
+            return {"ok": False, "error": {"code": "enterprise_client_not_found"}}
+        merged = {**existing, **data, "id": client_id}
+    else:
+        merged = data
+    try:
+        client = enterprise_seats.upsert_client(merged)
+    except Exception as exc:
+        log_fallback_exception("save enterprise client", exc)
+        return {"ok": False, "error": {"code": "enterprise_client_save_failed"}}
+    return {"ok": True, "client": client, "created": not bool(client_id)}
+
+
+def enterprise_client_detail_response(data=None):
+    """3.6 /admin/enterprise/client/detail：公司資料＋席次明細＋收款紀錄。"""
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or data.get("id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": {"code": "client_id_required"}}
+    detail = enterprise_seats.client_detail(client_id)
+    if not detail:
+        return {"ok": False, "error": {"code": "enterprise_client_not_found"}}
+    return {"ok": True, **detail}
+
+
+def _enterprise_import_rows_from_request(data):
+    """/import-preview 與 /import-commit 共用：接受已解析好的 rows，或原始 csv 文字。"""
+    rows = data.get("rows")
+    if isinstance(rows, list):
+        return rows
+    csv_text = data.get("csv") or data.get("csvText") or data.get("csv_text")
+    if csv_text:
+        return enterprise_seats.parse_seat_import_csv(csv_text)
+    return []
+
+
+def enterprise_seats_import_preview_response(data=None):
+    """3.6 /admin/enterprise/seats/import-preview：唯讀五分類預檢。"""
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": {"code": "client_id_required"}}
+    rows = _enterprise_import_rows_from_request(data)
+    try:
+        preview = enterprise_seats.import_preview(client_id, rows)
+    except ValueError as exc:
+        return {"ok": False, "error": {"code": str(exc)}}
+    return {"ok": True, **preview}
+
+
+def enterprise_seats_import_commit_response(data=None):
+    """3.6 /admin/enterprise/seats/import-commit：真正寫入名單。"""
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": {"code": "client_id_required"}}
+    rows = _enterprise_import_rows_from_request(data)
+    confirm_over_quota = bool(data.get("confirmOverQuota") or data.get("confirm_over_quota"))
+    try:
+        result = enterprise_seats.import_commit(
+            client_id, rows, actor="admin", confirm_over_quota=confirm_over_quota,
+        )
+    except ValueError as exc:
+        return {"ok": False, "error": {"code": str(exc)}}
+    return {"ok": True, **result}
+
+
+def enterprise_seats_export_response(data=None):
+    """3.6 /admin/enterprise/seats/export：匯出範本或現有席次（CSV 文字包在 JSON 裡，
+    跟本專案其餘接口一律走 JSON 回應的慣例一致；前端自行組 Blob 下載）。"""
+    data = data or {}
+    if bool(data.get("template")):
+        csv_text = enterprise_seats.build_seat_import_template_csv()
+        return {"ok": True, "csv": csv_text, "filename": "enterprise_seat_import_template.csv"}
+    client_id = data.get("clientId") or data.get("client_id")
+    status = data.get("status")
+    csv_text = enterprise_seats.build_seat_export_csv(client_id=client_id, status=status)
+    filename = f"enterprise_seats_{client_id or 'all'}.csv"
+    return {"ok": True, "csv": csv_text, "filename": filename}
+
+
+def enterprise_seats_grant_response(data=None):
+    """3.6 /admin/enterprise/seats/grant：批次授予。未付款則拒絕，回傳被擋原因
+   （鐵律 2、3 都在 enterprise_seats.grant_enterprise_membership 內強制，這裡不重複判斷）。"""
+    data = data or {}
+    seat_ids = data.get("seatIds") or data.get("seat_ids")
+    if not seat_ids and data.get("seatId"):
+        seat_ids = [data.get("seatId")]
+    if not isinstance(seat_ids, list) or not seat_ids:
+        return {"ok": False, "error": {"code": "seat_ids_required"}}
+    result = enterprise_seats.batch_grant_enterprise_membership(seat_ids, actor="admin", reason="admin_batch_grant")
+    return {"ok": True, **result}
+
+
 def default_billing_store():
     return {
         "schemaVersion": 1,
@@ -8102,6 +8227,74 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(drain_notification_outbox_response(data))
+            elif self.path == "/admin/enterprise/clients":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_clients_response(data))
+            elif self.path == "/admin/enterprise/client/save":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_client_save_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_client_created" if response.get("created") else "enterprise_client_updated",
+                            "targetTable": "enterprise_clients",
+                            "targetId": (response.get("client") or {}).get("id"),
+                            "details": {
+                                **privileged_actor_context(self.headers),
+                                "planTier": (response.get("client") or {}).get("planTier"),
+                            },
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/client/detail":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_client_detail_response(data))
+            elif self.path == "/admin/enterprise/seats/import-preview":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_seats_import_preview_response(data))
+            elif self.path == "/admin/enterprise/seats/import-commit":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_seats_import_commit_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_seats_imported",
+                            "targetTable": "enterprise_seats",
+                            "targetId": data.get("clientId") or data.get("client_id"),
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/seats/export":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_seats_export_response(data))
+            elif self.path == "/admin/enterprise/seats/grant":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_seats_grant_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_seats_grant_attempted",
+                            "targetTable": "subscription_ledger",
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
+                        })
+                    self._json(response)
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":
