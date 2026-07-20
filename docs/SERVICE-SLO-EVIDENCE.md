@@ -87,6 +87,30 @@ gcloud monitoring uptime list-configs --project=gen-lang-client-0229303523
 
 必須看到 8 個帶 repo-managed labels 的 checks，且實際 metric 已從三區出現。需要回滾時逐筆 `gcloud monitoring uptime delete CHECK_ID`；刪除會中斷 check ID 的歷史，所以必須先匯出設定／證據並經人工核准，部署腳本刻意不提供自動刪除。
 
+## Cloud Monitoring 7 天證據報告
+
+GitHub Actions 排程紀錄只保留為備援證據；正式的架構／API 可用性分數應採 Cloud Monitoring 的區域探測資料。唯讀產生報告：
+
+```powershell
+npm.cmd run service:slo:cloud -- --output dist/service-slo/cloud-monitoring-rolling-7d.json
+```
+
+報告以「服務 target × checker region × 每 5 分鐘 probe」為最小資料粒度。分子與分母都包含三個監測區域，不會把多區成功重複加分；缺少的區域樣本直接算入保守不可用。重複點、無效點、未知 check ID 與非預期區域會分開列入 `dataQuality`，但不會輸出 access token、原始 time series 或 Cloud check ID。
+
+Cloud Monitoring 設定的 `ASIA_PACIFIC`／`EUROPE` 區域在 metric 內會以實際位置 `apac-*`／`eur-*` 回傳；報告會先對焦回 manifest 區域再計算，避免把正常樣本誤判為缺失。
+
+2026-07-20 唯讀實測：8 個 targets、3 個區域皆完成映射；168 小時預期 48,384 點，當時取得 44,899 點，0 個失敗，coverage／保守可用率皆為 92.797%。因 coverage 尚未達 95%，狀態維持 `evidenceReady=false`，不提前提高健康度分數。
+
+只有同時符合以下條件，`evidenceReady` 才會是 `true`：
+
+- 視窗至少連續 168 小時。
+- 八個 manifest targets 都唯一對應到 repo-managed uptime check。
+- 區域樣本 coverage 至少 95%。
+
+這個值只代表 synthetic control-plane 證據可用，不代表 App 登入、購買、點數或通話 E2E 已驗收，也不等於產品品質 90 分。
+
+目前此命令採本機 `gcloud auth print-access-token` 做唯讀查詢，不修改 IAM、Cloud Monitoring、Cloud Run、資料庫或線上服務。GitHub Actions 自動化需另行審核並只授予執行身分 `roles/monitoring.viewer` 後才可啟用；本次不擴權。
+
 ## 不影響線上服務的護欄
 
 - 僅 `GET` 公開健康門面；不呼叫登入、購買、扣點、通話 offer 或管理後台寫入。

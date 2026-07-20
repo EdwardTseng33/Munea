@@ -139,6 +139,82 @@ async function main() {
   const monthlyExecutions = cloudTargets.length * uptimeManifest.regions.length * (60 / uptimeManifest.periodMinutes) * 24 * 30;
   check("Cloud uptime 月執行數低於官方 100 萬免費額度", monthlyExecutions === 207360 && monthlyExecutions < 1000000);
 
+  // Contract 12: Cloud Monitoring evidence uses target x region x time as its grain.
+  const { buildCloudMonitoringReport } = await import("./cloud-monitoring-slo-report.mjs");
+  const cloudFixtureManifest = {
+    project: "test-project",
+    periodMinutes: 5,
+    regions: ["asia-pacific", "europe"],
+    targets: [
+      { id: "brain-prod", environment: "production" },
+      { id: "voice-prod", environment: "production" },
+    ],
+  };
+  const managedConfig = (checkId, targetId) => ({
+    name: `projects/test-project/uptimeCheckConfigs/${checkId}`,
+    userLabels: { managed_by: "munea_repo", component: "service_slo", target_id: targetId },
+  });
+  const series = (checkId, region, points) => ({
+    metric: { labels: { check_id: checkId, checker_location: region } },
+    points: points.map(([endTime, value]) => ({ interval: { endTime }, value: { boolValue: value } })),
+  });
+  const cloudFixture = {
+    configs: [managedConfig("check-brain-secret", "brain-prod"), managedConfig("check-voice-secret", "voice-prod")],
+    timeSeries: [
+      series("check-brain-secret", "apac-singapore", [
+        ["2026-07-19T00:00:00.000Z", true],
+        ["2026-07-19T00:00:00.000Z", true],
+        ["2026-07-19T00:05:00.000Z", true],
+      ]),
+      series("check-brain-secret", "eur-belgium", [
+        ["2026-07-19T00:00:00.000Z", false],
+        ["2026-07-19T00:05:00.000Z", true],
+      ]),
+      series("check-voice-secret", "apac-singapore", [
+        ["2026-07-19T00:00:00.000Z", true],
+        ["2026-07-19T00:05:00.000Z", true],
+      ]),
+      series("check-voice-secret", "eur-belgium", [
+        ["2026-07-19T00:00:00.000Z", true],
+        ["2026-07-19T00:10:00.000Z", true],
+      ]),
+      series("unknown-check", "EUROPE", [["2026-07-19T00:00:00.000Z", true]]),
+      series("check-voice-secret", "MARS", [["2026-07-19T00:00:00.000Z", true]]),
+    ],
+  };
+  const cloudReport = buildCloudMonitoringReport(cloudFixture, {
+    manifest: cloudFixtureManifest,
+    from: "2026-07-19T00:00:00.000Z",
+    to: "2026-07-19T00:10:00.000Z",
+  });
+  check("Cloud report denominator includes targets, regions, and slots", cloudReport.denominator.expectedRegionalSamples === 8);
+  check("Cloud report deduplicates regional probe points", cloudReport.denominator.observedUniqueSamples === 7 && cloudReport.dataQuality.duplicatePointsIgnored === 1);
+  check("Cloud report counts failure and missing evidence conservatively", cloudReport.metrics.failedSamples === 1 && cloudReport.denominator.missingSamples === 1 && cloudReport.metrics.conservativeAvailabilityPct === 75);
+  check("Cloud report records discarded data quality issues", cloudReport.dataQuality.invalidOrOutOfWindowPointsIgnored === 1 && cloudReport.dataQuality.unknownCheckIdPointsIgnored === 1 && cloudReport.dataQuality.unexpectedRegionPointsIgnored === 1 && cloudReport.dataQuality.unexpectedRegions.mars === 1);
+  check("Cloud report does not expose raw check identifiers", !JSON.stringify(cloudReport).includes("check-brain-secret") && !Object.hasOwn(cloudReport, "timeSeries"));
+  check("Cloud report cannot be evidence-ready before 168 hours", cloudReport.evidenceReady === false);
+
+  const fullWeekFrom = "2026-07-12T00:00:00.000Z";
+  const fullWeekStart = new Date(fullWeekFrom).getTime();
+  const fullWeekManifest = {
+    project: "test-project",
+    periodMinutes: 5,
+    regions: ["asia-pacific"],
+    targets: [{ id: "brain-prod", environment: "production" }],
+  };
+  const fullWeekReport = buildCloudMonitoringReport({
+    configs: [managedConfig("check-week", "brain-prod")],
+    timeSeries: [series("check-week", "ASIA_PACIFIC", Array.from({ length: 2016 }, (_, index) => [
+      new Date(fullWeekStart + index * 5 * 60 * 1000).toISOString(),
+      true,
+    ]))],
+  }, {
+    manifest: fullWeekManifest,
+    from: fullWeekFrom,
+    to: "2026-07-19T00:00:00.000Z",
+  });
+  check("Cloud report becomes evidence-ready only with a complete seven-day window", fullWeekReport.evidenceReady === true && fullWeekReport.metrics.conservativeAvailabilityPct === 100);
+
   const uptimeScript = readFileSync("scripts/cloud-monitoring-uptime.ps1", "utf8");
   check("Cloud uptime apply 必須明確開關", /\[switch\]\$Apply/.test(uptimeScript) && /if \(\$Apply\)/.test(uptimeScript) && /PLAN ONLY: no Cloud Monitoring resources were changed/.test(uptimeScript));
   check("Cloud uptime project 釘死且不自動刪除", uptimeScript.includes("gen-lang-client-0229303523") && !/uptime[\"',\s]+delete/i.test(uptimeScript));
