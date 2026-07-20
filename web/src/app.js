@@ -2892,7 +2892,7 @@ window.MuneaFaceWave = FaceWave;
 let callConnected = false;
 let callDialing = false;
 let callPreflightPending = false;
-function setCallPreflightPending(on, pendingLabel = '確認可用點數中…') {
+function setCallPreflightPending(on, pendingLabel = '連線中…') {
   callPreflightPending = on;
   const b = $('#callToggle'); if (!b) return;
   b.setAttribute('aria-busy', on ? 'true' : 'false');
@@ -4820,7 +4820,8 @@ async function connectCall() {
     setCallDialing(true);
     setCallHint('開發測試直連中…', true);
   } else {
-    setCallHint('正在確認帳號與可用點數…', true);
+    // 點數是否足夠這件事只在後端靜默判斷，畫面維持一般撥號觀感，不對用戶顯示「查點數」字樣（Edward 2026-07-20拍板）。
+    setCallHint('連線中…', true);
     try {
       // A verified Auth session is not enough for Call Control: its durable
       // lease RPC also requires the account_members/person graph. Await the
@@ -4834,7 +4835,9 @@ async function connectCall() {
       const availableCredits = Number(rawAvailableCredits);
       if (rawAvailableCredits !== null && rawAvailableCredits !== undefined && rawAvailableCredits !== '' && Number.isFinite(availableCredits)) {
         voiceCallMark('credits_checked', availableCredits > 0 ? 'pass' : 'fail', { remaining: Math.max(0, availableCredits) });
-        if (availableCredits <= 0) throw new Error('insufficient_credits');
+        // 開發者 Gateway 模式（真登入、非直連）：仍照查、照記錄，但 0 點不擋——Edward 講了幾百遍卡在這裡測不了聊聊。
+        // 正式用戶（非開發者旁路）完全不受影響，0 點依然照擋。
+        if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');
       }
       setCallPreflightPending(true, '正在安排通話…');
       setCallHint('正在安排語音與影像席位…', true);
