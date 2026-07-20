@@ -708,24 +708,28 @@ Face.start = async function(char){
   this.transport = 'webrtc';
   this.on = false;
   Face._diagAttempts = [];
+  // Diagnostic A/B only: `?debug=1&relay=1` starts on the same Taiwan TURN
+  // relay used by the App. Normal visitors keep the current direct-first path.
+  const relayFirst = showDbg && qs.has('relay');
   let ok = false;
-  try{ ok = await this._attempt(char, false); }
+  try{ ok = await this._attempt(char, relayFirst); }
   catch(e){
     dbgLine('[face] first attempt threw: ' + (e && e.message || e));
     const diag = await collectPcDiag(this.pc);
-    Face._diagAttempts.push({ forceRelay:false, ok:false, threw:(e&&e.message)||String(e), diag });
+    Face._diagAttempts.push({ forceRelay:relayFirst, ok:false, threw:(e&&e.message)||String(e), diag });
   }
   if (!ok) {
-    dbgLine('[face] direct/STUN attempt failed or timed out -> retry forcing TURN relay');
-    setStatus('直連逾時，改走中繼重試…', true);
+    const fallbackRelay = !relayFirst;
+    dbgLine('[face] first network path failed -> retry forceRelay=' + fallbackRelay);
+    setStatus(fallbackRelay ? '直連逾時，改走中繼重試…' : '中繼逾時，改走直連重試…', true);
     try{ if (this.pc) this.pc.close(); }catch(e){}
     await new Promise(r => setTimeout(r, 350));
     let ok2 = false;
-    try{ ok2 = await this._attempt(char, true); }
+    try{ ok2 = await this._attempt(char, fallbackRelay); }
     catch(e){
       dbgLine('[face] relay attempt threw: ' + (e && e.message || e));
       const diag = await collectPcDiag(this.pc);
-      Face._diagAttempts.push({ forceRelay:true, ok:false, threw:(e&&e.message)||String(e), diag });
+      Face._diagAttempts.push({ forceRelay:fallbackRelay, ok:false, threw:(e&&e.message)||String(e), diag });
     }
     if (!ok2) {
       try{ if (this.pc) this.pc.close(); }catch(e){}
