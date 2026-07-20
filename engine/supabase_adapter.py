@@ -1072,6 +1072,78 @@ class SupabaseAdapter:
             "paymentNote": row.get("payment_note"),
             "invoiceNumber": row.get("invoice_number"),
             "invoiceIssuedAt": row.get("invoice_issued_at"),
+            # 2026-07-20 三次需求：請款單一旦寄出（issued）就把畫面凍結存這欄，
+            # 之後重下載一律回這份原樣，不看之後改過的開票／收款設定
+            # （見 engine/enterprise_billing.py 的 get_invoice_html() 決策理由）。
+            "invoiceHtmlSnapshot": row.get("invoice_html_snapshot"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    # ── ESG 成效月報存檔（2026-07-20 三次需求：接通「月報與請款單下載」）──
+    # 讀寫入口見 engine/enterprise_billing.py 的 save_report()／list_reports()／
+    # get_report()——這裡只是薄薄一層 row↔item 轉換，跟其餘 enterprise_* 方法同一個分層原則。
+    # 月報一算完就整份凍結存檔（原始數據 jsonb ＋ 渲染好的 HTML 一起存），之後下載
+    # 一律回這份存檔的原樣，不即時重算（理由見 enterprise_billing.py 的 save_report() docstring）。
+
+    def load_enterprise_reports(self, client_id=None, limit=200):
+        if not self.enabled():
+            return None
+        limit = max(1, min(500, int(limit or 200)))
+        filters = {"select": "*", "order": "period_start.desc", "limit": str(limit)}
+        if client_id:
+            filters["enterprise_client_id"] = f"eq.{client_id}"
+        rows = self._select("enterprise_reports", filters)
+        return [self.enterprise_report_row_to_item(row) for row in rows or []]
+
+    def get_enterprise_report(self, report_id):
+        if not self.enabled() or not self._is_uuid(report_id or ""):
+            return None
+        row = self._first("enterprise_reports", {"id": f"eq.{report_id}", "select": "*"})
+        return self.enterprise_report_row_to_item(row) if row else None
+
+    def save_enterprise_report(self, item):
+        """同一家公司同一帳單期間重跑月結＝覆蓋舊報告（on_conflict 對齊
+        022_enterprise_documents.sql 的 enterprise_reports_client_period_uidx），
+        不會累積出好幾份同期間的報告混淆下載清單。"""
+        if not self.enabled():
+            return None
+        payload = self.enterprise_report_to_row(item)
+        report_id = item.get("id")
+        if report_id and self._is_uuid(report_id):
+            payload["id"] = report_id
+        rows = self._request(
+            "POST", "enterprise_reports",
+            query={"on_conflict": "enterprise_client_id,period_start", "select": "*"},
+            payload=payload, prefer="resolution=merge-duplicates,return=representation",
+        )
+        return self.enterprise_report_row_to_item(rows[0]) if rows else None
+
+    @staticmethod
+    def enterprise_report_to_row(item):
+        item = item or {}
+        return {
+            "enterprise_client_id": item.get("enterpriseClientId"),
+            "invoice_id": item.get("invoiceId"),
+            "period_start": item.get("periodStart"),
+            "period_end": item.get("periodEnd"),
+            "report_data": item.get("reportData") or {},
+            "report_html": item.get("reportHtml") or "",
+            "generated_at": item.get("generatedAt"),
+        }
+
+    @staticmethod
+    def enterprise_report_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "enterpriseClientId": row.get("enterprise_client_id") or "",
+            "invoiceId": row.get("invoice_id"),
+            "periodStart": row.get("period_start"),
+            "periodEnd": row.get("period_end"),
+            "reportData": row.get("report_data") or {},
+            "reportHtml": row.get("report_html") or "",
+            "generatedAt": row.get("generated_at"),
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
         }
