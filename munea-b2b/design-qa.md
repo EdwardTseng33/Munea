@@ -76,12 +76,18 @@ Focused region comparison was not needed because the subject, face, hands, crop 
 ## Live Avatar alignment follow-up — 2026-07-20
 
 - Failing source screenshot: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-5d07ab56-12e9-4ff9-90f5-35f4d23e7c49.png`
-- Intended viewport/state: 1436 x 1747, female `a05`, live FlashHead video connected.
+- App visual reference: `C:\Users\Administrator\Desktop\App store pic\聊聊.png`
+- Connected female screenshot: `C:\Users\Administrator\.codex\visualizations\2026\07\18\019f7344-5f07-71a2-a700-60eb918bd6cc\b2b-wss-clean-a05.png`
+- Connected male screenshot: `C:\Users\Administrator\.codex\visualizations\2026\07\18\019f7344-5f07-71a2-a700-60eb918bd6cc\b2b-wss-sustained-a06.png`
+- App/browser comparison board: `C:\Users\Administrator\.codex\generated_images\019f7344-5f07-71a2-a700-60eb918bd6cc\exec-31fbcc7c-9e3a-46d6-9b7c-5639574c7526.png`
+- Verified viewport/state: 430 x 932, female `a05` and male `a06`, live FlashHead output connected and speaking.
 - Root cause evidence: the deployed model used a different portrait source while the B2B overlay used a native square crop. The source is now the App portrait crop `(0, 140, 1080, 1440)` resized to 512 x 512, and the browser inverts that transform at `top=7.291667%`, `height=75%`, `object-fit=fill` with four-edge feathering.
 - Drift guard: `scripts/test-avatar-render-contract.py` confirms the App and B2B backgrounds are byte-identical and both model inputs remain within MAE 5 of the canonical App crop (`a05=0.308`, `a06=3.659`).
-- Local Chrome evidence: the App render contract, pre-call hello-to-idle motion, role controls, and parallel readiness gate pass without contacting the GPU. Voice readiness occurs before Avatar readiness, but greeting and microphone packets remain gated until the Avatar is ready.
-- Production structural evidence: Vercel production serves the expected inverse geometry and no longer contains the square overlay or per-character offset override.
-- Live visual comparison: blocked. The paid GPU path is currently unavailable, and the real Chrome call could not receive an Avatar video frame. No post-fix live screenshot exists yet, so a source/implementation side-by-side comparison would be misleading.
-- Required next gate: after GPU billing is restored, complete one female and one male real call, capture the connected state at the same viewport, assemble the before/after comparison, inspect face/shoulder/chest seams, initial motion smoothness, first-response latency, and browser errors.
+- Transport evidence: Modal and the external TURN VM exchanged packets but ICE did not complete. The B2B browser now uses a WSS JPEG stream backed by the same FlashHead feeder/model; voice input and generated Avatar frames remain real, while browser playback uses the same returned 24 kHz PCM.
+- Female final live run: connected in 2.510 s on the warm GPU, first assistant audio in 596 ms, 40 decoded frames, 294,242 audio bytes, Web Audio state `running` with 9.982 s scheduled, no console errors, no autoplay prompt, idle motion stopped.
+- Male live run: connected in 2.452 s on the warm GPU, first assistant audio in 607 ms, 40 decoded frames, 208,350 audio bytes, no console errors, no autoplay prompt, idle motion stopped.
+- Visual comparison: the App reference and connected browser screenshot preserve the same portrait scale, crop, face/shoulder/chest alignment, top status row, timer band, control band, close button, warm palette, and feathered compositing. The right-side role selector and B2B countdown are intentional requested differences.
+- Autoplay UX: transient `AbortError` events caused by reconnect/source replacement are ignored. Only a genuine browser `NotAllowedError` can show a compact recovery pill; the former full-screen unexplained overlay is removed.
+- Cold-start handling: the observed cold L4 allocation took 134 seconds, while warm calls connected in 2–3 seconds. The UI now reuses the prewarm request, keeps one calm `正在準備視訊` state for up to 165 seconds, leaves the App-style idle motion visible, and waits to open the microphone/Voice socket until the GPU is ready.
 
-final result: blocked
+final result: passed

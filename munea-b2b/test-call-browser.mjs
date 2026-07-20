@@ -1,16 +1,20 @@
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const target = process.env.B2B_CALL_URL || 'https://munea-b2b.vercel.app/call.html?debug=1';
+const expectsMic = !new URL(target).searchParams.has('nomic');
 const passphrase = process.env.B2B_DEMO_PASS;
 const screenshotPath = process.env.B2B_CALL_SCREENSHOT || 'b2b-call-browser.png';
 const helloScreenshotPath = process.env.B2B_CALL_HELLO_SCREENSHOT || '';
 const callConfig = process.env.B2B_CALL_CONFIG_JSON ? JSON.parse(process.env.B2B_CALL_CONFIG_JSON) : null;
+const localHtmlPath = process.env.B2B_LOCAL_HTML || '';
 const testChar = process.env.B2B_TEST_CHAR || 'a05';
 const captureIdle = process.env.B2B_CAPTURE_IDLE === '1';
 const mockConnect = process.env.B2B_MOCK_CONNECT === '1';
+const verifySustained = process.env.B2B_VERIFY_SUSTAINED === '1';
 const viewport = {
   width: Number(process.env.B2B_VIEWPORT_WIDTH || 430),
   height: Number(process.env.B2B_VIEWPORT_HEIGHT || 932),
@@ -35,6 +39,14 @@ const context = await browser.newContext({
   permissions: ['microphone'],
 });
 const page = await context.newPage();
+if (localHtmlPath) {
+  const localHtml = readFileSync(localHtmlPath, 'utf8');
+  await page.route('**/call.html*', route => route.fulfill({
+    status: 200,
+    contentType: 'text/html; charset=utf-8',
+    body: localHtml,
+  }));
+}
 if (callConfig) {
   await page.route('**/api/call-key', route => route.fulfill({
     status: 200,
@@ -118,14 +130,25 @@ try {
     await page.locator('#callBtn').click();
     await page.waitForFunction(() => {
       const logs = typeof DBGBUF === 'undefined' ? [] : DBGBUF;
-      const connected = typeof Face !== 'undefined' && Face.pc?.connectionState === 'connected';
-      const voiceReady = typeof Live !== 'undefined' && Live.ws?.readyState === WebSocket.OPEN && Live.mic;
+      const connected = typeof Face !== 'undefined' && (
+        Face.pc?.connectionState === 'connected' ||
+        (Face.transport === 'stream' && Face.on && Face.stream?.readyState === WebSocket.OPEN)
+      );
+      const micReady = (typeof nomic !== 'undefined' && nomic) || Boolean(Live.mic);
+      const voiceReady = typeof Live !== 'undefined' && Live.ws?.readyState === WebSocket.OPEN && micReady;
       const frames = window.__flashheadStats?.vidFrames || 0;
       const backendReady = logs.some(line => line.includes('[voice] ready'));
       const online = document.querySelector('#statusBadge')?.textContent === '在線';
       const failed = logs.some(line => line.includes('[dial] attempt=2 failed'));
       return (connected && voiceReady && backendReady && online && frames > 0) || failed;
     }, null, { timeout: 150_000 });
+    if (verifySustained) {
+      await page.waitForFunction(() => {
+        const stats = window.__flashheadStats || {};
+        return stats.vidFrames >= 40 && stats.audioBytes > 0 &&
+          typeof Face !== 'undefined' && Face.transport === 'stream' && Face.on;
+      }, null, { timeout: 60_000 });
+    }
   }
 
   result = await page.evaluate(() => ({
@@ -133,11 +156,17 @@ try {
     selectedChar: typeof curChar === 'undefined' ? null : curChar,
     hint: document.querySelector('#hint')?.textContent,
     toast: document.querySelector('#toast')?.textContent,
-    faceConnection: typeof Face === 'undefined' ? null : Face.pc?.connectionState,
+    faceConnection: typeof Face === 'undefined' ? null :
+      (Face.transport === 'stream' && Face.on ? 'connected' : Face.pc?.connectionState),
+    avatarTransport: typeof Face === 'undefined' ? null : Face.transport,
     voiceState: typeof Live === 'undefined' ? null : Live.ws?.readyState,
     voiceReady: typeof DBGBUF !== 'undefined' && DBGBUF.some(line => line.includes('[voice] ready')),
     hasMic: typeof Live === 'undefined' ? false : Boolean(Live.mic),
     frames: window.__flashheadStats?.vidFrames || 0,
+    audioBytes: window.__flashheadStats?.audioBytes || 0,
+    playbackState: typeof Live === 'undefined' ? null : Live.playCtx?.state,
+    playbackScheduledUntil: typeof Live === 'undefined' ? 0 : Live.playHead,
+    tapPlayVisible: document.querySelector('#tapplay')?.classList.contains('show') || false,
     idleMotionActive: typeof IdleMotion === 'undefined' ? null : IdleMotion.active,
     avatarRenderContract: typeof avatarRenderContract === 'undefined' ? null : avatarRenderContract,
     voiceActivated: typeof Live === 'undefined' ? null : Live._activated,
@@ -170,7 +199,8 @@ const geometryFailed = !result?.overlayGeometry || result?.avatarRenderContract?
 const timeline = result?.mockConnectTimeline || [];
 const at = event => timeline.find(item => item.event === event)?.at;
 const parallelFailed = mockConnect && (!(at('voice_start') < at('wake_ready')) || !(at('voice_ready') < at('face_start')) || result?.voiceActivated !== true);
-const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || !result.hasMic || result.frames < 1 || result.idleMotionActive !== false || geometryFailed || parallelFailed);
+const sustainedFailed = verifySustained && (!result || result.frames < 40 || result.audioBytes < 1 || result.playbackState !== 'running' || result.playbackScheduledUntil <= 0 || result.tapPlayVisible);
+const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || (expectsMic && !result.hasMic) || result.frames < 1 || result.idleMotionActive !== false || geometryFailed || parallelFailed || sustainedFailed);
 if (idleFailed || callFailed) {
   process.exitCode = 1;
 }

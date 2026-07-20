@@ -16,9 +16,11 @@ fingerprint
 lt-cred-mech
 user=muneaturn:munea-turn-a7k2q
 realm=munea.turn
-external-ip=${EXTIP}
-min-port=49160
-max-port=49200
+# GCE uses one-to-one NAT: advertise the public address while binding relay sockets locally.
+external-ip=${EXTIP}/${INTIP}
+relay-ip=${INTIP}
+min-port=49152
+max-port=65535
 no-cli
 no-tlsv1
 no-tlsv1_1

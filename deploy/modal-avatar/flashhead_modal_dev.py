@@ -112,7 +112,9 @@ AUDIO_PREBUFFER_S = 0.3
     scaledown_window=480,              # 7/11 卡西法：240->480，真機測試常連續重試、避免每次都重冷啟(冷啟遇GPU吃緊可能等數分鐘)
     timeout=3600,
     max_containers=1,
-    region="ap-northeast",
+    # Let Modal choose any Asia-Pacific L4 pool. ap-northeast was waiting for
+    # capacity while the broader AP pool can schedule the same container sooner.
+    region="ap",
 )
 # 2026-07-12 卡西法（緊急修正，照 docs/多人併發容量架構-2026-07-12.md §8 標「緊急」）：
 # max_inputs=20 是「兩人同時打進同一容器互看臉/聲音混疊」bug 的根源——這支 Modal 測試版
@@ -269,6 +271,7 @@ class FlashHead:
         self._load_poster = _load_poster
         self.poster = _load_poster(CHAR_SRC[self.char])
         self.pcs = set()
+        self.stream_clients = 0
         self.pc_created = {}   # id(pc) -> 建線時間戳，餵給 watchdog 判斷卡住太久的連線(7/10 真機測試失敗後補)
         outer = self
 
@@ -376,6 +379,19 @@ class FlashHead:
                 outer.audio_out.clear()
                 print("[feeder] reset(turn boundary)", flush=True)
 
+            def finish(self):
+                """Pad the final partial model chunk instead of dropping the sentence tail."""
+                with self.lock:
+                    if self.t0 is None or len(self.acc) == 0:
+                        return
+                    remainder = len(self.acc) % outer.chunk_samples
+                    if remainder:
+                        self.acc = np.concatenate([
+                            self.acc,
+                            np.zeros(outer.chunk_samples - remainder, dtype=np.float32),
+                        ])
+                print("[feeder] finish(padded final chunk)", flush=True)
+
             def _gen_chunk(self, chunk_16k):
                 t_chunk_ready = time.time()
                 outer.audio_dq.extend(chunk_16k.tolist())
@@ -418,8 +434,10 @@ class FlashHead:
                     now = time.time()
                     with self.lock:
                         real_silent = (now - self.last_in) > 1.0
-                    has_conn = any(pc.connectionState in ("new", "connecting", "connected")
-                                  for pc in outer.pcs)
+                    has_conn = (outer.stream_clients > 0) or any(
+                        pc.connectionState in ("new", "connecting", "connected")
+                        for pc in outer.pcs
+                    )
                     if has_conn and real_silent and now >= self._idle_due:
                         if not self._idle_on:
                             self._idle_on = True
@@ -615,10 +633,8 @@ class FlashHead:
                 return {"error": "char not supported"}
             pc = RTCPeerConnection(RTCConfiguration(iceServers=[
                 RTCIceServer(urls="stun:stun.l.google.com:19302"),
-                # 7/11 卡西法補：server 端原本只有 STUN、relay 只靠 client 單邊——兩端都帶 TURN 是
-                # WebRTC 正規做法，對稱型 NAT 等更難連的網路環境兩端都能找到relay配對
-                RTCIceServer(urls=["turn:34.81.102.52:3478?transport=udp", "turn:34.81.102.52:3478?transport=tcp"],
-                             username="muneaturn", credential="munea-turn-a7k2q"),
+                # Browser-side TURN is enough. Keeping Modal on STUN prevents both peers
+                # from hairpinning through the same TURN allocation host behind GCP NAT.
             ]))
             outer.pcs.add(pc)
             outer.pc_created[id(pc)] = time.time()
@@ -684,6 +700,77 @@ class FlashHead:
             ok = outer._switch(char)
             return {"ok": ok, "char": outer.char, "switch_s": round(time.time() - t0, 3)}
 
+        @api.websocket("/stream")
+        async def stream_ws(ws: WebSocket, key: str = "", char: str = ""):
+            """HTTPS-friendly avatar transport for browser demos.
+
+            Modal's public HTTP edge is reliable while its ephemeral UDP mapping can
+            prevent WebRTC ICE from completing through an external TURN VM. This
+            endpoint keeps the exact same FlashHead feeder/render pipeline, but sends
+            JPEG frames over WSS and accepts the same 24 kHz PCM chunks in the other
+            direction. It is intentionally one-call-at-a-time, matching this class's
+            max_inputs=1 safety contract.
+            """
+            if not _pass(key):
+                await ws.close(code=4403)
+                return
+            if char and not outer._switch(char):
+                await ws.close(code=4404)
+                return
+            await ws.accept()
+            outer.stream_clients += 1
+            print("[stream] connected char=" + outer.char, flush=True)
+
+            async def receive_audio():
+                while True:
+                    msg = await ws.receive()
+                    if msg.get("bytes") is not None:
+                        outer.feeder.push24k(msg["bytes"])
+                    elif msg.get("text") == "reset":
+                        outer.feeder.reset()
+                    elif msg.get("text") == "finish":
+                        outer.feeder.finish()
+                    elif msg.get("type") == "websocket.disconnect":
+                        break
+
+            async def send_frames():
+                import cv2
+                loop = asyncio.get_running_loop()
+                due = loop.time()
+                last = outer.poster
+                params = [int(cv2.IMWRITE_JPEG_QUALITY), 78]
+                while True:
+                    frame = outer.sink.pop()
+                    if frame is not None:
+                        last = frame
+                    elif last is None:
+                        last = outer.poster
+                    bgr = cv2.cvtColor(last, cv2.COLOR_RGB2BGR)
+                    ok, encoded = cv2.imencode(".jpg", bgr, params)
+                    if ok:
+                        await ws.send_bytes(encoded.tobytes())
+                    due += 1.0 / outer.tgt_fps
+                    await asyncio.sleep(max(0.0, due - loop.time()))
+
+            recv_task = asyncio.create_task(receive_audio())
+            send_task = asyncio.create_task(send_frames())
+            try:
+                done, pending = await asyncio.wait(
+                    (recv_task, send_task), return_when=asyncio.FIRST_COMPLETED
+                )
+                for task in pending:
+                    task.cancel()
+                for task in done:
+                    task.result()
+            except (WebSocketDisconnect, RuntimeError):
+                pass
+            finally:
+                recv_task.cancel()
+                send_task.cancel()
+                outer.stream_clients = max(0, outer.stream_clients - 1)
+                outer.feeder.reset()
+                print("[stream] closed", flush=True)
+
         @api.websocket("/audio")
         async def audio_ws(ws: WebSocket, key: str = ""):
             if not _pass(key):
@@ -698,6 +785,8 @@ class FlashHead:
                         outer.feeder.push24k(msg["bytes"])
                     elif msg.get("text") == "reset":
                         outer.feeder.reset()
+                    elif msg.get("text") == "finish":
+                        outer.feeder.finish()
                     elif msg.get("type") == "websocket.disconnect":
                         break
             except WebSocketDisconnect:
