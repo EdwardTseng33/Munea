@@ -173,6 +173,24 @@ def _backend():
     return supabase_adapter.make_adapter()
 
 
+def _fetch_billing_settings():
+    """讀開票方／收款帳戶設定（2026-07-20 二次需求：Edward 一人公司，開票抬頭要
+    借用另一家公司、之後還會換，這批資料不能寫死在程式裡）。唯一入口是
+    enterprise_seats.get_billing_settings()——那支檔案已經處理好 Supabase／本地備援，
+    保證回傳 dict、不是 None，這裡不重做那層 fallback，只再包一層防呆：
+    萬一呼叫本身炸了（不是「沒設定」，是真的例外），退回空 dict，讓呼叫端走
+    is_billing_settings_configured() 判定成「尚未設定」、印警示，而不是讓整張
+    請款單／月報直接掛掉。
+
+    注意：這裡不 log 設定內容本身（銀行帳號是敏感資料，_log_fallback 只記錯誤訊息
+    跟例外，不記資料），跟需求單「帳號不要寫進任何記錄檔或稽核紀錄」的要求一致。"""
+    try:
+        return enterprise_seats.get_billing_settings()
+    except Exception as exc:
+        _log_fallback("load enterprise billing settings", exc)
+        return {}
+
+
 def _read_json_file(path, fallback=None):
     try:
         with open(path, encoding="utf-8") as f:
@@ -234,11 +252,22 @@ def resolve_billing_period(year=None, month=None, today=None):
     return previous_month_period(today=today)
 
 
-def compute_due_date(period_end):
-    """付款期限＝次月 15 日前（需求單 4.2、5.2）。"""
-    year = period_end.year + (1 if period_end.month == 12 else 0)
-    month = 1 if period_end.month == 12 else period_end.month + 1
-    return date(year, month, PAYMENT_DUE_DAY)
+def compute_due_date(period_end, payment_terms_days=None):
+    """付款期限：帳單期間最後一天 + N 天（需求單 4.2／5.2 預設 15 天＝「次月 15 日前」）。
+    N 現在可由後台 enterprise_billing_settings.paymentTermsDays 設定
+    （2026-07-20 二次需求：付款期限不是每家公司都一樣，要能調）；讀不到／不是正整數
+    就退回 PAYMENT_DUE_DAY=15。
+
+    用「+N 天」取代原本「次月第 N 天」的年月進位算法：period_end 一定是帳單月的
+    最後一天（billing_period_for() 保證），d 是月底 → d+1 天就是次月 1 號 → d+15 天
+    就是次月 15 號，跟舊算法結果完全相同；但「+N 天」對任意天數都成立（例如以後有人
+    把付款期限設 45 天），不受「次月有沒有第 N 天」這種曆法邊界限制，比原算法更通用。
+    """
+    if isinstance(payment_terms_days, bool) or not isinstance(payment_terms_days, int) or payment_terms_days <= 0:
+        days = PAYMENT_DUE_DAY
+    else:
+        days = payment_terms_days
+    return period_end + timedelta(days=days)
 
 
 # ---------------------------------------------------------------------------
@@ -576,13 +605,20 @@ def save_invoice(item):
     return _save_invoice_local(item)
 
 
-def build_invoice_draft(client, seats, period_start, period_end):
+def build_invoice_draft(client, seats, period_start, period_end, settings=None):
     """需求單 4.2：算出一張 draft 請款單，純計算不落地——落地交給 save_invoice()，
-    讓呼叫端可以先檢查／預覽再決定要不要真的寫進去。"""
+    讓呼叫端可以先檢查／預覽再決定要不要真的寫進去。
+
+    settings 可注入（測試／server.py 已經查過一次不必重查時用），不給就自己查目前的
+    開票／收款設定，只用來讀 paymentTermsDays 算 dueDate——settings 本身不落進
+    invoice 物件（付款期限之外的開票方／銀行資訊只在 render_invoice_html() 產出當下
+    即時查最新值，不要把某個時間點的設定快照凍進請款單資料，Edward 換開票公司後
+    舊的 draft 請款單重新產出 HTML 時應該要自動換成新的抬頭）。"""
+    settings = settings if settings is not None else _fetch_billing_settings()
     billable = billable_seats_for_client(client.get("id"), period_start, period_end, seats=seats)
     amounts = compute_invoice_amounts(len(billable), client.get("unitPriceTwd") or 0)
     invoice_no = generate_invoice_no(client, period_start)
-    due_date = compute_due_date(period_end)
+    due_date = compute_due_date(period_end, (settings or {}).get("paymentTermsDays"))
     seat_snapshot = [
         {
             "seatId": s.get("id"),
@@ -611,8 +647,8 @@ def build_invoice_draft(client, seats, period_start, period_end):
     }
 
 
-def generate_monthly_invoice(client, seats, period_start, period_end, persist=True):
-    draft = build_invoice_draft(client, seats, period_start, period_end)
+def generate_monthly_invoice(client, seats, period_start, period_end, persist=True, settings=None):
+    draft = build_invoice_draft(client, seats, period_start, period_end, settings=settings)
     if not persist:
         return draft
     return save_invoice(draft)
@@ -641,9 +677,16 @@ _INVOICE_HTML_STYLE = """
   .totals div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
   .totals .grand { font-size: 22px; font-weight: 700; border-top: 2px solid #1f2933;
                     margin-top: 6px; padding-top: 10px; }
-  .remit { margin-top: 24px; padding: 14px 16px; background: #f4f6f8; border-radius: 6px; font-size: 13px; }
+  .remit { margin-top: 0; padding: 14px 16px; background: #f4f6f8; border-radius: 6px; font-size: 13px; }
+  .remit strong { font-size: 16px; }
   .payment-status { margin-top: 16px; font-size: 13px; color: #52606d; }
+  .footer-note { margin-top: 16px; padding: 10px 14px; background: #f4f6f8; border-radius: 6px;
+                 font-size: 12px; color: #52606d; }
   .footer { margin-top: 32px; font-size: 11px; color: #9aa5b1; }
+  .warning-banner { margin: 16px 0 24px; padding: 14px 16px; background: #fdecea; border: 1px solid #c0392b;
+                     border-radius: 6px; color: #a4231a; font-weight: 700; font-size: 15px; }
+  .box.warning-box { border-color: #c0392b; background: #fdecea; }
+  .warning-text { color: #a4231a; font-weight: 600; margin: 0; }
   @media print {
     body { background: #fff; padding: 0; }
     .sheet { box-shadow: none; margin: 0; }
@@ -652,12 +695,31 @@ _INVOICE_HTML_STYLE = """
 """
 
 
-def render_invoice_html(invoice, client):
+def render_invoice_html(invoice, client, settings=None):
     """需求單 4.2＋5.2：請款單 HTML（可直接列印成 A4 直式 PDF）。
     含公司抬頭／統編／地址、單號、帳單期間、席次數×單價=小計、營業稅 5%、總計、
-    付款期限、匯款帳戶資訊；5.2 收款欄位有值才顯示（draft 階段通常還沒有）。"""
+    付款期限、匯款帳戶資訊；5.2 收款欄位有值才顯示（draft 階段通常還沒有）。
+
+    2026-07-20 二次需求：賣方（開票方）與匯款帳戶資訊改讀後台
+    enterprise_billing_settings（Edward 一人公司，開票抬頭要借用另一家公司、之後
+    還會換，不能寫死）。settings 可注入（測試／server.py 已經查過一次不必重查時用），
+    不給就即時查目前設定——不接受呼叫端沿用舊的請款單物件裡的快照，永遠印最新設定。
+
+    signature 保持向後相容：既有呼叫端沒帶 settings 一樣能跑，只是內部改成即時查值；
+    新增這個參數是為了讓測試能注入「尚未設定」情境，不必真的動本地／雲端設定檔。
+
+    銀行帳號是敏感資料——這裡只用來組 HTML 字串直接回傳給呼叫端顯示／下載，
+    全函式沒有任何 log／print，不會把帳號寫進任何記錄檔或稽核紀錄。"""
     client = client or {}
     invoice = invoice or {}
+    settings = settings if settings is not None else _fetch_billing_settings()
+
+    try:
+        billing_configured = enterprise_seats.is_billing_settings_configured(settings)
+    except Exception as exc:
+        _log_fallback("check enterprise billing settings configured", exc)
+        billing_configured = False
+
     company_name = html.escape(str(client.get("name") or ""))
     tax_id = html.escape(str(client.get("taxId") or "—"))
     billing_address = html.escape(str(client.get("billingAddress") or "—"))
@@ -668,10 +730,49 @@ def render_invoice_html(invoice, client):
     status = invoice.get("status") or "draft"
     draft_badge = "<span class=\"draft-badge\">草稿 DRAFT · 尚未人工放行</span>" if status == "draft" else ""
 
-    bank_info = os.environ.get(
-        "MUNEA_ENTERPRISE_REMIT_INFO",
-        "匯款銀行：（待財務部提供）｜戶名：沐寧股份有限公司（暫定）｜帳號：（待財務部提供）",
-    )
+    warning_banner = ""
+    if not billing_configured:
+        warning_banner = (
+            '<div class="warning-banner">⚠ 尚未設定開票資訊，請先至後台「企業客戶 → 收款設定」'
+            "填寫開票公司與匯款帳戶——此單暫不完整，請勿直接寄送給客戶。</div>"
+        )
+        issuer_block = """<div class="box warning-box">
+      <h2>賣方（開票方）</h2>
+      <p class="warning-text">⚠ 尚未設定開票資訊，請先至後台填寫</p>
+    </div>"""
+        remit_block = (
+            '<div class="remit warning-box">'
+            '<p class="warning-text">⚠ 尚未設定收款帳戶，請先至後台填寫——匯款資訊留白，客戶無法付款</p>'
+            "</div>"
+        )
+        footer_note_block = ""
+    else:
+        issuer_name = html.escape(str(settings.get("issuerCompanyName") or "—"))
+        issuer_tax_id = html.escape(str(settings.get("issuerTaxId") or "—"))
+        issuer_address = html.escape(str(settings.get("issuerAddress") or "—"))
+        issuer_phone = html.escape(str(settings.get("issuerPhone") or "—"))
+        issuer_contact = html.escape(str(settings.get("issuerContactName") or "—"))
+        issuer_block = f"""<div class="box">
+      <h2>賣方（開票方）</h2>
+      <p><strong>{issuer_name}</strong></p>
+      <p>統一編號：{issuer_tax_id}</p>
+      <p>地址：{issuer_address}</p>
+      <p>電話：{issuer_phone}</p>
+      <p>聯絡人：{issuer_contact}</p>
+    </div>"""
+
+        bank_lines = [
+            f"匯款銀行：{html.escape(str(settings.get('bankName') or '—'))}",
+        ]
+        if settings.get("bankBranch"):
+            bank_lines.append(f"分行：{html.escape(str(settings.get('bankBranch')))}")
+        bank_lines.append(f"戶名：{html.escape(str(settings.get('bankAccountName') or '—'))}")
+        bank_lines.append(f"<strong>帳號：{html.escape(str(settings.get('bankAccountNo') or '—'))}</strong>")
+        remit_block = f'<div class="remit">{"　｜　".join(bank_lines)}</div>'
+
+        footer_note_block = ""
+        if settings.get("invoiceFooterNote"):
+            footer_note_block = f'<div class="footer-note">{html.escape(str(settings.get("invoiceFooterNote")))}</div>'
 
     payment_rows = []
     if invoice.get("sentAt"):
@@ -699,6 +800,7 @@ def render_invoice_html(invoice, client):
 <div class="sheet">
   <h1>請款單 INVOICE</h1>
   <div class="sub">單號 {html.escape(str(invoice.get('invoiceNo') or ''))}　{draft_badge}</div>
+  {warning_banner}
 
   <div class="grid">
     <div class="box">
@@ -714,6 +816,14 @@ def render_invoice_html(invoice, client):
       <p>付款期限：{html.escape(str(invoice.get('dueDate') or '—'))}</p>
       <p>單據狀態：{html.escape(status)}</p>
       <p>對應月報：{html.escape(str(invoice.get('reportRef') or '（見後附 ESG 成效月報）'))}</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    {issuer_block}
+    <div class="box">
+      <h2>收款帳戶</h2>
+      {remit_block}
     </div>
   </div>
 
@@ -737,7 +847,7 @@ def render_invoice_html(invoice, client):
     <div class="grand"><span>總計</span><span>NT$ {_fmt_money(invoice.get('totalTwd'))}</span></div>
   </div>
 
-  <div class="remit">{html.escape(bank_info)}</div>
+  {footer_note_block}
   {payment_block}
 
   <div class="footer">Munea 企業席次月結系統自動產出 · {html.escape(_utc_now_iso())}</div>
