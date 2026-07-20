@@ -360,7 +360,7 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
   .kpi-row { grid-template-columns: repeat(2,1fr); }
   .grid-2, .grid-3, .char-grid, .stat-tiles, .assume-grid, .quick-links { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
-  .last-updated, .month-pill { display: none; }
+  .month-pill { display: none; }
 }
 @media (max-width: 880px) {
   .layout { flex-direction: column; }

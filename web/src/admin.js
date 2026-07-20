@@ -216,7 +216,7 @@
     if(q.degraded){
       return `<div class="ops-notice warn" role="status"><strong>部分數字目前是暫代資料</strong>有 ${q.degraded} 個區塊用的是測試／備援資料，顯示 0 不代表真的是 0。${q.dataAsOf?` ${asof}。`:""}</div>`;
     }
-    return `<div class="ops-notice info" role="status"><strong>${asof}</strong>之後有新的會再抓進來。</div>`;
+    return ""; // 一切正常時不再出橫幅——右上角「資料更新到 X」每頁都看得到，不重複講
   }
   function renderPage(id){
     pending.length=0;
@@ -520,7 +520,7 @@
   function envLabelFor(u){ if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
   function setStatus(t,k){
     const sp=$("statusPill"); if(sp){ sp.textContent=t; sp.className="status-pill"+(k?" "+k:""); }
-    const r=$("envRole"); if(r) r.textContent=state.connected?("已連線 · "+envLabelFor(state.base||initialBaseUrl())):(t||"尚未連線");
+    const r=$("envRole"); if(r) r.textContent=state.connected?envLabelFor(state.base||initialBaseUrl()):(t||"");
     const out=$("logoutBtn"); if(out) out.hidden=!state.connected;
   }
   function setBusy(on){
@@ -563,8 +563,8 @@
       if(!state.connected&&errValues.length&&errValues.every((m)=>/invalid_admin_token/.test(m))){ storageRemove(sessionStorage,ADMIN_TOKEN_KEY); state.token=""; }
       if($("rawOut")) $("rawOut").textContent=JSON.stringify({data,errors},null,2);
       if($("lastUpdated")){
-        const q=dataQualitySummary(),queryTime=new Date().toISOString();
-        $("lastUpdated").textContent=state.connected?(`查詢 ${fmtTime(queryTime)} · 紀錄最新時間 ${q.dataAsOf?fmtTime(q.dataAsOf):"未提供"}`):"";
+        const q=dataQualitySummary();
+        $("lastUpdated").textContent=state.connected?(q.dataAsOf?`資料更新到 ${fmtTime(q.dataAsOf)}`:`剛剛抓的（${fmtTime(new Date().toISOString())}）`):"";
       }
       renderSide(); renderPage(state.page);
       return { ok: state.connected, failed: errValues.length, total: keys.length, firstErr: errValues[0] };
@@ -701,7 +701,6 @@
 
   function init(){
     if(window.MuneaVersion && $("appVer")) $("appVer").textContent="v"+window.MuneaVersion.current;
-    const period=$("currentPeriod")?.querySelector("span"); if(period) period.textContent=new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"long",timeZone:"Asia/Taipei"}).format(new Date());
     renderSide();
     $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY)) refreshData(); else showLoginGate(); });
     $("logoutBtn")?.addEventListener("click",logout);
