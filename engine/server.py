@@ -349,6 +349,7 @@ ADMIN_POST_PATHS = {
     "/admin/medication-adherence",
     "/admin/family-health",
     "/admin/mood-trend",
+    "/admin/bond-depth",
     "/admin/voice-diagnostics",
     "/admin/notifications/drain",
     "/admin/login",
@@ -5259,6 +5260,202 @@ def admin_family_health(data=None):
     }
 
 
+def load_admin_relationship_state_rows(limit=5000):
+    """後台跨帳號關係深度：Supabase service-role 全表查詢目前關係狀態（現況快照，不分時間窗），
+    失敗退回本地 JSON。只留 person/account/等級/時間，不帶 tone/boundaries/relationshipMemory 內容。"""
+    limit = max(1, min(10000, int(limit or 5000)))
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_rows = backend.load_admin_relationship_states(limit=limit)
+        if remote_rows is not None:
+            record_admin_data_source(
+                "companion_relationship_states",
+                "supabase",
+                record_count=len(remote_rows),
+                data_as_of=latest_record_timestamp(remote_rows),
+            )
+            return remote_rows
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin relationship states from Supabase", e)
+    states = load_relationship_states(limit=limit)
+    rows = [{
+        "personId": s.get("personId"),
+        "accountId": s.get("accountId"),
+        "rapportLevel": s.get("rapportLevel") or "new",
+        "createdAt": s.get("createdAt"),
+        "updatedAt": s.get("updatedAt"),
+    } for s in states]
+    record_admin_data_source(
+        "companion_relationship_states",
+        "json",
+        record_count=len(rows),
+        data_as_of=latest_record_timestamp(rows),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return rows
+
+
+def load_admin_memory_item_count_rows(limit=20000):
+    """後台跨帳號記憶筆數：Supabase service-role 全表查詢（不篩 account_id），失敗退回本地 JSON。
+    只留 person/account/建立時間，內容一律不進這支——後台『關係深度』頁只算幾筆，不碰記憶內容。"""
+    limit = max(1, min(50000, int(limit or 20000)))
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_rows = backend.load_admin_memory_item_counts(limit=limit)
+        if remote_rows is not None:
+            record_admin_data_source(
+                "memory_items",
+                "supabase",
+                record_count=len(remote_rows),
+                data_as_of=latest_record_timestamp(remote_rows),
+            )
+            return remote_rows
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin memory item counts from Supabase", e)
+    items = read_json_file(MEMORY_ITEMS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    rows = [{
+        "personId": it.get("personId"),
+        "accountId": it.get("accountId"),
+        "createdAt": it.get("createdAt"),
+    } for it in items if it.get("personId")][:limit]
+    record_admin_data_source(
+        "memory_items",
+        "json",
+        record_count=len(rows),
+        data_as_of=latest_record_timestamp(rows),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return rows
+
+
+def admin_bond_depth(data=None):
+    """關係深度：沐寧跟每位長輩處得多熟——新認識／熟悉／信任／親近四階，加上記住幾件事。
+    量的是黏著度／護城河：關係養越深越不會退訂，卡在淺層的最可能默默流失。
+    只看筆數與階段，記憶內容一律不進這支回應；卡住名單抓『用了很久卻還沒熟起來』的人，建議真人多關心。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    stuck_days = max(1, min(365, int(data.get("stuckDays") or 14)))
+
+    relationship_rows = load_admin_relationship_state_rows(limit=10000)
+    memory_rows = load_admin_memory_item_count_rows(limit=50000)
+
+    now = datetime.now(timezone.utc)
+    since_iso = (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    people = {}
+    for row in relationship_rows:
+        pid = row.get("personId")
+        if not pid:
+            continue
+        prev = people.get(pid)
+        if not prev or str(row.get("updatedAt") or "") > str(prev.get("updatedAt") or ""):
+            people[pid] = row
+
+    memory_counts = {}
+    for row in memory_rows:
+        pid = row.get("personId")
+        if not pid:
+            continue
+        memory_counts[pid] = memory_counts.get(pid, 0) + 1
+
+    totals = {"people": 0, "newly": 0, "familiar": 0, "trusted": 0, "close": 0}
+    active_person_ids = []
+    for pid, row in people.items():
+        level = row.get("rapportLevel") or "new"
+        if level not in ("new", "familiar", "trusted", "close"):
+            level = "new"
+        updated_at = str(row.get("updatedAt") or "")
+        if updated_at and updated_at >= since_iso:
+            totals["people"] += 1
+            totals["newly" if level == "new" else level] += 1
+            active_person_ids.append(pid)
+
+    if active_person_ids:
+        avg_memories = round(sum(memory_counts.get(pid, 0) for pid in active_person_ids) / len(active_person_ids), 1)
+    else:
+        avg_memories = None
+
+    # 升級速度：目前系統只存『現在』的等級，沒留『何時從新認識變熟悉』的歷史時間點，
+    # 算不出來就誠實回 null——不瞎猜，等之後加了升級事件紀錄才補這個數字。
+    upgrade_days = None
+
+    person_ids_for_names = list(people.keys())
+    account_ids_for_names = sorted({row.get("accountId") for row in people.values() if row.get("accountId")})
+    display_names = {}
+    family_names_by_account = {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            if person_ids_for_names:
+                display_names = backend.load_persons_by_ids(person_ids_for_names) or {}
+            if account_ids_for_names:
+                family_names_by_account = backend.load_family_groups_by_account_ids(account_ids_for_names) or {}
+    except Exception as e:
+        log_fallback_exception("load person/family display names for bond depth", e)
+
+    stuck_list = []
+    for pid, row in people.items():
+        level = row.get("rapportLevel") or "new"
+        if level != "new":
+            continue
+        created_dt = parse_optional_iso_datetime(row.get("createdAt"))
+        if created_dt is None:
+            continue
+        days_since_join = (now - created_dt).days
+        if days_since_join <= stuck_days:
+            continue
+        account_id = row.get("accountId")
+        stuck_list.append({
+            "personId": pid,
+            "accountId": account_id,
+            "displayName": display_names.get(pid) or "長輩",
+            "familyName": family_names_by_account.get(account_id) or "Munea Care Circle",
+            "memories": memory_counts.get(pid, 0),
+            "level": "newly",
+            "daysSinceJoin": days_since_join,
+            "lastTalkAt": row.get("updatedAt"),
+        })
+
+    stuck_list.sort(key=lambda item: -(item.get("daysSinceJoin") or 0))
+    stuck_total = len(stuck_list)
+    stuck_list = stuck_list[:limit]
+    totals["stuck"] = stuck_total
+
+    principle_text = (
+        "『關係深度』看沐寧跟每位長輩處得多熟：新認識→熟悉→信任→親近，越後面代表陪伴越深、越不容易流失。"
+        "分佈與平均記憶筆數只算「近 " + str(days) + " 天內還有互動」的人，避免很久沒用的帳號拖低數字；"
+        "記憶只算「記住幾件事」，內容一律不進這支回應。"
+        "升級速度目前系統沒留『何時升級』的時間點，算不出來先誠實回 null，不瞎猜。"
+        "⭐卡住名單＝用了超過 " + str(stuck_days) + " 天、卻還停在「新認識」的人——不受近 " + str(days) + " 天篩選，"
+        "就算最近沒聊也一樣抓得到——這種人陪伴沒建立起來，最可能默默流失，建議真人多關心。"
+    )
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "stuckDays": stuck_days,
+        "totals": totals,
+        "avgMemories": avg_memories,
+        "upgradeDays": upgrade_days,
+        "stuckList": stuck_list,
+        "principle": principle_text,
+        "backend": data_backend_status(),
+    }
+
+
 FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
 
 def feedback_response(data):
@@ -7887,6 +8084,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_contract_response("munea.admin.mood-trend.v1", lambda: admin_mood_trend(data)))
+            elif self.path == "/admin/bond-depth":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.bond-depth.v1", lambda: admin_bond_depth(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

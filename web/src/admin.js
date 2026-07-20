@@ -12,6 +12,7 @@
       { id: "medication", label: "用藥與回診" },
       { id: "familyHealth", label: "家庭圈健康度" },
       { id: "moodTrend", label: "心情趨勢" },
+      { id: "bondDepth", label: "關係深度" },
     ]},
     { group: "營收", items: [
       { id: "subscription", label: "訂閱與點數" },
@@ -34,6 +35,7 @@
     medication: '<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
     familyHealth: '<path d="m3 9.5 9-7.5 9 7.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9 21v-6h6v6"/>',
     moodTrend: '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/>',
+    bondDepth: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   };
@@ -66,6 +68,7 @@
     medication: ["/admin/medication-adherence", { days: 30, limit: 50 }],
     familyHealth: ["/admin/family-health", { days: 30, limit: 50 }],
     moodTrend: ["/admin/mood-trend", { days: 30, limit: 50 }],
+    bondDepth: ["/admin/bond-depth", { days: 30, limit: 50, stuckDays: 14 }],
   };
 
   const CHART = { teal: "#3AA8A0", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#3A352E", muted: "#5A6963" };
@@ -105,6 +108,7 @@
   const medication = () => D().medication || {};
   const familyHealth = () => D().familyHealth || {};
   const moodTrend = () => D().moodTrend || {};
+  const bondDepth = () => D().bondDepth || {};
 
   function missingDataMeta(endpointKey){
     return {schema:ADMIN_DATA_META_SCHEMA,metricVersion:"unknown",generatedAt:null,dataAsOf:null,status:"unverified",degraded:true,degradationReasons:["metadata_missing"],freshness:{status:"unknown",reason:"metadata_missing"},sources:[],endpointKey};
@@ -235,6 +239,7 @@
     else if (id==="medication") html=renderMedication();
     else if (id==="familyHealth") html=renderFamilyHealth();
     else if (id==="moodTrend") html=renderMoodTrend();
+    else if (id==="bondDepth") html=renderBondDepth();
     else if (id==="subscription") html=renderSubscription();
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
@@ -459,6 +464,42 @@
       p.lowStreak?`<span class="pill ${p.lowStreak>=3?"bad":"warn"}">${n(p.lowStreak)} 天</span>`:`<span class="muted">—</span>`,
       p.lastSignalAt?esc(fmtTime(p.lastSignalAt)):`<span class="muted">—</span>`,
     ])):emptyBox("目前沒有人需要特別關心——很好。"));
+    return html;
+  }
+
+  function renderBondDepth(){
+    const bd=bondDepth(), t=bd.totals||{}, win=bd.windowDays||30, stuckDays=bd.stuckDays||14;
+    const trustedPlus=(t.trusted||0)+(t.close||0);
+    const stuckCount=t.stuck!=null?t.stuck:(bd.stuckList||[]).length;
+    let html=kpiRow([
+      { label:"平均記憶筆數", value:bd.avgMemories==null?"–":bd.avgMemories.toFixed(1), sub:`近 ${win} 天還在互動的長輩平均`, star:true, info:"沐寧幫每位長輩記住幾件事——只算筆數，不看內容。" },
+      { label:"信任以上人數", value:n(trustedPlus), sub:`近 ${win} 天 · 信任＋親近` },
+      { label:"卡在新認識人數", value:n(stuckCount), sub:`用了超過 ${stuckDays} 天還沒熟起來`, info:"陪伴沒建立起來，最可能默默流失，建議真人多關心。" },
+      { label:"平均升級天數", value:bd.upgradeDays==null?"–":n(bd.upgradeDays), sub:"從新認識到熟悉平均花幾天" },
+    ]);
+    html+=principle(bd.principle||"「關係深度」看沐寧跟每位長輩處得多熟：新認識→熟悉→信任→親近。只看筆數與階段，記憶內容不會出現在這裡。");
+    const dist=[
+      { label:"新認識", value:t.newly||0 },
+      { label:"熟悉", value:t.familiar||0 },
+      { label:"信任", value:t.trusted||0 },
+      { label:"親近", value:t.close||0 },
+    ];
+    if(!(t.people||0)){
+      html+=card("關係階段分佈", `近 ${win} 天還在互動的長輩`, emptyBox("還沒有關係資料——長輩開始跟沐寧聊天後就會出現。"));
+    } else {
+      html+=card("關係階段分佈", `近 ${win} 天還在互動的長輩 · 共 ${n(t.people||0)} 人`, chartMount("bd-dist"));
+      pending.push(()=>columnChart($("bd-dist"), dist.map((d)=>d.label), [
+        { name:"人數", color:cc.teal, values:dist.map((d)=>Math.round(d.value||0)) },
+      ], { empty:"還沒有關係資料。" }));
+    }
+    const list=bd.stuckList||[];
+    html+=card("卡住名單", "用了很久卻還停在新認識，排前面最需要關心", list.length?tableHTML(["長輩","家庭","記憶筆數","用了幾天","最近聊天"], list.map((p)=>[
+      `<b>${esc(p.displayName||"長輩")}</b>`,
+      esc(p.familyName||"–"),
+      n(p.memories||0),
+      p.daysSinceJoin!=null?`<span class="pill ${p.daysSinceJoin>=stuckDays*2?"bad":"warn"}">${n(p.daysSinceJoin)} 天</span>`:"–",
+      p.lastTalkAt?esc(fmtTime(p.lastTalkAt)):`<span class="muted">—</span>`,
+    ])):emptyBox("目前沒有人卡在剛認識——很好。"));
     return html;
   }
 

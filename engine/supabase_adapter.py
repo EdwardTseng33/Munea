@@ -698,6 +698,60 @@ class SupabaseAdapter:
 
         return last_seen
 
+    def load_admin_relationship_states(self, limit=5000):
+        """後台跨帳號關係深度：不篩 account_id，service-role 全表查詢目前關係狀態（現況快照，不分時間窗）。
+        只取 person/account/等級/時間欄位，不取 tone_overrides／user_boundaries／relationship_memory
+        （那些是內部運作用的狀態，不是後台該看的東西）。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        rows = self._select("companion_relationship_states", {
+            "select": "person_id,account_id,rapport_level,created_at,updated_at",
+            "deleted_at": "is.null",
+            "order": "updated_at.desc",
+            "limit": str(limit),
+        })
+        return [{
+            "personId": row.get("person_id"),
+            "accountId": row.get("account_id"),
+            "rapportLevel": row.get("rapport_level") or "new",
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        } for row in rows or []]
+
+    def load_admin_memory_item_counts(self, limit=20000):
+        """後台跨帳號記憶筆數：不篩 account_id，service-role 全表查詢——只取 person/account/建立時間，
+        絕不選 content／metadata／memory_type／source 任何一個欄位。後台『關係深度』頁只算幾筆記憶，
+        記憶內容永遠不能透過這支查詢流出。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(50000, int(limit or 20000)))
+        rows = self._select("memory_items", {
+            "select": "person_id,account_id,created_at",
+            "deleted_at": "is.null",
+            "order": "created_at.desc",
+            "limit": str(limit),
+        })
+        return [{
+            "personId": row.get("person_id"),
+            "accountId": row.get("account_id"),
+            "createdAt": row.get("created_at"),
+        } for row in rows or []]
+
+    def load_family_groups_by_account_ids(self, account_ids):
+        """後台名單顯示用：批次查帳號對應的家庭圈名稱（只回名稱，不含其他個資）。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(aid) for aid in (account_ids or []) if aid and self._is_uuid(str(aid))})
+        if not ids:
+            return {}
+        rows = self._select("family_groups", {
+            "account_id": f"in.({','.join(ids)})",
+            "select": "account_id,name",
+            "limit": str(len(ids)),
+        })
+        return {row.get("account_id"): row.get("name") for row in rows or [] if row.get("account_id")}
+
     def save_app_profile_store(self, store):
         if not self.enabled():
             return None
