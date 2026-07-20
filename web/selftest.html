@@ -101,19 +101,36 @@
     $id('newChalBtn').click();
     ['walkDue','walkDueTime','quizDue','quizDueTime','evDate','evTime','voteDue','voteDueTime','drawDate','drawTime'].forEach(id => A(!!$id(id), id + ' 缺'));
   });
-  await run('F-02', '送出邀請鈕固定畫面下方', () => {
-    A(W.getComputedStyle($id('startChalBtn')).position === 'sticky', '黏底遺失');
+  // 2026-07-20 修：原本斷言送出鈕 position:sticky，但 Edward 7/9 已拍板
+  // 「送出邀請跟著內容捲到最底、不釘在畫面上」（styles.css:604 有註解）。
+  // 考題與拍板相反＝假紅燈。改為驗真正該有的：鈕在、可按、關得掉。
+  await run('F-02', '送出邀請鈕在且關得掉', () => {
+    const btn = $id('startChalBtn');
+    A(!!btn, '送出鈕缺');
+    A(!btn.disabled, '送出鈕不能按');
+    A(W.getComputedStyle(btn).display !== 'none', '送出鈕被藏起來');
     const x = D.querySelector('#chalModal .mx-close'); A(!!x, 'X 鈕缺'); x.click();
   });
-  await run('F-03', '揪一攤送出＝正確日期標籤', () => {
-    $id('newChalBtn').click();
-    D.querySelector('.chal-type[data-kind="event"]').click();
-    $id('eventName').value = '巡檢聚餐'; $id('evDate').value = '2026-07-12'; $id('evTime').value = '18:30';
-    $id('startChalBtn').click();
-    const acts = JSON.parse(W.localStorage.getItem('munea.activities') || '[]');
-    const ev = acts[acts.length - 1] || {};
-    try { A(ev.title === '巡檢聚餐' && /7\/12/.test(ev.dateLabel || '') && /6:30/.test(ev.dateLabel || ''), '標籤 ' + (ev.dateLabel || '無')); }
-    finally { W.localStorage.setItem('munea.activities', JSON.stringify(acts.filter(a => a.id !== ev.id))); }
+  // 2026-07-20 修：原本走畫面送出，但畫面規定「至少選一位家人」，
+  // 而 7/9 拆掉示範假家人後、乾淨環境一個家人都沒有 → 永遠卡第一關＝假紅燈。
+  // 且日期寫死 2026-07-12，時間一過就變過去式（程式會擋過去時間）。
+  // 改測「用講的請她安排家庭活動」這條真正在乎的路（不需選家人），日期改成當下算出來的未來時間。
+  await run('F-03', '用講的安排家庭活動＝日期標籤正確', async () => {
+    A(typeof W.__muneaAddPersonalEvent === 'function', '語音記行程的接口不見了');
+    const d = new Date(Date.now() + 2 * 86400000); // 後天，永遠是未來
+    const p2 = n => String(n).padStart(2, '0');
+    const dateISO = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+    const bak = W.localStorage.getItem('munea.activities');
+    try {
+      const r = await W.__muneaAddPersonalEvent({ title: '巡檢聚餐', dateISO, time: '18:30' });
+      A(r && r.ok === true, '建立失敗：' + ((r && r.error) || '無回應'));
+      const want = (d.getMonth() + 1) + '/' + d.getDate();
+      A(new RegExp(want.replace('/', '\\/')).test(r.label || ''), '日期對不上，標籤＝' + (r.label || '無'));
+      A(/6:30/.test(r.label || ''), '時間對不上，標籤＝' + (r.label || '無'));
+      return r.label;
+    } finally {
+      bak ? W.localStorage.setItem('munea.activities', bak) : W.localStorage.removeItem('munea.activities');
+    }
   });
   await run('F-04', '興趣話題：入口/12選項/上限5', () => {
     A(!!$id('interestsRow') && !!$id('interestsModal'), '入口缺');
