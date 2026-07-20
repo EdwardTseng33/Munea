@@ -228,7 +228,8 @@ try {
         return stats.vidFrames >= 40 && stats.audioBytes > 0 &&
           typeof Face !== 'undefined' && Face.transport === 'webrtc' && Face.on &&
           Face._audioReceiver && Face._renderStream?.getAudioTracks().length > 0 &&
-          document.querySelector('#faceVid')?.muted === false;
+          document.querySelector('#faceVid')?.muted === true &&
+          typeof Live !== 'undefined' && Live.playHead > 0;
       }, null, { timeout: 60_000 });
       await page.waitForTimeout(Number(process.env.B2B_POST_READY_MS || 8000));
     }
@@ -349,7 +350,7 @@ const geometryFailed = !result?.overlayGeometry || Math.abs(result.overlayGeomet
 const timeline = result?.mockConnectTimeline || [];
 const at = event => timeline.find(item => item.event === event)?.at;
 const parallelFailed = mockConnect && (!(at('wake_ready') <= at('voice_start')) || !(at('wake_ready') <= at('face_start')) || Math.abs(at('voice_start') - at('face_start')) > 100 || !(at('voice_ready') <= at('av_warmup_start')) || !(at('face_ready') <= at('av_warmup_start')) || !(at('av_warmup_start') < at('av_warmup_ready')) || result?.voiceActivated !== true);
-const sustainedFailed = verifySustained && (!result || result.frames < 40 || result.audioBytes < 1 || !result.audioReceiverAttached || result.renderAudioTracks < 1 || result.faceVideoMuted || result.tapPlayVisible);
+const sustainedFailed = verifySustained && (!result || result.frames < 40 || result.audioBytes < 1 || !result.audioReceiverAttached || result.renderAudioTracks < 1 || !result.faceVideoMuted || result.playbackScheduledUntil <= 0 || result.tapPlayVisible);
 const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || (expectsMic && !result.hasMic) || result.frames < 1 || result.idleMotionActive !== false || geometryFailed || parallelFailed || sustainedFailed);
 if (idleFailed || callFailed) {
   process.exitCode = 1;
