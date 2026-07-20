@@ -18,9 +18,6 @@
       { id: "feedback", label: "用戶意見", badge: "feedback" },
       { id: "records", label: "系統紀錄" },
     ]},
-    { group: "設定", items: [
-      { id: "settings", label: "連線設定" },
-    ]},
   ];
   const CRUMB = {}, TITLE = {};
   NAV.forEach((g) => g.items.forEach((it) => { CRUMB[it.id] = g.group; TITLE[it.id] = it.label; }));
@@ -169,7 +166,7 @@
         const path=svg("path",{d:h<=0.5?`M ${x} ${T+ph} h ${barW}`:`M ${x} ${T+ph} V ${top+4} Q ${x} ${top} ${x+4} ${top} H ${x+barW-4} Q ${x+barW} ${top} ${x+barW} ${top+4} V ${T+ph} Z`,fill:se.color});
         path.addEventListener("mousemove",(e)=>tip(`<div>${esc(lb)}${series.length>1?" · "+esc(se.name):""}</div><b>${n(v)}</b>${opts.unit?" "+opts.unit:""}`,e.clientX,e.clientY));
         path.addEventListener("mouseleave",hideTip); s.appendChild(path); });
-      if(i%lstep===0||i===labels.length-1){ const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tl.textContent=lb; s.appendChild(tl); } });
+      if(i%lstep===0||(i===labels.length-1&&(labels.length-1)%lstep>=Math.ceil(lstep/2))){ const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tl.textContent=lb; s.appendChild(tl); } });
     box.innerHTML=""; box.appendChild(s);
     if(series.length>1){ const lg=document.createElement("div"); lg.className="legend"; lg.innerHTML=series.map((se)=>`<span class="key"><span class="swatch" style="background:${se.color}"></span>${esc(se.name)}</span>`).join(""); box.appendChild(lg); }
   }
@@ -207,7 +204,7 @@
       return `<div class="ops-notice warn" role="status"><strong>部分資料暫時讀不到</strong>${esc(paths)}。畫面保留已成功載入的資料，請稍後重新整理。</div>`;
     }
     const first=state.errors[failed[0]];
-    return `<div class="ops-notice error" role="alert"><strong>營運資料載入失敗</strong>${esc(explainErr(first))}。請確認連線與權限後重試。 <button type="button" class="btn-ghost" data-retry>重新整理</button> <button type="button" class="btn-ghost" data-goto="settings">連線設定</button></div>`;
+    return `<div class="ops-notice error" role="alert"><strong>營運資料載入失敗</strong>${esc(explainErr(first))}。請稍後重試；若一直失敗請重新登入。 <button type="button" class="btn-ghost" data-retry>重新整理</button> <button type="button" class="btn-ghost" data-relogin>重新登入</button></div>`;
   }
   function dataQualityNoticeHTML(){
     if(!state.connected||state.page!=="overview") return "";
@@ -231,7 +228,6 @@
     else if (id==="subscription") html=renderSubscription();
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
-    else if (id==="settings") html=settingsHTML();
     $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
     pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
     bindPageEvents(id);
@@ -426,18 +422,18 @@
       }).join("")}</div>`:""}`:emptyBox("還沒有點數異動紀錄——有人開始用點數後就會出現。"));
     // MRR / 流失：誠實標「待接 Apple」，不擺假數字
     const p=sm.pending||{};
-    html+=card("每月經常性收入 MRR ／ 流失率", "要接 Apple 開發者後台才有真數字", `
+    html+=card("每月經常性收入 ／ 退訂率", "App 還沒正式上架，所以還沒有真實付費訂閱", `
       <div style="display:flex;gap:24px;flex-wrap:wrap">
-        <div><div class="kpi-sub">MRR（月訂閱收入）</div><div class="kpi-value" style="color:var(--muted)">待接</div></div>
-        <div><div class="kpi-sub">流失率（取消訂閱）</div><div class="kpi-value" style="color:var(--muted)">待接</div></div>
+        <div><div class="kpi-sub">每月訂閱收入</div><div class="kpi-value" style="color:var(--muted)">尚未開始</div></div>
+        <div><div class="kpi-sub">退訂率</div><div class="kpi-value" style="color:var(--muted)">尚未開始</div></div>
       </div>
-      <div class="kpi-sub" style="margin-top:12px">${esc(p.mrr||"需要「目前有效訂閱」聚合——規劃走 App Store Connect API 拉真訂閱與營收。")}${p.churnRate?"　"+esc(p.churnRate):""}</div>`);
+      <div class="kpi-sub" style="margin-top:12px">${esc(p.mrr||"App 上架、開始有人付費之後，這兩個數字就會自動長出來（用自家的訂閱紀錄算，不必另外接蘋果後台）。")}${p.churnRate?"　"+esc(p.churnRate):""}</div>`);
     html+=card("方案表現", "月費 · 贈點 · 家庭圈上限（固定資訊）", tableHTML(["方案","內容","月費"],[
       ["<b>免費體驗</b>","綁定送 5 分鐘 · 提醒與心情先用起來","<span class='num'>NT$0</span>"],
       ["<b>Plus 家庭</b>","每月贈 100 點 · 家庭圈最多 4 人","<span class='num'>NT$599/月</span>"],
       ["<b>Pro 大家庭</b>","每月贈 200 點 · 家庭圈最多 12 人","<span class='num'>NT$1,199/月</span>"],
     ]));
-    html+=`<div class="kpi-sub" style="padding:0 4px">想試算 LTV／CAC／回本？到「設定 → 訂閱試算」填你的方案月費與行銷花費。</div>`;
+    html+=assumeCardHTML();
     return html;
   }
 
@@ -501,18 +497,11 @@
   }
 
   // ══════════ 設定頁 ══════════
-  function settingsHTML(){
+  // 訂閱試算（規劃計算機）——原本埋在「連線設定」頁，2026-07-20 併入「訂閱與點數」頁
+  function assumeCardHTML(){
     const a=loadAssume();
     return `
-    ${card("連線", "貼上通行碼、按「連線看真資料」——後台只顯示真資料，還沒有的會顯示空的（上線有用戶就會長出來）", `
-      <div class="field"><span>目前看的是：<b id="envLabel">–</b> <button type="button" class="btn-ghost" id="toggleAdv" aria-controls="advRow" aria-expanded="false" style="min-height:28px;padding:0 10px">換一台伺服器</button></span></div>
-      <div class="field" id="advRow" hidden><span>伺服器網址（進階，平常不用動）</span><input id="apiBaseUrl" type="url" spellcheck="false"></div>
-      <div class="field"><span>管理通行碼<small>（由蘇菲保管，跟她要一聲就好）</small></span><div class="token-wrap"><input id="adminToken" type="password" autocomplete="off" placeholder="貼上通行碼"><button type="button" class="eye-btn" id="eyeBtn" aria-controls="adminToken" aria-pressed="false">顯示</button></div></div>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="rememberToken"><span>記住通行碼（只到關掉這個分頁，較安全）</span></label>
-      <button type="button" class="primary" id="connectBtn">連線看真資料</button>
-      <div class="kpi-sub" id="connectHint" role="status" aria-live="polite" style="margin-top:10px"></div>
-    `)}
-    ${card("訂閱試算（規劃工具·不是真數字）", "填你的預期值，即時算 LTV／CAC／回本。這是planning用的計算機，不是後台的真實數據。", `
+    ${card("訂閱試算（規劃工具·不是真數字）", "填你的預期值，即時算 LTV／CAC／回本。這是規劃用的計算機，不是後台的真實數據。", `
       <div class="assume-grid">
         <label class="field"><span>Plus 月費 (NT$)</span><input type="number" id="aPlusPrice" value="${a.plusPrice}"></label>
         <label class="field"><span>Pro 月費 (NT$)</span><input type="number" id="aProPrice" value="${a.proPrice}"></label>
@@ -523,14 +512,7 @@
         <label class="field"><span>預估平均訂閱月數</span><input type="number" id="aLifeMonths" value="${a.lifeMonths}"></label>
       </div>
       <div id="assumeOut" class="kpi-sub" style="margin-top:12px"></div>
-    `)}
-    ${card("快速前往", "跟後台相關的其他頁面", `<div class="quick-links">
-      <a href="/" target="_blank" rel="noopener">📱 App 本體</a>
-      <a href="/selftest.html" target="_blank" rel="noopener">🧪 自動巡檢成績單</a>
-      <a href="https://munea.net" target="_blank" rel="noopener">🌐 官網 munea.net</a>
-      <a href="https://munea.net/privacy" target="_blank" rel="noopener">📄 隱私權政策</a>
-    </div>`)}
-    <details class="raw-panel card"><summary>🔧 工程資料（原始回應，平常不用打開）</summary><pre id="rawOut">{}</pre></details>`;
+    `)}`;
   }
 
   // ══════════ 連線 ══════════
@@ -546,7 +528,6 @@
     const root=$("pageRoot"); if(root) root.setAttribute("aria-busy",on?"true":"false");
     const refresh=$("refreshBtn"); if(refresh) refresh.disabled=!!on;
   }
-  function connectPromptHTML(){ return `<div class="connect-prompt"><h2>貼上通行碼，看真資料</h2><p class="muted">後台只顯示真實數據，還沒有的會顯示空的。到「連線設定」貼上通行碼（跟蘇菲要一聲就好）。</p><button type="button" class="primary" data-goto="settings">前往連線設定</button></div>`; }
 
   async function timedFetch(url,options){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),REQUEST_TIMEOUT_MS);
@@ -585,7 +566,7 @@
         const q=dataQualitySummary(),queryTime=new Date().toISOString();
         $("lastUpdated").textContent=state.connected?(`查詢 ${fmtTime(queryTime)} · 紀錄最新時間 ${q.dataAsOf?fmtTime(q.dataAsOf):"未提供"}`):"";
       }
-      updateBanner(); renderSide(); renderPage(state.page);
+      renderSide(); renderPage(state.page);
       return { ok: state.connected, failed: errValues.length, total: keys.length, firstErr: errValues[0] };
     }finally{ setBusy(false); }
   }
@@ -607,7 +588,7 @@
   }
   async function refreshData(){
     const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY),base=state.base||initialBaseUrl();
-    if(!token){ state.connected=false; setStatus("需要重新登入","error"); updateBanner(); showLoginGate(); return; }
+    if(!token){ state.connected=false; setStatus("需要重新登入","error"); showLoginGate(); return; }
     setStatus("讀取中…","");
     try{
       const r=await loadAll(base,token);
@@ -627,7 +608,6 @@
       <label class="login-field"><span>密碼</span><input id="loginPassword" type="password" autocomplete="current-password" placeholder="密碼"></label>
       <button type="submit" class="login-btn" id="loginBtn">登入</button>
       <div class="login-hint" id="loginHint" role="status" aria-live="polite"></div>
-      <button type="button" class="login-alt" id="loginAlt">改用通行碼進入（進階）</button>
     </form>`;
   }
   function removeLoginGate(){ const g=$("loginGate"); if(g) g.remove(); const layout=document.querySelector(".layout"); if(layout){ layout.inert=false; layout.removeAttribute("aria-hidden"); } }
@@ -637,7 +617,6 @@
     const g=document.createElement("div"); g.id="loginGate"; g.className="login-gate"; g.setAttribute("role","dialog"); g.setAttribute("aria-modal","true"); g.innerHTML=loginGateHTML();
     document.body.appendChild(g);
     $("loginForm")?.addEventListener("submit",(e)=>{ e.preventDefault(); doLogin(); });
-    $("loginAlt")?.addEventListener("click",()=>{ removeLoginGate(); go("settings"); });
     setTimeout(()=>$("loginEmail")?.focus(),50);
   }
   async function doLogin(){
@@ -672,7 +651,7 @@
     storageRemove(sessionStorage,ADMIN_TOKEN_KEY);
     state.token=""; state.data=null; state.errors={}; state.connected=false;
     if($("lastUpdated")) $("lastUpdated").textContent="";
-    setStatus("已登出",""); updateBanner(); renderSide(); show(); showLoginGate();
+    setStatus("已登出",""); renderSide(); show(); showLoginGate();
   }
 
   // ══════════ 訂閱試算（計算機·設定頁） ══════════
@@ -693,40 +672,30 @@
     $("sideNav").innerHTML=NAV.map((g)=>`<div class="nav-group"><div class="nav-group-label">${esc(g.group)}</div><div class="side-nav">${g.items.map((it)=>{
       const bv=badges[it.badge]; const b= it.badge&&bv&&bv!=="0"?`<span class="nav-badge">${esc(bv)}</span>`:"";
       return `<a href="#${it.id}" data-page="${it.id}">${icon(it.id)}<span class="nav-label">${esc(it.label)}</span>${b}</a>`;
-    }).join("")}</div></div>`).join("");
-    document.querySelectorAll("#sideNav a").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+    }).join("")}</div></div>`).join("")
+      + `<div class="side-links"><a href="/" target="_blank" rel="noopener">App 本體</a><a href="/selftest.html" target="_blank" rel="noopener">自動巡檢</a><a href="https://munea.net" target="_blank" rel="noopener">官網</a><a href="https://munea.net/privacy" target="_blank" rel="noopener">隱私權</a></div>`;
+    document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
   }
-  function updateBanner(){ const b=$("connectBanner"); if(b) b.hidden = state.connected || state.page==="settings"; }
   function go(id){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id; }
   function show(){
     const id=(location.hash||"#overview").slice(1);
     state.page=TITLE[id]?id:"overview";
     if($("crumb")) $("crumb").textContent=CRUMB[state.page]||"";
     if($("pageTitle")) $("pageTitle").textContent=TITLE[state.page]||"";
-    document.querySelectorAll("#sideNav a").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
-    updateBanner();
-    if(state.connected||state.page==="settings"){ renderPage(state.page); }
-    else { $("pageRoot").innerHTML=connectPromptHTML(); $("pageRoot").querySelectorAll("[data-goto]").forEach((b)=>b.addEventListener("click",()=>go(b.dataset.goto))); }
+    document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+    if(state.connected){ renderPage(state.page); }
+    else { $("pageRoot").innerHTML=""; showLoginGate(); }
   }
   function bindPageEvents(id){
     $("pageRoot").querySelectorAll("[data-goto]").forEach((b)=>b.addEventListener("click",()=>go(b.dataset.goto)));
     $("pageRoot").querySelectorAll("[data-retry]").forEach((b)=>b.addEventListener("click",refreshData));
+    $("pageRoot").querySelectorAll("[data-relogin]").forEach((b)=>b.addEventListener("click",logout));
     $("pageRoot").querySelectorAll("[data-acct]").forEach((b)=>b.addEventListener("click",()=>openAcctDetail(+b.dataset.acct)));
     const us=$("userSearch"); if(us){ us.value=state.tabs.userSearch||""; us.addEventListener("input",()=>{ state.tabs.userSearch=us.value.trim(); renderPage("users"); const el=$("userSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
     $("pageRoot").querySelectorAll("[data-ufilter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.userFilter=b.dataset.ufilter; renderPage("users"); }));
-    if(id==="settings"){
-      const base=initialBaseUrl();
-      if($("apiBaseUrl")) $("apiBaseUrl").value=base;
-      if($("envLabel")) $("envLabel").textContent=envLabelFor(base);
-      const st=storageGet(sessionStorage,ADMIN_TOKEN_KEY);
-      if(st&&$("adminToken")){ $("adminToken").value=st; $("rememberToken").checked=true; }
-      $("connectBtn")?.addEventListener("click",connect);
-      $("toggleAdv")?.addEventListener("click",()=>{ const row=$("advRow"),open=row.hidden; row.hidden=!open; $("toggleAdv").setAttribute("aria-expanded",open?"true":"false"); if(open)$("apiBaseUrl")?.focus(); });
-      $("eyeBtn")?.addEventListener("click",()=>{ const f=$("adminToken"); const sh=f.type==="text"; f.type=sh?"password":"text"; $("eyeBtn").textContent=sh?"顯示":"隱藏"; $("eyeBtn").setAttribute("aria-pressed",sh?"false":"true"); });
-      $("apiBaseUrl")?.addEventListener("input",()=>{ if($("envLabel"))$("envLabel").textContent=envLabelFor($("apiBaseUrl").value); });
+    if(id==="subscription"){
       ["aPlusPrice","aProPrice","aPlusCount","aProCount","aNewPaid","aMarketing","aLifeMonths"].forEach((i)=>$(i)?.addEventListener("input",calcAssume));
       calcAssume();
-      if(state.data&&$("rawOut")) $("rawOut").textContent=JSON.stringify({data:state.data,errors:state.errors},null,2);
     }
   }
 
@@ -734,9 +703,8 @@
     if(window.MuneaVersion && $("appVer")) $("appVer").textContent="v"+window.MuneaVersion.current;
     const period=$("currentPeriod")?.querySelector("span"); if(period) period.textContent=new Intl.DateTimeFormat("zh-TW",{year:"numeric",month:"long",timeZone:"Asia/Taipei"}).format(new Date());
     renderSide();
-    $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY)) refreshData(); else go("settings"); });
+    $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY)) refreshData(); else showLoginGate(); });
     $("logoutBtn")?.addEventListener("click",logout);
-    $("gotoSettings")?.addEventListener("click",()=>go("settings"));
     window.addEventListener("hashchange",show);
     setStatus("尚未連線","");
     show();
