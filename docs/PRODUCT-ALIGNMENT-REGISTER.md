@@ -20,9 +20,9 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | `1.0.41 (Build 48)`；package、Web 與 iOS 已在 main 對齊 | 尚無 Archive／upload／iPhone 證據；latest uploaded 仍是 `1.0.40 (Build 47)` | `aligned-source` | 整合 intended fixes 後再跑 strict package／human Gate |
+| App source lane | `1.0.42 (Build 48)`；package、Web 與 iOS 已在 main 對齊 | 尚無 Archive／upload／iPhone 證據；latest uploaded 仍是 `1.0.40 (Build 47)` | `aligned-source` | 整合 intended fixes 後再跑 strict package／human Gate |
 | App Store lane | latest uploaded `1.0.40 (Build 47)` | 已上傳、iPhone 已安裝；selected review Build／Apple state未確認 | `partial` | App Store Connect 截圖／狀態＋關鍵旅程真機 Gate |
-| Draft call／purchase fixes | #174 0 點預檢；#175 TEST 購買與 Apple mismatch UX | base 落後 main；main 已獨立使用 `1.0.41 (48)`，未 rebase 前不能算進 Build 48 | `partial` | 依序 rebase／整合，再鎖定 next candidate |
+| Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
 | Production Voice | current source 含較新的 Voice／call contract | 02:10 manifest：`1.0.31@500c819` | `runtime-behind` | authenticated canary＋installed-iPhone Voice Gate |
 | Production Gateway | App 正式路徑要求 Gateway | auth boundary 可觀察；release identity／真 client trace 未知 | `partial` | release identity＋lease／ready／cleanup trace |
@@ -35,8 +35,8 @@
 |---|---|---|---|---|
 | Pricing / entitlement | [`BILLING-CREDITS-ENTITLEMENT-v1.md`](./BILLING-CREDITS-ENTITLEMENT-v1.md)：Plus 100、Pro 200、packs 100／300／600／1000；policy v4 | App Store 商品與 Tokyo `019` 未證明；production Brain 落後 App source | `blocked` | ASC 商品＋DB ledger／post-check＋Sandbox purchase |
 | Google login | 原生優先＋PKCE fallback 已進 Build 47 | 缺 Build 47 選帳／callback／session／登出重登完整紀錄 | `partial` | exact-build iPhone acceptance |
-| Purchase / membership | StoreKit 與 server verification contract 存在 | 使用者回報身份不變、後續不可見；#175 尚 Draft；Apple account-token mismatch 需帳號處理 | `blocked` | TEST local simulation＋新 Sandbox Apple ID 真交易 |
-| 0-credit call UX | 應先查點數，0 點顯示原因，不進「撥通中」 | latest uploaded Build 47 未含 #174；Draft 尚未 rebase | `blocked` | next candidate 0 點真人 Gate |
+| Purchase / membership | StoreKit 與 server verification contract 存在 | 使用者回報身份不變、後續不可見；#175 內容已收攏進 #188（#188 尚未 merged）；Apple account-token mismatch 需帳號處理 | `blocked` | TEST local simulation＋新 Sandbox Apple ID 真交易 |
+| 0-credit call UX | 應先查點數，0 點顯示原因，不進「撥通中」 | latest uploaded Build 47 未含此修正；已收攏進 #188、尚未 merged。2026-07-20 改為靜默預檢：畫面不再出現「點數」字樣，開發者 profile 0 點不阻擋 | `blocked` | next candidate 0 點真人 Gate |
 | Authenticated Voice＋Avatar | 永久 App E2E Gate 已寫入 Release State／協作看板 | 沒有 exact Build＋production identities 的完整成功紀錄 | `blocked` | 有點數真帳號完整 call＋cleanup |
 | Reflex / realtime voice | Gemini Live path、turn policy與 Guardian gate 存在 | production Voice 落後、model/config與真人體感未綁 release evidence | `partial` | safe model metadata＋真人長聊 |
 | Butler | 產品文件曾宣告 Claude Sonnet；可執行路徑仍混合 deterministic／Google GenAI | provider authority、成本、安全與 deployed trace 不一致 | `blocked` | 拍板 provider SSOT，對齊 adapter／測試／telemetry／文件 |

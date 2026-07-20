@@ -45,6 +45,12 @@ assert(connectCall.includes('setTimeout(__muneaShowCallCreditBlocked, 0)'), 'Cre
 assert(connectCall.includes('if (!developmentDirectCall)') && connectCall.includes('Promise.race([') && connectCall.includes('setTimeout(resolve, 1200)'), 'Family relay lookup must not block development calls or delay production dialing indefinitely');
 assert(/if \(!LiveVoice\.prime\(\)\) \{\s*setCallPreflightPending\(false\)/.test(connectCall), 'Microphone failure must leave the preflight state without showing dialing');
 
+// 點數是否足夠只在後端靜默判斷；畫面不得出現「查點數」字樣，只維持一般撥號觀感（Edward 2026-07-20拍板）。
+assert(!connectCall.includes('確認可用點數中') && !connectCall.includes('正在確認帳號與可用點數'), 'Credit preflight must run silently: the button and caption must not show checking-credits copy to the caller');
+assert(!/setCallPreflightPending\([^)]*點數/.test(connectCall) && !/setCallHint\([^)]*點數/.test(connectCall), 'No preflight busy label or caption may mention credits while the check is still running');
+// 開發者 Gateway 模式（真登入、非直連）測試帳號不能被 0 點卡住；正式用戶（非開發者旁路）依然照擋。
+assert(connectCall.includes("if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');"), 'Only the developer Gateway profile may skip the zero-credit block; production callers must still be stopped');
+
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');
 assert(/class="range-row"[^>]*>\s*<input type="range" id="walkGoal"/.test(challengeSheet), 'Walk goal must use the visible range bar');

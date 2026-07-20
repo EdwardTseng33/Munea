@@ -26,10 +26,10 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.41 (Build 48)` | `origin/main` 的 package、lockfile、Web changelog、iOS Debug／Release與品質治理一致；#181–#199 已完成 API、release evidence、SLO 與輕量治理主線，本輪沒有 Build 48 Archive、upload 或 iPhone 安裝證據 | `package.json`; `web/src/version.js`; Xcode project; PR #176–#199 | 2026-07-20 |
+| Latest source | `1.0.42 (Build 48)` | `origin/main` 的 package、lockfile、Web changelog、iOS Debug／Release與品質治理一致；#181–#199 已完成 API、release evidence、SLO 與輕量治理主線，本輪沒有 Build 48 Archive、upload 或 iPhone 安裝證據 | `package.json`; `web/src/version.js`; Xcode project; PR #176–#199 | 2026-07-20 |
 | Latest uploaded App | `1.0.40 (Build 47)` | STATUS 記錄 IPA 五道防漏、20:44 上傳成功與 Edward iPhone 安裝／啟動成功；不以 later source 覆寫此成品事實 | `STATUS.md`; PR #172/#173 | 2026-07-17 20:44 |
 | App Store selected review lane | Exact Build／Apple state `unknown` | Build 47 已上傳不等於已選用、已送審、審核中或核准；只能由 App Store Connect 或使用者明確證據更新 | App Store Connect required | 2026-07-18 |
-| Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.41 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
+| Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.42 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
 ## Runtime services
 
