@@ -28,8 +28,8 @@ class ApiContractInventoryTests(unittest.TestCase):
 
     def test_committed_inventory_matches_source(self) -> None:
         self.assertEqual(validate_inventory(self.inventory, ROOT, self.routes), [])
-        # 2026-07-20 營運後台擴充：brain 新增 4 支 /admin 指標接口（用藥依從率／家庭圈健康度／心情趨勢／關係深度）
-        self.assertEqual(self.inventory["routeCounts"], {"brain": 71, "gateway": 23, "voice": 4})
+        # 2026-07-20 營運後台擴充 4 支指標接口 ＋ 企業席次 13 支管理接口
+        self.assertEqual(self.inventory["routeCounts"], {"brain": 84, "gateway": 23, "voice": 4})
         self.assertIn(Route("voice", "WS", "/"), self.routes)
 
     def test_new_source_route_must_be_registered(self) -> None:

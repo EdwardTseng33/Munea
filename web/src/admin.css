@@ -481,3 +481,15 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .row-act .ic{ width:14px; height:14px; }
 .pts-cell{ white-space:nowrap; }
 .pts-cell .num{ font-size:1rem; color:var(--ink); }
+
+/* ══════════ 企業客戶（B2B 席次管理）══════════ */
+.ent-form-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-bottom: 10px; }
+@media (max-width: 1120px) { .ent-form-grid { grid-template-columns: 1fr; } }
+tr.tr-overdue { background: var(--danger-soft); }
+.ent-pay-form-row td { background: var(--cream); padding: 16px; }
+.btn-danger { background: var(--danger); }
+.btn-danger:hover { background: #C94538; }
+.confirm-card { width: min(460px, 100%); }
+.confirm-body { margin-bottom: 18px; line-height: 1.65; color: var(--ink-2); font-size: .92rem; }
+.confirm-card.danger .confirm-body b { color: var(--danger); }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }

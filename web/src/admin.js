@@ -18,6 +18,12 @@
     { group: "營收", items: [
       { id: "subscription", label: "訂閱與點數" },
     ]},
+    { group: "企業客戶", items: [
+      { id: "enterpriseClients", label: "客戶列表", badge: "entOverdue" },
+      { id: "enterpriseImport", label: "名單匯入" },
+      { id: "enterprisePayments", label: "收款登記" },
+      { id: "enterpriseBillingSettings", label: "開票與收款設定", badge: "entBillingMissing" },
+    ]},
     { group: "服務與紀錄", items: [
       { id: "feedback", label: "用戶意見", badge: "feedback" },
       { id: "records", label: "系統紀錄" },
@@ -25,6 +31,8 @@
   ];
   const CRUMB = {}, TITLE = {};
   NAV.forEach((g) => g.items.forEach((it) => { CRUMB[it.id] = g.group; TITLE[it.id] = it.label; }));
+  // 單一公司明細不放側欄（跟「用戶明細」一樣靠列表列「查看」進入），但要能吃 hash 路由
+  TITLE.enterpriseClientDetail = "企業客戶明細"; CRUMB.enterpriseClientDetail = "企業客戶";
 
   const ICON_PATHS = {
     overview: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
@@ -40,6 +48,10 @@
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     carePriority: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    enterpriseClients: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+    enterpriseImport: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    enterprisePayments: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    enterpriseBillingSettings: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   };
   function icon(id, cls){ return `<svg class="${cls||"nav-ico"}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[id]||""}</svg>`; }
 
@@ -111,6 +123,10 @@
   const familyHealth = () => D().familyHealth || {};
   const moodTrend = () => D().moodTrend || {};
   const bondDepth = () => D().bondDepth || {};
+  // 企業客戶（B2B 席次）：各頁進場才現查，不掛進 loadAll 的 EP_LIST（那張表跟
+  // scripts/admin-smoke.ps1 有 1:1 契約測試，後端路由還沒接好前先不碰）
+  function entClients(){ return ((state.tabs.entClientsList && state.tabs.entClientsList.data) || {}).clients || []; }
+  function entInvoices(){ return ((state.tabs.entInvoicesList && state.tabs.entInvoicesList.data) || {}).invoices || []; }
 
   function missingDataMeta(endpointKey){
     return {schema:ADMIN_DATA_META_SCHEMA,metricVersion:"unknown",generatedAt:null,dataAsOf:null,status:"unverified",degraded:true,degradationReasons:["metadata_missing"],freshness:{status:"unknown",reason:"metadata_missing"},sources:[],endpointKey};
@@ -133,6 +149,7 @@
   function pct(v){ return (v==null||isNaN(v))?"–":Math.round(Number(v)*100)+"%"; }
   function shortDate(iso){ const p=String(iso).split("-"); return p.length===3?`${+p[1]}/${+p[2]}`:iso; }
   function fmtTime(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);}catch(e){return String(v);} }
+  function fmtDate(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"numeric",day:"numeric"}).format(d);}catch(e){return String(v);} }
   function zh(map,v,f){ if(v==null||v==="")return f||"–"; return map[String(v).toLowerCase()]||String(v); }
   const RISK_ZH = { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" };
   const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數" };
@@ -247,6 +264,11 @@
     else if (id==="subscription") html=renderSubscription();
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
+    else if (id==="enterpriseClients") html=renderEnterpriseClients();
+    else if (id==="enterpriseClientDetail") html=renderEnterpriseClientDetail();
+    else if (id==="enterpriseImport") html=renderEnterpriseImport();
+    else if (id==="enterprisePayments") html=renderEnterprisePayments();
+    else if (id==="enterpriseBillingSettings") html=renderEnterpriseBillingSettings();
     $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
     pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
     bindPageEvents(id);
@@ -671,8 +693,8 @@
     return html;
   }
 
-  function tableHTML(cols, rows){
-    return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th scope="col">${c?esc(c):'<span class="sr-only">操作</span>'}</th>`).join("")}</tr></thead><tbody>${rows.map((r)=>`<tr>${r.map((c)=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  function tableHTML(cols, rows, rowClasses){
+    return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th scope="col">${c?esc(c):'<span class="sr-only">操作</span>'}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${(rowClasses&&rowClasses[i])||""}">${r.map((c)=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
 
   function openAcctDetail(idx){
@@ -699,6 +721,603 @@
     mo.addEventListener("click",onOverlay);
     document.addEventListener("keydown",onKey);
     mo.querySelector("[data-close]")?.focus();
+  }
+
+
+  // ==========================================================================================
+  // 企業客戶（B2B 席次管理）—— 4 個畫面：客戶列表 / 單一公司 / 名單匯入 / 收款登記
+  // 資料各頁進場才現查（不掛進 loadAll 的 EP_LIST），走同一套 postAdmin，跟登入共用同一份通行碼。
+  // ==========================================================================================
+  const ENT_STATUS_ZH = { ok:["ok","正常"], expiring:["warn","30 天內到期"], overdue:["bad","逾期未付"] };
+  function entStatusPill(s){ const x=ENT_STATUS_ZH[s]||ENT_STATUS_ZH.ok; return `<span class="pill ${x[0]}"><span class="sdot"></span>${x[1]}</span>`; }
+  const ENT_SEAT_STATUS_ZH = { pending:["mute","待開通"], waiting:["warn","等待接手"], active:["ok","使用中"], grace:["warn","緩衝期"], released:["mute","已釋出"] };
+  function entSeatStatusPill(s){ const x=ENT_SEAT_STATUS_ZH[s]||ENT_SEAT_STATUS_ZH.pending; return `<span class="pill ${x[0]}">${x[1]}</span>`; }
+  const ENT_INVOICE_STATUS_ZH = { draft:["mute","草稿・待確認"], issued:["warn","已寄出・待收款"], sent:["warn","已寄出・待收款"], paid:["ok","已收款"], invoiced:["ok","已開發票"], void:["mute","已作廢"] };
+  function entInvoiceStatusPill(s){ const x=ENT_INVOICE_STATUS_ZH[s]||ENT_INVOICE_STATUS_ZH.draft; return `<span class="pill ${x[0]}">${x[1]}</span>`; }
+
+  const ENT_BILLING_REQUIRED_FIELDS = [
+    ["issuerCompanyName","開票公司抬頭"],
+    ["bankName","收款銀行"],
+    ["bankAccountName","戶名"],
+    ["bankAccountNo","帳號"],
+  ];
+  function entBillingSettingsMissing(bs){
+    bs=bs||{};
+    return ENT_BILLING_REQUIRED_FIELDS.filter(([key])=>!String(bs[key]||"").trim()).map(([,label])=>label);
+  }
+  function entBillingSettingsMissingCount(){
+    const c=state.tabs.entBillingSettings;
+    if(!c||c.status!=="ready") return 0;
+    return entBillingSettingsMissing((c.data&&c.data.settings)||{}).length;
+  }
+  function entBillingSettingsWarningHTML(){
+    const c=ensureEnterpriseBillingSettingsLoaded();
+    if(c.status!=="ready") return "";
+    const missing=entBillingSettingsMissing((c.data&&c.data.settings)||{});
+    if(!missing.length) return "";
+    return `<div class="ops-notice warn" role="alert"><strong>開票與收款設定還沒填完</strong>還缺「${missing.map((x)=>esc(x)).join("、")}」——月結產出的請款單會印不出正確資訊。 <button type="button" class="btn-ghost btn-sm" data-goto="enterpriseBillingSettings" style="margin-top:8px">前往填寫</button></div>`;
+  }
+
+  function downloadTextFile(filename, text, mime){
+    const blob=new Blob([text||""],{type:mime||"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=filename||"download.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1200);
+  }
+
+  // 重大動作二次確認彈窗（如「已入帳」）——跟 openAcctDetail 同一套 inert/焦點回歸寫法
+  function openConfirmModal(opts){
+    opts=opts||{};
+    const previous=document.activeElement, layout=document.querySelector(".layout");
+    let mo=$("confirmModal");
+    if(!mo){ mo=document.createElement("div"); mo.id="confirmModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
+    mo.innerHTML=`<div class="modal-card confirm-card${opts.danger?" danger":""}" role="alertdialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <div class="modal-head"><div class="modal-title" id="confirmModalTitle">${esc(opts.title||"請再確認一次")}</div><button class="modal-x" data-cf-close type="button" aria-label="取消">✕</button></div>
+      <div class="confirm-body">${opts.bodyHtml||""}</div>
+      <div class="confirm-actions">
+        <button type="button" class="btn-ghost" data-cf-cancel>${esc(opts.cancelLabel||"再想想")}</button>
+        <button type="button" class="${opts.danger?"btn-danger":""}" data-cf-confirm>${esc(opts.confirmLabel||"確認")}</button>
+      </div>
+    </div>`;
+    mo.hidden=false;
+    if(layout) layout.inert=true;
+    const onKey=(e)=>{ if(e.key==="Escape") close(); };
+    const onOverlay=(e)=>{ if(e.target===mo) close(); };
+    const close=()=>{ mo.hidden=true; if(layout) layout.inert=false; document.removeEventListener("keydown",onKey); mo.removeEventListener("click",onOverlay); if(previous&&previous.focus) previous.focus(); };
+    mo.querySelectorAll("[data-cf-close],[data-cf-cancel]").forEach((b)=>b.addEventListener("click",close));
+    mo.addEventListener("click",onOverlay);
+    document.addEventListener("keydown",onKey);
+    const confirmBtn=mo.querySelector("[data-cf-confirm]");
+    if(confirmBtn) confirmBtn.addEventListener("click",()=>{ close(); if(typeof opts.onConfirm==="function") opts.onConfirm(); });
+    const closeBtn=mo.querySelector("[data-cf-close]"); if(closeBtn) closeBtn.focus();
+  }
+
+  function entActionError(msg){
+    if(msg==="no_client_selected") return `<div class="ops-notice warn" role="alert" style="margin-top:12px"><strong>請先選公司</strong>選好目標公司才能繼續。</div>`;
+    return `<div class="ops-notice error" role="alert" style="margin-top:12px"><strong>沒有成功</strong>${esc(explainErr(msg))}</div>`;
+  }
+  function entActionNote(id,html){ const el=$(id); if(el) el.innerHTML=html||""; }
+  function entLoadingOrErrorCard(status,error,title,retryAttr){
+    if(status==="loading") return card(title,"讀取中",emptyBox("讀取中…"));
+    if(status==="error") return `<div class="ops-notice error" role="alert"><strong>讀不到資料</strong>${esc(explainErr(error))}</div>${card(title,"",`<button type="button" class="btn-sm" ${retryAttr}>重新整理</button>`)}`;
+    return null;
+  }
+
+  // ── 企業客戶清單／請款單清單：進場才查，動作完成後主動 reload ──
+  function ensureEnterpriseClientsLoaded(){
+    const c=state.tabs.entClientsList||(state.tabs.entClientsList={status:"idle",data:null,error:null});
+    if(c.status==="idle"){
+      c.status="loading";
+      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      postAdmin(base, token, "/admin/enterprise/clients", {})
+        .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterpriseImport","enterprisePayments"].includes(state.page)) renderPage(state.page); })
+        .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterpriseClients") renderPage(state.page); });
+    }
+    return c;
+  }
+  function reloadEnterpriseClients(){ state.tabs.entClientsList={status:"idle",data:null,error:null}; return ensureEnterpriseClientsLoaded(); }
+  function ensureEnterpriseInvoicesLoaded(){
+    const c=state.tabs.entInvoicesList||(state.tabs.entInvoicesList={status:"idle",data:null,error:null});
+    if(c.status==="idle"){
+      c.status="loading";
+      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      postAdmin(base, token, "/admin/enterprise/invoices", {})
+        .then((p)=>{ c.status="ready"; c.data=p; if(state.page==="enterprisePayments") renderPage(state.page); })
+        .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterprisePayments") renderPage(state.page); });
+    }
+    return c;
+  }
+  function reloadEnterpriseInvoices(){ state.tabs.entInvoicesList={status:"idle",data:null,error:null}; return ensureEnterpriseInvoicesLoaded(); }
+  function ensureEnterpriseBillingSettingsLoaded(){
+    const c=state.tabs.entBillingSettings||(state.tabs.entBillingSettings={status:"idle",data:null,error:null});
+    if(c.status==="idle"){
+      c.status="loading";
+      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      postAdmin(base, token, "/admin/enterprise/billing-settings", {})
+        .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterprisePayments","enterpriseBillingSettings"].includes(state.page)) renderPage(state.page); })
+        .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterpriseBillingSettings") renderPage(state.page); });
+    }
+    return c;
+  }
+  function reloadEnterpriseBillingSettings(){ state.tabs.entBillingSettings={status:"idle",data:null,error:null}; return ensureEnterpriseBillingSettingsLoaded(); }
+
+  // ── 畫面 1・企業客戶列表 ──
+  function renderEnterpriseClients(){
+    const c=ensureEnterpriseClientsLoaded();
+    const guard=entLoadingOrErrorCard(c.status,c.error,"企業客戶列表","data-ent-retry-clients");
+    if(guard) return guard;
+    const clients=entClients();
+    const activeSeats=clients.reduce((s,x)=>s+Number(x.activeSeats||0),0);
+    const monthly=clients.reduce((s,x)=>s+Number(x.estimatedMonthlyTwd||0),0);
+    const overdue=clients.filter((x)=>x.statusLight==="overdue");
+    let html=entBillingSettingsWarningHTML();
+    html+=kpiRow([
+      { label:"企業客戶數", value:n(clients.length), sub:"目前合作中的公司", star:true },
+      { label:"累計啟用席次", value:n(activeSeats), sub:"所有公司加總" },
+      { label:"本月預估金額", value:fmtMoney(monthly), sub:"依目前啟用席次估算" },
+      { label:"逾期未付", value:n(overdue.length), sub:overdue.length?"要優先催收":"目前沒有" },
+    ]);
+    const addBtn=`<button type="button" class="btn-sm" data-ent-new-client>＋ 新增企業客戶</button>`;
+    if(!clients.length){
+      html+=card("企業客戶列表","公司名、合約期間、席次、狀態、金額",emptyBox("還沒有企業客戶——談成第一家公司後，這裡會列出來。"),addBtn);
+      return html;
+    }
+    const rowClasses=clients.map((x)=>x.statusLight==="overdue"?"tr-overdue":"");
+    const rows=clients.map((x)=>{
+      const seatTxt=`<b class="num">${n(x.activeSeats||0)}</b><span class="muted small"> ／ 上限 ${n(x.seatQuota||0)}</span>${x.waitingSeats?`<div class="muted small">等待接手 ${n(x.waitingSeats)}</div>`:""}${x.graceSeats?`<div class="muted small">緩衝期 ${n(x.graceSeats)}</div>`:""}`;
+      const overdueTxt=Number(x.outstandingTwd||0)>0
+        ? `<b style="color:var(--danger)">${fmtMoney(x.outstandingTwd)}</b>${x.overdueDays?`<div class="small" style="color:var(--danger);font-weight:700">逾期 ${n(x.overdueDays)} 天</div>`:""}`
+        : `<span class="muted">—</span>`;
+      return [
+        `<b>${esc(x.name||"–")}</b>${x.taxId?`<div class="muted small">統編 ${esc(x.taxId)}</div>`:""}`,
+        `<span class="small">${esc(fmtDate(x.contractStart))} － ${esc(fmtDate(x.contractEnd))}</span>`,
+        seatTxt,
+        entStatusPill(x.statusLight),
+        fmtMoney(x.estimatedMonthlyTwd),
+        overdueTxt,
+        `<button type="button" class="row-act" data-ent-view="${esc(x.id)}" aria-label="查看 ${esc(x.name||"")} 明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
+      ];
+    });
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>企業客戶列表</h3><div class="card-note">共 ${clients.length} 家 · 逾期未付以紅色標示</div></div>${addBtn}</div>${tableHTML(["公司","合約期間","席次(已啟用／上限)","狀態","本月預估","累計欠款",""], rows, rowClasses)}</div>`;
+    html+=`<div id="entClientActionNote"></div>`;
+    return html;
+  }
+
+  // ── 畫面 2・單一公司（從列表「查看」進來）──
+  function loadEnterpriseClientDetail(clientId){
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    state.tabs.entDetail={ clientId, status:"loading", data:null, error:null };
+    renderPage(state.page);
+    postAdmin(base, token, "/admin/enterprise/client/detail", { clientId })
+      .then((p)=>{ if(state.tabs.entClientId!==clientId) return; state.tabs.entDetail={ clientId, status:"ready", data:p, error:null }; renderPage(state.page); })
+      .catch((e)=>{ if(state.tabs.entClientId!==clientId) return; state.tabs.entDetail={ clientId, status:"error", data:null, error:(e&&e.message)||"fail" }; renderPage(state.page); });
+  }
+  function renderEnterpriseClientDetail(){
+    const clientId=state.tabs.entClientId;
+    const back=`<button type="button" class="btn-ghost btn-sm" data-goto="enterpriseClients">← 返回企業客戶列表</button>`;
+    if(!clientId) return `${back}${card("企業客戶明細","",emptyBox("請先從列表選擇一家公司。"))}`;
+    const ed=state.tabs.entDetail||{};
+    if(ed.clientId!==clientId || ed.status==="loading") return `${back}${card("企業客戶明細","讀取中",emptyBox("讀取這家公司的資料中…"))}`;
+    if(ed.status==="error") return `${back}${card("企業客戶明細","",`<div class="ops-notice error" role="alert"><strong>讀不到這家公司的資料</strong>${esc(explainErr(ed.error))}</div><button type="button" class="btn-sm" style="margin-top:10px" data-ent-retry-detail="${esc(clientId)}">重新整理</button>`)}`;
+    const data=ed.data||{}, c=data.client||{}, seats=data.seats||[], invoices=data.invoices||[], reports=data.reports||data.downloads||[];
+    let html=back;
+    html+=card("基本資料", "可直接修改後儲存", `
+      <div class="ent-form-grid">
+        <label class="field"><span>公司名稱</span><input type="text" id="efName" value="${esc(c.name||"")}"></label>
+        <label class="field"><span>統一編號</span><input type="text" id="efTaxId" value="${esc(c.taxId||"")}"></label>
+        <label class="field"><span>帳單地址</span><input type="text" id="efBillingAddress" value="${esc(c.billingAddress||"")}"></label>
+        <label class="field"><span>窗口姓名</span><input type="text" id="efContactName" value="${esc(c.contactName||"")}"></label>
+        <label class="field"><span>窗口 Email</span><input type="email" id="efContactEmail" value="${esc(c.contactEmail||"")}"></label>
+        <label class="field"><span>窗口電話</span><input type="text" id="efContactPhone" value="${esc(c.contactPhone||"")}"></label>
+        <label class="field"><span>授予等級</span><select id="efPlanTier"><option value="plus"${c.planTier==="plus"?" selected":""}>Plus</option><option value="pro"${c.planTier==="pro"?" selected":""}>Pro</option></select></label>
+        <label class="field"><span>每席月費 (NT$)</span><input type="number" id="efUnitPrice" value="${esc(c.unitPriceTwd||0)}"></label>
+        <label class="field"><span>合約開始</span><input type="date" id="efContractStart" value="${esc(String(c.contractStart||"").slice(0,10))}"></label>
+        <label class="field"><span>合約結束</span><input type="date" id="efContractEnd" value="${esc(String(c.contractEnd||"").slice(0,10))}"></label>
+        <label class="field"><span>席次上限</span><input type="number" id="efSeatQuota" value="${esc(c.seatQuota||0)}"></label>
+        <label class="field"><span>月報＋請款單收件人（可多位，逗號分隔）</span><input type="text" id="efReportRecipients" value="${esc(Array.isArray(c.reportRecipients)?c.reportRecipients.join(","):(c.reportRecipients||""))}"></label>
+      </div>
+      <label class="field"><span>備註</span><input type="text" id="efNotes" value="${esc(c.notes||"")}"></label>
+      <button type="button" class="btn-sm" data-ent-save-client="${esc(clientId)}">儲存變更</button>
+      <div id="entSaveNote"></div>
+    `);
+    html+=`<div class="ops-notice error" role="alert"><strong>內部限定・不可外流</strong>這一頁列出每個席次綁定的 email／狀態，只有我們自己看；企業客戶只會拿到月報上的彙總數字，永遠看不到這一頁。</div>`;
+    const seatRows=seats.map((s)=>[
+      `<input type="checkbox" class="ent-seat-chk" value="${esc(s.id)}" ${["active","waiting","grace"].includes(s.status)?"":"disabled"}>`,
+      esc(s.inviteEmail||"–"),
+      entSeatStatusPill(s.status),
+      s.activatedAt?esc(fmtDate(s.activatedAt)):`<span class="muted">—</span>`,
+      s.graceUntil?esc(fmtDate(s.graceUntil)):`<span class="muted">—</span>`,
+      s.usageMinutes!=null?n(s.usageMinutes)+" 分":`<span class="muted">—</span>`,
+    ]);
+    html+=card("席次明細", `共 ${seats.length} 席 · 勾選「使用中／等待接手／緩衝期」的席次可批次授予（待開通表示 email 還沒綁定帳號，還不能授予）`, seats.length?`
+      ${tableHTML(["","Email","狀態","綁定時間","緩衝期至","本月用量"], seatRows)}
+      <button type="button" class="btn-sm" data-ent-grant="${esc(clientId)}" style="margin-top:10px">批次授予</button>
+      <div id="entGrantNote"></div>
+    `:emptyBox("這家公司還沒有匯入任何席次——先去「名單匯入」上傳名單。"));
+    const invRows=invoices.map((iv)=>[
+      esc(iv.invoiceNo||iv.id||"–"),
+      `${esc(fmtDate(iv.periodStart))} － ${esc(fmtDate(iv.periodEnd))}`,
+      fmtMoney(iv.totalTwd),
+      entInvoiceStatusPill(iv.status),
+      iv.paidAt?esc(fmtDate(iv.paidAt)):`<span class="muted">未收款</span>`,
+    ]);
+    html+=card("收款紀錄", "這家公司歷次請款與收款", invoices.length?tableHTML(["單號","期間","金額","狀態","實際入帳日"], invRows):emptyBox("這家公司還沒有請款紀錄——跑過月結後會出現。"));
+    const dlItems=reports.map((r,i)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(r.label||r.title||("文件 "+(i+1)))}</div><div class="ri-meta">${esc(r.period||"")}</div></div><div class="ri-actions"><button type="button" class="btn-ghost btn-sm" data-ent-download="${i}" data-ent-client="${esc(clientId)}">下載</button></div></div>`).join("");
+    html+=card("月報與請款單下載", "自動產出的 ESG 成效月報＋請款單", reports.length?`<div class="rows">${dlItems}</div><div id="entDownloadNote"></div>`:emptyBox("還沒有可下載的月報或請款單——跑過月結後會出現。"));
+    return html;
+  }
+  function entDownloadReport(clientId, idx){
+    const ed=state.tabs.entDetail||{};
+    const reports=(ed.data&&(ed.data.reports||ed.data.downloads))||[];
+    const r=reports[idx]; if(!r) return;
+    if(r.url){ window.open(r.url,"_blank","noopener"); return; }
+    if(r.html){ downloadTextFile((r.label||"report")+".html", r.html, "text/html;charset=utf-8;"); return; }
+    if(r.csv){ downloadTextFile((r.label||"report")+".csv", r.csv, "text/csv;charset=utf-8;"); return; }
+    entActionNote("entDownloadNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>這份文件目前沒有可下載的內容</strong>後端還沒提供檔案，等接好再試一次。</div>`);
+  }
+
+  function entCollectClientForm(p){
+    const g=(suffix)=>{ const el=$(p+suffix); return el?el.value:""; };
+    return {
+      name:g("Name").trim(), taxId:g("TaxId").trim(), billingAddress:g("BillingAddress").trim(),
+      contactName:g("ContactName").trim(), contactEmail:g("ContactEmail").trim(), contactPhone:g("ContactPhone").trim(),
+      planTier:g("PlanTier")||"plus", unitPriceTwd:Number(g("UnitPrice"))||0,
+      contractStart:g("ContractStart"), contractEnd:g("ContractEnd"), seatQuota:Number(g("SeatQuota"))||0,
+      reportRecipients:g("ReportRecipients").split(",").map((s)=>s.trim()).filter(Boolean),
+      notes:g("Notes").trim(),
+    };
+  }
+  function entSaveClient(clientId){
+    const body=entCollectClientForm("ef");
+    if(!body.name){ entActionNote("entSaveNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填公司名稱</strong></div>`); return; }
+    if(clientId) body.id=clientId;
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    postAdmin(base, token, "/admin/enterprise/client/save", body)
+      .then(()=>{ entActionNote("entSaveNote", `<div class="ops-notice info" role="status" style="margin-top:10px"><strong>已儲存</strong></div>`); reloadEnterpriseClients(); if(clientId) setTimeout(()=>loadEnterpriseClientDetail(clientId),1500); })
+      .catch((e)=>entActionNote("entSaveNote", entActionError((e&&e.message)||"fail")));
+  }
+  function openNewClientModal(){
+    const previous=document.activeElement, layout=document.querySelector(".layout");
+    let mo=$("newClientModal");
+    if(!mo){ mo=document.createElement("div"); mo.id="newClientModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
+    mo.innerHTML=`<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="newClientTitle" style="width:min(640px,100%)">
+      <div class="modal-head"><div class="modal-title" id="newClientTitle">新增企業客戶</div><button class="modal-x" data-nc-close type="button" aria-label="關閉">✕</button></div>
+      <div class="ent-form-grid">
+        <label class="field"><span>公司名稱</span><input type="text" id="ncName"></label>
+        <label class="field"><span>統一編號</span><input type="text" id="ncTaxId"></label>
+        <label class="field"><span>帳單地址</span><input type="text" id="ncBillingAddress"></label>
+        <label class="field"><span>窗口姓名</span><input type="text" id="ncContactName"></label>
+        <label class="field"><span>窗口 Email</span><input type="email" id="ncContactEmail"></label>
+        <label class="field"><span>窗口電話</span><input type="text" id="ncContactPhone"></label>
+        <label class="field"><span>授予等級</span><select id="ncPlanTier"><option value="plus">Plus</option><option value="pro">Pro</option></select></label>
+        <label class="field"><span>每席月費 (NT$)</span><input type="number" id="ncUnitPrice" value="599"></label>
+        <label class="field"><span>合約開始</span><input type="date" id="ncContractStart"></label>
+        <label class="field"><span>合約結束</span><input type="date" id="ncContractEnd"></label>
+        <label class="field"><span>席次上限</span><input type="number" id="ncSeatQuota" value="0"></label>
+        <label class="field"><span>月報＋請款單收件人（逗號分隔）</span><input type="text" id="ncReportRecipients"></label>
+      </div>
+      <label class="field"><span>備註</span><input type="text" id="ncNotes"></label>
+      <button type="button" class="btn-sm" data-nc-submit>建立公司</button>
+      <div id="newClientNote"></div>
+    </div>`;
+    mo.hidden=false;
+    if(layout) layout.inert=true;
+    const onKey=(e)=>{ if(e.key==="Escape") close(); };
+    const onOverlay=(e)=>{ if(e.target===mo) close(); };
+    const close=()=>{ mo.hidden=true; if(layout) layout.inert=false; document.removeEventListener("keydown",onKey); mo.removeEventListener("click",onOverlay); if(previous&&previous.focus) previous.focus(); };
+    mo.querySelectorAll("[data-nc-close]").forEach((b)=>b.addEventListener("click",close));
+    mo.addEventListener("click",onOverlay);
+    document.addEventListener("keydown",onKey);
+    const submitBtn=mo.querySelector("[data-nc-submit]");
+    if(submitBtn) submitBtn.addEventListener("click",()=>{
+      const body=entCollectClientForm("nc");
+      if(!body.name){ entActionNote("newClientNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填公司名稱</strong></div>`); return; }
+      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      postAdmin(base, token, "/admin/enterprise/client/save", body)
+        .then(()=>{ close(); reloadEnterpriseClients(); renderPage(state.page); })
+        .catch((e)=>entActionNote("newClientNote", entActionError((e&&e.message)||"fail")));
+    });
+    const closeBtn=mo.querySelector("[data-nc-close]"); if(closeBtn) closeBtn.focus();
+  }
+  const ENT_GRANT_REASON_ZH = {
+    enterprise_invoice_not_paid: "這家公司還沒有已收款的請款單，付款確認前不能開通",
+    seat_has_no_bound_account: "這個席次還沒有綁定帳號（email 還沒註冊比對成功）",
+    seat_must_be_active_or_waiting_to_grant_membership: "這個席次狀態還不能授予",
+    enterprise_seat_not_found: "找不到這個席次",
+    enterprise_client_not_found: "找不到這家公司",
+  };
+  function entGrantReasonZh(code){ return ENT_GRANT_REASON_ZH[code] || code || "原因不明"; }
+  function entGrantSeats(clientId){
+    const boxes=[...$("pageRoot").querySelectorAll(".ent-seat-chk:checked")].map((b)=>b.value);
+    if(!boxes.length){ entActionNote("entGrantNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請先勾選席次</strong></div>`); return; }
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    postAdmin(base, token, "/admin/enterprise/seats/grant", { clientId, seatIds:boxes })
+      .then((p)=>{
+        const sm=p.summary||{}, blocked=(p.results||[]).filter((x)=>!x.ok);
+        let msg=`<div class="ops-notice info" role="status" style="margin-top:10px"><strong>已處理 ${sm.total!=null?sm.total:boxes.length} 筆</strong>開通 ${sm.granted||0}${sm.waiting?`・轉為等待 ${sm.waiting}`:""}${sm.blocked?`・被擋下 ${sm.blocked}`:""}</div>`;
+        if(blocked.length) msg+=`<div class="ops-notice warn" role="alert" style="margin-top:8px"><strong>被擋下的原因</strong>${blocked.map((x)=>esc(entGrantReasonZh(x.error))).join("；")}</div>`;
+        entActionNote("entGrantNote", msg);
+        reloadEnterpriseClients(); setTimeout(()=>loadEnterpriseClientDetail(clientId),1800);
+      })
+      .catch((e)=>entActionNote("entGrantNote", entActionError((e&&e.message)||"fail")));
+  }
+
+  // ── 畫面 3・名單匯入 ──
+  function renderEnterpriseImport(){
+    const c=ensureEnterpriseClientsLoaded();
+    const guard=entLoadingOrErrorCard(c.status,c.error,"名單匯入","data-ent-retry-clients");
+    if(guard) return guard;
+    const clients=entClients();
+    const im=state.tabs.entImport||(state.tabs.entImport={ clientId:"", fileName:"", fileText:"", previewing:false, preview:null, committing:false, result:null, error:null });
+    if(!im.clientId && clients.length===1) im.clientId=String(clients[0].id);
+    const clientOpts=clients.map((x)=>`<option value="${esc(x.id)}"${String(im.clientId)===String(x.id)?" selected":""}>${esc(x.name)}</option>`).join("");
+    let html=card("名單匯入","先選公司，下載範本填好 email 清單，再上傳預檢", `
+      <div class="ent-form-grid">
+        <label class="field"><span>目標公司</span><select id="entImportClient">${clients.length?`<option value="">請選擇</option>${clientOpts}`:`<option value="">還沒有企業客戶</option>`}</select></label>
+      </div>
+      <div class="rowflex" style="margin-top:6px">
+        <button type="button" class="btn-ghost btn-sm" data-ent-template>下載範本 CSV</button>
+        <label class="btn-sm" style="display:inline-flex;align-items:center;cursor:pointer" for="entImportFile">上傳名單 CSV</label>
+        <input type="file" id="entImportFile" accept=".csv,text/csv" style="display:none">
+        <span class="muted small">${im.fileName?esc(im.fileName):"尚未選擇檔案"}</span>
+      </div>
+      <div id="entImportNote"></div>
+    `);
+    if(im.previewing){ html+=card("預檢結果","讀取中",emptyBox("正在比對名單…")); return html; }
+    if(im.preview){
+      const p=im.preview;
+      const groups=[["newSeats","新增"],["alreadyRegistered","已註冊・匯入後直接生效"],["duplicates","重複・會跳過"],["ownedByOtherClient","屬於其他公司・已擋下"],["overQuota","超過席次上限"]];
+      html+=`<div class="kpi-row">${groups.map(([key,label])=>`<div class="kpi"><div class="kpi-top"><span class="kpi-label">${esc(label)}</span></div><div class="kpi-value">${n((p[key]||[]).length)}</div></div>`).join("")}</div>`;
+      html+=groups.map(([key,label])=>{
+        const list=p[key]||[];
+        if(!list.length) return "";
+        const rows=list.map((r)=>[esc(r.email||r),esc(r.note||r.reason||"")]);
+        return card(`${label}（${list.length} 筆）`,"",tableHTML(["Email","備註／原因"],rows));
+      }).join("");
+      const hasOverQuota=(p.overQuota||[]).length>0;
+      html+=`<div class="card"><div class="card-head"><div><h3>確認匯入</h3><div class="card-note">${hasOverQuota?"含超過席次上限的筆數，匯入前會再確認一次":"確認後才會真的寫入名單"}</div></div></div>
+        <button type="button" class="btn-sm" data-ent-import-commit ${im.committing?"disabled":""}>${im.committing?"匯入中…":"確認匯入"}</button>
+        <div id="entImportCommitNote"></div>
+      </div>`;
+    }
+    if(im.result){
+      const r=im.result, created=r.created||[], activated=r.activated||[], skipped=r.skipped||[], fail=r.failed||[];
+      const okCount=r.summary?(r.summary.createdCount||0)+(r.summary.activatedCount||0):created.length+activated.length;
+      html+=card("匯入結果", `成功 ${okCount} 筆（新增 ${created.length}・已註冊直接生效 ${activated.length}）・跳過 ${skipped.length} 筆・失敗 ${fail.length} 筆`, `
+        ${fail.length?tableHTML(["Email","失敗原因"],fail.map((x)=>[esc(x.email||x),esc(x.error||x.reason||"")])):""}
+        ${skipped.length?tableHTML(["Email","跳過原因"],skipped.map((x)=>[esc(x.email||x),esc(entSkipReasonZh(x.skipReason))])):""}
+        ${(!fail.length&&!skipped.length)?emptyBox("全部成功，沒有跳過或失敗的筆數。"):""}
+        <button type="button" class="btn-ghost btn-sm" style="margin-top:10px" data-ent-import-download>下載結果清單</button>
+      `);
+    }
+    return html;
+  }
+  function entDownloadTemplate(){
+    const im=state.tabs.entImport||{};
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    postAdmin(base, token, "/admin/enterprise/seats/export", { clientId: im.clientId||"", template:true })
+      .then((p)=>downloadTextFile(p.filename||"munea-enterprise-seat-template.csv", p.csv||"email,備註\n", "text/csv;charset=utf-8;"))
+      .catch((e)=>entActionNote("entImportNote", entActionError((e&&e.message)||"fail")));
+  }
+  function entRunImportPreview(){
+    const im=state.tabs.entImport||(state.tabs.entImport={});
+    if(!im.clientId){ entActionNote("entImportNote", entActionError("no_client_selected")); return; }
+    im.previewing=true; im.preview=null; im.result=null;
+    renderPage(state.page);
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    postAdmin(base, token, "/admin/enterprise/seats/import-preview", { clientId: im.clientId, csv: im.fileText })
+      .then((p)=>{ im.previewing=false; im.preview=p; renderPage(state.page); })
+      .catch((e)=>{ im.previewing=false; renderPage(state.page); entActionNote("entImportNote", entActionError((e&&e.message)||"fail")); });
+  }
+  function entRunImportCommit(){
+    const im=state.tabs.entImport||{};
+    const doCommit=()=>{
+      im.committing=true; renderPage(state.page);
+      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      const overQuotaList=(im.preview&&im.preview.overQuota)||[];
+      postAdmin(base, token, "/admin/enterprise/seats/import-commit", { clientId: im.clientId, csv: im.fileText, confirmOverQuota: overQuotaList.length>0 })
+        .then((p)=>{ im.committing=false; im.result=p; im.preview=null; reloadEnterpriseClients(); renderPage(state.page); })
+        .catch((e)=>{ im.committing=false; renderPage(state.page); entActionNote("entImportCommitNote", entActionError((e&&e.message)||"fail")); });
+    };
+    const overQuota=(im.preview&&im.preview.overQuota)||[];
+    if(overQuota.length){
+      openConfirmModal({
+        title:"這批名單會超過合約席次上限",
+        bodyHtml:`<p>其中 <b>${overQuota.length}</b> 筆會讓已啟用席次超過合約上限，確定要照樣匯入嗎？超過的部分需要額外跟客戶確認加購。</p>`,
+        confirmLabel:"照樣匯入", danger:true, onConfirm:doCommit,
+      });
+    } else { doCommit(); }
+  }
+  const ENT_SKIP_REASON_ZH = { duplicate:"重複", over_quota:"超過席次上限（未確認匯入）", owned_by_other_client:"屬於其他公司" };
+  function entSkipReasonZh(code){ return ENT_SKIP_REASON_ZH[code] || code || "跳過"; }
+  function entDownloadImportResult(){
+    const im=state.tabs.entImport||{}, r=im.result||{};
+    const created=r.created||[], activated=r.activated||[], skipped=r.skipped||[], fail=r.failed||[];
+    const lines=["email,結果,原因"];
+    created.forEach((x)=>lines.push(`${x.email||x},新增,`));
+    activated.forEach((x)=>lines.push(`${x.email||x},已註冊直接生效,`));
+    skipped.forEach((x)=>lines.push(`${x.email||x},跳過,${entSkipReasonZh(x.skipReason)}`));
+    fail.forEach((x)=>lines.push(`${x.email||x},失敗,${String(x.error||x.reason||"").replace(/,/g," ")}`));
+    downloadTextFile("munea-enterprise-import-result.csv", lines.join("\n"), "text/csv;charset=utf-8;");
+  }
+
+  // ── 畫面 4・收款登記 ──
+  function entClientNameOf(clientId){
+    const list=entClients(); const hit=list.find((c)=>String(c.id)===String(clientId));
+    return hit?hit.name:(clientId||"–");
+  }
+  function renderEnterprisePayments(){
+    const iv0=ensureEnterpriseInvoicesLoaded();
+    const guard=entLoadingOrErrorCard(iv0.status,iv0.error,"收款登記","data-ent-retry-invoices");
+    if(guard) return guard;
+    ensureEnterpriseClientsLoaded(); // 請款單只存 enterpriseClientId，借企業客戶清單對照公司名（非阻擋、背景載入完自動重繪）
+    const invoices=entInvoices();
+    const filt=state.tabs.entPayFilter||"all";
+    const counts={ all:invoices.length, draft:0, issued:0, paid:0, overdue:0 };
+    invoices.forEach((iv)=>{
+      if(iv.status==="draft") counts.draft++;
+      else if(["issued","sent"].includes(iv.status)) counts.issued++;
+      else if(["paid","invoiced"].includes(iv.status)) counts.paid++;
+      if(Number(iv.overdueDays||0)>0 && !["paid","invoiced","void"].includes(iv.status)) counts.overdue++;
+    });
+    const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ent-pay-filter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
+    const tools=`<div class="tbl-tools">${chip("all","全部",counts.all)}${chip("draft","草稿・待確認",counts.draft)}${chip("issued","已寄出・待收款",counts.issued)}${chip("paid","已收款",counts.paid)}<span class="chip-sep"></span>${chip("overdue","逾期",counts.overdue)}<span class="chip-spring"></span><button type="button" class="btn-sm" data-ent-monthly-close>跑月結（產生本月請款單）</button></div>`;
+    let html=entBillingSettingsWarningHTML();
+    if(!invoices.length){
+      html+=card("請款單列表","登記收款、標記已入帳", `${tools}${emptyBox("還沒有請款單——跑過月結後會出現。")}`);
+      html+=`<div id="entPayActionNote"></div>`;
+      return html;
+    }
+    const filtered=invoices.filter((iv)=>{
+      if(filt==="overdue") return Number(iv.overdueDays||0)>0 && !["paid","invoiced","void"].includes(iv.status);
+      if(filt==="draft") return iv.status==="draft";
+      if(filt==="issued") return ["issued","sent"].includes(iv.status);
+      if(filt==="paid") return ["paid","invoiced"].includes(iv.status);
+      return true;
+    });
+    const openId=state.tabs.entPayOpenId;
+    const rowsHtml=filtered.map((iv)=>{
+      const overdue=Number(iv.overdueDays||0)>0 && !["paid","invoiced","void"].includes(iv.status);
+      const isOpen=String(openId)===String(iv.id);
+      let actions="";
+      if(iv.status==="draft") actions=`<button type="button" class="btn-ghost btn-sm" data-ent-mark-sent="${esc(iv.id)}">已寄出</button>`;
+      else if(["issued","sent"].includes(iv.status)) actions=`<button type="button" class="btn-ghost btn-sm" data-ent-pay-toggle="${esc(iv.id)}">${isOpen?"收合":"登記收款"}</button>`;
+      else actions=`<span class="pill ok">已入帳</span>`;
+      const payForm=isOpen?`
+        <tr class="ent-pay-form-row"><td colspan="7">
+          <div class="ent-form-grid">
+            <label class="field"><span>實際入帳日</span><input type="date" id="epPaidAt-${esc(iv.id)}"></label>
+            <label class="field"><span>實收金額 (NT$)</span><input type="number" id="epPaidAmount-${esc(iv.id)}" value="${esc(iv.totalTwd||0)}"></label>
+            <label class="field"><span>匯款備註（末五碼等）</span><input type="text" id="epPaidNote-${esc(iv.id)}" placeholder="對帳用"></label>
+          </div>
+          <button type="button" class="btn-danger btn-sm" data-ent-mark-paid="${esc(iv.id)}">已入帳</button>
+          <div id="entPayNote-${esc(iv.id)}"></div>
+        </td></tr>`:"";
+      return `<tr class="${overdue?"tr-overdue":""}">
+        <td><b>${esc(iv.invoiceNo||iv.id||"–")}</b></td>
+        <td>${esc(iv.clientName||entClientNameOf(iv.enterpriseClientId))}</td>
+        <td>${esc(fmtDate(iv.periodStart))} － ${esc(fmtDate(iv.periodEnd))}</td>
+        <td>${fmtMoney(iv.totalTwd)}</td>
+        <td>${entInvoiceStatusPill(iv.status)}</td>
+        <td>${overdue?`<b style="color:var(--danger)">逾期 ${n(iv.overdueDays)} 天</b><div class="small" style="color:var(--danger)">欠 ${fmtMoney(iv.totalTwd)}</div>`:`<span class="muted">—</span>`}</td>
+        <td>${actions}</td>
+      </tr>${payForm}`;
+    }).join("");
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>請款單列表</h3><div class="card-note">按「已寄出」記寄出日、按「登記收款」填入帳資料後「已入帳」＝開通開關</div></div></div>${tools}<div class="table-wrap"><table><thead><tr><th>單號</th><th>公司</th><th>期間</th><th>金額</th><th>狀態</th><th>逾期</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div></div>`;
+    html+=`<div id="entPayActionNote"></div>`;
+    return html;
+  }
+  function entMarkSent(invoiceId){
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    postAdmin(base, token, "/admin/enterprise/invoice/mark-sent", { invoiceId })
+      .then(()=>{ reloadEnterpriseInvoices(); })
+      .catch((e)=>entActionNote("entPayActionNote", entActionError((e&&e.message)||"fail")));
+  }
+  function entMarkPaid(invoiceId){
+    const invoices=entInvoices();
+    const iv=invoices.find((x)=>String(x.id)===String(invoiceId));
+    const paidAtEl=$("epPaidAt-"+invoiceId), paidAmountEl=$("epPaidAmount-"+invoiceId), paidNoteEl=$("epPaidNote-"+invoiceId);
+    const paidAt=paidAtEl?paidAtEl.value:"";
+    const paidAmount=Number(paidAmountEl?paidAmountEl.value:0)||0;
+    const paymentNote=paidNoteEl?paidNoteEl.value:"";
+    if(!paidAt){ entActionNote("entPayNote-"+invoiceId, `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填入帳日</strong>刷本子看到入帳的那一天。</div>`); return; }
+    const seats=iv&&(iv.billableSeats!=null?iv.billableSeats:iv.activeSeats);
+    openConfirmModal({
+      title:"確定要標記已入帳嗎？",
+      bodyHtml:`<p><b>即將開通 ${seats!=null?n(seats):"這批"} 個席次</b>，這個動作沒有辦法復原，請先確認款項真的已經入帳再按。</p><p class="muted small">公司：${esc(iv?(iv.clientName||entClientNameOf(iv.enterpriseClientId)):"–")}・單號：${esc((iv&&iv.invoiceNo)||invoiceId)}・入帳日：${esc(paidAt)}・實收：${fmtMoney(paidAmount)}</p>`,
+      confirmLabel:"確定已入帳，開通", danger:true,
+      onConfirm:()=>{
+        const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+        postAdmin(base, token, "/admin/enterprise/invoice/mark-paid", { invoiceId, paidAt, paidAmountTwd:paidAmount, paymentNote })
+          .then(()=>{ state.tabs.entPayOpenId=null; reloadEnterpriseInvoices(); reloadEnterpriseClients(); })
+          .catch((e)=>entActionNote("entPayNote-"+invoiceId, entActionError((e&&e.message)||"fail")));
+      },
+    });
+  }
+  function entRunMonthlyClose(){
+    openConfirmModal({
+      title:"要跑這個月的月結嗎？",
+      bodyHtml:`<p>會依目前每家公司「月底仍為使用中」的席次數，自動產出<b>請款單（草稿）</b>與 <b>ESG 成效月報</b>。請款單產出後還是草稿，需要人工確認才會轉成正式寄出。</p>`,
+      confirmLabel:"開始跑月結",
+      onConfirm:()=>{
+        const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+        postAdmin(base, token, "/admin/enterprise/monthly-close", {})
+          .then(()=>reloadEnterpriseInvoices())
+          .catch((e)=>entActionNote("entPayActionNote", entActionError((e&&e.message)||"fail")));
+      },
+    });
+  }
+
+  function ENT_BS_COMPANY_FORM_HTML(bs){
+    return `
+      <div class="ent-form-grid">
+        <label class="field"><span>開票公司抬頭</span><input type="text" id="bsIssuerCompanyName" value="${esc(bs.issuerCompanyName||"")}" placeholder="例：沐寧股份有限公司"></label>
+        <label class="field"><span>統一編號</span><input type="text" id="bsIssuerTaxId" value="${esc(bs.issuerTaxId||"")}"></label>
+        <label class="field"><span>公司地址</span><input type="text" id="bsIssuerAddress" value="${esc(bs.issuerAddress||"")}"></label>
+        <label class="field"><span>聯絡電話</span><input type="text" id="bsIssuerPhone" value="${esc(bs.issuerPhone||"")}"></label>
+        <label class="field"><span>聯絡人</span><input type="text" id="bsIssuerContactName" value="${esc(bs.issuerContactName||"")}"></label>
+      </div>
+    `;
+  }
+  function ENT_BS_BANK_FORM_HTML(bs){
+    return `
+      <div class="ops-notice warn" role="alert" style="margin-bottom:14px"><strong>帳號是敏感資料</strong>畫面上預設遮蔽，按「顯示」才會露出完整號碼，避免截圖外流。</div>
+      <div class="ent-form-grid">
+        <label class="field"><span>收款銀行</span><input type="text" id="bsBankName" value="${esc(bs.bankName||"")}"></label>
+        <label class="field"><span>分行</span><input type="text" id="bsBankBranch" value="${esc(bs.bankBranch||"")}"></label>
+        <label class="field"><span>戶名</span><input type="text" id="bsBankAccountName" value="${esc(bs.bankAccountName||"")}"></label>
+        <label class="field"><span>帳號</span>
+          <div class="token-wrap">
+            <input type="password" id="bsBankAccountNo" value="${esc(bs.bankAccountNo||"")}" autocomplete="off">
+            <button type="button" class="eye-btn" data-ent-toggle-mask="bsBankAccountNo">顯示</button>
+          </div>
+        </label>
+      </div>
+    `;
+  }
+  function ENT_BS_OTHER_FORM_HTML(bs){
+    return `
+      <div class="ent-form-grid">
+        <label class="field"><span>付款期限天數</span><input type="number" id="bsPaymentTermsDays" value="${esc(bs.paymentTermsDays!=null?bs.paymentTermsDays:15)}"><small class="muted">對應需求單「次月 15 日前」——從帳單期間結束日起算天數，預設 15 天，可調</small></label>
+        <label class="field"><span>請款單備註</span><input type="text" id="bsInvoiceFooterNote" value="${esc(bs.invoiceFooterNote||"")}" placeholder="例：請於匯款後回傳水單"></label>
+      </div>
+      <button type="button" class="btn-sm" data-ent-save-billing-settings>儲存變更</button>${bs.updatedAt?`<span class="muted small" style="margin-left:10px">上次更新：${esc(fmtTime(bs.updatedAt))}${bs.updatedBy?("（"+esc(bs.updatedBy)+"）"):""}</span>`:""}
+      <div id="entBillingSaveNote"></div>
+    `;
+  }
+  function renderEnterpriseBillingSettings(){
+    const c=ensureEnterpriseBillingSettingsLoaded();
+    const guard=entLoadingOrErrorCard(c.status,c.error,"開票與收款設定","data-ent-retry-billing-settings");
+    if(guard) return guard;
+    const bs=(c.data&&c.data.settings)||{};
+    const missing=entBillingSettingsMissing(bs);
+    let html=missing.length?("<div class=\"ops-notice warn\" role=\"alert\"><strong>還沒填完</strong>還缺「"+missing.map((x)=>esc(x)).join("、")+"」——沒填的欄位，月結產出的請款單會印不出正確資訊。</div>"):"";
+    html+=card("開票資訊","印在請款單抬頭的公司資料", ENT_BS_COMPANY_FORM_HTML(bs));
+    html+=card("收款資訊","印在請款單上的匯款帳戶", ENT_BS_BANK_FORM_HTML(bs));
+    html+=card("其他","付款期限與請款單上的備註", ENT_BS_OTHER_FORM_HTML(bs));
+    return html;
+  }
+  function entCollectBillingSettingsForm(){
+    const g=(id)=>{ const el=$(id); return el?el.value:""; };
+    return {
+      issuerCompanyName:g("bsIssuerCompanyName").trim(), issuerTaxId:g("bsIssuerTaxId").trim(), issuerAddress:g("bsIssuerAddress").trim(),
+      issuerPhone:g("bsIssuerPhone").trim(), issuerContactName:g("bsIssuerContactName").trim(),
+      bankName:g("bsBankName").trim(), bankBranch:g("bsBankBranch").trim(),
+      bankAccountName:g("bsBankAccountName").trim(), bankAccountNo:g("bsBankAccountNo").trim(),
+      paymentTermsDays:Number(g("bsPaymentTermsDays"))||15, invoiceFooterNote:g("bsInvoiceFooterNote").trim(),
+    };
+  }
+  function entSaveBillingSettings(){
+    const body=entCollectBillingSettingsForm();
+    if(!body.issuerCompanyName){ entActionNote("entBillingSaveNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填開票公司抬頭</strong></div>`); return; }
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    postAdmin(base, token, "/admin/enterprise/billing-settings/save", body)
+      .then(()=>{
+        entActionNote("entBillingSaveNote", `<div class="ops-notice info" role="status" style="margin-top:10px"><strong>已儲存</strong>之後產出的請款單會套用這份資料。</div>`);
+        setTimeout(reloadEnterpriseBillingSettings, 1600);
+      })
+      .catch((e)=>entActionNote("entBillingSaveNote", entActionError((e&&e.message)||"fail")));
   }
 
   // ══════════ 設定頁 ══════════
@@ -873,7 +1492,7 @@
 
   // ══════════ 導覽 ══════════
   function renderSide(){
-    const badges={ safety: state.connected?String((D().safety||{}).totals?.requiresHumanEscalation||0):"", feedback: state.connected?String(((D().feedback||{}).latest||[]).length||0):"", care: state.connected?String(carePriorityRows().rows.filter((r)=>r.score>=60).length||0):"" };
+    const badges={ safety: state.connected?String((D().safety||{}).totals?.requiresHumanEscalation||0):"", feedback: state.connected?String(((D().feedback||{}).latest||[]).length||0):"", care: state.connected?String(carePriorityRows().rows.filter((r)=>r.score>=60).length||0):"", entOverdue: state.connected?String(entClients().filter((c)=>c.statusLight==="overdue").length||0):"", entBillingMissing: state.connected?String(entBillingSettingsMissingCount()):"" };
     $("sideNav").innerHTML=NAV.map((g)=>`<div class="nav-group"><div class="nav-group-label">${esc(g.group)}</div><div class="side-nav">${g.items.map((it)=>{
       const bv=badges[it.badge]; const b= it.badge&&bv&&bv!=="0"?`<span class="nav-badge">${esc(bv)}</span>`:"";
       return `<a href="#${it.id}" data-page="${it.id}">${icon(it.id)}<span class="nav-label">${esc(it.label)}</span>${b}</a>`;
@@ -882,10 +1501,12 @@
       + `<div class="side-links"><a href="/" target="_blank" rel="noopener">App 本體</a><a href="/selftest.html" target="_blank" rel="noopener">自動巡檢</a><a href="https://munea.net" target="_blank" rel="noopener">官網</a><a href="/privacy.html" target="_blank" rel="noopener">隱私權</a></div>`;
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
   }
-  function go(id){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id; }
+  function go(id,arg){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id+(arg?":"+arg:""); }
   function show(){
-    const id=(location.hash||"#overview").slice(1);
+    const raw=(location.hash||"#overview").slice(1), sep=raw.indexOf(":");
+    const id=sep>-1?raw.slice(0,sep):raw, arg=sep>-1?raw.slice(sep+1):"";
     state.page=TITLE[id]?id:"overview";
+    if(arg) state.tabs.entClientId=arg;
     if($("crumb")) $("crumb").textContent=CRUMB[state.page]||"";
     if($("pageTitle")) $("pageTitle").textContent=TITLE[state.page]||"";
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
@@ -899,6 +1520,40 @@
     $("pageRoot").querySelectorAll("[data-acct]").forEach((b)=>b.addEventListener("click",()=>openAcctDetail(+b.dataset.acct)));
     const us=$("userSearch"); if(us){ us.value=state.tabs.userSearch||""; us.addEventListener("input",()=>{ state.tabs.userSearch=us.value.trim(); renderPage("users"); const el=$("userSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
     $("pageRoot").querySelectorAll("[data-ufilter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.userFilter=b.dataset.ufilter; renderPage("users"); }));
+    // ══ 企業客戶（B2B 席次）══
+    $("pageRoot").querySelectorAll("[data-ent-view]").forEach((b)=>b.addEventListener("click",()=>{ const cid=b.dataset.entView; state.tabs.entDetail=null; go("enterpriseClientDetail",cid); loadEnterpriseClientDetail(cid); }));
+    $("pageRoot").querySelectorAll("[data-ent-new-client]").forEach((b)=>b.addEventListener("click",openNewClientModal));
+    $("pageRoot").querySelectorAll("[data-ent-retry-clients]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseClients(); renderPage(state.page); }));
+    $("pageRoot").querySelectorAll("[data-ent-retry-invoices]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseInvoices(); renderPage(state.page); }));
+    $("pageRoot").querySelectorAll("[data-ent-retry-detail]").forEach((b)=>b.addEventListener("click",()=>loadEnterpriseClientDetail(b.dataset.entRetryDetail)));
+    $("pageRoot").querySelectorAll("[data-ent-save-client]").forEach((b)=>b.addEventListener("click",()=>entSaveClient(b.dataset.entSaveClient)));
+    $("pageRoot").querySelectorAll("[data-ent-grant]").forEach((b)=>b.addEventListener("click",()=>entGrantSeats(b.dataset.entGrant)));
+    $("pageRoot").querySelectorAll("[data-ent-download]").forEach((b)=>b.addEventListener("click",()=>entDownloadReport(b.dataset.entClient, +b.dataset.entDownload)));
+    const eic=$("entImportClient"); if(eic){ eic.value=(state.tabs.entImport&&state.tabs.entImport.clientId)||""; eic.addEventListener("change",()=>{ (state.tabs.entImport||(state.tabs.entImport={})).clientId=eic.value; }); }
+    $("pageRoot").querySelectorAll("[data-ent-template]").forEach((b)=>b.addEventListener("click",entDownloadTemplate));
+    const eif=$("entImportFile"); if(eif){ eif.addEventListener("change",()=>{
+      const f=eif.files&&eif.files[0]; if(!f) return;
+      const im=state.tabs.entImport||(state.tabs.entImport={});
+      im.fileName=f.name; im.result=null;
+      const reader=new FileReader();
+      reader.onload=()=>{ im.fileText=String(reader.result||""); entRunImportPreview(); };
+      reader.readAsText(f);
+    }); }
+    $("pageRoot").querySelectorAll("[data-ent-import-commit]").forEach((b)=>b.addEventListener("click",entRunImportCommit));
+    $("pageRoot").querySelectorAll("[data-ent-import-download]").forEach((b)=>b.addEventListener("click",entDownloadImportResult));
+    $("pageRoot").querySelectorAll("[data-ent-pay-filter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.entPayFilter=b.dataset.entPayFilter; renderPage("enterprisePayments"); }));
+    $("pageRoot").querySelectorAll("[data-ent-mark-sent]").forEach((b)=>b.addEventListener("click",()=>entMarkSent(b.dataset.entMarkSent)));
+    $("pageRoot").querySelectorAll("[data-ent-pay-toggle]").forEach((b)=>b.addEventListener("click",()=>{ const idv=b.dataset.entPayToggle; state.tabs.entPayOpenId=(String(state.tabs.entPayOpenId)===String(idv))?null:idv; renderPage("enterprisePayments"); }));
+    $("pageRoot").querySelectorAll("[data-ent-mark-paid]").forEach((b)=>b.addEventListener("click",()=>entMarkPaid(b.dataset.entMarkPaid)));
+    $("pageRoot").querySelectorAll("[data-ent-monthly-close]").forEach((b)=>b.addEventListener("click",entRunMonthlyClose));
+    $("pageRoot").querySelectorAll("[data-ent-retry-billing-settings]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseBillingSettings(); renderPage(state.page); }));
+    $("pageRoot").querySelectorAll("[data-ent-save-billing-settings]").forEach((b)=>b.addEventListener("click",entSaveBillingSettings));
+    $("pageRoot").querySelectorAll("[data-ent-toggle-mask]").forEach((b)=>b.addEventListener("click",()=>{
+      const fid=b.dataset.entToggleMask, el=$(fid); if(!el) return;
+      const showing=el.type==="text";
+      el.type=showing?"password":"text";
+      b.textContent=showing?"顯示":"隱藏";
+    }));
     if(id==="subscription"){
       ["aPlusPrice","aProPrice","aPlusCount","aProCount","aNewPaid","aMarketing","aLifeMonths"].forEach((i)=>$(i)?.addEventListener("input",calcAssume));
       calcAssume();
@@ -914,7 +1569,7 @@
     setStatus("尚未連線","");
     show();
     const st=storageGet(sessionStorage,ADMIN_TOKEN_KEY);
-    if(st){ state.token=st; (async()=>{ try{ const base=initialBaseUrl(); const r=await loadAll(base,st); if(r.ok){ setStatus(r.failed?"部分資料異常":"已連線",r.failed?"warn":"ok"); } else { setStatus("需要重新登入","error"); showLoginGate(); } }catch(e){ setStatus("連線失敗","error"); showLoginGate(); } })(); }
+    if(st){ state.token=st; (async()=>{ try{ const base=initialBaseUrl(); const r=await loadAll(base,st); if(r.ok){ removeLoginGate(); setStatus(r.failed?"部分資料異常":"已連線",r.failed?"warn":"ok"); } else { setStatus("需要重新登入","error"); showLoginGate(); } }catch(e){ setStatus("連線失敗","error"); showLoginGate(); } })(); }
     else { showLoginGate(); }
   }
   document.addEventListener("DOMContentLoaded",init);

@@ -23,6 +23,8 @@ from admin_data_quality import admin_contract_response, latest_record_timestamp,
 import chat_engine as eng
 import localization
 import supabase_adapter
+import enterprise_seats
+import enterprise_billing
 import model_router
 import notify
 import apple_store
@@ -359,6 +361,21 @@ ADMIN_POST_PATHS = {
     "/admin/daily-briefing",
     "/admin/memory-consolidate",
     "/admin/memory-living-profile",
+    # 企業席次（B2B）後台：需求單 3.6 接口清單（不含請款單相關端點，
+    # 那是 engine/enterprise_billing.py 的責任範圍，另案加入 ADMIN_POST_PATHS）。
+    "/admin/enterprise/clients",
+    "/admin/enterprise/client/save",
+    "/admin/enterprise/client/detail",
+    "/admin/enterprise/seats/import-preview",
+    "/admin/enterprise/seats/import-commit",
+    "/admin/enterprise/seats/export",
+    "/admin/enterprise/seats/grant",
+    "/admin/enterprise/invoices",
+    "/admin/enterprise/invoice/mark-sent",
+    "/admin/enterprise/invoice/mark-paid",
+    "/admin/enterprise/monthly-close",
+    "/admin/enterprise/billing-settings",
+    "/admin/enterprise/billing-settings/save",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -1184,6 +1201,18 @@ def _mask_email(email):
         return None
     name, dom = email.split("@", 1)
     return ((name[0] + "***") if name else "***") + "@" + dom
+
+
+def _mask_account_tail(value, keep=4):
+    """收款帳號等敏感值只留末幾碼——企業席次開票/收款設定異動要留 audit_events，
+    但不把完整帳號複製進第二張表（比照需求單 5.2 payment_note「匯款帳號末五碼」
+    同一個遮罩慣例）。"""
+    value = str(value or "").strip()
+    if not value:
+        return None
+    if len(value) <= keep:
+        return value
+    return "*" * (len(value) - keep) + value[-keep:]
 
 
 def family_invitations_response(data, client_ip=None, actor=None):
@@ -5828,6 +5857,313 @@ def admin_audit_events_summary(data=None):
     }
 
 
+# ── 企業席次（B2B）後台接口：企業席次·後台管理與月結 需求單 3.6 ──
+# 資料層／狀態機／三條鐵律都在 engine/enterprise_seats.py，這裡只是接口層：
+# 驗證管理權杖、解析請求、呼叫資料層、包成既有 admin 接口慣用的 {"ok": true, ...} 格式。
+# 請款單相關端點（/admin/enterprise/invoices、invoice/mark-sent、invoice/mark-paid、
+# monthly-close）不在這裡實作——那是 engine/enterprise_billing.py 的責任範圍。
+
+def enterprise_clients_response(data=None):
+    """3.6 /admin/enterprise/clients：企業客戶列表。"""
+    data = data or {}
+    clients = enterprise_seats.clients_overview(query=data.get("query"), status=data.get("status"))
+    return {"ok": True, "clients": clients, "count": len(clients)}
+
+
+def enterprise_client_save_response(data=None):
+    """3.6 /admin/enterprise/client/save：新建／編輯公司（2.1 全部欄位）。
+    有帶 id 時視為部分更新——先讀現有資料，用請求帶的欄位覆蓋後再整列存回
+   （upsert_client 本身是整列覆寫語意，見 enterprise_seats.py 的註解）。"""
+    data = data or {}
+    client_id = str(data.get("id") or "").strip()
+    if client_id:
+        existing = enterprise_seats.get_client(client_id)
+        if not existing:
+            return {"ok": False, "error": {"code": "enterprise_client_not_found"}}
+        merged = {**existing, **data, "id": client_id}
+    else:
+        merged = data
+    try:
+        client = enterprise_seats.upsert_client(merged)
+    except Exception as exc:
+        log_fallback_exception("save enterprise client", exc)
+        return {"ok": False, "error": {"code": "enterprise_client_save_failed"}}
+    return {"ok": True, "client": client, "created": not bool(client_id)}
+
+
+def enterprise_client_detail_response(data=None):
+    """3.6 /admin/enterprise/client/detail：公司資料＋席次明細＋收款紀錄＋可下載的
+    月報／請款單清單（需求單 3.5「單一公司」畫面最後一塊：2026-07-20 三次需求接通）。
+    reports 清單失敗不能讓整頁明細掛掉（下載是加分項、不是這支接口的主要用途），
+    這裡單獨包一層 try/except，壞掉時回空清單，前端會顯示『還沒有可下載的文件』。"""
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or data.get("id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": {"code": "client_id_required"}}
+    detail = enterprise_seats.client_detail(client_id)
+    if not detail:
+        return {"ok": False, "error": {"code": "enterprise_client_not_found"}}
+    detail = dict(detail)
+    try:
+        detail["reports"] = enterprise_billing.list_downloadable_documents(client_id, detail.get("client"))
+    except Exception as exc:
+        log_fallback_exception(f"list downloadable documents for enterprise client {client_id}", exc)
+        detail["reports"] = []
+    return {"ok": True, **detail}
+
+
+def _enterprise_import_rows_from_request(data):
+    """/import-preview 與 /import-commit 共用：接受已解析好的 rows，或原始 csv 文字。"""
+    rows = data.get("rows")
+    if isinstance(rows, list):
+        return rows
+    csv_text = data.get("csv") or data.get("csvText") or data.get("csv_text")
+    if csv_text:
+        return enterprise_seats.parse_seat_import_csv(csv_text)
+    return []
+
+
+def enterprise_seats_import_preview_response(data=None):
+    """3.6 /admin/enterprise/seats/import-preview：唯讀五分類預檢。"""
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": {"code": "client_id_required"}}
+    rows = _enterprise_import_rows_from_request(data)
+    try:
+        preview = enterprise_seats.import_preview(client_id, rows)
+    except ValueError as exc:
+        return {"ok": False, "error": {"code": str(exc)}}
+    return {"ok": True, **preview}
+
+
+def enterprise_seats_import_commit_response(data=None):
+    """3.6 /admin/enterprise/seats/import-commit：真正寫入名單。"""
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": {"code": "client_id_required"}}
+    rows = _enterprise_import_rows_from_request(data)
+    confirm_over_quota = bool(data.get("confirmOverQuota") or data.get("confirm_over_quota"))
+    try:
+        result = enterprise_seats.import_commit(
+            client_id, rows, actor="admin", confirm_over_quota=confirm_over_quota,
+        )
+    except ValueError as exc:
+        return {"ok": False, "error": {"code": str(exc)}}
+    return {"ok": True, **result}
+
+
+def enterprise_seats_export_response(data=None):
+    """3.6 /admin/enterprise/seats/export：匯出範本或現有席次（CSV 文字包在 JSON 裡，
+    跟本專案其餘接口一律走 JSON 回應的慣例一致；前端自行組 Blob 下載）。"""
+    data = data or {}
+    if bool(data.get("template")):
+        csv_text = enterprise_seats.build_seat_import_template_csv()
+        return {"ok": True, "csv": csv_text, "filename": "enterprise_seat_import_template.csv"}
+    client_id = data.get("clientId") or data.get("client_id")
+    status = data.get("status")
+    csv_text = enterprise_seats.build_seat_export_csv(client_id=client_id, status=status)
+    filename = f"enterprise_seats_{client_id or 'all'}.csv"
+    return {"ok": True, "csv": csv_text, "filename": filename}
+
+
+def enterprise_seats_grant_response(data=None):
+    """3.6 /admin/enterprise/seats/grant：批次授予。未付款則拒絕，回傳被擋原因
+   （鐵律 2、3 都在 enterprise_seats.grant_enterprise_membership 內強制，這裡不重複判斷）。"""
+    data = data or {}
+    seat_ids = data.get("seatIds") or data.get("seat_ids")
+    if not seat_ids and data.get("seatId"):
+        seat_ids = [data.get("seatId")]
+    if not isinstance(seat_ids, list) or not seat_ids:
+        return {"ok": False, "error": {"code": "seat_ids_required"}}
+    result = enterprise_seats.batch_grant_enterprise_membership(seat_ids, actor="admin", reason="admin_batch_grant")
+    return {"ok": True, **result}
+
+
+
+# ── 請款單／月結四條接口（需求單 3.6 最後一批）──
+# 薄薄一層：路由與參數驗證在這裡，計費／請款單產出／月報產出全部呼叫
+# engine/enterprise_billing.py 既有的公開函式，不重寫一份計費邏輯。
+
+def enterprise_invoices_response(data=None):
+    """3.6 /admin/enterprise/invoices：請款單列表，含狀態、逾期天數、累計欠款。"""
+    data = data or {}
+    client_id = data.get("clientId") or data.get("client_id")
+    status = data.get("status")
+    limit = data.get("limit")
+    invoices = enterprise_billing.list_invoices(client_id=client_id, status=status, limit=limit or 500)
+    enriched = [
+        {**inv, "overdueDays": enterprise_billing.compute_overdue_days(inv)}
+        for inv in invoices
+    ]
+    return {
+        "ok": True,
+        "invoices": enriched,
+        "count": len(enriched),
+        "outstandingTwd": enterprise_billing.compute_outstanding_total(invoices),
+    }
+
+
+def enterprise_invoice_mark_sent_response(data=None):
+    """3.6 /admin/enterprise/invoice/mark-sent：標記已寄出（記 sent_at），同時是需求單
+    4.2「產出後狀態為 draft，由我們人工確認後才轉 issued」的那個人工放行動作——
+    3.6 接口清單沒有另外列一個「轉 issued」端點，這裡一併做，狀態流才走得通。
+
+    2026-07-20 三次需求：這一刻也是請款單 HTML 的凍結時機——draft 階段
+    render_invoice_html() 一直即時讀最新開票／收款設定，但一旦按下「已寄出」，
+    當下畫面就此凍結存進 invoiceHtmlSnapshot；之後不管收款設定再怎麼改，這張已經
+    寄出去的單重新下載時，看到的都是「當初真的印給客戶的那個版本」（見
+    enterprise_billing.get_invoice_html() 的完整決策理由）。找不到公司資料（理論上
+    不會發生，僅防呆）就不寫快照，下載時會退回即時重繪，不讓整個標記動作因此失敗。"""
+    data = data or {}
+    invoice_id = str(data.get("invoiceId") or data.get("invoice_id") or "").strip()
+    if not invoice_id:
+        return {"ok": False, "error": {"code": "invoice_id_required"}}
+    invoice = enterprise_billing.get_invoice(invoice_id)
+    if not invoice:
+        return {"ok": False, "error": {"code": "enterprise_invoice_not_found"}}
+    if invoice.get("status") != "draft":
+        return {"ok": False, "error": {"code": "invoice_not_in_draft_status", "currentStatus": invoice.get("status")}}
+    updated = dict(invoice)
+    updated["status"] = "issued"
+    updated["sentAt"] = data.get("sentAt") or data.get("sent_at") or utc_now()
+    client = enterprise_seats.get_client(invoice.get("enterpriseClientId"))
+    if client:
+        try:
+            updated["invoiceHtmlSnapshot"] = enterprise_billing.render_invoice_html(updated, client)
+        except Exception as exc:
+            log_fallback_exception(f"freeze invoice html snapshot for {invoice_id}", exc)
+    saved = enterprise_billing.save_invoice(updated)
+    return {"ok": True, "invoice": saved}
+
+
+def enterprise_invoice_mark_paid_response(data=None):
+    """3.6 /admin/enterprise/invoice/mark-paid：已入帳＝開通開關（需求單 5.1）。
+    填 paid_at／paid_amount_twd／payment_note；成功之後
+    enterprise_seats.assert_client_has_paid_invoice() 讀到 status=paid（或 invoiced）
+    才會放行 grant——這裡跟那邊認定的「已付款」狀態一致，不是各自定義一套。
+    若同時帶 invoiceNumber（發票已開立），狀態直接落到 invoiced，因為 3.6 接口清單
+    沒有另外列一個「轉 invoiced」端點，比照 mark-sent 的同一個道理一併處理。"""
+    data = data or {}
+    invoice_id = str(data.get("invoiceId") or data.get("invoice_id") or "").strip()
+    if not invoice_id:
+        return {"ok": False, "error": {"code": "invoice_id_required"}}
+    invoice = enterprise_billing.get_invoice(invoice_id)
+    if not invoice:
+        return {"ok": False, "error": {"code": "enterprise_invoice_not_found"}}
+    if invoice.get("status") != "issued":
+        return {"ok": False, "error": {"code": "invoice_not_in_issued_status", "currentStatus": invoice.get("status")}}
+    paid_amount = data.get("paidAmountTwd")
+    if paid_amount is None:
+        paid_amount = data.get("paid_amount_twd")
+    updated = dict(invoice)
+    updated["paidAt"] = data.get("paidAt") or data.get("paid_at") or utc_now()
+    updated["paidAmountTwd"] = paid_amount if paid_amount is not None else invoice.get("totalTwd")
+    updated["paymentNote"] = data.get("paymentNote") or data.get("payment_note")
+    invoice_number = data.get("invoiceNumber") or data.get("invoice_number")
+    if invoice_number:
+        updated["invoiceNumber"] = invoice_number
+        updated["invoiceIssuedAt"] = data.get("invoiceIssuedAt") or data.get("invoice_issued_at") or utc_now()
+        updated["status"] = "invoiced"
+    else:
+        updated["status"] = "paid"
+    saved = enterprise_billing.save_invoice(updated)
+    return {"ok": True, "invoice": saved}
+
+
+def enterprise_monthly_close_response(data=None):
+    """3.6 /admin/enterprise/monthly-close：跑月結，產出請款單(draft)＋月報。
+    逾期 7 天以上的公司不產月報——enterprise_billing.run_monthly_close_for_client()
+    內部已經接住 ClientOverdueBlockedError、換成 reportBlocked 欄位回傳，這裡不重複判斷；
+    另外逐家客戶包一層 try/except，任何其他非預期例外也只影響那一家，不讓整批月結中斷。"""
+    data = data or {}
+    try:
+        period_start, period_end = enterprise_billing.resolve_billing_period(
+            year=data.get("year"), month=data.get("month"),
+        )
+    except (TypeError, ValueError):
+        return {"ok": False, "error": {"code": "invalid_billing_period"}}
+
+    client_id = data.get("clientId") or data.get("client_id")
+    if client_id:
+        client = enterprise_seats.get_client(client_id)
+        if not client:
+            return {"ok": False, "error": {"code": "enterprise_client_not_found"}}
+        clients = [client]
+    else:
+        clients = enterprise_seats.list_clients()
+
+    persist_invoice = data.get("persistInvoice")
+    persist_invoice = True if persist_invoice is None else bool(persist_invoice)
+
+    results = []
+    for client in clients:
+        cid = client.get("id")
+        try:
+            seats = enterprise_seats.list_seats(client_id=cid)
+            outcome = enterprise_billing.run_monthly_close_for_client(
+                client, seats, period_start, period_end, persist_invoice=persist_invoice,
+            )
+            invoice = outcome.get("invoice") or {}
+            report = outcome.get("report")
+            results.append({
+                "clientId": cid,
+                "clientName": client.get("name"),
+                "ok": True,
+                "invoice": invoice,
+                "invoiceHtml": enterprise_billing.render_invoice_html(invoice, client),
+                "reportBlocked": outcome.get("reportBlocked"),
+                "report": report,
+                "reportHtml": enterprise_billing.render_esg_report_html(report) if report else None,
+            })
+        except Exception as exc:
+            log_fallback_exception(f"monthly close for enterprise client {cid}", exc)
+            results.append({"clientId": cid, "clientName": client.get("name"), "ok": False, "error": str(exc)})
+
+    return {
+        "ok": True,
+        "period": {"start": period_start.isoformat(), "end": period_end.isoformat()},
+        "results": results,
+        "summary": {
+            "total": len(results),
+            "succeeded": sum(1 for r in results if r.get("ok")),
+            "reportBlocked": sum(1 for r in results if r.get("reportBlocked")),
+            "failed": sum(1 for r in results if not r.get("ok")),
+        },
+    }
+
+
+
+# ── 開票／收款設定（單列表 · 2026-07-20 二次需求）──
+# 一樣是薄薄一層：實際讀寫在 enterprise_seats.get_billing_settings()／
+# save_billing_settings()，這裡只做參數解析與回應包裝。
+
+def enterprise_billing_settings_response(data=None):
+    """/admin/enterprise/billing-settings：讀開票／收款設定。
+    isConfigured=false 時前端／enterprise_billing.py 產請款單都要顯示明顯提示，
+    不能靜默印出空白（settings 各欄位本身可能是 None，那是正常狀態，不是錯誤）。"""
+    settings = enterprise_seats.get_billing_settings()
+    return {
+        "ok": True,
+        "settings": settings,
+        "isConfigured": enterprise_seats.is_billing_settings_configured(settings),
+    }
+
+
+def enterprise_billing_settings_save_response(data=None, actor="admin"):
+    """/admin/enterprise/billing-settings/save：存開票／收款設定。改收款帳號是敏感動作，
+    audit_events 由呼叫端（do_POST 路由層）負責寫，見對應的 elif 區塊
+   （只記遮罩後的帳號末四碼，不把完整帳號複製進 audit_events）。"""
+    data = data or {}
+    payload = data.get("settings") if isinstance(data.get("settings"), dict) else data
+    saved = enterprise_seats.save_billing_settings(payload, updated_by=actor)
+    return {
+        "ok": True,
+        "settings": saved,
+        "isConfigured": enterprise_seats.is_billing_settings_configured(saved),
+    }
+
 def default_billing_store():
     return {
         "schemaVersion": 1,
@@ -8102,6 +8438,156 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(drain_notification_outbox_response(data))
+            elif self.path == "/admin/enterprise/clients":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_clients_response(data))
+            elif self.path == "/admin/enterprise/client/save":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_client_save_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_client_created" if response.get("created") else "enterprise_client_updated",
+                            "targetTable": "enterprise_clients",
+                            "targetId": (response.get("client") or {}).get("id"),
+                            "details": {
+                                **privileged_actor_context(self.headers),
+                                "planTier": (response.get("client") or {}).get("planTier"),
+                            },
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/client/detail":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_client_detail_response(data))
+            elif self.path == "/admin/enterprise/seats/import-preview":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_seats_import_preview_response(data))
+            elif self.path == "/admin/enterprise/seats/import-commit":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_seats_import_commit_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_seats_imported",
+                            "targetTable": "enterprise_seats",
+                            "targetId": data.get("clientId") or data.get("client_id"),
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/seats/export":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_seats_export_response(data))
+            elif self.path == "/admin/enterprise/seats/grant":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_seats_grant_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_seats_grant_attempted",
+                            "targetTable": "subscription_ledger",
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/invoices":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_invoices_response(data))
+            elif self.path == "/admin/enterprise/invoice/mark-sent":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_invoice_mark_sent_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_invoice_marked_sent",
+                            "targetTable": "enterprise_invoices",
+                            "targetId": (response.get("invoice") or {}).get("id"),
+                            "details": {**privileged_actor_context(self.headers), "invoiceNo": (response.get("invoice") or {}).get("invoiceNo")},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/invoice/mark-paid":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_invoice_mark_paid_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_invoice_marked_paid",
+                            "targetTable": "enterprise_invoices",
+                            "targetId": (response.get("invoice") or {}).get("id"),
+                            "details": {
+                                **privileged_actor_context(self.headers),
+                                "invoiceNo": (response.get("invoice") or {}).get("invoiceNo"),
+                                "status": (response.get("invoice") or {}).get("status"),
+                                "paidAmountTwd": (response.get("invoice") or {}).get("paidAmountTwd"),
+                            },
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/monthly-close":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_monthly_close_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_monthly_close_run",
+                            "targetTable": "enterprise_invoices",
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {}), "period": response.get("period")},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/billing-settings":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(enterprise_billing_settings_response(data))
+            elif self.path == "/admin/enterprise/billing-settings/save":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    actor_name = str(data.get("updatedBy") or data.get("updated_by") or "admin")[:120]
+                    response = enterprise_billing_settings_save_response(data, actor=actor_name)
+                    if response.get("ok"):
+                        saved = response.get("settings") or {}
+                        # 改收款帳號是敏感動作，一定要留紀錄——但只記遮罩後的末四碼，
+                        # 不把完整帳號複製進 audit_events（那張表沒必要再存一份敏感值）。
+                        append_audit_event({
+                            "eventType": "enterprise_billing_settings_updated",
+                            "targetTable": "enterprise_billing_settings",
+                            "details": {
+                                **privileged_actor_context(self.headers),
+                                "updatedBy": saved.get("updatedBy"),
+                                "issuerCompanyName": saved.get("issuerCompanyName"),
+                                "bankName": saved.get("bankName"),
+                                "bankAccountNoMasked": _mask_account_tail(saved.get("bankAccountNo")),
+                                "isConfigured": response.get("isConfigured"),
+                            },
+                        })
+                    self._json(response)
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

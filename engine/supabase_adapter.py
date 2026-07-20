@@ -427,6 +427,10 @@ class SupabaseAdapter:
                 "notification_events",
                 "notification_deliveries",
                 "notification_settings",
+                "enterprise_clients",
+                "enterprise_seats",
+                "enterprise_seat_events",
+                "enterprise_invoices",
             ],
         }
 
@@ -751,6 +755,460 @@ class SupabaseAdapter:
             "limit": str(len(ids)),
         })
         return {row.get("account_id"): row.get("name") for row in rows or [] if row.get("account_id")}
+
+    # ── 企業席次（B2B）：企業席次·後台管理與月結 需求單 2.1–2.5 ──
+    # 這四張表／grant_ref 欄位不屬於任何單一 account，不走 payload_account_id() 的
+    # 「信任邊界」機制（那套是給一般使用者請求用的）。這裡全部是後台 service-role 操作，
+    # 呼叫端（engine/enterprise_seats.py）本身就是唯一信任邊界。
+
+    def find_auth_user_by_email(self, email):
+        """GoTrue Admin API 用 email 精確比對找已註冊帳號（企業名單匯入預檢用：判斷「已註冊」）。
+        只需要 URL + service key，不需要帳號／person 身分，跟 _delete_auth_user 同一個入口。"""
+        email = str(email or "").strip().lower()
+        if not self.configured() or not email:
+            return None
+        url = f"{self.url}/auth/v1/admin/users?email={urllib.parse.quote(email)}"
+        req = urllib.request.Request(url, headers=self._service_headers(), method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                raw = resp.read().decode("utf-8")
+                data = json.loads(raw) if raw else {}
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            raise SupabaseRequestError(
+                f"Supabase admin user lookup failed: {exc.code} {detail}",
+                error_kind="permission" if exc.code in (401, 403) else "http_error",
+                status_code=exc.code,
+            ) from exc
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
+            raise SupabaseRequestError(
+                f"Supabase admin user lookup unreachable: {type(exc).__name__}",
+                error_kind="unreachable",
+            ) from exc
+        users = data.get("users") if isinstance(data, dict) else data
+        for user in users or []:
+            if str(user.get("email") or "").strip().lower() == email:
+                return user
+        return None
+
+    def load_enterprise_clients(self, query=None, status=None, limit=200):
+        """後台企業客戶列表：不篩 account_id（企業客戶本來就不屬於任何單一 account）。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(500, int(limit or 200)))
+        filters = {"select": "*", "order": "created_at.desc", "limit": str(limit)}
+        if status:
+            filters["status"] = f"eq.{status}"
+        query = str(query or "").strip()
+        if query:
+            filters["or"] = f"(name.ilike.*{query}*,tax_id.ilike.*{query}*,contact_email.ilike.*{query}*)"
+        rows = self._select("enterprise_clients", filters)
+        return [self.enterprise_client_row_to_item(row) for row in rows or []]
+
+    def get_enterprise_client(self, client_id):
+        if not self.enabled() or not self._is_uuid(client_id or ""):
+            return None
+        row = self._first("enterprise_clients", {"id": f"eq.{client_id}", "select": "*"})
+        return self.enterprise_client_row_to_item(row) if row else None
+
+    def save_enterprise_client(self, client):
+        """依 id 是否存在做 upsert（先 PATCH，沒命中再 POST），跟 save_companion_profile 同一套寫法。"""
+        if not self.enabled():
+            return None
+        payload = self.enterprise_client_to_row(client)
+        client_id = (client or {}).get("id")
+        rows = None
+        if client_id and self._is_uuid(client_id):
+            rows = self._request(
+                "PATCH", "enterprise_clients",
+                query={"id": f"eq.{client_id}", "select": "*"},
+                payload=payload, prefer="return=representation",
+            )
+        if not rows:
+            create_payload = dict(payload)
+            if client_id and self._is_uuid(client_id):
+                create_payload["id"] = client_id
+            rows = self._request(
+                "POST", "enterprise_clients",
+                query={"select": "*"},
+                payload=create_payload, prefer="return=representation",
+            )
+        return self.enterprise_client_row_to_item(rows[0]) if rows else None
+
+    def enterprise_client_to_row(self, client):
+        client = client or {}
+        return {
+            "name": str(client.get("name") or "").strip()[:200],
+            "client_code": client.get("clientCode") or client.get("client_code"),
+            "tax_id": client.get("taxId") or client.get("tax_id"),
+            "billing_address": client.get("billingAddress") or client.get("billing_address"),
+            "contact_name": client.get("contactName") or client.get("contact_name"),
+            "contact_email": client.get("contactEmail") or client.get("contact_email"),
+            "contact_phone": client.get("contactPhone") or client.get("contact_phone"),
+            "plan_tier": client.get("planTier") or client.get("plan_tier") or "plus",
+            "unit_price_twd": client.get("unitPriceTwd") if client.get("unitPriceTwd") is not None else (client.get("unit_price_twd") or 0),
+            "contract_start": client.get("contractStart") or client.get("contract_start"),
+            "contract_end": client.get("contractEnd") or client.get("contract_end"),
+            "seat_quota": int(client.get("seatQuota") or client.get("seat_quota") or 0),
+            "status": client.get("status") or "active",
+            "report_recipients": client.get("reportRecipients") or client.get("report_recipients") or [],
+            "notes": client.get("notes"),
+        }
+
+    @staticmethod
+    def enterprise_client_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "name": row.get("name") or "",
+            "clientCode": row.get("client_code"),
+            "taxId": row.get("tax_id"),
+            "billingAddress": row.get("billing_address"),
+            "contactName": row.get("contact_name"),
+            "contactEmail": row.get("contact_email"),
+            "contactPhone": row.get("contact_phone"),
+            "planTier": row.get("plan_tier") or "plus",
+            "unitPriceTwd": row.get("unit_price_twd") or 0,
+            "contractStart": row.get("contract_start"),
+            "contractEnd": row.get("contract_end"),
+            "seatQuota": row.get("seat_quota") or 0,
+            "status": row.get("status") or "active",
+            "reportRecipients": row.get("report_recipients") or [],
+            "notes": row.get("notes"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def load_enterprise_seats(self, client_id=None, status=None, account_id=None, invite_email=None, limit=2000):
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 2000)))
+        filters = {"select": "*", "order": "created_at.asc", "limit": str(limit)}
+        if client_id:
+            filters["enterprise_client_id"] = f"eq.{client_id}"
+        if status:
+            filters["status"] = f"eq.{status}"
+        if account_id:
+            filters["account_id"] = f"eq.{account_id}"
+        if invite_email:
+            filters["invite_email"] = f"ilike.{invite_email}"
+        rows = self._select("enterprise_seats", filters)
+        return [self.enterprise_seat_row_to_item(row) for row in rows or []]
+
+    def get_enterprise_seat(self, seat_id):
+        if not self.enabled() or not self._is_uuid(seat_id or ""):
+            return None
+        row = self._first("enterprise_seats", {"id": f"eq.{seat_id}", "select": "*"})
+        return self.enterprise_seat_row_to_item(row) if row else None
+
+    def create_enterprise_seat(self, seat):
+        if not self.enabled():
+            return None
+        payload = self.enterprise_seat_to_row(seat)
+        rows = self._request("POST", "enterprise_seats", query={"select": "*"}, payload=payload, prefer="return=representation")
+        return self.enterprise_seat_row_to_item(rows[0]) if rows else None
+
+    def update_enterprise_seat(self, seat_id, patch):
+        """局部更新一筆席次（狀態流轉／綁定帳號用）。patch 已是 snake_case 欄位，只送有值的欄位。"""
+        if not self.enabled() or not seat_id:
+            return None
+        rows = self._request(
+            "PATCH", "enterprise_seats",
+            query={"id": f"eq.{seat_id}", "select": "*"},
+            payload=patch, prefer="return=representation",
+        )
+        return self.enterprise_seat_row_to_item(rows[0]) if rows else None
+
+    def enterprise_seat_to_row(self, seat):
+        seat = seat or {}
+        return {
+            "enterprise_client_id": seat.get("enterpriseClientId") or seat.get("enterprise_client_id"),
+            "invite_email": str(seat.get("inviteEmail") or seat.get("invite_email") or "").strip().lower(),
+            "account_id": seat.get("accountId") or seat.get("account_id"),
+            "status": seat.get("status") or "pending",
+            "activated_at": seat.get("activatedAt") or seat.get("activated_at"),
+            "waiting_until": seat.get("waitingUntil") or seat.get("waiting_until"),
+            "grace_started_at": seat.get("graceStartedAt") or seat.get("grace_started_at"),
+            "grace_until": seat.get("graceUntil") or seat.get("grace_until"),
+            "released_at": seat.get("releasedAt") or seat.get("released_at"),
+            "released_reason": seat.get("releasedReason") or seat.get("released_reason"),
+            "notes": seat.get("notes"),
+        }
+
+    @staticmethod
+    def enterprise_seat_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "enterpriseClientId": row.get("enterprise_client_id") or "",
+            "inviteEmail": row.get("invite_email") or "",
+            "accountId": row.get("account_id"),
+            "status": row.get("status") or "pending",
+            "activatedAt": row.get("activated_at"),
+            "waitingUntil": row.get("waiting_until"),
+            "graceStartedAt": row.get("grace_started_at"),
+            "graceUntil": row.get("grace_until"),
+            "releasedAt": row.get("released_at"),
+            "releasedReason": row.get("released_reason"),
+            "notes": row.get("notes"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def append_enterprise_seat_event(self, event):
+        if not self.enabled():
+            return None
+        payload = self.enterprise_seat_event_to_row(event)
+        rows = self._request("POST", "enterprise_seat_events", query={"select": "*"}, payload=payload, prefer="return=representation")
+        return self.enterprise_seat_event_row_to_item(rows[0]) if rows else None
+
+    def load_enterprise_seat_events(self, seat_id=None, limit=500):
+        if not self.enabled():
+            return None
+        limit = max(1, min(2000, int(limit or 500)))
+        filters = {"select": "*", "order": "created_at.desc", "limit": str(limit)}
+        if seat_id:
+            filters["seat_id"] = f"eq.{seat_id}"
+        rows = self._select("enterprise_seat_events", filters)
+        return [self.enterprise_seat_event_row_to_item(row) for row in rows or []]
+
+    def enterprise_seat_event_to_row(self, event):
+        event = event or {}
+        return {
+            "seat_id": event.get("seatId") or event.get("seat_id"),
+            "from_status": event.get("fromStatus") or event.get("from_status"),
+            "to_status": event.get("toStatus") or event.get("to_status"),
+            "actor": event.get("actor") or "admin",
+            "reason": event.get("reason"),
+            "metadata": event.get("metadata") or {},
+        }
+
+    @staticmethod
+    def enterprise_seat_event_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "seatId": row.get("seat_id") or "",
+            "fromStatus": row.get("from_status"),
+            "toStatus": row.get("to_status") or "",
+            "actor": row.get("actor") or "admin",
+            "reason": row.get("reason"),
+            "metadata": row.get("metadata") or {},
+            "createdAt": row.get("created_at"),
+        }
+
+    def insert_enterprise_subscription_grant(self, payload):
+        """企業席次授予會員資格：直接寫一筆 subscription_ledger（provider='enterprise'）。
+        grant_ref 必填的鐵律由呼叫端 engine/enterprise_seats.py 的
+        validate_subscription_grant_ref() 先擋，這裡只負責落地——資料庫另有
+        subscription_ledger_enterprise_requires_grant_ref check constraint 當最後一道防線。"""
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "POST", "subscription_ledger",
+            query={"select": "*"},
+            payload=payload, prefer="return=representation",
+        )
+        return rows[0] if rows else None
+
+    def get_latest_subscription_ledger(self, account_id):
+        """讀一個帳號目前最新一筆 subscription_ledger（依 updated_at desc 取第一筆）。
+        不依賴 self.account_id／self.identity（呼叫端通常是後台操作某個席次綁定的帳號，
+        不是目前這個 request 本人的帳號）。企業席次鐵律 3『不得重複授予』用這個判斷
+        該帳號現有的個人（非企業）訂閱等級。"""
+        if not self.enabled() or not self._is_uuid(account_id or ""):
+            return None
+        return self._first("subscription_ledger", {
+            "account_id": f"eq.{account_id}",
+            "select": "*",
+            "order": "updated_at.desc",
+        })
+
+    def get_subscription_ledger_by_grant_ref(self, grant_ref):
+        """依 grant_ref（= enterprise_seats.id）查是否已經授予過——避免同一席次重插兩筆
+        subscription_ledger（鐵律 3『不得重複授予』的 idempotent 防線）。"""
+        if not self.enabled() or not self._is_uuid(grant_ref or ""):
+            return None
+        return self._first("subscription_ledger", {
+            "grant_ref": f"eq.{grant_ref}",
+            "select": "*",
+            "order": "updated_at.desc",
+        })
+
+    def load_enterprise_invoices(self, client_id=None, limit=200):
+        """唯讀：企業請款單清單／單一公司請款單。寫入（產出請款單、標已寄出／已入帳）
+        屬 engine/enterprise_billing.py 的責任，這裡只給 enterprise_seats.py 的鐵律 2
+        『未付款不得開通』守門查詢用，以及後台『單一公司明細』顯示收款紀錄用。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(500, int(limit or 200)))
+        filters = {"select": "*", "order": "period_start.desc", "limit": str(limit)}
+        if client_id:
+            filters["enterprise_client_id"] = f"eq.{client_id}"
+        rows = self._select("enterprise_invoices", filters)
+        return [self.enterprise_invoice_row_to_item(row) for row in rows or []]
+
+    @staticmethod
+    def enterprise_invoice_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "invoiceNo": row.get("invoice_no") or "",
+            "enterpriseClientId": row.get("enterprise_client_id") or "",
+            "periodStart": row.get("period_start"),
+            "periodEnd": row.get("period_end"),
+            "billableSeats": row.get("billable_seats") or 0,
+            "unitPriceTwd": row.get("unit_price_twd") or 0,
+            "subtotalTwd": row.get("subtotal_twd") or 0,
+            "taxTwd": row.get("tax_twd") or 0,
+            "totalTwd": row.get("total_twd") or 0,
+            "status": row.get("status") or "draft",
+            "dueDate": row.get("due_date"),
+            "seatSnapshot": row.get("seat_snapshot") or [],
+            "reportRef": row.get("report_ref"),
+            "sentAt": row.get("sent_at"),
+            "paidAt": row.get("paid_at"),
+            "paidAmountTwd": row.get("paid_amount_twd"),
+            "paymentNote": row.get("payment_note"),
+            "invoiceNumber": row.get("invoice_number"),
+            "invoiceIssuedAt": row.get("invoice_issued_at"),
+            # 2026-07-20 三次需求：請款單一旦寄出（issued）就把畫面凍結存這欄，
+            # 之後重下載一律回這份原樣，不看之後改過的開票／收款設定
+            # （見 engine/enterprise_billing.py 的 get_invoice_html() 決策理由）。
+            "invoiceHtmlSnapshot": row.get("invoice_html_snapshot"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    # ── ESG 成效月報存檔（2026-07-20 三次需求：接通「月報與請款單下載」）──
+    # 讀寫入口見 engine/enterprise_billing.py 的 save_report()／list_reports()／
+    # get_report()——這裡只是薄薄一層 row↔item 轉換，跟其餘 enterprise_* 方法同一個分層原則。
+    # 月報一算完就整份凍結存檔（原始數據 jsonb ＋ 渲染好的 HTML 一起存），之後下載
+    # 一律回這份存檔的原樣，不即時重算（理由見 enterprise_billing.py 的 save_report() docstring）。
+
+    def load_enterprise_reports(self, client_id=None, limit=200):
+        if not self.enabled():
+            return None
+        limit = max(1, min(500, int(limit or 200)))
+        filters = {"select": "*", "order": "period_start.desc", "limit": str(limit)}
+        if client_id:
+            filters["enterprise_client_id"] = f"eq.{client_id}"
+        rows = self._select("enterprise_reports", filters)
+        return [self.enterprise_report_row_to_item(row) for row in rows or []]
+
+    def get_enterprise_report(self, report_id):
+        if not self.enabled() or not self._is_uuid(report_id or ""):
+            return None
+        row = self._first("enterprise_reports", {"id": f"eq.{report_id}", "select": "*"})
+        return self.enterprise_report_row_to_item(row) if row else None
+
+    def save_enterprise_report(self, item):
+        """同一家公司同一帳單期間重跑月結＝覆蓋舊報告（on_conflict 對齊
+        022_enterprise_documents.sql 的 enterprise_reports_client_period_uidx），
+        不會累積出好幾份同期間的報告混淆下載清單。"""
+        if not self.enabled():
+            return None
+        payload = self.enterprise_report_to_row(item)
+        report_id = item.get("id")
+        if report_id and self._is_uuid(report_id):
+            payload["id"] = report_id
+        rows = self._request(
+            "POST", "enterprise_reports",
+            query={"on_conflict": "enterprise_client_id,period_start", "select": "*"},
+            payload=payload, prefer="resolution=merge-duplicates,return=representation",
+        )
+        return self.enterprise_report_row_to_item(rows[0]) if rows else None
+
+    @staticmethod
+    def enterprise_report_to_row(item):
+        item = item or {}
+        return {
+            "enterprise_client_id": item.get("enterpriseClientId"),
+            "invoice_id": item.get("invoiceId"),
+            "period_start": item.get("periodStart"),
+            "period_end": item.get("periodEnd"),
+            "report_data": item.get("reportData") or {},
+            "report_html": item.get("reportHtml") or "",
+            "generated_at": item.get("generatedAt"),
+        }
+
+    @staticmethod
+    def enterprise_report_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "enterpriseClientId": row.get("enterprise_client_id") or "",
+            "invoiceId": row.get("invoice_id"),
+            "periodStart": row.get("period_start"),
+            "periodEnd": row.get("period_end"),
+            "reportData": row.get("report_data") or {},
+            "reportHtml": row.get("report_html") or "",
+            "generatedAt": row.get("generated_at"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    # ── 開票／收款設定（單列表 · 2026-07-20 二次需求）──
+    # 讀取入口見 engine/enterprise_seats.py 的 get_billing_settings()／
+    # save_billing_settings()；enterprise_billing.py 產請款單時要呼叫那兩個函式，
+    # 不直接呼叫這裡（跟其餘 enterprise_* 方法同一個分層原則）。
+
+    def get_enterprise_billing_settings(self):
+        if not self.enabled():
+            return None
+        row = self._first("enterprise_billing_settings", {"select": "*", "limit": "1"})
+        return self.enterprise_billing_settings_row_to_item(row) if row else {}
+
+    def save_enterprise_billing_settings(self, settings):
+        """單列表用 on_conflict=singleton 做 upsert——第一次寫是 insert，
+        之後每次存都是同一列覆寫，不會累積多筆。"""
+        if not self.enabled():
+            return None
+        payload = self.enterprise_billing_settings_to_row(settings)
+        payload["singleton"] = True
+        rows = self._request(
+            "POST", "enterprise_billing_settings",
+            query={"on_conflict": "singleton", "select": "*"},
+            payload=payload, prefer="resolution=merge-duplicates,return=representation",
+        )
+        return self.enterprise_billing_settings_row_to_item(rows[0]) if rows else None
+
+    @staticmethod
+    def enterprise_billing_settings_to_row(settings):
+        settings = settings or {}
+        return {
+            "issuer_company_name": settings.get("issuerCompanyName") or settings.get("issuer_company_name"),
+            "issuer_tax_id": settings.get("issuerTaxId") or settings.get("issuer_tax_id"),
+            "issuer_address": settings.get("issuerAddress") or settings.get("issuer_address"),
+            "issuer_phone": settings.get("issuerPhone") or settings.get("issuer_phone"),
+            "issuer_contact_name": settings.get("issuerContactName") or settings.get("issuer_contact_name"),
+            "bank_name": settings.get("bankName") or settings.get("bank_name"),
+            "bank_branch": settings.get("bankBranch") or settings.get("bank_branch"),
+            "bank_account_name": settings.get("bankAccountName") or settings.get("bank_account_name"),
+            "bank_account_no": settings.get("bankAccountNo") or settings.get("bank_account_no"),
+            "payment_terms_days": int(settings.get("paymentTermsDays") or settings.get("payment_terms_days") or 15),
+            "invoice_footer_note": settings.get("invoiceFooterNote") or settings.get("invoice_footer_note"),
+            "updated_by": settings.get("updatedBy") or settings.get("updated_by"),
+        }
+
+    @staticmethod
+    def enterprise_billing_settings_row_to_item(row):
+        row = row or {}
+        return {
+            "issuerCompanyName": row.get("issuer_company_name"),
+            "issuerTaxId": row.get("issuer_tax_id"),
+            "issuerAddress": row.get("issuer_address"),
+            "issuerPhone": row.get("issuer_phone"),
+            "issuerContactName": row.get("issuer_contact_name"),
+            "bankName": row.get("bank_name"),
+            "bankBranch": row.get("bank_branch"),
+            "bankAccountName": row.get("bank_account_name"),
+            "bankAccountNo": row.get("bank_account_no"),
+            "paymentTermsDays": row.get("payment_terms_days") or 15,
+            "invoiceFooterNote": row.get("invoice_footer_note"),
+            "updatedAt": row.get("updated_at"),
+            "updatedBy": row.get("updated_by"),
+        }
 
     def save_app_profile_store(self, store):
         if not self.enabled():

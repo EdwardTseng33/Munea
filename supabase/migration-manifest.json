@@ -156,6 +156,27 @@
       "filename": "019_pricing_plus100_pro200.sql",
       "type": "seed",
       "sha256": "2350ec98107d3ea30952d000b5f8839a635a2ceed4007133f2f82c2b031e741b"
+    },
+    {
+      "order": 21,
+      "identity": "020",
+      "filename": "020_enterprise_seats.sql",
+      "type": "schema",
+      "sha256": "5b3259bd7b7375be78b3c368d85d1bc446004eb332513edca75127cab0a4247b"
+    },
+    {
+      "order": 22,
+      "identity": "021",
+      "filename": "021_enterprise_billing_settings.sql",
+      "type": "schema",
+      "sha256": "0699c4dc6de800f9572095e08e08b139facdac2306f5b528239d5853386ef726"
+    },
+    {
+      "order": 23,
+      "identity": "022",
+      "filename": "022_enterprise_documents.sql",
+      "type": "schema",
+      "sha256": "9941173ef2362f42b0b62cd165b360a55af1cb3fadbade1b7ab7cf132d5349da"
     }
   ]
 }
