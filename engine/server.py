@@ -348,6 +348,7 @@ ADMIN_POST_PATHS = {
     "/admin/audit-events",
     "/admin/medication-adherence",
     "/admin/family-health",
+    "/admin/mood-trend",
     "/admin/voice-diagnostics",
     "/admin/notifications/drain",
     "/admin/login",
@@ -4704,6 +4705,195 @@ def admin_medication_adherence(data=None):
     }
 
 
+# 心情趨勢：只用 wellbeing_signals（每輪對話後真寫的心情觀察）。
+# perception_snapshots 是情境感知快照、不是心情資料，這裡不用；系統也沒有記錄「孤獨」這種心情。
+MOOD_POSITIVE = ("happy", "pleasant")
+MOOD_STEADY = ("steady",)
+MOOD_LOW = ("low", "tired", "irritated")
+
+
+def _mood_bucket(mood):
+    """英文心情詞歸桶：正向／平穩／低落／其他（mixed、unknown、或任何對不上的怪值都算其他）。"""
+    m = str(mood or "").strip().lower()
+    if m in MOOD_POSITIVE:
+        return "positive"
+    if m in MOOD_STEADY:
+        return "steady"
+    if m in MOOD_LOW:
+        return "low"
+    return "other"
+
+
+def _low_mood_streak(day_map):
+    """連續低落天數：從『有心情訊號的最近一天』回推，要求日曆日真的相鄰（中間斷一天就不算連續），
+    且該天至少有 1 筆低落類心情，才算連續中的一天。day_map: {"YYYY-MM-DD": {"low": 次數}}。"""
+    if not day_map:
+        return 0
+    streak = 0
+    anchor = None
+    for dt in sorted(day_map.keys(), reverse=True):
+        try:
+            d = datetime.strptime(dt, "%Y-%m-%d").date()
+        except ValueError:
+            break
+        if anchor is not None and (anchor - d).days != 1:
+            break
+        if day_map[dt]["low"] <= 0:
+            break
+        streak += 1
+        anchor = d
+    return streak
+
+
+def load_admin_wellbeing_signal_rows(days=30, limit=5000):
+    """後台跨帳號心情訊號：Supabase service-role 全表查詢近 N 天（不篩 account_id），失敗退回本地 JSON。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(10000, int(limit or 5000)))
+    now = datetime.now(timezone.utc)
+    since_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) - timedelta(days=days - 1)
+    since_iso = since_day.strftime("%Y-%m-%dT%H:%M:%SZ")
+    since_date = since_day.strftime("%Y-%m-%d")
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_wellbeing_signals(since_iso=since_iso, limit=limit)
+        if remote_items is not None:
+            record_admin_data_source(
+                "wellbeing_signals",
+                "supabase",
+                record_count=len(remote_items),
+                data_as_of=latest_record_timestamp(remote_items),
+            )
+            return remote_items, since_date
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin wellbeing signals from Supabase", e)
+    items = read_json_file(WELLBEING_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [item for item in items if (item.get("date") or "") >= since_date]
+    items = items[:limit]
+    record_admin_data_source(
+        "wellbeing_signals",
+        "json",
+        record_count=len(items),
+        data_as_of=latest_record_timestamp(items),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return items, since_date
+
+
+def admin_mood_trend(data=None):
+    """心情趨勢：跨帳號心情訊號趨勢＋需要關心名單。
+    這是陪伴聊天時的心情紀錄，由 AI 依對話內容推測，不是醫療診斷、也不是健康建議——
+    只聚合次數與分數，絕不把聊天內容或任何原始對話文字帶進這支回應；異常請由真人關心確認。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    items, since_date = load_admin_wellbeing_signal_rows(days=days, limit=5000)
+
+    totals = {"signals": 0, "positive": 0, "steady": 0, "low": 0, "other": 0}
+    level_sum, level_count = 0.0, 0
+    daily = {}
+    people = {}
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=6)).strftime("%Y-%m-%d")
+
+    for item in items:
+        bucket = _mood_bucket(item.get("mood"))
+        totals["signals"] += 1
+        totals[bucket] += 1
+        level = item.get("level")
+        is_number = isinstance(level, (int, float)) and not isinstance(level, bool)
+        if is_number:
+            level_sum += level
+            level_count += 1
+        date = str(item.get("date") or "")[:10]
+        if date:
+            bucket_day = daily.setdefault(date, {"date": date, "positive": 0, "low": 0, "_levelSum": 0.0, "_levelCount": 0})
+            if bucket == "positive":
+                bucket_day["positive"] += 1
+            elif bucket == "low":
+                bucket_day["low"] += 1
+            if is_number:
+                bucket_day["_levelSum"] += level
+                bucket_day["_levelCount"] += 1
+        person_id = item.get("personId") or ""
+        account_id = item.get("accountId") or ""
+        key = person_id or (("account:" + account_id) if account_id else "unknown")
+        person = people.setdefault(key, {"personId": person_id or None, "accountId": account_id or None, "lastSignalAt": None, "_days": {}})
+        observed_at = item.get("observedAt") or item.get("createdAt")
+        if observed_at and (person["lastSignalAt"] is None or str(observed_at) > str(person["lastSignalAt"])):
+            person["lastSignalAt"] = observed_at
+        if date:
+            day = person["_days"].setdefault(date, {"low": 0})
+            if bucket == "low":
+                day["low"] += 1
+
+    daily_list = []
+    for d in sorted(daily.keys()):
+        b = daily[d]
+        avg_level = round(b["_levelSum"] / b["_levelCount"], 1) if b["_levelCount"] else None
+        daily_list.append({"date": d, "positive": b["positive"], "low": b["low"], "avgLevel": avg_level})
+
+    average_level = round(level_sum / level_count, 2) if level_count else None
+    denom = totals["positive"] + totals["steady"] + totals["low"]
+    positive_rate = round(totals["positive"] / denom, 4) if denom else None
+    low_rate = round(totals["low"] / denom, 4) if denom else None
+
+    person_ids = [p.get("personId") for p in people.values() if p.get("personId")]
+    display_names = {}
+    try:
+        backend = data_backend()
+        if backend.enabled() and person_ids:
+            display_names = backend.load_persons_by_ids(person_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load person display names for mood trend", e)
+
+    watchlist = []
+    for entry in people.values():
+        day_map = entry.pop("_days")
+        low_count_7d = sum(day["low"] for dt, day in day_map.items() if dt >= seven_days_ago)
+        low_streak = _low_mood_streak(day_map)
+        if low_count_7d < 3 and low_streak < 3:
+            continue
+        pid = entry.get("personId")
+        watch_entry = {
+            "personId": pid,
+            "accountId": entry.get("accountId"),
+            "lowCount": low_count_7d,
+            "lowStreak": low_streak,
+            "lastSignalAt": entry.get("lastSignalAt"),
+        }
+        if pid and display_names.get(pid):
+            watch_entry["displayName"] = display_names.get(pid)
+        watchlist.append(watch_entry)
+
+    watchlist.sort(key=lambda p: (-(p.get("lowStreak") or 0), -(p.get("lowCount") or 0)))
+    watchlist = watchlist[:limit]
+
+    principle_text = (
+        "這是陪伴聊天時的心情紀錄，由 AI 依對話內容推測，不是醫療診斷、也不是健康建議；異常請由真人關心確認。"
+        "「需要關心」＝近 7 天內出現 3 次以上低落類心情，或連續 3 天都有低落類心情。"
+    )
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_date,
+        "totals": totals,
+        "averageLevel": average_level,
+        "positiveRate": positive_rate,
+        "lowRate": low_rate,
+        "daily": daily_list,
+        "watchlist": watchlist,
+        "principle": principle_text,
+        "backend": data_backend_status(),
+    }
+
+
 def load_admin_family_membership_rows(limit=5000):
     """後台跨帳號家庭圈成員名單：Supabase service-role 全表查詢，失敗退回本機示範家庭圈
     （本地 JSON 模式沒有多帳號概念，就只有機器上這一戶）。"""
@@ -7687,6 +7877,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_contract_response("munea.admin.family-health.v1", lambda: admin_family_health(data)))
+            elif self.path == "/admin/mood-trend":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.mood-trend.v1", lambda: admin_mood_trend(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

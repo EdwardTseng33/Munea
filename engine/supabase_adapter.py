@@ -528,6 +528,23 @@ class SupabaseAdapter:
         rows = self._select("medication_dose_events", filters)
         return [self.medication_dose_row_to_item(row) for row in rows or []]
 
+    def load_admin_wellbeing_signals(self, since_iso=None, limit=5000):
+        """後台跨帳號心情趨勢：不篩 account_id，service-role 全表查詢近 N 天心情訊號（wellbeing_signals）。
+        只回全表列，不做內容過濾——聊天內容（facts 裡的 topics/positives/concerns 等）由呼叫端自行決定
+        要不要用；後台心情趨勢頁只聚合次數與分數，不轉交任何原始對話文字。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {
+            "select": "*",
+            "order": "observed_at.desc",
+            "limit": str(limit),
+        }
+        if since_iso:
+            filters["observed_at"] = f"gte.{since_iso}"
+        rows = self._select("wellbeing_signals", filters)
+        return [self.wellbeing_row_to_signal(row) for row in rows or []]
+
     def load_persons_by_ids(self, person_ids):
         """後台名單顯示用：批次查 person display_name（只回顯示名，不含其他個資）。"""
         if not self.enabled():

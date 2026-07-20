@@ -11,6 +11,7 @@
       { id: "safety", label: "安全守護警示", badge: "safety" },
       { id: "medication", label: "用藥與回診" },
       { id: "familyHealth", label: "家庭圈健康度" },
+      { id: "moodTrend", label: "心情趨勢" },
     ]},
     { group: "營收", items: [
       { id: "subscription", label: "訂閱與點數" },
@@ -32,6 +33,7 @@
     records: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
     medication: '<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
     familyHealth: '<path d="m3 9.5 9-7.5 9 7.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9 21v-6h6v6"/>',
+    moodTrend: '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   };
@@ -63,6 +65,7 @@
     audit: ["/admin/audit-events", { limit: 20 }],
     medication: ["/admin/medication-adherence", { days: 30, limit: 50 }],
     familyHealth: ["/admin/family-health", { days: 30, limit: 50 }],
+    moodTrend: ["/admin/mood-trend", { days: 30, limit: 50 }],
   };
 
   const CHART = { teal: "#3AA8A0", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#3A352E", muted: "#5A6963" };
@@ -101,6 +104,7 @@
   const ecount = () => usage().eventCounts || {};
   const medication = () => D().medication || {};
   const familyHealth = () => D().familyHealth || {};
+  const moodTrend = () => D().moodTrend || {};
 
   function missingDataMeta(endpointKey){
     return {schema:ADMIN_DATA_META_SCHEMA,metricVersion:"unknown",generatedAt:null,dataAsOf:null,status:"unverified",degraded:true,degradationReasons:["metadata_missing"],freshness:{status:"unknown",reason:"metadata_missing"},sources:[],endpointKey};
@@ -230,6 +234,7 @@
     else if (id==="safety") html=renderSafety();
     else if (id==="medication") html=renderMedication();
     else if (id==="familyHealth") html=renderFamilyHealth();
+    else if (id==="moodTrend") html=renderMoodTrend();
     else if (id==="subscription") html=renderSubscription();
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
@@ -412,6 +417,48 @@
       n(it.memberCount||0),
       it.lastFamilyActionAt?esc(fmtTime(it.lastFamilyActionAt)):`<span class="pill bad">從沒動作過</span>`,
     ])):emptyBox("目前每一位長輩都有家人在顧——很好。"));
+    return html;
+  }
+
+  function renderMoodTrend(){
+    const mt=moodTrend(), t=mt.totals||{}, win=mt.windowDays||30, avgLevel=mt.averageLevel;
+    const accts=(D().accounts||{}).accounts||[];
+    const acctIndex={}; accts.forEach((a)=>{ if(a.accountId) acctIndex[a.accountId]=a; });
+    const watch=(mt.watchlist||[]).map((p)=>{
+      const acct=acctIndex[p.accountId]||{};
+      const familyName=(acct.familyGroup||{}).name||"–";
+      const displayName=p.displayName||(acct.primaryPerson||{}).displayName||"長輩";
+      return Object.assign({}, p, { familyName, displayName });
+    });
+    let html=kpiRow([
+      { label:"心情平均分", value:avgLevel==null?"–":avgLevel.toFixed(1), sub:`近 ${win} 天 · 1～5 分（5 分最好）`, star:true, info:"由陪伴聊天內容推測的心情高低分（1-5），不是醫療評分。" },
+      { label:"正向比例", value:mt.positiveRate==null?"–":pct(mt.positiveRate), sub:`近 ${win} 天 · ${n(t.positive||0)} 次` },
+      { label:"低落比例", value:mt.lowRate==null?"–":pct(mt.lowRate), sub:`近 ${win} 天 · ${n(t.low||0)} 次` },
+      { label:"需要關心", value:n(watch.length), sub:"近 7 天低落 3 次以上或連續 3 天", info:"近 7 天內出現 3 次以上低落類心情、或連續 3 天都有低落類心情，建議家人主動關心一下" },
+    ]);
+    html+=principle(mt.principle||"這是陪伴聊天時的心情紀錄，由 AI 依對話內容推測，不是醫療診斷、也不是健康建議；異常請由真人關心確認。");
+    if(!(t.signals||0)){
+      html+=card("心情趨勢", `近 ${win} 天正向 vs 低落`, emptyBox("還沒有心情紀錄——開始聊天後就會出現。"));
+      return html;
+    }
+    const dl=mt.daily||[], labels=dl.map((d)=>shortDate(d.date));
+    html+=card("心情趨勢", `近 ${win} 天每日正向 vs 低落`, chartMount("mt-trend"));
+    pending.push(()=>columnChart($("mt-trend"), labels, [
+      { name:"正向", color:cc.teal, values:dl.map((d)=>Math.round(d.positive||0)) },
+      { name:"低落", color:cc.coral, values:dl.map((d)=>Math.round(d.low||0)) },
+    ], { empty:"還沒有心情紀錄。" }));
+    const sorted=watch.slice().sort((a,b)=>{
+      const streakDiff=(b.lowStreak||0)-(a.lowStreak||0);
+      if(streakDiff) return streakDiff;
+      return (b.lowCount||0)-(a.lowCount||0);
+    });
+    html+=card("需要關心名單", "連續低落天數多、次數多的排前面", sorted.length?tableHTML(["長輩","家庭","低落次數","連續低落","最近一次"], sorted.map((p)=>[
+      `<b>${esc(p.displayName)}</b>`,
+      esc(p.familyName),
+      n(p.lowCount||0),
+      p.lowStreak?`<span class="pill ${p.lowStreak>=3?"bad":"warn"}">${n(p.lowStreak)} 天</span>`:`<span class="muted">—</span>`,
+      p.lastSignalAt?esc(fmtTime(p.lastSignalAt)):`<span class="muted">—</span>`,
+    ])):emptyBox("目前沒有人需要特別關心——很好。"));
     return html;
   }
 
