@@ -357,6 +357,7 @@ ADMIN_POST_PATHS = {
     # 不是自助 API；單次金額上限與稽核紀錄見 admin_grant_credits_response / admin_set_plan_response。
     "/admin/credits/grant",
     "/admin/subscription/set-plan",
+    "/admin/subscription/extend-days",
     "/admin/notifications/drain",
     "/admin/login",
     # 維護入口（2026-07-17 補）：晨料備製與記憶整理是定時鬧鐘（Cloud Scheduler）用
@@ -7077,6 +7078,112 @@ def admin_set_plan_response(data, headers=None):
     }
 
 
+ADMIN_EXTEND_DAYS_MAX = 365  # 單次延長上限：防手滑打成 9999 天
+
+
+def admin_extend_subscription_response(data, headers=None):
+    """後台手動延長指定帳號的訂閱到期日（Plus／Pro 才有意義；免費帳號沒有到期日概念，
+    直接擋下、請先改方案）。從目前到期日往後加；若已過期或本來沒有到期日，從現在起算。
+    支援 dryRun（不落地，只回目前到期日／延長後預覽，給前端二次確認用的畫面資料）。
+
+    跟 Apple 購買驗證的關係（刻意不共用、不打架）：
+    - 這支完全不碰 _activate_apple_subscription、不改 productId／originalTransactionId／
+      provider——真實 Apple 訂閱的到期日永遠以蘋果最近一次通知／驗證結果為準。
+    - 對一個「目前就是真實 Apple 訂閱在計費」的帳號使用本功能，等同管理端在 Apple 的到期日
+      上再加碼幾天；但只要蘋果之後又送一次通知（例如下次自動續訂、或 App 重新驗證收據），
+      _activate_apple_subscription 會用 Apple 的 verified.expiresDate 整個覆寫回去，
+      屆時管理端加的天數就會被蓋掉、不會保留。這是刻意的取捨：Apple 訂閱的到期日必須以
+      Apple 為單一事實來源，管理端延長只在兩次 Apple 同步之間暫時有效，不做另一套「加成天數」
+      的獨立帳本去對抗 Apple（那樣兩邊真的会打架、更難排查）。回應會帶
+      appleManagedSubscription 旗標，前端會在確認視窗多提示一句，讓操作的人知情。
+    - 對「不是真實 Apple 在計費」的帳號（免費體驗手動升級、企業／測試帳號、
+      provider=manual-admin-grant 或本來就沒有 provider）——這支是唯一會動到期日的地方，
+      延長會穩定生效，不會被任何背景流程蓋掉，這才是本功能主要服務的情境
+      （客訴補償／行銷體驗／合作夥伴試用／內部測試帳號）。
+    """
+    data = data or {}
+    account_id = str(data.get("accountId") or data.get("account_id") or "").strip()
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_id_required"}}
+    dry_run = bool(data.get("dryRun") or data.get("dry_run"))
+    raw_days = data.get("days")
+    days = None
+    if raw_days not in (None, ""):
+        try:
+            days = int(raw_days)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": {"code": "invalid_days"}}
+        if days <= 0 or days > ADMIN_EXTEND_DAYS_MAX:
+            return {"ok": False, "error": {"code": "days_out_of_range", "limit": ADMIN_EXTEND_DAYS_MAX}}
+    if not dry_run and not days:
+        return {"ok": False, "error": {"code": "days_required"}}
+    target = _resolve_admin_target_identity(account_id)
+    if not target:
+        return {"ok": False, "error": {"code": "account_not_found"}}
+    reason = str(data.get("reason") or "admin_manual_extension")[:120]
+    token = REQUEST_DATA_IDENTITY.set(target["identity"])
+    try:
+        billing = load_billing_store()
+        plan = billing.get("activePlan") or "free"
+        if plan not in ("plus", "pro"):
+            return {
+                "ok": False,
+                "error": {"code": "plan_not_eligible_for_extension"},
+                "accountId": account_id,
+                "accountName": target.get("accountName"),
+                "activePlan": plan,
+            }
+        subscription = dict(billing.get("subscription") or {})
+        apple_managed = billing.get("provider") == "apple_storekit2"
+        now = datetime.now(timezone.utc)
+        current_expires_raw = subscription.get("expiresAt")
+        current_expires = parse_optional_iso_datetime(current_expires_raw)
+        status = str(subscription.get("status") or "inactive")
+        was_lapsed = bool(
+            status in {"expired", "revoked", "inactive"} or not current_expires or current_expires <= now
+        )
+        base = now if was_lapsed else current_expires
+        preview = {
+            "accountId": account_id,
+            "accountName": target.get("accountName"),
+            "activePlan": plan,
+            "appleManagedSubscription": apple_managed,
+            "previousExpiresAt": current_expires_raw,
+            "wasLapsedOrMissing": was_lapsed,
+            "newExpiresAt": None,
+        }
+        if days:
+            new_expires_iso = (base + timedelta(days=days)).isoformat().replace("+00:00", "Z")
+            preview["newExpiresAt"] = new_expires_iso
+        if dry_run:
+            return {"ok": True, "dryRun": True, **preview}
+        subscription["expiresAt"] = preview["newExpiresAt"]
+        subscription["status"] = "active"
+        subscription["lastVerifiedAt"] = utc_now()
+        if was_lapsed:
+            subscription["willRenew"] = False
+        billing = {**billing, "subscription": subscription}
+        billing = save_billing_store(billing)
+    finally:
+        REQUEST_DATA_IDENTITY.reset(token)
+    append_audit_event({
+        "eventType": "admin_subscription_extended",
+        "accountId": account_id,
+        "targetTable": "subscription_ledger",
+        "details": {
+            **privileged_actor_context(headers or {}),
+            "accountId": account_id,
+            "accountName": target.get("accountName"),
+            "days": days,
+            "reason": reason,
+            "previousExpiresAt": preview["previousExpiresAt"],
+            "newExpiresAt": preview["newExpiresAt"],
+            "appleManagedSubscription": apple_managed,
+        },
+    })
+    return {"ok": True, **preview}
+
+
 def subscription_event_response(data):
     event = data.get("event") or {}
     if not isinstance(event, dict):
@@ -8790,6 +8897,17 @@ class H(BaseHTTPRequestHandler):
                     else:
                         error = response.get("error") or {}
                         self._json_error(400, error.get("code") or "plan_change_failed", "Plan change could not be applied")
+            elif self.path == "/admin/subscription/extend-days":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = admin_extend_subscription_response(data, self.headers)
+                    if response.get("ok"):
+                        self._json(response)
+                    else:
+                        error = response.get("error") or {}
+                        self._json_error(400, error.get("code") or "subscription_extension_failed", "Subscription extension could not be applied")
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":

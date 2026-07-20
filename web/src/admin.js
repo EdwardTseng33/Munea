@@ -711,7 +711,7 @@
     const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
       <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>
-      <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button></div>
+      <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button><button type="button" class="btn-ghost btn-sm" data-open-action="extend">⏱ 延長天數</button></div>
       <div id="acctActionPanel"></div>`;
     const previous=document.activeElement,layout=document.querySelector(".layout");
     let mo=$("acctModal"); if(!mo){ mo=document.createElement("div"); mo.id="acctModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
@@ -1356,6 +1356,16 @@
       </div>`;
       panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
       panel.querySelector("#planSubmitBtn")?.addEventListener("click",()=>submitSetPlan(a));
+    } else if(mode==="extend"){
+      if((a.plan||"free")==="free"){
+        panel.innerHTML=`<div class="modal-subpanel">
+          <div class="modal-subtitle">延長「${esc(nm)}」的訂閱天數</div>
+          <div class="modal-subhint err">免費帳號沒有到期日，請先用「改方案」升成 Plus 或 Pro，才能延長天數。</div>
+        </div>`;
+        return;
+      }
+      panel.innerHTML=`<div class="modal-subpanel"><div class="modal-subtitle">延長「${esc(nm)}」的訂閱天數</div><div class="modal-subhint" id="acctActionHint">讀取目前到期日…</div></div>`;
+      loadExtendPreview(a);
     }
   }
 
@@ -1398,6 +1408,80 @@
     try{
       await postAdmin(state.base,state.token,"/admin/subscription/set-plan",{accountId:a.accountId,plan:plan});
       if(hint){ hint.textContent="已更新為 "+planTxt; hint.className="modal-subhint ok"; }
+      await refreshData();
+      const list=(D().accounts||{}).accounts||[];
+      const idx=list.findIndex((x)=>x.accountId===a.accountId);
+      if(idx>-1) openAcctDetail(idx);
+    }catch(e){
+      if(hint){ hint.textContent=explainErr(e&&e.message); hint.className="modal-subhint err"; }
+    }finally{ if(btn) btn.disabled=false; }
+  }
+
+  // 延長訂閱天數（2026-07-21 補）：先打 dryRun 拿目前到期日／是否符合資格，
+  // 再讓操作的人邊打天數邊看「延長後到期日」預覽，最後才是真正送出。
+  async function loadExtendPreview(a){
+    const panel=$("acctActionPanel");
+    try{
+      const info=await postAdmin(state.base,state.token,"/admin/subscription/extend-days",{accountId:a.accountId,dryRun:true});
+      renderExtendForm(a,info);
+    }catch(e){
+      if(panel) panel.innerHTML=`<div class="modal-subpanel"><div class="modal-subtitle">延長「${esc((a.primaryPerson||{}).displayName||a.accountName||"用戶")}」的訂閱天數</div><div class="modal-subhint err">${esc(explainErr(e&&e.message))}</div></div>`;
+    }
+  }
+
+  function renderExtendForm(a,info){
+    const panel=$("acctActionPanel"); if(!panel) return;
+    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    if(!info||!info.ok){
+      const code=(info&&info.error&&info.error.code)||"";
+      const msg=code==="plan_not_eligible_for_extension"?"免費帳號沒有到期日，請先用「改方案」升成 Plus 或 Pro，才能延長天數。":explainErr(code);
+      panel.innerHTML=`<div class="modal-subpanel"><div class="modal-subtitle">延長「${esc(nm)}」的訂閱天數</div><div class="modal-subhint err">${esc(msg)}</div></div>`;
+      return;
+    }
+    const planTxt={pro:"Pro",plus:"Plus"}[info.activePlan]||info.activePlan;
+    const baseline=info.wasLapsedOrMissing?"今天（目前沒有到期日或已過期）":fmtTime(info.previousExpiresAt);
+    const appleNote=info.appleManagedSubscription?`<div class="modal-subhint" style="margin-bottom:6px">這是真實 Apple 訂閱，下次蘋果同步（自動續訂或重新驗證）時到期日會被蘋果的值覆蓋，這次延長屆時可能不會保留。</div>`:"";
+    panel.innerHTML=`<div class="modal-subpanel">
+      <div class="modal-subtitle">延長「${esc(nm)}」的訂閱天數（目前方案：${esc(planTxt)}）</div>
+      <div class="kpi-sub" style="margin-bottom:10px">目前到期基準：${esc(baseline)}${info.appleManagedSubscription?' <span class="pill warn">真實 Apple 訂閱</span>':""}</div>
+      ${appleNote}
+      <label class="field"><span>延長天數（1～365）</span><input type="number" id="extendDays" min="1" max="365" step="1" placeholder="例如 30"></label>
+      <label class="field"><span>原因（會記錄在稽核紀錄，選填）</span><input type="text" id="extendReason" placeholder="例如：客訴補償／行銷體驗" maxlength="120"></label>
+      <div class="kpi-sub" id="extendPreviewLine"></div>
+      <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="extendSubmitBtn">確認延長</button></div>
+      <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
+    </div>`;
+    panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+    const baseMs=info.wasLapsedOrMissing?Date.now():new Date(info.previousExpiresAt).getTime();
+    const updatePreview=()=>{
+      const d=Number($("extendDays")?.value||0);
+      const line=$("extendPreviewLine");
+      if(!line) return;
+      if(!d||d<=0){ line.textContent=""; return; }
+      line.textContent="延長後到期日約："+fmtTime(new Date(baseMs+d*86400000).toISOString());
+    };
+    $("extendDays")?.addEventListener("input",updatePreview);
+    panel.querySelector("#extendSubmitBtn")?.addEventListener("click",()=>submitExtendDays(a,info));
+  }
+
+  async function submitExtendDays(a,info){
+    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const hint=$("acctActionHint");
+    const raw=($("extendDays")?.value||"").trim();
+    const days=Number(raw);
+    const reason=($("extendReason")?.value||"").trim();
+    if(!raw||!Number.isFinite(days)||days<=0){ if(hint){ hint.textContent="請輸入 1～365 的天數"; hint.className="modal-subhint err"; } return; }
+    if(days>365){ if(hint){ hint.textContent="單次最多延長 365 天，請分批操作"; hint.className="modal-subhint err"; } return; }
+    const baseMs=info.wasLapsedOrMissing?Date.now():new Date(info.previousExpiresAt).getTime();
+    const newDate=new Date(baseMs+days*86400000);
+    const appleNote=info.appleManagedSubscription?"\n\n注意：這是真實 Apple 訂閱，下次蘋果同步可能覆蓋這次延長。":"";
+    const msg="要把「"+nm+"」的訂閱延長 "+days+" 天嗎？\n"+(info.wasLapsedOrMissing?"目前沒有到期日或已過期，從今天起算":"目前到期日："+fmtTime(info.previousExpiresAt))+" → 延長後約："+fmtTime(newDate.toISOString())+appleNote+"\n\n確定送出後立即生效，請再次確認。";
+    if(!window.confirm(msg)) return;
+    const btn=$("extendSubmitBtn"); if(btn) btn.disabled=true;
+    if(hint){ hint.textContent="送出中…"; hint.className="modal-subhint"; }
+    try{
+      const res=await postAdmin(state.base,state.token,"/admin/subscription/extend-days",{accountId:a.accountId,days:days,reason:reason});
+      if(hint){ hint.textContent="已延長，新到期日："+fmtTime(res.newExpiresAt); hint.className="modal-subhint ok"; }
       await refreshData();
       const list=(D().accounts||{}).accounts||[];
       const idx=list.findIndex((x)=>x.accountId===a.accountId);
@@ -1453,7 +1537,7 @@
     if(!res.ok||p.ok===false){ const code=typeof p.error==="string"?p.error:(p.error&&p.error.code); throw new Error(code||("http_"+res.status)); }
     return p;
   }
-  function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
+  function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/plan_not_eligible_for_extension/.test(m))return "免費帳號沒有到期日，請先改方案"; if(/invalid_days/.test(m))return "天數格式不正確"; if(/days_out_of_range/.test(m))return "單次最多延長 365 天，請分批操作"; if(/days_required/.test(m))return "請輸入延長天數"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
 
   // 抓所有真資料（登入成功、貼通行碼、開頁自動連線 三處共用）
   async function loadAll(base, token){
