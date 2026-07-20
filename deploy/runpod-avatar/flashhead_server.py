@@ -65,11 +65,42 @@ from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, Slot
                                     health_snapshot, parse_frame_size, slot_summary,
                                     switch_slot_char)
 
+# ===== 正式線 / 展示間分家（2026-07-21）=====
+# a05/a06 = 正式 App 的臉，條件圖必須是「原生正方形裁切」（a05 貼 y=190、a06 貼 y=209），
+# 與 web/src/styles.css 的 .fh-overlay 貼合數字綁在一起，任一邊單獨改就會出現
+# 頭被壓扁／頭框上移／領口疊影（2026-07-20 正是這樣中的）。
+# a05d/a06d = B2B 展示間專用實驗格，換裁切／換解析度都不影響正式線。
 CHAR_SRC = {
     "a05": os.environ.get("MUNEA_FH_CHAR_A05", "/root/char-a05B.png"),
     "a06": os.environ.get("MUNEA_FH_CHAR_A06", "/root/char-a06B.png"),
+    "a05d": os.environ.get("MUNEA_FH_CHAR_A05D", "/root/char-a05B-demo.png"),
+    "a06d": os.environ.get("MUNEA_FH_CHAR_A06D", "/root/char-a06B-demo.png"),
 }
 DEFAULT_CHAR = "a05"
+
+# 與 deploy/modal-avatar/flashhead_modal_dev.py 同一份表——備援機接手時臉不可以換個樣子。
+# scripts/test-avatar-render-contract.py 會比對兩支引擎與 App，任一邊漂掉就擋下。
+_PROD_SQUARE = {"width": 640, "height": 640}
+_DEMO_FILL = {"width": 512, "height": 512}
+_CANVAS = {"width": 1080, "height": 1920}
+AVATAR_RENDER_CONTRACTS = {
+    "a05": {"version": "app-flashhead-square-v1", "lane": "prod", "canvas": _CANVAS,
+            "source_crop": {"x": 0, "y": 190, "width": 1080, "height": 1080},
+            "model_input": _PROD_SQUARE, "fit": "fill"},
+    "a06": {"version": "app-flashhead-square-v1", "lane": "prod", "canvas": _CANVAS,
+            "source_crop": {"x": 0, "y": 209, "width": 1080, "height": 1080},
+            "model_input": _PROD_SQUARE, "fit": "fill"},
+    "a05d": {"version": "demo-flashhead-portrait-v1", "lane": "demo", "canvas": _CANVAS,
+             "source_crop": {"x": 0, "y": 140, "width": 1080, "height": 1440},
+             "model_input": _DEMO_FILL, "fit": "fill"},
+    "a06d": {"version": "demo-flashhead-portrait-v1", "lane": "demo", "canvas": _CANVAS,
+             "source_crop": {"x": 0, "y": 140, "width": 1080, "height": 1440},
+             "model_input": _DEMO_FILL, "fit": "fill"},
+}
+
+
+def avatar_render_contract(char):
+    return AVATAR_RENDER_CONTRACTS.get(char) or AVATAR_RENDER_CONTRACTS[DEFAULT_CHAR]
 MODEL_ROOT = os.path.expanduser(os.environ.get("MUNEA_FH_MODEL_ROOT", "/models"))
 CKPT_DIR = os.environ.get(
     "MUNEA_FH_CKPT_DIR", os.path.join(MODEL_ROOT, "soulx-flashhead-1.3b")
@@ -514,6 +545,7 @@ class FlashHead:
             primary = outer.slots[0]
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
+                         "avatar_render_contract": avatar_render_contract(primary.char),
                          "capacity": snap})
             if len(outer.slots) > 1:
                 body["slots"] = [slot_summary(s, outer.wake_ts) for s in outer.slots]

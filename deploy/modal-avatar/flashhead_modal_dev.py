@@ -73,28 +73,52 @@ image = (
                  index_url="https://download.pytorch.org/whl/cu128", extra_options="--no-deps")
     .pip_install("fastapi", "aiortc", "aiohttp", "av")
     .env({"MUNEA_APP_KEY": APP_KEY})
-    # v2 crops come from the same bg-a05/bg-a06 portraits shipped in the App.
-    # Source box: x=0, y=140, w=1080, h=1440, resized to 512x512 for FlashHead.
-    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a05-inB-512-v2.png"), "/root/char-a05B.png")
-    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a06-inB-512-v2.png"), "/root/char-a06B.png")
+    # 正式線（a05/a06）：與 App 出貨的 bg-a05/bg-a06 立繪同源，原生正方形裁切、不做任何拉伸。
+    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a05-prod-square-640.png"), "/root/char-a05B.png")
+    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a06-prod-square-640.png"), "/root/char-a06B.png")
+    # 展示間（a05d/a06d）：B2B demo 專用實驗格，畫質怎麼試都行、碰不到正式線。
+    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a05-demo-fill-512.png"), "/root/char-a05B-demo.png")
+    .add_local_file(os.path.join(CHAR_ASSET_DIR, "a06-demo-fill-512.png"), "/root/char-a06B-demo.png")
 )
 
+# ===== 正式線 / 展示間分家（2026-07-21）=====
+# 2026-07-20 為了對齊 B2B demo，把 a05/a06 的條件圖換成 y=140 的 1080x1440 壓扁裁切，
+# 但 App 的貼合數字（web/src/styles.css .fh-overlay）從頭到尾假設「原生正方形、貼在 y=190/209」，
+# 於是正式 App 的頭被壓成 75% 高、上移 50px、領口跟立繪錯開成疊影。
+# 根治＝實驗與正式各走各的角色代號：a05/a06 永遠是正式線，a05d/a06d 給展示間隨便試。
 CHAR_SRC = {
     "a05": "/root/char-a05B.png",
     "a06": "/root/char-a06B.png",
+    "a05d": "/root/char-a05B-demo.png",
+    "a06d": "/root/char-a06B-demo.png",
 }
 DEFAULT_CHAR = "a05"
 
-# Single render contract shared with every FlashHead client. The condition
-# image is the App portrait crop below, resized to the model's square input.
-# Clients must invert this transform when compositing the generated video.
-AVATAR_RENDER_CONTRACT = {
-    "version": "app-flashhead-portrait-v1",
-    "canvas": {"width": 1080, "height": 1920},
-    "source_crop": {"x": 0, "y": 140, "width": 1080, "height": 1440},
-    "model_input": {"width": 512, "height": 512},
-    "fit": "fill",
+# 每個角色各自的貼合約定。客戶端把生成影像貼回 source_crop 這個框、object-fit 用 fit，
+# 就會回到原本立繪上的正確位置——正方形裁切自然等比、長方形裁切自然還原被壓扁的那一軸。
+# ⚠ 改 a05/a06 這兩條 = 改正式 App 的臉，必須連 web/src/styles.css 一起改並經 Edward 拍板；
+#    scripts/test-avatar-render-contract.py 會擋住只改一邊的情況。
+_PROD_SQUARE = {"width": 640, "height": 640}
+_DEMO_FILL = {"width": 512, "height": 512}
+_CANVAS = {"width": 1080, "height": 1920}
+AVATAR_RENDER_CONTRACTS = {
+    "a05": {"version": "app-flashhead-square-v1", "lane": "prod", "canvas": _CANVAS,
+            "source_crop": {"x": 0, "y": 190, "width": 1080, "height": 1080},
+            "model_input": _PROD_SQUARE, "fit": "fill"},
+    "a06": {"version": "app-flashhead-square-v1", "lane": "prod", "canvas": _CANVAS,
+            "source_crop": {"x": 0, "y": 209, "width": 1080, "height": 1080},
+            "model_input": _PROD_SQUARE, "fit": "fill"},
+    "a05d": {"version": "demo-flashhead-portrait-v1", "lane": "demo", "canvas": _CANVAS,
+             "source_crop": {"x": 0, "y": 140, "width": 1080, "height": 1440},
+             "model_input": _DEMO_FILL, "fit": "fill"},
+    "a06d": {"version": "demo-flashhead-portrait-v1", "lane": "demo", "canvas": _CANVAS,
+             "source_crop": {"x": 0, "y": 140, "width": 1080, "height": 1440},
+             "model_input": _DEMO_FILL, "fit": "fill"},
 }
+
+
+def avatar_render_contract(char):
+    return AVATAR_RENDER_CONTRACTS.get(char) or AVATAR_RENDER_CONTRACTS[DEFAULT_CHAR]
 
 SNAPSHOT_KEY = "v2-flashhead-eager"  # v1 用 compile 模式、Modal GPU 快照失敗(CUDA graph 存不進去)；v2 改 eager
 
@@ -579,7 +603,7 @@ class FlashHead:
                 gen_p95 = round(srt[max(0, int(len(srt) * 0.95) - 1)], 1)
             ao = outer.audio_out
             return {"ok": True, "engine": "flashhead-lite-modal", "char": outer.char,
-                    "avatar_render_contract": AVATAR_RENDER_CONTRACT,
+                    "avatar_render_contract": avatar_render_contract(outer.char),
                     "frames": outer.sink.count, "load": outer.load_report,
                     "round_count": outer.round_count,
                     "round_latencies_ms": list(outer.round_latencies),
