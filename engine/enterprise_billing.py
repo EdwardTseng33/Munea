@@ -10,14 +10,10 @@ supabase/sql/*（表結構）——本檔只讀 enterprise_seats.py 提供的資
 「CRUD 留給 billing 那支檔案自己加」），沿用 supabase_adapter 通用的
 _select/_request/_first（跟 enterprise_seats.py 用同一套，不新增 adapter 方法）。
 
-已知落差（不是我能改的範圍，留給之後補 SQL migration 的人）：
-需求單 5.2 要求 enterprise_invoices 補 6 個收款欄位
-（sent_at / paid_at / paid_amount_twd / payment_note / invoice_number / invoice_issued_at），
-但目前的 020_enterprise_seats.sql 只建了 2.4 列的欄位，沒有這 6 個。本檔的請款單物件
-在 Python 層完整支援全部欄位，本機 JSON 備援也完整落地；寫 Supabase 時只送
-現有欄位（見 _invoice_item_to_supabase_row），避免 PostgREST 因為欄位不存在而報錯。
-等 SQL 補上這 6 欄後，_invoice_item_to_supabase_row 要跟著解禁，計算邏輯
-（compute_overdue_days／compute_outstanding_total）不必改，本來就是照 5.2 定義寫的。
+2026-07-20 更新：需求單 5.2 的 6 個收款欄位（sent_at / paid_at / paid_amount_twd /
+payment_note / invoice_number / invoice_issued_at）已由資料層補進
+020_enterprise_seats.sql（status 也補了 invoiced），_invoice_item_to_supabase_row()
+已解禁全欄位寫入——見該函式與檔案本身的最新定義，欄位名／型別以那份 SQL 為準。
 """
 import calendar
 import html
@@ -45,7 +41,7 @@ PAYMENT_DUE_DAY = 15  # 需求單 4.2／5.2：付款期限＝次月 15 日前
 OVERDUE_GRACE_DAYS = 7  # 需求單 4.3／5.3：逾期 7 天以上 → 不出月報
 PRIVACY_MIN_GROUP_SIZE = 5  # 需求單 4.4 第 3 條：分組人數 < 5 不單獨呈現
 
-INVOICE_STATUSES = ("draft", "issued", "paid", "void")
+INVOICE_STATUSES = ("draft", "issued", "paid", "invoiced", "void")  # 需求單 5.2：020_enterprise_seats.sql 狀態流
 NON_BILLABLE_SEAT_STATUSES = {"pending", "waiting"}  # 需求單 4.1 + 5A：pending／waiting 一律不計費
 
 # 需求單 4.4 隱私鐵律用的關鍵字掃描表（都是「正規化後的 key 名稱」比對，不分大小寫、
@@ -380,12 +376,16 @@ _INVOICE_SUPABASE_COLUMNS = (
     "invoice_no", "enterprise_client_id", "period_start", "period_end",
     "billable_seats", "unit_price_twd", "subtotal_twd", "tax_twd", "total_twd",
     "status", "due_date", "seat_snapshot", "report_ref",
+    # 需求單 5.2 收款欄位（2026-07-20 解禁：020_enterprise_seats.sql 已補齊這六欄）
+    "sent_at", "paid_at", "paid_amount_twd", "payment_note", "invoice_number", "invoice_issued_at",
 )
 
 
 def _invoice_item_to_supabase_row(item):
-    """只送 020_enterprise_seats.sql 已經有的欄位——見檔頭「已知落差」說明，
-    5.2 的 6 個收款欄位現在的表還沒開，硬送會被 PostgREST 拒絕。"""
+    """對齊 020_enterprise_seats.sql 的 enterprise_invoices 定義送出整列。
+    5.2 的六個收款欄位（2026-07-20 解禁）：sent_at／paid_at／invoice_issued_at 是
+    timestamptz，None 就送 null（欄位本身可空）；paid_amount_twd 是 numeric、
+    有 check(paid_amount_twd is null or >=0)，同樣 None 就送 null，不能塞 0 混充「還沒收」。"""
     item = item or {}
     return {
         "invoice_no": item.get("invoiceNo"),
@@ -401,6 +401,12 @@ def _invoice_item_to_supabase_row(item):
         "due_date": item.get("dueDate"),
         "seat_snapshot": item.get("seatSnapshot") or [],
         "report_ref": item.get("reportRef"),
+        "sent_at": item.get("sentAt"),
+        "paid_at": item.get("paidAt"),
+        "paid_amount_twd": item.get("paidAmountTwd"),
+        "payment_note": item.get("paymentNote"),
+        "invoice_number": item.get("invoiceNumber"),
+        "invoice_issued_at": item.get("invoiceIssuedAt"),
     }
 
 
