@@ -22,6 +22,7 @@
       { id: "enterpriseClients", label: "客戶列表", badge: "entOverdue" },
       { id: "enterpriseImport", label: "名單匯入" },
       { id: "enterprisePayments", label: "收款登記" },
+      { id: "enterpriseBillingSettings", label: "開票與收款設定", badge: "entBillingMissing" },
     ]},
     { group: "服務與紀錄", items: [
       { id: "feedback", label: "用戶意見", badge: "feedback" },
@@ -50,6 +51,7 @@
     enterpriseClients: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
     enterpriseImport: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     enterprisePayments: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    enterpriseBillingSettings: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   };
   function icon(id, cls){ return `<svg class="${cls||"nav-ico"}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[id]||""}</svg>`; }
 
@@ -266,6 +268,7 @@
     else if (id==="enterpriseClientDetail") html=renderEnterpriseClientDetail();
     else if (id==="enterpriseImport") html=renderEnterpriseImport();
     else if (id==="enterprisePayments") html=renderEnterprisePayments();
+    else if (id==="enterpriseBillingSettings") html=renderEnterpriseBillingSettings();
     $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
     pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
     bindPageEvents(id);
@@ -732,6 +735,29 @@
   const ENT_INVOICE_STATUS_ZH = { draft:["mute","草稿・待確認"], issued:["warn","已寄出・待收款"], sent:["warn","已寄出・待收款"], paid:["ok","已收款"], invoiced:["ok","已開發票"], void:["mute","已作廢"] };
   function entInvoiceStatusPill(s){ const x=ENT_INVOICE_STATUS_ZH[s]||ENT_INVOICE_STATUS_ZH.draft; return `<span class="pill ${x[0]}">${x[1]}</span>`; }
 
+  const ENT_BILLING_REQUIRED_FIELDS = [
+    ["issuerCompanyName","開票公司抬頭"],
+    ["bankName","收款銀行"],
+    ["bankAccountName","戶名"],
+    ["bankAccountNo","帳號"],
+  ];
+  function entBillingSettingsMissing(bs){
+    bs=bs||{};
+    return ENT_BILLING_REQUIRED_FIELDS.filter(([key])=>!String(bs[key]||"").trim()).map(([,label])=>label);
+  }
+  function entBillingSettingsMissingCount(){
+    const c=state.tabs.entBillingSettings;
+    if(!c||c.status!=="ready") return 0;
+    return entBillingSettingsMissing((c.data&&c.data.settings)||{}).length;
+  }
+  function entBillingSettingsWarningHTML(){
+    const c=ensureEnterpriseBillingSettingsLoaded();
+    if(c.status!=="ready") return "";
+    const missing=entBillingSettingsMissing((c.data&&c.data.settings)||{});
+    if(!missing.length) return "";
+    return `<div class="ops-notice warn" role="alert"><strong>開票與收款設定還沒填完</strong>還缺「${missing.map((x)=>esc(x)).join("、")}」——月結產出的請款單會印不出正確資訊。 <button type="button" class="btn-ghost btn-sm" data-goto="enterpriseBillingSettings" style="margin-top:8px">前往填寫</button></div>`;
+  }
+
   function downloadTextFile(filename, text, mime){
     const blob=new Blob([text||""],{type:mime||"text/csv;charset=utf-8;"});
     const url=URL.createObjectURL(blob);
@@ -803,6 +829,18 @@
     return c;
   }
   function reloadEnterpriseInvoices(){ state.tabs.entInvoicesList={status:"idle",data:null,error:null}; return ensureEnterpriseInvoicesLoaded(); }
+  function ensureEnterpriseBillingSettingsLoaded(){
+    const c=state.tabs.entBillingSettings||(state.tabs.entBillingSettings={status:"idle",data:null,error:null});
+    if(c.status==="idle"){
+      c.status="loading";
+      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      postAdmin(base, token, "/admin/enterprise/billing-settings", {})
+        .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterprisePayments","enterpriseBillingSettings"].includes(state.page)) renderPage(state.page); })
+        .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterpriseBillingSettings") renderPage(state.page); });
+    }
+    return c;
+  }
+  function reloadEnterpriseBillingSettings(){ state.tabs.entBillingSettings={status:"idle",data:null,error:null}; return ensureEnterpriseBillingSettingsLoaded(); }
 
   // ── 畫面 1・企業客戶列表 ──
   function renderEnterpriseClients(){
@@ -813,7 +851,8 @@
     const activeSeats=clients.reduce((s,x)=>s+Number(x.activeSeats||0),0);
     const monthly=clients.reduce((s,x)=>s+Number(x.estimatedMonthlyTwd||0),0);
     const overdue=clients.filter((x)=>x.statusLight==="overdue");
-    let html=kpiRow([
+    let html=entBillingSettingsWarningHTML();
+    html+=kpiRow([
       { label:"企業客戶數", value:n(clients.length), sub:"目前合作中的公司", star:true },
       { label:"累計啟用席次", value:n(activeSeats), sub:"所有公司加總" },
       { label:"本月預估金額", value:fmtMoney(monthly), sub:"依目前啟用席次估算" },
@@ -1124,7 +1163,7 @@
     });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ent-pay-filter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
     const tools=`<div class="tbl-tools">${chip("all","全部",counts.all)}${chip("draft","草稿・待確認",counts.draft)}${chip("issued","已寄出・待收款",counts.issued)}${chip("paid","已收款",counts.paid)}<span class="chip-sep"></span>${chip("overdue","逾期",counts.overdue)}<span class="chip-spring"></span><button type="button" class="btn-sm" data-ent-monthly-close>跑月結（產生本月請款單）</button></div>`;
-    let html="";
+    let html=entBillingSettingsWarningHTML();
     if(!invoices.length){
       html+=card("請款單列表","登記收款、標記已入帳", `${tools}${emptyBox("還沒有請款單——跑過月結後會出現。")}`);
       html+=`<div id="entPayActionNote"></div>`;
@@ -1208,6 +1247,77 @@
           .catch((e)=>entActionNote("entPayActionNote", entActionError((e&&e.message)||"fail")));
       },
     });
+  }
+
+  function ENT_BS_COMPANY_FORM_HTML(bs){
+    return `
+      <div class="ent-form-grid">
+        <label class="field"><span>開票公司抬頭</span><input type="text" id="bsIssuerCompanyName" value="${esc(bs.issuerCompanyName||"")}" placeholder="例：沐寧股份有限公司"></label>
+        <label class="field"><span>統一編號</span><input type="text" id="bsIssuerTaxId" value="${esc(bs.issuerTaxId||"")}"></label>
+        <label class="field"><span>公司地址</span><input type="text" id="bsIssuerAddress" value="${esc(bs.issuerAddress||"")}"></label>
+        <label class="field"><span>聯絡電話</span><input type="text" id="bsIssuerPhone" value="${esc(bs.issuerPhone||"")}"></label>
+        <label class="field"><span>聯絡人</span><input type="text" id="bsIssuerContactName" value="${esc(bs.issuerContactName||"")}"></label>
+      </div>
+    `;
+  }
+  function ENT_BS_BANK_FORM_HTML(bs){
+    return `
+      <div class="ops-notice warn" role="alert" style="margin-bottom:14px"><strong>帳號是敏感資料</strong>畫面上預設遮蔽，按「顯示」才會露出完整號碼，避免截圖外流。</div>
+      <div class="ent-form-grid">
+        <label class="field"><span>收款銀行</span><input type="text" id="bsBankName" value="${esc(bs.bankName||"")}"></label>
+        <label class="field"><span>分行</span><input type="text" id="bsBankBranch" value="${esc(bs.bankBranch||"")}"></label>
+        <label class="field"><span>戶名</span><input type="text" id="bsBankAccountName" value="${esc(bs.bankAccountName||"")}"></label>
+        <label class="field"><span>帳號</span>
+          <div class="token-wrap">
+            <input type="password" id="bsBankAccountNo" value="${esc(bs.bankAccountNo||"")}" autocomplete="off">
+            <button type="button" class="eye-btn" data-ent-toggle-mask="bsBankAccountNo">顯示</button>
+          </div>
+        </label>
+      </div>
+    `;
+  }
+  function ENT_BS_OTHER_FORM_HTML(bs){
+    return `
+      <div class="ent-form-grid">
+        <label class="field"><span>付款期限天數</span><input type="number" id="bsPaymentTermsDays" value="${esc(bs.paymentTermsDays!=null?bs.paymentTermsDays:15)}"><small class="muted">對應需求單「次月 15 日前」——從帳單期間結束日起算天數，預設 15 天，可調</small></label>
+        <label class="field"><span>請款單備註</span><input type="text" id="bsInvoiceFooterNote" value="${esc(bs.invoiceFooterNote||"")}" placeholder="例：請於匯款後回傳水單"></label>
+      </div>
+      <button type="button" class="btn-sm" data-ent-save-billing-settings>儲存變更</button>${bs.updatedAt?`<span class="muted small" style="margin-left:10px">上次更新：${esc(fmtTime(bs.updatedAt))}${bs.updatedBy?("（"+esc(bs.updatedBy)+"）"):""}</span>`:""}
+      <div id="entBillingSaveNote"></div>
+    `;
+  }
+  function renderEnterpriseBillingSettings(){
+    const c=ensureEnterpriseBillingSettingsLoaded();
+    const guard=entLoadingOrErrorCard(c.status,c.error,"開票與收款設定","data-ent-retry-billing-settings");
+    if(guard) return guard;
+    const bs=(c.data&&c.data.settings)||{};
+    const missing=entBillingSettingsMissing(bs);
+    let html=missing.length?("<div class=\"ops-notice warn\" role=\"alert\"><strong>還沒填完</strong>還缺「"+missing.map((x)=>esc(x)).join("、")+"」——沒填的欄位，月結產出的請款單會印不出正確資訊。</div>"):"";
+    html+=card("開票資訊","印在請款單抬頭的公司資料", ENT_BS_COMPANY_FORM_HTML(bs));
+    html+=card("收款資訊","印在請款單上的匯款帳戶", ENT_BS_BANK_FORM_HTML(bs));
+    html+=card("其他","付款期限與請款單上的備註", ENT_BS_OTHER_FORM_HTML(bs));
+    return html;
+  }
+  function entCollectBillingSettingsForm(){
+    const g=(id)=>{ const el=$(id); return el?el.value:""; };
+    return {
+      issuerCompanyName:g("bsIssuerCompanyName").trim(), issuerTaxId:g("bsIssuerTaxId").trim(), issuerAddress:g("bsIssuerAddress").trim(),
+      issuerPhone:g("bsIssuerPhone").trim(), issuerContactName:g("bsIssuerContactName").trim(),
+      bankName:g("bsBankName").trim(), bankBranch:g("bsBankBranch").trim(),
+      bankAccountName:g("bsBankAccountName").trim(), bankAccountNo:g("bsBankAccountNo").trim(),
+      paymentTermsDays:Number(g("bsPaymentTermsDays"))||15, invoiceFooterNote:g("bsInvoiceFooterNote").trim(),
+    };
+  }
+  function entSaveBillingSettings(){
+    const body=entCollectBillingSettingsForm();
+    if(!body.issuerCompanyName){ entActionNote("entBillingSaveNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填開票公司抬頭</strong></div>`); return; }
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    postAdmin(base, token, "/admin/enterprise/billing-settings/save", body)
+      .then(()=>{
+        entActionNote("entBillingSaveNote", `<div class="ops-notice info" role="status" style="margin-top:10px"><strong>已儲存</strong>之後產出的請款單會套用這份資料。</div>`);
+        setTimeout(reloadEnterpriseBillingSettings, 1600);
+      })
+      .catch((e)=>entActionNote("entBillingSaveNote", entActionError((e&&e.message)||"fail")));
   }
 
   // ══════════ 設定頁 ══════════
@@ -1382,7 +1492,7 @@
 
   // ══════════ 導覽 ══════════
   function renderSide(){
-    const badges={ safety: state.connected?String((D().safety||{}).totals?.requiresHumanEscalation||0):"", feedback: state.connected?String(((D().feedback||{}).latest||[]).length||0):"", care: state.connected?String(carePriorityRows().rows.filter((r)=>r.score>=60).length||0):"", entOverdue: state.connected?String(entClients().filter((c)=>c.statusLight==="overdue").length||0):"" };
+    const badges={ safety: state.connected?String((D().safety||{}).totals?.requiresHumanEscalation||0):"", feedback: state.connected?String(((D().feedback||{}).latest||[]).length||0):"", care: state.connected?String(carePriorityRows().rows.filter((r)=>r.score>=60).length||0):"", entOverdue: state.connected?String(entClients().filter((c)=>c.statusLight==="overdue").length||0):"", entBillingMissing: state.connected?String(entBillingSettingsMissingCount()):"" };
     $("sideNav").innerHTML=NAV.map((g)=>`<div class="nav-group"><div class="nav-group-label">${esc(g.group)}</div><div class="side-nav">${g.items.map((it)=>{
       const bv=badges[it.badge]; const b= it.badge&&bv&&bv!=="0"?`<span class="nav-badge">${esc(bv)}</span>`:"";
       return `<a href="#${it.id}" data-page="${it.id}">${icon(it.id)}<span class="nav-label">${esc(it.label)}</span>${b}</a>`;
@@ -1435,6 +1545,14 @@
     $("pageRoot").querySelectorAll("[data-ent-pay-toggle]").forEach((b)=>b.addEventListener("click",()=>{ const idv=b.dataset.entPayToggle; state.tabs.entPayOpenId=(String(state.tabs.entPayOpenId)===String(idv))?null:idv; renderPage("enterprisePayments"); }));
     $("pageRoot").querySelectorAll("[data-ent-mark-paid]").forEach((b)=>b.addEventListener("click",()=>entMarkPaid(b.dataset.entMarkPaid)));
     $("pageRoot").querySelectorAll("[data-ent-monthly-close]").forEach((b)=>b.addEventListener("click",entRunMonthlyClose));
+    $("pageRoot").querySelectorAll("[data-ent-retry-billing-settings]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseBillingSettings(); renderPage(state.page); }));
+    $("pageRoot").querySelectorAll("[data-ent-save-billing-settings]").forEach((b)=>b.addEventListener("click",entSaveBillingSettings));
+    $("pageRoot").querySelectorAll("[data-ent-toggle-mask]").forEach((b)=>b.addEventListener("click",()=>{
+      const fid=b.dataset.entToggleMask, el=$(fid); if(!el) return;
+      const showing=el.type==="text";
+      el.type=showing?"password":"text";
+      b.textContent=showing?"顯示":"隱藏";
+    }));
     if(id==="subscription"){
       ["aPlusPrice","aProPrice","aPlusCount","aProCount","aNewPaid","aMarketing","aLifeMonths"].forEach((i)=>$(i)?.addEventListener("input",calcAssume));
       calcAssume();
