@@ -64,9 +64,15 @@
   await run('P-01', '免費方案為預設且權限中樞健在', () => {
     A(W.MMPLAN && typeof W.MMPLAN.get === 'function', 'MMPLAN 缺');
   });
-  await run('P-02', '補點四包 200/500/1000/1800', () => {
-    const packs = [...new Set([...D.querySelectorAll('.tu-card')].map(c => c.dataset.p))].sort((a,b)=>a-b).join('/');
-    A(packs === '200/500/1000/1800', '看到 ' + packs);
+  // 2026-07-20：原本寫死 200/500/1000/1800，7/17 改價後永遠紅燈。
+  // 改為驗「結構正確」而非「數字等於某組舊值」——改價不該讓巡檢失效。
+  await run('P-02', '補點四包：四包、數字遞增、都可點', () => {
+    const cards = [...D.querySelectorAll('.tu-card')];
+    const packs = [...new Set(cards.map(c => Number(c.dataset.p)))].sort((a, b) => a - b);
+    A(packs.length === 4, '應為四包、看到 ' + packs.length + ' 包');
+    A(packs.every(n => Number.isFinite(n) && n > 0), '有非正整數的包');
+    A(packs.every((n, i) => i === 0 || n > packs[i - 1]), '點數沒有由小到大');
+    return packs.join('/');
   });
   await run('P-03', '訂閱視窗：價格/恢復購買/法務文', () => {
     $id('managePlanBtn').click();
@@ -150,20 +156,59 @@
   });
 
   // ---------- B 系列 · 引擎（同棟樓） ----------
+  // 2026-07-20：引擎的門後來收緊了（① App 通行碼 ② 登入證），但巡檢一直裸奔敲門，
+  // 導致 B-02/B-03 長期紅燈／略過。以下統一改成「帶著門票敲」，且沒登入時誠實標略過、不亂報紅。
+  async function apiHeaders(extra) {
+    let h = { 'Content-Type': 'application/json', ...(extra || {}) };
+    try {
+      if (typeof W.muneaAuthHeaders === 'function') h = { ...h, ...(await W.muneaAuthHeaders()) };
+    } catch (e) { /* 取不到就走下面的備援 */ }
+    if (!h['X-Munea-Key'] && typeof W.MUNEA_APP_KEY === 'string') h['X-Munea-Key'] = W.MUNEA_APP_KEY;
+    return h;
+  }
+  const NEED_LOGIN = new Set(['auth_token_missing', 'auth_token_invalid', 'account_not_ready']);
+  const errCode = (r) => (r && r.error && r.error.code) || '';
+  // 沒登入 → 略過（不是壞掉）；被薄門擋 → 這才是真的要修
+  function gateOrSkip(r, what) {
+    const c = errCode(r);
+    if (NEED_LOGIN.has(c)) throw new Error('SKIP');
+    A(c !== 'app_key_required', what + '：通行碼沒帶到（薄門擋下）');
+  }
+
   await run('B-01', '引擎心跳', async () => {
-    const h = await fetch('/healthz').then(r => r.json()).catch(() => null);
+    // ⚠ 路徑結尾的斜線不能拿掉：Cloud Run 平台會攔截 /healthz（保留給自己的健康檢查），
+    // 只有 /healthz/ 才進得到我們的程式。2026-07-20 實測：/healthz→404、/healthz/→200。
+    const h = await fetch('/healthz/', { headers: await apiHeaders() }).then(r => r.json()).catch(() => null);
     if (!h) throw new Error('SKIP'); // 靜態預覽模式沒有引擎
-    A(h.ok === true, '心跳異常'); return h.backend && h.backend.provider ? ('資料=' + h.backend.provider) : '';
+    A(h.ok === true, '心跳異常');
+    return h.backend && h.backend.provider ? ('資料=' + h.backend.provider) : '';
   });
   await run('B-02', 'AI 三腦狀態口', async () => {
-    const r = await fetch('/ai/brain-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(x => x.json()).catch(() => null);
+    const r = await fetch('/ai/brain-status', { method: 'POST', headers: await apiHeaders(), body: '{}' }).then(x => x.json()).catch(() => null);
     if (!r) throw new Error('SKIP');
-    A(r.ok === true, '三腦狀態異常');
+    gateOrSkip(r, '三腦狀態');
+    A(r.ok === true, '三腦狀態異常：' + (errCode(r) || '未知'));
+  });
+  await run('B-04', '聊聊管線通（不花 AI 費）', async () => {
+    // 只驗「敲得到、門是對的」——不真的問 AI，所以不花錢，可以天天跑。
+    const r = await fetch('/chat', {
+      method: 'POST', headers: await apiHeaders(),
+      body: JSON.stringify({ history: [], char: '寧寧', probe: true }),
+    }).then(x => x.json()).catch(() => null);
+    A(!!r, '聊聊接口連不上');
+    gateOrSkip(r, '聊聊');
+    A(errCode(r) !== 'not_found', '聊聊接口不存在');
+    return r.ok === true ? '可用' : ('回應碼 ' + (errCode(r) || 'ok'));
   });
   await run('B-03', '真聊天一問（深檢·花 AI 費）', async () => {
     if (!DEEP) throw new Error('SKIP');
-    const r = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: [{ role: 'user', text: '巡檢測試：回我兩個字「收到」' }], char: '寧寧' }) }).then(x => x.json());
-    A(r && r.reply && r.reply.length > 0, '沒回話');
+    const r = await fetch('/chat', {
+      method: 'POST', headers: await apiHeaders(),
+      body: JSON.stringify({ history: [{ role: 'user', text: '巡檢測試：回我兩個字「收到」' }], char: '寧寧' }),
+    }).then(x => x.json()).catch(() => null);
+    A(!!r, '聊聊沒回應');
+    gateOrSkip(r, '聊聊');
+    A(r && r.reply && r.reply.length > 0, '沒回話：' + (errCode(r) || '空回應'));
     return (r.reply || '').slice(0, 12);
   });
 
@@ -194,6 +239,68 @@
     } finally {
       bak ? W.localStorage.setItem('munea.famVitals', bak) : W.localStorage.removeItem('munea.famVitals');
     }
+  });
+
+  // ---------- W 系列 · 對外必要網址（2026-07-20 新增）----------
+  // 起因：munea.net/privacy 已 404 十天沒人發現。隱私權與支援網址是 App Store 送審必填、
+  // 蘋果會實際點開；壞掉＝送審被擋。這類「沒人會主動點」的東西最需要機器每天代看一眼。
+  const headOK = async (url) => {
+    try { const r = await fetch(url, { method: 'GET', mode: 'cors' }); return r.ok; }
+    catch (e) { return null; } // 跨網域被擋 → 無法判定，回 null
+  };
+  await run('W-01', '本站法務頁可開（隱私/條款/支援）', async () => {
+    for (const p of ['/privacy.html', '/terms.html', '/support.html']) {
+      const r = await fetch(p).catch(() => null);
+      A(r && r.ok, p + ' 開不了');
+    }
+    return '三頁都在';
+  });
+  await run('W-02', '官網法務頁可開（送審必填·蘋果會點）', async () => {
+    const targets = ['https://munea.net/privacy', 'https://munea.net/support', 'https://munea.net/terms'];
+    const bad = [];
+    for (const u of targets) {
+      const ok = await headOK(u);
+      if (ok === null) throw new Error('SKIP'); // 跨網域擋住、瀏覽器測不到（請用巡檢小工具或直接點）
+      if (!ok) bad.push(u.replace('https://munea.net', ''));
+    }
+    A(bad.length === 0, '官網這幾頁開不了：' + bad.join('、') + '（會擋 App 送審）');
+    return '官網三頁都在';
+  });
+
+  // ---------- A 系列 · 營運後台（2026-07-20 新增）----------
+  // 起因：後台大改版新增 8 頁與 5 支資料接口，但巡檢完全沒覆蓋，壞了不會有人知道。
+  await run('A-01', '後台頁能開＋主程式在', async () => {
+    const html = await fetch('/admin.html').then(r => r.ok ? r.text() : null).catch(() => null);
+    A(!!html, '後台頁開不了');
+    A(html.includes('id="sideNav"') && html.includes('id="pageRoot"'), '後台骨架缺件');
+    const js = await fetch('/src/admin.js').then(r => r.ok ? r.text() : null).catch(() => null);
+    A(!!js, '後台主程式載不到');
+    return (js.length / 1024).toFixed(0) + 'KB';
+  });
+  await run('A-02', '後台八頁都在', async () => {
+    const js = await fetch('/src/admin.js').then(r => r.text());
+    const pages = ['renderOverview', 'renderCarePriority', 'renderUsers', 'renderSafety',
+      'renderMedication', 'renderFamilyHealth', 'renderMoodTrend', 'renderBondDepth'];
+    const missing = pages.filter(p => !js.includes(p));
+    A(missing.length === 0, '缺頁：' + missing.join('、'));
+    A(js.includes('loginGateHTML'), '登入門不見了');
+    A(!js.includes('settingsHTML'), '已移除的「連線設定」又跑回來了');
+    return pages.length + ' 頁';
+  });
+  await run('A-03', '後台資料接口都活著（且擋得住沒通行碼的人）', async () => {
+    const eps = ['/admin/north-star', '/admin/credits', '/admin/medication-adherence',
+      '/admin/family-health', '/admin/mood-trend', '/admin/bond-depth'];
+    const bad = [];
+    for (const ep of eps) {
+      const r = await fetch(ep, { method: 'POST', headers: await apiHeaders(), body: '{"days":30,"limit":5}' })
+        .then(x => x.json()).catch(() => null);
+      const c = errCode(r);
+      // 正常＝有回應，且沒帶管理通行碼時應被擋（invalid_admin_token）；404/連不上＝真的壞了
+      if (!r || c === 'not_found') bad.push(ep);
+      else if (!r.ok && c !== 'invalid_admin_token') bad.push(ep + '(' + c + ')');
+    }
+    A(bad.length === 0, '有問題：' + bad.join('、'));
+    return eps.length + ' 支';
   });
 
   // ---------- 總結 ----------
