@@ -707,9 +707,12 @@
     const stTxt={on:"活躍中",idle:"低度使用",off:"離線",alert:"守護中"}[st]||"離線";
     const mins=Math.round(u.totalMinutes||0);
     const fields=[["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]];
-    const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(p.displayName||a.accountName||"帳號")}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
+    const nm=p.displayName||a.accountName||"帳號";
+    const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
-      <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>`;
+      <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>
+      <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button></div>
+      <div id="acctActionPanel"></div>`;
     const previous=document.activeElement,layout=document.querySelector(".layout");
     let mo=$("acctModal"); if(!mo){ mo=document.createElement("div"); mo.id="acctModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
     mo.innerHTML=`<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="acctModalTitle">${body}</div>`; mo.hidden=false;
@@ -720,6 +723,7 @@
     mo.querySelectorAll("[data-close]").forEach((b)=>b.addEventListener("click",close));
     mo.addEventListener("click",onOverlay);
     document.addEventListener("keydown",onKey);
+    mo.querySelectorAll("[data-open-action]").forEach((b)=>b.addEventListener("click",()=>renderAcctActionPanel(a,b.dataset.openAction)));
     mo.querySelector("[data-close]")?.focus();
   }
 
@@ -1320,6 +1324,89 @@
       .catch((e)=>entActionNote("entBillingSaveNote", entActionError((e&&e.message)||"fail")));
   }
 
+  // 用戶明細彈窗內的「發點數／改方案」動作面板（2026-07-20 補）。
+  // 兩支都要求二次確認（window.confirm 明講對象＋內容）才送出，符合後台維運安全底線。
+  function renderAcctActionPanel(a, mode){
+    const panel=$("acctActionPanel"); if(!panel) return;
+    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    if(mode==="grant"){
+      panel.innerHTML=`<div class="modal-subpanel">
+        <div class="modal-subtitle">發點數給「${esc(nm)}」</div>
+        <label class="field"><span>點數（1～2000）</span><input type="number" id="grantAmount" min="1" max="2000" step="1" placeholder="例如 100"></label>
+        <label class="field"><span>原因（會記錄在稽核紀錄，選填）</span><input type="text" id="grantReason" placeholder="例如：客服補償／測試用" maxlength="120"></label>
+        <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="grantSubmitBtn">確認發送</button></div>
+        <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
+      </div>`;
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("#grantSubmitBtn")?.addEventListener("click",()=>submitGrantCredits(a));
+    } else if(mode==="plan"){
+      const cur=a.plan||"free";
+      const curTxt={pro:"Pro",plus:"Plus",free:"免費"}[cur]||"免費";
+      panel.innerHTML=`<div class="modal-subpanel">
+        <div class="modal-subtitle">改「${esc(nm)}」的方案（目前：${esc(curTxt)}）</div>
+        <label class="field"><span>新方案</span>
+          <select id="planSelect">
+            <option value="free"${cur==="free"?" selected":""}>免費</option>
+            <option value="plus"${cur==="plus"?" selected":""}>Plus</option>
+            <option value="pro"${cur==="pro"?" selected":""}>Pro</option>
+          </select>
+        </label>
+        <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="planSubmitBtn">確認更新</button></div>
+        <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
+      </div>`;
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("#planSubmitBtn")?.addEventListener("click",()=>submitSetPlan(a));
+    }
+  }
+
+  async function submitGrantCredits(a){
+    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const hint=$("acctActionHint");
+    const raw=($("grantAmount")?.value||"").trim();
+    const amount=Number(raw);
+    const reason=($("grantReason")?.value||"").trim();
+    if(!raw||!Number.isFinite(amount)||amount<=0){ if(hint){ hint.textContent="請輸入 1～2000 的點數"; hint.className="modal-subhint err"; } return; }
+    if(amount>2000){ if(hint){ hint.textContent="單次最多發 2000 點，請分批發送"; hint.className="modal-subhint err"; } return; }
+    const msg="要幫「"+nm+"」加 "+amount+" 點嗎？\n原因："+(reason||"（未填）")+"\n\n確定送出後無法收回，請再次確認。";
+    if(!window.confirm(msg)) return;
+    const btn=$("grantSubmitBtn"); if(btn) btn.disabled=true;
+    if(hint){ hint.textContent="送出中…"; hint.className="modal-subhint"; }
+    try{
+      const res=await postAdmin(state.base,state.token,"/admin/credits/grant",{accountId:a.accountId,amount:amount,reason:reason});
+      const total=(res.walletSummary||{}).total;
+      if(hint){ hint.textContent="已發送 "+amount+" 點，最新持有點數："+(total==null?"–":n(total))+" 點"; hint.className="modal-subhint ok"; }
+      await refreshData();
+      const list=(D().accounts||{}).accounts||[];
+      const idx=list.findIndex((x)=>x.accountId===a.accountId);
+      if(idx>-1) openAcctDetail(idx);
+    }catch(e){
+      if(hint){ hint.textContent=explainErr(e&&e.message); hint.className="modal-subhint err"; }
+    }finally{ if(btn) btn.disabled=false; }
+  }
+
+  async function submitSetPlan(a){
+    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const hint=$("acctActionHint");
+    const plan=$("planSelect")?.value||"free";
+    const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[plan]||plan;
+    const curTxt={pro:"Pro",plus:"Plus",free:"免費"}[a.plan||"free"]||"免費";
+    if(plan===(a.plan||"free")){ if(hint){ hint.textContent="跟目前方案一樣，沒有要改的"; hint.className="modal-subhint"; } return; }
+    const msg="要把「"+nm+"」的方案從 "+curTxt+" 改成 "+planTxt+" 嗎？\n\n確定送出後立即生效，請再次確認。";
+    if(!window.confirm(msg)) return;
+    const btn=$("planSubmitBtn"); if(btn) btn.disabled=true;
+    if(hint){ hint.textContent="送出中…"; hint.className="modal-subhint"; }
+    try{
+      await postAdmin(state.base,state.token,"/admin/subscription/set-plan",{accountId:a.accountId,plan:plan});
+      if(hint){ hint.textContent="已更新為 "+planTxt; hint.className="modal-subhint ok"; }
+      await refreshData();
+      const list=(D().accounts||{}).accounts||[];
+      const idx=list.findIndex((x)=>x.accountId===a.accountId);
+      if(idx>-1) openAcctDetail(idx);
+    }catch(e){
+      if(hint){ hint.textContent=explainErr(e&&e.message); hint.className="modal-subhint err"; }
+    }finally{ if(btn) btn.disabled=false; }
+  }
+
   // ══════════ 設定頁 ══════════
   // 訂閱試算（規劃計算機）——原本埋在「連線設定」頁，2026-07-20 併入「訂閱與點數」頁
   function assumeCardHTML(){
@@ -1366,7 +1453,7 @@
     if(!res.ok||p.ok===false){ const code=typeof p.error==="string"?p.error:(p.error&&p.error.code); throw new Error(code||("http_"+res.status)); }
     return p;
   }
-  function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
+  function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
 
   // 抓所有真資料（登入成功、貼通行碼、開頁自動連線 三處共用）
   async function loadAll(base, token){
