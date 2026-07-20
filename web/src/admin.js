@@ -5,6 +5,7 @@
   const NAV = [
     { group: "營運總覽", items: [
       { id: "overview", label: "總覽儀表板" },
+      { id: "carePriority", label: "最需要關心", badge: "care" },
     ]},
     { group: "用戶與守護", items: [
       { id: "users", label: "用戶管理" },
@@ -38,6 +39,7 @@
     bondDepth: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    carePriority: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
   };
   function icon(id, cls){ return `<svg class="${cls||"nav-ico"}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[id]||""}</svg>`; }
 
@@ -234,6 +236,7 @@
     pending.length=0;
     let html="";
     if (id==="overview") html=renderOverview();
+    else if (id==="carePriority") html=renderCarePriority();
     else if (id==="users") html=renderUsers();
     else if (id==="safety") html=renderSafety();
     else if (id==="medication") html=renderMedication();
@@ -282,6 +285,78 @@
   function planPill(p){ const m={ pro:["pill pro","Pro"], plus:["pill ok","Plus"], free:["pill mute","免費"] }; const x=m[p]||m.free; return `<span class="${x[0]}">${x[1]}</span>`; }
   function statusPill(s){ const m={ on:["ok","活躍中"], idle:["warn","低度使用"], off:["mute","離線"], alert:["bad","守護中"] }; const x=m[s]||m.off; return `<span class="pill ${x[0]}"><span class="sdot"></span>${x[1]}</span>`; }
   function usageCell(u){ u=u||{}; const mins=Math.round(u.totalMinutes||0); if(!mins) return `<span class="muted">—</span>`; const h=Math.min(22,Math.max(6,mins/6)); return `<div class="use-cell"><span class="mini-bars"><i style="height:${Math.round(h*0.5)}px"></i><i style="height:${Math.round(h*0.78)}px"></i><i style="height:${Math.round(h)}px"></i></span><b class="num">${n(mins)}</b><span class="muted small">分</span></div>`; }
+
+  // ══════════ 最需要關心：把各頁的風險訊號合成一張名單（純前端彙整，不另打後端）══════════
+  const CARE_LEVELS = [
+    { min: 60, cls: "bad",  label: "要立刻聯絡" },
+    { min: 30, cls: "warn", label: "這週要關心" },
+    { min: 1,  cls: "mute", label: "留意就好" },
+  ];
+  function careLevel(score){ return CARE_LEVELS.find((l)=>score>=l.min)||CARE_LEVELS[CARE_LEVELS.length-1]; }
+  const looksLikeId = (v) => /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(String(v||"")) || String(v||"").length>=32;
+
+  function carePriorityRows(){
+    const idx=new Map(); let unnamedAlerts=0;
+    const add=(name,family,score,reason,lastAt)=>{
+      const key=String(name||"").trim(); if(!key) return;
+      let r=idx.get(key);
+      if(!r){ r={name:key,family:family||"",score:0,reasons:[],lastAt:lastAt||null}; idx.set(key,r); }
+      if(family&&!r.family) r.family=family;
+      if(lastAt&&(!r.lastAt||String(lastAt)>String(r.lastAt))) r.lastAt=lastAt;
+      r.score+=score; r.reasons.push(reason);
+    };
+    ((D().safety||{}).recent||[]).forEach((e)=>{
+      const nm=e.displayName||e.personName||e.personId;
+      if(!nm||looksLikeId(nm)){ unnamedAlerts++; return; }
+      const s=String(e.riskLevel||"");
+      if(/high|crisis|crit/i.test(s)) add(nm,"",40,"安全警示・高風險",e.eventTime);
+      else if(/med|mod/i.test(s)) add(nm,"",20,"安全警示・中風險",e.eventTime);
+    });
+    ((D().familyHealth||{}).unwatchedList||[]).forEach((u)=>add(u.elderName,u.familyName,25,"沒人顧",u.lastFamilyActionAt));
+    ((D().medication||{}).people||[]).forEach((p)=>{
+      if((p.missedStreak||0)>=3) add(p.displayName,"",20,`連續漏服 ${n(p.missedStreak)} 天`,null);
+      else if(p.adherenceRate!=null&&p.adherenceRate<0.6) add(p.displayName,"",15,`用藥只做到 ${Math.round(p.adherenceRate*100)}%`,null);
+    });
+    ((D().moodTrend||{}).watchlist||[]).forEach((w)=>{
+      if((w.lowStreak||0)>=3) add(w.displayName,"",20,`連續低落 ${n(w.lowStreak)} 天`,w.lastSignalAt);
+      else if((w.lowCount||0)>=3) add(w.displayName,"",10,`近 7 天低落 ${n(w.lowCount)} 次`,w.lastSignalAt);
+    });
+    ((D().bondDepth||{}).stuckList||[]).forEach((b)=>add(b.displayName,b.familyName,10,`用了 ${n(b.daysSinceJoin)} 天還沒熟起來`,b.lastTalkAt));
+    ((D().accounts||{}).accounts||[]).forEach((a)=>{
+      const nm=(a.primaryPerson||{}).displayName||a.accountName, fam=(a.familyGroup||{}).name||"", u=a.usage||{};
+      if((a.status||"off")==="idle") add(nm,fam,15,"7 天以上沒通話",u.lastActiveAt);
+      if(Number(a.points||0)<20) add(nm,fam,5,`點數只剩 ${n(a.points||0)} 點`,u.lastActiveAt);
+    });
+    const rows=[...idx.values()].sort((x,y)=>y.score-x.score||String(x.name).localeCompare(String(y.name)));
+    return { rows, unnamedAlerts };
+  }
+
+  function renderCarePriority(){
+    const r0=carePriorityRows(), rows=r0.rows;
+    const urgent=rows.filter((r)=>r.score>=60).length, soon=rows.filter((r)=>r.score>=30&&r.score<60).length;
+    let html=kpiRow([
+      { label:"要立刻聯絡", value:n(urgent), sub:"警訊最多、今天就該打", star:true, info:"多個警訊同時出現（60 分以上）" },
+      { label:"這週要關心", value:n(soon), sub:"還不急、但別放著" },
+      { label:"名單上共", value:n(rows.length), sub:"有任何一項警訊的長輩" },
+      { label:"查不到姓名的警示", value:n(r0.unnamedAlerts), sub:r0.unnamedAlerts?"這些沒併進名單":"沒有" },
+    ]);
+    html+=principle("這張名單把「安全警示、沒人顧、用藥漏服、心情低落、關係沒建立起來、太久沒通話、點數見底」合起來看。分數只是排序用——真正要看的是「為什麼上榜」那一欄。系統不做醫療判讀，名單一律需要真人確認後處理。");
+    if(!rows.length){
+      html+=card("最需要關心的長輩", "把各項警訊合成一張名單", emptyBox("目前沒有人亮起警訊——很好。"));
+      return html;
+    }
+    html+=card("最需要關心的長輩", `共 ${rows.length} 位 · 越上面越該先聯絡`, tableHTML(["長輩","家庭","程度","為什麼上榜","最近動靜"], rows.slice(0,30).map((r)=>{
+      const lv=careLevel(r.score);
+      return [
+        `<b>${esc(r.name)}</b>`,
+        esc(r.family||"–"),
+        `<span class="pill ${lv.cls}"><span class="sdot"></span>${esc(lv.label)}</span>`,
+        `<div class="tag-row">${r.reasons.map((x)=>`<span class="pill mute">${esc(x)}</span>`).join("")}</div>`,
+        `<span class="muted small">${esc(fmtTime(r.lastAt))}</span>`,
+      ];
+    })));
+    return html;
+  }
 
   function renderUsers(){
     const accts=(D().accounts||{}).accounts||[];
@@ -792,7 +867,7 @@
 
   // ══════════ 導覽 ══════════
   function renderSide(){
-    const badges={ safety: state.connected?String((D().safety||{}).totals?.requiresHumanEscalation||0):"", feedback: state.connected?String(((D().feedback||{}).latest||[]).length||0):"" };
+    const badges={ safety: state.connected?String((D().safety||{}).totals?.requiresHumanEscalation||0):"", feedback: state.connected?String(((D().feedback||{}).latest||[]).length||0):"", care: state.connected?String(carePriorityRows().rows.filter((r)=>r.score>=60).length||0):"" };
     $("sideNav").innerHTML=NAV.map((g)=>`<div class="nav-group"><div class="nav-group-label">${esc(g.group)}</div><div class="side-nav">${g.items.map((it)=>{
       const bv=badges[it.badge]; const b= it.badge&&bv&&bv!=="0"?`<span class="nav-badge">${esc(bv)}</span>`:"";
       return `<a href="#${it.id}" data-page="${it.id}">${icon(it.id)}<span class="nav-label">${esc(it.label)}</span>${b}</a>`;
