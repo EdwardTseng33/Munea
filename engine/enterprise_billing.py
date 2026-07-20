@@ -40,6 +40,11 @@ TAX_RATE = Decimal("0.05")
 PAYMENT_DUE_DAY = 15  # 需求單 4.2／5.2：付款期限＝次月 15 日前
 OVERDUE_GRACE_DAYS = 7  # 需求單 4.3／5.3：逾期 7 天以上 → 不出月報
 PRIVACY_MIN_GROUP_SIZE = 5  # 需求單 4.4 第 3 條：分組人數 < 5 不單獨呈現
+# 2026-07-20 補：sampleSize 本身也是「該組數字」，遮蔽時不留精確整數（例如 3），
+# 換成這個粗粒度區間字串——跟其他數值欄位一樣被清空成非數字，enforce_privacy_guard()
+# 的規則 3 才能用同一套「suppressed 區塊裡不准有任何數字」邏輯一次擋住，不用為
+# sampleSize 另開特例白名單。
+SUPPRESSED_SAMPLE_SIZE_LABEL = "<5"
 
 INVOICE_STATUSES = ("draft", "issued", "paid", "invoiced", "void")  # 需求單 5.2：020_enterprise_seats.sql 狀態流
 NON_BILLABLE_SEAT_STATUSES = {"pending", "waiting"}  # 需求單 4.1 + 5A：pending／waiting 一律不計費
@@ -857,7 +862,7 @@ def _build_section_companionship(cohort_size, period_start, period_end, daily_ro
     continued_usage_rate = round(accounts_with_activity / cohort_size, 4) if cohort_size else None
 
     return {
-        "sampleSize": cohort_size,
+        "sampleSize": SUPPRESSED_SAMPLE_SIZE_LABEL if suppressed else cohort_size,
         "suppressed": suppressed,
         "avgWeeklyCallCount": None if suppressed else avg_weekly_call_count,
         "meaningfulCompanionDayRatio": None if suppressed else meaningful_day_ratio,
@@ -876,7 +881,7 @@ def _build_section_care(cohort_size, reminder_rows, safety_rows):
     notifications_sent = sum(1 for r in safety_rows if r.get("status") in ("notified", "resolved"))
     caught_in_time = sum(1 for r in safety_rows if r.get("status") == "resolved")
     return {
-        "sampleSize": cohort_size,
+        "sampleSize": SUPPRESSED_SAMPLE_SIZE_LABEL if suppressed else cohort_size,
         "suppressed": suppressed,
         "reminderCompletionRate": None if suppressed else completion_rate,
         "careNotificationsSent": None if suppressed else notifications_sent,
@@ -893,7 +898,7 @@ def _build_section_family_value(cohort_size, cohort_account_ids, family_rows):
     }
     ratio = round(len(notified_accounts) / cohort_size, 4) if cohort_size else None
     return {
-        "sampleSize": cohort_size,
+        "sampleSize": SUPPRESSED_SAMPLE_SIZE_LABEL if suppressed else cohort_size,
         "suppressed": suppressed,
         "familiesNotifiedRatio": None if suppressed else ratio,
     }
@@ -1022,12 +1027,33 @@ def _iter_list_of_dicts(obj):
     return found
 
 
+def _iter_numeric_leaves(obj, key_context=""):
+    """遞迴收集所有 (key_context, number)——用來抓規則 3 的真正漏洞：
+    一個區塊標了 suppressed=True，但底下還留著沒清成 None 的數字（int／float，
+    bool 不算數字）。用遞迴掃、不是只看第一層，是因為區塊結構以後可能長出巢狀欄位，
+    這道防線不該假設『suppressed 區塊永遠只有一層』。"""
+    out = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            out.extend(_iter_numeric_leaves(v, str(k)))
+    elif isinstance(obj, list):
+        for item in obj:
+            out.extend(_iter_numeric_leaves(item, key_context))
+    elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
+        out.append((key_context, obj))
+    return out
+
+
 def enforce_privacy_guard(report):
     """需求單 4.4 隱私鐵律，一次全部檢查，任一條違反就丟 PrivacyViolationError，
     呼叫端不准接著產出。四條規則：
       1. 不得含任何長輩姓名、帳號識別、聯絡方式
       2. 不得含任何對話內容或摘要片段
-      3. 任何分組人數 < 5 時該組數字不單獨呈現（要真的遮蔽，不是只標注）
+      3. 任何分組人數 < 5 時該組數字不單獨呈現（要真的遮蔽，不是只標注）——
+         這條分兩半查：(a) sampleSize 是數字且 < 5、卻沒標 suppressed → 擋；
+         (b) 標了 suppressed=True，區塊裡卻還留著任何數字（sampleSize 本身也算，
+         見 SUPPRESSED_SAMPLE_SIZE_LABEL）→ 擋。只查有沒有標注、不查有沒有真的
+         清空數字，等於沒擋——2026-07-20 蘇菲 review 抓到這個洞，(b) 是補上的。
       4. 只輸出彙總數字與比例（不准放逐人清單）
     """
     violations = []
@@ -1064,8 +1090,27 @@ def enforce_privacy_guard(report):
         if not isinstance(section, dict):
             continue
         sample_size = section.get("sampleSize")
-        if sample_size is not None and sample_size < PRIVACY_MIN_GROUP_SIZE and not section.get("suppressed"):
+        is_flagged_suppressed = bool(section.get("suppressed"))
+
+        # 3a：樣本數是數字（還沒被遮蔽成 SUPPRESSED_SAMPLE_SIZE_LABEL）且 < 5，
+        # 卻沒有標 suppressed——只查得到「有沒有標注」，抓漏標的情況。
+        if (
+            isinstance(sample_size, (int, float))
+            and not isinstance(sample_size, bool)
+            and sample_size < PRIVACY_MIN_GROUP_SIZE
+            and not is_flagged_suppressed
+        ):
             violations.append(f"規則3違反：區塊「{section_name}」樣本數 {sample_size} < 5，但沒有被標記為 suppressed，數字外洩風險")
+
+        # 3b：標了 suppressed=True，就必須「真的」遮蔽——區塊裡不准還留著任何數字，
+        # sampleSize 本身也在檢查範圍內（沒被換成 SUPPRESSED_SAMPLE_SIZE_LABEL 的話，
+        # 這裡一樣會被抓到）。這是補上「只標注、沒真的清空」那個洞的地方。
+        if is_flagged_suppressed:
+            for field, value in _iter_numeric_leaves(section):
+                violations.append(
+                    f"規則3違反：區塊「{section_name}」已標記 suppressed，但欄位「{field}」仍是數字 {value}，"
+                    f"只有標注沒有真的遮蔽"
+                )
 
     if violations:
         raise PrivacyViolationError("；".join(violations))
