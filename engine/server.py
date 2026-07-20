@@ -180,6 +180,8 @@ MEANINGFUL_EVENT_NAMES = {
     "avatar_session_completed",
     "companion_summary_created",
 }
+# 家庭圈健康度：家人「看過」的訊號（跟 product_events 的 eventName 對應，不含長輩自己的動作）
+FAMILY_ENGAGEMENT_EVENT_NAMES = ("family_dashboard_viewed", "family_message_viewed")
 AVATAR_MODE_ALIASES = {
     "static": "static-css",
     "css": "static-css",
@@ -344,6 +346,10 @@ ADMIN_POST_PATHS = {
     "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
+    "/admin/medication-adherence",
+    "/admin/family-health",
+    "/admin/mood-trend",
+    "/admin/bond-depth",
     "/admin/voice-diagnostics",
     "/admin/notifications/drain",
     "/admin/login",
@@ -4563,6 +4569,893 @@ def admin_safety_events_summary(data=None):
     }
 
 
+def _dose_adherence_rate(taken, skipped, missed):
+    """依從率＝做到 ÷（做到＋跳過＋漏服）；分母 0（還沒有結果）誠實回 None，不冒充 0。"""
+    denom = taken + skipped + missed
+    if denom <= 0:
+        return None
+    return round(taken / denom, 4)
+
+
+def load_admin_medication_dose_events(days=30, limit=3000):
+    """後台跨帳號用藥事件：Supabase service-role 全表查詢（不篩 account_id），失敗退回本地 JSON。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(5000, int(limit or 3000)))
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days - 1)
+    since_date = since.strftime("%Y-%m-%d")
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_medication_doses(since_date=since_date, limit=limit)
+        if remote_items is not None:
+            normalized_remote = [normalize_medication_dose(item) for item in remote_items]
+            record_admin_data_source(
+                "medication_dose_events",
+                "supabase",
+                record_count=len(normalized_remote),
+                data_as_of=latest_record_timestamp(normalized_remote),
+            )
+            return normalized_remote, since_date
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin medication doses from Supabase", e)
+    items = read_json_file(MEDICATION_DOSES_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [normalize_medication_dose(item) for item in items]
+    items = [item for item in items if (item.get("scheduledDate") or "") >= since_date]
+    items = items[:limit]
+    record_admin_data_source(
+        "medication_dose_events",
+        "json",
+        record_count=len(items),
+        data_as_of=latest_record_timestamp(items),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return items, since_date
+
+
+def admin_medication_adherence(data=None):
+    """用藥與回診：依從率＋每日趨勢＋需要關心的人（連續漏服）。
+    只講『有沒有照提醒做到』，不做診斷或醫療建議——真正的健康判讀交給家人與醫療團隊。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    items, since_date = load_admin_medication_dose_events(days=days, limit=3000)
+
+    totals = {"scheduled": 0, "taken": 0, "snoozed": 0, "skipped": 0, "missed": 0}
+    daily = {}
+    people = {}
+
+    for item in items:
+        status = item.get("status") or "scheduled"
+        if status in totals:
+            totals[status] += 1
+        date = str(item.get("scheduledDate") or "")[:10]
+        if date:
+            bucket = daily.setdefault(date, {"date": date, "taken": 0, "missed": 0, "skipped": 0})
+            if status in bucket:
+                bucket[status] += 1
+        person_id = item.get("personId") or ""
+        account_id = item.get("accountId") or ""
+        key = person_id or (("account:" + account_id) if account_id else "unknown")
+        person = people.setdefault(key, {
+            "personId": person_id or None,
+            "accountId": account_id or None,
+            "taken": 0, "missed": 0, "skipped": 0,
+            "_days": {},
+        })
+        if status in ("taken", "missed", "skipped"):
+            person[status] += 1
+        if date:
+            day = person["_days"].setdefault(date, {"taken": 0, "missed": 0, "skipped": 0})
+            if status in day:
+                day[status] += 1
+
+    daily_list = [daily[d] for d in sorted(daily.keys())]
+
+    person_ids = [p.get("personId") for p in people.values() if p.get("personId")]
+    display_names = {}
+    try:
+        backend = data_backend()
+        if backend.enabled() and person_ids:
+            display_names = backend.load_persons_by_ids(person_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load person display names for medication adherence", e)
+
+    people_list = []
+    for entry in people.values():
+        day_map = entry.pop("_days")
+        streak = 0
+        for dt in sorted(day_map.keys(), reverse=True):
+            day = day_map[dt]
+            if day["taken"] > 0 or day["skipped"] > 0:
+                break
+            if day["missed"] > 0:
+                streak += 1
+                continue
+            # 全是還沒到期的 scheduled/snoozed：不算、也不打斷連續漏服計算
+        entry["missedStreak"] = streak
+        entry["adherenceRate"] = _dose_adherence_rate(entry["taken"], entry["skipped"], entry["missed"])
+        pid = entry.get("personId")
+        if pid and display_names.get(pid):
+            entry["displayName"] = display_names.get(pid)
+        people_list.append(entry)
+
+    def sort_key(p):
+        rate = p.get("adherenceRate")
+        return (-(p.get("missedStreak") or 0), rate if rate is not None else 2)
+
+    people_list.sort(key=sort_key)
+    people_list = people_list[:limit]
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_date,
+        "totals": totals,
+        "adherenceRate": _dose_adherence_rate(totals["taken"], totals["skipped"], totals["missed"]),
+        "daily": daily_list,
+        "people": people_list,
+        "principle": "這裡只看『有沒有照提醒做到』，不做診斷或醫療建議；需要關心請家人直接跟長輩確認或聯繫醫療團隊。",
+        "backend": data_backend_status(),
+    }
+
+
+# 心情趨勢：只用 wellbeing_signals（每輪對話後真寫的心情觀察）。
+# perception_snapshots 是情境感知快照、不是心情資料，這裡不用；系統也沒有記錄「孤獨」這種心情。
+MOOD_POSITIVE = ("happy", "pleasant")
+MOOD_STEADY = ("steady",)
+MOOD_LOW = ("low", "tired", "irritated")
+
+
+def _mood_bucket(mood):
+    """英文心情詞歸桶：正向／平穩／低落／其他（mixed、unknown、或任何對不上的怪值都算其他）。"""
+    m = str(mood or "").strip().lower()
+    if m in MOOD_POSITIVE:
+        return "positive"
+    if m in MOOD_STEADY:
+        return "steady"
+    if m in MOOD_LOW:
+        return "low"
+    return "other"
+
+
+def _low_mood_streak(day_map):
+    """連續低落天數：從『有心情訊號的最近一天』回推，要求日曆日真的相鄰（中間斷一天就不算連續），
+    且該天至少有 1 筆低落類心情，才算連續中的一天。day_map: {"YYYY-MM-DD": {"low": 次數}}。"""
+    if not day_map:
+        return 0
+    streak = 0
+    anchor = None
+    for dt in sorted(day_map.keys(), reverse=True):
+        try:
+            d = datetime.strptime(dt, "%Y-%m-%d").date()
+        except ValueError:
+            break
+        if anchor is not None and (anchor - d).days != 1:
+            break
+        if day_map[dt]["low"] <= 0:
+            break
+        streak += 1
+        anchor = d
+    return streak
+
+
+def load_admin_wellbeing_signal_rows(days=30, limit=5000):
+    """後台跨帳號心情訊號：Supabase service-role 全表查詢近 N 天（不篩 account_id），失敗退回本地 JSON。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(10000, int(limit or 5000)))
+    now = datetime.now(timezone.utc)
+    since_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) - timedelta(days=days - 1)
+    since_iso = since_day.strftime("%Y-%m-%dT%H:%M:%SZ")
+    since_date = since_day.strftime("%Y-%m-%d")
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_wellbeing_signals(since_iso=since_iso, limit=limit)
+        if remote_items is not None:
+            record_admin_data_source(
+                "wellbeing_signals",
+                "supabase",
+                record_count=len(remote_items),
+                data_as_of=latest_record_timestamp(remote_items),
+            )
+            return remote_items, since_date
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin wellbeing signals from Supabase", e)
+    items = read_json_file(WELLBEING_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [item for item in items if (item.get("date") or "") >= since_date]
+    items = items[:limit]
+    # JSON 備援路徑存的是原始 signal dict（mood 常是中文原字）：跟 Supabase 路徑共用同一張換算表，
+    # 讓兩條讀取路徑對 _mood_bucket 而言看起來一樣，不會因為退到本地檔案就整批變回 other。
+    for item in items:
+        item["mood"] = supabase_adapter.recover_admin_wellbeing_mood(item)
+    record_admin_data_source(
+        "wellbeing_signals",
+        "json",
+        record_count=len(items),
+        data_as_of=latest_record_timestamp(items),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return items, since_date
+
+
+def admin_mood_trend(data=None):
+    """心情趨勢：跨帳號心情訊號趨勢＋需要關心名單。
+    這是陪伴聊天時的心情紀錄，由 AI 依對話內容推測，不是醫療診斷、也不是健康建議——
+    只聚合次數與分數，絕不把聊天內容或任何原始對話文字帶進這支回應；異常請由真人關心確認。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    items, since_date = load_admin_wellbeing_signal_rows(days=days, limit=5000)
+
+    totals = {"signals": 0, "positive": 0, "steady": 0, "low": 0, "other": 0}
+    level_sum, level_count = 0.0, 0
+    daily = {}
+    people = {}
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=6)).strftime("%Y-%m-%d")
+
+    for item in items:
+        bucket = _mood_bucket(item.get("mood"))
+        totals["signals"] += 1
+        totals[bucket] += 1
+        level = item.get("level")
+        is_number = isinstance(level, (int, float)) and not isinstance(level, bool)
+        if is_number:
+            level_sum += level
+            level_count += 1
+        date = str(item.get("date") or "")[:10]
+        if date:
+            bucket_day = daily.setdefault(date, {"date": date, "positive": 0, "low": 0, "_levelSum": 0.0, "_levelCount": 0})
+            if bucket == "positive":
+                bucket_day["positive"] += 1
+            elif bucket == "low":
+                bucket_day["low"] += 1
+            if is_number:
+                bucket_day["_levelSum"] += level
+                bucket_day["_levelCount"] += 1
+        person_id = item.get("personId") or ""
+        account_id = item.get("accountId") or ""
+        key = person_id or (("account:" + account_id) if account_id else "unknown")
+        person = people.setdefault(key, {"personId": person_id or None, "accountId": account_id or None, "lastSignalAt": None, "_days": {}})
+        observed_at = item.get("observedAt") or item.get("createdAt")
+        if observed_at and (person["lastSignalAt"] is None or str(observed_at) > str(person["lastSignalAt"])):
+            person["lastSignalAt"] = observed_at
+        if date:
+            day = person["_days"].setdefault(date, {"low": 0})
+            if bucket == "low":
+                day["low"] += 1
+
+    daily_list = []
+    for d in sorted(daily.keys()):
+        b = daily[d]
+        avg_level = round(b["_levelSum"] / b["_levelCount"], 1) if b["_levelCount"] else None
+        daily_list.append({"date": d, "positive": b["positive"], "low": b["low"], "avgLevel": avg_level})
+
+    average_level = round(level_sum / level_count, 2) if level_count else None
+    denom = totals["positive"] + totals["steady"] + totals["low"]
+    positive_rate = round(totals["positive"] / denom, 4) if denom else None
+    low_rate = round(totals["low"] / denom, 4) if denom else None
+
+    person_ids = [p.get("personId") for p in people.values() if p.get("personId")]
+    display_names = {}
+    try:
+        backend = data_backend()
+        if backend.enabled() and person_ids:
+            display_names = backend.load_persons_by_ids(person_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load person display names for mood trend", e)
+
+    watchlist = []
+    for entry in people.values():
+        day_map = entry.pop("_days")
+        low_count_7d = sum(day["low"] for dt, day in day_map.items() if dt >= seven_days_ago)
+        low_streak = _low_mood_streak(day_map)
+        if low_count_7d < 3 and low_streak < 3:
+            continue
+        pid = entry.get("personId")
+        watch_entry = {
+            "personId": pid,
+            "accountId": entry.get("accountId"),
+            "lowCount": low_count_7d,
+            "lowStreak": low_streak,
+            "lastSignalAt": entry.get("lastSignalAt"),
+        }
+        if pid and display_names.get(pid):
+            watch_entry["displayName"] = display_names.get(pid)
+        watchlist.append(watch_entry)
+
+    watchlist.sort(key=lambda p: (-(p.get("lowStreak") or 0), -(p.get("lowCount") or 0)))
+    watchlist = watchlist[:limit]
+
+    principle_text = (
+        "這是陪伴聊天時的心情紀錄，由 AI 依對話內容推測，不是醫療診斷、也不是健康建議；異常請由真人關心確認。"
+        "「需要關心」＝近 7 天內出現 3 次以上低落類心情，或連續 3 天都有低落類心情。"
+    )
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_date,
+        "totals": totals,
+        "averageLevel": average_level,
+        "positiveRate": positive_rate,
+        "lowRate": low_rate,
+        "daily": daily_list,
+        "watchlist": watchlist,
+        "principle": principle_text,
+        "backend": data_backend_status(),
+    }
+
+
+def load_admin_family_membership_rows(limit=5000):
+    """後台跨帳號家庭圈成員名單：Supabase service-role 全表查詢，失敗退回本機示範家庭圈
+    （本地 JSON 模式沒有多帳號概念，就只有機器上這一戶）。"""
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_rows = backend.load_admin_family_memberships(limit=limit)
+        if remote_rows is not None:
+            record_admin_data_source(
+                "family_memberships",
+                "supabase",
+                record_count=len(remote_rows),
+                data_as_of=latest_record_timestamp(remote_rows),
+            )
+            return remote_rows
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family memberships from Supabase", e)
+    store = load_app_profile_store()
+    family_group = store.get("familyGroup") or {}
+    account = store.get("account") or {}
+    members = family_group.get("members") or []
+    rows = [{
+        "id": m.get("id"),
+        "accountId": account.get("id") or "local-demo-account",
+        "familyGroupId": family_group.get("id") or "local-demo-family",
+        "personId": m.get("id"),
+        "role": m.get("role") or "family_contact",
+        "createdAt": m.get("createdAt"),
+        "updatedAt": m.get("updatedAt"),
+    } for m in members][:limit]
+    record_admin_data_source(
+        "family_memberships",
+        "json",
+        record_count=len(rows),
+        data_as_of=latest_record_timestamp(rows),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return rows
+
+
+def _family_health_since(days):
+    now = datetime.now(timezone.utc)
+    since_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) - timedelta(days=max(1, int(days or 30)) - 1)
+    return since_day.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def load_admin_family_relay_rows(days=30, limit=5000):
+    """後台跨帳號家人傳話：近 N 天，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(10000, int(limit or 5000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_family_relay_messages(since_iso=since_iso, limit=limit)
+        if remote_items is not None:
+            record_admin_data_source(
+                "family_relay_messages",
+                "supabase",
+                record_count=len(remote_items),
+                data_as_of=latest_record_timestamp(remote_items),
+            )
+            return remote_items, since_iso
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family relay messages from Supabase", e)
+    items = read_json_file(FAMILY_RELAYS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [normalize_family_relay(item) for item in items]
+    items = [item for item in items if (item.get("createdAt") or "") >= since_iso]
+    items = items[:limit]
+    record_admin_data_source(
+        "family_relay_messages",
+        "json",
+        record_count=len(items),
+        data_as_of=latest_record_timestamp(items),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return items, since_iso
+
+
+def load_admin_family_activity_rows(days=30, limit=3000):
+    """後台跨帳號家庭活動＋參與者：近 N 天，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(5000, int(limit or 3000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_activities = backend.load_admin_family_activities(since_iso=since_iso, limit=limit)
+        if remote_activities is not None:
+            remote_participants = backend.load_admin_family_activity_participants(since_iso=since_iso, limit=limit * 4) or []
+            record_admin_data_source(
+                "family_activities", "supabase",
+                record_count=len(remote_activities), data_as_of=latest_record_timestamp(remote_activities),
+            )
+            record_admin_data_source(
+                "family_activity_participants", "supabase",
+                record_count=len(remote_participants), data_as_of=latest_record_timestamp(remote_participants),
+            )
+            return remote_activities, remote_participants, since_iso
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family activities from Supabase", e)
+    activities_raw = read_json_file(FAMILY_ACTIVITIES_PATH, [])
+    if not isinstance(activities_raw, list):
+        activities_raw = []
+    activities = [normalize_family_activity(a) for a in activities_raw]
+    activities = [a for a in activities if (a.get("updatedAt") or "") >= since_iso]
+    participants = []
+    for a in activities:
+        for p in a.get("participants") or []:
+            participants.append({**p, "activityId": a.get("id")})
+    activities = activities[:limit]
+    record_admin_data_source(
+        "family_activities", "json",
+        record_count=len(activities), data_as_of=latest_record_timestamp(activities),
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    record_admin_data_source(
+        "family_activity_participants", "json",
+        record_count=len(participants), data_as_of=None,
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    return activities, participants, since_iso
+
+
+def load_admin_family_engagement_rows(days=30, limit=5000):
+    """後台跨帳號『看家庭看板／看家人訊息』：近 N 天，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(10000, int(limit or 5000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_events = backend.load_admin_family_engagement_events(FAMILY_ENGAGEMENT_EVENT_NAMES, since_iso=since_iso, limit=limit)
+        if remote_events is not None:
+            record_admin_data_source(
+                "family_engagement_events", "supabase",
+                record_count=len(remote_events), data_as_of=latest_record_timestamp(remote_events),
+            )
+            return remote_events, since_iso
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family engagement events from Supabase", e)
+    raw_store = read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store())
+    raw_events = raw_store.get("events", []) if isinstance(raw_store, dict) else []
+    events = [normalize_product_event(e) for e in raw_events]
+    events = [e for e in events if e.get("eventName") in FAMILY_ENGAGEMENT_EVENT_NAMES and (e.get("eventTime") or "") >= since_iso]
+    events = events[:limit]
+    record_admin_data_source(
+        "family_engagement_events", "json",
+        record_count=len(events), data_as_of=latest_record_timestamp(events),
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    return events, since_iso
+
+
+def load_admin_family_invitation_rows(days=30, limit=3000):
+    """後台跨帳號邀請成效：近 N 天建立的邀請，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(5000, int(limit or 3000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_family_invitations(since_iso=since_iso, limit=limit)
+        if remote_items is not None:
+            record_admin_data_source(
+                "family_invitations", "supabase",
+                record_count=len(remote_items), data_as_of=latest_record_timestamp(remote_items),
+            )
+            return remote_items
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family invitations from Supabase", e)
+    items = read_json_file(FAMILY_INVITATIONS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [normalize_family_invitation(item) for item in items]
+    items = [item for item in items if (item.get("createdAt") or "") >= since_iso]
+    items = items[:limit]
+    record_admin_data_source(
+        "family_invitations", "json",
+        record_count=len(items), data_as_of=latest_record_timestamp(items),
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    return items
+
+
+def admin_family_health(data=None):
+    """家庭圈健康度：有沒有家人在關心長輩——傳話、看家庭看板或家人訊息、參與家庭活動，任一都算『有人顧』。
+    長輩自己的動作不算；這裡只看『有沒有動作』，不評斷家人感情好不好、也不做關係品質判讀。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+
+    membership_rows = load_admin_family_membership_rows(limit=5000)
+    relay_rows, since_iso = load_admin_family_relay_rows(days=days, limit=5000)
+    activity_rows, participant_rows, _ = load_admin_family_activity_rows(days=days, limit=3000)
+    engagement_events, _ = load_admin_family_engagement_rows(days=days, limit=5000)
+    invitations = load_admin_family_invitation_rows(days=days, limit=3000)
+
+    households = {}
+    for row in membership_rows:
+        fg = row.get("familyGroupId")
+        if not fg:
+            continue
+        h = households.setdefault(fg, {"accountId": None, "elderPersonId": None, "memberIds": set()})
+        role = row.get("role") or "family_contact"
+        person_id = row.get("personId")
+        if role == "primary_user":
+            h["elderPersonId"] = person_id
+            h["accountId"] = row.get("accountId") or h["accountId"]
+        elif person_id:
+            h["memberIds"].add(person_id)
+        if not h["accountId"]:
+            h["accountId"] = row.get("accountId") or h["accountId"]
+
+    active = {fg: set() for fg in households}
+
+    def mark_active(fg, person_id):
+        if not fg or not person_id:
+            return
+        h = households.get(fg)
+        if h is None:
+            return
+        if person_id == h.get("elderPersonId"):
+            return
+        active.setdefault(fg, set()).add(person_id)
+
+    daily_messages = {}
+    daily_views = {}
+
+    for row in relay_rows:
+        fg = row.get("familyGroupId")
+        day = str(row.get("createdAt") or "")[:10]
+        if day:
+            daily_messages[day] = daily_messages.get(day, 0) + 1
+        mark_active(fg, row.get("senderPersonId"))
+        mark_active(fg, row.get("recipientPersonId"))
+
+    activity_family = {}
+    for a in activity_rows:
+        aid = a.get("id")
+        if aid:
+            activity_family[aid] = a.get("familyGroupId")
+    for p in participant_rows:
+        aid = p.get("activityId") or p.get("family_activity_id")
+        fg = activity_family.get(aid)
+        mark_active(fg, p.get("personId") or p.get("person_id"))
+
+    viewer_people = set()
+    for ev in engagement_events:
+        fg = ev.get("familyGroupId")
+        person_id = ev.get("personId")
+        day = str(ev.get("eventTime") or "")[:10]
+        if day:
+            daily_views[day] = daily_views.get(day, 0) + 1
+        if person_id:
+            viewer_people.add(person_id)
+        mark_active(fg, person_id)
+
+    household_ids = list(households.keys())
+    total_households = len(household_ids)
+    members_total = sum(len(h["memberIds"]) for h in households.values())
+    with_active_guardian = sum(1 for fg in household_ids if active.get(fg))
+    multi_guardian = sum(1 for fg in household_ids if len(active.get(fg) or set()) >= 2)
+    unwatched_fgs = [fg for fg in household_ids if not active.get(fg)]
+
+    guarded_rate = round(with_active_guardian / total_households, 4) if total_households else None
+
+    sent = len(invitations)
+    accepted = sum(1 for i in invitations if i.get("status") == "accepted")
+    pending_invites = sum(1 for i in invitations if i.get("status") == "pending")
+    accept_rate = round(accepted / sent, 4) if sent else None
+
+    all_days = sorted(set(daily_messages) | set(daily_views))
+    daily = [{"date": d, "messages": daily_messages.get(d, 0), "views": daily_views.get(d, 0)} for d in all_days]
+
+    last_action = {}
+    try:
+        backend = data_backend()
+        if backend.enabled() and unwatched_fgs:
+            last_action = backend.load_admin_family_last_action(unwatched_fgs, FAMILY_ENGAGEMENT_EVENT_NAMES, limit=2000) or {}
+    except Exception as e:
+        log_fallback_exception("load admin family last action", e)
+
+    person_ids_needed = {households[fg]["elderPersonId"] for fg in unwatched_fgs if households[fg].get("elderPersonId")}
+    display_names = {}
+    family_names = {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            if person_ids_needed:
+                display_names = backend.load_persons_by_ids(list(person_ids_needed)) or {}
+            if unwatched_fgs:
+                family_names = backend.load_family_groups_by_ids(unwatched_fgs) or {}
+    except Exception as e:
+        log_fallback_exception("load person/family display names for family health", e)
+
+    unwatched_list = []
+    for fg in unwatched_fgs:
+        h = households[fg]
+        elder_id = h.get("elderPersonId")
+        unwatched_list.append({
+            "accountId": h.get("accountId"),
+            "familyName": family_names.get(fg) or "Munea Care Circle",
+            "elderName": (elder_id and display_names.get(elder_id)) or "長輩",
+            "memberCount": len(h["memberIds"]),
+            "lastFamilyActionAt": last_action.get(fg),
+        })
+    unwatched_list.sort(key=lambda item: item.get("lastFamilyActionAt") or "")
+    unwatched_list = unwatched_list[:limit]
+
+    principle_text = (
+        "『有人顧』的算法：近 " + str(days) + " 天內，家人只要有傳話、看過家庭看板或家人訊息、"
+        "或參與家庭活動任一動作，就算這家有人在顧；長輩自己的動作不算。"
+        "這裡只看『有沒有動作』，不評斷家人感情好不好。"
+    )
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_iso,
+        "totals": {
+            "households": total_households,
+            "membersTotal": members_total,
+            "withActiveGuardian": with_active_guardian,
+            "multiGuardian": multi_guardian,
+            "unwatched": len(unwatched_fgs),
+        },
+        "guardedRate": guarded_rate,
+        "invites": {
+            "sent": sent,
+            "accepted": accepted,
+            "pending": pending_invites,
+            "acceptRate": accept_rate,
+        },
+        "relay": {
+            "messages": len(relay_rows),
+            "viewers": len(viewer_people),
+        },
+        "daily": daily,
+        "unwatchedList": unwatched_list,
+        "principle": principle_text,
+        "backend": data_backend_status(),
+    }
+
+
+def load_admin_relationship_state_rows(limit=5000):
+    """後台跨帳號關係深度：Supabase service-role 全表查詢目前關係狀態（現況快照，不分時間窗），
+    失敗退回本地 JSON。只留 person/account/等級/時間，不帶 tone/boundaries/relationshipMemory 內容。"""
+    limit = max(1, min(10000, int(limit or 5000)))
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_rows = backend.load_admin_relationship_states(limit=limit)
+        if remote_rows is not None:
+            record_admin_data_source(
+                "companion_relationship_states",
+                "supabase",
+                record_count=len(remote_rows),
+                data_as_of=latest_record_timestamp(remote_rows),
+            )
+            return remote_rows
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin relationship states from Supabase", e)
+    states = load_relationship_states(limit=limit)
+    rows = [{
+        "personId": s.get("personId"),
+        "accountId": s.get("accountId"),
+        "rapportLevel": s.get("rapportLevel") or "new",
+        "createdAt": s.get("createdAt"),
+        "updatedAt": s.get("updatedAt"),
+    } for s in states]
+    record_admin_data_source(
+        "companion_relationship_states",
+        "json",
+        record_count=len(rows),
+        data_as_of=latest_record_timestamp(rows),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return rows
+
+
+def load_admin_memory_item_count_rows(limit=20000):
+    """後台跨帳號記憶筆數：Supabase service-role 全表查詢（不篩 account_id），失敗退回本地 JSON。
+    只留 person/account/建立時間，內容一律不進這支——後台『關係深度』頁只算幾筆，不碰記憶內容。"""
+    limit = max(1, min(50000, int(limit or 20000)))
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_rows = backend.load_admin_memory_item_counts(limit=limit)
+        if remote_rows is not None:
+            record_admin_data_source(
+                "memory_items",
+                "supabase",
+                record_count=len(remote_rows),
+                data_as_of=latest_record_timestamp(remote_rows),
+            )
+            return remote_rows
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin memory item counts from Supabase", e)
+    items = read_json_file(MEMORY_ITEMS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    rows = [{
+        "personId": it.get("personId"),
+        "accountId": it.get("accountId"),
+        "createdAt": it.get("createdAt"),
+    } for it in items if it.get("personId")][:limit]
+    record_admin_data_source(
+        "memory_items",
+        "json",
+        record_count=len(rows),
+        data_as_of=latest_record_timestamp(rows),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return rows
+
+
+def admin_bond_depth(data=None):
+    """關係深度：沐寧跟每位長輩處得多熟——新認識／熟悉／信任／親近四階，加上記住幾件事。
+    量的是黏著度／護城河：關係養越深越不會退訂，卡在淺層的最可能默默流失。
+    只看筆數與階段，記憶內容一律不進這支回應；卡住名單抓『用了很久卻還沒熟起來』的人，建議真人多關心。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+    stuck_days = max(1, min(365, int(data.get("stuckDays") or 14)))
+
+    relationship_rows = load_admin_relationship_state_rows(limit=10000)
+    memory_rows = load_admin_memory_item_count_rows(limit=50000)
+
+    now = datetime.now(timezone.utc)
+    since_iso = (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    people = {}
+    for row in relationship_rows:
+        pid = row.get("personId")
+        if not pid:
+            continue
+        prev = people.get(pid)
+        if not prev or str(row.get("updatedAt") or "") > str(prev.get("updatedAt") or ""):
+            people[pid] = row
+
+    memory_counts = {}
+    for row in memory_rows:
+        pid = row.get("personId")
+        if not pid:
+            continue
+        memory_counts[pid] = memory_counts.get(pid, 0) + 1
+
+    totals = {"people": 0, "newly": 0, "familiar": 0, "trusted": 0, "close": 0}
+    active_person_ids = []
+    for pid, row in people.items():
+        level = row.get("rapportLevel") or "new"
+        if level not in ("new", "familiar", "trusted", "close"):
+            level = "new"
+        updated_at = str(row.get("updatedAt") or "")
+        if updated_at and updated_at >= since_iso:
+            totals["people"] += 1
+            totals["newly" if level == "new" else level] += 1
+            active_person_ids.append(pid)
+
+    if active_person_ids:
+        avg_memories = round(sum(memory_counts.get(pid, 0) for pid in active_person_ids) / len(active_person_ids), 1)
+    else:
+        avg_memories = None
+
+    # 升級速度：目前系統只存『現在』的等級，沒留『何時從新認識變熟悉』的歷史時間點，
+    # 算不出來就誠實回 null——不瞎猜，等之後加了升級事件紀錄才補這個數字。
+    upgrade_days = None
+
+    person_ids_for_names = list(people.keys())
+    account_ids_for_names = sorted({row.get("accountId") for row in people.values() if row.get("accountId")})
+    display_names = {}
+    family_names_by_account = {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            if person_ids_for_names:
+                display_names = backend.load_persons_by_ids(person_ids_for_names) or {}
+            if account_ids_for_names:
+                family_names_by_account = backend.load_family_groups_by_account_ids(account_ids_for_names) or {}
+    except Exception as e:
+        log_fallback_exception("load person/family display names for bond depth", e)
+
+    stuck_list = []
+    for pid, row in people.items():
+        level = row.get("rapportLevel") or "new"
+        if level != "new":
+            continue
+        created_dt = parse_optional_iso_datetime(row.get("createdAt"))
+        if created_dt is None:
+            continue
+        days_since_join = (now - created_dt).days
+        if days_since_join <= stuck_days:
+            continue
+        account_id = row.get("accountId")
+        stuck_list.append({
+            "personId": pid,
+            "accountId": account_id,
+            "displayName": display_names.get(pid) or "長輩",
+            "familyName": family_names_by_account.get(account_id) or "Munea Care Circle",
+            "memories": memory_counts.get(pid, 0),
+            "level": "newly",
+            "daysSinceJoin": days_since_join,
+            "lastTalkAt": row.get("updatedAt"),
+        })
+
+    stuck_list.sort(key=lambda item: -(item.get("daysSinceJoin") or 0))
+    stuck_total = len(stuck_list)
+    stuck_list = stuck_list[:limit]
+    totals["stuck"] = stuck_total
+
+    principle_text = (
+        "『關係深度』看沐寧跟每位長輩處得多熟：新認識→熟悉→信任→親近，越後面代表陪伴越深、越不容易流失。"
+        "分佈與平均記憶筆數只算「近 " + str(days) + " 天內還有互動」的人，避免很久沒用的帳號拖低數字；"
+        "記憶只算「記住幾件事」，內容一律不進這支回應。"
+        "升級速度目前系統沒留『何時升級』的時間點，算不出來先誠實回 null，不瞎猜。"
+        "⭐卡住名單＝用了超過 " + str(stuck_days) + " 天、卻還停在「新認識」的人——不受近 " + str(days) + " 天篩選，"
+        "就算最近沒聊也一樣抓得到——這種人陪伴沒建立起來，最可能默默流失，建議真人多關心。"
+    )
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "stuckDays": stuck_days,
+        "totals": totals,
+        "avgMemories": avg_memories,
+        "upgradeDays": upgrade_days,
+        "stuckList": stuck_list,
+        "principle": principle_text,
+        "backend": data_backend_status(),
+    }
+
+
 FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
 
 def feedback_response(data):
@@ -7173,6 +8066,30 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_contract_response("munea.admin.audit-events.v1", lambda: admin_audit_events_summary(data)))
+            elif self.path == "/admin/medication-adherence":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.medication-adherence.v1", lambda: admin_medication_adherence(data)))
+            elif self.path == "/admin/family-health":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.family-health.v1", lambda: admin_family_health(data)))
+            elif self.path == "/admin/mood-trend":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.mood-trend.v1", lambda: admin_mood_trend(data)))
+            elif self.path == "/admin/bond-depth":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.bond-depth.v1", lambda: admin_bond_depth(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

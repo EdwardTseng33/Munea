@@ -2861,8 +2861,6 @@ if missing_html:
     raise SystemExit("Admin console missing HTML tokens: " + ", ".join(missing_html))
 required_js = [
     "X-Munea-Admin-Token",
-    "apiBaseUrl",
-    "adminToken",
     "/admin/accounts",
     "/admin/north-star",
     "/admin/usage",
@@ -2872,7 +2870,12 @@ required_js = [
     "/admin/feedback",
     "/admin/safety-events",
     "/admin/audit-events",
-    "localStorage.setItem(ADMIN_BASE_KEY",
+    # 2026-07-20 擴充的營運指標接口
+    "/admin/credits",
+    "/admin/medication-adherence",
+    "/admin/family-health",
+    "/admin/mood-trend",
+    "/admin/bond-depth",
     "Promise.allSettled",
     "munea.admin-data-meta.v1",
     "dataQualityNoticeHTML",
@@ -2883,9 +2886,25 @@ required_js = [
     "renderSubscription",
     "renderFeedback",
     "renderRecords",
-    "settingsHTML",
+    "renderCarePriority",
+    "renderMedication",
+    "renderFamilyHealth",
+    "renderMoodTrend",
+    "renderBondDepth",
+    # 2026-07-20 起「連線設定」頁移除，入口一律走帳密登入門
+    "loginGateHTML",
+    "showLoginGate",
     "pts-cell",
 ]
+forbidden_js_legacy = [
+    "settingsHTML",
+    'id="apiBaseUrl"',
+    'id="adminToken"',
+    "connectPromptHTML",
+]
+present_legacy = [token for token in forbidden_js_legacy if token in js]
+if present_legacy:
+    raise SystemExit("Admin console still exposes removed connection-settings UI: " + ", ".join(present_legacy))
 missing_js = [token for token in required_js if token not in js]
 if missing_js:
     raise SystemExit("Admin console missing JS tokens: " + ", ".join(missing_js))

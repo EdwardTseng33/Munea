@@ -155,6 +155,11 @@ $adminReadBodies = [ordered]@{
   "/admin/privacy-requests" = @{ limit = 5 }
   "/admin/conversation-summaries" = @{ limit = 5 }
   "/admin/audit-events" = @{ limit = 5 }
+  "/admin/credits" = @{ limit = 5 }
+  "/admin/medication-adherence" = @{ days = 30; limit = 5 }
+  "/admin/family-health" = @{ days = 30; limit = 5 }
+  "/admin/mood-trend" = @{ days = 30; limit = 5 }
+  "/admin/bond-depth" = @{ days = 30; limit = 5; stuckDays = 14 }
 }
 
 Step "Admin page"

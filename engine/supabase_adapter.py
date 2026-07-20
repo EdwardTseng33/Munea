@@ -513,6 +513,245 @@ class SupabaseAdapter:
             summaries.append(self.admin_account_rows_to_summary(account, family_group, primary_person, memberships, companion))
         return summaries
 
+    def load_admin_medication_doses(self, since_date=None, limit=3000):
+        """後台跨帳號用藥依從率：不依 account_id 篩選、service-role 全表查詢近 N 天服藥事件。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 3000)))
+        filters = {
+            "select": "*",
+            "order": "scheduled_date.desc,updated_at.desc",
+            "limit": str(limit),
+        }
+        if since_date:
+            filters["scheduled_date"] = f"gte.{str(since_date)[:10]}"
+        rows = self._select("medication_dose_events", filters)
+        return [self.medication_dose_row_to_item(row) for row in rows or []]
+
+    def load_admin_wellbeing_signals(self, since_iso=None, limit=5000):
+        """後台跨帳號心情趨勢：不篩 account_id，service-role 全表查詢近 N 天心情訊號（wellbeing_signals）。
+        只回全表列，不做內容過濾——聊天內容（facts 裡的 topics/positives/concerns 等）由呼叫端自行決定
+        要不要用；後台心情趨勢頁只聚合次數與分數，不轉交任何原始對話文字。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {
+            "select": "*",
+            "order": "observed_at.desc",
+            "limit": str(limit),
+        }
+        if since_iso:
+            filters["observed_at"] = f"gte.{since_iso}"
+        rows = self._select("wellbeing_signals", filters)
+        signals = [self.wellbeing_row_to_signal(row) for row in rows or []]
+        # 後台聚合用：mood 換成英文 key（App 顯示走 load_wellbeing_signals，不經這條，不受影響）。
+        for signal in signals:
+            signal["mood"] = self._recover_admin_wellbeing_mood(signal)
+        return signals
+
+    def load_persons_by_ids(self, person_ids):
+        """後台名單顯示用：批次查 person display_name（只回顯示名，不含其他個資）。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(pid) for pid in (person_ids or []) if pid and self._is_uuid(str(pid))})
+        if not ids:
+            return {}
+        rows = self._select("persons", {
+            "id": f"in.({','.join(ids)})",
+            "select": "id,display_name",
+            "limit": str(len(ids)),
+        })
+        return {row.get("id"): row.get("display_name") for row in rows or [] if row.get("id")}
+
+    def load_admin_family_memberships(self, limit=5000):
+        """後台跨帳號家庭圈成員名單：不篩 account_id，service-role 全表查詢角色（誰是長輩／誰是家人）。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        rows = self._select("family_memberships", {
+            "select": "id,account_id,family_group_id,person_id,role,created_at,updated_at",
+            "order": "family_group_id.asc,created_at.asc",
+            "limit": str(limit),
+        })
+        return [{
+            "id": row.get("id"),
+            "accountId": row.get("account_id"),
+            "familyGroupId": row.get("family_group_id"),
+            "personId": row.get("person_id"),
+            "role": row.get("role") or "family_contact",
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        } for row in rows or []]
+
+    def load_admin_family_invitations(self, since_iso=None, limit=3000):
+        """後台跨帳號邀請成效：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 3000)))
+        filters = {"select": "*", "order": "created_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["created_at"] = f"gte.{since_iso}"
+        rows = self._select("family_invitations", filters)
+        return [self.family_invitation_row_to_invitation(row) for row in rows or []]
+
+    def load_admin_family_relay_messages(self, since_iso=None, limit=5000):
+        """後台跨帳號家人傳話：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {"select": "*", "order": "created_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["created_at"] = f"gte.{since_iso}"
+        rows = self._select("family_relay_messages", filters)
+        return [self.family_relay_row_to_relay(row) for row in rows or []]
+
+    def load_admin_family_activities(self, since_iso=None, limit=3000):
+        """後台跨帳號家庭活動：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 3000)))
+        filters = {"select": "*", "order": "updated_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["updated_at"] = f"gte.{since_iso}"
+        rows = self._select("family_activities", filters)
+        return [self.family_activity_row_to_activity(row) for row in rows or []]
+
+    def load_admin_family_activity_participants(self, since_iso=None, limit=5000):
+        """後台跨帳號家庭活動參與者：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {"select": "*", "order": "updated_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["updated_at"] = f"gte.{since_iso}"
+        rows = self._select("family_activity_participants", filters)
+        return [self.family_activity_participant_row_to_participant(row) for row in rows or []]
+
+    def load_admin_family_engagement_events(self, event_names, since_iso=None, limit=5000):
+        """後台跨帳號『看家庭看板／看家人訊息』事件：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        names = [str(name) for name in (event_names or []) if name]
+        if not names:
+            return []
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {
+            "select": "*",
+            "event_name": f"in.({','.join(names)})",
+            "order": "event_time.desc",
+            "limit": str(limit),
+        }
+        if since_iso:
+            filters["event_time"] = f"gte.{since_iso}"
+        rows = self._select("product_events", filters)
+        return [self.product_event_row_to_event(row) for row in rows or []]
+
+    def load_family_groups_by_ids(self, family_group_ids):
+        """後台名單顯示用：批次查家庭圈名稱（只回名稱，不含其他個資）。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(fid) for fid in (family_group_ids or []) if fid and self._is_uuid(str(fid))})
+        if not ids:
+            return {}
+        rows = self._select("family_groups", {
+            "id": f"in.({','.join(ids)})",
+            "select": "id,name",
+            "limit": str(len(ids)),
+        })
+        return {row.get("id"): row.get("name") for row in rows or [] if row.get("id")}
+
+    def load_admin_family_last_action(self, family_group_ids, event_names, limit=1000):
+        """『沒人顧』名單用：不限視窗，查這些家庭圈最後一次傳話／看家庭看板的時間，找最久沒人顧的家。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(fid) for fid in (family_group_ids or []) if fid and self._is_uuid(str(fid))})
+        if not ids:
+            return {}
+        id_list = ",".join(ids)
+        limit = max(1, min(5000, int(limit or 1000)))
+        last_seen = {}
+
+        def _bump(fg, ts):
+            if fg and ts and (fg not in last_seen or ts > last_seen[fg]):
+                last_seen[fg] = ts
+
+        relay_rows = self._select("family_relay_messages", {
+            "family_group_id": f"in.({id_list})",
+            "select": "family_group_id,created_at",
+            "order": "created_at.desc",
+            "limit": str(limit),
+        }) or []
+        for row in relay_rows:
+            _bump(row.get("family_group_id"), row.get("created_at"))
+
+        names = [str(name) for name in (event_names or []) if name]
+        if names:
+            event_rows = self._select("product_events", {
+                "family_group_id": f"in.({id_list})",
+                "event_name": f"in.({','.join(names)})",
+                "select": "family_group_id,event_time",
+                "order": "event_time.desc",
+                "limit": str(limit),
+            }) or []
+            for row in event_rows:
+                _bump(row.get("family_group_id"), row.get("event_time"))
+
+        return last_seen
+
+    def load_admin_relationship_states(self, limit=5000):
+        """後台跨帳號關係深度：不篩 account_id，service-role 全表查詢目前關係狀態（現況快照，不分時間窗）。
+        只取 person/account/等級/時間欄位，不取 tone_overrides／user_boundaries／relationship_memory
+        （那些是內部運作用的狀態，不是後台該看的東西）。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        rows = self._select("companion_relationship_states", {
+            "select": "person_id,account_id,rapport_level,created_at,updated_at",
+            "deleted_at": "is.null",
+            "order": "updated_at.desc",
+            "limit": str(limit),
+        })
+        return [{
+            "personId": row.get("person_id"),
+            "accountId": row.get("account_id"),
+            "rapportLevel": row.get("rapport_level") or "new",
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        } for row in rows or []]
+
+    def load_admin_memory_item_counts(self, limit=20000):
+        """後台跨帳號記憶筆數：不篩 account_id，service-role 全表查詢——只取 person/account/建立時間，
+        絕不選 content／metadata／memory_type／source 任何一個欄位。後台『關係深度』頁只算幾筆記憶，
+        記憶內容永遠不能透過這支查詢流出。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(50000, int(limit or 20000)))
+        rows = self._select("memory_items", {
+            "select": "person_id,account_id,created_at",
+            "deleted_at": "is.null",
+            "order": "created_at.desc",
+            "limit": str(limit),
+        })
+        return [{
+            "personId": row.get("person_id"),
+            "accountId": row.get("account_id"),
+            "createdAt": row.get("created_at"),
+        } for row in rows or []]
+
+    def load_family_groups_by_account_ids(self, account_ids):
+        """後台名單顯示用：批次查帳號對應的家庭圈名稱（只回名稱，不含其他個資）。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(aid) for aid in (account_ids or []) if aid and self._is_uuid(str(aid))})
+        if not ids:
+            return {}
+        rows = self._select("family_groups", {
+            "account_id": f"in.({','.join(ids)})",
+            "select": "account_id,name",
+            "limit": str(len(ids)),
+        })
+        return {row.get("account_id"): row.get("name") for row in rows or [] if row.get("account_id")}
+
     def save_app_profile_store(self, store):
         if not self.enabled():
             return None
@@ -3130,10 +3369,53 @@ class SupabaseAdapter:
             "updatedAt": row.get("updated_at"),
         }
 
-    @staticmethod
-    def _normalize_wellbeing_mood(mood):
-        allowed = {"happy", "pleasant", "steady", "tired", "low", "irritated", "mixed", "unknown"}
-        return mood if mood in allowed else "unknown"
+    # 中文六類（AI 觀察 perception_engine.MOOD_CATEGORIES／App 手動打卡)→ 英文 mood key 對照。
+    # 含常見同義詞（愉悅/平靜/焦慮/生氣，對齊 web/src/app.js FAM_MOOD_NAME 六色編號用字），
+    # 寫入路徑（_normalize_wellbeing_mood）跟讀取救援路徑（_recover_admin_wellbeing_mood）共用同一張表，別各寫一份。
+    _WELLBEING_MOOD_ENGLISH_KEYS = {"happy", "pleasant", "steady", "tired", "low", "irritated", "mixed"}
+    _WELLBEING_MOOD_CHINESE_ALIASES = {
+        "開心": "happy",
+        "愉快": "pleasant",
+        "愉悅": "pleasant",
+        "平穩": "steady",
+        "平靜": "steady",
+        "疲累": "tired",
+        "低落": "low",
+        "煩躁": "irritated",
+        "焦慮": "irritated",
+        "生氣": "irritated",
+        "混合": "mixed",
+    }
+
+    @classmethod
+    def _wellbeing_mood_from_text(cls, text):
+        """把任何原始 mood 字串（中文六類/同義詞，或已是英文 key）轉成英文 mood key；認不得回 None
+        （呼叫端自行決定要不要退 unknown，別在這裡吞掉「換算不出來」這件事）。比對前先 strip()。"""
+        t = str(text or "").strip()
+        if not t:
+            return None
+        if t in cls._WELLBEING_MOOD_ENGLISH_KEYS:
+            return t
+        return cls._WELLBEING_MOOD_CHINESE_ALIASES.get(t)
+
+    @classmethod
+    def _normalize_wellbeing_mood(cls, mood):
+        """寫入 wellbeing_signals.mood 前的正規化：中文／英文都收，認不得才回 unknown。
+        2026-07-20 修：舊版只認英文，AI 寫入的中文一律變 unknown，把後台心情趨勢的資料源污染光了。"""
+        return cls._wellbeing_mood_from_text(mood) or "unknown"
+
+    @classmethod
+    def _recover_admin_wellbeing_mood(cls, signal):
+        """後台心情趨勢救舊帳：wellbeing_row_to_signal 回給 App 的 mood 可能是中文原字（那是對的、App 要
+        顯示用，不要動它）；這裡只給後台聚合／_mood_bucket 用，換算成英文 mood key 才能正確歸桶。
+        依序試 signal.mood（Supabase 正規化後的英文，或 JSON 備援路徑的中文原字）、
+        facts.originalMood、facts.mood；都換算不出來才退 unknown。"""
+        facts = signal.get("facts") or {}
+        for candidate in (signal.get("mood"), facts.get("originalMood"), facts.get("mood")):
+            mapped = cls._wellbeing_mood_from_text(candidate)
+            if mapped:
+                return mapped
+        return "unknown"
 
     # 英文 mood 詞 → App 六色編號（0開心/1愉悅/2平靜/3低落/4焦慮/5生氣）；mixed/unknown 沒有安全對應、回 None
     _WELLBEING_MOOD_TO_KEY = {"happy": 0, "pleasant": 1, "steady": 2, "tired": 3, "low": 3, "irritated": 4}
@@ -3400,3 +3682,9 @@ class SupabaseAdapter:
 
 def make_adapter(env=None, identity=None):
     return SupabaseAdapter(env=env, identity=identity)
+
+
+def recover_admin_wellbeing_mood(item):
+    """後台心情訊號 mood 救援共用入口（Supabase 與 JSON 備援兩條讀取路徑共用同一張中文→英文對照表，
+    別各寫一份）。item：wellbeing signal dict（有 mood／facts 欄位即可，兩條路徑格式相容）。"""
+    return SupabaseAdapter._recover_admin_wellbeing_mood(item)
