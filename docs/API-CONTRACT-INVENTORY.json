@@ -11,7 +11,7 @@
     "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
-    "brain": 71,
+    "brain": 84,
     "gateway": 23,
     "voice": 4
   },
@@ -147,6 +147,188 @@
       "surface": "brain",
       "method": "POST",
       "path": "/admin/daily-briefing",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/billing-settings",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/billing-settings/save",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/client/detail",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/client/save",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/clients",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/invoice/mark-paid",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/invoice/mark-sent",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/invoices",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/monthly-close",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/seats/export",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/seats/grant",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/seats/import-commit",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/seats/import-preview",
       "auth": "operator",
       "criticality": "high",
       "idempotency": "operation-defined",
