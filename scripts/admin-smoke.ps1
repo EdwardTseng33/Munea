@@ -160,6 +160,7 @@ $adminReadBodies = [ordered]@{
   "/admin/family-health" = @{ days = 30; limit = 5 }
   "/admin/mood-trend" = @{ days = 30; limit = 5 }
   "/admin/bond-depth" = @{ days = 30; limit = 5; stuckDays = 14 }
+  "/admin/growth-metrics" = @{ days = 30 }
 }
 
 Step "Admin page"

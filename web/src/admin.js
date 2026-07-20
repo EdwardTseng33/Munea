@@ -14,6 +14,7 @@
       { id: "familyHealth", label: "家庭圈健康度" },
       { id: "moodTrend", label: "心情趨勢" },
       { id: "bondDepth", label: "關係深度" },
+      { id: "growth", label: "成長與黏著" },
     ]},
     { group: "營收", items: [
       { id: "subscription", label: "訂閱與點數" },
@@ -45,6 +46,7 @@
     familyHealth: '<path d="m3 9.5 9-7.5 9 7.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9 21v-6h6v6"/>',
     moodTrend: '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/>',
     bondDepth: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>',
+    growth: '<path d="M3 3v18h18"/><path d="M18.7 8 12 14.7l-3.5-3.5L3 16.7"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     carePriority: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
@@ -83,6 +85,7 @@
     familyHealth: ["/admin/family-health", { days: 30, limit: 50 }],
     moodTrend: ["/admin/mood-trend", { days: 30, limit: 50 }],
     bondDepth: ["/admin/bond-depth", { days: 30, limit: 50, stuckDays: 14 }],
+    growth: ["/admin/growth-metrics", { days: 30 }],
   };
 
   const CHART = { teal: "#3AA8A0", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#3A352E", muted: "#5A6963" };
@@ -123,6 +126,7 @@
   const familyHealth = () => D().familyHealth || {};
   const moodTrend = () => D().moodTrend || {};
   const bondDepth = () => D().bondDepth || {};
+  const growth = () => D().growth || {};
   // 企業客戶（B2B 席次）：各頁進場才現查，不掛進 loadAll 的 EP_LIST（那張表跟
   // scripts/admin-smoke.ps1 有 1:1 契約測試，後端路由還沒接好前先不碰）
   function entClients(){ return ((state.tabs.entClientsList && state.tabs.entClientsList.data) || {}).clients || []; }
@@ -261,6 +265,7 @@
     else if (id==="familyHealth") html=renderFamilyHealth();
     else if (id==="moodTrend") html=renderMoodTrend();
     else if (id==="bondDepth") html=renderBondDepth();
+    else if (id==="growth") html=renderGrowth();
     else if (id==="subscription") html=renderSubscription();
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
@@ -598,6 +603,46 @@
       p.daysSinceJoin!=null?`<span class="pill ${p.daysSinceJoin>=stuckDays*2?"bad":"warn"}">${n(p.daysSinceJoin)} 天</span>`:"–",
       p.lastTalkAt?esc(fmtTime(p.lastTalkAt)):`<span class="muted">—</span>`,
     ])):emptyBox("目前沒有人卡在剛認識——很好。"));
+    return html;
+  }
+
+  function renderGrowth(){
+    const g=growth(), sm=subM(), win=g.windowDays||30;
+    const st=g.stickiness||{}, ret=g.retention||{}, funnel=g.funnel||[], dataRange=g.dataRange||{};
+    const chatted=(funnel.find((s)=>s.step==="firstChat")||{}).count||0;
+    const registered=(funnel.find((s)=>s.step==="registered")||{}).count||0;
+    const activationRate=registered?chatted/registered:null;
+    const d30=ret.d30||{};
+    let html=kpiRow([
+      { label:"黏著度", value:st.avgActiveDays==null?"–":`${st.avgActiveDays.toFixed(1)} 天`, sub:st.rate==null?`近 ${win} 天平均`:`近 ${win} 天平均 · ${pct(st.rate)}`, star:true, info:"近 N 天內，平均每位長輩有幾天發生過『有意義互動』——通話講滿 1 分鐘、完成視訊臉、做到提醒、家人傳話等任一項都算，跟其他頁同一套判準。" },
+      { label:"30 天留存", value:d30.rate==null?"–":pct(d30.rate), sub:d30.cohort?`${n(d30.retained)}／${n(d30.cohort)} 人`:"還沒有人滿 30 天", info:"第一次有意義互動那天算第 0 天，看第 30 天『當天』還有沒有互動——不是 30 天內任何一天都算。" },
+      { label:"啟用率", value:activationRate==null?"–":pct(activationRate), sub:"註冊到真的聊上第一次", info:"註冊帳號後，有多少比例後來真的有過一次有意義互動——不看有沒有付費。" },
+      { label:"免費→付費轉換率", value:sm.freeToPaidConversion==null?"–":pct(sm.freeToPaidConversion), sub:"沿用「訂閱與點數」頁的數字" },
+    ]);
+    html+=principle(g.principle||"黏著度看近期回來的頻率，留存看第 N 天當天還有沒有回來，啟用漏斗看註冊到付費一路的轉換。");
+
+    const retentionOrder=[["d1","D1"],["d7","D7"],["d14","D14"],["d30","D30"]];
+    const retentionKnown=retentionOrder.filter(([k])=>ret[k]&&ret[k].rate!=null);
+    const retentionSkipped=retentionOrder.filter(([k])=>!(ret[k]&&ret[k].rate!=null));
+    let retentionNote="第一次有意義互動那天算第 0 天，看第 N 天『當天』還有沒有互動，不是 N 天內任何一天都算。";
+    if(retentionSkipped.length){
+      retentionNote+=` ${retentionSkipped.map(([,label])=>label).join("、")} 目前還算不出來（還沒有人滿那麼多天，不是沒人回來）。`;
+    }
+    if(!retentionKnown.length){
+      html+=card("留存曲線", retentionNote, emptyBox(dataRange.days!=null?`資料目前只回溯到 ${n(dataRange.days)} 天前，留存還算不出來，過幾天再回來看。`:"還沒有任何留存資料——長輩開始跟沐寧聊天後就會出現。"));
+    } else {
+      html+=card("留存曲線", retentionNote, chartMount("gr-retention"));
+      pending.push(()=>columnChart($("gr-retention"), retentionKnown.map(([,label])=>label), [
+        { name:"留存率", color:cc.teal, values:retentionKnown.map(([k])=>Math.round((ret[k].rate||0)*100)) },
+      ], { unit:"%", empty:"還沒有留存資料。" }));
+    }
+
+    const funnelMax=funnel.length?Math.max(1,...funnel.map((s)=>s.count||0)):1;
+    html+=card("啟用漏斗", "註冊 → 撥出第一通 → 第一次聊上 → 付費 · 看全部歷史，不受上面「近 N 天」限制", funnel.length?`<div class="bars-list">${funnel.map((s)=>{
+      const w=funnelMax?Math.round((s.count||0)/funnelMax*100):0;
+      const rateTxt=s.rate==null?"":`<span class="bl-sub">相對上一關 ${pct(s.rate)}</span>`;
+      return `<div class="bl"><div class="bl-top"><span class="bl-name">${esc(s.label)}</span><span class="bl-val">${n(s.count)} 戶${rateTxt}</span></div><div class="track"><div class="fill" style="width:${w}%"></div></div></div>`;
+    }).join("")}</div>`:emptyBox("還沒有帳號註冊——開始開放使用後這裡會出現。"));
     return html;
   }
 

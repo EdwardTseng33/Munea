@@ -2876,6 +2876,8 @@ required_js = [
     "/admin/family-health",
     "/admin/mood-trend",
     "/admin/bond-depth",
+    # 2026-07-21 擴充：成長與黏著（PMF 先行指標）
+    "/admin/growth-metrics",
     "Promise.allSettled",
     "munea.admin-data-meta.v1",
     "dataQualityNoticeHTML",
@@ -2891,6 +2893,7 @@ required_js = [
     "renderFamilyHealth",
     "renderMoodTrend",
     "renderBondDepth",
+    "renderGrowth",
     # 2026-07-20 起「連線設定」頁移除，入口一律走帳密登入門
     "loginGateHTML",
     "showLoginGate",

@@ -29,7 +29,8 @@ class ApiContractInventoryTests(unittest.TestCase):
     def test_committed_inventory_matches_source(self) -> None:
         self.assertEqual(validate_inventory(self.inventory, ROOT, self.routes), [])
         # 2026-07-20 營運後台擴充 4 支指標接口 ＋ 企業席次 13 支管理接口
-        self.assertEqual(self.inventory["routeCounts"], {"brain": 84, "gateway": 23, "voice": 4})
+        # 2026-07-21 新增「成長與黏著」PMF 指標頁 /admin/growth-metrics
+        self.assertEqual(self.inventory["routeCounts"], {"brain": 85, "gateway": 23, "voice": 4})
         self.assertIn(Route("voice", "WS", "/"), self.routes)
 
     def test_new_source_route_must_be_registered(self) -> None:

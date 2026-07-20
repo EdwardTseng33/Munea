@@ -5485,6 +5485,255 @@ def admin_bond_depth(data=None):
     }
 
 
+def load_admin_growth_product_events(limit=20000):
+    """後台『成長與黏著』：跟其他 admin_* 只抓近 N 天不同——黏著度／留存／啟用漏斗都要
+    抓到『比某個時間窗更早』的資料，才能定出每個人自己的『第 0 天』、也才能誠實回報
+    資料到底留了多深，所以這裡刻意不帶 since_iso、直接抓全部（量體目前還小，全撈划算；
+    之後量體大了要再依時間分頁）。"""
+    limit = max(1, min(50000, int(limit or 20000)))
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_events = backend.load_admin_product_events(limit=limit)
+        if remote_events is not None:
+            normalized_remote = [normalize_product_event(e) for e in remote_events]
+            record_admin_data_source(
+                "product_events",
+                "supabase",
+                record_count=len(normalized_remote),
+                data_as_of=latest_record_timestamp(remote_events),
+            )
+            return normalized_remote
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin product events for growth metrics", e)
+    raw_store = read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store())
+    raw_events = raw_store.get("events", []) if isinstance(raw_store, dict) else []
+    store = normalize_product_events_store(raw_store)
+    events = store["events"][:limit]
+    record_admin_data_source(
+        "product_events",
+        "json",
+        record_count=len(events),
+        data_as_of=latest_record_timestamp(raw_events),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return events
+
+
+def load_admin_growth_subscription_rows(limit=20000):
+    """後台『成長與黏著』付費判定：不篩 account_id，Supabase 全表查 subscription_ledger，
+    失敗退回本機這一戶的訂閱狀態（本地 JSON 模式沒有多帳號概念）。"""
+    limit = max(1, min(50000, int(limit or 20000)))
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_rows = backend.load_admin_subscription_ledger(limit=limit)
+        if remote_rows is not None:
+            record_admin_data_source(
+                "subscription_ledger",
+                "supabase",
+                record_count=len(remote_rows),
+                data_as_of=latest_record_timestamp(remote_rows),
+            )
+            return remote_rows
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin subscription ledger for growth metrics", e)
+    raw_store = read_json_file(BILLING_STORE_PATH, {})
+    rows = []
+    if isinstance(raw_store, dict) and raw_store.get("accountId"):
+        subscription = raw_store.get("subscription") or {}
+        rows.append({
+            "accountId": raw_store.get("accountId"),
+            "status": subscription.get("status") or "inactive",
+            "activePlan": raw_store.get("activePlan") or "free",
+            "provider": raw_store.get("provider"),
+            "createdAt": raw_store.get("updatedAt"),
+            "updatedAt": raw_store.get("updatedAt"),
+        })
+    record_admin_data_source(
+        "subscription_ledger",
+        "json",
+        record_count=len(rows),
+        data_as_of=latest_record_timestamp(rows),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return rows
+
+
+def admin_growth_metrics(data=None):
+    """成長與黏著（PMF 先行指標）：App 還沒上架，營收類必為 0；但留不住人，上架也不會有營收，
+    所以先看『有沒有回來』而不是『有沒有付錢』。
+    黏著度＝近 N 天內，平均每位長輩有幾天發生過『有意義互動』——跟其他頁同一套判準
+    （is_meaningful_product_event，不另立標準）。
+    留存 D1/D7/D14/D30＝每個人自己『第一次有意義互動』那天算第 0 天，看第 N 天『當天』
+    （不是『N 天內任一天』）還有沒有互動；分母只算『已經滿 N 天』的人，剛加入還沒滿的人
+    不算，避免低估——算不出來就誠實回 null，不拿 0 充數。
+    啟用漏斗（註冊→撥出第一通→第一次聊上→付費）用『帳號』貫穿全程（付費本來就是帳號層級
+    的事，且每筆事件都保證有 accountId，用帳號當同一條線最穩）；看的是全部歷史，不受上面
+    『近 N 天』限制——『近 N 天』只影響黏著度那段。
+    『付費』用 subscription_ledger 判斷（狀態 active 且方案不是 free），不是用戶端自己送的
+    subscription_purchased 分析事件——分析事件可能漏送或重送，帳本更可信；個人訂閱與企業
+    席次授予都算，免費體驗贈點不會出現在這張表，不會被誤算成付費。"""
+    data = data or {}
+    days = max(1, min(90, int(data.get("days") or 30)))
+    now = datetime.now(timezone.utc)
+    today_date = now.date()
+    since_iso = _family_health_since(days)
+    since_date_str = since_iso[:10]
+
+    all_events = load_admin_growth_product_events(limit=20000)
+    events = [event for event in all_events if not is_analytics_excluded_event(event)]
+    sub_rows = load_admin_growth_subscription_rows(limit=20000)
+
+    notes = []
+
+    earliest_event_at = None
+    for event in events:
+        et = event.get("eventTime")
+        if et and (earliest_event_at is None or et < earliest_event_at):
+            earliest_event_at = et
+    earliest_dt = parse_optional_iso_datetime(earliest_event_at)
+    data_range_days = (now - earliest_dt).days if earliest_dt else None
+    if earliest_event_at is None:
+        notes.append("目前完全沒有任何互動紀錄，成長與黏著這頁的數字都還算不出來。")
+
+    person_meaningful_dates = {}  # personId -> set(date_str)，全部歷史
+    no_person_meaningful_count = 0
+    account_first_bootstrap = {}
+    account_first_call = {}
+    account_first_meaningful = {}
+
+    for event in events:
+        acc = event.get("accountId")
+        name = event.get("eventName")
+        et_raw = event.get("eventTime") or ""
+        if acc and et_raw and name == "account_bootstrapped":
+            if acc not in account_first_bootstrap or et_raw < account_first_bootstrap[acc]:
+                account_first_bootstrap[acc] = et_raw
+        if acc and et_raw and name == "voice_session_started":
+            if acc not in account_first_call or et_raw < account_first_call[acc]:
+                account_first_call[acc] = et_raw
+        if not is_meaningful_product_event(event):
+            continue
+        if acc and et_raw and (acc not in account_first_meaningful or et_raw < account_first_meaningful[acc]):
+            account_first_meaningful[acc] = et_raw
+        pid = event.get("personId")
+        if not pid:
+            no_person_meaningful_count += 1
+            continue
+        day_str = et_raw[:10] if et_raw else None
+        if not day_str:
+            continue
+        person_meaningful_dates.setdefault(pid, set()).add(day_str)
+
+    if no_person_meaningful_count:
+        notes.append(
+            f"有 {no_person_meaningful_count} 筆有意義互動事件沒有帶長輩身分，"
+            "沒辦法歸到特定人身上——黏著度／留存先誠實不計這些，不硬湊。"
+        )
+
+    # 黏著度：近 windowDays 天
+    active_people = 0
+    meaningful_person_days = 0
+    for day_set in person_meaningful_dates.values():
+        in_window = [d for d in day_set if d >= since_date_str]
+        if in_window:
+            active_people += 1
+            meaningful_person_days += len(in_window)
+    avg_active_days = round(meaningful_person_days / active_people, 2) if active_people else None
+    stickiness_rate = round(avg_active_days / days, 4) if avg_active_days is not None else None
+    if not active_people:
+        notes.append(f"近 {days} 天內還沒有任何長輩有『有意義互動』，黏著度先誠實回 null，不是 0。")
+
+    stickiness = {
+        "activePeople": active_people,
+        "meaningfulPersonDays": meaningful_person_days,
+        "avgActiveDays": avg_active_days,
+        "rate": stickiness_rate,
+    }
+
+    # 留存：D1/D7/D14/D30（全部歷史，每人自己的第 0 天）
+    retention = {}
+    for offset, key in ((1, "d1"), (7, "d7"), (14, "d14"), (30, "d30")):
+        cohort = 0
+        retained = 0
+        for day_set in person_meaningful_dates.values():
+            day0_str = min(day_set)
+            day0 = datetime.strptime(day0_str, "%Y-%m-%d").date()
+            elapsed = (today_date - day0).days
+            if elapsed < offset:
+                continue
+            cohort += 1
+            target_day = (day0 + timedelta(days=offset)).strftime("%Y-%m-%d")
+            if target_day in day_set:
+                retained += 1
+        rate = round(retained / cohort, 4) if cohort else None
+        retention[key] = {"cohort": cohort, "retained": retained, "rate": rate}
+        if not cohort:
+            notes.append(
+                f"D{offset} 留存目前分母是 0——還沒有人滿 {offset} 天可以算，"
+                "不是沒人回來，等資料再多留一陣子就會有數字。"
+            )
+
+    # 啟用漏斗：註冊→撥出第一通→第一次聊上→付費（帳號層級、全部歷史）
+    paid_accounts = set()
+    for row in sub_rows:
+        acc = row.get("accountId")
+        if not acc:
+            continue
+        status = str(row.get("status") or "").strip().lower()
+        plan = str(row.get("activePlan") or "").strip().lower()
+        if status == "active" and plan not in ("", "free"):
+            paid_accounts.add(acc)
+
+    funnel_steps = [
+        ("registered", "註冊", len(account_first_bootstrap)),
+        ("firstCall", "撥出第一通", len(account_first_call)),
+        ("firstChat", "第一次真的聊上", len(account_first_meaningful)),
+        ("paid", "付費", len(paid_accounts)),
+    ]
+    funnel = []
+    prev_count = None
+    for step, label, count in funnel_steps:
+        rate = round(count / prev_count, 4) if prev_count else None
+        funnel.append({"step": step, "label": label, "count": count, "rate": rate})
+        prev_count = count
+    if not sub_rows:
+        notes.append(
+            "目前查不到任何 subscription_ledger 紀錄，『付費』這關先誠實顯示 0，"
+            "不代表系統壞了——App 還沒上架，這是預期中的狀態。"
+        )
+
+    principle_text = (
+        "黏著度＝近 " + str(days) + " 天內，平均每位長輩有幾天發生過『有意義互動』（跟其他頁同一套判準："
+        "通話講滿 1 分鐘或說了 3 句以上、完成視訊臉、做到提醒、家人傳話或看家庭看板等任一項）。"
+        "留存＝每個人自己『第一次有意義互動』那天算第 0 天，看第 1／7／14／30 天『當天』還有沒有互動——"
+        "不是『N 天內任何一天都算』；分母只算『已經滿 N 天』的人，剛加入還沒滿的人不算，避免低估。"
+        "啟用漏斗（註冊→撥出第一通→第一次聊上→付費）看的是全部歷史、以帳號為單位，不受上面『近 N 天』限制；"
+        "『付費』用真正的訂閱／企業席次紀錄判斷，不是用戶端自己送的分析事件，比較準。"
+    )
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "stickiness": stickiness,
+        "retention": retention,
+        "funnel": funnel,
+        "dataRange": {"earliestEventAt": earliest_event_at, "days": data_range_days},
+        "notes": notes,
+        "principle": principle_text,
+        "backend": data_backend_status(),
+    }
+
+
 FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
 
 def feedback_response(data):
@@ -8426,6 +8675,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_contract_response("munea.admin.bond-depth.v1", lambda: admin_bond_depth(data)))
+            elif self.path == "/admin/growth-metrics":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.growth-metrics.v1", lambda: admin_growth_metrics(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
