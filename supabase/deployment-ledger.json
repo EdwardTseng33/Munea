@@ -155,6 +155,24 @@
           "status": "blocked",
           "blocker": "tokyo_active_policy_v4_100_200_not_found",
           "evidenceRef": "docs/supabase/evidence/2026-07-18-tokyo-live-blockers.json"
+        },
+        {
+          "filename": "020_enterprise_seats.sql",
+          "sha256": "5b3259bd7b7375be78b3c368d85d1bc446004eb332513edca75127cab0a4247b",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+        },
+        {
+          "filename": "021_enterprise_billing_settings.sql",
+          "sha256": "0699c4dc6de800f9572095e08e08b139facdac2306f5b528239d5853386ef726",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+        },
+        {
+          "filename": "022_enterprise_documents.sql",
+          "sha256": "9941173ef2362f42b0b62cd165b360a55af1cb3fadbade1b7ab7cf132d5349da",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {
