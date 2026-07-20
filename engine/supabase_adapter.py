@@ -1035,6 +1035,28 @@ class SupabaseAdapter:
             "order": "updated_at.desc",
         })
 
+    def load_admin_subscription_ledger(self, limit=20000):
+        """後台『成長與黏著』付費判定：不篩 account_id，service-role 全表查詢 subscription_ledger，
+        只取判斷『這個帳號有沒有變成真正付費方案』需要的欄位——個人訂閱與企業席次授予都會落在
+        這張表（status=active 且 active_plan 不是 free），免費體驗贈點走 credit_wallets，
+        不會出現在這裡，不會被誤算成付費。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(50000, int(limit or 20000)))
+        rows = self._select("subscription_ledger", {
+            "select": "account_id,status,active_plan,provider,created_at,updated_at",
+            "order": "created_at.asc",
+            "limit": str(limit),
+        })
+        return [{
+            "accountId": row.get("account_id"),
+            "status": row.get("status") or "inactive",
+            "activePlan": row.get("active_plan") or "free",
+            "provider": row.get("provider"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        } for row in rows or []]
+
     def load_enterprise_invoices(self, client_id=None, limit=200):
         """唯讀：企業請款單清單／單一公司請款單。寫入（產出請款單、標已寄出／已入帳）
         屬 engine/enterprise_billing.py 的責任，這裡只給 enterprise_seats.py 的鐵律 2
@@ -1769,6 +1791,21 @@ class SupabaseAdapter:
             query["event_time"] = f"gte.{since_iso}"
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows]
+
+    def load_admin_product_events(self, limit=20000):
+        """後台『成長與黏著』：不篩 account_id，service-role 全表查詢 product_events 全部歷史。
+        黏著度／留存／啟用漏斗都要抓到『比某個時間窗更早』的資料才能定出每個人的『第 0 天』，
+        所以這裡刻意不帶 since_iso、直接抓能抓到的全部——量體目前還小（表剛開不久），全撈划算；
+        之後量體大了要再依時間分頁，這裡先誠實留一個上限，別無限撈。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(50000, int(limit or 20000)))
+        rows = self._select("product_events", {
+            "select": "*",
+            "order": "event_time.asc",
+            "limit": str(limit),
+        })
+        return [self.product_event_row_to_event(row) for row in rows or []]
 
     def load_memory_items(self, query=None, limit=200):
         if not self.enabled():
