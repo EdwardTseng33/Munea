@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""企業席次月結測試（需求單 4：計費規則、請款單、ESG 成效月報、4.4 隱私鐵律）。
+"""企業席次月結測試（需求單 4：計費規則、請款單、ESG 成效月報、4.4 隱私鐵律、5.2 收款欄位）。
 本檔跟 test_subscription_expiry.py 等既有測試同一套風格：unittest + 直接 import 目標模組。
-不接真的 Supabase——env 沒設 MUNEA_DATABASE_PROVIDER=supabase 時 configured() 就是 False，
-所有資料存取自動走本機 JSON 備援／或測試直接注入資料（seats/raw_metrics），
-所以這裡完全不用 mock supabase_adapter 的 HTTP 呼叫。"""
+大部分測試不接真的 Supabase——env 沒設 MUNEA_DATABASE_PROVIDER=supabase 時 configured()
+就是 False，所有資料存取自動走本機 JSON 備援／或測試直接注入資料（seats/raw_metrics）。
+唯一的例外是 InvoiceSupabaseFieldRoundTripTests：用一個假造的『已連線』backend
+（FakeSupabaseBackend）驗證 5.2 六個收款欄位真的會被送進 payload、也真的讀得回來，
+不是本地 JSON 備援那條路在幫忙掩護。"""
 import copy
 import os
 import sys
 import tempfile
 import unittest
 from datetime import date
+from unittest.mock import patch
 
 os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
 _TMP = tempfile.mkdtemp(prefix="munea-enterprise-billing-")
@@ -566,6 +569,116 @@ class MonthlyCloseBatchTests(unittest.TestCase):
         # 乙公司沒有帶任何逾期發票資料進來（existing_invoices 沒給 → 內部會去查 list_invoices，
         # 在乾淨的本機 store 裡查不到任何 issued 單 → 視為未逾期），報告應正常產出。
         self.assertIsNotNone(result_b["report"])
+
+
+
+class FakeSupabaseBackend:
+    """假造一個『Supabase 已連線』的 backend，驗證 5.2 六個收款欄位真的會被送進
+    payload（不是被 _invoice_item_to_supabase_row 過濾掉），也真的能從『回傳的 row』
+    讀回來。不接真的網路，但走的是跟正式環境一樣的 save_invoice() → _upsert_invoice_remote()
+    → backend._request() 這條路，不是本地 JSON 備援在幫忙掩護。"""
+
+    def __init__(self):
+        self._rows_by_invoice_no = {}
+        self.last_payload = None
+
+    def enabled(self):
+        return True
+
+    def _is_uuid(self, value):
+        return isinstance(value, str) and len(value) == 36 and value.count("-") == 4
+
+    def _request(self, method, table, query=None, payload=None, prefer=None):
+        assert table == "enterprise_invoices"
+        assert method == "POST"
+        self.last_payload = dict(payload)
+        row = dict(payload)
+        row.setdefault("id", "99999999-9999-4999-8999-999999999999")
+        row.setdefault("created_at", "2026-07-20T00:00:00Z")
+        row["updated_at"] = "2026-07-20T00:00:00Z"
+        self._rows_by_invoice_no[row["invoice_no"]] = row
+        return [row]
+
+    def _select(self, table, query):
+        assert table == "enterprise_invoices"
+        return list(self._rows_by_invoice_no.values())
+
+    def _first(self, table, query):
+        rows = self._select(table, query)
+        return rows[0] if rows else None
+
+
+class InvoiceSupabaseFieldRoundTripTests(unittest.TestCase):
+    """需求單 5.2：確認六個收款欄位真的能寫進 Supabase payload、也真的讀得回來。"""
+
+    def test_invoice_status_enum_includes_invoiced(self):
+        self.assertIn("invoiced", eb.INVOICE_STATUSES)
+
+    def test_unset_payment_fields_send_null_not_zero_or_missing(self):
+        period_start, period_end = JULY
+        client = make_client(unitPriceTwd=3000)
+        seats = [make_seat("a", "active", activated_at="2026-01-01T00:00:00Z")]
+        draft = eb.build_invoice_draft(client, seats, period_start, period_end)
+        row = eb._invoice_item_to_supabase_row(draft)
+        for column in ("sent_at", "paid_at", "paid_amount_twd", "payment_note",
+                       "invoice_number", "invoice_issued_at"):
+            self.assertIn(column, row, f"{column} 不該從 payload 消失")
+            self.assertIsNone(row[column], f"{column} 未設值時應送 null，不是 0 或空字串")
+
+    def test_five_two_fields_round_trip_through_fake_supabase_backend(self):
+        period_start, period_end = JULY
+        client = make_client(unitPriceTwd=3000)
+        seats = [make_seat("a", "active", activated_at="2026-01-01T00:00:00Z")]
+        draft = eb.build_invoice_draft(client, seats, period_start, period_end)
+        draft.update({
+            "status": "paid",
+            "sentAt": "2026-08-01T09:00:00Z",
+            "paidAt": "2026-08-10T10:00:00Z",
+            "paidAmountTwd": 3150,
+            "paymentNote": "匯款帳號末五碼 12345",
+            "invoiceNumber": "AB12345678",
+            "invoiceIssuedAt": "2026-08-11T00:00:00Z",
+        })
+
+        fake_backend = FakeSupabaseBackend()
+        with patch.object(eb, "_backend", return_value=fake_backend):
+            saved = eb.save_invoice(draft)
+
+            # 送出去的 payload 真的帶了六欄，型別／值都對得上
+            self.assertEqual(fake_backend.last_payload["sent_at"], "2026-08-01T09:00:00Z")
+            self.assertEqual(fake_backend.last_payload["paid_at"], "2026-08-10T10:00:00Z")
+            self.assertEqual(fake_backend.last_payload["paid_amount_twd"], 3150)
+            self.assertEqual(fake_backend.last_payload["payment_note"], "匯款帳號末五碼 12345")
+            self.assertEqual(fake_backend.last_payload["invoice_number"], "AB12345678")
+            self.assertEqual(fake_backend.last_payload["invoice_issued_at"], "2026-08-11T00:00:00Z")
+
+            # save_invoice() 回傳值（已經過 _invoice_row_to_item 正規化）六欄都讀得回來
+            self.assertEqual(saved["sentAt"], "2026-08-01T09:00:00Z")
+            self.assertEqual(saved["paidAt"], "2026-08-10T10:00:00Z")
+            self.assertEqual(saved["paidAmountTwd"], 3150)
+            self.assertEqual(saved["paymentNote"], "匯款帳號末五碼 12345")
+            self.assertEqual(saved["invoiceNumber"], "AB12345678")
+            self.assertEqual(saved["invoiceIssuedAt"], "2026-08-11T00:00:00Z")
+            self.assertEqual(saved["status"], "paid")
+
+            # 再走一次 list_invoices()／get_invoice()（同一個假 backend），確認查詢路徑也讀得回來
+            fetched = eb.get_invoice(saved["id"])
+            self.assertEqual(fetched["paidAmountTwd"], 3150)
+            self.assertEqual(fetched["invoiceNumber"], "AB12345678")
+            listed = eb.list_invoices(client_id=CLIENT_ID)
+            self.assertTrue(any(i["invoiceNo"] == draft["invoiceNo"] and i["paidAt"] == "2026-08-10T10:00:00Z" for i in listed))
+
+    def test_zero_is_a_valid_paid_amount_and_is_not_confused_with_unset(self):
+        """paid_amount_twd 的 check 是 >= 0，0 是合法值（例如全額折讓／贈送），
+        不該被 item.get(...) or 0 這種寫法誤判成『沒填』。"""
+        period_start, period_end = JULY
+        client = make_client(unitPriceTwd=3000)
+        seats = [make_seat("a", "active", activated_at="2026-01-01T00:00:00Z")]
+        draft = eb.build_invoice_draft(client, seats, period_start, period_end)
+        draft["paidAmountTwd"] = 0
+        row = eb._invoice_item_to_supabase_row(draft)
+        self.assertEqual(row["paid_amount_twd"], 0)
+        self.assertIsNotNone(row["paid_amount_twd"])
 
 
 if __name__ == "__main__":
