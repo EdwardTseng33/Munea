@@ -158,12 +158,25 @@
   // ---------- B 系列 · 引擎（同棟樓） ----------
   // 2026-07-20：引擎的門後來收緊了（① App 通行碼 ② 登入證），但巡檢一直裸奔敲門，
   // 導致 B-02/B-03 長期紅燈／略過。以下統一改成「帶著門票敲」，且沒登入時誠實標略過、不亂報紅。
+  // 通行碼是 app.js 裡的常數（const 不會掛到 window），巡檢直接從程式碼讀出來用，
+  // 這樣改鑰匙時巡檢會自動跟上、不必兩邊各維護一份。
+  let _appKey = null;
+  async function appKey() {
+    if (_appKey !== null) return _appKey;
+    if (typeof W.MUNEA_APP_KEY === 'string' && W.MUNEA_APP_KEY) { _appKey = W.MUNEA_APP_KEY; return _appKey; }
+    try {
+      const src = await fetch('/src/app.js').then(r => r.ok ? r.text() : '');
+      const m = src.match(/MUNEA_APP_KEY\s*=\s*['"]([^'"]+)['"]/);
+      _appKey = (m && m[1]) || '';
+    } catch (e) { _appKey = ''; }
+    return _appKey;
+  }
   async function apiHeaders(extra) {
     let h = { 'Content-Type': 'application/json', ...(extra || {}) };
     try {
       if (typeof W.muneaAuthHeaders === 'function') h = { ...h, ...(await W.muneaAuthHeaders()) };
     } catch (e) { /* 取不到就走下面的備援 */ }
-    if (!h['X-Munea-Key'] && typeof W.MUNEA_APP_KEY === 'string') h['X-Munea-Key'] = W.MUNEA_APP_KEY;
+    if (!h['X-Munea-Key']) { const k = await appKey(); if (k) h['X-Munea-Key'] = k; }
     return h;
   }
   const NEED_LOGIN = new Set(['auth_token_missing', 'auth_token_invalid', 'account_not_ready']);
