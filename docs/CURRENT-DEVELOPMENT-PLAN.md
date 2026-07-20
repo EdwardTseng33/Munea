@@ -3,7 +3,7 @@
 > Updated: 2026-07-20
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.41 (Build 48)`
+> **Current source:** `1.0.42 (Build 48)`
 >
 > **Latest uploaded App:** `1.0.40 (Build 47)`; the exact selected Build and Apple review state remain `unknown` until App Store Connect evidence is recorded.
 >
@@ -27,7 +27,7 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source | `1.0.41 (Build 48)` is current source; no Archive／upload／iPhone evidence for Build 48 | `merged, not packaged` |
+| App source | `1.0.42 (Build 48)` is current source; no Archive／upload／iPhone evidence for Build 48 | `merged, not packaged` |
 | Uploaded App | `1.0.40 (Build 47)` was uploaded and installed; selected review lane remains unknown | `packaged, human gates pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |
@@ -37,7 +37,7 @@
 
 ## Current Execution Order
 
-1. Review and merge the clean, green stack #174 → #175 → #188 without treating Draft or CI evidence as packaged success.
+1. Review and merge #188, which now carries the whole stack: #174 and #175 were closed on 2026-07-20 after diffing empty against #188, and the silent credit preflight plus developer zero-credit bypass ride on the same branch. Do not treat Draft or CI evidence as packaged success.
 2. On Mac／iPhone, record one-candidate-Build evidence for Google session, membership／points purchase, zero-credit preflight and credited `聊聊` end to end.
 3. Reconcile App Store selected Build, product price／description and Sandbox purchase result before changing release state.
 4. Apply Tokyo `017`／`019` only through the approved migration process; `018` requires backup, approval and full pre/post checks.
