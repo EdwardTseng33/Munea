@@ -169,6 +169,7 @@
         <div class="kpi-top"><span class="kpi-label">${esc(k.label)}${k.info?` <span class="kpi-info" title="${esc(k.info)}">ⓘ</span>`:""}</span></div>
         <div class="kpi-value">${esc(k.value)}${k.unit?`<span class="unit">${esc(k.unit)}</span>`:""}</div>
         ${k.sub?`<div class="kpi-sub">${esc(k.sub)}</div>`:""}
+        ${k.extra||""}
       </div>`).join("")}</div>`;
   }
   function card(title, note, body, headRight){
@@ -229,6 +230,48 @@
     overlay.addEventListener("mouseleave",()=>{ cross.setAttribute("opacity",0); dots.forEach((d)=>d.setAttribute("opacity",0)); hideTip(); });
     s.appendChild(overlay); box.innerHTML=""; box.appendChild(s);
     if(series.length>1){ const lg=document.createElement("div"); lg.className="legend"; lg.innerHTML=series.map((se)=>`<span class="key"><span class="swatch" style="background:${se.color}"></span>${esc(se.name)}</span>`).join(""); box.appendChild(lg); }
+  }
+
+  // 留存專用折線圖：留存要看的是「掉多快」，用長條看不出趨勢。
+  // 算不出來的節點（例如資料還沒滿 30 天）畫成虛線空心點＋說明，不畫成 0——0 會被誤讀成「沒人回來」。
+  function retentionChart(box, pts){
+    const W=760,H=230,L=48,R=24,T=26,B=44, pw=W-L-R, ph=H-T-B;
+    const nP=pts.length;
+    const x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-(v/100)*ph;
+    const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"留存曲線"});
+    for(let t=0;t<=4;t++){
+      const val=25*t, gy=y(val);
+      s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1}));
+      const tx=svg("text",{x:L-10,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=val+"%"; s.appendChild(tx);
+    }
+    const known=pts.map((p,i)=>({...p,i})).filter((p)=>p.rate!=null);
+    if(known.length>1){
+      s.appendChild(svg("polyline",{points:known.map((p)=>`${x(p.i)},${y(p.rate*100)}`).join(" "),
+        fill:"none",stroke:cc.teal,"stroke-width":2.5,"stroke-linejoin":"round","stroke-linecap":"round"}));
+    }
+    pts.forEach((p,i)=>{
+      const lb=svg("text",{x:x(i),y:H-16,"text-anchor":"middle","font-size":12,fill:p.rate==null?CHART.muted:CHART.ink,"font-weight":p.rate==null?"400":"600"});
+      lb.textContent=p.label; s.appendChild(lb);
+      if(p.rate==null){
+        // 尚未到期：虛線空心點＋「還要 N 天」，明白區分「還沒到」與「掉到 0」
+        s.appendChild(svg("circle",{cx:x(i),cy:y(0)-ph/2,r:6,fill:"#fff",stroke:CHART.muted,"stroke-width":1.5,"stroke-dasharray":"3 3"}));
+        const w=svg("text",{x:x(i),y:y(0)-ph/2-14,"text-anchor":"middle","font-size":11,fill:CHART.muted});
+        w.textContent=p.wait||"還沒到"; s.appendChild(w);
+        return;
+      }
+      const cy=y(p.rate*100);
+      s.appendChild(svg("circle",{cx:x(i),cy,r:5,fill:cc.teal,stroke:"#fff","stroke-width":2}));
+      // 第一個點的數值往右挪一點，免得跟左側刻度字黏在一起
+      const anch=i===0?"start":(i===nP-1?"end":"middle");
+      const vx=i===0?x(i)+8:(i===nP-1?x(i)-8:x(i));
+      const v=svg("text",{x:vx,y:cy-13,"text-anchor":anch,"font-size":13,fill:CHART.ink,"font-weight":"700"});
+      v.textContent=Math.round(p.rate*100)+"%"; s.appendChild(v);
+      if(p.cohort){
+        const c=svg("text",{x:x(i),y:H-2,"text-anchor":"middle","font-size":10.5,fill:CHART.muted});
+        c.textContent=`${p.retained}／${p.cohort} 人`; s.appendChild(c);
+      }
+    });
+    box.innerHTML=""; box.appendChild(s);
   }
 
   // ══════════ 頁面渲染（只吃真資料） ══════════
@@ -614,34 +657,40 @@
     const activationRate=registered?chatted/registered:null;
     const d30=ret.d30||{};
     let html=kpiRow([
-      { label:"黏著度", value:st.avgActiveDays==null?"–":`${st.avgActiveDays.toFixed(1)} 天`, sub:st.rate==null?`近 ${win} 天平均`:`近 ${win} 天平均 · ${pct(st.rate)}`, star:true, info:"近 N 天內，平均每位長輩有幾天發生過『有意義互動』——通話講滿 1 分鐘、完成視訊臉、做到提醒、家人傳話等任一項都算，跟其他頁同一套判準。" },
+      { label:"黏著度", value:st.avgActiveDays==null?"–":`${st.avgActiveDays.toFixed(1)} 天`, sub:st.rate==null?`近 ${win} 天平均`:`每 ${win} 天平均用 ${st.avgActiveDays.toFixed(1)} 天`, star:true,
+        info:"近 N 天內，平均每位長輩有幾天發生過『有意義互動』——通話講滿 1 分鐘、完成視訊臉、做到提醒、家人傳話等任一項都算，跟其他頁同一套判準。",
+        // 量尺讓「3.8 天」一眼看出是 30 天裡的多少，不必自己換算百分比
+        extra: st.rate==null?"":`<div class="meter" role="img" aria-label="黏著度 ${pct(st.rate)}"><span class="meter-fill" style="width:${Math.min(100,Math.round(st.rate*100))}%"></span></div><div class="meter-cap"><span>0 天</span><span>${pct(st.rate)}</span><span>${win} 天</span></div>` },
       { label:"30 天留存", value:d30.rate==null?"–":pct(d30.rate), sub:d30.cohort?`${n(d30.retained)}／${n(d30.cohort)} 人`:"還沒有人滿 30 天", info:"第一次有意義互動那天算第 0 天，看第 30 天『當天』還有沒有互動——不是 30 天內任何一天都算。" },
       { label:"啟用率", value:activationRate==null?"–":pct(activationRate), sub:"註冊到真的聊上第一次", info:"註冊帳號後，有多少比例後來真的有過一次有意義互動——不看有沒有付費。" },
       { label:"免費→付費轉換率", value:sm.freeToPaidConversion==null?"–":pct(sm.freeToPaidConversion), sub:"沿用「訂閱與點數」頁的數字" },
     ]);
     html+=principle(g.principle||"黏著度看近期回來的頻率，留存看第 N 天當天還有沒有回來，啟用漏斗看註冊到付費一路的轉換。");
 
-    const retentionOrder=[["d1","D1"],["d7","D7"],["d14","D14"],["d30","D30"]];
-    const retentionKnown=retentionOrder.filter(([k])=>ret[k]&&ret[k].rate!=null);
-    const retentionSkipped=retentionOrder.filter(([k])=>!(ret[k]&&ret[k].rate!=null));
-    let retentionNote="第一次有意義互動那天算第 0 天，看第 N 天『當天』還有沒有互動，不是 N 天內任何一天都算。";
-    if(retentionSkipped.length){
-      retentionNote+=` ${retentionSkipped.map(([,label])=>label).join("、")} 目前還算不出來（還沒有人滿那麼多天，不是沒人回來）。`;
-    }
+    const retentionOrder=[["d1","D1",1],["d7","D7",7],["d14","D14",14],["d30","D30",30]];
+    const haveDays=dataRange.days!=null?Number(dataRange.days):null;
+    const retPts=retentionOrder.map(([k,label,day])=>{
+      const r=ret[k]||{};
+      const left=(haveDays!=null&&r.rate==null)?Math.max(1,day-haveDays):null;
+      return { label, rate:r.rate==null?null:r.rate, cohort:r.cohort||0, retained:r.retained||0,
+               wait: left!=null?`還要 ${left} 天`:"還沒到" };
+    });
+    const retentionKnown=retPts.filter((p)=>p.rate!=null);
+    const retentionNote="第一次有意義互動那天算第 0 天，看第 N 天『當天』還有沒有回來——虛線的點是資料還沒滿那麼多天，不是掉到 0。";
     if(!retentionKnown.length){
-      html+=card("留存曲線", retentionNote, emptyBox(dataRange.days!=null?`資料目前只回溯到 ${n(dataRange.days)} 天前，留存還算不出來，過幾天再回來看。`:"還沒有任何留存資料——長輩開始跟沐寧聊天後就會出現。"));
+      html+=card("留存曲線", retentionNote, emptyBox(haveDays!=null?`資料目前只回溯到 ${n(haveDays)} 天前，留存還算不出來，過幾天再回來看。`:"還沒有任何留存資料——長輩開始跟沐寧聊天後就會出現。"));
     } else {
       html+=card("留存曲線", retentionNote, chartMount("gr-retention"));
-      pending.push(()=>columnChart($("gr-retention"), retentionKnown.map(([,label])=>label), [
-        { name:"留存率", color:cc.teal, values:retentionKnown.map(([k])=>Math.round((ret[k].rate||0)*100)) },
-      ], { unit:"%", empty:"還沒有留存資料。" }));
+      pending.push(()=>retentionChart($("gr-retention"), retPts));
     }
 
     const funnelMax=funnel.length?Math.max(1,...funnel.map((s)=>s.count||0)):1;
     html+=card("啟用漏斗", "註冊 → 撥出第一通 → 第一次聊上 → 付費 · 看全部歷史，不受上面「近 N 天」限制", funnel.length?`<div class="bars-list">${funnel.map((s)=>{
       const w=funnelMax?Math.round((s.count||0)/funnelMax*100):0;
-      const rateTxt=s.rate==null?"":`<span class="bl-sub">相對上一關 ${pct(s.rate)}</span>`;
-      return `<div class="bl"><div class="bl-top"><span class="bl-name">${esc(s.label)}</span><span class="bl-val">${n(s.count)} 戶${rateTxt}</span></div><div class="track"><div class="fill" style="width:${w}%"></div></div></div>`;
+      const zero=!(s.count||0);
+      // 0 戶不畫成空灰條（看起來像壞掉），改用虛線軌道＋「尚未開始」講清楚是還沒發生
+      const rateTxt=zero?`<span class="bl-sub">尚未開始</span>`:(s.rate==null?"":`<span class="bl-sub">相對上一關 ${pct(s.rate)}</span>`);
+      return `<div class="bl"><div class="bl-top"><span class="bl-name">${esc(s.label)}</span><span class="bl-val${zero?" is-zero":""}">${n(s.count)} 戶${rateTxt}</span></div><div class="track${zero?" is-empty":""}">${zero?"":`<div class="fill" style="width:${w}%"></div>`}</div></div>`;
     }).join("")}</div>`:emptyBox("還沒有帳號註冊——開始開放使用後這裡會出現。"));
     return html;
   }

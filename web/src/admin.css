@@ -503,3 +503,13 @@ tr.tr-overdue { background: var(--danger-soft); }
 .confirm-body { margin-bottom: 18px; line-height: 1.65; color: var(--ink-2); font-size: .92rem; }
 .confirm-card.danger .confirm-body b { color: var(--danger); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ══ 成長與黏著（2026-07-21 視覺優化）══ */
+/* 黏著度量尺：讓「3.8 天」一眼看出是 30 天裡的多少，不必自己換算 */
+.meter { margin-top: 10px; height: 8px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
+.meter-fill { display: block; height: 100%; border-radius: 999px; background: var(--teal); }
+.meter-cap { display: flex; justify-content: space-between; margin-top: 5px; color: var(--muted); font-size: .74rem; }
+.meter-cap span:nth-child(2) { color: var(--teal-dd); font-weight: 700; font-family: var(--num); }
+/* 漏斗「0 戶」不用空灰條——虛線軌道明白表示「還沒開始」而不是壞掉 */
+.bars-list .track.is-empty { border: 1px dashed var(--line); background: transparent; }
+.bars-list .bl-val.is-zero { color: var(--muted); }
