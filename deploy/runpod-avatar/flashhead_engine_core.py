@@ -114,6 +114,7 @@ class AudioOutBuffer:
         self.depth_samples = 0
         self.hold_until_ts = float("inf")
         self._awaiting_first_push = True
+        self.playout_generation = 0
 
     def push(self, pcm_int16):
         with self.lock:
@@ -123,6 +124,7 @@ class AudioOutBuffer:
                 self.next_prebuffer_s = self.default_prebuffer_s
                 self.hold_until_ts = time.time() + delay
                 self._awaiting_first_push = False
+                self.playout_generation += 1
             self.buf = np.concatenate([self.buf, pcm_int16])
             self.last_push_ts = time.time()
             self.depth_samples = len(self.buf)
@@ -144,6 +146,11 @@ class AudioOutBuffer:
         """True while audio and video must stay on their shared start gate."""
         with self.lock:
             return time.time() < self.hold_until_ts
+
+    def playout_marker(self):
+        """Return the current turn id and its shared A/V release timestamp."""
+        with self.lock:
+            return self.playout_generation, self.hold_until_ts
 
     def pop_frame(self):
         with self.lock:

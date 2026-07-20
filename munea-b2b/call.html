@@ -708,10 +708,9 @@ Face.start = async function(char){
   this.transport = 'webrtc';
   this.on = false;
   Face._diagAttempts = [];
-  // The US RunPod route loses too many packets on a direct residential path.
-  // Start through the same Taiwan TURN relay used by the App. Keep a debug-only
-  // `?debug=1&direct=1` escape hatch for future A/B measurements.
-  const relayFirst = !(showDbg && qs.has('direct'));
+  // Match the App: direct/STUN first with Taiwan TURN as the automatic fallback.
+  // `?debug=1&relay=1` remains available for controlled network A/B checks.
+  const relayFirst = showDbg && qs.has('relay');
   let ok = false;
   try{ ok = await this._attempt(char, relayFirst); }
   catch(e){
@@ -741,6 +740,14 @@ Face.start = async function(char){
   setStatus('視訊就緒，接聲音線…', true);
   this.ws = new WebSocket(AVATAR_HTTP.replace(/^http/,'ws') + '/audio?token=' + encodeURIComponent(AVATAR_TOKEN));
   this.ws.binaryType = 'arraybuffer';
+  this.ws.onmessage = ev=>{
+    if (typeof ev.data !== 'string') return;
+    let msg; try{ msg = JSON.parse(ev.data); }catch(e){ return; }
+    if (msg.type === 'playout_start') {
+      dbgLine('[face] server playout start generation=' + msg.generation);
+      Live.releaseLocalPlayout();
+    }
+  };
   this.on = true;
   const wsOk = await new Promise((res)=>{
     let done=false;
@@ -762,7 +769,7 @@ Face.prepareOpeningPath = async function(){
   faceVid.muted = true;
   this._tryPlay();
   // Same technique as the App: a private one-second silent turn warms the
-  // 768 model, encoder, WebRTC jitter buffer and remote audio renderer before
+  // 640 model, encoder, WebRTC jitter buffer and remote audio renderer before
   // the greeting. It never reaches Voice/Gemini and is never audible.
   this.reset();
   this.feed(new Int16Array(24000).buffer);
@@ -772,7 +779,9 @@ Face.prepareOpeningPath = async function(){
   if (!this.on) throw new Error('影音暖機期間連線中斷');
   overlay.classList.add('on');
   IdleMotion.stop();
-  faceVid.muted = false;
+  // Voice audio is played locally from the reliable Taiwan WebSocket after the
+  // RunPod playout marker. Keep the lossy trans-Pacific WebRTC audio muted.
+  faceVid.muted = true;
   this._tryPlay();
   dbgLine('[face] opening A/V warm-up complete; one player owns both tracks');
   return true;
@@ -870,7 +879,7 @@ function stopPeriodicStats(){ if (_statsTimer){ clearInterval(_statsTimer); _sta
 </script>
 <script>
 const Live = {
-  ws:null, ac:null, playCtx:null, playHead:0, playSources:[], mic:null, proc:null, on:false, micLevel:0, speaking:false, _spkT:null, _activated:false,
+  ws:null, ac:null, playCtx:null, playHead:0, playSources:[], _pendingPcm:[], _localPlayoutOn:false, mic:null, proc:null, on:false, micLevel:0, speaking:false, _spkT:null, _activated:false,
   _f2i(f){ const b=new Int16Array(f.length); for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i])); b[i]=s<0?s*0x8000:s*0x7fff;} return b; },
   _down(buf,inR,outR){ if(outR>=inR)return buf; const r=inR/outR,len=Math.round(buf.length/r),o=new Float32Array(len);
     let i=0,j=0; while(j<len){const n=Math.round((j+1)*r);let s=0,c=0;for(;i<n&&i<buf.length;i++){s+=buf[i];c++;}o[j++]=c?s/c:0;} return o; },
@@ -882,7 +891,13 @@ const Live = {
     }catch(e){ dbgLine('[voice] playback prime failed: ' + e.message); return false; }
   },
   playPcm(buf){
-    if (Face.transport !== 'stream') return;
+    if (Face.transport === 'webrtc' && !this._localPlayoutOn){
+      this._pendingPcm.push(buf.slice(0));
+      return;
+    }
+    this._schedulePcm(buf, Face.transport === 'stream' ? 0.82 : 0.02);
+  },
+  _schedulePcm(buf, initialDelay){
     if (!this.playCtx && !this.primePlayback()) return;
     const i16 = new Int16Array(buf), f32 = new Float32Array(i16.length);
     for (let i=0;i<i16.length;i++) f32[i] = i16[i] / 0x8000;
@@ -891,15 +906,23 @@ const Live = {
     const src = this.playCtx.createBufferSource();
     src.buffer = audio; src.connect(this.playCtx.destination);
     const now = this.playCtx.currentTime;
-    this.playHead = Math.max(this.playHead || 0, now + (this.playHead > now ? 0.03 : 0.82));
+    this.playHead = Math.max(this.playHead || 0, now + (this.playHead > now ? 0.03 : initialDelay));
     src.start(this.playHead);
     this.playHead += audio.duration;
     this.playSources.push(src);
     src.onended = ()=>{ const i=this.playSources.indexOf(src); if(i>=0)this.playSources.splice(i,1); };
   },
+  releaseLocalPlayout(){
+    if (Face.transport !== 'webrtc' || this._localPlayoutOn) return;
+    this._localPlayoutOn = true;
+    const pending = this._pendingPcm.splice(0);
+    for (const pcm of pending) this._schedulePcm(pcm, 0.02);
+  },
   stopPlayback(){
     for (const src of this.playSources.splice(0)){ try{ src.stop(); }catch(e){} }
     this.playHead = 0;
+    this._pendingPcm = [];
+    this._localPlayoutOn = false;
   },
   sendTestLine(){ try{ if (this.ws && this.ws.readyState===1) this.ws.send(JSON.stringify({type:'text', text: TEST_LINE})); dbgLine('[voice] nomic test line sent'); }catch(e){} },
   activate(){
@@ -989,7 +1012,11 @@ Live.start = async function(char){
         }
         return;
       }
-      if (!this._turnT0) this._turnT0 = performance.now();
+      if (!this._turnT0){
+        this._turnT0 = performance.now();
+        this._pendingPcm = [];
+        this._localPlayoutOn = Face.transport !== 'webrtc';
+      }
       clearTimeout(this._micReopenT);
       window.__flashheadStats.audioBytes += ev.data.byteLength || 0;
       Face.feed(ev.data);
