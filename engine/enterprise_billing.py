@@ -35,6 +35,9 @@ _JSON_STORE_LOCK = threading.RLock()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 INVOICES_PATH = os.environ.get("MUNEA_ENTERPRISE_INVOICES_PATH") or os.path.join(HERE, "enterprise_invoices_store.json")
+# 2026-07-20 三次需求：ESG 成效月報一算完就整份凍結存檔（見 save_report() docstring），
+# 跟請款單同一套環境變數命名慣例、同一個預設目錄。
+REPORTS_PATH = os.environ.get("MUNEA_ENTERPRISE_REPORTS_PATH") or os.path.join(HERE, "enterprise_reports_store.json")
 
 TAX_RATE = Decimal("0.05")
 PAYMENT_DUE_DAY = 15  # 需求單 4.2／5.2：付款期限＝次月 15 日前
@@ -417,6 +420,9 @@ _INVOICE_SUPABASE_COLUMNS = (
     "status", "due_date", "seat_snapshot", "report_ref",
     # 需求單 5.2 收款欄位（2026-07-20 解禁：020_enterprise_seats.sql 已補齊這六欄）
     "sent_at", "paid_at", "paid_amount_twd", "payment_note", "invoice_number", "invoice_issued_at",
+    # 2026-07-20 三次需求：請款單寄出（issued）當下凍結的 HTML 快照
+    # （022_enterprise_documents.sql 補的欄，見 get_invoice_html() 決策理由）
+    "invoice_html_snapshot",
 )
 
 
@@ -446,6 +452,7 @@ def _invoice_item_to_supabase_row(item):
         "payment_note": item.get("paymentNote"),
         "invoice_number": item.get("invoiceNumber"),
         "invoice_issued_at": item.get("invoiceIssuedAt"),
+        "invoice_html_snapshot": item.get("invoiceHtmlSnapshot"),
     }
 
 
@@ -481,6 +488,7 @@ def _invoice_row_to_item(row):
         "paymentNote": pick("paymentNote", "payment_note"),
         "invoiceNumber": pick("invoiceNumber", "invoice_number"),
         "invoiceIssuedAt": pick("invoiceIssuedAt", "invoice_issued_at"),
+        "invoiceHtmlSnapshot": pick("invoiceHtmlSnapshot", "invoice_html_snapshot"),
         "createdAt": pick("createdAt", "created_at"),
         "updatedAt": pick("updatedAt", "updated_at"),
     }
@@ -649,13 +657,31 @@ def build_invoice_draft(client, seats, period_start, period_end, settings=None):
         "paymentNote": None,
         "invoiceNumber": None,
         "invoiceIssuedAt": None,
+        "invoiceHtmlSnapshot": None,
     }
 
 
 def generate_monthly_invoice(client, seats, period_start, period_end, persist=True, settings=None):
+    """算出並落地一張月結請款單。
+
+    2026-07-20 三次需求踩到的真 bug（走完整流程實測抓到）：同一期間重跑月結時，
+    這裡原本無條件把新算出的 draft 存進去——save_invoice() 是整列覆寫語意
+    （見該函式），draft 明確帶著 status="draft"／sentAt=None／paidAt=None／
+    invoiceHtmlSnapshot=None 這些欄位，會把「已經人工按過已寄出／已入帳」的請款單
+    直接覆寫回草稿、抹掉收款紀錄與凍結的 HTML 快照——鐵律 5.1「已入帳＝開通開關」
+    因此可能被一次意外的重跑整個繞過（assert_client_has_paid_invoice 之後查到的
+    又是 draft，開通會被誤擋；更糟的情況是先誤擋、之後又被別的動作誤放行）。
+
+    修法：重跑前先查這期間是不是已經有一張不是 draft 的請款單（issued／paid／
+    invoiced／void，也就是人已經對它做過動作）——有的話直接原樣回傳，不重新計算、
+    不覆寫，金額異動走人工的請款單調整流程，不該被『重跑月結』這個批次動作悄悄改掉。
+    只有還在 draft（系統算好、還沒人工放行）的請款單才允許被下一次重跑取代。"""
     draft = build_invoice_draft(client, seats, period_start, period_end, settings=settings)
     if not persist:
         return draft
+    existing = get_invoice_by_no(draft["invoiceNo"])
+    if existing and existing.get("status") != "draft":
+        return existing
     return save_invoice(draft)
 
 
@@ -861,6 +887,29 @@ def render_invoice_html(invoice, client, settings=None):
 </div>
 </body>
 </html>"""
+
+
+def get_invoice_html(invoice_id):
+    """需求單 3.5＋3.6：單一公司明細頁「月報與請款單下載」要取出的請款單 HTML。
+
+    凍結時機的決定（2026-07-20 三次需求 · 已寫進 022_enterprise_documents.sql 檔頭註解）：
+      - status == draft（還沒人工放行寄出）：還沒有快照，即時用目前的開票／收款設定重繪
+        ——沿用 build_invoice_draft() 既有設計，Edward 換開票公司後，舊草稿要立刻反映新抬頭。
+      - status 其餘（issued／paid／invoiced／void）：一律回 invoiceHtmlSnapshot——
+        mark-sent 轉 issued 那一刻凍結存下來的原樣，之後收款設定再怎麼改，
+        這張已經寄出去的單重新下載時看到的都是「當初真的印給客戶的那個版本」，
+        帳務對帳／爭議時才有一致的憑證（這是本函式存在的唯一理由）。
+
+    找不到請款單或找不到對應公司都回 None，呼叫端（server.py）自行決定要回什麼錯誤代碼。"""
+    invoice = get_invoice(invoice_id)
+    if not invoice:
+        return None
+    if invoice.get("invoiceHtmlSnapshot"):
+        return invoice["invoiceHtmlSnapshot"]
+    client = enterprise_seats.get_client(invoice.get("enterpriseClientId"))
+    if not client:
+        return None
+    return render_invoice_html(invoice, client)
 
 
 # ---------------------------------------------------------------------------
@@ -1376,6 +1425,241 @@ def render_esg_report_html(report):
 
 
 # ---------------------------------------------------------------------------
+# D. ESG 月報存檔（需求單 3.5＋3.6：接通「月報與請款單下載」· 2026-07-20 三次需求）
+# ---------------------------------------------------------------------------
+
+# 月報一算完（build_esg_report() 成功回傳，不管有沒有正式寄出）就整份凍結存檔——
+# 跟請款單「草稿即時重繪、issued 後才凍結」不同：月報沒有 draft/issued 這種人工放行的
+# 中間態，而且底層事件表（daily_user_metrics 等）可能事後補資料，同一期間隔幾天重算
+# 數字可能跟當初報表兜不起來；ESG／帳務稽核要看的是「當初真的算出來、可能已經隨請款單
+# 一起送出去的那個版本」，所以在算完的當下就把 HTML 跟原始數據一起落地，不是等某個
+# 後續動作才凍結，也不是每次下載都重新算一次。
+
+def _report_row_to_item(row):
+    row = row or {}
+
+    def pick(camel, snake):
+        if camel in row and row.get(camel) is not None:
+            return row.get(camel)
+        return row.get(snake)
+
+    return {
+        "id": row.get("id") or "",
+        "enterpriseClientId": pick("enterpriseClientId", "enterprise_client_id") or "",
+        "invoiceId": pick("invoiceId", "invoice_id"),
+        "periodStart": pick("periodStart", "period_start"),
+        "periodEnd": pick("periodEnd", "period_end"),
+        "reportData": pick("reportData", "report_data") or {},
+        "reportHtml": pick("reportHtml", "report_html") or "",
+        "generatedAt": pick("generatedAt", "generated_at"),
+        "createdAt": pick("createdAt", "created_at"),
+        "updatedAt": pick("updatedAt", "updated_at"),
+    }
+
+
+def _report_item_to_supabase_row(item):
+    item = item or {}
+    return {
+        "enterprise_client_id": item.get("enterpriseClientId"),
+        "invoice_id": item.get("invoiceId"),
+        "period_start": item.get("periodStart"),
+        "period_end": item.get("periodEnd"),
+        "report_data": item.get("reportData") or {},
+        "report_html": item.get("reportHtml") or "",
+        "generated_at": item.get("generatedAt"),
+    }
+
+
+def _load_reports_remote(backend, client_id=None, limit=200):
+    if not backend.enabled():
+        return None
+    filters = {"select": "*", "order": "period_start.desc", "limit": str(max(1, min(500, int(limit or 200))))}
+    if client_id:
+        filters["enterprise_client_id"] = f"eq.{client_id}"
+    rows = backend._select("enterprise_reports", filters)
+    return [_report_row_to_item(row) for row in rows or []]
+
+
+def list_reports(client_id=None, limit=200):
+    backend = _backend()
+    try:
+        remote = _load_reports_remote(backend, client_id=client_id, limit=limit)
+        if remote is not None:
+            return remote
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback("load enterprise reports from Supabase", exc)
+    items = _read_json_file(REPORTS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [_report_row_to_item(item) for item in items]
+    if client_id:
+        items = [i for i in items if i["enterpriseClientId"] == client_id]
+    items.sort(key=lambda i: i.get("periodStart") or "", reverse=True)
+    return items[:limit]
+
+
+def get_report(report_id):
+    if not report_id:
+        return None
+    backend = _backend()
+    try:
+        if backend.enabled():
+            row = backend._first("enterprise_reports", {"id": f"eq.{report_id}", "select": "*"})
+            if row:
+                return _report_row_to_item(row)
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback(f"get enterprise report {report_id} from Supabase", exc)
+    items = _read_json_file(REPORTS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    for item in items:
+        if item.get("id") == report_id:
+            return _report_row_to_item(item)
+    return None
+
+
+def _upsert_report_remote(backend, item):
+    if not backend.enabled():
+        return None
+    payload = _report_item_to_supabase_row(item)
+    report_id = item.get("id")
+    if report_id and backend._is_uuid(report_id):
+        payload["id"] = report_id
+    rows = backend._request(
+        "POST", "enterprise_reports",
+        query={"on_conflict": "enterprise_client_id,period_start", "select": "*"},
+        payload=payload, prefer="resolution=merge-duplicates,return=representation",
+    )
+    return _report_row_to_item(rows[0]) if rows else None
+
+
+def _save_report_local(item):
+    items = _read_json_file(REPORTS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    now = _utc_now_iso()
+    record = dict(item)
+    existing_idx = None
+    for idx, existing in enumerate(items):
+        if (
+            existing.get("enterpriseClientId") == record.get("enterpriseClientId")
+            and existing.get("periodStart") == record.get("periodStart")
+        ):
+            existing_idx = idx
+            break
+    if existing_idx is not None:
+        record["id"] = items[existing_idx].get("id") or record.get("id") or str(uuid.uuid4())
+        record["createdAt"] = items[existing_idx].get("createdAt") or record.get("createdAt") or now
+        record["updatedAt"] = now
+        items[existing_idx] = {**items[existing_idx], **record}
+        final_record = items[existing_idx]
+    else:
+        record.setdefault("id", str(uuid.uuid4()))
+        record.setdefault("createdAt", now)
+        record["updatedAt"] = now
+        items.append(record)
+        final_record = record
+    _write_json_file(REPORTS_PATH, items)
+    return _report_row_to_item(final_record)
+
+
+def save_report(report, invoice_id=None):
+    client_id = (report.get("client") or {}).get("id")
+    period = report.get("reportPeriod") or {}
+    item = {
+        "enterpriseClientId": client_id,
+        "invoiceId": invoice_id,
+        "periodStart": period.get("start"),
+        "periodEnd": period.get("end"),
+        "reportData": report,
+        "reportHtml": render_esg_report_html(report),
+        "generatedAt": report.get("generatedAt") or _utc_now_iso(),
+    }
+    backend = _backend()
+    try:
+        remote = _upsert_report_remote(backend, item)
+        if remote is not None:
+            return remote
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback("save enterprise report to Supabase", exc)
+    return _save_report_local(item)
+
+
+def get_report_html(report_id):
+    report = get_report(report_id)
+    return report.get("reportHtml") if report else None
+
+
+# ---------------------------------------------------------------------------
+# E. 下載清單（需求單 3.5 單一公司頁「月報與請款單下載」· 2026-07-20 三次需求）
+# ---------------------------------------------------------------------------
+
+def _period_label_from_dates(period_start, period_end):
+    start = _parse_date(period_start)
+    if start:
+        return f"{start.year}年{start.month}月"
+    if period_start or period_end:
+        return f"{period_start or ''} ~ {period_end or ''}"
+    return ""
+
+
+_INVOICE_STATUS_LABEL_ZH = {
+    "draft": "草稿・尚未寄出",
+    "issued": "已寄出・待收款",
+    "paid": "已收款",
+    "invoiced": "已收款・已開發票",
+    "void": "已作廢",
+}
+
+
+def list_downloadable_documents(client_id, client=None):
+    client = client if client is not None else enterprise_seats.get_client(client_id)
+    docs = []
+    for inv in list_invoices(client_id=client_id, limit=200):
+        html_content = inv.get("invoiceHtmlSnapshot")
+        if not html_content and client:
+            try:
+                html_content = render_invoice_html(inv, client)
+            except Exception as exc:
+                _log_fallback(f"render invoice html for download (invoice {inv.get('id')})", exc)
+                html_content = None
+        period_label = _period_label_from_dates(inv.get("periodStart"), inv.get("periodEnd"))
+        status_label = _INVOICE_STATUS_LABEL_ZH.get(inv.get("status"), inv.get("status") or "")
+        docs.append({
+            "type": "invoice",
+            "id": inv.get("id"),
+            "periodStart": inv.get("periodStart"),
+            "periodEnd": inv.get("periodEnd"),
+            "period": period_label,
+            "label": f"請款單 {inv.get('invoiceNo') or ''}（{status_label}）",
+            "status": inv.get("status"),
+            "generatedAt": inv.get("updatedAt") or inv.get("createdAt"),
+            "html": html_content,
+        })
+    for rep in list_reports(client_id=client_id, limit=200):
+        period_label = _period_label_from_dates(rep.get("periodStart"), rep.get("periodEnd"))
+        docs.append({
+            "type": "report",
+            "id": rep.get("id"),
+            "periodStart": rep.get("periodStart"),
+            "periodEnd": rep.get("periodEnd"),
+            "period": period_label,
+            "label": f"ESG 成效月報 {period_label}",
+            "status": "generated",
+            "generatedAt": rep.get("generatedAt"),
+            "html": rep.get("reportHtml"),
+        })
+    docs.sort(key=lambda d: (d.get("periodStart") or "", d.get("type") == "report"), reverse=True)
+    return docs
+
+
+# ---------------------------------------------------------------------------
 # 月結整合（需求單 4、施工順序階段三）
 # ---------------------------------------------------------------------------
 
@@ -1385,7 +1669,13 @@ def run_monthly_close_for_client(client, seats, period_start, period_end, *,
     """對一家公司跑一次月結，同時出請款單與月報。
     請款單一定產出（逾期是催收的對象，不是不開單的理由）；月報則照需求單 4.3 鐵律，
     逾期 >= 7 天就不產、只回報原因，呼叫端（例如批次寄送流程）自己決定怎麼處理
-    （例如：請款單照常寄，月報改成內部提醒催收，不寄給客戶）。"""
+    （例如：請款單照常寄，月報改成內部提醒催收，不寄給客戶）。
+
+    2026-07-20 三次需求：月報算出來就存檔（save_report()，理由見該函式所在的 D 節開頭
+    註解），並把存檔後拿到的 report id 回填進請款單的 reportRef 欄位——兩份文件因此
+    互相認得對方，後台單一公司頁「月報與請款單下載」清單才能標出「這張請款單對應哪份
+    月報」。persist_invoice=False（測試／預覽用途）時兩邊都不落地，維持原本『純算給
+    呼叫端看，不動任何存檔』的語意，不能落一半（報告存了、請款單卻是預覽態）。"""
     invoice = generate_monthly_invoice(client, seats, period_start, period_end, persist=persist_invoice)
     result = {"invoice": invoice, "report": None, "reportBlocked": None}
     try:
@@ -1394,6 +1684,12 @@ def run_monthly_close_for_client(client, seats, period_start, period_end, *,
             invoices=existing_invoices, raw_metrics=raw_metrics, today=today,
         )
         result["report"] = report
+        if persist_invoice:
+            saved_report = save_report(report, invoice_id=invoice.get("id") if invoice else None)
+            if invoice is not None and saved_report and saved_report.get("id"):
+                invoice["reportRef"] = saved_report["id"]
+                invoice = save_invoice(invoice)
+                result["invoice"] = invoice
     except ClientOverdueBlockedError as exc:
         result["reportBlocked"] = {
             "reason": "overdue",
