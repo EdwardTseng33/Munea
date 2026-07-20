@@ -724,7 +724,9 @@ def render_invoice_html(invoice, client, settings=None):
     tax_id = html.escape(str(client.get("taxId") or "—"))
     billing_address = html.escape(str(client.get("billingAddress") or "—"))
     contact_name = html.escape(str(client.get("contactName") or "—"))
-    contact_email = html.escape(str(client.get("contactEmail") or "—"))
+    contact_email = html.escape(str(client.get("contactEmail") or ""))
+    # 客戶沒填 email 時不要印出「王小姐（—）」這種空括號，寄給客戶看起來像故障
+    contact_line = f"{contact_name}（{contact_email}）" if contact_email else contact_name
 
     period_label = f"{invoice.get('periodStart') or ''} ~ {invoice.get('periodEnd') or ''}"
     status = invoice.get("status") or "draft"
@@ -808,7 +810,7 @@ def render_invoice_html(invoice, client, settings=None):
       <p><strong>{company_name}</strong></p>
       <p>統一編號：{tax_id}</p>
       <p>地址：{billing_address}</p>
-      <p>聯絡人：{contact_name}（{contact_email}）</p>
+      <p>聯絡人：{contact_line}</p>
     </div>
     <div class="box">
       <h2>帳單資訊</h2>
