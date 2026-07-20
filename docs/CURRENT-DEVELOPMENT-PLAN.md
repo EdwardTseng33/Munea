@@ -1,6 +1,6 @@
 # Munea Current Development Plan
 
-> Updated: 2026-07-18
+> Updated: 2026-07-20
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
 > **Current source:** `1.0.41 (Build 48)`
@@ -30,14 +30,14 @@
 | App source | `1.0.41 (Build 48)` is current source; no Archive／upload／iPhone evidence for Build 48 | `merged, not packaged` |
 | Uploaded App | `1.0.40 (Build 47)` was uploaded and installed; selected review lane remains unknown | `packaged, human gates pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
-| Production Voice／Gateway／Avatar | Voice is behind source; Gateway／Avatar exact release identity and installed-App trace are not closed | `partial / unknown` |
+| Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |
 | Tokyo database | Repo migration head is `019`; `017`／`018`／`019` are blocked and `verifiedHead=null` | `blocked` |
-| Four P0 journeys | Google session, membership／points purchase, zero-credit preflight and credited chat-call lack one-Build iPhone evidence | `0/4 verified` |
+| Four P0 journeys | QA account with 505 points is ready, but Google session, membership／points purchase, zero-credit preflight and credited chat-call still lack one-Build iPhone evidence | `0/4 verified; ready to test` |
 | Overall release confidence | Raw engineering evidence is above the hard cap, but P0 human／live-data gates remain open | `69/100` |
 
 ## Current Execution Order
 
-1. Rebase and review the open App fixes (#174／#175) and test-account access work (#188) without treating Draft or CI evidence as packaged success.
+1. Review and merge the clean, green stack #174 → #175 → #188 without treating Draft or CI evidence as packaged success.
 2. On Mac／iPhone, record one-candidate-Build evidence for Google session, membership／points purchase, zero-credit preflight and credited `聊聊` end to end.
 3. Reconcile App Store selected Build, product price／description and Sandbox purchase result before changing release state.
 4. Apply Tokyo `017`／`019` only through the approved migration process; `018` requires backup, approval and full pre/post checks.

@@ -1,7 +1,7 @@
 {
   "schema": "munea.release-evidence.v1",
-  "capturedAt": "2026-07-18T09:24:08Z",
-  "capturedBySourceCommit": "9d30e8b03b08962f06125271290d00dd671382f2",
+  "capturedAt": "2026-07-19T16:21:26Z",
+  "capturedBySourceCommit": "00d3eb38b49314220b2697e4e244c60a533ac50a",
   "sourceVersion": "1.0.41",
   "targetConfigSha256": "f46dd0bc7f8d25997c5429d4612ae18b5ce1bfe125ac282992b5b24cfc1311c9",
   "results": [
@@ -29,9 +29,9 @@
       "observed": {
         "schema": "munea.service-release.v1",
         "service": "munea-voice",
-        "version": "1.0.31",
-        "commit": "500c819f367db689c571968872037bfa0f11a7fa",
-        "revision": "munea-voice-00002-sub",
+        "version": "1.0.41",
+        "commit": "906732abc24528db77355fdb378d660337cba093",
+        "revision": "munea-voice-00007-xab",
         "environment": "production"
       }
     },
