@@ -467,7 +467,8 @@ gateInput.addEventListener('keydown', e=>{ if (e.key === 'Enter') tryGate(); });
 <script>
 /* ===== 臉+聲音（同一條 WebRTC）——沿用 2026-07-10/11 真機修正史，勿隨意改動 ===== */
 const Face = {
-  pc:null, ws:null, on:false, _playGen:0,
+  pc:null, ws:null, on:false, _playGen:0, _renderStream:null,
+  _audioReceiver:null, _videoReady:false,
   iceServers(forceRelay){
     const credentials = { username:'muneaturn', credential:'munea-turn-a7k2q' };
     if (forceRelay) {
@@ -569,6 +570,13 @@ Face._attempt = async function(char, forceRelay){
   if (forceRelay) cfg.iceTransportPolicy = 'relay';
   const pc = new RTCPeerConnection(cfg);
   this.pc = pc;
+  this._renderStream = new MediaStream();
+  this._audioReceiver = null;
+  this._videoReady = false;
+  faceVid.srcObject = this._renderStream;
+  // Keep the proven App behavior: warm both remote tracks while muted, then
+  // reveal/unmute only after the shared opening path has settled.
+  faceVid.muted = true;
   pc.addTransceiver('video', { direction:'recvonly' });
   pc.addTransceiver('audio', { direction:'recvonly' });
   pc.onicecandidate = e => {
@@ -581,9 +589,15 @@ Face._attempt = async function(char, forceRelay){
   };
   pc.ontrack = e => {
     dbgLine('[face] ontrack kind=' + e.track.kind);
-    if (e.track.kind !== 'video') return;
-    faceVid.srcObject = e.streams[0];
-    faceVid.muted = false;
+    // Ported from the App's verified same-line path. Browsers do not promise
+    // that audio/video ontrack events expose the same MediaStream object.
+    // Explicitly merge both tracks so one media element owns one A/V clock.
+    if (!this._renderStream) this._renderStream = new MediaStream();
+    if (e.track && !this._renderStream.getTracks().some(track => track.id === e.track.id)) {
+      this._renderStream.addTrack(e.track);
+    }
+    if (faceVid.srcObject !== this._renderStream) faceVid.srcObject = this._renderStream;
+    if (e.track.kind === 'audio') this._audioReceiver = e.receiver;
     this._tryPlay();
     /* 2026-07-18 卡西法：掀開真臉框／停待機動畫延後到偵測到「幀率已穩定」才做（見下方
        waitForStableFrames + _attempt 內呼叫處）——接通瞬間只等到第一幀就掀開，掀開的常常
@@ -621,8 +635,8 @@ Face._attempt = async function(char, forceRelay){
     dbgLine('[face] first video frame=' + ok);
     if (ok){
       await this.waitForStableFrames(pc, 1600);
-      overlay.classList.add('on');
-      IdleMotion.stop();
+      this._videoReady = true;
+      dbgLine('[face] video path stable; keep idle cover until A/V warm-up completes');
     }
   }
   const diag = await collectPcDiag(pc);
@@ -689,6 +703,7 @@ Face.start = async function(char){
   // Production demo uses the same WebRTC path as the app. Keep the old frame
   // stream path only as an explicit diagnostic fallback.
   if (qs.has('stream')) return this.startStream(char);
+  this.transport = 'webrtc';
   this.on = false;
   Face._diagAttempts = [];
   let ok = false;
@@ -729,6 +744,32 @@ Face.start = async function(char){
   dbgLine('[face] connected char=' + char + ' audio_ws_ok=' + wsOk);
   return true;
 };
+Face.prepareOpeningPath = async function(){
+  if (this.transport !== 'webrtc') return true;
+  if (!this._videoReady || !this._audioReceiver) {
+    throw new Error('影音雙軌尚未就緒');
+  }
+  setStatus('正在穩定影音…');
+  setHintText('畫面保持待機，完成後自動接通');
+  dbgLine('[face] opening A/V warm-up start');
+  faceVid.muted = true;
+  this._tryPlay();
+  // Same technique as the App: a private one-second silent turn warms the
+  // 768 model, encoder, WebRTC jitter buffer and remote audio renderer before
+  // the greeting. It never reaches Voice/Gemini and is never audible.
+  this.reset();
+  this.feed(new Int16Array(24000).buffer);
+  this.finish();
+  await new Promise(resolve => setTimeout(resolve, 3200));
+  this.reset();
+  if (!this.on) throw new Error('影音暖機期間連線中斷');
+  overlay.classList.add('on');
+  IdleMotion.stop();
+  faceVid.muted = false;
+  this._tryPlay();
+  dbgLine('[face] opening A/V warm-up complete; one player owns both tracks');
+  return true;
+};
 Face.feed = function(buf){
   try{
     const target = this.transport === 'stream' ? this.stream : this.ws;
@@ -753,6 +794,9 @@ Face.stop = function(){
   try{ if (this.ws) this.ws.close(); }catch(e){}
   try{ if (this.pc) this.pc.close(); }catch(e){}
   this.stream = this.ws = this.pc = null;
+  this._renderStream = null;
+  this._audioReceiver = null;
+  this._videoReady = false;
   this.transport = null;
   overlay.classList.remove('on','stream');
   faceVid.srcObject = null;
@@ -1091,6 +1135,8 @@ async function attemptConnect(tryNo){
     if (!onCall) return;
     if (!voiceOk) throw new Error('語音線沒接上');
     if (!faceOk) throw new Error('臉線沒接上');
+    await Face.prepareOpeningPath();
+    if (!onCall) return;
     if (!Live.activate()) throw new Error('語音線無法開始對話');
     dbgLine('[dial] readiness gate passed total_ms=' + Math.round(performance.now() - connectT0));
     stage.classList.add('connected');
