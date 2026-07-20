@@ -543,7 +543,11 @@ class SupabaseAdapter:
         if since_iso:
             filters["observed_at"] = f"gte.{since_iso}"
         rows = self._select("wellbeing_signals", filters)
-        return [self.wellbeing_row_to_signal(row) for row in rows or []]
+        signals = [self.wellbeing_row_to_signal(row) for row in rows or []]
+        # 後台聚合用：mood 換成英文 key（App 顯示走 load_wellbeing_signals，不經這條，不受影響）。
+        for signal in signals:
+            signal["mood"] = self._recover_admin_wellbeing_mood(signal)
+        return signals
 
     def load_persons_by_ids(self, person_ids):
         """後台名單顯示用：批次查 person display_name（只回顯示名，不含其他個資）。"""
@@ -3311,10 +3315,53 @@ class SupabaseAdapter:
             "updatedAt": row.get("updated_at"),
         }
 
-    @staticmethod
-    def _normalize_wellbeing_mood(mood):
-        allowed = {"happy", "pleasant", "steady", "tired", "low", "irritated", "mixed", "unknown"}
-        return mood if mood in allowed else "unknown"
+    # 中文六類（AI 觀察 perception_engine.MOOD_CATEGORIES／App 手動打卡)→ 英文 mood key 對照。
+    # 含常見同義詞（愉悅/平靜/焦慮/生氣，對齊 web/src/app.js FAM_MOOD_NAME 六色編號用字），
+    # 寫入路徑（_normalize_wellbeing_mood）跟讀取救援路徑（_recover_admin_wellbeing_mood）共用同一張表，別各寫一份。
+    _WELLBEING_MOOD_ENGLISH_KEYS = {"happy", "pleasant", "steady", "tired", "low", "irritated", "mixed"}
+    _WELLBEING_MOOD_CHINESE_ALIASES = {
+        "開心": "happy",
+        "愉快": "pleasant",
+        "愉悅": "pleasant",
+        "平穩": "steady",
+        "平靜": "steady",
+        "疲累": "tired",
+        "低落": "low",
+        "煩躁": "irritated",
+        "焦慮": "irritated",
+        "生氣": "irritated",
+        "混合": "mixed",
+    }
+
+    @classmethod
+    def _wellbeing_mood_from_text(cls, text):
+        """把任何原始 mood 字串（中文六類/同義詞，或已是英文 key）轉成英文 mood key；認不得回 None
+        （呼叫端自行決定要不要退 unknown，別在這裡吞掉「換算不出來」這件事）。比對前先 strip()。"""
+        t = str(text or "").strip()
+        if not t:
+            return None
+        if t in cls._WELLBEING_MOOD_ENGLISH_KEYS:
+            return t
+        return cls._WELLBEING_MOOD_CHINESE_ALIASES.get(t)
+
+    @classmethod
+    def _normalize_wellbeing_mood(cls, mood):
+        """寫入 wellbeing_signals.mood 前的正規化：中文／英文都收，認不得才回 unknown。
+        2026-07-20 修：舊版只認英文，AI 寫入的中文一律變 unknown，把後台心情趨勢的資料源污染光了。"""
+        return cls._wellbeing_mood_from_text(mood) or "unknown"
+
+    @classmethod
+    def _recover_admin_wellbeing_mood(cls, signal):
+        """後台心情趨勢救舊帳：wellbeing_row_to_signal 回給 App 的 mood 可能是中文原字（那是對的、App 要
+        顯示用，不要動它）；這裡只給後台聚合／_mood_bucket 用，換算成英文 mood key 才能正確歸桶。
+        依序試 signal.mood（Supabase 正規化後的英文，或 JSON 備援路徑的中文原字）、
+        facts.originalMood、facts.mood；都換算不出來才退 unknown。"""
+        facts = signal.get("facts") or {}
+        for candidate in (signal.get("mood"), facts.get("originalMood"), facts.get("mood")):
+            mapped = cls._wellbeing_mood_from_text(candidate)
+            if mapped:
+                return mapped
+        return "unknown"
 
     # 英文 mood 詞 → App 六色編號（0開心/1愉悅/2平靜/3低落/4焦慮/5生氣）；mixed/unknown 沒有安全對應、回 None
     _WELLBEING_MOOD_TO_KEY = {"happy": 0, "pleasant": 1, "steady": 2, "tired": 3, "low": 3, "irritated": 4}
@@ -3581,3 +3628,9 @@ class SupabaseAdapter:
 
 def make_adapter(env=None, identity=None):
     return SupabaseAdapter(env=env, identity=identity)
+
+
+def recover_admin_wellbeing_mood(item):
+    """後台心情訊號 mood 救援共用入口（Supabase 與 JSON 備援兩條讀取路徑共用同一張中文→英文對照表，
+    別各寫一份）。item：wellbeing signal dict（有 mood／facts 欄位即可，兩條路徑格式相容）。"""
+    return SupabaseAdapter._recover_admin_wellbeing_mood(item)

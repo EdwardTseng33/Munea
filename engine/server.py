@@ -4774,6 +4774,10 @@ def load_admin_wellbeing_signal_rows(days=30, limit=5000):
         items = []
     items = [item for item in items if (item.get("date") or "") >= since_date]
     items = items[:limit]
+    # JSON 備援路徑存的是原始 signal dict（mood 常是中文原字）：跟 Supabase 路徑共用同一張換算表，
+    # 讓兩條讀取路徑對 _mood_bucket 而言看起來一樣，不會因為退到本地檔案就整批變回 other。
+    for item in items:
+        item["mood"] = supabase_adapter.recover_admin_wellbeing_mood(item)
     record_admin_data_source(
         "wellbeing_signals",
         "json",
