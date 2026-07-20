@@ -136,6 +136,7 @@
   function zh(map,v,f){ if(v==null||v==="")return f||"–"; return map[String(v).toLowerCase()]||String(v); }
   const RISK_ZH = { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" };
   const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數" };
+  const FB_TONE = { bug:"warn", idea:"gold", praise:"ok", nps:"mute" };
   const PV_ZH = { account_deletion:"刪除帳號", deletion:"刪除帳號", export:"資料副本", data_export:"資料副本", correction:"資料更正" };
   const ST_ZH = { pending:"待處理", open:"待處理", received:"已收到", processing:"處理中", done:"已完成", completed:"已完成", closed:"已結案" };
   const CREDIT_ZH = { subscription_monthly_allowance:"每月贈點", credit_grant:"發放點數", credit_consume:"使用點數", free_signup_voice_avatar_trial:"新用戶體驗贈點", apple_purchase:"加購點數", apple_purchase_refunded:"加購退款", apple_refund_reversed:"退款回沖", call_consume:"通話扣點" };
@@ -143,7 +144,7 @@
   // ══════════ 元件 ══════════
   function kpiRow(items){
     return `<div class="kpi-row">${items.map((k,i)=>`
-      <div class="kpi ${i===0&&k.star?"kpi-accent":""}">
+      <div class="kpi ${i===0&&k.star?(k.tone==="alert"?"kpi-accent-alert":"kpi-accent"):""}">
         <div class="kpi-top"><span class="kpi-label">${esc(k.label)}${k.info?` <span class="kpi-info" title="${esc(k.info)}">ⓘ</span>`:""}</span></div>
         <div class="kpi-value">${esc(k.value)}${k.unit?`<span class="unit">${esc(k.unit)}</span>`:""}</div>
         ${k.sub?`<div class="kpi-sub">${esc(k.sub)}</div>`:""}
@@ -335,7 +336,7 @@
     const r0=carePriorityRows(), rows=r0.rows;
     const urgent=rows.filter((r)=>r.score>=60).length, soon=rows.filter((r)=>r.score>=30&&r.score<60).length;
     let html=kpiRow([
-      { label:"要立刻聯絡", value:n(urgent), sub:"警訊最多、今天就該打", star:true, info:"多個警訊同時出現（60 分以上）" },
+      { label:"要立刻聯絡", value:n(urgent), sub:"警訊最多、今天就該打", star:true, tone:"alert", info:"多個警訊同時出現（60 分以上）" },
       { label:"這週要關心", value:n(soon), sub:"還不急、但別放著" },
       { label:"名單上共", value:n(rows.length), sub:"有任何一項警訊的長輩" },
       { label:"查不到姓名的警示", value:n(r0.unnamedAlerts), sub:r0.unnamedAlerts?"這些沒併進名單":"沒有" },
@@ -405,7 +406,7 @@
     const s=D().safety||{}, t=s.totals||{}, rec=s.recent||[];
     const total=t.byRiskLevel?Object.values(t.byRiskLevel).reduce((a,b)=>a+b,0):rec.length;
     let html=kpiRow([
-      { label:"需人工跟進", value:n(t.requiresHumanEscalation||0), sub:"建議 30 分內確認", star:true },
+      { label:"需人工跟進", value:n(t.requiresHumanEscalation||0), sub:"建議 30 分內確認", star:true, tone:"alert" },
       { label:"近 30 天警訊", value:n(total), sub:"所有風險等級加總" },
       { label:"高風險", value:n((t.byRiskLevel||{}).high||(t.byRiskLevel||{}).crisis||0), sub:"最需優先看" },
       { label:"低風險", value:n((t.byRiskLevel||{}).low||0), sub:"情緒低落等" },
@@ -419,7 +420,7 @@
         return `<div class="row-item ${tone==="bad"?"tint-bad":tone==="warn"?"tint-warn":""}"><div class="ri-body"><div class="ri-title">${esc(zh(RISK_ZH,e.riskLevel,"待查看"))} <span class="pill ${tone}">${esc((e.categories&&e.categories[0])||"訊號")}</span></div><div class="ri-desc">${esc(e.summary||"聊天中偵測到需關注訊號，請真人確認。")}</div><div class="ri-meta">${esc(e.personId||"用戶")} · ${esc(fmtTime(e.eventTime))}</div></div></div>`;
       }).join("")}</div>`);
     }
-    html+=principle("危機處理 SOP：① 專員 30 分鐘內確認 → ② 聯繫家庭圈指定聯絡人 → ③ 必要時引導撥打 119／1925 並記錄 → ④ 結案回填。所有紀錄僅授權營運與安全團隊檢視。");
+    html+=principle(`<b>出事時怎麼處理</b><div class="step-row"><span class="step"><i>1</i>30 分鐘內先確認</span><span class="step"><i>2</i>聯繫家庭圈指定的人</span><span class="step"><i>3</i>必要時引導撥 119／1925 並記錄</span><span class="step"><i>4</i>結案回填</span></div><div style="margin-top:8px">所有紀錄僅授權營運與安全團隊檢視。</div>`);
     return html;
   }
 
@@ -623,8 +624,8 @@
     const p=sm.pending||{};
     html+=card("每月經常性收入 ／ 退訂率", "App 還沒正式上架，所以還沒有真實付費訂閱", `
       <div style="display:flex;gap:24px;flex-wrap:wrap">
-        <div><div class="kpi-sub">每月訂閱收入</div><div class="kpi-value" style="color:var(--muted)">尚未開始</div></div>
-        <div><div class="kpi-sub">退訂率</div><div class="kpi-value" style="color:var(--muted)">尚未開始</div></div>
+        <div><div class="kpi-sub">每月訂閱收入</div><div class="pending-val">尚未開始<span class="pill mute">等上架</span></div></div>
+        <div><div class="kpi-sub">退訂率</div><div class="pending-val">尚未開始<span class="pill mute">等上架</span></div></div>
       </div>
       <div class="kpi-sub" style="margin-top:12px">${esc(p.mrr||"App 上架、開始有人付費之後，這兩個數字就會自動長出來（用自家的訂閱紀錄算，不必另外接蘋果後台）。")}${p.churnRate?"　"+esc(p.churnRate):""}</div>`);
     html+=card("方案表現", "月費 · 贈點 · 家庭圈上限（固定資訊）", tableHTML(["方案","內容","月費"],[
@@ -649,7 +650,8 @@
     } else {
       html+=card("用戶意見收件匣", "最近的意見（新到舊）", `<div class="rows">${latest.slice(0,15).map((it)=>{
         const img=typeof it.image==="string"&&it.image.indexOf("data:image/")===0?`<a href="${it.image}" target="_blank" rel="noopener"><img src="${it.image}" alt="附圖" style="margin-top:8px;max-width:150px;max-height:110px;border-radius:8px;border:1px solid #ccc;display:block"></a>`:"";
-        return `<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(zh(FB_ZH,it.type,"意見"))}${it.score!=null?`　${esc(it.score)} 分`:""}${img?"　📎有圖":""}</div><div class="ri-meta">${esc(it.category||"–")} · ${esc(fmtTime(it.createdAt))} · App ${esc(it.appVersion||"?")}</div><div style="margin-top:4px">${esc(it.text||"")}</div>${img}</div></div>`;
+        const tone=FB_TONE[String(it.type||"").toLowerCase()]||"mute";
+        return `<div class="row-item"><div class="ri-body"><div class="ri-title"><span class="pill ${tone}">${esc(zh(FB_ZH,it.type,"意見"))}</span>${it.score!=null?`　${esc(it.score)} 分`:""}${img?"　📎有圖":""}</div><div class="ri-meta">${esc(it.category||"–")} · ${esc(fmtTime(it.createdAt))} · App ${esc(it.appVersion||"?")}</div><div style="margin-top:4px">${esc(it.text||"")}</div>${img}</div></div>`;
       }).join("")}</div>`);
     }
     // 隱私申請（真）
@@ -661,7 +663,11 @@
   function renderRecords(){
     const sm=(D().summaries||{}).recent||[], au=(D().audit||{}).recent||[];
     let html=card("聊天摘要", "AI 記下的每段聊天重點（已去逐字、只留摘要）", sm.length?`<div class="rows">${sm.slice(0,15).map((s)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(fmtTime(s.createdAt))}</div><div class="ri-desc">${esc(s.summary||"")}</div><div class="tag-row">${(s.memoryTags||[]).map((t)=>`<span class="pill mute">${esc(t)}</span>`).join("")}${s.safetyRelevant?'<span class="pill bad">涉及安全</span>':""}</div></div></div>`).join("")}</div>`:emptyBox("還沒有聊天摘要——有人開始跟沐寧聊天後就會出現。"));
-    html+=card("系統操作紀錄", "系統跟管理端動過什麼，給工程師追查用", au.length?`<div class="rows">${au.slice(0,15).map((e)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(e.eventType||"事件")}</div><div class="ri-meta">${esc(e.targetTable||"–")} · ${esc(fmtTime(e.createdAt))}</div><div>${esc(e.targetId||e.accountId||"")}</div></div></div>`).join("")}</div>`:emptyBox("還沒有操作紀錄。"));
+    html+=card("系統操作紀錄", "系統跟管理端動過什麼，給工程師追查用", au.length?tableHTML(["時間","事件","對象"], au.slice(0,25).map((e)=>[
+      `<span class="muted small">${esc(fmtTime(e.createdAt))}</span>`,
+      `<b>${esc(e.eventType||"事件")}</b>`,
+      `${esc(e.targetId||e.accountId||"–")}<span class="muted small"> · ${esc(e.targetTable||"–")}</span>`,
+    ])):emptyBox("還沒有操作紀錄。"));
     return html;
   }
 
