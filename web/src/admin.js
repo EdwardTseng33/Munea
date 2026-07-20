@@ -906,7 +906,7 @@
       <div class="ent-form-grid">
         <label class="field"><span>公司名稱</span><input type="text" id="efName" value="${esc(c.name||"")}"></label>
         <label class="field"><span>統一編號</span><input type="text" id="efTaxId" value="${esc(c.taxId||"")}"></label>
-        <label class="field"><span>帳單地址</span><input type="text" id="efBillingAddress" value="${esc(c.billingAddress||"")}"></label>
+        <label class="field field-wide"><span>帳單地址</span><input type="text" id="efBillingAddress" value="${esc(c.billingAddress||"")}"></label>
         <label class="field"><span>窗口姓名</span><input type="text" id="efContactName" value="${esc(c.contactName||"")}"></label>
         <label class="field"><span>窗口 Email</span><input type="email" id="efContactEmail" value="${esc(c.contactEmail||"")}"></label>
         <label class="field"><span>窗口電話</span><input type="text" id="efContactPhone" value="${esc(c.contactPhone||"")}"></label>
@@ -915,9 +915,9 @@
         <label class="field"><span>合約開始</span><input type="date" id="efContractStart" value="${esc(String(c.contractStart||"").slice(0,10))}"></label>
         <label class="field"><span>合約結束</span><input type="date" id="efContractEnd" value="${esc(String(c.contractEnd||"").slice(0,10))}"></label>
         <label class="field"><span>席次上限</span><input type="number" id="efSeatQuota" value="${esc(c.seatQuota||0)}"></label>
-        <label class="field"><span>月報＋請款單收件人（可多位，逗號分隔）</span><input type="text" id="efReportRecipients" value="${esc(Array.isArray(c.reportRecipients)?c.reportRecipients.join(","):(c.reportRecipients||""))}"></label>
+        <label class="field field-wide"><span>月報＋請款單收件人（可多位，逗號分隔）</span><input type="text" id="efReportRecipients" value="${esc(Array.isArray(c.reportRecipients)?c.reportRecipients.join(","):(c.reportRecipients||""))}"></label>
       </div>
-      <label class="field"><span>備註</span><input type="text" id="efNotes" value="${esc(c.notes||"")}"></label>
+      <label class="field field-wide"><span>備註</span><input type="text" id="efNotes" value="${esc(c.notes||"")}"></label>
       <button type="button" class="btn-sm" data-ent-save-client="${esc(clientId)}">儲存變更</button>
       <div id="entSaveNote"></div>
     `);
@@ -986,7 +986,7 @@
       <div class="ent-form-grid">
         <label class="field"><span>公司名稱</span><input type="text" id="ncName"></label>
         <label class="field"><span>統一編號</span><input type="text" id="ncTaxId"></label>
-        <label class="field"><span>帳單地址</span><input type="text" id="ncBillingAddress"></label>
+        <label class="field field-wide"><span>帳單地址</span><input type="text" id="ncBillingAddress"></label>
         <label class="field"><span>窗口姓名</span><input type="text" id="ncContactName"></label>
         <label class="field"><span>窗口 Email</span><input type="email" id="ncContactEmail"></label>
         <label class="field"><span>窗口電話</span><input type="text" id="ncContactPhone"></label>
@@ -995,9 +995,9 @@
         <label class="field"><span>合約開始</span><input type="date" id="ncContractStart"></label>
         <label class="field"><span>合約結束</span><input type="date" id="ncContractEnd"></label>
         <label class="field"><span>席次上限</span><input type="number" id="ncSeatQuota" value="0"></label>
-        <label class="field"><span>月報＋請款單收件人（逗號分隔）</span><input type="text" id="ncReportRecipients"></label>
+        <label class="field field-wide"><span>月報＋請款單收件人（逗號分隔）</span><input type="text" id="ncReportRecipients"></label>
       </div>
-      <label class="field"><span>備註</span><input type="text" id="ncNotes"></label>
+      <label class="field field-wide"><span>備註</span><input type="text" id="ncNotes"></label>
       <button type="button" class="btn-sm" data-nc-submit>建立公司</button>
       <div id="newClientNote"></div>
     </div>`;
@@ -1254,7 +1254,7 @@
       <div class="ent-form-grid">
         <label class="field"><span>開票公司抬頭</span><input type="text" id="bsIssuerCompanyName" value="${esc(bs.issuerCompanyName||"")}" placeholder="例：沐寧股份有限公司"></label>
         <label class="field"><span>統一編號</span><input type="text" id="bsIssuerTaxId" value="${esc(bs.issuerTaxId||"")}"></label>
-        <label class="field"><span>公司地址</span><input type="text" id="bsIssuerAddress" value="${esc(bs.issuerAddress||"")}"></label>
+        <label class="field field-wide"><span>公司地址</span><input type="text" id="bsIssuerAddress" value="${esc(bs.issuerAddress||"")}"></label>
         <label class="field"><span>聯絡電話</span><input type="text" id="bsIssuerPhone" value="${esc(bs.issuerPhone||"")}"></label>
         <label class="field"><span>聯絡人</span><input type="text" id="bsIssuerContactName" value="${esc(bs.issuerContactName||"")}"></label>
       </div>
@@ -1280,7 +1280,7 @@
     return `
       <div class="ent-form-grid">
         <label class="field"><span>付款期限天數</span><input type="number" id="bsPaymentTermsDays" value="${esc(bs.paymentTermsDays!=null?bs.paymentTermsDays:15)}"><small class="muted">對應需求單「次月 15 日前」——從帳單期間結束日起算天數，預設 15 天，可調</small></label>
-        <label class="field"><span>請款單備註</span><input type="text" id="bsInvoiceFooterNote" value="${esc(bs.invoiceFooterNote||"")}" placeholder="例：請於匯款後回傳水單"></label>
+        <label class="field field-wide"><span>請款單備註</span><input type="text" id="bsInvoiceFooterNote" value="${esc(bs.invoiceFooterNote||"")}" placeholder="例：請於匯款後回傳水單"></label>
       </div>
       <button type="button" class="btn-sm" data-ent-save-billing-settings>儲存變更</button>${bs.updatedAt?`<span class="muted small" style="margin-left:10px">上次更新：${esc(fmtTime(bs.updatedAt))}${bs.updatedBy?("（"+esc(bs.updatedBy)+"）"):""}</span>`:""}
       <div id="entBillingSaveNote"></div>
