@@ -708,9 +708,10 @@ Face.start = async function(char){
   this.transport = 'webrtc';
   this.on = false;
   Face._diagAttempts = [];
-  // Diagnostic A/B only: `?debug=1&relay=1` starts on the same Taiwan TURN
-  // relay used by the App. Normal visitors keep the current direct-first path.
-  const relayFirst = showDbg && qs.has('relay');
+  // The US RunPod route loses too many packets on a direct residential path.
+  // Start through the same Taiwan TURN relay used by the App. Keep a debug-only
+  // `?debug=1&direct=1` escape hatch for future A/B measurements.
+  const relayFirst = !(showDbg && qs.has('direct'));
   let ok = false;
   try{ ok = await this._attempt(char, relayFirst); }
   catch(e){

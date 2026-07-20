@@ -36,7 +36,7 @@ assert.match(call, /frames - baseline >= 18/);
 assert.match(call, /waitForStableFrames\(pc, 1600\)/);
 assert.match(call, /this\._renderStream = new MediaStream\(\)/);
 assert.match(call, /this\._renderStream\.addTrack\(e\.track\)/);
-assert.match(call, /showDbg && qs\.has\('relay'\)/);
+assert.match(call, /relayFirst = !\(showDbg && qs\.has\('direct'\)\)/);
 assert.match(call, /if \(e\.track\.kind === 'audio'\) this\._audioReceiver = e\.receiver/);
 assert.match(call, /Face\.prepareOpeningPath = async function/);
 assert.match(call, /this\.feed\(new Int16Array\(24000\)\.buffer\)/);
