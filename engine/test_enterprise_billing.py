@@ -24,10 +24,33 @@ os.environ["MUNEA_ENTERPRISE_SEAT_EVENTS_PATH"] = os.path.join(_TMP, "enterprise
 # 剛好符合大部分測試想要的預設狀態（尚未設定）；要測「已設定」的情境時用 settings= 注入，
 # 不用真的寫這個檔案。
 os.environ["MUNEA_ENTERPRISE_BILLING_SETTINGS_PATH"] = os.path.join(_TMP, "enterprise_billing_settings_store.json")
+# 2026-07-20 三次需求：ESG 月報存檔——同樣指到 tmp 目錄，不然預設會落在 engine/ 底下
+# 污染程式庫目錄（跟上面幾行 invoices/clients/seats 同一個理由）。
+os.environ["MUNEA_ENTERPRISE_REPORTS_PATH"] = os.path.join(_TMP, "enterprise_reports_store.json")
 sys.path.insert(0, os.path.dirname(__file__))
 
 import enterprise_seats  # noqa: E402
 import enterprise_billing as eb  # noqa: E402
+
+# 2026-07-20 三次需求收尾補強：走完整套測試（python -m unittest discover）時實測抓到
+# 的真 bug——很多其他測試檔（例如 test_admin_maintenance_paths.py）會 import server.py，
+# server.py 又會 import enterprise_billing／enterprise_seats；如果那個 import 發生在
+# 本檔上面這幾行 os.environ[...] 設定「之前」（discover 依檔名排序，不保證本檔先跑），
+# 兩支模組的 INVOICES_PATH／CLIENTS_PATH 等常數就已經在第一次 import 時被讀成預設值
+# （engine/ 底下的真檔案）凍結住了——Python 模組只 import 一次、常數不會因為 env
+# 變數事後被改就重新讀取，本檔上面設的 os.environ 因此完全沒生效。
+# 後果很嚴重：本檔測試會真的寫進本機開發用的 enterprise_invoices_store.json 等檔案
+# （汙染真環境、汙染其他 session 的手動測試），而且測試結果會隨 discover 的 import
+# 順序不同而時過時不過（flaky）。
+# 修法：import 完直接覆寫模組屬性本身，不依賴「env 變數要在 import 當下被讀到」這個
+# 已經被證明不可靠的假設——不管哪個模組先被誰 import，這裡都強制把路徑釘回 tmp 目錄。
+eb.INVOICES_PATH = os.environ["MUNEA_ENTERPRISE_INVOICES_PATH"]
+eb.REPORTS_PATH = os.environ["MUNEA_ENTERPRISE_REPORTS_PATH"]
+enterprise_seats.CLIENTS_PATH = os.environ["MUNEA_ENTERPRISE_CLIENTS_PATH"]
+enterprise_seats.SEATS_PATH = os.environ["MUNEA_ENTERPRISE_SEATS_PATH"]
+enterprise_seats.SEAT_EVENTS_PATH = os.environ["MUNEA_ENTERPRISE_SEAT_EVENTS_PATH"]
+enterprise_seats.INVOICES_PATH = os.environ["MUNEA_ENTERPRISE_INVOICES_PATH"]
+enterprise_seats.BILLING_SETTINGS_PATH = os.environ["MUNEA_ENTERPRISE_BILLING_SETTINGS_PATH"]
 
 
 CLIENT_ID = "11111111-1111-4111-8111-111111111111"
@@ -253,6 +276,53 @@ class InvoiceGenerationAndPersistenceTests(unittest.TestCase):
         self.assertEqual(first["invoiceNo"], second["invoiceNo"])
         matches = [i for i in eb.list_invoices(client_id=CLIENT_ID) if i["invoiceNo"] == first["invoiceNo"]]
         self.assertEqual(len(matches), 1)
+
+    def test_rerunning_monthly_close_after_paid_does_not_revert_payment_status(self):
+        """2026-07-20 三次需求走完整流程實測踩到的真 bug：這期間的請款單已經
+        issued／paid（有 sentAt／paidAt／invoiceHtmlSnapshot 這些人工動作留下的痕跡）後，
+        重跑月結（例如手滑點兩次「跑月結」按鈕）不准把它打回 draft、抹掉收款紀錄——
+        鐵律 5.1『已入帳＝開通開關』要是被這樣悄悄繞過就是安全性問題。
+        用獨立 client id（不共用 CLIENT_ID）避免『已入帳』這個持久狀態污染到其他
+        也用 CLIENT_ID+JULY 這組期間的既有測試（本檔既有測試假設同期間重跑永遠會被
+        重算回 draft，本條修法之後這個假設不再成立，靠獨立 id 隔離即可，不必去重寫
+        整份既有測試）。"""
+        period_start, period_end = JULY
+        client = make_client(unitPriceTwd=3000, id="55555555-5555-4555-8555-555555555555")
+        seats = [make_seat("rp1", "active", activated_at="2026-01-01T00:00:00Z")]
+        draft = eb.generate_monthly_invoice(client, seats, period_start, period_end)
+        issued = dict(draft)
+        issued["status"] = "issued"
+        issued["sentAt"] = "2026-08-01T00:00:00Z"
+        issued = eb.save_invoice(issued)
+        issued["status"] = "paid"
+        issued["paidAt"] = "2026-08-05T00:00:00Z"
+        issued["paidAmountTwd"] = issued["totalTwd"]
+        issued["invoiceHtmlSnapshot"] = "<html>凍結的原樣</html>"
+        paid = eb.save_invoice(issued)
+        self.assertEqual(paid["status"], "paid")
+
+        rerun = eb.generate_monthly_invoice(client, seats, period_start, period_end)
+        self.assertEqual(rerun["id"], paid["id"])
+        self.assertEqual(rerun["status"], "paid")
+        self.assertEqual(rerun["paidAt"], "2026-08-05T00:00:00Z")
+        self.assertEqual(rerun["invoiceHtmlSnapshot"], "<html>凍結的原樣</html>")
+
+        fetched = eb.get_invoice(paid["id"])
+        self.assertEqual(fetched["status"], "paid")
+        self.assertEqual(fetched["paidAt"], "2026-08-05T00:00:00Z")
+
+    def test_rerunning_monthly_close_while_still_draft_recomputes_normally(self):
+        """還沒人工放行過（一直是 draft）的請款單，重跑月結要照常重算——上面那條
+        修法只鎖『已經有人動過』的單，不能連正常的重算需求都一起卡死。"""
+        period_start, period_end = eb.billing_period_for(2026, 9)
+        client = make_client(unitPriceTwd=3000, id="44444444-4444-4444-8444-444444444444")
+        seats = [make_seat("rd1", "active", activated_at="2026-01-01T00:00:00Z")]
+        first = eb.generate_monthly_invoice(client, seats, period_start, period_end)
+        self.assertEqual(first["billableSeats"], 1)
+        seats.append(make_seat("rd2", "active", activated_at="2026-01-01T00:00:00Z", account_id="acct-rd2"))
+        second = eb.generate_monthly_invoice(client, seats, period_start, period_end)
+        self.assertEqual(second["id"], first["id"])
+        self.assertEqual(second["billableSeats"], 2)
 
 
 
@@ -861,6 +931,167 @@ class RenderInvoiceHtmlBillingSettingsTests(unittest.TestCase):
             for message in records:
                 self.assertNotIn("9999888877776666", message)
         self.assertIn("9999888877776666", rendered)  # 帳號本來就該出現在請款單本文裡
+
+
+class InvoiceHtmlSnapshotTests(unittest.TestCase):
+    """2026-07-20 三次需求：get_invoice_html() 是「取出可下載請款單 HTML」唯一入口——
+    draft 即時重繪最新設定；issued 之後一律回凍結快照，不管設定後來怎麼改。"""
+
+    def setUp(self):
+        self.client = make_client()
+        enterprise_seats.upsert_client(self.client)
+
+    def test_draft_invoice_has_no_snapshot_and_live_renders(self):
+        period_start, period_end = JULY
+        seats = [make_seat("dh1", "active", activated_at="2026-01-01T00:00:00Z")]
+        draft = eb.generate_monthly_invoice(self.client, seats, period_start, period_end, persist=True)
+        self.assertIsNone(draft.get("invoiceHtmlSnapshot"))
+        rendered = eb.get_invoice_html(draft["id"])
+        self.assertIn("<!DOCTYPE html>", rendered)
+        self.assertIn(draft["invoiceNo"], rendered)
+
+    def test_issued_invoice_returns_frozen_snapshot_even_after_settings_change(self):
+        period_start, period_end = JULY
+        seats = [make_seat("dh2", "active", activated_at="2026-01-01T00:00:00Z")]
+        draft = eb.generate_monthly_invoice(self.client, seats, period_start, period_end, persist=True)
+        old_settings = make_billing_settings(bankAccountNo="1111100000011111")
+        frozen_html = eb.render_invoice_html(draft, self.client, settings=old_settings)
+        updated = dict(draft)
+        updated["status"] = "issued"
+        updated["invoiceHtmlSnapshot"] = frozen_html
+        saved = eb.save_invoice(updated)
+        rendered = eb.get_invoice_html(saved["id"])
+        self.assertIn("1111100000011111", rendered)
+        # 帳務對帳的核心保證：就算之後改了收款帳號，這張已寄出的單重下載仍是原樣，
+        # 不會偷偷冒出新帳號讓人誤匯錯地方。
+        self.assertNotIn("9999900000099999", rendered)
+
+    def test_missing_invoice_returns_none(self):
+        self.assertIsNone(eb.get_invoice_html("not-a-real-id"))
+
+
+class ReportPersistenceTests(unittest.TestCase):
+    """2026-07-20 三次需求：ESG 月報一算完就整份凍結存檔——save_report()／list_reports()／
+    get_report() 三個入口。"""
+
+    def setUp(self):
+        self.client = make_client()
+        enterprise_seats.upsert_client(self.client)
+
+    def _fresh_report(self, cohort_size=6):
+        return valid_report_fixture(cohort_size=cohort_size)
+
+    def test_save_report_then_get_report_round_trips(self):
+        report = self._fresh_report()
+        saved = eb.save_report(report, invoice_id="fake-invoice-id")
+        self.assertTrue(saved.get("id"))
+        self.assertEqual(saved["enterpriseClientId"], CLIENT_ID)
+        self.assertEqual(saved["invoiceId"], "fake-invoice-id")
+        self.assertIn("<!DOCTYPE html>", saved["reportHtml"])
+        fetched = eb.get_report(saved["id"])
+        self.assertEqual(fetched["reportHtml"], saved["reportHtml"])
+        self.assertEqual(fetched["reportData"]["client"]["id"], CLIENT_ID)
+
+    def test_save_report_same_client_period_overwrites_not_duplicates(self):
+        report = self._fresh_report()
+        first = eb.save_report(report)
+        second = eb.save_report(report)
+        listed = eb.list_reports(client_id=CLIENT_ID)
+        matching = [r for r in listed if r["periodStart"] == first["periodStart"]]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(first["id"], second["id"])
+
+    def test_get_report_html_returns_html_string(self):
+        report = self._fresh_report()
+        saved = eb.save_report(report)
+        html_out = eb.get_report_html(saved["id"])
+        self.assertIn("ESG 成效月報", html_out)
+
+    def test_get_report_missing_id_returns_none(self):
+        self.assertIsNone(eb.get_report("nope"))
+        self.assertIsNone(eb.get_report_html("nope"))
+
+
+class DownloadableDocumentsTests(unittest.TestCase):
+    """2026-07-20 三次需求：list_downloadable_documents() 是單一公司頁「月報與請款單
+    下載」清單的資料來源——合併請款單與月報、依期間排序、每筆都內嵌 html。"""
+
+    def setUp(self):
+        self.client = make_client(unitPriceTwd=3000)
+        enterprise_seats.upsert_client(self.client)
+
+    def test_merges_invoice_and_report_sorted_by_period_desc(self):
+        period_start, period_end = JULY
+        seats = [make_seat("dd1", "active", activated_at="2026-01-01T00:00:00Z", account_id="acct-dd1")]
+        invoice = eb.generate_monthly_invoice(self.client, seats, period_start, period_end, persist=True)
+        report = eb.build_esg_report(
+            self.client, seats, period_start, period_end,
+            invoices=[], raw_metrics=raw_metrics_for(["acct-dd1"]),
+        )
+        eb.save_report(report, invoice_id=invoice["id"])
+
+        docs = eb.list_downloadable_documents(CLIENT_ID, self.client)
+        self.assertEqual(len(docs), 2)
+        types = {d["type"] for d in docs}
+        self.assertEqual(types, {"invoice", "report"})
+        for d in docs:
+            self.assertTrue(d["html"])
+            self.assertIn("2026年7月", d["period"])
+
+    def test_draft_invoice_without_snapshot_still_has_html_via_live_render(self):
+        period_start, period_end = JULY
+        seats = [make_seat("dd2", "active", activated_at="2026-01-01T00:00:00Z")]
+        eb.generate_monthly_invoice(self.client, seats, period_start, period_end, persist=True)
+        docs = eb.list_downloadable_documents(CLIENT_ID, self.client)
+        invoice_docs = [d for d in docs if d["type"] == "invoice"]
+        self.assertEqual(len(invoice_docs), 1)
+        self.assertIn("<!DOCTYPE html>", invoice_docs[0]["html"])
+        self.assertIn("草稿", invoice_docs[0]["label"])
+
+    def test_no_documents_returns_empty_list(self):
+        other_client = make_client(id="22222222-2222-4222-8222-222222222222", name="沒有文件公司")
+        enterprise_seats.upsert_client(other_client)
+        docs = eb.list_downloadable_documents(other_client["id"], other_client)
+        self.assertEqual(docs, [])
+
+
+class MonthlyCloseReportLinkingTests(unittest.TestCase):
+    """2026-07-20 三次需求：run_monthly_close_for_client() 除了算，還要把報告存檔並
+    回填 invoice.reportRef——但只在 persist_invoice=True 時才落地，dry-run 不能偷偷存檔。"""
+
+    def setUp(self):
+        self.client = make_client(unitPriceTwd=3000, id="33333333-3333-4333-8333-333333333333")
+        enterprise_seats.upsert_client(self.client)
+
+    def test_persist_true_saves_report_and_links_reportRef(self):
+        period_start, period_end = JULY
+        seats = [make_seat("mc1", "active", activated_at="2026-01-01T00:00:00Z", account_id="acct-mc1")]
+        for s in seats:
+            s["enterpriseClientId"] = self.client["id"]
+        result = eb.run_monthly_close_for_client(
+            self.client, seats, period_start, period_end, persist_invoice=True,
+        )
+        self.assertIsNotNone(result["report"])
+        self.assertTrue(result["invoice"].get("reportRef"))
+        saved_report = eb.get_report(result["invoice"]["reportRef"])
+        self.assertIsNotNone(saved_report)
+        self.assertEqual(saved_report["enterpriseClientId"], self.client["id"])
+        # 存進資料庫的請款單也要看得到同一個 reportRef，不是只有回傳值有、落地的沒有。
+        persisted_invoice = eb.get_invoice(result["invoice"]["id"])
+        self.assertEqual(persisted_invoice["reportRef"], result["invoice"]["reportRef"])
+
+    def test_persist_false_does_not_save_report(self):
+        period_start, period_end = JULY
+        seats = [make_seat("mc2", "active", activated_at="2026-01-01T00:00:00Z", account_id="acct-mc2")]
+        for s in seats:
+            s["enterpriseClientId"] = self.client["id"]
+        result = eb.run_monthly_close_for_client(
+            self.client, seats, period_start, period_end, persist_invoice=False,
+        )
+        self.assertIsNotNone(result["report"])
+        self.assertIsNone(result["invoice"].get("reportRef"))
+        self.assertEqual(eb.list_reports(client_id=self.client["id"]), [])
+
 
 
 if __name__ == "__main__":
