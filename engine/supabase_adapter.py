@@ -542,6 +542,141 @@ class SupabaseAdapter:
         })
         return {row.get("id"): row.get("display_name") for row in rows or [] if row.get("id")}
 
+    def load_admin_family_memberships(self, limit=5000):
+        """後台跨帳號家庭圈成員名單：不篩 account_id，service-role 全表查詢角色（誰是長輩／誰是家人）。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        rows = self._select("family_memberships", {
+            "select": "id,account_id,family_group_id,person_id,role,created_at,updated_at",
+            "order": "family_group_id.asc,created_at.asc",
+            "limit": str(limit),
+        })
+        return [{
+            "id": row.get("id"),
+            "accountId": row.get("account_id"),
+            "familyGroupId": row.get("family_group_id"),
+            "personId": row.get("person_id"),
+            "role": row.get("role") or "family_contact",
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        } for row in rows or []]
+
+    def load_admin_family_invitations(self, since_iso=None, limit=3000):
+        """後台跨帳號邀請成效：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 3000)))
+        filters = {"select": "*", "order": "created_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["created_at"] = f"gte.{since_iso}"
+        rows = self._select("family_invitations", filters)
+        return [self.family_invitation_row_to_invitation(row) for row in rows or []]
+
+    def load_admin_family_relay_messages(self, since_iso=None, limit=5000):
+        """後台跨帳號家人傳話：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {"select": "*", "order": "created_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["created_at"] = f"gte.{since_iso}"
+        rows = self._select("family_relay_messages", filters)
+        return [self.family_relay_row_to_relay(row) for row in rows or []]
+
+    def load_admin_family_activities(self, since_iso=None, limit=3000):
+        """後台跨帳號家庭活動：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 3000)))
+        filters = {"select": "*", "order": "updated_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["updated_at"] = f"gte.{since_iso}"
+        rows = self._select("family_activities", filters)
+        return [self.family_activity_row_to_activity(row) for row in rows or []]
+
+    def load_admin_family_activity_participants(self, since_iso=None, limit=5000):
+        """後台跨帳號家庭活動參與者：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {"select": "*", "order": "updated_at.desc", "limit": str(limit)}
+        if since_iso:
+            filters["updated_at"] = f"gte.{since_iso}"
+        rows = self._select("family_activity_participants", filters)
+        return [self.family_activity_participant_row_to_participant(row) for row in rows or []]
+
+    def load_admin_family_engagement_events(self, event_names, since_iso=None, limit=5000):
+        """後台跨帳號『看家庭看板／看家人訊息』事件：不篩 account_id，service-role 全表查詢。"""
+        if not self.enabled():
+            return None
+        names = [str(name) for name in (event_names or []) if name]
+        if not names:
+            return []
+        limit = max(1, min(10000, int(limit or 5000)))
+        filters = {
+            "select": "*",
+            "event_name": f"in.({','.join(names)})",
+            "order": "event_time.desc",
+            "limit": str(limit),
+        }
+        if since_iso:
+            filters["event_time"] = f"gte.{since_iso}"
+        rows = self._select("product_events", filters)
+        return [self.product_event_row_to_event(row) for row in rows or []]
+
+    def load_family_groups_by_ids(self, family_group_ids):
+        """後台名單顯示用：批次查家庭圈名稱（只回名稱，不含其他個資）。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(fid) for fid in (family_group_ids or []) if fid and self._is_uuid(str(fid))})
+        if not ids:
+            return {}
+        rows = self._select("family_groups", {
+            "id": f"in.({','.join(ids)})",
+            "select": "id,name",
+            "limit": str(len(ids)),
+        })
+        return {row.get("id"): row.get("name") for row in rows or [] if row.get("id")}
+
+    def load_admin_family_last_action(self, family_group_ids, event_names, limit=1000):
+        """『沒人顧』名單用：不限視窗，查這些家庭圈最後一次傳話／看家庭看板的時間，找最久沒人顧的家。"""
+        if not self.enabled():
+            return None
+        ids = sorted({str(fid) for fid in (family_group_ids or []) if fid and self._is_uuid(str(fid))})
+        if not ids:
+            return {}
+        id_list = ",".join(ids)
+        limit = max(1, min(5000, int(limit or 1000)))
+        last_seen = {}
+
+        def _bump(fg, ts):
+            if fg and ts and (fg not in last_seen or ts > last_seen[fg]):
+                last_seen[fg] = ts
+
+        relay_rows = self._select("family_relay_messages", {
+            "family_group_id": f"in.({id_list})",
+            "select": "family_group_id,created_at",
+            "order": "created_at.desc",
+            "limit": str(limit),
+        }) or []
+        for row in relay_rows:
+            _bump(row.get("family_group_id"), row.get("created_at"))
+
+        names = [str(name) for name in (event_names or []) if name]
+        if names:
+            event_rows = self._select("product_events", {
+                "family_group_id": f"in.({id_list})",
+                "event_name": f"in.({','.join(names)})",
+                "select": "family_group_id,event_time",
+                "order": "event_time.desc",
+                "limit": str(limit),
+            }) or []
+            for row in event_rows:
+                _bump(row.get("family_group_id"), row.get("event_time"))
+
+        return last_seen
+
     def save_app_profile_store(self, store):
         if not self.enabled():
             return None

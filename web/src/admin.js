@@ -10,6 +10,7 @@
       { id: "users", label: "用戶管理" },
       { id: "safety", label: "安全守護警示", badge: "safety" },
       { id: "medication", label: "用藥與回診" },
+      { id: "familyHealth", label: "家庭圈健康度" },
     ]},
     { group: "營收", items: [
       { id: "subscription", label: "訂閱與點數" },
@@ -30,6 +31,7 @@
     feedback: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
     records: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
     medication: '<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
+    familyHealth: '<path d="m3 9.5 9-7.5 9 7.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9 21v-6h6v6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   };
@@ -60,6 +62,7 @@
     summaries: ["/admin/conversation-summaries", { limit: 20 }],
     audit: ["/admin/audit-events", { limit: 20 }],
     medication: ["/admin/medication-adherence", { days: 30, limit: 50 }],
+    familyHealth: ["/admin/family-health", { days: 30, limit: 50 }],
   };
 
   const CHART = { teal: "#3AA8A0", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#3A352E", muted: "#5A6963" };
@@ -97,6 +100,7 @@
   const daily = () => usage().daily || [];
   const ecount = () => usage().eventCounts || {};
   const medication = () => D().medication || {};
+  const familyHealth = () => D().familyHealth || {};
 
   function missingDataMeta(endpointKey){
     return {schema:ADMIN_DATA_META_SCHEMA,metricVersion:"unknown",generatedAt:null,dataAsOf:null,status:"unverified",degraded:true,degradationReasons:["metadata_missing"],freshness:{status:"unknown",reason:"metadata_missing"},sources:[],endpointKey};
@@ -225,6 +229,7 @@
     else if (id==="users") html=renderUsers();
     else if (id==="safety") html=renderSafety();
     else if (id==="medication") html=renderMedication();
+    else if (id==="familyHealth") html=renderFamilyHealth();
     else if (id==="subscription") html=renderSubscription();
     else if (id==="feedback") html=renderFeedback();
     else if (id==="records") html=renderRecords();
@@ -376,6 +381,37 @@
       p.adherenceRate==null?"–":pct(p.adherenceRate),
       p.missedStreak?`<span class="pill ${p.missedStreak>=2?"bad":"warn"}">${n(p.missedStreak)} 天</span>`:`<span class="muted">—</span>`,
     ])):emptyBox("還沒有用藥紀錄——有人開始用提醒後就會出現。"));
+    return html;
+  }
+
+  function renderFamilyHealth(){
+    const fh=familyHealth(), t=fh.totals||{}, win=fh.windowDays||30, rate=fh.guardedRate;
+    const inv=fh.invites||{};
+    let html=kpiRow([
+      { label:"有人顧的比例", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · ${n(t.withActiveGuardian||0)}／${n(t.households||0)} 戶`, star:true, info:"這戶除了長輩本人以外，近 N 天內至少有 1 位家人傳話、看過家庭看板或家人訊息、或參與家庭活動，就算「有人顧」。" },
+      { label:"多人守護家數", value:n(t.multiGuardian||0), sub:`近 ${win} 天有 2 位以上家人在顧` },
+      { label:"沒人顧家數", value:n(t.unwatched||0), sub:`近 ${win} 天沒有任何家人動作`, info:"家庭圈只有長輩本人、或家人整段時間都沒動作——流失與安全雙警訊" },
+      { label:"邀請成功率", value:inv.acceptRate==null?"–":pct(inv.acceptRate), sub:`近 ${win} 天送出 ${n(inv.sent||0)} 筆邀請` },
+    ]);
+    html+=principle(fh.principle||"「有人顧」的算法：家人有傳話、看過家庭看板或家人訊息、或參與家庭活動任一動作，就算這家有人在顧；長輩自己的動作不算。這裡只看「有沒有動作」，不評斷家人感情好不好。");
+    const dl=fh.daily||[], labels=dl.map((d)=>shortDate(d.date));
+    const totalDaily=dl.reduce((s,d)=>s+(d.messages||0)+(d.views||0),0);
+    if(!totalDaily && !(t.households||0)){
+      html+=card("家人互動趨勢", `近 ${win} 天傳話 vs 查看`, emptyBox("還沒有家庭圈資料——有家人開始用起來後就會出現。"));
+      return html;
+    }
+    html+=card("家人互動趨勢", `近 ${win} 天傳話 vs 查看`, chartMount("fh-trend"));
+    pending.push(()=>columnChart($("fh-trend"), labels, [
+      { name:"傳話", color:cc.teal, values:dl.map((d)=>Math.round(d.messages||0)) },
+      { name:"查看", color:cc.coral, values:dl.map((d)=>Math.round(d.views||0)) },
+    ], { empty:"還沒有家人互動紀錄。" }));
+    const list=fh.unwatchedList||[];
+    html+=card("沒人顧名單", "最久沒有家人動作的排前面", list.length?tableHTML(["家庭","長輩","家人數","最後一次家人動作"], list.map((it)=>[
+      esc(it.familyName||"–"),
+      `<b>${esc(it.elderName||"長輩")}</b>`,
+      n(it.memberCount||0),
+      it.lastFamilyActionAt?esc(fmtTime(it.lastFamilyActionAt)):`<span class="pill bad">從沒動作過</span>`,
+    ])):emptyBox("目前每一位長輩都有家人在顧——很好。"));
     return html;
   }
 

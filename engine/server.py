@@ -180,6 +180,8 @@ MEANINGFUL_EVENT_NAMES = {
     "avatar_session_completed",
     "companion_summary_created",
 }
+# 家庭圈健康度：家人「看過」的訊號（跟 product_events 的 eventName 對應，不含長輩自己的動作）
+FAMILY_ENGAGEMENT_EVENT_NAMES = ("family_dashboard_viewed", "family_message_viewed")
 AVATAR_MODE_ALIASES = {
     "static": "static-css",
     "css": "static-css",
@@ -345,6 +347,7 @@ ADMIN_POST_PATHS = {
     "/admin/safety-events",
     "/admin/audit-events",
     "/admin/medication-adherence",
+    "/admin/family-health",
     "/admin/voice-diagnostics",
     "/admin/notifications/drain",
     "/admin/login",
@@ -4701,6 +4704,367 @@ def admin_medication_adherence(data=None):
     }
 
 
+def load_admin_family_membership_rows(limit=5000):
+    """後台跨帳號家庭圈成員名單：Supabase service-role 全表查詢，失敗退回本機示範家庭圈
+    （本地 JSON 模式沒有多帳號概念，就只有機器上這一戶）。"""
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_rows = backend.load_admin_family_memberships(limit=limit)
+        if remote_rows is not None:
+            record_admin_data_source(
+                "family_memberships",
+                "supabase",
+                record_count=len(remote_rows),
+                data_as_of=latest_record_timestamp(remote_rows),
+            )
+            return remote_rows
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family memberships from Supabase", e)
+    store = load_app_profile_store()
+    family_group = store.get("familyGroup") or {}
+    account = store.get("account") or {}
+    members = family_group.get("members") or []
+    rows = [{
+        "id": m.get("id"),
+        "accountId": account.get("id") or "local-demo-account",
+        "familyGroupId": family_group.get("id") or "local-demo-family",
+        "personId": m.get("id"),
+        "role": m.get("role") or "family_contact",
+        "createdAt": m.get("createdAt"),
+        "updatedAt": m.get("updatedAt"),
+    } for m in members][:limit]
+    record_admin_data_source(
+        "family_memberships",
+        "json",
+        record_count=len(rows),
+        data_as_of=latest_record_timestamp(rows),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return rows
+
+
+def _family_health_since(days):
+    now = datetime.now(timezone.utc)
+    since_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) - timedelta(days=max(1, int(days or 30)) - 1)
+    return since_day.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def load_admin_family_relay_rows(days=30, limit=5000):
+    """後台跨帳號家人傳話：近 N 天，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(10000, int(limit or 5000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_family_relay_messages(since_iso=since_iso, limit=limit)
+        if remote_items is not None:
+            record_admin_data_source(
+                "family_relay_messages",
+                "supabase",
+                record_count=len(remote_items),
+                data_as_of=latest_record_timestamp(remote_items),
+            )
+            return remote_items, since_iso
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family relay messages from Supabase", e)
+    items = read_json_file(FAMILY_RELAYS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [normalize_family_relay(item) for item in items]
+    items = [item for item in items if (item.get("createdAt") or "") >= since_iso]
+    items = items[:limit]
+    record_admin_data_source(
+        "family_relay_messages",
+        "json",
+        record_count=len(items),
+        data_as_of=latest_record_timestamp(items),
+        authority="fallback",
+        degraded=True,
+        degradation_reason=fallback_reason,
+    )
+    return items, since_iso
+
+
+def load_admin_family_activity_rows(days=30, limit=3000):
+    """後台跨帳號家庭活動＋參與者：近 N 天，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(5000, int(limit or 3000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_activities = backend.load_admin_family_activities(since_iso=since_iso, limit=limit)
+        if remote_activities is not None:
+            remote_participants = backend.load_admin_family_activity_participants(since_iso=since_iso, limit=limit * 4) or []
+            record_admin_data_source(
+                "family_activities", "supabase",
+                record_count=len(remote_activities), data_as_of=latest_record_timestamp(remote_activities),
+            )
+            record_admin_data_source(
+                "family_activity_participants", "supabase",
+                record_count=len(remote_participants), data_as_of=latest_record_timestamp(remote_participants),
+            )
+            return remote_activities, remote_participants, since_iso
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family activities from Supabase", e)
+    activities_raw = read_json_file(FAMILY_ACTIVITIES_PATH, [])
+    if not isinstance(activities_raw, list):
+        activities_raw = []
+    activities = [normalize_family_activity(a) for a in activities_raw]
+    activities = [a for a in activities if (a.get("updatedAt") or "") >= since_iso]
+    participants = []
+    for a in activities:
+        for p in a.get("participants") or []:
+            participants.append({**p, "activityId": a.get("id")})
+    activities = activities[:limit]
+    record_admin_data_source(
+        "family_activities", "json",
+        record_count=len(activities), data_as_of=latest_record_timestamp(activities),
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    record_admin_data_source(
+        "family_activity_participants", "json",
+        record_count=len(participants), data_as_of=None,
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    return activities, participants, since_iso
+
+
+def load_admin_family_engagement_rows(days=30, limit=5000):
+    """後台跨帳號『看家庭看板／看家人訊息』：近 N 天，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(10000, int(limit or 5000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_events = backend.load_admin_family_engagement_events(FAMILY_ENGAGEMENT_EVENT_NAMES, since_iso=since_iso, limit=limit)
+        if remote_events is not None:
+            record_admin_data_source(
+                "family_engagement_events", "supabase",
+                record_count=len(remote_events), data_as_of=latest_record_timestamp(remote_events),
+            )
+            return remote_events, since_iso
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family engagement events from Supabase", e)
+    raw_store = read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store())
+    raw_events = raw_store.get("events", []) if isinstance(raw_store, dict) else []
+    events = [normalize_product_event(e) for e in raw_events]
+    events = [e for e in events if e.get("eventName") in FAMILY_ENGAGEMENT_EVENT_NAMES and (e.get("eventTime") or "") >= since_iso]
+    events = events[:limit]
+    record_admin_data_source(
+        "family_engagement_events", "json",
+        record_count=len(events), data_as_of=latest_record_timestamp(events),
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    return events, since_iso
+
+
+def load_admin_family_invitation_rows(days=30, limit=3000):
+    """後台跨帳號邀請成效：近 N 天建立的邀請，Supabase 全表查詢，失敗退回本地備份。"""
+    days = max(1, min(180, int(days or 30)))
+    limit = max(1, min(5000, int(limit or 3000)))
+    since_iso = _family_health_since(days)
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    try:
+        remote_items = backend.load_admin_family_invitations(since_iso=since_iso, limit=limit)
+        if remote_items is not None:
+            record_admin_data_source(
+                "family_invitations", "supabase",
+                record_count=len(remote_items), data_as_of=latest_record_timestamp(remote_items),
+            )
+            return remote_items
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin family invitations from Supabase", e)
+    items = read_json_file(FAMILY_INVITATIONS_PATH, [])
+    if not isinstance(items, list):
+        items = []
+    items = [normalize_family_invitation(item) for item in items]
+    items = [item for item in items if (item.get("createdAt") or "") >= since_iso]
+    items = items[:limit]
+    record_admin_data_source(
+        "family_invitations", "json",
+        record_count=len(items), data_as_of=latest_record_timestamp(items),
+        authority="fallback", degraded=True, degradation_reason=fallback_reason,
+    )
+    return items
+
+
+def admin_family_health(data=None):
+    """家庭圈健康度：有沒有家人在關心長輩——傳話、看家庭看板或家人訊息、參與家庭活動，任一都算『有人顧』。
+    長輩自己的動作不算；這裡只看『有沒有動作』，不評斷家人感情好不好、也不做關係品質判讀。"""
+    data = data or {}
+    days = max(1, min(180, int(data.get("days") or 30)))
+    limit = max(1, min(200, int(data.get("limit") or 50)))
+
+    membership_rows = load_admin_family_membership_rows(limit=5000)
+    relay_rows, since_iso = load_admin_family_relay_rows(days=days, limit=5000)
+    activity_rows, participant_rows, _ = load_admin_family_activity_rows(days=days, limit=3000)
+    engagement_events, _ = load_admin_family_engagement_rows(days=days, limit=5000)
+    invitations = load_admin_family_invitation_rows(days=days, limit=3000)
+
+    households = {}
+    for row in membership_rows:
+        fg = row.get("familyGroupId")
+        if not fg:
+            continue
+        h = households.setdefault(fg, {"accountId": None, "elderPersonId": None, "memberIds": set()})
+        role = row.get("role") or "family_contact"
+        person_id = row.get("personId")
+        if role == "primary_user":
+            h["elderPersonId"] = person_id
+            h["accountId"] = row.get("accountId") or h["accountId"]
+        elif person_id:
+            h["memberIds"].add(person_id)
+        if not h["accountId"]:
+            h["accountId"] = row.get("accountId") or h["accountId"]
+
+    active = {fg: set() for fg in households}
+
+    def mark_active(fg, person_id):
+        if not fg or not person_id:
+            return
+        h = households.get(fg)
+        if h is None:
+            return
+        if person_id == h.get("elderPersonId"):
+            return
+        active.setdefault(fg, set()).add(person_id)
+
+    daily_messages = {}
+    daily_views = {}
+
+    for row in relay_rows:
+        fg = row.get("familyGroupId")
+        day = str(row.get("createdAt") or "")[:10]
+        if day:
+            daily_messages[day] = daily_messages.get(day, 0) + 1
+        mark_active(fg, row.get("senderPersonId"))
+        mark_active(fg, row.get("recipientPersonId"))
+
+    activity_family = {}
+    for a in activity_rows:
+        aid = a.get("id")
+        if aid:
+            activity_family[aid] = a.get("familyGroupId")
+    for p in participant_rows:
+        aid = p.get("activityId") or p.get("family_activity_id")
+        fg = activity_family.get(aid)
+        mark_active(fg, p.get("personId") or p.get("person_id"))
+
+    viewer_people = set()
+    for ev in engagement_events:
+        fg = ev.get("familyGroupId")
+        person_id = ev.get("personId")
+        day = str(ev.get("eventTime") or "")[:10]
+        if day:
+            daily_views[day] = daily_views.get(day, 0) + 1
+        if person_id:
+            viewer_people.add(person_id)
+        mark_active(fg, person_id)
+
+    household_ids = list(households.keys())
+    total_households = len(household_ids)
+    members_total = sum(len(h["memberIds"]) for h in households.values())
+    with_active_guardian = sum(1 for fg in household_ids if active.get(fg))
+    multi_guardian = sum(1 for fg in household_ids if len(active.get(fg) or set()) >= 2)
+    unwatched_fgs = [fg for fg in household_ids if not active.get(fg)]
+
+    guarded_rate = round(with_active_guardian / total_households, 4) if total_households else None
+
+    sent = len(invitations)
+    accepted = sum(1 for i in invitations if i.get("status") == "accepted")
+    pending_invites = sum(1 for i in invitations if i.get("status") == "pending")
+    accept_rate = round(accepted / sent, 4) if sent else None
+
+    all_days = sorted(set(daily_messages) | set(daily_views))
+    daily = [{"date": d, "messages": daily_messages.get(d, 0), "views": daily_views.get(d, 0)} for d in all_days]
+
+    last_action = {}
+    try:
+        backend = data_backend()
+        if backend.enabled() and unwatched_fgs:
+            last_action = backend.load_admin_family_last_action(unwatched_fgs, FAMILY_ENGAGEMENT_EVENT_NAMES, limit=2000) or {}
+    except Exception as e:
+        log_fallback_exception("load admin family last action", e)
+
+    person_ids_needed = {households[fg]["elderPersonId"] for fg in unwatched_fgs if households[fg].get("elderPersonId")}
+    display_names = {}
+    family_names = {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            if person_ids_needed:
+                display_names = backend.load_persons_by_ids(list(person_ids_needed)) or {}
+            if unwatched_fgs:
+                family_names = backend.load_family_groups_by_ids(unwatched_fgs) or {}
+    except Exception as e:
+        log_fallback_exception("load person/family display names for family health", e)
+
+    unwatched_list = []
+    for fg in unwatched_fgs:
+        h = households[fg]
+        elder_id = h.get("elderPersonId")
+        unwatched_list.append({
+            "accountId": h.get("accountId"),
+            "familyName": family_names.get(fg) or "Munea Care Circle",
+            "elderName": (elder_id and display_names.get(elder_id)) or "長輩",
+            "memberCount": len(h["memberIds"]),
+            "lastFamilyActionAt": last_action.get(fg),
+        })
+    unwatched_list.sort(key=lambda item: item.get("lastFamilyActionAt") or "")
+    unwatched_list = unwatched_list[:limit]
+
+    principle_text = (
+        "『有人顧』的算法：近 " + str(days) + " 天內，家人只要有傳話、看過家庭看板或家人訊息、"
+        "或參與家庭活動任一動作，就算這家有人在顧；長輩自己的動作不算。"
+        "這裡只看『有沒有動作』，不評斷家人感情好不好。"
+    )
+
+    return {
+        "ok": True,
+        "windowDays": days,
+        "since": since_iso,
+        "totals": {
+            "households": total_households,
+            "membersTotal": members_total,
+            "withActiveGuardian": with_active_guardian,
+            "multiGuardian": multi_guardian,
+            "unwatched": len(unwatched_fgs),
+        },
+        "guardedRate": guarded_rate,
+        "invites": {
+            "sent": sent,
+            "accepted": accepted,
+            "pending": pending_invites,
+            "acceptRate": accept_rate,
+        },
+        "relay": {
+            "messages": len(relay_rows),
+            "viewers": len(viewer_people),
+        },
+        "daily": daily,
+        "unwatchedList": unwatched_list,
+        "principle": principle_text,
+        "backend": data_backend_status(),
+    }
+
+
 FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
 
 def feedback_response(data):
@@ -7317,6 +7681,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(admin_contract_response("munea.admin.medication-adherence.v1", lambda: admin_medication_adherence(data)))
+            elif self.path == "/admin/family-health":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_contract_response("munea.admin.family-health.v1", lambda: admin_family_health(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
