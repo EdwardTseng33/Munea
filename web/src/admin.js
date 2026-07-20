@@ -878,7 +878,8 @@
       const bv=badges[it.badge]; const b= it.badge&&bv&&bv!=="0"?`<span class="nav-badge">${esc(bv)}</span>`:"";
       return `<a href="#${it.id}" data-page="${it.id}">${icon(it.id)}<span class="nav-label">${esc(it.label)}</span>${b}</a>`;
     }).join("")}</div></div>`).join("")
-      + `<div class="side-links"><a href="/" target="_blank" rel="noopener">App 本體</a><a href="/selftest.html" target="_blank" rel="noopener">自動巡檢</a><a href="https://munea.net" target="_blank" rel="noopener">官網</a><a href="https://munea.net/privacy" target="_blank" rel="noopener">隱私權</a></div>`;
+      // 隱私權指向本服務自帶的 /privacy.html：munea.net 仍掛在舊 Vercel 部署、/privacy 為 404（2026-07-20 實測）
+      + `<div class="side-links"><a href="/" target="_blank" rel="noopener">App 本體</a><a href="/selftest.html" target="_blank" rel="noopener">自動巡檢</a><a href="https://munea.net" target="_blank" rel="noopener">官網</a><a href="/privacy.html" target="_blank" rel="noopener">隱私權</a></div>`;
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
   }
   function go(id){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id; }
