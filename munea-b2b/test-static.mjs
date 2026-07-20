@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const index = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const call = fs.readFileSync(new URL('./call.html', import.meta.url), 'utf8');
+const callKey = fs.readFileSync(new URL('./api/call-key.js', import.meta.url), 'utf8');
 
 function parseInlineScripts(html, label) {
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
@@ -23,6 +24,13 @@ assert.doesNotMatch(index, /\/api\/chat|speechSynthesis|chatTxt|文字聊聊/);
 assert.doesNotMatch(index, /台灣首創|這個領域的.{0,4}領先者|150 小時/);
 
 assert.match(call, /&demo=1&key=/);
+assert.match(call, /avatarToken/);
+assert.match(call, /\/offer\?token=/);
+assert.match(call, /\/audio\?token=/);
+assert.match(call, /if \(qs\.has\('stream'\)\) return this\.startStream/);
+assert.match(callKey, /\/demo\/session/);
+assert.match(callKey, /avatarToken/);
+assert.doesNotMatch(callKey, /DEMO_AVATAR_KEY/);
 assert.doesNotMatch(call, /cap_rem=1|cap_evt=1/);
 assert.match(call, /class="charbar"[\s\S]*bg-a05\.png[\s\S]*bg-a06\.png/);
 assert.match(call, /waitForFirstFrame/);

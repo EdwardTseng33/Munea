@@ -164,7 +164,8 @@
 <script>
 /* ===== 設定（B2B 版：鑰匙與服務位址不寫死，過密語後由 /api/call-key 發放） ===== */
 let AVATAR_HTTP = null;
-let AVATAR_KEY  = null;
+let AVATAR_TOKEN = null;
+let VOICE_KEY = null;
 let VOICE_WS_BASE = null;
 let CAP_SECONDS = 180;      // 體驗上限（伺服器可調）
 const TEST_LINE = '嗨,你在嗎?我在測試連線。';
@@ -269,7 +270,7 @@ async function collectPcDiag(pc){
 }
 async function sendDiag(reason){
   try{
-    if (!AVATAR_HTTP || !AVATAR_KEY) return;
+    if (!AVATAR_HTTP || !AVATAR_TOKEN) return;
     const payload = {
       ts: new Date().toISOString(), reason: reason || '',
       ua: navigator.userAgent, char: curChar,
@@ -280,7 +281,7 @@ async function sendDiag(reason){
       voice: window.__flashheadVoiceDiag,
       log: DBGBUF.slice(-200),
     };
-    await fetch(AVATAR_HTTP + '/diag?key=' + encodeURIComponent(AVATAR_KEY), {
+    await fetch(AVATAR_HTTP + '/diag?token=' + encodeURIComponent(AVATAR_TOKEN), {
       method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
     });
     dbgLine('[diag] sent to server ok');
@@ -430,7 +431,9 @@ async function bootstrapKeys(pass){
   if (r.status === 401) throw new Error('bad-pass');
   if (!r.ok) throw new Error('server-' + r.status);
   const j = await r.json();
-  AVATAR_HTTP = j.avatarHttp; AVATAR_KEY = j.avatarKey; VOICE_WS_BASE = j.voiceWs;
+  AVATAR_HTTP = j.avatarHttp; AVATAR_TOKEN = j.avatarToken;
+  VOICE_KEY = j.voiceKey; VOICE_WS_BASE = j.voiceWs;
+  if (!AVATAR_TOKEN || !VOICE_KEY) throw new Error('server-token');
   CAP_SECONDS = j.capSeconds || 180;
   capRemaining.textContent = '體驗 ' + clockText(CAP_SECONDS);
   dbgLine('[gate] keys ready, cap=' + CAP_SECONDS + 's');
@@ -439,9 +442,9 @@ async function bootstrapKeys(pass){
 }
 let avatarPrewarmPromise = null;
 function prewarm(){
-  if (!AVATAR_HTTP || !AVATAR_KEY) return;
+  if (!AVATAR_HTTP || !AVATAR_TOKEN) return;
   if (avatarPrewarmPromise) return avatarPrewarmPromise;
-  avatarPrewarmPromise = fetch(AVATAR_HTTP + '/health?key=' + encodeURIComponent(AVATAR_KEY)).then(r=>r.json()).then(j=>{
+  avatarPrewarmPromise = fetch(AVATAR_HTTP + '/health?token=' + encodeURIComponent(AVATAR_TOKEN)).then(r=>r.json()).then(j=>{
     if (j.avatar_render_contract) applyAvatarRenderContract(j.avatar_render_contract);
     dbgLine('[prewarm] health ok engine=' + j.engine + ' uptime_s=' + (j.uptime_s!=null?j.uptime_s:'?'));
     return true;
@@ -616,7 +619,7 @@ Face._attempt = async function(char, forceRelay){
   });
 
   setStatus('送出連線請求…', true);
-  const r = await withTimeout(fetch(AVATAR_HTTP + '/offer?key=' + encodeURIComponent(AVATAR_KEY) + '&char=' + char, {
+  const r = await withTimeout(fetch(AVATAR_HTTP + '/offer?token=' + encodeURIComponent(AVATAR_TOKEN) + '&char=' + char, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ sdp:pc.localDescription.sdp, type:pc.localDescription.type }),
   }), 15000, '連線請求');
@@ -649,8 +652,8 @@ Face.startStream = function(char){
   this._decoding = false;
   overlay.classList.add('stream');
   setStatus('接通 Avatar 畫面…', true);
-  const url = AVATAR_HTTP.replace(/^http/,'ws') + '/stream?key=' +
-    encodeURIComponent(AVATAR_KEY) + '&char=' + encodeURIComponent(char);
+  const url = AVATAR_HTTP.replace(/^http/,'ws') + '/stream?token=' +
+    encodeURIComponent(AVATAR_TOKEN) + '&char=' + encodeURIComponent(char);
   return new Promise((resolve, reject)=>{
     let settled = false;
     let timer = null;
@@ -698,10 +701,9 @@ Face.startStream = function(char){
   });
 };
 Face.start = async function(char){
-  // B2B browser demo uses the same FlashHead engine over WSS. This avoids the
-  // Modal-to-external-TURN UDP path that can receive packets but never complete
-  // ICE; append ?webrtc=1 only for transport diagnostics.
-  if (!qs.has('webrtc')) return this.startStream(char);
+  // Production demo uses the same WebRTC path as the app. Keep the old frame
+  // stream path only as an explicit diagnostic fallback.
+  if (qs.has('stream')) return this.startStream(char);
   this.on = false;
   Face._diagAttempts = [];
   let ok = false;
@@ -730,7 +732,7 @@ Face.start = async function(char){
     }
   }
   setStatus('視訊就緒，接聲音線…', true);
-  this.ws = new WebSocket(AVATAR_HTTP.replace(/^http/,'ws') + '/audio?key=' + encodeURIComponent(AVATAR_KEY));
+  this.ws = new WebSocket(AVATAR_HTTP.replace(/^http/,'ws') + '/audio?token=' + encodeURIComponent(AVATAR_TOKEN));
   this.ws.binaryType = 'arraybuffer';
   this.on = true;
   const wsOk = await new Promise((res)=>{
@@ -816,7 +818,7 @@ function startPeriodicStats(){
     window.__flashheadStatsHist.push(s);
     if (window.__flashheadStatsHist.length > 120) window.__flashheadStatsHist.shift();
     try{
-      await fetch(AVATAR_HTTP + '/diag?key=' + encodeURIComponent(AVATAR_KEY), {
+      await fetch(AVATAR_HTTP + '/diag?token=' + encodeURIComponent(AVATAR_TOKEN), {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ reason:'periodic-stats', seq:s.seq, char:curChar, stats:s, page:'b2b-call' }),
       });
@@ -885,7 +887,7 @@ const Live = {
 };
 Live.start = async function(char){
   // 訪客體驗不得宣告 App reminder/event 能力，也不得載入或回寫正式用戶資料。
-  let url = VOICE_WS_BASE + '?char=' + encodeURIComponent(char) + '&demo=1&key=' + encodeURIComponent(AVATAR_KEY);
+  let url = VOICE_WS_BASE + '?char=' + encodeURIComponent(char) + '&demo=1&key=' + encodeURIComponent(VOICE_KEY);
   this.on = true;
   this._activated = false;
   setStatus('連語音線…', true);
@@ -1054,7 +1056,7 @@ async function wakeAvatarService(){
   while (performance.now() - t0 < maxWaitMs){
     attempt++;
     try{
-      const r = await withTimeout(fetch(AVATAR_HTTP + '/health?key=' + encodeURIComponent(AVATAR_KEY)), 6000, '喚醒探測');
+      const r = await withTimeout(fetch(AVATAR_HTTP + '/health?token=' + encodeURIComponent(AVATAR_TOKEN)), 6000, '喚醒探測');
       if (r.ok){
         const j = await r.json().catch(()=>({}));
         if (j.avatar_render_contract) applyAvatarRenderContract(j.avatar_render_contract);
@@ -1124,7 +1126,7 @@ async function attemptConnect(tryNo){
 }
 
 async function dial(){
-  if (!AVATAR_KEY){ gate.classList.add('show'); return; }
+  if (!AVATAR_TOKEN || !VOICE_KEY){ gate.classList.add('show'); return; }
   onCall = true;
   Live.primePlayback();
   try{

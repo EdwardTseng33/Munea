@@ -12,6 +12,7 @@ PARSER.add_argument("char", nargs="?", default="a05")
 PARSER.add_argument("duration", nargs="?", type=float, default=6.0)
 PARSER.add_argument("--expect-size", type=int, choices=(512, 640, 768))
 PARSER.add_argument("--key-file", default=r"E:\Claude\Munea\deploy\.munea-app-key")
+PARSER.add_argument("--demo-password")
 PARSER.add_argument("--wav", default=r"E:\Claude\Munea\engine\nening-reply-1.wav")
 PARSER.add_argument("--out")
 ARGS = PARSER.parse_args()
@@ -19,7 +20,18 @@ ARGS = PARSER.parse_args()
 BASE = ARGS.base.rstrip("/")
 CHAR = ARGS.char
 DURATION_S = ARGS.duration
-KEY = open(ARGS.key_file, encoding="utf-8").read().strip()
+if ARGS.demo_password:
+    _session_response = requests.post(
+        BASE + "/demo/session", json={"password": ARGS.demo_password}, timeout=30
+    )
+    _session_response.raise_for_status()
+    KEY = str(_session_response.json().get("token") or "")
+    if not KEY:
+        raise RuntimeError("demo session did not return a token")
+    AUTH_PARAM = "token"
+else:
+    KEY = open(ARGS.key_file, encoding="utf-8").read().strip()
+    AUTH_PARAM = "key"
 WAV = ARGS.wav
 OUT = ARGS.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), "sameline_fh")
 os.makedirs(OUT, exist_ok=True)
@@ -78,7 +90,7 @@ async def main():
     for _ in range(60):
         if pc.iceGatheringState == "complete": break
         await asyncio.sleep(0.05)
-    r = requests.post(f"{BASE}/offer", params={"key": KEY, "char": CHAR},
+    r = requests.post(f"{BASE}/offer", params={AUTH_PARAM: KEY, "char": CHAR},
                       json={"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}, timeout=30)
     ans = r.json()
     if "error" in ans: print("offer error", ans); return
@@ -93,7 +105,7 @@ async def main():
     T0 = time.monotonic()
     _ws_base = BASE.replace("https://", "wss://").replace("http://", "ws://")   # https→wss、http(SSH通道)→ws
     aud = await websockets.connect(
-        _ws_base + "/audio?key=" + quote(KEY) + "&session=" + quote(session),
+        _ws_base + "/audio?" + AUTH_PARAM + "=" + quote(KEY) + "&session=" + quote(session),
         max_size=None,
     )
     await asyncio.sleep(2.0)   # 2 秒待機基準

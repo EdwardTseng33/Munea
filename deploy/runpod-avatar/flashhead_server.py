@@ -36,6 +36,7 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
 import sys
 import time
 import urllib.error
@@ -81,8 +82,11 @@ SR_IN, SR_ENG = 24000, 16000
 # 2026-07-11 斷續根治（官方體檢：零起播緩衝→斷糧）：開口前先墊 0.5s、生成允許往前衝到 1.5s 存貨。
 # 原理：4090 生成比即時快~1.9倍，拔掉「卡即時節奏」的閘門後會自動囤到上限、形成抖動緩衝墊；
 # 偶爾一塊做慢也不會見底（斷糧）。代價＝首句慢約 0.5s（一次性、非累積），換整段不再斷斷續續。
-AUDIO_PREBUFFER_S = 0.5    # 開口前先墊多少秒才真的放音
-OPENING_PREBUFFER_S = 1.0  # 每通首段多留 1 秒讓 iPhone/WebRTC 暖機；後續回合回到 0.5 秒
+AUDIO_PREBUFFER_S = max(0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.5")))
+OPENING_PREBUFFER_S = max(
+    AUDIO_PREBUFFER_S,
+    float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "1.0")),
+)
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
@@ -275,14 +279,14 @@ class FlashHead:
                             RTCPeerConnection, RTCSessionDescription, VideoStreamTrack)
         from aiortc.mediastreams import VIDEO_CLOCK_RATE, VIDEO_TIME_BASE
         from av import AudioFrame, VideoFrame
-        from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+        from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
         from fastapi.responses import JSONResponse
         from fastapi.middleware.cors import CORSMiddleware
 
         api = FastAPI()
         worker_origins = [x.strip() for x in os.environ.get(
             "MUNEA_WORKER_CORS_ORIGINS",
-            "capacitor://localhost,ionic://localhost,http://localhost,https://localhost",
+            "capacitor://localhost,ionic://localhost,http://localhost,https://localhost,https://munea-b2b.vercel.app",
         ).split(",") if x.strip()]
         api.add_middleware(
             CORSMiddleware, allow_origins=worker_origins,
@@ -300,12 +304,30 @@ class FlashHead:
             10, int(os.environ.get("MUNEA_WORKER_HEARTBEAT_SECONDS", "30"))
         )
         _allow_legacy = os.environ.get("MUNEA_ALLOW_LEGACY_APP_KEY", "1") == "1"
+        _demo_password_sha256 = os.environ.get("MUNEA_DEMO_PASSWORD_SHA256", "").strip().lower()
+        _demo_token_ttl = max(60, min(900, int(os.environ.get("MUNEA_DEMO_TOKEN_TTL", "300"))))
+        _demo_tokens = {}
+        _demo_attempts = {}
         _session_control = {}
 
         def _pass(request_key):
-            return (not _gate) or (request_key == _gate)
+            return (not _gate and not _demo_password_sha256) or (request_key == _gate)
+
+        def _demo_token_payload(token):
+            now = int(time.time())
+            expired = [value for value, payload in _demo_tokens.items()
+                       if int(payload.get("exp") or 0) < now]
+            for value in expired:
+                _demo_tokens.pop(value, None)
+            payload = _demo_tokens.get(token or "")
+            if not payload or int(payload.get("exp") or 0) < now:
+                return None
+            return payload
 
         def _authorize(request_key, token):
+            demo_payload = _demo_token_payload(token)
+            if demo_payload is not None:
+                return demo_payload
             if _token_secret:
                 payload = _decode_call_token(token, _token_secret, _worker_id)
                 if payload is not None:
@@ -313,6 +335,8 @@ class FlashHead:
                 if not (_allow_legacy and _pass(request_key)):
                     return False
                 return None
+            if _demo_password_sha256:
+                return False
             return None if _pass(request_key) else False
 
         async def _control_ready(control):
@@ -454,10 +478,38 @@ class FlashHead:
                 self._next_pts += len(chunk)
                 return frame
 
+        @api.post("/demo/session")
+        async def demo_session(payload: dict, request: Request):
+            if not _demo_password_sha256:
+                return JSONResponse(status_code=404, content={"error": "demo disabled"})
+            now = int(time.time())
+            client = request.client.host if request.client else "unknown"
+            recent = [stamp for stamp in _demo_attempts.get(client, []) if stamp > now - 300]
+            if len(recent) >= 10:
+                return JSONResponse(status_code=429, content={"error": "too many attempts"})
+            supplied = str(payload.get("password") or "").replace(" ", "").lower()
+            digest = hashlib.sha256(supplied.encode("utf-8")).hexdigest()
+            if not hmac.compare_digest(digest, _demo_password_sha256):
+                recent.append(now)
+                _demo_attempts[client] = recent
+                await asyncio.sleep(0.25)
+                return JSONResponse(status_code=401, content={"error": "password"})
+            _demo_attempts.pop(client, None)
+            token = secrets.token_urlsafe(32)
+            exp = now + _demo_token_ttl
+            _demo_tokens[token] = {
+                "demo": True,
+                "call_id": "demo-" + secrets.token_hex(8),
+                "lease_version": 1,
+                "slot_id": 1,
+                "exp": exp,
+            }
+            return {"token": token, "expiresIn": _demo_token_ttl}
+
         @api.get("/health")
-        def health(key: str = ""):
-            if not _pass(key):
-                return {"ok": False, "error": "key required"}
+        def health(key: str = "", token: str = ""):
+            if _authorize(key, token) is False:
+                return JSONResponse(status_code=403, content={"ok": False, "error": "token required"})
             snap = outer.pool.snapshot()
             primary = outer.slots[0]
             body = health_snapshot(primary, outer.wake_ts)
@@ -468,9 +520,9 @@ class FlashHead:
             return body
 
         @api.post("/diag")
-        async def diag(payload: dict, key: str = ""):
-            if not _pass(key):
-                return {"error": "key required"}
+        async def diag(payload: dict, key: str = "", token: str = ""):
+            if _authorize(key, token) is False:
+                return JSONResponse(status_code=403, content={"error": "token required"})
             import json as _json
             uptime_s = round(time.time() - getattr(outer, "wake_ts", time.time()), 1)
             body = _json.dumps(payload, ensure_ascii=False, default=str)
@@ -598,9 +650,10 @@ class FlashHead:
             asyncio.create_task(_worker_heartbeat_loop())
 
         @api.post("/switch")
-        async def switch_char(key: str = "", char: str = "", slot: int = 0):
-            if not _pass(key):
-                return {"error": "key required"}
+        async def switch_char(key: str = "", char: str = "", slot: int = 0,
+                              token: str = ""):
+            if _authorize(key, token) is False:
+                return JSONResponse(status_code=403, content={"error": "token required"})
             if not char:
                 return {"error": "char required"}
             if slot < 0 or slot >= len(outer.slots):
