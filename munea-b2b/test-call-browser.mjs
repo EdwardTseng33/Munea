@@ -15,6 +15,7 @@ const testChar = process.env.B2B_TEST_CHAR || 'a05';
 const captureIdle = process.env.B2B_CAPTURE_IDLE === '1';
 const mockConnect = process.env.B2B_MOCK_CONNECT === '1';
 const verifySustained = process.env.B2B_VERIFY_SUSTAINED === '1';
+const verifyRelock = process.env.B2B_VERIFY_RELOCK === '1';
 const fakeAudioFile = process.env.B2B_FAKE_AUDIO_FILE || '';
 const viewport = {
   width: Number(process.env.B2B_VIEWPORT_WIDTH || 430),
@@ -339,6 +340,34 @@ try {
     attempts: typeof Face === 'undefined' ? [] : Face._diagAttempts,
     logs: typeof DBGBUF === 'undefined' ? [] : DBGBUF,
   }));
+  if (verifyRelock && !captureIdle) {
+    await page.locator('#callBtn').click();
+    await page.waitForFunction(() => document.querySelector('#gate')?.classList.contains('show'));
+    result.relock = await page.evaluate(() => ({
+      gateVisible: document.querySelector('#gate')?.classList.contains('show') || false,
+      passwordBlank: document.querySelector('#gateInput')?.value === '',
+      avatarTokenCleared: typeof AVATAR_TOKEN !== 'undefined' && AVATAR_TOKEN === null,
+      voiceKeyCleared: typeof VOICE_KEY !== 'undefined' && VOICE_KEY === null,
+      avatarUrlCleared: typeof AVATAR_HTTP !== 'undefined' && AVATAR_HTTP === null,
+      voiceUrlCleared: typeof VOICE_WS_BASE !== 'undefined' && VOICE_WS_BASE === null,
+      prewarmCleared: typeof avatarPrewarmPromise !== 'undefined' && avatarPrewarmPromise === null,
+      legacyPasswordCleared: sessionStorage.getItem('munea_pass') === null,
+      legacyUnlockCleared: sessionStorage.getItem('munea_demo_unlocked') === null,
+    }));
+    // 模擬 1.0.2 曾留下的同分頁資料，再重新整理；新版仍必須回到密語門。
+    await page.evaluate(() => {
+      sessionStorage.setItem('munea_pass', 'legacy-value');
+      sessionStorage.setItem('munea_demo_unlocked', '1');
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => document.querySelector('#gate')?.classList.contains('show'));
+    result.reloadRelock = await page.evaluate(() => ({
+      gateVisible: document.querySelector('#gate')?.classList.contains('show') || false,
+      passwordBlank: document.querySelector('#gateInput')?.value === '',
+      legacyPasswordCleared: sessionStorage.getItem('munea_pass') === null,
+      legacyUnlockCleared: sessionStorage.getItem('munea_demo_unlocked') === null,
+    }));
+  }
   result.controlInteractions = controlInteractions;
   await page.screenshot({ path: screenshotPath, fullPage: true });
 } finally {
@@ -354,7 +383,11 @@ const timeline = result?.mockConnectTimeline || [];
 const at = event => timeline.find(item => item.event === event)?.at;
 const parallelFailed = mockConnect && (!(at('wake_ready') <= at('voice_start')) || !(at('wake_ready') <= at('face_start')) || Math.abs(at('voice_start') - at('face_start')) > 100 || !(at('voice_ready') <= at('av_warmup_start')) || !(at('face_ready') <= at('av_warmup_start')) || !(at('av_warmup_start') < at('av_warmup_ready')) || result?.voiceActivated !== true);
 const sustainedFailed = verifySustained && (!result || result.frames < 40 || result.audioBytes < 1 || !result.audioReceiverAttached || result.renderAudioTracks < 1 || !result.faceVideoMuted || result.playbackScheduledUntil <= 0 || result.tapPlayVisible);
+const relockFailed = verifyRelock && (
+  !result?.relock || Object.values(result.relock).some(value => value !== true) ||
+  !result?.reloadRelock || Object.values(result.reloadRelock).some(value => value !== true)
+);
 const callFailed = !captureIdle && (!result || result.selectedChar !== testChar || result.status !== '在線' || result.faceConnection !== 'connected' || result.voiceState !== 1 || !result.voiceReady || (expectsMic && !result.hasMic) || result.frames < 1 || result.idleMotionActive !== false || geometryFailed || parallelFailed || sustainedFailed);
-if (idleFailed || callFailed) {
+if (idleFailed || callFailed || relockFailed) {
   process.exitCode = 1;
 }

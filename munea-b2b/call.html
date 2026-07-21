@@ -109,7 +109,7 @@
       <canvas id="faceCanvas" width="512" height="512"></canvas>
     </div>
     <div class="scrim"></div>
-    <div class="demo-version" aria-label="Demo 版本 1.0.2">DEMO 1.0.2</div>
+    <div class="demo-version" aria-label="Demo 版本 1.0.3">DEMO 1.0.3</div>
   </div>
 
   <div class="top">
@@ -131,7 +131,7 @@
   <div class="gate" id="gate">
     <h2>合作夥伴體驗通道</h2>
     <p>這是沐寧的即時視訊對話體驗：真臉真聲、聽得懂、會回話。<br>請輸入邀請時提供的通關密語。</p>
-    <input id="gateInput" type="text" placeholder="輸入密語" autocomplete="off">
+    <input id="gateInput" type="password" placeholder="輸入密語" autocomplete="new-password">
     <div class="err" id="gateErr"></div>
     <button class="btn-teal" id="gateBtn">進入體驗</button>
     <a class="btn-ghost" href="index.html">回介紹頁</a>
@@ -437,9 +437,9 @@ async function bootstrapKeys(pass){
   if (r.status === 401) throw new Error('bad-pass');
   if (!r.ok) throw new Error('server-' + r.status);
   const j = await r.json();
+  if (!j.avatarHttp || !j.avatarToken || !j.voiceKey || !j.voiceWs) throw new Error('server-token');
   AVATAR_HTTP = j.avatarHttp; AVATAR_TOKEN = j.avatarToken;
   VOICE_KEY = j.voiceKey; VOICE_WS_BASE = j.voiceWs;
-  if (!AVATAR_TOKEN || !VOICE_KEY) throw new Error('server-token');
   CAP_SECONDS = j.capSeconds || 180;
   capRemaining.textContent = '體驗 ' + clockText(CAP_SECONDS);
   dbgLine('[gate] keys ready, cap=' + CAP_SECONDS + 's');
@@ -461,14 +461,36 @@ function prewarm(){
   });
   return avatarPrewarmPromise;
 }
+function clearStoredDemoAccess(){
+  // 清掉 1.0.2 以前可能留在同一分頁的明文密語與解鎖旗標。
+  try{
+    sessionStorage.removeItem('munea_pass');
+    sessionStorage.removeItem('munea_demo_unlocked');
+  }catch(e){}
+}
+function lockDemoAccess(showGate=true){
+  AVATAR_HTTP = null;
+  AVATAR_TOKEN = null;
+  VOICE_KEY = null;
+  VOICE_WS_BASE = null;
+  avatarPrewarmPromise = null;
+  clearStoredDemoAccess();
+  gateInput.value = '';
+  gateErr.textContent = '';
+  gateBtn.disabled = false;
+  if (showGate){
+    gate.classList.add('show');
+    setTimeout(()=> gateInput.focus(), 100);
+  }
+  dbgLine('[gate] one-experience access cleared');
+}
 async function tryGate(){
   const pass = gateInput.value;
   if (!pass.trim()){ gateErr.textContent = '請輸入密語'; return; }
   gateBtn.disabled = true; gateErr.textContent = '';
   try{
     await bootstrapKeys(pass);
-    sessionStorage.setItem('munea_pass', pass);
-    sessionStorage.setItem('munea_demo_unlocked', '1');
+    gateInput.value = '';
     gate.classList.remove('show');
   }catch(e){
     gateErr.textContent = (e.message === 'bad-pass') ? '密語不對，再試一次' : '連線出了點狀況，稍後再試';
@@ -477,15 +499,10 @@ async function tryGate(){
 }
 gateBtn.onclick = tryGate;
 gateInput.addEventListener('keydown', e=>{ if (e.key === 'Enter') tryGate(); });
-(async function initGate(){
-  const saved = sessionStorage.getItem('munea_pass');
-  if (saved){
-    try{ await bootstrapKeys(saved); return; }
-    catch(e){ dbgLine('[gate] saved pass rejected: ' + e.message); sessionStorage.removeItem('munea_pass'); }
-  }
-  gate.classList.add('show');
-  setTimeout(()=> gateInput.focus(), 200);
+(function initGate(){
+  lockDemoAccess(true);
 })();
+window.addEventListener('pagehide', ()=> lockDemoAccess(true));
 </script>
 <script>
 /* ===== 臉+聲音（同一條 WebRTC）——沿用 2026-07-10/11 真機修正史，勿隨意改動 ===== */
@@ -1244,6 +1261,7 @@ function hangup(preserveMessage=false){
   if (!preserveMessage){ setStatus('未在線'); setHintText(''); }
   caps.style.display='none';
   IdleMotion.start();   // 掛斷後重新執行聊聊的「打招呼 → 待機」模式。
+  lockDemoAccess(true); // 一次解鎖只允許一次體驗；再次撥號必須重新輸入密語。
 }
 callBtn.onclick = ()=> onCall ? hangup() : dial();
 
@@ -1264,6 +1282,7 @@ function syncMicControl(){
 micToggle.onclick = ()=>{ micMuted = !micMuted; syncMicControl(); };
 closeBtn.onclick = ()=>{
   if (onCall) hangup();
+  else lockDemoAccess(false);
   location.href = 'index.html';
 };
 

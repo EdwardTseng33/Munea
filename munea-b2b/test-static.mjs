@@ -26,7 +26,13 @@ assert.doesNotMatch(index, /\/api\/chat|speechSynthesis|chatTxt|文字聊聊/);
 assert.doesNotMatch(index, /台灣首創|這個領域的.{0,4}領先者|150 小時/);
 
 assert.match(call, /&demo=1&key=/);
-assert.match(call, />DEMO 1\.0\.2<\/div>/);
+assert.match(call, />DEMO 1\.0\.3<\/div>/);
+assert.match(call, /id="gateInput" type="password"/);
+assert.doesNotMatch(call, /sessionStorage\.setItem\(['"]munea_(?:pass|demo_unlocked)/);
+assert.doesNotMatch(call, /sessionStorage\.getItem\(['"]munea_pass/);
+assert.match(call, /function lockDemoAccess\(showGate=true\)[\s\S]*AVATAR_TOKEN = null;[\s\S]*VOICE_KEY = null;[\s\S]*avatarPrewarmPromise = null;/);
+assert.match(call, /function hangup\(preserveMessage=false\)[\s\S]*lockDemoAccess\(true\);/);
+assert.match(call, /window\.addEventListener\('pagehide', \(\)=> lockDemoAccess\(true\)\)/);
 assert.match(call, /avatarToken/);
 assert.match(call, /\/offer\?token=/);
 assert.match(call, /\/audio\?token=/);
