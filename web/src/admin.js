@@ -21,7 +21,6 @@
     ]},
     { group: "企業客戶", items: [
       { id: "enterpriseClients", label: "客戶列表", badge: "entOverdue" },
-      { id: "enterpriseImport", label: "名單匯入" },
       { id: "enterprisePayments", label: "收款登記" },
       { id: "enterpriseBillingSettings", label: "開票與收款設定", badge: "entBillingMissing" },
     ]},
@@ -51,7 +50,6 @@
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     carePriority: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
     enterpriseClients: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
-    enterpriseImport: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     enterprisePayments: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
     enterpriseBillingSettings: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   };
@@ -314,7 +312,6 @@
     else if (id==="records") html=renderRecords();
     else if (id==="enterpriseClients") html=renderEnterpriseClients();
     else if (id==="enterpriseClientDetail") html=renderEnterpriseClientDetail();
-    else if (id==="enterpriseImport") html=renderEnterpriseImport();
     else if (id==="enterprisePayments") html=renderEnterprisePayments();
     else if (id==="enterpriseBillingSettings") html=renderEnterpriseBillingSettings();
     $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
@@ -782,13 +779,21 @@
   }
 
   function renderRecords(){
-    const sm=(D().summaries||{}).recent||[], au=(D().audit||{}).recent||[];
-    let html=card("聊天摘要", "AI 記下的每段聊天重點（已去逐字、只留摘要）", sm.length?`<div class="rows">${sm.slice(0,15).map((s)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(fmtTime(s.createdAt))}</div><div class="ri-desc">${esc(s.summary||"")}</div><div class="tag-row">${(s.memoryTags||[]).map((t)=>`<span class="pill mute">${esc(t)}</span>`).join("")}${s.safetyRelevant?'<span class="pill bad">涉及安全</span>':""}</div></div></div>`).join("")}</div>`:emptyBox("還沒有聊天摘要——有人開始跟沐寧聊天後就會出現。"));
-    html+=card("系統操作紀錄", "系統跟管理端動過什麼，給工程師追查用", au.length?tableHTML(["時間","事件","對象"], au.slice(0,25).map((e)=>[
+    const smAll=(D().summaries||{}).recent||[], auAll=(D().audit||{}).recent||[];
+    const smQ=(state.tabs.recordsSummarySearch||"").trim().toLowerCase();
+    const auQ=(state.tabs.recordsAuditSearch||"").trim().toLowerCase();
+    const sm=smQ?smAll.filter((s)=>((s.summary||"")+" "+(s.memoryTags||[]).join(" ")).toLowerCase().indexOf(smQ)>-1):smAll;
+    const au=auQ?auAll.filter((e)=>((e.eventType||"")+" "+(e.targetId||e.accountId||"")+" "+(e.targetTable||"")).toLowerCase().indexOf(auQ)>-1):auAll;
+    const smTools=smAll.length?`<div class="tbl-tools"><input class="tbl-search" id="recordsSummarySearch" type="search" aria-label="搜尋聊天摘要內容或標籤" placeholder="搜尋摘要內容或標籤"></div>`:"";
+    const smBody=!smAll.length?emptyBox("還沒有聊天摘要——有人開始跟沐寧聊天後就會出現。"):(sm.length?`<div class="rows">${sm.slice(0,15).map((s)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(fmtTime(s.createdAt))}</div><div class="ri-desc">${esc(s.summary||"")}</div><div class="tag-row">${(s.memoryTags||[]).map((t)=>`<span class="pill mute">${esc(t)}</span>`).join("")}${s.safetyRelevant?'<span class="pill bad">涉及安全</span>':""}</div></div></div>`).join("")}</div>`:emptyBox(`沒有符合「${esc(state.tabs.recordsSummarySearch||"")}」的摘要`));
+    let html=`<div class="card tbl-card"><div class="card-head"><div><h3>聊天摘要</h3><div class="card-note">AI 記下的每段聊天重點（已去逐字、只留摘要）</div></div></div>${smTools}${smBody}</div>`;
+    const auTools=auAll.length?`<div class="tbl-tools"><input class="tbl-search" id="recordsAuditSearch" type="search" aria-label="搜尋事件類型、對象或資料表" placeholder="搜尋事件、對象或資料表"></div>`:"";
+    const auBody=!auAll.length?emptyBox("還沒有操作紀錄。"):(au.length?tableHTML(["時間","事件","對象"], au.slice(0,25).map((e)=>[
       `<span class="muted small">${esc(fmtTime(e.createdAt))}</span>`,
       `<b>${esc(e.eventType||"事件")}</b>`,
       `${esc(e.targetId||e.accountId||"–")}<span class="muted small"> · ${esc(e.targetTable||"–")}</span>`,
-    ])):emptyBox("還沒有操作紀錄。"));
+    ])):emptyBox(`沒有符合「${esc(state.tabs.recordsAuditSearch||"")}」的操作紀錄`));
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>系統操作紀錄</h3><div class="card-note">系統跟管理端動過什麼，給工程師追查用</div></div></div>${auTools}${auBody}</div>`;
     return html;
   }
 
@@ -914,7 +919,7 @@
       c.status="loading";
       const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
       postAdmin(base, token, "/admin/enterprise/clients", {})
-        .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterpriseImport","enterprisePayments"].includes(state.page)) renderPage(state.page); })
+        .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterprisePayments"].includes(state.page)) renderPage(state.page); })
         .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterpriseClients") renderPage(state.page); });
     }
     return c;
@@ -945,7 +950,7 @@
   }
   function reloadEnterpriseBillingSettings(){ state.tabs.entBillingSettings={status:"idle",data:null,error:null}; return ensureEnterpriseBillingSettingsLoaded(); }
 
-  // ── 畫面 1・企業客戶列表 ──
+  // ── 畫面 1・企業客戶列表（2026-07-22 併入「名單匯入」為滑出面板，側欄少一項、操作留在同一頁）──
   function renderEnterpriseClients(){
     const c=ensureEnterpriseClientsLoaded();
     const guard=entLoadingOrErrorCard(c.status,c.error,"企業客戶列表","data-ent-retry-clients");
@@ -961,30 +966,53 @@
       { label:"本月預估金額", value:fmtMoney(monthly), sub:"依目前啟用席次估算" },
       { label:"逾期未付", value:n(overdue.length), sub:overdue.length?"要優先催收":"目前沒有", star:overdue.length>0, tone:"alert" },
     ]);
-    const addBtn=`<button type="button" class="btn-sm" data-ent-new-client>＋ 新增企業客戶</button>`;
+    const addBtn=`<div class="card-head-actions"><button type="button" class="btn-ghost btn-sm" data-ent-import-open>＋ 匯入名單</button><button type="button" class="btn-sm" data-ent-new-client>＋ 新增企業客戶</button></div>`;
     if(!clients.length){
       html+=card("企業客戶列表","公司名、合約期間、席次、狀態、金額",emptyBox("還沒有企業客戶——談成第一家公司後，這裡會列出來。"),addBtn);
-      return html;
+    } else {
+      const rowClasses=clients.map((x)=>x.statusLight==="overdue"?"tr-overdue":"");
+      const rows=clients.map((x)=>{
+        const seatTxt=`<b class="num">${n(x.activeSeats||0)}</b><span class="muted small"> ／ 上限 ${n(x.seatQuota||0)}</span>${x.waitingSeats?`<div class="muted small">等待接手 ${n(x.waitingSeats)}</div>`:""}${x.graceSeats?`<div class="muted small">緩衝期 ${n(x.graceSeats)}</div>`:""}`;
+        const overdueTxt=Number(x.outstandingTwd||0)>0
+          ? `<b style="color:var(--danger)">${fmtMoney(x.outstandingTwd)}</b>${x.overdueDays?`<div class="small" style="color:var(--danger);font-weight:700">逾期 ${n(x.overdueDays)} 天</div>`:""}`
+          : `<span class="muted">—</span>`;
+        return [
+          `<b>${esc(x.name||"–")}</b>${x.taxId?`<div class="muted small">統編 ${esc(x.taxId)}</div>`:""}`,
+          `<span class="small">${esc(fmtDate(x.contractStart))} － ${esc(fmtDate(x.contractEnd))}</span>`,
+          seatTxt,
+          entStatusPill(x.statusLight),
+          fmtMoney(x.estimatedMonthlyTwd),
+          overdueTxt,
+          `<button type="button" class="row-act" data-ent-view="${esc(x.id)}" aria-label="查看 ${esc(x.name||"")} 明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
+        ];
+      });
+      html+=`<div class="card tbl-card"><div class="card-head"><div><h3>企業客戶列表</h3><div class="card-note">共 ${clients.length} 家 · 逾期未付以紅色標示</div></div>${addBtn}</div>${tableHTML(["公司","合約期間","席次(已啟用／上限)","狀態","本月預估","累計欠款",""], rows, rowClasses)}</div>`;
+      html+=`<div id="entClientActionNote"></div>`;
     }
-    const rowClasses=clients.map((x)=>x.statusLight==="overdue"?"tr-overdue":"");
-    const rows=clients.map((x)=>{
-      const seatTxt=`<b class="num">${n(x.activeSeats||0)}</b><span class="muted small"> ／ 上限 ${n(x.seatQuota||0)}</span>${x.waitingSeats?`<div class="muted small">等待接手 ${n(x.waitingSeats)}</div>`:""}${x.graceSeats?`<div class="muted small">緩衝期 ${n(x.graceSeats)}</div>`:""}`;
-      const overdueTxt=Number(x.outstandingTwd||0)>0
-        ? `<b style="color:var(--danger)">${fmtMoney(x.outstandingTwd)}</b>${x.overdueDays?`<div class="small" style="color:var(--danger);font-weight:700">逾期 ${n(x.overdueDays)} 天</div>`:""}`
-        : `<span class="muted">—</span>`;
-      return [
-        `<b>${esc(x.name||"–")}</b>${x.taxId?`<div class="muted small">統編 ${esc(x.taxId)}</div>`:""}`,
-        `<span class="small">${esc(fmtDate(x.contractStart))} － ${esc(fmtDate(x.contractEnd))}</span>`,
-        seatTxt,
-        entStatusPill(x.statusLight),
-        fmtMoney(x.estimatedMonthlyTwd),
-        overdueTxt,
-        `<button type="button" class="row-act" data-ent-view="${esc(x.id)}" aria-label="查看 ${esc(x.name||"")} 明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
-      ];
-    });
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>企業客戶列表</h3><div class="card-note">共 ${clients.length} 家 · 逾期未付以紅色標示</div></div>${addBtn}</div>${tableHTML(["公司","合約期間","席次(已啟用／上限)","狀態","本月預估","累計欠款",""], rows, rowClasses)}</div>`;
-    html+=`<div id="entClientActionNote"></div>`;
+    html+=entImportPanelHTML();
     return html;
+  }
+  // 名單匯入滑出面板：桌機從右側滑入、手機變底部滿版半層（見 admin.css .slideover-*）
+  function entImportPanelHTML(){
+    if(!state.tabs.entImportPanelOpen) return "";
+    return `<div class="slideover-overlay" id="entImportOverlay"><div class="slideover-panel" role="dialog" aria-modal="true" aria-labelledby="entImportPanelTitle">
+      <div class="slideover-head"><h2 id="entImportPanelTitle">匯入名單</h2><button type="button" class="modal-x" id="entImportPanelClose" aria-label="關閉匯入名單面板">✕</button></div>
+      <div class="slideover-body">${renderEnterpriseImportBody()}</div>
+    </div></div>`;
+  }
+  let entImportPrevFocus=null;
+  function openEntImportPanel(){
+    entImportPrevFocus=document.activeElement;
+    if(!state.tabs.entImport) state.tabs.entImport={ clientId:"", fileName:"", fileText:"", previewing:false, preview:null, committing:false, result:null, error:null };
+    state.tabs.entImportPanelOpen=true;
+    renderPage(state.page);
+    const cb=$("entImportPanelClose"); if(cb) cb.focus();
+  }
+  function closeEntImportPanel(){
+    state.tabs.entImportPanelOpen=false;
+    renderPage(state.page);
+    if(entImportPrevFocus&&entImportPrevFocus.focus) entImportPrevFocus.focus();
+    entImportPrevFocus=null;
   }
 
   // ── 畫面 2・單一公司（從列表「查看」進來）──
@@ -1037,7 +1065,7 @@
       ${tableHTML(["","Email","狀態","綁定時間","緩衝期至","本月用量"], seatRows)}
       <button type="button" class="btn-sm" data-ent-grant="${esc(clientId)}" style="margin-top:10px">批次授予</button>
       <div id="entGrantNote"></div>
-    `:emptyBox("這家公司還沒有匯入任何席次——先去「名單匯入」上傳名單。"));
+    `:emptyBox("這家公司還沒有匯入任何席次——回企業客戶列表按「＋ 匯入名單」上傳。"));
     const invRows=invoices.map((iv)=>[
       esc(iv.invoiceNo||iv.id||"–"),
       `${esc(fmtDate(iv.periodStart))} － ${esc(fmtDate(iv.periodEnd))}`,
@@ -1146,16 +1174,13 @@
       .catch((e)=>entActionNote("entGrantNote", entActionError((e&&e.message)||"fail")));
   }
 
-  // ── 畫面 3・名單匯入 ──
-  function renderEnterpriseImport(){
-    const c=ensureEnterpriseClientsLoaded();
-    const guard=entLoadingOrErrorCard(c.status,c.error,"名單匯入","data-ent-retry-clients");
-    if(guard) return guard;
+  // ── 名單匯入（企業客戶列表頁內滑出面板的內容，見 entImportPanelHTML）──
+  function renderEnterpriseImportBody(){
     const clients=entClients();
     const im=state.tabs.entImport||(state.tabs.entImport={ clientId:"", fileName:"", fileText:"", previewing:false, preview:null, committing:false, result:null, error:null });
     if(!im.clientId && clients.length===1) im.clientId=String(clients[0].id);
     const clientOpts=clients.map((x)=>`<option value="${esc(x.id)}"${String(im.clientId)===String(x.id)?" selected":""}>${esc(x.name)}</option>`).join("");
-    let html=card("名單匯入","先選公司，下載範本填好 email 清單，再上傳預檢", `
+    let html=card("選擇公司與檔案","先選公司，下載範本填好 email 清單，再上傳預檢", `
       <div class="ent-form-grid">
         <label class="field"><span>目標公司</span><select id="entImportClient">${clients.length?`<option value="">請選擇</option>${clientOpts}`:`<option value="">還沒有企業客戶</option>`}</select></label>
       </div>
@@ -1840,9 +1865,15 @@
     const us=$("userSearch"); if(us){ us.value=state.tabs.userSearch||""; us.addEventListener("input",()=>{ state.tabs.userSearch=us.value.trim(); renderPage("users"); const el=$("userSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
     $("pageRoot").querySelectorAll("[data-ufilter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.userFilter=b.dataset.ufilter; renderPage("users"); }));
     const stc=$("showTestAccountsChk"); if(stc){ stc.addEventListener("change",()=>toggleShowTestAccounts(stc.checked)); }
+    const rss=$("recordsSummarySearch"); if(rss){ rss.value=state.tabs.recordsSummarySearch||""; rss.addEventListener("input",()=>{ state.tabs.recordsSummarySearch=rss.value.trim(); renderPage("records"); const el=$("recordsSummarySearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
+    const ras=$("recordsAuditSearch"); if(ras){ ras.value=state.tabs.recordsAuditSearch||""; ras.addEventListener("input",()=>{ state.tabs.recordsAuditSearch=ras.value.trim(); renderPage("records"); const el=$("recordsAuditSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
     // ══ 企業客戶（B2B 席次）══
     $("pageRoot").querySelectorAll("[data-ent-view]").forEach((b)=>b.addEventListener("click",()=>{ const cid=b.dataset.entView; state.tabs.entDetail=null; go("enterpriseClientDetail",cid); loadEnterpriseClientDetail(cid); }));
     $("pageRoot").querySelectorAll("[data-ent-new-client]").forEach((b)=>b.addEventListener("click",openNewClientModal));
+    $("pageRoot").querySelectorAll("[data-ent-import-open]").forEach((b)=>b.addEventListener("click",openEntImportPanel));
+    { const eic2=$("entImportPanelClose"); if(eic2) eic2.addEventListener("click",closeEntImportPanel); }
+    { const eio=$("entImportOverlay"); if(eio) eio.addEventListener("click",(e)=>{ if(e.target===eio) closeEntImportPanel(); }); }
+    { const layout=document.querySelector(".layout"); if(layout) layout.inert = state.page==="enterpriseClients" && !!state.tabs.entImportPanelOpen; }
     $("pageRoot").querySelectorAll("[data-ent-retry-clients]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseClients(); renderPage(state.page); }));
     $("pageRoot").querySelectorAll("[data-ent-retry-invoices]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseInvoices(); renderPage(state.page); }));
     $("pageRoot").querySelectorAll("[data-ent-retry-detail]").forEach((b)=>b.addEventListener("click",()=>loadEnterpriseClientDetail(b.dataset.entRetryDetail)));
@@ -1886,6 +1917,7 @@
     $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY)) refreshData(); else showLoginGate(); });
     $("logoutBtn")?.addEventListener("click",logout);
     window.addEventListener("hashchange",show);
+    window.addEventListener("keydown",(e)=>{ if(e.key==="Escape" && state.tabs.entImportPanelOpen) closeEntImportPanel(); });
     setStatus("尚未連線","");
     show();
     const st=storageGet(sessionStorage,ADMIN_TOKEN_KEY);

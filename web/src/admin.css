@@ -513,6 +513,20 @@ tr.tr-overdue { background: var(--danger-soft); }
 .confirm-card.danger .confirm-body b { color: var(--danger); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
+/* 名單匯入滑出面板（2026-07-22 併入企業客戶列表——原獨立側欄頁改為動作＋面板，減少一次跳頁） */
+.card-head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.slideover-overlay { position: fixed; inset: 0; z-index: 85; background: rgba(31,43,39,.42); display: flex; justify-content: flex-end; }
+.slideover-panel { width: min(560px, 100%); height: 100%; background: var(--surface); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; animation: slideoverInX .16s ease-out; }
+@keyframes slideoverInX { from { transform: translateX(24px); opacity: .6; } to { transform: translateX(0); opacity: 1; } }
+.slideover-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
+.slideover-head h2 { margin: 0; font-size: 1.12rem; font-weight: 800; }
+.slideover-body { flex: 1 1 auto; overflow-y: auto; padding: 20px 22px 34px; }
+@media (max-width: 880px) {
+  .slideover-overlay { align-items: flex-end; }
+  .slideover-panel { width: 100%; height: 92vh; border-radius: 20px 20px 0 0; animation: slideoverInUpX .16s ease-out; }
+}
+@keyframes slideoverInUpX { from { transform: translateY(24px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+
 /* ══ 成長與黏著（2026-07-21 視覺優化）══ */
 /* 黏著度量尺：讓「3.8 天」一眼看出是 30 天裡的多少，不必自己換算 */
 .meter { margin-top: 10px; height: 8px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
