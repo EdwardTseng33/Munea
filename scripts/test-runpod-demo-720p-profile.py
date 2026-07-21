@@ -55,6 +55,17 @@ def main() -> None:
         assert model == {"width": 768, "height": 768}
         assert contract["fit"] == "fill"
 
+    call_html = (ROOT / "munea-b2b" / "call.html").read_text(encoding="utf-8")
+    for required in (
+        "DEMO 1.0.4",
+        "demo-flashhead-square-768-v2",
+        "source_crop: { x: 0, y: 190, width: 1080, height: 1080 }",
+        "source_crop: { x: 0, y: 209, width: 1080, height: 1080 }",
+        "model_input: { width: 768, height: 768 }",
+        "applyAvatarRenderContract(renderContractFor(curChar))",
+    ):
+        assert required in call_html, f"call.html missing Demo 768 contract: {required}"
+
     with tempfile.TemporaryDirectory(prefix="munea-demo-720p-") as temp:
         target_dir = Path(temp)
         subprocess.run(

@@ -19,6 +19,9 @@
   `/workspace/munea-demo/assets` 不覆蓋，回滾時仍可復原舊 profile。
 - 這是 FlashHead Lite 的原生 768 推論實驗，不宣稱權重已完成 768 再訓練；
   官方目前只釋出推論程式，尚無可直接沿用的訓練入口或 pretrained checkpoint。
+- Demo runtime 固定 `MUNEA_FH_SHARPEN=1`。RTX 6000 Ada 的同線 WebRTC gate
+  實測 a05d 嘴型相對聲音 `+0.31s`、a06d `+0.12s`，兩者皆實收 768×768。
+  這是本次可展示基線，不代表開源 Lite 權重已達 Pro 原生 720P 細節。
 
 本機合約 gate：
 

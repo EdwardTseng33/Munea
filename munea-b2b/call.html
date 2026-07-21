@@ -9,10 +9,10 @@
 <style>
   :root{
     --frame-w:min(100vw, calc(100dvh * 1080 / 1920));
-    /* Demo uses the 1080x1440 head-to-shoulder crop inside the 1080x1920 phone
+    /* Demo uses the 1080x1080 head-to-shoulder crop inside the 1080x1920 phone
        canvas. applyAvatarRenderContract() replaces these safe defaults with
        the authenticated engine contract before the live layer is shown. */
-    --box-left:0%; --box-top:7.291667%; --box-width:100%; --box-height:75%;
+    --box-left:0%; --box-top:9.895833%; --box-width:100%; --box-height:56.25%;
     --feather-top:4%; --feather-bottom-start:82%;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -106,10 +106,10 @@
     <video class="cover hide" id="coverVidNext" muted playsinline preload="auto"></video>
     <div class="overlay" id="overlay">
       <video id="faceVid" autoplay playsinline></video>
-      <canvas id="faceCanvas" width="512" height="512"></canvas>
+      <canvas id="faceCanvas" width="768" height="768"></canvas>
     </div>
     <div class="scrim"></div>
-    <div class="demo-version" aria-label="Demo 版本 1.0.3">DEMO 1.0.3</div>
+    <div class="demo-version" aria-label="Demo 版本 1.0.4">DEMO 1.0.4</div>
   </div>
 
   <div class="top">
@@ -179,13 +179,22 @@ const CHARS = {
   a06: { faceChar: '阿原', faceCode: 'a06d', label: '阿原', bg: 'flashhead/bg-a06.png', hello: 'assets/ahong-hello.mp4', idle: 'assets/ahong-idle.mp4' },
 };
 function faceCodeFor(c){ return (CHARS[c] && CHARS[c].faceCode) || c; }
-const FALLBACK_AVATAR_RENDER_CONTRACT = {
-  version: 'demo-flashhead-portrait-v1',
-  canvas: { width: 1080, height: 1920 },
-  source_crop: { x: 0, y: 140, width: 1080, height: 1440 },
-  model_input: { width: 512, height: 512 },
-  fit: 'fill',
+const DEMO_AVATAR_RENDER_CONTRACTS = {
+  a05: {
+    version: 'demo-flashhead-square-768-v2', lane: 'demo',
+    canvas: { width: 1080, height: 1920 },
+    source_crop: { x: 0, y: 190, width: 1080, height: 1080 },
+    model_input: { width: 768, height: 768 }, fit: 'fill',
+  },
+  a06: {
+    version: 'demo-flashhead-square-768-v2', lane: 'demo',
+    canvas: { width: 1080, height: 1920 },
+    source_crop: { x: 0, y: 209, width: 1080, height: 1080 },
+    model_input: { width: 768, height: 768 }, fit: 'fill',
+  },
 };
+const FALLBACK_AVATAR_RENDER_CONTRACT = DEMO_AVATAR_RENDER_CONTRACTS.a05;
+function renderContractFor(c){ return DEMO_AVATAR_RENDER_CONTRACTS[c] || FALLBACK_AVATAR_RENDER_CONTRACT; }
 let avatarRenderContract = FALLBACK_AVATAR_RENDER_CONTRACT;
 let curChar = 'a05';
 
@@ -206,7 +215,7 @@ const nomic = qs.has('nomic');
 if (showDbg) $('#dbg').classList.add('show');
 
 function applyAvatarRenderContract(raw){
-  const c = raw || FALLBACK_AVATAR_RENDER_CONTRACT;
+  const c = raw || renderContractFor(curChar);
   const canvas = c.canvas || {};
   const crop = c.source_crop || {};
   const cw = Number(canvas.width), ch = Number(canvas.height);
@@ -423,7 +432,7 @@ function pickChar(c){
   $('#charA06').classList.toggle('on', c==='a06');
   bgImg.src = CHARS[c].bg;
   chName.textContent = CHARS[c].label;
-  applyAvatarRenderContract();
+  applyAvatarRenderContract(renderContractFor(c));
   IdleMotion.start();
 }
 </script>
@@ -451,7 +460,10 @@ function prewarm(){
   if (!AVATAR_HTTP || !AVATAR_TOKEN) return;
   if (avatarPrewarmPromise) return avatarPrewarmPromise;
   avatarPrewarmPromise = fetch(AVATAR_HTTP + '/health?token=' + encodeURIComponent(AVATAR_TOKEN)).then(r=>r.json()).then(j=>{
-    applyAvatarRenderContract();
+    // /health reports the slot's current character (normally a05 before the
+    // offer). Keep a pre-selected male character on its own verified crop.
+    applyAvatarRenderContract(curChar === 'a05' && j.avatar_render_contract
+      ? j.avatar_render_contract : renderContractFor(curChar));
     dbgLine('[prewarm] health ok engine=' + j.engine + ' uptime_s=' + (j.uptime_s!=null?j.uptime_s:'?'));
     return true;
   }).catch(e=>{
@@ -745,6 +757,7 @@ Face.start = async function(char){
   if (qs.has('stream')) return this.startStream(char);
   this.transport = 'webrtc';
   this.on = false;
+  applyAvatarRenderContract(renderContractFor(curChar));
   Face._diagAttempts = [];
   // Match the App: direct/STUN first with Taiwan TURN as the automatic fallback.
   // `?debug=1&relay=1` remains available for controlled network A/B checks.
@@ -806,7 +819,7 @@ Face.prepareOpeningPath = async function(){
   faceVid.muted = true;
   this._tryPlay();
   // Same technique as the App: a private one-second silent turn warms the
-  // 640 model, encoder, WebRTC jitter buffer and remote audio renderer before
+  // 768 Demo model, encoder, WebRTC jitter buffer and remote audio renderer before
   // the greeting. It never reaches Voice/Gemini and is never audible.
   this.reset();
   this.feed(new Int16Array(24000).buffer);

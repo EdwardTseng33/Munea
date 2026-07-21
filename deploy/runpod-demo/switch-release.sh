@@ -38,4 +38,6 @@ for _ in {1..300}; do
 done
 
 echo "target release did not become ready within 300 seconds" >&2
-exit 1
+# A direct `exit 1` does not fire Bash's ERR trap. Use a failing command so
+# rollback() restores the previous symlink and process before the script exits.
+false
