@@ -21,7 +21,6 @@
     ]},
     { group: "企業客戶", items: [
       { id: "enterpriseClients", label: "客戶列表", badge: "entOverdue" },
-      { id: "enterpriseImport", label: "名單匯入" },
       { id: "enterprisePayments", label: "收款登記" },
       { id: "enterpriseBillingSettings", label: "開票與收款設定", badge: "entBillingMissing" },
     ]},
@@ -51,7 +50,6 @@
     calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     carePriority: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
     enterpriseClients: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
-    enterpriseImport: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     enterprisePayments: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
     enterpriseBillingSettings: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   };
@@ -68,7 +66,7 @@
   // 相容目前已部署的薄門；它不是管理憑證。部署端可在載入本檔前設定
   // window.MUNEA_ADMIN_APP_KEY，下一步即可把這個相容值從靜態資產移除。
   const LEGACY_APP_KEY = "mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5";
-  const state = { data: null, errors: {}, connected: false, loading: false, page: "overview", tabs: {}, base: "", token: "" };
+  const state = { data: null, errors: {}, connected: false, loading: false, page: "overview", tabs: {}, base: "", token: "", mobileNavOpen: false };
 
   const EP_LIST = {
     northStar: ["/admin/north-star", { days: 30 }],
@@ -90,6 +88,8 @@
 
   const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7B76" };
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
+  // 手機圖表軸字鎖 14px（2026-07-22 女巫 Gate2 · bondDepth/growth 反映最明顯，其餘圖表共用同一套函式一併受益）
+  function axisFontPx(){ try{ return window.innerWidth<=880?14:11; }catch(e){ return 11; } }
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const n = (v) => (v==null||v===""||isNaN(v))?"–":Number(v).toLocaleString("en-US");
@@ -156,8 +156,8 @@
   function fmtDate(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"numeric",day:"numeric"}).format(d);}catch(e){return String(v);} }
   function zh(map,v,f){ if(v==null||v==="")return f||"–"; return map[String(v).toLowerCase()]||String(v); }
   const RISK_ZH = { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" };
-  const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數" };
-  const FB_TONE = { bug:"warn", idea:"gold", praise:"ok", nps:"mute" };
+  const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數", survey:"問卷" };
+  const FB_TONE = { bug:"warn", idea:"gold", praise:"ok", nps:"mute", survey:"mute" };
   const PV_ZH = { account_deletion:"刪除帳號", deletion:"刪除帳號", export:"資料副本", data_export:"資料副本", correction:"資料更正" };
   const ST_ZH = { pending:"待處理", open:"待處理", received:"已收到", processing:"處理中", done:"已完成", completed:"已完成", closed:"已結案" };
   const CREDIT_ZH = { subscription_monthly_allowance:"每月贈點", credit_grant:"發放點數", credit_consume:"使用點數", free_signup_voice_avatar_trial:"新用戶體驗贈點", apple_purchase:"加購點數", apple_purchase_refunded:"加購退款", apple_refund_reversed:"退款回沖", call_consume:"通話扣點" };
@@ -187,15 +187,22 @@
   function tip(html,x,y){ const t=$("chartTip"); t.innerHTML=html; t.hidden=false; const r=t.getBoundingClientRect(); let px=x+14,py=y+14; if(px+r.width>innerWidth-8)px=x-r.width-14; if(py+r.height>innerHeight-8)py=y-r.height-14; t.style.left=px+"px"; t.style.top=py+"px"; }
   function hideTip(){ $("chartTip").hidden=true; }
   function allZero(series){ return series.every((s)=>s.values.every((v)=>!v)); }
+  // 圖表 viewBox 寬度＝容器實際渲染寬度（1 SVG 單位＝1 CSS px），font-size 才會是「宣告多少、畫面就是多少」
+  // （2026-07-22 女巫 Gate2 抓到：舊碼 viewBox 寫死 760、CSS width:100% 縮放進卡片後，字級被整體乘上縮放係數，
+  //   手機卡寬 ~305px 時 declared 14px 只剩約 5.6px 真實渲染——不只手機，桌面不同卡寬也各自被乘出不同真實字級）
+  function chartRenderWidth(box, fallback){
+    try{ const w=Math.round(box.getBoundingClientRect().width); return w>40?w:fallback; }
+    catch(e){ return fallback; }
+  }
 
   function columnChart(box, labels, series, opts){
     opts=opts||{};
     if(!labels.length || allZero(series)){ box.innerHTML=emptyBox(opts.empty||"還沒有資料——有用戶互動後就會長出來。"); return; }
-    const W=760,H=190,L=44,R=14,T=14,B=28, pw=W-L-R, ph=H-T-B;
+    const W=chartRenderWidth(box,760),H=190,L=44,R=14,T=14,B=28, pw=W-L-R, ph=H-T-B;
     const max=niceMax(Math.max(1,...series.flatMap((s)=>s.values))), y=(v)=>T+ph-(v/max)*ph;
     const chartLabel=series.map((se)=>se.name).join("、")+`，${labels.length} 個期間`;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":chartLabel});
-    for(let t=0;t<=4;t++){ const val=max/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
+    for(let t=0;t<=4;t++){ const val=max/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
     const band=pw/labels.length, groupW=Math.min(band*0.62,series.length*20+(series.length-1)*4), barW=Math.min(22,(groupW-(series.length-1)*4)/series.length);
     const lstep=Math.max(1,Math.ceil(labels.length/8));
     labels.forEach((lb,i)=>{ const cx=L+band*i+band/2,startX=cx-groupW/2;
@@ -203,7 +210,7 @@
         const path=svg("path",{d:h<=0.5?`M ${x} ${T+ph} h ${barW}`:`M ${x} ${T+ph} V ${top+4} Q ${x} ${top} ${x+4} ${top} H ${x+barW-4} Q ${x+barW} ${top} ${x+barW} ${top+4} V ${T+ph} Z`,fill:se.color});
         path.addEventListener("mousemove",(e)=>tip(`<div>${esc(lb)}${series.length>1?" · "+esc(se.name):""}</div><b>${n(v)}</b>${opts.unit?" "+opts.unit:""}`,e.clientX,e.clientY));
         path.addEventListener("mouseleave",hideTip); s.appendChild(path); });
-      if(i%lstep===0||(i===labels.length-1&&(labels.length-1)%lstep>=Math.ceil(lstep/2))){ const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tl.textContent=lb; s.appendChild(tl); } });
+      if(i%lstep===0||(i===labels.length-1&&(labels.length-1)%lstep>=Math.ceil(lstep/2))){ const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted}); tl.textContent=lb; s.appendChild(tl); } });
     box.innerHTML=""; box.appendChild(s);
     if(series.length>1){ const lg=document.createElement("div"); lg.className="legend"; lg.innerHTML=series.map((se)=>`<span class="key"><span class="swatch" style="background:${se.color}"></span>${esc(se.name)}</span>`).join(""); box.appendChild(lg); }
   }
@@ -211,14 +218,14 @@
   function lineChart(box, labels, series, opts){
     opts=opts||{};
     if(!labels.length || allZero(series)){ box.innerHTML=emptyBox(opts.empty||"還沒有資料。"); return; }
-    const W=760,H=180,L=44,R=16,T=14,B=26, pw=W-L-R, ph=H-T-B;
+    const W=chartRenderWidth(box,760),H=180,L=44,R=16,T=14,B=26, pw=W-L-R, ph=H-T-B;
     const maxV=opts.maxY||niceMax(Math.max(1,...series.flatMap((s)=>s.values))), minV=opts.minY||0;
     const nP=labels.length, x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-((v-minV)/(maxV-minV))*ph;
     const chartLabel=series.map((se)=>se.name).join("、")+`，${labels.length} 個期間`;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":chartLabel});
-    for(let t=0;t<=4;t++){ const val=minV+(maxV-minV)/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
+    for(let t=0;t<=4;t++){ const val=minV+(maxV-minV)/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
     const step=Math.max(1,Math.ceil(nP/7));
-    for(let i=0;i<nP;i+=step){ const tx=svg("text",{x:x(i),y:H-6,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tx.textContent=labels[i]; s.appendChild(tx); }
+    for(let i=0;i<nP;i+=step){ const tx=svg("text",{x:x(i),y:H-6,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=labels[i]; s.appendChild(tx); }
     series.forEach((se)=>{ const pts=se.values.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
       if(se.wash) s.appendChild(svg("polygon",{points:`${L},${T+ph} ${pts} ${x(nP-1)},${T+ph}`,fill:se.color,opacity:.1}));
       s.appendChild(svg("polyline",{points:pts,fill:"none",stroke:se.color,"stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
@@ -235,14 +242,14 @@
   // 留存專用折線圖：留存要看的是「掉多快」，用長條看不出趨勢。
   // 算不出來的節點（例如資料還沒滿 30 天）畫成虛線空心點＋說明，不畫成 0——0 會被誤讀成「沒人回來」。
   function retentionChart(box, pts){
-    const W=760,H=230,L=48,R=24,T=26,B=44, pw=W-L-R, ph=H-T-B;
+    const W=chartRenderWidth(box,760),H=230,L=48,R=24,T=26,B=44, pw=W-L-R, ph=H-T-B;
     const nP=pts.length;
     const x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-(v/100)*ph;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"留存曲線"});
     for(let t=0;t<=4;t++){
       const val=25*t, gy=y(val);
       s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1}));
-      const tx=svg("text",{x:L-10,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=val+"%"; s.appendChild(tx);
+      const tx=svg("text",{x:L-10,y:gy+4,"text-anchor":"end","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=val+"%"; s.appendChild(tx);
     }
     const known=pts.map((p,i)=>({...p,i})).filter((p)=>p.rate!=null);
     if(known.length>1){
@@ -250,12 +257,12 @@
         fill:"none",stroke:cc.teal,"stroke-width":2.5,"stroke-linejoin":"round","stroke-linecap":"round"}));
     }
     pts.forEach((p,i)=>{
-      const lb=svg("text",{x:x(i),y:H-16,"text-anchor":"middle","font-size":12,fill:p.rate==null?CHART.muted:CHART.ink,"font-weight":p.rate==null?"400":"600"});
+      const lb=svg("text",{x:x(i),y:H-16,"text-anchor":"middle","font-size":axisFontPx(),fill:p.rate==null?CHART.muted:CHART.ink,"font-weight":p.rate==null?"400":"600"});
       lb.textContent=p.label; s.appendChild(lb);
       if(p.rate==null){
         // 尚未到期：虛線空心點＋「還要 N 天」，明白區分「還沒到」與「掉到 0」
         s.appendChild(svg("circle",{cx:x(i),cy:y(0)-ph/2,r:6,fill:"#fff",stroke:CHART.muted,"stroke-width":1.5,"stroke-dasharray":"3 3"}));
-        const w=svg("text",{x:x(i),y:y(0)-ph/2-14,"text-anchor":"middle","font-size":11,fill:CHART.muted});
+        const w=svg("text",{x:x(i),y:y(0)-ph/2-14,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted});
         w.textContent=p.wait||"還沒到"; s.appendChild(w);
         return;
       }
@@ -264,10 +271,10 @@
       // 第一個點的數值往右挪一點，免得跟左側刻度字黏在一起
       const anch=i===0?"start":(i===nP-1?"end":"middle");
       const vx=i===0?x(i)+8:(i===nP-1?x(i)-8:x(i));
-      const v=svg("text",{x:vx,y:cy-13,"text-anchor":anch,"font-size":13,fill:CHART.ink,"font-weight":"700"});
+      const v=svg("text",{x:vx,y:cy-13,"text-anchor":anch,"font-size":Math.max(13,axisFontPx()),fill:CHART.ink,"font-weight":"700"});
       v.textContent=Math.round(p.rate*100)+"%"; s.appendChild(v);
       if(p.cohort){
-        const c=svg("text",{x:x(i),y:H-2,"text-anchor":"middle","font-size":10.5,fill:CHART.muted});
+        const c=svg("text",{x:x(i),y:H-2,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted});
         c.textContent=`${p.retained}／${p.cohort} 人`; s.appendChild(c);
       }
     });
@@ -314,12 +321,12 @@
     else if (id==="records") html=renderRecords();
     else if (id==="enterpriseClients") html=renderEnterpriseClients();
     else if (id==="enterpriseClientDetail") html=renderEnterpriseClientDetail();
-    else if (id==="enterpriseImport") html=renderEnterpriseImport();
     else if (id==="enterprisePayments") html=renderEnterprisePayments();
     else if (id==="enterpriseBillingSettings") html=renderEnterpriseBillingSettings();
     $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
     pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
     bindPageEvents(id);
+    renderEntImportPanel(); // body-level面板，每次 renderPage 都同步一次狀態（開／關／內容）
   }
 
   function renderOverview(){
@@ -443,7 +450,7 @@
       { label:"總用戶", star:true, value:n(accts.length), sub:`家庭圈 ${accts.length} · 成員 ${people} 人` },
       { label:"今日活躍", value:n(activeC), sub:accts.length?`活躍率 ${pct(activeC/accts.length)}`:"–", info:"近 3 天內有真互動的帳號" },
       { label:"低度使用", value:n(idleC), sub:"7 天以上沒通話", info:"需要關懷的沉睡帳號" },
-      { label:"守護中", value:n(guardC), sub:"安全警示待處理", info:"有安全守護警示、建議優先確認" },
+      { label:"守護中", value:n(guardC), sub:"安全警示待處理", star:guardC>0, tone:"alert", info:"有安全守護警示、建議優先確認" },
     ]);
     if(!accts.length){
       html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——正式開放註冊後，這裡會列出真實用戶。`:"還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
@@ -454,7 +461,7 @@
     const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
     const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
-    const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
+    const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
     const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
     const trows=rows.map((a)=>{ const idx=accts.indexOf(a); const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
       const nm=p.displayName||a.accountName||"–", initial=(String(nm).trim()[0]||"家");
@@ -511,7 +518,7 @@
     });
     const concerning=people.filter((p)=>(p.missedStreak||0)>=2).length;
     let html=kpiRow([
-      { label:"依從率", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · 做到 ÷（做到＋跳過＋漏服）`, star:true },
+      { label:"依從率", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · 做到 ÷（做到＋跳過＋漏服）`, star:true, tone:(rate!=null&&rate<0.7)?"alert":undefined },
       { label:"做到次數", value:n(t.taken||0), sub:`近 ${win} 天次數` },
       { label:"漏服次數", value:n(t.missed||0), sub:`近 ${win} 天次數` },
       { label:"需要關心", value:n(concerning), sub:"連續漏服 2 天以上", info:"連續兩天以上沒做到提醒的人，建議家人主動關心一下" },
@@ -549,7 +556,7 @@
     const fh=familyHealth(), t=fh.totals||{}, win=fh.windowDays||30, rate=fh.guardedRate;
     const inv=fh.invites||{};
     let html=kpiRow([
-      { label:"有人顧的比例", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · ${n(t.withActiveGuardian||0)}／${n(t.households||0)} 戶`, star:true, info:"這戶除了長輩本人以外，近 N 天內至少有 1 位家人傳話、看過家庭看板或家人訊息、或參與家庭活動，就算「有人顧」。" },
+      { label:"有人顧的比例", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · ${n(t.withActiveGuardian||0)}／${n(t.households||0)} 戶`, star:true, tone:(rate!=null&&rate<0.6)?"alert":undefined, info:"這戶除了長輩本人以外，近 N 天內至少有 1 位家人傳話、看過家庭看板或家人訊息、或參與家庭活動，就算「有人顧」。門檻＜60% 標紅（可調）。" },
       { label:"多人守護家數", value:n(t.multiGuardian||0), sub:`近 ${win} 天有 2 位以上家人在顧` },
       { label:"沒人顧家數", value:n(t.unwatched||0), sub:`近 ${win} 天沒有任何家人動作`, info:"家庭圈只有長輩本人、或家人整段時間都沒動作——流失與安全雙警訊" },
       { label:"邀請成功率", value:inv.acceptRate==null?"–":pct(inv.acceptRate), sub:`近 ${win} 天送出 ${n(inv.sent||0)} 筆邀請` },
@@ -590,7 +597,7 @@
       { label:"心情平均分", value:avgLevel==null?"–":avgLevel.toFixed(1), sub:`近 ${win} 天 · 1～5 分（5 分最好）`, star:true, info:"由陪伴聊天內容推測的心情高低分（1-5），不是醫療評分。" },
       { label:"正向比例", value:mt.positiveRate==null?"–":pct(mt.positiveRate), sub:`近 ${win} 天 · ${n(t.positive||0)} 次` },
       { label:"低落比例", value:mt.lowRate==null?"–":pct(mt.lowRate), sub:`近 ${win} 天 · ${n(t.low||0)} 次` },
-      { label:"需要關心", value:n(watch.length), sub:"近 7 天低落 3 次以上或連續 3 天", info:"近 7 天內出現 3 次以上低落類心情、或連續 3 天都有低落類心情，建議家人主動關心一下" },
+      { label:"需要關心", value:n(watch.length), sub:"近 7 天低落 3 次以上或連續 3 天", star:watch.length>0, tone:"alert", info:"近 7 天內出現 3 次以上低落類心情、或連續 3 天都有低落類心情，建議家人主動關心一下" },
     ]);
     html+=principle(mt.principle||"這是陪伴聊天時的心情紀錄，由 AI 依對話內容推測，不是醫療診斷、也不是健康建議；異常請由真人關心確認。");
     if(!(t.signals||0)){
@@ -625,7 +632,7 @@
     let html=kpiRow([
       { label:"平均記憶筆數", value:bd.avgMemories==null?"–":bd.avgMemories.toFixed(1), sub:`近 ${win} 天還在互動的長輩平均`, star:true, info:"沐寧幫每位長輩記住幾件事——只算筆數，不看內容。" },
       { label:"信任以上人數", value:n(trustedPlus), sub:`近 ${win} 天 · 信任＋親近` },
-      { label:"卡在新認識人數", value:n(stuckCount), sub:`用了超過 ${stuckDays} 天還沒熟起來`, info:"陪伴沒建立起來，最可能默默流失，建議真人多關心。" },
+      { label:"卡在新認識人數", value:n(stuckCount), sub:`用了超過 ${stuckDays} 天還沒熟起來`, star:stuckCount>0, tone:"alert", info:"陪伴沒建立起來，最可能默默流失，建議真人多關心。" },
       { label:"平均升級天數", value:bd.upgradeDays==null?"–":n(bd.upgradeDays), sub:"從新認識到熟悉平均花幾天" },
     ]);
     html+=principle(bd.principle||"「關係深度」看沐寧跟每位長輩處得多熟：新認識→熟悉→信任→親近。只看筆數與階段，記憶內容不會出現在這裡。");
@@ -717,7 +724,7 @@
     html+=kpiRow([
       { label:"全平台持有點數", value:n(ptsTotal), sub:`${n(cAccts.length)} 戶合計`, star:true },
       { label:"平均每戶點數", value:ptsAvg==null?"–":n(ptsAvg), sub:"點／戶" },
-      { label:"快用完", value:n(lowList.length), sub:`剩不到 ${LOW_PTS} 點`, info:"點數快見底的帳號——主動關心或提醒加購的好時機" },
+      { label:"快用完", value:n(lowList.length), sub:`剩不到 ${LOW_PTS} 點`, star:lowList.length>0, tone:"alert", info:"點數快見底的帳號——主動關心或提醒加購的好時機" },
       { label:"近 30 天加購", value:n(sm.pointsPurchases), unit:sm.pointsPurchases?" 筆":"", sub:`共 ${n(sm.pointsTotal)} 點` },
     ]);
     html+=card("快用完名單", `剩不到 ${LOW_PTS} 點 · 建議主動關心或提醒加購`, lowList.length?tableHTML(["用戶","家庭","方案","剩餘點數","最近活躍"], lowList.slice(0,12).map((a)=>{
@@ -782,18 +789,28 @@
   }
 
   function renderRecords(){
-    const sm=(D().summaries||{}).recent||[], au=(D().audit||{}).recent||[];
-    let html=card("聊天摘要", "AI 記下的每段聊天重點（已去逐字、只留摘要）", sm.length?`<div class="rows">${sm.slice(0,15).map((s)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(fmtTime(s.createdAt))}</div><div class="ri-desc">${esc(s.summary||"")}</div><div class="tag-row">${(s.memoryTags||[]).map((t)=>`<span class="pill mute">${esc(t)}</span>`).join("")}${s.safetyRelevant?'<span class="pill bad">涉及安全</span>':""}</div></div></div>`).join("")}</div>`:emptyBox("還沒有聊天摘要——有人開始跟沐寧聊天後就會出現。"));
-    html+=card("系統操作紀錄", "系統跟管理端動過什麼，給工程師追查用", au.length?tableHTML(["時間","事件","對象"], au.slice(0,25).map((e)=>[
+    const smAll=(D().summaries||{}).recent||[], auAll=(D().audit||{}).recent||[];
+    const smQ=(state.tabs.recordsSummarySearch||"").trim().toLowerCase();
+    const auQ=(state.tabs.recordsAuditSearch||"").trim().toLowerCase();
+    const sm=smQ?smAll.filter((s)=>((s.summary||"")+" "+(s.memoryTags||[]).join(" ")).toLowerCase().indexOf(smQ)>-1):smAll;
+    const au=auQ?auAll.filter((e)=>((e.eventType||"")+" "+(e.targetId||e.accountId||"")+" "+(e.targetTable||"")).toLowerCase().indexOf(auQ)>-1):auAll;
+    const smTools=smAll.length?`<div class="tbl-tools"><input class="tbl-search" id="recordsSummarySearch" type="search" aria-label="搜尋聊天摘要內容或標籤" placeholder="搜尋摘要內容或標籤"></div>`:"";
+    const smBody=!smAll.length?emptyBox("還沒有聊天摘要——有人開始跟沐寧聊天後就會出現。"):(sm.length?`<div class="rows">${sm.slice(0,15).map((s)=>`<div class="row-item"><div class="ri-body"><div class="ri-title">${esc(fmtTime(s.createdAt))}</div><div class="ri-desc">${esc(s.summary||"")}</div><div class="tag-row">${(s.memoryTags||[]).map((t)=>`<span class="pill mute">${esc(t)}</span>`).join("")}${s.safetyRelevant?'<span class="pill bad">涉及安全</span>':""}</div></div></div>`).join("")}</div>`:emptyBox(`沒有符合「${esc(state.tabs.recordsSummarySearch||"")}」的摘要`));
+    let html=`<div class="card tbl-card"><div class="card-head"><div><h3>聊天摘要</h3><div class="card-note">AI 記下的每段聊天重點（已去逐字、只留摘要）</div></div></div>${smTools}${smBody}</div>`;
+    const auTools=auAll.length?`<div class="tbl-tools"><input class="tbl-search" id="recordsAuditSearch" type="search" aria-label="搜尋事件類型、對象或資料表" placeholder="搜尋事件、對象或資料表"></div>`:"";
+    const auBody=!auAll.length?emptyBox("還沒有操作紀錄。"):(au.length?tableHTML(["時間","事件","對象"], au.slice(0,25).map((e)=>[
       `<span class="muted small">${esc(fmtTime(e.createdAt))}</span>`,
       `<b>${esc(e.eventType||"事件")}</b>`,
       `${esc(e.targetId||e.accountId||"–")}<span class="muted small"> · ${esc(e.targetTable||"–")}</span>`,
-    ])):emptyBox("還沒有操作紀錄。"));
+    ])):emptyBox(`沒有符合「${esc(state.tabs.recordsAuditSearch||"")}」的操作紀錄`));
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>系統操作紀錄</h3><div class="card-note">系統跟管理端動過什麼，給工程師追查用</div></div></div>${auTools}${auBody}</div>`;
     return html;
   }
 
+  // data-label 帶欄名到每個 td——手機版靠 CSS 把 table 轉「一列一卡」的堆疊卡片（見 admin.css .table-wrap 手機規則），
+  // 不必每頁另寫一份卡片版 markup；欄名是空字串（多半是操作鈕/勾選框欄）就不印 label、卡片內靠右顯示。
   function tableHTML(cols, rows, rowClasses){
-    return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th scope="col">${c?esc(c):'<span class="sr-only">操作</span>'}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${(rowClasses&&rowClasses[i])||""}">${r.map((c)=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th scope="col">${c?esc(c):'<span class="sr-only">操作</span>'}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${(rowClasses&&rowClasses[i])||""}">${r.map((c,j)=>`<td data-label="${esc(cols[j]||"")}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
 
   function openAcctDetail(idx){
@@ -914,7 +931,7 @@
       c.status="loading";
       const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
       postAdmin(base, token, "/admin/enterprise/clients", {})
-        .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterpriseImport","enterprisePayments"].includes(state.page)) renderPage(state.page); })
+        .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterprisePayments"].includes(state.page)) renderPage(state.page); })
         .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterpriseClients") renderPage(state.page); });
     }
     return c;
@@ -945,7 +962,7 @@
   }
   function reloadEnterpriseBillingSettings(){ state.tabs.entBillingSettings={status:"idle",data:null,error:null}; return ensureEnterpriseBillingSettingsLoaded(); }
 
-  // ── 畫面 1・企業客戶列表 ──
+  // ── 畫面 1・企業客戶列表（2026-07-22 併入「名單匯入」為滑出面板，側欄少一項、操作留在同一頁）──
   function renderEnterpriseClients(){
     const c=ensureEnterpriseClientsLoaded();
     const guard=entLoadingOrErrorCard(c.status,c.error,"企業客戶列表","data-ent-retry-clients");
@@ -961,30 +978,100 @@
       { label:"本月預估金額", value:fmtMoney(monthly), sub:"依目前啟用席次估算" },
       { label:"逾期未付", value:n(overdue.length), sub:overdue.length?"要優先催收":"目前沒有", star:overdue.length>0, tone:"alert" },
     ]);
-    const addBtn=`<button type="button" class="btn-sm" data-ent-new-client>＋ 新增企業客戶</button>`;
+    const addBtn=`<div class="card-head-actions"><button type="button" class="btn-ghost btn-sm" data-ent-import-open>＋ 匯入名單</button><button type="button" class="btn-sm" data-ent-new-client>＋ 新增企業客戶</button></div>`;
     if(!clients.length){
       html+=card("企業客戶列表","公司名、合約期間、席次、狀態、金額",emptyBox("還沒有企業客戶——談成第一家公司後，這裡會列出來。"),addBtn);
-      return html;
+    } else {
+      const rowClasses=clients.map((x)=>x.statusLight==="overdue"?"tr-overdue":"");
+      const rows=clients.map((x)=>{
+        const seatTxt=`<b class="num">${n(x.activeSeats||0)}</b><span class="muted small"> ／ 上限 ${n(x.seatQuota||0)}</span>${x.waitingSeats?`<div class="muted small">等待接手 ${n(x.waitingSeats)}</div>`:""}${x.graceSeats?`<div class="muted small">緩衝期 ${n(x.graceSeats)}</div>`:""}`;
+        const overdueTxt=Number(x.outstandingTwd||0)>0
+          ? `<b style="color:var(--danger)">${fmtMoney(x.outstandingTwd)}</b>${x.overdueDays?`<div class="small" style="color:var(--danger);font-weight:700">逾期 ${n(x.overdueDays)} 天</div>`:""}`
+          : `<span class="muted">—</span>`;
+        return [
+          `<b>${esc(x.name||"–")}</b>${x.taxId?`<div class="muted small">統編 ${esc(x.taxId)}</div>`:""}`,
+          `<span class="small">${esc(fmtDate(x.contractStart))} － ${esc(fmtDate(x.contractEnd))}</span>`,
+          seatTxt,
+          entStatusPill(x.statusLight),
+          fmtMoney(x.estimatedMonthlyTwd),
+          overdueTxt,
+          `<button type="button" class="row-act" data-ent-view="${esc(x.id)}" aria-label="查看 ${esc(x.name||"")} 明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
+        ];
+      });
+      html+=`<div class="card tbl-card"><div class="card-head"><div><h3>企業客戶列表</h3><div class="card-note">共 ${clients.length} 家 · 逾期未付以紅色標示</div></div>${addBtn}</div>${tableHTML(["公司","合約期間","席次(已啟用／上限)","狀態","本月預估","累計欠款",""], rows, rowClasses)}</div>`;
+      html+=`<div id="entClientActionNote"></div>`;
     }
-    const rowClasses=clients.map((x)=>x.statusLight==="overdue"?"tr-overdue":"");
-    const rows=clients.map((x)=>{
-      const seatTxt=`<b class="num">${n(x.activeSeats||0)}</b><span class="muted small"> ／ 上限 ${n(x.seatQuota||0)}</span>${x.waitingSeats?`<div class="muted small">等待接手 ${n(x.waitingSeats)}</div>`:""}${x.graceSeats?`<div class="muted small">緩衝期 ${n(x.graceSeats)}</div>`:""}`;
-      const overdueTxt=Number(x.outstandingTwd||0)>0
-        ? `<b style="color:var(--danger)">${fmtMoney(x.outstandingTwd)}</b>${x.overdueDays?`<div class="small" style="color:var(--danger);font-weight:700">逾期 ${n(x.overdueDays)} 天</div>`:""}`
-        : `<span class="muted">—</span>`;
-      return [
-        `<b>${esc(x.name||"–")}</b>${x.taxId?`<div class="muted small">統編 ${esc(x.taxId)}</div>`:""}`,
-        `<span class="small">${esc(fmtDate(x.contractStart))} － ${esc(fmtDate(x.contractEnd))}</span>`,
-        seatTxt,
-        entStatusPill(x.statusLight),
-        fmtMoney(x.estimatedMonthlyTwd),
-        overdueTxt,
-        `<button type="button" class="row-act" data-ent-view="${esc(x.id)}" aria-label="查看 ${esc(x.name||"")} 明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
-      ];
-    });
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>企業客戶列表</h3><div class="card-note">共 ${clients.length} 家 · 逾期未付以紅色標示</div></div>${addBtn}</div>${tableHTML(["公司","合約期間","席次(已啟用／上限)","狀態","本月預估","累計欠款",""], rows, rowClasses)}</div>`;
-    html+=`<div id="entClientActionNote"></div>`;
     return html;
+  }
+  // 名單匯入滑出面板：跟 openAcctDetail／openConfirmModal 一樣掛在 document.body（不是 #pageRoot 裡）。
+  // 2026-07-22 踩過一次真的坑：原本把面板字串併進 renderEnterpriseClients() 回傳的 html、面板就長在 .layout 底下；
+  // 面板開啟時 bindPageEvents 把 .layout 設 inert 想鎖住背景，結果連面板自己的按鈕也一起被鎖到完全點不動。
+  // 面板獨立掛在 body，鎖 .layout inert 才只鎖背景、不會鎖到自己。
+  function renderEntImportPanel(){
+    const layout=document.querySelector(".layout");
+    if(!state.tabs.entImportPanelOpen){
+      const old=$("entImportPanelRoot"); if(old) old.remove();
+      if(layout) layout.inert=false;
+      return;
+    }
+    if(layout) layout.inert=true;
+    let root=$("entImportPanelRoot");
+    if(!root){ root=document.createElement("div"); root.id="entImportPanelRoot"; document.body.appendChild(root); }
+    root.innerHTML=`<div class="slideover-overlay" id="entImportOverlay"><div class="slideover-panel" role="dialog" aria-modal="true" aria-labelledby="entImportPanelTitle">
+      <div class="slideover-head"><h2 id="entImportPanelTitle">匯入名單</h2><button type="button" class="modal-x" id="entImportPanelClose" aria-label="關閉匯入名單面板">✕</button></div>
+      <div class="slideover-body">${renderEnterpriseImportBody()}</div>
+      ${entImportPanelFooterHTML()}
+    </div></div>`;
+    bindEntImportPanelEvents(root);
+  }
+  function bindEntImportPanelEvents(root){
+    const close=root.querySelector("#entImportPanelClose"); if(close) close.addEventListener("click",closeEntImportPanel);
+    const overlay=root.querySelector("#entImportOverlay"); if(overlay) overlay.addEventListener("click",(e)=>{ if(e.target===overlay) closeEntImportPanel(); });
+    const eic=root.querySelector("#entImportClient"); if(eic){ eic.value=(state.tabs.entImport&&state.tabs.entImport.clientId)||""; eic.addEventListener("change",()=>{ (state.tabs.entImport||(state.tabs.entImport={})).clientId=eic.value; }); }
+    root.querySelectorAll("[data-ent-template]").forEach((b)=>b.addEventListener("click",entDownloadTemplate));
+    const eif=root.querySelector("#entImportFile"); if(eif){ eif.addEventListener("change",()=>{
+      const f=eif.files&&eif.files[0]; if(!f) return;
+      const im=state.tabs.entImport||(state.tabs.entImport={});
+      im.fileName=f.name; im.result=null;
+      const reader=new FileReader();
+      reader.onload=()=>{ im.fileText=String(reader.result||""); entRunImportPreview(); };
+      reader.readAsText(f);
+    }); }
+    root.querySelectorAll("[data-ent-import-commit]").forEach((b)=>b.addEventListener("click",entRunImportCommit));
+    root.querySelectorAll("[data-ent-import-download]").forEach((b)=>b.addEventListener("click",entDownloadImportResult));
+    root.querySelectorAll("[data-ent-import-cancel]").forEach((b)=>b.addEventListener("click",entCancelImportPreview));
+    root.querySelectorAll("[data-ent-import-close]").forEach((b)=>b.addEventListener("click",closeEntImportPanel));
+  }
+  // Sticky footer：取消／確認匯入、下載結果／完成關閉——手機版常駐畫面底部，不必滑到最底才摸得到（2026-07-22 女巫 Gate2 P0）
+  function entImportPanelFooterHTML(){
+    const im=state.tabs.entImport||{};
+    if(im.result){
+      return `<div class="slideover-footer"><div class="slideover-footer-actions"><button type="button" class="btn-ghost btn-sm" data-ent-import-download>下載結果清單</button><button type="button" class="btn-sm" data-ent-import-close>完成，關閉</button></div></div>`;
+    }
+    if(im.preview){
+      const hasOverQuota=(im.preview.overQuota||[]).length>0;
+      return `<div class="slideover-footer"><div class="slideover-footer-note" id="entImportCommitNote">${hasOverQuota?"含超過席次上限的筆數，匯入前會再確認一次":"確認後才會真的寫入名單"}</div><div class="slideover-footer-actions"><button type="button" class="btn-ghost btn-sm" data-ent-import-cancel>取消</button><button type="button" class="btn-sm" data-ent-import-commit ${im.committing?"disabled":""}>${im.committing?"匯入中…":"確認匯入"}</button></div></div>`;
+    }
+    return "";
+  }
+  function entCancelImportPreview(){
+    const im=state.tabs.entImport||(state.tabs.entImport={});
+    im.preview=null; im.fileText=""; im.fileName="";
+    renderPage(state.page);
+  }
+  let entImportPrevFocus=null;
+  function openEntImportPanel(){
+    entImportPrevFocus=document.activeElement;
+    if(!state.tabs.entImport) state.tabs.entImport={ clientId:"", fileName:"", fileText:"", previewing:false, preview:null, committing:false, result:null, error:null };
+    state.tabs.entImportPanelOpen=true;
+    renderPage(state.page);
+    const cb=$("entImportPanelClose"); if(cb) cb.focus();
+  }
+  function closeEntImportPanel(){
+    state.tabs.entImportPanelOpen=false;
+    renderPage(state.page);
+    if(entImportPrevFocus&&entImportPrevFocus.focus) entImportPrevFocus.focus();
+    entImportPrevFocus=null;
   }
 
   // ── 畫面 2・單一公司（從列表「查看」進來）──
@@ -1024,7 +1111,7 @@
       <button type="button" class="btn-sm" data-ent-save-client="${esc(clientId)}">儲存變更</button>
       <div id="entSaveNote"></div>
     `);
-    html+=`<div class="ops-notice error" role="alert"><strong>內部限定・不可外流</strong>這一頁列出每個席次綁定的 email／狀態，只有我們自己看；企業客戶只會拿到月報上的彙總數字，永遠看不到這一頁。</div>`;
+    html+=`<div class="ops-notice info" role="status"><strong>內部限定・不可外流</strong>這一頁列出每個席次綁定的 email／狀態，只有我們自己看；企業客戶只會拿到月報上的彙總數字，永遠看不到這一頁。</div>`;
     const seatRows=seats.map((s)=>[
       `<input type="checkbox" class="ent-seat-chk" value="${esc(s.id)}" ${["active","waiting","grace"].includes(s.status)?"":"disabled"}>`,
       esc(s.inviteEmail||"–"),
@@ -1037,7 +1124,7 @@
       ${tableHTML(["","Email","狀態","綁定時間","緩衝期至","本月用量"], seatRows)}
       <button type="button" class="btn-sm" data-ent-grant="${esc(clientId)}" style="margin-top:10px">批次授予</button>
       <div id="entGrantNote"></div>
-    `:emptyBox("這家公司還沒有匯入任何席次——先去「名單匯入」上傳名單。"));
+    `:emptyBox("這家公司還沒有匯入任何席次——回企業客戶列表按「＋ 匯入名單」上傳。"));
     const invRows=invoices.map((iv)=>[
       esc(iv.invoiceNo||iv.id||"–"),
       `${esc(fmtDate(iv.periodStart))} － ${esc(fmtDate(iv.periodEnd))}`,
@@ -1146,16 +1233,13 @@
       .catch((e)=>entActionNote("entGrantNote", entActionError((e&&e.message)||"fail")));
   }
 
-  // ── 畫面 3・名單匯入 ──
-  function renderEnterpriseImport(){
-    const c=ensureEnterpriseClientsLoaded();
-    const guard=entLoadingOrErrorCard(c.status,c.error,"名單匯入","data-ent-retry-clients");
-    if(guard) return guard;
+  // ── 名單匯入（企業客戶列表頁內滑出面板的內容，見 entImportPanelHTML）──
+  function renderEnterpriseImportBody(){
     const clients=entClients();
     const im=state.tabs.entImport||(state.tabs.entImport={ clientId:"", fileName:"", fileText:"", previewing:false, preview:null, committing:false, result:null, error:null });
     if(!im.clientId && clients.length===1) im.clientId=String(clients[0].id);
     const clientOpts=clients.map((x)=>`<option value="${esc(x.id)}"${String(im.clientId)===String(x.id)?" selected":""}>${esc(x.name)}</option>`).join("");
-    let html=card("名單匯入","先選公司，下載範本填好 email 清單，再上傳預檢", `
+    let html=card("選擇公司與檔案","先選公司，下載範本填好 email 清單，再上傳預檢", `
       <div class="ent-form-grid">
         <label class="field"><span>目標公司</span><select id="entImportClient">${clients.length?`<option value="">請選擇</option>${clientOpts}`:`<option value="">還沒有企業客戶</option>`}</select></label>
       </div>
@@ -1171,18 +1255,17 @@
     if(im.preview){
       const p=im.preview;
       const groups=[["newSeats","新增"],["alreadyRegistered","已註冊・匯入後直接生效"],["duplicates","重複・會跳過"],["ownedByOtherClient","屬於其他公司・已擋下"],["overQuota","超過席次上限"]];
-      html+=`<div class="kpi-row">${groups.map(([key,label])=>`<div class="kpi"><div class="kpi-top"><span class="kpi-label">${esc(label)}</span></div><div class="kpi-value">${n((p[key]||[]).length)}</div></div>`).join("")}</div>`;
+      // 重點先行：擋下／超額這兩種需要真人決定的情況，有筆數時給 alert 強調，不要跟正常新增筆數平等排列
+      const ALERT_KEYS=["ownedByOtherClient","overQuota"];
+      html+=`<div class="kpi-row">${groups.map(([key,label])=>{ const cnt=(p[key]||[]).length; const accent=(ALERT_KEYS.indexOf(key)>-1&&cnt>0)?" kpi-accent-alert":""; return `<div class="kpi${accent}"><div class="kpi-top"><span class="kpi-label">${esc(label)}</span></div><div class="kpi-value">${n(cnt)}</div></div>`; }).join("")}</div>`;
       html+=groups.map(([key,label])=>{
         const list=p[key]||[];
         if(!list.length) return "";
         const rows=list.map((r)=>[esc(r.email||r),esc(r.note||r.reason||"")]);
         return card(`${label}（${list.length} 筆）`,"",tableHTML(["Email","備註／原因"],rows));
       }).join("");
-      const hasOverQuota=(p.overQuota||[]).length>0;
-      html+=`<div class="card"><div class="card-head"><div><h3>確認匯入</h3><div class="card-note">${hasOverQuota?"含超過席次上限的筆數，匯入前會再確認一次":"確認後才會真的寫入名單"}</div></div></div>
-        <button type="button" class="btn-sm" data-ent-import-commit ${im.committing?"disabled":""}>${im.committing?"匯入中…":"確認匯入"}</button>
-        <div id="entImportCommitNote"></div>
-      </div>`;
+      // 「確認匯入」動作與備註移到滑出面板的 sticky footer（entImportPanelFooterHTML）——
+      // 手機版原本要滑到最底才摸得到按鈕，footer 常駐後拇指可及（2026-07-22 女巫 Gate2 P0）
     }
     if(im.result){
       const r=im.result, created=r.created||[], activated=r.activated||[], skipped=r.skipped||[], fail=r.failed||[];
@@ -1191,8 +1274,8 @@
         ${fail.length?tableHTML(["Email","失敗原因"],fail.map((x)=>[esc(x.email||x),esc(x.error||x.reason||"")])):""}
         ${skipped.length?tableHTML(["Email","跳過原因"],skipped.map((x)=>[esc(x.email||x),esc(entSkipReasonZh(x.skipReason))])):""}
         ${(!fail.length&&!skipped.length)?emptyBox("全部成功，沒有跳過或失敗的筆數。"):""}
-        <button type="button" class="btn-ghost btn-sm" style="margin-top:10px" data-ent-import-download>下載結果清單</button>
       `);
+      // 「下載結果清單／完成關閉」也移到 sticky footer
     }
     return html;
   }
@@ -1264,7 +1347,8 @@
       else if(["paid","invoiced"].includes(iv.status)) counts.paid++;
       if(Number(iv.overdueDays||0)>0 && !["paid","invoiced","void"].includes(iv.status)) counts.overdue++;
     });
-    const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ent-pay-filter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
+    // 逾期 chip 沒選中時也要看得出來要注意，不然要點過才知道要催收（重點先行）
+    const chip=(id,label,cnt)=>{ const danger=(id==="overdue"&&cnt>0&&filt!==id); return `<button type="button" class="chip-filter${filt===id?" on":""}${danger?" chip-filter-danger":""}" data-ent-pay-filter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`; };
     const tools=`<div class="tbl-tools">${chip("all","全部",counts.all)}${chip("draft","草稿・待確認",counts.draft)}${chip("issued","已寄出・待收款",counts.issued)}${chip("paid","已收款",counts.paid)}<span class="chip-sep"></span>${chip("overdue","逾期",counts.overdue)}<span class="chip-spring"></span><button type="button" class="btn-sm" data-ent-monthly-close>跑月結（產生本月請款單）</button></div>`;
     let html=entBillingSettingsWarningHTML();
     if(!invoices.length){
@@ -1816,9 +1900,29 @@
       // 隱私權指向本服務自帶的 /privacy.html：munea.net 仍掛在舊 Vercel 部署、/privacy 為 404（2026-07-20 實測）
       + `<div class="side-links"><a href="/" target="_blank" rel="noopener">App 本體</a><a href="/selftest.html" target="_blank" rel="noopener">自動巡檢</a><a href="https://munea.net" target="_blank" rel="noopener">官網</a><a href="/privacy.html" target="_blank" rel="noopener">隱私權</a></div>`;
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+    updateNavScrollHint();
+  }
+  // 手機抽屜「還可以往下捲」底部漸層提示：15 個項目常比視窗高，捲到底就自動收起提示
+  // （不是修 bug——項目本來就都在、可捲動——只是加視覺線索，不然使用者會以為選單只有這些）
+  function updateNavScrollHint(){
+    const nav=$("sideNav"), hint=$("navScrollHint");
+    if(!nav||!hint) return;
+    const canScrollMore = nav.scrollHeight - nav.scrollTop - nav.clientHeight > 4;
+    hint.classList.toggle("show", canScrollMore);
   }
   function go(id,arg){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id+(arg?":"+arg:""); }
+  // 手機導覽抽屜：切頁就收起來，不必使用者自己點掉（2026-07-22 女巫 Gate2）
+  function setMobileNavOpen(open){
+    state.mobileNavOpen=!!open;
+    const sb=document.querySelector(".sidebar"), ov=$("mobileNavOverlay"), btn=$("mobileNavBtn");
+    if(sb) sb.classList.toggle("is-open", state.mobileNavOpen);
+    if(ov) ov.hidden=!state.mobileNavOpen;
+    if(btn) btn.setAttribute("aria-expanded", state.mobileNavOpen?"true":"false");
+    document.body.classList.toggle("mobile-nav-locked", state.mobileNavOpen);
+    if(state.mobileNavOpen) setTimeout(updateNavScrollHint,50); // 抽屜滑入動畫跑完後量測才準
+  }
   function show(){
+    setMobileNavOpen(false);
     const raw=(location.hash||"#overview").slice(1), sep=raw.indexOf(":");
     const id=sep>-1?raw.slice(0,sep):raw, arg=sep>-1?raw.slice(sep+1):"";
     state.page=TITLE[id]?id:"overview";
@@ -1837,27 +1941,19 @@
     const us=$("userSearch"); if(us){ us.value=state.tabs.userSearch||""; us.addEventListener("input",()=>{ state.tabs.userSearch=us.value.trim(); renderPage("users"); const el=$("userSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
     $("pageRoot").querySelectorAll("[data-ufilter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.userFilter=b.dataset.ufilter; renderPage("users"); }));
     const stc=$("showTestAccountsChk"); if(stc){ stc.addEventListener("change",()=>toggleShowTestAccounts(stc.checked)); }
+    const rss=$("recordsSummarySearch"); if(rss){ rss.value=state.tabs.recordsSummarySearch||""; rss.addEventListener("input",()=>{ state.tabs.recordsSummarySearch=rss.value.trim(); renderPage("records"); const el=$("recordsSummarySearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
+    const ras=$("recordsAuditSearch"); if(ras){ ras.value=state.tabs.recordsAuditSearch||""; ras.addEventListener("input",()=>{ state.tabs.recordsAuditSearch=ras.value.trim(); renderPage("records"); const el=$("recordsAuditSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
     // ══ 企業客戶（B2B 席次）══
     $("pageRoot").querySelectorAll("[data-ent-view]").forEach((b)=>b.addEventListener("click",()=>{ const cid=b.dataset.entView; state.tabs.entDetail=null; go("enterpriseClientDetail",cid); loadEnterpriseClientDetail(cid); }));
     $("pageRoot").querySelectorAll("[data-ent-new-client]").forEach((b)=>b.addEventListener("click",openNewClientModal));
+    $("pageRoot").querySelectorAll("[data-ent-import-open]").forEach((b)=>b.addEventListener("click",openEntImportPanel));
+    // 面板自己的關閉／遮罩／表單／取消／確認匯入綁定都搬進 bindEntImportPanelEvents（面板現在掛在 body，不在 #pageRoot 裡）
     $("pageRoot").querySelectorAll("[data-ent-retry-clients]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseClients(); renderPage(state.page); }));
     $("pageRoot").querySelectorAll("[data-ent-retry-invoices]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseInvoices(); renderPage(state.page); }));
     $("pageRoot").querySelectorAll("[data-ent-retry-detail]").forEach((b)=>b.addEventListener("click",()=>loadEnterpriseClientDetail(b.dataset.entRetryDetail)));
     $("pageRoot").querySelectorAll("[data-ent-save-client]").forEach((b)=>b.addEventListener("click",()=>entSaveClient(b.dataset.entSaveClient)));
     $("pageRoot").querySelectorAll("[data-ent-grant]").forEach((b)=>b.addEventListener("click",()=>entGrantSeats(b.dataset.entGrant)));
     $("pageRoot").querySelectorAll("[data-ent-download]").forEach((b)=>b.addEventListener("click",()=>entDownloadReport(b.dataset.entClient, +b.dataset.entDownload)));
-    const eic=$("entImportClient"); if(eic){ eic.value=(state.tabs.entImport&&state.tabs.entImport.clientId)||""; eic.addEventListener("change",()=>{ (state.tabs.entImport||(state.tabs.entImport={})).clientId=eic.value; }); }
-    $("pageRoot").querySelectorAll("[data-ent-template]").forEach((b)=>b.addEventListener("click",entDownloadTemplate));
-    const eif=$("entImportFile"); if(eif){ eif.addEventListener("change",()=>{
-      const f=eif.files&&eif.files[0]; if(!f) return;
-      const im=state.tabs.entImport||(state.tabs.entImport={});
-      im.fileName=f.name; im.result=null;
-      const reader=new FileReader();
-      reader.onload=()=>{ im.fileText=String(reader.result||""); entRunImportPreview(); };
-      reader.readAsText(f);
-    }); }
-    $("pageRoot").querySelectorAll("[data-ent-import-commit]").forEach((b)=>b.addEventListener("click",entRunImportCommit));
-    $("pageRoot").querySelectorAll("[data-ent-import-download]").forEach((b)=>b.addEventListener("click",entDownloadImportResult));
     $("pageRoot").querySelectorAll("[data-ent-pay-filter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.entPayFilter=b.dataset.entPayFilter; renderPage("enterprisePayments"); }));
     $("pageRoot").querySelectorAll("[data-ent-mark-sent]").forEach((b)=>b.addEventListener("click",()=>entMarkSent(b.dataset.entMarkSent)));
     $("pageRoot").querySelectorAll("[data-ent-pay-toggle]").forEach((b)=>b.addEventListener("click",()=>{ const idv=b.dataset.entPayToggle; state.tabs.entPayOpenId=(String(state.tabs.entPayOpenId)===String(idv))?null:idv; renderPage("enterprisePayments"); }));
@@ -1882,7 +1978,13 @@
     renderSide();
     $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY)) refreshData(); else showLoginGate(); });
     $("logoutBtn")?.addEventListener("click",logout);
+    // 手機漢堡選單：開／關／點遮罩關／點任一導覽連結就關（#sideNav 本身不會被 renderSide() 整個換掉，掛在它身上安全）
+    $("mobileNavBtn")?.addEventListener("click",()=>setMobileNavOpen(!state.mobileNavOpen));
+    $("mobileNavOverlay")?.addEventListener("click",()=>setMobileNavOpen(false));
+    $("sideNav")?.addEventListener("click",(e)=>{ if(e.target.closest("a[data-page]")) setMobileNavOpen(false); });
+    $("sideNav")?.addEventListener("scroll",updateNavScrollHint,{passive:true});
     window.addEventListener("hashchange",show);
+    window.addEventListener("keydown",(e)=>{ if(e.key!=="Escape") return; if(state.tabs.entImportPanelOpen) closeEntImportPanel(); else if(state.mobileNavOpen) setMobileNavOpen(false); });
     setStatus("尚未連線","");
     show();
     const st=storageGet(sessionStorage,ADMIN_TOKEN_KEY);
