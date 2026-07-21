@@ -323,6 +323,22 @@ class SupabaseAdapter:
             detail = exc.read().decode("utf-8", "replace")[:300]
             raise RuntimeError(f"Supabase Auth user deletion failed: {exc.code} {detail}") from exc
 
+    def _fetch_auth_user_email(self, auth_user_id):
+        """GoTrue Admin 單一 user 查詢、只取 email（測試帳號網域判準用）。
+        任何失敗（逾時／找不到／格式異常）一律回 None，不讓名冊或分析請求被單一查詢拖垮。"""
+        if not self.configured() or not self._is_uuid(auth_user_id):
+            return None
+        url = f"{self.url}/auth/v1/admin/users/{urllib.parse.quote(auth_user_id)}"
+        req = urllib.request.Request(url, headers=self._service_headers(), method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            return None
+        # GoTrue 舊版包一層 {"user": {...}}，新版直接回 user 物件；兩種都接。
+        user = payload.get("user") if isinstance(payload, dict) and isinstance(payload.get("user"), dict) else payload
+        return (user or {}).get("email") if isinstance(user, dict) else None
+
     def enabled(self):
         return (
             self.configured()
@@ -495,8 +511,11 @@ class SupabaseAdapter:
                 filters["name"] = f"ilike.*{query}*"
         rows = self._select("accounts", filters)
         summaries = []
+        account_ids = []
         for account in rows or []:
             account_id = account.get("id")
+            if account_id:
+                account_ids.append(account_id)
             family_group = self._first("family_groups", {"account_id": f"eq.{account_id}", "select": "*", "limit": "1"})
             primary_person = self._first(
                 "persons",
@@ -515,7 +534,81 @@ class SupabaseAdapter:
                     {"account_id": f"eq.{account_id}", "person_id": f"eq.{primary_person.get('id')}", "select": "*", "limit": "1"},
                 )
             summaries.append(self.admin_account_rows_to_summary(account, family_group, primary_person, memberships, companion))
+        # 測試帳號判準（2026-07-21 補）：email @munea.net 網域 union 人工標記，只查一次（不逐列查），
+        # 標成 isTestAccount 給名冊隱藏／分析排除共用；查失敗一律 fail-open（見 resolve_test_account_signals）。
+        signals = self.resolve_test_account_signals(account_ids=account_ids)
+        test_ids = (signals.get("domainTestIds") or set()) | (signals.get("manualTestIds") or set())
+        for summary in summaries:
+            summary["isTestAccount"] = summary.get("accountId") in test_ids
         return summaries
+
+    def resolve_test_account_signals(self, account_ids=None, limit=200):
+        """算出測試帳號 ID 集合（不含 family/person/companion 這些重欄位，跟 load_admin_accounts
+        分開走一支輕量方法，讓 server.py 的分析排除快取可以低成本重算，不必每次都跑整份名冊 N+1 查詢）。
+        兩路判準：
+          - domainTestIds：帳號 owner（account_members role=owner status=active）的 Supabase Auth
+            email 屬 @munea.net 網域（走 GoTrue Admin 逐一查，量少可控——bounded 到傳入/掃描的帳號數）。
+          - manualTestIds：accounts.is_test_account=true（人工標記，欄位需先跑
+            supabase/sql/023_test_account_flag.sql；沒跑會查詢失敗，這裡吞掉當作沒有標記，不炸整支）。
+        account_ids=None 時自行掃描最近 limit 筆帳號（供 server.py 分析排除快取用）；
+        帶入 account_ids 時只查那批（供 load_admin_accounts 用自己已經撈到的那一頁帳號）。
+        任何一步失敗都 fail-open，回空集合，不誤傷正常帳號、也不讓呼叫端被拖垮。"""
+        domain_ids, manual_ids = set(), set()
+        if not self.enabled():
+            return {"domainTestIds": domain_ids, "manualTestIds": manual_ids}
+        if account_ids is None:
+            try:
+                limit = max(1, min(500, int(limit or 200)))
+                rows = self._select("accounts", {"select": "id", "order": "created_at.desc", "limit": str(limit)}) or []
+                account_ids = [r.get("id") for r in rows if r.get("id")]
+            except Exception:
+                account_ids = []
+        else:
+            account_ids = [aid for aid in account_ids if aid]
+        if not account_ids:
+            return {"domainTestIds": domain_ids, "manualTestIds": manual_ids}
+        id_str = ",".join(account_ids)
+        try:
+            flagged = self._select("accounts", {"select": "id", "is_test_account": "eq.true", "id": f"in.({id_str})"})
+            manual_ids = {r.get("id") for r in (flagged or []) if r.get("id")}
+        except Exception:
+            pass  # is_test_account 欄位可能還沒 migrate，人工標記先當沒有，不影響網域判準那條
+        try:
+            memberships = self._select(
+                "account_members",
+                {"account_id": f"in.({id_str})", "role": "eq.owner", "status": "eq.active", "select": "account_id,user_id"},
+            ) or []
+            checked_emails = {}
+            for m in memberships:
+                account_id, user_id = m.get("account_id"), m.get("user_id")
+                if not account_id or not user_id:
+                    continue
+                if user_id not in checked_emails:
+                    checked_emails[user_id] = self._fetch_auth_user_email(user_id)
+                email = checked_emails[user_id]
+                if email and str(email).strip().lower().endswith("@munea.net"):
+                    domain_ids.add(account_id)
+        except Exception:
+            pass
+        return {"domainTestIds": domain_ids, "manualTestIds": manual_ids}
+
+    def set_account_test_flag(self, account_id, is_test):
+        """人工標記／取消標記帳號為測試帳號（accounts.is_test_account）。只影響「名冊隱藏＋分析
+        數據排除」判準，不動任何帳務／方案／聊天資料。欄位需先跑
+        supabase/sql/023_test_account_flag.sql；沒跑會丟 SupabaseRequestError，呼叫端（server.py）
+        接住轉成好懂的錯誤碼，提示先跑 migration。"""
+        if not self.enabled():
+            raise RuntimeError("Supabase adapter is not configured")
+        if not self._is_uuid(account_id):
+            raise RuntimeError("A valid account id is required")
+        rows = self._request(
+            "PATCH",
+            "accounts",
+            query={"id": f"eq.{account_id}", "select": "id,is_test_account"},
+            payload={"is_test_account": bool(is_test)},
+            prefer="return=representation",
+        )
+        return rows[0] if rows else None
 
     def load_admin_medication_doses(self, since_date=None, limit=3000):
         """後台跨帳號用藥依從率：不依 account_id 篩選、service-role 全表查詢近 N 天服藥事件。"""

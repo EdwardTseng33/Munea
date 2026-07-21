@@ -32,7 +32,8 @@ class ApiContractInventoryTests(unittest.TestCase):
         # 2026-07-20 補：企業席次（B2B）後台管理／批次開通／月結請款 13 支管理接口
         # 2026-07-20 再補：會員維運 2 支接口（後台手動發點數／改方案）
         # 2026-07-21 再補：延長訂閱天數 1 支 ＋「成長與黏著」PMF 指標頁 /admin/growth-metrics 1 支
-        self.assertEqual(self.inventory["routeCounts"], {"brain": 88, "gateway": 23, "voice": 4})
+        # 2026-07-21 再補：測試帳號人工標記 /admin/accounts/set-test-flag 1 支
+        self.assertEqual(self.inventory["routeCounts"], {"brain": 89, "gateway": 23, "voice": 4})
         self.assertIn(Route("voice", "WS", "/"), self.routes)
 
     def test_new_source_route_must_be_registered(self) -> None:
