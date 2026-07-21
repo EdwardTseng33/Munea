@@ -352,6 +352,7 @@ ADMIN_POST_PATHS = {
     "/admin/family-health",
     "/admin/mood-trend",
     "/admin/bond-depth",
+    "/admin/growth-metrics",
     "/admin/voice-diagnostics",
     # 會員維運操作（2026-07-20 補）：後台手動發點數／改方案，一律走 admin_authorized 管理鑰匙，
     # 不是自助 API；單次金額上限與稽核紀錄見 admin_grant_credits_response / admin_set_plan_response。
