@@ -187,11 +187,18 @@
   function tip(html,x,y){ const t=$("chartTip"); t.innerHTML=html; t.hidden=false; const r=t.getBoundingClientRect(); let px=x+14,py=y+14; if(px+r.width>innerWidth-8)px=x-r.width-14; if(py+r.height>innerHeight-8)py=y-r.height-14; t.style.left=px+"px"; t.style.top=py+"px"; }
   function hideTip(){ $("chartTip").hidden=true; }
   function allZero(series){ return series.every((s)=>s.values.every((v)=>!v)); }
+  // 圖表 viewBox 寬度＝容器實際渲染寬度（1 SVG 單位＝1 CSS px），font-size 才會是「宣告多少、畫面就是多少」
+  // （2026-07-22 女巫 Gate2 抓到：舊碼 viewBox 寫死 760、CSS width:100% 縮放進卡片後，字級被整體乘上縮放係數，
+  //   手機卡寬 ~305px 時 declared 14px 只剩約 5.6px 真實渲染——不只手機，桌面不同卡寬也各自被乘出不同真實字級）
+  function chartRenderWidth(box, fallback){
+    try{ const w=Math.round(box.getBoundingClientRect().width); return w>40?w:fallback; }
+    catch(e){ return fallback; }
+  }
 
   function columnChart(box, labels, series, opts){
     opts=opts||{};
     if(!labels.length || allZero(series)){ box.innerHTML=emptyBox(opts.empty||"還沒有資料——有用戶互動後就會長出來。"); return; }
-    const W=760,H=190,L=44,R=14,T=14,B=28, pw=W-L-R, ph=H-T-B;
+    const W=chartRenderWidth(box,760),H=190,L=44,R=14,T=14,B=28, pw=W-L-R, ph=H-T-B;
     const max=niceMax(Math.max(1,...series.flatMap((s)=>s.values))), y=(v)=>T+ph-(v/max)*ph;
     const chartLabel=series.map((se)=>se.name).join("、")+`，${labels.length} 個期間`;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":chartLabel});
@@ -211,7 +218,7 @@
   function lineChart(box, labels, series, opts){
     opts=opts||{};
     if(!labels.length || allZero(series)){ box.innerHTML=emptyBox(opts.empty||"還沒有資料。"); return; }
-    const W=760,H=180,L=44,R=16,T=14,B=26, pw=W-L-R, ph=H-T-B;
+    const W=chartRenderWidth(box,760),H=180,L=44,R=16,T=14,B=26, pw=W-L-R, ph=H-T-B;
     const maxV=opts.maxY||niceMax(Math.max(1,...series.flatMap((s)=>s.values))), minV=opts.minY||0;
     const nP=labels.length, x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-((v-minV)/(maxV-minV))*ph;
     const chartLabel=series.map((se)=>se.name).join("、")+`，${labels.length} 個期間`;
@@ -235,7 +242,7 @@
   // 留存專用折線圖：留存要看的是「掉多快」，用長條看不出趨勢。
   // 算不出來的節點（例如資料還沒滿 30 天）畫成虛線空心點＋說明，不畫成 0——0 會被誤讀成「沒人回來」。
   function retentionChart(box, pts){
-    const W=760,H=230,L=48,R=24,T=26,B=44, pw=W-L-R, ph=H-T-B;
+    const W=chartRenderWidth(box,760),H=230,L=48,R=24,T=26,B=44, pw=W-L-R, ph=H-T-B;
     const nP=pts.length;
     const x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-(v/100)*ph;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"留存曲線"});
@@ -264,7 +271,7 @@
       // 第一個點的數值往右挪一點，免得跟左側刻度字黏在一起
       const anch=i===0?"start":(i===nP-1?"end":"middle");
       const vx=i===0?x(i)+8:(i===nP-1?x(i)-8:x(i));
-      const v=svg("text",{x:vx,y:cy-13,"text-anchor":anch,"font-size":13,fill:CHART.ink,"font-weight":"700"});
+      const v=svg("text",{x:vx,y:cy-13,"text-anchor":anch,"font-size":Math.max(13,axisFontPx()),fill:CHART.ink,"font-weight":"700"});
       v.textContent=Math.round(p.rate*100)+"%"; s.appendChild(v);
       if(p.cohort){
         const c=svg("text",{x:x(i),y:H-2,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted});
@@ -1893,6 +1900,15 @@
       // 隱私權指向本服務自帶的 /privacy.html：munea.net 仍掛在舊 Vercel 部署、/privacy 為 404（2026-07-20 實測）
       + `<div class="side-links"><a href="/" target="_blank" rel="noopener">App 本體</a><a href="/selftest.html" target="_blank" rel="noopener">自動巡檢</a><a href="https://munea.net" target="_blank" rel="noopener">官網</a><a href="/privacy.html" target="_blank" rel="noopener">隱私權</a></div>`;
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+    updateNavScrollHint();
+  }
+  // 手機抽屜「還可以往下捲」底部漸層提示：15 個項目常比視窗高，捲到底就自動收起提示
+  // （不是修 bug——項目本來就都在、可捲動——只是加視覺線索，不然使用者會以為選單只有這些）
+  function updateNavScrollHint(){
+    const nav=$("sideNav"), hint=$("navScrollHint");
+    if(!nav||!hint) return;
+    const canScrollMore = nav.scrollHeight - nav.scrollTop - nav.clientHeight > 4;
+    hint.classList.toggle("show", canScrollMore);
   }
   function go(id,arg){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id+(arg?":"+arg:""); }
   // 手機導覽抽屜：切頁就收起來，不必使用者自己點掉（2026-07-22 女巫 Gate2）
@@ -1903,6 +1919,7 @@
     if(ov) ov.hidden=!state.mobileNavOpen;
     if(btn) btn.setAttribute("aria-expanded", state.mobileNavOpen?"true":"false");
     document.body.classList.toggle("mobile-nav-locked", state.mobileNavOpen);
+    if(state.mobileNavOpen) setTimeout(updateNavScrollHint,50); // 抽屜滑入動畫跑完後量測才準
   }
   function show(){
     setMobileNavOpen(false);
@@ -1965,6 +1982,7 @@
     $("mobileNavBtn")?.addEventListener("click",()=>setMobileNavOpen(!state.mobileNavOpen));
     $("mobileNavOverlay")?.addEventListener("click",()=>setMobileNavOpen(false));
     $("sideNav")?.addEventListener("click",(e)=>{ if(e.target.closest("a[data-page]")) setMobileNavOpen(false); });
+    $("sideNav")?.addEventListener("scroll",updateNavScrollHint,{passive:true});
     window.addEventListener("hashchange",show);
     window.addEventListener("keydown",(e)=>{ if(e.key!=="Escape") return; if(state.tabs.entImportPanelOpen) closeEntImportPanel(); else if(state.mobileNavOpen) setMobileNavOpen(false); });
     setStatus("尚未連線","");

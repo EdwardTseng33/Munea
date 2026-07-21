@@ -391,6 +391,16 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
   .brand { padding: 4px 8px 18px; }
   .nav-group { margin-top: 11px; }
   #sideNav { display: block; overflow-y: auto; flex: 1 1 auto; }
+  /* 抽屜還可往下捲時的底部漸層提示：15 個項目在多數手機視窗高度裝不下，
+     不提示的話容易被誤判成「只有 12 項」（2026-07-22 女巫 Gate2 複核）——
+     實際上全部項目都在、可捲動，這裡只是加視覺提示，不是修 bug */
+  .nav-scroll-hint { height: 0; position: relative; flex: 0 0 auto; pointer-events: none; }
+  .nav-scroll-hint::before {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 30px;
+    background: linear-gradient(to bottom, rgba(54,66,62,0), var(--deep));
+    opacity: 0; transition: opacity .18s ease;
+  }
+  .nav-scroll-hint.show::before { opacity: 1; }
   .side-nav a { white-space: normal; }
   .content { padding: 15px 15px 42px; }
   .kpi-row { grid-template-columns: 1fr; }
