@@ -142,16 +142,34 @@ async def main():
             a_on = t; break
     # ── 嘴巴動起點（y33-50% 區塊）──
     m_on = None
+    mouth_motion = []
     prev = None
     for t, a in vframes:
         h, wd = a.shape[:2]
         m = a[int(h*0.33):int(h*0.50), int(wd*0.30):int(wd*0.70)].astype(np.int16)
         if prev is not None and prev.shape == m.shape and t >= t_speak:
-            if float(np.mean(np.abs(m - prev))) > 2.0 and m_on is None:
+            score = float(np.mean(np.abs(m - prev)))
+            mouth_motion.append((t, score))
+            if score > 2.0 and m_on is None:
                 m_on = t
         prev = m
-    print(f"[RESULT] 聲音軌開始出聲 t={a_on and round(a_on,2)}s · 嘴巴開始動 t={m_on and round(m_on,2)}s "
-          f"· 臉聲差={round(m_on - a_on, 2) if (a_on and m_on) else '量不到'}s", flush=True)
+
+    # A single poster/idle transition can move enough pixels to trip the old
+    # first-frame detector even though the mouth is visibly still. Require
+    # sustained motion in at least 5 of the next 8 frames before calling it
+    # speech motion; retain the raw first transition for diagnostics.
+    m_on_sustained = None
+    for i, (t, _) in enumerate(mouth_motion):
+        window = [score for wt, score in mouth_motion[i:i + 8] if wt - t <= 0.45]
+        if len(window) >= 5 and sum(score > 2.0 for score in window) >= 5:
+            m_on_sustained = t
+            break
+    measured_mouth_on = m_on_sustained or m_on
+    print(f"[RESULT] 聲音軌開始出聲 t={a_on and round(a_on,2)}s"
+          f" · 嘴巴持續動 t={m_on_sustained and round(m_on_sustained,2)}s"
+          f" · 首次畫面變化 t={m_on and round(m_on,2)}s"
+          f" · 臉聲差={round(measured_mouth_on - a_on, 2) if (a_on and measured_mouth_on) else '量不到'}s",
+          flush=True)
     print(f"[t] 收到影像格 {len(vframes)}、聲音包 {len(aframes)}"
           f"、解析度 {received_sizes[0][0]}x{received_sizes[0][1]}", flush=True)
     # 存證：聲音軌存 wav、講話中段影格存 3 張
@@ -162,8 +180,9 @@ async def main():
         ww.setnchannels(1); ww.setsampwidth(2); ww.setframerate(srr)
         ww.writeframes(pcm.tobytes()); ww.close()
     saved = 0
+    evidence_anchor = a_on or measured_mouth_on
     for t, a in vframes:
-        if m_on and m_on + 0.5 <= t <= m_on + 2.0 and saved < 3:
+        if evidence_anchor and evidence_anchor - 0.3 <= t <= evidence_anchor + 1.2 and saved < 6:
             Image.fromarray(a).save(os.path.join(OUT, f"speak_{t:05.2f}s.png")); saved += 1
     print("[t] 存證於", OUT, flush=True)
 

@@ -15,6 +15,7 @@ const testChar = process.env.B2B_TEST_CHAR || 'a05';
 const captureIdle = process.env.B2B_CAPTURE_IDLE === '1';
 const mockConnect = process.env.B2B_MOCK_CONNECT === '1';
 const verifySustained = process.env.B2B_VERIFY_SUSTAINED === '1';
+const fakeAudioFile = process.env.B2B_FAKE_AUDIO_FILE || '';
 const viewport = {
   width: Number(process.env.B2B_VIEWPORT_WIDTH || 430),
   height: Number(process.env.B2B_VIEWPORT_HEIGHT || 932),
@@ -32,6 +33,7 @@ const browser = await chromium.launch({
     '--autoplay-policy=no-user-gesture-required',
     '--use-fake-device-for-media-stream',
     '--use-fake-ui-for-media-stream',
+    ...(fakeAudioFile ? [`--use-file-for-fake-audio-capture=${fakeAudioFile}`] : []),
   ],
 });
 
