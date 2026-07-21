@@ -88,7 +88,7 @@
     growth: ["/admin/growth-metrics", { days: 30 }],
   };
 
-  const CHART = { teal: "#3AA8A0", coral: "#D98841", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#3A352E", muted: "#5A6963" };
+  const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7B76" };
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -165,7 +165,7 @@
   // ══════════ 元件 ══════════
   function kpiRow(items){
     return `<div class="kpi-row">${items.map((k,i)=>`
-      <div class="kpi ${i===0&&k.star?(k.tone==="alert"?"kpi-accent-alert":"kpi-accent"):""}">
+      <div class="kpi ${k.star?(k.tone==="alert"?"kpi-accent-alert":"kpi-accent"):""}">
         <div class="kpi-top"><span class="kpi-label">${esc(k.label)}${k.info?` <span class="kpi-info" title="${esc(k.info)}">ⓘ</span>`:""}</span></div>
         <div class="kpi-value">${esc(k.value)}${k.unit?`<span class="unit">${esc(k.unit)}</span>`:""}</div>
         ${k.sub?`<div class="kpi-sub">${esc(k.sub)}</div>`:""}
@@ -954,7 +954,7 @@
       { label:"企業客戶數", value:n(clients.length), sub:"目前合作中的公司", star:true },
       { label:"累計啟用席次", value:n(activeSeats), sub:"所有公司加總" },
       { label:"本月預估金額", value:fmtMoney(monthly), sub:"依目前啟用席次估算" },
-      { label:"逾期未付", value:n(overdue.length), sub:overdue.length?"要優先催收":"目前沒有" },
+      { label:"逾期未付", value:n(overdue.length), sub:overdue.length?"要優先催收":"目前沒有", star:overdue.length>0, tone:"alert" },
     ]);
     const addBtn=`<button type="button" class="btn-sm" data-ent-new-client>＋ 新增企業客戶</button>`;
     if(!clients.length){
