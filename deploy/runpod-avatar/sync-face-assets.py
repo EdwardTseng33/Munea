@@ -75,11 +75,20 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--target-dir", default="/root",
                         help="條件圖要放哪（預設 /root，跟 CHAR_SRC 對齊）")
+    parser.add_argument("--lane", choices=("all", "prod", "demo"), default="all",
+                        help="只重建指定服務線的條件圖")
+    parser.add_argument("--frame-size", type=int, choices=(512, 640, 768),
+                        help="依這個服務程序的實際推論尺寸輸出條件圖")
     args = parser.parse_args()
+
+    if args.frame_size and args.lane == "all":
+        parser.error("--frame-size 需要同時指定 --lane prod 或 --lane demo")
 
     portraits: dict[str, Image.Image] = {}
     changed, checked = 0, 0
     for char, contract in sorted(AVATAR_RENDER_CONTRACTS.items()):
+        if args.lane != "all" and contract["lane"] != args.lane:
+            continue
         name = BACKGROUND_OF[char]
         if name not in portraits:
             print(f"[{name}] 取立繪")
@@ -92,6 +101,8 @@ def main() -> int:
 
         crop = contract["source_crop"]
         model = contract["model_input"]
+        if args.frame_size:
+            model = {"width": args.frame_size, "height": args.frame_size}
         box = (crop["x"], crop["y"], crop["x"] + crop["width"], crop["y"] + crop["height"])
         built = portrait.crop(box).resize((model["width"], model["height"]), Image.Resampling.LANCZOS)
 

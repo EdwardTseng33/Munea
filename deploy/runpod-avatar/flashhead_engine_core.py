@@ -46,6 +46,29 @@ def parse_frame_size(value):
     return size
 
 
+def resolve_char_lane(char_src, default_char="a05", allowed_chars=""):
+    """Return an isolated character map for one service process.
+
+    Empty ``allowed_chars`` preserves the legacy all-character behavior. A
+    configured lane fails before GPU initialization when it contains a typo or
+    excludes its own default character.
+    """
+    default = str(default_char or "a05").strip().lower() or "a05"
+    if isinstance(allowed_chars, str):
+        allowed = frozenset(
+            value.strip().lower() for value in allowed_chars.split(",") if value.strip()
+        )
+    else:
+        allowed = frozenset(str(value).strip().lower() for value in allowed_chars if str(value).strip())
+    allowed = allowed or frozenset(char_src)
+    unknown = sorted(allowed - set(char_src))
+    if unknown:
+        raise ValueError("MUNEA_FH_ALLOWED_CHARS contains unsupported chars: " + ",".join(unknown))
+    if default not in allowed:
+        raise ValueError("MUNEA_FH_DEFAULT_CHAR must be included in MUNEA_FH_ALLOWED_CHARS")
+    return ({char: path for char, path in char_src.items() if char in allowed}, default, allowed)
+
+
 # ---------------------------------------------------------------------------
 # FrameSink / AudioOutBuffer -- copied verbatim from the single-instance file
 # (old flashhead_server.py lines 94-223). Logic untouched, only relocated;

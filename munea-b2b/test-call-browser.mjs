@@ -228,8 +228,8 @@ try {
         return stats.vidFrames >= 40 && stats.audioBytes > 0 &&
           typeof Face !== 'undefined' && Face.transport === 'webrtc' && Face.on &&
           Face._audioReceiver && Face._renderStream?.getAudioTracks().length > 0 &&
-          document.querySelector('#faceVid')?.muted === true &&
-          typeof Live !== 'undefined' && Live.playHead > 0;
+          document.querySelector('#faceVid')?.muted === false &&
+          typeof Live !== 'undefined' && Live.playHead === 0;
       }, null, { timeout: 60_000 });
       await page.waitForTimeout(Number(process.env.B2B_POST_READY_MS || 8000));
     }

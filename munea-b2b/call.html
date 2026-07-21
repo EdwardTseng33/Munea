@@ -9,9 +9,10 @@
 <style>
   :root{
     --frame-w:min(100vw, calc(100dvh * 1080 / 1920));
-    /* Match the production App's native 1080x1080 FlashHead square. The two
-       characters use different source Y offsets; pickChar() sets --box-top. */
-    --box-left:0%; --box-top:9.895833%; --box-width:100%; --box-height:56.25%;
+    /* Demo uses the 1080x1440 head-to-shoulder crop inside the 1080x1920 phone
+       canvas. applyAvatarRenderContract() replaces these safe defaults with
+       the authenticated engine contract before the live layer is shown. */
+    --box-left:0%; --box-top:7.291667%; --box-width:100%; --box-height:75%;
     --feather-top:4%; --feather-bottom-start:82%;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -29,7 +30,7 @@
   .cover.hide{opacity:0;pointer-events:none}
   .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:opacity .18s linear;z-index:3}
   .overlay.on{opacity:1}
-  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:cover !important;display:block}
+  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:fill !important;display:block}
   .overlay:not(.stream) canvas{display:none}
   .overlay.stream video{display:none}
   .overlay{
@@ -108,7 +109,7 @@
       <canvas id="faceCanvas" width="512" height="512"></canvas>
     </div>
     <div class="scrim"></div>
-    <div class="demo-version" aria-label="Demo 版本 1.0.1">DEMO 1.0.1</div>
+    <div class="demo-version" aria-label="Demo 版本 1.0.2">DEMO 1.0.2</div>
   </div>
 
   <div class="top">
@@ -765,7 +766,6 @@ Face.start = async function(char){
     let msg; try{ msg = JSON.parse(ev.data); }catch(e){ return; }
     if (msg.type === 'playout_start') {
       dbgLine('[face] server playout start generation=' + msg.generation);
-      Live.releaseLocalPlayout();
     }
   };
   this.on = true;
@@ -799,11 +799,13 @@ Face.prepareOpeningPath = async function(){
   if (!this.on) throw new Error('影音暖機期間連線中斷');
   overlay.classList.add('on');
   IdleMotion.stop();
-  // Voice audio is played locally from the reliable Taiwan WebSocket after the
-  // RunPod playout marker. Keep the lossy trans-Pacific WebRTC audio muted.
-  faceVid.muted = true;
+  // One media element must own both RTP clocks. Playing Voice PCM through a
+  // separate AudioContext made the mouth and audio drift even when each stream
+  // was individually healthy. The server releases generated audio and video
+  // together after its prebuffer, so unmute that bundled WebRTC stream here.
+  faceVid.muted = false;
   this._tryPlay();
-  dbgLine('[face] opening A/V warm-up complete; one player owns both tracks');
+  dbgLine('[face] opening A/V warm-up complete; WebRTC owns both A/V tracks');
   return true;
 };
 Face.feed = function(buf){
@@ -911,10 +913,10 @@ const Live = {
     }catch(e){ dbgLine('[voice] playback prime failed: ' + e.message); return false; }
   },
   playPcm(buf){
-    if (Face.transport === 'webrtc' && !this._localPlayoutOn){
-      this._pendingPcm.push(buf.slice(0));
-      return;
-    }
+    // WebRTC mode sends this PCM to FlashHead but does not play it through a
+    // second browser clock. The bundled avatar media stream is the only audible
+    // output. Stream diagnostics still need the local PCM fallback.
+    if (Face.transport === 'webrtc') return;
     this._schedulePcm(buf, Face.transport === 'stream' ? 0.82 : 0.02);
   },
   _schedulePcm(buf, initialDelay){
@@ -933,10 +935,10 @@ const Live = {
     src.onended = ()=>{ const i=this.playSources.indexOf(src); if(i>=0)this.playSources.splice(i,1); };
   },
   releaseLocalPlayout(){
-    if (Face.transport !== 'webrtc' || this._localPlayoutOn) return;
-    this._localPlayoutOn = true;
-    const pending = this._pendingPcm.splice(0);
-    for (const pcm of pending) this._schedulePcm(pcm, 0.02);
+    // Kept as a no-op for older browser bundles that may call it. WebRTC audio
+    // is intentionally never duplicated into AudioContext.
+    this._pendingPcm = [];
+    this._localPlayoutOn = false;
   },
   stopPlayback(){
     for (const src of this.playSources.splice(0)){ try{ src.stop(); }catch(e){} }

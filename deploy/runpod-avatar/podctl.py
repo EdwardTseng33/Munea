@@ -194,6 +194,17 @@ def managed_pods(prefix: str = "munea-vocaframe-backup") -> list[dict[str, Any]]
     return [pod for pod in list_pods() if str(pod.get("name", "")).startswith(prefix)]
 
 
+def redact_pod_for_output(pod: dict[str, Any]) -> dict[str, Any]:
+    """Make CLI status safe to paste into logs, issues, and support chats."""
+    safe = json.loads(json.dumps(pod))
+    env = safe.get("env") or {}
+    for key in list(env):
+        upper = str(key).upper()
+        if any(marker in upper for marker in ("PASSWORD", "SECRET", "TOKEN", "PRIVATE_KEY")):
+            env[key] = "[redacted]"
+    return safe
+
+
 def _print_list() -> None:
     pods = list_pods()
     if not pods:
@@ -282,7 +293,9 @@ def main() -> None:
                               for v in remaining],
             }, indent=2, ensure_ascii=False))
         elif command == "status":
-            print(json.dumps(get_pod(sys.argv[2]), indent=2, ensure_ascii=False)[:5000])
+            print(json.dumps(
+                redact_pod_for_output(get_pod(sys.argv[2])), indent=2, ensure_ascii=False
+            )[:5000])
         elif command == "create":
             allow_unbaked = "--allow-unbaked" in sys.argv
             pod = create_pod(require_template=not allow_unbaked)

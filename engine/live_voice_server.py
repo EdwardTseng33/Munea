@@ -810,6 +810,14 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     if allow_events and not demo_mode:
         tools.append(_EVENT_TOOLS)
     phrases = asr_adaptation_phrases(char, name, user, topics, location)
+    # The public Demo is used in a controlled, close-mic sales flow. End its
+    # turn sooner than the senior-friendly App profile, while preserving the
+    # App's 800 ms breathing window and noise-tolerant end sensitivity.
+    end_sensitivity = (
+        types.EndSensitivity.END_SENSITIVITY_HIGH
+        if demo_mode else types.EndSensitivity.END_SENSITIVITY_LOW
+    )
+    silence_duration_ms = 550 if demo_mode else 800
     transcription_config = types.AudioTranscriptionConfig(
         language_hints=types.LanguageHints(language_codes=["cmn-Hant-TW"]),
         adaptation_phrases=phrases,
@@ -832,9 +840,9 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
                 start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
-                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
+                end_of_speech_sensitivity=end_sensitivity,
                 prefix_padding_ms=300,
-                silence_duration_ms=800,
+                silence_duration_ms=silence_duration_ms,
             ),
             activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
