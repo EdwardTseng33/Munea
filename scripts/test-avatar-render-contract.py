@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import os
 import re
 import subprocess
 import sys
@@ -208,13 +209,23 @@ def check_runtime_demo_asset_build() -> None:
     tool = ROOT / "deploy" / "runpod-avatar" / "sync-face-assets.py"
     source = ROOT / "munea-b2b" / "flashhead"
     with tempfile.TemporaryDirectory(prefix="munea-demo-assets-") as output:
-        subprocess.run(
+        child_env = os.environ.copy()
+        child_env["PYTHONIOENCODING"] = "utf-8"
+        result = subprocess.run(
             [sys.executable, str(tool), "--source", str(source), "--target-dir", output,
              "--lane", "demo", "--frame-size", "768"],
-            check=True,
+            check=False,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            env=child_env,
         )
+        if result.returncode != 0:
+            raise AssertionError(
+                "Demo 768 runtime asset build failed\n"
+                f"stdout:\n{result.stdout}\n"
+                f"stderr:\n{result.stderr}"
+            )
         built = sorted(Path(output).glob("*.png"))
         assert [path.name for path in built] == ["char-a05B-demo.png", "char-a06B-demo.png"]
         for path in built:
