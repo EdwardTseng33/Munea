@@ -66,7 +66,7 @@
   // 相容目前已部署的薄門；它不是管理憑證。部署端可在載入本檔前設定
   // window.MUNEA_ADMIN_APP_KEY，下一步即可把這個相容值從靜態資產移除。
   const LEGACY_APP_KEY = "mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5";
-  const state = { data: null, errors: {}, connected: false, loading: false, page: "overview", tabs: {}, base: "", token: "" };
+  const state = { data: null, errors: {}, connected: false, loading: false, page: "overview", tabs: {}, base: "", token: "", mobileNavOpen: false };
 
   const EP_LIST = {
     northStar: ["/admin/north-star", { days: 30 }],
@@ -88,6 +88,8 @@
 
   const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7B76" };
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
+  // 手機圖表軸字鎖 14px（2026-07-22 女巫 Gate2 · bondDepth/growth 反映最明顯，其餘圖表共用同一套函式一併受益）
+  function axisFontPx(){ try{ return window.innerWidth<=880?14:11; }catch(e){ return 11; } }
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const n = (v) => (v==null||v===""||isNaN(v))?"–":Number(v).toLocaleString("en-US");
@@ -193,7 +195,7 @@
     const max=niceMax(Math.max(1,...series.flatMap((s)=>s.values))), y=(v)=>T+ph-(v/max)*ph;
     const chartLabel=series.map((se)=>se.name).join("、")+`，${labels.length} 個期間`;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":chartLabel});
-    for(let t=0;t<=4;t++){ const val=max/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
+    for(let t=0;t<=4;t++){ const val=max/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
     const band=pw/labels.length, groupW=Math.min(band*0.62,series.length*20+(series.length-1)*4), barW=Math.min(22,(groupW-(series.length-1)*4)/series.length);
     const lstep=Math.max(1,Math.ceil(labels.length/8));
     labels.forEach((lb,i)=>{ const cx=L+band*i+band/2,startX=cx-groupW/2;
@@ -201,7 +203,7 @@
         const path=svg("path",{d:h<=0.5?`M ${x} ${T+ph} h ${barW}`:`M ${x} ${T+ph} V ${top+4} Q ${x} ${top} ${x+4} ${top} H ${x+barW-4} Q ${x+barW} ${top} ${x+barW} ${top+4} V ${T+ph} Z`,fill:se.color});
         path.addEventListener("mousemove",(e)=>tip(`<div>${esc(lb)}${series.length>1?" · "+esc(se.name):""}</div><b>${n(v)}</b>${opts.unit?" "+opts.unit:""}`,e.clientX,e.clientY));
         path.addEventListener("mouseleave",hideTip); s.appendChild(path); });
-      if(i%lstep===0||(i===labels.length-1&&(labels.length-1)%lstep>=Math.ceil(lstep/2))){ const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tl.textContent=lb; s.appendChild(tl); } });
+      if(i%lstep===0||(i===labels.length-1&&(labels.length-1)%lstep>=Math.ceil(lstep/2))){ const tl=svg("text",{x:cx,y:H-8,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted}); tl.textContent=lb; s.appendChild(tl); } });
     box.innerHTML=""; box.appendChild(s);
     if(series.length>1){ const lg=document.createElement("div"); lg.className="legend"; lg.innerHTML=series.map((se)=>`<span class="key"><span class="swatch" style="background:${se.color}"></span>${esc(se.name)}</span>`).join(""); box.appendChild(lg); }
   }
@@ -214,9 +216,9 @@
     const nP=labels.length, x=(i)=>L+(nP<=1?pw/2:(i/(nP-1))*pw), y=(v)=>T+ph-((v-minV)/(maxV-minV))*ph;
     const chartLabel=series.map((se)=>se.name).join("、")+`，${labels.length} 個期間`;
     const s=svg("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":chartLabel});
-    for(let t=0;t<=4;t++){ const val=minV+(maxV-minV)/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
+    for(let t=0;t<=4;t++){ const val=minV+(maxV-minV)/4*t,gy=y(val); s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1})); const tx=svg("text",{x:L-8,y:gy+4,"text-anchor":"end","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=n(Math.round(val)); s.appendChild(tx); }
     const step=Math.max(1,Math.ceil(nP/7));
-    for(let i=0;i<nP;i+=step){ const tx=svg("text",{x:x(i),y:H-6,"text-anchor":"middle","font-size":11,fill:CHART.muted}); tx.textContent=labels[i]; s.appendChild(tx); }
+    for(let i=0;i<nP;i+=step){ const tx=svg("text",{x:x(i),y:H-6,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=labels[i]; s.appendChild(tx); }
     series.forEach((se)=>{ const pts=se.values.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
       if(se.wash) s.appendChild(svg("polygon",{points:`${L},${T+ph} ${pts} ${x(nP-1)},${T+ph}`,fill:se.color,opacity:.1}));
       s.appendChild(svg("polyline",{points:pts,fill:"none",stroke:se.color,"stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
@@ -240,7 +242,7 @@
     for(let t=0;t<=4;t++){
       const val=25*t, gy=y(val);
       s.appendChild(svg("line",{x1:L,x2:W-R,y1:gy,y2:gy,stroke:CHART.grid,"stroke-width":1}));
-      const tx=svg("text",{x:L-10,y:gy+4,"text-anchor":"end","font-size":11,fill:CHART.muted}); tx.textContent=val+"%"; s.appendChild(tx);
+      const tx=svg("text",{x:L-10,y:gy+4,"text-anchor":"end","font-size":axisFontPx(),fill:CHART.muted}); tx.textContent=val+"%"; s.appendChild(tx);
     }
     const known=pts.map((p,i)=>({...p,i})).filter((p)=>p.rate!=null);
     if(known.length>1){
@@ -248,12 +250,12 @@
         fill:"none",stroke:cc.teal,"stroke-width":2.5,"stroke-linejoin":"round","stroke-linecap":"round"}));
     }
     pts.forEach((p,i)=>{
-      const lb=svg("text",{x:x(i),y:H-16,"text-anchor":"middle","font-size":12,fill:p.rate==null?CHART.muted:CHART.ink,"font-weight":p.rate==null?"400":"600"});
+      const lb=svg("text",{x:x(i),y:H-16,"text-anchor":"middle","font-size":axisFontPx(),fill:p.rate==null?CHART.muted:CHART.ink,"font-weight":p.rate==null?"400":"600"});
       lb.textContent=p.label; s.appendChild(lb);
       if(p.rate==null){
         // 尚未到期：虛線空心點＋「還要 N 天」，明白區分「還沒到」與「掉到 0」
         s.appendChild(svg("circle",{cx:x(i),cy:y(0)-ph/2,r:6,fill:"#fff",stroke:CHART.muted,"stroke-width":1.5,"stroke-dasharray":"3 3"}));
-        const w=svg("text",{x:x(i),y:y(0)-ph/2-14,"text-anchor":"middle","font-size":11,fill:CHART.muted});
+        const w=svg("text",{x:x(i),y:y(0)-ph/2-14,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted});
         w.textContent=p.wait||"還沒到"; s.appendChild(w);
         return;
       }
@@ -265,7 +267,7 @@
       const v=svg("text",{x:vx,y:cy-13,"text-anchor":anch,"font-size":13,fill:CHART.ink,"font-weight":"700"});
       v.textContent=Math.round(p.rate*100)+"%"; s.appendChild(v);
       if(p.cohort){
-        const c=svg("text",{x:x(i),y:H-2,"text-anchor":"middle","font-size":10.5,fill:CHART.muted});
+        const c=svg("text",{x:x(i),y:H-2,"text-anchor":"middle","font-size":axisFontPx(),fill:CHART.muted});
         c.textContent=`${p.retained}／${p.cohort} 人`; s.appendChild(c);
       }
     });
@@ -317,6 +319,7 @@
     $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
     pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
     bindPageEvents(id);
+    renderEntImportPanel(); // body-level面板，每次 renderPage 都同步一次狀態（開／關／內容）
   }
 
   function renderOverview(){
@@ -797,8 +800,10 @@
     return html;
   }
 
+  // data-label 帶欄名到每個 td——手機版靠 CSS 把 table 轉「一列一卡」的堆疊卡片（見 admin.css .table-wrap 手機規則），
+  // 不必每頁另寫一份卡片版 markup；欄名是空字串（多半是操作鈕/勾選框欄）就不印 label、卡片內靠右顯示。
   function tableHTML(cols, rows, rowClasses){
-    return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th scope="col">${c?esc(c):'<span class="sr-only">操作</span>'}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${(rowClasses&&rowClasses[i])||""}">${r.map((c)=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    return `<div class="table-wrap"><table><thead><tr>${cols.map((c)=>`<th scope="col">${c?esc(c):'<span class="sr-only">操作</span>'}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr class="${(rowClasses&&rowClasses[i])||""}">${r.map((c,j)=>`<td data-label="${esc(cols[j]||"")}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
 
   function openAcctDetail(idx){
@@ -989,16 +994,63 @@
       html+=`<div class="card tbl-card"><div class="card-head"><div><h3>企業客戶列表</h3><div class="card-note">共 ${clients.length} 家 · 逾期未付以紅色標示</div></div>${addBtn}</div>${tableHTML(["公司","合約期間","席次(已啟用／上限)","狀態","本月預估","累計欠款",""], rows, rowClasses)}</div>`;
       html+=`<div id="entClientActionNote"></div>`;
     }
-    html+=entImportPanelHTML();
     return html;
   }
-  // 名單匯入滑出面板：桌機從右側滑入、手機變底部滿版半層（見 admin.css .slideover-*）
-  function entImportPanelHTML(){
-    if(!state.tabs.entImportPanelOpen) return "";
-    return `<div class="slideover-overlay" id="entImportOverlay"><div class="slideover-panel" role="dialog" aria-modal="true" aria-labelledby="entImportPanelTitle">
+  // 名單匯入滑出面板：跟 openAcctDetail／openConfirmModal 一樣掛在 document.body（不是 #pageRoot 裡）。
+  // 2026-07-22 踩過一次真的坑：原本把面板字串併進 renderEnterpriseClients() 回傳的 html、面板就長在 .layout 底下；
+  // 面板開啟時 bindPageEvents 把 .layout 設 inert 想鎖住背景，結果連面板自己的按鈕也一起被鎖到完全點不動。
+  // 面板獨立掛在 body，鎖 .layout inert 才只鎖背景、不會鎖到自己。
+  function renderEntImportPanel(){
+    const layout=document.querySelector(".layout");
+    if(!state.tabs.entImportPanelOpen){
+      const old=$("entImportPanelRoot"); if(old) old.remove();
+      if(layout) layout.inert=false;
+      return;
+    }
+    if(layout) layout.inert=true;
+    let root=$("entImportPanelRoot");
+    if(!root){ root=document.createElement("div"); root.id="entImportPanelRoot"; document.body.appendChild(root); }
+    root.innerHTML=`<div class="slideover-overlay" id="entImportOverlay"><div class="slideover-panel" role="dialog" aria-modal="true" aria-labelledby="entImportPanelTitle">
       <div class="slideover-head"><h2 id="entImportPanelTitle">匯入名單</h2><button type="button" class="modal-x" id="entImportPanelClose" aria-label="關閉匯入名單面板">✕</button></div>
       <div class="slideover-body">${renderEnterpriseImportBody()}</div>
+      ${entImportPanelFooterHTML()}
     </div></div>`;
+    bindEntImportPanelEvents(root);
+  }
+  function bindEntImportPanelEvents(root){
+    const close=root.querySelector("#entImportPanelClose"); if(close) close.addEventListener("click",closeEntImportPanel);
+    const overlay=root.querySelector("#entImportOverlay"); if(overlay) overlay.addEventListener("click",(e)=>{ if(e.target===overlay) closeEntImportPanel(); });
+    const eic=root.querySelector("#entImportClient"); if(eic){ eic.value=(state.tabs.entImport&&state.tabs.entImport.clientId)||""; eic.addEventListener("change",()=>{ (state.tabs.entImport||(state.tabs.entImport={})).clientId=eic.value; }); }
+    root.querySelectorAll("[data-ent-template]").forEach((b)=>b.addEventListener("click",entDownloadTemplate));
+    const eif=root.querySelector("#entImportFile"); if(eif){ eif.addEventListener("change",()=>{
+      const f=eif.files&&eif.files[0]; if(!f) return;
+      const im=state.tabs.entImport||(state.tabs.entImport={});
+      im.fileName=f.name; im.result=null;
+      const reader=new FileReader();
+      reader.onload=()=>{ im.fileText=String(reader.result||""); entRunImportPreview(); };
+      reader.readAsText(f);
+    }); }
+    root.querySelectorAll("[data-ent-import-commit]").forEach((b)=>b.addEventListener("click",entRunImportCommit));
+    root.querySelectorAll("[data-ent-import-download]").forEach((b)=>b.addEventListener("click",entDownloadImportResult));
+    root.querySelectorAll("[data-ent-import-cancel]").forEach((b)=>b.addEventListener("click",entCancelImportPreview));
+    root.querySelectorAll("[data-ent-import-close]").forEach((b)=>b.addEventListener("click",closeEntImportPanel));
+  }
+  // Sticky footer：取消／確認匯入、下載結果／完成關閉——手機版常駐畫面底部，不必滑到最底才摸得到（2026-07-22 女巫 Gate2 P0）
+  function entImportPanelFooterHTML(){
+    const im=state.tabs.entImport||{};
+    if(im.result){
+      return `<div class="slideover-footer"><div class="slideover-footer-actions"><button type="button" class="btn-ghost btn-sm" data-ent-import-download>下載結果清單</button><button type="button" class="btn-sm" data-ent-import-close>完成，關閉</button></div></div>`;
+    }
+    if(im.preview){
+      const hasOverQuota=(im.preview.overQuota||[]).length>0;
+      return `<div class="slideover-footer"><div class="slideover-footer-note" id="entImportCommitNote">${hasOverQuota?"含超過席次上限的筆數，匯入前會再確認一次":"確認後才會真的寫入名單"}</div><div class="slideover-footer-actions"><button type="button" class="btn-ghost btn-sm" data-ent-import-cancel>取消</button><button type="button" class="btn-sm" data-ent-import-commit ${im.committing?"disabled":""}>${im.committing?"匯入中…":"確認匯入"}</button></div></div>`;
+    }
+    return "";
+  }
+  function entCancelImportPreview(){
+    const im=state.tabs.entImport||(state.tabs.entImport={});
+    im.preview=null; im.fileText=""; im.fileName="";
+    renderPage(state.page);
   }
   let entImportPrevFocus=null;
   function openEntImportPanel(){
@@ -1205,11 +1257,8 @@
         const rows=list.map((r)=>[esc(r.email||r),esc(r.note||r.reason||"")]);
         return card(`${label}（${list.length} 筆）`,"",tableHTML(["Email","備註／原因"],rows));
       }).join("");
-      const hasOverQuota=(p.overQuota||[]).length>0;
-      html+=`<div class="card"><div class="card-head"><div><h3>確認匯入</h3><div class="card-note">${hasOverQuota?"含超過席次上限的筆數，匯入前會再確認一次":"確認後才會真的寫入名單"}</div></div></div>
-        <button type="button" class="btn-sm" data-ent-import-commit ${im.committing?"disabled":""}>${im.committing?"匯入中…":"確認匯入"}</button>
-        <div id="entImportCommitNote"></div>
-      </div>`;
+      // 「確認匯入」動作與備註移到滑出面板的 sticky footer（entImportPanelFooterHTML）——
+      // 手機版原本要滑到最底才摸得到按鈕，footer 常駐後拇指可及（2026-07-22 女巫 Gate2 P0）
     }
     if(im.result){
       const r=im.result, created=r.created||[], activated=r.activated||[], skipped=r.skipped||[], fail=r.failed||[];
@@ -1218,8 +1267,8 @@
         ${fail.length?tableHTML(["Email","失敗原因"],fail.map((x)=>[esc(x.email||x),esc(x.error||x.reason||"")])):""}
         ${skipped.length?tableHTML(["Email","跳過原因"],skipped.map((x)=>[esc(x.email||x),esc(entSkipReasonZh(x.skipReason))])):""}
         ${(!fail.length&&!skipped.length)?emptyBox("全部成功，沒有跳過或失敗的筆數。"):""}
-        <button type="button" class="btn-ghost btn-sm" style="margin-top:10px" data-ent-import-download>下載結果清單</button>
       `);
+      // 「下載結果清單／完成關閉」也移到 sticky footer
     }
     return html;
   }
@@ -1846,7 +1895,17 @@
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
   }
   function go(id,arg){ if(!TITLE[id]) id="overview"; state.page=id; location.hash="#"+id+(arg?":"+arg:""); }
+  // 手機導覽抽屜：切頁就收起來，不必使用者自己點掉（2026-07-22 女巫 Gate2）
+  function setMobileNavOpen(open){
+    state.mobileNavOpen=!!open;
+    const sb=document.querySelector(".sidebar"), ov=$("mobileNavOverlay"), btn=$("mobileNavBtn");
+    if(sb) sb.classList.toggle("is-open", state.mobileNavOpen);
+    if(ov) ov.hidden=!state.mobileNavOpen;
+    if(btn) btn.setAttribute("aria-expanded", state.mobileNavOpen?"true":"false");
+    document.body.classList.toggle("mobile-nav-locked", state.mobileNavOpen);
+  }
   function show(){
+    setMobileNavOpen(false);
     const raw=(location.hash||"#overview").slice(1), sep=raw.indexOf(":");
     const id=sep>-1?raw.slice(0,sep):raw, arg=sep>-1?raw.slice(sep+1):"";
     state.page=TITLE[id]?id:"overview";
@@ -1871,27 +1930,13 @@
     $("pageRoot").querySelectorAll("[data-ent-view]").forEach((b)=>b.addEventListener("click",()=>{ const cid=b.dataset.entView; state.tabs.entDetail=null; go("enterpriseClientDetail",cid); loadEnterpriseClientDetail(cid); }));
     $("pageRoot").querySelectorAll("[data-ent-new-client]").forEach((b)=>b.addEventListener("click",openNewClientModal));
     $("pageRoot").querySelectorAll("[data-ent-import-open]").forEach((b)=>b.addEventListener("click",openEntImportPanel));
-    { const eic2=$("entImportPanelClose"); if(eic2) eic2.addEventListener("click",closeEntImportPanel); }
-    { const eio=$("entImportOverlay"); if(eio) eio.addEventListener("click",(e)=>{ if(e.target===eio) closeEntImportPanel(); }); }
-    { const layout=document.querySelector(".layout"); if(layout) layout.inert = state.page==="enterpriseClients" && !!state.tabs.entImportPanelOpen; }
+    // 面板自己的關閉／遮罩／表單／取消／確認匯入綁定都搬進 bindEntImportPanelEvents（面板現在掛在 body，不在 #pageRoot 裡）
     $("pageRoot").querySelectorAll("[data-ent-retry-clients]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseClients(); renderPage(state.page); }));
     $("pageRoot").querySelectorAll("[data-ent-retry-invoices]").forEach((b)=>b.addEventListener("click",()=>{ reloadEnterpriseInvoices(); renderPage(state.page); }));
     $("pageRoot").querySelectorAll("[data-ent-retry-detail]").forEach((b)=>b.addEventListener("click",()=>loadEnterpriseClientDetail(b.dataset.entRetryDetail)));
     $("pageRoot").querySelectorAll("[data-ent-save-client]").forEach((b)=>b.addEventListener("click",()=>entSaveClient(b.dataset.entSaveClient)));
     $("pageRoot").querySelectorAll("[data-ent-grant]").forEach((b)=>b.addEventListener("click",()=>entGrantSeats(b.dataset.entGrant)));
     $("pageRoot").querySelectorAll("[data-ent-download]").forEach((b)=>b.addEventListener("click",()=>entDownloadReport(b.dataset.entClient, +b.dataset.entDownload)));
-    const eic=$("entImportClient"); if(eic){ eic.value=(state.tabs.entImport&&state.tabs.entImport.clientId)||""; eic.addEventListener("change",()=>{ (state.tabs.entImport||(state.tabs.entImport={})).clientId=eic.value; }); }
-    $("pageRoot").querySelectorAll("[data-ent-template]").forEach((b)=>b.addEventListener("click",entDownloadTemplate));
-    const eif=$("entImportFile"); if(eif){ eif.addEventListener("change",()=>{
-      const f=eif.files&&eif.files[0]; if(!f) return;
-      const im=state.tabs.entImport||(state.tabs.entImport={});
-      im.fileName=f.name; im.result=null;
-      const reader=new FileReader();
-      reader.onload=()=>{ im.fileText=String(reader.result||""); entRunImportPreview(); };
-      reader.readAsText(f);
-    }); }
-    $("pageRoot").querySelectorAll("[data-ent-import-commit]").forEach((b)=>b.addEventListener("click",entRunImportCommit));
-    $("pageRoot").querySelectorAll("[data-ent-import-download]").forEach((b)=>b.addEventListener("click",entDownloadImportResult));
     $("pageRoot").querySelectorAll("[data-ent-pay-filter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.entPayFilter=b.dataset.entPayFilter; renderPage("enterprisePayments"); }));
     $("pageRoot").querySelectorAll("[data-ent-mark-sent]").forEach((b)=>b.addEventListener("click",()=>entMarkSent(b.dataset.entMarkSent)));
     $("pageRoot").querySelectorAll("[data-ent-pay-toggle]").forEach((b)=>b.addEventListener("click",()=>{ const idv=b.dataset.entPayToggle; state.tabs.entPayOpenId=(String(state.tabs.entPayOpenId)===String(idv))?null:idv; renderPage("enterprisePayments"); }));
@@ -1916,8 +1961,12 @@
     renderSide();
     $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY)) refreshData(); else showLoginGate(); });
     $("logoutBtn")?.addEventListener("click",logout);
+    // 手機漢堡選單：開／關／點遮罩關／點任一導覽連結就關（#sideNav 本身不會被 renderSide() 整個換掉，掛在它身上安全）
+    $("mobileNavBtn")?.addEventListener("click",()=>setMobileNavOpen(!state.mobileNavOpen));
+    $("mobileNavOverlay")?.addEventListener("click",()=>setMobileNavOpen(false));
+    $("sideNav")?.addEventListener("click",(e)=>{ if(e.target.closest("a[data-page]")) setMobileNavOpen(false); });
     window.addEventListener("hashchange",show);
-    window.addEventListener("keydown",(e)=>{ if(e.key==="Escape" && state.tabs.entImportPanelOpen) closeEntImportPanel(); });
+    window.addEventListener("keydown",(e)=>{ if(e.key!=="Escape") return; if(state.tabs.entImportPanelOpen) closeEntImportPanel(); else if(state.mobileNavOpen) setMobileNavOpen(false); });
     setStatus("尚未連線","");
     show();
     const st=storageGet(sessionStorage,ADMIN_TOKEN_KEY);
