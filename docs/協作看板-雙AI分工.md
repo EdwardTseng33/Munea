@@ -4,6 +4,15 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 待審：測試帳號跟真實用戶隔離（2026-07-21 Claude/城堡 · Draft PR #222）
+
+- Branch：`calcifer-test-account-isolation-20260721`；獨立 worktree，基準 `origin/main@da39095`。
+- 檔案：`engine/server.py`、`engine/supabase_adapter.py`（判準＋排除邏輯）、`web/admin.html`／`web/src/admin.js`（名冊隱藏勾選＋人工標記按鈕）、`supabase/sql/023_test_account_flag.sql`（新欄位，待 Edward 手動跑 migration）、`supabase/migration-manifest.json`／`deployment-ledger.json`、`docs/API-CONTRACT-INVENTORY.json`、`scripts/test_api_contract_inventory.py`、`package.json`、新測試 `engine/test_admin_test_account_isolation.py`／`engine/test_supabase_test_account_signals.py`。
+- 目標：後台名冊混著自己人測試帳號（`Munea QA Review`／`Primary user`）會讓營運指標失真；判準＝owner email `@munea.net` 網域（自動）∪ `accounts.is_test_account` 人工標記，同一套判準餵進名冊隱藏與 `is_analytics_excluded_event` 數據排除。
+- 不影響包版（未動 `web/src/` App 邏輯以外檔案、`ios/`、Capacitor、版號）；未碰正式站探測或部署。
+- 驗過沒：`test:test-account-isolation`／`test:supabase-governance`／`test:api-contracts`／`test:admin-data-quality` 全綠；`test:launch` 除 1 個跟本改動無關的既有失敗（`scripts/test-voice-launch-policy.js` Avatar 暖機緩衝，本 PR 未動相關檔）外全綠。
+- 待 Edward：跑 SQL migration 023、重新部署 Brain、認 `Primary user` 這戶要不要標記為測試帳號。
+
 ### 已完成：Cloud Monitoring 固定頻率 uptime 控制面（2026-07-19 Codex · PR #194–#197）
 
 - Branch：`codex/service-uptime-control-20260719`；獨立 worktree，基準 `origin/main@c12195e`。
