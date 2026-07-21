@@ -10,11 +10,18 @@ from __future__ import annotations
 import os
 
 import flashhead_server as server
+from demo_profile import DEMO_RENDER_CONTRACTS
 
 
 DEMO_CHARACTERS = {
-    "a05d": os.environ.get("MUNEA_FH_CHAR_A05D", "/workspace/munea-demo/assets/char-a05B-demo.png"),
-    "a06d": os.environ.get("MUNEA_FH_CHAR_A06D", "/workspace/munea-demo/assets/char-a06B-demo.png"),
+    "a05d": os.environ.get(
+        "MUNEA_FH_DEMO_720P_CHAR_A05D",
+        "/workspace/munea-demo/assets-720p/char-a05B-demo-square-768.png",
+    ),
+    "a06d": os.environ.get(
+        "MUNEA_FH_DEMO_720P_CHAR_A06D",
+        "/workspace/munea-demo/assets-720p/char-a06B-demo-square-768.png",
+    ),
 }
 
 
@@ -59,11 +66,9 @@ def main() -> None:
 
     server.CHAR_SRC = DEMO_CHARACTERS
     server.DEFAULT_CHAR = "a05d"
-    server.AVATAR_RENDER_CONTRACTS = {
-        key: value
-        for key, value in server.AVATAR_RENDER_CONTRACTS.items()
-        if key in DEMO_CHARACTERS
-    }
+    # Replace only the Demo wrapper's in-process table. The shared server file
+    # and the App a05/a06 contracts remain unchanged.
+    server.AVATAR_RENDER_CONTRACTS = DEMO_RENDER_CONTRACTS
     install_demo_idle_barrier()
 
     fh = server.FlashHead()
