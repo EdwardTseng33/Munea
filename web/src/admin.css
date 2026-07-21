@@ -161,7 +161,7 @@ a { color: var(--teal-dd); }
 /* ══ 卡片通用 ══ */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); min-width: 0; }
 .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.card-head h3 { margin: 0; font-size: 1.04rem; font-weight: 800; }
+.card-head h3 { margin: 0; font-size: 1.04rem; font-weight: 800; word-break: keep-all; }
 .card-note { margin: 3px 0 0; color: var(--muted); font-size: 0.9rem; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
@@ -195,7 +195,7 @@ a { color: var(--teal-dd); }
 .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
 .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
 .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.kpi-label { color: var(--muted); font-size: .88rem; font-weight: 600; }
+.kpi-label { color: var(--muted); font-size: .88rem; font-weight: 600; word-break: keep-all; }
 .kpi-info { cursor: help; color: var(--teal); font-size: 0.9rem; font-weight: 700; }
 .def-list { display: grid; gap: 10px; }
 .def { font-size: .9rem; line-height: 1.6; color: var(--ink-2); }
@@ -206,7 +206,7 @@ a { color: var(--teal-dd); }
 .kpi-delta.flat { color: var(--muted); background: var(--cream); }
 .kpi-value { font-family: var(--num); font-size: 2rem; font-weight: 700; margin-top: 8px; line-height: 1.1; }
 .kpi-value .unit { font-size: .95rem; font-weight: 600; color: var(--muted); margin-left: 3px; }
-.kpi-sub { color: var(--muted); font-size: 0.875rem; margin-top: 5px; }
+.kpi-sub { color: var(--muted); font-size: 0.875rem; margin-top: 5px; word-break: keep-all; }
 /* 佔位值：刻意比真數字小、淡，避免遠看誤讀成有數據 */
 .pending-val { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--muted); font-size: .95rem; font-weight: 600; }
 /* 北極星/重點卡：改用淺薄荷底做強調，不用左邊框線 */
@@ -456,6 +456,10 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .chip-filter.on{ background:var(--teal); border-color:var(--teal); color:#fff; }
 .chip-filter .c{ font-family:var(--num); font-size:0.875rem; font-weight:700; padding:0 6px; border-radius:999px; background:rgba(0,0,0,.06); }
 .chip-filter.on .c{ background:rgba(255,255,255,.22); color:#fff; }
+/* 逾期未選中時也要顯眼——請款登記頁重點先行：不用點過濾器就先看到要催收 */
+.chip-filter-danger{ border-color:rgba(217,83,74,.4); color:var(--danger); background:var(--danger-soft); }
+.chip-filter-danger .c{ background:rgba(217,83,74,.16); }
+.chip-filter-danger:hover{ border-color:var(--danger); color:var(--danger); }
 .chip-sep{ width:1px; height:20px; background:var(--line); margin:0 4px; }
 .chip-spring{ flex:1; min-width:20px; }
 

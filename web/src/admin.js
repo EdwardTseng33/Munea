@@ -156,8 +156,8 @@
   function fmtDate(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"numeric",day:"numeric"}).format(d);}catch(e){return String(v);} }
   function zh(map,v,f){ if(v==null||v==="")return f||"–"; return map[String(v).toLowerCase()]||String(v); }
   const RISK_ZH = { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" };
-  const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數" };
-  const FB_TONE = { bug:"warn", idea:"gold", praise:"ok", nps:"mute" };
+  const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數", survey:"問卷" };
+  const FB_TONE = { bug:"warn", idea:"gold", praise:"ok", nps:"mute", survey:"mute" };
   const PV_ZH = { account_deletion:"刪除帳號", deletion:"刪除帳號", export:"資料副本", data_export:"資料副本", correction:"資料更正" };
   const ST_ZH = { pending:"待處理", open:"待處理", received:"已收到", processing:"處理中", done:"已完成", completed:"已完成", closed:"已結案" };
   const CREDIT_ZH = { subscription_monthly_allowance:"每月贈點", credit_grant:"發放點數", credit_consume:"使用點數", free_signup_voice_avatar_trial:"新用戶體驗贈點", apple_purchase:"加購點數", apple_purchase_refunded:"加購退款", apple_refund_reversed:"退款回沖", call_consume:"通話扣點" };
@@ -443,7 +443,7 @@
       { label:"總用戶", star:true, value:n(accts.length), sub:`家庭圈 ${accts.length} · 成員 ${people} 人` },
       { label:"今日活躍", value:n(activeC), sub:accts.length?`活躍率 ${pct(activeC/accts.length)}`:"–", info:"近 3 天內有真互動的帳號" },
       { label:"低度使用", value:n(idleC), sub:"7 天以上沒通話", info:"需要關懷的沉睡帳號" },
-      { label:"守護中", value:n(guardC), sub:"安全警示待處理", info:"有安全守護警示、建議優先確認" },
+      { label:"守護中", value:n(guardC), sub:"安全警示待處理", star:guardC>0, tone:"alert", info:"有安全守護警示、建議優先確認" },
     ]);
     if(!accts.length){
       html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——正式開放註冊後，這裡會列出真實用戶。`:"還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
@@ -454,7 +454,7 @@
     const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
     const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
-    const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
+    const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
     const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
     const trows=rows.map((a)=>{ const idx=accts.indexOf(a); const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
       const nm=p.displayName||a.accountName||"–", initial=(String(nm).trim()[0]||"家");
@@ -511,7 +511,7 @@
     });
     const concerning=people.filter((p)=>(p.missedStreak||0)>=2).length;
     let html=kpiRow([
-      { label:"依從率", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · 做到 ÷（做到＋跳過＋漏服）`, star:true },
+      { label:"依從率", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · 做到 ÷（做到＋跳過＋漏服）`, star:true, tone:(rate!=null&&rate<0.7)?"alert":undefined },
       { label:"做到次數", value:n(t.taken||0), sub:`近 ${win} 天次數` },
       { label:"漏服次數", value:n(t.missed||0), sub:`近 ${win} 天次數` },
       { label:"需要關心", value:n(concerning), sub:"連續漏服 2 天以上", info:"連續兩天以上沒做到提醒的人，建議家人主動關心一下" },
@@ -549,7 +549,7 @@
     const fh=familyHealth(), t=fh.totals||{}, win=fh.windowDays||30, rate=fh.guardedRate;
     const inv=fh.invites||{};
     let html=kpiRow([
-      { label:"有人顧的比例", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · ${n(t.withActiveGuardian||0)}／${n(t.households||0)} 戶`, star:true, info:"這戶除了長輩本人以外，近 N 天內至少有 1 位家人傳話、看過家庭看板或家人訊息、或參與家庭活動，就算「有人顧」。" },
+      { label:"有人顧的比例", value:rate==null?"–":pct(rate), sub:`近 ${win} 天 · ${n(t.withActiveGuardian||0)}／${n(t.households||0)} 戶`, star:true, tone:(rate!=null&&rate<0.6)?"alert":undefined, info:"這戶除了長輩本人以外，近 N 天內至少有 1 位家人傳話、看過家庭看板或家人訊息、或參與家庭活動，就算「有人顧」。門檻＜60% 標紅（可調）。" },
       { label:"多人守護家數", value:n(t.multiGuardian||0), sub:`近 ${win} 天有 2 位以上家人在顧` },
       { label:"沒人顧家數", value:n(t.unwatched||0), sub:`近 ${win} 天沒有任何家人動作`, info:"家庭圈只有長輩本人、或家人整段時間都沒動作——流失與安全雙警訊" },
       { label:"邀請成功率", value:inv.acceptRate==null?"–":pct(inv.acceptRate), sub:`近 ${win} 天送出 ${n(inv.sent||0)} 筆邀請` },
@@ -590,7 +590,7 @@
       { label:"心情平均分", value:avgLevel==null?"–":avgLevel.toFixed(1), sub:`近 ${win} 天 · 1～5 分（5 分最好）`, star:true, info:"由陪伴聊天內容推測的心情高低分（1-5），不是醫療評分。" },
       { label:"正向比例", value:mt.positiveRate==null?"–":pct(mt.positiveRate), sub:`近 ${win} 天 · ${n(t.positive||0)} 次` },
       { label:"低落比例", value:mt.lowRate==null?"–":pct(mt.lowRate), sub:`近 ${win} 天 · ${n(t.low||0)} 次` },
-      { label:"需要關心", value:n(watch.length), sub:"近 7 天低落 3 次以上或連續 3 天", info:"近 7 天內出現 3 次以上低落類心情、或連續 3 天都有低落類心情，建議家人主動關心一下" },
+      { label:"需要關心", value:n(watch.length), sub:"近 7 天低落 3 次以上或連續 3 天", star:watch.length>0, tone:"alert", info:"近 7 天內出現 3 次以上低落類心情、或連續 3 天都有低落類心情，建議家人主動關心一下" },
     ]);
     html+=principle(mt.principle||"這是陪伴聊天時的心情紀錄，由 AI 依對話內容推測，不是醫療診斷、也不是健康建議；異常請由真人關心確認。");
     if(!(t.signals||0)){
@@ -625,7 +625,7 @@
     let html=kpiRow([
       { label:"平均記憶筆數", value:bd.avgMemories==null?"–":bd.avgMemories.toFixed(1), sub:`近 ${win} 天還在互動的長輩平均`, star:true, info:"沐寧幫每位長輩記住幾件事——只算筆數，不看內容。" },
       { label:"信任以上人數", value:n(trustedPlus), sub:`近 ${win} 天 · 信任＋親近` },
-      { label:"卡在新認識人數", value:n(stuckCount), sub:`用了超過 ${stuckDays} 天還沒熟起來`, info:"陪伴沒建立起來，最可能默默流失，建議真人多關心。" },
+      { label:"卡在新認識人數", value:n(stuckCount), sub:`用了超過 ${stuckDays} 天還沒熟起來`, star:stuckCount>0, tone:"alert", info:"陪伴沒建立起來，最可能默默流失，建議真人多關心。" },
       { label:"平均升級天數", value:bd.upgradeDays==null?"–":n(bd.upgradeDays), sub:"從新認識到熟悉平均花幾天" },
     ]);
     html+=principle(bd.principle||"「關係深度」看沐寧跟每位長輩處得多熟：新認識→熟悉→信任→親近。只看筆數與階段，記憶內容不會出現在這裡。");
@@ -717,7 +717,7 @@
     html+=kpiRow([
       { label:"全平台持有點數", value:n(ptsTotal), sub:`${n(cAccts.length)} 戶合計`, star:true },
       { label:"平均每戶點數", value:ptsAvg==null?"–":n(ptsAvg), sub:"點／戶" },
-      { label:"快用完", value:n(lowList.length), sub:`剩不到 ${LOW_PTS} 點`, info:"點數快見底的帳號——主動關心或提醒加購的好時機" },
+      { label:"快用完", value:n(lowList.length), sub:`剩不到 ${LOW_PTS} 點`, star:lowList.length>0, tone:"alert", info:"點數快見底的帳號——主動關心或提醒加購的好時機" },
       { label:"近 30 天加購", value:n(sm.pointsPurchases), unit:sm.pointsPurchases?" 筆":"", sub:`共 ${n(sm.pointsTotal)} 點` },
     ]);
     html+=card("快用完名單", `剩不到 ${LOW_PTS} 點 · 建議主動關心或提醒加購`, lowList.length?tableHTML(["用戶","家庭","方案","剩餘點數","最近活躍"], lowList.slice(0,12).map((a)=>{
@@ -1024,7 +1024,7 @@
       <button type="button" class="btn-sm" data-ent-save-client="${esc(clientId)}">儲存變更</button>
       <div id="entSaveNote"></div>
     `);
-    html+=`<div class="ops-notice error" role="alert"><strong>內部限定・不可外流</strong>這一頁列出每個席次綁定的 email／狀態，只有我們自己看；企業客戶只會拿到月報上的彙總數字，永遠看不到這一頁。</div>`;
+    html+=`<div class="ops-notice info" role="status"><strong>內部限定・不可外流</strong>這一頁列出每個席次綁定的 email／狀態，只有我們自己看；企業客戶只會拿到月報上的彙總數字，永遠看不到這一頁。</div>`;
     const seatRows=seats.map((s)=>[
       `<input type="checkbox" class="ent-seat-chk" value="${esc(s.id)}" ${["active","waiting","grace"].includes(s.status)?"":"disabled"}>`,
       esc(s.inviteEmail||"–"),
@@ -1171,7 +1171,9 @@
     if(im.preview){
       const p=im.preview;
       const groups=[["newSeats","新增"],["alreadyRegistered","已註冊・匯入後直接生效"],["duplicates","重複・會跳過"],["ownedByOtherClient","屬於其他公司・已擋下"],["overQuota","超過席次上限"]];
-      html+=`<div class="kpi-row">${groups.map(([key,label])=>`<div class="kpi"><div class="kpi-top"><span class="kpi-label">${esc(label)}</span></div><div class="kpi-value">${n((p[key]||[]).length)}</div></div>`).join("")}</div>`;
+      // 重點先行：擋下／超額這兩種需要真人決定的情況，有筆數時給 alert 強調，不要跟正常新增筆數平等排列
+      const ALERT_KEYS=["ownedByOtherClient","overQuota"];
+      html+=`<div class="kpi-row">${groups.map(([key,label])=>{ const cnt=(p[key]||[]).length; const accent=(ALERT_KEYS.indexOf(key)>-1&&cnt>0)?" kpi-accent-alert":""; return `<div class="kpi${accent}"><div class="kpi-top"><span class="kpi-label">${esc(label)}</span></div><div class="kpi-value">${n(cnt)}</div></div>`; }).join("")}</div>`;
       html+=groups.map(([key,label])=>{
         const list=p[key]||[];
         if(!list.length) return "";
@@ -1264,7 +1266,8 @@
       else if(["paid","invoiced"].includes(iv.status)) counts.paid++;
       if(Number(iv.overdueDays||0)>0 && !["paid","invoiced","void"].includes(iv.status)) counts.overdue++;
     });
-    const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ent-pay-filter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
+    // 逾期 chip 沒選中時也要看得出來要注意，不然要點過才知道要催收（重點先行）
+    const chip=(id,label,cnt)=>{ const danger=(id==="overdue"&&cnt>0&&filt!==id); return `<button type="button" class="chip-filter${filt===id?" on":""}${danger?" chip-filter-danger":""}" data-ent-pay-filter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`; };
     const tools=`<div class="tbl-tools">${chip("all","全部",counts.all)}${chip("draft","草稿・待確認",counts.draft)}${chip("issued","已寄出・待收款",counts.issued)}${chip("paid","已收款",counts.paid)}<span class="chip-sep"></span>${chip("overdue","逾期",counts.overdue)}<span class="chip-spring"></span><button type="button" class="btn-sm" data-ent-monthly-close>跑月結（產生本月請款單）</button></div>`;
     let html=entBillingSettingsWarningHTML();
     if(!invoices.length){
