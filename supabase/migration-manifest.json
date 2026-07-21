@@ -177,6 +177,13 @@
       "filename": "022_enterprise_documents.sql",
       "type": "schema",
       "sha256": "9941173ef2362f42b0b62cd165b360a55af1cb3fadbade1b7ab7cf132d5349da"
+    },
+    {
+      "order": 24,
+      "identity": "023",
+      "filename": "023_test_account_flag.sql",
+      "type": "schema",
+      "sha256": "07539eea1a4b94cf92c01e97a77bbf8aba2e602ee0bd9814bbab81e1ae7b25d8"
     }
   ]
 }

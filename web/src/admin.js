@@ -430,7 +430,10 @@
   }
 
   function renderUsers(){
-    const accts=(D().accounts||{}).accounts||[];
+    const acctData=D().accounts||{};
+    const accts=acctData.accounts||[];
+    const hiddenTestCount=acctData.hiddenTestAccountCount||0;
+    const showTest=!!state.tabs.showTestAccounts;
     const safety=D().safety||{}, escalations=(safety.totals||{}).requiresHumanEscalation||0;
     const single=accts.length===1;
     const stOf=(a)=> (single&&escalations>0)?"alert":(a.status||"off");
@@ -443,7 +446,7 @@
       { label:"守護中", value:n(guardC), sub:"安全警示待處理", info:"有安全守護警示、建議優先確認" },
     ]);
     if(!accts.length){
-      html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox("還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
+      html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——正式開放註冊後，這裡會列出真實用戶。`:"還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
       return html;
     }
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
@@ -451,13 +454,14 @@
     const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
     const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
-    const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span><input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
+    const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
+    const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
     const trows=rows.map((a)=>{ const idx=accts.indexOf(a); const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
       const nm=p.displayName||a.accountName||"–", initial=(String(nm).trim()[0]||"家");
       const tint=AV_TINTS[Math.abs(String(nm).split("").reduce((h,ch)=>((h<<5)-h+ch.charCodeAt(0))|0,0))%AV_TINTS.length];
       const sub=REL_ZH[String(p.relationship||"").toLowerCase()]||"成員";
       return [
-        `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}</div><div class="u-sub">${esc(sub)}</div></div></div>`,
+        `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub">${esc(sub)}</div></div></div>`,
         `<span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span>`,
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
@@ -468,7 +472,8 @@
         `<button type="button" class="row-act" data-acct="${idx}" aria-label="查看 ${esc(nm)} 的用戶明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
       ];
     });
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}</div></div></div>${tools}${tableHTML(["用戶","家庭","方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
+    const hiddenNote=(!showTest&&hiddenTestCount)?` · 已隱藏 ${hiddenTestCount} 個測試帳號`:"";
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭","方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
     return html;
   }
 
@@ -805,7 +810,7 @@
     const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
       <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>
-      <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button><button type="button" class="btn-ghost btn-sm" data-open-action="extend">⏱ 延長天數</button></div>
+      <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button><button type="button" class="btn-ghost btn-sm" data-open-action="extend">⏱ 延長天數</button><button type="button" class="btn-ghost btn-sm" data-open-action="testflag">${a.isTestAccount?"✓ 取消測試標記":"🧪 標記為測試帳號"}</button></div>
       <div id="acctActionPanel"></div>`;
     const previous=document.activeElement,layout=document.querySelector(".layout");
     let mo=$("acctModal"); if(!mo){ mo=document.createElement("div"); mo.id="acctModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
@@ -1460,6 +1465,16 @@
       }
       panel.innerHTML=`<div class="modal-subpanel"><div class="modal-subtitle">延長「${esc(nm)}」的訂閱天數</div><div class="modal-subhint" id="acctActionHint">讀取目前到期日…</div></div>`;
       loadExtendPreview(a);
+    } else if(mode==="testflag"){
+      const willMark=!a.isTestAccount;
+      panel.innerHTML=`<div class="modal-subpanel">
+        <div class="modal-subtitle">${willMark?"標記":"取消標記"}「${esc(nm)}」為測試帳號</div>
+        <div class="kpi-sub" style="margin-bottom:10px">標記後這個帳號預設會從用戶名冊與營運數據（北極星、活躍人數、訂閱指標等）中隱藏／排除，不影響帳號本身的方案、點數或聊天資料，也可以隨時取消標記。</div>
+        <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="testFlagSubmitBtn">${willMark?"確認標記":"確認取消標記"}</button></div>
+        <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
+      </div>`;
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("#testFlagSubmitBtn")?.addEventListener("click",()=>submitSetTestFlag(a,willMark));
     }
   }
 
@@ -1583,6 +1598,42 @@
     }catch(e){
       if(hint){ hint.textContent=explainErr(e&&e.message); hint.className="modal-subhint err"; }
     }finally{ if(btn) btn.disabled=false; }
+  }
+
+  // 測試帳號人工標記（2026-07-21 補）：只改「名冊隱藏／分析排除」判準，不動帳務資料。
+  async function submitSetTestFlag(a,willMark){
+    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const hint=$("acctActionHint");
+    const msg=willMark
+      ? "要把「"+nm+"」標記為測試帳號嗎？標記後預設會從用戶名冊與營運數據中隱藏，不影響帳號本身的方案、點數或聊天資料。"
+      : "要取消「"+nm+"」的測試帳號標記嗎？取消後會恢復顯示在名冊與數據中。";
+    if(!window.confirm(msg)) return;
+    const btn=$("testFlagSubmitBtn"); if(btn) btn.disabled=true;
+    if(hint){ hint.textContent="送出中…"; hint.className="modal-subhint"; }
+    try{
+      await postAdmin(state.base,state.token,"/admin/accounts/set-test-flag",{accountId:a.accountId,isTestAccount:willMark});
+      a.isTestAccount=willMark;
+      if(hint){ hint.textContent=willMark?"已標記為測試帳號":"已取消測試帳號標記"; hint.className="modal-subhint ok"; }
+      toggleShowTestAccounts(!!state.tabs.showTestAccounts);
+    }catch(e){
+      if(hint){ hint.textContent=explainErr(e&&e.message); hint.className="modal-subhint err"; }
+    }finally{ if(btn) btn.disabled=false; }
+  }
+
+  // 「顯示測試帳號」開關：只重打 /admin/accounts（帶 includeTest），不用整頁 refreshData，
+  // 失敗就悄悄退回原狀態，不打斷正在看的畫面。
+  async function toggleShowTestAccounts(show){
+    const previous=!!state.tabs.showTestAccounts;
+    state.tabs.showTestAccounts=!!show;
+    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    try{
+      const res=await postAdmin(base,token,"/admin/accounts",{limit:50,includeTest:!!show});
+      state.data=state.data||{};
+      state.data.accounts=res;
+      if(state.page==="users") renderPage("users");
+    }catch(e){
+      state.tabs.showTestAccounts=previous;
+    }
   }
 
   // ══════════ 設定頁 ══════════
@@ -1785,6 +1836,7 @@
     $("pageRoot").querySelectorAll("[data-acct]").forEach((b)=>b.addEventListener("click",()=>openAcctDetail(+b.dataset.acct)));
     const us=$("userSearch"); if(us){ us.value=state.tabs.userSearch||""; us.addEventListener("input",()=>{ state.tabs.userSearch=us.value.trim(); renderPage("users"); const el=$("userSearch"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length);} }); }
     $("pageRoot").querySelectorAll("[data-ufilter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.userFilter=b.dataset.ufilter; renderPage("users"); }));
+    const stc=$("showTestAccountsChk"); if(stc){ stc.addEventListener("change",()=>toggleShowTestAccounts(stc.checked)); }
     // ══ 企業客戶（B2B 席次）══
     $("pageRoot").querySelectorAll("[data-ent-view]").forEach((b)=>b.addEventListener("click",()=>{ const cid=b.dataset.entView; state.tabs.entDetail=null; go("enterpriseClientDetail",cid); loadEnterpriseClientDetail(cid); }));
     $("pageRoot").querySelectorAll("[data-ent-new-client]").forEach((b)=>b.addEventListener("click",openNewClientModal));

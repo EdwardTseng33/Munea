@@ -173,6 +173,12 @@
           "sha256": "9941173ef2362f42b0b62cd165b360a55af1cb3fadbade1b7ab7cf132d5349da",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+        },
+        {
+          "filename": "023_test_account_flag.sql",
+          "sha256": "07539eea1a4b94cf92c01e97a77bbf8aba2e602ee0bd9814bbab81e1ae7b25d8",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {

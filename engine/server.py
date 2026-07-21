@@ -359,6 +359,8 @@ ADMIN_POST_PATHS = {
     "/admin/credits/grant",
     "/admin/subscription/set-plan",
     "/admin/subscription/extend-days",
+    # 測試帳號人工標記（2026-07-21 補）：見 admin_set_test_account_flag_response。
+    "/admin/accounts/set-test-flag",
     "/admin/notifications/drain",
     "/admin/login",
     # 維護入口（2026-07-17 補）：晨料備製與記憶整理是定時鬧鐘（Cloud Scheduler）用
@@ -3883,6 +3885,33 @@ def env_set(name):
     return {item.strip() for item in raw.split(",") if item.strip()}
 
 
+# 帳號層測試判準快取（2026-07-21 補）：email @munea.net 網域／人工標記算出的帳號 ID 集合，
+# 短 TTL 快取，餵進事件排除，讓「名冊隱藏」跟「數據剔除」用同一套判準（同呼叫
+# SupabaseAdapter.resolve_test_account_signals），不會一邊生效一邊沒有。
+TEST_ACCOUNT_CACHE_TTL_SECONDS = float(os.environ.get("MUNEA_TEST_ACCOUNT_CACHE_TTL_SECONDS") or 180)
+TEST_ACCOUNT_SCAN_LIMIT = int(os.environ.get("MUNEA_TEST_ACCOUNT_SCAN_LIMIT") or 300)
+_TEST_ACCOUNT_ID_CACHE = {"ids": set(), "expiresAt": 0.0}
+
+
+def test_account_id_set(force_refresh=False):
+    """算出目前的測試帳號 ID 集合（快取 TTL 秒）。任何一步失敗都 fail-open：保留舊快取、
+    絕不誤傷正常帳號，也不讓每一次分析請求都被 Supabase／GoTrue 查詢拖慢。"""
+    now = time.time()
+    cache = _TEST_ACCOUNT_ID_CACHE
+    if not force_refresh and now < cache["expiresAt"]:
+        return cache["ids"]
+    ids = set(cache["ids"])
+    try:
+        signals = data_backend().resolve_test_account_signals(limit=TEST_ACCOUNT_SCAN_LIMIT)
+        ids = set(signals.get("domainTestIds") or set()) | set(signals.get("manualTestIds") or set())
+    except Exception as e:
+        log_fallback_exception("resolve test account id set", e)
+    ids = ids | env_set("MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS")
+    cache["ids"] = ids
+    cache["expiresAt"] = now + TEST_ACCOUNT_CACHE_TTL_SECONDS
+    return ids
+
+
 def is_analytics_excluded_event(event):
     props = event.get("properties") or {}
     for key in ("analyticsExcluded", "excludeAnalytics", "developerMode", "isDeveloperActivity", "operationalAccount"):
@@ -3895,6 +3924,7 @@ def is_analytics_excluded_event(event):
     excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS"))
     excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS"))
     excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS"))
+    excluded_ids.update(test_account_id_set())  # 帳號層測試判準併入事件排除（2026-07-21 補）
     if event.get("accountId") in excluded_ids or event.get("personId") in excluded_ids or event.get("sessionId") in excluded_ids:
         return True
     return False
@@ -4080,6 +4110,7 @@ def normalize_admin_account_summary(item=None):
             "count": int(family_members.get("count") or 0),
             "byRole": dict(sorted(roles.items())),
         },
+        "isTestAccount": bool(item.get("isTestAccount") or item.get("is_test_account") or False),
     }
 
 
@@ -4276,7 +4307,14 @@ def admin_accounts_summary(data=None):
     account_id = data.get("accountId") or data.get("account_id")
     family_group_id = data.get("familyGroupId") or data.get("family_group_id")
     person_id = data.get("personId") or data.get("person_id")
-    accounts = load_admin_accounts(query=query, limit=limit)
+    # 測試帳號預設隱藏（2026-07-21 補）。單一 accountId 查找（例如既有會員維運操作
+    # _resolve_admin_target_identity）視同「已知道要哪個帳號」，一律不隱藏——不然標記過測試帳號
+    # 之後，發點數／改方案／延長天數這幾支既有管理操作會找不到那個帳號。
+    include_test = truthy(data.get("includeTest") if data.get("includeTest") is not None else data.get("include_test")) or bool(account_id)
+    # 隱藏測試帳號會讓回傳筆數少於 limit，多拉一點緩衝避免「隱藏後不夠 limit」；
+    # 早期規模小，這個緩衝量已足夠、成本可控。
+    fetch_limit = limit if include_test else min(200, limit + 50)
+    accounts = load_admin_accounts(query=query, limit=fetch_limit)
     if account_id:
         accounts = [account for account in accounts if account.get("accountId") == account_id]
     if family_group_id:
@@ -4292,6 +4330,11 @@ def admin_accounts_summary(data=None):
             or q in ((account.get("familyGroup") or {}).get("name") or "").lower()
             or q in ((account.get("primaryPerson") or {}).get("displayName") or "").lower()
         ]
+    hidden_test_account_count = 0
+    if not include_test:
+        visible = [account for account in accounts if not account.get("isTestAccount")]
+        hidden_test_account_count = len(accounts) - len(visible)
+        accounts = visible
     accounts = _enrich_accounts_with_activity(accounts[:limit], days=int(data.get("days") or 30))
     return {
         "ok": True,
@@ -4302,8 +4345,10 @@ def admin_accounts_summary(data=None):
             "familyGroupId": family_group_id,
             "personId": person_id,
             "limit": limit,
+            "includeTest": include_test,
         },
         "accounts": accounts,
+        "hiddenTestAccountCount": hidden_test_account_count,
         "privacy": {
             "surface": "admin_account_lookup",
             "rawTranscriptRecords": 0,
@@ -7166,7 +7211,9 @@ def _resolve_admin_target_identity(account_id):
     if not account_id:
         return None
     try:
-        found = admin_accounts_summary({"query": account_id, "limit": 5}).get("accounts") or []
+        # includeTest：管理端指定了明確的 accountId，代表已經知道要哪個帳號（可能就是要對測試帳號
+        # 操作，例如替 QA 測試帳號手動調整方案），不該被「測試帳號預設隱藏」擋下。
+        found = admin_accounts_summary({"query": account_id, "limit": 5, "includeTest": True}).get("accounts") or []
     except Exception as e:
         log_fallback_exception("resolve admin target account", e)
         found = []
@@ -7432,6 +7479,51 @@ def admin_extend_subscription_response(data, headers=None):
         },
     })
     return {"ok": True, **preview}
+
+
+# ══════════ 後台會員維運：測試帳號人工標記（2026-07-21 補） ══════════
+def admin_set_test_account_flag_response(data, headers=None):
+    """後台手動標記／取消標記某帳號為測試帳號（accounts.is_test_account）。只影響「用戶名冊隱藏＋
+    營運數據排除」判準，不動任何帳務／方案／訂閱／聊天資料——跟發點數／改方案／延長天數三支
+    是完全獨立的動作。標記／取消後立刻讓 test_account_id_set() 重算，名冊跟分析排除同步看到最新
+    狀態，不必等快取 TTL 過期。"""
+    data = data or {}
+    account_id = str(data.get("accountId") or data.get("account_id") or "").strip()
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_id_required"}}
+    raw_flag = data.get("isTestAccount")
+    if raw_flag is None:
+        raw_flag = data.get("is_test_account")
+    is_test = truthy(raw_flag)
+    target = _resolve_admin_target_identity(account_id)
+    if not target:
+        return {"ok": False, "error": {"code": "account_not_found"}}
+    backend = data_backend()
+    if not backend.enabled():
+        return {"ok": False, "error": {"code": "test_flag_not_configured"}}
+    try:
+        backend.set_account_test_flag(account_id, is_test)
+    except Exception as e:
+        log_fallback_exception("set account test flag", e)
+        return {"ok": False, "error": {"code": "test_account_column_missing"}}
+    test_account_id_set(force_refresh=True)
+    append_audit_event({
+        "eventType": "admin_test_account_flag_changed",
+        "accountId": account_id,
+        "targetTable": "accounts",
+        "details": {
+            **privileged_actor_context(headers or {}),
+            "accountId": account_id,
+            "accountName": target.get("accountName"),
+            "isTestAccount": is_test,
+        },
+    })
+    return {
+        "ok": True,
+        "accountId": account_id,
+        "accountName": target.get("accountName"),
+        "isTestAccount": is_test,
+    }
 
 
 def subscription_event_response(data):
@@ -9164,6 +9256,17 @@ class H(BaseHTTPRequestHandler):
                     else:
                         error = response.get("error") or {}
                         self._json_error(400, error.get("code") or "subscription_extension_failed", "Subscription extension could not be applied")
+            elif self.path == "/admin/accounts/set-test-flag":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = admin_set_test_account_flag_response(data, self.headers)
+                    if response.get("ok"):
+                        self._json(response)
+                    else:
+                        error = response.get("error") or {}
+                        self._json_error(400, error.get("code") or "test_flag_update_failed", "Test account flag could not be updated")
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/app-profile":
