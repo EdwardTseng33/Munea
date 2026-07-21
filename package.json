@@ -18,6 +18,7 @@
     "hosting:deploy": "npm run test:hosting && npx firebase-tools@15.23.0 deploy --only hosting:public --project gen-lang-client-0229303523",
     "test:call-control-app": "python scripts/test_app_call_control_contract.py",
     "test:ui-contracts": "node scripts/test-ui-contracts.js",
+    "test:avatar-contract": "python scripts/test-avatar-render-contract.py",
     "test:api-contracts": "python scripts/api_contract_inventory.py check && python scripts/test_api_contract_inventory.py",
     "test:admin-data-quality": "python engine/test_admin_data_quality.py && node scripts/test-admin-console.js",
     "test:supabase-governance": "python scripts/check_supabase_migrations.py && python scripts/test_supabase_migration_governance.py && python scripts/check_supabase_deployment_ledger.py && python scripts/test_supabase_deployment_ledger.py && python scripts/test_supabase_deployment_probe.py",
