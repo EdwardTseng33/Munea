@@ -1,0 +1,19 @@
+[
+  {
+    "id": "local-conversation-summary-4859b9ba2e",
+    "accountId": "local-account",
+    "personId": "local-person-self",
+    "voiceSessionId": "live-9",
+    "summary": "Post-turn companion review covered news_current_affairs; user turns: 1; Guardian risk: none.",
+    "memoryTags": [
+      "news_current_affairs"
+    ],
+    "safetyRelevant": false,
+    "createdAt": "2026-07-20T18:33:42Z",
+    "deletedAt": null,
+    "privacy": {
+      "storesRawTranscriptByDefault": false,
+      "retainedRecord": "summary_only"
+    }
+  }
+]

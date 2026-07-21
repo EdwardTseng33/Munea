@@ -1,0 +1,46 @@
+{
+  "elder-1": {
+    "personId": "elder-1",
+    "pushEnabled": true,
+    "categories": {
+      "medication": true,
+      "clinic": true,
+      "family": true,
+      "safety": false
+    },
+    "updatedAt": "2026-07-20T18:33:38Z"
+  },
+  "family-1": {
+    "personId": "family-1",
+    "pushEnabled": true,
+    "categories": {
+      "medication": true,
+      "clinic": true,
+      "family": true,
+      "safety": true
+    },
+    "updatedAt": "2026-07-20T18:33:38Z"
+  },
+  "local-person-self": {
+    "personId": "local-person-self",
+    "pushEnabled": true,
+    "categories": {
+      "medication": true,
+      "clinic": true,
+      "family": true,
+      "safety": true
+    },
+    "updatedAt": "2026-07-20T18:33:38Z"
+  },
+  "person-y": {
+    "personId": "person-y",
+    "pushEnabled": true,
+    "categories": {
+      "medication": false,
+      "clinic": true,
+      "family": true,
+      "safety": true
+    },
+    "updatedAt": "2026-07-20T18:33:38Z"
+  }
+}
