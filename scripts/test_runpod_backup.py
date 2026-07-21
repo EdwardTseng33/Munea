@@ -23,22 +23,6 @@ class Clock:
         return self.value
 
 
-def test_pod_status_redacts_secret_environment_values():
-    source = {
-        "id": "pod-1",
-        "env": {
-            "JUPYTER_PASSWORD": "do-not-print",
-            "MUNEA_CALL_TOKEN_SECRET": "do-not-print-either",
-            "MUNEA_FH_FRAME_SIZE": "768",
-        },
-    }
-    safe = podctl.redact_pod_for_output(source)
-    assert safe["env"]["JUPYTER_PASSWORD"] == "[redacted]"
-    assert safe["env"]["MUNEA_CALL_TOKEN_SECRET"] == "[redacted]"
-    assert safe["env"]["MUNEA_FH_FRAME_SIZE"] == "768"
-    assert source["env"]["JUPYTER_PASSWORD"] == "do-not-print"
-
-
 class FakeGateway:
     def __init__(self, workers, queue_depth=0):
         self.workers = [dict(worker) for worker in workers]
@@ -461,7 +445,6 @@ def main():
     os.environ["MUNEA_RUNPOD_TEMPLATE_ID"] = "tpl-test"
     try:
         tests = [
-            test_pod_status_redacts_secret_environment_values,
             test_spec_requires_baked_template,
             test_manual_pod_can_be_adopted_by_backup_controller,
             test_stopped_pod_without_host_is_recreated_from_template,

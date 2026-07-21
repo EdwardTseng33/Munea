@@ -93,32 +93,6 @@ def make_mock_pipeline_fns(tag_marker):
     return get_audio_embedding, run_pipeline
 
 
-def test_service_lane_character_isolation():
-    sources = {
-        "a05": "/prod/female.png",
-        "a06": "/prod/male.png",
-        "a05d": "/demo/female.png",
-        "a06d": "/demo/male.png",
-    }
-    demo_sources, default, allowed = fec.resolve_char_lane(sources, "a05d", "a05d,a06d")
-    assert demo_sources == {"a05d": "/demo/female.png", "a06d": "/demo/male.png"}
-    assert default == "a05d"
-    assert allowed == frozenset(("a05d", "a06d"))
-
-    try:
-        fec.resolve_char_lane(sources, "a05d", "a05,a06")
-        raise AssertionError("lane accepted a default character outside its allow-list")
-    except ValueError as exc:
-        assert "DEFAULT_CHAR" in str(exc)
-
-    try:
-        fec.resolve_char_lane(sources, "a05d", "a05d,typo")
-        raise AssertionError("lane accepted an unknown character")
-    except ValueError as exc:
-        assert "unsupported chars" in str(exc)
-    print("test_service_lane_character_isolation: PASS")
-
-
 def test_admission_find_free_and_full():
     slots = [make_slot(i, "s%d" % i) for i in range(2)]
     pool = fec.SlotPool(slots)
@@ -463,7 +437,6 @@ def test_force_release_slot_used_by_unhealthy_path():
 
 
 def main():
-    test_service_lane_character_isolation()
     test_admission_find_free_and_full()
     test_admission_release_and_reclaim()
     test_admission_honors_durable_preferred_slot()

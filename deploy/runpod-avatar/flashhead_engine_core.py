@@ -46,29 +46,6 @@ def parse_frame_size(value):
     return size
 
 
-def resolve_char_lane(char_src, default_char="a05", allowed_chars=""):
-    """Return an isolated character map for one service process.
-
-    Empty ``allowed_chars`` preserves the legacy all-character behavior. A
-    configured lane fails before GPU initialization when it contains a typo or
-    excludes its own default character.
-    """
-    default = str(default_char or "a05").strip().lower() or "a05"
-    if isinstance(allowed_chars, str):
-        allowed = frozenset(
-            value.strip().lower() for value in allowed_chars.split(",") if value.strip()
-        )
-    else:
-        allowed = frozenset(str(value).strip().lower() for value in allowed_chars if str(value).strip())
-    allowed = allowed or frozenset(char_src)
-    unknown = sorted(allowed - set(char_src))
-    if unknown:
-        raise ValueError("MUNEA_FH_ALLOWED_CHARS contains unsupported chars: " + ",".join(unknown))
-    if default not in allowed:
-        raise ValueError("MUNEA_FH_DEFAULT_CHAR must be included in MUNEA_FH_ALLOWED_CHARS")
-    return ({char: path for char, path in char_src.items() if char in allowed}, default, allowed)
-
-
 # ---------------------------------------------------------------------------
 # FrameSink / AudioOutBuffer -- copied verbatim from the single-instance file
 # (old flashhead_server.py lines 94-223). Logic untouched, only relocated;
@@ -137,7 +114,6 @@ class AudioOutBuffer:
         self.depth_samples = 0
         self.hold_until_ts = float("inf")
         self._awaiting_first_push = True
-        self.playout_generation = 0
 
     def push(self, pcm_int16):
         with self.lock:
@@ -147,7 +123,6 @@ class AudioOutBuffer:
                 self.next_prebuffer_s = self.default_prebuffer_s
                 self.hold_until_ts = time.time() + delay
                 self._awaiting_first_push = False
-                self.playout_generation += 1
             self.buf = np.concatenate([self.buf, pcm_int16])
             self.last_push_ts = time.time()
             self.depth_samples = len(self.buf)
@@ -169,11 +144,6 @@ class AudioOutBuffer:
         """True while audio and video must stay on their shared start gate."""
         with self.lock:
             return time.time() < self.hold_until_ts
-
-    def playout_marker(self):
-        """Return the current turn id and its shared A/V release timestamp."""
-        with self.lock:
-            return self.playout_generation, self.hold_until_ts
 
     def pop_frame(self):
         with self.lock:

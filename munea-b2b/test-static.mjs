@@ -4,6 +4,8 @@ import fs from 'node:fs';
 const index = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const call = fs.readFileSync(new URL('./call.html', import.meta.url), 'utf8');
 const callKey = fs.readFileSync(new URL('./api/call-key.js', import.meta.url), 'utf8');
+const demoManager = fs.readFileSync(new URL('../deploy/glows/manage-shared-demo.sh', import.meta.url), 'utf8');
+const demoDeploy = fs.readFileSync(new URL('../deploy/glows/shared-card-demo.ps1', import.meta.url), 'utf8');
 
 function parseInlineScripts(html, label) {
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
@@ -57,6 +59,17 @@ assert.match(callKey, /\/demo\/session/);
 assert.match(callKey, /avatarToken/);
 assert.doesNotMatch(callKey, /DEMO_AVATAR_KEY/);
 assert.doesNotMatch(call, /cap_rem=1|cap_evt=1/);
+
+// Demo deployment must stay process-, path-, and port-isolated from the App.
+assert.match(demoManager, /ROOT="\$\{MUNEA_DEMO_ROOT:-\/home\/glows\/munea-demo\}"/);
+assert.match(demoManager, /APP="\$\{ROOT\}\/flashhead_server\.py"/);
+assert.match(demoManager, /refusing to signal pid \$\{pid\}: it is not the Demo process/);
+assert.doesNotMatch(demoManager, /\b(?:pkill|killall)\b/i);
+assert.match(demoDeploy, /\$RemoteRoot = '\/home\/glows\/munea-demo'/);
+assert.match(demoDeploy, /MUNEA_FACE_PORT=8188/);
+assert.match(demoDeploy, /MUNEA_FH_ALLOWED_CHARS=a05d,a06d/);
+assert.doesNotMatch(demoDeploy, /\b(?:kill|pkill|killall|Stop-Process)\b/i);
+
 assert.match(call, /class="charbar"[\s\S]*bg-a05\.png[\s\S]*bg-a06\.png/);
 assert.match(call, /waitForFirstFrame/);
 assert.match(call, /Live\.primeMic\(\)/);

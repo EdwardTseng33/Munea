@@ -15,11 +15,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
-import os
 import re
-import subprocess
-import sys
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -204,42 +200,11 @@ def check_demo_lane(contracts: dict) -> None:
     print("demo lane: isolated from prod chars")
 
 
-def check_runtime_demo_asset_build() -> None:
-    """The shared-card Demo must build its own 768 inputs without touching App assets."""
-    tool = ROOT / "deploy" / "runpod-avatar" / "sync-face-assets.py"
-    source = ROOT / "munea-b2b" / "flashhead"
-    with tempfile.TemporaryDirectory(prefix="munea-demo-assets-") as output:
-        child_env = os.environ.copy()
-        child_env["PYTHONIOENCODING"] = "utf-8"
-        result = subprocess.run(
-            [sys.executable, str(tool), "--source", str(source), "--target-dir", output,
-             "--lane", "demo", "--frame-size", "768"],
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=child_env,
-        )
-        if result.returncode != 0:
-            raise AssertionError(
-                "Demo 768 runtime asset build failed\n"
-                f"stdout:\n{result.stdout}\n"
-                f"stderr:\n{result.stderr}"
-            )
-        built = sorted(Path(output).glob("*.png"))
-        assert [path.name for path in built] == ["char-a05B-demo.png", "char-a06B-demo.png"]
-        for path in built:
-            with Image.open(path) as image:
-                assert image.size == (768, 768), f"{path.name}: runtime asset is {image.size}"
-    print("demo lane: 768 runtime assets build independently")
-
-
 def main() -> None:
     contracts = engine_contracts()
     check_condition_images(contracts)
     check_app_overlay(contracts)
     check_demo_lane(contracts)
-    check_runtime_demo_asset_build()
     print("\nall avatar render contract checks passed")
 
 

@@ -62,7 +62,7 @@ from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
 from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
-                                    health_snapshot, parse_frame_size, resolve_char_lane, slot_summary,
+                                    health_snapshot, parse_frame_size, slot_summary,
                                     switch_slot_char)
 
 # ===== 正式線 / 展示間分家（2026-07-21）=====
@@ -76,11 +76,7 @@ CHAR_SRC = {
     "a05d": os.environ.get("MUNEA_FH_CHAR_A05D", "/root/char-a05B-demo.png"),
     "a06d": os.environ.get("MUNEA_FH_CHAR_A06D", "/root/char-a06B-demo.png"),
 }
-CHAR_SRC, DEFAULT_CHAR, ALLOWED_CHARS = resolve_char_lane(
-    CHAR_SRC,
-    os.environ.get("MUNEA_FH_DEFAULT_CHAR", "a05"),
-    os.environ.get("MUNEA_FH_ALLOWED_CHARS", ""),
-)
+DEFAULT_CHAR = "a05"
 
 # 與 deploy/modal-avatar/flashhead_modal_dev.py 同一份表——備援機接手時臉不可以換個樣子。
 # scripts/test-avatar-render-contract.py 會比對兩支引擎與 App，任一邊漂掉就擋下。
@@ -104,11 +100,7 @@ AVATAR_RENDER_CONTRACTS = {
 
 
 def avatar_render_contract(char):
-    base = AVATAR_RENDER_CONTRACTS.get(char) or AVATAR_RENDER_CONTRACTS[DEFAULT_CHAR]
-    # The source crop is a visual alignment contract. Inference resolution is a
-    # launch-time decision, so health must report what this process is actually
-    # running instead of the canonical asset size stored in the table above.
-    return {**base, "model_input": {"width": FRAME_SIZE, "height": FRAME_SIZE}}
+    return AVATAR_RENDER_CONTRACTS.get(char) or AVATAR_RENDER_CONTRACTS[DEFAULT_CHAR]
 MODEL_ROOT = os.path.expanduser(os.environ.get("MUNEA_FH_MODEL_ROOT", "/models"))
 CKPT_DIR = os.environ.get(
     "MUNEA_FH_CKPT_DIR", os.path.join(MODEL_ROOT, "soulx-flashhead-1.3b")
@@ -137,9 +129,6 @@ import flash_head.inference as _fh_inference
 _fh_inference.infer_params["height"] = FRAME_SIZE
 _fh_inference.infer_params["width"] = FRAME_SIZE
 PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
-WORKER_LANE = os.environ.get(
-    "MUNEA_FH_LANE", AVATAR_RENDER_CONTRACTS[DEFAULT_CHAR]["lane"]
-).strip().lower()
 # 2026-07-12 N 槽改造：沒設＝1（跟改造前單例行為一字不差）。只有測試卡明確設
 # MUNEA_FH_SLOTS=3 才會真的多槽——這是本輪任務的核心相容性鐵律。
 N_SLOTS = max(1, int(os.environ.get("MUNEA_FH_SLOTS", "1")))
@@ -556,8 +545,6 @@ class FlashHead:
             primary = outer.slots[0]
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
-                         "lane": WORKER_LANE, "frame_size": FRAME_SIZE,
-                         "allowed_chars": sorted(ALLOWED_CHARS),
                          "avatar_render_contract": avatar_render_contract(primary.char),
                          "capacity": snap})
             if len(outer.slots) > 1:
@@ -730,24 +717,6 @@ class FlashHead:
                 return
             await ws.accept()
             print("[audio] connected session=" + session[:8] + " slot" + str(slot.index), flush=True)
-            notifier_stop = asyncio.Event()
-
-            async def _notify_playout_start():
-                last_generation = slot.audio_out.playout_marker()[0]
-                while not notifier_stop.is_set():
-                    generation, release_ts = slot.audio_out.playout_marker()
-                    if generation > last_generation and release_ts != float("inf"):
-                        delay = max(0.0, release_ts - time.time())
-                        if delay:
-                            await asyncio.sleep(delay)
-                        current_generation, current_release_ts = slot.audio_out.playout_marker()
-                        if current_generation == generation and time.time() >= current_release_ts:
-                            await ws.send_json({"type": "playout_start", "generation": generation})
-                            last_generation = generation
-                            continue
-                    await asyncio.sleep(0.01)
-
-            notifier_task = asyncio.create_task(_notify_playout_start())
             try:
                 while True:
                     msg = await ws.receive()
@@ -761,13 +730,6 @@ class FlashHead:
                         break
             except WebSocketDisconnect:
                 pass
-            finally:
-                notifier_stop.set()
-                notifier_task.cancel()
-                try:
-                    await notifier_task
-                except (asyncio.CancelledError, WebSocketDisconnect):
-                    pass
             print("[audio] closed session=" + session[:8] + " slot" + str(slot.index), flush=True)
 
         return api

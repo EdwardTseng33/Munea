@@ -33,23 +33,6 @@ class B2BDemoVoiceIsolationTests(unittest.TestCase):
 
         self.assertEqual(config.tools, [])
 
-    def test_demo_ends_close_mic_turn_faster_without_changing_app_profile(self):
-        demo = voice.live_config(demo_mode=True)
-        app = voice.live_config(demo_mode=False)
-        demo_vad = demo.realtime_input_config.automatic_activity_detection
-        app_vad = app.realtime_input_config.automatic_activity_detection
-
-        self.assertEqual(demo_vad.silence_duration_ms, 550)
-        self.assertEqual(
-            demo_vad.end_of_speech_sensitivity,
-            voice.types.EndSensitivity.END_SENSITIVITY_HIGH,
-        )
-        self.assertEqual(app_vad.silence_duration_ms, 800)
-        self.assertEqual(
-            app_vad.end_of_speech_sensitivity,
-            voice.types.EndSensitivity.END_SENSITIVITY_LOW,
-        )
-
 
 if __name__ == "__main__":
     unittest.main()
