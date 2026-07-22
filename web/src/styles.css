@@ -2190,6 +2190,29 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .cap-busy::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 7px; vertical-align: -1.5px;
   border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: mn-spin .7s linear infinite; }
 
+/* ===== 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：排隊＝第幾位＋自動接通說明；全滿＝請稍後再試 =====
+   深色玻璃卡疊在人物畫面中央偏上，跟字幕框同一套視覺語言；字級放大給長輩看 */
+.busy-card { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); z-index: 8;   /* 中央偏下：把人物的眼神留出來——她人在、只是忙 */
+  width: min(320px, calc(100% - 56px));
+  background: rgba(8,18,15,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,.14); border-radius: 22px;
+  padding: 22px 20px; text-align: center; color: #FFF; font-family: var(--sans);
+  box-shadow: 0 24px 48px -20px rgba(0,0,0,.65); }
+.busy-card[hidden] { display: none; }
+.bc-ring { width: 30px; height: 30px; margin: 0 auto 12px;
+  border: 3px solid rgba(255,255,255,.22); border-top-color: var(--teal);
+  border-radius: 50%; animation: mn-spin 1s linear infinite; }
+.busy-card[data-mode="full"] .bc-ring { display: none; }
+.bc-title { font-size: 19px; font-weight: 800; line-height: 1.45; }
+.bc-pos { margin-top: 10px; font-size: 17px; color: rgba(255,255,255,.9); }
+.bc-pos b { font-size: 30px; font-weight: 800; color: #7FD8CE; margin: 0 3px; }
+.bc-pos:empty { display: none; }
+.bc-note { margin-top: 10px; font-size: 14.5px; line-height: 1.65; color: rgba(255,255,255,.74); }
+.bc-btn { margin-top: 16px; width: 100%; padding: 12px 0; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.1);
+  color: #FFF; font-size: 16px; font-weight: 700; font-family: var(--sans); }
+.bc-btn:active { background: rgba(255,255,255,.22); }
+
 /* 撥通中（腦開機）：同位置放載入動態；真收音動態等 ready 才出現（Edward 7/9） */
 /* 撥通中不再放收音載入動態（Edward 7/9：不直覺）——波紋等真的接通（聽/說狀態）才出現 */
 .face-screen[data-state="connecting"] .face-wave { display: none; }

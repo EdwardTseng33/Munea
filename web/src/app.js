@@ -192,6 +192,27 @@ function setCallHint(text, busy) {
   const cap = $('#chatCaption');
   if (cap) { cap.textContent = text; cap.classList.toggle('cap-busy', !!busy); }
 }
+// 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：顯卡滿載時「排隊／全滿」都給看得懂的大字畫面。
+// 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——忙線資訊必須有自己的卡。
+function showBusyCard(mode, position) {
+  const card = $('#busyCard'); if (!card) return;
+  card.dataset.mode = mode;
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
+  if (mode === 'queued') {
+    if (title) title.textContent = '現在比較多人在跟' + cname() + '聊天';
+    if (pos) pos.innerHTML = '你排第 <b>' + Math.max(1, parseInt(position, 10) || 1) + '</b> 位';
+    if (note) note.innerHTML = '輪到你會自動接通，排隊不扣點數。<br>請保持畫面開著，離開會取消排隊。';
+    if (btn) btn.textContent = '取消排隊';
+  } else {
+    if (title) title.textContent = '現在忙線中';
+    if (pos) pos.textContent = '';
+    // 角色名是用戶自訂字串：用 append 組字串＋<br>，不走 innerHTML（斷行乾淨、也不吃進標籤）
+    if (note) { note.textContent = ''; note.append('想跟' + cname() + '聊天的人比較多，', document.createElement('br'), '請稍後再試試看。'); }
+    if (btn) btn.textContent = '知道了';
+  }
+  card.hidden = false;
+}
+function hideBusyCard() { const card = $('#busyCard'); if (card) card.hidden = true; }
 // 等待中按鈕：加轉圈、鎖點擊（Edward 7/8：Loading 要有動態，不然像當機）
 function setBtnBusy(b, text) {
   if (!b) return;
@@ -1334,6 +1355,7 @@ const CallControl = {
     if (!base) throw new Error('call_control_not_configured');
     const generation = ++this.generation;
     this.cancelled = false;
+    this._queueSeen = false;
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
     let accountRecoveryAttempted = false;
     while (!this.cancelled) {
@@ -1356,7 +1378,14 @@ const CallControl = {
       if (result.status === 'queued') {
         this.pending = { call_id: result.call_id, idempotency_key: idempotencyKey };
         const queue = result.queue || {};
-        setCallHint('目前排第 ' + (queue.position || 1) + ' 位，正在準備通話席位…', true);
+        // 忙線排隊（2026-07-23 Edward 拍板 B 案）：明著告訴用戶排第幾位、輪到自動接通，不再讓撥號轉圈像當機
+        showBusyCard('queued', queue.position);
+        setCallPreflightPending(true, '排隊中…');
+        setCallHint('忙線中，排到會自動接通', true);
+        if (!this._queueSeen) {
+          this._queueSeen = true;
+          try { trackProductEvent('call_queue_shown', { position: queue.position || 1, depth: queue.depth || 0 }); } catch (e) {}
+        }
         await new Promise(resolve => setTimeout(resolve, 3000));
         continue;
       }
@@ -2894,6 +2923,7 @@ let callDialing = false;
 let callPreflightPending = false;
 function setCallPreflightPending(on, pendingLabel = '連線中…') {
   callPreflightPending = on;
+  if (!on) hideBusyCard();   // 排隊卡跟著撥號前置狀態走：接通／取消／失敗任何一條路離開排隊就收卡
   const b = $('#callToggle'); if (!b) return;
   b.setAttribute('aria-busy', on ? 'true' : 'false');
   const lbl = $('#callToggleLabel');
@@ -4753,6 +4783,7 @@ function setupHscrollHints() {
 async function connectCall() {
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
+  hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
   try {
@@ -4839,8 +4870,11 @@ async function connectCall() {
         // 正式用戶（非開發者旁路）完全不受影響，0 點依然照擋。
         if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');
       }
+      // 用戶可能在前置檢查途中就按了取消／離開（排隊可取消上線後，取消會把 preflight 收掉）——不再往下向總機叫號
+      if (!callPreflightPending && !callDialing && !callConnected) return;
       // 撥號中就是撥號中：不把「安排通話／安排席位」這種後台調度字眼推到畫面上，
       // 按鈕與字幕一路維持「連線中…」直到真的進入撥號（Edward 2026-07-20 拍板）。
+      // 例外＝真的滿載在排隊（Edward 2026-07-22 拍板 B 案）：排隊卡明講第幾位，這不是後台字眼、是誠實狀態。
       setCallPreflightPending(true);
       voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
@@ -4855,6 +4889,8 @@ async function connectCall() {
       });
     } catch (e) {
       const reason = String(e && e.message || e);
+      // 用戶自己取消排隊／撥號：取消當下畫面與席位都已收好（completeChatSession → release），這裡靜靜退場即可
+      if (reason === 'call_cancelled') { setCallPreflightPending(false); setCallDialing(false); return; }
       const authRequired = reason.indexOf('authentication_required') >= 0;
       voiceCallFail('gateway_assigned', reason, { endpoint: CallControl.url() });
       voiceCallEnd('failed', reason);
@@ -4862,9 +4898,10 @@ async function connectCall() {
       LiveVoice.stop(); setCallPreflightPending(false); setCallDialing(false); stopCallTimer();
       setCallHint(authRequired ? '登入狀態已失效，請重新登入後再撥' :
         (reason.indexOf('account_not_ready') >= 0 ? '帳號正在完成初始化，請稍後再撥一次' :
-        (reason.indexOf('queue_full') >= 0 ? '目前等待人數已滿，請稍後再撥' :
+        (reason.indexOf('queue_full') >= 0 ? '現在忙線中，請稍後再試試看' :
           (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
           (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
+      if (reason.indexOf('queue_full') >= 0) showBusyCard('full');   // 連排隊的位子都滿了：明講忙線、請稍後再試（Edward 7/22 B 案）
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
       if (reason.indexOf('insufficient_credits') >= 0) setTimeout(__muneaShowCallCreditBlocked, 0);
       try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
@@ -5168,7 +5205,7 @@ function init() {
   }
   // 關閉聊聊（X）＝有通話先掛斷結算，再回首頁；沒通話就直接回
   if ($('#chatExit')) $('#chatExit').addEventListener('click', () => {
-    if (callConnected || callDialing) {
+    if (callConnected || callDialing || callPreflightPending) {   // 排隊／前置中離開也要真取消，不留幽靈佔位
       const wasConnected = callConnected;
       LiveVoice.stop(); completeChatSession(wasConnected ? 'user_ended' : 'user_cancelled'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen();
       if (wasConnected) {
@@ -5180,12 +5217,18 @@ function init() {
     showView('home');
   });
   // 滑掉/切走 App＝自動掛斷（Edward 2026-07-10）：離開畫面就走「結束通話」完整收線（停聲音/停臉/停計時/記點），不讓通話在背景白燒點數
-  const _hangupOnLeave = () => { try { if ((callConnected || callDialing) && $('#callToggle')) $('#callToggle').click(); } catch (e) {} };
+  const _hangupOnLeave = () => { try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {} };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _hangupOnLeave(); });
   window.addEventListener('pagehide', _hangupOnLeave);
+  // 忙線卡按鈕：排隊模式＝取消排隊（走通話鍵同一條取消線）；全滿模式＝知道了、收卡
+  if ($('#busyCardBtn')) $('#busyCardBtn').addEventListener('click', () => {
+    const card = $('#busyCard'); const mode = card && card.dataset.mode;
+    hideBusyCard();
+    if (mode === 'queued' && !callConnected && (callDialing || callPreflightPending)) { try { $('#callToggle').click(); } catch (e) {} }
+  });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
-    // 撥通中再按一次＝取消撥號、回到待機
-    if (callDialing && !callConnected) {
+    // 撥通中（含排隊／前置連線）再按一次＝取消撥號、回到待機
+    if ((callDialing || callPreflightPending) && !callConnected) {
       LiveVoice.stop(); FaceWave.stop(); completeChatSession('user_cancelled'); chatOpened = false;
       setCallToggle(false); stopCallTimer();
       const chatEl = document.getElementById('chat'); if (chatEl) chatEl.dataset.state = 'idle';
