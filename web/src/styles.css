@@ -613,6 +613,7 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-provider-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 14px; }
 .auth-provider { width: 100%; min-height: 52px; border-radius: 16px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
 .auth-provider .ic { width: 21px; height: 21px; }
+.auth-provider .apple-mark { width: 16px; height: 20px; display: block; flex-shrink: 0; fill: currentColor; stroke: none; }
 .auth-dev-btn { width: 100%; margin-top: 10px; min-height: 46px; border-radius: 15px; background: var(--coral-soft); color: var(--coral-d); font-size: 15px; }
 .auth-message { min-height: 20px; font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.4; }
 .auth-message.is-error { color: var(--danger); font-weight: 700; }
