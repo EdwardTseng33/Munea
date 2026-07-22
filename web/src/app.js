@@ -5892,6 +5892,12 @@ function init() {
     if (!p) { toast('先選一包點數'); return; }
     // App 裡走真蘋果付款；點數入帳由 __muneaApplyPurchase 統一做
     if (window.MuneaStore && window.MuneaStore.available()) {
+      const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
+      if (!authNow.authUserId) {
+        toast('先登入帳號，點數才能記在你的帳上。', 4200);
+        if (typeof openAuthSheet === 'function') openAuthSheet();
+        return;
+      }
       const b = $('#tuBuyBtn');
       setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
@@ -6046,6 +6052,14 @@ function init() {
     if (!_planPick) return;
     // App 裡走真蘋果付款（StoreKit）；網頁預覽維持示範切換
     if (window.MuneaStore && window.MuneaStore.available()) {
+      // 未登入不先開蘋果付款——付完款才發現綁不了帳號，是 2026-07-22 Guideline 2.1(b) 退件級的體驗
+      const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
+      if (!authNow.authUserId) {
+        hidePlanConfirm();
+        toast('先登入帳號，訂閱才能綁到你的資料。', 4200);
+        if (typeof openAuthSheet === 'function') openAuthSheet();
+        return;
+      }
       const pid = window.MuneaStore.subId(_planPick, _subCyc);
       const b = $('#planYes');
       setBtnBusy(b, '連到 App Store');
@@ -6116,6 +6130,12 @@ function init() {
     const p = sel ? +sel.dataset.p : 0;
     if (!p) { toast('先選一包點數'); return; }
     if (window.MuneaStore && window.MuneaStore.available()) {
+      const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
+      if (!authNow.authUserId) {
+        toast('先登入帳號，點數才能記在你的帳上。', 4200);
+        if (typeof openAuthSheet === 'function') openAuthSheet();
+        return;
+      }
       const b = $('#tuBuyBtn2');
       setBtnBusy(b, '連到 App Store');
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
