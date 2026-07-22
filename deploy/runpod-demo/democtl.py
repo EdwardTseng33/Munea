@@ -91,10 +91,10 @@ def wake() -> dict[str, Any]:
     spec = {
         "name": POD_NAME,
         "computeType": "GPU",
-        "gpuTypeIds": ["NVIDIA RTX 6000 Ada Generation"],
+        "gpuTypeIds": ["NVIDIA RTX 6000 Ada Generation", "NVIDIA GeForce RTX 4090"],
         "gpuTypePriority": "availability",
         "gpuCount": 1,
-        "cloudType": "ALL",
+        "cloudType": "SECURE",
         "interruptible": False,
         "locked": False,
         "supportPublicIp": True,
