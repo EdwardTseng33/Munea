@@ -51,6 +51,18 @@ assert(!/setCallPreflightPending\([^)]*點數/.test(connectCall) && !/setCallHin
 // 開發者 Gateway 模式（真登入、非直連）測試帳號不能被 0 點卡住；正式用戶（非開發者旁路）依然照擋。
 assert(connectCall.includes("if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');"), 'Only the developer Gateway profile may skip the zero-credit block; production callers must still be stopped');
 
+// 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：排隊要顯示第幾位＋自動接通說明；隊伍全滿要明講請稍後再試；
+// 排隊／前置連線中都必須能取消（按通話鍵、離開聊聊頁、切走 App 三條路都要真取消，不留幽靈佔位）。
+assert(html.includes('id="busyCard"') && html.includes('id="busyCardBtn"'), 'Busy card markup must exist on the call screen');
+assert(css.includes('.busy-card'), 'Busy card styles must exist');
+assert(app.includes("showBusyCard('queued', queue.position)"), 'Queued gateway responses must surface the busy card with the caller position');
+assert(app.includes("showBusyCard('full')"), 'A full queue must surface the explicit busy-try-later card');
+assert(app.includes('現在忙線中，請稍後再試試看'), 'Full-queue copy must say busy-try-later in plain language');
+assert(/if \(\(callDialing \|\| callPreflightPending\) && !callConnected\)/.test(app), 'Tapping the call button must cancel while queued (preflight pending), not only while dialing');
+assert(app.includes('if (callConnected || callDialing || callPreflightPending)'), 'Leaving the call screen while queued must hang up and release the queue slot');
+assert(/callConnected \|\| callDialing \|\| callPreflightPending\) && \$\('#callToggle'\)/.test(app), 'Backgrounding the App while queued must cancel the queue slot');
+assert(app.includes("if (reason === 'call_cancelled')"), 'A user-initiated cancel must exit quietly instead of reporting a busy failure');
+
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');
 assert(/class="range-row"[^>]*>\s*<input type="range" id="walkGoal"/.test(challengeSheet), 'Walk goal must use the visible range bar');
