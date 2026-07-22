@@ -323,6 +323,61 @@ class SupabaseAdapter:
             detail = exc.read().decode("utf-8", "replace")[:300]
             raise RuntimeError(f"Supabase Auth user deletion failed: {exc.code} {detail}") from exc
 
+    def touch_account_last_seen(self, account_id=None):
+        """App 開機蓋上線章（免費帳號閒置清理的主要訊號）。
+
+        /account-bootstrap 成功後呼叫；失敗不擋開機流程（呼叫端 try/except）。
+        """
+        target = account_id or self.account_id
+        if not self.enabled() or not self._is_uuid(target):
+            return False
+        self._request(
+            "PATCH",
+            "accounts",
+            query={"id": f"eq.{target}"},
+            payload={"last_seen_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())},
+            prefer="return=minimal",
+        )
+        return True
+
+    def run_free_account_retention(self, inactive_days=60, warning_lead_days=7,
+                                   max_deletions=20, dry_run=True):
+        """免費帳號閒置清理：跑資料庫函式，真刪時順手清孤兒 Auth 登入身分。
+
+        資料庫函式（024）管兩段式警示／刪除與五道排除；帳號列刪掉後，
+        Auth 登入身分照 delete_scoped_account 既有路走 Admin API 刪，
+        刪不掉不假裝成功——cleanupRequired 帶回去給呼叫端告警。
+        """
+        if not self.enabled():
+            raise RuntimeError("Supabase adapter is not configured for retention runs")
+        result = self._request(
+            "POST",
+            "rpc/munea_run_free_account_retention",
+            payload={
+                "p_inactive_days": int(inactive_days),
+                "p_warning_lead_days": int(warning_lead_days),
+                "p_max_deletions": int(max_deletions),
+                "p_dry_run": bool(dry_run),
+            },
+        ) or {}
+        cleanup = {"attempted": 0, "deleted": 0, "failed": []}
+        if not dry_run:
+            seen = set()
+            for uid in result.get("authUserIdsToCleanup") or []:
+                uid = str(uid)
+                if uid in seen or not self._is_uuid(uid):
+                    continue
+                seen.add(uid)
+                cleanup["attempted"] += 1
+                try:
+                    self._delete_auth_user(uid)
+                    cleanup["deleted"] += 1
+                except Exception as exc:
+                    cleanup["failed"].append({"authUserId": uid, "error": type(exc).__name__})
+        result["authCleanup"] = cleanup
+        result["cleanupRequired"] = bool(cleanup["failed"])
+        return result
+
     def _fetch_auth_user_email(self, auth_user_id):
         """GoTrue Admin 單一 user 查詢、只取 email（測試帳號網域判準用）。
         任何失敗（逾時／找不到／格式異常）一律回 None，不讓名冊或分析請求被單一查詢拖垮。"""

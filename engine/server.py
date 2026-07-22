@@ -369,6 +369,10 @@ ADMIN_POST_PATHS = {
     "/admin/daily-briefing",
     "/admin/memory-consolidate",
     "/admin/memory-living-profile",
+    # 閒置清理（2026-07-22）：免費帳號 60 天未上線自動刪除。同上是定時鬧鐘
+    # 用管理鑰匙呼叫的（沒有用戶登入證可帶）；處理端自己再驗一次管理鑰匙，
+    # 而且預設乾跑（dryRun 未明講 false 一律只出報告、不動資料）。
+    "/admin/retention/run",
     # 企業席次（B2B）後台：需求單 3.6 接口清單（不含請款單相關端點，
     # 那是 engine/enterprise_billing.py 的責任範圍，另案加入 ADMIN_POST_PATHS）。
     "/admin/enterprise/clients",
@@ -3649,6 +3653,12 @@ def bootstrap_account_response(data, headers=None):
             bootstrap_scope_token = REQUEST_DATA_IDENTITY.set(bootstrap_identity)
             try:
                 free_trial = ensure_free_signup_trial(account_id)
+                try:
+                    # 上線章：閒置清理（/admin/retention/run）認的主要活動訊號。
+                    # 蓋不上不能擋開機（欄位還沒遷移／雲端瞬斷都可能發生）。
+                    supabase_adapter.make_adapter().touch_account_last_seen(account_id)
+                except Exception:
+                    logging.warning("touch_account_last_seen failed", exc_info=True)
                 append_product_event({"eventName": "account_bootstrapped", "properties": {"backend": "supabase"}})
                 return {
                     "ok": True,
@@ -4298,6 +4308,67 @@ def _enrich_accounts_with_activity(accounts, days=30):
         acct["status"] = _derive_account_status(agg["lastActiveAt"], agg["eventCount"])
         acct["points"] = int(points_map.get(acct.get("accountId") or "", 0) or 0)
     return accounts
+
+
+def _retention_int_param(data, key, env_key, default, lo, hi):
+    """0 是合法值（例如 warningLeadDays=0＝不留警示窗），不能用 or 吃掉。"""
+    raw = data.get(key)
+    if raw is None:
+        raw = os.environ.get(env_key)
+    try:
+        value = int(raw) if raw is not None and str(raw).strip() != "" else default
+    except (TypeError, ValueError):
+        value = default
+    return max(lo, min(hi, value))
+
+
+def admin_retention_run(data=None):
+    """免費帳號 60 天未上線自動清理（2026-07-22 Edward 拍板）。
+
+    真正的政策與五道排除都在資料庫函式 munea_run_free_account_retention
+    （supabase/sql/024）；這裡只管參數護欄、預設乾跑、跑完告警。
+    定時鬧鐘（Cloud Scheduler）每天帶管理鑰匙打這裡一次。
+    """
+    data = data or {}
+    adapter = supabase_adapter.make_adapter()
+    if not adapter.enabled():
+        return {"ok": False, "error": "supabase_not_configured",
+                "backend": data_backend_status()}
+
+    # 預設乾跑：dryRun 沒有「明講 false」一律只出報告不動資料。
+    dry_run = data.get("dryRun")
+    if dry_run is None:
+        dry_run = str(os.environ.get("MUNEA_RETENTION_DRY_RUN") or "1").strip().lower() not in {"0", "false", "no", "off"}
+    else:
+        dry_run = bool(dry_run)
+
+    inactive_days = _retention_int_param(data, "inactiveDays", "MUNEA_RETENTION_INACTIVE_DAYS", 60, 30, 365)
+    warning_lead = _retention_int_param(data, "warningLeadDays", "MUNEA_RETENTION_WARNING_LEAD_DAYS", 7, 0, 30)
+    max_deletions = _retention_int_param(data, "maxDeletions", "MUNEA_RETENTION_MAX_DELETIONS", 20, 0, 200)
+
+    try:
+        report = adapter.run_free_account_retention(
+            inactive_days=inactive_days,
+            warning_lead_days=warning_lead,
+            max_deletions=max_deletions,
+            dry_run=dry_run,
+        )
+    except Exception as exc:
+        logging.exception("retention run failed")
+        return {"ok": False, "error": "retention_run_failed",
+                "detail": type(exc).__name__, "dryRun": dry_run}
+
+    if not dry_run:
+        deleted = int(report.get("deletedCount") or 0)
+        warned = int(report.get("warnedCount") or 0)
+        if deleted or report.get("cleanupRequired"):
+            notify.alert(
+                "privacy", "retention-purge",
+                f"Inactive free-account purge: deleted={deleted} warned={warned}"
+                + (" (auth cleanup required)" if report.get("cleanupRequired") else ""),
+            )
+
+    return {"ok": True, **report}
 
 
 def admin_accounts_summary(data=None):
@@ -9075,6 +9146,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(drain_notification_outbox_response(data))
+            elif self.path == "/admin/retention/run":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_retention_run(data))
             elif self.path == "/admin/enterprise/clients":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
