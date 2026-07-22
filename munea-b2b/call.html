@@ -30,7 +30,7 @@
   .cover.hide{opacity:0;pointer-events:none}
   .overlay{position:absolute;left:var(--box-left);top:var(--box-top);width:var(--box-width);height:var(--box-height);overflow:hidden;opacity:0;transition:opacity .18s linear;z-index:3}
   .overlay.on{opacity:1}
-  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:fill !important;display:block}
+  .overlay video,.overlay canvas{position:absolute;inset:0;width:100% !important;height:100% !important;object-fit:cover !important;display:block}
   .overlay:not(.stream) canvas{display:none}
   .overlay.stream video{display:none}
   .overlay{
