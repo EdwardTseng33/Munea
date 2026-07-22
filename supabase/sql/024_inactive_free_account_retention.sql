@@ -127,11 +127,9 @@ begin
         and w.wallet_type = 'purchased'
         and w.balance > 0
     )
-    -- D. 企業席次在身不碰
-    and not exists (
-      select 1 from public.enterprise_seats es
-      where es.account_id = a.id and es.status <> 'released'
-    )
+    -- D. 企業席次在身不碰 → 拆到候選建好之後、用 to_regclass 條件刪
+    --    （enterprise_seats 是較晚的遷移，某些環境還沒建表；直接在這裡
+    --     靜態引用會讓整支函式在缺表環境無法執行。見下方 to_regclass 段）
     -- E. 別人家庭圈的成員不碰
     and not exists (
       select 1 from public.account_members mine
@@ -148,6 +146,17 @@ begin
       where am.account_id = a.id
         and u.email ilike '%@munea.net'
     );
+
+  -- D. 企業席次在身不碰（表存在才查；缺表環境沒有企業客戶、跳過安全）。
+  --    放在 if 分支內＝缺表時這條含 enterprise_seats 的語句不會被執行、
+  --    PL/pgSQL 不 plan 未到達的語句，因此不會 42P01。
+  if to_regclass('public.enterprise_seats') is not null then
+    delete from _retention_candidates c
+    where exists (
+      select 1 from public.enterprise_seats es
+      where es.account_id = c.account_id and es.status <> 'released'
+    );
+  end if;
 
   select count(*) into v_scanned from _retention_candidates;
 
