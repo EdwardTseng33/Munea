@@ -184,6 +184,13 @@
       "filename": "023_test_account_flag.sql",
       "type": "schema",
       "sha256": "07539eea1a4b94cf92c01e97a77bbf8aba2e602ee0bd9814bbab81e1ae7b25d8"
+    },
+    {
+      "order": 25,
+      "identity": "024",
+      "filename": "024_inactive_free_account_retention.sql",
+      "type": "schema",
+      "sha256": "c01c8e5c58882ca6a75ae363aa07090202dbf6b31aa09a1f96a994c704aa00a8"
     }
   ]
 }
