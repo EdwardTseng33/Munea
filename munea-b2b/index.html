@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>沐寧 Munea｜把「會關心人的 AI」帶進您的服務裡・企業 ESG × 長照機構方案</title>
-<meta name="description" content="沐寧 Munea 為台灣照護場域與員工家庭提供真臉真聲 AI 健康陪伴：從小規模試辦開始，以通話完成率、使用率、家屬回饋與異常回報品質驗證成效。">
+<meta name="description" content="沐寧 Munea 為台灣照護場域與員工家庭，提供真臉真聲、會關心人的 AI 陪伴：小規模試辦看到效果再擴大，關懷成果每月看得見。">
 <meta name="theme-color" content="#3AA8A0">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Munea 沐寧">
 <meta property="og:title" content="沐寧 Munea｜把「會關心人的 AI」帶進您的服務裡">
-<meta property="og:description" content="真臉真聲 AI 健康陪伴，從小規模試辦開始，用可量測指標驗證照護價值。">
+<meta property="og:description" content="真臉真聲、會關心人的 AI 陪伴。小規模試辦看到效果再擴大，關懷成果看得見。">
 <meta property="og:image" content="assets/app-chat.png">
 <meta property="og:locale" content="zh_TW">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="沐寧 Munea｜把「會關心人的 AI」帶進您的服務裡">
-<meta name="twitter:description" content="真臉真聲 AI 健康陪伴，從小規模試辦開始，用可量測指標驗證照護價值。">
+<meta name="twitter:description" content="真臉真聲、會關心人的 AI 陪伴。小規模試辦看到效果再擴大，關懷成果看得見。">
 <link rel="icon" href="assets/paining-logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -267,7 +267,9 @@
   .price-card .who{font-size:13px;color:var(--muted);margin-bottom:16px}
   .price-card .amt{font-family:"Poppins","Noto Sans TC",sans-serif;font-weight:700;font-size:27px;color:var(--teal-d);line-height:1.3}
   .price-card .unit{font-size:14px;color:var(--muted);margin:2px 0 16px}
-  .price-card ul{list-style:none;margin-top:auto}
+  .price-card ul{list-style:none;margin-top:14px}
+  .price-card .was{font-size:13.5px;color:var(--muted);text-decoration:line-through;font-weight:500;margin-left:6px}
+  .save-badge{display:inline-flex;align-items:center;gap:6px;background:var(--coral-soft);color:var(--coral-d);font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:99px;align-self:flex-start}
   .price-card li{padding:7px 0 7px 24px;position:relative;font-size:14px;color:var(--muted);line-height:1.7;border-bottom:1px dashed var(--line)}
   .price-card li:last-child{border-bottom:none}
   .price-card li::before{content:"✓";position:absolute;left:2px;top:8px;font-size:13px;font-weight:700;color:var(--teal)}
@@ -397,6 +399,26 @@
     .f-grid{grid-template-columns:1fr}
     .modal-card{padding:30px 22px 26px}
   }
+  /* ── 時代數字牆＋國際驗證（2026-07-22 圖文並茂改版） ── */
+  .statband{padding:96px 0 72px}
+  .statband .center-head{margin-bottom:46px}
+  .stat-wall{display:grid;grid-template-columns:repeat(4,1fr);gap:26px}
+  .stat-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:38px 26px 32px;text-align:center;box-shadow:var(--shadow-sm)}
+  .stat-card .sv{font-family:"Poppins","Noto Sans TC",sans-serif;font-weight:700;font-size:44px;line-height:1.1;color:var(--teal-d)}
+  .stat-card .su{font-size:20px;margin-left:2px;color:var(--teal)}
+  .stat-card .sl{font-weight:700;margin-top:14px;font-size:15.5px}
+  .stat-card .sd{font-size:13px;color:var(--muted);margin-top:7px;line-height:1.7}
+  .stat-src{font-size:12px;color:var(--muted);text-align:center;margin-top:26px}
+  .proof{padding:70px 0;background:linear-gradient(180deg,var(--mint) 0%,var(--cream) 100%)}
+  .proof-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center}
+  .proof-bars{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:30px 28px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:20px}
+  .pb-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;font-size:14.5px}
+  .pb-head b{font-family:"Poppins","Noto Sans TC",sans-serif;font-size:22px;color:var(--teal-d)}
+  .pb-track{height:12px;border-radius:99px;background:var(--cream-2);overflow:hidden}
+  .pb-track i{display:block;height:100%;width:var(--w);border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--coral))}
+  .proof-note{display:flex;flex-direction:column;gap:14px;font-size:15.5px}
+  .proof-cite{font-size:12.5px;color:var(--muted)}
+  @media(max-width:860px){.stat-wall{grid-template-columns:repeat(2,1fr)}.proof-grid{grid-template-columns:1fr}.stat-card .sv{font-size:34px}}
 </style>
 </head>
 <body>
@@ -426,17 +448,17 @@
   <div class="wrap hero-grid">
     <div>
       <div class="eyebrow">台灣照護場域・員工家庭照顧解決方案</div>
-      <h1>把每天做不到的關心<br>變成<em>可量測的照護服務</em></h1>
-      <p class="sub">沐寧用真臉真聲 AI 陪長輩日常對話，協助提醒、整理關懷訊號並回報家人或照護者。先從 10–20 位小規模試辦開始，以通話完成率、使用率、家屬回饋與異常回報品質驗證是否值得正式導入。</p>
+      <h1>照顧不到的時刻，<br>交給<em>會關心人的 AI</em></h1>
+      <p class="sub">真臉真聲，陪長輩天天好好說話，替你接住夜間、離峰、遠距那些人手接不住的時刻。使用狀況與關懷成果每月看得見，ESG、家屬都能交代。</p>
       <div class="hero-actions">
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
-          預約 30 分鐘場域診斷</button>
-        <button class="btn btn-ghost" type="button" data-modal="trial">申請試辦評估</button>
+          預約合作洽談</button>
+        <a class="btn btn-ghost" href="#demo">先跟寧寧說一句話</a>
       </div>
       <div class="hero-note">
-        <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>4–8 週試辦・KPI 先議定</span>
-        <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>可先用既有裝置・深度整合另評估</span>
+        <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>小規模試辦，看到效果再擴大</span>
+        <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>純軟體，下載就能用、免導入</span>
         <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>即時體驗 Demo ↓</a>
       </div>
     </div>
@@ -454,6 +476,20 @@
 </header>
 
 <!-- ═══════════ 核心價值 ═══════════ -->
+<section class="statband"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">為什麼是現在</div>
+    <h2>台灣已進入超高齡時代，人力接不住</h2>
+  </div>
+  <div class="stat-wall reveal">
+    <div class="stat-card"><div class="sv num">1<span class="su">／5</span></div><div class="sl">每 5 人有 1 位長者</div><div class="sd">2025 台灣正式進入超高齡社會</div></div>
+    <div class="stat-card"><div class="sv num">87.5<span class="su">%</span></div><div class="sl">長照機構長期缺工</div><div class="sd">四分之一機構補一名照服員要等半年</div></div>
+    <div class="stat-card"><div class="sv num">15<span class="su">支菸</span></div><div class="sl">長期孤獨的健康代價</div><div class="sd">研究指出等同每天抽 15 支菸的風險</div></div>
+    <div class="stat-card"><div class="sv num">+22<span class="su">%</span></div><div class="sl">AI 高齡照護年成長</div><div class="sd">全球市場 2026 年估 670 億美元</div></div>
+  </div>
+  <p class="stat-src">資料來源：衛福部 2025・台灣長照機構缺工調查 2025・Nature 高齡孤獨研究 2025・Grand View Research 2026</p>
+</div></section>
+
 <section id="value"><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">為什麼是沐寧</div>
@@ -528,41 +564,62 @@
 </div></section>
 
 <!-- ═══════════ 解決方案 ═══════════ -->
+<section class="proof"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">國際已驗證</div>
+    <h2>AI 陪伴長輩，美國政府做了三年，有效</h2>
+    <p class="sec-sub">紐約州政府 2022 年起把 AI 陪伴夥伴送進獨居長輩家中，官方追蹤成果：</p>
+  </div>
+  <div class="proof-grid reveal">
+    <div class="proof-bars">
+      <div class="pb"><div class="pb-head"><span>覺得更不孤單</span><b>94%</b></div><div class="pb-track"><i style="--w:94%"></i></div></div>
+      <div class="pb"><div class="pb-head"><span>整體狀態變好</span><b>97%</b></div><div class="pb-track"><i style="--w:97%"></i></div></div>
+      <div class="pb"><div class="pb-head"><span>與世界更有連結</span><b>79%</b></div><div class="pb-track"><i style="--w:79%"></i></div></div>
+      <div class="pb"><div class="pb-head"><span>使用滿意度</span><b>4.6／5</b></div><div class="pb-track"><i style="--w:92%"></i></div></div>
+    </div>
+    <div class="proof-note">
+      <p><b>長輩平均每天主動互動 30 次以上、一週 6 天</b>——不是被迫使用，是長輩自己想聊。</p>
+      <p>2025 年單年就有 3,500 位長者申請加入，政府持續加碼。</p>
+      <p>沐寧把同一件已被驗證的事，做給台灣長輩：說國語、真臉真聲、記得每一位。</p>
+      <p class="proof-cite">來源：紐約州老齡廳（NYSOFA）官方計畫報告 2022–2026</p>
+    </div>
+  </div>
+</div></section>
+
 <section id="solutions"><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">優先市場與合作路徑</div>
     <h2>先做最接近現場、最容易驗證的場域</h2>
-    <p class="sec-sub">第一階段聚焦長照／日照、銀髮住宅與企業家庭照顧；既有 App、白牌或 API 深度整合，於試辦確認需求後另案評估。</p>
+    <p class="sec-sub">第一階段先聚焦長照／日照、銀髮住宅與企業家庭照顧；其他合作方式，試辦確認需求後再談。</p>
   </div>
   <div class="sol-grid">
     <div class="sol hl2 reveal">
       <span class="tag teal">🏥 長照機構／日照中心</span>
-      <h3>先找出<em>最值得被補上的關懷空窗</em></h3>
-      <div class="math">試辦前盤點目前巡視、關懷與家屬詢問流程；試辦期間量測通話完成率、使用率、家屬回饋與異常回報品質，不先承諾未驗證的節省工時。</div>
+      <h3>把顧不到的時段，<em>先補起來</em></h3>
+      <div class="math">先小規模試辦，看長輩用得順不順、家屬有沒有更安心，不先承諾沒驗證過的省力數字。</div>
       <ul class="s-list">
         <li><b>家屬 App 查看近況</b>：觀察詢問量與家屬安心感是否改善</li>
         <li><b>關懷訊號整理</b>：由機構共同定義哪些情況需要人工接手</li>
-        <li><b>機構管理後台</b>：全院狀態總覽、異常提醒、關懷紀錄</li>
       </ul>
-      <div class="s-price"><span class="nb">NT$499 起</span><span>／床・月（30 床起・年約・含機構後台）</span></div>
+      <div class="s-price"><span class="nb">NT$499 起</span><span>／床・月</span></div>
       <button class="s-cta" type="button" data-modal="trial">申請場域試辦評估 →</button>
     </div>
     <div class="sol hl reveal">
       <span class="tag coral">🏢 企業 ESG／人資</span>
       <h3>把家庭照顧支持，做成<em>員工真正用得到的福利</em></h3>
-      <div class="math">先用小規模員工家庭試辦，量測啟用率、持續使用率、滿意度與照顧壓力自評；ESG 僅採匿名彙總，不把個人健康或對話內容交給雇主。</div>
+      <div class="math">先讓一小群員工的爸媽試用，看用得順不順、照顧壓力有沒有變小。ESG 只看匿名總數，個人健康與對話內容絕不交給公司。</div>
       <ul class="s-list">
-        <li><b>員工的爸媽免費用 App</b>：啟用碼綁定，下載即用</li>
-        <li><b>家屬本人接收提醒</b>：通知對象與升級流程先議定</li>
-        <li><b>匿名彙總成果報告</b>：提供參與、使用與滿意度指標</li>
+        <li><b>員工的長輩專屬陪伴</b>：公司提供席次，讓員工的爸媽有沐寧陪</li>
+        <li><b>家屬 App 連動</b>：員工隨時看得到爸媽狀況</li>
+        <li><b>10 個帳號以上附每月成效報告</b>：使用率・關懷・異常摘要</li>
       </ul>
-      <div class="s-price"><span class="nb">NT$499 起</span><span>／人・月（50 席起・量大階梯）</span></div>
+      <div class="s-price"><span class="nb">NT$499 起</span><span>／人・月・比 App Store 個人版便宜 NT$100</span></div>
       <button class="s-cta" type="button" data-modal="trial">申請員工家庭試辦評估 →</button>
     </div>
     <div class="sol reveal">
       <span class="tag teal">🏘️ 高齡村／銀髮住宅</span>
       <h3>「會關心人的社區」<em>是下一個招住賣點</em></h3>
-      <div class="math">房內陪伴＋夜間離峰不空窗＝住民滿意度；住民滿意度＝續住率。一戶多住一年的營收，遠超過整層樓的席次年費。</div>
+      <div class="math">房裡有人陪、夜間離峰不空窗，住民更願意留下來。多留一戶一年，就遠超整層樓的席次年費。</div>
       <ul class="s-list">
         <li><b>住民專屬陪伴</b>：記得每位住民，越聊越熟</li>
         <li><b>夜間與離峰不空窗</b>：人力薄的時段，陪伴接得上</li>
@@ -587,7 +644,7 @@
       <div class="sw-txt">
         <span class="tag coral">🤝 策略聯盟／推廣夥伴</span>
         <h3>把 Munea 放進你的服務組合，<em>多一條分潤收入</em></h3>
-        <div class="math" style="margin-bottom:10px;">既有客群或場域直接加值，不用自己養產品團隊：通路推廣分潤、共同方案開發、場域試辦夥伴；白牌 App／API 嵌入依整合深度洽談。</div>
+        <div class="math" style="margin-bottom:10px;">既有客群直接加值，不用自己養產品團隊：通路分潤、共同方案、場域試辦夥伴都可以談。</div>
         <div class="s-price"><span>分潤與共同行銷方案洽談</span></div>
       </div>
       <button class="btn btn-teal" type="button" data-modal="demo">洽談合作</button>
@@ -635,7 +692,7 @@
   <div class="center-head reveal">
     <div class="eyebrow center">核心技術</div>
     <h2>人力有下班時間，關心沒有</h2>
-    <p class="sec-sub">夜班巡不完的走廊、外地孩子放不下的心、員工上班時的分神：這些人接不住的時刻，正是沐寧被設計出來的原因。</p>
+    <p class="sec-sub">真臉真聲、聽得懂台灣長輩的表達、記得每一次聊過的事——她能一直陪下去的三個底子。</p>
   </div>
 
   <div class="pioneer reveal">
@@ -705,13 +762,6 @@
     <p>互動層讓長輩願意開口，照護層把聊出來的每句話變成守護，技術層讓這一切安穩地跑。三層合在一起，就是一位記得每位長輩、看得到也聽得到、出事會叫人的管家。</p>
   </div>
 
-  <div class="b2b-map reveal">
-    <h3>B2B 合作，我們替您解決什麼</h3>
-    <div class="map-item"><span class="mp">機構人力顧不到的空窗</span><span class="ma">→</span><span class="ms">夜間與離峰她補位陪伴，<b>異常第一時間通報</b></span></div>
-    <div class="map-item"><span class="mp">家屬的不放心</span><span class="ma">→</span><span class="ms">打開 App 就看到近況，<b>來電詢問下降</b></span></div>
-    <div class="map-item"><span class="mp">員工遠距顧爸媽的焦慮</span><span class="ma">→</span><span class="ms">爸媽有人陪，不對勁<b>即刻通知員工本人</b></span></div>
-    <div class="map-item"><span class="mp">ESG 缺可量化的員工照顧作為</span><span class="ma">→</span><span class="ms">服務涵蓋人數與匿名成果報告，<b>直接寫進永續報告書</b></span></div>
-  </div>
 </div></section>
 
 <!-- ═══════════ Demo 密碼閘 ═══════════ -->
@@ -753,40 +803,39 @@
 <section id="pricing"><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">合作方案與參考費用</div>
-    <h2>先用試辦把規模與價格算清楚</h2>
-    <p class="sec-sub">企業採購不應拿消費版折扣倒推。正式報價依有效席次、預計使用量、支援需求與整合深度議定；以下 NT$499 起為參考起點，不代表不限量通話或所有客製皆免費。</p>
+    <h2>席次制，用多少付多少</h2>
+    <p class="sec-sub">純軟體訂閱、員工下載 App 就能用，不需要建置或導入。企業整批採購，每席比 App Store 個人版便宜 NT$100（Plus 599→499、Pro 1199→1099）；10 個帳號以上附每月成效報告，季報／分析報告為另外付費的選配。以下為參考起點，不代表不限量通話。</p>
   </div>
   <div class="price-grid">
     <div class="price-card hl reveal">
       <h3>長照機構席次</h3>
       <div class="who">住宿式機構・日照・高齡村・銀髮住宅</div>
       <div class="amt nb">NT$499 起</div>
-      <div class="unit">每床（戶）・每月（30 床起）</div>
+      <div class="unit">每床（戶）・每月</div>
       <ul>
         <li>長輩專屬陪伴席次</li>
-        <li>家屬 App 連動（來電詢問下降）</li>
-        <li>機構管理後台（總覽・異常提醒・關懷紀錄）</li>
+        <li>家屬 App 連動</li>
         <li>每月營運數據報告（使用率・關懷・異常摘要）</li>
-        <li>標準導入免費・量大階梯優惠</li>
+        <li>純軟體・機構平板或長輩手機都能用</li>
       </ul>
     </div>
     <div class="price-card reveal">
       <h3>企業 ESG 席次</h3>
       <div class="who">上市櫃・中大型企業 HR／永續部門</div>
-      <div class="amt nb">NT$499 起</div>
-      <div class="unit">每人・每月（50 席起）</div>
+      <div class="amt nb">NT$499 起<span class="was">個人版 NT$599</span></div>
+      <div class="unit">每人・每月（Plus 499・Pro 1099）</div>
+      <span class="save-badge">整批採購，每席省 NT$100</span>
       <ul>
-        <li>員工爸媽免費用 App（啟用碼綁定）</li>
-        <li>異常通知員工本人</li>
-        <li>基本匿名彙總數據（HR 交差用）</li>
-        <li>標準導入免費・量大階梯優惠</li>
+        <li>員工的長輩專屬陪伴席次</li>
+        <li>家屬 App 連動（員工隨時看得到爸媽狀況）</li>
+        <li>10 個帳號以上・附每月成效報告（使用率・關懷・異常摘要）</li>
       </ul>
     </div>
     <div class="price-card reveal">
       <h3>ESG 成果報告服務</h3>
       <div class="who">企業席次加值・永續報告書適用</div>
       <div class="amt nb">依規模報價</div>
-      <div class="unit">季度報告＋年度回顧（選配加值）</div>
+      <div class="unit">季報／分析報告・另外付費選配</div>
       <ul>
         <li>季度匿名成果報告（參與數・使用率・滿意度）</li>
         <li>對應 GRI 社會面／員工福祉指標</li>
@@ -795,17 +844,11 @@
       </ul>
     </div>
   </div>
-  <div class="trial-band reveal">
-    <span class="big">先定 KPI，再決定是否擴大</span>
-    <p><b>標準試辦 4–8 週、10–20 位參與者</b>，費用依場域與支援範圍議定。建議共同追蹤通話完成率、啟用與持續使用率、家屬／使用者回饋，以及異常回報的準確度；正式價格與轉正式條件在試辦前寫清楚。</p>
-  </div>
   <div class="tbl-scroll reveal"><table>
     <tr><th>合作形態</th><th>適合對象</th><th>計費方式</th><th>參考區間</th></tr>
     <tr><td class="strong">機構席次</td><td>長照機構・日照・高齡村・銀髮住宅</td><td>按床（戶）席次・月費</td><td class="nb">NT$499 起／床・月</td></tr>
-    <tr><td class="strong">企業 ESG 席次</td><td>企業 HR／永續部門</td><td>按員工家庭席次・月費</td><td class="nb">NT$499 起／人・月</td></tr>
+    <tr><td class="strong">企業 ESG 席次</td><td>企業 HR／永續部門</td><td>按員工家庭席次・月費（比個人版每席 -NT$100）</td><td class="nb">NT$499 起／人・月</td></tr>
     <tr><td class="strong">健康中心席次</td><td>健康中心・診所・藥局</td><td>按會員席次・月費</td><td>依會員規模報價</td></tr>
-    <tr><td class="strong">標準導入</td><td>各方案皆適用（線上訓練＋啟用碼）</td><td>免費</td><td class="nb">NT$0</td></tr>
-    <tr><td class="strong">到場訓練／客製整合</td><td>大型機構・需客製者</td><td>選配一次性</td><td>依規模報價</td></tr>
     <tr><td class="strong">ESG 成果報告服務</td><td>企業席次加值・永續報告書用</td><td>季度／年度</td><td>依規模報價</td></tr>
     <tr><td class="strong">策略聯盟／白牌／API</td><td>通路・保險・電信・平台業者</td><td>分潤・平台授權＋用量</td><td>依合作深度洽談</td></tr>
   </table></div>
@@ -854,14 +897,14 @@
       <div class="no num">3</div>
       <div>
         <h4>4–8 週場域試辦</h4>
-        <p>先選 10–20 位參與者，建立基準值並每週回看使用率、通話完成率、回饋與人工接手紀錄。</p>
+        <p>先選 10–20 位參與者，每週回看用得順不順、家屬回饋與需要人工接手的狀況。</p>
       </div>
     </div>
     <div class="step">
       <div class="no num">4</div>
       <div>
         <h4>達標轉正式</h4>
-        <p>依事先議定的 KPI 決定擴大、調整或停止；正式價格、支援範圍與責任邊界以合約確認。</p>
+        <p>依事先講好的目標決定擴大、調整或停止；正式價格與責任範圍以合約確認。</p>
       </div>
     </div>
   </div>
@@ -902,12 +945,12 @@
     <div class="cta-box">
       <div class="glow"></div><div class="glow2"></div>
       <p class="quote">市場上大家都在教 AI 回答問題，<br>我們選擇教 AI <em>關心人</em>。</p>
-      <p class="sub">30 分鐘先確認場域是否適合，4–8 週試辦再用數字決定是否擴大。</p>
+      <p class="sub">先看、先試，達標再擴大。</p>
       <div class="hero-actions">
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
-          預約 30 分鐘場域診斷</button>
-        <button class="btn btn-ghost" type="button" data-modal="trial">申請試辦評估</button>
+          預約合作洽談</button>
+        <a class="btn btn-ghost" href="#demo">先跟寧寧說一句話</a>
       </div>
     </div>
   </div>
@@ -1103,7 +1146,7 @@
     mode = (m === 'trial') ? 'trial' : 'demo';
     if (mode === 'trial') {
       bTitle.textContent = '申請試辦評估';
-      bSub.textContent = '留下場域與對象資訊，我們一個工作天內回覆，協助規劃 4–8 週、10–20 位參與者的 KPI 試辦。';
+      bSub.textContent = '留下場域與對象資訊，我們一個工作天內回覆，協助規劃 4–8 週、10–20 位參與者的小規模試辦。';
     } else {
       bTitle.textContent = '預約 30 分鐘場域診斷';
       bSub.textContent = '留下資料，我們一個工作天內回覆；會談包含現況盤點、即時體驗與下一步試辦建議。';
