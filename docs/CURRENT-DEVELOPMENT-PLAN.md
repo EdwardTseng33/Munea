@@ -3,7 +3,7 @@
 > Updated: 2026-07-20
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.42 (Build 48)`
+> **Current source:** `1.0.43 (Build 48)`
 >
 > **Latest uploaded App:** `1.0.40 (Build 47)`; the exact selected Build and Apple review state remain `unknown` until App Store Connect evidence is recorded.
 >
@@ -27,7 +27,7 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source | `1.0.42 (Build 48)` is current source; no Archive／upload／iPhone evidence for Build 48 | `merged, not packaged` |
+| App source | `1.0.43 (Build 48)` is current source; no Archive／upload／iPhone evidence for Build 48 | `merged, not packaged` |
 | Uploaded App | `1.0.40 (Build 47)` was uploaded and installed; selected review lane remains unknown | `packaged, human gates pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |
