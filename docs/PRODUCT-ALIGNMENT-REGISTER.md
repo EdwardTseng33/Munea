@@ -20,7 +20,7 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | `1.0.42 (Build 48)`；package、Web 與 iOS 已在 main 對齊 | 尚無 Archive／upload／iPhone 證據；latest uploaded 仍是 `1.0.40 (Build 47)` | `aligned-source` | 整合 intended fixes 後再跑 strict package／human Gate |
+| App source lane | `1.0.43 (Build 48)`；package、Web 與 iOS 已在 main 對齊 | 尚無 Archive／upload／iPhone 證據；latest uploaded 仍是 `1.0.40 (Build 47)` | `aligned-source` | 整合 intended fixes 後再跑 strict package／human Gate |
 | App Store lane | latest uploaded `1.0.40 (Build 47)` | 已上傳、iPhone 已安裝；selected review Build／Apple state未確認 | `partial` | App Store Connect 截圖／狀態＋關鍵旅程真機 Gate |
 | Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
