@@ -134,6 +134,12 @@ PORT = int(os.environ.get("MUNEA_FACE_PORT", "8188"))
 N_SLOTS = max(1, int(os.environ.get("MUNEA_FH_SLOTS", "1")))
 
 
+# 2026-07-23 時鐘誤差容忍：GPU 租賃主機的時鐘由機房控制、容器內無權校時（tw-06 實測快 4 分 17 秒），
+# 主機時鐘偏快會把 90 秒壽命的正牌通話證全部當過期拒收（換卡當天全通話陣亡的根因）。
+# 容忍只放寬「過期」判定方向（吃得下主機快 MUNEA_CALL_TOKEN_CLOCK_LEEWAY 秒）；簽章/worker 綁定照舊全驗。
+CALL_TOKEN_CLOCK_LEEWAY_S = max(0, int(os.environ.get("MUNEA_CALL_TOKEN_CLOCK_LEEWAY", "330")))
+
+
 def _decode_call_token(token, secret, expected_worker):
     if not token or not secret:
         return None
@@ -146,7 +152,7 @@ def _decode_call_token(token, secret, expected_worker):
             return None
         raw = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
         payload = json.loads(raw)
-        if int(payload.get("exp") or 0) < int(time.time()):
+        if int(payload.get("exp") or 0) + CALL_TOKEN_CLOCK_LEEWAY_S < int(time.time()):
             return None
         if expected_worker and payload.get("worker_id") != expected_worker:
             return None
