@@ -26,6 +26,7 @@ check are ported line-by-line from the original single-instance
 flashhead_server.py, not rewritten from scratch.
 """
 import collections
+import os
 import threading
 import time
 
@@ -33,6 +34,15 @@ import numpy as np
 
 
 SUPPORTED_FRAME_SIZES = (512, 640, 768)
+
+# 句尾自動補刀門檻（秒）：輸入音訊靜默超過這個時間、且 acc 還壓著不滿一個
+# chunk 的殘尾，就視同句尾 finish、補靜音照樣生成。
+# 背景（2026-07-24 Edward 親測「句尾吞 1-2 字」根因）：browser relay 的
+# 'finish' 通知只在整輪 turn_complete 才來，一輪內逐句 TTS 之間沒有通知，
+# 每句尾最多 0.96s（1-2 個中文字）會滯留 acc 直到下一句音訊抵達才被硬併，
+# 實測 16 round 只有 6 次 finish。0.45s < 0.8s round 邊界、又大於正常
+# 串流抖動；TTS 中途真的停超過 0.45s 時只是多一格帶靜音尾的畫面，順序不亂。
+TAIL_FLUSH_S = float(os.environ.get("MUNEA_FH_TAIL_FLUSH_S", "0.45"))
 
 
 def parse_frame_size(value):
@@ -416,8 +426,14 @@ class Feeder:
                         self.acc = self.acc[cs:]
                         self.acc_out = self.acc_out[output_samples:]
                         self.consumed += cs
-                elif self._finish_pending and 0 < len(self.acc) < cs:
+                elif 0 < len(self.acc) < cs and (
+                        self._finish_pending
+                        or (self.t0 is not None
+                            and (time.time() - self.last_in) > TAIL_FLUSH_S)):
                     valid = len(self.acc)
+                    if not self._finish_pending:
+                        print("[feeder] slot" + str(self.slot.index)
+                              + " tail auto-flush valid=" + str(valid), flush=True)
                     padded = np.zeros(cs, dtype=np.float32)
                     padded[:valid] = self.acc
                     output_samples = min(len(self.acc_out), int(round(valid * self.sr_in / self.sr_eng)))
