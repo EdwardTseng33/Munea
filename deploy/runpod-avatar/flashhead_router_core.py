@@ -16,6 +16,7 @@
 |---|---|---|
 | POST /switch，帶明確 slot 參數 | 既有 0-based slot 參數（既有 admin 工具慣例，原樣保留） | index = slot |
 | POST /demo/session | 無 token 可讀，demo token 固定在 process 0 記憶體裡核發 | index = 0（固定） |
+| **有 session 參數、且 session 之前在 /offer 記錄過** | **2026-07-24 熱修：/offer 回應的 backend 若已記錄過這個 session，後續呼叫一律回那個 backend——優先權最高，蓋過 token/round robin** | **index = 記錄值（固定）** |
 | 帶 token，token 可解出 JSON payload、payload.worker_id 符合本機 "-pN" 格式 | Durable Call Control 核發的正式 token（見 flashhead_server.py _decode_call_token） | index = N |
 | 帶 token，但解不出 "." 分隔（demo token 是不透明亂數字串，沒有 "."） | demo token 的形狀特徵——demo token 只在 process 0 核發、驗證，必須固定路由到同一台 | index = 0（固定） |
 | 帶 token，JSON 解得出來但 worker_id 對不上本機任何一個 "-pN" | 可能是別台機器核發的 token（誤連） | 保守退回 round robin，不猜 0 |
@@ -26,9 +27,23 @@
 worker_id 綁定）維持在被路由到的那個 flashhead_server process 裡各自做一次，
 跟今天完全一樣，這支檔案的誤判/被偽造頂多路由錯 process（下一步驗證會失敗、
 回 403），不會弱化任何安全性。
+
+**2026-07-24 正式線上線後抓到的真 bug（session 黏性）**：key= 萬用鑰匙／任何
+無 token 或 token 對不上本機 worker_id 的請求，走的是 round robin——`/offer` 分到
+A 房建立 session，緊接著的 `/audio?session=X` 完全沒有路由信號可以決定性地推回
+A 房，round robin 繼續往前轉、把它送去 B 房，B 房沒見過這個 session，403。
+**token 正式路徑（Durable Call Control）不受影響**——那條本來就是靠 token 裡的
+worker_id 決定性路由，跟 round robin 無關；受影響的只有走 key= 萬用鑰匙的驗收
+工具與任何純 key-auth 客戶端（真實通話正常）。
+
+修法：`SessionRouteTable`（見下）在 `/offer` 成功回應後記下
+`session_id -> backend_index`，`/audio`／`/switch` 帶 `session` 參數時**優先**查這張表
+（蓋過 token/round robin），查無才照舊 fallback。TTL + 上限雙重防漏水——
+router 是長駐 process，這張表不能無限長大。
 """
 import base64
 import json
+import time
 
 
 def decode_token_payload_unverified(token):
@@ -98,10 +113,79 @@ class RoundRobinPicker:
         return idx
 
 
-def pick_backend_index(path, token, explicit_slot, base_worker_id, n_procs, round_robin):
-    """核心路由決策——見檔頭決策表。純函式（round_robin 参数本身是唯一
-    帶狀態的部分，狀態由呼叫端持有、注入進來，方便測試用固定/假的 picker）。
+class SessionRouteTable:
+    """/offer 建立的 session_id -> backend index 對照表（2026-07-24 熱修）。
+
+    backend process 之間完全不共享 in-memory 狀態（各自獨立 SlotPool），
+    同一個 session 中途被路由到不同 process 就是 403 的根源——這張表就是
+    「session 一旦落地某個 backend，後續呼叫一律回那個 backend」的唯一真相
+    來源，供 pick_backend_index() 在算 token/round robin 之前優先查。
+
+    TTL + 上限雙重防漏水：record() 每次呼叫都先清過期項，超過上限再淘汰
+    最舊的一筆——router 是長駐 process，若 session 從沒收到明確的結束訊號
+    （目前 WS 斷線只在 flashhead_router.py 那層關閉連線，不會主動來通知
+    這張表清掉），只能靠 TTL 兜底，避免這個 dict 無限長大。
     """
+    def __init__(self, ttl_s=3600.0, max_entries=500):
+        if ttl_s <= 0:
+            raise ValueError("ttl_s must be > 0")
+        if max_entries < 1:
+            raise ValueError("max_entries must be >= 1")
+        self.ttl_s = ttl_s
+        self.max_entries = max_entries
+        self._table = {}  # session_id -> (index, recorded_at)
+
+    def record(self, session_id, index):
+        if not session_id:
+            return
+        now = time.time()
+        self._purge_expired(now)
+        if session_id not in self._table and len(self._table) >= self.max_entries:
+            self._evict_oldest()
+        self._table[session_id] = (index, now)
+
+    def lookup(self, session_id):
+        if not session_id:
+            return None
+        entry = self._table.get(session_id)
+        if entry is None:
+            return None
+        index, recorded_at = entry
+        if time.time() - recorded_at > self.ttl_s:
+            self._table.pop(session_id, None)
+            return None
+        return index
+
+    def _purge_expired(self, now):
+        expired = [sid for sid, (_, ts) in self._table.items() if now - ts > self.ttl_s]
+        for sid in expired:
+            self._table.pop(sid, None)
+
+    def _evict_oldest(self):
+        if not self._table:
+            return
+        oldest_sid = min(self._table.items(), key=lambda kv: kv[1][1])[0]
+        self._table.pop(oldest_sid, None)
+
+    def __len__(self):
+        return len(self._table)
+
+
+def pick_backend_index(path, token, explicit_slot, base_worker_id, n_procs, round_robin,
+                        session=None, session_table=None):
+    """核心路由決策——見檔頭決策表。純函式（round_robin/session_table 兩個
+    参数是唯一帶狀態的部分，狀態由呼叫端持有、注入進來，方便測試用固定/假的
+    picker/table）。
+
+    session/session_table 優先權最高（2026-07-24 熱修，見 SessionRouteTable
+    文件）：只要這個 session 之前記錄過，不管 token/worker_id 講什麼，一律
+    回當初真正建立 session 的那個 process；查無才落回下面既有規則。
+    """
+    if session and session_table is not None:
+        idx = session_table.lookup(session)
+        if idx is not None:
+            return idx
+
     if path == "/switch" and explicit_slot is not None:
         return explicit_slot if 0 <= explicit_slot < n_procs else None
 

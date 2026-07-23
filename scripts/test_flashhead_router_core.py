@@ -142,6 +142,166 @@ def test_pick_backend_index_no_token_round_robins():
     print("test_pick_backend_index_no_token_round_robins: PASS")
 
 
+def test_session_route_table_record_and_lookup():
+    table = frc.SessionRouteTable(ttl_s=3600, max_entries=10)
+    assert table.lookup("s1") is None  # 沒記錄過 -> None
+    table.record("s1", 0)
+    table.record("s2", 1)
+    assert table.lookup("s1") == 0
+    assert table.lookup("s2") == 1
+    assert len(table) == 2
+    # 空字串/None session_id 一律當沒有，不寫進表也不查得到什麼
+    table.record("", 0)
+    table.record(None, 1)
+    assert len(table) == 2
+    assert table.lookup("") is None
+    assert table.lookup(None) is None
+    print("test_session_route_table_record_and_lookup: PASS")
+
+
+def test_session_route_table_ttl_expiry():
+    """TTL 到期要真的失效（查不到、也要從內部字典清掉，不是永遠留著）。"""
+    table = frc.SessionRouteTable(ttl_s=10.0, max_entries=10)
+    clock = [1000.0]
+    original_time = frc.time.time
+    frc.time.time = lambda: clock[0]
+    try:
+        table.record("s1", 0)
+        assert table.lookup("s1") == 0
+        clock[0] = 1005.0  # 還在 TTL 內
+        assert table.lookup("s1") == 0
+        clock[0] = 1011.0  # 超過 10 秒 TTL
+        assert table.lookup("s1") is None
+        assert len(table) == 0, "expired entry must actually be purged, not just hidden"
+    finally:
+        frc.time.time = original_time
+    print("test_session_route_table_ttl_expiry: PASS")
+
+
+def test_session_route_table_max_entries_evicts_oldest():
+    """超過上限時要淘汰最舊的一筆，不能無限長大（防漏水）。"""
+    table = frc.SessionRouteTable(ttl_s=3600, max_entries=3)
+    clock = [1000.0]
+    original_time = frc.time.time
+    frc.time.time = lambda: clock[0]
+    try:
+        table.record("s1", 0)
+        clock[0] = 1001.0
+        table.record("s2", 1)
+        clock[0] = 1002.0
+        table.record("s3", 0)
+        assert len(table) == 3
+        clock[0] = 1003.0
+        table.record("s4", 1)  # 第 4 筆進來，s1（最舊）要被淘汰
+        assert len(table) == 3
+        assert table.lookup("s1") is None, "oldest entry must be evicted once over max_entries"
+        assert table.lookup("s2") == 1
+        assert table.lookup("s3") == 0
+        assert table.lookup("s4") == 1
+        # 更新既有 session（不是新增）不該觸發淘汰、也不該讓長度超過上限
+        clock[0] = 1004.0
+        table.record("s2", 1)
+        assert len(table) == 3
+        assert table.lookup("s2") == 1
+        assert table.lookup("s3") == 0
+        assert table.lookup("s4") == 1
+    finally:
+        frc.time.time = original_time
+    print("test_session_route_table_max_entries_evicts_oldest: PASS")
+
+
+def test_session_route_table_rejects_bad_config():
+    for bad_ttl in (0, -1):
+        try:
+            frc.SessionRouteTable(ttl_s=bad_ttl)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("ttl_s<=0 must be rejected")
+    for bad_max in (0, -1):
+        try:
+            frc.SessionRouteTable(max_entries=bad_max)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("max_entries<1 must be rejected")
+    print("test_session_route_table_rejects_bad_config: PASS")
+
+
+def test_pick_backend_index_session_priority_beats_token_and_round_robin():
+    """2026-07-24 熱修的核心斷言：session 一旦記錄過，優先權蓋過 token 的
+    worker_id、也蓋過 round robin，不管呼叫幾次都要回同一個 process。"""
+    session_table = frc.SessionRouteTable()
+    session_table.record("session-A", 1)
+    rr = frc.RoundRobinPicker(3)
+
+    # 完全沒有 token 的請求，一樣要靠 session 命中，不落到 round robin
+    for _ in range(3):
+        assert frc.pick_backend_index("/audio", "", None, "glows-tw06", 3, rr,
+                                       session="session-A", session_table=session_table) == 1
+
+    # 帶了一個指向別的 process 的 token，session 命中還是優先蓋過去
+    foreign_token = _make_token({"worker_id": "glows-tw06-p2"})
+    idx = frc.pick_backend_index("/audio", foreign_token, None, "glows-tw06", 3, rr,
+                                  session="session-A", session_table=session_table)
+    assert idx == 1, "session hit must win over token's worker_id"
+    print("test_pick_backend_index_session_priority_beats_token_and_round_robin: PASS")
+
+
+def test_pick_backend_index_session_miss_falls_back_to_existing_rules():
+    session_table = frc.SessionRouteTable()
+    rr = frc.RoundRobinPicker(3)
+    # session 給了但表裡沒有 -> 照舊 fallback 到 round robin（不是報錯、
+    # 不是 None）
+    idx = frc.pick_backend_index("/audio", "", None, "glows-tw06", 3, rr,
+                                  session="never-seen-before", session_table=session_table)
+    assert idx == 0  # round robin 第一次從 0 開始
+    print("test_pick_backend_index_session_miss_falls_back_to_existing_rules: PASS")
+
+
+def test_two_backends_two_interleaved_sessions_each_route_home():
+    """正式線 bug 的正面回歸測試：key= 萬用鑰匙（無 token）情境下，兩個
+    session 各自在不同 backend 建立，之後用交錯順序打 /audio，每一次都必須
+    準確回到各自的 home process，不能被 round robin 繼續往前轉而打散
+    （這正是 2026-07-24 那個「A 房 offer、B 房 403」的失敗模式）。"""
+    session_table = frc.SessionRouteTable()
+    rr = frc.RoundRobinPicker(2)
+
+    # 模擬兩通電話先後 /offer（key= 萬用鑰匙、完全沒有 worker_id 信號，
+    # 路由器只能 round robin），並各自記錄 backend 回應帶回來的 session。
+    home_a = frc.pick_backend_index("/offer", "", None, "glows-tw06", 2, rr)
+    session_table.record("session-A", home_a)
+    home_b = frc.pick_backend_index("/offer", "", None, "glows-tw06", 2, rr)
+    session_table.record("session-B", home_b)
+    assert home_a != home_b, (
+        "round robin 的頭兩次分派必須落在不同 process 才重現得出原本的 bug 場景"
+    )
+
+    # 交錯呼叫 /audio 多輪，round robin 內部指標持續往前轉，但 session 查表
+    # 必須每次都精準蓋過去，回各自的 home，不受 round robin 轉動影響。
+    call_order = ["session-A", "session-B", "session-B", "session-A",
+                  "session-A", "session-B", "session-A"]
+    homes = {"session-A": home_a, "session-B": home_b}
+    for sid in call_order:
+        got = frc.pick_backend_index("/audio", "", None, "glows-tw06", 2, rr,
+                                      session=sid, session_table=session_table)
+        assert got == homes[sid], (
+            "%s must always route home to backend %d, got %d (round robin leaked through)"
+            % (sid, homes[sid], got)
+        )
+
+    # /switch 帶 session 一樣要吃查表優先（防呆：即使目前 flashhead_server.py
+    # 的 /switch 還沒真的送 session 參數，路由器這邊要先接得住）。
+    for sid in ("session-A", "session-B"):
+        got = frc.pick_backend_index("/switch", "", None, "glows-tw06", 2, rr,
+                                      session=sid, session_table=session_table)
+        assert got == homes[sid]
+
+    print("test_two_backends_two_interleaved_sessions_each_route_home: PASS "
+          "(session-A always -> p%d, session-B always -> p%d, round robin never leaked through)"
+          % (home_a, home_b))
+
+
 def test_merge_health_snapshots():
     healthy_0 = {"ok": True, "capacity": {"limit": 1, "active": 1, "available": False},
                  "char": "a05"}
@@ -241,6 +401,13 @@ def main():
     test_pick_backend_index_foreign_worker_id_falls_back_round_robin()
     test_pick_backend_index_demo_token_shape_routes_to_zero()
     test_pick_backend_index_no_token_round_robins()
+    test_session_route_table_record_and_lookup()
+    test_session_route_table_ttl_expiry()
+    test_session_route_table_max_entries_evicts_oldest()
+    test_session_route_table_rejects_bad_config()
+    test_pick_backend_index_session_priority_beats_token_and_round_robin()
+    test_pick_backend_index_session_miss_falls_back_to_existing_rules()
+    test_two_backends_two_interleaved_sessions_each_route_home()
     test_merge_health_snapshots()
     test_launcher_dry_run_matches_core_module()
     print("FlashHead router core + launcher cross-check: ALL PASS")

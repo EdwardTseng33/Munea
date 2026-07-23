@@ -15,6 +15,7 @@ import base64
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,8 +46,12 @@ def build_fake_backend(index):
 
     async def offer(request):
         body = await request.json()
+        # 真的 backend（flashhead_server.py）每次 /offer 都 uuid4() 生一個
+        # 全新 session id，跟 backend index 無關——這裡刻意用亂數而不是
+        # "fake-session-%d" % index，確保測試真的在驗證「router 從回應內容
+        # 讀出 session、記表」這條路徑，不是巧合對上 index。
         return web.json_response({"backend_index": index, "sdp_echo": body.get("sdp"),
-                                   "session": "fake-session-%d" % index})
+                                   "session": uuid.uuid4().hex})
 
     async def switch(request):
         return web.json_response({"backend_index": index, "ok": True})
@@ -150,11 +155,48 @@ async def async_main():
                 assert msg.data == "echo-from-p1:hello", "expected WS reply from backend 1, got %r" % msg.data
                 await ws.close()
 
+            # 2026-07-24 熱修的正面回歸測試（真的走 HTTP + WS，不只是純邏輯）：
+            # key= 萬用鑰匙情境（完全不帶 token）下，兩通 /offer 被 round
+            # robin 分到不同 backend，router 從「真正的 HTTP 回應內容」讀出
+            # session id 記表；之後交錯打 /audio?session=... 必須每次都精準
+            # 落回各自的 home，不能被 round robin 繼續往前轉打散
+            # （這正是正式線 403 事故的真實重現路徑）。
+            async with client.post(base + "/offer",
+                                    json={"sdp": "no-token-sdp-1", "type": "offer"}) as resp:
+                data = await resp.json()
+                session_x = data["session"]
+                home_x = data["backend_index"]
+            async with client.post(base + "/offer",
+                                    json={"sdp": "no-token-sdp-2", "type": "offer"}) as resp:
+                data = await resp.json()
+                session_y = data["session"]
+                home_y = data["backend_index"]
+            assert home_x != home_y, (
+                "round robin 的頭兩次分派必須落在不同 backend 才重現得出原本的 bug 場景 "
+                "(got home_x=%r home_y=%r)" % (home_x, home_y)
+            )
+
+            call_order = [(session_x, home_x), (session_y, home_y), (session_y, home_y),
+                          (session_x, home_x), (session_x, home_x), (session_y, home_y)]
+            for sid, expected_home in call_order:
+                async with client.ws_connect(base + "/audio", params={"session": sid}) as ws:
+                    await ws.send_str("ping")
+                    msg = await ws.receive(timeout=5)
+                    assert msg.type == aiohttp.WSMsgType.TEXT
+                    expected = "echo-from-p%d:ping" % expected_home
+                    assert msg.data == expected, (
+                        "session %s must route home to backend %d, got %r (expected %r) "
+                        "-- session stickiness regressed" % (sid, expected_home, msg.data, expected)
+                    )
+                    await ws.close()
+
         print("test_offer_routes_by_token_worker_id: PASS")
         print("test_switch_routes_by_explicit_slot: PASS")
         print("test_demo_session_routes_to_backend_zero: PASS")
         print("test_health_aggregates_all_backends: PASS")
         print("test_audio_websocket_proxies_end_to_end: PASS")
+        print("test_two_sessions_interleaved_no_token_stick_to_their_home_backend: PASS "
+              "(session_x always -> p%d, session_y always -> p%d)" % (home_x, home_y))
         print("FlashHead router integration test: ALL PASS")
     finally:
         for r in runners:
