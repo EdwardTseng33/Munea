@@ -1,5 +1,7 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
+> 🎯 **2026-07-23 17:05 打包手牌（Edward 拍板「包版更新吧」· Windows 蘇菲立牌）**：main（`556092a`）＝ **`1.0.43 (Build 48)` 待打包**，版號四處已齊（version.js／package.json／package-lock／iOS MARKETING_VERSION 1.0.43＋Build 48）、**不需再跳版**。內容＝Build 47 之後累積三版：1.0.41 撥號前先確認帳號與點數＋正式包隱藏開發角標、1.0.42 撥號點數確認靜默化＋開發測試帳號不卡 0 點、1.0.43 聊聊忙線排隊卡（#230 · 排隊顯示第幾位／全滿明講／取消排隊）。**這包同時是推播第一包**：APNs 推播鑰匙 7/23 已建好掛上大腦兩台（詳 124 號），Build 48 真機首度可領推播門牌（App 登記接口既有、指正式大腦、登記不吃鑰匙現在就通）。**Mac 接手**：`git pull` → `npm install` → `npx cap sync ios` → Xcode Archive → Export → 上傳 App Store Connect＋Edward iPhone 換裝；**不需雲端部署**（正式大腦切流量另案、詳 124 號）。完成回填本板。
+>
 > 🔴 **2026-07-17 Google 登入真機 Gate FAIL／修復中**：Edward 在送審候選 `1.0.37 (Build 44)` 點 Google 登入，App 顯示「登入暫時無法啟動」。外部 Google iOS client／callback 與東京 Supabase provider 公開探測正常，但 App 把原生 bridge、SDK、ID token、Supabase 換證等所有錯誤都吃成同一句，且原生路徑失敗後沒有使用既有系統瀏覽器 PKCE 備援。PR #168（`codex/fix-google-login-fallback-20260717`）修正為原生選帳優先、非取消型失敗自動切 `munea://auth/callback` 安全備援，並顯示／記錄安全錯誤碼；完整 `release:check` PASS。Build 44 的 Google 登入不得標 PASS；合併後需 Mac `cap sync`、新 Build、安裝版 iPhone 完成選帳→回 App→session→登出重登，再以真 token 驗聊聊撥通。
 >
 > 🛠️ **2026-07-17 15:34 實機續查／Build 44 修復中**：Build 43 的 401 換證已生效；真實登入有效時 Brain API 與 Gateway 都曾回 200，但 App 事件精確記錄 15:34:16／15:34:22 兩次 `insufficient_credits`。資料庫唯讀確認該帳號 active 錢包餘額 0、一次性免費 5 點發放紀錄為空；同時 `--gateway` QA profile 的 `enabled: true` 被 App 誤判為 fixture bypass，整段沒呼叫本應補齊帳號與免費體驗的 `/account-bootstrap`，所以沒有 lease／heartbeat。新修復讓真實登入必做且等待 bootstrap，`account_not_ready` 時補建並用同一 idempotency key 只重試一次；Mac 新增明確的 `ios:dev-profile:direct`（自動測試帳號、不跳登入）與 `ios:dev-profile:gateway`（真登入）命令。目標 `1.0.37 (Build 44)`，Draft PR #164；只需重新包 App，不需部署 Brain／Voice／Gateway。
@@ -63,6 +65,8 @@
 ---
 
 ## 一眼總覽
+
+**124－📦 打包手牌：1.0.43 Build 48＝推播第一包（7/23 17:05 Windows 蘇菲 · Edward 拍板「包版更新吧」）**：①✅ Windows 主線追平（落後 144 個更新已拉齊、本機兩筆語音舊存檔確認主線已有同內容、安全收攏）；版號四處齊 `1.0.43`／Build 48、package-lock 同步（113 號三連紅燈教訓已避）。②✅ 這包帶 Build 47 後三版累積：1.0.41 撥號前點數確認、1.0.42 撥號靜默＋測試帳號不卡點、1.0.43 忙線排隊卡（#230 · Edward 7/22 拍板 B 案）。③🔑 **推播前置已就位**：APNs 鑰匙 `59QVAHNMZP` 7/23 建好、正本在 Secret Manager `munea-apns-private-key`；測試大腦（staging rev 00079）已掛鑰匙服役中；**正式大腦掛鑰匙的新版 0% 待命、流量仍 100% 釘 00018-beg（17:00 實查）**——切流量隨下次正式部署帶過去（Edward 同意方向、不趕這包）。App 領推播門牌走 `/push/devices` 登記、不吃鑰匙＝Build 48 裝上就能領；「發」推播先用測試機沙盒驗（Edward 手機開發包＝沙盒門牌、配 staging 鑰匙剛好成對）。④**Mac 車道**：pull → npm install → cap sync ios → Archive → Export → 上傳＋換裝；不需雲端部署。⑤看板規矩⑥報備：本次 Windows 側**零 App 檔案改動**（純狀態板手牌）、無鎖區；123 號讓給 PR #234（4090 換裝紀錄、尚開著）。
 
 **122－🗂️ 營運後台大改版一日完工：8 頁重做＋企業席次＋會員維運＋成長黏著（7/20 全數併入 main／此前狀態板漏記，7/21 11:19 Windows 蘇菲補登）**：①✅ **後台改版主體 #204**（07-20 09:05 併）：8 個頁面重做、配色對齊品牌、拿掉「連線設定」概念（未登入一律走帳密登入門）。②✅ **對外／巡檢配套**：#207 撥號中不冒後台字眼、#208 側邊「隱私權」連結改指本服務 `/privacy.html`、#209 自我巡檢修長期紅燈＋補後台與對外網址巡檢（24→29 項）。③✅ **企業席次 #212／#214**：後台管理、批次開通、月結請款、ESG 月報（歸屬記號＝唯一鑰匙、月底席次計費、緩衝 30 天、月報<5 人不呈現，見 memory `enterprise-seats-design`）。④✅ **會員維運三操作**：#215 發點數＋改方案、#216 延長訂閱天數。⑤✅ **成長與黏著 #217／#218**：黏著度／留存曲線／啟用漏斗（PMF 先行指標，補 7/19 盤點的數據缺口）＋修 `/admin/growth-metrics` 漏登記管理鑰匙通行清單。⑥📍 **正式站部署待核**：memory 記 7/20 18:15 正式＋測試兩台切 v1.0.42（含 #204／#208）；但 #217／#218 是 18:25／18:36 才併，可能未進 18:15 那次部署——**成長黏著兩頁是否已在正式站，待探測確認**（Edward 7/21 11:19 先擱置探測、改先補狀態板）。⑦後台登入＝帳密（`edwardt0303@gmail.com`＋管理密碼），非連線設定；正式／測試看同一份東京數據（見 memory `admin-console-access`）。
 
