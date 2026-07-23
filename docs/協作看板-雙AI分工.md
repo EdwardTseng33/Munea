@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 已完成：正式臉卡換裝 6000 Ada → 4090（2026-07-23 Windows 蘇菲 · Edward 拍板省成本 · App E2E pending）
+
+- **新常駐**：GLOWS RTX 4090 24GB `ins-5y4k7z7r`（SSH `-p 26697 root@tw-06.access.glows.ai`、鑰匙 `deploy/glows/glows_ed25519`）· 對外正門 **`https://tw-06.access.glows.ai:26455`** · VocaFrame 640 · **compile 開**（常駐機開機稅一次付清：首席 120s、次席吃快取 0.45s）· 服務 slots=2。裝機照 `deploy/glows/install-flashhead.sh` 自檢全綠；服務檔取 `origin/main` 最新（含 #226 臉分家後版本）；條件圖在機器上跑 `sync-face-assets.py` 從正式立繪自動重切（a05 y=190／a06 y=209、與 App 貼合契約一致）。
+- **容量重驗（profile 原則生效）**：本卡兩路同時真 WebRTC 實測——eager p95 1022.9ms（餘裕 **−6.6%**、超即時預算）；compile p95 859.5ms（餘裕 **10.5%**）。均低於城堡 20% 安全線（前例：6000 Ada 三路 eager 14% 不列安全值）→ **Gateway 登記 `glows-rtx4090-tw06` capacity=1**、第二席保溫。7/13「4090 每卡 2 路安全」暫定值在本卡不成立；要升 2 席須 Edward 拍板接受薄餘裕＋補兩路 60 分鐘 soak。
+- **驗收證據**：a05／a06 單路＋雙路 WebRTC 皆 640×640 影音同線到齊（雙路 12s：430 格／840 包）；公網 `/health` 帶鑰匙 200、無鑰匙 403；聊聊 SOP `qa_munea.py` **11/12**（唯一 FAIL＝收尾對已刪帳號重複刪、帳號實際已清乾淨）；正式線 `/chat` 真回話 21.5s、測試機 17.4s（歷史區間內）。依 7/17 永久硬 Gate：**Edward iPhone 真機撥通前標 App E2E pending**。
+- **舊卡與待辦**：① `glows-rtx6000ada-tw07` 已置 draining（自身心跳報 unhealthy、不接活）——**GLOWS 上那台 6000 Ada 還在計費，Edward 驗收滿意後請至主控台 Stop & Release** ② `deploy/glows/.env` 的 GLOWS SDK 通行碼已失效（查門牌／自動開關都靠它）——請 Edward 從 Profile 抄新的 ③ `web/src/app.js` `FLASHHEAD_URL_DEFAULT` 仍指死門牌 tw-07:26969（主路徑由 Gateway 發牌不受影響；下次包版順手改 26455）④ RunPod 備援列 terminated、未動。
+
 ### 待審：測試帳號跟真實用戶隔離（2026-07-21 Claude/城堡 · Draft PR #222）
 
 - Branch：`calcifer-test-account-isolation-20260721`；獨立 worktree，基準 `origin/main@da39095`。
