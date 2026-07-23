@@ -46,6 +46,21 @@ def parse_frame_size(value):
     return size
 
 
+def env_flag_enabled(value):
+    """Shared default-off parsing rule for the N-way batching surgery switches
+    (MUNEA_FH_SLOT_STREAM today; MUNEA_FH_BATCHING once phase 2 lands). Kept
+    here (zero heavy deps) so the parsing rule itself is unit-testable without
+    a GPU/torch/fastapi install -- see scripts/test_flashhead_slot_stream.py.
+
+    Convention: only the literal string "1" enables the switch. Unset, "0",
+    "" or anything else disables it -- current behavior must never change
+    unless a session explicitly opts in (same rule as MUNEA_FH_SLOTS in
+    docs/多人併發容量架構-2026-07-12.md and the 2026-07-23 batching-surgery
+    design doc's compatibility rules).
+    """
+    return value == "1"
+
+
 # ---------------------------------------------------------------------------
 # FrameSink / AudioOutBuffer -- copied verbatim from the single-instance file
 # (old flashhead_server.py lines 94-223). Logic untouched, only relocated;
@@ -193,6 +208,12 @@ class Slot:
         self.sink = None
         self.audio_out = None
         self.feeder = None
+        # N-way batching surgery phase 1 / option B (2026-07-23): only set to a
+        # real torch.cuda.Stream() by flashhead_server.py when MUNEA_FH_SLOT_STREAM
+        # is on; stays None otherwise (default, matches pre-patch behavior).
+        # This module never imports torch itself -- see make_slot_stream_run_pipeline
+        # below for how the stream actually gets used.
+        self.cuda_stream = None
         self.SYNC_BUFFER_MS = 350
         self.round_count = 0
         self.round_start_ts = 0.0
@@ -452,6 +473,36 @@ class Feeder:
                 self._idle_due = now + cs / self.sr_eng
             else:
                 time.sleep(0.02)
+
+
+# ---------------------------------------------------------------------------
+# make_slot_stream_run_pipeline —— N-way batching surgery phase 1 / option B
+# (2026-07-23, see docs/research/合批手術-設計方案-2026-07-23.md section 2).
+#
+# All three slots' Feeder threads live in the SAME process / SAME CUDA
+# context. Without an explicit per-slot stream, their GPU work all lands on
+# the shared default stream, and deploy/flashhead-patches/0001-gate-profile-
+# sync.patch's 8 device-wide torch.cuda.synchronize() barriers (now gated by
+# MUNEA_FH_PROFILE_SYNC) make each slot's generate() call wait for whatever
+# the OTHER slots queued too -- see the design doc section 1.2 for the full
+# root-cause writeup.
+#
+# This wraps a slot's run_pipeline callable so its GPU work is issued on a
+# dedicated stream instead, then hands the finished tensor back to the
+# caller's current stream via wait_stream() -- a GPU-side, non-blocking
+# dependency, NOT another host-blocking torch.cuda.synchronize() (that would
+# just reintroduce a barrier and defeat the whole point). torch_module is
+# dependency-injected (this file stays free of a module-level `import torch`)
+# so the wiring itself is unit-testable with a fake torch stand-in -- see
+# scripts/test_flashhead_slot_stream.py.
+# ---------------------------------------------------------------------------
+def make_slot_stream_run_pipeline(run_pipeline_fn, stream, torch_module):
+    def _run_on_slot_stream(pipeline, audio_embedding):
+        with torch_module.cuda.stream(stream):
+            result = run_pipeline_fn(pipeline, audio_embedding)
+        torch_module.cuda.current_stream().wait_stream(stream)
+        return result
+    return _run_on_slot_stream
 
 
 # ---------------------------------------------------------------------------
