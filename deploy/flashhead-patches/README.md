@@ -2,6 +2,26 @@
 
 `SoulX-FlashHead` 是整包 `git clone` 到每台 GPU 機器上的第三方副本（`deploy/glows/install-flashhead.sh`／`deploy/runpod-avatar/install-flashhead.sh`），不是 pip 套件、也不 vendor 進這個 repo。要改上游程式碼一律走「patch 檔 + 裝機腳本自動套用」，不手改機器上的檔案，理由見 `docs/research/合批手術-設計方案-2026-07-23.md` 第 3 節相容性鐵律第 4 條。
 
+## ⚠️ 2026-07-23 誠實紀錄：階段 2 同卡 A/B 實測，這包 patch 對「3 路變慢」實測無效
+
+階段 1 設計書把病灶診斷成 `torch.cuda.synchronize()` 全裝置屏障，理論分析方向（thread 級序列化）是對的，但屏障本身**不是主因**——今晚同卡 A/B 實測（RunPod 4090、640 渦輪、21 塊）：
+
+| 情境 | p95 |
+|---|---|
+| 3 thread 基線（不開任何新旗標） | 1920ms（-100%） |
+| 3 thread ＋ 這包 patch（`MUNEA_FH_PROFILE_SYNC=0`，拔屏障） | 1964ms（-105%，比基線還略慢，誤差範圍內＝無效） |
+| **3 個獨立 OS process**（各自 1 slot，不需要這包 patch） | **1183ms（-23%，GPU 真的吃到 100%/412W）** |
+
+**真正的病灶是 Python GIL**：同一個 process 內三條 thread 共用一個 GIL，不管 CUDA 層有沒有屏障，thread 排程本身就會序列化——這是階段 1 設計書沒抓到的一層。結構解＝合批手術階段 2「多程序部署」（`deploy/runpod-avatar/start-vocaframe.sh` ＋ `flashhead_router.py`，見 `deploy/glows/README.md` 對應章節），不是拔屏障。
+
+**這包 patch 為什麼還留著、沒有 revert**：
+1. 拔掉 device-wide sync 屏障本身沒有壞處（`PROFILE_SYNC` 預設 `True`＝跟改動前一字不差，要顯式設 `MUNEA_FH_PROFILE_SYNC=0` 才會生效），單純是「原本以為有用、量出來沒用」，不是「量出來有害」。
+2. 拔屏障後 `print()` 計時失真的副作用只在你主動關閉時才發生，平常完全無感。
+3. 多程序部署下每個 process 只有 1 個 slot、沒有其他 thread 可以互相卡，`MUNEA_FH_SLOT_STREAM` 自然變成無用武之地（沒有第二個 slot 可以分流），但也不會造成任何問題——單槽時這個開關本來就是 no-op。
+4. 留著當作日後計時診斷用的工具：如果之後遇到需要精確量測 denoise 各步驟耗時的情境（例如換模型/換解析度時要重新抓 chunk budget 分佈），`MUNEA_FH_PROFILE_SYNC` 這個開關（保留印計時的路）本來就是為了這種情境設計的，不需要重新造一次輪子。
+
+**不算走冤枉路**：這輪測試同時也排除了「CUDA 層序列化」這個假設，把病灶範圍收斂到「process/thread 邊界」，直接指向階段 2 的解法方向——診斷過程本身有價值，只是最終解法不是這包 patch。
+
 ## 目錄慣例
 
 - 檔名 `NNNN-描述.patch`，四碼流水號、只增不改（既有 patch 不回頭改內容，要調整就開新編號）。
