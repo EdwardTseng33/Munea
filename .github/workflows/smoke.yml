@@ -63,6 +63,10 @@ jobs:
         env:
           GEMINI_API_KEY: smoke-test-key
           MUNEA_SKIP_ENV_LOCAL: "1"
+          # windows-latest runner 的 Python stdout 預設 cp1252，這支測試的中文 print
+          # 會 UnicodeEncodeError（本機因為系統已是 UTF-8 而測不出來）；強制 UTF-8 輸出。
+          PYTHONIOENCODING: "utf-8"
+          PYTHONUTF8: "1"
         run: python engine/test_guardian_crisis.py
 
       - name: Summarize guardian crisis gate
