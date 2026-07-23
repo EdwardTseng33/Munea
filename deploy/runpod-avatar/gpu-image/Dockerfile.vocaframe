@@ -23,8 +23,9 @@ RUN sed -i 's/mediapipe==0.10.9/mediapipe>=0.10.13/' requirements.txt \
 
 # 雷4 flash-attn 預編譯 wheel（cp311 · torch2.7 · cxx11abiTRUE）
 RUN pip install --no-cache-dir ninja \
- && wget -q "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.0.post2/flash_attn-2.8.0.post2+cu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl" -O /tmp/fa.whl \
- && pip install --no-cache-dir /tmp/fa.whl && rm /tmp/fa.whl
+ && FA_WHL="flash_attn-2.8.0.post2+cu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl" \
+ && wget -q "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.0.post2/${FA_WHL}" -O "/tmp/${FA_WHL}" \
+ && pip install --no-cache-dir "/tmp/${FA_WHL}" && rm "/tmp/${FA_WHL}"
 
 # 雷3 torch cu128 校正（requirements 若沒動過等於空跑）
 RUN pip install --no-cache-dir --force-reinstall torch==2.7.1+cu128 torchvision==0.22.1+cu128 \
