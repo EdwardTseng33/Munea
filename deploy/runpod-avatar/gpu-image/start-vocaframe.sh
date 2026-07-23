@@ -14,6 +14,9 @@ export MUNEA_FH_MODEL_ROOT="${MUNEA_FH_MODEL_ROOT:-/models}"
 
 cd /root/munea-service
 
+# 維修門（sshd）：RunPod 對 22/tcp 發公網直連埠；掛了也不影響通話服務
+/usr/sbin/sshd 2>/dev/null || echo "[boot] sshd failed to start (non-fatal)" >&2
+
 # 條件圖再對一次正式線答案（立繪若改版、開機就跟上）；對不到網路就用烘焙版
 python sync-face-assets.py || echo "[boot] sync-face-assets failed; using baked condition images" >&2
 

@@ -46,6 +46,12 @@ RUN chmod +x /root/munea-service/start-vocaframe.sh
 # 條件圖烘焙版：建置時就跟正式線出貨立繪對一次答案（開機時會再對一次、對不到就用這份）
 RUN cd /root/munea-service && python sync-face-assets.py
 
+# 維修門：sshd＋城堡鑰匙（實驗卡調校、爆量卡除錯都靠它；金鑰是公開半邊、非機密）
+RUN mkdir -p /root/.ssh /run/sshd \
+ && echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGbdYdN5LBKIF1cSFb6jQ5lkKNsw9uiAUxKJd/1t5QS9 munea-sophie-eval' > /root/.ssh/authorized_keys \
+ && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys \
+ && ssh-keygen -A
+
 WORKDIR /root/munea-service
 EXPOSE 8188
 CMD ["/root/munea-service/start-vocaframe.sh"]
