@@ -6,7 +6,7 @@ FROM python:3.11-slim
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update -qq \
  && apt-get install -y -qq --no-install-recommends \
-      libgl1 libglib2.0-0 ffmpeg git wget curl build-essential ca-certificates \
+      libgl1 libglib2.0-0 ffmpeg git wget curl build-essential ca-certificates openssh-server \
  && rm -rf /var/lib/apt/lists/*
 
 # 引擎版本釘死＝2026-07-23 正式線 GLOWS 4090 上驗收過的那一版
