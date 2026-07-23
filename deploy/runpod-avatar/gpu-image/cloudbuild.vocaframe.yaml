@@ -1,0 +1,17 @@
+# 雲端烘焙：gcloud builds submit deploy/runpod-avatar --config deploy/runpod-avatar/gpu-image/cloudbuild.vocaframe.yaml
+# 產物：asia-east1-docker.pkg.dev/gen-lang-client-0229303523/munea-gpu/vocaframe-640:latest
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - gpu-image/Dockerfile.vocaframe
+      - -t
+      - asia-east1-docker.pkg.dev/$PROJECT_ID/munea-gpu/vocaframe-640:latest
+      - .
+images:
+  - asia-east1-docker.pkg.dev/$PROJECT_ID/munea-gpu/vocaframe-640:latest
+timeout: 7200s
+options:
+  machineType: E2_HIGHCPU_8
+  diskSizeGb: 200
