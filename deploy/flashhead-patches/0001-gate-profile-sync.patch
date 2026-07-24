@@ -1,0 +1,100 @@
+diff --git a/flash_head/src/pipeline/flash_head_pipeline.py b/flash_head/src/pipeline/flash_head_pipeline.py
+index 6d0b757..55dfd26 100644
+--- a/flash_head/src/pipeline/flash_head_pipeline.py
++++ b/flash_head/src/pipeline/flash_head_pipeline.py
+@@ -21,6 +21,40 @@ COMPILE_VAE = True
+ # use parallel vae to speedup decode/encode, only support WanVAE
+ USE_PARALLEL_VAE = True
+ 
++# ---------------------------------------------------------------------------
++# Munea patch (calcifer 2026-07-23, N-way batching surgery phase 1 / option B).
++# Source: deploy/flashhead-patches/0001-gate-profile-sync.patch in the Munea
++# repo. Design doc: docs/research/合批手術-設計方案-2026-07-23.md section 1.2
++# (item 3).
++#
++# generate() below calls a CUDA device-sync barrier 8 times (about 14
++# invocations per chunk once the 4-step denoise loop is counted) purely to
++# bracket wall-clock print() timing lines. None of them are required for
++# correctness -- the denoise/VAE data-dependency chain is already ordered by
++# the CUDA stream itself. The barrier blocks until every stream on the
++# current CUDA context has drained, not just the calling thread's own work.
++# Munea's N-slot server runs all slots as Python threads inside ONE process
++# (one CUDA context), so each of these barriers also waits on whatever the
++# OTHER slots queued -- this is the main root cause of the "3 slots run
++# slower than 3x" behaviour seen in the 2026-07-23 concurrency benchmark.
++#
++# PROFILE_SYNC controls this barrier and follows the same external-override
++# convention already used for COMPILE_MODEL / COMPILE_VAE above: it defaults
++# to True here (pre-patch behaviour, byte-for-byte -- the barrier still fires
++# every call, timing prints stay accurate) and Munea's flashhead_server.py
++# sets it from MUNEA_FH_PROFILE_SYNC after importing this module, exactly
++# like it already does for COMPILE_MODEL/COMPILE_VAE via MUNEA_FH_COMPILE.
++# When set to False, the print() lines still run but no longer reflect a
++# GPU-drained wall time.
++# ---------------------------------------------------------------------------
++PROFILE_SYNC = True
++
++
++def _profile_sync():
++    if PROFILE_SYNC:
++        torch.cuda.synchronize()
++
++
+ def get_cond_image_dict(cond_image_path_or_dir, use_face_crop):
+     def get_image(cond_image_path, use_face_crop):
+         if use_face_crop:
+@@ -241,7 +275,7 @@ class FlashHeadPipeline:
+                 generator=self.generator)
+ 
+             for i in range(len(self.timesteps)-1):
+-                torch.cuda.synchronize()
++                _profile_sync()
+                 start_time = time.time()
+ 
+                 noise[:, :self.latent_motion_frames.shape[1]] = self.latent_motion_frames
+@@ -275,38 +309,38 @@ class FlashHeadPipeline:
+ 
+                     noise = (1 - t_i_1) * x_0 + t_i_1 * torch.randn(x_0.size(), dtype=x_0.dtype, device=self.device, generator=self.generator)
+ 
+-                torch.cuda.synchronize()
++                _profile_sync()
+                 end_time = time.time()
+                 if self.rank == 0:
+                     print(f'[generate] model denoise per step: {end_time - start_time}s')
+ 
+             noise[:, :self.latent_motion_frames.shape[1]] = self.latent_motion_frames
+ 
+-            torch.cuda.synchronize()
++            _profile_sync()
+             start_decode_time = time.time()
+ 
+             videos = self.vae.decode(noise)
+ 
+-            torch.cuda.synchronize()
++            _profile_sync()
+             end_decode_time = time.time()
+             if self.rank == 0:
+                 print(f'[generate] decode video frames: {end_decode_time - start_decode_time}s')
+         
+-        torch.cuda.synchronize()
++        _profile_sync()
+         start_color_correction_time = time.time()
+         if self.color_correction_strength > 0.0:
+             videos = match_and_blend_colors_torch(videos, self.original_color_reference, self.color_correction_strength)
+ 
+         cond_frame = videos[:, :, -self.motion_frames_num:].to(self.device)
+-        torch.cuda.synchronize()
++        _profile_sync()
+         end_color_correction_time = time.time()
+         if self.rank == 0:
+             print(f'[generate] color correction: {end_color_correction_time - start_color_correction_time}s')
+ 
+-        torch.cuda.synchronize()
++        _profile_sync()
+         start_encode_time = time.time()
+         self.latent_motion_frames = self.vae.encode(cond_frame)
+-        torch.cuda.synchronize()
++        _profile_sync()
+         end_encode_time = time.time()
+         if self.rank == 0:
+             print(f'[generate] encode motion frames: {end_encode_time - start_encode_time}s')

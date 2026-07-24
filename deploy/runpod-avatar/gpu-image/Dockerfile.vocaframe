@@ -1,0 +1,57 @@
+# 沐寧 VocaFrame 640 · RunPod 爆量備援卡印象檔（2026-07-23 · 4090三人併發兩軌計畫 Track 2）
+# 全烤進去：引擎＋權重＋條件圖都在印象檔裡，不掛置物櫃 → 任何機房有卡就能開。
+# 配方鏡像 deploy/glows/install-flashhead.sh（先鋒六雷疫苗全帶），引擎版本釘正式線同一版。
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+RUN apt-get update -qq \
+ && apt-get install -y -qq --no-install-recommends \
+      libgl1 libglib2.0-0 ffmpeg git wget curl build-essential ca-certificates openssh-server \
+ && rm -rf /var/lib/apt/lists/*
+
+# 引擎版本釘死＝2026-07-23 正式線 GLOWS 4090 上驗收過的那一版
+ARG FLASHHEAD_COMMIT=9bc03de06bb0de82cd6bc477804512ae06144bf2
+RUN git clone https://github.com/Soul-AILab/SoulX-FlashHead.git /root/SoulX-FlashHead \
+ && git -C /root/SoulX-FlashHead checkout ${FLASHHEAD_COMMIT}
+
+WORKDIR /root/SoulX-FlashHead
+# 雷1 mediapipe / 雷2 nccl；requirements 會偷換 torch cu126、最後一步校正回 cu128
+RUN sed -i 's/mediapipe==0.10.9/mediapipe>=0.10.13/' requirements.txt \
+ && sed -i '/nvidia-nccl-cu12/d' requirements.txt \
+ && pip install --no-cache-dir --ignore-installed blinker -r requirements.txt \
+ && pip install --no-cache-dir --force-reinstall scipy==1.17.1 psutil transformers==4.57.3
+
+# 雷4 flash-attn 預編譯 wheel（cp311 · torch2.7 · cxx11abiTRUE）
+RUN pip install --no-cache-dir ninja \
+ && FA_WHL="flash_attn-2.8.0.post2+cu12torch2.7cxx11abiTRUE-cp311-cp311-linux_x86_64.whl" \
+ && wget -q "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.0.post2/${FA_WHL}" -O "/tmp/${FA_WHL}" \
+ && pip install --no-cache-dir "/tmp/${FA_WHL}" && rm "/tmp/${FA_WHL}"
+
+# 雷3 torch cu128 校正（requirements 若沒動過等於空跑）
+RUN pip install --no-cache-dir --force-reinstall torch==2.7.1+cu128 torchvision==0.22.1+cu128 \
+      --index-url https://download.pytorch.org/whl/cu128 --no-deps
+
+# 服務層零件
+RUN pip install --no-cache-dir fastapi aiortc aiohttp av "huggingface_hub[cli]" soundfile uvicorn
+
+# 權重烤進印象檔（輕量版＋聽聲零件）→ 開機零下載
+RUN hf download Soul-AILab/SoulX-FlashHead-1_3B --local-dir /models/soulx-flashhead-1.3b --exclude "Model_Pro/*" \
+ && hf download facebook/wav2vec2-base-960h --local-dir /models/wav2vec2-base-960h
+
+# 通話服務（跟正式線同一組檔案）
+COPY flashhead_server.py flashhead_engine_core.py sync-face-assets.py /root/munea-service/
+COPY gpu-image/start-vocaframe.sh /root/munea-service/start-vocaframe.sh
+RUN chmod +x /root/munea-service/start-vocaframe.sh
+
+# 條件圖烘焙版：建置時就跟正式線出貨立繪對一次答案（開機時會再對一次、對不到就用這份）
+RUN cd /root/munea-service && python sync-face-assets.py
+
+# 維修門：sshd＋城堡鑰匙（實驗卡調校、爆量卡除錯都靠它；金鑰是公開半邊、非機密）
+RUN mkdir -p /root/.ssh /run/sshd \
+ && echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGbdYdN5LBKIF1cSFb6jQ5lkKNsw9uiAUxKJd/1t5QS9 munea-sophie-eval' > /root/.ssh/authorized_keys \
+ && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys \
+ && ssh-keygen -A
+
+WORKDIR /root/munea-service
+EXPOSE 8188
+CMD ["/root/munea-service/start-vocaframe.sh"]

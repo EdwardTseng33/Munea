@@ -57,13 +57,24 @@ import flash_head.src.pipeline.flash_head_pipeline as _fhp_mod
 _COMPILE = os.environ.get("MUNEA_FH_COMPILE", "0") == "1"
 _fhp_mod.COMPILE_MODEL = _COMPILE
 _fhp_mod.COMPILE_VAE = _COMPILE
+# N-way batching surgery phase 1 / option B (2026-07-23, calcifer). See
+# deploy/flashhead-patches/README.md for the patch itself (gates 8 device-wide
+# torch.cuda.synchronize() debug barriers inside generate()) and the
+# external-override convention this mirrors (same pattern as COMPILE_MODEL /
+# COMPILE_VAE right above). Default keeps every barrier firing -- byte-for-
+# byte pre-patch behavior when MUNEA_FH_PROFILE_SYNC is unset. Harmless no-op
+# if the patch was not applied to this checkout (PROFILE_SYNC just becomes an
+# unused module attribute; generate() still calls torch.cuda.synchronize()
+# directly, matching pre-patch behavior in that case too).
+_fhp_mod.PROFILE_SYNC = os.environ.get("MUNEA_FH_PROFILE_SYNC", "1") == "1"
 
 from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
 from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
-                                    health_snapshot, parse_frame_size, slot_summary,
-                                    switch_slot_char)
+                                    env_flag_enabled, health_snapshot,
+                                    make_slot_stream_run_pipeline, parse_frame_size,
+                                    slot_summary, switch_slot_char)
 
 # ===== 正式線 / 展示間分家（2026-07-21）=====
 # a05/a06 = 正式 App 的臉，條件圖必須是「原生正方形裁切」（a05 貼 y=190、a06 貼 y=209），
@@ -123,6 +134,13 @@ MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
 FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
 FRAME_SIZE = parse_frame_size(os.environ.get("MUNEA_FH_FRAME_SIZE", "512"))
+# N-way batching surgery phase 1 / option B (2026-07-23): give each slot its
+# own CUDA stream instead of sharing the default stream with the other two.
+# Default off -- matches pre-patch behavior byte-for-byte (see
+# deploy/flashhead-patches/README.md). Pairs with MUNEA_FH_PROFILE_SYNC=0
+# above; turning this on alone has little effect because the vendored
+# generate() barriers (when still firing) are device-wide, not per-stream.
+SLOT_STREAM = env_flag_enabled(os.environ.get("MUNEA_FH_SLOT_STREAM", "0"))
 # SoulX defaults to 512 in infer_params.yaml. Changing only the source image
 # does not change inference resolution, so apply the launch decision here.
 import flash_head.inference as _fh_inference
@@ -290,7 +308,18 @@ class FlashHead:
         slot.audio_out = AudioOutBuffer(SR_IN, prebuffer_s=AUDIO_PREBUFFER_S)
         slot.sink = FrameSink(slot.tgt_fps)
         slot.SYNC_BUFFER_MS = 350
-        slot.feeder = Feeder(slot, self._get_audio_embedding, self._run_pipeline,
+        run_pipeline_for_slot = self._run_pipeline
+        if SLOT_STREAM:
+            # Give this slot its own stream instead of sharing the default one
+            # with the other slots -- see make_slot_stream_run_pipeline's
+            # docstring in flashhead_engine_core.py for why it uses
+            # wait_stream() and not another blocking synchronize().
+            slot.cuda_stream = torch.cuda.Stream()
+            run_pipeline_for_slot = make_slot_stream_run_pipeline(
+                self._run_pipeline, slot.cuda_stream, torch)
+        else:
+            slot.cuda_stream = None
+        slot.feeder = Feeder(slot, self._get_audio_embedding, run_pipeline_for_slot,
                              sr_in=SR_IN, sr_eng=SR_ENG, max_ahead_s=MAX_AHEAD_S,
                              sharpen=FH_SHARPEN, on_unhealthy=self._on_slot_unhealthy)
 

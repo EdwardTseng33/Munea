@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from release_evidence import TARGETS_PATH, capture_target, validate_evidence
+from release_evidence import TARGETS_PATH, capture_target, compare_source_version, validate_evidence
 
 
 class ReleaseEvidenceTests(unittest.TestCase):
@@ -34,6 +34,31 @@ class ReleaseEvidenceTests(unittest.TestCase):
         captured = datetime.fromisoformat(self.latest["capturedAt"].replace("Z", "+00:00"))
         errors = self.validate(self.latest, max_age_hours=24, now=captured + timedelta(hours=25))
         self.assertTrue(any("older than 24 hours" in error for error in errors), errors)
+
+    def test_version_bump_since_capture_is_not_drift(self) -> None:
+        document = copy.deepcopy(self.latest)
+        document["sourceVersion"] = "0.0.1"
+        self.assertEqual(self.validate(document), [])
+        self.assertEqual(compare_source_version("0.0.1", self.source_version)[0], "behind")
+
+    def test_strict_version_blocks_a_stale_capture(self) -> None:
+        document = copy.deepcopy(self.latest)
+        document["sourceVersion"] = "0.0.1"
+        errors = self.validate(document, strict_version=True)
+        self.assertTrue(any("must match package version" in error for error in errors), errors)
+
+    def test_evidence_ahead_of_source_fails(self) -> None:
+        document = copy.deepcopy(self.latest)
+        document["sourceVersion"] = "999.0.0"
+        errors = self.validate(document)
+        self.assertTrue(any("is ahead of package version" in error for error in errors), errors)
+
+    def test_unreadable_or_missing_source_version_fails(self) -> None:
+        for value, expected in (("not-a-version", "cannot be compared"), ("", "sourceVersion is missing")):
+            document = copy.deepcopy(self.latest)
+            document["sourceVersion"] = value
+            errors = self.validate(document)
+            self.assertTrue(any(expected in error for error in errors), (value, errors))
 
     def test_service_identity_tamper_fails(self) -> None:
         document = copy.deepcopy(self.latest)
