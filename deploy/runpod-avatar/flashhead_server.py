@@ -581,7 +581,11 @@ class FlashHead:
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
                          "avatar_render_contract": avatar_render_contract(primary.char),
-                         "capacity": snap})
+                         "capacity": snap,
+                         # 2026-07-23 STATUS 125 防線 2：機器自報時鐘（機房控制、容器內無權校時）。
+                         # 監控可拿自己的時鐘跟這個欄位比對，抓「時鐘偏快」而非只抓「機器死了」——
+                         # 舊卡沒這欄位不會炸，純加欄位、不影響既有讀者（見 deploy/gateway/monitor.py）。
+                         "server_time": round(time.time(), 3)})
             if len(outer.slots) > 1:
                 body["slots"] = [slot_summary(s, outer.wake_ts) for s in outer.slots]
             return body
