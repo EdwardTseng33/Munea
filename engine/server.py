@@ -21,6 +21,7 @@ load_engine_env()
 from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
+import cloud_resync
 import health_kb
 import localization
 import supabase_adapter
@@ -606,9 +607,11 @@ def append_memory_items(items):
         if remote_items is not None:
             return remote_items
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
+        # 90分#2（2026-07-24）：雲端斷線不再往上丟 500——退本機備份＋告警＋進待補佇列、
+        # 背景工人趁雲端恢復自動補回（缺表＝要跑遷移、補也沒用、只留本機）。
         log_cloud_write_fallback("append memory items to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending_many("memory_items", items, identity=REQUEST_DATA_IDENTITY.get())
     existing = load_memory_items(limit=1000)
     save_memory_items(existing + items)
     return items
@@ -699,9 +702,10 @@ def append_conversation_summary(item):
         if remote_item is not None:
             return remote_item
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
+        # 90分#2：同 append_memory_items——退本機＋告警＋待補佇列、不往上丟 500
         log_cloud_write_fallback("append conversation summary to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending("conversation_summaries", item, identity=REQUEST_DATA_IDENTITY.get())
     existing = load_conversation_summaries(limit=1000, include_deleted=True)
     existing = [row for row in existing if row.get("id") != item["id"]]
     existing.append(item)
@@ -880,9 +884,10 @@ def append_wellbeing_signal(signal):
         if remote_signal is not None:
             return remote_signal
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
+        # 90分#2：同 append_memory_items——退本機＋告警＋待補佇列、不往上丟 500
         log_cloud_write_fallback("append wellbeing signal to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending("wellbeing_signals", signal, identity=REQUEST_DATA_IDENTITY.get())
     signals = read_json_file(WELLBEING_PATH, [])
     if not isinstance(signals, list):
         signals = []
@@ -9721,4 +9726,5 @@ if __name__ == "__main__":
     print(f"沐寧 App 伺服器啟動 → http://localhost:{port}  （Ctrl+C 結束）")
     # 門向：本機照舊只開給自己家（安全）；雲端主機（Cloud Run）由配方設 MUNEA_HOST=0.0.0.0 開正門
     host = os.environ.get("MUNEA_HOST") or "127.0.0.1"
+    cloud_resync.start_worker()  # 90分#2：背景回補工人（欠雲端的帳、趁恢復自動補回）
     ThreadingHTTPServer((host, port), H).serve_forever()
