@@ -509,6 +509,17 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "沒有貼圖、照片、文字訊息、影片、連結、按鈕可以傳給你，你也看不到他的畫面。"
         "絕對不要說「你傳了貼圖／照片／訊息」這類話；"
         "聽不清楚、或只聽到雜音時，就誠實說沒聽清楚、請他再說一次，不要猜測他做了什麼動作。）"
+        # 2026-07-24 Edward 拍板「語音自覺」：現實邊界管的是「他傳不了東西給你」，
+        # 這段補另一半——「你也給不了東西他」。這不是長輩專屬規則，是純語音通話對任何
+        # 使用者都成立的通用限制：不管是誰，都只能用耳朵收你的話，講出「傳連結／傳文件」
+        # 這種話對誰都是空話——屬「身分與人格」層（優先權契約第三層，跟現實邊界同層）。
+        "（語音自覺：你是這通電話裡的一個聲音——對方只聽得到你，一切都只能用「講」的。"
+        "你沒有辦法提供圖片、連結、網址、文件或文獻，也沒有畫面可以指給他看；"
+        "絕對不要說「我傳給你」「你看一下這張圖」「詳見某某網站」「我把資料給你」"
+        "這類話——你講了他也收不到，只會讓他一直等或找不到東西。"
+        "查到的資料要先在心裡消化成口語重點，像跟朋友轉述一件事那樣自然講出來，"
+        "不要唸條列、不要照搬書面用語；一次最多講三件事，每講完一件就停一下、"
+        "留時間讓他消化或接話，不要一口氣倒完。）"
     )
     # 熟識度分寸貫穿整段對話（不只開場）：越不熟越收斂、越熟越自在（Edward 2026-07-12）
     if fam < 1:
@@ -781,7 +792,54 @@ def asr_adaptation_phrases(char=None, name=None, user=None, topics=None, locatio
     return phrases
 
 
-def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False):
+def _voice_rhythm_param(explicit, env_name, default, cast=int):
+    """語音打斷／收話節奏參數，三層 fallback：
+    ①呼叫端明確帶值（保留給未來單通話／單一使用者覆蓋——例如連線參數之後可以帶入
+      使用者自己的節奏偏好；這次先把介面開好，呼叫端目前一律傳 None，還沒真的接使用者資料）
+    ②環境變數（目前整機一個值；測試機可先試新節奏，正式機不設＝零改變）
+    ③內建預設（＝2026-07-10 對照戶外雜音調校過的現行值）。
+    這是「按使用者說話節奏調的參數」，不是專屬長輩版——不同人語速、停頓習慣不同
+    （例如有人停頓較長、有人語速較快），這裡不預設是誰在講電話。"""
+    if explicit is not None:
+        try:
+            return cast(explicit)
+        except (TypeError, ValueError):
+            pass
+    raw = os.environ.get(env_name, "").strip()
+    if raw:
+        try:
+            return cast(raw)
+        except (TypeError, ValueError):
+            pass
+    return default
+
+
+def _voice_sensitivity_param(explicit, env_name, default_value, high_value, low_value):
+    """同 `_voice_rhythm_param` 的三層 fallback，給 HIGH/LOW 靈敏度枚舉值用。"""
+    def _map(raw):
+        token = str(raw).strip().upper()
+        if token in ("HIGH", "START_SENSITIVITY_HIGH", "END_SENSITIVITY_HIGH"):
+            return high_value
+        if token in ("LOW", "START_SENSITIVITY_LOW", "END_SENSITIVITY_LOW"):
+            return low_value
+        raise ValueError(token)
+
+    if explicit is not None:
+        try:
+            return _map(explicit)
+        except ValueError:
+            pass
+    raw = os.environ.get(env_name, "").strip()
+    if raw:
+        try:
+            return _map(raw)
+        except ValueError:
+            pass
+    return default_value
+
+
+def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
+                 start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     # 通話中即時查詢：預設關（2026-07-17 Edward 拍板）。
@@ -826,15 +884,33 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
             )
         ),
-        # 聽話靈敏度（Edward 2026-07-10「戶外雜音/旁人聊天被當成我在講」）：
-        # 開口判定調「低靈敏」＝要更明確、對著手機講的人聲才算你在說話——背景雜音/遠處聊天不易誤觸、不再亂打斷她；
-        # 結束判定同樣用低靈敏；尾端靜音窗 800ms＝長輩講話中間喘口氣不會被急著搶話。
+        # 聽話節奏（Edward 2026-07-10「戶外雜音/旁人聊天被當成我在講」定的現行值，
+        # 下方四個都是「零設定＝這四個現行值、行為不變」的預設）：
+        # 開口判定「低靈敏」＝要更明確、對著手機講的人聲才算你在說話——背景雜音/遠處聊天不易誤觸；
+        # 結束判定同樣低靈敏；尾端靜音窗 800ms＝講話中間喘口氣不會被急著搶話。
+        # 2026-07-24：四個值都改走 `_voice_rhythm_param`／`_voice_sensitivity_param` 三層
+        # fallback（呼叫端明確值→環境變數→這裡的現行值當預設）——這是「按使用者說話節奏調」
+        # 的參數，不是長輩專屬版；不同人語速停頓不同，未來要接單一通話/單一使用者覆蓋時，
+        # 介面已經開好，不用再改這段。蕪菁頭文獻調研：句中停頓較長的使用者，測試機可試
+        # MUNEA_VOICE_SILENCE_MS=1000~1200 觀察搶話是否減少（正式機預設不動）。
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
-                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
-                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
-                prefix_padding_ms=300,
-                silence_duration_ms=800,
+                start_of_speech_sensitivity=_voice_sensitivity_param(
+                    start_sensitivity, "MUNEA_VOICE_START_SENSITIVITY",
+                    types.StartSensitivity.START_SENSITIVITY_LOW,
+                    types.StartSensitivity.START_SENSITIVITY_HIGH,
+                    types.StartSensitivity.START_SENSITIVITY_LOW,
+                ),
+                end_of_speech_sensitivity=_voice_sensitivity_param(
+                    end_sensitivity, "MUNEA_VOICE_END_SENSITIVITY",
+                    types.EndSensitivity.END_SENSITIVITY_LOW,
+                    types.EndSensitivity.END_SENSITIVITY_HIGH,
+                    types.EndSensitivity.END_SENSITIVITY_LOW,
+                ),
+                prefix_padding_ms=_voice_rhythm_param(
+                    prefix_padding_ms, "MUNEA_VOICE_PREFIX_PADDING_MS", 300),
+                silence_duration_ms=_voice_rhythm_param(
+                    silence_duration_ms, "MUNEA_VOICE_SILENCE_MS", 800),
             ),
             activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
@@ -852,8 +928,11 @@ async def search_current_information(search_client, query, location=None):
     clean_query = live_lookup.normalize_query(query)
     if not clean_query:
         raise ValueError("lookup query is empty")
+    # 2026-07-24 主備對調：正式機紀錄 gemini-2.5-flash 常 8-9 秒逾時／客滿，
+    # gemini-3.1-flash-lite 實測同流程 2-3 秒。快的當主，多數查詢不用等到
+    # per_model_s 超時才切下一顆；2.5-flash 退居備援。
     models = [m.strip() for m in os.environ.get(
-        "MUNEA_LOOKUP_MODEL", "gemini-2.5-flash,gemini-3.1-flash-lite").split(",") if m.strip()]
+        "MUNEA_LOOKUP_MODEL", "gemini-3.1-flash-lite,gemini-2.5-flash").split(",") if m.strip()]
     per_model_s = float(os.environ.get("MUNEA_LOOKUP_PER_MODEL_SECONDS", "6"))
     last_exc = None
     for model in models:

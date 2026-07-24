@@ -4,12 +4,65 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 待審：語音優化快贏包 A/B/C（2026-07-24 卡西法/城堡 · Draft PR #243 · App E2E pending）
+
+- Branch：`feat/voice-quickwin-20260724`；獨立 worktree，基準 `origin/main@313f6c27`。
+- 檔案：`engine/live_voice_server.py`（system_instruction 補「語音自覺」、live_config
+  新增節奏參數三層 fallback、查詢主備模型對調）、`engine/live_lookup.py`（材料規則補
+  口語化）、`engine/test_voice_style_rules.py`／`engine/test_live_lookup.py`（新增契約
+  測試）、新增 `engine/test_voice_rhythm_params.py`、`package.json`（test:launch 串新
+  測試）、`scripts/test-voice-launch-policy.js`（同步更新一條因重構失效的字面檢查）。
+- 目標：Edward 拍板路線 A 快贏包 + 「語音自覺」新增需求——她要知道自己只是電話裡的
+  一個聲音，不能講出「傳給你連結」這類空話；查詢主備模型對調（3.1-flash-lite 2-3秒
+  當主，2.5-flash 常 8-9秒退居備援）；打斷/收話節奏參數改三層 fallback（呼叫端明確
+  值→環境變數→現行值當預設），Edward course-correction 後定位為「按使用者調的節奏
+  參數」而非長輩專屬版，正式機零環境變數＝零改變。
+- 不碰區：沒打開 `MUNEA_VOICE_LIVE_LOOKUP`（正式/測試都維持關，只調備援順序）、沒把
+  非預設節奏值套到正式機、沒實作 GoAway/session resumption/context compression（體檢
+  確認現況與既有文件一致、列後續項）。
+- 驗過沒：本機真跑 `test_live_lookup`／`test_voice_style_rules`／新增
+  `test_voice_rhythm_params`／`test_location_not_a_topic`／`test_voice_echo_guard`／
+  `test_voice_call_memory`／`test_voice_call_diagnostics`／`test_voice_health_context`／
+  `test_b2b_demo_voice_isolation`／`test_guardian_crisis`（含語音線模擬）全數 PASS；
+  `test-voice-turn-policy.js`／`test-voice-call-diagnostics.js` PASS；
+  `test-voice-launch-policy.js` 除一項與本次改動無關、在乾淨 `origin/main` 上就已存在
+  的既有失敗外全過（已用 `git stash` 對照驗證非本 PR 引入）。**App E2E pending**——
+  未在安裝版 iPhone App 上做真人撥通驗收，上線前需補（call-path risk：是）。
+
+### 待審：守護腦危機測試綁進自動守門（2026-07-24 卡西法/城堡 · Draft PR #240）
+
+- Branch：`calcifer/ci-guardian-crisis-smoke-20260724`；獨立 worktree，基準 `origin/main@d0cba99`。
+- 檔案：`.github/workflows/smoke.yml`（smoke-no-api job 新增 guardian-crisis-gate 步驟 + outputs + Slack 通知欄位）、`package.json`（`test:launch` 加回這支測試）。
+- 目標：CTO 架構稽核發現 `engine/test_guardian_crisis.py`（自傷/傷人/精神異常/保護事件/用藥邊界共 46 案例，唯一「絕對不能錯」的測試）沒被任何 CI 或 `test:launch` 綁住，全靠人記得手動跑；補上自動守門。
+- 不影響 App/Auth/Gateway/Voice/Avatar/部署流程，純 CI 配線，無 call-path 風險。
+- 踩坑一次：第一版 push 後在 windows-latest 跑者上因 Python stdout 預設 cp1252、中文 print 炸 `UnicodeEncodeError`（本機因系統已是 UTF-8 測不出來）；補 `PYTHONIOENCODING=utf-8`＋`PYTHONUTF8=1` 後修復，本機重現＋修復皆有紀錄在 PR。
+- 驗過沒：PR #240 CI 實跑，`Windows smoke without API server`／`Windows auth gate smoke` 皆 PASS（guardian-crisis-gate 46/46 + 語音線模擬 PASS）；`Current truth and drift gates` 失敗屬既有版本漂移檢查（main 上本就間歇失敗），與本次改動無關。
+
+### 待審：寧寧回答品質輕量評測腳手架 v1（2026-07-24 卡西法/城堡 · Draft PR #242）
+
+- Branch：`calcifer/nening-eval-scaffold-20260724`；獨立 worktree，基準 `origin/main@d0cba99`。
+- 檔案：新增 `engine/eval/`（`golden_set_v1.json` 黃金集種子26題、`gen_reply.py`／`judge.py` 子行程worker、`run_eval.py` 一鍵跑orchestrator、`README.md` 設計決策與基準記錄、`results/` 存檔留基準）；修改 `package.json`（新增 `eval:nening` script，未動 `test:launch`）。
+- 目標：出處 `docs/research/健康管家模型-技術路線調研-2026-07-24.md` 第4題（評測腳手架=ROI最高補件）——讓寧寧回答品質可量測可迴歸，不再靠人工唸逐字稿。
+- 選型：手寫薄跑分器，不用 DeepEval/promptfoo（repo無pytest生態、promptfoo接不到server.py內部函式、量級用不到重型框架）；理由詳 README。
+- 不進CI（評審燒真金錢+LLM判定有雜訊，不適合當push-gate），先手動建基準，nightly與退步容忍區間留給Edward/馬魯克之後拍板。
+- 跟 `engine/test_guardian_crisis.py`（PR #240 已綁CI）互補不重複：那支測風險分類對不對(零成本)，這份測回答內容好不好(真呼叫模型)。
+- 驗過沒：本機真跑整份26題黃金集，26/26無錯誤、整題PASS 18/26(69.2%)、準則PASS 70/78(89.7%)，真實token用量230,227（`usage_metadata`直接讀出）；`personalization`類只五成，抓到目前production prompt「溫牛奶反例」真實存在的具體證據（詳PR描述與README）。
+
+
 ### 已完成：正式臉卡換裝 6000 Ada → 4090（2026-07-23 Windows 蘇菲 · Edward 拍板省成本 · App E2E pending）
 
 - **新常駐**：GLOWS RTX 4090 24GB `ins-5y4k7z7r`（SSH `-p 26697 root@tw-06.access.glows.ai`、鑰匙 `deploy/glows/glows_ed25519`）· 對外正門 **`https://tw-06.access.glows.ai:26455`** · VocaFrame 640 · **compile 開**（常駐機開機稅一次付清：首席 120s、次席吃快取 0.45s）· 服務 slots=2。裝機照 `deploy/glows/install-flashhead.sh` 自檢全綠；服務檔取 `origin/main` 最新（含 #226 臉分家後版本）；條件圖在機器上跑 `sync-face-assets.py` 從正式立繪自動重切（a05 y=190／a06 y=209、與 App 貼合契約一致）。
 - **容量重驗（profile 原則生效）**：本卡兩路同時真 WebRTC 實測——eager p95 1022.9ms（餘裕 **−6.6%**、超即時預算）；compile p95 859.5ms（餘裕 **10.5%**）。均低於城堡 20% 安全線（前例：6000 Ada 三路 eager 14% 不列安全值）→ **Gateway 登記 `glows-rtx4090-tw06` capacity=1**、第二席保溫。7/13「4090 每卡 2 路安全」暫定值在本卡不成立；要升 2 席須 Edward 拍板接受薄餘裕＋補兩路 60 分鐘 soak。
 - **驗收證據**：a05／a06 單路＋雙路 WebRTC 皆 640×640 影音同線到齊（雙路 12s：430 格／840 包）；公網 `/health` 帶鑰匙 200、無鑰匙 403；聊聊 SOP `qa_munea.py` **11/12**（唯一 FAIL＝收尾對已刪帳號重複刪、帳號實際已清乾淨）；正式線 `/chat` 真回話 21.5s、測試機 17.4s（歷史區間內）。依 7/17 永久硬 Gate：**Edward iPhone 真機撥通前標 App E2E pending**。
 - **舊卡與待辦**：① `glows-rtx6000ada-tw07` 已置 draining（自身心跳報 unhealthy、不接活）——**GLOWS 上那台 6000 Ada 還在計費，Edward 驗收滿意後請至主控台 Stop & Release** ② `deploy/glows/.env` 的 GLOWS SDK 通行碼已失效（查門牌／自動開關都靠它）——請 Edward 從 Profile 抄新的 ③ `web/src/app.js` `FLASHHEAD_URL_DEFAULT` 仍指死門牌 tw-07:26969（主路徑由 Gateway 發牌不受影響；下次包版順手改 26455）④ RunPod 備援列 terminated、未動。
+
+### 待審：B1貼身感小刀——CORE補下限規則+側寫/記憶提前（2026-07-24 卡西法/城堡 · PR #245 已 ready）
+
+- Branch：`calcifer/b1-personalization-scalpel-20260724`；獨立 worktree，基準 `origin/main@b94fba6`。
+- 檔案：`engine/chat_engine.py`（CORE ⓪-D 補「貼身感下限」+「問診分寸」兩條規則）、`engine/server.py`（`reply_context_instruction()` living_line＋相關記憶區塊往前移＋措辭改硬性）。未動 RED、未動21題衛教內容、未帶評測工具進本PR（評測工具是PR #242範圍）。
+- 目標：稽核發現黃金集26題貼身感只五成（已注入側寫但寧寧沒接住）；霍爾/卡西法討論收斂B1先單獨做、驗證量尺會動，B2(21題衛教)之後疊加。
+- 驗過沒：46題危機測試不受影響仍46/46；黃金集26題before/after配對跑，personalization 50%→66.7%(回升，符合預期)，但taiwan_local/plain_language各掉1題；重複抽樣噪聲檢查發現±1題規模差異在temp=0.7下無法排除是抽樣噪聲(g06/g24兩次after跑動間直接翻轉)；7題無側寫題人眼核對皆無硬拗捏造背景。
+- **Edward 裁決選 B，已收尾**：補做 N=3 多數決（3個獨立完整26題跑動，2/3過算過）分清因果——personalization 33.3%→66.7%(+2題，B1真有效)；medboundary 持平(46.2%→46.2%)＝噪聲不追；taiwan_local/plain_language category層級持平或-1題，但逐題揪出g14(CRP解釋題)3/3→1/3、g24(找公園題)3/3→0/3兩個真回歸（穩定退步、非噪聲），共同模式＝為了貼身感省略了原本該有的收尾動作。補⓪-D-3規則修復（貼身感是多做一件事、不是少做另一件必要的事）並二次N=3驗證：g14修後3/3穩定PASS、g24修後0/3→2/3多數轉PASS。順手在 `engine/eval/README.md`（PR #242）記錄「單次跑動雜訊不可信」教訓、把 `run_eval.py --repeat N` 多數決模式列為B2前置待辦。PR #245 已標 ready，CI全綠。B1收工。
 
 ### 待審：測試帳號跟真實用戶隔離（2026-07-21 Claude/城堡 · Draft PR #222）
 

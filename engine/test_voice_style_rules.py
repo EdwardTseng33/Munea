@@ -112,6 +112,20 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("1925", self.src)
         self.assertIn("醫療紅線與危機處理規則永遠優先", self.src)
 
+    def test_voice_self_awareness_rule_present(self):
+        """2026-07-24 Edward 拍板「語音自覺」：她要知道自己只是聲音，不能講出「傳給你」
+        這類空話；查到的資料要先消化成口語，不是唸條列。通用規則，不得綁死長輩措辭。"""
+        self.assertIn("語音自覺", self.src)
+        self.assertIn("一切都只能用「講」的", self.src)
+        for banned_phrase in ("我傳給你", "你看一下這張圖", "詳見某某網站", "我把資料給你"):
+            self.assertIn(banned_phrase, self.src)
+        self.assertIn("一次最多講三件事", self.src)
+        self.assertIn("消化成口語重點", self.src)
+        # 措辭不得綁死「長輩」——這是純語音通話的通用限制，不是年齡層專屬規則
+        self_awareness = self.src[self.src.index("語音自覺：你是這通電話裡的一個聲音"):
+                                   self.src.index("留時間讓他消化或接話，不要一口氣倒完。）")]
+        self.assertNotIn("長輩", self_awareness)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

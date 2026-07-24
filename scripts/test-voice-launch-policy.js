@@ -96,7 +96,11 @@ expect(voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLB
   'the deterministic Mandarin fallback does not bypass conversational generation');
 expect(voiceServer.includes('asyncio.to_thread(_hokkien_fallback_pcm, char)'),
   'the deterministic Mandarin fallback is not prewarmed off the call-ready path');
-expect(voiceServer.includes('prefix_padding_ms=300'),
+// 2026-07-24：prefix_padding_ms 改走 _voice_rhythm_param 三層 fallback（呼叫端明確值→
+// 環境變數→這裡的 300 預設）；不設環境變數＝跟改動前的字面 300ms 完全一樣的行為，
+// 契約檢查同步改成看 fallback 呼叫是否仍以 300 為內建預設。
+expect(voiceServer.includes('prefix_padding_ms=_voice_rhythm_param(') &&
+  voiceServer.includes('"MUNEA_VOICE_PREFIX_PADDING_MS", 300)'),
   'server VAD does not require sustained speech before committing a turn');
 expect(voiceServer.includes('types.LanguageHints(language_codes=["cmn-Hant-TW"])'),
   'S2S input/output transcription is not explicitly biased to Taiwan Mandarin');

@@ -3051,7 +3051,7 @@ def reply_context_instruction(context):
     if living.get("intoLately"):
         living_parts.append("最近迷：" + "、".join(living["intoLately"]))
     living_line = (
-        "（這位長輩現在是誰（活的側寫，拿來自然關心、別照唸出來）：\n"
+        "（這位長輩現在是誰（活的側寫）——這輪如果跟以下背景相關，建議與關心務必自然扣住至少一項具體事實，不要給對誰都通用的建議；不要照唸出來，要自然融進你的話裡：\n"
         + "\n".join(f"- {p}" for p in living_parts) + "\n）"
     ) if living_parts else ""
     try:
@@ -3117,6 +3117,8 @@ def reply_context_instruction(context):
         f"（語氣：{', '.join(persona_body.get('toneProfile') or [])}。）",
         f"（對話風格：{', '.join(persona_body.get('conversationStyle') or [])}。）",
         f"（安全風險：{(guardian.get('risk') or {}).get('level', 'none')}；動作：{(guardian.get('risk') or {}).get('action', 'allow')}。）",
+        living_line,
+        "（相關記憶——這輪如果相關，優先拿來讓建議「只對這個人成立」、不要給通用建議：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
         time_line,
         brief_line,
         "（聽出對方的語氣與心情、跟著調整：聽起來累或低落→放柔放慢、不催、多陪；開心→跟著亮起來。這是關心、不是診斷，絕不評斷對方的心理狀態。）",
@@ -3125,9 +3127,7 @@ def reply_context_instruction(context):
         location_line,
         culture_line,
         "（智慧鏡頭：可溫柔用台灣諺語、生活智慧、簡單的反思提問陪伴；對方有信仰才順著其信仰語彙。絕不捏造經文、不強加宗教、不說教；危機時安全規則優先於一切。）",
-        living_line,
         health_line,
-        "（相關記憶：\n" + ("\n".join(memory_lines) if memory_lines else "- 沒有足夠相關記憶，不要假裝記得。") + "\n）",
         "（即時感知需求：\n" + ("\n".join(domain_lines) if domain_lines else "- 此輪不需要外部即時事實。") + "\n）",
         "（醫療紅線，最高優先：不診斷、不開藥、不建議劑量或顆數、不說停藥換藥、不說不用看醫生。被問到藥怎麼吃、吃幾顆、能不能吃、要不要停，一律溫柔回：這要請醫生或藥師決定，並主動提議幫忙記下來回診時問。身體急症徵兆一律提醒聯絡 119。不主動顯示逐字稿；沒有資料來源就說不能確認、不編造。）",
     ])
