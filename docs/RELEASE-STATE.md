@@ -41,7 +41,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | staging | Brain | `1.0.40@fa14e4c`, `munea-brain-staging-00063-tod` | `/version` 200；pricing exact revision 100% serving，安全 smoke PASS；不是 production，且不代表真人購買驗收 | 2026-07-20 00:21 |
 | staging | Voice | `1.0.41@906732ab`, `munea-voice-staging-00053-xow` | `/version` 200；公開 identity 已刷新；不是 production，真人通話仍需 App E2E | 2026-07-20 00:21 |
 
-`/version` 是 runtime identity authority。上述 5 個公開 target 的 safe observation、target-config hash、capture time 與 capture source commit 保存在 [`RELEASE-EVIDENCE-LATEST.json`](./RELEASE-EVIDENCE-LATEST.json)，以 [`RELEASE-EVIDENCE-TARGETS.json`](./RELEASE-EVIDENCE-TARGETS.json) 及 `python scripts/release_evidence.py check --max-age-hours 24` 驗 freshness。Cloud Run Ready、0% canary、source equivalence或 App 預設 URL 都不能替代 serving identity 與真實 client trace。
+`/version` 是 runtime identity authority。上述 5 個公開 target 的 safe observation、target-config hash、capture time 與 capture source commit 保存在 [`RELEASE-EVIDENCE-LATEST.json`](./RELEASE-EVIDENCE-LATEST.json)，以 [`RELEASE-EVIDENCE-TARGETS.json`](./RELEASE-EVIDENCE-TARGETS.json) 及 `npm run release:evidence:check`（= `python scripts/release_evidence.py check --max-age-hours 24 --strict-version`）驗 freshness 與版號對齊；上線前跑這一條。CI 常駐的 `python scripts/release_evidence.py check`（無 `--strict-version`）只擋真漂移：sourceVersion 缺值、看不懂、或超前 package version。證據落後 package version 是版號跳了還沒重擷的正常開發狀態，只給 warning，重擷用 `npm run release:evidence:capture`。Cloud Run Ready、0% canary、source equivalence或 App 預設 URL 都不能替代 serving identity 與真實 client trace。
 
 ## Database and billing policy
 

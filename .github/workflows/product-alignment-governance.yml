@@ -83,8 +83,18 @@ jobs:
       - name: Test alignment governance failures
         run: python -B scripts/test_product_alignment_governance.py
 
+      # 版號往前跳、證據還沒重擷 = 正常開發，只留 warning；真漂移（缺值／看不懂／超前 source）才紅燈。
+      # 上線前的嚴格版由 `npm run release:evidence:check`（--strict-version）把關。
       - name: Check committed runtime evidence contract
-        run: python -B scripts/release_evidence.py check
+        run: |
+          set -o pipefail
+          python -B scripts/release_evidence.py check | tee "$RUNNER_TEMP/release-evidence.txt"
+          if grep -q '^WARN' "$RUNNER_TEMP/release-evidence.txt"; then
+            {
+              echo "### Release evidence warning"
+              grep '^WARN' "$RUNNER_TEMP/release-evidence.txt"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Test runtime evidence safety and freshness rules
         run: python -B scripts/test_release_evidence.py
