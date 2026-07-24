@@ -12,6 +12,9 @@
 | （D1 現場補）`avatar_cloud_server.py` | 雲端版臉服務：Ditto 生成 → WebRTC；沿用本機版的對時/羽化/門禁設計 |
 | `flashhead_server.py` | FlashHead 通話服務（現役引擎，GLOWS 台灣機跑的就是它） |
 | `flashhead_engine_core.py` | 2026-07-12 N 槽改造拆出的引擎核心（零重量依賴、可本機單元測試）——**跟 flashhead_server.py 是一組，scp 上機器要兩個一起傳**，只傳前者會 ImportError 開機失敗。預設 `MUNEA_FH_SLOTS` 不設＝單槽，跟改造前單例版行為一字不差；測試卡要多槽才設這個環境變數。單元測試：`python scripts/test_flashhead_multislot.py`（repo 根目錄跑）。|
+| `start-vocaframe.sh` | 2026-07-23 合批手術階段 2：多程序啟動器。`MUNEA_FH_PROCS` 未設/1＝完全委派給 `start-flashhead.sh`，行為一字不差；設 >1 開 N 個 `flashhead_server.py`（各 1 slot、各自埠號/`MUNEA_WORKER_ID`）+ `flashhead_router.py`。細節與部署步驟草稿見 `deploy/glows/README.md` 對應章節。 |
+| `flashhead_router.py` | 2026-07-23：只在 `MUNEA_FH_PROCS>1` 時用到的前置分流器（aiohttp），依 call token 的 `worker_id` 把請求轉給對應 process。跟 `flashhead_server.py`/`flashhead_engine_core.py` 一起 scp。 |
+| `flashhead_router_core.py` | 2026-07-23：`flashhead_router.py` 的純路由決策邏輯（零重依賴，可本機單元測試）。單元測試：`python scripts/test_flashhead_router_core.py`。 |
 
 ## 768（720P級）首發設定
 

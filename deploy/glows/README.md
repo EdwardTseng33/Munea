@@ -1,5 +1,32 @@
 # Glows.ai 台灣 4090 · FlashHead 臉引擎（2026-07-11 試車紀錄＋重建手冊）
 
+## 2026-07-23 合批手術階段 2 · 多程序部署（同卡 A/B 實測定案）
+
+**今晚同卡 A/B 實測（RunPod 4090、640 渦輪、21 塊）**：3 條 thread 在同一 process 內 p95=1920ms（-100%），同一顆卡改成 3 個獨立 OS process（各自 1 slot）p95=1183ms（-23%，GPU 真的吃到 100%/412W）——**GIL 序列化才是「3 路變超慢」的真病灶，不是階段 1（方案 B）猜測的 CUDA sync 屏障**（那條路也量過：3 thread + 方案 B 拔屏障 p95=1964ms，比不拔還略慢、判定無效，見 `deploy/flashhead-patches/README.md` 的誠實紀錄；方案 B 程式碼保留在 repo 裡，預設關、無害，留作日後計時診斷用）。
+
+**新增元件（都在 `deploy/runpod-avatar/`，跟 `flashhead_server.py` 同一批要上傳的檔案）**：
+
+| 檔案 | 用途 |
+|---|---|
+| `start-vocaframe.sh` | 多程序啟動器。`MUNEA_FH_PROCS` 未設/設 1 時完全委派給既有 `start-flashhead.sh`，一字不差；設 >1 時開 N 個 `flashhead_server.py` process（各自 `MUNEA_FH_SLOTS=1`、各自埠號 `MUNEA_FACE_PORT+1..+N`、各自 `MUNEA_WORKER_ID` 尾碼 `-p0/-p1/...`）+ 1 個 `flashhead_router.py`。支援 `--dry-run`（或 `MUNEA_FH_DRY_RUN=1`）只印計畫、不真的啟動，方便部署前預覽。 |
+| `flashhead_router.py` | 前置分流器（aiohttp），只在 `MUNEA_FH_PROCS>1` 時由啟動器一併起，監聽原本對外的 `MUNEA_FACE_PORT` 不變，依請求裡的 call token（`worker_id` 欄位）把 `/offer`／`/audio`／`/switch`／`/demo/session` 轉給對應的 backend process，`/health` 會 fan-out 聚合成一份跟現行多槽 `/health` 同形狀的 `slots` 陣列。 |
+| `flashhead_router_core.py` | 路由決策純邏輯（零重依賴，不 import aiohttp），可離線單元測試——見 `scripts/test_flashhead_router_core.py`（已接進 `test:launch`）。 |
+
+**為什麼需要一個分流器**：Glows 目前一台機器只映射一個對外 http 埠，N 個獨立 process 各自綁不同內部埠號時，只有分流器綁的那個埠是外面連得到的；分流器再依 call token 裡的 `worker_id`（Durable Call Control 核發、`flashhead_server.py` 既有的 `_decode_call_token` 機制本來就會帶這個欄位）轉發給正確的 backend process。路由層只「偷看」token payload 決定轉去哪，不驗證簽章——真正的權限驗證維持在被轉發到的那個 process 裡各自做一次，跟現行完全一樣，路由猜錯的後果最多是白轉一次、被目標 process 的簽章驗證擋下，不會弱化安全性。
+
+**部署步驟草稿（正式線 Glows 卡切雙/三程序，待 Edward/主對話蘇菲離峰時段驗）**：
+
+1. 上傳 `flashhead_server.py`／`flashhead_engine_core.py`／`flashhead_router.py`／`flashhead_router_core.py`／`start-vocaframe.sh` 五個檔案（缺任何一個，`MUNEA_FH_PROCS>1` 時 `start-vocaframe.sh` 會在啟動 router 前主動擋下並印錯誤訊息，不會半殘啟動）。
+2. `runtime.env` 加一行 `MUNEA_FH_PROCS=2`（先從 2 開始、確認穩定再考慮 3——今晚 2 process 實測 p95=787ms、18% 餘裕已經達標，3 process 才會逼近 GPU 硬體極限的 23% 缺口）。
+3. 先跑 `bash start-vocaframe.sh --dry-run` 確認印出的埠號／`worker_id` 計畫符合預期，再拿掉 `--dry-run` 真的啟動。
+4. 驗收：`curl <門牌>/health` 應該回報 `capacity.limit=2`（或設定的 N）且 `slots` 陣列有 N 筆各自的 `worker_id`；`tools/face-acceptance/驗收-FlashHead同線.py` 跑過（會走 `/offer`，實際驗證分流有沒有把請求正確送到某一個 backend process）。
+5. 資料庫端（待 Edward/主對話蘇菲確認）：`gpu_workers` 表要幫這張卡新增 N 筆 worker 列，`worker_id` 依序是 `<既有worker_id>-p0`／`-p1`／...，`url` 全部填同一個對外門牌（分流器會處理內部轉發），`capacity` 每筆都填 1（不是 N——現在是「N 個各自 capacity=1 的獨立 worker」模型，不是「1 個 worker capacity=N」）。
+6. 觀察至少一輪離峰時段的真實通話（不只是 `/health` 探測），確認 `/audio` WebSocket 全程沒有中途斷線、嘴聲同步正常，再擴大流量占比。
+7. 回退路徑：`runtime.env` 拿掉 `MUNEA_FH_PROCS`（或設回 1）+ 重跑 `start-vocaframe.sh`，立刻退回現行單程序行為；`gpu_workers` 的 N 筆列改回 `status='draining'` 讓現有通話跑完、不再派新的。
+
+**已知限制（誠實記錄，非本輪範圍）**：demo 模式（`/demo/session`）固定路由到 process 0，多程序不會幫 demo 流量分攤負載（demo token 只在核發它的那個 process 記憶體裡驗證得過，這是既有單程序時代就有的設計、不是這輪新增的限制）；`/switch` 端點沿用既有 0-based `slot` 參數，跟 call token 裡 1-based 的 `slot_id` 語意不同，保留給人工操作用、不是給 App 呼叫的端點。
+
+
 ## 2026-07-13 RTX 6000 Ada 48GB 實測定案
 
 - 測試卡：GLOWS TW-07，Ubuntu 24.04 Docker NV580，RTX 6000 Ada 48GB，0.720 Credit/hr（NT$23.04/hr）。
