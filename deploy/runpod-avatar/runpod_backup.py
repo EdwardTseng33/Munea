@@ -71,6 +71,22 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
+        max_pods = _int("MUNEA_RUNPOD_MAX_PODS", 14)
+        max_scale_up = _int("MUNEA_RUNPOD_MAX_SCALE_UP_PER_CYCLE", 4)
+        # A per-cycle scale-up batch larger than the whole pool is harmless
+        # intent, not a fatal error: you can never open more than max_pods at
+        # once anyway. Clamp it (when max_pods is itself sane) with a warning so
+        # an ops env like MAX_PODS=2 + MAX_SCALE_UP=4 self-heals instead of
+        # crashing the controller on startup. Genuinely bad values (max_pods out
+        # of range, batch < 1) are still rejected by validate().
+        if max_pods >= 1 and max_scale_up > max_pods:
+            print(
+                "[runpod-backup] MUNEA_RUNPOD_MAX_SCALE_UP_PER_CYCLE "
+                f"{max_scale_up} exceeds MUNEA_RUNPOD_MAX_PODS {max_pods}; "
+                f"clamping batch to {max_pods}",
+                flush=True,
+            )
+            max_scale_up = max_pods
         return cls(
             mode=os.environ.get("MUNEA_RUNPOD_AUTOMATION_MODE", "observe").lower(),
             gateway_url=os.environ.get("MUNEA_GATEWAY_URL", "http://127.0.0.1:8199").rstrip("/"),
@@ -78,8 +94,8 @@ class Config:
             worker_key=os.environ.get("MUNEA_AVATAR_APP_KEY", ""),
             pod_prefix=os.environ.get("MUNEA_RUNPOD_POD_PREFIX", "munea-vocaframe-backup"),
             slots=_int("MUNEA_RUNPOD_SLOTS", 2),
-            max_pods=_int("MUNEA_RUNPOD_MAX_PODS", 14),
-            max_scale_up_per_cycle=_int("MUNEA_RUNPOD_MAX_SCALE_UP_PER_CYCLE", 4),
+            max_pods=max_pods,
+            max_scale_up_per_cycle=max_scale_up,
             target_concurrent_calls=_int("MUNEA_TARGET_CONCURRENT_CALLS", 30),
             utilization_threshold=_float("MUNEA_RUNPOD_SCALE_UP_UTILIZATION", 0.80),
             failure_threshold=_int("MUNEA_RUNPOD_FAILURE_THRESHOLD", 3),

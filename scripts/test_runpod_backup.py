@@ -440,6 +440,34 @@ def test_scale_up_registration_failure_rolls_back_entire_batch():
         ]
 
 
+def test_scale_up_batch_over_pool_self_heals_from_env():
+    """MAX_PODS=2 + MAX_SCALE_UP=4 must clamp, not crash the controller."""
+    keys = ("MUNEA_RUNPOD_MAX_PODS", "MUNEA_RUNPOD_MAX_SCALE_UP_PER_CYCLE")
+    saved = {k: os.environ.get(k) for k in keys}
+    try:
+        os.environ["MUNEA_RUNPOD_MAX_PODS"] = "2"
+        os.environ["MUNEA_RUNPOD_MAX_SCALE_UP_PER_CYCLE"] = "4"
+        cfg = rb.Config.from_env()
+        # The harmless "batch bigger than pool" env self-heals by clamping.
+        assert cfg.max_pods == 2
+        assert cfg.max_scale_up_per_cycle == 2
+        cfg.validate()  # must not raise now that the batch is bounded
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    # A contradictory config built directly (programmer error, not ops env) is
+    # still rejected loudly -- validate() semantics are unchanged.
+    try:
+        rb.Config(max_pods=2, max_scale_up_per_cycle=4).validate()
+        raise AssertionError("direct contradictory config must still raise")
+    except rb.BackupControllerError:
+        pass
+
+
 def main():
     old = os.environ.get("MUNEA_RUNPOD_TEMPLATE_ID")
     os.environ["MUNEA_RUNPOD_TEMPLATE_ID"] = "tpl-test"
@@ -464,6 +492,7 @@ def main():
             test_capacity_plan_for_1_3_4_10_30_callers,
             test_thirty_call_burst_scales_in_bounded_batches,
             test_scale_up_registration_failure_rolls_back_entire_batch,
+            test_scale_up_batch_over_pool_self_heals_from_env,
         ]
         for test in tests:
             test()
