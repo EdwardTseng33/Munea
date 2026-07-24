@@ -21,6 +21,7 @@ load_engine_env()
 from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
+import health_kb
 import localization
 import supabase_adapter
 import enterprise_seats
@@ -8408,6 +8409,14 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     base, _ = _sys_for(char)
     context = context or build_reply_context(history, char, data)
     base = base + reply_context_instruction(context) + localization.reply_language_instruction(context.get("locale"))
+    # B2 衛教（2026-07-24）：按最後一句用戶的話命中策展題庫才注入；沒命中＝空字串、不佔說明書。
+    last_user = ""
+    for h in reversed(history or []):
+        if isinstance(h, dict) and (h.get("role") or "user") == "user":
+            last_user = (h.get("text") or h.get("content") or "").strip()
+            if last_user:
+                break
+    base += health_kb.injection_for(last_user)
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):

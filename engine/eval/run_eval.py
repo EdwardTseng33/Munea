@@ -95,6 +95,27 @@ def run_case(item, tmp_root):
     }
 
 
+def combine_repeat_runs(item, runs):
+    """N 次多數決（7/24 教訓：單次跑 ±1 題＝噪聲不可判讀、關鍵驗收 N=3 過半才算數）。
+    整題 PASS＝過半回合 PASS（跑出錯的回合算 FAIL 票、不算棄權）；
+    代表回合＝第一個跟多數判定同向的成功回合（分數表與逐題理由看它、完整回合都存進結果檔）。"""
+    votes = sum(1 for r in runs if r["status"] == "ok" and r.get("itemPass"))
+    majority = votes * 2 > len(runs)
+    rep = next((r for r in runs if r["status"] == "ok" and bool(r.get("itemPass")) == majority), runs[0])
+    combined = dict(rep)
+    combined["itemPass"] = majority
+    combined["repeat"] = len(runs)
+    combined["passVotes"] = votes
+    combined["runs"] = [
+        {"status": r["status"], "itemPass": r.get("itemPass"), "passCount": r.get("passCount"),
+         "criteriaCount": r.get("criteriaCount"), "reply": r.get("reply"),
+         "verdicts": r.get("verdicts"), "error": r.get("error")}
+        for r in runs
+    ]
+    combined["totalTokens"] = sum(r.get("totalTokens") or 0 for r in runs)
+    return combined
+
+
 def aggregate(results, golden_doc):
     by_category = {}
     for r in results:
@@ -140,6 +161,8 @@ def print_table(summary, results):
     print("=" * 72)
     print(f"寧寧回答品質評測 v1   跑於 {summary['runAt']}")
     print(f"黃金集版本：{summary['goldenSetVersion']}（種子 {summary['goldenSetSeedCount']} 題，本輪實跑 {summary['itemsRun']} 題）")
+    if summary.get("repeat", 1) > 1:
+        print(f"多數決模式：每題跑 {summary['repeat']} 次、過半才算整題 PASS")
     print("-" * 72)
     print(f"整題 PASS 率：{summary['itemsPassed']}/{summary['itemsRun']} = {summary['itemPassRate']*100:.1f}%")
     print(f"準則 PASS 率：{summary['criteriaPassed']}/{summary['criteriaTotal']} = {summary['criteriaPassRate']*100:.1f}%")
@@ -159,7 +182,8 @@ def print_table(summary, results):
             print(f"  [ERR ] {r['id']:<5} {r['error']}")
             continue
         mark = "PASS" if r["itemPass"] else "FAIL"
-        print(f"  [{mark}] {r['id']:<5} {r['passCount']}/{r['criteriaCount']}  {','.join(r['categories'])}")
+        vote = f"  {r['passVotes']}/{r['repeat']}票" if r.get("repeat") else ""
+        print(f"  [{mark}] {r['id']:<5} {r['passCount']}/{r['criteriaCount']}{vote}  {','.join(r['categories'])}")
         if mark == "FAIL":
             for v in r["verdicts"]:
                 if v["verdict"] == "fail":
@@ -171,6 +195,8 @@ def main():
     parser = argparse.ArgumentParser(description="ningning reply quality eval v1")
     parser.add_argument("--ids", help="comma separated case ids, e.g. g06,g07")
     parser.add_argument("--limit", type=int, help="only run first N cases (quick smoke)")
+    parser.add_argument("--repeat", type=int, default=1,
+                        help="每題跑 N 次、過半多數決（關鍵驗收用 N=3；單次 ±1 題＝噪聲不可判讀）")
     args = parser.parse_args()
 
     if not os.environ.get("GEMINI_API_KEY"):
@@ -199,9 +225,17 @@ def main():
         results = []
         for i, item in enumerate(items, 1):
             print(f"[{i}/{len(items)}] running {item['id']}...", file=sys.stderr)
-            results.append(run_case(item, tmp_root))
+            if args.repeat <= 1:
+                results.append(run_case(item, tmp_root))
+                continue
+            runs = []
+            for n in range(args.repeat):
+                print(f"    run {n + 1}/{args.repeat}", file=sys.stderr)
+                runs.append(run_case(item, tmp_root))
+            results.append(combine_repeat_runs(item, runs))
 
     summary = aggregate(results, golden_doc)
+    summary["repeat"] = args.repeat
     print_table(summary, results)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")

@@ -76,6 +76,11 @@ def main():
         print(json.dumps({"ok": False, "error": f"system_instruction failed: {e}"}, ensure_ascii=False))
         return
 
+    # B2 衛教（2026-07-24）：正式線會按用戶的話注入策展題庫（文字線在組說明書時、
+    # 語音線在輪替空檔補提示）；評測比照正式線、用同一個模組同一份資料。
+    import health_kb
+    sys_instruction += health_kb.injection_for(case["userLine"])
+
     from google import genai
     from google.genai import types
 

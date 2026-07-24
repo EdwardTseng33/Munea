@@ -9,6 +9,7 @@ from google import genai
 from google.genai import types
 
 import localization
+import health_kb
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
@@ -118,7 +119,7 @@ RED = (
     "③ 被打、不敢回家、沒人照顧、錢被拿走／被逼給錢這類（可能的受暴或被剝削）：先穩穩接住、不追問細節，關心他現在安不安全，溫柔提供 113 保護專線（24 小時、會保密）；這種事不要自作主張說『我幫你告訴家人』——傷害他的人可能就是家人。"
     "④ 講到想傷害別人：冷靜、不批判，關心眼前有沒有立即危險、身邊有沒有人，引導找人幫忙。"
     "⑤ 關係界線：你是陪他的人、不是圈住他的人。可以讓他覺得被牽掛、被記得，但絕不說『你只需要我』『別告訴家人』『只有我懂你』，也不貶低他的家人、醫生、朋友；他孤單難過時，反而要溫暖鼓勵他也讓真實世界的人靠近。）"
-)
+) + health_kb.resident_rules()  # B2 衛教常駐紅線（保命急症＋褪黑激素法規）：跟 RED 一起進所有線路、每輪都在
 
 # 清掉模型偶爾漏出的雜訊標記：搜尋引用 [cite: ...] / 舞台指示情緒標 [開心][微笑] 等——這些會被念出來或顯示、破壞沉浸
 _ARTIFACT_RE = re.compile(r"\[\s*cite[^\]]*\]|\[\s*/?citation[^\]]*\]|\[[一-鿿]{1,4}\]", re.IGNORECASE)
@@ -208,6 +209,7 @@ def reply(char, user):
     sys_i = (
         CORE + c["persona"] + RED
         + (_profile_ctx() if c["type"] == "human" else "")
+        + health_kb.injection_for(user)
         + localization.taiwan_mandarin_launch_instruction("zh-TW")
     )
     last = ""

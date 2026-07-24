@@ -37,6 +37,7 @@ from voice_echo_guard import frame_rms, in_output_window, should_drop_uplink_fra
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
+import health_kb
 import localization
 import live_lookup
 from call_control_client import post_internal, verify_call_token
@@ -390,10 +391,32 @@ async def guardian_watch(cid, who, text, st, session):
         _diag(cid, "guardian.watch_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
+def health_watch_user_text(cid, st):
+    """B2 衛教（2026-07-24）：用戶字幕命中策展題庫→排隊一條衛教提示，騎守護腦同一個
+    「輪替空檔」送出機制。每題整通只注入一次、每通上限 health_kb.MAX_TOPICS_PER_CALL 題
+    （衛教是配菜、不把通話變講座）。純關鍵字比對、同步、零模型呼叫——絕不擋音訊管線。"""
+    try:
+        sent = st.setdefault("health_topics_sent", set())
+        if len(sent) >= health_kb.MAX_TOPICS_PER_CALL or st.get("pending_health_cue"):
+            return
+        ids = health_kb.match_topics(st.get("user_buf") or "", limit=1, exclude=sent)
+        if not ids:
+            return
+        sent.add(ids[0])
+        st["pending_health_cue"] = health_kb.voice_cue(ids[0])
+        _diag(cid, "healthkb.hit", topic=ids[0])
+    except Exception as e:
+        _diag(cid, "healthkb.err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+
 async def guardian_flush_pending_cue(cid, session, st):
     """在天然的輪替空檔（模型這一輪講完、turn_complete）送出排隊的安全導引，不是插話攔截正在講的這一句。"""
     pending = st.get("pending_cues") or []
     st["pending_cues"] = []
+    health_cue = st.get("pending_health_cue")
+    st["pending_health_cue"] = None
+    if health_cue:
+        pending = pending + [health_cue]  # 衛教排在安全導引之後：安全永遠先講、衛教只是配菜
     if not pending:
         return
     try:
@@ -1226,6 +1249,8 @@ async def handle(ws):
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
+          "health_topics_sent": set(), "pending_health_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
+
           "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
           "blocked_output_text": "", "language_retry_count": 0,
@@ -1827,6 +1852,7 @@ async def handle(ws):
                                 await ws.send(json.dumps({"type": "caption", "who": "user", "text": user_text}))
                                 st["user_buf"] = (st["user_buf"] + user_text)[-200:]
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
+                                health_watch_user_text(cid, st)  # B2 衛教：同一份字幕順手比對題庫（同步、零模型呼叫）
                             if getattr(sc, "interrupted", False) and not st.get("language_block"):
                                 _diag(cid, "node.interrupted")
                                 await ws.send(json.dumps({"type": "interrupted"}))
@@ -1885,7 +1911,7 @@ async def handle(ws):
                                 st["ai_buf"] = ""
                                 st["user_flagged"] = set()
                                 st["ai_flagged"] = set()
-                                if st.get("pending_cues"):
+                                if st.get("pending_cues") or st.get("pending_health_cue"):
                                     st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                         # 即時查詢由 Voice 自己執行；提醒／傳話才交給 App 寫入。
                         tc = getattr(msg, "tool_call", None)
