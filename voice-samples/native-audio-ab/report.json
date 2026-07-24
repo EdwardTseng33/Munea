@@ -1,0 +1,2464 @@
+{
+  "generated_at": "2026-07-25 00:59:23",
+  "baseline_model": "gemini-3.1-flash-live-preview",
+  "connectivity": [
+    {
+      "model": "gemini-3.1-flash-live-preview",
+      "ok": true,
+      "connect_ms": 235.0,
+      "error": null,
+      "language_code_effective": "cmn-TW"
+    },
+    {
+      "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+      "ok": true,
+      "connect_ms": 93.0,
+      "error": "language_code=cmn-TW rejected, fell back to auto-detect: APIError: 1007 None. Unsupported language code 'cmn-TW' for model models/gemini-2.5-flash-native-audio-preview-12-2025",
+      "language_code_effective": null
+    },
+    {
+      "model": "gemini-2.5-flash-native-audio-preview-09-2025",
+      "ok": true,
+      "connect_ms": 94.0,
+      "error": "language_code=cmn-TW rejected, fell back to auto-detect: APIError: 1007 None. Unsupported language code 'cmn-TW' for model models/gemini-2.5-flash-native-audio-preview-09-2025",
+      "language_code_effective": null
+    },
+    {
+      "model": "gemini-2.5-flash-native-audio-latest",
+      "ok": true,
+      "connect_ms": 110.0,
+      "error": "language_code=cmn-TW rejected, fell back to auto-detect: APIError: 1007 None. Unsupported language code 'cmn-TW' for model models/gemini-2.5-flash-native-audio-latest",
+      "language_code_effective": null
+    }
+  ],
+  "native_model_used": "gemini-2.5-flash-native-audio-preview-12-2025",
+  "language_code_used": {
+    "baseline": "cmn-TW",
+    "native": null
+  },
+  "latency": {
+    "baseline": [
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "round": 1,
+        "label": "greeting",
+        "connect_ms": 156.0,
+        "first_audio_latency_ms": 1625.0,
+        "turn_complete": true,
+        "total_response_ms": 9984.0,
+        "output_bytes": 401310,
+        "output_duration_s": 8.36,
+        "output_transcript": "早安啊!聽起來很不錯耶,今天天氣真的是超好的,那我們大概幾點出發比較好呢?",
+        "input_transcript_asr": "早 安 , 今 天 天 气 真 好 , 晚 点 要 不 要 一 起 去 公 园 走 走 ?",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-3_1-flash-live-preview_round1.wav"
+      },
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "round": 2,
+        "label": "greeting",
+        "connect_ms": 344.0,
+        "first_audio_latency_ms": 1609.0,
+        "turn_complete": true,
+        "total_response_ms": 13422.0,
+        "output_bytes": 566910,
+        "output_duration_s": 11.81,
+        "output_transcript": "早安啊! 聽起來很棒耶! 不過因為我是語音助理,沒辦法跟你一起出門走走。 你要不要找你的朋友或家人一起去呢? 公園應該會很舒服喔!",
+        "input_transcript_asr": "早 安 , 今 天 天 气 真 好 , 晚 点 要 不 要 一 起 去 公 园 走 走 ?",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-3_1-flash-live-preview_round2.wav"
+      },
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "round": 3,
+        "label": "greeting",
+        "connect_ms": 125.0,
+        "first_audio_latency_ms": 1641.0,
+        "turn_complete": true,
+        "total_response_ms": 10047.0,
+        "output_bytes": 403202,
+        "output_duration_s": 8.4,
+        "output_transcript": "早安啊! 聽起來很棒耶, 不過你是說晚上嗎? 還是下午茶時間? 我要瞧一下我的行程喔!",
+        "input_transcript_asr": "早 安 , 今 天 天 气 真 好 , 晚 点 要 不 要 一 起 去 公 园 走 走 ?",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-3_1-flash-live-preview_round3.wav"
+      },
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "round": 4,
+        "label": "greeting",
+        "connect_ms": 94.0,
+        "first_audio_latency_ms": 1609.0,
+        "turn_complete": true,
+        "total_response_ms": 8625.0,
+        "output_bytes": 336482,
+        "output_duration_s": 7.01,
+        "output_transcript": "早安啊! 聽起來很棒耶! 你大概幾點想去走走呢? 我看看我的行程可不可以。",
+        "input_transcript_asr": "早 安 , 今 天 天 气 真 好 , 晚 点 要 不 要 一 起 去 公 园 走 走 ?",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-3_1-flash-live-preview_round4.wav"
+      },
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "round": 5,
+        "label": "greeting",
+        "connect_ms": 235.0,
+        "first_audio_latency_ms": 1625.0,
+        "turn_complete": true,
+        "total_response_ms": 6594.0,
+        "output_bytes": 238562,
+        "output_duration_s": 4.97,
+        "output_transcript": "好啊, 天氣 這麼 好, 出去 走走 真的 不錯! 你想 幾點 去呢?",
+        "input_transcript_asr": "早 安 , 今 天 天 气 真 好 , 晚 点 要 不 要 一 起 去 公 园 走 走 ?",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-3_1-flash-live-preview_round5.wav"
+      }
+    ],
+    "native": [
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "round": 1,
+        "label": "greeting",
+        "connect_ms": 94.0,
+        "first_audio_latency_ms": 3516.0,
+        "turn_complete": true,
+        "total_response_ms": 8859.0,
+        "output_bytes": 257280,
+        "output_duration_s": 5.36,
+        "output_transcript": "好啊， 聽起 來不 錯耶！ 太陽 大 大的， 出去 走 走 很舒 服。",
+        "input_transcript_asr": "早安,今天天氣真好,晚點要不要一起去公園走走。",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-2_5-flash-native-audio-preview-12-2025_round1.wav"
+      },
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "round": 2,
+        "label": "greeting",
+        "connect_ms": 94.0,
+        "first_audio_latency_ms": 3219.0,
+        "turn_complete": true,
+        "total_response_ms": 8563.0,
+        "output_bytes": 257280,
+        "output_duration_s": 5.36,
+        "output_transcript": "好啊， 聽起 來不 錯耶！ 太陽 大 大的， 出去 走 走 很舒 服。",
+        "input_transcript_asr": "早安,今天天氣真好,晚點要不要一起去公園走走。",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-2_5-flash-native-audio-preview-12-2025_round2.wav"
+      },
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "round": 3,
+        "label": "greeting",
+        "connect_ms": 94.0,
+        "first_audio_latency_ms": 3672.0,
+        "turn_complete": true,
+        "total_response_ms": 9907.0,
+        "output_bytes": 299520,
+        "output_duration_s": 6.24,
+        "output_transcript": "好啊！ 這麼好的天气去公园走走真的很舒服。大概几点去呢？",
+        "input_transcript_asr": "早安,今天天氣真好,晚點要不要一起去公園走走。",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-2_5-flash-native-audio-preview-12-2025_round3.wav"
+      },
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "round": 4,
+        "label": "greeting",
+        "connect_ms": 94.0,
+        "first_audio_latency_ms": 3718.0,
+        "turn_complete": true,
+        "total_response_ms": 7625.0,
+        "output_bytes": 188160,
+        "output_duration_s": 3.92,
+        "output_transcript": "好啊, 聽起來不錯耶! 哪個公園比較好啊?",
+        "input_transcript_asr": "早安,今天天氣真好,晚點要不要一起去公園走走。",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-2_5-flash-native-audio-preview-12-2025_round4.wav"
+      },
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "round": 5,
+        "label": "greeting",
+        "connect_ms": 94.0,
+        "first_audio_latency_ms": 3500.0,
+        "turn_complete": true,
+        "total_response_ms": 7735.0,
+        "output_bytes": 203520,
+        "output_duration_s": 4.24,
+        "output_transcript": "好啊! 聽起來不錯耶。 幾點去比較好啊?",
+        "input_transcript_asr": "早安,今天天氣真好,晚點要不要一起去公園走走。",
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\greeting_gemini-2_5-flash-native-audio-preview-12-2025_round5.wav"
+      }
+    ]
+  },
+  "latency_summary": {
+    "baseline_connect_ms": {
+      "n": 5,
+      "mean": 190.8,
+      "median": 156.0,
+      "min": 94.0,
+      "max": 344.0
+    },
+    "baseline_first_audio_ms": {
+      "n": 5,
+      "mean": 1621.8,
+      "median": 1625.0,
+      "min": 1609.0,
+      "max": 1641.0
+    },
+    "baseline_total_ms": {
+      "n": 5,
+      "mean": 9734.4,
+      "median": 9984.0,
+      "min": 6594.0,
+      "max": 13422.0
+    },
+    "native_connect_ms": {
+      "n": 5,
+      "mean": 94.0,
+      "median": 94.0,
+      "min": 94.0,
+      "max": 94.0
+    },
+    "native_first_audio_ms": {
+      "n": 5,
+      "mean": 3525.0,
+      "median": 3516.0,
+      "min": 3219.0,
+      "max": 3718.0
+    },
+    "native_total_ms": {
+      "n": 5,
+      "mean": 8537.8,
+      "median": 8563.0,
+      "min": 7625.0,
+      "max": 9907.0
+    }
+  },
+  "tool_call_test": {
+    "baseline_sync_runs": [
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "label": "lookup_sync_r1",
+        "non_blocking": false,
+        "scheduling": null,
+        "connect_ms": 109.0,
+        "tool_call_seen": true,
+        "turn_complete": true,
+        "output_bytes": 417630,
+        "output_transcript": "對啊， 換 老闆 了。 不過聽說水餃的味道還是一樣好吃， 生意好像還不錯喔！ 你有去吃過新老闆煮的嗎？",
+        "timeline": [
+          {
+            "t_rel_s": 11.34,
+            "event": "tool_call_received",
+            "fn": "slow_lookup",
+            "args": {
+              "query": "巷口水餃店 換老闆"
+            }
+          },
+          {
+            "t_rel_s": 15.34,
+            "event": "tool_response_sent"
+          },
+          {
+            "t_rel_s": 15.97,
+            "event": "audio_chunk",
+            "bytes": 2910,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 15.97,
+            "event": "output_text",
+            "text": "對啊，",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 15.98,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.03,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.14,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.14,
+            "event": "output_text",
+            "text": " 換",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.14,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.22,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.22,
+            "event": "output_text",
+            "text": " 老闆",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.22,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.31,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.31,
+            "event": "output_text",
+            "text": " 了。",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.31,
+            "event": "audio_chunk",
+            "bytes": 5760,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.39,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.39,
+            "event": "output_text",
+            "text": " 不過",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.41,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.47,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.5,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.59,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.59,
+            "event": "output_text",
+            "text": "聽",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.66,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.66,
+            "event": "output_text",
+            "text": "說",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.77,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.77,
+            "event": "output_text",
+            "text": "水餃",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.83,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.83,
+            "event": "output_text",
+            "text": "的味",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.88,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.88,
+            "event": "output_text",
+            "text": "道",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.95,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.95,
+            "event": "output_text",
+            "text": "還是",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.02,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.02,
+            "event": "output_text",
+            "text": "一樣",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.19,
+            "event": "audio_chunk",
+            "bytes": 28800,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.19,
+            "event": "output_text",
+            "text": "好吃，",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.33,
+            "event": "audio_chunk",
+            "bytes": 24960,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.33,
+            "event": "output_text",
+            "text": " 生意",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.41,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.41,
+            "event": "output_text",
+            "text": "好像",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.47,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.47,
+            "event": "output_text",
+            "text": "還不",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.56,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.56,
+            "event": "output_text",
+            "text": "錯",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.66,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.66,
+            "event": "output_text",
+            "text": "喔！",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.83,
+            "event": "audio_chunk",
+            "bytes": 28800,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.83,
+            "event": "output_text",
+            "text": " 你有",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.83,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.92,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.92,
+            "event": "output_text",
+            "text": "去吃",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.0,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.0,
+            "event": "output_text",
+            "text": "過新",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.08,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.08,
+            "event": "output_text",
+            "text": "老闆",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.16,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.16,
+            "event": "output_text",
+            "text": "煮的",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.27,
+            "event": "audio_chunk",
+            "bytes": 19200,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.27,
+            "event": "output_text",
+            "text": "嗎？",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.28,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          }
+        ],
+        "spoke_during_tool_wait": false,
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\lookup_sync_r1_gemini-3_1-flash-live-preview_tool.wav"
+      },
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "label": "lookup_sync_r2",
+        "non_blocking": false,
+        "scheduling": null,
+        "connect_ms": 93.0,
+        "tool_call_seen": true,
+        "turn_complete": true,
+        "output_bytes": 474242,
+        "output_transcript": "我也幫你查了一下,那間水餃店老闆真的換人了,不過聽說味道倒是沒什麼變,生意還是很不錯喔!你有打算去試試看嗎?",
+        "timeline": [
+          {
+            "t_rel_s": 11.33,
+            "event": "tool_call_received",
+            "fn": "slow_lookup",
+            "args": {
+              "query": "巷口水餃店 換老闆"
+            }
+          },
+          {
+            "t_rel_s": 15.34,
+            "event": "tool_response_sent"
+          },
+          {
+            "t_rel_s": 15.86,
+            "event": "audio_chunk",
+            "bytes": 2,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 15.86,
+            "event": "output_text",
+            "text": "我也幫",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 15.86,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 15.91,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 15.91,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.0,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.0,
+            "event": "output_text",
+            "text": "你查",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.01,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.14,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.14,
+            "event": "output_text",
+            "text": "了一下,",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.14,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.19,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.2,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.31,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.31,
+            "event": "output_text",
+            "text": "那間",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.33,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.44,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.44,
+            "event": "output_text",
+            "text": "水餃",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.44,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.55,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.55,
+            "event": "output_text",
+            "text": "店",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.67,
+            "event": "audio_chunk",
+            "bytes": 19200,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.67,
+            "event": "output_text",
+            "text": "老闆",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.75,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.75,
+            "event": "output_text",
+            "text": "真的",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.81,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.81,
+            "event": "output_text",
+            "text": "換",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.91,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.91,
+            "event": "output_text",
+            "text": "人了,",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.91,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.06,
+            "event": "audio_chunk",
+            "bytes": 19200,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.06,
+            "event": "output_text",
+            "text": "不過",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.06,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.2,
+            "event": "audio_chunk",
+            "bytes": 21120,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.2,
+            "event": "output_text",
+            "text": "聽說",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.28,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.28,
+            "event": "output_text",
+            "text": "味道",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.28,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.39,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.39,
+            "event": "output_text",
+            "text": "倒是",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.45,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.45,
+            "event": "output_text",
+            "text": "沒什",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.55,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.55,
+            "event": "output_text",
+            "text": "麼變,",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.55,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.69,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.69,
+            "event": "output_text",
+            "text": "生意",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.69,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.8,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.8,
+            "event": "output_text",
+            "text": "還是",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.91,
+            "event": "audio_chunk",
+            "bytes": 21120,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.91,
+            "event": "output_text",
+            "text": "很不錯",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.91,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.0,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.0,
+            "event": "output_text",
+            "text": "喔!",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.09,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.09,
+            "event": "output_text",
+            "text": "你有",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.09,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.23,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.23,
+            "event": "output_text",
+            "text": "打算",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.3,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.3,
+            "event": "output_text",
+            "text": "去試",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.39,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.39,
+            "event": "output_text",
+            "text": "試看",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.53,
+            "event": "audio_chunk",
+            "bytes": 23040,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.53,
+            "event": "output_text",
+            "text": "嗎?",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.53,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": false
+          }
+        ],
+        "spoke_during_tool_wait": false,
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\lookup_sync_r2_gemini-3_1-flash-live-preview_tool.wav"
+      },
+      {
+        "model": "gemini-3.1-flash-live-preview",
+        "label": "lookup_sync_r3",
+        "non_blocking": false,
+        "scheduling": null,
+        "connect_ms": 109.0,
+        "tool_call_seen": true,
+        "turn_complete": true,
+        "output_bytes": 523682,
+        "output_transcript": "欸,對耶! 我幫你查了一下,那間水餃店老闆真的換人了。 不過聽說味道好像沒什麼改變,生意還是蠻好的。 你有要去吃看看嗎?",
+        "timeline": [
+          {
+            "t_rel_s": 11.31,
+            "event": "tool_call_received",
+            "fn": "slow_lookup",
+            "args": {
+              "query": "巷口水餃店 換老闆"
+            }
+          },
+          {
+            "t_rel_s": 15.31,
+            "event": "tool_response_sent"
+          },
+          {
+            "t_rel_s": 16.22,
+            "event": "audio_chunk",
+            "bytes": 2,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.22,
+            "event": "output_text",
+            "text": "欸,對",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.23,
+            "event": "audio_chunk",
+            "bytes": 9120,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.28,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.34,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.45,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.45,
+            "event": "output_text",
+            "text": "耶!",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.45,
+            "event": "audio_chunk",
+            "bytes": 5760,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.58,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.58,
+            "event": "output_text",
+            "text": " 我幫",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.58,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.59,
+            "event": "audio_chunk",
+            "bytes": 5760,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.73,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.73,
+            "event": "output_text",
+            "text": "你查",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.73,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.8,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.8,
+            "event": "output_text",
+            "text": "了一下,",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.81,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 16.84,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.03,
+            "event": "audio_chunk",
+            "bytes": 24960,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.03,
+            "event": "output_text",
+            "text": "那間",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.12,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.12,
+            "event": "output_text",
+            "text": "水餃",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.19,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.19,
+            "event": "output_text",
+            "text": "店",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.26,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.26,
+            "event": "output_text",
+            "text": "老闆",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.26,
+            "event": "audio_chunk",
+            "bytes": 3840,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.38,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.38,
+            "event": "output_text",
+            "text": "真的",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.48,
+            "event": "audio_chunk",
+            "bytes": 19200,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.48,
+            "event": "output_text",
+            "text": "換人",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.55,
+            "event": "audio_chunk",
+            "bytes": 11520,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.55,
+            "event": "output_text",
+            "text": "了。",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.66,
+            "event": "audio_chunk",
+            "bytes": 19200,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.66,
+            "event": "output_text",
+            "text": " 不過",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.66,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.81,
+            "event": "audio_chunk",
+            "bytes": 19200,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.81,
+            "event": "output_text",
+            "text": "聽說",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.83,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.95,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 17.95,
+            "event": "output_text",
+            "text": "味道",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.03,
+            "event": "audio_chunk",
+            "bytes": 13440,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.03,
+            "event": "output_text",
+            "text": "好像",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.11,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.11,
+            "event": "output_text",
+            "text": "沒什麼",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.11,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.25,
+            "event": "audio_chunk",
+            "bytes": 23040,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.25,
+            "event": "output_text",
+            "text": "改變,",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.42,
+            "event": "audio_chunk",
+            "bytes": 28800,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.42,
+            "event": "output_text",
+            "text": "生意",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.47,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.47,
+            "event": "output_text",
+            "text": "還是",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.56,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.56,
+            "event": "output_text",
+            "text": "蠻好",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.66,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.66,
+            "event": "output_text",
+            "text": "的。",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.78,
+            "event": "audio_chunk",
+            "bytes": 23040,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.78,
+            "event": "output_text",
+            "text": " 你有",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.78,
+            "event": "audio_chunk",
+            "bytes": 9600,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.94,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.94,
+            "event": "output_text",
+            "text": "要去吃",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 18.94,
+            "event": "audio_chunk",
+            "bytes": 5760,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 19.06,
+            "event": "audio_chunk",
+            "bytes": 17280,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 19.06,
+            "event": "output_text",
+            "text": "看看",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 19.16,
+            "event": "audio_chunk",
+            "bytes": 15360,
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 19.16,
+            "event": "output_text",
+            "text": "嗎?",
+            "during_tool_wait": false
+          },
+          {
+            "t_rel_s": 19.16,
+            "event": "audio_chunk",
+            "bytes": 7680,
+            "during_tool_wait": false
+          }
+        ],
+        "spoke_during_tool_wait": false,
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\lookup_sync_r3_gemini-3_1-flash-live-preview_tool.wav"
+      }
+    ],
+    "native_nonblocking_whenidle_runs": [
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "label": "lookup_nonblocking_whenidle_r1",
+        "non_blocking": true,
+        "scheduling": "WHEN_IDLE",
+        "connect_ms": 79.0,
+        "tool_call_seen": true,
+        "turn_complete": true,
+        "output_bytes": 65280,
+        "output_transcript": "好的,我 查 看一 下。",
+        "timeline": [
+          {
+            "t_rel_s": 12.75,
+            "event": "tool_call_received",
+            "fn": "slow_lookup",
+            "args": {
+              "query": "巷口那家水餃店 換老闆"
+            }
+          },
+          {
+            "t_rel_s": 13.34,
+            "event": "output_text",
+            "text": "好的,我",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.52,
+            "event": "output_text",
+            "text": " 查",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.56,
+            "event": "output_text",
+            "text": " 看一",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.62,
+            "event": "output_text",
+            "text": " 下。",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 46080,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.7,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.7,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 16.77,
+            "event": "tool_response_sent"
+          }
+        ],
+        "spoke_during_tool_wait": true,
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\lookup_nonblocking_whenidle_r1_gemini-2_5-flash-native-audio-preview-12-2025_tool.wav"
+      },
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "label": "lookup_nonblocking_whenidle_r2",
+        "non_blocking": true,
+        "scheduling": "WHEN_IDLE",
+        "connect_ms": 94.0,
+        "tool_call_seen": true,
+        "turn_complete": true,
+        "output_bytes": 230400,
+        "output_transcript": "我幫你查一下喔,因為這種消息可能需要時間查證。",
+        "timeline": [
+          {
+            "t_rel_s": 12.77,
+            "event": "tool_call_received",
+            "fn": "slow_lookup",
+            "args": {
+              "query": "巷口那家水餃店 換老闆"
+            }
+          },
+          {
+            "t_rel_s": 13.27,
+            "event": "output_text",
+            "text": "我幫",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.49,
+            "event": "output_text",
+            "text": "你查",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.61,
+            "event": "output_text",
+            "text": "一下喔,",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.61,
+            "event": "audio_chunk",
+            "bytes": 46080,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.61,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.7,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.7,
+            "event": "output_text",
+            "text": "因為",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.7,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.72,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.75,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.75,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.75,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.77,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.77,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.78,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.8,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.8,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.81,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.83,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.83,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.86,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.86,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.88,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.89,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.89,
+            "event": "output_text",
+            "text": "這",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.89,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.91,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.92,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.92,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.94,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.94,
+            "event": "output_text",
+            "text": "種",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.95,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.99,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.99,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.99,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.99,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.02,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.02,
+            "event": "output_text",
+            "text": "消息",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.02,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.02,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.03,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.05,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.06,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.06,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.09,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.09,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.11,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.11,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.12,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.12,
+            "event": "output_text",
+            "text": "可能",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.14,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.16,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.2,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.2,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.2,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.24,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.24,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.24,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.24,
+            "event": "output_text",
+            "text": "需要",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.27,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.27,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.28,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.28,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.31,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.31,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.33,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.33,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.33,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.34,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.34,
+            "event": "output_text",
+            "text": "時間",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.36,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.38,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.38,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.39,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.41,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.42,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.42,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.44,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.44,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.45,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.45,
+            "event": "output_text",
+            "text": "查證。",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.47,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.47,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.49,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.5,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.5,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.52,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.53,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.56,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.56,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.56,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.58,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.59,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.59,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.61,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.61,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.62,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.66,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 14.66,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 16.78,
+            "event": "tool_response_sent"
+          }
+        ],
+        "spoke_during_tool_wait": true,
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\lookup_nonblocking_whenidle_r2_gemini-2_5-flash-native-audio-preview-12-2025_tool.wav"
+      },
+      {
+        "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+        "label": "lookup_nonblocking_whenidle_r3",
+        "non_blocking": true,
+        "scheduling": "WHEN_IDLE",
+        "connect_ms": 203.0,
+        "tool_call_seen": true,
+        "turn_complete": true,
+        "output_bytes": 74880,
+        "output_transcript": "等我一下， 我查查看。",
+        "timeline": [
+          {
+            "t_rel_s": 12.77,
+            "event": "tool_call_received",
+            "fn": "slow_lookup",
+            "args": {
+              "query": "巷口那家水餃店 換老闆"
+            }
+          },
+          {
+            "t_rel_s": 13.3,
+            "event": "output_text",
+            "text": "等我一下，",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.5,
+            "event": "output_text",
+            "text": " 我查",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.59,
+            "event": "output_text",
+            "text": "查看。",
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.61,
+            "event": "audio_chunk",
+            "bytes": 46080,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.61,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.61,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.64,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.66,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.69,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.7,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.72,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.72,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 13.74,
+            "event": "audio_chunk",
+            "bytes": 1920,
+            "during_tool_wait": true
+          },
+          {
+            "t_rel_s": 16.78,
+            "event": "tool_response_sent"
+          }
+        ],
+        "spoke_during_tool_wait": true,
+        "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\lookup_nonblocking_whenidle_r3_gemini-2_5-flash-native-audio-preview-12-2025_tool.wav"
+      }
+    ],
+    "baseline_tool_call_rate": 1.0,
+    "native_tool_call_rate": 1.0
+  },
+  "affect_proactive_accept": {
+    "gemini-3.1-flash-live-preview": {
+      "model": "gemini-3.1-flash-live-preview",
+      "affective_dialog": {
+        "accepted": false,
+        "error": "APIError: 1011 None. Internal error encountered."
+      },
+      "proactive_audio": {
+        "accepted": false,
+        "error": "APIError: 1007 None. Invalid JSON payload received. Unknown name \"proactivity\" at 'setup': Cannot find field."
+      },
+      "both": {
+        "accepted": false,
+        "error": "APIError: 1007 None. Invalid JSON payload received. Unknown name \"proactivity\" at 'setup': Cannot find field."
+      }
+    },
+    "gemini-2.5-flash-native-audio-preview-12-2025": {
+      "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+      "affective_dialog": {
+        "accepted": true,
+        "connect_ms": 109.0
+      },
+      "proactive_audio": {
+        "accepted": false,
+        "error": "APIError: 1007 None. Invalid JSON payload received. Unknown name \"proactivity\" at 'setup': Cannot find field."
+      },
+      "both": {
+        "accepted": false,
+        "error": "APIError: 1007 None. Invalid JSON payload received. Unknown name \"proactivity\" at 'setup': Cannot find field."
+      }
+    }
+  },
+  "emotion_test": {
+    "affective_off": {
+      "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+      "affective_dialog": false,
+      "turn_complete": true,
+      "total_response_ms": 12219.0,
+      "output_transcript": "拍拍, 秀秀。 遇到 煩心 事 真的 很 難受。 要不要 聊 一下? 說 出來 可能 會 比較 好過 一點。",
+      "output_duration_s": 9.08,
+      "speaking_rate_chars_per_s": 5.95,
+      "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\emotion_affective0_gemini-2_5-flash-native-audio-preview-12-2025.wav"
+    },
+    "affective_on": {
+      "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+      "affective_dialog": true,
+      "turn_complete": true,
+      "total_response_ms": 17938.0,
+      "output_transcript": "聽到你 這樣 說, 我 覺得 你 現在 一定 很 難 受。 家 裡的 事 真的 很 煩 人。 你 願意 多 跟我 說 說 看 嗎? 說 出 來 也許 會 好 一點。",
+      "output_duration_s": 13.32,
+      "speaking_rate_chars_per_s": 6.16,
+      "sample_path": "E:\\Claude\\Munea\\.worktrees\\voice-native-audio-ab\\voice-samples\\native-audio-ab\\emotion_affective1_gemini-2_5-flash-native-audio-preview-12-2025.wav"
+    }
+  },
+  "pricing_note": "2026-07-25 ai.google.dev/gemini-api/docs/pricing scrape: 3.1 Flash Live Preview input text $0.75/1M, audio $3.00/1M(or $0.005/min), output text $4.50/1M, audio $12.00/1M(or $0.018/min); 2.5 Flash Native Audio(12-2025) input text $0.50/1M, audio/video $3.00/1M, output text $2.00/1M, audio $12.00/1M(no per-min option). Audio output unit price is the same, but 2.5 native audio text tokens are cheaper; both are labeled Preview on Developer API(not Vertex), stricter rate limits."
+}
