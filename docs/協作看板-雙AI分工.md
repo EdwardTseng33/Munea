@@ -4,6 +4,37 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 待審：營運後台三個數據洞修補（2026-07-24 卡西法/城堡）
+
+- Branch：`calcifer/admin-data-gaps-20260724`；獨立 worktree，基準 `origin/main@1505b4d1`。
+- 檔案：`engine/server.py`（新增 `analytics_excluded_id_set`／`is_admin_row_excluded` 共用排除
+  判準，接上安全守護警示／用藥與回診／家庭圈健康度／心情趨勢／關係深度五支跨帳號接口；
+  `admin_subscription_metrics` 補 MRR＝目前有效訂閱×方案月費；`admin_credits_summary` 加
+  `scope: single_demo_account` 欄位；`feedback_response`／`admin_feedback_summary` 改接
+  Supabase 持久化、缺表優雅退回本地 JSON）、`engine/supabase_adapter.py`（新增
+  `feedback_item_to_row`／`feedback_row_to_item`／`save_feedback_item`／
+  `load_admin_feedback_items`）、新增 `supabase/sql/026_feedback_store.sql`（`feedback_items`
+  表）、`supabase/migration-manifest.json`／`supabase/deployment-ledger.json`（登記 026）、
+  新增測試 `engine/test_admin_safety_events.py`／`test_admin_subscription_mrr.py`／
+  `test_feedback_store.py`／`test_admin_credits_scope.py`，並在既有
+  `test_family_health.py`／`test_mood_trend.py`／`test_bond_depth.py`／
+  `test_medication_doses.py` 補測試帳號排除測項。
+- 目標：修 7/24 稽核抓到的三個數據洞——①五頁跨帳號接口完全沒接測試帳號排除，示範／QA
+  帳號混進真實數字 ②MRR 一律回 None、底層 `subscription_ledger` 資料其實已具備 ③意見回饋
+  只寫容器本地檔，部署或多副本會洗掉/分裂。全部在雲端大腦側（`engine/`），不改 App 包版。
+- 不碰區：沒動 `deploy/runpod-avatar/`、`scripts/cloud-run-deploy-runpod-controller.ps1`、
+  `scripts/voice_chain_probe.py`、`deploy/gateway/monitor.py`（另兩位卡西法的地盤）；沒動
+  `web/admin.js`（scope 欄位留給前端未來接）；沒部署、沒跑 026 SQL。
+- 驗過沒：本機真跑新增與既有測試全數 PASS（含五頁排除測項、MRR 5 案例、feedback 11 案例、
+  credits scope 1 案例）；`scripts/check_supabase_migrations.py`／
+  `scripts/check_supabase_deployment_ledger.py`／兩者對應 `test_supabase_*` 治理測試／
+  `scripts/api_contract_inventory.py check`／`test_api_contract_inventory.py`／
+  `test-admin-console.js`／`test-ui-contracts.js` 全過；`npm run test:launch` 跑到
+  `test_flashhead_patch_integrity.py` 因既有 `deploy/flashhead-patches/*.patch` 在本機
+  `core.autocrlf=true` 下被轉成 CRLF 而失敗——用 `git show HEAD:<file>` 確認該檔在 repo 裡本來
+  就是純 LF，純屬本機 checkout 環境問題、與本次改動無關，之後兩支 flashhead 測試單獨跑仍
+  PASS。**未部署、未跑 026 SQL、需 Edward/馬魯克確認後才生效。**
+
 ### 待審：語音優化快贏包 A/B/C（2026-07-24 卡西法/城堡 · Draft PR #243 · App E2E pending）
 
 - Branch：`feat/voice-quickwin-20260724`；獨立 worktree，基準 `origin/main@313f6c27`。
