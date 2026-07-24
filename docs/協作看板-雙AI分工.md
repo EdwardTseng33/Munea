@@ -4,6 +4,31 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 待審：語音優化快贏包 A/B/C（2026-07-24 卡西法/城堡 · Draft PR #243 · App E2E pending）
+
+- Branch：`feat/voice-quickwin-20260724`；獨立 worktree，基準 `origin/main@313f6c27`。
+- 檔案：`engine/live_voice_server.py`（system_instruction 補「語音自覺」、live_config
+  新增節奏參數三層 fallback、查詢主備模型對調）、`engine/live_lookup.py`（材料規則補
+  口語化）、`engine/test_voice_style_rules.py`／`engine/test_live_lookup.py`（新增契約
+  測試）、新增 `engine/test_voice_rhythm_params.py`、`package.json`（test:launch 串新
+  測試）、`scripts/test-voice-launch-policy.js`（同步更新一條因重構失效的字面檢查）。
+- 目標：Edward 拍板路線 A 快贏包 + 「語音自覺」新增需求——她要知道自己只是電話裡的
+  一個聲音，不能講出「傳給你連結」這類空話；查詢主備模型對調（3.1-flash-lite 2-3秒
+  當主，2.5-flash 常 8-9秒退居備援）；打斷/收話節奏參數改三層 fallback（呼叫端明確
+  值→環境變數→現行值當預設），Edward course-correction 後定位為「按使用者調的節奏
+  參數」而非長輩專屬版，正式機零環境變數＝零改變。
+- 不碰區：沒打開 `MUNEA_VOICE_LIVE_LOOKUP`（正式/測試都維持關，只調備援順序）、沒把
+  非預設節奏值套到正式機、沒實作 GoAway/session resumption/context compression（體檢
+  確認現況與既有文件一致、列後續項）。
+- 驗過沒：本機真跑 `test_live_lookup`／`test_voice_style_rules`／新增
+  `test_voice_rhythm_params`／`test_location_not_a_topic`／`test_voice_echo_guard`／
+  `test_voice_call_memory`／`test_voice_call_diagnostics`／`test_voice_health_context`／
+  `test_b2b_demo_voice_isolation`／`test_guardian_crisis`（含語音線模擬）全數 PASS；
+  `test-voice-turn-policy.js`／`test-voice-call-diagnostics.js` PASS；
+  `test-voice-launch-policy.js` 除一項與本次改動無關、在乾淨 `origin/main` 上就已存在
+  的既有失敗外全過（已用 `git stash` 對照驗證非本 PR 引入）。**App E2E pending**——
+  未在安裝版 iPhone App 上做真人撥通驗收，上線前需補（call-path risk：是）。
+
 ### 待審：守護腦危機測試綁進自動守門（2026-07-24 卡西法/城堡 · Draft PR #240）
 
 - Branch：`calcifer/ci-guardian-crisis-smoke-20260724`；獨立 worktree，基準 `origin/main@d0cba99`。
@@ -22,6 +47,7 @@
 - 不進CI（評審燒真金錢+LLM判定有雜訊，不適合當push-gate），先手動建基準，nightly與退步容忍區間留給Edward/馬魯克之後拍板。
 - 跟 `engine/test_guardian_crisis.py`（PR #240 已綁CI）互補不重複：那支測風險分類對不對(零成本)，這份測回答內容好不好(真呼叫模型)。
 - 驗過沒：本機真跑整份26題黃金集，26/26無錯誤、整題PASS 18/26(69.2%)、準則PASS 70/78(89.7%)，真實token用量230,227（`usage_metadata`直接讀出）；`personalization`類只五成，抓到目前production prompt「溫牛奶反例」真實存在的具體證據（詳PR描述與README）。
+
 
 ### 已完成：正式臉卡換裝 6000 Ada → 4090（2026-07-23 Windows 蘇菲 · Edward 拍板省成本 · App E2E pending）
 

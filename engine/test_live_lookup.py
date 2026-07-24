@@ -19,6 +19,13 @@ class LiveLookupTest(unittest.TestCase):
         self.assertIn("使用 Google Search 查證", request)
         self.assertNotIn(live_lookup.CUE_TEXT, request)
 
+    def test_request_asks_for_spoken_style_material(self):
+        """2026-07-24：材料是給語音助理直接照著念的，不能是條列或書面體。"""
+        request = live_lookup.build_request("附近牙醫推薦")
+        self.assertIn("口語", request)
+        self.assertIn("不要用條列符號", request)
+        self.assertIn("不要用書面體", request)
+
     def test_result_removes_urls_and_citations_and_counts_sources(self):
         grounding = types.SimpleNamespace(grounding_chunks=[object(), object()])
         candidate = types.SimpleNamespace(grounding_metadata=grounding)
