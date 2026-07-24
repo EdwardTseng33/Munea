@@ -162,8 +162,10 @@ expect(liveConfigStart >= 0 && liveConfigEnd > liveConfigStart &&
   voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
   'current-information lookup can still bypass the feature-gated controlled Voice tool path');
 const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
-expect(lookupFlow.indexOf('await _send_lookup_cue()') >= 0 &&
-  lookupFlow.indexOf('await _send_lookup_cue()') < lookupFlow.indexOf('search_current_information(_cli') &&
+// 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，呼叫點仍必須在
+// 真的打網路查詢之前。
+expect(lookupFlow.indexOf('await _send_lookup_cue(category)') >= 0 &&
+  lookupFlow.indexOf('await _send_lookup_cue(category)') < lookupFlow.indexOf('search_current_information(cli') &&
   lookupFlow.includes('asyncio.wait_for('),
   'lookup network I/O can start before the spoken cue or run without a timeout');
 expect(['node.lookup_started', 'node.lookup_cue_sent', 'node.lookup_done',
