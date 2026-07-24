@@ -66,6 +66,11 @@ _TURN_URLS = [x.strip() for x in os.environ.get("MUNEA_TURN_URLS", "").split(","
 _REQUIRE_DURABLE = os.environ.get("MUNEA_GATEWAY_REQUIRE_DURABLE", "0") == "1"
 DURABLE = SupabaseCallStore.from_env()
 
+# A worker in one of these states has been taken offline on purpose. A liveness
+# heartbeat must never flip it back online. Kept in sync with the same set in
+# monitor.py and deploy/runpod-avatar/runpod_backup.py.
+TERMINAL_WORKER_STATUSES = frozenset({"terminated", "stopped", "exited", "disabled"})
+
 
 def _client_ok(key):
     return (not _GATE) or (key == _GATE)
@@ -430,15 +435,31 @@ def durable_worker_health(worker_id: str, body: DurableWorkerHealthBody,
                           authorization: str = Header(default=""),
                           x_munea_admin_token: str = Header(default="")):
     _admin_bearer(authorization, x_munea_admin_token)
-    values = {
-        "status": "ready" if body.healthy else "unhealthy",
-        "last_heartbeat_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    }
-    # active_leases is the durable admission ledger. A worker heartbeat reports
-    # physical media sessions, which can legitimately lag reservations while a
-    # call is connecting. Never let telemetry erase reserved capacity.
+    heartbeat_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    store = _durable()
     try:
-        return {"ok": True, "worker": _durable().update_worker(worker_id, values)}
+        # A worker that has been terminated/stopped must stay down. The RunPod
+        # backup controller reports health for every worker still on its roster
+        # roughly every 15s; without this guard a single healthy heartbeat that
+        # races an operator's removal would flip the worker back to
+        # "ready"/"unhealthy", forcing the removal to be retried. Read the
+        # current status first and, for a terminal worker, refresh only the
+        # heartbeat clock so the machine's status stays exactly where the
+        # operator left it.
+        current = store.get_worker(worker_id)
+        current_status = str((current or {}).get("status") or "").lower()
+        if current_status in TERMINAL_WORKER_STATUSES:
+            return {"ok": True, "worker": store.update_worker(
+                worker_id, {"last_heartbeat_at": heartbeat_at})}
+        values = {
+            "status": "ready" if body.healthy else "unhealthy",
+            "last_heartbeat_at": heartbeat_at,
+        }
+        # active_leases is the durable admission ledger. A worker heartbeat
+        # reports physical media sessions, which can legitimately lag
+        # reservations while a call is connecting. Never let telemetry erase
+        # reserved capacity.
+        return {"ok": True, "worker": store.update_worker(worker_id, values)}
     except CallControlError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
