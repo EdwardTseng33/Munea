@@ -197,27 +197,119 @@ function setCallHint(text, busy) {
   const cap = $('#chatCaption');
   if (cap) { cap.textContent = text; cap.classList.toggle('cap-busy', !!busy); }
 }
-// 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：顯卡滿載時「排隊／全滿」都給看得懂的大字畫面。
-// 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——忙線資訊必須有自己的卡。
-function showBusyCard(mode, position) {
+// 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：
+// 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
+// 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
+// mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿，附「先用文字聊」出口）
+function showBusyCard(mode, payload) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = mode;
-  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
   if (mode === 'queued') {
-    if (title) title.textContent = '現在比較多人在跟' + cname() + '聊天';
-    if (pos) pos.innerHTML = '你排第 <b>' + Math.max(1, parseInt(position, 10) || 1) + '</b> 位';
-    if (note) note.innerHTML = '輪到你會自動接通，排隊不扣點數。<br>請保持畫面開著，離開會取消排隊。';
+    card.dataset.action = 'cancel';
+    if (alt) alt.hidden = true;
+    const q = payload || {};
+    const position = Math.max(1, parseInt(q.position, 10) || 1);
+    const preparing = position <= 1;   // 排第 1 位＝其實是在幫你準備、不是真的一堆人在排（Edward 2026-07-24 拍板）
+    const eta = formatQueueEta(q.eta_s);
+    if (title) title.textContent = preparing ? (cname() + '正在為你準備聊天室') : ('現在比較多人在跟' + cname() + '聊天');
+    if (pos) pos.innerHTML = preparing ? '' : ('你排第 <b>' + position + '</b> 位');
+    let etaLine;
+    if (eta === 'soon') etaLine = preparing ? '快好了，通常幾分鐘內就會自動接通。' : '快好了，很快就輪到你。';
+    else if (typeof eta === 'number') etaLine = '大約再 ' + eta + ' 分鐘' + (preparing ? '會自動接通。' : '會輪到你。');
+    else etaLine = preparing ? '通常幾分鐘內就好，準備好會自動接通。' : '輪到你會自動接通。';
+    if (note) note.textContent = etaLine + '排隊不扣點數，暫時先別關掉這個畫面，好了會自動接通。';
     if (btn) btn.textContent = '取消排隊';
   } else {
+    // 'full'：連排隊的位子都滿了——除了「知道了」，多給一個不用等 GPU 席位的出口
+    card.dataset.action = 'dismiss';
     if (title) title.textContent = '現在忙線中';
     if (pos) pos.textContent = '';
     // 角色名是用戶自訂字串：用 append 組字串＋<br>，不走 innerHTML（斷行乾淨、也不吃進標籤）
     if (note) { note.textContent = ''; note.append('想跟' + cname() + '聊天的人比較多，', document.createElement('br'), '請稍後再試試看。'); }
     if (btn) btn.textContent = '知道了';
+    if (alt) alt.hidden = false;
   }
   card.hidden = false;
 }
+// 排隊等待時間人話化（2026-07-24 P0）：後端 queue.eta_s 一直都有算、前端過去只讀 position 把它丟掉。
+// 不給精確倒數（會顯得像在說謊）——只給粗略區間：快好了 / 大約幾分鐘 / 太久或缺值就不顯示數字。
+function formatQueueEta(etaS) {
+  const n = Number(etaS);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n < 90) return 'soon';
+  if (n <= 600) return Math.ceil(n / 60);   // 10 分鐘內才給概數，且無條件進位（寧可講久一點、不要讓人覺得被騙）
+  return null;   // 超過 10 分鐘或算不出來：只講準備／排隊敘事，不亂猜數字
+}
 function hideBusyCard() { const card = $('#busyCard'); if (card) card.hidden = true; }
+// 通用失敗卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
+// 斷線重連失敗／連線逾時／拿不到麥克風——這些過去全部只寫進被藏起來的 #chatCaption，使用者等於零回饋。
+// 現在一律借 busyCard 的殼：標題講人話原因＋一句怎麼辦＋一顆按鈕。
+function showCallStatusCard(opts) {
+  opts = opts || {};
+  const card = $('#busyCard'); if (!card) return;
+  card.dataset.mode = 'error';
+  card.dataset.action = opts.action || 'dismiss';
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
+  if (title) title.textContent = opts.title || '目前無法接通';
+  if (pos) pos.textContent = '';
+  if (note) note.textContent = opts.note || '請稍後再試一次。';
+  if (btn) btn.textContent = opts.btnText || '知道了';
+  if (alt) alt.hidden = true;
+  card.hidden = false;
+}
+// ===== 全滿出口：先用文字聊（2026-07-24 Edward 拍板 P0）=====
+// Avatar／即時語音兩個 GPU 席位滿了時，不用讓長輩乾等排隊——直接借既有文字聊天管線（window.__chatSay，
+// 內部就是 init() 裡的 chatHandle／voiceProvider.sendText）繼續聊，這條路本來就不吃 Avatar／Voice 席位，
+// 也不用排隊。別新造頁面，只在通話畫面裡疊一塊簡單的文字面板，讀「打字」不讀「說話」。
+// （這幾個函式放頂層 scope，是因為 connectCall() 本身也是頂層函式，需要在真的要撥號前呼叫
+// exitTextFallbackChat() 收掉面板——放進 init() 裡面 connectCall 會拿不到。）
+function appendTextChatBubble(role, text) {
+  const log = $('#textChatLog'); if (!log || !text) return;
+  const row = document.createElement('div');
+  row.className = 'tc-row ' + (role === 'user' ? 'tc-user' : 'tc-ai');
+  row.textContent = text;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+function startTextFallbackChat() {
+  const panel = $('#textChatPanel'); if (!panel) return;
+  chatOpened = true;
+  activeChatSessionId = makeSessionId('text');
+  activeChatStartedAt = Date.now();
+  activeChatTurnCount = 0;
+  panel.hidden = false;
+  const inp = $('#textChatInput'); if (inp) { inp.value = ''; inp.focus(); }
+  try { trackProductEvent('call_full_text_fallback_started', {}); } catch (e) {}
+}
+function exitTextFallbackChat() {
+  const panel = $('#textChatPanel');
+  if (panel && !panel.hidden) {
+    panel.hidden = true;
+    if (chatOpened) { try { trackProductEvent('call_full_text_fallback_ended', { turnCount: activeChatTurnCount }); } catch (e) {} }
+    chatOpened = false;
+  }
+}
+async function sendTextFallbackMessage() {
+  const input = $('#textChatInput'); const sendBtn = $('#textChatSend');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendTextChatBubble('user', text);
+  setBtnBusy(sendBtn, '傳送中');
+  const beforeLen = chatHistory.length;
+  try {
+    await window.__chatSay(text);   // init() 裡掛出來的 chatHandle 橋（chatHandle 本身是 init() 內部函式，拿不到）
+  } finally {
+    clearBtnBusy(sendBtn, '傳送');
+    if (input) input.focus();
+  }
+  // chatHandle 內部會把新的一輪對話（含 AI 回覆）推進 chatHistory；掃新增的區段找出「她」的回覆貼上面板。
+  for (let i = beforeLen; i < chatHistory.length; i++) {
+    if (chatHistory[i] && chatHistory[i].role === 'model') appendTextChatBubble('ai', chatHistory[i].text);
+  }
+}
 // 等待中按鈕：加轉圈、鎖點擊（Edward 7/8：Loading 要有動態，不然像當機）
 function setBtnBusy(b, text) {
   if (!b) return;
@@ -1383,8 +1475,8 @@ const CallControl = {
       if (result.status === 'queued') {
         this.pending = { call_id: result.call_id, idempotency_key: idempotencyKey };
         const queue = result.queue || {};
-        // 忙線排隊（2026-07-23 Edward 拍板 B 案）：明著告訴用戶排第幾位、輪到自動接通，不再讓撥號轉圈像當機
-        showBusyCard('queued', queue.position);
+        // 忙線排隊（2026-07-23 Edward 拍板 B 案 → 2026-07-24 P0 補上 eta_s）：明著告訴用戶排第幾位／準備中、輪到自動接通
+        showBusyCard('queued', queue);
         setCallPreflightPending(true, '排隊中…');
         setCallHint('忙線中，排到會自動接通', true);
         if (!this._queueSeen) {
@@ -4825,6 +4917,7 @@ async function connectCall() {
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
   hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
+  if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 若正在「先用文字聊」，重新真的撥號前先收掉面板，避免兩層畫面疊在一起（2026-07-24 P0）
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
   try {
@@ -4873,9 +4966,14 @@ async function connectCall() {
     setCallPreflightPending(false);
     voiceCallFail('microphone_requested', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     voiceCallEnd('failed', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
-    setCallHint(LiveVoice._micUnavailableReason === 'https_required'
+    const micHttpsOnly = LiveVoice._micUnavailableReason === 'https_required';
+    setCallHint(micHttpsOnly
       ? '手機／區網測試需要 HTTPS 才能開麥，請改用公開測試連結'
       : '拿不到麥克風，請到瀏覽器設定允許');
+    showCallStatusCard({
+      title: micHttpsOnly ? '目前連線環境不支援開麥' : '拿不到麥克風權限',
+      note: micHttpsOnly ? '手機或區網測試需要 HTTPS 才能開麥，請改用公開測試連結。' : '請到手機或瀏覽器設定裡，允許沐寧使用麥克風，再重新撥一次。',
+    });
     return;
   }
   // 家人傳話是附加功能：正式帳號最多等 1.2 秒；開發假登入直接略過，不能卡住主要通話。
@@ -4942,9 +5040,25 @@ async function connectCall() {
         (reason.indexOf('queue_full') >= 0 ? '現在忙線中，請稍後再試試看' :
           (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
           (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
-      if (reason.indexOf('queue_full') >= 0) showBusyCard('full');   // 連排隊的位子都滿了：明講忙線、請稍後再試（Edward 7/22 B 案）
+      // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：#chatCaption 被藏起來，光靠上面那句字幕使用者實際上看不到，
+      // 每種失敗都要有標題講原因＋一句怎麼辦＋一顆按鈕；點數不足已有專屬彈窗（__muneaShowCallCreditBlocked），不重複打擾。
+      const accountNotReady = reason.indexOf('account_not_ready') >= 0;
+      const queueFull = reason.indexOf('queue_full') >= 0;
+      const insufficientCredits = reason.indexOf('insufficient_credits') >= 0;
+      const controlNotConfigured = reason.indexOf('call_control_not_configured') >= 0;
+      if (queueFull) {
+        showBusyCard('full');   // 連排隊的位子都滿了：明講忙線、請稍後再試＋「先用文字聊」出口（Edward 7/22 B 案／7/24 P0 加出口）
+      } else if (authRequired) {
+        showCallStatusCard({ title: '登入狀態已失效', note: '請重新登入後再撥一次。', btnText: '重新登入', action: 'reopen-auth' });
+      } else if (accountNotReady) {
+        showCallStatusCard({ title: '帳號正在準備中', note: '通常幾秒鐘就好，請稍後再撥一次。' });
+      } else if (controlNotConfigured) {
+        showCallStatusCard({ title: '通話服務正在更新', note: '請稍後再試一次，造成不便請見諒。' });
+      } else if (!insufficientCredits) {
+        showCallStatusCard({ title: '目前無法接通', note: '通話服務暫時忙碌中，請稍後再試一次。' });
+      }
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
-      if (reason.indexOf('insufficient_credits') >= 0) setTimeout(__muneaShowCallCreditBlocked, 0);
+      if (insufficientCredits) setTimeout(__muneaShowCallCreditBlocked, 0);
       try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
       return;
     }
@@ -4990,6 +5104,7 @@ async function connectCall() {
         chatOpened = false; setCallDialing(false); stopCallTimer();
         const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
         setFaceState('idle'); setCallHint('服務尚未完成接通，請稍後再試。');
+        showCallStatusCard({ title: '服務尚未完成接通', note: '請稍後再試一次。' });
         try { FaceIdle.start(); } catch (e2) {}
         return;
       }
@@ -5058,6 +5173,7 @@ async function connectCall() {
       chatOpened = false; setCallDialing(false); stopCallTimer();
       const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
       setFaceState('idle'); setCallHint('目前連線還沒準備好，請稍後再試');
+      showCallStatusCard({ title: '目前連線還沒準備好', note: '請稍後再撥一次看看。' });
       try { completeChatSession('readiness_timeout'); } catch (e) {}
       try { FaceIdle.start(); } catch (e) {}
       try { trackProductEvent('voice_readiness_timeout', { voiceReady: _voiceReady, faceReady: _faceReady }); } catch (e) {}
@@ -5079,6 +5195,7 @@ async function connectCall() {
         chatOpened = false; setCallDialing(false); setCallToggle(false); stopCallTimer();
         if (chatEl) chatEl.dataset.state = 'idle';
         setFaceState('idle'); setCallHint('連線中斷了，請再撥一次');
+        showCallStatusCard({ title: '連線中斷了', note: '請重新撥一次繼續聊天。' });
         try { FaceIdle.start(); } catch (e) {}
         return;
       }
@@ -5098,6 +5215,7 @@ async function connectCall() {
       chatOpened = false; setCallDialing(false); stopCallTimer();
       if (chatEl) chatEl.dataset.state = 'idle';
       setFaceState('idle'); setCallHint('目前 3 個通話席都在使用中，請稍後再撥');
+      showBusyCard('full');   // 影像席位全滿跟排隊全滿是同一類「都滿了」，一併給「先用文字聊」出口（2026-07-24 P0）
       try { completeChatSession('avatar_capacity_full'); } catch (e) {}
       try { trackProductEvent('avatar_capacity_full', { mode: 'voice_avatar_required' }); } catch (e) {}
       try { FaceIdle.start(); } catch (e) {}
@@ -5254,6 +5372,7 @@ function init() {
         setTimeout(() => window.__muneaMaybeAskReview('chat_completed'), 800);   // 自己掛斷＝好好聊完 → 開心時刻
       }
     }
+    if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 離開時順手收掉「先用文字聊」面板，下次進來是乾淨的通話畫面
     FaceWave.stop();
     showView('home');
   });
@@ -5261,11 +5380,17 @@ function init() {
   const _hangupOnLeave = () => { try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {} };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _hangupOnLeave(); });
   window.addEventListener('pagehide', _hangupOnLeave);
-  // 忙線卡按鈕：排隊模式＝取消排隊（走通話鍵同一條取消線）；全滿模式＝知道了、收卡
+  // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；其餘＝知道了、收卡
   if ($('#busyCardBtn')) $('#busyCardBtn').addEventListener('click', () => {
-    const card = $('#busyCard'); const mode = card && card.dataset.mode;
+    const card = $('#busyCard'); const action = card && card.dataset.action;
     hideBusyCard();
-    if (mode === 'queued' && !callConnected && (callDialing || callPreflightPending)) { try { $('#callToggle').click(); } catch (e) {} }
+    if (action === 'cancel' && !callConnected && (callDialing || callPreflightPending)) { try { $('#callToggle').click(); } catch (e) {} }
+    else if (action === 'reopen-auth') { setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0); }
+  });
+  // 全滿出口（2026-07-24 P0）：不用乾等 GPU 席位，先切去既有 /chat 文字管線聊
+  if ($('#busyCardAlt')) $('#busyCardAlt').addEventListener('click', () => {
+    hideBusyCard();
+    if (typeof startTextFallbackChat === 'function') startTextFallbackChat();
   });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     // 撥通中（含排隊／前置連線）再按一次＝取消撥號、回到待機
@@ -7868,6 +7993,13 @@ function init() {
       postTurnReview();
     }
   }
+  // 全滿出口「先用文字聊」的送出／面板事件綁定（函式本體移到頂層 scope，見 showCallStatusCard 附近——
+  // connectCall() 是頂層函式，需要在真的要撥號前呼叫 exitTextFallbackChat() 收面板，兩邊都要拿得到）。
+  window.__muneaSendTextFallback = sendTextFallbackMessage;   // 供 Chrome MCP／自動測試直接觸發送出
+  if ($('#textChatSend')) $('#textChatSend').addEventListener('click', sendTextFallbackMessage);
+  if ($('#textChatInput')) $('#textChatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextFallbackMessage(); }
+  });
   function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();

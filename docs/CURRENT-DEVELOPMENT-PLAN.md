@@ -3,7 +3,7 @@
 > Updated: 2026-07-20
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.43 (Build 48)`
+> **Current source:** `1.0.44 (Build 48)`
 >
 > **Latest uploaded App:** `1.0.40 (Build 47)`; the exact selected Build and Apple review state remain `unknown` until App Store Connect evidence is recorded.
 >

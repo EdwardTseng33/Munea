@@ -51,17 +51,46 @@ assert(!/setCallPreflightPending\([^)]*點數/.test(connectCall) && !/setCallHin
 // 開發者 Gateway 模式（真登入、非直連）測試帳號不能被 0 點卡住；正式用戶（非開發者旁路）依然照擋。
 assert(connectCall.includes("if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');"), 'Only the developer Gateway profile may skip the zero-credit block; production callers must still be stopped');
 
-// 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：排隊要顯示第幾位＋自動接通說明；隊伍全滿要明講請稍後再試；
-// 排隊／前置連線中都必須能取消（按通話鍵、離開聊聊頁、切走 App 三條路都要真取消，不留幽靈佔位）。
+// 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：排隊要顯示第幾位或準備中敘事＋
+// 帶粗略等待時間；隊伍全滿要明講請稍後再試並提供「先用文字聊」出口；撥號各種失敗一律要有看得見的卡，不能只寫進被
+// CSS 藏起來的 #chatCaption；排隊／前置連線中都必須能取消（按通話鍵、離開聊聊頁、切走 App 三條路都要真取消）。
 assert(html.includes('id="busyCard"') && html.includes('id="busyCardBtn"'), 'Busy card markup must exist on the call screen');
+assert(html.includes('id="busyCardAlt"'), 'Busy card must expose a secondary exit button element for the full-queue text-chat fallback');
 assert(css.includes('.busy-card'), 'Busy card styles must exist');
-assert(app.includes("showBusyCard('queued', queue.position)"), 'Queued gateway responses must surface the busy card with the caller position');
+assert(app.includes("showBusyCard('queued', queue)"), 'Queued gateway responses must surface the busy card with the full queue payload (position and eta_s), not just a bare position number');
 assert(app.includes("showBusyCard('full')"), 'A full queue must surface the explicit busy-try-later card');
 assert(app.includes('現在忙線中，請稍後再試試看'), 'Full-queue copy must say busy-try-later in plain language');
 assert(/if \(\(callDialing \|\| callPreflightPending\) && !callConnected\)/.test(app), 'Tapping the call button must cancel while queued (preflight pending), not only while dialing');
 assert(app.includes('if (callConnected || callDialing || callPreflightPending)'), 'Leaving the call screen while queued must hang up and release the queue slot');
 assert(/callConnected \|\| callDialing \|\| callPreflightPending\) && \$\('#callToggle'\)/.test(app), 'Backgrounding the App while queued must cancel the queue slot');
 assert(app.includes("if (reason === 'call_cancelled')"), 'A user-initiated cancel must exit quietly instead of reporting a busy failure');
+
+// 排隊敘事＋等待時間人話化（2026-07-24 P0）：position<=1 要用「準備中」講法而不是誤導的「排第 1 位」；
+// eta_s（後端一直都有算，之前被前端丟掉）要轉成粗略區間，不給會顯得說謊的精確倒數。
+assert(app.includes('function formatQueueEta(') && app.includes("if (n < 90) return 'soon';") && app.includes('if (n <= 600) return Math.ceil(n / 60);'),
+  'Queue ETA must be bucketed into a soon/minutes/none narrative from queue.eta_s, not shown as a raw countdown');
+assert(app.includes("preparing = position <= 1") && app.includes("cname() + '正在為你準備聊天室'"),
+  'Position 1 must use a preparing narrative instead of the misleading "you are #1 in line" framing');
+assert(app.includes('暫時先別關掉這個畫面，好了會自動接通'), 'The queue note must use the softened stay-on-screen phrasing instead of the old "leaving cancels the queue" warning');
+
+// 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
+// 斷線重連失敗／連線逾時／影像席位全滿／拿不到麥克風，過去全部只寫進被藏起來的 #chatCaption，等於零回饋。
+assert(app.includes('function showCallStatusCard(opts)'), 'A generic visible failure card function must exist for non-queue call failures');
+const statusCardCopies = ['登入狀態已失效', '帳號正在準備中', '通話服務正在更新', '目前無法接通', '服務尚未完成接通', '目前連線還沒準備好', '連線中斷了', '拿不到麥克風權限'];
+statusCardCopies.forEach(copy => assert(app.includes(copy), `Failure card copy missing for: ${copy}`));
+assert(app.includes("action: 'reopen-auth'") && app.includes("action === 'reopen-auth'") && app.includes('openAuthSheet()'),
+  'An expired session must offer a one-tap re-login action on the visible card, not just a hidden caption');
+assert(app.includes("showCallStatusCard({ title: '服務尚未完成接通'"), 'The gateway activation timeout must also surface a visible card, matching the other silent-failure fixes');
+
+// 全滿態給出口：先用文字聊（2026-07-24 Edward 拍板 P0）——不新造頁面，重用既有 chatHandle 文字管線，
+// 不佔用 Avatar／即時語音席位，讓長輩在滿載時仍有話可聊而不是只能乾等或放棄。
+assert(html.includes('id="textChatPanel"') && html.includes('id="textChatLog"') && html.includes('id="textChatInput"') && html.includes('id="textChatSend"'),
+  'The text-chat fallback panel markup must exist on the call screen');
+assert(app.includes('function startTextFallbackChat()') && app.includes('function sendTextFallbackMessage()') && app.includes('function exitTextFallbackChat()'),
+  'The text-chat fallback lifecycle functions must exist');
+assert(app.includes('await window.__chatSay(text);'), 'The text-chat fallback must reuse the existing chatHandle pipeline (via its window.__chatSay bridge) instead of a new chat backend');
+assert(app.includes("$('#busyCardAlt')") && app.includes('startTextFallbackChat()'), 'The full-queue card alt button must trigger the text-chat fallback');
+assert(app.includes('exitTextFallbackChat()'), 'Leaving the call screen must also tear down the text-chat fallback panel so the next visit starts clean');
 
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');
