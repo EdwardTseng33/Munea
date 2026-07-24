@@ -142,7 +142,9 @@ expect(voiceServer.includes('[即時語音能量]') && voiceServer.includes('預
   'live voice opening can still default to a high-energy delivery');
 expect(avatarServer.includes('self.slot.audio_out.playout_held()'),
   'Avatar video can start consuming frames before the audio prebuffer releases');
-expect(avatarServer.includes('OPENING_PREBUFFER_S = 1.0') && avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
+expect((avatarServer.includes('OPENING_PREBUFFER_S = 1.0') ||
+        avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "1.0"')) &&
+       avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
   'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
