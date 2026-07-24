@@ -51,6 +51,46 @@ def _parse_utc(value: Any) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def _parse_version(value: Any) -> tuple[int, ...] | None:
+    text = str(value or "").strip()
+    parts = text.split(".")
+    if not text or not all(part.isdigit() for part in parts):
+        return None
+    return tuple(int(part) for part in parts)
+
+
+def compare_source_version(evidence_version: Any, source_version: Any) -> tuple[str, str]:
+    """Classify committed evidence against the current source version.
+
+    Evidence can only be refreshed by GETting live services, so a version bump always
+    lands before the next capture. That lag is normal development, not drift: only a
+    missing, unreadable, or ahead-of-source version proves the file is wrong.
+    """
+    evidence_text = str(evidence_version or "").strip()
+    source_text = str(source_version or "").strip()
+    if not evidence_text:
+        return "missing", "release evidence sourceVersion is missing"
+    if evidence_text == source_text:
+        return "aligned", ""
+    captured = _parse_version(evidence_text)
+    current = _parse_version(source_text)
+    if captured is None or current is None:
+        return (
+            "unreadable",
+            f"release evidence sourceVersion {evidence_text} cannot be compared with package version {source_text or 'unset'}",
+        )
+    if captured > current:
+        return (
+            "ahead",
+            f"release evidence sourceVersion {evidence_text} is ahead of package version {source_text}",
+        )
+    return (
+        "behind",
+        f"release evidence was captured for {evidence_text} and package version is now {source_text}; "
+        "run `npm run release:evidence:capture` before calling the next build released",
+    )
+
+
 def _source_commit(root: Path) -> str:
     github_sha = os.environ.get("GITHUB_SHA", "").strip()
     if github_sha:
@@ -159,6 +199,7 @@ def validate_evidence(
     source_version: str,
     max_age_hours: float | None = None,
     now: datetime | None = None,
+    strict_version: bool = False,
 ) -> list[str]:
     errors: list[str] = []
     if not isinstance(document, dict):
@@ -172,8 +213,14 @@ def validate_evidence(
         return errors + ["release evidence targets must be an array"]
     if document.get("targetConfigSha256") != _canonical_hash(targets_document):
         errors.append("release evidence was captured with a different target configuration")
-    if document.get("sourceVersion") != source_version:
-        errors.append(f"release evidence sourceVersion must match package version {source_version}")
+    version_state, version_message = compare_source_version(document.get("sourceVersion"), source_version)
+    if version_state in {"missing", "unreadable", "ahead"}:
+        errors.append(version_message)
+    elif version_state == "behind" and strict_version:
+        errors.append(
+            f"release evidence sourceVersion must match package version {source_version} "
+            f"but was captured for {document.get('sourceVersion')}"
+        )
     commit = str(document.get("capturedBySourceCommit") or "")
     if commit != "unknown" and (len(commit) < 7 or any(char not in "0123456789abcdef" for char in commit.lower())):
         errors.append("capturedBySourceCommit must be a Git SHA or unknown")
@@ -245,19 +292,32 @@ def validate_evidence(
     return errors
 
 
-def check(root: Path = ROOT, input_path: Path = LATEST_PATH, max_age_hours: float | None = None) -> list[str]:
+def check(
+    root: Path = ROOT,
+    input_path: Path = LATEST_PATH,
+    max_age_hours: float | None = None,
+    strict_version: bool = False,
+) -> tuple[list[str], list[str]]:
     try:
         document = _read_json(root / input_path)
         targets = _read_json(root / TARGETS_PATH)
         package = _read_json(root / "package.json")
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        return [f"release evidence cannot be read: {exc}"]
-    return validate_evidence(
+        return [f"release evidence cannot be read: {exc}"], []
+    source_version = str(package.get("version") or "")
+    errors = validate_evidence(
         document,
         targets,
-        source_version=str(package.get("version") or ""),
+        source_version=source_version,
         max_age_hours=max_age_hours,
+        strict_version=strict_version,
     )
+    warnings: list[str] = []
+    if isinstance(document, dict) and not strict_version:
+        state, message = compare_source_version(document.get("sourceVersion"), source_version)
+        if state == "behind":
+            warnings.append(message)
+    return errors, warnings
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -268,6 +328,11 @@ def main(argv: list[str] | None = None) -> int:
     check_parser = subparsers.add_parser("check", help="validate committed release evidence")
     check_parser.add_argument("--input", type=Path, default=LATEST_PATH)
     check_parser.add_argument("--max-age-hours", type=float)
+    check_parser.add_argument(
+        "--strict-version",
+        action="store_true",
+        help="require the evidence to be captured from the current package version (use before a release)",
+    )
     args = parser.parse_args(argv)
 
     if args.command == "capture":
@@ -279,14 +344,21 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(rendered)
         return 0 if all(result.get("ok") is True for result in document["results"]) else 1
 
-    errors = check(input_path=args.input, max_age_hours=args.max_age_hours)
+    errors, warnings = check(
+        input_path=args.input,
+        max_age_hours=args.max_age_hours,
+        strict_version=args.strict_version,
+    )
+    for warning in warnings:
+        print(f"WARN {warning}")
     if errors:
         print("Release evidence: FAIL")
         for error in errors:
             print(f"- {error}")
         return 1
     freshness = f", max age {args.max_age_hours:g}h" if args.max_age_hours is not None else ""
-    print(f"Release evidence: PASS ({len(_read_json(ROOT / TARGETS_PATH)['targets'])} targets{freshness})")
+    strictness = ", strict version" if args.strict_version else ""
+    print(f"Release evidence: PASS ({len(_read_json(ROOT / TARGETS_PATH)['targets'])} targets{freshness}{strictness})")
     return 0
 
 
