@@ -6,10 +6,37 @@ apt-get update -qq >/dev/null 2>&1
 apt-get install -y -qq libgl1 libglib2.0-0 ffmpeg >/dev/null 2>&1
 
 E=/root/miniconda3/envs/workenv/bin
+# 2026-07-23 calcifer: pin the checkout to a known commit (matches the
+# runpod-avatar install script) so deploy/flashhead-patches/*.patch always
+# has a stable base to apply against -- "git clone --depth 1" alone only
+# grabs whatever the upstream default branch tip happens to be that day.
+FLASHHEAD_COMMIT="${MUNEA_FH_COMMIT:-9bc03de06bb0de82cd6bc477804512ae06144bf2}"
 if [[ ! -d /root/SoulX-FlashHead/.git ]]; then
   git clone --depth 1 https://github.com/Soul-AILab/SoulX-FlashHead.git /root/SoulX-FlashHead
 fi
 cd /root/SoulX-FlashHead || exit 1
+git fetch --depth 1 origin "$FLASHHEAD_COMMIT"
+git checkout --detach "$FLASHHEAD_COMMIT"
+
+echo "=== apply Munea patches (see deploy/flashhead-patches/README.md) ==="
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MUNEA_FH_PATCHES_DIR="${MUNEA_FH_PATCHES_DIR:-$SCRIPT_DIR/../flashhead-patches}"
+if [[ -d "$MUNEA_FH_PATCHES_DIR" ]]; then
+  for p in "$MUNEA_FH_PATCHES_DIR"/*.patch; do
+    [[ -e "$p" ]] || continue
+    if git apply --check "$p" 2>/dev/null; then
+      echo "  applying $(basename "$p")"
+      git apply "$p"
+    elif git apply -R --check "$p" 2>/dev/null; then
+      echo "  $(basename "$p") already applied -- skipping (idempotent rerun)"
+    else
+      echo "  ERROR: $(basename "$p") does not apply and is not already applied (upstream commit $FLASHHEAD_COMMIT may have drifted) -- aborting"
+      exit 1
+    fi
+  done
+else
+  echo "  MUNEA_FH_PATCHES_DIR ($MUNEA_FH_PATCHES_DIR) not found -- skipping. Upload deploy/flashhead-patches alongside this script to enable MUNEA_FH_PROFILE_SYNC / MUNEA_FH_SLOT_STREAM."
+fi
 
 echo "=== [1/5] requirements（雷1 mediapipe / 雷2 nccl 已修；不動預裝 torch）==="
 sed -i 's/mediapipe==0.10.9/mediapipe>=0.10.13/' requirements.txt

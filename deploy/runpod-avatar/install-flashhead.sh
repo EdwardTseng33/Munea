@@ -26,6 +26,26 @@ cd "$INSTALL_ROOT/SoulX-FlashHead" || exit 1
 git fetch --depth 1 origin "$FLASHHEAD_COMMIT"
 git checkout --detach "$FLASHHEAD_COMMIT"
 
+echo "=== apply Munea patches (see deploy/flashhead-patches/README.md) ==="
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MUNEA_FH_PATCHES_DIR="${MUNEA_FH_PATCHES_DIR:-$SCRIPT_DIR/../flashhead-patches}"
+if [[ -d "$MUNEA_FH_PATCHES_DIR" ]]; then
+  for p in "$MUNEA_FH_PATCHES_DIR"/*.patch; do
+    [[ -e "$p" ]] || continue
+    if git apply --check "$p" 2>/dev/null; then
+      echo "  applying $(basename "$p")"
+      git apply "$p"
+    elif git apply -R --check "$p" 2>/dev/null; then
+      echo "  $(basename "$p") already applied -- skipping (idempotent rerun)"
+    else
+      echo "  ERROR: $(basename "$p") does not apply and is not already applied (upstream commit $FLASHHEAD_COMMIT may have drifted) -- aborting"
+      exit 1
+    fi
+  done
+else
+  echo "  MUNEA_FH_PATCHES_DIR ($MUNEA_FH_PATCHES_DIR) not found -- skipping. Upload deploy/flashhead-patches alongside this script to enable MUNEA_FH_PROFILE_SYNC / MUNEA_FH_SLOT_STREAM."
+fi
+
 echo "=== [2/5] requirements（雷1 mediapipe / 雷2 nccl 已修；不動預裝 torch）==="
 sed -i 's/mediapipe==0.10.9/mediapipe>=0.10.13/' requirements.txt
 sed -i '/nvidia-nccl-cu12/d' requirements.txt

@@ -24,6 +24,14 @@ import torch
 import flash_head.src.pipeline.flash_head_pipeline as _fhp
 _fhp.COMPILE_MODEL = (MODE == "compile")
 _fhp.COMPILE_VAE = (MODE == "compile")
+# N-way batching surgery phase 1 / option B (2026-07-23): let the experimental
+# card toggle the same MUNEA_FH_PROFILE_SYNC flag flashhead_server.py reads,
+# so this standalone bench script can A/B the barrier removal in isolation
+# (see deploy/flashhead-patches/README.md). Default keeps every
+# torch.cuda.synchronize() barrier firing -- matches pre-patch behavior.
+# No-op if deploy/flashhead-patches/0001-gate-profile-sync.patch was not
+# applied to this checkout.
+_fhp.PROFILE_SYNC = os.environ.get("MUNEA_FH_PROFILE_SYNC", "1") == "1"
 
 import flash_head.inference as _fh_inference
 if EXPECT_SIZE:
