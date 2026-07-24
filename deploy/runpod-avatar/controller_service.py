@@ -39,10 +39,33 @@ def _validated_config() -> Config:
     return config
 
 
+# Seconds to wait before retrying a failed startup (bad env/config). Keeping the
+# loop alive and retrying -- instead of letting the task die -- means /health and
+# the Cloud Run log keep reporting the real cause instead of a frozen ok=false.
+_STARTUP_RETRY_SECONDS = 30
+
+
 async def _controller_loop(stop: asyncio.Event) -> None:
-    config = _validated_config()
-    controller = BackupController(config)
+    controller: BackupController | None = None
     while not stop.is_set():
+        if controller is None:
+            # Build config + controller inside the guarded loop. A failed
+            # validate() here used to raise straight out of this asyncio task and
+            # kill it silently: cycles stuck at 0, last_error empty, nothing in
+            # the log. Now the cause lands in STATUS["last_error"] (surfaced by
+            # /health) and stdout, and we retry instead of dying.
+            try:
+                controller = BackupController(_validated_config())
+                STATUS["last_error"] = ""
+            except Exception as exc:
+                STATUS["last_error"] = f"startup: {type(exc).__name__}: {str(exc)[:300]}"
+                print("[runpod-controller] " + STATUS["last_error"], flush=True)
+                try:
+                    await asyncio.wait_for(stop.wait(), timeout=_STARTUP_RETRY_SECONDS)
+                except asyncio.TimeoutError:
+                    pass
+                continue
+
         STATUS["last_run_at"] = time.time()
         try:
             result = await asyncio.to_thread(controller.run_once)
@@ -57,8 +80,9 @@ async def _controller_loop(stop: asyncio.Event) -> None:
                 "last_error": f"{type(exc).__name__}: {str(exc)[:300]}",
                 "cycles": int(STATUS["cycles"]) + 1,
             })
+            print("[runpod-controller] run_once failed: " + STATUS["last_error"], flush=True)
         try:
-            await asyncio.wait_for(stop.wait(), timeout=config.poll_seconds)
+            await asyncio.wait_for(stop.wait(), timeout=controller.config.poll_seconds)
         except asyncio.TimeoutError:
             pass
 
