@@ -9,10 +9,15 @@ server.py / chat_engine.py 的資料檔路徑（MEMORY_ITEMS_PATH、LIVING_PROFI
 python 行程，先設好 env、再 import，天生乾淨隔離，也跟這個 repo 其他 test_*.py
 「一支腳本一個 process」的慣例一致，不引入新的資料層 hack。
 
-輸入（stdin，一行 JSON）：
-  {"id": "...", "character": "寧寧", "userLine": "...",
-   "fixture": {"memory_items": [...], "living_profile": {...}} | null,
-   "tmpdir": "<這題專用的暫存資料夾，呼叫端已建好>"}
+輸入（stdin，一行 JSON）——兩種模式：
+  舊模式（golden_set 單輪，語音線 system_instruction）：
+    {"id": "...", "character": "寧寧", "userLine": "...",
+     "fixture": {"memory_items": [...], "living_profile": {...}} | null,
+     "tmpdir": "<這題專用的暫存資料夾，呼叫端已建好>"}
+  新模式（聊天品質多輪，正式文字線 server.reply_conv，2026-07-25 新增）：
+    上面欄位皆同，但多帶 "history"（本輪之前的對話，[{"role":"user"/"model","text":"..."}...]，
+    第一輪可為空陣列）與 "newUserLine"（這一輪使用者說的話，取代 userLine）——
+    只要 case 裡有 "history" 這個 key（即使是空陣列）就會走新模式。
 
 輸出（stdout，一行 JSON）：
   {"ok": true, "reply": "...", "modelUsed": "gemini-2.5-flash"}
@@ -69,6 +74,28 @@ def main():
     # 模擬「這通電話已驗證是這個人」——正式路徑是 auth middleware 設的，
     # 這裡直接設同一個 contextvar，不繞過任何邏輯、只是跳過真的登入。
     server.REQUEST_DATA_IDENTITY.set({"personId": person_id})
+
+    # 2026-07-25（聊天品質多輪劇本，卡西法）：mode="conv" 是多輪文字通道路徑，
+    # 直接借正式文字線的 server.reply_conv()（跟 App 文字聊天走同一支函式），
+    # 而不是 lv.system_instruction() 那條（那是語音線單輪路徑，golden_set 用）。
+    # 兩條路徑並存、互不影響：golden_set_v1.json 沒有 "history" 欄位，只會走
+    # 下面舊的單輪分支；聊天品質劇本庫每一輪都帶 "history"，走這個新分支。
+    if "history" in case:
+        history = list(case.get("history") or [])
+        history.append({"role": "user", "text": case["newUserLine"]})
+        data = {"personId": person_id}
+        try:
+            context = server.build_reply_context(history, char=case.get("character") or "寧寧", data=data)
+            reply_raw = server.reply_conv(history, char=case.get("character") or "寧寧", data=data, context=context)
+            reply = server.localization.assistant_output_text(reply_raw, context.get("locale"))
+        except Exception as e:
+            print(json.dumps({"ok": False, "error": f"reply_conv failed: {e}"}, ensure_ascii=False))
+            return
+        print(json.dumps({
+            "ok": True, "reply": (reply or "").strip(),
+            "modelUsed": "server.reply_conv (production text-line, gemini-2.5-flash 主/自動降級)",
+        }, ensure_ascii=False))
+        return
 
     try:
         sys_instruction = lv.system_instruction(char=case.get("character") or "寧寧")
