@@ -34,8 +34,11 @@ RUN_NOW="${2:-}"
 BRAIN_URL="$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format='value(status.url)')"
 [ -n "$BRAIN_URL" ] || { echo "⛔ 取不到 $SVC 服務網址"; exit 1; }
 
-ADMIN_TOKEN="$(gcloud_run secrets versions access latest --secret munea-admin-password --project "$PROJECT")"
-[ -n "$ADMIN_TOKEN" ] || { echo "⛔ 取不到管理通行碼（Secret munea-admin-password）"; exit 1; }
+# ⚠ 兩個保險箱名字很像、別拿錯（2026-07-24 首掛踩過 403）：
+#   munea-admin-token-staging = 管理 API 通行碼（X-Munea-Admin-Token 認這把、兩台大腦同用）
+#   munea-admin-password      = 後台帳密登入的密碼（跟這支無關）
+ADMIN_TOKEN="$(gcloud_run secrets versions access latest --secret munea-admin-token-staging --project "$PROJECT")"
+[ -n "$ADMIN_TOKEN" ] || { echo "⛔ 取不到管理 API 通行碼（Secret munea-admin-token-staging）"; exit 1; }
 
 APP_KEY="${MUNEA_APP_KEY:-}"
 if [ -z "$APP_KEY" ] && [ -f deploy/.munea-app-key ]; then
@@ -43,21 +46,22 @@ if [ -z "$APP_KEY" ] && [ -f deploy/.munea-app-key ]; then
 fi
 [ -n "$APP_KEY" ] || { echo "⛔ 找不到 MUNEA_APP_KEY 或 deploy/.munea-app-key"; exit 1; }
 
+HEADERS="Content-Type=application/json,X-Munea-Admin-Token=$ADMIN_TOKEN,X-Munea-Key=$APP_KEY"
 COMMON_ARGS=(
   --project "$PROJECT" --location "$REGION"
   --schedule "30 6 * * *" --time-zone "Asia/Taipei"
   --uri "$BRAIN_URL/admin/daily-briefing" --http-method POST
-  --headers "Content-Type=application/json,X-Munea-Admin-Token=$ADMIN_TOKEN,X-Munea-Key=$APP_KEY"
   --message-body '{"region":"臺北市"}'
   --max-retry-attempts 3 --min-backoff 30s --max-backoff 3600s
 )
 
 if gcloud_run scheduler jobs describe "$JOB" --project "$PROJECT" --location "$REGION" >/dev/null 2>&1; then
   echo "== 鬧鐘已存在、更新設定：$JOB → $BRAIN_URL =="
-  gcloud_run scheduler jobs update http "$JOB" "${COMMON_ARGS[@]}"
+  # update 的頭參數叫 --update-headers（跟 create 的 --headers 不同名、2026-07-24 踩過）
+  gcloud_run scheduler jobs update http "$JOB" "${COMMON_ARGS[@]}" --update-headers "$HEADERS" 2>&1 | grep -v "$ADMIN_TOKEN" || true
 else
   echo "== 建立鬧鐘：$JOB → $BRAIN_URL（每天台灣 06:30）=="
-  gcloud_run scheduler jobs create http "$JOB" "${COMMON_ARGS[@]}"
+  gcloud_run scheduler jobs create http "$JOB" "${COMMON_ARGS[@]}" --headers "$HEADERS" 2>&1 | grep -v "$ADMIN_TOKEN" || true
 fi
 
 echo "== 掛載後核對 =="
