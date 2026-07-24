@@ -4422,45 +4422,53 @@ class SupabaseAdapter:
         if prefer:
             headers["prefer"] = prefer
         req = urllib.request.Request(url, data=body, headers=headers, method=method)
-        try:
-            with urllib.request.urlopen(req, timeout=4) as resp:
-                raw = resp.read().decode("utf-8")
-                _reset_circuit()
-                return json.loads(raw) if raw else []
-        except urllib.error.HTTPError as e:
-            # HTTP 層有明確快速回應（如缺表 404）：不觸發斷路器（本來就快），但視為連線成功可用
-            _reset_circuit()
-            detail = e.read().decode("utf-8", "replace")[:300]
-            error_code = None
+        # 讀取（GET）連線層瞬斷先重試一次再認輸；寫入不盲重試——逾時可能其實已寫入、
+        # 重打會變兩筆。寫入失敗的正路＝本機備份＋告警（server.log_cloud_write_fallback）。
+        attempts = 2 if method == "GET" else 1
+        for attempt in range(attempts):
             try:
-                parsed_detail = json.loads(detail)
-                if isinstance(parsed_detail, dict):
-                    error_code = parsed_detail.get("code")
-            except (TypeError, ValueError):
-                pass
-            if e.code == 404 and (error_code == "PGRST205" or "PGRST205" in detail):
-                _mark_table_missing(table)  # 記著這張表缺，30 秒內同批呼叫秒退
-                error_code = "PGRST205"
-            if e.code == 401:
-                error_kind = "configuration"
-            elif e.code == 403:
-                error_kind = "permission"
-            elif e.code == 404 and error_code == "PGRST205":
-                error_kind = "missing_table"
-            elif error_code == "42501":
-                error_kind = "permission"
-            else:
-                error_kind = "http_error"
-            raise SupabaseRequestError(
-                f"Supabase {method} {table} failed: {e.code} {detail}",
-                error_kind=error_kind,
-                status_code=e.code,
-                error_code=error_code,
-            ) from e
-        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
-            # 連線層失敗（逾時 / 連不上 / 被重置）：開啟斷路器，讓同批後續呼叫秒退
-            _trip_circuit()
-            raise SupabaseRequestError(f"Supabase {method} {table} unreachable: {type(e).__name__}", error_kind="unreachable") from e
+                with urllib.request.urlopen(req, timeout=4) as resp:
+                    raw = resp.read().decode("utf-8")
+                    _reset_circuit()
+                    return json.loads(raw) if raw else []
+            except urllib.error.HTTPError as e:
+                # HTTP 層有明確快速回應（如缺表 404）：不觸發斷路器（本來就快）、也不重試，視為連線成功可用
+                _reset_circuit()
+                detail = e.read().decode("utf-8", "replace")[:300]
+                error_code = None
+                try:
+                    parsed_detail = json.loads(detail)
+                    if isinstance(parsed_detail, dict):
+                        error_code = parsed_detail.get("code")
+                except (TypeError, ValueError):
+                    pass
+                if e.code == 404 and (error_code == "PGRST205" or "PGRST205" in detail):
+                    _mark_table_missing(table)  # 記著這張表缺，30 秒內同批呼叫秒退
+                    error_code = "PGRST205"
+                if e.code == 401:
+                    error_kind = "configuration"
+                elif e.code == 403:
+                    error_kind = "permission"
+                elif e.code == 404 and error_code == "PGRST205":
+                    error_kind = "missing_table"
+                elif error_code == "42501":
+                    error_kind = "permission"
+                else:
+                    error_kind = "http_error"
+                raise SupabaseRequestError(
+                    f"Supabase {method} {table} failed: {e.code} {detail}",
+                    error_kind=error_kind,
+                    status_code=e.code,
+                    error_code=error_code,
+                ) from e
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+                if attempt + 1 < attempts:
+                    time.sleep(0.4)
+                    continue
+                # 連線層失敗（逾時 / 連不上 / 被重置）：開啟斷路器，讓同批後續呼叫秒退
+                _trip_circuit()
+                raise SupabaseRequestError(f"Supabase {method} {table} unreachable: {type(e).__name__}", error_kind="unreachable") from e
+        raise SupabaseRequestError(f"Supabase {method} {table} retry loop exhausted", error_kind="unreachable")
 
     @staticmethod
     def _is_uuid(value):
