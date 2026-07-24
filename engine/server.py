@@ -4781,8 +4781,14 @@ def admin_safety_events_summary(data=None):
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
     events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
-    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
-    events = [event for event in events if not is_analytics_excluded_event(event)]
+    # 2026-07-24 補：這頁原本沒接測試帳號排除。注意：不能借用 is_analytics_excluded_event，
+    # 那支連 analyticsExcluded/developerMode 這類「不算進互動指標」的事件級旗標都會濾掉——
+    # guardian_evaluate_response 對每一筆守護風險評估都固定寫 analyticsExcluded=True（避免
+    # 系統自動觸發的評估污染「有意義互動天數」等成長指標），這是跟帳號是不是測試帳號無關的
+    # 另一件事。這裡只用帳號／長輩層級的測試判準（is_admin_row_excluded），安全守護警示頁
+    # 才不會把真實帳號的正常風險事件也一起濾掉（2026-07-24 smoke 紅燈實測抓到）。
+    excluded_ids = analytics_excluded_id_set()
+    events = [event for event in events if not is_admin_row_excluded(event, excluded_ids)]
     safety_events = []
     for event in events:
         if event.get("eventName") != "guardian_risk_evaluated":
