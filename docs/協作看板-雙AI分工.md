@@ -11,13 +11,13 @@
 - **驗收證據**：a05／a06 單路＋雙路 WebRTC 皆 640×640 影音同線到齊（雙路 12s：430 格／840 包）；公網 `/health` 帶鑰匙 200、無鑰匙 403；聊聊 SOP `qa_munea.py` **11/12**（唯一 FAIL＝收尾對已刪帳號重複刪、帳號實際已清乾淨）；正式線 `/chat` 真回話 21.5s、測試機 17.4s（歷史區間內）。依 7/17 永久硬 Gate：**Edward iPhone 真機撥通前標 App E2E pending**。
 - **舊卡與待辦**：① `glows-rtx6000ada-tw07` 已置 draining（自身心跳報 unhealthy、不接活）——**GLOWS 上那台 6000 Ada 還在計費，Edward 驗收滿意後請至主控台 Stop & Release** ② `deploy/glows/.env` 的 GLOWS SDK 通行碼已失效（查門牌／自動開關都靠它）——請 Edward 從 Profile 抄新的 ③ `web/src/app.js` `FLASHHEAD_URL_DEFAULT` 仍指死門牌 tw-07:26969（主路徑由 Gateway 發牌不受影響；下次包版順手改 26455）④ RunPod 備援列 terminated、未動。
 
-### 待審：B1貼身感小刀——CORE補下限規則+側寫/記憶提前（2026-07-24 卡西法/城堡 · Draft PR #245）
+### 待審：B1貼身感小刀——CORE補下限規則+側寫/記憶提前（2026-07-24 卡西法/城堡 · PR #245 已 ready）
 
 - Branch：`calcifer/b1-personalization-scalpel-20260724`；獨立 worktree，基準 `origin/main@b94fba6`。
 - 檔案：`engine/chat_engine.py`（CORE ⓪-D 補「貼身感下限」+「問診分寸」兩條規則）、`engine/server.py`（`reply_context_instruction()` living_line＋相關記憶區塊往前移＋措辭改硬性）。未動 RED、未動21題衛教內容、未帶評測工具進本PR（評測工具是PR #242範圍）。
 - 目標：稽核發現黃金集26題貼身感只五成（已注入側寫但寧寧沒接住）；霍爾/卡西法討論收斂B1先單獨做、驗證量尺會動，B2(21題衛教)之後疊加。
 - 驗過沒：46題危機測試不受影響仍46/46；黃金集26題before/after配對跑，personalization 50%→66.7%(回升，符合預期)，但taiwan_local/plain_language各掉1題；重複抽樣噪聲檢查發現±1題規模差異在temp=0.7下無法排除是抽樣噪聲(g06/g24兩次after跑動間直接翻轉)；7題無側寫題人眼核對皆無硬拗捏造背景。
-- **誠實結論非乾淨PASS**：對照自訂驗收關卡（其他類別不得倒退）本次未乾淨達標，PR描述附三個選項（A接受小風險合併/B補N=3重複取樣/C先改善量尺方法論）待Edward/馬魯克拍板，PR維持Draft不自行合併。
+- **Edward 裁決選 B，已收尾**：補做 N=3 多數決（3個獨立完整26題跑動，2/3過算過）分清因果——personalization 33.3%→66.7%(+2題，B1真有效)；medboundary 持平(46.2%→46.2%)＝噪聲不追；taiwan_local/plain_language category層級持平或-1題，但逐題揪出g14(CRP解釋題)3/3→1/3、g24(找公園題)3/3→0/3兩個真回歸（穩定退步、非噪聲），共同模式＝為了貼身感省略了原本該有的收尾動作。補⓪-D-3規則修復（貼身感是多做一件事、不是少做另一件必要的事）並二次N=3驗證：g14修後3/3穩定PASS、g24修後0/3→2/3多數轉PASS。順手在 `engine/eval/README.md`（PR #242）記錄「單次跑動雜訊不可信」教訓、把 `run_eval.py --repeat N` 多數決模式列為B2前置待辦。PR #245 已標 ready，CI全綠。B1收工。
 
 ### 待審：測試帳號跟真實用戶隔離（2026-07-21 Claude/城堡 · Draft PR #222）
 
