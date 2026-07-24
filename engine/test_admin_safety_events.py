@@ -66,14 +66,17 @@ class AdminSafetyEventsSummaryTests(unittest.TestCase):
     def test_guardian_risk_events_and_safety_summaries_aggregate_cross_account(self):
         self._seed_events([
             {
+                # analyticsExcluded=True 是 guardian_evaluate_response 對每一筆風險評估都會寫的
+                # 固定旗標（避免污染「有意義互動天數」等成長指標），跟帳號是不是測試帳號無關——
+                # 安全守護警示頁必須照樣算進來，不能被這個旗標濾掉（2026-07-24 smoke 紅燈實測）。
                 "id": "ev-1", "accountId": "account-a", "personId": "elder-a",
                 "eventName": "guardian_risk_evaluated", "eventTime": self._iso(0),
-                "properties": {"riskLevel": "high", "categories": ["fall"]},
+                "properties": {"riskLevel": "high", "categories": ["fall"], "analyticsExcluded": True},
             },
             {
                 "id": "ev-2", "accountId": "account-b", "personId": "elder-b",
                 "eventName": "guardian_risk_evaluated", "eventTime": self._iso(1),
-                "properties": {"riskLevel": "low", "categories": ["mood"]},
+                "properties": {"riskLevel": "low", "categories": ["mood"], "analyticsExcluded": True},
             },
         ])
         self._seed_summaries([
