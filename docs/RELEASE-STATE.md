@@ -2,7 +2,7 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-20 00:21 Asia/Taipei` (public runtime refresh and QA account readiness)
+Snapshot time: `2026-07-24 21:00 Asia/Taipei` (production + staging 1.0.44 runtime + deployment ledger reconciliation; App lanes below unchanged from 2026-07-20 refresh)
 
 Source baseline: `origin/main@00d3eb3`
 
@@ -35,11 +35,11 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Environment | Service | Serving identity observed from public endpoint | Interpretation | Evidence time |
 |---|---|---|---|---|
-| production | Brain | `1.0.40@fa14e4c`, `munea-brain-00006-faw` | `/version` 200；100% traffic 已由 exact-revision promotion 切換。此 revision 與 uploaded Build 47 同 commit，含 Apple Product ID 不變的 100／300／600／1000 點數包與 Plus 100／Pro 200 入帳 mapping；不含 Draft #174／#175。安全 smoke 與新 revision ERROR log 檢查 PASS，真人 Sandbox purchase 仍 pending | 2026-07-18 17:23 |
-| production | Voice | `1.0.41@906732ab`, `munea-voice-00007-xab` | `/version` 200；已與 current source Voice commit 對齊。這只證明部署身分，真人通話仍需安裝版 App E2E | 2026-07-20 00:21 |
+| production | Brain | `1.0.44@8ddab84c`, `munea-brain-00021-kow` | `/version` 200；canary 0% PASS 後 exact-revision promotion 切 100% 流量（tag `prod-0724-204855-8ddab84`）。此 revision 帶 `MUNEA_APNS_KEY_ID=59QVAHNMZP` 推播鑰匙正式生效；回滾至 `munea-brain-00018-beg` | 2026-07-24 20:48 |
+| production | Voice | `1.0.44@8ddab84c`, `munea-voice-00009-muh` | `/version` 200；canary 0% PASS 後 exact-revision promotion 切 100% 流量（tag `prod-0724-204904-8ddab84`）；回滾至 `munea-voice-00007-xab` | 2026-07-24 20:49 |
 | production | Call Control / Gateway | release identity `unknown` | 公開 `/health` 無憑證回 401，auth boundary 正常；authenticated lease／cleanup 與 source commit 未證明 | 2026-07-18 00:20 |
-| staging | Brain | `1.0.40@fa14e4c`, `munea-brain-staging-00063-tod` | `/version` 200；pricing exact revision 100% serving，安全 smoke PASS；不是 production，且不代表真人購買驗收 | 2026-07-20 00:21 |
-| staging | Voice | `1.0.41@906732ab`, `munea-voice-staging-00053-xow` | `/version` 200；公開 identity 已刷新；不是 production，真人通話仍需 App E2E | 2026-07-20 00:21 |
+| staging | Brain | `1.0.44@dfea6aac`, `munea-brain-staging-00083-veh` | `/version` 200；安全兩閘（canary 0%→自動驗證→promote）PASS，語音 s2s 探針 5/5 PASS；`dfea6aac` 與正式線 `8ddab84c` 之間僅差文件、程式本體相同；不是 production | 2026-07-24 19:50 |
+| staging | Voice | `1.0.44@dfea6aac`, `munea-voice-staging-00058-yer` | `/version` 200；同上安全兩閘 PASS；不是 production，真人通話仍需 App E2E | 2026-07-24 19:50 |
 
 `/version` 是 runtime identity authority。上述 5 個公開 target 的 safe observation、target-config hash、capture time 與 capture source commit 保存在 [`RELEASE-EVIDENCE-LATEST.json`](./RELEASE-EVIDENCE-LATEST.json)，以 [`RELEASE-EVIDENCE-TARGETS.json`](./RELEASE-EVIDENCE-TARGETS.json) 及 `npm run release:evidence:check`（= `python scripts/release_evidence.py check --max-age-hours 24 --strict-version`）驗 freshness 與版號對齊；上線前跑這一條。CI 常駐的 `python scripts/release_evidence.py check`（無 `--strict-version`）只擋真漂移：sourceVersion 缺值、看不懂、或超前 package version。證據落後 package version 是版號跳了還沒重擷的正常開發狀態，只給 warning，重擷用 `npm run release:evidence:capture`。Cloud Run Ready、0% canary、source equivalence或 App 預設 URL 都不能替代 serving identity 與真實 client trace。
 
@@ -48,7 +48,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Item | Current state | Interpretation |
 |---|---|---|
 | Repo migration head | `019` | `019_pricing_plus100_pro200.sql` 存在；本輪補入 migration manifest。這只證明 source governance |
-| Environment deployment ledger | `supabase/deployment-ledger.json` | 東京 20 支 migration 逐支對應 manifest checksum；17 筆 historical claim、0 筆 unknown、3 筆 blocked；`verifiedHead=null` |
+| Environment deployment ledger | `supabase/deployment-ledger.json` | 東京 27 支 migration 逐支對應 manifest checksum；17 筆 historical claim、4 筆 unknown（`020`／`021`／`022`／`026`）、3 筆 blocked（`017`／`018`／`019`）、3 筆 verified read-only-probe（`023`／`024`／`025`，2026-07-24）；`verifiedHead=null`（`001` 起未形成連續 verified chain） |
 | Tokyo applied `017` | `blocked / HTTP 404` | 07:12 UTC GET-only probe 對正確東京 project 發出請求，`notification_settings` 不可到達；需核准套用後重驗 |
 | Tokyo applied `018` | `blocked / partial photo-key=0` | destructive cleanup 仍需 approval、backup、完整 data-image pre-check／post-check；單一欄位零筆不能升格 |
 | Tokyo applied `019` | `blocked / policy mismatch` | policy table 可查，但沒有符合 active v4 Plus 100／Pro 200 的資料；需核准套用後重驗 |
