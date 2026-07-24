@@ -40,6 +40,11 @@ WEB_DIR = os.path.normpath(os.path.join(HERE, "..", "web"))
 BRAIN_RELEASE_METADATA = build_service_metadata("munea-brain")
 DEFAULT_CHAR = "寧寧"
 COMPANION_PROFILE_PATH = os.environ.get("MUNEA_COMPANION_PROFILE_PATH") or os.path.join(HERE, "companion_profile.json")
+# Backlog（沙利曼 Gate 5 2026-07-24 二輪抓到，先記不實作）：這支本機 JSON fallback 檔跟
+# companion_profile.json 同款式，是「單一租戶開發模式」的共用檔案，非雲端環境下所有使用者
+# 會寫進同一份檔案、後寫覆蓋先寫。正式機（MUNEA_DATABASE_PROVIDER=supabase 且已配置）不受影響
+# ——雲端路徑一律走 persons 表、per-person 隔離；只有本機/開發模式沒接雲端時才會退到這裡。
+# 之後如需真正多人本機開發（而非單租戶 demo），應改成 per-person 檔名或直接停寫。
 PERSON_PROFILE_PATH = os.environ.get("MUNEA_PERSON_PROFILE_PATH") or os.path.join(HERE, "person_profile.json")
 APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")

@@ -76,6 +76,8 @@ const DEV_FIXTURE_MARKER_KEY = 'munea.developmentFixtures.v1';
 // 開帳與個人資料重整（2026-07-24）：首登一次性彈個人資料卡的旗標——填了或跳過都算「問過」，
 // 之後永不再自動彈；跳過者靠首頁「讓寧寧更認識你」小卡（見 renderProfilePromptCard）自己回來補。
 const PERSON_PROFILE_PROMPT_KEY = 'munea.personProfilePrompted.v1';
+// 女巫 Gate 2 二輪：小卡加低調 X，點了永久不再顯示（Edward 哲學：不強迫，這卡不該無法擺脫）。
+const PROFILE_NUDGE_DISMISSED_KEY = 'munea.profileNudgeDismissed.v1';
 
 /* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
@@ -3250,7 +3252,8 @@ function renderFreeMemberBadge() {
 function renderProfilePromptCard() {
   const card = $('#profileNudgeCard');
   if (!card) return;
-  const show = isLoggedIn() && storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true' && !personProfileHasData();
+  const show = isLoggedIn() && storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true'
+    && storageGet(PROFILE_NUDGE_DISMISSED_KEY) !== 'true' && !personProfileHasData();
   card.hidden = !show;
 }
 function renderAuthAvatar(state = authState(), signedIn = state.status === 'signed-in') {
@@ -5486,6 +5489,7 @@ function init() {
   // 回到「一般模式」（設定頁點『個人資料』進來時用的就是這個乾淨版）。
   function closeProfileFirstRunUi() {
     const banner = $('#pfFirstRunBanner'); if (banner) banner.hidden = true;
+    const disclosure = $('#pfFirstRunDisclosure'); if (disclosure) disclosure.hidden = true;
     const skip = $('#pfSkipBtn'); if (skip) skip.hidden = true;
     const modal = $('#profileModal'); if (modal) modal.classList.remove('pf-first-run');
   }
@@ -5498,6 +5502,9 @@ function init() {
       if (nameInput && !nameInput.value && st && st.name) nameInput.value = String(st.name).trim().slice(0, 12);
     } catch (e) {}
     const banner = $('#pfFirstRunBanner'); if (banner) banner.hidden = false;
+    // 沙利曼 Gate 5：資料在按「存好」當下就上傳，告知必須早於上傳（放在存好鈕正上方），
+    // 不能只靠聊聊前的同意卡把關——那時個人資料早就已經存過雲了。
+    const disclosure = $('#pfFirstRunDisclosure'); if (disclosure) disclosure.hidden = false;
     const skip = $('#pfSkipBtn'); if (skip) skip.hidden = false;
     const modal = $('#profileModal');
     if (modal) { modal.classList.add('pf-first-run'); modal.classList.add('show'); }
@@ -5542,7 +5549,13 @@ function init() {
     renderProfilePromptCard();
     try { trackProductEvent('person_profile_first_prompt_skipped', {}); } catch (e) {}
   });
-  if ($('#profileNudgeCard')) $('#profileNudgeCard').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
+  if ($('#profileNudgeCardMain')) $('#profileNudgeCardMain').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
+  if ($('#profileNudgeCardClose')) $('#profileNudgeCardClose').addEventListener('click', e => {
+    e.stopPropagation();
+    storageSet(PROFILE_NUDGE_DISMISSED_KEY, 'true');
+    renderProfilePromptCard();
+    try { trackProductEvent('person_profile_nudge_dismissed', {}); } catch (e2) {}
+  });
   if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
   if ($('#profileClose')) $('#profileClose').addEventListener('click', () => $('#profileModal').classList.remove('show'));
   if ($('#profileModal')) $('#profileModal').addEventListener('click', e => { if (e.target === $('#profileModal')) $('#profileModal').classList.remove('show'); });
