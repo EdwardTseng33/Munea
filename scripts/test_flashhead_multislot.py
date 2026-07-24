@@ -436,6 +436,57 @@ def test_force_release_slot_used_by_unhealthy_path():
     print("test_force_release_slot_used_by_unhealthy_path: PASS")
 
 
+def test_antiflicker_freezes_static_background_keeps_motion():
+    """時間穩定器（2026-07-24 待機背景微閃爍修正）：
+    1. 背景 ±2 階微雜訊 -> 凍住（輸出跟第一張完全一致）
+    2. 真動作（0<->200 大幅變化）-> 照常通過、不被凍
+    3. reset() 清基準 -> 下一張原樣通過、不跟舊一輪畫面混合"""
+    slot = make_slot(0, "s0")
+    emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+
+    rng = np.random.default_rng(7)
+    base = np.full((8, 8, 3), 120, dtype=np.uint8)
+    n = 6
+    frames = np.zeros((n, 8, 8, 3), dtype=np.uint8)
+    for i in range(n):
+        noise = rng.integers(-2, 3, size=(8, 8, 3))
+        frames[i] = np.clip(base.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+        # 「嘴巴」那格做真動作：0 <-> 200 交替（差異遠超 AF_HI，必須通過）
+        frames[i, 6, 6] = 200 if i % 2 == 0 else 0
+
+    out = feeder._stabilize(frames.copy(), feeder._epoch)
+
+    bg = np.ones((8, 8), dtype=bool)
+    bg[6, 6] = False
+    for i in range(1, n):
+        assert np.array_equal(out[i][bg], out[0][bg]), \
+            "frame %d: static background noise must be frozen" % i
+    mouth = [int(out[i][6, 6, 0]) for i in range(n)]
+    assert max(mouth) > 150 and min(mouth) < 50, "real motion must pass through"
+
+    feeder.reset()
+    assert feeder._prev_frame is None, "reset must clear the stabilizer baseline"
+    fresh = np.full((1, 8, 8, 3), 10, dtype=np.uint8)
+    out2 = feeder._stabilize(fresh.copy(), feeder._epoch)
+    assert np.array_equal(out2[0], fresh[0]), "first frame after reset must pass unchanged"
+
+    # cv2 快路徑與 numpy 備援必須輸出完全一致（含中間混合帶）
+    try:
+        import cv2
+    except ImportError:
+        cv2 = None
+    if cv2 is not None:
+        prev = rng.integers(0, 255, size=(32, 32, 3)).astype(np.uint8)
+        # 差異值刻意覆蓋 0..30：涵蓋凍住帶 / 混合帶 / 放行帶
+        cur = np.clip(prev.astype(np.int16)
+                      + rng.integers(-30, 31, size=(32, 32, 3)), 0, 255).astype(np.uint8)
+        got_np = fec.stabilize_frame(prev.copy(), cur.copy(), None)
+        got_cv = fec.stabilize_frame(prev.copy(), cur.copy(), cv2)
+        assert np.array_equal(got_np, got_cv), "cv2 and numpy paths must agree exactly"
+    print("test_antiflicker_freezes_static_background_keeps_motion: PASS")
+
+
 def main():
     test_admission_find_free_and_full()
     test_admission_release_and_reclaim()
@@ -450,6 +501,7 @@ def main():
     test_health_snapshot_math()
     test_frame_size_contract()
     test_force_release_slot_used_by_unhealthy_path()
+    test_antiflicker_freezes_static_background_keeps_motion()
     print("FlashHead multi-slot smoke test: ALL PASS")
 
 

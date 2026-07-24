@@ -4005,6 +4005,18 @@ def test_account_id_set(force_refresh=False):
     return ids
 
 
+def analytics_excluded_id_set():
+    """帳號／長輩／session 三種 ID 的分析排除清單合集：env 手動清單 ＋ test_account_id_set() 快取。
+    後台事件排除（is_analytics_excluded_event）與跨帳號小工具列排除（is_admin_row_excluded）共用
+    這份，一個請求只算一次（test_account_id_set 本身已有 TTL 快取，這裡不再重查 Supabase／GoTrue）。"""
+    excluded_ids = set()
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS"))
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS"))
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS"))
+    excluded_ids.update(test_account_id_set())
+    return excluded_ids
+
+
 def is_analytics_excluded_event(event):
     props = event.get("properties") or {}
     for key in ("analyticsExcluded", "excludeAnalytics", "developerMode", "isDeveloperActivity", "operationalAccount"):
@@ -4013,14 +4025,22 @@ def is_analytics_excluded_event(event):
     account_type = str(props.get("accountType") or props.get("actorType") or props.get("environment") or "").strip().lower()
     if account_type in {"developer", "dev", "internal", "test", "qa", "ops", "operational"}:
         return True
-    excluded_ids = set()
-    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS"))
-    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS"))
-    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS"))
-    excluded_ids.update(test_account_id_set())  # 帳號層測試判準併入事件排除（2026-07-21 補）
+    excluded_ids = analytics_excluded_id_set()
     if event.get("accountId") in excluded_ids or event.get("personId") in excluded_ids or event.get("sessionId") in excluded_ids:
         return True
     return False
+
+
+def is_admin_row_excluded(row, excluded_ids=None):
+    """後台跨帳號小工具列（用藥／心情／關係深度／安全事件摘要等，沒有 properties 旗標可讀，
+    只有 accountId／personId）的測試帳號排除判準——跟事件排除共用同一份 ID 集合／同一份快取，
+    2026-07-24 稽核補：這五頁原本完全沒接測試帳號排除，示範／QA 帳號會混進真實營運數字。"""
+    if not isinstance(row, dict):
+        return False
+    ids = excluded_ids if excluded_ids is not None else analytics_excluded_id_set()
+    account_id = row.get("accountId") or row.get("account_id")
+    person_id = row.get("personId") or row.get("person_id")
+    return (account_id is not None and account_id in ids) or (person_id is not None and person_id in ids)
 
 
 def append_product_event(data=None):
@@ -4512,12 +4532,16 @@ def admin_accounts_summary(data=None):
 
 
 def admin_credits_summary(data=None):
+    """點數組成與最近異動：讀的是目前 request context 這一個帳號（本機示範帳號／單一登入身分），
+    不是跨帳號聚合查詢——跟其他用 load_admin_* 全表查詢的後台頁不同，用 scope 欄位老實標出來，
+    前端未來要顯示提醒可以認這個欄位（2026-07-24 稽核補；本次不動 web/admin.js）。"""
     data = data or {}
     limit = max(1, min(100, int(data.get("limit") or 25)))
     billing = load_billing_store()
     credits = load_credits_store()
     return {
         "ok": True,
+        "scope": "single_demo_account",
         "accountId": billing.get("accountId") or credits.get("accountId"),
         "activePlan": billing.get("activePlan"),
         "subscription": billing.get("subscription"),
@@ -4532,9 +4556,34 @@ def admin_credits_summary(data=None):
     }
 
 
+# 訂閱 MRR 換算用的方案月費：跟 web/src/app.js 的 SUB_PRICE、supabase/sql/019_pricing_plus100_pro200.sql
+# 說明欄位（Plus NT$599／月、Pro NT$1,199／月）同一組數字——只有這一個地方該存這組數字，
+# 價格異動要三處一起改，不在這裡另外發明新價格。
+ADMIN_SUBSCRIPTION_MONTHLY_PRICE_NTD = {"plus": 599, "pro": 1199}
+
+
+def _latest_admin_ledger_row_per_account(rows):
+    """依 accountId 只留『目前最新一筆』（updatedAt 沒有就退 createdAt），跟
+    get_latest_subscription_ledger 的『最新一筆』定義一致——避免歷史上任何一筆 active
+    就被誤算成『現在還在付費』（subscription_ledger 是逐筆異動的帳本，不是目前狀態表）。"""
+    latest = {}
+    stamps = {}
+    for row in rows or []:
+        acc = row.get("accountId")
+        if not acc:
+            continue
+        stamp = str(row.get("updatedAt") or row.get("createdAt") or "")
+        if acc not in stamps or stamp >= stamps[acc]:
+            stamps[acc] = stamp
+            latest[acc] = row
+    return list(latest.values())
+
+
 def admin_subscription_metrics(data=None):
     """訂閱營運聚合：從 product_events 算能算的真數字（新增訂閱/點數/註冊/轉換率）；
-    MRR 與流失率需要『目前有效訂閱聚合』與『取消事件』，尚未具備時誠實回 None + 原因。"""
+    MRR＝目前有效訂閱（subscription_ledger 每帳號最新一筆）× 方案月費，跟『成長與黏著』頁
+    的付費判定共用同一張表；流失率需要 subscription_cancelled／downgraded 事件，尚未具備，
+    誠實回 None（2026-07-24 稽核補：MRR 之前一律回 None，底層資料其實已經存在）。"""
     data = data or {}
     days = max(1, min(90, int(data.get("days") or 30)))
     now = datetime.now(timezone.utc)
@@ -4560,6 +4609,22 @@ def admin_subscription_metrics(data=None):
         elif name == "onboarding_completed":
             registrations += 1
     conversion = round(new_subs / registrations, 4) if registrations else None
+
+    excluded_ids = analytics_excluded_id_set()
+    ledger_rows = load_admin_growth_subscription_rows(limit=20000)
+    ledger_rows = [row for row in ledger_rows if not is_admin_row_excluded(row, excluded_ids)]
+    latest_ledger_rows = _latest_admin_ledger_row_per_account(ledger_rows)
+    active_subscribers_by_plan = {}
+    for row in latest_ledger_rows:
+        status = str(row.get("status") or "").strip().lower()
+        plan = str(row.get("activePlan") or "").strip().lower()
+        if status == "active" and plan in ADMIN_SUBSCRIPTION_MONTHLY_PRICE_NTD:
+            active_subscribers_by_plan[plan] = active_subscribers_by_plan.get(plan, 0) + 1
+    mrr = sum(
+        count * ADMIN_SUBSCRIPTION_MONTHLY_PRICE_NTD[plan]
+        for plan, count in active_subscribers_by_plan.items()
+    )
+
     return {
         "ok": True,
         "windowDays": days,
@@ -4570,11 +4635,10 @@ def admin_subscription_metrics(data=None):
         "pointsTotal": round(points_total),
         "registrations": registrations,
         "freeToPaidConversion": conversion,
-        "mrr": None,
-        "activeSubscribersByPlan": None,
+        "mrr": mrr,
+        "activeSubscribersByPlan": dict(sorted(active_subscribers_by_plan.items())),
         "churnRate": None,
         "pending": {
-            "mrr": "需要跨帳號『目前有效訂閱』聚合（訂閱事件只記新購、不記目前狀態）",
             "churnRate": "需要 subscription_cancelled / subscription_downgraded 事件（目前只記進、不記出）",
         },
         "backend": data_backend_status(),
@@ -4718,6 +4782,14 @@ def admin_safety_events_summary(data=None):
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
     events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
+    # 2026-07-24 補：這頁原本沒接測試帳號排除。注意：不能借用 is_analytics_excluded_event，
+    # 那支連 analyticsExcluded/developerMode 這類「不算進互動指標」的事件級旗標都會濾掉——
+    # guardian_evaluate_response 對每一筆守護風險評估都固定寫 analyticsExcluded=True（避免
+    # 系統自動觸發的評估污染「有意義互動天數」等成長指標），這是跟帳號是不是測試帳號無關的
+    # 另一件事。這裡只用帳號／長輩層級的測試判準（is_admin_row_excluded），安全守護警示頁
+    # 才不會把真實帳號的正常風險事件也一起濾掉（2026-07-24 smoke 紅燈實測抓到）。
+    excluded_ids = analytics_excluded_id_set()
+    events = [event for event in events if not is_admin_row_excluded(event, excluded_ids)]
     safety_events = []
     for event in events:
         if event.get("eventName") != "guardian_risk_evaluated":
@@ -4745,6 +4817,8 @@ def admin_safety_events_summary(data=None):
     summaries = load_conversation_summaries(limit=500, include_deleted=False)
     for summary in summaries:
         if not summary.get("safetyRelevant"):
+            continue
+        if is_admin_row_excluded(summary, excluded_ids):
             continue
         tags = summary.get("memoryTags") or []
         if category_filter and category_filter not in tags:
@@ -4860,6 +4934,8 @@ def admin_medication_adherence(data=None):
     days = max(1, min(180, int(data.get("days") or 30)))
     limit = max(1, min(200, int(data.get("limit") or 50)))
     items, since_date = load_admin_medication_dose_events(days=days, limit=3000)
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    items = [item for item in items if not is_admin_row_excluded(item, excluded_ids)]
 
     totals = {"scheduled": 0, "taken": 0, "snoozed": 0, "skipped": 0, "missed": 0}
     daily = {}
@@ -5033,6 +5109,8 @@ def admin_mood_trend(data=None):
     days = max(1, min(180, int(data.get("days") or 30)))
     limit = max(1, min(200, int(data.get("limit") or 50)))
     items, since_date = load_admin_wellbeing_signal_rows(days=days, limit=5000)
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    items = [item for item in items if not is_admin_row_excluded(item, excluded_ids)]
 
     totals = {"signals": 0, "positive": 0, "steady": 0, "low": 0, "other": 0}
     level_sum, level_count = 0.0, 0
@@ -5347,6 +5425,14 @@ def admin_family_health(data=None):
     engagement_events, _ = load_admin_family_engagement_rows(days=days, limit=5000)
     invitations = load_admin_family_invitation_rows(days=days, limit=3000)
 
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    membership_rows = [row for row in membership_rows if not is_admin_row_excluded(row, excluded_ids)]
+    relay_rows = [row for row in relay_rows if not is_admin_row_excluded(row, excluded_ids)]
+    activity_rows = [row for row in activity_rows if not is_admin_row_excluded(row, excluded_ids)]
+    participant_rows = [row for row in participant_rows if not is_admin_row_excluded(row, excluded_ids)]
+    engagement_events = [event for event in engagement_events if not is_analytics_excluded_event(event)]
+    invitations = [row for row in invitations if not is_admin_row_excluded(row, excluded_ids)]
+
     households = {}
     for row in membership_rows:
         fg = row.get("familyGroupId")
@@ -5585,6 +5671,10 @@ def admin_bond_depth(data=None):
 
     relationship_rows = load_admin_relationship_state_rows(limit=10000)
     memory_rows = load_admin_memory_item_count_rows(limit=50000)
+
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    relationship_rows = [row for row in relationship_rows if not is_admin_row_excluded(row, excluded_ids)]
+    memory_rows = [row for row in memory_rows if not is_admin_row_excluded(row, excluded_ids)]
 
     now = datetime.now(timezone.utc)
     since_iso = (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -5942,7 +6032,10 @@ def admin_growth_metrics(data=None):
 FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
 
 def feedback_response(data):
-    """意見與建議收件箱：type=bug|idea|praise|nps ＋ 分類/內容/分數＋自動情境（版本/方案），供後台篩選整理。"""
+    """意見與建議收件箱：type=bug|idea|praise|nps ＋ 分類/內容/分數＋自動情境（版本/方案），供後台篩選整理。
+    優先寫 Supabase feedback_items（跨副本共用、部署不會洗掉）；026 沒跑或雲端不可用時優雅退回
+    本地 JSON（單機備援，跟 026 之前的行為一致，不因為新表沒建就整支功能壞掉，2026-07-24 稽核補：
+    這支原本只寫本機檔案，多副本／每次部署都會分裂或洗掉意見收件箱）。"""
     data = data or {}
     ftype = str(data.get("type") or "").strip()
     if ftype not in ("bug", "idea", "praise", "nps", "survey"):
@@ -5961,34 +6054,64 @@ def feedback_response(data):
     img = data.get("image")
     if isinstance(img, str) and img.startswith("data:image/") and len(img) <= 700000:  # ~700KB 上限（壓過的小圖綽綽有餘）
         item["image"] = img
-    items = read_json_file(FEEDBACK_PATH, [])
-    if not isinstance(items, list):
-        items = []
-    items.append(item)
-    write_json_file(FEEDBACK_PATH, items[-5000:])
+    backend_used = "json"
+    try:
+        remote_item = data_backend().save_feedback_item(item)
+        if remote_item is not None:
+            backend_used = "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save feedback item to Supabase", e)
+    if backend_used != "supabase":
+        items = read_json_file(FEEDBACK_PATH, [])
+        if not isinstance(items, list):
+            items = []
+        items.append(item)
+        write_json_file(FEEDBACK_PATH, items[-5000:])
     try:
         label = {"bug": "🐞問題", "idea": "💡建議", "praise": "❤️稱讚", "nps": "📊NPS", "survey": "📋問卷"}.get(ftype, ftype)
         summary = (item["category"] + " · " if item["category"] else "") + (f"{item['score']} 分" if item["score"] is not None else (item["text"][:60] or ""))
         notify.ops("feedback_received", f"{label} {summary}")
     except Exception as notify_error:
         log_fallback_exception("send feedback notification", notify_error)
-    return {"ok": True, "id": item["id"]}
+    return {"ok": True, "id": item["id"], "backend": backend_used}
 
 def admin_feedback_summary(data=None):
-    """後台整理：按類型/分類統計＋最新清單＋NPS 計算（推薦者9-10/中立7-8/批評者0-6）。"""
+    """後台整理：按類型/分類統計＋最新清單＋NPS 計算（推薦者9-10/中立7-8/批評者0-6）。
+    優先讀 Supabase feedback_items（跨副本合併後的真資料）；026 沒跑或雲端不可用時退回本機
+    備援檔（單一容器本地檔、多副本會分裂，誠實標成 degraded，2026-07-24 稽核補）。"""
     data = data or {}
-    items = read_json_file(FEEDBACK_PATH, [])
-    if not isinstance(items, list):
-        items = []
-    record_admin_data_source(
-        "feedback",
-        "json",
-        record_count=len(items),
-        data_as_of=latest_record_timestamp(items),
-        authority="prototype",
-        degraded=True,
-        degradation_reason="primary_adapter_not_implemented",
-    )
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    items = None
+    try:
+        remote_items = backend.load_admin_feedback_items(limit=5000)
+        if remote_items is not None:
+            items = remote_items
+            record_admin_data_source(
+                "feedback",
+                "supabase",
+                record_count=len(items),
+                data_as_of=latest_record_timestamp(items),
+            )
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin feedback items from Supabase", e)
+    if items is None:
+        items = read_json_file(FEEDBACK_PATH, [])
+        if not isinstance(items, list):
+            items = []
+        record_admin_data_source(
+            "feedback",
+            "json",
+            record_count=len(items),
+            data_as_of=latest_record_timestamp(items),
+            authority="fallback",
+            degraded=True,
+            degradation_reason=fallback_reason,
+        )
     by_type, by_cat = {}, {}
     nps_scores = []
     for it in items:

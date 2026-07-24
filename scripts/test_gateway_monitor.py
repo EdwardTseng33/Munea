@@ -59,35 +59,36 @@ class MetricsTests(unittest.TestCase):
             monitor.parse_prometheus_metrics("munea_avatar_capacity nope\n")
 
 
+class Response:
+    status = 200
+    headers = {"Content-Type": "application/json"}
+
+    def __init__(self, body: bytes) -> None:
+        self.body = body
+
+    def __enter__(self) -> "Response":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def getcode(self) -> int:
+        return self.status
+
+    def read(self) -> bytes:
+        return self.body
+
+
 class GatewayClientTests(unittest.TestCase):
     def test_poll_fetches_health_and_metrics_with_admin_bearer(self) -> None:
         requests: list[tuple[str, str, float]] = []
-
-        class Response:
-            status = 200
-            headers = {"Content-Type": "application/json"}
-
-            def __init__(self, body: bytes) -> None:
-                self.body = body
-
-            def __enter__(self) -> "Response":
-                return self
-
-            def __exit__(self, *args: object) -> None:
-                return None
-
-            def getcode(self) -> int:
-                return self.status
-
-            def read(self) -> bytes:
-                return self.body
 
         def opener(request: object, *, timeout: float) -> Response:
             url = request.full_url
             requests.append((url, request.get_header("Authorization"), timeout))
             if url.endswith("/health"):
                 return Response(b'{"ok":true,"mode":"durable","durable_ready":true}')
-            return Response(b"munea_avatar_capacity 3\n")
+            return Response(b"munea_avatar_capacity 3")
 
         client = monitor.GatewayClient(
             "https://gateway.test/",
@@ -102,6 +103,91 @@ class GatewayClientTests(unittest.TestCase):
             ("https://gateway.test/health", "Bearer admin-secret", 4.0),
             ("https://gateway.test/metrics", "Bearer admin-secret", 4.0),
         ])
+        self.assertEqual(result.worker_clock_checks, {})
+
+    def test_poll_skips_worker_clock_probing_without_a_configured_key(self) -> None:
+        """STATUS 125 defense line 2 is opt-in: unset MUNEA_APP_KEY must
+        leave this monitor byte-for-byte unchanged (no extra requests)."""
+        requests: list[str] = []
+
+        def opener(request: object, *, timeout: float) -> Response:
+            requests.append(request.full_url)
+            if request.full_url.endswith("/health"):
+                return Response(json.dumps({
+                    "ok": True,
+                    "snapshot": {"workers": [
+                        {"worker_id": "gpu-1", "url": "https://gpu-1.example"},
+                    ]},
+                }).encode("utf-8"))
+            return Response(b"")
+
+        client = monitor.GatewayClient(
+            "https://gateway.test/", timeout_seconds=4.0, opener=opener,
+        )
+        result = client.poll()
+        self.assertEqual(result.worker_clock_checks, {})
+        self.assertEqual(requests, ["https://gateway.test/health", "https://gateway.test/metrics"])
+
+    def test_poll_probes_each_worker_health_directly_for_clock_skew(self) -> None:
+        """STATUS 125 defense line 2: when a worker health key IS
+        configured, the monitor hits each worker's own /health (bypassing
+        the Gateway) with the shared key= and diffs its self-reported
+        server_time against the monitor's own clock."""
+        calls: list[str] = []
+
+        def opener(request: object, *, timeout: float) -> Response:
+            calls.append(request.full_url)
+            if request.full_url == "https://gateway.test/health":
+                return Response(json.dumps({
+                    "ok": True,
+                    "snapshot": {"workers": [
+                        {"worker_id": "gpu-1", "url": "https://gpu-1.example", "status": "ready"},
+                        {"worker_id": "gpu-2", "url": "https://gpu-2.example", "status": "ready"},
+                    ]},
+                }).encode("utf-8"))
+            if request.full_url == "https://gateway.test/metrics":
+                return Response(b"")
+            if request.full_url.startswith("https://gpu-1.example/health"):
+                # tw-06-shaped incident: worker clock is 256s fast.
+                return Response(json.dumps({"ok": True, "server_time": 743.0}).encode("utf-8"))
+            if request.full_url.startswith("https://gpu-2.example/health"):
+                return Response(json.dumps({"ok": True, "server_time": 999.5}).encode("utf-8"))
+            raise AssertionError("unexpected URL: " + request.full_url)
+
+        client = monitor.GatewayClient(
+            "https://gateway.test/",
+            timeout_seconds=4.0,
+            opener=opener,
+            worker_health_key="mnk_shared",
+            clock=lambda: 1000.0,
+        )
+        result = client.poll()
+        self.assertEqual(result.worker_clock_checks, {
+            "gpu-1": {"skew_seconds": 257.0},
+            "gpu-2": {"skew_seconds": 0.5},
+        })
+        self.assertIn("https://gpu-1.example/health?key=mnk_shared", calls)
+        self.assertIn("https://gpu-2.example/health?key=mnk_shared", calls)
+
+    def test_poll_records_worker_probe_failures_without_raising(self) -> None:
+        def opener(request: object, *, timeout: float) -> Response:
+            if request.full_url == "https://gateway.test/health":
+                return Response(json.dumps({
+                    "ok": True,
+                    "snapshot": {"workers": [
+                        {"worker_id": "gpu-down", "url": "https://gpu-down.example"},
+                    ]},
+                }).encode("utf-8"))
+            if request.full_url == "https://gateway.test/metrics":
+                return Response(b"")
+            raise TimeoutError("worker unreachable")
+
+        client = monitor.GatewayClient(
+            "https://gateway.test/", timeout_seconds=4.0, opener=opener,
+            worker_health_key="mnk_shared",
+        )
+        result = client.poll()
+        self.assertEqual(result.worker_clock_checks, {"gpu-down": {"error": "worker unreachable"}})
 
 
 class EvaluationTests(unittest.TestCase):
@@ -151,6 +237,69 @@ class EvaluationTests(unittest.TestCase):
         )
         keys = [alert.key for alert in monitor.evaluate_alerts(result, now=NOW)]
         self.assertEqual(keys, ["avatar_utilization_high", "voice_utilization_high"])
+
+    def test_worker_clock_skew_beyond_threshold_alerts(self) -> None:
+        """STATUS 125 defense line 2: a worker whose own clock has drifted
+        past the threshold must alert even though nothing else about it
+        looks unhealthy (fresh heartbeat, ready status, normal capacity)."""
+        result = healthy_result()
+        result.health["snapshot"]["workers"] = [
+            {"worker_id": "tw-06", "status": "ready", "last_heartbeat_at": NOW},
+        ]
+        result = monitor.PollResult(
+            health=result.health,
+            metrics=result.metrics,
+            worker_clock_checks={"tw-06": {"skew_seconds": 257.0}},
+        )
+        keys = [alert.key for alert in monitor.evaluate_alerts(result, now=NOW)]
+        self.assertEqual(keys, ["worker_clock_skew:tw-06"])
+
+    def test_worker_clock_skew_within_threshold_is_silent(self) -> None:
+        result = healthy_result()
+        result = monitor.PollResult(
+            health=result.health,
+            metrics=result.metrics,
+            worker_clock_checks={"tw-06": {"skew_seconds": 45.0}},
+        )
+        self.assertEqual(monitor.evaluate_alerts(result, now=NOW), [])
+
+    def test_worker_clock_skew_threshold_is_configurable(self) -> None:
+        result = healthy_result()
+        result = monitor.PollResult(
+            health=result.health,
+            metrics=result.metrics,
+            worker_clock_checks={"tw-06": {"skew_seconds": 45.0}},
+        )
+        keys = [
+            alert.key for alert in monitor.evaluate_alerts(
+                result, now=NOW, clock_skew_threshold_seconds=30.0,
+            )
+        ]
+        self.assertEqual(keys, ["worker_clock_skew:tw-06"])
+
+    def test_worker_clock_probe_error_does_not_alert_on_its_own(self) -> None:
+        """An unreachable-worker probe error is a reachability signal
+        already covered by worker_unhealthy/worker_heartbeat_stale -- it
+        must not raise a duplicate/confusing clock-skew alert by itself."""
+        result = healthy_result()
+        result = monitor.PollResult(
+            health=result.health,
+            metrics=result.metrics,
+            worker_clock_checks={"tw-06": {"error": "timed out"}},
+        )
+        self.assertEqual(monitor.evaluate_alerts(result, now=NOW), [])
+
+    def test_worker_clock_skew_negative_direction_also_alerts(self) -> None:
+        """The alert must fire regardless of sign -- a worker clock that is
+        slow is just as wrong as one that is fast."""
+        result = healthy_result()
+        result = monitor.PollResult(
+            health=result.health,
+            metrics=result.metrics,
+            worker_clock_checks={"tw-06": {"skew_seconds": -200.0}},
+        )
+        keys = [alert.key for alert in monitor.evaluate_alerts(result, now=NOW)]
+        self.assertEqual(keys, ["worker_clock_skew:tw-06"])
 
     def test_poll_failures_are_independent_alerts(self) -> None:
         result = monitor.PollResult(
