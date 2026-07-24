@@ -191,6 +191,13 @@
       "filename": "024_inactive_free_account_retention.sql",
       "type": "schema",
       "sha256": "65fffe16599ea06a0f128e58a2b365fe056dc33aa3ddd17f4e0c29ba59792fa2"
+    },
+    {
+      "order": 26,
+      "identity": "025",
+      "filename": "025_person_profile_fields.sql",
+      "type": "schema",
+      "sha256": "a2c53f8aaf310895658730b613c9ef5a151392b25bfb8bbf8bc8e66963550774"
     }
   ]
 }

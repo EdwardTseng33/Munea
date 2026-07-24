@@ -40,6 +40,12 @@ WEB_DIR = os.path.normpath(os.path.join(HERE, "..", "web"))
 BRAIN_RELEASE_METADATA = build_service_metadata("munea-brain")
 DEFAULT_CHAR = "寧寧"
 COMPANION_PROFILE_PATH = os.environ.get("MUNEA_COMPANION_PROFILE_PATH") or os.path.join(HERE, "companion_profile.json")
+# Backlog（沙利曼 Gate 5 2026-07-24 二輪抓到，先記不實作）：這支本機 JSON fallback 檔跟
+# companion_profile.json 同款式，是「單一租戶開發模式」的共用檔案，非雲端環境下所有使用者
+# 會寫進同一份檔案、後寫覆蓋先寫。正式機（MUNEA_DATABASE_PROVIDER=supabase 且已配置）不受影響
+# ——雲端路徑一律走 persons 表、per-person 隔離；只有本機/開發模式沒接雲端時才會退到這裡。
+# 之後如需真正多人本機開發（而非單租戶 demo），應改成 per-person 檔名或直接停寫。
+PERSON_PROFILE_PATH = os.environ.get("MUNEA_PERSON_PROFILE_PATH") or os.path.join(HERE, "person_profile.json")
 APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
 CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(HERE, "credits_store.json")
@@ -3767,6 +3773,82 @@ def companion_profile_response(data):
         profile = load_companion_profile()
     template = COMPANION_TEMPLATES[profile["templateId"]]
     return {"ok": True, "profile": profile, "backendChar": template["backendChar"], "backend": data_backend_status()}
+
+
+def normalize_person_profile(data):
+    """個人資料卡（web/index.html #profileModal）欄位正規化——名稱/暱稱/生日/所在地。
+
+    照片（avatar）刻意不在這裡：需求單拍板第一版照片只留本機、不上雲。
+    """
+    data = data or {}
+
+    def _clean_text(value, limit):
+        text = str(value if value is not None else "").strip()
+        return text[:limit] if text else ""
+
+    def _clean_year(value):
+        if value in (None, ""):
+            return None
+        try:
+            year = int(value)
+        except (TypeError, ValueError):
+            return None
+        return year if 1900 <= year <= 2100 else None
+
+    def _clean_month(value):
+        if value in (None, ""):
+            return None
+        try:
+            month = int(value)
+        except (TypeError, ValueError):
+            return None
+        return month if 1 <= month <= 12 else None
+
+    return {
+        "name": _clean_text(data.get("name"), 80),
+        "nick": _clean_text(data.get("nick") or data.get("nickname"), 40),
+        "birthYear": _clean_year(data.get("birthYear") if data.get("birthYear") is not None else data.get("birth_year")),
+        "birthMonth": _clean_month(data.get("birthMonth") if data.get("birthMonth") is not None else data.get("birth_month")),
+        "county": _clean_text(data.get("county"), 20),
+        "district": _clean_text(data.get("district"), 20),
+        "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
+    }
+
+
+def load_person_profile():
+    try:
+        remote_profile = data_backend().load_person_profile()
+        if remote_profile:
+            return normalize_person_profile(remote_profile)
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load person profile from Supabase", e)
+    stored = read_json_file(PERSON_PROFILE_PATH, {})
+    return normalize_person_profile(stored)
+
+
+def save_person_profile(data):
+    profile = normalize_person_profile({**(data or {}), "updatedAt": utc_now()})
+    try:
+        remote_profile = data_backend().save_person_profile(profile)
+        if remote_profile:
+            profile = normalize_person_profile(remote_profile)
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save person profile to Supabase", e)
+    write_json_file(PERSON_PROFILE_PATH, profile)
+    return profile
+
+
+def person_profile_response(data):
+    action = (data.get("action") or "load").lower()
+    if action == "save":
+        profile = save_person_profile(data.get("profile") or data)
+    else:
+        profile = load_person_profile()
+    return {"ok": True, "profile": profile, "backend": data_backend_status()}
 
 
 def app_profile_response(data):
@@ -8879,7 +8961,7 @@ class H(BaseHTTPRequestHandler):
                 "release": BRAIN_RELEASE_METADATA,
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "person-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
                 "notificationPush": apns_status(),
             })
@@ -9346,6 +9428,8 @@ class H(BaseHTTPRequestHandler):
                         self._json_error(400, error.get("code") or "test_flag_update_failed", "Test account flag could not be updated")
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
+            elif self.path == "/person-profile":
+                self._json(person_profile_response(data))
             elif self.path == "/app-profile":
                 self._json(app_profile_response(data))
             elif self.path == "/auth-status":

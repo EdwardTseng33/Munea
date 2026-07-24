@@ -1752,6 +1752,33 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .pf-form .chal-input { width: 100%; }
 .pf-birth { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
 .pf-hint { display: block; font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+/* 開帳與個人資料重整（2026-07-24）＋女巫 Gate 2 修正（2026-07-24 二輪）：首登彈卡視覺。 */
+.pf-first-run-banner { background: var(--mint); border: 1px solid rgba(58,168,160,.22); border-radius: var(--radius-sm); padding: 12px 14px; margin: 4px 0 4px; font-size: 15.5px; line-height: 1.6; color: var(--ink-2); }
+/* 沙利曼 Gate 5：存檔即上傳，告知要放在「存好」鈕正上方（比聊聊前同意卡更早） */
+.pf-first-run-disclosure { background: #FFF; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px; margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+/* 首登模式下，「名稱」（Google/Apple 帶入、多半不用手動改）與生日「月」／所在地「區」
+   照舊存在但不強調——真正要使用者動手的三格重點是家人稱呼／出生年／縣市（女巫 Gate 2 二輪：
+   原本誤調暗 #pfNick，應調暗 #pfName 那組；用 :has() 把整個 .pf-field 一起調暗）。 */
+.pf-first-run #pfBirthM, .pf-first-run #pfDistrict, .pf-first-run .pf-field:has(> #pfName) { opacity: .58; }
+/* 首頁「讓寧寧更認識你」小卡（跳過首登彈卡的人回來補資料的入口）。
+   外層 .profile-nudge-card 是純容器（不可點，避免巢狀互動元素），主體 .pnc-main 與
+   關閉鈕 .pnc-close 是兩顆各自獨立的按鈕——女巫 Gate 2 二輪：加低調 X，點了永久不再顯示。 */
+.profile-nudge-card { width: 100%; display: flex; align-items: center; background: var(--mint); border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 20px; box-shadow: var(--shadow-sm); position: relative; }
+.profile-nudge-card .pnc-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: none; border: none; padding: 13px 44px 13px 15px; margin: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.profile-nudge-card .pnc-ico { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 11px; background: #fff; display: grid; place-items: center; color: var(--teal-d); }
+.profile-nudge-card .pnc-ico .ic { width: 20px; height: 20px; }
+.profile-nudge-card .pnc-body { flex: 1; min-width: 0; }
+.profile-nudge-card .pnc-body b { display: block; font-family: var(--display); font-size: 15px; color: var(--ink); }
+.profile-nudge-card .pnc-body small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.profile-nudge-card .pnc-arrow { flex-shrink: 0; color: var(--muted); font-size: 17px; }
+/* 低調關閉鈕（Edward 哲學：不強迫，這卡不該無法擺脫）——觸控目標 44x44，視覺上只留一個小 x */
+.profile-nudge-card .pnc-close { position: absolute; top: 0; right: 0; width: 44px; height: 44px; display: grid; place-items: center; background: none; border: none; color: var(--muted); cursor: pointer; }
+.profile-nudge-card .pnc-close .ic { width: 14px; height: 14px; }
+/* 首頁「免費會員」小標——沿用 .mem-badge 既有色階，這裡只補外距 */
+.home-badge { margin-right: 2px; }
+/* 女巫 Gate 2 抓到的缺陷：.modal-btn.quiet 從未定義，跳過鈕跟「存好」鈕長一模一樣的實心綠——
+   跳過該是次要動作，不該跟主要動作視覺同權。沿用既有 .btn-quiet 色階慣例。 */
+.modal-btn.quiet { background: var(--mint); color: var(--teal-dd); border: 1.5px solid var(--teal-d); box-shadow: none; }
 
 /* ===== 方案完整子頁 ===== */
 .plan-scroll { padding-top: 8px; }

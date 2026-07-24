@@ -73,6 +73,11 @@ const ONBOARDING_COMPLETED_KEY = 'munea.onboardingCompleted.v1';
 const AI_PROVIDER_CONSENT_KEY = 'munea.aiProviderConsent.v1';
 const AI_PROVIDER_CONSENT_VERSION = '2026-07-02-ai-provider-v1';
 const DEV_FIXTURE_MARKER_KEY = 'munea.developmentFixtures.v1';
+// 開帳與個人資料重整（2026-07-24）：首登一次性彈個人資料卡的旗標——填了或跳過都算「問過」，
+// 之後永不再自動彈；跳過者靠首頁「讓寧寧更認識你」小卡（見 renderProfilePromptCard）自己回來補。
+const PERSON_PROFILE_PROMPT_KEY = 'munea.personProfilePrompted.v1';
+// 女巫 Gate 2 二輪：小卡加低調 X，點了永久不再顯示（Edward 哲學：不強迫，這卡不該無法擺脫）。
+const PROFILE_NUDGE_DISMISSED_KEY = 'munea.profileNudgeDismissed.v1';
 
 /* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
@@ -2518,6 +2523,15 @@ const LiveVoice = {
       // 所在地（可到區）→ 讓寧寧推薦附近真的吃得到的餐廳、聊在地話題（不再亂猜位置 · 7/9 Edward）
       const _loc = (_pp.city || '').trim();
       if (_loc) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'loc=' + encodeURIComponent(_loc);
+      // 年齡→語音節奏資料通道（開帳與個人資料重整 2026-07-24 拍板）：這裡只把資料備好、
+      // 不接消費端——「年齡→講話節奏預設」的三層 fallback 邏輯在 PR #243（engine/live_voice_server.py
+      // _voice_rhythm_param，該 PR 尚未合併，伺服器目前也不解析這個參數）。未知 query 參數會被安全忽略，
+      // 不影響現行通話；#243 合併後如需接線，於 live_voice_server.py 解析 `age` 餵進第①層 fallback。
+      const _bym = String(_pp.birth || '').match(/(19|20)(\d{2})/);
+      if (_bym) {
+        const _age = new Date().getFullYear() - parseInt(_bym[0], 10);
+        if (_age > 0 && _age < 130) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'age=' + encodeURIComponent(_age);
+      }
     } catch (e) {}
     // 能力握手：告訴伺服器「這版 App 接得住 AI 幫你設提醒」→ 只有新版才拿到設提醒工具，舊版不會被假成功（2026-07-09 Edward）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
@@ -3217,6 +3231,31 @@ function authState() {
 function localPersonAvatar() {
   try { return (JSON.parse(localStorage.getItem('munea.personProfile') || '{}')).avatar || ''; } catch (e) { return ''; }
 }
+// 個人資料卡是否已經有「真資料」（不是全空白）——首登彈卡與「讓寧寧更認識你」小卡都靠這個判斷，
+// 只看使用者會填的三格重點（家人稱呼／生日／所在地），不含名稱與照片（那兩格不影響「問過沒」判斷）。
+function personProfileHasData(p) {
+  const src = p || (function () { try { return JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); } catch (e) { return {}; } })();
+  return !!(src && (String(src.nick || '').trim() || String(src.city || '').trim() || String(src.birth || '').trim()));
+}
+// 首頁「免費會員」標示（Edward 2026-07-24 拍板）：只在真的登入且是免費方案時顯示，不動方案邏輯本身。
+function renderFreeMemberBadge() {
+  const el = $('#homeMemberBadge');
+  if (!el) return;
+  let dev = false;
+  try { dev = !!authState().developerMode; } catch (e) {}
+  const free = !window.MMPLAN || typeof window.MMPLAN.isFree !== 'function' || window.MMPLAN.isFree();
+  const show = isLoggedIn() && !dev && free;
+  el.hidden = !show;
+}
+// 首頁「讓寧寧更認識你」小卡：只在「問過（首登彈過）但當時跳過、後續也還沒補填」時顯示；
+// 點下去開的是同一張 #profileModal（一般模式，不是首登模式），跟設定頁的「個人資料」入口共用同一顆。
+function renderProfilePromptCard() {
+  const card = $('#profileNudgeCard');
+  if (!card) return;
+  const show = isLoggedIn() && storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true'
+    && storageGet(PROFILE_NUDGE_DISMISSED_KEY) !== 'true' && !personProfileHasData();
+  card.hidden = !show;
+}
 function renderAuthAvatar(state = authState(), signedIn = state.status === 'signed-in') {
   const box = $('#authAvatar');
   const img = $('#authAvatarImg');
@@ -3341,6 +3380,8 @@ function updateAuthUI() {
   const signOut = $('#authSignOutBtn');
   if (signOut) signOut.hidden = !signedIn;
   renderMemBadge();
+  renderFreeMemberBadge();
+  renderProfilePromptCard();
   renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
@@ -5265,7 +5306,8 @@ function init() {
     if (detail.status === 'signed-in') {
       closeAuthSheet();
       syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true })
-        .then(result => { if (result && result.ok) refreshServerCredits(); })
+        .then(result => { if (result && result.ok) refreshServerCredits(); return syncPersonProfileCloud(); })
+        .then(() => { maybeShowFirstRunProfilePrompt(); renderFreeMemberBadge(); })
         .catch(() => {});
     } else {
       POINTS.serverRemaining = null;
@@ -5312,7 +5354,7 @@ function init() {
     return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
   }
   let _pfPendingAvatar = '';
-  const PF_DEF = { name: '', nick: '', birth: '', city: '' };   // 7/9 正式化：不再預設示範身分（陳秀英/阿嬤）——空欄位＋提示字自己填
+  const PF_DEF = { name: '', nick: '', birth: '', city: '', updatedAt: '' };   // 7/9 正式化：不再預設示範身分（陳秀英/阿嬤）——空欄位＋提示字自己填；updatedAt 給雲端合併判斷「較新者勝」用（2026-07-24）
   function loadPersonProfile() { try { return Object.assign({}, PF_DEF, JSON.parse(localStorage.getItem('munea.personProfile') || '{}')); } catch (e) { return Object.assign({}, PF_DEF); } }
   // 所在地＝縣市→區 兩層下拉（iPhone 原生滾輪、長輩好按、零錯字 · 2026-07-09 Edward 改用選單）
   function pfCountyList() { return (window.TW_DISTRICTS ? Object.keys(window.TW_DISTRICTS) : []); }
@@ -5374,6 +5416,114 @@ function init() {
     _pfPendingAvatar = p.avatar || '';
     if (typeof renderPfAvatar === 'function') renderPfAvatar(p.avatar, p.nick);
   }
+  // 個人資料上雲同步（開帳與個人資料重整 2026-07-24 拍板）：本機 schema（birth="YYYY 年 M 月"字串、
+  // city=縣市＋區合併字串）跟 Brain /person-profile 的結構化欄位（birthYear/birthMonth/county/district）
+  // 互轉，換裝置登入同帳號資料都在；照片不上雲（沿用需求單拍板）。
+  function personProfileToCloudPayload(p) {
+    const my = p || loadPersonProfile();
+    const ym = String(my.birth || '').match(/(\d{4}).*?(\d{1,2})/);
+    const loc = parsePfCity(my.city || '');
+    return {
+      name: my.name || '',
+      nick: my.nick || '',
+      birthYear: ym ? parseInt(ym[1], 10) : null,
+      birthMonth: ym ? parseInt(ym[2], 10) : null,
+      county: loc.county || '',
+      district: loc.district || '',
+      updatedAt: my.updatedAt || '',
+    };
+  }
+  function cloudProfileToLocal(cloud, existing) {
+    const base = existing || loadPersonProfile();
+    const city = cloud.county ? (cloud.county + (cloud.district || '')) : base.city;
+    const birth = cloud.birthYear ? (cloud.birthYear + ' 年 ' + (cloud.birthMonth || 1) + ' 月') : base.birth;
+    return Object.assign({}, base, {
+      name: cloud.name || base.name,
+      nick: cloud.nick || base.nick,
+      birth: birth,
+      city: city,
+      updatedAt: cloud.updatedAt || base.updatedAt,
+    });
+  }
+  function pushPersonProfileToCloud(p) {
+    if (isStaticPreview() || usesDevelopmentDirectCall() || !isLoggedIn()) return Promise.resolve(null);
+    return brainPost('/person-profile', { action: 'save', profile: personProfileToCloudPayload(p) }).catch(() => null);
+  }
+  let _personProfileCloudSyncPromise = null;
+  // 開機／登入後跑一次：雲端有較新資料就合併回本機（換裝置場景）；
+  // 本機比雲端新（或雲端根本沒資料）就把本機資料補上雲（既有用戶/離線先存的場景）。
+  function syncPersonProfileCloud() {
+    if (isStaticPreview() || usesDevelopmentDirectCall() || !isLoggedIn()) return Promise.resolve(null);
+    if (_personProfileCloudSyncPromise) return _personProfileCloudSyncPromise;
+    _personProfileCloudSyncPromise = (async () => {
+      try {
+        const resp = await brainPost('/person-profile', { action: 'load' });
+        const cloud = resp && resp.ok && resp.profile ? resp.profile : null;
+        const local = loadPersonProfile();
+        const localAt = local.updatedAt ? (Date.parse(local.updatedAt) || 0) : 0;
+        const cloudAt = cloud && cloud.updatedAt ? (Date.parse(cloud.updatedAt) || 0) : 0;
+        const cloudHasData = !!(cloud && (cloud.nick || cloud.name || cloud.county || cloud.birthYear));
+        const localHasData = personProfileHasData(local);
+        if (cloudHasData && cloudAt >= localAt) {
+          const merged = cloudProfileToLocal(cloud, local);
+          try { localStorage.setItem('munea.personProfile', JSON.stringify(merged)); } catch (e) {}
+          if (typeof applyUserAvatar === 'function') applyUserAvatar();
+          return merged;
+        }
+        if (localHasData && (!cloudHasData || localAt > cloudAt)) {
+          if (!local.updatedAt) {
+            local.updatedAt = new Date().toISOString();
+            try { localStorage.setItem('munea.personProfile', JSON.stringify(local)); } catch (e) {}
+          }
+          await pushPersonProfileToCloud(local);
+          return local;
+        }
+        return local;
+      } catch (e) {
+        return null;
+      }
+    })();
+    return _personProfileCloudSyncPromise.finally(() => { _personProfileCloudSyncPromise = null; });
+  }
+  // 首登一次性彈個人資料卡（Edward 2026-07-24 拍板）：關掉首登視覺（banner＋跳過鈕），
+  // 回到「一般模式」（設定頁點『個人資料』進來時用的就是這個乾淨版）。
+  function closeProfileFirstRunUi() {
+    const banner = $('#pfFirstRunBanner'); if (banner) banner.hidden = true;
+    const disclosure = $('#pfFirstRunDisclosure'); if (disclosure) disclosure.hidden = true;
+    const skip = $('#pfSkipBtn'); if (skip) skip.hidden = true;
+    const modal = $('#profileModal'); if (modal) modal.classList.remove('pf-first-run');
+  }
+  function openProfileModalFirstRun() {
+    fillPersonProfile();
+    // 名稱預填：Google/Apple 帳號帶的名字（使用者還沒填過個人資料時，這是唯一能預填的來源）。
+    try {
+      const st = authState();
+      const nameInput = $('#pfName');
+      if (nameInput && !nameInput.value && st && st.name) nameInput.value = String(st.name).trim().slice(0, 12);
+    } catch (e) {}
+    const banner = $('#pfFirstRunBanner'); if (banner) banner.hidden = false;
+    // 沙利曼 Gate 5：資料在按「存好」當下就上傳，告知必須早於上傳（放在存好鈕正上方），
+    // 不能只靠聊聊前的同意卡把關——那時個人資料早就已經存過雲了。
+    const disclosure = $('#pfFirstRunDisclosure'); if (disclosure) disclosure.hidden = false;
+    const skip = $('#pfSkipBtn'); if (skip) skip.hidden = false;
+    const modal = $('#profileModal');
+    if (modal) { modal.classList.add('pf-first-run'); modal.classList.add('show'); }
+    storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+    try { trackProductEvent('person_profile_first_prompt_shown', {}); } catch (e) {}
+  }
+  // 登入成功＋帳號 bootstrap＋雲端個人資料合併都跑完才判斷要不要彈：
+  // 已問過＝不管；還沒問過但（本機或剛從雲端合併回來的）資料已經有內容＝視同舊用戶問過，靜靜補記旗標、不彈；
+  // 真的全空白才是「首登真新用戶」，這時才彈。
+  function maybeShowFirstRunProfilePrompt() {
+    if (!isLoggedIn()) return;
+    if (storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true') { renderProfilePromptCard(); return; }
+    if (personProfileHasData(loadPersonProfile())) {
+      storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+      renderProfilePromptCard();
+      return;
+    }
+    openProfileModalFirstRun();
+  }
   if ($('#pfSaveBtn')) $('#pfSaveBtn').addEventListener('click', () => {
     const p = {
       name: ($('#pfName').value || '').trim() || PF_DEF.name,
@@ -5381,11 +5531,30 @@ function init() {
       birth: ($('#pfBirthY') && $('#pfBirthY').value ? $('#pfBirthY').value + ' 年 ' + $('#pfBirthM').value + ' 月' : PF_DEF.birth),
       city: pfLocationValue() || PF_DEF.city,
       avatar: _pfPendingAvatar,
+      updatedAt: new Date().toISOString(),
     };
     try { localStorage.setItem('munea.personProfile', JSON.stringify(p)); } catch (e) {}
     if (typeof applyUserAvatar === 'function') applyUserAvatar();
+    pushPersonProfileToCloud(p);
+    closeProfileFirstRunUi();
+    storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+    renderProfilePromptCard();
     $('#profileModal').classList.remove('show');
     toast(p.name ? ('存好了，' + p.name + '，資料我記著。') : '存好了，資料我記著。');
+  });
+  if ($('#pfSkipBtn')) $('#pfSkipBtn').addEventListener('click', () => {
+    closeProfileFirstRunUi();
+    storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+    $('#profileModal').classList.remove('show');
+    renderProfilePromptCard();
+    try { trackProductEvent('person_profile_first_prompt_skipped', {}); } catch (e) {}
+  });
+  if ($('#profileNudgeCardMain')) $('#profileNudgeCardMain').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
+  if ($('#profileNudgeCardClose')) $('#profileNudgeCardClose').addEventListener('click', e => {
+    e.stopPropagation();
+    storageSet(PROFILE_NUDGE_DISMISSED_KEY, 'true');
+    renderProfilePromptCard();
+    try { trackProductEvent('person_profile_nudge_dismissed', {}); } catch (e2) {}
   });
   if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
   if ($('#profileClose')) $('#profileClose').addEventListener('click', () => $('#profileModal').classList.remove('show'));

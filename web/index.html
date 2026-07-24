@@ -19,7 +19,7 @@
     <div class="pad">
       <div class="page-head home-head">
         <h1 class="page-title" id="greetBig">晚上好</h1>
-        <span class="home-meta"><span class="home-date" id="metaDate">—</span><span id="homeWxWrap" style="display:none"><span class="home-sep">·</span><b id="homeWx"></b></span></span>
+        <span class="home-meta"><span class="mem-badge free home-badge" id="homeMemberBadge" hidden>FREE</span><span class="home-date" id="metaDate">—</span><span id="homeWxWrap" style="display:none"><span class="home-sep">·</span><b id="homeWx"></b></span></span>
       </div>
 
       <div class="butler-card">
@@ -35,6 +35,14 @@
       <div class="care-card" id="careCard">
         <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"/></svg><span><span class="cname">寧寧</span>幫你留意</span><span class="care-dots" id="careDots"></span></div>
         <div class="care-body" id="careBody"></div>
+      </div>
+      <div class="profile-nudge-card" id="profileNudgeCard" hidden>
+        <button type="button" class="pnc-main" id="profileNudgeCardMain">
+          <span class="pnc-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
+          <span class="pnc-body"><b>讓<span class="cname">寧寧</span>更認識你</b><small>填個稱呼、生日、所在地，她會叫得更順口、報得準天氣</small></span>
+          <span class="pnc-arrow">›</span>
+        </button>
+        <button type="button" class="pnc-close" id="profileNudgeCardClose" aria-label="不再顯示這張卡"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
 
 
@@ -788,6 +796,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="profileClose" type="button" aria-label="關閉個人資料" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>個人資料</h2>
+      <p class="pf-first-run-banner" id="pfFirstRunBanner" hidden>填了這些，寧寧會用你習慣的稱呼、合你的節奏跟你說話，也能報你那邊的天氣。</p>
       <div class="pf-form">
         <div class="pf-avatar-row">
           <div class="pf-avatar-wrap">
@@ -809,7 +818,9 @@
           <div class="pf-birth"><select class="chal-input" id="pfCounty"></select><select class="chal-input" id="pfDistrict"></select></div>
           <span class="pf-hint">選到「區」——天氣、附近餐廳與在地話題會更準</span></div>
       </div>
+      <p class="pf-first-run-disclosure" id="pfFirstRunDisclosure" hidden>你填的稱呼、出生年月、所在縣市會安全同步到雲端（主機在國外），換手機登入也找得到；隨時能在這裡修改或清空。照片只留在這支手機、不會上傳。</p>
       <button class="modal-btn" id="pfSaveBtn" style="margin-top:14px">存好</button>
+      <button class="modal-btn quiet" id="pfSkipBtn" type="button" style="margin-top:8px" hidden>先跳過</button>
     </div>
   </div>
 
@@ -1038,11 +1049,12 @@
       <button class="auth-close mx-close" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span>開始聊之前，先跟你說一聲</span></div>
       <ul class="consent-points">
-        <li><i class="cp-dot"></i><div><b>你說的話會加密後送到境外的雲端處理</b><small>全程加密傳輸，只用來聽懂你、記得你——不外流、不販售、不做廣告</small></div></li>
-        <li><i class="cp-dot"></i><div><b>只留對話重點，原始錄音不保存</b><small>隨時能在「我的資料」刪掉</small></div></li>
-        <li><i class="cp-dot"></i><div><b>聲音只用來聽懂你，不做聲紋辨識</b></div></li>
+        <li><i class="cp-dot"></i><div><b>你說的話會加密後送到國外的雲端處理</b><small>全程加密傳輸，只用來聽懂你、記得你，你也能隨時查看——不外流、不販售、不做廣告</small></div></li>
+        <li><i class="cp-dot"></i><div><b>只留對話重點，原始錄音不保存</b><small>你隨時能在「我的資料」查看或刪除</small></div></li>
+        <li><i class="cp-dot"></i><div><b>聲音只用來聽懂你在說什麼</b><small>不做其他辨識用途，你隨時能查看這部分怎麼被使用</small></div></li>
+        <li><i class="cp-dot"></i><div><b>你填的稱呼、出生年月、所在縣市會同步到雲端</b><small>雲端主機在國外；換手機、換裝置登入都找得到，你隨時能查看、修改或清空，照片只留在這支手機</small></div></li>
       </ul>
-      <p class="consent-note">沐寧是陪伴、不是緊急服務。遇到急難請撥 <b>119</b>，想找人說說話可撥 <b>1925</b>。</p>
+      <p class="consent-note">資料由沐寧（Munea）保管，只在你使用期間保存；隨時可查詢、更正或要求刪除。沐寧是陪伴、不是緊急服務。遇到急難請撥 <b>119</b>，想找人說說話可撥 <b>1925</b>。</p>
       <button type="button" class="consent-go" id="consentAgree">我知道了，開始聊</button>
       <button type="button" class="consent-link" id="consentDetail">先看完整隱私說明</button>
     </div>
