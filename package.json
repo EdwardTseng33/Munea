@@ -25,7 +25,7 @@
     "test:supabase-governance": "python scripts/check_supabase_migrations.py && python scripts/test_supabase_migration_governance.py && python scripts/check_supabase_deployment_ledger.py && python scripts/test_supabase_deployment_ledger.py && python scripts/test_supabase_deployment_probe.py",
     "test:product-alignment": "python scripts/check_product_alignment.py && python scripts/test_product_alignment_governance.py && python scripts/release_evidence.py check && python scripts/test_release_evidence.py",
     "release:evidence:capture": "python scripts/release_evidence.py capture",
-    "release:evidence:check": "python scripts/release_evidence.py check --max-age-hours 24",
+    "release:evidence:check": "python scripts/release_evidence.py check --max-age-hours 24 --strict-version",
     "test:voice-launch-policy": "node scripts/test-voice-launch-policy.js",
     "test:voice-diagnostics": "node scripts/test-voice-call-diagnostics.js",
     "voice:s2s-probe": "python engine/voice_s2s_probe.py",
