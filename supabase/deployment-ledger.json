@@ -177,20 +177,29 @@
         {
           "filename": "023_test_account_flag.sql",
           "sha256": "07539eea1a4b94cf92c01e97a77bbf8aba2e602ee0bd9814bbab81e1ae7b25d8",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+          "status": "verified",
+          "evidenceRef": "STATUS.md",
+          "verifiedAt": "2026-07-24T20:55:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "8ddab84cb7cd8b6d8c5aa638871bf253c5f343a4"
         },
         {
           "filename": "024_inactive_free_account_retention.sql",
           "sha256": "65fffe16599ea06a0f128e58a2b365fe056dc33aa3ddd17f4e0c29ba59792fa2",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+          "status": "verified",
+          "evidenceRef": "STATUS.md",
+          "verifiedAt": "2026-07-24T20:55:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "8ddab84cb7cd8b6d8c5aa638871bf253c5f343a4"
         },
         {
           "filename": "025_person_profile_fields.sql",
           "sha256": "a2c53f8aaf310895658730b613c9ef5a151392b25bfb8bbf8bc8e66963550774",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+          "status": "verified",
+          "evidenceRef": "STATUS.md",
+          "verifiedAt": "2026-07-24T20:55:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "8ddab84cb7cd8b6d8c5aa638871bf253c5f343a4"
         },
         {
           "filename": "026_feedback_store.sql",
