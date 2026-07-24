@@ -87,8 +87,10 @@ class VoiceStyleRulesTest(unittest.TestCase):
                         tool_flow.index("else:"))
         self.assertLess(tool_flow.index("else:"), tool_flow.index('"type": "action"'))
         flow = self.src[self.src.index("async def _run_live_lookup"):]
-        self.assertLess(flow.index("await _send_lookup_cue()"),
-                        flow.index("search_current_information(_cli"))
+        # 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，
+        # 呼叫點仍必須在真的打網路查詢之前。
+        self.assertLess(flow.index("await _send_lookup_cue(category)"),
+                        flow.index("search_current_information(cli"))
         for event in ("node.lookup_started", "node.lookup_cue_sent", "node.lookup_done",
                       "node.lookup_failed", "node.lookup_answer_audio"):
             self.assertIn(event, self.src)
