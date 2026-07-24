@@ -20,6 +20,7 @@ jobs:
       static-smoke-outcome: ${{ steps.static-smoke.outcome }}
       supabase-doctor-outcome: ${{ steps.supabase-doctor.outcome }}
       release-consistency-outcome: ${{ steps.release-consistency.outcome }}
+      guardian-crisis-outcome: ${{ steps.guardian-crisis-gate.outcome }}
 
     steps:
       - name: Checkout
@@ -51,6 +52,32 @@ jobs:
         run: |
           python -m pip install "pillow>=10" "numpy>=1.26"
           npm run test:avatar-contract
+
+      # 2026-07-24：CTO 架構稽核抓到——守護腦危機/紅線測試（自傷/傷人/精神異常/保護事件/
+      # 用藥邊界共 46 案例）之前只寫在文件裡「動到安全相關必跑」，沒有被任何自動守門
+      # 綁住，全靠人（或 AI session）記得手動跑。這裡接上：純函式段無網路無金鑰依賴，
+      # 語音線模擬段用下面的 dummy GEMINI_API_KEY 走 monkeypatch（不連真的 Gemini/Supabase）。
+      - name: Run guardian crisis safety gate
+        id: guardian-crisis-gate
+        if: always()
+        env:
+          GEMINI_API_KEY: smoke-test-key
+          MUNEA_SKIP_ENV_LOCAL: "1"
+          # windows-latest runner 的 Python stdout 預設 cp1252，這支測試的中文 print
+          # 會 UnicodeEncodeError（本機因為系統已是 UTF-8 而測不出來）；強制 UTF-8 輸出。
+          PYTHONIOENCODING: "utf-8"
+          PYTHONUTF8: "1"
+        run: python engine/test_guardian_crisis.py
+
+      - name: Summarize guardian crisis gate
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.guardian-crisis-gate.outcome }}" -eq "success") {
+            "[ok] Guardian crisis safety gate passed." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "[error] Guardian crisis safety gate failed and blocks this run." >> $env:GITHUB_STEP_SUMMARY
+          }
 
       - name: Run static smoke
         id: static-smoke
@@ -172,6 +199,7 @@ jobs:
           needs['smoke-no-api'].outputs['static-smoke-outcome'] != 'success' ||
           needs['smoke-no-api'].outputs['supabase-doctor-outcome'] != 'success' ||
           needs['smoke-no-api'].outputs['release-consistency-outcome'] != 'success' ||
+          needs['smoke-no-api'].outputs['guardian-crisis-outcome'] != 'success' ||
           needs['auth-gate'].outputs['auth-gate-outcome'] != 'success'
         )
       }}
@@ -185,6 +213,7 @@ jobs:
           STATIC_SMOKE: ${{ needs['smoke-no-api'].outputs['static-smoke-outcome'] }}
           SUPABASE_DOCTOR: ${{ needs['smoke-no-api'].outputs['supabase-doctor-outcome'] }}
           RELEASE_CONSISTENCY: ${{ needs['smoke-no-api'].outputs['release-consistency-outcome'] }}
+          GUARDIAN_CRISIS: ${{ needs['smoke-no-api'].outputs['guardian-crisis-outcome'] }}
           AUTH_GATE: ${{ needs['auth-gate'].outputs['auth-gate-outcome'] }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -201,6 +230,7 @@ jobs:
               f"Smoke: {os.environ['STATIC_SMOKE']}",
               f"Supabase doctor: {os.environ['SUPABASE_DOCTOR']}",
               f"Release consistency: {os.environ['RELEASE_CONSISTENCY']}",
+              f"Guardian crisis gate: {os.environ['GUARDIAN_CRISIS']}",
               f"Auth gate: {os.environ['AUTH_GATE']}",
               f"查看結果: {os.environ['RUN_URL']}",
           ])
