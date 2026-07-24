@@ -8452,7 +8452,9 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                 r = eng.client.models.generate_content(
                     model=m, contents=contents,
                     config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
-                return r.text.strip()
+                # 2026-07-25（卡西法・三修③）：出口前防禦性清洗，剝掉模型偶爾漏出的
+                # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
+                return eng.strip_reasoning_artifacts(r.text)
             except Exception as e:
                 log_fallback_exception(f"generate chat reply with {m}", e)
         time.sleep(2)

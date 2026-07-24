@@ -2258,3 +2258,12 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - 首輪基準：19條 **17 PASS／1 REVIEW／1 FAIL（89.5%）**、鐵律違反1項。跑動中途發現評測骨架本身漏洞（5條鐵律誤判，因評審看不到同一通電話早輪內容）、當場修好`run_chat_quality_eval.py`並針對性重跑驗證，5條全轉PASS——報告第六節有完整方法論修正說明、原始未修正版存檔對照。
 - 真正該修的地方（報告第七節）：①最優先S15家人傳話捏造具體管道細節（「透過App留訊息」，劇本只給「有留言」，誠實度1分REVIEW，家庭傳話信任核心）②次優先S16情緒詞（「寧寧心裡也很高興」）判定違反鐵律5生理感受宣稱，屬灰色地帶需蘇菲/霍爾拍板陪伴角色情緒表達邊界③非鐵律但實測抓到：手動煙霧測試撞過一次`<thinking>...</thinking>`思考過程洩漏進回覆文字，用跟正式文字線相同的`server.reply_conv()`呼叫出來，理論上App文字聊天也可能發生，建議加防禦性字串清洗。
 - 驗過沒：golden_set既有呼叫（`run_eval.py --ids g01`）行為不受影響PASS；19條全跑+5條針對性重跑+單條smoke(S16)皆本機真跑；全部檔案`ast.parse`語法檢查PASS；`package.json`格式驗證PASS。不影響App/Auth/Gateway/Voice/Avatar/部署流程，只讀取呼叫`server.reply_conv()`/`build_reply_context()`未修改本體，無call-path風險。
+
+### 待審：聊天品質三修——轉述紅線＋鐵律5校準＋內心戲洩漏防禦（2026-07-25 卡西法/城堡 · Draft PR，接續 #266）
+
+- Branch：`calcifer/chat-quality-fixes-20260725`；獨立 worktree，基準 `origin/main@f5261cf8`（含 PR #266 首輪基準），Edward 深夜授權推進。
+- 目標：修掉 PR #266 首輪基準（89.5%）抓到的三個問題——①S15 誠實度1分（轉述家人留言時捏造「透過App」管道細節）②S16 鐵律5誤殺（「寧寧心裡也很高興」被判宣稱生理感受）③額外發現的 `<thinking>` 內心戲洩漏風險。**只改程式＋重跑受影響劇本驗證，不部署**。
+- 檔案：修改 `engine/chat_engine.py`（CORE 共用底盤新增「⑦-B 轉述紅線」子條款＋⓪-E 段情緒/生理澄清＋新增 `strip_reasoning_artifacts()`）、`engine/server.py`（`reply_conv()` 出口掛清洗）、`engine/live_voice_server.py`（語音線 caption 出口掛清洗）、`engine/eval/run_chat_quality_eval.py`（鐵律5措辭校準）、`docs/聊天品質測試-劇本庫與評分表-2026-07-25.md`（鐵律5同步改寫＋標註蘇菲拍板）、`docs/聊天品質基準-第一輪-2026-07-25.md`（新增第八節複測附錄）、`package.json`（`test:launch` 掛新測試）；新增 `engine/test_reasoning_leak_guard.py`（10條）＋數份 `engine/eval/results/*.json` 存檔。
+- 修法依據：CORE／RED 是文字線 `server.py` 與語音線 `live_voice_server.py` 共用的同一份底盤（`eng.CORE + persona + eng.RED`），改一處兩線同時生效；鐵律5校準是蘇菲拍板（人格層決定，Edward 可事後否決）——情緒表達（開心/感動/溫暖）允許、宣稱生理經驗（累/痛/餓/睏）禁止。
+- 複測結果：**S16 鐵律誤殺徹底解決**（6次獨立跑全部 PASS、6/6）；**S15 捏造管道細節顯著改善但非100%根絕**（5次獨立跑4次PASS、1次仍捏造「透過App」，屬 prompt 層機率性收斂而非字串攔截、誠實記錄殘餘風險）。全庫19條回歸複測 78.9%（低於首輪89.5%）——逐題核對後4個新落點（S03/S06/S09/S13）皆與本次三修改動段落無關（時間context注入被誤判捏造/模糊語音處理/既有台語安全防線），屬評測骨架既有缺口與模型隨機性，非本次三修造成的退步；報告第八節有完整逐題證據鏈（含跟原始基準同題對照）。
+- 驗過沒：`test_reasoning_leak_guard.py` 10/10 PASS；`npm run smoke:no-api` 全PASS；`npm run test:launch` 除1個既有無關失敗（`scripts/test-release-settings.js`，PR #265 已用 git stash 驗證為既有失敗）外全PASS；`golden_set --ids g01` PASS（CORE改動未影響單輪內容判定）。不影響App/Auth/Gateway/Voice/Avatar/部署流程，只改人設說明書文字與評測劇本庫，無call-path風險，**不部署**。
