@@ -174,6 +174,26 @@ class AdminBondDepthTests(unittest.TestCase):
             self.assertNotIn(banned, response["principle"])
         self.assertIn("記憶", response["principle"])
 
+    def test_test_account_signals_are_excluded_from_totals_and_stuck_list(self):
+        """2026-07-24 稽核補：這頁原本沒接測試帳號排除，示範／QA 帳號的關係狀態會混進真實數字。"""
+        server._TEST_ACCOUNT_ID_CACHE["ids"] = {"test-account-x"}
+        server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = server.time.time() + 999
+        try:
+            self._seed_states([
+                {"personId": "person-real", "accountId": "account-real", "rapportLevel": "familiar", "createdAt": self._iso(5), "updatedAt": self._iso(0)},
+                {"personId": "person-test", "accountId": "test-account-x", "rapportLevel": "new", "createdAt": self._iso(30), "updatedAt": self._iso(0)},
+            ])
+            self._seed_memories([
+                {"personId": "person-real", "createdAt": self._iso(0)},
+                {"personId": "person-test", "createdAt": self._iso(0)},
+            ])
+            response = server.admin_bond_depth({"days": 30, "limit": 50, "stuckDays": 14})
+        finally:
+            server._TEST_ACCOUNT_ID_CACHE["ids"] = set()
+            server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = 0.0
+        self.assertEqual(response["totals"], {"people": 1, "newly": 0, "familiar": 1, "trusted": 0, "close": 0, "stuck": 0})
+        self.assertEqual(response["stuckList"], [])
+
 
 class SupabaseAdminBondDepthCrossAccountTests(unittest.TestCase):
     """Adapter 層：後台跨帳號關係深度查詢不能被單一 account_id 過濾掉，且記憶查詢絕不選 content。"""

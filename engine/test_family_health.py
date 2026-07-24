@@ -201,6 +201,37 @@ class AdminFamilyHealthTests(unittest.TestCase):
             self.assertNotIn(banned, response["principle"])
         self.assertIn("有人顧", response["principle"])
 
+    def test_test_account_household_is_excluded_from_totals(self):
+        """2026-07-24 稽核補：這頁原本沒接測試帳號排除，示範／QA 帳號的家人動作會混進「有人顧」統計。"""
+        membership_rows = [
+            {"familyGroupId": "fg-real", "accountId": "account-real", "personId": "elder-real", "role": "primary_user"},
+            {"familyGroupId": "fg-real", "accountId": "account-real", "personId": "fam-real1", "role": "family_contact"},
+            {"familyGroupId": "fg-test", "accountId": "test-account-x", "personId": "elder-test", "role": "primary_user"},
+            {"familyGroupId": "fg-test", "accountId": "test-account-x", "personId": "fam-test1", "role": "family_contact"},
+        ]
+        self._seed_relays([
+            {
+                "id": "relay-test1", "familyGroupId": "fg-test", "accountId": "test-account-x",
+                "senderPersonId": "fam-test1", "recipientPersonId": "elder-test",
+                "content": "QA 測試訊息", "createdAt": self._iso(0),
+            },
+        ])
+        server._TEST_ACCOUNT_ID_CACHE["ids"] = {"test-account-x"}
+        server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = server.time.time() + 999
+        try:
+            with patch.object(server, "load_admin_family_membership_rows", return_value=membership_rows):
+                response = server.admin_family_health({"days": 30, "limit": 50})
+        finally:
+            server._TEST_ACCOUNT_ID_CACHE["ids"] = set()
+            server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = 0.0
+        self.assertTrue(response["ok"])
+        self.assertEqual(response["totals"]["households"], 1)
+        self.assertEqual(response["totals"]["membersTotal"], 1)
+        self.assertEqual(response["totals"]["withActiveGuardian"], 0)
+        self.assertEqual(response["totals"]["unwatched"], 1)
+        self.assertEqual(response["unwatchedList"][0]["accountId"], "account-real")
+        self.assertEqual(response["relay"]["messages"], 0)
+
 
 class SupabaseAdminFamilyHealthCrossAccountTests(unittest.TestCase):
     """Adapter 層：後台跨帳號家庭圈查詢不能被單一 account_id 過濾掉。"""
