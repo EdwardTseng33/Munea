@@ -1862,7 +1862,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     if sc:
                         ot = getattr(sc, "output_transcription", None)
                         if ot and getattr(ot, "text", None):
-                            caption_text = localization.display_text(ot.text, "zh-TW")
+                            # 2026-07-25（卡西法・三修③）：語音線字幕出口也要過同一道防禦性
+                            # 清洗，剝掉可能漏出的 <thinking> 內部推理標記，跟文字線同一把關卡。
+                            caption_text = eng.strip_reasoning_artifacts(localization.display_text(ot.text, "zh-TW"))
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
