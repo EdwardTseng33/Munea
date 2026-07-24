@@ -2217,8 +2217,10 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .cap-busy::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 7px; vertical-align: -1.5px;
   border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: mn-spin .7s linear infinite; }
 
-/* ===== 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：排隊＝第幾位＋自動接通說明；全滿＝請稍後再試 =====
-   深色玻璃卡疊在人物畫面中央偏上，跟字幕框同一套視覺語言；字級放大給長輩看 */
+/* ===== 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡＋視覺修）=====
+   深色玻璃卡疊在人物畫面中央偏上，跟字幕框同一套視覺語言；字級放大給長輩看
+   2026-07-24 視覺修：大字色改用畫面既有的亮薄荷色（跟 .face-wave 收音波同色，不再是孤色）；
+   按鈕邊框拉到 3:1 以上；說明字級升到 16px（原 14.5px 是全卡最小字，關鍵行為說明反而最不顯眼）。*/
 .busy-card { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); z-index: 8;   /* 中央偏下：把人物的眼神留出來——她人在、只是忙 */
   width: min(320px, calc(100% - 56px));
   background: rgba(8,18,15,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -2229,16 +2231,37 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .bc-ring { width: 30px; height: 30px; margin: 0 auto 12px;
   border: 3px solid rgba(255,255,255,.22); border-top-color: var(--teal);
   border-radius: 50%; animation: mn-spin 1s linear infinite; }
-.busy-card[data-mode="full"] .bc-ring { display: none; }
+.busy-card[data-mode="full"] .bc-ring, .busy-card[data-mode="error"] .bc-ring { display: none; }   /* 全滿／失敗態不是「還在等」，不轉圈 */
 .bc-title { font-size: 19px; font-weight: 800; line-height: 1.45; }
 .bc-pos { margin-top: 10px; font-size: 17px; color: rgba(255,255,255,.9); }
-.bc-pos b { font-size: 30px; font-weight: 800; color: #7FD8CE; margin: 0 3px; }
+.bc-pos b { font-size: 30px; font-weight: 800; color: #3ED4C2; margin: 0 3px; }   /* 統一到畫面既有的亮薄荷色（.face-wave 同色），原 #7FD8CE 是孤色 */
 .bc-pos:empty { display: none; }
-.bc-note { margin-top: 10px; font-size: 14.5px; line-height: 1.65; color: rgba(255,255,255,.74); }
-.bc-btn { margin-top: 16px; width: 100%; padding: 12px 0; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.1);
-  color: #FFF; font-size: 16px; font-weight: 700; font-family: var(--sans); }
-.bc-btn:active { background: rgba(255,255,255,.22); }
+.bc-note { margin-top: 10px; font-size: 16px; line-height: 1.6; color: rgba(255,255,255,.82); }   /* 14.5px→16px：關鍵行為說明不該是全卡最小字 */
+.bc-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.bc-btn { width: 100%; padding: 12px 0; border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,.55); background: rgba(255,255,255,.14);
+  color: #FFF; font-size: 16px; font-weight: 700; font-family: var(--sans); margin-top: 0; }
+.bc-btn:active { background: rgba(255,255,255,.26); }
+.bc-btn.bc-btn-alt { background: transparent; border-color: rgba(255,255,255,.4); font-weight: 600; }   /* 次要出口：視覺退一階，主按鈕仍最顯眼 */
+.bc-btn.bc-btn-alt:active { background: rgba(255,255,255,.12); }
+.bc-btn[hidden] { display: none; }
+
+/* ===== 全滿出口：先用文字聊（2026-07-24 Edward 拍板 P0）=====
+   蓋在通話畫面上的簡單文字面板；不佔 Avatar／即時語音席位、走既有 /chat 文字管線，別新造頁面。*/
+.text-chat-panel { position: absolute; inset: 60px 18px 92px; z-index: 9;
+  display: flex; flex-direction: column; background: rgba(255,255,255,.97);
+  border-radius: 22px; box-shadow: 0 24px 48px -20px rgba(0,0,0,.55); overflow: hidden; }
+.text-chat-panel[hidden] { display: none; }
+.tc-log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.tc-row { max-width: 84%; padding: 10px 14px; border-radius: 16px; font-size: 16px; line-height: 1.5; word-break: break-word; }
+.tc-row.tc-user { align-self: flex-end; background: var(--btn-green); color: #fff; border-bottom-right-radius: 4px; }
+.tc-row.tc-ai { align-self: flex-start; background: var(--mint); color: var(--ink); border-bottom-left-radius: 4px; }
+.tc-input-row { display: flex; align-items: flex-end; gap: 8px; padding: 12px; border-top: 1px solid var(--line); background: var(--surface); }
+.tc-input-row textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 14px;
+  padding: 10px 12px; font-size: 16px; font-family: var(--sans); max-height: 88px; color: var(--ink); }
+.tc-input-row button { flex: 0 0 auto; padding: 0 18px; height: 44px; border-radius: 14px; border: none;
+  background: var(--btn-green); color: #fff; font-weight: 700; font-size: 15px; }
+.tc-input-row button.busy-spin { color: rgba(255,255,255,.85); }
 
 /* 撥通中（腦開機）：同位置放載入動態；真收音動態等 ready 才出現（Edward 7/9） */
 /* 撥通中不再放收音載入動態（Edward 7/9：不直覺）——波紋等真的接通（聽/說狀態）才出現 */

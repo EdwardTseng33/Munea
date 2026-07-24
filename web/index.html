@@ -491,16 +491,30 @@
     <!-- S2S 狀態提示：不顯示逐字稿，保持像視訊聊天 -->
     <div class="face-caption" id="chatCaption">直接說，我在這裡</div>
 
-    <!-- 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：顯卡滿載時「排隊＝第幾位＋自動接通說明」「全滿＝請稍後再試」，
-         文案由 app.js showBusyCard() 依情況填入；取消排隊走通話鍵同一條取消線 -->
+    <!-- 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：顯卡滿載「排隊＝第幾位或準備中
+         ＋自動接通說明」「全滿＝請稍後再試＋先用文字聊出口」，撥號各種失敗（登入失效／帳號未就緒／服務異常／暖機逾時／
+         斷線重連失敗）也共用這張卡；文案由 app.js showBusyCard()／showCallStatusCard() 依情況填入。 -->
     <div class="busy-card" id="busyCard" hidden>
       <div class="bc-ring" aria-hidden="true"></div>
       <div class="bc-title" id="busyCardTitle">現在忙線中</div>
       <div class="bc-pos" id="busyCardPos"></div>
       <div class="bc-note" id="busyCardNote"></div>
-      <button class="bc-btn" id="busyCardBtn" type="button">取消排隊</button>
+      <div class="bc-actions">
+        <button class="bc-btn" id="busyCardBtn" type="button">取消排隊</button>
+        <button class="bc-btn bc-btn-alt" id="busyCardAlt" type="button" hidden>先用文字聊</button>
+      </div>
     </div>
     <!-- 人物畫面上的招呼字泡（faceIdleHi）2026-07-16 Edward 拿掉：畫面保持乾淨、只留字幕與控制列 -->
+
+    <!-- 全滿出口：先用文字聊（2026-07-24 Edward 拍板 P0）：借既有 /chat 文字管線（chatHandle），
+         不佔用 Avatar／即時語音席位、不用排隊；按下 busyCardAlt 後出現在通話畫面上、蓋住人物層。 -->
+    <div class="text-chat-panel" id="textChatPanel" hidden>
+      <div class="tc-log" id="textChatLog" aria-live="polite"></div>
+      <div class="tc-input-row">
+        <textarea id="textChatInput" rows="1" maxlength="500" placeholder="打字給寧寧看看…" aria-label="輸入文字訊息給寧寧"></textarea>
+        <button id="textChatSend" type="button">傳送</button>
+      </div>
+    </div>
 
     <!-- 底部單列：字幕開關｜麥克風開關｜通話（同一顆：綠=開始、紅=結束） -->
     <div class="face-bar">
