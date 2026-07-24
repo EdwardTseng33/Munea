@@ -665,6 +665,68 @@ class SupabaseAdapter:
         )
         return rows[0] if rows else None
 
+    @staticmethod
+    def feedback_row_to_item(row):
+        """把 feedback_items 資料列換回 engine/feedback_store.json 原本的欄位形狀，讓
+        admin_feedback_summary 不必因為換資料源而改聚合邏輯。"""
+        row = row or {}
+        item = {
+            "id": row.get("id") or "",
+            "type": row.get("type") or "",
+            "category": row.get("category") or "",
+            "text": row.get("content") or "",
+            "score": row.get("score"),
+            "appVersion": row.get("app_version") or "",
+            "plan": row.get("plan") or "",
+            "createdAt": row.get("created_at"),
+        }
+        if row.get("image_data_url"):
+            item["image"] = row.get("image_data_url")
+        return item
+
+    def feedback_item_to_row(self, item):
+        item = item or {}
+        return {
+            "id": item.get("id"),
+            "account_id": self.payload_account_id(item.get("accountId") or item.get("account_id")) or None,
+            "person_id": item.get("personId") or item.get("person_id") or self.person_id or None,
+            "type": item.get("type"),
+            "category": item.get("category") or None,
+            "content": item.get("text") or item.get("content") or "",
+            "score": item.get("score"),
+            "app_version": item.get("appVersion") or item.get("app_version") or None,
+            "plan": item.get("plan") or None,
+            "image_data_url": item.get("image") or item.get("image_data_url"),
+            "created_at": item.get("createdAt") or item.get("created_at"),
+        }
+
+    def save_feedback_item(self, item):
+        """意見與建議收件箱寫入 Supabase feedback_items（026 沒跑之前呼叫端會接住缺表例外、
+        退回本地 JSON——見 server.feedback_response）。"""
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "POST",
+            "feedback_items",
+            query={"select": "*"},
+            payload=self.feedback_item_to_row(item),
+            prefer="return=representation",
+        )
+        return self.feedback_row_to_item(rows[0]) if rows else None
+
+    def load_admin_feedback_items(self, limit=2000):
+        """後台意見與建議收件箱：不篩 account_id，service-role 全表查詢，跟其他後台跨帳號頁
+        （medication_dose_events／wellbeing_signals 等）同一套模式。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 2000)))
+        rows = self._select("feedback_items", {
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(limit),
+        })
+        return [self.feedback_row_to_item(row) for row in rows or []]
+
     def load_admin_medication_doses(self, since_date=None, limit=3000):
         """後台跨帳號用藥依從率：不依 account_id 篩選、service-role 全表查詢近 N 天服藥事件。"""
         if not self.enabled():
