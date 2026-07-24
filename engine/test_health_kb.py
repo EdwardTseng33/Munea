@@ -103,6 +103,8 @@ class MatchingTest(unittest.TestCase):
             ("感冒一直好不了，鼻水流不停", "TW-EDU-19"),
             ("心臟一直咚咚咚跳很快", "TW-EDU-20"),
             ("LINE群組傳的這個是真的假的", "TW-EDU-21"),
+            # 7/24 首輪評測抓漏：「群組在傳」「是真的嗎」這種說法原本接不住、謠言資料叫不出來
+            ("LINE群組在傳說吃降血壓藥會洗腎，是真的嗎", "TW-EDU-21"),
         ]
         for text, want in cases:
             got = health_kb.match_topics(text)
