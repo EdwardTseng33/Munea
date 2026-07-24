@@ -2744,18 +2744,20 @@ missing_index = [token for token in required_index if token not in index]
 if missing_index:
     raise SystemExit("Missing in-app AI provider consent disclosure tokens: " + ", ".join(missing_index))
 
-required_onboarding = [
-    "aiProviderConsentSetup",
-    "munea.aiProviderConsent.v1",
-    "2026-07-02-ai-provider-v1",
-    "privacy.html",
-    "\u8a9e\u97f3",
-    "AI",
+# 2026-07-24: welcome wizard retired (account + profile rework). onboarding.html is no
+# longer the home of AI-provider consent. Consent now shows on first call-gate
+# (index.html #consentSheet); check the sheet covers the new cloud-sync disclosure.
+# onboarding.html itself is verified separately below as a retired stub.
+required_consent_sheet = [
+    "consentSheet",
+    "consentAgree",
     "\u5883\u5916",
+    "\u96f2\u7aef",
+    "\u500b\u4eba\u8cc7\u6599",
 ]
-missing_onboarding = [token for token in required_onboarding if token not in onboarding]
-if missing_onboarding:
-    raise SystemExit("Missing onboarding AI provider consent tokens: " + ", ".join(missing_onboarding))
+missing_consent_sheet = [token for token in required_consent_sheet if token not in index]
+if missing_consent_sheet:
+    raise SystemExit("Missing call-gate consent sheet tokens: " + ", ".join(missing_consent_sheet))
 
 required_app = [
     "AI_PROVIDER_CONSENT_KEY",
@@ -2782,6 +2784,33 @@ for forbidden in ["SERVICE_ROLE", "service_role", "SUPABASE_SERVICE_ROLE_KEY"]:
 print("frontend AI provider consent OK")
 '@
 Pass "Frontend AI provider consent is present"
+
+Step "Onboarding retirement contract"
+Invoke-PythonBlock @'
+from pathlib import Path
+onboarding = Path("web/onboarding.html").read_text(encoding="utf-8")
+# 2026-07-24: welcome wizard fully retired. This file may only be a minimal
+# redirect-to-index stub now -- no old wizard markup, no independent account
+# bootstrap call, no independent consent checkbox (would create two competing
+# bootstrap/consent code paths).
+if len(onboarding) > 2000:
+    raise SystemExit("onboarding.html no longer looks like a minimal retired stub (too large)")
+if "index.html" not in onboarding:
+    raise SystemExit("onboarding.html stub must redirect to index.html")
+forbidden_wizard_tokens = [
+    "ob-door",
+    "ob-step",
+    "obNext",
+    "function bootstrapAccount",
+    "aiProviderConsentSetup",
+    "companionNameSetup",
+]
+present_wizard_tokens = [token for token in forbidden_wizard_tokens if token in onboarding]
+if present_wizard_tokens:
+    raise SystemExit("onboarding.html still contains retired wizard markup: " + ", ".join(present_wizard_tokens))
+print("onboarding retirement contract OK")
+'@
+Pass "Onboarding is retired to a minimal redirect stub"
 
 Step "Frontend auth bridge contract"
 Invoke-PythonBlock @'
@@ -2819,11 +2848,12 @@ required_auth = [
 missing_auth = [token for token in required_auth if token not in auth]
 if missing_auth:
     raise SystemExit("Missing auth bridge tokens: " + ", ".join(missing_auth))
-for token in ["src/auth.js", "MuneaAuth"]:
-    if token not in index and token == "src/auth.js":
-        raise SystemExit("index.html missing auth runtime")
-    if token not in onboarding:
-        raise SystemExit("onboarding.html missing auth runtime/token: " + token)
+if "src/auth.js" not in index:
+    raise SystemExit("index.html missing auth runtime")
+if "MuneaAuth" not in index:
+    raise SystemExit("index.html missing auth runtime token: MuneaAuth")
+# 2026-07-24: onboarding.html welcome wizard retired, no longer needs its own
+# auth runtime -- it is a minimal redirect stub now, verified separately below.
 for token in ["muneaAuthHeaders", "Authorization", "Bearer", "munea:auth-state"]:
     if token not in app:
         raise SystemExit("app.js missing auth API bridge: " + token)
@@ -3120,7 +3150,6 @@ Step "Account bootstrap frontend contract"
 Invoke-PythonBlock @'
 from pathlib import Path
 js = Path("web/src/app.js").read_text(encoding="utf-8")
-onboarding = Path("web/onboarding.html").read_text(encoding="utf-8")
 required_app = [
     "syncAccountBootstrap",
     "accountBootstrapPayload",
@@ -3129,20 +3158,16 @@ required_app = [
     "/account-bootstrap",
     "auth_user_required",
     "onboarding_completed",
+    "auth_signed_in",
+    "munea:auth-state",
 ]
 missing_app = [item for item in required_app if item not in js]
 if missing_app:
     raise SystemExit("Missing app bootstrap contract pieces: " + ", ".join(missing_app))
-required_onboarding = [
-    "bootstrapAccount",
-    "/account-bootstrap",
-    "munea.onboardingCompleted.v1",
-    "munea.accountBootstrapped.v1",
-    "auth_user_required",
-]
-missing_onboarding = [item for item in required_onboarding if item not in onboarding]
-if missing_onboarding:
-    raise SystemExit("Missing onboarding bootstrap pieces: " + ", ".join(missing_onboarding))
+# 2026-07-24: account + profile rework -- bootstrap now fires directly off the
+# sign-in event (munea:auth-state signed-in -> syncAccountBootstrap({reason:
+# 'auth_signed_in'})), not the old onboarding.html final-step call.
+# onboarding.html is a minimal redirect stub now, verified separately below.
 print("account bootstrap frontend contract OK")
 '@
 Pass "Frontend onboarding can initialize account bootstrap"

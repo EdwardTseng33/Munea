@@ -1411,6 +1411,88 @@ class SupabaseAdapter:
         )
         return self.companion_row_to_profile(rows[0]) if rows else None
 
+    @staticmethod
+    def person_row_to_profile(row):
+        """persons 表的個人資料欄位 → App 端 personProfile 形狀。
+
+        刻意不讀 display_name（該欄位現行語意是 AI 陪伴角色名稱，見
+        bootstrap_account／profile_to_person_row 的註解）；使用者本人名字走
+        另開的 profile_name 欄位，避免兩種語意混在同一欄。
+        """
+        row = row or {}
+        return {
+            "name": row.get("profile_name") or "",
+            "nick": row.get("nickname") or "",
+            "birthYear": row.get("birth_year"),
+            "birthMonth": row.get("birth_month"),
+            "county": row.get("county") or "",
+            "district": row.get("district") or "",
+            "updatedAt": row.get("updated_at") or row.get("created_at"),
+        }
+
+    @staticmethod
+    def profile_to_person_row(profile):
+        """個人資料卡存檔 → persons 表 PATCH payload（只送有帶到的欄位）。
+
+        `None` 代表「這次沒帶這個欄位」（不覆蓋既有值）；空字串／0 是使用者
+        明確清空，一樣要送出去蓋掉舊值。
+        """
+        profile = profile or {}
+        row = {}
+        if profile.get("name") is not None:
+            row["profile_name"] = (str(profile.get("name") or "").strip()[:80]) or None
+        if profile.get("nick") is not None:
+            row["nickname"] = (str(profile.get("nick") or "").strip()[:40]) or None
+        if profile.get("birthYear") is not None:
+            try:
+                year = int(profile.get("birthYear"))
+                row["birth_year"] = year if 1900 <= year <= 2100 else None
+            except (TypeError, ValueError):
+                row["birth_year"] = None
+        if profile.get("birthMonth") is not None:
+            try:
+                month = int(profile.get("birthMonth"))
+                row["birth_month"] = month if 1 <= month <= 12 else None
+            except (TypeError, ValueError):
+                row["birth_month"] = None
+        if profile.get("county") is not None:
+            row["county"] = (str(profile.get("county") or "").strip()[:20]) or None
+        if profile.get("district") is not None:
+            row["district"] = (str(profile.get("district") or "").strip()[:20]) or None
+        return row
+
+    def load_person_profile(self):
+        """讀本人（self.person_id）的個人資料——名稱/暱稱/生日/所在地。
+
+        照片（avatar）不上雲，這裡不含這個欄位（沿用需求單拍板：第一版照片只留本機）。
+        """
+        if not self.enabled():
+            return None
+        row = self._first("persons", {"id": f"eq.{self.person_id}", "select": "*"})
+        if not row:
+            return None
+        return self.person_row_to_profile(row)
+
+    def save_person_profile(self, profile):
+        """把個人資料卡存檔寫回本人（self.person_id）的 persons 列。
+
+        persons 列在帳號 bootstrap 時就建好了（primary_care_recipient），這裡
+        只做 PATCH、不需要像 companion_profiles 那樣處理「找不到列就補一筆」。
+        """
+        if not self.enabled():
+            return None
+        payload = self.profile_to_person_row(profile)
+        if not payload:
+            return self.load_person_profile()
+        rows = self._request(
+            "PATCH",
+            "persons",
+            query={"id": f"eq.{self.person_id}", "select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.person_row_to_profile(rows[0]) if rows else None
+
     def bootstrap_account(self, data=None):
         if not self.enabled():
             return None
