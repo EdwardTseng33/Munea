@@ -4,6 +4,15 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-07-27 蘇菲 🚀 部署：正式機兩台上 7/25 深夜班成果（Edward「更新上線吧」授權）
+
+- **範圍**：`munea-brain` `00021-kow`→`00023-xoc`、`munea-voice` `00009-muh`→`00011-luw`→`00013-joj`（疊試驗設定）；皆 v1.0.44 @ `f6d9c7fa3408`。
+- **內容**：#265 語音週包（過場話句庫輪替／10 分鐘連線牆／查詢提速）＋#268 聊天品質三修（轉述紅線／鐵律校準／內心戲清洗）。
+- **試驗設定上正式**：`MUNEA_VOICE_LIVE_LOOKUP=1`、`MUNEA_VOICE_SILENCE_MS=1100`（staging 驗兩天）。
+- **查核**：`MUNEA_REQUIRE_AUTH=1` 已確認（Gate 5 命門）；新舊 revision env 名單 diff 完全一致；兩閘（0% canary → exact-revision promote）走完；`/version` 兩台驗明正身；總機 durable_ready、臉機 tw-06 兩席 ready。
+- **未涵蓋**：正式線真人媒體 Gate 待 Edward 安裝版 iPhone；`voice-chain-auth-probe.ps1` 護欄禁止對正式 voice 跑拋棄帳號探測（未繞過）。
+- **回滾**：見 STATUS 132 號（brain/voice 各自 exact-revision，或只移除兩個試驗環境值）。
+
 ### 待審：營運後台三個數據洞修補（2026-07-24 卡西法/城堡）
 
 - Branch：`calcifer/admin-data-gaps-20260724`；獨立 worktree，基準 `origin/main@1505b4d1`。
