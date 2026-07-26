@@ -2267,3 +2267,20 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - 修法依據：CORE／RED 是文字線 `server.py` 與語音線 `live_voice_server.py` 共用的同一份底盤（`eng.CORE + persona + eng.RED`），改一處兩線同時生效；鐵律5校準是蘇菲拍板（人格層決定，Edward 可事後否決）——情緒表達（開心/感動/溫暖）允許、宣稱生理經驗（累/痛/餓/睏）禁止。
 - 複測結果：**S16 鐵律誤殺徹底解決**（6次獨立跑全部 PASS、6/6）；**S15 捏造管道細節顯著改善但非100%根絕**（5次獨立跑4次PASS、1次仍捏造「透過App」，屬 prompt 層機率性收斂而非字串攔截、誠實記錄殘餘風險）。全庫19條回歸複測 78.9%（低於首輪89.5%）——逐題核對後4個新落點（S03/S06/S09/S13）皆與本次三修改動段落無關（時間context注入被誤判捏造/模糊語音處理/既有台語安全防線），屬評測骨架既有缺口與模型隨機性，非本次三修造成的退步；報告第八節有完整逐題證據鏈（含跟原始基準同題對照）。
 - 驗過沒：`test_reasoning_leak_guard.py` 10/10 PASS；`npm run smoke:no-api` 全PASS；`npm run test:launch` 除1個既有無關失敗（`scripts/test-release-settings.js`，PR #265 已用 git stash 驗證為既有失敗）外全PASS；`golden_set --ids g01` PASS（CORE改動未影響單輪內容判定）。不影響App/Auth/Gateway/Voice/Avatar/部署流程，只改人設說明書文字與評測劇本庫，無call-path風險，**不部署**。
+
+### 2026-07-25 卡西法 🔄 部署：voice-staging 更新至 main 最新版（PR #265 語音優化週包）——canary 驗證通過並已 promote
+
+- **範圍**：只動 `munea-voice-staging`（0% canary → promote 100%）；`munea-voice`（正式）全程未動。
+- **部署源**：乾淨 worktree、`git archive` 打包 `origin/main@34d41f2e`（PR #265 merge commit，含過場話輪替＋10 分鐘連線牆＋查詢 thinking_budget=0 三件）。
+- **canary-deploy.sh voice** → revision `munea-voice-staging-00060-lij`、tag `stg-0725-014513-34d41f2`、`--no-traffic`；`canary-verify.sh` 結構驗證 PASS（Ready、0%、root 200、release identity 對）。
+- **env／secrets 對照**：新舊 revision `describe` 逐項比對，只有 `MUNEA_RELEASE_COMMIT` 換新，其餘 env（含既有試驗設定 `MUNEA_VOICE_LIVE_LOOKUP=1`、`MUNEA_VOICE_SILENCE_MS=1100`）與 4 個 secrets 一項不少、原樣保留（`--update-env-vars` 合併語義生效）。
+- **三支探針**（對 canary tag URL 跑，`GEMINI_API_KEY` 用本機 `.env.local` 開發鑰匙合成語音輸入）：
+  - `voice_s2s_probe.py`：核心功能檢查（S2S 有回語音／回合完成／無台語誤判）連續多輪 100% PASS；ASR 關鍵詞與句尾靜音兩項偶爾 FAIL，經對照舊版 baseline revision（`stg-0724-195017-dfea6aa`）跑同款探針重現同樣的偶發同音字誤聽模式，確認是探針本機合成語音的 client 端既有雜訊、非本次部署引入的回歸。
+  - `voice_barge_probe.py`：7/7 PASS（插話握手、Gemini 中斷、ASR 聽到新話題、插話後新回覆、舊音訊快速停止等）。
+  - `voice_silence_probe.py`：3/3 PASS（室內底噪 10 秒未誤觸 ASR／回覆／假回合）。
+- **查詢提速實測**（另寫暫時性計時腳本，量「使用者問完到 `node.lookup_answer_audio` 記錄的答案音訊開始秒數」，非委託檔案、跑完即棄）：3 輪、共 16 次語音查詢請求中，6 次模型主動觸發 `search_current_information` 工具（其餘因模型自行判斷用既有知識回答或婉拒即時資訊，未觸發工具、不計入比較）；6 次工具觸發樣本：3614／3748／4952／5178／5647／5983 ms，中位數 ≈5065ms（vs 修復前 9.6–11 秒基準，降幅約 47-53%）。單次用戶端 `TimeoutError`（0 asr_turns、無 server 端例外對應）判為單發連線瞬斷，非本次部署引入之伺服器錯誤。
+- **Cloud Logging 檢查**：canary revision `severity>=ERROR` 排除例行 WebSocket 健康探測雜訊（`did not receive a valid HTTP request`／`EOFError` 屬 Cloud Run 對純 WS 服務的常態噪音）後，**零應用層例外**。
+- **Promote**：`promote.sh staging voice stg-0725-014513-34d41f2 1.0.44 34d41f2e227b81f1dc2f28bb40d69c7641f8f80f` 重驗＋切流量成功；預設 URL `/version` 確認 `commit=34d41f2e227b...`、`revision=munea-voice-staging-00060-lij`、100%。
+- **正式機**：`munea-voice` 部署前後皆為 `munea-voice-00009-muh`（`prod-0724-204904-8ddab84`）、100% 流量，未動。
+- **回滾把手**：`gcloud run services update-traffic munea-voice-staging --region asia-east1 --project gen-lang-client-0229303523 --to-revisions munea-voice-staging-00058-yer=100`
+
