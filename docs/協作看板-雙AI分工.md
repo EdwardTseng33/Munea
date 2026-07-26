@@ -2267,3 +2267,9 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - 修法依據：CORE／RED 是文字線 `server.py` 與語音線 `live_voice_server.py` 共用的同一份底盤（`eng.CORE + persona + eng.RED`），改一處兩線同時生效；鐵律5校準是蘇菲拍板（人格層決定，Edward 可事後否決）——情緒表達（開心/感動/溫暖）允許、宣稱生理經驗（累/痛/餓/睏）禁止。
 - 複測結果：**S16 鐵律誤殺徹底解決**（6次獨立跑全部 PASS、6/6）；**S15 捏造管道細節顯著改善但非100%根絕**（5次獨立跑4次PASS、1次仍捏造「透過App」，屬 prompt 層機率性收斂而非字串攔截、誠實記錄殘餘風險）。全庫19條回歸複測 78.9%（低於首輪89.5%）——逐題核對後4個新落點（S03/S06/S09/S13）皆與本次三修改動段落無關（時間context注入被誤判捏造/模糊語音處理/既有台語安全防線），屬評測骨架既有缺口與模型隨機性，非本次三修造成的退步；報告第八節有完整逐題證據鏈（含跟原始基準同題對照）。
 - 驗過沒：`test_reasoning_leak_guard.py` 10/10 PASS；`npm run smoke:no-api` 全PASS；`npm run test:launch` 除1個既有無關失敗（`scripts/test-release-settings.js`，PR #265 已用 git stash 驗證為既有失敗）外全PASS；`golden_set --ids g01` PASS（CORE改動未影響單輪內容判定）。不影響App/Auth/Gateway/Voice/Avatar/部署流程，只改人設說明書文字與評測劇本庫，無call-path風險，**不部署**。
+
+### 2026-07-26 Claude/城堡 📐 方向落檔：健康照護管家——就醫代理與就醫導引（Draft PR · 純文件不動程式）
+
+- **來源**：Edward 兩輪指示——①整理家庭病歷（健康存摺）＋生活狀態、就診時遞交醫護 ②就醫判斷（該不該看/看什麼科/看哪個醫生、台灣名醫文化）③終局 agent-to-agent 家庭↔醫院。
+- **產出**：`docs/健康照護管家-就醫代理與導引-方向與分階-2026-07-26.md`——一句話定盤「沐寧整理事實、醫師做判斷」；七條紅線（文案紅線／不對稱鐵則「只往上推永不往下擋」／symptom checker=SaMD 深水區／病歷=特種個資§6／醫師資訊只彙整不評價／病歷家人可見性要專屬分層／機構介接前法遵）；四階分階（A 看診秘書 v1.x 不碰特種個資可直排、D 就醫導引輕量並行、B 病歷保管箱+健康存摺 SDK 先設計後施工、C 對外遞交 a2a 長線 C0=摘要單 QR）；三項待 Edward 拍板（D3 名醫姿勢／B 啟動時機／不對稱鐵則入 CORE）。
+- **邊界**：純新增文件＋看板一筆；不動 App／engine／部署。Branch `claude/health-caregiver-ai-features-v9kcj3`。
