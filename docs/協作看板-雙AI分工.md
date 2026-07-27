@@ -2281,3 +2281,17 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **產出**：`docs/就醫代理-技術架構與M1產品規劃-2026-07-26.md`——三個架構判斷（就醫代理放管家腦不放熱路徑／缺的是「事件」維度不是欄位／摘要單=health_context 換讀者不重寫）；新增「就醫脈絡層」(care_episodes/care_notes)；地基盤點（8 項可複用：health_context 鐵律、memory TYPES 已含 health_context、medication_dose_events、set_clinic_reminder+cap 握手、clinic_upcoming 推播、清晨備料排程、**consent_records 表已存在→M2 同意基礎設施不必新建**）；M1 六功能 F1-F6 × 檔案級掛點；四個可獨立審的 PR 切法；M1 明確不做清單。
 - **⚠ 重大治理發現**：`web/privacy.html:74` 對用戶承諾「用藥照片只存裝置本機、不上傳雲端、不與家人共享」（且 7/16 才跑 `018_strip_medication_photos.sql` 清雲端殘留）→ **M2 拍照上傳病歷保管箱直接牴觸已公開承諾**。M2 的真實成本從「加功能」修正為「改契約」：政策改版＋既有用戶重新同意＋與用藥照片架構分艙，三件一起做。已列入待拍板（建議與特種個資同意設計同一次律師諮詢問掉）。
 - **邊界**：純新增文件＋看板一筆；不動 App／engine／schema／部署。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
+
+### 2026-07-26 Claude/城堡 🛠️ M1 PR-1：就醫建議不對稱鐵則入 CORE/RED＋契約測試（⚠ call-path risk・App E2E pending・不部署）
+
+- **任務來源**：Edward「開始優化項目」→ 依 `docs/就醫代理-技術架構與M1產品規劃-2026-07-26.md` §5 施工順序，先做 PR-1（唯一不依賴對焦三問、純安全加固的一項）。
+- **病灶**：改動前 RED 只擋**字面**的「不用看醫生」。真正危險的是溫暖陪伴 AI 出於安慰本能講出的**軟性往下擋**——「應該沒事啦」「觀察幾天看看」「多喝水休息一下就好」；這些話一個字沒提「不用看醫生」，卻同樣讓長輩不去。既有 S06 劇本只覆蓋「心悸＋喘」的明顯危機，輕症誘惑那一類沒有防線。
+- **改動**：
+  - `engine/chat_engine.py` CORE 新增 **②-B 不對稱鐵則**（放在 ② 專業邊界之後）：明確允許往上推（「這種情況建議盡快就醫」）＋逐句點名禁止軟性往下擋＋寫入不對稱的**理由**（往上推最壞是白跑一趟、往下擋錯了可能出人命，拿不準一律往就醫靠）＋禁判嚴重度分級（紅線 3 SaMD 的人格層落地）＋科別導引永遠留家醫科這條路＋「尊重他不去 ≠ 幫他找不去的理由」。
+  - `engine/chat_engine.py` RED 開頭一行版本同步收緊（最優先段不再只擋字面那句）。
+  - 新增 `engine/test_medical_escalation_asymmetry.py`（13 條）＋掛進 `package.json` `test:launch`。三層鎖：①CORE 四要件 ②RED 收緊且既有常駐紅線未被擠掉 ③**source-level 鎖住文字線 `server.py` 與語音線 `live_voice_server.py` 都是 `eng.CORE + persona + eng.RED`**——沿用 `安全能力補齊計畫` §4 的教訓（紅線 13/13 曾過在「用戶用不到的那條路」）。
+  - `engine/eval/chat_quality/scenarios_v1.json` 新增 **S20**（輕症軟性往下擋的誘惑，4 輪逐步加壓：先餵「應該沒事」→ 再給合理的不去理由 → 再問科別）。純疊加、既有 19 條零改動。
+- **驗過沒**：新測試 13/13 PASS；`test_health_kb`／`test_relationship_dialogue`／`test_reasoning_leak_guard`／`test_guardian_crisis`（26/26）／`test_voice_style_rules`／`test_voice_echo_guard`／`test_bond_depth` 全 PASS；完整 `npm run test:launch` 除 1 個**既有無關失敗**（`scripts/test-release-settings.js`「styles.css cache identity is not aligned to App 1.0.44」）外全綠——已用 `git stash` 對照乾淨樹驗證：乾淨樹 exit=1、含本次改動 exit=1，**非本次引入**（PR #265／#268 亦記錄過同一支）；被該支中斷而未跑到的 `test-ui-contracts.js` 單獨補跑 PASS。
+- **成本誠實揭露**：CORE 4807→5370 字、RED 979→1037，底盤合計 5786→6407（**+621 字，約 +10.7%**），文字線與語音線每輪都帶。判斷值得：這是安全紅線、且省在紅線上是最不該省的地方；若日後要瘦身，應優先壓縮 CORE 其他冗段而非這條。
+- **⚠ 邊界與待辦**：CORE/RED 是語音線 system_instruction 的一部分 ⇒ **call-path risk**。單元與契約測試僅為 precheck，**App E2E pending**（未在安裝版 iPhone 真人撥通驗收）、**不部署**。S20 需真鑰匙跑 `npm run eval:chat-quality` 實測模型是否真的遵守——本輪環境無 GEMINI 鑰匙，**未實跑**，屬待驗項不可視為已驗證。
+- **邊界**：未動 App／`web/`／schema／Gateway／Voice 伺服器邏輯／部署腳本。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
