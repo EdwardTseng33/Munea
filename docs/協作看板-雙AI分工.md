@@ -2274,3 +2274,10 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **產出**：`docs/健康照護管家-就醫代理與導引-方向與分階-2026-07-26.md`——一句話定盤「沐寧整理事實、醫師做判斷」；七條紅線（文案紅線／不對稱鐵則「只往上推永不往下擋」／symptom checker=SaMD 深水區／病歷=特種個資§6／醫師資訊只彙整不評價／病歷家人可見性要專屬分層／機構介接前法遵）；四階分階（A 看診秘書 v1.x 不碰特種個資可直排、D 就醫導引輕量並行、B 病歷保管箱+健康存摺 SDK 先設計後施工、C 對外遞交 a2a 長線 C0=摘要單 QR）；三項待 Edward 拍板（D3 名醫姿勢／B 啟動時機／不對稱鐵則入 CORE）。
 - **邊界**：純新增文件＋看板一筆；不動 App／engine／部署。Branch `claude/health-caregiver-ai-features-v9kcj3`。
 - **v2 更新（同日）**：Edward 第三輪指示「先思考規劃方法、階段任務、終局對焦再動工」→ 同檔升 v2：新增終局對焦（終局一句話＋四個身分定盤：家庭端代理人不做醫院端生意／陪伴是根代理是果／a2a 入場券=資料完整度×信任／台灣形狀優先＋終局不變量）、規劃方法四原則（終局倒推／兩軸矩陣／閘門制／防漂移）、里程碑閘門表 M0-M5＋D3 選配（每階=假設+閘門+失敗訊號+依賴；M5=條件觸發非排程）、待拍板改為對焦三問（L1）＋戰術三問。仍純文件、同 PR #270。
+
+### 2026-07-26 Claude/城堡 🏗️ 就醫代理：技術架構與 M1 產品規劃（同 PR #270 · 純文件不動程式）
+
+- **來源**：Edward 第四問「實際規劃上怎麼思考？技術架構、產品功能要做什麼規劃」。翻過 `health_context.py`／`memory_engine.py`／`live_voice_server.py`／`server.py`／`supabase/sql/001-026`／`web/src/app.js`／`web/privacy.html` 後產出施工級規劃。
+- **產出**：`docs/就醫代理-技術架構與M1產品規劃-2026-07-26.md`——三個架構判斷（就醫代理放管家腦不放熱路徑／缺的是「事件」維度不是欄位／摘要單=health_context 換讀者不重寫）；新增「就醫脈絡層」(care_episodes/care_notes)；地基盤點（8 項可複用：health_context 鐵律、memory TYPES 已含 health_context、medication_dose_events、set_clinic_reminder+cap 握手、clinic_upcoming 推播、清晨備料排程、**consent_records 表已存在→M2 同意基礎設施不必新建**）；M1 六功能 F1-F6 × 檔案級掛點；四個可獨立審的 PR 切法；M1 明確不做清單。
+- **⚠ 重大治理發現**：`web/privacy.html:74` 對用戶承諾「用藥照片只存裝置本機、不上傳雲端、不與家人共享」（且 7/16 才跑 `018_strip_medication_photos.sql` 清雲端殘留）→ **M2 拍照上傳病歷保管箱直接牴觸已公開承諾**。M2 的真實成本從「加功能」修正為「改契約」：政策改版＋既有用戶重新同意＋與用藥照片架構分艙，三件一起做。已列入待拍板（建議與特種個資同意設計同一次律師諮詢問掉）。
+- **邊界**：純新增文件＋看板一筆；不動 App／engine／schema／部署。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
