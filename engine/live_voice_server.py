@@ -292,6 +292,26 @@ def guardian_ai_correction_cue(categories, risk=None, policy=None):
     )
 
 
+def impossible_promise_cue(dropped):
+    """語音線專用的自我更正提示（2026-07-29）。
+
+    為什麼語音線不能只靠出口清洗：聲音是邊生邊播的，等字幕清乾淨時那句
+    「我幫你打電話給你女兒」**已經唸出去、長輩已經聽到了**——他會坐下來等，
+    等不到人也不會再想辦法求助。收不回聲音，但可以在下一個輪替空檔（通常兩三秒內）
+    讓她自己自然地更正回來，趕在他真的去等之前。
+
+    語氣要求：自然收回、不長篇道歉（一直道歉會讓長輩緊張、也顯得不可靠）。
+    """
+    said = (dropped or [""])[0][:40]
+    return (
+        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」這類**你其實做不到**的事"
+        "（你撥不了電話、發不了訊息、叫不了車、傳不了圖）。"
+        "下一句請**自然地把它收回來，並馬上給他一個他自己做得到的替代**，"
+        "像『欸不好意思，我沒辦法幫你撥電話，不過你現在打給她，我在這邊陪你等她接』。"
+        "不要長篇道歉、不要解釋你是AI，一句帶過就好，重點放在他接下來可以怎麼做。）" % said
+    )
+
+
 def guardian_scan_text(text):
     """純函式：一句字幕丟進去，回傳守護腦判讀結果。不做任何 I/O、不碰 session，方便單元測試/語音線模擬。"""
     try:
@@ -422,6 +442,11 @@ async def guardian_flush_pending_cue(cid, session, st):
     st["pending_cues"] = []
     health_cue = st.get("pending_health_cue")
     st["pending_health_cue"] = None
+    promise_cue = st.get("pending_promise_cue")
+    st["pending_promise_cue"] = None
+    if promise_cue:
+        # 空頭承諾更正排最前面：長輩可能正準備坐下來等，這句要最快講
+        pending = [promise_cue] + pending
     if health_cue:
         pending = pending + [health_cue]  # 衛教排在安全導引之後：安全永遠先講、衛教只是配菜
     if not pending:
@@ -1271,7 +1296,7 @@ def _new_call_state():
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
-          "health_topics_sent": set(), "pending_health_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
+          "health_topics_sent": set(), "pending_health_cue": None, "pending_promise_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
 
           "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
@@ -1905,7 +1930,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         if ot and getattr(ot, "text", None):
                             # 2026-07-25（卡西法・三修③）：語音線字幕出口也要過同一道防禦性
                             # 清洗，剝掉可能漏出的 <thinking> 內部推理標記，跟文字線同一把關卡。
-                            caption_text = eng.strip_reasoning_artifacts(localization.display_text(ot.text, "zh-TW"))
+                            raw_caption = localization.display_text(ot.text, "zh-TW")
+                            caption_text = eng.clean_outgoing_reply(raw_caption)
+                            # 語音線：字幕能清、聲音已經放出去了——排一句自我更正，
+                            # 讓她在下一個輪替空檔（幾秒內）自然收回，趕在長輩真的坐著等之前。
+                            _, _promised = eng.strip_impossible_promises(raw_caption)
+                            if _promised and not st.get("pending_promise_cue"):
+                                st["pending_promise_cue"] = impossible_promise_cue(_promised)
+                                _diag(cid, "promise.cue_queued", said=_promised[0][:30])
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
@@ -1977,7 +2009,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["ai_buf"] = ""
                             st["user_flagged"] = set()
                             st["ai_flagged"] = set()
-                            if st.get("pending_cues") or st.get("pending_health_cue"):
+                            if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if _voice_session_extend_enabled() and st.get("goaway_pending"):
                                 # GoAway 已經預警過、現在剛好是天然的輪替空檔（這一輪自然講完了）——
