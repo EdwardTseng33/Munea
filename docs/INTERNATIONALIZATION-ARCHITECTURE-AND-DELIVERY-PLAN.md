@@ -165,6 +165,7 @@ Phase 2d（2026-07-28）建立英文、日文、西班牙文法律與客服靜�
 - 英文、日文、西班牙文翻譯與法律審查仍標示 `pending`，在審查、畫面 QA、App reader 接線完成前不可開放 runtime／binary gate。
 - 現有繁中服務條款的點數文案已對齊實際 call gate：點數不足時不開始新語音／虛擬形象通話，不再宣稱會自動切換免費通話。
 - 目前只建立 repo 內草稿與自動護欄，沒有部署；待 #270 合併後，App reader 才依已核准的 UI locale 選擇對應靜態頁面。
+- `scripts/build-app-site-legal-localizations.js` 將三語來源可重現地產生到 Firebase 的 `app-site/legal/`；未核准頁面自動加入 `noindex,nofollow`，測試確保公開產物不引用未部署的 `web/src/` 路徑。本批仍未執行 Firebase deploy。
 
 Phase 2e（2026-07-28）建立 App Store 多語 metadata 與可用地區閘門：
 
