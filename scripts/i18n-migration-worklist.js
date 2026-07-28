@@ -9,6 +9,7 @@ const {
 } = require('./i18n-surface-inventory.js');
 
 const ROOT = path.resolve(__dirname, '..');
+const ZH_CATALOG_PATH = path.join(ROOT, 'web', 'src', 'i18n', 'zh-TW.json');
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -31,6 +32,18 @@ function bindingKind(candidate) {
   return 'runtime-copy';
 }
 
+function catalogValueIndex() {
+  const catalog = JSON.parse(fs.readFileSync(ZH_CATALOG_PATH, 'utf8'));
+  const index = new Map();
+  for (const [key, value] of Object.entries(catalog)) {
+    const source = String(value).replace(/\s+/g, ' ').trim();
+    if (!index.has(source)) index.set(source, []);
+    index.get(source).push(key);
+  }
+  for (const matches of index.values()) matches.sort();
+  return index;
+}
+
 function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInventory()) {
   const report = buildReport(inventory);
   const surface = report.surfaces.find((entry) => entry.id === surfaceId);
@@ -40,23 +53,33 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
   }
 
   const entries = new Map();
+  const catalogMatchesBySource = catalogValueIndex();
   const sourceFiles = {};
   for (const file of surface.files) {
     const absolutePath = path.join(ROOT, file.path);
     sourceFiles[file.path] = sha256(fs.readFileSync(absolutePath));
     for (const candidate of file.candidates) {
       if (candidate.bindingStatus === 'bound') continue;
-      const key = stableKey(candidate.text);
-      if (!entries.has(key)) {
-        entries.set(key, {
-          suggestedKey: key,
-          source: candidate.text,
+      const source = candidate.rawText || candidate.text;
+      const entryId = stableKey(source);
+      if (!entries.has(entryId)) {
+        const catalogMatches = catalogMatchesBySource.get(source) || [];
+        const resolutionKind = catalogMatches.length === 1
+          ? 'reuse-existing-key'
+          : catalogMatches.length > 1
+            ? 'review-existing-keys'
+            : 'create-key';
+        entries.set(entryId, {
+          suggestedKey: catalogMatches.length === 1 ? catalogMatches[0] : entryId,
+          source,
+          catalogMatches,
+          resolutionKind,
           bindingKind: bindingKind(candidate),
           reviewStatus: 'pending',
           occurrences: [],
         });
       }
-      const entry = entries.get(key);
+      const entry = entries.get(entryId);
       const nextKind = bindingKind(candidate);
       if (nextKind === 'markup-refactor') entry.bindingKind = nextKind;
       entry.occurrences.push({
@@ -70,11 +93,13 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
   const worklist = [...entries.values()]
     .sort((left, right) => left.suggestedKey.localeCompare(right.suggestedKey));
   const bindingKinds = {};
+  const resolutionKinds = {};
   for (const entry of worklist) {
     bindingKinds[entry.bindingKind] = (bindingKinds[entry.bindingKind] || 0) + 1;
+    resolutionKinds[entry.resolutionKind] = (resolutionKinds[entry.resolutionKind] || 0) + 1;
   }
   return {
-    schema: 'munea.i18n-migration-worklist.v2',
+    schema: 'munea.i18n-migration-worklist.v3',
     surface: surfaceId,
     requiredLocales: inventory.requiredLocales,
     sourceFiles,
@@ -85,6 +110,7 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
       occurrences: surface.unboundHanCandidates,
       uniqueSourceStrings: worklist.length,
       bindingKinds,
+      resolutionKinds,
     },
     entries: worklist,
   };
@@ -98,6 +124,9 @@ function formatSummary(worklist) {
     `Unique source strings: ${worklist.summary.uniqueSourceStrings}`,
   ];
   for (const [kind, count] of Object.entries(worklist.summary.bindingKinds).sort()) {
+    lines.push(`- ${kind}: ${count}`);
+  }
+  for (const [kind, count] of Object.entries(worklist.summary.resolutionKinds).sort()) {
     lines.push(`- ${kind}: ${count}`);
   }
   return lines.join('\n');
@@ -117,6 +146,7 @@ if (require.main === module) {
 module.exports = {
   bindingKind,
   buildMigrationWorklist,
+  catalogValueIndex,
   formatSummary,
   stableKey,
 };

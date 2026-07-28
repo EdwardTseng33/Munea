@@ -32,6 +32,15 @@ function normalizeCandidate(value) {
     .trim();
 }
 
+function candidatePreview(text) {
+  if (text.length <= 160) return text;
+  const firstHan = text.search(HAN_RE);
+  const start = firstHan > 120 ? Math.max(0, firstHan - 60) : 0;
+  const prefix = start > 0 ? '...' : '';
+  const available = 160 - prefix.length - 3;
+  return `${prefix}${text.slice(start, start + available)}...`;
+}
+
 function loadCatalogKeys() {
   if (cachedCatalogKeys) return cachedCatalogKeys;
   const manifest = JSON.parse(fs.readFileSync(CATALOG_MANIFEST_PATH, 'utf8'));
@@ -55,7 +64,7 @@ function pushCandidate(candidates, source, index, kind, value, binding = null) {
   const candidate = {
     line: lineNumberAt(source, index),
     kind,
-    text: text.length > 160 ? `${text.slice(0, 157)}...` : text,
+    text: candidatePreview(text),
     bindingStatus: binding ? 'bound' : 'unbound',
   };
   if (binding) {
@@ -66,6 +75,11 @@ function pushCandidate(candidates, source, index, kind, value, binding = null) {
     configurable: false,
     enumerable: false,
     value: index,
+  });
+  Object.defineProperty(candidate, 'rawText', {
+    configurable: false,
+    enumerable: false,
+    value: text,
   });
   candidates.push(candidate);
 }
@@ -294,7 +308,7 @@ function scanHtml(source, catalogKeys = loadCatalogKeys()) {
           source,
           bodyOffset + candidate.sourceIndex,
           `inline-${candidate.kind}`,
-          candidate.text,
+          candidate.rawText,
           binding,
         );
       }

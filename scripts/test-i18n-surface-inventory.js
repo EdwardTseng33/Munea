@@ -52,6 +52,12 @@ assert.deepEqual(
   ['unbound', 'bound', 'bound', 'unbound', 'unbound'],
   'HTML bindings must be recognized only when their catalog key is complete',
 );
+const lateHanCandidate = scanHtml(
+  `<script>const longCopy = '${'a'.repeat(180)}仍需翻譯';</script>`,
+);
+assert.equal(lateHanCandidate.length, 1, 'Han text after the preview limit must remain inventoried');
+assert.match(lateHanCandidate[0].text, /仍需翻譯/, 'The audit preview must retain the Han evidence');
+assert(lateHanCandidate[0].rawText.length > 180, 'The migration worklist must retain full source copy');
 
 const inventory = loadInventory();
 assert.deepEqual(
