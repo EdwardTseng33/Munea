@@ -10,6 +10,7 @@ const {
   formatReport,
   validateEvidenceConsistency,
   validateInstalledAppEvidence,
+  validateLocaleDataEvidence,
   validateNativeReviewEvidence,
   validatePurchaseEvidence,
   validateVisualEvidence,
@@ -22,6 +23,7 @@ const requiredGates = [
   'catalogCoverage',
   'appUiIntegration',
   'sourceCopyMigration',
+  'localeDataReadiness',
   'runtimeLocalization',
   'binaryLocalization',
   'nativeLanguageReview',
@@ -64,6 +66,15 @@ for (const locale of requiredLocales) {
   assert(
     entry.blockers.some(({ gate }) => gate === 'sourceCopyMigration'),
     `${locale} must remain blocked while hard-coded App WebView copy exists`,
+  );
+  assert(
+    entry.blockers.some(({ gate }) => gate === 'localeDataReadiness'),
+    `${locale} must require a redacted production LocaleContext data audit`,
+  );
+  assert.equal(
+    entry.gates.localeDataReadiness.evidence,
+    'docs/LOCALE-CONTEXT-DATA-READINESS.json + docs/qa/i18n/locale-context-data-audit.json',
+    `${locale} locale data gate must use the canonical zero-write audit evidence`,
   );
   assert.equal(
     entry.gates.sourceCopyMigration.evidence,
@@ -161,6 +172,10 @@ assert(
   'Release readiness must include fail-closed internal-copy review evidence',
 );
 assert(
+  report.generatedFrom.includes('docs/LOCALE-CONTEXT-DATA-READINESS.json'),
+  'Release readiness must include explicit LocaleContext data readiness',
+);
+assert(
   report.generatedFrom.includes('scripts/i18n-native-review-worklist.js'),
   'Release readiness must include the catalog-bound native review worklist',
 );
@@ -174,6 +189,90 @@ assert(
 );
 
 const exactCommit = 'a'.repeat(40);
+const localeDataManifest = {
+  requiredEvidence: {
+    environment: 'production',
+    captureMode: 'read-only-redacted-export',
+    writesPerformed: false,
+    minimumActiveRecords: 1,
+    explicitCoverage: 1,
+    invalidActiveRecords: 0,
+    accountIsolationFailures: 0,
+    exportIssueCount: 0,
+    containsDirectIdentifiers: false,
+    containsNames: false,
+    containsContactDetails: false,
+    recordReferencesAreOrdinalOnly: true,
+  },
+};
+const localeDataEvidence = {
+  schema: 'munea.locale-context-data-audit.v1',
+  result: 'pass',
+  sourceCommit: exactCommit,
+  generatedAt: '2026-07-28T08:00:00Z',
+  sourceExport: {
+    schema: 'munea.locale-context-data-export.v1',
+    generatedAt: '2026-07-28T07:55:00Z',
+    environment: 'production',
+    captureMode: 'read-only-redacted-export',
+    writesPerformed: false,
+  },
+  summary: {
+    recordCount: 1,
+    activeRecordCount: 1,
+    completeActiveRecords: 1,
+    invalidActiveRecords: 0,
+    invalidInactiveRecords: 0,
+    accountIsolationFailures: 0,
+    explicitCoverage: 1,
+    exportIssueCount: 0,
+  },
+  outputPrivacy: {
+    containsDirectIdentifiers: false,
+    containsNames: false,
+    containsContactDetails: false,
+    recordReferencesAreOrdinalOnly: true,
+  },
+  exportIssues: [],
+  records: [{
+    record: 'record-0001',
+    active: true,
+    status: 'complete',
+    issues: [],
+  }],
+};
+assert.equal(
+  validateLocaleDataEvidence(localeDataEvidence, localeDataManifest),
+  true,
+);
+assert.equal(
+  validateLocaleDataEvidence(
+    {
+      ...localeDataEvidence,
+      summary: {
+        ...localeDataEvidence.summary,
+        accountIsolationFailures: 1,
+      },
+    },
+    localeDataManifest,
+  ),
+  false,
+  'Cross-account LocaleContext evidence must fail closed',
+);
+assert.equal(
+  validateLocaleDataEvidence(
+    {
+      ...localeDataEvidence,
+      outputPrivacy: {
+        ...localeDataEvidence.outputPrivacy,
+        containsDirectIdentifiers: true,
+      },
+    },
+    localeDataManifest,
+  ),
+  false,
+  'LocaleContext release evidence must remain identifier-free',
+);
 const enCatalogPath = path.join(__dirname, '..', 'web', 'src', 'i18n', 'en.json');
 const enCatalogSource = fs.readFileSync(enCatalogPath, 'utf8');
 const enCatalogKeys = Object.keys(JSON.parse(enCatalogSource)).sort();

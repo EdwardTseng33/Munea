@@ -1,0 +1,37 @@
+{
+  "schema": "munea.locale-context-data-readiness.v1",
+  "status": "pending-read-only-production-audit",
+  "auditScript": "scripts/locale_context_data_audit.py",
+  "evidencePath": "docs/qa/i18n/locale-context-data-audit.json",
+  "productionMutationAuthorized": false,
+  "requiredEvidence": {
+    "environment": "production",
+    "captureMode": "read-only-redacted-export",
+    "writesPerformed": false,
+    "minimumActiveRecords": 1,
+    "explicitCoverage": 1,
+    "invalidActiveRecords": 0,
+    "accountIsolationFailures": 0,
+    "exportIssueCount": 0,
+    "containsDirectIdentifiers": false,
+    "containsNames": false,
+    "containsContactDetails": false,
+    "recordReferencesAreOrdinalOnly": true
+  },
+  "canonicalStorage": {
+    "uiLocale": "accounts.locale",
+    "preferredLanguages": "accounts.preferred_languages",
+    "conversationLocale": "persons.locale",
+    "countryCode": "persons.region_code",
+    "timeZone": "persons.timezone",
+    "serverPolicy": "persons.attributes.localeContext"
+  },
+  "separationPolicy": [
+    "Language must not infer country, safety region, legal region, currency, units, time zone, or data region.",
+    "Person records must match their owning account reference.",
+    "The audit export must use pseudonymous references and omit names, email addresses, phone numbers, and raw database identifiers.",
+    "No country-specific member database is required by language localization; data residency is an independent server policy field."
+  ],
+  "releaseRule": "All active production records must have explicit, valid LocaleContext storage and zero account-isolation failures before any locale promotion is authorized.",
+  "currentEvidence": "No production export has been inspected. Release remains blocked without fabricating evidence."
+}

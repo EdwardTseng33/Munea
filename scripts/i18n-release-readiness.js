@@ -305,6 +305,47 @@ function validateEvidenceConsistency(evidenceSet) {
     && sameServiceRevisions;
 }
 
+function validateLocaleDataEvidence(evidence, readinessManifest) {
+  const required = readinessManifest && readinessManifest.requiredEvidence;
+  const summary = evidence && evidence.summary;
+  const privacy = evidence && evidence.outputPrivacy;
+  const source = evidence && evidence.sourceExport;
+  if (!required || !summary || !privacy || !source) return false;
+  return evidence.schema === 'munea.locale-context-data-audit.v1'
+    && evidence.result === 'pass'
+    && /^[0-9a-f]{40}$/i.test(evidence.sourceCommit || '')
+    && validIsoDate(evidence.generatedAt)
+    && source.schema === 'munea.locale-context-data-export.v1'
+    && validIsoDate(source.generatedAt)
+    && source.environment === required.environment
+    && source.captureMode === required.captureMode
+    && source.writesPerformed === required.writesPerformed
+    && Number.isInteger(summary.recordCount)
+    && summary.recordCount >= summary.activeRecordCount
+    && Number.isInteger(summary.activeRecordCount)
+    && summary.activeRecordCount >= required.minimumActiveRecords
+    && summary.completeActiveRecords === summary.activeRecordCount
+    && summary.invalidActiveRecords === required.invalidActiveRecords
+    && summary.accountIsolationFailures === required.accountIsolationFailures
+    && summary.exportIssueCount === required.exportIssueCount
+    && summary.explicitCoverage === required.explicitCoverage
+    && privacy.containsDirectIdentifiers === required.containsDirectIdentifiers
+    && privacy.containsNames === required.containsNames
+    && privacy.containsContactDetails === required.containsContactDetails
+    && privacy.recordReferencesAreOrdinalOnly === required.recordReferencesAreOrdinalOnly
+    && Array.isArray(evidence.exportIssues)
+    && evidence.exportIssues.length === 0
+    && Array.isArray(evidence.records)
+    && evidence.records.length === summary.recordCount
+    && evidence.records.every((record, index) => (
+      record.record === `record-${String(index + 1).padStart(4, '0')}`
+      && typeof record.active === 'boolean'
+      && record.status === 'complete'
+      && Array.isArray(record.issues)
+      && record.issues.length === 0
+    ));
+}
+
 function evidenceResult(locale, filename, validator) {
   const filePath = path.join(QA_DIR, locale, filename);
   if (!fs.existsSync(filePath)) {
@@ -348,6 +389,27 @@ function buildReadiness() {
   );
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
+  const localeDataManifest = readJson(
+    path.join(ROOT, 'docs', 'LOCALE-CONTEXT-DATA-READINESS.json'),
+  );
+  const localeDataEvidencePath = path.resolve(ROOT, localeDataManifest.evidencePath);
+  const localeDataEvidenceInsideRoot = localeDataEvidencePath.startsWith(`${ROOT}${path.sep}`);
+  let localeDataEvidencePassed = false;
+  if (
+    localeDataManifest.status === 'approved'
+    && localeDataManifest.productionMutationAuthorized === false
+    && localeDataEvidenceInsideRoot
+    && fs.existsSync(localeDataEvidencePath)
+  ) {
+    try {
+      localeDataEvidencePassed = validateLocaleDataEvidence(
+        readJson(localeDataEvidencePath),
+        localeDataManifest,
+      );
+    } catch {
+      localeDataEvidencePassed = false;
+    }
+  }
   const surfaceReport = buildSurfaceReport();
   const appWebViewSurface = surfaceReport.surfaces.find(({ id }) => id === 'app-webview');
   if (!appWebViewSurface) throw new Error('i18n app-webview surface inventory is missing');
@@ -482,6 +544,11 @@ function buildReadiness() {
         appWebViewSurface.unboundHanCandidates === 0,
         'all unbound App WebView copy must be moved into catalogs before release',
         'docs/I18N-SURFACE-INVENTORY.json + docs/I18N-NON-USER-FACING-REVIEW.json + scripts/i18n-surface-inventory.js',
+      ),
+      localeDataReadiness: check(
+        localeDataEvidencePassed,
+        'active production records need explicit LocaleContext policy and zero account-isolation failures from a redacted read-only audit',
+        'docs/LOCALE-CONTEXT-DATA-READINESS.json + docs/qa/i18n/locale-context-data-audit.json',
       ),
       runtimeLocalization: check(
         catalog.runtimeEnabled === true,
@@ -648,6 +715,8 @@ function buildReadiness() {
       'web/src/i18n/app-surface-copy-manifest.json',
       'docs/I18N-SURFACE-INVENTORY.json',
       'docs/I18N-NON-USER-FACING-REVIEW.json',
+      'docs/LOCALE-CONTEXT-DATA-READINESS.json',
+      'scripts/locale_context_data_audit.py',
       'scripts/i18n-native-review-worklist.js',
       'scripts/i18n-visual-qa-worklist.js',
       'engine/voice-locale-integration-manifest.json',
@@ -692,6 +761,7 @@ module.exports = {
   buildReadiness,
   formatReport,
   validateInstalledAppEvidence,
+  validateLocaleDataEvidence,
   validateEvidenceConsistency,
   validateNativeReviewEvidence,
   validatePurchaseEvidence,
