@@ -88,7 +88,24 @@
         "locale-segmentation"
       ],
       "releaseGate": "Country and locale operational visibility",
-      "baselineHanCandidates": 692
+      "baselineHanCandidates": 692,
+      "localizationContract": {
+        "runtime": "web/src/admin-i18n.js",
+        "validation": "scripts/test-admin-localizations.js",
+        "sourceLocale": "zh-TW",
+        "catalogs": {
+          "en": "web/src/i18n/admin-en.json",
+          "ja": "web/src/i18n/admin-ja.json",
+          "es": "web/src/i18n/admin-es.json"
+        },
+        "localeResolution": "browser-language-with-localhost-only-forcing",
+        "policyFields": [
+          "countryCode",
+          "safetyRegion",
+          "legalRegion",
+          "dataRegion"
+        ]
+      }
     },
     {
       "id": "marketing-site",

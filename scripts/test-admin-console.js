@@ -72,3 +72,4 @@ for (const token of [":focus-visible", '.page[aria-busy="true"]', ".ops-notice.e
 }
 
 console.log(`Admin console contract OK (${consolePaths.length} endpoint(s))`);
+require("./test-admin-localizations.js");

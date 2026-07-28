@@ -105,6 +105,35 @@ assert.ok(
   inventory.surfaces.some((surface) => surface.id === 'operations-admin'),
   'The operations admin must be included in the delivery scope',
 );
+const operationsAdmin = inventory.surfaces.find(
+  (surface) => surface.id === 'operations-admin',
+);
+assert.equal(operationsAdmin.localizationContract.runtime, 'web/src/admin-i18n.js');
+assert.equal(
+  operationsAdmin.localizationContract.validation,
+  'scripts/test-admin-localizations.js',
+);
+assert.deepEqual(operationsAdmin.localizationContract.catalogs, {
+  en: 'web/src/i18n/admin-en.json',
+  ja: 'web/src/i18n/admin-ja.json',
+  es: 'web/src/i18n/admin-es.json',
+});
+assert.deepEqual(operationsAdmin.localizationContract.policyFields, [
+  'countryCode',
+  'safetyRegion',
+  'legalRegion',
+  'dataRegion',
+]);
+for (const contractPath of [
+  operationsAdmin.localizationContract.runtime,
+  operationsAdmin.localizationContract.validation,
+  ...Object.values(operationsAdmin.localizationContract.catalogs),
+]) {
+  assert.ok(
+    require('fs').existsSync(require('path').resolve(__dirname, '..', contractPath)),
+    `Admin localization contract file must exist: ${contractPath}`,
+  );
+}
 const marketingSite = inventory.surfaces.find(
   (surface) => surface.id === 'marketing-site',
 );

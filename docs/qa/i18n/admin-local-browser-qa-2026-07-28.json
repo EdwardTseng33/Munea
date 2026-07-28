@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "admin-local-browser-i18n-qa",
+  "recordedAt": "2026-07-28T23:55:21+08:00",
+  "scope": {
+    "surface": "operations-admin",
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4175",
+    "productionTouched": false,
+    "networkPolicy": "abort every request whose host is not 127.0.0.1 or localhost"
+  },
+  "runtime": {
+    "fixture": "scripts/admin-i18n-fixture-server.js",
+    "browser": "Chrome 150.0.7871.182",
+    "automation": "Playwright from the locally installed agent-browser environment"
+  },
+  "locales": [
+    "zh-TW",
+    "en",
+    "ja",
+    "es"
+  ],
+  "localeSelection": {
+    "production": "browser or device language; no language selector",
+    "qaOverride": "?lang= is accepted only on localhost or 127.0.0.1"
+  },
+  "viewports": {
+    "desktop": {
+      "width": 1440,
+      "height": 1000
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "authenticatedChecks": {
+    "total": 28,
+    "statesPerLocale": [
+      "overview-desktop",
+      "users-desktop",
+      "safety-desktop",
+      "subscription-desktop",
+      "locale-detail-desktop",
+      "overview-mobile",
+      "users-mobile"
+    ],
+    "assertions": {
+      "catalogLoadErrors": 0,
+      "untranslatedVisibleStrings": 0,
+      "wholePageHorizontalOverflows": 0,
+      "mobileSidebarsLeftOpen": 0
+    },
+    "result": "passed"
+  },
+  "signedOutVisualSmoke": {
+    "screenshots": 4,
+    "result": "passed"
+  },
+  "localePolicySeparationCanary": {
+    "account": "Yuki",
+    "countryCode": "JP",
+    "uiLocale": "ja",
+    "conversationLocale": "en",
+    "timeZone": "Asia/Tokyo",
+    "safetyRegion": "JP",
+    "legalRegion": "JP",
+    "dataRegion": "jp-primary",
+    "result": "displayed as separate fields in all four operator UI locales"
+  },
+  "screenshots": {
+    "directory": "C:/Users/Administrator/.codex/visualizations/2026/07/27/019fa432-899a-7891-8be5-9afe04da104b/admin-i18n",
+    "perLocale": [
+      "signed-out-desktop",
+      "overview-desktop",
+      "users-desktop",
+      "safety-desktop",
+      "subscription-desktop",
+      "locale-detail-desktop",
+      "overview-mobile",
+      "users-mobile"
+    ]
+  },
+  "limitations": [
+    "This evidence covers only the local operations-admin fixture; it does not verify or touch production.",
+    "No installed-iPhone App end-to-end call or purchase flow was run.",
+    "No native-speaker language review was run.",
+    "App Store metadata, storefront availability, localized in-app purchase copy, screenshots, and the Apple-selected binary were not verified.",
+    "Real tenant and member data isolation was not exercised end to end.",
+    "The admin displays the backend effective locale and policy context, but verified source provenance for defaulted policy fields remains pending."
+  ]
+}

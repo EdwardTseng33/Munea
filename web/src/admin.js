@@ -88,6 +88,8 @@
 
   const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7B76" };
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
+  const ADMIN_FORMAT_LOCALE = (window.MuneaAdminI18n && window.MuneaAdminI18n.current()) || "zh-TW";
+  const ADMIN_FORMAT_TIME_ZONE = String(window.MUNEA_ADMIN_TIME_ZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
   // 手機圖表軸字鎖 14px（2026-07-22 女巫 Gate2 · bondDepth/growth 反映最明顯，其餘圖表共用同一套函式一併受益）
   function axisFontPx(){ try{ return window.innerWidth<=880?14:11; }catch(e){ return 11; } }
   const $ = (id) => document.getElementById(id);
@@ -163,31 +165,34 @@
   function fmtMoney(v){ return (v==null||isNaN(v))?"–":"NT$"+Math.round(Number(v)).toLocaleString("en-US"); }
   function pct(v){ return (v==null||isNaN(v))?"–":Math.round(Number(v)*100)+"%"; }
   function shortDate(iso){ const p=String(iso).split("-"); return p.length===3?`${+p[1]}/${+p[2]}`:iso; }
-  function fmtTime(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);}catch(e){return String(v);} }
-  function fmtDate(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"numeric",day:"numeric"}).format(d);}catch(e){return String(v);} }
+  function fmtTime(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat(ADMIN_FORMAT_LOCALE,{timeZone:ADMIN_FORMAT_TIME_ZONE,month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);}catch(e){return String(v);} }
+  function fmtDate(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat(ADMIN_FORMAT_LOCALE,{timeZone:ADMIN_FORMAT_TIME_ZONE,year:"numeric",month:"numeric",day:"numeric"}).format(d);}catch(e){return String(v);} }
   function zh(map,v,f){ if(v==null||v==="")return f||"–"; return map[String(v).toLowerCase()]||String(v); }
-  const RISK_ZH = { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" };
+  const RISK_LABEL_BY_LOCALE = {
+    "zh-TW": { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" },
+    en: { crisis:"🔴 Crisis", critical:"🔴 Crisis", high:"🔴 High risk", medium:"🟡 Medium risk", moderate:"🟡 Medium risk", low:"🟢 Low risk", none:"Low" },
+    ja: { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高リスク", medium:"🟡 中リスク", moderate:"🟡 中リスク", low:"🟢 低リスク", none:"低" },
+    es: { crisis:"🔴 Crisis", critical:"🔴 Crisis", high:"🔴 Riesgo alto", medium:"🟡 Riesgo medio", moderate:"🟡 Riesgo medio", low:"🟢 Riesgo bajo", none:"Bajo" },
+  };
+  const RISK_ZH = RISK_LABEL_BY_LOCALE[ADMIN_FORMAT_LOCALE] || RISK_LABEL_BY_LOCALE["zh-TW"];
   const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數", survey:"問卷" };
   const FB_TONE = { bug:"warn", idea:"gold", praise:"ok", nps:"mute", survey:"mute" };
   const PV_ZH = { account_deletion:"刪除帳號", deletion:"刪除帳號", export:"資料副本", data_export:"資料副本", correction:"資料更正" };
   const ST_ZH = { pending:"待處理", open:"待處理", received:"已收到", processing:"處理中", done:"已完成", completed:"已完成", closed:"已結案" };
   const CREDIT_ZH = { subscription_monthly_allowance:"每月贈點", credit_grant:"發放點數", credit_consume:"使用點數", free_signup_voice_avatar_trial:"新用戶體驗贈點", apple_purchase:"加購點數", apple_purchase_refunded:"加購退款", apple_refund_reversed:"退款回沖", call_consume:"通話扣點" };
   const LOCALE_LABEL = { "zh-TW":"\u7e41\u9ad4\u4e2d\u6587", en:"English", ja:"日本語", es:"Español" };
-  const MARKET_TEXT = {
-    chat:"\u804a\u5929",
-    tableHeader:"\u5730\u5340\uff0f\u8a9e\u8a00",
-    country:"\u570b\u5bb6\uff0f\u5730\u5340",
-    appLanguage:"App \u64cd\u4f5c\u8a9e\u8a00",
-    conversationLanguage:"\u966a\u4f34\u804a\u5929\u8a9e\u8a00",
-    timeZone:"\u6642\u5340",
-    policyRegions:"\u5b89\u5168\uff0f\u6cd5\u5f8b\u5340\u57df",
-    dataRegion:"\u8cc7\u6599\u5340\u57df",
+  const MARKET_TEXT_BY_LOCALE = {
+    "zh-TW": { chat:"聊天", tableHeader:"地區／語言", country:"國家／地區", appLanguage:"App 操作語言", conversationLanguage:"陪伴聊天語言", timeZone:"時區", policyRegions:"安全／法律區域", dataRegion:"資料區域" },
+    en: { chat:"conversation", tableHeader:"Region / language", country:"Country / region", appLanguage:"App UI language", conversationLanguage:"Companion conversation language", timeZone:"Time zone", policyRegions:"Safety / legal region", dataRegion:"Data region" },
+    ja: { chat:"会話", tableHeader:"地域／言語", country:"国／地域", appLanguage:"Appの表示言語", conversationLanguage:"会話言語", timeZone:"タイムゾーン", policyRegions:"安全／法務地域", dataRegion:"データ地域" },
+    es: { chat:"conversación", tableHeader:"Región / idioma", country:"País / región", appLanguage:"Idioma de la interfaz", conversationLanguage:"Idioma de conversación", timeZone:"Zona horaria", policyRegions:"Región de seguridad / legal", dataRegion:"Región de datos" },
   };
+  const MARKET_TEXT = MARKET_TEXT_BY_LOCALE[ADMIN_FORMAT_LOCALE] || MARKET_TEXT_BY_LOCALE["zh-TW"];
   function accountLocaleContext(account){
     const a=account||{},p=a.primaryPerson||{},ctx=a.localeContext||{};
     return {
-      uiLocale:ctx.uiLocale||a.locale||"zh-TW",
-      conversationLocale:ctx.conversationLocale||p.locale||a.locale||"zh-TW",
+      uiLocale:ctx.uiLocale||a.locale||"—",
+      conversationLocale:ctx.conversationLocale||p.locale||a.locale||"—",
       countryCode:ctx.countryCode||p.regionCode||"—",
       timeZone:ctx.timeZone||p.timezone||"—",
       safetyRegion:ctx.safetyRegion||"—",
@@ -195,7 +200,10 @@
       dataRegion:ctx.dataRegion||"—",
     };
   }
-  function localeLabel(locale){ return LOCALE_LABEL[locale]||String(locale||"—"); }
+  function localeLabel(locale){
+    const raw=String(locale||"—"), normalized=/^zh/i.test(raw)?"zh-TW":(/^en/i.test(raw)?"en":(/^ja/i.test(raw)?"ja":(/^es/i.test(raw)?"es":"")));
+    return LOCALE_LABEL[normalized]||raw;
+  }
   function accountMarketSearchText(account){
     const ctx=accountLocaleContext(account);
     return [ctx.countryCode,ctx.uiLocale,localeLabel(ctx.uiLocale),ctx.conversationLocale,localeLabel(ctx.conversationLocale),ctx.timeZone,ctx.safetyRegion,ctx.legalRegion,ctx.dataRegion].join(" ").toLowerCase();
@@ -442,7 +450,7 @@
       const sub=REL_ZH[String(p.relationship||"").toLowerCase()]||"成員";
       return [
         `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub">${esc(sub)}</div></div></div>`,
-        `<span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span>`,
+        `<span class="family-cell"><span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span></span>`,
         accountMarketCell(a),
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
@@ -1857,7 +1865,8 @@
     localStorage.setItem(ASSUME_KEY,JSON.stringify(a));
     const paid=a.plusCount+a.proCount, mrr=a.plusCount*a.plusPrice+a.proCount*a.proPrice;
     const arpu=paid?mrr/paid:null, ltv=arpu!=null?arpu*a.lifeMonths:null, cac=a.newPaid?a.marketing/a.newPaid:null, ratio=(ltv!=null&&cac)?ltv/cac:null;
-    if($("assumeOut")) $("assumeOut").innerHTML=`MRR <b>${fmtMoney(mrr)}</b> · ARPU ${arpu!=null?fmtMoney(arpu):"–"} · LTV ${ltv!=null?fmtMoney(ltv):"–"} · CAC ${cac!=null?fmtMoney(cac):"填新增付費+行銷花費"} · <b>LTV:CAC ${ratio!=null?ratio.toFixed(1)+":1"+(ratio>=3?" 🟢":ratio>=1?" 🟡":" 🔴"):"–"}</b>`;
+    const emptyCac={ "zh-TW":"填新增付費+行銷花費", en:"enter paid users + marketing spend", ja:"新規有料数と広告費を入力", es:"introduce usuarios de pago y gasto de marketing" }[ADMIN_FORMAT_LOCALE]||"填新增付費+行銷花費";
+    if($("assumeOut")) $("assumeOut").innerHTML=`MRR <b>${fmtMoney(mrr)}</b> · ARPU ${arpu!=null?fmtMoney(arpu):"–"} · LTV ${ltv!=null?fmtMoney(ltv):"–"} · CAC ${cac!=null?fmtMoney(cac):emptyCac} · <b>LTV:CAC ${ratio!=null?ratio.toFixed(1)+":1"+(ratio>=3?" 🟢":ratio>=1?" 🟡":" 🔴"):"–"}</b>`;
   }
 
   // ══════════ 導覽 ══════════
@@ -1983,5 +1992,10 @@
     root.innerHTML=`<div class="ops-notice warn" role="status"><strong>連不到伺服器</strong>${extra}這不是密碼問題，你的登入還在——稍後按右上角「重新整理」再試一次。</div>`;
     bindPageEvents(state.page);
   }
-  document.addEventListener("DOMContentLoaded",init);
+  function boot(){
+    Promise.resolve(window.MuneaAdminI18n && window.MuneaAdminI18n.ready)
+      .finally(init);
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",boot);
+  else boot();
 })();
