@@ -13,8 +13,8 @@ const worklist = buildLayoutRiskWorklist();
 
 assert.equal(worklist.schema, 'munea.i18n-layout-risk-worklist.v1');
 assert.deepEqual(worklist.locales, ['zh-TW', 'en', 'ja', 'es']);
-assert.equal(worklist.catalogKeyCount, 431);
-assert.equal(worklist.entryCount, 431 * LOCALES.length);
+assert.equal(worklist.catalogKeyCount, 432);
+assert.equal(worklist.entryCount, 432 * LOCALES.length);
 assert.equal(worklist.entries.length, worklist.entryCount);
 assert.equal(
   Object.values(worklist.summary.bySeverity).reduce((sum, count) => sum + count, 0),
@@ -23,7 +23,7 @@ assert.equal(
 for (const locale of LOCALES) {
   assert.equal(
     Object.values(worklist.summary.byLocale[locale]).reduce((sum, count) => sum + count, 0),
-    431,
+    432,
   );
 }
 
