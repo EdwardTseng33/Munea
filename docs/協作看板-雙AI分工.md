@@ -2337,3 +2337,24 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **其他驗證**：`test_health_context`／`test_family_health`／`test_medication_doses`／`test_medical_escalation_asymmetry`／`test_voice_style_rules` 全 exit=0；PR-3 的 `test-care-questions` 仍全過。
 - **⚠ 未完（本 PR 明確不含）**：後端 endpoint 未接、UI 未做、每日任務入口未接、設定頁未加、匯出未做、口袋問題清單未做。**PDF 匯出在 iOS 原生殼能否運作尚未實測，不先承諾**。未部署。
 - **邊界**：未動 schema／migration／既有 endpoint／部署腳本／前端。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
+
+### 2026-07-28 Claude/城堡 🛠️ M1 PR-4b/4c：就診摘要 endpoint ＋ 完整 UI（⚠ App E2E pending・未部署）
+
+- **後端**（`engine/server.py`）：新增 `POST /visit-summary` → `visit_summary_response()`。三條設計：
+  - **認人只認已驗證身分**（`_current_person_id()`），**絕不採信 payload 的 personId**（可偽造）。沿用 `load_health_context`／`voice_health_context` 同一條規矩——健康資料把 A 的講給 B 聽比不講嚴重得多。記憶再依 `personId` 過濾一次（本機 JSON 退路裡多人記憶是混在一起的）。
+  - **部分資料讀不到要回報**（`summary.partial`）：一份少了血壓的摘要看起來就像「他都沒量」，醫師會據此判斷——悄悄少一塊比整份失敗更危險。
+  - 記憶撈取上限放寬到 1000（預設 200 會把 60 天摘要的早期症狀吃掉）。
+  - 路由＋契約清單＋`docs/API-CONTRACT-INVENTORY.json` 已同步；`scripts/test_api_contract_inventory.py` 的路由數絆線 91→92（新增路由必須是有意識的動作，故照規矩更新）。
+- **前端**（`web/index.html`／`app.js`／`styles.css`）：把**死掉的 `#reportModal`** 改造成真的就診摘要。
+  - **快照優先**：先畫本機快照、再背景更新 ⇒ **診間離線打得開**，且早期症狀不受記憶淘汰影響。
+  - **口袋問題前端合併**：清單是裝置本機的（H1 期間刻意不上雲），後端不知道它存在 ⇒ 客觀資料後端組、主觀問題前端接。
+  - 期間 7/14/30/60 現場可切（醫師問「這狀況多久了」→ 當場切 60 天）＋設定頁存預設值。
+  - 時間軸三種來源用**形狀**區分（●自述／▲量測／✕用藥）**不用顏色**——醫師要分辨的是可信度不是嚴重度，顏色會讓它看起來像醫療警報。
+  - 匯出：文字分享（既有管線）＋**列印存 PDF（零外部套件）**＋首次匯出的不可回收提醒。
+  - 口袋問題清單：長輩**自己**加／刪／「看完醫生了」整批標記問過。**刻意沒有子女代為新增的入口**（Edward 2026-07-28）。
+  - 入口：今天的看診任務卡點開＝摘要（照 `mood` 任務先例，**不打勾**；打勾改為摘要頁底部大按鈕，長輩按小勾勾很難按）＋設定頁「就診摘要」列。任務卡副標改為「點開看這次要問的 N 個問題」。
+- **🔧 順手修好一支長期紅燈**：`scripts/test-release-settings.js`（"styles.css cache identity is not aligned to App 1.0.44"）。`package.json` 是 1.0.44 但 `index.html` 快取代碼停在 v1043（auth.js 甚至 v1042）。**先前判定為既有無關失敗是對的，但本次改了 styles.css/app.js 就變成我的問題**——快取代碼沒更新的話，部署上去使用者仍會拿舊檔，改動根本到不了他們手上。已對齊：改過的檔換今天日期、沒改的檔保留原日期只對齊版本代碼。
+- **驗過沒**：新增 `engine/test_visit_summary_endpoint.py`（**23 項全過**：認人防線／別人的記憶不得混入／payload 偽造不採信／部分資料揭露／期間壞值不炸／路由與契約登記）＋ `scripts/test-visit-summary-ui.js`（**59 項全過**）掛進 `test:launch`。**完整 `npm run test:launch` 首次全綠（exit=0）**。
+- **測試又抓到我兩個問題（都是測試設計，不是程式）**：①頁尾免責「非醫療診斷」踩到自己的禁字表——這次**不改文案而是給極窄白名單**（只放行字面完全相符的免責句，不放行「凡有『非』就通融」那種後門），因為為了閃測試去弱化免責聲明是本末倒置，與 PR-4a 那次可改寫的情況不同 ②禁字出現在**解釋「為何不能寫這些字」的註解裡** → 改為只掃執行碼與版型，沿用 `test-cloud-sync-guard.js` 既有規矩。
+- **⚠ 未驗項**：**App E2E pending**——未在真機開啟摘要面板、未實測 `window.print()` 在 iOS WKWebView 能否運作（程式已備退路提示，**仍不承諾 PDF 可用**）、未實測語音記錄口袋問題的實際準確度。**未部署**。
+- **邊界**：未動 schema／migration／既有 endpoint 行為／Gateway／Avatar。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
