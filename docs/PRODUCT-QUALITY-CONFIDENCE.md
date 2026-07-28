@@ -10,7 +10,7 @@
 
 **目前產品品質信心：69/100，未達 90。**
 
-這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#199 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract、DB deployment ledger、服務 watchdog、Cloud Monitoring 固定頻率控制面與輕量風險治理。2026-07-20 的公開 evidence 確認 production Voice 已由 `1.0.31` 前進到 `1.0.41@906732ab`，但部署身分不能替代安裝版 iPhone 通話。東京 live probe 仍證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 缺核准備份與完整前後檢查。專用 QA 帳號已完成真密碼登入、account bootstrap 與 `505` 點讀回，讓一個 Build 的驗收可執行；Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄。latest source 是 `1.0.43 (Build 48)`，latest uploaded 仍是 `1.0.40 (Build 47)`，#174／#175 已於 2026-07-20 比對差異為空後關閉、內容收攏進 #188；#188 仍是 Draft PR。
+這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#199 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract、DB deployment ledger、服務 watchdog、Cloud Monitoring 固定頻率控制面與輕量風險治理。2026-07-20 的公開 evidence 確認 production Voice 已由 `1.0.31` 前進到 `1.0.41@906732ab`，但部署身分不能替代安裝版 iPhone 通話。東京 live probe 仍證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 缺核准備份與完整前後檢查。專用 QA 帳號已完成真密碼登入、account bootstrap 與 `505` 點讀回，讓一個 Build 的驗收可執行；Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄。latest source、latest uploaded 與 App Store selected Build 現為 `1.0.44 (Build 492)`；Edward iPhone 已安裝／啟動，但完整 App E2E 仍待真人驗收。
 
 在任何 P0 關鍵旅程失敗或缺少真機閉環時，整體分數最高只能是 69。自動測試全綠可以提高工程信心，不能解除這個上限。
 
@@ -77,7 +77,7 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.44 (Build 48)`；source、Web、package、iOS 與品質治理已在 `origin/main@00d3eb3` 對齊，包含 #181–#199 的 release／SLO／治理工作；本輪沒有 Build 48 Archive／upload／iPhone 證據 |
+| Latest source | `1.0.44 (Build 492)`；以 `origin/main@5d2008c` 為基準的發版分支已完成 Release Archive／IPA、Apple upload／processing／版本選用、Edward iPhone 安裝／啟動與手機端版號回讀；未送審，App E2E pending |
 | Latest uploaded App | `1.0.40 (Build 47)`；STATUS 記錄 20:44 上傳成功與 Edward iPhone 換裝成功 |
 | App Store | Build 47 已上傳；精確 selected Build 與 Apple review state 未由本輪 App Store Connect 證據確認，因此保持 `unknown` |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
