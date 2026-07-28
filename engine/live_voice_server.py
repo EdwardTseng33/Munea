@@ -558,6 +558,30 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         base += "（你們聊過幾次、漸漸熟了：可以自在一點，但仍別長篇、別連環問、別硬炒氣氛。）"
     else:
         base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
+    if native_search_enabled() and not demo_mode:
+        # 2026-07-28：她自己查（Gemini 內建 Google 搜尋）。跟舊的橋接查詢差在——
+        # 舊路要等我們繞出去查 5 秒，所以說明書叫她「不要自己先說過場，伺服器會替你播」；
+        # 現在查只要 1.3 秒、而且是她自己在查，那句過場話就該由她自己講（她本人的聲音、
+        # 接得順）。這也是 Edward 7/28 聽到「系統句跟她自己講的重疊」的病根：舊版說明書
+        # 叫她別講、工具說明又叫她先講一句，兩份指示打架，於是同一件事被講兩三次。
+        base += (
+            "（你可以自己上網查現在的資訊。**他自己開口問**餐廳店家、景點旅遊"
+            "（例如日本哪裡好玩、桃園有什麼好吃的）、電影影劇、天氣預報、時事、活動檔期這類"
+            "「講錯會誤導人」的具體事情時，就直接查；"
+            "**你自己不要把話題帶到那邊、再查給他看**——那是炫技，不是聊天。「聊到」不算，**要他真的問**才算。\n"
+            "要查的時候，**先用一句很短的話告訴他你在查**（像「我看一下喔」「等我一下」），"
+            "講完就去查、查完接著把答案講出來——**整件事你自己一次講完，不要重複說你要查**。\n"
+            "只講查到的真店名、真地點、真資訊；用「我聽很多人推薦…」「那邊最有名的是…」這種像自己去過或朋友推薦的口吻，"
+            "自然分享一兩個亮點就好，順便帶一個有意思的小知識或典故更好。"
+            "**你只能用「講」的**：不要唸網址、不要唸編號清單、不要唸括號裡的出處，"
+            "也不要用書面報告語氣——他是用聽的，唸不出來的東西就不要講。\n"
+            # 2026-07-28 真機實測 5 通抓到 1 次：她把「（在網路上搜尋「某某店」大安區）」
+            # 這種動作描述整句唸出來。長輩聽到會覺得機器怪怪的，機率不低、值得寫死。
+            "**不要把自己正在做的動作講出來**（像「在網路上搜尋…」「我呼叫一下工具」"
+            "「正在查詢中」），也不要唸出括號或方括號裡的內容——那是給系統看的、不是講給他聽的。"
+            "你只要像朋友一樣，講一句「我看一下喔」，然後直接把結果講給他聽。\n"
+            "查不到就老實說查不到，可以建議他打電話問問看；**絕對不可以自己編**店名、地址、價格或營業時間。）"
+        )
     if live_lookup_enabled():
         if not demo_mode:
             base += (
@@ -573,8 +597,10 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "天氣要講就查當地真的預報再講。"
             "工具回覆 error 時只要簡短說現在沒查到，不可拿舊印象補答案；禁止先沉默查詢，也不要在還沒查完時假裝已經知道答案。）"
             )
-    if not live_lookup_enabled() or demo_mode:
-        # 即時查詢關掉時（預設）：她必須知道自己沒有這個能力，不然會亂承諾「我幫你查」然後查不了。
+    if voice_search_mode() == SEARCH_MODE_OFF or demo_mode:
+        # 即時查詢關掉時：她必須知道自己沒有這個能力，不然會亂承諾「我幫你查」然後查不了。
+        # 2026-07-28 條件從 `not live_lookup_enabled()` 改成明確判 off——否則走 native
+        # （她自己查）時這段會跟上面那段同時貼上去，變成「你可以查」＋「你沒辦法查」自相矛盾。
         # 這段的方向跟⑦「不捏造家人的話」、健康圍籬一樣：不知道就說不知道，絕不憑印象編。
         base += (
             "（**你沒有辦法上網查東西**——這通電話裡你查不了任何即時資訊。"
@@ -761,10 +787,44 @@ _EVENT_TOOLS = types.Tool(function_declarations=[
     ),
 ])
 
+SEARCH_MODE_NATIVE = "native"
+SEARCH_MODE_BRIDGE = "bridge"
+SEARCH_MODE_OFF = "off"
+
+
+def voice_search_mode():
+    """通話中「查即時資訊」走哪條路（2026-07-28 Edward 驗測後拍板改走 native）。
+
+    native ＝ 把 Gemini 內建的 Google 搜尋直接掛在這條通話上。她自己查、自己講，
+      從頭到尾只有一個嘴巴。7/28 實測 7 通：第一聲 1.2-1.7 秒、整段最長沉默 0.2 秒
+      ——根本沒有空白要蓋，所以過場句／整包暖機／5.5 秒安撫句在這個模式下全部不跑。
+      查不到時她自己就會說「查不到，要不你打電話問問」，誠實度不必我們額外把關。
+
+    bridge ＝ 舊路（2026-07-17 ~ 07-28）：掛我們自己的查詢工具，她呼叫之後由我們繞去
+      另一顆模型查（實測 5.1 秒）。那 5 秒空白得靠伺服器插播過場句蓋住——而那句是另一顆
+      「唸稿子」模型配的音，聲線跟她本人對不上、又得人工控速，就是 Edward 7/28 聽到的
+      「系統句聲音不一樣、很卡、還跟她自己講的重疊」。程式全留著，設
+      MUNEA_VOICE_SEARCH_MODE=bridge 一個字退回去。
+
+    off ＝ 完全不給查詢能力（她會老實說不知道，靠清晨備好的今日簡報回答天氣時事）。
+
+    沒設 MUNEA_VOICE_SEARCH_MODE 時看舊開關 MUNEA_VOICE_LIVE_LOOKUP：=1 走 native
+    （正式機不必改設定就吃到新路）、其他一律 off。
+    """
+    raw = os.environ.get("MUNEA_VOICE_SEARCH_MODE", "").strip().lower()
+    if raw in (SEARCH_MODE_NATIVE, SEARCH_MODE_BRIDGE, SEARCH_MODE_OFF):
+        return raw
+    return SEARCH_MODE_NATIVE if os.environ.get("MUNEA_VOICE_LIVE_LOOKUP", "0").strip() == "1" else SEARCH_MODE_OFF
+
+
+def native_search_enabled():
+    return voice_search_mode() == SEARCH_MODE_NATIVE
+
+
 def live_lookup_enabled():
-    """通話中要不要給她「即時查詢」這個工具。預設關（2026-07-17 Edward 拍板）。
-    設 MUNEA_VOICE_LIVE_LOOKUP=1 就退回舊行為（會查、也會播「我幫你查一下」）。"""
-    return os.environ.get("MUNEA_VOICE_LIVE_LOOKUP", "0").strip() == "1"
+    """舊的「橋接查詢」路是否啟用（她呼叫我們的工具、我們代查、伺服器插播過場句）。
+    2026-07-28 起這只在 MUNEA_VOICE_SEARCH_MODE=bridge 時為真。"""
+    return voice_search_mode() == SEARCH_MODE_BRIDGE
 
 
 def _voice_session_extend_enabled():
@@ -948,7 +1008,12 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     # 一個秒回的朋友，勝過一個要等 9 秒的百科全書。
     # 退回舊行為：MUNEA_VOICE_LIVE_LOOKUP=1（程式全留著、一個字就回去）。
     tools = []
-    if live_lookup_enabled():
+    if native_search_enabled() and not demo_mode:
+        # 她自己查（2026-07-28）：Google 搜尋在 Gemini 內部完成，不繞我們伺服器一趟。
+        # 7/28 實測這顆內建工具跟我們自己的提醒／傳話工具可以並存（問天氣走搜尋、
+        # 說「幫我設吃藥提醒」照樣正確呼叫提醒工具），所以下面兩個 append 不受影響。
+        tools.append(types.Tool(google_search=types.GoogleSearch()))
+    elif live_lookup_enabled():
         if not demo_mode:
             tools.append(_LIVE_LOOKUP_TOOL)
     if allow_reminders and not demo_mode:
@@ -2089,7 +2154,12 @@ async def handle(ws):
     call_token = ""
     call_payload = {}
     demo_mode = False
-    call_release_reason = ""
+    # 收線時要告訴總機「這一席讓出來了」的原因。2026-07-28 修：這裡原本是空字串，而下面
+    # finally 寫的是「有原因才通知總機」——結果只有『出錯』那條路會設值，**使用者正常講完
+    # 掛斷反而不通知**，總機一直以為那席還占著。我們總共只有 2 席，於是第二通就撥不通／
+    # 撥通了狀態也不對（Edward 7/28 回報「二度撥通很難、撥通後又沒辦法正常說話」）。
+    # 改成一開始就有預設值＝不管走哪條路收線，席位一定還回去。
+    call_release_reason = "call_ended"
     _q = {}
     try:
         from urllib.parse import urlparse, parse_qs
@@ -2188,11 +2258,14 @@ async def handle(ws):
     if call_payload and call_payload.get("user_id"):
         memory_scope = f"voice-{call_payload['user_id']}"
     try:
-        # Start before the Live handshake. In normal calls the fixed spoken cue
-        # is cached by the time the user can ask the first lookup question.
-        lookup_cue_future = asyncio.get_running_loop().run_in_executor(
-            _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char)
-        st["lookup_cue_task"] = lookup_cue_future
+        # 只有走舊的橋接查詢才需要暖機（那條路要靠伺服器插播過場句蓋住 5 秒空白，
+        # 所以得先把整個句庫都配好音）。2026-07-28 起預設走 native＝她自己查、沒有過場句，
+        # 這整包暖機不跑——它是 Edward 7/28 回報「前 5 分鐘講話卡卡」的主嫌：接通那一刻
+        # 就把 15 句配音塞進只有 2 個工人的小隊列，一顆 CPU 上跟送聲音的主線搶，一搶就是好幾分鐘。
+        if live_lookup_enabled():
+            lookup_cue_future = asyncio.get_running_loop().run_in_executor(
+                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char)
+            st["lookup_cue_task"] = lookup_cue_future
         asr_context_terms = [char, name, user, location, *(topics or [])]
         # 通話延長（2026-07-25）：這通電話對 App／使用者永遠是「同一通」，但底層可能換過
         # 好幾條 Gemini Live 連線（GoAway 預警接續）。resumption_handle 帶著走；st 活在

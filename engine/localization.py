@@ -85,10 +85,22 @@ _TAIWANESE_MANDARIN_FALLBACKS = (
 # Gemini Live currently exposes a language code and voice choice, but no
 # per-word pronunciation lexicon. Avoid user-verified unstable terms in spoken
 # output instead of hoping a prompt-only phonetic hint will always be obeyed.
+# 供應商唸不穩的詞 → 換成穩定說法。
+#
+# 2026-07-28 拿掉 ("興趣", "喜好")：這條原本是為了修「興趣」走音，但 Edward 真機聽到
+# 換上去的「喜好」也走音（聽成「信號」——後面的「ㄏㄠˋ」一樣、錯在前一個字），
+# 等於拿一個唸錯換另一個唸錯，而且新的錯法意思差更遠。
+# 兩個補強：①這張表只驗「原詞」有沒有漏出來，從來沒驗過「換上去的詞唸得對不對」——
+# 底下 unstable_replacement_targets() 就是補這個缺口，讓考卷能一起盯替換後的詞；
+# ②「興趣／喜好」都是書面詞，跟長輩講話本來就不該用——改成句型層級的指示
+# （見 taiwan_mandarin_pronunciation_guard_instruction），直接叫她問「你平常喜歡做什麼」，
+# 比在兩個都會走音的書面詞之間換來換去更根本。
 _TAIWAN_MANDARIN_SPEECH_REPLACEMENTS = (
-    ("興趣", "喜好"),
     ("濃醇", "厚實"),
 )
+
+# 已知會走音、但沒有安全替換詞的書面語：直接叫她別用，改用口語句型。
+_TAIWAN_MANDARIN_AVOID_TERMS = ("興趣", "喜好")
 
 _TAIWAN_TRADITIONAL_CONVERTER = OpenCC("s2twp")
 _CJK_PUNCTUATION_RE = re.compile(r"\s*([，。！？；：、])\s*")
@@ -204,12 +216,26 @@ def taiwan_mandarin_pronunciation_guard_instruction(locale):
         f"不要說「{source}」，改說「{target}」"
         for source, target in _TAIWAN_MANDARIN_SPEECH_REPLACEMENTS
     )
+    avoid = "」「".join(_TAIWAN_MANDARIN_AVOID_TERMS)
     return (
         "\n[台灣華語咬字]\n"
         "語音輸出要使用台灣常用讀音、完整收好句尾。已知供應商容易誤讀的詞直接換成穩定說法："
         + replacements
-        + "。即使對方用了原詞，也不要原樣複誦。"
+        + "。即使對方用了原詞，也不要原樣複誦。\n"
+        # 2026-07-28：這兩個詞都會走音、又沒有同樣意思又唸得穩的替代詞，所以改成
+        # 「別用這個詞、改用這種問法」——長輩對話本來也不會用書面語問「你的興趣是什麼」。
+        "另外「" + avoid + "」這類書面詞一律不要說出口，改用口語問法"
+        "（例如「你平常喜歡做什麼」「你喜歡的事是什麼」）。"
     )
+
+
+def unstable_replacement_targets():
+    """替換表「換上去」的那些詞——考卷要一起盯這些字的唸法。
+
+    2026-07-28 立：舊版只驗原詞有沒有漏出來，沒人驗換上去的詞唸得對不對，
+    結果「興趣→喜好」把一個走音換成另一個走音，兩個禮拜沒被抓到。
+    """
+    return tuple(target for _, target in _TAIWAN_MANDARIN_SPEECH_REPLACEMENTS)
 
 
 def voice_opening_instruction(familiarity=0, topics=None, location=None, opening_index=None):
@@ -244,8 +270,16 @@ def voice_opening_instruction(familiarity=0, topics=None, location=None, opening
 
 
 def contains_unstable_mandarin_speech(text):
+    """這句話裡有沒有「已知會唸歪」的詞——有就攔下來讓她重講。
+
+    2026-07-28 補上 _TAIWAN_MANDARIN_AVOID_TERMS：舊版只攔替換表的「原詞」，
+    所以「興趣」會被攔、換上去的「喜好」不會——Edward 真機聽到「喜好」走音成「信號」
+    整整兩個禮拜沒被攔過一次。現在原詞跟避用詞一起攔。
+    """
     value = str(text or "")
-    return any(source in value for source, _ in _TAIWAN_MANDARIN_SPEECH_REPLACEMENTS)
+    if any(source in value for source, _ in _TAIWAN_MANDARIN_SPEECH_REPLACEMENTS):
+        return True
+    return any(term in value for term in _TAIWAN_MANDARIN_AVOID_TERMS)
 
 
 def assistant_output_text(text, locale):
