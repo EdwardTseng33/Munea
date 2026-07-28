@@ -235,6 +235,8 @@ function check(condition, reason, evidence) {
 function buildReadiness() {
   const catalogManifest = readJson(path.join(I18N_DIR, 'catalog-manifest.json'));
   const reviewManifest = readJson(path.join(I18N_DIR, 'review-manifest.json'));
+  const screenManifest = readJson(path.join(I18N_DIR, 'app-screen-manifest.json'));
+  const bindingManifest = readJson(path.join(I18N_DIR, 'app-binding-manifest.json'));
   const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
@@ -280,6 +282,12 @@ function buildReadiness() {
         review.catalogCoverage === 'approved',
         'catalog coverage review must be approved',
         'web/src/i18n/review-manifest.json',
+      ),
+      appUiIntegration: check(
+        screenManifest.bindingStatus === 'integrated'
+          && bindingManifest.integrationStatus === 'integrated',
+        'all required App screens, dynamic renderers, and markup refactors must be wired to catalog keys',
+        'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json',
       ),
       runtimeLocalization: check(
         catalog.runtimeEnabled === true,
@@ -372,6 +380,8 @@ function buildReadiness() {
     generatedFrom: [
       'web/src/i18n/catalog-manifest.json',
       'web/src/i18n/review-manifest.json',
+      'web/src/i18n/app-screen-manifest.json',
+      'web/src/i18n/app-binding-manifest.json',
       'web/legal/manifest.json',
       'app-store/localizations/manifest.json',
       'app-store/in-app-purchases/manifest.json',

@@ -18,6 +18,7 @@ const report = buildReadiness();
 const requiredLocales = ['zh-TW', 'en', 'ja', 'es'];
 const requiredGates = [
   'catalogCoverage',
+  'appUiIntegration',
   'runtimeLocalization',
   'binaryLocalization',
   'nativeLanguageReview',
@@ -41,6 +42,10 @@ for (const locale of requiredLocales) {
   const entry = report.locales[locale];
   assert.deepEqual(Object.keys(entry.gates), requiredGates, `${locale} gate inventory drifted`);
   assert.equal(entry.ready, false, `${locale} must not be release-ready without current evidence`);
+  assert(
+    entry.blockers.some(({ gate }) => gate === 'appUiIntegration'),
+    `${locale} must require completed App UI integration`,
+  );
   assert(
     entry.blockers.some(({ gate }) => gate === 'installedAppE2E'),
     `${locale} must require exact installed-App evidence`,
@@ -72,6 +77,7 @@ for (const locale of requiredLocales) {
 for (const locale of ['en', 'ja', 'es']) {
   const entry = report.locales[locale];
   assert.equal(entry.gates.runtimeLocalization.passed, false);
+  assert.equal(entry.gates.appUiIntegration.passed, false);
   assert.equal(entry.gates.binaryLocalization.passed, false);
   assert.equal(entry.gates.appStoreScreenshots.passed, false);
   assert.equal(entry.gates.inAppPurchaseLocalization.passed, false);
