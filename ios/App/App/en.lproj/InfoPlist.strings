@@ -1,5 +1,7 @@
 "CFBundleDisplayName" = "Munea";
 "NSMicrophoneUsageDescription" = "Munea needs microphone access so you can talk with your AI companion.";
+"NSCameraUsageDescription" = "Munea uses the camera only when you choose to take a profile photo, medication photo, or feedback attachment.";
+"NSPhotoLibraryUsageDescription" = "Munea reads only the photos you select for a profile image, medication photo, or feedback attachment.";
 "NSSpeechRecognitionUsageDescription" = "Munea uses speech recognition to understand what you say to your companion.";
 "NSUserNotificationsUsageDescription" = "Munea sends gentle reminders and family care updates.";
 "NSLocalNetworkUsageDescription" = "Munea connects to a voice service on your local Wi-Fi for real-time conversations.";

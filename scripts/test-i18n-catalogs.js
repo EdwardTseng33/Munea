@@ -148,6 +148,45 @@ const expectedBinaryLocales = sorted(
     .map(({ nativeLocale }) => nativeLocale),
 );
 const infoPlist = readText(path.join(ROOT, 'ios', 'App', 'App', 'Info.plist'));
+const requiredInfoPlistKeys = [
+  'CFBundleDisplayName',
+  'NSMicrophoneUsageDescription',
+  'NSCameraUsageDescription',
+  'NSPhotoLibraryUsageDescription',
+  'NSSpeechRecognitionUsageDescription',
+  'NSUserNotificationsUsageDescription',
+  'NSLocalNetworkUsageDescription',
+  'NSHealthShareUsageDescription',
+  'NSHealthUpdateUsageDescription',
+];
+for (const entry of manifest.locales) {
+  const stringsPath = path.join(
+    ROOT,
+    'ios',
+    'App',
+    'App',
+    `${entry.nativeLocale}.lproj`,
+    'InfoPlist.strings',
+  );
+  const stringsSource = readText(stringsPath);
+  const localizedValues = new Map(
+    [...stringsSource.matchAll(/^"([^"]+)"\s*=\s*"((?:[^"\\]|\\.)*)";\s*$/gm)]
+      .map((match) => [match[1], match[2]]),
+  );
+  assert.deepEqual(
+    sorted([...localizedValues.keys()]),
+    sorted(requiredInfoPlistKeys),
+    `${entry.nativeLocale} InfoPlist.strings key parity differs`,
+  );
+  for (const key of requiredInfoPlistKeys) {
+    assert.ok(localizedValues.get(key).trim(), `${entry.nativeLocale}:${key} must not be empty`);
+  }
+  if (entry.locale === 'en' || entry.locale === 'es') {
+    for (const [key, value] of localizedValues) {
+      assert.ok(!hanPattern.test(value), `${entry.nativeLocale}:${key} unexpectedly contains Han text`);
+    }
+  }
+}
 const plistBlock = infoPlist.match(
   /<key>CFBundleLocalizations<\/key>\s*<array>([\s\S]*?)<\/array>/,
 );

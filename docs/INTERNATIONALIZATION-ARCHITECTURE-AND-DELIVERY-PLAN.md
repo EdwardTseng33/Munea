@@ -162,6 +162,13 @@ Phase 1h（2026-07-28）：Browser／iOS App Language bootstrap
 - bootstrap 完成會送出 `munea:locale-ready`，供待 #247／#270 合併後的 App 初始化等待；載入失敗則保留繁中並回報 fallback，不阻斷 App 啟動。
 - 目前只有靜態 `data-i18n`、已接線模組與開發 preview 能反映裝置語言；大量 `index.html`／`app.js` 動態文案尚未遷移，不能宣稱全畫面完成。
 
+Phase 1i（2026-07-28）：iOS permission localization parity
+
+- 四個 `InfoPlist.strings` 都具備 App 名稱、麥克風、相機、照片、語音辨識、通知、本機網路、HealthKit 讀取與預留寫入共 9 個相同 key。
+- 自動測試會阻擋缺 key、空字串，以及英文／西班牙文權限提示混入漢字。
+- Xcode variant group、`knownRegions` 與 `CFBundleLocalizations` 仍只有 `zh-Hant`；en／ja／es 必須等全畫面、語音與 exact-build gates 通過後才一起註冊，避免 IPA 過早宣告支援。
+- 此階段只補齊未打包草稿與靜態契約，未執行 Xcode build、archive、upload 或 App Store Connect 變更。
+
 Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 
 - 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。
