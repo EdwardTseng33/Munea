@@ -73,6 +73,11 @@ const ONBOARDING_COMPLETED_KEY = 'munea.onboardingCompleted.v1';
 const AI_PROVIDER_CONSENT_KEY = 'munea.aiProviderConsent.v1';
 const AI_PROVIDER_CONSENT_VERSION = '2026-07-02-ai-provider-v1';
 const DEV_FIXTURE_MARKER_KEY = 'munea.developmentFixtures.v1';
+// 開帳與個人資料重整（2026-07-24）：首登一次性彈個人資料卡的旗標——填了或跳過都算「問過」，
+// 之後永不再自動彈；跳過者靠首頁「幫你留意」裡的一則提醒（見 syncProfileNudge）自己回來補。
+// 2026-07-28 Edward 拍板：原本的獨立小卡＋關閉 X 整組退役，改收進留意卡輪播——
+// 輪播 5.2 秒自己轉走＝天生不強迫，不需要 X（舊 X 被樣式蓋住等於沒用，是這次的起因）。
+const PERSON_PROFILE_PROMPT_KEY = 'munea.personProfilePrompted.v1';
 
 /* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
@@ -192,27 +197,119 @@ function setCallHint(text, busy) {
   const cap = $('#chatCaption');
   if (cap) { cap.textContent = text; cap.classList.toggle('cap-busy', !!busy); }
 }
-// 忙線中狀態卡（2026-07-23 Edward 拍板 B 案）：顯卡滿載時「排隊／全滿」都給看得懂的大字畫面。
-// 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——忙線資訊必須有自己的卡。
-function showBusyCard(mode, position) {
+// 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：
+// 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
+// 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
+// mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿，附「先用文字聊」出口）
+function showBusyCard(mode, payload) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = mode;
-  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
   if (mode === 'queued') {
-    if (title) title.textContent = '現在比較多人在跟' + cname() + '聊天';
-    if (pos) pos.innerHTML = '你排第 <b>' + Math.max(1, parseInt(position, 10) || 1) + '</b> 位';
-    if (note) note.innerHTML = '輪到你會自動接通，排隊不扣點數。<br>請保持畫面開著，離開會取消排隊。';
+    card.dataset.action = 'cancel';
+    if (alt) alt.hidden = true;
+    const q = payload || {};
+    const position = Math.max(1, parseInt(q.position, 10) || 1);
+    const preparing = position <= 1;   // 排第 1 位＝其實是在幫你準備、不是真的一堆人在排（Edward 2026-07-24 拍板）
+    const eta = formatQueueEta(q.eta_s);
+    if (title) title.textContent = preparing ? (cname() + '正在為你準備聊天室') : ('現在比較多人在跟' + cname() + '聊天');
+    if (pos) pos.innerHTML = preparing ? '' : ('你排第 <b>' + position + '</b> 位');
+    let etaLine;
+    if (eta === 'soon') etaLine = preparing ? '快好了，通常幾分鐘內就會自動接通。' : '快好了，很快就輪到你。';
+    else if (typeof eta === 'number') etaLine = '大約再 ' + eta + ' 分鐘' + (preparing ? '會自動接通。' : '會輪到你。');
+    else etaLine = preparing ? '通常幾分鐘內就好，準備好會自動接通。' : '輪到你會自動接通。';
+    if (note) note.textContent = etaLine + '排隊不扣點數，暫時先別關掉這個畫面，好了會自動接通。';
     if (btn) btn.textContent = '取消排隊';
   } else {
+    // 'full'：連排隊的位子都滿了——除了「知道了」，多給一個不用等 GPU 席位的出口
+    card.dataset.action = 'dismiss';
     if (title) title.textContent = '現在忙線中';
     if (pos) pos.textContent = '';
     // 角色名是用戶自訂字串：用 append 組字串＋<br>，不走 innerHTML（斷行乾淨、也不吃進標籤）
     if (note) { note.textContent = ''; note.append('想跟' + cname() + '聊天的人比較多，', document.createElement('br'), '請稍後再試試看。'); }
     if (btn) btn.textContent = '知道了';
+    if (alt) alt.hidden = false;
   }
   card.hidden = false;
 }
+// 排隊等待時間人話化（2026-07-24 P0）：後端 queue.eta_s 一直都有算、前端過去只讀 position 把它丟掉。
+// 不給精確倒數（會顯得像在說謊）——只給粗略區間：快好了 / 大約幾分鐘 / 太久或缺值就不顯示數字。
+function formatQueueEta(etaS) {
+  const n = Number(etaS);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n < 90) return 'soon';
+  if (n <= 600) return Math.ceil(n / 60);   // 10 分鐘內才給概數，且無條件進位（寧可講久一點、不要讓人覺得被騙）
+  return null;   // 超過 10 分鐘或算不出來：只講準備／排隊敘事，不亂猜數字
+}
 function hideBusyCard() { const card = $('#busyCard'); if (card) card.hidden = true; }
+// 通用失敗卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
+// 斷線重連失敗／連線逾時／拿不到麥克風——這些過去全部只寫進被藏起來的 #chatCaption，使用者等於零回饋。
+// 現在一律借 busyCard 的殼：標題講人話原因＋一句怎麼辦＋一顆按鈕。
+function showCallStatusCard(opts) {
+  opts = opts || {};
+  const card = $('#busyCard'); if (!card) return;
+  card.dataset.mode = 'error';
+  card.dataset.action = opts.action || 'dismiss';
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
+  if (title) title.textContent = opts.title || '目前無法接通';
+  if (pos) pos.textContent = '';
+  if (note) note.textContent = opts.note || '請稍後再試一次。';
+  if (btn) btn.textContent = opts.btnText || '知道了';
+  if (alt) alt.hidden = true;
+  card.hidden = false;
+}
+// ===== 全滿出口：先用文字聊（2026-07-24 Edward 拍板 P0）=====
+// Avatar／即時語音兩個 GPU 席位滿了時，不用讓長輩乾等排隊——直接借既有文字聊天管線（window.__chatSay，
+// 內部就是 init() 裡的 chatHandle／voiceProvider.sendText）繼續聊，這條路本來就不吃 Avatar／Voice 席位，
+// 也不用排隊。別新造頁面，只在通話畫面裡疊一塊簡單的文字面板，讀「打字」不讀「說話」。
+// （這幾個函式放頂層 scope，是因為 connectCall() 本身也是頂層函式，需要在真的要撥號前呼叫
+// exitTextFallbackChat() 收掉面板——放進 init() 裡面 connectCall 會拿不到。）
+function appendTextChatBubble(role, text) {
+  const log = $('#textChatLog'); if (!log || !text) return;
+  const row = document.createElement('div');
+  row.className = 'tc-row ' + (role === 'user' ? 'tc-user' : 'tc-ai');
+  row.textContent = text;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+function startTextFallbackChat() {
+  const panel = $('#textChatPanel'); if (!panel) return;
+  chatOpened = true;
+  activeChatSessionId = makeSessionId('text');
+  activeChatStartedAt = Date.now();
+  activeChatTurnCount = 0;
+  panel.hidden = false;
+  const inp = $('#textChatInput'); if (inp) { inp.value = ''; inp.focus(); }
+  try { trackProductEvent('call_full_text_fallback_started', {}); } catch (e) {}
+}
+function exitTextFallbackChat() {
+  const panel = $('#textChatPanel');
+  if (panel && !panel.hidden) {
+    panel.hidden = true;
+    if (chatOpened) { try { trackProductEvent('call_full_text_fallback_ended', { turnCount: activeChatTurnCount }); } catch (e) {} }
+    chatOpened = false;
+  }
+}
+async function sendTextFallbackMessage() {
+  const input = $('#textChatInput'); const sendBtn = $('#textChatSend');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendTextChatBubble('user', text);
+  setBtnBusy(sendBtn, '傳送中');
+  const beforeLen = chatHistory.length;
+  try {
+    await window.__chatSay(text);   // init() 裡掛出來的 chatHandle 橋（chatHandle 本身是 init() 內部函式，拿不到）
+  } finally {
+    clearBtnBusy(sendBtn, '傳送');
+    if (input) input.focus();
+  }
+  // chatHandle 內部會把新的一輪對話（含 AI 回覆）推進 chatHistory；掃新增的區段找出「她」的回覆貼上面板。
+  for (let i = beforeLen; i < chatHistory.length; i++) {
+    if (chatHistory[i] && chatHistory[i].role === 'model') appendTextChatBubble('ai', chatHistory[i].text);
+  }
+}
 // 等待中按鈕：加轉圈、鎖點擊（Edward 7/8：Loading 要有動態，不然像當機）
 function setBtnBusy(b, text) {
   if (!b) return;
@@ -1378,8 +1475,8 @@ const CallControl = {
       if (result.status === 'queued') {
         this.pending = { call_id: result.call_id, idempotency_key: idempotencyKey };
         const queue = result.queue || {};
-        // 忙線排隊（2026-07-23 Edward 拍板 B 案）：明著告訴用戶排第幾位、輪到自動接通，不再讓撥號轉圈像當機
-        showBusyCard('queued', queue.position);
+        // 忙線排隊（2026-07-23 Edward 拍板 B 案 → 2026-07-24 P0 補上 eta_s）：明著告訴用戶排第幾位／準備中、輪到自動接通
+        showBusyCard('queued', queue);
         setCallPreflightPending(true, '排隊中…');
         setCallHint('忙線中，排到會自動接通', true);
         if (!this._queueSeen) {
@@ -2518,6 +2615,15 @@ const LiveVoice = {
       // 所在地（可到區）→ 讓寧寧推薦附近真的吃得到的餐廳、聊在地話題（不再亂猜位置 · 7/9 Edward）
       const _loc = (_pp.city || '').trim();
       if (_loc) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'loc=' + encodeURIComponent(_loc);
+      // 年齡→語音節奏資料通道（開帳與個人資料重整 2026-07-24 拍板）：這裡只把資料備好、
+      // 不接消費端——「年齡→講話節奏預設」的三層 fallback 邏輯在 PR #243（engine/live_voice_server.py
+      // _voice_rhythm_param，該 PR 尚未合併，伺服器目前也不解析這個參數）。未知 query 參數會被安全忽略，
+      // 不影響現行通話；#243 合併後如需接線，於 live_voice_server.py 解析 `age` 餵進第①層 fallback。
+      const _bym = String(_pp.birth || '').match(/(19|20)(\d{2})/);
+      if (_bym) {
+        const _age = new Date().getFullYear() - parseInt(_bym[0], 10);
+        if (_age > 0 && _age < 130) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'age=' + encodeURIComponent(_age);
+      }
     } catch (e) {}
     // 能力握手：告訴伺服器「這版 App 接得住 AI 幫你設提醒」→ 只有新版才拿到設提醒工具，舊版不會被假成功（2026-07-09 Edward）
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
@@ -3048,8 +3154,11 @@ const FaceIdle = {
 
 async function enterChat() {
   setCallToggle(false);
+  // 2026-07-28（Edward 回報「二度撥通會看到上一段對話」）：這裡原本只把字幕框藏起來、
+  // 沒有清掉裡面的字——上一通最後一句就一直留在框裡，下次撥通又把框顯示出來，
+  // 一接通就看到上一通的對話。直接整個拿掉，要用時 setCaption 會重建一個乾淨的。
   const box = document.querySelector('.face-caption-box');
-  if (box) box.style.display = 'none';
+  if (box) box.remove();
   setFaceState('idle');
   _fhWarmArt();   // 全身立繪先換對角色並解碼（第一通接通時不再有解碼空窗＝不黑閃）
   if (typeof callConnected === 'undefined' || !callConnected) FaceIdle.start();   // 待機動態輪播（通話中不搶）
@@ -3217,6 +3326,36 @@ function authState() {
 function localPersonAvatar() {
   try { return (JSON.parse(localStorage.getItem('munea.personProfile') || '{}')).avatar || ''; } catch (e) { return ''; }
 }
+// 個人資料卡是否已經有「真資料」（不是全空白）——首登彈卡與「讓寧寧更認識你」小卡都靠這個判斷，
+// 只看使用者會填的三格重點（家人稱呼／生日／所在地），不含名稱與照片（那兩格不影響「問過沒」判斷）。
+function personProfileHasData(p) {
+  const src = p || (function () { try { return JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); } catch (e) { return {}; } })();
+  return !!(src && (String(src.nick || '').trim() || String(src.city || '').trim() || String(src.birth || '').trim()));
+}
+// 首頁「免費會員」標示（Edward 2026-07-24 拍板）：只在真的登入且是免費方案時顯示，不動方案邏輯本身。
+function renderFreeMemberBadge() {
+  const el = $('#homeMemberBadge');
+  if (!el) return;
+  let dev = false;
+  try { dev = !!authState().developerMode; } catch (e) {}
+  const free = !window.MMPLAN || typeof window.MMPLAN.isFree !== 'function' || window.MMPLAN.isFree();
+  const show = isLoggedIn() && !dev && free;
+  el.hidden = !show;
+}
+// 首頁「幫你留意」裡的個人資料提醒該不該出現：問過（首登彈過）但當時跳過、後續也還沒補填才出現。
+// 一填完（稱呼／生日／所在地任一格有值）就自動不再出現——雲端資料合併回來也走同一條判斷。
+function shouldShowProfileNudge() {
+  return isLoggedIn() && storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true' && !personProfileHasData();
+}
+// 只有「該不該出現」的答案真的翻面才重繪輪播：登入狀態每刷新一次就重繪的話，
+// 輪播會被打回第一則，正在看家人帶話的人會被硬生生切走。
+let _profileNudgeOn = null;
+function syncProfileNudge() {
+  const on = shouldShowProfileNudge();
+  if (on === _profileNudgeOn) return;
+  _profileNudgeOn = on;
+  renderCareCarousel();
+}
 function renderAuthAvatar(state = authState(), signedIn = state.status === 'signed-in') {
   const box = $('#authAvatar');
   const img = $('#authAvatarImg');
@@ -3341,6 +3480,8 @@ function updateAuthUI() {
   const signOut = $('#authSignOutBtn');
   if (signOut) signOut.hidden = !signedIn;
   renderMemBadge();
+  renderFreeMemberBadge();
+  syncProfileNudge();
   renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
@@ -4279,7 +4420,8 @@ const CARE_ICONS = {
   msg: '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>',
   walk: '<svg class="ic" viewBox="0 0 24 24"><path d="M13 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM8 21l3-6M14 21v-5l-2.5-3 1-5.5M8.5 9 11 6.5l2.5 1 2 3H18"/></svg>',
   cal: '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-  medal: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>'
+  medal: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>',
+  person: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>'
 };
 let _careIdx = 0, _careTimer = null;
 // 留意卡文案規則（Edward 7/6）：標題 ≤12 字（一行放得下）、副標最多兩行（約 26 字內）完整顯示
@@ -4331,6 +4473,14 @@ function buildCareItems() {
   } catch (e) {}
   if (v && v.dateISO) { const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診'; items.push({ k: 'status', tone: '', icon: 'cal', title: _vTitle + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' }); }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
   items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
+  // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
+  // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
+  // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）；
+  // 7/29 再收成「個人資料」——「用戶」是產品人的詞、長輩不會這樣自稱，且這四個字跟設定頁入口、
+  // 點下去開的那張卡標題完全一致，使用者一路看到的是同一個名字。
+  // 附帶好處：固定 4 字＝完全不受名字長度影響，繞開了原本兩道會咬字的關卡——
+  // 渲染時的 slice(0,12) 硬切（沒補刪節號）、以及 .care-txt p 的單行 ellipsis（375px 下約 10 字到底）。
+  if (shouldShowProfileNudge()) items.unshift({ k: 'profile', tone: '', icon: 'person', title: '個人資料', sub: '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: '去填寫' });
   return items;
 }
 function renderCareCarousel() {
@@ -4784,6 +4934,7 @@ async function connectCall() {
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
   hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
+  if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 若正在「先用文字聊」，重新真的撥號前先收掉面板，避免兩層畫面疊在一起（2026-07-24 P0）
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
   try {
@@ -4832,9 +4983,14 @@ async function connectCall() {
     setCallPreflightPending(false);
     voiceCallFail('microphone_requested', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     voiceCallEnd('failed', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
-    setCallHint(LiveVoice._micUnavailableReason === 'https_required'
+    const micHttpsOnly = LiveVoice._micUnavailableReason === 'https_required';
+    setCallHint(micHttpsOnly
       ? '手機／區網測試需要 HTTPS 才能開麥，請改用公開測試連結'
       : '拿不到麥克風，請到瀏覽器設定允許');
+    showCallStatusCard({
+      title: micHttpsOnly ? '目前連線環境不支援開麥' : '拿不到麥克風權限',
+      note: micHttpsOnly ? '手機或區網測試需要 HTTPS 才能開麥，請改用公開測試連結。' : '請到手機或瀏覽器設定裡，允許沐寧使用麥克風，再重新撥一次。',
+    });
     return;
   }
   // 家人傳話是附加功能：正式帳號最多等 1.2 秒；開發假登入直接略過，不能卡住主要通話。
@@ -4901,18 +5057,36 @@ async function connectCall() {
         (reason.indexOf('queue_full') >= 0 ? '現在忙線中，請稍後再試試看' :
           (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
           (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
-      if (reason.indexOf('queue_full') >= 0) showBusyCard('full');   // 連排隊的位子都滿了：明講忙線、請稍後再試（Edward 7/22 B 案）
+      // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：#chatCaption 被藏起來，光靠上面那句字幕使用者實際上看不到，
+      // 每種失敗都要有標題講原因＋一句怎麼辦＋一顆按鈕；點數不足已有專屬彈窗（__muneaShowCallCreditBlocked），不重複打擾。
+      const accountNotReady = reason.indexOf('account_not_ready') >= 0;
+      const queueFull = reason.indexOf('queue_full') >= 0;
+      const insufficientCredits = reason.indexOf('insufficient_credits') >= 0;
+      const controlNotConfigured = reason.indexOf('call_control_not_configured') >= 0;
+      if (queueFull) {
+        showBusyCard('full');   // 連排隊的位子都滿了：明講忙線、請稍後再試＋「先用文字聊」出口（Edward 7/22 B 案／7/24 P0 加出口）
+      } else if (authRequired) {
+        showCallStatusCard({ title: '登入狀態已失效', note: '請重新登入後再撥一次。', btnText: '重新登入', action: 'reopen-auth' });
+      } else if (accountNotReady) {
+        showCallStatusCard({ title: '帳號正在準備中', note: '通常幾秒鐘就好，請稍後再撥一次。' });
+      } else if (controlNotConfigured) {
+        showCallStatusCard({ title: '通話服務正在更新', note: '請稍後再試一次，造成不便請見諒。' });
+      } else if (!insufficientCredits) {
+        showCallStatusCard({ title: '目前無法接通', note: '通話服務暫時忙碌中，請稍後再試一次。' });
+      }
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
-      if (reason.indexOf('insufficient_credits') >= 0) setTimeout(__muneaShowCallCreditBlocked, 0);
+      if (insufficientCredits) setTimeout(__muneaShowCallCreditBlocked, 0);
       try { trackProductEvent('call_control_rejected', { reason }); } catch (e2) {}
       return;
     }
   }
   let _connectedOnce = false;
   const markConnected = () => { if (_connectedOnce) return; _connectedOnce = true; setCallToggle(true); startCallTimer(); };
-  const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
+  // 每通電話都從一張乾淨的字幕開始（同 enterChat：只切顯示／隱藏會把上一通的字帶進來）。
+  // 拿掉之後由 setCaption 重建；字幕開關關著時 setCaption 本來就不會建，所以原本
+  // 「關字幕就隱藏」的行為不變。
   const box = document.querySelector('.face-caption-box');
-  if (box) box.style.display = capOff ? 'none' : '';
+  if (box) box.remove();
   // 真即時語音（Gemini 3.1 Live）：麥克風即時串流、寧寧真聲音即時回、可打斷
   if (getLiveVoiceUrl()) {
     chatOpened = true;
@@ -4949,6 +5123,7 @@ async function connectCall() {
         chatOpened = false; setCallDialing(false); stopCallTimer();
         const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
         setFaceState('idle'); setCallHint('服務尚未完成接通，請稍後再試。');
+        showCallStatusCard({ title: '服務尚未完成接通', note: '請稍後再試一次。' });
         try { FaceIdle.start(); } catch (e2) {}
         return;
       }
@@ -5017,6 +5192,7 @@ async function connectCall() {
       chatOpened = false; setCallDialing(false); stopCallTimer();
       const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
       setFaceState('idle'); setCallHint('目前連線還沒準備好，請稍後再試');
+      showCallStatusCard({ title: '目前連線還沒準備好', note: '請稍後再撥一次看看。' });
       try { completeChatSession('readiness_timeout'); } catch (e) {}
       try { FaceIdle.start(); } catch (e) {}
       try { trackProductEvent('voice_readiness_timeout', { voiceReady: _voiceReady, faceReady: _faceReady }); } catch (e) {}
@@ -5038,6 +5214,7 @@ async function connectCall() {
         chatOpened = false; setCallDialing(false); setCallToggle(false); stopCallTimer();
         if (chatEl) chatEl.dataset.state = 'idle';
         setFaceState('idle'); setCallHint('連線中斷了，請再撥一次');
+        showCallStatusCard({ title: '連線中斷了', note: '請重新撥一次繼續聊天。' });
         try { FaceIdle.start(); } catch (e) {}
         return;
       }
@@ -5057,6 +5234,7 @@ async function connectCall() {
       chatOpened = false; setCallDialing(false); stopCallTimer();
       if (chatEl) chatEl.dataset.state = 'idle';
       setFaceState('idle'); setCallHint('目前 3 個通話席都在使用中，請稍後再撥');
+      showBusyCard('full');   // 影像席位全滿跟排隊全滿是同一類「都滿了」，一併給「先用文字聊」出口（2026-07-24 P0）
       try { completeChatSession('avatar_capacity_full'); } catch (e) {}
       try { trackProductEvent('avatar_capacity_full', { mode: 'voice_avatar_required' }); } catch (e) {}
       try { FaceIdle.start(); } catch (e) {}
@@ -5196,7 +5374,10 @@ function init() {
     const rp = e.target.closest('[data-report]');
     if (rp) { reportFamilyFeedItem(+rp.dataset.report); return; }
     const b = e.target.closest('.care-btn');
-    if (b) showView(b.dataset.go === 'status' ? 'status' : 'family');
+    if (!b) return;
+    // 個人資料那則不換頁，開的是同一張 #profileModal（一般模式），跟設定頁的「個人資料」入口共用同一顆
+    if (b.dataset.go === 'profile') { fillPersonProfile(); $('#profileModal').classList.add('show'); return; }
+    showView(b.dataset.go === 'status' ? 'status' : 'family');
   });
   if (location.hash.slice(1) === 'pick') {
     const sheet = $('#companionSheet');
@@ -5213,6 +5394,7 @@ function init() {
         setTimeout(() => window.__muneaMaybeAskReview('chat_completed'), 800);   // 自己掛斷＝好好聊完 → 開心時刻
       }
     }
+    if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 離開時順手收掉「先用文字聊」面板，下次進來是乾淨的通話畫面
     FaceWave.stop();
     showView('home');
   });
@@ -5220,11 +5402,17 @@ function init() {
   const _hangupOnLeave = () => { try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {} };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _hangupOnLeave(); });
   window.addEventListener('pagehide', _hangupOnLeave);
-  // 忙線卡按鈕：排隊模式＝取消排隊（走通話鍵同一條取消線）；全滿模式＝知道了、收卡
+  // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；其餘＝知道了、收卡
   if ($('#busyCardBtn')) $('#busyCardBtn').addEventListener('click', () => {
-    const card = $('#busyCard'); const mode = card && card.dataset.mode;
+    const card = $('#busyCard'); const action = card && card.dataset.action;
     hideBusyCard();
-    if (mode === 'queued' && !callConnected && (callDialing || callPreflightPending)) { try { $('#callToggle').click(); } catch (e) {} }
+    if (action === 'cancel' && !callConnected && (callDialing || callPreflightPending)) { try { $('#callToggle').click(); } catch (e) {} }
+    else if (action === 'reopen-auth') { setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0); }
+  });
+  // 全滿出口（2026-07-24 P0）：不用乾等 GPU 席位，先切去既有 /chat 文字管線聊
+  if ($('#busyCardAlt')) $('#busyCardAlt').addEventListener('click', () => {
+    hideBusyCard();
+    if (typeof startTextFallbackChat === 'function') startTextFallbackChat();
   });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     // 撥通中（含排隊／前置連線）再按一次＝取消撥號、回到待機
@@ -5265,7 +5453,8 @@ function init() {
     if (detail.status === 'signed-in') {
       closeAuthSheet();
       syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true })
-        .then(result => { if (result && result.ok) refreshServerCredits(); })
+        .then(result => { if (result && result.ok) refreshServerCredits(); return syncPersonProfileCloud(); })
+        .then(() => { maybeShowFirstRunProfilePrompt(); renderFreeMemberBadge(); })
         .catch(() => {});
     } else {
       POINTS.serverRemaining = null;
@@ -5312,7 +5501,7 @@ function init() {
     return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
   }
   let _pfPendingAvatar = '';
-  const PF_DEF = { name: '', nick: '', birth: '', city: '' };   // 7/9 正式化：不再預設示範身分（陳秀英/阿嬤）——空欄位＋提示字自己填
+  const PF_DEF = { name: '', nick: '', birth: '', city: '', updatedAt: '' };   // 7/9 正式化：不再預設示範身分（陳秀英/阿嬤）——空欄位＋提示字自己填；updatedAt 給雲端合併判斷「較新者勝」用（2026-07-24）
   function loadPersonProfile() { try { return Object.assign({}, PF_DEF, JSON.parse(localStorage.getItem('munea.personProfile') || '{}')); } catch (e) { return Object.assign({}, PF_DEF); } }
   // 所在地＝縣市→區 兩層下拉（iPhone 原生滾輪、長輩好按、零錯字 · 2026-07-09 Edward 改用選單）
   function pfCountyList() { return (window.TW_DISTRICTS ? Object.keys(window.TW_DISTRICTS) : []); }
@@ -5374,6 +5563,114 @@ function init() {
     _pfPendingAvatar = p.avatar || '';
     if (typeof renderPfAvatar === 'function') renderPfAvatar(p.avatar, p.nick);
   }
+  // 個人資料上雲同步（開帳與個人資料重整 2026-07-24 拍板）：本機 schema（birth="YYYY 年 M 月"字串、
+  // city=縣市＋區合併字串）跟 Brain /person-profile 的結構化欄位（birthYear/birthMonth/county/district）
+  // 互轉，換裝置登入同帳號資料都在；照片不上雲（沿用需求單拍板）。
+  function personProfileToCloudPayload(p) {
+    const my = p || loadPersonProfile();
+    const ym = String(my.birth || '').match(/(\d{4}).*?(\d{1,2})/);
+    const loc = parsePfCity(my.city || '');
+    return {
+      name: my.name || '',
+      nick: my.nick || '',
+      birthYear: ym ? parseInt(ym[1], 10) : null,
+      birthMonth: ym ? parseInt(ym[2], 10) : null,
+      county: loc.county || '',
+      district: loc.district || '',
+      updatedAt: my.updatedAt || '',
+    };
+  }
+  function cloudProfileToLocal(cloud, existing) {
+    const base = existing || loadPersonProfile();
+    const city = cloud.county ? (cloud.county + (cloud.district || '')) : base.city;
+    const birth = cloud.birthYear ? (cloud.birthYear + ' 年 ' + (cloud.birthMonth || 1) + ' 月') : base.birth;
+    return Object.assign({}, base, {
+      name: cloud.name || base.name,
+      nick: cloud.nick || base.nick,
+      birth: birth,
+      city: city,
+      updatedAt: cloud.updatedAt || base.updatedAt,
+    });
+  }
+  function pushPersonProfileToCloud(p) {
+    if (isStaticPreview() || usesDevelopmentDirectCall() || !isLoggedIn()) return Promise.resolve(null);
+    return brainPost('/person-profile', { action: 'save', profile: personProfileToCloudPayload(p) }).catch(() => null);
+  }
+  let _personProfileCloudSyncPromise = null;
+  // 開機／登入後跑一次：雲端有較新資料就合併回本機（換裝置場景）；
+  // 本機比雲端新（或雲端根本沒資料）就把本機資料補上雲（既有用戶/離線先存的場景）。
+  function syncPersonProfileCloud() {
+    if (isStaticPreview() || usesDevelopmentDirectCall() || !isLoggedIn()) return Promise.resolve(null);
+    if (_personProfileCloudSyncPromise) return _personProfileCloudSyncPromise;
+    _personProfileCloudSyncPromise = (async () => {
+      try {
+        const resp = await brainPost('/person-profile', { action: 'load' });
+        const cloud = resp && resp.ok && resp.profile ? resp.profile : null;
+        const local = loadPersonProfile();
+        const localAt = local.updatedAt ? (Date.parse(local.updatedAt) || 0) : 0;
+        const cloudAt = cloud && cloud.updatedAt ? (Date.parse(cloud.updatedAt) || 0) : 0;
+        const cloudHasData = !!(cloud && (cloud.nick || cloud.name || cloud.county || cloud.birthYear));
+        const localHasData = personProfileHasData(local);
+        if (cloudHasData && cloudAt >= localAt) {
+          const merged = cloudProfileToLocal(cloud, local);
+          try { localStorage.setItem('munea.personProfile', JSON.stringify(merged)); } catch (e) {}
+          if (typeof applyUserAvatar === 'function') applyUserAvatar();
+          return merged;
+        }
+        if (localHasData && (!cloudHasData || localAt > cloudAt)) {
+          if (!local.updatedAt) {
+            local.updatedAt = new Date().toISOString();
+            try { localStorage.setItem('munea.personProfile', JSON.stringify(local)); } catch (e) {}
+          }
+          await pushPersonProfileToCloud(local);
+          return local;
+        }
+        return local;
+      } catch (e) {
+        return null;
+      }
+    })();
+    return _personProfileCloudSyncPromise.finally(() => { _personProfileCloudSyncPromise = null; });
+  }
+  // 首登一次性彈個人資料卡（Edward 2026-07-24 拍板）：關掉首登視覺（banner＋跳過鈕），
+  // 回到「一般模式」（設定頁點『個人資料』進來時用的就是這個乾淨版）。
+  function closeProfileFirstRunUi() {
+    const banner = $('#pfFirstRunBanner'); if (banner) banner.hidden = true;
+    const disclosure = $('#pfFirstRunDisclosure'); if (disclosure) disclosure.hidden = true;
+    const skip = $('#pfSkipBtn'); if (skip) skip.hidden = true;
+    const modal = $('#profileModal'); if (modal) modal.classList.remove('pf-first-run');
+  }
+  function openProfileModalFirstRun() {
+    fillPersonProfile();
+    // 名稱預填：Google/Apple 帳號帶的名字（使用者還沒填過個人資料時，這是唯一能預填的來源）。
+    try {
+      const st = authState();
+      const nameInput = $('#pfName');
+      if (nameInput && !nameInput.value && st && st.name) nameInput.value = String(st.name).trim().slice(0, 12);
+    } catch (e) {}
+    const banner = $('#pfFirstRunBanner'); if (banner) banner.hidden = false;
+    // 沙利曼 Gate 5：資料在按「存好」當下就上傳，告知必須早於上傳（放在存好鈕正上方），
+    // 不能只靠聊聊前的同意卡把關——那時個人資料早就已經存過雲了。
+    const disclosure = $('#pfFirstRunDisclosure'); if (disclosure) disclosure.hidden = false;
+    const skip = $('#pfSkipBtn'); if (skip) skip.hidden = false;
+    const modal = $('#profileModal');
+    if (modal) { modal.classList.add('pf-first-run'); modal.classList.add('show'); }
+    storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+    try { trackProductEvent('person_profile_first_prompt_shown', {}); } catch (e) {}
+  }
+  // 登入成功＋帳號 bootstrap＋雲端個人資料合併都跑完才判斷要不要彈：
+  // 已問過＝不管；還沒問過但（本機或剛從雲端合併回來的）資料已經有內容＝視同舊用戶問過，靜靜補記旗標、不彈；
+  // 真的全空白才是「首登真新用戶」，這時才彈。
+  function maybeShowFirstRunProfilePrompt() {
+    if (!isLoggedIn()) return;
+    if (storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true') { syncProfileNudge(); return; }
+    if (personProfileHasData(loadPersonProfile())) {
+      storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+      syncProfileNudge();
+      return;
+    }
+    openProfileModalFirstRun();
+  }
   if ($('#pfSaveBtn')) $('#pfSaveBtn').addEventListener('click', () => {
     const p = {
       name: ($('#pfName').value || '').trim() || PF_DEF.name,
@@ -5381,12 +5678,26 @@ function init() {
       birth: ($('#pfBirthY') && $('#pfBirthY').value ? $('#pfBirthY').value + ' 年 ' + $('#pfBirthM').value + ' 月' : PF_DEF.birth),
       city: pfLocationValue() || PF_DEF.city,
       avatar: _pfPendingAvatar,
+      updatedAt: new Date().toISOString(),
     };
     try { localStorage.setItem('munea.personProfile', JSON.stringify(p)); } catch (e) {}
     if (typeof applyUserAvatar === 'function') applyUserAvatar();
+    pushPersonProfileToCloud(p);
+    closeProfileFirstRunUi();
+    storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+    syncProfileNudge();
     $('#profileModal').classList.remove('show');
     toast(p.name ? ('存好了，' + p.name + '，資料我記著。') : '存好了，資料我記著。');
   });
+  if ($('#pfSkipBtn')) $('#pfSkipBtn').addEventListener('click', () => {
+    closeProfileFirstRunUi();
+    storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
+    $('#profileModal').classList.remove('show');
+    syncProfileNudge();
+    try { trackProductEvent('person_profile_first_prompt_skipped', {}); } catch (e) {}
+  });
+  // 2026-07-28：獨立小卡的「點卡片」與「關閉 X」兩顆事件隨小卡一起退役——
+  // 提醒改由「幫你留意」輪播的 .care-btn[data-go=profile] 接手（見上方 #careBody 的處理）。
   if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
   if ($('#profileClose')) $('#profileClose').addEventListener('click', () => $('#profileModal').classList.remove('show'));
   if ($('#profileModal')) $('#profileModal').addEventListener('click', e => { if (e.target === $('#profileModal')) $('#profileModal').classList.remove('show'); });
@@ -7161,7 +7472,11 @@ function init() {
   });
 
   // ===== App Store 評分彈窗：只在開心時刻、每版最多一次、負面情境絕不跳 =====
-  // 對接約定（Mac）：原生實作 window.__muneaRequestReview()（蘋果原生評分視窗、系統自控全年上限）
+  // 原生視窗＝ StorePlugin.requestReview（ios/App/App/StorePlugin.swift），下面這行把它接成 __muneaRequestReview。
+  // 網頁預覽沒有原生外掛 → 接不上，時機閘會自己跳過（見下方 native_unavailable 那道）。
+  if (window.MuneaStore && typeof window.MuneaStore.requestReview === 'function' && window.MuneaStore.available()) {
+    window.__muneaRequestReview = function () { return window.MuneaStore.requestReview(); };
+  }
   window.__muneaMaybeAskReview = function (moment) {
     try {
       const ver = (window.MuneaVersion && window.MuneaVersion.current) || '0';
@@ -7170,9 +7485,14 @@ function init() {
       const chats = +(localStorage.getItem('munea.stat.chatsCompleted') || 0);
       const okMoment = (moment === 'chat_completed' && chats >= 3) || moment === 'activity_done';
       if (!okMoment) return;
+      // 原生沒接上就直接退場、不蓋「這版問過了」的章——否則這一版的機會會被白白燒掉（2026-07-29 修）
+      if (typeof window.__muneaRequestReview !== 'function') {
+        trackProductEvent('review_prompt_skipped', { moment: moment, reason: 'native_unavailable' });
+        return;
+      }
       localStorage.setItem('munea.reviewAsked.' + ver, '1');
       trackProductEvent('review_prompt_shown', { moment: moment });
-      if (typeof window.__muneaRequestReview === 'function') window.__muneaRequestReview();
+      window.__muneaRequestReview();
     } catch (e) {}
   };
   if ($('#interestsSave')) $('#interestsSave').addEventListener('click', () => {
@@ -7699,6 +8019,13 @@ function init() {
       postTurnReview();
     }
   }
+  // 全滿出口「先用文字聊」的送出／面板事件綁定（函式本體移到頂層 scope，見 showCallStatusCard 附近——
+  // connectCall() 是頂層函式，需要在真的要撥號前呼叫 exitTextFallbackChat() 收面板，兩邊都要拿得到）。
+  window.__muneaSendTextFallback = sendTextFallbackMessage;   // 供 Chrome MCP／自動測試直接觸發送出
+  if ($('#textChatSend')) $('#textChatSend').addEventListener('click', sendTextFallbackMessage);
+  if ($('#textChatInput')) $('#textChatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextFallbackMessage(); }
+  });
   function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();

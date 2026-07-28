@@ -1,34 +1,42 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<!-- ⚠ 這是「版型」，不是網站本體。改這裡之後要跑 `node app-site/_src/build.mjs` 才會生效。 -->
+<html lang="zh-Hant-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title data-en="Munea · The AI care companion who remembers you">沐寧 Munea｜會記得你的 AI 照護管家・iPhone App</title>
+<title>沐寧 Munea｜全家人的健康陪伴 AI 照護管家・iPhone App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="icon" href="assets/paining-logo.png" type="image/png">
-<meta name="description" content="沐寧是住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，也把全家人圈在一起。iPhone 免費下載。">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@600&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/paining-logo.png" type="image/png">
+<meta name="description" content="沐寧是住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，也把全家人圈在一起。iPhone App。">
 <link rel="canonical" href="https://app.munea.net/">
+<link rel="alternate" hreflang="zh-Hant" href="https://app.munea.net/">
+<link rel="alternate" hreflang="en" href="https://app.munea.net/en">
+<link rel="alternate" hreflang="ja" href="https://app.munea.net/ja">
+<link rel="alternate" hreflang="es" href="https://app.munea.net/es">
+<link rel="alternate" hreflang="x-default" href="https://app.munea.net/">
 <meta name="theme-color" content="#3AA8A0">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Munea 沐寧">
-<meta property="og:title" content="沐寧 Munea｜會記得你的 AI 照護管家">
-<meta property="og:description" content="住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，把全家人圈在一起。iPhone 免費下載。">
+<meta property="og:title" content="沐寧 Munea｜全家人的健康陪伴 AI 照護管家">
+<meta property="og:description" content="住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，把全家人圈在一起。">
 <meta property="og:url" content="https://app.munea.net/">
 <meta property="og:image" content="https://app.munea.net/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="zh_TW">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta property="og:locale:alternate" content="es_ES">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="沐寧 Munea｜會記得你的 AI 照護管家">
-<meta name="twitter:description" content="住在手機裡的 AI 照護管家——會動的臉、真人般的聲音，把全家人圈在一起。iPhone 免費下載。">
+<meta name="twitter:title" content="沐寧 Munea｜全家人的健康陪伴 AI 照護管家">
+<meta name="twitter:description" content="住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，把全家人圈在一起。">
 <meta name="twitter:image" content="https://app.munea.net/assets/og-image.jpg">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"MobileApplication","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，把全家人圈在一起。","url":"https://app.munea.net/","image":"https://app.munea.net/assets/og-image.jpg","inLanguage":"zh-TW","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+{"@context":"https://schema.org","@type":"MobileApplication","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，把全家人圈在一起。","url":"https://app.munea.net/","image":"https://app.munea.net/assets/og-image.jpg","inLanguage":"zh-Hant-TW","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
 </script>
-<meta name="theme-color" content="#3AA8A0">
-<link rel="stylesheet" href="warm.css?v=8">
+<link rel="stylesheet" href="/warm.css?v=10">
 <style>
   /* ── Edward 拍板：扁平化，不要陰影與漸層 ── */
   :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
@@ -43,32 +51,39 @@
   .why-feature{background:var(--teal-d)!important}
   .story{background:var(--mint)!important}
   .hero h1 .hl::after{background:#F6D8BC!important}
-  /* ── App 版補充樣式（沿用 warm.css 色票與框架） ── */
-  /* 首頁大半身影片 */
-  .hero-grid{grid-template-columns:1fr 1.02fr}
+
+  /* ── 版面基礎 ── */
+  /* 這行原本沒帶斷點，會蓋掉樣式表裡「手機改單欄」的規則，
+     害主視覺在手機上還是硬擠兩欄（中文勉強看得下去，英文被壓成細長條）。 */
+  @media(min-width:901px){.hero-grid{grid-template-columns:1fr 1.02fr}}
+  @media(max-width:900px){.hero-grid{grid-template-columns:1fr}}
   h2,h3{text-wrap:balance}
   p,li,.disc,.mates .more,.sub,.pain-track,.q{text-wrap:pretty}
   .hero-media{position:relative;z-index:1}
-  .hero-media .frame{position:relative;border-radius:30px;overflow:hidden;box-shadow:var(--shadow-lg);background:#e7f0eb;aspect-ratio:9/16;max-width:320px;margin:0 auto}
+  .hero-media .frame{position:relative;border-radius:30px;overflow:hidden;background:#e7f0eb;aspect-ratio:9/16;max-width:320px;margin:0 auto}
   .hero-media video{width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
-  .hero-media .glow{position:absolute;inset:-20px;border-radius:42px;background:radial-gradient(60% 60% at 28% 18%,rgba(58,168,160,.20),transparent 70%),radial-gradient(55% 55% at 82% 92%,rgba(244,162,97,.16),transparent 70%);z-index:-1;filter:blur(8px)}
   .hero-media .float-chip{z-index:3}
   .hero-media .fc-1{top:22px;left:-24px;animation:floaty 7s ease-in-out infinite}
   .hero-media .fc-2{bottom:30px;right:-22px;animation:floaty 7s ease-in-out infinite 1.6s}
   @media(max-width:900px){.hero-media .frame{max-width:360px}.hero-media .float-chip{display:none}}
-  /* App Store 徽章（深色，沿用 btn） */
+
+  /* App Store 徽章 */
   .btn .as-t{display:flex;flex-direction:column;line-height:1.1;text-align:left}
   .btn .as-t small{font-size:11px;font-weight:500;opacity:.9}
   .btn .as-t b{font-size:17px;font-weight:700;letter-spacing:.02em}
-  .btn-appstore{background:var(--teal-dd);color:#fff;box-shadow:0 14px 30px -12px rgba(35,108,102,.55)}
+  .btn-appstore{background:var(--teal-dd);color:#fff}
   .btn-appstore:hover{background:#1D5A55;transform:translateY(-3px)}
   .btn-appstore svg{width:24px;height:24px}
-  /* App 截圖 → 完整放進手機框（不裁切），浮在柔色面板 */
+  /* App 還沒過審時的「即將上架」樣子——不留死連結 */
+  .btn-appstore.is-soon{background:var(--teal-dd);cursor:default}
+  .btn-appstore.is-soon:hover{background:var(--teal-dd);transform:none}
+  .cta-box .btn-appstore.is-soon:hover{background:#fff;transform:none}
+
+  /* App 截圖 → 完整放進手機框 */
   .pane{aspect-ratio:auto!important;background:#e9f2ed!important;display:grid;place-items:center;padding:30px}
-  .dev{width:min(250px,74%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27,0 24px 48px -20px rgba(46,138,131,.5)}
+  .dev{width:min(250px,74%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27}
   .dev img{width:100%;height:100%;object-fit:cover;position:static;display:block}
-  /* 視訊聊天：插畫人物 + 手機屏幕通話介面 */
-  .callphone{position:relative;width:min(252px,76%);aspect-ratio:780/1688;border-radius:34px;overflow:hidden;box-shadow:0 0 0 9px #15110e,0 24px 48px -20px rgba(46,138,131,.5)}
+  .callphone{position:relative;width:min(252px,76%);aspect-ratio:780/1688;border-radius:34px;overflow:hidden;box-shadow:0 0 0 9px #15110e}
   .callphone>img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
   .cscreen{position:absolute;inset:0;color:#fff}
   .csb{position:absolute;top:0;left:0;right:0;height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 20px;font-size:12px;font-weight:700;color:#33403D}
@@ -82,36 +97,30 @@
   .chead .cstat{background:rgba(51,64,61,.58);color:#fff;border-radius:100px;padding:4px 9px;font-size:10px;font-weight:600;white-space:nowrap}
   .cfoot{position:absolute;bottom:18px;left:15px;right:15px}
   .cwave{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:16px;margin-bottom:14px}
-  .cwave i{width:3px;border-radius:3px;background:#7CF0C8}
+  .cwave i{width:3px;border-radius:3px;background:#7CF0C8;transform-origin:bottom;animation:cwv 1.1s ease-in-out infinite}
+  .cwave i:nth-child(2n){animation-duration:.85s}
+  .cwave i:nth-child(3n){animation-duration:1.35s}
+  @keyframes cwv{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+  @media(prefers-reduced-motion:reduce){.cwave i{animation:none}}
   .crow{display:flex;align-items:center;justify-content:center;gap:10px}
   .crow .cb{width:44px;height:44px;border-radius:50%;background:rgba(20,17,14,.42);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
   .crow .cb.on{background:#3AA8A0}
-  .crow .cend{display:inline-flex;align-items:center;gap:6px;background:#E5533D;color:#fff;border-radius:100px;padding:11px 17px;font-size:14px;font-weight:700}
-  /* 導覽列：免費下載 與 中文 按鈕同高 */
+  .crow .cb svg{width:20px;height:20px;stroke:#fff}
+  .crow .cend{display:inline-flex;align-items:center;gap:6px;background:#E5533D;color:#fff;border-radius:100px;padding:11px 17px;font-size:14px;font-weight:700;white-space:nowrap}
+
+  /* 導覽列 */
   .navlinks a.nav-cta{height:42px;padding:0 22px;display:inline-flex;align-items:center;font-size:15px}
   .lang-trigger{height:42px;padding:0 15px}
-  /* 功能02 會動的臉影片 */
-  .callphone>video{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
-  /* 輪播左右箭頭放到整個欄位左右邊、垂直置中 */
-  .pcar{position:relative}
-  .parrows{position:absolute;top:0;bottom:74px;left:0;right:0;margin:0;pointer-events:none}
-  .parr{position:absolute;top:40%;transform:translateY(-50%);pointer-events:auto;box-shadow:var(--shadow-sm)}
-  .parr.prev{left:-6px}
-  .parr.next{right:-6px}
-  .pdots{margin-top:8px}
-  @media(max-width:880px){
-    .parrows{position:static;pointer-events:auto;display:flex;justify-content:center;gap:12px;margin-top:22px;bottom:auto}
-    .parr{position:static;transform:none}
-  }
-  /* 用戶情境輪播 */
+  .lang-opt{text-decoration:none}
+  .lang-menu{min-width:172px}
+
+  /* 情境輪播 */
   .pcar{position:relative}
   .pslide{display:none}
-  .pslide.active{display:block;animation:pfade .6s ease}
+  .pslide.active{display:block;animation:pfade .55s ease}
   @keyframes pfade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .pslide .persona-wrap{grid-template-columns:.85fr 1.15fr;gap:56px;align-items:center}
   .pslide .persona-vis .ph{aspect-ratio:4/4.4}
-  .pslide .persona-vis .ph.son{display:grid;place-items:center;background:linear-gradient(150deg,var(--mint-2),var(--coral-soft));border:6px solid #fff}
-  .pslide .persona-vis .ph.son .pemoji{font-size:100px;line-height:1}
   .parrows{display:flex;gap:12px;justify-content:center;margin-top:30px}
   .parr{width:46px;height:46px;border-radius:50%;background:#fff;border:1.5px solid var(--mint-2);color:var(--teal-d);cursor:pointer;display:grid;place-items:center;transition:.2s}
   .parr:hover{background:var(--mint);border-color:var(--teal);transform:translateY(-2px)}
@@ -122,7 +131,7 @@
   .cta-box .btn-appstore:hover{background:#f4f0e8;transform:translateY(-3px)}
   footer .btn-appstore{background:var(--teal);color:#fff}
   footer .btn-appstore:hover{background:var(--teal-d)}
-  /* 功能區在中等寬度也保持左右並排（照片在文字旁），只在很窄才上下疊 */
+
   @media(min-width:641px) and (max-width:880px){
     #features .pz{grid-template-columns:1fr 1fr;gap:30px}
     #features .pz.reverse .pz-vis{order:2}
@@ -131,247 +140,95 @@
     #features .pane{padding:14px}
     #features .dev,#features .callphone{width:min(176px,94%)}
     #features .flist li{font-size:14.5px}
-    #features .mates{display:none}
   }
   @media(max-width:880px){
     .pslide .persona-wrap{grid-template-columns:1fr;gap:26px}
     .pslide .persona-vis .ph{aspect-ratio:4/3.6}
     .pane{padding:18px}.dev,.callphone{width:min(206px,62%)}
   }
-  /* 用戶情境（為一家人而做） */
-  .persona3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-  .pcard{background:#fff;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--line);transition:transform .3s,box-shadow .3s;display:flex;flex-direction:column}
-  .pcard:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
-  .pcard .pic{aspect-ratio:4/3.1;overflow:hidden}
-  .pcard .pic img{width:100%;height:100%;object-fit:cover;object-position:center 22%}
-  .pcard .pic.son{display:grid;place-items:center;background:linear-gradient(150deg,var(--mint-2),var(--coral-soft))}
-  .pcard .pic .pemoji{font-size:66px;line-height:1}
-  .pcard .body{padding:24px 24px 28px}
-  .pcard .prole{display:inline-block;font-family:"Poppins";font-size:12.5px;font-weight:700;letter-spacing:.03em;color:var(--teal-d);background:var(--mint);padding:5px 12px;border-radius:100px;margin-bottom:12px}
-  .pcard h3{font-size:20px;font-weight:700;margin-bottom:10px}
-  .pcard p{color:var(--muted);font-size:15px;line-height:1.75}
-  @media(max-width:880px){.persona3{grid-template-columns:1fr}}
+
   /* 功能小標籤列 */
   .flist{list-style:none;margin-top:20px;display:grid;gap:12px}
   .flist li{display:flex;gap:11px;align-items:flex-start;font-size:15.5px;color:var(--muted)}
   .flist li svg{width:22px;height:22px;stroke:var(--teal);flex-shrink:0;margin-top:2px}
   .flist li b{color:var(--ink);font-weight:600}
-  /* 夥伴小頭像列（聊天段內） */
-  .mates{display:flex;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap}
-  .mates .m{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:100px;padding:5px 13px 5px 5px;box-shadow:var(--shadow-sm);font-size:13.5px;font-weight:600;color:var(--ink)}
-  .mates .m img{width:30px;height:30px;border-radius:50%;object-fit:cover}
-  .mates .more{color:var(--muted);font-size:13.5px;font-weight:500}
-  /* 頁尾精簡 */
-  .foot-lite{text-align:center}
-  .foot-lite .brand{display:inline-flex;align-items:center;gap:11px;color:#fff;justify-content:center}
-  .foot-lite .brand .logo-mark{width:34px;height:34px}
-  .foot-lite .brand .logo-word{font-family:"Poppins";font-weight:700;font-size:24px;letter-spacing:-.02em}
-  .foot-lite .brand .logo-word b{color:var(--teal)}
-  .foot-lite .brand .logo-zh{font-family:"Noto Sans TC";font-size:.72em;font-weight:700;margin-left:8px;opacity:.9}
-  .foot-lite .subtitle{font-family:"Noto Serif TC",serif;color:#cfd8d5;font-size:17px;margin-top:14px}
-  .foot-dl{margin-top:26px;display:flex;justify-content:center}
-  .foot-links2{display:flex;gap:8px 22px;justify-content:center;flex-wrap:wrap;margin-top:30px;font-size:14.5px}
+
+  /* 頁尾 */
   .foot-links2 a{color:#cfd8d5;transition:.2s}
   .foot-links2 a:hover{color:var(--coral)}
   .foot-disc{max-width:720px;margin:26px auto 0;font-size:12.5px;color:#8a9893;line-height:1.85}
-  .foot-copy{margin-top:22px;font-size:13px;color:#8a9893}
-  /* ── Edward 精修：標籤瘦身移邊 + 通話介面圖示化 + 清殘留漸層 ── */
+
+  /* 精修 */
   .hero-media .float-chip{padding:8px 12px;font-size:12.5px;border:1px solid var(--line);background:#fff;gap:8px}
   .hero-media .float-chip .ic{width:28px;height:28px;border-radius:9px}
   .hero-media .float-chip .ic svg{width:15px;height:15px}
   .hero-media .fc-1{top:-20px;left:-16px}
   .hero-media .fc-2{bottom:-20px;right:-16px}
-  .crow .cb svg{width:20px;height:20px;stroke:#fff}
-  .crow .cend{white-space:nowrap}
-  .pcard .pic.son,.pslide .persona-vis .ph.son{background:#e3efe9!important}
-</style>
-</head>
-<body>
-<div class="progress"></div>
 
-<header>
-  <nav class="wrap">
-    <a class="logo" href="index.html" aria-label="Munea 首頁">
-      <span class="logo-mark" aria-hidden="true"><img src="assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
-      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
-    </a>
-    <div class="nav-cluster">
-      <div class="navlinks">
-      <a class="nav-cta" href="https://apps.apple.com/tw/app/munea" target="_blank" rel="noopener" data-en="Free download">免費下載</a>
-      </div>
-      <div class="lang-switch" data-open="false">
-        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換語言 / Switch language">
-          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
-          <span class="lang-current">中文</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div class="lang-menu" role="listbox" aria-label="語言 / Language">
-          <button class="lang-opt" type="button" role="option" data-lang="zh"><span class="tick"></span>中文<span class="sub">繁中</span></button>
-          <button class="lang-opt" type="button" role="option" data-lang="en"><span class="tick"></span>English<span class="sub">EN</span></button>
-        </div>
-      </div>
-    <button class="menu-btn" type="button" aria-label="選單" aria-expanded="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33403D" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-    </div>
-  </nav>
-</header>
+  /* ══════════ 動態層（Edward 7/29 拍板：中等）══════════ */
+  /* 全部都吃系統的「減少動態」設定；長輩或會暈的人不會被轉到 */
 
-<!-- HERO -->
-<section class="hero">
-  <div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
-  <div class="wrap hero-grid">
-    <div>
-      <div class="eyebrow" data-en="AI care · chat companion · reminders · family circle">AI 智慧照護 · AI 聊天陪伴 · 用藥看診提醒 · 家庭圈互動</div>
-      <h1 data-en='<span class="word">There is someone who will</span><br><span class="word hl">always remember you</span>'><span class="word">有一個人，</span><br><span class="word hl">會一直記得你</span></h1>
-      <p class="sub" data-en="Munea is an AI care companion living in your phone — a face that moves, a voice that feels real, remembering the things you tell it, and keeping the whole family close.">沐寧是住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，也把全家人圈在一起。</p>
-      <div class="hero-actions">
-        <a class="btn btn-appstore" href="https://apps.apple.com/tw/app/munea" target="_blank" rel="noopener" aria-label="在 App Store 免費下載沐寧">
-          <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-          <span class="as-t"><small data-en="On the App Store">在 App Store</small><b data-en="Free download">免費下載</b></span></a>
-      </div>
-      <div class="trust">
-        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></span><span data-en="A face that moves">會動的臉</span></div>
-        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg></span><span data-en="A real-sounding voice">真人的聲音</span></div>
-        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11a4 4 0 10-8 0"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span data-en="A family circle">全家健康圈</span></div>
-      </div>
-    </div>
-    <div class="hero-media">
-      <div class="glow"></div>
-      <div class="frame">
-        <video class="hero-face" id="heroVid" poster="assets/real-female-hero-poster.jpg" muted playsinline autoplay preload="auto" aria-label="沐寧的 AI 夥伴——會動、正在陪你">
-          <source src="assets/realfemale-hello.mp4" type="video/mp4">
-        </video>
-      </div>
-      <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span data-en="Reminded Mom to take her meds">已提醒媽媽吃藥</span></div>
-      <div class="float-chip fc-2"><span class="ic" style="background:var(--coral-soft);color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span data-en="She remembers what you said">她記得你說的事</span></div>
-    </div>
-    <script>(function(){var v=document.getElementById('heroVid');if(!v)return;v.addEventListener('ended',function(){if(v.dataset.i)return;v.dataset.i='1';v.src='assets/realfemale-idle.mp4';v.loop=true;v.play();});})();</script>
-  </div>
-  <div class="scrollcue"><span class="mouse"></span>SCROLL</div>
-</section>
+  /* ① 數字滑到才長出來 */
+  .cnum{font-variant-numeric:tabular-nums}
 
-<!-- 用戶情境（輪播） -->
-<section class="persona" id="personas">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow center" data-en="Who Munea is for">沐寧，為一家人而做</div>
-      <h2 data-en="Whoever you are, someone remembers you">不管你是誰，都有人記得你</h2>
-      <p data-en="A grandparent at home, a daughter far away, a grandchild who wants to be closer.">在家的阿公阿嬤、在外地的女兒、想更靠近的孫子——沐寧替每一個人，都留一個位置。</p>
-    </div>
-    <div class="pcar reveal">
-      <div class="pslide active">
-        <div class="persona-wrap">
-          <div class="persona-vis"><div class="ph"><img src="assets/persona-elder.jpg" alt="阿嬤"></div><div class="tag"><span class="d"></span><span data-en="Grandma / 70 / lives alone">阿嬤 · 70 歲 · 獨居</span></div></div>
-          <div class="persona-txt"><div class="eyebrow" data-en="A real situation">一個真實的處境</div><p class="q serif" data-en="Alone at home — her sore knee, her grandchild&apos;s wedding, her favorite old street. <b>She wants someone to remember what she said, and to keep her company.</b>">一個人在家的日子，膝蓋痛、孫子的婚事、愛去的老街——<b>她想有人記得她說過的話，也想有人陪她說說話。</b></p><p data-en="Munea chats with her every day, keeps it all, and reminds her — gently, out loud — when it is time for her meds or a check-up.">沐寧每天陪她聊、替她記著，到點親口提醒她吃藥、回診——不用她自己記，也不用一直麻煩孩子。</p></div>
-        </div>
-      </div>
-      <div class="pslide">
-        <div class="persona-wrap">
-          <div class="persona-vis"><div class="ph"><img src="assets/persona-daughter.jpg" alt="女兒"></div><div class="tag"><span class="d"></span><span data-en="Daughter / 40 / far away">女兒 · 40 歲 · 在外地</span></div></div>
-          <div class="persona-txt"><div class="eyebrow" data-en="A real situation">一個真實的處境</div><p class="q serif" data-en="Busy, far away, shy about calling all the time. <b>She just wants to know Mom and Dad are okay today.</b>">忙、不在身邊、不好意思一直打電話——<b>她只是想知道，爸媽今天過得好不好。</b></p><p data-en="She opens the app and sees how they are, and hears first when something is off — the worry from afar finally has somewhere to rest.">打開 App 就看得到爸媽今天的狀況，有事第一時間知道——在外地的那份牽掛，終於有個地方放。</p></div>
-        </div>
-      </div>
-      <div class="pslide">
-        <div class="persona-wrap">
-          <div class="persona-vis"><div class="ph"><img src="assets/persona-son.jpg" alt="孫子"></div><div class="tag"><span class="d"></span><span data-en="Grandkid / 15">孫子 · 15 歲</span></div></div>
-          <div class="persona-txt"><div class="eyebrow" data-en="A real situation">一個真實的處境</div><p class="q serif" data-en="He wants to be closer to grandma and grandpa — <b>he just never knows what to talk about.</b>">他想跟阿公阿嬤更親——<b>只是每次都不知道要聊什麼。</b></p><p data-en="A family walking challenge, a quick quiz game — the laughter does the talking, and three generations get a little closer.">一起走路挑戰、玩個機智問答，笑聲替他把話說了，三代人就這樣近了一點。</p></div>
-        </div>
-      </div>
-      <div class="pdots"><button class="pdot active" type="button" aria-label="1"></button><button class="pdot" type="button" aria-label="2"></button><button class="pdot" type="button" aria-label="3"></button></div>
-    </div>
-  </div>
-</section>
+  /* ② 手機截圖跟著捲動輕微位移（很淡的視差） */
+  .pz-vis .dev,.pz-vis .callphone{will-change:transform;transition:transform .12s linear}
 
-<!-- 解決問題 -->
-<section class="pain-sec">
-  <div class="wrap pain-layout">
-    <aside class="pain-aside reveal">
-      <div class="eyebrow" data-en="What Munea holds">沐寧接住的事</div>
-      <h2 data-en="Being cared for shouldn't wait for someone to be free">被好好陪著，不該總是要等人有空</h2>
-      <p data-en="From the elder at home to the child far away — everyone is stuck on a quiet difficulty.">從家裡的長輩，到在外地的孩子，每個人都卡在一個不好說出口的難處。</p>
-      <div class="pain-aside-foot"><span class="big">4</span><span class="txt" data-en="things Munea<br>quietly holds">沐寧默默<br>接住的事</span></div>
-    </aside>
-    <ol class="pain-track">
-      <li class="ptk-item reveal"><span class="ptk-num">01</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><div class="ptk-body"><span class="ptk-role" data-en="Loneliness">孤單</span><h3 data-en="A whole day, and no one to really talk to">一整天，沒有一個人好好說說話</h3></div></li>
-      <li class="ptk-item reveal"><span class="ptk-num">02</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span><div class="ptk-body"><span class="ptk-role" data-en="Forgetting">記不住</span><h3 data-en="Did I take my meds? Time for a check-up?">藥吃了沒、該回診了嗎，常記不清</h3></div></li>
-      <li class="ptk-item reveal"><span class="ptk-num">03</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span><div class="ptk-body"><span class="ptk-role" data-en="Far away">在外地</span><h3 data-en="Away, unsure how Mom & Dad are today">不在身邊，不知道爸媽今天好不好</h3></div></li>
-      <li class="ptk-item reveal"><span class="ptk-num">04</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-8-4.5-8-11a5 5 0 019-3 5 5 0 019 3c0 6.5-8 11-8 11z"/></svg></span><div class="ptk-body"><span class="ptk-role" data-en="To be remembered">想被記得</span><h3 data-en="Starting from &quot;hello&quot; every time is tiring">每次都要從「你好」重新開始，好累</h3></div></li>
-    </ol>
-  </div>
-</section>
+  /* ③ 逐項錯開浮現：清單、流程步驟 */
+  .stg>*{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s cubic-bezier(.2,.8,.2,1)}
+  .stg.in>*{opacity:1;transform:none}
+  .stg.in>*:nth-child(1){transition-delay:.04s}
+  .stg.in>*:nth-child(2){transition-delay:.12s}
+  .stg.in>*:nth-child(3){transition-delay:.20s}
+  .stg.in>*:nth-child(4){transition-delay:.28s}
+  .stg.in>*:nth-child(5){transition-delay:.36s}
+  .stg.in>*:nth-child(6){transition-delay:.44s}
+  .stg.in>*:nth-child(7){transition-delay:.52s}
+  .stg.in>*:nth-child(8){transition-delay:.60s}
+  .stg.in>*:nth-child(9){transition-delay:.68s}
 
-<!-- FEATURES -->
-<section id="features">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow center" data-en="What Munea does">沐寧會做的事</div>
-      <h2 data-en="A health-care steward that lives in the family">住進一家人生活裡的健康照護管家</h2>
-      <p data-en="Track health and reminders, chat like a real video call, and keep the whole family connected — three things Munea does every day.">追蹤健康與提醒、像真人視訊般聊天陪伴、把全家連在一起——沐寧每天做的三件事。</p>
-    </div>
-    <div class="prod-zig">
+  @media(prefers-reduced-motion:reduce){
+    .stg>*{opacity:1!important;transform:none!important;transition:none!important}
+    .pz-vis .dev,.pz-vis .callphone{transform:none!important}
+    .hero-media .fc-1,.hero-media .fc-2{animation:none!important}
+  }
 
-      <!-- 1 · AI 健康數據追蹤 -->
-      <article class="pz reveal">
-        <div class="pz-vis"><span class="pz-step" data-en="Health tracking">健康追蹤</span><div class="ph pane"><div class="dev"><img src="assets/app-status.jpg" alt="沐寧 App 健康數據與提醒畫面" loading="lazy"></div></div></div>
-        <div class="pz-txt">
-          <span class="pz-idx" data-en="Feature 01">功能 01</span>
-          <span class="badge"><span class="d"></span><span data-en="AI health-care tracking">AI 健康照護追蹤</span></span>
-          <h3 data-en="Meds, check-ups, and health data — all watched over">用藥、看診、健康數據，都替你看著</h3>
-          <p data-en="Munea tracks health for you — medication and check-up reminders in her own gentle voice, with steps, heart rate, blood pressure, sleep and more synced from Apple Health.">沐寧替你追蹤健康——用藥提醒、回診看診提醒都用溫柔的語音喊你；步數、心率、血壓、睡眠等數據從 Apple 健康自動帶進來。</p>
-          <ul class="flist">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span data-en="<b>Meds &amp; check-up reminders</b> — called out loud on time, no scolding if you slip"><b>用藥與看診提醒</b>——到點親口喊你，漏了不指責</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span data-en="<b>Health data at a glance</b> — steps, heart rate, blood pressure, sleep"><b>健康數據追蹤</b>——步數、心率、血壓、睡眠一眼看見</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span data-en="<b>Apple Health sync</b> — brought in automatically, no manual logging"><b>Apple 健康同步</b>——自動帶進來，不用手動記</span></li>
-          </ul>
-        </div>
-      </article>
+  /* ══════════ 一天之中（捲動說故事）══════════ */
+  #story{padding:80px 0}
+  #story .story-grid{margin-top:44px}
+  #story .scene .ph{border-radius:20px;overflow:hidden;background:#e9f2ed;display:grid;place-items:center}
+  #story .scene .ph img{width:auto;height:100%;max-height:520px;object-fit:contain;display:block;transition:opacity .35s ease}
+  #story .scene .ph.swapping img{opacity:0}
+  #story .story-step{cursor:pointer}
+  #story .story-step p{margin:0}
+  @media(max-width:880px){
+    #story .story-grid{grid-template-columns:1fr;gap:28px}
+    #story .story-sticky{position:static}
+    #story .scene .ph img{max-height:380px}
+  }
 
-      <!-- 2 · 聊天陪伴 -->
-      <article class="pz reverse reveal">
-        <div class="pz-vis"><span class="pz-step" data-en="Chat companion">聊天陪伴</span><div class="ph pane"><div class="callphone"><img class="manvid" src="assets/real-male-full.jpg" alt="擬真男・視訊陪伴中" loading="lazy"><div class="cscreen"><div class="csb"><span>8:36</span><span class="isl"></span><span class="sic"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg viewBox="0 0 16 12"><path d="M8 12L1 4a10 10 0 0114 0z"/></svg><svg viewBox="0 0 26 12"><rect x="0.7" y="1" width="21" height="10" rx="2.6" fill="none" stroke="#33403D" stroke-width="1"/><rect x="2.2" y="2.5" width="15" height="7" rx="1.4"/><rect x="23" y="4" width="2" height="4" rx="1"/></svg></span></div><div class="chead"><span class="cname"><i></i>阿原 <small data-en="online">在線</small></span><span class="cstat" data-en="Live · 00:03">臉：連線中 · 00:03</span></div><div class="cfoot"><div class="cwave"><i style="height:6px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i></div><div class="crow"><span class="cb" aria-label="字幕"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6.5" width="18" height="11" rx="2.5"/><path d="M9.5 11a2 2 0 100 2M15.5 11a2 2 0 100 2"/></svg></span><span class="cb on" aria-label="麥克風"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span><span class="cend"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M21 15.5c-1.2 0-2.4-.2-3.5-.6a1 1 0 00-1 .2l-2.2 2.2a15 15 0 01-6.6-6.6l2.2-2.2a1 1 0 00.2-1A11 11 0 018.5 4a1 1 0 00-1-1H4a1 1 0 00-1 1 17 17 0 0017 17 1 1 0 001-1v-3.5a1 1 0 00-1-1z"/></svg><span data-en="End">結束</span></span></div></div></div></div></div></div>
-        <div class="pz-txt">
-          <span class="pz-idx" data-en="Feature 02">功能 02</span>
-          <span class="badge"><span class="d"></span><span data-en="Like video-calling a real person">像跟真人視訊</span></span>
-          <h3 data-en="A chat so natural, it feels like a video call">聊起來生動自然，就像在跟人視訊</h3>
-          <p data-en="As the family's care steward, Munea chats with your loved ones. Real-time voice-to-voice and a live moving face make every conversation vivid, warm and natural — comfortable, just like a video call with a real person.">作為家庭的健康照護管家，沐寧陪家人聊天。即時語音對話＋會動的臉，讓每次聊天都生動、有溫度、舒服自然——就像在跟真人視訊。</p>
-          <ul class="flist">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg><span data-en="<b>Real-time voice</b> — jump in anytime, replies never lag"><b>即時語音對話</b>——想插話就插話，答話不卡頓</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg><span data-en="<b>A moving face</b> — looks at you and speaks, like someone's really there"><b>會動的臉</b>——看著你、開口說話，像真的有人在陪</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg><span data-en="<b>Remembers what you said</b> — picks up right where you left off"><b>記得你說的話</b>——這次從上次聊到的地方接著聊</span></li>
-          </ul>
-          <div class="mates">
-            <span class="m"><img src="assets/face-nening.png" alt="擬真女孩"><span data-en="Realistic girl">擬真女孩</span></span>
-            <span class="m"><img src="assets/face-ahong.png" alt="擬真男孩"><span data-en="Realistic boy">擬真男孩</span></span>
-            <span class="more" data-en="2 companions — pick the one you like">兩位夥伴，挑一個喜歡的</span>
-          </div>
-        </div>
-      </article>
+  /* ══════════ 六位夥伴 ══════════ */
+  #cast{padding:78px 0;background:var(--cream-2)}
+  .castgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:42px}
+  .castcard{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px 14px 20px;text-align:center;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s}
+  .castcard:hover{transform:translateY(-6px);border-color:var(--teal)}
+  .castcard .av{width:96px;height:96px;border-radius:50%;overflow:hidden;margin:0 auto 14px;background:var(--mint);position:relative}
+  .castcard .av img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+  .castcard:hover .av img{transform:scale(1.09)}
+  .castcard .av::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--coral);opacity:0;transform:scale(.86);transition:opacity .3s,transform .35s cubic-bezier(.2,.8,.2,1)}
+  .castcard:hover .av::after{opacity:1;transform:scale(1)}
+  .castcard b{display:block;font-size:17px;font-weight:700;color:var(--ink);margin-bottom:5px}
+  .castcard small{display:block;font-size:12.5px;color:var(--muted);line-height:1.6}
+  .castcard .kind{display:inline-block;margin-top:11px;font-family:"Poppins";font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:4px 10px;border-radius:100px;background:var(--mint);color:var(--teal-d)}
+  .castcard .kind.toon{background:var(--coral-soft);color:var(--coral-d)}
+  .castnote{text-align:center;margin-top:34px;color:var(--muted);font-size:15px}
+  @media(max-width:980px){.castgrid{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.castgrid{grid-template-columns:repeat(2,1fr);gap:14px}.castcard .av{width:78px;height:78px}}
 
-      <!-- 3 · 家庭照護圈 -->
-      <article class="pz reveal">
-        <div class="pz-vis"><span class="pz-step" data-en="Family care circle">家庭照護圈</span><div class="ph pane"><div class="dev"><img src="assets/app-family.jpg" alt="沐寧 App 全家健康圈畫面" loading="lazy"></div></div></div>
-        <div class="pz-txt">
-          <span class="pz-idx" data-en="Feature 03">功能 03</span>
-          <span class="badge"><span class="d"></span><span data-en="Closer as a family">一家人更靠近</span></span>
-          <h3 data-en="See how everyone's doing — and have fun together">看見彼此的狀態，也一起玩在一起</h3>
-          <p data-en="In the family care circle, everyone can check and follow each other's health and mood. Start a walking challenge or a quiz game together — little ways to add fun and closeness between parents and kids.">在家庭照護圈裡，家人可以查看、追蹤彼此的健康與心情狀態；還能發起健康運動、機智問答等小遊戲，替親子的陪伴與互動多添一點樂趣。</p>
-          <ul class="flist">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg><span data-en="<b>Health &amp; mood</b> — visible to each other, peace of mind from afar"><b>健康與心情狀態</b>——互相看得見，在外地也安心</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 3v7a6 6 0 0012 0V3"/><path d="M4 21h16M9 3H5m14 0h-4"/></svg><span data-en="<b>Walking challenges</b> — the whole family competes on steps"><b>一起走路挑戰</b>——全家比步數，越動越健康</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 115 .5c0 1.5-2 2-2 3.5M12 17h.01"/></svg><span data-en="<b>Quiz games</b> — keep Mom and Dad sharp, with more laughter"><b>機智問答遊戲</b>——陪爸媽動動腦，笑聲多一點</span></li>
-          </ul>
-        </div>
-      </article>
-
-    </div>
-  </div>
-</section>
-
-<!-- LIVE AVATAR DEMO -->
-<style>
+  /* ══════════ 眼見為憑 ══════════ */
   #livedemo{padding:76px 0;background:var(--mint)}
   #livedemo .sec-head{margin-bottom:38px}
-  #livedemo h2{font-size:clamp(20px,2.8vw,30px);white-space:nowrap;line-height:1.3}
-  @media(max-width:760px){#livedemo h2{white-space:normal;font-size:22px}}
+  #livedemo h2{font-size:clamp(20px,2.8vw,30px);line-height:1.3}
   .vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;max-width:720px;margin:0 auto}
   .vdemo{margin:0}
   .vframe{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;background:var(--cream-2);border:1px solid var(--line)}
@@ -384,67 +241,19 @@
   .vsound.on .ic-off{display:inline}
   .vcap{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-top:14px;padding:0 4px}
   .vcap .vlab{font-weight:700;color:var(--ink);font-size:16px}
-  .vcap .vhint{font-size:12.5px;color:var(--muted)}
+  .vdisc{max-width:620px;margin:30px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8}
   @media(max-width:640px){.vgrid{grid-template-columns:1fr;max-width:340px}}
-</style>
-<section id="livedemo">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow center" data-en="See it, hear it">眼見為憑・打開聲音聽聽看</div>
-      <h2 data-en="Live Avatar Demo">AI 語音陪聊模擬（Live Avatar Demo）</h2>
-      <p data-en="Both clips below are AI video demos from Munea — not real people, yet with natural expressions and voices. Turn on the sound, hear them speak, and feel what it's like to have someone there.">下面兩段，都是沐寧的 AI 視訊示範——不是真人，卻有自然的表情和聲音。打開聲音，聽他們跟你說說話，感受那份「有人在」的溫度。</p>
-    </div>
-    <div class="vgrid reveal">
-      <figure class="vdemo">
-        <div class="vframe">
-          <video class="vplay" poster="assets/real-female-poster.jpg" muted playsinline autoplay loop preload="auto" aria-label="沐寧 AI 視訊示範・自然女聲"><source src="assets/realfemale-talk-demo.mp4" type="video/mp4"></video>
-          <button class="vsound" type="button" aria-label="開啟聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-en="Sound on">開聲音</span></button>
-        </div>
-        <figcaption class="vcap"><span class="vlab" data-en="Realistic girl">擬真女孩</span></figcaption>
-      </figure>
-      <figure class="vdemo">
-        <div class="vframe">
-          <video class="vplay" poster="assets/real-male-poster.jpg" muted playsinline autoplay loop preload="auto" aria-label="沐寧 AI 視訊示範・沉穩男聲"><source src="assets/realmale-talk-demo.mp4" type="video/mp4"></video>
-          <button class="vsound" type="button" aria-label="開啟聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-en="Sound on">開聲音</span></button>
-        </div>
-        <figcaption class="vcap"><span class="vlab" data-en="Realistic boy">擬真男孩</span></figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-<script>
-(function(){
-  var wrap=document.getElementById('livedemo'); if(!wrap) return;
-  wrap.querySelectorAll('.vsound').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var vid=btn.closest('.vdemo').querySelector('video');
-      var unmute=vid.muted;
-      wrap.querySelectorAll('video').forEach(function(v){
-        v.muted=true;
-        var b=v.closest('.vdemo').querySelector('.vsound');
-        b.classList.remove('on'); b.setAttribute('aria-pressed','false');
-        var t=b.querySelector('.vs-tx'); if(t) t.textContent='開聲音';
-      });
-      if(unmute){ vid.muted=false; vid.play(); btn.classList.add('on'); btn.setAttribute('aria-pressed','true'); var t=btn.querySelector('.vs-tx'); if(t) t.textContent='靜音'; }
-    });
-  });
-})();
-</script>
 
-<!-- FAMILYWELLNESS AI · 家庭健康陪伴照護管家 -->
-<style>
+  /* ══════════ FamilyWellness AI ══════════ */
   #tech{padding:78px 0}
   #tech .sec-head{margin-bottom:48px}
   #tech .tbrand{display:inline-flex;align-items:center;gap:9px;font-family:"Poppins";font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--teal-d);background:var(--mint);padding:7px 16px;border-radius:100px;margin-bottom:16px}
   #tech .tbrand .d{width:8px;height:8px;border-radius:50%;background:var(--teal)}
   #tech .ttag{font-family:"Noto Serif TC",serif;font-size:clamp(17px,2.2vw,21px);color:var(--teal-d);font-weight:600;line-height:1.55;margin:4px 0 2px}
   #tech .tintro{color:var(--muted);font-size:16.5px;line-height:1.85;max-width:640px;margin:8px auto 0}
-
-  /* ── A．技術架構：深色沉浸面板當舞台 ── */
   #tech .arch-wrap{background:#1F2B27;border-radius:var(--r);padding:48px 36px 40px;margin:36px 0 40px}
   #tech .arch-cap{display:flex;align-items:center;justify-content:center;gap:10px;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mint);margin-bottom:32px}
   #tech .arch-cap i{width:20px;height:1.5px;background:var(--mint);opacity:.55}
-
   #tech .arch-modules{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
   #tech .arch-card{background:rgba(250,247,242,.05);border:1px solid rgba(250,247,242,.14);border-radius:18px;padding:24px}
   #tech .arch-ic{width:52px;height:52px;border-radius:50%;background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.18);display:grid;place-items:center;margin-bottom:16px}
@@ -452,87 +261,332 @@
   #tech .arch-tag{display:block;font-family:"Poppins";font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,242,.5);margin-bottom:8px}
   #tech .arch-card h4{font-size:17px;font-weight:700;color:var(--cream);margin-bottom:10px}
   #tech .arch-card p{font-size:15px;color:rgba(250,247,242,.74);line-height:1.72;margin:0}
-
   #tech .arch-link{display:flex;justify-content:center;margin:0 0 16px}
   #tech .arch-link svg{width:20px;height:20px;stroke:rgba(250,247,242,.3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-
   #tech .arch-orch{background:var(--coral-soft);border-radius:18px;padding:24px;margin-bottom:24px;display:flex;gap:18px;align-items:flex-start}
   #tech .arch-orch .arch-ic{background:var(--coral-d);border-color:var(--coral-d);flex-shrink:0;margin-bottom:0}
   #tech .arch-orch .arch-ic svg{stroke:#fff}
   #tech .arch-orch .arch-body .arch-tag{color:var(--coral-d);opacity:1;margin-bottom:6px}
   #tech .arch-orch h4{color:var(--ink);margin-bottom:8px}
   #tech .arch-orch p{color:#4A5651}
-
   #tech .arch-formula{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:24px 0;border-top:1px solid rgba(250,247,242,.14);border-bottom:1px solid rgba(250,247,242,.14);margin-bottom:24px}
   #tech .af-result{font-family:"Poppins";font-weight:700;font-size:16px;color:var(--cream)}
   #tech .af-eq{font-family:"Poppins";font-weight:700;font-size:16px;color:rgba(250,247,242,.4)}
   #tech .af-plus{font-size:14px;color:rgba(250,247,242,.35)}
   #tech .af-term{font-family:"Poppins";font-size:13.5px;font-weight:600;color:var(--cream);background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.16);padding:6px 14px;border-radius:100px}
   #tech .af-term.safe{color:var(--coral-d);background:var(--coral-soft);border-color:var(--coral-soft)}
-
   #tech .arch-pipeline{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}
   #tech .ap-step{font-family:"Poppins";font-size:12.5px;font-weight:600;color:rgba(250,247,242,.85);background:rgba(250,247,242,.06);border:1px solid rgba(250,247,242,.14);padding:8px 14px;border-radius:100px}
   #tech .ap-arrow{color:rgba(250,247,242,.32);font-size:14px}
-
-  /* ── B．跟一般通用型 AI 的差別：設計過的對照卡 ── */
   #tech .cmp{margin-bottom:40px}
   #tech .cmp-cap{display:block;text-align:center;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-d);margin-bottom:24px}
   #tech .cmp-table{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-  #tech .cmp-labels{display:grid;grid-template-columns:110px 1fr 1fr;padding:16px 0}
+  #tech .cmp-labels{display:grid;grid-template-columns:120px 1fr 1fr;padding:16px 0}
   #tech .cmp-labels .cl-a,#tech .cmp-labels .cl-b{font-family:"Poppins";font-size:12.5px;font-weight:700;padding:0 20px}
   #tech .cmp-labels .cl-a{color:var(--muted)}
   #tech .cmp-labels .cl-b{color:var(--teal-d);display:flex;align-items:center;gap:7px}
   #tech .cmp-labels .cl-b i{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0}
-  #tech .cmp-item{display:grid;grid-template-columns:110px 1fr 1fr;border-top:1px solid var(--line)}
+  #tech .cmp-item{display:grid;grid-template-columns:120px 1fr 1fr;border-top:1px solid var(--line)}
   #tech .ci-cat{padding:18px 12px 18px 20px;font-family:"Poppins";font-size:12.5px;font-weight:700;color:var(--muted);display:flex;align-items:center}
   #tech .ci-a,#tech .ci-b{margin:0;padding:18px 20px;font-size:15px;line-height:1.6;display:flex;align-items:center}
   #tech .ci-a{color:var(--muted)}
   #tech .ci-b{background:var(--mint);color:var(--ink);font-weight:600}
-
   #tech .tclose{margin:0 auto;text-align:center;font-family:"Noto Serif TC",serif;font-size:clamp(16px,2vw,19px);color:var(--ink);font-weight:600;line-height:1.75;max-width:700px}
-
-  @media(max-width:820px){
-    #tech .arch-modules{grid-template-columns:1fr}
-    #tech .arch-orch{flex-direction:column}
-  }
+  @media(max-width:820px){#tech .arch-modules{grid-template-columns:1fr}#tech .arch-orch{flex-direction:column}}
   @media(max-width:640px){
     #tech .cmp-labels{display:none}
     #tech .cmp-item{grid-template-columns:1fr 1fr;border-top:none}
     #tech .ci-cat{grid-column:1/-1;padding:16px 20px 4px;border-top:1px solid var(--line)}
     #tech .ci-a,#tech .ci-b{padding:8px 16px 18px;font-size:14px}
   }
+
+  /* ══════════ 頁尾補一列（客服／企業）══════════ */
+  .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
 </style>
+</head>
+<body data-cta="soon">
+<div class="progress"></div>
+
+<header>
+  <nav class="wrap">
+    <a class="logo" href="https://app.munea.net/" aria-label="Munea">
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </a>
+    <div class="nav-cluster">
+      <div class="navlinks">
+        <a class="nav-cta" href="#download">即將上架</a>
+      </div>
+      <div class="lang-switch" data-open="false">
+        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換語言 / Switch language">
+          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+          <span class="lang-current">繁中</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" aria-label="切換語言 / Switch language">
+          <a class="lang-opt is-active" role="option" aria-selected="true" hreflang="zh-Hant" href="https://app.munea.net/"><span class="tick"></span>中文<span class="sub">繁中</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="en" href="https://app.munea.net/en"><span class="tick"></span>English<span class="sub">EN</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="ja" href="https://app.munea.net/ja"><span class="tick"></span>日本語<span class="sub">日本語</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="es" href="https://app.munea.net/es"><span class="tick"></span>Español<span class="sub">ES</span></a>
+        </div>
+      </div>
+      <button class="menu-btn" type="button" aria-label="選單" aria-expanded="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33403D" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">全家人的健康陪伴 AI 照護管家</div>
+      <h1><span class="word">有一個人，</span><br><span class="word hl">會一直記得你</span></h1>
+      <p class="sub">沐寧是住在手機裡的 AI 照護管家——一張會動的臉、真人般的聲音，記得你說過的事，陪著家裡每一個人，也把全家圈在一起。</p>
+      <div class="hero-actions">
+        <a class="btn btn-appstore is-soon" href="#download" aria-label="在 App Store 取得沐寧">
+          <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+          <span class="as-t"><small>iPhone App</small><b>即將上架</b></span></a>
+      </div>
+      <div class="trust">
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></span><span>會動的臉</span></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg></span><span>真人的聲音</span></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11a4 4 0 10-8 0"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span>全家健康圈</span></div>
+      </div>
+    </div>
+    <div class="hero-media">
+      <div class="frame">
+        <video class="hero-face" id="heroVid" poster="/assets/real-female-hero-poster.jpg" muted playsinline autoplay preload="auto" aria-label="沐寧的 AI 夥伴——會動、正在陪你">
+          <source src="/assets/realfemale-hello.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span>已提醒媽媽吃藥</span></div>
+      <div class="float-chip fc-2"><span class="ic" style="background:var(--coral-soft);color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span>她記得你說的事</span></div>
+    </div>
+  </div>
+  <div class="scrollcue"><span class="mouse"></span>SCROLL</div>
+</section>
+
+<!-- ═══ 用戶情境（輪播）═══ -->
+<section class="persona" id="personas">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">沐寧，為一家人而做</div>
+      <h2>不管你是誰，都有人記得你</h2>
+      <p>在家的阿公阿嬤、在外地的女兒、想更靠近的孫子——沐寧替每一個人，都留一個位置。</p>
+    </div>
+    <div class="pcar reveal">
+      <div class="pslide active">
+        <div class="persona-wrap">
+          <div class="persona-vis"><div class="ph"><img src="/assets/persona-elder.jpg" alt="阿嬤"></div><div class="tag"><span class="d"></span><span>阿嬤 · 70 歲 · 獨居</span></div></div>
+          <div class="persona-txt"><div class="eyebrow">一個真實的處境</div><p class="q serif">一個人在家的日子，膝蓋痛、孫子的婚事、愛去的老街——<b>她想有人記得她說過的話，也想有人陪她說說話。</b></p><p>沐寧每天陪她聊、替她記著，到點親口提醒她吃藥、回診——不用她自己記，也不用一直麻煩孩子。</p></div>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="persona-wrap">
+          <div class="persona-vis"><div class="ph"><img src="/assets/persona-daughter.jpg" alt="女兒" loading="lazy"></div><div class="tag"><span class="d"></span><span>女兒 · 40 歲 · 在外地</span></div></div>
+          <div class="persona-txt"><div class="eyebrow">一個真實的處境</div><p class="q serif">忙、不在身邊、不好意思一直打電話——<b>她只是想知道，爸媽今天過得好不好。</b></p><p>打開 App 就看得到爸媽今天的狀況，有事第一時間知道——在外地的那份牽掛，終於有個地方放。</p></div>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="persona-wrap">
+          <div class="persona-vis"><div class="ph"><img src="/assets/persona-son.jpg" alt="孫子" loading="lazy"></div><div class="tag"><span class="d"></span><span>孫子 · 15 歲</span></div></div>
+          <div class="persona-txt"><div class="eyebrow">一個真實的處境</div><p class="q serif">他想跟阿公阿嬤更親——<b>只是每次都不知道要聊什麼。</b></p><p>一起走路挑戰、玩個機智問答，笑聲替他把話說了，三代人就這樣近了一點。</p></div>
+        </div>
+      </div>
+      <div class="pdots"><button class="pdot active" type="button" aria-label="1"></button><button class="pdot" type="button" aria-label="2"></button><button class="pdot" type="button" aria-label="3"></button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 沐寧接住的事 ═══ -->
+<section class="pain-sec">
+  <div class="wrap pain-layout">
+    <aside class="pain-aside reveal">
+      <div class="eyebrow">沐寧接住的事</div>
+      <h2>被好好陪著，不該總是要等人有空</h2>
+      <p>從家裡的長輩，到在外地的孩子，每個人都卡在一個不好說出口的難處。</p>
+      <div class="pain-aside-foot"><span class="big cnum" data-count="4">0</span><span class="txt">沐寧默默<br>接住的事</span></div>
+    </aside>
+    <ol class="pain-track stg reveal">
+      <li class="ptk-item"><span class="ptk-num">01</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><div class="ptk-body"><span class="ptk-role">孤單</span><h3>一整天，沒有一個人好好說說話</h3></div></li>
+      <li class="ptk-item"><span class="ptk-num">02</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span><div class="ptk-body"><span class="ptk-role">記不住</span><h3>藥吃了沒、該回診了嗎，常記不清</h3></div></li>
+      <li class="ptk-item"><span class="ptk-num">03</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span><div class="ptk-body"><span class="ptk-role">在外地</span><h3>不在身邊，不知道爸媽今天好不好</h3></div></li>
+      <li class="ptk-item"><span class="ptk-num">04</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-8-4.5-8-11a5 5 0 019-3 5 5 0 019 3c0 6.5-8 11-8 11z"/></svg></span><div class="ptk-body"><span class="ptk-role">想被記得</span><h3>每次都要從「你好」重新開始，好累</h3></div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ═══ 一天之中（捲動說故事）═══ -->
+<section class="story" id="story">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">一天之中</div>
+      <h2>她不是等你開口，才想起你</h2>
+      <p>從早上第一句話，到睡前那一句晚安——沐寧的一天，是繞著家裡的人走的。</p>
+    </div>
+    <div class="story-grid">
+      <div class="story-sticky">
+        <div class="scene">
+          <div class="ph"><img src="/assets/app-home.jpg" alt="沐寧 App 畫面" loading="lazy"></div>
+          <div class="scene-label"><span class="d"></span><span class="txt">早上・她先開口</span></div>
+          <div class="timechip">08:00</div>
+        </div>
+      </div>
+      <div class="story-steps">
+        <article class="story-step on" data-scene="早上・她先開口" data-img="/assets/app-home.jpg" data-time="08:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span><div><span class="num">01</span><h3>早上，她先跟你說早</h3></div></div><p>天亮前她已經把今天的天氣、日子、家人動態都備好了。你一開口，她接得上，不用你從頭交代。</p></article>
+        <article class="story-step" data-scene="中午・親口提醒" data-img="/assets/app-reminder.jpg" data-time="12:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span><div><span class="num">02</span><h3>中午，該吃藥了她會喊你</h3></div></div><p>用藥與回診到點親口提醒，還會推到手機上。漏了也不指責，換個時間再問一次。</p></article>
+        <article class="story-step" data-scene="下午・家人放心" data-img="/assets/app-family.jpg" data-time="15:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span><div><span class="num">03</span><h3>下午，家人那邊也安心</h3></div></div><p>健康與心情的變化，變成家人手機上看得到的狀況。真有異常，先關心本人，再通知家人。</p></article>
+        <article class="story-step" data-scene="晚上・睡前記得" data-img="/assets/app-status.jpg" data-time="21:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span><div><span class="num">04</span><h3>晚上，今天說過的事她收好了</h3></div></div><p>聊過的事整理進記憶：重要的長期記著、當天的暫時放著。明天接得上，不用你重講一次。</p></article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 功能 ═══ -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">沐寧會做的事</div>
+      <h2>住進一家人生活裡的健康照護管家</h2>
+      <p>看顧健康與提醒、像真人視訊般聊天陪伴、把全家連在一起——沐寧每天做的三件事。</p>
+    </div>
+    <div class="prod-zig">
+
+      <!-- 功能 01 -->
+      <article class="pz reveal">
+        <div class="pz-vis"><span class="pz-step">健康看顧</span><div class="ph pane"><div class="dev"><img src="/assets/app-status.jpg" alt="沐寧 App 健康數據與提醒畫面" loading="lazy"></div></div></div>
+        <div class="pz-txt">
+          <span class="pz-idx">功能 01</span>
+          <span class="badge"><span class="d"></span><span>AI 健康趨勢看顧</span></span>
+          <h3>用藥、看診、身體數字，都替你看著</h3>
+          <p>沐寧替你看顧健康——用藥提醒、回診看診提醒都用溫柔的語音喊你；步數、心率、血壓、睡眠等數字從 Apple 健康自動帶進來。</p>
+          <ul class="flist stg">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span><b>用藥與看診提醒</b>——到點親口喊你，漏了不指責</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span><b>健康趨勢一眼看見</b>——步數、心率、血壓、睡眠</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span><b>Apple 健康同步</b>——自動帶進來，不用手動記</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2z"/><path d="M6 8a6 6 0 1112 0c0 7 2 9 2 9H4s2-2 2-9"/></svg><span><b>手機推播提醒</b>——App 沒開著，該提醒的照樣送到</span></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- 功能 02 -->
+      <article class="pz reverse reveal">
+        <div class="pz-vis"><span class="pz-step">聊天陪伴</span><div class="ph pane"><div class="callphone"><img src="/assets/real-male-full.jpg" alt="擬真夥伴・視訊陪伴中" loading="lazy"><div class="cscreen"><div class="csb"><span>8:36</span><span class="isl"></span><span class="sic"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg viewBox="0 0 16 12"><path d="M8 12L1 4a10 10 0 0114 0z"/></svg><svg viewBox="0 0 26 12"><rect x="0.7" y="1" width="21" height="10" rx="2.6" fill="none" stroke="#33403D" stroke-width="1"/><rect x="2.2" y="2.5" width="15" height="7" rx="1.4"/><rect x="23" y="4" width="2" height="4" rx="1"/></svg></span></div><div class="chead"><span class="cname"><i></i>阿宏 <small>在線</small></span><span class="cstat">臉：連線中 · 00:03</span></div><div class="cfoot"><div class="cwave"><i style="height:6px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i></div><div class="crow"><span class="cb" aria-label="字幕"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6.5" width="18" height="11" rx="2.5"/><path d="M9.5 11a2 2 0 100 2M15.5 11a2 2 0 100 2"/></svg></span><span class="cb on" aria-label="麥克風"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span><span class="cend"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M21 15.5c-1.2 0-2.4-.2-3.5-.6a1 1 0 00-1 .2l-2.2 2.2a15 15 0 01-6.6-6.6l2.2-2.2a1 1 0 00.2-1A11 11 0 018.5 4a1 1 0 00-1-1H4a1 1 0 00-1 1 17 17 0 0017 17 1 1 0 001-1v-3.5a1 1 0 00-1-1z"/></svg><span>結束</span></span></div></div></div></div></div></div>
+        <div class="pz-txt">
+          <span class="pz-idx">功能 02</span>
+          <span class="badge"><span class="d"></span><span>像跟真人視訊</span></span>
+          <h3>聊起來生動自然，就像在跟人視訊</h3>
+          <p>作為家庭的健康照護管家，沐寧陪家人聊天。即時語音對話＋會動的臉，讓每次聊天都生動、有溫度、舒服自然——就像在跟真人視訊。</p>
+          <ul class="flist stg">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg><span><b>即時語音對話</b>——想插話就插話，答話不卡頓</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg><span><b>會動的臉</b>——看著你、開口說話，像真的有人在陪</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg><span><b>記得你說的話</b>——這次從上次聊到的地方接著聊</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4.5 8-11V5l-8-3-8 3v6c0 6.5 8 11 8 11z"/><path d="M9 11.5l2 2 4-4"/></svg><span><b>該說不知道就說不知道</b>——不編、不亂給醫療建議</span></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- 功能 03 -->
+      <article class="pz reveal">
+        <div class="pz-vis"><span class="pz-step">家庭照護圈</span><div class="ph pane"><div class="dev"><img src="/assets/app-family.jpg" alt="沐寧 App 全家健康圈畫面" loading="lazy"></div></div></div>
+        <div class="pz-txt">
+          <span class="pz-idx">功能 03</span>
+          <span class="badge"><span class="d"></span><span>一家人更靠近</span></span>
+          <h3>看見彼此的狀態，也一起玩在一起</h3>
+          <p>在家庭照護圈裡，家人可以看見、關心彼此的健康與心情；還能發起健康運動、機智問答等小遊戲，替親子的陪伴與互動多添一點樂趣。</p>
+          <ul class="flist stg">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg><span><b>健康與心情狀態</b>——互相看得見，在外地也安心</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 3v7a6 6 0 0012 0V3"/><path d="M4 21h16M9 3H5m14 0h-4"/></svg><span><b>一起走路挑戰</b>——全家比步數，越動越健康</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 115 .5c0 1.5-2 2-2 3.5M12 17h.01"/></svg><span><b>機智問答遊戲</b>——陪爸媽動動腦，笑聲多一點</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M13 2L4.5 13H12l-1 9 8.5-11H13l0-9z"/></svg><span><b>狀況不對主動說</b>——先關心本人，再讓家人知道</span></li>
+          </ul>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 六位夥伴 ═══ -->
+<section id="cast">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">挑一個合得來的</div>
+      <h2>六位夥伴，換誰陪都可以</h2>
+      <p>換一位夥伴，就換一套個性與聲音——長輩喜歡誰陪，就讓誰陪。記憶跟著家人走，換了夥伴，她們一樣記得你。</p>
+    </div>
+    <div class="castgrid stg reveal">
+      <div class="castcard"><div class="av"><img src="/assets/face-nening.png" alt="寧寧" loading="lazy" width="132" height="132"></div><b>寧寧</b><small>溫柔細心的<br>擬真女生</small><span class="kind">擬真</span></div>
+      <div class="castcard"><div class="av"><img src="/assets/face-ahong.png" alt="阿宏" loading="lazy" width="132" height="132"></div><b>阿宏</b><small>沉穩可靠的<br>擬真男生</small><span class="kind">擬真</span></div>
+      <div class="castcard"><div class="av"><img src="/assets/face-xiaoyun.png" alt="小昀" loading="lazy" width="132" height="132"></div><b>小昀</b><small>活潑好聊的<br>插畫女孩</small><span class="kind toon">插畫</span></div>
+      <div class="castcard"><div class="av"><img src="/assets/face-ayuan.png" alt="阿原" loading="lazy" width="132" height="132"></div><b>阿原</b><small>憨厚幽默的<br>插畫男孩</small><span class="kind toon">插畫</span></div>
+      <div class="castcard"><div class="av"><img src="/assets/face-mimi.png" alt="咪咪" loading="lazy" width="132" height="132"></div><b>咪咪</b><small>撒嬌黏人的<br>貓咪</small><span class="kind toon">毛小孩</span></div>
+      <div class="castcard"><div class="av"><img src="/assets/face-wangcai.png" alt="旺財" loading="lazy" width="132" height="132"></div><b>旺財</b><small>熱情忠心的<br>狗狗</small><span class="kind toon">毛小孩</span></div>
+    </div>
+    <p class="castnote reveal">名字也可以自己改——想叫她什麼，她就答應什麼。</p>
+  </div>
+</section>
+
+<!-- ═══ 眼見為憑 ═══ -->
+<section id="livedemo">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">眼見為憑・打開聲音聽聽看</div>
+      <h2>AI 語音陪聊模擬（Live Avatar Demo）</h2>
+      <p>下面兩段，都是沐寧的 AI 視訊示範——不是真人，卻有自然的表情和聲音。打開聲音，聽他們跟你說說話，感受那份「有人在」的溫度。</p>
+    </div>
+    <div class="vgrid reveal">
+      <figure class="vdemo">
+        <div class="vframe">
+          <video class="vplay" poster="/assets/real-female-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realfemale-talk-demo.mp4" aria-label="沐寧 AI 視訊示範・自然女聲"></video>
+          <button class="vsound" type="button" aria-label="開聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="開聲音" data-off="靜音">開聲音</span></button>
+        </div>
+        <figcaption class="vcap"><span class="vlab">擬真女孩</span></figcaption>
+      </figure>
+      <figure class="vdemo">
+        <div class="vframe">
+          <video class="vplay" poster="/assets/real-male-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realmale-talk-demo.mp4" aria-label="沐寧 AI 視訊示範・沉穩男聲"></video>
+          <button class="vsound" type="button" aria-label="開聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="開聲音" data-off="靜音">開聲音</span></button>
+        </div>
+        <figcaption class="vcap"><span class="vlab">擬真男孩</span></figcaption>
+      </figure>
+    </div>
+    <p class="vdisc reveal">影片中的臉與聲音皆為 AI 生成，非真實人物。沐寧在 App 裡也會明確告訴使用者「我是 AI」，不會假裝自己是真人。</p>
+  </div>
+</section>
+
+<!-- ═══ FamilyWellness AI ═══ -->
 <section id="tech">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="tbrand"><span class="d"></span>FamilyWellness AI</span>
-      <h2 data-en="FamilyWellness AI — your family's health &amp; care companion">家庭健康陪伴照護管家</h2>
-      <p class="ttag" data-en="The real-time intelligence that makes company feel truly present.">讓「陪伴」真的像有人在的即時智能。</p>
-      <p class="tintro" data-en="She isn&apos;t a general-purpose assistant — she&apos;s a care system where memory, perception, interaction and safety work together. This is what&apos;s underneath, and why she isn&apos;t like other AI.">她不是通用助手，是記憶、感知、交互與安全協同運作的照護系統——這是她的裡子，也是她跟一般 AI 不一樣的地方。</p>
+      <h2>家庭健康陪伴照護管家</h2>
+      <p class="ttag">讓「陪伴」真的像有人在的即時智能。</p>
+      <p class="tintro">她不是通用助手，是記憶、感知、交互與安全協同運作的照護系統——這是她的裡子，也是她跟一般 AI 不一樣的地方。</p>
     </div>
 
-    <!-- A．技術架構：三大核心服務模組＋幕後指揮 -->
     <div class="arch-wrap reveal">
-      <div class="arch-cap"><i></i><span data-en="Architecture · how she's put together">技術架構 · 智能怎麼組成</span><i></i></div>
+      <div class="arch-cap"><i></i><span>技術架構 · 智能怎麼組成</span><i></i></div>
 
-      <div class="arch-modules">
+      <div class="arch-modules stg">
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg></span>
           <span class="arch-tag">MEMORY · 記憶</span>
-          <h4 data-en="Remembers you">記得你</h4>
-          <p data-en="Every conversation is distilled into four memory layers — core, long-term, recent, today — weighted by importance, newer facts replacing older ones.">把每次對話萃取成核心／長期／近況／當天四層記憶，用重要性排序，新事實覆蓋舊事。</p>
+          <h4>記得你</h4>
+          <p>把每次對話萃取成核心／長期／近況／當天四層記憶，用重要性排序，新事實覆蓋舊事。</p>
         </div>
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><path d="M12 5v2M12 17v2M5 12h2M17 12h2M7.1 7.1l1.4 1.4M15.5 15.5l1.4 1.4M16.9 7.1l-1.4 1.4M8.5 15.5l-1.4 1.4"/></svg></span>
           <span class="arch-tag">PERCEPTION · 感知</span>
-          <h4 data-en="Knows this moment">懂此刻</h4>
-          <p data-en="Every morning she gathers weather, news, key dates and family updates in advance — building today's context before the conversation even starts.">每天清晨主動彙整天氣、時事、重要日子與家人動態，先備好「今天的脈絡」，對話時直接調用。</p>
+          <h4>懂此刻</h4>
+          <p>每天清晨主動彙整天氣、時事、重要日子與家人動態，先備好「今天的脈絡」，對話時直接調用。</p>
         </div>
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="6.2"/><path d="M6.4 13.8c.7.8 1.6 1.2 2.6 1.2s1.9-.4 2.6-1.2"/><path d="M6.8 10h.01M11.2 10h.01"/><path d="M17 8.5a4.3 4.3 0 010 7"/><path d="M19.3 6.3a7.5 7.5 0 010 11.4"/></svg></span>
           <span class="arch-tag">INTERACTION · 交互</span>
-          <h4 data-en="How she's with you">怎麼互動</h4>
-          <p data-en="Interruptible real-time voice, a face whose expression and lip-sync track her voice to the millisecond, a character engine that swaps personality and voice, plus a safety layer that can veto any response.">可打斷的即時語音、表情嘴型與聲音毫秒同步的臉、換角色就換一套人格聲線，加上能否決回應的安全層。</p>
+          <h4>怎麼互動</h4>
+          <p>可打斷的即時語音、表情嘴型與聲音毫秒同步的臉、換角色就換一套人格聲線，加上能否決回應的安全層。</p>
         </div>
       </div>
 
@@ -542,85 +596,59 @@
         <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M4 6h6M4 12h10M4 18h6"/><path d="M14 6l6 6-6 6"/></svg></span>
         <div class="arch-body">
           <span class="arch-tag">ORCHESTRATION · 幕後</span>
-          <h4 data-en="Behind the scenes: dispatch">指揮調度</h4>
-          <p data-en="All modules merge in real time into a single reply; priority always runs safety, then immediacy, then background — context injection stays minimal, and never steals the spotlight.">把記憶、感知、人格、安全即時整合成一句回話；優先權永遠是安全＞即時＞背景；脈絡注入盡量精簡，不搶戲。</p>
+          <h4>指揮調度</h4>
+          <p>把記憶、感知、人格、安全即時整合成一句回話；優先權永遠是安全＞即時＞背景；脈絡注入盡量精簡，不搶戲。</p>
         </div>
       </div>
 
-      <div class="arch-formula">
-        <span class="af-result" data-en="Response">回應</span>
+      <div class="arch-formula stg">
+        <span class="af-result">回應</span>
         <span class="af-eq">=</span>
-        <span class="af-term" data-en="Personality">人格</span><span class="af-plus">+</span>
-        <span class="af-term" data-en="Memory">記憶</span><span class="af-plus">+</span>
-        <span class="af-term" data-en="Perception">感知</span><span class="af-plus">+</span>
-        <span class="af-term" data-en="This conversation">當下對話</span><span class="af-plus">+</span>
-        <span class="af-term safe" data-en="Safety">安全</span><span class="af-plus">+</span>
-        <span class="af-term" data-en="Expression">表達</span>
+        <span class="af-term">人格</span><span class="af-plus">+</span>
+        <span class="af-term">記憶</span><span class="af-plus">+</span>
+        <span class="af-term">感知</span><span class="af-plus">+</span>
+        <span class="af-term">當下對話</span><span class="af-plus">+</span>
+        <span class="af-term safe">安全</span><span class="af-plus">+</span>
+        <span class="af-term">表達</span>
       </div>
 
-      <div class="arch-pipeline">
-        <span class="ap-step" data-en="You speak">你說話</span><span class="ap-arrow">→</span>
-        <span class="ap-step" data-en="Context assembled live">即時組脈絡</span><span class="ap-arrow">→</span>
-        <span class="ap-step" data-en="Voice reply, face synced">語音回＋臉同步</span><span class="ap-arrow">→</span>
-        <span class="ap-step" data-en="Folded into memory">自動整理進記憶</span><span class="ap-arrow">→</span>
-        <span class="ap-step" data-en="Picks up next time">下次接得上</span>
+      <div class="arch-pipeline stg">
+        <span class="ap-step">你說話</span><span class="ap-arrow">→</span>
+        <span class="ap-step">即時組脈絡</span><span class="ap-arrow">→</span>
+        <span class="ap-step">語音回＋臉同步</span><span class="ap-arrow">→</span>
+        <span class="ap-step">自動整理進記憶</span><span class="ap-arrow">→</span>
+        <span class="ap-step">下次接得上</span>
       </div>
     </div>
 
-    <!-- B．跟一般通用型 AI 的差別 -->
     <div class="cmp reveal">
-      <span class="cmp-cap" data-en="How she's different from a general AI">跟一般通用型 AI，差在哪</span>
+      <span class="cmp-cap">跟一般通用型 AI，差在哪</span>
       <div class="cmp-table">
         <div class="cmp-labels">
           <span></span>
-          <span class="cl-a" data-en="General AI">一般通用型 AI</span>
-          <span class="cl-b"><i></i><span data-en="Munea FamilyWellness AI">沐寧 FamilyWellness AI</span></span>
+          <span class="cl-a">一般通用型 AI</span>
+          <span class="cl-b"><i></i><span>沐寧 FamilyWellness AI</span></span>
         </div>
-        <div class="cmp-item">
-          <span class="ci-cat" data-en="Nature">本質</span>
-          <p class="ci-a" data-en="A general assistant that answers anything">一個通用助手，什麼都回</p>
-          <p class="ci-b" data-en="A care system where memory, perception, interaction, safety and personality work together">記憶＋感知＋交互＋安全＋人格，協同運作的照護系統</p>
-        </div>
-        <div class="cmp-item">
-          <span class="ci-cat" data-en="Face / voice">臉／聲音</span>
-          <p class="ci-a" data-en="A text box">文字框</p>
-          <p class="ci-b" data-en="A real face and voice, live like a video call">真臉＋真聲，即時視訊感</p>
-        </div>
-        <div class="cmp-item">
-          <span class="ci-cat" data-en="Character">角色</span>
-          <p class="ci-a" data-en="One assistant">一個助理</p>
-          <p class="ci-b" data-en="A personality with character — switch her, switch the voice and rapport">有個性的角色人格，換角色就換一套人格與聲線</p>
-        </div>
-        <div class="cmp-item">
-          <span class="ci-cat" data-en="Knowing the moment">懂此刻</span>
-          <p class="ci-a" data-en="Only knows when you ask">你問才知道</p>
-          <p class="ci-b" data-en="Proactively builds today's context every morning">每天主動預建今日情境脈絡</p>
-        </div>
-        <div class="cmp-item">
-          <span class="ci-cat" data-en="Boundaries">邊界</span>
-          <p class="ci-a" data-en="May give medical advice carelessly">可能亂給醫療建議</p>
-          <p class="ci-b" data-en="Never diagnoses; medication is only ever a reminder; medical boundaries are kept">不做診斷、用藥只提醒，守住醫療邊界</p>
-        </div>
-        <div class="cmp-item">
-          <span class="ci-cat" data-en="Who it's for">為誰做</span>
-          <p class="ci-a" data-en="A general-purpose tool">通用工具</p>
-          <p class="ci-b" data-en="Built for the whole family's physical and emotional wellbeing">為全家人的身心健康而做</p>
-        </div>
+        <div class="cmp-item"><span class="ci-cat">本質</span><p class="ci-a">一個通用助手，什麼都回</p><p class="ci-b">記憶＋感知＋交互＋安全＋人格，協同運作的照護系統</p></div>
+        <div class="cmp-item"><span class="ci-cat">臉／聲音</span><p class="ci-a">文字框</p><p class="ci-b">真臉＋真聲，即時視訊感</p></div>
+        <div class="cmp-item"><span class="ci-cat">角色</span><p class="ci-a">一個助理</p><p class="ci-b">六位有個性的角色，換角色就換一套人格與聲線</p></div>
+        <div class="cmp-item"><span class="ci-cat">懂此刻</span><p class="ci-a">你問才知道</p><p class="ci-b">每天主動預建今日情境脈絡</p></div>
+        <div class="cmp-item"><span class="ci-cat">邊界</span><p class="ci-a">可能亂給醫療建議</p><p class="ci-b">不做診斷、用藥只提醒，不知道就說不知道</p></div>
+        <div class="cmp-item"><span class="ci-cat">為誰做</span><p class="ci-a">通用工具</p><p class="ci-b">為全家人的身心健康而做</p></div>
       </div>
     </div>
 
-    <p class="tclose reveal" data-en="FamilyWellness AI — real technology built to do one simple thing: remember you, understand the moment, and respond to you well.">FamilyWellness AI——用真的技術，做一件很簡單的事：記得你、懂此刻、好好回應你。</p>
+    <p class="tclose reveal">FamilyWellness AI——用真的技術，做一件很簡單的事：記得你、懂此刻、好好回應你。</p>
   </div>
 </section>
 
-<!-- CTA -->
+<!-- ═══ 收尾 CTA ═══ -->
 <section class="cta-band" id="download">
   <div class="wrap">
     <div class="cta-box reveal">
-      <div class="glow"></div><div class="glow2"></div>
-      <h2 data-en="Today, let Munea start<br>remembering you.">今天，就讓沐寧<br>開始記得你。</h2>
-      <p data-en="Free on iPhone. Prices and plans are shown inside the app.">iPhone 免費下載。方案與價格，打開 App 就看得到。</p>
-      <a class="btn btn-appstore" href="https://apps.apple.com/tw/app/munea" target="_blank" rel="noopener" aria-label="在 App Store 免費下載沐寧"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="as-t"><small data-en="On the App Store">在 App Store</small><b data-en="Free download">免費下載</b></span></a>
+      <h2>今天，就讓沐寧<br>開始記得你。</h2>
+      <p>iPhone App，免費下載。方案與價格，打開 App 就看得到。</p>
+      <a class="btn btn-appstore is-soon" href="#download" aria-label="在 App Store 取得沐寧"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="as-t"><small>iPhone App</small><b>即將上架</b></span></a>
     </div>
   </div>
 </section>
@@ -629,28 +657,160 @@
   <div class="wrap">
     <div class="foot-grid">
       <div>
-        <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="assets/paining-logo.png" alt="Munea" width="30" height="30"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
-        <p class="desc" data-en="An AI care companion in your phone — a face that moves, a voice that remembers, keeping you and your family close.">會記得你的 AI 照護管家——一張會動的臉、一個記得你的聲音，把你和家人圈在一起。</p>
+        <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30" loading="lazy"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
+        <p class="desc">會記得你的 AI 照護管家——一張會動的臉、一個記得你的聲音，把你和家人圈在一起。</p>
       </div>
       <div class="foot-col">
-        <h4 data-en="Meet Munea">認識沐寧</h4>
-        <a href="#personas" data-en="Who it is for">用戶情境</a>
-        <a href="#features" data-en="Features">功能特色</a>
-        <a href="#tech" data-en="The technology">技術核心</a>
+        <h4>認識沐寧</h4>
+        <a href="#personas">用戶情境</a>
+        <a href="#features">功能特色</a>
+        <a href="#cast">六位夥伴</a>
+        <a href="#tech">技術核心</a>
       </div>
       <div class="foot-col">
-        <h4 data-en="Terms &amp; contact">條款與聯絡</h4>
-        <a href="/terms" data-en="Membership Terms">會員條款</a>
-        <a href="/privacy" data-en="Privacy Policy">隱私權條款</a>
+        <h4>條款與聯絡</h4>
+        <a href="/support">客服支援</a>
+        <a href="/terms">會員條款</a>
+        <a href="/privacy">隱私權條款</a>
+        <a class="ext" href="https://munea-b2b.vercel.app" target="_blank" rel="noopener">企業與機構合作</a>
         <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a>
       </div>
     </div>
-    <p class="disc" data-en="Munea is a companion for company and daily reminders. It does not provide medical diagnosis, treatment, or advice, and is not a medical device. For health concerns, consult a doctor. In an emergency call 119; for emotional support in Taiwan call the 1925 line.">沐寧是陪伴與生活提醒的夥伴，不提供醫療診斷或建議，也非醫療器材；健康問題請諮詢醫師。緊急狀況請撥 119，心理支持請撥 1925 安心專線。</p>
-    <div class="foot-bottom"><span data-en="© 2026 Munea · Cared for, always.">© 2026 Munea 沐寧 · 有人在乎，就會心安。</span></div>
+    <p class="disc">沐寧是陪伴與生活提醒的夥伴，非醫療器材，不提供診斷、治療或緊急醫療服務；健康問題請諮詢醫師。緊急狀況請撥 119，心理支持請撥 1925 安心專線。</p>
+    <div class="foot-bottom"><span>© 2026 Munea 沐寧 · 有人在乎，就會心安。</span></div>
   </div>
 </footer>
 
-<script>(function(){var s=[].slice.call(document.querySelectorAll('.pslide'));if(!s.length)return;var d=[].slice.call(document.querySelectorAll('.pdot'));var i=0,t;function go(n){i=(n+s.length)%s.length;s.forEach(function(x,k){x.classList.toggle('active',k===i);});d.forEach(function(x,k){x.classList.toggle('active',k===i);});}function auto(){clearInterval(t);t=setInterval(function(){go(i+1);},5500);}d.forEach(function(x,k){x.addEventListener('click',function(){go(k);auto();});});var pv=document.querySelector('.parr.prev'),nx=document.querySelector('.parr.next');if(pv)pv.addEventListener('click',function(){go(i-1);auto();});if(nx)nx.addEventListener('click',function(){go(i+1);auto();});go(0);auto();})();</script>
-<script src="warm.js?v=6"></script>
+<script src="/warm.js?v=10"></script>
+<script>
+/* ── 首頁自己的小動作（都吃系統的「減少動態」設定）── */
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 招呼影片播完 → 換成待機影片，讓臉一直「在」 */
+  var v = document.getElementById('heroVid');
+  if (v) v.addEventListener('ended', function(){
+    if (v.dataset.i) return;
+    v.dataset.i = '1';
+    v.src = '/assets/realfemale-idle.mp4';
+    v.loop = true;
+    v.play().catch(function(){});
+  });
+
+  /* 情境輪播 */
+  (function(){
+    var s = [].slice.call(document.querySelectorAll('.pslide'));
+    if (!s.length) return;
+    var d = [].slice.call(document.querySelectorAll('.pdot')), i = 0, t;
+    function go(n){
+      i = (n + s.length) % s.length;
+      s.forEach(function(x,k){ x.classList.toggle('active', k===i); });
+      d.forEach(function(x,k){ x.classList.toggle('active', k===i); });
+    }
+    function auto(){ clearInterval(t); if(!reduce) t = setInterval(function(){ go(i+1); }, 6000); }
+    d.forEach(function(x,k){ x.addEventListener('click', function(){ go(k); auto(); }); });
+    go(0); auto();
+  })();
+
+  /* 示範影片：滑到才下載、滑走就停 —— 一開頁不再白扛 1.8MB */
+  (function(){
+    var wrap = document.getElementById('livedemo');
+    if (!wrap) return;
+    var vids = [].slice.call(wrap.querySelectorAll('video[data-src]'));
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        var vd = e.target;
+        if (e.isIntersecting){
+          if (!vd.src){ vd.src = vd.dataset.src; }
+          vd.play().catch(function(){});
+        } else if (vd.src && !vd.paused){
+          vd.pause();
+        }
+      });
+    }, {threshold: .25});
+    vids.forEach(function(vd){ io.observe(vd); });
+
+    wrap.querySelectorAll('.vsound').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var vid = btn.closest('.vdemo').querySelector('video');
+        if (!vid.src) vid.src = vid.dataset.src;
+        var unmute = vid.muted;
+        wrap.querySelectorAll('video').forEach(function(o){
+          o.muted = true;
+          var b = o.closest('.vdemo').querySelector('.vsound');
+          b.classList.remove('on'); b.setAttribute('aria-pressed','false');
+          var t = b.querySelector('.vs-tx'); if (t) t.textContent = t.dataset.on;
+        });
+        if (unmute){
+          vid.muted = false;
+          vid.play().catch(function(){});
+          btn.classList.add('on'); btn.setAttribute('aria-pressed','true');
+          var t = btn.querySelector('.vs-tx'); if (t) t.textContent = t.dataset.off;
+        }
+      });
+    });
+  })();
+
+  if (reduce) return;
+
+  /* 數字滑到才長出來 */
+  (function(){
+    var nums = [].slice.call(document.querySelectorAll('.cnum[data-count]'));
+    if (!nums.length) return;
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if (!e.isIntersecting) return;
+        io.unobserve(e.target);
+        var el = e.target, target = parseInt(el.dataset.count, 10) || 0, t0 = null;
+        (function step(ts){
+          if (t0 === null) t0 = ts;
+          var p = Math.min((ts - t0) / 900, 1);
+          el.textContent = String(Math.round(target * (1 - Math.pow(1 - p, 3))));
+          if (p < 1) requestAnimationFrame(step);
+        })(performance.now());
+      });
+    }, {threshold: .6});
+    nums.forEach(function(n){ io.observe(n); });
+  })();
+
+  /* 逐項錯開浮現 */
+  (function(){
+    var groups = [].slice.call(document.querySelectorAll('.stg'));
+    if (!groups.length) return;
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      });
+    }, {threshold: .18});
+    groups.forEach(function(g){ io.observe(g); });
+  })();
+
+  /* 手機截圖跟著捲動輕輕位移（最大 ±14px，不搶戲） */
+  (function(){
+    if (!window.matchMedia('(min-width:881px)').matches) return;
+    var shots = [].slice.call(document.querySelectorAll('.pz-vis .dev, .pz-vis .callphone'));
+    if (!shots.length) return;
+    var ticking = false;
+    function tick(){
+      var vh = window.innerHeight;
+      shots.forEach(function(el){
+        var r = el.getBoundingClientRect();
+        if (r.bottom < -200 || r.top > vh + 200) return;
+        var mid = (r.top + r.height / 2 - vh / 2) / vh;   // -0.5 ~ 0.5
+        el.style.transform = 'translateY(' + (mid * -22).toFixed(1) + 'px)';
+      });
+      ticking = false;
+    }
+    window.addEventListener('scroll', function(){
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(tick);
+    }, {passive:true});
+    tick();
+  })();
+})();
+</script>
 </body>
 </html>

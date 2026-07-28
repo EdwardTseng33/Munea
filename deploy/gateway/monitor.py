@@ -9,6 +9,7 @@ import math
 import os
 import sys
 import time
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,6 +21,14 @@ from slack_notify import DEDUP_SECONDS, SlackNotifier, default_state_path
 DEFAULT_INTERVAL_SECONDS = 60.0
 DEFAULT_TIMEOUT_SECONDS = 10.0
 DEFAULT_STALE_HEARTBEAT_SECONDS = 120.0
+# 2026-07-23 STATUS 125 defense line 2: a GPU worker's own clock can drift
+# without ever going "unhealthy" or missing a heartbeat -- the Gateway only
+# ever sees last_heartbeat_at stamped by ITS OWN clock at receipt time, so
+# that signal cannot detect the worker's clock being wrong. tw-06 was
+# measured 4m17s (257s) fast; keep the default threshold comfortably below
+# that so a repeat trips this alarm well before a fresh 90s call token would
+# start looking expired to the worker.
+DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS = 90.0
 UTILIZATION_THRESHOLD = 0.80
 
 
@@ -72,6 +81,11 @@ class PollResult:
     metrics: Mapping[str, float] | None = None
     health_error: str = ""
     metrics_error: str = ""
+    # worker_id -> {"skew_seconds": float} or {"error": str}. Populated by
+    # GatewayClient.poll() only when a worker health key is configured
+    # (STATUS 125 defense line 2); empty dict means "not probed", not
+    # "clocks are fine" -- evaluate_alerts() never alerts on an empty dict.
+    worker_clock_checks: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
 
 
 def parse_prometheus_metrics(body: str) -> dict[str, float]:
@@ -120,6 +134,8 @@ class GatewayClient:
         admin_key: str = "",
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
         opener: Callable[..., object] = urllib.request.urlopen,
+        worker_health_key: str = "",
+        clock: Callable[[], float] = time.time,
     ) -> None:
         if not base_url.strip():
             raise MonitorConfigError("MUNEA_GATEWAY_URL is required")
@@ -127,6 +143,13 @@ class GatewayClient:
         self.admin_key = admin_key.strip()
         self.timeout_seconds = timeout_seconds
         self.opener = opener
+        # STATUS 125 defense line 2: the same legacy universal key= that
+        # App/probe scripts already use against a worker's own /health
+        # (see scripts/voice_chain_probe.py, web/src/app.js MUNEA_APP_KEY).
+        # Optional and off by default -- unset means "do not probe worker
+        # clocks", not "clocks are fine" (see PollResult.worker_clock_checks).
+        self.worker_health_key = worker_health_key.strip()
+        self.clock = clock
 
     def poll(self) -> PollResult:
         health: Mapping[str, object] | None = None
@@ -158,7 +181,52 @@ class GatewayClient:
             metrics=metrics,
             health_error=health_error,
             metrics_error=metrics_error,
+            worker_clock_checks=self._probe_worker_clocks(health),
         )
+
+    def _probe_worker_clocks(self, health: Mapping[str, object] | None) -> dict[str, dict[str, object]]:
+        """Poll each GPU worker's own /health directly (bypassing the
+        Gateway) for its self-reported server_time and diff it against this
+        monitor's own clock (2026-07-23 STATUS 125 defense line 2).
+
+        The Gateway's worker registry only ever stamps last_heartbeat_at
+        with the GATEWAY's clock at receipt time -- a worker whose own
+        clock is wrong looks perfectly fresh from there. Only a direct hit
+        on the worker's /health (which now echoes its own wall clock, see
+        flashhead_server.py) can surface this.
+        """
+        if not self.worker_health_key:
+            return {}
+        workers = None
+        if isinstance(health, dict):
+            snapshot = health.get("snapshot")
+            if isinstance(snapshot, dict):
+                workers = snapshot.get("workers")
+        if not isinstance(workers, list):
+            return {}
+        checks: dict[str, dict[str, object]] = {}
+        for worker in workers:
+            if not isinstance(worker, dict):
+                continue
+            worker_id = str(worker.get("worker_id") or "").strip()
+            url = str(worker.get("url") or "").strip()
+            if not worker_id or not url:
+                continue
+            probe_url = (
+                url.rstrip("/") + "/health?key=" + urllib.parse.quote(self.worker_health_key, safe="")
+            )
+            try:
+                body, _ = _request(probe_url, "", self.timeout_seconds, self.opener)
+                observed_at = self.clock()
+                value = json.loads(body.decode("utf-8"))
+                server_time = _number(value.get("server_time")) if isinstance(value, dict) else None
+                if server_time is None:
+                    checks[worker_id] = {"error": "server_time missing from worker /health"}
+                    continue
+                checks[worker_id] = {"skew_seconds": round(observed_at - server_time, 1)}
+            except Exception as exc:
+                checks[worker_id] = {"error": str(exc)}
+        return checks
 
 
 def _number(value: object) -> float | None:
@@ -206,6 +274,7 @@ def evaluate_alerts(
     *,
     now: float | None = None,
     stale_heartbeat_seconds: float = DEFAULT_STALE_HEARTBEAT_SECONDS,
+    clock_skew_threshold_seconds: float = DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS,
 ) -> list[Alert]:
     current = time.time() if now is None else now
     health = result.health
@@ -302,6 +371,25 @@ def evaluate_alerts(
                         {"age_seconds": round(age, 1), "status": status},
                     ))
 
+    # 2026-07-23 STATUS 125 defense line 2: worker_clock_checks is only ever
+    # non-empty when GatewayClient was configured with a worker health key
+    # (opt-in). An "error" entry (unreachable, missing server_time on an
+    # older build, etc.) is a reachability signal already covered by
+    # worker_unhealthy/worker_heartbeat_stale above -- only a measured skew
+    # past the threshold raises a new alert here, so this never duplicates
+    # those.
+    for worker_id, check in (result.worker_clock_checks or {}).items():
+        if not isinstance(check, dict):
+            continue
+        skew = _number(check.get("skew_seconds"))
+        if skew is not None and abs(skew) > clock_skew_threshold_seconds:
+            alerts.append(Alert(
+                f"worker_clock_skew:{worker_id}",
+                "critical",
+                f"GPU worker {worker_id} clock is off by more than {clock_skew_threshold_seconds:g}s",
+                {"skew_seconds": skew, "threshold_seconds": clock_skew_threshold_seconds},
+            ))
+
     return alerts
 
 
@@ -312,12 +400,14 @@ class GatewayMonitor:
         notifier: AlertNotifier,
         *,
         stale_heartbeat_seconds: float = DEFAULT_STALE_HEARTBEAT_SECONDS,
+        clock_skew_threshold_seconds: float = DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS,
         clock: Callable[[], float] = time.time,
         lifecycle_state_path: str | os.PathLike[str] | None = None,
     ) -> None:
         self.client = client
         self.notifier = notifier
         self.stale_heartbeat_seconds = stale_heartbeat_seconds
+        self.clock_skew_threshold_seconds = clock_skew_threshold_seconds
         self.clock = clock
         self.lifecycle_state_path = Path(lifecycle_state_path) if lifecycle_state_path else None
         self._active_alerts = self._load_lifecycle_state()
@@ -356,6 +446,7 @@ class GatewayMonitor:
             result,
             now=self.clock(),
             stale_heartbeat_seconds=self.stale_heartbeat_seconds,
+            clock_skew_threshold_seconds=self.clock_skew_threshold_seconds,
         )
         sent: list[str] = []
         suppressed: list[str] = []
@@ -442,6 +533,12 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         "MUNEA_GATEWAY_HEARTBEAT_STALE_SECONDS",
         os.environ.get("MUNEA_GATEWAY_HEARTBEAT_STALE_SECONDS", str(DEFAULT_STALE_HEARTBEAT_SECONDS)),
     )
+    clock_skew_threshold = _positive_float(
+        "MUNEA_WORKER_CLOCK_SKEW_THRESHOLD_SECONDS",
+        os.environ.get(
+            "MUNEA_WORKER_CLOCK_SKEW_THRESHOLD_SECONDS", str(DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS)
+        ),
+    )
     gateway_url = os.environ.get("MUNEA_GATEWAY_URL", "")
     notify = _env_bool("MUNEA_GATEWAY_MONITOR_NOTIFY")
     webhook_url = os.environ.get("MUNEA_SLACK_ALERT_WEBHOOK", "")
@@ -454,10 +551,16 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         "MUNEA_GATEWAY_MONITOR_LIFECYCLE_FILE",
         os.path.join(os.path.dirname(state_path), "munea-gateway-monitor-lifecycle.json"),
     ).strip()
+    # STATUS 125 defense line 2: same shared client key the App and
+    # scripts/voice_chain_probe.py already use (MUNEA_APP_KEY). Optional --
+    # unset keeps this monitor byte-for-byte the same as before this change
+    # (no worker clock probing, no new alerts).
+    worker_health_key = os.environ.get("MUNEA_APP_KEY", "").strip()
     client = GatewayClient(
         gateway_url,
         admin_key=os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
         timeout_seconds=timeout,
+        worker_health_key=worker_health_key,
     )
     notifier: AlertNotifier
     if notify:
@@ -473,6 +576,7 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         client,
         notifier,
         stale_heartbeat_seconds=stale,
+        clock_skew_threshold_seconds=clock_skew_threshold,
         lifecycle_state_path=lifecycle_path or None,
     ), interval
 

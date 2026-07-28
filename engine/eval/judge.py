@@ -6,8 +6,13 @@
 題目整體 PASS 的定義＝該題全部準則都 pass（見 run_eval.py 的彙整規則）。
 
 跑法（stdin 一行 JSON，stdout 一行 JSON）：
-  輸入：{"userLine": "...", "reply": "...", "criteria": ["...", "..."]}
+  輸入：{"userLine": "...", "reply": "...", "criteria": ["...", "..."],
+         "knownFacts": ["...", "..."] | null}
   輸出：{"ok": true, "verdicts": [{"criterion": "...", "verdict": "pass|fail", "reason": "..."}]}
+
+2026-07-25（聊天品質劇本庫，卡西法）：新增可選的 knownFacts 參數（見
+build_prompt 內註解說明為什麼要加）。golden_set 既有呼叫不帶這個參數，
+行為完全不變，向下相容。
 """
 import json
 import os
@@ -32,9 +37,21 @@ JUDGE_SYSTEM = (
 )
 
 
-def build_prompt(user_line, reply, criteria):
+def build_prompt(user_line, reply, criteria, known_facts=None):
     numbered = "\n".join(f"{i+1}. {c}" for i, c in enumerate(criteria))
+    facts_block = ""
+    if known_facts:
+        # 2026-07-25（聊天品質劇本庫，卡西法）：可選的「已知事實」context。
+        # 沒有這段時，評審只看得到單輪 userLine+reply，無法分辨「AI 用了記憶
+        # 側寫裡本來就有的事實」跟「AI 憑空編造」——會把合法的貼身感回覆誤判成
+        # 準則6（編造記憶）違反。golden_set 既有呼叫不帶這個參數，行為不變。
+        facts_numbered = "\n".join(f"- {fact}" for fact in known_facts)
+        facts_block = (
+            f"背景（寧寧透過記憶側寫「原本就合法知道」的事，不算她自己編的，"
+            f"只有背景裡沒有、使用者這輪也沒講過的才算編造）：\n{facts_numbered}\n\n"
+        )
     return (
+        f"{facts_block}"
         f"使用者說的話：{user_line}\n\n"
         f"寧寧的回覆：{reply}\n\n"
         f"請針對以下每一條準則，判定 pass 或 fail，並給一句話理由"
@@ -45,7 +62,7 @@ def build_prompt(user_line, reply, criteria):
     )
 
 
-def judge(user_line, reply, criteria, api_key=None):
+def judge(user_line, reply, criteria, api_key=None, known_facts=None):
     from google import genai
     from google.genai import types
 
@@ -56,7 +73,7 @@ def judge(user_line, reply, criteria, api_key=None):
         return {"ok": False, "error": "empty reply, nothing to judge"}
 
     client = genai.Client(api_key=api_key)
-    prompt = build_prompt(user_line, reply, criteria)
+    prompt = build_prompt(user_line, reply, criteria, known_facts=known_facts)
     last_err = ""
     for model in (JUDGE_MODEL, "gemini-flash-latest"):
         try:
@@ -93,7 +110,8 @@ def judge(user_line, reply, criteria, api_key=None):
 
 def main():
     case = json.loads(sys.stdin.readline())
-    result = judge(case["userLine"], case["reply"], case["criteria"])
+    result = judge(case["userLine"], case["reply"], case["criteria"],
+                    known_facts=case.get("knownFacts"))
     print(json.dumps(result, ensure_ascii=False))
 
 

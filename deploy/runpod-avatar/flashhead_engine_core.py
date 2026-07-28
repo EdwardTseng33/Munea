@@ -44,6 +44,48 @@ SUPPORTED_FRAME_SIZES = (512, 640, 768)
 # 串流抖動；TTS 中途真的停超過 0.45s 時只是多一格帶靜音尾的畫面，順序不亂。
 TAIL_FLUSH_S = float(os.environ.get("MUNEA_FH_TAIL_FLUSH_S", "0.45"))
 
+# 畫面時間穩定器（2026-07-24 Edward 反映「待機時整個背景微閃爍」）。
+# 根因：生成模型每 chunk 重畫整張圖（含背景），背景像素每次都有 1~3 階的
+# 隨機微差，待機時特別明顯。做法：新畫面逐像素跟上一張輸出比，差異 <= AF_LO
+# 的像素直接沿用上一張（背景完全靜止）；差異 >= AF_HI 的照常更新（眨眼、
+# 嘴型差異大、不受影響）；中間區線性過渡、避免硬邊。因為是跟「上一張輸出」
+# 比，緩慢真動作的差異會累積、一超過 AF_LO 就開始跟上，不會被永久凍住。
+# 副作用是正向的：背景靜止後 WebRTC 編碼省下的位元集中給臉部、畫質更好。
+# MUNEA_FH_ANTIFLICKER=0 可整個關掉（回到舊行為）。
+ANTIFLICKER = os.environ.get("MUNEA_FH_ANTIFLICKER", "1") == "1"
+ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "3"))
+ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "12"))
+
+
+def stabilize_frame(prev, cur, cv2mod):
+    """單張時間穩定：跟上一張輸出 prev 比，回傳處理後的 cur。
+
+    三分法：差異(三通道取最大) <= AF_LO 的像素沿用 prev（背景微雜訊凍住）、
+    >= AF_HI 照常更新（眨眼嘴型不受影響）、中間窄帶線性混合避免硬邊。
+    對真動作用「取最大」是刻意保守——寧可放行、不誤凍。緩慢真動作因為是
+    跟「上一張輸出」比，差異會累積、一超過 AF_LO 就開始跟上、不會永久凍住。
+    cv2mod 傳 None 走純 numpy 備援；兩條路徑輸出必須完全一致（有單元測試）。
+    """
+    if cv2mod is not None:
+        d3 = cv2mod.absdiff(cur, prev)
+        c0, c1, c2 = cv2mod.split(d3)
+        d = cv2mod.max(cv2mod.max(c0, c1), c2)
+        hold = cv2mod.compare(d, ANTIFLICKER_LO, cv2mod.CMP_LE)
+        cv2mod.copyTo(prev, hold, cur)
+    else:
+        delta = cur.astype(np.int16)
+        delta -= prev
+        np.abs(delta, out=delta)
+        d = delta.max(axis=2)
+        cur = np.where((d <= ANTIFLICKER_LO)[:, :, None], prev, cur)
+    mid = (d > ANTIFLICKER_LO) & (d < ANTIFLICKER_HI)
+    if mid.any():
+        w = ((d[mid].astype(np.float32) - ANTIFLICKER_LO)
+             / (ANTIFLICKER_HI - ANTIFLICKER_LO))[:, None]
+        cur[mid] = (prev[mid].astype(np.float32) * (1.0 - w)
+                    + cur[mid].astype(np.float32) * w + 0.5).astype(np.uint8)
+    return cur
+
 
 def parse_frame_size(value):
     """Validate the square model frame size before any GPU work starts."""
@@ -311,6 +353,9 @@ class Feeder:
         # 繼續講上一段」「插話後又冒半句舊話」）。
         self._epoch = 0
         self._fault_streak = 0
+        # 時間穩定器狀態：上一張「實際輸出」的畫面（reset/換角色時清空，
+        # 否則會拿舊角色/舊一輪的畫面當基準、產生一瞬間的鬼影混合）。
+        self._prev_frame = None
 
         if auto_start:
             threading.Thread(target=self._loop, daemon=True).start()
@@ -344,6 +389,7 @@ class Feeder:
             self.consumed = 0
             self._epoch += 1
             self._finish_pending = False
+            self._prev_frame = None
             if self.slot.audio_dq is not None:
                 self.slot.audio_dq.extend([0.0] * self.slot.audio_dq.maxlen)
         if self.slot.sink is not None:
@@ -377,6 +423,30 @@ class Feeder:
                 except Exception as cb_err:
                     print("[feeder] slot" + str(self.slot.index)
                           + " on_unhealthy callback error: " + repr(cb_err), flush=True)
+
+    def _stabilize(self, frames, chunk_epoch):
+        """時間穩定器：逐張跟上一張輸出比，幾乎沒變的像素沿用上一張。
+
+        cv2 快路徑實測 768² 約 3.5-4.7ms/張（26 張一包約 0.1s、佔 0.96s
+        chunk 預算一成）；cv2 缺席時走純 numpy 備援（慢 4 倍、僅測試環境）。
+        像素數學在模組層 stabilize_frame()，兩條路徑輸出完全一致、可單元測。
+        """
+        try:
+            import cv2 as cv2mod
+        except ImportError:
+            cv2mod = None
+        prev = self._prev_frame
+        for i in range(frames.shape[0]):
+            cur = frames[i]
+            if prev is not None and prev.shape == cur.shape:
+                cur = stabilize_frame(prev, cur, cv2mod)
+                frames[i] = cur
+            prev = cur
+        # 只有世代號沒變才更新基準——reset()/換角色後不可拿舊世代的畫面當基準
+        with self.lock:
+            if self._epoch == chunk_epoch and prev is not None:
+                self._prev_frame = prev.copy()
+        return frames
 
     def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None):
         t_chunk_ready = time.time()
@@ -412,6 +482,8 @@ class Feeder:
                 print("[feeder] slot" + str(self.slot.index) + " stale chunk dropped (epoch "
                       + str(chunk_epoch) + " -> " + str(self._epoch) + ")", flush=True)
                 return
+        if ANTIFLICKER:
+            frames = self._stabilize(frames, chunk_epoch)
         self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
         if valid_samples is None:
             valid_samples = len(chunk_16k)

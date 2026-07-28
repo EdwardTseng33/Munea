@@ -7,12 +7,26 @@ param(
   [string]$RunPodSecret = "munea-runpod-api-key",
   [string]$GatewayAdminSecret = "munea-gateway-admin-key",
   [string]$AvatarAppKeySecret = "munea-avatar-app-key",
+  # SlotsPerPod=2 只在備援卡印象檔已升級成雙程序版（deploy/runpod-avatar/
+  # gpu-image/Dockerfile.vocaframe 帶 flashhead_router.py 那版）且已重新烤圖、
+  # RunPod 私有模板已指到新映像之後才能跑這支腳本用這個值——若模板還是舊版
+  # 單程序映像，這裡先手動覆蓋成 1（`-SlotsPerPod 1`），避免管家把只能撐 1
+  # 通話的舊卡登記成 2 席容量、通話品質反而變差。取捨說明見
+  # deploy/runpod-avatar/README.md「MUNEA_RUNPOD_SLOTS 1→2 切換」段。
   [int]$SlotsPerPod = 2,
-  [int]$MaxPods = 14,
-  [int]$TargetConcurrentCalls = 30,
+  [int]$MaxPods = 4,
+  [int]$TargetConcurrentCalls = 10,
   [switch]$DryRun
 )
 
+# 2026-07-24 8-10人併發容量升級工程包1（卡西法）：MaxPods/TargetConcurrentCalls
+# 預設值改為對齊「主卡2席 + 備援4張x2席 = 10席」目標；SCALE_DOWN_ACTION 預設
+# 從 "stop" 改成 "terminate"。
+# ⚠ 7/23 教訓：SCALE_DOWN_ACTION="stop" 是死路——RunPod 的 Stop 只停計費碼錶、
+# 不保留 GPU 資源，暫停中的卡隨時會被其他租客搶走，恢復時可能直接開不回來
+# （見 deploy/runpod-avatar/README.md 成本紀錄「暫停⇄喚醒實測」：暫停3秒成功，
+# 喚醒因原主機GPU被租走而失敗）。城堡規矩「用完刪」正是為此而立，未來若有人
+# 想改回 "stop" 省錢，先重讀那段教訓再決定。
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $source = Join-Path $root "deploy\runpod-avatar"
@@ -38,6 +52,9 @@ $envValues = [ordered]@{
   MUNEA_RUNPOD_POD_PREFIX = "munea-vocaframe-backup"
   MUNEA_RUNPOD_SLOTS = [string]$SlotsPerPod
   MUNEA_RUNPOD_MAX_PODS = [string]$MaxPods
+  # 沿用既有值：MaxPods 升到 4 後，"4" 剛好等於新的 max_pods 上限，仍滿足
+  # runpod_backup.Config.validate() 的「批次 <= 總量」限制（不需要跟著調整），
+  # 語意等同「尖峰時一次把 4 張備援全開齊也可以」，跟 8-10 席目標的急迫性一致。
   MUNEA_RUNPOD_MAX_SCALE_UP_PER_CYCLE = "4"
   MUNEA_TARGET_CONCURRENT_CALLS = [string]$TargetConcurrentCalls
   MUNEA_RUNPOD_SCALE_UP_UTILIZATION = "0.80"
@@ -47,7 +64,7 @@ $envValues = [ordered]@{
   MUNEA_RUNPOD_SCALE_UP_COOLDOWN_SECONDS = "15"
   MUNEA_RUNPOD_STARTUP_TIMEOUT_SECONDS = "420"
   MUNEA_RUNPOD_POLL_SECONDS = "15"
-  MUNEA_RUNPOD_SCALE_DOWN_ACTION = "stop"
+  MUNEA_RUNPOD_SCALE_DOWN_ACTION = "terminate"
   MUNEA_RUNPOD_STATE_FILE = "/tmp/runpod-backup-state.json"
   MUNEA_RUNPOD_LOCK_FILE = "/tmp/runpod-backup.lock"
 }

@@ -1,11 +1,11 @@
 # Munea Current Development Plan
 
-> Updated: 2026-07-20
+> Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.43 (Build 48)`
+> **Current source:** `1.0.44 (Build 492)`; this is post-package source that has advanced beyond the frozen uploaded binary at `72a0bd46` and must use a new Build number when packaged again.
 >
-> **Latest uploaded App:** `1.0.40 (Build 47)`; the exact selected Build and Apple review state remain `unknown` until App Store Connect evidence is recorded.
+> **Latest uploaded App:** `1.0.44 (Build 492)`; Apple processing completed and the Build was selected and saved for 1.0.44 at 17:31. It has not been submitted, approved or released.
 >
 > **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000. Existing App Store Product IDs stay unchanged.
 >
@@ -27,8 +27,8 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source | `1.0.43 (Build 48)` is current source; no Archive／upload／iPhone evidence for Build 48 | `merged, not packaged` |
-| Uploaded App | `1.0.40 (Build 47)` was uploaded and installed; selected review lane remains unknown | `packaged, human gates pending` |
+| App source | Current `1.0.44` source has advanced beyond the frozen Build 492 commit `72a0bd46`; no Archive／IPA evidence applies to the post-package source | `merged evidence; next Build not packaged` |
+| Uploaded App | `1.0.44 (Build 492)` was uploaded, processed and selected for 1.0.44; Edward iPhone install／launch／version readback pass; App E2E remains pending | `selected and installed, not submitted; human call gate pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |
 | Tokyo database | Repo migration head is `019`; `017`／`018`／`019` are blocked and `verifiedHead=null` | `blocked` |

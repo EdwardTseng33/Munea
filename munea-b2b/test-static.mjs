@@ -18,9 +18,10 @@ function parseInlineScripts(html, label) {
 parseInlineScripts(index, 'index.html');
 parseInlineScripts(call, 'call.html');
 
-assert.match(index, /4–8 週試辦/);
+assert.match(index, /2–4 週場域試辦/);
+assert.doesNotMatch(index, /4–8 週/);
 assert.match(index, /10–20 位/);
-assert.match(index, /通話完成率/);
+assert.match(index, /達標轉正式/);
 assert.match(index, /全程只用麥克風與聲音互動/);
 assert.doesNotMatch(index, /\/api\/chat|speechSynthesis|chatTxt|文字聊聊/);
 assert.doesNotMatch(index, /台灣首創|這個領域的.{0,4}領先者|150 小時/);
@@ -29,7 +30,9 @@ assert.match(call, /&demo=1&key=/);
 assert.match(call, />DEMO 1\.0\.4<\/div>/);
 assert.match(call, /id="gateInput" type="password"/);
 assert.doesNotMatch(call, /sessionStorage\.setItem\(['"]munea_(?:pass|demo_unlocked)/);
-assert.doesNotMatch(call, /sessionStorage\.getItem\(['"]munea_pass/);
+// 2026-07-21 auto-unlock: call.html reads the pass saved by index.html so the
+// visitor types the passphrase once, not twice. The backend still validates it.
+assert.match(call, /sessionStorage\.getItem\(['"]munea_pass/);
 assert.match(call, /function lockDemoAccess\(showGate=true\)[\s\S]*AVATAR_TOKEN = null;[\s\S]*VOICE_KEY = null;[\s\S]*avatarPrewarmPromise = null;/);
 assert.match(call, /function hangup\(preserveMessage=false\)[\s\S]*lockDemoAccess\(true\);/);
 assert.match(call, /window\.addEventListener\('pagehide', \(\)=> lockDemoAccess\(true\)\)/);
@@ -63,7 +66,9 @@ assert.match(call, /demo-flashhead-square-768-v2/);
 assert.match(call, /id="faceCanvas" width="768" height="768"/);
 assert.match(call, /faceCode: 'a05d'/);
 assert.match(call, /faceCode: 'a06d'/);
-assert.match(call, /object-fit:fill !important/);
+// PR #226: fill stretched the 768x768 face; cover keeps the aspect ratio.
+assert.match(call, /object-fit:cover !important/);
+assert.doesNotMatch(call, /object-fit:fill !important/);
 assert.match(call, /let CAP_SECONDS = 180/);
 assert.match(callKey, /\/demo\/session/);
 assert.match(callKey, /avatarToken/);
@@ -80,7 +85,7 @@ assert.match(demoDeploy, /MUNEA_FACE_PORT=8188/);
 assert.match(demoDeploy, /MUNEA_FH_ALLOWED_CHARS=a05d,a06d/);
 assert.doesNotMatch(demoDeploy, /\b(?:kill|pkill|killall|Stop-Process)\b/i);
 
-assert.match(call, /class="charbar"[\s\S]*bg-a05\.png[\s\S]*bg-a06\.png/);
+assert.match(call, /class="charbar"[\s\S]*bg-a05\.webp[\s\S]*bg-a06\.webp/);
 assert.match(call, /waitForFirstFrame/);
 assert.match(call, /Live\.primeMic\(\)/);
 assert.match(call, /first video frame=/);

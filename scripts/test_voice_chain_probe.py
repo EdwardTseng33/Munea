@@ -77,6 +77,27 @@ def main():
         probe.get_json = original_get_json
     assert sanitized.stages[-1].status == "PASS"
 
+    # STATUS 125 defense line 1: call_token= must be used instead of key=
+    # (not alongside it) so an expired/clock-skewed call token cannot be
+    # masked by the legacy universal key= bypass.
+    token_probe = probe.ProbeReport("production", "2026-07-15T00:00:00Z")
+    captured_health_urls = []
+    original_get_json = probe.get_json
+    try:
+        def fake_get_json(url, timeout, bearer=""):
+            captured_health_urls.append(url)
+            return 200, {"ok": True}
+        probe.get_json = fake_get_json
+        probe.probe_http_health(
+            token_probe, "avatar_call_token_health", "https://avatar.example", "unused-legacy-key", 7,
+            call_token="real-call-token",
+        )
+    finally:
+        probe.get_json = original_get_json
+    assert token_probe.stages[-1].status == "PASS"
+    assert captured_health_urls[-1].endswith("?token=real-call-token")
+    assert "key=" not in captured_health_urls[-1]
+
     original_post_json = probe.post_json
     malformed_calls = []
     try:
@@ -176,6 +197,17 @@ def main():
     unreleased.add("gateway_release", "FAIL", started, "release failed")
     assert unreleased.passed is False and unreleased.first_failure == "gateway_release"
 
+    # STATUS 125 defense line 1: a production report that never ran the
+    # call-token health probe at all must not be able to report PASS, even
+    # if every other stage (including the legacy key= avatar_health) is
+    # green -- that green-everywhere-except-token shape is exactly what the
+    # 2026-07-23 tw-06 outage would have produced under the old required set.
+    missing_token_probe = probe.ProbeReport("production", "2026-07-15T00:00:00Z")
+    for stage in ("gateway_health", "gateway_lease", "voice_ready", "avatar_health", "gateway_release"):
+        missing_token_probe.add(stage, "PASS", started)
+    assert missing_token_probe.passed is False
+    assert missing_token_probe.first_blocker == "avatar_call_token_health"
+
     seen = {}
 
     def fake_profile(profile, root):
@@ -186,8 +218,9 @@ def main():
             "app_key": "public-client-key",
         }
 
-    def fake_health(report, name, base_url, app_key, timeout, durable=False, bearer=""):
+    def fake_health(report, name, base_url, app_key, timeout, durable=False, bearer="", call_token=""):
         seen[name + "_bearer"] = bearer
+        seen[name + "_call_token"] = call_token
         report.add(name, "PASS", probe.time.monotonic(), "ok", base_url)
 
     def fake_lease(report, gateway_url, access_token, timeout):
@@ -235,12 +268,23 @@ def main():
             os.environ["MUNEA_ACCESS_TOKEN"] = previous_access_token
     assert seen == {
         "gateway_health_bearer": "real-access-token",
+        "gateway_health_call_token": "",
         "avatar_health_bearer": "",
+        "avatar_health_call_token": "",
+        # STATUS 125 defense line 1: the token-based re-probe must run with
+        # the real Gateway call token, not the legacy key=, and must be the
+        # stage that actually receives it (avatar_health above never should).
+        "avatar_call_token_health_bearer": "",
+        "avatar_call_token_health_call_token": "signed-call-token",
         "voice_url": canary,
         "call_token": "signed-call-token",
         "released": "call-1",
     }
     assert any(stage.name == "voice_route" and stage.status == "PASS" for stage in canary_report.stages)
+    assert any(
+        stage.name == "avatar_call_token_health" and stage.status == "PASS"
+        for stage in canary_report.stages
+    )
 
     async def failing_voice_ready(report, voice_url, app_key, timeout, call_token=""):
         raise RuntimeError("unexpected Voice failure")
@@ -262,6 +306,7 @@ def main():
     assert seen["released"] == "call-1"
     assert seen["gateway_health_bearer"] == "real-access-token"
     assert "avatar_health_bearer" not in seen
+    assert "avatar_call_token_health_bearer" not in seen
 
     wrapper = SOURCE.with_name("voice-chain-auth-probe.ps1").read_text(encoding="utf-8")
     assert "Refusing to run while MUNEA_ACCESS_TOKEN is already set" in wrapper

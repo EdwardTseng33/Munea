@@ -124,19 +124,82 @@ def test_she_knows_she_cannot_search():
 
 
 def test_lookup_can_be_switched_back():
-    """對照組：一個字就能退回舊行為（程式沒被砍掉、Edward 覺得她太笨隨時可開）。"""
+    """對照組：一個字就能退回舊的橋接查詢（程式沒被砍掉、隨時可開）。
+
+    2026-07-28 更新：舊開關 MUNEA_VOICE_LIVE_LOOKUP=1 現在代表「她自己查」（native），
+    要完整退回「我們代查＋伺服器插播過場句」得指名 MUNEA_VOICE_SEARCH_MODE=bridge。
+    """
+    import importlib
+    import live_voice_server as lv
+    os.environ["MUNEA_VOICE_SEARCH_MODE"] = "bridge"
+    try:
+        importlib.reload(lv)
+        check("對照組：指名 bridge → 舊路回來", lv.live_lookup_enabled() is True)
+        cfg = lv.live_config(char="寧寧", name="寧寧")
+        names = [f.name for t in (cfg.tools or []) for f in (t.function_declarations or [])]
+        check("對照組：舊工具真的回到她手上（證明不是砍掉、是關掉）",
+              "search_current_information" in names)
+        inst = lv.system_instruction(char="寧寧", name="寧寧")
+        check("對照組：說明書也跟著回舊版", "你有 search_current_information" in inst)
+    finally:
+        os.environ.pop("MUNEA_VOICE_SEARCH_MODE", None)
+        importlib.reload(lv)
+
+
+# ---- 三、她自己查（2026-07-28 · Edward 驗測「系統句跟她自己講的重疊」後改）----
+def test_native_search_is_the_default_when_lookup_on():
+    """舊開關打開 → 走「她自己查」，掛的是 Gemini 內建搜尋、不是我們的代查工具。
+
+    這條同時是回歸護欄：舊路要靠伺服器插播過場句蓋住 5 秒空白，那句是另一顆
+    「唸稿子」模型配音（聲線對不上、還得人工控速）＝Edward 7/28 聽到的
+    「系統句聲音不一樣、很卡、又跟她自己講的重疊」。
+    """
     import importlib
     import live_voice_server as lv
     os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1"
     try:
         importlib.reload(lv)
-        check("對照組：開關打開 → 工具回來", lv.live_lookup_enabled() is True)
+        check("舊開關=1 → 走她自己查", lv.native_search_enabled() is True)
+        check("舊的代查路同時是關的", lv.live_lookup_enabled() is False)
         cfg = lv.live_config(char="寧寧", name="寧寧")
         names = [f.name for t in (cfg.tools or []) for f in (t.function_declarations or [])]
-        check("對照組：工具真的回到她手上（證明不是砍掉、是關掉）",
-              "search_current_information" in names)
-        inst = lv.system_instruction(char="寧寧", name="寧寧")
-        check("對照組：說明書也跟著回舊版", "你有 search_current_information" in inst)
+        check("她手上沒有我們的代查工具（沒有代查就沒有 5 秒空白要蓋）",
+              "search_current_information" not in names)
+        check("掛上了內建的 Google 搜尋",
+              any(getattr(t, "google_search", None) is not None for t in (cfg.tools or [])))
+    finally:
+        os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
+        importlib.reload(lv)
+
+
+def test_native_search_instructions_do_not_contradict():
+    """她自己查時，說明書不可以同時說「你可以查」跟「你沒辦法查」。
+
+    這是 7/28 差點自己造出來的坑：判斷「她沒有查詢能力」那段原本寫
+    `not live_lookup_enabled()`，而 live_lookup_enabled 現在只代表舊的代查路——
+    走 native 時它是 False，於是兩段互相打架的指示會同時貼上去。
+    """
+    import importlib
+    import live_voice_server as lv
+    os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1"
+    try:
+        importlib.reload(lv)
+        inst = lv.system_instruction(char="寧寧", name="寧寧", location="臺北市大安區")
+        check("有告訴她可以自己上網查", "你可以自己上網查現在的資訊" in inst)
+        check("不會同時說她沒辦法查（自相矛盾）", "你沒有辦法上網查東西" not in inst)
+        check("不再宣稱伺服器會替她播過場句",
+              "Voice 伺服器會先替你播放" not in inst)
+        check("改成叫她自己講那句過場話", "先用一句很短的話告訴他你在查" in inst)
+        check("只能用講的：不准唸網址", "不要唸網址" in inst)
+        check("不准把搜尋動作唸出來（7/28 真機 1/5 機率洩漏）",
+              "不要把自己正在做的動作講出來" in inst)
+        # 7/28 考卷 S18：說明書用「我看一下喔」當過場話例句，她把「看」泛化成視覺能力，
+        # 冒出「把藥袋拿來讓我幫您看看」——一句踩兩條鐵律。例句改掉＋補釘「查≠看得見」後 PASS。
+        check("過場話例句不含『看』（免得被當成看得見）",
+              "「我看一下喔」" not in inst)
+        check("釘明查東西是上網查、不是用眼睛看",
+              "不是「用眼睛看」" in inst)
+        check("不准叫他把東西拿來給你看", "拿來給你看" in inst)
     finally:
         os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
         importlib.reload(lv)
@@ -161,6 +224,8 @@ def main():
     test_live_lookup_off_by_default()
     test_she_knows_she_cannot_search()
     test_lookup_can_be_switched_back()
+    test_native_search_is_the_default_when_lookup_on()
+    test_native_search_instructions_do_not_contradict()
     test_core_no_longer_claims_a_search_tool()
 
     print()

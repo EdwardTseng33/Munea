@@ -21,6 +21,8 @@ load_engine_env()
 from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
+import cloud_resync
+import health_kb
 import localization
 import supabase_adapter
 import enterprise_seats
@@ -40,6 +42,12 @@ WEB_DIR = os.path.normpath(os.path.join(HERE, "..", "web"))
 BRAIN_RELEASE_METADATA = build_service_metadata("munea-brain")
 DEFAULT_CHAR = "寧寧"
 COMPANION_PROFILE_PATH = os.environ.get("MUNEA_COMPANION_PROFILE_PATH") or os.path.join(HERE, "companion_profile.json")
+# Backlog（沙利曼 Gate 5 2026-07-24 二輪抓到，先記不實作）：這支本機 JSON fallback 檔跟
+# companion_profile.json 同款式，是「單一租戶開發模式」的共用檔案，非雲端環境下所有使用者
+# 會寫進同一份檔案、後寫覆蓋先寫。正式機（MUNEA_DATABASE_PROVIDER=supabase 且已配置）不受影響
+# ——雲端路徑一律走 persons 表、per-person 隔離；只有本機/開發模式沒接雲端時才會退到這裡。
+# 之後如需真正多人本機開發（而非單租戶 demo），應改成 per-person 檔名或直接停寫。
+PERSON_PROFILE_PATH = os.environ.get("MUNEA_PERSON_PROFILE_PATH") or os.path.join(HERE, "person_profile.json")
 APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
 CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(HERE, "credits_store.json")
@@ -219,6 +227,18 @@ def log_fallback_exception(context, exc):
         exc,
         exc_info=os.environ.get("MUNEA_DEBUG_TRACEBACK") == "1",
     )
+
+
+def log_cloud_write_fallback(context, exc):
+    """雲端「寫入」失敗、退本機備份：跟一般 fallback 不同——正式機多台不共用本機檔，
+    這一刻資料就有無聲消失的風險（2026-07-24 架構體檢點名的最大洞）。
+    所以除了記警告，還發功能告警到告警房（notify 同類 10 分鐘節流、不會洗版）；
+    告警失敗絕不反過來弄壞原本的本機備份路徑。"""
+    log_fallback_exception(context, exc)
+    try:
+        notify.alert("data", context, f"{type(exc).__name__}: {str(exc)[:200]}｜已退本機備份、雲端少這筆＝多台不同步，需要回補")
+    except Exception as alert_exc:
+        LOGGER.warning("cloud-write fallback alert failed: %s", alert_exc)
 
 
 def normalize_template_id(template_id):
@@ -587,9 +607,11 @@ def append_memory_items(items):
         if remote_items is not None:
             return remote_items
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
-        log_fallback_exception("append memory items to Supabase", e)
+        # 90分#2（2026-07-24）：雲端斷線不再往上丟 500——退本機備份＋告警＋進待補佇列、
+        # 背景工人趁雲端恢復自動補回（缺表＝要跑遷移、補也沒用、只留本機）。
+        log_cloud_write_fallback("append memory items to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending_many("memory_items", items, identity=REQUEST_DATA_IDENTITY.get())
     existing = load_memory_items(limit=1000)
     save_memory_items(existing + items)
     return items
@@ -680,9 +702,10 @@ def append_conversation_summary(item):
         if remote_item is not None:
             return remote_item
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
-        log_fallback_exception("append conversation summary to Supabase", e)
+        # 90分#2：同 append_memory_items——退本機＋告警＋待補佇列、不往上丟 500
+        log_cloud_write_fallback("append conversation summary to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending("conversation_summaries", item, identity=REQUEST_DATA_IDENTITY.get())
     existing = load_conversation_summaries(limit=1000, include_deleted=True)
     existing = [row for row in existing if row.get("id") != item["id"]]
     existing.append(item)
@@ -701,7 +724,7 @@ def archive_conversation_summary(summary_id):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("archive conversation summary in Supabase", e)
+        log_cloud_write_fallback("archive conversation summary in Supabase", e)
     items = load_conversation_summaries(limit=1000, include_deleted=True)
     archived = None
     for item in items:
@@ -861,9 +884,10 @@ def append_wellbeing_signal(signal):
         if remote_signal is not None:
             return remote_signal
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
-        log_fallback_exception("append wellbeing signal to Supabase", e)
+        # 90分#2：同 append_memory_items——退本機＋告警＋待補佇列、不往上丟 500
+        log_cloud_write_fallback("append wellbeing signal to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending("wellbeing_signals", signal, identity=REQUEST_DATA_IDENTITY.get())
     signals = read_json_file(WELLBEING_PATH, [])
     if not isinstance(signals, list):
         signals = []
@@ -970,7 +994,7 @@ def family_state_response(data):
                 # 23514＝雲端桌子還不認這把鑰匙（vitals 待 008 遷移）→ 安靜退引擎本子、不炸用戶
                 if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e) and "23514" not in str(e):
                     raise e
-                log_fallback_exception("save family state to Supabase", e)
+                log_cloud_write_fallback("save family state to Supabase", e)
         allstate = _family_state_json_all()
         g = allstate.setdefault(group, {})
         g[key] = {"value": value_to_store, "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
@@ -1069,7 +1093,7 @@ def create_family_invitation(invitation):
         # 22P02＝雲端桌子要正式編號（真帳號上線前給的是裝置編號）→ 退引擎本子記帳、功能照常
         if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
-        log_fallback_exception("create family invitation in Supabase", e)
+        log_cloud_write_fallback("create family invitation in Supabase", e)
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
     if not isinstance(invitations, list):
         invitations = []
@@ -1090,7 +1114,7 @@ def update_family_invitation(invitation_id, patch):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
-        log_fallback_exception("update family invitation in Supabase", e)
+        log_cloud_write_fallback("update family invitation in Supabase", e)
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
     if not isinstance(invitations, list):
         invitations = []
@@ -1168,7 +1192,7 @@ def update_family_invitation_after_code_exchange(invitation_id, patch):
         if remote is not None:
             return public_family_invitation(remote), "supabase"
     except Exception as e:
-        log_fallback_exception("complete family invitation exchange", e)
+        log_cloud_write_fallback("complete family invitation exchange", e)
     # JSON is only the development fallback. Production reaches the scoped
     # Supabase update above after verified authentication.
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
@@ -1600,7 +1624,7 @@ def save_family_activity(activity):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save family activity to Supabase", e)
+        log_cloud_write_fallback("save family activity to Supabase", e)
     activities = load_family_activities(limit=1000)
     next_activities = [a for a in activities if a.get("id") != activity.get("id")]
     next_activities.append(activity)
@@ -1617,7 +1641,7 @@ def save_family_activity_participant(activity_id, participant):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save family activity participant to Supabase", e)
+        log_cloud_write_fallback("save family activity participant to Supabase", e)
     activities = load_family_activities(limit=1000)
     next_activities = []
     for activity in activities:
@@ -1887,7 +1911,7 @@ def save_routine_reminder(item):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save routine reminder to Supabase", e)
+        log_cloud_write_fallback("save routine reminder to Supabase", e)
     items = load_routine_reminders(limit=1000)
     next_items = [item for item in items if item.get("id") != reminder.get("id")]
     next_items.append(reminder)
@@ -1906,7 +1930,7 @@ def update_routine_reminder(reminder_id, patch):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("update routine reminder in Supabase", e)
+        log_cloud_write_fallback("update routine reminder in Supabase", e)
     items = load_routine_reminders(limit=1000)
     updated = None
     next_items = []
@@ -2019,7 +2043,7 @@ def save_medication_dose(item):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save medication dose to Supabase", e)
+        log_cloud_write_fallback("save medication dose to Supabase", e)
     items = load_medication_doses(limit=5000)
     identity = (dose.get("personId"), dose.get("doseKey"))
     next_items = [item for item in items if (item.get("personId"), item.get("doseKey")) != identity]
@@ -2101,7 +2125,7 @@ def save_notification_settings(patch, person_id=None):
         except Exception as e:
             if not is_missing_table_error(e):
                 raise
-            log_fallback_exception("save notification settings", e)
+            log_cloud_write_fallback("save notification settings", e)
     items = read_json_file(NOTIFICATION_SETTINGS_PATH, {})
     if not isinstance(items, dict):
         items = {}
@@ -2479,7 +2503,7 @@ def refresh_daily_briefing(region=None, person_id=None):
         # ⚠ 已知一個會讓這裡必定失敗的成因：Supabase perception_snapshots.snapshot_type 的 CHECK
         # constraint 清單裡沒有 'daily_briefing'（見 supabase/sql/009_perception_snapshot_daily_briefing.sql）
         # ——這正是「23514 check_violation」的根因，要等這支 migration 跑過才會真的存得進去。
-        log_fallback_exception("save daily briefing snapshot", e)
+        log_cloud_write_fallback("save daily briefing snapshot", e)
         return {"ok": False, "brain": "butler", "action": "daily_briefing",
                 "error": "snapshot_save_failed", "briefing": briefing, "expiresAt": expires}
     return {"ok": True, "brain": "butler", "action": "daily_briefing",
@@ -2554,7 +2578,7 @@ def append_perception_snapshots(snapshots):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
-        log_fallback_exception("append perception snapshots to Supabase", e)
+        log_cloud_write_fallback("append perception snapshots to Supabase", e)
     existing = load_perception_snapshots(limit=1000)
     save_perception_snapshots(existing + snapshots)
     return snapshots
@@ -2643,7 +2667,7 @@ def upsert_relationship_state(state):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("upsert relationship state to Supabase", e)
+        log_cloud_write_fallback("upsert relationship state to Supabase", e)
     states = load_relationship_states(limit=1000)
     updated = False
     next_states = []
@@ -3299,7 +3323,7 @@ def save_app_profile_store(data):
         if remote_store:
             store = normalize_app_profile_store(remote_store)
     except Exception as e:
-        log_fallback_exception("save app profile to Supabase", e)
+        log_cloud_write_fallback("save app profile to Supabase", e)
     write_json_file(APP_PROFILE_STORE_PATH, store)
     _APP_PROFILE_CACHE["store"] = store  # 存檔後即時更新快取，避免讀到舊值
     _APP_PROFILE_CACHE["ts"] = time.time()
@@ -3329,7 +3353,7 @@ def save_family_member(member, family_group_id=None):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save family member to Supabase", e)
+        log_cloud_write_fallback("save family member to Supabase", e)
     store = load_app_profile_store()
     family_group = store.setdefault("familyGroup", {"id": family_group_id or "local-demo-family", "name": "Munea Care Circle", "members": []})
     members = [normalize_family_member(m) for m in family_group.get("members", [])]
@@ -3769,6 +3793,82 @@ def companion_profile_response(data):
     return {"ok": True, "profile": profile, "backendChar": template["backendChar"], "backend": data_backend_status()}
 
 
+def normalize_person_profile(data):
+    """個人資料卡（web/index.html #profileModal）欄位正規化——名稱/暱稱/生日/所在地。
+
+    照片（avatar）刻意不在這裡：需求單拍板第一版照片只留本機、不上雲。
+    """
+    data = data or {}
+
+    def _clean_text(value, limit):
+        text = str(value if value is not None else "").strip()
+        return text[:limit] if text else ""
+
+    def _clean_year(value):
+        if value in (None, ""):
+            return None
+        try:
+            year = int(value)
+        except (TypeError, ValueError):
+            return None
+        return year if 1900 <= year <= 2100 else None
+
+    def _clean_month(value):
+        if value in (None, ""):
+            return None
+        try:
+            month = int(value)
+        except (TypeError, ValueError):
+            return None
+        return month if 1 <= month <= 12 else None
+
+    return {
+        "name": _clean_text(data.get("name"), 80),
+        "nick": _clean_text(data.get("nick") or data.get("nickname"), 40),
+        "birthYear": _clean_year(data.get("birthYear") if data.get("birthYear") is not None else data.get("birth_year")),
+        "birthMonth": _clean_month(data.get("birthMonth") if data.get("birthMonth") is not None else data.get("birth_month")),
+        "county": _clean_text(data.get("county"), 20),
+        "district": _clean_text(data.get("district"), 20),
+        "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
+    }
+
+
+def load_person_profile():
+    try:
+        remote_profile = data_backend().load_person_profile()
+        if remote_profile:
+            return normalize_person_profile(remote_profile)
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load person profile from Supabase", e)
+    stored = read_json_file(PERSON_PROFILE_PATH, {})
+    return normalize_person_profile(stored)
+
+
+def save_person_profile(data):
+    profile = normalize_person_profile({**(data or {}), "updatedAt": utc_now()})
+    try:
+        remote_profile = data_backend().save_person_profile(profile)
+        if remote_profile:
+            profile = normalize_person_profile(remote_profile)
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save person profile to Supabase", e)
+    write_json_file(PERSON_PROFILE_PATH, profile)
+    return profile
+
+
+def person_profile_response(data):
+    action = (data.get("action") or "load").lower()
+    if action == "save":
+        profile = save_person_profile(data.get("profile") or data)
+    else:
+        profile = load_person_profile()
+    return {"ok": True, "profile": profile, "backend": data_backend_status()}
+
+
 def app_profile_response(data):
     action = (data.get("action") or "load").lower()
     if action in ("save", "replace"):
@@ -3922,6 +4022,18 @@ def test_account_id_set(force_refresh=False):
     return ids
 
 
+def analytics_excluded_id_set():
+    """帳號／長輩／session 三種 ID 的分析排除清單合集：env 手動清單 ＋ test_account_id_set() 快取。
+    後台事件排除（is_analytics_excluded_event）與跨帳號小工具列排除（is_admin_row_excluded）共用
+    這份，一個請求只算一次（test_account_id_set 本身已有 TTL 快取，這裡不再重查 Supabase／GoTrue）。"""
+    excluded_ids = set()
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS"))
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS"))
+    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS"))
+    excluded_ids.update(test_account_id_set())
+    return excluded_ids
+
+
 def is_analytics_excluded_event(event):
     props = event.get("properties") or {}
     for key in ("analyticsExcluded", "excludeAnalytics", "developerMode", "isDeveloperActivity", "operationalAccount"):
@@ -3930,14 +4042,22 @@ def is_analytics_excluded_event(event):
     account_type = str(props.get("accountType") or props.get("actorType") or props.get("environment") or "").strip().lower()
     if account_type in {"developer", "dev", "internal", "test", "qa", "ops", "operational"}:
         return True
-    excluded_ids = set()
-    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_ACCOUNT_IDS"))
-    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_PERSON_IDS"))
-    excluded_ids.update(env_set("MUNEA_ANALYTICS_EXCLUDED_SESSION_IDS"))
-    excluded_ids.update(test_account_id_set())  # 帳號層測試判準併入事件排除（2026-07-21 補）
+    excluded_ids = analytics_excluded_id_set()
     if event.get("accountId") in excluded_ids or event.get("personId") in excluded_ids or event.get("sessionId") in excluded_ids:
         return True
     return False
+
+
+def is_admin_row_excluded(row, excluded_ids=None):
+    """後台跨帳號小工具列（用藥／心情／關係深度／安全事件摘要等，沒有 properties 旗標可讀，
+    只有 accountId／personId）的測試帳號排除判準——跟事件排除共用同一份 ID 集合／同一份快取，
+    2026-07-24 稽核補：這五頁原本完全沒接測試帳號排除，示範／QA 帳號會混進真實營運數字。"""
+    if not isinstance(row, dict):
+        return False
+    ids = excluded_ids if excluded_ids is not None else analytics_excluded_id_set()
+    account_id = row.get("accountId") or row.get("account_id")
+    person_id = row.get("personId") or row.get("person_id")
+    return (account_id is not None and account_id in ids) or (person_id is not None and person_id in ids)
 
 
 def append_product_event(data=None):
@@ -4429,12 +4549,16 @@ def admin_accounts_summary(data=None):
 
 
 def admin_credits_summary(data=None):
+    """點數組成與最近異動：讀的是目前 request context 這一個帳號（本機示範帳號／單一登入身分），
+    不是跨帳號聚合查詢——跟其他用 load_admin_* 全表查詢的後台頁不同，用 scope 欄位老實標出來，
+    前端未來要顯示提醒可以認這個欄位（2026-07-24 稽核補；本次不動 web/admin.js）。"""
     data = data or {}
     limit = max(1, min(100, int(data.get("limit") or 25)))
     billing = load_billing_store()
     credits = load_credits_store()
     return {
         "ok": True,
+        "scope": "single_demo_account",
         "accountId": billing.get("accountId") or credits.get("accountId"),
         "activePlan": billing.get("activePlan"),
         "subscription": billing.get("subscription"),
@@ -4449,9 +4573,34 @@ def admin_credits_summary(data=None):
     }
 
 
+# 訂閱 MRR 換算用的方案月費：跟 web/src/app.js 的 SUB_PRICE、supabase/sql/019_pricing_plus100_pro200.sql
+# 說明欄位（Plus NT$599／月、Pro NT$1,199／月）同一組數字——只有這一個地方該存這組數字，
+# 價格異動要三處一起改，不在這裡另外發明新價格。
+ADMIN_SUBSCRIPTION_MONTHLY_PRICE_NTD = {"plus": 599, "pro": 1199}
+
+
+def _latest_admin_ledger_row_per_account(rows):
+    """依 accountId 只留『目前最新一筆』（updatedAt 沒有就退 createdAt），跟
+    get_latest_subscription_ledger 的『最新一筆』定義一致——避免歷史上任何一筆 active
+    就被誤算成『現在還在付費』（subscription_ledger 是逐筆異動的帳本，不是目前狀態表）。"""
+    latest = {}
+    stamps = {}
+    for row in rows or []:
+        acc = row.get("accountId")
+        if not acc:
+            continue
+        stamp = str(row.get("updatedAt") or row.get("createdAt") or "")
+        if acc not in stamps or stamp >= stamps[acc]:
+            stamps[acc] = stamp
+            latest[acc] = row
+    return list(latest.values())
+
+
 def admin_subscription_metrics(data=None):
     """訂閱營運聚合：從 product_events 算能算的真數字（新增訂閱/點數/註冊/轉換率）；
-    MRR 與流失率需要『目前有效訂閱聚合』與『取消事件』，尚未具備時誠實回 None + 原因。"""
+    MRR＝目前有效訂閱（subscription_ledger 每帳號最新一筆）× 方案月費，跟『成長與黏著』頁
+    的付費判定共用同一張表；流失率需要 subscription_cancelled／downgraded 事件，尚未具備，
+    誠實回 None（2026-07-24 稽核補：MRR 之前一律回 None，底層資料其實已經存在）。"""
     data = data or {}
     days = max(1, min(90, int(data.get("days") or 30)))
     now = datetime.now(timezone.utc)
@@ -4477,6 +4626,22 @@ def admin_subscription_metrics(data=None):
         elif name == "onboarding_completed":
             registrations += 1
     conversion = round(new_subs / registrations, 4) if registrations else None
+
+    excluded_ids = analytics_excluded_id_set()
+    ledger_rows = load_admin_growth_subscription_rows(limit=20000)
+    ledger_rows = [row for row in ledger_rows if not is_admin_row_excluded(row, excluded_ids)]
+    latest_ledger_rows = _latest_admin_ledger_row_per_account(ledger_rows)
+    active_subscribers_by_plan = {}
+    for row in latest_ledger_rows:
+        status = str(row.get("status") or "").strip().lower()
+        plan = str(row.get("activePlan") or "").strip().lower()
+        if status == "active" and plan in ADMIN_SUBSCRIPTION_MONTHLY_PRICE_NTD:
+            active_subscribers_by_plan[plan] = active_subscribers_by_plan.get(plan, 0) + 1
+    mrr = sum(
+        count * ADMIN_SUBSCRIPTION_MONTHLY_PRICE_NTD[plan]
+        for plan, count in active_subscribers_by_plan.items()
+    )
+
     return {
         "ok": True,
         "windowDays": days,
@@ -4487,11 +4652,10 @@ def admin_subscription_metrics(data=None):
         "pointsTotal": round(points_total),
         "registrations": registrations,
         "freeToPaidConversion": conversion,
-        "mrr": None,
-        "activeSubscribersByPlan": None,
+        "mrr": mrr,
+        "activeSubscribersByPlan": dict(sorted(active_subscribers_by_plan.items())),
         "churnRate": None,
         "pending": {
-            "mrr": "需要跨帳號『目前有效訂閱』聚合（訂閱事件只記新購、不記目前狀態）",
             "churnRate": "需要 subscription_cancelled / subscription_downgraded 事件（目前只記進、不記出）",
         },
         "backend": data_backend_status(),
@@ -4635,6 +4799,14 @@ def admin_safety_events_summary(data=None):
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
     events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
+    # 2026-07-24 補：這頁原本沒接測試帳號排除。注意：不能借用 is_analytics_excluded_event，
+    # 那支連 analyticsExcluded/developerMode 這類「不算進互動指標」的事件級旗標都會濾掉——
+    # guardian_evaluate_response 對每一筆守護風險評估都固定寫 analyticsExcluded=True（避免
+    # 系統自動觸發的評估污染「有意義互動天數」等成長指標），這是跟帳號是不是測試帳號無關的
+    # 另一件事。這裡只用帳號／長輩層級的測試判準（is_admin_row_excluded），安全守護警示頁
+    # 才不會把真實帳號的正常風險事件也一起濾掉（2026-07-24 smoke 紅燈實測抓到）。
+    excluded_ids = analytics_excluded_id_set()
+    events = [event for event in events if not is_admin_row_excluded(event, excluded_ids)]
     safety_events = []
     for event in events:
         if event.get("eventName") != "guardian_risk_evaluated":
@@ -4662,6 +4834,8 @@ def admin_safety_events_summary(data=None):
     summaries = load_conversation_summaries(limit=500, include_deleted=False)
     for summary in summaries:
         if not summary.get("safetyRelevant"):
+            continue
+        if is_admin_row_excluded(summary, excluded_ids):
             continue
         tags = summary.get("memoryTags") or []
         if category_filter and category_filter not in tags:
@@ -4777,6 +4951,8 @@ def admin_medication_adherence(data=None):
     days = max(1, min(180, int(data.get("days") or 30)))
     limit = max(1, min(200, int(data.get("limit") or 50)))
     items, since_date = load_admin_medication_dose_events(days=days, limit=3000)
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    items = [item for item in items if not is_admin_row_excluded(item, excluded_ids)]
 
     totals = {"scheduled": 0, "taken": 0, "snoozed": 0, "skipped": 0, "missed": 0}
     daily = {}
@@ -4950,6 +5126,8 @@ def admin_mood_trend(data=None):
     days = max(1, min(180, int(data.get("days") or 30)))
     limit = max(1, min(200, int(data.get("limit") or 50)))
     items, since_date = load_admin_wellbeing_signal_rows(days=days, limit=5000)
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    items = [item for item in items if not is_admin_row_excluded(item, excluded_ids)]
 
     totals = {"signals": 0, "positive": 0, "steady": 0, "low": 0, "other": 0}
     level_sum, level_count = 0.0, 0
@@ -5264,6 +5442,14 @@ def admin_family_health(data=None):
     engagement_events, _ = load_admin_family_engagement_rows(days=days, limit=5000)
     invitations = load_admin_family_invitation_rows(days=days, limit=3000)
 
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    membership_rows = [row for row in membership_rows if not is_admin_row_excluded(row, excluded_ids)]
+    relay_rows = [row for row in relay_rows if not is_admin_row_excluded(row, excluded_ids)]
+    activity_rows = [row for row in activity_rows if not is_admin_row_excluded(row, excluded_ids)]
+    participant_rows = [row for row in participant_rows if not is_admin_row_excluded(row, excluded_ids)]
+    engagement_events = [event for event in engagement_events if not is_analytics_excluded_event(event)]
+    invitations = [row for row in invitations if not is_admin_row_excluded(row, excluded_ids)]
+
     households = {}
     for row in membership_rows:
         fg = row.get("familyGroupId")
@@ -5502,6 +5688,10 @@ def admin_bond_depth(data=None):
 
     relationship_rows = load_admin_relationship_state_rows(limit=10000)
     memory_rows = load_admin_memory_item_count_rows(limit=50000)
+
+    excluded_ids = analytics_excluded_id_set()  # 2026-07-24 補：這頁原本沒接測試帳號排除
+    relationship_rows = [row for row in relationship_rows if not is_admin_row_excluded(row, excluded_ids)]
+    memory_rows = [row for row in memory_rows if not is_admin_row_excluded(row, excluded_ids)]
 
     now = datetime.now(timezone.utc)
     since_iso = (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -5859,7 +6049,10 @@ def admin_growth_metrics(data=None):
 FEEDBACK_PATH = os.environ.get("MUNEA_FEEDBACK_PATH") or os.path.join(HERE, "feedback_store.json")
 
 def feedback_response(data):
-    """意見與建議收件箱：type=bug|idea|praise|nps ＋ 分類/內容/分數＋自動情境（版本/方案），供後台篩選整理。"""
+    """意見與建議收件箱：type=bug|idea|praise|nps ＋ 分類/內容/分數＋自動情境（版本/方案），供後台篩選整理。
+    優先寫 Supabase feedback_items（跨副本共用、部署不會洗掉）；026 沒跑或雲端不可用時優雅退回
+    本地 JSON（單機備援，跟 026 之前的行為一致，不因為新表沒建就整支功能壞掉，2026-07-24 稽核補：
+    這支原本只寫本機檔案，多副本／每次部署都會分裂或洗掉意見收件箱）。"""
     data = data or {}
     ftype = str(data.get("type") or "").strip()
     if ftype not in ("bug", "idea", "praise", "nps", "survey"):
@@ -5878,34 +6071,64 @@ def feedback_response(data):
     img = data.get("image")
     if isinstance(img, str) and img.startswith("data:image/") and len(img) <= 700000:  # ~700KB 上限（壓過的小圖綽綽有餘）
         item["image"] = img
-    items = read_json_file(FEEDBACK_PATH, [])
-    if not isinstance(items, list):
-        items = []
-    items.append(item)
-    write_json_file(FEEDBACK_PATH, items[-5000:])
+    backend_used = "json"
+    try:
+        remote_item = data_backend().save_feedback_item(item)
+        if remote_item is not None:
+            backend_used = "supabase"
+    except Exception as e:
+        if data_backend().enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("save feedback item to Supabase", e)
+    if backend_used != "supabase":
+        items = read_json_file(FEEDBACK_PATH, [])
+        if not isinstance(items, list):
+            items = []
+        items.append(item)
+        write_json_file(FEEDBACK_PATH, items[-5000:])
     try:
         label = {"bug": "🐞問題", "idea": "💡建議", "praise": "❤️稱讚", "nps": "📊NPS", "survey": "📋問卷"}.get(ftype, ftype)
         summary = (item["category"] + " · " if item["category"] else "") + (f"{item['score']} 分" if item["score"] is not None else (item["text"][:60] or ""))
         notify.ops("feedback_received", f"{label} {summary}")
     except Exception as notify_error:
         log_fallback_exception("send feedback notification", notify_error)
-    return {"ok": True, "id": item["id"]}
+    return {"ok": True, "id": item["id"], "backend": backend_used}
 
 def admin_feedback_summary(data=None):
-    """後台整理：按類型/分類統計＋最新清單＋NPS 計算（推薦者9-10/中立7-8/批評者0-6）。"""
+    """後台整理：按類型/分類統計＋最新清單＋NPS 計算（推薦者9-10/中立7-8/批評者0-6）。
+    優先讀 Supabase feedback_items（跨副本合併後的真資料）；026 沒跑或雲端不可用時退回本機
+    備援檔（單一容器本地檔、多副本會分裂，誠實標成 degraded，2026-07-24 稽核補）。"""
     data = data or {}
-    items = read_json_file(FEEDBACK_PATH, [])
-    if not isinstance(items, list):
-        items = []
-    record_admin_data_source(
-        "feedback",
-        "json",
-        record_count=len(items),
-        data_as_of=latest_record_timestamp(items),
-        authority="prototype",
-        degraded=True,
-        degradation_reason="primary_adapter_not_implemented",
-    )
+    backend = data_backend()
+    fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
+    items = None
+    try:
+        remote_items = backend.load_admin_feedback_items(limit=5000)
+        if remote_items is not None:
+            items = remote_items
+            record_admin_data_source(
+                "feedback",
+                "supabase",
+                record_count=len(items),
+                data_as_of=latest_record_timestamp(items),
+            )
+    except Exception as e:
+        if backend.enabled() and not is_missing_table_error(e):
+            raise e
+        log_fallback_exception("load admin feedback items from Supabase", e)
+    if items is None:
+        items = read_json_file(FEEDBACK_PATH, [])
+        if not isinstance(items, list):
+            items = []
+        record_admin_data_source(
+            "feedback",
+            "json",
+            record_count=len(items),
+            data_as_of=latest_record_timestamp(items),
+            authority="fallback",
+            degraded=True,
+            degradation_reason=fallback_reason,
+        )
     by_type, by_cat = {}, {}
     nps_scores = []
     for it in items:
@@ -8203,6 +8426,14 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     base, _ = _sys_for(char)
     context = context or build_reply_context(history, char, data)
     base = base + reply_context_instruction(context) + localization.reply_language_instruction(context.get("locale"))
+    # B2 衛教（2026-07-24）：按最後一句用戶的話命中策展題庫才注入；沒命中＝空字串、不佔說明書。
+    last_user = ""
+    for h in reversed(history or []):
+        if isinstance(h, dict) and (h.get("role") or "user") == "user":
+            last_user = (h.get("text") or h.get("content") or "").strip()
+            if last_user:
+                break
+    base += health_kb.injection_for(last_user)
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):
@@ -8221,7 +8452,9 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                 r = eng.client.models.generate_content(
                     model=m, contents=contents,
                     config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
-                return r.text.strip()
+                # 2026-07-25（卡西法・三修③）：出口前防禦性清洗，剝掉模型偶爾漏出的
+                # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
+                return eng.clean_outgoing_reply(r.text)
             except Exception as e:
                 log_fallback_exception(f"generate chat reply with {m}", e)
         time.sleep(2)
@@ -8879,7 +9112,7 @@ class H(BaseHTTPRequestHandler):
                 "release": BRAIN_RELEASE_METADATA,
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "person-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
                 "notificationPush": apns_status(),
             })
@@ -9346,6 +9579,8 @@ class H(BaseHTTPRequestHandler):
                         self._json_error(400, error.get("code") or "test_flag_update_failed", "Test account flag could not be updated")
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
+            elif self.path == "/person-profile":
+                self._json(person_profile_response(data))
             elif self.path == "/app-profile":
                 self._json(app_profile_response(data))
             elif self.path == "/auth-status":
@@ -9493,4 +9728,5 @@ if __name__ == "__main__":
     print(f"沐寧 App 伺服器啟動 → http://localhost:{port}  （Ctrl+C 結束）")
     # 門向：本機照舊只開給自己家（安全）；雲端主機（Cloud Run）由配方設 MUNEA_HOST=0.0.0.0 開正門
     host = os.environ.get("MUNEA_HOST") or "127.0.0.1"
+    cloud_resync.start_worker()  # 90分#2：背景回補工人（欠雲端的帳、趁恢復自動補回）
     ThreadingHTTPServer((host, port), H).serve_forever()

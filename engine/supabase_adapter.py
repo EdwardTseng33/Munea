@@ -665,6 +665,68 @@ class SupabaseAdapter:
         )
         return rows[0] if rows else None
 
+    @staticmethod
+    def feedback_row_to_item(row):
+        """把 feedback_items 資料列換回 engine/feedback_store.json 原本的欄位形狀，讓
+        admin_feedback_summary 不必因為換資料源而改聚合邏輯。"""
+        row = row or {}
+        item = {
+            "id": row.get("id") or "",
+            "type": row.get("type") or "",
+            "category": row.get("category") or "",
+            "text": row.get("content") or "",
+            "score": row.get("score"),
+            "appVersion": row.get("app_version") or "",
+            "plan": row.get("plan") or "",
+            "createdAt": row.get("created_at"),
+        }
+        if row.get("image_data_url"):
+            item["image"] = row.get("image_data_url")
+        return item
+
+    def feedback_item_to_row(self, item):
+        item = item or {}
+        return {
+            "id": item.get("id"),
+            "account_id": self.payload_account_id(item.get("accountId") or item.get("account_id")) or None,
+            "person_id": item.get("personId") or item.get("person_id") or self.person_id or None,
+            "type": item.get("type"),
+            "category": item.get("category") or None,
+            "content": item.get("text") or item.get("content") or "",
+            "score": item.get("score"),
+            "app_version": item.get("appVersion") or item.get("app_version") or None,
+            "plan": item.get("plan") or None,
+            "image_data_url": item.get("image") or item.get("image_data_url"),
+            "created_at": item.get("createdAt") or item.get("created_at"),
+        }
+
+    def save_feedback_item(self, item):
+        """意見與建議收件箱寫入 Supabase feedback_items（026 沒跑之前呼叫端會接住缺表例外、
+        退回本地 JSON——見 server.feedback_response）。"""
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "POST",
+            "feedback_items",
+            query={"select": "*"},
+            payload=self.feedback_item_to_row(item),
+            prefer="return=representation",
+        )
+        return self.feedback_row_to_item(rows[0]) if rows else None
+
+    def load_admin_feedback_items(self, limit=2000):
+        """後台意見與建議收件箱：不篩 account_id，service-role 全表查詢，跟其他後台跨帳號頁
+        （medication_dose_events／wellbeing_signals 等）同一套模式。"""
+        if not self.enabled():
+            return None
+        limit = max(1, min(5000, int(limit or 2000)))
+        rows = self._select("feedback_items", {
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": str(limit),
+        })
+        return [self.feedback_row_to_item(row) for row in rows or []]
+
     def load_admin_medication_doses(self, since_date=None, limit=3000):
         """後台跨帳號用藥依從率：不依 account_id 篩選、service-role 全表查詢近 N 天服藥事件。"""
         if not self.enabled():
@@ -1410,6 +1472,88 @@ class SupabaseAdapter:
                 prefer="return=representation",
         )
         return self.companion_row_to_profile(rows[0]) if rows else None
+
+    @staticmethod
+    def person_row_to_profile(row):
+        """persons 表的個人資料欄位 → App 端 personProfile 形狀。
+
+        刻意不讀 display_name（該欄位現行語意是 AI 陪伴角色名稱，見
+        bootstrap_account／profile_to_person_row 的註解）；使用者本人名字走
+        另開的 profile_name 欄位，避免兩種語意混在同一欄。
+        """
+        row = row or {}
+        return {
+            "name": row.get("profile_name") or "",
+            "nick": row.get("nickname") or "",
+            "birthYear": row.get("birth_year"),
+            "birthMonth": row.get("birth_month"),
+            "county": row.get("county") or "",
+            "district": row.get("district") or "",
+            "updatedAt": row.get("updated_at") or row.get("created_at"),
+        }
+
+    @staticmethod
+    def profile_to_person_row(profile):
+        """個人資料卡存檔 → persons 表 PATCH payload（只送有帶到的欄位）。
+
+        `None` 代表「這次沒帶這個欄位」（不覆蓋既有值）；空字串／0 是使用者
+        明確清空，一樣要送出去蓋掉舊值。
+        """
+        profile = profile or {}
+        row = {}
+        if profile.get("name") is not None:
+            row["profile_name"] = (str(profile.get("name") or "").strip()[:80]) or None
+        if profile.get("nick") is not None:
+            row["nickname"] = (str(profile.get("nick") or "").strip()[:40]) or None
+        if profile.get("birthYear") is not None:
+            try:
+                year = int(profile.get("birthYear"))
+                row["birth_year"] = year if 1900 <= year <= 2100 else None
+            except (TypeError, ValueError):
+                row["birth_year"] = None
+        if profile.get("birthMonth") is not None:
+            try:
+                month = int(profile.get("birthMonth"))
+                row["birth_month"] = month if 1 <= month <= 12 else None
+            except (TypeError, ValueError):
+                row["birth_month"] = None
+        if profile.get("county") is not None:
+            row["county"] = (str(profile.get("county") or "").strip()[:20]) or None
+        if profile.get("district") is not None:
+            row["district"] = (str(profile.get("district") or "").strip()[:20]) or None
+        return row
+
+    def load_person_profile(self):
+        """讀本人（self.person_id）的個人資料——名稱/暱稱/生日/所在地。
+
+        照片（avatar）不上雲，這裡不含這個欄位（沿用需求單拍板：第一版照片只留本機）。
+        """
+        if not self.enabled():
+            return None
+        row = self._first("persons", {"id": f"eq.{self.person_id}", "select": "*"})
+        if not row:
+            return None
+        return self.person_row_to_profile(row)
+
+    def save_person_profile(self, profile):
+        """把個人資料卡存檔寫回本人（self.person_id）的 persons 列。
+
+        persons 列在帳號 bootstrap 時就建好了（primary_care_recipient），這裡
+        只做 PATCH、不需要像 companion_profiles 那樣處理「找不到列就補一筆」。
+        """
+        if not self.enabled():
+            return None
+        payload = self.profile_to_person_row(profile)
+        if not payload:
+            return self.load_person_profile()
+        rows = self._request(
+            "PATCH",
+            "persons",
+            query={"id": f"eq.{self.person_id}", "select": "*"},
+            payload=payload,
+            prefer="return=representation",
+        )
+        return self.person_row_to_profile(rows[0]) if rows else None
 
     def bootstrap_account(self, data=None):
         if not self.enabled():
@@ -4278,45 +4422,53 @@ class SupabaseAdapter:
         if prefer:
             headers["prefer"] = prefer
         req = urllib.request.Request(url, data=body, headers=headers, method=method)
-        try:
-            with urllib.request.urlopen(req, timeout=4) as resp:
-                raw = resp.read().decode("utf-8")
-                _reset_circuit()
-                return json.loads(raw) if raw else []
-        except urllib.error.HTTPError as e:
-            # HTTP 層有明確快速回應（如缺表 404）：不觸發斷路器（本來就快），但視為連線成功可用
-            _reset_circuit()
-            detail = e.read().decode("utf-8", "replace")[:300]
-            error_code = None
+        # 讀取（GET）連線層瞬斷先重試一次再認輸；寫入不盲重試——逾時可能其實已寫入、
+        # 重打會變兩筆。寫入失敗的正路＝本機備份＋告警（server.log_cloud_write_fallback）。
+        attempts = 2 if method == "GET" else 1
+        for attempt in range(attempts):
             try:
-                parsed_detail = json.loads(detail)
-                if isinstance(parsed_detail, dict):
-                    error_code = parsed_detail.get("code")
-            except (TypeError, ValueError):
-                pass
-            if e.code == 404 and (error_code == "PGRST205" or "PGRST205" in detail):
-                _mark_table_missing(table)  # 記著這張表缺，30 秒內同批呼叫秒退
-                error_code = "PGRST205"
-            if e.code == 401:
-                error_kind = "configuration"
-            elif e.code == 403:
-                error_kind = "permission"
-            elif e.code == 404 and error_code == "PGRST205":
-                error_kind = "missing_table"
-            elif error_code == "42501":
-                error_kind = "permission"
-            else:
-                error_kind = "http_error"
-            raise SupabaseRequestError(
-                f"Supabase {method} {table} failed: {e.code} {detail}",
-                error_kind=error_kind,
-                status_code=e.code,
-                error_code=error_code,
-            ) from e
-        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
-            # 連線層失敗（逾時 / 連不上 / 被重置）：開啟斷路器，讓同批後續呼叫秒退
-            _trip_circuit()
-            raise SupabaseRequestError(f"Supabase {method} {table} unreachable: {type(e).__name__}", error_kind="unreachable") from e
+                with urllib.request.urlopen(req, timeout=4) as resp:
+                    raw = resp.read().decode("utf-8")
+                    _reset_circuit()
+                    return json.loads(raw) if raw else []
+            except urllib.error.HTTPError as e:
+                # HTTP 層有明確快速回應（如缺表 404）：不觸發斷路器（本來就快）、也不重試，視為連線成功可用
+                _reset_circuit()
+                detail = e.read().decode("utf-8", "replace")[:300]
+                error_code = None
+                try:
+                    parsed_detail = json.loads(detail)
+                    if isinstance(parsed_detail, dict):
+                        error_code = parsed_detail.get("code")
+                except (TypeError, ValueError):
+                    pass
+                if e.code == 404 and (error_code == "PGRST205" or "PGRST205" in detail):
+                    _mark_table_missing(table)  # 記著這張表缺，30 秒內同批呼叫秒退
+                    error_code = "PGRST205"
+                if e.code == 401:
+                    error_kind = "configuration"
+                elif e.code == 403:
+                    error_kind = "permission"
+                elif e.code == 404 and error_code == "PGRST205":
+                    error_kind = "missing_table"
+                elif error_code == "42501":
+                    error_kind = "permission"
+                else:
+                    error_kind = "http_error"
+                raise SupabaseRequestError(
+                    f"Supabase {method} {table} failed: {e.code} {detail}",
+                    error_kind=error_kind,
+                    status_code=e.code,
+                    error_code=error_code,
+                ) from e
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+                if attempt + 1 < attempts:
+                    time.sleep(0.4)
+                    continue
+                # 連線層失敗（逾時 / 連不上 / 被重置）：開啟斷路器，讓同批後續呼叫秒退
+                _trip_circuit()
+                raise SupabaseRequestError(f"Supabase {method} {table} unreachable: {type(e).__name__}", error_kind="unreachable") from e
+        raise SupabaseRequestError(f"Supabase {method} {table} retry loop exhausted", error_kind="unreachable")
 
     @staticmethod
     def _is_uuid(value):

@@ -157,6 +157,30 @@ class AdminMedicationAdherenceTests(unittest.TestCase):
         self.assertIn("不做診斷", response["principle"])
         self.assertIn("提醒做到", response["principle"])
 
+    def test_test_account_doses_are_excluded_from_totals_and_people(self):
+        """2026-07-24 稽核補：這頁原本沒接測試帳號排除，示範／QA 帳號的用藥事件會混進真實依從率。"""
+        today = datetime.now(timezone.utc).date()
+
+        def on(offset):
+            return (today - timedelta(days=offset)).isoformat()
+
+        self._seed([
+            {"personId": "person-real", "accountId": "account-real", "doseKey": "r1", "scheduledDate": on(0), "status": "taken"},
+            {"personId": "person-test", "accountId": "test-account-x", "doseKey": "t1", "scheduledDate": on(0), "status": "missed"},
+            {"personId": "person-test", "accountId": "test-account-x", "doseKey": "t2", "scheduledDate": on(1), "status": "missed"},
+        ])
+        server._TEST_ACCOUNT_ID_CACHE["ids"] = {"test-account-x"}
+        server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = server.time.time() + 999
+        try:
+            response = server.admin_medication_adherence({"days": 30, "limit": 50})
+        finally:
+            server._TEST_ACCOUNT_ID_CACHE["ids"] = set()
+            server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = 0.0
+        self.assertEqual(response["totals"], {"scheduled": 0, "taken": 1, "snoozed": 0, "skipped": 0, "missed": 0})
+        person_ids = [p["personId"] for p in response["people"]]
+        self.assertIn("person-real", person_ids)
+        self.assertNotIn("person-test", person_ids)
+
 
 class SupabaseAdminMedicationCrossAccountTests(unittest.TestCase):
     """Adapter 層：後台跨帳號用藥查詢不能被單一 account_id 過濾掉。"""

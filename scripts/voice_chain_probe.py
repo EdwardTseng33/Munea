@@ -9,6 +9,16 @@ For a zero-traffic Voice revision, use --profile production together with
 --voice-canary-url. The probe still acquires a real Gateway lease and call token,
 routes only the Voice WebSocket to the allowlisted tagged revision, then releases
 the lease. It never treats that ready handshake as a real-device media PASS.
+
+2026-07-24 (STATUS 125 defense line 1): production runs now probe the Avatar
+worker's /health twice -- once with the legacy universal key= (avatar_health,
+"is the box alive at all") and once with the real Gateway call_token=
+(avatar_call_token_health, "does the box's own clock still accept a freshly
+minted call token"). The 2026-07-23 tw-06 outage passed key= health checks all
+day while every real call_token was rejected as expired (the worker's clock
+was 4m17s fast); key= silently bypasses call-token verification via the
+MUNEA_ALLOW_LEGACY_APP_KEY path, so it can never catch that failure mode on
+its own. avatar_call_token_health is now required for a production PASS.
 """
 
 from __future__ import annotations
@@ -56,12 +66,25 @@ class ProbeReport:
         ))
 
     @property
-    def passed(self):
-        required = ("voice_ready", "avatar_health") if self.profile == "development" else (
-            "gateway_health", "gateway_lease", "voice_ready", "avatar_health", "gateway_release",
+    def required_stages(self):
+        """Stages that must all report PASS for this profile.
+
+        production adds avatar_call_token_health next to the legacy
+        avatar_health (2026-07-24, STATUS 125 defense line 1) -- a probe
+        that only ever checked key= would have reported this exact profile
+        green all day during the 2026-07-23 clock-skew outage.
+        """
+        if self.profile == "development":
+            return ("voice_ready", "avatar_health")
+        return (
+            "gateway_health", "gateway_lease", "voice_ready",
+            "avatar_health", "avatar_call_token_health", "gateway_release",
         )
+
+    @property
+    def passed(self):
         statuses = {stage.name: stage.status for stage in self.stages}
-        return all(statuses.get(name) == "PASS" for name in required)
+        return all(statuses.get(name) == "PASS" for name in self.required_stages)
 
     @property
     def first_failure(self):
@@ -69,11 +92,8 @@ class ProbeReport:
 
     @property
     def first_blocker(self):
-        required = ("voice_ready", "avatar_health") if self.profile == "development" else (
-            "gateway_health", "gateway_lease", "voice_ready", "avatar_health", "gateway_release",
-        )
         statuses = {stage.name: stage.status for stage in self.stages}
-        return next((name for name in required if statuses.get(name) != "PASS"), "")
+        return next((name for name in self.required_stages if statuses.get(name) != "PASS"), "")
 
     def payload(self):
         return {
@@ -321,14 +341,23 @@ def release_gateway_lease(report, gateway_url, access_token, lease, timeout):
         report.add("gateway_release", "FAIL", started, type(error).__name__, gateway_url)
 
 
-def probe_http_health(report, name, base_url, app_key, timeout, durable=False, bearer=""):
+def probe_http_health(report, name, base_url, app_key, timeout, durable=False, bearer="", call_token=""):
+    """Hit an endpoint's /health. Pass call_token to authenticate the same
+    way a real call does (Durable Call Control token=); otherwise falls
+    back to the legacy universal key= (2026-07-24, STATUS 125 defense line
+    1). The two auth paths are NOT interchangeable diagnostically: key=
+    only proves the process is up, because MUNEA_ALLOW_LEGACY_APP_KEY lets
+    it bypass call-token/clock verification entirely. call_token= exercises
+    the exact check that failed during the 2026-07-23 tw-06 clock-skew
+    outage, so only it can catch a repeat."""
     started = time.monotonic()
     if not base_url:
         report.add(name, "SKIP", started, "endpoint is not configured")
         return
     try:
+        auth = {"token": call_token} if call_token else {"key": app_key}
         status, body = get_json(
-            with_query(base_url.rstrip("/") + "/health", key=app_key), timeout, bearer=bearer
+            with_query(base_url.rstrip("/") + "/health", **auth), timeout, bearer=bearer
         )
         ok = status == 200 and body.get("ok") is True
         if durable:
@@ -371,6 +400,25 @@ async def run_probe(args):
             started = time.monotonic()
             report.add("voice_ready", "SKIP", started, "production Voice needs a Gateway call token")
         probe_http_health(report, "avatar_health", avatar_url, app_key, args.timeout)
+        if lease:
+            # STATUS 125 defense line 1: re-probe the same /health with the
+            # real call token instead of the legacy key=. This is the only
+            # check in this script that would have gone red during the
+            # 2026-07-23 tw-06 clock-skew outage (avatar_health above stayed
+            # green all day because key= never touches call-token/clock
+            # verification at all).
+            probe_http_health(
+                report, "avatar_call_token_health", avatar_url, "", args.timeout,
+                call_token=lease["call_token"],
+            )
+        else:
+            started = time.monotonic()
+            report.add(
+                "avatar_call_token_health", "SKIP", started,
+                "no Gateway call token available (see gateway_lease failure)"
+                if args.profile == "production"
+                else "no Gateway call token available (development profile has no lease)",
+            )
         started = time.monotonic()
         report.add(
             "real_device_media_gate",

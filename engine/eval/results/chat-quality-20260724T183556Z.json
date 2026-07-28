@@ -1,0 +1,117 @@
+{
+  "summary": {
+    "runAt": "2026-07-24T18:35:56.230196+00:00",
+    "itemsRun": 1,
+    "passCount": 1,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 5.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 5.0,
+      "不搶話尊重": 3.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "不搶話尊重",
+        3.0
+      ],
+      [
+        "貼身度",
+        5.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ]
+    ]
+  },
+  "results": [
+    {
+      "id": "S15",
+      "label": "家人動態回報·中繼傳話",
+      "categories": [
+        "family_relay"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "真的喔？她自己跟我講的還是你自己猜的？",
+          "note": "",
+          "reply": "不是我自己猜的啦，是雅雯昨天有透過App留言跟我說的喔。她說這個禮拜六會回來看看你。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        },
+        {
+          "turn": 2,
+          "user": "太好啊！我來去準備她愛吃的菜。",
+          "note": "跳題，開心",
+          "reply": "聽到雅雯要回來，阿嬤一定很開心厚！她知道阿嬤要特別準備，一定也會很期待的。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧能精準回溯「雅雯昨天有透過App留言跟我說的喔」的資訊來源，並接住使用者因孫女回來而「準備她愛吃的菜」的開心情緒。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "回覆中使用了「啦」、「喔」、「厚！」等語助詞，語氣自然流暢，符合口語對話習慣。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧的回覆簡潔明瞭，每次只傳達一到兩個重點，沒有造成資訊負擔。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 3,
+            "reason": "對話輪次少，沒有明顯搶話或打斷使用者的情況，但也沒有特別展現等待或引導使用者說完的行為。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧能同理使用者因孫女回來而「太好啊！」的開心情緒，並溫暖回應「阿嬤一定很開心厚！」。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧明確指出資訊來源是「雅雯昨天有透過App留言跟我說的喔」，直接回應使用者疑問，展現誠實。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧的回覆僅止於資訊提供與情緒同理，沒有任何命令、建議或替使用者做決定的意圖。"
+          }
+        ],
+        "average": 4.71,
+        "minScore": 3,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.71、單維最低 3、鐵律全過"
+    }
+  ]
+}

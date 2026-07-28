@@ -150,6 +150,24 @@ class AdminMoodTrendTests(unittest.TestCase):
         self.assertNotIn("wordObs", serialized)
         self.assertNotIn("concerns", serialized)
 
+    def test_test_account_signals_are_excluded_from_totals_and_watchlist(self):
+        """2026-07-24 稽核補：這頁原本沒接測試帳號排除，示範／QA 帳號的心情訊號會混進真實數字。"""
+        server._TEST_ACCOUNT_ID_CACHE["ids"] = {"test-account-x"}
+        server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = server.time.time() + 999
+        try:
+            self._seed([
+                {"personId": "person-real", "accountId": "account-real", "date": self._day(0), "mood": "happy", "level": 5, "observedAt": self._day(0) + "T09:00:00Z"},
+                {"personId": "person-test", "accountId": "test-account-x", "date": self._day(1), "mood": "low", "level": 1, "observedAt": self._day(1) + "T09:00:00Z"},
+                {"personId": "person-test", "accountId": "test-account-x", "date": self._day(2), "mood": "low", "level": 1, "observedAt": self._day(2) + "T09:00:00Z"},
+                {"personId": "person-test", "accountId": "test-account-x", "date": self._day(3), "mood": "low", "level": 1, "observedAt": self._day(3) + "T09:00:00Z"},
+            ])
+            response = server.admin_mood_trend({"days": 30, "limit": 50})
+        finally:
+            server._TEST_ACCOUNT_ID_CACHE["ids"] = set()
+            server._TEST_ACCOUNT_ID_CACHE["expiresAt"] = 0.0
+        self.assertEqual(response["totals"], {"signals": 1, "positive": 1, "steady": 0, "low": 0, "other": 0})
+        self.assertEqual(response["watchlist"], [])
+
 
 class SupabaseAdminMoodTrendCrossAccountTests(unittest.TestCase):
     """Adapter 層：後台跨帳號心情訊號查詢不能被單一 account_id 過濾掉。"""

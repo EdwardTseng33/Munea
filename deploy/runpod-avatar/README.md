@@ -16,6 +16,29 @@
 | `flashhead_router.py` | 2026-07-23：只在 `MUNEA_FH_PROCS>1` 時用到的前置分流器（aiohttp），依 call token 的 `worker_id` 把請求轉給對應 process。跟 `flashhead_server.py`/`flashhead_engine_core.py` 一起 scp。 |
 | `flashhead_router_core.py` | 2026-07-23：`flashhead_router.py` 的純路由決策邏輯（零重依賴，可本機單元測試）。單元測試：`python scripts/test_flashhead_router_core.py`。 |
 
+## 備援卡雙程序升級（2026-07-24 · 8-10人併發容量升級工程包1）
+
+`gpu-image/Dockerfile.vocaframe`／`gpu-image/start-vocaframe.sh` 這兩個檔案是 RunPod 備援卡的印象檔（跟主卡 GLOWS 用的 `start-vocaframe.sh` 是兩支獨立腳本，見腳本檔頭差異說明），已補進主卡「合批手術階段2」的多程序修復：
+
+- Dockerfile 多 COPY `flashhead_router.py`／`flashhead_router_core.py`，並新增 `MUNEA_FH_IMAGE_BUILD` 版本戳記（純觀察用，`echo $MUNEA_FH_IMAGE_BUILD` 或看開機 log 就能確認這張卡是不是這版）。
+- `start-vocaframe.sh` 預設 `MUNEA_FH_PROCS=2`（2 個獨立 process，各自 1 slot，取代舊版執行緒多槽的 GIL 序列化瓶頸），支援 `--dry-run` 預覽（同 GLOWS 版介面，但不依賴 `runtime.env`——RunPod 直接讀容器環境變數）。
+
+### `MUNEA_RUNPOD_SLOTS` 1→2 切換的做法與取捨
+
+選了**「直接升版後全面 2 席」**，沒有做印象檔版本戳記讓管家自動判斷容量的機制。理由：
+
+1. RunPod 備援卡本來就是「用完刪、要用重開」的一次性資源（不像 GLOWS 是長駐機器）——`podctl.build_pod_spec()` 每次開卡都指同一個 `MUNEA_RUNPOD_TEMPLATE_ID`，不存在「舊卡活著、新設定推過去」的版本混跑問題，只要模板換成新映像，之後開出來的卡全部都是雙程序。
+2. 自動偵測需要額外機制（例如健康檢查回報「我是雙程序版」、管家再依此決定登記幾席），改動量與風險都比「照順序手動切換」高，不符合本次施工「不擴大範圍」的要求。
+3. 安全的代價是**部署順序不能顛倒**：必須先烤新印象檔、更新 RunPod 私有模板，確認新開的卡真的是雙程序版之後，才能把 `MUNEA_RUNPOD_SLOTS`／`scripts/cloud-run-deploy-runpod-controller.ps1` 的 `-SlotsPerPod` 從 1 調成 2（`.env.example` 與 `.ps1` 都已加註解提醒）。順序顛倒的後果：管家會把只能撐 1 通話的舊卡登記成 2 席容量，通話品質下降（GIL 序列化重演），不會直接壞掉但體驗會變差。
+
+### 合併後需要的部署步驟（本 PR 不執行，列給後續操作者）
+
+1. `gcloud builds submit deploy/runpod-avatar --config deploy/runpod-avatar/gpu-image/cloudbuild.vocaframe.yaml`（烤新印象檔，含下載 SoulX-FlashHead 引擎與模型權重，預估 **20-35 分鐘**——大頭是 `pip install` 一長串 CUDA/flash-attn 依賴與兩個模型下載，機器規格 `E2_HIGHCPU_8`／`diskSizeGb: 200` 已在 cloudbuild 設定裡）。
+2. 到 RunPod 主控台把私有模板（`MUNEA_RUNPOD_TEMPLATE_ID` 指到的那個）的映像換成新烤的 tag（或另建一個新模板、改 `MUNEA_RUNPOD_TEMPLATE_ID` 指過去）。
+3. 手動開一張測試用備援卡（走既有 `podctl.py`／`runpod_backup.py` 流程），確認 `curl <門牌>/health` 回報 `engine: "flashhead-lite-multiproc-router"`、`capacity.limit=2`，並跑 `python tools/face-acceptance/驗收-FlashHead同線.py` 驗證雙程序真的能各自接客。
+4. 驗證通過後，才把 `MUNEA_RUNPOD_SLOTS` 現行值（Cloud Run 環境變數）與 `scripts/cloud-run-deploy-runpod-controller.ps1` 的 `-SlotsPerPod` 一起從 1 調整為 2；`MaxPods`／`TargetConcurrentCalls` 的新預設（4／10）本 PR 已經改好，重跑該腳本或用 `gcloud run services update` 手動套用即可生效。
+5. 誰能做：需要 RunPod 主控台權限（換模板映像）與 GCP `gcloud` 部署權限（Cloud Run 更新），目前是 Edward／有金鑰的人手動跑，非本 PR 範圍。
+
 ## 768（720P級）首發設定
 
 FlashHead實測可用尺寸是32的倍數；720會炸，首發720P級畫質使用 **768×768**。正式切換前必須同時完成：

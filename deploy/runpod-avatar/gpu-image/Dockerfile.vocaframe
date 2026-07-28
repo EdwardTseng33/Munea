@@ -38,10 +38,21 @@ RUN pip install --no-cache-dir fastapi aiortc aiohttp av "huggingface_hub[cli]" 
 RUN hf download Soul-AILab/SoulX-FlashHead-1_3B --local-dir /models/soulx-flashhead-1.3b --exclude "Model_Pro/*" \
  && hf download facebook/wav2vec2-base-960h --local-dir /models/wav2vec2-base-960h
 
-# 通話服務（跟正式線同一組檔案）
-COPY flashhead_server.py flashhead_engine_core.py sync-face-assets.py /root/munea-service/
+# 通話服務（跟正式線同一組檔案；2026-07-24 8-10人併發容量升級工程包1
+# 補進 flashhead_router.py／flashhead_router_core.py——沒有這兩個檔案，
+# MUNEA_FH_PROCS>1 時 start-vocaframe.sh 會在啟動 router 前主動擋下並印
+# 錯誤訊息，不會半殘啟動，見 deploy/glows/README.md「合批手術階段2」）
+COPY flashhead_server.py flashhead_engine_core.py sync-face-assets.py \
+     flashhead_router.py flashhead_router_core.py /root/munea-service/
 COPY gpu-image/start-vocaframe.sh /root/munea-service/start-vocaframe.sh
 RUN chmod +x /root/munea-service/start-vocaframe.sh
+
+# 印象檔版本戳記（純觀察用、不驅動任何自動判斷邏輯——「這張卡是不是雙
+# 程序版」的判斷刻意選最簡單可靠的做法：直接升版後全面 2 席，見
+# deploy/runpod-avatar/README.md「MUNEA_RUNPOD_SLOTS 1→2 切換」段的取捨
+# 說明。這個戳記只是給 ops 從開機 log／SSH 進去 `echo $MUNEA_FH_IMAGE_BUILD`
+# 肉眼確認版本用，不接任何自動化）。
+ENV MUNEA_FH_IMAGE_BUILD="vocaframe-640-dualproc-20260724"
 
 # 條件圖烘焙版：建置時就跟正式線出貨立繪對一次答案（開機時會再對一次、對不到就用這份）
 RUN cd /root/munea-service && python sync-face-assets.py
