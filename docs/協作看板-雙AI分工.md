@@ -2309,3 +2309,12 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **其他驗證**：語音線相關 7 支（`test_voice_style_rules`／`test_voice_echo_guard`／`test_voice_session_extend`／`test_voice_call_memory`／`test_voice_call_diagnostics`／`test_medical_escalation_asymmetry`／`test_b2b_demo_voice_isolation`）全 exit=0；`test-notification-platform`／`test-cloud-sync-guard`／`test-voice-launch-policy`／`test-ui-contracts`／`test-medication-service` 全 exit=0；完整 `npm run test:launch` 除既有無關失敗（`scripts/test-release-settings.js`「styles.css cache identity is not aligned to App 1.0.44」，前一輪已用 `git stash` 對照乾淨樹驗證非本次引入）外全綠。
 - **⚠ 未驗項（不可視為已驗證）**：**call-path risk**（動語音線工具與說明書）。單元／契約測試僅 precheck，**App E2E pending**——未在安裝版 iPhone 真人撥通、未實測「她會不會在對話中正確呼叫這個工具」（需真鑰匙＋實機）。**不部署**。UI 清單顯示（在 App 裡看到這些問題）**本 PR 未做**，目前只有推播帶數量＋`window.__muneaOpenCareQuestions` 可取用；排 PR-4 摘要單一起做。
 - **邊界**：未動 schema／migration／Gateway／Avatar／部署腳本／`web/index.html`。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
+
+### 2026-07-27 Claude/城堡 📋 Edward 拍板：M3 健康存摺押後（純文件，未動程式）
+
+- **Edward 原話**：「先不考慮健康存摺，你們有說要被驗證的產品/公司才能申請，這個我們就先擺後面。」
+- **我原本寫錯的地方（已修正）**：7/26 查證文件寫「沐寧有公司主體即符合資格」——**這句太樂觀**。公司主體只是第一關，真正入場券是**四項全備**：合法登記公司＋數發部行動 App 資安檢測 L2 證明＋健保署簽約＋App 已上架滿 3 個月。我們**四項都不具備**，而且這不是花錢買得到的，是「先成為一個真的上架、被第三方驗證過的產品」才拿得到的門票。Edward 的判斷比我的查證準。
+- **處置**：M3 由排程里程碑改為**條件觸發、不排程**（比照 M5）。觸發條件＝App 上架滿 3 個月且通過資安檢測 L2——等 M1/M2 把產品做成真的有人用，門票自然到手。
+- **⚠ 連帶影響（要記住，別讓後人誤會）**：官方就醫紀錄**長期拿不到**。因此 **M1 摘要單必須完全靠自蒐資料站得住**（語音萃取的症狀時間軸／在家量測／用藥實況），**不得預設摘要單裡會有官方病歷或用藥紀錄**，版型與價值論證都不能靠它。好消息：M1 現行設計本來就是這樣（純程式組裝、讀既有 `memory_items`），**無需改動 PR-3 已完工的部分，也不改 PR-4 規劃**。唯一官方資料過渡路（用戶自己從健保快易通下載→手動上傳）屬 M2 形態，而 M2 已因「不花錢證明」鎖在 M1 閘門後 ⇒ **短期內沐寧手上就是沒有官方病歷，這是已知且接受的狀態。**
+- **改動檔案**：`docs/健康照護管家-就醫代理與導引-方向與分階-2026-07-26.md` 五處同步（§5-2 資料完整度軸標示只有前三段可用、§5-3 刪除「便宜前置可先走」例外、§6 里程碑表 M3 改押後、§6 押後決議與修正說明、§9 取消 SDK 資格查證前置、尾註升 v2.1）。文件內部一致性已檢查：不再有任何地方假設健康存摺會在近期到手。
+- **未動**：任何程式、schema、部署。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
