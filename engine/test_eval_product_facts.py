@@ -48,6 +48,11 @@ def test_product_facts_state_the_product_not_excuses():
           all("【產品事實】" in f for f in ev.PRODUCT_FACTS))
     check("講明聊聊是有臉的視訊通話", "視訊" in blob and "臉" in blob)
     check("講明寧寧是長期陪伴、過去通過很多次電話", "長期" in blob and "過去通過" in blob)
+    # 2026-07-28 當天踩到：第一版寫「雙方看得到」，但畫面是單向的（她看不到使用者）。
+    # 她講了完全正確的「我又看不到你的畫面」反而被判成跟產品事實矛盾＝編造（考卷 S12）。
+    check("講明畫面是單向的、她看不到使用者",
+          "單向" in blob and "寧寧看不到使用者" in blob)
+    check("沒有『雙方看得到』這種會反咬正確行為的寫法", "雙方看得到" not in blob)
 
 
 def test_product_facts_keep_the_line_on_real_fabrication():
