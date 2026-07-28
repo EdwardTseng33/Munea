@@ -105,6 +105,23 @@ assert.ok(
   inventory.surfaces.some((surface) => surface.id === 'operations-admin'),
   'The operations admin must be included in the delivery scope',
 );
+const marketingSite = inventory.surfaces.find(
+  (surface) => surface.id === 'marketing-site',
+);
+assert.deepEqual(
+  marketingSite.files,
+  ['app-site/index.html'],
+  'The marketing inventory must audit the Firebase-hosted public site',
+);
+assert.equal(
+  marketingSite.baselineHanCandidates,
+  195,
+  'The public-site baseline must fail closed when new untranslated copy is added',
+);
+assert.ok(
+  !inventory.surfaces.some((surface) => surface.files.includes('web/landing.html')),
+  'The legacy internal landing prototype must not stand in for the deployed public site',
+);
 assert.ok(
   inventory.surfaces.some((surface) => surface.id === 'voice-and-gateway'),
   'The voice and Gateway path must be included in the delivery scope',
@@ -181,6 +198,12 @@ for (const file of legalAndSupport.files) {
     ),
   );
 }
+const marketingReport = report.surfaces.find(
+  (surface) => surface.id === 'marketing-site',
+);
+assert.equal(marketingReport.hanCandidates, 195);
+assert.equal(marketingReport.unboundHanCandidates, 195);
+assert.equal(marketingReport.files[0].path, 'app-site/index.html');
 assert.deepEqual(validateReport(report), [], 'The checked-in baseline must not regress');
 
 console.log('PASS: i18n surface inventory contract');

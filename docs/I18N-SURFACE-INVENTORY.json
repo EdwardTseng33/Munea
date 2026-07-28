@@ -96,14 +96,14 @@
       "audience": "prospect",
       "scanMode": "localized-text",
       "files": [
-        "web/landing.html"
+        "app-site/index.html"
       ],
       "requiredStates": [
         "landing-mobile",
         "landing-desktop"
       ],
       "releaseGate": "Localized acquisition surface",
-      "baselineHanCandidates": 163
+      "baselineHanCandidates": 195
     },
     {
       "id": "locale-contract",
