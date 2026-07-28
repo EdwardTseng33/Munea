@@ -57,6 +57,10 @@ docs/qa/i18n/
 
 因此每個語系至少需要 38 states × 3 profiles = 114 張 App 驗收圖，四語合計 456 張；不能以同一張圖重複充當不同 state 或 profile。新增 shipping surface 時，manifest 與截圖需求會同步增加。
 
+執行 `node scripts/i18n-visual-qa-worklist.js` 可產生完整 456 筆 capture worklist；使用 `--locale en` 等參數可只列出單一語系的 114 筆。每筆都包含實際 App state、profile、來源 anchor、預定 PNG 路徑與四項人工檢查，初始狀態固定為 `pending`。
+
+worklist 不會自動開啟畫面、不會建立假截圖，也不會把任何項目改成 PASS。每張圖必須來自同一個 exact installed iPhone build，並在當次驗收中實際開啟、儲存與檢查。發布驗證會拒絕路徑重用，也會拒絕把相同 PNG 內容複製成不同檔名充當另一個 state 或 profile。
+
 ## voice-e2e.json
 
 必要欄位：

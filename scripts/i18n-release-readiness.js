@@ -118,6 +118,7 @@ function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
   const screens = new Map(evidence.screens.map((screen) => [screen.state, screen]));
   const evidenceDir = path.dirname(filePath);
   const usedScreenshots = new Set();
+  const usedScreenshotHashes = new Set();
   for (const state of requiredStates) {
     const screen = screens.get(state);
     if (!screen
@@ -148,10 +149,12 @@ function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
           || path.isAbsolute(relativePath)
           || !/\.png$/i.test(screenshotPath)
           || usedScreenshots.has(screenshotPath)
+          || usedScreenshotHashes.has(String(capture.sha256 || '').toLowerCase())
           || !validPngEvidence(screenshotPath, capture.sha256)) {
         return false;
       }
       usedScreenshots.add(screenshotPath);
+      usedScreenshotHashes.add(capture.sha256.toLowerCase());
     }
   }
   return true;
@@ -521,6 +524,7 @@ function buildReadiness() {
       'web/src/i18n/app-surface-manifest.json',
       'web/src/i18n/app-surface-copy-manifest.json',
       'docs/I18N-SURFACE-INVENTORY.json',
+      'scripts/i18n-visual-qa-worklist.js',
       'web/legal/manifest.json',
       'app-store/localizations/manifest.json',
       'app-store/in-app-purchases/manifest.json',

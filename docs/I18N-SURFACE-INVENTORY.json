@@ -125,6 +125,8 @@
         "scripts/test-app-i18n-binding-manifest.js",
         "scripts/test-app-surface-manifest.js",
         "scripts/test-app-surface-copy-manifest.js",
+        "scripts/i18n-visual-qa-worklist.js",
+        "scripts/test-i18n-visual-qa-worklist.js",
         "scripts/test-i18n-browser-bootstrap.js",
         "tools/i18n-preview.html",
         "web/src/legal.css",

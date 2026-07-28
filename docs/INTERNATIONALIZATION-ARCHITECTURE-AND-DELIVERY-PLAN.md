@@ -328,6 +328,13 @@ Phase 5d（2026-07-28）：訂閱與點數購買流程四語文案契約
 - `scripts/test-purchase-flow-view-model.js` 用台灣、英語、日本與西語常見價格格式測試 Apple 價格原樣保留，並覆蓋取消、等待、未驗證、帳戶不符、連線失敗與恢復購買。
 - 目前只是可接線的 catalog 與測試；`web/index.html`／`web/src/app.js` 的實際購買畫面要等 #247／#270 合併後再依最新主線接上，避免同檔競爭。接線、四語截圖與 StoreKit Sandbox 實機驗收完成前仍為 `App E2E pending`。
 
+Phase 5e（2026-07-28）：456 張 exact-build 視覺驗收工作表
+
+- `scripts/i18n-visual-qa-worklist.js` 從 38 個 shipping states、3 個 iPhone profiles 與 4 個語系即時計算 456 筆 capture 工作，不手寫或複製畫面清單。
+- 每筆工作固定指向 exact installed iPhone App、實際畫面 anchor、唯一 PNG 路徑，以及 overflow／clipping／untranslated copy／layout 四項人工檢查；工具只產生 `pending`，永遠不自動批准。
+- `visual-qa.json` 驗證除禁止重複路徑外，也禁止相同 PNG SHA-256 被複製成不同 state／profile，避免用一張圖假裝完成多個畫面。
+- 這是驗收執行底盤，不是驗收結果；Browser／實機畫面尚未逐張擷取與人工確認，故 visual gate 仍維持關閉。
+
 Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
 
 - `web/src/i18n/dom-localizer.js` 只用 `textContent` 與明確允許的 `aria-label`、`placeholder`、`title`、`value` 屬性套用翻譯，不接受 HTML 字串，也不從 DOM 解析插值資料。

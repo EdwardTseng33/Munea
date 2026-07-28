@@ -127,6 +127,10 @@ assert(
   'Release readiness must include the complete App surface copy mapping',
 );
 assert(
+  report.generatedFrom.includes('scripts/i18n-visual-qa-worklist.js'),
+  'Release readiness must include the exact-build visual capture worklist',
+);
+assert(
   formatReport(report).includes('Overall: NOT READY'),
   'Human-readable report must lead with the actual release state',
 );
@@ -444,6 +448,35 @@ try {
     ),
     false,
     'Every App state must have all three real visual profiles',
+  );
+  const duplicateScreenshot = 'home-duplicate.png';
+  fs.copyFileSync(
+    path.join(tempDir, captures[0].screenshot),
+    path.join(tempDir, duplicateScreenshot),
+  );
+  assert.equal(
+    validateVisualEvidence(
+      {
+        ...visualEvidence,
+        screens: [{
+          ...visualEvidence.screens[0],
+          captures: [
+            captures[0],
+            {
+              ...captures[1],
+              screenshot: duplicateScreenshot,
+              sha256: captures[0].sha256,
+            },
+            captures[2],
+          ],
+        }],
+      },
+      'en',
+      visualEvidencePath,
+      ['home'],
+    ),
+    false,
+    'Copied screenshot bytes must not be reused for another state or profile',
   );
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
