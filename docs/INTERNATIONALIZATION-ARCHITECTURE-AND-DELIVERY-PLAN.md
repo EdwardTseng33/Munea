@@ -127,6 +127,12 @@ Phase 1b（2026-07-28）先完成未接正式頁面的 locale runtime：
 
 - UI 語言候選只來自 iOS/WebView 的 `navigator.languages`／`navigator.language`，不建立 App 內切換器，也不保存手動語言到 localStorage。
 - 正式模式只選擇 manifest 中 `runtimeEnabled=true` 的語言；目前 en/ja/es 即使被裝置選中仍回退繁中。
+
+Phase 1c（2026-07-28）建立完整交付面與回歸基準：
+
+- `docs/I18N-SURFACE-INVENTORY.json` 把 App WebView、法律／支援頁、營運後台、官網、LocaleContext、Gateway／Voice、iOS binary 與 App Store 全部納入同一份完成矩陣。
+- `scripts/i18n-surface-inventory.js` 掃描正式介面中的繁中文字串候選；遷移期間不得高於基準，正式開放前必須降為零或逐筆審核為非使用者文案。
+- 完成不再以「有四個 JSON」判定，而是每個 surface 都要通過 catalog、動態內容、視覺截圖、區域安全、App Store 與實機語音 gate。
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。
 - missing-key telemetry 只記錄 key 與 locale，去重後回退繁中；不記翻譯內容、畫面文字或任何使用者輸入。
 - runtime 目前是純模組並已進 UI contract tests；等 #247/#270 合併後，才接到 `web/src/i18n.js` 與正式 DOM。

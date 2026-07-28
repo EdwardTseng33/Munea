@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "requiredLocales": [
+    "zh-TW",
+    "en",
+    "ja",
+    "es"
+  ],
+  "candidatePolicy": {
+    "description": "Han text in a shipping surface is a localization candidate until it is moved into a catalog or explicitly reviewed as non-user-facing.",
+    "completionTarget": 0,
+    "regressionPolicy": "A surface may not exceed its checked-in baseline while migration is in progress. Release requires the target to reach zero."
+  },
+  "surfaces": [
+    {
+      "id": "app-webview",
+      "label": "iPhone App WebView",
+      "audience": "member",
+      "scanMode": "localized-text",
+      "files": [
+        "web/index.html",
+        "web/src/app.js",
+        "web/src/auth.js",
+        "web/src/health.js",
+        "web/src/store.js",
+        "web/src/notify.js",
+        "web/src/medication.js",
+        "web/src/companion-profile.js"
+      ],
+      "requiredStates": [
+        "signed-out",
+        "home",
+        "status",
+        "chat-idle",
+        "chat-connecting",
+        "chat-active",
+        "family",
+        "settings",
+        "purchase",
+        "error-and-empty-states"
+      ],
+      "releaseGate": "App UI coverage and visual QA",
+      "baselineHanCandidates": 1727
+    },
+    {
+      "id": "legal-and-support",
+      "label": "Privacy, terms, and support",
+      "audience": "member",
+      "scanMode": "localized-text",
+      "files": [
+        "web/privacy.html",
+        "web/terms.html",
+        "web/support.html"
+      ],
+      "requiredStates": [
+        "privacy",
+        "terms",
+        "support"
+      ],
+      "releaseGate": "Localized legal review",
+      "baselineHanCandidates": 146
+    },
+    {
+      "id": "operations-admin",
+      "label": "Operations admin",
+      "audience": "operator",
+      "scanMode": "localized-text",
+      "files": [
+        "web/admin.html",
+        "web/src/admin.js"
+      ],
+      "requiredStates": [
+        "signed-out",
+        "overview",
+        "members",
+        "calls",
+        "subscriptions",
+        "safety",
+        "locale-segmentation"
+      ],
+      "releaseGate": "Country and locale operational visibility",
+      "baselineHanCandidates": 692
+    },
+    {
+      "id": "marketing-site",
+      "label": "Public marketing site",
+      "audience": "prospect",
+      "scanMode": "localized-text",
+      "files": [
+        "web/landing.html"
+      ],
+      "requiredStates": [
+        "landing-mobile",
+        "landing-desktop"
+      ],
+      "releaseGate": "Localized acquisition surface",
+      "baselineHanCandidates": 163
+    },
+    {
+      "id": "locale-contract",
+      "label": "Locale contract and catalogs",
+      "audience": "system",
+      "scanMode": "existence",
+      "files": [
+        "web/src/i18n.js",
+        "web/src/i18n/catalog-runtime.js",
+        "web/src/i18n/catalog-manifest.json",
+        "web/src/i18n/zh-TW.json",
+        "web/src/i18n/en.json",
+        "web/src/i18n/ja.json",
+        "web/src/i18n/es.json",
+        "engine/localization.py"
+      ],
+      "requiredStates": [
+        "device-locale-resolution",
+        "release-gated-fallback",
+        "missing-key-telemetry"
+      ],
+      "releaseGate": "Catalog parity and LocaleContext validation"
+    },
+    {
+      "id": "voice-and-gateway",
+      "label": "Gateway and live voice",
+      "audience": "system",
+      "scanMode": "existence",
+      "files": [
+        "deploy/gateway/gateway_server.py",
+        "deploy/gateway/call_control_store.py",
+        "engine/live_voice_server.py",
+        "engine/server.py"
+      ],
+      "requiredStates": [
+        "signed-locale-context",
+        "asr-language",
+        "prompt-language",
+        "opening-and-retry-copy",
+        "tts-language",
+        "mixed-language-turn",
+        "regional-safety"
+      ],
+      "releaseGate": "Installed App voice E2E for every locale"
+    },
+    {
+      "id": "ios-and-store",
+      "label": "iOS binary and App Store",
+      "audience": "distribution",
+      "scanMode": "existence",
+      "files": [
+        "ios/App/App/Info.plist",
+        "ios/App/App.xcodeproj/project.pbxproj",
+        "ios/App/App/zh-Hant.lproj/InfoPlist.strings",
+        "ios/App/App/en.lproj/InfoPlist.strings",
+        "ios/App/App/ja.lproj/InfoPlist.strings",
+        "ios/App/App/es.lproj/InfoPlist.strings"
+      ],
+      "requiredStates": [
+        "binary-localizations",
+        "privacy-purpose-strings",
+        "store-description",
+        "keywords",
+        "screenshots",
+        "market-availability"
+      ],
+      "releaseGate": "Exact approved binary and App Store localization"
+    }
+  ]
+}
