@@ -103,6 +103,7 @@ function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
       || evidence.locale !== locale
       || evidence.result !== 'pass'
       || !/^[0-9a-f]{40}$/i.test(evidence.captureCommit || '')
+      || !/^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
       || !validIsoDate(evidence.capturedAt)
       || !requiredStrings(evidence, ['appVersion', 'build'])
       || !Array.isArray(evidence.profiles)
@@ -161,6 +162,7 @@ function validateVoiceEvidence(evidence, locale) {
     && evidence.locale === locale
     && evidence.result === 'pass'
     && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
+    && /^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
     && validIsoDate(evidence.testedAt)
     && requiredStrings(evidence, [
       'appVersion',
@@ -293,6 +295,8 @@ function validateEvidenceConsistency(evidenceSet) {
     && [visual, voice, purchase].every((evidence) => (
       evidence.appVersion === appVersion && evidence.build === build
     ))
+    && visual.binarySha256 === installed.binarySha256
+    && voice.binarySha256 === installed.binarySha256
     && purchase.binarySha256 === installed.binarySha256
     && purchase.backendRevision === installed.serviceRevisions.brain
     && sameServiceRevisions;

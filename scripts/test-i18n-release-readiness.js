@@ -162,6 +162,7 @@ const voiceEvidence = {
   locale: 'en',
   result: 'pass',
   exactCommit,
+  binarySha256: 'b'.repeat(64),
   testedAt: '2026-07-28T08:00:00Z',
   appVersion: '1.0.45',
   build: '49',
@@ -285,6 +286,7 @@ const consistentVisualEvidence = {
   locale: 'en',
   result: 'pass',
   captureCommit: exactCommit,
+  binarySha256: installedEvidence.binarySha256,
   capturedAt: '2026-07-28T08:00:00Z',
   appVersion: installedEvidence.appVersion,
   build: installedEvidence.build,
@@ -358,6 +360,7 @@ try {
     locale: 'en',
     result: 'pass',
     captureCommit: exactCommit,
+    binarySha256: installedEvidence.binarySha256,
     capturedAt: '2026-07-28T08:00:00Z',
     appVersion: '1.0.45',
     build: '49',
@@ -371,6 +374,16 @@ try {
   assert.equal(
     validateVisualEvidence(visualEvidence, 'en', visualEvidencePath, ['home']),
     true,
+  );
+  assert.equal(
+    validateVisualEvidence(
+      { ...visualEvidence, binarySha256: 'unknown' },
+      'en',
+      visualEvidencePath,
+      ['home'],
+    ),
+    false,
+    'Visual evidence must identify the exact installed binary',
   );
   assert.equal(
     validateVisualEvidence(

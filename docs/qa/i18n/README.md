@@ -33,7 +33,7 @@ docs/qa/i18n/
 
 - `schema`: `munea.i18n-visual-qa.v1`
 - `locale`
-- `appVersion`、`build`、40 字元 `captureCommit`
+- `appVersion`、`build`、40 字元 `captureCommit`、64 字元 `binarySha256`
 - ISO 8601 `capturedAt`
 - `profiles` 必須恰好包含 `iphone-small-standard`、`iphone-standard`、`iphone-dynamic-type-large`
 - `screens` 覆蓋 `docs/I18N-SURFACE-INVENTORY.json` 的 10 個 App WebView states，加上 `modal:profile`、`modal:data`、`modal:font`
@@ -52,7 +52,7 @@ docs/qa/i18n/
 - `schema`: `munea.i18n-voice-e2e.v1`
 - `locale`、`conversationLocale`
 - `appVersion`、`build`、`profile`、`environment`、`device`
-- 40 字元 `exactCommit`、ISO 8601 `testedAt`
+- 40 字元 `exactCommit`、64 字元 `binarySha256`、ISO 8601 `testedAt`
 - `serviceRevisions`: `brain`、`voice`、`gateway`、`avatar`
 - `steps` 全部為 `true`：
   - `openingInLocale`
@@ -78,7 +78,7 @@ docs/qa/i18n/
 
 ## 精確版本證據鏈
 
-同一語系的 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json` 與 `purchase-e2e.json` 必須指向同一個 source commit、App version 與 build。安裝版與購買證據的 IPA SHA-256 必須一致；語音證據與安裝版的 Brain／Voice／Gateway／Avatar revisions 也必須一致，購買 backend revision 必須對上安裝版 Brain revision。任一份證據來自其他 build 都會讓 `exactBuildEvidenceChain` Gate 失敗。
+同一語系的 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json` 與 `purchase-e2e.json` 必須指向同一個 source commit、App version、build 與 IPA SHA-256；四份證據少一份 binary identity 或不一致都不得通過。語音證據與安裝版的 Brain／Voice／Gateway／Avatar revisions 也必須一致，購買 backend revision 必須對上安裝版 Brain revision。任一份證據來自其他 build 都會讓 `exactBuildEvidenceChain` Gate 失敗。
 
 ## purchase-e2e.json
 
