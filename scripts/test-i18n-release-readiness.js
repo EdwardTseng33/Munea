@@ -237,6 +237,7 @@ assert(
 );
 
 const exactCommit = 'a'.repeat(40);
+const evidenceReferenceTime = '2026-07-28T12:00:00Z';
 const localeDataManifest = {
   requiredEvidence: {
     environment: 'production',
@@ -251,6 +252,7 @@ const localeDataManifest = {
     containsNames: false,
     containsContactDetails: false,
     recordReferencesAreOrdinalOnly: true,
+    maximumAgeHours: 24,
   },
 };
 const localeDataEvidence = {
@@ -260,6 +262,7 @@ const localeDataEvidence = {
   generatedAt: '2026-07-28T08:00:00Z',
   sourceExport: {
     schema: 'munea.locale-context-data-export.v1',
+    sourceCommit: exactCommit,
     generatedAt: '2026-07-28T07:55:00Z',
     environment: 'production',
     captureMode: 'read-only-redacted-export',
@@ -290,7 +293,11 @@ const localeDataEvidence = {
   }],
 };
 assert.equal(
-  validateLocaleDataEvidence(localeDataEvidence, localeDataManifest),
+  validateLocaleDataEvidence(
+    localeDataEvidence,
+    localeDataManifest,
+    evidenceReferenceTime,
+  ),
   true,
 );
 assert.equal(
@@ -303,6 +310,7 @@ assert.equal(
       },
     },
     localeDataManifest,
+    evidenceReferenceTime,
   ),
   false,
   'Cross-account LocaleContext evidence must fail closed',
@@ -317,9 +325,26 @@ assert.equal(
       },
     },
     localeDataManifest,
+    evidenceReferenceTime,
   ),
   false,
   'LocaleContext release evidence must remain identifier-free',
+);
+assert.equal(
+  validateLocaleDataEvidence(
+    {
+      ...localeDataEvidence,
+      generatedAt: '2026-07-26T08:00:00Z',
+      sourceExport: {
+        ...localeDataEvidence.sourceExport,
+        generatedAt: '2026-07-26T07:55:00Z',
+      },
+    },
+    localeDataManifest,
+    evidenceReferenceTime,
+  ),
+  false,
+  'Stale production LocaleContext evidence must expire',
 );
 const memberDataIsolationManifest = {
   requiredEvidence: {
@@ -331,6 +356,7 @@ const memberDataIsolationManifest = {
     fixtureLifecycleReviewed: true,
     containsSecrets: false,
     containsPersonalData: false,
+    maximumAgeHours: 24,
   },
   requiredScenarios: [
     'ownAccountReadable',
@@ -420,15 +446,17 @@ const memberDataIsolationEvidence = {
     responsePayloadsStored: false,
   },
 };
+const validateIsolationEvidence = (evidence) => validateMemberDataIsolationEvidence(
+  evidence,
+  memberDataIsolationManifest,
+  evidenceReferenceTime,
+);
 assert.equal(
-  validateMemberDataIsolationEvidence(
-    memberDataIsolationEvidence,
-    memberDataIsolationManifest,
-  ),
+  validateIsolationEvidence(memberDataIsolationEvidence),
   true,
 );
 assert.equal(
-  validateMemberDataIsolationEvidence(
+  validateIsolationEvidence(
     {
       ...memberDataIsolationEvidence,
       scenarios: {
@@ -436,54 +464,57 @@ assert.equal(
         otherAccountPersonDeniedByBrain: false,
       },
     },
-    memberDataIsolationManifest,
   ),
   false,
   'A service-role BOLA path must keep international release blocked',
 );
 assert.equal(
-  validateMemberDataIsolationEvidence(
+  validateIsolationEvidence(
     {
       ...memberDataIsolationEvidence,
       stagingCommit: 'b'.repeat(40),
     },
-    memberDataIsolationManifest,
   ),
   false,
   'Isolation evidence must be bound to the Brain commit returned by staging',
 );
 assert.equal(
-  validateMemberDataIsolationEvidence(
+  validateIsolationEvidence(
     {
       ...memberDataIsolationEvidence,
       checks: memberDataIsolationEvidence.checks.slice(1),
     },
-    memberDataIsolationManifest,
   ),
   false,
   'Isolation evidence must include every required RLS and Brain check',
 );
 assert.equal(
-  validateMemberDataIsolationEvidence(
+  validateIsolationEvidence(
     {
       ...memberDataIsolationEvidence,
       stagingRevision: 'unknown',
     },
-    memberDataIsolationManifest,
   ),
   false,
   'An unknown staging revision cannot satisfy the isolation gate',
 );
 assert.equal(
-  validateMemberDataIsolationEvidence(
+  validateIsolationEvidence(
     {
       ...memberDataIsolationEvidence,
       stagingProjectRef: 'fespbkdwafueyonppzwq',
     },
-    memberDataIsolationManifest,
   ),
   false,
   'Production Supabase evidence must never satisfy the staging isolation gate',
+);
+assert.equal(
+  validateIsolationEvidence({
+    ...memberDataIsolationEvidence,
+    testedAt: '2026-07-26T08:00:00Z',
+  }),
+  false,
+  'Stale two-tenant isolation evidence must expire',
 );
 const enCatalogPath = path.join(__dirname, '..', 'web', 'src', 'i18n', 'en.json');
 const enCatalogSource = fs.readFileSync(enCatalogPath, 'utf8');

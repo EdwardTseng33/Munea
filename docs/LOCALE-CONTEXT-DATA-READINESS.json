@@ -16,7 +16,8 @@
     "containsDirectIdentifiers": false,
     "containsNames": false,
     "containsContactDetails": false,
-    "recordReferencesAreOrdinalOnly": true
+    "recordReferencesAreOrdinalOnly": true,
+    "maximumAgeHours": 24
   },
   "canonicalStorage": {
     "uiLocale": "accounts.locale",

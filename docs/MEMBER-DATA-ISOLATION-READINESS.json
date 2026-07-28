@@ -16,7 +16,8 @@
     "fixtureAccounts": 2,
     "fixtureLifecycleReviewed": true,
     "containsSecrets": false,
-    "containsPersonalData": false
+    "containsPersonalData": false,
+    "maximumAgeHours": 24
   },
   "requiredScenarios": [
     "ownAccountReadable",

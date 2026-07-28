@@ -39,6 +39,22 @@ function validIsoDate(value) {
     && !Number.isNaN(Date.parse(value));
 }
 
+function evidenceWithinAge(value, maximumAgeHours, referenceTime = new Date()) {
+  if (
+    !validIsoDate(value)
+    || !Number.isFinite(maximumAgeHours)
+    || maximumAgeHours <= 0
+  ) return false;
+  const referenceMs = referenceTime instanceof Date
+    ? referenceTime.getTime()
+    : Date.parse(referenceTime);
+  if (!Number.isFinite(referenceMs)) return false;
+  const evidenceMs = Date.parse(value);
+  const futureClockSkewMs = 5 * 60 * 1000;
+  return evidenceMs <= referenceMs + futureClockSkewMs
+    && referenceMs - evidenceMs <= maximumAgeHours * 60 * 60 * 1000;
+}
+
 function requiredStrings(value, fields) {
   return value && fields.every((field) => (
     typeof value[field] === 'string' && value[field].trim() !== ''
@@ -329,7 +345,7 @@ function validateEvidenceConsistency(evidenceSet) {
     && sameServiceRevisions;
 }
 
-function validateLocaleDataEvidence(evidence, readinessManifest) {
+function validateLocaleDataEvidence(evidence, readinessManifest, referenceTime = new Date()) {
   const required = readinessManifest && readinessManifest.requiredEvidence;
   const summary = evidence && evidence.summary;
   const privacy = evidence && evidence.outputPrivacy;
@@ -339,8 +355,12 @@ function validateLocaleDataEvidence(evidence, readinessManifest) {
     && evidence.result === 'pass'
     && /^[0-9a-f]{40}$/i.test(evidence.sourceCommit || '')
     && validIsoDate(evidence.generatedAt)
+    && evidenceWithinAge(evidence.generatedAt, required.maximumAgeHours, referenceTime)
     && source.schema === 'munea.locale-context-data-export.v1'
+    && source.sourceCommit === evidence.sourceCommit
     && validIsoDate(source.generatedAt)
+    && evidenceWithinAge(source.generatedAt, required.maximumAgeHours, referenceTime)
+    && Date.parse(source.generatedAt) <= Date.parse(evidence.generatedAt)
     && source.environment === required.environment
     && source.captureMode === required.captureMode
     && source.writesPerformed === required.writesPerformed
@@ -370,7 +390,11 @@ function validateLocaleDataEvidence(evidence, readinessManifest) {
     ));
 }
 
-function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
+function validateMemberDataIsolationEvidence(
+  evidence,
+  readinessManifest,
+  referenceTime = new Date(),
+) {
   const required = readinessManifest && readinessManifest.requiredEvidence;
   const requiredScenarios = readinessManifest && readinessManifest.requiredScenarios;
   const requiredChecks = readinessManifest && readinessManifest.requiredChecks;
@@ -407,6 +431,7 @@ function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
     && evidence.result === 'pass'
     && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
     && validIsoDate(evidence.testedAt)
+    && evidenceWithinAge(evidence.testedAt, required.maximumAgeHours, referenceTime)
     && evidence.environment === required.environment
     && evidence.captureMode === required.captureMode
     && evidence.realMemberDataUsed === required.realMemberDataUsed

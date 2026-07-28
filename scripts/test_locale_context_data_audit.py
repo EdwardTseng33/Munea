@@ -63,6 +63,7 @@ def record(
 def complete_export() -> dict:
     return {
         "schema": "munea.locale-context-data-export.v1",
+        "sourceCommit": EXACT_COMMIT,
         "generatedAt": "2026-07-28T11:00:00Z",
         "environment": "production",
         "captureMode": "read-only-redacted-export",
@@ -223,6 +224,25 @@ class LocaleContextDataAuditTests(unittest.TestCase):
         report = self.audit(payload)
         self.assertEqual(report["result"], "fail")
         self.assertIn("export_must_confirm_zero_writes", report["exportIssues"])
+
+    def test_export_commit_must_match_audit_commit(self) -> None:
+        payload = complete_export()
+        payload["sourceCommit"] = "b" * 40
+        report = self.audit(payload)
+        self.assertEqual(report["result"], "fail")
+        self.assertIn("export_source_commit_mismatch", report["exportIssues"])
+
+    def test_commit_identity_is_normalized_to_lowercase(self) -> None:
+        payload = complete_export()
+        payload["sourceCommit"] = EXACT_COMMIT.upper()
+        report = audit_export(
+            payload,
+            source_commit=EXACT_COMMIT.upper(),
+            audited_at=AUDITED_AT,
+        )
+        self.assertEqual(report["result"], "pass")
+        self.assertEqual(report["sourceCommit"], EXACT_COMMIT)
+        self.assertEqual(report["sourceExport"]["sourceCommit"], EXACT_COMMIT)
 
 
 if __name__ == "__main__":

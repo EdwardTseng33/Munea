@@ -30,6 +30,7 @@ _SUPPORTED_PREFIXES = ("zh", "en", "ja", "es")
 
 _ROOT_FIELDS = {
     "schema",
+    "sourceCommit",
     "generatedAt",
     "environment",
     "captureMode",
@@ -260,6 +261,7 @@ def audit_export(
     audited_at: str | None = None,
 ) -> dict[str, Any]:
     """Return a deterministic, identifier-free audit report."""
+    normalized_source_commit = str(source_commit or "").lower()
     export_issues: list[str] = []
     if not isinstance(payload, dict):
         payload = {}
@@ -269,6 +271,11 @@ def audit_export(
 
     if payload.get("schema") != EXPORT_SCHEMA:
         export_issues.append("export_schema_invalid")
+    export_source_commit = str(payload.get("sourceCommit") or "")
+    if not _COMMIT_RE.fullmatch(export_source_commit):
+        export_issues.append("export_source_commit_invalid")
+    elif export_source_commit.lower() != normalized_source_commit:
+        export_issues.append("export_source_commit_mismatch")
     if not _iso_timestamp(payload.get("generatedAt")):
         export_issues.append("export_generated_at_invalid")
     if payload.get("environment") not in ("staging", "production"):
@@ -277,7 +284,7 @@ def audit_export(
         export_issues.append("export_capture_mode_invalid")
     if payload.get("writesPerformed") is not False:
         export_issues.append("export_must_confirm_zero_writes")
-    if not _COMMIT_RE.fullmatch(str(source_commit or "")):
+    if not _COMMIT_RE.fullmatch(normalized_source_commit):
         export_issues.append("source_commit_invalid")
 
     records = payload.get("records")
@@ -340,11 +347,16 @@ def audit_export(
     return {
         "schema": AUDIT_SCHEMA,
         "result": "pass" if passed else "fail",
-        "sourceCommit": source_commit,
+        "sourceCommit": normalized_source_commit,
         "generatedAt": audited_at
         or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "sourceExport": {
             "schema": payload.get("schema"),
+            "sourceCommit": (
+                export_source_commit.lower()
+                if _COMMIT_RE.fullmatch(export_source_commit)
+                else payload.get("sourceCommit")
+            ),
             "generatedAt": payload.get("generatedAt"),
             "environment": payload.get("environment"),
             "captureMode": payload.get("captureMode"),
