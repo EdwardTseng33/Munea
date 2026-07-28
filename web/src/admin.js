@@ -65,6 +65,8 @@
   // window.MUNEA_ADMIN_APP_KEY，下一步即可把這個相容值從靜態資產移除。
   const LEGACY_APP_KEY = "mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5";
   const state = { data: null, errors: {}, connected: false, loading: false, page: "overview", tabs: {}, base: "", token: "", mobileNavOpen: false };
+  // 開頁時若記得上次登入，先別閃出登入框——等自動連線結果出來再決定
+  let autoLoginInFlight = false;
 
   const EP_LIST = {
     northStar: ["/admin/north-star", { days: 30 }],
@@ -94,6 +96,17 @@
   function storageGet(store,key){ try{ return store.getItem(key)||""; }catch(e){ return ""; } }
   function storageSet(store,key,value){ try{ store.setItem(key,value); return true; }catch(e){ return false; } }
   function storageRemove(store,key){ try{ store.removeItem(key); }catch(e){} }
+
+  // ══════════ 登入鑰匙的存放（統一走這三個口，之後要換存法只改這裡） ══════════
+  // 目前刻意只存 sessionStorage：後台通行碼等同萬能鑰匙、伺服器端不會換，
+  // 所以不留在 localStorage（2026-07-16 #114 安全加固立的規矩）。
+  // 代價是關掉分頁就要重登——要解需要伺服器端改發「有期限的臨時通行證」。
+  function saveAdminToken(token){ if(token) storageSet(sessionStorage,ADMIN_TOKEN_KEY,token); }
+  function readAdminToken(){ return storageGet(sessionStorage,ADMIN_TOKEN_KEY); }
+  function clearAdminToken(){ storageRemove(sessionStorage,ADMIN_TOKEN_KEY); }
+  // 錯誤訊息是不是「鑰匙不對」——只有這種才該把人請回登入畫面；
+  // 連不到伺服器 / 超時只是暫時的，重登也沒用，不要打斷他。
+  function isAuthError(m){ return /invalid_admin_token|admin_token_not_configured|http_40[13]/.test(String(m||"")); }
   function runtimeAppKey(){ return String(window.MUNEA_ADMIN_APP_KEY||LEGACY_APP_KEY||"").trim(); }
   function requestHeaders(extra){
     const headers=Object.assign({},extra||{}),key=runtimeAppKey();
@@ -854,7 +867,7 @@
     const c=state.tabs.entClientsList||(state.tabs.entClientsList={status:"idle",data:null,error:null});
     if(c.status==="idle"){
       c.status="loading";
-      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
       postAdmin(base, token, "/admin/enterprise/clients", {})
         .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterprisePayments"].includes(state.page)) renderPage(state.page); })
         .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterpriseClients") renderPage(state.page); });
@@ -866,7 +879,7 @@
     const c=state.tabs.entInvoicesList||(state.tabs.entInvoicesList={status:"idle",data:null,error:null});
     if(c.status==="idle"){
       c.status="loading";
-      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
       postAdmin(base, token, "/admin/enterprise/invoices", {})
         .then((p)=>{ c.status="ready"; c.data=p; if(state.page==="enterprisePayments") renderPage(state.page); })
         .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterprisePayments") renderPage(state.page); });
@@ -878,7 +891,7 @@
     const c=state.tabs.entBillingSettings||(state.tabs.entBillingSettings={status:"idle",data:null,error:null});
     if(c.status==="idle"){
       c.status="loading";
-      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
       postAdmin(base, token, "/admin/enterprise/billing-settings", {})
         .then((p)=>{ c.status="ready"; c.data=p; if(["enterpriseClients","enterprisePayments","enterpriseBillingSettings"].includes(state.page)) renderPage(state.page); })
         .catch((e)=>{ c.status="error"; c.error=(e&&e.message)||"fail"; if(state.page==="enterpriseBillingSettings") renderPage(state.page); });
@@ -1001,7 +1014,7 @@
 
   // ── 畫面 2・單一公司（從列表「查看」進來）──
   function loadEnterpriseClientDetail(clientId){
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     state.tabs.entDetail={ clientId, status:"loading", data:null, error:null };
     renderPage(state.page);
     postAdmin(base, token, "/admin/enterprise/client/detail", { clientId })
@@ -1087,7 +1100,7 @@
     const body=entCollectClientForm("ef");
     if(!body.name){ entActionNote("entSaveNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填公司名稱</strong></div>`); return; }
     if(clientId) body.id=clientId;
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     postAdmin(base, token, "/admin/enterprise/client/save", body)
       .then(()=>{ entActionNote("entSaveNote", `<div class="ops-notice info" role="status" style="margin-top:10px"><strong>已儲存</strong></div>`); reloadEnterpriseClients(); if(clientId) setTimeout(()=>loadEnterpriseClientDetail(clientId),1500); })
       .catch((e)=>entActionNote("entSaveNote", entActionError((e&&e.message)||"fail")));
@@ -1128,7 +1141,7 @@
     if(submitBtn) submitBtn.addEventListener("click",()=>{
       const body=entCollectClientForm("nc");
       if(!body.name){ entActionNote("newClientNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填公司名稱</strong></div>`); return; }
-      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
       postAdmin(base, token, "/admin/enterprise/client/save", body)
         .then(()=>{ close(); reloadEnterpriseClients(); renderPage(state.page); })
         .catch((e)=>entActionNote("newClientNote", entActionError((e&&e.message)||"fail")));
@@ -1146,7 +1159,7 @@
   function entGrantSeats(clientId){
     const boxes=[...$("pageRoot").querySelectorAll(".ent-seat-chk:checked")].map((b)=>b.value);
     if(!boxes.length){ entActionNote("entGrantNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請先勾選席次</strong></div>`); return; }
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     postAdmin(base, token, "/admin/enterprise/seats/grant", { clientId, seatIds:boxes })
       .then((p)=>{
         const sm=p.summary||{}, blocked=(p.results||[]).filter((x)=>!x.ok);
@@ -1206,7 +1219,7 @@
   }
   function entDownloadTemplate(){
     const im=state.tabs.entImport||{};
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     postAdmin(base, token, "/admin/enterprise/seats/export", { clientId: im.clientId||"", template:true })
       .then((p)=>downloadTextFile(p.filename||"munea-enterprise-seat-template.csv", p.csv||"email,備註\n", "text/csv;charset=utf-8;"))
       .catch((e)=>entActionNote("entImportNote", entActionError((e&&e.message)||"fail")));
@@ -1216,7 +1229,7 @@
     if(!im.clientId){ entActionNote("entImportNote", entActionError("no_client_selected")); return; }
     im.previewing=true; im.preview=null; im.result=null;
     renderPage(state.page);
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     postAdmin(base, token, "/admin/enterprise/seats/import-preview", { clientId: im.clientId, csv: im.fileText })
       .then((p)=>{ im.previewing=false; im.preview=p; renderPage(state.page); })
       .catch((e)=>{ im.previewing=false; renderPage(state.page); entActionNote("entImportNote", entActionError((e&&e.message)||"fail")); });
@@ -1225,7 +1238,7 @@
     const im=state.tabs.entImport||{};
     const doCommit=()=>{
       im.committing=true; renderPage(state.page);
-      const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+      const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
       const overQuotaList=(im.preview&&im.preview.overQuota)||[];
       postAdmin(base, token, "/admin/enterprise/seats/import-commit", { clientId: im.clientId, csv: im.fileText, confirmOverQuota: overQuotaList.length>0 })
         .then((p)=>{ im.committing=false; im.result=p; im.preview=null; reloadEnterpriseClients(); renderPage(state.page); })
@@ -1321,7 +1334,7 @@
     return html;
   }
   function entMarkSent(invoiceId){
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     postAdmin(base, token, "/admin/enterprise/invoice/mark-sent", { invoiceId })
       .then(()=>{ reloadEnterpriseInvoices(); })
       .catch((e)=>entActionNote("entPayActionNote", entActionError((e&&e.message)||"fail")));
@@ -1340,7 +1353,7 @@
       bodyHtml:`<p><b>即將開通 ${seats!=null?n(seats):"這批"} 個席次</b>，這個動作沒有辦法復原，請先確認款項真的已經入帳再按。</p><p class="muted small">公司：${esc(iv?(iv.clientName||entClientNameOf(iv.enterpriseClientId)):"–")}・單號：${esc((iv&&iv.invoiceNo)||invoiceId)}・入帳日：${esc(paidAt)}・實收：${fmtMoney(paidAmount)}</p>`,
       confirmLabel:"確定已入帳，開通", danger:true,
       onConfirm:()=>{
-        const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+        const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
         postAdmin(base, token, "/admin/enterprise/invoice/mark-paid", { invoiceId, paidAt, paidAmountTwd:paidAmount, paymentNote })
           .then(()=>{ state.tabs.entPayOpenId=null; reloadEnterpriseInvoices(); reloadEnterpriseClients(); })
           .catch((e)=>entActionNote("entPayNote-"+invoiceId, entActionError((e&&e.message)||"fail")));
@@ -1353,7 +1366,7 @@
       bodyHtml:`<p>會依目前每家公司「月底仍為使用中」的席次數，自動產出<b>請款單（草稿）</b>與 <b>ESG 成效月報</b>。請款單產出後還是草稿，需要人工確認才會轉成正式寄出。</p>`,
       confirmLabel:"開始跑月結",
       onConfirm:()=>{
-        const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+        const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
         postAdmin(base, token, "/admin/enterprise/monthly-close", {})
           .then(()=>reloadEnterpriseInvoices())
           .catch((e)=>entActionNote("entPayActionNote", entActionError((e&&e.message)||"fail")));
@@ -1423,7 +1436,7 @@
   function entSaveBillingSettings(){
     const body=entCollectBillingSettingsForm();
     if(!body.issuerCompanyName){ entActionNote("entBillingSaveNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>請填開票公司抬頭</strong></div>`); return; }
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     postAdmin(base, token, "/admin/enterprise/billing-settings/save", body)
       .then(()=>{
         entActionNote("entBillingSaveNote", `<div class="ops-notice info" role="status" style="margin-top:10px"><strong>已儲存</strong>之後產出的請款單會套用這份資料。</div>`);
@@ -1634,7 +1647,7 @@
   async function toggleShowTestAccounts(show){
     const previous=!!state.tabs.showTestAccounts;
     state.tabs.showTestAccounts=!!show;
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY), base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
     try{
       const res=await postAdmin(base,token,"/admin/accounts",{limit:50,includeTest:!!show});
       state.data=state.data||{};
@@ -1709,7 +1722,7 @@
       });
       state.data=data; state.errors=errors; state.connected=Object.keys(data).length>0;
       const errValues=Object.values(errors);
-      if(!state.connected&&errValues.length&&errValues.every((m)=>/invalid_admin_token/.test(m))){ storageRemove(sessionStorage,ADMIN_TOKEN_KEY); state.token=""; }
+      if(!state.connected&&errValues.length&&errValues.every(isAuthError)){ clearAdminToken(); state.token=""; }
       if($("rawOut")) $("rawOut").textContent=JSON.stringify({data,errors},null,2);
       if($("lastUpdated")){
         const q=dataQualitySummary();
@@ -1720,29 +1733,17 @@
     }finally{ setBusy(false); }
   }
 
-  async function connect(){
-    const rawBase=($("apiBaseUrl")?.value||initialBaseUrl()).trim();
-    const token=($("adminToken")?.value||"").trim();
-    if(!token){ setStatus("要先貼通行碼","error"); return; }
-    try{
-      const base=normalizeAdminBaseUrl(rawBase);
-      try{ localStorage.setItem(ADMIN_BASE_KEY,base); }catch(e){}
-      if($("rememberToken")?.checked) storageSet(sessionStorage,ADMIN_TOKEN_KEY,token); else storageRemove(sessionStorage,ADMIN_TOKEN_KEY);
-      setStatus("讀取中…","");
-      const r=await loadAll(base,token);
-      if(r.failed===0) setStatus("已連線","ok");
-      else if(r.failed===r.total){ setStatus("連線失敗","error"); if($("connectHint"))$("connectHint").textContent="連線失敗："+explainErr(r.firstErr); }
-      else setStatus("有 "+r.failed+" 區讀不到","warn");
-    }catch(e){ setStatus("連線失敗","error"); if($("connectHint"))$("connectHint").textContent=explainErr(e&&e.message); }
-  }
   async function refreshData(){
-    const token=state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY),base=state.base||initialBaseUrl();
+    const token=state.token||readAdminToken(),base=state.base||initialBaseUrl();
     if(!token){ state.connected=false; setStatus("需要重新登入","error"); showLoginGate(); return; }
     setStatus("讀取中…","");
     try{
       const r=await loadAll(base,token);
       if(r.failed===0) setStatus("已連線","ok");
-      else if(r.failed===r.total){ setStatus("連線失敗","error"); if(!state.token) showLoginGate(); }
+      else if(r.failed===r.total){
+        if(!state.token){ setStatus("需要重新登入","error"); showLoginGate(); } // 鑰匙真的不對（loadAll 已清掉）
+        else setStatus("連不到伺服器","error"); // 只是連不上、登入還在——不要把人請回登入畫面
+      }
       else setStatus("有 "+r.failed+" 區讀不到","warn");
     }catch(e){ setStatus("連線失敗","error"); state.errors={connection:(e&&e.message)||"fail"}; renderPage(state.page); }
   }
@@ -1781,7 +1782,7 @@
       const res=await timedFetch(base+"/admin/login",{method:"POST",headers:requestHeaders({"Content-Type":"application/json; charset=utf-8"}),body:JSON.stringify({email,password})});
       const p=await res.json().catch(()=>({}));
       if(p&&p.ok&&p.token){
-        storageSet(sessionStorage,ADMIN_TOKEN_KEY,p.token);
+        saveAdminToken(p.token);
         try{ localStorage.setItem(ADMIN_BASE_KEY,base); }catch(e){}
         state.token=p.token; state.base=base;
         removeLoginGate();
@@ -1797,7 +1798,7 @@
     finally{ if($("loginBtn")) $("loginBtn").disabled=false; }
   }
   function logout(){
-    storageRemove(sessionStorage,ADMIN_TOKEN_KEY);
+    clearAdminToken();
     state.token=""; state.data=null; state.errors={}; state.connected=false;
     if($("lastUpdated")) $("lastUpdated").textContent="";
     setStatus("已登出",""); renderSide(); show(); showLoginGate();
@@ -1856,6 +1857,7 @@
     if($("pageTitle")) $("pageTitle").textContent=TITLE[state.page]||"";
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
     if(state.connected){ renderPage(state.page); }
+    else if(autoLoginInFlight){ $("pageRoot").innerHTML=`<div class="ops-notice" role="status">正在用上次的登入自動連線…</div>`; }
     else { $("pageRoot").innerHTML=""; showLoginGate(); }
   }
   function bindPageEvents(id){
@@ -1901,7 +1903,7 @@
   function init(){
     if(window.MuneaVersion && $("appVer")) $("appVer").textContent="v"+window.MuneaVersion.current;
     renderSide();
-    $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||storageGet(sessionStorage,ADMIN_TOKEN_KEY)) refreshData(); else showLoginGate(); });
+    $("refreshBtn")?.addEventListener("click",()=>{ if(state.connected||state.token||readAdminToken()) refreshData(); else showLoginGate(); });
     $("logoutBtn")?.addEventListener("click",logout);
     // 手機漢堡選單：開／關／點遮罩關／點任一導覽連結就關（#sideNav 本身不會被 renderSide() 整個換掉，掛在它身上安全）
     $("mobileNavBtn")?.addEventListener("click",()=>setMobileNavOpen(!state.mobileNavOpen));
@@ -1910,11 +1912,32 @@
     $("sideNav")?.addEventListener("scroll",updateNavScrollHint,{passive:true});
     window.addEventListener("hashchange",show);
     window.addEventListener("keydown",(e)=>{ if(e.key!=="Escape") return; if(state.tabs.entImportPanelOpen) closeEntImportPanel(); else if(state.mobileNavOpen) setMobileNavOpen(false); });
-    setStatus("尚未連線","");
+    const st=readAdminToken();
+    autoLoginInFlight=!!st;
+    setStatus(st?"讀取中…":"尚未連線","");
     show();
-    const st=storageGet(sessionStorage,ADMIN_TOKEN_KEY);
-    if(st){ state.token=st; (async()=>{ try{ const base=initialBaseUrl(); const r=await loadAll(base,st); if(r.ok){ removeLoginGate(); setStatus(r.failed?"部分資料異常":"已連線",r.failed?"warn":"ok"); } else { setStatus("需要重新登入","error"); showLoginGate(); } }catch(e){ setStatus("連線失敗","error"); showLoginGate(); } })(); }
-    else { showLoginGate(); }
+    if(!st){ showLoginGate(); return; }
+    state.token=st;
+    (async()=>{
+      try{
+        const r=await loadAll(initialBaseUrl(),st);
+        if(r.ok){ removeLoginGate(); setStatus(r.failed?"部分資料異常":"已連線",r.failed?"warn":"ok"); return; }
+        // 讀不到：分清楚是「鑰匙不對」還是「連不到伺服器」——後者請他重登也沒用
+        if(!state.token){ setStatus("需要重新登入","error"); showLoginGate(); }
+        else { setStatus("連不到伺服器","error"); showConnectionTrouble(r.firstErr); }
+      }catch(e){
+        const msg=(e&&e.message)||"";
+        if(isAuthError(msg)){ clearAdminToken(); state.token=""; setStatus("需要重新登入","error"); showLoginGate(); }
+        else { setStatus("連不到伺服器","error"); showConnectionTrouble(msg); }
+      }finally{ autoLoginInFlight=false; }
+    })();
+  }
+  // 連不到伺服器時：留在畫面上講清楚不是密碼問題，給一個「再試一次」，不要把人趕回登入框
+  function showConnectionTrouble(err){
+    const root=$("pageRoot"); if(!root) return;
+    const detail=explainErr(err), extra=(detail&&detail!=="連不到伺服器")?esc(detail)+"。":"";
+    root.innerHTML=`<div class="ops-notice warn" role="status"><strong>連不到伺服器</strong>${extra}這不是密碼問題，你的登入還在——稍後按右上角「重新整理」再試一次。</div>`;
+    bindPageEvents(state.page);
   }
   document.addEventListener("DOMContentLoaded",init);
 })();
