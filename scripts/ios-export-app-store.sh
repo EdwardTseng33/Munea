@@ -78,6 +78,44 @@ GOOGLE_SERVER_CLIENT_ID="$(plutil -extract GIDServerClientID raw "$APP_PATH/Info
 GOOGLE_URL_TYPES="$(plutil -extract CFBundleURLTypes xml1 -o - "$APP_PATH/Info.plist" 2>/dev/null || true)"
 DEVICE_FAMILIES="$(plutil -extract UIDeviceFamily json -o - "$APP_PATH/Info.plist" 2>/dev/null || true)"
 
+# MUNEA_I18N_BINARY_GATE_START
+# App Store Connect may display languages from submitted metadata even when the installed binary
+# cannot actually resolve those localizations. Verify the exported App bundle itself, not the
+# source tree, so unreferenced *.lproj folders or stale Xcode target membership cannot pass.
+REQUIRED_IOS_LOCALIZATIONS=("zh-Hant" "en" "ja" "es")
+REQUIRED_LOCALIZED_USAGE_KEYS=(
+  "CFBundleDisplayName"
+  "NSMicrophoneUsageDescription"
+  "NSCameraUsageDescription"
+  "NSPhotoLibraryUsageDescription"
+  "NSSpeechRecognitionUsageDescription"
+  "NSUserNotificationsUsageDescription"
+  "NSLocalNetworkUsageDescription"
+  "NSHealthShareUsageDescription"
+  "NSHealthUpdateUsageDescription"
+)
+BUNDLE_LOCALIZATIONS="$(
+  plutil -extract CFBundleLocalizations json -o - "$APP_PATH/Info.plist" 2>/dev/null || true
+)"
+for locale in "${REQUIRED_IOS_LOCALIZATIONS[@]}"; do
+  LOCALIZED_INFO_PATH="$APP_PATH/$locale.lproj/InfoPlist.strings"
+  if ! grep -Eq "\"$locale\"" <<<"$BUNDLE_LOCALIZATIONS" \
+    || [ ! -f "$LOCALIZED_INFO_PATH" ]; then
+    echo "FAIL exported IPA is missing binary localization: $locale"
+    exit 1
+  fi
+  for usage_key in "${REQUIRED_LOCALIZED_USAGE_KEYS[@]}"; do
+    LOCALIZED_USAGE_VALUE="$(
+      plutil -extract "$usage_key" raw "$LOCALIZED_INFO_PATH" 2>/dev/null || true
+    )"
+    if [ -z "$LOCALIZED_USAGE_VALUE" ]; then
+      echo "FAIL exported IPA localization $locale is missing $usage_key"
+      exit 1
+    fi
+  done
+done
+# MUNEA_I18N_BINARY_GATE_END
+
 if [ ! -f "$AUTH_CONFIG_PATH" ] \
   || grep -q 'MUNEA_IOS_DEVELOPMENT_PROFILE_START' "$AUTH_CONFIG_PATH" \
   || ! grep -Eq 'enabled:[[:space:]]*false' "$AUTH_CONFIG_PATH" \
@@ -182,6 +220,7 @@ fi
 echo "PASS IPA excludes development fixtures and contains the latest Web and authentication assets."
 echo "PASS IPA excludes cloud admin and FlashHead test assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
+echo "PASS IPA contains zh-Hant, English, Japanese, and Spanish binary localizations."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS IPA app.js is pinned to production Brain/Voice/Call-control endpoints with no staging leak."
 echo "PASS IPA supports iPhone only."
