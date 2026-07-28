@@ -10,8 +10,10 @@ from copy import deepcopy
 
 try:
     from engine import localization
+    from engine import voice_language_intent
 except ModuleNotFoundError:  # Engine services import sibling modules directly.
     import localization
+    import voice_language_intent
 
 
 class VoiceLocaleSession:
@@ -53,6 +55,36 @@ class VoiceLocaleSession:
         profile["localeContext"] = self.locale_context
         profile["sessionLocale"] = self._state["sessionLocale"]
         return profile
+
+    def cancel_pending_change(self):
+        """Cancel a pending saved-language change and restore the saved base."""
+        self._state = {
+            **self._state,
+            "sessionLocale": self._state["baseLocale"],
+            "pendingPermanentLocale": None,
+        }
+        return self.state
+
+    def resolve_spoken_turn(self, transcript, detected_languages=None):
+        """Parse an explicit spoken command, then apply the session policy."""
+        intent = voice_language_intent.parse_spoken_language_intent(
+            transcript,
+            pending_permanent=bool(self._state["pendingPermanentLocale"]),
+        )
+        if intent["kind"] == "cancel":
+            self.cancel_pending_change()
+            result = self.resolve_turn(detected_languages=detected_languages)
+        elif intent["kind"] == "confirm":
+            result = self.resolve_turn(confirmation=True)
+        elif intent["kind"] == "switch":
+            result = self.resolve_turn(
+                switch_locale=intent["switchLocale"],
+                permanent=intent["permanent"],
+            )
+        else:
+            result = self.resolve_turn(detected_languages=detected_languages)
+        result["intent"] = deepcopy(intent)
+        return result
 
     def resolve_turn(
         self,

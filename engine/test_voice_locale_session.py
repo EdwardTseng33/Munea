@@ -20,6 +20,7 @@ class VoiceLocaleSessionTests(unittest.TestCase):
         )
         self.assertEqual(manifest["schema"], "munea.voice-locale-integration.v1")
         self.assertEqual(manifest["bridgeStatus"], "integrated")
+        self.assertEqual(manifest["spokenIntentStatus"], "integrated")
         self.assertEqual(manifest["appRequestPolicyStatus"], "integrated")
         self.assertEqual(manifest["appRequestPolicyWiringStatus"], "pending-pr-270")
         self.assertEqual(manifest["liveVoiceServerStatus"], "pending-pr-270")
@@ -140,6 +141,98 @@ class VoiceLocaleSessionTests(unittest.TestCase):
             request["storageFields"]["person"]["attributes"]["localeContext"]["safetyRegion"],
             "US",
         )
+
+    def test_code_switch_without_command_changes_only_the_current_response(self):
+        session = VoiceLocaleSession({
+            "uiLocale": "zh-TW",
+            "conversationLocale": "zh-TW",
+            "countryCode": "TW",
+            "safetyRegion": "TW",
+            "legalRegion": "TW",
+            "dataRegion": "tw-primary",
+        })
+
+        turn = session.resolve_spoken_turn(
+            "今天很開心, and I want to tell you why.",
+            detected_languages=["en-US", "zh-TW"],
+        )
+
+        self.assertEqual(turn["intent"]["kind"], "none")
+        self.assertEqual(turn["profile"]["responseLocale"], "en")
+        self.assertEqual(session.state["sessionLocale"], "zh-TW")
+        self.assertEqual(session.locale_context["conversationLocale"], "zh-TW")
+        self.assertEqual(session.locale_context["safetyRegion"], "TW")
+        self.assertIsNone(turn["persistenceRequest"])
+
+    def test_spoken_temporary_switch_does_not_change_ui_or_policy(self):
+        session = VoiceLocaleSession({
+            "uiLocale": "zh-TW",
+            "conversationLocale": "zh-TW",
+            "countryCode": "TW",
+            "timeZone": "Asia/Taipei",
+            "currency": "TWD",
+            "safetyRegion": "TW",
+            "legalRegion": "TW",
+            "dataRegion": "tw-primary",
+        })
+
+        turn = session.resolve_spoken_turn("請幫我改用英文")
+
+        self.assertEqual(turn["intent"]["kind"], "switch")
+        self.assertEqual(turn["profile"]["responseLocale"], "en")
+        self.assertEqual(session.state["sessionLocale"], "en")
+        self.assertEqual(session.locale_context["uiLocale"], "zh-TW")
+        self.assertEqual(session.locale_context["conversationLocale"], "zh-TW")
+        self.assertEqual(session.locale_context["countryCode"], "TW")
+        self.assertEqual(session.locale_context["safetyRegion"], "TW")
+        self.assertIsNone(turn["persistenceRequest"])
+
+    def test_spoken_permanent_switch_needs_confirmation_before_storage(self):
+        session = VoiceLocaleSession({
+            "uiLocale": "en",
+            "conversationLocale": "en",
+            "preferredLanguages": ["en", "ja"],
+            "countryCode": "US",
+            "safetyRegion": "US",
+            "legalRegion": "US",
+            "dataRegion": "us-central",
+        })
+
+        requested = session.resolve_spoken_turn(
+            "Please speak Japanese from now on",
+        )
+        self.assertTrue(requested["decision"]["confirmationRequired"])
+        self.assertEqual(session.state["pendingPermanentLocale"], "ja")
+        self.assertIsNone(requested["persistenceRequest"])
+
+        confirmed = session.resolve_spoken_turn("yes, confirm")
+        self.assertEqual(confirmed["intent"]["kind"], "confirm")
+        self.assertEqual(confirmed["decision"]["persistedLocale"], "ja")
+        self.assertEqual(session.locale_context["conversationLocale"], "ja")
+        self.assertEqual(session.locale_context["uiLocale"], "en")
+        self.assertEqual(session.locale_context["safetyRegion"], "US")
+        self.assertIsNotNone(confirmed["persistenceRequest"])
+
+    def test_canceling_pending_permanent_switch_restores_saved_language(self):
+        session = VoiceLocaleSession({
+            "uiLocale": "en",
+            "conversationLocale": "en",
+            "countryCode": "US",
+            "safetyRegion": "US",
+            "legalRegion": "US",
+            "dataRegion": "us-central",
+        })
+        session.resolve_spoken_turn("Please speak Japanese from now on")
+
+        canceled = session.resolve_spoken_turn("no, cancel")
+
+        self.assertEqual(canceled["intent"]["kind"], "cancel")
+        self.assertEqual(session.state["sessionLocale"], "en")
+        self.assertEqual(session.state["baseLocale"], "en")
+        self.assertIsNone(session.state["pendingPermanentLocale"])
+        self.assertEqual(session.locale_context["conversationLocale"], "en")
+        self.assertEqual(session.locale_context["safetyRegion"], "US")
+        self.assertIsNone(canceled["persistenceRequest"])
 
 
 if __name__ == "__main__":
