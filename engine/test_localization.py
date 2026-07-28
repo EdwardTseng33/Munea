@@ -78,6 +78,85 @@ class LocalizationTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             localization.build_locale_context(["ja"])
 
+    def test_locale_context_maps_existing_account_and_person_storage(self):
+        context = localization.locale_context_from_account(
+            {
+                "locale": "en-US",
+                "preferred_languages": ["en-US", "es-MX"],
+            },
+            {
+                "locale": "es-MX",
+                "timezone": "America/Mexico_City",
+                "region_code": "MX",
+                "attributes": {
+                    "localeContext": {
+                        "units": "metric",
+                        "currency": "MXN",
+                        "safetyRegion": "MX",
+                        "legalRegion": "MX",
+                        "dataRegion": "us-central",
+                    },
+                },
+            },
+        )
+
+        self.assertEqual(context["uiLocale"], "en")
+        self.assertEqual(context["conversationLocale"], "es")
+        self.assertEqual(context["preferredLanguages"], ["es", "en"])
+        self.assertEqual(context["countryCode"], "MX")
+        self.assertEqual(context["safetyRegion"], "MX")
+        self.assertEqual(context["legalRegion"], "MX")
+        self.assertEqual(context["dataRegion"], "us-central")
+
+    def test_locale_context_request_keeps_ui_and_conversation_language_separate(self):
+        context = localization.locale_context_from_request({
+            "locale": "ja-JP",
+            "conversationLocale": "en-US",
+            "preferredLanguages": ["ja-JP", "en-US"],
+            "countryCode": "JP",
+            "timeZone": "Asia/Tokyo",
+            "currency": "JPY",
+            "safetyRegion": "JP",
+            "legalRegion": "JP",
+            "dataRegion": "jp-primary",
+        })
+
+        self.assertEqual(context["uiLocale"], "ja")
+        self.assertEqual(context["conversationLocale"], "en")
+        self.assertEqual(context["preferredLanguages"], ["en", "ja"])
+        self.assertEqual(context["countryCode"], "JP")
+        self.assertEqual(context["timeZone"], "Asia/Tokyo")
+
+    def test_locale_context_storage_reuses_columns_and_preserves_attributes(self):
+        context = localization.build_locale_context({
+            "uiLocale": "es",
+            "conversationLocale": "en",
+            "preferredLanguages": ["es", "en"],
+            "countryCode": "MX",
+            "timeZone": "America/Mexico_City",
+            "currency": "MXN",
+            "safetyRegion": "MX",
+            "legalRegion": "MX",
+            "dataRegion": "us-central",
+        })
+        fields = localization.locale_context_storage_fields(
+            context,
+            {"birthday": "1950-01-01"},
+        )
+
+        self.assertEqual(fields["account"], {
+            "locale": "es",
+            "preferred_languages": ["en", "es"],
+        })
+        self.assertEqual(fields["person"]["locale"], "en")
+        self.assertEqual(fields["person"]["timezone"], "America/Mexico_City")
+        self.assertEqual(fields["person"]["region_code"], "MX")
+        self.assertEqual(fields["person"]["attributes"]["birthday"], "1950-01-01")
+        self.assertEqual(
+            fields["person"]["attributes"]["localeContext"]["safetyRegion"],
+            "MX",
+        )
+
     def test_normalizes_supported_and_browser_locales(self):
         self.assertEqual(localization.normalize_locale("zh-Hant"), "zh-TW")
         self.assertEqual(localization.normalize_locale("en-GB"), "en")

@@ -139,6 +139,12 @@ Phase 1d（2026-07-28）補齊可共用的語言品質底盤：
 - 核心四語 catalog 擴充至至少 90 個 App 共用狀態，包含登入、首頁、健康、心情、家庭、通話排隊、設定、訂閱、回饋與用藥。
 - locale runtime 增加 `Intl` 複數、日期、數字、清單與相對時間格式，避免日期／單位／複數靠中文字串拼接。
 - `review-manifest.json` 將 catalog coverage、母語審稿、視覺 QA、語音 E2E、區域安全／法律、App Store metadata 與市場開放設為逐語系必要核准；任何一項未核准都不能開 runtime 或 binary gate。
+
+Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
+
+- 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。
+- 帳號 bootstrap、JSON fallback、Supabase 新增／更新與營運帳號摘要都回傳同一份 `localeContext`；現有台灣帳號保持原行為。
+- 本批碰 Auth／account bootstrap，屬 call-path risk；只有單元與 smoke precheck，仍為 `App E2E pending`，未部署。
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。
 - missing-key telemetry 只記錄 key 與 locale，去重後回退繁中；不記翻譯內容、畫面文字或任何使用者輸入。
 - runtime 目前是純模組並已進 UI contract tests；等 #247/#270 合併後，才接到 `web/src/i18n.js` 與正式 DOM。

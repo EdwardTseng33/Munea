@@ -197,6 +197,101 @@ def build_locale_context(values=None):
     return context
 
 
+def locale_context_from_account(account=None, person=None, overrides=None):
+    """Build LocaleContext v1 from the existing account/person storage model.
+
+    Language, geography, legal/safety policy, and data residency remain
+    independent. Person attributes carry policy fields that do not have
+    dedicated database columns yet; no value is inferred from a language tag.
+    """
+    account = account if isinstance(account, Mapping) else {}
+    person = person if isinstance(person, Mapping) else {}
+    attributes = person.get("attributes")
+    attributes = attributes if isinstance(attributes, Mapping) else {}
+    stored = {}
+    for candidate in (
+        account.get("localeContext"),
+        account.get("locale_context"),
+        attributes.get("localeContext"),
+        attributes.get("locale_context"),
+    ):
+        if isinstance(candidate, Mapping):
+            stored.update(candidate)
+
+    values = dict(stored)
+    storage_values = {
+        "uiLocale": account.get("locale"),
+        "conversationLocale": person.get("locale"),
+        "preferredLanguages": (
+            account.get("preferredLanguages")
+            or account.get("preferred_languages")
+        ),
+        "countryCode": person.get("regionCode") or person.get("region_code"),
+        "timeZone": person.get("timeZone") or person.get("timezone"),
+    }
+    values.update({key: value for key, value in storage_values.items() if value is not None})
+    if overrides is not None:
+        if not isinstance(overrides, Mapping):
+            raise TypeError("LocaleContext overrides must be a mapping")
+        values.update(overrides)
+    return build_locale_context(values)
+
+
+def locale_context_from_request(data=None, account=None, person=None):
+    """Normalize a trusted App/API request without coupling locale to country."""
+    data = data if isinstance(data, Mapping) else {}
+    requested = data.get("localeContext") or data.get("locale_context") or {}
+    if not isinstance(requested, Mapping):
+        raise TypeError("localeContext request value must be a mapping")
+    requested = dict(requested)
+    aliases = {
+        "uiLocale": data.get("uiLocale") or data.get("ui_locale") or data.get("locale"),
+        "conversationLocale": (
+            data.get("conversationLocale")
+            or data.get("conversation_locale")
+        ),
+        "preferredLanguages": (
+            data.get("preferredLanguages")
+            or data.get("preferred_languages")
+        ),
+        "countryCode": data.get("countryCode") or data.get("country_code"),
+        "timeZone": data.get("timeZone") or data.get("time_zone") or data.get("timezone"),
+        "units": data.get("units"),
+        "currency": data.get("currency"),
+        "safetyRegion": data.get("safetyRegion") or data.get("safety_region"),
+        "legalRegion": data.get("legalRegion") or data.get("legal_region"),
+        "dataRegion": data.get("dataRegion") or data.get("data_region"),
+    }
+    requested.update({key: value for key, value in aliases.items() if value is not None})
+    return locale_context_from_account(account, person, requested)
+
+
+def locale_context_storage_fields(context, person_attributes=None):
+    """Map LocaleContext v1 onto existing account/person database fields."""
+    normalized = build_locale_context(context)
+    attributes = dict(person_attributes) if isinstance(person_attributes, Mapping) else {}
+    attributes["localeContext"] = {
+        "version": normalized["version"],
+        "units": normalized["units"],
+        "currency": normalized["currency"],
+        "safetyRegion": normalized["safetyRegion"],
+        "legalRegion": normalized["legalRegion"],
+        "dataRegion": normalized["dataRegion"],
+    }
+    return {
+        "account": {
+            "locale": normalized["uiLocale"],
+            "preferred_languages": list(normalized["preferredLanguages"]),
+        },
+        "person": {
+            "locale": normalized["conversationLocale"],
+            "timezone": normalized["timeZone"],
+            "region_code": normalized["countryCode"],
+            "attributes": attributes,
+        },
+    }
+
+
 def _normalize_preferred_languages(values, conversation_locale):
     if isinstance(values, str):
         values = [values]

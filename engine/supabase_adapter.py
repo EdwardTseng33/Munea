@@ -15,6 +15,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import localization
+
 
 UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
@@ -533,12 +535,14 @@ class SupabaseAdapter:
         family_group = self._load_family_group()
         members = self._load_family_members(family_group["id"] if family_group else None)
         companion = self.load_companion_profile() or {}
+        locale_context = localization.locale_context_from_account(account, person)
         return {
             "schemaVersion": 1,
             "account": {
                 "id": self.account_id,
-                "locale": (account or {}).get("locale") or "zh-TW",
-                "preferredLanguages": (account or {}).get("preferred_languages") or ["zh-TW", "en"],
+                "locale": locale_context["uiLocale"],
+                "preferredLanguages": locale_context["preferredLanguages"],
+                "localeContext": locale_context,
                 "createdAt": (account or {}).get("created_at"),
             },
             "familyGroup": {
@@ -1575,6 +1579,31 @@ class SupabaseAdapter:
                 person = self._first("persons", {"account_id": f"eq.{self.account_id}", "is_primary_care_recipient": "eq.true", "select": "*"})
                 if person and person.get("id"):
                     self.person_id = person["id"]
+                if str(data.get("action") or "").lower() in ("update", "patch"):
+                    account = self._first("accounts", {"id": f"eq.{self.account_id}", "select": "*"})
+                    locale_context = localization.locale_context_from_request(
+                        data,
+                        account,
+                        person,
+                    )
+                    fields = localization.locale_context_storage_fields(
+                        locale_context,
+                        (person or {}).get("attributes"),
+                    )
+                    self._request(
+                        "PATCH",
+                        "accounts",
+                        query={"id": f"eq.{self.account_id}", "select": "*"},
+                        payload=fields["account"],
+                        prefer="return=representation",
+                    )
+                    self._request(
+                        "PATCH",
+                        "persons",
+                        query={"id": f"eq.{self.person_id}", "select": "*"},
+                        payload=fields["person"],
+                        prefer="return=representation",
+                    )
                 return self.load_app_profile_store()
             finally:
                 self.account_id = previous_account_id
@@ -1585,6 +1614,8 @@ class SupabaseAdapter:
         family_group_id = str(uuid.uuid4())
         display_name = (data.get("displayName") or data.get("display_name") or "Munea user").strip()[:80] or "Munea user"
         companion = data.get("companionProfile") or data.get("companion_profile") or {}
+        locale_context = localization.locale_context_from_request(data)
+        locale_fields = localization.locale_context_storage_fields(locale_context)
 
         account = self._request(
             "POST",
@@ -1593,8 +1624,7 @@ class SupabaseAdapter:
             payload={
                 "id": account_id,
                 "name": data.get("accountName") or data.get("account_name") or "Munea account",
-                "locale": data.get("locale") or "zh-TW",
-                "preferred_languages": data.get("preferredLanguages") or data.get("preferred_languages") or ["zh-TW", "en"],
+                **locale_fields["account"],
             },
             prefer="return=representation",
         )[0]
@@ -1620,8 +1650,7 @@ class SupabaseAdapter:
                 "auth_user_id": auth_user_id,
                 "display_name": display_name,
                 "relationship": data.get("relationship") or "self",
-                "locale": data.get("locale") or "zh-TW",
-                "timezone": data.get("timezone") or "Asia/Taipei",
+                **locale_fields["person"],
                 "is_primary_care_recipient": True,
             },
             prefer="return=representation",
@@ -3203,11 +3232,13 @@ class SupabaseAdapter:
         for membership in memberships:
             role = membership.get("role") or "unknown"
             roles[role] = roles.get(role, 0) + 1
+        locale_context = localization.locale_context_from_account(account, primary_person)
         return {
             "accountId": account.get("id") or "",
             "accountName": account.get("name") or "",
-            "locale": account.get("locale") or "zh-TW",
-            "preferredLanguages": account.get("preferred_languages") or ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": account.get("created_at"),
             "updatedAt": account.get("updated_at"),
             "familyGroup": {

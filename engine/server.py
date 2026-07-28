@@ -3187,12 +3187,14 @@ def load_legacy_companion_profile():
 
 def default_app_profile_store(companion_profile=None):
     companion_profile = normalize_companion_profile(companion_profile)
+    locale_context = localization.build_locale_context()
     return {
         "schemaVersion": 1,
         "account": {
             "id": "local-demo-account",
-            "locale": "zh-TW",
-            "preferredLanguages": ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": "2026-06-29T00:00:00Z",
         },
         "familyGroup": {
@@ -3264,12 +3266,14 @@ def normalize_app_profile_store(data=None):
         }))
 
     account = data.get("account") or {}
+    locale_context = localization.locale_context_from_account(account)
     return {
         "schemaVersion": int(data.get("schemaVersion") or data.get("schema_version") or 1),
         "account": {
             "id": str(account.get("id") or "local-demo-account"),
-            "locale": str(account.get("locale") or "zh-TW"),
-            "preferredLanguages": account.get("preferredLanguages") or account.get("preferred_languages") or ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": account.get("createdAt") or account.get("created_at") or "2026-06-29T00:00:00Z",
         },
         "familyGroup": {
@@ -3639,8 +3643,15 @@ def family_relays_response(data):
 
 def bootstrap_account_response(data, headers=None):
     data = data or {}
-    data = {**data, "locale": localization.normalize_locale(data.get("locale"))}
     action = (data.get("action") or "create").lower()
+    if action not in ("update", "patch"):
+        locale_context = localization.locale_context_from_request(data)
+        data = {
+            **data,
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
+        }
     backend = data_backend()
     auth_context = verify_auth_context(headers)
     verified_auth_user_id = auth_context.get("authUserId") if auth_context.get("ok") else None
@@ -3702,8 +3713,10 @@ def bootstrap_account_response(data, headers=None):
     if action in ("update", "patch"):
         store = load_app_profile_store()
         account = store.setdefault("account", {})
-        account["locale"] = localization.normalize_locale(data.get("locale") or account.get("locale"))
-        account["preferredLanguages"] = data.get("preferredLanguages") or data.get("preferred_languages") or account.get("preferredLanguages") or [account["locale"]]
+        locale_context = localization.locale_context_from_request(data, account=account)
+        account["locale"] = locale_context["uiLocale"]
+        account["preferredLanguages"] = locale_context["preferredLanguages"]
+        account["localeContext"] = locale_context
         save_app_profile_store(store)
         return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store), "auth": public_auth_context(auth_context), "backend": data_backend_status()}
 
@@ -3720,8 +3733,9 @@ def bootstrap_account_response(data, headers=None):
         "schemaVersion": 1,
         "account": {
             "id": account_id,
-            "locale": data.get("locale") or "zh-TW",
-            "preferredLanguages": data.get("preferredLanguages") or data.get("preferred_languages") or ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": utc_now(),
         },
         "familyGroup": {
@@ -4213,11 +4227,13 @@ def normalize_admin_account_summary(item=None):
     companion = item.get("companion") or {}
     family_members = item.get("familyMembers") or item.get("family_members") or {}
     roles = family_members.get("byRole") or family_members.get("by_role") or {}
+    locale_context = localization.locale_context_from_account(item, primary_person)
     return {
         "accountId": str(item.get("accountId") or item.get("account_id") or ""),
         "accountName": str(item.get("accountName") or item.get("account_name") or ""),
-        "locale": str(item.get("locale") or "zh-TW"),
-        "preferredLanguages": item.get("preferredLanguages") or item.get("preferred_languages") or ["zh-TW", "en"],
+        "locale": locale_context["uiLocale"],
+        "preferredLanguages": locale_context["preferredLanguages"],
+        "localeContext": locale_context,
         "createdAt": item.get("createdAt") or item.get("created_at"),
         "updatedAt": item.get("updatedAt") or item.get("updated_at"),
         "familyGroup": {
