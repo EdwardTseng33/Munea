@@ -1,11 +1,31 @@
 """Locale policy shared by Munea's API, model prompts, and speech synthesis."""
 
 import re
+from collections.abc import Mapping
 
 from opencc import OpenCC
 
 SUPPORTED_LOCALES = ("zh-TW", "en", "ja", "es")
 DEFAULT_LOCALE = "zh-TW"
+LOCALE_CONTEXT_VERSION = 1
+DEFAULT_LOCALE_CONTEXT = {
+    "version": LOCALE_CONTEXT_VERSION,
+    "uiLocale": DEFAULT_LOCALE,
+    "conversationLocale": DEFAULT_LOCALE,
+    "preferredLanguages": [DEFAULT_LOCALE],
+    "countryCode": "TW",
+    "timeZone": "Asia/Taipei",
+    "units": "metric",
+    "currency": "TWD",
+    "safetyRegion": "TW",
+    "legalRegion": "TW",
+    "dataRegion": "tw-primary",
+}
+_VALID_UNITS = ("metric", "us")
+_REGION_CODE_RE = re.compile(r"^[A-Z]{2}$")
+_CURRENCY_CODE_RE = re.compile(r"^[A-Z]{3}$")
+_TIME_ZONE_RE = re.compile(r"^(?:UTC|[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+)$")
+_DATA_REGION_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 _SPEECH_CODES = {"zh-TW": "cmn-TW", "en": "en-US", "ja": "ja-JP", "es": "es-ES"}
 _REPLY_INSTRUCTIONS = {
     "zh-TW": "請一律使用自然的繁體台灣中文回覆，絕不使用簡體字。",
@@ -101,6 +121,7 @@ _CONTEXT_ASR_ALIASES = {
     "旺財": ("旺才",),
 }
 
+
 def normalize_locale(locale):
     raw = str(locale or "").strip().replace("_", "-")
     if raw in SUPPORTED_LOCALES: return raw
@@ -110,6 +131,128 @@ def normalize_locale(locale):
     if lowered.startswith("es"): return "es"
     if lowered.startswith("en"): return "en"
     return DEFAULT_LOCALE
+
+
+def build_locale_context(values=None):
+    """Return a normalized, JSON-ready LocaleContext v1.
+
+    This is an additive contract scaffold. It is intentionally not connected to
+    the production Gateway or Live call path yet. Language never infers country,
+    legal/safety policy, data residency, units, currency, or time zone.
+    """
+    if values is None:
+        values = {}
+    if not isinstance(values, Mapping):
+        raise TypeError("LocaleContext input must be a mapping")
+
+    context = {
+        key: list(value) if isinstance(value, list) else value
+        for key, value in DEFAULT_LOCALE_CONTEXT.items()
+    }
+    context["uiLocale"] = normalize_locale(values.get("uiLocale"))
+    context["conversationLocale"] = normalize_locale(
+        values.get("conversationLocale") or context["uiLocale"]
+    )
+    context["preferredLanguages"] = _normalize_preferred_languages(
+        values.get("preferredLanguages"),
+        context["conversationLocale"],
+    )
+    context["countryCode"] = _normalize_code(
+        values.get("countryCode"),
+        context["countryCode"],
+        _REGION_CODE_RE,
+    )
+    context["timeZone"] = _normalize_text(
+        values.get("timeZone"),
+        context["timeZone"],
+        _TIME_ZONE_RE,
+    )
+    context["units"] = _normalize_choice(
+        values.get("units"),
+        context["units"],
+        _VALID_UNITS,
+        "units",
+    )
+    context["currency"] = _normalize_code(
+        values.get("currency"),
+        context["currency"],
+        _CURRENCY_CODE_RE,
+    )
+    context["safetyRegion"] = _normalize_code(
+        values.get("safetyRegion"),
+        context["safetyRegion"],
+        _REGION_CODE_RE,
+    )
+    context["legalRegion"] = _normalize_code(
+        values.get("legalRegion"),
+        context["legalRegion"],
+        _REGION_CODE_RE,
+    )
+    context["dataRegion"] = _normalize_text(
+        values.get("dataRegion"),
+        context["dataRegion"],
+        _DATA_REGION_RE,
+        lowercase=True,
+    )
+    return context
+
+
+def _normalize_preferred_languages(values, conversation_locale):
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, (list, tuple)):
+        values = []
+    normalized = [conversation_locale]
+    for value in values:
+        locale = _match_supported_locale(value)
+        if locale and locale not in normalized:
+            normalized.append(locale)
+    return normalized
+
+
+def _match_supported_locale(locale):
+    raw = str(locale or "").strip().replace("_", "-")
+    lowered = raw.lower()
+    if raw in SUPPORTED_LOCALES:
+        return raw
+    if lowered.startswith("zh"):
+        return "zh-TW"
+    if lowered.startswith("en"):
+        return "en"
+    if lowered.startswith("ja"):
+        return "ja"
+    if lowered.startswith("es"):
+        return "es"
+    return None
+
+
+def _normalize_code(value, fallback, pattern):
+    if value is None:
+        return fallback
+    normalized = str(value or "").strip().upper()
+    if not pattern.fullmatch(normalized):
+        raise ValueError(f"Invalid LocaleContext value: {value!r}")
+    return normalized
+
+
+def _normalize_text(value, fallback, pattern, lowercase=False):
+    if value is None:
+        return fallback
+    normalized = str(value or "").strip()
+    if lowercase:
+        normalized = normalized.lower()
+    if not pattern.fullmatch(normalized):
+        raise ValueError(f"Invalid LocaleContext value: {value!r}")
+    return normalized
+
+
+def _normalize_choice(value, fallback, choices, field):
+    if value is None:
+        return fallback
+    if value not in choices:
+        raise ValueError(f"Invalid LocaleContext {field}: {value!r}")
+    return value
+
 
 def speech_language_code(locale): return _SPEECH_CODES[normalize_locale(locale)]
 

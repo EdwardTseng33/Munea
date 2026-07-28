@@ -4,6 +4,80 @@ import localization
 
 
 class LocalizationTests(unittest.TestCase):
+    def test_locale_context_defaults_preserve_current_taiwan_production_behavior(self):
+        context = localization.build_locale_context()
+
+        self.assertEqual(context, localization.DEFAULT_LOCALE_CONTEXT)
+        self.assertIsNot(context["preferredLanguages"], localization.DEFAULT_LOCALE_CONTEXT["preferredLanguages"])
+
+    def test_locale_context_keeps_language_and_region_policy_independent(self):
+        context = localization.build_locale_context({
+            "uiLocale": "ja-JP",
+            "preferredLanguages": ["ja-JP", "en-US", "ja"],
+        })
+
+        self.assertEqual(context["uiLocale"], "ja")
+        self.assertEqual(context["conversationLocale"], "ja")
+        self.assertEqual(context["preferredLanguages"], ["ja", "en"])
+        self.assertEqual(context["countryCode"], "TW")
+        self.assertEqual(context["safetyRegion"], "TW")
+        self.assertEqual(context["legalRegion"], "TW")
+        self.assertEqual(context["dataRegion"], "tw-primary")
+
+    def test_locale_context_accepts_explicit_market_and_data_policy(self):
+        context = localization.build_locale_context({
+            "uiLocale": "es-MX",
+            "conversationLocale": "en-US",
+            "preferredLanguages": ["es-MX", "en-US"],
+            "countryCode": "mx",
+            "timeZone": "America/Mexico_City",
+            "units": "metric",
+            "currency": "mxn",
+            "safetyRegion": "mx",
+            "legalRegion": "mx",
+            "dataRegion": "us-central",
+        })
+
+        self.assertEqual(context, {
+            "version": 1,
+            "uiLocale": "es",
+            "conversationLocale": "en",
+            "preferredLanguages": ["en", "es"],
+            "countryCode": "MX",
+            "timeZone": "America/Mexico_City",
+            "units": "metric",
+            "currency": "MXN",
+            "safetyRegion": "MX",
+            "legalRegion": "MX",
+            "dataRegion": "us-central",
+        })
+
+    def test_locale_context_falls_back_only_for_unsupported_app_languages(self):
+        context = localization.build_locale_context({
+            "uiLocale": "de-DE",
+            "preferredLanguages": ["de-DE"],
+        })
+
+        self.assertEqual(context, localization.DEFAULT_LOCALE_CONTEXT)
+
+    def test_locale_context_rejects_invalid_policy_values(self):
+        invalid_values = (
+            {"countryCode": "Taiwan"},
+            {"timeZone": "../Taipei"},
+            {"units": "imperial"},
+            {"currency": "$"},
+            {"safetyRegion": "global"},
+            {"legalRegion": ""},
+            {"dataRegion": "../../prod"},
+        )
+        for values in invalid_values:
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                localization.build_locale_context(values)
+
+    def test_locale_context_rejects_non_mapping_input(self):
+        with self.assertRaises(TypeError):
+            localization.build_locale_context(["ja"])
+
     def test_normalizes_supported_and_browser_locales(self):
         self.assertEqual(localization.normalize_locale("zh-Hant"), "zh-TW")
         self.assertEqual(localization.normalize_locale("en-GB"), "en")
