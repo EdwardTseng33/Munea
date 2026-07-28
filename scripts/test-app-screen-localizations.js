@@ -47,6 +47,12 @@ for (const [group, keys] of Object.entries(allGroups)) {
       if (locale === 'en' || locale === 'es') {
         assert.ok(!han.test(value), `${locale}:${group}:${key} unexpectedly contains Han text`);
       }
+      if (locale === 'en') {
+        assert.ok(
+          !/\b(?:she|her|hers)\b/i.test(value),
+          `${locale}:${group}:${key} must not assume the selected companion is female`,
+        );
+      }
     }
   }
 }
