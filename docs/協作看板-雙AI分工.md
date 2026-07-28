@@ -2372,3 +2372,17 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **本次已修**（不能留著騙人）：打包後的 App（`isPackagedApp()`）**不再提供 PDF 選項**，選單改為只給「傳給家人／複製文字」並說明 PDF 還在做；瀏覽器環境維持列印可用。**一顆按了沒事的按鈕比沒有更糟**——長輩會以為自己按錯。`test-visit-summary-ui.js` 59 項仍全過。
 - **未做**：原生外掛本身（待 Edward 決定是否開工）。
 - 來源：Apple Developer Forums（WKWebView 列印／SwiftUI WebView printing）、Apple 官方文件（`createPDF(configuration:)`、`WKPDFConfiguration`）、Capacitor Discussion #3213（WebView 的 Web Share API Level 2 支援）、caniwebview.com。
+
+### 2026-07-28 Claude/城堡 🛠️ M1 PR-4d：iOS 原生 PDF 匯出外掛（⚠ 未編譯・未實機驗證）
+
+- **依據**：前一則調研結論——`window.print()` 在 iOS WKWebView 完全無效，正解為 `WKWebView.createPDF()`＋`UIActivityViewController`；且專案已有五個自寫 Swift 外掛，屬既有慣例。
+- **新增** `ios/App/App/ExportPlugin.swift`（160 行，照 GoogleSignInPlugin 的 `CAPPlugin, CAPBridgedPlugin` 模式）：
+  - **離屏 WKWebView 載入「純摘要 HTML」再轉 PDF**，不印主畫面——主畫面會夾到 App 的殼與捲動裁切，且使用者捲到哪就印出不一樣的東西。A4 固定寬 595pt ⇒ 每一份版面一致。
+  - **⚠ 關鍵風險已處理**：離屏 webview **若從未加入畫面階層，可能根本不排版 → `createPDF` 拿到空白**。已改為 `addSubview` 但 `alpha = 0`＋不吃點擊＋壓到最底；三條退出路徑（成功／失敗／逾時）都 `removeFromSuperview`，不留殭屍 webview。
+  - `baseURL: nil`（自組 HTML 自帶行內樣式，不去載任何外部資源）、12 秒逾時保險絲（載入卡住不讓按鈕永遠沒反應）、iPad `popoverPresentationController` anchor（不給會直接崩潰）、檔名守門（去掉路徑分隔與控制字元）。
+  - **回報只給「有沒有完成、用了哪個管道」，不回報傳給了誰**——那是健康資料的去向，不該進我們的紀錄。
+  - 已在 `MuneaViewController.capacitorDidLoad()` 明確註冊（沿用專案「不靠自動掃描」的慣例）。
+- **前端**：新增 `visitSummaryAsHTML()`（`visitSummaryAsText()` 的同胞，樣式全行內寫死）＋`exportVisitSummaryPdf()` 橋接。匯出選單改為 **原生優先 → 瀏覽器退 `window.print()` → 兩者皆無就不列 PDF 選項**（不給按了沒事的假選項）。
+- **驗過沒**：`scripts/test-visit-summary-ui.js` 擴充到 **88 項全過**（新增第⑩組：外掛已註冊／jsName 對得上／用了 createPDF 與系統分享面板／離屏渲染／iPad anchor／逾時保險絲／不記錄分享對象／選單依可用性調整／**PDF 版面守同一套禁字紅線＋免責聲明＋來源圖例＋逸出**——那份會被印出來交到醫師手上，紅線要再守一次）。完整 `npm run test:launch` **exit=0 全綠**。
+- **⚠ 未驗項（重要）**：本環境**無 Xcode／無 Swift 編譯器**，只做了靜態檢查（括號配對、必要結構、與既有外掛的共通模式 4/4）。**Swift 未編譯、未上真機**。以下必須在 Edward 的機器上驗：①能否編譯 ②`createPDF` 是否真的拿到完整內容（離屏排版風險已處理但未證實）③中文字型渲染 ④分享面板在真機與 iPad 的行為。**在那之前不可宣稱 PDF 匯出可用。**
+- **邊界**：未動 schema／既有 endpoint／既有外掛／部署腳本。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。

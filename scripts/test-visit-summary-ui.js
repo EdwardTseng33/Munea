@@ -116,12 +116,51 @@ expect(app.indexOf('renderVisitSummary(_rptLastSummary);') < app.indexOf('const 
   '⑦ 應先畫快照再背景更新，否則沒網路時畫面是空的');
 ok('⑦ 先畫快照、再背景更新（診間離線可用）');
 
-/* ⑧ 匯出：分享前警告 + PDF 走零套件的列印 */
+/* ⑧ 匯出：分享前警告 + PDF 零套件 */
 expect(app.includes('傳出去之後就收不回來'), '⑧ 匯出前沒有提醒健康資料不可回收');
-expect(app.includes('window.print()'), '⑧ PDF 沒有走瀏覽器內建列印');
+expect(app.includes('window.print()'), '⑧ 瀏覽器環境沒有保留列印路徑');
 expect(css.includes('@media print'), '⑧ 缺列印樣式，印出來會夾雜 App 的殼');
 expect(!/jspdf|html2canvas|pdfmake/i.test(app), '⑧ 引入了外部 PDF 套件——違反零支出與零新依賴');
 ok('⑧ 匯出有隱私提醒、PDF 零套件、列印樣式齊備');
+
+/* ⑩ iOS 原生 PDF 匯出（PR-4d）
+ * window.print() 在 iOS WKWebView 完全無效，所以 App 內必須走原生外掛；
+ * 而且「沒有可用路徑時不可列出 PDF 選項」——按了沒事的按鈕比沒有更糟。 */
+const exportSwift = fs.readFileSync(path.join(root, 'ios', 'App', 'App', 'ExportPlugin.swift'), 'utf8');
+const viewController = fs.readFileSync(path.join(root, 'ios', 'App', 'App', 'MuneaViewController.swift'), 'utf8');
+
+expect(viewController.includes('registerPluginInstance(ExportPlugin())'),
+  '⑩ 外掛沒有掛上橋——不註冊等於整支不存在（照既有五個外掛的明確註冊慣例）');
+expect(exportSwift.includes('public let jsName = "Export"'), '⑩ 外掛的 jsName 不是 Export');
+expect(app.includes("window.Capacitor.Plugins.Export"), '⑩ 前端沒有取用 Export 外掛');
+expect(exportSwift.includes('createPDF(configuration:'), '⑩ 沒有用 WKWebView.createPDF');
+expect(exportSwift.includes('UIActivityViewController'), '⑩ 沒有交給系統分享面板');
+
+// 離屏 webview：直接印主畫面會拿到 App 的殼＋被裁掉的捲動內容
+expect(exportSwift.includes('loadHTMLString') && exportSwift.includes('baseURL: nil'),
+  '⑩ 沒有用離屏 webview 載入純摘要 HTML（直接印主畫面會夾到 App 的殼與捲動裁切）');
+expect(app.includes('function visitSummaryAsHTML'), '⑩ 缺少純摘要 HTML 產生器');
+
+// iPad 彈出分享面板沒給 anchor 會直接崩潰
+expect(exportSwift.includes('popoverPresentationController'), '⑩ iPad 分享面板缺 anchor，會崩潰');
+// 逾時保險絲：載入卡住不能讓按鈕永遠沒有回應
+expect(exportSwift.includes('export_render_timeout'), '⑩ 沒有逾時保險絲，載入卡住時使用者會一直等');
+// 分享去向不進紀錄——那是健康資料的去向
+expect(!/recipient|sentTo|contact/i.test(exportSwift), '⑩ 外掛回報了分享對象——健康資料的去向不該進我們的紀錄');
+
+// 沒有可用路徑時不可列出 PDF 選項
+expect(app.includes('const canPdf = hasNativePdf || !isPackagedApp()'),
+  '⑩ 沒有判斷 PDF 是否真的可用');
+expect(app.includes("menu = canPdf"), '⑩ 選單沒有依可用性調整，會列出按了沒事的選項');
+
+// PDF 那份 HTML 會被印出來交到醫師手上——同一套紅線要再守一次
+const pdfHtmlFn = stripComments(app.slice(app.indexOf('function visitSummaryAsHTML'), app.indexOf('function muneaExportPlugin')));
+FORBIDDEN.forEach(word => expect(!stripDisclaimers(pdfHtmlFn).includes(word),
+  `⑩ PDF 版面出現判定字眼「${word}」——這份會交到醫師手上`));
+expect(pdfHtmlFn.includes('非醫療診斷'), '⑩ PDF 版面缺少免責聲明');
+expect(pdfHtmlFn.includes('rptEsc'), '⑩ PDF 版面沒有逸出使用者輸入');
+expect(pdfHtmlFn.includes('● 長輩自己說的'), '⑩ PDF 版面缺來源圖例，醫師無法分辨自述與量測');
+ok('⑩ 原生 PDF 匯出：外掛已註冊、離屏渲染、iPad 不崩、逾時有保險絲、版面守同一套紅線');
 
 /* ⑨ 後端契約對得上 */
 expect(app.includes("brainPost('/visit-summary'"), '⑨ 前端沒有呼叫 /visit-summary');

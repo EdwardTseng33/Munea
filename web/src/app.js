@@ -1231,6 +1231,85 @@ function visitSummaryAsText(summary) {
   return lines.join('\n');
 }
 
+/* 摘要 → 一份自成一體的 A4 HTML，餵給原生外掛轉 PDF。
+   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的 modal，直接印會拿到
+   App 的殼＋被裁掉的捲動內容。這份只有摘要本身，版面完全可控、每一份長一樣。
+   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS 根本不會被載到。 */
+function visitSummaryAsHTML(summary) {
+  const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
+  const rows = [];
+  rows.push('<h1>就診摘要</h1>');
+  rows.push('<p class="sub">' + (summary ? ('涵蓋 ' + rptEsc(summary.from) + ' – ' + rptEsc(summary.to)) : '') + '</p>');
+
+  if (qs.length) {
+    rows.push('<h2>這次想問醫生</h2><ol>');
+    qs.forEach(q => rows.push('<li>' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
+    rows.push('</ol>');
+  }
+  if (summary && summary.timeline && summary.timeline.length) {
+    rows.push('<h2>這段期間發生的事</h2><table>');
+    summary.timeline.forEach(e => {
+      rows.push('<tr><td class="d">' + rptEsc(rptShortDate(e.date)) + '</td>'
+        + '<td class="m">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</td>'
+        + '<td>' + rptEsc(e.text) + (e.detail ? '<span class="sm">（' + rptEsc(e.detail) + '）</span>' : '') + '</td></tr>');
+    });
+    rows.push('</table><p class="sm">● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄</p>');
+    if (summary.timelineOmitted > 0) rows.push('<p class="sm">另有 ' + summary.timelineOmitted + ' 筆較早的紀錄沒有列出來。</p>');
+  }
+  if (summary && summary.vitals && summary.vitals.length) {
+    rows.push('<h2>在家量的</h2><ul>');
+    summary.vitals.forEach(v => rows.push('<li>' + rptEsc(v) + '</li>'));
+    rows.push('</ul><p class="sm">' + rptEsc(summary.baselineNote || '') + '</p>');
+  }
+  if (summary && summary.medication && summary.medication.length) {
+    rows.push('<h2>藥實際吃了沒</h2><table>');
+    summary.medication.forEach(m => {
+      rows.push('<tr><td>' + rptEsc(m.name) + '</td><td>排 ' + m.scheduled + ' 次 · 吃了 ' + m.taken + ' 次'
+        + (m.missed ? '　其中 ' + m.missed + ' 次沒吃' : '') + '</td></tr>');
+    });
+    rows.push('</table>');
+  }
+  if (summary && summary.partial && summary.partial.length) {
+    const label = { vitals: '在家量測', medication: '用藥紀錄', symptoms: '聊天中提到的狀況' };
+    rows.push('<p class="sm">' + rptEsc(summary.partial.map(k => label[k] || k).join('、')) + '這次沒有讀到，這一頁不是完整的。</p>');
+  }
+  rows.push('<p class="foot">沐寧整理 · 家屬提供的紀錄，非醫療診斷</p>');
+
+  return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+    + '<style>'
+    + '@page{size:A4;margin:14mm}'
+    + 'body{font-family:-apple-system,"PingFang TC","Heiti TC",sans-serif;color:#1a1a1a;font-size:12pt;line-height:1.6;margin:0}'
+    + 'h1{font-size:20pt;margin:0 0 2pt}'
+    + 'h2{font-size:12pt;margin:16pt 0 4pt;padding-bottom:2pt;border-bottom:1px solid #ccc}'
+    + '.sub{color:#555;margin:0 0 6pt;font-size:10.5pt}'
+    + 'ol,ul{margin:0;padding-left:18pt}li{margin:2pt 0}'
+    + 'table{width:100%;border-collapse:collapse}'
+    + 'td{padding:3pt 0;vertical-align:top;border-bottom:1px solid #eee}'
+    + 'td.d{width:42pt;color:#555;white-space:nowrap}td.m{width:16pt;text-align:center}'
+    + '.sm{font-size:9.5pt;color:#666;margin:4pt 0 0}'
+    + '.foot{margin-top:18pt;padding-top:6pt;border-top:1px solid #ccc;font-size:9pt;color:#666;text-align:center}'
+    + '</style></head><body>' + rows.join('') + '</body></html>';
+}
+
+/* 原生匯出外掛（ios/App/App/ExportPlugin.swift）。沒有就回 null，呼叫端自己退回文字分享。 */
+function muneaExportPlugin() {
+  return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Export) || null;
+}
+async function exportVisitSummaryPdf(summary) {
+  const plugin = muneaExportPlugin();
+  if (!plugin || typeof plugin.sharePdf !== 'function') return { ok: false, error: 'plugin_unavailable' };
+  try {
+    const stamp = summary && summary.to ? String(summary.to) : '';
+    const r = await plugin.sharePdf({
+      html: visitSummaryAsHTML(summary),
+      filename: '就診摘要' + (stamp ? '-' + stamp : ''),
+    });
+    return { ok: true, completed: !!(r && r.completed) };
+  } catch (e) {
+    return { ok: false, error: (e && (e.code || e.message)) || 'export_failed' };
+  }
+}
+
 async function aiAddMedReminder(a) {
   const rawName = String((a && a.name) || '').trim();
   const name = (rawName && muneaIsCleanZhText(rawName)) ? rawName : '';   // 藥名不乾淨寧可拒收、讓 AI 再問一次，不存假名字（Edward 2026-07-15 事故）
@@ -6971,19 +7050,28 @@ function init() {
       if (!window.confirm('這一頁有你的健康紀錄，傳出去之後就收不回來了。要繼續嗎？')) return;
       try { localStorage.setItem('munea.visitSummary.shareWarned', '1'); } catch (e) {}
     }
-    // ⚠ 已查證：**window.print() 在 iOS 的 WKWebView 完全無效**（同一顆按鈕在 Safari 可以、
-    // 在 App 殼裡按了沒反應）。所以打包後的 App 一律不提供這個選項——
-    // 一顆按了沒事的按鈕比沒有更糟，長輩會以為自己按錯。
-    // 正解是原生外掛 WKWebView.createPDF()＋UIActivityViewController，尚未實作（見協作看板）。
-    const canPrint = !isPackagedApp();
-    const menu = canPrint
-      ? '要怎麼匯出？\n1 = 存成 PDF（用瀏覽器列印）\n2 = 傳給家人\n3 = 複製文字'
-      : '要怎麼匯出？\n2 = 傳給家人\n3 = 複製文字\n（存成 PDF 還在做，先用傳送或複製）';
-    const choice = window.prompt(menu, canPrint ? '1' : '2');
+    // PDF 有兩條路，可用的那條才會出現在選單裡：
+    //   · App 內 → 原生外掛（ExportPlugin.swift，WKWebView.createPDF＋系統分享面板）
+    //   · 瀏覽器 → window.print()
+    // **window.print() 在 iOS 的 WKWebView 完全無效**（同一顆按鈕在 Safari 可以、在 App 殼裡
+    // 按了沒反應），所以 App 內絕不能走那條——一顆按了沒事的按鈕比沒有更糟，
+    // 長輩會以為是自己按錯。兩條都沒有時，選單就不列 PDF，不給他一個假選項。
+    const hasNativePdf = !!(muneaExportPlugin() && typeof muneaExportPlugin().sharePdf === 'function');
+    const canPdf = hasNativePdf || !isPackagedApp();
+    const menu = canPdf
+      ? '要怎麼匯出？\n1 = 存成 PDF\n2 = 傳給家人\n3 = 複製文字'
+      : '要怎麼匯出？\n2 = 傳給家人\n3 = 複製文字';
+    const choice = window.prompt(menu, canPdf ? '1' : '2');
     if (choice === null) return;
-    try { trackProductEvent('visit_summary_exported', { how: String(choice), periodDays: _rptPeriod, packaged: isPackagedApp() }); } catch (e) {}
+    try { trackProductEvent('visit_summary_exported', { how: String(choice), periodDays: _rptPeriod, pdfPath: hasNativePdf ? 'native' : (isPackagedApp() ? 'none' : 'print') }); } catch (e) {}
     if (String(choice).trim() === '1') {
-      if (!canPrint) { toast('這台裝置還不能存 PDF，可以改用「傳給家人」'); return; }
+      if (hasNativePdf) {
+        exportVisitSummaryPdf(_rptLastSummary).then(r => {
+          if (!r.ok) toast('PDF 這次沒做出來，可以改用「傳給家人」');
+        });
+        return;
+      }
+      if (isPackagedApp()) { toast('這台裝置還不能存 PDF，可以改用「傳給家人」'); return; }
       try { window.print(); } catch (e) { toast('這台裝置印不出來，可以改用「傳給家人」'); }
       return;
     }
