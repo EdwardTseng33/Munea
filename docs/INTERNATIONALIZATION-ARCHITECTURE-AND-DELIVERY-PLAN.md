@@ -151,7 +151,7 @@ Phase 1e（2026-07-28）：App 全畫面狀態契約
 
 Phase 1f（2026-07-28）：全畫面遷移工作表與排版壓力測試
 
-- `scripts/i18n-migration-worklist.js` 從正式 shipping surface 即時計算穩定 worklist；目前 App WebView 有 1,727 個繁中文案出現位置、1,211 個唯一來源字串，不再用「catalog 已有 111 keys」誤稱全畫面完成。
+- `scripts/i18n-migration-worklist.js` 從正式 shipping surface 即時計算穩定 worklist；目前 App WebView 有 1,688 個繁中文案出現位置、1,122 個唯一來源字串，其中 1,568 個出現位置仍未綁定，不再用「catalog 已有 483 keys」誤稱全畫面完成。
 - 每筆工作項目保留檔案、行號、來源型態與穩定 hash key，並區分 static text、attribute、runtime/interpolated copy 與必須先拆 HTML 的 markup refactor。
 - `scripts/i18n-pseudo-catalog.js` 產生保留 placeholder 的 35% 擴張壓力文案；主畫面接線後，必須先用 pseudo locale 跑完窄螢幕與 Dynamic Type，再進入四語正式截圖。
 - 這兩個工具只讀來源並在測試記憶體內產生資料，不改 shipping catalog、不切 runtime locale，也不影響正式服務。
@@ -180,8 +180,8 @@ Phase 1i（2026-07-28）：iOS permission localization parity
 
 Phase 1j（2026-07-28）：38 個 shipping states 的完整四語文案契約
 
-- 四個 App catalog 已擴充到 468 個一致 key，補齊連接裝置、問答、家庭活動、興趣、安全、陪伴角色、報告、家庭圈、邀請／加入、預約、歷史、同意、版本、用藥管理、通知設定／收件匣、文字聊天，以及排隊、授權、內購、方案、照護輪播等動態 renderer 文案。
-- `web/src/i18n/app-surface-copy-manifest.json` 將 38 個 shipping states 逐一綁定文案群組與高風險必要 key；測試要求 38 個 state 與畫面盤點完全一致，且 468 個 key 全部至少歸屬一個實際畫面。
+- 四個 App catalog 已擴充到 483 個一致 key，補齊首頁問候與任務、連接裝置、問答、家庭活動、興趣、安全、陪伴角色、報告、家庭圈、邀請／加入、預約、歷史、同意、版本、用藥管理、通知設定／收件匣、文字聊天，以及排隊、授權、內購、方案、照護輪播等動態 renderer 文案。
+- `web/src/i18n/app-surface-copy-manifest.json` 將 38 個 shipping states 逐一綁定文案群組與高風險必要 key；測試要求 38 個 state 與畫面盤點完全一致，且 483 個 key 全部至少歸屬一個實際畫面。
 - 安全、同意、健康連接與用藥畫面採不依語言推定國家的通用緊急／醫療聲明；所在地緊急號碼仍只能由後端核定的 `safetyRegion` 決定。
 - `catalogCoverage` 發布 Gate 現在同時要求母語審稿核准與完整畫面文案 mapping，避免只審核心畫面就誤開語系。
 - 這一批是 catalog + contract + automated tests，尚未修改被 #247／#270／#273 佔用的主 App 檔案；全畫面接線、456 張截圖與 exact-build iPhone 驗收前仍為 `App E2E pending`。
@@ -308,7 +308,7 @@ Phase 5a（2026-07-28）將發布判定改為證據驅動：
 - `visual-qa.json` 必須覆蓋上述 38 states，且每個畫面都要有小螢幕、標準螢幕、放大字體三份獨立 PNG；每語系 114 張、四語共 456 張，重複路徑或缺任一 profile 都不通過。
 - `exactBuildEvidenceChain` 再確認視覺、語音、安裝版與 8 商品購買證據來自同一 commit／version／build／IPA SHA-256／IPA bytes；compiler 必須重新雜湊同一個實體 IPA，四份證據都必須帶 binary identity，服務 revisions 不一致時也不得混用證據。
 - iOS archive 會在本機候選 App bundle 內嵌 `public/src/build-identity.json`；實機驗收必須從已安裝 App 讀回 Bundle ID、commit、version、build，並與候選 IPA 的 identity 完全一致。
-- `sourceCopyMigration` 直接執行 shipping App WebView 掃描；只要 `index.html`、`app.js` 或動態模組仍有硬編碼繁中文案，就算 manifest 被手動改成 integrated 也不能開 runtime／binary。現況 1,727 個候選因此會正確保持 Gate 關閉，直到主畫面 PR 合併後逐項遷移歸零。
+- `sourceCopyMigration` 直接執行 shipping App WebView 掃描；只要 `index.html`、`app.js` 或動態模組仍有硬編碼繁中文案，就算 manifest 被手動改成 integrated 也不能開 runtime／binary。現況 1,688 個候選因此會正確保持 Gate 關閉，直到主畫面 PR 合併後逐項遷移歸零。
 
 Phase 5b（2026-07-28）：App Store 五張圖故事板
 

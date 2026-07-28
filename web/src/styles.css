@@ -124,8 +124,9 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .task-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; color: transparent; transition: .2s; }
 .task-item.done .task-check { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.05); }
 .task-item.done .task-title { color: var(--muted); text-decoration: line-through; }
-.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral); }
+.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
 .task-time.coral { color: var(--coral); }
+html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 
 .fam-peek { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); margin-top: 14px; }
 .fam-peek .fp-avatar { width: 46px; height: 46px; border-radius: 50%; background: #F2D9C0; flex-shrink: 0; }
@@ -1612,7 +1613,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .care-ico.coral { background: var(--coral); color: #fff; }
 .care-ico.gold { background: #C79A3B; color: #fff; }
 .care-txt { min-width: 0; }
-.care-txt p { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.care-txt p { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .care-txt small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; line-height: 1.45; color: var(--muted); margin-top: 3px; white-space: normal; overflow: hidden; }
 
 /* ===== 家庭版緊湊刻度 v2 ＋ 對比補強（Edward 7/3） ===== */

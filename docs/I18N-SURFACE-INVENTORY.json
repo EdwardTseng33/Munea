@@ -40,7 +40,7 @@
         "error-and-empty-states"
       ],
       "releaseGate": "App UI coverage and visual QA",
-      "baselineHanCandidates": 1725
+      "baselineHanCandidates": 1688
     },
     {
       "id": "legal-and-support",
