@@ -132,6 +132,78 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(context["countryCode"], "JP")
         self.assertEqual(context["timeZone"], "Asia/Tokyo")
 
+    def test_app_preferences_preserve_trusted_market_and_policy_fields(self):
+        account = {
+            "locale": "zh-TW",
+            "preferred_languages": ["zh-TW"],
+        }
+        person = {
+            "locale": "zh-TW",
+            "timezone": "Asia/Taipei",
+            "region_code": "JP",
+            "attributes": {
+                "localeContext": {
+                    "units": "metric",
+                    "currency": "JPY",
+                    "safetyRegion": "JP",
+                    "legalRegion": "JP",
+                    "dataRegion": "jp-primary",
+                },
+            },
+        }
+
+        context = localization.locale_context_from_app_preferences(
+            {
+                "locale": "en-US",
+                "conversationLocale": "es-MX",
+                "preferredLanguages": ["en-US", "es-MX"],
+                "timezone": "America/Los_Angeles",
+            },
+            account,
+            person,
+        )
+
+        self.assertEqual(context["uiLocale"], "en")
+        self.assertEqual(context["conversationLocale"], "es")
+        self.assertEqual(context["preferredLanguages"], ["es", "en"])
+        self.assertEqual(context["timeZone"], "America/Los_Angeles")
+        self.assertEqual(context["countryCode"], "JP")
+        self.assertEqual(context["currency"], "JPY")
+        self.assertEqual(context["safetyRegion"], "JP")
+        self.assertEqual(context["legalRegion"], "JP")
+        self.assertEqual(context["dataRegion"], "jp-primary")
+
+    def test_app_preferences_reject_policy_override_attempts(self):
+        attempts = (
+            {"countryCode": "US"},
+            {"safety_region": "US"},
+            {"localeContext": {"legalRegion": "US"}},
+            {"locale_context": {"dataRegion": "us-primary"}},
+            {"localeContext": {"currency": "USD"}},
+            {"localeContext": {"units": "us"}},
+        )
+        for request in attempts:
+            with self.subTest(request=request), self.assertRaisesRegex(
+                ValueError,
+                "cannot change server policy fields",
+            ):
+                localization.locale_context_from_app_preferences(request)
+
+    def test_app_preferences_reject_unknown_nested_fields(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unsupported App locale preference fields",
+        ):
+            localization.locale_context_from_app_preferences({
+                "localeContext": {"version": 1, "uiLocale": "ja"},
+            })
+
+    def test_app_preferences_require_a_mapping_locale_context(self):
+        with self.assertRaises(TypeError):
+            localization.locale_context_from_app_preferences({
+                "localeContext": ["en"],
+            })
+
     def test_mixed_language_turn_does_not_mutate_saved_or_session_language(self):
         state = localization.new_conversation_locale_state({
             "uiLocale": "ja",

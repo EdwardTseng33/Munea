@@ -1,11 +1,15 @@
 {
   "schema": "munea.voice-locale-integration.v1",
   "bridgeStatus": "integrated",
+  "appRequestPolicyStatus": "integrated",
+  "appRequestPolicyWiringStatus": "pending-pr-270",
   "liveVoiceServerStatus": "pending-pr-270",
   "gatewayResolverStatus": "integrated",
   "gatewayClaimsStatus": "pending-pr-258",
   "legacyTokenMode": "compatibility",
   "requiredBeforeRelease": {
+    "appRequestPolicyStatus": "integrated",
+    "appRequestPolicyWiringStatus": "integrated",
     "liveVoiceServerStatus": "integrated",
     "gatewayResolverStatus": "integrated",
     "gatewayClaimsStatus": "integrated",

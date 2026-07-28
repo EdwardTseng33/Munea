@@ -8,6 +8,20 @@ from opencc import OpenCC
 SUPPORTED_LOCALES = ("zh-TW", "en", "ja", "es")
 DEFAULT_LOCALE = "zh-TW"
 LOCALE_CONTEXT_VERSION = 1
+APP_MUTABLE_LOCALE_FIELDS = (
+    "uiLocale",
+    "conversationLocale",
+    "preferredLanguages",
+    "timeZone",
+)
+SERVER_POLICY_LOCALE_FIELDS = (
+    "countryCode",
+    "units",
+    "currency",
+    "safetyRegion",
+    "legalRegion",
+    "dataRegion",
+)
 DEFAULT_LOCALE_CONTEXT = {
     "version": LOCALE_CONTEXT_VERSION,
     "uiLocale": DEFAULT_LOCALE,
@@ -282,6 +296,63 @@ def locale_context_from_request(data=None, account=None, person=None):
         "dataRegion": data.get("dataRegion") or data.get("data_region"),
     }
     requested.update({key: value for key, value in aliases.items() if value is not None})
+    return locale_context_from_account(account, person, requested)
+
+
+def locale_context_from_app_preferences(data=None, account=None, person=None):
+    """Apply untrusted App language preferences without changing policy regions.
+
+    The App may report the iOS language list and device time zone. It may not
+    decide country, currency, units, safety/legal policy, or data residency.
+    Those fields must already come from verified account/person storage or a
+    separate server-side market policy resolver.
+    """
+    data = data if isinstance(data, Mapping) else {}
+    requested = data.get("localeContext") or data.get("locale_context") or {}
+    if not isinstance(requested, Mapping):
+        raise TypeError("localeContext App preference value must be a mapping")
+    requested = dict(requested)
+
+    aliases = {
+        "uiLocale": data.get("uiLocale") or data.get("ui_locale") or data.get("locale"),
+        "conversationLocale": (
+            data.get("conversationLocale")
+            or data.get("conversation_locale")
+        ),
+        "preferredLanguages": (
+            data.get("preferredLanguages")
+            or data.get("preferred_languages")
+        ),
+        "timeZone": data.get("timeZone") or data.get("time_zone") or data.get("timezone"),
+    }
+    requested.update({key: value for key, value in aliases.items() if value is not None})
+
+    protected_aliases = {
+        "countryCode": ("countryCode", "country_code"),
+        "units": ("units",),
+        "currency": ("currency",),
+        "safetyRegion": ("safetyRegion", "safety_region"),
+        "legalRegion": ("legalRegion", "legal_region"),
+        "dataRegion": ("dataRegion", "data_region"),
+    }
+    protected = []
+    for field, field_aliases in protected_aliases.items():
+        if field in requested or any(
+            alias in data or alias in requested
+            for alias in field_aliases
+        ):
+            protected.append(field)
+    if protected:
+        raise ValueError(
+            "App preferences cannot change server policy fields: "
+            + ", ".join(sorted(protected))
+        )
+
+    unknown = sorted(set(requested) - set(APP_MUTABLE_LOCALE_FIELDS))
+    if unknown:
+        raise ValueError(
+            "Unsupported App locale preference fields: " + ", ".join(unknown)
+        )
     return locale_context_from_account(account, person, requested)
 
 

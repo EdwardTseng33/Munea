@@ -439,6 +439,8 @@ function buildReadiness() {
       ),
       voiceIntegration: check(
         voiceIntegrationManifest.bridgeStatus === 'integrated'
+          && voiceIntegrationManifest.appRequestPolicyStatus === 'integrated'
+          && voiceIntegrationManifest.appRequestPolicyWiringStatus === 'integrated'
           && voiceIntegrationManifest.liveVoiceServerStatus === 'integrated'
           && voiceIntegrationManifest.gatewayResolverStatus === 'integrated'
           && voiceIntegrationManifest.gatewayClaimsStatus === 'integrated'
