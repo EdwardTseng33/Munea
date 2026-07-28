@@ -2248,16 +2248,41 @@ def push_devices_response(data):
 
 
 def enqueue_notification_event(item, recipient_person_id=None, actor_person_id=None):
+    item = item or {}
     raw_event_type = str((item or {}).get("eventType") or (item or {}).get("event_type") or "").strip()
     if raw_event_type not in notification_service.EVENT_TYPES:
         return None, "notification_event_type_invalid"
+    backend = data_backend()
+    recipient_id = (
+        recipient_person_id
+        or item.get("recipientPersonId")
+        or item.get("recipient_person_id")
+    )
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    requested_locale = item.get("locale") or metadata.get("locale")
+    devices = None
+    if backend.enabled():
+        locale_loader = getattr(backend, "notification_locale_for_person", None)
+        resolved_locale = (
+            locale_loader(recipient_id, requested_locale=requested_locale)
+            if callable(locale_loader)
+            else notification_service.notification_locale(requested_locale)
+        )
+    else:
+        devices = read_json_file(PUSH_DEVICES_PATH, [])
+        resolved_locale = notification_service.preferred_device_locale(
+            devices if isinstance(devices, list) else [],
+            recipient_id,
+            requested_locale,
+        )
     event = notification_service.normalize_event(
-        item, recipient_person_id=recipient_person_id, actor_person_id=actor_person_id
+        {**item, "locale": resolved_locale},
+        recipient_person_id=recipient_person_id,
+        actor_person_id=actor_person_id,
     )
     error = notification_service.validate_event(event)
     if error:
         return None, error
-    backend = data_backend()
     if backend.enabled():
         saved = backend.enqueue_notification_event(event)
         return notification_service.normalize_event(saved), "supabase"
@@ -2273,7 +2298,7 @@ def enqueue_notification_event(item, recipient_person_id=None, actor_person_id=N
     events.append(event)
     write_json_file(NOTIFICATION_EVENTS_PATH, events[-10000:])
 
-    devices = read_json_file(PUSH_DEVICES_PATH, [])
+    devices = devices if isinstance(devices, list) else []
     deliveries = read_json_file(NOTIFICATION_DELIVERIES_PATH, [])
     deliveries = deliveries if isinstance(deliveries, list) else []
     # 通知中心設定：收件人關掉的類別只寫事件、不建推播投遞
@@ -3528,15 +3553,15 @@ def family_relays_response(data):
             "familyGroupId": relay.get("familyGroupId"),
             "resourceType": "family_relay_message",
             "resourceId": relay.get("id"),
-            "title": f"{relay.get('senderLabel') or '家人'}捎來一則話",
             "body": relay.get("content"),
-            "publicTitle": "沐寧提醒",
-            "publicBody": "家人捎來一則訊息，解鎖後收聽。",
             "sensitivity": "private",
             "deepLink": f"munea://relay/{relay.get('id')}",
             "dedupeKey": f"family-relay:{relay.get('id')}",
             "expiresAt": relay.get("expiresAt"),
-            "metadata": {"source": relay.get("source")},
+            "metadata": {
+                "source": relay.get("source"),
+                "senderLabel": relay.get("senderLabel"),
+            },
         })
         return {
             "ok": True, "relay": relay, "backend": "json",

@@ -145,6 +145,12 @@ Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 - 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。
 - 帳號 bootstrap、JSON fallback、Supabase 新增／更新與營運帳號摘要都回傳同一份 `localeContext`；現有台灣帳號保持原行為。
 - 本批碰 Auth／account bootstrap，屬 call-path risk；只有單元與 smoke precheck，仍為 `App E2E pending`，未部署。
+
+Phase 2b（2026-07-28）將收件人的 App 語言接入通知：
+
+- JSON 與 Supabase 通知先取最新有效 iOS 裝置的 UI locale，再回退帳號 UI locale；不使用陪伴聊天語言，也不由語言推測國家。
+- 四語 generic、家庭轉達與家庭邀請的鎖定畫面文案由後端產生，健康敏感內容仍固定隱藏；通知 metadata 留下 locale 供 APNs fallback 使用。
+- 新增 `027_localized_notification_copy.sql`，目前只在隔離分支接受靜態與測試驗證，尚未套用任何正式資料庫。
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。
 - missing-key telemetry 只記錄 key 與 locale，去重後回退繁中；不記翻譯內容、畫面文字或任何使用者輸入。
 - runtime 目前是純模組並已進 UI contract tests；等 #247/#270 合併後，才接到 `web/src/i18n.js` 與正式 DOM。

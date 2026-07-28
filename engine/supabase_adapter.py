@@ -16,6 +16,7 @@ import urllib.parse
 import urllib.request
 
 import localization
+import notification_service
 
 
 UUID_RE = re.compile(
@@ -2976,6 +2977,35 @@ class SupabaseAdapter:
             return self.notification_event_row_to_event(rows)
         return self.notification_event_row_to_event(rows[0]) if rows else None
 
+    def notification_locale_for_person(self, person_id, requested_locale=None):
+        if requested_locale:
+            return notification_service.notification_locale(requested_locale)
+        if not self.enabled() or not self._is_uuid(person_id or ""):
+            return notification_service.notification_locale()
+        device = self._first("push_devices", {
+            "person_id": f"eq.{person_id}",
+            "notifications_enabled": "eq.true",
+            "invalidated_at": "is.null",
+            "select": "locale,last_seen_at",
+            "order": "last_seen_at.desc",
+            "limit": "1",
+        })
+        if device and device.get("locale"):
+            return notification_service.notification_locale(device.get("locale"))
+        person = self._first("persons", {
+            "id": f"eq.{person_id}",
+            "select": "account_id,locale",
+        })
+        account = None
+        if person and person.get("account_id"):
+            account = self._first("accounts", {
+                "id": f"eq.{person.get('account_id')}",
+                "select": "locale",
+            })
+        return notification_service.notification_locale(
+            (account or {}).get("locale") or (person or {}).get("locale")
+        )
+
     def load_notification_events(self, unread_only=False, include_archived=False, event_type=None, limit=100):
         if not self.enabled() or not self.request_scoped:
             return None
@@ -3429,13 +3459,15 @@ class SupabaseAdapter:
     @staticmethod
     def notification_event_to_rpc(event):
         event = event or {}
+        metadata = event.get("metadata") if isinstance(event.get("metadata"), dict) else {}
+        copy = notification_service.generic_copy(metadata.get("locale"))
         return {
             "p_recipient_person_id": event.get("recipientPersonId") or event.get("recipient_person_id"),
             "p_event_type": event.get("eventType") or event.get("event_type"),
             "p_title": event.get("title"),
             "p_body": event.get("body"),
-            "p_public_title": event.get("publicTitle") or event.get("public_title") or "沐寧提醒",
-            "p_public_body": event.get("publicBody") or event.get("public_body") or "你的健康提醒到了，解鎖後查看。",
+            "p_public_title": event.get("publicTitle") or event.get("public_title") or copy["title"],
+            "p_public_body": event.get("publicBody") or event.get("public_body") or copy["body"],
             "p_sensitivity": event.get("sensitivity") or "private",
             "p_deep_link": event.get("deepLink") or event.get("deep_link") or "munea://notifications",
             "p_actor_person_id": event.get("actorPersonId") or event.get("actor_person_id"),
@@ -3443,13 +3475,15 @@ class SupabaseAdapter:
             "p_resource_type": event.get("resourceType") or event.get("resource_type"),
             "p_resource_id": event.get("resourceId") or event.get("resource_id"),
             "p_dedupe_key": event.get("dedupeKey") or event.get("dedupe_key") or None,
-            "p_metadata": event.get("metadata") if isinstance(event.get("metadata"), dict) else {},
+            "p_metadata": metadata,
             "p_expires_at": event.get("expiresAt") or event.get("expires_at"),
         }
 
     @staticmethod
     def notification_event_row_to_event(row):
         row = row or {}
+        metadata = row.get("metadata") or {}
+        copy = notification_service.generic_copy(metadata.get("locale"))
         return {
             "id": row.get("id"),
             "accountId": row.get("account_id"),
@@ -3459,14 +3493,14 @@ class SupabaseAdapter:
             "eventType": row.get("event_type"),
             "resourceType": row.get("resource_type"),
             "resourceId": row.get("resource_id"),
-            "title": row.get("title") or "沐寧提醒",
+            "title": row.get("title") or copy["title"],
             "body": row.get("body") or "",
-            "publicTitle": row.get("public_title") or "沐寧提醒",
-            "publicBody": row.get("public_body") or "你的健康提醒到了，解鎖後查看。",
+            "publicTitle": row.get("public_title") or copy["title"],
+            "publicBody": row.get("public_body") or copy["body"],
             "sensitivity": row.get("sensitivity") or "private",
             "deepLink": row.get("deep_link") or "munea://notifications",
             "dedupeKey": row.get("dedupe_key"),
-            "metadata": row.get("metadata") or {},
+            "metadata": metadata,
             "expiresAt": row.get("expires_at"),
             "readAt": row.get("read_at"),
             "archivedAt": row.get("archived_at"),
