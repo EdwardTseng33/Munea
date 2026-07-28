@@ -191,6 +191,15 @@ def test_native_search_instructions_do_not_contradict():
               "Voice 伺服器會先替你播放" not in inst)
         check("改成叫她自己講那句過場話", "先用一句很短的話告訴他你在查" in inst)
         check("只能用講的：不准唸網址", "不要唸網址" in inst)
+        check("不准把搜尋動作唸出來（7/28 真機 1/5 機率洩漏）",
+              "不要把自己正在做的動作講出來" in inst)
+        # 7/28 考卷 S18：說明書用「我看一下喔」當過場話例句，她把「看」泛化成視覺能力，
+        # 冒出「把藥袋拿來讓我幫您看看」——一句踩兩條鐵律。例句改掉＋補釘「查≠看得見」後 PASS。
+        check("過場話例句不含『看』（免得被當成看得見）",
+              "「我看一下喔」" not in inst)
+        check("釘明查東西是上網查、不是用眼睛看",
+              "不是「用眼睛看」" in inst)
+        check("不准叫他把東西拿來給你看", "拿來給你看" in inst)
     finally:
         os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
         importlib.reload(lv)
