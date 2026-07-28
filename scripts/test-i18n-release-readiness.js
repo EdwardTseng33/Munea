@@ -21,6 +21,7 @@ const requiredLocales = ['zh-TW', 'en', 'ja', 'es'];
 const requiredGates = [
   'catalogCoverage',
   'appUiIntegration',
+  'sourceCopyMigration',
   'runtimeLocalization',
   'binaryLocalization',
   'nativeLanguageReview',
@@ -58,6 +59,15 @@ for (const locale of requiredLocales) {
     entry.gates.appUiIntegration.evidence,
     'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
     `${locale} App integration gate must include the complete shipping surface manifest`,
+  );
+  assert(
+    entry.blockers.some(({ gate }) => gate === 'sourceCopyMigration'),
+    `${locale} must remain blocked while hard-coded App WebView copy exists`,
+  );
+  assert.equal(
+    entry.gates.sourceCopyMigration.evidence,
+    'docs/I18N-SURFACE-INVENTORY.json + scripts/i18n-surface-inventory.js',
+    `${locale} source-copy gate must use the shipping surface scanner`,
   );
   assert(
     entry.blockers.some(({ gate }) => gate === 'nativeLanguageReview'),
@@ -104,6 +114,7 @@ for (const locale of ['en', 'ja', 'es']) {
   const entry = report.locales[locale];
   assert.equal(entry.gates.runtimeLocalization.passed, false);
   assert.equal(entry.gates.appUiIntegration.passed, false);
+  assert.equal(entry.gates.sourceCopyMigration.passed, false);
   assert.equal(entry.gates.binaryLocalization.passed, false);
   assert.equal(entry.gates.appStoreScreenshots.passed, false);
   assert.equal(entry.gates.inAppPurchaseLocalization.passed, false);

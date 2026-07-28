@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { buildReport: buildSurfaceReport } = require('./i18n-surface-inventory.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const I18N_DIR = path.join(ROOT, 'web', 'src', 'i18n');
@@ -338,6 +339,9 @@ function buildReadiness() {
   const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
+  const surfaceReport = buildSurfaceReport();
+  const appWebViewSurface = surfaceReport.surfaces.find(({ id }) => id === 'app-webview');
+  if (!appWebViewSurface) throw new Error('i18n app-webview surface inventory is missing');
   const requiredVisualStates = surfaceManifest.surfaces.map(({ state }) => state);
   const catalogEntries = new Map(
     catalogManifest.locales.map((entry) => [entry.locale, entry]),
@@ -401,6 +405,11 @@ function buildReadiness() {
           )),
         'all shipping App surfaces, dynamic renderers, and markup refactors must be wired to catalog keys',
         'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
+      ),
+      sourceCopyMigration: check(
+        appWebViewSurface.hanCandidates === 0,
+        'all hard-coded App WebView copy must be moved into catalogs before release',
+        'docs/I18N-SURFACE-INVENTORY.json + scripts/i18n-surface-inventory.js',
       ),
       runtimeLocalization: check(
         catalog.runtimeEnabled === true,
@@ -511,6 +520,7 @@ function buildReadiness() {
       'web/src/i18n/app-binding-manifest.json',
       'web/src/i18n/app-surface-manifest.json',
       'web/src/i18n/app-surface-copy-manifest.json',
+      'docs/I18N-SURFACE-INVENTORY.json',
       'web/legal/manifest.json',
       'app-store/localizations/manifest.json',
       'app-store/in-app-purchases/manifest.json',
