@@ -79,6 +79,31 @@ python scripts\member_data_isolation_probe.py `
 
 完成後用 `node scripts/i18n-native-review-evidence.js --input <工作檔>.json --output docs/qa/i18n/ja/native-review.json` 編譯證據。只要少一個 key、少一項檢查、catalog bytes 改變、placeholder 或翻譯被工作檔竄改，compiler 都會拒絕建立 PASS。compiler 不會自行把 `review-manifest.json` 改成 approved。
 
+## app-store-native-review.json
+
+App Store 主頁文案、五張商店截圖文案與八個內購項目必須由母語審稿者一起驗收，不能只把 manifest 狀態改成 `approved`。每個上架目標固定包含 32 筆人工檢查：
+
+- App Store 主頁文案 6 筆
+- 五張截圖的標題與說明共 10 筆
+- 八個內購項目的名稱與說明共 16 筆
+
+執行 `node scripts/app-store-native-review-worklist.js --locale en > <工作檔>.json` 可產生單一目標的工作檔。可用目標為 `zh-TW`、`en`、`ja`、`es-ES`、`es-MX`；西班牙文必須選擇實際市場變體，不能用未定市場的 `es` 代替。
+
+審稿者需逐筆將 `result` 設為 `pass`，並將六項 `checks` 全部設為布林值 `true`。工作檔根節點另需填入：
+
+```json
+{
+  "review": {
+    "exactCommit": "<40 字元 commit>",
+    "reviewedAt": "<ISO 8601>",
+    "reviewerReference": "<不含個資的內部審稿編號>",
+    "reviewerRole": "native-language-store-reviewer"
+  }
+}
+```
+
+完成後執行 `node scripts/app-store-native-review-evidence.js --input <工作檔>.json --output docs/qa/i18n/en/app-store-native-review.json`。證據會綁定 App Store 地區路由、該語系完整 metadata、截圖尺寸／順序／文案、八個 IAP 商品事實與該語系完整 IAP copy 的 SHA-256；文案、商品事實或地區規則改動後，舊證據會自動失效，單純把人工審核狀態從 `draft` 改成 `approved` 不會要求重審文案。西班牙市場證據分別放在 `docs/qa/i18n/es-ES/` 或 `docs/qa/i18n/es-MX/`。
+
 ## visual-qa.json
 
 必要欄位：

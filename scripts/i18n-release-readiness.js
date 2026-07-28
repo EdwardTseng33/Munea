@@ -8,6 +8,9 @@ const {
   pngDimensions,
   profileDimensionsMatch,
 } = require('./i18n-visual-qa-evidence.js');
+const {
+  validateAppStoreNativeReviewEvidence,
+} = require('./app-store-native-review-evidence.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const I18N_DIR = path.join(ROOT, 'web', 'src', 'i18n');
@@ -581,6 +584,11 @@ function buildReadiness() {
         key: variantKey,
         store: store.marketVariants && store.marketVariants[variantKey],
         iap: iapLocale.marketVariants && iapLocale.marketVariants[variantKey],
+        nativeReviewEvidence: evidenceResult(
+          variantKey,
+          'app-store-native-review.json',
+          (evidence) => validateAppStoreNativeReviewEvidence(evidence, variantKey),
+        ),
         legal: legal.regionalVariants
           && legal.regionalVariants[
             store.marketVariants
@@ -631,6 +639,28 @@ function buildReadiness() {
       ? spanishSelectionValid
         && selectedStoreVariants.every(({ iap }) => iap.metadataReview === 'approved')
       : iapLocale.metadataReview === 'approved';
+    const storeNativeReviewEvidence = locale === 'es'
+      ? null
+      : evidenceResult(
+        locale,
+        'app-store-native-review.json',
+        (evidence) => validateAppStoreNativeReviewEvidence(evidence, locale),
+      );
+    const storeNativeReviewPassed = locale === 'es'
+      ? spanishSelectionValid
+        && selectedStoreVariants.every(({ nativeReviewEvidence }) => (
+          nativeReviewEvidence.passed
+        ))
+      : storeNativeReviewEvidence.passed;
+    const storeNativeReviewEvidencePath = locale === 'es'
+      ? (
+        selectedStoreVariants.length > 0
+          ? selectedStoreVariants
+            .map(({ nativeReviewEvidence }) => nativeReviewEvidence.path)
+            .join(' + ')
+          : 'docs/qa/i18n/<selected-es-variant>/app-store-native-review.json'
+      )
+      : storeNativeReviewEvidence.path;
     const promotionAuthorized = locale === 'es'
       ? spanishSelectionValid
         && selectedStoreVariants.every(({ store: variantStore, iap, policy }) => (
@@ -750,19 +780,21 @@ function buildReadiness() {
       ),
       appStoreMetadata: check(
         review.appStoreMetadata === 'approved'
-          && metadataApproved,
-        'App Store metadata must be reviewed for the selected locale variant',
-        'app-store/localizations/manifest.json',
+          && metadataApproved
+          && storeNativeReviewPassed,
+        'App Store metadata needs byte-bound native review evidence for the selected locale variant',
+        `${storeNativeReviewEvidencePath} + app-store/localizations/manifest.json`,
       ),
       inAppPurchaseLocalization: check(
         review.inAppPurchaseLocalization === 'approved'
           && iapMetadataApproved
+          && storeNativeReviewPassed
           && iapManifest.productSet.appStoreConnectStatus === 'verified'
           && iapManifest.productSet.products.every((product) => (
             product.reviewScreenshotStatus === 'approved'
           )),
-        'all 8 IAP products need approved localized copy, current App Store identity, and review screenshots',
-        'app-store/in-app-purchases/manifest.json',
+        'all 8 IAP products need byte-bound native review, current App Store identity, and review screenshots',
+        `${storeNativeReviewEvidencePath} + app-store/in-app-purchases/manifest.json`,
       ),
       appStoreScreenshots: check(
         screenshotsApproved,
@@ -876,6 +908,8 @@ function buildReadiness() {
       'scripts/member_data_isolation_probe.py',
       'scripts/i18n-native-review-worklist.js',
       'scripts/i18n-native-review-evidence.js',
+      'scripts/app-store-native-review-worklist.js',
+      'scripts/app-store-native-review-evidence.js',
       'scripts/i18n-visual-qa-worklist.js',
       'scripts/i18n-visual-qa-evidence.js',
       'scripts/i18n-app-e2e-evidence.js',
@@ -924,6 +958,7 @@ module.exports = {
   validateLocaleDataEvidence,
   validateMemberDataIsolationEvidence,
   validateEvidenceConsistency,
+  validateAppStoreNativeReviewEvidence,
   validateNativeReviewEvidence,
   validatePurchaseEvidence,
   validateVisualEvidence,
