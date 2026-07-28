@@ -1,19 +1,19 @@
 {
   "net.munea.app.plus.monthly": {
     "displayName": "Munea Plus mensual",
-    "description": "100 créditos al mes y círculo de hasta 4"
+    "description": "100 créditos al mes, círculo familiar para 4"
   },
   "net.munea.app.plus.yearly": {
     "displayName": "Munea Plus anual",
-    "description": "Plan anual: 100 créditos al mes, hasta 4"
+    "description": "Anual: 100 créditos al mes, círculo para 4"
   },
   "net.munea.app.pro.monthly": {
     "displayName": "Munea Pro mensual",
-    "description": "200 créditos al mes y círculo de hasta 12"
+    "description": "200 créditos al mes, círculo familiar para 12"
   },
   "net.munea.app.pro.yearly": {
     "displayName": "Munea Pro anual",
-    "description": "Plan anual: 200 créditos al mes, hasta 12"
+    "description": "Anual: 200 créditos al mes, círculo para 12"
   },
   "net.munea.app.points.200": {
     "displayName": "Munea 100 créditos",
