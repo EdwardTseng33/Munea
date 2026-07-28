@@ -35,8 +35,8 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Environment | Service | Serving identity observed from public endpoint | Interpretation | Evidence time |
 |---|---|---|---|---|
-| production | Brain | `1.0.44@8ddab84c`, `munea-brain-00021-kow` | `/version` 200；canary 0% PASS 後 exact-revision promotion 切 100% 流量（tag `prod-0724-204855-8ddab84`）。此 revision 帶 `MUNEA_APNS_KEY_ID=59QVAHNMZP` 推播鑰匙正式生效；回滾至 `munea-brain-00018-beg` | 2026-07-24 20:48 |
-| production | Voice | `1.0.44@8ddab84c`, `munea-voice-00009-muh` | `/version` 200；canary 0% PASS 後 exact-revision promotion 切 100% 流量（tag `prod-0724-204904-8ddab84`）；回滾至 `munea-voice-00007-xab` | 2026-07-24 20:49 |
+| production | Brain | `1.0.44@f6d9c7fa`, `munea-brain-00023-xoc` | `/version` 200；canary 0% PASS 後 exact-revision promotion 切 100% 流量（tag `prod-0727-003757-f6d9c7f`）。帶 #268 聊天品質三修（轉述紅線／內心戲清洗）；`MUNEA_REQUIRE_AUTH=1` 已查核；回滾至 `munea-brain-00021-kow` | 2026-07-27 00:44 |
+| production | Voice | `1.0.44@f6d9c7fa`, `munea-voice-00013-joj` | `/version` 200；exact-revision promote（tag `prod-0727-003936-f6d9c7f`＝`00011-luw`）後疊試驗設定 `MUNEA_VOICE_LIVE_LOOKUP=1`／`MUNEA_VOICE_SILENCE_MS=1100`（tag `exp-0727-lookup`）切 100%；帶 #265 語音週包；回滾至 `munea-voice-00011-luw`（保留新版、去試驗設定）或 `munea-voice-00009-muh`（退 7/24 版） | 2026-07-27 00:52 |
 | production | Call Control / Gateway | release identity `unknown` | 公開 `/health` 無憑證回 401，auth boundary 正常；authenticated lease／cleanup 與 source commit 未證明 | 2026-07-18 00:20 |
 | staging | Brain | `1.0.44@dfea6aac`, `munea-brain-staging-00083-veh` | `/version` 200；安全兩閘（canary 0%→自動驗證→promote）PASS，語音 s2s 探針 5/5 PASS；`dfea6aac` 與正式線 `8ddab84c` 之間僅差文件、程式本體相同；不是 production | 2026-07-24 19:50 |
 | staging | Voice | `1.0.44@dfea6aac`, `munea-voice-staging-00058-yer` | `/version` 200；同上安全兩閘 PASS；不是 production，真人通話仍需 App E2E | 2026-07-24 19:50 |

@@ -178,13 +178,52 @@ def system_context_facts(sys_ctx):
     return facts
 
 
-def run_scenario(item, personas, tmp_root):
-    """跑一條劇本：逐輪生回覆(server.reply_conv 多輪文字線) → 逐輪鐵律判定(judge.py)
-    → 整條劇本 7 維整體判定(dimension_judge.py) → 三-1 判定規則彙整 verdict。"""
+def pregenerate_live_replies(item, persona, case_dir):
+    """語音線模式：整條劇本當成「一通電話」一次跑完，回傳 (replies, error)。
+
+    為什麼不能像文字線那樣一輪一輪叫（2026-07-27 實測）：Live API 不收 role="model"
+    的內容（回 1007 invalid argument），沒辦法把「她上一輪說過的話」當歷史再餵回去。
+    所以語音線一定得開一條連線連續講完——這反而跟真實通話一樣，她自己記得剛講過什麼。
+    """
+    payload = {
+        "id": item["id"], "character": item.get("character") or "寧寧",
+        "fixture": persona["fixture"], "tmpdir": case_dir,
+        "turns": [t["user"] for t in item["turns"]],
+    }
+    # 一通電話含多輪語音生成，比文字線慢得多——時限放寬到整條劇本的量級。
+    result = run_subprocess_json(
+        os.path.join(HERE, "gen_reply_live.py"), payload, cwd=ENGINE_DIR, timeout=600)
+    replies = result.get("replies") or []
+    if not result.get("ok"):
+        return replies, result.get("error") or "live generation failed"
+    return replies, None
+
+
+def run_scenario(item, personas, tmp_root, line="text"):
+    """跑一條劇本：逐輪生回覆 → 逐輪鐵律判定(judge.py)
+    → 整條劇本 7 維整體判定(dimension_judge.py) → 三-1 判定規則彙整 verdict。
+
+    line="text"：走正式文字線（server.reply_conv）＝原本的考法，預設不變。
+    line="live"：走正式語音線（Gemini Live · 跟 App 聊聊同一顆腦、同一組設定），
+                 順便量每輪的「第一聲」反應毫秒數（2026-07-27 · 思考深度 A/B 用）。
+    """
     persona_key = item["persona"]
     persona = personas[persona_key]
     case_dir = os.path.join(tmp_root, item["id"])
     os.makedirs(case_dir, exist_ok=True)
+
+    live_replies, live_error = [], None
+    if line == "live":
+        if item.get("openingAssistantLine"):
+            # 這條劇本要求「AI 先開口說某句話」，但語音線塞不進她說過的話（見上），
+            # 硬跑等於考一份不同的題目。明講跳過、不靜靜略過。
+            return {
+                "id": item["id"], "label": item["label"], "categories": item["categories"],
+                "persona": persona_key, "personaBrief": persona["brief"], "transcript": [],
+                "status": "skipped", "verdict": "ERROR",
+                "verdictReason": "語音線不支援劇本指定的 AI 開場白（Live API 不收 model 角色內容），這條只在文字線考",
+            }
+        live_replies, live_error = pregenerate_live_replies(item, persona, case_dir)
 
     history = []  # [{"role": "user"/"model", "text": "..."}]
     if item.get("openingAssistantLine"):
@@ -206,12 +245,21 @@ def run_scenario(item, personas, tmp_root):
         known_facts = known_facts + [f"（寧寧稍早已主動說過）{item['openingAssistantLine']}"]
 
     for idx, turn in enumerate(item["turns"], 1):
-        gen_payload = {
-            "id": f"{item['id']}-t{idx}", "character": item.get("character") or "寧寧",
-            "fixture": persona["fixture"], "tmpdir": case_dir,
-            "history": history, "newUserLine": turn["user"],
-        }
-        gen_result = run_subprocess_json(os.path.join(HERE, "gen_reply.py"), gen_payload, cwd=ENGINE_DIR)
+        if line == "live":
+            # 這一輪的回覆在上面那通電話裡已經講完了，直接取用（不足＝那通中途斷了）。
+            if idx <= len(live_replies):
+                spoken = live_replies[idx - 1]
+                gen_result = {"ok": True, "reply": spoken.get("reply") or "",
+                              "firstAudioMs": spoken.get("firstAudioMs")}
+            else:
+                gen_result = {"ok": False, "error": live_error or "live call ended early"}
+        else:
+            gen_payload = {
+                "id": f"{item['id']}-t{idx}", "character": item.get("character") or "寧寧",
+                "fixture": persona["fixture"], "tmpdir": case_dir,
+                "history": history, "newUserLine": turn["user"],
+            }
+            gen_result = run_subprocess_json(os.path.join(HERE, "gen_reply.py"), gen_payload, cwd=ENGINE_DIR)
         if not gen_result.get("ok"):
             gen_error = f"turn {idx}: {gen_result.get('error')}"
             transcript.append({"turn": idx, "user": turn["user"], "note": turn.get("note", ""),
@@ -221,7 +269,8 @@ def run_scenario(item, personas, tmp_root):
         reply = gen_result["reply"]
         leak = detect_raw_leak(reply)
         transcript.append({"turn": idx, "user": turn["user"], "note": turn.get("note", ""),
-                            "reply": reply, "genOk": True, "rawArtifactLeak": leak})
+                            "reply": reply, "genOk": True, "rawArtifactLeak": leak,
+                            "firstAudioMs": gen_result.get("firstAudioMs")})
         history.append({"role": "user", "text": turn["user"]})
         history.append({"role": "model", "text": reply})
 
@@ -329,7 +378,18 @@ def aggregate(results):
         for name in dim_sums
     }
     weakest = sorted(dim_avgs.items(), key=lambda kv: kv[1])[:3]
+    # 語音線才有的數字：「第一聲」反應毫秒（長輩感受到的快慢）。文字線一律是空的。
+    latencies = sorted(
+        t["firstAudioMs"] for r in results for t in (r.get("transcript") or [])
+        if isinstance(t.get("firstAudioMs"), int))
+    latency = None
+    if latencies:
+        mid = latencies[len(latencies) // 2]
+        latency = {"turns": len(latencies), "medianMs": mid,
+                   "meanMs": round(sum(latencies) / len(latencies)),
+                   "slowestMs": latencies[-1], "fastestMs": latencies[0]}
     return {
+        "firstAudioLatency": latency,
         "runAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "itemsRun": n,
         "passCount": counts["PASS"], "reviewCount": counts["REVIEW"],
@@ -350,6 +410,10 @@ def print_table(summary, results):
           f"REVIEW：{summary['reviewCount']}  FAIL：{summary['failCount']}  ERROR：{summary['errorCount']}")
     print(f"PASS 率：{summary['passRate']*100:.1f}%（首輪建基準，不卡關門檻）")
     print(f"鐵律違反總數：{summary['hardRuleViolationTotal']} 項（跨 19 條 x 8 項 x 各輪次）")
+    lat = summary.get("firstAudioLatency")
+    if lat:
+        print(f"第一聲反應（語音線 {lat['turns']} 輪）：中位數 {lat['medianMs']}ms／"
+              f"平均 {lat['meanMs']}ms／最慢 {lat['slowestMs']}ms")
     if summary.get("rawArtifactLeakTotal"):
         print(f"⚠ 額外發現：{summary['rawArtifactLeakTotal']} 輪回覆疑似洩漏內部標記/思考過程（非鐵律判定，另列供追查）")
     print("-" * 76)
@@ -373,6 +437,9 @@ def main():
     parser = argparse.ArgumentParser(description="munea chat quality eval v1 (19 scenarios, multi-turn)")
     parser.add_argument("--ids", help="comma separated scenario ids, e.g. S04,S06")
     parser.add_argument("--limit", type=int, help="only run first N scenarios (quick smoke)")
+    parser.add_argument("--line", choices=("text", "live"), default="text",
+                        help="考哪一條線：text＝正式文字線（預設、原本的考法）；"
+                             "live＝正式語音線（跟 App 聊聊同一顆腦，另量第一聲反應毫秒）")
     args = parser.parse_args()
 
     if not os.environ.get("GEMINI_API_KEY"):
@@ -401,21 +468,29 @@ def main():
     with tempfile.TemporaryDirectory(prefix="munea-chatq-") as tmp_root:
         results = []
         for i, item in enumerate(items, 1):
-            print(f"[{i}/{len(items)}] running {item['id']} ({item['label']})...", file=sys.stderr)
-            results.append(run_scenario(item, personas, tmp_root))
+            print(f"[{i}/{len(items)}] running {item['id']} ({item['label']})"
+                  f" [{args.line}]...", file=sys.stderr)
+            results.append(run_scenario(item, personas, tmp_root, line=args.line))
 
     summary = aggregate(results)
+    summary["line"] = args.line
+    if args.line == "live":
+        # 這場考試跑在哪一段思考深度，寫進報告裡——A/B 兩份結果不能靠記憶分辨。
+        summary["thinkingLevel"] = os.environ.get("MUNEA_VOICE_THINKING_LEVEL", "").strip() \
+            or "default(minimal)"
     print_table(summary, results)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out_path = os.path.join(RESULTS_DIR, f"chat-quality-{timestamp}.json")
+    # 語音線與文字線各存各的，不互相蓋掉（比較基準要留得住）。
+    tag = "chat-quality" if args.line == "text" else "chat-quality-live"
+    out_path = os.path.join(RESULTS_DIR, f"{tag}-{timestamp}.json")
     payload = {"summary": summary, "results": results}
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    latest_path = os.path.join(RESULTS_DIR, "latest-chat-quality.json")
+    latest_path = os.path.join(RESULTS_DIR, f"latest-{tag}.json")
     with open(latest_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"\n完整結果存到：{out_path}\n（latest-chat-quality.json 也同步更新）")
+    print(f"\n完整結果存到：{out_path}\n（latest-{tag}.json 也同步更新）")
 
 
 if __name__ == "__main__":

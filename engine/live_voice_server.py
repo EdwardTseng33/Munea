@@ -892,9 +892,42 @@ def _voice_sensitivity_param(explicit, env_name, default_value, high_value, low_
     return default_value
 
 
+_THINKING_LEVELS = {
+    "MINIMAL": types.ThinkingLevel.MINIMAL,
+    "LOW": types.ThinkingLevel.LOW,
+    "MEDIUM": types.ThinkingLevel.MEDIUM,
+    "HIGH": types.ThinkingLevel.HIGH,
+}
+
+
+def _voice_thinking_level(explicit=None):
+    """語音腦的「思考深度」（2026-07-27 Edward 拍板 A 案：一次只轉一個旋鈕、實測比較）。
+
+    為什麼要有這個旋鈕：`gemini-3.1-flash-live-preview` 的 thinking_level 出廠預設是
+    `minimal`（Google 為「最低延遲」調的）。但 Google 自己拿去宣稱「複雜指令遵守領先」的
+    Audio MultiChallenge 成績，發表文明寫是 with 'thinking' on 測出來的——也就是說，我們
+    一直用最淺的思考模式，跑一個要記五層說明書（安全紅線／語言鐵律／人格／情境／風格）、
+    還要判斷何時該呼叫提醒工具的角色。這是說明書照官方建議重排之前，唯一能單獨轉、
+    又能單獨看出因果的旋鈕。
+
+    為什麼預設不動：官方對「調深會慢多少毫秒」一個數字都沒給，而語音陪伴最怕慢半拍。
+    所以三層 fallback 的最底層＝None＝完全不送這個欄位＝維持 Live API 出廠預設，
+    正式機零改變；要比較時在測試機設 MUNEA_VOICE_THINKING_LEVEL=low，A/B 打幾通比
+    「守不守規矩」與「慢多少」，比完再決定正式機跟不跟。
+    看得懂的值：minimal / low / medium / high（大小寫皆可）；寫錯或留空一律當沒設。
+    """
+    for raw in (explicit, os.environ.get("MUNEA_VOICE_THINKING_LEVEL", "")):
+        token = str(raw or "").strip().upper()
+        if token:
+            level = _THINKING_LEVELS.get(token)
+            if level is not None:
+                return level
+    return None
+
+
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
-                 resumption_handle=None):
+                 resumption_handle=None, thinking_level=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     # 通話中即時查詢：預設關（2026-07-17 Edward 拍板）。
@@ -922,6 +955,11 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_REMINDER_TOOLS)
     if allow_events and not demo_mode:
         tools.append(_EVENT_TOOLS)
+    resolved_thinking = _voice_thinking_level(thinking_level)
+    thinking_config = (
+        types.ThinkingConfig(thinking_level=resolved_thinking)
+        if resolved_thinking is not None else None
+    )
     phrases = asr_adaptation_phrases(char, name, user, topics, location)
     transcription_config = types.AudioTranscriptionConfig(
         language_hints=types.LanguageHints(language_codes=["cmn-Hant-TW"]),
@@ -982,6 +1020,9 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
             types.ContextWindowCompressionConfig(sliding_window=types.SlidingWindow())
             if _voice_session_extend_enabled() else None
         ),
+        # 思考深度（2026-07-27）：None＝不送這個欄位＝Live API 出廠預設（minimal），
+        # 正式機零改變；要 A/B 比「守規矩程度 vs 慢多少」時才設 MUNEA_VOICE_THINKING_LEVEL。
+        thinking_config=thinking_config,
     )
 
 
@@ -2166,6 +2207,10 @@ async def handle(ws):
             cfg = await asyncio.to_thread(
                 live_config, char, name, mood, topics, user, location, allow_reminders, fam,
                 memory_scope, allow_events, demo_mode, resumption_handle=resumption_handle)
+            if first_connect and cfg.thinking_config is not None:
+                # A/B 實測要有帳可查：這通到底跑在哪一段思考深度，直接寫進通話紀錄。
+                # 沒設（正式機預設）時一個字都不印，日誌不變吵。
+                _diag(cid, "thinking_level", level=cfg.thinking_config.thinking_level)
             _key_idx, _cli = _pick_client()   # 挑現在最閒的一把鑰匙開這條底層連線（多鑰匙分流的核心）
             try:
                 async with _cli.aio.live.connect(model=MODEL, config=cfg) as session:
