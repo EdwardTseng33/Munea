@@ -8,6 +8,7 @@ const path = require('path');
 const {
   buildReadiness,
   formatReport,
+  validateEvidenceConsistency,
   validateInstalledAppEvidence,
   validatePurchaseEvidence,
   validateVisualEvidence,
@@ -31,6 +32,7 @@ const requiredGates = [
   'marketAvailability',
   'installedAppE2E',
   'purchaseE2E',
+  'exactBuildEvidenceChain',
 ];
 
 assert.equal(report.schema, 'munea.i18n-release-readiness.v1');
@@ -61,6 +63,10 @@ for (const locale of requiredLocales) {
   assert(
     entry.blockers.some(({ gate }) => gate === 'purchaseE2E'),
     `${locale} must require exact installed-App StoreKit evidence`,
+  );
+  assert(
+    entry.blockers.some(({ gate }) => gate === 'exactBuildEvidenceChain'),
+    `${locale} must require one consistent exact-build evidence chain`,
   );
   assert.equal(
     entry.gates.visualQA.evidence,
@@ -218,6 +224,49 @@ assert.equal(
   ),
   false,
   'Purchase evidence must cover the exact 8-product set',
+);
+
+const consistentVisualEvidence = {
+  schema: 'munea.i18n-visual-qa.v1',
+  locale: 'en',
+  result: 'pass',
+  captureCommit: exactCommit,
+  capturedAt: '2026-07-28T08:00:00Z',
+  appVersion: installedEvidence.appVersion,
+  build: installedEvidence.build,
+};
+assert.equal(
+  validateEvidenceConsistency({
+    visual: consistentVisualEvidence,
+    voice: { ...voiceEvidence, appVersion: installedEvidence.appVersion, build: installedEvidence.build },
+    installed: installedEvidence,
+    purchase: {
+      ...purchaseEvidence,
+      appVersion: installedEvidence.appVersion,
+      build: installedEvidence.build,
+      binarySha256: installedEvidence.binarySha256,
+      backendRevision: installedEvidence.serviceRevisions.brain,
+    },
+  }),
+  true,
+  'One exact build and service revision chain must pass',
+);
+assert.equal(
+  validateEvidenceConsistency({
+    visual: consistentVisualEvidence,
+    voice: { ...voiceEvidence, appVersion: installedEvidence.appVersion, build: installedEvidence.build },
+    installed: installedEvidence,
+    purchase: {
+      ...purchaseEvidence,
+      exactCommit: 'd'.repeat(40),
+      appVersion: installedEvidence.appVersion,
+      build: installedEvidence.build,
+      binarySha256: installedEvidence.binarySha256,
+      backendRevision: installedEvidence.serviceRevisions.brain,
+    },
+  }),
+  false,
+  'Evidence from a different source commit must not be combined',
 );
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'munea-i18n-visual-'));

@@ -59,6 +59,10 @@ docs/qa/i18n/
 
 瀏覽器、模擬器、單元測試、synthetic probe、developer-direct 或不同 build 的成功紀錄都不能代替 installed App E2E。
 
+## 精確版本證據鏈
+
+同一語系的 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json` 與 `purchase-e2e.json` 必須指向同一個 source commit、App version 與 build。安裝版與購買證據的 IPA SHA-256 必須一致；語音證據與安裝版的 Brain／Voice／Gateway／Avatar revisions 也必須一致，購買 backend revision 必須對上安裝版 Brain revision。任一份證據來自其他 build 都會讓 `exactBuildEvidenceChain` Gate 失敗。
+
 ## purchase-e2e.json
 
 必要欄位：

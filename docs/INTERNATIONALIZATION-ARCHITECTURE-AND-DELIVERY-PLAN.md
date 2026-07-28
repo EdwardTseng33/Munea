@@ -277,9 +277,10 @@ Phase 3c（2026-07-28）建立 Live Voice 共用語系設定包：
 Phase 5a（2026-07-28）將發布判定改為證據驅動：
 
 - `scripts/i18n-release-readiness.js` 以 catalog、review、法律、App Store manifest 與 `docs/qa/i18n/<locale>/` 的實際證據即時計算四語狀態，不以人工寫一句「完成」代替。
-- 每個語系都必須同時通過 catalog、runtime、binary、母語審稿、視覺截圖、真實語音、區域法律、商店文案、8 項內購本地化、商店截圖、市場／價格可用性、exact-build installed App E2E 與 StoreKit Sandbox 購買 E2E 共 13 道 gate。
+- 每個語系都必須同時通過 catalog、App UI 接線、runtime、binary、母語審稿、視覺截圖、真實語音、區域法律、商店文案、8 項內購本地化、商店截圖、市場／價格可用性、exact-build installed App E2E、StoreKit Sandbox 購買 E2E 與精確版本證據鏈共 15 道 gate。
 - `--strict` 只有四語全部有現行證據才回傳成功；目前四語都會明確顯示 `NOT READY`，這是正確護欄，不是測試失敗。
 - 視覺、語音與實機證據的固定入口分別為 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json`；檔案不存在、JSON 無效或 `result` 不是 `pass` 都視為未完成。
+- `exactBuildEvidenceChain` 再確認視覺、語音、安裝版與 8 商品購買證據來自同一 commit／version／build；IPA SHA-256 或服務 revisions 不一致時不得混用證據。
 
 Phase 5b（2026-07-28）：App Store 五張圖故事板
 

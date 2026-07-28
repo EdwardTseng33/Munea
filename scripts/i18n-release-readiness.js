@@ -205,6 +205,33 @@ function validatePurchaseEvidence(evidence, locale, requiredProductIds) {
   ));
 }
 
+function validateEvidenceConsistency(evidenceSet) {
+  const source = evidenceSet || {};
+  const visual = source.visual;
+  const voice = source.voice;
+  const installed = source.installed;
+  const purchase = source.purchase;
+  if (!visual || !voice || !installed || !purchase) return false;
+  const exactCommit = installed.exactCommit;
+  const appVersion = installed.appVersion;
+  const build = installed.build;
+  const sameServiceRevisions = ['brain', 'voice', 'gateway', 'avatar']
+    .every((service) => (
+      voice.serviceRevisions
+      && installed.serviceRevisions
+      && voice.serviceRevisions[service] === installed.serviceRevisions[service]
+    ));
+  return visual.captureCommit === exactCommit
+    && voice.exactCommit === exactCommit
+    && purchase.exactCommit === exactCommit
+    && [visual, voice, purchase].every((evidence) => (
+      evidence.appVersion === appVersion && evidence.build === build
+    ))
+    && purchase.binarySha256 === installed.binarySha256
+    && purchase.backendRevision === installed.serviceRevisions.brain
+    && sameServiceRevisions;
+}
+
 function evidenceResult(locale, filename, validator) {
   const filePath = path.join(QA_DIR, locale, filename);
   if (!fs.existsSync(filePath)) {
@@ -361,6 +388,20 @@ function buildReadiness() {
         'the exact installed iPhone build must pass all 8 StoreKit Sandbox purchase paths',
         purchaseEvidence.path,
       ),
+      exactBuildEvidenceChain: check(
+        visualEvidence.passed
+          && voiceEvidence.passed
+          && installedEvidence.passed
+          && purchaseEvidence.passed
+          && validateEvidenceConsistency({
+            visual: visualEvidence.evidence,
+            voice: voiceEvidence.evidence,
+            installed: installedEvidence.evidence,
+            purchase: purchaseEvidence.evidence,
+          }),
+        'visual, voice, installed-App, and purchase evidence must identify the same commit, App version, build, binary, and service revisions',
+        `docs/qa/i18n/${locale}/`,
+      ),
     };
 
     const blockers = Object.entries(gates)
@@ -422,6 +463,7 @@ module.exports = {
   buildReadiness,
   formatReport,
   validateInstalledAppEvidence,
+  validateEvidenceConsistency,
   validatePurchaseEvidence,
   validateVisualEvidence,
   validateVoiceEvidence,
