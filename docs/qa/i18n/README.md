@@ -101,6 +101,18 @@ python scripts\member_data_isolation_probe.py `
 
 worklist 不會自動開啟畫面、不會建立假截圖，也不會把任何項目改成 PASS。每張圖必須來自同一個 exact installed iPhone build，並在當次驗收中實際開啟、儲存與檢查。發布驗證會拒絕路徑重用，也會拒絕把相同 PNG 內容複製成不同檔名充當另一個 state 或 profile。
 
+擷取前先把單一語系 worklist 存成工作檔，填妥 `buildIdentity` 的 commit、IPA SHA-256、App version、build，以及根節點 `review.capturedAt`、不含個資的 `reviewerReference`、`reviewerRole`。每張實機圖需依 worklist 的 `workspacePath` 儲存，人工確認四個 checks 後把該 entry 設為 `result: pass`。
+
+完成 114 張後執行 `node scripts/i18n-visual-qa-evidence.js --input <工作檔>.json --output docs/qa/i18n/en/visual-qa.json`。compiler 會驗證：
+
+- 38 states × 3 profiles 完整且順序未漂移。
+- PNG 路徑留在該語系證據資料夾內，symlink 也不能跳出去。
+- 小尺寸／標準／Dynamic Type profile 的圖片尺寸符合 1x、2x 或 3x iPhone capture。
+- 114 張圖的 SHA-256 全部不同，不能複製同一張圖充數。
+- 四項人工檢查全為布林 `true`，且 evidence 綁定同一 commit、IPA、version、build。
+
+compiler 不會截圖、不會自行勾選人工檢查，也不會把 review manifest 改成 approved。
+
 ## voice-e2e.json
 
 必要欄位：

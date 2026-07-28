@@ -242,6 +242,7 @@ require('./test-app-surface-copy-manifest.js');
 require('./test-i18n-native-review-worklist.js');
 require('./test-i18n-native-review-evidence.js');
 require('./test-i18n-visual-qa-worklist.js');
+require('./test-i18n-visual-qa-evidence.js');
 require('./test-i18n-layout-risk-worklist.js');
 require('./test-legal-localizations.js');
 require('./test-app-store-localizations.js');

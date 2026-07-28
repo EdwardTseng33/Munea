@@ -203,6 +203,10 @@ assert(
   'Release readiness must include the exact-build visual capture worklist',
 );
 assert(
+  report.generatedFrom.includes('scripts/i18n-visual-qa-evidence.js'),
+  'Release readiness must include the exact-build visual evidence compiler',
+);
+assert(
   formatReport(report).includes('Overall: NOT READY'),
   'Human-readable report must lead with the actual release state',
 );

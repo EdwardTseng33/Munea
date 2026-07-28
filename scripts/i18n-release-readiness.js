@@ -795,6 +795,7 @@ function buildReadiness() {
       'scripts/i18n-native-review-worklist.js',
       'scripts/i18n-native-review-evidence.js',
       'scripts/i18n-visual-qa-worklist.js',
+      'scripts/i18n-visual-qa-evidence.js',
       'engine/voice-locale-integration-manifest.json',
       'web/legal/manifest.json',
       'web/legal/regional-safety-policy.json',
