@@ -11,6 +11,12 @@ window.MuneaHealth = (function () {
   let lastRefreshAt = 0;
   let lastSummary = null;
 
+  function t(key, fallback, values) {
+    return window.MuneaI18n
+      ? window.MuneaI18n.t(key, values || null, fallback)
+      : fallback;
+  }
+
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Health) || null;
   }
@@ -30,21 +36,34 @@ window.MuneaHealth = (function () {
       btn.classList.toggle('disconnect', on);
       btn.classList.remove('arm');
       delete btn.dataset.disconnectArmed;
-      btn.textContent = on ? '解除連接' : (btn.dataset.label || '連接');
+      btn.textContent = on
+        ? t('health.disconnect', '解除連接')
+        : t('health.connect', btn.dataset.label || '連接');
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
     const state = document.getElementById('healthSettingsState');
     if (state) state.classList.toggle('off', !on);
     const stateLabel = document.getElementById('healthSettingsStateLabel');
-    if (stateLabel) stateLabel.textContent = on ? '已連接' : '未連接';
+    if (stateLabel) stateLabel.textContent = on
+      ? t('health.connected', '已連接')
+      : t('health.notConnected', '未連接');
     const detail = document.getElementById('cnHealthDetail');
     if (detail) detail.textContent = on
-      ? '正在同步步數、心率、睡眠、血壓與血氧'
-      : '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧';
+      ? t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧')
+      : t(
+        'health.availableDetail',
+        '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧',
+      );
     const help = document.getElementById('cnHealthHelp');
     if (help) help.textContent = on
-      ? '解除連接會停止沐寧後續同步，既有紀錄仍會保留。要撤銷 Apple 健康的系統授權，請到「健康 App」的個人頭像／隱私權設定中管理沐寧。'
-      : '目前未同步。重新連接後才會讀取新的健康資料。';
+      ? t(
+        'health.disconnectHelp',
+        '解除連接會停止沐寧後續同步，既有紀錄仍會保留。要撤銷 Apple 健康的系統授權，請到「健康 App」的個人頭像／隱私權設定中管理沐寧。',
+      )
+      : t(
+        'health.notConnectedHelp',
+        '目前未同步。重新連接後才會讀取新的健康資料。',
+      );
   }
 
   function emitConnectionState() {
@@ -127,7 +146,7 @@ window.MuneaHealth = (function () {
       if (btn.dataset.disconnectArmed !== '1') {
         btn.dataset.disconnectArmed = '1';
         btn.classList.add('arm');
-        btn.textContent = '再按一次解除';
+        btn.textContent = t('health.confirmDisconnect', '再按一次解除');
         clearTimeout(disconnectArmTimer);
         disconnectArmTimer = setTimeout(renderConnectionState, 4000);
         return;

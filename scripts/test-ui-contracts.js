@@ -228,6 +228,7 @@ require('./test-i18n-dom-localizer.js');
 require('./test-i18n-legal-routing.js');
 require('./test-i18n-migration-worklist.js');
 require('./test-i18n-pseudo-catalog.js');
+require('./test-companion-profile-localization.js');
 require('./test-i18n-surface-inventory.js');
 require('./test-legal-localizations.js');
 require('./test-app-store-localizations.js');

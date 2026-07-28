@@ -97,5 +97,21 @@ vm.runInThisContext(fs.readFileSync('web/src/health.js', 'utf8'), { filename: 'h
 
   await MuneaHealth.refresh();
   assert.strictEqual(summaryReads, 2, 'disconnect must stop future HealthKit reads');
+
+  const translated = {
+    'health.connect': 'Connect',
+    'health.notConnected': 'Not connected',
+    'health.availableDetail': 'Available health data',
+    'health.notConnectedHelp': 'Connect to sync new health data.',
+  };
+  window.MuneaI18n = {
+    t: (key, values, fallback) => translated[key] || fallback,
+  };
+  MuneaHealth.renderConnectionState();
+  assert.strictEqual(elements.cnHealthBtn.textContent, 'Connect');
+  assert.strictEqual(elements.healthSettingsStateLabel.textContent, 'Not connected');
+  assert.strictEqual(elements.cnHealthDetail.textContent, 'Available health data');
+  assert.strictEqual(elements.cnHealthHelp.textContent, 'Connect to sync new health data.');
+
   console.log('Apple Health connection state: ALL PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -147,6 +147,13 @@ Phase 1f（2026-07-28）：全畫面遷移工作表與排版壓力測試
 - `scripts/i18n-pseudo-catalog.js` 產生保留 placeholder 的 35% 擴張壓力文案；主畫面接線後，必須先用 pseudo locale 跑完窄螢幕與 Dynamic Type，再進入四語正式截圖。
 - 這兩個工具只讀來源並在測試記憶體內產生資料，不改 shipping catalog、不切 runtime locale，也不影響正式服務。
 
+Phase 1g（2026-07-28）：先接上無衝突的健康與陪伴角色模組
+
+- Apple 健康的連接、解除、同步狀態與系統授權說明已改用四語 catalog；舊版繁中 runtime 不認識新 key 時仍使用原繁中 fallback，現行行為不變。
+- 陪伴角色的後端 `backendChar` 與 template id 保持不變，只有顯示名稱與角色描述跟隨 App Language；使用者自訂名稱永遠保留，未自訂的預設名稱換語言時會同步更新。
+- 對應測試驗證 HealthKit 連接／解除與 refresh 去重不回歸，也驗證換語言不會改角色後端身分或覆蓋自訂名稱。
+- 角色名稱會進入通話人設，屬 chat-call path risk；目前只有 coded + tested，仍為 `App E2E pending`，沒有部署。
+
 Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 
 - 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。
