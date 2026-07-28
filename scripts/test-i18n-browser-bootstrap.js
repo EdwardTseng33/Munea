@@ -5,8 +5,12 @@ const fs = require('fs');
 const vm = require('vm');
 const catalogRuntime = require('../web/src/i18n/catalog-runtime.js');
 const domLocalizer = require('../web/src/i18n/dom-localizer.js');
+const appBindingRuntime = require('../web/src/i18n/app-binding-runtime.js');
 
 const manifest = JSON.parse(fs.readFileSync('web/src/i18n/catalog-manifest.json', 'utf8'));
+const bindingManifest = JSON.parse(
+  fs.readFileSync('web/src/i18n/app-binding-manifest.json', 'utf8'),
+);
 const catalogs = Object.fromEntries(
   manifest.locales.map((entry) => [
     entry.catalog,
@@ -34,6 +38,14 @@ class FakeElement {
     return [];
   }
 
+  querySelector() {
+    return null;
+  }
+
+  contains(node) {
+    return this === node;
+  }
+
   setAttribute(name, value) {
     this.attributes[name] = String(value);
   }
@@ -42,6 +54,7 @@ class FakeElement {
 function createBrowser(options = {}) {
   const tab = new FakeElement({ 'data-i18n': 'tab.home' });
   const html = new FakeElement();
+  const signIn = new FakeElement();
   const events = [];
   const observations = [];
   class FakeMutationObserver {
@@ -69,6 +82,7 @@ function createBrowser(options = {}) {
     baseURI: 'https://app.munea.test/',
     currentScript: { src: 'https://app.munea.test/src/i18n.js' },
     documentElement: html,
+    getElementById: (id) => (id === 'authSignInBtn' ? signIn : null),
     head: { appendChild() { throw new Error('preloaded test globals should avoid script injection'); } },
     title: '',
     createElement: () => new FakeElement(),
@@ -78,6 +92,7 @@ function createBrowser(options = {}) {
     MUNEA_DEV_CONFIG: options.devConfig || { enabled: false },
     MuneaCatalogRuntime: catalogRuntime,
     MuneaDomLocalizer: browserDomLocalizer,
+    MuneaAppBindingRuntime: appBindingRuntime,
     dispatchEvent: (event) => events.push(event),
   };
   const fetch = async (url) => {
@@ -85,6 +100,9 @@ function createBrowser(options = {}) {
     if (options.failFetch) throw new Error('offline');
     if (pathname.endsWith('/catalog-manifest.json')) {
       return { ok: true, json: async () => manifest };
+    }
+    if (pathname.endsWith('/app-binding-manifest.json')) {
+      return { ok: true, json: async () => bindingManifest };
     }
     const filename = pathname.split('/').pop();
     if (catalogs[filename]) return { ok: true, json: async () => catalogs[filename] };
@@ -107,7 +125,7 @@ function createBrowser(options = {}) {
   context.globalThis = context;
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'i18n.js' });
-  return { document, events, html, observations, tab, window };
+  return { document, events, html, observations, signIn, tab, window };
 }
 
 (async () => {
@@ -120,10 +138,15 @@ function createBrowser(options = {}) {
     'A device language must not bypass a disabled locale release gate',
   );
   assert.equal(production.tab.textContent, '首頁');
+  assert.equal(production.signIn.textContent, '登入');
   assert.equal(production.html.getAttribute('lang'), 'zh-Hant-TW');
-  assert.equal(production.observations.length, 1, 'Dynamic App content must be observed');
+  assert.equal(production.observations.length, 2, 'Dynamic and declarative App content must be observed');
+  const dynamicObservation = production.observations.find(
+    ({ observerOptions }) => Array.isArray(observerOptions.attributeFilter),
+  );
+  assert(dynamicObservation, 'Dynamic data-i18n observer is missing');
   const dynamic = new FakeElement({ 'data-i18n': 'notification.centerTitle' });
-  production.observations[0].observer.callback([
+  dynamicObservation.observer.callback([
     { type: 'childList', addedNodes: [dynamic] },
   ]);
   assert.equal(dynamic.textContent, '通知中心');
@@ -132,9 +155,14 @@ function createBrowser(options = {}) {
   const preview = createBrowser({
     devConfig: { enabled: true, i18nPreviewLocale: 'ja-JP' },
   });
+  preview.window.MUNEA_DEV_CONFIG = {
+    enabled: true,
+    voiceUrl: 'https://voice.example.test',
+  };
   await preview.window.MuneaI18n.ready;
   assert.equal(preview.window.MuneaI18n.current(), 'ja');
   assert.equal(preview.tab.textContent, 'ホーム');
+  assert.equal(preview.signIn.textContent, 'ログイン');
   assert.equal(preview.html.getAttribute('lang'), 'ja');
   assert.equal(preview.window.MuneaI18n.weatherLanguage(), 'ja');
   assert.deepEqual(

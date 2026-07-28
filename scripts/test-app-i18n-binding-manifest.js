@@ -12,6 +12,10 @@ const domLocalizer = fs.readFileSync(
   path.join(ROOT, 'web', 'src', 'i18n', 'dom-localizer.js'),
   'utf8',
 );
+const appBindingRuntime = fs.readFileSync(
+  path.join(ROOT, 'web', 'src', 'i18n', 'app-binding-runtime.js'),
+  'utf8',
+);
 const manifest = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'web', 'src', 'i18n', 'app-binding-manifest.json'), 'utf8'),
 );
@@ -26,12 +30,29 @@ const catalogs = Object.fromEntries(
 
 assert.equal(manifest.schema, 'munea.i18n-app-binding-manifest.v1');
 assert.equal(manifest.integrationStatus, 'pending-conflicting-main-screen-prs');
+assert.equal(manifest.staticBindingRuntimeStatus, 'integrated');
+assert.equal(manifest.stateOwnedRendererStatus, 'pending-conflicting-main-screen-prs');
 assert.equal(manifest.dynamicContentObserver, 'integrated');
 assert.match(domLocalizer, /function observe\(/, 'Dynamic DOM localizer observer is missing');
 assert.match(
   bootstrap,
   /domLocalizer\.observe\(\s*document,/,
   'App locale bootstrap must observe dynamically inserted shipping UI',
+);
+assert.match(
+  bootstrap,
+  /MuneaAppBindingRuntime/,
+  'App locale bootstrap must load the declarative static binding runtime',
+);
+assert.match(
+  bootstrap,
+  /createAppBindingRuntime\(\{/,
+  'App locale bootstrap must initialize declarative static bindings',
+);
+assert.match(
+  appBindingRuntime,
+  /binding\.applyMode === STATIC_MODE/,
+  'Static binding runtime must exclude state-owned renderer output',
 );
 assert.ok(manifest.staticBindings.length >= 25);
 assert.ok(manifest.dynamicBindings.length >= 7);
@@ -55,11 +76,26 @@ for (const binding of manifest.staticBindings) {
     ['textContent', 'descendantText', 'aria-label', 'placeholder', 'title'].includes(binding.target),
     `unsupported binding target: ${binding.target}`,
   );
+  assert.ok(
+    ['static', 'state-owned'].includes(binding.applyMode),
+    `unsupported binding apply mode: ${binding.applyMode}`,
+  );
   const signature = `${binding.anchorId}:${binding.target}`;
   assert.ok(!bindingSignatures.has(signature), `duplicate binding: ${signature}`);
   bindingSignatures.add(signature);
   assertKeys([binding.key], `static:${signature}`);
 }
+
+assert.equal(
+  manifest.staticBindings.filter(({ applyMode }) => applyMode === 'static').length,
+  20,
+  'Safe static binding inventory drifted',
+);
+assert.equal(
+  manifest.staticBindings.filter(({ applyMode }) => applyMode === 'state-owned').length,
+  7,
+  'State-owned binding inventory drifted',
+);
 
 for (const binding of manifest.dynamicBindings) {
   assert.ok(ids.has(binding.anchorId), `dynamic anchor is missing: ${binding.anchorId}`);

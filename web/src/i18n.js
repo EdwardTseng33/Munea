@@ -29,13 +29,21 @@
     ? new URL('.', document.currentScript.src)
     : new URL('src/', document.baseURI);
   const assetUrl = (relativePath) => new URL(relativePath, scriptBase).toString();
+  const INITIAL_PREVIEW_LOCALE = (() => {
+    const config = window.MUNEA_DEV_CONFIG || {};
+    return config.enabled === true && typeof config.i18nPreviewLocale === 'string'
+      ? config.i18nPreviewLocale
+      : null;
+  })();
 
   let runtime = null;
   let domLocalizer = null;
+  let appBindingRuntime = null;
   let currentLocale = DEFAULT_LOCALE;
   let metadataByLocale = { [DEFAULT_LOCALE]: FALLBACK_METADATA };
   let initialized = false;
   let mutationObserver = null;
+  let appBindingObserver = null;
 
   function loadScript(globalName, relativePath) {
     if (window[globalName]) return Promise.resolve(window[globalName]);
@@ -61,10 +69,10 @@
   }
 
   function developerPreviewLocale() {
-    const config = window.MUNEA_DEV_CONFIG || {};
-    return config.enabled === true && typeof config.i18nPreviewLocale === 'string'
-      ? config.i18nPreviewLocale
-      : null;
+    // auth-config.js loads after this bootstrap and may replace the developer
+    // config object. Capture the local-only preview profile synchronously so
+    // asynchronous catalog fetches cannot lose the requested QA locale.
+    return INITIAL_PREVIEW_LOCALE;
   }
 
   function resolvedPreferredLanguages() {
@@ -119,6 +127,7 @@
         );
       });
     }
+    if (appBindingRuntime) appBindingRuntime.apply(scope);
     document.title = t('app.title', null, 'Munea 沐寧');
     return currentLocale;
   }
@@ -141,6 +150,14 @@
       runtime,
       () => currentLocale,
     );
+    if (appBindingObserver && typeof appBindingObserver.disconnect === 'function') {
+      appBindingObserver.disconnect();
+    }
+    appBindingObserver = appBindingRuntime && typeof appBindingRuntime.observe === 'function'
+      ? appBindingRuntime.observe(
+        typeof MutationObserver === 'function' ? MutationObserver : null,
+      )
+      : null;
     return mutationObserver;
   }
 
@@ -159,10 +176,18 @@
 
   async function initialize() {
     try {
-      const [manifest, catalogRuntimeApi, domLocalizerApi] = await Promise.all([
+      const [
+        manifest,
+        bindingManifest,
+        catalogRuntimeApi,
+        domLocalizerApi,
+        appBindingRuntimeApi,
+      ] = await Promise.all([
         fetchJson('i18n/catalog-manifest.json'),
+        fetchJson('i18n/app-binding-manifest.json'),
         loadScript('MuneaCatalogRuntime', 'i18n/catalog-runtime.js'),
         loadScript('MuneaDomLocalizer', 'i18n/dom-localizer.js'),
+        loadScript('MuneaAppBindingRuntime', 'i18n/app-binding-runtime.js'),
       ]);
       const catalogs = Object.fromEntries(await Promise.all(
         manifest.locales.map(async (entry) => [
@@ -182,6 +207,17 @@
         },
       });
       domLocalizer = domLocalizerApi;
+      appBindingRuntime = appBindingRuntimeApi.createAppBindingRuntime({
+        catalogRuntime: runtime,
+        documentLike: document,
+        localeFor: () => currentLocale,
+        manifest: bindingManifest,
+        reportIssue: (event) => {
+          try {
+            window.dispatchEvent(new CustomEvent('munea:i18n-binding-issue', { detail: event }));
+          } catch (error) {}
+        },
+      });
       metadataByLocale = Object.fromEntries(
         manifest.locales.map((entry) => [entry.locale, Object.freeze({ ...entry })]),
       );

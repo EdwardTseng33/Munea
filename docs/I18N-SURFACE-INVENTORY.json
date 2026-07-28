@@ -146,6 +146,7 @@
       "scanMode": "existence",
       "files": [
         "web/src/i18n.js",
+        "web/src/i18n/app-binding-runtime.js",
         "web/src/i18n/catalog-runtime.js",
         "web/src/i18n/dom-localizer.js",
         "web/src/i18n/legal-routing.js",
