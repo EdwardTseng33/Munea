@@ -47,7 +47,10 @@
   .hero h1 .hl::after{background:#F6D8BC!important}
 
   /* ── 版面基礎 ── */
-  .hero-grid{grid-template-columns:1fr 1.02fr}
+  /* 這行原本沒帶斷點，會蓋掉樣式表裡「手機改單欄」的規則，
+     害主視覺在手機上還是硬擠兩欄（中文勉強看得下去，英文被壓成細長條）。 */
+  @media(min-width:901px){.hero-grid{grid-template-columns:1fr 1.02fr}}
+  @media(max-width:900px){.hero-grid{grid-template-columns:1fr}}
   h2,h3{text-wrap:balance}
   p,li,.disc,.mates .more,.sub,.pain-track,.q{text-wrap:pretty}
   .hero-media{position:relative;z-index:1}
