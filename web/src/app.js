@@ -6971,12 +6971,19 @@ function init() {
       if (!window.confirm('這一頁有你的健康紀錄，傳出去之後就收不回來了。要繼續嗎？')) return;
       try { localStorage.setItem('munea.visitSummary.shareWarned', '1'); } catch (e) {}
     }
-    const choice = window.prompt('要怎麼匯出？\n1 = 存成 PDF（用手機的列印）\n2 = 傳給家人\n3 = 複製文字', '1');
+    // ⚠ 已查證：**window.print() 在 iOS 的 WKWebView 完全無效**（同一顆按鈕在 Safari 可以、
+    // 在 App 殼裡按了沒反應）。所以打包後的 App 一律不提供這個選項——
+    // 一顆按了沒事的按鈕比沒有更糟，長輩會以為自己按錯。
+    // 正解是原生外掛 WKWebView.createPDF()＋UIActivityViewController，尚未實作（見協作看板）。
+    const canPrint = !isPackagedApp();
+    const menu = canPrint
+      ? '要怎麼匯出？\n1 = 存成 PDF（用瀏覽器列印）\n2 = 傳給家人\n3 = 複製文字'
+      : '要怎麼匯出？\n2 = 傳給家人\n3 = 複製文字\n（存成 PDF 還在做，先用傳送或複製）';
+    const choice = window.prompt(menu, canPrint ? '1' : '2');
     if (choice === null) return;
-    try { trackProductEvent('visit_summary_exported', { how: String(choice), periodDays: _rptPeriod }); } catch (e) {}
+    try { trackProductEvent('visit_summary_exported', { how: String(choice), periodDays: _rptPeriod, packaged: isPackagedApp() }); } catch (e) {}
     if (String(choice).trim() === '1') {
-      // ⚠ iOS 原生殼（WKWebView）對 window.print() 的支援尚未實機驗證。
-      // 印不出來時不要靜默失敗——明確告訴他還有別條路可走。
+      if (!canPrint) { toast('這台裝置還不能存 PDF，可以改用「傳給家人」'); return; }
       try { window.print(); } catch (e) { toast('這台裝置印不出來，可以改用「傳給家人」'); }
       return;
     }

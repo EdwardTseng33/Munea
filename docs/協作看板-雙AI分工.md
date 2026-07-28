@@ -2358,3 +2358,17 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **測試又抓到我兩個問題（都是測試設計，不是程式）**：①頁尾免責「非醫療診斷」踩到自己的禁字表——這次**不改文案而是給極窄白名單**（只放行字面完全相符的免責句，不放行「凡有『非』就通融」那種後門），因為為了閃測試去弱化免責聲明是本末倒置，與 PR-4a 那次可改寫的情況不同 ②禁字出現在**解釋「為何不能寫這些字」的註解裡** → 改為只掃執行碼與版型，沿用 `test-cloud-sync-guard.js` 既有規矩。
 - **⚠ 未驗項**：**App E2E pending**——未在真機開啟摘要面板、未實測 `window.print()` 在 iOS WKWebView 能否運作（程式已備退路提示，**仍不承諾 PDF 可用**）、未實測語音記錄口袋問題的實際準確度。**未部署**。
 - **邊界**：未動 schema／migration／既有 endpoint 行為／Gateway／Avatar。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
+
+### 2026-07-28 Claude/城堡 🔍 iOS 匯出方案調研 ＋ 修掉會騙人的 PDF 按鈕
+
+- **起因**：Edward 要求調研 iOS App 的匯出方法（我先前只敢說「PDF 未實測、不承諾」）。
+- **查證結果（三條，第一條推翻我上一輪的實作）**：
+  1. **`window.print()` 在 iOS WKWebView 完全無效**——同一顆按鈕在 iOS Safari 可以，在 App 殼裡按了沒反應。Apple 開發者論壇與多方來源一致；SwiftUI WebView 也同樣不支援列印，官方建議「改成輸出 PDF 或圖片」。⇒ **PR-4c 寫的「存成 PDF（列印）」在真機上是一顆按了沒事的按鈕。**
+  2. **正解＝`WKWebView.createPDF(configuration:)`（iOS 14+）**：原生把網頁內容算成 PDF data，再交 `UIActivityViewController`（存到檔案／LINE／AirDrop／AirPrint 一次到位）。
+  3. **Web Share API Level 2（`navigator.share({files})`）自 iOS 14 起在 WebView 可用**，但需 `navigator.canShare` 先測；專案在 `app.js` 的隱私資料匯出已經在用「分享檔案＋下載退路」這套，可直接沿用。
+- **方案比較**：A `window.print()` ❌iOS 無效／B 純文字分享 ✅現成但陽春／**C 原生外掛 createPDF ✅建議**／D JS 套件（jsPDF 等）**中文字型是大坑、要塞字型檔且加依賴**／E 後端產 PDF（違反零支出）。
+- **建議 C 的理由**：專案**已有五個自寫 Swift Capacitor 外掛**（AppleSignIn／GoogleSignIn／Health／Notify／Store，90–330 行）⇒ 寫外掛是既有慣例不是新能力；**零第三方依賴、零成本**（符合「不花錢證明」）；中文由系統渲染**不會亂碼**；一個分享面板同時涵蓋存檔／傳送／列印。
+- **⚠ 實作要處理的坑**：摘要面板可滾動，`createPDF` 直接抓可能只拿到可視區。穩健做法＝**另開隱藏 WKWebView 載入「純摘要 HTML」**（不含 App 殼）再轉 PDF，版面完全可控，也能直接沿用既有 `@media print` 樣式。前端需補一支 `visitSummaryAsHTML()`（`visitSummaryAsText()` 的同胞）。
+- **本次已修**（不能留著騙人）：打包後的 App（`isPackagedApp()`）**不再提供 PDF 選項**，選單改為只給「傳給家人／複製文字」並說明 PDF 還在做；瀏覽器環境維持列印可用。**一顆按了沒事的按鈕比沒有更糟**——長輩會以為自己按錯。`test-visit-summary-ui.js` 59 項仍全過。
+- **未做**：原生外掛本身（待 Edward 決定是否開工）。
+- 來源：Apple Developer Forums（WKWebView 列印／SwiftUI WebView printing）、Apple 官方文件（`createPDF(configuration:)`、`WKPDFConfiguration`）、Capacitor Discussion #3213（WebView 的 Web Share API Level 2 支援）、caniwebview.com。
