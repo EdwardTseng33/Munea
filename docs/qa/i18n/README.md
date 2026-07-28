@@ -35,13 +35,15 @@ docs/qa/i18n/
 - `locale`
 - `appVersion`、`build`、40 字元 `captureCommit`
 - ISO 8601 `capturedAt`
-- `viewports` 至少包含 `iphone`、`dynamic-type-large`
-- `screens` 覆蓋 `docs/I18N-SURFACE-INVENTORY.json` 的全部 App WebView states
-- 每個 screen 都要有實際存在、尺寸有效且 SHA-256 相符的 PNG、`result: pass`，並確認：
+- `profiles` 必須恰好包含 `iphone-small-standard`、`iphone-standard`、`iphone-dynamic-type-large`
+- `screens` 覆蓋 `docs/I18N-SURFACE-INVENTORY.json` 的 10 個 App WebView states，加上 `modal:profile`、`modal:data`、`modal:font`
+- 每個 screen 的每個 profile 都要有獨立、實際存在、尺寸有效且 SHA-256 相符的 PNG 與 `result: pass`，並確認：
   - `noOverflow`
   - `noClipping`
   - `noUntranslatedCopy`
   - `layoutAccepted`
+
+因此每個語系至少需要 13 states × 3 profiles = 39 張 App 驗收圖，四語合計 156 張；不能以同一張圖重複充當不同 state 或 profile。
 
 ## voice-e2e.json
 

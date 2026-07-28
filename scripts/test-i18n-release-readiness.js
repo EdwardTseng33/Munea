@@ -326,13 +326,33 @@ assert.equal(
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'munea-i18n-visual-'));
 try {
   const visualEvidencePath = path.join(tempDir, 'visual-qa.json');
-  const pngEvidence = Buffer.alloc(24);
-  Buffer.from('89504e470d0a1a0a', 'hex').copy(pngEvidence, 0);
-  Buffer.from('49484452', 'hex').copy(pngEvidence, 12);
-  pngEvidence.writeUInt32BE(390, 16);
-  pngEvidence.writeUInt32BE(844, 20);
-  fs.writeFileSync(path.join(tempDir, 'home.png'), pngEvidence);
-  const screenshotSha256 = crypto.createHash('sha256').update(pngEvidence).digest('hex');
+  const profileSpecs = [
+    ['iphone-small-standard', 375, 667],
+    ['iphone-standard', 390, 844],
+    ['iphone-dynamic-type-large', 390, 844],
+  ];
+  const captures = profileSpecs.map(([profile, width, height], index) => {
+    const pngEvidence = Buffer.alloc(25);
+    Buffer.from('89504e470d0a1a0a', 'hex').copy(pngEvidence, 0);
+    Buffer.from('49484452', 'hex').copy(pngEvidence, 12);
+    pngEvidence.writeUInt32BE(width, 16);
+    pngEvidence.writeUInt32BE(height, 20);
+    pngEvidence.writeUInt8(index, 24);
+    const screenshot = `home-${profile}.png`;
+    fs.writeFileSync(path.join(tempDir, screenshot), pngEvidence);
+    return {
+      profile,
+      screenshot,
+      sha256: crypto.createHash('sha256').update(pngEvidence).digest('hex'),
+      result: 'pass',
+      checks: {
+        noOverflow: true,
+        noClipping: true,
+        noUntranslatedCopy: true,
+        layoutAccepted: true,
+      },
+    };
+  });
   const visualEvidence = {
     schema: 'munea.i18n-visual-qa.v1',
     locale: 'en',
@@ -341,18 +361,11 @@ try {
     capturedAt: '2026-07-28T08:00:00Z',
     appVersion: '1.0.45',
     build: '49',
-    viewports: ['iphone', 'dynamic-type-large'],
+    profiles: profileSpecs.map(([profile]) => profile),
     screens: [{
       state: 'home',
-      screenshot: 'home.png',
-      sha256: screenshotSha256,
       result: 'pass',
-      checks: {
-        noOverflow: true,
-        noClipping: true,
-        noUntranslatedCopy: true,
-        layoutAccepted: true,
-      },
+      captures,
     }],
   };
   assert.equal(
@@ -361,13 +374,38 @@ try {
   );
   assert.equal(
     validateVisualEvidence(
-      { ...visualEvidence, screens: [{ ...visualEvidence.screens[0], screenshot: '../escape.png' }] },
+      {
+        ...visualEvidence,
+        screens: [{
+          ...visualEvidence.screens[0],
+          captures: [
+            { ...captures[0], screenshot: '../escape.png' },
+            ...captures.slice(1),
+          ],
+        }],
+      },
       'en',
       visualEvidencePath,
       ['home'],
     ),
     false,
     'Visual evidence must not reference screenshots outside its evidence directory',
+  );
+  assert.equal(
+    validateVisualEvidence(
+      {
+        ...visualEvidence,
+        screens: [{
+          ...visualEvidence.screens[0],
+          captures: captures.slice(0, 2),
+        }],
+      },
+      'en',
+      visualEvidencePath,
+      ['home'],
+    ),
+    false,
+    'Every App state must have all three real visual profiles',
   );
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });

@@ -19,6 +19,12 @@ const STORE_LOCALE_BY_CATALOG = {
   es: 'es',
 };
 
+const REQUIRED_VISUAL_PROFILES = [
+  'iphone-small-standard',
+  'iphone-standard',
+  'iphone-dynamic-type-large',
+];
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -99,32 +105,52 @@ function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
       || !/^[0-9a-f]{40}$/i.test(evidence.captureCommit || '')
       || !validIsoDate(evidence.capturedAt)
       || !requiredStrings(evidence, ['appVersion', 'build'])
-      || !Array.isArray(evidence.viewports)
-      || !evidence.viewports.includes('iphone')
-      || !evidence.viewports.includes('dynamic-type-large')
+      || !Array.isArray(evidence.profiles)
+      || evidence.profiles.length !== REQUIRED_VISUAL_PROFILES.length
+      || !REQUIRED_VISUAL_PROFILES.every((profile) => evidence.profiles.includes(profile))
       || !Array.isArray(evidence.screens)) {
+    return false;
+  }
+  if (new Set(evidence.screens.map((screen) => screen.state)).size !== evidence.screens.length) {
     return false;
   }
   const screens = new Map(evidence.screens.map((screen) => [screen.state, screen]));
   const evidenceDir = path.dirname(filePath);
+  const usedScreenshots = new Set();
   for (const state of requiredStates) {
     const screen = screens.get(state);
     if (!screen
         || screen.result !== 'pass'
-        || !requiredTrue(screen.checks, [
-          'noOverflow',
-          'noClipping',
-          'noUntranslatedCopy',
-          'layoutAccepted',
-        ])
-        || typeof screen.screenshot !== 'string') {
+        || !Array.isArray(screen.captures)
+        || screen.captures.length !== REQUIRED_VISUAL_PROFILES.length) {
       return false;
     }
-    const screenshotPath = path.resolve(evidenceDir, screen.screenshot);
-    if (!screenshotPath.startsWith(evidenceDir + path.sep)
-        || !/\.png$/i.test(screenshotPath)
-        || !validPngEvidence(screenshotPath, screen.sha256)) {
-      return false;
+    const captures = new Map(screen.captures.map((capture) => [capture.profile, capture]));
+    if (captures.size !== screen.captures.length) return false;
+    for (const profile of REQUIRED_VISUAL_PROFILES) {
+      const capture = captures.get(profile);
+      if (!capture
+          || capture.result !== 'pass'
+          || !requiredTrue(capture.checks, [
+            'noOverflow',
+            'noClipping',
+            'noUntranslatedCopy',
+            'layoutAccepted',
+          ])
+          || typeof capture.screenshot !== 'string') {
+        return false;
+      }
+      const screenshotPath = path.resolve(evidenceDir, capture.screenshot);
+      const relativePath = path.relative(evidenceDir, screenshotPath);
+      if (!relativePath
+          || relativePath.startsWith(`..${path.sep}`)
+          || path.isAbsolute(relativePath)
+          || !/\.png$/i.test(screenshotPath)
+          || usedScreenshots.has(screenshotPath)
+          || !validPngEvidence(screenshotPath, capture.sha256)) {
+        return false;
+      }
+      usedScreenshots.add(screenshotPath);
     }
   }
   return true;
@@ -308,8 +334,10 @@ function buildReadiness() {
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
   const inventory = readJson(INVENTORY_PATH);
-  const requiredVisualStates = inventory.surfaces
-    .find((surface) => surface.id === 'app-webview').requiredStates;
+  const requiredVisualStates = [
+    ...inventory.surfaces.find((surface) => surface.id === 'app-webview').requiredStates,
+    ...Object.keys(screenManifest.requiredModals).map((name) => `modal:${name}`),
+  ];
   const catalogEntries = new Map(
     catalogManifest.locales.map((entry) => [entry.locale, entry]),
   );

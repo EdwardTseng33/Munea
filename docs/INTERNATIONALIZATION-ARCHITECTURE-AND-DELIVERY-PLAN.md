@@ -281,6 +281,7 @@ Phase 5a（2026-07-28）將發布判定改為證據驅動：
 - `--strict` 只有四語全部有現行證據才回傳成功；目前四語都會明確顯示 `NOT READY`，這是正確護欄，不是測試失敗。
 - 母語審稿、視覺、語音與實機證據的固定入口分別為 `native-review.json`、`visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json`；檔案不存在、JSON 無效或 `result` 不是 `pass` 都視為未完成。
 - `native-review.json` 必須綁定目前 catalog 原始檔與完整 key 清單的 SHA-256；翻譯或 key 變更後，舊審稿證據會自動失效。
+- `visual-qa.json` 必須覆蓋 10 個 App states 與 3 個 modal，且每個畫面都要有小螢幕、標準螢幕、放大字體三份獨立 PNG；每語系 39 張、四語共 156 張，重複路徑或缺任一 profile 都不通過。
 - `exactBuildEvidenceChain` 再確認視覺、語音、安裝版與 8 商品購買證據來自同一 commit／version／build；IPA SHA-256 或服務 revisions 不一致時不得混用證據。
 
 Phase 5b（2026-07-28）：App Store 五張圖故事板
