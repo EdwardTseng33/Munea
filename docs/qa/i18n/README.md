@@ -167,6 +167,32 @@ compiler 不會截圖、不會自行勾選人工檢查，也不會把 review man
 
 測試不得記錄 Sandbox Apple ID、付款資料或完整交易 JWS。模擬器、假交易與不同 build 的結果不能代替本證據。
 
+## 一次完成 App、語音與購買驗收
+
+每個語系先建立一份不可直接通過的驗收清單：
+
+```powershell
+node scripts/i18n-app-e2e-evidence.js `
+  --locale en `
+  --template <安全工作目錄>\en-app-e2e-worklist.json
+```
+
+把同一個已安裝 iPhone build 的 commit、IPA SHA-256、版號、build、裝置、環境與 Brain／Voice／Gateway／Avatar revision 填入後，實際完成：
+
+- App 通話全路徑：麥克風、Auth、帳號、點數、Gateway、Voice、Avatar、開場、真實語音、AI 回覆、掛斷釋放容量。
+- 語音語系：指定語言開場、混合語言、單次切換，以及使用者確認後的永久偏好。
+- StoreKit Sandbox：8 個產品的在地名稱、系統價格、購買 sheet、伺服器驗證、權益套用、transaction finish、取消／未驗證／恢復購買路徑。
+
+所有步驟都由驗收人員標為 `true`、每個產品標為 `pass` 後，才可編譯三份 release gate 證據：
+
+```powershell
+node scripts/i18n-app-e2e-evidence.js `
+  --input <安全工作目錄>\en-app-e2e-worklist.json `
+  --output-dir docs\qa\i18n\en
+```
+
+工具不覆寫既有證據，且只接受非敏感的 ticket／證據引用；不得放入個資、Apple ID、原始音訊、token、JWS 或 transaction payload。西班牙文在 `app-store/in-app-purchases/manifest.json` 正式選定 `es-ES` 或 `es-MX` 前，編譯器必須拒絕產生通過證據。
+
 ## 本機 catalog 預覽
 
 `tools/i18n-preview.html?locale=ja` 可在本機 HTTP server 中查看繁中、英文、日文、西班牙文的代表性 catalog 元件、登入、設定、個人資料、資料匯出／刪除、字體、訂閱方案、點數包、StoreKit 價格格式與購買錯誤狀態，並用 `125% text` 按鈕先檢查長字串換行。
