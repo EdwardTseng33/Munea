@@ -20,7 +20,7 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | current `1.0.44` source 已超過凍結的 Build 492 commit `72a0bd46`；專案仍記錄 492，但 post-package source 沒有同一份 Archive／IPA 證據 | Build 492 的 Archive／IPA、Apple upload 與 Edward iPhone 安裝／啟動證據只適用 `72a0bd46`；App E2E pending | `partial` | 若驗現有 492，須針對該凍結成品；若包 current source，先換新 Build number 再完整驗收 |
+| App source lane | `1.0.44 (Build 492)`；current source 已超過凍結 commit `72a0bd46`，post-package source 沒有同一份 Archive／IPA 證據 | Build 492 的 Archive／IPA、Apple upload 與 Edward iPhone 安裝／啟動證據只適用 `72a0bd46`；App E2E pending | `partial` | 若驗現有 492，須針對該凍結成品；若包 current source，先換新 Build number 再完整驗收 |
 | App Store lane | latest uploaded／selected `1.0.44 (Build 492)` | Apple processing 完成，17:31 已選入並儲存於 1.0.44；仍為「準備提交」，未送審／核准／公開 | `partial` | 完成 App E2E 與審查資料核對；送審另行授權 |
 | Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |

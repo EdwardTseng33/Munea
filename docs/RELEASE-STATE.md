@@ -26,7 +26,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.44` post-package source（Xcode project 記錄 Build 492） | current source 已在凍結 commit `72a0bd46` 之後加入 Voice／Gateway 等變更；沒有適用 current HEAD 的 Archive／IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source。下一次包版必須換新 Build number | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 02:50 |
+| Latest source | `1.0.44 (Build 492)` | 這是 post-package source，已在凍結 commit `72a0bd46` 之後加入 Voice／Gateway 等變更；沒有適用 current HEAD 的 Archive／IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source。下一次包版必須換新 Build number | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 02:50 |
 | Latest uploaded App | `1.0.44 (Build 492)` | App Store Release Archive／IPA 已建立；Apple 於 17:22:57 回傳 `Upload succeeded`，TestFlight upload status 與 Build 處理皆完成。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1` | Xcode upload receipt; App Store Connect; `STATUS.md` | 2026-07-28 17:31 |
 | App Store selected review lane | `1.0.44 (Build 492)` | 17:31 已選入 1.0.44 版本頁並儲存；頁面狀態仍為「準備提交」。未點「新增以供審查」、未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-28 17:31 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
