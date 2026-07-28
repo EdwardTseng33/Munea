@@ -85,7 +85,7 @@ python scripts\member_data_isolation_probe.py `
 
 - `schema`: `munea.i18n-visual-qa.v1`
 - `locale`
-- `appVersion`、`build`、40 字元 `captureCommit`、64 字元 `binarySha256`
+- `appVersion`、`build`、40 字元 `captureCommit`、64 字元 `binarySha256`、正整數 `binaryBytes`
 - ISO 8601 `capturedAt`
 - `profiles` 必須恰好包含 `iphone-small-standard`、`iphone-standard`、`iphone-dynamic-type-large`
 - `screens` 必須完整覆蓋 `web/src/i18n/app-surface-manifest.json` 的 38 個 shipping states，包括主頁、通話各狀態、連接裝置、全部 modal／reader，以及動態建立的通知設定與通知收件匣
@@ -101,9 +101,9 @@ python scripts\member_data_isolation_probe.py `
 
 worklist 不會自動開啟畫面、不會建立假截圖，也不會把任何項目改成 PASS。每張圖必須來自同一個 exact installed iPhone build，並在當次驗收中實際開啟、儲存與檢查。發布驗證會拒絕路徑重用，也會拒絕把相同 PNG 內容複製成不同檔名充當另一個 state 或 profile。
 
-擷取前先把單一語系 worklist 存成工作檔，填妥 `buildIdentity` 的 commit、IPA SHA-256、App version、build，以及根節點 `review.capturedAt`、不含個資的 `reviewerReference`、`reviewerRole`。每張實機圖需依 worklist 的 `workspacePath` 儲存，人工確認四個 checks 後把該 entry 設為 `result: pass`。
+擷取前先把單一語系 worklist 存成工作檔，填妥 `buildIdentity` 的 commit、IPA SHA-256、IPA bytes、App version、build，以及根節點 `review.capturedAt`、不含個資的 `reviewerReference`、`reviewerRole`。每張實機圖需依 worklist 的 `workspacePath` 儲存，人工確認四個 checks 後把該 entry 設為 `result: pass`。
 
-完成 114 張後執行 `node scripts/i18n-visual-qa-evidence.js --input <工作檔>.json --output docs/qa/i18n/en/visual-qa.json`。compiler 會驗證：
+完成 114 張後執行 `node scripts/i18n-visual-qa-evidence.js --input <工作檔>.json --output docs/qa/i18n/en/visual-qa.json --ipa <同一個候選版.ipa>`。compiler 會重新雜湊實體 IPA，確認 SHA-256 與 bytes 都和工作檔一致，並驗證：
 
 - 38 states × 3 profiles 完整且順序未漂移。
 - PNG 路徑留在該語系證據資料夾內，symlink 也不能跳出去。
@@ -121,7 +121,7 @@ compiler 不會截圖、不會自行勾選人工檢查，也不會把 review man
 - `schema`: `munea.i18n-voice-e2e.v1`
 - `locale`、`conversationLocale`
 - `appVersion`、`build`、`profile`、`environment`、`device`
-- 40 字元 `exactCommit`、64 字元 `binarySha256`、ISO 8601 `testedAt`
+- 40 字元 `exactCommit`、64 字元 `binarySha256`、正整數 `binaryBytes`、ISO 8601 `testedAt`
 - `serviceRevisions`: `brain`、`voice`、`gateway`、`avatar`
 - `steps` 全部為 `true`：
   - `openingInLocale`
@@ -139,7 +139,7 @@ compiler 不會截圖、不會自行勾選人工檢查，也不會把 review man
 - `schema`: `munea.i18n-installed-app-e2e.v1`
 - `locale`
 - `appVersion`、`build`、`profile`、`environment`、`device`
-- 40 字元 `exactCommit`、64 字元 `binarySha256`、ISO 8601 `testedAt`
+- 40 字元 `exactCommit`、64 字元 `binarySha256`、正整數 `binaryBytes`、ISO 8601 `testedAt`
 - `serviceRevisions`: `brain`、`voice`、`gateway`、`avatar`
 - 從按下通話、權限、Auth、帳號、點數、Gateway、Voice、Avatar、真實麥克風上行、AI 聲音與畫面，到掛斷釋放容量，所有 `steps` 都必須為 `true`
 
@@ -147,7 +147,7 @@ compiler 不會截圖、不會自行勾選人工檢查，也不會把 review man
 
 ## 精確版本證據鏈
 
-同一語系的 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json` 與 `purchase-e2e.json` 必須指向同一個 source commit、App version、build 與 IPA SHA-256；四份證據少一份 binary identity 或不一致都不得通過。語音證據與安裝版的 Brain／Voice／Gateway／Avatar revisions 也必須一致，購買 backend revision 必須對上安裝版 Brain revision。任一份證據來自其他 build 都會讓 `exactBuildEvidenceChain` Gate 失敗。
+同一語系的 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json` 與 `purchase-e2e.json` 必須指向同一個 source commit、App version、build、IPA SHA-256 與 IPA bytes；四份證據少一份 binary identity 或不一致都不得通過。語音證據與安裝版的 Brain／Voice／Gateway／Avatar revisions 也必須一致，購買 backend revision 必須對上安裝版 Brain revision。任一份證據來自其他 build 都會讓 `exactBuildEvidenceChain` Gate 失敗。
 
 ## purchase-e2e.json
 
@@ -156,7 +156,7 @@ compiler 不會截圖、不會自行勾選人工檢查，也不會把 review man
 - `schema`: `munea.i18n-purchase-e2e.v1`
 - `locale`、`storeLocale`
 - `appVersion`、`build`、`profile`、`environment`、`device`、`backendRevision`
-- 40 字元 `exactCommit`、64 字元 `binarySha256`、ISO 8601 `testedAt`
+- 40 字元 `exactCommit`、64 字元 `binarySha256`、正整數 `binaryBytes`、ISO 8601 `testedAt`
 - `steps` 必須確認登入、8 商品載入、免費會員不得購買點數、取消與未驗證交易不入帳，以及有效訂閱還原
 - `products` 必須恰好覆蓋 4 個訂閱與 4 個點數包；每項都要在實體 iPhone 的 StoreKit Sandbox 確認：
   - 顯示名稱符合該語系
@@ -178,7 +178,7 @@ node scripts/i18n-app-e2e-evidence.js `
   --template <安全工作目錄>\en-app-e2e-worklist.json
 ```
 
-把同一個已安裝 iPhone build 的 commit、IPA SHA-256、版號、build、裝置、環境與 Brain／Voice／Gateway／Avatar revision 填入後，實際完成：
+把同一個已安裝 iPhone build 的 commit、IPA SHA-256、IPA bytes、版號、build、裝置、環境與 Brain／Voice／Gateway／Avatar revision 填入後，實際完成：
 
 - App 通話全路徑：麥克風、Auth、帳號、點數、Gateway、Voice、Avatar、開場、真實語音、AI 回覆、掛斷釋放容量。
 - 語音語系：指定語言開場、混合語言、單次切換，以及使用者確認後的永久偏好。
@@ -189,10 +189,11 @@ node scripts/i18n-app-e2e-evidence.js `
 ```powershell
 node scripts/i18n-app-e2e-evidence.js `
   --input <安全工作目錄>\en-app-e2e-worklist.json `
-  --output-dir docs\qa\i18n\en
+  --output-dir docs\qa\i18n\en `
+  --ipa <安全工作目錄>\Munea-candidate.ipa
 ```
 
-工具不覆寫既有證據，且只接受非敏感的 ticket／證據引用；不得放入個資、Apple ID、原始音訊、token、JWS 或 transaction payload。西班牙文在 `app-store/in-app-purchases/manifest.json` 正式選定 `es-ES` 或 `es-MX` 前，編譯器必須拒絕產生通過證據。
+工具會重新雜湊輸入的實體 IPA、不覆寫既有證據，且只接受非敏感的 ticket／證據引用；不得放入個資、Apple ID、原始音訊、token、JWS 或 transaction payload。西班牙文在 `app-store/in-app-purchases/manifest.json` 正式選定 `es-ES` 或 `es-MX` 前，編譯器必須拒絕產生通過證據。
 
 ## 本機 catalog 預覽
 

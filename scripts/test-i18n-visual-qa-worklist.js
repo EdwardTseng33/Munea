@@ -28,6 +28,7 @@ assert.equal(worklist.approvalPolicy.staticRiskCannotPassVisualQa, true);
 assert.deepEqual(worklist.buildIdentity, {
   captureCommit: null,
   binarySha256: null,
+  binaryBytes: null,
   appVersion: null,
   build: null,
 });

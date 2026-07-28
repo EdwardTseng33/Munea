@@ -4,6 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { buildReport: buildSurfaceReport } = require('./i18n-surface-inventory.js');
+const {
+  pngDimensions,
+  profileDimensionsMatch,
+} = require('./i18n-visual-qa-evidence.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const I18N_DIR = path.join(ROOT, 'web', 'src', 'i18n');
@@ -45,17 +49,19 @@ function requiredTrue(value, fields) {
   return value && fields.every((field) => value[field] === true);
 }
 
-function validPngEvidence(filePath, expectedSha256) {
+function validPngEvidence(filePath, expectedSha256, profile) {
   if (!/^[0-9a-f]{64}$/i.test(expectedSha256 || '') || !fs.existsSync(filePath)) {
     return false;
   }
-  const data = fs.readFileSync(filePath);
-  const pngSignature = '89504e470d0a1a0a';
-  return data.length >= 24
-    && data.subarray(0, 8).toString('hex') === pngSignature
-    && data.readUInt32BE(16) > 0
-    && data.readUInt32BE(20) > 0
-    && crypto.createHash('sha256').update(data).digest('hex') === expectedSha256.toLowerCase();
+  try {
+    const data = fs.readFileSync(filePath);
+    const dimensions = pngDimensions(data);
+    return profileDimensionsMatch(profile, dimensions.width, dimensions.height)
+      && crypto.createHash('sha256').update(data).digest('hex')
+        === expectedSha256.toLowerCase();
+  } catch {
+    return false;
+  }
 }
 
 function sha256(value) {
@@ -104,6 +110,8 @@ function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
       || evidence.result !== 'pass'
       || !/^[0-9a-f]{40}$/i.test(evidence.captureCommit || '')
       || !/^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
+      || !Number.isSafeInteger(evidence.binaryBytes)
+      || evidence.binaryBytes <= 0
       || !validIsoDate(evidence.capturedAt)
       || !requiredStrings(evidence, ['appVersion', 'build'])
       || !Array.isArray(evidence.profiles)
@@ -150,7 +158,7 @@ function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
           || !/\.png$/i.test(screenshotPath)
           || usedScreenshots.has(screenshotPath)
           || usedScreenshotHashes.has(String(capture.sha256 || '').toLowerCase())
-          || !validPngEvidence(screenshotPath, capture.sha256)) {
+          || !validPngEvidence(screenshotPath, capture.sha256, profile)) {
         return false;
       }
       usedScreenshots.add(screenshotPath);
@@ -166,6 +174,8 @@ function validateVoiceEvidence(evidence, locale) {
     && evidence.result === 'pass'
     && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
     && /^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
+    && Number.isSafeInteger(evidence.binaryBytes)
+    && evidence.binaryBytes > 0
     && validIsoDate(evidence.testedAt)
     && requiredStrings(evidence, [
       'appVersion',
@@ -198,6 +208,8 @@ function validateInstalledAppEvidence(evidence, locale) {
     && evidence.result === 'pass'
     && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
     && /^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
+    && Number.isSafeInteger(evidence.binaryBytes)
+    && evidence.binaryBytes > 0
     && validIsoDate(evidence.testedAt)
     && requiredStrings(evidence, [
       'appVersion',
@@ -235,6 +247,8 @@ function validatePurchaseEvidence(evidence, locale, requiredProductIds) {
       || evidence.result !== 'pass'
       || !/^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
       || !/^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
+      || !Number.isSafeInteger(evidence.binaryBytes)
+      || evidence.binaryBytes <= 0
       || !validIsoDate(evidence.testedAt)
       || !requiredStrings(evidence, [
         'appVersion',
@@ -301,6 +315,9 @@ function validateEvidenceConsistency(evidenceSet) {
     && visual.binarySha256 === installed.binarySha256
     && voice.binarySha256 === installed.binarySha256
     && purchase.binarySha256 === installed.binarySha256
+    && visual.binaryBytes === installed.binaryBytes
+    && voice.binaryBytes === installed.binaryBytes
+    && purchase.binaryBytes === installed.binaryBytes
     && purchase.backendRevision === installed.serviceRevisions.brain
     && sameServiceRevisions;
 }

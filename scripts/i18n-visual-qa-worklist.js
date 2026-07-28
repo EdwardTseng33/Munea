@@ -99,6 +99,7 @@ function buildVisualQaWorklist(localeFilter) {
     buildIdentity: {
       captureCommit: null,
       binarySha256: null,
+      binaryBytes: null,
       appVersion: null,
       build: null,
     },

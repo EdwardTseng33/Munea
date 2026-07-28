@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -50,11 +51,31 @@ function png(width, height, uniqueByte) {
   ]);
 }
 
+function candidateIpa(evidenceDir, name = 'candidate.ipa') {
+  const filePath = path.join(evidenceDir, name);
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(
+      filePath,
+      Buffer.concat([
+        Buffer.from('504b0304', 'hex'),
+        Buffer.from(`munea-exact-build-${name}`, 'utf8'),
+      ]),
+    );
+  }
+  return filePath;
+}
+
+function compile(worklist, evidenceDir, ipaPath = candidateIpa(evidenceDir)) {
+  return compileVisualQaEvidence(worklist, { evidenceDir, ipaPath });
+}
+
 function completedWorklist(evidenceDir) {
   const worklist = buildVisualQaWorklist('en');
+  const ipaData = fs.readFileSync(candidateIpa(evidenceDir));
   worklist.buildIdentity = {
     captureCommit: 'a'.repeat(40),
-    binarySha256: 'b'.repeat(64),
+    binarySha256: crypto.createHash('sha256').update(ipaData).digest('hex'),
+    binaryBytes: ipaData.length,
     appVersion: '1.0.45',
     build: '500',
   };
@@ -77,7 +98,7 @@ function completedWorklist(evidenceDir) {
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'munea-visual-evidence-'));
 try {
   const worklist = completedWorklist(temp);
-  const evidence = compileVisualQaEvidence(worklist, { evidenceDir: temp });
+  const evidence = compile(worklist, temp);
   assert.equal(evidence.schema, 'munea.i18n-visual-qa.v1');
   assert.equal(evidence.result, 'pass');
   assert.equal(evidence.locale, 'en');
@@ -87,18 +108,19 @@ try {
     new Set(evidence.screens.flatMap(({ captures }) => captures.map(({ sha256 }) => sha256))).size,
     114,
   );
+  assert.equal(evidence.binaryBytes, fs.statSync(candidateIpa(temp)).size);
 
   const incomplete = completedWorklist(temp);
   incomplete.entries[0].checks.noClipping = false;
   assert.throws(
-    () => compileVisualQaEvidence(incomplete, { evidenceDir: temp }),
+    () => compile(incomplete, temp),
     /noClipping/,
   );
 
   const missing = completedWorklist(temp);
   fs.unlinkSync(path.join(temp, missing.entries[1].screenshot));
   assert.throws(
-    () => compileVisualQaEvidence(missing, { evidenceDir: temp }),
+    () => compile(missing, temp),
     /screenshot is missing/,
   );
   fs.writeFileSync(
@@ -112,7 +134,7 @@ try {
     png(320, 480, 250),
   );
   assert.throws(
-    () => compileVisualQaEvidence(wrongDimensions, { evidenceDir: temp }),
+    () => compile(wrongDimensions, temp),
     /dimensions do not match/,
   );
 
@@ -122,7 +144,7 @@ try {
     Buffer.from('89504e470d0a1a0a0000000d49484452000001860000034c', 'hex'),
   );
   assert.throws(
-    () => compileVisualQaEvidence(truncated, { evidenceDir: temp }),
+    () => compile(truncated, temp),
     /not a complete PNG/,
   );
 
@@ -132,7 +154,7 @@ try {
   corrupt[corrupt.length - 1] ^= 0xff;
   fs.writeFileSync(corruptPath, corrupt);
   assert.throws(
-    () => compileVisualQaEvidence(badCrc, { evidenceDir: temp }),
+    () => compile(badCrc, temp),
     /invalid CRC/,
   );
 
@@ -142,15 +164,21 @@ try {
     path.join(temp, duplicate.entries[6].screenshot),
   );
   assert.throws(
-    () => compileVisualQaEvidence(duplicate, { evidenceDir: temp }),
+    () => compile(duplicate, temp),
     /bytes are reused/,
   );
 
   const drifted = completedWorklist(temp);
   drifted.entries[5].screenshot = '../escape.png';
   assert.throws(
-    () => compileVisualQaEvidence(drifted, { evidenceDir: temp }),
+    () => compile(drifted, temp),
     /differs from current worklist/,
+  );
+
+  const differentIpa = candidateIpa(temp, 'different.ipa');
+  assert.throws(
+    () => compile(completedWorklist(temp), temp, differentIpa),
+    /binarySha256 does not match/,
   );
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });

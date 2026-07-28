@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const zlib = require('zlib');
 const {
   buildReadiness,
   formatReport,
@@ -17,6 +18,30 @@ const {
   validateVisualEvidence,
   validateVoiceEvidence,
 } = require('./i18n-release-readiness.js');
+const { crc32 } = require('./i18n-visual-qa-evidence.js');
+
+function pngChunk(type, data) {
+  const typeBytes = Buffer.from(type, 'ascii');
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE(crc32(Buffer.concat([typeBytes, data])));
+  return Buffer.concat([length, typeBytes, data, checksum]);
+}
+
+function validPng(width, height, uniqueByte) {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 6;
+  return Buffer.concat([
+    Buffer.from('89504e470d0a1a0a', 'hex'),
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', zlib.deflateSync(Buffer.from([uniqueByte]))),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
 
 const report = buildReadiness();
 const requiredLocales = ['zh-TW', 'en', 'ja', 'es'];
@@ -440,6 +465,7 @@ const voiceEvidence = {
   result: 'pass',
   exactCommit,
   binarySha256: 'b'.repeat(64),
+  binaryBytes: 60000000,
   testedAt: '2026-07-28T08:00:00Z',
   appVersion: '1.0.45',
   build: '49',
@@ -471,6 +497,7 @@ const installedEvidence = {
   result: 'pass',
   exactCommit,
   binarySha256: 'b'.repeat(64),
+  binaryBytes: 60000000,
   testedAt: '2026-07-28T08:00:00Z',
   appVersion: '1.0.45',
   build: '49',
@@ -500,6 +527,11 @@ assert.equal(
   false,
   'Installed App evidence must identify the exact binary',
 );
+assert.equal(
+  validateInstalledAppEvidence({ ...installedEvidence, binaryBytes: null }, 'en'),
+  false,
+  'Installed App evidence must include the exact IPA byte size',
+);
 
 const purchaseProductIds = [
   'net.munea.app.plus.monthly',
@@ -517,6 +549,7 @@ const purchaseEvidence = {
   result: 'pass',
   exactCommit,
   binarySha256: 'c'.repeat(64),
+  binaryBytes: 60000000,
   testedAt: '2026-07-28T08:00:00Z',
   appVersion: '1.0.45',
   build: '49',
@@ -564,6 +597,7 @@ const consistentVisualEvidence = {
   result: 'pass',
   captureCommit: exactCommit,
   binarySha256: installedEvidence.binarySha256,
+  binaryBytes: installedEvidence.binaryBytes,
   capturedAt: '2026-07-28T08:00:00Z',
   appVersion: installedEvidence.appVersion,
   build: installedEvidence.build,
@@ -601,6 +635,23 @@ assert.equal(
   false,
   'Evidence from a different source commit must not be combined',
 );
+assert.equal(
+  validateEvidenceConsistency({
+    visual: consistentVisualEvidence,
+    voice: { ...voiceEvidence, appVersion: installedEvidence.appVersion, build: installedEvidence.build },
+    installed: installedEvidence,
+    purchase: {
+      ...purchaseEvidence,
+      appVersion: installedEvidence.appVersion,
+      build: installedEvidence.build,
+      binarySha256: installedEvidence.binarySha256,
+      binaryBytes: installedEvidence.binaryBytes + 1,
+      backendRevision: installedEvidence.serviceRevisions.brain,
+    },
+  }),
+  false,
+  'Evidence with a different IPA byte size must not be combined',
+);
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'munea-i18n-visual-'));
 try {
@@ -611,12 +662,7 @@ try {
     ['iphone-dynamic-type-large', 390, 844],
   ];
   const captures = profileSpecs.map(([profile, width, height], index) => {
-    const pngEvidence = Buffer.alloc(25);
-    Buffer.from('89504e470d0a1a0a', 'hex').copy(pngEvidence, 0);
-    Buffer.from('49484452', 'hex').copy(pngEvidence, 12);
-    pngEvidence.writeUInt32BE(width, 16);
-    pngEvidence.writeUInt32BE(height, 20);
-    pngEvidence.writeUInt8(index, 24);
+    const pngEvidence = validPng(width, height, index);
     const screenshot = `home-${profile}.png`;
     fs.writeFileSync(path.join(tempDir, screenshot), pngEvidence);
     return {
@@ -638,6 +684,7 @@ try {
     result: 'pass',
     captureCommit: exactCommit,
     binarySha256: installedEvidence.binarySha256,
+    binaryBytes: installedEvidence.binaryBytes,
     capturedAt: '2026-07-28T08:00:00Z',
     appVersion: '1.0.45',
     build: '49',
@@ -652,6 +699,17 @@ try {
     validateVisualEvidence(visualEvidence, 'en', visualEvidencePath, ['home']),
     true,
   );
+  const corruptScreenshotPath = path.join(tempDir, captures[0].screenshot);
+  const originalScreenshot = fs.readFileSync(corruptScreenshotPath);
+  const corruptScreenshot = Buffer.from(originalScreenshot);
+  corruptScreenshot[corruptScreenshot.length - 1] ^= 0xff;
+  fs.writeFileSync(corruptScreenshotPath, corruptScreenshot);
+  assert.equal(
+    validateVisualEvidence(visualEvidence, 'en', visualEvidencePath, ['home']),
+    false,
+    'Release readiness must reject malformed PNG evidence even when JSON is hand-written',
+  );
+  fs.writeFileSync(corruptScreenshotPath, originalScreenshot);
   assert.equal(
     validateVisualEvidence(
       { ...visualEvidence, binarySha256: 'unknown' },

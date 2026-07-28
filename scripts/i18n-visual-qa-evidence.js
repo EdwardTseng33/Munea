@@ -6,6 +6,9 @@ const path = require('node:path');
 const {
   buildVisualQaWorklist,
 } = require('./i18n-visual-qa-worklist.js');
+const {
+  verifyDeclaredIpaIdentity,
+} = require('./ipa-binary-identity.js');
 
 const REQUIRED_CHECKS = Object.freeze([
   'noOverflow',
@@ -193,15 +196,12 @@ function compileVisualQaEvidence(worklist, options = {}) {
   const build = worklist.buildIdentity;
   if (!build || typeof build !== 'object') throw new Error('buildIdentity is required');
   const captureCommit = requiredString(build.captureCommit, 'buildIdentity.captureCommit');
-  const binarySha256 = requiredString(build.binarySha256, 'buildIdentity.binarySha256');
   const appVersion = requiredString(build.appVersion, 'buildIdentity.appVersion');
   const buildNumber = requiredString(build.build, 'buildIdentity.build');
   if (!/^[0-9a-f]{40}$/i.test(captureCommit)) {
     throw new Error('captureCommit must be a 40-character Git SHA');
   }
-  if (!/^[0-9a-f]{64}$/i.test(binarySha256)) {
-    throw new Error('binarySha256 must be a 64-character SHA-256');
-  }
+  const binaryIdentity = verifyDeclaredIpaIdentity(build, options.ipaPath);
   const review = worklist.review;
   if (!review || typeof review !== 'object') throw new Error('visual review metadata is required');
   if (!validIsoDate(review.capturedAt)) {
@@ -299,7 +299,8 @@ function compileVisualQaEvidence(worklist, options = {}) {
     locale,
     result: 'pass',
     captureCommit,
-    binarySha256,
+    binarySha256: binaryIdentity.binarySha256,
+    binaryBytes: binaryIdentity.binaryBytes,
     capturedAt: review.capturedAt,
     appVersion,
     build: buildNumber,
@@ -313,16 +314,21 @@ function compileVisualQaEvidence(worklist, options = {}) {
 function main() {
   const inputIndex = process.argv.indexOf('--input');
   const outputIndex = process.argv.indexOf('--output');
+  const ipaIndex = process.argv.indexOf('--ipa');
   const input = inputIndex >= 0 ? process.argv[inputIndex + 1] : '';
   const output = outputIndex >= 0 ? process.argv[outputIndex + 1] : '';
-  if (!input || !output) {
-    throw new Error('usage: --input <completed-worklist.json> --output <visual-qa.json>');
+  const ipaPath = ipaIndex >= 0 ? process.argv[ipaIndex + 1] : '';
+  if (!input || !output || !ipaPath) {
+    throw new Error(
+      'usage: --input <completed-worklist.json> --output <visual-qa.json> --ipa <candidate.ipa>',
+    );
   }
   const inputPath = path.resolve(input);
   const outputPath = path.resolve(output);
   const worklist = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
   const evidence = compileVisualQaEvidence(worklist, {
     evidenceDir: path.dirname(outputPath),
+    ipaPath,
   });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');

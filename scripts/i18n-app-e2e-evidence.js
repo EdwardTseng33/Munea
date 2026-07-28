@@ -7,6 +7,9 @@ const {
   validatePurchaseEvidence,
   validateVoiceEvidence,
 } = require('./i18n-release-readiness.js');
+const {
+  verifyDeclaredIpaIdentity,
+} = require('./ipa-binary-identity.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const IAP_MANIFEST_PATH = path.join(
@@ -134,6 +137,7 @@ function buildAppE2eWorklist(locale) {
     buildIdentity: {
       exactCommit: '',
       binarySha256: '',
+      binaryBytes: null,
       appVersion: '',
       build: '',
     },
@@ -175,27 +179,25 @@ function buildAppE2eWorklist(locale) {
   };
 }
 
-function validateBuildIdentity(build) {
+function validateBuildIdentity(build, ipaPath) {
   if (!build || typeof build !== 'object') throw new Error('buildIdentity is required');
   const exactCommit = requiredString(build.exactCommit, 'buildIdentity.exactCommit');
-  const binarySha256 = requiredString(build.binarySha256, 'buildIdentity.binarySha256');
   const appVersion = requiredString(build.appVersion, 'buildIdentity.appVersion');
   const buildNumber = requiredString(build.build, 'buildIdentity.build');
   if (!/^[0-9a-f]{40}$/i.test(exactCommit)) {
     throw new Error('buildIdentity.exactCommit must be a 40-character Git SHA');
   }
-  if (!/^[0-9a-f]{64}$/i.test(binarySha256)) {
-    throw new Error('buildIdentity.binarySha256 must be a 64-character SHA-256');
-  }
+  const binaryIdentity = verifyDeclaredIpaIdentity(build, ipaPath);
   return {
     exactCommit,
-    binarySha256: binarySha256.toLowerCase(),
+    binarySha256: binaryIdentity.binarySha256,
+    binaryBytes: binaryIdentity.binaryBytes,
     appVersion,
     build: buildNumber,
   };
 }
 
-function compileAppE2eEvidence(worklist) {
+function compileAppE2eEvidence(worklist, options = {}) {
   if (!worklist || worklist.schema !== 'munea.i18n-app-e2e-worklist.v1') {
     throw new Error('App E2E worklist schema is invalid');
   }
@@ -204,7 +206,7 @@ function compileAppE2eEvidence(worklist) {
   const canonical = buildAppE2eWorklist(locale);
   const iapManifest = readIapManifest();
   const productIds = iapManifest.productSet.products.map(({ productId }) => productId);
-  const build = validateBuildIdentity(worklist.buildIdentity);
+  const build = validateBuildIdentity(worklist.buildIdentity, options.ipaPath);
   const run = worklist.run;
   if (!run || typeof run !== 'object') throw new Error('run metadata is required');
   if (!validIsoDate(run.testedAt)) throw new Error('run.testedAt must be an ISO 8601 timestamp');
@@ -286,6 +288,7 @@ function compileAppE2eEvidence(worklist) {
     result: 'pass',
     exactCommit: build.exactCommit,
     binarySha256: build.binarySha256,
+    binaryBytes: build.binaryBytes,
     appVersion: build.appVersion,
     build: build.build,
     testerReference,
@@ -364,14 +367,16 @@ function main() {
   }
   const input = argValue('--input');
   const outputDir = argValue('--output-dir');
-  if (!input || !outputDir) {
+  const ipaPath = argValue('--ipa');
+  if (!input || !outputDir || !ipaPath) {
     throw new Error(
       'usage: --locale <locale> --template <worklist.json> OR '
-      + '--input <completed-worklist.json> --output-dir <locale-evidence-dir>',
+      + '--input <completed-worklist.json> --output-dir <locale-evidence-dir> '
+      + '--ipa <candidate.ipa>',
     );
   }
   const worklist = JSON.parse(fs.readFileSync(path.resolve(input), 'utf8'));
-  const evidence = compileAppE2eEvidence(worklist);
+  const evidence = compileAppE2eEvidence(worklist, { ipaPath });
   const target = path.resolve(outputDir);
   const outputs = [
     ['installed-app-e2e.json', evidence.installed],
