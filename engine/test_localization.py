@@ -132,6 +132,105 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(context["countryCode"], "JP")
         self.assertEqual(context["timeZone"], "Asia/Tokyo")
 
+    def test_mixed_language_turn_does_not_mutate_saved_or_session_language(self):
+        state = localization.new_conversation_locale_state({
+            "uiLocale": "ja",
+            "conversationLocale": "en",
+            "countryCode": "US",
+            "safetyRegion": "US",
+        })
+
+        decision = localization.resolve_conversation_turn_locale(
+            state,
+            detected_languages=["en-US", "zh-Hant-TW"],
+        )
+
+        self.assertEqual(decision["responseLocale"], "en")
+        self.assertEqual(decision["detectedLocales"], ["en", "zh-TW"])
+        self.assertTrue(decision["codeSwitchDetected"])
+        self.assertFalse(decision["sessionChanged"])
+        self.assertEqual(decision["state"]["baseLocale"], "en")
+        self.assertEqual(decision["state"]["sessionLocale"], "en")
+        self.assertNotIn("countryCode", decision["state"])
+        self.assertNotIn("safetyRegion", decision["state"])
+
+    def test_turn_can_reply_in_detected_language_without_saving_it(self):
+        state = localization.new_conversation_locale_state({
+            "conversationLocale": "en",
+        })
+
+        decision = localization.resolve_conversation_turn_locale(
+            state,
+            detected_languages=["ja-JP"],
+        )
+
+        self.assertEqual(decision["responseLocale"], "ja")
+        self.assertEqual(decision["state"]["baseLocale"], "en")
+        self.assertEqual(decision["state"]["sessionLocale"], "en")
+        self.assertIsNone(decision["persistedLocale"])
+
+    def test_explicit_temporary_voice_switch_changes_only_the_session(self):
+        state = localization.new_conversation_locale_state({
+            "conversationLocale": "zh-TW",
+        })
+
+        decision = localization.resolve_conversation_turn_locale(
+            state,
+            switch_locale="es-MX",
+        )
+
+        self.assertEqual(decision["responseLocale"], "es")
+        self.assertEqual(decision["state"]["baseLocale"], "zh-TW")
+        self.assertEqual(decision["state"]["sessionLocale"], "es")
+        self.assertTrue(decision["sessionChanged"])
+        self.assertFalse(decision["confirmationRequired"])
+
+    def test_permanent_voice_switch_requires_then_records_confirmation(self):
+        state = localization.new_conversation_locale_state({
+            "conversationLocale": "en",
+        })
+        requested = localization.resolve_conversation_turn_locale(
+            state,
+            switch_locale="ja",
+            permanent=True,
+        )
+
+        self.assertEqual(requested["responseLocale"], "ja")
+        self.assertEqual(requested["state"]["baseLocale"], "en")
+        self.assertEqual(requested["state"]["sessionLocale"], "ja")
+        self.assertEqual(requested["state"]["pendingPermanentLocale"], "ja")
+        self.assertTrue(requested["confirmationRequired"])
+        self.assertIsNone(requested["persistedLocale"])
+
+        confirmed = localization.resolve_conversation_turn_locale(
+            requested["state"],
+            confirmation=True,
+        )
+        self.assertEqual(confirmed["state"]["baseLocale"], "ja")
+        self.assertEqual(confirmed["state"]["sessionLocale"], "ja")
+        self.assertIsNone(confirmed["state"]["pendingPermanentLocale"])
+        self.assertEqual(confirmed["persistedLocale"], "ja")
+
+    def test_voice_switch_rejects_unsupported_or_unexpected_confirmation(self):
+        state = localization.new_conversation_locale_state({
+            "conversationLocale": "en",
+        })
+        with self.assertRaisesRegex(ValueError, "Unsupported conversation locale"):
+            localization.resolve_conversation_turn_locale(
+                state,
+                switch_locale="fr-FR",
+            )
+        with self.assertRaisesRegex(ValueError, "No permanent"):
+            localization.resolve_conversation_turn_locale(
+                state,
+                confirmation=True,
+            )
+        with self.assertRaisesRegex(ValueError, "requires switchLocale"):
+            localization.resolve_conversation_turn_locale(
+                state,
+                permanent=True,
+            )
+
     def test_locale_context_storage_reuses_columns_and_preserves_attributes(self):
         context = localization.build_locale_context({
             "uiLocale": "es",

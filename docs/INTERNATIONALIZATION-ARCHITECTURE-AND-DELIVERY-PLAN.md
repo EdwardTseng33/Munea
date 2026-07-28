@@ -199,6 +199,13 @@ Phase 3a（2026-07-28）先建立 signed call claim 的解析護欄：
 - rollout 期間，沒有 locale claim 的既有已簽 token 仍可得到繁中／台灣相容預設；Gateway、Voice 與實機 E2E 通過後切為 `allow_legacy=false`。
 - 本批只加入共用解析與單元測試，尚未改 Gateway 簽發或 Voice 使用方式；待 #258／#270 合併後再接線，正式 call path 不變。
 
+Phase 3b（2026-07-28）建立混合語言與語音切換狀態規則：
+
+- `engine/localization.py` 將已儲存的 `baseLocale`、本通使用的 `sessionLocale`、待確認的 `pendingPermanentLocale` 分開，絕不把語言變化帶到 `countryCode`、`safetyRegion` 或資料區域。
+- 單一輪偵測到不同語言時，可以用當輪主要語言回覆，但不自動改寫 session 或會員偏好；中英夾雜本身不是永久切換指令。
+- 「這通改用日文」只改 session；「以後都用日文」先暫時切換並要求確認，確認後才回傳可寫入帳號的 `persistedLocale`。
+- 狀態模組只接受 ASR／模型產生的結構化語言與切換意圖，不用脆弱的關鍵字規則猜測使用者意思；正式 Voice 接線仍等待 #270。
+
 此階段屬 chat-call path risk。完成程式與自動測試後仍標記 `App E2E pending`，直到使用受影響 profile 的實體 iPhone 完成完整通話驗收。
 
 ### Phase 4 — 後台與營運

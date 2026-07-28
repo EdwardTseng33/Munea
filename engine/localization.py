@@ -359,6 +359,113 @@ def _match_supported_locale(locale):
     return None
 
 
+def new_conversation_locale_state(locale_context=None):
+    """Create session language state without copying geography or policy fields."""
+    context = build_locale_context(locale_context)
+    locale = context["conversationLocale"]
+    return {
+        "baseLocale": locale,
+        "sessionLocale": locale,
+        "pendingPermanentLocale": None,
+    }
+
+
+def resolve_conversation_turn_locale(
+    state,
+    detected_languages=None,
+    switch_locale=None,
+    permanent=False,
+    confirmation=False,
+):
+    """Resolve one voice turn without treating code-switching as a saved preference.
+
+    ASR or the model supplies ``detected_languages`` in dominant-first order.
+    A separate structured intent parser supplies ``switch_locale`` and whether
+    the request is permanent; this policy deliberately does not guess those
+    intents from raw speech. A permanent change is returned only after an
+    explicit confirmation turn.
+    """
+    if not isinstance(state, Mapping):
+        raise TypeError("Conversation locale state must be a mapping")
+    base_locale = _required_supported_locale(state.get("baseLocale"), "baseLocale")
+    session_locale = _required_supported_locale(
+        state.get("sessionLocale") or base_locale,
+        "sessionLocale",
+    )
+    pending_locale = state.get("pendingPermanentLocale")
+    if pending_locale is not None:
+        pending_locale = _required_supported_locale(
+            pending_locale,
+            "pendingPermanentLocale",
+        )
+
+    detected = detected_languages
+    if isinstance(detected, str):
+        detected = [detected]
+    if not isinstance(detected, (list, tuple)):
+        detected = []
+    detected_locales = []
+    for value in detected:
+        locale = _match_supported_locale(value)
+        if locale and locale not in detected_locales:
+            detected_locales.append(locale)
+
+    requested_locale = None
+    if switch_locale is not None:
+        requested_locale = _required_supported_locale(switch_locale, "switchLocale")
+    if permanent and requested_locale is None and not confirmation:
+        raise ValueError("A permanent conversation locale change requires switchLocale")
+
+    previous_session_locale = session_locale
+    confirmation_required = False
+    persisted_locale = None
+
+    if requested_locale is not None:
+        session_locale = requested_locale
+        if permanent:
+            if confirmation:
+                base_locale = requested_locale
+                pending_locale = None
+                persisted_locale = requested_locale
+            else:
+                pending_locale = requested_locale
+                confirmation_required = True
+        else:
+            pending_locale = None
+    elif confirmation:
+        if pending_locale is None:
+            raise ValueError("No permanent conversation locale change is pending")
+        base_locale = pending_locale
+        session_locale = pending_locale
+        persisted_locale = pending_locale
+        pending_locale = None
+
+    response_locale = requested_locale or (
+        detected_locales[0] if detected_locales else session_locale
+    )
+    next_state = {
+        "baseLocale": base_locale,
+        "sessionLocale": session_locale,
+        "pendingPermanentLocale": pending_locale,
+    }
+    return {
+        "state": next_state,
+        "responseLocale": response_locale,
+        "detectedLocales": detected_locales,
+        "codeSwitchDetected": len(detected_locales) > 1,
+        "sessionChanged": previous_session_locale != session_locale,
+        "confirmationRequired": confirmation_required,
+        "persistedLocale": persisted_locale,
+    }
+
+
+def _required_supported_locale(value, field):
+    locale = _match_supported_locale(value)
+    if locale is None:
+        raise ValueError(f"Unsupported conversation locale for {field}: {value!r}")
+    return locale
+
+
 def _normalize_code(value, fallback, pattern):
     if value is None:
         return fallback
