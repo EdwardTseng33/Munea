@@ -221,6 +221,13 @@ Phase 5a（2026-07-28）將發布判定改為證據驅動：
 - `--strict` 只有四語全部有現行證據才回傳成功；目前四語都會明確顯示 `NOT READY`，這是正確護欄，不是測試失敗。
 - 視覺、語音與實機證據的固定入口分別為 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json`；檔案不存在、JSON 無效或 `result` 不是 `pass` 都視為未完成。
 
+Phase 5b（2026-07-28）：App Store 五張圖故事板
+
+- `app-store/localizations/screenshot-plan.json` 固定繁中、英文、日文、西班牙文的五張圖順序、對應 App 畫面與短文案，避免各市場截出不同產品承諾。
+- 每張圖必須來自 exact approved build 與 synthetic QA account，禁止使用正式會員資料；必須確認沒有未翻譯文字、溢位或裁切。
+- 目前只有故事板與文案草稿，沒有把計畫當成截圖證據；各語系 `screenshotStatus` 仍維持 missing 或 existing-unreviewed。
+- 西班牙文仍必須先決定 `es-ES` 或 `es-MX`；決策前不得送審或開市場。
+
 Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
 
 - `web/src/i18n/dom-localizer.js` 只用 `textContent` 與明確允許的 `aria-label`、`placeholder`、`title`、`value` 屬性套用翻譯，不接受 HTML 字串，也不從 DOM 解析插值資料。

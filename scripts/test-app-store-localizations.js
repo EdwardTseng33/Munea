@@ -6,6 +6,10 @@ const path = require('path');
 
 const root = path.resolve('app-store/localizations');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
+const screenshotPlan = JSON.parse(
+  fs.readFileSync(path.join(root, 'screenshot-plan.json'), 'utf8'),
+);
+const inventory = JSON.parse(fs.readFileSync('docs/I18N-SURFACE-INVENTORY.json', 'utf8'));
 const localeKeys = ['zh-Hant', 'en-US', 'ja', 'es'];
 const requiredMetadata = [
   'name',
@@ -40,6 +44,23 @@ assert.equal(manifest.appAvailability.currentState, 'unverified');
 assert.equal(manifest.appAvailability.changeAuthorized, false);
 assert.equal(manifest.inAppPurchaseAvailability.currentState, 'unverified');
 assert.equal(manifest.inAppPurchaseAvailability.changeAuthorized, false);
+assert.equal(screenshotPlan.schema, 'munea.app-store-screenshot-plan.v1');
+assert.equal(screenshotPlan.authority, 'repository-draft-only');
+assert.equal(screenshotPlan.status, 'draft');
+assert.deepEqual(screenshotPlan.canvas, { width: 1242, height: 2688, format: 'png' });
+assert.deepEqual(Object.keys(screenshotPlan.locales), localeKeys);
+
+const appStates = new Set(
+  inventory.surfaces.find((surface) => surface.id === 'app-webview').requiredStates,
+);
+const requiredFrameOrder = [
+  'voice-companion',
+  'daily-reminders',
+  'family-circle',
+  'conversation-memory',
+  'wellbeing-records',
+];
+assert.deepEqual(screenshotPlan.frameOrder, requiredFrameOrder);
 
 for (const localeKey of localeKeys) {
   const locale = manifest.locales[localeKey];
@@ -50,6 +71,25 @@ for (const localeKey of localeKeys) {
   const filePath = path.join(root, locale.metadataFile);
   assert(fs.existsSync(filePath), `Missing App Store metadata for ${localeKey}`);
   const metadata = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  const screenshotLocale = screenshotPlan.locales[localeKey];
+  assert(screenshotLocale, `Missing screenshot story for ${localeKey}`);
+  assert.equal(screenshotLocale.catalogLocale, locale.catalogLocale);
+  assert.notEqual(screenshotLocale.status, 'approved');
+  assert.equal(screenshotLocale.frames.length, locale.expectedScreenshotCount);
+  assert.deepEqual(
+    screenshotLocale.frames.map((frame) => frame.id),
+    requiredFrameOrder,
+    `${localeKey} screenshot story must keep the approved five-frame order`,
+  );
+  for (const frame of screenshotLocale.frames) {
+    assert(appStates.has(frame.appState), `${localeKey}.${frame.id} has unknown App state`);
+    assert(frame.headline.trim(), `${localeKey}.${frame.id} needs a headline`);
+    assert(frame.supportingText.trim(), `${localeKey}.${frame.id} needs supporting text`);
+    assert([...frame.headline].length <= 48, `${localeKey}.${frame.id} headline is too long`);
+    assert([...frame.supportingText].length <= 100, `${localeKey}.${frame.id} support text is too long`);
+    assert(!/[\r\n<>]/.test(frame.headline), `${localeKey}.${frame.id} headline must be plain text`);
+    assert(!/[\r\n<>]/.test(frame.supportingText), `${localeKey}.${frame.id} support text must be plain text`);
+  }
 
   for (const field of requiredMetadata) {
     assert.equal(typeof metadata[field], 'string', `${localeKey}.${field} must be a string`);
@@ -80,6 +120,12 @@ for (const localeKey of localeKeys) {
     assert(!pattern.test(searchableCopy), `${localeKey} contains a banned or false store claim: ${pattern}`);
   }
 }
+
+assert(
+  !/陪伴/.test(JSON.stringify(screenshotPlan.locales.ja))
+    && !/陪伴/.test(JSON.stringify(JSON.parse(fs.readFileSync(path.join(root, 'ja.json'), 'utf8')))),
+  'Japanese copy must not retain the Chinese-only term 陪伴',
+);
 
 const screenshotDirectory = path.resolve(root, manifest.locales['zh-Hant'].screenshotDirectory);
 const primaryScreenshots = fs.readdirSync(screenshotDirectory).filter((name) => /\.png$/i.test(name));

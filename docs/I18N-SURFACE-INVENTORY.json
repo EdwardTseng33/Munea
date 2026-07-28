@@ -177,6 +177,7 @@
         "ios/App/App/ja.lproj/InfoPlist.strings",
         "ios/App/App/es.lproj/InfoPlist.strings",
         "app-store/localizations/manifest.json",
+        "app-store/localizations/screenshot-plan.json",
         "app-store/localizations/zh-Hant.json",
         "app-store/localizations/en-US.json",
         "app-store/localizations/ja.json",
