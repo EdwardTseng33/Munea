@@ -168,7 +168,10 @@
         "app-store/localizations/zh-Hant.json",
         "app-store/localizations/en-US.json",
         "app-store/localizations/ja.json",
-        "app-store/localizations/es-draft.json"
+        "app-store/localizations/es-draft.json",
+        "docs/qa/i18n/README.md",
+        "scripts/i18n-release-readiness.js",
+        "scripts/test-i18n-release-readiness.js"
       ],
       "requiredStates": [
         "binary-localizations",

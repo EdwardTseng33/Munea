@@ -1,0 +1,341 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const ROOT = path.resolve(__dirname, '..');
+const I18N_DIR = path.join(ROOT, 'web', 'src', 'i18n');
+const LEGAL_DIR = path.join(ROOT, 'web', 'legal');
+const STORE_DIR = path.join(ROOT, 'app-store', 'localizations');
+const QA_DIR = path.join(ROOT, 'docs', 'qa', 'i18n');
+const INVENTORY_PATH = path.join(ROOT, 'docs', 'I18N-SURFACE-INVENTORY.json');
+
+const STORE_LOCALE_BY_CATALOG = {
+  'zh-TW': 'zh-Hant',
+  en: 'en-US',
+  ja: 'ja',
+  es: 'es',
+};
+
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function validIsoDate(value) {
+  return typeof value === 'string'
+    && value.trim() !== ''
+    && !Number.isNaN(Date.parse(value));
+}
+
+function requiredStrings(value, fields) {
+  return value && fields.every((field) => (
+    typeof value[field] === 'string' && value[field].trim() !== ''
+  ));
+}
+
+function requiredTrue(value, fields) {
+  return value && fields.every((field) => value[field] === true);
+}
+
+function validPngEvidence(filePath, expectedSha256) {
+  if (!/^[0-9a-f]{64}$/i.test(expectedSha256 || '') || !fs.existsSync(filePath)) {
+    return false;
+  }
+  const data = fs.readFileSync(filePath);
+  const pngSignature = '89504e470d0a1a0a';
+  return data.length >= 24
+    && data.subarray(0, 8).toString('hex') === pngSignature
+    && data.readUInt32BE(16) > 0
+    && data.readUInt32BE(20) > 0
+    && crypto.createHash('sha256').update(data).digest('hex') === expectedSha256.toLowerCase();
+}
+
+function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
+  if (evidence.schema !== 'munea.i18n-visual-qa.v1'
+      || evidence.locale !== locale
+      || evidence.result !== 'pass'
+      || !/^[0-9a-f]{40}$/i.test(evidence.captureCommit || '')
+      || !validIsoDate(evidence.capturedAt)
+      || !requiredStrings(evidence, ['appVersion', 'build'])
+      || !Array.isArray(evidence.viewports)
+      || !evidence.viewports.includes('iphone')
+      || !evidence.viewports.includes('dynamic-type-large')
+      || !Array.isArray(evidence.screens)) {
+    return false;
+  }
+  const screens = new Map(evidence.screens.map((screen) => [screen.state, screen]));
+  const evidenceDir = path.dirname(filePath);
+  for (const state of requiredStates) {
+    const screen = screens.get(state);
+    if (!screen
+        || screen.result !== 'pass'
+        || !requiredTrue(screen.checks, [
+          'noOverflow',
+          'noClipping',
+          'noUntranslatedCopy',
+          'layoutAccepted',
+        ])
+        || typeof screen.screenshot !== 'string') {
+      return false;
+    }
+    const screenshotPath = path.resolve(evidenceDir, screen.screenshot);
+    if (!screenshotPath.startsWith(evidenceDir + path.sep)
+        || !/\.png$/i.test(screenshotPath)
+        || !validPngEvidence(screenshotPath, screen.sha256)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function validateVoiceEvidence(evidence, locale) {
+  return evidence.schema === 'munea.i18n-voice-e2e.v1'
+    && evidence.locale === locale
+    && evidence.result === 'pass'
+    && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
+    && validIsoDate(evidence.testedAt)
+    && requiredStrings(evidence, [
+      'appVersion',
+      'build',
+      'profile',
+      'environment',
+      'device',
+      'conversationLocale',
+    ])
+    && requiredStrings(evidence.serviceRevisions, [
+      'brain',
+      'voice',
+      'gateway',
+      'avatar',
+    ])
+    && requiredTrue(evidence.steps, [
+      'openingInLocale',
+      'microphoneAudioUnderstood',
+      'assistantResponseAudible',
+      'assistantResponseVisible',
+      'mixedLanguageTurn',
+      'temporaryVoiceSwitch',
+      'permanentPreferenceConfirmed',
+    ]);
+}
+
+function validateInstalledAppEvidence(evidence, locale) {
+  return evidence.schema === 'munea.i18n-installed-app-e2e.v1'
+    && evidence.locale === locale
+    && evidence.result === 'pass'
+    && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
+    && /^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
+    && validIsoDate(evidence.testedAt)
+    && requiredStrings(evidence, [
+      'appVersion',
+      'build',
+      'profile',
+      'environment',
+      'device',
+    ])
+    && requiredStrings(evidence.serviceRevisions, [
+      'brain',
+      'voice',
+      'gateway',
+      'avatar',
+    ])
+    && requiredTrue(evidence.steps, [
+      'callButtonTapped',
+      'microphoneGranted',
+      'authPassed',
+      'accountBootstrapPassed',
+      'creditsPassed',
+      'gatewayLeaseAcquired',
+      'voiceReady',
+      'avatarReady',
+      'openingHeard',
+      'microphoneAudioSent',
+      'assistantResponseAudible',
+      'assistantResponseVisible',
+      'hangupReleasedCapacity',
+    ]);
+}
+
+function evidenceResult(locale, filename, validator) {
+  const filePath = path.join(QA_DIR, locale, filename);
+  if (!fs.existsSync(filePath)) {
+    return { exists: false, passed: false, path: path.relative(ROOT, filePath).replaceAll('\\', '/') };
+  }
+  try {
+    const evidence = readJson(filePath);
+    return {
+      exists: true,
+      passed: validator(evidence, locale, filePath),
+      path: path.relative(ROOT, filePath).replaceAll('\\', '/'),
+      evidence,
+    };
+  } catch (error) {
+    return {
+      exists: true,
+      passed: false,
+      path: path.relative(ROOT, filePath).replaceAll('\\', '/'),
+      error: error.message,
+    };
+  }
+}
+
+function check(condition, reason, evidence) {
+  return { passed: Boolean(condition), reason, evidence };
+}
+
+function buildReadiness() {
+  const catalogManifest = readJson(path.join(I18N_DIR, 'catalog-manifest.json'));
+  const reviewManifest = readJson(path.join(I18N_DIR, 'review-manifest.json'));
+  const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
+  const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
+  const inventory = readJson(INVENTORY_PATH);
+  const requiredVisualStates = inventory.surfaces
+    .find((surface) => surface.id === 'app-webview').requiredStates;
+  const catalogEntries = new Map(
+    catalogManifest.locales.map((entry) => [entry.locale, entry]),
+  );
+
+  const locales = {};
+  for (const locale of Object.keys(reviewManifest.locales)) {
+    const catalog = catalogEntries.get(locale);
+    const review = reviewManifest.locales[locale];
+    const legal = legalManifest.locales[locale];
+    const storeKey = STORE_LOCALE_BY_CATALOG[locale];
+    const store = storeManifest.locales[storeKey];
+    const visualEvidence = evidenceResult(
+      locale,
+      'visual-qa.json',
+      (evidence, evidenceLocale, filePath) => (
+        validateVisualEvidence(evidence, evidenceLocale, filePath, requiredVisualStates)
+      ),
+    );
+    const voiceEvidence = evidenceResult(locale, 'voice-e2e.json', validateVoiceEvidence);
+    const installedEvidence = evidenceResult(
+      locale,
+      'installed-app-e2e.json',
+      validateInstalledAppEvidence,
+    );
+
+    const gates = {
+      catalogCoverage: check(
+        review.catalogCoverage === 'approved',
+        'catalog coverage review must be approved',
+        'web/src/i18n/review-manifest.json',
+      ),
+      runtimeLocalization: check(
+        catalog.runtimeEnabled === true,
+        'locale runtime must be enabled only after all release gates',
+        'web/src/i18n/catalog-manifest.json',
+      ),
+      binaryLocalization: check(
+        catalog.binaryLocalizationEnabled === true,
+        'locale must be included in the exact iOS binary',
+        'web/src/i18n/catalog-manifest.json',
+      ),
+      nativeLanguageReview: check(
+        review.nativeLanguageReview === 'approved',
+        'native-language review must be approved',
+        'web/src/i18n/review-manifest.json',
+      ),
+      visualQA: check(
+        review.visualQA === 'approved' && visualEvidence.passed,
+        'visual QA needs approval plus current screenshot evidence',
+        visualEvidence.path,
+      ),
+      voiceE2E: check(
+        review.voiceE2E === 'approved' && voiceEvidence.passed,
+        'voice E2E needs approval plus current real-call evidence',
+        voiceEvidence.path,
+      ),
+      regionalSafetyAndLegal: check(
+        review.regionalSafetyAndLegal === 'approved'
+          && legal.legalReview === 'approved'
+          && store.publicUrlStatus === 'deployed-and-verified',
+        'regional safety, legal review, and public legal URLs must all be verified',
+        'web/legal/manifest.json',
+      ),
+      appStoreMetadata: check(
+        review.appStoreMetadata === 'approved'
+          && store.metadataReview === 'approved',
+        'App Store metadata must be reviewed for the selected locale variant',
+        'app-store/localizations/manifest.json',
+      ),
+      appStoreScreenshots: check(
+        store.screenshotStatus === 'approved',
+        'localized App Store screenshots must be approved',
+        'app-store/localizations/manifest.json',
+      ),
+      marketAvailability: check(
+        review.marketAvailability === 'approved'
+          && store.promotionAuthorized === true
+          && storeManifest.appAvailability.currentState === 'verified',
+        'App Store Connect availability must be verified and promotion explicitly authorized',
+        'app-store/localizations/manifest.json',
+      ),
+      installedAppE2E: check(
+        installedEvidence.passed,
+        'the exact installed iPhone build must pass the full App acceptance gate',
+        installedEvidence.path,
+      ),
+    };
+
+    const blockers = Object.entries(gates)
+      .filter(([, gate]) => !gate.passed)
+      .map(([gate, value]) => ({ gate, reason: value.reason, evidence: value.evidence }));
+    locales[locale] = {
+      contentVariant: review.contentVariant,
+      storeLocale: store.appStoreLocale,
+      ready: blockers.length === 0,
+      blockers,
+      gates,
+    };
+  }
+
+  return {
+    schema: 'munea.i18n-release-readiness.v1',
+    generatedFrom: [
+      'web/src/i18n/catalog-manifest.json',
+      'web/src/i18n/review-manifest.json',
+      'web/legal/manifest.json',
+      'app-store/localizations/manifest.json',
+      'docs/qa/i18n/<locale>/*.json',
+    ],
+    appAvailabilityAuthority: storeManifest.appAvailability.sourceOfTruth,
+    locales,
+    allReady: Object.values(locales).every((entry) => entry.ready),
+  };
+}
+
+function formatReport(report) {
+  const lines = [
+    'Munea i18n release readiness',
+    `Overall: ${report.allReady ? 'READY' : 'NOT READY'}`,
+  ];
+  for (const [locale, entry] of Object.entries(report.locales)) {
+    lines.push(`${locale}: ${entry.ready ? 'READY' : `BLOCKED (${entry.blockers.length})`}`);
+    for (const blocker of entry.blockers) {
+      lines.push(`  - ${blocker.gate}: ${blocker.reason} [${blocker.evidence}]`);
+    }
+  }
+  return lines.join('\n');
+}
+
+if (require.main === module) {
+  const report = buildReadiness();
+  process.stdout.write(`${formatReport(report)}\n`);
+  if (process.argv.includes('--json')) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  }
+  if (process.argv.includes('--strict') && !report.allReady) {
+    process.exitCode = 1;
+  }
+}
+
+module.exports = {
+  buildReadiness,
+  formatReport,
+  validateInstalledAppEvidence,
+  validateVisualEvidence,
+  validateVoiceEvidence,
+};

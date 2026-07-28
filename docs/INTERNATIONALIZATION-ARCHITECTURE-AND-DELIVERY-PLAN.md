@@ -213,6 +213,13 @@ Phase 3a（2026-07-28）先建立 signed call claim 的解析護欄：
 - 建議順序：`en-US` 小流量 canary → `ja-JP` → 選定的西班牙文市場（`es-ES` 或 `es-MX`）。
 - 每一市場只有在翻譯、UI、語音、安全/法規、資料、客服及實機 E2E 都通過後才開放。
 
+Phase 5a（2026-07-28）將發布判定改為證據驅動：
+
+- `scripts/i18n-release-readiness.js` 以 catalog、review、法律、App Store manifest 與 `docs/qa/i18n/<locale>/` 的實際證據即時計算四語狀態，不以人工寫一句「完成」代替。
+- 每個語系都必須同時通過 catalog、runtime、binary、母語審稿、視覺截圖、真實語音、區域法律、商店文案、商店截圖、市場可用性及 exact-build installed App E2E 共 11 道 gate。
+- `--strict` 只有四語全部有現行證據才回傳成功；目前四語都會明確顯示 `NOT READY`，這是正確護欄，不是測試失敗。
+- 視覺、語音與實機證據的固定入口分別為 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json`；檔案不存在、JSON 無效或 `result` 不是 `pass` 都視為未完成。
+
 ## 5. 不影響正式服務的護欄
 
 - 所有新能力先以 additive schema、feature flag 與舊版台灣預設加入。
