@@ -4472,10 +4472,12 @@ function buildCareItems() {
   items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
   // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
-  // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）。
-  // 附帶好處：固定 6 字＝完全不受名字長度影響，繞開了原本兩道會咬字的關卡——
+  // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）；
+  // 7/29 再收成「個人資料」——「用戶」是產品人的詞、長輩不會這樣自稱，且這四個字跟設定頁入口、
+  // 點下去開的那張卡標題完全一致，使用者一路看到的是同一個名字。
+  // 附帶好處：固定 4 字＝完全不受名字長度影響，繞開了原本兩道會咬字的關卡——
   // 渲染時的 slice(0,12) 硬切（沒補刪節號）、以及 .care-txt p 的單行 ellipsis（375px 下約 10 字到底）。
-  if (shouldShowProfileNudge()) items.unshift({ k: 'profile', tone: '', icon: 'person', title: '用戶資料更新', sub: '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: '去填寫' });
+  if (shouldShowProfileNudge()) items.unshift({ k: 'profile', tone: '', icon: 'person', title: '個人資料', sub: '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: '去填寫' });
   return items;
 }
 function renderCareCarousel() {
