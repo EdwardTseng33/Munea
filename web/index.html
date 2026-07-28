@@ -154,6 +154,21 @@
       <span class="chip" id="medChip" style="flex-shrink:0;background:var(--coral-soft);color:var(--coral-d)">尚未服用</span>
     </div>
   </div>
+  <!-- 就診摘要常駐入口（M1 · PR-4e）。原本只有「當天有排看診」時的任務卡能打開摘要，
+       等於功能九成的時間是隱形的：沒設提醒、想前一天先準備、平常想看看整理成什麼樣——全都進不去。
+       這張卡永遠在（狀態頁＝「我的身體」，摘要就是這些東西的總結），跟用藥卡同一個形狀。 -->
+  <div class="card" id="visitSummaryCard" style="padding:14px 15px;margin-bottom:11px;cursor:pointer">
+    <div class="row" style="justify-content:space-between;gap:10px">
+      <div class="row" style="gap:11px;min-width:0">
+        <span style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:14.5px">就診摘要</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:1px" id="visitSummaryCardSub">帶去給醫生看的一頁整理</div>
+        </div>
+      </div>
+      <span class="chip" id="visitSummaryCardChip" style="flex-shrink:0;background:var(--mint);color:var(--teal-dd)">打開看看</span>
+    </div>
+  </div>
   <div class="row" id="vitalsRow" style="gap:11px;margin-bottom:11px;align-items:stretch">
     <div class="card" style="padding:15px;flex:1">
       <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="chip" id="bpChip" style="background:var(--mint);color:var(--teal-dd)">穩定</span></div>

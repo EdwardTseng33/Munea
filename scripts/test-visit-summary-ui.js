@@ -42,6 +42,23 @@ expect(html.includes('id="visitSummaryRow"'), '① 設定頁那一列不存在')
   .forEach(id => expect(html.includes('id="' + id + '"'), `① app.js 綁了 #${id}，但 HTML 裡沒有這個元素`));
 ok('① 入口與所綁元素全部存在（含上一版死因的回歸測試）');
 
+/* ①b 入口要「碰得到」，不只是「存在」（M1 · PR-4e 的教訓）
+ * 我第一版只接了看診任務卡，而那張卡**只在當天有排定看診時才出現**——
+ * 沒設提醒、想前一天先準備、平常想看看整理成什麼樣，通通進不去，
+ * 等於功能九成的時間是隱形的。「面板打得開」跟「使用者找得到」是兩件事。 */
+expect(html.includes('id="visitSummaryCard"'), '①b 狀態頁缺常駐入口卡');
+expect(app.includes("openVisitSummary('status-card')"), '①b 狀態頁的卡沒有接到摘要');
+expect(app.includes("openVisitSummary('settings')"),
+  '①b 設定頁那一列點下去沒有打開摘要——只會改天數的話，它是設定不是入口');
+// 至少要有一個「不依賴當天有排看診」的入口，否則功能大半時間是隱形的
+const alwaysOn = ["openVisitSummary('status-card')", "openVisitSummary('settings')"]
+  .filter(t => app.includes(t));
+expect(alwaysOn.length >= 2,
+  `①b 常駐入口不足（目前 ${alwaysOn.length} 個）：只靠當天的看診卡＝功能九成時間看不到`);
+// 每個入口都要能被追蹤，否則 H1 分不出「哪條路有人用」
+expect(app.includes("source: source || 'unknown'"), '①b 開啟事件沒有記來源，分不出哪個入口有效');
+ok(`①b 常駐入口 ${alwaysOn.length} 個＋當天任務卡，且開啟來源可追蹤`);
+
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
   '疑似', '診斷', '嚴重', '正常值', '標準值'];
