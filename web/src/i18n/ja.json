@@ -174,6 +174,7 @@
   "settings.appleHealth": "Appleヘルスケア",
   "settings.appleHealthSubtitle": "歩数、心拍数、睡眠",
   "settings.medicationReminders": "服薬リマインダー",
+  "settings.medicationCount": "薬：{count} 種類",
   "settings.medicationRemindersSubtitle": "時間になったら通知し、アプリで確認できます。",
   "settings.appointmentReminders": "受診リマインダー",
   "settings.appointmentRemindersSubtitle": "受診日の前日にお知らせします",

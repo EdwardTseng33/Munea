@@ -17,6 +17,21 @@ window.MuneaNotify = (function () {
     categories: { medication: true, clinic: true, family: true, safety: true }
   };
 
+  function t(key, fallback, values) {
+    return window.MuneaI18n
+      ? window.MuneaI18n.t(key, values || null, fallback)
+      : fallback;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Notify) || null;
   }
@@ -339,12 +354,20 @@ window.MuneaNotify = (function () {
       row.className = 'set-row';
       row.id = 'notificationCenterRow';
       row.style.cursor = 'pointer';
-      row.innerHTML = settingsIcon() + '<span class="sr-main">通知中心<small>用藥、看診、家人與安全通知</small></span><span class="sr-arrow"><b id="notificationCenterState"></b> ›</span>';
       anchor.parentNode.insertBefore(row, anchor);
+    }
+    row.innerHTML = settingsIcon()
+      + '<span class="sr-main">' + escapeHtml(t('notification.centerTitle', '通知中心'))
+      + '<small>' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒。'))
+      + '</small></span><span class="sr-arrow"><b id="notificationCenterState"></b> ›</span>';
+    if (row.dataset.notificationBound !== '1') {
+      row.dataset.notificationBound = '1';
       row.addEventListener('click', function () { void openNotificationSettings(); });
     }
     var state = document.getElementById('notificationCenterState');
-    if (state) state.textContent = notificationMasterOn() ? '已開啟' : '已關閉';
+    if (state) state.textContent = notificationMasterOn()
+      ? t('notification.pushOn', '重要提醒會送到這支手機')
+      : t('notification.pushOff', '開啟後才會收到提醒');
   }
 
   // 通知中心＝全螢幕子頁（7/16 Edward：內容多、不做彈窗）；沿用條款/方案同一套 reader-page 版型
@@ -355,18 +378,24 @@ window.MuneaNotify = (function () {
     page.className = 'reader-page notification-page';
     page.id = 'notificationSettingsPage';
     page.setAttribute('aria-hidden', 'true');
-    page.innerHTML = '<div class="nav-head"><button class="nav-back" id="notificationSettingsBack" type="button" aria-label="返回設定"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">通知中心</span><span></span></div>' +
-      '<div class="reader-scroll notification-page-scroll"><p class="notification-page-sub">選擇哪些事情要提醒你</p>' +
+    var centerTitle = escapeHtml(t('notification.centerTitle', '通知中心'));
+    var pushTitle = escapeHtml(t('notification.push', 'App 推播通知'));
+    var medicationTitle = escapeHtml(t('notification.medication', '用藥提醒'));
+    var clinicTitle = escapeHtml(t('notification.clinic', '看診提醒'));
+    var familyTitle = escapeHtml(t('notification.family', '家人消息'));
+    var safetyTitle = escapeHtml(t('notification.safety', '安全通知'));
+    page.innerHTML = '<div class="nav-head"><button class="nav-back" id="notificationSettingsBack" type="button" aria-label="' + escapeHtml(t('common.close', '關閉')) + '"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">' + centerTitle + '</span><span></span></div>' +
+      '<div class="reader-scroll notification-page-scroll"><p class="notification-page-sub">' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒。')) + '</p>' +
       '<div class="notification-setting-list">' +
-      '<div class="notification-setting-row notification-master-row"><span><b>App 推播通知</b><small id="notificationPermissionMessage">開啟後才會收到提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="App 推播通知"><i></i></button></div>' +
-      '<p class="notification-setting-heading">提醒類型</p>' +
-      '<div class="notification-setting-row"><span><b>用藥提醒</b><small>到時間提醒你查看與確認</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="medication" aria-label="用藥提醒"><i></i></button></div>' +
-      '<div class="notification-setting-row"><span><b>看診提醒</b><small>回診與看診行程提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="clinic" aria-label="看診提醒"><i></i></button></div>' +
-      '<div class="notification-setting-row"><span><b>家人消息</b><small>家人傳話、邀請與家庭活動</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="family" aria-label="家人消息"><i></i></button></div>' +
-      '<div class="notification-setting-row"><span><b>安全通知</b><small>只控制你自己手機；家人守護通知不受影響</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="safety" aria-label="安全通知"><i></i></button></div>' +
-      '<div class="notification-setting-row notification-safety-contacts" id="notificationSafetyContacts" role="button" tabindex="0"><span><b>安全通知的通知對象</b><small id="notificationSafetyContactsState">還沒設定緊急聯絡人</small></span><span class="notification-row-arrow">›</span></div>' +
+      '<div class="notification-setting-row notification-master-row"><span><b>' + pushTitle + '</b><small id="notificationPermissionMessage">' + escapeHtml(t('notification.pushOff', '開啟後才會收到提醒')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="' + pushTitle + '"><i></i></button></div>' +
+      '<p class="notification-setting-heading">' + escapeHtml(t('notification.reminderTypes', '提醒類型')) + '</p>' +
+      '<div class="notification-setting-row"><span><b>' + medicationTitle + '</b><small>' + escapeHtml(t('settings.medicationRemindersSubtitle', '到時間通知你，開啟 App 可查看與確認')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="medication" aria-label="' + medicationTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>' + clinicTitle + '</b><small>' + escapeHtml(t('settings.appointmentRemindersSubtitle', '回診前一天提醒你')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="clinic" aria-label="' + clinicTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>' + familyTitle + '</b></span><button class="notification-switch" type="button" role="switch" data-notification-setting="family" aria-label="' + familyTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>' + safetyTitle + '</b><small>' + escapeHtml(t('settings.safetyNotificationsSubtitle', '同步資料需要留意時，通知你選定的家人。')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="safety" aria-label="' + safetyTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row notification-safety-contacts" id="notificationSafetyContacts" role="button" tabindex="0"><span><b>' + escapeHtml(t('notification.safetyRecipients', '安全通知的通知對象')) + '</b><small id="notificationSafetyContactsState">' + escapeHtml(t('notification.noContacts', '還沒設定緊急聯絡人')) + '</small></span><span class="notification-row-arrow">›</span></div>' +
       '</div>' +
-      '<p class="notification-privacy-note">鎖定畫面不顯示藥名、健康數值或家人訊息內容。</p>' +
+      '<p class="notification-privacy-note">' + escapeHtml(t('notification.privacy', '鎖定畫面不顯示藥名、健康數值或家人訊息內容。')) + '</p>' +
       '<p class="notification-save-state" id="notificationSaveState" aria-live="polite"></p></div>';
     document.body.appendChild(page);
     page.querySelector('#notificationSettingsBack').addEventListener('click', closeNotificationSettings);
@@ -413,13 +442,17 @@ window.MuneaNotify = (function () {
     var permissionMessage = page.querySelector('#notificationPermissionMessage');
     if (permissionMessage) {
       permissionMessage.textContent = _permission.status === 'denied'
-        ? '已被 iPhone 關閉，點開關前往系統設定；回來會自動接上'
-        : (masterOn ? '重要提醒會送到這支手機' : '開啟時才會詢問 iPhone 通知權限');
+        ? t('notification.denied', '通知已被 iPhone 設定關閉。請開啟設定後再試一次。')
+        : (masterOn
+          ? t('notification.pushOn', '重要提醒會送到這支手機')
+          : t('notification.permissionPrompt', '開啟時才會詢問 iPhone 通知權限'));
     }
     var contactsState = page.querySelector('#notificationSafetyContactsState');
     if (contactsState) {
       var names = safetyContactNames();
-      contactsState.textContent = names.length ? '會通知：' + names.join('、') : '還沒設定緊急聯絡人';
+      contactsState.textContent = names.length
+        ? names.join(' · ')
+        : t('notification.noContacts', '還沒設定緊急聯絡人');
     }
   }
 
@@ -776,6 +809,10 @@ window.MuneaNotify = (function () {
       var badge = document.getElementById('notificationUnreadCount');
       if (badge) badge.textContent = '';
     }
+  });
+  window.addEventListener('munea:locale-ready', function () {
+    renderSettingsRows();
+    renderNotificationSettings();
   });
   function bootWhenReady() {
     restoreNotificationSettings();

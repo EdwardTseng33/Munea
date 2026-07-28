@@ -368,7 +368,7 @@
       <div class="plan-card">
         <div class="plan-title-row">
           <span class="plan-name" id="setPlanName">Plus 方案</span>
-          <span class="plan-payer" style="margin:0">我的訂閱</span>
+          <span class="plan-payer" style="margin:0" data-i18n="settings.mySubscription">我的訂閱</span>
         </div>
         <p class="plan-renewal" id="setPlanRenewalDate" hidden aria-live="polite"></p>
         <div class="plan-divider"></div>
@@ -386,7 +386,7 @@
       <div class="set-list">
         <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main"><span data-i18n="settings.profile">個人資料</span><small data-i18n="settings.profileSubtitle">名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main"><span data-i18n="settings.careCircle">家庭照護圈</span><small data-i18n="settings.careCircleSubtitle">誰在圈裡、誰付費、誰收通知</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main">想聊的話題<small>挑幾個興趣，<span class="cname">寧寧</span>會多留意這些新鮮事</small></span><span class="sr-arrow" id="interestsNow">›</span></div>
+        <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main"><span data-i18n="settings.interests">想聊的話題</span><small id="interestsSubtitle">挑幾個興趣，寧寧會多留意這些新鮮事</small></span><span class="sr-arrow" id="interestsNow">›</span></div>
       </div>
 
       <h2 class="set-section" data-i18n="settings.section.companion">AI 陪伴角色</h2>
@@ -432,9 +432,9 @@
 
       <h2 class="set-section" data-i18n="settings.section.about">關於</h2>
       <div class="set-list">
-        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">—</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main"><span data-i18n="app.title">Munea 沐寧</span><small id="versionSubtitle">版本 <span id="verRowNum">—</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main"><span data-i18n="reader.termsTitle">使用條款</span><small data-i18n="settings.termsSubtitle">服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="reader.privacyTitle">隱私權政策</span><small data-i18n="settings.privacySubtitle">資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
     </div>
   </section>

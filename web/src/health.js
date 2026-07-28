@@ -164,6 +164,7 @@ window.MuneaHealth = (function () {
   }
 
   bindConnectionUi();
+  window.addEventListener('munea:locale-ready', renderConnectionState);
 
   return { GOAL: GOAL, REFRESH_COOLDOWN_MS: REFRESH_COOLDOWN_MS, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative };
 })();

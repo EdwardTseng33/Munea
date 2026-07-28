@@ -174,6 +174,7 @@
   "settings.appleHealth": "Salud de Apple",
   "settings.appleHealthSubtitle": "Pasos, frecuencia cardiaca y sueño",
   "settings.medicationReminders": "Recordatorios de medicación",
+  "settings.medicationCount": "Medicamentos: {count}",
   "settings.medicationRemindersSubtitle": "Recibe un aviso a tiempo y abre la app para revisar y confirmar.",
   "settings.appointmentReminders": "Recordatorios de citas",
   "settings.appointmentRemindersSubtitle": "Recibe un recordatorio el día antes de la cita",

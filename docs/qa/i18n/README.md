@@ -43,7 +43,7 @@ python scripts\member_data_isolation_probe.py `
 
 - 38 個 state 不缺漏、不重複。
 - 每個 state 至少有 3 個可驗收的文案 key。
-- 483 個 key 在繁中、英文、日文、西班牙文都存在且非空白。
+- 484 個 key 在繁中、英文、日文、西班牙文都存在且非空白。
 - 英文與西班牙文沒有中文字殘留。
 - 健康、安全、同意、用藥與通知隱私的高風險聲明被明確列為必要文案。
 
@@ -64,7 +64,7 @@ python scripts\member_data_isolation_probe.py `
 
 只要 catalog 內容或 key 清單後續改變，既有母語審稿證據就會失效，必須重審受影響版本。不得填入審稿者姓名、Email 或其他直接個資。
 
-執行 `node scripts/i18n-native-review-worklist.js --locale ja > <工作檔>.json` 可產生單一語系的 483 筆工作檔。審稿者必須逐筆把 `result` 改為 `pass`，並把六個 `checks` 全部改為布林值 `true`；若翻譯與繁中來源完全相同且未在日文共用詞 allowlist，還必須留下 `reviewerNote`。工作檔根節點另需填入：
+執行 `node scripts/i18n-native-review-worklist.js --locale ja > <工作檔>.json` 可產生單一語系的 484 筆工作檔。審稿者必須逐筆把 `result` 改為 `pass`，並把六個 `checks` 全部改為布林值 `true`；若翻譯與繁中來源完全相同且未在日文共用詞 allowlist，還必須留下 `reviewerNote`。工作檔根節點另需填入：
 
 ```json
 {

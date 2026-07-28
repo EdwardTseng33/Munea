@@ -66,6 +66,7 @@ function localAuthConfig(port, previewLocale = null) {
   const origin = `http://${LOOPBACK_HOST}:${port}`;
   const lines = [
     '// Local i18n visual-QA fixture. No Supabase or production endpoint is configured.',
+    "try { localStorage.setItem('munea.avatarUrl', ''); } catch (error) {}",
     'window.MUNEA_DEV_CONFIG = {',
     '  enabled: true,',
     '  autoSignIn: false,',

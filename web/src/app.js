@@ -561,6 +561,7 @@ function syncCompanionUI() {
   const settingName = $('#settingsCompanionName'); if (settingName) settingName.textContent = display;
   const careHeading = $('#careHeading'); if (careHeading) careHeading.textContent = muneaT('home.careHeading', '{companion}幫你留意', { companion: display });
   const chatTaskTitle = $('#chatTaskTitle'); if (chatTaskTitle) chatTaskTitle.textContent = muneaT('home.taskChatTitle', '和{companion}聊聊', { companion: display });
+  const interestsSubtitle = $('#interestsSubtitle'); if (interestsSubtitle) interestsSubtitle.textContent = muneaT('settings.interestsSubtitle', '挑幾個興趣，{companion}會多留意這些新鮮事', { companion: display });
   const settingLabel = $('#settingsTemplateLabel'); if (settingLabel) settingLabel.textContent = t.templateLabel;
   const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = thumbSrc;
   const nameInput = $('#companionNameInput');
@@ -1715,7 +1716,7 @@ function getAvatarUrl() {
       const u = raw.replace(/\/$/, '');
       // 舊版曾把臨時 GLOWS 門牌寫進 localStorage；升版後要自動回到新主卡。
       if (RETIRED_FLASHHEAD_URLS.has(u)) localStorage.removeItem('munea.avatarUrl');
-      else if (u) return u;
+      else return u;
     }
   } catch (e) {}
   return faceEngine() === 'flashhead' ? FLASHHEAD_URL_DEFAULT : AVATAR_URL_DEFAULT;
@@ -3840,7 +3841,8 @@ function loadMeds() {
   try { return JSON.parse(localStorage.getItem('munea.meds')) || []; } catch (e) { return []; }
 }
 function updateMedCount() {
-  const n = loadMeds().length + ' 種藥';
+  const count = loadMeds().length;
+  const n = muneaT('settings.medicationCount', '{count} 種藥', { count });
   const el = $('#medCountLabel');
   if (el) el.textContent = n;
   const el2 = $('#medCountSettings');
@@ -4684,6 +4686,12 @@ function toast(text, duration = 2600) {
 function applyAppVersion() {
   const V = window.MuneaVersion; if (!V) return;
   const n = document.getElementById('verRowNum'); if (n) n.textContent = V.current;
+  const subtitle = document.getElementById('versionSubtitle');
+  if (subtitle) subtitle.textContent = muneaT(
+    'settings.versionReleaseNotes',
+    '版本 {version} · 看更新內容',
+    { version: V.current },
+  );
 }
 function openVersionSheet() {
   const V = window.MuneaVersion || { current: '—', channel: '', changelog: [] };
@@ -7448,13 +7456,15 @@ function init() {
   renderVisitRow();
   refreshRoutineRemindersFromBackend();
   const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
+  const FONT_LABEL_KEYS = { std: 'font.standard', lg: 'font.large', xl: 'font.extraLarge' };
   function applyFontScale() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     const step = FONT_STEPS.find(x => x[0] === cur) || FONT_STEPS[0];
     document.querySelectorAll('.screen .pad, .modal').forEach(el => { el.style.zoom = step[2]; });
     const row = $('#fontNow');
-    if (row) row.textContent = step[1] + ' ›';
+    if (row) row.textContent = muneaT(FONT_LABEL_KEYS[step[0]], step[1]) + ' ›';
   }
+  window.__muneaApplyFontScale = applyFontScale;
   function markFontOpt() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     document.querySelectorAll('.font-opt').forEach(o => o.classList.toggle('on', o.dataset.f === cur));
@@ -8324,6 +8334,9 @@ function refreshLocalizedDynamicUi() {
   try { syncCompanionUI(); } catch (e) {}
   try { renderHomeGreeting(); } catch (e) {}
   try { refreshMoodTask(); } catch (e) {}
+  try { updateMedCount(); } catch (e) {}
+  try { applyAppVersion(); } catch (e) {}
+  try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
   try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
   try { updateAuthUI(); } catch (e) {}
 }
