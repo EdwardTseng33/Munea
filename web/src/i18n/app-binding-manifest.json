@@ -68,6 +68,11 @@
       "anchorId": "authMessage",
       "renderer": "openAuthSheet",
       "keys": ["auth.inProgress", "auth.cancelled", "auth.unavailable"]
+    },
+    {
+      "anchorId": "careBody",
+      "renderer": "buildCareItems",
+      "keys": ["home.profilePromptTitle", "home.profilePromptBody", "home.profilePromptAction"]
     }
   ],
   "markupRefactors": [

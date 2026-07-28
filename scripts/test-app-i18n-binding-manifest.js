@@ -55,8 +55,17 @@ assert.match(
   'Static binding runtime must exclude state-owned renderer output',
 );
 assert.ok(manifest.staticBindings.length >= 25);
-assert.ok(manifest.dynamicBindings.length >= 7);
+assert.ok(manifest.dynamicBindings.length >= 8);
 assert.ok(manifest.markupRefactors.length >= 5);
+
+const profilePromptBinding = manifest.dynamicBindings.find(
+  ({ anchorId, renderer }) => anchorId === 'careBody' && renderer === 'buildCareItems',
+);
+assert.deepEqual(
+  profilePromptBinding?.keys,
+  ['home.profilePromptTitle', 'home.profilePromptBody', 'home.profilePromptAction'],
+  'Profile update care card must keep its three localized renderer keys wired',
+);
 
 const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
 const bindingSignatures = new Set();
