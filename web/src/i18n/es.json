@@ -102,6 +102,12 @@
   "medication.namePlaceholder": "Copia el nombre del medicamento de la etiqueta",
   "medication.taken": "Tomado",
   "medication.notTaken": "No tomado",
+  "reader.privacyTitle": "Política de privacidad",
+  "reader.termsTitle": "Términos del servicio",
+  "reader.supportTitle": "Ayuda",
+  "reader.loading": "Cargando contenido…",
+  "reader.loadError": "No se pudo cargar el contenido. Inténtalo de nuevo más tarde.",
+  "reader.back": "Volver",
   "time.minutes.one": "{count} minuto",
   "time.minutes.other": "{count} minutos"
 }

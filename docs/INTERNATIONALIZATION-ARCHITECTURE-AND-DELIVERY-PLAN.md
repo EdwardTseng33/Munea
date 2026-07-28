@@ -221,6 +221,14 @@ Phase 5a（2026-07-28）將發布判定改為證據驅動：
 - `--strict` 只有四語全部有現行證據才回傳成功；目前四語都會明確顯示 `NOT READY`，這是正確護欄，不是測試失敗。
 - 視覺、語音與實機證據的固定入口分別為 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json`；檔案不存在、JSON 無效或 `result` 不是 `pass` 都視為未完成。
 
+Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
+
+- `web/src/i18n/dom-localizer.js` 只用 `textContent` 與明確允許的 `aria-label`、`placeholder`、`title`、`value` 屬性套用翻譯，不接受 HTML 字串，也不從 DOM 解析插值資料。
+- 文件語言由 catalog metadata 設定 `<html lang>` 與 `dir`，讓 VoiceOver、鍵盤與排版引擎取得正確語言。
+- `web/src/i18n/legal-routing.js` 將 UI locale 與法律頁選擇接在同一個 release gate：正式模式必須同時滿足 `runtimeEnabled=true` 與 `legalReview=approved`；否則回退繁中。開發預覽可明確傳入 `allowDraft=true` 查看待審稿。
+- 元件與 catalog 已有獨立測試；`web/index.html`、`web/src/app.js` 的正式接線仍等待 #247/#270 先合併，避免覆蓋既有 App 與 chat-call 變更。
+- 此階段只完成 coded + tested，未部署；`App E2E pending`。
+
 ## 5. 不影響正式服務的護欄
 
 - 所有新能力先以 additive schema、feature flag 與舊版台灣預設加入。

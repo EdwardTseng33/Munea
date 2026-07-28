@@ -102,6 +102,12 @@
   "medication.namePlaceholder": "薬の袋に書かれた名前を入力",
   "medication.taken": "服用済み",
   "medication.notTaken": "未服用",
+  "reader.privacyTitle": "プライバシーポリシー",
+  "reader.termsTitle": "利用規約",
+  "reader.supportTitle": "サポート",
+  "reader.loading": "読み込み中…",
+  "reader.loadError": "内容を読み込めませんでした。しばらくしてからもう一度お試しください。",
+  "reader.back": "戻る",
   "time.minutes.one": "{count} 分",
   "time.minutes.other": "{count} 分"
 }

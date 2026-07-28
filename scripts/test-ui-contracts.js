@@ -224,6 +224,8 @@ console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo pri
 // without competing with active work that is editing package.json.
 require('./test-i18n-catalogs.js');
 require('./test-i18n-runtime.js');
+require('./test-i18n-dom-localizer.js');
+require('./test-i18n-legal-routing.js');
 require('./test-i18n-surface-inventory.js');
 require('./test-legal-localizations.js');
 require('./test-app-store-localizations.js');

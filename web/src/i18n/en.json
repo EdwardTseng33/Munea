@@ -102,6 +102,12 @@
   "medication.namePlaceholder": "Copy the medicine name from the label",
   "medication.taken": "Taken",
   "medication.notTaken": "Not taken",
+  "reader.privacyTitle": "Privacy Policy",
+  "reader.termsTitle": "Terms of Service",
+  "reader.supportTitle": "Support",
+  "reader.loading": "Loading content…",
+  "reader.loadError": "We couldn't load this content. Please try again later.",
+  "reader.back": "Back",
   "time.minutes.one": "{count} minute",
   "time.minutes.other": "{count} minutes"
 }

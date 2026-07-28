@@ -102,6 +102,12 @@
   "medication.namePlaceholder": "藥名照藥袋抄",
   "medication.taken": "已服用",
   "medication.notTaken": "尚未服用",
+  "reader.privacyTitle": "隱私權政策",
+  "reader.termsTitle": "服務條款",
+  "reader.supportTitle": "支援",
+  "reader.loading": "內容載入中…",
+  "reader.loadError": "無法載入內容，請稍後再試。",
+  "reader.back": "返回",
   "time.minutes.one": "{count} 分鐘",
   "time.minutes.other": "{count} 分鐘"
 }
