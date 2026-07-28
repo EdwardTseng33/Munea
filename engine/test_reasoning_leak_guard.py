@@ -109,14 +109,16 @@ class ProductionCallSitesWireTheGuardTests(unittest.TestCase):
         src_path = os.path.join(os.path.dirname(__file__), "server.py")
         with open(src_path, encoding="utf-8") as f:
             src = f.read()
-        self.assertIn("eng.strip_reasoning_artifacts(r.text)", src)
+        # 2026-07-29：出口改走統一清洗 clean_outgoing_reply（內含這道剝除＋空頭承諾攔截），
+        # 這道防禦沒有被拿掉、只是包進同一支函式，檢查跟著改認新名字。
+        self.assertIn("eng.clean_outgoing_reply(r.text)", src)
 
     def test_live_voice_caption_output_calls_strip_reasoning_artifacts(self):
         src_path = os.path.join(os.path.dirname(__file__), "live_voice_server.py")
         with open(src_path, encoding="utf-8") as f:
             src = f.read()
         self.assertIn(
-            "eng.strip_reasoning_artifacts(localization.display_text(ot.text",
+            "caption_text = eng.clean_outgoing_reply(raw_caption)",
             src,
         )
 
