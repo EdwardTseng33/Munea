@@ -7455,7 +7455,11 @@ function init() {
   });
 
   // ===== App Store 評分彈窗：只在開心時刻、每版最多一次、負面情境絕不跳 =====
-  // 對接約定（Mac）：原生實作 window.__muneaRequestReview()（蘋果原生評分視窗、系統自控全年上限）
+  // 原生視窗＝ StorePlugin.requestReview（ios/App/App/StorePlugin.swift），下面這行把它接成 __muneaRequestReview。
+  // 網頁預覽沒有原生外掛 → 接不上，時機閘會自己跳過（見下方 native_unavailable 那道）。
+  if (window.MuneaStore && typeof window.MuneaStore.requestReview === 'function' && window.MuneaStore.available()) {
+    window.__muneaRequestReview = function () { return window.MuneaStore.requestReview(); };
+  }
   window.__muneaMaybeAskReview = function (moment) {
     try {
       const ver = (window.MuneaVersion && window.MuneaVersion.current) || '0';
@@ -7464,9 +7468,14 @@ function init() {
       const chats = +(localStorage.getItem('munea.stat.chatsCompleted') || 0);
       const okMoment = (moment === 'chat_completed' && chats >= 3) || moment === 'activity_done';
       if (!okMoment) return;
+      // 原生沒接上就直接退場、不蓋「這版問過了」的章——否則這一版的機會會被白白燒掉（2026-07-29 修）
+      if (typeof window.__muneaRequestReview !== 'function') {
+        trackProductEvent('review_prompt_skipped', { moment: moment, reason: 'native_unavailable' });
+        return;
+      }
       localStorage.setItem('munea.reviewAsked.' + ver, '1');
       trackProductEvent('review_prompt_shown', { moment: moment });
-      if (typeof window.__muneaRequestReview === 'function') window.__muneaRequestReview();
+      window.__muneaRequestReview();
     } catch (e) {}
   };
   if ($('#interestsSave')) $('#interestsSave').addEventListener('click', () => {
