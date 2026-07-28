@@ -166,6 +166,13 @@ Phase 2b（2026-07-28）將收件人的 App 語言接入通知：
 - 四語 generic、家庭轉達與家庭邀請的鎖定畫面文案由後端產生，健康敏感內容仍固定隱藏；通知 metadata 留下 locale 供 APNs fallback 使用。
 - 新增 `027_localized_notification_copy.sql`，目前只在隔離分支接受靜態與測試驗證，尚未套用任何正式資料庫。
 
+Phase 2g（2026-07-28）：用藥時段改用語言無關 ID
+
+- `web/src/i18n/medication-schedule.js` 定義 `after-breakfast`、`after-lunch`、`after-dinner`、`bedtime` 四個 canonical slot ID；顯示文字才由四語 catalog 決定。
+- 相容層能讀取舊繁中、英文、日文、西班牙文時段文字及自訂時間，輸出固定排序並去除重複值。
+- 新表單接線後採 `slotIds` canonical 欄位，同時保留繁中 `time` 字串雙寫給既有 App；等 exact-build 跨版本資料遷移驗證完成後才移除 legacy 欄位。
+- 目前只建立資料契約與測試，尚未修改衝突中的 App 表單／畫面；不會重寫現有用藥資料，也不部署。
+
 Phase 2c（2026-07-28）補齊營運後台的國際使用者狀態：
 
 - 用戶名冊直接顯示國家／地區、App UI 語言與陪伴聊天語言，並可用國碼、語言、時區或資料區域搜尋。

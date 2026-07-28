@@ -106,6 +106,7 @@
         "web/src/i18n/catalog-runtime.js",
         "web/src/i18n/dom-localizer.js",
         "web/src/i18n/legal-routing.js",
+        "web/src/i18n/medication-schedule.js",
         "web/src/i18n/catalog-manifest.json",
         "web/src/i18n/review-manifest.json",
         "web/src/i18n/zh-TW.json",
