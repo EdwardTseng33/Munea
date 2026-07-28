@@ -1,0 +1,148 @@
+{
+  "schema": "munea.i18n-app-screen-manifest.v1",
+  "bindingStatus": "pending-main-screen-integration",
+  "visualQaPending": true,
+  "requiredStates": {
+    "signed-out": [
+      "auth.sheetTitle",
+      "auth.sheetSubtitle",
+      "auth.apple",
+      "auth.google",
+      "auth.termsPrefix",
+      "auth.termsLink",
+      "auth.aiProcessingDisclosure",
+      "auth.cancelled",
+      "auth.unavailable"
+    ],
+    "home": [
+      "home.greetingEvening",
+      "home.startChat",
+      "home.todayTogether",
+      "home.profilePromptTitle",
+      "home.profilePromptBody",
+      "tab.home"
+    ],
+    "status": [
+      "status.title",
+      "status.today",
+      "status.past7Days",
+      "status.past30Days",
+      "status.moodMonitoring",
+      "status.healthData",
+      "status.medication",
+      "status.recordMood",
+      "health.steps",
+      "health.sleep"
+    ],
+    "chat-idle": [
+      "voice.call.start",
+      "voice.call.offline",
+      "accessibility.toggleCall",
+      "accessibility.toggleCaptions",
+      "accessibility.toggleMicrophone"
+    ],
+    "chat-connecting": [
+      "voice.connecting",
+      "voice.queue.preparing",
+      "voice.queue.position.one",
+      "voice.queue.position.other",
+      "voice.queue.wait",
+      "voice.queue.cancel"
+    ],
+    "chat-active": [
+      "voice.ready",
+      "voice.call.end",
+      "voice.call.online",
+      "voice.call.speaking",
+      "voice.fallback"
+    ],
+    "family": [
+      "family.title",
+      "family.all",
+      "family.activities",
+      "family.startActivity",
+      "family.journal",
+      "family.noActivities",
+      "family.invite"
+    ],
+    "settings": [
+      "settings.title",
+      "settings.section.account",
+      "settings.section.billing",
+      "settings.section.accountFamily",
+      "settings.section.companion",
+      "settings.section.healthSafety",
+      "settings.section.experience",
+      "settings.section.about",
+      "settings.profile",
+      "settings.profileSubtitle",
+      "settings.careCircle",
+      "settings.careCircleSubtitle",
+      "settings.interests",
+      "settings.interestsSubtitle",
+      "settings.appleHealth",
+      "settings.medicationReminders",
+      "settings.appointmentReminders",
+      "settings.safetyNotifications",
+      "settings.myData",
+      "settings.feedback",
+      "settings.fontDisplay"
+    ],
+    "purchase": [
+      "subscription.title",
+      "subscription.tagline",
+      "subscription.plansTab",
+      "subscription.creditsTab",
+      "subscription.creditRulesTitle",
+      "subscription.monthlyCreditsBody",
+      "subscription.purchasedCreditsBody",
+      "purchase.loadingProducts",
+      "purchase.buyCredits",
+      "purchase.restore"
+    ],
+    "error-and-empty-states": [
+      "error.generic",
+      "error.offline",
+      "common.retry",
+      "voice.call.unavailable",
+      "family.noActivities",
+      "purchase.storeUnavailable",
+      "purchase.failed",
+      "purchase.restoreNone"
+    ]
+  },
+  "requiredModals": {
+    "profile": [
+      "profile.title",
+      "profile.firstRunIntro",
+      "profile.changePhoto",
+      "profile.photoHint",
+      "profile.name",
+      "profile.familyNickname",
+      "profile.familyNicknamePlaceholder",
+      "profile.birthdate",
+      "profile.location",
+      "profile.locationHint",
+      "profile.cloudDisclosure",
+      "profile.save",
+      "profile.skip"
+    ],
+    "data": [
+      "data.title",
+      "data.description",
+      "data.export",
+      "data.delete",
+      "data.policyHint"
+    ],
+    "font": [
+      "font.title",
+      "font.subtitle",
+      "font.standard",
+      "font.standardBody",
+      "font.large",
+      "font.largeBody",
+      "font.extraLarge",
+      "font.extraLargeBody"
+    ]
+  }
+}

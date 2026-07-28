@@ -140,6 +140,13 @@ Phase 1d（2026-07-28）補齊可共用的語言品質底盤：
 - locale runtime 增加 `Intl` 複數、日期、數字、清單與相對時間格式，避免日期／單位／複數靠中文字串拼接。
 - `review-manifest.json` 將 catalog coverage、母語審稿、視覺 QA、語音 E2E、區域安全／法律、App Store metadata 與市場開放設為逐語系必要核准；任何一項未核准都不能開 runtime 或 binary gate。
 
+Phase 1e（2026-07-28）：App 全畫面狀態契約
+
+- `web/src/i18n/app-screen-manifest.json` 將 App WebView 的 10 個必要畫面狀態與 profile／data／font 三個必要 modal，映射到 112 個具語意的 catalog key，讓「全畫面」有可追蹤的完成定義。
+- 設定、登入、帳號、家庭、健康安全、個人資料、資料匯出／刪除與字體顯示的四語文案已備妥；英文與西班牙文會被測試阻擋中文字殘留。
+- manifest 明確保持 `pending-main-screen-integration` 與 `visualQaPending=true`；catalog 備妥不等於畫面已接線，也不能解除 exact-build 截圖與實機 Gate。
+- `scripts/test-app-screen-localizations.js` 驗證畫面狀態與 inventory 完全一致、四語 key 齊全且每個狀態至少有五個驗收項目，並納入 UI contract suite。
+
 Phase 1f（2026-07-28）：全畫面遷移工作表與排版壓力測試
 
 - `scripts/i18n-migration-worklist.js` 從正式 shipping surface 即時計算穩定 worklist；目前 App WebView 有 1,727 個繁中文案出現位置、1,211 個唯一來源字串，不再用「catalog 已有 111 keys」誤稱全畫面完成。

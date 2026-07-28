@@ -80,7 +80,7 @@ docs/qa/i18n/
 
 ## 本機 catalog 預覽
 
-`tools/i18n-preview.html?locale=ja` 可在本機 HTTP server 中查看繁中、英文、日文、西班牙文的代表性 catalog 元件、訂閱方案、點數包、StoreKit 價格格式與購買錯誤狀態，並用 `125% text` 按鈕先檢查長字串換行。
+`tools/i18n-preview.html?locale=ja` 可在本機 HTTP server 中查看繁中、英文、日文、西班牙文的代表性 catalog 元件、登入、設定、個人資料、資料匯出／刪除、字體、訂閱方案、點數包、StoreKit 價格格式與購買錯誤狀態，並用 `125% text` 按鈕先檢查長字串換行。
 
 這個頁面：
 

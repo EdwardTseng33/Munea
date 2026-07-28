@@ -85,6 +85,56 @@
     </section>
 
     <section>
+      <h2 data-i18n="auth.sheetTitle">登入 Munea</h2>
+      <p data-i18n="auth.sheetSubtitle">同步陪伴角色、家人照護圈與訂閱權益</p>
+      <div class="row"><span data-i18n="auth.apple">使用 Apple 登入</span><span data-i18n="auth.google">使用 Google 登入</span></div>
+      <p class="long-copy">
+        <span data-i18n="auth.termsPrefix">繼續即代表同意</span>
+        <strong data-i18n="auth.termsLink">服務條款與隱私權政策</strong>
+      </p>
+      <p class="long-copy" data-i18n="auth.aiProcessingDisclosure">AI 處理說明</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="settings.title">設定</h2>
+      <div class="row"><span data-i18n="settings.section.account">帳號</span><span data-i18n="auth.guestMode">訪客模式</span></div>
+      <div class="row"><span data-i18n="settings.section.billing">訂閱與點數</span><span id="settingsCreditBalance">Credits</span></div>
+      <div class="row"><span data-i18n="settings.profile">個人資料</span><span data-i18n="settings.profileSubtitle">名稱、生日、所在地</span></div>
+      <div class="row"><span data-i18n="settings.careCircle">照護圈</span><span data-i18n="settings.careCircleSubtitle">誰在圈裡</span></div>
+      <div class="row"><span data-i18n="settings.interests">想聊的話題</span><span id="settingsInterestsSubtitle">Interests</span></div>
+      <div class="row"><span data-i18n="settings.appleHealth">Apple 健康</span><span data-i18n="settings.appleHealthSubtitle">步數、心率、睡眠</span></div>
+      <div class="row"><span data-i18n="settings.medicationReminders">用藥提醒</span><span data-i18n="settings.medicationRemindersSubtitle">到時間通知</span></div>
+      <div class="row"><span data-i18n="settings.safetyNotifications">安全通知</span><span data-i18n="settings.safetyNotificationsSubtitle">通知家人</span></div>
+      <p class="long-copy" data-i18n="settings.lowCredits">點數快用完</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="profile.title">個人資料</h2>
+      <p class="long-copy" id="profileFirstRunIntro">個人化說明</p>
+      <div class="row"><span data-i18n="profile.changePhoto">更換照片</span><span data-i18n="profile.photoHint">家人頁顯示</span></div>
+      <div class="row"><span data-i18n="profile.name">名稱</span><span data-i18n="profile.familyNickname">家人稱呼</span></div>
+      <div class="row"><span data-i18n="profile.birthdate">生日</span><span data-i18n="profile.location">所在地</span></div>
+      <p class="long-copy" data-i18n="profile.locationHint">區域說明</p>
+      <p class="long-copy" data-i18n="profile.cloudDisclosure">雲端同步說明</p>
+      <div class="row"><span data-i18n="profile.skip">先跳過</span><span data-i18n="profile.save">儲存</span></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="data.title">我的資料</h2>
+      <p class="long-copy" data-i18n="data.description">資料匯出與刪除說明</p>
+      <div class="row"><span data-i18n="data.export">匯出資料副本</span><span data-i18n="data.delete">刪除我的資料</span></div>
+      <p data-i18n="data.policyHint">請查看隱私權政策</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="font.title">字體與顯示</h2>
+      <p data-i18n="font.subtitle">選擇看得舒服的大小</p>
+      <div class="row"><span data-i18n="font.standard">標準</span><span data-i18n="font.standardBody">手機常用大小</span></div>
+      <div class="row"><span data-i18n="font.large">大</span><span data-i18n="font.largeBody">閱讀更輕鬆</span></div>
+      <div class="row"><span data-i18n="font.extraLarge">特大</span><span data-i18n="font.extraLargeBody">更大的閱讀字級</span></div>
+    </section>
+
+    <section>
       <h2 data-i18n="medication.title">用藥</h2>
       <div class="row"><span data-i18n="medication.slot.afterBreakfast">早餐後</span><span data-i18n="medication.taken">已服用</span></div>
       <div class="row"><span data-i18n="medication.slot.afterLunch">午餐後</span><span data-i18n="medication.notTaken">尚未服用</span></div>
@@ -160,6 +210,21 @@
         'voice.queue.position.one',
         { count: 3 },
         'Queue position 3',
+      );
+      document.getElementById('settingsCreditBalance').textContent = api.t(
+        'settings.creditsBalance',
+        { credits: 240 },
+        '240 credits',
+      );
+      document.getElementById('settingsInterestsSubtitle').textContent = api.t(
+        'settings.interestsSubtitle',
+        { companion: api.t('companion.nening.name') },
+        'Topics',
+      );
+      document.getElementById('profileFirstRunIntro').textContent = api.t(
+        'profile.firstRunIntro',
+        { companion: api.t('companion.nening.name') },
+        'Profile introduction',
       );
       const mockPrices = {
         'zh-TW': { plan: 'NT$300', credits: 'NT$180' },

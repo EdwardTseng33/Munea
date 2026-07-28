@@ -15,7 +15,7 @@ const keys = new Set([
   ...[...html.matchAll(/api\.t\(\s*'([^']+)'/g)].map((match) => match[1]),
 ]);
 
-assert(keys.size >= 40, 'The QA preview must cover representative App and purchase copy');
+assert(keys.size >= 75, 'The QA preview must cover representative App, settings, modal, and purchase copy');
 for (const [locale, catalog] of Object.entries(catalogs)) {
   for (const key of keys) {
     assert.equal(typeof catalog[key], 'string', `${locale} preview key is missing: ${key}`);
@@ -36,6 +36,8 @@ assert(html.includes("ja: { plan: '¥1,500', credits: '¥900' }"));
 assert(html.includes("es: { plan: '9,99 €', credits: '5,99 €' }"));
 assert(html.includes("flow.failureMessage('apple_account_token_mismatch')"));
 assert(html.includes("flow.restoreMessage({ ok: false, reason: 'none' })"));
+assert(html.includes("api.t(\n        'settings.creditsBalance'"));
+assert(html.includes("api.t(\n        'profile.firstRunIntro'"));
 assert(!/https?:\/\//i.test(html), 'The local QA page must not call external services');
 assert(!/localStorage|sessionStorage/.test(html), 'The QA page must not persist a language');
 
