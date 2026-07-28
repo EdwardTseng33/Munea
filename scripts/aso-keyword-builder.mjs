@@ -29,9 +29,14 @@ const CANDIDATES = [
   '問候', '溝通', '安全', '復健', '量測', '步數', '關懷'
 ];
 
-/* 需要 Edward 拍板才放的詞。不預設塞進去——放進關鍵字不等於醫療宣稱
- * （描述已明寫「不提供醫療診斷、不是醫療器材」），但剛被退件三次的當口，
- * 任何一點審核風險都該由人決定，不由工具偷偷決定。用 --with-judgment 加入。 */
+/* Edward 2026-07-29 指定必放的詞。不參與去重、不參與排序，永遠排最前面塞滿。
+ * 註記：「健康管家」「AI照護」的字名稱裡都有了，理論上蘋果能自己組合。
+ * 但中文斷詞蘋果沒有公開文件，放完整詞組是保守安全的選擇；且算過空間夠，
+ * 不必為了省字元冒這個不確定性。 */
+const MUST_HAVE = ['健康管家', '高齡照護', '心靈陪聊', '家人圈', 'AI照護', '用藥看診提醒'];
+
+/* 需要 Edward 拍板才放的詞。2026-07-29 Edward 拍板：不放失智。
+ * 保留機制與詞本身，之後想加就跑 --with-judgment，不必改程式。 */
 const NEEDS_JUDGMENT = ['失智'];
 
 /* 剔除規則：候選詞若整個出現在名稱或副標裡，就是重複、必須拿掉。
@@ -48,13 +53,17 @@ function build(name, subtitle, withJudgment) {
   const pool = withJudgment ? [...CANDIDATES, ...NEEDS_JUDGMENT] : CANDIDATES;
 
   for (const word of pool) {
-    if (isDuplicate(word, taken)) dropped.push(word);
+    // 指定必放的詞不重複佔位（例：MUST_HAVE 已有「健康管家」，候選就不必再放「管家」）
+    if (MUST_HAVE.some(m => m.includes(word))) dropped.push(word);
+    else if (isDuplicate(word, taken)) dropped.push(word);
     else kept.push(word);
   }
 
-  // 貪心填滿：照優先序塞，塞不下的就停（不跳過後面較短的詞，免得破壞意圖排序）
-  const picked = [];
-  let used = 0;
+  // 指定必放的詞永遠先塞、不參與去重
+  const picked = [...MUST_HAVE];
+  let used = MUST_HAVE.join(',').length;
+
+  // 其餘照優先序貪心填滿（不跳過後面較短的詞，免得破壞意圖排序）
   for (const word of kept) {
     const cost = picked.length === 0 ? word.length : word.length + 1;   // +1 = 分隔逗號
     if (used + cost > LIMIT) continue;
