@@ -15,6 +15,19 @@
   let configured = false;
   let syncPromise = Promise.resolve();
 
+  function t(key, fallback) {
+    return global.MuneaI18n
+      ? global.MuneaI18n.t(key, null, fallback)
+      : fallback;
+  }
+
+  function localizedFallback(key, fallback) {
+    return Object.freeze({
+      localized: t(key, fallback),
+      fallback,
+    });
+  }
+
   function safeScope(value) {
     return encodeURIComponent(String(value || 'guest').trim() || 'guest');
   }
@@ -105,9 +118,17 @@
       });
     });
     try { localStorage.setItem('munea.medStartDates.v1', JSON.stringify(starts)); } catch (e) {}
-    const order = ['早餐後', '午餐後', '晚餐後', '睡前'];
+    const order = [
+      localizedFallback('medication.slot.afterBreakfast', '早餐後'),
+      localizedFallback('medication.slot.afterLunch', '午餐後'),
+      localizedFallback('medication.slot.afterDinner', '晚餐後'),
+      localizedFallback('medication.slot.bedtime', '睡前'),
+    ];
+    const slotOrder = (slot) => order.findIndex(({ fallback, localized }) => (
+      slot === fallback || slot === localized
+    ));
     out.sort((a, b) => {
-      const ai = order.indexOf(a.slot), bi = order.indexOf(b.slot);
+      const ai = slotOrder(a.slot), bi = slotOrder(b.slot);
       if (ai === bi) return a.medicationName.localeCompare(b.medicationName, 'zh-Hant');
       return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
     });

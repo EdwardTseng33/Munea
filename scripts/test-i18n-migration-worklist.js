@@ -19,9 +19,12 @@ assert.equal(worklist.surface, 'app-webview');
 assert.deepEqual(worklist.requiredLocales, ['zh-TW', 'en', 'ja', 'es']);
 assert.equal(worklist.summary.totalOccurrences, appSurface.baselineHanCandidates);
 assert(worklist.summary.boundOccurrences > 0, 'Bound fallbacks must be reported separately');
+assert.equal(worklist.summary.reviewedNonUserFacingOccurrences, 7);
 assert(worklist.summary.unboundOccurrences > 0, 'Unbound copy must remain in the worklist');
 assert.equal(
-  worklist.summary.boundOccurrences + worklist.summary.unboundOccurrences,
+  worklist.summary.boundOccurrences
+    + worklist.summary.reviewedNonUserFacingOccurrences
+    + worklist.summary.unboundOccurrences,
   worklist.summary.totalOccurrences,
 );
 assert(worklist.summary.resolutionKinds['reuse-existing-key'] > 0);

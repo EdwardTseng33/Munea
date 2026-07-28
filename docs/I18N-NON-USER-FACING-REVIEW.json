@@ -1,0 +1,74 @@
+{
+  "schema": "munea.i18n-non-user-facing-review.v1",
+  "policy": {
+    "exactFileTextKindAndOccurrenceMatchRequired": true,
+    "newOccurrencesFailClosed": true,
+    "userVisibleFallbacksForbidden": true,
+    "evidenceFileRequired": true
+  },
+  "entries": [
+    {
+      "id": "companion-backend-nening",
+      "path": "web/src/companion-profile.js",
+      "text": "寧寧",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-ahong",
+      "path": "web/src/companion-profile.js",
+      "text": "阿宏",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-xiaoyun",
+      "path": "web/src/companion-profile.js",
+      "text": "小昀",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-ayuan",
+      "path": "web/src/companion-profile.js",
+      "text": "阿原",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-mimi",
+      "path": "web/src/companion-profile.js",
+      "text": "咪咪",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-wangcai",
+      "path": "web/src/companion-profile.js",
+      "text": "旺財",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-legacy-brand-sentinel",
+      "path": "web/src/companion-profile.js",
+      "text": "沐寧",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-brand-migration-sentinel",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    }
+  ]
+}

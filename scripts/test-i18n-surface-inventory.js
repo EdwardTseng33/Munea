@@ -15,23 +15,24 @@ const jsCandidates = scanJavaScript(`
   const template = \`你好，\${name}\`;
   const bound = t('common.save', '儲存');
   const direct = window.MuneaI18n.t('common.cancel', null, '取消');
+  const legacy = localizedFallback('medication.slot.bedtime', '睡前');
   const unknown = t('missing.catalog.key', '未翻譯');
   /* "區塊註解不算" */
   const english = "Save";
 `);
 assert.deepEqual(
   jsCandidates.map((item) => item.text),
-  ['儲存成功', '你好，${name}', '儲存', '取消', '未翻譯'],
+  ['儲存成功', '你好，${name}', '儲存', '取消', '睡前', '未翻譯'],
   'JavaScript scanner should keep localized literals and ignore comments',
 );
 assert.deepEqual(
   jsCandidates.map((item) => item.bindingStatus),
-  ['unbound', 'unbound', 'bound', 'bound', 'unbound'],
+  ['unbound', 'unbound', 'bound', 'bound', 'bound', 'unbound'],
   'Only fallback literals attached to catalog-complete keys may be classified as bound',
 );
 assert.deepEqual(
   jsCandidates.filter((item) => item.bindingStatus === 'bound').map((item) => item.bindingKey),
-  ['common.save', 'common.cancel'],
+  ['common.save', 'common.cancel', 'medication.slot.bedtime'],
 );
 
 const htmlCandidates = scanHtml(`
@@ -93,12 +94,26 @@ assert.ok(
 );
 const appWebView = report.surfaces.find((surface) => surface.id === 'app-webview');
 assert.ok(appWebView.boundHanCandidates > 0, 'Catalog-bound fallback copy must remain auditable');
+assert.equal(
+  appWebView.reviewedNonUserFacingHanCandidates,
+  7,
+  'Only the exact reviewed companion backend identities may be excluded from UI debt',
+);
+const companionProfile = appWebView.files.find(
+  (file) => file.path === 'web/src/companion-profile.js',
+);
+assert.equal(companionProfile.boundHanCandidates, 12);
+assert.equal(companionProfile.reviewedNonUserFacingHanCandidates, 7);
+assert.equal(companionProfile.unboundHanCandidates, 0);
+assert.deepEqual(companionProfile.reviewFailures, []);
 assert.ok(
   appWebView.unboundHanCandidates > 0,
   'The App must remain blocked while unbound localized copy exists',
 );
 assert.equal(
-  appWebView.boundHanCandidates + appWebView.unboundHanCandidates,
+  appWebView.boundHanCandidates
+    + appWebView.reviewedNonUserFacingHanCandidates
+    + appWebView.unboundHanCandidates,
   appWebView.hanCandidates,
 );
 assert.deepEqual(validateReport(report), [], 'The checked-in baseline must not regress');

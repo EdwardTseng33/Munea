@@ -481,7 +481,7 @@ function buildReadiness() {
       sourceCopyMigration: check(
         appWebViewSurface.unboundHanCandidates === 0,
         'all unbound App WebView copy must be moved into catalogs before release',
-        'docs/I18N-SURFACE-INVENTORY.json + scripts/i18n-surface-inventory.js',
+        'docs/I18N-SURFACE-INVENTORY.json + docs/I18N-NON-USER-FACING-REVIEW.json + scripts/i18n-surface-inventory.js',
       ),
       runtimeLocalization: check(
         catalog.runtimeEnabled === true,
@@ -647,6 +647,7 @@ function buildReadiness() {
       'web/src/i18n/app-surface-manifest.json',
       'web/src/i18n/app-surface-copy-manifest.json',
       'docs/I18N-SURFACE-INVENTORY.json',
+      'docs/I18N-NON-USER-FACING-REVIEW.json',
       'scripts/i18n-native-review-worklist.js',
       'scripts/i18n-visual-qa-worklist.js',
       'engine/voice-locale-integration-manifest.json',

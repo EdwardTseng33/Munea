@@ -67,7 +67,7 @@ for (const locale of requiredLocales) {
   );
   assert.equal(
     entry.gates.sourceCopyMigration.evidence,
-    'docs/I18N-SURFACE-INVENTORY.json + scripts/i18n-surface-inventory.js',
+    'docs/I18N-SURFACE-INVENTORY.json + docs/I18N-NON-USER-FACING-REVIEW.json + scripts/i18n-surface-inventory.js',
     `${locale} source-copy gate must use the shipping surface scanner`,
   );
   assert(
@@ -155,6 +155,10 @@ assert(
 assert(
   report.generatedFrom.includes('web/legal/regional-safety-policy.json'),
   'Release readiness must include country-specific Spanish safety policy',
+);
+assert(
+  report.generatedFrom.includes('docs/I18N-NON-USER-FACING-REVIEW.json'),
+  'Release readiness must include fail-closed internal-copy review evidence',
 );
 assert(
   report.generatedFrom.includes('scripts/i18n-native-review-worklist.js'),

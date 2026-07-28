@@ -17,6 +17,10 @@ window.addEventListener = (name, handler) => {
   listeners.set(name, handlers);
 };
 window.dispatchEvent = event => (listeners.get(event.type) || []).forEach(handler => handler(event));
+const englishCatalog = JSON.parse(fs.readFileSync('web/src/i18n/en.json', 'utf8'));
+window.MuneaI18n = {
+  t: (key, ignored, fallback) => englishCatalog[key] || fallback,
+};
 
 vm.runInThisContext(fs.readFileSync('web/src/medication.js', 'utf8'), { filename: 'medication.js' });
 
@@ -30,6 +34,14 @@ const meds = [
   const today = MuneaMedication.dateKey();
   let summary = MuneaMedication.daySummary(today, meds);
   assert.deepStrictEqual({ taken: summary.taken, expected: summary.expected }, { taken: 0, expected: 3 });
+  assert.deepStrictEqual(
+    MuneaMedication.slotsFor([
+      { id: 'bedtime-med', name: 'Night medicine', time: 'Before bed' },
+      { id: 'breakfast-med', name: 'Morning medicine', time: 'After breakfast' },
+    ], today).map(event => event.slot),
+    ['After breakfast', 'Before bed'],
+    'Localized slot labels must preserve the canonical medication order',
+  );
 
   MuneaMedication.markNext(meds, 'home');
   summary = MuneaMedication.daySummary(today, meds);

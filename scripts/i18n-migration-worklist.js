@@ -59,7 +59,7 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
     const absolutePath = path.join(ROOT, file.path);
     sourceFiles[file.path] = sha256(fs.readFileSync(absolutePath));
     for (const candidate of file.candidates) {
-      if (candidate.bindingStatus === 'bound') continue;
+      if (candidate.bindingStatus !== 'unbound') continue;
       const source = candidate.rawText || candidate.text;
       const entryId = stableKey(source);
       if (!entries.has(entryId)) {
@@ -106,6 +106,7 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
     summary: {
       totalOccurrences: surface.hanCandidates,
       boundOccurrences: surface.boundHanCandidates,
+      reviewedNonUserFacingOccurrences: surface.reviewedNonUserFacingHanCandidates,
       unboundOccurrences: surface.unboundHanCandidates,
       occurrences: surface.unboundHanCandidates,
       uniqueSourceStrings: worklist.length,

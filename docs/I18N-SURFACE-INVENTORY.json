@@ -7,7 +7,7 @@
     "es"
   ],
   "candidatePolicy": {
-    "description": "Han text remains visible in the audit, but only text connected to a valid key present in every required locale catalog is classified as bound. All other user-facing Han text is unbound localization debt.",
+    "description": "Han text remains visible in the audit. Text connected to a valid key present in every required locale catalog is bound; exact internal identities may be excluded only by the fail-closed non-user-facing review manifest. All remaining Han text is unbound localization debt.",
     "completionTarget": 0,
     "regressionPolicy": "A surface may not exceed its checked-in total-Han baseline while migration is in progress. Release requires unbound Han candidates to reach zero; catalog-bound fallback text remains auditable but does not block release."
   },
@@ -114,6 +114,7 @@
         "web/src/i18n/app-binding-manifest.json",
         "web/src/i18n/app-surface-manifest.json",
         "web/src/i18n/app-surface-copy-manifest.json",
+        "docs/I18N-NON-USER-FACING-REVIEW.json",
         "web/src/i18n/zh-TW.json",
         "web/src/i18n/en.json",
         "web/src/i18n/ja.json",

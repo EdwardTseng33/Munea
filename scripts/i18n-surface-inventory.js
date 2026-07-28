@@ -5,6 +5,11 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const INVENTORY_PATH = path.join(ROOT, 'docs', 'I18N-SURFACE-INVENTORY.json');
+const NON_USER_FACING_REVIEW_PATH = path.join(
+  ROOT,
+  'docs',
+  'I18N-NON-USER-FACING-REVIEW.json',
+);
 const CATALOG_DIR = path.join(ROOT, 'web', 'src', 'i18n');
 const CATALOG_MANIFEST_PATH = path.join(CATALOG_DIR, 'catalog-manifest.json');
 const HAN_RE = /[\u3400-\u9fff\uf900-\ufaff]/u;
@@ -16,6 +21,7 @@ const HTML_ATTRIBUTE_MARKERS = Object.freeze({
 });
 
 let cachedCatalogKeys = null;
+let cachedNonUserFacingReview = null;
 
 function lineNumberAt(source, index) {
   let line = 1;
@@ -56,6 +62,55 @@ function loadCatalogKeys() {
 
 function validBindingKey(key, catalogKeys = loadCatalogKeys()) {
   return typeof key === 'string' && catalogKeys.has(key);
+}
+
+function loadNonUserFacingReview() {
+  if (cachedNonUserFacingReview) return cachedNonUserFacingReview;
+  cachedNonUserFacingReview = JSON.parse(
+    fs.readFileSync(NON_USER_FACING_REVIEW_PATH, 'utf8'),
+  );
+  return cachedNonUserFacingReview;
+}
+
+function applyNonUserFacingReview(relativePath, candidates, review = loadNonUserFacingReview()) {
+  const failures = [];
+  const entries = review.entries.filter((entry) => entry.path === relativePath);
+  for (const entry of entries) {
+    if (
+      typeof entry.id !== 'string'
+      || typeof entry.text !== 'string'
+      || typeof entry.kind !== 'string'
+      || !Number.isInteger(entry.expectedOccurrences)
+      || entry.expectedOccurrences < 1
+      || !['backend-template-identity', 'legacy-brand-migration-sentinel']
+        .includes(entry.reasonCode)
+    ) {
+      failures.push(`${relativePath}: invalid non-user-facing review entry ${entry.id || '<missing-id>'}`);
+      continue;
+    }
+    if (!fs.existsSync(path.join(ROOT, entry.evidence || ''))) {
+      failures.push(`${relativePath}: missing review evidence for ${entry.id}`);
+      continue;
+    }
+    const matches = candidates.filter((candidate) => (
+      candidate.bindingStatus === 'unbound'
+      && candidate.kind === entry.kind
+      && candidate.rawText === entry.text
+    ));
+    if (matches.length !== entry.expectedOccurrences) {
+      failures.push(
+        `${relativePath}: non-user-facing review ${entry.id} expected `
+        + `${entry.expectedOccurrences} occurrence(s), found ${matches.length}`,
+      );
+      continue;
+    }
+    for (const candidate of matches) {
+      candidate.bindingStatus = 'reviewed-non-user-facing';
+      candidate.reviewId = entry.id;
+      candidate.reviewReason = entry.reasonCode;
+    }
+  }
+  return failures;
 }
 
 function pushCandidate(candidates, source, index, kind, value, binding = null) {
@@ -158,7 +213,7 @@ function staticCatalogKey(source, argument) {
 
 function javaScriptBindings(source, catalogKeys) {
   const bindings = [];
-  const callPattern = /\b(muneaT|t|(?:window\.)?MuneaI18n(?:\.|\?\.)t)\s*\(/g;
+  const callPattern = /\b(muneaT|t|localizedFallback|(?:window\.)?MuneaI18n(?:\.|\?\.)t)\s*\(/g;
   let match;
   while ((match = callPattern.exec(source)) !== null) {
     const openParenIndex = source.indexOf('(', match.index + match[1].length);
@@ -358,17 +413,24 @@ function scanHtml(source, catalogKeys = loadCatalogKeys()) {
 function scanFile(relativePath) {
   const absolutePath = path.join(ROOT, relativePath);
   if (!fs.existsSync(absolutePath)) {
-    return { path: relativePath, exists: false, candidates: [] };
+    return {
+      path: relativePath,
+      exists: false,
+      candidates: [],
+      reviewFailures: [],
+    };
   }
   const source = fs.readFileSync(absolutePath, 'utf8');
   const extension = path.extname(relativePath).toLowerCase();
   const candidates = extension === '.html'
     ? scanHtml(source)
     : scanJavaScript(source);
+  const reviewFailures = applyNonUserFacingReview(relativePath, candidates);
   return {
     path: relativePath,
     exists: true,
     candidates,
+    reviewFailures,
   };
 }
 
@@ -391,6 +453,7 @@ function buildReport(inventory = loadInventory()) {
         path: relativePath,
         exists: fs.existsSync(path.join(ROOT, relativePath)),
         candidates: [],
+        reviewFailures: [],
       };
     });
     const hanCandidates = files.reduce((sum, file) => sum + file.candidates.length, 0);
@@ -400,7 +463,18 @@ function buildReport(inventory = loadInventory()) {
       ).length,
       0,
     );
-    const unboundHanCandidates = hanCandidates - boundHanCandidates;
+    const reviewedNonUserFacingHanCandidates = files.reduce(
+      (sum, file) => sum + file.candidates.filter(
+        (candidate) => candidate.bindingStatus === 'reviewed-non-user-facing',
+      ).length,
+      0,
+    );
+    const unboundHanCandidates = files.reduce(
+      (sum, file) => sum + file.candidates.filter(
+        (candidate) => candidate.bindingStatus === 'unbound',
+      ).length,
+      0,
+    );
     return {
       id: surface.id,
       label: surface.label,
@@ -408,7 +482,9 @@ function buildReport(inventory = loadInventory()) {
       baselineHanCandidates: surface.baselineHanCandidates ?? null,
       hanCandidates,
       boundHanCandidates,
+      reviewedNonUserFacingHanCandidates,
       unboundHanCandidates,
+      reviewFailures: files.flatMap((file) => file.reviewFailures),
       missingFiles: files.filter((file) => !file.exists).map((file) => file.path),
       files: files.map((file) => ({
         path: file.path,
@@ -417,13 +493,38 @@ function buildReport(inventory = loadInventory()) {
         boundHanCandidates: file.candidates.filter(
           (candidate) => candidate.bindingStatus === 'bound',
         ).length,
-        unboundHanCandidates: file.candidates.filter(
-          (candidate) => candidate.bindingStatus !== 'bound',
+        reviewedNonUserFacingHanCandidates: file.candidates.filter(
+          (candidate) => candidate.bindingStatus === 'reviewed-non-user-facing',
         ).length,
+        unboundHanCandidates: file.candidates.filter(
+          (candidate) => candidate.bindingStatus === 'unbound',
+        ).length,
+        reviewFailures: file.reviewFailures,
         candidates: file.candidates,
       })),
     };
   });
+  const review = loadNonUserFacingReview();
+  const reviewFailures = [];
+  if (
+    review.schema !== 'munea.i18n-non-user-facing-review.v1'
+    || !review.policy
+    || review.policy.exactFileTextKindAndOccurrenceMatchRequired !== true
+    || review.policy.newOccurrencesFailClosed !== true
+    || review.policy.userVisibleFallbacksForbidden !== true
+    || review.policy.evidenceFileRequired !== true
+  ) {
+    reviewFailures.push('invalid non-user-facing review policy');
+  }
+  const reviewIds = review.entries.map(({ id }) => id);
+  if (new Set(reviewIds).size !== reviewIds.length) {
+    reviewFailures.push('non-user-facing review IDs must be unique');
+  }
+  for (const entry of review.entries) {
+    if (!seen.has(entry.path)) {
+      reviewFailures.push(`non-user-facing review path is outside the surface inventory: ${entry.path}`);
+    }
+  }
   return {
     schemaVersion: inventory.schemaVersion,
     requiredLocales: inventory.requiredLocales,
@@ -433,20 +534,26 @@ function buildReport(inventory = loadInventory()) {
       (sum, surface) => sum + surface.boundHanCandidates,
       0,
     ),
+    totalReviewedNonUserFacingHanCandidates: surfaces.reduce(
+      (sum, surface) => sum + surface.reviewedNonUserFacingHanCandidates,
+      0,
+    ),
     totalUnboundHanCandidates: surfaces.reduce(
       (sum, surface) => sum + surface.unboundHanCandidates,
       0,
     ),
+    reviewFailures,
     surfaces,
   };
 }
 
 function validateReport(report) {
-  const failures = [];
+  const failures = [...(report.reviewFailures || [])];
   for (const surface of report.surfaces) {
     for (const missingFile of surface.missingFiles) {
       failures.push(`${surface.id}: missing file ${missingFile}`);
     }
+    failures.push(...surface.reviewFailures);
     if (
       surface.scanMode === 'localized-text'
       && Number.isInteger(surface.baselineHanCandidates)
@@ -457,8 +564,13 @@ function validateReport(report) {
         + `${surface.baselineHanCandidates} -> ${surface.hanCandidates}`,
       );
     }
-    if (surface.boundHanCandidates + surface.unboundHanCandidates !== surface.hanCandidates) {
-      failures.push(`${surface.id}: bound and unbound Han candidate counts do not reconcile`);
+    if (
+      surface.boundHanCandidates
+      + surface.reviewedNonUserFacingHanCandidates
+      + surface.unboundHanCandidates
+      !== surface.hanCandidates
+    ) {
+      failures.push(`${surface.id}: Han candidate classifications do not reconcile`);
     }
   }
   return failures;
@@ -467,7 +579,9 @@ function validateReport(report) {
 function printSummary(report) {
   console.log(
     `I18N surface inventory: ${report.totalHanCandidates} Han candidates `
-    + `(${report.totalBoundHanCandidates} bound, ${report.totalUnboundHanCandidates} unbound)`,
+    + `(${report.totalBoundHanCandidates} bound, `
+    + `${report.totalReviewedNonUserFacingHanCandidates} reviewed internal, `
+    + `${report.totalUnboundHanCandidates} unbound)`,
   );
   for (const surface of report.surfaces) {
     const baseline = Number.isInteger(surface.baselineHanCandidates)
@@ -475,13 +589,17 @@ function printSummary(report) {
       : '';
     console.log(
       `- ${surface.id}: ${surface.hanCandidates}${baseline} `
-      + `(${surface.boundHanCandidates} bound, ${surface.unboundHanCandidates} unbound)`,
+      + `(${surface.boundHanCandidates} bound, `
+      + `${surface.reviewedNonUserFacingHanCandidates} reviewed internal, `
+      + `${surface.unboundHanCandidates} unbound)`,
     );
     for (const file of surface.files) {
       if (surface.scanMode === 'localized-text') {
         console.log(
           `  ${file.path}: ${file.hanCandidates} `
-          + `(${file.boundHanCandidates} bound, ${file.unboundHanCandidates} unbound)`,
+          + `(${file.boundHanCandidates} bound, `
+          + `${file.reviewedNonUserFacingHanCandidates} reviewed internal, `
+          + `${file.unboundHanCandidates} unbound)`,
         );
       }
     }
@@ -507,9 +625,11 @@ if (require.main === module) {
 }
 
 module.exports = {
+  applyNonUserFacingReview,
   buildReport,
   loadCatalogKeys,
   loadInventory,
+  loadNonUserFacingReview,
   scanFile,
   scanHtml,
   scanJavaScript,
