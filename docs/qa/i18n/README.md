@@ -12,6 +12,21 @@ docs/qa/i18n/
 
 不得先建立假 PASS 檔案。`scripts/i18n-release-readiness.js` 會在檔案不存在、格式不完整、截圖不存在或 `result != pass` 時保持發布 Gate 關閉。
 
+## native-review.json
+
+母語審稿不能只在 manifest 寫 `approved`。每個語系需由實際審稿者建立：
+
+- `schema`: `munea.i18n-native-review.v1`
+- `locale`、`contentVariant`
+- 40 字元 `exactCommit`、ISO 8601 `reviewedAt`
+- 不含個資的 `reviewerReference` 與 `reviewerRole`
+- 目前 catalog 原始檔的 `catalogSha256`
+- 完整 key 清單的 `reviewedKeyCount` 與 `reviewedKeysSha256`
+- `openIssues: 0`
+- `checks` 全部為 `true`：語意保留、文法自然、語氣合宜、文化脈絡、placeholder 上下文，以及實際朗讀語音文案
+
+只要 catalog 內容或 key 清單後續改變，既有母語審稿證據就會失效，必須重審受影響版本。不得填入審稿者姓名、Email 或其他直接個資。
+
 ## visual-qa.json
 
 必要欄位：

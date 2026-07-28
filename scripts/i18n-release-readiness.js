@@ -52,6 +52,46 @@ function validPngEvidence(filePath, expectedSha256) {
     && crypto.createHash('sha256').update(data).digest('hex') === expectedSha256.toLowerCase();
 }
 
+function sha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function validateNativeReviewEvidence(
+  evidence,
+  locale,
+  catalogPath,
+  expectedContentVariant,
+) {
+  if (!fs.existsSync(catalogPath)) return false;
+  const catalogSource = fs.readFileSync(catalogPath, 'utf8');
+  let catalog;
+  try {
+    catalog = JSON.parse(catalogSource);
+  } catch {
+    return false;
+  }
+  const keys = Object.keys(catalog).sort();
+  return evidence.schema === 'munea.i18n-native-review.v1'
+    && evidence.locale === locale
+    && evidence.contentVariant === expectedContentVariant
+    && evidence.result === 'pass'
+    && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
+    && validIsoDate(evidence.reviewedAt)
+    && requiredStrings(evidence, ['reviewerReference', 'reviewerRole'])
+    && evidence.catalogSha256 === sha256(catalogSource)
+    && evidence.reviewedKeyCount === keys.length
+    && evidence.reviewedKeysSha256 === sha256(keys.join('\n'))
+    && evidence.openIssues === 0
+    && requiredTrue(evidence.checks, [
+      'meaningPreserved',
+      'grammarNatural',
+      'toneAppropriate',
+      'culturalContextAccepted',
+      'placeholderContextAccepted',
+      'spokenCopyReadAloud',
+    ]);
+}
+
 function validateVisualEvidence(evidence, locale, filePath, requiredStates) {
   if (evidence.schema !== 'munea.i18n-visual-qa.v1'
       || evidence.locale !== locale
@@ -283,6 +323,17 @@ function buildReadiness() {
     const storeKey = STORE_LOCALE_BY_CATALOG[locale];
     const store = storeManifest.locales[storeKey];
     const iapLocale = iapManifest.locales[locale];
+    const catalogPath = path.join(I18N_DIR, catalog.catalog);
+    const nativeReviewEvidence = evidenceResult(
+      locale,
+      'native-review.json',
+      (evidence, evidenceLocale) => validateNativeReviewEvidence(
+        evidence,
+        evidenceLocale,
+        catalogPath,
+        review.contentVariant,
+      ),
+    );
     const visualEvidence = evidenceResult(
       locale,
       'visual-qa.json',
@@ -327,9 +378,9 @@ function buildReadiness() {
         'web/src/i18n/catalog-manifest.json',
       ),
       nativeLanguageReview: check(
-        review.nativeLanguageReview === 'approved',
-        'native-language review must be approved',
-        'web/src/i18n/review-manifest.json',
+        review.nativeLanguageReview === 'approved' && nativeReviewEvidence.passed,
+        'native-language review needs approval plus evidence bound to the current complete catalog',
+        nativeReviewEvidence.path,
       ),
       visualQA: check(
         review.visualQA === 'approved' && visualEvidence.passed,
@@ -464,6 +515,7 @@ module.exports = {
   formatReport,
   validateInstalledAppEvidence,
   validateEvidenceConsistency,
+  validateNativeReviewEvidence,
   validatePurchaseEvidence,
   validateVisualEvidence,
   validateVoiceEvidence,

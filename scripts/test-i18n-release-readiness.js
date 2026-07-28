@@ -10,6 +10,7 @@ const {
   formatReport,
   validateEvidenceConsistency,
   validateInstalledAppEvidence,
+  validateNativeReviewEvidence,
   validatePurchaseEvidence,
   validateVisualEvidence,
   validateVoiceEvidence,
@@ -49,6 +50,10 @@ for (const locale of requiredLocales) {
     `${locale} must require completed App UI integration`,
   );
   assert(
+    entry.blockers.some(({ gate }) => gate === 'nativeLanguageReview'),
+    `${locale} must require current catalog-bound native review evidence`,
+  );
+  assert(
     entry.blockers.some(({ gate }) => gate === 'installedAppE2E'),
     `${locale} must require exact installed-App evidence`,
   );
@@ -67,6 +72,11 @@ for (const locale of requiredLocales) {
   assert(
     entry.blockers.some(({ gate }) => gate === 'exactBuildEvidenceChain'),
     `${locale} must require one consistent exact-build evidence chain`,
+  );
+  assert.equal(
+    entry.gates.nativeLanguageReview.evidence,
+    `docs/qa/i18n/${locale}/native-review.json`,
+    `${locale} native review evidence must use the canonical path`,
   );
   assert.equal(
     entry.gates.visualQA.evidence,
@@ -97,6 +107,50 @@ assert(
 );
 
 const exactCommit = 'a'.repeat(40);
+const enCatalogPath = path.join(__dirname, '..', 'web', 'src', 'i18n', 'en.json');
+const enCatalogSource = fs.readFileSync(enCatalogPath, 'utf8');
+const enCatalogKeys = Object.keys(JSON.parse(enCatalogSource)).sort();
+const nativeReviewEvidence = {
+  schema: 'munea.i18n-native-review.v1',
+  locale: 'en',
+  contentVariant: 'international-English',
+  result: 'pass',
+  exactCommit,
+  reviewedAt: '2026-07-28T08:00:00Z',
+  reviewerReference: 'review-ticket-001',
+  reviewerRole: 'native-language-reviewer',
+  catalogSha256: crypto.createHash('sha256').update(enCatalogSource).digest('hex'),
+  reviewedKeyCount: enCatalogKeys.length,
+  reviewedKeysSha256: crypto.createHash('sha256').update(enCatalogKeys.join('\n')).digest('hex'),
+  openIssues: 0,
+  checks: Object.fromEntries([
+    'meaningPreserved',
+    'grammarNatural',
+    'toneAppropriate',
+    'culturalContextAccepted',
+    'placeholderContextAccepted',
+    'spokenCopyReadAloud',
+  ].map((key) => [key, true])),
+};
+assert.equal(
+  validateNativeReviewEvidence(
+    nativeReviewEvidence,
+    'en',
+    enCatalogPath,
+    'international-English',
+  ),
+  true,
+);
+assert.equal(
+  validateNativeReviewEvidence(
+    { ...nativeReviewEvidence, catalogSha256: '0'.repeat(64) },
+    'en',
+    enCatalogPath,
+    'international-English',
+  ),
+  false,
+  'Native review must expire when the reviewed catalog bytes differ',
+);
 const serviceRevisions = {
   brain: 'brain-revision',
   voice: 'voice-revision',
