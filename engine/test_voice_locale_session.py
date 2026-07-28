@@ -21,6 +21,7 @@ class VoiceLocaleSessionTests(unittest.TestCase):
         self.assertEqual(manifest["schema"], "munea.voice-locale-integration.v1")
         self.assertEqual(manifest["bridgeStatus"], "integrated")
         self.assertEqual(manifest["liveVoiceServerStatus"], "pending-pr-270")
+        self.assertEqual(manifest["gatewayResolverStatus"], "integrated")
         self.assertEqual(manifest["gatewayClaimsStatus"], "pending-pr-258")
         self.assertEqual(manifest["legacyTokenMode"], "compatibility")
         self.assertEqual(manifest["appE2EStatus"], "pending")

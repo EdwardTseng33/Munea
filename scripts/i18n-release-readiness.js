@@ -440,6 +440,7 @@ function buildReadiness() {
       voiceIntegration: check(
         voiceIntegrationManifest.bridgeStatus === 'integrated'
           && voiceIntegrationManifest.liveVoiceServerStatus === 'integrated'
+          && voiceIntegrationManifest.gatewayResolverStatus === 'integrated'
           && voiceIntegrationManifest.gatewayClaimsStatus === 'integrated'
           && voiceIntegrationManifest.legacyTokenMode === 'disabled',
         'Gateway claims and Live Voice must consume the trusted locale session bridge with legacy mode disabled',
