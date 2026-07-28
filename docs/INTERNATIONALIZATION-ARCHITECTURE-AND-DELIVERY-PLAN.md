@@ -178,6 +178,14 @@ Phase 1i（2026-07-28）：iOS permission localization parity
 - Xcode variant group、`knownRegions` 與 `CFBundleLocalizations` 仍只有 `zh-Hant`；en／ja／es 必須等全畫面、語音與 exact-build gates 通過後才一起註冊，避免 IPA 過早宣告支援。
 - 此階段只補齊未打包草稿與靜態契約，未執行 Xcode build、archive、upload 或 App Store Connect 變更。
 
+Phase 1j（2026-07-28）：38 個 shipping states 的完整四語文案契約
+
+- 四個 App catalog 已擴充到 430 個一致 key，補齊連接裝置、問答、家庭活動、興趣、安全、陪伴角色、報告、家庭圈、邀請／加入、預約、歷史、同意、版本、用藥管理、通知設定／收件匣與文字聊天。
+- `web/src/i18n/app-surface-copy-manifest.json` 將 38 個 shipping states 逐一綁定文案群組與高風險必要 key；測試要求 38 個 state 與畫面盤點完全一致，且 430 個 key 全部至少歸屬一個實際畫面。
+- 安全、同意、健康連接與用藥畫面採不依語言推定國家的通用緊急／醫療聲明；所在地緊急號碼仍只能由後端核定的 `safetyRegion` 決定。
+- `catalogCoverage` 發布 Gate 現在同時要求母語審稿核准與完整畫面文案 mapping，避免只審核心畫面就誤開語系。
+- 這一批是 catalog + contract + automated tests，尚未修改被 #247／#270／#273 佔用的主 App 檔案；全畫面接線、456 張截圖與 exact-build iPhone 驗收前仍為 `App E2E pending`。
+
 Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 
 - 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。

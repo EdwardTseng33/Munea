@@ -50,6 +50,11 @@ for (const locale of requiredLocales) {
     `${locale} must require completed App UI integration`,
   );
   assert.equal(
+    entry.gates.catalogCoverage.evidence,
+    'web/src/i18n/review-manifest.json + web/src/i18n/app-surface-copy-manifest.json',
+    `${locale} catalog coverage gate must include the complete App surface copy mapping`,
+  );
+  assert.equal(
     entry.gates.appUiIntegration.evidence,
     'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
     `${locale} App integration gate must include the complete shipping surface manifest`,
@@ -106,6 +111,10 @@ for (const locale of ['en', 'ja', 'es']) {
 }
 
 assert.equal(report.locales.es.storeLocale, null, 'Spanish market variant must remain undecided');
+assert(
+  report.generatedFrom.includes('web/src/i18n/app-surface-copy-manifest.json'),
+  'Release readiness must include the complete App surface copy mapping',
+);
 assert(
   formatReport(report).includes('Overall: NOT READY'),
   'Human-readable report must lead with the actual release state',

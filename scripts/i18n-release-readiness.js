@@ -334,6 +334,7 @@ function buildReadiness() {
   const screenManifest = readJson(path.join(I18N_DIR, 'app-screen-manifest.json'));
   const bindingManifest = readJson(path.join(I18N_DIR, 'app-binding-manifest.json'));
   const surfaceManifest = readJson(path.join(I18N_DIR, 'app-surface-manifest.json'));
+  const copyManifest = readJson(path.join(I18N_DIR, 'app-surface-copy-manifest.json'));
   const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
@@ -385,9 +386,10 @@ function buildReadiness() {
 
     const gates = {
       catalogCoverage: check(
-        review.catalogCoverage === 'approved',
-        'catalog coverage review must be approved',
-        'web/src/i18n/review-manifest.json',
+        review.catalogCoverage === 'approved'
+          && copyManifest.catalogStatus === 'complete-for-current-surface-inventory',
+        'catalog coverage review and complete App surface copy mapping must be approved',
+        'web/src/i18n/review-manifest.json + web/src/i18n/app-surface-copy-manifest.json',
       ),
       appUiIntegration: check(
         screenManifest.bindingStatus === 'integrated'
@@ -507,6 +509,7 @@ function buildReadiness() {
       'web/src/i18n/app-screen-manifest.json',
       'web/src/i18n/app-binding-manifest.json',
       'web/src/i18n/app-surface-manifest.json',
+      'web/src/i18n/app-surface-copy-manifest.json',
       'web/legal/manifest.json',
       'app-store/localizations/manifest.json',
       'app-store/in-app-purchases/manifest.json',

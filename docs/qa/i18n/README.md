@@ -12,6 +12,18 @@ docs/qa/i18n/
 
 不得先建立假 PASS 檔案。`scripts/i18n-release-readiness.js` 會在檔案不存在、格式不完整、截圖不存在或 `result != pass` 時保持發布 Gate 關閉。
 
+## 全畫面文案契約
+
+`web/src/i18n/app-surface-copy-manifest.json` 是畫面到文案的可執行對照表。它必須與 `app-surface-manifest.json` 的 38 個 shipping states 完全一致，並讓四語 catalog 的每一個 key 至少歸屬一個實際畫面。`scripts/test-app-surface-copy-manifest.js` 會驗證：
+
+- 38 個 state 不缺漏、不重複。
+- 每個 state 至少有 3 個可驗收的文案 key。
+- 430 個 key 在繁中、英文、日文、西班牙文都存在且非空白。
+- 英文與西班牙文沒有中文字殘留。
+- 健康、安全、同意、用藥與通知隱私的高風險聲明被明確列為必要文案。
+
+這份契約只證明文案已備妥，不代表 DOM／動態 renderer 已接線，也不能取代母語審稿與 456 張 exact-build 畫面驗收。
+
 ## native-review.json
 
 母語審稿不能只在 manifest 寫 `approved`。每個語系需由實際審稿者建立：
