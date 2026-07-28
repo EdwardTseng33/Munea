@@ -6,6 +6,9 @@
     {
       "locale": "zh-TW",
       "nativeLocale": "zh-Hant",
+      "label": "繁體中文",
+      "htmlLang": "zh-Hant-TW",
+      "weatherLanguage": "zh",
       "catalog": "zh-TW.json",
       "status": "production",
       "runtimeEnabled": true,
@@ -14,6 +17,9 @@
     {
       "locale": "en",
       "nativeLocale": "en",
+      "label": "English",
+      "htmlLang": "en",
+      "weatherLanguage": "en",
       "catalog": "en.json",
       "status": "development",
       "runtimeEnabled": false,
@@ -22,6 +28,9 @@
     {
       "locale": "ja",
       "nativeLocale": "ja",
+      "label": "日本語",
+      "htmlLang": "ja",
+      "weatherLanguage": "ja",
       "catalog": "ja.json",
       "status": "development",
       "runtimeEnabled": false,
@@ -30,6 +39,9 @@
     {
       "locale": "es",
       "nativeLocale": "es",
+      "label": "Español",
+      "htmlLang": "es",
+      "weatherLanguage": "es",
       "catalog": "es.json",
       "status": "development",
       "runtimeEnabled": false,

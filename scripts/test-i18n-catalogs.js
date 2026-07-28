@@ -40,6 +40,9 @@ const localeEntries = new Map(manifest.locales.map((entry) => [entry.locale, ent
 const catalogs = new Map();
 for (const entry of manifest.locales) {
   assert.match(entry.catalog, /^[A-Za-z-]+\.json$/);
+  assert.ok(entry.label, `${entry.locale} label is missing`);
+  assert.ok(entry.htmlLang, `${entry.locale} htmlLang is missing`);
+  assert.ok(entry.weatherLanguage, `${entry.locale} weatherLanguage is missing`);
   const catalogPath = path.join(CATALOG_DIR, entry.catalog);
   assert.ok(fs.existsSync(catalogPath), `missing catalog: ${entry.catalog}`);
   catalogs.set(entry.locale, readJson(catalogPath));
