@@ -138,6 +138,10 @@ assert(
   'Release readiness must include the complete App surface copy mapping',
 );
 assert(
+  report.generatedFrom.includes('scripts/i18n-native-review-worklist.js'),
+  'Release readiness must include the catalog-bound native review worklist',
+);
+assert(
   report.generatedFrom.includes('scripts/i18n-visual-qa-worklist.js'),
   'Release readiness must include the exact-build visual capture worklist',
 );

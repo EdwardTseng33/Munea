@@ -536,6 +536,7 @@ function buildReadiness() {
       'web/src/i18n/app-surface-manifest.json',
       'web/src/i18n/app-surface-copy-manifest.json',
       'docs/I18N-SURFACE-INVENTORY.json',
+      'scripts/i18n-native-review-worklist.js',
       'scripts/i18n-visual-qa-worklist.js',
       'engine/voice-locale-integration-manifest.json',
       'web/legal/manifest.json',

@@ -26,7 +26,7 @@
     "en": {
       "contentVariant": "international-English",
       "speechVariantPolicy": "country-dependent",
-      "catalogCoverage": "in-progress",
+      "catalogCoverage": "approved",
       "nativeLanguageReview": "pending",
       "visualQA": "pending",
       "voiceE2E": "pending",
@@ -38,7 +38,7 @@
     "ja": {
       "contentVariant": "ja-JP",
       "speechVariantPolicy": "ja-JP",
-      "catalogCoverage": "in-progress",
+      "catalogCoverage": "approved",
       "nativeLanguageReview": "pending",
       "visualQA": "pending",
       "voiceE2E": "pending",
@@ -50,7 +50,7 @@
     "es": {
       "contentVariant": "neutral-international-Spanish",
       "speechVariantPolicy": "country-dependent",
-      "catalogCoverage": "in-progress",
+      "catalogCoverage": "approved",
       "nativeLanguageReview": "pending",
       "visualQA": "pending",
       "voiceE2E": "pending",
