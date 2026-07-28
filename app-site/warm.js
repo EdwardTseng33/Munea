@@ -45,19 +45,19 @@
   const timechip = document.querySelector('.scene .timechip');
   const sceneImg = document.querySelector('.scene .ph img');
   const scenes = [
-    {label:'早上・她先開口', en:'Morning · She says hi first', img:'assets/app-home.jpg',     time:'08:00', timeEn:'08:00'},
-    {label:'中午・親口提醒',  en:'Noon · A spoken reminder',    img:'assets/app-reminder.jpg', time:'12:00', timeEn:'12:00'},
-    {label:'下午・家人放心',  en:'Afternoon · Family at ease',  img:'assets/app-family.jpg',   time:'15:00', timeEn:'15:00'},
-    {label:'晚上・睡前記得',  en:'Night · Remembered',          img:'assets/app-status.jpg',   time:'21:00', timeEn:'21:00'}
+    {labels:{'zh-TW':'早上・她先開口',en:'Morning · She says hi first',ja:'朝 · 先に声をかけます',es:'Mañana · Saluda primero'},img:'assets/app-home.jpg',time:'08:00'},
+    {labels:{'zh-TW':'中午・親口提醒',en:'Noon · A spoken reminder',ja:'昼 · 声でリマインド',es:'Mediodía · Recordatorio por voz'},img:'assets/app-reminder.jpg',time:'12:00'},
+    {labels:{'zh-TW':'下午・家人放心',en:'Afternoon · Family at ease',ja:'午後 · 家族も安心',es:'Tarde · La familia tranquila'},img:'assets/app-family.jpg',time:'15:00'},
+    {labels:{'zh-TW':'晚上・睡前記得',en:'Night · Remembered',ja:'夜 · 今日のことを記憶',es:'Noche · Lo vivido queda en la memoria'},img:'assets/app-status.jpg',time:'21:00'}
   ];
   let curStep = 0;
-  const isEn = () => document.documentElement.lang === 'en';
+  const activeLocale = () => document.documentElement.dataset.muneaLocale || 'zh-TW';
   function setStep(i){
     curStep = i;
     steps.forEach((s,k)=>s.classList.toggle('on', k===i));
-    if(sceneLabel) sceneLabel.textContent = isEn() ? scenes[i].en : scenes[i].label;
+    if(sceneLabel) sceneLabel.textContent = scenes[i].labels[activeLocale()] || scenes[i].labels.en;
     if(sceneImg && scenes[i].img && !sceneImg.src.endsWith(scenes[i].img)) sceneImg.src = scenes[i].img;
-    if(timechip) timechip.textContent = isEn() ? scenes[i].timeEn : scenes[i].time;
+    if(timechip) timechip.textContent = scenes[i].time;
   }
   if(steps.length){
     setStep(0);
@@ -101,28 +101,140 @@
   }
 })();
 
-/* ===== 中文 / English language switch (dropdown) ===== */
+/* ===== Four-locale public-site language switch ===== */
 (function(){
   const KEY = 'careon-lang';
+  const SUPPORTED = ['zh-TW', 'en', 'ja', 'es'];
+  const HTML_LANG = {'zh-TW':'zh-Hant',en:'en',ja:'ja',es:'es'};
+  const SHORT_LABEL = {'zh-TW':'中文',en:'EN',ja:'日本語',es:'ES'};
+  const EN_MESSAGES = {soundOn:'Sound on',mute:'Mute'};
   const sw = document.querySelector('.lang-switch');
   const trigger = sw && sw.querySelector('.lang-trigger');
   const current = sw && sw.querySelector('.lang-current');
   const opts = sw ? [...sw.querySelectorAll('.lang-opt')] : [];
   const nodes = [...document.querySelectorAll('[data-en]')];
-  nodes.forEach(n => { n._zh = n.innerHTML; });   // capture original Chinese
-  let lang = 'zh';
-  try { if (localStorage.getItem(KEY) === 'en') lang = 'en'; } catch(e){}
-  function setOpen(o){ if(!sw) return; sw.setAttribute('data-open', o ? 'true' : 'false'); if(trigger) trigger.setAttribute('aria-expanded', o ? 'true' : 'false'); }
-  function apply(l){
-    lang = l;
-    document.documentElement.lang = (l === 'en') ? 'en' : 'zh-Hant';
-    nodes.forEach(n => { n.innerHTML = (l === 'en') ? n.getAttribute('data-en') : n._zh; });
-    if (current) current.textContent = (l === 'en') ? 'EN' : '中文';
-    opts.forEach(o => o.setAttribute('aria-selected', o.dataset.lang === l ? 'true' : 'false'));
-    try { localStorage.setItem(KEY, l); } catch(e){}
-    window.dispatchEvent(new Event('careon-lang'));
+  const localizedAttributes = ['aria-label', 'alt', 'content'];
+  const attributeBindings = localizedAttributes.flatMap((attribute) => (
+    [...document.querySelectorAll(`[data-en-${attribute}]`)].map((element) => ({
+      attribute,
+      element,
+      source: element.getAttribute(`data-en-${attribute}`),
+      zh: element.getAttribute(attribute),
+    }))
+  ));
+  const catalogs = new Map();
+  nodes.forEach(n => { n._zh = n.innerHTML; });
+  let lang = 'zh-TW';
+  let requestId = 0;
+  function normalizeLocale(value){
+    const raw = String(value || '').trim().toLowerCase();
+    if(raw === 'zh' || raw.startsWith('zh-')) return 'zh-TW';
+    if(raw === 'ja' || raw.startsWith('ja-')) return 'ja';
+    if(raw === 'es' || raw.startsWith('es-')) return 'es';
+    if(raw === 'en' || raw.startsWith('en-')) return 'en';
+    return null;
   }
-  apply(lang);
+  function initialLocale(){
+    try {
+      const saved = normalizeLocale(localStorage.getItem(KEY));
+      if(saved) return saved;
+    } catch(e){}
+    const preferred = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language];
+    for(const candidate of preferred){
+      const resolved = normalizeLocale(candidate);
+      if(resolved) return resolved;
+    }
+    return 'zh-TW';
+  }
+  async function loadCatalog(locale){
+    if(locale === 'zh-TW' || locale === 'en') return null;
+    if(catalogs.has(locale)) return catalogs.get(locale);
+    const response = await fetch(`i18n/${locale}.json`);
+    if(!response.ok) throw new Error(`locale catalog ${locale} returned ${response.status}`);
+    const catalog = await response.json();
+    if(
+      catalog.schemaVersion !== 1
+      || catalog.locale !== locale
+      || !catalog.translations
+      || !catalog.attributes
+      || !catalog.messages
+    ){
+      throw new Error(`locale catalog ${locale} has an invalid contract`);
+    }
+    catalogs.set(locale, catalog);
+    return catalog;
+  }
+  function translate(source, locale = lang){
+    if(locale === 'zh-TW') return null;
+    if(locale === 'en') return source;
+    const catalog = catalogs.get(locale);
+    return catalog && catalog.translations[source] || null;
+  }
+  function message(key, zhFallback){
+    if(lang === 'zh-TW') return zhFallback;
+    if(lang === 'en') return EN_MESSAGES[key] || null;
+    const catalog = catalogs.get(lang);
+    return catalog && catalog.messages[key] || null;
+  }
+  function setOpen(o){ if(!sw) return; sw.setAttribute('data-open', o ? 'true' : 'false'); if(trigger) trigger.setAttribute('aria-expanded', o ? 'true' : 'false'); }
+  async function apply(value){
+    const locale = normalizeLocale(value) || 'zh-TW';
+    const ownRequest = ++requestId;
+    if(trigger) trigger.setAttribute('aria-busy', 'true');
+    try {
+      await loadCatalog(locale);
+      if(ownRequest !== requestId) return;
+      const missing = [];
+      const textUpdates = nodes.map(n => {
+        const source = n.getAttribute('data-en');
+        const localized = locale === 'zh-TW' ? n._zh : translate(source, locale);
+        if(localized == null){
+          missing.push(source);
+        }
+        return {element:n,localized};
+      });
+      const attributeUpdates = attributeBindings.map((binding) => {
+        let localized = binding.zh;
+        if(locale === 'en') localized = binding.source;
+        if(locale === 'ja' || locale === 'es'){
+          localized = catalogs.get(locale).attributes[binding.source];
+        }
+        if(localized == null){
+          missing.push(`${binding.attribute}:${binding.source}`);
+        }
+        return {...binding,localized};
+      });
+      if(missing.length) throw new Error(`${locale} is missing ${missing.length} translation(s)`);
+      textUpdates.forEach(({element,localized}) => { element.innerHTML = localized; });
+      attributeUpdates.forEach(({element,attribute,localized}) => {
+        element.setAttribute(attribute, localized);
+      });
+      lang = locale;
+      document.documentElement.lang = HTML_LANG[locale];
+      document.documentElement.dataset.muneaLocale = locale;
+      document.documentElement.removeAttribute('data-i18n-error');
+      if(current) current.textContent = SHORT_LABEL[locale];
+      opts.forEach(o => o.setAttribute('aria-selected', o.dataset.lang === locale ? 'true' : 'false'));
+      try { localStorage.setItem(KEY, locale); } catch(e){}
+      window.dispatchEvent(new CustomEvent('careon-lang', {detail:{locale}}));
+    } catch(error) {
+      document.documentElement.setAttribute('data-i18n-error', locale);
+      console.error('[Munea marketing i18n]', error);
+    } finally {
+      if(ownRequest === requestId && trigger) trigger.removeAttribute('aria-busy');
+    }
+  }
+  window.MuneaMarketingI18n = {
+    apply,
+    getLocale: () => lang,
+    message,
+    normalizeLocale,
+    supportedLocales: [...SUPPORTED],
+    translate,
+  };
+  apply(initialLocale());
   if (trigger) trigger.addEventListener('click', (e) => { e.stopPropagation(); setOpen(sw.getAttribute('data-open') !== 'true'); });
   opts.forEach(o => o.addEventListener('click', () => { apply(o.dataset.lang); setOpen(false); }));
   document.addEventListener('click', (e) => { if (sw && !sw.contains(e.target)) setOpen(false); });

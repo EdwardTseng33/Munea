@@ -103,7 +103,24 @@
         "landing-desktop"
       ],
       "releaseGate": "Localized acquisition surface",
-      "baselineHanCandidates": 195
+      "baselineHanCandidates": 196,
+      "localizationContract": {
+        "runtime": "app-site/warm.js",
+        "validation": "scripts/test-marketing-site-localizations.js",
+        "inlineSourceLocales": [
+          "zh-TW",
+          "en"
+        ],
+        "catalogs": {
+          "ja": "app-site/i18n/ja.json",
+          "es": "app-site/i18n/es.json"
+        },
+        "mediaGate": {
+          "status": "pending-exact-build-localized-captures-and-captions",
+          "embeddedAppScreenshots": "pending-four-locale-exact-build-captures",
+          "videoCaptions": "pending-source-audio-transcription-and-four-locale-review"
+        }
+      }
     },
     {
       "id": "locale-contract",

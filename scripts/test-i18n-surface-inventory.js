@@ -115,9 +115,34 @@ assert.deepEqual(
 );
 assert.equal(
   marketingSite.baselineHanCandidates,
-  195,
+  196,
   'The public-site baseline must fail closed when new untranslated copy is added',
 );
+assert.equal(marketingSite.localizationContract.runtime, 'app-site/warm.js');
+assert.equal(
+  marketingSite.localizationContract.validation,
+  'scripts/test-marketing-site-localizations.js',
+);
+assert.deepEqual(marketingSite.localizationContract.inlineSourceLocales, ['zh-TW', 'en']);
+assert.deepEqual(marketingSite.localizationContract.catalogs, {
+  ja: 'app-site/i18n/ja.json',
+  es: 'app-site/i18n/es.json',
+});
+assert.deepEqual(marketingSite.localizationContract.mediaGate, {
+  status: 'pending-exact-build-localized-captures-and-captions',
+  embeddedAppScreenshots: 'pending-four-locale-exact-build-captures',
+  videoCaptions: 'pending-source-audio-transcription-and-four-locale-review',
+});
+for (const contractPath of [
+  marketingSite.localizationContract.runtime,
+  marketingSite.localizationContract.validation,
+  ...Object.values(marketingSite.localizationContract.catalogs),
+]) {
+  assert.ok(
+    require('fs').existsSync(require('path').resolve(__dirname, '..', contractPath)),
+    `Marketing localization contract file must exist: ${contractPath}`,
+  );
+}
 assert.ok(
   !inventory.surfaces.some((surface) => surface.files.includes('web/landing.html')),
   'The legacy internal landing prototype must not stand in for the deployed public site',
@@ -201,8 +226,8 @@ for (const file of legalAndSupport.files) {
 const marketingReport = report.surfaces.find(
   (surface) => surface.id === 'marketing-site',
 );
-assert.equal(marketingReport.hanCandidates, 195);
-assert.equal(marketingReport.unboundHanCandidates, 195);
+assert.equal(marketingReport.hanCandidates, 196);
+assert.equal(marketingReport.unboundHanCandidates, 196);
 assert.equal(marketingReport.files[0].path, 'app-site/index.html');
 assert.deepEqual(validateReport(report), [], 'The checked-in baseline must not regress');
 

@@ -249,6 +249,7 @@ require('./test-i18n-app-e2e-evidence.js');
 require('./test-ios-export-i18n-binary-gate.js');
 require('./test-i18n-layout-risk-worklist.js');
 require('./test-legal-localizations.js');
+require('./test-marketing-site-localizations.js');
 require('./test-app-store-localizations.js');
 require('./test-in-app-purchase-localizations.js');
 require('./test-i18n-release-readiness.js');
