@@ -133,9 +133,28 @@ for (const locale of ['en', 'ja', 'es']) {
 }
 
 assert.equal(report.locales.es.storeLocale, null, 'Spanish market variant must remain undecided');
+assert.deepEqual(report.locales.es.selectedStoreVariants, []);
+assert.deepEqual(
+  Object.keys(report.locales.es.candidateStoreVariants),
+  ['es-ES', 'es-MX'],
+);
+for (const variant of Object.values(report.locales.es.candidateStoreVariants)) {
+  assert.equal(variant.ready, false);
+  assert.equal(variant.gates.selected, false);
+  assert.equal(variant.gates.metadata, false);
+  assert.equal(variant.gates.publicUrls, false);
+  assert.equal(variant.gates.screenshots, false);
+  assert.equal(variant.gates.regionalLegal, false);
+  assert.equal(variant.gates.iap, false);
+  assert.equal(variant.gates.availability, false);
+}
 assert(
   report.generatedFrom.includes('web/src/i18n/app-surface-copy-manifest.json'),
   'Release readiness must include the complete App surface copy mapping',
+);
+assert(
+  report.generatedFrom.includes('web/legal/regional-safety-policy.json'),
+  'Release readiness must include country-specific Spanish safety policy',
 );
 assert(
   report.generatedFrom.includes('scripts/i18n-native-review-worklist.js'),

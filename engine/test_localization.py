@@ -534,9 +534,41 @@ class LocalizationTests(unittest.TestCase):
 
         self.assertIn("119", english_in_taiwan)
         self.assertIn("1925", english_in_taiwan)
+        self.assertIn("911", chinese_in_mexico)
+        self.assertIn("墨西哥", chinese_in_mexico)
         self.assertNotIn("119", chinese_in_mexico)
         self.assertNotIn("1925", chinese_in_mexico)
-        self.assertIn("所在地", chinese_in_mexico)
+
+    def test_spain_and_mexico_safety_policies_do_not_follow_spanish_language(self):
+        spanish_in_spain = localization.regional_safety_instruction("es", "ES")
+        spanish_in_mexico = localization.regional_safety_instruction("es", "MX")
+        chinese_in_spain = localization.regional_safety_instruction("zh-TW", "ES")
+        spanish_in_unknown_region = localization.regional_safety_instruction("es", "AR")
+
+        self.assertIn("112", spanish_in_spain)
+        self.assertNotIn("911", spanish_in_spain)
+        self.assertIn("España", spanish_in_spain)
+        self.assertIn("911", spanish_in_mexico)
+        self.assertNotIn("112", spanish_in_mexico)
+        self.assertIn("México", spanish_in_mexico)
+        self.assertIn("112", chinese_in_spain)
+        self.assertIn("西班牙", chinese_in_spain)
+        self.assertNotRegex(spanish_in_unknown_region, r"\b(?:112|911|119|1925)\b")
+        self.assertIn("servicio local de emergencias", spanish_in_unknown_region)
+
+    def test_regional_safety_policy_sources_are_explicit_and_official(self):
+        self.assertEqual(
+            set(localization.REGIONAL_SAFETY_POLICY_SOURCES),
+            {"ES", "MX"},
+        )
+        self.assertIn(
+            "interior.gob.es",
+            localization.REGIONAL_SAFETY_POLICY_SOURCES["ES"],
+        )
+        self.assertIn(
+            "gob.mx",
+            localization.REGIONAL_SAFETY_POLICY_SOURCES["MX"],
+        )
 
     def test_disabled_hokkien_is_rewritten_to_mandarin_for_speech_and_display(self):
         self.assertEqual(localization.speech_text("你卡早捆喔", "zh-TW"), "你早點睡喔")

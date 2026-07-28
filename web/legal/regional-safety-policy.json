@@ -1,0 +1,36 @@
+{
+  "schema": "munea.regional-safety-policy.v1",
+  "authority": "repository-draft-only",
+  "selectionPolicy": {
+    "languageNeverSelectsCountry": true,
+    "trustedLocaleContextField": "safetyRegion",
+    "unknownRegionBehavior": "generic-local-emergency-service-guidance",
+    "automaticPromotionForbidden": true
+  },
+  "regions": {
+    "ES": {
+      "countryCode": "ES",
+      "safetyRegion": "ES",
+      "legalRegion": "ES",
+      "appLanguage": "es",
+      "appStoreLocale": "es-ES",
+      "emergencyNumber": "112",
+      "emergencyNumberReview": "official-source-verified",
+      "officialEmergencySource": "https://www.interior.gob.es/opencms/en/contacta-con-nosotros/contacto-prueba-3-hide/index.html",
+      "legalReview": "pending-qualified-review",
+      "availabilityAuthorized": false
+    },
+    "MX": {
+      "countryCode": "MX",
+      "safetyRegion": "MX",
+      "legalRegion": "MX",
+      "appLanguage": "es",
+      "appStoreLocale": "es-MX",
+      "emergencyNumber": "911",
+      "emergencyNumberReview": "official-source-verified",
+      "officialEmergencySource": "https://www.gob.mx/911/articulos/que-es-el-911emergencias?idiom=es",
+      "legalReview": "pending-qualified-review",
+      "availabilityAuthorized": false
+    }
+  }
+}

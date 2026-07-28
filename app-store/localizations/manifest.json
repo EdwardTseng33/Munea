@@ -48,13 +48,43 @@
     "es": {
       "catalogLocale": "es",
       "appStoreLocale": null,
+      "selectedVariant": null,
+      "selectedVariants": [],
       "candidateAppStoreLocales": [
         "es-ES",
         "es-MX"
       ],
+      "marketVariants": {
+        "es-ES": {
+          "metadataFile": "es-ES.json",
+          "targetTerritories": [
+            "ES"
+          ],
+          "safetyRegion": "ES",
+          "legalRegion": "ES",
+          "metadataReview": "draft-qualified-review-pending",
+          "publicUrlStatus": "pending-regional-review",
+          "screenshotStatus": "missing",
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        },
+        "es-MX": {
+          "metadataFile": "es-MX.json",
+          "targetTerritories": [
+            "MX"
+          ],
+          "safetyRegion": "MX",
+          "legalRegion": "MX",
+          "metadataReview": "draft-qualified-review-pending",
+          "publicUrlStatus": "pending-regional-review",
+          "screenshotStatus": "missing",
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        }
+      },
       "metadataFile": "es-draft.json",
       "targetTerritories": [],
-      "marketDecision": "Choose es-ES or es-MX before App Store localization and regional review.",
+      "marketDecision": "Select one or both prepared variants only after regional legal, safety, screenshot, price, and App E2E review.",
       "marketDecisionSource": "https://developer.apple.com/help/app-store-connect/reference/app-information/app-store-localizations/",
       "metadataReview": "draft",
       "publicUrlStatus": "pending-deployment",

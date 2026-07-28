@@ -161,12 +161,33 @@ for (const localeKey of localeKeys) {
 
 const spanish = manifest.locales.es;
 assert.equal(spanish.appStoreLocale, null, 'Spanish IAP locale must wait for the market decision');
+assert.equal(spanish.selectedVariant, null);
 assert.deepEqual(
   spanish.candidateAppStoreLocales,
   ['es-ES', 'es-MX'],
   'Spanish App Store choices must remain explicit',
 );
 assert.notEqual(spanish.metadataReview, 'approved');
+assert.deepEqual(Object.keys(spanish.marketVariants), ['es-ES', 'es-MX']);
+for (const variantKey of ['es-ES', 'es-MX']) {
+  const variant = spanish.marketVariants[variantKey];
+  const copy = JSON.parse(fs.readFileSync(path.join(IAP_DIR, variant.copyFile), 'utf8'));
+  assert.match(variant.metadataReview, /^draft/);
+  assert.equal(variant.availabilityAuthorized, false);
+  assert.deepEqual(Object.keys(copy).sort(), [...productIds].sort());
+  for (const [productId, localized] of Object.entries(copy)) {
+    assert(
+      [...localized.displayName].length >= 2 && [...localized.displayName].length <= 30,
+      `${variantKey}.${productId} display name must be 2-30 characters`,
+    );
+    assert(
+      [...localized.description].length <= 45,
+      `${variantKey}.${productId} description exceeds Apple's 45-character limit`,
+    );
+    assert(!hanPattern.test(`${localized.displayName}\n${localized.description}`));
+    assert(!forbiddenPricePattern.test(`${localized.displayName}\n${localized.description}`));
+  }
+}
 
 for (const product of manifest.productSet.products.filter(({ type }) => type === 'consumable')) {
   const expectedGrant = expectedProducts[product.productId].grantedPoints;
@@ -177,6 +198,13 @@ for (const product of manifest.productSet.products.filter(({ type }) => type ===
       copy[product.productId].displayName.includes(expectedGrant.toLocaleString('en-US'))
         || copy[product.productId].displayName.includes(String(expectedGrant)),
       `${localeKey}.${product.productId} must show the actual ${expectedGrant}-credit grant, not its legacy suffix`,
+    );
+  }
+  for (const variant of Object.values(spanish.marketVariants)) {
+    const copy = JSON.parse(fs.readFileSync(path.join(IAP_DIR, variant.copyFile), 'utf8'));
+    assert(
+      copy[product.productId].displayName.includes(String(expectedGrant)),
+      `${variant.copyFile}.${product.productId} must show the actual ${expectedGrant}-credit grant`,
     );
   }
 }

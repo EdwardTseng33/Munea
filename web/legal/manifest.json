@@ -36,7 +36,28 @@
     "es": {
       "htmlLang": "es",
       "contentVariant": "neutral-international-Spanish",
-      "legalReview": "pending",
+      "legalReview": "pending-market-selection",
+      "regionalPolicyFile": "regional-safety-policy.json",
+      "regionalVariants": {
+        "ES": {
+          "contentVariant": "es-ES",
+          "legalReview": "pending-qualified-review",
+          "pages": {
+            "privacy": "es/privacy.html",
+            "terms": "es/terms.html",
+            "support": "es/support.html"
+          }
+        },
+        "MX": {
+          "contentVariant": "es-MX",
+          "legalReview": "pending-qualified-review",
+          "pages": {
+            "privacy": "es/privacy.html",
+            "terms": "es/terms.html",
+            "support": "es/support.html"
+          }
+        }
+      },
       "pages": {
         "privacy": "es/privacy.html",
         "terms": "es/terms.html",

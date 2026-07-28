@@ -32,8 +32,38 @@ for (const locale of ['en', 'ja', 'es']) {
   assert.equal(draftPreview.resolvedLocale, locale);
   assert.equal(draftPreview.path, `legal/${locale}/privacy.html`);
   assert.equal(draftPreview.usedFallback, false);
-  assert.equal(draftPreview.legalReview, 'pending');
+  assert.match(draftPreview.legalReview, /^pending/);
 }
+
+for (const legalRegion of ['ES', 'MX']) {
+  const spanishVariant = resolveLegalPage({
+    allowDraft: true,
+    catalogManifest,
+    kind: 'support',
+    legalManifest,
+    legalRegion,
+    locale: 'es',
+  });
+  assert.equal(spanishVariant.requestedLocale, 'es');
+  assert.equal(spanishVariant.resolvedLocale, 'es');
+  assert.equal(spanishVariant.requestedLegalRegion, legalRegion);
+  assert.equal(spanishVariant.resolvedLegalRegion, legalRegion);
+  assert.equal(spanishVariant.path, 'legal/es/support.html');
+  assert.equal(spanishVariant.legalReview, 'pending-qualified-review');
+}
+
+const spanishWithoutTrustedRegion = resolveLegalPage({
+  allowDraft: true,
+  catalogManifest,
+  kind: 'support',
+  legalManifest,
+  locale: 'es',
+});
+assert.equal(
+  spanishWithoutTrustedRegion.resolvedLegalRegion,
+  null,
+  'Spanish language alone must never select Spain or Mexico legal policy',
+);
 
 const traditionalChinese = resolveLegalPage({
   catalogManifest,

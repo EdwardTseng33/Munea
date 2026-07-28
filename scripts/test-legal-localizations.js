@@ -10,6 +10,9 @@ const manifest = JSON.parse(
 );
 const requiredLocales = ['zh-TW', 'en', 'ja', 'es'];
 const requiredPages = ['privacy', 'terms', 'support'];
+const regionalPolicy = JSON.parse(
+  fs.readFileSync(path.join(legalRoot, 'regional-safety-policy.json'), 'utf8'),
+);
 
 assert.equal(manifest.schemaVersion, 1, 'Legal localization manifest must use schema version 1');
 assert.equal(manifest.defaultLocale, 'zh-TW', 'Traditional Chinese must remain the legal default');
@@ -31,8 +34,8 @@ for (const locale of requiredLocales) {
     `${locale} must declare privacy, terms, and support pages`,
   );
   assert.equal(
-    config.legalReview,
-    locale === 'zh-TW' ? 'approved' : 'pending',
+    locale === 'zh-TW' ? config.legalReview : config.legalReview.startsWith('pending'),
+    locale === 'zh-TW' ? 'approved' : true,
     `${locale} legal-review state must remain release-gated`,
   );
 
@@ -71,6 +74,28 @@ for (const locale of requiredLocales) {
       );
     }
   }
+}
+
+assert.equal(regionalPolicy.schema, 'munea.regional-safety-policy.v1');
+assert.equal(regionalPolicy.authority, 'repository-draft-only');
+assert.equal(regionalPolicy.selectionPolicy.languageNeverSelectsCountry, true);
+assert.equal(regionalPolicy.selectionPolicy.trustedLocaleContextField, 'safetyRegion');
+assert.equal(regionalPolicy.selectionPolicy.automaticPromotionForbidden, true);
+assert.deepEqual(Object.keys(regionalPolicy.regions), ['ES', 'MX']);
+assert.equal(regionalPolicy.regions.ES.emergencyNumber, '112');
+assert.match(regionalPolicy.regions.ES.officialEmergencySource, /interior\.gob\.es/);
+assert.equal(regionalPolicy.regions.MX.emergencyNumber, '911');
+assert.match(regionalPolicy.regions.MX.officialEmergencySource, /gob\.mx/);
+for (const [region, policy] of Object.entries(regionalPolicy.regions)) {
+  assert.equal(policy.safetyRegion, region);
+  assert.equal(policy.legalRegion, region);
+  assert.equal(policy.appLanguage, 'es');
+  assert.equal(policy.availabilityAuthorized, false);
+  assert.match(policy.legalReview, /^pending/);
+  assert.deepEqual(
+    manifest.locales.es.regionalVariants[region].contentVariant,
+    policy.appStoreLocale,
+  );
 }
 
 for (const locale of ['en', 'es']) {

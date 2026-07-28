@@ -106,10 +106,24 @@
     },
     "es": {
       "appStoreLocale": null,
+      "selectedVariant": null,
+      "selectedVariants": [],
       "candidateAppStoreLocales": [
         "es-ES",
         "es-MX"
       ],
+      "marketVariants": {
+        "es-ES": {
+          "copyFile": "es-ES.json",
+          "metadataReview": "draft-qualified-review-pending",
+          "availabilityAuthorized": false
+        },
+        "es-MX": {
+          "copyFile": "es-MX.json",
+          "metadataReview": "draft-qualified-review-pending",
+          "availabilityAuthorized": false
+        }
+      },
       "copyFile": "es-draft.json",
       "metadataReview": "draft-market-variant-pending"
     }

@@ -16,11 +16,23 @@
     return manifest.locales.find((entry) => entry && entry.locale === locale) || null;
   }
 
-  function legalEntry(manifest, locale) {
+  function legalEntry(manifest, locale, legalRegion) {
     if (!manifest || !manifest.locales || typeof manifest.locales !== 'object') {
       throw new TypeError('legal manifest.locales is required');
     }
-    return manifest.locales[locale] || null;
+    const base = manifest.locales[locale] || null;
+    const region = String(legalRegion || '').trim().toUpperCase();
+    const regional = base
+      && base.regionalVariants
+      && region
+      && base.regionalVariants[region];
+    if (!regional) return base;
+    return {
+      ...base,
+      ...regional,
+      legalRegion: region,
+      pages: regional.pages || base.pages,
+    };
   }
 
   function webPath(manifestPath) {
@@ -57,7 +69,11 @@
       ? config.locale
       : fallbackLocale;
     const requestedCatalog = catalogEntry(catalogManifest, requestedLocale);
-    const requestedLegal = legalEntry(legalManifest, requestedLocale);
+    const requestedLegal = legalEntry(
+      legalManifest,
+      requestedLocale,
+      config.legalRegion,
+    );
     const draftAllowed = config.allowDraft === true;
     const requestedReady = Boolean(
       requestedCatalog
@@ -74,7 +90,11 @@
     );
 
     const resolvedLocale = requestedReady ? requestedLocale : fallbackLocale;
-    const resolvedLegal = legalEntry(legalManifest, resolvedLocale);
+    const resolvedLegal = legalEntry(
+      legalManifest,
+      resolvedLocale,
+      resolvedLocale === requestedLocale ? config.legalRegion : null,
+    );
     if (!resolvedLegal || !resolvedLegal.pages || !resolvedLegal.pages[kind]) {
       throw new Error(`missing ${kind} page for legal fallback locale ${fallbackLocale}`);
     }
@@ -85,7 +105,9 @@
       path: webPath(resolvedLegal.pages[kind]),
       requestedLegalReview: requestedLegal ? requestedLegal.legalReview : null,
       requestedLocale,
+      requestedLegalRegion: requestedLegal ? requestedLegal.legalRegion || null : null,
       resolvedLocale,
+      resolvedLegalRegion: resolvedLegal.legalRegion || null,
       usedFallback: resolvedLocale !== requestedLocale,
     });
   }

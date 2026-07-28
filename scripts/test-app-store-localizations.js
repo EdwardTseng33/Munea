@@ -10,6 +10,9 @@ const screenshotPlan = JSON.parse(
   fs.readFileSync(path.join(root, 'screenshot-plan.json'), 'utf8'),
 );
 const inventory = JSON.parse(fs.readFileSync('docs/I18N-SURFACE-INVENTORY.json', 'utf8'));
+const regionalPolicy = JSON.parse(
+  fs.readFileSync('web/legal/regional-safety-policy.json', 'utf8'),
+);
 const localeKeys = ['zh-Hant', 'en-US', 'ja', 'es'];
 const requiredMetadata = [
   'name',
@@ -153,5 +156,54 @@ assert.deepEqual(
   'Apple supports separate Spain and Mexico Spanish localizations',
 );
 assert.deepEqual(manifest.locales.es.targetTerritories, [], 'Spanish territories must stay closed before market choice');
+assert.equal(manifest.locales.es.selectedVariant, null);
+assert.deepEqual(
+  Object.keys(manifest.locales.es.marketVariants),
+  ['es-ES', 'es-MX'],
+  'Both Apple Spanish metadata variants must be prepared independently',
+);
+assert.deepEqual(
+  Object.keys(screenshotPlan.locales.es.marketVariants),
+  ['es-ES', 'es-MX'],
+  'Both Spanish variants must have separate screenshot gates',
+);
+for (const variantKey of ['es-ES', 'es-MX']) {
+  const variant = manifest.locales.es.marketVariants[variantKey];
+  const screenshotVariant = screenshotPlan.locales.es.marketVariants[variantKey];
+  const metadata = JSON.parse(fs.readFileSync(path.join(root, variant.metadataFile), 'utf8'));
+  const region = variantKey === 'es-ES' ? 'ES' : 'MX';
+  const emergencyNumber = region === 'ES' ? '112' : '911';
+  const otherNumber = region === 'ES' ? '911' : '112';
+
+  assert.equal(variant.safetyRegion, region);
+  assert.equal(variant.legalRegion, region);
+  assert.deepEqual(variant.targetTerritories, [region]);
+  assert.equal(variant.promotionAuthorized, false);
+  assert.match(variant.metadataReview, /^draft/);
+  assert.equal(screenshotVariant.status, 'missing');
+  assert.equal(screenshotVariant.expectedScreenshotCount, 5);
+  assert.equal(screenshotVariant.promotionAuthorized, false);
+  assert.equal(metadata.contentVariant, variantKey);
+  assert.match(metadata.status, /^draft/);
+  assert(metadata.description.includes(emergencyNumber));
+  assert(!metadata.description.includes(otherNumber));
+  assert.equal(regionalPolicy.regions[region].appStoreLocale, variantKey);
+  assert.equal(regionalPolicy.regions[region].emergencyNumber, emergencyNumber);
+
+  for (const field of requiredMetadata) {
+    assert.equal(typeof metadata[field], 'string', `${variantKey}.${field} must be a string`);
+    assert(metadata[field].trim(), `${variantKey}.${field} must not be empty`);
+  }
+  assert([...metadata.name].length <= 30);
+  assert([...metadata.subtitle].length <= 30);
+  assert([...metadata.promotionalText].length <= 170);
+  assert([...metadata.description].length <= 4000);
+  assert(Buffer.byteLength(metadata.keywords, 'utf8') <= 100);
+  for (const urlField of ['privacyPolicyUrl', 'supportUrl', 'marketingUrl']) {
+    const url = new URL(metadata[urlField]);
+    assert.equal(url.protocol, 'https:');
+    assert.equal(url.hostname, 'app.munea.net');
+  }
+}
 
 console.log('PASS: App Store localization drafts, limits, screenshots, and availability gates');

@@ -343,6 +343,9 @@ function buildReadiness() {
     path.join(ROOT, 'engine', 'voice-locale-integration-manifest.json'),
   );
   const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
+  const regionalSafetyPolicy = readJson(
+    path.join(LEGAL_DIR, 'regional-safety-policy.json'),
+  );
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
   const surfaceReport = buildSurfaceReport();
@@ -362,6 +365,69 @@ function buildReadiness() {
     const storeKey = STORE_LOCALE_BY_CATALOG[locale];
     const store = storeManifest.locales[storeKey];
     const iapLocale = iapManifest.locales[locale];
+    const selectedStoreVariants = locale === 'es'
+      ? (store.selectedVariants || []).map((variantKey) => ({
+        key: variantKey,
+        store: store.marketVariants && store.marketVariants[variantKey],
+        iap: iapLocale.marketVariants && iapLocale.marketVariants[variantKey],
+        legal: legal.regionalVariants
+          && legal.regionalVariants[
+            store.marketVariants
+            && store.marketVariants[variantKey]
+            && store.marketVariants[variantKey].legalRegion
+          ],
+        policy: Object.values(regionalSafetyPolicy.regions).find(
+          ({ appStoreLocale }) => appStoreLocale === variantKey,
+        ),
+      }))
+      : [];
+    const spanishSelectionValid = locale !== 'es' || (
+      selectedStoreVariants.length > 0
+      && selectedStoreVariants.length === new Set(
+        selectedStoreVariants.map(({ key }) => key),
+      ).size
+      && selectedStoreVariants.every(({ store: variantStore, iap, legal: regionalLegal, policy }) => (
+        variantStore && iap && regionalLegal && policy
+      ))
+    );
+    const metadataApproved = locale === 'es'
+      ? spanishSelectionValid
+        && selectedStoreVariants.every(({ store: variantStore }) => (
+          variantStore.metadataReview === 'approved'
+        ))
+      : store.metadataReview === 'approved';
+    const publicUrlsVerified = locale === 'es'
+      ? spanishSelectionValid
+        && selectedStoreVariants.every(({ store: variantStore }) => (
+          variantStore.publicUrlStatus === 'deployed-and-verified'
+        ))
+      : store.publicUrlStatus === 'deployed-and-verified';
+    const screenshotsApproved = locale === 'es'
+      ? spanishSelectionValid
+        && selectedStoreVariants.every(({ store: variantStore }) => (
+          variantStore.screenshotStatus === 'approved'
+        ))
+      : store.screenshotStatus === 'approved';
+    const regionalPolicyApproved = locale === 'es'
+      ? spanishSelectionValid
+        && selectedStoreVariants.every(({ legal: regionalLegal, policy }) => (
+          regionalLegal.legalReview === 'approved'
+          && policy.legalReview === 'approved'
+          && policy.emergencyNumberReview === 'official-source-verified'
+        ))
+      : legal.legalReview === 'approved';
+    const iapMetadataApproved = locale === 'es'
+      ? spanishSelectionValid
+        && selectedStoreVariants.every(({ iap }) => iap.metadataReview === 'approved')
+      : iapLocale.metadataReview === 'approved';
+    const promotionAuthorized = locale === 'es'
+      ? spanishSelectionValid
+        && selectedStoreVariants.every(({ store: variantStore, iap, policy }) => (
+          variantStore.promotionAuthorized === true
+          && iap.availabilityAuthorized === true
+          && policy.availabilityAuthorized === true
+        ))
+      : store.promotionAuthorized === true;
     const catalogPath = path.join(I18N_DIR, catalog.catalog);
     const nativeReviewEvidence = evidenceResult(
       locale,
@@ -455,20 +521,20 @@ function buildReadiness() {
       ),
       regionalSafetyAndLegal: check(
         review.regionalSafetyAndLegal === 'approved'
-          && legal.legalReview === 'approved'
-          && store.publicUrlStatus === 'deployed-and-verified',
+          && regionalPolicyApproved
+          && publicUrlsVerified,
         'regional safety, legal review, and public legal URLs must all be verified',
-        'web/legal/manifest.json',
+        'web/legal/manifest.json + web/legal/regional-safety-policy.json',
       ),
       appStoreMetadata: check(
         review.appStoreMetadata === 'approved'
-          && store.metadataReview === 'approved',
+          && metadataApproved,
         'App Store metadata must be reviewed for the selected locale variant',
         'app-store/localizations/manifest.json',
       ),
       inAppPurchaseLocalization: check(
         review.inAppPurchaseLocalization === 'approved'
-          && iapLocale.metadataReview === 'approved'
+          && iapMetadataApproved
           && iapManifest.productSet.appStoreConnectStatus === 'verified'
           && iapManifest.productSet.products.every((product) => (
             product.reviewScreenshotStatus === 'approved'
@@ -477,13 +543,13 @@ function buildReadiness() {
         'app-store/in-app-purchases/manifest.json',
       ),
       appStoreScreenshots: check(
-        store.screenshotStatus === 'approved',
+        screenshotsApproved,
         'localized App Store screenshots must be approved',
         'app-store/localizations/manifest.json',
       ),
       marketAvailability: check(
         review.marketAvailability === 'approved'
-          && store.promotionAuthorized === true
+          && promotionAuthorized
           && storeManifest.appAvailability.currentState === 'verified'
           && iapManifest.availability.currentState === 'verified'
           && iapManifest.pricePolicy.appStoreConnectStatus === 'verified',
@@ -522,6 +588,49 @@ function buildReadiness() {
     locales[locale] = {
       contentVariant: review.contentVariant,
       storeLocale: store.appStoreLocale,
+      ...(locale === 'es' ? {
+        selectedStoreVariants: store.selectedVariants || [],
+        candidateStoreVariants: Object.fromEntries(
+          Object.entries(store.marketVariants || {}).map(([variantKey, variantStore]) => {
+            const candidate = selectedStoreVariants.find(({ key }) => key === variantKey);
+            const policy = candidate
+              ? candidate.policy
+              : Object.values(regionalSafetyPolicy.regions).find(
+                ({ appStoreLocale }) => appStoreLocale === variantKey,
+              );
+            const variantIap = iapLocale.marketVariants
+              && iapLocale.marketVariants[variantKey];
+            const variantLegal = policy
+              && legal.regionalVariants
+              && legal.regionalVariants[policy.legalRegion];
+            const variantGates = {
+              selected: (store.selectedVariants || []).includes(variantKey),
+              metadata: variantStore.metadataReview === 'approved',
+              publicUrls: variantStore.publicUrlStatus === 'deployed-and-verified',
+              screenshots: variantStore.screenshotStatus === 'approved',
+              regionalLegal: Boolean(
+                policy
+                && variantLegal
+                && policy.emergencyNumberReview === 'official-source-verified'
+                && policy.legalReview === 'approved'
+                && variantLegal.legalReview === 'approved'
+              ),
+              iap: Boolean(variantIap && variantIap.metadataReview === 'approved'),
+              availability: Boolean(
+                policy
+                && variantIap
+                && variantStore.promotionAuthorized === true
+                && variantIap.availabilityAuthorized === true
+                && policy.availabilityAuthorized === true
+              ),
+            };
+            return [variantKey, {
+              ready: Object.values(variantGates).every(Boolean),
+              gates: variantGates,
+            }];
+          }),
+        ),
+      } : {}),
       ready: blockers.length === 0,
       blockers,
       gates,
@@ -542,6 +651,7 @@ function buildReadiness() {
       'scripts/i18n-visual-qa-worklist.js',
       'engine/voice-locale-integration-manifest.json',
       'web/legal/manifest.json',
+      'web/legal/regional-safety-policy.json',
       'app-store/localizations/manifest.json',
       'app-store/in-app-purchases/manifest.json',
       'docs/qa/i18n/<locale>/*.json',

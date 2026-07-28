@@ -71,6 +71,27 @@ _TAIWAN_EMERGENCY_GUIDANCE = {
     "ja": "台湾で差し迫った危険がある場合は119へ、心の相談は1925へ連絡し、近くの信頼できる人にも助けを求めてください。",
     "es": "Si alguien está en peligro inmediato en Taiwán, llama al 119. Para apoyo de salud mental, llama al 1925 y pide ayuda a una persona cercana de confianza.",
 }
+_SPAIN_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在西班牙有立即危險，請立刻撥打 112，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Spain, call 112 and ask a trusted person nearby to help.",
+    "ja": "スペインで差し迫った危険がある場合は112へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en España, llama al 112 y pide ayuda a una persona de confianza cercana.",
+}
+_MEXICO_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在墨西哥有立即危險，請立刻撥打 911，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Mexico, call 911 and ask a trusted person nearby to help.",
+    "ja": "メキシコで差し迫った危険がある場合は911へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en México, llama al 911 y pide ayuda a una persona de confianza cercana.",
+}
+_REGIONAL_EMERGENCY_GUIDANCE = {
+    "TW": _TAIWAN_EMERGENCY_GUIDANCE,
+    "ES": _SPAIN_EMERGENCY_GUIDANCE,
+    "MX": _MEXICO_EMERGENCY_GUIDANCE,
+}
+REGIONAL_SAFETY_POLICY_SOURCES = {
+    "ES": "https://www.interior.gob.es/opencms/en/contacta-con-nosotros/contacto-prueba-3-hide/index.html",
+    "MX": "https://www.gob.mx/911/articulos/que-es-el-911emergencias?idiom=es",
+}
 
 # Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current
 # Live provider does not list Taiwanese Hokkien as a supported language, so a
@@ -615,15 +636,14 @@ def regional_safety_instruction(locale, safety_region):
 
     The response language never chooses a country, hotline, legal regime, or
     data region. Only a trusted ``safetyRegion`` may select regional numbers;
-    unknown and non-Taiwan regions use generic local-emergency guidance until a
-    separately reviewed regional policy is added.
+    unknown regions use generic local-emergency guidance until a separately
+    reviewed regional policy is added.
     """
     normalized_locale = normalize_locale(locale)
     normalized_region = str(safety_region or "").strip().upper()
-    copy = (
-        _TAIWAN_EMERGENCY_GUIDANCE
-        if normalized_region == "TW"
-        else _GENERIC_EMERGENCY_GUIDANCE
+    copy = _REGIONAL_EMERGENCY_GUIDANCE.get(
+        normalized_region,
+        _GENERIC_EMERGENCY_GUIDANCE,
     )
     return "\n[Regional safety]\n" + copy[normalized_locale]
 

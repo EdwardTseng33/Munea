@@ -139,6 +139,24 @@
       "catalogLocale": "es",
       "variant": "neutral-international-Spanish-market-pending",
       "status": "draft-market-variant-pending",
+      "marketVariants": {
+        "es-ES": {
+          "status": "missing",
+          "targetTerritories": [
+            "ES"
+          ],
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        },
+        "es-MX": {
+          "status": "missing",
+          "targetTerritories": [
+            "MX"
+          ],
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        }
+      },
       "frames": [
         {
           "id": "voice-companion",
