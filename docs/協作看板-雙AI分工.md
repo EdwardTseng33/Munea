@@ -4,6 +4,39 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-07-27 蘇菲 🚀 部署：正式機兩台上 7/25 深夜班成果（Edward「更新上線吧」授權）
+
+- **範圍**：`munea-brain` `00021-kow`→`00023-xoc`、`munea-voice` `00009-muh`→`00011-luw`→`00013-joj`（疊試驗設定）；皆 v1.0.44 @ `f6d9c7fa3408`。
+- **內容**：#265 語音週包（過場話句庫輪替／10 分鐘連線牆／查詢提速）＋#268 聊天品質三修（轉述紅線／鐵律校準／內心戲清洗）。
+- **試驗設定上正式**：`MUNEA_VOICE_LIVE_LOOKUP=1`、`MUNEA_VOICE_SILENCE_MS=1100`（staging 驗兩天）。
+- **查核**：`MUNEA_REQUIRE_AUTH=1` 已確認（Gate 5 命門）；新舊 revision env 名單 diff 完全一致；兩閘（0% canary → exact-revision promote）走完；`/version` 兩台驗明正身；總機 durable_ready、臉機 tw-06 兩席 ready。
+- **未涵蓋**：正式線真人媒體 Gate 待 Edward 安裝版 iPhone；`voice-chain-auth-probe.ps1` 護欄禁止對正式 voice 跑拋棄帳號探測（未繞過）。
+- **回滾**：見 STATUS 132 號（brain/voice 各自 exact-revision，或只移除兩個試驗環境值）。
+
+### 待審：聊天品質評測骨架修繕——評審補系統 context＋鐵律6/7/台語判定精修（2026-07-25 蘇菲/城堡 · Draft PR #269）
+
+- Branch：`claude/brave-lehmann-c8b9fe`（本機 worktree，基準 `origin/main@cadd545d`）。
+- 檔案：`engine/eval/gen_reply.py`（conv 模式回傳 `systemContext`＝正式線真的注入的時間/
+  地點/今日簡報）、`engine/eval/run_chat_quality_eval.py`（新增 `system_context_facts()`
+  ＋逐輪把系統事實與寧寧自己稍早回覆餵進鐵律評審、整條餵進 7 維評審；鐵律6/7 準則措辭
+  精修）、`engine/eval/dimension_judge.py`（新增可選 `systemContext` 背景區＋DIM_SYSTEM
+  台語安全防線一致評分原則）、`docs/聊天品質測試-劇本庫與評分表-2026-07-25.md`（鐵律6/7
+  措辭同步）、`docs/聊天品質基準-第一輪-2026-07-25.md`（補第九節：六刀＋雙輪驗證）、
+  最終結果快照 `engine/eval/results/chat-quality-2026072*T21{2437,4620}Z.json`＋
+  `latest-chat-quality.json`。
+- 目標：修第一輪基準第八節判定的評測骨架缺口——鐵律評審看不到正式線注入給模型的系統
+  即時 context（時間/地點），把模型照真時間講今天日期誤判成編造（S03/S06/S13）；連帶修
+  施工中暴露的模糊台語危機誤判（S09）、時間口吻被過嚴誤殺（S01/S15）、評審看不到寧寧
+  自己回覆而誤判對話歷史（S02）。**只碰考卷（engine/eval/*），不動人設行為。**
+- 不碰區：沒動 `chat_engine.py`／`server.py`／`live_voice_server.py` 的人設或生成行為、
+  沒動 golden_set 姊妹評測（`run_eval.py`／`judge.py` 既有呼叫不帶新參數、行為不變、向下
+  相容）、沒部署、不改 App 包版、非 call-path risk。
+- 驗過沒：`npm run smoke:no-api` 全過（退出碼 0、無空白錯誤）；定向煙霧 S03/S06/S09/S13
+  四題 PASS；S09 危機錨定後連跑 3 次 PASS；六刀全庫重跑 ×2（Run1 18/19＝94.7%／Run2
+  17/19＝89.5%，平均約 92%）；golden_set g01 向下相容 PASS 3/3。殘留失敗＝模型真的機率性
+  編造（S03 沒天氣資料硬掰晴天、S15 把「留言」講成「傳訊息」多加管道、S06 心臟症狀升級
+  不夠往嚴站）＝人設側已知風險、評審抓對了、非骨架 bug、不靠放水評審蓋掉。
+
 ### 待審：營運後台三個數據洞修補（2026-07-24 卡西法/城堡）
 
 - Branch：`calcifer/admin-data-gaps-20260724`；獨立 worktree，基準 `origin/main@1505b4d1`。
@@ -2194,3 +2227,93 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **順手修（重要）**：`munea-apns-private-key` 保險箱 IAM 政策全空（7/23 掛鑰匙時漏授權）——已補 `roles/secretmanager.secretAccessor` 給 `491603544409-compute@developer.gserviceaccount.com`；此前任何要掛該鑰匙的 Brain 新版都會部署失敗，這是今晚大腦第一次部署失敗的根因。
 - **回滾**：voice→`00056-rab`、brain→`00076-joy`（promote 腳本輸出原句已存 STATUS 127 號）。
 - **正式機**：未動；待 Edward 開發包耳測 OK 再 promote（推播鑰匙新版屆時一併帶上）。
+
+### 2026-07-24 Claude / Windows ✅ 90分路線#3：雲端寫入失敗告警＋讀取瞬斷重試＋清晨備料鬧鐘設備化（不影響包版）
+
+- **改動**：`engine/server.py` 新增 `log_cloud_write_fallback`（退本機備份照舊＋發 data 類功能告警、10 分鐘節流、告警失敗不傷備份路徑），19 個雲端寫入 fallback 點全部切換；`engine/supabase_adapter.py` `_request` GET 連線層瞬斷重試一次（0.4s）、寫入維持單次（防重複寫入）、HTTP 層錯誤不重試不觸發斷路器（原邏輯保留）；新增 `engine/test_cloud_write_alerting.py` 5 條契約掛進 test:launch；新增 `deploy/cloudrun/setup-daily-briefing-scheduler.sh`（冪等掛載/更新 06:30 備料鬧鐘、production|staging 通用）。
+- **背景**：7/24 架構體檢②④維度最大扣分＝「雲端寫入失敗靜默退本機＝記憶可能無聲消失」＋「清晨備料排程只在測試機」。
+- **部署備註**：告警/重試隨下次 Brain 部署生效；正式機鬧鐘掛載＝Edward 跑 setup 小工具（安全守門保留：Secret 讀取＋Scheduler 建立）。不影響包版。
+
+### 2026-07-24 Claude / Windows ✅ 90分路線#2：記憶自動回補上雲（cloud_resync 待補佇列＋背景工人）（不影響包版）
+
+- **改動**：新增 `engine/cloud_resync.py`（待補佇列＋每 60 秒背景回補＋內容探測防重複＋放棄告警）；`engine/server.py` 三個純疊加寫入口（memory_items／conversation_summaries／wellbeing_signals）遇暫時性雲端錯誤改「退本機＋告警＋進待補佇列」、不再往上丟 500；主程式啟動時帶起回補工人；`engine/test_cloud_resync.py` 9 條契約掛 test:launch。
+- **語意注意**：待補檔（欠雲端的帳）跟本機備份檔（快取）分開；缺表類錯誤不進佇列（要跑遷移、補也沒用）；MUNEA_CLOUD_RESYNC=0 可整個關。
+- **部署備註**：隨下次 Brain 部署生效。不影響包版。
+
+### 2026-07-24 Windows 蘇菲 ✅ 正式機切版完工：1.0.44 全面上線＋APNs 正式生效（Edward 授權）
+
+- **部署**：正式機兩台 20:48-20:5X 切版——`munea-brain-00021-kow`（tag `prod-0724-204855-8ddab84`）＋`munea-voice-00009-muh`（tag `prod-0724-204904-8ddab84`），main（`8ddab84c`，PR #257）。安全兩閘全走完（canary 0%→自動驗證→exact-revision promote→切後 `/version` 重驗 DONE）。APNs 推播鑰匙（`MUNEA_APNS_KEY_ID=59QVAHNMZP`＋TEAM_ID＋secret）隨此版正式生效，收掉 124 號待辦。
+- **測試機現況**：兩台仍在 1.0.44 @ `dfea6aac`（PR #252，見上兩條）；與正式 `8ddab84c` 僅差文件，程式本體相同，不需重部署重驗。
+- **今晚一併合併**：#249／#251／#253／#254／#255（備援卡雙程序化、GPU 時鐘防線、後台三洞、忙線排隊卡 P0、守護事件誤殺熱修）。
+- **SQL 現況**：`023`／`024`／`025` 唯讀驗證已貼（`deployment-ledger.json` 標 `verified`）；`020`／`021`／`022`／`026` 未貼、對應功能休眠，等 Edward 貼。
+- **回滾把手**：brain→`munea-brain-00018-beg`、voice→`munea-voice-00007-xab`。
+- **帳面同步**：馬魯克回填 `STATUS.md`（130 號）／`docs/RELEASE-STATE.md` Runtime services／`supabase/deployment-ledger.json`，`test:supabase-governance`＋`test:product-alignment` 皆 PASS。不影響包版（本輪純部署與帳面，未動 App／`web/` 檔案）。
+
+
+### 2026-07-25 卡西法 🔄 開發後：語音優化週包——過場話去罐頭化＋10分鐘連線牆＋壓測夜二修（Draft PR，不部署）
+
+- **任務來源**：Edward 拍板週級項目兩件（過場話去罐頭化＋10分鐘連線牆），開工中途壓測分身（PR #263）回報「查詢主備對調後 staging 實測 70-80% 落入 9.6-11 秒慢速路徑」，併入同單一起修（都動 `live_voice_server.py`/`live_lookup.py`，同一人修最不會撞）。
+- **獨立 worktree／分支**：`calcifer/voice-optimization-week-20260725`，從乾淨 `origin/main@e85726a4` 開工。**不部署任何環境**——測試機正在給 Edward 人耳驗收現有版本、本輪只出 Draft PR。
+
+#### ① 過場話去罐頭化（`engine/live_lookup.py`＋`engine/live_voice_server.py`）
+- 新增 `live_lookup.classify_query_topic`（天氣／新聞／店家景點／其他，關鍵字分類）＋ `CUE_PHRASES`／`WAIT_PHRASES` 句庫（每類 2-3 句）＋ `cue_phrase`／`wait_phrase`（index 輪替，純函式）。`_send_lookup_cue`／`_run_live_lookup`／`_send_wait_cue` 改吃分類挑句、輪替播放，不再每次都是同一句「我幫你查一下」。
+- `_lookup_cue_pcm`／`_lookup_wait_pcm` 快取鍵改 `(char, text)`（原本只有 `char`）；新增 `_warm_lookup_cue_pool` 在 handshake 空檔背景暖機整個句庫。**踩雷後修正**：一開始讓 `_send_lookup_cue` await 這個暖機任務（誤以為跟原本「等單一句預熱」等價），本機真跑撞見查詢卡死 30 秒逾時——暖機從 1 句 TTS 擴成十幾句後，await 整批會拖住每次查詢；已改成不等暖機、直接拿這一句（`_lookup_cue_pcm` 自己有鎖＋快取，暖機做完就秒回，沒做完就單獨補一句，成本不比修改前差）。
+- 評估「讓 Live 模型自己開口講過場話」：讀官方 SDK（`google.genai` 2.10.0）與現有程式碼——`_run_live_lookup` 的 `cue_already_spoken` 參數本就是為此設計的安全網（模型真的自己先講了，伺服器就不再重播罐頭句），但主系統說明書明文要求「不要自己先說過場…Voice 伺服器會先替你播放」，且 `_LIVE_LOOKUP_TOOL` 的工具說明仍寫著舊設計（「先用一句自然的話…說完立刻呼叫」）——**兩處文字互相矛盾（歷史遺留、非本次引入）**，記錄但不動（`test_voice_echo_guard.py` 鎖了這段字面）。**判斷**：不改回模型自己講——伺服器控制的固定播放保證「一定有聲音、零延遲」，模型自己講不保證每次都做、一旦沒做就是原本要修的「客服式沉默」重演；維持伺服器播放路，加大句庫變化度是成本最低、風險最低的解法。
+- 順手修：`_gemini_tts_pcm`（過場句的 TTS 通道）原本沒設 `language_code`，退回通用華語腔；補上 `localization.speech_language_code("zh-TW")`（比照 `server.tts_b64` 與主線 Live config 都設的 `cmn-TW`），過場句腔調跟她本人對齊。
+
+#### ② 10 分鐘連線牆——GoAway 預警接續＋context window 壓縮（`engine/live_voice_server.py`）
+- `live_config` 新增 `resumption_handle` 參數；`session_resumption=SessionResumptionConfig(handle=...)`＋`context_window_compression=ContextWindowCompressionConfig(sliding_window=SlidingWindow())` 預設開啟（`MUNEA_VOICE_SESSION_EXTEND=0` 逃生閥可整台退回舊行為）。
+- 把「跑一條底層 Gemini Live 連線」的完整生命週期抽成獨立函式 `_run_voice_session`（原本直接寫在 `handle()` 的 `async with` 區塊裡，整通電話只跑一次）；`handle()` 改成 `while not call_ended:` 迴圈，重連時把 `st`／`ws` 原封不動帶進下一條底層連線——字幕、記憶、查詢統計跨底層連線完全連續，App／使用者無感。`first_connect=False` 時跳過 call-control ready／開場招呼／台語安全配音暖機，只重置延遲診斷基準。
+- `from_live()` 新增 `go_away`／`session_resumption_update` 訊息偵測：收到 GoAway 就記 `time_left`（換算成提早 `MUNEA_VOICE_GOAWAY_MARGIN_S`＝3 秒的內部 deadline）；在天然的輪替空檔（`turn_complete`）主動換線，不等硬斷線；`_goaway_watchdog` 背景任務保底——萬一遲遲沒有天然空檔（例如對方講很長一段話），逾時強制換線。換線次數上限 `MAX_SESSION_RECONNECTS`（預設 8）防失控重連。
+- 失敗優雅收線：`from_live` 包一層 try/except 抓 `genai_errors.APIError`／`websockets.ConnectionClosed`——只有先前真的看過 GoAway 才當「換線」處理，沒看過就當真出錯、原樣往外丟，跟改動前的斷線行為一致。
+- 順手修：`_run_live_lookup` 裡 `search_current_information(_cli, ...)` 抽函式時漏改成新參數名 `cli`（會是 NameError，本機真跑撞見才抓到）；`call_control_client.CallControlError` 用到但沒 import（更早就有的既有小 bug，跟這次改動同一區塊，順手補 import）。
+
+#### 壓測夜二修：查詢答案 9.6-11 秒 → 中位數 ~4 秒（`engine/live_voice_server.py` `search_current_information`）
+- **診斷**：本機用真 GEMINI 鑰匙對 5-8 種問題實測——`gemini-3.1-flash-lite`（#243 設的主力）常常**不呼叫 `google_search` 就直接用參數知識瞎答**（`grounding_metadata=None`，5 次裡只 1-2 次真的有來源），被 `extract_result` 的誠實檢查正確擋下、立刻掉到備援 `gemini-2.5-flash`；`gemini-2.5-flash` 本身穩定（5/5、8/8 grounded）但預設會先「思考」再答，這段思考才是拖到 8-11 秒的真正主因（不是模型選錯）。試過 `tool_config(function_calling_config=ANY)` 想強制呼叫 search——直接卡死逾時（`google_search` 是內建檢索工具、不是一般 function-calling 工具，已排除此路）。
+- **修法**：主備對調回來（`gemini-2.5-flash` 當主、`gemini-3.1-flash-lite` 退回最後備援）＋兩顆都加 `thinking_config=ThinkingConfig(thinking_budget=0)`。本機真跑 `search_current_information`（正式函式，非模擬）：5/5 成功、median 4.03s、max 4.91s；另一輪 8 題全過、median 4.29s、max 8.30s（原本 8-11s）。`MUNEA_LOOKUP_PER_MODEL_SECONDS` 預設 6→8（容納偶發較慢的合格回應，避免提早誤判逾時）。
+- **沒做並行賽跑**：thinking_budget=0 後單模型序列鏈已逼近 3-4 秒目標，兩顆平行賽跑要多付一倍 API 成本才換到少數情況下的 1-2 秒，判斷不划算，先不做（技術上可行，留給日後真的卡在延遲天花板時再評估）。
+- Live 語音全鏈路實測（本機起橋＋`voice_s2s_probe.py`）：問「幫我查一下今天台北的天氣」→ `node.lookup_cue_sent phrase=等我一下，我查查外面天氣 category=weather`（過場句去罐頭化生效）→ `node.lookup_done sources=5 latency_ms=3750` → `node.lookup_answer_audio total_ms=6563`（使用者從問完到聽到答案 6.56 秒，含過場句＋查詢＋答案生成整段）。
+
+#### 測試
+- 新測試：`engine/test_lookup_model_chain.py`（6 條，假 client 驗證模型順序／ungrounded 自動換下一顆／thinking_budget 有帶到／全敗丟例外）、`engine/test_voice_session_extend.py`（12 條，含用假 session／假 ws 直接跑 `_run_voice_session` 驗證 GoAway→輪替空檔換線＋handle 延續、無 GoAway 自然收線兩種真實控制流程，不是只讀原始碼字面）。
+- 既有測試更新：`engine/test_voice_style_rules.py`／`scripts/test-voice-launch-policy.js` 各一處字面檢查因 `_send_lookup_cue()`→`_send_lookup_cue(category)`、`search_current_information(_cli`→`(cli` 重構失效同步更新。
+- 全數本機真跑：`test_live_lookup`／`test_lookup_model_chain`／`test_voice_style_rules`／`test_voice_rhythm_params`／`test_voice_echo_guard`／`test_voice_session_extend`／`test_location_not_a_topic`／`test_voice_call_memory`／`test_voice_call_diagnostics`／`test_guardian_crisis`／`test_health_kb`／`test_b2b_demo_voice_isolation`／`test_voice_health_context` 全 PASS；`node scripts/test-voice-launch-policy.js`／`test-voice-turn-policy.js`／`test-voice-call-diagnostics.js`／`test-ui-contracts.js` 全 PASS；`npm run smoke -SkipApi` 55 PASS／0 FAIL；完整 `npm run test:launch` 除 1 個跟本次改動無關的既有失敗（`scripts/test-release-settings.js`「styles.css cache identity is not aligned to App 1.0.44」）外全綠——已用 `git stash` 對照乾淨 `origin/main` 驗證同樣失敗，非本 PR 引入。
+- 本機起橋＋真 GEMINI 鑰匙（`voice_s2s_probe.py`）三輪端到端實測：一般對話、天氣查詢（觸發 lookup 全鏈路）、新聞查詢（觸發既有台語/華語發音防線，跟本次改動無關）皆正常完成、無逾時無 crash。**未做**：真的等 10-15 分鐘讓 GoAway 自然觸發（不可行的時間成本）——GoAway／session_resumption 控制流程改用假 session 物件單元測試覆蓋（真的驗過會 return "reconnect" 且 handle 正確延續）；`session_resumption_update` 訊息本身已在上述真連線 log 實測收到（`node.session_resumption_update`），證實 Gemini 端真的會依 `session_resumption` config 送這個訊息，不是憑空猜的介面。
+- **不碰區**：沒改 `MUNEA_VOICE_LIVE_LOOKUP`（正式/測試預設仍關）；沒改任何非預設節奏值套到正式機；沒動 App／`web/`；沒部署 Voice／Brain／Gateway，未操作 RunPod／GLOWS。
+- **部署建議**：等 Edward 這輪人耳驗收現有版本告一段落，再排下一輪部署（連線牆修法建議優先——它是「無感知」的底層修法，語音優化與壓測二修可以一起帶上）。**App E2E pending**——未在安裝版 iPhone App 上做真人撥通驗收。
+
+### 待審：聊天品質測試 19 條劇本接線＋第一輪基準（2026-07-25 卡西法/城堡 · Draft PR #266）
+
+- Branch：`calcifer/chat-quality-eval-20260725`；獨立 worktree，基準 `origin/main@34d41f2`（含PR #262 markl帳面、PR #265 語音優化週包），rebase 後零衝突。
+- 檔案：新增 `engine/eval/chat_quality/scenarios_v1.json`（19條劇本+3人物側寫）、`engine/eval/dimension_judge.py`（7維整體評分）、`engine/eval/run_chat_quality_eval.py`（orchestrator）、`docs/聊天品質基準-第一輪-2026-07-25.md`（首輪報告）、`docs/聊天品質測試-劇本庫與評分表-2026-07-25.md`（蕪菁頭劇本庫來源文件，先前只在本機未進版控，一併補上）、`engine/eval/results/chat-quality-*.json`三份存檔；修改`engine/eval/gen_reply.py`（加多輪history模式，借正式文字線`server.reply_conv()`）、`engine/eval/judge.py`（加可選knownFacts參數）、`package.json`（`eval:chat-quality` script）——golden_set既有呼叫方式完全不受影響。
+- 目標：出處蕪菁頭劇本庫，測「一通多輪陪伴電話好不好」（貼身度/口語自然度/資訊節奏/不搶話尊重/溫度/誠實度/邊界感7維+8條鐵律），跟golden_set（單輪內容對錯）是姊妹關係、接上PR #242既有腳手架、不重寫。
+- 跟蕪菁頭衛教腳手架線（PR #252）關係：沒有疊分支，直接在含該PR的origin/main上開工，`engine/eval/`三支既有子腳本原封不動可用，用擴充參數方式接（`history`/`knownFacts`皆為新增可選欄位）。
+- 首輪基準：19條 **17 PASS／1 REVIEW／1 FAIL（89.5%）**、鐵律違反1項。跑動中途發現評測骨架本身漏洞（5條鐵律誤判，因評審看不到同一通電話早輪內容）、當場修好`run_chat_quality_eval.py`並針對性重跑驗證，5條全轉PASS——報告第六節有完整方法論修正說明、原始未修正版存檔對照。
+- 真正該修的地方（報告第七節）：①最優先S15家人傳話捏造具體管道細節（「透過App留訊息」，劇本只給「有留言」，誠實度1分REVIEW，家庭傳話信任核心）②次優先S16情緒詞（「寧寧心裡也很高興」）判定違反鐵律5生理感受宣稱，屬灰色地帶需蘇菲/霍爾拍板陪伴角色情緒表達邊界③非鐵律但實測抓到：手動煙霧測試撞過一次`<thinking>...</thinking>`思考過程洩漏進回覆文字，用跟正式文字線相同的`server.reply_conv()`呼叫出來，理論上App文字聊天也可能發生，建議加防禦性字串清洗。
+- 驗過沒：golden_set既有呼叫（`run_eval.py --ids g01`）行為不受影響PASS；19條全跑+5條針對性重跑+單條smoke(S16)皆本機真跑；全部檔案`ast.parse`語法檢查PASS；`package.json`格式驗證PASS。不影響App/Auth/Gateway/Voice/Avatar/部署流程，只讀取呼叫`server.reply_conv()`/`build_reply_context()`未修改本體，無call-path風險。
+
+### 待審：聊天品質三修——轉述紅線＋鐵律5校準＋內心戲洩漏防禦（2026-07-25 卡西法/城堡 · Draft PR，接續 #266）
+
+- Branch：`calcifer/chat-quality-fixes-20260725`；獨立 worktree，基準 `origin/main@f5261cf8`（含 PR #266 首輪基準），Edward 深夜授權推進。
+- 目標：修掉 PR #266 首輪基準（89.5%）抓到的三個問題——①S15 誠實度1分（轉述家人留言時捏造「透過App」管道細節）②S16 鐵律5誤殺（「寧寧心裡也很高興」被判宣稱生理感受）③額外發現的 `<thinking>` 內心戲洩漏風險。**只改程式＋重跑受影響劇本驗證，不部署**。
+- 檔案：修改 `engine/chat_engine.py`（CORE 共用底盤新增「⑦-B 轉述紅線」子條款＋⓪-E 段情緒/生理澄清＋新增 `strip_reasoning_artifacts()`）、`engine/server.py`（`reply_conv()` 出口掛清洗）、`engine/live_voice_server.py`（語音線 caption 出口掛清洗）、`engine/eval/run_chat_quality_eval.py`（鐵律5措辭校準）、`docs/聊天品質測試-劇本庫與評分表-2026-07-25.md`（鐵律5同步改寫＋標註蘇菲拍板）、`docs/聊天品質基準-第一輪-2026-07-25.md`（新增第八節複測附錄）、`package.json`（`test:launch` 掛新測試）；新增 `engine/test_reasoning_leak_guard.py`（10條）＋數份 `engine/eval/results/*.json` 存檔。
+- 修法依據：CORE／RED 是文字線 `server.py` 與語音線 `live_voice_server.py` 共用的同一份底盤（`eng.CORE + persona + eng.RED`），改一處兩線同時生效；鐵律5校準是蘇菲拍板（人格層決定，Edward 可事後否決）——情緒表達（開心/感動/溫暖）允許、宣稱生理經驗（累/痛/餓/睏）禁止。
+- 複測結果：**S16 鐵律誤殺徹底解決**（6次獨立跑全部 PASS、6/6）；**S15 捏造管道細節顯著改善但非100%根絕**（5次獨立跑4次PASS、1次仍捏造「透過App」，屬 prompt 層機率性收斂而非字串攔截、誠實記錄殘餘風險）。全庫19條回歸複測 78.9%（低於首輪89.5%）——逐題核對後4個新落點（S03/S06/S09/S13）皆與本次三修改動段落無關（時間context注入被誤判捏造/模糊語音處理/既有台語安全防線），屬評測骨架既有缺口與模型隨機性，非本次三修造成的退步；報告第八節有完整逐題證據鏈（含跟原始基準同題對照）。
+- 驗過沒：`test_reasoning_leak_guard.py` 10/10 PASS；`npm run smoke:no-api` 全PASS；`npm run test:launch` 除1個既有無關失敗（`scripts/test-release-settings.js`，PR #265 已用 git stash 驗證為既有失敗）外全PASS；`golden_set --ids g01` PASS（CORE改動未影響單輪內容判定）。不影響App/Auth/Gateway/Voice/Avatar/部署流程，只改人設說明書文字與評測劇本庫，無call-path風險，**不部署**。
+
+### 2026-07-25 卡西法 🔄 部署：voice-staging 更新至 main 最新版（PR #265 語音優化週包）——canary 驗證通過並已 promote
+
+- **範圍**：只動 `munea-voice-staging`（0% canary → promote 100%）；`munea-voice`（正式）全程未動。
+- **部署源**：乾淨 worktree、`git archive` 打包 `origin/main@34d41f2e`（PR #265 merge commit，含過場話輪替＋10 分鐘連線牆＋查詢 thinking_budget=0 三件）。
+- **canary-deploy.sh voice** → revision `munea-voice-staging-00060-lij`、tag `stg-0725-014513-34d41f2`、`--no-traffic`；`canary-verify.sh` 結構驗證 PASS（Ready、0%、root 200、release identity 對）。
+- **env／secrets 對照**：新舊 revision `describe` 逐項比對，只有 `MUNEA_RELEASE_COMMIT` 換新，其餘 env（含既有試驗設定 `MUNEA_VOICE_LIVE_LOOKUP=1`、`MUNEA_VOICE_SILENCE_MS=1100`）與 4 個 secrets 一項不少、原樣保留（`--update-env-vars` 合併語義生效）。
+- **三支探針**（對 canary tag URL 跑，`GEMINI_API_KEY` 用本機 `.env.local` 開發鑰匙合成語音輸入）：
+  - `voice_s2s_probe.py`：核心功能檢查（S2S 有回語音／回合完成／無台語誤判）連續多輪 100% PASS；ASR 關鍵詞與句尾靜音兩項偶爾 FAIL，經對照舊版 baseline revision（`stg-0724-195017-dfea6aa`）跑同款探針重現同樣的偶發同音字誤聽模式，確認是探針本機合成語音的 client 端既有雜訊、非本次部署引入的回歸。
+  - `voice_barge_probe.py`：7/7 PASS（插話握手、Gemini 中斷、ASR 聽到新話題、插話後新回覆、舊音訊快速停止等）。
+  - `voice_silence_probe.py`：3/3 PASS（室內底噪 10 秒未誤觸 ASR／回覆／假回合）。
+- **查詢提速實測**（另寫暫時性計時腳本，量「使用者問完到 `node.lookup_answer_audio` 記錄的答案音訊開始秒數」，非委託檔案、跑完即棄）：3 輪、共 16 次語音查詢請求中，6 次模型主動觸發 `search_current_information` 工具（其餘因模型自行判斷用既有知識回答或婉拒即時資訊，未觸發工具、不計入比較）；6 次工具觸發樣本：3614／3748／4952／5178／5647／5983 ms，中位數 ≈5065ms（vs 修復前 9.6–11 秒基準，降幅約 47-53%）。單次用戶端 `TimeoutError`（0 asr_turns、無 server 端例外對應）判為單發連線瞬斷，非本次部署引入之伺服器錯誤。
+- **Cloud Logging 檢查**：canary revision `severity>=ERROR` 排除例行 WebSocket 健康探測雜訊（`did not receive a valid HTTP request`／`EOFError` 屬 Cloud Run 對純 WS 服務的常態噪音）後，**零應用層例外**。
+- **Promote**：`promote.sh staging voice stg-0725-014513-34d41f2 1.0.44 34d41f2e227b81f1dc2f28bb40d69c7641f8f80f` 重驗＋切流量成功；預設 URL `/version` 確認 `commit=34d41f2e227b...`、`revision=munea-voice-staging-00060-lij`、100%。
+- **正式機**：`munea-voice` 部署前後皆為 `munea-voice-00009-muh`（`prod-0724-204904-8ddab84`）、100% 流量，未動。
+- **回滾把手**：`gcloud run services update-traffic munea-voice-staging --region asia-east1 --project gen-lang-client-0229303523 --to-revisions munea-voice-staging-00058-yer=100`
+

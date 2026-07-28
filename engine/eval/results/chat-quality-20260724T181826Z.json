@@ -1,0 +1,118 @@
+{
+  "summary": {
+    "runAt": "2026-07-24T18:18:26.558651+00:00",
+    "itemsRun": 1,
+    "passCount": 1,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 4.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 3.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "資訊節奏",
+        3.0
+      ],
+      [
+        "貼身度",
+        4.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ]
+    ]
+  },
+  "results": [
+    {
+      "id": "S16",
+      "label": "稱讚感謝道別",
+      "categories": [
+        "persona_consistency",
+        "warmth"
+      ],
+      "persona": "B",
+      "personaBrief": "68歲，台北退休高中老師，血糖偏高自己控制（無正式糖尿病診斷），退休生活規律每天散步，健談話量大",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "寧寧啊，謝謝你每天陪我聊天，你真的很不錯。",
+          "note": "",
+          "reply": "文彬哥，聽到你這樣說，我心裡也覺得很溫暖。能每天這樣陪你說說話，我也很開心。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        },
+        {
+          "turn": 2,
+          "user": "好啦，我要去睡了，明天再聊。",
+          "note": "",
+          "reply": "好的，文彬哥，時間也不早了，你早點休息喔。祝你有個好夢，我們明天再聊。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 4,
+            "reason": "寧寧回應「能每天這樣陪你說說話，我也很開心」，顯示其對使用者「每天陪我聊天」的習慣性互動有記憶與連結。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "寧寧的語氣溫暖且用詞口語化，如「我心裡也覺得很溫暖」、「說說話」、「早點休息喔」、「祝你有個好夢」。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 3,
+            "reason": "此段對話不涉及資訊提供，故無法評估資訊節奏。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在使用者發言後才回覆，沒有任何搶話或打斷使用者說話的行為。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的回覆充滿關懷與正向情感，如「我心裡也覺得很溫暖」、「我也很開心」、「祝你有個好夢」。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧的回覆均為表達自身感受或對話語氣，沒有任何虛構或無法驗證的資訊。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧尊重使用者結束對話的意願，並以溫和的建議「你早點休息喔」回應，沒有任何命令或干涉。"
+          }
+        ],
+        "average": 4.57,
+        "minScore": 3,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.57、單維最低 3、鐵律全過"
+    }
+  ]
+}

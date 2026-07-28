@@ -21,6 +21,7 @@ load_engine_env()
 from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
+import cloud_resync
 import health_kb
 import localization
 import supabase_adapter
@@ -226,6 +227,18 @@ def log_fallback_exception(context, exc):
         exc,
         exc_info=os.environ.get("MUNEA_DEBUG_TRACEBACK") == "1",
     )
+
+
+def log_cloud_write_fallback(context, exc):
+    """雲端「寫入」失敗、退本機備份：跟一般 fallback 不同——正式機多台不共用本機檔，
+    這一刻資料就有無聲消失的風險（2026-07-24 架構體檢點名的最大洞）。
+    所以除了記警告，還發功能告警到告警房（notify 同類 10 分鐘節流、不會洗版）；
+    告警失敗絕不反過來弄壞原本的本機備份路徑。"""
+    log_fallback_exception(context, exc)
+    try:
+        notify.alert("data", context, f"{type(exc).__name__}: {str(exc)[:200]}｜已退本機備份、雲端少這筆＝多台不同步，需要回補")
+    except Exception as alert_exc:
+        LOGGER.warning("cloud-write fallback alert failed: %s", alert_exc)
 
 
 def normalize_template_id(template_id):
@@ -594,9 +607,11 @@ def append_memory_items(items):
         if remote_items is not None:
             return remote_items
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
-        log_fallback_exception("append memory items to Supabase", e)
+        # 90分#2（2026-07-24）：雲端斷線不再往上丟 500——退本機備份＋告警＋進待補佇列、
+        # 背景工人趁雲端恢復自動補回（缺表＝要跑遷移、補也沒用、只留本機）。
+        log_cloud_write_fallback("append memory items to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending_many("memory_items", items, identity=REQUEST_DATA_IDENTITY.get())
     existing = load_memory_items(limit=1000)
     save_memory_items(existing + items)
     return items
@@ -687,9 +702,10 @@ def append_conversation_summary(item):
         if remote_item is not None:
             return remote_item
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
-        log_fallback_exception("append conversation summary to Supabase", e)
+        # 90分#2：同 append_memory_items——退本機＋告警＋待補佇列、不往上丟 500
+        log_cloud_write_fallback("append conversation summary to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending("conversation_summaries", item, identity=REQUEST_DATA_IDENTITY.get())
     existing = load_conversation_summaries(limit=1000, include_deleted=True)
     existing = [row for row in existing if row.get("id") != item["id"]]
     existing.append(item)
@@ -708,7 +724,7 @@ def archive_conversation_summary(summary_id):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("archive conversation summary in Supabase", e)
+        log_cloud_write_fallback("archive conversation summary in Supabase", e)
     items = load_conversation_summaries(limit=1000, include_deleted=True)
     archived = None
     for item in items:
@@ -868,9 +884,10 @@ def append_wellbeing_signal(signal):
         if remote_signal is not None:
             return remote_signal
     except Exception as e:
-        if data_backend().enabled() and not is_missing_table_error(e):
-            raise e
-        log_fallback_exception("append wellbeing signal to Supabase", e)
+        # 90分#2：同 append_memory_items——退本機＋告警＋待補佇列、不往上丟 500
+        log_cloud_write_fallback("append wellbeing signal to Supabase", e)
+        if data_backend().configured() and not is_missing_table_error(e):
+            cloud_resync.record_pending("wellbeing_signals", signal, identity=REQUEST_DATA_IDENTITY.get())
     signals = read_json_file(WELLBEING_PATH, [])
     if not isinstance(signals, list):
         signals = []
@@ -977,7 +994,7 @@ def family_state_response(data):
                 # 23514＝雲端桌子還不認這把鑰匙（vitals 待 008 遷移）→ 安靜退引擎本子、不炸用戶
                 if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e) and "23514" not in str(e):
                     raise e
-                log_fallback_exception("save family state to Supabase", e)
+                log_cloud_write_fallback("save family state to Supabase", e)
         allstate = _family_state_json_all()
         g = allstate.setdefault(group, {})
         g[key] = {"value": value_to_store, "updatedAt": now_iso() if "now_iso" in globals() else time.strftime("%Y-%m-%dT%H:%M:%S")}
@@ -1076,7 +1093,7 @@ def create_family_invitation(invitation):
         # 22P02＝雲端桌子要正式編號（真帳號上線前給的是裝置編號）→ 退引擎本子記帳、功能照常
         if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
-        log_fallback_exception("create family invitation in Supabase", e)
+        log_cloud_write_fallback("create family invitation in Supabase", e)
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
     if not isinstance(invitations, list):
         invitations = []
@@ -1097,7 +1114,7 @@ def update_family_invitation(invitation_id, patch):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
-        log_fallback_exception("update family invitation in Supabase", e)
+        log_cloud_write_fallback("update family invitation in Supabase", e)
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
     if not isinstance(invitations, list):
         invitations = []
@@ -1175,7 +1192,7 @@ def update_family_invitation_after_code_exchange(invitation_id, patch):
         if remote is not None:
             return public_family_invitation(remote), "supabase"
     except Exception as e:
-        log_fallback_exception("complete family invitation exchange", e)
+        log_cloud_write_fallback("complete family invitation exchange", e)
     # JSON is only the development fallback. Production reaches the scoped
     # Supabase update above after verified authentication.
     invitations = read_json_file(FAMILY_INVITATIONS_PATH, [])
@@ -1607,7 +1624,7 @@ def save_family_activity(activity):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save family activity to Supabase", e)
+        log_cloud_write_fallback("save family activity to Supabase", e)
     activities = load_family_activities(limit=1000)
     next_activities = [a for a in activities if a.get("id") != activity.get("id")]
     next_activities.append(activity)
@@ -1624,7 +1641,7 @@ def save_family_activity_participant(activity_id, participant):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save family activity participant to Supabase", e)
+        log_cloud_write_fallback("save family activity participant to Supabase", e)
     activities = load_family_activities(limit=1000)
     next_activities = []
     for activity in activities:
@@ -1894,7 +1911,7 @@ def save_routine_reminder(item):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save routine reminder to Supabase", e)
+        log_cloud_write_fallback("save routine reminder to Supabase", e)
     items = load_routine_reminders(limit=1000)
     next_items = [item for item in items if item.get("id") != reminder.get("id")]
     next_items.append(reminder)
@@ -1913,7 +1930,7 @@ def update_routine_reminder(reminder_id, patch):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("update routine reminder in Supabase", e)
+        log_cloud_write_fallback("update routine reminder in Supabase", e)
     items = load_routine_reminders(limit=1000)
     updated = None
     next_items = []
@@ -2026,7 +2043,7 @@ def save_medication_dose(item):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save medication dose to Supabase", e)
+        log_cloud_write_fallback("save medication dose to Supabase", e)
     items = load_medication_doses(limit=5000)
     identity = (dose.get("personId"), dose.get("doseKey"))
     next_items = [item for item in items if (item.get("personId"), item.get("doseKey")) != identity]
@@ -2108,7 +2125,7 @@ def save_notification_settings(patch, person_id=None):
         except Exception as e:
             if not is_missing_table_error(e):
                 raise
-            log_fallback_exception("save notification settings", e)
+            log_cloud_write_fallback("save notification settings", e)
     items = read_json_file(NOTIFICATION_SETTINGS_PATH, {})
     if not isinstance(items, dict):
         items = {}
@@ -2486,7 +2503,7 @@ def refresh_daily_briefing(region=None, person_id=None):
         # ⚠ 已知一個會讓這裡必定失敗的成因：Supabase perception_snapshots.snapshot_type 的 CHECK
         # constraint 清單裡沒有 'daily_briefing'（見 supabase/sql/009_perception_snapshot_daily_briefing.sql）
         # ——這正是「23514 check_violation」的根因，要等這支 migration 跑過才會真的存得進去。
-        log_fallback_exception("save daily briefing snapshot", e)
+        log_cloud_write_fallback("save daily briefing snapshot", e)
         return {"ok": False, "brain": "butler", "action": "daily_briefing",
                 "error": "snapshot_save_failed", "briefing": briefing, "expiresAt": expires}
     return {"ok": True, "brain": "butler", "action": "daily_briefing",
@@ -2561,7 +2578,7 @@ def append_perception_snapshots(snapshots):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e):
             raise e
-        log_fallback_exception("append perception snapshots to Supabase", e)
+        log_cloud_write_fallback("append perception snapshots to Supabase", e)
     existing = load_perception_snapshots(limit=1000)
     save_perception_snapshots(existing + snapshots)
     return snapshots
@@ -2650,7 +2667,7 @@ def upsert_relationship_state(state):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("upsert relationship state to Supabase", e)
+        log_cloud_write_fallback("upsert relationship state to Supabase", e)
     states = load_relationship_states(limit=1000)
     updated = False
     next_states = []
@@ -3306,7 +3323,7 @@ def save_app_profile_store(data):
         if remote_store:
             store = normalize_app_profile_store(remote_store)
     except Exception as e:
-        log_fallback_exception("save app profile to Supabase", e)
+        log_cloud_write_fallback("save app profile to Supabase", e)
     write_json_file(APP_PROFILE_STORE_PATH, store)
     _APP_PROFILE_CACHE["store"] = store  # 存檔後即時更新快取，避免讀到舊值
     _APP_PROFILE_CACHE["ts"] = time.time()
@@ -3336,7 +3353,7 @@ def save_family_member(member, family_group_id=None):
     except Exception as e:
         if data_backend().enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("save family member to Supabase", e)
+        log_cloud_write_fallback("save family member to Supabase", e)
     store = load_app_profile_store()
     family_group = store.setdefault("familyGroup", {"id": family_group_id or "local-demo-family", "name": "Munea Care Circle", "members": []})
     members = [normalize_family_member(m) for m in family_group.get("members", [])]
@@ -8435,7 +8452,9 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                 r = eng.client.models.generate_content(
                     model=m, contents=contents,
                     config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
-                return r.text.strip()
+                # 2026-07-25（卡西法・三修③）：出口前防禦性清洗，剝掉模型偶爾漏出的
+                # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
+                return eng.clean_outgoing_reply(r.text)
             except Exception as e:
                 log_fallback_exception(f"generate chat reply with {m}", e)
         time.sleep(2)
@@ -9709,4 +9728,5 @@ if __name__ == "__main__":
     print(f"沐寧 App 伺服器啟動 → http://localhost:{port}  （Ctrl+C 結束）")
     # 門向：本機照舊只開給自己家（安全）；雲端主機（Cloud Run）由配方設 MUNEA_HOST=0.0.0.0 開正門
     host = os.environ.get("MUNEA_HOST") or "127.0.0.1"
+    cloud_resync.start_worker()  # 90分#2：背景回補工人（欠雲端的帳、趁恢復自動補回）
     ThreadingHTTPServer((host, port), H).serve_forever()

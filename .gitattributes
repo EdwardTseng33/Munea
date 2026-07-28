@@ -1,0 +1,4 @@
+# 臉機補丁與部署小工具必須保持 LF——Windows 簽出被 autocrlf 轉成 CRLF 會讓 Linux GPU 機 git apply 失敗
+# （2026-07-24 test_flashhead_patch_integrity 在新 worktree 亮紅燈後立）
+*.patch -text
+*.sh text eol=lf

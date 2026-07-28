@@ -73,8 +73,12 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("人設、記憶、喜好、舊對話或範例", instruction)
         self.assertIn("可以用國語再說一次嗎", instruction)
         self.assertIn("絕對不要猜意思", instruction)
-        self.assertIn("不要說「興趣」，改說「喜好」", instruction)
         self.assertIn("不要說「濃醇」，改說「厚實」", instruction)
+        # 2026-07-28：「興趣→喜好」這條拿掉了——Edward 真機聽到換上去的「喜好」也走音
+        # （聽成「信號」），等於拿一個唸錯換另一個唸錯。兩個詞都改成句型層級的避用指示。
+        self.assertNotIn("改說「喜好」", instruction)
+        self.assertIn("「興趣」「喜好」這類書面詞一律不要說出口", instruction)
+        self.assertIn("你平常喜歡做什麼", instruction)
         self.assertEqual(localization.taiwan_mandarin_launch_instruction("en"), "")
 
     def test_reply_instruction_includes_launch_language_gate(self):
@@ -111,10 +115,27 @@ class LocalizationTests(unittest.TestCase):
     def test_unstable_mandarin_terms_use_speech_safe_paraphrases(self):
         self.assertTrue(localization.contains_unstable_mandarin_speech("聊聊你的興趣"))
         self.assertTrue(localization.contains_unstable_mandarin_speech("味道很濃醇"))
+        # 2026-07-28 新增的那半邊防線：「喜好」以前是替換表「換上去」的詞，從來不被攔——
+        # Edward 真機聽到它走音成「信號」兩個禮拜都沒被抓到。現在講出口一樣攔下重講。
+        self.assertTrue(localization.contains_unstable_mandarin_speech("你的喜好是什麼"))
+        self.assertFalse(localization.contains_unstable_mandarin_speech("你平常喜歡做什麼"))
         self.assertEqual(
-            localization.speech_text("聊聊你的興趣，這杯咖啡很濃醇", "zh-TW"),
-            "聊聊你的喜好，這杯咖啡很厚實",
+            localization.speech_text("這杯咖啡很濃醇", "zh-TW"),
+            "這杯咖啡很厚實",
         )
+
+    def test_replacement_targets_are_not_themselves_broken(self):
+        """換上去的詞本身不可以是已知會唸歪的詞。
+
+        這是 7/28 那個坑的回歸護欄：當時為了修「興趣」走音，把它換成「喜好」，
+        結果「喜好」也走音（Edward 真機聽成「信號」）＝拿一個唸錯換另一個唸錯，
+        而且沒有任何一支測試會叫。以後誰再加這種替換，這條就會擋下來。
+        """
+        for target in localization.unstable_replacement_targets():
+            self.assertFalse(
+                localization.contains_unstable_mandarin_speech(target),
+                f"替換後的「{target}」本身就是已知會唸歪的詞，等於拿一個唸錯換另一個唸錯",
+            )
 
     def test_opening_policy_rotates_and_bans_generic_mood_questions(self):
         openings = [

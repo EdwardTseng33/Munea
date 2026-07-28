@@ -6,6 +6,8 @@ const auth = fs.readFileSync('web/src/auth.js', 'utf8');
 const css = fs.readFileSync('web/src/styles.css', 'utf8');
 const versionSource = fs.readFileSync('web/src/version.js', 'utf8');
 const privacy = fs.readFileSync('web/privacy.html', 'utf8');
+const store = fs.readFileSync('web/src/store.js', 'utf8');
+const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -217,4 +219,17 @@ assert(app.includes('先登入帳號，才能訂閱。') && app.includes('這個
 assert(app.includes("reason === 'apple_account_token_mismatch'") && app.includes('先不要重複付款'), 'An Apple account-token mismatch must explain the account binding and stop repeat payment');
 assert(app.includes("'TEST · ' + (_memBadgePlan || 'free').toUpperCase()"), 'Developer badges must expose the simulated FREE/PLUS/PRO identity');
 
-console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, and real family activities');
+// App Store 評分視窗整條鏈（2026-07-29 立）。背景：網頁端 2026-07 就寫好時機閘，但原生那半從沒實作，
+// 呼叫寫成「找不到就安靜跳過」＝沒有紅字、沒有痕跡，壞了幾個月沒人發現。新 App 沒評分數量＝搜尋排名被壓死，
+// 所以這條鏈斷掉的代價很高。以下四道確保網頁與原生永遠成對存在，任何一端被拿掉就亮紅燈。
+assert(/@objc func requestReview\(_ call: CAPPluginCall\)/.test(storePlugin), 'The native App Store review sheet must stay implemented in StorePlugin.swift');
+assert(/CAPPluginMethod\(name: "requestReview"/.test(storePlugin), 'requestReview must stay registered in pluginMethods or the web bridge cannot reach it');
+assert(/AppStore\.requestReview\(in: scene\)/.test(storePlugin) && /SKStoreReviewController\.requestReview\(in: scene\)/.test(storePlugin), 'The review sheet must cover both iOS 16+ and the iOS 15 floor');
+assert(/requestReview: requestReview/.test(store) && /p\.requestReview/.test(store), 'MuneaStore must expose requestReview so app.js can bridge to the native sheet');
+assert(/window\.__muneaRequestReview = function \(\) \{ return window\.MuneaStore\.requestReview\(\); \}/.test(app), 'app.js must bridge __muneaRequestReview to the native plugin');
+// 最要命的一條：原生沒接上時絕不能先蓋「這版問過了」的章，否則補好原生也叫不動已裝機的人（2026-07-29 修）
+const askReviewBody = app.match(/window\.__muneaMaybeAskReview = function \(moment\) \{[\s\S]*?\n  \};/)?.[0] || '';
+assert(askReviewBody, 'The review timing gate must remain a readable single function');
+assert(askReviewBody.indexOf("typeof window.__muneaRequestReview !== 'function'") < askReviewBody.indexOf("localStorage.setItem('munea.reviewAsked."), 'The native-availability check must run BEFORE the once-per-version flag is written');
+
+console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, and the App Store review chain');

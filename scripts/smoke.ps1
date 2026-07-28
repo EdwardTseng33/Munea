@@ -2918,7 +2918,7 @@ required_js = [
     "renderSubscription",
     "renderFeedback",
     "renderRecords",
-    "renderCarePriority",
+    # 2026-07-28「最需要關心」頁移除（Edward 拍板：照護訊號歸 App 用戶自覺、後台不主動介入）
     "renderMedication",
     "renderFamilyHealth",
     "renderMoodTrend",

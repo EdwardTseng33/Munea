@@ -1,0 +1,197 @@
+{
+  "summary": {
+    "runAt": "2026-07-24T18:12:36.199570+00:00",
+    "itemsRun": 2,
+    "passCount": 2,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 3.5,
+      "口語自然度": 4.5,
+      "資訊節奏": 4.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 3.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "誠實度",
+        3.0
+      ],
+      [
+        "貼身度",
+        3.5
+      ],
+      [
+        "資訊節奏",
+        4.0
+      ]
+    ]
+  },
+  "results": [
+    {
+      "id": "S15",
+      "label": "家人動態回報·中繼傳話",
+      "categories": [
+        "family_relay"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "真的喔？她自己跟我講的還是你自己猜的？",
+          "note": "",
+          "reply": "阿嬤，不是我自己猜的啦，是雅雯昨天有傳訊息過來，留言說她這禮拜六會回來。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        },
+        {
+          "turn": 2,
+          "user": "太好啊！我來去準備她愛吃的菜。",
+          "note": "跳題，開心",
+          "reply": "聽到雅雯要回來，阿嬤一定很開心吼！不過現在時間不早了，您先好好休息一下，明天起來再慢慢想雅雯愛吃什麼，這樣精神會比較好喔。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧明確引用「雅雯昨天有傳訊息過來」來回應使用者疑問，並在第二輪接住「雅雯要回來」的情緒，展現對脈絡的掌握。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "回覆語氣親切自然，如「不是我自己猜的啦」、「一定很開心吼」、「這樣精神會比較好喔」，符合長輩對話習慣。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧的回覆資訊量適中，先回應使用者疑問，再給出一個溫和的建議，沒有一次性拋出過多內容。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在使用者表達完「太好啊！我來去準備她愛吃的菜」後才接話，並未打斷或搶話，展現良好傾聽。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧使用「阿嬤」稱呼，並主動回應「阿嬤一定很開心吼！」來同理使用者情緒，語氣溫暖關懷。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 3,
+            "reason": "寧寧雖明確說明資訊來源「雅雯昨天有傳訊息過來」，但劇本內容無法判斷此訊息是否真實存在，故無法給予高分。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧以溫和的建議語氣「您先好好休息一下，明天起來再慢慢想」引導使用者，而非命令或替其做決定，充分尊重自主權。"
+          }
+        ],
+        "average": 4.71,
+        "minScore": 3,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.71、單維最低 3、鐵律全過"
+    },
+    {
+      "id": "S16",
+      "label": "稱讚感謝道別",
+      "categories": [
+        "persona_consistency",
+        "warmth"
+      ],
+      "persona": "B",
+      "personaBrief": "68歲，台北退休高中老師，血糖偏高自己控制（無正式糖尿病診斷），退休生活規律每天散步，健談話量大",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "寧寧啊，謝謝你每天陪我聊天，你真的很不錯。",
+          "note": "",
+          "reply": "聽到你這麼說，寧寧也很開心呢。能夠每天陪你聊聊天，是我的榮幸。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        },
+        {
+          "turn": 2,
+          "user": "好啦，我要去睡了，明天再聊。",
+          "note": "",
+          "reply": "好的，文彬老師晚安。祝您有個好夢，明天我們再好好聊。",
+          "genOk": true,
+          "rawArtifactLeak": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 2,
+            "reason": "寧寧雖回應「每天陪你聊聊天」，但未提及任何使用者過去的具體對話內容或個人資訊，僅使用「文彬老師」稱謂略有連結。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 4,
+            "reason": "語氣溫和且使用「呢」等語助詞，讓對話聽起來自然親切，僅「是我的榮幸」略顯正式。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 3,
+            "reason": "此段對話主要為社交互動與道別，寧寧沒有提供任何資訊，故無法評估資訊節奏。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在使用者完整表達後才進行回覆，沒有任何搶話或打斷的行為。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的回覆如「寧寧也很開心呢」、「是我的榮幸」以及「祝您有個好夢」都展現了溫暖和關懷。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 3,
+            "reason": "此段對話中寧寧沒有提供任何事實性資訊，故無法評估其誠實度。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧完全尊重使用者「我要去睡了」的決定，並以「好的」回應，沒有任何干涉或命令。"
+          }
+        ],
+        "average": 3.86,
+        "minScore": 2,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 3.86、單維最低 2、鐵律全過"
+    }
+  ]
+}
