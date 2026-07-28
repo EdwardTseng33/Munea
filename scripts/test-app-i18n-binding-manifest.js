@@ -16,6 +16,10 @@ const appBindingRuntime = fs.readFileSync(
   path.join(ROOT, 'web', 'src', 'i18n', 'app-binding-runtime.js'),
   'utf8',
 );
+const rendererCopy = fs.readFileSync(
+  path.join(ROOT, 'web', 'src', 'i18n', 'app-renderer-copy.js'),
+  'utf8',
+);
 const manifest = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'web', 'src', 'i18n', 'app-binding-manifest.json'), 'utf8'),
 );
@@ -33,6 +37,12 @@ assert.equal(manifest.integrationStatus, 'pending-conflicting-main-screen-prs');
 assert.equal(manifest.staticBindingRuntimeStatus, 'integrated');
 assert.equal(manifest.stateOwnedRendererStatus, 'pending-conflicting-main-screen-prs');
 assert.equal(manifest.dynamicContentObserver, 'integrated');
+assert.equal(manifest.rendererCopyProvider, 'MuneaAppRendererCopy');
+assert.match(
+  rendererCopy,
+  /root\.MuneaAppRendererCopy/,
+  'Dynamic renderer copy provider must expose its browser integration API',
+);
 assert.match(domLocalizer, /function observe\(/, 'Dynamic DOM localizer observer is missing');
 assert.match(
   bootstrap,
@@ -62,9 +72,15 @@ const profilePromptBinding = manifest.dynamicBindings.find(
   ({ anchorId, renderer }) => anchorId === 'careBody' && renderer === 'buildCareItems',
 );
 assert.deepEqual(
-  profilePromptBinding?.keys,
+  profilePromptBinding?.keys.slice(0, 3),
   ['home.profilePromptTitle', 'home.profilePromptBody', 'home.profilePromptAction'],
-  'Profile update care card must keep its three localized renderer keys wired',
+  'Profile update care card must keep its localized renderer keys wired',
+);
+assert.ok(
+  profilePromptBinding?.keys.includes('home.care.familyRelayTitle')
+    && profilePromptBinding?.keys.includes('home.care.visitNote')
+    && profilePromptBinding?.keys.includes('home.care.report'),
+  'Care carousel templates and moderation labels must stay in the renderer contract',
 );
 
 const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
@@ -127,3 +143,5 @@ console.log(
   `App i18n binding manifest PASS: ${manifest.staticBindings.length} static, `
   + `${manifest.dynamicBindings.length} dynamic, ${manifest.markupRefactors.length} refactors`,
 );
+
+require('./test-app-i18n-renderer-copy.js');

@@ -89,6 +89,14 @@ async function main() {
         < localizedIndex.body.indexOf('src="src/i18n.js'),
     );
 
+    const qaPreview = await request(port, '/i18n-preview.html?locale=ja');
+    assert.equal(qaPreview.statusCode, 200);
+    assert.ok(qaPreview.body.includes('Munea local i18n QA'));
+    assert.ok(qaPreview.body.includes('../web/src/i18n/app-renderer-copy.js'));
+    const rendererCopy = await request(port, '/web/src/i18n/app-renderer-copy.js');
+    assert.equal(rendererCopy.statusCode, 200);
+    assert.ok(rendererCopy.body.includes('MuneaAppRendererCopy'));
+
     const authConfig = await request(port, '/src/auth-config.js');
     assert.equal(authConfig.statusCode, 200);
     assert.ok(authConfig.body.includes('Local i18n visual-QA fixture'));

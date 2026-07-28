@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WEB_ROOT = path.join(ROOT, 'web');
+const QA_PREVIEW_PATH = path.join(ROOT, 'tools', 'i18n-preview.html');
 const LOOPBACK_HOST = '127.0.0.1';
 const DEFAULT_PORT = 4177;
 const PREVIEW_LOCALES = new Set(['zh-TW', 'en', 'ja', 'es']);
@@ -140,7 +141,13 @@ function safeStaticPath(pathname) {
   } catch {
     return null;
   }
-  const relative = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  const relative = decoded === '/'
+    ? 'index.html'
+    : (
+      decoded.startsWith('/web/')
+        ? decoded.slice('/web/'.length)
+        : decoded.replace(/^\/+/, '')
+    );
   const target = path.resolve(WEB_ROOT, relative);
   const prefix = WEB_ROOT.endsWith(path.sep) ? WEB_ROOT : `${WEB_ROOT}${path.sep}`;
   return target === WEB_ROOT || target.startsWith(prefix) ? target : null;
@@ -163,7 +170,9 @@ function createFixtureServer({ port = DEFAULT_PORT } = {}) {
       return;
     }
 
-    const target = safeStaticPath(pathname);
+    const target = pathname === '/i18n-preview.html'
+      ? QA_PREVIEW_PATH
+      : safeStaticPath(pathname);
     if (!target || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
       if (!path.extname(pathname)) {
         res.writeHead(200, responseHeaders('application/json; charset=utf-8'));

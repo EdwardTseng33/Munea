@@ -4,6 +4,7 @@
   "staticBindingRuntimeStatus": "integrated",
   "stateOwnedRendererStatus": "pending-conflicting-main-screen-prs",
   "dynamicContentObserver": "integrated",
+  "rendererCopyProvider": "MuneaAppRendererCopy",
   "staticBindings": [
     {"anchorId": "authStatusText", "target": "textContent", "key": "auth.guestMode", "applyMode": "state-owned"},
     {"anchorId": "authSignInBtn", "target": "textContent", "key": "auth.signIn", "applyMode": "static"},
@@ -37,7 +38,17 @@
     {
       "anchorId": "setPlanName",
       "renderer": "renderPlanState",
-      "keys": ["settings.planName", "subscription.planFree", "subscription.planPlus", "subscription.planPro"]
+      "keys": [
+        "settings.planName",
+        "settings.managePlan",
+        "settings.upgradePlan",
+        "subscription.planFree",
+        "subscription.planPlus",
+        "subscription.planPro",
+        "subscription.monthlyCreditsNote",
+        "subscription.freeCreditsLeft",
+        "subscription.freePlanNote"
+      ]
     },
     {
       "anchorId": "chatCaption",
@@ -47,12 +58,31 @@
     {
       "anchorId": "busyCardTitle",
       "renderer": "showBusyCard",
-      "keys": ["voice.queue.preparing", "voice.queue.wait", "voice.call.unavailable"]
+      "keys": [
+        "voice.queue.preparingWithCompanion",
+        "voice.queue.busyWithCompanion",
+        "voice.queue.position",
+        "voice.queue.etaPreparingSoon",
+        "voice.queue.etaWaitingSoon",
+        "voice.queue.etaPreparingMinutes",
+        "voice.queue.etaWaitingMinutes",
+        "voice.queue.etaPreparingUnknown",
+        "voice.queue.etaWaitingUnknown",
+        "voice.queue.note",
+        "voice.queue.cancel",
+        "voice.queue.fullTitle",
+        "voice.queue.fullBody",
+        "common.okay"
+      ]
     },
     {
       "anchorId": "subCta",
       "renderer": "renderSubUI",
-      "keys": ["subscription.currentPlan", "subscription.upgradeTo", "subscription.changeTo"]
+      "keys": [
+        "subscription.currentPlanCta",
+        "subscription.upgradeTo",
+        "subscription.changeTo"
+      ]
     },
     {
       "anchorId": "tuBuyBtn2",
@@ -62,7 +92,13 @@
     {
       "anchorId": "planConfirmText",
       "renderer": "planConfirmHtml",
-      "keys": ["subscription.confirmTitle", "subscription.confirmBody"]
+      "keys": [
+        "subscription.confirmTitle",
+        "subscription.confirmBody",
+        "subscription.confirmFacts",
+        "subscription.confirmAction",
+        "subscription.cancel"
+      ]
     },
     {
       "anchorId": "authMessage",
@@ -72,7 +108,29 @@
     {
       "anchorId": "careBody",
       "renderer": "buildCareItems",
-      "keys": ["home.profilePromptTitle", "home.profilePromptBody", "home.profilePromptAction"]
+      "keys": [
+        "home.profilePromptTitle",
+        "home.profilePromptBody",
+        "home.profilePromptAction",
+        "home.care.familyRelayTitle",
+        "home.care.familyRelayFrom",
+        "home.care.acknowledge",
+        "home.care.open",
+        "home.care.demoRelay",
+        "home.care.familyFallback",
+        "home.care.activityFallback",
+        "home.care.walkTitle",
+        "home.care.walkGap",
+        "home.care.walkComplete",
+        "home.care.activityTitle",
+        "home.care.activityProgress",
+        "home.care.visitFallback",
+        "home.care.visitSoon",
+        "home.care.visitNote",
+        "home.care.medicationRhythm",
+        "home.care.remove",
+        "home.care.report"
+      ]
     }
   ],
   "markupRefactors": [

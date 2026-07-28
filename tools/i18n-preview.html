@@ -33,6 +33,10 @@
     .plan-card button { width: 100%; margin-top: 10px; border: 0; border-radius: 12px; background: #237e70; color: white; font-weight: 700; }
     .purchase-rule { margin: 8px 0; padding-left: 12px; border-left: 3px solid #79b8aa; }
     .purchase-state { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #f5f8f7; font-size: 13px; }
+    .dynamic-card { margin-top: 10px; padding: 14px; border: 1px solid #b9ccc5; border-radius: 14px; background: #f8fbfa; }
+    .dynamic-card strong, .dynamic-card small { display: block; }
+    .dynamic-card small { margin-top: 6px; color: #42645a; line-height: 1.45; }
+    .dynamic-card button { margin-top: 10px; }
   </style>
   <script>
     (function () {
@@ -151,6 +155,25 @@
       <h2 data-i18n="voice.call.start">開始通話</h2>
       <p id="queuePosition">Queue position</p>
       <p class="long-copy" data-i18n="voice.queue.wait">等待通話</p>
+      <div class="dynamic-card">
+        <strong id="dynamicQueueTitle">Dynamic queue title</strong>
+        <span id="dynamicQueuePosition">Dynamic queue position</span>
+        <small id="dynamicQueueNote">Dynamic queue note</small>
+        <button type="button" id="dynamicQueueButton">Dynamic queue action</button>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-i18n="home.todayTogether">今天一起完成</h2>
+      <div class="dynamic-card">
+        <strong id="dynamicCareTitle">Dynamic care title</strong>
+        <small id="dynamicCareBody">Dynamic care body</small>
+        <button type="button" id="dynamicCareButton">Dynamic care action</button>
+      </div>
+      <div class="dynamic-card">
+        <strong id="dynamicVisitTitle">Dynamic visit title</strong>
+        <small id="dynamicVisitBody">Dynamic visit body</small>
+      </div>
     </section>
 
     <section id="purchasePreview">
@@ -168,6 +191,8 @@
         <p data-i18n="subscription.plusAudience">日常語音陪伴與基本家庭關懷</p>
         <p data-i18n="subscription.plusFeature1">日常語音陪伴</p>
         <p data-i18n="subscription.plusFeature2">持續陪伴記憶</p>
+        <p id="dynamicPlanName">Dynamic plan name</p>
+        <p id="dynamicPlanNote">Dynamic plan note</p>
         <button type="button" id="planBuyLabel">Confirm plan</button>
       </div>
       <div class="plan-card">
@@ -195,6 +220,7 @@
   </main>
 
   <script src="../web/src/i18n/purchase-flow.js"></script>
+  <script src="../web/src/i18n/app-renderer-copy.js"></script>
   <script src="../web/src/i18n.js"></script>
   <script>
     (async function () {
@@ -234,6 +260,7 @@
       };
       const prices = mockPrices[api.current()] || mockPrices['zh-TW'];
       const flow = window.MuneaPurchaseFlow.createPurchaseFlow({ t: api.t });
+      const rendererCopy = window.MuneaAppRendererCopy.createAppRendererCopy({ t: api.t });
       const plan = flow.subscription({
         productId: 'net.munea.app.plus.monthly',
         displayName: 'Munea Plus',
@@ -254,6 +281,37 @@
       document.getElementById('purchasePending').textContent = flow.failureMessage('pending');
       document.getElementById('purchaseMismatch').textContent = flow.failureMessage('apple_account_token_mismatch');
       document.getElementById('purchaseRestoreNone').textContent = flow.restoreMessage({ ok: false, reason: 'none' });
+      const queue = rendererCopy.queueCard({
+        mode: 'queued',
+        position: 3,
+        etaSeconds: 121,
+        companion: api.t('companion.nening.name'),
+      });
+      document.getElementById('dynamicQueueTitle').textContent = queue.title;
+      document.getElementById('dynamicQueuePosition').textContent = queue.position;
+      document.getElementById('dynamicQueueNote').textContent = queue.note;
+      document.getElementById('dynamicQueueButton').textContent = queue.button;
+      const care = rendererCopy.walkActivity({
+        owner: 'Mei',
+        gap: 5000,
+      });
+      document.getElementById('dynamicCareTitle').textContent = care.title;
+      document.getElementById('dynamicCareBody').textContent = care.body;
+      document.getElementById('dynamicCareButton').textContent = rendererCopy.careLabels().open;
+      const visit = rendererCopy.upcomingVisit({
+        title: api.t('home.care.visitFallback'),
+        date: '7/31',
+        companion: api.t('companion.nening.name'),
+      });
+      document.getElementById('dynamicVisitTitle').textContent = visit.title;
+      document.getElementById('dynamicVisitBody').textContent = visit.body;
+      const planSummary = rendererCopy.planSummary({
+        plan: 'plus',
+        monthlyCredits: 300,
+        minutes: 300,
+      });
+      document.getElementById('dynamicPlanName').textContent = planSummary.name;
+      document.getElementById('dynamicPlanNote').textContent = planSummary.note;
       document.getElementById('largeText').addEventListener('click', function () {
         document.getElementById('preview').classList.toggle('large-text');
       });
