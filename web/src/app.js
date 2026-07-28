@@ -74,10 +74,10 @@ const AI_PROVIDER_CONSENT_KEY = 'munea.aiProviderConsent.v1';
 const AI_PROVIDER_CONSENT_VERSION = '2026-07-02-ai-provider-v1';
 const DEV_FIXTURE_MARKER_KEY = 'munea.developmentFixtures.v1';
 // 開帳與個人資料重整（2026-07-24）：首登一次性彈個人資料卡的旗標——填了或跳過都算「問過」，
-// 之後永不再自動彈；跳過者靠首頁「讓寧寧更認識你」小卡（見 renderProfilePromptCard）自己回來補。
+// 之後永不再自動彈；跳過者靠首頁「幫你留意」裡的一則提醒（見 syncProfileNudge）自己回來補。
+// 2026-07-28 Edward 拍板：原本的獨立小卡＋關閉 X 整組退役，改收進留意卡輪播——
+// 輪播 5.2 秒自己轉走＝天生不強迫，不需要 X（舊 X 被樣式蓋住等於沒用，是這次的起因）。
 const PERSON_PROFILE_PROMPT_KEY = 'munea.personProfilePrompted.v1';
-// 女巫 Gate 2 二輪：小卡加低調 X，點了永久不再顯示（Edward 哲學：不強迫，這卡不該無法擺脫）。
-const PROFILE_NUDGE_DISMISSED_KEY = 'munea.profileNudgeDismissed.v1';
 
 /* ===== AvatarRuntime：先把即時 avatar 的共用合約立起來 =====
  * mode=static-css 先用靜態圖 + CSS 呼吸/眨眼/聲波；之後 Ditto / LiveAvatar 只要接這層。 */
@@ -3342,14 +3342,19 @@ function renderFreeMemberBadge() {
   const show = isLoggedIn() && !dev && free;
   el.hidden = !show;
 }
-// 首頁「讓寧寧更認識你」小卡：只在「問過（首登彈過）但當時跳過、後續也還沒補填」時顯示；
-// 點下去開的是同一張 #profileModal（一般模式，不是首登模式），跟設定頁的「個人資料」入口共用同一顆。
-function renderProfilePromptCard() {
-  const card = $('#profileNudgeCard');
-  if (!card) return;
-  const show = isLoggedIn() && storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true'
-    && storageGet(PROFILE_NUDGE_DISMISSED_KEY) !== 'true' && !personProfileHasData();
-  card.hidden = !show;
+// 首頁「幫你留意」裡的個人資料提醒該不該出現：問過（首登彈過）但當時跳過、後續也還沒補填才出現。
+// 一填完（稱呼／生日／所在地任一格有值）就自動不再出現——雲端資料合併回來也走同一條判斷。
+function shouldShowProfileNudge() {
+  return isLoggedIn() && storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true' && !personProfileHasData();
+}
+// 只有「該不該出現」的答案真的翻面才重繪輪播：登入狀態每刷新一次就重繪的話，
+// 輪播會被打回第一則，正在看家人帶話的人會被硬生生切走。
+let _profileNudgeOn = null;
+function syncProfileNudge() {
+  const on = shouldShowProfileNudge();
+  if (on === _profileNudgeOn) return;
+  _profileNudgeOn = on;
+  renderCareCarousel();
 }
 function renderAuthAvatar(state = authState(), signedIn = state.status === 'signed-in') {
   const box = $('#authAvatar');
@@ -3476,7 +3481,7 @@ function updateAuthUI() {
   if (signOut) signOut.hidden = !signedIn;
   renderMemBadge();
   renderFreeMemberBadge();
-  renderProfilePromptCard();
+  syncProfileNudge();
   renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
@@ -4415,7 +4420,8 @@ const CARE_ICONS = {
   msg: '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>',
   walk: '<svg class="ic" viewBox="0 0 24 24"><path d="M13 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM8 21l3-6M14 21v-5l-2.5-3 1-5.5M8.5 9 11 6.5l2.5 1 2 3H18"/></svg>',
   cal: '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-  medal: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>'
+  medal: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg>',
+  person: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>'
 };
 let _careIdx = 0, _careTimer = null;
 // 留意卡文案規則（Edward 7/6）：標題 ≤12 字（一行放得下）、副標最多兩行（約 26 字內）完整顯示
@@ -4467,6 +4473,14 @@ function buildCareItems() {
   } catch (e) {}
   if (v && v.dateISO) { const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診'; items.push({ k: 'status', tone: '', icon: 'cal', title: _vTitle + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' }); }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
   items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
+  // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
+  // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
+  // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）；
+  // 7/29 再收成「個人資料」——「用戶」是產品人的詞、長輩不會這樣自稱，且這四個字跟設定頁入口、
+  // 點下去開的那張卡標題完全一致，使用者一路看到的是同一個名字。
+  // 附帶好處：固定 4 字＝完全不受名字長度影響，繞開了原本兩道會咬字的關卡——
+  // 渲染時的 slice(0,12) 硬切（沒補刪節號）、以及 .care-txt p 的單行 ellipsis（375px 下約 10 字到底）。
+  if (shouldShowProfileNudge()) items.unshift({ k: 'profile', tone: '', icon: 'person', title: '個人資料', sub: '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: '去填寫' });
   return items;
 }
 function renderCareCarousel() {
@@ -5360,7 +5374,10 @@ function init() {
     const rp = e.target.closest('[data-report]');
     if (rp) { reportFamilyFeedItem(+rp.dataset.report); return; }
     const b = e.target.closest('.care-btn');
-    if (b) showView(b.dataset.go === 'status' ? 'status' : 'family');
+    if (!b) return;
+    // 個人資料那則不換頁，開的是同一張 #profileModal（一般模式），跟設定頁的「個人資料」入口共用同一顆
+    if (b.dataset.go === 'profile') { fillPersonProfile(); $('#profileModal').classList.add('show'); return; }
+    showView(b.dataset.go === 'status' ? 'status' : 'family');
   });
   if (location.hash.slice(1) === 'pick') {
     const sheet = $('#companionSheet');
@@ -5646,10 +5663,10 @@ function init() {
   // 真的全空白才是「首登真新用戶」，這時才彈。
   function maybeShowFirstRunProfilePrompt() {
     if (!isLoggedIn()) return;
-    if (storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true') { renderProfilePromptCard(); return; }
+    if (storageGet(PERSON_PROFILE_PROMPT_KEY) === 'true') { syncProfileNudge(); return; }
     if (personProfileHasData(loadPersonProfile())) {
       storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
-      renderProfilePromptCard();
+      syncProfileNudge();
       return;
     }
     openProfileModalFirstRun();
@@ -5668,7 +5685,7 @@ function init() {
     pushPersonProfileToCloud(p);
     closeProfileFirstRunUi();
     storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
-    renderProfilePromptCard();
+    syncProfileNudge();
     $('#profileModal').classList.remove('show');
     toast(p.name ? ('存好了，' + p.name + '，資料我記著。') : '存好了，資料我記著。');
   });
@@ -5676,16 +5693,11 @@ function init() {
     closeProfileFirstRunUi();
     storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
     $('#profileModal').classList.remove('show');
-    renderProfilePromptCard();
+    syncProfileNudge();
     try { trackProductEvent('person_profile_first_prompt_skipped', {}); } catch (e) {}
   });
-  if ($('#profileNudgeCardMain')) $('#profileNudgeCardMain').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
-  if ($('#profileNudgeCardClose')) $('#profileNudgeCardClose').addEventListener('click', e => {
-    e.stopPropagation();
-    storageSet(PROFILE_NUDGE_DISMISSED_KEY, 'true');
-    renderProfilePromptCard();
-    try { trackProductEvent('person_profile_nudge_dismissed', {}); } catch (e2) {}
-  });
+  // 2026-07-28：獨立小卡的「點卡片」與「關閉 X」兩顆事件隨小卡一起退役——
+  // 提醒改由「幫你留意」輪播的 .care-btn[data-go=profile] 接手（見上方 #careBody 的處理）。
   if ($('#profileRow')) $('#profileRow').addEventListener('click', () => { fillPersonProfile(); $('#profileModal').classList.add('show'); });
   if ($('#profileClose')) $('#profileClose').addEventListener('click', () => $('#profileModal').classList.remove('show'));
   if ($('#profileModal')) $('#profileModal').addEventListener('click', e => { if (e.target === $('#profileModal')) $('#profileModal').classList.remove('show'); });
@@ -7460,7 +7472,11 @@ function init() {
   });
 
   // ===== App Store 評分彈窗：只在開心時刻、每版最多一次、負面情境絕不跳 =====
-  // 對接約定（Mac）：原生實作 window.__muneaRequestReview()（蘋果原生評分視窗、系統自控全年上限）
+  // 原生視窗＝ StorePlugin.requestReview（ios/App/App/StorePlugin.swift），下面這行把它接成 __muneaRequestReview。
+  // 網頁預覽沒有原生外掛 → 接不上，時機閘會自己跳過（見下方 native_unavailable 那道）。
+  if (window.MuneaStore && typeof window.MuneaStore.requestReview === 'function' && window.MuneaStore.available()) {
+    window.__muneaRequestReview = function () { return window.MuneaStore.requestReview(); };
+  }
   window.__muneaMaybeAskReview = function (moment) {
     try {
       const ver = (window.MuneaVersion && window.MuneaVersion.current) || '0';
@@ -7469,9 +7485,14 @@ function init() {
       const chats = +(localStorage.getItem('munea.stat.chatsCompleted') || 0);
       const okMoment = (moment === 'chat_completed' && chats >= 3) || moment === 'activity_done';
       if (!okMoment) return;
+      // 原生沒接上就直接退場、不蓋「這版問過了」的章——否則這一版的機會會被白白燒掉（2026-07-29 修）
+      if (typeof window.__muneaRequestReview !== 'function') {
+        trackProductEvent('review_prompt_skipped', { moment: moment, reason: 'native_unavailable' });
+        return;
+      }
       localStorage.setItem('munea.reviewAsked.' + ver, '1');
       trackProductEvent('review_prompt_shown', { moment: moment });
-      if (typeof window.__muneaRequestReview === 'function') window.__muneaRequestReview();
+      window.__muneaRequestReview();
     } catch (e) {}
   };
   if ($('#interestsSave')) $('#interestsSave').addEventListener('click', () => {

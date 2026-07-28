@@ -165,12 +165,26 @@ window.MuneaStore = (function () {
     }
   }
 
+  /* 蘋果原生評分視窗。時機閘在 app.js 的 __muneaMaybeAskReview（只在開心時刻問）。
+     蘋果規定：一年最多跳 3 次、跳不跳由系統決定，呼叫成功不等於畫面有出現。 */
+  async function requestReview() {
+    var p = plugin();
+    if (!p || !p.requestReview) return { ok: false, reason: 'unsupported' };
+    try {
+      var result = await p.requestReview();
+      return { ok: true, shown: !!(result && result.shown) };
+    } catch (e) {
+      return { ok: false, reason: 'error', message: String(e) };
+    }
+  }
+
   return {
     available: function () { return !!plugin(); },
     subId: function (plan, cyc) { return SUB[plan + '|' + cyc] || null; },
     ptsId: function (n) { return PTS[n] || null; },
     purchase: purchase,
     restore: restore,
-    manageSubscriptions: manageSubscriptions
+    manageSubscriptions: manageSubscriptions,
+    requestReview: requestReview
   };
 })();
