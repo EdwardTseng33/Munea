@@ -14,6 +14,9 @@ const {
 const {
   validateEvidence: validateAppStoreConnectEvidence,
 } = require('./app-store-connect-i18n-evidence.js');
+const {
+  validateRepositoryStoreAssets,
+} = require('./app-store-metadata-limits.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const I18N_DIR = path.join(ROOT, 'web', 'src', 'i18n');
@@ -599,6 +602,7 @@ function buildReadiness() {
     catalogManifest.locales.map((entry) => [entry.locale, entry]),
   );
   const requiredProductIds = iapManifest.productSet.products.map(({ productId }) => productId);
+  const storeTechnicalValidation = validateRepositoryStoreAssets();
 
   const locales = {};
   for (const locale of Object.keys(reviewManifest.locales)) {
@@ -668,6 +672,13 @@ function buildReadiness() {
       ? spanishSelectionValid
         && selectedStoreVariants.every(({ iap }) => iap.metadataReview === 'approved')
       : iapLocale.metadataReview === 'approved';
+    const storeTechnicalTargets = locale === 'es'
+      ? ['es-ES', 'es-MX']
+      : [locale];
+    const storeTechnicalValidationPassed = storeTechnicalTargets.every((target) => (
+      storeTechnicalValidation.targets[target]
+      && storeTechnicalValidation.targets[target].valid
+    ));
     const storeNativeReviewEvidence = locale === 'es'
       ? null
       : evidenceResult(
@@ -807,8 +818,14 @@ function buildReadiness() {
         'regional safety, legal review, and public legal URLs must all be verified',
         'web/legal/manifest.json + web/legal/regional-safety-policy.json',
       ),
+      appStoreTechnicalValidation: check(
+        storeTechnicalValidationPassed,
+        'App Store and all 8 IAP localized fields must satisfy Apple character, byte, URL, and plain-text rules',
+        'scripts/app-store-metadata-limits.js + app-store/localizations/ + app-store/in-app-purchases/',
+      ),
       appStoreMetadata: check(
         review.appStoreMetadata === 'approved'
+          && storeTechnicalValidationPassed
           && metadataApproved
           && storeNativeReviewPassed
           && appStoreConnectEvidencePassed,
@@ -817,6 +834,7 @@ function buildReadiness() {
       ),
       inAppPurchaseLocalization: check(
         review.inAppPurchaseLocalization === 'approved'
+          && storeTechnicalValidationPassed
           && iapMetadataApproved
           && storeNativeReviewPassed
           && appStoreConnectEvidencePassed
@@ -942,6 +960,7 @@ function buildReadiness() {
       'scripts/i18n-native-review-evidence.js',
       'scripts/app-store-native-review-worklist.js',
       'scripts/app-store-native-review-evidence.js',
+      'scripts/app-store-metadata-limits.js',
       'app-store/connect-audit-requirements.json',
       'scripts/app-store-connect-i18n-evidence.js',
       'scripts/i18n-visual-qa-worklist.js',

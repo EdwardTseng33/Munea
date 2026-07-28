@@ -49,6 +49,10 @@ try {
   if ($LASTEXITCODE -ne 0) {
     throw "App Store Connect multilingual evidence contract failed with exit code $LASTEXITCODE"
   }
+  & node scripts/app-store-metadata-limits.js --strict
+  if ($LASTEXITCODE -ne 0) {
+    throw "App Store and IAP localized metadata limits failed with exit code $LASTEXITCODE"
+  }
   Pass "App Store metadata, screenshots, territories, IAP copy, review assets, and prices normalize without writes"
 
   Step "Product alignment governance"

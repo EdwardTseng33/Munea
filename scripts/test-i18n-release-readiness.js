@@ -19,6 +19,11 @@ const {
   validateVoiceEvidence,
 } = require('./i18n-release-readiness.js');
 const { crc32 } = require('./i18n-visual-qa-evidence.js');
+const {
+  validateAppMetadata,
+  validateIapCopy,
+  validateRepositoryStoreAssets,
+} = require('./app-store-metadata-limits.js');
 
 function pngChunk(type, data) {
   const typeBytes = Buffer.from(type, 'ascii');
@@ -58,6 +63,7 @@ const requiredGates = [
   'voiceIntegration',
   'voiceE2E',
   'regionalSafetyAndLegal',
+  'appStoreTechnicalValidation',
   'appStoreMetadata',
   'inAppPurchaseLocalization',
   'appStoreScreenshots',
@@ -141,6 +147,11 @@ for (const locale of requiredLocales) {
   assert(
     entry.blockers.some(({ gate }) => gate === 'inAppPurchaseLocalization'),
     `${locale} must require current IAP localization and product evidence`,
+  );
+  assert.equal(
+    entry.gates.appStoreTechnicalValidation.passed,
+    true,
+    `${locale} prepared App Store and IAP copy must satisfy Apple's technical limits`,
   );
   assert(
     entry.blockers.some(({ gate }) => gate === 'purchaseE2E'),
@@ -232,8 +243,66 @@ assert(
   'Release readiness must include the exact-build visual evidence compiler',
 );
 assert(
+  report.generatedFrom.includes('scripts/app-store-metadata-limits.js'),
+  'Release readiness must include App Store and IAP field-limit validation',
+);
+assert(
   formatReport(report).includes('Overall: NOT READY'),
   'Human-readable report must lead with the actual release state',
+);
+
+const storeTechnicalValidation = validateRepositoryStoreAssets();
+assert.equal(
+  storeTechnicalValidation.allValid,
+  true,
+  'Every prepared App Store locale and all eight IAP products must satisfy Apple limits',
+);
+const validMetadata = {
+  name: 'Munea',
+  subtitle: 'Voice companion',
+  promotionalText: 'A familiar voice for everyday life.',
+  description: 'Talk, remember, and stay connected.',
+  keywords: 'voice,family,companion',
+  privacyPolicyUrl: 'https://app.munea.net/privacy',
+  supportUrl: 'https://app.munea.net/support',
+};
+assert.equal(validateAppMetadata(validMetadata).valid, true);
+assert.equal(
+  validateAppMetadata({ ...validMetadata, name: 'x'.repeat(31) }).valid,
+  false,
+  'An App name over 30 characters must fail closed',
+);
+assert.equal(
+  validateAppMetadata({ ...validMetadata, keywords: 'a'.repeat(101) }).valid,
+  false,
+  'Keywords over 100 UTF-8 bytes must fail closed',
+);
+assert.equal(
+  validateAppMetadata({ ...validMetadata, description: '<b>Not plain text</b>' }).valid,
+  false,
+  'HTML in the App Store description must fail closed',
+);
+const sampleProducts = {
+  'net.munea.sample': {
+    displayName: 'Munea Sample',
+    description: 'A valid sample purchase',
+  },
+};
+assert.equal(validateIapCopy(sampleProducts, ['net.munea.sample']).valid, true);
+assert.equal(
+  validateIapCopy({
+    'net.munea.sample': {
+      ...sampleProducts['net.munea.sample'],
+      description: 'x'.repeat(46),
+    },
+  }, ['net.munea.sample']).valid,
+  false,
+  'An IAP description over 45 characters must fail closed',
+);
+assert.equal(
+  validateIapCopy({}, ['net.munea.sample']).valid,
+  false,
+  'Missing IAP products must fail closed',
 );
 
 const exactCommit = 'a'.repeat(40);
