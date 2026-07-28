@@ -91,7 +91,10 @@ def judge_dimensions(scenario, persona, turns, dimensions, api_key=None, system_
     client = genai.Client(api_key=api_key)
     prompt = build_prompt(scenario, persona, turns, dimensions, system_context=system_context)
     last_err = ""
-    for model in (DIM_MODEL, "gemini-flash-latest"):
+    # 2026-07-28（S09 ERROR 修）：評審偶爾會吐出被截斷的 JSON（「Expecting ',' delimiter」），
+    # 整條劇本就變 ERROR、在成績單上跟「真的答壞」長得一樣，害人誤判品質退步。
+    # 那是傳輸/生成的偶發抖動、不是評審判斷有問題——同一個模型先重試一次再換備援。
+    for model in (DIM_MODEL, DIM_MODEL, "gemini-flash-latest"):
         try:
             r = client.models.generate_content(
                 model=model, contents=prompt,
