@@ -253,6 +253,7 @@
   "feedback.submit": "送信する",
   "medication.title": "お薬",
   "medication.namePlaceholder": "薬の袋に書かれた名前を入力",
+  "medication.genericName": "薬",
   "medication.taken": "服用済み",
   "medication.notTaken": "未服用",
   "medication.slot.afterBreakfast": "朝食後",

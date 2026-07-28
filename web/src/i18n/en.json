@@ -253,6 +253,7 @@
   "feedback.submit": "Send feedback",
   "medication.title": "Medication",
   "medication.namePlaceholder": "Copy the medicine name from the label",
+  "medication.genericName": "Medicine",
   "medication.taken": "Taken",
   "medication.notTaken": "Not taken",
   "medication.slot.afterBreakfast": "After breakfast",

@@ -82,7 +82,11 @@ function applyNonUserFacingReview(relativePath, candidates, review = loadNonUser
       || typeof entry.kind !== 'string'
       || !Number.isInteger(entry.expectedOccurrences)
       || entry.expectedOccurrences < 1
-      || !['backend-template-identity', 'legacy-brand-migration-sentinel']
+      || ![
+        'backend-template-identity',
+        'legacy-brand-migration-sentinel',
+        'legacy-storage-identity',
+      ]
         .includes(entry.reasonCode)
     ) {
       failures.push(`${relativePath}: invalid non-user-facing review entry ${entry.id || '<missing-id>'}`);

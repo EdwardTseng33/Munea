@@ -31,7 +31,7 @@ const evidence = compileNativeReviewEvidence(completedWorklist());
 assert.equal(evidence.schema, 'munea.i18n-native-review.v1');
 assert.equal(evidence.locale, 'en');
 assert.equal(evidence.result, 'pass');
-assert.equal(evidence.reviewedKeyCount, 430);
+assert.equal(evidence.reviewedKeyCount, 431);
 assert.equal(evidence.openIssues, 0);
 assert.deepEqual(
   Object.keys(evidence.checks),

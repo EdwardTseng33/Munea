@@ -253,6 +253,7 @@
   "feedback.submit": "送出回饋",
   "medication.title": "用藥",
   "medication.namePlaceholder": "藥名照藥袋抄",
+  "medication.genericName": "藥物",
   "medication.taken": "已服用",
   "medication.notTaken": "尚未服用",
   "medication.slot.afterBreakfast": "早餐後",

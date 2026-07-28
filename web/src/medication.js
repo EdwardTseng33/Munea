@@ -8,6 +8,7 @@
   const STORE_PREFIX = 'munea.medicationDoses.v1.';
   const LEGACY_PREFIX = 'munea.medDone.';
   const MIGRATION_PREFIX = 'munea.medicationDoses.migrated.v1.';
+  const LEGACY_GENERIC_MEDICATION_NAME = '藥';
   const VALID_STATUS = new Set(['scheduled', 'taken', 'snoozed', 'skipped', 'missed']);
   let scope = 'guest';
   let post = null;
@@ -26,6 +27,10 @@
       localized: t(key, fallback),
       fallback,
     });
+  }
+
+  function genericMedicationName() {
+    return t('medication.genericName', 'Medication');
   }
 
   function safeScope(value) {
@@ -108,9 +113,9 @@
         if (!slot) return;
         out.push({
           doseKey: doseKey(day, med, slot),
-          legacyKey: slot + '|' + (med.name || '藥'),
+          legacyKey: slot + '|' + (med.name || LEGACY_GENERIC_MEDICATION_NAME),
           reminderId: med.id || med.reminderId || null,
-          medicationName: med.name || '藥',
+          medicationName: med.name || genericMedicationName(),
           slot,
           scheduledDate: day,
           photo: med.photo || '',
@@ -143,7 +148,7 @@
       personId: event.personId || scope,
       reminderId: event.reminderId || null,
       doseKey: String(event.doseKey || ''),
-      medicationName: event.medicationName || '藥',
+      medicationName: event.medicationName || genericMedicationName(),
       slot: event.slot || '',
       scheduledDate: event.scheduledDate || dateKey(),
       scheduledAt: event.scheduledAt || null,

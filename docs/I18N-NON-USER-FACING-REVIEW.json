@@ -69,6 +69,15 @@
       "expectedOccurrences": 1,
       "reasonCode": "legacy-brand-migration-sentinel",
       "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "medication-legacy-generic-name",
+      "path": "web/src/medication.js",
+      "text": "藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-medication-service.js"
     }
   ]
 }

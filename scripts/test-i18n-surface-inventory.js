@@ -96,8 +96,8 @@ const appWebView = report.surfaces.find((surface) => surface.id === 'app-webview
 assert.ok(appWebView.boundHanCandidates > 0, 'Catalog-bound fallback copy must remain auditable');
 assert.equal(
   appWebView.reviewedNonUserFacingHanCandidates,
-  7,
-  'Only the exact reviewed companion backend identities may be excluded from UI debt',
+  8,
+  'Only exact reviewed backend and legacy storage identities may be excluded from UI debt',
 );
 const companionProfile = appWebView.files.find(
   (file) => file.path === 'web/src/companion-profile.js',
@@ -106,6 +106,13 @@ assert.equal(companionProfile.boundHanCandidates, 12);
 assert.equal(companionProfile.reviewedNonUserFacingHanCandidates, 7);
 assert.equal(companionProfile.unboundHanCandidates, 0);
 assert.deepEqual(companionProfile.reviewFailures, []);
+const medication = appWebView.files.find(
+  (file) => file.path === 'web/src/medication.js',
+);
+assert.equal(medication.boundHanCandidates, 4);
+assert.equal(medication.reviewedNonUserFacingHanCandidates, 1);
+assert.equal(medication.unboundHanCandidates, 0);
+assert.deepEqual(medication.reviewFailures, []);
 assert.ok(
   appWebView.unboundHanCandidates > 0,
   'The App must remain blocked while unbound localized copy exists',

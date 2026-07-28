@@ -42,6 +42,19 @@ const meds = [
     ['After breakfast', 'Before bed'],
     'Localized slot labels must preserve the canonical medication order',
   );
+  const unnamedDose = MuneaMedication.slotsFor([
+    { id: 'unnamed-med', time: 'After breakfast' },
+  ], today)[0];
+  assert.strictEqual(
+    unnamedDose.medicationName,
+    'Medicine',
+    'Missing medication names must use the current App language',
+  );
+  assert.strictEqual(
+    unnamedDose.legacyKey,
+    `After breakfast|\u85e5`,
+    'Changing App language must not rewrite the legacy adherence key',
+  );
 
   MuneaMedication.markNext(meds, 'home');
   summary = MuneaMedication.daySummary(today, meds);

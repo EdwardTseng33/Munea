@@ -253,6 +253,7 @@
   "feedback.submit": "Enviar comentarios",
   "medication.title": "Medicación",
   "medication.namePlaceholder": "Copia el nombre del medicamento de la etiqueta",
+  "medication.genericName": "Medicamento",
   "medication.taken": "Tomado",
   "medication.notTaken": "No tomado",
   "medication.slot.afterBreakfast": "Después del desayuno",
