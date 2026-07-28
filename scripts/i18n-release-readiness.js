@@ -394,6 +394,7 @@ function buildReadiness() {
       appUiIntegration: check(
         screenManifest.bindingStatus === 'integrated'
           && bindingManifest.integrationStatus === 'integrated'
+          && bindingManifest.dynamicContentObserver === 'integrated'
           && surfaceManifest.integrationStatus === 'integrated'
           && surfaceManifest.surfaces.every(({ localizationStatus }) => (
             localizationStatus === 'integrated'

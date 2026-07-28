@@ -35,6 +35,7 @@
   let currentLocale = DEFAULT_LOCALE;
   let metadataByLocale = { [DEFAULT_LOCALE]: FALLBACK_METADATA };
   let initialized = false;
+  let mutationObserver = null;
 
   function loadScript(globalName, relativePath) {
     if (window[globalName]) return Promise.resolve(window[globalName]);
@@ -130,6 +131,19 @@
     return currentLocale;
   }
 
+  function observeDynamicContent() {
+    if (!runtime || !domLocalizer || typeof domLocalizer.observe !== 'function') return null;
+    if (mutationObserver && typeof mutationObserver.disconnect === 'function') {
+      mutationObserver.disconnect();
+    }
+    mutationObserver = domLocalizer.observe(
+      document,
+      runtime,
+      () => currentLocale,
+    );
+    return mutationObserver;
+  }
+
   function supportedSnapshot() {
     return Object.freeze(Object.fromEntries(
       Object.entries(metadataByLocale).map(([locale, metadata]) => [
@@ -174,6 +188,7 @@
       currentLocale = resolveConfiguredLocale();
       initialized = true;
       apply();
+      observeDynamicContent();
       try {
         window.dispatchEvent(new CustomEvent('munea:locale-ready', {
           detail: {

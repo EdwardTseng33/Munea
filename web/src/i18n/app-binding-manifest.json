@@ -1,6 +1,7 @@
 {
   "schema": "munea.i18n-app-binding-manifest.v1",
   "integrationStatus": "pending-conflicting-main-screen-prs",
+  "dynamicContentObserver": "integrated",
   "staticBindings": [
     {"anchorId": "authStatusText", "target": "textContent", "key": "auth.guestMode"},
     {"anchorId": "authSignInBtn", "target": "textContent", "key": "auth.signIn"},

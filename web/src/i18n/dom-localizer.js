@@ -13,6 +13,10 @@
     Object.freeze({ marker: 'data-i18n-title', attribute: 'title' }),
     Object.freeze({ marker: 'data-i18n-value', attribute: 'value' }),
   ]);
+  const OBSERVED_ATTRIBUTES = Object.freeze([
+    'data-i18n',
+    ...ATTRIBUTE_BINDINGS.map(({ marker }) => marker),
+  ]);
 
   function matchingNodes(root, selector) {
     if (!root) return [];
@@ -82,9 +86,50 @@
     });
   }
 
+  function observe(
+    root,
+    runtime,
+    localeFor,
+    valuesFor,
+    ObserverConstructor,
+  ) {
+    const target = root && root.documentElement ? root.documentElement : root;
+    if (!target) throw new TypeError('i18n observation root is required');
+    const Observer = ObserverConstructor || (
+      typeof MutationObserver === 'function' ? MutationObserver : null
+    );
+    if (!Observer) return null;
+    const resolvedLocale = () => (
+      typeof localeFor === 'function' ? localeFor() : localeFor
+    );
+    const observer = new Observer((records) => {
+      const pending = new Set();
+      for (const record of records || []) {
+        if (record.type === 'attributes' && record.target) {
+          pending.add(record.target);
+        }
+        for (const node of record.addedNodes || []) {
+          pending.add(node);
+        }
+      }
+      for (const node of pending) {
+        apply(node, runtime, resolvedLocale(), valuesFor);
+      }
+    });
+    observer.observe(target, {
+      attributeFilter: [...OBSERVED_ATTRIBUTES],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    return observer;
+  }
+
   return Object.freeze({
     ATTRIBUTE_BINDINGS,
+    OBSERVED_ATTRIBUTES,
     apply,
     applyDocumentLocale,
+    observe,
   });
 }));

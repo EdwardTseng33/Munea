@@ -186,6 +186,13 @@ Phase 1j（2026-07-28）：38 個 shipping states 的完整四語文案契約
 - `catalogCoverage` 發布 Gate 現在同時要求母語審稿核准與完整畫面文案 mapping，避免只審核心畫面就誤開語系。
 - 這一批是 catalog + contract + automated tests，尚未修改被 #247／#270／#273 佔用的主 App 檔案；全畫面接線、456 張截圖與 exact-build iPhone 驗收前仍為 `App E2E pending`。
 
+Phase 1k（2026-07-28）：動態畫面的自動本地化接線
+
+- `web/src/i18n/dom-localizer.js` 以 `MutationObserver` 監看新增節點與經審核的 `data-i18n*` 屬性，通知設定、收件匣、錯誤狀態及執行期 modal 在插入 DOM 後能自動套用目前 App Language。
+- Observer 只寫入 `textContent` 與 aria-label／placeholder／title／value 白名單，不接受 HTML；非瀏覽器或不支援 Observer 的環境則安全略過，不阻斷 App 啟動。
+- `web/src/i18n.js` 在 catalog 初始化與初次套用後才啟動 observer，語系來源仍只跟隨 iOS App Language 或明確開發預覽，沒有新增使用者語言切換器。
+- `appUiIntegration` Gate 現在也要求動態 observer 已整合；這只完成動態接線底盤，#270 內的通知 renderer 仍須在合併後補上實際 key，故整體狀態仍為 `App E2E pending`。
+
 Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 
 - 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。

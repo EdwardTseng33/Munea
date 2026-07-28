@@ -7,6 +7,11 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(ROOT, 'web', 'index.html'), 'utf8');
 const app = fs.readFileSync(path.join(ROOT, 'web', 'src', 'app.js'), 'utf8');
+const bootstrap = fs.readFileSync(path.join(ROOT, 'web', 'src', 'i18n.js'), 'utf8');
+const domLocalizer = fs.readFileSync(
+  path.join(ROOT, 'web', 'src', 'i18n', 'dom-localizer.js'),
+  'utf8',
+);
 const manifest = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'web', 'src', 'i18n', 'app-binding-manifest.json'), 'utf8'),
 );
@@ -21,6 +26,13 @@ const catalogs = Object.fromEntries(
 
 assert.equal(manifest.schema, 'munea.i18n-app-binding-manifest.v1');
 assert.equal(manifest.integrationStatus, 'pending-conflicting-main-screen-prs');
+assert.equal(manifest.dynamicContentObserver, 'integrated');
+assert.match(domLocalizer, /function observe\(/, 'Dynamic DOM localizer observer is missing');
+assert.match(
+  bootstrap,
+  /domLocalizer\.observe\(\s*document,/,
+  'App locale bootstrap must observe dynamically inserted shipping UI',
+);
 assert.ok(manifest.staticBindings.length >= 25);
 assert.ok(manifest.dynamicBindings.length >= 7);
 assert.ok(manifest.markupRefactors.length >= 5);

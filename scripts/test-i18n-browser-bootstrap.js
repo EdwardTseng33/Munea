@@ -43,6 +43,28 @@ function createBrowser(options = {}) {
   const tab = new FakeElement({ 'data-i18n': 'tab.home' });
   const html = new FakeElement();
   const events = [];
+  const observations = [];
+  class FakeMutationObserver {
+    constructor(callback) {
+      this.callback = callback;
+    }
+
+    observe(target, observerOptions) {
+      observations.push({ observer: this, observerOptions, target });
+    }
+
+    disconnect() {}
+  }
+  const browserDomLocalizer = {
+    ...domLocalizer,
+    observe: (root, runtime, localeFor, valuesFor) => domLocalizer.observe(
+      root,
+      runtime,
+      localeFor,
+      valuesFor,
+      FakeMutationObserver,
+    ),
+  };
   const document = {
     baseURI: 'https://app.munea.test/',
     currentScript: { src: 'https://app.munea.test/src/i18n.js' },
@@ -55,7 +77,7 @@ function createBrowser(options = {}) {
   const window = {
     MUNEA_DEV_CONFIG: options.devConfig || { enabled: false },
     MuneaCatalogRuntime: catalogRuntime,
-    MuneaDomLocalizer: domLocalizer,
+    MuneaDomLocalizer: browserDomLocalizer,
     dispatchEvent: (event) => events.push(event),
   };
   const fetch = async (url) => {
@@ -78,13 +100,14 @@ function createBrowser(options = {}) {
     document,
     fetch,
     navigator: { languages: options.languages || ['ja-JP', 'en-US'], language: 'ja-JP' },
+    MutationObserver: FakeMutationObserver,
     URL,
     window,
   };
   context.globalThis = context;
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'i18n.js' });
-  return { document, events, html, tab, window };
+  return { document, events, html, observations, tab, window };
 }
 
 (async () => {
@@ -98,6 +121,12 @@ function createBrowser(options = {}) {
   );
   assert.equal(production.tab.textContent, '首頁');
   assert.equal(production.html.getAttribute('lang'), 'zh-Hant-TW');
+  assert.equal(production.observations.length, 1, 'Dynamic App content must be observed');
+  const dynamic = new FakeElement({ 'data-i18n': 'notification.centerTitle' });
+  production.observations[0].observer.callback([
+    { type: 'childList', addedNodes: [dynamic] },
+  ]);
+  assert.equal(dynamic.textContent, '通知中心');
   assert.equal(production.window.MuneaI18n.setLocale('es'), 'zh-TW');
 
   const preview = createBrowser({

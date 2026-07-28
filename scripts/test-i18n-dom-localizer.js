@@ -5,8 +5,10 @@ const fs = require('fs');
 const { createCatalogRuntime } = require('../web/src/i18n/catalog-runtime.js');
 const {
   ATTRIBUTE_BINDINGS,
+  OBSERVED_ATTRIBUTES,
   apply,
   applyDocumentLocale,
+  observe,
 } = require('../web/src/i18n/dom-localizer.js');
 
 function readJson(path) {
@@ -102,6 +104,47 @@ assert.throws(
   () => apply(text, runtime, 'en', () => 'unsafe'),
   /must be an object/,
   'Interpolation data must be supplied as structured values',
+);
+
+let observedTarget = null;
+let observedOptions = null;
+let observerCallback = null;
+class FakeMutationObserver {
+  constructor(callback) {
+    observerCallback = callback;
+  }
+
+  observe(target, options) {
+    observedTarget = target;
+    observedOptions = options;
+  }
+}
+const dynamicRoot = new FakeElement();
+const mutationObserver = observe(
+  dynamicRoot,
+  runtime,
+  () => 'es',
+  null,
+  FakeMutationObserver,
+);
+assert(mutationObserver instanceof FakeMutationObserver);
+assert.equal(observedTarget, dynamicRoot);
+assert.deepEqual(observedOptions, {
+  attributeFilter: [...OBSERVED_ATTRIBUTES],
+  attributes: true,
+  childList: true,
+  subtree: true,
+});
+const dynamicText = new FakeElement({ 'data-i18n': 'notification.centerTitle' });
+observerCallback([{ type: 'childList', addedNodes: [dynamicText] }]);
+assert.equal(dynamicText.textContent, catalogs.es['notification.centerTitle']);
+dynamicText.setAttribute('data-i18n', 'notification.noItems');
+observerCallback([{ type: 'attributes', target: dynamicText, addedNodes: [] }]);
+assert.equal(dynamicText.textContent, catalogs.es['notification.noItems']);
+assert.equal(
+  observe(dynamicRoot, runtime, 'en', null, null),
+  null,
+  'Non-browser runtimes may omit MutationObserver without breaking localization',
 );
 
 console.log('PASS: safe DOM localization contract');
