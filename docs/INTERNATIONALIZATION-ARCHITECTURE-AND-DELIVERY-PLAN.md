@@ -274,6 +274,14 @@ Phase 3c（2026-07-28）建立 Live Voice 共用語系設定包：
 - 緊急號碼只由後端核定的 `safetyRegion` 選擇，絕不由 UI／對話語言推測。`TW` 才能帶 119／1925；其他或未知區域使用該回覆語言的「聯絡所在地緊急服務」通用文字。
 - 四語 profile 與跨語回合測試已建立；目前尚未改 #270 佔用中的 `live_voice_server.py`，所以只是 coded + tested 的接線前置，仍為 `App E2E pending`。
 
+Phase 3d（2026-07-28）：可信 Live Voice locale session bridge
+
+- `engine/voice_locale_session.py` 只能從已驗證 call-token 的巢狀 `locale_context` 建立語音 session；頂層 locale／country／safety aliases 永遠不信任，rollout 後可用 `allow_legacy=false` 對缺 claim token fail closed。
+- Bridge 分開保存帳號偏好、這通 session 語言與單輪 response 語言。中英日西混講只切當輪回覆；「這通改語言」只改 session；「以後都用」必須確認後才產生明確 persistence request。
+- 永久切換只更新 `conversationLocale`／preferred languages，不會改 `uiLocale`、country、timezone、safety、legal 或 data region；儲存 patch 沿用既有 account／person 欄位映射。
+- `engine/voice-locale-integration-manifest.json` 明確保持 Live Voice #270、Gateway #258 與 legacy token mode 未完成；新增 `voiceIntegration` 發布 Gate，三項未接完前即使有人放入 E2E JSON 也不能開語系。
+- 本批只新增獨立 bridge、測試與 Gate，不修改被佔用的正式 Voice／Gateway handler、不部署；屬 call-path risk，仍為 `App E2E pending`。
+
 此階段屬 chat-call path risk。完成程式與自動測試後仍標記 `App E2E pending`，直到使用受影響 profile 的實體 iPhone 完成完整通話驗收。
 
 ### Phase 4 — 後台與營運

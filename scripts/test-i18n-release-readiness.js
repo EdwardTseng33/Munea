@@ -26,6 +26,7 @@ const requiredGates = [
   'binaryLocalization',
   'nativeLanguageReview',
   'visualQA',
+  'voiceIntegration',
   'voiceE2E',
   'regionalSafetyAndLegal',
   'appStoreMetadata',
@@ -82,6 +83,15 @@ for (const locale of requiredLocales) {
     `${locale} must require current visual evidence`,
   );
   assert(
+    entry.blockers.some(({ gate }) => gate === 'voiceIntegration'),
+    `${locale} must require trusted Gateway and Live Voice locale integration`,
+  );
+  assert.equal(
+    entry.gates.voiceIntegration.evidence,
+    'engine/voice-locale-integration-manifest.json',
+    `${locale} voice integration gate must use the canonical manifest`,
+  );
+  assert(
     entry.blockers.some(({ gate }) => gate === 'inAppPurchaseLocalization'),
     `${locale} must require current IAP localization and product evidence`,
   );
@@ -115,6 +125,7 @@ for (const locale of ['en', 'ja', 'es']) {
   assert.equal(entry.gates.runtimeLocalization.passed, false);
   assert.equal(entry.gates.appUiIntegration.passed, false);
   assert.equal(entry.gates.sourceCopyMigration.passed, false);
+  assert.equal(entry.gates.voiceIntegration.passed, false);
   assert.equal(entry.gates.binaryLocalization.passed, false);
   assert.equal(entry.gates.appStoreScreenshots.passed, false);
   assert.equal(entry.gates.inAppPurchaseLocalization.passed, false);

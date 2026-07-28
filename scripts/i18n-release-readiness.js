@@ -339,6 +339,9 @@ function buildReadiness() {
   const bindingManifest = readJson(path.join(I18N_DIR, 'app-binding-manifest.json'));
   const surfaceManifest = readJson(path.join(I18N_DIR, 'app-surface-manifest.json'));
   const copyManifest = readJson(path.join(I18N_DIR, 'app-surface-copy-manifest.json'));
+  const voiceIntegrationManifest = readJson(
+    path.join(ROOT, 'engine', 'voice-locale-integration-manifest.json'),
+  );
   const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
@@ -434,6 +437,14 @@ function buildReadiness() {
         'visual QA needs approval plus current screenshot evidence',
         visualEvidence.path,
       ),
+      voiceIntegration: check(
+        voiceIntegrationManifest.bridgeStatus === 'integrated'
+          && voiceIntegrationManifest.liveVoiceServerStatus === 'integrated'
+          && voiceIntegrationManifest.gatewayClaimsStatus === 'integrated'
+          && voiceIntegrationManifest.legacyTokenMode === 'disabled',
+        'Gateway claims and Live Voice must consume the trusted locale session bridge with legacy mode disabled',
+        'engine/voice-locale-integration-manifest.json',
+      ),
       voiceE2E: check(
         review.voiceE2E === 'approved' && voiceEvidence.passed,
         'voice E2E needs approval plus current real-call evidence',
@@ -525,6 +536,7 @@ function buildReadiness() {
       'web/src/i18n/app-surface-copy-manifest.json',
       'docs/I18N-SURFACE-INVENTORY.json',
       'scripts/i18n-visual-qa-worklist.js',
+      'engine/voice-locale-integration-manifest.json',
       'web/legal/manifest.json',
       'app-store/localizations/manifest.json',
       'app-store/in-app-purchases/manifest.json',

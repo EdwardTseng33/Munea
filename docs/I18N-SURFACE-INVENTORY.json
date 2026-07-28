@@ -151,6 +151,9 @@
         "app-site/legal/es/terms.html",
         "app-site/legal/es/support.html",
         "engine/localization.py",
+        "engine/voice_locale_session.py",
+        "engine/voice-locale-integration-manifest.json",
+        "engine/test_voice_locale_session.py",
         "engine/test_localization.py"
       ],
       "requiredStates": [
