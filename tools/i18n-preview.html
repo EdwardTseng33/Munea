@@ -26,6 +26,13 @@
     .row span:last-child { max-width: 62%; text-align: right; color: #42645a; }
     .long-copy { padding: 12px; border-radius: 12px; background: #f5f8f7; }
     .error { background: #ffe5e5; color: #852525; }
+    .purchase-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .purchase-tabs span { padding: 9px; border-radius: 10px; background: #edf7f3; text-align: center; }
+    .plan-card { margin-top: 12px; padding: 14px; border: 2px solid #79b8aa; border-radius: 14px; }
+    .plan-card h3 { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: 16px; }
+    .plan-card button { width: 100%; margin-top: 10px; border: 0; border-radius: 12px; background: #237e70; color: white; font-weight: 700; }
+    .purchase-rule { margin: 8px 0; padding-left: 12px; border-left: 3px solid #79b8aa; }
+    .purchase-state { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #f5f8f7; font-size: 13px; }
   </style>
   <script>
     (function () {
@@ -95,8 +102,49 @@
       <p id="queuePosition">Queue position</p>
       <p class="long-copy" data-i18n="voice.queue.wait">等待通話</p>
     </section>
+
+    <section id="purchasePreview">
+      <h2 data-i18n="subscription.title">方案與點數</h2>
+      <p data-i18n="subscription.tagline">選擇適合家人的陪伴方案</p>
+      <div class="purchase-tabs">
+        <span data-i18n="subscription.plansTab">訂閱方案</span>
+        <span data-i18n="subscription.creditsTab">加購點數</span>
+      </div>
+      <div class="plan-card">
+        <h3>
+          <span data-i18n="subscription.planPlus">Plus</span>
+          <span id="planStorePrice">StoreKit price</span>
+        </h3>
+        <p data-i18n="subscription.plusAudience">日常語音陪伴與基本家庭關懷</p>
+        <p data-i18n="subscription.plusFeature1">日常語音陪伴</p>
+        <p data-i18n="subscription.plusFeature2">持續陪伴記憶</p>
+        <button type="button" id="planBuyLabel">Confirm plan</button>
+      </div>
+      <div class="plan-card">
+        <h3>
+          <span data-i18n="purchase.topUpTitle">加購通話點數</span>
+          <span id="creditStorePrice">StoreKit price</span>
+        </h3>
+        <p data-i18n="purchase.topUpDescription">點數用途說明</p>
+        <p id="creditMinutes">Estimated minutes</p>
+        <button type="button" id="creditBuyLabel">Buy credits</button>
+      </div>
+      <h2 data-i18n="subscription.creditRulesTitle">點數使用規則</h2>
+      <div class="purchase-rule">
+        <strong data-i18n="subscription.monthlyCreditsTitle">每月方案點數</strong>
+        <p data-i18n="subscription.monthlyCreditsBody">未使用點數不累積</p>
+      </div>
+      <div class="purchase-rule">
+        <strong data-i18n="subscription.purchasedCreditsTitle">加購點數</strong>
+        <p data-i18n="subscription.purchasedCreditsBody">加購點數不會到期</p>
+      </div>
+      <div class="purchase-state" id="purchasePending">Purchase pending</div>
+      <div class="purchase-state error" id="purchaseMismatch">Account mismatch</div>
+      <div class="purchase-state" id="purchaseRestoreNone">Nothing to restore</div>
+    </section>
   </main>
 
+  <script src="../web/src/i18n/purchase-flow.js"></script>
   <script src="../web/src/i18n.js"></script>
   <script>
     (async function () {
@@ -113,6 +161,34 @@
         { count: 3 },
         'Queue position 3',
       );
+      const mockPrices = {
+        'zh-TW': { plan: 'NT$300', credits: 'NT$180' },
+        en: { plan: '$9.99', credits: '$5.99' },
+        ja: { plan: '¥1,500', credits: '¥900' },
+        es: { plan: '9,99 €', credits: '5,99 €' },
+      };
+      const prices = mockPrices[api.current()] || mockPrices['zh-TW'];
+      const flow = window.MuneaPurchaseFlow.createPurchaseFlow({ t: api.t });
+      const plan = flow.subscription({
+        productId: 'net.munea.app.plus.monthly',
+        displayName: 'Munea Plus',
+        description: '',
+        displayPrice: prices.plan,
+      }, { plan: 'plus', billingPeriod: 'month' });
+      const credits = flow.creditPack({
+        productId: 'net.munea.app.points.200',
+        displayName: 'Munea Credits',
+        description: '',
+        displayPrice: prices.credits,
+      }, { credits: 100, minutes: 20 });
+      document.getElementById('planStorePrice').textContent = plan.displayPrice;
+      document.getElementById('planBuyLabel').textContent = plan.upgradeLabel;
+      document.getElementById('creditStorePrice').textContent = credits.displayPrice;
+      document.getElementById('creditMinutes').textContent = credits.minutesLabel;
+      document.getElementById('creditBuyLabel').textContent = credits.buyLabel;
+      document.getElementById('purchasePending').textContent = flow.failureMessage('pending');
+      document.getElementById('purchaseMismatch').textContent = flow.failureMessage('apple_account_token_mismatch');
+      document.getElementById('purchaseRestoreNone').textContent = flow.restoreMessage({ ok: false, reason: 'none' });
       document.getElementById('largeText').addEventListener('click', function () {
         document.getElementById('preview').classList.toggle('large-text');
       });

@@ -80,10 +80,11 @@ docs/qa/i18n/
 
 ## 本機 catalog 預覽
 
-`tools/i18n-preview.html?locale=ja` 可在本機 HTTP server 中查看繁中、英文、日文、西班牙文的代表性 catalog 元件，並用 `125% text` 按鈕先檢查長字串換行。
+`tools/i18n-preview.html?locale=ja` 可在本機 HTTP server 中查看繁中、英文、日文、西班牙文的代表性 catalog 元件、訂閱方案、點數包、StoreKit 價格格式與購買錯誤狀態，並用 `125% text` 按鈕先檢查長字串換行。
 
 這個頁面：
 
 - 不連正式 API、不讀會員資料、不保存語言。
+- 價格是 QA 用的各地格式範例，不是正式售價，也不會開啟 Apple 付款。
 - 只證明 catalog bootstrap 與代表性元件能渲染。
 - 不代表完整 App 畫面、App Store 截圖、實機 Dynamic Type 或 installed App E2E 通過。
