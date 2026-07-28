@@ -45,6 +45,7 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
     const absolutePath = path.join(ROOT, file.path);
     sourceFiles[file.path] = sha256(fs.readFileSync(absolutePath));
     for (const candidate of file.candidates) {
+      if (candidate.bindingStatus === 'bound') continue;
       const key = stableKey(candidate.text);
       if (!entries.has(key)) {
         entries.set(key, {
@@ -73,12 +74,15 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
     bindingKinds[entry.bindingKind] = (bindingKinds[entry.bindingKind] || 0) + 1;
   }
   return {
-    schema: 'munea.i18n-migration-worklist.v1',
+    schema: 'munea.i18n-migration-worklist.v2',
     surface: surfaceId,
     requiredLocales: inventory.requiredLocales,
     sourceFiles,
     summary: {
-      occurrences: surface.hanCandidates,
+      totalOccurrences: surface.hanCandidates,
+      boundOccurrences: surface.boundHanCandidates,
+      unboundOccurrences: surface.unboundHanCandidates,
+      occurrences: surface.unboundHanCandidates,
       uniqueSourceStrings: worklist.length,
       bindingKinds,
     },
@@ -89,7 +93,8 @@ function buildMigrationWorklist(surfaceId = 'app-webview', inventory = loadInven
 function formatSummary(worklist) {
   const lines = [
     `I18N migration worklist: ${worklist.surface}`,
-    `Occurrences: ${worklist.summary.occurrences}`,
+    `Unbound occurrences: ${worklist.summary.unboundOccurrences}`,
+    `Already bound fallbacks: ${worklist.summary.boundOccurrences}`,
     `Unique source strings: ${worklist.summary.uniqueSourceStrings}`,
   ];
   for (const [kind, count] of Object.entries(worklist.summary.bindingKinds).sort()) {

@@ -7,9 +7,9 @@
     "es"
   ],
   "candidatePolicy": {
-    "description": "Han text in a shipping surface is a localization candidate until it is moved into a catalog or explicitly reviewed as non-user-facing.",
+    "description": "Han text remains visible in the audit, but only text connected to a valid key present in every required locale catalog is classified as bound. All other user-facing Han text is unbound localization debt.",
     "completionTarget": 0,
-    "regressionPolicy": "A surface may not exceed its checked-in baseline while migration is in progress. Release requires the target to reach zero."
+    "regressionPolicy": "A surface may not exceed its checked-in total-Han baseline while migration is in progress. Release requires unbound Han candidates to reach zero; catalog-bound fallback text remains auditable but does not block release."
   },
   "surfaces": [
     {

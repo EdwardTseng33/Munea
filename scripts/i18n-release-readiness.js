@@ -413,8 +413,8 @@ function buildReadiness() {
         'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
       ),
       sourceCopyMigration: check(
-        appWebViewSurface.hanCandidates === 0,
-        'all hard-coded App WebView copy must be moved into catalogs before release',
+        appWebViewSurface.unboundHanCandidates === 0,
+        'all unbound App WebView copy must be moved into catalogs before release',
         'docs/I18N-SURFACE-INVENTORY.json + scripts/i18n-surface-inventory.js',
       ),
       runtimeLocalization: check(
