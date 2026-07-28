@@ -1,0 +1,124 @@
+{
+  "schema": "munea.i18n-app-binding-manifest.v1",
+  "integrationStatus": "pending-conflicting-main-screen-prs",
+  "staticBindings": [
+    {"anchorId": "authStatusText", "target": "textContent", "key": "auth.guestMode"},
+    {"anchorId": "authSignInBtn", "target": "textContent", "key": "auth.signIn"},
+    {"anchorId": "authSignOutBtn", "target": "textContent", "key": "auth.signOut"},
+    {"anchorId": "managePlanBtn", "target": "textContent", "key": "settings.managePlan"},
+    {"anchorId": "topUpBtn", "target": "textContent", "key": "settings.topUpCredits"},
+    {"anchorId": "healthSettingsStateLabel", "target": "textContent", "key": "health.notConnected"},
+    {"anchorId": "callToggleLabel", "target": "textContent", "key": "voice.call.start"},
+    {"anchorId": "callToggle", "target": "aria-label", "key": "accessibility.toggleCall"},
+    {"anchorId": "busyCardBtn", "target": "textContent", "key": "voice.queue.cancel"},
+    {"anchorId": "dataExportBtn", "target": "textContent", "key": "data.export"},
+    {"anchorId": "dataDeleteBtn", "target": "textContent", "key": "data.delete"},
+    {"anchorId": "pfFirstRunBanner", "target": "textContent", "key": "profile.firstRunIntro"},
+    {"anchorId": "pfAvatarBtn", "target": "textContent", "key": "profile.changePhoto"},
+    {"anchorId": "pfAvatarClear", "target": "aria-label", "key": "accessibility.removePhoto"},
+    {"anchorId": "pfAvatarClear", "target": "title", "key": "accessibility.removePhoto"},
+    {"anchorId": "pfNick", "target": "placeholder", "key": "profile.familyNicknamePlaceholder"},
+    {"anchorId": "pfFirstRunDisclosure", "target": "textContent", "key": "profile.cloudDisclosure"},
+    {"anchorId": "pfSaveBtn", "target": "textContent", "key": "profile.save"},
+    {"anchorId": "pfSkipBtn", "target": "textContent", "key": "profile.skip"},
+    {"anchorId": "planCancelBtn", "target": "textContent", "key": "purchase.manageSubscription"},
+    {"anchorId": "restoreBtn", "target": "textContent", "key": "purchase.restore"},
+    {"anchorId": "planYes", "target": "textContent", "key": "subscription.confirmAction"},
+    {"anchorId": "planNo", "target": "textContent", "key": "subscription.cancel"},
+    {"anchorId": "authSheetTitle", "target": "textContent", "key": "auth.sheetTitle"},
+    {"anchorId": "authAppleBtn", "target": "descendantText", "key": "auth.apple"},
+    {"anchorId": "authGoogleBtn", "target": "descendantText", "key": "auth.google"},
+    {"anchorId": "authDeveloperBtn", "target": "textContent", "key": "auth.developerMode"}
+  ],
+  "dynamicBindings": [
+    {
+      "anchorId": "setPlanName",
+      "renderer": "renderPlanState",
+      "keys": ["settings.planName", "subscription.planFree", "subscription.planPlus", "subscription.planPro"]
+    },
+    {
+      "anchorId": "chatCaption",
+      "renderer": "setCallHint",
+      "keys": ["voice.ready", "voice.connecting", "voice.fallback", "voice.call.unavailable"]
+    },
+    {
+      "anchorId": "busyCardTitle",
+      "renderer": "showBusyCard",
+      "keys": ["voice.queue.preparing", "voice.queue.wait", "voice.call.unavailable"]
+    },
+    {
+      "anchorId": "subCta",
+      "renderer": "renderSubUI",
+      "keys": ["subscription.currentPlan", "subscription.upgradeTo", "subscription.changeTo"]
+    },
+    {
+      "anchorId": "tuBuyBtn2",
+      "renderer": "renderSubUI",
+      "keys": ["purchase.buyCredits", "purchase.storeUnavailable", "purchase.loadingProducts"]
+    },
+    {
+      "anchorId": "planConfirmText",
+      "renderer": "planConfirmHtml",
+      "keys": ["subscription.confirmTitle", "subscription.confirmBody"]
+    },
+    {
+      "anchorId": "authMessage",
+      "renderer": "openAuthSheet",
+      "keys": ["auth.inProgress", "auth.cancelled", "auth.unavailable"]
+    }
+  ],
+  "markupRefactors": [
+    {
+      "containerId": "settings",
+      "keys": [
+        "settings.section.account",
+        "settings.section.billing",
+        "settings.section.accountFamily",
+        "settings.section.companion",
+        "settings.section.healthSafety",
+        "settings.section.experience",
+        "settings.section.about"
+      ]
+    },
+    {
+      "containerId": "profileModal",
+      "keys": [
+        "profile.title",
+        "profile.name",
+        "profile.familyNickname",
+        "profile.birthdate",
+        "profile.location",
+        "profile.locationHint"
+      ]
+    },
+    {
+      "containerId": "dataModal",
+      "keys": ["data.title", "data.description", "data.policyHint"]
+    },
+    {
+      "containerId": "fontModal",
+      "keys": [
+        "font.title",
+        "font.subtitle",
+        "font.standard",
+        "font.standardBody",
+        "font.large",
+        "font.largeBody",
+        "font.extraLarge",
+        "font.extraLargeBody"
+      ]
+    },
+    {
+      "containerId": "planModal",
+      "keys": [
+        "subscription.title",
+        "subscription.tagline",
+        "subscription.plansTab",
+        "subscription.creditsTab",
+        "subscription.creditRulesTitle",
+        "subscription.monthlyCreditsBody",
+        "subscription.purchasedCreditsBody"
+      ]
+    }
+  ]
+}

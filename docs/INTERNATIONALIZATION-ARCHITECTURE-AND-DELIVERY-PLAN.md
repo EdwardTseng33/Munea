@@ -144,8 +144,9 @@ Phase 1e（2026-07-28）：App 全畫面狀態契約
 
 - `web/src/i18n/app-screen-manifest.json` 將 App WebView 的 10 個必要畫面狀態與 profile／data／font 三個必要 modal，映射到 112 個具語意的 catalog key，讓「全畫面」有可追蹤的完成定義。
 - 設定、登入、帳號、家庭、健康安全、個人資料、資料匯出／刪除與字體顯示的四語文案已備妥；英文與西班牙文會被測試阻擋中文字殘留。
+- `app-binding-manifest.json` 再把現有 DOM anchor、動態 renderer 與需要 markup refactor 的容器對到 27 個靜態接線、7 個動態狀態及 5 個結構改造，讓 #247／#270／#273 合併後可依清單接線，不靠人工搜尋中文字。
 - manifest 明確保持 `pending-main-screen-integration` 與 `visualQaPending=true`；catalog 備妥不等於畫面已接線，也不能解除 exact-build 截圖與實機 Gate。
-- `scripts/test-app-screen-localizations.js` 驗證畫面狀態與 inventory 完全一致、四語 key 齊全且每個狀態至少有五個驗收項目，並納入 UI contract suite。
+- `scripts/test-app-screen-localizations.js` 與 `scripts/test-app-i18n-binding-manifest.js` 驗證畫面狀態與 inventory 完全一致、四語 key 齊全、DOM anchor／renderer 存在且每個狀態至少有五個驗收項目，並納入 UI contract suite。
 
 Phase 1f（2026-07-28）：全畫面遷移工作表與排版壓力測試
 
