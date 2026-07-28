@@ -35,6 +35,40 @@ if hasattr(sys.stdout, "reconfigure"):
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+def _injected_system_facts(context):
+    """把正式線 build_reply_context() 真的注入給模型的『系統事實』攤平回傳，
+    讓評審端（judge.py 鐵律6／dimension_judge.py 誠實度）拿到跟模型一模一樣的
+    背景，才不會把『模型照系統給的真時間講出今天日期』誤判成編造。
+
+    2026-07-25（評測骨架修繕，蘇菲）：對應第一輪基準第八節缺口——鐵律評審
+    只餵 persona 記憶側寫、沒餵系統即時 context（時間/地點/今日簡報），S03/S06/
+    S13 講出系統給的時間被誤殺。這裡回傳的三塊剛好對上正式線 reply_context_
+    instruction() 注入的 time_line／location_line／brief_line。"""
+    context = context or {}
+    now = context.get("now") or {}
+    location = str(context.get("location") or "").strip()
+    briefing_facts = []
+    brief = context.get("dailyBriefing") or {}
+    if brief.get("briefingLine"):
+        briefing_facts.append(str(brief["briefingLine"]))
+    if brief.get("tomorrowLine"):
+        briefing_facts.append("明天預告：" + str(brief["tomorrowLine"]))
+    for hint in brief.get("careHints") or []:
+        briefing_facts.append(str(hint))
+    for sched in brief.get("scheduleToday") or []:
+        briefing_facts.append("今天的重要日子：" + str(sched))
+    for t in brief.get("topics") or []:
+        if isinstance(t, dict) and t.get("line"):
+            briefing_facts.append(str(t["line"]))
+    if not briefing_facts and brief.get("newsLine"):  # 相容舊 snapshot
+        briefing_facts.append(str(brief["newsLine"]))
+    return {
+        "now": {k: now.get(k) for k in ("date", "weekday", "time", "period") if now.get(k)},
+        "location": location,
+        "dailyBriefing": briefing_facts,
+    }
+
+
 def _set_isolated_paths(tmpdir, person_id):
     # 一律指到這題專屬的暫存資料夾，絕不動到 engine/ 底下真正的資料檔。
     os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
@@ -94,6 +128,7 @@ def main():
         print(json.dumps({
             "ok": True, "reply": (reply or "").strip(),
             "modelUsed": "server.reply_conv (production text-line, gemini-2.5-flash 主/自動降級)",
+            "systemContext": _injected_system_facts(context),
         }, ensure_ascii=False))
         return
 
