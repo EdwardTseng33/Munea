@@ -3154,8 +3154,11 @@ const FaceIdle = {
 
 async function enterChat() {
   setCallToggle(false);
+  // 2026-07-28（Edward 回報「二度撥通會看到上一段對話」）：這裡原本只把字幕框藏起來、
+  // 沒有清掉裡面的字——上一通最後一句就一直留在框裡，下次撥通又把框顯示出來，
+  // 一接通就看到上一通的對話。直接整個拿掉，要用時 setCaption 會重建一個乾淨的。
   const box = document.querySelector('.face-caption-box');
-  if (box) box.style.display = 'none';
+  if (box) box.remove();
   setFaceState('idle');
   _fhWarmArt();   // 全身立繪先換對角色並解碼（第一通接通時不再有解碼空窗＝不黑閃）
   if (typeof callConnected === 'undefined' || !callConnected) FaceIdle.start();   // 待機動態輪播（通話中不搶）
@@ -5079,9 +5082,11 @@ async function connectCall() {
   }
   let _connectedOnce = false;
   const markConnected = () => { if (_connectedOnce) return; _connectedOnce = true; setCallToggle(true); startCallTimer(); };
-  const capOff = $('#captionToggle') && $('#captionToggle').classList.contains('off');
+  // 每通電話都從一張乾淨的字幕開始（同 enterChat：只切顯示／隱藏會把上一通的字帶進來）。
+  // 拿掉之後由 setCaption 重建；字幕開關關著時 setCaption 本來就不會建，所以原本
+  // 「關字幕就隱藏」的行為不變。
   const box = document.querySelector('.face-caption-box');
-  if (box) box.style.display = capOff ? 'none' : '';
+  if (box) box.remove();
   // 真即時語音（Gemini 3.1 Live）：麥克風即時串流、寧寧真聲音即時回、可打斷
   if (getLiveVoiceUrl()) {
     chatOpened = true;

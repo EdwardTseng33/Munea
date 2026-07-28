@@ -59,7 +59,10 @@ def main():
     root = os.path.dirname(os.path.abspath(__file__))
     srv = open(os.path.join(root, "live_voice_server.py"), encoding="utf-8").read()
     check("伺服器有掛回音濾網", "should_drop_uplink_frame" in srv and "node.echo_guard_dropped" in srv)
-    check("模型主聲道記出聲時間", srv.count('st["last_out"] = time.monotonic()') >= 2)
+    # 2026-07-29：原本寫死比對 `st["last_out"] = time.monotonic()` 出現幾次，但主聲道那處
+    # 為了順便量抖動改成先取一次 now 再指派（功能完全一樣）。改成檢查「有幾個地方在更新
+    # 出聲時間」這個行為本身，不綁特定寫法——回音濾網要靠它判斷她此刻在不在講話。
+    check("模型主聲道記出聲時間", srv.count('st["last_out"] = ') >= 2)
     check("收線總帳含回音丟棄數", "echo_dropped=st" in srv)
     check("發音級攔截先讓她自己重講(同聲線)", 'source in ("model_output", "mandarin_pronunciation")' in srv)
     check("重講再被攔才換安全配音", "_send_safe_mandarin_tts(blocked_text, source)" in srv)
