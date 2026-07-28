@@ -12,6 +12,31 @@ docs/qa/i18n/
 
 不得先建立假 PASS 檔案。`scripts/i18n-release-readiness.js` 會在檔案不存在、格式不完整、截圖不存在或 `result != pass` 時保持發布 Gate 關閉。
 
+## 共用資料安全證據
+
+四個語系共用兩份資料層證據，放在 `docs/qa/i18n/` 根目錄，不複製到各語系資料夾：
+
+- `locale-context-data-audit.json`：由 `scripts/locale_context_data_audit.py` 對正式環境的唯讀、去識別化匯出執行。不得包含姓名、Email、電話或原始資料庫 ID；所有 active record 必須具備完整 LocaleContext，且 account/person 關聯不可錯置。
+- `member-data-isolation-e2e.json`：由 `scripts/member_data_isolation_probe.py` 對獨立的非正式 Supabase staging project 執行。它會從 A/B 兩個預先建立的測試家庭，分別驗證直連 Supabase RLS 與 Brain service-role handler 都無法讀取另一個家庭。
+
+會員隔離探針只送唯讀請求，且程式會硬拒絕東京正式 project `fespbkdwafueyonppzwq`、回滾 project `uhmpmystjjdqqxlpsthc` 與正式 Brain 網址。執行前需用環境變數提供：
+
+- staging 目標：`MUNEA_I18N_STAGING_SUPABASE_URL`、`MUNEA_I18N_STAGING_SUPABASE_PROJECT_REF`、`MUNEA_I18N_STAGING_SUPABASE_PUBLISHABLE_KEY`、`MUNEA_I18N_STAGING_BRAIN_URL`、`MUNEA_APP_KEY`
+- A/B 測試家庭：各自的 bearer token、account ID、person ID、family ID
+- 已移除成員：`MUNEA_I18N_REMOVED_MEMBER_TOKEN`
+
+token 與 ID 只從 process environment 讀取，不可寫進指令列、repo 或證據檔。探針輸出只保存 HTTP status、row count、staging revision 與布林結果，不保存 API 回應內容。執行形式：
+
+```powershell
+python scripts\member_data_isolation_probe.py `
+  --exact-commit <40字元commit> `
+  --evidence-reference <內部驗收編號> `
+  --fixture-lifecycle-reference <staging測試帳號管理紀錄> `
+  --output docs\qa\i18n\member-data-isolation-e2e.json
+```
+
+產出 `pass` 後仍需人工確認 `docs/MEMBER-DATA-ISOLATION-READINESS.json` 的證據來源，再把 status 改為 `approved`；探針本身不會自動開啟市場。
+
 ## 全畫面文案契約
 
 `web/src/i18n/app-surface-copy-manifest.json` 是畫面到文案的可執行對照表。它必須與 `app-surface-manifest.json` 的 38 個 shipping states 完全一致，並讓四語 catalog 的每一個 key 至少歸屬一個實際畫面。`scripts/test-app-surface-copy-manifest.js` 會驗證：

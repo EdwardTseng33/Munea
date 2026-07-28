@@ -291,11 +291,11 @@ assert.equal(
 const memberDataIsolationManifest = {
   requiredEvidence: {
     environment: 'staging',
-    captureMode: 'isolated-two-tenant-fixture',
+    captureMode: 'read-only-preprovisioned-two-tenant',
     realMemberDataUsed: false,
     productionWritesPerformed: false,
     fixtureAccounts: 2,
-    fixtureCleanupPassed: true,
+    fixtureLifecycleReviewed: true,
     containsSecrets: false,
     containsPersonalData: false,
   },
@@ -304,10 +304,10 @@ const memberDataIsolationManifest = {
     'otherAccountPersonDeniedByRls',
     'otherAccountPersonDeniedByBrain',
     'otherAccountFamilyDeniedByBrain',
-    'clientTenantOverrideIgnored',
+    'clientTenantOverrideDenied',
     'removedMemberDenied',
     'unknownUserDenied',
-    'fixtureCleanupPassed',
+    'fixtureLifecycleReviewed',
   ],
 };
 const memberDataIsolationEvidence = {
@@ -316,18 +316,33 @@ const memberDataIsolationEvidence = {
   exactCommit,
   testedAt: '2026-07-28T08:00:00Z',
   environment: 'staging',
-  captureMode: 'isolated-two-tenant-fixture',
+  captureMode: 'read-only-preprovisioned-two-tenant',
   realMemberDataUsed: false,
   productionWritesPerformed: false,
   fixtureAccounts: 2,
-  fixtureCleanupPassed: true,
+  fixtureLifecycleReviewed: true,
   containsSecrets: false,
   containsPersonalData: false,
   stagingRevision: 'brain-staging-revision',
+  stagingProjectRef: 'abcdefghijklmnopqrst',
   evidenceReference: 'staging-security-run-001',
+  fixtureLifecycleReference: 'staging-fixtures-001',
   scenarios: Object.fromEntries(
     memberDataIsolationManifest.requiredScenarios.map((scenario) => [scenario, true]),
   ),
+  checks: [{
+    name: 'tenant_a_cannot_read_tenant_b_person_via_rls',
+    result: 'pass',
+    statusCode: 200,
+    rowCount: 0,
+  }],
+  scope: {
+    directSupabaseRls: true,
+    brainServiceRoleAuthorization: true,
+    writesAttempted: false,
+    productionTargetsForbidden: true,
+    responsePayloadsStored: false,
+  },
 };
 assert.equal(
   validateMemberDataIsolationEvidence(
@@ -349,6 +364,17 @@ assert.equal(
   ),
   false,
   'A service-role BOLA path must keep international release blocked',
+);
+assert.equal(
+  validateMemberDataIsolationEvidence(
+    {
+      ...memberDataIsolationEvidence,
+      stagingProjectRef: 'fespbkdwafueyonppzwq',
+    },
+    memberDataIsolationManifest,
+  ),
+  false,
+  'Production Supabase evidence must never satisfy the staging isolation gate',
 );
 const enCatalogPath = path.join(__dirname, '..', 'web', 'src', 'i18n', 'en.json');
 const enCatalogSource = fs.readFileSync(enCatalogPath, 'utf8');

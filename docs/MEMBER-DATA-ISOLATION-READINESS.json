@@ -10,11 +10,11 @@
   ],
   "requiredEvidence": {
     "environment": "staging",
-    "captureMode": "isolated-two-tenant-fixture",
+    "captureMode": "read-only-preprovisioned-two-tenant",
     "realMemberDataUsed": false,
     "productionWritesPerformed": false,
     "fixtureAccounts": 2,
-    "fixtureCleanupPassed": true,
+    "fixtureLifecycleReviewed": true,
     "containsSecrets": false,
     "containsPersonalData": false
   },
@@ -23,11 +23,12 @@
     "otherAccountPersonDeniedByRls",
     "otherAccountPersonDeniedByBrain",
     "otherAccountFamilyDeniedByBrain",
-    "clientTenantOverrideIgnored",
+    "clientTenantOverrideDenied",
     "removedMemberDenied",
     "unknownUserDenied",
-    "fixtureCleanupPassed"
+    "fixtureLifecycleReviewed"
   ],
-  "releaseRule": "Static tests are prechecks only. International promotion requires a current two-tenant staging E2E proving that direct Supabase access and Brain service-role handlers both deny cross-account reads.",
+  "probeScript": "scripts/member_data_isolation_probe.py",
+  "releaseRule": "Static tests are prechecks only. International promotion requires a current read-only two-tenant staging E2E on a non-production Supabase project, proving that direct Supabase access and Brain service-role handlers both deny cross-account reads.",
   "currentEvidence": "No two-tenant staging E2E evidence has been recorded. Release remains blocked without fabricating evidence."
 }

@@ -349,6 +349,7 @@ function validateLocaleDataEvidence(evidence, readinessManifest) {
 function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
   const required = readinessManifest && readinessManifest.requiredEvidence;
   const requiredScenarios = readinessManifest && readinessManifest.requiredScenarios;
+  const scope = evidence && evidence.scope;
   if (!required || !Array.isArray(requiredScenarios)) return false;
   return evidence.schema === 'munea.member-data-isolation-e2e.v1'
     && evidence.result === 'pass'
@@ -359,12 +360,33 @@ function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
     && evidence.realMemberDataUsed === required.realMemberDataUsed
     && evidence.productionWritesPerformed === required.productionWritesPerformed
     && evidence.fixtureAccounts === required.fixtureAccounts
-    && evidence.fixtureCleanupPassed === required.fixtureCleanupPassed
+    && evidence.fixtureLifecycleReviewed === required.fixtureLifecycleReviewed
     && evidence.containsSecrets === required.containsSecrets
     && evidence.containsPersonalData === required.containsPersonalData
-    && requiredStrings(evidence, ['stagingRevision', 'evidenceReference'])
+    && requiredStrings(evidence, [
+      'stagingRevision',
+      'stagingProjectRef',
+      'evidenceReference',
+      'fixtureLifecycleReference',
+    ])
+    && !['fespbkdwafueyonppzwq', 'uhmpmystjjdqqxlpsthc'].includes(
+      evidence.stagingProjectRef,
+    )
+    && scope
+    && scope.directSupabaseRls === true
+    && scope.brainServiceRoleAuthorization === true
+    && scope.writesAttempted === false
+    && scope.productionTargetsForbidden === true
+    && scope.responsePayloadsStored === false
     && evidence.scenarios
-    && requiredScenarios.every((scenario) => evidence.scenarios[scenario] === true);
+    && requiredScenarios.every((scenario) => evidence.scenarios[scenario] === true)
+    && Array.isArray(evidence.checks)
+    && evidence.checks.length > 0
+    && evidence.checks.every((check) => (
+      check
+      && check.result === 'pass'
+      && Number.isInteger(check.statusCode)
+    ));
 }
 
 function evidenceResult(locale, filename, validator) {
@@ -769,6 +791,7 @@ function buildReadiness() {
       'docs/LOCALE-CONTEXT-DATA-READINESS.json',
       'docs/MEMBER-DATA-ISOLATION-READINESS.json',
       'scripts/locale_context_data_audit.py',
+      'scripts/member_data_isolation_probe.py',
       'scripts/i18n-native-review-worklist.js',
       'scripts/i18n-visual-qa-worklist.js',
       'engine/voice-locale-integration-manifest.json',
