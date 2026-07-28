@@ -40,6 +40,17 @@ try {
   }
   Pass "Source metadata and iOS baseline are internally consistent"
 
+  Step "App Store Connect multilingual read-only capture contract"
+  & node scripts/test-app-store-connect-readonly-capture.js
+  if ($LASTEXITCODE -ne 0) {
+    throw "App Store Connect read-only capture contract failed with exit code $LASTEXITCODE"
+  }
+  & node scripts/test-app-store-connect-i18n-evidence.js
+  if ($LASTEXITCODE -ne 0) {
+    throw "App Store Connect multilingual evidence contract failed with exit code $LASTEXITCODE"
+  }
+  Pass "App Store metadata, screenshots, territories, IAP copy, review assets, and prices normalize without writes"
+
   Step "Product alignment governance"
   & python scripts/check_product_alignment.py
   if ($LASTEXITCODE -ne 0) {

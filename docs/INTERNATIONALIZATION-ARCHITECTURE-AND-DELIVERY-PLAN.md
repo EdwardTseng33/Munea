@@ -350,6 +350,21 @@ Phase 5f（2026-07-29）：App Store 與八個內購項目的母語審稿證據
 Phase 5g（2026-07-29）：App Store Connect 唯讀實況證據
 
 - `scripts/app-store-connect-i18n-evidence.js` 驗證 72 小時內的唯讀 App Store Connect 正規化快照，逐一比對 Bundle、目標語系／地區、主頁 metadata、五張截圖、八個 IAP 身分與類型、IAP 文案、審核截圖、販售地區及當地 `displayPrice`。
+- `scripts/app-store-connect-readonly-capture.js` 使用 Apple 官方 JWT（ES256、最長 20 分鐘）與 GET-only client，逐頁讀取明確指定的 App Info／App Store Version、版本在地化、截圖、App availability、訂閱、消耗品、審核截圖、販售地區及價格；它只輸出不含憑證的正規化 snapshot，並直接呼叫上述 evidence compiler。多個 App Info／版本不會自動猜測，執行時必須傳入兩個 resource ID。
+- 正式 App Store Connect 擷取指令（仍為 production-data read；只在取得帳號授權、選定西語市場，並確認明確 resource ID 後執行）：
+
+  ```powershell
+  $env:ASC_KEY_ID = "<key id>"
+  $env:ASC_ISSUER_ID = "<issuer id；個人 key 可省略>"
+  $env:ASC_PRIVATE_KEY_PATH = "<AuthKey_....p8>"
+  node scripts/app-store-connect-readonly-capture.js `
+    --app-info-id "<App Info resource id>" `
+    --app-store-version-id "<App Store Version resource id>" `
+    --output "<非 repo 暫存路徑>\app-store-connect-snapshot.json" `
+    --audit-output "docs/qa/i18n/app-store-connect-audit.json"
+  ```
+
+- 擷取器限制 request origin 為 `https://api.appstoreconnect.apple.com`、路徑為 `/v1/` 或 `/v2/` 且 method 固定 `GET`，追蹤的分頁連結也套用相同限制；不包含建立、更新、刪除或上傳 endpoint。
 - 證據不保存 API key、JWT、會員資料或交易內容，且明確要求 `productionWritesPerformed: false`；本機未設定 App Store Connect 憑證時只建立驗證器與合成測試，不連後台。
 - `appStoreMetadata`、`inAppPurchaseLocalization`、`marketAvailability` 三個 Gate 現在都必須同時有 `docs/qa/i18n/app-store-connect-audit.json`，不能再靠 repository manifest 自稱 `verified`。
 - 每筆工作固定指向 exact installed iPhone App、實際畫面 anchor、唯一 PNG 路徑，以及 overflow／clipping／untranslated copy／layout 四項人工檢查；工具只產生 `pending`，永遠不自動批准。
