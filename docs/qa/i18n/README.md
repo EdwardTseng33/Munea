@@ -36,14 +36,14 @@ docs/qa/i18n/
 - `appVersion`、`build`、40 字元 `captureCommit`、64 字元 `binarySha256`
 - ISO 8601 `capturedAt`
 - `profiles` 必須恰好包含 `iphone-small-standard`、`iphone-standard`、`iphone-dynamic-type-large`
-- `screens` 覆蓋 `docs/I18N-SURFACE-INVENTORY.json` 的 10 個 App WebView states，加上 `modal:profile`、`modal:data`、`modal:font`
+- `screens` 必須完整覆蓋 `web/src/i18n/app-surface-manifest.json` 的 38 個 shipping states，包括主頁、通話各狀態、連接裝置、全部 modal／reader，以及動態建立的通知設定與通知收件匣
 - 每個 screen 的每個 profile 都要有獨立、實際存在、尺寸有效且 SHA-256 相符的 PNG 與 `result: pass`，並確認：
   - `noOverflow`
   - `noClipping`
   - `noUntranslatedCopy`
   - `layoutAccepted`
 
-因此每個語系至少需要 13 states × 3 profiles = 39 張 App 驗收圖，四語合計 156 張；不能以同一張圖重複充當不同 state 或 profile。
+因此每個語系至少需要 38 states × 3 profiles = 114 張 App 驗收圖，四語合計 456 張；不能以同一張圖重複充當不同 state 或 profile。新增 shipping surface 時，manifest 與截圖需求會同步增加。
 
 ## voice-e2e.json
 

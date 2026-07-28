@@ -49,6 +49,11 @@ for (const locale of requiredLocales) {
     entry.blockers.some(({ gate }) => gate === 'appUiIntegration'),
     `${locale} must require completed App UI integration`,
   );
+  assert.equal(
+    entry.gates.appUiIntegration.evidence,
+    'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
+    `${locale} App integration gate must include the complete shipping surface manifest`,
+  );
   assert(
     entry.blockers.some(({ gate }) => gate === 'nativeLanguageReview'),
     `${locale} must require current catalog-bound native review evidence`,

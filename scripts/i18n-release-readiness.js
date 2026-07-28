@@ -10,7 +10,6 @@ const LEGAL_DIR = path.join(ROOT, 'web', 'legal');
 const STORE_DIR = path.join(ROOT, 'app-store', 'localizations');
 const IAP_DIR = path.join(ROOT, 'app-store', 'in-app-purchases');
 const QA_DIR = path.join(ROOT, 'docs', 'qa', 'i18n');
-const INVENTORY_PATH = path.join(ROOT, 'docs', 'I18N-SURFACE-INVENTORY.json');
 
 const STORE_LOCALE_BY_CATALOG = {
   'zh-TW': 'zh-Hant',
@@ -334,14 +333,11 @@ function buildReadiness() {
   const reviewManifest = readJson(path.join(I18N_DIR, 'review-manifest.json'));
   const screenManifest = readJson(path.join(I18N_DIR, 'app-screen-manifest.json'));
   const bindingManifest = readJson(path.join(I18N_DIR, 'app-binding-manifest.json'));
+  const surfaceManifest = readJson(path.join(I18N_DIR, 'app-surface-manifest.json'));
   const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
-  const inventory = readJson(INVENTORY_PATH);
-  const requiredVisualStates = [
-    ...inventory.surfaces.find((surface) => surface.id === 'app-webview').requiredStates,
-    ...Object.keys(screenManifest.requiredModals).map((name) => `modal:${name}`),
-  ];
+  const requiredVisualStates = surfaceManifest.surfaces.map(({ state }) => state);
   const catalogEntries = new Map(
     catalogManifest.locales.map((entry) => [entry.locale, entry]),
   );
@@ -395,9 +391,13 @@ function buildReadiness() {
       ),
       appUiIntegration: check(
         screenManifest.bindingStatus === 'integrated'
-          && bindingManifest.integrationStatus === 'integrated',
-        'all required App screens, dynamic renderers, and markup refactors must be wired to catalog keys',
-        'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json',
+          && bindingManifest.integrationStatus === 'integrated'
+          && surfaceManifest.integrationStatus === 'integrated'
+          && surfaceManifest.surfaces.every(({ localizationStatus }) => (
+            localizationStatus === 'integrated'
+          )),
+        'all shipping App surfaces, dynamic renderers, and markup refactors must be wired to catalog keys',
+        'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
       ),
       runtimeLocalization: check(
         catalog.runtimeEnabled === true,
@@ -506,6 +506,7 @@ function buildReadiness() {
       'web/src/i18n/review-manifest.json',
       'web/src/i18n/app-screen-manifest.json',
       'web/src/i18n/app-binding-manifest.json',
+      'web/src/i18n/app-surface-manifest.json',
       'web/legal/manifest.json',
       'app-store/localizations/manifest.json',
       'app-store/in-app-purchases/manifest.json',
