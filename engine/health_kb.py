@@ -14,6 +14,8 @@ docs/research/衛教題庫-21題完整劇本v1-2026-07-24.md，紅旗逐條回�
 import json
 import os
 
+import health_selector
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOPICS_PATH = os.path.join(HERE, "health_topics.json")
 
@@ -51,11 +53,21 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):
     return [tid for _, tid in scored[:limit]]
 
 
-def injection_for(text, exclude=None):
-    """文字線用：按這一句用戶的話組出注入段；沒命中回空字串（不佔說明書）。"""
+def injection_for(text, exclude=None, profile=None, hour=None):
+    """文字線用：按這一句用戶的話組出注入段；沒命中回空字串（不佔說明書）。
+
+    2026-07-29：命中的題目若已經有「方案池」（因人因時因地挑選），改用挑選層的結果——
+    同一句「我睡不好」，上班族半夜問跟長輩早上問會拿到不同的方案。沒建方案池的題
+    照舊走原本那段固定注入文，兩者並存、不必一次搬完 21 題。
+    """
     ids = match_topics(text, exclude=exclude)
     if not ids:
         return ""
+    for tid in ids:
+        if tid in health_selector.TOPICS:
+            picked = health_selector.render(tid, text, profile, hour)
+            if picked:
+                return picked
     parts = []
     for tid in ids:
         t = TOPIC_BY_ID[tid]
