@@ -7934,24 +7934,11 @@ function init() {
   if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);
   if ($('#verClose')) $('#verClose').addEventListener('click', () => $('#versionSheet').classList.remove('show'));
   applyAppVersion();
-  // 設定頁「就診摘要」：點一下切換預設期間（7→14→30→60→7）。
-  // 刻意不做日期選擇器也不做下拉——長輩用不動，四個值輪著按最直接。
-  function refreshVisitSummarySettingLabel() {
-    const el = $('#visitSummaryPeriodLabel');
-    if (el) el.textContent = '近 ' + visitSummaryPeriod() + ' 天';
-  }
-  refreshVisitSummarySettingLabel();
-  if ($('#visitSummaryRow')) $('#visitSummaryRow').addEventListener('click', e => {
-    // 點右邊的天數＝改預設期間；點這一列的其他地方＝打開摘要。
-    // 設定頁其他每一列點下去都會「開一個東西」，只有這列不開會很怪。
-    if (e.target.closest('#visitSummaryPeriodLabel')) {
-      const now = visitSummaryPeriod();
-      const next = VISIT_SUMMARY_PERIODS[(VISIT_SUMMARY_PERIODS.indexOf(now) + 1) % VISIT_SUMMARY_PERIODS.length];
-      setVisitSummaryPeriod(next);
-      refreshVisitSummarySettingLabel();
-      toast('就診摘要改成看最近 ' + next + ' 天');
-      return;
-    }
+  // 設定頁「就診摘要」：點了就打開，外層不顯示天數（Edward 2026-07-28）。
+  // 天數在摘要裡面用 7／14／30／60 四顆膠囊選——外層再標一次是重複資訊，
+  // 而且「幾天」是打開之後才需要決定的事，不是進去之前。
+  // 選過的值會被記住，下次打開就是上次那個。
+  if ($('#visitSummaryRow')) $('#visitSummaryRow').addEventListener('click', () => {
     if (typeof openVisitSummary === 'function') openVisitSummary('settings');
   });
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));

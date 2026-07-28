@@ -61,12 +61,23 @@ expect(app.includes("openVisitSummary('settings')"),
 const settingsSection = html.slice(html.indexOf('健康資料與安全'), html.indexOf('App 體驗'));
 expect(settingsSection.includes('id="visitSummaryRow"'),
   '①b 就診摘要那一欄不在「健康資料與安全」區裡');
+// 外層不標天數（Edward 2026-07-28）：那是進去之後才要決定的事，
+// 標在外面是重複資訊，也讓一列同時有兩種點法、很難按。
+expect(!html.includes('visitSummaryPeriodLabel') && !app.includes('refreshVisitSummarySettingLabel'),
+  '①b 設定頁那一欄又在外層顯示天數——天數應該只在摘要裡面選');
 // 不該再有狀態頁常駐卡（過度曝光；這不是每天要看的東西）
 expect(!html.includes('id="visitSummaryCard"') && !app.includes("openVisitSummary('status-card')"),
   '①b 狀態頁又出現常駐入口——這不是成天要看的東西，放在每天看的頁面只會變成噪音');
 // 每個入口都要能被追蹤，否則 H1 分不出「哪條路有人用」
 expect(app.includes("source: source || 'unknown'"), '①b 開啟事件沒有記來源，分不出哪個入口有效');
 ok('①b 入口恰好兩個：首頁當天任務卡＋設定頁常駐欄，且開啟來源可追蹤');
+
+/* ①c 期間只在摘要裡面選：四個選項齊全、選了要記住 */
+const tabsMarkup = html.slice(html.indexOf('id="rptPeriodTabs"'), html.indexOf('id="rptBody"'));
+[7, 14, 30, 60].forEach(d => expect(tabsMarkup.includes(`data-days="${d}"`), `①c 摘要裡缺少 ${d} 天選項`));
+expect(app.includes('setVisitSummaryPeriod(days)'), '①c 切換後沒有記住，下次打開又回預設');
+expect(app.includes('_rptPeriod = visitSummaryPeriod()'), '①c 打開時沒有讀回上次選的期間');
+ok('①c 期間四個選項都在摘要裡，選過會記住');
 
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
