@@ -58,3 +58,13 @@ docs/qa/i18n/
 - 從按下通話、權限、Auth、帳號、點數、Gateway、Voice、Avatar、真實麥克風上行、AI 聲音與畫面，到掛斷釋放容量，所有 `steps` 都必須為 `true`
 
 瀏覽器、模擬器、單元測試、synthetic probe、developer-direct 或不同 build 的成功紀錄都不能代替 installed App E2E。
+
+## 本機 catalog 預覽
+
+`tools/i18n-preview.html?locale=ja` 可在本機 HTTP server 中查看繁中、英文、日文、西班牙文的代表性 catalog 元件，並用 `125% text` 按鈕先檢查長字串換行。
+
+這個頁面：
+
+- 不連正式 API、不讀會員資料、不保存語言。
+- 只證明 catalog bootstrap 與代表性元件能渲染。
+- 不代表完整 App 畫面、App Store 截圖、實機 Dynamic Type 或 installed App E2E 通過。

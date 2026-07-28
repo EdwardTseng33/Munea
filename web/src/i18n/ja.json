@@ -1,6 +1,7 @@
 {
   "app.title": "Munea",
   "settings.title": "設定",
+  "settings.companion": "コンパニオン",
   "tab.home": "ホーム",
   "tab.status": "状態",
   "tab.chat": "お話",
@@ -64,6 +65,7 @@
   "mood.anxious": "不安",
   "mood.angry": "怒っている",
   "health.bloodPressure": "血圧",
+  "health.title": "健康",
   "health.heartRate": "心拍数",
   "health.bloodOxygen": "血中酸素",
   "health.sleep": "睡眠",

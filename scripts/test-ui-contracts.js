@@ -225,6 +225,7 @@ console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo pri
 require('./test-i18n-catalogs.js');
 require('./test-i18n-runtime.js');
 require('./test-i18n-browser-bootstrap.js');
+require('./test-i18n-preview.js');
 require('./test-i18n-dom-localizer.js');
 require('./test-i18n-legal-routing.js');
 require('./test-i18n-migration-worklist.js');

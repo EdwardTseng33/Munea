@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Munea i18n QA preview</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eef4f1; color: #17372f; }
+    header { position: sticky; top: 0; z-index: 2; padding: 14px 18px; background: #17372f; color: white; }
+    header strong { display: block; margin-bottom: 8px; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; }
+    nav a, button { border: 1px solid #b9ccc5; border-radius: 999px; padding: 7px 11px; background: white; color: #17372f; text-decoration: none; font: inherit; cursor: pointer; }
+    main { width: min(100%, 430px); margin: 20px auto; padding: 0 20px 30px; }
+    main.large-text { font-size: 125%; }
+    .status { margin: 0 0 16px; padding: 10px 12px; border-radius: 10px; background: #fff5d9; font-size: 13px; }
+    section { margin-bottom: 16px; padding: 18px; border: 1px solid #d9e4df; border-radius: 18px; background: white; box-shadow: 0 8px 24px rgba(23,55,47,.06); overflow-wrap: anywhere; }
+    h2 { margin: 0 0 12px; font-size: 17px; }
+    p { margin: 8px 0; line-height: 1.5; }
+    .tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; font-size: 12px; text-align: center; }
+    .tabs span { min-width: 0; padding: 8px 2px; border-radius: 8px; background: #edf7f3; overflow-wrap: anywhere; }
+    .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf1ef; }
+    .row:last-child { border-bottom: 0; }
+    .row span:last-child { max-width: 62%; text-align: right; color: #42645a; }
+    .long-copy { padding: 12px; border-radius: 12px; background: #f5f8f7; }
+    .error { background: #ffe5e5; color: #852525; }
+  </style>
+  <script>
+    (function () {
+      const allowed = ['zh-TW', 'en', 'ja', 'es'];
+      const requested = new URLSearchParams(location.search).get('locale');
+      window.MUNEA_DEV_CONFIG = {
+        enabled: true,
+        i18nPreviewLocale: allowed.includes(requested) ? requested : 'zh-TW',
+      };
+    }());
+  </script>
+</head>
+<body>
+  <header>
+    <strong>Munea local i18n QA · <span id="activeLocale">loading</span></strong>
+    <nav aria-label="QA locale controls">
+      <a href="?locale=zh-TW">繁中</a>
+      <a href="?locale=en">English</a>
+      <a href="?locale=ja">日本語</a>
+      <a href="?locale=es">Español</a>
+      <button type="button" id="largeText">125% text</button>
+    </nav>
+  </header>
+  <main id="preview">
+    <p class="status" id="status">Loading local catalogs…</p>
+
+    <section>
+      <h2 data-i18n="app.title">Munea 沐寧</h2>
+      <div class="tabs">
+        <span data-i18n="tab.home">首頁</span>
+        <span data-i18n="tab.status">狀態</span>
+        <span data-i18n="tab.chat">聊聊</span>
+        <span data-i18n="tab.family">家人</span>
+        <span data-i18n="tab.settings">設定</span>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-i18n="health.title">健康</h2>
+      <div class="row"><span data-i18n="health.connected">已連接</span><span data-i18n="health.syncingDetail">正在同步健康資料</span></div>
+      <div class="row"><span data-i18n="health.notConnected">未連接</span><span data-i18n="health.connect">連接</span></div>
+      <p class="long-copy" data-i18n="health.disconnectHelp">解除連接說明</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="settings.companion">陪伴角色</h2>
+      <div class="row"><span data-i18n="companion.nening.name">寧寧</span><span data-i18n="companion.nening.label">溫柔型</span></div>
+      <div class="row"><span data-i18n="companion.ahong.name">阿宏</span><span data-i18n="companion.ahong.label">沉穩型</span></div>
+      <div class="row"><span data-i18n="companion.xiaoyun.name">小昀</span><span data-i18n="companion.xiaoyun.label">開朗型</span></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="medication.title">用藥</h2>
+      <div class="row"><span data-i18n="medication.slot.afterBreakfast">早餐後</span><span data-i18n="medication.taken">已服用</span></div>
+      <div class="row"><span data-i18n="medication.slot.afterLunch">午餐後</span><span data-i18n="medication.notTaken">尚未服用</span></div>
+      <div class="row"><span data-i18n="medication.slot.afterDinner">晚餐後</span><span data-i18n="medication.slot.bedtime">睡前</span></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="reader.privacyTitle">隱私權政策</h2>
+      <div class="row"><span data-i18n="reader.loading">載入中</span><span data-i18n="reader.back">返回</span></div>
+      <p class="long-copy" data-i18n="reader.loadError">無法載入內容</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="voice.call.start">開始通話</h2>
+      <p id="queuePosition">Queue position</p>
+      <p class="long-copy" data-i18n="voice.queue.wait">等待通話</p>
+    </section>
+  </main>
+
+  <script src="../web/src/i18n.js"></script>
+  <script>
+    (async function () {
+      const api = window.MuneaI18n;
+      const result = await api.ready;
+      document.getElementById('activeLocale').textContent = api.current();
+      const status = document.getElementById('status');
+      status.textContent = result.fallback
+        ? 'Fallback active: ' + (result.error || 'unknown error')
+        : 'Local catalog loaded. This page is not release evidence.';
+      status.classList.toggle('error', result.fallback);
+      document.getElementById('queuePosition').textContent = api.t(
+        'voice.queue.position.one',
+        { count: 3 },
+        'Queue position 3',
+      );
+      document.getElementById('largeText').addEventListener('click', function () {
+        document.getElementById('preview').classList.toggle('large-text');
+      });
+    }());
+  </script>
+</body>
+</html>

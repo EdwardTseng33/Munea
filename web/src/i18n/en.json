@@ -1,6 +1,7 @@
 {
   "app.title": "Munea",
   "settings.title": "Settings",
+  "settings.companion": "Companion",
   "tab.home": "Home",
   "tab.status": "Status",
   "tab.chat": "Talk",
@@ -64,6 +65,7 @@
   "mood.anxious": "Anxious",
   "mood.angry": "Angry",
   "health.bloodPressure": "Blood pressure",
+  "health.title": "Health",
   "health.heartRate": "Heart rate",
   "health.bloodOxygen": "Blood oxygen",
   "health.sleep": "Sleep",

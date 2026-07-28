@@ -1,6 +1,7 @@
 {
   "app.title": "Munea 沐寧",
   "settings.title": "設定",
+  "settings.companion": "陪伴角色",
   "tab.home": "首頁",
   "tab.status": "狀態",
   "tab.chat": "聊聊",
@@ -64,6 +65,7 @@
   "mood.anxious": "焦慮",
   "mood.angry": "生氣",
   "health.bloodPressure": "血壓",
+  "health.title": "健康",
   "health.heartRate": "心率",
   "health.bloodOxygen": "血氧",
   "health.sleep": "睡眠",
