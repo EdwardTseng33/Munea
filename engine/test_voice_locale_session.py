@@ -22,6 +22,7 @@ class VoiceLocaleSessionTests(unittest.TestCase):
         self.assertEqual(manifest["bridgeStatus"], "integrated")
         self.assertEqual(manifest["spokenIntentStatus"], "integrated")
         self.assertEqual(manifest["appRequestPolicyStatus"], "integrated")
+        self.assertEqual(manifest["preHandlerPipelineContractStatus"], "integrated")
         self.assertEqual(manifest["appRequestPolicyWiringStatus"], "pending-pr-270")
         self.assertEqual(manifest["liveVoiceServerStatus"], "pending-pr-270")
         self.assertEqual(manifest["gatewayResolverStatus"], "integrated")

@@ -727,12 +727,13 @@ function buildReadiness() {
       voiceIntegration: check(
         voiceIntegrationManifest.bridgeStatus === 'integrated'
           && voiceIntegrationManifest.appRequestPolicyStatus === 'integrated'
+          && voiceIntegrationManifest.preHandlerPipelineContractStatus === 'integrated'
           && voiceIntegrationManifest.appRequestPolicyWiringStatus === 'integrated'
           && voiceIntegrationManifest.liveVoiceServerStatus === 'integrated'
           && voiceIntegrationManifest.gatewayResolverStatus === 'integrated'
           && voiceIntegrationManifest.gatewayClaimsStatus === 'integrated'
           && voiceIntegrationManifest.legacyTokenMode === 'disabled',
-        'Gateway claims and Live Voice must consume the trusted locale session bridge with legacy mode disabled',
+        'The pre-handler LocaleContext contract, Gateway claims, and Live Voice must consume the trusted locale session bridge with legacy mode disabled',
         'engine/voice-locale-integration-manifest.json',
       ),
       voiceE2E: check(
