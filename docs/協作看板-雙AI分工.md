@@ -2160,6 +2160,13 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **安全邊界**：純 CI 判定邏輯與文件，不動 App、Brain、Voice、Gateway、iOS 包、線上服務或部署流程。證據檔本身**沒有**動——重擷是上線車道的動作，這次刻意不做，否則只是把今天補綠、下次跳版再紅一次。
 - **本機驗收**：治理關 8 個步驟照 CI 順序全跑，全綠（含 `check-release-consistency --strict-ios` PASS、source 1.0.43／iOS 1.0.43 Build 48 對齊）。預設模式印出落後 warning 後 PASS；`--strict-version` 如預期紅燈。非 call-path 變更，無 App E2E 需求。
 
+### 2026-07-24 Claude / Windows 🔄 開發中：全站按鈕對比修正＋刪除鈕危險樣式（女巫 Gate 2 抓的兩個既有問題）
+
+- **目標**：①主按鈕白字對比全站不過 WCAG AA（`--btn-green #37A099` 白字只有 3.16:1、`--teal-d` 底也只有 4.13:1，主用戶是高齡族群更需要對比）②設定頁「刪除我的資料」掛著從未定義的 `.quiet`、渲染成跟一般確認鈕相同的實心綠。兩者皆為既有系統性問題、非 PR #246 造成。
+- **修法**：`--btn-green` 色票加深為 `#2A7E78`（白字 4.82:1 ✓、色相不變），一次修掉全站十多顆共用主鈕；三顆 `--teal-d` 底的按鈕（consent-go／auth-primary／已服藥）統一改用 `--btn-green`。新增 `--danger-d #B0392D`（6.05:1）＋`.modal-btn.danger`（白底深紅描邊；「再按一次確認」武裝態＝實心深紅白字）；`#dataDeleteBtn` 改掛 `danger`，中斷連結／退出家庭圈兩顆紅字鈕一併換深紅。
+- **實際檔案**：`web/src/styles.css`（色票 2 處＋按鈕 7 處）、`web/index.html`（刪除鈕 class 一行）、`docs/qa/button-contrast-20260724/`（前後截圖 8 張＋對比數值 README）、本看板。
+- **安全邊界**：純前端 CSS／一行 HTML class，不動 App 邏輯、Brain、Voice、Gateway、iOS 包。刪除流程的兩段確認行為（app.js）完全沒動、只加視覺層。與 PR #246 不衝突（它動的是 `.modal-btn.quiet` 定義與 profileModal 區塊、沒碰 `#dataDeleteBtn` 那行）。
+- **本機驗收**：`node scripts/test-ui-contracts.js` 綠；前後截圖 4 組畫面目檢過（品牌薄荷綠色相未跑、危險鈕與確認鈕視覺明確分權）。
 
 ### 2026-07-24 Claude / Windows 🔄 開發前：開帳與個人資料重整（Edward 拍板需求單）
 
