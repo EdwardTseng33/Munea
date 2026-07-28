@@ -4,6 +4,14 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-07-28 Codex 📱 App 1.0.44 Build 492 上傳與 Edward iPhone 換裝（App E2E pending）
+
+- **來源／範圍**：獨立 worktree `codex/app-store-1.0.44-build492-20260728`，基準 `origin/main@5d2008c`；修改 Xcode Build 48→492、`web/index.html` 四個 cache identity → `20260728-v1044`，以及本次發版證據文件。未帶入 Draft PR #247 的 UI 內容。
+- **測試／正式包**：完整 `test:launch`、App Call Control 15/15、Avatar render contract、strict release consistency、App Store IPA 五道防漏全 PASS。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`。
+- **Apple**：17:22:57 `Upload succeeded`，processing 完成；17:31 已選入並儲存在 1.0.44 版本頁。目前仍為「準備提交」，未點「新增以供審查」、未送審／核准／公開。
+- **手機**：Edward iPhone 15 Pro 已安裝、啟動並從裝置回讀 `Munea 1.0.44 (492)`；Development signing＋production config，沒有 direct／gateway QA fixture。
+- **硬 Gate**：自動 contract 只屬 precheck。仍需 Edward 以 0 點真帳號確認不顯示撥號中／不領 lease，再以 505 點 QA 帳號完成 Voice＋Avatar、AI 聲畫回應、掛斷後釋位；在此之前維持 `App E2E pending`。
+
 ### 2026-07-27 蘇菲 🚀 部署：正式機兩台上 7/25 深夜班成果（Edward「更新上線吧」授權）
 
 - **範圍**：`munea-brain` `00021-kow`→`00023-xoc`、`munea-voice` `00009-muh`→`00011-luw`→`00013-joj`（疊試驗設定）；皆 v1.0.44 @ `f6d9c7fa3408`。
@@ -2316,4 +2324,3 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **Promote**：`promote.sh staging voice stg-0725-014513-34d41f2 1.0.44 34d41f2e227b81f1dc2f28bb40d69c7641f8f80f` 重驗＋切流量成功；預設 URL `/version` 確認 `commit=34d41f2e227b...`、`revision=munea-voice-staging-00060-lij`、100%。
 - **正式機**：`munea-voice` 部署前後皆為 `munea-voice-00009-muh`（`prod-0724-204904-8ddab84`）、100% 流量，未動。
 - **回滾把手**：`gcloud run services update-traffic munea-voice-staging --region asia-east1 --project gen-lang-client-0229303523 --to-revisions munea-voice-staging-00058-yer=100`
-
