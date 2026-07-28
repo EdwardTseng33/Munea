@@ -1,0 +1,33 @@
+{
+  "schema": "munea.member-data-isolation-readiness.v1",
+  "status": "pending-staging-two-tenant-e2e",
+  "evidencePath": "docs/qa/i18n/member-data-isolation-e2e.json",
+  "productionMutationAuthorized": false,
+  "staticPrechecks": [
+    "engine/test_account_scope.py",
+    "scripts/test_production_security_sql.py",
+    "engine/test_family_invitation_access.py"
+  ],
+  "requiredEvidence": {
+    "environment": "staging",
+    "captureMode": "isolated-two-tenant-fixture",
+    "realMemberDataUsed": false,
+    "productionWritesPerformed": false,
+    "fixtureAccounts": 2,
+    "fixtureCleanupPassed": true,
+    "containsSecrets": false,
+    "containsPersonalData": false
+  },
+  "requiredScenarios": [
+    "ownAccountReadable",
+    "otherAccountPersonDeniedByRls",
+    "otherAccountPersonDeniedByBrain",
+    "otherAccountFamilyDeniedByBrain",
+    "clientTenantOverrideIgnored",
+    "removedMemberDenied",
+    "unknownUserDenied",
+    "fixtureCleanupPassed"
+  ],
+  "releaseRule": "Static tests are prechecks only. International promotion requires a current two-tenant staging E2E proving that direct Supabase access and Brain service-role handlers both deny cross-account reads.",
+  "currentEvidence": "No two-tenant staging E2E evidence has been recorded. Release remains blocked without fabricating evidence."
+}

@@ -346,6 +346,27 @@ function validateLocaleDataEvidence(evidence, readinessManifest) {
     ));
 }
 
+function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
+  const required = readinessManifest && readinessManifest.requiredEvidence;
+  const requiredScenarios = readinessManifest && readinessManifest.requiredScenarios;
+  if (!required || !Array.isArray(requiredScenarios)) return false;
+  return evidence.schema === 'munea.member-data-isolation-e2e.v1'
+    && evidence.result === 'pass'
+    && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
+    && validIsoDate(evidence.testedAt)
+    && evidence.environment === required.environment
+    && evidence.captureMode === required.captureMode
+    && evidence.realMemberDataUsed === required.realMemberDataUsed
+    && evidence.productionWritesPerformed === required.productionWritesPerformed
+    && evidence.fixtureAccounts === required.fixtureAccounts
+    && evidence.fixtureCleanupPassed === required.fixtureCleanupPassed
+    && evidence.containsSecrets === required.containsSecrets
+    && evidence.containsPersonalData === required.containsPersonalData
+    && requiredStrings(evidence, ['stagingRevision', 'evidenceReference'])
+    && evidence.scenarios
+    && requiredScenarios.every((scenario) => evidence.scenarios[scenario] === true);
+}
+
 function evidenceResult(locale, filename, validator) {
   const filePath = path.join(QA_DIR, locale, filename);
   if (!fs.existsSync(filePath)) {
@@ -392,6 +413,9 @@ function buildReadiness() {
   const localeDataManifest = readJson(
     path.join(ROOT, 'docs', 'LOCALE-CONTEXT-DATA-READINESS.json'),
   );
+  const memberDataIsolationManifest = readJson(
+    path.join(ROOT, 'docs', 'MEMBER-DATA-ISOLATION-READINESS.json'),
+  );
   const localeDataEvidencePath = path.resolve(ROOT, localeDataManifest.evidencePath);
   const localeDataEvidenceInsideRoot = localeDataEvidencePath.startsWith(`${ROOT}${path.sep}`);
   let localeDataEvidencePassed = false;
@@ -408,6 +432,28 @@ function buildReadiness() {
       );
     } catch {
       localeDataEvidencePassed = false;
+    }
+  }
+  const memberDataIsolationEvidencePath = path.resolve(
+    ROOT,
+    memberDataIsolationManifest.evidencePath,
+  );
+  const memberDataIsolationEvidenceInsideRoot = memberDataIsolationEvidencePath
+    .startsWith(`${ROOT}${path.sep}`);
+  let memberDataIsolationEvidencePassed = false;
+  if (
+    memberDataIsolationManifest.status === 'approved'
+    && memberDataIsolationManifest.productionMutationAuthorized === false
+    && memberDataIsolationEvidenceInsideRoot
+    && fs.existsSync(memberDataIsolationEvidencePath)
+  ) {
+    try {
+      memberDataIsolationEvidencePassed = validateMemberDataIsolationEvidence(
+        readJson(memberDataIsolationEvidencePath),
+        memberDataIsolationManifest,
+      );
+    } catch {
+      memberDataIsolationEvidencePassed = false;
     }
   }
   const surfaceReport = buildSurfaceReport();
@@ -549,6 +595,11 @@ function buildReadiness() {
         localeDataEvidencePassed,
         'active production records need explicit LocaleContext policy and zero account-isolation failures from a redacted read-only audit',
         'docs/LOCALE-CONTEXT-DATA-READINESS.json + docs/qa/i18n/locale-context-data-audit.json',
+      ),
+      memberDataIsolation: check(
+        memberDataIsolationEvidencePassed,
+        'two isolated staging tenants must prove that RLS and Brain service-role handlers both deny cross-account data access',
+        'docs/MEMBER-DATA-ISOLATION-READINESS.json + docs/qa/i18n/member-data-isolation-e2e.json',
       ),
       runtimeLocalization: check(
         catalog.runtimeEnabled === true,
@@ -716,6 +767,7 @@ function buildReadiness() {
       'docs/I18N-SURFACE-INVENTORY.json',
       'docs/I18N-NON-USER-FACING-REVIEW.json',
       'docs/LOCALE-CONTEXT-DATA-READINESS.json',
+      'docs/MEMBER-DATA-ISOLATION-READINESS.json',
       'scripts/locale_context_data_audit.py',
       'scripts/i18n-native-review-worklist.js',
       'scripts/i18n-visual-qa-worklist.js',
@@ -762,6 +814,7 @@ module.exports = {
   formatReport,
   validateInstalledAppEvidence,
   validateLocaleDataEvidence,
+  validateMemberDataIsolationEvidence,
   validateEvidenceConsistency,
   validateNativeReviewEvidence,
   validatePurchaseEvidence,

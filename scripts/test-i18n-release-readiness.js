@@ -11,6 +11,7 @@ const {
   validateEvidenceConsistency,
   validateInstalledAppEvidence,
   validateLocaleDataEvidence,
+  validateMemberDataIsolationEvidence,
   validateNativeReviewEvidence,
   validatePurchaseEvidence,
   validateVisualEvidence,
@@ -24,6 +25,7 @@ const requiredGates = [
   'appUiIntegration',
   'sourceCopyMigration',
   'localeDataReadiness',
+  'memberDataIsolation',
   'runtimeLocalization',
   'binaryLocalization',
   'nativeLanguageReview',
@@ -75,6 +77,15 @@ for (const locale of requiredLocales) {
     entry.gates.localeDataReadiness.evidence,
     'docs/LOCALE-CONTEXT-DATA-READINESS.json + docs/qa/i18n/locale-context-data-audit.json',
     `${locale} locale data gate must use the canonical zero-write audit evidence`,
+  );
+  assert(
+    entry.blockers.some(({ gate }) => gate === 'memberDataIsolation'),
+    `${locale} must require a real two-tenant staging isolation E2E`,
+  );
+  assert.equal(
+    entry.gates.memberDataIsolation.evidence,
+    'docs/MEMBER-DATA-ISOLATION-READINESS.json + docs/qa/i18n/member-data-isolation-e2e.json',
+    `${locale} member security gate must cover RLS and Brain service-role paths`,
   );
   assert.equal(
     entry.gates.sourceCopyMigration.evidence,
@@ -176,6 +187,10 @@ assert(
   'Release readiness must include explicit LocaleContext data readiness',
 );
 assert(
+  report.generatedFrom.includes('docs/MEMBER-DATA-ISOLATION-READINESS.json'),
+  'Release readiness must include two-tenant member data isolation',
+);
+assert(
   report.generatedFrom.includes('scripts/i18n-native-review-worklist.js'),
   'Release readiness must include the catalog-bound native review worklist',
 );
@@ -272,6 +287,68 @@ assert.equal(
   ),
   false,
   'LocaleContext release evidence must remain identifier-free',
+);
+const memberDataIsolationManifest = {
+  requiredEvidence: {
+    environment: 'staging',
+    captureMode: 'isolated-two-tenant-fixture',
+    realMemberDataUsed: false,
+    productionWritesPerformed: false,
+    fixtureAccounts: 2,
+    fixtureCleanupPassed: true,
+    containsSecrets: false,
+    containsPersonalData: false,
+  },
+  requiredScenarios: [
+    'ownAccountReadable',
+    'otherAccountPersonDeniedByRls',
+    'otherAccountPersonDeniedByBrain',
+    'otherAccountFamilyDeniedByBrain',
+    'clientTenantOverrideIgnored',
+    'removedMemberDenied',
+    'unknownUserDenied',
+    'fixtureCleanupPassed',
+  ],
+};
+const memberDataIsolationEvidence = {
+  schema: 'munea.member-data-isolation-e2e.v1',
+  result: 'pass',
+  exactCommit,
+  testedAt: '2026-07-28T08:00:00Z',
+  environment: 'staging',
+  captureMode: 'isolated-two-tenant-fixture',
+  realMemberDataUsed: false,
+  productionWritesPerformed: false,
+  fixtureAccounts: 2,
+  fixtureCleanupPassed: true,
+  containsSecrets: false,
+  containsPersonalData: false,
+  stagingRevision: 'brain-staging-revision',
+  evidenceReference: 'staging-security-run-001',
+  scenarios: Object.fromEntries(
+    memberDataIsolationManifest.requiredScenarios.map((scenario) => [scenario, true]),
+  ),
+};
+assert.equal(
+  validateMemberDataIsolationEvidence(
+    memberDataIsolationEvidence,
+    memberDataIsolationManifest,
+  ),
+  true,
+);
+assert.equal(
+  validateMemberDataIsolationEvidence(
+    {
+      ...memberDataIsolationEvidence,
+      scenarios: {
+        ...memberDataIsolationEvidence.scenarios,
+        otherAccountPersonDeniedByBrain: false,
+      },
+    },
+    memberDataIsolationManifest,
+  ),
+  false,
+  'A service-role BOLA path must keep international release blocked',
 );
 const enCatalogPath = path.join(__dirname, '..', 'web', 'src', 'i18n', 'en.json');
 const enCatalogSource = fs.readFileSync(enCatalogPath, 'utf8');
