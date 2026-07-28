@@ -234,6 +234,7 @@ require('./test-companion-profile-localization.js');
 require('./test-medication-schedule-i18n.js');
 require('./test-i18n-surface-inventory.js');
 require('./test-purchase-flow-localizations.js');
+require('./test-purchase-flow-view-model.js');
 require('./test-legal-localizations.js');
 require('./test-app-store-localizations.js');
 require('./test-in-app-purchase-localizations.js');

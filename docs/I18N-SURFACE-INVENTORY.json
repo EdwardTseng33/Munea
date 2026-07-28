@@ -107,6 +107,7 @@
         "web/src/i18n/dom-localizer.js",
         "web/src/i18n/legal-routing.js",
         "web/src/i18n/medication-schedule.js",
+        "web/src/i18n/purchase-flow.js",
         "web/src/i18n/catalog-manifest.json",
         "web/src/i18n/review-manifest.json",
         "web/src/i18n/zh-TW.json",
@@ -198,7 +199,8 @@
         "scripts/i18n-release-readiness.js",
         "scripts/test-i18n-release-readiness.js",
         "scripts/test-in-app-purchase-localizations.js",
-        "scripts/test-purchase-flow-localizations.js"
+        "scripts/test-purchase-flow-localizations.js",
+        "scripts/test-purchase-flow-view-model.js"
       ],
       "requiredStates": [
         "binary-localizations",

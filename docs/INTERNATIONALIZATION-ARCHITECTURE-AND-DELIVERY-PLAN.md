@@ -295,6 +295,8 @@ Phase 5d（2026-07-28）：訂閱與點數購買流程四語文案契約
 - 價格相關文案只保留 `{price}` placeholder，必須接 Apple 回傳的 `displayPrice`；測試會拒絕 `NT$`、`US$`、美元、歐元、日圓符號或 ISO 幣別被寫入購買流程翻譯。
 - 四語共同鎖定產品規則：免費帳戶只有一次 5 分鐘體驗、每月方案點數不累積、加購點數不會到期，且先扣每月方案點數再扣加購點數。
 - `scripts/test-purchase-flow-localizations.js` 驗證四語 key、placeholder、幣別、英文／西文中文字殘留與產品規則，並已納入既有 UI contract suite。
+- `web/src/i18n/purchase-flow.js` 把 StoreKit 商品轉成訂閱／點數畫面 View Model；缺少 `displayPrice` 時寧可顯示商店暫時無法使用，也不回退到寫死價格，所有付款與恢復狀態都由同一份錯誤映射提供四語訊息。
+- `scripts/test-purchase-flow-view-model.js` 用台灣、英語、日本與西語常見價格格式測試 Apple 價格原樣保留，並覆蓋取消、等待、未驗證、帳戶不符、連線失敗與恢復購買。
 - 目前只是可接線的 catalog 與測試；`web/index.html`／`web/src/app.js` 的實際購買畫面要等 #247／#270 合併後再依最新主線接上，避免同檔競爭。接線、四語截圖與 StoreKit Sandbox 實機驗收完成前仍為 `App E2E pending`。
 
 Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
