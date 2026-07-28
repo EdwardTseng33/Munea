@@ -65,8 +65,30 @@ assert.equal(
   previewRuntime.t('ja-JP', 'error.retryAfterSeconds', {}),
   '{seconds}秒後にもう一度お試しください。',
 );
+assert.equal(previewRuntime.tp('en-US', 'time.minutes', 1), '1 minute');
+assert.equal(previewRuntime.tp('en-US', 'time.minutes', 3), '3 minutes');
+assert.equal(previewRuntime.tp('ja-JP', 'time.minutes', 3), '3 分');
+assert.equal(previewRuntime.tp('es-MX', 'time.minutes', 1), '1 minuto');
+assert.equal(previewRuntime.formatNumber('en-US', 1234.5), '1,234.5');
+assert.match(
+  previewRuntime.formatDate('ja-JP', '2026-07-28T00:00:00Z', {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  }),
+  /2026/,
+);
+assert.equal(
+  previewRuntime.formatList('en-US', ['Mimi', 'Nening'], { type: 'conjunction' }),
+  'Mimi and Nening',
+);
+assert.ok(
+  previewRuntime.formatRelativeTime('es-ES', -1, 'day', { numeric: 'auto' }).length > 0,
+);
 assert.throws(() => previewRuntime.t('en-US', ''), /non-empty string/);
 assert.throws(() => previewRuntime.t('en-US'), /non-empty string/);
+assert.throws(() => previewRuntime.tp('en-US', 'time.minutes', Number.NaN), /finite number/);
+assert.throws(() => previewRuntime.formatDate('en-US', 'not-a-date'), /valid/);
+assert.throws(() => previewRuntime.formatList('en-US', 'Mimi'), /array/);
 
 const missingEvents = [];
 const catalogsWithGap = JSON.parse(JSON.stringify(catalogs));
@@ -117,4 +139,7 @@ const runtimeSource = fs.readFileSync(
 assert.ok(!runtimeSource.includes('localStorage'), 'UI locale runtime must not add an in-App selector');
 assert.ok(!runtimeSource.includes('conversationLocale'), 'UI locale must stay independent from voice language');
 
-console.log('i18n runtime PASS: iOS language resolution, release gates, fallback, telemetry');
+console.log(
+  'i18n runtime PASS: iOS language resolution, release gates, plural/date/number/list formatting, '
+  + 'fallback, telemetry',
+);

@@ -7,6 +7,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const CATALOG_DIR = path.join(ROOT, 'web', 'src', 'i18n');
 const MANIFEST_PATH = path.join(CATALOG_DIR, 'catalog-manifest.json');
+const REVIEW_MANIFEST_PATH = path.join(CATALOG_DIR, 'review-manifest.json');
 
 function readText(filePath) {
   return fs.readFileSync(filePath, 'utf8');
@@ -25,6 +26,7 @@ function placeholders(value) {
 }
 
 const manifest = readJson(MANIFEST_PATH);
+const reviewManifest = readJson(REVIEW_MANIFEST_PATH);
 assert.equal(manifest.schemaVersion, 1);
 assert.equal(manifest.defaultLocale, 'zh-TW');
 assert.equal(manifest.fallbackLocale, 'zh-TW');
@@ -50,7 +52,7 @@ for (const entry of manifest.locales) {
 
 const defaultCatalog = catalogs.get(manifest.defaultLocale);
 const defaultKeys = sorted(Object.keys(defaultCatalog));
-assert.ok(defaultKeys.length >= 20, 'core catalog must contain at least 20 keys');
+assert.ok(defaultKeys.length >= 90, 'core catalog must contain at least 90 keys');
 
 for (const [locale, catalog] of catalogs) {
   assert.deepEqual(sorted(Object.keys(catalog)), defaultKeys, `${locale} key set differs`);
@@ -65,6 +67,54 @@ for (const [locale, catalog] of catalogs) {
       placeholders(defaultCatalog[key]),
       `${locale}:${key} placeholder mismatch`,
     );
+  }
+}
+
+assert.equal(reviewManifest.schemaVersion, 1);
+assert.deepEqual(
+  Object.keys(reviewManifest.locales),
+  manifest.locales.map(({ locale }) => locale),
+  'review manifest locales differ from catalog manifest',
+);
+assert.deepEqual(
+  reviewManifest.requiredApprovals,
+  [
+    'catalogCoverage',
+    'nativeLanguageReview',
+    'visualQA',
+    'voiceE2E',
+    'regionalSafetyAndLegal',
+    'appStoreMetadata',
+    'marketAvailability',
+  ],
+);
+for (const entry of manifest.locales) {
+  const review = reviewManifest.locales[entry.locale];
+  assert.ok(review.contentVariant, `${entry.locale} content variant is missing`);
+  assert.ok(review.speechVariantPolicy, `${entry.locale} speech policy is missing`);
+  for (const gate of reviewManifest.requiredApprovals) {
+    assert.ok(review[gate], `${entry.locale}:${gate} review state is missing`);
+  }
+  if (entry.runtimeEnabled || entry.binaryLocalizationEnabled) {
+    for (const gate of reviewManifest.requiredApprovals) {
+      assert.equal(
+        review[gate],
+        'approved',
+        `${entry.locale} was enabled before ${gate} approval`,
+      );
+    }
+  }
+}
+assert.equal(
+  reviewManifest.locales.es.contentVariant,
+  'neutral-international-Spanish',
+  'Spanish UI copy must not silently imply a country or safety region',
+);
+
+const hanPattern = /[\u3400-\u9fff\uf900-\ufaff]/u;
+for (const locale of ['en', 'es']) {
+  for (const [key, value] of Object.entries(catalogs.get(locale))) {
+    assert.ok(!hanPattern.test(value), `${locale}:${key} unexpectedly contains Han text`);
   }
 }
 

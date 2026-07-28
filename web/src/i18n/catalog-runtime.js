@@ -118,14 +118,19 @@
       );
     }
 
+    function translationLocale(locale) {
+      const requestedLocale = normalizeLocaleTag(locale, allLocales) || fallbackLocale;
+      return enabledLocales.includes(requestedLocale)
+        ? requestedLocale
+        : fallbackLocale;
+    }
+
     function t(locale, key, values, literalFallback) {
       if (typeof key !== 'string' || !key.trim()) {
         throw new TypeError('i18n key must be a non-empty string');
       }
       const requestedLocale = normalizeLocaleTag(locale, allLocales) || fallbackLocale;
-      const resolvedLocale = enabledLocales.includes(requestedLocale)
-        ? requestedLocale
-        : fallbackLocale;
+      const resolvedLocale = translationLocale(requestedLocale);
       let template = catalogs[resolvedLocale][key];
       if (typeof template !== 'string') {
         reportMissing(requestedLocale, resolvedLocale, key);
@@ -133,6 +138,65 @@
       }
       if (typeof template !== 'string') template = literalFallback || key;
       return interpolate(template, values);
+    }
+
+    function intlLocale(locale) {
+      const resolvedLocale = translationLocale(locale);
+      return entries.get(resolvedLocale).htmlLang || resolvedLocale;
+    }
+
+    function finiteNumber(value, label) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) {
+        throw new TypeError(`${label} must be a finite number`);
+      }
+      return number;
+    }
+
+    function formatNumber(locale, value, options) {
+      return new Intl.NumberFormat(intlLocale(locale), options)
+        .format(finiteNumber(value, 'i18n number'));
+    }
+
+    function formatDate(locale, value, options) {
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        throw new TypeError('i18n date must be valid');
+      }
+      return new Intl.DateTimeFormat(intlLocale(locale), options).format(date);
+    }
+
+    function formatList(locale, values, options) {
+      if (!Array.isArray(values)) {
+        throw new TypeError('i18n list must be an array');
+      }
+      return new Intl.ListFormat(intlLocale(locale), options)
+        .format(values.map((value) => String(value)));
+    }
+
+    function formatRelativeTime(locale, value, unit, options) {
+      return new Intl.RelativeTimeFormat(intlLocale(locale), options)
+        .format(finiteNumber(value, 'i18n relative time'), unit);
+    }
+
+    function tp(locale, key, count, values, literalFallback) {
+      if (typeof key !== 'string' || !key.trim()) {
+        throw new TypeError('i18n plural key must be a non-empty string');
+      }
+      const numericCount = finiteNumber(count, 'i18n plural count');
+      const resolvedLocale = translationLocale(locale);
+      const category = new Intl.PluralRules(intlLocale(resolvedLocale)).select(numericCount);
+      const categoryKey = `${key}.${category}`;
+      const otherKey = `${key}.other`;
+      const selectedKey = typeof catalogs[resolvedLocale][categoryKey] === 'string'
+        ? categoryKey
+        : otherKey;
+      return t(
+        resolvedLocale,
+        selectedKey,
+        { ...(values || {}), count: numericCount },
+        literalFallback,
+      );
     }
 
     function localeMetadata(locale) {
@@ -145,10 +209,15 @@
       devicePreferredLanguages,
       enabledLocales: Object.freeze([...enabledLocales]),
       fallbackLocale,
+      formatDate,
+      formatList,
+      formatNumber,
+      formatRelativeTime,
       localeMetadata,
       normalizeLocale: (value) => normalizeLocaleTag(value, allLocales),
       resolveLocale,
       t,
+      tp,
     });
   }
 
