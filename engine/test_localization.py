@@ -74,6 +74,11 @@ class LocalizationTests(unittest.TestCase):
             with self.subTest(values=values), self.assertRaises(ValueError):
                 localization.build_locale_context(values)
 
+    def test_locale_context_rejects_unknown_contract_versions(self):
+        for version in (0, 2, "future", True):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                localization.build_locale_context({"version": version})
+
     def test_locale_context_rejects_non_mapping_input(self):
         with self.assertRaises(TypeError):
             localization.build_locale_context(["ja"])
@@ -156,6 +161,67 @@ class LocalizationTests(unittest.TestCase):
             fields["person"]["attributes"]["localeContext"]["safetyRegion"],
             "MX",
         )
+
+    def test_call_claims_keep_every_locale_dimension_in_one_signed_object(self):
+        claims = localization.locale_context_call_claims({
+            "uiLocale": "ja",
+            "conversationLocale": "en",
+            "preferredLanguages": ["ja", "en"],
+            "countryCode": "JP",
+            "timeZone": "Asia/Tokyo",
+            "currency": "JPY",
+            "safetyRegion": "JP",
+            "legalRegion": "JP",
+            "dataRegion": "jp-primary",
+        })
+
+        self.assertEqual(list(claims), ["locale_context"])
+        self.assertEqual(claims["locale_context"]["uiLocale"], "ja")
+        self.assertEqual(claims["locale_context"]["conversationLocale"], "en")
+        self.assertEqual(claims["locale_context"]["safetyRegion"], "JP")
+        self.assertEqual(claims["locale_context"]["dataRegion"], "jp-primary")
+
+    def test_verified_call_payload_ignores_untrusted_top_level_locale_aliases(self):
+        context = localization.locale_context_from_verified_call_payload({
+            "locale": "ja",
+            "countryCode": "JP",
+            "safetyRegion": "JP",
+        })
+
+        self.assertEqual(context, localization.DEFAULT_LOCALE_CONTEXT)
+
+    def test_verified_call_payload_accepts_only_nested_locale_context(self):
+        context = localization.locale_context_from_verified_call_payload({
+            "call_id": "call-1",
+            "locale_context": {
+                "version": 1,
+                "uiLocale": "es-MX",
+                "conversationLocale": "en-US",
+                "preferredLanguages": ["es-MX", "en-US"],
+                "countryCode": "MX",
+                "timeZone": "America/Mexico_City",
+                "currency": "MXN",
+                "safetyRegion": "MX",
+                "legalRegion": "MX",
+                "dataRegion": "us-central",
+            },
+        })
+
+        self.assertEqual(context["uiLocale"], "es")
+        self.assertEqual(context["conversationLocale"], "en")
+        self.assertEqual(context["safetyRegion"], "MX")
+        self.assertEqual(context["dataRegion"], "us-central")
+
+    def test_verified_call_payload_can_fail_closed_after_rollout(self):
+        with self.assertRaises(ValueError):
+            localization.locale_context_from_verified_call_payload(
+                {"call_id": "call-1"},
+                allow_legacy=False,
+            )
+        with self.assertRaises(TypeError):
+            localization.locale_context_from_verified_call_payload(
+                {"locale_context": "ja"},
+            )
 
     def test_normalizes_supported_and_browser_locales(self):
         self.assertEqual(localization.normalize_locale("zh-Hant"), "zh-TW")

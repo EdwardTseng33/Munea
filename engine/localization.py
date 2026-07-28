@@ -144,6 +144,13 @@ def build_locale_context(values=None):
         values = {}
     if not isinstance(values, Mapping):
         raise TypeError("LocaleContext input must be a mapping")
+    if "version" in values:
+        try:
+            version = int(values["version"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid LocaleContext version: {values['version']!r}") from exc
+        if isinstance(values["version"], bool) or version != LOCALE_CONTEXT_VERSION:
+            raise ValueError(f"Unsupported LocaleContext version: {values['version']!r}")
 
     context = {
         key: list(value) if isinstance(value, list) else value
@@ -290,6 +297,37 @@ def locale_context_storage_fields(context, person_attributes=None):
             "attributes": attributes,
         },
     }
+
+
+def locale_context_call_claims(context):
+    """Return the only locale claim shape allowed inside a signed call token.
+
+    Gateway integration must use a LocaleContext resolved from trusted account
+    policy. This helper deliberately emits one nested object instead of legacy
+    top-level locale/country fields, which prevents downstream services from
+    accidentally treating UI language as geography or safety policy.
+    """
+    return {"locale_context": build_locale_context(context)}
+
+
+def locale_context_from_verified_call_payload(payload, allow_legacy=True):
+    """Read LocaleContext only after the surrounding call token is verified.
+
+    Existing production tokens carry no locale claim. During the additive
+    rollout they retain the current Taiwan defaults. Once Gateway and installed
+    App E2E are ready, callers can set ``allow_legacy=False`` to fail closed.
+    Top-level locale, country, or region fields are never trusted as aliases.
+    """
+    if not isinstance(payload, Mapping):
+        raise TypeError("Verified call-token payload must be a mapping")
+    raw = payload.get("locale_context")
+    if raw is None:
+        if allow_legacy:
+            return build_locale_context()
+        raise ValueError("Verified call token is missing locale_context")
+    if not isinstance(raw, Mapping):
+        raise TypeError("Verified call token locale_context must be a mapping")
+    return build_locale_context(raw)
 
 
 def _normalize_preferred_languages(values, conversation_locale):

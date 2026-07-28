@@ -191,6 +191,13 @@ Phase 2e（2026-07-28）建立 App Store 多語 metadata 與可用地區閘門�
 - 實作逐輪語言偵測、自然 code-switch、暫時/永久語音切換指令。
 - ASR、TTS、開場白、fallback、安全政策與內容檢索全部依獨立欄位選擇。
 
+Phase 3a（2026-07-28）先建立 signed call claim 的解析護欄：
+
+- call token 只允許一個完整的 `locale_context` 巢狀 claim，不接受頂層 `locale`、`countryCode` 或 `safetyRegion` 別名，避免下游把 UI 語言或 App 候選值當成可信政策。
+- LocaleContext 版本必須明確為 v1；未知版本直接拒絕，不能靜默降級成台灣規則。
+- rollout 期間，沒有 locale claim 的既有已簽 token 仍可得到繁中／台灣相容預設；Gateway、Voice 與實機 E2E 通過後切為 `allow_legacy=false`。
+- 本批只加入共用解析與單元測試，尚未改 Gateway 簽發或 Voice 使用方式；待 #258／#270 合併後再接線，正式 call path 不變。
+
 此階段屬 chat-call path risk。完成程式與自動測試後仍標記 `App E2E pending`，直到使用受影響 profile 的實體 iPhone 完成完整通話驗收。
 
 ### Phase 4 — 後台與營運
