@@ -19,6 +19,7 @@
 		A1AA0001B2BB0001C3CC0045 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A1AA0001B2BB0001C3CC0040 /* InfoPlist.strings */; };
 		A1AA0001B2BB0001C3CC0052 /* AppleSignInPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AA0001B2BB0001C3CC0051 /* AppleSignInPlugin.swift */; };
 		A1AA0001B2BB0001C3CC0072 /* GoogleSignInPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AA0001B2BB0001C3CC0071 /* GoogleSignInPlugin.swift */; };
+		A1AA0001B2BB0001C3CC0092 /* ExportPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AA0001B2BB0001C3CC0091 /* ExportPlugin.swift */; };
 		A1AA0001B2BB0001C3CC0062 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1AA0001B2BB0001C3CC0061 /* PrivacyInfo.xcprivacy */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -37,6 +38,7 @@
 		A1AA0001B2BB0001C3CC0031 /* MuneaViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuneaViewController.swift; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0051 /* AppleSignInPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInPlugin.swift; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0071 /* GoogleSignInPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInPlugin.swift; sourceTree = "<group>"; };
+		A1AA0001B2BB0001C3CC0091 /* ExportPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPlugin.swift; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0061 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0003 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0041 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -92,6 +94,7 @@
 				A1AA0001B2BB0001C3CC0031 /* MuneaViewController.swift */,
 				A1AA0001B2BB0001C3CC0051 /* AppleSignInPlugin.swift */,
 				A1AA0001B2BB0001C3CC0071 /* GoogleSignInPlugin.swift */,
+				A1AA0001B2BB0001C3CC0091 /* ExportPlugin.swift */,
 				A1AA0001B2BB0001C3CC0061 /* PrivacyInfo.xcprivacy */,
 				A1AA0001B2BB0001C3CC0003 /* App.entitlements */,
 				A1AA0001B2BB0001C3CC0040 /* InfoPlist.strings */,
@@ -205,6 +208,7 @@
 				A1AA0001B2BB0001C3CC0032 /* MuneaViewController.swift in Sources */,
 				A1AA0001B2BB0001C3CC0052 /* AppleSignInPlugin.swift in Sources */,
 				A1AA0001B2BB0001C3CC0072 /* GoogleSignInPlugin.swift in Sources */,
+				A1AA0001B2BB0001C3CC0092 /* ExportPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

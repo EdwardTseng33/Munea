@@ -2386,3 +2386,12 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **驗過沒**：`scripts/test-visit-summary-ui.js` 擴充到 **88 項全過**（新增第⑩組：外掛已註冊／jsName 對得上／用了 createPDF 與系統分享面板／離屏渲染／iPad anchor／逾時保險絲／不記錄分享對象／選單依可用性調整／**PDF 版面守同一套禁字紅線＋免責聲明＋來源圖例＋逸出**——那份會被印出來交到醫師手上，紅線要再守一次）。完整 `npm run test:launch` **exit=0 全綠**。
 - **⚠ 未驗項（重要）**：本環境**無 Xcode／無 Swift 編譯器**，只做了靜態檢查（括號配對、必要結構、與既有外掛的共通模式 4/4）。**Swift 未編譯、未上真機**。以下必須在 Edward 的機器上驗：①能否編譯 ②`createPDF` 是否真的拿到完整內容（離屏排版風險已處理但未證實）③中文字型渲染 ④分享面板在真機與 iPad 的行為。**在那之前不可宣稱 PDF 匯出可用。**
 - **邊界**：未動 schema／既有 endpoint／既有外掛／部署腳本。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
+
+### 2026-07-28 Claude/城堡 🔧 PR-4d 補漏：ExportPlugin 未納入 Xcode 專案（一定會編譯失敗）
+
+- **背景**：Edward 授權直接更新／部署。**先誠實回報：授權解不開這個關卡**——本容器沒有 `gcloud`／`xcodebuild`／`swift`／`firebase`，也沒有任何雲端憑證。部署與 Xcode 編譯**不是權限問題，是工具不存在**。改用這段時間做「先幫他把會踩的雷拆掉」。
+- **抓到並修好的雷（必踩）**：`ios/App/App.xcodeproj/project.pbxproj` 是**明列檔案**制（`PBXFileSystemSynchronizedRootGroup` 計數為 0），五個既有外掛都被逐一寫進專案檔。**新增的 `.swift` 丟進資料夾不會自動加入編譯目標** ⇒ Edward 一按編譯就會失敗，而且錯誤是 `cannot find 'ExportPlugin' in scope`、**指向 `MuneaViewController.swift`**，看起來像不相關的問題，很難聯想到真因。
+- **處置**：照 GoogleSignInPlugin 的既有規律，在四個區段補齊 `ExportPlugin.swift`——`PBXBuildFile`／`PBXFileReference`／`PBXGroup`（側邊欄可見）／**`Sources` build phase（真正決定會不會被編譯的那一段）**。
+- **過程中被自己的斷言擋下一次**：原本要用的物件 ID `...0081/0082` **已被 GoogleSignIn 套件佔用**，若硬寫下去會產生重複 ID、把專案檔弄壞（Xcode 可能開不起來）。改用未使用的 `...0091/0092`，並驗證無重複定義、`{}` 配對正確、Sources phase 的 swift 檔由 7 → 8。
+- **測試**：`scripts/test-visit-summary-ui.js` 補上三項 pbxproj 納入檢查（BuildFile／FileReference／Sources phase），**91 項全過**；完整 `npm run test:launch` **exit=0**。
+- **⚠ 仍未驗**：Swift 依然**未編譯、未上真機**（環境無 Xcode）。這次只是把「一定會失敗」變成「有機會成功」，**不等於會成功**。真機仍須驗：能否編譯、`createPDF` 是否拿到完整內容、中文渲染、分享面板行為（含 iPad）。

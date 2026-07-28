@@ -131,6 +131,16 @@ const viewController = fs.readFileSync(path.join(root, 'ios', 'App', 'App', 'Mun
 
 expect(viewController.includes('registerPluginInstance(ExportPlugin())'),
   '⑩ 外掛沒有掛上橋——不註冊等於整支不存在（照既有五個外掛的明確註冊慣例）');
+// Xcode 專案是「明列檔案」不是自動同步：.swift 丟進資料夾 **不會** 自動進編譯目標。
+// 漏了這步會編譯失敗在 MuneaViewController（cannot find 'ExportPlugin' in scope），
+// 錯誤訊息指向別的檔案，很難聯想到真因。
+const pbxproj = fs.readFileSync(path.join(root, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj'), 'utf8');
+expect(/ExportPlugin\.swift in Sources \*\/ = \{isa = PBXBuildFile/.test(pbxproj),
+  '⑩ ExportPlugin.swift 沒有 PBXBuildFile 項目');
+expect(/ExportPlugin\.swift \*\/ = \{isa = PBXFileReference/.test(pbxproj),
+  '⑩ ExportPlugin.swift 沒有 PBXFileReference 項目');
+expect(/ExportPlugin\.swift in Sources \*\/,/.test(pbxproj),
+  '⑩ ExportPlugin.swift 不在 Sources build phase 裡——不會被編譯');
 expect(exportSwift.includes('public let jsName = "Export"'), '⑩ 外掛的 jsName 不是 Export');
 expect(app.includes("window.Capacitor.Plugins.Export"), '⑩ 前端沒有取用 Export 外掛');
 expect(exportSwift.includes('createPDF(configuration:'), '⑩ 沒有用 WKWebView.createPDF');
