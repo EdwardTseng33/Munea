@@ -979,7 +979,6 @@ async function aiAddCareQuestion(a) {
   // trackProductEvent 本來就會剝 text/transcript/reply，這裡連欄位都不放）
   try { trackProductEvent('care_question_added', { questionCount: count, textLength: raw.length, via: 'voice' }); } catch (e) {}
   try { if (window.__muneaRefreshVisitRow) window.__muneaRefreshVisitRow(); } catch (e) {}
-  try { if (typeof refreshVisitSummaryCard === 'function') refreshVisitSummaryCard(); } catch (e) {}
   try { if (typeof renderCareQuestions === 'function') renderCareQuestions(); } catch (e) {}
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
   return { ok: true, question: raw, count, persistence: 'device' };
@@ -1042,17 +1041,6 @@ function rptShortDate(iso) {
   const m = String(iso || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
   return m ? (parseInt(m[1], 10) + '/' + parseInt(m[2], 10)) : '';
 }
-
-function refreshVisitSummaryCard() {
-  const sub = document.getElementById('visitSummaryCardSub');
-  const chip = document.getElementById('visitSummaryCardChip');
-  if (!sub) return;
-  let n = 0;
-  try { n = (typeof openCareQuestions === 'function') ? openCareQuestions().length : 0; } catch (e) {}
-  sub.textContent = n ? ('已經記下 ' + n + ' 個要問醫生的問題') : '帶去給醫生看的一頁整理';
-  if (chip) chip.textContent = n ? (n + ' 個問題') : '打開看看';
-}
-window.__muneaRefreshVisitSummaryCard = refreshVisitSummaryCard;
 
 function renderVisitSummary(summary) {
   const body = document.getElementById('rptBody');
@@ -1155,7 +1143,6 @@ function addCareQuestionManually() {
   if (!saveCareQuestions(arr)) { toast('沒存起來，請再試一次'); return; }
   try { trackProductEvent('care_question_added', { questionCount: openCareQuestions().length, textLength: text.length, via: 'manual' }); } catch (e) {}
   renderVisitSummary(_rptLastSummary);
-  try { refreshVisitSummaryCard(); } catch (e) {}
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
 }
 function removeCareQuestion(id) {
@@ -1164,7 +1151,6 @@ function removeCareQuestion(id) {
   saveCareQuestions(arr);
   try { trackProductEvent('care_question_removed', { questionCount: openCareQuestions().length }); } catch (e) {}
   renderVisitSummary(_rptLastSummary);
-  try { refreshVisitSummaryCard(); } catch (e) {}
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
 }
 /* 看完醫生了：清單上的問題整批標記「問過了」（保留歷史、不刪除），
@@ -1176,7 +1162,6 @@ function markCareQuestionsAsked() {
   arr.forEach(q => { if (!q.askedAt) { q.askedAt = now; n += 1; } });
   saveCareQuestions(arr);
   try { trackProductEvent('visit_summary_completed', { askedCount: n, periodDays: _rptPeriod }); } catch (e) {}
-  try { refreshVisitSummaryCard(); } catch (e) {}
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
   return n;
 }
@@ -7956,7 +7941,6 @@ function init() {
     if (el) el.textContent = '近 ' + visitSummaryPeriod() + ' 天';
   }
   refreshVisitSummarySettingLabel();
-  try { refreshVisitSummaryCard(); } catch (e) {}
   if ($('#visitSummaryRow')) $('#visitSummaryRow').addEventListener('click', e => {
     // 點右邊的天數＝改預設期間；點這一列的其他地方＝打開摘要。
     // 設定頁其他每一列點下去都會「開一個東西」，只有這列不開會很怪。
@@ -7969,11 +7953,6 @@ function init() {
       return;
     }
     if (typeof openVisitSummary === 'function') openVisitSummary('settings');
-  });
-  // 狀態頁常駐入口（M1 · PR-4e）。先前只有「當天有排看診」的任務卡能打開摘要——
-  // 沒設提醒、想前一天先準備、平常想看看整理成什麼樣，通通進不去，等於功能九成時間是隱形的。
-  if ($('#visitSummaryCard')) $('#visitSummaryCard').addEventListener('click', () => {
-    if (typeof openVisitSummary === 'function') openVisitSummary('status-card');
   });
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));
   if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));

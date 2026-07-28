@@ -42,22 +42,31 @@ expect(html.includes('id="visitSummaryRow"'), '① 設定頁那一列不存在')
   .forEach(id => expect(html.includes('id="' + id + '"'), `① app.js 綁了 #${id}，但 HTML 裡沒有這個元素`));
 ok('① 入口與所綁元素全部存在（含上一版死因的回歸測試）');
 
-/* ①b 入口要「碰得到」，不只是「存在」（M1 · PR-4e 的教訓）
- * 我第一版只接了看診任務卡，而那張卡**只在當天有排定看診時才出現**——
- * 沒設提醒、想前一天先準備、平常想看看整理成什麼樣，通通進不去，
- * 等於功能九成的時間是隱形的。「面板打得開」跟「使用者找得到」是兩件事。 */
-expect(html.includes('id="visitSummaryCard"'), '①b 狀態頁缺常駐入口卡');
-expect(app.includes("openVisitSummary('status-card')"), '①b 狀態頁的卡沒有接到摘要');
+/* ①b 入口的形狀（Edward 2026-07-28 定案）
+ *
+ * **恰好兩個，不多不少：**
+ *   · 首頁——當天有看診任務時，點任務卡打開（時機驅動）
+ *   · 設定頁「健康資料與安全」——常駐一欄，隨時打開（不依賴有沒有排看診）
+ *
+ * 為什麼不再多：**這不是成天需要看的東西**。放進狀態頁那種每天在看的地方，
+ * 一年裡有 360 天它只是噪音。（我一度加了狀態頁常駐卡，Edward 判定過度曝光，已撤除。）
+ *
+ * 為什麼不能更少：只留當天的任務卡，等於「沒設看診提醒就永遠看不到」——
+ * 那是上一版的真缺陷。設定頁那一欄是**保證找得到**的那條路，不可拿掉。
+ * 「面板打得開」跟「使用者找得到」是兩件事。 */
+expect(app.includes("openVisitSummary('daily-task')"), '①b 首頁看診任務卡沒有接到摘要');
 expect(app.includes("openVisitSummary('settings')"),
-  '①b 設定頁那一列點下去沒有打開摘要——只會改天數的話，它是設定不是入口');
-// 至少要有一個「不依賴當天有排看診」的入口，否則功能大半時間是隱形的
-const alwaysOn = ["openVisitSummary('status-card')", "openVisitSummary('settings')"]
-  .filter(t => app.includes(t));
-expect(alwaysOn.length >= 2,
-  `①b 常駐入口不足（目前 ${alwaysOn.length} 個）：只靠當天的看診卡＝功能九成時間看不到`);
+  '①b 設定頁那一欄點下去沒有打開摘要——只會改天數的話，它是設定不是入口');
+// 設定頁那一欄必須落在「健康資料與安全」區，跟用藥提醒／看診提醒放在一起
+const settingsSection = html.slice(html.indexOf('健康資料與安全'), html.indexOf('App 體驗'));
+expect(settingsSection.includes('id="visitSummaryRow"'),
+  '①b 就診摘要那一欄不在「健康資料與安全」區裡');
+// 不該再有狀態頁常駐卡（過度曝光；這不是每天要看的東西）
+expect(!html.includes('id="visitSummaryCard"') && !app.includes("openVisitSummary('status-card')"),
+  '①b 狀態頁又出現常駐入口——這不是成天要看的東西，放在每天看的頁面只會變成噪音');
 // 每個入口都要能被追蹤，否則 H1 分不出「哪條路有人用」
 expect(app.includes("source: source || 'unknown'"), '①b 開啟事件沒有記來源，分不出哪個入口有效');
-ok(`①b 常駐入口 ${alwaysOn.length} 個＋當天任務卡，且開啟來源可追蹤`);
+ok('①b 入口恰好兩個：首頁當天任務卡＋設定頁常駐欄，且開啟來源可追蹤');
 
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
