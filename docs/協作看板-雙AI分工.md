@@ -2432,3 +2432,16 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **驗證**：完整 `npm run test:launch` **exit=0 全綠**；`test-release-settings.js` PASS（版號 SSOT 與快取代碼一致性）。
 - **⚠ 這一版「更版」只到原始碼層，不等於上線**。仍待 Edward 的機器：①`npm run cap:sync` ②Xcode 編譯（**ExportPlugin.swift 首次進編譯器，能否編過未知**）③真機驗證摘要面板／PDF／中文渲染／分享面板 ④Archive＋上傳 App Store Connect ⑤雲端大腦部署（`/visit-summary` 新端點須隨後端上線，否則 App 打不到）。**本容器無 Xcode／gcloud／憑證，這五步我做不到。**
 - **⚠ 部署順序提醒**：`/visit-summary` 是新端點 ⇒ **後端要先上，App 才不會打空氣**。若 App 先上而後端未更新，摘要會落到「這次沒有連上」的降級路徑（不會崩，但功能等於沒有）。
+
+### 2026-07-28 Claude/城堡 🔴→✅ CI 修復：更版後五份治理文件的 current source 沒跟上
+
+- **CI 失敗**：PR #270 的 `Product alignment governance / Current truth and drift gates`（run 30379294969）在 `check_product_alignment.py` 紅燈。
+- **真因（我的疏漏）**：升版 1.0.44 → 1.1.0 (Build 49) 時，只同步了「程式面五處」（package／lockfile／version.js／iOS MARKETING＋BUILD）與 index.html 快取代碼，**漏了治理文件的 current source 標記**。這道閘門存在的目的正是抓這個——**版號跳了但「現況真相」文件還停在舊版**，看板會誤導所有人。
+- **修正**（只動這五行的版號標記，歷史敘述與其他版本提及一律不動）：
+  - `docs/RELEASE-STATE.md`：`| Latest source | 1.1.0 (Build 49) |`
+  - `docs/PRODUCT-QUALITY-CONFIDENCE.md`：`| Latest source | 1.1.0 (Build 49)；…`
+  - `docs/PRODUCT-ALIGNMENT-REGISTER.md`：`| App source lane | 1.1.0 (Build 49)；…`
+  - `docs/00-總綱-從這裡開始.md`：`current source 為 1.1.0 (Build 49)`
+  - `docs/CURRENT-DEVELOPMENT-PLAN.md`：`> **Current source:** 1.1.0 (Build 49)`
+- **驗證**：把 CI 那支 workflow 的**八個步驟逐一在本地重跑**，全部 exit=0（product alignment／governance 測試／release evidence／evidence 規則測試／release consistency `--strict-ios`／migration manifest／deployment ledger／StoreKit 驗證順序）；完整 `npm run test:launch` 亦 exit=0。
+- **一個 WARN（CI 設計為不擋、只出摘要）**：`release evidence was captured for 1.0.42 and package version is now 1.1.0` ⇒ **打包前** Edward 需在自己機器跑 `npm run release:evidence:capture`（該指令會實際探測執行中的服務，本容器無憑證做不到）。**這是上線前的必要步驟，不是可略過的雜訊。**

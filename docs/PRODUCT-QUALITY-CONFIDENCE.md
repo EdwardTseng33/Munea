@@ -77,7 +77,7 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.44 (Build 48)`；source、Web、package、iOS 與品質治理已在 `origin/main@00d3eb3` 對齊，包含 #181–#199 的 release／SLO／治理工作；本輪沒有 Build 48 Archive／upload／iPhone 證據 |
+| Latest source | `1.1.0 (Build 49)`；source、Web、package、iOS 與品質治理已在 `origin/main@00d3eb3` 對齊，包含 #181–#199 的 release／SLO／治理工作；本輪沒有 Build 48 Archive／upload／iPhone 證據 |
 | Latest uploaded App | `1.0.40 (Build 47)`；STATUS 記錄 20:44 上傳成功與 Edward iPhone 換裝成功 |
 | App Store | Build 47 已上傳；精確 selected Build 與 Apple review state 未由本輪 App Store Connect 證據確認，因此保持 `unknown` |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
