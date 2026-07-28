@@ -1,0 +1,22 @@
+{
+  "app.title": "Munea",
+  "settings.title": "設定",
+  "tab.home": "ホーム",
+  "tab.status": "状態",
+  "tab.chat": "お話",
+  "tab.family": "家族",
+  "tab.settings": "設定",
+  "voice.connecting": "接続しています…",
+  "voice.ready": "どうぞ。ここにいますよ。",
+  "voice.fallback": "こんにちは。ここにいますよ。話したいことから、ゆっくり始めましょう。",
+  "common.cancel": "キャンセル",
+  "common.confirm": "確認",
+  "common.save": "保存",
+  "common.retry": "もう一度",
+  "common.close": "閉じる",
+  "error.generic": "問題が発生しました。もう一度お試しください。",
+  "error.offline": "現在接続できません。通信環境を確認して、もう一度お試しください。",
+  "error.retryAfterSeconds": "{seconds}秒後にもう一度お試しください。",
+  "locale.fallbackNotice": "この内容は一時的に繁体字中国語で表示されています。",
+  "accessibility.back": "戻る"
+}

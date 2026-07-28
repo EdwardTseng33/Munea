@@ -1,0 +1,22 @@
+{
+  "app.title": "Munea",
+  "settings.title": "Ajustes",
+  "tab.home": "Inicio",
+  "tab.status": "Estado",
+  "tab.chat": "Hablar",
+  "tab.family": "Familia",
+  "tab.settings": "Ajustes",
+  "voice.connecting": "Conectando…",
+  "voice.ready": "Cuéntame. Estoy aquí contigo.",
+  "voice.fallback": "Hola, estoy aquí contigo. Podemos empezar por lo que quieras contarme.",
+  "common.cancel": "Cancelar",
+  "common.confirm": "Confirmar",
+  "common.save": "Guardar",
+  "common.retry": "Intentar de nuevo",
+  "common.close": "Cerrar",
+  "error.generic": "Ha ocurrido un problema. Inténtalo de nuevo.",
+  "error.offline": "No podemos conectarnos ahora. Comprueba tu conexión a internet e inténtalo de nuevo.",
+  "error.retryAfterSeconds": "Vuelve a intentarlo en {seconds} segundos.",
+  "locale.fallbackNotice": "Este contenido se muestra temporalmente en chino tradicional.",
+  "accessibility.back": "Volver"
+}

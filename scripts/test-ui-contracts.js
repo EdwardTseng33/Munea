@@ -218,3 +218,8 @@ assert(app.includes("reason === 'apple_account_token_mismatch'") && app.includes
 assert(app.includes("'TEST · ' + (_memBadgePlan || 'free').toUpperCase()"), 'Developer badges must expose the simulated FREE/PLUS/PRO identity');
 
 console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, and real family activities');
+
+// Multilingual catalogs stay development-only until their UI, Voice, regional,
+// App Store, and real-device gates pass. Keep this in the existing launch suite
+// without competing with active work that is editing package.json.
+require('./test-i18n-catalogs.js');

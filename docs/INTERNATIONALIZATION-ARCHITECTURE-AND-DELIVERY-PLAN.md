@@ -116,6 +116,13 @@ Admin ──> market/language/region filters ──> regional aggregates (no raw
 
 注意：待目前修改 `web/index.html`、`web/src/app.js`、`web/src/styles.css` 的 PR 合併後再開始，避免競爭修改。
 
+Phase 1a（2026-07-28）先完成不接 runtime 的安全地基：
+
+- 建立四語 core catalog 與 release manifest；英文、日文、西班牙文一律標記 `development`、`runtimeEnabled=false`、`binaryLocalizationEnabled=false`。
+- 加入 key 完整性、placeholder、HTML 注入、現有 `data-i18n` 覆蓋與 iOS binary 宣告一致性測試。
+- 翻譯來源檔保留在 repo，但在完整 UI/Voice/安全/商店 gate 通過前，不把 en/ja/es `InfoPlist.strings` 加入正式 App target。
+- 本次 iOS project 只修正「尚未發布卻先宣告語言」的 packaging 狀態；不包版、不上傳，`App E2E pending`。
+
 ### Phase 2 — 帳號、內容與資料區
 
 - 會員模型加入 UI/對話偏好、country/timezone 與後端核定 region 欄位。

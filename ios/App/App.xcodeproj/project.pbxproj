@@ -39,10 +39,7 @@
 		A1AA0001B2BB0001C3CC0071 /* GoogleSignInPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInPlugin.swift; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0061 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0003 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
-		A1AA0001B2BB0001C3CC0041 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		A1AA0001B2BB0001C3CC0042 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh-Hant; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
-		A1AA0001B2BB0001C3CC0043 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		A1AA0001B2BB0001C3CC0044 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -214,10 +211,7 @@
 		A1AA0001B2BB0001C3CC0040 /* InfoPlist.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
-				A1AA0001B2BB0001C3CC0041 /* en */,
 				A1AA0001B2BB0001C3CC0042 /* zh-Hant */,
-				A1AA0001B2BB0001C3CC0043 /* ja */,
-				A1AA0001B2BB0001C3CC0044 /* es */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";

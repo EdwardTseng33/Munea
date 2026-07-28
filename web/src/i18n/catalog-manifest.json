@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "defaultLocale": "zh-TW",
+  "fallbackLocale": "zh-TW",
+  "locales": [
+    {
+      "locale": "zh-TW",
+      "nativeLocale": "zh-Hant",
+      "catalog": "zh-TW.json",
+      "status": "production",
+      "runtimeEnabled": true,
+      "binaryLocalizationEnabled": true
+    },
+    {
+      "locale": "en",
+      "nativeLocale": "en",
+      "catalog": "en.json",
+      "status": "development",
+      "runtimeEnabled": false,
+      "binaryLocalizationEnabled": false
+    },
+    {
+      "locale": "ja",
+      "nativeLocale": "ja",
+      "catalog": "ja.json",
+      "status": "development",
+      "runtimeEnabled": false,
+      "binaryLocalizationEnabled": false
+    },
+    {
+      "locale": "es",
+      "nativeLocale": "es",
+      "catalog": "es.json",
+      "status": "development",
+      "runtimeEnabled": false,
+      "binaryLocalizationEnabled": false
+    }
+  ],
+  "releaseGates": [
+    "uiCoverage",
+    "nativeLanguageReview",
+    "layoutAndDynamicType",
+    "voiceE2E",
+    "regionalSafetyAndLegal",
+    "appStoreMetadata",
+    "marketAvailability"
+  ]
+}

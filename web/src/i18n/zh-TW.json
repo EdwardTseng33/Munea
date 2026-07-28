@@ -1,0 +1,22 @@
+{
+  "app.title": "Munea 沐寧",
+  "settings.title": "設定",
+  "tab.home": "首頁",
+  "tab.status": "狀態",
+  "tab.chat": "聊聊",
+  "tab.family": "家人",
+  "tab.settings": "設定",
+  "voice.connecting": "正在連線…",
+  "voice.ready": "直接說，我在這裡",
+  "voice.fallback": "嗨，我在這裡。想從哪件事聊起都可以。",
+  "common.cancel": "取消",
+  "common.confirm": "確認",
+  "common.save": "儲存",
+  "common.retry": "再試一次",
+  "common.close": "關閉",
+  "error.generic": "出了一點狀況，請再試一次。",
+  "error.offline": "目前無法連線，請檢查網路後再試一次。",
+  "error.retryAfterSeconds": "請在 {seconds} 秒後再試一次。",
+  "locale.fallbackNotice": "此內容暫時以繁體中文顯示。",
+  "accessibility.back": "返回"
+}
