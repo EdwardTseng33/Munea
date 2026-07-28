@@ -112,6 +112,8 @@
         "web/src/i18n/en.json",
         "web/src/i18n/ja.json",
         "web/src/i18n/es.json",
+        "scripts/i18n-migration-worklist.js",
+        "scripts/i18n-pseudo-catalog.js",
         "web/src/legal.css",
         "web/legal/manifest.json",
         "web/legal/en/privacy.html",

@@ -140,6 +140,13 @@ Phase 1d（2026-07-28）補齊可共用的語言品質底盤：
 - locale runtime 增加 `Intl` 複數、日期、數字、清單與相對時間格式，避免日期／單位／複數靠中文字串拼接。
 - `review-manifest.json` 將 catalog coverage、母語審稿、視覺 QA、語音 E2E、區域安全／法律、App Store metadata 與市場開放設為逐語系必要核准；任何一項未核准都不能開 runtime 或 binary gate。
 
+Phase 1f（2026-07-28）：全畫面遷移工作表與排版壓力測試
+
+- `scripts/i18n-migration-worklist.js` 從正式 shipping surface 即時計算穩定 worklist；目前 App WebView 有 1,727 個繁中文案出現位置、1,211 個唯一來源字串，不再用「catalog 已有 111 keys」誤稱全畫面完成。
+- 每筆工作項目保留檔案、行號、來源型態與穩定 hash key，並區分 static text、attribute、runtime/interpolated copy 與必須先拆 HTML 的 markup refactor。
+- `scripts/i18n-pseudo-catalog.js` 產生保留 placeholder 的 35% 擴張壓力文案；主畫面接線後，必須先用 pseudo locale 跑完窄螢幕與 Dynamic Type，再進入四語正式截圖。
+- 這兩個工具只讀來源並在測試記憶體內產生資料，不改 shipping catalog、不切 runtime locale，也不影響正式服務。
+
 Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 
 - 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。
