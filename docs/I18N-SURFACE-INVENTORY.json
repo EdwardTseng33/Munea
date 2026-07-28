@@ -110,6 +110,17 @@
         "web/src/i18n/en.json",
         "web/src/i18n/ja.json",
         "web/src/i18n/es.json",
+        "web/src/legal.css",
+        "web/legal/manifest.json",
+        "web/legal/en/privacy.html",
+        "web/legal/en/terms.html",
+        "web/legal/en/support.html",
+        "web/legal/ja/privacy.html",
+        "web/legal/ja/terms.html",
+        "web/legal/ja/support.html",
+        "web/legal/es/privacy.html",
+        "web/legal/es/terms.html",
+        "web/legal/es/support.html",
         "engine/localization.py"
       ],
       "requiredStates": [

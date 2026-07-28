@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "defaultLocale": "zh-TW",
+  "fallbackLocale": "zh-TW",
+  "locales": {
+    "zh-TW": {
+      "htmlLang": "zh-Hant",
+      "contentVariant": "zh-Hant-TW",
+      "legalReview": "approved",
+      "pages": {
+        "privacy": "../privacy.html",
+        "terms": "../terms.html",
+        "support": "../support.html"
+      }
+    },
+    "en": {
+      "htmlLang": "en",
+      "contentVariant": "international-English",
+      "legalReview": "pending",
+      "pages": {
+        "privacy": "en/privacy.html",
+        "terms": "en/terms.html",
+        "support": "en/support.html"
+      }
+    },
+    "ja": {
+      "htmlLang": "ja",
+      "contentVariant": "ja-JP",
+      "legalReview": "pending",
+      "pages": {
+        "privacy": "ja/privacy.html",
+        "terms": "ja/terms.html",
+        "support": "ja/support.html"
+      }
+    },
+    "es": {
+      "htmlLang": "es",
+      "contentVariant": "neutral-international-Spanish",
+      "legalReview": "pending",
+      "pages": {
+        "privacy": "es/privacy.html",
+        "terms": "es/terms.html",
+        "support": "es/support.html"
+      }
+    }
+  }
+}
