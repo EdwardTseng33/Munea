@@ -195,6 +195,10 @@ assert(
   'Release readiness must include the catalog-bound native review worklist',
 );
 assert(
+  report.generatedFrom.includes('scripts/i18n-native-review-evidence.js'),
+  'Release readiness must include the fail-closed native review evidence compiler',
+);
+assert(
   report.generatedFrom.includes('scripts/i18n-visual-qa-worklist.js'),
   'Release readiness must include the exact-build visual capture worklist',
 );

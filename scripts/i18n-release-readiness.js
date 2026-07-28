@@ -793,6 +793,7 @@ function buildReadiness() {
       'scripts/locale_context_data_audit.py',
       'scripts/member_data_isolation_probe.py',
       'scripts/i18n-native-review-worklist.js',
+      'scripts/i18n-native-review-evidence.js',
       'scripts/i18n-visual-qa-worklist.js',
       'engine/voice-locale-integration-manifest.json',
       'web/legal/manifest.json',

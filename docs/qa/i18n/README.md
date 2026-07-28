@@ -64,6 +64,21 @@ python scripts\member_data_isolation_probe.py `
 
 只要 catalog 內容或 key 清單後續改變，既有母語審稿證據就會失效，必須重審受影響版本。不得填入審稿者姓名、Email 或其他直接個資。
 
+執行 `node scripts/i18n-native-review-worklist.js --locale ja > <工作檔>.json` 可產生單一語系的 430 筆工作檔。審稿者必須逐筆把 `result` 改為 `pass`，並把六個 `checks` 全部改為布林值 `true`；若翻譯與繁中來源完全相同且未在日文共用詞 allowlist，還必須留下 `reviewerNote`。工作檔根節點另需填入：
+
+```json
+{
+  "review": {
+    "exactCommit": "<40字元commit>",
+    "reviewedAt": "<ISO 8601>",
+    "reviewerReference": "<不含個資的內部審稿編號>",
+    "reviewerRole": "native-language-reviewer"
+  }
+}
+```
+
+完成後用 `node scripts/i18n-native-review-evidence.js --input <工作檔>.json --output docs/qa/i18n/ja/native-review.json` 編譯證據。只要少一個 key、少一項檢查、catalog bytes 改變、placeholder 或翻譯被工作檔竄改，compiler 都會拒絕建立 PASS。compiler 不會自行把 `review-manifest.json` 改成 approved。
+
 ## visual-qa.json
 
 必要欄位：
