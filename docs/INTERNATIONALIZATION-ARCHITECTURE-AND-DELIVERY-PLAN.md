@@ -346,6 +346,12 @@ Phase 5f（2026-07-29）：App Store 與八個內購項目的母語審稿證據
 - `scripts/app-store-native-review-worklist.js` 將每個上架目標的 App Store 主頁 6 欄、五張截圖文案 10 欄、八個 IAP 名稱／說明 16 欄，組成 32 筆人工審稿工作。
 - `scripts/app-store-native-review-evidence.js` 要求逐筆母語、語意、語氣、聲明正確性、區域脈絡與商店呈現檢查，並把通過證據綁定 App Store metadata、地區路由、截圖文案、IAP 商品事實及 IAP copy 的內容雜湊；純審核狀態變更不會讓已完成的文案審稿失效。
 - 發布閘門不再接受只修改 manifest 的 `approved` 宣告；缺少或檔案雜湊不符的母語審稿證據時，App Store metadata 與 IAP localization 都保持封鎖。
+
+Phase 5g（2026-07-29）：App Store Connect 唯讀實況證據
+
+- `scripts/app-store-connect-i18n-evidence.js` 驗證 72 小時內的唯讀 App Store Connect 正規化快照，逐一比對 Bundle、目標語系／地區、主頁 metadata、五張截圖、八個 IAP 身分與類型、IAP 文案、審核截圖、販售地區及當地 `displayPrice`。
+- 證據不保存 API key、JWT、會員資料或交易內容，且明確要求 `productionWritesPerformed: false`；本機未設定 App Store Connect 憑證時只建立驗證器與合成測試，不連後台。
+- `appStoreMetadata`、`inAppPurchaseLocalization`、`marketAvailability` 三個 Gate 現在都必須同時有 `docs/qa/i18n/app-store-connect-audit.json`，不能再靠 repository manifest 自稱 `verified`。
 - 每筆工作固定指向 exact installed iPhone App、實際畫面 anchor、唯一 PNG 路徑，以及 overflow／clipping／untranslated copy／layout 四項人工檢查；工具只產生 `pending`，永遠不自動批准。
 - `visual-qa.json` 驗證除禁止重複路徑外，也禁止相同 PNG SHA-256 被複製成不同 state／profile，避免用一張圖假裝完成多個畫面。
 - 這是驗收執行底盤，不是驗收結果；Browser／實機畫面尚未逐張擷取與人工確認，故 visual gate 仍維持關閉。

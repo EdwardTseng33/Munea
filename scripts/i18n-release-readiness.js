@@ -11,6 +11,9 @@ const {
 const {
   validateAppStoreNativeReviewEvidence,
 } = require('./app-store-native-review-evidence.js');
+const {
+  validateEvidence: validateAppStoreConnectEvidence,
+} = require('./app-store-connect-i18n-evidence.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const I18N_DIR = path.join(ROOT, 'web', 'src', 'i18n');
@@ -516,6 +519,32 @@ function buildReadiness() {
   );
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
   const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
+  const appStoreConnectRequirements = readJson(
+    path.join(ROOT, 'app-store', 'connect-audit-requirements.json'),
+  );
+  const appStoreConnectEvidencePath = path.resolve(
+    ROOT,
+    appStoreConnectRequirements.evidencePath,
+  );
+  const appStoreConnectEvidenceInsideRoot = appStoreConnectEvidencePath
+    .startsWith(`${ROOT}${path.sep}`);
+  let appStoreConnectEvidencePassed = false;
+  if (
+    appStoreConnectEvidenceInsideRoot
+    && fs.existsSync(appStoreConnectEvidencePath)
+  ) {
+    try {
+      appStoreConnectEvidencePassed = validateAppStoreConnectEvidence(
+        readJson(appStoreConnectEvidencePath),
+      );
+    } catch {
+      appStoreConnectEvidencePassed = false;
+    }
+  }
+  const appStoreConnectEvidenceRelativePath = path.relative(
+    ROOT,
+    appStoreConnectEvidencePath,
+  ).replaceAll('\\', '/');
   const localeDataManifest = readJson(
     path.join(ROOT, 'docs', 'LOCALE-CONTEXT-DATA-READINESS.json'),
   );
@@ -781,20 +810,22 @@ function buildReadiness() {
       appStoreMetadata: check(
         review.appStoreMetadata === 'approved'
           && metadataApproved
-          && storeNativeReviewPassed,
-        'App Store metadata needs byte-bound native review evidence for the selected locale variant',
-        `${storeNativeReviewEvidencePath} + app-store/localizations/manifest.json`,
+          && storeNativeReviewPassed
+          && appStoreConnectEvidencePassed,
+        'App Store metadata needs byte-bound native review plus a fresh read-only App Store Connect match',
+        `${storeNativeReviewEvidencePath} + ${appStoreConnectEvidenceRelativePath}`,
       ),
       inAppPurchaseLocalization: check(
         review.inAppPurchaseLocalization === 'approved'
           && iapMetadataApproved
           && storeNativeReviewPassed
+          && appStoreConnectEvidencePassed
           && iapManifest.productSet.appStoreConnectStatus === 'verified'
           && iapManifest.productSet.products.every((product) => (
             product.reviewScreenshotStatus === 'approved'
           )),
-        'all 8 IAP products need byte-bound native review, current App Store identity, and review screenshots',
-        `${storeNativeReviewEvidencePath} + app-store/in-app-purchases/manifest.json`,
+        'all 8 IAP products need byte-bound native review, fresh App Store Connect identity, and review screenshots',
+        `${storeNativeReviewEvidencePath} + ${appStoreConnectEvidenceRelativePath}`,
       ),
       appStoreScreenshots: check(
         screenshotsApproved,
@@ -804,11 +835,12 @@ function buildReadiness() {
       marketAvailability: check(
         review.marketAvailability === 'approved'
           && promotionAuthorized
+          && appStoreConnectEvidencePassed
           && storeManifest.appAvailability.currentState === 'verified'
           && iapManifest.availability.currentState === 'verified'
           && iapManifest.pricePolicy.appStoreConnectStatus === 'verified',
-        'App and all IAP storefront availability and prices must be verified before promotion',
-        'app-store/localizations/manifest.json + app-store/in-app-purchases/manifest.json',
+        'App and all IAP storefront availability and localized prices need a fresh read-only App Store Connect audit',
+        appStoreConnectEvidenceRelativePath,
       ),
       installedAppE2E: check(
         installedEvidence.passed,
@@ -910,6 +942,8 @@ function buildReadiness() {
       'scripts/i18n-native-review-evidence.js',
       'scripts/app-store-native-review-worklist.js',
       'scripts/app-store-native-review-evidence.js',
+      'app-store/connect-audit-requirements.json',
+      'scripts/app-store-connect-i18n-evidence.js',
       'scripts/i18n-visual-qa-worklist.js',
       'scripts/i18n-visual-qa-evidence.js',
       'scripts/i18n-app-e2e-evidence.js',
@@ -958,6 +992,7 @@ module.exports = {
   validateLocaleDataEvidence,
   validateMemberDataIsolationEvidence,
   validateEvidenceConsistency,
+  validateAppStoreConnectEvidence,
   validateAppStoreNativeReviewEvidence,
   validateNativeReviewEvidence,
   validatePurchaseEvidence,

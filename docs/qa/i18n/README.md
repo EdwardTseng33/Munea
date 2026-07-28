@@ -104,6 +104,25 @@ App Store 主頁文案、五張商店截圖文案與八個內購項目必須由�
 
 完成後執行 `node scripts/app-store-native-review-evidence.js --input <工作檔>.json --output docs/qa/i18n/en/app-store-native-review.json`。證據會綁定 App Store 地區路由、該語系完整 metadata、截圖尺寸／順序／文案、八個 IAP 商品事實與該語系完整 IAP copy 的 SHA-256；文案、商品事實或地區規則改動後，舊證據會自動失效，單純把人工審核狀態從 `draft` 改成 `approved` 不會要求重審文案。西班牙市場證據分別放在 `docs/qa/i18n/es-ES/` 或 `docs/qa/i18n/es-MX/`。
 
+## app-store-connect-audit.json
+
+Repo 文案完成不代表 App Store Connect 已上傳、商品已在正確國家販售或價格已存在。正式候選版前必須用唯讀 App Store Connect API 匯出正規化快照，再執行：
+
+`node scripts/app-store-connect-i18n-evidence.js --input <唯讀快照>.json --output docs/qa/i18n/app-store-connect-audit.json`
+
+驗證器會拒絕以下情況：
+
+- 西班牙市場尚未在 manifest 選定 `es-ES`、`es-MX` 或兩者
+- 快照超過 72 小時、來自非唯讀流程、含 secrets 或執行任何 production write
+- Bundle ID／App Store app ID 不符
+- 任一目標地區沒有開放 App
+- App Store metadata 與 repo 審稿版本不一致，或少於五張截圖
+- 八個 IAP 商品缺漏、類型不符、沒有 App Review 截圖
+- 任一目標地區未開放某個 IAP，或缺 StoreKit 當地幣別／`displayPrice`
+- IAP 名稱與說明和 repo 審稿版本不一致
+
+輸出證據只保留來源參考、雜湊與結果，不保存 API 私鑰、JWT、使用者資料或交易資料。`app-store/connect-audit-requirements.json` 是時效、唯讀方式與證據路徑的發布契約；任何人工把 manifest 改成 `verified` 的操作，都不能取代這份新鮮快照證據。
+
 ## visual-qa.json
 
 必要欄位：
