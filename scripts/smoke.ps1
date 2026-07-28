@@ -1255,8 +1255,13 @@ class FakeAdminAccountsBackend:
         return [{
             "accountId": "account-remote",
             "accountName": "Remote care account",
-            "locale": "zh-TW",
-            "preferredLanguages": ["zh-TW", "en"],
+            "locale": "ja",
+            "preferredLanguages": ["en", "ja"],
+            "localeContext": {
+                "uiLocale": "ja", "conversationLocale": "en",
+                "countryCode": "JP", "timeZone": "Asia/Tokyo",
+                "safetyRegion": "JP", "legalRegion": "JP", "dataRegion": "jp-primary",
+            },
             "familyGroup": {"id": "family-remote", "name": "Remote family"},
             "primaryPerson": {"id": "person-remote", "displayName": "Auntie", "relationship": "self"},
             "companion": {"templateId": "nening-real-female", "displayName": "Munea", "nameTouched": False},
@@ -1283,6 +1288,9 @@ try:
     assert remote["count"] == 1
     assert remote["accounts"][0]["accountId"] == "account-remote"
     assert remote["accounts"][0]["familyMembers"]["byRole"]["caregiver"] == 1
+    assert remote["accounts"][0]["localeContext"]["uiLocale"] == "ja"
+    assert remote["accounts"][0]["localeContext"]["conversationLocale"] == "en"
+    assert remote["accounts"][0]["localeContext"]["countryCode"] == "JP"
     assert remote["privacy"]["rawTranscriptRecords"] == 0
 finally:
     server.data_backend = original_backend
@@ -1294,7 +1302,15 @@ with tempfile.TemporaryDirectory() as d:
     try:
         server.data_backend = lambda: DisabledBackend()
         server.save_app_profile_store({
-            "account": {"id": "local-account-1", "name": "Local care account", "locale": "zh-TW"},
+            "account": {
+                "id": "local-account-1", "name": "Local care account", "locale": "es",
+                "localeContext": {
+                    "uiLocale": "es", "conversationLocale": "en",
+                    "countryCode": "MX", "timeZone": "America/Mexico_City",
+                    "currency": "MXN", "safetyRegion": "MX",
+                    "legalRegion": "MX", "dataRegion": "us-central",
+                },
+            },
             "familyGroup": {
                 "id": "family-local-1",
                 "name": "Local family",
@@ -1313,6 +1329,9 @@ with tempfile.TemporaryDirectory() as d:
         assert local["accounts"][0]["familyGroup"]["id"] == "family-local-1"
         assert local["accounts"][0]["primaryPerson"]["displayName"] == "Edward"
         assert local["accounts"][0]["familyMembers"]["count"] == 2
+        assert local["accounts"][0]["localeContext"]["uiLocale"] == "es"
+        assert local["accounts"][0]["localeContext"]["conversationLocale"] == "en"
+        assert local["accounts"][0]["localeContext"]["countryCode"] == "MX"
         by_person = server.admin_accounts_summary({"personId": "person-local-1"})
         assert by_person["count"] == 1
     finally:

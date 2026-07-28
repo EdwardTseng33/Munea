@@ -151,6 +151,12 @@ Phase 2b（2026-07-28）將收件人的 App 語言接入通知：
 - JSON 與 Supabase 通知先取最新有效 iOS 裝置的 UI locale，再回退帳號 UI locale；不使用陪伴聊天語言，也不由語言推測國家。
 - 四語 generic、家庭轉達與家庭邀請的鎖定畫面文案由後端產生，健康敏感內容仍固定隱藏；通知 metadata 留下 locale 供 APNs fallback 使用。
 - 新增 `027_localized_notification_copy.sql`，目前只在隔離分支接受靜態與測試驗證，尚未套用任何正式資料庫。
+
+Phase 2c（2026-07-28）補齊營運後台的國際使用者狀態：
+
+- 用戶名冊直接顯示國家／地區、App UI 語言與陪伴聊天語言，並可用國碼、語言、時區或資料區域搜尋。
+- 用戶明細分別顯示 UI／聊天語言、時區、安全／法律區域與資料區域；不把任一欄位混成單一「地區」推論。
+- 後台仍維持內部繁中操作介面；本批只補營運可視性，不等同四語 App 畫面已完成。
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。
 - missing-key telemetry 只記錄 key 與 locale，去重後回退繁中；不記翻譯內容、畫面文字或任何使用者輸入。
 - runtime 目前是純模組並已進 UI contract tests；等 #247/#270 合併後，才接到 `web/src/i18n.js` 與正式 DOM。

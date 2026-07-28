@@ -161,6 +161,41 @@
   const PV_ZH = { account_deletion:"刪除帳號", deletion:"刪除帳號", export:"資料副本", data_export:"資料副本", correction:"資料更正" };
   const ST_ZH = { pending:"待處理", open:"待處理", received:"已收到", processing:"處理中", done:"已完成", completed:"已完成", closed:"已結案" };
   const CREDIT_ZH = { subscription_monthly_allowance:"每月贈點", credit_grant:"發放點數", credit_consume:"使用點數", free_signup_voice_avatar_trial:"新用戶體驗贈點", apple_purchase:"加購點數", apple_purchase_refunded:"加購退款", apple_refund_reversed:"退款回沖", call_consume:"通話扣點" };
+  const LOCALE_LABEL = { "zh-TW":"\u7e41\u9ad4\u4e2d\u6587", en:"English", ja:"日本語", es:"Español" };
+  const MARKET_TEXT = {
+    chat:"\u804a\u5929",
+    tableHeader:"\u5730\u5340\uff0f\u8a9e\u8a00",
+    country:"\u570b\u5bb6\uff0f\u5730\u5340",
+    appLanguage:"App \u64cd\u4f5c\u8a9e\u8a00",
+    conversationLanguage:"\u966a\u4f34\u804a\u5929\u8a9e\u8a00",
+    timeZone:"\u6642\u5340",
+    policyRegions:"\u5b89\u5168\uff0f\u6cd5\u5f8b\u5340\u57df",
+    dataRegion:"\u8cc7\u6599\u5340\u57df",
+  };
+  function accountLocaleContext(account){
+    const a=account||{},p=a.primaryPerson||{},ctx=a.localeContext||{};
+    return {
+      uiLocale:ctx.uiLocale||a.locale||"zh-TW",
+      conversationLocale:ctx.conversationLocale||p.locale||a.locale||"zh-TW",
+      countryCode:ctx.countryCode||p.regionCode||"—",
+      timeZone:ctx.timeZone||p.timezone||"—",
+      safetyRegion:ctx.safetyRegion||"—",
+      legalRegion:ctx.legalRegion||"—",
+      dataRegion:ctx.dataRegion||"—",
+    };
+  }
+  function localeLabel(locale){ return LOCALE_LABEL[locale]||String(locale||"—"); }
+  function accountMarketSearchText(account){
+    const ctx=accountLocaleContext(account);
+    return [ctx.countryCode,ctx.uiLocale,localeLabel(ctx.uiLocale),ctx.conversationLocale,localeLabel(ctx.conversationLocale),ctx.timeZone,ctx.safetyRegion,ctx.legalRegion,ctx.dataRegion].join(" ").toLowerCase();
+  }
+  function accountMarketCell(account){
+    const ctx=accountLocaleContext(account);
+    const language=ctx.uiLocale===ctx.conversationLocale
+      ?localeLabel(ctx.uiLocale)
+      :`${localeLabel(ctx.uiLocale)} UI · ${localeLabel(ctx.conversationLocale)} ${MARKET_TEXT.chat}`;
+    return `<span class="market-cell"><b>${esc(ctx.countryCode)}</b><span class="muted small">${esc(language)}</span></span>`;
+  }
 
   // ══════════ 元件 ══════════
   function kpiRow(items){
@@ -459,7 +494,7 @@
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
     const planC={free:0,plus:0,pro:0}; accts.forEach((a)=>{ const p=a.plan||"free"; planC[p]=(planC[p]||0)+1; });
     const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
-    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")).toLowerCase().indexOf(q)>-1; });
+    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")+" "+accountMarketSearchText(a)).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
     const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
     const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
@@ -470,6 +505,7 @@
       return [
         `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub">${esc(sub)}</div></div></div>`,
         `<span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span>`,
+        accountMarketCell(a),
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
         esc(c.displayName||c.templateId||"–"),
@@ -480,7 +516,7 @@
       ];
     });
     const hiddenNote=(!showTest&&hiddenTestCount)?` · 已隱藏 ${hiddenTestCount} 個測試帳號`:"";
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭","方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
     return html;
   }
 
@@ -822,7 +858,15 @@
     const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[a.plan||"free"]||"免費";
     const stTxt={on:"活躍中",idle:"低度使用",off:"離線",alert:"守護中"}[st]||"離線";
     const mins=Math.round(u.totalMinutes||0);
-    const fields=[["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]];
+    const ctx=accountLocaleContext(a);
+    const fields=[
+      ["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],[MARKET_TEXT.country,ctx.countryCode],
+      [MARKET_TEXT.appLanguage,localeLabel(ctx.uiLocale)],[MARKET_TEXT.conversationLanguage,localeLabel(ctx.conversationLocale)],[MARKET_TEXT.timeZone,ctx.timeZone],
+      [MARKET_TEXT.policyRegions,`${ctx.safetyRegion} / ${ctx.legalRegion}`],[MARKET_TEXT.dataRegion,ctx.dataRegion],
+      ["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],
+      ["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],
+      ["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]
+    ];
     const nm=p.displayName||a.accountName||"帳號";
     const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>

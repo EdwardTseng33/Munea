@@ -509,6 +509,8 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .u-nm{ font-weight:700; color:var(--ink); font-size:.94rem; line-height:1.2; }
 .u-sub{ color:var(--muted); font-size:0.875rem; margin-top:2px; }
 .u-fam{ font-weight:600; color:var(--ink-2); }
+.market-cell{ display:flex; flex-direction:column; gap:2px; min-width:118px; }
+.market-cell b{ color:var(--ink); font-family:var(--num); letter-spacing:.04em; }
 
 .use-cell{ display:flex; align-items:flex-end; gap:8px; }
 .use-cell .num{ font-size:1rem; color:var(--ink); line-height:1; }

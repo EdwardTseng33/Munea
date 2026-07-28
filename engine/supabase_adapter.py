@@ -3279,8 +3279,9 @@ class SupabaseAdapter:
                 "id": primary_person.get("id") or "",
                 "displayName": primary_person.get("display_name") or "",
                 "relationship": primary_person.get("relationship") or "self",
-                "locale": primary_person.get("locale") or account.get("locale") or "zh-TW",
-                "timezone": primary_person.get("timezone") or "Asia/Taipei",
+                "locale": locale_context["conversationLocale"],
+                "timezone": locale_context["timeZone"],
+                "regionCode": locale_context["countryCode"],
             },
             "companion": {
                 "templateId": companion.get("template_id") or "nening-real-female",

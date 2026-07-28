@@ -50,6 +50,14 @@ for (const token of [
   "dataAsOf",
   "metadata_missing",
   "dataQualityNoticeHTML",
+  "accountLocaleContext",
+  "accountMarketSearchText",
+  "MARKET_TEXT",
+  "tableHeader",
+  "appLanguage",
+  "conversationLanguage",
+  "policyRegions",
+  "dataRegion",
 ]) {
   assert(js.includes(token), `admin.js missing health/security contract: ${token}`);
 }

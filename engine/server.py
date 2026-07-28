@@ -4269,8 +4269,9 @@ def normalize_admin_account_summary(item=None):
             "id": str(primary_person.get("id") or ""),
             "displayName": str(primary_person.get("displayName") or primary_person.get("display_name") or ""),
             "relationship": str(primary_person.get("relationship") or "self"),
-            "locale": str(primary_person.get("locale") or item.get("locale") or "zh-TW"),
-            "timezone": str(primary_person.get("timezone") or "Asia/Taipei"),
+            "locale": locale_context["conversationLocale"],
+            "timezone": locale_context["timeZone"],
+            "regionCode": locale_context["countryCode"],
         },
         "companion": {
             "templateId": str(companion.get("templateId") or companion.get("template_id") or "nening-real-female"),
@@ -4297,11 +4298,13 @@ def local_admin_account_summary():
         role = member.get("role") or "unknown"
         roles[role] = roles.get(role, 0) + 1
     companion = (store.get("companionProfiles") or {}).get(primary_id) or active_companion_profile(store)
+    locale_context = localization.locale_context_from_account(account)
     return normalize_admin_account_summary({
         "accountId": account.get("id"),
         "accountName": account.get("name") or account.get("id") or "local-demo-account",
         "locale": account.get("locale"),
         "preferredLanguages": account.get("preferredLanguages"),
+        "localeContext": locale_context,
         "createdAt": account.get("createdAt"),
         "updatedAt": store.get("updatedAt"),
         "familyGroup": {
@@ -4312,8 +4315,9 @@ def local_admin_account_summary():
             "id": primary_id,
             "displayName": primary_member.get("displayName") or "Primary user",
             "relationship": primary_member.get("relationship") or "self",
-            "locale": account.get("locale") or "zh-TW",
-            "timezone": "Asia/Taipei",
+            "locale": locale_context["conversationLocale"],
+            "timezone": locale_context["timeZone"],
+            "regionCode": locale_context["countryCode"],
         },
         "companion": companion,
         "familyMembers": {
