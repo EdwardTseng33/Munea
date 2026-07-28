@@ -17,7 +17,7 @@ h1,h2,h3,.en{font-family:"Poppins","Noto Sans TC",sans-serif}
 .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
 a{text-decoration:none;color:inherit}
 img{max-width:100%}
-.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:"Poppins";font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-d)}
+.eyebrow{display:inline-flex;align-items:center;flex-wrap:wrap;max-width:100%;gap:9px;font-family:"Poppins";font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-d)}
 .eyebrow::before{content:"";width:22px;height:1.5px;background:var(--coral)}
 .btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:16px;padding:15px 28px;border-radius:100px;border:none;cursor:pointer;transition:transform .25s,box-shadow .25s,background .25s;font-family:inherit;position:relative;overflow:hidden}
 .btn-coral{background:var(--coral);color:#fff;box-shadow:0 14px 28px -12px rgba(224,139,69,.7)}
@@ -84,7 +84,13 @@ nav{display:flex;align-items:center;justify-content:space-between;height:76px}
 .blob.c{width:200px;height:200px;background:radial-gradient(circle,#d9efe8,transparent 70%);top:40%;left:46%;opacity:.5}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center;position:relative;z-index:1}
 .hero h1{font-size:clamp(32px,5vw,56px);line-height:1.14;font-weight:700;letter-spacing:-.01em;margin:20px 0 22px}
+/* 中文一句短，整句不斷行沒問題；英文／西班牙文一個 .word 是一整句，
+   窄螢幕上不准斷行會把整欄撐寬，底下的字全被切掉（2026-07-29 抓到）。
+   桌機維持不斷行的排版意圖，窄螢幕一律放行。 */
 .hero h1 .word{white-space:nowrap}
+@media(max-width:900px){.hero h1 .word{white-space:normal}}
+/* 格線子欄預設 min-width:auto，內容一寬就撐破欄位——一律准縮 */
+.hero-grid>*,.persona-wrap>*,.pz>*,.story-grid>*{min-width:0}
 .hero h1 .hl{color:var(--teal);position:relative;display:inline-block}
 .hero h1 .hl::after{content:"";position:absolute;left:0;right:0;bottom:.08em;height:.18em;background:rgba(244,162,97,.32);border-radius:6px;z-index:-1;transform:scaleX(0);transform-origin:left;animation:underline 1s .9s cubic-bezier(.2,.7,.2,1) forwards}
 @keyframes underline{to{transform:scaleX(1)}}

@@ -144,18 +144,28 @@ assert.deepEqual(
 );
 assert.equal(
   marketingSite.baselineHanCandidates,
-  196,
+  244,
   'The public-site baseline must fail closed when new untranslated copy is added',
 );
-assert.equal(marketingSite.localizationContract.runtime, 'app-site/warm.js');
+assert.equal(marketingSite.localizationContract.runtime, 'site-src/build.mjs');
 assert.equal(
   marketingSite.localizationContract.validation,
-  'scripts/test-marketing-site-localizations.js',
+  'scripts/test-app-site-seo.js',
 );
-assert.deepEqual(marketingSite.localizationContract.inlineSourceLocales, ['zh-TW', 'en']);
 assert.deepEqual(marketingSite.localizationContract.catalogs, {
-  ja: 'app-site/i18n/ja.json',
-  es: 'app-site/i18n/es.json',
+  'zh-TW': 'site-src/i18n/zh.json',
+  en: 'site-src/i18n/en.json',
+  ja: 'site-src/i18n/ja.json',
+  es: 'site-src/i18n/es.json',
+});
+assert.equal(marketingSite.localizationContract.localeResolution, 'static-paths-with-native-links');
+assert.deepEqual(marketingSite.staticLocalizedAssets, {
+  profile: 'marketing-generated',
+  manifest: 'site-src/localization-manifest.json',
+  sourceLocale: 'zh-TW',
+  pageBySource: {
+    'app-site/index.html': 'landing',
+  },
 });
 assert.deepEqual(marketingSite.localizationContract.mediaGate, {
   status: 'pending-exact-build-localized-captures-and-captions',
@@ -255,9 +265,15 @@ for (const file of legalAndSupport.files) {
 const marketingReport = report.surfaces.find(
   (surface) => surface.id === 'marketing-site',
 );
-assert.equal(marketingReport.hanCandidates, 196);
-assert.equal(marketingReport.unboundHanCandidates, 196);
+assert.equal(marketingReport.hanCandidates, 244);
+assert.equal(marketingReport.boundHanCandidates, 244);
+assert.equal(marketingReport.unboundHanCandidates, 0);
 assert.equal(marketingReport.files[0].path, 'app-site/index.html');
+assert.ok(
+  marketingReport.files[0].candidates.every(
+    (candidate) => candidate.bindingType === 'localized-static-asset',
+  ),
+);
 assert.deepEqual(validateReport(report), [], 'The checked-in baseline must not regress');
 
 console.log('PASS: i18n surface inventory contract');

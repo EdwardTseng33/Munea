@@ -184,15 +184,33 @@ function applyStaticLocalizedAssetBinding(
         `${relativePath}: ${locale} static ${pageKind} asset has the wrong html lang`,
       );
     }
-    if (
-      !/<title>[^<]+<\/title>/i.test(html)
-      || !/class=["'][^"']*\bprivacy-page\b/i.test(html)
-      || !/class=["'][^"']*\bprivacy-section\b/i.test(html)
-      || /<script[\s>]/i.test(html)
-    ) {
-      failures.push(
-        `${relativePath}: ${locale} static ${pageKind} asset is incomplete or executable`,
-      );
+    const profile = config.profile || 'legal-static';
+    if (profile === 'legal-static') {
+      if (
+        !/<title>[^<]+<\/title>/i.test(html)
+        || !/class=["'][^"']*\bprivacy-page\b/i.test(html)
+        || !/class=["'][^"']*\bprivacy-section\b/i.test(html)
+        || /<script[\s>]/i.test(html)
+      ) {
+        failures.push(
+          `${relativePath}: ${locale} static ${pageKind} asset is incomplete or executable`,
+        );
+      }
+    } else if (profile === 'marketing-generated') {
+      const h1Count = [...html.matchAll(/<h1(?:\s|>)/gi)].length;
+      if (
+        !/<title\b[^>]*>[^<]+<\/title>/i.test(html)
+        || !/<link\s+rel=["']canonical["']\s+href=["'][^"']+["']/i.test(html)
+        || h1Count !== 1
+        || /\{\{[^}]+\}\}/.test(html)
+        || /noindex/i.test(html)
+      ) {
+        failures.push(
+          `${relativePath}: ${locale} generated ${pageKind} asset is incomplete or unresolved`,
+        );
+      }
+    } else {
+      failures.push(`${relativePath}: unsupported static localization profile ${profile}`);
     }
     if (locale === config.sourceLocale) {
       const sourcePath = path.resolve(ROOT, relativePath);

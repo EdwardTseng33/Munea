@@ -115,23 +115,31 @@
       "files": [
         "app-site/index.html"
       ],
+      "staticLocalizedAssets": {
+        "profile": "marketing-generated",
+        "manifest": "site-src/localization-manifest.json",
+        "sourceLocale": "zh-TW",
+        "pageBySource": {
+          "app-site/index.html": "landing"
+        }
+      },
       "requiredStates": [
         "landing-mobile",
         "landing-desktop"
       ],
       "releaseGate": "Localized acquisition surface",
-      "baselineHanCandidates": 196,
+      "baselineHanCandidates": 244,
       "localizationContract": {
-        "runtime": "app-site/warm.js",
-        "validation": "scripts/test-marketing-site-localizations.js",
-        "inlineSourceLocales": [
-          "zh-TW",
-          "en"
-        ],
+        "runtime": "site-src/build.mjs",
+        "validation": "scripts/test-app-site-seo.js",
+        "sourceLocale": "zh-TW",
         "catalogs": {
-          "ja": "app-site/i18n/ja.json",
-          "es": "app-site/i18n/es.json"
+          "zh-TW": "site-src/i18n/zh.json",
+          "en": "site-src/i18n/en.json",
+          "ja": "site-src/i18n/ja.json",
+          "es": "site-src/i18n/es.json"
         },
+        "localeResolution": "static-paths-with-native-links",
         "mediaGate": {
           "status": "pending-exact-build-localized-captures-and-captions",
           "embeddedAppScreenshots": "pending-four-locale-exact-build-captures",
