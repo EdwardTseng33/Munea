@@ -21,6 +21,30 @@
 - **未涵蓋**：正式線真人媒體 Gate 待 Edward 安裝版 iPhone；`voice-chain-auth-probe.ps1` 護欄禁止對正式 voice 跑拋棄帳號探測（未繞過）。
 - **回滾**：見 STATUS 132 號（brain/voice 各自 exact-revision，或只移除兩個試驗環境值）。
 
+### 待審：聊天品質評測骨架修繕——評審補系統 context＋鐵律6/7/台語判定精修（2026-07-25 蘇菲/城堡 · Draft PR #269）
+
+- Branch：`claude/brave-lehmann-c8b9fe`（本機 worktree，基準 `origin/main@cadd545d`）。
+- 檔案：`engine/eval/gen_reply.py`（conv 模式回傳 `systemContext`＝正式線真的注入的時間/
+  地點/今日簡報）、`engine/eval/run_chat_quality_eval.py`（新增 `system_context_facts()`
+  ＋逐輪把系統事實與寧寧自己稍早回覆餵進鐵律評審、整條餵進 7 維評審；鐵律6/7 準則措辭
+  精修）、`engine/eval/dimension_judge.py`（新增可選 `systemContext` 背景區＋DIM_SYSTEM
+  台語安全防線一致評分原則）、`docs/聊天品質測試-劇本庫與評分表-2026-07-25.md`（鐵律6/7
+  措辭同步）、`docs/聊天品質基準-第一輪-2026-07-25.md`（補第九節：六刀＋雙輪驗證）、
+  最終結果快照 `engine/eval/results/chat-quality-2026072*T21{2437,4620}Z.json`＋
+  `latest-chat-quality.json`。
+- 目標：修第一輪基準第八節判定的評測骨架缺口——鐵律評審看不到正式線注入給模型的系統
+  即時 context（時間/地點），把模型照真時間講今天日期誤判成編造（S03/S06/S13）；連帶修
+  施工中暴露的模糊台語危機誤判（S09）、時間口吻被過嚴誤殺（S01/S15）、評審看不到寧寧
+  自己回覆而誤判對話歷史（S02）。**只碰考卷（engine/eval/*），不動人設行為。**
+- 不碰區：沒動 `chat_engine.py`／`server.py`／`live_voice_server.py` 的人設或生成行為、
+  沒動 golden_set 姊妹評測（`run_eval.py`／`judge.py` 既有呼叫不帶新參數、行為不變、向下
+  相容）、沒部署、不改 App 包版、非 call-path risk。
+- 驗過沒：`npm run smoke:no-api` 全過（退出碼 0、無空白錯誤）；定向煙霧 S03/S06/S09/S13
+  四題 PASS；S09 危機錨定後連跑 3 次 PASS；六刀全庫重跑 ×2（Run1 18/19＝94.7%／Run2
+  17/19＝89.5%，平均約 92%）；golden_set g01 向下相容 PASS 3/3。殘留失敗＝模型真的機率性
+  編造（S03 沒天氣資料硬掰晴天、S15 把「留言」講成「傳訊息」多加管道、S06 心臟症狀升級
+  不夠往嚴站）＝人設側已知風險、評審抓對了、非骨架 bug、不靠放水評審蓋掉。
+
 ### 待審：營運後台三個數據洞修補（2026-07-24 卡西法/城堡）
 
 - Branch：`calcifer/admin-data-gaps-20260724`；獨立 worktree，基準 `origin/main@1505b4d1`。

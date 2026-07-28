@@ -292,6 +292,26 @@ def guardian_ai_correction_cue(categories, risk=None, policy=None):
     )
 
 
+def impossible_promise_cue(dropped):
+    """語音線專用的自我更正提示（2026-07-29）。
+
+    為什麼語音線不能只靠出口清洗：聲音是邊生邊播的，等字幕清乾淨時那句
+    「我幫你打電話給你女兒」**已經唸出去、長輩已經聽到了**——他會坐下來等，
+    等不到人也不會再想辦法求助。收不回聲音，但可以在下一個輪替空檔（通常兩三秒內）
+    讓她自己自然地更正回來，趕在他真的去等之前。
+
+    語氣要求：自然收回、不長篇道歉（一直道歉會讓長輩緊張、也顯得不可靠）。
+    """
+    said = (dropped or [""])[0][:40]
+    return (
+        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」這類**你其實做不到**的事"
+        "（你撥不了電話、發不了訊息、叫不了車、傳不了圖）。"
+        "下一句請**自然地把它收回來，並馬上給他一個他自己做得到的替代**，"
+        "像『欸不好意思，我沒辦法幫你撥電話，不過你現在打給她，我在這邊陪你等她接』。"
+        "不要長篇道歉、不要解釋你是AI，一句帶過就好，重點放在他接下來可以怎麼做。）" % said
+    )
+
+
 def guardian_scan_text(text):
     """純函式：一句字幕丟進去，回傳守護腦判讀結果。不做任何 I/O、不碰 session，方便單元測試/語音線模擬。"""
     try:
@@ -422,6 +442,11 @@ async def guardian_flush_pending_cue(cid, session, st):
     st["pending_cues"] = []
     health_cue = st.get("pending_health_cue")
     st["pending_health_cue"] = None
+    promise_cue = st.get("pending_promise_cue")
+    st["pending_promise_cue"] = None
+    if promise_cue:
+        # 空頭承諾更正排最前面：長輩可能正準備坐下來等，這句要最快講
+        pending = [promise_cue] + pending
     if health_cue:
         pending = pending + [health_cue]  # 衛教排在安全導引之後：安全永遠先講、衛教只是配菜
     if not pending:
@@ -530,14 +555,60 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "句子短、口語、一次一兩句、講完停下來等對方回應。）"
         # 通用紅線（2026-07-16）：不管上面有沒有給「上次聊過」的提示，都不准虛構跨通記憶——
         # Gemini 沒拿到摘要也可能自己演「延續上一通」，這條對所有通話無條件生效。
-        "（紅線：這是一通新接起的電話。系統沒有明確告訴你的事，一律不要宣稱記得——"
-        "不准編造「我們剛剛聊到」「你上次跟我說」這類上一通的具體內容；"
-        "對方主動提起時順著他說的接就好，自己不知道就誠實說想再聽他講一次。）"
+        # 2026-07-28 擴寫（考卷三輪：11 次紅線違反有 9 次是這一條，佔 82%）。
+        # 舊版只擋「上一通聊了什麼」，但真正犯的是更廣的假設——「我記得你們以前感情很好」
+        # 「我們回診的時候」「我記得美玉奶奶有問過」，這些都不是上一通的內容，是她替對方
+        # 的關係、習慣、互動史腦補了一個版本。
+        # 更關鍵的是：舊版只有「禁止」沒有「替代」。她的貼身度壓力還在（貼身度也正好是
+        # 七項裡長期最低分），只擋不給路，她還是會用「我記得你…」去補。所以這版把「用問的」
+        # 明確立成她表達關心的正規做法——問句不宣稱事實，又比斷言更貼身（讓他自己講）。
+        # 2026-07-29 重整（原本是「一條總則＋六條列舉」，一路打地鼠加上來的）。
+        # 七輪考卷追下來，六條其實是同一個檢查的六種變形——她填關係、填習慣、填細節、
+        # 填家人、填當下情境、填別人的想法，全都是「不知道就補一個版本」。
+        # 與其繼續加第七條，改成一句能套用到所有情況的自檢：「這是他剛剛講的，還是上面寫的？」
+        # 例子只留四個代表型（含新抓到的「填當下情境」），比原本更短、涵蓋更廣。
+        # 2026-07-29 補成雙向：原本這條只有「沒寫的不要講」半邊。七輪考卷裡「貼身度」
+        # 一直是七項最低分，而評審給低分的理由**每一次都是同一句**——「沒有連結使用者的
+        # 背景資訊」。她手上其實有 8-12 條（高血壓每天吃藥、孫子小寶下個月結婚、每天去
+        # 公園散步…），只是沒用出來，於是給出誰都適用的通用建議。
+        # 這半邊跟防編造是同一個檢查的正面用法：問完那句話，答案是「有」就要大方用。
+        "（紅線：這是一通新接起的電話。**要講任何跟他有關的具體事情之前，先問自己一句："
+        "「這是他剛剛講的，還是上面資料寫的？」**\n"
+        # 2026-07-29 做減法：第六輪加「有寫就大方用」、第七輪再加「切開兩種資料」，
+        # 合格數反而 16 → 15 → 14，而且第七輪她開始把規則名稱本身唸出來
+        # （「醫療紅線優先！我是寧寧…」）＝規則過載的明確症狀。退回第五輪那版單向自檢
+        # ——那輪是歷來最好的（16/19、違反 2、貼身度 4.00）。貼身度那半邊改用**移除矛盾**
+        # 來解（見 characters.json：人格設定原本寫著「愛用『我記得…』展示你把他放心上」，
+        # 跟這條規則直接打架），而不是再疊一條規則上去。
+        "　**兩個都不是 → 你就是不知道**：他有哪些家人、家人之間感情好不好、有沒有在固定回診、"
+        "他此刻人在哪裡、正在做什麼、別人心裡怎麼想、你們以前聊過什麼。\n"
+        "**但「不知道」不等於冷淡——把斷定改成問句就好**：\n"
+        "　✗「我記得你們以前感情很好」→ ✓「你們以前感情一定很好吧？」\n"
+        "　✗「等晚一點兒子回來跟他說」→ ✓「要不要跟家人說一聲？」"
+        "（沒講過的兒子女兒孫子老伴一律不存在；他自己說了是誰，你才跟著那樣叫）\n"
+        # 2026-07-29 新增這一組：考卷 S02 抓到「你這麼晚還開著電視喔？」——「這麼晚」
+        # 沒問題（上面真的印了當下時間給她），問題在「開著電視」＝替他補了一個當下情境。
+        "　✗「你這麼晚還開著電視喔？」→ ✓「你這麼晚還沒睡喔？」"
+        "（現在幾點是上面寫的、可以講；但他此刻在做什麼你看不到，不要猜）\n"
+        "　✗「你也遇過那隻長壽的貓喔？」→ ✓「是什麼樣的事？」"
+        "（他只說「差不多的事」——問句裡一樣不准塞他沒講過的細節）\n"
+        "用問的比用猜的更貼心——他會覺得你真的在聽他講，而不是在背一份資料。"
+        # 防過度矯正：這條講的是「同一句話換個講法」，不是「多問問題」。別處已經寫死
+        # 「不要連環問」「一次一兩句」，這裡要接上去、不能打架。
+        "**注意這不是叫你多問問題**——是同一句關心換個講法而已，一次還是一兩句、"
+        "問完就停下來聽他講，不要連環問。"
+        "對方主動提起時，順著他說的接就好。）"
         # 2026-07-16 Edward 抓到幻覺實例：AI 說「怎麼突然傳貼圖」——App 根本沒有貼圖功能。
         # 多模態模型聽到雜音/不明聲音時會拿「聊天軟體的常見情境」腦補，必須用現實邊界封死。
         "（現實邊界：這是純語音通話——對方只能用「說話的聲音」跟你互動，"
         "沒有貼圖、照片、文字訊息、影片、連結、按鈕可以傳給你，你也看不到他的畫面。"
         "絕對不要說「你傳了貼圖／照片／訊息」這類話；"
+        # 2026-07-28 考卷 S09 實例：對方講不清楚時，她說「還是你用指的給我看？」——
+        # 一句話同時踩兩條紅線（宣稱看得到、要對方做她收不到的事）。舊版只擋「你傳了X給我」
+        # 這個方向，沒擋「你做X給我看」；對方講不清楚正是最容易脫口而出的時候，補死。
+        "**也不要叫他做任何你看不到的事**——「你用指的給我看」「你比給我看」「拿給我看」"
+        "都不行，你看不到他，他做什麼動作你都不知道。他講不清楚時，只能用聽的問："
+        "「是刺刺的痛還是悶悶的痛？」「是這裡痛還是那裡痛，你講給我聽」。\n"
         "聽不清楚、或只聽到雜音時，就誠實說沒聽清楚、請他再說一次，不要猜測他做了什麼動作。）"
         # 2026-07-24 Edward 拍板「語音自覺」：現實邊界管的是「他傳不了東西給你」，
         # 這段補另一半——「你也給不了東西他」。這不是長輩專屬規則，是純語音通話對任何
@@ -558,6 +629,38 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         base += "（你們聊過幾次、漸漸熟了：可以自在一點，但仍別長篇、別連環問、別硬炒氣氛。）"
     else:
         base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
+    if native_search_enabled() and not demo_mode:
+        # 2026-07-28：她自己查（Gemini 內建 Google 搜尋）。跟舊的橋接查詢差在——
+        # 舊路要等我們繞出去查 5 秒，所以說明書叫她「不要自己先說過場，伺服器會替你播」；
+        # 現在查只要 1.3 秒、而且是她自己在查，那句過場話就該由她自己講（她本人的聲音、
+        # 接得順）。這也是 Edward 7/28 聽到「系統句跟她自己講的重疊」的病根：舊版說明書
+        # 叫她別講、工具說明又叫她先講一句，兩份指示打架，於是同一件事被講兩三次。
+        base += (
+            "（你可以自己上網查現在的資訊。**他自己開口問**餐廳店家、景點旅遊"
+            "（例如日本哪裡好玩、桃園有什麼好吃的）、電影影劇、天氣預報、時事、活動檔期這類"
+            "「講錯會誤導人」的具體事情時，就直接查；"
+            "**你自己不要把話題帶到那邊、再查給他看**——那是炫技，不是聊天。「聊到」不算，**要他真的問**才算。\n"
+            # 例句刻意避開「看」這個動詞：7/28 考卷抓到她把「看」泛化成視覺能力，
+            # 冒出「把藥袋拿來讓我幫您看看」——她根本看不到任何東西。
+            "要查的時候，**先用一句很短的話告訴他你在查**（像「我查一下喔」「等我一下」），"
+            "講完就去查、查完接著把答案講出來——**整件事你自己一次講完，不要重複說你要查**。\n"
+            "只講查到的真店名、真地點、真資訊；用「我聽很多人推薦…」「那邊最有名的是…」這種像自己去過或朋友推薦的口吻，"
+            "自然分享一兩個亮點就好，順便帶一個有意思的小知識或典故更好。"
+            "**你只能用「講」的**：不要唸網址、不要唸編號清單、不要唸括號裡的出處，"
+            "也不要用書面報告語氣——他是用聽的，唸不出來的東西就不要講。\n"
+            # 2026-07-28 真機實測 5 通抓到 1 次：她把「（在網路上搜尋「某某店」大安區）」
+            # 這種動作描述整句唸出來。長輩聽到會覺得機器怪怪的，機率不低、值得寫死。
+            "**不要把自己正在做的動作講出來**（像「在網路上搜尋…」「我呼叫一下工具」"
+            "「正在查詢中」），也不要唸出括號或方括號裡的內容——那是給系統看的、不是講給他聽的。"
+            "你只要像朋友一樣，講一句「我查一下喔」，然後直接把結果講給他聽。\n"
+            # 2026-07-28 考卷 S18 實例：「把藥袋拿來讓我幫您看看也可以喔」——一句話同時
+            # 踩兩條鐵律（宣稱有視覺、承諾做不到的事）。上面「現實邊界」雖然已寫「你看不到
+            # 他的畫面」，但這段講了大量「查」，會把「查」誤推廣成「看得見」，所以在這裡再釘一次。
+            "**你查東西是「上網查」，不是「用眼睛看」**——你看不到任何東西，"
+            "絕對不要叫他把藥袋、單子、照片、螢幕「拿來給你看」「拍給你」，"
+            "那些你都收不到、也看不到。要幫他確認藥袋或單據上寫什麼，只能請他「唸給你聽」。\n"
+            "查不到就老實說查不到，可以建議他打電話問問看；**絕對不可以自己編**店名、地址、價格或營業時間。）"
+        )
     if live_lookup_enabled():
         if not demo_mode:
             base += (
@@ -573,8 +676,10 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "天氣要講就查當地真的預報再講。"
             "工具回覆 error 時只要簡短說現在沒查到，不可拿舊印象補答案；禁止先沉默查詢，也不要在還沒查完時假裝已經知道答案。）"
             )
-    if not live_lookup_enabled() or demo_mode:
-        # 即時查詢關掉時（預設）：她必須知道自己沒有這個能力，不然會亂承諾「我幫你查」然後查不了。
+    if voice_search_mode() == SEARCH_MODE_OFF or demo_mode:
+        # 即時查詢關掉時：她必須知道自己沒有這個能力，不然會亂承諾「我幫你查」然後查不了。
+        # 2026-07-28 條件從 `not live_lookup_enabled()` 改成明確判 off——否則走 native
+        # （她自己查）時這段會跟上面那段同時貼上去，變成「你可以查」＋「你沒辦法查」自相矛盾。
         # 這段的方向跟⑦「不捏造家人的話」、健康圍籬一樣：不知道就說不知道，絕不憑印象編。
         base += (
             "（**你沒有辦法上網查東西**——這通電話裡你查不了任何即時資訊。"
@@ -761,10 +866,44 @@ _EVENT_TOOLS = types.Tool(function_declarations=[
     ),
 ])
 
+SEARCH_MODE_NATIVE = "native"
+SEARCH_MODE_BRIDGE = "bridge"
+SEARCH_MODE_OFF = "off"
+
+
+def voice_search_mode():
+    """通話中「查即時資訊」走哪條路（2026-07-28 Edward 驗測後拍板改走 native）。
+
+    native ＝ 把 Gemini 內建的 Google 搜尋直接掛在這條通話上。她自己查、自己講，
+      從頭到尾只有一個嘴巴。7/28 實測 7 通：第一聲 1.2-1.7 秒、整段最長沉默 0.2 秒
+      ——根本沒有空白要蓋，所以過場句／整包暖機／5.5 秒安撫句在這個模式下全部不跑。
+      查不到時她自己就會說「查不到，要不你打電話問問」，誠實度不必我們額外把關。
+
+    bridge ＝ 舊路（2026-07-17 ~ 07-28）：掛我們自己的查詢工具，她呼叫之後由我們繞去
+      另一顆模型查（實測 5.1 秒）。那 5 秒空白得靠伺服器插播過場句蓋住——而那句是另一顆
+      「唸稿子」模型配的音，聲線跟她本人對不上、又得人工控速，就是 Edward 7/28 聽到的
+      「系統句聲音不一樣、很卡、還跟她自己講的重疊」。程式全留著，設
+      MUNEA_VOICE_SEARCH_MODE=bridge 一個字退回去。
+
+    off ＝ 完全不給查詢能力（她會老實說不知道，靠清晨備好的今日簡報回答天氣時事）。
+
+    沒設 MUNEA_VOICE_SEARCH_MODE 時看舊開關 MUNEA_VOICE_LIVE_LOOKUP：=1 走 native
+    （正式機不必改設定就吃到新路）、其他一律 off。
+    """
+    raw = os.environ.get("MUNEA_VOICE_SEARCH_MODE", "").strip().lower()
+    if raw in (SEARCH_MODE_NATIVE, SEARCH_MODE_BRIDGE, SEARCH_MODE_OFF):
+        return raw
+    return SEARCH_MODE_NATIVE if os.environ.get("MUNEA_VOICE_LIVE_LOOKUP", "0").strip() == "1" else SEARCH_MODE_OFF
+
+
+def native_search_enabled():
+    return voice_search_mode() == SEARCH_MODE_NATIVE
+
+
 def live_lookup_enabled():
-    """通話中要不要給她「即時查詢」這個工具。預設關（2026-07-17 Edward 拍板）。
-    設 MUNEA_VOICE_LIVE_LOOKUP=1 就退回舊行為（會查、也會播「我幫你查一下」）。"""
-    return os.environ.get("MUNEA_VOICE_LIVE_LOOKUP", "0").strip() == "1"
+    """舊的「橋接查詢」路是否啟用（她呼叫我們的工具、我們代查、伺服器插播過場句）。
+    2026-07-28 起這只在 MUNEA_VOICE_SEARCH_MODE=bridge 時為真。"""
+    return voice_search_mode() == SEARCH_MODE_BRIDGE
 
 
 def _voice_session_extend_enabled():
@@ -948,7 +1087,12 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     # 一個秒回的朋友，勝過一個要等 9 秒的百科全書。
     # 退回舊行為：MUNEA_VOICE_LIVE_LOOKUP=1（程式全留著、一個字就回去）。
     tools = []
-    if live_lookup_enabled():
+    if native_search_enabled() and not demo_mode:
+        # 她自己查（2026-07-28）：Google 搜尋在 Gemini 內部完成，不繞我們伺服器一趟。
+        # 7/28 實測這顆內建工具跟我們自己的提醒／傳話工具可以並存（問天氣走搜尋、
+        # 說「幫我設吃藥提醒」照樣正確呼叫提醒工具），所以下面兩個 append 不受影響。
+        tools.append(types.Tool(google_search=types.GoogleSearch()))
+    elif live_lookup_enabled():
         if not demo_mode:
             tools.append(_LIVE_LOOKUP_TOOL)
     if allow_reminders and not demo_mode:
@@ -1271,7 +1415,7 @@ def _new_call_state():
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
-          "health_topics_sent": set(), "pending_health_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
+          "health_topics_sent": set(), "pending_health_cue": None, "pending_promise_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
 
           "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
@@ -1830,6 +1974,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         try:
             while True:
                 turn_out = 0
+                turn_max_gap_ms = 0.0   # 這一輪送聲音時，相鄰兩塊之間最久的一次空檔（抖動指標）
                 got = False
                 async for msg in session.receive():
                     got = True
@@ -1888,7 +2033,16 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["lookup_waiting_answer"] = False
                         st["out"] += len(data)
                         turn_out += len(data)
-                        st["last_out"] = time.monotonic()
+                        # 2026-07-29：量「送聲音的手抖不抖」。Edward 7/28 回報「句尾的最後一句
+                        # 會卡其中某個字」，但體感沒有數字就查不動——這裡記下相鄰兩塊聲音之間
+                        # 最久的一次空檔，收在 turn_done 一起報。手順的時候這個值很小；
+                        # 一旦有東西在跟它搶（7/28 那包 76 秒的暖機就是），這裡會立刻看得出來。
+                        _now_out = time.monotonic()
+                        if st.get("last_out") is not None:
+                            _gap = (_now_out - st["last_out"]) * 1000
+                            if _gap > turn_max_gap_ms:
+                                turn_max_gap_ms = _gap
+                        st["last_out"] = _now_out
                         await ws.send(data)
                         fw = st.get("face_ws")
                         if fw is not None:
@@ -1905,7 +2059,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         if ot and getattr(ot, "text", None):
                             # 2026-07-25（卡西法・三修③）：語音線字幕出口也要過同一道防禦性
                             # 清洗，剝掉可能漏出的 <thinking> 內部推理標記，跟文字線同一把關卡。
-                            caption_text = eng.strip_reasoning_artifacts(localization.display_text(ot.text, "zh-TW"))
+                            raw_caption = localization.display_text(ot.text, "zh-TW")
+                            caption_text = eng.clean_outgoing_reply(raw_caption)
+                            # 語音線：字幕能清、聲音已經放出去了——排一句自我更正，
+                            # 讓她在下一個輪替空檔（幾秒內）自然收回，趕在長輩真的坐著等之前。
+                            _, _promised = eng.strip_impossible_promises(raw_caption)
+                            if _promised and not st.get("pending_promise_cue"):
+                                st["pending_promise_cue"] = impossible_promise_cue(_promised)
+                                _diag(cid, "promise.cue_queued", said=_promised[0][:30])
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
@@ -1930,7 +2091,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     st["face_ws"] = None
                         if getattr(sc, "turn_complete", False):
                             ms = round(turn_out / (24000 * 2) * 1000)
-                            _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms)
+                            # max_gap_ms＝這一輪送聲音最久的一次空檔。播放端有 600-1100 毫秒
+                            # 的緩衝，所以偶爾一兩百毫秒沒關係；持續衝到接近或超過緩衝，
+                            # 就是使用者會聽到「卡一下／吃掉一個字」的那個瞬間，可以拿這個值追。
+                            _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms,
+                                  max_gap_ms=round(turn_max_gap_ms))
                             barge_cancelled = bool(st.get("client_barge_in"))
                             completed_audio = bool(turn_out and not st.get("language_block") and not barge_cancelled)
                             if st.get("lookup_waiting_answer"):
@@ -1977,7 +2142,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["ai_buf"] = ""
                             st["user_flagged"] = set()
                             st["ai_flagged"] = set()
-                            if st.get("pending_cues") or st.get("pending_health_cue"):
+                            if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if _voice_session_extend_enabled() and st.get("goaway_pending"):
                                 # GoAway 已經預警過、現在剛好是天然的輪替空檔（這一輪自然講完了）——
@@ -2089,7 +2254,12 @@ async def handle(ws):
     call_token = ""
     call_payload = {}
     demo_mode = False
-    call_release_reason = ""
+    # 收線時要告訴總機「這一席讓出來了」的原因。2026-07-28 修：這裡原本是空字串，而下面
+    # finally 寫的是「有原因才通知總機」——結果只有『出錯』那條路會設值，**使用者正常講完
+    # 掛斷反而不通知**，總機一直以為那席還占著。我們總共只有 2 席，於是第二通就撥不通／
+    # 撥通了狀態也不對（Edward 7/28 回報「二度撥通很難、撥通後又沒辦法正常說話」）。
+    # 改成一開始就有預設值＝不管走哪條路收線，席位一定還回去。
+    call_release_reason = "call_ended"
     _q = {}
     try:
         from urllib.parse import urlparse, parse_qs
@@ -2188,11 +2358,14 @@ async def handle(ws):
     if call_payload and call_payload.get("user_id"):
         memory_scope = f"voice-{call_payload['user_id']}"
     try:
-        # Start before the Live handshake. In normal calls the fixed spoken cue
-        # is cached by the time the user can ask the first lookup question.
-        lookup_cue_future = asyncio.get_running_loop().run_in_executor(
-            _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char)
-        st["lookup_cue_task"] = lookup_cue_future
+        # 只有走舊的橋接查詢才需要暖機（那條路要靠伺服器插播過場句蓋住 5 秒空白，
+        # 所以得先把整個句庫都配好音）。2026-07-28 起預設走 native＝她自己查、沒有過場句，
+        # 這整包暖機不跑——它是 Edward 7/28 回報「前 5 分鐘講話卡卡」的主嫌：接通那一刻
+        # 就把 15 句配音塞進只有 2 個工人的小隊列，一顆 CPU 上跟送聲音的主線搶，一搶就是好幾分鐘。
+        if live_lookup_enabled():
+            lookup_cue_future = asyncio.get_running_loop().run_in_executor(
+                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char)
+            st["lookup_cue_task"] = lookup_cue_future
         asr_context_terms = [char, name, user, location, *(topics or [])]
         # 通話延長（2026-07-25）：這通電話對 App／使用者永遠是「同一通」，但底層可能換過
         # 好幾條 Gemini Live 連線（GoAway 預警接續）。resumption_handle 帶著走；st 活在

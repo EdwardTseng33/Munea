@@ -3,7 +3,7 @@
 > Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.44 (Build 492)`
+> **Current source:** `1.0.44` post-package source; the Xcode project records Build `492`, but source has advanced beyond the frozen uploaded binary and must use a new Build number when packaged again.
 >
 > **Latest uploaded App:** `1.0.44 (Build 492)`; Apple processing completed and the Build was selected and saved for 1.0.44 at 17:31. It has not been submitted, approved or released.
 >
@@ -27,7 +27,7 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source | `1.0.44 (Build 492)` release branch is based on `origin/main@5d2008c`; strict package and App contracts pass | `packaged, PR merge pending` |
+| App source | Current `1.0.44` source has advanced beyond the frozen Build 492 commit `72a0bd46`; no Archive／IPA evidence applies to the post-package source | `merged evidence; next Build not packaged` |
 | Uploaded App | `1.0.44 (Build 492)` was uploaded, processed and selected for 1.0.44; Edward iPhone install／launch／version readback pass; App E2E remains pending | `selected and installed, not submitted; human call gate pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |

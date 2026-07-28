@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-28 17:32 Asia/Taipei` (App 1.0.44 Build 492 package, upload, App Store selection and Edward iPhone installation refresh; runtime and DB lanes otherwise unchanged)
+Snapshot time: `2026-07-29 02:50 Asia/Taipei` (Build 492 frozen-artifact evidence reconciled against post-package main; runtime and DB lanes otherwise unchanged)
 
-Source baseline: `origin/main@5d2008c` + `codex/app-store-1.0.44-build492-20260728`
+Source reconciliation baseline: `origin/main@db229d8c`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -26,7 +26,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.44 (Build 492)` | 發版分支以最新 `origin/main@5d2008c` 為基準；package、lockfile、Web changelog、四個 `v1044` 快取戳記與 iOS Debug／Release版號一致。完整 `test:launch`、App Call Control 15/15、Avatar render contract、strict release consistency 與 IPA 五道防漏全過；分支尚待 PR 合併 | `package.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-07-28 17:20 |
+| Latest source | `1.0.44` post-package source（Xcode project 記錄 Build 492） | current source 已在凍結 commit `72a0bd46` 之後加入 Voice／Gateway 等變更；沒有適用 current HEAD 的 Archive／IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source。下一次包版必須換新 Build number | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 02:50 |
 | Latest uploaded App | `1.0.44 (Build 492)` | App Store Release Archive／IPA 已建立；Apple 於 17:22:57 回傳 `Upload succeeded`，TestFlight upload status 與 Build 處理皆完成。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1` | Xcode upload receipt; App Store Connect; `STATUS.md` | 2026-07-28 17:31 |
 | App Store selected review lane | `1.0.44 (Build 492)` | 17:31 已選入 1.0.44 版本頁並儲存；頁面狀態仍為「準備提交」。未點「新增以供審查」、未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-28 17:31 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
@@ -77,7 +77,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Developer purchase / Apple account mismatch UX | #175 `tested`, Draft，stacked on #174 | 整合後包版；TEST 不觸發 Apple；真帳號 mismatch 不重複扣款 |
 | Dedicated QA account | 正式 Supabase password sign-in、account bootstrap 與 Brain balance readback 已驗證；purchased balance `505`（免費 5＋授權測試 500），帳密只存 Secret Manager，事件排除營運分析 | #188 合併後由 Mac 安全載入 Secret，包一個開發版完成 iPhone 登入與 credited chat-call；後端帳號存在不等於 App Gate 通過 |
 | Subscription / points purchase | Build 47 使用者回報身份與購買後續無法完成 | Sandbox Apple ID、server verification、entitlement／wallet refresh E2E |
-| Authenticated chat call | Build 492 的 App Call Control 15/15 與 Avatar render contract 通過，手機已安裝／啟動 | `App E2E pending`：仍需 exact Build＋production Gateway／Voice／Avatar 完成真麥克風、AI 聲畫回應與掛斷釋位 |
+| Authenticated chat call | 凍結 commit `72a0bd46` 的 Build 492 已通過 App Call Control 15/15 與 Avatar render contract，手機已安裝／啟動 | `App E2E pending`：仍需針對該 exact Build＋production Gateway／Voice／Avatar 完成真麥克風、AI 聲畫回應與掛斷釋位；post-package source 不承接結果 |
 | Pricing policy v4 | source／uploaded Build 47／production Brain 已對齊；Apple Product ID 維持原值，Brain 實際 grant mapping 為點數包 100／300／600／1000、Plus 100、Pro 200 | App Store price／description、Tokyo `019` 與登入後 Sandbox purchase／wallet refresh 真人驗收；DB policy mismatch 不參與目前 `/apple/transaction` 的 `verified.points` 入帳路徑，但仍需治理對焦 |
 | Managed-cloud `/chat-test` | #182 已合併，source 預設 404 | Voice 尚未部署；production／staging live GET 仍須重新驗證 404 |
 

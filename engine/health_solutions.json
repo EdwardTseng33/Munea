@@ -1,0 +1,140 @@
+{
+  "version": "v1",
+  "updated": "2026-07-29",
+  "designDoc": "docs/research/因人因時因地-方案池與挑選邏輯-2026-07-29.md",
+  "note": "方案池：一個症狀不是一條答案，是一池方案。每個方案標好『多快有感／屬哪一類／要花多少力氣／誰不能用』，由 health_kb 的挑選層依這個人的狀況（急不急、偏好、做不做得到、年齡）安全剔除後排序，只端出主推 1＋備援 2。設計依據見 designDoc。",
+  "riskLevels": {
+    "L1": "生活調整——可直接建議",
+    "L2": "食物——可直接建議，食補優先",
+    "L3": "保健品／健康食品——可建議，但同段話必須講滿：成熟度＋每日上限＋禁忌族群且要問專業",
+    "L4": "用藥／處方——只提醒去問，絕不替他判斷",
+    "L5": "急症——立即轉介／119，對方推辭也不軟化"
+  },
+  "maturity": {
+    "proven": "🟢已證實",
+    "emerging": "🟡有苗頭、證據還在累積",
+    "traditional": "⚪傳統經驗，僅供參考"
+  },
+  "topics": {
+    "TW-EDU-01": {
+      "title": "睡不好",
+      "reframe": [
+        {
+          "when": "照顧者說『我媽半夜要起來上廁所／我根本睡不飽』",
+          "say": "這不是你睡不著，是你根本沒得睡——先把這件事講出來接住他，再談方法。硬套失眠的建議會答非所問。"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "sleep-screen-off",
+          "label": "睡前一小時把手機放遠一點",
+          "riskLevel": "L1", "maturity": "proven",
+          "timeToEffect": "今晚", "solutionType": "行為調整", "effortCost": "低",
+          "audience": ["worker", "elder", "caregiver", "women"],
+          "say": "睡前一個鐘頭把手機放遠一點、燈調暗，讓腦袋知道要休息了——今晚就可以試。"
+        },
+        {
+          "id": "sleep-warm-bath",
+          "label": "睡前溫水澡／泡腳",
+          "riskLevel": "L1", "maturity": "proven",
+          "timeToEffect": "今晚", "solutionType": "行為調整", "effortCost": "低",
+          "audience": ["worker", "elder", "women"],
+          "say": "睡前洗個溫水澡或泡個腳，起來體溫慢慢降下來的時候比較好睡。"
+        },
+        {
+          "id": "sleep-fixed-waketime",
+          "label": "固定時間起床",
+          "riskLevel": "L1", "maturity": "proven",
+          "timeToEffect": "一週", "solutionType": "行為調整", "effortCost": "中",
+          "audience": ["worker", "elder", "women"],
+          "notFor": ["輪班工作", "照顧者夜間需起身"],
+          "say": "每天固定同一個時間起床（連假日也是），身體的生理時鐘會慢慢調回來。"
+        },
+        {
+          "id": "sleep-daylight-walk",
+          "label": "白天曬太陽、走一走",
+          "riskLevel": "L1", "maturity": "proven",
+          "timeToEffect": "慢養", "solutionType": "運動", "effortCost": "中",
+          "audience": ["elder", "worker", "women"],
+          "say": "白天多出去曬曬太陽、走一走，晚上比較好睡——這個對長輩特別有效。"
+        },
+        {
+          "id": "sleep-gentle-stretch",
+          "label": "睡前伸展／簡單瑜珈",
+          "riskLevel": "L1", "maturity": "emerging",
+          "timeToEffect": "一週", "solutionType": "運動", "effortCost": "低",
+          "audience": ["worker", "women", "caregiver"],
+          "say": "睡前做幾個慢慢的伸展、深呼吸，肩頸鬆開來人也比較容易放鬆下來。"
+        },
+        {
+          "id": "sleep-cut-caffeine",
+          "label": "下午之後不碰咖啡因",
+          "riskLevel": "L1", "maturity": "proven",
+          "timeToEffect": "一週", "solutionType": "行為調整", "effortCost": "低",
+          "audience": ["worker", "elder", "caregiver", "women"],
+          "say": "下午之後就別再喝咖啡、濃茶了，咖啡因在身體裡待得比想像中久。"
+        },
+        {
+          "id": "sleep-magnesium-food",
+          "label": "從食物補鎂",
+          "riskLevel": "L2", "maturity": "proven",
+          "timeToEffect": "慢養", "solutionType": "食補", "effortCost": "低",
+          "audience": ["elder", "worker", "caregiver", "women"],
+          "say": "深綠色蔬菜、堅果、香蕉本來就有鎂，從吃的補最安全，也不用擔心過量。"
+        },
+        {
+          "id": "sleep-magnesium-supplement",
+          "label": "睡前補鎂（保健品）",
+          "riskLevel": "L3", "maturity": "emerging",
+          "timeToEffect": "一週", "solutionType": "保健品", "effortCost": "低",
+          "audience": ["worker", "women"],
+          "contraindications": ["腎功能異常", "低血壓", "孕哺", "腸胃術後"],
+          "dailyCap": "補充品每日不超過 250 毫克",
+          "evidence": {
+            "year": 2025,
+            "source": "隨機雙盲對照試驗（PubMed 40918053）",
+            "population": "18-65 歲、自述睡不好 155 人",
+            "effect": "失眠嚴重度改善 -3.9 vs 安慰劑 -2.3（p=0.049），效果量小",
+            "olderAdults": "2021 老年人統合分析：入睡快約 17 分鐘，但低品質證據"
+          },
+          "say": "這一兩年有個比較新的研究，是找像你這樣睡不好的上班族做的——睡前補鎂，失眠的困擾確實有減輕一點，不過效果不大、不是人人有感。台灣營養師一般建議補充品的鎂一天不超過 250 毫克，吃多了會拉肚子；你如果有腎臟或血壓的狀況，要先問過醫師或營養師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "sleep-split-rest",
+          "label": "把睡眠切兩段顧",
+          "riskLevel": "L1", "maturity": "traditional",
+          "timeToEffect": "今晚", "solutionType": "行為調整", "effortCost": "低",
+          "audience": ["caregiver"],
+          "say": "既然半夜一定會被叫起來，不如把睡眠切成兩段——他起來之前先讓自己睡一段，比硬撐整夜好過一點。"
+        },
+        {
+          "id": "sleep-respite-service",
+          "label": "喘息服務補眠",
+          "riskLevel": "L1", "maturity": "proven",
+          "timeToEffect": "慢養", "solutionType": "行為調整", "effortCost": "中",
+          "audience": ["caregiver"],
+          "say": "長照的喘息服務可以讓你補個眠，這是你應得的，要不要我幫你記著、你有空去問問看？"
+        },
+        {
+          "id": "sleep-melatonin-blocked",
+          "label": "褪黑激素（台灣屬處方藥）",
+          "riskLevel": "L4", "maturity": "proven",
+          "timeToEffect": "今晚", "solutionType": "用藥", "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "褪黑激素在台灣是處方藥，我不能建議你去買——這個要跟醫師討論才行。"
+        },
+        {
+          "id": "sleep-refer-doctor",
+          "label": "轉介就醫",
+          "riskLevel": "L5", "maturity": "proven",
+          "timeToEffect": "今晚", "solutionType": "就醫", "effortCost": "中",
+          "audience": ["worker", "elder", "caregiver", "women"],
+          "escalateWhen": ["長期失眠", "白天累到不行", "打呼合併呼吸中止", "情緒持續低落"],
+          "say": "如果這樣持續好一陣子、白天累到影響生活，或睡覺會打呼打到像停止呼吸，這個要看醫生——一般會先看家醫科，或是有睡眠門診的醫院。"
+        }
+      ]
+    }
+  }
+}

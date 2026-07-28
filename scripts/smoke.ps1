@@ -2918,7 +2918,7 @@ required_js = [
     "renderSubscription",
     "renderFeedback",
     "renderRecords",
-    "renderCarePriority",
+    # 2026-07-28「最需要關心」頁移除（Edward 拍板：照護訊號歸 App 用戶自覺、後台不主動介入）
     "renderMedication",
     "renderFamilyHealth",
     "renderMoodTrend",
@@ -3261,6 +3261,13 @@ if ($LASTEXITCODE -ne 0) {
   throw "Gateway HTTP auth surface contract failed with exit code $LASTEXITCODE"
 }
 Pass "Gateway user health redaction and admin boundaries are valid"
+
+Step "Gateway worker-health terminal-state guard"
+& $Python "scripts/test_gateway_worker_health.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "Gateway worker-health terminal-state guard failed with exit code $LASTEXITCODE"
+}
+Pass "A terminated worker stays down under healthy heartbeats"
 
 Step "Git diff check"
 git diff --check

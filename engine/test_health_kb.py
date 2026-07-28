@@ -122,7 +122,10 @@ class MatchingTest(unittest.TestCase):
         self.assertLessEqual(len(ids), health_kb.MAX_TOPICS_PER_TURN)
         inj = health_kb.injection_for(text)
         self.assertLessEqual(len(inj), 1500)
-        self.assertIn("衛教資料庫命中", inj)
+        # 2026-07-29：有建方案池的題（如失眠）走「因人挑選」格式、其餘走原本的固定注入文，
+        # 兩種都要帶框架說明（告訴模型這是系統給的素材、怎麼講），認任一即可。
+        self.assertTrue("衛教資料庫命中" in inj or "因人挑選的方案" in inj,
+                        f"注入段沒有框架說明：{inj[:60]}")
 
     def test_no_match_returns_empty_string_not_noise(self):
         self.assertEqual(health_kb.injection_for("今天天氣真好"), "")

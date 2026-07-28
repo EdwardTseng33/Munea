@@ -18,7 +18,8 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "manageSubscriptions", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise)
     ]
 
     private var updatesTask: Task<Void, Never>?
@@ -134,6 +135,25 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
             } catch {
                 call.reject(error.localizedDescription)
             }
+        }
+    }
+
+    /// 蘋果原生評分視窗。要不要問由網頁端 __muneaMaybeAskReview 把關（只在開心時刻）。
+    /// 蘋果自控：一年最多跳 3 次、跳不跳由系統決定 —— resolve 成功不代表畫面真的出現過。
+    /// 找不到前景視窗不算錯誤（App 在背景時可能發生），回 shown:false 讓網頁端安靜跳過。
+    @objc func requestReview(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) else {
+                call.resolve(["shown": false])
+                return
+            }
+            if #available(iOS 16.0, *) {
+                AppStore.requestReview(in: scene)
+            } else {
+                SKStoreReviewController.requestReview(in: scene)
+            }
+            call.resolve(["shown": true])
         }
     }
 

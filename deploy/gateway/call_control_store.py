@@ -205,6 +205,14 @@ class SupabaseCallStore:
         ))
         return (result or [{}])[0]
 
+    def get_worker(self, worker_id: str) -> dict[str, Any] | None:
+        url = (self.url + "/rest/v1/gpu_workers?worker_id=eq."
+               + urllib.parse.quote(worker_id) + "&limit=1")
+        result = self._json("GET", url, headers=self._service_headers())
+        if not result:
+            return None
+        return result[0]
+
     def update_worker(self, worker_id: str, values: dict[str, Any]) -> dict[str, Any]:
         url = self.url + "/rest/v1/gpu_workers?worker_id=eq." + urllib.parse.quote(worker_id)
         result = self._json("PATCH", url, body=values, headers=self._service_headers("return=representation"))
