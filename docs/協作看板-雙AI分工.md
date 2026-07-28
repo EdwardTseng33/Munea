@@ -2421,3 +2421,14 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
   - `openVisitSummary('settings')`——設定頁**「健康資料與安全」**區，位於「看診提醒」下方（已驗證區塊歸屬正確；該區依序為 Apple 健康／用藥提醒／看診提醒／**就診摘要**／安全通知／我的資料）
 - **測試改為守「形狀」而非放寬門檻**：第①b 組改成同時驗**下限與上限**——必須有設定頁那條常駐路（否則「沒設看診提醒就永遠看不到」＝上一版的真缺陷會復發）、且**不得再出現狀態頁常駐卡**（過度曝光）。註解寫明兩邊的理由，避免後人只往一個方向修。**96 項全過**；完整 `npm run test:launch` **exit=0**。
 - **⚠ 仍未驗**：真機 E2E 與 Xcode 編譯（環境無 Xcode／無 Swift 編譯器）。
+
+### 2026-07-28 Claude/城堡 🚀 更版 1.1.0（Build 49）— M1 就醫代理首發（⚠ 未打包・未部署）
+
+- **Edward**：「PDF 做好就好，好了就更版上線了。」PDF 程式已完成（PR-4d 原生外掛）⇒ 執行更版。
+- **版號判定 1.0.44 → `1.1.0`（不是 1.0.45）**：依 `web/src/version.js` 開頭寫死的規則——「修 bug／小調整 → 最後一碼；**加新功能 → 中間碼**」。本次是**新功能**（口袋問題＋就診摘要＋新後端 endpoint＋新原生外掛），與 1.0.41→44 那幾版「以修 bug 為主故走第三碼」的先例性質不同，故進中間碼。**Build 48 → 49**（App Store 不接受重複 build 號）。
+- **五處版號已對齊並實測**：`package.json`／`package-lock.json`／`web/src/version.js` `current`／iOS `MARKETING_VERSION`×2／iOS `CURRENT_PROJECT_VERSION`×2。
+- **快取代碼同步**：`index.html` 四個資產由 `-v1044` → `-v110`（`test-release-settings.js` 的期望格式＝版號去點）。改過的檔（styles.css／app.js／version.js）換今天日期，未改的（auth.js）保留原日期。**不同步的話部署後使用者仍拿舊快取、改動到不了手上**。
+- **更新紀錄**已加 1.1.0 一筆，六條白話項目（含「寧寧永遠不會說應該沒事、不用看醫生」——把安全鐵則寫進使用者看得到的地方）。
+- **驗證**：完整 `npm run test:launch` **exit=0 全綠**；`test-release-settings.js` PASS（版號 SSOT 與快取代碼一致性）。
+- **⚠ 這一版「更版」只到原始碼層，不等於上線**。仍待 Edward 的機器：①`npm run cap:sync` ②Xcode 編譯（**ExportPlugin.swift 首次進編譯器，能否編過未知**）③真機驗證摘要面板／PDF／中文渲染／分享面板 ④Archive＋上傳 App Store Connect ⑤雲端大腦部署（`/visit-summary` 新端點須隨後端上線，否則 App 打不到）。**本容器無 Xcode／gcloud／憑證，這五步我做不到。**
+- **⚠ 部署順序提醒**：`/visit-summary` 是新端點 ⇒ **後端要先上，App 才不會打空氣**。若 App 先上而後端未更新，摘要會落到「這次沒有連上」的降級路徑（不會崩，但功能等於沒有）。
