@@ -373,8 +373,36 @@ function validateLocaleDataEvidence(evidence, readinessManifest) {
 function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
   const required = readinessManifest && readinessManifest.requiredEvidence;
   const requiredScenarios = readinessManifest && readinessManifest.requiredScenarios;
+  const requiredChecks = readinessManifest && readinessManifest.requiredChecks;
   const scope = evidence && evidence.scope;
-  if (!required || !Array.isArray(requiredScenarios)) return false;
+  if (
+    !required
+    || !Array.isArray(requiredScenarios)
+    || !Array.isArray(requiredChecks)
+  ) return false;
+  const checks = Array.isArray(evidence && evidence.checks) ? evidence.checks : [];
+  const checkNames = checks.map((check) => check && check.name);
+  const checksByName = new Map(checks.map((check) => [check && check.name, check]));
+  const checkContractPassed = (
+    checks.length === requiredChecks.length
+    && new Set(checkNames).size === checkNames.length
+    && requiredChecks.every((contract) => {
+      const check = checksByName.get(contract.name);
+      return check
+        && check.result === 'pass'
+        && Number.isInteger(check.statusCode)
+        && Array.isArray(contract.allowedStatusCodes)
+        && contract.allowedStatusCodes.includes(check.statusCode)
+        && (
+          !Object.hasOwn(contract, 'rowCount')
+          || check.rowCount === contract.rowCount
+        )
+        && (
+          !Object.hasOwn(contract, 'commitMatched')
+          || check.commitMatched === contract.commitMatched
+        );
+    })
+  );
   return evidence.schema === 'munea.member-data-isolation-e2e.v1'
     && evidence.result === 'pass'
     && /^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
@@ -388,11 +416,21 @@ function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
     && evidence.containsSecrets === required.containsSecrets
     && evidence.containsPersonalData === required.containsPersonalData
     && requiredStrings(evidence, [
+      'stagingIdentitySchema',
+      'stagingService',
+      'stagingEnvironment',
+      'stagingCommit',
       'stagingRevision',
       'stagingProjectRef',
       'evidenceReference',
       'fixtureLifecycleReference',
     ])
+    && evidence.stagingIdentitySchema === 'munea.service-release.v1'
+    && evidence.stagingService === 'brain'
+    && evidence.stagingEnvironment === 'staging'
+    && evidence.stagingCommit === evidence.exactCommit
+    && /^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$/.test(evidence.stagingRevision)
+    && evidence.stagingRevision.toLowerCase() !== 'unknown'
     && !['fespbkdwafueyonppzwq', 'uhmpmystjjdqqxlpsthc'].includes(
       evidence.stagingProjectRef,
     )
@@ -404,13 +442,7 @@ function validateMemberDataIsolationEvidence(evidence, readinessManifest) {
     && scope.responsePayloadsStored === false
     && evidence.scenarios
     && requiredScenarios.every((scenario) => evidence.scenarios[scenario] === true)
-    && Array.isArray(evidence.checks)
-    && evidence.checks.length > 0
-    && evidence.checks.every((check) => (
-      check
-      && check.result === 'pass'
-      && Number.isInteger(check.statusCode)
-    ));
+    && checkContractPassed;
 }
 
 function evidenceResult(locale, filename, validator) {

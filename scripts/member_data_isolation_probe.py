@@ -27,6 +27,7 @@ UUID_RE = re.compile(
 )
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 PROJECT_REF_RE = re.compile(r"^[a-z0-9]{20}$")
+SAFE_LABEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$")
 DEFAULT_BRAIN_URL = "https://munea-brain-staging-491603544409.asia-east1.run.app"
 
 
@@ -138,6 +139,7 @@ def validate_config(config: ProbeConfig) -> ProbeConfig:
             "brain_url": brain,
             "supabase_url": supabase,
             "staging_project_ref": config.staging_project_ref.lower(),
+            "exact_commit": config.exact_commit.lower(),
         }
     )
 
@@ -239,16 +241,34 @@ def run_probe(
         None,
         config.timeout_seconds,
     )
+    staging_commit = ""
     staging_revision = ""
     if isinstance(version_payload, dict):
+        staging_commit = str(version_payload.get("commit") or "").lower()
         staging_revision = str(
             version_payload.get("revision")
             or version_payload.get("serviceRevision")
-            or version_payload.get("commit")
             or ""
         )
-    revision_passed = version_status == 200 and bool(staging_revision)
-    checks.append(_safe_check("staging_revision", revision_passed, version_status))
+    release_identity_passed = (
+        version_status == 200
+        and isinstance(version_payload, dict)
+        and version_payload.get("schema") == "munea.service-release.v1"
+        and version_payload.get("service") == "brain"
+        and version_payload.get("environment") == "staging"
+        and COMMIT_RE.fullmatch(staging_commit) is not None
+        and staging_commit == config.exact_commit.lower()
+        and SAFE_LABEL_RE.fullmatch(staging_revision) is not None
+        and staging_revision.lower() != "unknown"
+    )
+    checks.append(
+        _safe_check(
+            "staging_release_identity",
+            release_identity_passed,
+            version_status,
+            commitMatched=staging_commit == config.exact_commit.lower(),
+        )
+    )
 
     own_direct = all(
         (
@@ -369,7 +389,7 @@ def run_probe(
     checks.append(_safe_check("unknown_user_denied", unknown_denied, unknown_status))
 
     scenarios = {
-        "ownAccountReadable": revision_passed and own_direct and own_brain,
+        "ownAccountReadable": release_identity_passed and own_direct and own_brain,
         "otherAccountPersonDeniedByRls": cross_direct,
         "otherAccountPersonDeniedByBrain": cross_person_brain,
         "otherAccountFamilyDeniedByBrain": cross_family_brain,
@@ -395,6 +415,16 @@ def run_probe(
         "fixtureLifecycleReviewed": True,
         "containsSecrets": False,
         "containsPersonalData": False,
+        "stagingIdentitySchema": (
+            version_payload.get("schema") if isinstance(version_payload, dict) else ""
+        ),
+        "stagingService": (
+            version_payload.get("service") if isinstance(version_payload, dict) else ""
+        ),
+        "stagingEnvironment": (
+            version_payload.get("environment") if isinstance(version_payload, dict) else ""
+        ),
+        "stagingCommit": staging_commit,
         "stagingRevision": staging_revision,
         "stagingProjectRef": config.staging_project_ref,
         "evidenceReference": config.evidence_reference,

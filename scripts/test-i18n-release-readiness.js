@@ -342,6 +342,42 @@ const memberDataIsolationManifest = {
     'unknownUserDenied',
     'fixtureLifecycleReviewed',
   ],
+  requiredChecks: [
+    { name: 'staging_release_identity', allowedStatusCodes: [200], commitMatched: true },
+    { name: 'tenant_a_reads_own_person_via_rls', allowedStatusCodes: [200], rowCount: 1 },
+    { name: 'tenant_b_reads_own_person_via_rls', allowedStatusCodes: [200], rowCount: 1 },
+    {
+      name: 'tenant_a_cannot_read_tenant_b_person_via_rls',
+      allowedStatusCodes: [200],
+      rowCount: 0,
+    },
+    {
+      name: 'tenant_b_cannot_read_tenant_a_person_via_rls',
+      allowedStatusCodes: [200],
+      rowCount: 0,
+    },
+    { name: 'tenant_a_reads_own_person_via_brain', allowedStatusCodes: [200] },
+    { name: 'tenant_b_reads_own_person_via_brain', allowedStatusCodes: [200] },
+    {
+      name: 'tenant_a_cannot_read_tenant_b_person_via_brain',
+      allowedStatusCodes: [403],
+    },
+    {
+      name: 'tenant_b_cannot_read_tenant_a_person_via_brain',
+      allowedStatusCodes: [403],
+    },
+    {
+      name: 'tenant_a_cannot_read_tenant_b_family_via_brain',
+      allowedStatusCodes: [403],
+    },
+    {
+      name: 'tenant_b_cannot_read_tenant_a_family_via_brain',
+      allowedStatusCodes: [403],
+    },
+    { name: 'client_tenant_override_denied', allowedStatusCodes: [403] },
+    { name: 'removed_member_denied', allowedStatusCodes: [403] },
+    { name: 'unknown_user_denied', allowedStatusCodes: [200, 401, 403] },
+  ],
 };
 const memberDataIsolationEvidence = {
   schema: 'munea.member-data-isolation-e2e.v1',
@@ -356,6 +392,10 @@ const memberDataIsolationEvidence = {
   fixtureLifecycleReviewed: true,
   containsSecrets: false,
   containsPersonalData: false,
+  stagingIdentitySchema: 'munea.service-release.v1',
+  stagingService: 'brain',
+  stagingEnvironment: 'staging',
+  stagingCommit: exactCommit,
   stagingRevision: 'brain-staging-revision',
   stagingProjectRef: 'abcdefghijklmnopqrst',
   evidenceReference: 'staging-security-run-001',
@@ -363,12 +403,15 @@ const memberDataIsolationEvidence = {
   scenarios: Object.fromEntries(
     memberDataIsolationManifest.requiredScenarios.map((scenario) => [scenario, true]),
   ),
-  checks: [{
-    name: 'tenant_a_cannot_read_tenant_b_person_via_rls',
+  checks: memberDataIsolationManifest.requiredChecks.map((contract) => ({
+    name: contract.name,
     result: 'pass',
-    statusCode: 200,
-    rowCount: 0,
-  }],
+    statusCode: contract.allowedStatusCodes[0],
+    ...(Object.hasOwn(contract, 'rowCount') ? { rowCount: contract.rowCount } : {}),
+    ...(Object.hasOwn(contract, 'commitMatched')
+      ? { commitMatched: contract.commitMatched }
+      : {}),
+  })),
   scope: {
     directSupabaseRls: true,
     brainServiceRoleAuthorization: true,
@@ -397,6 +440,39 @@ assert.equal(
   ),
   false,
   'A service-role BOLA path must keep international release blocked',
+);
+assert.equal(
+  validateMemberDataIsolationEvidence(
+    {
+      ...memberDataIsolationEvidence,
+      stagingCommit: 'b'.repeat(40),
+    },
+    memberDataIsolationManifest,
+  ),
+  false,
+  'Isolation evidence must be bound to the Brain commit returned by staging',
+);
+assert.equal(
+  validateMemberDataIsolationEvidence(
+    {
+      ...memberDataIsolationEvidence,
+      checks: memberDataIsolationEvidence.checks.slice(1),
+    },
+    memberDataIsolationManifest,
+  ),
+  false,
+  'Isolation evidence must include every required RLS and Brain check',
+);
+assert.equal(
+  validateMemberDataIsolationEvidence(
+    {
+      ...memberDataIsolationEvidence,
+      stagingRevision: 'unknown',
+    },
+    memberDataIsolationManifest,
+  ),
+  false,
+  'An unknown staging revision cannot satisfy the isolation gate',
 );
 assert.equal(
   validateMemberDataIsolationEvidence(

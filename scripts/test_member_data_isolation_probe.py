@@ -47,8 +47,15 @@ def config() -> ProbeConfig:
 
 
 class FakeTransport:
-    def __init__(self, leak_cross_tenant: bool = False):
+    def __init__(
+        self,
+        leak_cross_tenant: bool = False,
+        staging_commit: str = "a" * 40,
+        staging_revision: str = "brain-staging-00001-test",
+    ):
         self.leak_cross_tenant = leak_cross_tenant
+        self.staging_commit = staging_commit
+        self.staging_revision = staging_revision
         self.calls = []
 
     def __call__(self, method, url, headers, payload, timeout):
@@ -56,7 +63,13 @@ class FakeTransport:
         token = headers.get("authorization", "").removeprefix("Bearer ")
         parsed = urllib.parse.urlsplit(url)
         if parsed.path == "/version":
-            return 200, {"revision": "brain-staging-00001-test"}
+            return 200, {
+                "schema": "munea.service-release.v1",
+                "service": "brain",
+                "commit": self.staging_commit,
+                "revision": self.staging_revision,
+                "environment": "staging",
+            }
         if parsed.path == "/rest/v1/persons":
             person_filter = urllib.parse.parse_qs(parsed.query)["id"][0]
             person_id = person_filter.removeprefix("eq.")
@@ -104,6 +117,10 @@ class MemberDataIsolationProbeTests(unittest.TestCase):
         )
         self.assertEqual(report["result"], "pass")
         self.assertTrue(all(report["scenarios"].values()))
+        self.assertEqual(report["stagingIdentitySchema"], "munea.service-release.v1")
+        self.assertEqual(report["stagingService"], "brain")
+        self.assertEqual(report["stagingEnvironment"], "staging")
+        self.assertEqual(report["stagingCommit"], "a" * 40)
         self.assertTrue(report["scope"]["productionTargetsForbidden"])
         self.assertFalse(report["scope"]["writesAttempted"])
         serialized = str(report)
@@ -127,6 +144,31 @@ class MemberDataIsolationProbeTests(unittest.TestCase):
         )
         self.assertEqual(report["result"], "fail")
         self.assertFalse(report["scenarios"]["otherAccountPersonDeniedByRls"])
+
+    def test_staging_service_commit_must_match_attested_commit(self) -> None:
+        report = run_probe(
+            config(),
+            transport=FakeTransport(staging_commit="b" * 40),
+            tested_at="2026-07-28T12:00:00Z",
+        )
+        self.assertEqual(report["result"], "fail")
+        self.assertFalse(report["scenarios"]["ownAccountReadable"])
+        identity_check = next(
+            check
+            for check in report["checks"]
+            if check["name"] == "staging_release_identity"
+        )
+        self.assertEqual(identity_check["result"], "fail")
+        self.assertFalse(identity_check["commitMatched"])
+
+    def test_unknown_staging_revision_cannot_create_evidence(self) -> None:
+        report = run_probe(
+            config(),
+            transport=FakeTransport(staging_revision="unknown"),
+            tested_at="2026-07-28T12:00:00Z",
+        )
+        self.assertEqual(report["result"], "fail")
+        self.assertFalse(report["scenarios"]["ownAccountReadable"])
 
     def test_production_supabase_project_is_refused(self) -> None:
         with self.assertRaisesRegex(ValueError, "production or rollback"):
