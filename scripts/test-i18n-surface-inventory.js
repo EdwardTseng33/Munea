@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const {
+  applyStaticLocalizedAssetBinding,
   buildReport,
   loadInventory,
   scanHtml,
@@ -66,6 +67,40 @@ assert.deepEqual(
   ['zh-TW', 'en', 'ja', 'es'],
   'The delivery inventory must cover the four approved locales',
 );
+const legalInventory = inventory.surfaces.find(
+  (surface) => surface.id === 'legal-and-support',
+);
+const staticAssetCandidate = { bindingStatus: 'unbound' };
+assert.deepEqual(
+  applyStaticLocalizedAssetBinding(
+    'web/privacy.html',
+    [staticAssetCandidate],
+    legalInventory.staticLocalizedAssets,
+    inventory.requiredLocales,
+  ),
+  [],
+  'A complete four-locale static legal asset may bind its Traditional Chinese source',
+);
+assert.equal(staticAssetCandidate.bindingStatus, 'bound');
+assert.equal(staticAssetCandidate.bindingKey, 'static-asset:privacy');
+const missingStaticAssetCandidate = { bindingStatus: 'unbound' };
+assert.match(
+  applyStaticLocalizedAssetBinding(
+    'web/privacy.html',
+    [missingStaticAssetCandidate],
+    {
+      ...legalInventory.staticLocalizedAssets,
+      manifest: 'web/legal/missing-manifest.json',
+    },
+    inventory.requiredLocales,
+  )[0],
+  /missing or unsafe static localization manifest/,
+);
+assert.equal(
+  missingStaticAssetCandidate.bindingStatus,
+  'unbound',
+  'A broken static localization bundle must fail closed',
+);
 assert.ok(
   inventory.surfaces.some((surface) => surface.id === 'operations-admin'),
   'The operations admin must be included in the delivery scope',
@@ -123,6 +158,29 @@ assert.equal(
     + appWebView.unboundHanCandidates,
   appWebView.hanCandidates,
 );
+const legalAndSupport = report.surfaces.find(
+  (surface) => surface.id === 'legal-and-support',
+);
+assert.ok(
+  legalAndSupport.hanCandidates > 0,
+  'The Traditional Chinese legal source must remain visible in the audit',
+);
+assert.equal(
+  legalAndSupport.boundHanCandidates,
+  legalAndSupport.hanCandidates,
+  'Every legal source candidate must bind to a complete four-locale static asset bundle',
+);
+assert.equal(legalAndSupport.unboundHanCandidates, 0);
+assert.deepEqual(legalAndSupport.reviewFailures, []);
+for (const file of legalAndSupport.files) {
+  assert.equal(file.boundHanCandidates, file.hanCandidates);
+  assert.equal(file.unboundHanCandidates, 0);
+  assert.ok(
+    file.candidates.every(
+      (candidate) => candidate.bindingType === 'localized-static-asset',
+    ),
+  );
+}
 assert.deepEqual(validateReport(report), [], 'The checked-in baseline must not regress');
 
 console.log('PASS: i18n surface inventory contract');

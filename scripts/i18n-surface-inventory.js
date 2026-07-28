@@ -117,6 +117,104 @@ function applyNonUserFacingReview(relativePath, candidates, review = loadNonUser
   return failures;
 }
 
+function applyStaticLocalizedAssetBinding(
+  relativePath,
+  candidates,
+  config,
+  requiredLocales,
+) {
+  if (!config) return [];
+  const failures = [];
+  const pageKind = config.pageBySource && config.pageBySource[relativePath];
+  if (
+    typeof config.manifest !== 'string'
+    || typeof config.sourceLocale !== 'string'
+    || !requiredLocales.includes(config.sourceLocale)
+    || !config.pageBySource
+    || typeof config.pageBySource !== 'object'
+    || typeof pageKind !== 'string'
+  ) {
+    return [`${relativePath}: invalid static localized asset configuration`];
+  }
+
+  const manifestPath = path.resolve(ROOT, config.manifest);
+  if (
+    !manifestPath.startsWith(`${ROOT}${path.sep}`)
+    || !fs.existsSync(manifestPath)
+  ) {
+    return [`${relativePath}: missing or unsafe static localization manifest ${config.manifest}`];
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch (error) {
+    return [`${relativePath}: invalid static localization manifest ${config.manifest}`];
+  }
+  if (!manifest.locales || typeof manifest.locales !== 'object') {
+    return [`${relativePath}: static localization manifest has no locales`];
+  }
+
+  const manifestDir = path.dirname(manifestPath);
+  for (const locale of requiredLocales) {
+    const localeConfig = manifest.locales[locale];
+    const assetPath = localeConfig
+      && localeConfig.pages
+      && localeConfig.pages[pageKind];
+    if (
+      !localeConfig
+      || typeof localeConfig.htmlLang !== 'string'
+      || typeof assetPath !== 'string'
+    ) {
+      failures.push(`${relativePath}: ${locale} is missing static ${pageKind} metadata`);
+      continue;
+    }
+    const absoluteAssetPath = path.resolve(manifestDir, assetPath);
+    if (
+      !absoluteAssetPath.startsWith(`${ROOT}${path.sep}`)
+      || !fs.existsSync(absoluteAssetPath)
+    ) {
+      failures.push(`${relativePath}: ${locale} static ${pageKind} asset is missing or unsafe`);
+      continue;
+    }
+    const html = fs.readFileSync(absoluteAssetPath, 'utf8');
+    const escapedLang = localeConfig.htmlLang.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!new RegExp(`<html\\s+lang=["']${escapedLang}["']`, 'i').test(html)) {
+      failures.push(
+        `${relativePath}: ${locale} static ${pageKind} asset has the wrong html lang`,
+      );
+    }
+    if (
+      !/<title>[^<]+<\/title>/i.test(html)
+      || !/class=["'][^"']*\bprivacy-page\b/i.test(html)
+      || !/class=["'][^"']*\bprivacy-section\b/i.test(html)
+      || /<script[\s>]/i.test(html)
+    ) {
+      failures.push(
+        `${relativePath}: ${locale} static ${pageKind} asset is incomplete or executable`,
+      );
+    }
+    if (locale === config.sourceLocale) {
+      const sourcePath = path.resolve(ROOT, relativePath);
+      if (absoluteAssetPath !== sourcePath) {
+        failures.push(
+          `${relativePath}: source locale ${locale} does not resolve to the inventoried asset`,
+        );
+      }
+    }
+  }
+
+  if (!failures.length) {
+    for (const candidate of candidates) {
+      if (candidate.bindingStatus !== 'unbound') continue;
+      candidate.bindingStatus = 'bound';
+      candidate.bindingKey = `static-asset:${pageKind}`;
+      candidate.bindingType = 'localized-static-asset';
+    }
+  }
+  return failures;
+}
+
 function pushCandidate(candidates, source, index, kind, value, binding = null) {
   const text = normalizeCandidate(value);
   if (!text || !HAN_RE.test(text)) return;
@@ -445,6 +543,25 @@ function loadInventory() {
 function buildReport(inventory = loadInventory()) {
   const seen = new Map();
   const surfaces = inventory.surfaces.map((surface) => {
+    const staticConfig = surface.staticLocalizedAssets || null;
+    const staticConfigFailures = [];
+    if (staticConfig) {
+      const configuredSources = Object.keys(staticConfig.pageBySource || {});
+      for (const relativePath of surface.files) {
+        if (!configuredSources.includes(relativePath)) {
+          staticConfigFailures.push(
+            `${surface.id}: static localization source is not mapped: ${relativePath}`,
+          );
+        }
+      }
+      for (const relativePath of configuredSources) {
+        if (!surface.files.includes(relativePath)) {
+          staticConfigFailures.push(
+            `${surface.id}: static localization mapping is outside the surface: ${relativePath}`,
+          );
+        }
+      }
+    }
     const files = surface.files.map((relativePath) => {
       if (seen.has(relativePath)) {
         throw new Error(
@@ -452,7 +569,16 @@ function buildReport(inventory = loadInventory()) {
         );
       }
       seen.set(relativePath, surface.id);
-      if (surface.scanMode === 'localized-text') return scanFile(relativePath);
+      if (surface.scanMode === 'localized-text') {
+        const file = scanFile(relativePath);
+        file.reviewFailures.push(...applyStaticLocalizedAssetBinding(
+          relativePath,
+          file.candidates,
+          staticConfig,
+          inventory.requiredLocales,
+        ));
+        return file;
+      }
       return {
         path: relativePath,
         exists: fs.existsSync(path.join(ROOT, relativePath)),
@@ -488,7 +614,10 @@ function buildReport(inventory = loadInventory()) {
       boundHanCandidates,
       reviewedNonUserFacingHanCandidates,
       unboundHanCandidates,
-      reviewFailures: files.flatMap((file) => file.reviewFailures),
+      reviewFailures: [
+        ...staticConfigFailures,
+        ...files.flatMap((file) => file.reviewFailures),
+      ],
       missingFiles: files.filter((file) => !file.exists).map((file) => file.path),
       files: files.map((file) => ({
         path: file.path,
@@ -630,6 +759,7 @@ if (require.main === module) {
 
 module.exports = {
   applyNonUserFacingReview,
+  applyStaticLocalizedAssetBinding,
   buildReport,
   loadCatalogKeys,
   loadInventory,

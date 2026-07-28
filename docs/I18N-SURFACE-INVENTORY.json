@@ -52,6 +52,15 @@
         "web/terms.html",
         "web/support.html"
       ],
+      "staticLocalizedAssets": {
+        "manifest": "web/legal/manifest.json",
+        "sourceLocale": "zh-TW",
+        "pageBySource": {
+          "web/privacy.html": "privacy",
+          "web/terms.html": "terms",
+          "web/support.html": "support"
+        }
+      },
       "requiredStates": [
         "privacy",
         "terms",
