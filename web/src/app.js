@@ -939,6 +939,54 @@ async function aiAddVisitReminder(a) {
   try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
   return { ok: true, title, label, reminderId: visit.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
 }
+/* ===== 口袋問題（M1 PR-3 · 2026-07-27）=====
+   寧寧在聊天裡聽到「這個要不要問醫生」→ 幫他存起來、看診前提醒他。
+   刻意不做的事：不判嚴重度、不猜病名、不排序急迫性——那些是醫生的事（見 chat_engine.CORE ②-B）。
+   儲存位置：**只有裝置本機**。H1 驗證期間刻意不進雲端（見
+   docs/就醫代理-技術架構與M1產品規劃-2026-07-26.md §5 順序修正）——family_state_entries
+   的 state_key 有 CHECK 白名單、加雲端 key 要動 schema，而「有沒有人用」這個問題不需要雲端就能答。
+   ⚠ 因此 UI 文案不得暗示雲端備份或永久保存；清快取／換手機會遺失是已知且可接受的取捨。 */
+const CARE_Q_KEY = 'munea.careQuestions';
+const CARE_Q_MAX = 20;          // 上限：清單太長長輩讀不完、也不是這個功能的用途
+const CARE_Q_MAX_LEN = 60;      // 一題最長 60 字（跟工具描述一致）
+function loadCareQuestions() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem(CARE_Q_KEY) || '[]') || []; } catch (e) {}
+  if (!Array.isArray(arr)) arr = [];
+  return arr.filter(q => q && typeof q.text === 'string' && q.text);
+}
+function saveCareQuestions(arr) {
+  try { localStorage.setItem(CARE_Q_KEY, JSON.stringify(arr.slice(-CARE_Q_MAX))); return true; } catch (e) { return false; }
+}
+function openCareQuestions() {
+  return loadCareQuestions().filter(q => !q.askedAt);
+}
+async function aiAddCareQuestion(a) {
+  const raw = String((a && a.question) || '').trim().slice(0, CARE_Q_MAX_LEN);
+  // 同一道共用守門：辨識雜訊／外文亂碼寧可拒收讓她再問一次，不存假問題（沿用 2026-07-15 事故的教訓）
+  if (!raw || !muneaIsCleanZhText(raw)) return { ok: false, error: 'question_text_unclear' };
+  const arr = loadCareQuestions();
+  const norm = raw.replace(/\s+/g, '');
+  if (arr.some(q => !q.askedAt && String(q.text || '').replace(/\s+/g, '') === norm)) {
+    // 同一個問題重複記＝清單變垃圾場。回 ok（她已經跟長輩說要記了，不該讓她改口說失敗），但不重複塞。
+    return { ok: true, question: raw, count: openCareQuestions().length, duplicate: true };
+  }
+  const item = { id: 'q_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6), text: raw, createdAt: new Date().toISOString(), askedAt: '' };
+  arr.push(item);
+  if (!saveCareQuestions(arr)) return { ok: false, error: 'local_write_failed' };
+  const count = openCareQuestions().length;
+  // 閘門埋點（H1：就醫時刻是不是真痛點）——只記數量與長度，**不送問題內文**（健康疑問屬敏感內容，
+  // trackProductEvent 本來就會剝 text/transcript/reply，這裡連欄位都不放）
+  try { trackProductEvent('care_question_added', { questionCount: count, textLength: raw.length, via: 'voice' }); } catch (e) {}
+  try { if (window.__muneaRefreshVisitRow) window.__muneaRefreshVisitRow(); } catch (e) {}
+  try { if (typeof renderCareQuestions === 'function') renderCareQuestions(); } catch (e) {}
+  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+  return { ok: true, question: raw, count, persistence: 'device' };
+}
+window.__muneaOpenCareQuestions = openCareQuestions;
+window.__muneaLoadCareQuestions = loadCareQuestions;
+window.__muneaSaveCareQuestions = saveCareQuestions;
+
 async function aiAddMedReminder(a) {
   const rawName = String((a && a.name) || '').trim();
   const name = (rawName && muneaIsCleanZhText(rawName)) ? rawName : '';   // 藥名不乾淨寧可拒收、讓 AI 再問一次，不存假名字（Edward 2026-07-15 事故）
@@ -966,6 +1014,11 @@ async function handleVoiceAction(action, args) {
   if (action === 'set_clinic_reminder') {
     const r = await aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
     if (typeof toast === 'function') toast(r.ok ? ('看診提醒設好了：' + r.title + ' · ' + r.label) : '看診日期我沒抓到，你再說一次日期好嗎');
+    return r;
+  }
+  if (action === 'add_care_question') {
+    const r = await aiAddCareQuestion({ question: args.question });
+    if (typeof toast === 'function') toast(r.ok ? ('記下來了，看醫生前我會提醒你（' + r.count + ' 個問題）') : '這個問題我沒聽清楚，你再說一次好嗎');
     return r;
   }
   if (action === 'set_medication_reminder') {
@@ -2629,6 +2682,8 @@ const LiveVoice = {
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
     // 能力握手：「接得住 AI 幫你記行程」（揪一攤）→ 約會/聚餐不再被硬塞成看診提醒（2026-07-16 Edward）
     url += '&cap_evt=1';
+    // 能力握手：「接得住 AI 幫你記要問醫生的問題」（口袋問題）→ 舊版不會拿到工具、不會出現「幫你記下來了」卻沒地方記（M1 PR-3 · 2026-07-27）
+    url += '&cap_ask=1';
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
     // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。

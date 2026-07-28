@@ -2295,3 +2295,17 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **成本誠實揭露**：CORE 4807→5370 字、RED 979→1037，底盤合計 5786→6407（**+621 字，約 +10.7%**），文字線與語音線每輪都帶。判斷值得：這是安全紅線、且省在紅線上是最不該省的地方；若日後要瘦身，應優先壓縮 CORE 其他冗段而非這條。
 - **⚠ 邊界與待辦**：CORE/RED 是語音線 system_instruction 的一部分 ⇒ **call-path risk**。單元與契約測試僅為 precheck，**App E2E pending**（未在安裝版 iPhone 真人撥通驗收）、**不部署**。S20 需真鑰匙跑 `npm run eval:chat-quality` 實測模型是否真的遵守——本輪環境無 GEMINI 鑰匙，**未實跑**，屬待驗項不可視為已驗證。
 - **邊界**：未動 App／`web/`／schema／Gateway／Voice 伺服器邏輯／部署腳本。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
+
+### 2026-07-27 Claude/城堡 🛠️ M1 PR-3：口袋問題（AI 幫你記要問醫生的問題）（⚠ call-path risk・App E2E pending・不部署）
+
+- **任務來源**：Edward 拍板對焦三問（①家庭端定盤 OK ②終局一句話 OK ③**「不花錢證明」**——比原提案更嚴，連律師初診／SDK 申請等便宜前置也不花，M1 全程零外部支出）→ 依此開工 H1 第一支探針。
+- **🔄 施工順序修正（因「不花錢證明」）**：原計畫 PR-2（`care_episodes` 正式表）先行、PR-3 依賴它。查證後改為 **PR-3 先行、PR-2 降為 H1 閘門後才蓋**。理由：①`family_state_entries.state_key` 有 CHECK 白名單，新增雲端 key 要動 schema ②但 `munea.visits` 這條既有軌道證明原型階段本來就先走裝置端。**⇒ 零 migration、零 DB 風險、零 Codex 協調等待**，完全符合零支出。代價（誠實）：H1 期間口袋問題**只存裝置本機**（清快取／換手機會遺失、家人端看不到），UI 文案不得暗示雲端備份——對「有沒有人用」這問題夠用。
+- **改動**：
+  - `engine/live_voice_server.py`：新增 `_CARE_QUESTION_TOOLS`（`add_care_question`，只存問題、不做醫療判斷）＋`allow_care_questions` 旗標串過 `system_instruction`／`live_config`／`handle()`＋能力握手 `?cap_ask=1`＋說明書新增段（**先複誦確認再呼叫**、`status=ok` 才能說記好了、**記完不准順口判斷嚴重不嚴重／猜病名／說「應該還好」**、隨口抱怨不硬記、一通最多兩三題）。工具轉發沿用既有泛用 `action` 管線，**伺服器端零額外接線**。
+  - `web/src/app.js`：新增口袋問題區塊（`munea.careQuestions`／`loadCareQuestions`／`openCareQuestions`／`aiAddCareQuestion`）＋`handleVoiceAction` 接 `add_care_question`＋語音 URL 帶 `&cap_ask=1`。守門沿用共用 `muneaIsCleanZhText`（2026-07-15 事故的那道門）；重複問題回 ok 但不重複入帳（避免她改口說沒記到）；上限 20 筆／單題 60 字。
+  - `web/src/notify.js`：既有 `clinic_upcoming` 看診推播文字加一句「你有 N 個問題要問醫生」——**只帶數量、不帶內文**（健康疑問屬敏感內容，比照用藥照片事故的原則）。不新建排程機制。
+  - 埋點：`care_question_added`（帶 `questionCount`／`textLength`／`via`，**不帶問題內文**）走既有 `product_events`，不接新分析工具。
+- **驗過沒**：新增 `scripts/test-care-questions.js`（**11 組全過**）掛進 `test:launch`。手法為兩層——**Part A 行為（6 組）**：把 app.js 的口袋問題區塊抽出在 `vm` 沙盒**真的執行**（app.js 太大無法整支載入），驗守門擋 6 種雜訊、去重、已問過退場、長度截斷、清單上限、**埋點不夾帶內文**；**Part B 契約（5 組）**：cap 握手兩邊對得上、工具受 `allow_care_questions`＋`demo_mode` 雙重把關、App 有接 action、說明書有「不判嚴重度／不猜病名」邊界、推播組裝行不碰內文。施工中被自己的測試抓到兩個真問題：①`const` 在 vm script 頂層不掛 global（常數讀成 undefined，上限測試等於沒測）②B-5 原用全檔 regex 會誤殺（`q.text` 是篩選條件不是內文外洩）——都已修成精確檢查。
+- **其他驗證**：語音線相關 7 支（`test_voice_style_rules`／`test_voice_echo_guard`／`test_voice_session_extend`／`test_voice_call_memory`／`test_voice_call_diagnostics`／`test_medical_escalation_asymmetry`／`test_b2b_demo_voice_isolation`）全 exit=0；`test-notification-platform`／`test-cloud-sync-guard`／`test-voice-launch-policy`／`test-ui-contracts`／`test-medication-service` 全 exit=0；完整 `npm run test:launch` 除既有無關失敗（`scripts/test-release-settings.js`「styles.css cache identity is not aligned to App 1.0.44」，前一輪已用 `git stash` 對照乾淨樹驗證非本次引入）外全綠。
+- **⚠ 未驗項（不可視為已驗證）**：**call-path risk**（動語音線工具與說明書）。單元／契約測試僅 precheck，**App E2E pending**——未在安裝版 iPhone 真人撥通、未實測「她會不會在對話中正確呼叫這個工具」（需真鑰匙＋實機）。**不部署**。UI 清單顯示（在 App 裡看到這些問題）**本 PR 未做**，目前只有推播帶數量＋`window.__muneaOpenCareQuestions` 可取用；排 PR-4 摘要單一起做。
+- **邊界**：未動 schema／migration／Gateway／Avatar／部署腳本／`web/index.html`。Branch `claude/health-caregiver-ai-features-v9kcj3`（PR #270）。
