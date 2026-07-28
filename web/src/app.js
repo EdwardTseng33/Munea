@@ -4472,7 +4472,15 @@ function buildCareItems() {
   items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
   // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
-  if (shouldShowProfileNudge()) items.unshift({ k: 'profile', tone: '', icon: 'person', title: cname() + '想更認識你', sub: '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: '去填寫' });
+  // 名字先自己收邊再組字：AI 名字欄位開放到 12 字（index.html 的 companionNameInput maxlength），
+  // 直接組「名字＋想更認識你」有兩層會被砍——下面 slice(0,12) 的硬切（沒補刪節號、會斷成「…想更認」），
+  // 以及 .care-txt p 的單行 ellipsis（375px 下實測約 10 字就到底，12 字仍會被截成「想更…」）。
+  // 所以收到「標題總長 ≤10 字」：名字 ≤5 字原樣用，超過就縮 4 字＋「…」，兩道砍刀都碰不到。
+  if (shouldShowProfileNudge()) {
+    const _nm = cname();
+    const _nmShort = _nm.length > 5 ? _nm.slice(0, 4) + '…' : _nm;
+    items.unshift({ k: 'profile', tone: '', icon: 'person', title: _nmShort + '想更認識你', sub: '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: '去填寫' });
+  }
   return items;
 }
 function renderCareCarousel() {
