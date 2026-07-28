@@ -8,6 +8,7 @@ const {
   checkedAscUrl,
   createJwt,
   createReadOnlyClient,
+  discoverTargets,
   formatDisplayPrice,
   normalizePrices,
 } = require('./app-store-connect-readonly-capture.js');
@@ -364,6 +365,20 @@ const pagedClient = createReadOnlyClient({
   assert.equal(snapshot.iapProducts.length, 8);
   assert.equal(snapshot.productionWritesPerformed, false);
   assert(snapshot.iapProducts.every(({ localizedPrices }) => localizedPrices.JP.currency === 'JPY'));
+
+  const discovery = await discoverTargets({
+    client: mockClient,
+    bundleIdentifier: requirements.bundleIdentifier,
+    capturedAt,
+  });
+  assert.equal(discovery.schema, 'munea.app-store-connect-target-discovery.v1');
+  assert.deepEqual(discovery.appInfos.map(({ id }) => id), [appInfoId]);
+  assert.deepEqual(
+    discovery.appStoreVersions.map(({ id }) => id),
+    [appStoreVersionId],
+  );
+  assert.equal(discovery.containsSecrets, false);
+  assert.equal(discovery.productionWritesPerformed, false);
 
   const price = formatDisplayPrice('9.99', 'USD', 'en-US');
   assert.match(price, /\$9\.99/);

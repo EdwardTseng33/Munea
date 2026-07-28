@@ -358,6 +358,9 @@ Phase 5g（2026-07-29）：App Store Connect 唯讀實況證據
   $env:ASC_ISSUER_ID = "<issuer id；個人 key 可省略>"
   $env:ASC_PRIVATE_KEY_PATH = "<AuthKey_....p8>"
   node scripts/app-store-connect-readonly-capture.js `
+    --discover-output "<非 repo 暫存路徑>\app-store-connect-targets.json"
+
+  node scripts/app-store-connect-readonly-capture.js `
     --app-info-id "<App Info resource id>" `
     --app-store-version-id "<App Store Version resource id>" `
     --output "<非 repo 暫存路徑>\app-store-connect-snapshot.json" `

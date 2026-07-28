@@ -521,6 +521,58 @@ async function captureSnapshot({
   };
 }
 
+async function discoverTargets({
+  client,
+  bundleIdentifier,
+  capturedAt = new Date(),
+}) {
+  if (!bundleIdentifier) throw new Error('bundleIdentifier is required');
+  const apps = await client.list(
+    `/v1/apps?filter[bundleId]=${encodeURIComponent(bundleIdentifier)}`
+    + '&fields[apps]=bundleId,name,primaryLocale&limit=2',
+  );
+  const app = requireSingle(apps.data, 'Munea App Store Connect app');
+  if (app.attributes.bundleId !== bundleIdentifier) {
+    throw new Error('App Store Connect returned a different bundle identifier');
+  }
+  const [infos, versions] = await Promise.all([
+    client.list(
+      `/v1/apps/${encodeURIComponent(app.id)}/appInfos`
+      + '?fields[appInfos]=appStoreState&limit=200',
+    ),
+    client.list(
+      `/v1/apps/${encodeURIComponent(app.id)}/appStoreVersions`
+      + '?filter[platform]=IOS'
+      + '&fields[appStoreVersions]=platform,versionString,appStoreState,createdDate'
+      + '&limit=200',
+    ),
+  ]);
+  return {
+    schema: 'munea.app-store-connect-target-discovery.v1',
+    capturedAt: capturedAt.toISOString(),
+    captureMethod: 'app-store-connect-api-read-only',
+    containsSecrets: false,
+    productionWritesPerformed: false,
+    bundleIdentifier,
+    appStoreConnectAppId: String(app.id),
+    app: {
+      name: app.attributes.name,
+      primaryLocale: app.attributes.primaryLocale,
+    },
+    appInfos: infos.data.map(({ id, attributes }) => ({
+      id,
+      appStoreState: attributes.appStoreState,
+    })),
+    appStoreVersions: versions.data.map(({ id, attributes }) => ({
+      id,
+      platform: attributes.platform,
+      versionString: attributes.versionString,
+      appStoreState: attributes.appStoreState,
+      createdDate: attributes.createdDate,
+    })),
+  };
+}
+
 function argument(name) {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : '';
@@ -529,14 +581,19 @@ function argument(name) {
 async function main() {
   const output = argument('--output');
   const auditOutput = argument('--audit-output');
+  const discoverOutput = argument('--discover-output');
   const appInfoId = argument('--app-info-id');
   const appStoreVersionId = argument('--app-store-version-id');
   const keyId = process.env.ASC_KEY_ID;
   const issuerId = process.env.ASC_ISSUER_ID;
   const privateKeyPath = process.env.ASC_PRIVATE_KEY_PATH;
-  if (!output || !auditOutput || !appInfoId || !appStoreVersionId) {
+  if (
+    !discoverOutput
+    && (!output || !auditOutput || !appInfoId || !appStoreVersionId)
+  ) {
     throw new Error(
-      'usage: --app-info-id <id> --app-store-version-id <id> '
+      'usage: --discover-output <targets.json> OR '
+      + '--app-info-id <id> --app-store-version-id <id> '
       + '--output <snapshot.json> --audit-output <audit.json>',
     );
   }
@@ -546,6 +603,24 @@ async function main() {
   const privateKey = fs.readFileSync(path.resolve(privateKeyPath), 'utf8');
   const token = createJwt({ keyId, issuerId, privateKey });
   const client = createReadOnlyClient({ token });
+  if (discoverOutput) {
+    const discovery = await discoverTargets({
+      client,
+      bundleIdentifier: 'net.munea.app',
+    });
+    const discoveryPath = path.resolve(discoverOutput);
+    fs.mkdirSync(path.dirname(discoveryPath), { recursive: true });
+    fs.writeFileSync(
+      discoveryPath,
+      `${JSON.stringify(discovery, null, 2)}\n`,
+      'utf8',
+    );
+    process.stdout.write(
+      `PASS: discovered ${discovery.appInfos.length} App Info resource(s) and `
+      + `${discovery.appStoreVersions.length} iOS App Store version(s)\n`,
+    );
+    return;
+  }
   const requirements = buildCurrentRequirements();
   const snapshot = await captureSnapshot({
     client,
@@ -581,6 +656,7 @@ module.exports = {
   checkedAscUrl,
   createJwt,
   createReadOnlyClient,
+  discoverTargets,
   formatDisplayPrice,
   normalizePrices,
 };
