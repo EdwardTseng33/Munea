@@ -154,6 +154,14 @@ Phase 1g（2026-07-28）：先接上無衝突的健康與陪伴角色模組
 - 對應測試驗證 HealthKit 連接／解除與 refresh 去重不回歸，也驗證換語言不會改角色後端身分或覆蓋自訂名稱。
 - 角色名稱會進入通話人設，屬 chat-call path risk；目前只有 coded + tested，仍為 `App E2E pending`，沒有部署。
 
+Phase 1h（2026-07-28）：Browser／iOS App Language bootstrap
+
+- `web/src/i18n.js` 啟動時載入 catalog manifest、catalog runtime、DOM localizer 與四語 catalog；不再把 runtime 永久寫死為繁中。
+- 正式模式只會選擇 manifest 中 `runtimeEnabled=true` 的裝置 App Language；目前 en／ja／es gate 關閉，所以正式 App 仍安全回退繁中。
+- 開發設定必須同時有 `MUNEA_DEV_CONFIG.enabled=true` 與 `i18nPreviewLocale` 才能預覽 development locale；`setLocale()` 不接受使用者指定值，也不寫 localStorage。
+- bootstrap 完成會送出 `munea:locale-ready`，供待 #247／#270 合併後的 App 初始化等待；載入失敗則保留繁中並回報 fallback，不阻斷 App 啟動。
+- 目前只有靜態 `data-i18n`、已接線模組與開發 preview 能反映裝置語言；大量 `index.html`／`app.js` 動態文案尚未遷移，不能宣稱全畫面完成。
+
 Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 
 - 不以語言推測國家，也不為每個國家另建會員資料庫；沿用 `accounts.locale/preferred_languages` 與 `persons.locale/timezone/region_code/attributes`，分別保存 UI、陪伴對話、國家／時區與安全／法律／資料區域。
