@@ -197,7 +197,8 @@
         "docs/qa/i18n/README.md",
         "scripts/i18n-release-readiness.js",
         "scripts/test-i18n-release-readiness.js",
-        "scripts/test-in-app-purchase-localizations.js"
+        "scripts/test-in-app-purchase-localizations.js",
+        "scripts/test-purchase-flow-localizations.js"
       ],
       "requiredStates": [
         "binary-localizations",

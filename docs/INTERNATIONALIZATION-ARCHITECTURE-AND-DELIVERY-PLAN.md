@@ -289,6 +289,14 @@ Phase 5c（2026-07-28）：8 項內購四語契約與實機驗收
 - 原生 `StorePlugin.getProducts` 與 `MuneaStore.getProducts()` 已把 Apple 回傳的 `displayName`、`description`、`displayPrice` 正規化並快取；待衝突中的購買畫面合併後，只能使用這份 StoreKit 資料渲染，不得把台灣價格複製到海外語系。
 - 這一批只增加草稿、測試與發布閘門，未打包、未上傳、未扣款，也不影響現有正式服務；在實機證據完成前狀態固定為 `App E2E pending`。
 
+Phase 5d（2026-07-28）：訂閱與點數購買流程四語文案契約
+
+- 四個 catalog 已補齊訂閱方案、點數包、登入提示、商品載入、確認付款、等待處理、付款失敗、帳戶不符、恢復購買與管理訂閱等 79 個畫面文案 key。
+- 價格相關文案只保留 `{price}` placeholder，必須接 Apple 回傳的 `displayPrice`；測試會拒絕 `NT$`、`US$`、美元、歐元、日圓符號或 ISO 幣別被寫入購買流程翻譯。
+- 四語共同鎖定產品規則：免費帳戶只有一次 5 分鐘體驗、每月方案點數不累積、加購點數不會到期，且先扣每月方案點數再扣加購點數。
+- `scripts/test-purchase-flow-localizations.js` 驗證四語 key、placeholder、幣別、英文／西文中文字殘留與產品規則，並已納入既有 UI contract suite。
+- 目前只是可接線的 catalog 與測試；`web/index.html`／`web/src/app.js` 的實際購買畫面要等 #247／#270 合併後再依最新主線接上，避免同檔競爭。接線、四語截圖與 StoreKit Sandbox 實機驗收完成前仍為 `App E2E pending`。
+
 Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
 
 - `web/src/i18n/dom-localizer.js` 只用 `textContent` 與明確允許的 `aria-label`、`placeholder`、`title`、`value` 屬性套用翻譯，不接受 HTML 字串，也不從 DOM 解析插值資料。
