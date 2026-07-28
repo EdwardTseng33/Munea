@@ -10,14 +10,36 @@ DERIVED_DATA="$BUILD_ROOT/derived-data-release"
 SOURCE_PACKAGES="$BUILD_ROOT/source-packages"
 ARCHIVE_PATH="$BUILD_ROOT/archives/Munea.xcarchive"
 LOG_PATH="/private/tmp/munea-ios-archive.log"
+BUILD_IDENTITY_PATH="$ROOT/ios/App/App/public/src/build-identity.json"
 
 mkdir -p "$DERIVED_DATA" "$SOURCE_PACKAGES" "$(dirname "$ARCHIVE_PATH")"
+
+if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+  echo "FAIL iOS archive requires a clean committed worktree."
+  exit 1
+fi
+RELEASE_COMMIT="$(git rev-parse HEAD)"
+if [[ ! "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "FAIL iOS archive could not resolve an exact 40-character source commit."
+  exit 1
+fi
 
 echo "== Check declared Capacitor parts exist in node_modules =="
 bash "$ROOT/scripts/ios-capacitor-parts-check.sh" pre-sync
 
 echo "== Sync iOS assets =="
 "$ROOT/node_modules/.bin/cap" sync ios
+
+if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+  echo "FAIL cap sync changed tracked source; commit the generated changes before archiving."
+  exit 1
+fi
+
+echo "== Embed exact App build identity =="
+node "$ROOT/scripts/ios-build-identity.js" \
+  --write \
+  --commit "$RELEASE_COMMIT" \
+  --output "$BUILD_IDENTITY_PATH"
 
 echo "== Check native parts survived cap sync =="
 bash "$ROOT/scripts/ios-capacitor-parts-check.sh" post-sync

@@ -307,6 +307,7 @@ Phase 5a（2026-07-28）將發布判定改為證據驅動：
 - `web/src/i18n/app-surface-manifest.json` 直接盤點正式 App 38 個 shipping states：主頁、狀態、家人、設定、連接裝置、通話各狀態、全部 modal／reader，以及動態通知設定與收件匣；發布 gate 不再只看核心 13 畫面。
 - `visual-qa.json` 必須覆蓋上述 38 states，且每個畫面都要有小螢幕、標準螢幕、放大字體三份獨立 PNG；每語系 114 張、四語共 456 張，重複路徑或缺任一 profile 都不通過。
 - `exactBuildEvidenceChain` 再確認視覺、語音、安裝版與 8 商品購買證據來自同一 commit／version／build／IPA SHA-256／IPA bytes；compiler 必須重新雜湊同一個實體 IPA，四份證據都必須帶 binary identity，服務 revisions 不一致時也不得混用證據。
+- iOS archive 會在本機候選 App bundle 內嵌 `public/src/build-identity.json`；實機驗收必須從已安裝 App 讀回 Bundle ID、commit、version、build，並與候選 IPA 的 identity 完全一致。
 - `sourceCopyMigration` 直接執行 shipping App WebView 掃描；只要 `index.html`、`app.js` 或動態模組仍有硬編碼繁中文案，就算 manifest 被手動改成 integrated 也不能開 runtime／binary。現況 1,727 個候選因此會正確保持 Gate 關閉，直到主畫面 PR 合併後逐項遷移歸零。
 
 Phase 5b（2026-07-28）：App Store 五張圖故事板

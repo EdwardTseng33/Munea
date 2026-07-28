@@ -10,6 +10,9 @@ const {
 const {
   verifyDeclaredIpaIdentity,
 } = require('./ipa-binary-identity.js');
+const {
+  validateIosBuildIdentity,
+} = require('./ios-build-identity.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const IAP_MANIFEST_PATH = path.join(
@@ -158,6 +161,13 @@ function buildAppE2eWorklist(locale) {
       dataHandling: falseChecks(DATA_HANDLING_CHECKS),
     },
     installedApp: {
+      runtimeIdentity: {
+        schema: 'munea.ios-build-identity.v1',
+        bundleIdentifier: '',
+        exactCommit: '',
+        appVersion: '',
+        build: '',
+      },
       steps: falseChecks(INSTALLED_APP_STEPS),
     },
     voice: {
@@ -230,8 +240,21 @@ function compileAppE2eEvidence(worklist, options = {}) {
     );
   }
   requireAllTrue(run.dataHandling, DATA_HANDLING_CHECKS, 'run.dataHandling');
+  const installedApp = worklist.installedApp;
+  if (!installedApp || typeof installedApp !== 'object') {
+    throw new Error('installedApp run is required');
+  }
+  const runtimeIdentity = validateIosBuildIdentity(
+    installedApp.runtimeIdentity,
+    {
+      bundleIdentifier: 'net.munea.app',
+      exactCommit: build.exactCommit,
+      appVersion: build.appVersion,
+      build: build.build,
+    },
+  );
   requireAllTrue(
-    worklist.installedApp && worklist.installedApp.steps,
+    installedApp.steps,
     INSTALLED_APP_STEPS,
     'installedApp.steps',
   );
@@ -302,6 +325,7 @@ function compileAppE2eEvidence(worklist, options = {}) {
     profile,
     environment,
     device,
+    runtimeIdentity,
     serviceRevisions,
     steps: Object.fromEntries(INSTALLED_APP_STEPS.map((field) => [field, true])),
   };

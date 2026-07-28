@@ -244,6 +244,7 @@ require('./test-i18n-native-review-evidence.js');
 require('./test-i18n-visual-qa-worklist.js');
 require('./test-i18n-visual-qa-evidence.js');
 require('./test-ipa-binary-identity.js');
+require('./test-ios-build-identity.js');
 require('./test-i18n-app-e2e-evidence.js');
 require('./test-ios-export-i18n-binary-gate.js');
 require('./test-i18n-layout-risk-worklist.js');

@@ -504,6 +504,13 @@ const installedEvidence = {
   profile: 'staging-gateway',
   environment: 'staging',
   device: 'iPhone acceptance device',
+  runtimeIdentity: {
+    schema: 'munea.ios-build-identity.v1',
+    bundleIdentifier: 'net.munea.app',
+    exactCommit,
+    appVersion: '1.0.45',
+    build: '49',
+  },
   serviceRevisions,
   steps: Object.fromEntries([
     'callButtonTapped',
@@ -531,6 +538,17 @@ assert.equal(
   validateInstalledAppEvidence({ ...installedEvidence, binaryBytes: null }, 'en'),
   false,
   'Installed App evidence must include the exact IPA byte size',
+);
+assert.equal(
+  validateInstalledAppEvidence({
+    ...installedEvidence,
+    runtimeIdentity: {
+      ...installedEvidence.runtimeIdentity,
+      build: '50',
+    },
+  }, 'en'),
+  false,
+  'Installed App runtime identity must match the candidate build',
 );
 
 const purchaseProductIds = [

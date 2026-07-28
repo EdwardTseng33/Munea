@@ -184,6 +184,8 @@ node scripts/i18n-app-e2e-evidence.js `
 - 語音語系：指定語言開場、混合語言、單次切換，以及使用者確認後的永久偏好。
 - StoreKit Sandbox：8 個產品的在地名稱、系統價格、購買 sheet、伺服器驗證、權益套用、transaction finish、取消／未驗證／恢復購買路徑。
 
+`npm run ios:archive` 只接受乾淨 worktree，並會在 App bundle 內建立 `public/src/build-identity.json`。在已安裝的候選 App 上用 Safari Web Inspector 執行 `fetch('src/build-identity.json').then(r => r.json()).then(console.log)`，把回報的 schema、Bundle ID、commit、version、build 填入 `installedApp.runtimeIdentity`。這份資料不含帳號或裝置個資；compiler 會拒絕 runtime identity 與候選 IPA 不一致的驗收結果。
+
 所有步驟都由驗收人員標為 `true`、每個產品標為 `pass` 後，才可編譯三份 release gate 證據：
 
 ```powershell

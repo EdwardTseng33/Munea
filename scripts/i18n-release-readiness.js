@@ -203,6 +203,7 @@ function validateVoiceEvidence(evidence, locale) {
 }
 
 function validateInstalledAppEvidence(evidence, locale) {
+  const runtimeIdentity = evidence && evidence.runtimeIdentity;
   return evidence.schema === 'munea.i18n-installed-app-e2e.v1'
     && evidence.locale === locale
     && evidence.result === 'pass'
@@ -210,6 +211,12 @@ function validateInstalledAppEvidence(evidence, locale) {
     && /^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
     && Number.isSafeInteger(evidence.binaryBytes)
     && evidence.binaryBytes > 0
+    && runtimeIdentity
+    && runtimeIdentity.schema === 'munea.ios-build-identity.v1'
+    && runtimeIdentity.bundleIdentifier === 'net.munea.app'
+    && runtimeIdentity.exactCommit === evidence.exactCommit
+    && runtimeIdentity.appVersion === evidence.appVersion
+    && runtimeIdentity.build === evidence.build
     && validIsoDate(evidence.testedAt)
     && requiredStrings(evidence, [
       'appVersion',

@@ -53,6 +53,13 @@ function complete(locale = 'en') {
   worklist.installedApp.steps = Object.fromEntries(
     INSTALLED_APP_STEPS.map((field) => [field, true]),
   );
+  worklist.installedApp.runtimeIdentity = {
+    schema: 'munea.ios-build-identity.v1',
+    bundleIdentifier: 'net.munea.app',
+    exactCommit: worklist.buildIdentity.exactCommit,
+    appVersion: worklist.buildIdentity.appVersion,
+    build: worklist.buildIdentity.build,
+  };
   worklist.voice.steps = Object.fromEntries(
     VOICE_STEPS.map((field) => [field, true]),
   );
@@ -79,6 +86,7 @@ assert.equal(evidence.voice.binarySha256, evidence.purchase.binarySha256);
 assert.equal(evidence.purchase.products.length, 8);
 assert.equal(evidence.purchase.backendRevision, evidence.installed.serviceRevisions.brain);
 assert.equal(evidence.installed.binaryBytes, ipaData.length);
+assert.equal(evidence.installed.runtimeIdentity.exactCommit, completed.buildIdentity.exactCommit);
 
 const incomplete = complete();
 incomplete.installedApp.steps.avatarReady = false;
@@ -123,6 +131,13 @@ fs.writeFileSync(
 assert.throws(
   () => compileAppE2eEvidence(complete(), { ipaPath: differentIpaPath }),
   /binarySha256 does not match/,
+);
+
+const wrongInstalledBuild = complete();
+wrongInstalledBuild.installedApp.runtimeIdentity.build = '999';
+assert.throws(
+  () => compileAppE2eEvidence(wrongInstalledBuild, { ipaPath }),
+  /build does not match/,
 );
 
 console.log('PASS: App E2E compiler requires exact-build call, voice, and 8-product evidence');
