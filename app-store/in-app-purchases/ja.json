@@ -1,7 +1,7 @@
 {
   "net.munea.app.plus.monthly": {
     "displayName": "Munea Plus 月額",
-    "description": "毎月100ポイント、健康推移、家族4人まで"
+    "description": "毎月100ポイント、健康の傾向、家族4人まで"
   },
   "net.munea.app.plus.yearly": {
     "displayName": "Munea Plus 年額",
@@ -9,7 +9,7 @@
   },
   "net.munea.app.pro.monthly": {
     "displayName": "Munea Pro 月額",
-    "description": "毎月200ポイント、健康推移、家族12人まで"
+    "description": "毎月200ポイント、健康の傾向、家族12人まで"
   },
   "net.munea.app.pro.yearly": {
     "displayName": "Munea Pro 年額",
