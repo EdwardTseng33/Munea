@@ -361,6 +361,111 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("conexión", localization.retry_message("es"))
         self.assertNotIn("今天過得怎麼樣", localization.opening_message("zh-TW"))
 
+    def test_voice_session_profile_keeps_ui_conversation_and_region_independent(self):
+        profile = localization.voice_session_locale_profile({
+            "uiLocale": "ja",
+            "conversationLocale": "en",
+            "preferredLanguages": ["ja", "en"],
+            "countryCode": "JP",
+            "timeZone": "Asia/Tokyo",
+            "currency": "JPY",
+            "safetyRegion": "JP",
+            "legalRegion": "JP",
+            "dataRegion": "jp-primary",
+        })
+
+        self.assertEqual(profile["localeContext"]["uiLocale"], "ja")
+        self.assertEqual(profile["sessionLocale"], "en")
+        self.assertEqual(profile["responseLocale"], "en")
+        self.assertEqual(profile["captionLocale"], "en")
+        self.assertEqual(profile["speechLanguageCode"], "en-US")
+        self.assertTrue(profile["openingMessage"].startswith("Hi,"))
+        self.assertNotIn("119", profile["regionalSafetyInstruction"])
+        self.assertNotIn("1925", profile["regionalSafetyInstruction"])
+        self.assertEqual(profile["localeContext"]["countryCode"], "JP")
+        self.assertEqual(profile["localeContext"]["safetyRegion"], "JP")
+
+    def test_voice_session_profile_covers_all_four_speech_locales(self):
+        expected = {
+            "zh-TW": "cmn-TW",
+            "en": "en-US",
+            "ja": "ja-JP",
+            "es": "es-ES",
+        }
+        for locale, speech_code in expected.items():
+            with self.subTest(locale=locale):
+                profile = localization.voice_session_locale_profile({
+                    "conversationLocale": locale,
+                })
+                self.assertEqual(profile["speechLanguageCode"], speech_code)
+                self.assertTrue(profile["openingMessage"])
+                self.assertTrue(profile["retryMessage"])
+                self.assertTrue(profile["replyLanguageInstruction"])
+                self.assertTrue(profile["regionalSafetyInstruction"])
+
+    def test_voice_turn_profile_can_code_switch_without_mutating_policy(self):
+        context = localization.build_locale_context({
+            "uiLocale": "en",
+            "conversationLocale": "en",
+            "countryCode": "US",
+            "timeZone": "America/Los_Angeles",
+            "currency": "USD",
+            "safetyRegion": "US",
+            "legalRegion": "US",
+            "dataRegion": "us-central",
+        })
+        state = localization.new_conversation_locale_state(context)
+
+        turn = localization.voice_turn_locale_profile(
+            context,
+            state,
+            detected_languages=["ja-JP", "en-US"],
+        )
+
+        self.assertTrue(turn["decision"]["codeSwitchDetected"])
+        self.assertEqual(turn["decision"]["state"]["baseLocale"], "en")
+        self.assertEqual(turn["decision"]["state"]["sessionLocale"], "en")
+        self.assertEqual(turn["profile"]["responseLocale"], "ja")
+        self.assertEqual(turn["profile"]["sessionLocale"], "en")
+        self.assertEqual(turn["profile"]["speechLanguageCode"], "ja-JP")
+        self.assertEqual(turn["profile"]["localeContext"]["countryCode"], "US")
+        self.assertEqual(turn["profile"]["localeContext"]["safetyRegion"], "US")
+        self.assertNotIn("119", turn["profile"]["regionalSafetyInstruction"])
+
+    def test_explicit_voice_switch_updates_session_profile_but_not_account_policy(self):
+        context = localization.build_locale_context({
+            "uiLocale": "zh-TW",
+            "conversationLocale": "zh-TW",
+            "countryCode": "TW",
+            "safetyRegion": "TW",
+        })
+        state = localization.new_conversation_locale_state(context)
+
+        turn = localization.voice_turn_locale_profile(
+            context,
+            state,
+            switch_locale="es-MX",
+        )
+
+        self.assertEqual(turn["profile"]["sessionLocale"], "es")
+        self.assertEqual(turn["profile"]["responseLocale"], "es")
+        self.assertEqual(turn["profile"]["speechLanguageCode"], "es-ES")
+        self.assertIsNone(turn["decision"]["persistedLocale"])
+        self.assertEqual(turn["profile"]["localeContext"]["conversationLocale"], "zh-TW")
+        self.assertEqual(turn["profile"]["localeContext"]["countryCode"], "TW")
+        self.assertIn("119", turn["profile"]["regionalSafetyInstruction"])
+        self.assertIn("1925", turn["profile"]["regionalSafetyInstruction"])
+
+    def test_regional_safety_numbers_follow_safety_region_not_language(self):
+        english_in_taiwan = localization.regional_safety_instruction("en", "TW")
+        chinese_in_mexico = localization.regional_safety_instruction("zh-TW", "MX")
+
+        self.assertIn("119", english_in_taiwan)
+        self.assertIn("1925", english_in_taiwan)
+        self.assertNotIn("119", chinese_in_mexico)
+        self.assertNotIn("1925", chinese_in_mexico)
+        self.assertIn("所在地", chinese_in_mexico)
+
     def test_disabled_hokkien_is_rewritten_to_mandarin_for_speech_and_display(self):
         self.assertEqual(localization.speech_text("你卡早捆喔", "zh-TW"), "你早點睡喔")
         self.assertEqual(localization.display_text("你咖紮綑喔", "zh-TW"), "你早點睡喔")

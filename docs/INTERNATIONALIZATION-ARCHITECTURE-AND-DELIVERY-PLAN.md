@@ -243,6 +243,13 @@ Phase 3b（2026-07-28）建立混合語言與語音切換狀態規則：
 - 「這通改用日文」只改 session；「以後都用日文」先暫時切換並要求確認，確認後才回傳可寫入帳號的 `persistedLocale`。
 - 狀態模組只接受 ASR／模型產生的結構化語言與切換意圖，不用脆弱的關鍵字規則猜測使用者意思；正式 Voice 接線仍等待 #270。
 
+Phase 3c（2026-07-28）建立 Live Voice 共用語系設定包：
+
+- `voice_session_locale_profile()` 將可信 `LocaleContext` 一次轉成 session／response／caption locale、ASR/TTS language code、開場、重試、語言 prompt 與區域安全提示，避免 `live_voice_server.py` 各處自行寫死語系。
+- `voice_turn_locale_profile()` 接續混語狀態機：單輪中英／日英混講可用主要語言回覆，但不改會員偏好；暫時切換只改 session，永久切換仍要確認。
+- 緊急號碼只由後端核定的 `safetyRegion` 選擇，絕不由 UI／對話語言推測。`TW` 才能帶 119／1925；其他或未知區域使用該回覆語言的「聯絡所在地緊急服務」通用文字。
+- 四語 profile 與跨語回合測試已建立；目前尚未改 #270 佔用中的 `live_voice_server.py`，所以只是 coded + tested 的接線前置，仍為 `App E2E pending`。
+
 此階段屬 chat-call path risk。完成程式與自動測試後仍標記 `App E2E pending`，直到使用受影響 profile 的實體 iPhone 完成完整通話驗收。
 
 ### Phase 4 — 後台與營運

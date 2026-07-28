@@ -139,7 +139,8 @@
         "app-site/legal/es/privacy.html",
         "app-site/legal/es/terms.html",
         "app-site/legal/es/support.html",
-        "engine/localization.py"
+        "engine/localization.py",
+        "engine/test_localization.py"
       ],
       "requiredStates": [
         "device-locale-resolution",

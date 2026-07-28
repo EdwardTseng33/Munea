@@ -45,6 +45,18 @@ _RETRY_MESSAGES = {
     "ja": "少し接続が不安定です。少し待ってから、もう一度話しかけてもらえますか？",
     "es": "Estoy teniendo un pequeño problema de conexión. ¿Podemos intentarlo de nuevo en un momento?",
 }
+_GENERIC_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人有立即危險，請立刻聯絡所在地的緊急服務，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger, contact the local emergency service and ask a trusted person nearby to help.",
+    "ja": "差し迫った危険がある場合は、現地の緊急通報先に連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato, contacta con el servicio local de emergencias y pide ayuda a una persona de confianza cercana.",
+}
+_TAIWAN_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人有立即危險，請立刻撥打台灣 119；需要心理支持時可撥 1925，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Taiwan, call 119. For mental-health support, call 1925 and ask a trusted person nearby to help.",
+    "ja": "台湾で差し迫った危険がある場合は119へ、心の相談は1925へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Taiwán, llama al 119. Para apoyo de salud mental, llama al 1925 y pide ayuda a una persona cercana de confianza.",
+}
 
 # Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current
 # Live provider does not list Taiwanese Hokkien as a supported language, so a
@@ -525,6 +537,77 @@ def reconcile_context_transcription(text, expected_terms=None, locale="zh-TW"):
 def opening_message(locale): return _OPENING_MESSAGES[normalize_locale(locale)]
 
 def retry_message(locale): return _RETRY_MESSAGES[normalize_locale(locale)]
+
+
+def regional_safety_instruction(locale, safety_region):
+    """Return localized emergency guidance from an explicit safety region.
+
+    The response language never chooses a country, hotline, legal regime, or
+    data region. Only a trusted ``safetyRegion`` may select regional numbers;
+    unknown and non-Taiwan regions use generic local-emergency guidance until a
+    separately reviewed regional policy is added.
+    """
+    normalized_locale = normalize_locale(locale)
+    normalized_region = str(safety_region or "").strip().upper()
+    copy = (
+        _TAIWAN_EMERGENCY_GUIDANCE
+        if normalized_region == "TW"
+        else _GENERIC_EMERGENCY_GUIDANCE
+    )
+    return "\n[Regional safety]\n" + copy[normalized_locale]
+
+
+def voice_session_locale_profile(locale_context=None):
+    """Build the complete locale bundle consumed by one Live voice session."""
+    context = build_locale_context(locale_context)
+    locale = context["conversationLocale"]
+    return {
+        "localeContext": context,
+        "sessionLocale": locale,
+        "responseLocale": locale,
+        "captionLocale": locale,
+        "speechLanguageCode": speech_language_code(locale),
+        "openingMessage": opening_message(locale),
+        "retryMessage": retry_message(locale),
+        "replyLanguageInstruction": reply_language_instruction(locale),
+        "regionalSafetyInstruction": regional_safety_instruction(
+            locale,
+            context["safetyRegion"],
+        ),
+    }
+
+
+def voice_turn_locale_profile(
+    locale_context,
+    state,
+    detected_languages=None,
+    switch_locale=None,
+    permanent=False,
+    confirmation=False,
+):
+    """Resolve a mixed-language turn and return its prompt/speech locale bundle."""
+    context = build_locale_context(locale_context)
+    decision = resolve_conversation_turn_locale(
+        state,
+        detected_languages=detected_languages,
+        switch_locale=switch_locale,
+        permanent=permanent,
+        confirmation=confirmation,
+    )
+    response_locale = decision["responseLocale"]
+    profile = voice_session_locale_profile({
+        **context,
+        "conversationLocale": response_locale,
+    })
+    profile["localeContext"] = context
+    profile["sessionLocale"] = decision["state"]["sessionLocale"]
+    profile["responseLocale"] = response_locale
+    profile["captionLocale"] = response_locale
+    return {
+        "decision": decision,
+        "profile": profile,
+    }
+
 
 def reply_language_instruction(locale):
     """A narrow addition to the existing safety/persona prompt, never a replacement."""
