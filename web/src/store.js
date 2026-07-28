@@ -18,12 +18,69 @@ window.MuneaStore = (function () {
     600: 'net.munea.app.points.1000',
     1000: 'net.munea.app.points.1800'
   };
+  var PRODUCT_IDS = Object.freeze(
+    Object.keys(SUB).map(function (key) { return SUB[key]; })
+      .concat(Object.keys(PTS).map(function (key) { return PTS[key]; }))
+  );
+  var PRODUCT_CACHE = Object.create(null);
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Store) || null;
   }
   function isDeveloperSimulation(state) {
     var dev = window.MUNEA_DEV_CONFIG || {};
     return dev.enabled === true && state && state.developerMode === true;
+  }
+  function knownProductIds(ids) {
+    var requested = Array.isArray(ids) && ids.length ? ids : PRODUCT_IDS;
+    return requested
+      .map(function (value) { return String(value || ''); })
+      .filter(function (value, index, all) {
+        return PRODUCT_IDS.indexOf(value) >= 0 && all.indexOf(value) === index;
+      });
+  }
+  async function getProducts(ids) {
+    var requested = knownProductIds(ids);
+    var p = plugin();
+    if (!p || typeof p.getProducts !== 'function') {
+      return {
+        ok: false,
+        reason: 'unsupported',
+        products: [],
+        missingProductIds: requested
+      };
+    }
+    try {
+      var result = await p.getProducts({ ids: requested });
+      var received = result && Array.isArray(result.products) ? result.products : [];
+      var products = received.map(function (item) {
+        var productId = String((item && (item.productId || item.id)) || '');
+        if (requested.indexOf(productId) < 0) return null;
+        var normalized = Object.freeze({
+          productId: productId,
+          displayName: String(item.displayName || item.title || ''),
+          description: String(item.description || ''),
+          displayPrice: String(item.displayPrice || '')
+        });
+        if (!normalized.displayName || !normalized.displayPrice) return null;
+        PRODUCT_CACHE[productId] = normalized;
+        return normalized;
+      }).filter(Boolean);
+      var loadedIds = products.map(function (product) { return product.productId; });
+      return {
+        ok: products.length > 0,
+        products: products,
+        missingProductIds: requested.filter(function (productId) {
+          return loadedIds.indexOf(productId) < 0;
+        })
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        reason: 'store_products_unavailable',
+        products: [],
+        missingProductIds: requested
+      };
+    }
   }
   function applyDeveloperSimulation(pid) {
     if (typeof window.__muneaApplyPurchase !== 'function') {
@@ -167,6 +224,9 @@ window.MuneaStore = (function () {
 
   return {
     available: function () { return !!plugin(); },
+    productIds: function () { return PRODUCT_IDS.slice(); },
+    getProducts: getProducts,
+    product: function (productId) { return PRODUCT_CACHE[String(productId || '')] || null; },
     subId: function (plan, cyc) { return SUB[plan + '|' + cyc] || null; },
     ptsId: function (n) { return PTS[n] || null; },
     purchase: purchase,

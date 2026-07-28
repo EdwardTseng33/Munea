@@ -104,6 +104,25 @@ for (const sourcePath of ['engine/apple_store.py', 'web/src/store.js']) {
     `${sourcePath} product IDs drifted from the localized IAP registry`,
   );
 }
+const storeBridge = fs.readFileSync(path.join(ROOT, 'web', 'src', 'store.js'), 'utf8');
+const nativeStoreBridge = fs.readFileSync(
+  path.join(ROOT, 'ios', 'App', 'App', 'StorePlugin.swift'),
+  'utf8',
+);
+assert(nativeStoreBridge.includes('CAPPluginMethod(name: "getProducts"'));
+for (const field of ['displayName', 'description', 'displayPrice']) {
+  assert(
+    nativeStoreBridge.includes(`"${field}": $0.`),
+    `Native StoreKit product query must return ${field}`,
+  );
+}
+assert(storeBridge.includes('getProducts: getProducts'));
+assert(storeBridge.includes('PRODUCT_CACHE'));
+assert(storeBridge.includes('displayPrice: String(item.displayPrice || \'\')'));
+assert(
+  !/displayPrice:\s*['"][^'"]*(?:NT\$|US\$|[$€¥￥])/.test(storeBridge),
+  'Store bridge must never hard-code a localized display price',
+);
 
 const hanPattern = /[\u3400-\u9fff\uf900-\ufaff]/u;
 const forbiddenPricePattern = /(?:NT\$|US\$|[$€¥￥]|\b(?:USD|TWD|JPY|EUR)\b)/i;

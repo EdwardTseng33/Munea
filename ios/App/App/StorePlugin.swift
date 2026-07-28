@@ -47,7 +47,14 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
             do {
                 let prods = try await Product.products(for: ids)
                 let arr: [[String: String]] = prods.map {
-                    ["id": $0.id, "displayPrice": $0.displayPrice, "title": $0.displayName]
+                    [
+                        "id": $0.id,
+                        "productId": $0.id,
+                        "title": $0.displayName,
+                        "displayName": $0.displayName,
+                        "description": $0.description,
+                        "displayPrice": $0.displayPrice
+                    ]
                 }
                 call.resolve(["products": arr])
             } catch {

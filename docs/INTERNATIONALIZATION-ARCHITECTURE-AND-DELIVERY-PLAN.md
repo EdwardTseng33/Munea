@@ -279,6 +279,7 @@ Phase 5c（2026-07-28）：8 項內購四語契約與實機驗收
 - 點數包文案明確限定 Plus／Pro 會員，不改變「免費會員不能購買點數」的產品規則；訂閱月繳／年繳的每月點數與家庭人數都對齊 server-owned billing facts。
 - 每個商品仍需 App Store Connect 身分、可售地區、價格與 App Review screenshot 的現況證據；目前全部維持 `unverified`，不操作正式商店。
 - `purchase-e2e.json` 要求 exact build 在實體 iPhone 的 StoreKit Sandbox 逐項完成 8 個商品，確認在地名稱、StoreKit 價格、付款視窗、後端驗證、正確入帳、transaction finish、畫面刷新，另驗證取消／未驗證交易不入帳與訂閱還原。
+- 原生 `StorePlugin.getProducts` 與 `MuneaStore.getProducts()` 已把 Apple 回傳的 `displayName`、`description`、`displayPrice` 正規化並快取；待衝突中的購買畫面合併後，只能使用這份 StoreKit 資料渲染，不得把台灣價格複製到海外語系。
 - 這一批只增加草稿、測試與發布閘門，未打包、未上傳、未扣款，也不影響現有正式服務；在實機證據完成前狀態固定為 `App E2E pending`。
 
 Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件

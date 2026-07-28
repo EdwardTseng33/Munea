@@ -125,6 +125,11 @@ const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0
 expect(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'auth sheet still opens the keyboard automatically');
 
 expect(swiftStore.includes('CAPPluginMethod(name: "manageSubscriptions"'), 'native subscription management method is not registered');
+expect(swiftStore.includes('CAPPluginMethod(name: "getProducts"'), 'native localized StoreKit product query is not registered');
+expect(swiftStore.includes('"displayPrice": $0.displayPrice'), 'native StoreKit bridge must return localized displayPrice');
+expect(store.includes('getProducts: getProducts'), 'browser Store bridge must expose localized StoreKit products');
+expect(store.includes('PRODUCT_CACHE') && store.includes('displayPrice: String(item.displayPrice'), 'App UI must receive and cache StoreKit display prices');
+expect(!/displayPrice:\s*['"][^'"]*(?:NT\$|US\$|[$€¥￥])/.test(store), 'Store bridge must not hard-code a localized price');
 expect(swiftStore.includes('AppStore.showManageSubscriptions'), 'native subscription management sheet is not implemented');
 expect(!reviewNotes.includes('Guest accounts include'), 'review notes still claim a guest trial');
 expect(reviewNotes.includes('Voice chat and\n   private account data require sign-in'), 'review notes do not explain the sign-in gate');
