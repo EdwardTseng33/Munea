@@ -107,6 +107,7 @@ worklist 不會自動開啟畫面、不會建立假截圖，也不會把任何�
 
 - 38 states × 3 profiles 完整且順序未漂移。
 - PNG 路徑留在該語系證據資料夾內，symlink 也不能跳出去。
+- PNG 必須具備完整且 CRC 正確的 `IHDR`、`IDAT`、`IEND` chunk；截斷檔、壞檔或只偽造標頭的檔案一律拒絕。
 - 小尺寸／標準／Dynamic Type profile 的圖片尺寸符合 1x、2x 或 3x iPhone capture。
 - 114 張圖的 SHA-256 全部不同，不能複製同一張圖充數。
 - 四項人工檢查全為布林 `true`，且 evidence 綁定同一 commit、IPA、version、build。

@@ -41,17 +41,96 @@ function requiredString(value, label) {
   return value.trim();
 }
 
+const PNG_SIGNATURE = Buffer.from('89504e470d0a1a0a', 'hex');
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < table.length; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) {
+      value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+    }
+    table[index] = value >>> 0;
+  }
+  return table;
+})();
+
+function crc32(buffer) {
+  let checksum = 0xffffffff;
+  for (const byte of buffer) {
+    checksum = CRC32_TABLE[(checksum ^ byte) & 0xff] ^ (checksum >>> 8);
+  }
+  return (checksum ^ 0xffffffff) >>> 0;
+}
+
 function pngDimensions(buffer) {
   if (
     !Buffer.isBuffer(buffer)
-    || buffer.length < 24
-    || buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
-    || buffer.subarray(12, 16).toString('ascii') !== 'IHDR'
+    || buffer.length < 57
+    || !buffer.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)
   ) {
-    throw new Error('screenshot is not a valid PNG with an IHDR header');
+    throw new Error('screenshot is not a complete PNG');
   }
-  const width = buffer.readUInt32BE(16);
-  const height = buffer.readUInt32BE(20);
+
+  let offset = PNG_SIGNATURE.length;
+  let chunkIndex = 0;
+  let width = 0;
+  let height = 0;
+  let seenHeader = false;
+  let seenImageData = false;
+  let seenEnd = false;
+  while (offset < buffer.length) {
+    if (buffer.length - offset < 12) {
+      throw new Error('screenshot PNG has a truncated chunk');
+    }
+    const dataLength = buffer.readUInt32BE(offset);
+    if (dataLength > buffer.length - offset - 12) {
+      throw new Error('screenshot PNG chunk length exceeds the file');
+    }
+    const typeOffset = offset + 4;
+    const dataOffset = typeOffset + 4;
+    const crcOffset = dataOffset + dataLength;
+    const typeBytes = buffer.subarray(typeOffset, dataOffset);
+    const type = typeBytes.toString('ascii');
+    if (!/^[A-Za-z]{4}$/.test(type)) {
+      throw new Error('screenshot PNG contains an invalid chunk type');
+    }
+    const expectedCrc = buffer.readUInt32BE(crcOffset);
+    const actualCrc = crc32(buffer.subarray(typeOffset, crcOffset));
+    if (actualCrc !== expectedCrc) {
+      throw new Error(`screenshot PNG chunk ${type} has an invalid CRC`);
+    }
+    if (chunkIndex === 0 && type !== 'IHDR') {
+      throw new Error('screenshot PNG must start with IHDR');
+    }
+    if (type === 'IHDR') {
+      if (seenHeader || dataLength !== 13) {
+        throw new Error('screenshot PNG has an invalid IHDR chunk');
+      }
+      width = buffer.readUInt32BE(dataOffset);
+      height = buffer.readUInt32BE(dataOffset + 4);
+      seenHeader = true;
+    } else if (type === 'IDAT') {
+      if (!seenHeader || seenEnd || dataLength === 0) {
+        throw new Error('screenshot PNG has an invalid IDAT chunk');
+      }
+      seenImageData = true;
+    } else if (type === 'IEND') {
+      if (!seenHeader || !seenImageData || seenEnd || dataLength !== 0) {
+        throw new Error('screenshot PNG has an invalid IEND chunk');
+      }
+      seenEnd = true;
+      if (crcOffset + 4 !== buffer.length) {
+        throw new Error('screenshot PNG contains data after IEND');
+      }
+    } else if (seenEnd) {
+      throw new Error('screenshot PNG contains a chunk after IEND');
+    }
+    offset = crcOffset + 4;
+    chunkIndex += 1;
+  }
+  if (!seenHeader || !seenImageData || !seenEnd) {
+    throw new Error('screenshot PNG is missing IHDR, IDAT, or IEND');
+  }
   if (width <= 0 || height <= 0) throw new Error('screenshot dimensions are invalid');
   return { width, height };
 }
@@ -267,6 +346,7 @@ module.exports = {
   REQUIRED_CHECKS,
   REQUIRED_PROFILES,
   compileVisualQaEvidence,
+  crc32,
   pngDimensions,
   profileDimensionsMatch,
 };

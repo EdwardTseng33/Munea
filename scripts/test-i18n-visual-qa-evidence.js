@@ -4,6 +4,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const zlib = require('node:zlib');
 const {
   buildVisualQaWorklist,
 } = require('./i18n-visual-qa-worklist.js');
@@ -13,14 +14,40 @@ const {
   compileVisualQaEvidence,
 } = require('./i18n-visual-qa-evidence.js');
 
+function testCrc32(buffer) {
+  let checksum = 0xffffffff;
+  for (const byte of buffer) {
+    checksum ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      checksum = (checksum & 1)
+        ? (0xedb88320 ^ (checksum >>> 1))
+        : (checksum >>> 1);
+    }
+  }
+  return (checksum ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type, data) {
+  const typeBytes = Buffer.from(type, 'ascii');
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE(testCrc32(Buffer.concat([typeBytes, data])));
+  return Buffer.concat([length, typeBytes, data, checksum]);
+}
+
 function png(width, height, uniqueByte) {
-  const buffer = Buffer.alloc(25);
-  Buffer.from('89504e470d0a1a0a', 'hex').copy(buffer, 0);
-  Buffer.from('49484452', 'hex').copy(buffer, 12);
-  buffer.writeUInt32BE(width, 16);
-  buffer.writeUInt32BE(height, 20);
-  buffer.writeUInt8(uniqueByte, 24);
-  return buffer;
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 6;
+  return Buffer.concat([
+    Buffer.from('89504e470d0a1a0a', 'hex'),
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', zlib.deflateSync(Buffer.from([uniqueByte]))),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 function completedWorklist(evidenceDir) {
@@ -87,6 +114,26 @@ try {
   assert.throws(
     () => compileVisualQaEvidence(wrongDimensions, { evidenceDir: temp }),
     /dimensions do not match/,
+  );
+
+  const truncated = completedWorklist(temp);
+  fs.writeFileSync(
+    path.join(temp, truncated.entries[2].screenshot),
+    Buffer.from('89504e470d0a1a0a0000000d49484452000001860000034c', 'hex'),
+  );
+  assert.throws(
+    () => compileVisualQaEvidence(truncated, { evidenceDir: temp }),
+    /not a complete PNG/,
+  );
+
+  const badCrc = completedWorklist(temp);
+  const corruptPath = path.join(temp, badCrc.entries[2].screenshot);
+  const corrupt = fs.readFileSync(corruptPath);
+  corrupt[corrupt.length - 1] ^= 0xff;
+  fs.writeFileSync(corruptPath, corrupt);
+  assert.throws(
+    () => compileVisualQaEvidence(badCrc, { evidenceDir: temp }),
+    /invalid CRC/,
   );
 
   const duplicate = completedWorklist(temp);
