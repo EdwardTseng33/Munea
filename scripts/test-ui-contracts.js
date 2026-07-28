@@ -226,3 +226,4 @@ require('./test-i18n-catalogs.js');
 require('./test-i18n-runtime.js');
 require('./test-i18n-surface-inventory.js');
 require('./test-legal-localizations.js');
+require('./test-app-store-localizations.js');

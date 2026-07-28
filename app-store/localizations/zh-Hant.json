@@ -1,0 +1,13 @@
+{
+  "status": "draft",
+  "name": "沐寧 Munea－全家人的 AI 陪伴",
+  "subtitle": "會記得你，也在乎你在乎的人",
+  "promotionalText": "用聲音陪你聊日常、記住重要小事，也讓受邀家人一起關心生活近況。",
+  "description": "沐寧是一位住在 iPhone 裡的 AI 陪伴。\n\n你可以用說話的方式和陪伴角色聊日常、興趣與回憶。沐寧也能保存經你同意的對話摘要，讓下次聊天更連貫。\n\n主要功能：\n• 語音聊聊：像打電話一樣自然地說話與聆聽\n• 生活提醒：建立用藥、回診與日常事項提醒\n• 家人互動：邀請家人加入照護圈、傳話與參與活動\n• 心情與健康紀錄：查看自己保存的生活與健康資料\n• Apple 健康：經你授權後讀取支援的健康資料\n\n沐寧是陪伴與生活提醒工具，不提供診斷、治療、心理治療或緊急服務。身體不適請尋求合格醫療人員協助；緊急狀況請聯絡所在地的緊急服務。\n\n部分語音與 AI 功能會使用點數。價格、續訂、取消、每期點數與加購點數條件，會在 App 與 Apple 購買畫面中清楚顯示。",
+  "keywords": "陪伴,長輩,語音聊天,家人,生活提醒,心情,照護圈,回診",
+  "whatsNew": "沐寧首版帶來 AI 語音陪伴、生活提醒、家人互動、心情紀錄與 Apple 健康連結。",
+  "privacyPolicyUrl": "https://app.munea.net/privacy",
+  "supportUrl": "https://app.munea.net/support",
+  "marketingUrl": "https://app.munea.net/",
+  "reviewNotesStatus": "separate-current-build-review-required"
+}

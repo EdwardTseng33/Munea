@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "authority": "repository-draft-only",
+  "primaryLocale": "zh-Hant",
+  "locales": {
+    "zh-Hant": {
+      "catalogLocale": "zh-TW",
+      "appStoreLocale": "zh-Hant",
+      "metadataFile": "zh-Hant.json",
+      "targetTerritories": [
+        "TW"
+      ],
+      "metadataReview": "draft",
+      "publicUrlStatus": "existing-primary-pages",
+      "screenshotStatus": "existing-unreviewed",
+      "screenshotDirectory": "../../App store pic",
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    },
+    "en-US": {
+      "catalogLocale": "en",
+      "appStoreLocale": "en-US",
+      "metadataFile": "en-US.json",
+      "targetTerritories": [
+        "US"
+      ],
+      "metadataReview": "draft",
+      "publicUrlStatus": "pending-deployment",
+      "screenshotStatus": "missing",
+      "screenshotDirectory": null,
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    },
+    "ja": {
+      "catalogLocale": "ja",
+      "appStoreLocale": "ja",
+      "metadataFile": "ja.json",
+      "targetTerritories": [
+        "JP"
+      ],
+      "metadataReview": "draft",
+      "publicUrlStatus": "pending-deployment",
+      "screenshotStatus": "missing",
+      "screenshotDirectory": null,
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    },
+    "es": {
+      "catalogLocale": "es",
+      "appStoreLocale": null,
+      "metadataFile": "es-draft.json",
+      "targetTerritories": [],
+      "marketDecision": "Choose es-ES or es-MX before App Store localization and regional review.",
+      "metadataReview": "draft",
+      "publicUrlStatus": "pending-deployment",
+      "screenshotStatus": "missing",
+      "screenshotDirectory": null,
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    }
+  },
+  "appAvailability": {
+    "currentState": "unverified",
+    "sourceOfTruth": "App Store Connect Pricing and Availability",
+    "changeAuthorized": false
+  },
+  "inAppPurchaseAvailability": {
+    "currentState": "unverified",
+    "sourceOfTruth": "App Store Connect product availability",
+    "changeAuthorized": false
+  }
+}

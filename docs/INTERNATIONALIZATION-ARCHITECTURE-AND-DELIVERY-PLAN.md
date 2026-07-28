@@ -166,6 +166,15 @@ Phase 2d（2026-07-28）建立英文、日文、西班牙文法律與客服靜�
 - 現有繁中服務條款的點數文案已對齊實際 call gate：點數不足時不開始新語音／虛擬形象通話，不再宣稱會自動切換免費通話。
 - 目前只建立 repo 內草稿與自動護欄，沒有部署；待 #270 合併後，App reader 才依已核准的 UI locale 選擇對應靜態頁面。
 
+Phase 2e（2026-07-28）建立 App Store 多語 metadata 與可用地區閘門：
+
+- 四語 metadata 以 repo 草稿保存並檢查 Apple 欄位限制：名稱／副標各 30 字元、推廣文字 170 字元、描述 4,000 字元、關鍵字 100 bytes；描述維持純文字。
+- metadata 語系、Xcode binary 語系、App／IAP 可用國家是三個獨立狀態；任何一項存在都不能推定另外兩項已上線。
+- 現有五張 1242×2688 圖只記為繁中未審截圖；英文、日文、西班牙文截圖仍為 `missing`，不得沿用繁中圖宣稱完成畫面驗收。
+- 西班牙文先保留中性翻譯草稿，但 App Store locale 與可用地區維持空值，必須先選定 `es-ES` 或 `es-MX` 再做母語、法規、客服與截圖審核。
+- `appAvailability` 與 IAP availability 只以 App Store Connect 為權威，目前 repo 一律記為 `unverified`、`changeAuthorized=false`；本批不操作 App Store Connect。
+- Apple 現行欄位與在地化規則參考：<https://developer.apple.com/help/app-store-connect/reference/app-information/app-information>、<https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information>、<https://developer.apple.com/help/app-store-connect/manage-app-information/localize-app-information>；可用地區參考：<https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store>。
+
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。
 - missing-key telemetry 只記錄 key 與 locale，去重後回退繁中；不記翻譯內容、畫面文字或任何使用者輸入。
 - runtime 目前是純模組並已進 UI contract tests；等 #247/#270 合併後，才接到 `web/src/i18n.js` 與正式 DOM。

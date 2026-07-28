@@ -163,7 +163,12 @@
         "ios/App/App/zh-Hant.lproj/InfoPlist.strings",
         "ios/App/App/en.lproj/InfoPlist.strings",
         "ios/App/App/ja.lproj/InfoPlist.strings",
-        "ios/App/App/es.lproj/InfoPlist.strings"
+        "ios/App/App/es.lproj/InfoPlist.strings",
+        "app-store/localizations/manifest.json",
+        "app-store/localizations/zh-Hant.json",
+        "app-store/localizations/en-US.json",
+        "app-store/localizations/ja.json",
+        "app-store/localizations/es-draft.json"
       ],
       "requiredStates": [
         "binary-localizations",
