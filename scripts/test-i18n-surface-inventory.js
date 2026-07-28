@@ -53,6 +53,12 @@ assert.ok(
   inventory.surfaces.some((surface) => surface.id === 'ios-and-store'),
   'The iOS binary and App Store must be included in the delivery scope',
 );
+assert.ok(
+  inventory.surfaces
+    .find((surface) => surface.id === 'ios-and-store')
+    .requiredStates.includes('purchase-e2e'),
+  'The App Store surface must include real-device purchase acceptance',
+);
 
 const report = buildReport(inventory);
 const missingFiles = report.surfaces.flatMap((surface) => surface.missingFiles);

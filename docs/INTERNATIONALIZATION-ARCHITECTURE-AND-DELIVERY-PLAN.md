@@ -210,6 +210,7 @@ Phase 2e（2026-07-28）建立 App Store 多語 metadata 與可用地區閘門�
 - 現有五張 1242×2688 圖只記為繁中未審截圖；英文、日文、西班牙文截圖仍為 `missing`，不得沿用繁中圖宣稱完成畫面驗收。
 - 西班牙文先保留中性翻譯草稿，但 App Store locale 與可用地區維持空值，必須先選定 `es-ES` 或 `es-MX` 再做母語、法規、客服與截圖審核。
 - `appAvailability` 與 IAP availability 只以 App Store Connect 為權威，目前 repo 一律記為 `unverified`、`changeAuthorized=false`；本批不操作 App Store Connect。
+- Apple 目前將西班牙（`es-ES`）與墨西哥（`es-MX`）列為不同 App Store localization；兩個候選值明列於 manifest，但產品／法規市場決策前不代選、不開地區。
 - Apple 現行欄位與在地化規則參考：<https://developer.apple.com/help/app-store-connect/reference/app-information/app-information>、<https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information>、<https://developer.apple.com/help/app-store-connect/manage-app-information/localize-app-information>；可用地區參考：<https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store>。
 
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。
@@ -260,7 +261,7 @@ Phase 3b（2026-07-28）建立混合語言與語音切換狀態規則：
 Phase 5a（2026-07-28）將發布判定改為證據驅動：
 
 - `scripts/i18n-release-readiness.js` 以 catalog、review、法律、App Store manifest 與 `docs/qa/i18n/<locale>/` 的實際證據即時計算四語狀態，不以人工寫一句「完成」代替。
-- 每個語系都必須同時通過 catalog、runtime、binary、母語審稿、視覺截圖、真實語音、區域法律、商店文案、商店截圖、市場可用性及 exact-build installed App E2E 共 11 道 gate。
+- 每個語系都必須同時通過 catalog、runtime、binary、母語審稿、視覺截圖、真實語音、區域法律、商店文案、8 項內購本地化、商店截圖、市場／價格可用性、exact-build installed App E2E 與 StoreKit Sandbox 購買 E2E 共 13 道 gate。
 - `--strict` 只有四語全部有現行證據才回傳成功；目前四語都會明確顯示 `NOT READY`，這是正確護欄，不是測試失敗。
 - 視覺、語音與實機證據的固定入口分別為 `visual-qa.json`、`voice-e2e.json`、`installed-app-e2e.json`；檔案不存在、JSON 無效或 `result` 不是 `pass` 都視為未完成。
 
@@ -270,6 +271,15 @@ Phase 5b（2026-07-28）：App Store 五張圖故事板
 - 每張圖必須來自 exact approved build 與 synthetic QA account，禁止使用正式會員資料；必須確認沒有未翻譯文字、溢位或裁切。
 - 目前只有故事板與文案草稿，沒有把計畫當成截圖證據；各語系 `screenshotStatus` 仍維持 missing 或 existing-unreviewed。
 - 西班牙文仍必須先決定 `es-ES` 或 `es-MX`；決策前不得送審或開市場。
+
+Phase 5c（2026-07-28）：8 項內購四語契約與實機驗收
+
+- `app-store/in-app-purchases/manifest.json` 是 4 個訂閱與 4 個點數包的 repo 草稿單一來源；Product ID 保持既有不可變值，商品名稱只顯示實際 100／300／600／1,000 點，不把歷史 suffix 當權益。
+- 繁中、英文、日文與中性西班牙文草稿都遵守 Apple 的 Display Name 2–30 字元、Description 最多 45 字元限制；repo 文案禁止寫死幣別與價格，畫面價格只使用 StoreKit 的在地化 `Product.displayPrice`。
+- 點數包文案明確限定 Plus／Pro 會員，不改變「免費會員不能購買點數」的產品規則；訂閱月繳／年繳的每月點數與家庭人數都對齊 server-owned billing facts。
+- 每個商品仍需 App Store Connect 身分、可售地區、價格與 App Review screenshot 的現況證據；目前全部維持 `unverified`，不操作正式商店。
+- `purchase-e2e.json` 要求 exact build 在實體 iPhone 的 StoreKit Sandbox 逐項完成 8 個商品，確認在地名稱、StoreKit 價格、付款視窗、後端驗證、正確入帳、transaction finish、畫面刷新，另驗證取消／未驗證交易不入帳與訂閱還原。
+- 這一批只增加草稿、測試與發布閘門，未打包、未上傳、未扣款，也不影響現有正式服務；在實機證據完成前狀態固定為 `App E2E pending`。
 
 Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
 

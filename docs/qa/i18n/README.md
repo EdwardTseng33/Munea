@@ -59,6 +59,25 @@ docs/qa/i18n/
 
 瀏覽器、模擬器、單元測試、synthetic probe、developer-direct 或不同 build 的成功紀錄都不能代替 installed App E2E。
 
+## purchase-e2e.json
+
+必要欄位：
+
+- `schema`: `munea.i18n-purchase-e2e.v1`
+- `locale`、`storeLocale`
+- `appVersion`、`build`、`profile`、`environment`、`device`、`backendRevision`
+- 40 字元 `exactCommit`、64 字元 `binarySha256`、ISO 8601 `testedAt`
+- `steps` 必須確認登入、8 商品載入、免費會員不得購買點數、取消與未驗證交易不入帳，以及有效訂閱還原
+- `products` 必須恰好覆蓋 4 個訂閱與 4 個點數包；每項都要在實體 iPhone 的 StoreKit Sandbox 確認：
+  - 顯示名稱符合該語系
+  - 價格由 StoreKit 回傳並顯示
+  - Apple 付款視窗可開啟
+  - 後端驗證交易
+  - 正確方案或點數入帳
+  - transaction 完成且 App 狀態刷新
+
+測試不得記錄 Sandbox Apple ID、付款資料或完整交易 JWS。模擬器、假交易與不同 build 的結果不能代替本證據。
+
 ## 本機 catalog 預覽
 
 `tools/i18n-preview.html?locale=ja` 可在本機 HTTP server 中查看繁中、英文、日文、西班牙文的代表性 catalog 元件，並用 `125% text` 按鈕先檢查長字串換行。

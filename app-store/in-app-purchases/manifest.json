@@ -1,0 +1,127 @@
+{
+  "schema": "munea.app-store-iap-localizations.v1",
+  "authority": "repository-draft-only",
+  "billingFactsSource": "docs/BILLING-CREDITS-ENTITLEMENT-v1.md",
+  "officialRules": {
+    "localizedInformation": "https://developer.apple.com/help/app-store-connect/reference/in-app-purchases-and-subscriptions/in-app-purchase-information/",
+    "availability": "https://developer.apple.com/help/app-store-connect/manage-in-app-purchases/set-availability-for-in-app-purchases/"
+  },
+  "productSet": {
+    "repositoryAlignment": "verified",
+    "appStoreConnectStatus": "unverified",
+    "products": [
+      {
+        "productId": "net.munea.app.plus.monthly",
+        "type": "auto-renewable-subscription",
+        "plan": "plus",
+        "billingPeriod": "month",
+        "monthlyPoints": 100,
+        "familyCircleLimit": 4,
+        "reviewScreenshotStatus": "unverified"
+      },
+      {
+        "productId": "net.munea.app.plus.yearly",
+        "type": "auto-renewable-subscription",
+        "plan": "plus",
+        "billingPeriod": "year",
+        "monthlyPoints": 100,
+        "familyCircleLimit": 4,
+        "reviewScreenshotStatus": "unverified"
+      },
+      {
+        "productId": "net.munea.app.pro.monthly",
+        "type": "auto-renewable-subscription",
+        "plan": "pro",
+        "billingPeriod": "month",
+        "monthlyPoints": 200,
+        "familyCircleLimit": 12,
+        "reviewScreenshotStatus": "unverified"
+      },
+      {
+        "productId": "net.munea.app.pro.yearly",
+        "type": "auto-renewable-subscription",
+        "plan": "pro",
+        "billingPeriod": "year",
+        "monthlyPoints": 200,
+        "familyCircleLimit": 12,
+        "reviewScreenshotStatus": "unverified"
+      },
+      {
+        "productId": "net.munea.app.points.200",
+        "type": "consumable",
+        "grantedPoints": 100,
+        "eligiblePlans": [
+          "plus",
+          "pro"
+        ],
+        "reviewScreenshotStatus": "unverified"
+      },
+      {
+        "productId": "net.munea.app.points.500",
+        "type": "consumable",
+        "grantedPoints": 300,
+        "eligiblePlans": [
+          "plus",
+          "pro"
+        ],
+        "reviewScreenshotStatus": "unverified"
+      },
+      {
+        "productId": "net.munea.app.points.1000",
+        "type": "consumable",
+        "grantedPoints": 600,
+        "eligiblePlans": [
+          "plus",
+          "pro"
+        ],
+        "reviewScreenshotStatus": "unverified"
+      },
+      {
+        "productId": "net.munea.app.points.1800",
+        "type": "consumable",
+        "grantedPoints": 1000,
+        "eligiblePlans": [
+          "plus",
+          "pro"
+        ],
+        "reviewScreenshotStatus": "unverified"
+      }
+    ]
+  },
+  "locales": {
+    "zh-TW": {
+      "appStoreLocale": "zh-Hant",
+      "copyFile": "zh-Hant.json",
+      "metadataReview": "approved"
+    },
+    "en": {
+      "appStoreLocale": "en-US",
+      "copyFile": "en-US.json",
+      "metadataReview": "draft"
+    },
+    "ja": {
+      "appStoreLocale": "ja",
+      "copyFile": "ja.json",
+      "metadataReview": "draft"
+    },
+    "es": {
+      "appStoreLocale": null,
+      "candidateAppStoreLocales": [
+        "es-ES",
+        "es-MX"
+      ],
+      "copyFile": "es-draft.json",
+      "metadataReview": "draft-market-variant-pending"
+    }
+  },
+  "availability": {
+    "currentState": "unverified",
+    "sourceOfTruth": "App Store Connect product availability",
+    "changeAuthorized": false
+  },
+  "pricePolicy": {
+    "sourceOfTruth": "StoreKit localized Product.displayPrice",
+    "repositoryCopyMayContainPrice": false,
+    "appStoreConnectStatus": "unverified"
+  }
+}

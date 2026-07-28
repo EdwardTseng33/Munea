@@ -188,9 +188,15 @@
         "app-store/localizations/en-US.json",
         "app-store/localizations/ja.json",
         "app-store/localizations/es-draft.json",
+        "app-store/in-app-purchases/manifest.json",
+        "app-store/in-app-purchases/zh-Hant.json",
+        "app-store/in-app-purchases/en-US.json",
+        "app-store/in-app-purchases/ja.json",
+        "app-store/in-app-purchases/es-draft.json",
         "docs/qa/i18n/README.md",
         "scripts/i18n-release-readiness.js",
-        "scripts/test-i18n-release-readiness.js"
+        "scripts/test-i18n-release-readiness.js",
+        "scripts/test-in-app-purchase-localizations.js"
       ],
       "requiredStates": [
         "binary-localizations",
@@ -198,7 +204,11 @@
         "store-description",
         "keywords",
         "screenshots",
-        "market-availability"
+        "iap-localized-information",
+        "iap-review-screenshots",
+        "storekit-localized-prices",
+        "market-availability",
+        "purchase-e2e"
       ],
       "releaseGate": "Exact approved binary and App Store localization"
     }

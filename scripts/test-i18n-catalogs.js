@@ -36,6 +36,7 @@ assert.deepEqual(
 );
 assert.ok(manifest.releaseGates.includes('voiceE2E'));
 assert.ok(manifest.releaseGates.includes('regionalSafetyAndLegal'));
+assert.ok(manifest.releaseGates.includes('inAppPurchaseLocalization'));
 assert.ok(manifest.releaseGates.includes('marketAvailability'));
 
 const localeEntries = new Map(manifest.locales.map((entry) => [entry.locale, entry]));
@@ -85,6 +86,7 @@ assert.deepEqual(
     'voiceE2E',
     'regionalSafetyAndLegal',
     'appStoreMetadata',
+    'inAppPurchaseLocalization',
     'marketAvailability',
   ],
 );

@@ -7,6 +7,7 @@
     "voiceE2E",
     "regionalSafetyAndLegal",
     "appStoreMetadata",
+    "inAppPurchaseLocalization",
     "marketAvailability"
   ],
   "locales": {
@@ -19,6 +20,7 @@
       "voiceE2E": "approved",
       "regionalSafetyAndLegal": "approved",
       "appStoreMetadata": "approved",
+      "inAppPurchaseLocalization": "approved",
       "marketAvailability": "approved"
     },
     "en": {
@@ -30,6 +32,7 @@
       "voiceE2E": "pending",
       "regionalSafetyAndLegal": "pending",
       "appStoreMetadata": "pending",
+      "inAppPurchaseLocalization": "pending",
       "marketAvailability": "pending"
     },
     "ja": {
@@ -41,6 +44,7 @@
       "voiceE2E": "pending",
       "regionalSafetyAndLegal": "pending",
       "appStoreMetadata": "pending",
+      "inAppPurchaseLocalization": "pending",
       "marketAvailability": "pending"
     },
     "es": {
@@ -52,6 +56,7 @@
       "voiceE2E": "pending",
       "regionalSafetyAndLegal": "pending",
       "appStoreMetadata": "pending",
+      "inAppPurchaseLocalization": "pending",
       "marketAvailability": "pending"
     }
   }

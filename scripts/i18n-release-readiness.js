@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const I18N_DIR = path.join(ROOT, 'web', 'src', 'i18n');
 const LEGAL_DIR = path.join(ROOT, 'web', 'legal');
 const STORE_DIR = path.join(ROOT, 'app-store', 'localizations');
+const IAP_DIR = path.join(ROOT, 'app-store', 'in-app-purchases');
 const QA_DIR = path.join(ROOT, 'docs', 'qa', 'i18n');
 const INVENTORY_PATH = path.join(ROOT, 'docs', 'I18N-SURFACE-INVENTORY.json');
 
@@ -157,6 +158,53 @@ function validateInstalledAppEvidence(evidence, locale) {
     ]);
 }
 
+function validatePurchaseEvidence(evidence, locale, requiredProductIds) {
+  if (evidence.schema !== 'munea.i18n-purchase-e2e.v1'
+      || evidence.locale !== locale
+      || evidence.result !== 'pass'
+      || !/^[0-9a-f]{40}$/i.test(evidence.exactCommit || '')
+      || !/^[0-9a-f]{64}$/i.test(evidence.binarySha256 || '')
+      || !validIsoDate(evidence.testedAt)
+      || !requiredStrings(evidence, [
+        'appVersion',
+        'build',
+        'profile',
+        'environment',
+        'device',
+        'storeLocale',
+        'backendRevision',
+      ])
+      || !requiredTrue(evidence.steps, [
+        'signedIn',
+        'storeProductsLoaded',
+        'freeMemberPointPurchaseBlocked',
+        'cancelPathCreatedNoEntitlement',
+        'unverifiedPathCreatedNoEntitlement',
+        'activeSubscriptionRestorePassed',
+      ])
+      || !Array.isArray(evidence.products)) {
+    return false;
+  }
+  const expected = [...requiredProductIds].sort();
+  const actual = evidence.products.map(({ productId }) => productId).sort();
+  if (actual.length !== new Set(actual).size
+      || JSON.stringify(actual) !== JSON.stringify(expected)) {
+    return false;
+  }
+  return evidence.products.every((product) => (
+    product.result === 'pass'
+    && requiredTrue(product.checks, [
+      'localizedNameMatched',
+      'storeKitPriceDisplayed',
+      'purchaseSheetOpened',
+      'serverTransactionVerified',
+      'entitlementApplied',
+      'transactionFinished',
+      'postPurchaseStateRefreshed',
+    ])
+  ));
+}
+
 function evidenceResult(locale, filename, validator) {
   const filePath = path.join(QA_DIR, locale, filename);
   if (!fs.existsSync(filePath)) {
@@ -189,12 +237,14 @@ function buildReadiness() {
   const reviewManifest = readJson(path.join(I18N_DIR, 'review-manifest.json'));
   const legalManifest = readJson(path.join(LEGAL_DIR, 'manifest.json'));
   const storeManifest = readJson(path.join(STORE_DIR, 'manifest.json'));
+  const iapManifest = readJson(path.join(IAP_DIR, 'manifest.json'));
   const inventory = readJson(INVENTORY_PATH);
   const requiredVisualStates = inventory.surfaces
     .find((surface) => surface.id === 'app-webview').requiredStates;
   const catalogEntries = new Map(
     catalogManifest.locales.map((entry) => [entry.locale, entry]),
   );
+  const requiredProductIds = iapManifest.productSet.products.map(({ productId }) => productId);
 
   const locales = {};
   for (const locale of Object.keys(reviewManifest.locales)) {
@@ -203,6 +253,7 @@ function buildReadiness() {
     const legal = legalManifest.locales[locale];
     const storeKey = STORE_LOCALE_BY_CATALOG[locale];
     const store = storeManifest.locales[storeKey];
+    const iapLocale = iapManifest.locales[locale];
     const visualEvidence = evidenceResult(
       locale,
       'visual-qa.json',
@@ -215,6 +266,13 @@ function buildReadiness() {
       locale,
       'installed-app-e2e.json',
       validateInstalledAppEvidence,
+    );
+    const purchaseEvidence = evidenceResult(
+      locale,
+      'purchase-e2e.json',
+      (evidence, evidenceLocale) => (
+        validatePurchaseEvidence(evidence, evidenceLocale, requiredProductIds)
+      ),
     );
 
     const gates = {
@@ -261,6 +319,16 @@ function buildReadiness() {
         'App Store metadata must be reviewed for the selected locale variant',
         'app-store/localizations/manifest.json',
       ),
+      inAppPurchaseLocalization: check(
+        review.inAppPurchaseLocalization === 'approved'
+          && iapLocale.metadataReview === 'approved'
+          && iapManifest.productSet.appStoreConnectStatus === 'verified'
+          && iapManifest.productSet.products.every((product) => (
+            product.reviewScreenshotStatus === 'approved'
+          )),
+        'all 8 IAP products need approved localized copy, current App Store identity, and review screenshots',
+        'app-store/in-app-purchases/manifest.json',
+      ),
       appStoreScreenshots: check(
         store.screenshotStatus === 'approved',
         'localized App Store screenshots must be approved',
@@ -269,14 +337,21 @@ function buildReadiness() {
       marketAvailability: check(
         review.marketAvailability === 'approved'
           && store.promotionAuthorized === true
-          && storeManifest.appAvailability.currentState === 'verified',
-        'App Store Connect availability must be verified and promotion explicitly authorized',
-        'app-store/localizations/manifest.json',
+          && storeManifest.appAvailability.currentState === 'verified'
+          && iapManifest.availability.currentState === 'verified'
+          && iapManifest.pricePolicy.appStoreConnectStatus === 'verified',
+        'App and all IAP storefront availability and prices must be verified before promotion',
+        'app-store/localizations/manifest.json + app-store/in-app-purchases/manifest.json',
       ),
       installedAppE2E: check(
         installedEvidence.passed,
         'the exact installed iPhone build must pass the full App acceptance gate',
         installedEvidence.path,
+      ),
+      purchaseE2E: check(
+        purchaseEvidence.passed,
+        'the exact installed iPhone build must pass all 8 StoreKit Sandbox purchase paths',
+        purchaseEvidence.path,
       ),
     };
 
@@ -299,6 +374,7 @@ function buildReadiness() {
       'web/src/i18n/review-manifest.json',
       'web/legal/manifest.json',
       'app-store/localizations/manifest.json',
+      'app-store/in-app-purchases/manifest.json',
       'docs/qa/i18n/<locale>/*.json',
     ],
     appAvailabilityAuthority: storeManifest.appAvailability.sourceOfTruth,
@@ -336,6 +412,7 @@ module.exports = {
   buildReadiness,
   formatReport,
   validateInstalledAppEvidence,
+  validatePurchaseEvidence,
   validateVisualEvidence,
   validateVoiceEvidence,
 };

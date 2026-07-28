@@ -9,6 +9,7 @@ const {
   buildReadiness,
   formatReport,
   validateInstalledAppEvidence,
+  validatePurchaseEvidence,
   validateVisualEvidence,
   validateVoiceEvidence,
 } = require('./i18n-release-readiness.js');
@@ -24,9 +25,11 @@ const requiredGates = [
   'voiceE2E',
   'regionalSafetyAndLegal',
   'appStoreMetadata',
+  'inAppPurchaseLocalization',
   'appStoreScreenshots',
   'marketAvailability',
   'installedAppE2E',
+  'purchaseE2E',
 ];
 
 assert.equal(report.schema, 'munea.i18n-release-readiness.v1');
@@ -46,6 +49,14 @@ for (const locale of requiredLocales) {
     entry.blockers.some(({ gate }) => gate === 'visualQA'),
     `${locale} must require current visual evidence`,
   );
+  assert(
+    entry.blockers.some(({ gate }) => gate === 'inAppPurchaseLocalization'),
+    `${locale} must require current IAP localization and product evidence`,
+  );
+  assert(
+    entry.blockers.some(({ gate }) => gate === 'purchaseE2E'),
+    `${locale} must require exact installed-App StoreKit evidence`,
+  );
   assert.equal(
     entry.gates.visualQA.evidence,
     `docs/qa/i18n/${locale}/visual-qa.json`,
@@ -63,6 +74,7 @@ for (const locale of ['en', 'ja', 'es']) {
   assert.equal(entry.gates.runtimeLocalization.passed, false);
   assert.equal(entry.gates.binaryLocalization.passed, false);
   assert.equal(entry.gates.appStoreScreenshots.passed, false);
+  assert.equal(entry.gates.inAppPurchaseLocalization.passed, false);
   assert.equal(entry.gates.marketAvailability.passed, false);
 }
 
@@ -143,6 +155,63 @@ assert.equal(
   validateInstalledAppEvidence({ ...installedEvidence, binarySha256: 'unknown' }, 'en'),
   false,
   'Installed App evidence must identify the exact binary',
+);
+
+const purchaseProductIds = [
+  'net.munea.app.plus.monthly',
+  'net.munea.app.plus.yearly',
+  'net.munea.app.pro.monthly',
+  'net.munea.app.pro.yearly',
+  'net.munea.app.points.200',
+  'net.munea.app.points.500',
+  'net.munea.app.points.1000',
+  'net.munea.app.points.1800',
+];
+const purchaseEvidence = {
+  schema: 'munea.i18n-purchase-e2e.v1',
+  locale: 'en',
+  result: 'pass',
+  exactCommit,
+  binarySha256: 'c'.repeat(64),
+  testedAt: '2026-07-28T08:00:00Z',
+  appVersion: '1.0.45',
+  build: '49',
+  profile: 'sandbox-gateway',
+  environment: 'sandbox',
+  device: 'iPhone acceptance device',
+  storeLocale: 'en-US',
+  backendRevision: 'brain-revision',
+  steps: Object.fromEntries([
+    'signedIn',
+    'storeProductsLoaded',
+    'freeMemberPointPurchaseBlocked',
+    'cancelPathCreatedNoEntitlement',
+    'unverifiedPathCreatedNoEntitlement',
+    'activeSubscriptionRestorePassed',
+  ].map((key) => [key, true])),
+  products: purchaseProductIds.map((productId) => ({
+    productId,
+    result: 'pass',
+    checks: Object.fromEntries([
+      'localizedNameMatched',
+      'storeKitPriceDisplayed',
+      'purchaseSheetOpened',
+      'serverTransactionVerified',
+      'entitlementApplied',
+      'transactionFinished',
+      'postPurchaseStateRefreshed',
+    ].map((key) => [key, true])),
+  })),
+};
+assert.equal(validatePurchaseEvidence(purchaseEvidence, 'en', purchaseProductIds), true);
+assert.equal(
+  validatePurchaseEvidence(
+    { ...purchaseEvidence, products: purchaseEvidence.products.slice(0, 7) },
+    'en',
+    purchaseProductIds,
+  ),
+  false,
+  'Purchase evidence must cover the exact 8-product set',
 );
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'munea-i18n-visual-'));

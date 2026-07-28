@@ -48,9 +48,14 @@
     "es": {
       "catalogLocale": "es",
       "appStoreLocale": null,
+      "candidateAppStoreLocales": [
+        "es-ES",
+        "es-MX"
+      ],
       "metadataFile": "es-draft.json",
       "targetTerritories": [],
       "marketDecision": "Choose es-ES or es-MX before App Store localization and regional review.",
+      "marketDecisionSource": "https://developer.apple.com/help/app-store-connect/reference/app-information/app-store-localizations/",
       "metadataReview": "draft",
       "publicUrlStatus": "pending-deployment",
       "screenshotStatus": "missing",
@@ -64,9 +69,5 @@
     "sourceOfTruth": "App Store Connect Pricing and Availability",
     "changeAuthorized": false
   },
-  "inAppPurchaseAvailability": {
-    "currentState": "unverified",
-    "sourceOfTruth": "App Store Connect product availability",
-    "changeAuthorized": false
-  }
+  "inAppPurchaseManifest": "../in-app-purchases/manifest.json"
 }

@@ -55,6 +55,7 @@
     "voiceE2E",
     "regionalSafetyAndLegal",
     "appStoreMetadata",
+    "inAppPurchaseLocalization",
     "marketAvailability"
   ]
 }

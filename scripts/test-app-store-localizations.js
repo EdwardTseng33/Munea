@@ -42,8 +42,15 @@ assert.equal(manifest.authority, 'repository-draft-only', 'Repository metadata m
 assert.deepEqual(Object.keys(manifest.locales), localeKeys, 'The store pack must cover the four planned locales');
 assert.equal(manifest.appAvailability.currentState, 'unverified');
 assert.equal(manifest.appAvailability.changeAuthorized, false);
-assert.equal(manifest.inAppPurchaseAvailability.currentState, 'unverified');
-assert.equal(manifest.inAppPurchaseAvailability.changeAuthorized, false);
+assert.equal(
+  manifest.inAppPurchaseManifest,
+  '../in-app-purchases/manifest.json',
+  'IAP metadata and availability must have one independent source of truth',
+);
+assert(
+  fs.existsSync(path.resolve(root, manifest.inAppPurchaseManifest)),
+  'The referenced IAP localization manifest must exist',
+);
 assert.equal(screenshotPlan.schema, 'munea.app-store-screenshot-plan.v1');
 assert.equal(screenshotPlan.authority, 'repository-draft-only');
 assert.equal(screenshotPlan.status, 'draft');
@@ -140,6 +147,11 @@ assert.equal(manifest.locales['en-US'].screenshotStatus, 'missing');
 assert.equal(manifest.locales.ja.screenshotStatus, 'missing');
 assert.equal(manifest.locales.es.screenshotStatus, 'missing');
 assert.equal(manifest.locales.es.appStoreLocale, null, 'Spanish App Store locale must wait for es-ES or es-MX choice');
+assert.deepEqual(
+  manifest.locales.es.candidateAppStoreLocales,
+  ['es-ES', 'es-MX'],
+  'Apple supports separate Spain and Mexico Spanish localizations',
+);
 assert.deepEqual(manifest.locales.es.targetTerritories, [], 'Spanish territories must stay closed before market choice');
 
 console.log('PASS: App Store localization drafts, limits, screenshots, and availability gates');
