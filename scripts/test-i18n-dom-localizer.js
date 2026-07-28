@@ -138,6 +138,13 @@ assert.deepEqual(observedOptions, {
 const dynamicText = new FakeElement({ 'data-i18n': 'notification.centerTitle' });
 observerCallback([{ type: 'childList', addedNodes: [dynamicText] }]);
 assert.equal(dynamicText.textContent, catalogs.es['notification.centerTitle']);
+dynamicText.textContent = '通知中心';
+observerCallback([{ type: 'childList', target: dynamicText, addedNodes: [] }]);
+assert.equal(
+  dynamicText.textContent,
+  catalogs.es['notification.centerTitle'],
+  'A renderer overwriting localized text must be corrected on the existing bound element',
+);
 dynamicText.setAttribute('data-i18n', 'notification.noItems');
 observerCallback([{ type: 'attributes', target: dynamicText, addedNodes: [] }]);
 assert.equal(dynamicText.textContent, catalogs.es['notification.noItems']);

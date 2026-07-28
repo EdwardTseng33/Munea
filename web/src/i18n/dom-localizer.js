@@ -50,7 +50,8 @@
     for (const node of matchingNodes(root, '[data-i18n]')) {
       const key = node.getAttribute('data-i18n');
       if (!key) continue;
-      node.textContent = translated(runtime, locale, key, node, valuesFor);
+      const value = translated(runtime, locale, key, node, valuesFor);
+      if (node.textContent !== value) node.textContent = value;
       bindingCount += 1;
     }
 
@@ -58,10 +59,10 @@
       for (const node of matchingNodes(root, `[${binding.marker}]`)) {
         const key = node.getAttribute(binding.marker);
         if (!key) continue;
-        node.setAttribute(
-          binding.attribute,
-          translated(runtime, locale, key, node, valuesFor),
-        );
+        const value = translated(runtime, locale, key, node, valuesFor);
+        if (node.getAttribute(binding.attribute) !== value) {
+          node.setAttribute(binding.attribute, value);
+        }
         bindingCount += 1;
       }
     }
@@ -106,6 +107,9 @@
       const pending = new Set();
       for (const record of records || []) {
         if (record.type === 'attributes' && record.target) {
+          pending.add(record.target);
+        }
+        if (record.type === 'childList' && record.target) {
           pending.add(record.target);
         }
         for (const node of record.addedNodes || []) {
