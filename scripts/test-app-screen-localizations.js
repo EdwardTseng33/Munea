@@ -16,8 +16,13 @@ const surfaceInventory = readJson('docs/I18N-SURFACE-INVENTORY.json');
 const appSurface = surfaceInventory.surfaces.find(({ id }) => id === 'app-webview');
 assert.ok(appSurface, 'app-webview inventory is missing');
 assert.equal(screenManifest.schema, 'munea.i18n-app-screen-manifest.v1');
-assert.equal(screenManifest.bindingStatus, 'pending-main-screen-integration');
+assert.equal(screenManifest.bindingStatus, 'integrated');
 assert.equal(screenManifest.visualQaPending, true);
+assert.equal(screenManifest.integrationEvidence.releaseEvidence, false);
+assert.equal(
+  screenManifest.integrationEvidence.report,
+  'docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/full-surface-all-profiles-local-browser-precheck.json',
+);
 assert.deepEqual(
   Object.keys(screenManifest.requiredStates),
   appSurface.requiredStates,

@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -12,8 +13,8 @@ const REPORT_PATH = path.join(
   'qa',
   'i18n',
   'local-browser-precheck',
-  'full-surface-standard-2026-07-29',
-  'full-surface-standard-local-browser-precheck.json',
+  'full-surface-all-profiles-2026-07-29',
+  'full-surface-all-profiles-local-browser-precheck.json',
 );
 const report = JSON.parse(fs.readFileSync(REPORT_PATH, 'utf8'));
 const manifest = JSON.parse(
@@ -21,25 +22,89 @@ const manifest = JSON.parse(
 );
 const expectedLocales = ['zh-TW', 'en', 'ja', 'es'];
 const expectedStates = manifest.surfaces.map(({ state }) => state);
+const expectedProfiles = [
+  ['iphone-small-standard', 375, 667, 'std'],
+  ['iphone-standard', 390, 844, 'std'],
+  ['iphone-dynamic-type-large', 390, 844, 'xl'],
+];
+const evidenceSourcePaths = [
+  'web',
+  'scripts/app-full-surface-i18n-browser-precheck.js',
+  'scripts/app-i18n-fixture-server.js',
+];
 
-assert.equal(report.schema, 'munea.app-full-surface-standard-local-browser-precheck.v1');
+function gitLines(args) {
+  return execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+  }).trim().split(/\r?\n/u).filter(Boolean);
+}
+
+assert.equal(report.schema, 'munea.app-full-surface-local-browser-precheck.v2');
 assert.equal(report.result, 'pass-local-precheck');
 assert.equal(report.releaseEvidence, false);
+assert.match(
+  report.sourceBaseCommit,
+  /^[0-9a-f]{40}$/u,
+  'Browser evidence must identify the exact 40-character source commit',
+);
+assert.deepEqual(
+  report.sourceChangedFiles,
+  [],
+  'Browser evidence captured from a dirty worktree cannot certify the App source',
+);
+assert.doesNotThrow(
+  () => execFileSync(
+    'git',
+    ['merge-base', '--is-ancestor', report.sourceBaseCommit, 'HEAD'],
+    { cwd: ROOT, stdio: 'ignore' },
+  ),
+  'Browser evidence source commit must be an ancestor of the tested HEAD',
+);
+assert.deepEqual(
+  gitLines(['diff', '--name-only', report.sourceBaseCommit, '--', ...evidenceSourcePaths]),
+  [],
+  'Browser evidence is stale because shipping WebView or capture source changed',
+);
+assert.deepEqual(
+  gitLines(['status', '--short', '--untracked-files=all', '--', ...evidenceSourcePaths]),
+  [],
+  'Browser evidence cannot pass with uncommitted shipping WebView or capture source changes',
+);
 assert.equal(report.scope.environment, 'local-fixture-only');
-assert.equal(report.scope.captureProfile, 'iphone-standard');
+assert.deepEqual(
+  report.scope.captureProfiles.map(({ id, viewport, appFontScale }) => [
+    id,
+    viewport.width,
+    viewport.height,
+    appFontScale,
+  ]),
+  expectedProfiles,
+);
+assert.deepEqual(manifest.captureProfiles, expectedProfiles.map(([id]) => id));
 assert.equal(report.scope.productionTouched, false);
 assert.equal(report.scope.stagingTouched, false);
 assert.equal(report.scope.appStoreConnectTouched, false);
 assert.equal(report.scope.installedAppUsed, false);
 assert.deepEqual(report.networkSafety.observedExternalRequests, []);
 assert.deepEqual(report.failures, []);
-assert.equal(report.screens.length, expectedLocales.length * expectedStates.length);
+assert.equal(
+  report.screens.length,
+  expectedLocales.length * expectedStates.length * expectedProfiles.length,
+);
 
 const observed = new Set();
 for (const screen of report.screens) {
   assert.ok(expectedLocales.includes(screen.locale), `Unexpected locale ${screen.locale}`);
   assert.ok(expectedStates.includes(screen.state), `Unexpected state ${screen.state}`);
-  const identity = `${screen.locale}/${screen.state}`;
+  const profile = expectedProfiles.find(([id]) => id === screen.profile);
+  assert.ok(profile, `Unexpected profile ${screen.profile}`);
+  assert.deepEqual(
+    [screen.viewport.width, screen.viewport.height, screen.appFontScale],
+    profile.slice(1),
+    `${screen.profile} runtime profile`,
+  );
+  const identity = `${screen.profile}/${screen.locale}/${screen.state}`;
   assert.ok(!observed.has(identity), `Duplicate screen ${identity}`);
   observed.add(identity);
   assert.equal(screen.translationResult, 'pass', `${identity} translation`);
@@ -57,12 +122,17 @@ for (const screen of report.screens) {
   );
 }
 
-for (const locale of expectedLocales) {
-  for (const state of expectedStates) {
-    assert.ok(observed.has(`${locale}/${state}`), `Missing ${locale}/${state}`);
+for (const [profile] of expectedProfiles) {
+  for (const locale of expectedLocales) {
+    for (const state of expectedStates) {
+      assert.ok(
+        observed.has(`${profile}/${locale}/${state}`),
+        `Missing ${profile}/${locale}/${state}`,
+      );
+    }
   }
 }
 
 process.stdout.write(
-  `Full-surface App i18n browser evidence PASS: ${report.screens.length} local screenshots.\n`,
+  `Full-surface App i18n browser evidence PASS: ${report.screens.length} local screenshots bound to ${report.sourceBaseCommit.slice(0, 8)}.\n`,
 );

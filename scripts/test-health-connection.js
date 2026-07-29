@@ -1,6 +1,18 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
+const styles = fs.readFileSync('web/src/styles.css', 'utf8');
+
+assert.match(
+  styles,
+  /html\[lang="en"\] #connect \.cn-row,\s*html\[lang="es"\] #connect \.cn-row\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*44px minmax\(0,\s*1fr\)/s,
+  'English and Spanish health cards must preserve a readable copy column at App XL',
+);
+assert.match(
+  styles,
+  /html\[lang="en"\] #connect \.cn-row \.cn-btn,\s*html\[lang="es"\] #connect \.cn-row \.cn-btn\s*\{[^}]*grid-column:\s*2[^}]*justify-self:\s*start/s,
+  'English and Spanish health connect buttons must move below expanded copy',
+);
 
 const values = new Map([['munea.health.last', '{"kept":true}']]);
 global.localStorage = {

@@ -82,9 +82,14 @@ for (const locale of requiredLocales) {
   const entry = report.locales[locale];
   assert.deepEqual(Object.keys(entry.gates), requiredGates, `${locale} gate inventory drifted`);
   assert.equal(entry.ready, false, `${locale} must not be release-ready without current evidence`);
+  assert.equal(
+    entry.gates.appUiIntegration.passed,
+    true,
+    `${locale} shipping App UI integration must stay complete`,
+  );
   assert(
-    entry.blockers.some(({ gate }) => gate === 'appUiIntegration'),
-    `${locale} must require completed App UI integration`,
+    !entry.blockers.some(({ gate }) => gate === 'appUiIntegration'),
+    `${locale} must not report a completed App UI integration as blocked`,
   );
   assert.equal(
     entry.gates.catalogCoverage.evidence,
@@ -181,7 +186,7 @@ for (const locale of requiredLocales) {
 for (const locale of ['en', 'ja', 'es']) {
   const entry = report.locales[locale];
   assert.equal(entry.gates.runtimeLocalization.passed, false);
-  assert.equal(entry.gates.appUiIntegration.passed, false);
+  assert.equal(entry.gates.appUiIntegration.passed, true);
   assert.equal(entry.gates.sourceCopyMigration.passed, false);
   assert.equal(entry.gates.voiceIntegration.passed, false);
   assert.equal(entry.gates.binaryLocalization.passed, false);

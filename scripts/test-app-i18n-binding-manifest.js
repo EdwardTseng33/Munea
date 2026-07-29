@@ -33,9 +33,9 @@ const catalogs = Object.fromEntries(
 );
 
 assert.equal(manifest.schema, 'munea.i18n-app-binding-manifest.v1');
-assert.equal(manifest.integrationStatus, 'in-progress-main-screen-integration');
+assert.equal(manifest.integrationStatus, 'integrated');
 assert.equal(manifest.staticBindingRuntimeStatus, 'integrated');
-assert.equal(manifest.stateOwnedRendererStatus, 'in-progress-main-screen-integration');
+assert.equal(manifest.stateOwnedRendererStatus, 'integrated');
 assert.equal(manifest.dynamicContentObserver, 'integrated');
 assert.equal(manifest.rendererCopyProvider, 'MuneaAppRendererCopy');
 assert.match(
