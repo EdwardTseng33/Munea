@@ -16,6 +16,15 @@ param(
   [int]$SlotsPerPod = 2,
   [int]$MaxPods = 4,
   [int]$TargetConcurrentCalls = 10,
+  # 2026-07-29 蘇菲：這三個值原本只活在線上服務的環境變數裡、腳本沒帶——
+  # 照跑一次 --env-vars-file 整份覆蓋就會把模板編號洗掉、管家從此開不了卡
+  # （fail closed）。現在收進腳本＝部署即完整。
+  [string]$TemplateId = "bv9wrwdq8i",
+  [string]$DataCenters = "AP-JP-1,EU-RO-1",
+  # 每機房配隔壁倉庫的模板（鏡像倉庫：東京 asia-northeast1、歐洲 europe-west4；
+  # 25GB 印象檔跨洲拉是 7/23 演習開卡 9 分鐘的元凶）。空字串＝關閉分機房、
+  # 全部用 TemplateId。格式 "AP-JP-1=tmplA,EU-RO-1=tmplB"。
+  [string]$TemplateMap = "",
   [switch]$DryRun
 )
 
@@ -67,6 +76,11 @@ $envValues = [ordered]@{
   MUNEA_RUNPOD_SCALE_DOWN_ACTION = "terminate"
   MUNEA_RUNPOD_STATE_FILE = "/tmp/runpod-backup-state.json"
   MUNEA_RUNPOD_LOCK_FILE = "/tmp/runpod-backup.lock"
+  MUNEA_RUNPOD_TEMPLATE_ID = $TemplateId
+  MUNEA_RUNPOD_DATA_CENTERS = $DataCenters
+}
+if ($TemplateMap.Trim()) {
+  $envValues["MUNEA_RUNPOD_TEMPLATE_MAP"] = $TemplateMap.Trim()
 }
 $lines = foreach ($entry in $envValues.GetEnumerator()) {
   $escaped = ([string]$entry.Value).Replace("'", "''")

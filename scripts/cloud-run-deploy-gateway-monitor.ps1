@@ -6,6 +6,12 @@ param(
   [string]$GatewayUrl = "https://munea-call-control-fiu65jd4da-de.a.run.app",
   [string]$AdminKeySecret = "munea-gateway-admin-key",
   [string]$SlackWebhookSecret = "munea-slack-alert-webhook",
+  # 2026-07-29 蘇菲：STATUS 125 防線二（工作機時鐘偏差偵測）蓋好後一直沒插電——
+  # monitor.py 只在有 MUNEA_APP_KEY 時才會直接敲每台臉機的 /health 量時鐘差
+  # （tw-06 快 4分17秒那次，總機心跳完全看不出來、只有這條路看得到）。
+  # 預設帶上；要關掉才傳 -NoWorkerClockProbe。
+  [string]$AvatarAppKeySecret = "munea-avatar-app-key",
+  [switch]$NoWorkerClockProbe,
   [int]$IntervalSeconds = 60,
   [switch]$Notify,
   [switch]$DryRun
@@ -37,6 +43,11 @@ $secretBindings = "MUNEA_GATEWAY_ADMIN_KEY=$($AdminKeySecret):latest"
 if ($Notify) {
   $secretBindings += ",MUNEA_SLACK_ALERT_WEBHOOK=$($SlackWebhookSecret):latest"
 }
+if (-not $NoWorkerClockProbe) {
+  & $gcloud.Source secrets describe $AvatarAppKeySecret --project $ProjectId --format="value(name)" 2>$null | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Required Secret Manager secret is missing: $AvatarAppKeySecret" }
+  $secretBindings += ",MUNEA_APP_KEY=$($AvatarAppKeySecret):latest"
+}
 $argsList = @(
   "run", "deploy", $Service,
   "--source", $source,
@@ -57,8 +68,11 @@ $argsList = @(
   "--no-allow-unauthenticated",
   "--quiet"
 )
-if (-not $Notify) {
-  $argsList += @("--remove-secrets", "MUNEA_SLACK_ALERT_WEBHOOK")
+$removeSecrets = @()
+if (-not $Notify) { $removeSecrets += "MUNEA_SLACK_ALERT_WEBHOOK" }
+if ($NoWorkerClockProbe) { $removeSecrets += "MUNEA_APP_KEY" }
+if ($removeSecrets.Count -gt 0) {
+  $argsList += @("--remove-secrets", ($removeSecrets -join ","))
 }
 
 Write-Host "Deploying $Service (notify=$notifyValue)" -ForegroundColor Cyan

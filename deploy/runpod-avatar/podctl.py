@@ -42,6 +42,42 @@ def _int(name: str, default: int) -> int:
         raise RunPodError(f"{name} must be an integer") from exc
 
 
+def data_centers() -> list[str]:
+    return _csv("MUNEA_RUNPOD_DATA_CENTERS", ("AP-JP-1",))
+
+
+def template_map() -> dict[str, str]:
+    """Parse MUNEA_RUNPOD_TEMPLATE_MAP ("AP-JP-1=id1,EU-RO-1=id2").
+
+    Each RunPod data center should boot from the template whose image lives in
+    the nearest registry mirror; a 25GB image pulled cross-continent is what
+    turned the 2026-07-23 drill's cold start into 9 minutes.
+    """
+    mapping: dict[str, str] = {}
+    for item in _csv("MUNEA_RUNPOD_TEMPLATE_MAP"):
+        if "=" not in item:
+            raise RunPodError(
+                "MUNEA_RUNPOD_TEMPLATE_MAP entries must look like DC-ID=templateId"
+            )
+        data_center, template_id = item.split("=", 1)
+        if data_center.strip() and template_id.strip():
+            mapping[data_center.strip()] = template_id.strip()
+    return mapping
+
+
+def is_stockout_error(exc: BaseException) -> bool:
+    """True when RunPod rejected a create only because the DC has no GPUs."""
+    text = str(exc).lower()
+    return any(marker in text for marker in (
+        "no instances available",
+        "no longer any instances",
+        "no available instances",
+        "not have any available",
+        "out of stock",
+        "insufficient capacity",
+    ))
+
+
 def api_key() -> str:
     value = os.environ.get("RUNPOD_API_KEY", "").strip()
     if value:
@@ -81,9 +117,18 @@ def request(method: str, path: str, body: dict[str, Any] | None = None,
         raise RunPodError(f"RunPod API {method} {path} unavailable: {exc}") from exc
 
 
-def build_pod_spec(require_template: bool = True) -> dict[str, Any]:
-    """Build a one-GPU, no-network-volume backup Pod specification."""
-    template_id = os.environ.get("MUNEA_RUNPOD_TEMPLATE_ID", "").strip()
+def build_pod_spec(require_template: bool = True, data_center: str | None = None,
+                   template_id: str | None = None) -> dict[str, Any]:
+    """Build a one-GPU, no-network-volume backup Pod specification.
+
+    ``data_center`` narrows placement: ``None`` keeps the env-configured list,
+    a DC id pins that one data center, and ``""`` removes the restriction
+    entirely (global stock search). ``template_id`` overrides the env template
+    so each data center can boot from its nearest registry mirror.
+    """
+    template_id = (template_id or "").strip() or os.environ.get(
+        "MUNEA_RUNPOD_TEMPLATE_ID", ""
+    ).strip()
     if require_template and not template_id:
         raise RunPodError(
             "MUNEA_RUNPOD_TEMPLATE_ID is required for automated creation; "
@@ -106,9 +151,11 @@ def build_pod_spec(require_template: bool = True) -> dict[str, Any]:
         "ports": ["8188/http", "22/tcp"],
         "allowedCudaVersions": ["12.8"],
     }
-    data_centers = _csv("MUNEA_RUNPOD_DATA_CENTERS", ("AP-JP-1",))
-    if data_centers:
-        spec["dataCenterIds"] = data_centers
+    placement = data_centers() if data_center is None else (
+        [data_center] if data_center else []
+    )
+    if placement:
+        spec["dataCenterIds"] = placement
         spec["dataCenterPriority"] = "custom"
     if template_id:
         spec["templateId"] = template_id
