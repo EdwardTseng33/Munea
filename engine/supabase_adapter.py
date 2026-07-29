@@ -3353,7 +3353,13 @@ class SupabaseAdapter:
             },
             "primaryPerson": {
                 "id": primary_person.get("id") or "",
+                # ⚠ displayName 這一欄存的是「AI 陪伴角色的名字」，不是使用者本人的名字
+                # （見 person_row_to_profile 註解）。後台名冊要顯示「這一戶是誰」時要用
+                # profileName／nickname——2026-07-29 之前名冊拿 displayName 當人名顯示，
+                # 結果十戶用戶會看到十個「寧寧」，分不出誰是誰。
                 "displayName": primary_person.get("display_name") or "",
+                "profileName": primary_person.get("profile_name") or "",
+                "nickname": primary_person.get("nickname") or "",
                 "relationship": primary_person.get("relationship") or "self",
                 "locale": primary_person.get("locale") or account.get("locale") or "zh-TW",
                 "timezone": primary_person.get("timezone") or "Asia/Taipei",

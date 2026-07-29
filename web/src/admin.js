@@ -370,6 +370,18 @@
 
   const AV_TINTS=[["var(--coral-soft)","var(--coral-d)"],["var(--mint)","var(--teal-dd)"],["var(--gold-soft)","#9A7B24"],["#E7E9F2","#5A6B8C"],["#F1E4EC","#9C5B84"]];
   const REL_ZH={ self:"主要使用者", primary_user:"主要使用者", elder:"長輩", senior:"長輩", child:"子女", daughter:"女兒", son:"兒子", family:"家人", caregiver:"照顧者" };
+  // 「這一戶是誰」的名字取用順序（2026-07-29 定）：個人資料卡填的本名 → 暱稱 → 登入帶進來的名字。
+  // ⚠ 不用 primaryPerson.displayName——那一欄存的是 AI 陪伴角色名（寧寧／阿宏），
+  // 拿它當人名顯示的話，十戶用戶就會看到十個「寧寧」，名冊等於分不出誰是誰。
+  // 三個都沒有就老實寫「未填姓名」，讓人靠旁邊的信箱認人，不要拿角色名冒充。
+  // 帳號名是註冊時系統自己填的預設值，不是人取的名字——不能拿來當人名顯示。
+  const GENERIC_ACCOUNT_NAMES=new Set(["Munea account","Munea demo account","Munea Care Circle"]);
+  function acctPersonName(a, fallback){ a=a||{}; const p=a.primaryPerson||{},o=a.owner||{};
+    const named=(p.profileName||p.nickname||o.signInName||"").trim();
+    if(named) return named;
+    const acctName=String(a.accountName||"").trim();
+    if(acctName&&!GENERIC_ACCOUNT_NAMES.has(acctName)) return acctName;
+    return fallback||"未填姓名"; }
   const SIGNIN_ZH={ google:"Google 登入", apple:"Apple 登入", email:"信箱登入", phone:"手機登入" };
   // 「這一戶是誰登入的」一句話：登入方式 + 信箱。Apple 選「隱藏我的電子郵件」時拿到的是轉信地址，
   // 老實顯示成「Apple 隱藏信箱」——那是 Apple 的規矩不是我們漏抓，寫成真信箱會誤導維運判讀。
@@ -403,12 +415,12 @@
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
     const planC={free:0,plus:0,pro:0}; accts.forEach((a)=>{ const p=a.plan||"free"; planC[p]=(planC[p]||0)+1; });
     const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
-    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{},o=a.owner||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")+" "+(o.email||"")+" "+(o.signInName||"")).toLowerCase().indexOf(q)>-1; });
+    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{},o=a.owner||{}; return ((acctPersonName(a)||"")+" "+(p.displayName||"")+" "+(f.name||"")+" "+(o.email||"")+" "+(o.signInName||"")).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
     const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
     const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
     const trows=rows.map((a)=>{ const idx=accts.indexOf(a); const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
-      const nm=p.displayName||a.accountName||"–", initial=(String(nm).trim()[0]||"家");
+      const nm=acctPersonName(a), initial=(String(nm).trim()[0]||"家");
       const tint=AV_TINTS[Math.abs(String(nm).split("").reduce((h,ch)=>((h<<5)-h+ch.charCodeAt(0))|0,0))%AV_TINTS.length];
       const sub=REL_ZH[String(p.relationship||"").toLowerCase()]||"成員";
       const who=ownerLine(a.owner);
@@ -458,7 +470,7 @@
     const people=(m.people||[]).map((p)=>{
       const acct=acctIndex[p.accountId]||{};
       const familyName=(acct.familyGroup||{}).name||"–";
-      const displayName=p.displayName||(acct.primaryPerson||{}).displayName||"長輩";
+      const displayName=p.displayName||acctPersonName(acct,"長輩");
       return Object.assign({}, p, { familyName, displayName });
     });
     const concerning=people.filter((p)=>(p.missedStreak||0)>=2).length;
@@ -535,7 +547,7 @@
     const watch=(mt.watchlist||[]).map((p)=>{
       const acct=acctIndex[p.accountId]||{};
       const familyName=(acct.familyGroup||{}).name||"–";
-      const displayName=p.displayName||(acct.primaryPerson||{}).displayName||"長輩";
+      const displayName=p.displayName||acctPersonName(acct,"長輩");
       return Object.assign({}, p, { familyName, displayName });
     });
     let html=kpiRow([
@@ -675,7 +687,7 @@
     html+=card("快用完名單", `剩不到 ${LOW_PTS} 點 · 建議主動關心或提醒加購`, lowList.length?tableHTML(["用戶","家庭","方案","剩餘點數","最近活躍"], lowList.slice(0,12).map((a)=>{
       const pp=a.primaryPerson||{},ff=a.familyGroup||{},uu=a.usage||{};
       return [
-        `<b>${esc(pp.displayName||a.accountName||"–")}</b>`,
+        `<b>${esc(acctPersonName(a))}</b>`,
         esc(ff.name||"–"),
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
@@ -773,7 +785,7 @@
       // 上線後分不出真實用戶跟測試帳號、也聯絡不到人。
       ["登入方式",ownerLabel(o)||"查無登入身分"],["登入信箱",ownerEmailText(o)||"–"],["註冊時間",o.signedUpAt?fmtTime(o.signedUpAt):fmtTime(a.createdAt)],["最後登入",o.lastSignInAt?fmtTime(o.lastSignInAt):"–"],
       ["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]];
-    const nm=p.displayName||a.accountName||"帳號";
+    const nm=acctPersonName(a,"帳號");
     const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
       <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>
@@ -1461,7 +1473,7 @@
   // 兩支都要求二次確認（window.confirm 明講對象＋內容）才送出，符合後台維運安全底線。
   function renderAcctActionPanel(a, mode){
     const panel=$("acctActionPanel"); if(!panel) return;
-    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const nm=acctPersonName(a,"用戶");
     if(mode==="grant"){
       panel.innerHTML=`<div class="modal-subpanel">
         <div class="modal-subtitle">發點數給「${esc(nm)}」</div>
@@ -1525,7 +1537,7 @@
   }
 
   async function submitDeleteAccount(a){
-    const nm=(a.primaryPerson||{}).displayName||a.accountName||"帳號";
+    const nm=acctPersonName(a,"帳號");
     const hint=$("acctActionHint");
     const typed=($("deleteConfirmInput")?.value||"").trim();
     if(typed!=="刪除"){ if(hint){ hint.textContent="請輸入「刪除」兩個字才能送出"; hint.className="modal-subhint err"; } return; }
@@ -1547,7 +1559,7 @@
   }
 
   async function submitGrantCredits(a){
-    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const nm=acctPersonName(a,"用戶");
     const hint=$("acctActionHint");
     const raw=($("grantAmount")?.value||"").trim();
     const amount=Number(raw);
@@ -1572,7 +1584,7 @@
   }
 
   async function submitSetPlan(a){
-    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const nm=acctPersonName(a,"用戶");
     const hint=$("acctActionHint");
     const plan=$("planSelect")?.value||"free";
     const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[plan]||plan;
@@ -1602,13 +1614,13 @@
       const info=await postAdmin(state.base,state.token,"/admin/subscription/extend-days",{accountId:a.accountId,dryRun:true});
       renderExtendForm(a,info);
     }catch(e){
-      if(panel) panel.innerHTML=`<div class="modal-subpanel"><div class="modal-subtitle">延長「${esc((a.primaryPerson||{}).displayName||a.accountName||"用戶")}」的訂閱天數</div><div class="modal-subhint err">${esc(explainErr(e&&e.message))}</div></div>`;
+      if(panel) panel.innerHTML=`<div class="modal-subpanel"><div class="modal-subtitle">延長「${esc(acctPersonName(a,"用戶"))}」的訂閱天數</div><div class="modal-subhint err">${esc(explainErr(e&&e.message))}</div></div>`;
     }
   }
 
   function renderExtendForm(a,info){
     const panel=$("acctActionPanel"); if(!panel) return;
-    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const nm=acctPersonName(a,"用戶");
     if(!info||!info.ok){
       const code=(info&&info.error&&info.error.code)||"";
       const msg=code==="plan_not_eligible_for_extension"?"免費帳號沒有到期日，請先用「改方案」升成 Plus 或 Pro，才能延長天數。":explainErr(code);
@@ -1642,7 +1654,7 @@
   }
 
   async function submitExtendDays(a,info){
-    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const nm=acctPersonName(a,"用戶");
     const hint=$("acctActionHint");
     const raw=($("extendDays")?.value||"").trim();
     const days=Number(raw);
@@ -1670,7 +1682,7 @@
 
   // 測試帳號人工標記（2026-07-21 補）：只改「名冊隱藏／分析排除」判準，不動帳務資料。
   async function submitSetTestFlag(a,willMark){
-    const nm=(a.primaryPerson||{}).displayName||a.accountName||"用戶";
+    const nm=acctPersonName(a,"用戶");
     const hint=$("acctActionHint");
     const msg=willMark
       ? "要把「"+nm+"」標記為測試帳號嗎？標記後預設會從用戶名冊與營運數據中隱藏，不影響帳號本身的方案、點數或聊天資料。"
@@ -1833,9 +1845,19 @@
         state.token=p.token; state.base=base;
         removeLoginGate();
         setStatus("讀取中…","");
-        const r=await loadAll(base, p.token);
-        setStatus(r.ok?(r.failed?"部分資料異常":"已連線"):"連線異常",r.ok?(r.failed?"warn":"ok"):"error");
-        if(!r.ok) showLoginGate();
+        let r=await loadAll(base, p.token);
+        // 2026-07-29 修：伺服器沒人用的時候會睡著，登入成功後第一批十幾個查詢常常一起逾時。
+        // 舊版只要讀不到資料就 showLoginGate()，把已經登入成功的人趕回登入框重打密碼——
+        // 這就是「要登入兩三次才進得去」的真正原因（第二次伺服器醒了就通）。
+        // 鑰匙不對時 loadAll 會自己清掉 state.token；token 還在＝登入是好的，先自動再試一次。
+        if(!r.ok && state.token){
+          setStatus("伺服器喚醒中，再試一次…","warn");
+          await new Promise((done)=>setTimeout(done,1500));  // 給睡著的伺服器一點起床時間再打第二輪
+          r=await loadAll(base, p.token);
+        }
+        if(r.ok){ setStatus(r.failed?"部分資料異常":"已連線", r.failed?"warn":"ok"); }
+        else if(!state.token){ setStatus("需要重新登入","error"); showLoginGate(); }
+        else { setStatus("連不到伺服器","error"); showConnectionTrouble(r.firstErr); }
       } else {
         const map={too_many_attempts:"錯太多次了，先等 10 分鐘再試",invalid_credentials:"帳號或密碼不對",login_not_configured:"伺服器還沒設定登入（跟蘇菲說一聲）"};
         if(hint){ hint.textContent=map[p&&p.error]||"登入失敗，再試一次"; hint.className="login-hint err"; }
@@ -1966,7 +1988,14 @@
     state.token=st;
     (async()=>{
       try{
-        const r=await loadAll(initialBaseUrl(),st);
+        let r=await loadAll(initialBaseUrl(),st);
+        // 同 doLogin：伺服器睡著時第一批查詢會一起逾時，鑰匙還在就自動再試一次，
+        // 不要一開頁就丟一張「連不到伺服器」讓人自己按重新整理。
+        if(!r.ok && state.token){
+          setStatus("伺服器喚醒中，再試一次…","warn");
+          await new Promise((done)=>setTimeout(done,1500));
+          r=await loadAll(initialBaseUrl(),st);
+        }
         if(r.ok){ removeLoginGate(); setStatus(r.failed?"部分資料異常":"已連線",r.failed?"warn":"ok"); return; }
         // 讀不到：分清楚是「鑰匙不對」還是「連不到伺服器」——後者請他重登也沒用
         if(!state.token){ setStatus("需要重新登入","error"); showLoginGate(); }
