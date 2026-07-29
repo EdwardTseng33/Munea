@@ -704,6 +704,20 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .cn-row .cn-name { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--ink); }
 .cn-row .cn-desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .cn-row .cn-btn { font-family: var(--display); font-weight: 700; font-size: 15px; color: #fff; background: var(--teal-d); border: none; border-radius: 999px; padding: 9px 17px; cursor: pointer; flex-shrink: 0; }
+/* English and Spanish expand sharply at the App XL font setting. Keep the
+   description readable instead of squeezing it between the icon and CTA. */
+html[lang="en"] #connect .cn-row,
+html[lang="es"] #connect .cn-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+}
+html[lang="en"] #connect .cn-row .cn-btn,
+html[lang="es"] #connect .cn-row .cn-btn {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 7px;
+}
 .cn-row .cn-btn.done { background: var(--mint); color: var(--teal-dd); }
 .cn-row .cn-btn.disconnect { background: var(--surface); color: var(--danger-d); border: 1px solid rgba(176,57,45,.4); }
 .cn-row .cn-btn.disconnect.arm { background: rgba(194,75,68,.1); }
