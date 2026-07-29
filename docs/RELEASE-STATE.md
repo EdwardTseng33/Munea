@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-29 Asia/Taipei` (1.0.45 Build 1 release candidate prepared from current main; packaging and external lanes remain pending)
+Snapshot time: `2026-07-29 13:49 Asia/Taipei` (1.0.45 Build 1 packaged, installed and uploaded; Apple processing／version-page selection not yet confirmed)
 
-Source reconciliation baseline: `origin/main@68956b3`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
+Source reconciliation baseline: `origin/main@68956b3`; frozen uploaded App source: `ac9aac2`
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -26,10 +26,10 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.45 (Build 1)` | 發版候選由 `origin/main@68956b3` 建立，含 #247 按鈕對比／危險操作樣式與其後已合併內容；版本、Build 與 WebView cache identity 已對齊。Archive／IPA／iPhone／Apple 證據尚待本輪產生，不得沿用 Build 492 證據 | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 |
-| Latest uploaded App | `1.0.44 (Build 492)` | App Store Release Archive／IPA 已建立；Apple 於 17:22:57 回傳 `Upload succeeded`，TestFlight upload status 與 Build 處理皆完成。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1` | Xcode upload receipt; App Store Connect; `STATUS.md` | 2026-07-28 17:31 |
-| App Store selected review lane | `1.0.44 (Build 492)` | 17:31 已選入 1.0.44 版本頁並儲存；頁面狀態仍為「準備提交」。未點「新增以供審查」、未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-28 17:31 |
-| Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
+| Latest source | `1.0.45 (Build 1)` | App source 凍結於 `ac9aac2`，由 `origin/main@68956b3` 建立，含 #247 按鈕對比／危險操作樣式與其後已合併內容；版本、Build 與 WebView cache identity 已對齊 | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 |
+| Latest uploaded App | `1.0.45 (Build 1)` | App Store Archive／IPA 已建立；13:49:37 Apple 回傳 `Uploaded package is processing`／`Upload succeeded`。IPA 58,868,591 bytes，SHA-256 `901da9287281db1b6185cc7ed7d5d57aa0253b564c2cccc7e44517ed9bf311ff`；processing 完成尚未由 App Store Connect 確認 | Xcode upload receipt; archive／IPA inspection; `STATUS.md` | 2026-07-29 13:49 |
+| App Store selected review lane | `1.0.44 (Build 492)` | 1.0.44 舊頁曾選入 Build 492 並儲存；1.0.45 Build 1 上傳後，App Store Connect 工作階段逾時，尚未確認 processing 完成或將 Build 1 選入新版頁。未送審、未核准、未公開發佈 | App Store Connect live page; login handoff | 2026-07-29 13:54 |
+| Edward iPhone install lane | `1.0.45 (Build 1)` | Edward iPhone 15 Pro（iPhone16,1）安裝與啟動成功，`devicectl` 從手機回讀 `Munea net.munea.app 1.0.45 1`；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-29 13:46 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
 ## Runtime services
@@ -77,7 +77,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Developer purchase / Apple account mismatch UX | #175 `tested`, Draft，stacked on #174 | 整合後包版；TEST 不觸發 Apple；真帳號 mismatch 不重複扣款 |
 | Dedicated QA account | 正式 Supabase password sign-in、account bootstrap 與 Brain balance readback 已驗證；purchased balance `505`（免費 5＋授權測試 500），帳密只存 Secret Manager，事件排除營運分析 | #188 合併後由 Mac 安全載入 Secret，包一個開發版完成 iPhone 登入與 credited chat-call；後端帳號存在不等於 App Gate 通過 |
 | Subscription / points purchase | Build 47 使用者回報身份與購買後續無法完成 | Sandbox Apple ID、server verification、entitlement／wallet refresh E2E |
-| Authenticated chat call | 1.0.45 Build 1 發版候選已建立；凍結 commit `72a0bd46` 的 Build 492 自動測試／手機安裝證據不得上推 | `App E2E pending`：仍需針對 1.0.45 Build 1＋production Gateway／Voice／Avatar 完成真麥克風、AI 聲畫回應與掛斷釋位 |
+| Authenticated chat call | 1.0.45 Build 1 已由 frozen source `ac9aac2` 封裝、安裝與上傳；自動測試／手機安裝不可上推為真人驗收 | `App E2E pending`：仍需針對 1.0.45 Build 1＋production Gateway／Voice／Avatar 完成 0 點阻擋與 505 點真麥克風、AI 聲畫回應、掛斷釋位 |
 | Pricing policy v4 | source／uploaded Build 47／production Brain 已對齊；Apple Product ID 維持原值，Brain 實際 grant mapping 為點數包 100／300／600／1000、Plus 100、Pro 200 | App Store price／description、Tokyo `019` 與登入後 Sandbox purchase／wallet refresh 真人驗收；DB policy mismatch 不參與目前 `/apple/transaction` 的 `verified.points` 入帳路徑，但仍需治理對焦 |
 | Managed-cloud `/chat-test` | #182 已合併，source 預設 404 | Voice 尚未部署；production／staging live GET 仍須重新驗證 404 |
 

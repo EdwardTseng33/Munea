@@ -4,13 +4,14 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
-### 2026-07-29 Codex 🚧 App 1.0.45 Build 1 發版中（call-path risk；App E2E pending）
+### 2026-07-29 Codex 📱 App 1.0.45 Build 1 已封裝／裝機／上傳（call-path risk；App E2E pending）
 
 - **來源／範圍**：獨立 worktree `codex/app-store-1.0.45-build1-20260729`，基準 `origin/main@68956b3`。已核對 open PR；#284 為 95 commits 的未完成 Draft、#264／#263／#244 stale 或不可合併，本輪不強併。相對 Build 492，新 App 內容含已合併 #247 的主按鈕對比與危險操作樣式。
-- **預計修改**：`package.json`／lock、`web/src/version.js`／`index.html` cache identity、Xcode version/build，以及 release SSOT／看板／狀態紀錄。目標 `1.0.45 (Build 1)`。
+- **版本／凍結來源**：`package.json`／lock、`web/src/version.js`／`index.html` cache identity 與 Xcode Debug／Release 已對齊 `1.0.45 (Build 1)`；App source commit `ac9aac2`。
 - **自動門檻**：完整 `test:launch`、App Call Control 15/15、Avatar render、UI／release settings／產品對焦與 strict iOS consistency PASS。主線 `test-voice-launch-policy` 原本仍禁止 7/28 已合併的 native Google Search，本輪只更新契約，改驗 native／bridge／off 明確 gate 與 demo 隔離；完整套件重跑 PASS。
 - **已知外部證據缺口**：`release:evidence:check --strict-version` 因 snapshot 仍為 1.0.42 且逾 24 小時 FAIL；重新 capture 在 HTTPS connect 階段超過端點預算後中止，未修改線上服務，也不宣稱 runtime freshness 通過。
-- **外部動作界線**：完成 App Store Archive／IPA、Edward iPhone Development＋production config 安裝回讀、App Store Connect upload／processing／版本頁選取；未授權送審或公開發佈。
+- **正式包／手機**：Archive、App Store IPA 與五道防漏 PASS；IPA 58,868,591 bytes，SHA-256 `901da9287281db1b6185cc7ed7d5d57aa0253b564c2cccc7e44517ed9bf311ff`。13:46 Edward iPhone 15 Pro 已以 Development signing＋production config 安裝、啟動並回讀 `1.0.45 (1)`。
+- **Apple**：13:49:37 `Uploaded package is processing`／`Upload succeeded`。App Store Connect 重新整理後登入工作階段逾時，尚未確認 processing 完成或選入 1.0.45 版本頁；未送審、未核准、未公開發佈。
 - **硬 Gate**：自動測試、Archive、上傳或安裝皆只算 precheck；0 點真帳號與 505 點 Voice＋Avatar 真人流程未跑通前維持 `App E2E pending`。
 
 ### 2026-07-28 Codex 📱 App 1.0.44 Build 492 上傳與 Edward iPhone 換裝（App E2E pending）
