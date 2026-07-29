@@ -1,26 +1,10 @@
 {
   "schema": "munea.app-medication-local-browser-precheck.v1",
-  "recordedAt": "2026-07-29T11:22:50.457Z",
+  "recordedAt": "2026-07-29T11:26:14.860Z",
   "result": "pass-local-precheck",
   "releaseEvidence": false,
-  "sourceBaseCommit": "7c57eb71d7c9742c907002b08db62fb7f7e85091",
-  "sourceChangedFiles": [
-    "M scripts/i18n-native-review-worklist.js",
-    " M scripts/test-medication-schedule-i18n.js",
-    " M scripts/test-ui-contracts.js",
-    " M web/src/app.js",
-    " M web/src/i18n/app-binding-manifest.json",
-    " M web/src/i18n/app-surface-copy-manifest.json",
-    " M web/src/i18n/en.json",
-    " M web/src/i18n/es.json",
-    " M web/src/i18n/ja.json",
-    " M web/src/i18n/medication-schedule.js",
-    " M web/src/i18n/zh-TW.json",
-    " M web/src/medication.js",
-    " M web/src/styles.css",
-    "?? docs/qa/i18n/local-browser-precheck/medication-2026-07-29/",
-    "?? scripts/app-medication-i18n-browser-precheck.js"
-  ],
+  "sourceBaseCommit": "75ac0d68628a26eebb383b5a679d7c2f38eca9c3",
+  "sourceChangedFiles": [],
   "scope": {
     "surfaces": [
       "modal:medication-manager/list",
@@ -107,13 +91,13 @@
         "screenshots": {
           "list": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/zh-TW__medication-manager-list__iphone390x844.png",
-            "bytes": 110225,
-            "sha256": "6d61509f43b40c85fbe7f3d00570c4ace156f24ce3b210b900a1d900e716f6b4"
+            "bytes": 107891,
+            "sha256": "70444281ecce0f352e5a8cc725710f835b29992ca9f5f2c49c9f675f75fdb62d"
           },
           "form": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/zh-TW__medication-manager-form__iphone390x844.png",
-            "bytes": 58759,
-            "sha256": "8888f3dc573e41b290be8ba606c5f4fd412db9c7bd7091819435ec0933c21485"
+            "bytes": 58883,
+            "sha256": "d6bf63fa255ccae2b652f28a6b80c2def6f4f84495abd12e892e0f796eacf9dc"
           }
         }
       },
@@ -153,8 +137,8 @@
         },
         "screenshot": {
           "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/zh-TW__medication-reminder__iphone390x844.png",
-          "bytes": 102076,
-          "sha256": "ac6f08d331cb9d2a9901d585ff64efe267c699c4c492102adfaa60e8f0242af5"
+          "bytes": 102088,
+          "sha256": "f90d4ce295d19b6505ad8247808d03f41f6d299322d6bcb0f549622389f8effc"
         }
       },
       "browserErrors": []
@@ -168,8 +152,8 @@
         "layout": {
           "left": 0,
           "right": 390,
-          "top": 122,
-          "bottom": 865,
+          "top": 117,
+          "bottom": 861,
           "width": 390,
           "height": 743,
           "horizontalOverflowPixels": 0,
@@ -214,13 +198,13 @@
         "screenshots": {
           "list": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/en__medication-manager-list__iphone390x844.png",
-            "bytes": 130929,
-            "sha256": "00441c6e24a333f2053287f5b36e2f802e3fdf891de66b6025c291d01816062e"
+            "bytes": 130845,
+            "sha256": "1d50e8b25c5c797517f015919390ffc781ed45f937d9e8a168a8bd84957b6f72"
           },
           "form": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/en__medication-manager-form__iphone390x844.png",
-            "bytes": 72347,
-            "sha256": "c03afed066ea07aec0c2a79c624c36c34e97d9811f02ce8a7f67667965b34448"
+            "bytes": 72348,
+            "sha256": "2fd0a3f4c1cc1e74379538b8f33defe0a65b024167f8d7674e5a7b1fc4b9b2b8"
           }
         }
       },
@@ -260,8 +244,8 @@
         },
         "screenshot": {
           "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/en__medication-reminder__iphone390x844.png",
-          "bytes": 115321,
-          "sha256": "367e4d10b5553d10a0f3f24cc5ca26a46a917678528858eca1c61cf28aadfd02"
+          "bytes": 116826,
+          "sha256": "02971f509707e0c163e05bc8b42c45cc4b44baaa9c74c08e69664c8fe094c316"
         }
       },
       "browserErrors": []
@@ -275,8 +259,8 @@
         "layout": {
           "left": 0,
           "right": 390,
-          "top": 117,
-          "bottom": 861,
+          "top": 122,
+          "bottom": 865,
           "width": 390,
           "height": 743,
           "horizontalOverflowPixels": 0,
@@ -321,13 +305,13 @@
         "screenshots": {
           "list": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/ja__medication-manager-list__iphone390x844.png",
-            "bytes": 128711,
-            "sha256": "f97bf3e2b58a2625dfcff640f1b3e3b2185186cf30767e8fb1ff8356cf4a997d"
+            "bytes": 138202,
+            "sha256": "68a85bf749c01af183241eea48065eff70dea10aaaeb1bb12b3c5d635eaa20ee"
           },
           "form": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/ja__medication-manager-form__iphone390x844.png",
-            "bytes": 74615,
-            "sha256": "13ccbdb7ff5fb829f0d9523fa7ec5a0b6029a4fb7c318a103a054942981a77f5"
+            "bytes": 76411,
+            "sha256": "dd1a83bdce675220a2f55676c8cdf752597c72e5b782e6e92711c7d0f8a1e970"
           }
         }
       },
@@ -367,8 +351,8 @@
         },
         "screenshot": {
           "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/ja__medication-reminder__iphone390x844.png",
-          "bytes": 116796,
-          "sha256": "5ff334cc7058c7e3c0e17d33a9081a5db5280a706c11db2dabcdbc84a2034a8d"
+          "bytes": 117286,
+          "sha256": "5ceba0607fb008d21aefb9cf4fd49761683beadbd43e79ffef06358a774bde06"
         }
       },
       "browserErrors": []
@@ -428,13 +412,13 @@
         "screenshots": {
           "list": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/es__medication-manager-list__iphone390x844.png",
-            "bytes": 134352,
-            "sha256": "43f0d01b66435b6803f2b0f4c00a3f631489061b8d75cfa205a00027bf4711a8"
+            "bytes": 134583,
+            "sha256": "074f4e4df497313f47ae2986036e46174920cb8b2642c5d4fd222e20760b8bc1"
           },
           "form": {
             "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/es__medication-manager-form__iphone390x844.png",
-            "bytes": 75709,
-            "sha256": "4c1579b09ca3fbccf823846cb7604873e579c47c251ba859ff36075af719d6a6"
+            "bytes": 78199,
+            "sha256": "a31b9127b78567c8549b9a5b785364fa4fca0be967d9978c803b00a994ff5871"
           }
         }
       },
@@ -474,8 +458,8 @@
         },
         "screenshot": {
           "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/es__medication-reminder__iphone390x844.png",
-          "bytes": 122338,
-          "sha256": "a9457f4edcd31991faf2551da4e27f92bdcf8f21c28be0758de0df0f5225c934"
+          "bytes": 122132,
+          "sha256": "a988ce3c1e89f50f03bad21d665518e9f352f0b1863e32dfb3c394260a6d0854"
         }
       },
       "browserErrors": []
@@ -486,5 +470,5 @@
     "Spoken reminder copy was evaluated as text only; no production Voice or audio synthesis was called.",
     "No production, staging, Gateway, Voice, Avatar, Supabase, StoreKit, or App Store Connect service was exercised."
   ],
-  "completedAt": "2026-07-29T11:22:55.931Z"
+  "completedAt": "2026-07-29T11:26:21.602Z"
 }
