@@ -32,12 +32,24 @@ function muneaIsCleanZhText(raw) {
   if (new Set(s).size / s.length < 0.5) return false; // 同字元大量重複＝疑似亂碼
   return true;
 }
+function muneaIsCleanDisplayText(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s || s.length > 160) return false;
+  if (/[\u0000-\u001f\u007f\ufffd<>]/u.test(s)) return false;
+  if (/[\u202a-\u202e\u2066-\u2069]/u.test(s)) return false;
+  if (/(?:javascript|data)\s*:|https?:\/\//iu.test(s)) return false;
+  const meaningful = s.replace(/[\p{P}\p{S}\p{Z}\p{M}]/gu, '');
+  if (!meaningful || !/[\p{L}\p{N}]/u.test(meaningful)) return false;
+  const characters = [...meaningful.toLocaleLowerCase(muneaLocale())];
+  if (characters.length >= 6 && new Set(characters).size / characters.length < 0.35) return false;
+  return true;
+}
 // 顯示前再守一次門（Edward 2026-07-15 事故：首頁招呼卡以外，用藥/看診/留意卡都還在印未過濾的存檔文字）
 // 存檔時就算漏接、或手機裡已經存著舊的髒資料，畫面上都不該印出來——不乾淨就退回 fallback，不留原文
 function muneaSafeDisplayText(raw, fallback) {
   const s = String(raw == null ? '' : raw).trim();
   if (!s) return fallback;
-  return muneaIsCleanZhText(s) ? s : fallback;
+  return muneaIsCleanDisplayText(s) ? s : fallback;
 }
 
 const OVERLAYS = ['med', 'connect', 'chat'];
@@ -3931,16 +3943,31 @@ function updateMedCount() {
   if (window.MuneaNotify) window.MuneaNotify.sync(); // 用藥變動 → 重排 App 關著也會響的提醒
 }
 const PILL_SLOT_ORDER = ['早餐後', '午餐後', '晚餐後', '睡前'];
+const PILL_SLOT_KEYS = Object.freeze({
+  '早餐後': 'medication.slot.afterBreakfast',
+  '午餐後': 'medication.slot.afterLunch',
+  '晚餐後': 'medication.slot.afterDinner',
+  '睡前': 'medication.slot.bedtime',
+});
+function localizedMedicationSlot(slot) {
+  const label = String(slot || '').trim();
+  const key = PILL_SLOT_KEYS[label];
+  return key ? muneaT(key, label) : label;
+}
 function pillDateKey() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 const WEEK_STEPS = [4200, 5100, 3600, 6200, 5500, 0, 0]; // 一~日；今天=第5天
-function renderStatusCharts() {
+function renderStatusCharts(force = false) {
   const wb = document.getElementById('weekBars');
+  if (force && wb) delete wb.dataset.done;
   if (wb && !wb.dataset.done) {
     const mx = Math.max(...WEEK_STEPS, 1);
-    const names = ['一', '二', '三', '四', '五', '六', '日'];
+    const names = Array.from({ length: 7 }, (_, index) => (
+      new Intl.DateTimeFormat(muneaLocale(), { weekday: 'narrow' })
+        .format(new Date(2024, 0, 7 + index))
+    ));
     wb.innerHTML = WEEK_STEPS.map((v, i) => {
       const kind = i === 4 ? 'today' : (i > 4 ? 'future' : (v >= 5000 ? 'hi' : ''));
       const hpx = v ? Math.max(10, Math.round(v / mx * 74)) : 8;
@@ -3949,6 +3976,7 @@ function renderStatusCharts() {
     wb.dataset.done = '1';
   }
   const mb = document.getElementById('monthBars');
+  if (force && mb) delete mb.dataset.done;
   if (mb && !mb.dataset.done) {
     let html = '';
     for (let d = 1; d <= 30; d++) {
@@ -3995,12 +4023,22 @@ function renderPillTask() {
   const doneN = slots.filter(s => s.status === 'taken').length;
   const next = slots.find(s => s.status !== 'taken' && s.status !== 'skipped');
   if (next) {
-    title.textContent = '吃' + muneaSafeDisplayText(String(next.name).split(/\s+/)[0], '藥'); // 標題用短名、全名在用藥管理；短名守門（Edward 2026-07-15 事故）
-    sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
+    const genericName = muneaT('medication.genericName', '藥');
+    const rawName = String(next.name || '').trim();
+    const shortSource = muneaLocale() === 'zh-TW'
+      ? rawName.split(/\s+/)[0]
+      : rawName;
+    const shortName = muneaSafeDisplayText(shortSource, genericName);
+    title.textContent = muneaT('medication.takeName', '吃{name}', { name: shortName });
+    sub.textContent = muneaT('medication.taskProgress', '{slot} · 今天 {done}/{total} 次', {
+      slot: localizedMedicationSlot(next.slot),
+      done: doneN,
+      total,
+    });
     card.classList.remove('done');
   } else {
-    title.textContent = '今天的藥都吃了';
-    sub.textContent = total + ' 次都記到了，讚';
+    title.textContent = muneaT('medication.allDone', '都完成了');
+    sub.textContent = muneaT('medication.completedToday', '今天 {total} 次都記到了', { total });
     card.classList.add('done');
   }
   const _pico = card.querySelector('.task-ico');
@@ -4022,8 +4060,11 @@ function visitToday() {
 function _clock12(tv) {
   const p = String(tv || '').split(':'); const hh = +p[0], mm = +p[1] || 0;
   if (isNaN(hh)) return '';
-  const ap = hh < 12 ? '上午' : '下午'; const h12 = ((hh + 11) % 12) + 1;
-  return ap + ' ' + h12 + (mm ? ':' + String(mm).padStart(2, '0') : '');
+  const date = new Date(2024, 0, 1, hh, mm);
+  return new Intl.DateTimeFormat(muneaLocale(), {
+    hour: 'numeric',
+    minute: mm ? '2-digit' : undefined,
+  }).format(date);
 }
 // 24 小時制，跟用藥任務的「14:00」一致（Edward 2026-07-14）
 function _clock24(tv) {
@@ -4036,7 +4077,13 @@ function _visitDayShort(v) {
   if (!v) return '';
   if (v.dateISO) {
     const d = new Date(v.dateISO + 'T00:00');
-    if (!isNaN(d.getTime())) return (d.getMonth() + 1) + '/' + d.getDate() + '（' + ['週日', '週一', '週二', '週三', '週四', '週五', '週六'][d.getDay()] + '）';
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat(muneaLocale(), {
+        month: 'numeric',
+        day: 'numeric',
+        weekday: 'short',
+      }).format(d);
+    }
   }
   return String(v.label || '').split(/\s*[上下]午/)[0].trim();  // 舊資料兜底
 }
@@ -4047,9 +4094,9 @@ function renderVisitTask() {
   if (!v) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
   card.style.display = '';
   const t = $('#visitTaskTitle'), s = $('#visitTaskSub'), tm = $('#visitTaskTime');
-  if (t) t.textContent = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診';   // 今天一起完成的回診卡標題守門（Edward 2026-07-15 事故）
-  if (s) s.textContent = _visitDayShort(v) || '記得帶健保卡';
-  if (tm) tm.textContent = _clock24(v.time) || '今天';
+  if (t) t.textContent = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || muneaT('visit.defaultTitle', '回診');   // 今天一起完成的回診卡標題守門（Edward 2026-07-15 事故）
+  if (s) s.textContent = _visitDayShort(v) || muneaT('visit.defaultNote', '記得帶健保卡與用藥資料');
+  if (tm) tm.textContent = _clock24(v.time) || muneaT('common.today', '今天');
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
 // 行程（揪一攤約會/聚餐）跟回診同一條規矩：只在「當天」進今日任務（Edward 7/16「今天的行程才顯示今天」）
@@ -4068,24 +4115,39 @@ function renderEventTask() {
   if (!ev) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
   card.style.display = '';
   const t = $('#eventTaskTitle'), s = $('#eventTaskSub'), tm = $('#eventTaskTime');
-  if (t) t.textContent = muneaSafeDisplayText(ev.title, '') || '和家人的約';
-  if (s) s.textContent = muneaSafeDisplayText(ev.place, '') || '記得準時赴約';
-  if (tm) tm.textContent = _clock24(ev.time) || '今天';
+  if (t) t.textContent = muneaSafeDisplayText(ev.title, '') || muneaT('event.familyTitle', '和家人的約');
+  if (s) s.textContent = muneaSafeDisplayText(ev.place, '') || muneaT('event.arriveOnTime', '記得準時赴約');
+  if (tm) tm.textContent = _clock24(ev.time) || muneaT('common.today', '今天');
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
 // 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋行程（當天才有）＋走走＋心情筆記＋聊聊
 function renderDailyTasks() { renderPillTask(); renderVisitTask(); renderEventTask(); refreshMoodTask(); }
 window.__muneaRenderDailyTasks = renderDailyTasks;
 // Apple 健康的步數 → 首頁走路任務（原生端 health.js 讀到步數後呼叫）
-window.__muneaSetSteps = function (n) {
+function renderWalkProgress(n) {
   n = Math.max(0, Math.round(+n || 0));
   const card = document.querySelector('.task-item[data-task="walk"]');
   if (!card) return;
   const goal = (window.MuneaHealth && window.MuneaHealth.GOAL) || 500;
   const sub = document.getElementById('walkSub');
   const chip = document.getElementById('walkChip');
-  if (sub) sub.textContent = n >= goal ? ('今天走了 ' + n.toLocaleString() + ' 步，達標了') : ('今天走了 ' + n.toLocaleString() + ' / ' + goal + ' 步');
-  if (chip) chip.textContent = n >= goal ? '達標' : (n.toLocaleString() + ' 步');
+  if (sub) sub.removeAttribute('data-i18n');
+  if (chip) chip.removeAttribute('data-i18n');
+  const count = new Intl.NumberFormat(muneaLocale()).format(n);
+  const formattedGoal = new Intl.NumberFormat(muneaLocale()).format(goal);
+  if (sub) {
+    sub.textContent = n >= goal
+      ? muneaT('home.walkProgressMet', '今天走了 {count} 步，達標了', { count })
+      : muneaT('home.walkProgress', '今天走了 {count} / {goal} 步', {
+        count,
+        goal: formattedGoal,
+      });
+  }
+  if (chip) {
+    chip.textContent = n >= goal
+      ? muneaT('home.walkGoalMet', '達標')
+      : muneaT('home.walkSteps', '{count} 步', { count });
+  }
   card.dataset.steps = String(n);
   if (n >= goal) card.classList.add('done'); // 走到目標就自動完成
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
@@ -4095,7 +4157,8 @@ window.__muneaSetSteps = function (n) {
     const day = _todayISO();
     mergeHealthHistory([{ date: day, steps: n }]);
   } catch (e) {}
-};
+}
+window.__muneaSetSteps = renderWalkProgress;
 
 const HEALTH_LOG_RETENTION_DAYS = 365;
 function mergeHealthHistory(days, syncCloud = true) {
@@ -8480,6 +8543,14 @@ function refreshLocalizedDynamicUi() {
   try { renderHomeGreeting(); } catch (e) {}
   try { refreshMoodTask(); } catch (e) {}
   try { updateMedCount(); } catch (e) {}
+  try { renderDailyTasks(); } catch (e) {}
+  try {
+    const walk = document.querySelector('.task-item[data-task="walk"]');
+    if (walk && walk.dataset.steps !== undefined) {
+      renderWalkProgress(Number(walk.dataset.steps));
+    }
+  } catch (e) {}
+  try { renderStatusCharts(true); } catch (e) {}
   try { applyAppVersion(); } catch (e) {}
   try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
   try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}

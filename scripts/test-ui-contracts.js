@@ -129,6 +129,40 @@ assert(app.includes('function localizeAuthTerms()') && /refreshLocalizedDynamicU
   'The complete auth terms disclosure and close label must refresh with the active App locale');
 assert(css.includes(':is(html:lang(en), html:lang(es)) .reader-card :is(p, li)'),
   'English and Spanish legal copy must use natural left alignment instead of stretched CJK justification');
+[
+  'common.today',
+  'medication.takeName',
+  'medication.taskProgress',
+  'visit.defaultTitle',
+  'visit.defaultNote',
+  'event.familyTitle',
+  'event.arriveOnTime',
+  'home.walkProgressMet',
+  'home.walkProgress',
+  'home.walkGoalMet',
+  'home.walkSteps',
+].forEach(key => assert(zhCatalog[key], `Home task catalog key missing for: ${key}`));
+assert(app.includes('function localizedMedicationSlot(slot)')
+  && app.includes("muneaT('medication.taskProgress'")
+  && app.includes("muneaT('visit.defaultTitle'")
+  && app.includes("muneaT('event.familyTitle'")
+  && app.includes("muneaT('home.walkProgressMet'"),
+  'Medication, visit, family-event, and walking cards must render from the active locale catalog');
+assert(app.includes("muneaLocale() === 'zh-TW'")
+  && app.includes("sub.removeAttribute('data-i18n')")
+  && app.includes("chip.removeAttribute('data-i18n')"),
+  'Multilingual medicine names must not be truncated at the first word, and state-owned walking output must not be overwritten by static DOM localization');
+assert(app.includes('function muneaIsCleanDisplayText(raw)')
+  && /function muneaSafeDisplayText[\s\S]*?muneaIsCleanDisplayText\(s\)/.test(app),
+  'Stored user-visible names must accept safe multilingual text instead of applying the Chinese-only ASR guard');
+assert(app.includes("!/[\u005cp{L}\u005cp{N}]/u.test(meaningful)")
+  && app.includes('https?:\\/\\/'),
+  'The multilingual display guard must accept Unicode letters while rejecting URL-like and control-character payloads');
+assert(/refreshLocalizedDynamicUi\(\)[\s\S]*?renderDailyTasks\(\)[\s\S]*?renderStatusCharts\(true\)/.test(app),
+  'Locale changes must rerender daily tasks and locale-formatted chart weekday labels');
+assert(app.includes("new Intl.DateTimeFormat(muneaLocale(), { weekday: 'narrow' })")
+  && /function _visitDayShort[\s\S]*?new Intl\.DateTimeFormat\(muneaLocale\(\)/.test(app),
+  'Weekday labels and visit dates must use the active locale instead of fixed Chinese date text');
 
 // 全滿態給出口：先用文字聊（2026-07-24 Edward 拍板 P0）——不新造頁面，重用既有 chatHandle 文字管線，
 // 不佔用 Avatar／即時語音席位，讓長輩在滿載時仍有話可聊而不是只能乾等或放棄。

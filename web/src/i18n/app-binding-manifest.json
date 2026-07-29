@@ -197,6 +197,49 @@
         "home.care.remove",
         "home.care.report"
       ]
+    },
+    {
+      "anchorId": "pillTitle",
+      "renderer": "renderPillTask",
+      "keys": [
+        "medication.genericName",
+        "medication.takeName",
+        "medication.taskProgress",
+        "medication.allDone",
+        "medication.completedToday",
+        "medication.slot.afterBreakfast",
+        "medication.slot.afterLunch",
+        "medication.slot.afterDinner",
+        "medication.slot.bedtime"
+      ]
+    },
+    {
+      "anchorId": "visitTask",
+      "renderer": "renderVisitTask",
+      "keys": [
+        "visit.defaultTitle",
+        "visit.defaultNote",
+        "common.today"
+      ]
+    },
+    {
+      "anchorId": "eventTask",
+      "renderer": "renderEventTask",
+      "keys": [
+        "event.familyTitle",
+        "event.arriveOnTime",
+        "common.today"
+      ]
+    },
+    {
+      "anchorId": "walkSub",
+      "renderer": "renderWalkProgress",
+      "keys": [
+        "home.walkProgressMet",
+        "home.walkProgress",
+        "home.walkGoalMet",
+        "home.walkSteps"
+      ]
     }
   ],
   "markupRefactors": [

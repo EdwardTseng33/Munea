@@ -1,0 +1,160 @@
+{
+  "schema": "munea.app-home-tasks-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T09:39:38.541Z",
+  "result": "pass-local-precheck",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "7f306ae34eefb33c05729412cd12b0baf70249d6",
+  "sourceChangedFiles": [
+    "M scripts/test-ui-contracts.js",
+    " M web/src/app.js",
+    " M web/src/i18n/app-binding-manifest.json",
+    " M web/src/i18n/app-surface-copy-manifest.json",
+    " M web/src/i18n/en.json",
+    " M web/src/i18n/es.json",
+    " M web/src/i18n/ja.json",
+    " M web/src/i18n/zh-TW.json",
+    "?? docs/qa/i18n/local-browser-precheck/home-tasks-2026-07-29/",
+    "?? scripts/app-home-tasks-i18n-browser-precheck.js"
+  ],
+  "scope": {
+    "surface": "screen:home/dynamic-daily-tasks",
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4178",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "appStoreConnectTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "browser": "Google Chrome",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "automation": "Playwright local fallback after agent-browser executable was unavailable"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "observedExternalRequests": []
+  },
+  "screens": {
+    "zh-TW": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "labels": {
+        "pillTitle": "吃維生素D",
+        "pillSub": "早餐後 · 今天 0/1 次",
+        "visitTitle": "回診",
+        "visitSub": "7/29（週三）",
+        "visitTime": "09:30",
+        "eventTitle": "和家人的約",
+        "eventSub": "記得準時赴約",
+        "eventTime": "14:00",
+        "walkSub": "今天走了 321 / 500 步",
+        "walkChip": "321 步"
+      },
+      "missingExpected": [],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "horizontalOverflowPixels": 0,
+      "visibleRows": 6,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/home-tasks-2026-07-29/zh-TW__home-dynamic-tasks__iphone390x844.png",
+        "bytes": 40992,
+        "sha256": "35b7e8f26a27cb8024429fd48f38cdbd0fdee6c594ec4ca52c9582bcf5b66a41"
+      }
+    },
+    "en": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "labels": {
+        "pillTitle": "Take Vitamin D",
+        "pillSub": "After breakfast · 0/1 doses today",
+        "visitTitle": "Follow-up visit",
+        "visitSub": "Wed, 7/29",
+        "visitTime": "09:30",
+        "eventTitle": "Time with family",
+        "eventSub": "Remember to arrive on time",
+        "eventTime": "14:00",
+        "walkSub": "You walked 321 / 500 steps today",
+        "walkChip": "321 steps"
+      },
+      "missingExpected": [],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "horizontalOverflowPixels": 0,
+      "visibleRows": 6,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/home-tasks-2026-07-29/en__home-dynamic-tasks__iphone390x844.png",
+        "bytes": 47345,
+        "sha256": "2e2feb3ea4953e6c9eecedd01c223558c140a21582bdef9ceef467f2555474d6"
+      }
+    },
+    "ja": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "labels": {
+        "pillTitle": "ビタミンDを飲む",
+        "pillSub": "朝食後・今日 0/1 回",
+        "visitTitle": "通院",
+        "visitSub": "7/29(水)",
+        "visitTime": "09:30",
+        "eventTitle": "家族との予定",
+        "eventSub": "時間に遅れないようにしましょう",
+        "eventTime": "14:00",
+        "walkSub": "今日は 321 / 500 歩",
+        "walkChip": "321 歩"
+      },
+      "missingExpected": [],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "horizontalOverflowPixels": 0,
+      "visibleRows": 6,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/home-tasks-2026-07-29/ja__home-dynamic-tasks__iphone390x844.png",
+        "bytes": 46671,
+        "sha256": "904a8094d492dde25d35a3e73e08c7a2faf544df233080b3971a18fe6557c269"
+      }
+    },
+    "es": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "labels": {
+        "pillTitle": "Tomar Vitamina D",
+        "pillSub": "Después del desayuno · 0/1 dosis hoy",
+        "visitTitle": "Cita médica",
+        "visitSub": "mié, 29/7",
+        "visitTime": "09:30",
+        "eventTitle": "Plan familiar",
+        "eventSub": "Recuerda llegar a tiempo",
+        "eventTime": "14:00",
+        "walkSub": "Hoy has dado 321 / 500 pasos",
+        "walkChip": "321 pasos"
+      },
+      "missingExpected": [],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "horizontalOverflowPixels": 0,
+      "visibleRows": 6,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/home-tasks-2026-07-29/es__home-dynamic-tasks__iphone390x844.png",
+        "bytes": 49300,
+        "sha256": "cf8fbe36935b36732a9721d8d9a190379e792831cd0caa7250381f4f5f01bd93"
+      }
+    }
+  },
+  "limitations": [
+    "This is a local browser precheck, not exact installed-iPhone visual QA.",
+    "No Gateway, Live Voice, StoreKit, App Store Connect, Supabase, staging, or production service was exercised."
+  ]
+}
