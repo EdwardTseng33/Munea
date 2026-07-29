@@ -49,6 +49,36 @@ def require_env(name: str) -> str:
     return value
 
 
+GCLOUD_SECRETS = {
+    "SUPABASE_SERVICE_ROLE_KEY": "munea-supabase-service-staging",
+    "MUNEA_GATEWAY_ADMIN_KEY": "munea-gateway-admin-key",
+}
+DEFAULT_SUPABASE_URL = "https://fespbkdwafueyonppzwq.supabase.co"
+
+
+def fetch_secrets_from_gcloud(project: str) -> None:
+    """Fill the required env vars straight from Secret Manager (values never
+    touch a shell command line or the transcript)."""
+    import shutil
+    import subprocess
+
+    gcloud = shutil.which("gcloud") or shutil.which("gcloud.cmd")
+    if not gcloud:
+        raise DrillError("gcloud is required for --fetch-secrets")
+    os.environ.setdefault("SUPABASE_URL", DEFAULT_SUPABASE_URL)
+    for env_name, secret in GCLOUD_SECRETS.items():
+        if os.environ.get(env_name, "").strip():
+            continue
+        value = subprocess.run(
+            [gcloud, "secrets", "versions", "access", "latest",
+             "--secret=" + secret, "--project=" + project],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        if not value:
+            raise DrillError(f"secret {secret} came back empty")
+        os.environ[env_name] = value
+
+
 class Drill:
     def __init__(self, args: argparse.Namespace):
         self.args = args
@@ -292,7 +322,13 @@ def main() -> None:
     parser.add_argument("--scale-up-timeout", type=int, default=900,
                         help="seconds to wait for the live controller to open "
                              "and health-gate a backup card (default 900)")
-    Drill(parser.parse_args()).run()
+    parser.add_argument("--fetch-secrets", action="store_true",
+                        help="fill missing env vars from GCP Secret Manager")
+    parser.add_argument("--gcp-project", default="gen-lang-client-0229303523")
+    args = parser.parse_args()
+    if args.fetch_secrets:
+        fetch_secrets_from_gcloud(args.gcp_project)
+    Drill(args).run()
 
 
 if __name__ == "__main__":
