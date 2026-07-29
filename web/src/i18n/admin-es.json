@@ -227,7 +227,19 @@
     "只有標記為測試的帳號才能從後台刪除": "Solo se pueden eliminar aquí las cuentas marcadas como de prueba",
     "這台伺服器沒接上資料庫，不能刪帳號": "Este servidor no tiene conexión con la base de datos, así que no se pueden eliminar cuentas",
     "刪除沒有成功，請看系統操作紀錄": "La eliminación falló: revisa el registro de actividad del sistema",
-    "伺服器喚醒中，再試一次…": "Despertando el servidor, reintentando…"
+    "伺服器喚醒中，再試一次…": "Despertando el servidor, reintentando…",
+    "快被自動清除": "Cerca del borrado automático",
+    "還沒上線過": "Nunca abrió la app",
+    "沒上線過": "Nunca abrió",
+    "快被清除": "Cerca del borrado",
+    "待清除": "Pendiente de borrado",
+    "自動清除": "Borrado automático",
+    "最後上線": "Última apertura",
+    "離自動清除": "Hasta el borrado automático",
+    "今天有上線": "Abrió hoy",
+    "已達自動清除門檻": "Superó el umbral de borrado",
+    "註冊後沒開過 App": "Se registró pero nunca abrió la app",
+    "註冊完就沒回來的帳號": "Cuentas que se registraron y no volvieron"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Últimos {0} días" },
@@ -248,6 +260,10 @@
     { "source": "{0}人", "target": "{0} personas" },
     { "source": "{0} 點", "target": "{0} créditos" },
     { "source": "剩不到 {0} 點 · 建議主動關心或提醒加購", "target": "Menos de {0} créditos · considera ofrecer ayuda" },
-    { "source": "{0}/月", "target": "{0}/mes" }
+    { "source": "{0}/月", "target": "{0}/mes" },
+    { "source": "剩 {0} 天", "target": "Quedan {0} días" },
+    { "source": "{0} 天沒上線", "target": "{0} días sin abrir" },
+    { "source": "{0} 天前上線", "target": "Abrió hace {0} días" },
+    { "source": "閒置滿 {0} 天", "target": "Inactivo {0} días" }
   ]
 }
