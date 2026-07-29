@@ -388,6 +388,40 @@ class SupabaseAdapter:
         result["cleanupRequired"] = bool(cleanup["failed"])
         return result
 
+    def _fetch_auth_users_map(self, wanted_ids, per_page=200, max_pages=10):
+        """一次撈 GoTrue 使用者清單建索引 → {authUserId: user}，取代「一戶問一次」。
+
+        名冊要顯示「這一戶是誰登入的」，登入資料在 GoTrue（不是一般資料表），沒辦法跟其他表
+        一起 in.() 批次查。舊法逐一問，一戶一次來回——6 戶實測就佔掉整支名冊約七成時間，
+        戶數上去照樣會撞後台 15 秒逾時（#329 只解了另一半）。
+
+        改用列表接口分頁掃，想找的都找到就提早停。
+        上限 max_pages 是保險：使用者數遠超過 per_page × max_pages 時不再往下掃，
+        沒撈到的那幾戶回退成逐一查（呼叫端負責），寧可慢一點也不讓名冊整個掛掉。
+        任何失敗回空 dict，呼叫端照舊逐一查。"""
+        wanted = {str(i) for i in (wanted_ids or []) if i}
+        if not self.configured() or not wanted:
+            return {}
+        found = {}
+        for page in range(1, max_pages + 1):
+            url = f"{self.url}/auth/v1/admin/users?page={page}&per_page={int(per_page)}"
+            req = urllib.request.Request(url, headers=self._service_headers(), method="GET")
+            try:
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+            except Exception:
+                break
+            users = payload.get("users") if isinstance(payload, dict) else payload
+            if not isinstance(users, list) or not users:
+                break
+            for user in users:
+                uid = str((user or {}).get("id") or "")
+                if uid in wanted:
+                    found[uid] = user
+            if len(found) >= len(wanted) or len(users) < per_page:
+                break
+        return found
+
     def _fetch_auth_user(self, auth_user_id):
         """GoTrue Admin 單一 user 查詢，回整個 user 物件（測試帳號網域判準＋名冊會員資料共用）。
         任何失敗（逾時／找不到／格式異常）一律回 None，不讓名冊或分析請求被單一查詢拖垮。"""
@@ -705,7 +739,9 @@ class SupabaseAdapter:
                 "account_members",
                 {"account_id": f"in.({id_str})", "role": "eq.owner", "status": "eq.active", "select": "account_id,user_id"},
             ) or []
-            checked_users = {}
+            # 先用列表接口一次撈；沒撈到的（使用者數超過掃描上限那種）才逐一補問。
+            owner_user_ids = [m.get("user_id") for m in memberships if m.get("user_id")]
+            checked_users = dict(self._fetch_auth_users_map(owner_user_ids))
             for m in memberships:
                 account_id, user_id = m.get("account_id"), m.get("user_id")
                 if not account_id or not user_id:
