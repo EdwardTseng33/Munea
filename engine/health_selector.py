@@ -183,6 +183,13 @@ def _score(sol, flags, urgent, user_text):
         elif sol.get("solutionType") in ("食補", "行為調整"):
             score += 0.5
 
+    # 他點名問的東西要浮上來（2026-07-29 中醫題抓到、已成通則）：
+    # 「我在吃抗凝血的藥，可以吃當歸嗎」——最該回答的那條卻因為分數不夠沒被選中，
+    # 端出去的是三句通用的話。askedFor 原本只用來解除陪襯層降級，不夠；
+    # 他指名問的，本來就該排到前面，不然等於答非所問。
+    if any(w and w in text for w in (sol.get("askedFor") or [])):
+        score += 5.0
+
     # 證據強度：同分時已證實的排前面
     score += {"proven": 0.8, "emerging": 0.3, "traditional": 0.0}.get(sol.get("maturity"), 0)
 
