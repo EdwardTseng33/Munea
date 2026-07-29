@@ -3544,6 +3544,232 @@
           "say": "**出血、持續肚子痛、胎動明顯變少、破水——立刻就醫，不要等。** 另外嚴重頭痛合併看東西模糊或突然水腫，那可能是子癇前症的警訊，也要馬上去。產後如果情緒持續低落、對什麼都提不起勁，那是產後憂鬱、是病不是「不夠愛小孩」，安心專線 1925 隨時可以打。"
         }
       ]
+    },
+    "TW-EDU-30": {
+      "title": "體質與中醫調理",
+      "solutions": [
+        {
+          "id": "tcm-listen",
+          "label": "先聽懂他在講什麼",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "你說的「燥」「火氣大」「氣虛」我聽得懂——那是在講你身體現在的感覺。跟我多說一點：是嘴破、睡不好、還是覺得整個人悶悶熱熱的？我不會替你判斷是什麼證型，但你怎麼形容，我就照那個去想能做什麼。",
+          "askedFor": [
+            "燥",
+            "氣虛",
+            "血虛",
+            "腎虛",
+            "肝火",
+            "上火",
+            "濕氣",
+            "冷底",
+            "體質",
+            "火氣大"
+          ]
+        },
+        {
+          "id": "tcm-see-doctor",
+          "label": "找合格中醫師，健保有給付",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "你如果想走中醫這條路，去找**有執照的中醫師**看診最實在——**中醫門診健保有給付**，很多人不知道。體質這種事要當面把脈問診才準，不是照網路上的說法對號入座。",
+          "askedFor": [
+            "看中醫",
+            "針灸",
+            "拔罐",
+            "推拿",
+            "把脈",
+            "中醫師"
+          ]
+        },
+        {
+          "id": "tcm-both-lanes",
+          "label": "中西醫可以一起，但要讓兩邊都知道",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "看中醫不用瞞著西醫、看西醫也不用瞞著中醫——**兩邊都要知道你在吃什麼**。中藥跟西藥是會打架的，講清楚他們才能幫你調開。",
+          "related": "TW-EDU-16"
+        },
+        {
+          "id": "tcm-food-warm",
+          "label": "從吃的溫和調整",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women",
+            "worker"
+          ],
+          "say": "想從吃的慢慢調，先從廚房裡就有的來：怕冷手腳冰就薑茶、四神湯；覺得燥、嘴破就多喝水、白木耳、綠豆湯。這些是食物、不是藥，溫和、也不用花大錢。",
+          "askedFor": [
+            "食療",
+            "藥膳",
+            "四神湯",
+            "薑茶",
+            "白木耳",
+            "綠豆"
+          ]
+        },
+        {
+          "id": "tcm-routine",
+          "label": "作息比補品重要",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "teen"
+          ],
+          "say": "中醫西醫在這件事上講的其實一樣：早點睡、三餐定時、少生氣、動一動。這幾樣做到，比任何補品都有用——而且不用錢。"
+        },
+        {
+          "id": "tcm-acupressure",
+          "label": "自己按幾個穴位",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "中醫調理",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "想自己做的話，按合谷（虎口）、內關（手腕橫紋往上三指）這幾個好找的位置，一次按個一兩分鐘、有點痠脹就好。按了舒服就繼續，不舒服就停——這是放鬆，不是治療。",
+          "askedFor": [
+            "穴位",
+            "按摩",
+            "合谷",
+            "內關",
+            "按哪裡"
+          ]
+        },
+        {
+          "id": "tcm-tonic-caution",
+          "label": "進補之前先想一下",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "中醫調理",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "薑母鴨、麻油雞、藥燉排骨這些冬令進補，正在感冒發燒、或血壓血糖控制得不好的時候先別吃——**補錯時候會反效果**。真的想補，問一下中醫師比較保險。",
+          "askedFor": [
+            "進補",
+            "薑母鴨",
+            "麻油雞",
+            "藥燉",
+            "補冬",
+            "冬令"
+          ]
+        },
+        {
+          "id": "tcm-herb-interaction",
+          "label": "這幾樣藥材要特別小心",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "中醫調理",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "高血壓控制不佳",
+            "懷孕或哺乳中",
+            "肝腎功能異常"
+          ],
+          "dailyCap": "份量一律由中醫師決定，我不會給任何數字",
+          "evidence": {
+            "finding": "當歸、丹參與抗凝血劑併用會增加出血風險；甘草長期或大量使用與血壓上升、低血鉀有關（甘草幾乎存在於大部分複方中藥）"
+          },
+          "say": "有幾樣要特別提醒你：**當歸、丹參跟抗凝血的西藥一起吃會增加出血風險**；**甘草**幾乎每帖中藥都有，長期或大量吃跟血壓上升有關，血壓高的人要留意。份量我一個數字都不會給——這要中醫師開。懷孕哺乳的話，中藥一律先問過再吃。",
+          "verifiedAt": "2026-07-29",
+          "askedFor": [
+            "當歸",
+            "丹參",
+            "甘草",
+            "抗凝血",
+            "中藥會不會",
+            "藥材",
+            "人參",
+            "黃耆"
+          ]
+        },
+        {
+          "id": "tcm-prescribe-blocked",
+          "label": "開方、辨證、報劑量",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "我不會替你判斷是「腎虛」還是「肝火旺」，也不會開方子或說哪個藥材吃幾錢——那是中醫師望聞問切之後才能做的事。我更不會叫你把西藥停掉改吃中藥。"
+        },
+        {
+          "id": "tcm-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吃中藥後皮膚或眼白變黃",
+            "嚴重腹瀉或嘔吐",
+            "水腫",
+            "不明原因出血或瘀青",
+            "為了吃中藥自行停掉西藥"
+          ],
+          "say": "吃中藥之後如果皮膚或眼白變黃、水腫、莫名瘀青出血、或嚴重腹瀉嘔吐——**先停下來、儘快就醫**。另外一條最重要：**不要為了吃中藥自己把西藥停掉**，尤其血壓、血糖、心臟、抗凝血的藥，那個風險很高。"
+        }
+      ]
     }
   }
 }
