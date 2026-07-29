@@ -233,24 +233,15 @@
 
       <!-- 全家總覽 -->
       <div class="fam-view active" id="viewAll">
-        <!-- 圈裡只有自己時的引導（Edward 2026-07-29）：還沒有家人就先把人找進來，
-             不要先擺一整排「發起活動 / 家庭記錄簿 / 全家狀態」——那些這時候點了都是死路。 -->
-        <div class="fam-onboard" id="famOnboard" hidden>
-          <span class="fo-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
-          <b>先把家人找進來</b>
-          <p>家人加入後，就能一起發起活動、彼此看得到狀態，<span class="cname">寧寧</span>也才幫得上忙。</p>
-          <button type="button" class="fo-btn" id="famOnboardInvite">邀請家人加入</button>
-        </div>
-
-        <div class="sec-head" id="famActHead"><div><h2>家庭活動</h2></div></div>
-        <div class="chal-actions" id="famActBtns">
+        <div class="sec-head"><div><h2>家庭活動</h2></div></div>
+        <div class="chal-actions">
           <button class="chal-act new" id="newChalBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>發起活動</button>
           <button class="chal-act book" id="bookBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/></svg>家庭記錄簿</button>
         </div>
         <!-- 空狀態＝真活動卡的插入錨點（renderActCard 靠它定位，別拆）；有卡時由 JS 隱藏 -->
         <div class="quest-empty" id="actEmpty">還沒有進行中的活動<br>點上面「發起活動」，揪全家走走、猜謎、投票或聚餐</div>
 
-        <div class="sec-head" id="famHealthHead"><div><h2>全家狀態</h2></div></div>
+        <div class="sec-head"><div><h2>全家狀態</h2></div></div>
         <div class="health-list" id="healthList">
           <div class="health-row" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei">
             <span class="hr-av"><span class="init-ava p-mei">華</span></span>

@@ -487,17 +487,12 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* ===== 家庭任務卡（家人頁 · 合作型） ===== */
 .quest-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 16px 16px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
 .quest-empty { border: 1.5px dashed var(--line); border-radius: var(--radius-md); padding: 18px 16px; margin-bottom: 12px; text-align: center; font-size: 14px; color: var(--muted); line-height: 1.7; }
-/* 圈裡只有自己時的引導卡（Edward 2026-07-29）：這個狀態下整頁只該有一件事＝把家人找進來。
-   其他區塊（家庭活動／全家狀態）由 renderFamRoster 一起收起來。 */
-.fam-onboard { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
-  padding: 30px 22px; margin: 10px 0 4px; box-shadow: var(--shadow-sm); }
-.fam-onboard .fo-ico { width: 58px; height: 58px; border-radius: 18px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); }
-.fam-onboard .fo-ico .ic { width: 28px; height: 28px; }
-.fam-onboard b { font-family: var(--display); font-size: 19px; color: var(--ink); }
-.fam-onboard p { font-size: 14.5px; color: var(--muted); line-height: 1.7; margin: 0; }
-.fam-onboard .fo-btn { margin-top: 8px; min-height: 50px; padding: 0 30px; border-radius: 999px; border: none;
-  background: var(--teal); color: #fff; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer; }
+/* 全家狀態還沒有家人時的空狀態（Edward 2026-07-29：功能都留著、這區空著就好）。
+   本來是塞一行小字進 .health-list 的白卡裡，跟上面「還沒有進行中的活動」的虛線框長得不一樣，
+   兩個空狀態並排時很不搭；改成同一套虛線框，並把白卡外觀讓掉。 */
+.health-list.is-empty { background: none; box-shadow: none; }
+.health-list .fam-empty { border: 1.5px dashed var(--line); border-radius: var(--radius-md);
+  padding: 18px 16px; text-align: center; font-size: 14px; color: var(--muted); line-height: 1.7; }
 /* 發起人刪除鈕：卡片底部低調膠囊；點一下進「確認」紅色態、再點才刪（防誤刪）*/
 .qc-del { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
 .qc-del .ic { width: 15px; height: 15px; }

@@ -6031,12 +6031,6 @@ function init() {
   function renderFamRoster() {
     const mem = loadCircle().filter(m => !m.self);
     FAM_ORDER = mem.map(m => m.name);
-    // 圈裡只有自己時（Edward 2026-07-29）：只留「把家人找進來」的引導，
-    // 家庭活動／全家狀態整組收起來——這時候「發起活動」點下去只會跳「圈裡還沒有家人」，是死路。
-    const _alone = mem.length === 0;
-    [['#famOnboard', _alone], ['#famActHead', !_alone], ['#famActBtns', !_alone],
-     ['#actEmpty', !_alone], ['#famHealthHead', !_alone], ['#healthList', !_alone]]
-      .forEach(([sel, show]) => { const el = $(sel); if (el) el.hidden = !show; });
     const fs = $('#famSwitch');
     if (fs) {
       const allBtn = fs.querySelector('[data-person="all"]');
@@ -6061,7 +6055,9 @@ function init() {
         '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
         '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
         '<div class="hr-status ' + st.cls + '"><span class="hr-dot"></span><span class="hr-slabel">' + st.label + '</span></div></div>';
-    }).join('') : '<p class="modal-sub" style="margin:6px 2px">圈裡還沒有家人，點上面「邀請」把家人拉進來。</p>';
+    }).join('') : '<div class="fam-empty">圈裡還沒有家人<br>點上面「邀請」把家人拉進來，就看得到大家的狀態</div>';
+    // 空的時候讓掉白卡外觀，改用跟上面「還沒有進行中的活動」同一套虛線框（Edward 2026-07-29）
+    if (hl) hl.classList.toggle('is-empty', !mem.length);
     if (currentPerson && !FAM_ORDER.includes(currentPerson)) { currentPerson = FAM_ORDER[0] || ''; if ($('#viewPerson') && $('#viewPerson').classList.contains('active')) showFamAll(); }
     renderFamDots();
   }
@@ -6555,12 +6551,6 @@ function init() {
       if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); }
     }
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
-  });
-  // 引導卡的「邀請家人加入」：直接按既有的邀請鈕，沿用同一套守門
-  //（免費方案導升級、圈滿了給提示），不另開一條規則免得兩邊行為不一致。
-  if ($('#famOnboardInvite')) $('#famOnboardInvite').addEventListener('click', () => {
-    const inv = $('#famSwitch') && $('#famSwitch').querySelector('[data-person="invite"]');
-    if (inv) inv.click();
   });
   const healthList = $('#healthList');
   if (healthList) healthList.addEventListener('click', e => {
