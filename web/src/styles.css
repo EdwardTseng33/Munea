@@ -1585,12 +1585,12 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rpt-row div span { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
 /* 用藥時段清單 */
 .ms-group { background: #FFF; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
-.ms-head { display: flex; align-items: center; gap: 10px; }
-.ms-head > b { font-size: 17px; }
-.ms-time-wrap { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.ms-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; }
+.ms-head > b { grid-column: 1; grid-row: 1; min-width: 0; font-size: 17px; overflow-wrap: anywhere; }
+.ms-time-wrap { grid-column: 2; grid-row: 1; display: inline-flex; align-items: center; gap: 6px; margin-left: 0; }
 .ms-time { font-size: 17px; font-variant-numeric: tabular-nums; }
 .ms-tbtn { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--line); background: #FFF; color: var(--teal-d); font-size: 17px; }
-.ms-count { font-size: 13px; color: var(--muted); min-width: 34px; text-align: right; }
+.ms-count { grid-column: 1 / -1; grid-row: 2; justify-self: start; font-size: 13px; color: var(--muted); min-width: 0; text-align: left; }
 .ms-med { display: flex; align-items: center; gap: 8px; padding: 8px 0 0; }
 .ms-med b { font-size: 15px; }
 .ms-med span { font-size: 13px; color: var(--muted); }
@@ -2131,6 +2131,10 @@ html[lang="es"] .face-name .fn-status { font-size: 12px; }
 input.ms-time { border: none; background: none; font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; padding: 2px 2px; cursor: pointer; }
 input.ms-time::-webkit-calendar-picker-indicator { opacity: .55; cursor: pointer; }
 input.ms-time:focus { outline: none; color: var(--teal-dd); }
+.ms-time-control { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 54px; min-height: 34px; border-radius: 9px; }
+.ms-time-display { color: var(--ink); font-family: var(--display); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; }
+.ms-time-control input.ms-time { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; }
+.ms-time-control:focus-within { outline: 2px solid var(--teal-d); outline-offset: 2px; }
 
 /* 藥物照片（Edward 7/7） */
 .med-photo-row { display: flex; align-items: center; gap: 14px; margin: 4px 0 10px; }

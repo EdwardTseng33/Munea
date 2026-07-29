@@ -1,4 +1,5 @@
 import './i18n/legal-routing.js';
+import './i18n/medication-schedule.js';
 
 /* Munea 沐寧 — 原型互動
  * 落實 Claude Design「沐寧 沐寧 配色」+ Elfie 融入（安心存摺 / 今天一起完成 / 家人互動）
@@ -50,6 +51,15 @@ function muneaSafeDisplayText(raw, fallback) {
   const s = String(raw == null ? '' : raw).trim();
   if (!s) return fallback;
   return muneaIsCleanDisplayText(s) ? s : fallback;
+}
+function muneaEscapeHtml(raw) {
+  return String(raw == null ? '' : raw).replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]);
 }
 
 const OVERLAYS = ['med', 'connect', 'chat'];
@@ -1086,13 +1096,20 @@ async function aiAddVisitReminder(a) {
 }
 async function aiAddMedReminder(a) {
   const rawName = String((a && a.name) || '').trim();
-  const name = (rawName && muneaIsCleanZhText(rawName)) ? rawName : '';   // 藥名不乾淨寧可拒收、讓 AI 再問一次，不存假名字（Edward 2026-07-15 事故）
-  const SLOTS = ['早餐後', '午餐後', '晚餐後', '睡前'];
-  let slots = (a && Array.isArray(a.slots)) ? a.slots.filter(s => SLOTS.indexOf(s) >= 0) : [];
+  const name = (rawName && muneaIsCleanDisplayText(rawName)) ? rawName : '';
+  let slots = (a && Array.isArray(a.slots))
+    ? a.slots.map(canonicalMedicationSlot).filter(Boolean)
+    : [];
   slots = [...new Set(slots)];
   if (!name || !slots.length) return { ok: false, error: 'medication_name_or_slots_required' };
   const meds = (typeof loadMeds === 'function') ? loadMeds() : [];
-  const med = { name, time: slots.join('、'), days: (a && a.days) || '長期', by: '', photo: '' };
+  const med = {
+    name,
+    time: slots.join('、'),
+    days: canonicalMedicationDuration(a && a.days),
+    by: '',
+    photo: '',
+  };
   ensureMedReminderId(med);
   const nextMeds = meds.filter(m => String(m && m.id) !== String(med.id));
   nextMeds.push(med);
@@ -1115,7 +1132,16 @@ async function handleVoiceAction(action, args) {
   }
   if (action === 'set_medication_reminder') {
     const r = await aiAddMedReminder({ name: args.name, slots: args.slots, days: args.days });
-    if (typeof toast === 'function') toast(r.ok ? ('用藥提醒設好了：' + r.slots.join('、') + '吃「' + r.name + '」') : '要什麼時候吃我沒抓到，你再說一次好嗎');
+    if (typeof toast === 'function') toast(r.ok
+      ? muneaT(
+        'medication.action.added',
+        '用藥提醒已設定：{slots}服用「{name}」',
+        { slots: localizedMedicationSlotList(r.slots), name: r.name },
+      )
+      : muneaT(
+        'medication.action.missingSchedule',
+        '還沒確認服藥時間，請再說一次。',
+      ));
     return r;
   }
   if (action === 'set_personal_event') {
@@ -4011,6 +4037,53 @@ function localizedMedicationSlot(slot) {
   const key = PILL_SLOT_KEYS[label];
   return key ? muneaT(key, label) : label;
 }
+function canonicalMedicationSlot(slot) {
+  const label = String(slot || '').trim();
+  if (PILL_SLOT_KEYS[label]) return label;
+  const stableIds = {
+    afterBreakfast: '早餐後',
+    afterLunch: '午餐後',
+    afterDinner: '晚餐後',
+    'after-breakfast': '早餐後',
+    'after-lunch': '午餐後',
+    'after-dinner': '晚餐後',
+    bedtime: '睡前',
+  };
+  if (stableIds[label]) return stableIds[label];
+  const normalized = window.MuneaMedicationScheduleI18n?.normalizeSlot(label);
+  if (normalized && stableIds[normalized]) return stableIds[normalized];
+  return Object.keys(PILL_SLOT_KEYS).find(
+    canonical => localizedMedicationSlot(canonical).toLocaleLowerCase(muneaLocale())
+      === label.toLocaleLowerCase(muneaLocale()),
+  ) || '';
+}
+function localizedMedicationSlotList(slots) {
+  const values = (Array.isArray(slots) ? slots : String(slots || '').split('、'))
+    .map(canonicalMedicationSlot)
+    .filter(Boolean)
+    .map(localizedMedicationSlot);
+  try {
+    return new Intl.ListFormat(muneaLocale(), { style: 'long', type: 'conjunction' }).format(values);
+  } catch (e) {
+    return values.join('、');
+  }
+}
+function localizedMedicationDuration(duration) {
+  const raw = canonicalMedicationDuration(duration);
+  const dayMatch = raw.match(/^(\d+)\s*天$/);
+  if (dayMatch) {
+    const count = new Intl.NumberFormat(muneaLocale()).format(Number(dayMatch[1]));
+    return muneaT('medication.duration.days', '{count} 天', { count });
+  }
+  if (raw === '長期') return muneaT('medication.duration.longTerm', '長期');
+  if (raw === '每天') return muneaT('medication.duration.daily', '每天');
+  return raw;
+}
+function canonicalMedicationDuration(duration) {
+  const raw = String(duration || '').trim();
+  if (!raw) return '長期';
+  return window.MuneaMedicationScheduleI18n?.normalizeDuration(raw) || raw;
+}
 function pillDateKey() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -4370,7 +4443,7 @@ function showMedPhoto(url, name) {
   if (!url) return;
   let lb = document.getElementById('medLightbox');
   if (!lb) { lb = document.createElement('div'); lb.id = 'medLightbox'; lb.className = 'med-lightbox'; document.body.appendChild(lb); lb.addEventListener('click', ev => { if (ev.target === lb || ev.target.classList.contains('mlb-close')) lb.classList.remove('show'); }); }
-  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + muneaSafeDisplayText(name, '') + '</div><button type="button" class="mlb-close">關閉</button></div>';   // 藥物照片燈箱名稱守門（Edward 2026-07-15 事故）
+  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + muneaEscapeHtml(muneaSafeDisplayText(name, '')) + '</div><button type="button" class="mlb-close">' + muneaEscapeHtml(muneaT('common.close', '關閉')) + '</button></div>';   // 藥物照片燈箱名稱守門（Edward 2026-07-15 事故）
   lb.classList.add('show');
 }
 function canvasToJpeg(cv) { let q = 0.82; let url = cv.toDataURL('image/jpeg', q); while (url.length > 180000 && q > 0.4) { q -= 0.16; url = cv.toDataURL('image/jpeg', q); } return url; }
@@ -4390,15 +4463,186 @@ function renderMedSlots() {
     const slot = def[0], k = def[1], off = def[2];
     const inSlot = meds.filter(m => String(m.time).split('、').map(x => x.trim()).includes(slot));
     const rows = inSlot.length
-      ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + muneaSafeDisplayText(m.name, '藥') + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
-      : '<div class="ms-empty">這個時段沒有藥</div>';
-    return '<div class="ms-group"><div class="ms-head"><b>' + slot + '</b>' +
+      ? inSlot.map(m => {
+        const safeName = muneaSafeDisplayText(
+          m.name,
+          muneaT('medication.genericName', '藥物'),
+        );
+        const removeLabel = muneaT(
+          'medicationManager.removeSlot',
+          '從{slot}移除{name}',
+          { slot: localizedMedicationSlot(slot), name: safeName },
+        );
+        return '<div class="ms-med">'
+          + (m.photo ? '<span class="ms-thumb" data-name="' + muneaEscapeHtml(m.name) + '" style="background-image:url(' + m.photo + ')"></span>' : '')
+          + '<b>' + muneaEscapeHtml(safeName) + '</b>'
+          + '<span>' + muneaEscapeHtml(localizedMedicationDuration(m.days)) + '</span>'
+          + '<button type="button" class="ms-del" data-slot="' + muneaEscapeHtml(slot) + '" data-name="' + muneaEscapeHtml(m.name) + '" aria-label="' + muneaEscapeHtml(removeLabel) + '">✕</button></div>';
+      }).join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
+      : '<div class="ms-empty">' + muneaEscapeHtml(muneaT('medicationManager.emptySlot', '這個時段沒有藥')) + '</div>';
+    const countKey = inSlot.length === 1
+      ? 'medicationManager.medicineCountOne'
+      : 'medicationManager.medicineCountOther';
+    const count = new Intl.NumberFormat(muneaLocale()).format(inSlot.length);
+    const countCopy = inSlot.length
+      ? muneaT(countKey, '{count} 種', { count })
+      : '';
+    const reminderTimeLabel = muneaT(
+      'medicationManager.reminderTime',
+      '提醒時間',
+    );
+    const reminderTime = medSlotTime(k, off);
+    return '<div class="ms-group"><div class="ms-head"><b>' + muneaEscapeHtml(localizedMedicationSlot(slot)) + '</b>' +
       '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
-      '<input type="time" class="ms-time" data-k="' + k + '" data-off="' + off + '" value="' + medSlotTime(k, off) + '" />' +
+      '<label class="ms-time-control"><span class="ms-time-display" aria-hidden="true">' + reminderTime + '</span>' +
+      '<input type="time" class="ms-time" data-k="' + k + '" data-off="' + off + '" value="' + reminderTime + '" aria-label="' + muneaEscapeHtml(reminderTimeLabel) + '" /></label>' +
       '<button type="button" class="ms-tbtn" data-k="' + k + '" data-m="15">＋</button></span>' +
-      '<span class="ms-count">' + (inSlot.length ? inSlot.length + ' 種' : '') + '</span></div>' + rows + '</div>';
+      '<span class="ms-count">' + muneaEscapeHtml(countCopy) + '</span></div>' + rows + '</div>';
   }).join('');
 }
+
+function setElementOwnText(element, text) {
+  if (!element) return;
+  const textNodes = [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE);
+  if (textNodes.length) {
+    textNodes[0].textContent = text;
+    textNodes.slice(1).forEach(node => node.remove());
+    return;
+  }
+  element.appendChild(document.createTextNode(text));
+}
+
+function renderMedicationReminderCopy(medication) {
+  const modal = document.getElementById('medRemindModal');
+  if (!modal) return;
+  const med = medication || {};
+  const canonicalSlot = canonicalMedicationSlot(med.time) || '早餐後';
+  const slot = localizedMedicationSlot(canonicalSlot);
+  const name = muneaSafeDisplayText(
+    med.name,
+    muneaT('medication.genericName', '藥物'),
+  );
+  modal.dataset.medicationName = name;
+  modal.dataset.medicationSlot = canonicalSlot;
+  if ($('#medDueSay')) $('#medDueSay').textContent = muneaT(
+    'medicationReminder.dueSay',
+    '{slot}的藥，時間到了',
+    { slot },
+  );
+  if ($('#medDueName')) $('#medDueName').textContent = name;
+  if ($('#medDueDesc')) $('#medDueDesc').textContent = muneaT(
+    'medicationReminder.description',
+    '{slot}提醒 · 請依藥袋或醫囑服用',
+    { slot },
+  );
+}
+
+function medicationReminderSpeech(medication) {
+  const med = medication || {};
+  const canonicalSlot = canonicalMedicationSlot(med.time) || '早餐後';
+  return muneaT(
+    'medicationReminder.speech',
+    '{name}是{slot}的藥，時間到了。服用後跟我說一聲。',
+    {
+      name: muneaSafeDisplayText(
+        med.name,
+        muneaT('medication.genericName', '藥物'),
+      ),
+      slot: localizedMedicationSlot(canonicalSlot),
+    },
+  );
+}
+
+function localizeMedicationSurfaces() {
+  const manager = document.getElementById('medMgrModal');
+  if (manager) {
+    const title = manager.querySelector('.modal > h2');
+    if (title) title.textContent = muneaT('medication.title', '用藥');
+    const subtitle = manager.querySelector('.modal-sub');
+    if (subtitle) subtitle.textContent = [
+      muneaT('medicationManager.subtitle', '設定後會在時間到時通知；開啟 App 可確認是否已服用。'),
+      muneaT('medicationManager.disclaimer', 'Munea 只協助提醒，不提供用藥判斷；請依醫師或藥師指示服用。'),
+    ].join(' ');
+    const addLabel = manager.querySelector('.field-label.sect-new');
+    if (addLabel) addLabel.textContent = muneaT('medicationManager.addMedicine', '新增一種藥');
+    const nameInput = document.getElementById('medName');
+    if (nameInput) nameInput.placeholder = muneaT('medication.namePlaceholder', '藥名照藥袋抄');
+    const photoButton = document.getElementById('medPhotoBtn');
+    if (photoButton) photoButton.textContent = muneaT('medicationManager.photo', '加入藥物照片');
+    const photoHint = manager.querySelector('.med-photo-hint');
+    if (photoHint) photoHint.textContent = muneaT('medicationManager.photoHint', '選填，幫助你辨認藥物');
+    const scheduleLabel = document.getElementById('medTimeChips')?.previousElementSibling;
+    if (scheduleLabel) scheduleLabel.textContent = muneaT(
+      'medicationManager.scheduleMultiple',
+      '什麼時候吃（可多選）',
+    );
+    const durationLabel = document.getElementById('medDayChips')?.previousElementSibling;
+    if (durationLabel) durationLabel.textContent = muneaT('medicationManager.duration', '吃多久');
+    document.querySelectorAll('#medTimeChips .mchip').forEach(chip => {
+      chip.textContent = localizedMedicationSlot(chip.dataset.t);
+    });
+    document.querySelectorAll('#medDayChips .mchip').forEach(chip => {
+      chip.textContent = localizedMedicationDuration(chip.dataset.d);
+    });
+    const addButton = document.getElementById('medAddBtn');
+    if (addButton) addButton.textContent = muneaT('medicationManager.add', '加入提醒');
+    const closeButton = document.getElementById('medMgrClose');
+    if (closeButton) closeButton.setAttribute(
+      'aria-label',
+      muneaT('medicationManager.close', '關閉用藥提醒'),
+    );
+    renderMedSlots();
+  }
+
+  const reminder = document.getElementById('medRemindModal');
+  if (reminder) {
+    const closeButton = reminder.querySelector('.mx-close');
+    if (closeButton) closeButton.setAttribute(
+      'aria-label',
+      muneaT('common.close', '關閉'),
+    );
+    const streak = reminder.querySelector('.mpc-streak');
+    setElementOwnText(
+      streak,
+      muneaT('medicationReminder.streak', '已連續完成 {days} 天', {
+        days: new Intl.NumberFormat(muneaLocale()).format(6),
+      }),
+    );
+    const taken = document.getElementById('medTaken');
+    setElementOwnText(taken, muneaT('medicationReminder.taken', '我吃過了'));
+    const snooze = document.getElementById('medSnooze');
+    if (snooze) snooze.textContent = muneaT(
+      'medicationReminder.snooze',
+      '{minutes} 分鐘後再提醒',
+      { minutes: new Intl.NumberFormat(muneaLocale()).format(10) },
+    );
+    renderMedicationReminderCopy({
+      name: reminder.dataset.medicationName,
+      time: reminder.dataset.medicationSlot,
+    });
+  }
+}
+
+window.__medicationI18nTest = {
+  showManager: medication => {
+    const med = medication || {
+      name: muneaT('medication.genericName', '藥物'),
+      time: '早餐後',
+      days: '長期',
+    };
+    localStorage.setItem('munea.meds', JSON.stringify([med]));
+    localizeMedicationSurfaces();
+    document.getElementById('medMgrModal')?.classList.add('show');
+  },
+  showReminder: medication => {
+    renderMedicationReminderCopy(medication);
+    localizeMedicationSurfaces();
+    document.getElementById('medRemindModal')?.classList.add('show');
+  },
+  reminderSpeech: medication => medicationReminderSpeech(medication),
+  canonicalSlot: slot => canonicalMedicationSlot(slot),
+  canonicalDuration: duration => canonicalMedicationDuration(duration),
+};
 
 const POINTS = { total: 0, used: 0, serverRemaining: null,    // 方案與雲端錢包載入後再填入，不預設舊方案額度
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
@@ -5901,6 +6145,7 @@ function init() {
   });
   applyCaptionState();
   localizeChatControls();
+  localizeMedicationSurfaces();
   enableSheetDrag();               // 所有彈窗支援下拉關閉手勢
   refreshTaskProgress();
   restoreFamilyFeed();
@@ -6661,7 +6906,10 @@ function init() {
       if (archivedMed) archiveRoutineReminder(archivedMed.id || stableReminderId('med_', [archivedMed.name, archivedMed.time, archivedMed.days, archivedMed.by].join('|')));
       updateMedCount();
       renderMedSlots();
-      toast('拿掉了，這個時段不再提醒這種藥。');
+      toast(muneaT(
+        'medicationManager.removedToast',
+        '已移除，這個時段不再提醒這種藥。',
+      ));
     }
   });
   if ($('#medSlots')) $('#medSlots').addEventListener('change', e => {
@@ -6676,13 +6924,25 @@ function init() {
   });
   let _medPendingPhoto = '';
   if ($('#medPhotoBtn')) $('#medPhotoBtn').addEventListener('click', () => { if ($('#medPhotoFile')) $('#medPhotoFile').click(); });
-  if ($('#medPhotoFile')) $('#medPhotoFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#medPhotoBox'); if (box) box.classList.add('processing'); resizeSquare(f, url => { if (box) box.classList.remove('processing'); _medPendingPhoto = url; if (box) { box.style.backgroundImage = 'url(' + url + ')'; box.classList.add('has'); } }, () => { if (box) box.classList.remove('processing'); toast('這張照片讀不到，換一張相簿裡的照片試試'); }); });
+  if ($('#medPhotoFile')) $('#medPhotoFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#medPhotoBox'); if (box) box.classList.add('processing'); resizeSquare(f, url => { if (box) box.classList.remove('processing'); _medPendingPhoto = url; if (box) { box.style.backgroundImage = 'url(' + url + ')'; box.classList.add('has'); } }, () => { if (box) box.classList.remove('processing'); toast(muneaT('medicationManager.photoReadError', '這張照片讀不到，請換一張相簿裡的照片。')); }); });
   if ($('#medAddBtn')) $('#medAddBtn').addEventListener('click', () => {
     const name = $('#medName').value.trim();
     const times = [...document.querySelectorAll('#medTimeChips .mchip.on')].map(b => b.dataset.t);
     const days = document.querySelector('#medDayChips .mchip.on')?.dataset.d || '長期';
-    if (!name) { toast('先寫藥名（照藥袋抄就好）'); return; }
-    if (!times.length) { toast('點一下什麼時候吃（可以選好幾個）'); return; }
+    if (!name) {
+      toast(muneaT(
+        'medicationManager.nameRequired',
+        '請先填寫藥名（照藥袋抄即可）。',
+      ));
+      return;
+    }
+    if (!times.length) {
+      toast(muneaT(
+        'medicationManager.scheduleRequired',
+        '請選擇服藥時間，可以多選。',
+      ));
+      return;
+    }
     const meds = loadMeds();
     const med = { name, time: times.join('、'), days, by: '美華', photo: _medPendingPhoto };
     ensureMedReminderId(med);
@@ -6694,7 +6954,15 @@ function init() {
     document.querySelectorAll('#medTimeChips .mchip.on').forEach(x => x.classList.remove('on'));
     renderMedList();
     updateMedCount();
-    toast('好，' + cname() + '會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
+    toast(muneaT(
+      'medicationManager.addedToast',
+      '{companion}會在{slots}提醒你服用「{name}」，時間依照你的作息。',
+      {
+        companion: cname(),
+        slots: localizedMedicationSlotList(times),
+        name,
+      },
+    ));
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
@@ -8183,12 +8451,10 @@ function init() {
   let medSnoozeUntil = 0, medShowing = null;
   function fireMedReminder(med) {
     medShowing = med;
-    if ($('#medDueDesc')) $('#medDueDesc').textContent = med.time + '的提醒 · 配溫開水就可以';
-    if ($('#medDueName')) $('#medDueName').textContent = muneaSafeDisplayText(med.name, '藥');   // 用藥提醒彈窗名稱守門（Edward 2026-07-15 事故）
-    if ($('#medDueSay')) $('#medDueSay').textContent = med.time + '的藥，時間到囉';
+    renderMedicationReminderCopy(med);
     $('#medRemindModal').classList.add('show');
     // A6：寧寧親口說（App 開著時；打包後升級推播）
-    try { if (typeof speakChat === 'function') speakChat(med.time + '的' + muneaSafeDisplayText(med.name, '藥') + '，時間到囉。吃完跟我說一聲。'); } catch (e) {}
+    try { if (typeof speakChat === 'function') speakChat(medicationReminderSpeech(med)); } catch (e) {}
   }
   function checkDueMeds() {
     if (Date.now() < medSnoozeUntil || medShowing) return;
@@ -8216,20 +8482,32 @@ function init() {
         try { done = JSON.parse(localStorage.getItem(todayKey())) || {}; } catch (e) {}
         done[medShowing.key] = true;
         try { localStorage.setItem(todayKey(), JSON.stringify(done)); } catch (e) {}
-        pushFamilyFeed('<b>' + myFeedName() + '</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
+        pushFamilyFeed(muneaT(
+          'medicationReminder.familyFeedTaken',
+          '{person}的{slot}藥已服用，{companion}已記錄。',
+          {
+            person: '<b>' + muneaEscapeHtml(myFeedName()) + '</b>',
+            slot: localizedMedicationSlot(medShowing.time),
+            companion: cname(),
+          },
+        ));
         trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
       }
     }
     medShowing = null;
     $('#medRemindModal').classList.remove('show');
-    toast('記下了，藥吃了。');
+    toast(muneaT('medicationReminder.takenToast', '已記錄為服用。'));
     renderPillTask();
   });
   if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => {
     medSnoozeUntil = Date.now() + 10 * 60 * 1000;
     medShowing = null;
     $('#medRemindModal').classList.remove('show');
-    toast('好，10 分鐘後再提醒你。');
+    toast(muneaT(
+      'medicationReminder.snoozedToast',
+      '好，{minutes} 分鐘後再提醒你。',
+      { minutes: new Intl.NumberFormat(muneaLocale()).format(10) },
+    ));
   });
   setInterval(checkDueMeds, 30000);
   setTimeout(checkDueMeds, 1500);
@@ -8702,6 +8980,7 @@ function refreshLocalizedDynamicUi() {
   try { localizeAuthTerms(); } catch (e) {}
   try { applyTaskAccessibilityLabels(); } catch (e) {}
   try { localizeChatControls(); } catch (e) {}
+  try { localizeMedicationSurfaces(); } catch (e) {}
 }
 window.addEventListener('munea:locale-ready', refreshLocalizedDynamicUi);
 window.addEventListener('munea:locale-change', () => {

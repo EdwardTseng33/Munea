@@ -69,7 +69,7 @@
   function scheduledOn(med, day, starts) {
     med = med || {};
     const identity = medIdentity(med) + '|' + String(med.time || '');
-    const durationMatch = String(med.days || '').match(/(7|14|30|90)/);
+    const durationMatch = String(med.days || '').match(/(\d+)/);
     let start = med.startDate || med.start_date || starts[identity];
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(start || ''))) {
       // Legacy long-term medicines predate this field and must keep their history.

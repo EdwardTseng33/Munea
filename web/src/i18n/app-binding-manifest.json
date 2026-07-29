@@ -244,6 +244,57 @@
       ]
     },
     {
+      "anchorId": "medMgrModal",
+      "renderer": "localizeMedicationSurfaces",
+      "keys": [
+        "medication.title",
+        "medication.namePlaceholder",
+        "medication.genericName",
+        "medication.slot.afterBreakfast",
+        "medication.slot.afterLunch",
+        "medication.slot.afterDinner",
+        "medication.slot.bedtime",
+        "medication.duration.days",
+        "medication.duration.longTerm",
+        "medication.duration.daily",
+        "medicationManager.subtitle",
+        "medicationManager.addMedicine",
+        "medicationManager.photo",
+        "medicationManager.photoHint",
+        "medicationManager.scheduleMultiple",
+        "medicationManager.duration",
+        "medicationManager.add",
+        "medicationManager.disclaimer",
+        "medicationManager.close",
+        "medicationManager.emptySlot",
+        "medicationManager.medicineCountOne",
+        "medicationManager.medicineCountOther",
+        "medicationManager.reminderTime",
+        "medicationManager.removeSlot",
+        "medicationManager.removedToast",
+        "medicationManager.photoReadError",
+        "medicationManager.nameRequired",
+        "medicationManager.scheduleRequired",
+        "medicationManager.addedToast"
+      ]
+    },
+    {
+      "anchorId": "medRemindModal",
+      "renderer": "renderMedicationReminderCopy",
+      "keys": [
+        "medicationReminder.title",
+        "medicationReminder.streak",
+        "medicationReminder.taken",
+        "medicationReminder.snooze",
+        "medicationReminder.dueSay",
+        "medicationReminder.description",
+        "medicationReminder.speech",
+        "medicationReminder.takenToast",
+        "medicationReminder.snoozedToast",
+        "medicationReminder.familyFeedTaken"
+      ]
+    },
+    {
       "anchorId": "visitTask",
       "renderer": "renderVisitTask",
       "keys": [

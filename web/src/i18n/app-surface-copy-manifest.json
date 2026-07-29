@@ -35,8 +35,8 @@
     {"state": "modal:history", "keyPrefixes": ["history."], "requiredKeys": ["history.title", "history.saved", "history.empty"]},
     {"state": "modal:consent", "keyPrefixes": ["consent."], "requiredKeys": ["consent.title", "consent.cloudProcessingBody", "consent.emergencyGeneric"]},
     {"state": "modal:version", "keyPrefixes": ["version."], "requiredKeys": ["version.title", "version.subtitle", "version.close"]},
-    {"state": "modal:medication-reminder", "keyPrefixes": ["medicationReminder."], "requiredKeys": ["medicationReminder.title", "medicationReminder.taken", "medicationReminder.snooze"]},
-    {"state": "modal:medication-manager", "keyPrefixes": ["medicationManager.", "medication."], "requiredKeys": ["medicationManager.addMedicine", "medicationManager.schedule", "medicationManager.disclaimer"]},
+    {"state": "modal:medication-reminder", "keyPrefixes": ["medicationReminder."], "requiredKeys": ["medicationReminder.title", "medicationReminder.dueSay", "medicationReminder.description", "medicationReminder.speech", "medicationReminder.taken", "medicationReminder.snooze"]},
+    {"state": "modal:medication-manager", "keyPrefixes": ["medicationManager.", "medication."], "requiredKeys": ["medicationManager.addMedicine", "medicationManager.scheduleMultiple", "medicationManager.emptySlot", "medicationManager.reminderTime", "medicationManager.removeSlot", "medicationManager.disclaimer"]},
     {"state": "modal:auth", "keyPrefixes": ["auth."], "requiredKeys": ["auth.sheetTitle", "auth.aiProcessingDisclosure", "auth.cancelled"]},
     {"state": "page:notification-settings", "keyPrefixes": ["notification."], "requiredKeys": ["notification.centerTitle", "notification.privacy", "notification.denied"]},
     {"state": "modal:notification-inbox", "keyPrefixes": ["notification."], "requiredKeys": ["notification.inboxSubtitle", "notification.noItems", "notification.defaultTitle"]}

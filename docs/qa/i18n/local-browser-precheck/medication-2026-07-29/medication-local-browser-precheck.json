@@ -1,0 +1,490 @@
+{
+  "schema": "munea.app-medication-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T11:22:50.457Z",
+  "result": "pass-local-precheck",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "7c57eb71d7c9742c907002b08db62fb7f7e85091",
+  "sourceChangedFiles": [
+    "M scripts/i18n-native-review-worklist.js",
+    " M scripts/test-medication-schedule-i18n.js",
+    " M scripts/test-ui-contracts.js",
+    " M web/src/app.js",
+    " M web/src/i18n/app-binding-manifest.json",
+    " M web/src/i18n/app-surface-copy-manifest.json",
+    " M web/src/i18n/en.json",
+    " M web/src/i18n/es.json",
+    " M web/src/i18n/ja.json",
+    " M web/src/i18n/medication-schedule.js",
+    " M web/src/i18n/zh-TW.json",
+    " M web/src/medication.js",
+    " M web/src/styles.css",
+    "?? docs/qa/i18n/local-browser-precheck/medication-2026-07-29/",
+    "?? scripts/app-medication-i18n-browser-precheck.js"
+  ],
+  "scope": {
+    "surfaces": [
+      "modal:medication-manager/list",
+      "modal:medication-manager/form",
+      "modal:medication-reminder",
+      "medication-reminder/spoken-copy"
+    ],
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4181",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "gatewayTouched": false,
+    "voiceTouched": false,
+    "appStoreConnectTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "browser": "Google Chrome",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "automation": "Playwright local fallback after agent-browser executable was unavailable"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "observedExternalRequests": []
+  },
+  "locales": {
+    "zh-TW": {
+      "htmlLang": "zh-Hant-TW",
+      "medicationName": "脈優",
+      "manager": {
+        "missingCopy": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 122,
+          "bottom": 865,
+          "width": 390,
+          "height": 743,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "formLabels": {
+          "namePlaceholder": "藥名照藥袋抄",
+          "photo": "加入藥物照片",
+          "photoHint": "選填，幫助你辨認藥物",
+          "add": "加入提醒",
+          "closeLabel": "關閉用藥提醒",
+          "slots": [
+            "早餐後",
+            "午餐後",
+            "晚餐後",
+            "睡前"
+          ],
+          "durations": [
+            "7 天",
+            "14 天",
+            "30 天",
+            "90 天",
+            "長期"
+          ],
+          "timeDisplays": [
+            "08:00",
+            "12:30",
+            "18:30",
+            "21:30"
+          ],
+          "timeInputLabels": [
+            "提醒時間",
+            "提醒時間",
+            "提醒時間",
+            "提醒時間"
+          ]
+        },
+        "invalidTimeDisplays": [],
+        "invalidTimeLabels": [],
+        "systemLocaleTimeFragments": [],
+        "screenshots": {
+          "list": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/zh-TW__medication-manager-list__iphone390x844.png",
+            "bytes": 110225,
+            "sha256": "6d61509f43b40c85fbe7f3d00570c4ace156f24ce3b210b900a1d900e716f6b4"
+          },
+          "form": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/zh-TW__medication-manager-form__iphone390x844.png",
+            "bytes": 58759,
+            "sha256": "8888f3dc573e41b290be8ba606c5f4fd412db9c7bd7091819435ec0933c21485"
+          }
+        }
+      },
+      "reminder": {
+        "values": {
+          "dueSay": "早餐後的藥，時間到了",
+          "name": "脈優",
+          "description": "早餐後提醒 · 請依藥袋或醫囑服用",
+          "streak": "已連續完成 6 天",
+          "taken": "我吃過了",
+          "snooze": "10 分鐘後再提醒",
+          "closeLabel": "關閉",
+          "speech": "脈優是早餐後的藥，時間到了。服用後跟我說一聲。"
+        },
+        "expected": {
+          "dueSay": "早餐後的藥，時間到了",
+          "name": "脈優",
+          "description": "早餐後提醒 · 請依藥袋或醫囑服用",
+          "streak": "已連續完成 6 天",
+          "taken": "我吃過了",
+          "snooze": "10 分鐘後再提醒",
+          "closeLabel": "關閉",
+          "speech": "脈優是早餐後的藥，時間到了。服用後跟我說一聲。"
+        },
+        "mismatches": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 518,
+          "bottom": 865,
+          "width": 390,
+          "height": 347,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/zh-TW__medication-reminder__iphone390x844.png",
+          "bytes": 102076,
+          "sha256": "ac6f08d331cb9d2a9901d585ff64efe267c699c4c492102adfaa60e8f0242af5"
+        }
+      },
+      "browserErrors": []
+    },
+    "en": {
+      "htmlLang": "en",
+      "medicationName": "Metformin",
+      "manager": {
+        "missingCopy": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 122,
+          "bottom": 865,
+          "width": 390,
+          "height": 743,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "formLabels": {
+          "namePlaceholder": "Copy the medicine name from the label",
+          "photo": "Add medication photo",
+          "photoHint": "Optional. Helps you recognize the medication.",
+          "add": "Add reminder",
+          "closeLabel": "Close medication reminders",
+          "slots": [
+            "After breakfast",
+            "After lunch",
+            "After dinner",
+            "Before bed"
+          ],
+          "durations": [
+            "7 days",
+            "14 days",
+            "30 days",
+            "90 days",
+            "Long term"
+          ],
+          "timeDisplays": [
+            "08:00",
+            "12:30",
+            "18:30",
+            "21:30"
+          ],
+          "timeInputLabels": [
+            "Reminder time",
+            "Reminder time",
+            "Reminder time",
+            "Reminder time"
+          ]
+        },
+        "invalidTimeDisplays": [],
+        "invalidTimeLabels": [],
+        "systemLocaleTimeFragments": [],
+        "screenshots": {
+          "list": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/en__medication-manager-list__iphone390x844.png",
+            "bytes": 130929,
+            "sha256": "00441c6e24a333f2053287f5b36e2f802e3fdf891de66b6025c291d01816062e"
+          },
+          "form": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/en__medication-manager-form__iphone390x844.png",
+            "bytes": 72347,
+            "sha256": "c03afed066ea07aec0c2a79c624c36c34e97d9811f02ce8a7f67667965b34448"
+          }
+        }
+      },
+      "reminder": {
+        "values": {
+          "dueSay": "It's time for your After breakfast medication",
+          "name": "Metformin",
+          "description": "After breakfast reminder · Follow the label or your clinician's instructions",
+          "streak": "Completed for 6 days in a row",
+          "taken": "I've taken it",
+          "snooze": "Remind me again in 10 minutes",
+          "closeLabel": "Close",
+          "speech": "It's time to take Metformin, scheduled for After breakfast. Let me know when you've taken it."
+        },
+        "expected": {
+          "dueSay": "It's time for your After breakfast medication",
+          "name": "Metformin",
+          "description": "After breakfast reminder · Follow the label or your clinician's instructions",
+          "streak": "Completed for 6 days in a row",
+          "taken": "I've taken it",
+          "snooze": "Remind me again in 10 minutes",
+          "closeLabel": "Close",
+          "speech": "It's time to take Metformin, scheduled for After breakfast. Let me know when you've taken it."
+        },
+        "mismatches": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 431,
+          "bottom": 870,
+          "width": 390,
+          "height": 439,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/en__medication-reminder__iphone390x844.png",
+          "bytes": 115321,
+          "sha256": "367e4d10b5553d10a0f3f24cc5ca26a46a917678528858eca1c61cf28aadfd02"
+        }
+      },
+      "browserErrors": []
+    },
+    "ja": {
+      "htmlLang": "ja",
+      "medicationName": "メトホルミン",
+      "manager": {
+        "missingCopy": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 117,
+          "bottom": 861,
+          "width": 390,
+          "height": 743,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "formLabels": {
+          "namePlaceholder": "薬の袋に書かれた名前を入力",
+          "photo": "薬の写真を追加",
+          "photoHint": "任意。薬を見分けるために使えます。",
+          "add": "リマインダーを追加",
+          "closeLabel": "服薬リマインダーを閉じる",
+          "slots": [
+            "朝食後",
+            "昼食後",
+            "夕食後",
+            "就寝前"
+          ],
+          "durations": [
+            "7日間",
+            "14日間",
+            "30日間",
+            "90日間",
+            "長期"
+          ],
+          "timeDisplays": [
+            "08:00",
+            "12:30",
+            "18:30",
+            "21:30"
+          ],
+          "timeInputLabels": [
+            "お知らせ時刻",
+            "お知らせ時刻",
+            "お知らせ時刻",
+            "お知らせ時刻"
+          ]
+        },
+        "invalidTimeDisplays": [],
+        "invalidTimeLabels": [],
+        "systemLocaleTimeFragments": [],
+        "screenshots": {
+          "list": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/ja__medication-manager-list__iphone390x844.png",
+            "bytes": 128711,
+            "sha256": "f97bf3e2b58a2625dfcff640f1b3e3b2185186cf30767e8fb1ff8356cf4a997d"
+          },
+          "form": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/ja__medication-manager-form__iphone390x844.png",
+            "bytes": 74615,
+            "sha256": "13ccbdb7ff5fb829f0d9523fa7ec5a0b6029a4fb7c318a103a054942981a77f5"
+          }
+        }
+      },
+      "reminder": {
+        "values": {
+          "dueSay": "朝食後のお薬の時間です",
+          "name": "メトホルミン",
+          "description": "朝食後のリマインダー・薬袋または医師の指示に従ってください",
+          "streak": "6日続けて完了しました",
+          "taken": "飲みました",
+          "snooze": "10分後にもう一度知らせる",
+          "closeLabel": "閉じる",
+          "speech": "朝食後のお薬「メトホルミン」の時間です。飲んだら教えてください。"
+        },
+        "expected": {
+          "dueSay": "朝食後のお薬の時間です",
+          "name": "メトホルミン",
+          "description": "朝食後のリマインダー・薬袋または医師の指示に従ってください",
+          "streak": "6日続けて完了しました",
+          "taken": "飲みました",
+          "snooze": "10分後にもう一度知らせる",
+          "closeLabel": "閉じる",
+          "speech": "朝食後のお薬「メトホルミン」の時間です。飲んだら教えてください。"
+        },
+        "mismatches": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 493,
+          "bottom": 870,
+          "width": 390,
+          "height": 377,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/ja__medication-reminder__iphone390x844.png",
+          "bytes": 116796,
+          "sha256": "5ff334cc7058c7e3c0e17d33a9081a5db5280a706c11db2dabcdbc84a2034a8d"
+        }
+      },
+      "browserErrors": []
+    },
+    "es": {
+      "htmlLang": "es",
+      "medicationName": "Metformina",
+      "manager": {
+        "missingCopy": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 117,
+          "bottom": 861,
+          "width": 390,
+          "height": 743,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "formLabels": {
+          "namePlaceholder": "Copia el nombre del medicamento de la etiqueta",
+          "photo": "Añadir foto del medicamento",
+          "photoHint": "Opcional. Te ayuda a reconocer el medicamento.",
+          "add": "Añadir recordatorio",
+          "closeLabel": "Cerrar recordatorios de medicación",
+          "slots": [
+            "Después del desayuno",
+            "Después del almuerzo",
+            "Después de la cena",
+            "Antes de dormir"
+          ],
+          "durations": [
+            "7 días",
+            "14 días",
+            "30 días",
+            "90 días",
+            "A largo plazo"
+          ],
+          "timeDisplays": [
+            "08:00",
+            "12:30",
+            "18:30",
+            "21:30"
+          ],
+          "timeInputLabels": [
+            "Hora del recordatorio",
+            "Hora del recordatorio",
+            "Hora del recordatorio",
+            "Hora del recordatorio"
+          ]
+        },
+        "invalidTimeDisplays": [],
+        "invalidTimeLabels": [],
+        "systemLocaleTimeFragments": [],
+        "screenshots": {
+          "list": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/es__medication-manager-list__iphone390x844.png",
+            "bytes": 134352,
+            "sha256": "43f0d01b66435b6803f2b0f4c00a3f631489061b8d75cfa205a00027bf4711a8"
+          },
+          "form": {
+            "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/es__medication-manager-form__iphone390x844.png",
+            "bytes": 75709,
+            "sha256": "4c1579b09ca3fbccf823846cb7604873e579c47c251ba859ff36075af719d6a6"
+          }
+        }
+      },
+      "reminder": {
+        "values": {
+          "dueSay": "Después del desayuno: es hora de tomar tu medicación",
+          "name": "Metformina",
+          "description": "Después del desayuno · Sigue las indicaciones de la etiqueta o de tu profesional sanitario",
+          "streak": "Completado durante 6 días seguidos",
+          "taken": "Ya la he tomado",
+          "snooze": "Recordármelo de nuevo en 10 minutos",
+          "closeLabel": "Cerrar",
+          "speech": "Es hora de tomar Metformina, programado para Después del desayuno. Avísame cuando lo hayas tomado."
+        },
+        "expected": {
+          "dueSay": "Después del desayuno: es hora de tomar tu medicación",
+          "name": "Metformina",
+          "description": "Después del desayuno · Sigue las indicaciones de la etiqueta o de tu profesional sanitario",
+          "streak": "Completado durante 6 días seguidos",
+          "taken": "Ya la he tomado",
+          "snooze": "Recordármelo de nuevo en 10 minutos",
+          "closeLabel": "Cerrar",
+          "speech": "Es hora de tomar Metformina, programado para Después del desayuno. Avísame cuando lo hayas tomado."
+        },
+        "mismatches": [],
+        "untranslatedCopy": [],
+        "layout": {
+          "left": 0,
+          "right": 390,
+          "top": 431,
+          "bottom": 870,
+          "width": 390,
+          "height": 439,
+          "horizontalOverflowPixels": 0,
+          "overflowingChildren": [],
+          "internallyOverflowingElements": []
+        },
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/medication-2026-07-29/es__medication-reminder__iphone390x844.png",
+          "bytes": 122338,
+          "sha256": "a9457f4edcd31991faf2551da4e27f92bdcf8f21c28be0758de0df0f5225c934"
+        }
+      },
+      "browserErrors": []
+    }
+  },
+  "limitations": [
+    "This is a local browser precheck, not exact installed-iPhone visual QA.",
+    "Spoken reminder copy was evaluated as text only; no production Voice or audio synthesis was called.",
+    "No production, staging, Gateway, Voice, Avatar, Supabase, StoreKit, or App Store Connect service was exercised."
+  ],
+  "completedAt": "2026-07-29T11:22:55.931Z"
+}

@@ -5,6 +5,7 @@ const fs = require('fs');
 const {
   SLOT_IDS,
   displaySlot,
+  normalizeDuration,
   normalizeSlot,
   scheduleSlots,
   storagePatch,
@@ -28,6 +29,11 @@ assert.equal(normalizeSlot('早餐後'), 'after-breakfast');
 assert.equal(normalizeSlot('After Breakfast'), 'after-breakfast');
 assert.equal(normalizeSlot('朝食後'), 'after-breakfast');
 assert.equal(normalizeSlot('DESPUÉS DEL DESAYUNO'), 'after-breakfast');
+assert.equal(normalizeDuration('once'), '1 天');
+assert.equal(normalizeDuration('1回'), '1 天');
+assert.equal(normalizeDuration('una vez'), '1 天');
+assert.equal(normalizeDuration('14 days'), '14 天');
+assert.equal(normalizeDuration('30 días'), '30 天');
 assert.equal(normalizeSlot('21:30'), null);
 
 assert.deepEqual(

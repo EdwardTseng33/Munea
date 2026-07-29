@@ -7,6 +7,7 @@ const css = fs.readFileSync('web/src/styles.css', 'utf8');
 const versionSource = fs.readFileSync('web/src/version.js', 'utf8');
 const privacy = fs.readFileSync('web/privacy.html', 'utf8');
 const store = fs.readFileSync('web/src/store.js', 'utf8');
+const medication = fs.readFileSync('web/src/medication.js', 'utf8');
 const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
 const rendererCopySource = fs.readFileSync('web/src/i18n/app-renderer-copy.js', 'utf8');
 const legalRoutingSource = fs.readFileSync('web/src/i18n/legal-routing.js', 'utf8');
@@ -162,6 +163,53 @@ assert(app.includes('function applyTaskAccessibilityLabels()') && /refreshLocali
   'Task completion accessibility labels must refresh after the active App locale changes');
 assert(app.includes('function localizeAuthTerms()') && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeAuthTerms\(\)/.test(app),
   'The complete auth terms disclosure and close label must refresh with the active App locale');
+[
+  'medication.duration.days',
+  'medication.duration.longTerm',
+  'medication.action.added',
+  'medicationReminder.dueSay',
+  'medicationReminder.description',
+  'medicationReminder.speech',
+  'medicationReminder.takenToast',
+  'medicationManager.scheduleMultiple',
+  'medicationManager.emptySlot',
+  'medicationManager.removeSlot',
+  'medicationManager.addedToast',
+].forEach(key => assert(zhCatalog[key], `Medication surface catalog key missing for: ${key}`));
+assert(app.includes('function localizeMedicationSurfaces()')
+  && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeMedicationSurfaces\(\)/.test(app),
+  'Medication manager and due-reminder surfaces must refresh when the App locale changes');
+assert(/async function aiAddMedReminder[\s\S]*?muneaIsCleanDisplayText\(rawName\)/.test(app)
+  && !/async function aiAddMedReminder[\s\S]{0,260}?muneaIsCleanZhText\(rawName\)/.test(app),
+  'Voice-created medication names must accept safe English, Japanese, and Spanish text');
+assert(app.includes('function canonicalMedicationSlot(slot)')
+  && app.includes("import './i18n/medication-schedule.js'")
+  && app.includes("'after-breakfast': '早餐後'")
+  && app.includes("'after-lunch': '午餐後'")
+  && app.includes("'after-dinner': '晚餐後'")
+  && app.includes('window.MuneaMedicationScheduleI18n?.normalizeSlot(label)')
+  && app.includes('function canonicalMedicationDuration(duration)')
+  && app.includes('window.MuneaMedicationScheduleI18n?.normalizeDuration(raw)')
+  && /async function aiAddMedReminder[\s\S]*?days: canonicalMedicationDuration\(a && a\.days\)/.test(app)
+  && app.includes('function localizedMedicationDuration(duration)')
+  && app.includes('function medicationReminderSpeech(medication)'),
+  'Medication storage identifiers, visible durations, and spoken reminders must stay locale-aware');
+assert(
+  /const durationMatch = String\(med\.days \|\| ''\)\.match\(\/\(\\d\+\)\/\)/.test(medication),
+  'Medication scheduling must honor one-day and arbitrary finite treatments from voice actions',
+);
+const medicationManagerUi = app.slice(
+  app.indexOf("const setReminders = $('#medEntrySettings')"),
+  app.indexOf("if ($('#medEntryStatus'))"),
+);
+const medicationReminderUi = app.slice(
+  app.indexOf('function fireMedReminder(med)'),
+  app.indexOf('setInterval(checkDueMeds'),
+);
+assert(!/toast\(['"`](?:拿掉了|這張照片讀不到|先寫藥名|點一下什麼時候吃|記下了，藥吃了|好，10 分鐘後)/.test(
+  medicationManagerUi + medicationReminderUi,
+),
+  'Medication manager and due-reminder feedback must not bypass the locale catalog');
 assert(css.includes(':is(html:lang(en), html:lang(es)) .reader-card :is(p, li)'),
   'English and Spanish legal copy must use natural left alignment instead of stretched CJK justification');
 [

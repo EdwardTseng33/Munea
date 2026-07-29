@@ -42,6 +42,17 @@
       'bedtime', '睡前', 'before bed', '就寝前', 'antes de dormir',
     ],
   });
+  const DURATION_ALIASES = Object.freeze({
+    '長期': [
+      '長期', 'long-term', 'long term', '长期', '長期間', 'largo plazo',
+    ],
+    '每天': [
+      '每天', 'daily', 'every day', '每日', 'todos los días', 'cada día',
+    ],
+    '1 天': [
+      '一次', 'once', 'one time', '1回', '一回', 'una vez',
+    ],
+  });
 
   function comparable(value) {
     return String(value || '')
@@ -59,6 +70,22 @@
 
   function normalizeSlot(value) {
     return ALIAS_TO_ID.get(comparable(value)) || null;
+  }
+
+  const DURATION_ALIAS_TO_STORAGE = new Map();
+  for (const [storageValue, aliases] of Object.entries(DURATION_ALIASES)) {
+    for (const alias of aliases) {
+      DURATION_ALIAS_TO_STORAGE.set(comparable(alias), storageValue);
+    }
+  }
+
+  function normalizeDuration(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const known = DURATION_ALIAS_TO_STORAGE.get(comparable(raw));
+    if (known) return known;
+    const dayMatch = comparable(raw).match(/^(\d+)\s*(?:天|days?|日(?:間)?|dias?)$/);
+    return dayMatch ? `${Number(dayMatch[1])} 天` : raw;
   }
 
   function rawSlotValues(medication) {
@@ -117,10 +144,12 @@
 
   return Object.freeze({
     ALIASES,
+    DURATION_ALIASES,
     LEGACY_ZH_LABELS,
     SLOT_IDS,
     SLOT_KEYS,
     displaySlot,
+    normalizeDuration,
     normalizeSlot,
     scheduleSlots,
     storagePatch,
