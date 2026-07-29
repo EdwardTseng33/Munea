@@ -47,10 +47,10 @@ assert.deepEqual(
   'Structured slot IDs must be preferred for new records',
 );
 
-assert.equal(displaySlot('after-breakfast', translator('zh-TW')), '早餐後');
-assert.equal(displaySlot('after-breakfast', translator('en')), 'After breakfast');
-assert.equal(displaySlot('after-breakfast', translator('ja')), '朝食後');
-assert.equal(displaySlot('after-breakfast', translator('es')), 'Después del desayuno');
+assert.equal(displaySlot('after-breakfast', translator('zh-TW')), '早餐');
+assert.equal(displaySlot('after-breakfast', translator('en')), 'Breakfast');
+assert.equal(displaySlot('after-breakfast', translator('ja')), '朝食');
+assert.equal(displaySlot('after-breakfast', translator('es')), 'Desayuno');
 assert.equal(displaySlot('21:30', translator('en')), '21:30');
 
 assert.deepEqual(

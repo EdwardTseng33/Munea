@@ -155,6 +155,16 @@ window.MuneaNotify = (function () {
     return result;
   }
 
+  // 推播文字裡的時段顯示名（Edward 2026-07-29：不要寫飯前飯後、直接講餐別）。
+  // 跟 app.js 的 MED_SLOT_LABEL 同一份意思；這支是獨立載入的小程式、不共用變數所以各留一份。
+  function slotLabel(slot) {
+    if (slot === '早餐後') return t('medication.slot.afterBreakfast', '早餐');
+    if (slot === '午餐後') return t('medication.slot.afterLunch', '中餐');
+    if (slot === '晚餐後') return t('medication.slot.afterDinner', '晚餐');
+    if (slot === '睡前') return t('medication.slot.bedtime', '睡前');
+    return slot;
+  }
+
   function slotTime(slot) {
     var map = { '早餐後': ['b', 30], '午餐後': ['l', 30], '晚餐後': ['d', 30], '睡前': ['s', -30] };
     var match = map[slot];
@@ -253,7 +263,7 @@ window.MuneaNotify = (function () {
       }, privacyFields(
         t('notification.medicationDueTitle', '該吃藥了'),
         t('notification.medicationDueBody', '{slot}的藥：{medications}。吃完回沐寧打個勾。', {
-          slot: slot,
+          slot: slotLabel(slot),
           medications: group.names.join(t('common.listSeparator', '、'))
         }),
         'medication_due', slot, 'munea://medications/' + encodeURIComponent(slot)
@@ -269,7 +279,7 @@ window.MuneaNotify = (function () {
       }, parts, privacyFields(
         t('notification.medicationDueTitle', '該吃藥了'),
         t('notification.medicationDueBody', '{slot}的藥：{medications}。吃完回沐寧打個勾。', {
-          slot: group.slot,
+          slot: slotLabel(group.slot),
           medications: group.names.join(t('common.listSeparator', '、'))
         }),
         'medication_due', localDateKey(group.date) + '|' + group.slot,

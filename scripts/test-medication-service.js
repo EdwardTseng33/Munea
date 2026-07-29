@@ -37,13 +37,13 @@ const meds = [
   assert.deepStrictEqual(
     MuneaMedication.slotsFor([
       { id: 'bedtime-med', name: 'Night medicine', time: 'Before bed' },
-      { id: 'breakfast-med', name: 'Morning medicine', time: 'After breakfast' },
+      { id: 'breakfast-med', name: 'Morning medicine', time: 'Breakfast' },
     ], today).map(event => event.slot),
-    ['After breakfast', 'Before bed'],
+    ['Breakfast', 'Before bed'],
     'Localized slot labels must preserve the canonical medication order',
   );
   const unnamedDose = MuneaMedication.slotsFor([
-    { id: 'unnamed-med', time: 'After breakfast' },
+    { id: 'unnamed-med', time: 'Breakfast' },
   ], today)[0];
   assert.strictEqual(
     unnamedDose.medicationName,
@@ -52,7 +52,7 @@ const meds = [
   );
   assert.strictEqual(
     unnamedDose.legacyKey,
-    `After breakfast|\u85e5`,
+    `Breakfast|\u85e5`,
     'Changing App language must not rewrite the legacy adherence key',
   );
 

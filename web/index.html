@@ -737,7 +737,7 @@
       <button class="auth-close" id="companionCloseBtn" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>陪伴角色</h2>
       <p class="modal-sub">先選角色、再取名字，個性、外觀、聲音由角色決定，名字由你決定。<br><b style="color:var(--teal-dd)">換角色不會忘記你們聊過的事</b>，記憶跟著你，不跟角色走。</p>
-      <label class="companion-name-label" for="companionNameInput">幫 TA 取個名字</label>
+      <label class="companion-name-label" for="companionNameInput">幫角色取名稱</label>
       <input class="companion-name-input" id="companionNameInput" value="寧寧" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿福" />
       <div class="field-label">選擇互動 AI 角色</div>
       <div class="avatar-pick" id="avatarPick">
@@ -757,7 +757,7 @@
       <h2>回診摘要 · 6 月</h2>
       <p class="modal-sub">這個月的重點整理成一頁，醫生一眼看懂。</p>
       <div class="rpt-card">
-        <div class="rpt-row"><span class="rpt-k">用藥</span><div><b>準時 23 / 30 天</b><span>漏的多在午餐後，已改成飯後半小時提醒</span></div></div>
+        <div class="rpt-row"><span class="rpt-k">用藥</span><div><b>準時 23 / 30 天</b><span>漏的多在中餐，已把提醒往後挪半小時</span></div></div>
         <div class="rpt-row"><span class="rpt-k">血壓</span><div><b>平均 128 / 82</b><span>範圍 118–142 · 早晚各量一次</span></div></div>
         <div class="rpt-row"><span class="rpt-k">睡眠</span><div><b>平均 7.3 小時</b><span>入睡穩定，偶爾半夜醒一次</span></div></div>
         <div class="rpt-row"><span class="rpt-k">想問醫生</span><div><b>睡前偶爾頭暈</b><span>7/1 跟<span class="cname">寧寧</span>聊到，記得帶這題問</span></div></div>
@@ -1113,9 +1113,11 @@
       </div>
       <div class="field-label">什麼時候吃（可多選）</div>
       <div class="med-chips" id="medTimeChips">
-        <button class="mchip" data-t="早餐後">早餐後</button>
-        <button class="mchip" data-t="午餐後">午餐後</button>
-        <button class="mchip" data-t="晚餐後">晚餐後</button>
+        <!-- data-t 是存進藥單的內部值，不能改（改了對不上既有資料）；按鈕上的字才是給人看的
+             （Edward 2026-07-29：直接寫餐別、不要飯前飯後）。顯示名對照見 app.js 的 MED_SLOT_LABEL。 -->
+        <button class="mchip" data-t="早餐後">早餐</button>
+        <button class="mchip" data-t="午餐後">中餐</button>
+        <button class="mchip" data-t="晚餐後">晚餐</button>
         <button class="mchip" data-t="睡前">睡前</button>
       </div>
       <div class="field-label">吃多久</div>
