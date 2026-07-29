@@ -198,6 +198,27 @@ class Drill:
         backup_seen = ""
         result: dict[str, Any] = {}
         while time.monotonic() < deadline:
+            # Keep the two seat-holding reservations alive exactly like real
+            # in-progress calls do: leases expire 45-60s without a heartbeat,
+            # and each re-request below runs the reaper first -- round 2 on
+            # 2026-07-29 watched its own poll sweep the expired occupiers out
+            # and hand the "queued" caller a primary seat. Heartbeats on
+            # connecting (never-active) leases bill nothing.
+            for occupier in self.calls[:2]:
+                if occupier.get("status") != "connect":
+                    continue
+                beat = self.store.heartbeat(
+                    call_id=str(occupier["call_id"]),
+                    lease_version=int(occupier.get("lease_version") or 1),
+                    component="drill-occupier",
+                    event_id="queue-drill-hb-" + uuid.uuid4().hex,
+                    user_id=self.user_id,
+                )
+                if not beat.get("ok"):
+                    raise DrillError(
+                        "a seat-holding reservation went stale mid-drill: "
+                        + json.dumps(beat)
+                    )
             if not backup_seen:
                 snapshot = self.gateway.snapshot()
                 for worker in snapshot.get("workers", []):
