@@ -61,11 +61,46 @@ def frame_rms(frame):
 
 
 def in_output_window(now, last_out, tail_ms=None):
-    """她正在出聲、或最後一塊輸出還在殘響窗內。"""
+    """她正在出聲、或最後一塊輸出還在殘響窗內。
+
+    ⚠ 已知結構性弱點（2026-07-29 抓到、由 note_playout/playout_window 補上）：
+    last_out 是「伺服器送出」的時間，但 Gemini 送資料比真實講話快——一句 10 秒的話
+    伺服器 2 秒就送完，手機卻要播 10 秒。只用 last_out+tail 當窗，句子後半段的回音
+    全落在窗外 → 被當成用戶講話 → 她回答自己（Edward 7/29 點名的「自問自答」）。
+    保留此函式當後備（playout track 沒起來時仍有基本保護）。"""
     if not last_out:
         return False
     tail_ms = guard_tail_ms() if tail_ms is None else tail_ms
     return (now - last_out) * 1000.0 <= tail_ms
+
+
+def playout_lead_s():
+    """手機端起播前的緩衝（秒）。同線模式實際 0.6-1.1 秒、本地播放 0.2-0.9 秒，
+    取 0.8 當預設、可調。窗寧可略寬（真人聲靠音量門檻分辨，不靠窗）。"""
+    try:
+        return float(os.environ.get("MUNEA_VOICE_PLAYOUT_LEAD_S", "0.8"))
+    except (TypeError, ValueError):
+        return 0.8
+
+
+def note_playout(playout_head, now, chunk_bytes, rate=24000, width=2):
+    """伺服器每送一塊聲音就推進「手機大概播到哪」的水位（鏡射 App 端 _notePlayout）。
+
+    回傳新的 playout_head（monotonic 秒）：
+    - 水位落後現在（上一句早播完）→ 從 now+起播緩衝 重新起算
+    - 否則直接往上疊這塊的真實播放長度
+    """
+    dur = (chunk_bytes / float(rate * width))
+    base = playout_head if (playout_head and playout_head > now) else (now + playout_lead_s())
+    return base + dur
+
+
+def in_playout_window(now, playout_head, tail_ms=None):
+    """回音窗 v2：以「手機大概播到哪」為準——她的聲音還在（或剛播完殘響未散）都算窗內。"""
+    if not playout_head:
+        return False
+    tail_ms = guard_tail_ms() if tail_ms is None else tail_ms
+    return now <= playout_head + tail_ms / 1000.0
 
 
 def should_drop_uplink_frame(now, last_out, rms, enabled=None, tail_ms=None, threshold=None):

@@ -148,6 +148,11 @@ expect((avatarServer.includes('OPENING_PREBUFFER_S = 1.0') ||
   'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
+// 2026-07-29 更新：原版寫死「live_config 不准出現內建 Google 搜尋」——那是 7/17
+// 「查詢一律走我們代查」時代的規定。Edward 7/28 驗測後拍板改走「她自己查」（native，
+// 掛 Gemini 內建搜尋；實測第一聲 5.1 秒→1.3 秒、過場句三嘴變一嘴，PR #274）。
+// 這條政策的「精神」不變、只換形狀：查詢能力必須有開關控管（native_search_enabled /
+// live_lookup_enabled 兩道門、demo 間一律不給），不准無條件常開。
 const liveConfigStart = voiceServer.indexOf('def live_config(');
 const liveConfigEnd = voiceServer.indexOf('async def search_current_information(', liveConfigStart + 1);
 const liveConfig = voiceServer.slice(liveConfigStart, liveConfigEnd);
@@ -158,13 +163,19 @@ const liveConfig = voiceServer.slice(liveConfigStart, liveConfigEnd);
 // 內容農場跟醫學會指引長得一樣，而健康建議講錯長輩會照著做（7/24 拍板：健康走策展題庫）。
 expect(liveConfigStart >= 0 && liveConfigEnd > liveConfigStart &&
   liveConfig.includes('tools = []') &&
-  liveConfig.includes('if live_lookup_enabled():') &&
+  liveConfig.includes('if native_search_enabled() and not demo_mode:') &&
+  liveConfig.includes('tools.append(types.Tool(google_search=types.GoogleSearch()))') &&
+  liveConfig.includes('elif live_lookup_enabled():') &&
   liveConfig.includes('tools.append(_LIVE_LOOKUP_TOOL)') &&
   liveConfig.includes('tools=tools') &&
   voiceServer.includes('name=live_lookup.TOOL_NAME') &&
   voiceServer.includes('if function_name == live_lookup.TOOL_NAME') &&
   voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
   'the controlled bridge-lookup path is no longer intact as a fallback');
+// 聯集（7/29 合併）：我方＝預設關的結構檢查；主線＝健康問題不准拿搜尋結果回答的護欄。
+expect(voiceServer.includes('def voice_search_mode()') &&
+  voiceServer.includes('return SEARCH_MODE_NATIVE if os.environ.get("MUNEA_VOICE_LIVE_LOOKUP", "0").strip() == "1" else SEARCH_MODE_OFF'),
+  'voice search no longer defaults to off when no env flag is set');
 expect(voiceServer.includes('if native_search_enabled() and not demo_mode:') &&
   voiceServer.includes('絕對不准用查到的網路內容回答') &&
   voiceServer.includes('寧可說不知道，也不要拿網路上的東西當健康建議'),

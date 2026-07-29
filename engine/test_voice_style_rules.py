@@ -52,11 +52,17 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertNotIn("整段對話都用", self.src)
 
     def test_voice_only_reality_rule(self):
-        """2026-07-16 Edward 抓到「怎麼突然傳貼圖」幻覺：純語音現實邊界必須封死。"""
-        self.assertIn("現實邊界", self.src)
-        self.assertIn("純語音通話", self.src)
+        """2026-07-16 Edward 抓到「怎麼突然傳貼圖」幻覺：純語音現實邊界必須封死。
+
+        2026-07-29 說明書瘦身：原「現實邊界」＋「語音自覺」兩段併成「純語音的現實」
+        （同一個現實的兩半：他傳不了給你＋你給不了他），規則一條不丟、只改字面。
+        """
+        self.assertIn("純語音的現實", self.src)
+        self.assertIn("他傳不了任何東西給你", self.src)
         self.assertIn("沒有貼圖", self.src)
-        self.assertIn("不要猜測他做了什麼動作", self.src)
+        self.assertIn("不要猜他做了什麼", self.src)
+        # 2026-07-28 S09：不叫他做任何你看不到的事（「用指的給我看」）——瘦身後仍要在
+        self.assertIn("用指的給我看", self.src)
 
     def test_story_moral_rule_present(self):
         self.assertIn("[說故事與在地內容]", self.src)
@@ -116,16 +122,17 @@ class VoiceStyleRulesTest(unittest.TestCase):
 
     def test_voice_self_awareness_rule_present(self):
         """2026-07-24 Edward 拍板「語音自覺」：她要知道自己只是聲音，不能講出「傳給你」
-        這類空話；查到的資料要先消化成口語，不是唸條列。通用規則，不得綁死長輩措辭。"""
-        self.assertIn("語音自覺", self.src)
-        self.assertIn("一切都只能用「講」的", self.src)
-        for banned_phrase in ("我傳給你", "你看一下這張圖", "詳見某某網站", "我把資料給你"):
+        這類空話；查到的資料要先消化成口語，不是唸條列。通用規則，不得綁死長輩措辭。
+
+        2026-07-29 瘦身後這半邊住在「純語音的現實」段（你給不了他任何東西）。"""
+        self.assertIn("你也給不了他任何東西", self.src)
+        for banned_phrase in ("我傳給你", "你看一下這張圖", "詳見某某網站"):
             self.assertIn(banned_phrase, self.src)
-        self.assertIn("一次最多講三件事", self.src)
-        self.assertIn("消化成口語重點", self.src)
+        self.assertIn("一次最多三件事", self.src)
+        self.assertIn("消化成口語", self.src)
         # 措辭不得綁死「長輩」——這是純語音通話的通用限制，不是年齡層專屬規則
-        self_awareness = self.src[self.src.index("語音自覺：你是這通電話裡的一個聲音"):
-                                   self.src.index("留時間讓他消化或接話，不要一口氣倒完。）")]
+        self_awareness = self.src[self.src.index("純語音的現實：你們之間只有「聲音」"):
+                                   self.src.index("讓他消化或接話。）")]
         self.assertNotIn("長輩", self_awareness)
 
 
