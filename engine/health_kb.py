@@ -78,7 +78,10 @@ def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None
             topic = health_selector.TOPICS.get(tid)
             if not topic:
                 return False
-            return any(aud in (s.get("audience") or []) for s in topic.get("solutions") or [])
+            # 要「專門為這個齡層寫的方案」才算數（audience 清單短），不是隨便掛了名就算——
+            # 2026-07-29 實測：按摩掛了五個齡層，害青少年被路由到成人失眠題、拿到長輩版建議。
+            return any(aud in (s.get("audience") or []) and len(s.get("audience") or []) <= 2
+                       for s in topic.get("solutions") or [])
         ids = sorted(ids, key=lambda t: (not _serves_audience(t),))
     for tid in ids:
         if tid in health_selector.TOPICS:
