@@ -92,6 +92,9 @@ def _profile_flags(profile):
     p = profile or {}
     return {
         "audience": p.get("audience"),                       # elder / worker / caregiver / women
+        # 挑選時比對用的齡層清單。多數情況就是他自己那一個；照顧者替家人問時
+        # 會在 pick() 裡加上被照顧的那位（方案是要給媽媽用的、不是給他用的）。
+        "audiences": [p.get("audience")] if p.get("audience") else [],
         "conditions": [str(c) for c in (p.get("conditions") or [])],   # 腎功能異常、低血壓…
         "constraints": [str(c) for c in (p.get("constraints") or [])], # 輪班工作、照顧者夜間需起身…
         "lowMobility": bool(p.get("lowMobility")),
@@ -125,10 +128,10 @@ def _score(sol, flags, urgent, user_text):
         score += {"慢養": 3.0, "一週": 2.5, "今晚": 1.5}.get(time_to, 0)
 
     # 對不對這個人（沒標 audience 的方案＝通用，不加不減）
-    aud = flags["audience"]
+    auds = flags.get("audiences") or ([flags["audience"]] if flags["audience"] else [])
     sol_aud = sol.get("audience")
-    if aud and sol_aud:
-        if aud in sol_aud:
+    if auds and sol_aud:
+        if any(a in sol_aud for a in auds):
             # 專屬度：只針對這種處境設計的方案（例照顧者的「把睡眠切兩段」），
             # 要贏過人人適用的通用方案——不然照顧者拿到的主推會是「睡前手機放遠」，
             # 那對「我媽三點要起來」根本答非所問。
@@ -206,10 +209,28 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     pool = topic.get("solutions") or []
     # 代問時只留「講給家長聽」的版本；本人問只留「講給本人聽」的版本；沒標的兩邊都給。
     pool = [s for s in pool if s.get("forWhom") in (None, "parent" if proxy else "self")]
+    # 照顧者替家人問時，方案是要給**被照顧的那位**用的（2026-07-29 骨鬆題抓到）：
+    # 「我媽有骨鬆，怕她跌倒」原本只比對 caregiver，結果專為長輩寫的「練肌力跟平衡」
+    # 拿不到專屬度加分、被通用建議擠掉——防跌實證最明確的那條反而沒端出去。
+    # 兩個齡層都算數：照顧者自己的方案（喘息、把睡眠切兩段）照樣浮得上來。
+    if proxy and flags["audience"] == "caregiver":
+        flags["audiences"] = ["caregiver", "elder"]
+
+    # secondLine＝可以講、但永遠不准當第一個講的（2026-07-29 搬膝蓋題時抓到）：
+    #   ① 證據偏弱的保健品（葡萄糖胺）——排在肌力訓練前面等於把最弱的當主力，
+    #      「潑冷水同一句要帶更有效的替代」這個設計就整個反過來了
+    #   ② 「這很普遍、不是你特別差」這類安慰話——是配菜、不該吃掉行動建議的位子
+    # 用分數硬壓不可靠（差 0.3 分就翻盤），直接分兩層排：正規的先、陪襯的後。
+    # 但他自己點名問的不算陪襯——「葡萄糖胺到底有沒有效」問的就是那個，
+    # 這時候把答案壓到後面切掉，等於問了不答。
+    def _demoted(s):
+        if not s.get("secondLine"):
+            return False
+        return not any(w and w in (user_text or "") for w in (s.get("askedFor") or []))
 
     ranked = sorted(
         (s for s in pool if not _blocked_by_safety(s, flags, user_text)),
-        key=lambda s: -_score(s, flags, urgent, user_text),
+        key=lambda s: (_demoted(s), -_score(s, flags, urgent, user_text)),
     )
     # 類型多樣性：三個建議全是「行為調整」等於同一招講三次，長輩也記不住差別。
     # 挑的時候同類型最多兩個，把位置留給食補／運動／保健品這些不同路數的方案。

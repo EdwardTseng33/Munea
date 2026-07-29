@@ -208,8 +208,157 @@ class OutputShapeTest(unittest.TestCase):
             self.assertIn("絕不推薦品牌", text)
 
 
+class SecondLineTest(unittest.TestCase):
+    """陪襯層：可以講、但不准當主力（2026-07-29 搬膝蓋題時抓到）。
+
+    當初的設計是「潑保健品冷水的同一句一定要帶更有效的替代」，
+    結果排序把證據最弱的葡萄糖胺頂到第一個——設計整個反過來。
+    """
+
+    def test_weak_evidence_supplement_never_leads(self):
+        first = hs.pick("TW-EDU-02", "膝蓋痛，爬樓梯特別酸", ELDER, 15)["solutions"][0]
+        self.assertNotEqual(first["id"], "knee-glucosamine",
+                            "證據偏弱的保健品排到第一個＝把最弱的當主力")
+
+    def test_stronger_alternative_leads_instead(self):
+        picked = hs.pick("TW-EDU-02", "膝蓋痛，爬樓梯特別酸", ELDER, 15)["solutions"]
+        self.assertIn(picked[0]["id"], ("knee-thigh-strength", "knee-weight"),
+                      "實證更明確的肌力訓練／體重控制沒排在前面")
+
+    def test_comfort_lines_do_not_take_an_action_slot(self):
+        """「這很普遍、不是你特別差」是配菜，不該吃掉行動建議的位子。"""
+        ids = [s["id"] for s in hs.pick("TW-EDU-03", "我血壓又高了", ELDER, 8)["solutions"]]
+        self.assertNotEqual(ids[0], "bp-normalize")
+
+    def test_what_he_asked_about_by_name_is_answered_not_buried(self):
+        """他點名問的東西被降級切掉＝問了不答，比排序難看得多。"""
+        picked = hs.pick("TW-EDU-02", "葡萄糖胺到底有沒有效？我膝蓋不好", ELDER, 15)["solutions"]
+        self.assertEqual(picked[0]["id"], "knee-glucosamine")
+
+    def test_answering_the_supplement_still_offers_a_better_path(self):
+        ids = [s["id"] for s in hs.pick("TW-EDU-02", "葡萄糖胺有效嗎", ELDER, 15)["solutions"]]
+        self.assertTrue({"knee-thigh-strength", "knee-weight"} & set(ids),
+                        "潑了冷水卻沒給更有效的替代路")
+
+
+class MigratedTopicsTest(unittest.TestCase):
+    """2026-07-29 第二批搬進方案池的四題，各自最要命的那條要守住。"""
+
+    def test_reflux_always_carries_the_heart_attack_red_line(self):
+        ref = hs.pick("TW-EDU-11", "我火燒心", WORKER, 22)["referral"]
+        self.assertIsNotNone(ref)
+        self.assertIn("心", ref["say"])
+
+    def test_blood_pressure_never_touches_medication(self):
+        for prof in (ELDER, CAREGIVER, WORKER):
+            for s in hs.pick("TW-EDU-03", "我血壓高，是不是要加藥", prof, 9)["solutions"]:
+                self.assertNotEqual(s.get("riskLevel"), "L4", "把調藥端上桌了")
+
+    def test_red_yeast_interaction_surfaces_when_he_mentions_it(self):
+        ids = [s["id"] for s in hs.pick("TW-EDU-16", "我在吃紅麴", ELDER, 14)["solutions"]]
+        self.assertIn("supp-red-yeast", ids, "紅麴配降血脂藥是這題最重要的一條，沒講到")
+
+    def test_kidney_trouble_removes_the_potassium_advice(self):
+        prof = {"audience": "elder", "conditions": ["腎功能異常"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-03", "我血壓高", prof, 9)["solutions"]]
+        self.assertNotIn("bp-dash-diet", ids, "腎功能不好還叫他補鉀")
+
+    def test_worker_and_elder_get_different_reflux_advice(self):
+        w = [s["id"] for s in hs.pick("TW-EDU-11", "我火燒心", WORKER, 23)["solutions"]]
+        e = [s["id"] for s in hs.pick("TW-EDU-11", "我火燒心", ELDER, 9)["solutions"]]
+        self.assertNotEqual(w, e, "上班族跟長輩拿到一模一樣的答案＝因人而異沒生效")
+
+
+class CaregiverProxyTest(unittest.TestCase):
+    """照顧者替家人問時，方案是要給**被照顧的那位**用的（2026-07-29 骨鬆題抓到）。
+
+    「我媽有骨鬆，怕她跌倒」原本只比對 caregiver，專為長輩寫的「練肌力跟平衡」
+    拿不到專屬度加分、被通用建議擠掉——防跌實證最明確的那條反而沒端出去。
+    """
+
+    def test_elder_specific_advice_surfaces_when_a_caregiver_asks_for_a_parent(self):
+        ids = [s["id"] for s in hs.pick("TW-EDU-17", "我媽有骨鬆，怕她跌倒",
+                                        {"audience": "caregiver"}, 14)["solutions"]]
+        self.assertIn("osteo-strength-balance", ids, "防跌實證最明確的那條沒端出去")
+
+    def test_caregivers_own_needs_are_not_crowded_out(self):
+        """兩個齡層都算數——照顧者自己的喘息方案照樣要浮得上來。"""
+        ids = [s["id"] for s in hs.pick("TW-EDU-18", "照顧我媽照顧到快崩潰了",
+                                        {"audience": "caregiver"}, 22)["solutions"]]
+        self.assertIn("mood-caregiver-respite", ids)
+
+    def test_a_caregiver_complaining_about_himself_is_not_treated_as_proxy(self):
+        """「我媽三點要起來，我根本睡不飽」講的是他自己——不能當成替媽媽問。"""
+        res = hs.pick("TW-EDU-01", "我媽三點要起來，我根本睡不飽",
+                      {"audience": "caregiver", "constraints": ["照顧者夜間需起身"]}, 2)
+        self.assertFalse(res["proxy"])
+        self.assertIsNotNone(res["reframe"], "沒接住「你不是失眠、是沒得睡」")
+
+
+class Batch3Test(unittest.TestCase):
+    """第三批五題：便秘／腳抽筋／骨鬆防跌／情緒低落／記性變差。"""
+
+    def test_burnt_out_caregiver_is_caught_at_all(self):
+        """「照顧到快崩潰」原本一個關鍵字都沒命中——最需要接住的人漏接。"""
+        self.assertTrue(health_kb_match("照顧我媽照顧到快崩潰了"))
+
+    def test_suicidal_signals_always_reach_the_hotline(self):
+        for prof in ({"audience": "elder"}, {"audience": "caregiver"}, {"audience": "teen"}):
+            ref = hs.pick("TW-EDU-18", "覺得活著沒什麼意思", prof, 23)["referral"]
+            self.assertIsNotNone(ref)
+            self.assertIn("1925", ref["say"], "沒給安心專線")
+
+    def test_evidence_backed_stretch_beats_the_folk_remedy(self):
+        first = hs.pick("TW-EDU-15", "半夜小腿一直抽筋", ELDER, 23)["solutions"][0]
+        self.assertEqual(first["id"], "cramp-stretch-before-bed")
+
+    def test_exercise_beats_brain_supplements(self):
+        """池子自己就寫了「運動的證據比補腦品強」——排序不能把自己的話講反。"""
+        first = hs.pick("TW-EDU-14", "我最近記性變差", ELDER, 11)["solutions"][0]
+        self.assertNotEqual(first["id"], "mci-brain-supp")
+
+    def test_sudden_confusion_is_flagged_as_delirium_not_dementia(self):
+        ref = hs.pick("TW-EDU-14", "我媽突然認不得人", {"audience": "caregiver"}, 20)["referral"]
+        self.assertIn("譫妄", ref["say"])
+
+    def test_immunocompromised_never_gets_probiotics(self):
+        prof = {"audience": "worker", "conditions": ["免疫功能低下"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-06", "我便秘", prof, 10)["solutions"]]
+        self.assertNotIn("consti-probiotics", ids)
+
+    def test_kidney_trouble_never_gets_magnesium_for_cramps(self):
+        prof = {"audience": "worker", "conditions": ["腎功能異常"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-15", "我一直抽筋，鎂有用嗎", prof, 23)["solutions"]]
+        self.assertNotIn("cramp-magnesium", ids)
+
+    def test_kidney_stones_never_gets_calcium_supplement(self):
+        prof = {"audience": "women", "conditions": ["有腎結石病史"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-17", "骨鬆要吃鈣片嗎", prof, 14)["solutions"]]
+        self.assertNotIn("osteo-calcium-vitd-supp", ids)
+
+
+def health_kb_match(text):
+    import health_kb
+    return health_kb.match_topics(text)
+
+
 class DataIntegrityTest(unittest.TestCase):
     """資料本身的紀律——內容寫壞了這裡先亮紅燈。"""
+
+    def test_migrated_topics_no_longer_carry_fixed_text(self):
+        """搬進方案池的題目若 inject 還留舊固定稿＝兩份真相打架。"""
+        import json
+        with open(os.path.join(HERE, "health_topics.json"), encoding="utf-8") as f:
+            topics = json.load(f)["topics"]
+        for t in topics:
+            if t["id"] in hs.TOPICS:
+                self.assertIn("方案池", t.get("inject", ""),
+                              f"{t['id']} 已有方案池，inject 卻還是舊固定稿")
+
+    def test_every_pool_has_a_referral_card(self):
+        for tid, topic in hs.TOPICS.items():
+            self.assertTrue(any(s.get("riskLevel") == "L5" for s in topic["solutions"]),
+                            f"{tid} 沒有轉介卡——出事沒有出口")
 
     def test_every_supplement_declares_cap_and_contraindications(self):
         for topic in hs.TOPICS.values():
