@@ -168,7 +168,7 @@ window.MuneaHealth = (function () {
         : view === 'ok' ? t('health.disconnect', '解除連接')
         : view === 'error' ? t('health.retry', '再試一次')
         : view === 'checking' ? t('health.checking', '檢查中…')
-        : t('health.openHealthApp', '去健康 App 開項目');
+        : t('health.openHealthApp', '去健康 App');
       btn.disabled = view === 'checking';
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
@@ -184,9 +184,9 @@ window.MuneaHealth = (function () {
     const detail = document.getElementById('cnHealthDetail');
     if (detail) detail.textContent =
       view === 'off' ? t('health.availableDetail', '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧')
-      : view === 'checking' ? t('health.checkingDetail', '正在確認讀不讀得到資料')
-      : view === 'error' ? t('health.readFailedDetail', '這次沒讀成功，可以再試一次')
-      : view === 'empty' ? t('health.noReadableDataDetail', '已連接，但目前一項資料都讀不到')
+      : view === 'checking' ? t('health.checkingDetail', '正在確認讀不讀得到')
+      : view === 'error' ? t('health.readFailedDetail', '這次沒讀成功')
+      : view === 'empty' ? t('health.noReadableDataDetail', '目前讀不到資料')
       : t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧');
     const help = document.getElementById('cnHealthHelp');
     if (help) help.textContent =

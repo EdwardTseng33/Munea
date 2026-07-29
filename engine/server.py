@@ -231,8 +231,11 @@ def log_fallback_exception(context, exc):
     if any(k in (context or "") for k in ("chat reply", "TTS", "opener", "generate", "model")):
         try:
             ai_health.record_failure("%s: %s" % (context, exc))
-        except Exception as health_error:
-            LOGGER.warning("AI health failure recording failed: %s", health_error)
+        except Exception as record_exc:
+            # 記錄失敗本身也失敗時，一樣要留下痕跡——默默吞掉就是 7/29 那次
+            # 「巡邏永遠報綠燈」的成因。這裡只能用 LOGGER，
+            # 不能再呼叫 log_fallback_exception（那會自己叫自己、無限繞回來）。
+            LOGGER.warning("ai_health.record_failure failed: %s", record_exc)
     LOGGER.warning(
         "%s failed; using prototype fallback: %s",
         context,
