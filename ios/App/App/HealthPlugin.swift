@@ -247,9 +247,14 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /// 讀「最近一筆」某種量測值
+    /// 限最近 7 天內：狀態頁把這些值標成「今天」，沒有時間界線的話，
+    /// 幾個月前的舊紀錄會被當成今天的數值顯示（長輩會以為是剛量的）。
     private func latestQuantity(_ type: HKQuantityType, completion: @escaping (HKQuantity?) -> Void) {
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let q = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
+        let end = Date()
+        let start = Calendar.current.date(byAdding: .day, value: -7, to: end) ?? end
+        let recent = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+        let q = HKSampleQuery(sampleType: type, predicate: recent, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
             completion((samples?.first as? HKQuantitySample)?.quantity)
         }
         store.execute(q)
