@@ -8481,7 +8481,10 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                     config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
                 # 2026-07-25（卡西法・三修③）：出口前防禦性清洗，剝掉模型偶爾漏出的
                 # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
-                return eng.clean_outgoing_reply(r.text)
+                # has_briefing：今天到底有沒有備到天氣。沒有卻講「氣象報告說」＝
+                # 引用一個不存在的來源，出口硬擋（2026-07-29 考卷 S03 抓到）。
+                return eng.clean_outgoing_reply(
+                    r.text, has_briefing=bool((context or {}).get("dailyBriefing")))
             except Exception as e:
                 log_fallback_exception(f"generate chat reply with {m}", e)
         time.sleep(2)
