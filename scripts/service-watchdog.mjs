@@ -58,8 +58,8 @@ export const TARGETS = [
     check: "json-ok",
   },
   {
-    name: "公開網站 app.munea.net",
-    url: "https://app.munea.net/",
+    name: "公開網站 munea.net（正門）",
+    url: "https://munea.net/",
     expect: [200],
   },
 ];

@@ -29,6 +29,15 @@ DEFAULT_STALE_HEARTBEAT_SECONDS = 120.0
 # that so a repeat trips this alarm well before a fresh 90s call token would
 # start looking expired to the worker.
 DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS = 90.0
+# 2026-07-29: 7/23-24 the alerts channel flapped CRITICAL/RECOVERED all night
+# because dead worker rows (tw-07 after retirement, stale RunPod rescues) sat
+# in the registry as "unhealthy" with an ever-stale heartbeat and nobody ever
+# marked them terminated. Alerting without a containment mechanism is noise --
+# so after a worker has been BOTH unhealthy AND heartbeat-silent for this
+# long, the monitor retires it (status=terminated) itself and says so once.
+# Healthy/ready workers are never touched; a retired worker can always be
+# re-registered. Non-positive disables the behavior.
+DEFAULT_AUTO_RETIRE_SECONDS = 1800.0
 UTILIZATION_THRESHOLD = 0.80
 
 
@@ -72,7 +81,11 @@ class Alert:
     fields: Mapping[str, object] = field(default_factory=dict)
 
     def slack_message(self) -> str:
-        return f"[Munea Gateway][{self.severity.upper()}] {self.summary}"
+        # 2026-07-29 Edward: notifications must be readable by a
+        # non-engineer at a glance -- plain Chinese, emoji severity, no
+        # bracketed English tags.
+        emoji = {"critical": "🔴", "warning": "🟡"}.get(self.severity, "⚪")
+        return f"{emoji} 沐寧看門狗：{self.summary}"
 
 
 @dataclass(frozen=True)
@@ -184,6 +197,30 @@ class GatewayClient:
             worker_clock_checks=self._probe_worker_clocks(health),
         )
 
+    def retire_worker(self, worker_id: str) -> None:
+        """Mark a dead worker terminated so its stale row stops flapping alerts."""
+        url = (
+            self.base_url + "/v1/internal/workers/"
+            + urllib.parse.quote(worker_id, safe="") + "/state"
+        )
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "munea-gateway-monitor/1",
+        }
+        if self.admin_key:
+            headers["Authorization"] = "Bearer " + self.admin_key
+        request = urllib.request.Request(
+            url,
+            data=json.dumps({"status": "terminated"}).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with self.opener(request, timeout=self.timeout_seconds) as response:
+            status = getattr(response, "status", response.getcode())
+            if status < 200 or status >= 300:
+                raise RuntimeError(f"HTTP {status}")
+
     def _probe_worker_clocks(self, health: Mapping[str, object] | None) -> dict[str, dict[str, object]]:
         """Poll each GPU worker's own /health directly (bypassing the
         Gateway) for its self-reported server_time and diff it against this
@@ -282,23 +319,23 @@ def evaluate_alerts(
     alerts: list[Alert] = []
 
     if result.health_error:
-        alerts.append(Alert("health_poll_failed", "critical", "Health endpoint poll failed", {
-            "error": result.health_error,
+        alerts.append(Alert("health_poll_failed", "critical", "連不上總機（健康檢查失敗）——聊聊可能撥不通", {
+            "錯誤訊息": result.health_error,
         }))
     if result.metrics_error:
-        alerts.append(Alert("metrics_poll_failed", "critical", "Metrics endpoint poll failed", {
-            "error": result.metrics_error,
+        alerts.append(Alert("metrics_poll_failed", "critical", "讀不到總機的數字報表（監測部分失明）", {
+            "錯誤訊息": result.metrics_error,
         }))
 
     if health is not None:
         if health.get("durable_ready") is not True or health.get("mode") != "durable":
-            alerts.append(Alert("durable_not_ready", "critical", "Durable call control is not ready", {
-                "durable_error": health.get("durable_error") or "",
-                "mode": health.get("mode") or "unknown",
+            alerts.append(Alert("durable_not_ready", "critical", "總機派位系統沒就緒——撥打聊聊會失敗", {
+                "錯誤訊息": health.get("durable_error") or "",
+                "模式": health.get("mode") or "unknown",
             }))
         if health.get("ok") is not True:
-            alerts.append(Alert("gateway_unhealthy", "critical", "Gateway reports unhealthy", {
-                "ok": health.get("ok"),
+            alerts.append(Alert("gateway_unhealthy", "critical", "總機回報不健康——聊聊服務有風險", {
+                "回報值": health.get("ok"),
             }))
 
     avatar_capacity = _signal(health, metrics, "munea_avatar_capacity", "avatar_capacity")
@@ -307,18 +344,19 @@ def evaluate_alerts(
     voice_active = _signal(health, metrics, "munea_voice_active", "voice_active")
     queue_depth = _signal(health, metrics, "munea_call_queue_depth", "queue_depth")
 
+    resource_names = {"avatar": "臉的席位", "voice": "聲音線路"}
     for resource, capacity in (("avatar", avatar_capacity), ("voice", voice_capacity)):
         if capacity is not None and capacity <= 0:
             alerts.append(Alert(
                 f"{resource}_zero_capacity",
                 "critical",
-                f"{resource.capitalize()} capacity is zero",
-                {"capacity": capacity},
+                f"{resource_names[resource]}完全歸零——所有通話都會失敗",
+                {"總席位": capacity},
             ))
 
     if queue_depth is not None and queue_depth > 0:
-        alerts.append(Alert("queue_depth_nonzero", "warning", "Calls are waiting in the queue", {
-            "queue_depth": queue_depth,
+        alerts.append(Alert("queue_depth_nonzero", "warning", "有客人在排隊等聊聊（正常時會自動開備援卡補位）", {
+            "排隊人數": int(queue_depth),
         }))
 
     for resource, active, capacity in (
@@ -332,11 +370,11 @@ def evaluate_alerts(
             alerts.append(Alert(
                 f"{resource}_utilization_high",
                 "warning",
-                f"{resource.capitalize()} utilization is at least 80%",
+                f"{resource_names[resource]}快滿了（{int(active)}/{int(capacity)} 使用中）",
                 {
-                    "active": active,
-                    "capacity": capacity,
-                    "utilization_pct": round(utilization * 100, 1),
+                    "使用中": int(active),
+                    "總席位": int(capacity),
+                    "使用率%": round(utilization * 100, 1),
                 },
             ))
 
@@ -353,10 +391,10 @@ def evaluate_alerts(
                 alerts.append(Alert(
                     f"worker_unhealthy:{worker_id}",
                     "critical",
-                    f"GPU worker {worker_id} reports unhealthy",
+                    f"臉機 {worker_id} 回報不健康——這台暫時接不了通話",
                     {
-                        "provider": worker.get("provider") or worker.get("kind") or "unknown",
-                        "status": status,
+                        "供應商": worker.get("provider") or worker.get("kind") or "unknown",
+                        "狀態": status,
                     },
                 ))
             heartbeat_value = worker.get("last_heartbeat_at")
@@ -367,8 +405,8 @@ def evaluate_alerts(
                     alerts.append(Alert(
                         f"worker_heartbeat_stale:{worker_id}",
                         "critical",
-                        f"GPU worker {worker_id} heartbeat is stale",
-                        {"age_seconds": round(age, 1), "status": status},
+                        f"臉機 {worker_id} 心跳斷了（可能斷線或當機）",
+                        {"斷聯秒數": round(age, 1), "狀態": status},
                     ))
 
     # 2026-07-23 STATUS 125 defense line 2: worker_clock_checks is only ever
@@ -386,8 +424,8 @@ def evaluate_alerts(
             alerts.append(Alert(
                 f"worker_clock_skew:{worker_id}",
                 "critical",
-                f"GPU worker {worker_id} clock is off by more than {clock_skew_threshold_seconds:g}s",
-                {"skew_seconds": skew, "threshold_seconds": clock_skew_threshold_seconds},
+                f"臉機 {worker_id} 的時鐘不準——通話證會被誤判過期、聊聊撥不通（7/23 事故同型）",
+                {"時鐘差(秒)": skew, "警戒線(秒)": clock_skew_threshold_seconds},
             ))
 
     return alerts
@@ -401,6 +439,7 @@ class GatewayMonitor:
         *,
         stale_heartbeat_seconds: float = DEFAULT_STALE_HEARTBEAT_SECONDS,
         clock_skew_threshold_seconds: float = DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS,
+        auto_retire_seconds: float = DEFAULT_AUTO_RETIRE_SECONDS,
         clock: Callable[[], float] = time.time,
         lifecycle_state_path: str | os.PathLike[str] | None = None,
     ) -> None:
@@ -408,6 +447,7 @@ class GatewayMonitor:
         self.notifier = notifier
         self.stale_heartbeat_seconds = stale_heartbeat_seconds
         self.clock_skew_threshold_seconds = clock_skew_threshold_seconds
+        self.auto_retire_seconds = auto_retire_seconds
         self.clock = clock
         self.lifecycle_state_path = Path(lifecycle_state_path) if lifecycle_state_path else None
         self._active_alerts = self._load_lifecycle_state()
@@ -481,11 +521,10 @@ class GatewayMonitor:
                 continue
             recovery_key = "recovered:" + key
             recovery_fields = dict(previous.get("fields") or {})
-            recovery_fields["previous_severity"] = previous.get("severity") or "unknown"
             try:
                 delivered = self.notifier.send(
                     recovery_key,
-                    f"[Munea Gateway][RECOVERED] {previous.get('summary') or key}",
+                    f"🟢 沐寧看門狗：已恢復——{previous.get('summary') or key}",
                     fields=recovery_fields,
                 )
                 (recovered if delivered else suppressed).append(recovery_key)
@@ -494,16 +533,67 @@ class GatewayMonitor:
             except Exception as exc:
                 notification_errors[recovery_key] = str(exc)
 
+        auto_retired, auto_retire_errors = self._auto_retire_dead_workers(result)
+
         self._active_alerts = next_active
         self._save_lifecycle_state()
         return {
             "alert_keys": [alert.key for alert in alerts],
             "active_alert_keys": sorted(next_active),
+            "auto_retire_errors": auto_retire_errors,
+            "auto_retired": auto_retired,
             "notification_errors": notification_errors,
             "recovered": recovered,
             "sent": sent,
             "suppressed": suppressed,
         }
+
+    def _auto_retire_dead_workers(
+        self, result: PollResult
+    ) -> tuple[list[str], dict[str, str]]:
+        """Containment behind the alarm: a worker that has been BOTH marked
+        unhealthy AND heartbeat-silent longer than auto_retire_seconds is a
+        corpse nobody collected (7/23-24 tw-07 flapped the alerts channel all
+        night this way). Mark it terminated so routing, probing, and alerting
+        all stop; announce once. Ready/healthy workers are never touched."""
+        retired: list[str] = []
+        errors: dict[str, str] = {}
+        if self.auto_retire_seconds <= 0 or not result.health:
+            return retired, errors
+        snapshot = result.health.get("snapshot")
+        workers = snapshot.get("workers") if isinstance(snapshot, dict) else None
+        if not isinstance(workers, list):
+            return retired, errors
+        now_ts = self.clock()
+        for worker in workers:
+            if not isinstance(worker, dict):
+                continue
+            if str(worker.get("status") or "").lower() != "unhealthy":
+                continue
+            worker_id = str(worker.get("worker_id") or "")
+            heartbeat = _timestamp(worker.get("last_heartbeat_at"))
+            if not worker_id or heartbeat is None:
+                continue
+            age = now_ts - heartbeat
+            if age <= self.auto_retire_seconds:
+                continue
+            try:
+                self.client.retire_worker(worker_id)
+            except Exception as exc:
+                errors[worker_id] = str(exc)
+                continue
+            retired.append(worker_id)
+            try:
+                self.notifier.send(
+                    "worker_auto_retired:" + worker_id,
+                    f"🧹 沐寧看門狗：臉機 {worker_id} 斷聯超過 {round(age)} 秒"
+                    "且早已標記不健康——已自動移出名冊、相關警報停止。"
+                    "這台若要回役，重新登記即可。",
+                    fields={"斷聯秒數": round(age, 1)},
+                )
+            except Exception:
+                pass
+        return retired, errors
 
 
 def _positive_float(name: str, value: str) -> float:
@@ -556,6 +646,15 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
     # unset keeps this monitor byte-for-byte the same as before this change
     # (no worker clock probing, no new alerts).
     worker_health_key = os.environ.get("MUNEA_APP_KEY", "").strip()
+    auto_retire_raw = os.environ.get(
+        "MUNEA_WORKER_AUTO_RETIRE_SECONDS", str(DEFAULT_AUTO_RETIRE_SECONDS)
+    ).strip()
+    try:
+        auto_retire_seconds = float(auto_retire_raw)
+    except ValueError as exc:
+        raise MonitorConfigError(
+            "MUNEA_WORKER_AUTO_RETIRE_SECONDS must be a number"
+        ) from exc
     client = GatewayClient(
         gateway_url,
         admin_key=os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
@@ -577,6 +676,7 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         notifier,
         stale_heartbeat_seconds=stale,
         clock_skew_threshold_seconds=clock_skew_threshold,
+        auto_retire_seconds=auto_retire_seconds,
         lifecycle_state_path=lifecycle_path or None,
     ), interval
 

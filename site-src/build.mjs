@@ -159,7 +159,8 @@ for (const l of LOCALES) {
 }
 
 /* ── sitemap：四個語系全列，每筆帶 hreflang 互指 ── */
-const legalPages = ['privacy', 'terms', 'support'];
+// 法律頁的正本網址在 app.munea.net（蘋果登記的），不混進 munea.net 的網站地圖
+const legalPages = [];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${LOCALES.map(

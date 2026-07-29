@@ -479,7 +479,7 @@
   "feedback.submit": "送出回饋",
   "medication.title": "用藥",
   "medication.namePlaceholder": "藥名照藥袋抄",
-  "medication.genericName": "藥物",
+  "medication.genericName": "藥",
   "medication.taken": "已服用",
   "medication.notTaken": "尚未服用",
   "medication.slot.afterBreakfast": "早餐",
@@ -497,11 +497,11 @@
   "health.notConnected": "未連接",
   "health.noReadableData": "讀不到資料",
   "health.noReadableDataDetail": "已連接，但目前一項資料都讀不到",
-  "health.noReadableDataHelp": "沐寧還讀不到任何一項。請打開手機的「健康」App → 右上角的個人照片 →「App 與服務」→ 沐寧 → 把要給沐寧看的項目打開（步數、心率、睡眠、血壓、血氧）。如果這支手機本來就還沒有這些紀錄，等有了就會自己出現。",
+  "health.noReadableDataHelp": "沐寧還讀不到任何一項。可能是授權時項目沒有打開，也可能是這支手機還沒有這些紀錄。用下面的按鍵去「健康」App 打開項目就好。",
   "health.syncingDetail": "正在同步步數、心率、睡眠、血壓與血氧",
   "health.availableDetail": "自動含手錶與其他裝置 · 步數／心率／睡眠／血壓／血氧",
   "health.disconnectHelp": "解除連接會停止沐寧後續同步，既有紀錄仍會保留。要撤銷 Apple 健康的系統授權，請到「健康 App」的個人頭像／隱私權設定中管理沐寧。",
-  "health.notConnectedHelp": "目前未同步。重新連接後才會讀取新的健康資料。",
+  "health.notConnectedHelp": "按下「連接」後手機會跳出一個畫面，請把要給沐寧看的項目一項一項打開再按允許——那些項目預設是關著的。",
   "health.confirmDisconnect": "再按一次解除",
   "companion.nening.name": "寧寧",
   "companion.nening.label": "溫柔型 · 像家人，會照看",
@@ -718,7 +718,6 @@
   "notification.loading": "正在載入通知…",
   "notification.signInRequired": "請先登入，或稍後再試一次。",
   "notification.emptyDetail": "目前沒有通知。新的提醒與家人消息會保留在這裡。",
-  "medication.genericName": "藥",
   "textChat.title": "先用文字聊",
   "textChat.placeholder": "輸入想說的話",
   "textChat.send": "送出",
@@ -788,5 +787,6 @@
   "legacyUi.familyAllStatus": "全家狀態",
   "legacyUi.familyOkay": "安好",
   "version.webBuild": "內頁 v{version}",
-  "version.localizedSummary": "這次更新改善通話狀態說明、文字備援與閱讀清晰度。"
+  "version.localizedSummary": "這次更新改善通話狀態說明、文字備援與閱讀清晰度。",
+  "health.openHealthApp": "打開「健康」App 開啟項目"
 }

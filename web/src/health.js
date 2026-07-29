@@ -81,6 +81,22 @@ window.MuneaHealth = (function () {
     } catch (e) { hasData = null; }
   }
 
+  // 蘋果的授權視窗「同一批項目只跳一次」——問過之後再呼叫，系統什麼都不會做、
+  // 也不會回報任何錯誤。所以要自己記住問過沒有，否則第二次點「連接」在使用者眼中就是壞掉。
+  function askedBefore() {
+    try { return !!localStorage.getItem('munea.health.askedAt'); } catch (e) { return false; }
+  }
+  function markAsked() {
+    try { localStorage.setItem('munea.health.askedAt', String(Date.now())); } catch (e) {}
+  }
+
+  // 把使用者送到「健康」App 自己開項目（App 不能代替他開，蘋果不給）
+  async function openHealthApp() {
+    const p = plugin();
+    if (!p || typeof p.openHealthApp !== 'function') return { opened: false };
+    try { return await p.openHealthApp(); } catch (e) { return { opened: false }; }
+  }
+
   function renderConnectionState() {
     const on = connected();
     const blank = on && hasData === false;   // 說已連接、卻一項都讀不到
@@ -114,19 +130,27 @@ window.MuneaHealth = (function () {
         : t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧');
     const help = document.getElementById('cnHealthHelp');
     if (help) help.textContent = !on
+      // 還沒連：先提醒授權視窗裡的項目預設是關的。
+      // 這是「連了卻沒資料」最大的來源——很多人直接按允許，等於一項都沒開。
       ? t(
         'health.notConnectedHelp',
-        '目前未同步。重新連接後才會讀取新的健康資料。',
+        '按下「連接」後手機會跳出一個畫面，請把要給沐寧看的項目一項一項打開再按允許——那些項目預設是關著的。',
       )
       : blank
         ? t(
           'health.noReadableDataHelp',
-          '沐寧還讀不到任何一項。請打開手機的「健康」App → 右上角的個人照片 → 「App 與服務」→ 沐寧 → 把要給沐寧看的項目打開（步數、心率、睡眠、血壓、血氧）。如果這支手機本來就還沒有這些紀錄，等有了就會自己出現。',
+          '沐寧還讀不到任何一項。可能是授權時項目沒有打開，也可能是這支手機還沒有這些紀錄。用下面的按鍵去「健康」App 打開項目就好。',
         )
         : t(
         'health.disconnectHelp',
         '解除連接會停止沐寧後續同步，既有紀錄仍會保留。要撤銷 Apple 健康的系統授權，請到「健康 App」的個人頭像／隱私權設定中管理沐寧。',
       );
+    // 「打開健康 App」只在讀不到資料時出現，而且只有真機才有用（網頁預覽沒有這個能力）
+    const openBtn = document.getElementById('cnHealthOpenBtn');
+    if (openBtn) {
+      openBtn.hidden = !(blank && available());
+      openBtn.textContent = t('health.openHealthApp', '打開「健康」App 開啟項目');
+    }
   }
 
   function emitConnectionState() {
@@ -139,14 +163,20 @@ window.MuneaHealth = (function () {
     const p = plugin();
     if (!p) return { ok: false, reason: 'unsupported' }; // 不在 App 裡（網頁預覽）
     try {
+      const asked = askedBefore();
       const r = await p.requestAuthorization();
       if (r && r.available === false) return { ok: false, reason: 'unavailable' }; // 這台沒有健康資料
+      markAsked();
       try { localStorage.setItem('munea.devicesOn', '1'); } catch (e) {}
       const s = await refresh({ force: true });
       emitConnectionState();
       // 一項都沒讀到就照實說：多半是授權視窗裡沒打開項目，也可能這支手機本來就沒紀錄。
       // 蘋果不讓 App 分辨這兩者，所以不猜原因、只講現況跟怎麼開。
-      if (!hasAnyValue(s)) return { ok: true, empty: true, summary: s };
+      if (!hasAnyValue(s)) {
+        // 之前已經問過 → 系統剛剛那一下什麼都沒跳（蘋果只跳一次），
+        // 再叫他「重按一次連接」永遠不會有結果，要直接送他去「健康」App 開項目。
+        return { ok: true, empty: true, needsHealthApp: asked, summary: s };
+      }
       return { ok: true, summary: s };
     } catch (e) {
       return { ok: false, reason: 'error', message: String(e) };
@@ -207,6 +237,21 @@ window.MuneaHealth = (function () {
   }
 
   function bindConnectionUi() {
+    const openBtn = document.getElementById('cnHealthOpenBtn');
+    if (openBtn && !openBtn.dataset.bound) {
+      openBtn.dataset.bound = '1';
+      openBtn.addEventListener('click', async function () {
+        await openHealthApp();
+        // 從「健康」App 回來時再讀一次，剛打開的項目就會直接長出來，不用他自己再按一次連接
+        const onBack = () => {
+          if (document.visibilityState === 'visible') {
+            document.removeEventListener('visibilitychange', onBack);
+            refresh({ force: true });
+          }
+        };
+        document.addEventListener('visibilitychange', onBack);
+      });
+    }
     const btn = document.getElementById('cnHealthBtn');
     if (!btn) return;
     btn.addEventListener('click', function (event) {
@@ -241,5 +286,5 @@ window.MuneaHealth = (function () {
   bindConnectionUi();
   window.addEventListener('munea:locale-ready', renderConnectionState);
 
-  return { GOAL: GOAL, REFRESH_COOLDOWN_MS: REFRESH_COOLDOWN_MS, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative, metricStates: metricStates, hasAnyValue: hasAnyValue };
+  return { GOAL: GOAL, REFRESH_COOLDOWN_MS: REFRESH_COOLDOWN_MS, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative, metricStates: metricStates, hasAnyValue: hasAnyValue, openHealthApp: openHealthApp, askedBefore: askedBefore };
 })();
