@@ -293,6 +293,17 @@ const refreshLowStateBody = app.match(/function refreshLowState\(\) \{[\s\S]*?\n
 assert(/const low = !\(window\.MMPLAN && window\.MMPLAN\.isFree\(\)\) && ptsLeft\(\) < LOW_PTS;/.test(refreshLowStateBody), 'The low-points warning must never fire for free members');
 assert(!/strip\.style\.display = ptsLeft\(\) < LOW_PTS/.test(app), 'The plan-blind low-points warning must stay dead');
 
+const renderPointsBody = app.match(/function renderPoints\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(renderPointsBody.includes("muneaT('settings.creditsBalance'") && renderPointsBody.includes('Intl.NumberFormat(muneaLocale())'), 'The live credit balance must use compact locale copy and number formatting');
+const callBudgetTickBody = app.match(/function callBudgetTick\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(callBudgetTickBody.includes("muneaT('credits.lowTitle'") && callBudgetTickBody.includes("muneaT('credits.lowBody'"), 'The low-credit call warning must be localized without changing the budget gate');
+const pointsPopupCopyBody = app.match(/function renderPointsPopupCopy\(root\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(pointsPopupCopyBody && app.includes("'credits.exhaustedTitle'") && app.includes("'credits.exhaustedBody'"), 'The exhausted-credit dialog must render localized title and body copy');
+assert(app.includes("muneaT('settings.topUpCredits'") && app.includes("muneaT('common.notNow'"), 'The exhausted-credit dialog actions must use shared localized labels');
+const refreshLocalizedDynamicUiBody = app.match(/function refreshLocalizedDynamicUi\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(refreshLocalizedDynamicUiBody.includes('renderPointsPopupCopy()'), 'An open exhausted-credit dialog must rerender after the iOS App Language changes');
+assert(app.includes("muneaT('credits.freeTrialEnded'"), 'The free-trial exhaustion toast must be localized');
+
 // 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）
 assert(app.includes('function planPurchaseFailMessage'), 'Purchase failures must map reasons to plain-language text');
 assert(app.includes('先登入帳號，才能訂閱。') && app.includes('這個方案現在還不能買') && app.includes('付款過了，但還沒對上帳'), 'Purchase failure texts must cover sign-in, unavailable product and unverified payment');

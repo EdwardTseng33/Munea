@@ -168,8 +168,8 @@
     },
     {
       "anchorId": "captionToggle",
-      "renderer": "init",
-      "keys": ["voice.caption.enabled", "voice.caption.disabled"]
+      "renderer": "localizeChatControls",
+      "keys": ["voice.caption.enabled", "voice.caption.disabled", "voice.caption.label", "voice.microphone.label", "accessibility.toggleCaptions", "accessibility.toggleMicrophone"]
     },
     {
       "anchorId": "careBody",
@@ -239,6 +239,33 @@
         "home.walkProgress",
         "home.walkGoalMet",
         "home.walkSteps"
+      ]
+    },
+    {
+      "anchorId": "ptsLeft",
+      "renderer": "renderPoints",
+      "keys": [
+        "settings.creditsBalance",
+        "settings.lowCredits"
+      ]
+    },
+    {
+      "anchorId": "chatCaption",
+      "renderer": "callBudgetTick",
+      "keys": [
+        "credits.lowTitle",
+        "credits.lowBody"
+      ]
+    },
+    {
+      "anchorId": "topUpModal",
+      "renderer": "renderPointsPopupCopy",
+      "keys": [
+        "credits.exhaustedTitle",
+        "credits.exhaustedBody",
+        "credits.freeTrialEnded",
+        "settings.topUpCredits",
+        "common.notNow"
       ]
     }
   ],

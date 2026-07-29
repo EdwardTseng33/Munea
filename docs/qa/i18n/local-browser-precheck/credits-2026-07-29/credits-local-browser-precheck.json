@@ -1,0 +1,355 @@
+{
+  "schema": "munea.app-credits-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T10:21:49.573Z",
+  "result": "pass-local-precheck",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "b63f48118c4fcb3d1c874a29211268a1af19b6a5",
+  "sourceChangedFiles": [
+    "M scripts/i18n-native-review-worklist.js",
+    " M scripts/test-ui-contracts.js",
+    " M web/src/app.js",
+    " M web/src/i18n/app-binding-manifest.json",
+    " M web/src/i18n/app-surface-copy-manifest.json",
+    " M web/src/i18n/en.json",
+    " M web/src/i18n/es.json",
+    " M web/src/i18n/ja.json",
+    " M web/src/i18n/zh-TW.json",
+    " M web/src/styles.css",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/",
+    "?? scripts/app-credits-i18n-browser-precheck.js"
+  ],
+  "scope": {
+    "surfaces": [
+      "chat:idle/credit-balance",
+      "modal:top-up/credits-exhausted"
+    ],
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4179",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "appStoreConnectTouched": false,
+    "storeKitTouched": false,
+    "gatewayTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "browser": "Google Chrome",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "automation": "Playwright local fallback after agent-browser executable was unavailable"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "observedExternalRequests": []
+  },
+  "screens": {
+    "zh-TW": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "labels": {
+        "balance": "點數 1,234 點",
+        "callStatus": "未在線",
+        "callAction": "開始通話",
+        "captions": "字幕",
+        "microphone": "麥克風",
+        "title": "點數用完了",
+        "body": "這批點數剛好用完了。加購點數後，就能繼續跟沐寧聊天。",
+        "primary": "加購點數",
+        "secondary": "稍後再說"
+      },
+      "expectedLabels": {
+        "balance": "點數 1,234 點",
+        "callStatus": "未在線",
+        "callAction": "開始通話",
+        "captions": "字幕",
+        "microphone": "麥克風",
+        "title": "點數用完了",
+        "body": "這批點數剛好用完了。加購點數後，就能繼續跟沐寧聊天。",
+        "primary": "加購點數",
+        "secondary": "稍後再說"
+      },
+      "mismatches": [],
+      "browserErrors": [],
+      "balanceVisible": true,
+      "balanceLayout": {
+        "width": 158,
+        "height": 25,
+        "left": 212,
+        "right": 370,
+        "top": 22,
+        "bottom": 47,
+        "horizontalOverflowPixels": 0
+      },
+      "nameLayout": {
+        "left": 20,
+        "right": 120,
+        "top": 20,
+        "bottom": 48
+      },
+      "headerGapPixels": 92,
+      "pageState": {
+        "bodyTextLength": 88,
+        "errorOverlay": false,
+        "documentHorizontalOverflowPixels": 0
+      },
+      "cardLayout": {
+        "width": 320,
+        "height": 314,
+        "left": 35,
+        "right": 355,
+        "top": 265,
+        "bottom": 579,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "cardInsideViewport": true,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshots": {
+        "balance": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__credit-balance__iphone390x844.png",
+          "bytes": 555051,
+          "sha256": "2e3d28793b7a488da8cb738f2294ed58c08027d2159b8ab65c75afae1e3d5ed6"
+        },
+        "exhausted": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__credits-exhausted__iphone390x844.png",
+          "bytes": 163870,
+          "sha256": "30783b734a5541c345d634c0c75f045216f94eb17efa4fce671be8896bc6f291"
+        }
+      }
+    },
+    "en": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "labels": {
+        "balance": "1,234 credits",
+        "callStatus": "Offline",
+        "callAction": "Start call",
+        "captions": "Captions",
+        "microphone": "Microphone",
+        "title": "You’re out of credits",
+        "body": "You’ve used this batch of credits. Buy more to continue chatting with Munea.",
+        "primary": "Buy credits",
+        "secondary": "Not now"
+      },
+      "expectedLabels": {
+        "balance": "1,234 credits",
+        "callStatus": "Offline",
+        "callAction": "Start call",
+        "captions": "Captions",
+        "microphone": "Microphone",
+        "title": "You’re out of credits",
+        "body": "You’ve used this batch of credits. Buy more to continue chatting with Munea.",
+        "primary": "Buy credits",
+        "secondary": "Not now"
+      },
+      "mismatches": [],
+      "browserErrors": [],
+      "balanceVisible": true,
+      "balanceLayout": {
+        "width": 160,
+        "height": 25,
+        "left": 210,
+        "right": 370,
+        "top": 22,
+        "bottom": 47,
+        "horizontalOverflowPixels": 0
+      },
+      "nameLayout": {
+        "left": 20,
+        "right": 169,
+        "top": 21,
+        "bottom": 49
+      },
+      "headerGapPixels": 41,
+      "pageState": {
+        "bodyTextLength": 196,
+        "errorOverlay": false,
+        "documentHorizontalOverflowPixels": 0
+      },
+      "cardLayout": {
+        "width": 320,
+        "height": 308,
+        "left": 35,
+        "right": 355,
+        "top": 268,
+        "bottom": 576,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "cardInsideViewport": true,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshots": {
+        "balance": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__credit-balance__iphone390x844.png",
+          "bytes": 554422,
+          "sha256": "164b4f2699f3222269cbf0cc0d3c680548e8941a149a85ba6c7fa591ab3f3c8b"
+        },
+        "exhausted": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__credits-exhausted__iphone390x844.png",
+          "bytes": 165862,
+          "sha256": "8ba46815014e6ecb92a3a35c09304fcd1b462a198de8b74887cd9b058088b710"
+        }
+      }
+    },
+    "ja": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "labels": {
+        "balance": "1,234ポイント",
+        "callStatus": "オフライン",
+        "callAction": "通話を始める",
+        "captions": "字幕",
+        "microphone": "マイク",
+        "title": "ポイントを使い切りました",
+        "body": "今回のポイントを使い切りました。ポイントを追加すると、Muneaとの会話を続けられます。",
+        "primary": "ポイントを追加",
+        "secondary": "後で"
+      },
+      "expectedLabels": {
+        "balance": "1,234ポイント",
+        "callStatus": "オフライン",
+        "callAction": "通話を始める",
+        "captions": "字幕",
+        "microphone": "マイク",
+        "title": "ポイントを使い切りました",
+        "body": "今回のポイントを使い切りました。ポイントを追加すると、Muneaとの会話を続けられます。",
+        "primary": "ポイントを追加",
+        "secondary": "後で"
+      },
+      "mismatches": [],
+      "browserErrors": [],
+      "balanceVisible": true,
+      "balanceLayout": {
+        "width": 166,
+        "height": 24,
+        "left": 204,
+        "right": 370,
+        "top": 22,
+        "bottom": 47,
+        "horizontalOverflowPixels": 0
+      },
+      "nameLayout": {
+        "left": 20,
+        "right": 182,
+        "top": 21,
+        "bottom": 49
+      },
+      "headerGapPixels": 22,
+      "pageState": {
+        "bodyTextLength": 119,
+        "errorOverlay": false,
+        "documentHorizontalOverflowPixels": 0
+      },
+      "cardLayout": {
+        "width": 320,
+        "height": 345,
+        "left": 35,
+        "right": 355,
+        "top": 249,
+        "bottom": 595,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "cardInsideViewport": true,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshots": {
+        "balance": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__credit-balance__iphone390x844.png",
+          "bytes": 555619,
+          "sha256": "339d726ea88fdf4d939798e063077270a6c0c6ee131cb09e850cce42815e2778"
+        },
+        "exhausted": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__credits-exhausted__iphone390x844.png",
+          "bytes": 165948,
+          "sha256": "0743e663aefed405edc5fdd8095b934705500d80a7b0a24f453412398a009b57"
+        }
+      }
+    },
+    "es": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "labels": {
+        "balance": "1234 créditos",
+        "callStatus": "Sin conexión",
+        "callAction": "Iniciar llamada",
+        "captions": "Subtítulos",
+        "microphone": "Micrófono",
+        "title": "Te has quedado sin créditos",
+        "body": "Has usado todos estos créditos. Compra más para seguir hablando con Munea.",
+        "primary": "Comprar créditos",
+        "secondary": "Ahora no"
+      },
+      "expectedLabels": {
+        "balance": "1234 créditos",
+        "callStatus": "Sin conexión",
+        "callAction": "Iniciar llamada",
+        "captions": "Subtítulos",
+        "microphone": "Micrófono",
+        "title": "Te has quedado sin créditos",
+        "body": "Has usado todos estos créditos. Compra más para seguir hablando con Munea.",
+        "primary": "Comprar créditos",
+        "secondary": "Ahora no"
+      },
+      "mismatches": [],
+      "browserErrors": [],
+      "balanceVisible": true,
+      "balanceLayout": {
+        "width": 165,
+        "height": 24,
+        "left": 205,
+        "right": 370,
+        "top": 21,
+        "bottom": 46,
+        "horizontalOverflowPixels": 0
+      },
+      "nameLayout": {
+        "left": 20,
+        "right": 197,
+        "top": 21,
+        "bottom": 49
+      },
+      "headerGapPixels": 8,
+      "pageState": {
+        "bodyTextLength": 217,
+        "errorOverlay": false,
+        "documentHorizontalOverflowPixels": 0
+      },
+      "cardLayout": {
+        "width": 320,
+        "height": 308,
+        "left": 35,
+        "right": 355,
+        "top": 268,
+        "bottom": 576,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "cardInsideViewport": true,
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshots": {
+        "balance": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__credit-balance__iphone390x844.png",
+          "bytes": 555404,
+          "sha256": "c7d44e1005d268c94869bd240a5a06e8197a92d4ac436214d09983f8cefe2631"
+        },
+        "exhausted": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__credits-exhausted__iphone390x844.png",
+          "bytes": 167507,
+          "sha256": "52f2956862453a3de217040c69f63c92e917cfe928be0ca456143d5d9972f5c0"
+        }
+      }
+    }
+  },
+  "limitations": [
+    "This is a local browser precheck, not exact installed-iPhone visual QA.",
+    "No production, staging, StoreKit, Gateway, Voice, Avatar, Supabase, or App Store Connect service was exercised."
+  ]
+}

@@ -4346,7 +4346,22 @@ function renderMedSlots() {
 const POINTS = { total: 0, used: 0, serverRemaining: null,    // 方案與雲端錢包載入後再填入，不預設舊方案額度
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
 const LOW_PTS = 30;
-window.__ptsTest = { setUsed: v => { POINTS.used = v; renderPoints(); }, ff: s => { _callSec = s; } };
+window.__ptsTest = {
+  setUsed: v => { POINTS.used = v; renderPoints(); },
+  setRemaining: v => { POINTS.serverRemaining = Math.max(0, Number(v) || 0); renderPoints(); },
+  showExhausted: () => __muneaShowPointsPopup(),
+  showIdleChat: () => {
+    document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+    const chat = document.getElementById('chat');
+    if (chat) {
+      chat.classList.add('active');
+      chat.dataset.state = 'idle';
+    }
+    setCallToggle(false);
+    localizeChatControls();
+  },
+  ff: s => { _callSec = s; },
+};
 window.__medRefresh = () => updateMedCount();
 function ptsLeft() {
   return Number.isFinite(POINTS.serverRemaining)
@@ -4369,8 +4384,12 @@ function pushWallet() { syncPush('wallet', { grant: POINTS.total, used: POINTS.u
 function ptsPillHidden() { return !!(window.MMPLAN && window.MMPLAN.isFree()) && ptsLeft() <= 0; }
 function renderPoints() {
   const left = ptsLeft();
+  const formattedLeft = new Intl.NumberFormat(muneaLocale()).format(left);
   const hud = document.querySelector('.hud-pill.pts');
-  if (hud) { hud.textContent = '剩 ' + left + ' 點'; hud.style.display = ptsPillHidden() ? 'none' : ''; }
+  if (hud) {
+    hud.textContent = muneaT('settings.creditsBalance', '點數 {credits} 點', { credits: formattedLeft });
+    hud.style.display = ptsPillHidden() ? 'none' : '';
+  }
   if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
   if ($('#ptsUsed')) $('#ptsUsed').textContent = POINTS.used;
   if ($('#ptsBar')) $('#ptsBar').style.width = (POINTS.total > 0 ? Math.round(POINTS.used / POINTS.total * 100) : 0) + '%';
@@ -4397,12 +4416,31 @@ function callBudgetTick() {
   const left = ptsLeft() - Math.floor(_callSec / 60);
   if (!_lowWarned && left <= 15 && left > 0) {
     _lowWarned = true;
-    setCaption('點數快用完了，大概還能聊 ' + left + ' 分鐘', '用完聊天會先停，補點數就能繼續');
+    const minutes = new Intl.NumberFormat(muneaLocale()).format(left);
+    setCaption(
+      muneaT('credits.lowTitle', '點數快用完了，大概還能聊 {minutes} 分鐘', { minutes }),
+      muneaT('credits.lowBody', '用完聊天會先停，補點數就能繼續'),
+    );
   }
   if (!_zeroSaid && left <= 0) {
     _zeroSaid = true;
     __muneaPointsOut();                                  // 點數用完 → 停止聊天 + 跳補點數
   }
+}
+function renderPointsPopupCopy(root) {
+  const popup = root || document.getElementById('mm-pts');
+  if (!popup) return;
+  const title = popup.querySelector('[data-points-copy="title"]');
+  const body = popup.querySelector('[data-points-copy="body"]');
+  const go = popup.querySelector('[data-points-action="top-up"]');
+  const no = popup.querySelector('[data-points-action="dismiss"]');
+  if (title) title.textContent = muneaT('credits.exhaustedTitle', '點數用完了');
+  if (body) body.textContent = muneaT(
+    'credits.exhaustedBody',
+    '聊天會用到點數，這批剛好用完囉。補一些點數，就能繼續跟沐寧聊。',
+  );
+  if (go) go.textContent = muneaT('settings.topUpCredits', '補充點數');
+  if (no) no.textContent = muneaT('common.notNow', '先不用');
 }
 function __muneaShowPointsPopup(){
   var old=document.getElementById('mm-pts'); if(old) old.remove();
@@ -4410,14 +4448,15 @@ function __muneaShowPointsPopup(){
   m.style.cssText='position:fixed;inset:0;z-index:10060;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
   m.innerHTML='<div style="width:min(320px,84vw);background:#F4F0E8;border-radius:24px;padding:26px 22px 18px;text-align:center;box-shadow:0 24px 60px -14px rgba(0,0,0,.5)">'
     +'<div style="width:54px;height:54px;border-radius:16px;margin:0 auto 16px;background:linear-gradient(135deg,#E0B354,#C79A3B);display:grid;place-items:center"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M9 10h4.5a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3H15"/></svg></div>'
-    +'<div style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px">點數用完了</div>'
-    +'<div style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px">聊天會用到點數，這批剛好用完囉。補一些點數，就能繼續跟沐寧聊。</div>'
-    +'<button id="mm-pts-go" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px">補充點數</button>'
-    +'<button id="mm-pts-no" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer">先不用</button>'
+    +'<div data-points-copy="title" style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px"></div>'
+    +'<div data-points-copy="body" style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px"></div>'
+    +'<button data-points-action="top-up" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px"></button>'
+    +'<button data-points-action="dismiss" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer"></button>'
     +'</div>';
   document.body.appendChild(m);
-  m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-pts-no') m.remove(); });
-  var go=document.getElementById('mm-pts-go');
+  renderPointsPopupCopy(m);
+  m.addEventListener('click',function(e){ if(e.target===m||e.target.closest('[data-points-action="dismiss"]')) m.remove(); });
+  var go=m.querySelector('[data-points-action="top-up"]');
   if(go) go.addEventListener('click',function(){ m.remove(); var tm=document.getElementById('topUpModal'); if(tm) tm.classList.add('show'); });
 }
 function __muneaShowCallCreditBlocked(){
@@ -4442,7 +4481,7 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { chatOpened = false; } catch (e) {}
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
-  toast('免費帳號的一次性 5 點體驗已用完');
+  toast(muneaT('credits.freeTrialEnded', '免費帳號的一次性 5 分鐘體驗已用完'));
   try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
   if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
 }
@@ -4483,6 +4522,17 @@ function applyCaptionState() {
   if (b) { b.classList.toggle('off', !captionsOn); b.setAttribute('aria-pressed', captionsOn ? 'true' : 'false'); }
   if (chat) chat.classList.toggle('captions-on', captionsOn);
   if (!captionsOn) { const box = document.querySelector('.face-caption-box'); if (box) box.remove(); }
+}
+function localizeChatControls() {
+  const captions = document.getElementById('captionToggle');
+  const captionsLabel = captions && captions.querySelector('span');
+  if (captionsLabel) captionsLabel.textContent = muneaT('voice.caption.label', '字幕');
+  if (captions) captions.setAttribute('aria-label', muneaT('accessibility.toggleCaptions', '字幕開關'));
+
+  const microphone = document.getElementById('chatMic');
+  const microphoneLabel = microphone && microphone.querySelector('span');
+  if (microphoneLabel) microphoneLabel.textContent = muneaT('voice.microphone.label', '麥克風');
+  if (microphone) microphone.setAttribute('aria-label', muneaT('accessibility.toggleMicrophone', '麥克風開關'));
 }
 function setCaption(text, hint) {
   if (!captionsOn) return;                 // 字幕關閉時不顯示逐字稿
@@ -5770,6 +5820,7 @@ function init() {
       : muneaT('voice.caption.disabled', '字幕已關閉'));
   });
   applyCaptionState();
+  localizeChatControls();
   enableSheetDrag();               // 所有彈窗支援下拉關閉手勢
   refreshTaskProgress();
   restoreFamilyFeed();
@@ -8554,9 +8605,11 @@ function refreshLocalizedDynamicUi() {
   try { applyAppVersion(); } catch (e) {}
   try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
   try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
+  try { renderPointsPopupCopy(); } catch (e) {}
   try { updateAuthUI(); } catch (e) {}
   try { localizeAuthTerms(); } catch (e) {}
   try { applyTaskAccessibilityLabels(); } catch (e) {}
+  try { localizeChatControls(); } catch (e) {}
 }
 window.addEventListener('munea:locale-ready', refreshLocalizedDynamicUi);
 window.addEventListener('munea:locale-change', () => {

@@ -27,6 +27,7 @@ const JA_SHARED_SOURCE_KEYS = Object.freeze([
   'subscription.planPro',
   'tab.settings',
   'version.subtitle',
+  'voice.caption.label',
 ]);
 
 function readCatalog(locale) {
