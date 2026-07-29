@@ -18,23 +18,25 @@ const jsCandidates = scanJavaScript(`
   const direct = window.MuneaI18n.t('common.cancel', null, '取消');
   const legacy = localizedFallback('medication.slot.bedtime', '睡前');
   const uiHelper = window.muneaUiT('status.title', '今天的狀態');
+  const escaped = value.replace(/['"]/g, '');
+  const afterRegex = t('notification.centerTitle', '通知中心');
   const unknown = t('missing.catalog.key', '未翻譯');
   /* "區塊註解不算" */
   const english = "Save";
 `);
 assert.deepEqual(
   jsCandidates.map((item) => item.text),
-  ['儲存成功', '你好，${name}', '儲存', '取消', '睡前', '今天的狀態', '未翻譯'],
+  ['儲存成功', '你好，${name}', '儲存', '取消', '睡前', '今天的狀態', '通知中心', '未翻譯'],
   'JavaScript scanner should keep localized literals and ignore comments',
 );
 assert.deepEqual(
   jsCandidates.map((item) => item.bindingStatus),
-  ['unbound', 'unbound', 'bound', 'bound', 'bound', 'bound', 'unbound'],
+  ['unbound', 'unbound', 'bound', 'bound', 'bound', 'bound', 'bound', 'unbound'],
   'Only fallback literals attached to catalog-complete keys may be classified as bound',
 );
 assert.deepEqual(
   jsCandidates.filter((item) => item.bindingStatus === 'bound').map((item) => item.bindingKey),
-  ['common.save', 'common.cancel', 'medication.slot.bedtime', 'status.title'],
+  ['common.save', 'common.cancel', 'medication.slot.bedtime', 'status.title', 'notification.centerTitle'],
 );
 
 const htmlCandidates = scanHtml(`
@@ -211,9 +213,14 @@ assert.ok(
 );
 const appWebView = report.surfaces.find((surface) => surface.id === 'app-webview');
 assert.ok(appWebView.boundHanCandidates > 0, 'Catalog-bound fallback copy must remain auditable');
+const reviewedAppOccurrences = JSON.parse(
+  require('fs').readFileSync('docs/I18N-NON-USER-FACING-REVIEW.json', 'utf8'),
+).entries
+  .filter((entry) => appWebView.files.some((file) => file.path === entry.path))
+  .reduce((sum, entry) => sum + entry.expectedOccurrences, 0);
 assert.equal(
   appWebView.reviewedNonUserFacingHanCandidates,
-  8,
+  reviewedAppOccurrences,
   'Only exact reviewed backend and legacy storage identities may be excluded from UI debt',
 );
 const companionProfile = appWebView.files.find(
@@ -230,6 +237,13 @@ assert.equal(medication.boundHanCandidates, 4);
 assert.equal(medication.reviewedNonUserFacingHanCandidates, 1);
 assert.equal(medication.unboundHanCandidates, 0);
 assert.deepEqual(medication.reviewFailures, []);
+const notifications = appWebView.files.find(
+  (file) => file.path === 'web/src/notify.js',
+);
+assert.equal(notifications.boundHanCandidates, 59);
+assert.equal(notifications.reviewedNonUserFacingHanCandidates, 5);
+assert.equal(notifications.unboundHanCandidates, 0);
+assert.deepEqual(notifications.reviewFailures, []);
 assert.ok(
   appWebView.unboundHanCandidates > 0,
   'The App must remain blocked while unbound localized copy exists',

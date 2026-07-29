@@ -360,12 +360,22 @@ function bindingForIndex(bindings, index) {
   return binding ? { key: binding.key, type: binding.type } : null;
 }
 
+function isRegexLiteralStart(source, index) {
+  let cursor = index - 1;
+  while (cursor >= 0 && /\s/.test(source[cursor])) cursor -= 1;
+  if (cursor < 0) return true;
+  if ('([{:;,=!?&|+-*%^~<>'.includes(source[cursor])) return true;
+  const prefix = source.slice(Math.max(0, cursor - 16), cursor + 1);
+  return /\b(?:return|case|throw|typeof|instanceof|in|of|yield|await)$/.test(prefix);
+}
+
 function scanJavaScript(source, catalogKeys = loadCatalogKeys()) {
   const candidates = [];
   const bindings = javaScriptBindings(source, catalogKeys);
   let i = 0;
   let state = 'code';
   let quote = '';
+  let regexCharacterClass = false;
   let start = 0;
   let value = '';
 
@@ -373,6 +383,22 @@ function scanJavaScript(source, catalogKeys = loadCatalogKeys()) {
     const char = source[i];
     const next = source[i + 1];
 
+    if (state === 'regex') {
+      if (char === '\\') {
+        i += 2;
+        continue;
+      }
+      if (char === '[') regexCharacterClass = true;
+      if (char === ']') regexCharacterClass = false;
+      if (char === '/' && !regexCharacterClass) {
+        state = 'code';
+        i += 1;
+        while (/[A-Za-z]/.test(source[i] || '')) i += 1;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
     if (state === 'line-comment') {
       if (char === '\n') state = 'code';
       i += 1;
@@ -421,6 +447,12 @@ function scanJavaScript(source, catalogKeys = loadCatalogKeys()) {
     if (char === '/' && next === '*') {
       state = 'block-comment';
       i += 2;
+      continue;
+    }
+    if (char === '/' && isRegexLiteralStart(source, i)) {
+      state = 'regex';
+      regexCharacterClass = false;
+      i += 1;
       continue;
     }
     if (char === '"' || char === "'" || char === '`') {

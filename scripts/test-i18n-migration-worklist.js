@@ -13,6 +13,11 @@ const {
 const worklist = buildMigrationWorklist();
 const inventory = JSON.parse(fs.readFileSync('docs/I18N-SURFACE-INVENTORY.json', 'utf8'));
 const appSurface = inventory.surfaces.find((surface) => surface.id === 'app-webview');
+const reviewedAppOccurrences = JSON.parse(
+  fs.readFileSync('docs/I18N-NON-USER-FACING-REVIEW.json', 'utf8'),
+).entries
+  .filter((entry) => appSurface.files.includes(entry.path))
+  .reduce((sum, entry) => sum + entry.expectedOccurrences, 0);
 
 assert.equal(worklist.schema, 'munea.i18n-migration-worklist.v3');
 assert.equal(worklist.surface, 'app-webview');
@@ -22,7 +27,7 @@ assert(
   'Current App copy inventory must not exceed the checked-in migration baseline',
 );
 assert(worklist.summary.boundOccurrences > 0, 'Bound fallbacks must be reported separately');
-assert.equal(worklist.summary.reviewedNonUserFacingOccurrences, 8);
+assert.equal(worklist.summary.reviewedNonUserFacingOccurrences, reviewedAppOccurrences);
 assert(worklist.summary.unboundOccurrences > 0, 'Unbound copy must remain in the worklist');
 assert.equal(
   worklist.summary.boundOccurrences

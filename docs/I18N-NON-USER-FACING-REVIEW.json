@@ -78,6 +78,51 @@
       "expectedOccurrences": 1,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-medication-service.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-breakfast",
+      "path": "web/src/notify.js",
+      "text": "早餐後",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-lunch",
+      "path": "web/src/notify.js",
+      "text": "午餐後",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-dinner",
+      "path": "web/src/notify.js",
+      "text": "晚餐後",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-bedtime",
+      "path": "web/src/notify.js",
+      "text": "睡前",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-generic-medication-name",
+      "path": "web/src/notify.js",
+      "text": "藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
     }
   ]
 }

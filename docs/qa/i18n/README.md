@@ -251,3 +251,16 @@ node scripts/i18n-app-e2e-evidence.js `
 - 價格是 QA 用的各地格式範例，不是正式售價，也不會開啟 Apple 付款。
 - 只證明 catalog bootstrap 與代表性元件能渲染。
 - 不代表完整 App 畫面、App Store 截圖、實機 Dynamic Type 或 installed App E2E 通過。
+
+## 本機 App 畫面預檢
+
+`scripts/app-status-i18n-browser-precheck.js` 與
+`scripts/app-notification-i18n-browser-precheck.js` 只啟動綁定
+`127.0.0.1` 的 fixture server，並封鎖瀏覽器對 loopback 以外的請求。
+目前的狀態頁與通知中心四語截圖、雜湊及檢查結果放在：
+
+- `docs/qa/i18n/local-browser-precheck/status-2026-07-29/`
+- `docs/qa/i18n/local-browser-precheck/notification-2026-07-29/`
+
+這些報告固定標記 `releaseEvidence: false`，只可作為開發預檢；不能替代
+同一候選 IPA 在實體 iPhone 上完成的 456 張 visual QA、APNs、通話及購買驗收。

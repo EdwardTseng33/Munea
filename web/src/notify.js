@@ -200,8 +200,8 @@ window.MuneaNotify = (function () {
     return {
       title: detailTitle,
       body: detailBody,
-      publicTitle: '沐寧提醒',
-      publicBody: '你的健康提醒到了，解鎖後查看。',
+      publicTitle: t('notification.publicTitle', '沐寧提醒'),
+      publicBody: t('notification.publicBody', '你的健康提醒到了，解鎖後查看。'),
       eventType: eventType,
       resourceId: String(resourceId || ''),
       deepLink: deepLink,
@@ -227,7 +227,7 @@ window.MuneaNotify = (function () {
         var slot = raw.trim();
         var timing = slotTime(slot);
         if (!slot || !timing) return;
-        var name = String(med.name || '藥').split(/\s+/)[0];
+        var name = String(med.name || t('medication.genericName', '藥')).split(/\s+/)[0];
         if (!end) {
           (recurring[slot] = recurring[slot] || { time: timing, names: [] }).names.push(name);
           return;
@@ -251,7 +251,11 @@ window.MuneaNotify = (function () {
         minute: group.time.minute,
         repeats: true
       }, privacyFields(
-        '該吃藥了', slot + '的藥：' + group.names.join('、') + '。吃完回沐寧打個勾。',
+        t('notification.medicationDueTitle', '該吃藥了'),
+        t('notification.medicationDueBody', '{slot}的藥：{medications}。吃完回沐寧打個勾。', {
+          slot: slot,
+          medications: group.names.join(t('common.listSeparator', '、'))
+        }),
         'medication_due', slot, 'munea://medications/' + encodeURIComponent(slot)
       )));
     });
@@ -263,7 +267,11 @@ window.MuneaNotify = (function () {
         hour: group.time.hour,
         minute: group.time.minute
       }, parts, privacyFields(
-        '該吃藥了', group.slot + '的藥：' + group.names.join('、') + '。吃完回沐寧打個勾。',
+        t('notification.medicationDueTitle', '該吃藥了'),
+        t('notification.medicationDueBody', '{slot}的藥：{medications}。吃完回沐寧打個勾。', {
+          slot: group.slot,
+          medications: group.names.join(t('common.listSeparator', '、'))
+        }),
         'medication_due', localDateKey(group.date) + '|' + group.slot,
         'munea://medications/' + localDateKey(group.date) + '/' + encodeURIComponent(group.slot)
       )));
@@ -284,7 +292,10 @@ window.MuneaNotify = (function () {
         id: 'act-' + activity.id,
         hour: remindAt.getHours(), minute: remindAt.getMinutes()
       }, dateParts(remindAt), privacyFields(
-        (activity.title || '家庭聚會') + '快到了', '再 30 分鐘，別忘了喔。',
+        t('notification.familyActivityTitle', '{title}快到了', {
+          title: activity.title || t('notification.familyDefaultTitle', '家庭聚會')
+        }),
+        t('notification.familyActivityBody', '再 30 分鐘，別忘了喔。'),
         'family_activity', activity.id, 'munea://family/activities/' + activity.id
       )));
     });
@@ -299,7 +310,10 @@ window.MuneaNotify = (function () {
         id: 'visit-' + visit.id,
         hour: remindAt.getHours(), minute: remindAt.getMinutes()
       }, dateParts(remindAt), privacyFields(
-        (visit.title || '回診') + '提醒', '等等 ' + (visit.time || '') + '記得帶健保卡。',
+        t('notification.clinicTitle', '{title}提醒', {
+          title: visit.title || t('notification.clinicDefaultTitle', '回診')
+        }),
+        t('notification.clinicBody', '等等 {time} 記得帶健保卡。', { time: visit.time || '' }),
         'clinic_upcoming', visit.id, 'munea://visits/' + visit.id
       )));
     });
@@ -503,7 +517,9 @@ window.MuneaNotify = (function () {
         if (registration && registration.token) await registerToken(registration);
       } catch (e) {}
     }
-    if (message) message.textContent = saved.synced ? '通知已開啟' : '這支手機已開啟；雲端尚未同步';
+    if (message) message.textContent = saved.synced
+      ? t('notification.enabled', '通知已開啟')
+      : t('notification.localEnabledCloudPending', '這支手機已開啟；雲端尚未同步');
     return saved;
   }
 
@@ -520,7 +536,10 @@ window.MuneaNotify = (function () {
           if (!_permission.granted && _permission.status !== 'denied') await requestPermission();
           if (!_permission.granted) {
             setEnableIntent();
-            if (message) message.textContent = '請在 iPhone 設定中允許沐寧通知；回到沐寧會自動開啟';
+            if (message) message.textContent = t(
+              'notification.allowInSettings',
+              '請在 iPhone 設定中允許沐寧通知；回到沐寧會自動開啟'
+            );
             await window.MuneaNotify.openSettings();
             return;
           }
@@ -529,14 +548,18 @@ window.MuneaNotify = (function () {
           clearEnableIntent();
           var saved = await saveNotificationSettings({ pushEnabled: false });
           var deviceSynced = await disableCurrentDevice();
-          if (message) message.textContent = saved.synced && deviceSynced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
+          if (message) message.textContent = saved.synced && deviceSynced
+            ? t('notification.updated', '設定已更新')
+            : t('notification.localUpdatedCloudPending', '這支手機已更新；雲端尚未同步');
         }
       } else {
         if (!notificationMasterOn() || !Object.prototype.hasOwnProperty.call(_notificationSettings.categories, key)) return;
         var categories = {};
         categories[key] = !_notificationSettings.categories[key];
         var categorySaved = await saveNotificationSettings({ categories: categories });
-        if (message) message.textContent = categorySaved.synced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
+        if (message) message.textContent = categorySaved.synced
+          ? t('notification.updated', '設定已更新')
+          : t('notification.localUpdatedCloudPending', '這支手機已更新；雲端尚未同步');
       }
       sync();
     } finally {
@@ -609,18 +632,23 @@ window.MuneaNotify = (function () {
 
   function notificationTypeLabel(type) {
     var labels = {
-      medication_due: '用藥提醒', medication_missed: '漏服提醒', clinic_upcoming: '看診提醒',
-      family_relay: '家人傳話', family_invitation: '家庭邀請', family_activity: '家庭活動',
-      health_alert: '健康通知'
+      medication_due: t('notification.medication', '用藥提醒'),
+      medication_missed: t('notification.medicationMissed', '漏服提醒'),
+      clinic_upcoming: t('notification.clinic', '看診提醒'),
+      family_relay: t('notification.familyRelay', '家人傳話'),
+      family_invitation: t('notification.familyInvitation', '家庭邀請'),
+      family_activity: t('notification.familyActivity', '家庭活動'),
+      health_alert: t('notification.health', '健康通知')
     };
-    return labels[type] || '照護通知';
+    return labels[type] || t('notification.care', '照護通知');
   }
 
   function notificationTimeLabel(value) {
     if (!value) return '';
     var date = new Date(value);
     if (isNaN(date)) return '';
-    try { return new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date); }
+    var locale = (window.MuneaI18n && window.MuneaI18n.current()) || 'zh-TW';
+    try { return new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date); }
     catch (e) { return date.toLocaleString(); }
   }
 
@@ -631,7 +659,12 @@ window.MuneaNotify = (function () {
     mask.className = 'modal-mask';
     mask.id = 'notificationInboxModal';
     mask.setAttribute('aria-hidden', 'true');
-    mask.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationInboxTitle"><div class="modal-grab"></div><div class="auth-modal-head"><div><h2 id="notificationInboxTitle">通知中心</h2><p class="modal-sub">推播沒有送達時，重要事件仍會保留在這裡。</p></div><button class="auth-close" id="notificationInboxClose" type="button" aria-label="關閉">×</button></div><div id="notificationInboxList" style="display:grid;gap:10px;padding-bottom:12px"></div></div>';
+    mask.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationInboxTitle"><div class="modal-grab"></div><div class="auth-modal-head"><div><h2 id="notificationInboxTitle">'
+      + escapeHtml(t('notification.centerTitle', '通知中心'))
+      + '</h2><p class="modal-sub">' + escapeHtml(t('notification.inboxSubtitle', '推播沒有送達時，重要事件仍會保留在這裡。'))
+      + '</p></div><button class="auth-close" id="notificationInboxClose" type="button" aria-label="'
+      + escapeHtml(t('notification.close', '關閉通知中心'))
+      + '">×</button></div><div id="notificationInboxList" style="display:grid;gap:10px;padding-bottom:12px"></div></div>';
     document.body.appendChild(mask);
     function close() {
       mask.classList.remove('show');
@@ -657,7 +690,7 @@ window.MuneaNotify = (function () {
     head.appendChild(time);
     var title = document.createElement('strong');
     title.style.fontSize = '16px';
-    title.textContent = item.title || '你的健康提醒到了';
+    title.textContent = item.title || t('notification.defaultTitle', '你的照護提醒到了');
     var body = document.createElement('span');
     body.style.cssText = 'font-size:14px;line-height:1.5;color:var(--ink-2)';
     body.textContent = item.body || '';
@@ -686,15 +719,15 @@ window.MuneaNotify = (function () {
     var list = mask.querySelector('#notificationInboxList');
     mask.classList.add('show');
     mask.setAttribute('aria-hidden', 'false');
-    list.textContent = '正在載入通知…';
+    list.textContent = t('notification.loading', '正在載入通知…');
     var result = await api('/notifications', { action: 'list', limit: 100 });
     list.textContent = '';
     if (!result || !Array.isArray(result.notifications)) {
-      list.textContent = '請先登入，或稍後再試一次。';
+      list.textContent = t('notification.signInRequired', '請先登入，或稍後再試一次。');
       return;
     }
     if (!result.notifications.length) {
-      list.textContent = '目前沒有通知。新的提醒與家人消息會保留在這裡。';
+      list.textContent = t('notification.emptyDetail', '目前沒有通知。新的提醒與家人消息會保留在這裡。');
       return;
     }
     result.notifications.forEach(function (item) { list.appendChild(notificationCard(item)); });
