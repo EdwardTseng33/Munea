@@ -44,6 +44,9 @@
     ],
     "chat-connecting": [
       "voice.connecting",
+      "voice.call.dialing",
+      "voice.call.firstWarmup",
+      "voice.call.openingWarmup",
       "voice.queue.preparing",
       "voice.queue.position.one",
       "voice.queue.position.other",
@@ -55,6 +58,9 @@
       "voice.call.end",
       "voice.call.online",
       "voice.call.speaking",
+      "voice.call.connectedCaption",
+      "voice.call.listeningPrompt",
+      "voice.call.goodbye",
       "voice.fallback"
     ],
     "family": [
@@ -106,6 +112,10 @@
       "error.offline",
       "common.retry",
       "voice.call.unavailable",
+      "voice.call.retryLater",
+      "voice.call.microphonePermissionTitle",
+      "voice.call.authExpiredTitle",
+      "voice.call.disconnectedTitle",
       "family.noActivities",
       "purchase.storeUnavailable",
       "purchase.failed",

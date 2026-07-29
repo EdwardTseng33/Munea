@@ -91,6 +91,32 @@
       ]
     },
     {
+      "anchorId": "busyCardTitle",
+      "renderer": "showCallStatusCard",
+      "keys": [
+        "voice.call.unavailable",
+        "voice.call.retryLater",
+        "voice.call.microphoneHttpsTitle",
+        "voice.call.microphoneHttpsNote",
+        "voice.call.microphonePermissionTitle",
+        "voice.call.microphonePermissionNote",
+        "voice.call.authExpiredTitle",
+        "voice.call.authExpiredNote",
+        "voice.call.accountPreparingTitle",
+        "voice.call.accountPreparingNote",
+        "voice.call.serviceUpdatingTitle",
+        "voice.call.serviceUpdatingNote",
+        "voice.call.serviceBusyNote",
+        "voice.call.activationPendingTitle",
+        "voice.call.readinessPendingTitle",
+        "voice.call.readinessPendingNote",
+        "voice.call.disconnectedTitle",
+        "voice.call.disconnectedNote",
+        "auth.signInAgain",
+        "common.okay"
+      ]
+    },
+    {
       "anchorId": "subCta",
       "renderer": "renderSubUI",
       "keys": [

@@ -8,6 +8,8 @@ const versionSource = fs.readFileSync('web/src/version.js', 'utf8');
 const privacy = fs.readFileSync('web/privacy.html', 'utf8');
 const store = fs.readFileSync('web/src/store.js', 'utf8');
 const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
+const rendererCopySource = fs.readFileSync('web/src/i18n/app-renderer-copy.js', 'utf8');
+const zhCatalog = JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'));
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -78,7 +80,7 @@ assert(html.includes('id="busyCardAlt"'), 'Busy card must expose a secondary exi
 assert(css.includes('.busy-card'), 'Busy card styles must exist');
 assert(app.includes("showBusyCard('queued', queue)"), 'Queued gateway responses must surface the busy card with the full queue payload (position and eta_s), not just a bare position number');
 assert(app.includes("showBusyCard('full')"), 'A full queue must surface the explicit busy-try-later card');
-assert(app.includes('現在忙線中，請稍後再試試看'), 'Full-queue copy must say busy-try-later in plain language');
+assert(zhCatalog['voice.queue.fullTitle'] === '現在忙線中' && zhCatalog['voice.queue.fullBody'].includes('請稍後再試試看'), 'Full-queue catalog copy must say busy-try-later in plain language');
 assert(/if \(\(callDialing \|\| callPreflightPending\) && !callConnected\)/.test(app), 'Tapping the call button must cancel while queued (preflight pending), not only while dialing');
 assert(app.includes('if (callConnected || callDialing || callPreflightPending)'), 'Leaving the call screen while queued must hang up and release the queue slot');
 assert(/callConnected \|\| callDialing \|\| callPreflightPending\) && \$\('#callToggle'\)/.test(app), 'Backgrounding the App while queued must cancel the queue slot');
@@ -94,12 +96,13 @@ assert(app.includes('暫時先別關掉這個畫面，好了會自動接通'), '
 
 // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
 // 斷線重連失敗／連線逾時／影像席位全滿／拿不到麥克風，過去全部只寫進被藏起來的 #chatCaption，等於零回饋。
-assert(app.includes('function showCallStatusCard(opts)'), 'A generic visible failure card function must exist for non-queue call failures');
-const statusCardCopies = ['登入狀態已失效', '帳號正在準備中', '通話服務正在更新', '目前無法接通', '服務尚未完成接通', '目前連線還沒準備好', '連線中斷了', '拿不到麥克風權限'];
-statusCardCopies.forEach(copy => assert(app.includes(copy), `Failure card copy missing for: ${copy}`));
-assert(app.includes("action: 'reopen-auth'") && app.includes("action === 'reopen-auth'") && app.includes('openAuthSheet()'),
+assert(app.includes('function showCallStatusCard(stateOrOptions)'), 'A generic visible localized failure card function must exist for non-queue call failures');
+const statusCardKeys = ['voice.call.authExpiredTitle', 'voice.call.accountPreparingTitle', 'voice.call.serviceUpdatingTitle', 'voice.call.unavailable', 'voice.call.activationPendingTitle', 'voice.call.readinessPendingTitle', 'voice.call.disconnectedTitle', 'voice.call.microphonePermissionTitle'];
+statusCardKeys.forEach(key => assert(zhCatalog[key], `Failure card catalog key missing for: ${key}`));
+assert(rendererCopySource.includes("action: 'reopen-auth'") && app.includes("action === 'reopen-auth'") && app.includes('openAuthSheet()'),
   'An expired session must offer a one-tap re-login action on the visible card, not just a hidden caption');
-assert(app.includes("showCallStatusCard({ title: '服務尚未完成接通'"), 'The gateway activation timeout must also surface a visible card, matching the other silent-failure fixes');
+assert(app.includes("showCallStatusCard('activationPending')"), 'The gateway activation timeout must also surface a visible localized card, matching the other silent-failure fixes');
+assert(app.includes("muneaT('voice.call.dialing'") && app.includes("muneaT('voice.call.online'") && app.includes("muneaT('voice.call.offline'"), 'Call control labels and presence state must use the locale catalog');
 
 // 全滿態給出口：先用文字聊（2026-07-24 Edward 拍板 P0）——不新造頁面，重用既有 chatHandle 文字管線，
 // 不佔用 Avatar／即時語音席位，讓長輩在滿載時仍有話可聊而不是只能乾等或放棄。

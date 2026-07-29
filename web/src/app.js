@@ -211,17 +211,20 @@ function setCallHint(text, busy) {
 }
 function setLocalizedCallHint(state, busy = false) {
   const rendererCopy = muneaRendererCopy();
-  const fallback = {
-    connecting: '正在連線…',
-    ready: '直接說，我在這裡',
-    speaking: '正在說話',
-    unavailable: '目前無法接通',
+  const fallbackKeys = {
+    connecting: 'voice.connecting',
+    developerConnecting: 'voice.call.developerConnecting',
+    developerReady: 'voice.call.developerReady',
+    firstWarmup: 'voice.call.firstWarmup',
+    idleEnded: 'voice.call.idleEnded',
+    openingWarmup: 'voice.call.openingWarmup',
+    ready: 'voice.ready',
+    speaking: 'voice.call.speaking',
+    unavailable: 'voice.call.unavailable',
   };
-  const text = state === 'speaking'
-    ? muneaT('voice.call.speaking', fallback.speaking)
-    : (rendererCopy
-      ? rendererCopy.callHint(state)
-      : (fallback[state] || fallback.unavailable));
+  const text = rendererCopy
+    ? rendererCopy.callHint(state)
+    : muneaT(fallbackKeys[state] || fallbackKeys.unavailable, '');
   setCallHint(text, busy);
 }
 // 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：
@@ -290,16 +293,26 @@ function hideBusyCard() { const card = $('#busyCard'); if (card) card.hidden = t
 // 通用失敗卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
 // 斷線重連失敗／連線逾時／拿不到麥克風——這些過去全部只寫進被藏起來的 #chatCaption，使用者等於零回饋。
 // 現在一律借 busyCard 的殼：標題講人話原因＋一句怎麼辦＋一顆按鈕。
-function showCallStatusCard(opts) {
-  opts = opts || {};
+function showCallStatusCard(stateOrOptions) {
+  const rendererCopy = muneaRendererCopy();
+  const opts = typeof stateOrOptions === 'string'
+    ? (rendererCopy
+      ? rendererCopy.callStatus(stateOrOptions)
+      : {
+        action: 'dismiss',
+        btnText: muneaT('common.okay', ''),
+        note: muneaT('voice.call.retryLater', ''),
+        title: muneaT('voice.call.unavailable', ''),
+      })
+    : (stateOrOptions || {});
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = 'error';
   card.dataset.action = opts.action || 'dismiss';
   const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
-  if (title) title.textContent = opts.title || '目前無法接通';
+  if (title) title.textContent = opts.title || muneaT('voice.call.unavailable', '');
   if (pos) pos.textContent = '';
-  if (note) note.textContent = opts.note || '請稍後再試一次。';
-  if (btn) btn.textContent = opts.btnText || '知道了';
+  if (note) note.textContent = opts.note || muneaT('voice.call.retryLater', '');
+  if (btn) btn.textContent = opts.button || opts.btnText || muneaT('common.okay', '');
   if (alt) alt.hidden = true;
   card.hidden = false;
 }
@@ -342,12 +355,12 @@ async function sendTextFallbackMessage() {
   if (!text) return;
   input.value = '';
   appendTextChatBubble('user', text);
-  setBtnBusy(sendBtn, '傳送中');
+  setBtnBusy(sendBtn, muneaT('common.sending', ''));
   const beforeLen = chatHistory.length;
   try {
     await window.__chatSay(text);   // init() 裡掛出來的 chatHandle 橋（chatHandle 本身是 init() 內部函式，拿不到）
   } finally {
-    clearBtnBusy(sendBtn, '傳送');
+    clearBtnBusy(sendBtn, muneaT('textChat.send', ''));
     if (input) input.focus();
   }
   // chatHandle 內部會把新的一輪對話（含 AI 回覆）推進 chatHistory；掃新增的區段找出「她」的回覆貼上面板。
@@ -3080,14 +3093,16 @@ window.MuneaFaceWave = FaceWave;
 let callConnected = false;
 let callDialing = false;
 let callPreflightPending = false;
-function setCallPreflightPending(on, pendingLabel = '連線中…') {
+function setCallPreflightPending(on, pendingLabel = muneaT('voice.connecting', '')) {
   callPreflightPending = on;
   if (!on) hideBusyCard();   // 排隊卡跟著撥號前置狀態走：接通／取消／失敗任何一條路離開排隊就收卡
   const b = $('#callToggle'); if (!b) return;
   b.setAttribute('aria-busy', on ? 'true' : 'false');
   const lbl = $('#callToggleLabel');
   if (lbl && on) lbl.textContent = pendingLabel;
-  else if (lbl && !callDialing) lbl.textContent = callConnected ? '結束通話' : '開始通話';
+  else if (lbl && !callDialing) lbl.textContent = callConnected
+    ? muneaT('voice.call.end', '')
+    : muneaT('voice.call.start', '');
 }
 // 撥通中狀態：按鈕顯示「撥通中···」循環；真的接通（她開始聽/說）才變「結束通話」＋開始計時（Edward 7/9）
 function setCallDialing(on) {
@@ -3097,8 +3112,17 @@ function setCallDialing(on) {
   b.classList.toggle('dialing', on);
   const lbl = $('#callToggleLabel');
   if (lbl) {
-    if (on) lbl.innerHTML = '撥號中<span class="dial-dots"><i>·</i><i>·</i><i>·</i></span>';
-    else lbl.textContent = callConnected ? '結束通話' : '開始通話';
+    if (on) {
+      lbl.textContent = muneaT('voice.call.dialing', '');
+      const dots = document.createElement('span');
+      dots.className = 'dial-dots';
+      dots.innerHTML = '<i>·</i><i>·</i><i>·</i>';
+      lbl.appendChild(dots);
+    } else {
+      lbl.textContent = callConnected
+        ? muneaT('voice.call.end', '')
+        : muneaT('voice.call.start', '');
+    }
   }
 }
 function setCallToggle(connected) {
@@ -3108,7 +3132,13 @@ function setCallToggle(connected) {
   const _b0 = $('#callToggle'); if (_b0) _b0.classList.remove('dialing');
   // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
   const fn = document.querySelector('.face-name');
-  if (fn) { fn.classList.toggle('off', !connected); const st = fn.querySelector('.fn-status'); if (st) st.textContent = connected ? '在線' : '未在線'; }
+  if (fn) {
+    fn.classList.toggle('off', !connected);
+    const st = fn.querySelector('.fn-status');
+    if (st) st.textContent = connected
+      ? muneaT('voice.call.online', '')
+      : muneaT('voice.call.offline', '');
+  }
   const b = $('#callToggle');
   if (!b) return;
   b.classList.toggle('start', !connected);
@@ -3116,7 +3146,9 @@ function setCallToggle(connected) {
   const pts = document.querySelector('.hud-pill.pts');
   if (pts) pts.style.display = (connected || ptsPillHidden()) ? 'none' : '';   // 通話中讓畫面乾淨；免費 0 點不掛牌
   const lbl = $('#callToggleLabel');
-  if (lbl) lbl.textContent = connected ? '結束通話' : '開始通話';
+  if (lbl) lbl.textContent = connected
+    ? muneaT('voice.call.end', '')
+    : muneaT('voice.call.start', '');
 }
 
 // ===== 待機動態（Edward 7/9 供片）：進聊聊頁播「打招呼」一次 → 「待機」循環；按通話即停回靜態，交給語音＋雲端臉 =====
@@ -3273,7 +3305,7 @@ function completeChatSession(reason = 'ended') {
     pushWallet();
     renderPoints();
   updateMedCount();
-    toast('今天聊得真開心，下次見！');
+    toast(muneaT('voice.call.goodbye', ''));
   }
   stopCallTimer();
   if (!activeChatSessionId || !activeChatStartedAt) return;
@@ -5113,13 +5145,8 @@ async function connectCall() {
     voiceCallFail('microphone_requested', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     voiceCallEnd('failed', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     const micHttpsOnly = LiveVoice._micUnavailableReason === 'https_required';
-    setCallHint(micHttpsOnly
-      ? '手機／區網測試需要 HTTPS 才能開麥，請改用公開測試連結'
-      : '拿不到麥克風，請到瀏覽器設定允許');
-    showCallStatusCard({
-      title: micHttpsOnly ? '目前連線環境不支援開麥' : '拿不到麥克風權限',
-      note: micHttpsOnly ? '手機或區網測試需要 HTTPS 才能開麥，請改用公開測試連結。' : '請到手機或瀏覽器設定裡，允許沐寧使用麥克風，再重新撥一次。',
-    });
+    setLocalizedCallHint('unavailable');
+    showCallStatusCard(micHttpsOnly ? 'microphoneHttps' : 'microphonePermission');
     return;
   }
   // 家人傳話是附加功能：正式帳號最多等 1.2 秒；開發假登入直接略過，不能卡住主要通話。
@@ -5134,7 +5161,7 @@ async function connectCall() {
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   if (developmentDirectCall) {
     setCallDialing(true);
-    setCallHint('開發測試直連中…', true);
+    setLocalizedCallHint('developerConnecting', true);
   } else {
     // 點數是否足夠這件事只在後端靜默判斷，畫面維持一般撥號觀感，不對用戶顯示「查點數」字樣（Edward 2026-07-20拍板）。
     setLocalizedCallHint('connecting', true);
@@ -5181,11 +5208,7 @@ async function connectCall() {
       voiceCallEnd('failed', reason);
       try { await CallControl.release(reason); } catch (e2) {}
       LiveVoice.stop(); setCallPreflightPending(false); setCallDialing(false); stopCallTimer();
-      setCallHint(authRequired ? '登入狀態已失效，請重新登入後再撥' :
-        (reason.indexOf('account_not_ready') >= 0 ? '帳號正在完成初始化，請稍後再撥一次' :
-        (reason.indexOf('queue_full') >= 0 ? '現在忙線中，請稍後再試試看' :
-          (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
-          (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
+      setLocalizedCallHint('unavailable');
       // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：#chatCaption 被藏起來，光靠上面那句字幕使用者實際上看不到，
       // 每種失敗都要有標題講原因＋一句怎麼辦＋一顆按鈕；點數不足已有專屬彈窗（__muneaShowCallCreditBlocked），不重複打擾。
       const accountNotReady = reason.indexOf('account_not_ready') >= 0;
@@ -5195,13 +5218,13 @@ async function connectCall() {
       if (queueFull) {
         showBusyCard('full');   // 連排隊的位子都滿了：明講忙線、請稍後再試＋「先用文字聊」出口（Edward 7/22 B 案／7/24 P0 加出口）
       } else if (authRequired) {
-        showCallStatusCard({ title: '登入狀態已失效', note: '請重新登入後再撥一次。', btnText: '重新登入', action: 'reopen-auth' });
+        showCallStatusCard('authExpired');
       } else if (accountNotReady) {
-        showCallStatusCard({ title: '帳號正在準備中', note: '通常幾秒鐘就好，請稍後再撥一次。' });
+        showCallStatusCard('accountPreparing');
       } else if (controlNotConfigured) {
-        showCallStatusCard({ title: '通話服務正在更新', note: '請稍後再試一次，造成不便請見諒。' });
+        showCallStatusCard('serviceUpdating');
       } else if (!insufficientCredits) {
-        showCallStatusCard({ title: '目前無法接通', note: '通話服務暫時忙碌中，請稍後再試一次。' });
+        showCallStatusCard('serviceBusy');
       }
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
       if (insufficientCredits) setTimeout(__muneaShowCallCreditBlocked, 0);
@@ -5225,7 +5248,7 @@ async function connectCall() {
     voiceCallMark('app_session_created', 'pass', { sessionId: activeChatSessionId });
     setFaceState('idle');
     // 新引擎首通冷開機較久（喚醒優化交先鋒車道）——誠實預告、不讓人以為當機（Edward 2026-07-11「等20秒」）
-    setCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? '新引擎暖身中，首次約需半分鐘…' : '連線中…', true);
+    setLocalizedCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? 'firstWarmup' : 'connecting', true);
     trackProductEvent('voice_session_started', { locale: muneaLocale(), mode: 'live' });
     const chatEl = document.getElementById('chat');
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
@@ -5240,7 +5263,7 @@ async function connectCall() {
       _activationInFlight = true;
       try {
         voiceCallMark('gateway_activation_wait', 'pass');
-        setCallHint(developmentDirectCall ? '開發測試管線已就緒…' : '連線中…', true);
+        setLocalizedCallHint(developmentDirectCall ? 'developerReady' : 'connecting', true);
         if (!developmentDirectCall) await CallControl.waitUntilActive(15000);
       } catch (e) {
         voiceCallFail('gateway_activation', e);
@@ -5251,13 +5274,13 @@ async function connectCall() {
         try { completeChatSession(String(e && e.message || e)); } catch (e2) {}
         chatOpened = false; setCallDialing(false); stopCallTimer();
         const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
-        setFaceState('idle'); setCallHint('服務尚未完成接通，請稍後再試。');
-        showCallStatusCard({ title: '服務尚未完成接通', note: '請稍後再試一次。' });
+        setFaceState('idle'); setLocalizedCallHint('unavailable');
+        showCallStatusCard('activationPending');
         try { FaceIdle.start(); } catch (e2) {}
         return;
       }
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
-      setCallHint('聲音與畫面暖機中…', true);
+      setLocalizedCallHint('openingWarmup', true);
       voiceCallMark('opening_audio_warmup', 'pass');
       const openingAudio = noFace
         ? { mode: 'no_avatar', verified: true, receiverAttached: false }
@@ -5289,7 +5312,7 @@ async function connectCall() {
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
       const _autoEndCall = () => {
-        setCallHint('先幫你把通話收起來囉，想聊再找我');
+        setLocalizedCallHint('idleEnded');
         try { LiveVoice.stop(); } catch (e) {} try { FaceWave.stop(); } catch (e) {}
         try { completeChatSession('idle_timeout'); } catch (e) {}
         chatOpened = false; setCallToggle(false); stopCallTimer();
@@ -5321,7 +5344,7 @@ async function connectCall() {
       chatOpened = false; setCallDialing(false); stopCallTimer();
       const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
       setFaceState('idle'); setLocalizedCallHint('unavailable');
-      showCallStatusCard({ title: '目前連線還沒準備好', note: '請稍後再撥一次看看。' });
+      showCallStatusCard('readinessPending');
       try { completeChatSession('readiness_timeout'); } catch (e) {}
       try { FaceIdle.start(); } catch (e) {}
       try { trackProductEvent('voice_readiness_timeout', { voiceReady: _voiceReady, faceReady: _faceReady }); } catch (e) {}
@@ -5343,7 +5366,7 @@ async function connectCall() {
         chatOpened = false; setCallDialing(false); setCallToggle(false); stopCallTimer();
         if (chatEl) chatEl.dataset.state = 'idle';
         setFaceState('idle'); setLocalizedCallHint('unavailable');
-        showCallStatusCard({ title: '連線中斷了', note: '請重新撥一次繼續聊天。' });
+        showCallStatusCard('disconnected');
         try { FaceIdle.start(); } catch (e) {}
         return;
       }
@@ -5370,7 +5393,10 @@ async function connectCall() {
     }).catch(() => {});   // 影像滿載不退純語音；下一版接 Gateway 後顯示排隊位置
     return;
   }
-  setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
+  setCaption(
+    muneaT('voice.call.connectedCaption', ''),
+    muneaT('voice.call.listeningPrompt', ''),
+  );
   markConnected();   // 簡單陪聊模式（無雲端語音）＝立即可講
   openVoiceSession();
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);

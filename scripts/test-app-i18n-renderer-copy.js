@@ -67,7 +67,25 @@ for (const locale of LOCALES) {
   assert.equal(copy.authMessage('idle'), '');
   assert.ok(copy.authMessage('inProgress'));
   assert.ok(copy.callHint('ready'));
+  assert.ok(copy.callHint('speaking'));
   assert.ok(copy.callHint('not-a-state'));
+  const callStatuses = [
+    'accountPreparing',
+    'activationPending',
+    'authExpired',
+    'disconnected',
+    'microphoneHttps',
+    'microphonePermission',
+    'readinessPending',
+    'serviceBusy',
+    'serviceUpdating',
+    'unavailable',
+  ].map(state => copy.callStatus(state));
+  for (const status of callStatuses) {
+    assert.ok(status.title && status.note && status.button);
+  }
+  assert.equal(copy.callStatus('authExpired').action, 'reopen-auth');
+  assert.equal(copy.callStatus('not-a-state').action, 'dismiss');
 
   const buy = copy.purchaseButton({ credits: 200, price, state: 'ready' });
   assert.ok(buy.includes('200'));
@@ -132,6 +150,7 @@ for (const locale of LOCALES) {
     confirmation,
     cta,
     full,
+    callStatuses,
     paidSummary,
     preparing,
     queued,
@@ -152,4 +171,4 @@ assert.ok(
   'Renderer copy must not mutate region or data policy',
 );
 
-console.log('App renderer copy PASS: 8 dynamic renderer families x 4 locales');
+console.log('App renderer copy PASS: 9 dynamic renderer families x 4 locales');

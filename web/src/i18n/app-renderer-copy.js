@@ -15,9 +15,59 @@
   });
   const CALL_HINT_KEYS = Object.freeze({
     connecting: 'voice.connecting',
+    developerConnecting: 'voice.call.developerConnecting',
+    developerReady: 'voice.call.developerReady',
     fallback: 'voice.fallback',
+    firstWarmup: 'voice.call.firstWarmup',
+    idleEnded: 'voice.call.idleEnded',
+    openingWarmup: 'voice.call.openingWarmup',
     ready: 'voice.ready',
+    speaking: 'voice.call.speaking',
     unavailable: 'voice.call.unavailable',
+  });
+  const CALL_STATUS_KEYS = Object.freeze({
+    accountPreparing: Object.freeze({
+      title: 'voice.call.accountPreparingTitle',
+      note: 'voice.call.accountPreparingNote',
+    }),
+    activationPending: Object.freeze({
+      title: 'voice.call.activationPendingTitle',
+      note: 'voice.call.retryLater',
+    }),
+    authExpired: Object.freeze({
+      title: 'voice.call.authExpiredTitle',
+      note: 'voice.call.authExpiredNote',
+      button: 'auth.signInAgain',
+      action: 'reopen-auth',
+    }),
+    disconnected: Object.freeze({
+      title: 'voice.call.disconnectedTitle',
+      note: 'voice.call.disconnectedNote',
+    }),
+    microphoneHttps: Object.freeze({
+      title: 'voice.call.microphoneHttpsTitle',
+      note: 'voice.call.microphoneHttpsNote',
+    }),
+    microphonePermission: Object.freeze({
+      title: 'voice.call.microphonePermissionTitle',
+      note: 'voice.call.microphonePermissionNote',
+    }),
+    readinessPending: Object.freeze({
+      title: 'voice.call.readinessPendingTitle',
+      note: 'voice.call.readinessPendingNote',
+    }),
+    serviceBusy: Object.freeze({
+      title: 'voice.call.unavailable',
+      note: 'voice.call.serviceBusyNote',
+    }),
+    serviceUpdating: Object.freeze({
+      title: 'voice.call.serviceUpdatingTitle',
+      note: 'voice.call.serviceUpdatingNote',
+    }),
+    unavailable: Object.freeze({
+      title: 'voice.call.unavailable',
+      note: 'voice.call.retryLater',
+    }),
   });
   const AUTH_MESSAGE_KEYS = Object.freeze({
     cancelled: 'auth.cancelled',
@@ -103,6 +153,16 @@
 
     function callHint(state) {
       return t(CALL_HINT_KEYS[state] || CALL_HINT_KEYS.unavailable);
+    }
+
+    function callStatus(state) {
+      const keys = CALL_STATUS_KEYS[state] || CALL_STATUS_KEYS.unavailable;
+      return Object.freeze({
+        action: keys.action || 'dismiss',
+        button: t(keys.button || 'common.okay'),
+        note: t(keys.note),
+        title: t(keys.title),
+      });
     }
 
     function authMessage(state) {
@@ -249,6 +309,7 @@
     return Object.freeze({
       authMessage,
       callHint,
+      callStatus,
       careLabels,
       familyActivity,
       familyRelay,
