@@ -1160,6 +1160,743 @@
           "say": "如果吃了保健品之後肌肉痠痛沒力、皮膚或眼白變黃、或會心悸——立刻停用並儘快就醫，這不是自己觀察看看的事。"
         }
       ]
+    },
+    "TW-EDU-06": {
+      "title": "便秘",
+      "solutions": [
+        {
+          "id": "consti-water",
+          "label": "水要喝夠",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "很多長輩怕頻尿就不敢喝水，結果更難解。水喝夠纖維才推得動——白天分次喝，不要等口渴才喝。"
+        },
+        {
+          "id": "consti-fiber-food",
+          "label": "從食物補纖維",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "深綠色蔬菜、地瓜、水果連皮吃、糙米換一半——纖維從食物補最實在，而且要配著水一起。"
+        },
+        {
+          "id": "consti-kiwi-prune",
+          "label": "奇異果或黑棗",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women",
+            "caregiver"
+          ],
+          "say": "一天兩顆奇異果、或幾顆黑棗（加州蜜棗），這兩樣在研究裡對便秘算是少數蠻站得住腳的食物。"
+        },
+        {
+          "id": "consti-routine",
+          "label": "固定時間上廁所",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "早餐後半小時是腸子最想動的時候，固定那時去坐一下、不急不催，久了身體會養成節奏。"
+        },
+        {
+          "id": "consti-walk",
+          "label": "起來動一動",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "久坐不動腸子也會跟著懶。飯後散個十幾分鐘，比什麼都便宜。"
+        },
+        {
+          "id": "consti-probiotics",
+          "label": "益生菌",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "益生菌",
+            "乳酸菌",
+            "益菌"
+          ],
+          "contraindications": [
+            "免疫功能低下",
+            "正在化療",
+            "短腸症"
+          ],
+          "dailyCap": "依產品標示，不重複吃多種同類產品",
+          "evidence": {
+            "finding": "菌株差異大、效果因人而異；證據不如水分與纖維紮實"
+          },
+          "say": "益生菌可以試，但菌株差很多、不是人人有感——證據沒有「水喝夠＋纖維吃夠」來得紮實，別當主力。免疫功能低下或正在化療的人吃之前一定要問醫師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "consti-laxative-blocked",
+          "label": "瀉藥／軟便劑",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "瀉藥、軟便劑、浣腸的種類跟用量我不能建議；長期靠瀉藥腸子會更懶，那要醫師評估。"
+        },
+        {
+          "id": "consti-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "解黑便或血便",
+            "不明原因變瘦",
+            "突然變得完全解不出來",
+            "肚子劇痛合併嘔吐"
+          ],
+          "say": "如果大便帶血或變黑、莫名其妙變瘦、或是原本正常突然完全解不出來還肚子劇痛——這要儘快看醫生，不是調飲食就好。"
+        }
+      ]
+    },
+    "TW-EDU-15": {
+      "title": "腳抽筋（小腿夜間抽筋）",
+      "solutions": [
+        {
+          "id": "cramp-stretch-before-bed",
+          "label": "睡前拉小腿",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "運動",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "睡前扶著牆把小腿後側拉開，一次撐三十秒、做兩三回。這個對夜間抽筋是少數真的有研究支持的作法。"
+        },
+        {
+          "id": "cramp-hydration",
+          "label": "水跟電解質",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "流汗多、水喝太少的日子特別容易抽。白天把水補回來，不是睡前猛灌。"
+        },
+        {
+          "id": "cramp-warm",
+          "label": "保暖跟泡腳",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "腳冷容易抽。睡前泡個溫水腳、被子把腳蓋好，這個沒什麼壞處、很多人覺得有差。",
+          "secondLine": true,
+          "askedFor": [
+            "泡腳",
+            "保暖",
+            "腳很冷"
+          ]
+        },
+        {
+          "id": "cramp-food-minerals",
+          "label": "從食物補礦物質",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "香蕉、深綠色蔬菜、堅果、牛奶——鉀、鎂、鈣從吃的補起，比買瓶罐實在。"
+        },
+        {
+          "id": "cramp-magnesium",
+          "label": "鎂補充劑",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "鎂",
+            "鎂錠",
+            "檸檬酸鎂"
+          ],
+          "contraindications": [
+            "腎功能異常",
+            "正在吃某些抗生素或骨鬆藥（間隔時間有講究）"
+          ],
+          "dailyCap": "成人補充劑型式一天不超過 350 毫克（這是官方訂的安全上限，不是建議你吃到）",
+          "evidence": {
+            "finding": "對「老年人夜間抽筋」的試驗多數沒看到明顯效果；對孕期抽筋的證據較好"
+          },
+          "say": "鎂常被拿來治抽筋，但講實話：針對長輩夜間抽筋的試驗大多沒看到明顯效果，孕期抽筋的證據反而好一些。要試可以，別抱太大期待。腎功能不好的人不要自己吃；跟某些抗生素、骨鬆藥要隔開時間，先問藥師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "cramp-med-review",
+          "label": "會不會是藥的關係",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "有些利尿劑、降血脂藥吃了比較容易抽筋。如果是最近換藥才開始的，回診時提一句，讓醫師看看。",
+          "related": "TW-EDU-16"
+        },
+        {
+          "id": "cramp-quinine-blocked",
+          "label": "抽筋的藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "治抽筋的藥（像奎寧那類）有嚴重副作用、國外已經不建議這樣用，我不會建議你去弄來吃。"
+        },
+        {
+          "id": "cramp-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "單側小腿持續腫痛發熱",
+            "抽筋合併無力或麻木",
+            "走一段路就腿痛要停"
+          ],
+          "say": "如果是單邊小腿一直腫痛又發熱（要排除血栓）、或抽筋還合併無力發麻、或走一段路就痛到得停下來——這幾種不是普通抽筋，要看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-17": {
+      "title": "骨質疏鬆／防跌倒骨折",
+      "solutions": [
+        {
+          "id": "osteo-fall-proof-home",
+          "label": "把家裡的跌倒點清掉",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "骨鬆真正可怕的是跌倒。今晚就能做的：浴室止滑墊、走道別放雜物、地上的電線收起來、半夜起來的路上留一盞小燈。"
+        },
+        {
+          "id": "osteo-strength-balance",
+          "label": "練肌力跟平衡",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "扶著椅背單腳站、起立坐下、太極——練平衡跟腿力，防跌倒的實證比補鈣還明確。"
+        },
+        {
+          "id": "osteo-sunlight",
+          "label": "曬太陽",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women",
+            "worker"
+          ],
+          "say": "每天出門曬個十幾二十分鐘，順便走路。這是最便宜的維生素 D。"
+        },
+        {
+          "id": "osteo-calcium-food",
+          "label": "從食物補鈣",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women",
+            "teen"
+          ],
+          "say": "牛奶、小魚乾、豆腐、深綠色蔬菜、黑芝麻——鈣從吃的補最好吸收，也不會有結石的疑慮。"
+        },
+        {
+          "id": "osteo-calcium-vitd-supp",
+          "label": "鈣片＋維生素 D",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "contraindications": [
+            "有腎結石病史",
+            "高血鈣",
+            "副甲狀腺問題",
+            "正在吃某些骨鬆藥或甲狀腺藥（要隔開時間）"
+          ],
+          "dailyCap": "鈣的每日總攝取（含食物）成人建議不超過 2000-2500 毫克，這是安全上限不是目標",
+          "evidence": {
+            "finding": "食物補不夠時才補充；一次大量不如分次，且需與部分藥物間隔"
+          },
+          "say": "如果吃的實在補不夠，鈣片配維生素 D 是合理的補法——但要記得三件事：一次別吃太多、分次吃吸收比較好；有腎結石病史或高血鈣的人不要自己補；跟骨鬆藥、甲狀腺藥要隔開時間。要吃多少、要不要吃，帶著你現在的藥去問醫師或藥師。",
+          "verifiedAt": "2026-07-29",
+          "secondLine": true,
+          "askedFor": [
+            "鈣片",
+            "補鈣",
+            "維他命D",
+            "維生素D"
+          ]
+        },
+        {
+          "id": "osteo-quit-smoke-alcohol",
+          "label": "菸酒少一點",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "高",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "抽菸跟喝酒都會加速骨質流失，這兩樣少一點，比多吃一罐鈣片有用。"
+        },
+        {
+          "id": "osteo-dexa",
+          "label": "去做骨密度檢查",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "想知道自己到底鬆不鬆，去做個骨密度檢查（DXA）最實在——不用猜。符合條件的健保有給付，可以先問家醫科。"
+        },
+        {
+          "id": "osteo-meds-blocked",
+          "label": "骨鬆藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "骨鬆的藥（打針的、吃的）要不要用、用哪一種，是醫師依照你的骨密度跟骨折風險決定的，我不會替你判斷。"
+        },
+        {
+          "id": "osteo-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "跌倒後站不起來或劇痛",
+            "身高明顯變矮或駝背變快",
+            "突然的背痛"
+          ],
+          "say": "跌倒之後站不起來、或痛到不能動——先別自己扶起來，叫救護車。另外身高明顯變矮、駝背變快、或突然背痛，那可能是脊椎壓迫性骨折，要看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-18": {
+      "title": "情緒低落／老年憂鬱",
+      "solutions": [
+        {
+          "id": "mood-listen-first",
+          "label": "先被聽見",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "say": "先不用急著解決什麼。你願意講，我就聽——這種心情能講出來，本身就有用。"
+        },
+        {
+          "id": "mood-daylight-walk",
+          "label": "白天出去走走、曬到太陽",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "白天出門走個二十分鐘、曬到太陽——運動對輕中度的情緒低落，研究上是有實質幫助的，不是安慰話。"
+        },
+        {
+          "id": "mood-one-connection",
+          "label": "一週跟人見一次面",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "一個人待久了心情會往下沉。一週固定跟人見一次面就好——老朋友、社區據點、教會、什麼都算。"
+        },
+        {
+          "id": "mood-sleep-link",
+          "label": "先看是不是睡不好",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "caregiver",
+            "teen"
+          ],
+          "say": "睡不好跟心情低落常常是同一件事的兩面，先把睡的部分顧好，心情往往跟著鬆一點。",
+          "related": "TW-EDU-01"
+        },
+        {
+          "id": "mood-caregiver-respite",
+          "label": "照顧者要有喘息",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "caregiver"
+          ],
+          "say": "你不是心情不好，你是太久沒有休息了。長照專線 1966 可以問喘息服務——找人替你幾個小時，不是偷懶。"
+        },
+        {
+          "id": "mood-1925",
+          "label": "安心專線 1925",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "say": "如果晚上特別難熬，安心專線 1925 是 24 小時免付費的，隨時有人接。你不必等到很嚴重才打。"
+        },
+        {
+          "id": "mood-antidep-blocked",
+          "label": "抗憂鬱藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "中",
+          "audience": [],
+          "blocked": true,
+          "say": "抗憂鬱的藥要不要吃、吃哪一種，是身心科醫師的判斷；已經在吃的更不要自己停，那反彈會很不舒服。"
+        },
+        {
+          "id": "mood-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "escalateWhen": [
+            "想傷害自己",
+            "覺得活著沒意思",
+            "兩週以上吃不下睡不著",
+            "突然把東西送人交代後事"
+          ],
+          "say": "如果有想傷害自己的念頭、或覺得活著沒什麼意思——請立刻打 1925 安心專線或 119，也讓身邊的人知道。連續兩週以上吃不下睡不著、什麼都提不起勁，那要看身心科，這是病、不是想不開。"
+        }
+      ]
+    },
+    "TW-EDU-14": {
+      "title": "記性變差／輕度認知障礙",
+      "solutions": [
+        {
+          "id": "mci-normalize-vs-warn",
+          "label": "分清楚正常老化跟該擔心的",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "想不起某個名字、東西放哪忘了但提醒一下會想起來——這比較像正常老化。真正要留意的是整件事忘掉、重複問同一句、熟悉的路走丟。"
+        },
+        {
+          "id": "mci-exercise",
+          "label": "規律運動",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "講到護腦，運動是目前證據最強的一項——比任何補腦保健品都強。一週幾次快走就算數。"
+        },
+        {
+          "id": "mci-social",
+          "label": "多跟人來往、動腦",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder"
+          ],
+          "say": "跟人聊天、打牌、學新東西、參加據點活動——社交跟動腦對延緩退化是有幫助的，而且比一個人在家做習題有效。"
+        },
+        {
+          "id": "mci-hearing-vision",
+          "label": "聽力視力先顧好",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "這一條常被忽略：聽不清楚、看不清楚會讓人退縮不出門，是失智少數幾個「可以改變」的風險因子。該配助聽器、該看眼睛就去。"
+        },
+        {
+          "id": "mci-vascular",
+          "label": "血壓血糖顧好就是護腦",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "血壓、血糖、血脂控制好，腦子的血管就顧好了——護腦不是靠吃補品，是靠這些。",
+          "related": "TW-EDU-03"
+        },
+        {
+          "id": "mci-brain-supp",
+          "label": "銀杏、魚油那類補腦品",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "銀杏",
+            "魚油",
+            "磷脂醯絲胺酸",
+            "補腦"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑或阿斯匹靈",
+            "即將手術"
+          ],
+          "dailyCap": "依產品標示，且不與其他同類補充品重複吃",
+          "evidence": {
+            "finding": "銀杏等補腦保健品對預防或延緩失智的證據普遍不足；運動與三高控制的證據明確得多"
+          },
+          "say": "銀杏、魚油這些補腦的，講實話證據普遍不足，別把錢跟期待放在那裡。運動、控制三高、多跟人來往，這幾樣的證據明確得多。要吃也可以，但如果你在吃抗凝血劑或阿斯匹靈，銀杏會增加出血風險，一定要先問醫師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "mci-checkup",
+          "label": "去做記憶門診評估",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "與其自己猜，不如去神經內科或記憶門診做個評估。有些記性變差其實是甲狀腺、B12 不足、憂鬱或藥物引起的，這幾種找出來是可以處理的。"
+        },
+        {
+          "id": "mci-dementia-drug-blocked",
+          "label": "失智藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "失智相關的藥物要不要用、用哪一種，是醫師評估後的決定，我不會替你判斷。"
+        },
+        {
+          "id": "mci-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "突然發生的意識混亂",
+            "熟悉的路走丟",
+            "重複問同一件事",
+            "人格或行為明顯改變"
+          ],
+          "say": "如果是**突然**變得胡塗、認不得人、講話顛三倒四——那不是失智，那是急性的譫妄，可能是感染或藥物引起，要立刻就醫。如果是慢慢的：熟悉的路走丟、一直重複問同一件事、性情大變——安排記憶門診評估。"
+        }
+      ]
     }
   }
 }
