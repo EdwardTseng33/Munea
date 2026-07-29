@@ -383,6 +383,9 @@ ADMIN_POST_PATHS = {
     "/admin/subscription/extend-days",
     # 測試帳號人工標記（2026-07-21 補）：見 admin_set_test_account_flag_response。
     "/admin/accounts/set-test-flag",
+    # 測試帳號清場（2026-07-29 補）：上線前把演習／審查留下的假資料刪乾淨。
+    # 只刪得掉已標記為測試的帳號，見 admin_delete_test_account_response。
+    "/admin/accounts/delete",
     "/admin/notifications/drain",
     "/admin/login",
     # 維護入口（2026-07-17 補）：晨料備製與記憶整理是定時鬧鐘（Cloud Scheduler）用
@@ -4604,6 +4607,9 @@ def admin_accounts_summary(data=None):
         "privacy": {
             "surface": "admin_account_lookup",
             "rawTranscriptRecords": 0,
+            # 2026-07-29：名冊多帶了 owner（登入信箱／登入方式／註冊與最後登入時間），
+            # 這是個人資料，老實標出來——後台走管理鑰匙、只給維運端看，不進任何對外回應。
+            "includesOwnerContact": True,
         },
         "backend": data_backend_status(),
     }
@@ -7881,6 +7887,51 @@ def admin_set_test_account_flag_response(data, headers=None):
     }
 
 
+def admin_delete_test_account_response(data, headers=None):
+    """後台永久刪除一個測試帳號（清場用）。
+
+    兩道閘：① 後台管理鑰匙（路由層 admin_authorized）② 帳號必須已標記 is_test_account=true。
+    第二道是防手滑——要刪就先勾「標記為測試帳號」再刪，兩個動作分開，維運端沒有一鍵刪真客戶的路。
+    真實用戶要刪帳號一律走 App 內的帳號刪除或隱私請求，不從這裡開後門。"""
+    data = data or {}
+    account_id = str(data.get("accountId") or data.get("account_id") or "").strip()
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_id_required"}}
+    target = _resolve_admin_target_identity(account_id)
+    account_name = (target or {}).get("accountName") or ""
+    backend = data_backend()
+    if not backend.enabled():
+        return {"ok": False, "error": {"code": "account_deletion_not_configured"}}
+    try:
+        result = backend.admin_delete_test_account(account_id, actor=privileged_actor_context(headers or {}).get("actor"))
+    except PermissionError:
+        return {"ok": False, "error": {"code": "account_deletion_requires_test_flag"}}
+    except LookupError:
+        return {"ok": False, "error": {"code": "account_not_found"}}
+    except Exception as e:
+        log_fallback_exception("admin delete test account", e)
+        return {"ok": False, "error": {"code": "account_deletion_failed"}}
+    test_account_id_set(force_refresh=True)
+    append_audit_event({
+        "eventType": "admin_test_account_deleted",
+        "accountId": account_id,
+        "targetTable": "accounts",
+        "details": {
+            **privileged_actor_context(headers or {}),
+            "accountId": account_id,
+            "accountName": result.get("accountName") or account_name,
+            "authCleanup": result.get("authCleanup"),
+        },
+    })
+    return {
+        "ok": True,
+        "accountId": account_id,
+        "accountName": result.get("accountName") or account_name,
+        "authCleanup": result.get("authCleanup"),
+        "cleanupRequired": bool(result.get("cleanupRequired")),
+    }
+
+
 def subscription_event_response(data):
     event = data.get("event") or {}
     if not isinstance(event, dict):
@@ -9723,6 +9774,18 @@ class H(BaseHTTPRequestHandler):
                     else:
                         error = response.get("error") or {}
                         self._json_error(400, error.get("code") or "test_flag_update_failed", "Test account flag could not be updated")
+            elif self.path == "/admin/accounts/delete":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = admin_delete_test_account_response(data, self.headers)
+                    if response.get("ok"):
+                        self._json(response)
+                    else:
+                        error = response.get("error") or {}
+                        status = 403 if error.get("code") == "account_deletion_requires_test_flag" else 400
+                        self._json_error(status, error.get("code") or "account_deletion_failed", "Account could not be deleted")
             elif self.path == "/companion-profile":
                 self._json(companion_profile_response(data))
             elif self.path == "/person-profile":

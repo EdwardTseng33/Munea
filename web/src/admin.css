@@ -314,6 +314,14 @@ tbody tr:hover { background: var(--cream); }
 .ri-actions button { min-height: 34px; padding: 0 14px; font-size: 0.9rem; }
 .btn-ghost { background: #fff; color: var(--teal-dd); border: 1px solid var(--line); }
 .btn-ghost:hover { border-color: var(--teal); }
+/* 永久刪除的確認勾選框：不可逆動作要有一道手動摩擦，但不綁特定語言的打字確認 */
+.del-confirm { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; cursor: pointer; font-weight: 600; color: var(--danger); }
+.del-confirm input[type=checkbox] { flex: 0 0 18px; accent-color: var(--danger); }
+/* 不可逆動作（永久刪除測試帳號）：紅字紅框，跟旁邊「發點數／改方案」這些可回復的動作看得出差別 */
+.btn-ghost.danger { color: var(--danger); border-color: rgba(217,83,74,.32); }
+.btn-ghost.danger:hover { border-color: var(--danger); background: var(--danger-soft); }
+button.btn-sm.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+button.btn-sm.danger:hover { filter: brightness(.94); }
 .row-item.done { opacity: .58; }
 
 /* 角色卡 */
