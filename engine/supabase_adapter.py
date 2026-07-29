@@ -3483,6 +3483,10 @@ class SupabaseAdapter:
             "localeContext": locale_context,
             "createdAt": account.get("created_at"),
             "updatedAt": account.get("updated_at"),
+            # 閒置清理看的是 last_seen_at（App 開機蓋的上線章），跟 usage.lastActiveAt
+            # （由使用事件推算）不是同一個東西——60 天自動刪除那條規則認的是這一個。
+            "lastSeenAt": account.get("last_seen_at"),
+            "retentionWarnedAt": account.get("retention_warned_at"),
             "familyGroup": {
                 "id": family_group.get("id") or "",
                 "name": family_group.get("name") or "Munea Care Circle",

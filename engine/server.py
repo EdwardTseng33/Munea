@@ -4300,6 +4300,9 @@ def normalize_admin_account_summary(item=None):
         "localeContext": locale_context,
         "createdAt": item.get("createdAt") or item.get("created_at"),
         "updatedAt": item.get("updatedAt") or item.get("updated_at"),
+        # 60 天閒置自動刪除那條規則認的欄位——名冊要顯示「離自動清除還有幾天」就靠它
+        "lastSeenAt": item.get("lastSeenAt") or item.get("last_seen_at"),
+        "retentionWarnedAt": item.get("retentionWarnedAt") or item.get("retention_warned_at"),
         "familyGroup": {
             "id": str(family_group.get("id") or ""),
             "name": str(family_group.get("name") or "Munea Care Circle"),

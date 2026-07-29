@@ -442,7 +442,23 @@
     if(!parts.length) parts.push(`<span>查無登入身分</span>`);
     return parts.join('<span aria-hidden="true"> · </span>'); }
   function planPill(p){ const m={ pro:["pill pro","Pro"], plus:["pill ok","Plus"], free:["pill mute","免費"] }; const x=m[p]||m.free; return `<span class="${x[0]}">${x[1]}</span>`; }
-  function statusPill(s){ const m={ on:["ok","活躍中"], idle:["warn","低度使用"], off:["mute","離線"], alert:["bad","守護中"] }; const x=m[s]||m.off; return `<span class="pill ${x[0]}"><span class="sdot"></span>${x[1]}</span>`; }
+  // 後台不追「誰在線上誰離線」（Edward 2026-07-29 拍板）——要追的是「有沒有登入活動」，
+  // 因為免費帳號 60 天沒上線就會自動清除資料（supabase/sql/024）。
+  // 這一欄回答的就是那件事：離自動清除還有幾天。看的是 accounts.lastSeenAt（App 開機蓋的章），
+  // 不是由使用事件推算的 lastActiveAt。
+  const RETENTION_DAYS=60, RETENTION_WARN_AT=53;
+  function idleDays(a){ const seen=(a||{}).lastSeenAt; if(!seen) return null;
+    const t=new Date(seen); if(isNaN(t)) return null;
+    return Math.floor((Date.now()-t.getTime())/86400000); }
+  function retentionCell(a){
+    const d=idleDays(a);
+    if(d==null) return `<span class="pill mute">還沒上線過</span>`;
+    const left=RETENTION_DAYS-d;
+    if(left<=0) return `<span class="pill bad">待清除</span>`;
+    if(d>=RETENTION_WARN_AT) return `<span class="pill bad">剩 ${left} 天</span>`;
+    if(d>=30) return `<span class="pill warn">剩 ${left} 天</span>`;
+    return `<span class="pill ok">${d} 天前上線</span>`;
+  }
   function usageCell(u){ u=u||{}; const mins=Math.round(u.totalMinutes||0); if(!mins) return `<span class="muted">—</span>`; const h=Math.min(22,Math.max(6,mins/6)); return `<div class="use-cell"><span class="mini-bars"><i style="height:${Math.round(h*0.5)}px"></i><i style="height:${Math.round(h*0.78)}px"></i><i style="height:${Math.round(h)}px"></i></span><b class="num">${n(mins)}</b><span class="muted small">分</span></div>`; }
 
   function renderUsers(){
@@ -452,14 +468,15 @@
     const showTest=!!state.tabs.showTestAccounts;
     const safety=D().safety||{}, escalations=(safety.totals||{}).requiresHumanEscalation||0;
     const single=accts.length===1;
-    const stOf=(a)=> (single&&escalations>0)?"alert":(a.status||"off");
     const people=accts.reduce((s,a)=>s+((a.familyMembers||{}).count||0),0);
-    const sts=accts.map(stOf), activeC=sts.filter(s=>s==="on").length, idleC=sts.filter(s=>s==="idle").length, guardC=sts.filter(s=>s==="alert").length;
+    const idleList=accts.map(idleDays);
+    const neverSeen=idleList.filter((d)=>d==null).length;
+    const nearPurge=idleList.filter((d)=>d!=null&&d>=RETENTION_WARN_AT).length;
     let html=kpiRow([
       { label:"總用戶", star:true, value:n(accts.length), sub:`家庭圈 ${accts.length} · 成員 ${people} 人` },
-      { label:"今日活躍", value:n(activeC), sub:accts.length?`活躍率 ${pct(activeC/accts.length)}`:"–", info:"近 3 天內有真互動的帳號" },
-      { label:"低度使用", value:n(idleC), sub:"7 天以上沒通話", info:"需要關懷的沉睡帳號" },
-      { label:"守護中", value:n(guardC), sub:"安全警示待處理", star:guardC>0, tone:"alert", info:"有安全守護警示、建議優先確認" },
+      { label:"快被自動清除", value:n(nearPurge), sub:`閒置滿 ${RETENTION_WARN_AT} 天`, star:nearPurge>0, tone:"alert", info:`免費帳號 ${RETENTION_DAYS} 天沒上線就會自動清除資料，這是已進入警示期的戶數` },
+      { label:"還沒上線過", value:n(neverSeen), sub:"註冊後沒開過 App", info:"註冊完就沒回來的帳號" },
+      { label:"守護中", value:n(escalations), sub:"安全警示待處理", star:escalations>0, tone:"alert", info:"有安全守護警示、建議優先確認" },
     ]);
     if(!accts.length){
       html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——正式開放註冊後，這裡會列出真實用戶。`:"還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
@@ -467,11 +484,15 @@
     }
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
     const planC={free:0,plus:0,pro:0}; accts.forEach((a)=>{ const p=a.plan||"free"; planC[p]=(planC[p]||0)+1; });
-    const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
+    const passFilter=(a)=>{
+      if(filt==="near-purge"){ const d=idleDays(a); return d!=null&&d>=RETENTION_WARN_AT; }
+      if(filt==="never-seen") return idleDays(a)==null;
+      if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt;
+      return true; };
     const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{},o=a.owner||{}; return ((acctPersonName(a)||"")+" "+(p.displayName||"")+" "+(f.name||"")+" "+(o.email||"")+" "+(o.signInName||"")+" "+accountMarketSearchText(a)).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
     const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
-    const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
+    const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("near-purge","快被清除",nearPurge)}${chip("never-seen","沒上線過",neverSeen)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
     const trows=rows.map((a)=>{ const idx=accts.indexOf(a); const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
       const nm=acctPersonName(a), initial=(String(nm).trim()[0]||"家");
       const tint=AV_TINTS[Math.abs(String(nm).split("").reduce((h,ch)=>((h<<5)-h+ch.charCodeAt(0))|0,0))%AV_TINTS.length];
@@ -485,13 +506,13 @@
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
         esc(c.displayName||c.templateId||"–"),
         usageCell(u),
-        statusPill(stOf(a)),
-        `<span class="muted small">${esc(fmtTime(u.lastActiveAt||a.updatedAt||a.createdAt))}</span>`,
+        retentionCell(a),
+        `<span class="muted small">${esc(a.lastSeenAt?fmtTime(a.lastSeenAt):"—")}</span>`,
         `<button type="button" class="row-act" data-acct="${idx}" aria-label="查看 ${esc(nm)} 的用戶明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
       ];
     });
     const hiddenNote=(!showTest&&hiddenTestCount)?` · 已隱藏 ${hiddenTestCount} 個測試帳號`:"";
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","自動清除","最後上線",""], trows)}</div>`;
     return html;
   }
 
@@ -829,9 +850,11 @@
     const p=a.primaryPerson||{},f=a.familyGroup||{},c=a.companion||{},m=a.familyMembers||{},u=a.usage||{};
     const safety=D().safety||{}, escalations=(safety.totals||{}).requiresHumanEscalation||0;
     const single=((D().accounts||{}).accounts||[]).length===1;
-    const st=(single&&escalations>0)?"alert":(a.status||"off");
     const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[a.plan||"free"]||"免費";
-    const stTxt={on:"活躍中",idle:"低度使用",off:"離線",alert:"守護中"}[st]||"離線";
+    // 不再顯示「在線／離線」，改講對閒置清除有意義的話：多久沒上線、還剩幾天
+    const idle=idleDays(a);
+    const idleTxt=idle==null?"還沒上線過":(idle<=0?"今天有上線":`${idle} 天沒上線`);
+    const purgeTxt=idle==null?"—":(RETENTION_DAYS-idle<=0?"已達自動清除門檻":`剩 ${RETENTION_DAYS-idle} 天`);
     const mins=Math.round(u.totalMinutes||0);
     const ctx=accountLocaleContext(a);
     const o=a.owner||{};
@@ -847,7 +870,7 @@
       [MARKET_TEXT.appLanguage,localeLabel(ctx.uiLocale)],[MARKET_TEXT.conversationLanguage,localeLabel(ctx.conversationLocale)],[MARKET_TEXT.timeZone,ctx.timeZone],
       [MARKET_TEXT.policyRegions,`${ctx.safetyRegion} / ${ctx.legalRegion}`],[MARKET_TEXT.dataRegion,ctx.dataRegion],
       ["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],
-      ["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],
+      ["最後上線",idleTxt],["離自動清除",purgeTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],
       ["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]
     ];
     const nm=acctPersonName(a,"帳號");

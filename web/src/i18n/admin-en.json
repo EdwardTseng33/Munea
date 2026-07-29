@@ -227,7 +227,19 @@
     "只有標記為測試的帳號才能從後台刪除": "Only accounts marked as test accounts can be deleted here",
     "這台伺服器沒接上資料庫，不能刪帳號": "This server has no database connection, so accounts cannot be deleted",
     "刪除沒有成功，請看系統操作紀錄": "Deletion failed — check the system activity log",
-    "伺服器喚醒中，再試一次…": "Waking the server, retrying…"
+    "伺服器喚醒中，再試一次…": "Waking the server, retrying…",
+    "快被自動清除": "Nearing auto-deletion",
+    "還沒上線過": "Never opened the app",
+    "沒上線過": "Never opened",
+    "快被清除": "Nearing deletion",
+    "待清除": "Due for deletion",
+    "自動清除": "Auto-deletion",
+    "最後上線": "Last opened",
+    "離自動清除": "Until auto-deletion",
+    "今天有上線": "Opened today",
+    "已達自動清除門檻": "Past the auto-deletion threshold",
+    "註冊後沒開過 App": "Signed up but never opened the app",
+    "註冊完就沒回來的帳號": "Accounts that signed up and never came back"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },
@@ -248,6 +260,10 @@
     { "source": "{0}人", "target": "{0} people" },
     { "source": "{0} 點", "target": "{0} credits" },
     { "source": "剩不到 {0} 點 · 建議主動關心或提醒加購", "target": "Fewer than {0} credits · consider proactive support" },
-    { "source": "{0}/月", "target": "{0}/month" }
+    { "source": "{0}/月", "target": "{0}/month" },
+    { "source": "剩 {0} 天", "target": "{0} days left" },
+    { "source": "{0} 天沒上線", "target": "{0} days since last open" },
+    { "source": "{0} 天前上線", "target": "Opened {0} days ago" },
+    { "source": "閒置滿 {0} 天", "target": "Idle for {0} days" }
   ]
 }
