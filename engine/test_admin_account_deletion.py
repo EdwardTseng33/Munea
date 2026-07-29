@@ -143,5 +143,54 @@ class OwnerSummaryTests(unittest.TestCase):
         self.assertEqual(owner["email"], "someone@gmail.com")
 
 
+
+
+class AdminAccountSummaryFieldTests(unittest.TestCase):
+    """名冊回應的最後一層格式整理不准把「這一戶是誰」的欄位濾掉。
+
+    真踩過（2026-07-29）：supabase_adapter 已經把 owner／profileName 組好了，
+    但 server.normalize_admin_account_summary 只逐欄重建它認識的欄位，新欄位默默消失——
+    測試機部署後名冊還是空的，程式碼看起來卻完全正確，非常難查。
+    """
+
+    def setUp(self):
+        os.environ.setdefault("GEMINI_API_KEY", "admin-account-summary-test-key")
+        import server
+        self.server = server
+
+    def test_owner_and_real_name_survive_normalization(self):
+        raw = {
+            "accountId": ACCOUNT_ID,
+            "accountName": "Munea account",
+            "primaryPerson": {"id": "p1", "displayName": "寧寧", "profileName": "林建國", "nickname": "阿國"},
+            "owner": {
+                "authUserId": OWNER_ID, "email": "someone@gmail.com", "emailIsPrivateRelay": False,
+                "signInMethod": "google", "signInName": "陳美玲",
+                "signedUpAt": "2026-07-29T12:45:11Z", "lastSignInAt": "2026-07-29T12:45:13Z",
+            },
+        }
+        out = self.server.normalize_admin_account_summary(raw)
+        self.assertEqual(out["owner"]["email"], "someone@gmail.com")
+        self.assertEqual(out["owner"]["signInMethod"], "google")
+        self.assertEqual(out["owner"]["signInName"], "陳美玲")
+        self.assertEqual(out["owner"]["lastSignInAt"], "2026-07-29T12:45:13Z")
+        # 使用者本人的名字（profileName／nickname）跟 AI 陪伴角色名（displayName）都要留著
+        self.assertEqual(out["primaryPerson"]["profileName"], "林建國")
+        self.assertEqual(out["primaryPerson"]["nickname"], "阿國")
+        self.assertEqual(out["primaryPerson"]["displayName"], "寧寧")
+
+    def test_missing_owner_becomes_empty_shell_not_missing_key(self):
+        out = self.server.normalize_admin_account_summary({"accountId": ACCOUNT_ID})
+        self.assertIn("owner", out)
+        self.assertEqual(out["owner"]["email"], "")
+        self.assertEqual(out["owner"]["signInMethod"], "")
+
+    def test_apple_relay_email_is_flagged_even_if_upstream_forgot(self):
+        out = self.server.normalize_admin_account_summary(
+            {"accountId": ACCOUNT_ID, "owner": {"email": "abc@privaterelay.appleid.com"}}
+        )
+        self.assertTrue(out["owner"]["emailIsPrivateRelay"])
+
+
 if __name__ == "__main__":
     unittest.main()
