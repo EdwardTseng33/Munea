@@ -71,7 +71,9 @@ $envValues = [ordered]@{
   MUNEA_RUNPOD_IDLE_SECONDS = "900"
   MUNEA_RUNPOD_COOLDOWN_SECONDS = "300"
   MUNEA_RUNPOD_SCALE_UP_COOLDOWN_SECONDS = "15"
-  MUNEA_RUNPOD_STARTUP_TIMEOUT_SECONDS = "420"
+  # 2026-07-29：420→600。鏡像後同城拉圖 2-5 分內綽綽有餘；放寬是給「全球
+  # 兜底」跨洋拉圖的最壞情境——超時會砍卡重開、太緊會變成開卡→砍卡的空燒迴圈。
+  MUNEA_RUNPOD_STARTUP_TIMEOUT_SECONDS = "600"
   MUNEA_RUNPOD_POLL_SECONDS = "15"
   MUNEA_RUNPOD_SCALE_DOWN_ACTION = "terminate"
   MUNEA_RUNPOD_STATE_FILE = "/tmp/runpod-backup-state.json"
