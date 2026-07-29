@@ -162,8 +162,11 @@ class WiringTest(unittest.TestCase):
 
     def test_text_line_passes_outcomes_and_person(self):
         src = self._read("server.py")
-        self.assertIn("health_followup.outcomes_for(_person_id)", src)
-        self.assertIn('"personId": _person_id', src)
+        # 2026-07-29 兩條線共用同一個組法之後，這幾行搬進 current_health_profile()——
+        # 保證沒變（文字線照樣拿到人別鍵與過往效果），只是驗它現在住的地方。
+        self.assertIn("health_followup.outcomes_for(person_id) if person_id else {}", src)
+        self.assertIn('"personId": person_id', src)
+        self.assertIn("_health_profile = current_health_profile()", src)
 
     def test_recommendations_are_recorded_when_injected(self):
         src = self._read("health_kb.py")
@@ -173,6 +176,79 @@ class WiringTest(unittest.TestCase):
         src = self._read("server.py")
         self.assertIn("health_followup.due_followups(person_id, limit=1)", src)
         self.assertIn("health_followup.followup_cue(_due[0])", src)
+
+
+class VoiceLineWiringTest(unittest.TestCase):
+    """聊聊是主戰場，飛輪卻只接了文字線（2026-07-29 第三次犯同一類毛病）。
+
+    當時的狀況：語音線讀 st["health_audience"]——那個鍵**從頭到尾沒有任何地方
+    寫進去**，所以分齡一直是 None、等於因人挑選在主戰場根本沒生效；推薦也沒入帳，
+    同一個人在聊聊講過「那個沒效」，文字線完全不知道。
+    """
+
+    def _read(self, name):
+        with open(os.path.join(HERE, name), encoding="utf-8") as f:
+            return f.read()
+
+    def test_voice_no_longer_reads_a_key_nobody_writes(self):
+        src = self._read("live_voice_server.py")
+        self.assertNotIn('st.get("health_audience")', src,
+                         "又在讀沒有人寫入的狀態鍵——分齡等於沒生效")
+
+    def test_voice_actually_fetches_the_profile(self):
+        src = self._read("live_voice_server.py")
+        self.assertIn("_start_health_profile_fetch(st, memory_scope)", src)
+        self.assertIn('"/voice/health-context"', src)
+
+    def test_profile_fetch_never_blocks_the_call_setup_path(self):
+        """接通那條路是 async 主幹道，卡 3 秒＝整台機器上所有通話一起卡。"""
+        src = self._read("live_voice_server.py")
+        # 接通當下只放空的、真的去查是背景執行緒的事
+        self.assertIn('st["health_profile"] = {}\n    _start_health_profile_fetch(st, memory_scope)', src,
+                      "接通處沒有先放空值＋改派背景查")
+        self.assertIn("threading.Thread(target=_fill, daemon=True)", src)
+        # 整支檔案只准有這一處真的發出查詢，而且它住在背景那個 _fill 裡
+        self.assertEqual(src.count("= _fetch_health_profile(memory_scope)"), 1)
+        fill = src.split("def _fill():", 1)[1].split("threading.Thread", 1)[0]
+        self.assertIn("_fetch_health_profile(memory_scope)", fill,
+                      "查詢跑出背景執行緒外面了＝又擋在接通路徑上")
+
+    def test_voice_uses_the_fetched_profile_when_picking(self):
+        src = self._read("live_voice_server.py")
+        self.assertIn('_prof = st.get("health_profile") or {}', src)
+
+    def test_voice_recommendations_are_booked_on_the_brain(self):
+        voice = self._read("live_voice_server.py")
+        self.assertIn('st["pending_health_record"] = (ids[0], said, _prof, _hour)', voice)
+        self.assertIn('"/voice/health-recommended"', voice)
+
+    def test_nothing_is_booked_until_she_actually_says_it(self):
+        """提示是排在下一個輪替空檔送的；電話先掛就等於沒講過，記了會問空氣。"""
+        voice = self._read("live_voice_server.py")
+        self.assertIn("if health_cue and health_record:", voice)
+        self.assertIn("_record_voice_recommendation(cid, st, *health_record)", voice)
+        # 記帳只能發生在「已經送出去」之後
+        after_send = voice.split('_diag(cid, "guardian.cue_sent"', 1)[1]
+        self.assertIn("_record_voice_recommendation(cid, st, *health_record)", after_send)
+        brain = self._read("server.py")
+        self.assertIn("def voice_health_recommended_response(data)", brain)
+        self.assertIn("health_followup.record_recommendation(person_id, topic_id, solutions)", brain)
+
+    def test_the_new_internal_route_is_registered_and_secret_gated(self):
+        src = self._read("server.py")
+        self.assertIn('"/voice/health-recommended": voice_health_recommended_response', src)
+        # 內部通道一律吃共用密語；漏掛＝任何人都能替別人記帳
+        self.assertIn('"/voice/health-recommended")', src)
+
+    def test_brain_hands_the_profile_over_only_when_it_knows_who_it_is(self):
+        src = self._read("server.py")
+        self.assertIn("profile = current_health_profile() if person else None", src)
+
+    def test_both_lines_build_the_profile_the_same_way(self):
+        """一邊有、一邊悄悄沒有——就是這次的病根。共用同一個組法。"""
+        src = self._read("server.py")
+        self.assertIn("def current_health_profile()", src)
+        self.assertEqual(src.count("_health_profile = current_health_profile()"), 1)
 
 
 if __name__ == "__main__":
