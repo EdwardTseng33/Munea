@@ -71,6 +71,34 @@
       "keys": ["voice.ready", "voice.connecting", "voice.fallback", "voice.call.unavailable"]
     },
     {
+      "anchorId": "chatCaption",
+      "renderer": "setLocalizedRuntimeHint",
+      "keys": [
+        "voice.runtime.playbackBlocked",
+        "voice.runtime.audioOnlyFallback",
+        "voice.runtime.microphoneTapToResume",
+        "voice.runtime.listening",
+        "voice.runtime.reconnecting",
+        "voice.runtime.microphonePermission",
+        "voice.runtime.heard",
+        "voice.runtime.thinking",
+        "voice.runtime.didNotHear",
+        "voice.runtime.recordingTapWhenDone",
+        "voice.runtime.microphoneMuted",
+        "voice.runtime.microphoneMutedHint"
+      ]
+    },
+    {
+      "anchorId": "chat",
+      "renderer": "setLocalizedRuntimeCaption",
+      "keys": [
+        "voice.runtime.recoveredTitle",
+        "voice.runtime.recoveredBody",
+        "voice.runtime.degradedTitle",
+        "voice.runtime.degradedBody"
+      ]
+    },
+    {
       "anchorId": "busyCardTitle",
       "renderer": "showBusyCard",
       "keys": [

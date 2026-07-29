@@ -129,6 +129,35 @@ assert(app.includes("muneaT('voice.call.dialing'") && app.includes("muneaT('voic
 assert(/muneaT\(\s*'auth\.chatSignInRequired'/.test(app) && app.includes("muneaT('voice.caption.enabled'") && app.includes("muneaT('voice.caption.disabled'"),
   'Sign-in and caption feedback must be rendered from the active locale catalog');
 assert(app.includes("muneaT('accessibility.markComplete'"), 'Task completion controls must expose a localized accessible label');
+const runtimeVoiceKeys = [
+  'voice.runtime.playbackBlocked',
+  'voice.runtime.audioOnlyFallback',
+  'voice.runtime.microphoneTapToResume',
+  'voice.runtime.listening',
+  'voice.runtime.reconnecting',
+  'voice.runtime.microphonePermission',
+  'voice.runtime.heard',
+  'voice.runtime.thinking',
+  'voice.runtime.didNotHear',
+  'voice.runtime.recordingTapWhenDone',
+  'voice.runtime.microphoneMuted',
+  'voice.runtime.microphoneMutedHint',
+  'voice.runtime.recoveredTitle',
+  'voice.runtime.recoveredBody',
+  'voice.runtime.degradedTitle',
+  'voice.runtime.degradedBody',
+  'voice.runtime.textFallbackPrompt',
+  'voice.runtime.deviceTextFallbackPrompt',
+  'voice.runtime.microphoneTextFallbackPrompt',
+];
+runtimeVoiceKeys.forEach(key => assert(zhCatalog[key], `Voice runtime catalog key missing for: ${key}`));
+assert(app.includes('function setLocalizedRuntimeHint(state, busy = false)')
+  && app.includes('function setLocalizedRuntimeCaption(state)'),
+  'Voice runtime hints and recovery captions must use named localized renderers');
+assert(!/setCallHint\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),
+  'Call runtime hints must not bypass the locale catalog with inline Han copy');
+assert(!/setCaption\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),
+  'Call recovery captions must not bypass the locale catalog with inline Han copy');
 assert(app.includes('function applyTaskAccessibilityLabels()') && /refreshLocalizedDynamicUi\(\)[\s\S]*?applyTaskAccessibilityLabels\(\)/.test(app),
   'Task completion accessibility labels must refresh after the active App locale changes');
 assert(app.includes('function localizeAuthTerms()') && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeAuthTerms\(\)/.test(app),

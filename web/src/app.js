@@ -242,6 +242,38 @@ function setLocalizedCallHint(state, busy = false) {
     : muneaT(fallbackKeys[state] || fallbackKeys.unavailable, '');
   setCallHint(text, busy);
 }
+const VOICE_RUNTIME_COPY = Object.freeze({
+  playbackBlocked: ['voice.runtime.playbackBlocked', '聲音暫時被擋住了，點一下畫面就好'],
+  audioOnlyFallback: ['voice.runtime.audioOnlyFallback', '畫面先休息一下，我們繼續用聲音聊'],
+  microphoneTapToResume: ['voice.runtime.microphoneTapToResume', '收音還沒啟動，請點一下畫面'],
+  listening: ['voice.runtime.listening', '我在聽，你說吧'],
+  reconnecting: ['voice.runtime.reconnecting', '線路沒接好，正在重新連線…'],
+  microphonePermission: ['voice.runtime.microphonePermission', '請到設定允許使用麥克風'],
+  heard: ['voice.runtime.heard', '我聽見了'],
+  thinking: ['voice.runtime.thinking', '我想一下'],
+  didNotHear: ['voice.runtime.didNotHear', '沒有聽清楚，請再說一次'],
+  recordingTapWhenDone: ['voice.runtime.recordingTapWhenDone', '我在聽，說完再按一次'],
+  microphoneMuted: ['voice.runtime.microphoneMuted', '麥克風已關閉'],
+  microphoneMutedHint: ['voice.runtime.microphoneMutedHint', '麥克風已關閉，想說話時再點一下'],
+  recoveredTitle: ['voice.runtime.recoveredTitle', '已經接回來了，剛才說的我都記得'],
+  recoveredBody: ['voice.runtime.recoveredBody', '我們繼續'],
+  degradedTitle: ['voice.runtime.degradedTitle', '訊號不太穩，我先用簡單模式陪你'],
+  degradedBody: ['voice.runtime.degradedBody', '連線會自動恢復，剛才聊的內容都還在'],
+});
+function voiceRuntimeCopy(state) {
+  const entry = VOICE_RUNTIME_COPY[state] || VOICE_RUNTIME_COPY.reconnecting;
+  return muneaT(entry[0], entry[1]);
+}
+function setLocalizedRuntimeHint(state, busy = false) {
+  setCallHint(voiceRuntimeCopy(state), busy);
+}
+function setLocalizedRuntimeCaption(state) {
+  if (state === 'recovered') {
+    setCaption(voiceRuntimeCopy('recoveredTitle'), voiceRuntimeCopy('recoveredBody'));
+    return;
+  }
+  setCaption(voiceRuntimeCopy('degradedTitle'), voiceRuntimeCopy('degradedBody'));
+}
 // 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：
 // 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
 // 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
@@ -2000,7 +2032,7 @@ const Avatar = {
           const _pv = vid.play();
           if (_pv && _pv.then) _pv.then(() => Avatar._diagNote('影音播放:成功')).catch((err) => {   // 被 iOS 擋（手勢斷鏈）→ 點畫面一下＝新手勢救回（先鋒 tap-to-play 的 App 版）
             Avatar._diagNote('影音播放:被擋(' + (err && err.name) + ')', true);
-            try { setCallHint('聲音被擋住了，點一下畫面就好', true); } catch (e2) {}
+            try { setLocalizedRuntimeHint('playbackBlocked', true); } catch (e2) {}
             try {
               document.getElementById('chat').addEventListener('click', () => {
                 vid.muted = false; const _p3 = vid.play(); if (_p3 && _p3.catch) _p3.catch(() => {});
@@ -2195,7 +2227,7 @@ const Avatar = {
     try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
     try { this.stop(); } catch (e) {}   // 收 WebRTC＋恢復照片層（stop 內含 _fhComposite(false)）
     try { FaceIdle.start(); } catch (e) {}   // 立繪待機動畫頂上，不留凍格
-    try { setCallHint('畫面先休息一下，我們用聲音繼續聊'); } catch (e) {}
+    try { setLocalizedRuntimeHint('audioOnlyFallback'); } catch (e) {}
   },
   stop() {
     this.on = false;
@@ -2284,13 +2316,13 @@ const LiveVoice = {
       if (!this.micOpen || (this._micPackets || 0) > sentAtOpen) return;
       this._resumeAudio();
       try { trackProductEvent('voice_mic_stalled', { audioState: this.ac && this.ac.state, trackState: this.mic && this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState }); } catch (e) {}
-      setCallHint('收音還沒啟動，請點一下畫面');
+      setLocalizedRuntimeHint('microphoneTapToResume');
       if (!this._micGestureBound) {
         this._micGestureBound = true;
         const recover = () => {
           this._micGestureBound = false;
           this._resumeAudio();
-          setCallHint('我在聽，你說吧');
+          setLocalizedRuntimeHint('listening');
         };
         try { document.getElementById('chat').addEventListener('click', recover, { once: true }); } catch (e) {}
       }
@@ -2668,7 +2700,7 @@ const LiveVoice = {
     try { this._attachMicProcessor(); } catch (e) { voiceCallFail('microphone_uplink_rebuilt', e, { attempt }); return false; }
     voiceCallMark('microphone_uplink_rebuilt', 'pass', { attempt });
     try { trackProductEvent('voice_mic_uplink_rebuilt', { attempt }); } catch (e) {}
-    if (this.micOpen) setCallHint('我在聽，你說吧');   // 重建成功、正在收音 → 蓋掉稍早的「請點一下畫面」提示
+    if (this.micOpen) setLocalizedRuntimeHint('listening');   // 重建成功、正在收音 → 蓋掉稍早的「請點一下畫面」提示
     return true;
   },
   // 收音管看門（蟲 b「整通零上行」根治）：WebSocket open 後 3 秒還沒送出第一包（開麥前也該有靜音包）
@@ -2706,7 +2738,7 @@ const LiveVoice = {
       this._deadLineSessionId = sessionKey;
       voiceCallFail('dead_line_reconnect', phase + '_' + waitMs + 'ms');
       try { trackProductEvent('voice_dead_line_reconnect', { phase }); } catch (e) {}
-      setCallHint('線路沒接好，我重接一次…', true);
+      setLocalizedRuntimeHint('reconnecting', true);
       try { this.ws.close(); } catch (e) { try { this.stop(); } catch (e2) {} }   // close → onclose → onDrop 自動重連
     }, waitMs);
   },
@@ -2797,7 +2829,7 @@ const LiveVoice = {
         const micSetup = await micPipelineReady;   // 管線多半早就建好了，這裡只是收結果
         if (!micSetup.ok) {
           voiceCallFail('microphone_ready', micSetup.error || 'microphone_unavailable');
-          setCallHint('拿不到麥克風，請到設定允許'); try { this.ws.close(); } catch (e) {} done(false); return;
+          setLocalizedRuntimeHint('microphonePermission'); try { this.ws.close(); } catch (e) {} done(false); return;
         }
         this._resumeAudio();
         this._armUplinkWatch();                        // open 後 3 秒沒有第一包 → 自動重建收音管（最多 2 次）
@@ -4395,6 +4427,15 @@ window.__ptsTest = {
       'credits.freeTrialOneMinute',
       '免費體驗剩約 1 分鐘，慢慢說完沒關係。',
     ));
+  },
+  showVoiceRuntimeCaption: state => {
+    captionsOn = true;
+    applyCaptionState();
+    setLocalizedRuntimeCaption(state);
+  },
+  showVoiceRuntimeHint: state => {
+    setLocalizedRuntimeHint(state);
+    return document.getElementById('chatCaption')?.textContent || '';
   },
   ff: s => { _callSec = s; },
 };
@@ -8440,16 +8481,16 @@ function init() {
     }
     const acted = parseChatIntent(t);
     if (acted) { speakChat(acted); return; }
-    setCallHint('我聽見了');
+    setLocalizedRuntimeHint('heard');
     chatHistory.push({ role: 'user', text: t });
     activeChatTurnCount += 1;
     // [S2S] 思考態：不顯示文字稿，只讓臉與狀態提示表達「她在想」
-    setTimeout(() => { setFaceState('thinking'); setCallHint('我想一下'); }, 380);
+    setTimeout(() => { setFaceState('thinking'); setLocalizedRuntimeHint('thinking'); }, 380);
     const r = await voiceProvider.sendText({ history: chatHistory, char: currentChar });
     if (r && r.reply) {                              // 真腦回話＋真聲音
       if (_brainDegraded) {
         _brainDegraded = false;
-        setCaption('接回來了，剛剛說的我都記著', '我們繼續');
+        setLocalizedRuntimeCaption('recovered');
         trackProductEvent('voice_brain_recovered', { turnCount: activeChatTurnCount });
       }
       setLocalizedCallHint('speaking');
@@ -8465,7 +8506,7 @@ function init() {
     } else {                                          // 沒真腦 → 退回規則版（純靜態 demo 也能動）
       if (!_brainDegraded) {
         _brainDegraded = true;
-        setCaption('訊號不太穩，我先用簡單的方式陪你', '會自己接回來，聊的內容我都記著');
+        setLocalizedRuntimeCaption('degraded');
       }
       const rr = chatReply(t);
       setLocalizedCallHint('speaking');
@@ -8496,11 +8537,11 @@ function init() {
   }
   async function sendVoiceNote(blob, durationMs) {
     if (!blob || !blob.size) {
-      setCallHint('沒有聽清楚，再說一次');
+      setLocalizedRuntimeHint('didNotHear');
       setFaceState('idle');
       return;
     }
-    setCallHint('我想一下');
+    setLocalizedRuntimeHint('thinking');
     const audio = await blobToDataUrl(blob);
     const r = await voiceProvider.sendVoiceNote({ char: currentChar, audio, mime: blob.type || 'audio/webm', durationMs });
     if (r && r.ok) {
@@ -8516,7 +8557,11 @@ function init() {
         durationMs,
       });
       setLocalizedCallHint('unavailable');
-      const s = prompt(`我先用文字接住你，想跟${companionDisplayName}說什麼？`);
+      const s = prompt(muneaT(
+        'voice.runtime.textFallbackPrompt',
+        '我先用文字接住你，想跟{companion}說什麼？',
+        { companion: companionDisplayName },
+      ));
       if (s) chatHandle(s);
     }
     setFaceState('idle');
@@ -8525,7 +8570,11 @@ function init() {
   let mediaRec = null, mediaChunks = [], mediaStartedAt = 0;
   async function startVoiceCapture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      const s = prompt(`（這個裝置先用打字，正式版用即時語音）跟${companionDisplayName}說什麼？`);
+      const s = prompt(muneaT(
+        'voice.runtime.deviceTextFallbackPrompt',
+        '這個裝置暫時無法使用語音，我們先用文字。想跟{companion}說什麼？',
+        { companion: companionDisplayName },
+      ));
       if (s) chatHandle(s);
       return;
     }
@@ -8546,10 +8595,14 @@ function init() {
       chatOn = true;
       chatMic.classList.add('recording');
       setFaceState('listening');
-      setCallHint('我在聽，說完再按一次');
+      setLocalizedRuntimeHint('recordingTapWhenDone');
     } catch (e) {
-      setCallHint('目前拿不到麥克風權限');
-      const s = prompt(`想跟${companionDisplayName}說什麼？`);
+      setLocalizedRuntimeHint('microphonePermission');
+      const s = prompt(muneaT(
+        'voice.runtime.microphoneTextFallbackPrompt',
+        '想跟{companion}說什麼？',
+        { companion: companionDisplayName },
+      ));
       if (s) chatHandle(s);
     }
   }
@@ -8576,7 +8629,7 @@ function init() {
       micMuted = !micMuted;
       chatMic.classList.toggle('off', micMuted);
       try { LiveVoice.micOpen = !micMuted; } catch (e) {}   // 靜音＝停收音；開啟＝恢復（半雙工仍套用：她說話時本就靜音）
-      setCallHint(micMuted ? '麥克風先關著，想說話再點一下' : '我在聽，你說吧');
+      setLocalizedRuntimeHint(micMuted ? 'microphoneMutedHint' : 'listening');
       return;
     }
     if (!SR2) {
@@ -8592,7 +8645,7 @@ function init() {
     // 通話中：麥克風＝靜音開關
     micMuted = !micMuted;
     chatMic.classList.toggle('off', micMuted);
-    if (micMuted) { try { chatRec && chatRec.stop(); } catch (e) {} setCallHint('麥克風先關著'); }
+    if (micMuted) { try { chatRec && chatRec.stop(); } catch (e) {} setLocalizedRuntimeHint('microphoneMuted'); }
     else { setLocalizedCallHint('ready'); startListening(); }
   });
 
