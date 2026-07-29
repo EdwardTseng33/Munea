@@ -232,10 +232,10 @@ def log_fallback_exception(context, exc):
         try:
             ai_health.record_failure("%s: %s" % (context, exc))
         except Exception as record_exc:
-            # 這裡不能再呼叫 log_fallback_exception（會自己叫自己），但也不能默不作聲——
-            # 這一行吞掉的正是「健康監控記不下來」這件事，安靜吞掉就等於上面那句
-            # 「不然巡邏永遠報綠燈」被它自己破壞。直接寫 log，不繞回來。
-            LOGGER.warning("ai_health.record_failure failed for %s: %s", context, record_exc)
+            # 記錄失敗本身也失敗時，一樣要留下痕跡——默默吞掉就是 7/29 那次
+            # 「巡邏永遠報綠燈」的成因。這裡只能用 LOGGER，
+            # 不能再呼叫 log_fallback_exception（那會自己叫自己、無限繞回來）。
+            LOGGER.warning("ai_health.record_failure failed: %s", record_exc)
     LOGGER.warning(
         "%s failed; using prototype fallback: %s",
         context,
