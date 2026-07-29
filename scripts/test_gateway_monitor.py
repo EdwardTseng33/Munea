@@ -447,7 +447,7 @@ class MonitorCycleTests(unittest.TestCase):
         self.assertEqual(after_recovery["recovered"], [])
         self.assertEqual(recurrence["sent"], ["queue_depth_nonzero"])
         self.assertEqual(len(delivered), 3)
-        self.assertIn("[RECOVERED]", delivered[1]["text"])
+        self.assertIn("已恢復", delivered[1]["text"])
 
     def test_lifecycle_state_survives_monitor_recreation(self) -> None:
         class Client:
