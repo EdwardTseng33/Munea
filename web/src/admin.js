@@ -88,6 +88,8 @@
 
   const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7B76" };
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
+  const ADMIN_FORMAT_LOCALE = (window.MuneaAdminI18n && window.MuneaAdminI18n.current()) || "zh-TW";
+  const ADMIN_FORMAT_TIME_ZONE = String(window.MUNEA_ADMIN_TIME_ZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
   // 手機圖表軸字鎖 14px（2026-07-22 女巫 Gate2 · bondDepth/growth 反映最明顯，其餘圖表共用同一套函式一併受益）
   function axisFontPx(){ try{ return window.innerWidth<=880?14:11; }catch(e){ return 11; } }
   const $ = (id) => document.getElementById(id);
@@ -163,15 +165,56 @@
   function fmtMoney(v){ return (v==null||isNaN(v))?"–":"NT$"+Math.round(Number(v)).toLocaleString("en-US"); }
   function pct(v){ return (v==null||isNaN(v))?"–":Math.round(Number(v)*100)+"%"; }
   function shortDate(iso){ const p=String(iso).split("-"); return p.length===3?`${+p[1]}/${+p[2]}`:iso; }
-  function fmtTime(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);}catch(e){return String(v);} }
-  function fmtDate(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"numeric",day:"numeric"}).format(d);}catch(e){return String(v);} }
+  function fmtTime(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat(ADMIN_FORMAT_LOCALE,{timeZone:ADMIN_FORMAT_TIME_ZONE,month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);}catch(e){return String(v);} }
+  function fmtDate(v){ if(!v)return "–"; const d=new Date(v); if(isNaN(d))return String(v); try{ return new Intl.DateTimeFormat(ADMIN_FORMAT_LOCALE,{timeZone:ADMIN_FORMAT_TIME_ZONE,year:"numeric",month:"numeric",day:"numeric"}).format(d);}catch(e){return String(v);} }
   function zh(map,v,f){ if(v==null||v==="")return f||"–"; return map[String(v).toLowerCase()]||String(v); }
-  const RISK_ZH = { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" };
+  const RISK_LABEL_BY_LOCALE = {
+    "zh-TW": { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高風險", medium:"🟡 中風險", moderate:"🟡 中風險", low:"🟢 低風險", none:"低" },
+    en: { crisis:"🔴 Crisis", critical:"🔴 Crisis", high:"🔴 High risk", medium:"🟡 Medium risk", moderate:"🟡 Medium risk", low:"🟢 Low risk", none:"Low" },
+    ja: { crisis:"🔴 危機", critical:"🔴 危機", high:"🔴 高リスク", medium:"🟡 中リスク", moderate:"🟡 中リスク", low:"🟢 低リスク", none:"低" },
+    es: { crisis:"🔴 Crisis", critical:"🔴 Crisis", high:"🔴 Riesgo alto", medium:"🟡 Riesgo medio", moderate:"🟡 Riesgo medio", low:"🟢 Riesgo bajo", none:"Bajo" },
+  };
+  const RISK_ZH = RISK_LABEL_BY_LOCALE[ADMIN_FORMAT_LOCALE] || RISK_LABEL_BY_LOCALE["zh-TW"];
   const FB_ZH = { bug:"問題回報", idea:"功能許願", praise:"稱讚", nps:"打分數", survey:"問卷" };
   const FB_TONE = { bug:"warn", idea:"gold", praise:"ok", nps:"mute", survey:"mute" };
   const PV_ZH = { account_deletion:"刪除帳號", deletion:"刪除帳號", export:"資料副本", data_export:"資料副本", correction:"資料更正" };
   const ST_ZH = { pending:"待處理", open:"待處理", received:"已收到", processing:"處理中", done:"已完成", completed:"已完成", closed:"已結案" };
   const CREDIT_ZH = { subscription_monthly_allowance:"每月贈點", credit_grant:"發放點數", credit_consume:"使用點數", free_signup_voice_avatar_trial:"新用戶體驗贈點", apple_purchase:"加購點數", apple_purchase_refunded:"加購退款", apple_refund_reversed:"退款回沖", call_consume:"通話扣點" };
+  const LOCALE_LABEL = { "zh-TW":"\u7e41\u9ad4\u4e2d\u6587", en:"English", ja:"日本語", es:"Español" };
+  const MARKET_TEXT_BY_LOCALE = {
+    "zh-TW": { chat:"聊天", tableHeader:"地區／語言", country:"國家／地區", appLanguage:"App 操作語言", conversationLanguage:"陪伴聊天語言", timeZone:"時區", policyRegions:"安全／法律區域", dataRegion:"資料區域" },
+    en: { chat:"conversation", tableHeader:"Region / language", country:"Country / region", appLanguage:"App UI language", conversationLanguage:"Companion conversation language", timeZone:"Time zone", policyRegions:"Safety / legal region", dataRegion:"Data region" },
+    ja: { chat:"会話", tableHeader:"地域／言語", country:"国／地域", appLanguage:"Appの表示言語", conversationLanguage:"会話言語", timeZone:"タイムゾーン", policyRegions:"安全／法務地域", dataRegion:"データ地域" },
+    es: { chat:"conversación", tableHeader:"Región / idioma", country:"País / región", appLanguage:"Idioma de la interfaz", conversationLanguage:"Idioma de conversación", timeZone:"Zona horaria", policyRegions:"Región de seguridad / legal", dataRegion:"Región de datos" },
+  };
+  const MARKET_TEXT = MARKET_TEXT_BY_LOCALE[ADMIN_FORMAT_LOCALE] || MARKET_TEXT_BY_LOCALE["zh-TW"];
+  function accountLocaleContext(account){
+    const a=account||{},p=a.primaryPerson||{},ctx=a.localeContext||{};
+    return {
+      uiLocale:ctx.uiLocale||a.locale||"—",
+      conversationLocale:ctx.conversationLocale||p.locale||a.locale||"—",
+      countryCode:ctx.countryCode||p.regionCode||"—",
+      timeZone:ctx.timeZone||p.timezone||"—",
+      safetyRegion:ctx.safetyRegion||"—",
+      legalRegion:ctx.legalRegion||"—",
+      dataRegion:ctx.dataRegion||"—",
+    };
+  }
+  function localeLabel(locale){
+    const raw=String(locale||"—"), normalized=/^zh/i.test(raw)?"zh-TW":(/^en/i.test(raw)?"en":(/^ja/i.test(raw)?"ja":(/^es/i.test(raw)?"es":"")));
+    return LOCALE_LABEL[normalized]||raw;
+  }
+  function accountMarketSearchText(account){
+    const ctx=accountLocaleContext(account);
+    return [ctx.countryCode,ctx.uiLocale,localeLabel(ctx.uiLocale),ctx.conversationLocale,localeLabel(ctx.conversationLocale),ctx.timeZone,ctx.safetyRegion,ctx.legalRegion,ctx.dataRegion].join(" ").toLowerCase();
+  }
+  function accountMarketCell(account){
+    const ctx=accountLocaleContext(account);
+    const language=ctx.uiLocale===ctx.conversationLocale
+      ?localeLabel(ctx.uiLocale)
+      :`${localeLabel(ctx.uiLocale)} UI · ${localeLabel(ctx.conversationLocale)} ${MARKET_TEXT.chat}`;
+    return `<span class="market-cell"><b>${esc(ctx.countryCode)}</b><span class="muted small">${esc(language)}</span></span>`;
+  }
 
   // ══════════ 元件 ══════════
   function kpiRow(items){
@@ -415,7 +458,7 @@
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
     const planC={free:0,plus:0,pro:0}; accts.forEach((a)=>{ const p=a.plan||"free"; planC[p]=(planC[p]||0)+1; });
     const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
-    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{},o=a.owner||{}; return ((acctPersonName(a)||"")+" "+(p.displayName||"")+" "+(f.name||"")+" "+(o.email||"")+" "+(o.signInName||"")).toLowerCase().indexOf(q)>-1; });
+    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{},o=a.owner||{}; return ((acctPersonName(a)||"")+" "+(p.displayName||"")+" "+(f.name||"")+" "+(o.email||"")+" "+(o.signInName||"")+" "+accountMarketSearchText(a)).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
     const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
     const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
@@ -426,7 +469,8 @@
       const who=ownerLine(a.owner);
       return [
         `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub">${esc(sub)}${who?` · ${esc(who)}`:""}</div></div></div>`,
-        `<span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span>`,
+        `<span class="family-cell"><span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span></span>`,
+        accountMarketCell(a),
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
         esc(c.displayName||c.templateId||"–"),
@@ -437,7 +481,7 @@
       ];
     });
     const hiddenNote=(!showTest&&hiddenTestCount)?` · 已隱藏 ${hiddenTestCount} 個測試帳號`:"";
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭","方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","狀態","最近活躍",""], trows)}</div>`;
     return html;
   }
 
@@ -779,12 +823,23 @@
     const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[a.plan||"free"]||"免費";
     const stTxt={on:"活躍中",idle:"低度使用",off:"離線",alert:"守護中"}[st]||"離線";
     const mins=Math.round(u.totalMinutes||0);
+    const ctx=accountLocaleContext(a);
     const o=a.owner||{};
-    const fields=[["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],
-      // 會員資料三欄（2026-07-29 補）：後台要能回答「這一戶到底是誰」，不然名冊只剩暱稱、
+    const fields=[
+      // 「主要使用者」放真人名字（個人資料／登入帶進來的），AI 陪伴角色名另有自己的欄位——
+      // 兩者混在同一欄的話，後台就分不出「這戶是誰」跟「他把 AI 叫什麼」。
+      ["家庭圈",f.name||"–"],["主要使用者",acctPersonName(a)],
+      // 會員資料四欄（2026-07-29 補）：後台要能回答「這一戶到底是誰」，不然名冊只剩暱稱、
       // 上線後分不出真實用戶跟測試帳號、也聯絡不到人。
-      ["登入方式",ownerLabel(o)||"查無登入身分"],["登入信箱",ownerEmailText(o)||"–"],["註冊時間",o.signedUpAt?fmtTime(o.signedUpAt):fmtTime(a.createdAt)],["最後登入",o.lastSignInAt?fmtTime(o.lastSignInAt):"–"],
-      ["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]];
+      ["登入方式",ownerLabel(o)||"查無登入身分"],["登入信箱",ownerEmailText(o)||"–"],
+      ["註冊時間",o.signedUpAt?fmtTime(o.signedUpAt):fmtTime(a.createdAt)],["最後登入",o.lastSignInAt?fmtTime(o.lastSignInAt):"–"],
+      [MARKET_TEXT.country,ctx.countryCode],
+      [MARKET_TEXT.appLanguage,localeLabel(ctx.uiLocale)],[MARKET_TEXT.conversationLanguage,localeLabel(ctx.conversationLocale)],[MARKET_TEXT.timeZone,ctx.timeZone],
+      [MARKET_TEXT.policyRegions,`${ctx.safetyRegion} / ${ctx.legalRegion}`],[MARKET_TEXT.dataRegion,ctx.dataRegion],
+      ["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],
+      ["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],
+      ["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]
+    ];
     const nm=acctPersonName(a,"帳號");
     const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
@@ -1527,7 +1582,7 @@
       panel.innerHTML=`<div class="modal-subpanel">
         <div class="modal-subtitle">永久刪除測試帳號「${esc(nm)}」</div>
         <div class="kpi-sub" style="margin-bottom:10px">會一併刪掉這個帳號的家庭圈、個人資料、點數錢包、聊天摘要與登入身分，<b>刪掉就回不來</b>。只有已標記為測試的帳號刪得掉；真實用戶要刪帳號請走 App 內的帳號刪除或隱私請求。</div>
-        <label class="field"><span>請輸入「刪除」兩個字確認</span><input id="deleteConfirmInput" type="text" autocomplete="off" placeholder="刪除"></label>
+        <label class="del-confirm"><input type="checkbox" id="deleteConfirmChk"> 我知道刪掉就回不來了</label>
         <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm danger" id="deleteSubmitBtn">永久刪除</button></div>
         <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
       </div>`;
@@ -1539,8 +1594,9 @@
   async function submitDeleteAccount(a){
     const nm=acctPersonName(a,"帳號");
     const hint=$("acctActionHint");
-    const typed=($("deleteConfirmInput")?.value||"").trim();
-    if(typed!=="刪除"){ if(hint){ hint.textContent="請輸入「刪除」兩個字才能送出"; hint.className="modal-subhint err"; } return; }
+    // 勾選框而不是「打特定字確認」：後台有四個語系，要人打中文字在英日西介面下根本按不下去
+    // （守門測試也會擋含中文的譯文）。勾選一樣有摩擦、但不綁語言。
+    if(!$("deleteConfirmChk")?.checked){ if(hint){ hint.textContent="請先勾選確認"; hint.className="modal-subhint err"; } return; }
     if(!a.isTestAccount){ if(hint){ hint.textContent="這個帳號沒有標記為測試帳號，不能從後台刪除"; hint.className="modal-subhint err"; } return; }
     if(!window.confirm("要永久刪除測試帳號「"+nm+"」嗎？\n\n這個動作無法復原。")) return;
     const btn=$("deleteSubmitBtn"); if(btn) btn.disabled=true;
@@ -1881,7 +1937,8 @@
     localStorage.setItem(ASSUME_KEY,JSON.stringify(a));
     const paid=a.plusCount+a.proCount, mrr=a.plusCount*a.plusPrice+a.proCount*a.proPrice;
     const arpu=paid?mrr/paid:null, ltv=arpu!=null?arpu*a.lifeMonths:null, cac=a.newPaid?a.marketing/a.newPaid:null, ratio=(ltv!=null&&cac)?ltv/cac:null;
-    if($("assumeOut")) $("assumeOut").innerHTML=`MRR <b>${fmtMoney(mrr)}</b> · ARPU ${arpu!=null?fmtMoney(arpu):"–"} · LTV ${ltv!=null?fmtMoney(ltv):"–"} · CAC ${cac!=null?fmtMoney(cac):"填新增付費+行銷花費"} · <b>LTV:CAC ${ratio!=null?ratio.toFixed(1)+":1"+(ratio>=3?" 🟢":ratio>=1?" 🟡":" 🔴"):"–"}</b>`;
+    const emptyCac={ "zh-TW":"填新增付費+行銷花費", en:"enter paid users + marketing spend", ja:"新規有料数と広告費を入力", es:"introduce usuarios de pago y gasto de marketing" }[ADMIN_FORMAT_LOCALE]||"填新增付費+行銷花費";
+    if($("assumeOut")) $("assumeOut").innerHTML=`MRR <b>${fmtMoney(mrr)}</b> · ARPU ${arpu!=null?fmtMoney(arpu):"–"} · LTV ${ltv!=null?fmtMoney(ltv):"–"} · CAC ${cac!=null?fmtMoney(cac):emptyCac} · <b>LTV:CAC ${ratio!=null?ratio.toFixed(1)+":1"+(ratio>=3?" 🟢":ratio>=1?" 🟡":" 🔴"):"–"}</b>`;
   }
 
   // ══════════ 導覽 ══════════
@@ -2014,5 +2071,10 @@
     root.innerHTML=`<div class="ops-notice warn" role="status"><strong>連不到伺服器</strong>${extra}這不是密碼問題，你的登入還在——稍後按右上角「重新整理」再試一次。</div>`;
     bindPageEvents(state.page);
   }
-  document.addEventListener("DOMContentLoaded",init);
+  function boot(){
+    Promise.resolve(window.MuneaAdminI18n && window.MuneaAdminI18n.ready)
+      .finally(init);
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",boot);
+  else boot();
 })();

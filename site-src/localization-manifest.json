@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "defaultLocale": "zh-TW",
+  "fallbackLocale": "zh-TW",
+  "locales": {
+    "zh-TW": {
+      "htmlLang": "zh-Hant-TW",
+      "pages": {
+        "landing": "../app-site/index.html"
+      }
+    },
+    "en": {
+      "htmlLang": "en",
+      "pages": {
+        "landing": "../app-site/en/index.html"
+      }
+    },
+    "ja": {
+      "htmlLang": "ja",
+      "pages": {
+        "landing": "../app-site/ja/index.html"
+      }
+    },
+    "es": {
+      "htmlLang": "es",
+      "pages": {
+        "landing": "../app-site/es/index.html"
+      }
+    }
+  }
+}

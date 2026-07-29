@@ -1,0 +1,228 @@
+{
+  "schema": "munea.app-legal-reader-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T09:11:23.762Z",
+  "result": "pass-local-precheck",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "6e9e27eb904834a18059c7fc6cd0470dcf290b64",
+  "sourceChangedFiles": [
+    "M scripts/test-ui-contracts.js",
+    " M web/src/app.js",
+    " M web/src/i18n/app-binding-manifest.json",
+    " M web/src/i18n/app-screen-manifest.json",
+    " M web/src/i18n/en.json",
+    " M web/src/i18n/es.json",
+    " M web/src/i18n/ja.json",
+    " M web/src/i18n/zh-TW.json",
+    " M web/src/styles.css",
+    "?? docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/",
+    "?? scripts/app-legal-reader-i18n-browser-precheck.js"
+  ],
+  "scope": {
+    "surfaces": [
+      "reader:privacy",
+      "reader:terms",
+      "modal:auth-chat-gate",
+      "chat:caption-feedback",
+      "home:task-accessibility"
+    ],
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4179",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "appStoreConnectTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "browser": "Google Chrome",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "automation": "Playwright local fallback because agent-browser executable is unavailable"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "observedExternalRequests": []
+  },
+  "locales": {
+    "zh-TW": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "privacy": {
+        "title": "隱私權政策",
+        "bodyCharacters": 1830,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/privacy.html",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/zh-TW__privacy-reader__iphone390x844.png",
+          "bytes": 124547,
+          "sha256": "192c3a302d01ba4f432e13a4e205d7a0ad44deb7bcb35c5912e1ed6779a0be3a"
+        }
+      },
+      "terms": {
+        "title": "服務條款",
+        "bodyCharacters": 991,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/terms.html"
+      },
+      "auth": {
+        "message": "請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘",
+        "terms": "繼續即代表同意 服務條款與隱私權政策 — 語音與文字會由 Munea 的 AI 系統處理，部分服務位於境外。",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/zh-TW__chat-sign-in-gate__iphone390x844.png",
+          "bytes": 112665,
+          "sha256": "6aac9f9efaf293ada21ea249bb091aaacdbead40f0ea82a8372eb7e12913c414"
+        }
+      },
+      "captionToast": "字幕已開啟",
+      "taskCompletionAriaLabels": [
+        "標示完成"
+      ],
+      "observedLegalPaths": [
+        "/privacy.html",
+        "/terms.html"
+      ],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "routeResult": "pass",
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    },
+    "en": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "privacy": {
+        "title": "Privacy Policy",
+        "bodyCharacters": 5243,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/legal/en/privacy.html",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/en__privacy-reader__iphone390x844.png",
+          "bytes": 78816,
+          "sha256": "f4a2f0a2044497e117533593571ff50b1be8c7fec0d91ea8c3d30e795facf8f5"
+        }
+      },
+      "terms": {
+        "title": "Terms of Service",
+        "bodyCharacters": 2873,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/legal/en/terms.html"
+      },
+      "auth": {
+        "message": "Sign in with Google or Apple to chat. Free accounts receive 5 one-time credits, or about 5 minutes.",
+        "terms": "By continuing, you agree to the Terms of Service and Privacy Policy — Your voice and text are processed by Munea's AI systems, some of which operate outside your country.",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/en__chat-sign-in-gate__iphone390x844.png",
+          "bytes": 127373,
+          "sha256": "45f077f049d90e14ebf55247e4e4f7db70f9cc1df8e791e6736e81115bb1da7c"
+        }
+      },
+      "captionToast": "Captions are on",
+      "taskCompletionAriaLabels": [
+        "Mark as complete"
+      ],
+      "observedLegalPaths": [
+        "/legal/en/privacy.html",
+        "/legal/en/terms.html"
+      ],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "routeResult": "pass",
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    },
+    "ja": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "privacy": {
+        "title": "プライバシーポリシー",
+        "bodyCharacters": 2344,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/legal/ja/privacy.html",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/ja__privacy-reader__iphone390x844.png",
+          "bytes": 106013,
+          "sha256": "fc16ee7170134431f49e73a0096e4fde12200b6a3286ede3f220a5a02357f055"
+        }
+      },
+      "terms": {
+        "title": "利用規約",
+        "bodyCharacters": 1351,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/legal/ja/terms.html"
+      },
+      "auth": {
+        "message": "チャットを利用するには Google または Apple でログインしてください。無料アカウントには初回限定で5クレジット（約5分）が付与されます。",
+        "terms": "続行すると、次の内容に同意したものとみなされます： 利用規約とプライバシーポリシー — 音声とテキストはMuneaのAIシステムで処理され、一部のサービスは国外で運用されます。",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/ja__chat-sign-in-gate__iphone390x844.png",
+          "bytes": 137331,
+          "sha256": "f21da43c87783580ab6f7115168eca01f19eeb1657eec9360fa9a733e2058827"
+        }
+      },
+      "captionToast": "字幕をオンにしました",
+      "taskCompletionAriaLabels": [
+        "完了としてマーク"
+      ],
+      "observedLegalPaths": [
+        "/legal/ja/privacy.html",
+        "/legal/ja/terms.html"
+      ],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "routeResult": "pass",
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    },
+    "es": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "privacy": {
+        "title": "Política de privacidad",
+        "bodyCharacters": 5780,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/legal/es/privacy.html",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/es__privacy-reader__iphone390x844.png",
+          "bytes": 84586,
+          "sha256": "1d2497f568c499acfb47aa30c9b9d295110eeb480ba496bdc0dc2a6848ea4f1e"
+        }
+      },
+      "terms": {
+        "title": "Términos del servicio",
+        "bodyCharacters": 3254,
+        "horizontalOverflowPixels": 0,
+        "expectedPath": "/legal/es/terms.html"
+      },
+      "auth": {
+        "message": "Inicia sesión con Google o Apple para chatear. Las cuentas gratuitas reciben 5 créditos iniciales, equivalentes a unos 5 minutos.",
+        "terms": "Al continuar, aceptas los Términos del servicio y la Política de privacidad — Tu voz y tus textos son procesados por los sistemas de IA de Munea; algunos servicios funcionan fuera de tu país.",
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/legal-reader-2026-07-29/es__chat-sign-in-gate__iphone390x844.png",
+          "bytes": 133577,
+          "sha256": "0b5297e7abdb51540ab465a63e66f79b91f79cb3449205e351a33371102468a8"
+        }
+      },
+      "captionToast": "Los subtítulos están activados",
+      "taskCompletionAriaLabels": [
+        "Marcar como completado"
+      ],
+      "observedLegalPaths": [
+        "/legal/es/privacy.html",
+        "/legal/es/terms.html"
+      ],
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "routeResult": "pass",
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    }
+  },
+  "limitations": [
+    "This is a local browser precheck, not exact installed-iPhone visual QA.",
+    "Localized legal pages remain draft-only until qualified legal review and runtime release gates pass.",
+    "No Gateway, Live Voice, StoreKit, App Store Connect, Supabase, staging, or production service was exercised."
+  ]
+}

@@ -189,6 +189,7 @@ async function testGateway401Recovery() {
     usesDevelopmentDirectCall() { return false; },
     developerConfig() { return {}; },
     isDeveloperBypassAllowed() { return false; },
+    storageGet() { return null; },
     async muneaAuthHeaders(headers) {
       return { ...headers, Authorization: 'Bearer stale-token', 'X-Munea-Key': 'door-key' };
     },
@@ -254,6 +255,7 @@ async function testGatewayAccountBootstrapRecovery() {
     usesDevelopmentDirectCall() { return false; },
     developerConfig() { return {}; },
     isDeveloperBypassAllowed() { return false; },
+    storageGet() { return null; },
     async muneaAuthHeaders(headers) {
       return { ...headers, Authorization: 'Bearer valid-token' };
     },

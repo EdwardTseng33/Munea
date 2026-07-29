@@ -134,6 +134,35 @@ class NotificationPlatformTests(unittest.TestCase):
         events = json.loads(self.files["NOTIFICATION_EVENTS_PATH"].read_text(encoding="utf-8"))
         self.assertEqual(len(events), 1)
 
+    def test_device_locale_localizes_generic_and_family_relay_copy(self):
+        self.bind(RECIPIENT)
+        server.push_devices_response({
+            "action": "register",
+            "token": "d" * 64,
+            "environment": "production",
+            "permissionStatus": "authorized",
+            "notificationsEnabled": True,
+            "locale": "ja-JP",
+        })
+        generic, _ = server.enqueue_notification_event({
+            "eventType": "health_alert",
+            "recipientPersonId": RECIPIENT,
+            "deepLink": "munea://notifications",
+        })
+        self.assertEqual(generic["metadata"]["locale"], "ja")
+        self.assertEqual(generic["publicTitle"], "Muneaからのお知らせ")
+        self.assertIn("ロックを解除", generic["publicBody"])
+
+        relay, _ = server.enqueue_notification_event({
+            "eventType": "family_relay",
+            "recipientPersonId": RECIPIENT,
+            "body": "Dinner is ready",
+            "deepLink": "munea://relay/relay-ja",
+            "metadata": {"senderLabel": "Edward"},
+        })
+        self.assertEqual(relay["title"], "Edwardさんからメッセージが届きました")
+        self.assertIn("ご家族", relay["publicBody"])
+
     def test_json_family_relay_also_creates_inbox_event(self):
         self.bind(SENDER)
         result = server.family_relays_response({
@@ -172,6 +201,22 @@ class NotificationPlatformTests(unittest.TestCase):
         self.assertEqual(row["person_id"], RECIPIENT)
         self.assertEqual(row["auth_user_id"], AUTH_USER)
 
+    def test_adapter_prefers_latest_device_ui_locale_for_notification_copy(self):
+        adapter = SupabaseAdapter(
+            env={
+                "MUNEA_DATABASE_PROVIDER": "supabase",
+                "SUPABASE_URL": "https://example.supabase.co",
+                "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_test",
+            },
+            identity={"accountId": ACCOUNT, "personId": RECIPIENT, "authUserId": AUTH_USER},
+        )
+        adapter._first = lambda table, _query: (
+            {"locale": "es-MX", "last_seen_at": "2026-07-28T12:00:00Z"}
+            if table == "push_devices"
+            else None
+        )
+        self.assertEqual(adapter.notification_locale_for_person(RECIPIENT), "es")
+
     def test_migration_contains_private_tables_and_atomic_outbox_rpc(self):
         sql_path = Path(__file__).resolve().parents[1] / "supabase" / "sql" / "016_notification_platform.sql"
         sql = sql_path.read_text(encoding="utf-8")
@@ -181,6 +226,12 @@ class NotificationPlatformTests(unittest.TestCase):
         self.assertIn("public.enqueue_notification_event", sql)
         self.assertIn("for update skip locked", sql.lower())
         self.assertIn("revoke all on public.push_devices from anon, authenticated", sql)
+        localized_path = Path(__file__).resolve().parents[1] / "supabase" / "sql" / "027_localized_notification_copy.sql"
+        localized = localized_path.read_text(encoding="utf-8")
+        self.assertIn("notification_locale_for_person", localized)
+        self.assertIn("Muneaからのお知らせ", localized)
+        self.assertIn("Recordatorio de Munea", localized)
+        self.assertIn("'locale', v_locale", localized)
 
 
 if __name__ == "__main__":

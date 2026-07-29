@@ -1,0 +1,24 @@
+{
+  "schema": "munea.voice-locale-integration.v1",
+  "bridgeStatus": "integrated",
+  "spokenIntentStatus": "integrated",
+  "appRequestPolicyStatus": "integrated",
+  "preHandlerPipelineContractStatus": "integrated",
+  "appRequestPolicyWiringStatus": "integrated",
+  "liveVoiceServerStatus": "integrated",
+  "gatewayResolverStatus": "integrated",
+  "gatewayClaimsStatus": "integrated",
+  "legacyTokenMode": "compatibility",
+  "requiredBeforeRelease": {
+    "appRequestPolicyStatus": "integrated",
+    "spokenIntentStatus": "integrated",
+    "preHandlerPipelineContractStatus": "integrated",
+    "appRequestPolicyWiringStatus": "integrated",
+    "liveVoiceServerStatus": "integrated",
+    "gatewayResolverStatus": "integrated",
+    "gatewayClaimsStatus": "integrated",
+    "legacyTokenMode": "disabled"
+  },
+  "callPathRisk": true,
+  "appE2EStatus": "pending"
+}

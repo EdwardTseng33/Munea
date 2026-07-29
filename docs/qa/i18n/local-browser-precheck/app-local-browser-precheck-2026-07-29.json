@@ -1,0 +1,174 @@
+{
+  "schema": "munea.app-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T00:30:00+08:00",
+  "result": "fail",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "2172c2592fa1d9d106f8ed49e0912085bbb2800c",
+  "originMainAtRecording": "adc6c0f6d6d5400c7ad1c149d244da0217e59926",
+  "workingTreeFixtureFiles": [
+    "scripts/app-i18n-fixture-server.js",
+    "scripts/test-app-i18n-fixture-server.js"
+  ],
+  "scope": {
+    "surface": "web/index.html",
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4177",
+    "productionTouched": false,
+    "appStoreConnectTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "agentBrowserVersion": "0.33.1",
+    "browser": "Chrome 150.0.0.0",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "fixtureContractTest": "scripts/test-app-i18n-fixture-server.js"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "contentSecurityPolicy": "default-src 'self' data: blob:; connect-src 'self' ws://127.0.0.1:* ws://localhost:*",
+    "observedRequestHosts": [
+      "127.0.0.1"
+    ],
+    "observedExternalRequestCount": 0,
+    "supabaseConfigured": false,
+    "productionServiceConfigured": false,
+    "browserErrors": 0
+  },
+  "screens": {
+    "zh-TW/home": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "title": "Munea 沐寧",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "pass-source-locale",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/zh-TW__home__iphone390x844.png",
+        "bytes": 88629,
+        "sha256": "13b2ee0789849b1601b7c3404be0ea209879ee97cc04c0afc298856f501dcabf"
+      }
+    },
+    "en/home": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "title": "Munea",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "fail-untranslated-dynamic-copy",
+      "layoutResult": "pass",
+      "localizedEvidence": [
+        "Home",
+        "Status",
+        "Talk",
+        "Family",
+        "Settings"
+      ],
+      "untranslatedSamples": [
+        "夜深了",
+        "開始聊聊",
+        "今天一起完成",
+        "心情筆記"
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/en__home__iphone390x844.png",
+        "bytes": 87361,
+        "sha256": "c994253e3744d9eacc1569a35e39beb9e29f029b21f0989dd52486e6cbb3c2a1"
+      }
+    },
+    "ja/home": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "title": "Munea",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "fail-untranslated-zh-TW-dynamic-copy",
+      "layoutResult": "pass",
+      "localizedEvidence": [
+        "ホーム",
+        "状態",
+        "お話",
+        "家族",
+        "設定"
+      ],
+      "untranslatedSamples": [
+        "夜深了",
+        "開始聊聊",
+        "今天一起完成",
+        "心情筆記"
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/ja__home__iphone390x844.png",
+        "bytes": 88063,
+        "sha256": "296396f6fadf4e3b0b2d0938a72c4b87fbd049e70773349581f5b150afe04baa"
+      }
+    },
+    "es/home": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "title": "Munea",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "fail-untranslated-dynamic-copy",
+      "layoutResult": "pass",
+      "localizedEvidence": [
+        "Inicio",
+        "Estado",
+        "Hablar",
+        "Familia",
+        "Ajustes"
+      ],
+      "untranslatedSamples": [
+        "夜深了",
+        "開始聊聊",
+        "今天一起完成",
+        "心情筆記"
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/es__home__iphone390x844.png",
+        "bytes": 87305,
+        "sha256": "a01a4c037e9499eeb1f9e92e7098e0bba5f7e4fbeea8bc839846b93c9f76d048"
+      }
+    },
+    "es/settings": {
+      "resolvedLocale": "es",
+      "activeScreen": "settings",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "fail-untranslated-dynamic-copy",
+      "layoutResult": "pass",
+      "localizedEvidence": [
+        "Ajustes",
+        "Iniciar sesión",
+        "Comprar créditos"
+      ],
+      "untranslatedSamples": [
+        "帳號",
+        "訂閱與點數",
+        "個人資料",
+        "健康資料與安全",
+        "隱私權政策"
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/es__settings__iphone390x844.png",
+        "bytes": 68473,
+        "sha256": "177c735f18ca5078a2061cd25f907681285ee89ae14c1d34d6abbb4eb8a198b0"
+      }
+    }
+  },
+  "conclusion": {
+    "localeResolution": "pass",
+    "sampledLayoutOverflow": "pass",
+    "fullScreenTranslation": "fail",
+    "releaseGate": "blocked",
+    "nextRequiredWork": [
+      "Move state-owned and dynamic App renderer copy into catalog keys after the conflicting main-screen pull requests merge.",
+      "Repeat all 38 manifest states for four locales and both capture profiles.",
+      "Run the exact installed-iPhone App acceptance gate after the complete commit is packaged."
+    ]
+  },
+  "limitations": [
+    "This is a local browser precheck and cannot pass exact-build visual QA.",
+    "Only home in four locales and settings in Spanish were sampled.",
+    "No Gateway, Live Voice, StoreKit, App Store Connect, Supabase, installed iPhone, staging, or production service was exercised."
+  ]
+}

@@ -53,6 +53,7 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+html.admin-i18n-pending body { visibility: hidden; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font-family: var(--sans); line-height: 1.55; -webkit-font-smoothing: antialiased;
@@ -87,6 +88,7 @@ a { color: var(--teal-dd); }
 .muted { color: var(--muted); }
 .small { font-size: 0.9rem; }
 .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+.pts-cell .muted, .use-cell .muted { margin-left: .25em; }
 
 /* ══ 版面 ══ */
 .layout { display: flex; min-height: 100vh; }
@@ -109,6 +111,16 @@ a { color: var(--teal-dd); }
 
 .nav-group { margin-top: 11px; }
 .nav-group-label { color: var(--deep-muted); font-size: 0.875rem; letter-spacing: .14em; padding: 0 12px 6px; font-weight: 600; }
+.nav-label, .brand-sub, .card h3, .card-note, button, th, td {
+  overflow-wrap: anywhere;
+}
+html[data-admin-locale="en"] .nav-group-label,
+html[data-admin-locale="es"] .nav-group-label {
+  letter-spacing: .04em;
+}
+html[data-admin-locale="ja"] .nav-group-label {
+  letter-spacing: .08em;
+}
 .side-nav a {
   display: flex; align-items: center; gap: 11px; color: var(--deep-ink);
   text-decoration: none; padding: 9px 12px; border-radius: 11px; font-size: .94rem; margin-bottom: 2px;
@@ -156,8 +168,8 @@ a { color: var(--teal-dd); }
 .mobile-nav-btn .ic { display: inline-block; }
 .topbar-action.secondary { background: #fff; color: var(--teal-dd); border: 1px solid var(--line); }
 
-.content { padding: 22px 28px 52px; }
-.page { display: grid; gap: 16px; }
+.content { min-width: 0; max-width: 100%; padding: 22px 28px 52px; }
+.page { display: grid; min-width: 0; max-width: 100%; gap: 16px; }
 .page[aria-busy="true"] { opacity: .68; cursor: progress; }
 .page[hidden] { display: none; }
 
@@ -256,7 +268,7 @@ a { color: var(--teal-dd); }
 .bars-list .fill.gold { background: var(--gold); }
 
 /* ══ 表格 ══ */
-.table-wrap { overflow-x: auto; }
+.table-wrap { min-width: 0; max-width: 100%; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { border-bottom: 1px solid var(--line-soft); padding: 11px 10px; text-align: left; vertical-align: middle; }
 th { color: var(--muted); font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
@@ -283,7 +295,7 @@ tbody tr:hover { background: var(--cream); }
 .dlabel { color: var(--muted); font-size: 0.875rem; margin-bottom: 3px; }
 .dval { font-weight: 700; }
 
-.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 0.875rem; font-weight: 700; }
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 0.875rem; font-weight: 700; white-space: nowrap; }
 .pill.ok { background: var(--mint); color: var(--teal-dd); }
 .pill.warn { background: var(--coral-soft); color: var(--coral-d); }
 .pill.bad { background: var(--danger-soft); color: var(--danger); }
@@ -302,6 +314,9 @@ tbody tr:hover { background: var(--cream); }
 .ri-actions button { min-height: 34px; padding: 0 14px; font-size: 0.9rem; }
 .btn-ghost { background: #fff; color: var(--teal-dd); border: 1px solid var(--line); }
 .btn-ghost:hover { border-color: var(--teal); }
+/* 永久刪除的確認勾選框：不可逆動作要有一道手動摩擦，但不綁特定語言的打字確認 */
+.del-confirm { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; cursor: pointer; font-weight: 600; color: var(--danger); }
+.del-confirm input[type=checkbox] { flex: 0 0 18px; accent-color: var(--danger); }
 /* 不可逆動作（永久刪除測試帳號）：紅字紅框，跟旁邊「發點數／改方案」這些可回復的動作看得出差別 */
 .btn-ghost.danger { color: var(--danger); border-color: rgba(217,83,74,.32); }
 .btn-ghost.danger:hover { border-color: var(--danger); background: var(--danger-soft); }
@@ -508,14 +523,17 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .chip-sep{ width:1px; height:20px; background:var(--line); margin:0 4px; }
 .chip-spring{ flex:1; min-width:20px; }
 
-.u-cell{ display:flex; align-items:center; gap:11px; }
+.u-cell{ display:flex; align-items:center; gap:11px; min-width:100px; }
 .u-av{ flex:none; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; font-family:var(--sans); }
 .u-meta{ min-width:0; }
-.u-nm{ font-weight:700; color:var(--ink); font-size:.94rem; line-height:1.2; }
-.u-sub{ color:var(--muted); font-size:0.875rem; margin-top:2px; }
-.u-fam{ font-weight:600; color:var(--ink-2); }
+.u-nm{ font-weight:700; color:var(--ink); font-size:.94rem; line-height:1.2; white-space:nowrap; }
+.u-sub{ color:var(--muted); font-size:0.875rem; margin-top:2px; white-space:nowrap; }
+.u-fam{ font-weight:600; color:var(--ink-2); white-space:nowrap; }
+.family-cell{ display:inline-flex; align-items:baseline; flex-wrap:wrap; column-gap:4px; white-space:normal; }
+.market-cell{ display:flex; flex-direction:column; gap:2px; min-width:118px; word-break:keep-all; overflow-wrap:normal; }
+.market-cell b{ color:var(--ink); font-family:var(--num); letter-spacing:.04em; }
 
-.use-cell{ display:flex; align-items:flex-end; gap:8px; }
+.use-cell{ display:flex; align-items:flex-end; gap:8px; white-space:nowrap; }
 .use-cell .num{ font-size:1rem; color:var(--ink); line-height:1; }
 .mini-bars{ display:inline-flex; align-items:flex-end; gap:2px; height:22px; }
 .mini-bars i{ width:4px; border-radius:2px; background:var(--teal); opacity:.85; }
@@ -535,6 +553,21 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .row-act .ic{ width:14px; height:14px; }
 .pts-cell{ white-space:nowrap; }
 .pts-cell .num{ font-size:1rem; color:var(--ink); }
+
+@media (min-width: 881px) {
+  .tbl-card table { table-layout: fixed; }
+  .tbl-card th { white-space: normal; line-height: 1.25; overflow-wrap: normal; }
+  .tbl-card th:nth-child(1) { width: 145px; }
+  .tbl-card th:nth-child(2) { width: 130px; }
+  .tbl-card th:nth-child(3) { width: 120px; }
+  .tbl-card th:nth-child(4) { width: 70px; }
+  .tbl-card th:nth-child(5) { width: 105px; }
+  .tbl-card th:nth-child(6) { width: 125px; }
+  .tbl-card th:nth-child(7) { width: 100px; }
+  .tbl-card th:nth-child(8) { width: 125px; }
+  .tbl-card th:nth-child(9) { width: 85px; }
+  .tbl-card th:nth-child(10) { width: 60px; }
+}
 
 /* ══════════ 企業客戶（B2B 席次管理）══════════ */
 .ent-form-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px 20px; margin-bottom: 10px; align-items: start; }

@@ -15,6 +15,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import localization
+import notification_service
+
 
 UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
@@ -565,12 +568,14 @@ class SupabaseAdapter:
         family_group = self._load_family_group()
         members = self._load_family_members(family_group["id"] if family_group else None)
         companion = self.load_companion_profile() or {}
+        locale_context = localization.locale_context_from_account(account, person)
         return {
             "schemaVersion": 1,
             "account": {
                 "id": self.account_id,
-                "locale": (account or {}).get("locale") or "zh-TW",
-                "preferredLanguages": (account or {}).get("preferred_languages") or ["zh-TW", "en"],
+                "locale": locale_context["uiLocale"],
+                "preferredLanguages": locale_context["preferredLanguages"],
+                "localeContext": locale_context,
                 "createdAt": (account or {}).get("created_at"),
             },
             "familyGroup": {
@@ -1712,6 +1717,31 @@ class SupabaseAdapter:
                 person = self._first("persons", {"account_id": f"eq.{self.account_id}", "is_primary_care_recipient": "eq.true", "select": "*"})
                 if person and person.get("id"):
                     self.person_id = person["id"]
+                if str(data.get("action") or "").lower() in ("update", "patch"):
+                    account = self._first("accounts", {"id": f"eq.{self.account_id}", "select": "*"})
+                    locale_context = localization.locale_context_from_request(
+                        data,
+                        account,
+                        person,
+                    )
+                    fields = localization.locale_context_storage_fields(
+                        locale_context,
+                        (person or {}).get("attributes"),
+                    )
+                    self._request(
+                        "PATCH",
+                        "accounts",
+                        query={"id": f"eq.{self.account_id}", "select": "*"},
+                        payload=fields["account"],
+                        prefer="return=representation",
+                    )
+                    self._request(
+                        "PATCH",
+                        "persons",
+                        query={"id": f"eq.{self.person_id}", "select": "*"},
+                        payload=fields["person"],
+                        prefer="return=representation",
+                    )
                 return self.load_app_profile_store()
             finally:
                 self.account_id = previous_account_id
@@ -1722,6 +1752,8 @@ class SupabaseAdapter:
         family_group_id = str(uuid.uuid4())
         display_name = (data.get("displayName") or data.get("display_name") or "Munea user").strip()[:80] or "Munea user"
         companion = data.get("companionProfile") or data.get("companion_profile") or {}
+        locale_context = localization.locale_context_from_request(data)
+        locale_fields = localization.locale_context_storage_fields(locale_context)
 
         account = self._request(
             "POST",
@@ -1730,8 +1762,7 @@ class SupabaseAdapter:
             payload={
                 "id": account_id,
                 "name": data.get("accountName") or data.get("account_name") or "Munea account",
-                "locale": data.get("locale") or "zh-TW",
-                "preferred_languages": data.get("preferredLanguages") or data.get("preferred_languages") or ["zh-TW", "en"],
+                **locale_fields["account"],
             },
             prefer="return=representation",
         )[0]
@@ -1757,8 +1788,7 @@ class SupabaseAdapter:
                 "auth_user_id": auth_user_id,
                 "display_name": display_name,
                 "relationship": data.get("relationship") or "self",
-                "locale": data.get("locale") or "zh-TW",
-                "timezone": data.get("timezone") or "Asia/Taipei",
+                **locale_fields["person"],
                 "is_primary_care_recipient": True,
             },
             prefer="return=representation",
@@ -3084,6 +3114,35 @@ class SupabaseAdapter:
             return self.notification_event_row_to_event(rows)
         return self.notification_event_row_to_event(rows[0]) if rows else None
 
+    def notification_locale_for_person(self, person_id, requested_locale=None):
+        if requested_locale:
+            return notification_service.notification_locale(requested_locale)
+        if not self.enabled() or not self._is_uuid(person_id or ""):
+            return notification_service.notification_locale()
+        device = self._first("push_devices", {
+            "person_id": f"eq.{person_id}",
+            "notifications_enabled": "eq.true",
+            "invalidated_at": "is.null",
+            "select": "locale,last_seen_at",
+            "order": "last_seen_at.desc",
+            "limit": "1",
+        })
+        if device and device.get("locale"):
+            return notification_service.notification_locale(device.get("locale"))
+        person = self._first("persons", {
+            "id": f"eq.{person_id}",
+            "select": "account_id,locale",
+        })
+        account = None
+        if person and person.get("account_id"):
+            account = self._first("accounts", {
+                "id": f"eq.{person.get('account_id')}",
+                "select": "locale",
+            })
+        return notification_service.notification_locale(
+            (account or {}).get("locale") or (person or {}).get("locale")
+        )
+
     def load_notification_events(self, unread_only=False, include_archived=False, event_type=None, limit=100):
         if not self.enabled() or not self.request_scoped:
             return None
@@ -3340,11 +3399,13 @@ class SupabaseAdapter:
         for membership in memberships:
             role = membership.get("role") or "unknown"
             roles[role] = roles.get(role, 0) + 1
+        locale_context = localization.locale_context_from_account(account, primary_person)
         return {
             "accountId": account.get("id") or "",
             "accountName": account.get("name") or "",
-            "locale": account.get("locale") or "zh-TW",
-            "preferredLanguages": account.get("preferred_languages") or ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": account.get("created_at"),
             "updatedAt": account.get("updated_at"),
             "familyGroup": {
@@ -3361,8 +3422,9 @@ class SupabaseAdapter:
                 "profileName": primary_person.get("profile_name") or "",
                 "nickname": primary_person.get("nickname") or "",
                 "relationship": primary_person.get("relationship") or "self",
-                "locale": primary_person.get("locale") or account.get("locale") or "zh-TW",
-                "timezone": primary_person.get("timezone") or "Asia/Taipei",
+                "locale": locale_context["conversationLocale"],
+                "timezone": locale_context["timeZone"],
+                "regionCode": locale_context["countryCode"],
             },
             "companion": {
                 "templateId": companion.get("template_id") or "nening-real-female",
@@ -3541,13 +3603,15 @@ class SupabaseAdapter:
     @staticmethod
     def notification_event_to_rpc(event):
         event = event or {}
+        metadata = event.get("metadata") if isinstance(event.get("metadata"), dict) else {}
+        copy = notification_service.generic_copy(metadata.get("locale"))
         return {
             "p_recipient_person_id": event.get("recipientPersonId") or event.get("recipient_person_id"),
             "p_event_type": event.get("eventType") or event.get("event_type"),
             "p_title": event.get("title"),
             "p_body": event.get("body"),
-            "p_public_title": event.get("publicTitle") or event.get("public_title") or "沐寧提醒",
-            "p_public_body": event.get("publicBody") or event.get("public_body") or "你的健康提醒到了，解鎖後查看。",
+            "p_public_title": event.get("publicTitle") or event.get("public_title") or copy["title"],
+            "p_public_body": event.get("publicBody") or event.get("public_body") or copy["body"],
             "p_sensitivity": event.get("sensitivity") or "private",
             "p_deep_link": event.get("deepLink") or event.get("deep_link") or "munea://notifications",
             "p_actor_person_id": event.get("actorPersonId") or event.get("actor_person_id"),
@@ -3555,13 +3619,15 @@ class SupabaseAdapter:
             "p_resource_type": event.get("resourceType") or event.get("resource_type"),
             "p_resource_id": event.get("resourceId") or event.get("resource_id"),
             "p_dedupe_key": event.get("dedupeKey") or event.get("dedupe_key") or None,
-            "p_metadata": event.get("metadata") if isinstance(event.get("metadata"), dict) else {},
+            "p_metadata": metadata,
             "p_expires_at": event.get("expiresAt") or event.get("expires_at"),
         }
 
     @staticmethod
     def notification_event_row_to_event(row):
         row = row or {}
+        metadata = row.get("metadata") or {}
+        copy = notification_service.generic_copy(metadata.get("locale"))
         return {
             "id": row.get("id"),
             "accountId": row.get("account_id"),
@@ -3571,14 +3637,14 @@ class SupabaseAdapter:
             "eventType": row.get("event_type"),
             "resourceType": row.get("resource_type"),
             "resourceId": row.get("resource_id"),
-            "title": row.get("title") or "沐寧提醒",
+            "title": row.get("title") or copy["title"],
             "body": row.get("body") or "",
-            "publicTitle": row.get("public_title") or "沐寧提醒",
-            "publicBody": row.get("public_body") or "你的健康提醒到了，解鎖後查看。",
+            "publicTitle": row.get("public_title") or copy["title"],
+            "publicBody": row.get("public_body") or copy["body"],
             "sensitivity": row.get("sensitivity") or "private",
             "deepLink": row.get("deep_link") or "munea://notifications",
             "dedupeKey": row.get("dedupe_key"),
-            "metadata": row.get("metadata") or {},
+            "metadata": metadata,
             "expiresAt": row.get("expires_at"),
             "readAt": row.get("read_at"),
             "archivedAt": row.get("archived_at"),

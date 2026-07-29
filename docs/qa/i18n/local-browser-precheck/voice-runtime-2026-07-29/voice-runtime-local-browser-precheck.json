@@ -1,0 +1,321 @@
+{
+  "schema": "munea.app-voice-runtime-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T10:48:13.693Z",
+  "result": "pass-local-precheck",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "e44c633d0d26f361c847d5bc1d863903c43286bc",
+  "sourceChangedFiles": [
+    "M scripts/test-ui-contracts.js",
+    " M web/src/app.js",
+    " M web/src/i18n/app-binding-manifest.json",
+    " M web/src/i18n/app-screen-manifest.json",
+    " M web/src/i18n/app-surface-copy-manifest.json",
+    " M web/src/i18n/en.json",
+    " M web/src/i18n/es.json",
+    " M web/src/i18n/ja.json",
+    " M web/src/i18n/zh-TW.json",
+    "?? scripts/app-voice-runtime-i18n-browser-precheck.js"
+  ],
+  "scope": {
+    "surfaces": [
+      "chat:active/runtime-hints",
+      "chat:active/recovered-caption",
+      "chat:active/degraded-caption"
+    ],
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4180",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "appStoreConnectTouched": false,
+    "gatewayTouched": false,
+    "voiceTouched": false,
+    "avatarTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "browser": "Google Chrome",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "automation": "Playwright local fallback after agent-browser executable was unavailable"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "observedExternalRequests": []
+  },
+  "locales": {
+    "zh-TW": {
+      "htmlLang": "zh-Hant-TW",
+      "observedHints": {
+        "playbackBlocked": "聲音暫時被擋住了，點一下畫面就好",
+        "audioOnlyFallback": "畫面先休息一下，我們繼續用聲音聊",
+        "microphoneTapToResume": "收音還沒啟動，請點一下畫面",
+        "listening": "我在聽，你說吧",
+        "reconnecting": "線路沒接好，正在重新連線…",
+        "microphonePermission": "請到設定允許使用麥克風",
+        "heard": "我聽見了",
+        "thinking": "我想一下",
+        "didNotHear": "沒有聽清楚，請再說一次",
+        "recordingTapWhenDone": "我在聽，說完再按一次",
+        "microphoneMuted": "麥克風已關閉",
+        "microphoneMutedHint": "麥克風已關閉，想說話時再點一下"
+      },
+      "captions": {
+        "recovered": {
+          "expectedTitle": "已經接回來了，剛才說的我都記得",
+          "expectedBody": "我們繼續",
+          "observed": {
+            "title": "已經接回來了，剛才說的我都記得",
+            "body": "我們繼續",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 541,
+              "bottom": 618,
+              "width": 358,
+              "height": 76,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/zh-TW-recovered.png",
+            "bytes": 469142,
+            "sha256": "d0335ff4fcb7af819ffcbab13566a9a0a7f0e40356db2c16f790189adf271f80"
+          }
+        },
+        "degraded": {
+          "expectedTitle": "訊號不太穩，我先用簡單模式陪你",
+          "expectedBody": "連線會自動恢復，剛才聊的內容都還在",
+          "observed": {
+            "title": "訊號不太穩，我先用簡單模式陪你",
+            "body": "連線會自動恢復，剛才聊的內容都還在",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 540,
+              "bottom": 616,
+              "width": 358,
+              "height": 76,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/zh-TW-degraded.png",
+            "bytes": 473006,
+            "sha256": "f5a3521a3646055b74e5dcbf2b2721d9420f470f485997752c2394ffe7e370ea"
+          }
+        }
+      },
+      "browserErrors": []
+    },
+    "en": {
+      "htmlLang": "en",
+      "observedHints": {
+        "playbackBlocked": "Audio is paused. Tap the screen to resume.",
+        "audioOnlyFallback": "The video is taking a break. We can keep talking by voice.",
+        "microphoneTapToResume": "Your microphone hasn't started. Tap the screen.",
+        "listening": "I'm listening. Go ahead.",
+        "reconnecting": "The connection didn't start correctly. Reconnecting…",
+        "microphonePermission": "Allow microphone access in Settings.",
+        "heard": "I heard you.",
+        "thinking": "Let me think.",
+        "didNotHear": "I didn't catch that. Please say it again.",
+        "recordingTapWhenDone": "I'm listening. Tap again when you're done.",
+        "microphoneMuted": "Microphone off.",
+        "microphoneMutedHint": "Your microphone is off. Tap it when you're ready to speak."
+      },
+      "captions": {
+        "recovered": {
+          "expectedTitle": "You're reconnected. I remember what you just said.",
+          "expectedBody": "Let's continue.",
+          "observed": {
+            "title": "You're reconnected. I remember what you just said.",
+            "body": "Let's continue.",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 516,
+              "bottom": 618,
+              "width": 358,
+              "height": 101,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/en-recovered.png",
+            "bytes": 434593,
+            "sha256": "612ef1e9e7fd7bd8dfe9af995cf0b5c92cf1b68c9abb5b305796b2da4d2cf20f"
+          }
+        },
+        "degraded": {
+          "expectedTitle": "The connection is unstable, so I'll stay with you in a simpler mode.",
+          "expectedBody": "It will reconnect automatically. I still have what we discussed.",
+          "observed": {
+            "title": "The connection is unstable, so I'll stay with you in a simpler mode.",
+            "body": "It will reconnect automatically. I still have what we discussed.",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 494,
+              "bottom": 617,
+              "width": 358,
+              "height": 122,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/en-degraded.png",
+            "bytes": 455050,
+            "sha256": "ea21feb22cadc55302bfc2658b9c4fb84725170b602fa35c66187f1487188992"
+          }
+        }
+      },
+      "browserErrors": []
+    },
+    "ja": {
+      "htmlLang": "ja",
+      "observedHints": {
+        "playbackBlocked": "音声が一時停止しています。画面をタップしてください。",
+        "audioOnlyFallback": "映像は少し休ませて、音声でお話を続けましょう。",
+        "microphoneTapToResume": "マイクがまだ開始していません。画面をタップしてください。",
+        "listening": "聞いています。どうぞ。",
+        "reconnecting": "接続がうまく始まりませんでした。再接続しています…",
+        "microphonePermission": "設定でマイクへのアクセスを許可してください。",
+        "heard": "聞こえました。",
+        "thinking": "少し考えますね。",
+        "didNotHear": "よく聞き取れませんでした。もう一度お願いします。",
+        "recordingTapWhenDone": "聞いています。話し終えたら、もう一度タップしてください。",
+        "microphoneMuted": "マイクはオフです。",
+        "microphoneMutedHint": "マイクはオフです。話すときにもう一度タップしてください。"
+      },
+      "captions": {
+        "recovered": {
+          "expectedTitle": "接続が戻りました。さっきのお話も覚えています。",
+          "expectedBody": "続きを話しましょう。",
+          "observed": {
+            "title": "接続が戻りました。さっきのお話も覚えています。",
+            "body": "続きを話しましょう。",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 517,
+              "bottom": 619,
+              "width": 358,
+              "height": 101,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/ja-recovered.png",
+            "bytes": 397632,
+            "sha256": "a95131d81232da501fc1485224962afcf3cfb29e2167a3bb706cad58a7c9dfe0"
+          }
+        },
+        "degraded": {
+          "expectedTitle": "接続が不安定なので、簡易モードでお話を続けます。",
+          "expectedBody": "自動で再接続します。これまでのお話は覚えています。",
+          "observed": {
+            "title": "接続が不安定なので、簡易モードでお話を続けます。",
+            "body": "自動で再接続します。これまでのお話は覚えています。",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 515,
+              "bottom": 617,
+              "width": 358,
+              "height": 101,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/ja-degraded.png",
+            "bytes": 461893,
+            "sha256": "1a4116d2934c96eaf82fd234a0621996df9dbcb42f681b121a7be1a3c1eba781"
+          }
+        }
+      },
+      "browserErrors": []
+    },
+    "es": {
+      "htmlLang": "es",
+      "observedHints": {
+        "playbackBlocked": "El audio está en pausa. Toca la pantalla para reanudarlo.",
+        "audioOnlyFallback": "El video descansará un momento. Podemos seguir hablando por voz.",
+        "microphoneTapToResume": "El micrófono aún no se ha iniciado. Toca la pantalla.",
+        "listening": "Te escucho. Adelante.",
+        "reconnecting": "La conexión no se inició correctamente. Volviendo a conectar…",
+        "microphonePermission": "Permite el acceso al micrófono en Ajustes.",
+        "heard": "Te he oído.",
+        "thinking": "Déjame pensar.",
+        "didNotHear": "No te he oído bien. Repítelo, por favor.",
+        "recordingTapWhenDone": "Te escucho. Vuelve a tocar cuando termines.",
+        "microphoneMuted": "Micrófono desactivado.",
+        "microphoneMutedHint": "El micrófono está desactivado. Tócalo cuando quieras hablar."
+      },
+      "captions": {
+        "recovered": {
+          "expectedTitle": "La conexión ha vuelto. Recuerdo lo que acabas de decir.",
+          "expectedBody": "Sigamos.",
+          "observed": {
+            "title": "La conexión ha vuelto. Recuerdo lo que acabas de decir.",
+            "body": "Sigamos.",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 515,
+              "bottom": 617,
+              "width": 358,
+              "height": 101,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/es-recovered.png",
+            "bytes": 405147,
+            "sha256": "b003886d39f18ebbda8068cdd665a395ce59f40ce51a180504f907018bd72a46"
+          }
+        },
+        "degraded": {
+          "expectedTitle": "La conexión es inestable, así que seguiré contigo en un modo más sencillo.",
+          "expectedBody": "Se volverá a conectar automáticamente. Recuerdo lo que hemos hablado.",
+          "observed": {
+            "title": "La conexión es inestable, así que seguiré contigo en un modo más sencillo.",
+            "body": "Se volverá a conectar automáticamente. Recuerdo lo que hemos hablado.",
+            "layout": {
+              "left": 16,
+              "right": 374,
+              "top": 494,
+              "bottom": 617,
+              "width": 358,
+              "height": 122,
+              "horizontalOverflowPixels": 0,
+              "verticalOverflowPixels": 0
+            }
+          },
+          "screenshot": {
+            "path": "docs/qa/i18n/local-browser-precheck/voice-runtime-2026-07-29/es-degraded.png",
+            "bytes": 505575,
+            "sha256": "3af914a898ee68ac063af45ac6bdf5ba4cddfbcf752e3ffaaa163c8da8bcfab7"
+          }
+        }
+      },
+      "browserErrors": []
+    }
+  },
+  "limitations": [
+    "This is a local browser precheck, not exact installed-iPhone visual QA.",
+    "Hidden runtime hints were contract-checked programmatically; visible recovery captions were also screenshot-checked.",
+    "No production, staging, Gateway, Voice, Avatar, Supabase, App Store Connect, or StoreKit service was exercised."
+  ],
+  "completedAt": "2026-07-29T10:48:20.300Z"
+}

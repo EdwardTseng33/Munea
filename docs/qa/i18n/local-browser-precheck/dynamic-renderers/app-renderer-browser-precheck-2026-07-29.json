@@ -1,0 +1,167 @@
+{
+  "schema": "munea.app-renderer-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T00:58:41+08:00",
+  "result": "pass-local-renderer-copy",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "3447b2911b581cba6dad49ac081efe8ff18f08c6",
+  "originMainAtRecording": "adc6c0f6d6d5400c7ad1c149d244da0217e59926",
+  "scope": {
+    "surface": "tools/i18n-preview.html",
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4177/i18n-preview.html",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "appStoreConnectTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "agentBrowserVersion": "0.33.1",
+    "browser": "HeadlessChrome 150.0.0.0",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "rendererCopy": "web/src/i18n/app-renderer-copy.js"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "contentSecurityPolicy": "default-src 'self' data: blob:; connect-src 'self' ws://127.0.0.1:* ws://localhost:*",
+    "observedRequestHosts": [
+      "127.0.0.1"
+    ],
+    "observedExternalRequestCount": 0,
+    "browserErrors": 0
+  },
+  "screens": {
+    "zh-TW/dynamic-renderers": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "pass-renderer-copy",
+      "layoutResult": "pass",
+      "queue": [
+        "現在比較多人在跟寧寧聊天",
+        "你排第 3 位",
+        "大約再 3 分鐘會輪到你。排隊不扣點數，暫時先別關掉這個畫面；準備好就會自動接通。"
+      ],
+      "care": [
+        "Mei發起的走路活動",
+        "還差 5000 步就達標，今晚一起走走？"
+      ],
+      "visit": [
+        "回診快到了",
+        "7/31 · 想問醫生的，寧寧都幫你記著。"
+      ],
+      "plan": [
+        "Plus 方案",
+        "300 點約可聊 300 分鐘；聊天用點數，用完補一下就能繼續。"
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/dynamic-renderers/zh-TW__dynamic-renderers__iphone390x844.png",
+        "bytes": 451357,
+        "sha256": "b80368c24f0b1b70495ee76535c279e8c5efbb2f184e6b8e6ab7f7bb7348c484"
+      }
+    },
+    "en/dynamic-renderers": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "pass-renderer-copy",
+      "layoutResult": "pass",
+      "queue": [
+        "More people are talking with Ningning right now",
+        "You are number 3 in line",
+        "About 3 more minutes until your turn. Waiting does not use credits. Keep this screen open and the call will connect automatically."
+      ],
+      "care": [
+        "Mei started a walking activity",
+        "5000 steps to go. Shall we take a walk tonight?"
+      ],
+      "visit": [
+        "Appointment is coming up",
+        "7/31 · Ningning saved what you want to ask the doctor."
+      ],
+      "plan": [
+        "Plus plan",
+        "300 credits provide about 300 minutes of conversation. Add more when they run out to keep talking."
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/dynamic-renderers/en__dynamic-renderers__iphone390x844.png",
+        "bytes": 250233,
+        "sha256": "2af4a637616ba5db14fac6cba4e76a3b711602eeae00983458ed06d6d5e77720"
+      }
+    },
+    "ja/dynamic-renderers": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "pass-renderer-copy",
+      "layoutResult": "pass",
+      "queue": [
+        "現在、ニンニンとお話し中の方が多くなっています",
+        "順番は3番目です",
+        "順番まであと約3分です。待機中はポイントを消費しません。この画面を閉じずにお待ちください。準備ができると自動でつながります。"
+      ],
+      "care": [
+        "Meiさんが始めたウォーキング",
+        "目標まであと5000歩です。今夜いっしょに歩きませんか？"
+      ],
+      "visit": [
+        "「診察」が近づいています",
+        "7/31・医師に聞きたいことはニンニンが覚えています。"
+      ],
+      "plan": [
+        "Plusプラン",
+        "300ポイントで約300分お話しできます。ポイントがなくなると会話は一時停止し、追加後に再開できます。"
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/dynamic-renderers/ja__dynamic-renderers__iphone390x844.png",
+        "bytes": 446565,
+        "sha256": "9237f22952c73128b17735d762a261df06c4c01a4b32c51130c6f2f19863e260"
+      }
+    },
+    "es/dynamic-renderers": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "horizontalOverflowPixels": 0,
+      "translationResult": "pass-renderer-copy",
+      "layoutResult": "pass",
+      "queue": [
+        "Hay más personas hablando con Ningning en este momento",
+        "Estás en el puesto 3 de la cola",
+        "Faltan unos 3 minutos para tu turno. Esperar no consume créditos. Mantén esta pantalla abierta y la llamada se conectará automáticamente."
+      ],
+      "care": [
+        "Mei inició una actividad de caminata",
+        "Faltan 5000 pasos para alcanzar la meta. ¿Caminamos esta noche?"
+      ],
+      "visit": [
+        "Se acerca Cita médica",
+        "7/31 · Ningning guardó lo que quieres preguntarle al médico."
+      ],
+      "plan": [
+        "Plan Plus",
+        "300 créditos permiten hablar durante unos 300 minutos. Añade más cuando se terminen para seguir conversando."
+      ],
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/dynamic-renderers/es__dynamic-renderers__iphone390x844.png",
+        "bytes": 270448,
+        "sha256": "41f1d9f09bed7e662c8b4029390f2a8d8b09d98a7eae8732f81e463a54cdc118"
+      }
+    }
+  },
+  "conclusion": {
+    "dynamicRendererCopy": "pass",
+    "sampledLayoutOverflow": "pass",
+    "appRuntimeIntegration": "pending-conflicting-main-screen-prs",
+    "fullAppTranslation": "blocked-by-unintegrated-source-copy",
+    "releaseGate": "blocked"
+  },
+  "limitations": [
+    "This proves the new renderer-copy view model in a local QA surface, not the shipping App integration.",
+    "The occupied App renderers still emit Traditional Chinese until their pull requests merge and the thin integration is applied.",
+    "No Gateway, Live Voice, StoreKit transaction, App Store Connect, Supabase, staging, production service, or installed iPhone was exercised."
+  ]
+}

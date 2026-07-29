@@ -151,6 +151,76 @@ class SupabaseCallStore:
             body=body or {}, headers=self._service_headers(),
         )
 
+    def _first_rest_row(self, table: str, query: dict[str, str]) -> dict[str, Any] | None:
+        url = (
+            self.url
+            + "/rest/v1/"
+            + urllib.parse.quote(table)
+            + "?"
+            + urllib.parse.urlencode({**query, "limit": "1"})
+        )
+        result = self._json("GET", url, headers=self._service_headers())
+        if not result:
+            return None
+        if not isinstance(result, list) or not isinstance(result[0], dict):
+            raise CallControlError("Supabase returned an invalid locale record")
+        return result[0]
+
+    def load_call_locale_records(
+        self,
+        *,
+        call_id: str,
+        user_id: str,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load locale policy only through the authenticated call lease.
+
+        The App may select a ``person_id`` when it requests a call, but the
+        database RPC verifies that the person belongs to the user's active
+        account before storing it on ``call_leases``. Locale and region policy
+        are therefore resolved from service-role reads of that verified lease,
+        never from client-provided locale fields.
+        """
+        lease = self._first_rest_row("call_leases", {
+            "call_id": "eq." + str(call_id),
+            "user_id": "eq." + str(user_id),
+            "select": "account_id,person_id",
+        })
+        if not lease or not lease.get("account_id"):
+            raise CallControlError("trusted call locale scope was not found")
+
+        account_id = str(lease["account_id"])
+        account = self._first_rest_row("accounts", {
+            "id": "eq." + account_id,
+            "select": "id,locale,preferred_languages",
+        })
+        if not account:
+            raise CallControlError("trusted account locale record was not found")
+
+        person_id = str(lease.get("person_id") or "")
+        if person_id:
+            person = self._first_rest_row("persons", {
+                "id": "eq." + person_id,
+                "account_id": "eq." + account_id,
+                "select": "id,account_id,locale,timezone,region_code,attributes",
+            })
+        else:
+            # Compatibility for leases created before the App sent person_id.
+            # Prefer the authenticated person's own record; otherwise use the
+            # account's primary care recipient. Both queries remain scoped to
+            # the already verified account.
+            person = self._first_rest_row("persons", {
+                "account_id": "eq." + account_id,
+                "auth_user_id": "eq." + str(user_id),
+                "select": "id,account_id,locale,timezone,region_code,attributes",
+            })
+            if not person:
+                person = self._first_rest_row("persons", {
+                    "account_id": "eq." + account_id,
+                    "is_primary_care_recipient": "eq.true",
+                    "select": "id,account_id,locale,timezone,region_code,attributes",
+                })
+        return account, person or {}
+
     def request_call(self, *, user_id: str, person_id: str | None, character_id: str,
                      idempotency_key: str, queue_max: int = 30) -> dict[str, Any]:
         return self.rpc("munea_call_request", {

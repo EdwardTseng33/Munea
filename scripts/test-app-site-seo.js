@@ -167,3 +167,5 @@ for (const page of pages) {
 }
 
 console.log(`[ok] app.munea.net SEO contract passed (${locales.length} locales)`);
+
+require("./test-app-site-legal-localizations.js");

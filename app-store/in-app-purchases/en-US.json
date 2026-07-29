@@ -1,0 +1,34 @@
+{
+  "net.munea.app.plus.monthly": {
+    "displayName": "Munea Plus Monthly",
+    "description": "100 credits/month, trends, family group of 4"
+  },
+  "net.munea.app.plus.yearly": {
+    "displayName": "Munea Plus Annual",
+    "description": "Annual: 100 credits/month, family group of 4"
+  },
+  "net.munea.app.pro.monthly": {
+    "displayName": "Munea Pro Monthly",
+    "description": "200 credits/month, trends, family group of 12"
+  },
+  "net.munea.app.pro.yearly": {
+    "displayName": "Munea Pro Annual",
+    "description": "Annual: 200 credits/month, family group of 12"
+  },
+  "net.munea.app.points.200": {
+    "displayName": "Munea 100 Credits",
+    "description": "Adds 100 credits for Plus or Pro members"
+  },
+  "net.munea.app.points.500": {
+    "displayName": "Munea 300 Credits",
+    "description": "Adds 300 credits for Plus or Pro members"
+  },
+  "net.munea.app.points.1000": {
+    "displayName": "Munea 600 Credits",
+    "description": "Adds 600 credits for Plus or Pro members"
+  },
+  "net.munea.app.points.1800": {
+    "displayName": "Munea 1,000 Credits",
+    "description": "Adds 1,000 credits for Plus or Pro members"
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "schema": "munea.app-status-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T06:45:45.349Z",
+  "result": "pass-local-precheck",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "61e97bbb275525748785928ad2222effb1396c31",
+  "sourceChangedFiles": [
+    "M docs/qa/i18n/README.md",
+    " M scripts/i18n-native-review-worklist.js",
+    " M scripts/i18n-surface-inventory.js",
+    " M scripts/test-app-i18n-binding-manifest.js",
+    " M scripts/test-i18n-layout-risk-worklist.js",
+    " M scripts/test-i18n-migration-worklist.js",
+    " M scripts/test-i18n-native-review-evidence.js",
+    " M scripts/test-i18n-native-review-worklist.js",
+    " M scripts/test-i18n-surface-inventory.js",
+    " M web/index.html",
+    " M web/src/app.js",
+    " M web/src/i18n/app-binding-manifest.json",
+    " M web/src/i18n/en.json",
+    " M web/src/i18n/es.json",
+    " M web/src/i18n/ja.json",
+    " M web/src/i18n/zh-TW.json",
+    "?? docs/qa/i18n/local-browser-precheck/status-2026-07-29/",
+    "?? scripts/app-status-i18n-browser-precheck.js"
+  ],
+  "scope": {
+    "surface": "screen:status",
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4177",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "appStoreConnectTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "browser": "Google Chrome",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "automation": "Playwright local fallback after agent-browser CDP failure"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "observedExternalRequests": []
+  },
+  "screens": {
+    "zh-TW": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "periods": {
+        "today": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "今天的狀態",
+          "observationPeriod": "今天",
+          "observationText": "還沒接上健康裝置。接上 Apple 健康，或先記個心情、跟我聊聊，我就開始幫你看著了。"
+        },
+        "week": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "過去 7 天的狀態",
+          "observationPeriod": "過去 7 天",
+          "observationText": "趨勢從你的真實紀錄長出來。每天記一點，一週後這裡就有你的節奏。"
+        },
+        "month": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "過去 30 天的狀態",
+          "observationPeriod": "過去 30 天",
+          "observationText": "一個月的健康地圖正在累積。持續記錄，我會幫你看出變化。"
+        }
+      },
+      "horizontalOverflowPixels": 0,
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/status-2026-07-29/zh-TW__status__iphone390x844.png",
+        "bytes": 76821,
+        "sha256": "b7ffac4b31ea3fb4e7bfe5ead30622a671f36c49ec98ac99334cdd3ebc4d6013"
+      }
+    },
+    "en": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "periods": {
+        "today": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "Today's status",
+          "observationPeriod": "Today",
+          "observationText": "No health device is connected yet. Connect Apple Health, record a mood, or talk with me, and I'll start keeping an eye on things."
+        },
+        "week": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "Status for the past 7 days",
+          "observationPeriod": "Past 7 days",
+          "observationText": "Your trends grow from real records. Add a little each day, and your weekly rhythm will appear here."
+        },
+        "month": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "Status for the past 30 days",
+          "observationPeriod": "Past 30 days",
+          "observationText": "Your monthly health picture is taking shape. Keep recording and I'll help you notice changes."
+        }
+      },
+      "horizontalOverflowPixels": 0,
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/status-2026-07-29/en__status__iphone390x844.png",
+        "bytes": 78446,
+        "sha256": "ef4b8e8b319349eb137430fbabc0f1aa825d79d9a6f2ba8189d1fb16589d633e"
+      }
+    },
+    "ja": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "periods": {
+        "today": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "今日の様子",
+          "observationPeriod": "今日",
+          "observationText": "健康デバイスはまだ接続されていません。Apple ヘルスと連携するか、気分を記録したり私と話したりすると、見守りを始めます。"
+        },
+        "week": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "過去 7 日間の様子",
+          "observationPeriod": "過去 7 日間",
+          "observationText": "実際の記録から傾向が育ちます。毎日少しずつ記録すると、一週間のリズムが見えてきます。"
+        },
+        "month": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "過去 30 日間の様子",
+          "observationPeriod": "過去 30 日間",
+          "observationText": "一か月の健康マップを作成中です。記録を続けると、変化を一緒に見つけられます。"
+        }
+      },
+      "horizontalOverflowPixels": 0,
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/status-2026-07-29/ja__status__iphone390x844.png",
+        "bytes": 94535,
+        "sha256": "13cf22d845b658fbca3cb21323b1e2982f642b08332496368f5be1847ab0a3ae"
+      }
+    },
+    "es": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "periods": {
+        "today": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "Estado de hoy",
+          "observationPeriod": "Hoy",
+          "observationText": "Todavía no hay un dispositivo de salud conectado. Conecta Apple Salud, anota tu estado de ánimo o habla conmigo y empezaré a estar pendiente."
+        },
+        "week": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "Estado de los últimos 7 días",
+          "observationPeriod": "Últimos 7 días",
+          "observationText": "Las tendencias nacen de tus registros reales. Anota algo cada día y aquí aparecerá tu ritmo semanal."
+        },
+        "month": {
+          "horizontalOverflowPixels": 0,
+          "pageTitle": "Estado de los últimos 30 días",
+          "observationPeriod": "Últimos 30 días",
+          "observationText": "Tu panorama de salud mensual está tomando forma. Sigue registrando datos y te ayudaré a detectar cambios."
+        }
+      },
+      "horizontalOverflowPixels": 0,
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass",
+      "screenshot": {
+        "path": "docs/qa/i18n/local-browser-precheck/status-2026-07-29/es__status__iphone390x844.png",
+        "bytes": 81013,
+        "sha256": "c61dc0d7dd4d2b433c781631cbe2e3078a635f5b2e0b05ec35bc93c55e390a60"
+      }
+    }
+  },
+  "limitations": [
+    "This is a local browser precheck, not exact installed-iPhone visual QA.",
+    "No Gateway, Live Voice, StoreKit, App Store Connect, Supabase, staging, or production service was exercised."
+  ]
+}
