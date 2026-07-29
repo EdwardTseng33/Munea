@@ -698,7 +698,9 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .cn-row { display: flex; align-items: center; gap: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 15px; margin-bottom: 11px; }
 .cn-row .cn-ico { width: 44px; height: 44px; border-radius: 12px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
 .cn-row .cn-ico .ic { width: 24px; height: 24px; }
-.cn-row .cn-mid { flex: 1; }
+/* min-width:0 讓左邊文字可以縮：沒有這行時，文字撐住不讓，右邊按鍵就被擠出整列外面
+   （「去健康 App 開項目」這種比較長的按鍵文字實測會超出 12px）。 */
+.cn-row .cn-mid { flex: 1; min-width: 0; }
 .cn-row .cn-name { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--ink); }
 .cn-row .cn-desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .cn-row .cn-btn { font-family: var(--display); font-weight: 700; font-size: 15px; color: #fff; background: var(--teal-d); border: none; border-radius: 999px; padding: 9px 17px; cursor: pointer; flex-shrink: 0; }
@@ -706,10 +708,9 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .cn-row .cn-btn.disconnect { background: var(--surface); color: var(--danger-d); border: 1px solid rgba(176,57,45,.4); }
 .cn-row .cn-btn.disconnect.arm { background: rgba(194,75,68,.1); }
 .cn-health-help { margin: 0 4px 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
-/* 讀不到資料時才出現的補救鍵：長輩找不到「健康」App 裡那層設定，用一顆鍵直接送過去 */
-.cn-health-open { display: block; width: calc(100% - 8px); margin: -8px 4px 18px; min-height: 48px; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--teal); background: #fff; color: var(--teal-dd); font-family: var(--display); font-weight: 700; font-size: 15px; line-height: 1.4; cursor: pointer; }
-.cn-health-open:active { background: var(--mint); }
-.cn-health-open[hidden] { display: none; }
+/* 讀取實況（幾點讀的、讀到哪幾項／失敗原因）——讓人能確定到底讀到了沒 */
+.cn-health-read { margin: -10px 4px 18px; color: var(--teal-dd); font-size: 12.5px; line-height: 1.5; }
+.cn-health-read[hidden] { display: none; }
 .sr-on.off { color: var(--muted); }
 .sr-on.off .d { background: var(--muted); }
 .cn-note { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 15px 16px; margin-top: 18px; }

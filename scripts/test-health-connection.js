@@ -33,13 +33,14 @@ const elements = {
   healthSettingsStateLabel: element('未連接'),
   cnHealthDetail: element(),
   cnHealthHelp: element(),
-  cnHealthOpenBtn: element(),
+  cnHealthReadState: element(),
 };
 elements.cnHealthBtn.dataset.label = '連接';
 
 let summaryReads = 0;
 let historyReads = 0;
 let emptySummary = false;   // 模擬「授權過了、但一項都讀不到」
+let summaryThrows = '';     // 模擬讀取整個失敗（要跟「沒資料」分得開）
 let openedHealthApp = 0;
 global.document = {
   getElementById: id => elements[id] || null,
@@ -58,7 +59,7 @@ window.Capacitor = {
   isNativePlatform: () => true,
   Plugins: { Health: {
     requestAuthorization: async () => ({ granted: true, available: true }),
-    getSummary: async () => { summaryReads += 1; return emptySummary ? { available: true } : { available: true, steps: 1234 }; },
+    getSummary: async () => { summaryReads += 1; if (summaryThrows) throw new Error(summaryThrows); return emptySummary ? { available: true, fields: [], errors: [] } : { available: true, steps: 1234, fields: ['steps'], errors: [] }; },
     getHistory: async () => { historyReads += 1; return { available: true, days: [] }; },
     openHealthApp: async () => { openedHealthApp += 1; return { opened: true }; },
   } },
@@ -125,33 +126,53 @@ vm.runInThisContext(fs.readFileSync('web/src/health.js', 'utf8'), { filename: 'h
 
   window.MuneaI18n = null;   // 回到中文預設字，接著驗「讀不到資料」這條路
 
-  // 蘋果不會告訴 App 讀取被拒絕，而且授權視窗一輩子只跳一次。
-  // 所以「連了卻一項都讀不到」必須：照實說 + 給一顆真的按鍵送使用者去健康 App，
-  // 不能繼續叫他重按「連接」（系統不會再跳，永遠不會有結果）。
+  // 整頁只有一顆按鍵，它做什麼由狀態決定。以下驗四種狀態各自的行為。
+  const clickMain = () => elements.cnHealthBtn.listeners.click({ preventDefault() {}, stopImmediatePropagation() {} });
+
+  // ① 連了卻一項都讀不到：照實說，而且那顆鍵要變成「去健康 App 打開項目」
+  //    （不能還顯示「解除連接」——什麼都沒讀到，根本沒東西可解除）
   emptySummary = true;
   const again = await MuneaHealth.connect();
   await new Promise(resolve => setTimeout(resolve, 1));
   assert.strictEqual(again.empty, true, '一項都讀不到必須回報 empty');
-  assert.strictEqual(again.needsHealthApp, true, '問過之後再連接必須直接送去健康 App');
+  assert.strictEqual(again.needsHealthApp, true, '問過之後再連接代表系統不會再跳視窗');
+  assert.strictEqual(MuneaHealth.uiState(), 'empty');
   assert.strictEqual(elements.healthSettingsStateLabel.textContent, '讀不到資料');
-  assert.strictEqual(elements.cnHealthOpenBtn.hidden, false, '讀不到資料時必須出現「打開健康 App」按鍵');
-  assert.ok(elements.cnHealthHelp.textContent.includes('健康'), '說明必須告訴使用者去健康 App 打開項目');
+  assert.strictEqual(elements.cnHealthBtn.dataset.action, 'openHealth', '讀不到時主按鍵必須改成去健康 App');
+  assert.ok(/健康/.test(elements.cnHealthBtn.textContent), '按鍵文字要講清楚是去健康 App');
   assert.ok(!MuneaHealth.hasAnyValue({ available: true }), '空摘要不得算成有資料');
   assert.ok(
     Object.values(MuneaHealth.metricStates()).every(state => state === 'empty'),
     '讀不到時每一項都必須標成 empty，不得沿用舊值繼續宣稱',
   );
   assert.strictEqual(openedHealthApp, 0, '沒按按鍵之前不得自己跳去健康 App');
-  elements.cnHealthOpenBtn.listeners.click();
+  clickMain();
   await new Promise(resolve => setTimeout(resolve, 1));
   assert.strictEqual(openedHealthApp, 1, '按下按鍵必須打開健康 App');
+  assert.ok(/一項都沒有/.test(elements.cnHealthReadState.textContent), '要顯示讀取實況，讓人確定到底讀到沒');
 
-  // 有資料時按鍵要收起來，不要一直提醒
+  // ② 讀得到：按鍵才變回「解除連接」，並且說明要講明它不會收回 iPhone 的授權
   emptySummary = false;
   await MuneaHealth.refresh({ force: true });
   await new Promise(resolve => setTimeout(resolve, 1));
-  assert.strictEqual(elements.cnHealthOpenBtn.hidden, true, '讀得到資料後就不該再顯示補救按鍵');
+  assert.strictEqual(MuneaHealth.uiState(), 'ok');
   assert.strictEqual(elements.healthSettingsStateLabel.textContent, '已連接');
+  assert.strictEqual(elements.cnHealthBtn.dataset.action, 'disconnect');
+  assert.ok(/授權還是開著/.test(elements.cnHealthHelp.textContent), '解除連接必須講明 iPhone 授權沒被收回');
+  assert.ok(/步數/.test(elements.cnHealthReadState.textContent), '讀取實況要列出讀到哪幾項');
+
+  // ③ 讀取失敗：不可以跟「沒資料」混為一談，要講原因並給「再試一次」
+  summaryThrows = '健康資料暫時無法取得';
+  await MuneaHealth.refresh({ force: true });
+  await new Promise(resolve => setTimeout(resolve, 1));
+  assert.strictEqual(MuneaHealth.uiState(), 'error', '讀取失敗必須自成一種狀態，不能算成沒資料');
+  assert.strictEqual(elements.healthSettingsStateLabel.textContent, '讀取失敗');
+  assert.strictEqual(elements.cnHealthBtn.dataset.action, 'retry');
+  assert.ok(/健康資料暫時無法取得/.test(elements.cnHealthReadState.textContent), '失敗原因必須看得到');
+  summaryThrows = '';
+  clickMain();
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.strictEqual(MuneaHealth.uiState(), 'ok', '按再試一次要能救回來');
 
   console.log('Apple Health connection state: ALL PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });
