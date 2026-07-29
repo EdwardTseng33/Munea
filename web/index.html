@@ -925,7 +925,7 @@
         <div class="credit-rules" aria-label="點數使用規則">
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
-            <b>會員月點數</b><i></i><span class="cr-note">每期重發，不累積</span>
+            <b>會員月點數</b><i></i><span class="cr-note">每月重發，不留到下個月</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
@@ -944,7 +944,7 @@
             <span class="ppk-save" id="savePro" style="display:none"></span>
             <div class="ppk-who">家裡多個人要照看、全家一起顧</div>
             <ul class="ppk-feats">
-              <li>每月 <b>200</b> 點語音陪聊 <span class="ppk-rule">當期有效・不累積</span></li>
+              <li>每月 <b>200</b> 點語音陪聊 <span class="ppk-rule">當月有效・不留到下個月</span></li>
               <li>健康 7／30 天趨勢全解鎖</li>
               <li>家庭健康圈最多 <b>12 人</b></li>
             </ul>
@@ -955,7 +955,7 @@
             <span class="ppk-save" id="savePlus" style="display:none"></span>
             <div class="ppk-who">先照顧一個人，基本照護就夠</div>
             <ul class="ppk-feats">
-              <li>每月 <b>100</b> 點語音陪聊 <span class="ppk-rule">當期有效・不累積</span></li>
+              <li>每月 <b>100</b> 點語音陪聊 <span class="ppk-rule">當月有效・不留到下個月</span></li>
               <li>健康 7／30 天趨勢全解鎖</li>
               <li>家庭健康圈最多 <b>4 人</b></li>
             </ul>
@@ -980,7 +980,7 @@
         <div class="credit-rules points-rules" aria-label="加購點數使用規則">
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
-            <b>會員月點數</b><i></i><span class="cr-note">每期重發，不累積</span>
+            <b>會員月點數</b><i></i><span class="cr-note">每月重發，不留到下個月</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
@@ -1332,17 +1332,46 @@ window.MMMEDCLICK=function(){ var meds=mmMeds(); if(!meds.length){ var mask=docu
 <script>
 /* ② 健康數據誠實空值（Edward 7/7）：沒接裝置就不假裝有數字 */
 window.MMDEV = function(){
-  var has = !!localStorage.getItem('munea.devicesOn');
   function T(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
   function hide(id){ var el=document.getElementById(id); if(el) el.style.display='none'; }
   function show(id){ var el=document.getElementById(id); if(el) el.style.display=''; }
-  if(has){ ['bpChip','hrChip'].forEach(show); return; }  // 有接裝置：用現有數字、chip 顯示
-  var obs=document.getElementById('obsText'); if(obs) obs.innerHTML='還沒接上健康裝置——接上 <b style="color:#8FD4CC">Apple 健康</b>，或先記個心情、跟我聊聊，我就開始幫你看著了。';
-  T('bpNum','—'); T('bpUnit',''); T('bpSub','接 Apple 健康帶入'); hide('bpChip');
-  T('hrNum','—'); T('hrUnit',''); T('hrSub','接 Apple 健康帶入'); hide('hrChip');
-  T('spo2Num','—'); T('spo2Unit',''); T('sleepNum','—'); T('sleepUnit',''); T('stepsNum','—'); T('stepsUnit','');
-  ['sleepTrendChart','actChart'].forEach(function(id){ var el=document.getElementById(id); if(el && el.offsetParent!==null){ el.innerHTML='<div style="padding:16px 2px;font-size:12.5px;color:var(--muted);text-align:center">接上 Apple 健康後，這裡會長出你的趨勢</div>'; } });
-  hide('sleepTrendChip'); hide('actChip');
+  var H = window.MuneaHealth;
+  // 真機：每一項的狀態由「真的讀到什麼」推導（health.js metricStates）。
+  // 不可以用 munea.devicesOn 旗標判斷——那是我們自己在授權視窗關掉後就設的，
+  // 蘋果不會告訴 App 讀取被拒絕，所以按過連接鍵完全不代表讀得到東西。
+  // 網頁預覽沒有原生外掛，維持原本的示範切換。
+  var KEYS = ['bp','hr','spo2','sleep','steps'];
+  var st = (H && H.available && H.available() && H.metricStates) ? H.metricStates() : null;
+  if(!st){
+    var flag = !!localStorage.getItem('munea.devicesOn'), demo = flag ? 'ok' : 'off';
+    st = {}; KEYS.forEach(function(k){ st[k] = demo; });
+  }
+  var off = st.bp === 'off';                                              // 沒連：五項同時 off
+  var anyOk = KEYS.some(function(k){ return st[k] === 'ok'; });
+
+  // 沒有真觀察可寫的時候，這句話由狀態決定——三種情況講三種話，不可以互相沿用。
+  // （只讀到一部分卻還說「讀不到資料」也是假的，一樣不行。）
+  var obs=document.getElementById('obsText');
+  if(obs && !window.__muneaObsReal) obs.innerHTML = off
+    ? '還沒接上健康裝置——接上 <b style="color:#8FD4CC">Apple 健康</b>，或先記個心情、跟我聊聊，我就開始幫你看著了。'
+    : !anyOk
+      ? '已經連上 Apple 健康，但我還讀不到資料。到「健康」App→個人照片→<b style="color:#8FD4CC">「App 與服務」→沐寧</b>，把要給我看的項目打開就好。'
+      : '今天讀到的都整理在這裡了，<b style="color:#8FD4CC">還沒讀到的我也標了出來</b>。';
+
+  // 讀不到的項目：數字留「—」，標籤一定藏起來。
+  // bpChip/hrChip 預設寫死「穩定」「正常」、bpSub 寫「正常範圍內」——
+  // 一項都沒讀到還把它們顯示出來，等於對長輩做沒有根據的生理宣稱，絕對不行。
+  var miss = off ? '接 Apple 健康帶入' : '還沒讀到這一項';
+  if(st.bp !== 'ok'){ T('bpNum','—'); T('bpUnit',''); T('bpSub',miss); hide('bpChip'); } else { show('bpChip'); }
+  if(st.hr !== 'ok'){ T('hrNum','—'); T('hrUnit',''); T('hrSub',miss); hide('hrChip'); } else { show('hrChip'); }
+  if(st.spo2 !== 'ok'){ T('spo2Num','—'); T('spo2Unit',''); }
+  if(st.sleep !== 'ok'){ T('sleepNum','—'); T('sleepUnit',''); }
+  if(st.steps !== 'ok'){ T('stepsNum','—'); T('stepsUnit',''); }
+  if(!anyOk){
+    var trendMsg = off ? '接上 Apple 健康後，這裡會長出你的趨勢' : '讀到資料後，這裡會長出你的趨勢';
+    ['sleepTrendChart','actChart'].forEach(function(id){ var el=document.getElementById(id); if(el && el.offsetParent!==null){ el.innerHTML='<div style="padding:16px 2px;font-size:12.5px;color:var(--muted);text-align:center">'+trendMsg+'</div>'; } });
+    hide('sleepTrendChip'); hide('actChip');
+  }
 };
 </script>
 
