@@ -85,6 +85,8 @@
         "voice.queue.etaWaitingUnknown",
         "voice.queue.note",
         "voice.queue.cancel",
+        "voice.queue.pending",
+        "voice.queue.wait",
         "voice.queue.fullTitle",
         "voice.queue.fullBody",
         "common.okay"
@@ -266,6 +268,14 @@
         "credits.freeTrialEnded",
         "settings.topUpCredits",
         "common.notNow"
+      ]
+    },
+    {
+      "anchorId": "callTimer",
+      "renderer": "startCallTimer",
+      "keys": [
+        "credits.freeTrialOneMinute",
+        "credits.freeTrialEnded"
       ]
     }
   ],

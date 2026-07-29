@@ -95,6 +95,12 @@ assert(css.includes('.busy-card'), 'Busy card styles must exist');
 assert(app.includes("showBusyCard('queued', queue)"), 'Queued gateway responses must surface the busy card with the full queue payload (position and eta_s), not just a bare position number');
 assert(app.includes("showBusyCard('full')"), 'A full queue must surface the explicit busy-try-later card');
 assert(zhCatalog['voice.queue.fullTitle'] === '現在忙線中' && zhCatalog['voice.queue.fullBody'].includes('請稍後再試試看'), 'Full-queue catalog copy must say busy-try-later in plain language');
+assert(app.includes("muneaT('voice.queue.pending'") && app.includes("muneaT('voice.queue.wait'"), 'Queued call button and hidden fallback hint must follow the App language');
+const busyCardFallbackBody = app.slice(
+  app.indexOf('function showBusyCard(mode, payload)'),
+  app.indexOf('function formatQueueEta'),
+);
+assert(busyCardFallbackBody.includes("muneaT('voice.queue.fullTitle'") && busyCardFallbackBody.includes("'voice.queue.fullBody'"), 'Busy-card fallback copy must stay localized even before renderer-copy initialization');
 assert(/if \(\(callDialing \|\| callPreflightPending\) && !callConnected\)/.test(app), 'Tapping the call button must cancel while queued (preflight pending), not only while dialing');
 assert(app.includes('if (callConnected || callDialing || callPreflightPending)'), 'Leaving the call screen while queued must hang up and release the queue slot');
 assert(/callConnected \|\| callDialing \|\| callPreflightPending\) && \$\('#callToggle'\)/.test(app), 'Backgrounding the App while queued must cancel the queue slot');
@@ -104,9 +110,9 @@ assert(app.includes("if (reason === 'call_cancelled')"), 'A user-initiated cance
 // eta_s（後端一直都有算，之前被前端丟掉）要轉成粗略區間，不給會顯得說謊的精確倒數。
 assert(app.includes('function formatQueueEta(') && app.includes("if (n < 90) return 'soon';") && app.includes('if (n <= 600) return Math.ceil(n / 60);'),
   'Queue ETA must be bucketed into a soon/minutes/none narrative from queue.eta_s, not shown as a raw countdown');
-assert(app.includes("preparing = position <= 1") && app.includes("cname() + '正在為你準備聊天室'"),
+assert(app.includes("preparing = position <= 1") && busyCardFallbackBody.includes("'voice.queue.preparingWithCompanion'"),
   'Position 1 must use a preparing narrative instead of the misleading "you are #1 in line" framing');
-assert(app.includes('暫時先別關掉這個畫面，好了會自動接通'), 'The queue note must use the softened stay-on-screen phrasing instead of the old "leaving cancels the queue" warning');
+assert(busyCardFallbackBody.includes("'voice.queue.note'"), 'The queue note must use the localized softened stay-on-screen phrasing instead of the old "leaving cancels the queue" warning');
 
 // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
 // 斷線重連失敗／連線逾時／影像席位全滿／拿不到麥克風，過去全部只寫進被藏起來的 #chatCaption，等於零回饋。
@@ -303,6 +309,8 @@ assert(app.includes("muneaT('settings.topUpCredits'") && app.includes("muneaT('c
 const refreshLocalizedDynamicUiBody = app.match(/function refreshLocalizedDynamicUi\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert(refreshLocalizedDynamicUiBody.includes('renderPointsPopupCopy()'), 'An open exhausted-credit dialog must rerender after the iOS App Language changes');
 assert(app.includes("muneaT('credits.freeTrialEnded'"), 'The free-trial exhaustion toast must be localized');
+assert(app.includes("muneaT(\n          'credits.freeTrialOneMinute'"), 'The one-minute free-trial warning must be localized and must not call a minute a credit');
+assert(!app.includes("toast('免費體驗剩約 1 點"), 'The free-trial warning must never label a remaining minute as one credit');
 
 // 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）
 assert(app.includes('function planPurchaseFailMessage'), 'Purchase failures must map reasons to plain-language text');

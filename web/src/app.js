@@ -275,22 +275,47 @@ function showBusyCard(mode, payload) {
     const position = Math.max(1, parseInt(q.position, 10) || 1);
     const preparing = position <= 1;   // 排第 1 位＝其實是在幫你準備、不是真的一堆人在排（Edward 2026-07-24 拍板）
     const eta = formatQueueEta(q.eta_s);
-    if (title) title.textContent = preparing ? (cname() + '正在為你準備聊天室') : ('現在比較多人在跟' + cname() + '聊天');
-    if (pos) pos.innerHTML = preparing ? '' : ('你排第 <b>' + position + '</b> 位');
+    if (title) title.textContent = preparing
+      ? muneaT('voice.queue.preparingWithCompanion', '{companion}正在為你準備聊天室', { companion: cname() })
+      : muneaT('voice.queue.busyWithCompanion', '現在比較多人在跟{companion}聊天', { companion: cname() });
+    if (pos) pos.textContent = preparing
+      ? ''
+      : muneaT('voice.queue.position', '你排第 {count} 位', { count: position });
     let etaLine;
-    if (eta === 'soon') etaLine = preparing ? '快好了，通常幾分鐘內就會自動接通。' : '快好了，很快就輪到你。';
-    else if (typeof eta === 'number') etaLine = '大約再 ' + eta + ' 分鐘' + (preparing ? '會自動接通。' : '會輪到你。');
-    else etaLine = preparing ? '通常幾分鐘內就好，準備好會自動接通。' : '輪到你會自動接通。';
-    if (note) note.textContent = etaLine + '排隊不扣點數，暫時先別關掉這個畫面，好了會自動接通。';
-    if (btn) btn.textContent = '取消排隊';
+    if (eta === 'soon') {
+      etaLine = muneaT(
+        preparing ? 'voice.queue.etaPreparingSoon' : 'voice.queue.etaWaitingSoon',
+        preparing ? '快好了，通常幾分鐘內就會自動接通。' : '快好了，很快就輪到你。',
+      );
+    } else if (typeof eta === 'number') {
+      etaLine = muneaT(
+        preparing ? 'voice.queue.etaPreparingMinutes' : 'voice.queue.etaWaitingMinutes',
+        preparing ? '大約再 {minutes} 分鐘會自動接通。' : '大約再 {minutes} 分鐘會輪到你。',
+        { minutes: eta },
+      );
+    } else {
+      etaLine = muneaT(
+        preparing ? 'voice.queue.etaPreparingUnknown' : 'voice.queue.etaWaitingUnknown',
+        preparing ? '通常幾分鐘內就好，準備好會自動接通。' : '輪到你會自動接通。',
+      );
+    }
+    if (note) note.textContent = muneaT(
+      'voice.queue.note',
+      '{eta}排隊不扣點數，暫時先別關掉這個畫面；準備好就會自動接通。',
+      { eta: etaLine },
+    );
+    if (btn) btn.textContent = muneaT('voice.queue.cancel', '取消排隊');
   } else {
     // 'full'：連排隊的位子都滿了——除了「知道了」，多給一個不用等 GPU 席位的出口
     card.dataset.action = 'dismiss';
-    if (title) title.textContent = '現在忙線中';
+    if (title) title.textContent = muneaT('voice.queue.fullTitle', '現在忙線中');
     if (pos) pos.textContent = '';
-    // 角色名是用戶自訂字串：用 append 組字串＋<br>，不走 innerHTML（斷行乾淨、也不吃進標籤）
-    if (note) { note.textContent = ''; note.append('想跟' + cname() + '聊天的人比較多，', document.createElement('br'), '請稍後再試試看。'); }
-    if (btn) btn.textContent = '知道了';
+    if (note) note.textContent = muneaT(
+      'voice.queue.fullBody',
+      '想跟{companion}聊天的人比較多，請稍後再試試看。',
+      { companion: cname() },
+    );
+    if (btn) btn.textContent = muneaT('common.okay', '知道了');
     if (alt) alt.hidden = false;
   }
   card.hidden = false;
@@ -1565,8 +1590,8 @@ const CallControl = {
         const queue = result.queue || {};
         // 忙線排隊（2026-07-23 Edward 拍板 B 案 → 2026-07-24 P0 補上 eta_s）：明著告訴用戶排第幾位／準備中、輪到自動接通
         showBusyCard('queued', queue);
-        setCallPreflightPending(true, '排隊中…');
-        setCallHint('忙線中，排到會自動接通', true);
+        setCallPreflightPending(true, muneaT('voice.queue.pending', '排隊中…'));
+        setCallHint(muneaT('voice.queue.wait', '輪到你時會自動接通。'), true);
         if (!this._queueSeen) {
           this._queueSeen = true;
           try { trackProductEvent('call_queue_shown', { position: queue.position || 1, depth: queue.depth || 0 }); } catch (e) {}
@@ -4360,6 +4385,17 @@ window.__ptsTest = {
     setCallToggle(false);
     localizeChatControls();
   },
+  showQueued: () => {
+    showBusyCard('queued', { position: 3, eta_s: 121 });
+    setCallPreflightPending(true, muneaT('voice.queue.pending', '排隊中…'));
+  },
+  showFreeMinute: () => {
+    setCallPreflightPending(false);
+    toast(muneaT(
+      'credits.freeTrialOneMinute',
+      '免費體驗剩約 1 分鐘，慢慢說完沒關係。',
+    ));
+  },
   ff: s => { _callSec = s; },
 };
 window.__medRefresh = () => updateMedCount();
@@ -4496,7 +4532,10 @@ function startCallTimer() {
       // 快到了先溫柔預告（剩 1 分鐘）：畫面提示＋悄悄請角色自然收尾，不再無預警斷線
       if (_rem > 0 && _rem <= 60 && !_freeWarned) {
         _freeWarned = true;
-        toast('免費體驗剩約 1 點，慢慢說完沒關係');
+        toast(muneaT(
+          'credits.freeTrialOneMinute',
+          '免費體驗剩約 1 分鐘，慢慢說完沒關係。',
+        ));
         try {
           if (LiveVoice && LiveVoice.on && LiveVoice.ws && LiveVoice.ws.readyState === 1) {
             LiveVoice.ws.send(JSON.stringify({ type: 'text', text: '（系統悄悄話，請不要唸出這段、也不要提到系統或倒數：免費體驗只剩大約一分鐘，請自然地把話題暖心收尾，溫柔說今天先聊到這。）' }));

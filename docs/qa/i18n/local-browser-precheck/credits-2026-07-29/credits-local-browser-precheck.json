@@ -1,11 +1,16 @@
 {
   "schema": "munea.app-credits-local-browser-precheck.v1",
-  "recordedAt": "2026-07-29T10:21:49.573Z",
+  "recordedAt": "2026-07-29T10:35:24.861Z",
   "result": "pass-local-precheck",
   "releaseEvidence": false,
-  "sourceBaseCommit": "b63f48118c4fcb3d1c874a29211268a1af19b6a5",
+  "sourceBaseCommit": "cf9c07020ba1d17b8e981f0bc5f5b4ac356ee8c5",
   "sourceChangedFiles": [
-    "M scripts/i18n-native-review-worklist.js",
+    "M docs/qa/i18n/local-browser-precheck/credits-2026-07-29/credits-local-browser-precheck.json",
+    " M docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__credits-exhausted__iphone390x844.png",
+    " M docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__credits-exhausted__iphone390x844.png",
+    " M docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__credits-exhausted__iphone390x844.png",
+    " M docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__credits-exhausted__iphone390x844.png",
+    " M scripts/app-credits-i18n-browser-precheck.js",
     " M scripts/test-ui-contracts.js",
     " M web/src/app.js",
     " M web/src/i18n/app-binding-manifest.json",
@@ -14,13 +19,20 @@
     " M web/src/i18n/es.json",
     " M web/src/i18n/ja.json",
     " M web/src/i18n/zh-TW.json",
-    " M web/src/styles.css",
-    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/",
-    "?? scripts/app-credits-i18n-browser-precheck.js"
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__free-trial-one-minute__iphone390x844.png",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__queued-call__iphone390x844.png",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__free-trial-one-minute__iphone390x844.png",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__queued-call__iphone390x844.png",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__free-trial-one-minute__iphone390x844.png",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__queued-call__iphone390x844.png",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__free-trial-one-minute__iphone390x844.png",
+    "?? docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__queued-call__iphone390x844.png"
   ],
   "scope": {
     "surfaces": [
       "chat:idle/credit-balance",
+      "chat:queued/capacity-wait",
+      "chat:active/free-trial-one-minute",
       "modal:top-up/credits-exhausted"
     ],
     "environment": "local-fixture-only",
@@ -73,11 +85,49 @@
         "secondary": "稍後再說"
       },
       "mismatches": [],
+      "queueLabels": {
+        "pending": "排隊中…",
+        "title": "現在比較多人在跟寧寧聊天",
+        "position": "你排第 3 位",
+        "note": "大約再 3 分鐘會輪到你。排隊不扣點數，暫時先別關掉這個畫面；準備好就會自動接通。",
+        "button": "取消排隊"
+      },
+      "expectedQueue": {
+        "pending": "排隊中…",
+        "title": "現在比較多人在跟寧寧聊天",
+        "position": "你排第 3 位",
+        "note": "大約再 3 分鐘會輪到你。排隊不扣點數，暫時先別關掉這個畫面；準備好就會自動接通。",
+        "button": "取消排隊"
+      },
+      "queueMismatches": [],
+      "queueLayout": {
+        "left": 35,
+        "right": 355,
+        "top": 320,
+        "bottom": 625,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "pendingButtonLayout": {
+        "clientWidth": 138,
+        "scrollWidth": 138,
+        "horizontalOverflowPixels": 0
+      },
+      "freeWarningLayout": {
+        "label": "免費體驗剩約 1 分鐘，慢慢說完沒關係。",
+        "left": 39,
+        "right": 351,
+        "top": 574,
+        "bottom": 624,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "expectedFreeWarning": "免費體驗剩約 1 分鐘，慢慢說完沒關係。",
       "browserErrors": [],
       "balanceVisible": true,
       "balanceLayout": {
         "width": 158,
-        "height": 25,
+        "height": 24,
         "left": 212,
         "right": 370,
         "top": 22,
@@ -87,12 +137,12 @@
       "nameLayout": {
         "left": 20,
         "right": 120,
-        "top": 20,
-        "bottom": 48
+        "top": 22,
+        "bottom": 50
       },
       "headerGapPixels": 92,
       "pageState": {
-        "bodyTextLength": 88,
+        "bodyTextLength": 109,
         "errorOverlay": false,
         "documentHorizontalOverflowPixels": 0
       },
@@ -115,10 +165,20 @@
           "bytes": 555051,
           "sha256": "2e3d28793b7a488da8cb738f2294ed58c08027d2159b8ab65c75afae1e3d5ed6"
         },
+        "queued": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__queued-call__iphone390x844.png",
+          "bytes": 449284,
+          "sha256": "56ded8a53dc3a061b8037bf6c6ebfecb021f1dd6225a2564dddad58f51ed2194"
+        },
+        "freeTrialOneMinute": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__free-trial-one-minute__iphone390x844.png",
+          "bytes": 554985,
+          "sha256": "551ba8e3663a308fa1aea6d47becee6af79b5802045cb6a828d3c2528574ead4"
+        },
         "exhausted": {
           "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/zh-TW__credits-exhausted__iphone390x844.png",
-          "bytes": 163870,
-          "sha256": "30783b734a5541c345d634c0c75f045216f94eb17efa4fce671be8896bc6f291"
+          "bytes": 164912,
+          "sha256": "09a77124f5f7c66074df2eeaccdcdbdc46622a7e84e9d7c59362bf95675b3ae2"
         }
       }
     },
@@ -148,26 +208,64 @@
         "secondary": "Not now"
       },
       "mismatches": [],
+      "queueLabels": {
+        "pending": "In queue…",
+        "title": "More people are talking with Ningning right now",
+        "position": "You are number 3 in line",
+        "note": "About 3 more minutes until your turn. Waiting does not use credits. Keep this screen open and the call will connect automatically.",
+        "button": "Leave the queue"
+      },
+      "expectedQueue": {
+        "pending": "In queue…",
+        "title": "More people are talking with Ningning right now",
+        "position": "You are number 3 in line",
+        "note": "About 3 more minutes until your turn. Waiting does not use credits. Keep this screen open and the call will connect automatically.",
+        "button": "Leave the queue"
+      },
+      "queueMismatches": [],
+      "queueLayout": {
+        "left": 35,
+        "right": 355,
+        "top": 294,
+        "bottom": 652,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "pendingButtonLayout": {
+        "clientWidth": 138,
+        "scrollWidth": 138,
+        "horizontalOverflowPixels": 0
+      },
+      "freeWarningLayout": {
+        "label": "About 1 minute remains in your free trial. Take your time finishing your thought.",
+        "left": 35,
+        "right": 355,
+        "top": 528,
+        "bottom": 624,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "expectedFreeWarning": "About 1 minute remains in your free trial. Take your time finishing your thought.",
       "browserErrors": [],
       "balanceVisible": true,
       "balanceLayout": {
         "width": 160,
-        "height": 25,
+        "height": 24,
         "left": 210,
         "right": 370,
-        "top": 22,
-        "bottom": 47,
+        "top": 24,
+        "bottom": 48,
         "horizontalOverflowPixels": 0
       },
       "nameLayout": {
         "left": 20,
         "right": 169,
-        "top": 21,
-        "bottom": 49
+        "top": 22,
+        "bottom": 50
       },
       "headerGapPixels": 41,
       "pageState": {
-        "bodyTextLength": 196,
+        "bodyTextLength": 278,
         "errorOverlay": false,
         "documentHorizontalOverflowPixels": 0
       },
@@ -190,10 +288,20 @@
           "bytes": 554422,
           "sha256": "164b4f2699f3222269cbf0cc0d3c680548e8941a149a85ba6c7fa591ab3f3c8b"
         },
+        "queued": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__queued-call__iphone390x844.png",
+          "bytes": 428924,
+          "sha256": "1dfb1d8b59cbd7a7660209d99d0c1996fec8b186c398ceab8fb775deba078d20"
+        },
+        "freeTrialOneMinute": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__free-trial-one-minute__iphone390x844.png",
+          "bytes": 552666,
+          "sha256": "970144c9761f4f93453d6c59ea2460a6013a4bbde5113676987b2bacbf88a15e"
+        },
         "exhausted": {
           "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/en__credits-exhausted__iphone390x844.png",
-          "bytes": 165862,
-          "sha256": "8ba46815014e6ecb92a3a35c09304fcd1b462a198de8b74887cd9b058088b710"
+          "bytes": 166763,
+          "sha256": "fdbf14deb4bf3bb7ab28cb05b29037ba3a965325a6c590b3169c3e31ff6a5379"
         }
       }
     },
@@ -223,6 +331,44 @@
         "secondary": "後で"
       },
       "mismatches": [],
+      "queueLabels": {
+        "pending": "待機中…",
+        "title": "現在、ニンニンとお話し中の方が多くなっています",
+        "position": "順番は3番目です",
+        "note": "順番まであと約3分です。待機中はポイントを消費しません。この画面を閉じずにお待ちください。準備ができると自動でつながります。",
+        "button": "待機をやめる"
+      },
+      "expectedQueue": {
+        "pending": "待機中…",
+        "title": "現在、ニンニンとお話し中の方が多くなっています",
+        "position": "順番は3番目です",
+        "note": "順番まであと約3分です。待機中はポイントを消費しません。この画面を閉じずにお待ちください。準備ができると自動でつながります。",
+        "button": "待機をやめる"
+      },
+      "queueMismatches": [],
+      "queueLayout": {
+        "left": 35,
+        "right": 355,
+        "top": 294,
+        "bottom": 652,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "pendingButtonLayout": {
+        "clientWidth": 138,
+        "scrollWidth": 138,
+        "horizontalOverflowPixels": 0
+      },
+      "freeWarningLayout": {
+        "label": "無料体験はあと約1分です。焦らず、ゆっくり話してください。",
+        "left": 35,
+        "right": 355,
+        "top": 551,
+        "bottom": 624,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "expectedFreeWarning": "無料体験はあと約1分です。焦らず、ゆっくり話してください。",
       "browserErrors": [],
       "balanceVisible": true,
       "balanceLayout": {
@@ -230,19 +376,19 @@
         "height": 24,
         "left": 204,
         "right": 370,
-        "top": 22,
-        "bottom": 47,
+        "top": 24,
+        "bottom": 48,
         "horizontalOverflowPixels": 0
       },
       "nameLayout": {
         "left": 20,
         "right": 182,
-        "top": 21,
-        "bottom": 49
+        "top": 24,
+        "bottom": 51
       },
       "headerGapPixels": 22,
       "pageState": {
-        "bodyTextLength": 119,
+        "bodyTextLength": 149,
         "errorOverlay": false,
         "documentHorizontalOverflowPixels": 0
       },
@@ -265,10 +411,20 @@
           "bytes": 555619,
           "sha256": "339d726ea88fdf4d939798e063077270a6c0c6ee131cb09e850cce42815e2778"
         },
+        "queued": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__queued-call__iphone390x844.png",
+          "bytes": 435153,
+          "sha256": "ea25f43098f00bd6e23bb5da3a54d40832dee50b9a202c2587167a4052cb794f"
+        },
+        "freeTrialOneMinute": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__free-trial-one-minute__iphone390x844.png",
+          "bytes": 555550,
+          "sha256": "14682892b78b1f91607d97cfe14beb5e81515c15a562906ff847a5515ea065c7"
+        },
         "exhausted": {
           "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/ja__credits-exhausted__iphone390x844.png",
-          "bytes": 165948,
-          "sha256": "0743e663aefed405edc5fdd8095b934705500d80a7b0a24f453412398a009b57"
+          "bytes": 166045,
+          "sha256": "d4e7b2c71c81dfcba803a2475328720f2c12ee93de1e0cdfdf872d78b41e88fa"
         }
       }
     },
@@ -298,6 +454,44 @@
         "secondary": "Ahora no"
       },
       "mismatches": [],
+      "queueLabels": {
+        "pending": "En cola…",
+        "title": "Hay más personas hablando con Ningning en este momento",
+        "position": "Estás en el puesto 3 de la cola",
+        "note": "Faltan unos 3 minutos para tu turno. Esperar no consume créditos. Mantén esta pantalla abierta y la llamada se conectará automáticamente.",
+        "button": "Salir de la cola"
+      },
+      "expectedQueue": {
+        "pending": "En cola…",
+        "title": "Hay más personas hablando con Ningning en este momento",
+        "position": "Estás en el puesto 3 de la cola",
+        "note": "Faltan unos 3 minutos para tu turno. Esperar no consume créditos. Mantén esta pantalla abierta y la llamada se conectará automáticamente.",
+        "button": "Salir de la cola"
+      },
+      "queueMismatches": [],
+      "queueLayout": {
+        "left": 35,
+        "right": 355,
+        "top": 267,
+        "bottom": 678,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "pendingButtonLayout": {
+        "clientWidth": 138,
+        "scrollWidth": 138,
+        "horizontalOverflowPixels": 0
+      },
+      "freeWarningLayout": {
+        "label": "Queda aproximadamente 1 minuto de la prueba gratuita. Termina de hablar con calma.",
+        "left": 35,
+        "right": 355,
+        "top": 528,
+        "bottom": 624,
+        "horizontalOverflowPixels": 0,
+        "verticalOverflowPixels": 0
+      },
+      "expectedFreeWarning": "Queda aproximadamente 1 minuto de la prueba gratuita. Termina de hablar con calma.",
       "browserErrors": [],
       "balanceVisible": true,
       "balanceLayout": {
@@ -305,19 +499,19 @@
         "height": 24,
         "left": 205,
         "right": 370,
-        "top": 21,
-        "bottom": 46,
+        "top": 24,
+        "bottom": 48,
         "horizontalOverflowPixels": 0
       },
       "nameLayout": {
         "left": 20,
         "right": 197,
-        "top": 21,
-        "bottom": 49
+        "top": 24,
+        "bottom": 51
       },
       "headerGapPixels": 8,
       "pageState": {
-        "bodyTextLength": 217,
+        "bodyTextLength": 300,
         "errorOverlay": false,
         "documentHorizontalOverflowPixels": 0
       },
@@ -340,10 +534,20 @@
           "bytes": 555404,
           "sha256": "c7d44e1005d268c94869bd240a5a06e8197a92d4ac436214d09983f8cefe2631"
         },
+        "queued": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__queued-call__iphone390x844.png",
+          "bytes": 411273,
+          "sha256": "5d14e6806432e3cdd6d3bd3bf299e1e9291dd2a63f3b70fbb066a063580f5065"
+        },
+        "freeTrialOneMinute": {
+          "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__free-trial-one-minute__iphone390x844.png",
+          "bytes": 502119,
+          "sha256": "c818e6dc3fb052d3b71b8bdef64436c3d153c51e654a03bdf2de11ab5b849b3e"
+        },
         "exhausted": {
           "path": "docs/qa/i18n/local-browser-precheck/credits-2026-07-29/es__credits-exhausted__iphone390x844.png",
-          "bytes": 167507,
-          "sha256": "52f2956862453a3de217040c69f63c92e917cfe928be0ca456143d5d9972f5c0"
+          "bytes": 168006,
+          "sha256": "12975e441c8128e85127cf3b3dbddf273c0e3822181b2c060ebc785658408957"
         }
       }
     }

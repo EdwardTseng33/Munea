@@ -106,7 +106,12 @@ async function main() {
     sourceBaseCommit: sourceCommit(),
     sourceChangedFiles: sourceChangedFiles(),
     scope: {
-      surfaces: ['chat:idle/credit-balance', 'modal:top-up/credits-exhausted'],
+      surfaces: [
+        'chat:idle/credit-balance',
+        'chat:queued/capacity-wait',
+        'chat:active/free-trial-one-minute',
+        'modal:top-up/credits-exhausted',
+      ],
       environment: 'local-fixture-only',
       baseUrl: `http://${HOST}:${PORT}`,
       productionTouched: false,
@@ -181,6 +186,8 @@ async function main() {
           && typeof window.__ptsTest.setRemaining === 'function'
           && typeof window.__ptsTest.showExhausted === 'function'
           && typeof window.__ptsTest.showIdleChat === 'function'
+          && typeof window.__ptsTest.showQueued === 'function'
+          && typeof window.__ptsTest.showFreeMinute === 'function'
         ),
       }));
       if (
@@ -204,6 +211,8 @@ async function main() {
           && typeof window.__ptsTest.setRemaining === 'function'
           && typeof window.__ptsTest.showExhausted === 'function'
           && typeof window.__ptsTest.showIdleChat === 'function'
+          && typeof window.__ptsTest.showQueued === 'function'
+          && typeof window.__ptsTest.showFreeMinute === 'function'
         ),
         expected,
       );
@@ -256,7 +265,92 @@ async function main() {
       );
       await page.screenshot({ path: balancePath });
 
-      await page.evaluate(() => window.__ptsTest.showExhausted());
+      const companion = await page.locator('#chatName').textContent();
+      const queueEta = format(copy['voice.queue.etaWaitingMinutes'], { minutes: 3 });
+      const expectedQueue = {
+        pending: copy['voice.queue.pending'],
+        title: format(copy['voice.queue.busyWithCompanion'], { companion: companion.trim() }),
+        position: format(copy['voice.queue.position'], { count: 3 }),
+        note: format(copy['voice.queue.note'], { eta: queueEta }),
+        button: copy['voice.queue.cancel'],
+      };
+      await page.evaluate(() => window.__ptsTest.showQueued());
+      await page.waitForFunction(
+        (labels) => {
+          const card = document.getElementById('busyCard');
+          return (
+            card
+            && card.hidden === false
+            && document.getElementById('callToggleLabel')?.textContent.trim() === labels.pending
+            && document.getElementById('busyCardTitle')?.textContent.trim() === labels.title
+            && document.getElementById('busyCardPos')?.textContent.trim() === labels.position
+            && document.getElementById('busyCardNote')?.textContent.trim() === labels.note
+            && document.getElementById('busyCardBtn')?.textContent.trim() === labels.button
+          );
+        },
+        expectedQueue,
+      );
+      const queueCard = page.locator('#busyCard');
+      const queueLabels = await queueCard.evaluate(() => ({
+        pending: document.getElementById('callToggleLabel')?.textContent.trim() || '',
+        title: document.getElementById('busyCardTitle')?.textContent.trim() || '',
+        position: document.getElementById('busyCardPos')?.textContent.trim() || '',
+        note: document.getElementById('busyCardNote')?.textContent.trim() || '',
+        button: document.getElementById('busyCardBtn')?.textContent.trim() || '',
+      }));
+      const queueLayout = await queueCard.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          left: Math.floor(rect.left),
+          right: Math.ceil(rect.right),
+          top: Math.floor(rect.top),
+          bottom: Math.ceil(rect.bottom),
+          horizontalOverflowPixels: Math.max(0, Math.ceil(element.scrollWidth - element.clientWidth)),
+          verticalOverflowPixels: Math.max(0, Math.ceil(element.scrollHeight - element.clientHeight)),
+        };
+      });
+      const pendingButtonLayout = await page.locator('#callToggle').evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        horizontalOverflowPixels: Math.max(0, element.scrollWidth - element.clientWidth),
+      }));
+      const queuePath = path.join(
+        OUTPUT_DIR,
+        `${expected.locale}__queued-call__iphone390x844.png`,
+      );
+      await page.screenshot({ path: queuePath });
+
+      const expectedFreeWarning = copy['credits.freeTrialOneMinute'];
+      await page.evaluate(() => window.__ptsTest.showFreeMinute());
+      await page.waitForFunction(
+        (label) => (
+          document.getElementById('toast')?.classList.contains('show')
+          && document.getElementById('toast')?.textContent.trim() === label
+        ),
+        expectedFreeWarning,
+      );
+      const freeWarningLayout = await page.locator('#toast').evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          label: element.textContent.trim(),
+          left: Math.floor(rect.left),
+          right: Math.ceil(rect.right),
+          top: Math.floor(rect.top),
+          bottom: Math.ceil(rect.bottom),
+          horizontalOverflowPixels: Math.max(0, Math.ceil(element.scrollWidth - element.clientWidth)),
+          verticalOverflowPixels: Math.max(0, Math.ceil(element.scrollHeight - element.clientHeight)),
+        };
+      });
+      const freeWarningPath = path.join(
+        OUTPUT_DIR,
+        `${expected.locale}__free-trial-one-minute__iphone390x844.png`,
+      );
+      await page.screenshot({ path: freeWarningPath });
+
+      await page.evaluate(() => {
+        document.getElementById('toast')?.classList.remove('show');
+        window.__ptsTest.showExhausted();
+      });
       await page.waitForSelector('#mm-pts');
       const popup = page.locator('#mm-pts');
       const labels = await popup.evaluate((element) => ({
@@ -308,6 +402,9 @@ async function main() {
       const mismatches = Object.entries(expectedLabels)
         .filter(([key, value]) => labels[key] !== value)
         .map(([key, value]) => ({ key, expected: value, actual: labels[key] }));
+      const queueMismatches = Object.entries(expectedQueue)
+        .filter(([key, value]) => queueLabels[key] !== value)
+        .map(([key, value]) => ({ key, expected: value, actual: queueLabels[key] }));
       const cardInsideViewport = (
         cardLayout.left >= 0
         && cardLayout.right <= VIEWPORT.width
@@ -320,6 +417,13 @@ async function main() {
         labels,
         expectedLabels,
         mismatches,
+        queueLabels,
+        expectedQueue,
+        queueMismatches,
+        queueLayout,
+        pendingButtonLayout,
+        freeWarningLayout,
+        expectedFreeWarning,
         browserErrors,
         balanceVisible,
         balanceLayout,
@@ -328,7 +432,11 @@ async function main() {
         pageState,
         cardLayout,
         cardInsideViewport,
-        translationResult: mismatches.length === 0 ? 'pass' : 'fail',
+        translationResult: (
+          mismatches.length === 0
+          && queueMismatches.length === 0
+          && freeWarningLayout.label === expectedFreeWarning
+        ) ? 'pass' : 'fail',
         layoutResult: (
           cardInsideViewport
           && balanceVisible
@@ -338,10 +446,26 @@ async function main() {
           && headerGapPixels >= 8
           && cardLayout.horizontalOverflowPixels === 0
           && cardLayout.verticalOverflowPixels === 0
+          && queueLayout.left >= 0
+          && queueLayout.right <= VIEWPORT.width
+          && queueLayout.top >= 0
+          && queueLayout.bottom <= VIEWPORT.height
+          && queueLayout.horizontalOverflowPixels === 0
+          && queueLayout.verticalOverflowPixels === 0
+          && pendingButtonLayout.horizontalOverflowPixels === 0
+          && freeWarningLayout.label === expectedFreeWarning
+          && freeWarningLayout.left >= 0
+          && freeWarningLayout.right <= VIEWPORT.width
+          && freeWarningLayout.top >= 0
+          && freeWarningLayout.bottom <= VIEWPORT.height
+          && freeWarningLayout.horizontalOverflowPixels === 0
+          && freeWarningLayout.verticalOverflowPixels === 0
           && pageState.documentHorizontalOverflowPixels === 0
         ) ? 'pass' : 'fail',
         screenshots: {
           balance: screenshotEvidence(balancePath),
+          queued: screenshotEvidence(queuePath),
+          freeTrialOneMinute: screenshotEvidence(freeWarningPath),
           exhausted: screenshotEvidence(popupPath),
         },
       };
