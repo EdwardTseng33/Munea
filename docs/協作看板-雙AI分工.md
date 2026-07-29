@@ -2331,3 +2331,13 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **Promote**：`promote.sh staging voice stg-0725-014513-34d41f2 1.0.44 34d41f2e227b81f1dc2f28bb40d69c7641f8f80f` 重驗＋切流量成功；預設 URL `/version` 確認 `commit=34d41f2e227b...`、`revision=munea-voice-staging-00060-lij`、100%。
 - **正式機**：`munea-voice` 部署前後皆為 `munea-voice-00009-muh`（`prod-0724-204904-8ddab84`）、100% 流量，未動。
 - **回滾把手**：`gcloud run services update-traffic munea-voice-staging --region asia-east1 --project gen-lang-client-0229303523 --to-revisions munea-voice-staging-00058-yer=100`
+
+### 2026-07-29 Claude/城堡 🔀 拆分批次②：就診摘要組裝層（純函式・自 #270 移植）
+
+- **來源**：PR #270 拆分批次②，原 commit `3b686a3`，自最新 `origin/main` 重新移植。
+- **為何本批可先走**：只新增 `engine/visit_summary.py` 與其測試，**不碰 #284 接管的任何檔案**，也**不動 `health_context.py`**（只讀它的既有函式）。**沒有任何呼叫端**——這支是純函式模組，合併後對執行中的行為零影響（inert），是最安全的一批。
+- **內容**：把一段期間的症狀自述／在家量測／用藥實況組成「一頁帶去給醫生看」的結構化資料。**純程式、不呼叫 AI**（生成一千份與一份同價）。繼承 `health_context` 三條鐵律，另立三條專屬：**來源必須標記**（自述 vs 量測，醫師要能一眼分辨可信度）、**只並列不連線**（同日症狀＋數據寫成因果＝判讀＝紅線）、**截斷要誠實揭露**（超過一頁上限明說「另有 N 筆未列出」）。
+- **移植處置**：`package.json` 的 test 登記在 cherry-pick 解衝突時被 main 版覆蓋，已重新掛上 `test_visit_summary`；看板同批次①做法（以 main 為準＋單一補記）。
+- **⚠ 與批次① 的合併順序**：兩批都改 `package.json` 的 `test:launch` 字串，**後合併的那個需要一行 rebase**（各自加各自的測試，語意不衝突）。
+- **驗證**：`test_visit_summary` **23 項全過**，已掛進 `test:launch`。
+- **⚠ 未驗／未含**：本批**不含** endpoint、App UI、iOS 匯出、口袋問題（那些碰 #284 的檔案，依拆分規則要等 #284 合併後再移植）。未部署。
