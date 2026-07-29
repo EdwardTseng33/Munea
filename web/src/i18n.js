@@ -40,6 +40,7 @@
   let domLocalizer = null;
   let appBindingRuntime = null;
   let currentLocale = DEFAULT_LOCALE;
+  let legacySourceTextIndex = new Map();
   let metadataByLocale = { [DEFAULT_LOCALE]: FALLBACK_METADATA };
   let initialized = false;
   let mutationObserver = null;
@@ -110,6 +111,36 @@
       text = text.replaceAll(`{${name}}`, String(value));
     }
     return text;
+  }
+
+  function buildLegacySourceTextIndex(catalogs) {
+    const fallbackCatalog = catalogs && catalogs[DEFAULT_LOCALE];
+    if (!fallbackCatalog || typeof fallbackCatalog !== 'object') return new Map();
+    const candidates = new Map();
+    for (const [key, value] of Object.entries(fallbackCatalog)) {
+      if (typeof value !== 'string' || !value.trim() || value.includes('{')) continue;
+      const source = value.trim();
+      if (!candidates.has(source)) candidates.set(source, []);
+      candidates.get(source).push(key);
+    }
+    return new Map(
+      [...candidates.entries()].map(([source, keys]) => [source, Object.freeze(keys)]),
+    );
+  }
+
+  function translateLegacySourceText(value) {
+    const raw = String(value == null ? '' : value);
+    if (!runtime || currentLocale === DEFAULT_LOCALE || !raw.trim()) return raw;
+    const source = raw.trim();
+    const keys = legacySourceTextIndex.get(source);
+    if (!keys || !keys.length) return raw;
+    const translations = [...new Set(keys.map((key) => runtime.t(currentLocale, key)))];
+    const translatedValue = translations
+      .filter((translation) => translation && translation !== source)
+      .sort((left, right) => left.length - right.length)[0];
+    if (!translatedValue) return raw;
+    const start = raw.indexOf(source);
+    return `${raw.slice(0, start)}${translatedValue}${raw.slice(start + source.length)}`;
   }
 
   function apply(root) {
@@ -206,6 +237,7 @@
           } catch (error) {}
         },
       });
+      legacySourceTextIndex = buildLegacySourceTextIndex(catalogs);
       domLocalizer = domLocalizerApi;
       appBindingRuntime = appBindingRuntimeApi.createAppBindingRuntime({
         catalogRuntime: runtime,
@@ -255,6 +287,7 @@
     ready,
     setLocale,
     t,
+    translateLegacySourceText,
     weatherLanguage,
   });
 }());

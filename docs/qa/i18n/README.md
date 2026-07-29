@@ -261,6 +261,19 @@ node scripts/i18n-app-e2e-evidence.js `
 
 - `docs/qa/i18n/local-browser-precheck/status-2026-07-29/`
 - `docs/qa/i18n/local-browser-precheck/notification-2026-07-29/`
+- `docs/qa/i18n/local-browser-precheck/full-surface-standard-2026-07-29/`
+
+`full-surface-standard-2026-07-29` 是 loopback-only 的 38 states × 4 locales
+標準 iPhone viewport 預檢，共 152 張獨立截圖。它會阻擋外部 browser request，
+檢查空白狀態、runtime error、可見系統文案殘留來源語言與水平溢位，並以
+`scripts/test-app-full-surface-i18n-browser-precheck.js` 驗證畫面集合與每張 PNG
+checksum。家人傳話、家人姓名、藥名等使用者內容可保留原語言，不得被 UI
+localizer 強制翻譯。
+
+這份預檢仍是 `releaseEvidence: false`。HTML date/time 原生控制項可能依測試機
+作業系統的區域格式顯示；App Language 與 iOS 原生 picker 的最終一致性必須在
+exact-build installed-iPhone gate 驗證。它也不取代 small iPhone、Dynamic Type
+Large、StoreKit、Gateway、Voice、Avatar 或 App Store Connect 驗收。
 
 這些報告固定標記 `releaseEvidence: false`，只可作為開發預檢；不能替代
 同一候選 IPA 在實體 iPhone 上完成的 456 張 visual QA、APNs、通話及購買驗收。

@@ -12,6 +12,149 @@ const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.prefe
 const muneaT = (key, fallback, values = null) => (
   window.MuneaI18n ? window.MuneaI18n.t(key, values, fallback) : fallback
 );
+const legacyStaticTextSources = new WeakMap();
+const legacyStaticAttributeSources = new WeakMap();
+function localizeLegacyStaticCopy() {
+  if (
+    !window.MuneaI18n
+    || typeof window.MuneaI18n.translateLegacySourceText !== 'function'
+    || muneaLocale() === 'zh-TW'
+  ) return;
+  const excludedParents = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'OPTION']);
+  for (const root of document.querySelectorAll('.screen, .modal-mask, .reader-page')) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const parent = node.parentElement;
+      if (
+        parent
+        && !excludedParents.has(parent.tagName)
+        && !parent.isContentEditable
+      ) {
+        if (!legacyStaticTextSources.has(node)) {
+          legacyStaticTextSources.set(node, node.nodeValue);
+        }
+        const source = legacyStaticTextSources.get(node);
+        const translated = window.MuneaI18n.translateLegacySourceText(source);
+        if (translated !== node.nodeValue) node.nodeValue = translated;
+      }
+      node = walker.nextNode();
+    }
+    for (const element of root.querySelectorAll('[placeholder], [aria-label], [title]')) {
+      let sources = legacyStaticAttributeSources.get(element);
+      if (!sources) {
+        sources = {};
+        legacyStaticAttributeSources.set(element, sources);
+      }
+      for (const attribute of ['placeholder', 'aria-label', 'title']) {
+        if (!element.hasAttribute(attribute)) continue;
+        if (!Object.hasOwn(sources, attribute)) sources[attribute] = element.getAttribute(attribute);
+        const translated = window.MuneaI18n.translateLegacySourceText(sources[attribute]);
+        if (translated !== element.getAttribute(attribute)) {
+          element.setAttribute(attribute, translated);
+        }
+      }
+    }
+  }
+}
+function localizeCanonicalLegacyPanels() {
+  if (muneaLocale() === 'zh-TW') return;
+  const setText = (selector, key, fallback, values = null) => {
+    const element = document.querySelector(selector);
+    if (element) element.textContent = muneaT(key, fallback, values);
+  };
+
+  setText('#reportModal h2', 'report.title', 'Health and daily summary');
+  setText('#reportModal > .modal > .modal-sub', 'report.empty', 'There is not enough information to create a summary yet.');
+  const reportCard = $('#reportModal .rpt-card');
+  if (reportCard) reportCard.style.display = 'none';
+  setText('#rptSendBtn', 'report.share', 'Share summary');
+  const reportFooter = $('#reportModal .modal-sub[style*="margin-top"]');
+  if (reportFooter) reportFooter.style.display = 'none';
+
+  setText('#historyModal h2', 'history.title', 'Past records');
+  setText('#historyModal > .modal > .modal-sub', 'history.subtitle', 'View monthly summaries or choose a date range.');
+  const historyMonths = $('#histMonths');
+  if (historyMonths && historyMonths.dataset.localizedEmpty !== '1') {
+    historyMonths.dataset.localizedEmpty = '1';
+    historyMonths.replaceChildren();
+    const empty = document.createElement('p');
+    empty.className = 'modal-sub';
+    empty.textContent = muneaT('history.empty', 'There are no records for this period.');
+    historyMonths.appendChild(empty);
+  }
+
+  const consentPairs = [
+    ['consent.cloudProcessingTitle', 'Voice and text are encrypted and sent to the cloud for processing', 'consent.cloudProcessingBody', 'They are used only to understand you and provide the service.'],
+    ['consent.summaryOnlyTitle', 'Only necessary conversation highlights are retained', 'consent.summaryOnlyBody', 'Original recordings are not stored.'],
+    ['consent.voicePurposeTitle', 'Your voice is used only to understand what you say', 'consent.voicePurposeBody', 'It is not used for identity recognition or unrelated purposes.'],
+    ['consent.profileCloudTitle', 'Profile information you provide is securely synced', 'consent.profileCloudBody', 'Your photo stays on this phone.'],
+  ];
+  $$('#consentSheet .consent-points li').forEach((item, index) => {
+    const pair = consentPairs[index];
+    if (!pair) return;
+    const title = item.querySelector('b');
+    const body = item.querySelector('small');
+    if (title) title.textContent = muneaT(pair[0], pair[1]);
+    if (body) body.textContent = muneaT(pair[2], pair[3]);
+  });
+  setText('#consentSheet .consent-note', 'consent.dataController', 'Munea manages this data. You can request access, correction, or deletion.');
+  setText('#consentAgree', 'consent.agree', 'I understand. Start talking');
+  setText('#consentDetail', 'consent.detail', 'Read the full privacy notice first');
+
+  setText('#subPlans > .sub-intro', 'subscription.benefitsIntro', 'Every paid plan includes');
+  const benefitKeys = [
+    ['subscription.benefitVoiceTitle', 'Natural voice companionship', 'subscription.benefitVoiceBody', 'Talk naturally in a familiar language.'],
+    ['subscription.benefitCareTitle', 'Everyday care', 'subscription.benefitCareBody', 'Companion reminders and daily records.'],
+    ['subscription.benefitFamilyTitle', 'Family care circle', 'subscription.benefitFamilyBody', 'Helps family members stay informed and connected.'],
+    ['subscription.benefitMemoryTitle', 'Continuing companion memory', 'subscription.benefitMemoryBody', 'Keeps important people and routines in context.'],
+  ];
+  $$('#subPlans .sub-value .sv-row').forEach((row, index) => {
+    const keys = benefitKeys[index];
+    if (!keys) return;
+    const title = row.querySelector('.sv-txt b');
+    const body = row.querySelector('.sv-txt small');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  setText('#subPlans .sub-sec-label', 'subscription.choosePlan', 'Choose a plan');
+  const cycleButtons = $$('#subCycle .scyc-btn');
+  if (cycleButtons[0]) cycleButtons[0].textContent = muneaT('subscription.billingMonthly', 'Monthly');
+  if (cycleButtons[1]) cycleButtons[1].textContent = muneaT('subscription.billingYearly', 'Yearly');
+  const creditRuleKeys = [
+    ['subscription.monthlyCreditsTitle', 'Monthly plan credits', 'subscription.monthlyCreditsBody', 'Issued again each billing period.'],
+    ['subscription.purchasedCreditsTitle', 'Purchased credits', 'subscription.purchasedCreditsBody', 'They do not expire.'],
+    ['subscription.deductionOrderTitle', 'Credit order', 'subscription.deductionOrderBody', 'Monthly credits are used before purchased credits.'],
+  ];
+  $$('#subPlans .credit-rules .cr-row').forEach((row, index) => {
+    const keys = creditRuleKeys[index];
+    if (!keys) return;
+    const title = row.querySelector('b');
+    const body = row.querySelector('.cr-note');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  $$('.tu-card').forEach((card) => {
+    const credits = Number(card.dataset.p || 0);
+    const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
+    const amount = card.querySelector('b');
+    const minutes = card.querySelector('.tu-min');
+    if (amount) amount.textContent = muneaT('purchase.creditsAmount', '{credits} credits', { credits: formatted });
+    if (minutes) minutes.textContent = muneaT('purchase.approxMinutes', 'About {minutes} minutes', { minutes: formatted });
+  });
+
+  const changelog = $('#changelogList');
+  if (changelog) {
+    changelog.replaceChildren();
+    const summary = document.createElement('p');
+    summary.className = 'modal-sub';
+    summary.textContent = muneaT(
+      'version.localizedSummary',
+      'This update improves call status explanations, text fallback, and readability.',
+    );
+    changelog.appendChild(summary);
+  }
+}
 let muneaRendererCopyCache = null;
 function muneaRendererCopy() {
   if (muneaRendererCopyCache) return muneaRendererCopyCache;
@@ -5258,6 +5401,7 @@ function openVersionSheet() {
     ).join('');
   }
   const m = document.getElementById('versionSheet'); if (m) m.classList.add('show');
+  localizeCanonicalLegacyPanels();
 }
 
 // ===== 健康頁：分層排版（今日總結＋想提醒你＋都很穩）· 對應「健康照護-數據告警AI提醒-設計」=====
@@ -6083,7 +6227,9 @@ function init() {
     if (_vs && window.MuneaVersion) {
       const _showStamp = (typeof isDeveloperBypassAllowed === 'function' && isDeveloperBypassAllowed())
         || (typeof isPackagedApp === 'function' && !isPackagedApp());
-      _vs.textContent = _showStamp ? ('內頁 v' + MuneaVersion.current) : '';
+      _vs.textContent = _showStamp
+        ? muneaT('version.webBuild', 'Web v{version}', { version: MuneaVersion.current })
+        : '';
     }
   } catch (e) {}
   window.addEventListener('munea:medication-change', handleMedicationChange);
@@ -7960,12 +8106,24 @@ function init() {
   function updateWalkLabels() {
     paintRange($('#walkGoal')); paintRange($('#walkDays')); paintRange($('#quizN'));
     const g = +($('#walkGoal') ? $('#walkGoal').value : 30000);
-    if ($('#walkGoalVal')) $('#walkGoalVal').textContent = g.toLocaleString() + ' 步';
+    if ($('#walkGoalVal')) $('#walkGoalVal').textContent = muneaT(
+      'legacyUi.activityGoalValue',
+      '{steps} steps',
+      { steps: new Intl.NumberFormat(muneaLocale()).format(g) },
+    );
     const n = $$('#inviteList .iv.on').length || 1;
     const d = +($('#walkDays') ? $('#walkDays').value : 7);
     if ($('#walkDaysVal')) $('#walkDaysVal').textContent = d + ' 天';
     const per = Math.max(100, Math.round(g / (n * d) / 100) * 100);
-    if ($('#goalHint')) $('#goalHint').textContent = n + ' 人一起走 ' + d + ' 天 · 平均每人每天約 ' + per.toLocaleString() + ' 步';
+    if ($('#goalHint')) $('#goalHint').textContent = muneaT(
+      'legacyUi.activityGoalHint',
+      '{people} people over {days} days · About {steps} steps per person each day',
+      {
+        people: new Intl.NumberFormat(muneaLocale()).format(n),
+        days: new Intl.NumberFormat(muneaLocale()).format(d),
+        steps: new Intl.NumberFormat(muneaLocale()).format(per),
+      },
+    );
   }
   function recalcWalk(reset) {
     const slider = $('#walkGoal');
@@ -8993,6 +9151,7 @@ document.addEventListener('DOMContentLoaded', init);
 function refreshLocalizedDynamicUi() {
   if (document.readyState === 'loading') return;
   try { if (window.MuneaI18n) window.MuneaI18n.apply(); } catch (e) {}
+  try { localizeLegacyStaticCopy(); } catch (e) {}
   try { renderCareCarousel(); } catch (e) {}
   try { syncCompanionUI(); } catch (e) {}
   try { renderHomeGreeting(); } catch (e) {}
@@ -9015,6 +9174,7 @@ function refreshLocalizedDynamicUi() {
   try { applyTaskAccessibilityLabels(); } catch (e) {}
   try { localizeChatControls(); } catch (e) {}
   try { localizeMedicationSurfaces(); } catch (e) {}
+  try { localizeCanonicalLegacyPanels(); } catch (e) {}
 }
 window.addEventListener('munea:locale-ready', refreshLocalizedDynamicUi);
 window.addEventListener('munea:locale-change', () => {

@@ -1158,7 +1158,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-price { white-space: nowrap; color: var(--teal-dd); font-weight: 700; font-size: 20px; }
 .plan-price small { font-size: 13px; font-weight: 600; color: var(--muted); }
 .plan-actions { display: flex; gap: 10px; margin-top: 14px; }
-.plan-actions .plan-btn { flex: 1; white-space: nowrap; min-height: 48px; }
+.plan-actions .plan-btn { flex: 1 1 0; min-width: 0; white-space: normal; min-height: 48px; padding-inline: 12px; }
 #topUpBtn.plan-btn { background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); }
 
 /* 沒有全身圖的角色（方形素材）：滿版聰明裁切、臉保持偏上 */
@@ -1478,8 +1478,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .fc-role.pay { color: var(--teal-dd); background: var(--mint); }
 
 /* 加值點數 */
-.tu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tu-card { border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 16px 10px; text-align: center; cursor: pointer; font-family: var(--sans); }
+.tu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tu-card { min-width: 0; border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 16px 10px; text-align: center; cursor: pointer; font-family: var(--sans); }
 .tu-card b { display: block; font-family: var(--display); font-size: 20px; color: var(--ink); }
 .tu-card span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
 .tu-card.on { border-color: var(--teal); background: var(--mint); }
@@ -1729,7 +1729,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .set-row .sr-arrow { white-space: nowrap; flex-shrink: 0; }
 /* 加值卡三行各自單行 */
 .tu-card { display: flex; flex-direction: column; gap: 3px; align-items: center; }
-.tu-card b, .tu-card .tu-price, .tu-card .tu-min { white-space: nowrap; }
+.tu-card b, .tu-card .tu-price, .tu-card .tu-min { white-space: normal; overflow-wrap: anywhere; }
 .tu-card .tu-price { font-size: 15px; font-weight: 700; color: var(--ink); }
 .tu-card .tu-min { font-size: 12.5px; color: var(--muted); }
 /* 字級選單 */
