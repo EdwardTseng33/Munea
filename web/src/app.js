@@ -1923,10 +1923,37 @@ const Avatar = {
         }
       });
       const o = await this.pc.createOffer(); await this.pc.setLocalDescription(o);
-      await new Promise(res => {  // 等收集完連線候選再送（demo-live 同款）
+      // 2026-07-29 接通提速第 2 刀：舊版「等收集完全部連線候選再送（demo-live 同款）、
+      // 上限 3 秒」——名單裡掛著多台中繼站（含公用備援），行動網路上幾乎每次都等好等滿，
+      // 是真機 trail「5.9 秒影像軌才到」的最大單一成分。改成夠用就先送：
+      // 湊到第一條「走得出去」的路線（經 STUN 或中繼）＋0.8 秒緩衝就出發；
+      // 3 秒上限與收集完成照舊。量測記號 avatar_ice_gather 上真機直接看省多少。
+      await new Promise(res => {
         if (this.pc.iceGatheringState === 'complete') return res();
-        const chk = () => { if (this.pc.iceGatheringState === 'complete') { this.pc.removeEventListener('icegatheringstatechange', chk); res(); } };
-        this.pc.addEventListener('icegatheringstatechange', chk); setTimeout(res, 3000);
+        const gatherT0 = performance.now();
+        let usable = 0, settled = false;
+        const done = () => {
+          if (settled) return; settled = true;
+          try { this.pc.removeEventListener('icegatheringstatechange', chk); } catch (e2) {}
+          try { this.pc.removeEventListener('icecandidate', onCand); } catch (e2) {}
+          clearInterval(tick); clearTimeout(cap);
+          try { voiceCallMark('avatar_ice_gather', 'pass', { ms: Math.round(performance.now() - gatherT0), usable }); } catch (e2) {}
+          res();
+        };
+        const maybe = () => {
+          if (this.pc.iceGatheringState === 'complete') return done();
+          if (usable > 0 && (performance.now() - gatherT0) >= 800) return done();
+        };
+        const chk = () => maybe();
+        const onCand = (e) => {
+          // host 候選只在同網段有用；能出門的是經 STUN（srflx）或中繼（relay）那幾條
+          if (e && e.candidate && /typ (srflx|relay)/.test(String(e.candidate.candidate || ''))) usable += 1;
+          maybe();
+        };
+        this.pc.addEventListener('icegatheringstatechange', chk);
+        this.pc.addEventListener('icecandidate', onCand);
+        const tick = setInterval(maybe, 200);
+        const cap = setTimeout(done, 3000);
       });
       // 帶上目前選的角色（六角色 · 7/9）；角色不吃擬真引擎時服務會說不行 → 自動退回 2D 動畫
       // FlashHead 測試模式不帶角色（它目前只有測試臉、帶中文名會被拒連）——擬真女底圖入庫後再帶
