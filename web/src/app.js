@@ -2403,6 +2403,60 @@ const LiveVoice = {
     try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_greet' }); } catch (e) {}
     return { mode, verified: stable, receiverAttached };
   },
+  // ── 同線聲音「中途斷續」監測＋自動退回（2026-07-29 · 穩定度）──
+  // 背景：同線模式下聲音繞三趟（伺服器→手機→臉機→WebRTC回手機），只要上行或臉機
+  // 慢一下，使用者聽到的就是「卡一下／吃掉一個字」。而既有保底只在「開頭 3 秒完全沒聲」
+  // 才退回本地播放——只擋「死掉」、沒擋「斷續」，跟伺服器端 7/29 修掉的是同一類設計漏洞。
+  // 真機數據佐證（正式庫 sameline_check）：Edward 7/28 的通話全部走同線（result: kept），
+  // 但通話中段沒有任何量測——他回報的卡卡正好發生在沒人看的地方。
+  // 判法：每 500ms 問一次連線「聲音位元組有沒有在增加」（getStats，iPhone 讀得到；
+  // 不用音量量表——iPhone Web Audio 讀遠端串流恆為 0，7/12 已踩過）。
+  // 「她此刻應該在講話」（_playoutUntil 未到）而位元組不動連續兩拍＝一次斷續；
+  // 一通累積 2 次＝這條線不可靠，退回本地播放（聲音穩定優先，臉可能慢半拍——
+  // 跟伺服器端同一個取捨：長輩主要用聽的）。每次斷續都回報後台，之後不用截圖就有數據。
+  _sameLineFallBackNow(reason) {
+    this._sameLineFellBack = true;
+    // 退回本地播放的同時把同線那軌靜音——不然臉機晚點醒過來、兩邊一起出聲＝回答重疊（7/11 真機教訓）
+    try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
+    try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
+    try { Avatar._diagNote('同線退回本地(' + reason + ')', true); } catch (e) {}
+    try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
+    try { trackProductEvent('sameline_fellback', { reason: String(reason || '') }); } catch (e) {}
+  },
+  _armSameLineStutterWatch() {
+    if (this._slStutterT) return;
+    this._slPrevBytes = -1; this._slStallStreak = 0; this._slStalls = 0;
+    this._slStutterT = setInterval(async () => {
+      if (!this.on || !this._sameLine || this._sameLineFellBack === true) {
+        clearInterval(this._slStutterT); this._slStutterT = null; return;
+      }
+      const now = performance.now();
+      // 只在「她此刻應該正在講話」的時間窗內量；剩不到 400ms 的句尾不算（自然收尾）
+      if (!this._playoutUntil || now > this._playoutUntil - 400) {
+        this._slStallStreak = 0; this._slPrevBytes = -1; return;
+      }
+      let bytes = -1;
+      try {
+        const rcv = Avatar._faceAudReceiver;
+        if (rcv && rcv.getStats) {
+          const st = await rcv.getStats();
+          st.forEach(r => { if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio') && typeof r.bytesReceived === 'number') bytes = r.bytesReceived; });
+        }
+      } catch (e) {}
+      if (bytes < 0) return;   // 讀不到就不判（寧可漏一拍、不誤退）
+      if (this._slPrevBytes >= 0 && (bytes - this._slPrevBytes) < 200) {
+        this._slStallStreak += 1;
+        if (this._slStallStreak === 2) {   // 連續兩拍（約 1 秒）沒聲進來、而她應該在講＝一次斷續
+          this._slStalls += 1;
+          try { trackProductEvent('sameline_audio_stall', { count: this._slStalls, turn: this._playbackTurn || 0 }); } catch (e) {}
+          if (this._slStalls >= 2) this._sameLineFallBackNow('midcall_stutter');
+        }
+      } else {
+        this._slStallStreak = 0;
+      }
+      this._slPrevBytes = bytes;
+    }, 500);
+  },
   _notePlayout(byteLength) {
     const now = performance.now();
     const useSameLine = this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true;
@@ -2824,6 +2878,7 @@ const LiveVoice = {
               }
             }, 3000);
           }
+          this._armSameLineStutterWatch();   // 中途斷續監測（2026-07-29）：開頭 3 秒查只擋「死掉」，這支擋「斷續」
           this._toListening();                                    // 依實際應播完時間換手，不再用「資料停止到貨」誤判句尾
           return;                                                  // 不本地排程（聲音由 faceAud 出）
         }
@@ -2879,6 +2934,7 @@ const LiveVoice = {
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
+    try { clearInterval(this._slStutterT); } catch (e) {} this._slStutterT = null;   // 中途斷續監測一起收（2026-07-29）
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}

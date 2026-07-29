@@ -148,19 +148,30 @@ expect((avatarServer.includes('OPENING_PREBUFFER_S = 1.0') ||
   'the first Avatar turn does not get a one-second post-PCM warmup buffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
+// 2026-07-29 更新：原版寫死「live_config 不准出現內建 Google 搜尋」——那是 7/17
+// 「查詢一律走我們代查」時代的規定。Edward 7/28 驗測後拍板改走「她自己查」（native，
+// 掛 Gemini 內建搜尋；實測第一聲 5.1 秒→1.3 秒、過場句三嘴變一嘴，PR #274）。
+// 這條政策的「精神」不變、只換形狀：查詢能力必須有開關控管（native_search_enabled /
+// live_lookup_enabled 兩道門、demo 間一律不給），不准無條件常開。
 const liveConfigStart = voiceServer.indexOf('def live_config(');
 const liveConfigEnd = voiceServer.indexOf('async def search_current_information(', liveConfigStart + 1);
 const liveConfig = voiceServer.slice(liveConfigStart, liveConfigEnd);
 expect(liveConfigStart >= 0 && liveConfigEnd > liveConfigStart &&
   liveConfig.includes('tools = []') &&
-  liveConfig.includes('if live_lookup_enabled():') &&
+  liveConfig.includes('if native_search_enabled() and not demo_mode:') &&
+  liveConfig.includes('tools.append(types.Tool(google_search=types.GoogleSearch()))') &&
+  liveConfig.includes('elif live_lookup_enabled():') &&
   liveConfig.includes('tools.append(_LIVE_LOOKUP_TOOL)') &&
   liveConfig.includes('tools=tools') &&
-  !liveConfig.includes('google_search=types.GoogleSearch()') &&
   voiceServer.includes('name=live_lookup.TOOL_NAME') &&
   voiceServer.includes('if function_name == live_lookup.TOOL_NAME') &&
   voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
   'current-information lookup can still bypass the feature-gated controlled Voice tool path');
+// 預設仍是關的：兩個環境變數都沒設時，voice_search_mode() 落到 off（引擎測試
+// test_location_not_a_topic.py 的 test_live_lookup_off_by_default 驗行為，這裡驗結構）。
+expect(voiceServer.includes('def voice_search_mode()') &&
+  voiceServer.includes('return SEARCH_MODE_NATIVE if os.environ.get("MUNEA_VOICE_LIVE_LOOKUP", "0").strip() == "1" else SEARCH_MODE_OFF'),
+  'voice search no longer defaults to off when no env flag is set');
 const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
 // 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，呼叫點仍必須在
 // 真的打網路查詢之前。
