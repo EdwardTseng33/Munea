@@ -14,6 +14,7 @@ docs/research/衛教題庫-21題完整劇本v1-2026-07-24.md，紅旗逐條回�
 import json
 import os
 
+import health_followup
 import health_selector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -83,6 +84,15 @@ def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None
         if tid in health_selector.TOPICS:
             picked = health_selector.render(tid, text, profile, hour)
             if picked:
+                # 效果飛輪：把這次推了什麼記下來，幾天後她才問得出「後來有沒有好一點」。
+                # 記不起來也不能擋住對話——這只是加分項，不是必要路徑。
+                pid = (profile or {}).get("personId")
+                if pid:
+                    try:
+                        chosen = health_selector.pick(tid, text, profile, hour)["solutions"]
+                        health_followup.record_recommendation(pid, tid, chosen)
+                    except Exception:
+                        pass
                 return picked
     parts = []
     for tid in ids:

@@ -93,6 +93,8 @@ def _profile_flags(profile):
         "constraints": [str(c) for c in (p.get("constraints") or [])], # 輪班工作、照顧者夜間需起身…
         "lowMobility": bool(p.get("lowMobility")),
         "pillAverse": bool(p.get("pillAverse")),
+        # 這個人試過什麼、結果如何（health_followup.outcomes_for 給的）
+        "outcomes": p.get("outcomes") or {},
     }
 
 
@@ -149,6 +151,17 @@ def _score(sol, flags, urgent, user_text):
 
     # 證據強度：同分時已證實的排前面
     score += {"proven": 0.8, "emerging": 0.3, "traditional": 0.0}.get(sol.get("maturity"), 0)
+
+    # 效果飛輪（2026-07-29）：上次推過、他回報過結果的，這次要不一樣——
+    # 有效的先講（他信得過、也真的幫到他）、說沒效的別再端出來（再講一次很傷信任）、
+    # 還沒試的輕輕加一點（可以再提一次，但不要壓過新方案）。
+    outcome = (flags.get("outcomes") or {}).get(sol.get("id"))
+    if outcome == "worked":
+        score += 3.0
+    elif outcome == "no_effect":
+        score -= 8.0
+    elif outcome == "not_tried":
+        score += 0.5
     return score
 
 
