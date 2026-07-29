@@ -17,6 +17,21 @@ window.MuneaNotify = (function () {
     categories: { medication: true, clinic: true, family: true, safety: true }
   };
 
+  function t(key, fallback, values) {
+    return window.MuneaI18n
+      ? window.MuneaI18n.t(key, values || null, fallback)
+      : fallback;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Notify) || null;
   }
@@ -142,8 +157,13 @@ window.MuneaNotify = (function () {
 
   // 推播文字裡的時段顯示名（Edward 2026-07-29：不要寫飯前飯後、直接講餐別）。
   // 跟 app.js 的 MED_SLOT_LABEL 同一份意思；這支是獨立載入的小程式、不共用變數所以各留一份。
-  var SLOT_LABEL = { '早餐後': '早餐', '午餐後': '中餐', '晚餐後': '晚餐', '睡前': '睡前' };
-  function slotLabel(slot) { return SLOT_LABEL[slot] || slot; }
+  function slotLabel(slot) {
+    if (slot === '早餐後') return t('medication.slot.afterBreakfast', '早餐');
+    if (slot === '午餐後') return t('medication.slot.afterLunch', '中餐');
+    if (slot === '晚餐後') return t('medication.slot.afterDinner', '晚餐');
+    if (slot === '睡前') return t('medication.slot.bedtime', '睡前');
+    return slot;
+  }
 
   function slotTime(slot) {
     var map = { '早餐後': ['b', 30], '午餐後': ['l', 30], '晚餐後': ['d', 30], '睡前': ['s', -30] };
@@ -190,8 +210,8 @@ window.MuneaNotify = (function () {
     return {
       title: detailTitle,
       body: detailBody,
-      publicTitle: '沐寧提醒',
-      publicBody: '你的健康提醒到了，解鎖後查看。',
+      publicTitle: t('notification.publicTitle', '沐寧提醒'),
+      publicBody: t('notification.publicBody', '你的健康提醒到了，解鎖後查看。'),
       eventType: eventType,
       resourceId: String(resourceId || ''),
       deepLink: deepLink,
@@ -217,7 +237,7 @@ window.MuneaNotify = (function () {
         var slot = raw.trim();
         var timing = slotTime(slot);
         if (!slot || !timing) return;
-        var name = String(med.name || '藥').split(/\s+/)[0];
+        var name = String(med.name || t('medication.genericName', '藥')).split(/\s+/)[0];
         if (!end) {
           (recurring[slot] = recurring[slot] || { time: timing, names: [] }).names.push(name);
           return;
@@ -241,7 +261,11 @@ window.MuneaNotify = (function () {
         minute: group.time.minute,
         repeats: true
       }, privacyFields(
-        '該吃藥了', slotLabel(slot) + '的藥：' + group.names.join('、') + '。吃完回沐寧打個勾。',
+        t('notification.medicationDueTitle', '該吃藥了'),
+        t('notification.medicationDueBody', '{slot}的藥：{medications}。吃完回沐寧打個勾。', {
+          slot: slotLabel(slot),
+          medications: group.names.join(t('common.listSeparator', '、'))
+        }),
         'medication_due', slot, 'munea://medications/' + encodeURIComponent(slot)
       )));
     });
@@ -253,7 +277,11 @@ window.MuneaNotify = (function () {
         hour: group.time.hour,
         minute: group.time.minute
       }, parts, privacyFields(
-        '該吃藥了', slotLabel(group.slot) + '的藥：' + group.names.join('、') + '。吃完回沐寧打個勾。',
+        t('notification.medicationDueTitle', '該吃藥了'),
+        t('notification.medicationDueBody', '{slot}的藥：{medications}。吃完回沐寧打個勾。', {
+          slot: slotLabel(group.slot),
+          medications: group.names.join(t('common.listSeparator', '、'))
+        }),
         'medication_due', localDateKey(group.date) + '|' + group.slot,
         'munea://medications/' + localDateKey(group.date) + '/' + encodeURIComponent(group.slot)
       )));
@@ -274,7 +302,10 @@ window.MuneaNotify = (function () {
         id: 'act-' + activity.id,
         hour: remindAt.getHours(), minute: remindAt.getMinutes()
       }, dateParts(remindAt), privacyFields(
-        (activity.title || '家庭聚會') + '快到了', '再 30 分鐘，別忘了喔。',
+        t('notification.familyActivityTitle', '{title}快到了', {
+          title: activity.title || t('notification.familyDefaultTitle', '家庭聚會')
+        }),
+        t('notification.familyActivityBody', '再 30 分鐘，別忘了喔。'),
         'family_activity', activity.id, 'munea://family/activities/' + activity.id
       )));
     });
@@ -289,7 +320,10 @@ window.MuneaNotify = (function () {
         id: 'visit-' + visit.id,
         hour: remindAt.getHours(), minute: remindAt.getMinutes()
       }, dateParts(remindAt), privacyFields(
-        (visit.title || '回診') + '提醒', '等等 ' + (visit.time || '') + '記得帶健保卡。',
+        t('notification.clinicTitle', '{title}提醒', {
+          title: visit.title || t('notification.clinicDefaultTitle', '回診')
+        }),
+        t('notification.clinicBody', '等等 {time} 記得帶健保卡。', { time: visit.time || '' }),
         'clinic_upcoming', visit.id, 'munea://visits/' + visit.id
       )));
     });
@@ -344,12 +378,20 @@ window.MuneaNotify = (function () {
       row.className = 'set-row';
       row.id = 'notificationCenterRow';
       row.style.cursor = 'pointer';
-      row.innerHTML = settingsIcon() + '<span class="sr-main">通知中心<small>用藥、看診、家人與安全通知</small></span><span class="sr-arrow"><b id="notificationCenterState"></b> ›</span>';
       anchor.parentNode.insertBefore(row, anchor);
+    }
+    row.innerHTML = settingsIcon()
+      + '<span class="sr-main">' + escapeHtml(t('notification.centerTitle', '通知中心'))
+      + '<small>' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒。'))
+      + '</small></span><span class="sr-arrow"><b id="notificationCenterState"></b> ›</span>';
+    if (row.dataset.notificationBound !== '1') {
+      row.dataset.notificationBound = '1';
       row.addEventListener('click', function () { void openNotificationSettings(); });
     }
     var state = document.getElementById('notificationCenterState');
-    if (state) state.textContent = notificationMasterOn() ? '已開啟' : '已關閉';
+    if (state) state.textContent = notificationMasterOn()
+      ? t('notification.pushOn', '重要提醒會送到這支手機')
+      : t('notification.pushOff', '開啟後才會收到提醒');
   }
 
   // 通知中心＝全螢幕子頁（7/16 Edward：內容多、不做彈窗）；沿用條款/方案同一套 reader-page 版型
@@ -360,18 +402,24 @@ window.MuneaNotify = (function () {
     page.className = 'reader-page notification-page';
     page.id = 'notificationSettingsPage';
     page.setAttribute('aria-hidden', 'true');
-    page.innerHTML = '<div class="nav-head"><button class="nav-back" id="notificationSettingsBack" type="button" aria-label="返回設定"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">通知中心</span><span></span></div>' +
-      '<div class="reader-scroll notification-page-scroll"><p class="notification-page-sub">選擇哪些事情要提醒你</p>' +
+    var centerTitle = escapeHtml(t('notification.centerTitle', '通知中心'));
+    var pushTitle = escapeHtml(t('notification.push', 'App 推播通知'));
+    var medicationTitle = escapeHtml(t('notification.medication', '用藥提醒'));
+    var clinicTitle = escapeHtml(t('notification.clinic', '看診提醒'));
+    var familyTitle = escapeHtml(t('notification.family', '家人消息'));
+    var safetyTitle = escapeHtml(t('notification.safety', '安全通知'));
+    page.innerHTML = '<div class="nav-head"><button class="nav-back" id="notificationSettingsBack" type="button" aria-label="' + escapeHtml(t('common.close', '關閉')) + '"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">' + centerTitle + '</span><span></span></div>' +
+      '<div class="reader-scroll notification-page-scroll"><p class="notification-page-sub">' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒。')) + '</p>' +
       '<div class="notification-setting-list">' +
-      '<div class="notification-setting-row notification-master-row"><span><b>App 推播通知</b><small id="notificationPermissionMessage">開啟後才會收到提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="App 推播通知"><i></i></button></div>' +
-      '<p class="notification-setting-heading">提醒類型</p>' +
-      '<div class="notification-setting-row"><span><b>用藥提醒</b><small>到時間提醒你查看與確認</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="medication" aria-label="用藥提醒"><i></i></button></div>' +
-      '<div class="notification-setting-row"><span><b>看診提醒</b><small>回診與看診行程提醒</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="clinic" aria-label="看診提醒"><i></i></button></div>' +
-      '<div class="notification-setting-row"><span><b>家人消息</b><small>家人傳話、邀請與家庭活動</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="family" aria-label="家人消息"><i></i></button></div>' +
-      '<div class="notification-setting-row"><span><b>安全通知</b><small>只控制你自己手機；家人守護通知不受影響</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="safety" aria-label="安全通知"><i></i></button></div>' +
-      '<div class="notification-setting-row notification-safety-contacts" id="notificationSafetyContacts" role="button" tabindex="0"><span><b>安全通知的通知對象</b><small id="notificationSafetyContactsState">還沒設定緊急聯絡人</small></span><span class="notification-row-arrow">›</span></div>' +
+      '<div class="notification-setting-row notification-master-row"><span><b>' + pushTitle + '</b><small id="notificationPermissionMessage">' + escapeHtml(t('notification.pushOff', '開啟後才會收到提醒')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="' + pushTitle + '"><i></i></button></div>' +
+      '<p class="notification-setting-heading">' + escapeHtml(t('notification.reminderTypes', '提醒類型')) + '</p>' +
+      '<div class="notification-setting-row"><span><b>' + medicationTitle + '</b><small>' + escapeHtml(t('settings.medicationRemindersSubtitle', '到時間通知你，開啟 App 可查看與確認')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="medication" aria-label="' + medicationTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>' + clinicTitle + '</b><small>' + escapeHtml(t('settings.appointmentRemindersSubtitle', '回診前一天提醒你')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="clinic" aria-label="' + clinicTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>' + familyTitle + '</b></span><button class="notification-switch" type="button" role="switch" data-notification-setting="family" aria-label="' + familyTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row"><span><b>' + safetyTitle + '</b><small>' + escapeHtml(t('settings.safetyNotificationsSubtitle', '同步資料需要留意時，通知你選定的家人。')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="safety" aria-label="' + safetyTitle + '"><i></i></button></div>' +
+      '<div class="notification-setting-row notification-safety-contacts" id="notificationSafetyContacts" role="button" tabindex="0"><span><b>' + escapeHtml(t('notification.safetyRecipients', '安全通知的通知對象')) + '</b><small id="notificationSafetyContactsState">' + escapeHtml(t('notification.noContacts', '還沒設定緊急聯絡人')) + '</small></span><span class="notification-row-arrow">›</span></div>' +
       '</div>' +
-      '<p class="notification-privacy-note">鎖定畫面不顯示藥名、健康數值或家人訊息內容。</p>' +
+      '<p class="notification-privacy-note">' + escapeHtml(t('notification.privacy', '鎖定畫面不顯示藥名、健康數值或家人訊息內容。')) + '</p>' +
       '<p class="notification-save-state" id="notificationSaveState" aria-live="polite"></p></div>';
     document.body.appendChild(page);
     page.querySelector('#notificationSettingsBack').addEventListener('click', closeNotificationSettings);
@@ -418,13 +466,17 @@ window.MuneaNotify = (function () {
     var permissionMessage = page.querySelector('#notificationPermissionMessage');
     if (permissionMessage) {
       permissionMessage.textContent = _permission.status === 'denied'
-        ? '已被 iPhone 關閉，點開關前往系統設定；回來會自動接上'
-        : (masterOn ? '重要提醒會送到這支手機' : '開啟時才會詢問 iPhone 通知權限');
+        ? t('notification.denied', '通知已被 iPhone 設定關閉。請開啟設定後再試一次。')
+        : (masterOn
+          ? t('notification.pushOn', '重要提醒會送到這支手機')
+          : t('notification.permissionPrompt', '開啟時才會詢問 iPhone 通知權限'));
     }
     var contactsState = page.querySelector('#notificationSafetyContactsState');
     if (contactsState) {
       var names = safetyContactNames();
-      contactsState.textContent = names.length ? '會通知：' + names.join('、') : '還沒設定緊急聯絡人';
+      contactsState.textContent = names.length
+        ? names.join(' · ')
+        : t('notification.noContacts', '還沒設定緊急聯絡人');
     }
   }
 
@@ -475,7 +527,9 @@ window.MuneaNotify = (function () {
         if (registration && registration.token) await registerToken(registration);
       } catch (e) {}
     }
-    if (message) message.textContent = saved.synced ? '通知已開啟' : '這支手機已開啟；雲端尚未同步';
+    if (message) message.textContent = saved.synced
+      ? t('notification.enabled', '通知已開啟')
+      : t('notification.localEnabledCloudPending', '這支手機已開啟；雲端尚未同步');
     return saved;
   }
 
@@ -492,7 +546,10 @@ window.MuneaNotify = (function () {
           if (!_permission.granted && _permission.status !== 'denied') await requestPermission();
           if (!_permission.granted) {
             setEnableIntent();
-            if (message) message.textContent = '請在 iPhone 設定中允許沐寧通知；回到沐寧會自動開啟';
+            if (message) message.textContent = t(
+              'notification.allowInSettings',
+              '請在 iPhone 設定中允許沐寧通知；回到沐寧會自動開啟'
+            );
             await window.MuneaNotify.openSettings();
             return;
           }
@@ -501,14 +558,18 @@ window.MuneaNotify = (function () {
           clearEnableIntent();
           var saved = await saveNotificationSettings({ pushEnabled: false });
           var deviceSynced = await disableCurrentDevice();
-          if (message) message.textContent = saved.synced && deviceSynced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
+          if (message) message.textContent = saved.synced && deviceSynced
+            ? t('notification.updated', '設定已更新')
+            : t('notification.localUpdatedCloudPending', '這支手機已更新；雲端尚未同步');
         }
       } else {
         if (!notificationMasterOn() || !Object.prototype.hasOwnProperty.call(_notificationSettings.categories, key)) return;
         var categories = {};
         categories[key] = !_notificationSettings.categories[key];
         var categorySaved = await saveNotificationSettings({ categories: categories });
-        if (message) message.textContent = categorySaved.synced ? '設定已更新' : '這支手機已更新；雲端尚未同步';
+        if (message) message.textContent = categorySaved.synced
+          ? t('notification.updated', '設定已更新')
+          : t('notification.localUpdatedCloudPending', '這支手機已更新；雲端尚未同步');
       }
       sync();
     } finally {
@@ -581,18 +642,23 @@ window.MuneaNotify = (function () {
 
   function notificationTypeLabel(type) {
     var labels = {
-      medication_due: '用藥提醒', medication_missed: '漏服提醒', clinic_upcoming: '看診提醒',
-      family_relay: '家人傳話', family_invitation: '家庭邀請', family_activity: '家庭活動',
-      health_alert: '健康通知'
+      medication_due: t('notification.medication', '用藥提醒'),
+      medication_missed: t('notification.medicationMissed', '漏服提醒'),
+      clinic_upcoming: t('notification.clinic', '看診提醒'),
+      family_relay: t('notification.familyRelay', '家人傳話'),
+      family_invitation: t('notification.familyInvitation', '家庭邀請'),
+      family_activity: t('notification.familyActivity', '家庭活動'),
+      health_alert: t('notification.health', '健康通知')
     };
-    return labels[type] || '照護通知';
+    return labels[type] || t('notification.care', '照護通知');
   }
 
   function notificationTimeLabel(value) {
     if (!value) return '';
     var date = new Date(value);
     if (isNaN(date)) return '';
-    try { return new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date); }
+    var locale = (window.MuneaI18n && window.MuneaI18n.current()) || 'zh-TW';
+    try { return new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date); }
     catch (e) { return date.toLocaleString(); }
   }
 
@@ -603,7 +669,12 @@ window.MuneaNotify = (function () {
     mask.className = 'modal-mask';
     mask.id = 'notificationInboxModal';
     mask.setAttribute('aria-hidden', 'true');
-    mask.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationInboxTitle"><div class="modal-grab"></div><div class="auth-modal-head"><div><h2 id="notificationInboxTitle">通知中心</h2><p class="modal-sub">推播沒有送達時，重要事件仍會保留在這裡。</p></div><button class="auth-close" id="notificationInboxClose" type="button" aria-label="關閉">×</button></div><div id="notificationInboxList" style="display:grid;gap:10px;padding-bottom:12px"></div></div>';
+    mask.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationInboxTitle"><div class="modal-grab"></div><div class="auth-modal-head"><div><h2 id="notificationInboxTitle">'
+      + escapeHtml(t('notification.centerTitle', '通知中心'))
+      + '</h2><p class="modal-sub">' + escapeHtml(t('notification.inboxSubtitle', '推播沒有送達時，重要事件仍會保留在這裡。'))
+      + '</p></div><button class="auth-close" id="notificationInboxClose" type="button" aria-label="'
+      + escapeHtml(t('notification.close', '關閉通知中心'))
+      + '">×</button></div><div id="notificationInboxList" style="display:grid;gap:10px;padding-bottom:12px"></div></div>';
     document.body.appendChild(mask);
     function close() {
       mask.classList.remove('show');
@@ -629,7 +700,7 @@ window.MuneaNotify = (function () {
     head.appendChild(time);
     var title = document.createElement('strong');
     title.style.fontSize = '16px';
-    title.textContent = item.title || '你的健康提醒到了';
+    title.textContent = item.title || t('notification.defaultTitle', '你的照護提醒到了');
     var body = document.createElement('span');
     body.style.cssText = 'font-size:14px;line-height:1.5;color:var(--ink-2)';
     body.textContent = item.body || '';
@@ -658,15 +729,15 @@ window.MuneaNotify = (function () {
     var list = mask.querySelector('#notificationInboxList');
     mask.classList.add('show');
     mask.setAttribute('aria-hidden', 'false');
-    list.textContent = '正在載入通知…';
+    list.textContent = t('notification.loading', '正在載入通知…');
     var result = await api('/notifications', { action: 'list', limit: 100 });
     list.textContent = '';
     if (!result || !Array.isArray(result.notifications)) {
-      list.textContent = '請先登入，或稍後再試一次。';
+      list.textContent = t('notification.signInRequired', '請先登入，或稍後再試一次。');
       return;
     }
     if (!result.notifications.length) {
-      list.textContent = '目前沒有通知。新的提醒與家人消息會保留在這裡。';
+      list.textContent = t('notification.emptyDetail', '目前沒有通知。新的提醒與家人消息會保留在這裡。');
       return;
     }
     result.notifications.forEach(function (item) { list.appendChild(notificationCard(item)); });
@@ -781,6 +852,10 @@ window.MuneaNotify = (function () {
       var badge = document.getElementById('notificationUnreadCount');
       if (badge) badge.textContent = '';
     }
+  });
+  window.addEventListener('munea:locale-ready', function () {
+    renderSettingsRows();
+    renderNotificationSettings();
   });
   function bootWhenReady() {
     restoreNotificationSettings();

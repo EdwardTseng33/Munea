@@ -1,0 +1,9 @@
+{
+  "schema": "munea.app-store-connect-i18n-audit-requirements.v1",
+  "evidencePath": "docs/qa/i18n/app-store-connect-audit.json",
+  "maximumAgeHours": 72,
+  "captureMethod": "app-store-connect-api-read-only",
+  "bundleIdentifier": "net.munea.app",
+  "containsSecrets": false,
+  "productionWritesPerformed": false
+}

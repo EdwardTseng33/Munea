@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "requiredApprovals": [
+    "catalogCoverage",
+    "nativeLanguageReview",
+    "visualQA",
+    "voiceE2E",
+    "regionalSafetyAndLegal",
+    "appStoreMetadata",
+    "inAppPurchaseLocalization",
+    "marketAvailability"
+  ],
+  "locales": {
+    "zh-TW": {
+      "contentVariant": "zh-Hant-TW",
+      "speechVariantPolicy": "cmn-TW",
+      "catalogCoverage": "approved",
+      "nativeLanguageReview": "approved",
+      "visualQA": "approved",
+      "voiceE2E": "approved",
+      "regionalSafetyAndLegal": "approved",
+      "appStoreMetadata": "approved",
+      "inAppPurchaseLocalization": "approved",
+      "marketAvailability": "approved"
+    },
+    "en": {
+      "contentVariant": "international-English",
+      "speechVariantPolicy": "country-dependent",
+      "catalogCoverage": "approved",
+      "nativeLanguageReview": "pending",
+      "visualQA": "pending",
+      "voiceE2E": "pending",
+      "regionalSafetyAndLegal": "pending",
+      "appStoreMetadata": "pending",
+      "inAppPurchaseLocalization": "pending",
+      "marketAvailability": "pending"
+    },
+    "ja": {
+      "contentVariant": "ja-JP",
+      "speechVariantPolicy": "ja-JP",
+      "catalogCoverage": "approved",
+      "nativeLanguageReview": "pending",
+      "visualQA": "pending",
+      "voiceE2E": "pending",
+      "regionalSafetyAndLegal": "pending",
+      "appStoreMetadata": "pending",
+      "inAppPurchaseLocalization": "pending",
+      "marketAvailability": "pending"
+    },
+    "es": {
+      "contentVariant": "neutral-international-Spanish",
+      "speechVariantPolicy": "country-dependent",
+      "catalogCoverage": "approved",
+      "nativeLanguageReview": "pending",
+      "visualQA": "pending",
+      "voiceE2E": "pending",
+      "regionalSafetyAndLegal": "pending",
+      "appStoreMetadata": "pending",
+      "inAppPurchaseLocalization": "pending",
+      "marketAvailability": "pending"
+    }
+  }
+}

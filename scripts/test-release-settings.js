@@ -125,6 +125,11 @@ const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0
 expect(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'auth sheet still opens the keyboard automatically');
 
 expect(swiftStore.includes('CAPPluginMethod(name: "manageSubscriptions"'), 'native subscription management method is not registered');
+expect(swiftStore.includes('CAPPluginMethod(name: "getProducts"'), 'native localized StoreKit product query is not registered');
+expect(swiftStore.includes('"displayPrice": $0.displayPrice'), 'native StoreKit bridge must return localized displayPrice');
+expect(store.includes('getProducts: getProducts'), 'browser Store bridge must expose localized StoreKit products');
+expect(store.includes('PRODUCT_CACHE') && store.includes('displayPrice: String(item.displayPrice'), 'App UI must receive and cache StoreKit display prices');
+expect(!/displayPrice:\s*['"][^'"]*(?:NT\$|US\$|[$€¥￥])/.test(store), 'Store bridge must not hard-code a localized price');
 expect(swiftStore.includes('AppStore.showManageSubscriptions'), 'native subscription management sheet is not implemented');
 expect(!reviewNotes.includes('Guest accounts include'), 'review notes still claim a guest trial');
 expect(reviewNotes.includes('Voice chat and\n   private account data require sign-in'), 'review notes do not explain the sign-in gate');
@@ -136,7 +141,11 @@ expect(auth.includes("nativePlugin('GoogleSignIn')"), 'native Google plugin brid
 expect(auth.includes("provider: 'google'") && auth.includes('google_identity_token_missing'), 'native Google ID token is not exchanged with Supabase');
 expect(auth.includes('signInWithBrowserOAuth') && auth.includes("fallbackFrom: nativeCode"), 'native Google failure does not fall back to browser OAuth');
 expect(app.includes("auth_sign_in_fallback_started") && app.includes("auth_sign_in_failed"), 'Google sign-in fallback diagnostics are missing');
-expect(app.includes('Google 登入失敗（${code}）'), 'Google sign-in failure still hides the diagnostic code');
+expect(
+  app.includes("trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom })") &&
+  app.includes("setAuthMessageState('unavailable', 'error')"),
+  'localized Google sign-in failure does not retain the diagnostic code in telemetry'
+);
 expect(!app.includes('登入暫時無法啟動'), 'retired generic Google sign-in failure text remains in the App bundle');
 expect(auth.includes('signInWithIdToken'), 'native Apple ID token is not exchanged with Supabase');
 expect(infoPlist.includes('<string>munea</string>'), 'iOS OAuth callback URL scheme is missing');

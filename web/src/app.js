@@ -1,3 +1,6 @@
+import './i18n/legal-routing.js';
+import './i18n/medication-schedule.js';
+
 /* Munea 沐寧 — 原型互動
  * 落實 Claude Design「沐寧 沐寧 配色」+ Elfie 融入（安心存摺 / 今天一起完成 / 家人互動）
  * 標 [ENGINE] 處正式版接 castle-voice-engine（中文〔台灣〕優先、英文第二 + 三顆腦 + 擬真 avatar；台語先不承諾）。 */
@@ -6,7 +9,162 @@ const $  = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const muneaLocale = () => (window.MuneaI18n ? window.MuneaI18n.current() : 'zh-TW');
 const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.preferredLanguages() : ['zh-TW']);
-const muneaT = (key, fallback) => (window.MuneaI18n ? window.MuneaI18n.t(key, null, fallback) : fallback);
+const muneaT = (key, fallback, values = null) => (
+  window.MuneaI18n ? window.MuneaI18n.t(key, values, fallback) : fallback
+);
+const legacyStaticTextSources = new WeakMap();
+const legacyStaticAttributeSources = new WeakMap();
+function localizeLegacyStaticCopy() {
+  if (
+    !window.MuneaI18n
+    || typeof window.MuneaI18n.translateLegacySourceText !== 'function'
+    || muneaLocale() === 'zh-TW'
+  ) return;
+  const excludedParents = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'OPTION']);
+  for (const root of document.querySelectorAll('.screen, .modal-mask, .reader-page')) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const parent = node.parentElement;
+      if (
+        parent
+        && !excludedParents.has(parent.tagName)
+        && !parent.isContentEditable
+      ) {
+        if (!legacyStaticTextSources.has(node)) {
+          legacyStaticTextSources.set(node, node.nodeValue);
+        }
+        const source = legacyStaticTextSources.get(node);
+        const translated = window.MuneaI18n.translateLegacySourceText(source);
+        if (translated !== node.nodeValue) node.nodeValue = translated;
+      }
+      node = walker.nextNode();
+    }
+    for (const element of root.querySelectorAll('[placeholder], [aria-label], [title]')) {
+      let sources = legacyStaticAttributeSources.get(element);
+      if (!sources) {
+        sources = {};
+        legacyStaticAttributeSources.set(element, sources);
+      }
+      for (const attribute of ['placeholder', 'aria-label', 'title']) {
+        if (!element.hasAttribute(attribute)) continue;
+        if (!Object.hasOwn(sources, attribute)) sources[attribute] = element.getAttribute(attribute);
+        const translated = window.MuneaI18n.translateLegacySourceText(sources[attribute]);
+        if (translated !== element.getAttribute(attribute)) {
+          element.setAttribute(attribute, translated);
+        }
+      }
+    }
+  }
+}
+function localizeCanonicalLegacyPanels() {
+  if (muneaLocale() === 'zh-TW') return;
+  const setText = (selector, key, fallback, values = null) => {
+    const element = document.querySelector(selector);
+    if (element) element.textContent = muneaT(key, fallback, values);
+  };
+
+  setText('#reportModal h2', 'report.title', 'Health and daily summary');
+  setText('#reportModal > .modal > .modal-sub', 'report.empty', 'There is not enough information to create a summary yet.');
+  const reportCard = $('#reportModal .rpt-card');
+  if (reportCard) reportCard.style.display = 'none';
+  setText('#rptSendBtn', 'report.share', 'Share summary');
+  const reportFooter = $('#reportModal .modal-sub[style*="margin-top"]');
+  if (reportFooter) reportFooter.style.display = 'none';
+
+  setText('#historyModal h2', 'history.title', 'Past records');
+  setText('#historyModal > .modal > .modal-sub', 'history.subtitle', 'View monthly summaries or choose a date range.');
+  const historyMonths = $('#histMonths');
+  if (historyMonths && historyMonths.dataset.localizedEmpty !== '1') {
+    historyMonths.dataset.localizedEmpty = '1';
+    historyMonths.replaceChildren();
+    const empty = document.createElement('p');
+    empty.className = 'modal-sub';
+    empty.textContent = muneaT('history.empty', 'There are no records for this period.');
+    historyMonths.appendChild(empty);
+  }
+
+  const consentPairs = [
+    ['consent.cloudProcessingTitle', 'Voice and text are encrypted and sent to the cloud for processing', 'consent.cloudProcessingBody', 'They are used only to understand you and provide the service.'],
+    ['consent.summaryOnlyTitle', 'Only necessary conversation highlights are retained', 'consent.summaryOnlyBody', 'Original recordings are not stored.'],
+    ['consent.voicePurposeTitle', 'Your voice is used only to understand what you say', 'consent.voicePurposeBody', 'It is not used for identity recognition or unrelated purposes.'],
+    ['consent.profileCloudTitle', 'Profile information you provide is securely synced', 'consent.profileCloudBody', 'Your photo stays on this phone.'],
+  ];
+  $$('#consentSheet .consent-points li').forEach((item, index) => {
+    const pair = consentPairs[index];
+    if (!pair) return;
+    const title = item.querySelector('b');
+    const body = item.querySelector('small');
+    if (title) title.textContent = muneaT(pair[0], pair[1]);
+    if (body) body.textContent = muneaT(pair[2], pair[3]);
+  });
+  setText('#consentSheet .consent-note', 'consent.dataController', 'Munea manages this data. You can request access, correction, or deletion.');
+  setText('#consentAgree', 'consent.agree', 'I understand. Start talking');
+  setText('#consentDetail', 'consent.detail', 'Read the full privacy notice first');
+
+  setText('#subPlans > .sub-intro', 'subscription.benefitsIntro', 'Every paid plan includes');
+  const benefitKeys = [
+    ['subscription.benefitVoiceTitle', 'Natural voice companionship', 'subscription.benefitVoiceBody', 'Talk naturally in a familiar language.'],
+    ['subscription.benefitCareTitle', 'Everyday care', 'subscription.benefitCareBody', 'Companion reminders and daily records.'],
+    ['subscription.benefitFamilyTitle', 'Family care circle', 'subscription.benefitFamilyBody', 'Helps family members stay informed and connected.'],
+    ['subscription.benefitMemoryTitle', 'Continuing companion memory', 'subscription.benefitMemoryBody', 'Keeps important people and routines in context.'],
+  ];
+  $$('#subPlans .sub-value .sv-row').forEach((row, index) => {
+    const keys = benefitKeys[index];
+    if (!keys) return;
+    const title = row.querySelector('.sv-txt b');
+    const body = row.querySelector('.sv-txt small');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  setText('#subPlans .sub-sec-label', 'subscription.choosePlan', 'Choose a plan');
+  const cycleButtons = $$('#subCycle .scyc-btn');
+  if (cycleButtons[0]) cycleButtons[0].textContent = muneaT('subscription.billingMonthly', 'Monthly');
+  if (cycleButtons[1]) cycleButtons[1].textContent = muneaT('subscription.billingYearly', 'Yearly');
+  const creditRuleKeys = [
+    ['subscription.monthlyCreditsTitle', 'Monthly plan credits', 'subscription.monthlyCreditsBody', 'Issued again each billing period.'],
+    ['subscription.purchasedCreditsTitle', 'Purchased credits', 'subscription.purchasedCreditsBody', 'They do not expire.'],
+    ['subscription.deductionOrderTitle', 'Credit order', 'subscription.deductionOrderBody', 'Monthly credits are used before purchased credits.'],
+  ];
+  $$('#subPlans .credit-rules .cr-row').forEach((row, index) => {
+    const keys = creditRuleKeys[index];
+    if (!keys) return;
+    const title = row.querySelector('b');
+    const body = row.querySelector('.cr-note');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  $$('.tu-card').forEach((card) => {
+    const credits = Number(card.dataset.p || 0);
+    const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
+    const amount = card.querySelector('b');
+    const minutes = card.querySelector('.tu-min');
+    if (amount) amount.textContent = muneaT('purchase.creditsAmount', '{credits} credits', { credits: formatted });
+    if (minutes) minutes.textContent = muneaT('purchase.approxMinutes', 'About {minutes} minutes', { minutes: formatted });
+  });
+
+  const changelog = $('#changelogList');
+  if (changelog) {
+    changelog.replaceChildren();
+    const summary = document.createElement('p');
+    summary.className = 'modal-sub';
+    summary.textContent = muneaT(
+      'version.localizedSummary',
+      'This update improves call status explanations, text fallback, and readability.',
+    );
+    changelog.appendChild(summary);
+  }
+}
+let muneaRendererCopyCache = null;
+function muneaRendererCopy() {
+  if (muneaRendererCopyCache) return muneaRendererCopyCache;
+  const api = window.MuneaAppRendererCopy;
+  if (!api || typeof api.createAppRendererCopy !== 'function') return null;
+  muneaRendererCopyCache = api.createAppRendererCopy({
+    t: (key, values) => muneaT(key, key, values),
+  });
+  return muneaRendererCopyCache;
+}
 
 function muneaIsCleanZhText(raw) {
   const s = String(raw == null ? '' : raw).replace(/\s+/g, '');
@@ -18,12 +176,33 @@ function muneaIsCleanZhText(raw) {
   if (new Set(s).size / s.length < 0.5) return false; // 同字元大量重複＝疑似亂碼
   return true;
 }
+function muneaIsCleanDisplayText(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s || s.length > 160) return false;
+  if (/[\u0000-\u001f\u007f\ufffd<>]/u.test(s)) return false;
+  if (/[\u202a-\u202e\u2066-\u2069]/u.test(s)) return false;
+  if (/(?:javascript|data)\s*:|https?:\/\//iu.test(s)) return false;
+  const meaningful = s.replace(/[\p{P}\p{S}\p{Z}\p{M}]/gu, '');
+  if (!meaningful || !/[\p{L}\p{N}]/u.test(meaningful)) return false;
+  const characters = [...meaningful.toLocaleLowerCase(muneaLocale())];
+  if (characters.length >= 6 && new Set(characters).size / characters.length < 0.35) return false;
+  return true;
+}
 // 顯示前再守一次門（Edward 2026-07-15 事故：首頁招呼卡以外，用藥/看診/留意卡都還在印未過濾的存檔文字）
 // 存檔時就算漏接、或手機裡已經存著舊的髒資料，畫面上都不該印出來——不乾淨就退回 fallback，不留原文
 function muneaSafeDisplayText(raw, fallback) {
   const s = String(raw == null ? '' : raw).trim();
   if (!s) return fallback;
-  return muneaIsCleanZhText(s) ? s : fallback;
+  return muneaIsCleanDisplayText(s) ? s : fallback;
+}
+function muneaEscapeHtml(raw) {
+  return String(raw == null ? '' : raw).replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]);
 }
 
 const OVERLAYS = ['med', 'connect', 'chat'];
@@ -61,6 +240,7 @@ let chatOpened = false;          // 這次進聊聊她有沒有先開過口
 let chatAudio = null;
 let companionBackendSyncing = false;
 let accountBootstrapPromise = null;
+let latestTrustedLocaleContext = null;
 let activeChatSessionId = null;
 let activeChatStartedAt = 0;
 let activeChatTurnCount = 0;
@@ -173,7 +353,7 @@ const avatarRuntime = {
     speakTimer = setTimeout(() => {
       if (this.state === 'speaking') {
         this.setState('idle');
-        setCallHint('直接說，我在這裡');
+        setLocalizedCallHint('ready');
       }
     }, ms);
     return ms;
@@ -181,7 +361,7 @@ const avatarRuntime = {
   onAudioEnd() {
     if (this.state === 'speaking') {
       this.setState('idle');
-      setCallHint('直接說，我在這裡');
+      setLocalizedCallHint('ready');
     }
   },
 };
@@ -197,6 +377,56 @@ function setCallHint(text, busy) {
   const cap = $('#chatCaption');
   if (cap) { cap.textContent = text; cap.classList.toggle('cap-busy', !!busy); }
 }
+function setLocalizedCallHint(state, busy = false) {
+  const rendererCopy = muneaRendererCopy();
+  const fallbackKeys = {
+    connecting: 'voice.connecting',
+    developerConnecting: 'voice.call.developerConnecting',
+    developerReady: 'voice.call.developerReady',
+    firstWarmup: 'voice.call.firstWarmup',
+    idleEnded: 'voice.call.idleEnded',
+    openingWarmup: 'voice.call.openingWarmup',
+    ready: 'voice.ready',
+    speaking: 'voice.call.speaking',
+    unavailable: 'voice.call.unavailable',
+  };
+  const text = rendererCopy
+    ? rendererCopy.callHint(state)
+    : muneaT(fallbackKeys[state] || fallbackKeys.unavailable, '');
+  setCallHint(text, busy);
+}
+const VOICE_RUNTIME_COPY = Object.freeze({
+  playbackBlocked: ['voice.runtime.playbackBlocked', '聲音暫時被擋住了，點一下畫面就好'],
+  audioOnlyFallback: ['voice.runtime.audioOnlyFallback', '畫面先休息一下，我們繼續用聲音聊'],
+  microphoneTapToResume: ['voice.runtime.microphoneTapToResume', '收音還沒啟動，請點一下畫面'],
+  listening: ['voice.runtime.listening', '我在聽，你說吧'],
+  reconnecting: ['voice.runtime.reconnecting', '線路沒接好，正在重新連線…'],
+  microphonePermission: ['voice.runtime.microphonePermission', '請到設定允許使用麥克風'],
+  heard: ['voice.runtime.heard', '我聽見了'],
+  thinking: ['voice.runtime.thinking', '我想一下'],
+  didNotHear: ['voice.runtime.didNotHear', '沒有聽清楚，請再說一次'],
+  recordingTapWhenDone: ['voice.runtime.recordingTapWhenDone', '我在聽，說完再按一次'],
+  microphoneMuted: ['voice.runtime.microphoneMuted', '麥克風已關閉'],
+  microphoneMutedHint: ['voice.runtime.microphoneMutedHint', '麥克風已關閉，想說話時再點一下'],
+  recoveredTitle: ['voice.runtime.recoveredTitle', '已經接回來了，剛才說的我都記得'],
+  recoveredBody: ['voice.runtime.recoveredBody', '我們繼續'],
+  degradedTitle: ['voice.runtime.degradedTitle', '訊號不太穩，我先用簡單模式陪你'],
+  degradedBody: ['voice.runtime.degradedBody', '連線會自動恢復，剛才聊的內容都還在'],
+});
+function voiceRuntimeCopy(state) {
+  const entry = VOICE_RUNTIME_COPY[state] || VOICE_RUNTIME_COPY.reconnecting;
+  return muneaT(entry[0], entry[1]);
+}
+function setLocalizedRuntimeHint(state, busy = false) {
+  setCallHint(voiceRuntimeCopy(state), busy);
+}
+function setLocalizedRuntimeCaption(state) {
+  if (state === 'recovered') {
+    setCaption(voiceRuntimeCopy('recoveredTitle'), voiceRuntimeCopy('recoveredBody'));
+    return;
+  }
+  setCaption(voiceRuntimeCopy('degradedTitle'), voiceRuntimeCopy('degradedBody'));
+}
 // 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：
 // 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
 // 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
@@ -205,6 +435,24 @@ function showBusyCard(mode, payload) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = mode;
   const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
+  const rendererCopy = muneaRendererCopy();
+  if (rendererCopy) {
+    const q = payload || {};
+    const localized = rendererCopy.queueCard({
+      companion: cname(),
+      etaSeconds: q.eta_s,
+      mode,
+      position: q.position,
+    });
+    card.dataset.action = localized.action;
+    if (title) title.textContent = localized.title;
+    if (pos) pos.textContent = localized.position;
+    if (note) note.textContent = localized.note;
+    if (btn) btn.textContent = localized.button;
+    if (alt) alt.hidden = !localized.showTextFallback;
+    card.hidden = false;
+    return;
+  }
   if (mode === 'queued') {
     card.dataset.action = 'cancel';
     if (alt) alt.hidden = true;
@@ -212,22 +460,47 @@ function showBusyCard(mode, payload) {
     const position = Math.max(1, parseInt(q.position, 10) || 1);
     const preparing = position <= 1;   // 排第 1 位＝其實是在幫你準備、不是真的一堆人在排（Edward 2026-07-24 拍板）
     const eta = formatQueueEta(q.eta_s);
-    if (title) title.textContent = preparing ? (cname() + '正在為你準備聊天室') : ('現在比較多人在跟' + cname() + '聊天');
-    if (pos) pos.innerHTML = preparing ? '' : ('你排第 <b>' + position + '</b> 位');
+    if (title) title.textContent = preparing
+      ? muneaT('voice.queue.preparingWithCompanion', '{companion}正在為你準備聊天室', { companion: cname() })
+      : muneaT('voice.queue.busyWithCompanion', '現在比較多人在跟{companion}聊天', { companion: cname() });
+    if (pos) pos.textContent = preparing
+      ? ''
+      : muneaT('voice.queue.position', '你排第 {count} 位', { count: position });
     let etaLine;
-    if (eta === 'soon') etaLine = preparing ? '快好了，通常幾分鐘內就會自動接通。' : '快好了，很快就輪到你。';
-    else if (typeof eta === 'number') etaLine = '大約再 ' + eta + ' 分鐘' + (preparing ? '會自動接通。' : '會輪到你。');
-    else etaLine = preparing ? '通常幾分鐘內就好，準備好會自動接通。' : '輪到你會自動接通。';
-    if (note) note.textContent = etaLine + '排隊不扣點數，暫時先別關掉這個畫面，好了會自動接通。';
-    if (btn) btn.textContent = '取消排隊';
+    if (eta === 'soon') {
+      etaLine = muneaT(
+        preparing ? 'voice.queue.etaPreparingSoon' : 'voice.queue.etaWaitingSoon',
+        preparing ? '快好了，通常幾分鐘內就會自動接通。' : '快好了，很快就輪到你。',
+      );
+    } else if (typeof eta === 'number') {
+      etaLine = muneaT(
+        preparing ? 'voice.queue.etaPreparingMinutes' : 'voice.queue.etaWaitingMinutes',
+        preparing ? '大約再 {minutes} 分鐘會自動接通。' : '大約再 {minutes} 分鐘會輪到你。',
+        { minutes: eta },
+      );
+    } else {
+      etaLine = muneaT(
+        preparing ? 'voice.queue.etaPreparingUnknown' : 'voice.queue.etaWaitingUnknown',
+        preparing ? '通常幾分鐘內就好，準備好會自動接通。' : '輪到你會自動接通。',
+      );
+    }
+    if (note) note.textContent = muneaT(
+      'voice.queue.note',
+      '{eta}排隊不扣點數，暫時先別關掉這個畫面；準備好就會自動接通。',
+      { eta: etaLine },
+    );
+    if (btn) btn.textContent = muneaT('voice.queue.cancel', '取消排隊');
   } else {
     // 'full'：連排隊的位子都滿了——除了「知道了」，多給一個不用等 GPU 席位的出口
     card.dataset.action = 'dismiss';
-    if (title) title.textContent = '現在忙線中';
+    if (title) title.textContent = muneaT('voice.queue.fullTitle', '現在忙線中');
     if (pos) pos.textContent = '';
-    // 角色名是用戶自訂字串：用 append 組字串＋<br>，不走 innerHTML（斷行乾淨、也不吃進標籤）
-    if (note) { note.textContent = ''; note.append('想跟' + cname() + '聊天的人比較多，', document.createElement('br'), '請稍後再試試看。'); }
-    if (btn) btn.textContent = '知道了';
+    if (note) note.textContent = muneaT(
+      'voice.queue.fullBody',
+      '想跟{companion}聊天的人比較多，請稍後再試試看。',
+      { companion: cname() },
+    );
+    if (btn) btn.textContent = muneaT('common.okay', '知道了');
     if (alt) alt.hidden = false;
   }
   card.hidden = false;
@@ -245,16 +518,26 @@ function hideBusyCard() { const card = $('#busyCard'); if (card) card.hidden = t
 // 通用失敗卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
 // 斷線重連失敗／連線逾時／拿不到麥克風——這些過去全部只寫進被藏起來的 #chatCaption，使用者等於零回饋。
 // 現在一律借 busyCard 的殼：標題講人話原因＋一句怎麼辦＋一顆按鈕。
-function showCallStatusCard(opts) {
-  opts = opts || {};
+function showCallStatusCard(stateOrOptions) {
+  const rendererCopy = muneaRendererCopy();
+  const opts = typeof stateOrOptions === 'string'
+    ? (rendererCopy
+      ? rendererCopy.callStatus(stateOrOptions)
+      : {
+        action: 'dismiss',
+        btnText: muneaT('common.okay', ''),
+        note: muneaT('voice.call.retryLater', ''),
+        title: muneaT('voice.call.unavailable', ''),
+      })
+    : (stateOrOptions || {});
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = 'error';
   card.dataset.action = opts.action || 'dismiss';
   const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
-  if (title) title.textContent = opts.title || '目前無法接通';
+  if (title) title.textContent = opts.title || muneaT('voice.call.unavailable', '');
   if (pos) pos.textContent = '';
-  if (note) note.textContent = opts.note || '請稍後再試一次。';
-  if (btn) btn.textContent = opts.btnText || '知道了';
+  if (note) note.textContent = opts.note || muneaT('voice.call.retryLater', '');
+  if (btn) btn.textContent = opts.button || opts.btnText || muneaT('common.okay', '');
   if (alt) alt.hidden = true;
   card.hidden = false;
 }
@@ -297,12 +580,12 @@ async function sendTextFallbackMessage() {
   if (!text) return;
   input.value = '';
   appendTextChatBubble('user', text);
-  setBtnBusy(sendBtn, '傳送中');
+  setBtnBusy(sendBtn, muneaT('common.sending', ''));
   const beforeLen = chatHistory.length;
   try {
     await window.__chatSay(text);   // init() 裡掛出來的 chatHandle 橋（chatHandle 本身是 init() 內部函式，拿不到）
   } finally {
-    clearBtnBusy(sendBtn, '傳送');
+    clearBtnBusy(sendBtn, muneaT('textChat.send', ''));
     if (input) input.focus();
   }
   // chatHandle 內部會把新的一輪對話（含 AI 回覆）推進 chatHistory；掃新增的區段找出「她」的回覆貼上面板。
@@ -463,6 +746,12 @@ function accountBootstrapPayload(action = 'create', extra = {}) {
   if (authUserId) payload.authUserId = authUserId;
   return payload;
 }
+function captureTrustedLocaleContext(response) {
+  const account = response && response.store && response.store.account;
+  const context = account && account.localeContext;
+  if (!context || typeof context !== 'object' || Array.isArray(context)) return;
+  latestTrustedLocaleContext = Object.freeze({ ...context });
+}
 async function syncAccountBootstrap(action = 'create', extra = {}) {
   // Only the fixture/direct-call profile skips cloud account creation. The
   // Gateway QA profile is still a real Supabase user and must be bootstrapped.
@@ -482,6 +771,7 @@ async function syncAccountBootstrap(action = 'create', extra = {}) {
   accountBootstrapPromise = (async () => {
     const response = await brainPost('/account-bootstrap', accountBootstrapPayload(action, extra));
     if (response && response.ok) {
+      captureTrustedLocaleContext(response);
       storageSet(ACCOUNT_BOOTSTRAP_KEY, 'true');
       if (authUserId) storageSet(ACCOUNT_BOOTSTRAP_USER_KEY, authUserId);
       const store = response.store || {};
@@ -506,6 +796,7 @@ async function syncAccountBootstrap(action = 'create', extra = {}) {
 }
 function syncCompanionUI() {
   const t = templateFor();
+  if (!companionNameTouched) companionDisplayName = t.defaultName;
   const display = companionDisplayName.trim() || t.defaultName;
   const src = 'avatars/' + currentAvatarId + '.png';
   const thumbSrc = t.thumbAsset || src;
@@ -514,6 +805,9 @@ function syncCompanionUI() {
   const homeName = $('#companionHomeName'); if (homeName) homeName.textContent = display;
   const chatName = $('#chatName'); if (chatName) chatName.textContent = display;
   const settingName = $('#settingsCompanionName'); if (settingName) settingName.textContent = display;
+  const careHeading = $('#careHeading'); if (careHeading) careHeading.textContent = muneaT('home.careHeading', '{companion}幫你留意', { companion: display });
+  const chatTaskTitle = $('#chatTaskTitle'); if (chatTaskTitle) chatTaskTitle.textContent = muneaT('home.taskChatTitle', '和{companion}聊聊', { companion: display });
+  const interestsSubtitle = $('#interestsSubtitle'); if (interestsSubtitle) interestsSubtitle.textContent = muneaT('settings.interestsSubtitle', '挑幾個興趣，{companion}會多留意這些新鮮事', { companion: display });
   const settingLabel = $('#settingsTemplateLabel'); if (settingLabel) settingLabel.textContent = t.templateLabel;
   const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = thumbSrc;
   const nameInput = $('#companionNameInput');
@@ -521,7 +815,7 @@ function syncCompanionUI() {
   const fimg = $('#faceImg'); if (fimg) { fimg.src = fullSrc; fimg.classList.toggle('sq', !t.fullAsset); }
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
   $$('.obs-ava img').forEach(i => { i.src = thumbSrc; });   // 狀態頁「○○的觀察」頭像＝跟著選的角色臉（Edward 2026-07-09）
-  $$('.cname').forEach(el => { el.textContent = display; });
+  const obsHeading = $('#obsHeading'); if (obsHeading) obsHeading.textContent = muneaT('status.companionObservation', '{companion}的觀察', { companion: display });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
   renderCompanionGreeting();
@@ -630,23 +924,27 @@ function renderSubscriptionEndDate(subscription) {
     el.textContent = '';
     return;
   }
-  const date = new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit'
+  const date = new Intl.DateTimeFormat(muneaLocale(), {
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    year: 'numeric', month: '2-digit', day: '2-digit'
   }).format(expires);
-  el.textContent = '訂閱到期日：' + date;
+  el.textContent = muneaT('subscription.expiryDate', '訂閱到期日：{date}', { date });
   el.hidden = false;
 }
 
 function subscriptionSuccessMessage(plan, subscription) {
-  const planLabel = ({ plus: 'Plus', pro: 'Pro' })[plan] || '你的';
+  const rendererCopy = muneaRendererCopy();
+  const planLabel = rendererCopy ? rendererCopy.planLabel(plan) : (({ plus: 'Plus', pro: 'Pro' })[plan] || '你的');
   const expires = subscription && subscription.expiresAt ? new Date(subscription.expiresAt) : null;
   if (subscription && subscription.status === 'active' && expires && !Number.isNaN(expires.getTime())) {
-    const date = new Intl.DateTimeFormat('zh-TW', {
-      timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit'
+    const date = new Intl.DateTimeFormat(muneaLocale(), {
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      year: 'numeric', month: '2-digit', day: '2-digit'
     }).format(expires);
-    return '謝謝你訂閱 ' + planLabel + '！方案已啟用；到期日 ' + date + ' 已顯示在設定。';
+    return muneaT('subscription.thankYou', '謝謝你訂閱 {plan}！方案已啟用。', { plan: planLabel })
+      + ' ' + muneaT('subscription.expiryDate', '訂閱到期日：{date}', { date });
   }
-  return '謝謝你訂閱 ' + planLabel + '！方案已啟用；到期日會顯示在設定的方案卡。';
+  return muneaT('subscription.thankYou', '謝謝你訂閱 {plan}！方案已啟用。', { plan: planLabel });
 }
 
 async function routineRemindersPost(body) {
@@ -941,13 +1239,20 @@ async function aiAddVisitReminder(a) {
 }
 async function aiAddMedReminder(a) {
   const rawName = String((a && a.name) || '').trim();
-  const name = (rawName && muneaIsCleanZhText(rawName)) ? rawName : '';   // 藥名不乾淨寧可拒收、讓 AI 再問一次，不存假名字（Edward 2026-07-15 事故）
-  const SLOTS = ['早餐後', '午餐後', '晚餐後', '睡前'];
-  let slots = (a && Array.isArray(a.slots)) ? a.slots.filter(s => SLOTS.indexOf(s) >= 0) : [];
+  const name = (rawName && muneaIsCleanDisplayText(rawName)) ? rawName : '';
+  let slots = (a && Array.isArray(a.slots))
+    ? a.slots.map(canonicalMedicationSlot).filter(Boolean)
+    : [];
   slots = [...new Set(slots)];
   if (!name || !slots.length) return { ok: false, error: 'medication_name_or_slots_required' };
   const meds = (typeof loadMeds === 'function') ? loadMeds() : [];
-  const med = { name, time: slots.join('、'), days: (a && a.days) || '長期', by: '', photo: '' };
+  const med = {
+    name,
+    time: slots.join('、'),
+    days: canonicalMedicationDuration(a && a.days),
+    by: '',
+    photo: '',
+  };
   ensureMedReminderId(med);
   const nextMeds = meds.filter(m => String(m && m.id) !== String(med.id));
   nextMeds.push(med);
@@ -963,6 +1268,32 @@ async function aiAddMedReminder(a) {
 // 聊聊語音收到 AI 的「幫你做進 App」指令 → 執行 + 螢幕輕提示（寧寧的口頭確認由 AI 那頭講）
 async function handleVoiceAction(action, args) {
   args = args || {};
+  if (action === 'update_conversation_locale') {
+    const locale = window.MuneaI18n
+      ? window.MuneaI18n.normalize(args.locale)
+      : String(args.locale || '');
+    if (!['zh-TW', 'en', 'ja', 'es'].includes(locale)) {
+      return { ok: false, error: 'unsupported_locale' };
+    }
+    const current = latestTrustedLocaleContext || {};
+    const preferred = [
+      locale,
+      ...(Array.isArray(current.preferredLanguages)
+        ? current.preferredLanguages
+        : muneaPreferredLanguages()),
+    ].filter((value, index, all) => value && all.indexOf(value) === index);
+    const response = await brainPost('/account-bootstrap', accountBootstrapPayload('patch', {
+      localeContext: {
+        conversationLocale: locale,
+        preferredLanguages: preferred,
+      },
+    }));
+    if (!response || !response.ok) {
+      return { ok: false, error: 'locale_preference_write_failed' };
+    }
+    captureTrustedLocaleContext(response);
+    return { ok: true, locale, persistence: 'cloud' };
+  }
   if (action === 'set_clinic_reminder') {
     const r = await aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
     if (typeof toast === 'function') toast(r.ok ? ('看診提醒設好了：' + r.title + ' · ' + r.label) : '看診日期我沒抓到，你再說一次日期好嗎');
@@ -970,7 +1301,16 @@ async function handleVoiceAction(action, args) {
   }
   if (action === 'set_medication_reminder') {
     const r = await aiAddMedReminder({ name: args.name, slots: args.slots, days: args.days });
-    if (typeof toast === 'function') toast(r.ok ? ('用藥提醒設好了：' + r.slots.join('、') + '吃「' + r.name + '」') : '要什麼時候吃我沒抓到，你再說一次好嗎');
+    if (typeof toast === 'function') toast(r.ok
+      ? muneaT(
+        'medication.action.added',
+        '用藥提醒已設定：{slots}服用「{name}」',
+        { slots: localizedMedicationSlotList(r.slots), name: r.name },
+      )
+      : muneaT(
+        'medication.action.missingSchedule',
+        '還沒確認服藥時間，請再說一次。',
+      ));
     return r;
   }
   if (action === 'set_personal_event') {
@@ -1456,9 +1796,17 @@ const CallControl = {
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
     let accountRecoveryAttempted = false;
     while (!this.cancelled) {
+      const personId = storageGet('munea.cloudPersonId') || '';
+      const requestBody = {
+        character_id: characterId || 'default',
+        idempotency_key: idempotencyKey,
+      };
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(personId)) {
+        requestBody.person_id = personId;
+      }
       const response = await this._fetch(base + '/v1/calls', {
         method: 'POST',
-        body: JSON.stringify({ character_id: characterId || 'default', idempotency_key: idempotencyKey }),
+        body: JSON.stringify(requestBody),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error((result && result.detail) || ('call_control_http_' + response.status));
@@ -1477,8 +1825,8 @@ const CallControl = {
         const queue = result.queue || {};
         // 忙線排隊（2026-07-23 Edward 拍板 B 案 → 2026-07-24 P0 補上 eta_s）：明著告訴用戶排第幾位／準備中、輪到自動接通
         showBusyCard('queued', queue);
-        setCallPreflightPending(true, '排隊中…');
-        setCallHint('忙線中，排到會自動接通', true);
+        setCallPreflightPending(true, muneaT('voice.queue.pending', '排隊中…'));
+        setCallHint(muneaT('voice.queue.wait', '輪到你時會自動接通。'), true);
         if (!this._queueSeen) {
           this._queueSeen = true;
           try { trackProductEvent('call_queue_shown', { position: queue.position || 1, depth: queue.depth || 0 }); } catch (e) {}
@@ -1664,7 +2012,7 @@ function getAvatarUrl() {
       const u = raw.replace(/\/$/, '');
       // 舊版曾把臨時 GLOWS 門牌寫進 localStorage；升版後要自動回到新主卡。
       if (RETIRED_FLASHHEAD_URLS.has(u)) localStorage.removeItem('munea.avatarUrl');
-      else if (u) return u;
+      else return u;
     }
   } catch (e) {}
   return faceEngine() === 'flashhead' ? FLASHHEAD_URL_DEFAULT : AVATAR_URL_DEFAULT;
@@ -1887,7 +2235,7 @@ const Avatar = {
           const _pv = vid.play();
           if (_pv && _pv.then) _pv.then(() => Avatar._diagNote('影音播放:成功')).catch((err) => {   // 被 iOS 擋（手勢斷鏈）→ 點畫面一下＝新手勢救回（先鋒 tap-to-play 的 App 版）
             Avatar._diagNote('影音播放:被擋(' + (err && err.name) + ')', true);
-            try { setCallHint('聲音被擋住了，點一下畫面就好', true); } catch (e2) {}
+            try { setLocalizedRuntimeHint('playbackBlocked', true); } catch (e2) {}
             try {
               document.getElementById('chat').addEventListener('click', () => {
                 vid.muted = false; const _p3 = vid.play(); if (_p3 && _p3.catch) _p3.catch(() => {});
@@ -2109,7 +2457,7 @@ const Avatar = {
     try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
     try { this.stop(); } catch (e) {}   // 收 WebRTC＋恢復照片層（stop 內含 _fhComposite(false)）
     try { FaceIdle.start(); } catch (e) {}   // 立繪待機動畫頂上，不留凍格
-    try { setCallHint('畫面先休息一下，我們用聲音繼續聊'); } catch (e) {}
+    try { setLocalizedRuntimeHint('audioOnlyFallback'); } catch (e) {}
   },
   stop() {
     this.on = false;
@@ -2198,13 +2546,13 @@ const LiveVoice = {
       if (!this.micOpen || (this._micPackets || 0) > sentAtOpen) return;
       this._resumeAudio();
       try { trackProductEvent('voice_mic_stalled', { audioState: this.ac && this.ac.state, trackState: this.mic && this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState }); } catch (e) {}
-      setCallHint('收音還沒啟動，請點一下畫面');
+      setLocalizedRuntimeHint('microphoneTapToResume');
       if (!this._micGestureBound) {
         this._micGestureBound = true;
         const recover = () => {
           this._micGestureBound = false;
           this._resumeAudio();
-          setCallHint('我在聽，你說吧');
+          setLocalizedRuntimeHint('listening');
         };
         try { document.getElementById('chat').addEventListener('click', recover, { once: true }); } catch (e) {}
       }
@@ -2636,7 +2984,7 @@ const LiveVoice = {
     try { this._attachMicProcessor(); } catch (e) { voiceCallFail('microphone_uplink_rebuilt', e, { attempt }); return false; }
     voiceCallMark('microphone_uplink_rebuilt', 'pass', { attempt });
     try { trackProductEvent('voice_mic_uplink_rebuilt', { attempt }); } catch (e) {}
-    if (this.micOpen) setCallHint('我在聽，你說吧');   // 重建成功、正在收音 → 蓋掉稍早的「請點一下畫面」提示
+    if (this.micOpen) setLocalizedRuntimeHint('listening');   // 重建成功、正在收音 → 蓋掉稍早的「請點一下畫面」提示
     return true;
   },
   // 收音管看門（蟲 b「整通零上行」根治）：WebSocket open 後 3 秒還沒送出第一包（開麥前也該有靜音包）
@@ -2674,7 +3022,7 @@ const LiveVoice = {
       this._deadLineSessionId = sessionKey;
       voiceCallFail('dead_line_reconnect', phase + '_' + waitMs + 'ms');
       try { trackProductEvent('voice_dead_line_reconnect', { phase }); } catch (e) {}
-      setCallHint('線路沒接好，我重接一次…', true);
+      setLocalizedRuntimeHint('reconnecting', true);
       try { this.ws.close(); } catch (e) { try { this.stop(); } catch (e2) {} }   // close → onclose → onDrop 自動重連
     }, waitMs);
   },
@@ -2765,7 +3113,7 @@ const LiveVoice = {
         const micSetup = await micPipelineReady;   // 管線多半早就建好了，這裡只是收結果
         if (!micSetup.ok) {
           voiceCallFail('microphone_ready', micSetup.error || 'microphone_unavailable');
-          setCallHint('拿不到麥克風，請到設定允許'); try { this.ws.close(); } catch (e) {} done(false); return;
+          setLocalizedRuntimeHint('microphonePermission'); try { this.ws.close(); } catch (e) {} done(false); return;
         }
         this._resumeAudio();
         this._armUplinkWatch();                        // open 後 3 秒沒有第一包 → 自動重建收音管（最多 2 次）
@@ -3110,14 +3458,16 @@ window.MuneaFaceWave = FaceWave;
 let callConnected = false;
 let callDialing = false;
 let callPreflightPending = false;
-function setCallPreflightPending(on, pendingLabel = '連線中…') {
+function setCallPreflightPending(on, pendingLabel = muneaT('voice.connecting', '')) {
   callPreflightPending = on;
   if (!on) hideBusyCard();   // 排隊卡跟著撥號前置狀態走：接通／取消／失敗任何一條路離開排隊就收卡
   const b = $('#callToggle'); if (!b) return;
   b.setAttribute('aria-busy', on ? 'true' : 'false');
   const lbl = $('#callToggleLabel');
   if (lbl && on) lbl.textContent = pendingLabel;
-  else if (lbl && !callDialing) lbl.textContent = callConnected ? '結束通話' : '開始通話';
+  else if (lbl && !callDialing) lbl.textContent = callConnected
+    ? muneaT('voice.call.end', '')
+    : muneaT('voice.call.start', '');
 }
 // 撥通中狀態：按鈕顯示「撥通中···」循環；真的接通（她開始聽/說）才變「結束通話」＋開始計時（Edward 7/9）
 function setCallDialing(on) {
@@ -3127,8 +3477,17 @@ function setCallDialing(on) {
   b.classList.toggle('dialing', on);
   const lbl = $('#callToggleLabel');
   if (lbl) {
-    if (on) lbl.innerHTML = '撥號中<span class="dial-dots"><i>·</i><i>·</i><i>·</i></span>';
-    else lbl.textContent = callConnected ? '結束通話' : '開始通話';
+    if (on) {
+      lbl.textContent = muneaT('voice.call.dialing', '');
+      const dots = document.createElement('span');
+      dots.className = 'dial-dots';
+      dots.innerHTML = '<i>·</i><i>·</i><i>·</i>';
+      lbl.appendChild(dots);
+    } else {
+      lbl.textContent = callConnected
+        ? muneaT('voice.call.end', '')
+        : muneaT('voice.call.start', '');
+    }
   }
 }
 function setCallToggle(connected) {
@@ -3138,7 +3497,13 @@ function setCallToggle(connected) {
   const _b0 = $('#callToggle'); if (_b0) _b0.classList.remove('dialing');
   // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
   const fn = document.querySelector('.face-name');
-  if (fn) { fn.classList.toggle('off', !connected); const st = fn.querySelector('.fn-status'); if (st) st.textContent = connected ? '在線' : '未在線'; }
+  if (fn) {
+    fn.classList.toggle('off', !connected);
+    const st = fn.querySelector('.fn-status');
+    if (st) st.textContent = connected
+      ? muneaT('voice.call.online', '')
+      : muneaT('voice.call.offline', '');
+  }
   const b = $('#callToggle');
   if (!b) return;
   b.classList.toggle('start', !connected);
@@ -3146,7 +3511,9 @@ function setCallToggle(connected) {
   const pts = document.querySelector('.hud-pill.pts');
   if (pts) pts.style.display = (connected || ptsPillHidden()) ? 'none' : '';   // 通話中讓畫面乾淨；免費 0 點不掛牌
   const lbl = $('#callToggleLabel');
-  if (lbl) lbl.textContent = connected ? '結束通話' : '開始通話';
+  if (lbl) lbl.textContent = connected
+    ? muneaT('voice.call.end', '')
+    : muneaT('voice.call.start', '');
 }
 
 // ===== 待機動態（Edward 7/9 供片）：進聊聊頁播「打招呼」一次 → 「待機」循環；按通話即停回靜態，交給語音＋雲端臉 =====
@@ -3262,13 +3629,13 @@ async function openVoiceSession() {
   });
   const r = await voiceProvider.open(currentChar);
   if (r && r.reply) {
-    setCallHint('正在說話');
+    setLocalizedCallHint('speaking');
     chatHistory.push({ role: 'model', text: r.reply });
     if (r.audio) playB64(r.audio); else speakChat(r.reply);
     faceSpeak(r.reply);
   } else {
     const fallback = muneaT('voice.fallback', '我在這裡，今天過得好嗎？想聊什麼都可以。');
-    setCallHint(muneaT('voice.ready', '直接說，我在這裡'));
+    setLocalizedCallHint('ready');
     faceSpeak(fallback);
   }
 }
@@ -3303,7 +3670,7 @@ function completeChatSession(reason = 'ended') {
     pushWallet();
     renderPoints();
   updateMedCount();
-    toast('今天聊得真開心，下次見！');
+    toast(muneaT('voice.call.goodbye', ''));
   }
   stopCallTimer();
   if (!activeChatSessionId || !activeChatStartedAt) return;
@@ -3326,7 +3693,9 @@ function showView(id) {
   // 所有進聊聊的路都經過這個路口——訪客點聊聊＝先引導 Google／Apple 登入、不進聊天頁
   if (id === 'chat' && !isLoggedIn()) {
     if (typeof openAuthSheet === 'function') openAuthSheet();
-    if (typeof setAuthMessage === 'function') setAuthMessage('請先使用 Google 或 Apple 登入，就能和' + cname() + '聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'ok');
+    if (typeof setAuthMessage === 'function') {
+      setAuthMessage(muneaT('auth.signInDescription', '登入後就能和 {companion} 聊聊。', { companion: cname() }), 'ok');
+    }
     try { trackProductEvent('login_gate_shown', { feature: 'chat' }); } catch (e) {}
     return;
   }
@@ -3375,7 +3744,9 @@ function requireLogin(reasonText, feature) {
   try {
     if (isLoggedIn()) return true;
     if (typeof openAuthSheet === 'function') openAuthSheet();
-    if (typeof setAuthMessage === 'function') setAuthMessage(reasonText || '先用 Google 或 Apple 登入一下（30 秒就好）', 'ok');
+    if (typeof setAuthMessage === 'function') {
+      setAuthMessage(reasonText || muneaT('auth.signInRequired', '請使用 Google 或 Apple 登入'), 'ok');
+    }
     try { trackProductEvent('login_gate_shown', { feature: feature || 'family' }); } catch (e) {}
     return false;
   } catch (e) { return true; }   // 判斷出錯就不擋（不因把關 bug 卡死使用者）
@@ -3477,9 +3848,58 @@ function setAuthMessage(text = '', type = '') {
   el.classList.toggle('is-error', type === 'error');
   el.classList.toggle('is-ok', type === 'ok');
 }
+function setAuthMessageState(state, type = '') {
+  const rendererCopy = muneaRendererCopy();
+  const keys = {
+    cancelled: 'auth.cancelled',
+    inProgress: 'auth.inProgress',
+    unavailable: 'auth.unavailable',
+  };
+  const fallback = {
+    cancelled: '已取消登入',
+    inProgress: '正在前往登入…',
+    unavailable: '目前無法登入，請稍後再試。',
+  };
+  const resolvedState = keys[state] ? state : 'unavailable';
+  setAuthMessage(
+    rendererCopy
+      ? rendererCopy.authMessage(resolvedState)
+      : muneaT(keys[resolvedState], fallback[resolvedState]),
+    type,
+  );
+}
+function localizeAuthTerms() {
+  const terms = $('#authSheet .auth-terms');
+  const link = terms && terms.querySelector('a');
+  if (terms && link) {
+    link.textContent = muneaT('auth.termsLink', '服務條款與隱私權政策');
+    link.setAttribute('href', '#');
+    link.removeAttribute('target');
+    link.removeAttribute('rel');
+    terms.replaceChildren(
+      document.createTextNode(`${muneaT('auth.termsPrefix', '繼續即代表同意')} `),
+      link,
+      document.createTextNode(` — ${muneaT(
+        'auth.aiProcessingDisclosure',
+        '語音與文字會由 Munea 的 AI 系統處理，部分服務位於境外。',
+      )}`),
+    );
+    if (link.dataset.readerBound !== '1') {
+      link.dataset.readerBound = '1';
+      link.addEventListener('click', event => {
+        event.preventDefault();
+        closeAuthSheet();
+        openInAppReader('privacy');
+      });
+    }
+  }
+  const close = $('#authCloseBtn');
+  if (close) close.setAttribute('aria-label', muneaT('accessibility.close', '關閉'));
+}
 function openAuthSheet() {
   const sheet = $('#authSheet');
   if (!sheet) return;
+  localizeAuthTerms();
   sheet.classList.add('show');
   sheet.setAttribute('aria-hidden', 'false');
   setAuthMessage('');
@@ -3487,8 +3907,9 @@ function openAuthSheet() {
   if (devBtn) {
     devBtn.hidden = !isDeveloperBypassAllowed();
     if (!devBtn.hidden) {
-      const label = isGatewayDeveloperProfile() ? devBtn.dataset.labelGateway : devBtn.dataset.labelDefault;
-      if (label) devBtn.textContent = label;
+      devBtn.textContent = isGatewayDeveloperProfile()
+        ? muneaT('auth.testAccount', devBtn.dataset.labelGateway || '使用測試帳號登入')
+        : muneaT('auth.developerMode', devBtn.dataset.labelDefault || '使用開發者模式');
     }
   }
 }
@@ -3555,7 +3976,9 @@ function updateAuthUI() {
   const card = $('#authCard');
   if (card) card.dataset.authState = signedIn ? 'signed-in' : 'guest';
   const status = $('#authStatusText');
-  if (status) status.textContent = signedIn ? (authDisplayName(state) || '已登入') : '訪客模式';
+  if (status) status.textContent = signedIn
+    ? (authDisplayName(state) || muneaT('auth.signedIn', '已登入'))
+    : muneaT('auth.guestMode', '訪客模式');
   const email = $('#authEmailText');
   if (email) email.textContent = signedIn && state.email ? state.email : '';
   const signIn = $('#authSignInBtn');
@@ -3570,12 +3993,12 @@ function updateAuthUI() {
 async function signInWithAuthProvider(provider) {
   // 7/9 正式化：沒設定好就老實說、不再假裝登入成功
   if (authState().configured === false) {
-    setAuthMessage('登入服務還沒接上，請稍後再試', 'error');
+    setAuthMessageState('unavailable', 'error');
     return;
   }
   const auth = window.MuneaAuth;
-  if (!auth) return setAuthMessage('登入模組尚未載入', 'error');
-  setAuthMessage('正在前往登入...', 'ok');
+  if (!auth) return setAuthMessageState('unavailable', 'error');
+  setAuthMessageState('inProgress', 'ok');
   trackProductEvent('auth_sign_in_started', { provider });
   const method = provider === 'apple' ? auth.signInWithApple : auth.signInWithGoogle;
   const result = method ? await method() : { ok: false, error: { code: 'unsupported_provider' } };
@@ -3584,22 +4007,14 @@ async function signInWithAuthProvider(provider) {
   if (result && result.ok) {
     if (fallbackFrom) {
       trackProductEvent('auth_sign_in_fallback_started', { provider, from: fallbackFrom, path: result.authPath || '' });
-      return setAuthMessage('原生登入未啟動，已改用安全登入頁', 'ok');
+      return setAuthMessageState('inProgress', 'ok');
     }
-    return setAuthMessage('請在瀏覽器或系統視窗完成登入', 'ok');
+    return setAuthMessageState('inProgress', 'ok');
   }
   trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom });
-  const messages = {
-    auth_not_configured: '尚未連接 Supabase 登入設定',
-    google_sign_in_cancelled: '已取消 Google 登入',
-    google_sign_in_in_progress: 'Google 登入正在進行中',
-    native_google_unavailable: 'Google 登入元件未載入，請更新 App',
-    google_ios_client_id_missing: 'Google 登入設定缺失，請更新 App',
-    google_sign_in_view_unavailable: '目前無法開啟 Google 登入畫面',
-    native_oauth_unavailable: '無法開啟 Google 安全登入頁',
-    native_oauth_open_failed: 'Google 安全登入頁開啟失敗',
-  };
-  setAuthMessage(messages[code] || `Google 登入失敗（${code}）`, code === 'google_sign_in_cancelled' ? 'info' : 'error');
+  if (code === 'google_sign_in_cancelled') return setAuthMessageState('cancelled', 'info');
+  if (code === 'google_sign_in_in_progress') return setAuthMessageState('inProgress', 'ok');
+  setAuthMessageState('unavailable', 'error');
 }
 async function signInDeveloperMode() {
   const auth = window.MuneaAuth;
@@ -3817,7 +4232,7 @@ function renderCompanionGreeting(now = new Date()) {
     if (relayLine) {
       line = relayLine;
     } else if (!lastAt) {
-      line = '我是' + nm + '，來陪你說說話的——點下面，跟我認識一下？';
+      line = muneaT('home.introFirst', '我是{companion}，來陪你說說話的——點下面，跟我認識一下？', { companion: nm });
     } else if (!_muneaSameCalendarDate(new Date(lastAt), now)) {
       line = _muneaNotChattedTodayLine(now, ask);
     } else {
@@ -3827,37 +4242,42 @@ function renderCompanionGreeting(now = new Date()) {
     line = nm + '，' + ask;   // 順位 4：任何讀取失敗，只靠 cname() 與時段拼出最保守泛用句
   }
   if (!line) line = nm + '，' + ask;
-  if (line.length > 40) line = line.slice(0, 39) + '…';
   msg.textContent = line;
   // 聊聊頁人物畫面上的那顆字泡（faceIdleHi）已整個拿掉（Edward 2026-07-16）——首頁卡片這行照舊
 }
 
-(function homeGreeting() {
+function renderHomeGreeting() {
   const now = new Date();
   const h = now.getHours();
-  const dayN = Math.max(1, now.getDate() - 1);
   renderCompanionGreeting(now);
 
-  const wd = ['日','一','二','三','四','五','六'][now.getDay()];
   const meta = $('#metaDate');
-  if (meta) meta.textContent = `${now.getMonth() + 1}月${now.getDate()}日 週${wd}`;
+  if (meta) {
+    meta.textContent = new Intl.DateTimeFormat(muneaLocale(), {
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short',
+    }).format(now);
+  }
   const kick = $('#greetKicker'), big = $('#greetBig');
-  let k = '你好', b = '今天還好嗎？';
-  if (h >= 5 && h < 11) { k = '早安'; b = '昨晚睡得還好嗎？'; }
-  else if (h >= 11 && h < 14) { k = '午安'; b = '吃飽了嗎？'; }
-  else if (h >= 14 && h < 18) { k = '午安'; b = '下午了，休息一下吧'; }
-  else if (h >= 18 && h < 22) { k = '晚上好'; b = '今天過得怎麼樣？'; }
-  else { k = '夜深了'; b = '早點休息，別撐太晚'; }
+  let key = 'home.greetingHello', fallback = '你好';
+  if (h >= 5 && h < 11) { key = 'home.greetingMorning'; fallback = '早安'; }
+  else if (h >= 11 && h < 18) { key = 'home.greetingAfternoon'; fallback = '午安'; }
+  else if (h >= 18 && h < 22) { key = 'home.greetingEvening'; fallback = '晚上好'; }
+  else { key = 'home.greetingLate'; fallback = '夜深了'; }
+  const k = muneaT(key, fallback);
   if (kick) kick.textContent = k;
   if (big) big.textContent = k;
-})();
+}
+renderHomeGreeting();
 
 function loadMeds() {
   // 沒設用藥就是空的——首頁不該有吃藥任務、用藥管理顯示空狀態（Edward 2026-07-07）
   try { return JSON.parse(localStorage.getItem('munea.meds')) || []; } catch (e) { return []; }
 }
 function updateMedCount() {
-  const n = loadMeds().length + ' 種藥';
+  const count = loadMeds().length;
+  const n = muneaT('settings.medicationCount', '{count} 種藥', { count });
   const el = $('#medCountLabel');
   if (el) el.textContent = n;
   const el2 = $('#medCountSettings');
@@ -3866,16 +4286,78 @@ function updateMedCount() {
   if (window.MuneaNotify) window.MuneaNotify.sync(); // 用藥變動 → 重排 App 關著也會響的提醒
 }
 const PILL_SLOT_ORDER = ['早餐後', '午餐後', '晚餐後', '睡前'];
+const PILL_SLOT_KEYS = Object.freeze({
+  '早餐後': 'medication.slot.afterBreakfast',
+  '午餐後': 'medication.slot.afterLunch',
+  '晚餐後': 'medication.slot.afterDinner',
+  '睡前': 'medication.slot.bedtime',
+});
+function localizedMedicationSlot(slot) {
+  const label = String(slot || '').trim();
+  const key = PILL_SLOT_KEYS[label];
+  return key ? muneaT(key, label) : label;
+}
+function canonicalMedicationSlot(slot) {
+  const label = String(slot || '').trim();
+  if (PILL_SLOT_KEYS[label]) return label;
+  const stableIds = {
+    afterBreakfast: '早餐後',
+    afterLunch: '午餐後',
+    afterDinner: '晚餐後',
+    'after-breakfast': '早餐後',
+    'after-lunch': '午餐後',
+    'after-dinner': '晚餐後',
+    bedtime: '睡前',
+  };
+  if (stableIds[label]) return stableIds[label];
+  const normalized = window.MuneaMedicationScheduleI18n?.normalizeSlot(label);
+  if (normalized && stableIds[normalized]) return stableIds[normalized];
+  return Object.keys(PILL_SLOT_KEYS).find(
+    canonical => localizedMedicationSlot(canonical).toLocaleLowerCase(muneaLocale())
+      === label.toLocaleLowerCase(muneaLocale()),
+  ) || '';
+}
+function localizedMedicationSlotList(slots) {
+  const values = (Array.isArray(slots) ? slots : String(slots || '').split('、'))
+    .map(canonicalMedicationSlot)
+    .filter(Boolean)
+    .map(localizedMedicationSlot);
+  try {
+    return new Intl.ListFormat(muneaLocale(), { style: 'long', type: 'conjunction' }).format(values);
+  } catch (e) {
+    return values.join('、');
+  }
+}
+function localizedMedicationDuration(duration) {
+  const raw = canonicalMedicationDuration(duration);
+  const dayMatch = raw.match(/^(\d+)\s*天$/);
+  if (dayMatch) {
+    const count = new Intl.NumberFormat(muneaLocale()).format(Number(dayMatch[1]));
+    return muneaT('medication.duration.days', '{count} 天', { count });
+  }
+  if (raw === '長期') return muneaT('medication.duration.longTerm', '長期');
+  if (raw === '每天') return muneaT('medication.duration.daily', '每天');
+  return raw;
+}
+function canonicalMedicationDuration(duration) {
+  const raw = String(duration || '').trim();
+  if (!raw) return '長期';
+  return window.MuneaMedicationScheduleI18n?.normalizeDuration(raw) || raw;
+}
 function pillDateKey() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 const WEEK_STEPS = [4200, 5100, 3600, 6200, 5500, 0, 0]; // 一~日；今天=第5天
-function renderStatusCharts() {
+function renderStatusCharts(force = false) {
   const wb = document.getElementById('weekBars');
+  if (force && wb) delete wb.dataset.done;
   if (wb && !wb.dataset.done) {
     const mx = Math.max(...WEEK_STEPS, 1);
-    const names = ['一', '二', '三', '四', '五', '六', '日'];
+    const names = Array.from({ length: 7 }, (_, index) => (
+      new Intl.DateTimeFormat(muneaLocale(), { weekday: 'narrow' })
+        .format(new Date(2024, 0, 7 + index))
+    ));
     wb.innerHTML = WEEK_STEPS.map((v, i) => {
       const kind = i === 4 ? 'today' : (i > 4 ? 'future' : (v >= 5000 ? 'hi' : ''));
       const hpx = v ? Math.max(10, Math.round(v / mx * 74)) : 8;
@@ -3884,6 +4366,7 @@ function renderStatusCharts() {
     wb.dataset.done = '1';
   }
   const mb = document.getElementById('monthBars');
+  if (force && mb) delete mb.dataset.done;
   if (mb && !mb.dataset.done) {
     let html = '';
     for (let d = 1; d <= 30; d++) {
@@ -3930,12 +4413,22 @@ function renderPillTask() {
   const doneN = slots.filter(s => s.status === 'taken').length;
   const next = slots.find(s => s.status !== 'taken' && s.status !== 'skipped');
   if (next) {
-    title.textContent = '吃' + muneaSafeDisplayText(String(next.name).split(/\s+/)[0], '藥'); // 標題用短名、全名在用藥管理；短名守門（Edward 2026-07-15 事故）
-    sub.textContent = medSlotLabel(next.slot) + ' · 今天 ' + doneN + '/' + total + ' 次';
+    const genericName = muneaT('medication.genericName', '藥');
+    const rawName = String(next.name || '').trim();
+    const shortSource = muneaLocale() === 'zh-TW'
+      ? rawName.split(/\s+/)[0]
+      : rawName;
+    const shortName = muneaSafeDisplayText(shortSource, genericName);
+    title.textContent = muneaT('medication.takeName', '吃{name}', { name: shortName });
+    sub.textContent = muneaT('medication.taskProgress', '{slot} · 今天 {done}/{total} 次', {
+      slot: localizedMedicationSlot(next.slot),
+      done: doneN,
+      total,
+    });
     card.classList.remove('done');
   } else {
-    title.textContent = '今天的藥都吃了';
-    sub.textContent = total + ' 次都記到了，讚';
+    title.textContent = muneaT('medication.allDone', '都完成了');
+    sub.textContent = muneaT('medication.completedToday', '今天 {total} 次都記到了', { total });
     card.classList.add('done');
   }
   const _pico = card.querySelector('.task-ico');
@@ -3957,8 +4450,11 @@ function visitToday() {
 function _clock12(tv) {
   const p = String(tv || '').split(':'); const hh = +p[0], mm = +p[1] || 0;
   if (isNaN(hh)) return '';
-  const ap = hh < 12 ? '上午' : '下午'; const h12 = ((hh + 11) % 12) + 1;
-  return ap + ' ' + h12 + (mm ? ':' + String(mm).padStart(2, '0') : '');
+  const date = new Date(2024, 0, 1, hh, mm);
+  return new Intl.DateTimeFormat(muneaLocale(), {
+    hour: 'numeric',
+    minute: mm ? '2-digit' : undefined,
+  }).format(date);
 }
 // 24 小時制，跟用藥任務的「14:00」一致（Edward 2026-07-14）
 function _clock24(tv) {
@@ -3971,7 +4467,13 @@ function _visitDayShort(v) {
   if (!v) return '';
   if (v.dateISO) {
     const d = new Date(v.dateISO + 'T00:00');
-    if (!isNaN(d.getTime())) return (d.getMonth() + 1) + '/' + d.getDate() + '（' + ['週日', '週一', '週二', '週三', '週四', '週五', '週六'][d.getDay()] + '）';
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat(muneaLocale(), {
+        month: 'numeric',
+        day: 'numeric',
+        weekday: 'short',
+      }).format(d);
+    }
   }
   return String(v.label || '').split(/\s*[上下]午/)[0].trim();  // 舊資料兜底
 }
@@ -3982,9 +4484,9 @@ function renderVisitTask() {
   if (!v) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
   card.style.display = '';
   const t = $('#visitTaskTitle'), s = $('#visitTaskSub'), tm = $('#visitTaskTime');
-  if (t) t.textContent = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診';   // 今天一起完成的回診卡標題守門（Edward 2026-07-15 事故）
-  if (s) s.textContent = _visitDayShort(v) || '記得帶健保卡';
-  if (tm) tm.textContent = _clock24(v.time) || '今天';
+  if (t) t.textContent = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || muneaT('visit.defaultTitle', '回診');   // 今天一起完成的回診卡標題守門（Edward 2026-07-15 事故）
+  if (s) s.textContent = _visitDayShort(v) || muneaT('visit.defaultNote', '記得帶健保卡與用藥資料');
+  if (tm) tm.textContent = _clock24(v.time) || muneaT('common.today', '今天');
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
 // 行程（揪一攤約會/聚餐）跟回診同一條規矩：只在「當天」進今日任務（Edward 7/16「今天的行程才顯示今天」）
@@ -4003,24 +4505,39 @@ function renderEventTask() {
   if (!ev) { card.style.display = 'none'; card.classList.remove('done'); if (typeof refreshTaskProgress === 'function') refreshTaskProgress(); return; }
   card.style.display = '';
   const t = $('#eventTaskTitle'), s = $('#eventTaskSub'), tm = $('#eventTaskTime');
-  if (t) t.textContent = muneaSafeDisplayText(ev.title, '') || '和家人的約';
-  if (s) s.textContent = muneaSafeDisplayText(ev.place, '') || '記得準時赴約';
-  if (tm) tm.textContent = _clock24(ev.time) || '今天';
+  if (t) t.textContent = muneaSafeDisplayText(ev.title, '') || muneaT('event.familyTitle', '和家人的約');
+  if (s) s.textContent = muneaSafeDisplayText(ev.place, '') || muneaT('event.arriveOnTime', '記得準時赴約');
+  if (tm) tm.textContent = _clock24(ev.time) || muneaT('common.today', '今天');
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
 // 首頁「今天一起完成」整組重算：用藥（有設才有）＋回診（當天才有）＋行程（當天才有）＋走走＋心情筆記＋聊聊
 function renderDailyTasks() { renderPillTask(); renderVisitTask(); renderEventTask(); refreshMoodTask(); }
 window.__muneaRenderDailyTasks = renderDailyTasks;
 // Apple 健康的步數 → 首頁走路任務（原生端 health.js 讀到步數後呼叫）
-window.__muneaSetSteps = function (n) {
+function renderWalkProgress(n) {
   n = Math.max(0, Math.round(+n || 0));
   const card = document.querySelector('.task-item[data-task="walk"]');
   if (!card) return;
   const goal = (window.MuneaHealth && window.MuneaHealth.GOAL) || 500;
   const sub = document.getElementById('walkSub');
   const chip = document.getElementById('walkChip');
-  if (sub) sub.textContent = n >= goal ? ('今天走了 ' + n.toLocaleString() + ' 步，達標了') : ('今天走了 ' + n.toLocaleString() + ' / ' + goal + ' 步');
-  if (chip) chip.textContent = n >= goal ? '達標' : (n.toLocaleString() + ' 步');
+  if (sub) sub.removeAttribute('data-i18n');
+  if (chip) chip.removeAttribute('data-i18n');
+  const count = new Intl.NumberFormat(muneaLocale()).format(n);
+  const formattedGoal = new Intl.NumberFormat(muneaLocale()).format(goal);
+  if (sub) {
+    sub.textContent = n >= goal
+      ? muneaT('home.walkProgressMet', '今天走了 {count} 步，達標了', { count })
+      : muneaT('home.walkProgress', '今天走了 {count} / {goal} 步', {
+        count,
+        goal: formattedGoal,
+      });
+  }
+  if (chip) {
+    chip.textContent = n >= goal
+      ? muneaT('home.walkGoalMet', '達標')
+      : muneaT('home.walkSteps', '{count} 步', { count });
+  }
   card.dataset.steps = String(n);
   if (n >= goal) card.classList.add('done'); // 走到目標就自動完成
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
@@ -4030,7 +4547,8 @@ window.__muneaSetSteps = function (n) {
     const day = _todayISO();
     mergeHealthHistory([{ date: day, steps: n }]);
   } catch (e) {}
-};
+}
+window.__muneaSetSteps = renderWalkProgress;
 
 const HEALTH_LOG_RETENTION_DAYS = 365;
 function mergeHealthHistory(days, syncCloud = true) {
@@ -4191,7 +4709,7 @@ function showMedPhoto(url, name) {
   if (!url) return;
   let lb = document.getElementById('medLightbox');
   if (!lb) { lb = document.createElement('div'); lb.id = 'medLightbox'; lb.className = 'med-lightbox'; document.body.appendChild(lb); lb.addEventListener('click', ev => { if (ev.target === lb || ev.target.classList.contains('mlb-close')) lb.classList.remove('show'); }); }
-  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + muneaSafeDisplayText(name, '') + '</div><button type="button" class="mlb-close">關閉</button></div>';   // 藥物照片燈箱名稱守門（Edward 2026-07-15 事故）
+  lb.innerHTML = '<div class="mlb-card"><img src="' + url + '" alt=""><div class="mlb-name">' + muneaEscapeHtml(muneaSafeDisplayText(name, '')) + '</div><button type="button" class="mlb-close">' + muneaEscapeHtml(muneaT('common.close', '關閉')) + '</button></div>';   // 藥物照片燈箱名稱守門（Edward 2026-07-15 事故）
   lb.classList.add('show');
 }
 function canvasToJpeg(cv) { let q = 0.82; let url = cv.toDataURL('image/jpeg', q); while (url.length > 180000 && q > 0.4) { q -= 0.16; url = cv.toDataURL('image/jpeg', q); } return url; }
@@ -4211,20 +4729,226 @@ function renderMedSlots() {
     const slot = def[0], k = def[1], off = def[2];
     const inSlot = meds.filter(m => String(m.time).split('、').map(x => x.trim()).includes(slot));
     const rows = inSlot.length
-      ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + muneaSafeDisplayText(m.name, '藥') + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
-      : '<div class="ms-empty">這個時段沒有藥</div>';
-    return '<div class="ms-group"><div class="ms-head"><b>' + medSlotLabel(slot) + '</b>' +
+      ? inSlot.map(m => {
+        const safeName = muneaSafeDisplayText(
+          m.name,
+          muneaT('medication.genericName', '藥物'),
+        );
+        const removeLabel = muneaT(
+          'medicationManager.removeSlot',
+          '從{slot}移除{name}',
+          { slot: localizedMedicationSlot(slot), name: safeName },
+        );
+        return '<div class="ms-med">'
+          + (m.photo ? '<span class="ms-thumb" data-name="' + muneaEscapeHtml(m.name) + '" style="background-image:url(' + m.photo + ')"></span>' : '')
+          + '<b>' + muneaEscapeHtml(safeName) + '</b>'
+          + '<span>' + muneaEscapeHtml(localizedMedicationDuration(m.days)) + '</span>'
+          + '<button type="button" class="ms-del" data-slot="' + muneaEscapeHtml(slot) + '" data-name="' + muneaEscapeHtml(m.name) + '" aria-label="' + muneaEscapeHtml(removeLabel) + '">✕</button></div>';
+      }).join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
+      : '<div class="ms-empty">' + muneaEscapeHtml(muneaT('medicationManager.emptySlot', '這個時段沒有藥')) + '</div>';
+    const countKey = inSlot.length === 1
+      ? 'medicationManager.medicineCountOne'
+      : 'medicationManager.medicineCountOther';
+    const count = new Intl.NumberFormat(muneaLocale()).format(inSlot.length);
+    const countCopy = inSlot.length
+      ? muneaT(countKey, '{count} 種', { count })
+      : '';
+    const reminderTimeLabel = muneaT(
+      'medicationManager.reminderTime',
+      '提醒時間',
+    );
+    const reminderTime = medSlotTime(k, off);
+    return '<div class="ms-group"><div class="ms-head"><b>' + muneaEscapeHtml(localizedMedicationSlot(slot)) + '</b>' +
       '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
-      '<input type="time" class="ms-time" data-k="' + k + '" data-off="' + off + '" value="' + medSlotTime(k, off) + '" />' +
+      '<label class="ms-time-control"><span class="ms-time-display" aria-hidden="true">' + reminderTime + '</span>' +
+      '<input type="time" class="ms-time" data-k="' + k + '" data-off="' + off + '" value="' + reminderTime + '" aria-label="' + muneaEscapeHtml(reminderTimeLabel) + '" /></label>' +
       '<button type="button" class="ms-tbtn" data-k="' + k + '" data-m="15">＋</button></span>' +
-      '<span class="ms-count">' + (inSlot.length ? inSlot.length + ' 種' : '') + '</span></div>' + rows + '</div>';
+      '<span class="ms-count">' + muneaEscapeHtml(countCopy) + '</span></div>' + rows + '</div>';
   }).join('');
 }
+
+function setElementOwnText(element, text) {
+  if (!element) return;
+  const textNodes = [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE);
+  if (textNodes.length) {
+    textNodes[0].textContent = text;
+    textNodes.slice(1).forEach(node => node.remove());
+    return;
+  }
+  element.appendChild(document.createTextNode(text));
+}
+
+function renderMedicationReminderCopy(medication) {
+  const modal = document.getElementById('medRemindModal');
+  if (!modal) return;
+  const med = medication || {};
+  const canonicalSlot = canonicalMedicationSlot(med.time) || '早餐後';
+  const slot = localizedMedicationSlot(canonicalSlot);
+  const name = muneaSafeDisplayText(
+    med.name,
+    muneaT('medication.genericName', '藥物'),
+  );
+  modal.dataset.medicationName = name;
+  modal.dataset.medicationSlot = canonicalSlot;
+  if ($('#medDueSay')) $('#medDueSay').textContent = muneaT(
+    'medicationReminder.dueSay',
+    '{slot}的藥，時間到了',
+    { slot },
+  );
+  if ($('#medDueName')) $('#medDueName').textContent = name;
+  if ($('#medDueDesc')) $('#medDueDesc').textContent = muneaT(
+    'medicationReminder.description',
+    '{slot}提醒 · 請依藥袋或醫囑服用',
+    { slot },
+  );
+}
+
+function medicationReminderSpeech(medication) {
+  const med = medication || {};
+  const canonicalSlot = canonicalMedicationSlot(med.time) || '早餐後';
+  return muneaT(
+    'medicationReminder.speech',
+    '{name}是{slot}的藥，時間到了。服用後跟我說一聲。',
+    {
+      name: muneaSafeDisplayText(
+        med.name,
+        muneaT('medication.genericName', '藥物'),
+      ),
+      slot: localizedMedicationSlot(canonicalSlot),
+    },
+  );
+}
+
+function localizeMedicationSurfaces() {
+  const manager = document.getElementById('medMgrModal');
+  if (manager) {
+    const title = manager.querySelector('.modal > h2');
+    if (title) title.textContent = muneaT('medication.title', '用藥');
+    const subtitle = manager.querySelector('.modal-sub');
+    if (subtitle) subtitle.textContent = [
+      muneaT('medicationManager.subtitle', '設定後會在時間到時通知；開啟 App 可確認是否已服用。'),
+      muneaT('medicationManager.disclaimer', 'Munea 只協助提醒，不提供用藥判斷；請依醫師或藥師指示服用。'),
+    ].join(' ');
+    const addLabel = manager.querySelector('.field-label.sect-new');
+    if (addLabel) addLabel.textContent = muneaT('medicationManager.addMedicine', '新增一種藥');
+    const nameInput = document.getElementById('medName');
+    if (nameInput) nameInput.placeholder = muneaT('medication.namePlaceholder', '藥名照藥袋抄');
+    const photoButton = document.getElementById('medPhotoBtn');
+    if (photoButton) photoButton.textContent = muneaT('medicationManager.photo', '加入藥物照片');
+    const photoHint = manager.querySelector('.med-photo-hint');
+    if (photoHint) photoHint.textContent = muneaT('medicationManager.photoHint', '選填，幫助你辨認藥物');
+    const scheduleLabel = document.getElementById('medTimeChips')?.previousElementSibling;
+    if (scheduleLabel) scheduleLabel.textContent = muneaT(
+      'medicationManager.scheduleMultiple',
+      '什麼時候吃（可多選）',
+    );
+    const durationLabel = document.getElementById('medDayChips')?.previousElementSibling;
+    if (durationLabel) durationLabel.textContent = muneaT('medicationManager.duration', '吃多久');
+    document.querySelectorAll('#medTimeChips .mchip').forEach(chip => {
+      chip.textContent = localizedMedicationSlot(chip.dataset.t);
+    });
+    document.querySelectorAll('#medDayChips .mchip').forEach(chip => {
+      chip.textContent = localizedMedicationDuration(chip.dataset.d);
+    });
+    const addButton = document.getElementById('medAddBtn');
+    if (addButton) addButton.textContent = muneaT('medicationManager.add', '加入提醒');
+    const closeButton = document.getElementById('medMgrClose');
+    if (closeButton) closeButton.setAttribute(
+      'aria-label',
+      muneaT('medicationManager.close', '關閉用藥提醒'),
+    );
+    renderMedSlots();
+  }
+
+  const reminder = document.getElementById('medRemindModal');
+  if (reminder) {
+    const closeButton = reminder.querySelector('.mx-close');
+    if (closeButton) closeButton.setAttribute(
+      'aria-label',
+      muneaT('common.close', '關閉'),
+    );
+    const streak = reminder.querySelector('.mpc-streak');
+    setElementOwnText(
+      streak,
+      muneaT('medicationReminder.streak', '已連續完成 {days} 天', {
+        days: new Intl.NumberFormat(muneaLocale()).format(6),
+      }),
+    );
+    const taken = document.getElementById('medTaken');
+    setElementOwnText(taken, muneaT('medicationReminder.taken', '我吃過了'));
+    const snooze = document.getElementById('medSnooze');
+    if (snooze) snooze.textContent = muneaT(
+      'medicationReminder.snooze',
+      '{minutes} 分鐘後再提醒',
+      { minutes: new Intl.NumberFormat(muneaLocale()).format(10) },
+    );
+    renderMedicationReminderCopy({
+      name: reminder.dataset.medicationName,
+      time: reminder.dataset.medicationSlot,
+    });
+  }
+}
+
+window.__medicationI18nTest = {
+  showManager: medication => {
+    const med = medication || {
+      name: muneaT('medication.genericName', '藥物'),
+      time: '早餐後',
+      days: '長期',
+    };
+    localStorage.setItem('munea.meds', JSON.stringify([med]));
+    localizeMedicationSurfaces();
+    document.getElementById('medMgrModal')?.classList.add('show');
+  },
+  showReminder: medication => {
+    renderMedicationReminderCopy(medication);
+    localizeMedicationSurfaces();
+    document.getElementById('medRemindModal')?.classList.add('show');
+  },
+  reminderSpeech: medication => medicationReminderSpeech(medication),
+  canonicalSlot: slot => canonicalMedicationSlot(slot),
+  canonicalDuration: duration => canonicalMedicationDuration(duration),
+};
 
 const POINTS = { total: 0, used: 0, serverRemaining: null,    // 方案與雲端錢包載入後再填入，不預設舊方案額度
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
 const LOW_PTS = 30;
-window.__ptsTest = { setUsed: v => { POINTS.used = v; renderPoints(); }, ff: s => { _callSec = s; } };
+window.__ptsTest = {
+  setUsed: v => { POINTS.used = v; renderPoints(); },
+  setRemaining: v => { POINTS.serverRemaining = Math.max(0, Number(v) || 0); renderPoints(); },
+  showExhausted: () => __muneaShowPointsPopup(),
+  showIdleChat: () => {
+    document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+    const chat = document.getElementById('chat');
+    if (chat) {
+      chat.classList.add('active');
+      chat.dataset.state = 'idle';
+    }
+    setCallToggle(false);
+    localizeChatControls();
+  },
+  showQueued: () => {
+    showBusyCard('queued', { position: 3, eta_s: 121 });
+    setCallPreflightPending(true, muneaT('voice.queue.pending', '排隊中…'));
+  },
+  showFreeMinute: () => {
+    setCallPreflightPending(false);
+    toast(muneaT(
+      'credits.freeTrialOneMinute',
+      '免費體驗剩約 1 分鐘，慢慢說完沒關係。',
+    ));
+  },
+  showVoiceRuntimeCaption: state => {
+    captionsOn = true;
+    applyCaptionState();
+    setLocalizedRuntimeCaption(state);
+  },
+  showVoiceRuntimeHint: state => {
+    setLocalizedRuntimeHint(state);
+    return document.getElementById('chatCaption')?.textContent || '';
+  },
+  ff: s => { _callSec = s; },
+};
 window.__medRefresh = () => updateMedCount();
 function ptsLeft() {
   return Number.isFinite(POINTS.serverRemaining)
@@ -4247,8 +4971,12 @@ function pushWallet() { syncPush('wallet', { grant: POINTS.total, used: POINTS.u
 function ptsPillHidden() { return !!(window.MMPLAN && window.MMPLAN.isFree()) && ptsLeft() <= 0; }
 function renderPoints() {
   const left = ptsLeft();
+  const formattedLeft = new Intl.NumberFormat(muneaLocale()).format(left);
   const hud = document.querySelector('.hud-pill.pts');
-  if (hud) { hud.textContent = '剩 ' + left + ' 點'; hud.style.display = ptsPillHidden() ? 'none' : ''; }
+  if (hud) {
+    hud.textContent = muneaT('settings.creditsBalance', '點數 {credits} 點', { credits: formattedLeft });
+    hud.style.display = ptsPillHidden() ? 'none' : '';
+  }
   if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
   if ($('#ptsUsed')) $('#ptsUsed').textContent = POINTS.used;
   if ($('#ptsBar')) $('#ptsBar').style.width = (POINTS.total > 0 ? Math.round(POINTS.used / POINTS.total * 100) : 0) + '%';
@@ -4275,12 +5003,31 @@ function callBudgetTick() {
   const left = ptsLeft() - Math.floor(_callSec / 60);
   if (!_lowWarned && left <= 15 && left > 0) {
     _lowWarned = true;
-    setCaption('點數快用完了，大概還能聊 ' + left + ' 分鐘', '用完聊天會先停，補點數就能繼續');
+    const minutes = new Intl.NumberFormat(muneaLocale()).format(left);
+    setCaption(
+      muneaT('credits.lowTitle', '點數快用完了，大概還能聊 {minutes} 分鐘', { minutes }),
+      muneaT('credits.lowBody', '用完聊天會先停，補點數就能繼續'),
+    );
   }
   if (!_zeroSaid && left <= 0) {
     _zeroSaid = true;
     __muneaPointsOut();                                  // 點數用完 → 停止聊天 + 跳補點數
   }
+}
+function renderPointsPopupCopy(root) {
+  const popup = root || document.getElementById('mm-pts');
+  if (!popup) return;
+  const title = popup.querySelector('[data-points-copy="title"]');
+  const body = popup.querySelector('[data-points-copy="body"]');
+  const go = popup.querySelector('[data-points-action="top-up"]');
+  const no = popup.querySelector('[data-points-action="dismiss"]');
+  if (title) title.textContent = muneaT('credits.exhaustedTitle', '點數用完了');
+  if (body) body.textContent = muneaT(
+    'credits.exhaustedBody',
+    '聊天會用到點數，這批剛好用完囉。補一些點數，就能繼續跟沐寧聊。',
+  );
+  if (go) go.textContent = muneaT('settings.topUpCredits', '補充點數');
+  if (no) no.textContent = muneaT('common.notNow', '先不用');
 }
 function __muneaShowPointsPopup(){
   var old=document.getElementById('mm-pts'); if(old) old.remove();
@@ -4288,14 +5035,15 @@ function __muneaShowPointsPopup(){
   m.style.cssText='position:fixed;inset:0;z-index:10060;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
   m.innerHTML='<div style="width:min(320px,84vw);background:#F4F0E8;border-radius:24px;padding:26px 22px 18px;text-align:center;box-shadow:0 24px 60px -14px rgba(0,0,0,.5)">'
     +'<div style="width:54px;height:54px;border-radius:16px;margin:0 auto 16px;background:linear-gradient(135deg,#E0B354,#C79A3B);display:grid;place-items:center"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M9 10h4.5a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3H15"/></svg></div>'
-    +'<div style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px">點數用完了</div>'
-    +'<div style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px">聊天會用到點數，這批剛好用完囉。補一些點數，就能繼續跟沐寧聊。</div>'
-    +'<button id="mm-pts-go" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px">補充點數</button>'
-    +'<button id="mm-pts-no" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer">先不用</button>'
+    +'<div data-points-copy="title" style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px"></div>'
+    +'<div data-points-copy="body" style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px"></div>'
+    +'<button data-points-action="top-up" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px"></button>'
+    +'<button data-points-action="dismiss" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer"></button>'
     +'</div>';
   document.body.appendChild(m);
-  m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-pts-no') m.remove(); });
-  var go=document.getElementById('mm-pts-go');
+  renderPointsPopupCopy(m);
+  m.addEventListener('click',function(e){ if(e.target===m||e.target.closest('[data-points-action="dismiss"]')) m.remove(); });
+  var go=m.querySelector('[data-points-action="top-up"]');
   if(go) go.addEventListener('click',function(){ m.remove(); var tm=document.getElementById('topUpModal'); if(tm) tm.classList.add('show'); });
 }
 function __muneaShowCallCreditBlocked(){
@@ -4320,7 +5068,7 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { chatOpened = false; } catch (e) {}
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
-  toast('免費帳號的一次性 5 點體驗已用完');
+  toast(muneaT('credits.freeTrialEnded', '免費帳號的一次性 5 分鐘體驗已用完'));
   try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
   if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
 }
@@ -4335,7 +5083,10 @@ function startCallTimer() {
       // 快到了先溫柔預告（剩 1 分鐘）：畫面提示＋悄悄請角色自然收尾，不再無預警斷線
       if (_rem > 0 && _rem <= 60 && !_freeWarned) {
         _freeWarned = true;
-        toast('免費體驗剩約 1 點，慢慢說完沒關係');
+        toast(muneaT(
+          'credits.freeTrialOneMinute',
+          '免費體驗剩約 1 分鐘，慢慢說完沒關係。',
+        ));
         try {
           if (LiveVoice && LiveVoice.on && LiveVoice.ws && LiveVoice.ws.readyState === 1) {
             LiveVoice.ws.send(JSON.stringify({ type: 'text', text: '（系統悄悄話，請不要唸出這段、也不要提到系統或倒數：免費體驗只剩大約一分鐘，請自然地把話題暖心收尾，溫柔說今天先聊到這。）' }));
@@ -4361,6 +5112,17 @@ function applyCaptionState() {
   if (b) { b.classList.toggle('off', !captionsOn); b.setAttribute('aria-pressed', captionsOn ? 'true' : 'false'); }
   if (chat) chat.classList.toggle('captions-on', captionsOn);
   if (!captionsOn) { const box = document.querySelector('.face-caption-box'); if (box) box.remove(); }
+}
+function localizeChatControls() {
+  const captions = document.getElementById('captionToggle');
+  const captionsLabel = captions && captions.querySelector('span');
+  if (captionsLabel) captionsLabel.textContent = muneaT('voice.caption.label', '字幕');
+  if (captions) captions.setAttribute('aria-label', muneaT('accessibility.toggleCaptions', '字幕開關'));
+
+  const microphone = document.getElementById('chatMic');
+  const microphoneLabel = microphone && microphone.querySelector('span');
+  if (microphoneLabel) microphoneLabel.textContent = muneaT('voice.microphone.label', '麥克風');
+  if (microphone) microphone.setAttribute('aria-label', muneaT('accessibility.toggleMicrophone', '麥克風開關'));
 }
 function setCaption(text, hint) {
   if (!captionsOn) return;                 // 字幕關閉時不顯示逐字稿
@@ -4517,18 +5279,30 @@ let _careIdx = 0, _careTimer = null;
 function plain(s) { return String(s == null ? '' : s).replace(/<[^>]+>/g, ''); }
 function buildCareItems() {
   const items = [];
+  const rendererCopy = muneaRendererCopy();
+  const careLabels = rendererCopy ? rendererCopy.careLabels() : null;
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
   const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
   // 留意卡是首頁會轉動輪播的位置、比招呼卡更容易被看到——family feed 原文一律要過守門才能顯示（Edward 2026-07-15 事故：這裡漏接、招呼卡另一條路徑已守）
-  let _rTitle = '家人帶話給你', _rSub = '', _relayClean = false;
+  let _rTitle = rendererCopy
+    ? rendererCopy.familyRelay({ companion: cname() }).title
+    : '家人帶話給你';
+  let _rSub = '', _relayClean = false;
   if (relayMsg) {
     const _p = plain(relayMsg);
     const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/);
     if (_m) {
       const _whoSafe = muneaSafeDisplayText(_m[1].trim(), '');
       const _bodySafe = muneaSafeDisplayText(_m[2].trim(), '');
-      if (_whoSafe && _bodySafe) { _rTitle = _whoSafe + ' 要我提醒你'; _rSub = _bodySafe; _relayClean = true; }
+      if (_whoSafe && _bodySafe) {
+        const localized = rendererCopy
+          ? rendererCopy.familyRelay({ body: _bodySafe, companion: cname(), from: _whoSafe })
+          : null;
+        _rTitle = localized ? localized.title : _whoSafe + ' 要我提醒你';
+        _rSub = localized ? localized.body : _bodySafe;
+        _relayClean = true;
+      }
     } else {
       const _safeP = muneaSafeDisplayText(_p, '');
       if (_safeP) { _rSub = _safeP; _relayClean = true; }
@@ -4537,20 +5311,43 @@ function buildCareItems() {
   // 蘋果 UGC 審核要求（7/9）：這則若真的來自家人 feed（傳話/愛心/塗鴉…），記下它在陣列裡的位置，卡片才能掛「移除／檢舉」；示範文案（feed 是空的）不算數
   const _feedIdx = relayMsg ? feed.indexOf(relayMsg) : (feed.length ? 0 : -1);
   const _feed0Safe = feed[0] ? muneaSafeDisplayText(plain(feed[0]), '') : '';
+  const defaultRelay = rendererCopy
+    ? rendererCopy.familyRelay({ body: _feed0Safe, companion: cname() })
+    : null;
   const familyItem = _relayClean
-    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: '知道了', feedIdx: _feedIdx }
-    : { k: 'family', tone: '', icon: 'msg', title: '家人帶話給你', sub: _feed0Safe || ('美華說週末回去看你，' + cname() + '都幫你收著了'), btn: '去看看', feedIdx: _feedIdx };
+    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: careLabels ? careLabels.acknowledge : '知道了', feedIdx: _feedIdx }
+    : {
+      k: 'family',
+      tone: '',
+      icon: 'msg',
+      title: defaultRelay ? defaultRelay.title : '家人帶話給你',
+      sub: defaultRelay ? defaultRelay.body : (_feed0Safe || ('美華說週末回去看你，' + cname() + '都幫你收著了')),
+      btn: careLabels ? careLabels.open : '去看看',
+      feedIdx: _feedIdx,
+    };
   let acts = [];
   try { acts = JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) {}
   const act = acts.find(a => a && !a.done && !a.archived);
   if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
     const goal = +(act.steps || act.goal || 8000);
     const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: muneaSafeDisplayText(act.owner, '家人') + '發起的走路活動', sub: gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績', btn: '去看看' });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
+    const localized = rendererCopy
+      ? rendererCopy.walkActivity({ gap, owner: muneaSafeDisplayText(act.owner, '') })
+      : null;
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : muneaSafeDisplayText(act.owner, '家人') + '發起的走路活動', sub: localized ? localized.body : (gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績'), btn: careLabels ? careLabels.open : '去看看' });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
   } else if (act) {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: muneaSafeDisplayText(act.owner, '家人') + '發起了活動', sub: '「' + muneaSafeDisplayText(act.title, '家庭活動') + '」進行中，看看大家的進度', btn: '去看看' });
+    const localized = rendererCopy
+      ? rendererCopy.familyActivity({
+        owner: muneaSafeDisplayText(act.owner, ''),
+        title: muneaSafeDisplayText(act.title, ''),
+      })
+      : null;
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : muneaSafeDisplayText(act.owner, '家人') + '發起了活動', sub: localized ? localized.body : '「' + muneaSafeDisplayText(act.title, '家庭活動') + '」進行中，看看大家的進度', btn: careLabels ? careLabels.open : '去看看' });
   } else {
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: '外婆發起的走路活動', sub: '還差 5,000 步就達標，今晚一起走走？', btn: '去看看' });
+    const localized = rendererCopy
+      ? rendererCopy.walkActivity({ gap: 5000, owner: '' })
+      : null;
+    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : '外婆發起的走路活動', sub: localized ? localized.body : '還差 5,000 步就達標，今晚一起走走？', btn: careLabels ? careLabels.open : '去看看' });
   }
   items.push(familyItem);
   let v = null;
@@ -4560,8 +5357,18 @@ function buildCareItems() {
     const today = isoOf(new Date());
     v = arr.filter(x => x && x.dateISO && x.dateISO >= today).sort((a, b) => a.dateISO.localeCompare(b.dateISO))[0] || null;
   } catch (e) {}
-  if (v && v.dateISO) { const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診'; items.push({ k: 'status', tone: '', icon: 'cal', title: _vTitle + '快到了', sub: (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: '看安排' }); }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
-  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: '準時吃藥有節奏', sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
+  if (v && v.dateISO) {
+    const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診';
+    const localized = rendererCopy
+      ? rendererCopy.upcomingVisit({
+        companion: cname(),
+        date: v.label || String(v.dateISO).slice(5).replace('-', '/'),
+        title: _vTitle,
+      })
+      : null;
+    items.push({ k: 'status', tone: '', icon: 'cal', title: localized ? localized.title : _vTitle + '快到了', sub: localized ? localized.body : (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: careLabels ? careLabels.open : '看安排' });
+  }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
+  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: muneaT('home.care.medicationRhythm', '準時吃藥有節奏'), sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
   // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
   // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）；
@@ -4569,19 +5376,24 @@ function buildCareItems() {
   // 點下去開的那張卡標題完全一致，使用者一路看到的是同一個名字。
   // 附帶好處：固定 4 字＝完全不受名字長度影響，繞開了原本兩道會咬字的關卡——
   // 渲染時的 slice(0,12) 硬切（沒補刪節號）、以及 .care-txt p 的單行 ellipsis（375px 下約 10 字到底）。
-  if (shouldShowProfileNudge()) items.unshift({ k: 'profile', tone: '', icon: 'person', title: '個人資料', sub: '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: '去填寫' });
+  if (shouldShowProfileNudge()) {
+    const localized = rendererCopy ? rendererCopy.profilePrompt() : null;
+    items.unshift({ k: 'profile', tone: '', icon: 'person', title: localized ? localized.title : '個人資料', sub: localized ? localized.body : '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: localized ? localized.action : '去填寫' });
+  }
   return items;
 }
 function renderCareCarousel() {
   const body = document.getElementById('careBody');
   const dots = document.getElementById('careDots');
   if (!body || !dots) return;
+  const rendererCopy = muneaRendererCopy();
+  const careLabels = rendererCopy ? rendererCopy.careLabels() : null;
   const items = buildCareItems();
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
-    '<div class="care-txt"><p>' + (String(it.title).length > 12 ? String(it.title).slice(0, 12) : it.title) + '</p>' + (it.sub ? '<small>' + it.sub + '</small>' : '') +
-    (typeof it.feedIdx === 'number' && it.feedIdx > -1 ? '<div class="care-mod"><button type="button" class="care-mod-btn" data-remove="' + it.feedIdx + '">移除這則</button><button type="button" class="care-mod-btn" data-report="' + it.feedIdx + '">檢舉</button></div>' : '') +
+    '<div class="care-txt"><p>' + it.title + '</p>' + (it.sub ? '<small>' + it.sub + '</small>' : '') +
+    (typeof it.feedIdx === 'number' && it.feedIdx > -1 ? '<div class="care-mod"><button type="button" class="care-mod-btn" data-remove="' + it.feedIdx + '">' + (careLabels ? careLabels.remove : '移除這則') + '</button><button type="button" class="care-mod-btn" data-report="' + it.feedIdx + '">' + (careLabels ? careLabels.report : '檢舉') + '</button></div>' : '') +
     '</div>' +
     (it.btn ? '<button type="button" class="care-btn" data-go="' + it.k + '">' + it.btn + '</button>' : '') +
     '</div>').join('');
@@ -4657,6 +5469,12 @@ function toast(text, duration = 2600) {
 function applyAppVersion() {
   const V = window.MuneaVersion; if (!V) return;
   const n = document.getElementById('verRowNum'); if (n) n.textContent = V.current;
+  const subtitle = document.getElementById('versionSubtitle');
+  if (subtitle) subtitle.textContent = muneaT(
+    'settings.versionReleaseNotes',
+    '版本 {version} · 看更新內容',
+    { version: V.current },
+  );
 }
 function openVersionSheet() {
   const V = window.MuneaVersion || { current: '—', channel: '', changelog: [] };
@@ -4672,6 +5490,7 @@ function openVersionSheet() {
     ).join('');
   }
   const m = document.getElementById('versionSheet'); if (m) m.classList.add('show');
+  localizeCanonicalLegacyPanels();
 }
 
 // ===== 健康頁：分層排版（今日總結＋想提醒你＋都很穩）· 對應「健康照護-數據告警AI提醒-設計」=====
@@ -4791,8 +5610,12 @@ function refreshMoodTask() {
   item.classList.toggle('done', done);
   const sub = document.getElementById('moodTaskSub');
   const chip = document.getElementById('moodTaskChip');
-  if (sub) sub.textContent = done ? '今天的心情已記錄' : '記錄今天的心情';
-  if (chip) chip.textContent = done ? '完成' : '隨時';
+  if (sub) sub.textContent = done
+    ? muneaT('home.taskMoodDone', '今天的心情已記錄')
+    : muneaT('home.taskMoodBody', '記錄今天的心情');
+  if (chip) chip.textContent = done
+    ? muneaT('home.taskDone', '完成')
+    : muneaT('home.taskAnytime', '隨時');
   refreshTaskProgress();
 }
 window.__muneaMoodRecorded = function () { refreshMoodTask(); };
@@ -5073,13 +5896,8 @@ async function connectCall() {
     voiceCallFail('microphone_requested', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     voiceCallEnd('failed', LiveVoice._micUnavailableReason || 'microphone_prime_failed');
     const micHttpsOnly = LiveVoice._micUnavailableReason === 'https_required';
-    setCallHint(micHttpsOnly
-      ? '手機／區網測試需要 HTTPS 才能開麥，請改用公開測試連結'
-      : '拿不到麥克風，請到瀏覽器設定允許');
-    showCallStatusCard({
-      title: micHttpsOnly ? '目前連線環境不支援開麥' : '拿不到麥克風權限',
-      note: micHttpsOnly ? '手機或區網測試需要 HTTPS 才能開麥，請改用公開測試連結。' : '請到手機或瀏覽器設定裡，允許沐寧使用麥克風，再重新撥一次。',
-    });
+    setLocalizedCallHint('unavailable');
+    showCallStatusCard(micHttpsOnly ? 'microphoneHttps' : 'microphonePermission');
     return;
   }
   // 前置並行（2026-07-29 接通提速）：家人傳話準備、帳號確認、點數同步原本一條龍
@@ -5093,10 +5911,10 @@ async function connectCall() {
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   if (developmentDirectCall) {
     setCallDialing(true);
-    setCallHint('開發測試直連中…', true);
+    setLocalizedCallHint('developerConnecting', true);
   } else {
     // 點數是否足夠這件事只在後端靜默判斷，畫面維持一般撥號觀感，不對用戶顯示「查點數」字樣（Edward 2026-07-20拍板）。
-    setCallHint('連線中…', true);
+    setLocalizedCallHint('connecting', true);
     try {
       // A verified Auth session is not enough for Call Control: its durable
       // lease RPC also requires the account_members/person graph. Await the
@@ -5147,11 +5965,7 @@ async function connectCall() {
       voiceCallEnd('failed', reason);
       try { await CallControl.release(reason); } catch (e2) {}
       LiveVoice.stop(); setCallPreflightPending(false); setCallDialing(false); stopCallTimer();
-      setCallHint(authRequired ? '登入狀態已失效，請重新登入後再撥' :
-        (reason.indexOf('account_not_ready') >= 0 ? '帳號正在完成初始化，請稍後再撥一次' :
-        (reason.indexOf('queue_full') >= 0 ? '現在忙線中，請稍後再試試看' :
-          (reason.indexOf('insufficient_credits') >= 0 ? '點數不足，補充後就能繼續聊' :
-          (reason.indexOf('call_control_not_configured') >= 0 ? '通話服務正在更新，請稍後再試' : '目前通話服務忙碌中，請稍後再試')))));
+      setLocalizedCallHint('unavailable');
       // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：#chatCaption 被藏起來，光靠上面那句字幕使用者實際上看不到，
       // 每種失敗都要有標題講原因＋一句怎麼辦＋一顆按鈕；點數不足已有專屬彈窗（__muneaShowCallCreditBlocked），不重複打擾。
       const accountNotReady = reason.indexOf('account_not_ready') >= 0;
@@ -5161,13 +5975,13 @@ async function connectCall() {
       if (queueFull) {
         showBusyCard('full');   // 連排隊的位子都滿了：明講忙線、請稍後再試＋「先用文字聊」出口（Edward 7/22 B 案／7/24 P0 加出口）
       } else if (authRequired) {
-        showCallStatusCard({ title: '登入狀態已失效', note: '請重新登入後再撥一次。', btnText: '重新登入', action: 'reopen-auth' });
+        showCallStatusCard('authExpired');
       } else if (accountNotReady) {
-        showCallStatusCard({ title: '帳號正在準備中', note: '通常幾秒鐘就好，請稍後再撥一次。' });
+        showCallStatusCard('accountPreparing');
       } else if (controlNotConfigured) {
-        showCallStatusCard({ title: '通話服務正在更新', note: '請稍後再試一次，造成不便請見諒。' });
+        showCallStatusCard('serviceUpdating');
       } else if (!insufficientCredits) {
-        showCallStatusCard({ title: '目前無法接通', note: '通話服務暫時忙碌中，請稍後再試一次。' });
+        showCallStatusCard('serviceBusy');
       }
       if (authRequired) setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0);
       if (insufficientCredits) setTimeout(__muneaShowCallCreditBlocked, 0);
@@ -5191,7 +6005,7 @@ async function connectCall() {
     voiceCallMark('app_session_created', 'pass', { sessionId: activeChatSessionId });
     setFaceState('idle');
     // 新引擎首通冷開機較久（喚醒優化交先鋒車道）——誠實預告、不讓人以為當機（Edward 2026-07-11「等20秒」）
-    setCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? '新引擎暖身中，首次約需半分鐘…' : '連線中…', true);
+    setLocalizedCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? 'firstWarmup' : 'connecting', true);
     trackProductEvent('voice_session_started', { locale: muneaLocale(), mode: 'live' });
     const chatEl = document.getElementById('chat');
     if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
@@ -5206,7 +6020,7 @@ async function connectCall() {
       _activationInFlight = true;
       try {
         voiceCallMark('gateway_activation_wait', 'pass');
-        setCallHint(developmentDirectCall ? '開發測試管線已就緒…' : '連線中…', true);
+        setLocalizedCallHint(developmentDirectCall ? 'developerReady' : 'connecting', true);
         if (!developmentDirectCall) await CallControl.waitUntilActive(15000);
       } catch (e) {
         voiceCallFail('gateway_activation', e);
@@ -5217,13 +6031,13 @@ async function connectCall() {
         try { completeChatSession(String(e && e.message || e)); } catch (e2) {}
         chatOpened = false; setCallDialing(false); stopCallTimer();
         const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
-        setFaceState('idle'); setCallHint('服務尚未完成接通，請稍後再試。');
-        showCallStatusCard({ title: '服務尚未完成接通', note: '請稍後再試一次。' });
+        setFaceState('idle'); setLocalizedCallHint('unavailable');
+        showCallStatusCard('activationPending');
         try { FaceIdle.start(); } catch (e2) {}
         return;
       }
       if (!callDialing && !callConnected) { clearTimeout(_gateTimeout); return; }
-      setCallHint('聲音與畫面暖機中…', true);
+      setLocalizedCallHint('openingWarmup', true);
       voiceCallMark('opening_audio_warmup', 'pass');
       const openingAudio = noFace
         ? { mode: 'no_avatar', verified: true, receiverAttached: false }
@@ -5255,7 +6069,7 @@ async function connectCall() {
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
       const _autoEndCall = () => {
-        setCallHint('先幫你把通話收起來囉，想聊再找我');
+        setLocalizedCallHint('idleEnded');
         try { LiveVoice.stop(); } catch (e) {} try { FaceWave.stop(); } catch (e) {}
         try { completeChatSession('idle_timeout'); } catch (e) {}
         chatOpened = false; setCallToggle(false); stopCallTimer();
@@ -5286,18 +6100,18 @@ async function connectCall() {
       try { LiveVoice.stop(); } catch (e) {}
       chatOpened = false; setCallDialing(false); stopCallTimer();
       const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
-      setFaceState('idle'); setCallHint('目前連線還沒準備好，請稍後再試');
-      showCallStatusCard({ title: '目前連線還沒準備好', note: '請稍後再撥一次看看。' });
+      setFaceState('idle'); setLocalizedCallHint('unavailable');
+      showCallStatusCard('readinessPending');
       try { completeChatSession('readiness_timeout'); } catch (e) {}
       try { FaceIdle.start(); } catch (e) {}
       try { trackProductEvent('voice_readiness_timeout', { voiceReady: _voiceReady, faceReady: _faceReady }); } catch (e) {}
     }, 30000);
 
     LiveVoice.onReady = () => { _voiceReady = true; tryStart(); };   // 語音伺服器接上腦＝語音就緒
-    LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setCallHint('連線中…', true); };
+    LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setLocalizedCallHint('connecting', true); };
     // 開場後才顯示狀態（撥通中維持待機動畫、不搶戲）
-    const onListen = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setCallHint('我在聽，你說吧'); FaceWave.start(() => LiveVoice.micLevel); };
-    const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setCallHint('正在說話'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
+    const onListen = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setLocalizedCallHint('ready'); FaceWave.start(() => LiveVoice.micLevel); };
+    const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setLocalizedCallHint('speaking'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
     // 斷線自動接回：掉了就自動重連；多次失敗則收整通，不退成純語音。
     let _reconnects = 0;
@@ -5308,12 +6122,12 @@ async function connectCall() {
         try { completeChatSession('reconnect_failed'); } catch (e) {}
         chatOpened = false; setCallDialing(false); setCallToggle(false); stopCallTimer();
         if (chatEl) chatEl.dataset.state = 'idle';
-        setFaceState('idle'); setCallHint('連線中斷了，請再撥一次');
-        showCallStatusCard({ title: '連線中斷了', note: '請重新撥一次繼續聊天。' });
+        setFaceState('idle'); setLocalizedCallHint('unavailable');
+        showCallStatusCard('disconnected');
         try { FaceIdle.start(); } catch (e) {}
         return;
       }
-      setCallHint('接回來中', true);
+      setLocalizedCallHint('connecting', true);
       setTimeout(() => {
         if (!callConnected && !callDialing) return;
         const resume = CallControl.active ? CallControl.refreshToken() : Promise.resolve();
@@ -5328,7 +6142,7 @@ async function connectCall() {
       try { LiveVoice.stop(); } catch (e) {}
       chatOpened = false; setCallDialing(false); stopCallTimer();
       if (chatEl) chatEl.dataset.state = 'idle';
-      setFaceState('idle'); setCallHint('目前 3 個通話席都在使用中，請稍後再撥');
+      setFaceState('idle'); setLocalizedCallHint('unavailable');
       showBusyCard('full');   // 影像席位全滿跟排隊全滿是同一類「都滿了」，一併給「先用文字聊」出口（2026-07-24 P0）
       try { completeChatSession('avatar_capacity_full'); } catch (e) {}
       try { trackProductEvent('avatar_capacity_full', { mode: 'voice_avatar_required' }); } catch (e) {}
@@ -5336,31 +6150,94 @@ async function connectCall() {
     }).catch(() => {});   // 影像滿載不退純語音；下一版接 Gateway 後顯示排隊位置
     return;
   }
-  setCaption('接通了，直接說話就可以', '想到什麼就說，我在聽');
+  setCaption(
+    muneaT('voice.call.connectedCaption', ''),
+    muneaT('voice.call.listeningPrompt', ''),
+  );
   markConnected();   // 簡單陪聊模式（無雲端語音）＝立即可講
   openVoiceSession();
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
 }
 
+let legalRoutingManifestsPromise = null;
+function isLocalI18nDraftPreview() {
+  const config = window.MUNEA_DEV_CONFIG || {};
+  const localOrigin = ['localhost', '127.0.0.1', ''].includes(window.location.hostname)
+    || window.location.protocol === 'file:';
+  const queryLocale = new URLSearchParams(window.location.search).get('lang');
+  const requestedLocale = config.i18nPreviewLocale || queryLocale;
+  return localOrigin
+    && config.enabled === true
+    && ['zh-TW', 'en', 'ja', 'es'].includes(requestedLocale)
+    && requestedLocale === muneaLocale();
+}
+function trustedLegalRegion() {
+  const region = latestTrustedLocaleContext && latestTrustedLocaleContext.legalRegion;
+  return /^[A-Z]{2}$/.test(String(region || '').trim().toUpperCase())
+    ? String(region).trim().toUpperCase()
+    : null;
+}
+async function fetchJsonDocument(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Unable to load ${path}: HTTP ${response.status}`);
+  return response.json();
+}
+function legalRoutingManifests() {
+  if (!legalRoutingManifestsPromise) {
+    legalRoutingManifestsPromise = Promise.all([
+      fetchJsonDocument('src/i18n/catalog-manifest.json'),
+      fetchJsonDocument('legal/manifest.json'),
+    ]).then(([catalogManifest, legalManifest]) => ({ catalogManifest, legalManifest }))
+      .catch(error => {
+        legalRoutingManifestsPromise = null;
+        throw error;
+      });
+  }
+  return legalRoutingManifestsPromise;
+}
+async function resolveInAppLegalPage(kind) {
+  const routing = window.MuneaLegalRouting;
+  if (!routing || typeof routing.resolveLegalPage !== 'function') {
+    throw new Error('Legal routing is unavailable');
+  }
+  const manifests = await legalRoutingManifests();
+  return routing.resolveLegalPage({
+    kind,
+    ...manifests,
+    locale: muneaLocale(),
+    legalRegion: trustedLegalRegion(),
+    allowDraft: isLocalI18nDraftPreview(),
+  });
+}
+function setReaderStatus(body, text) {
+  const paragraph = document.createElement('p');
+  paragraph.textContent = text;
+  body.replaceChildren(paragraph);
+}
 async function openInAppReader(kind, options) {
-  const page = kind === 'terms' ? 'terms.html' : 'privacy.html';
   const reader = $('#readerPage');
   const body = $('#readerBody');
   if (!reader || !body) return;
-  $('#readerTitle').textContent = kind === 'terms' ? '使用條款' : '隱私權政策';
+  const titleKey = kind === 'terms' ? 'reader.termsTitle' : 'reader.privacyTitle';
+  const titleFallback = kind === 'terms' ? '服務條款' : '隱私權政策';
+  $('#readerTitle').textContent = muneaT(titleKey, titleFallback);
   reader.dataset.returnToConsent = options && options.returnToConsent ? '1' : '';
-  body.innerHTML = '<p>讀取中…</p>';
+  setReaderStatus(body, muneaT('reader.loading', '內容載入中…'));
   reader.classList.add('show');
   reader.setAttribute('aria-hidden', 'false');
   try {
-    const html = await fetch(page).then(r => r.text());
+    const route = await resolveInAppLegalPage(kind);
+    const response = await fetch(route.path);
+    if (!response.ok) throw new Error(`Unable to load legal page: HTTP ${response.status}`);
+    const html = await response.text();
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const secs = [...doc.querySelectorAll('.privacy-section')];
-    body.innerHTML = secs.map(s2 => '<h4>' + s2.querySelector('h2').textContent + '</h4>' +
+    if (!secs.length) throw new Error('Legal page has no readable sections');
+    body.innerHTML = secs.map(s2 => '<h4>' + (s2.querySelector('h2')?.textContent || '') + '</h4>' +
       [...s2.querySelectorAll('p, ul')].map(x => x.outerHTML.replace(/<h2.*?<\/h2>/, '')).join('')).join('');
     body.querySelectorAll('a').forEach(a => { const b2 = document.createElement('strong'); b2.textContent = a.textContent; a.replaceWith(b2); });
   } catch (e) {
-    body.innerHTML = '<p>暫時讀不到，晚點再試。</p>';
+    setReaderStatus(body, muneaT('reader.loadError', '無法載入內容，請稍後再試。'));
   }
   const scroll = body.closest('.reader-scroll');
   if (scroll) scroll.scrollTop = 0;
@@ -5377,6 +6254,13 @@ function closeInAppReader() {
     const sheet = $('#consentSheet');
     if (sheet) sheet.classList.add('show');
   }
+}
+
+function applyTaskAccessibilityLabels() {
+  document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
+  document.querySelectorAll('#taskCard .task-check').forEach(s2 => {
+    s2.setAttribute('aria-label', muneaT('accessibility.markComplete', '標示完成'));
+  });
 }
 
 function setupCriticalConsentControls() {
@@ -5438,7 +6322,9 @@ function init() {
     if (_vs && window.MuneaVersion) {
       const _showStamp = (typeof isDeveloperBypassAllowed === 'function' && isDeveloperBypassAllowed())
         || (typeof isPackagedApp === 'function' && !isPackagedApp());
-      _vs.textContent = _showStamp ? ('內頁 v' + MuneaVersion.current) : '';
+      _vs.textContent = _showStamp
+        ? muneaT('version.webBuild', 'Web v{version}', { version: MuneaVersion.current })
+        : '';
     }
   } catch (e) {}
   window.addEventListener('munea:medication-change', handleMedicationChange);
@@ -5454,8 +6340,7 @@ function init() {
       if (document.visibilityState === 'visible') syncPullAll({ minIntervalMs: 30000 });
     });
   }
-  document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
-  document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
+  applyTaskAccessibilityLabels();
   syncCompanionUI();
   setupHscrollHints();
   renderPoints();
@@ -5529,9 +6414,13 @@ function init() {
     captionsOn = !captionsOn;
     try { localStorage.setItem('munea.captions', captionsOn ? '1' : '0'); } catch (e) {}
     applyCaptionState();
-    toast(captionsOn ? '字幕開啟：會顯示逐字' : '字幕關閉');
+    toast(captionsOn
+      ? muneaT('voice.caption.enabled', '字幕已開啟')
+      : muneaT('voice.caption.disabled', '字幕已關閉'));
   });
   applyCaptionState();
+  localizeChatControls();
+  localizeMedicationSurfaces();
   enableSheetDrag();               // 所有彈窗支援下拉關閉手勢
   refreshTaskProgress();
   restoreFamilyFeed();
@@ -5572,7 +6461,10 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
-    if (!requireLogin('請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'chat')) return;
+    if (!requireLogin(muneaT(
+      'auth.chatSignInRequired',
+      '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+    ), 'chat')) return;
     if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
     else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
     showView('chat');
@@ -6295,7 +7187,10 @@ function init() {
       if (archivedMed) archiveRoutineReminder(archivedMed.id || stableReminderId('med_', [archivedMed.name, archivedMed.time, archivedMed.days, archivedMed.by].join('|')));
       updateMedCount();
       renderMedSlots();
-      toast('拿掉了，這個時段不再提醒這種藥。');
+      toast(muneaT(
+        'medicationManager.removedToast',
+        '已移除，這個時段不再提醒這種藥。',
+      ));
     }
   });
   if ($('#medSlots')) $('#medSlots').addEventListener('change', e => {
@@ -6310,13 +7205,25 @@ function init() {
   });
   let _medPendingPhoto = '';
   if ($('#medPhotoBtn')) $('#medPhotoBtn').addEventListener('click', () => { if ($('#medPhotoFile')) $('#medPhotoFile').click(); });
-  if ($('#medPhotoFile')) $('#medPhotoFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#medPhotoBox'); if (box) box.classList.add('processing'); resizeSquare(f, url => { if (box) box.classList.remove('processing'); _medPendingPhoto = url; if (box) { box.style.backgroundImage = 'url(' + url + ')'; box.classList.add('has'); } }, () => { if (box) box.classList.remove('processing'); toast('這張照片讀不到，換一張相簿裡的照片試試'); }); });
+  if ($('#medPhotoFile')) $('#medPhotoFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#medPhotoBox'); if (box) box.classList.add('processing'); resizeSquare(f, url => { if (box) box.classList.remove('processing'); _medPendingPhoto = url; if (box) { box.style.backgroundImage = 'url(' + url + ')'; box.classList.add('has'); } }, () => { if (box) box.classList.remove('processing'); toast(muneaT('medicationManager.photoReadError', '這張照片讀不到，請換一張相簿裡的照片。')); }); });
   if ($('#medAddBtn')) $('#medAddBtn').addEventListener('click', () => {
     const name = $('#medName').value.trim();
     const times = [...document.querySelectorAll('#medTimeChips .mchip.on')].map(b => b.dataset.t);
     const days = document.querySelector('#medDayChips .mchip.on')?.dataset.d || '長期';
-    if (!name) { toast('先寫藥名（照藥袋抄就好）'); return; }
-    if (!times.length) { toast('點一下什麼時候吃（可以選好幾個）'); return; }
+    if (!name) {
+      toast(muneaT(
+        'medicationManager.nameRequired',
+        '請先填寫藥名（照藥袋抄即可）。',
+      ));
+      return;
+    }
+    if (!times.length) {
+      toast(muneaT(
+        'medicationManager.scheduleRequired',
+        '請選擇服藥時間，可以多選。',
+      ));
+      return;
+    }
     const meds = loadMeds();
     const med = { name, time: times.join('、'), days, by: '美華', photo: _medPendingPhoto };
     ensureMedReminderId(med);
@@ -6328,7 +7235,15 @@ function init() {
     document.querySelectorAll('#medTimeChips .mchip.on').forEach(x => x.classList.remove('on'));
     renderMedList();
     updateMedCount();
-    toast('好，' + cname() + '會在' + times.join('、') + '提醒吃「' + name + '」，時間照你的作息');
+    toast(muneaT(
+      'medicationManager.addedToast',
+      '{companion}會在{slots}提醒你服用「{name}」，時間依照你的作息。',
+      {
+        companion: cname(),
+        slots: localizedMedicationSlotList(times),
+        name,
+      },
+    ));
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
@@ -6387,8 +7302,16 @@ function init() {
     document.querySelectorAll('.ppk').forEach(c => { c.classList.toggle('sel', c.dataset.t === _subPlan); c.classList.toggle('is-cur', c.dataset.t === cur); });
     const cta = $('#subCta');
     if (cta) {
-      if (_subPlan === cur) cta.textContent = '你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案';
-      else cta.textContent = (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? '升級 ' : '改用 ') + CIRCLE_PLAN_LABEL[_subPlan] + ' · ' + fmtPrice(_subPlan, _subCyc);
+      const rendererCopy = muneaRendererCopy();
+      cta.textContent = rendererCopy
+        ? rendererCopy.subscriptionCta({
+          currentPlan: cur,
+          price: fmtPrice(_subPlan, _subCyc),
+          selectedPlan: _subPlan,
+        })
+        : (_subPlan === cur
+          ? '你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案'
+          : (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? '升級 ' : '改用 ') + CIRCLE_PLAN_LABEL[_subPlan] + ' · ' + fmtPrice(_subPlan, _subCyc));
     }
     // 免費不能買點數（Edward 7/17 拍板 Ⓐ）：點數是會員的東西，免費走一次性 5 分鐘體驗、不吃點數。
     // 只剩一個分頁的切換器像壞掉 → 整個收起來，免費只看得到訂閱方案。訂閱後才長出來。
@@ -6414,7 +7337,16 @@ function init() {
     const plan = circlePlan();
     const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
     const pts = Object.prototype.hasOwnProperty.call(PLAN_POINTS, plan) ? PLAN_POINTS[plan] : PLAN_POINTS.plus;
-    const sn = $('#setPlanName'); if (sn) sn.textContent = label + ' 方案';
+    const rendererCopy = muneaRendererCopy();
+    const localizedPlan = rendererCopy
+      ? rendererCopy.planSummary({
+        minutes: pts,
+        monthlyCredits: pts,
+        plan,
+        purchasedCredits: POINTS.bought,
+      })
+      : null;
+    const sn = $('#setPlanName'); if (sn) sn.textContent = localizedPlan ? localizedPlan.name : label + ' 方案';
     // 帳號卡右上角唯一的身份標籤（開發測試帳號會蓋成 TEST）
     renderMemBadge(plan);
     const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
@@ -6432,16 +7364,19 @@ function init() {
       if (_lbl) _lbl.style.display = (!_isFreeP || _leftover > 0) ? '' : 'none';
       if (_used) _used.style.display = _isFreeP ? 'none' : '';
       if (_bar) _bar.style.display = _isFreeP ? 'none' : '';
-      if (_note) _note.textContent = !_isFreeP
-        ? (pts + ' 點約可聊 ' + pts + ' 分鐘；聊天用點數，用完補一下就能繼續。')
-        : (_leftover > 0
-          ? '你還有 ' + _leftover + ' 點沒用完，會一直留著 · 訂閱 Plus／Pro 就能繼續用這些點聊天。'
-          : '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。');
+      if (_note) _note.textContent = localizedPlan
+        ? localizedPlan.note
+        : (!_isFreeP
+          ? (pts + ' 點約可聊 ' + pts + ' 分鐘；聊天用點數，用完補一下就能繼續。')
+          : (_leftover > 0
+            ? '你還有 ' + _leftover + ' 點沒用完，會一直留著 · 訂閱 Plus／Pro 就能繼續用這些點聊天。'
+            : '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。'));
     }
     const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
-    const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = _isFreeP ? '升級方案' : '訂閱方案';
+    const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = localizedPlan ? localizedPlan.manageLabel : (_isFreeP ? '升級方案' : '訂閱方案');
     renderSubUI();
   }
+  window.__muneaRenderPlanState = renderPlanState;
   // 分段 tab（訂閱方案 / 點數購買）
   document.querySelectorAll('.sseg-btn').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.pane === 'points' && circlePlan() === 'free') return;   // 雙保險：免費點不到點數購買
@@ -6459,6 +7394,18 @@ function init() {
   // 舊寫法在開欄當下把方案抄進 _planPick 就不再更新：欄開著時改選方案或月/年繳，
   // 欄位文字與實際扣款會對不上（選 Plus 卻扣 Pro、寫月費卻扣年費）。一律重畫、不留舊值。
   function planConfirmHtml(plan, cyc) {
+    const rendererCopy = muneaRendererCopy();
+    if (rendererCopy) {
+      const localized = rendererCopy.planConfirmation({
+        credits: PLAN_POINTS[plan],
+        members: CIRCLE_LIMITS[plan],
+        plan,
+        price: fmtPrice(plan, cyc),
+      });
+      const yes = $('#planYes'); if (yes) yes.textContent = localized.action;
+      const no = $('#planNo'); if (no) no.textContent = localized.cancel;
+      return localized.title + '<br>' + localized.facts + '<br><small>' + localized.body + '</small>';
+    }
     return '訂閱「<b>' + CIRCLE_PLAN_LABEL[plan] + '</b>」· ' + fmtPrice(plan, cyc)
       + '<br>每月 ' + PLAN_POINTS[plan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[plan] + ' 人。';
   }
@@ -7260,12 +8207,24 @@ function init() {
   function updateWalkLabels() {
     paintRange($('#walkGoal')); paintRange($('#walkDays')); paintRange($('#quizN'));
     const g = +($('#walkGoal') ? $('#walkGoal').value : 30000);
-    if ($('#walkGoalVal')) $('#walkGoalVal').textContent = g.toLocaleString() + ' 步';
+    if ($('#walkGoalVal')) $('#walkGoalVal').textContent = muneaT(
+      'legacyUi.activityGoalValue',
+      '{steps} steps',
+      { steps: new Intl.NumberFormat(muneaLocale()).format(g) },
+    );
     const n = $$('#inviteList .iv.on').length || 1;
     const d = +($('#walkDays') ? $('#walkDays').value : 7);
     if ($('#walkDaysVal')) $('#walkDaysVal').textContent = d + ' 天';
     const per = Math.max(100, Math.round(g / (n * d) / 100) * 100);
-    if ($('#goalHint')) $('#goalHint').textContent = n + ' 人一起走 ' + d + ' 天 · 平均每人每天約 ' + per.toLocaleString() + ' 步';
+    if ($('#goalHint')) $('#goalHint').textContent = muneaT(
+      'legacyUi.activityGoalHint',
+      '{people} people over {days} days · About {steps} steps per person each day',
+      {
+        people: new Intl.NumberFormat(muneaLocale()).format(n),
+        days: new Intl.NumberFormat(muneaLocale()).format(d),
+        steps: new Intl.NumberFormat(muneaLocale()).format(per),
+      },
+    );
   }
   function recalcWalk(reset) {
     const slider = $('#walkGoal');
@@ -7397,13 +8356,15 @@ function init() {
   renderVisitRow();
   refreshRoutineRemindersFromBackend();
   const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
+  const FONT_LABEL_KEYS = { std: 'font.standard', lg: 'font.large', xl: 'font.extraLarge' };
   function applyFontScale() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     const step = FONT_STEPS.find(x => x[0] === cur) || FONT_STEPS[0];
     document.querySelectorAll('.screen .pad, .modal').forEach(el => { el.style.zoom = step[2]; });
     const row = $('#fontNow');
-    if (row) row.textContent = step[1] + ' ›';
+    if (row) row.textContent = muneaT(FONT_LABEL_KEYS[step[0]], step[1]) + ' ›';
   }
+  window.__muneaApplyFontScale = applyFontScale;
   function markFontOpt() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     document.querySelectorAll('.font-opt').forEach(o => o.classList.toggle('on', o.dataset.f === cur));
@@ -7783,12 +8744,10 @@ function init() {
   let medSnoozeUntil = 0, medShowing = null;
   function fireMedReminder(med) {
     medShowing = med;
-    if ($('#medDueDesc')) $('#medDueDesc').textContent = med.time + '的提醒 · 配溫開水就可以';
-    if ($('#medDueName')) $('#medDueName').textContent = muneaSafeDisplayText(med.name, '藥');   // 用藥提醒彈窗名稱守門（Edward 2026-07-15 事故）
-    if ($('#medDueSay')) $('#medDueSay').textContent = med.time + '的藥，時間到囉';
+    renderMedicationReminderCopy(med);
     $('#medRemindModal').classList.add('show');
     // A6：寧寧親口說（App 開著時；打包後升級推播）
-    try { if (typeof speakChat === 'function') speakChat(med.time + '的' + muneaSafeDisplayText(med.name, '藥') + '，時間到囉。吃完跟我說一聲。'); } catch (e) {}
+    try { if (typeof speakChat === 'function') speakChat(medicationReminderSpeech(med)); } catch (e) {}
   }
   function checkDueMeds() {
     if (Date.now() < medSnoozeUntil || medShowing) return;
@@ -7816,20 +8775,32 @@ function init() {
         try { done = JSON.parse(localStorage.getItem(todayKey())) || {}; } catch (e) {}
         done[medShowing.key] = true;
         try { localStorage.setItem(todayKey(), JSON.stringify(done)); } catch (e) {}
-        pushFamilyFeed('<b>' + myFeedName() + '</b>' + medShowing.time + '的藥吃了，' + cname() + '有看著');
+        pushFamilyFeed(muneaT(
+          'medicationReminder.familyFeedTaken',
+          '{person}的{slot}藥已服用，{companion}已記錄。',
+          {
+            person: '<b>' + muneaEscapeHtml(myFeedName()) + '</b>',
+            slot: localizedMedicationSlot(medShowing.time),
+            companion: cname(),
+          },
+        ));
         trackProductEvent('routine_reminder_completed', { reminderType: 'medication' });
       }
     }
     medShowing = null;
     $('#medRemindModal').classList.remove('show');
-    toast('記下了，藥吃了。');
+    toast(muneaT('medicationReminder.takenToast', '已記錄為服用。'));
     renderPillTask();
   });
   if ($('#medSnooze')) $('#medSnooze').addEventListener('click', () => {
     medSnoozeUntil = Date.now() + 10 * 60 * 1000;
     medShowing = null;
     $('#medRemindModal').classList.remove('show');
-    toast('好，10 分鐘後再提醒你。');
+    toast(muneaT(
+      'medicationReminder.snoozedToast',
+      '好，{minutes} 分鐘後再提醒你。',
+      { minutes: new Intl.NumberFormat(muneaLocale()).format(10) },
+    ));
   });
   setInterval(checkDueMeds, 30000);
   setTimeout(checkDueMeds, 1500);
@@ -8081,19 +9052,19 @@ function init() {
     }
     const acted = parseChatIntent(t);
     if (acted) { speakChat(acted); return; }
-    setCallHint('我聽見了');
+    setLocalizedRuntimeHint('heard');
     chatHistory.push({ role: 'user', text: t });
     activeChatTurnCount += 1;
     // [S2S] 思考態：不顯示文字稿，只讓臉與狀態提示表達「她在想」
-    setTimeout(() => { setFaceState('thinking'); setCallHint('我想一下'); }, 380);
+    setTimeout(() => { setFaceState('thinking'); setLocalizedRuntimeHint('thinking'); }, 380);
     const r = await voiceProvider.sendText({ history: chatHistory, char: currentChar });
     if (r && r.reply) {                              // 真腦回話＋真聲音
       if (_brainDegraded) {
         _brainDegraded = false;
-        setCaption('接回來了，剛剛說的我都記著', '我們繼續');
+        setLocalizedRuntimeCaption('recovered');
         trackProductEvent('voice_brain_recovered', { turnCount: activeChatTurnCount });
       }
-      setCallHint('正在說話');
+      setLocalizedCallHint('speaking');
       chatHistory.push({ role: 'model', text: r.reply });
       if (r.audio) playB64(r.audio); else speakChat(r.reply);
       faceSpeak(r.reply);
@@ -8106,10 +9077,10 @@ function init() {
     } else {                                          // 沒真腦 → 退回規則版（純靜態 demo 也能動）
       if (!_brainDegraded) {
         _brainDegraded = true;
-        setCaption('訊號不太穩，我先用簡單的方式陪你', '會自己接回來，聊的內容我都記著');
+        setLocalizedRuntimeCaption('degraded');
       }
       const rr = chatReply(t);
-      setCallHint('正在說話');
+      setLocalizedCallHint('speaking');
       chatHistory.push({ role: 'model', text: rr });
       speakChat(rr);
       faceSpeak(rr);
@@ -8137,11 +9108,11 @@ function init() {
   }
   async function sendVoiceNote(blob, durationMs) {
     if (!blob || !blob.size) {
-      setCallHint('沒有聽清楚，再說一次');
+      setLocalizedRuntimeHint('didNotHear');
       setFaceState('idle');
       return;
     }
-    setCallHint('我想一下');
+    setLocalizedRuntimeHint('thinking');
     const audio = await blobToDataUrl(blob);
     const r = await voiceProvider.sendVoiceNote({ char: currentChar, audio, mime: blob.type || 'audio/webm', durationMs });
     if (r && r.ok) {
@@ -8150,14 +9121,18 @@ function init() {
         bytes: r.bytes || 0,
         mime: blob.type || 'audio/webm',
       });
-      setCallHint('正在說話');
+      setLocalizedCallHint('speaking');
     } else {
       trackProductEvent('voice_session_fallback_used', {
         fallback: 'voice-note-upload-failed',
         durationMs,
       });
-      setCallHint('目前無法語音連線');
-      const s = prompt(`我先用文字接住你，想跟${companionDisplayName}說什麼？`);
+      setLocalizedCallHint('unavailable');
+      const s = prompt(muneaT(
+        'voice.runtime.textFallbackPrompt',
+        '我先用文字接住你，想跟{companion}說什麼？',
+        { companion: companionDisplayName },
+      ));
       if (s) chatHandle(s);
     }
     setFaceState('idle');
@@ -8166,7 +9141,11 @@ function init() {
   let mediaRec = null, mediaChunks = [], mediaStartedAt = 0;
   async function startVoiceCapture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      const s = prompt(`（這個裝置先用打字，正式版用即時語音）跟${companionDisplayName}說什麼？`);
+      const s = prompt(muneaT(
+        'voice.runtime.deviceTextFallbackPrompt',
+        '這個裝置暫時無法使用語音，我們先用文字。想跟{companion}說什麼？',
+        { companion: companionDisplayName },
+      ));
       if (s) chatHandle(s);
       return;
     }
@@ -8187,18 +9166,22 @@ function init() {
       chatOn = true;
       chatMic.classList.add('recording');
       setFaceState('listening');
-      setCallHint('我在聽，說完再按一次');
+      setLocalizedRuntimeHint('recordingTapWhenDone');
     } catch (e) {
-      setCallHint('目前拿不到麥克風權限');
-      const s = prompt(`想跟${companionDisplayName}說什麼？`);
+      setLocalizedRuntimeHint('microphonePermission');
+      const s = prompt(muneaT(
+        'voice.runtime.microphoneTextFallbackPrompt',
+        '想跟{companion}說什麼？',
+        { companion: companionDisplayName },
+      ));
       if (s) chatHandle(s);
     }
   }
   let micMuted = false;
   function startListening() {
     if (!SR2 || chatOn || micMuted || !callConnected) return;
-    chatRec = new SR2(); chatRec.lang = 'zh-TW'; chatRec.interimResults = false;
-    chatRec.onstart = () => { chatOn = true; chatMic && chatMic.classList.add('recording'); setFaceState('listening'); setCallHint('我在聽'); };
+    chatRec = new SR2(); chatRec.lang = muneaLocale(); chatRec.interimResults = false;
+    chatRec.onstart = () => { chatOn = true; chatMic && chatMic.classList.add('recording'); setFaceState('listening'); setLocalizedCallHint('ready'); };
     chatRec.onresult = e => chatHandle(e.results[0][0].transcript);
     chatRec.onend = () => {
       chatOn = false;
@@ -8217,7 +9200,7 @@ function init() {
       micMuted = !micMuted;
       chatMic.classList.toggle('off', micMuted);
       try { LiveVoice.micOpen = !micMuted; } catch (e) {}   // 靜音＝停收音；開啟＝恢復（半雙工仍套用：她說話時本就靜音）
-      setCallHint(micMuted ? '麥克風先關著，想說話再點一下' : '我在聽，你說吧');
+      setLocalizedRuntimeHint(micMuted ? 'microphoneMutedHint' : 'listening');
       return;
     }
     if (!SR2) {
@@ -8233,8 +9216,8 @@ function init() {
     // 通話中：麥克風＝靜音開關
     micMuted = !micMuted;
     chatMic.classList.toggle('off', micMuted);
-    if (micMuted) { try { chatRec && chatRec.stop(); } catch (e) {} setCallHint('麥克風先關著'); }
-    else { setCallHint('我在聽'); startListening(); }
+    if (micMuted) { try { chatRec && chatRec.stop(); } catch (e) {} setLocalizedRuntimeHint('microphoneMuted'); }
+    else { setLocalizedCallHint('ready'); startListening(); }
   });
 
   // 陪伴角色：使用者命名與模板分離
@@ -8266,7 +9249,37 @@ function init() {
   if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
 }
 document.addEventListener('DOMContentLoaded', init);
+function refreshLocalizedDynamicUi() {
+  if (document.readyState === 'loading') return;
+  try { if (window.MuneaI18n) window.MuneaI18n.apply(); } catch (e) {}
+  try { localizeLegacyStaticCopy(); } catch (e) {}
+  try { renderCareCarousel(); } catch (e) {}
+  try { syncCompanionUI(); } catch (e) {}
+  try { renderHomeGreeting(); } catch (e) {}
+  try { refreshMoodTask(); } catch (e) {}
+  try { updateMedCount(); } catch (e) {}
+  try { renderDailyTasks(); } catch (e) {}
+  try {
+    const walk = document.querySelector('.task-item[data-task="walk"]');
+    if (walk && walk.dataset.steps !== undefined) {
+      renderWalkProgress(Number(walk.dataset.steps));
+    }
+  } catch (e) {}
+  try { renderStatusCharts(true); } catch (e) {}
+  try { applyAppVersion(); } catch (e) {}
+  try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
+  try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
+  try { renderPointsPopupCopy(); } catch (e) {}
+  try { updateAuthUI(); } catch (e) {}
+  try { localizeAuthTerms(); } catch (e) {}
+  try { applyTaskAccessibilityLabels(); } catch (e) {}
+  try { localizeChatControls(); } catch (e) {}
+  try { localizeMedicationSurfaces(); } catch (e) {}
+  try { localizeCanonicalLegacyPanels(); } catch (e) {}
+}
+window.addEventListener('munea:locale-ready', refreshLocalizedDynamicUi);
 window.addEventListener('munea:locale-change', () => {
+  refreshLocalizedDynamicUi();
   voiceProvider.close();
   if (storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'true') syncAccountBootstrap('update', { force: true, reason: 'locale_updated' });
 });

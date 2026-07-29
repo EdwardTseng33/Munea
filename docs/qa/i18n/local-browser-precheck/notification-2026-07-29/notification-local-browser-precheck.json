@@ -1,0 +1,151 @@
+{
+  "schema": "munea.app-notification-local-browser-precheck.v1",
+  "recordedAt": "2026-07-29T07:02:41.325Z",
+  "result": "pass-local-precheck",
+  "releaseEvidence": false,
+  "sourceBaseCommit": "2c61d33f3dc19480ae6b281befca0f48eafab747",
+  "sourceChangedFiles": [
+    "M docs/I18N-NON-USER-FACING-REVIEW.json",
+    " M docs/I18N-SURFACE-INVENTORY.json",
+    " M scripts/i18n-surface-inventory.js",
+    " M scripts/test-i18n-migration-worklist.js",
+    " M scripts/test-i18n-surface-inventory.js",
+    " M scripts/test-notification-platform.js",
+    " M web/src/i18n/en.json",
+    " M web/src/i18n/es.json",
+    " M web/src/i18n/ja.json",
+    " M web/src/i18n/zh-TW.json",
+    " M web/src/notify.js",
+    "?? docs/qa/i18n/local-browser-precheck/notification-2026-07-29/",
+    "?? scripts/app-notification-i18n-browser-precheck.js"
+  ],
+  "scope": {
+    "surfaces": [
+      "notification-settings",
+      "notification-inbox-signed-out"
+    ],
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4178",
+    "productionTouched": false,
+    "stagingTouched": false,
+    "appStoreConnectTouched": false,
+    "installedAppUsed": false
+  },
+  "runtime": {
+    "browser": "Google Chrome",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "fixtureServer": "scripts/app-i18n-fixture-server.js",
+    "automation": "Playwright local fallback after agent-browser CDP failure"
+  },
+  "networkSafety": {
+    "loopbackBindOnly": true,
+    "allowedBrowserDomain": "127.0.0.1",
+    "observedExternalRequests": []
+  },
+  "locales": {
+    "zh-TW": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "settings": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/zh-TW__notification-settings__iphone390x844.png",
+          "bytes": 56085,
+          "sha256": "8d061fd43df55d6c4ab2e2e8bf42487f1f14c19f0e752835fa47f2720daf8073"
+        }
+      },
+      "inbox": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/zh-TW__notification-inbox__iphone390x844.png",
+          "bytes": 77165,
+          "sha256": "e4478a2021a1903a449d34373249871c55274ca8deb763d40c7cf903e538e923"
+        }
+      },
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    },
+    "en": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "settings": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/en__notification-settings__iphone390x844.png",
+          "bytes": 58528,
+          "sha256": "1e4466ab8772f245b255d8675f9cff90f368ddf931eda190ef11776234bb1fce"
+        }
+      },
+      "inbox": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/en__notification-inbox__iphone390x844.png",
+          "bytes": 77364,
+          "sha256": "6f63e097ca77ffdec4f0ffb8ffc474c8c36b3003bdf1f69d4a412d853e9267de"
+        }
+      },
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    },
+    "ja": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "settings": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/ja__notification-settings__iphone390x844.png",
+          "bytes": 69233,
+          "sha256": "346dd36430e50704da80a62352dc161def7044a01290535286f9170da452b702"
+        }
+      },
+      "inbox": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/ja__notification-inbox__iphone390x844.png",
+          "bytes": 75955,
+          "sha256": "b0884a471208028821ac4b75063c26d89c00adb92f91a2882a7d88d036629682"
+        }
+      },
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    },
+    "es": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "settings": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/es__notification-settings__iphone390x844.png",
+          "bytes": 63522,
+          "sha256": "389ba79611cb57a65245d10c62502d65299e3b2b8939626d025134042ee83d22"
+        }
+      },
+      "inbox": {
+        "horizontalOverflowPixels": 0,
+        "screenshot": {
+          "path": "docs/qa/i18n/local-browser-precheck/notification-2026-07-29/es__notification-inbox__iphone390x844.png",
+          "bytes": 77972,
+          "sha256": "acbe23df3e2302e2a72e5dcfccb6348f3e389c68f27c4715ad9dea8dc1a75753"
+        }
+      },
+      "untranslatedSamples": [],
+      "browserErrors": [],
+      "translationResult": "pass",
+      "layoutResult": "pass"
+    }
+  },
+  "limitations": [
+    "This is a local browser precheck, not exact installed-iPhone visual QA.",
+    "Native iOS notification permission, APNs delivery, and notification taps were not exercised.",
+    "No Gateway, Live Voice, StoreKit, App Store Connect, Supabase, staging, or production service was exercised."
+  ]
+}

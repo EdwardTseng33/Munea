@@ -8,12 +8,30 @@
   const STORE_PREFIX = 'munea.medicationDoses.v1.';
   const LEGACY_PREFIX = 'munea.medDone.';
   const MIGRATION_PREFIX = 'munea.medicationDoses.migrated.v1.';
+  const LEGACY_GENERIC_MEDICATION_NAME = '藥';
   const VALID_STATUS = new Set(['scheduled', 'taken', 'snoozed', 'skipped', 'missed']);
   let scope = 'guest';
   let post = null;
   let medsProvider = () => [];
   let configured = false;
   let syncPromise = Promise.resolve();
+
+  function t(key, fallback) {
+    return global.MuneaI18n
+      ? global.MuneaI18n.t(key, null, fallback)
+      : fallback;
+  }
+
+  function localizedFallback(key, fallback) {
+    return Object.freeze({
+      localized: t(key, fallback),
+      fallback,
+    });
+  }
+
+  function genericMedicationName() {
+    return t('medication.genericName', 'Medication');
+  }
 
   function safeScope(value) {
     return encodeURIComponent(String(value || 'guest').trim() || 'guest');
@@ -51,7 +69,7 @@
   function scheduledOn(med, day, starts) {
     med = med || {};
     const identity = medIdentity(med) + '|' + String(med.time || '');
-    const durationMatch = String(med.days || '').match(/(7|14|30|90)/);
+    const durationMatch = String(med.days || '').match(/(\d+)/);
     let start = med.startDate || med.start_date || starts[identity];
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(start || ''))) {
       // Legacy long-term medicines predate this field and must keep their history.
@@ -95,9 +113,9 @@
         if (!slot) return;
         out.push({
           doseKey: doseKey(day, med, slot),
-          legacyKey: slot + '|' + (med.name || '藥'),
+          legacyKey: slot + '|' + (med.name || LEGACY_GENERIC_MEDICATION_NAME),
           reminderId: med.id || med.reminderId || null,
-          medicationName: med.name || '藥',
+          medicationName: med.name || genericMedicationName(),
           slot,
           scheduledDate: day,
           photo: med.photo || '',
@@ -105,9 +123,17 @@
       });
     });
     try { localStorage.setItem('munea.medStartDates.v1', JSON.stringify(starts)); } catch (e) {}
-    const order = ['早餐後', '午餐後', '晚餐後', '睡前'];
+    const order = [
+      localizedFallback('medication.slot.afterBreakfast', '早餐後'),
+      localizedFallback('medication.slot.afterLunch', '午餐後'),
+      localizedFallback('medication.slot.afterDinner', '晚餐後'),
+      localizedFallback('medication.slot.bedtime', '睡前'),
+    ];
+    const slotOrder = (slot) => order.findIndex(({ fallback, localized }) => (
+      slot === fallback || slot === localized
+    ));
     out.sort((a, b) => {
-      const ai = order.indexOf(a.slot), bi = order.indexOf(b.slot);
+      const ai = slotOrder(a.slot), bi = slotOrder(b.slot);
       if (ai === bi) return a.medicationName.localeCompare(b.medicationName, 'zh-Hant');
       return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
     });
@@ -122,7 +148,7 @@
       personId: event.personId || scope,
       reminderId: event.reminderId || null,
       doseKey: String(event.doseKey || ''),
-      medicationName: event.medicationName || '藥',
+      medicationName: event.medicationName || genericMedicationName(),
       slot: event.slot || '',
       scheduledDate: event.scheduledDate || dateKey(),
       scheduledAt: event.scheduledAt || null,

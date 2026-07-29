@@ -18,7 +18,7 @@
   <section class="screen active" id="home">
     <div class="pad">
       <div class="page-head home-head">
-        <h1 class="page-title" id="greetBig">晚上好</h1>
+        <h1 class="page-title" id="greetBig" data-i18n="home.greetingEvening">晚上好</h1>
         <span class="home-meta"><span class="mem-badge free home-badge" id="homeMemberBadge" hidden>FREE</span><span class="home-date" id="metaDate">—</span><span id="homeWxWrap" style="display:none"><span class="home-sep">·</span><b id="homeWx"></b></span></span>
       </div>
 
@@ -31,9 +31,9 @@
           </div>
         </div>
       </div>
-      <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>開始聊聊</button>
+      <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span data-i18n="home.startChat">開始聊聊</span></button>
       <div class="care-card" id="careCard">
-        <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"/></svg><span><span class="cname">寧寧</span>幫你留意</span><span class="care-dots" id="careDots"></span></div>
+        <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"/></svg><span id="careHeading">寧寧幫你留意</span><span class="care-dots" id="careDots"></span></div>
         <div class="care-body" id="careBody"></div>
       </div>
       <!-- 2026-07-28：原「讓寧寧更認識你」獨立小卡已退役，提醒改收進上方「幫你留意」輪播的第一則 -->
@@ -41,7 +41,7 @@
 
 
       <div class="sec-head">
-        <div><h2>今天一起完成</h2></div>
+        <div><h2 data-i18n="home.todayTogether">今天一起完成</h2></div>
         <span class="task-progress">0 / 3</span>
       </div>
       <div class="task-card" id="taskCard">
@@ -66,20 +66,20 @@
         </div>
         <div class="task-item" data-task="walk">
           <span class="task-ico walk"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg></span>
-          <div class="task-body"><div class="task-title">出門走走</div><div class="task-sub" id="walkSub">今天走 500 步</div></div>
-          <span class="task-time coral" id="walkChip">隨時</span>
+          <div class="task-body"><div class="task-title" data-i18n="home.taskWalkTitle">出門走走</div><div class="task-sub" id="walkSub" data-i18n="home.taskWalkBody">今天走 500 步</div></div>
+          <span class="task-time coral" id="walkChip" data-i18n="home.taskAnytime">隨時</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
         <div class="task-item" data-task="mood">
           <span class="task-ico mood"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8.5 15s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/></svg></span>
-          <div class="task-body"><div class="task-title">心情筆記</div><div class="task-sub" id="moodTaskSub">記錄今天的心情</div></div>
-          <span class="task-time coral" id="moodTaskChip">隨時</span>
+          <div class="task-body"><div class="task-title" data-i18n="home.taskMoodTitle">心情筆記</div><div class="task-sub" id="moodTaskSub" data-i18n="home.taskMoodBody">記錄今天的心情</div></div>
+          <span class="task-time coral" id="moodTaskChip" data-i18n="home.taskAnytime">隨時</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
         <div class="task-item" data-task="chat">
           <span class="task-ico chat"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></span>
-          <div class="task-body"><div class="task-title">和<span class="cname">寧寧</span>聊聊</div><div class="task-sub">說說今天的事</div></div>
-          <span class="task-time">隨時</span>
+          <div class="task-body"><div class="task-title" id="chatTaskTitle">和寧寧聊聊</div><div class="task-sub" data-i18n="home.taskChatBody">說說今天的事</div></div>
+          <span class="task-time" data-i18n="home.taskAnytime">隨時</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
       </div>
@@ -94,17 +94,17 @@
   <div class="serif h1" style="margin-bottom:14px" id="pageTitle">今天的狀態</div>
   <div class="row st-seg" style="position:relative;background:var(--ink);border-radius:100px;padding:4px;margin-bottom:16px;box-shadow:0 10px 22px -14px rgba(0,0,0,.5)">
     <div id="segThumb" style="position:absolute;top:4px;left:4px;width:calc((100% - 8px)/3);height:calc(100% - 8px);background:var(--teal);border-radius:100px;transition:transform .32s cubic-bezier(.4,0,.2,1);z-index:0"></div>
-    <span style="position:relative;z-index:1;flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:#fff">今天</span>
-    <span style="position:relative;z-index:1;flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:rgba(244,240,232,.55)">過去7天</span>
-    <span style="position:relative;z-index:1;flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:rgba(244,240,232,.55)">過去30天</span></div>
+    <span style="position:relative;z-index:1;flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:#fff" data-period="today" data-i18n="status.today">今天</span>
+    <span style="position:relative;z-index:1;flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:rgba(244,240,232,.55)" data-period="week" data-i18n="status.past7Days">過去 7 天</span>
+    <span style="position:relative;z-index:1;flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:rgba(244,240,232,.55)" data-period="month" data-i18n="status.past30Days">過去 30 天</span></div>
 
   <!-- 寧寧的觀察 -->
   <div style="background:var(--deep);border-radius:20px;padding:14px 16px;margin-bottom:14px;color:#fff">
     <div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
       <span class="obs-ava" style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;overflow:hidden;flex-shrink:0;background:var(--mint2)"><img class="ava-img" src="avatars/nening-face.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"></span>
       <div style="flex:1">
-        <div class="serif" style="font-size:15.5px;font-weight:900"><span class="cname">寧寧</span>的觀察</div>
-        <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700">剛剛幫你看過數據</span></div>
+        <div class="serif" id="obsHeading" style="font-size:15.5px;font-weight:900">寧寧的觀察</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700" data-i18n="status.dataReviewed">剛剛幫你看過數據</span></div>
       </div>
       <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff">今天</span>
     </div>
@@ -116,31 +116,31 @@
     <div class="row" style="justify-content:space-between;margin-bottom:15px">
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="19" height="19" viewBox="0 0 24 24" style="flex-shrink:0" fill="none" stroke="var(--teal-dd)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 14.5c1.2 1.5 5.8 1.5 7 0"/><circle cx="9" cy="10" r=".85" fill="var(--coral)" stroke="none"/><circle cx="15" cy="10" r=".85" fill="var(--coral)" stroke="none"/></svg>
-        <div class="serif" style="font-size:19px;font-weight:900">情緒監測</div>
+        <div class="serif" style="font-size:19px;font-weight:900" data-i18n="status.moodMonitoring">情緒監測</div>
       </div>
       <span class="chip" id="moodChip" style="background:#fff;color:var(--teal-dd)">過去7天 ↗ 平穩</span>
     </div>
     <div id="moodBody"><div class="row" style="gap:13px;margin-bottom:14px">
       <div id="moodOrb" style="flex:0 0 52px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.42),rgba(255,255,255,0) 62%),#236C66;box-shadow:0 8px 18px -6px rgba(35,108,102,.5)"></div>
       <div style="flex:1">
-        <div style="display:flex;align-items:baseline;gap:7px"><span id="moodLabel" class="serif" style="font-size:22px;font-weight:900;color:#236C66">平靜</span><span style="font-size:11.5px;color:var(--muted)">今天</span></div>
+        <div style="display:flex;align-items:baseline;gap:7px"><span id="moodLabel" class="serif" style="font-size:22px;font-weight:900;color:#236C66">平靜</span><span id="moodPeriodLabel" style="font-size:11.5px;color:var(--muted)">今天</span></div>
         <div id="moodNote" style="font-size:12.5px;color:var(--ink2);line-height:1.5;margin-top:3px">今天心情平穩，膝蓋的痠有記著。</div>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:9px">記錄當下的心情</div>
-    <div class="row" id="moodFaces" style="justify-content:space-between"><button class="moodface" data-i="0"><span class="fring" style="background:#F4B63A"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7.3 9.6c.5-1 1.9-1 2.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M14.3 9.6c.5-1 1.9-1 2.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M7.6 14.6Q12 19.6 16.4 14.6Z" fill="#fff" stroke="none"/></svg></span><span class="flab" style="color:var(--muted)">開心</span></button><button class="moodface" data-i="1"><span class="fring" style="background:#2FB7A8"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="9.6" r="1.2" fill="#fff"/><circle cx="15.4" cy="9.6" r="1.2" fill="#fff"/><path d="M8.5 15.3c1 1.3 5.5 1.3 7 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)">愉悅</span></button><button class="moodface" data-i="2"><span class="fring" style="background:#236C66"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="10.4" r="1.2" fill="#fff"/><circle cx="15.4" cy="10.4" r="1.2" fill="#fff"/><path d="M9 15h6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)">平靜</span></button><button class="moodface" data-i="3"><span class="fring" style="background:#6D7F91"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="10.4" r="1.2" fill="#fff"/><circle cx="15.4" cy="10.4" r="1.2" fill="#fff"/><path d="M8.5 16.4c1.5-1.1 4.5-1.1 6 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)">低落</span></button><button class="moodface" data-i="4"><span class="fring" style="background:#D98A32"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="10.4" r="1.2" fill="#fff"/><circle cx="15.4" cy="10.4" r="1.2" fill="#fff"/><path d="M7.3 9.3q1-1 2.3-.3M14.4 9q1.3-.7 2.3.3" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.6" cy="11.8" r="1.1" fill="#fff"/><circle cx="15.4" cy="11.8" r="1.1" fill="#fff"/><ellipse cx="12" cy="16.2" rx="1.3" ry="1.7" fill="#fff"/></svg></span><span class="flab" style="color:var(--muted)">焦慮</span></button><button class="moodface" data-i="5"><span class="fring" style="background:#E95B4F"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7.4 8.7 10.5 10.4M16.6 8.7 13.5 10.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="12.2" r="1.1" fill="#fff"/><circle cx="15" cy="12.2" r="1.1" fill="#fff"/><path d="M8.4 16.8c1.6-1.9 4.6-1.9 6.2 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)">生氣</span></button></div></div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:9px" data-i18n="status.recordMood">記錄當下的心情</div>
+    <div class="row" id="moodFaces" style="justify-content:space-between"><button class="moodface" data-i="0"><span class="fring" style="background:#F4B63A"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7.3 9.6c.5-1 1.9-1 2.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M14.3 9.6c.5-1 1.9-1 2.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M7.6 14.6Q12 19.6 16.4 14.6Z" fill="#fff" stroke="none"/></svg></span><span class="flab" style="color:var(--muted)" data-i18n="mood.happy">開心</span></button><button class="moodface" data-i="1"><span class="fring" style="background:#2FB7A8"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="9.6" r="1.2" fill="#fff"/><circle cx="15.4" cy="9.6" r="1.2" fill="#fff"/><path d="M8.5 15.3c1 1.3 5.5 1.3 7 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)" data-i18n="mood.pleasant">愉悅</span></button><button class="moodface" data-i="2"><span class="fring" style="background:#236C66"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="10.4" r="1.2" fill="#fff"/><circle cx="15.4" cy="10.4" r="1.2" fill="#fff"/><path d="M9 15h6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)" data-i18n="mood.calm">平靜</span></button><button class="moodface" data-i="3"><span class="fring" style="background:#6D7F91"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="10.4" r="1.2" fill="#fff"/><circle cx="15.4" cy="10.4" r="1.2" fill="#fff"/><path d="M8.5 16.4c1.5-1.1 4.5-1.1 6 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)" data-i18n="mood.low">低落</span></button><button class="moodface" data-i="4"><span class="fring" style="background:#D98A32"><svg width="20" height="20" viewBox="0 0 24 24"><circle cx="8.6" cy="10.4" r="1.2" fill="#fff"/><circle cx="15.4" cy="10.4" r="1.2" fill="#fff"/><path d="M7.3 9.3q1-1 2.3-.3M14.4 9q1.3-.7 2.3.3" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.6" cy="11.8" r="1.1" fill="#fff"/><circle cx="15.4" cy="11.8" r="1.1" fill="#fff"/><ellipse cx="12" cy="16.2" rx="1.3" ry="1.7" fill="#fff"/></svg></span><span class="flab" style="color:var(--muted)" data-i18n="mood.anxious">焦慮</span></button><button class="moodface" data-i="5"><span class="fring" style="background:#E95B4F"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7.4 8.7 10.5 10.4M16.6 8.7 13.5 10.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="12.2" r="1.1" fill="#fff"/><circle cx="15" cy="12.2" r="1.1" fill="#fff"/><path d="M8.4 16.8c1.6-1.9 4.6-1.9 6.2 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span><span class="flab" style="color:var(--muted)" data-i18n="mood.angry">生氣</span></button></div></div>
   </div>
 
   <!-- 健康數據 -->
   <div class="row" style="align-items:baseline;margin:4px 2px 12px">
-    <span class="serif" style="font-size:17px;font-weight:900">健康數據</span>
+    <span class="serif" style="font-size:17px;font-weight:900" data-i18n="status.healthData">健康數據</span>
   </div>
   <div class="card" id="medCard" style="padding:14px 15px;margin-bottom:11px;display:none;cursor:pointer">
     <div class="row" style="justify-content:space-between;gap:10px">
       <div class="row" style="gap:11px;min-width:0">
         <span id="medIcon" style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:var(--coral);display:grid;place-items:center;color:#fff;transition:background .2s"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
         <div style="min-width:0">
-          <div style="font-weight:700;font-size:14.5px">用藥狀態</div>
+          <div style="font-weight:700;font-size:14.5px" data-i18n="status.medication">用藥狀態</div>
           <div style="font-size:12px;color:var(--muted);margin-top:1px" id="medSub">還沒設定用藥，跟寧寧說一聲就好</div>
         </div>
       </div>
@@ -149,31 +149,31 @@
   </div>
   <div class="row" id="vitalsRow" style="gap:11px;margin-bottom:11px;align-items:stretch">
     <div class="card" style="padding:15px;flex:1">
-      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="chip" id="bpChip" style="background:var(--mint);color:var(--teal-dd)">穩定</span></div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:3px">血壓</div>
+      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="chip" id="bpChip" style="background:var(--mint);color:var(--teal-dd)" data-i18n="health.stable">穩定</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:3px" data-i18n="health.bloodPressure">血壓</div>
       <div><span class="mnum" id="bpNum" style="font-size:26px;color:var(--teal-dd)">—</span><span id="bpUnit" style="font-size:12.5px;color:var(--muted)"></span></div>
       <div id="bpSub" style="font-size:11.5px;color:var(--muted);margin-top:6px">正常範圍內</div>
     </div>
     <div class="card" style="padding:15px;flex:1">
-      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span><span class="chip" id="hrChip" style="background:var(--coral-soft);color:var(--coral-d)">正常</span></div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:3px">心率</div>
+      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span><span class="chip" id="hrChip" style="background:var(--coral-soft);color:var(--coral-d)" data-i18n="health.normal">正常</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:3px" data-i18n="health.heartRate">心率</div>
       <div><span class="mnum" id="hrNum" style="font-size:26px;color:var(--coral-d)">—</span><span id="hrUnit" style="font-size:12.5px;color:var(--muted)"></span></div>
       <div id="hrSub" style="font-size:11.5px;color:var(--muted);margin-top:6px">靜息心率</div>
     </div>
   </div>
   <div class="card" id="miniStatsCard" style="display:flex;align-items:stretch;padding:0;overflow:hidden;margin-bottom:16px">
     <div style="flex:1;padding:13px 14px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/></svg><span style="font-size:11.5px;color:var(--muted)">血氧</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/></svg><span style="font-size:11.5px;color:var(--muted)" data-i18n="health.bloodOxygen">血氧</span></div>
       <div><span class="mnum" id="spo2Num" style="font-size:21px;color:var(--teal-dd)">—</span><span id="spo2Unit" style="font-size:11px;color:var(--muted)"></span></div>
     </div>
     <div style="width:1px;background:var(--line);margin:12px 0"></div>
     <div style="flex:1;padding:13px 14px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg><span style="font-size:11.5px;color:var(--muted)">睡眠</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg><span style="font-size:11.5px;color:var(--muted)" data-i18n="health.sleep">睡眠</span></div>
       <div><span class="mnum" id="sleepNum" style="font-size:21px;color:#8A6410">—</span><span id="sleepUnit" style="font-size:11px;color:var(--muted)"></span></div>
     </div>
     <div style="width:1px;background:var(--line);margin:12px 0"></div>
     <div style="flex:1;padding:13px 14px">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/></svg><span style="font-size:11.5px;color:var(--muted)">步數</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/></svg><span style="font-size:11.5px;color:var(--muted)" data-i18n="health.steps">步數</span></div>
       <div><span class="mnum" id="stepsNum" style="font-size:20px;color:var(--teal-dd)">—</span><span id="stepsUnit" style="font-size:11px;color:var(--muted)"></span></div>
     </div>
   </div>
@@ -181,7 +181,7 @@
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:7px">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--coral-d)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
-        <span class="serif" style="font-weight:900;font-size:15px">用藥紀錄</span>
+        <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.medicationRecords">用藥紀錄</span>
       </div>
       <span class="chip" id="medTrendChip" style="background:var(--coral-soft);color:var(--coral-d)">7 天準時 6/7</span>
     </div>
@@ -191,55 +191,55 @@
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:7px">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A6410" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
-        <span class="serif" style="font-weight:900;font-size:15px">睡眠品質</span>
+        <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.sleepQuality">睡眠品質</span>
       </div>
       <span class="chip" id="sleepTrendChip" style="background:var(--gold-soft);color:#8A6410">日均 7.2 時</span>
     </div>
     <div id="sleepTrendChart"></div>
-    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-top:8px"><i style="display:inline-block;width:12px;border-top:1.5px dashed rgba(90,105,99,.55)"></i>目標 7.5 時</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-top:8px"><i style="display:inline-block;width:12px;border-top:1.5px dashed rgba(90,105,99,.55)"></i><span data-i18n="status.sleepGoal">目標 7.5 小時</span></div>
   </div>
   <div class="card" id="actCard" style="padding:16px;margin-bottom:16px;display:none">
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:7px">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/></svg>
-        <span class="serif" style="font-weight:900;font-size:15px">活動量</span>
+        <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.activity">活動量</span>
       </div>
       <span class="chip" id="actChip" style="background:var(--mint);color:var(--teal-dd)">日均 6,800 步</span>
     </div>
     <div id="actChart"></div>
     <div id="actLegend" style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px">
-      <span style="display:flex;align-items:center;gap:5px"><i style="display:inline-block;width:12px;border-top:1.5px dashed rgba(90,105,99,.55)"></i>目標 7,000 步</span>
+      <span style="display:flex;align-items:center;gap:5px"><i style="display:inline-block;width:12px;border-top:1.5px dashed rgba(90,105,99,.55)"></i><span data-i18n="status.stepsGoal">目標 7,000 步</span></span>
       <span id="actNote"></span>
     </div>
   </div>
   <div class="card" id="stConnectCard" style="padding:14px 16px;display:flex;align-items:center;gap:12px;background:var(--mint);cursor:pointer">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal-d)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="6" y="7" width="12" height="10" rx="3"/><path d="M9 7l.5-3h5l.5 3M9 17l.5 3h5l.5-3M12 10.5v2l1.4.8"/></svg>
-    <div style="flex:1;font-size:13.5px;color:var(--ink2);line-height:1.5">接上 <b>Apple 健康</b>，血壓、心率、血氧、活動、睡眠全部自動同步。<b style="color:var(--teal-d)">管理裝置 ›</b></div></div>
+    <div style="flex:1;font-size:13.5px;color:var(--ink2);line-height:1.5"><span data-i18n="status.deviceSyncBody">接上 Apple 健康，血壓、心率、血氧、活動、睡眠全部自動同步。</span> <b style="color:var(--teal-d)" data-i18n="status.manageDevices">管理裝置 ›</b></div></div>
     </div>
   </section>
 
   <!-- ===== 家人 ===== -->
   <section class="screen" id="family">
     <div class="pad">
-      <div class="page-head fam-page-head"><h1 class="page-title">全家健康圈</h1><button type="button" class="pt-nav" id="famManageBtn" aria-label="管理家人、移除或封鎖成員"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></button></div>
+      <div class="page-head fam-page-head"><h1 class="page-title" data-i18n="family.title">全家健康圈</h1><button type="button" class="pt-nav" id="famManageBtn" aria-label="管理家人、移除或封鎖成員"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></button></div>
 
       <div class="hscroll-wrap"><div class="fam-switch" id="famSwitch">
-        <button class="fam-switch-item active" data-person="all"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="fs-name">全家</span></button>
+        <button class="fam-switch-item active" data-person="all"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="fs-name" data-i18n="family.all">全家</span></button>
         <button class="fam-switch-item" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei"><span class="fs-av"><span class="init-ava p-mei">華</span></span><span class="fs-name">美華</span></button>
         <button class="fam-switch-item" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi"><span class="fs-av"><span class="init-ava p-zhi">明</span></span><span class="fs-name">志明</span></button>
         <button class="fam-switch-item" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao"><span class="fs-av"><span class="init-ava p-bao">寶</span></span><span class="fs-name">小寶</span></button>
-        <button class="fam-switch-item invite" data-person="invite"><span class="fs-av plus"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="fs-name">邀請</span></button>
+        <button class="fam-switch-item invite" data-person="invite"><span class="fs-av plus"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="fs-name" data-i18n="family.invite">邀請</span></button>
       </div><span class="hscroll-more" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
 
       <!-- 全家總覽 -->
       <div class="fam-view active" id="viewAll">
-        <div class="sec-head"><div><h2>家庭活動</h2></div></div>
+        <div class="sec-head"><div><h2 data-i18n="family.activities">家庭活動</h2></div></div>
         <div class="chal-actions">
-          <button class="chal-act new" id="newChalBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>發起活動</button>
-          <button class="chal-act book" id="bookBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/></svg>家庭記錄簿</button>
+          <button class="chal-act new" id="newChalBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="family.startActivity">發起活動</span></button>
+          <button class="chal-act book" id="bookBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/></svg><span data-i18n="family.journal">家庭記錄簿</span></button>
         </div>
         <!-- 空狀態＝真活動卡的插入錨點（renderActCard 靠它定位，別拆）；有卡時由 JS 隱藏 -->
-        <div class="quest-empty" id="actEmpty">還沒有進行中的活動<br>點上面「發起活動」，揪全家走走、猜謎、投票或聚餐</div>
+        <div class="quest-empty" id="actEmpty"><span data-i18n="family.noActivities">還沒有進行中的活動</span><br>點上面「發起活動」，揪全家走走、猜謎、投票或聚餐</div>
 
         <div class="sec-head"><div><h2>全家狀態</h2></div></div>
         <div class="health-list" id="healthList">
@@ -345,7 +345,7 @@
   <section class="screen" id="settings">
     <div class="pad">
       <div class="page-head"><h1 class="page-title" data-i18n="settings.title">設定</h1></div>
-      <h2 class="set-section">帳號</h2>
+      <h2 class="set-section" data-i18n="settings.section.account">帳號</h2>
       <div class="auth-card" id="authCard" data-auth-state="guest">
         <div class="auth-card-main">
           <span class="auth-ava guest" id="authAvatar">
@@ -364,11 +364,11 @@
         </div>
       </div>
 
-      <h2 class="set-section">訂閱與點數</h2>
+      <h2 class="set-section" data-i18n="settings.section.billing">訂閱與點數</h2>
       <div class="plan-card">
         <div class="plan-title-row">
           <span class="plan-name" id="setPlanName">Plus 方案</span>
-          <span class="plan-payer" style="margin:0">我的訂閱</span>
+          <span class="plan-payer" style="margin:0" data-i18n="settings.mySubscription">我的訂閱</span>
         </div>
         <p class="plan-renewal" id="setPlanRenewalDate" hidden aria-live="polite"></p>
         <div class="plan-divider"></div>
@@ -382,14 +382,14 @@
         </div>
       </div>
 
-      <h2 class="set-section">帳號與家庭</h2>
+      <h2 class="set-section" data-i18n="settings.section.accountFamily">帳號與家庭</h2>
       <div class="set-list">
-        <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main">個人資料<small>名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main">家庭照護圈<small>誰在圈裡、誰付費、誰收通知</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main">想聊的話題<small>挑幾個興趣，<span class="cname">寧寧</span>會多留意這些新鮮事</small></span><span class="sr-arrow" id="interestsNow">›</span></div>
+        <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main"><span data-i18n="settings.profile">個人資料</span><small data-i18n="settings.profileSubtitle">名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main"><span data-i18n="settings.careCircle">家庭照護圈</span><small data-i18n="settings.careCircleSubtitle">誰在圈裡、誰付費、誰收通知</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main"><span data-i18n="settings.interests">想聊的話題</span><small id="interestsSubtitle">挑幾個興趣，寧寧會多留意這些新鮮事</small></span><span class="sr-arrow" id="interestsNow">›</span></div>
       </div>
 
-      <h2 class="set-section">AI 陪伴角色</h2>
+      <h2 class="set-section" data-i18n="settings.section.companion">AI 陪伴角色</h2>
       <div class="set-list" id="companionRow" style="cursor:pointer">
         <div class="set-row"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/nening-face.png" alt=""></span><span class="sr-main"><b id="settingsCompanionName">寧寧</b><small id="settingsTemplateLabel">溫柔型 · 像家人，會照看</small></span><span class="sr-arrow">›</span></div>
       </div>
@@ -415,26 +415,26 @@
         <pre class="ai-dev-json" id="aiDevJson">{}</pre>
       </section>
 
-      <h2 class="set-section">健康資料與安全</h2>
+      <h2 class="set-section" data-i18n="settings.section.healthSafety">健康資料與安全</h2>
       <div class="set-list">
-        <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main">Apple 健康<small>步數・心率・睡眠</small></span><span class="sr-on" id="healthSettingsState"><span class="d"></span><span id="healthSettingsStateLabel">未連接</span></span></div>
-        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main">用藥提醒<small>到時間通知你，開啟 App 可查看與確認</small></span><span class="sr-arrow"><b id="medCountSettings">2 種藥</b> ›</span></div>
-        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main">看診提醒<small>回診前一天提醒你</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
-        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main">安全通知<small>同步到需留意的數據時，通知你選定的家人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
-        <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">我的資料<small>匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main"><span data-i18n="settings.appleHealth">Apple 健康</span><small data-i18n="settings.appleHealthSubtitle">步數・心率・睡眠</small></span><span class="sr-on" id="healthSettingsState"><span class="d"></span><span id="healthSettingsStateLabel">未連接</span></span></div>
+        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，開啟 App 可查看與確認</small></span><span class="sr-arrow"><b id="medCountSettings">2 種藥</b> ›</span></div>
+        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">看診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">回診前一天提醒你</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">同步到需留意的數據時，通知你選定的家人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+        <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="settings.myData">我的資料</span><small data-i18n="settings.myDataSubtitle">匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進登入流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
-      <h2 class="set-section">App 體驗</h2>
+      <h2 class="set-section" data-i18n="settings.section.experience">App 體驗</h2>
       <div class="set-list">
-        <div class="set-row" id="feedbackRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z"/><path d="M8 10h8M8 13.5h5"/></svg></span><span class="sr-main">給開發者的建議<small>回報問題、許願新功能、幫沐寧打分數</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="fontRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span><span class="sr-main">字體與顯示<small>字級大小與閱讀舒適</small></span><span class="sr-arrow" id="fontNow">標準 ›</span></div>
+        <div class="set-row" id="feedbackRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z"/><path d="M8 10h8M8 13.5h5"/></svg></span><span class="sr-main"><span data-i18n="settings.feedback">給開發者的建議</span><small data-i18n="settings.feedbackSubtitle">回報問題、許願新功能、幫沐寧打分數</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="fontRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span><span class="sr-main"><span data-i18n="settings.fontDisplay">字體與顯示</span><small data-i18n="settings.fontDisplaySubtitle">字級大小與閱讀舒適</small></span><span class="sr-arrow" id="fontNow">標準 ›</span></div>
       </div>
 
-      <h2 class="set-section">關於</h2>
+      <h2 class="set-section" data-i18n="settings.section.about">關於</h2>
       <div class="set-list">
-        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main">Munea 沐寧<small>版本 <span id="verRowNum">—</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main">使用條款<small>服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
-        <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main">隱私權政策<small>資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main"><span data-i18n="app.title">Munea 沐寧</span><small id="versionSubtitle">版本 <span id="verRowNum">—</span> · 看更新內容</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main"><span data-i18n="reader.termsTitle">使用條款</span><small data-i18n="settings.termsSubtitle">服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="reader.privacyTitle">隱私權政策</span><small data-i18n="settings.privacySubtitle">資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
     </div>
   </section>
@@ -770,12 +770,12 @@
   <div class="modal-mask" id="fontModal">
     <div class="modal">
       <div class="modal-grab"></div>
-      <h2>字體與顯示</h2>
-      <p class="modal-sub">選一個看得舒服的大小，全 App 一起變。</p>
+      <h2 data-i18n="font.title">字體與顯示</h2>
+      <p class="modal-sub" data-i18n="font.subtitle">選一個看得舒服的大小，全 App 一起變。</p>
       <div class="font-opts">
-        <button class="font-opt" data-f="std"><b style="font-size:16px">標準</b><span>目前手機常用大小</span></button>
-        <button class="font-opt" data-f="lg"><b style="font-size:18px">大</b><span>看得更輕鬆</span></button>
-        <button class="font-opt" data-f="xl"><b style="font-size:20px">特大</b><span>給眼睛最大的照顧</span></button>
+        <button class="font-opt" data-f="std"><b style="font-size:16px" data-i18n="font.standard">標準</b><span data-i18n="font.standardBody">目前手機常用大小</span></button>
+        <button class="font-opt" data-f="lg"><b style="font-size:18px" data-i18n="font.large">大</b><span data-i18n="font.largeBody">看得更輕鬆</span></button>
+        <button class="font-opt" data-f="xl"><b style="font-size:20px" data-i18n="font.extraLarge">特大</b><span data-i18n="font.extraLargeBody">給眼睛最大的照顧</span></button>
       </div>
       <button class="auth-close" id="fontClose" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
@@ -790,11 +790,11 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close" id="dataClose" type="button" aria-label="關閉" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>我的資料</h2>
-      <p class="modal-sub">對話摘要、提醒與紀錄都是你的：登入後可以立即建立只屬於你的 JSON 資料副本，或永久刪除帳號與雲端資料。若有 Apple 訂閱，刪除帳號不會自動取消續訂，請先到「訂閱與點數」管理。</p>
+      <h2 data-i18n="data.title">我的資料</h2>
+      <p class="modal-sub" data-i18n="data.description">對話摘要、提醒與紀錄都是你的：登入後可以立即建立只屬於你的 JSON 資料副本，或永久刪除帳號與雲端資料。若有 Apple 訂閱，刪除帳號不會自動取消續訂，請先到「訂閱與點數」管理。</p>
       <button class="modal-btn" id="dataExportBtn">匯出一份給我</button>
       <button class="modal-btn danger" id="dataDeleteBtn" style="margin-top:10px">刪除我的資料</button>
-      <p class="modal-sub" style="margin-top:12px">詳細規則在「隱私權政策」頁（設定裡可開）。</p>
+      <p class="modal-sub" style="margin-top:12px" data-i18n="data.policyHint">詳細規則在「隱私權政策」頁（設定裡可開）。</p>
     </div>
   </div>
 
@@ -897,14 +897,14 @@
     <div class="sub-hero">
       <button class="sub-x" id="planClose" type="button" aria-label="關閉"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <img class="sub-hero-art" src="illustrations/sub-hero-family.png" alt="" width="800" height="379" />
-      <div class="sub-hero-cap"><div class="sub-hero-title">升級沐寧</div><div class="sub-hero-sub">把一家人的每一天，照顧得更周到</div></div>
+      <div class="sub-hero-cap"><div class="sub-hero-title" data-i18n="subscription.title">升級沐寧</div><div class="sub-hero-sub" data-i18n="subscription.tagline">把一家人的每一天，照顧得更周到</div></div>
     </div>
     <div class="sub-body">
       <!-- 分段 tab（狀態頁風格）-->
       <div class="sub-seg" id="subSeg">
         <div class="sseg-thumb" id="ssegThumb"></div>
-        <button class="sseg-btn on" data-pane="plans" type="button">訂閱方案</button>
-        <button class="sseg-btn" data-pane="points" type="button">點數購買</button>
+        <button class="sseg-btn on" data-pane="plans" type="button" data-i18n="subscription.plansTab">訂閱方案</button>
+        <button class="sseg-btn" data-pane="points" type="button" data-i18n="subscription.creditsTab">點數購買</button>
       </div>
       <p class="sub-intro" id="pointsUnlockNotice"><b>訂閱成功後，會員身分會立即更新，並開放「點數購買」。</b></p>
       <!-- 訂閱方案 -->
@@ -1140,7 +1140,7 @@
       <div class="auth-modal-head">
         <div>
           <h2 id="authSheetTitle">登入 Munea</h2>
-          <p class="modal-sub">同步陪伴角色、家人照護圈與訂閱權益</p>
+          <p class="modal-sub" data-i18n="auth.sheetSubtitle">同步陪伴角色、家人照護圈與訂閱權益</p>
         </div>
         <button class="auth-close" id="authCloseBtn" type="button" aria-label="關閉"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
@@ -1167,7 +1167,8 @@
 
 </div>
   <script src="src/version.js?v=20260728-v1044"></script>
-  <script src="src/i18n.js?v=20260714-zh-only1"></script>
+  <script src="src/i18n.js?v=20260729-four-locale2"></script>
+  <script src="src/i18n/app-renderer-copy.js?v=20260729-four-locale2"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
@@ -1177,6 +1178,22 @@
   <script src="src/notify.js?v=20260716-v1023"></script>
   <script src="src/medication.js?v=20260715-med1"></script>
   <script>
+  window.muneaUiT = function(key, fallback, values) {
+    return window.MuneaI18n
+      ? window.MuneaI18n.t(key, values || null, fallback)
+      : fallback;
+  };
+  window.muneaUiLocale = function() {
+    return window.MuneaI18n ? window.MuneaI18n.current() : 'zh-TW';
+  };
+  window.muneaUiCompanionName = function() {
+    try {
+      if (window.MuneaCompanionProfile) {
+        return window.MuneaCompanionProfile.loadProfile().displayName;
+      }
+    } catch (error) {}
+    return window.muneaUiT('companion.nening.name', '寧寧');
+  };
   /* 方案／權限判斷中心（單一真相 · 兩邊都讀得到）· Edward 7/7：登入預設 free；付費 Plus / Pro。
      ⚠ 7/7 合併時一度被移除、免費限制失效，此處重建並對齊 Mac 的 Plus/Pro 訂閱畫面。 */
   window.MMPLAN = (function(){
@@ -1224,16 +1241,18 @@
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
-/* ===== Munea 情緒球引擎（Edward 7/7 拍板：主色A / 5秒可改 / 手動優先 / 空狀態） ===== */
-window.MM = (function(){
+  /* ===== Munea 情緒球引擎（Edward 7/7 拍板：主色A / 5秒可改 / 手動優先 / 空狀態） ===== */
+  window.MM = (function(){
   var MOODS=[
-    {k:'開心',c:'#F4B63A',note:'今天特別開心，還主動說想出去走走。'},
-    {k:'愉悅',c:'#2FB7A8',note:'心情很好，剛剛還哼了首歌呢。'},
-    {k:'平靜',c:'#236C66',note:'今天心情平穩，膝蓋的痠有記著。'},
-    {k:'低落',c:'#6D7F91',note:'今天話比較少，我多陪你一點。'},
-    {k:'焦慮',c:'#D98A32',note:'今天心裡悶悶的，要不要跟寧寧說說？'},
-    {k:'生氣',c:'#E95B4F',note:'好像有點不開心，深呼吸一下，寧寧在。'}
+    {k:'開心',labelKey:'mood.happy',noteKey:'mood.note.happy',c:'#F4B63A',note:'今天特別開心，還主動說想出去走走。'},
+    {k:'愉悅',labelKey:'mood.pleasant',noteKey:'mood.note.pleasant',c:'#2FB7A8',note:'心情很好，剛剛還哼了首歌呢。'},
+    {k:'平靜',labelKey:'mood.calm',noteKey:'mood.note.calm',c:'#236C66',note:'今天心情平穩，膝蓋的痠有記著。'},
+    {k:'低落',labelKey:'mood.low',noteKey:'mood.note.low',c:'#6D7F91',note:'今天話比較少，我多陪你一點。'},
+    {k:'焦慮',labelKey:'mood.anxious',noteKey:'mood.note.anxious',c:'#D98A32',note:'今天心裡悶悶的，要不要跟寧寧說說？'},
+    {k:'生氣',labelKey:'mood.angry',noteKey:'mood.note.angry',c:'#E95B4F',note:'好像有點不開心，深呼吸一下，寧寧在。'}
   ];
+  function moodLabel(i){ return window.muneaUiT(MOODS[i].labelKey,MOODS[i].k); }
+  function moodNote(i){ return window.muneaUiT(MOODS[i].noteKey,MOODS[i].note,{companion:window.muneaUiCompanionName()}); }
   var LEVELS=[5,4,3,2,2,1];
   // 聊聊觀察的心情詞 → 情緒球六色（球顯示時對齊）
   var BMAP={'開心':0,'愉快':1,'愉悅':1,'平穩':2,'平靜':2,'疲累':3,'低落':3,'煩躁':4,'焦慮':4,'緊張':4,'生氣':5,'憤怒':5};
@@ -1258,7 +1277,7 @@ window.MM = (function(){
   function hasSelfReportToday(){ var today=keyOf(Date.now()); return entries().some(function(x){ return x.src==='self' && keyOf(x.t)===today; }); }
   // 規則④：當天主色 = 出現最多；平手取最近（自我回報優先）
   function dominant(key){ var a=entries().filter(function(r){return keyOf(r.t)===key;}); if(!a.length) return null; var c={}; a.forEach(function(r){c[r.i]=(c[r.i]||0)+1;}); var mx=0,k; for(k in c){ if(c[k]>mx) mx=c[k]; } for(var j=a.length-1;j>=0;j--){ if(c[a[j].i]===mx) return a[j].i; } return null; }
-  var WD=['日','一','二','三','四','五','六'];
+  function weekdayLabel(date){ try{ return new Intl.DateTimeFormat(window.muneaUiLocale(),{weekday:'narrow'}).format(date); }catch(e){ return ['日','一','二','三','四','五','六'][date.getDay()]; } }
 
   // ===== 後端帳本（點的寫進去、聊聊記的讀回來，同一本）=====
   var _logTimer=null,_logMood=null;
@@ -1283,12 +1302,12 @@ window.MM = (function(){
   function eatBall(f,i,wasEmpty){ var orb=document.getElementById('moodOrb'); if(!orb) return; var fr=f.querySelector('.fring').getBoundingClientRect(), orbR=orb.getBoundingClientRect(), sz=22; var ball=document.createElement('span'); ball.style.cssText='position:fixed;z-index:9999;width:'+sz+'px;height:'+sz+'px;border-radius:50%;pointer-events:none;background:'+SH+MOODS[i].c+';box-shadow:0 6px 14px -4px '+MOODS[i].c+';left:'+(fr.left+fr.width/2-sz/2)+'px;top:'+(fr.top+fr.height/2-sz/2)+'px;transition:transform .55s cubic-bezier(.5,0,.4,1),opacity .22s ease .38s'; document.body.appendChild(ball); var dx=(orbR.left+orbR.width/2)-(fr.left+fr.width/2), dy=(orbR.top+orbR.height/2)-(fr.top+fr.height/2); requestAnimationFrame(function(){ ball.style.transform='translate('+dx+'px,'+dy+'px) scale(.35)'; ball.style.opacity='0'; }); setTimeout(function(){ ball.remove(); flash(orb,MOODS[i].c); if(wasEmpty){ setTimeout(function(){ flash(orb,MOODS[i].c); },240); } },560); }
   function spitBall(f,i){ var orb=document.getElementById('moodOrb'); if(!orb) return; var fr=f.querySelector('.fring').getBoundingClientRect(), orbR=orb.getBoundingClientRect(), sz=20; var ball=document.createElement('span'); var dx=(orbR.left+orbR.width/2)-(fr.left+fr.width/2), dy=(orbR.top+orbR.height/2)-(fr.top+fr.height/2); ball.style.cssText='position:fixed;z-index:9999;width:'+sz+'px;height:'+sz+'px;border-radius:50%;pointer-events:none;background:'+SH+MOODS[i].c+';left:'+(fr.left+fr.width/2-sz/2)+'px;top:'+(fr.top+fr.height/2-sz/2)+'px;transition:transform .3s cubic-bezier(.5,0,.5,1)'; document.body.appendChild(ball); requestAnimationFrame(function(){ ball.style.transform='translate('+(dx*0.68)+'px,'+(dy*0.68)+'px) scale(.85)'; }); setTimeout(function(){ shake(orb); ball.style.transition='transform .55s cubic-bezier(.3,1.25,.5,1),opacity .45s ease .28s'; ball.style.transform='translate('+(dx*0.68+(i%2?46:-46))+'px,'+(dy*0.68-64)+'px) scale(.5)'; ball.style.opacity='0'; },300); setTimeout(function(){ ball.remove(); },940); registerSpit(); }
   function registerSpit(){ var now=Date.now(); spitTimes.push(now); spitTimes=spitTimes.filter(function(t){return now-t<PWIN;}); if(spitTimes.length>=PN && now-lastPopup>PCOOL){ lastPopup=now; spitTimes=[]; showPopup(); } }
-  function showPopup(){ if(document.getElementById('mm-popup')) return; var m=document.createElement('div'); m.id='mm-popup'; m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.42);backdrop-filter:blur(2px);animation:mmFade .2s ease'; m.innerHTML='<div style="width:min(300px,82vw);background:var(--surface,#fff);border-radius:22px;padding:24px 20px 20px;text-align:center;box-shadow:0 22px 54px -12px rgba(0,0,0,.45)"><div style="width:58px;height:58px;border-radius:50%;margin:0 auto 14px;background:'+SH+'#236C66;box-shadow:0 8px 18px -7px rgba(35,108,102,.5)"></div><div style="font-family:var(--serif,Georgia,serif);font-weight:900;font-size:17.5px;color:var(--ink,#3A352E);margin-bottom:9px">我知道你現在心情很滿</div><div style="font-size:13.5px;line-height:1.75;color:var(--ink2,#5A5349);margin-bottom:18px">記一顆就好——記太多反而看不出真正的你。<br>想抒發的話，隨時跟我聊聊都可以。</div><button id="mm-popok" style="width:100%;border:none;background:var(--teal,#3AA8A0);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:14px;cursor:pointer">好，我知道了</button></div>'; document.body.appendChild(m); m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-popok') m.remove(); }); }
+  function showPopup(){ if(document.getElementById('mm-popup')) return; var m=document.createElement('div'); m.id='mm-popup'; m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.42);backdrop-filter:blur(2px);animation:mmFade .2s ease'; m.innerHTML='<div style="width:min(300px,82vw);background:var(--surface,#fff);border-radius:22px;padding:24px 20px 20px;text-align:center;box-shadow:0 22px 54px -12px rgba(0,0,0,.45)"><div style="width:58px;height:58px;border-radius:50%;margin:0 auto 14px;background:'+SH+'#236C66;box-shadow:0 8px 18px -7px rgba(35,108,102,.5)"></div><div style="font-family:var(--serif,Georgia,serif);font-weight:900;font-size:17.5px;color:var(--ink,#3A352E);margin-bottom:9px">'+window.muneaUiT('mood.limitTitle','我知道你現在心情很滿')+'</div><div style="font-size:13.5px;line-height:1.75;color:var(--ink2,#5A5349);margin-bottom:18px">'+window.muneaUiT('mood.limitBody','記一顆就好——記太多反而看不出真正的你。想抒發的話，隨時跟我聊聊都可以。')+'</div><button id="mm-popok" style="width:100%;border:none;background:var(--teal,#3AA8A0);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:14px;cursor:pointer">'+window.muneaUiT('common.gotIt','好，我知道了')+'</button></div>'; document.body.appendChild(m); m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-popok') m.remove(); }); }
 
   function quickSquish(orb){ if(!orb) return; orb.animate([{transform:'scale(1)'},{transform:'scale(.9)',offset:.3},{transform:'scale(1.07)',offset:.62},{transform:'scale(1)'}],{duration:280,easing:'cubic-bezier(.34,1.5,.5,1)'}); }
   var burstTimes=[], lastNote=0;
   function registerBurst(){ var now=Date.now(); burstTimes.push(now); burstTimes=burstTimes.filter(function(t){return now-t<15000;}); if(burstTimes.length>=12 && now-lastNote>60000){ lastNote=now; burstTimes=[]; gentleNote(); } }
-  function gentleNote(){ var n=document.createElement('div'); n.style.cssText='position:fixed;left:50%;bottom:118px;transform:translateX(-50%) translateY(8px);z-index:9998;background:rgba(54,66,62,.94);color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:999px;box-shadow:0 12px 28px -8px rgba(0,0,0,.42);opacity:0;transition:opacity .4s ease,transform .4s ease;pointer-events:none'; n.textContent='有好多感覺呢，我都在 · 想聊聊嗎'; document.body.appendChild(n); requestAnimationFrame(function(){ n.style.opacity='1'; n.style.transform='translateX(-50%) translateY(0)'; }); setTimeout(function(){ n.style.opacity='0'; n.style.transform='translateX(-50%) translateY(8px)'; setTimeout(function(){ n.remove(); },450); },2800); }
+  function gentleNote(){ var n=document.createElement('div'); n.style.cssText='position:fixed;left:50%;bottom:118px;transform:translateX(-50%) translateY(8px);z-index:9998;background:rgba(54,66,62,.94);color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:999px;box-shadow:0 12px 28px -8px rgba(0,0,0,.42);opacity:0;transition:opacity .4s ease,transform .4s ease;pointer-events:none'; n.textContent=window.muneaUiT('mood.gentleNudge','有好多感覺呢，我都在 · 想聊聊嗎'); document.body.appendChild(n); requestAnimationFrame(function(){ n.style.opacity='1'; n.style.transform='translateX(-50%) translateY(0)'; }); setTimeout(function(){ n.style.opacity='0'; n.style.transform='translateX(-50%) translateY(8px)'; setTimeout(function(){ n.remove(); },450); },2800); }
   var _tapTimes=[];
   function bindFaces(){
     var orb=document.getElementById('moodOrb');
@@ -1305,10 +1324,10 @@ window.MM = (function(){
       if(typeof window.__muneaMoodRecorded==='function') window.__muneaMoodRecorded(MOODS[i]);
     }; });
   }
-  function decorate(){ var orb=document.getElementById('moodOrb'), label=document.getElementById('moodLabel'), note=document.getElementById('moodNote'), chip=document.getElementById('moodChip'); if(!orb||!label) return; var cur=currentEntry(), i=cur?cur.i:null, st=state(); if(i!=null&&!MOODS[i]) i=null; /* 防呆：怪編號一律當「還沒記錄」、絕不讓卡片死 */ orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent='還沒記錄'; label.style.color='#8A9297'; if(note) note.textContent='點下面的表情，餵情緒球第一口'; } else { label.textContent=MOODS[i].k; label.style.color=MOODS[i].c; if(note) note.textContent=MOODS[i].note; } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent='寧寧從聊天感覺到的'; else sub.textContent='今天'; } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?'還沒記錄':'今天'; }
-  function weekHTML(){ var days=[],filled=0; for(var off=6;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; days.push({lab:WD[d.getDay()],i:i}); } var dots=days.map(function(x){ var col=(x.i==null)?'transparent':MOODS[x.i].c; var bd=(x.i==null)?'2px dashed #D2CCBE':'none'; return '<div style="text-align:center;flex:1"><div style="width:28px;height:28px;border-radius:50%;margin:0 auto;background:'+col+';border:'+bd+'"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">'+x.lab+'</div></div>'; }).join(''); var cap=filled?('這週記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>的心情，繼續保持。'):'每天記一點，這裡會慢慢長出你的心情軌跡。'; return '<div style="display:flex;justify-content:space-between;margin-bottom:12px">'+dots+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
-  function monthHTML(){ var cells=[],filled=0; for(var off=29;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; cells.push(i); } var grid=cells.map(function(i){ var col=(i==null)?'transparent':MOODS[i].c; var bd=(i==null)?'1.5px dashed #DAD4C6':'none'; return '<div style="height:22px;border-radius:5px;background:'+col+';border:'+bd+'"></div>'; }).join(''); var cap=filled?('這個月記了 <b style="color:var(--teal-dd)">'+filled+' 天</b>，心情地圖正在長出來。'):'每天記一點，一個月後這裡就是你的心情地圖。'; return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+grid+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
-  function renderMood(mood){ var body=document.getElementById('moodBody'), chip=document.getElementById('moodChip'); if(!body) return; function paint(){ var b=document.getElementById('moodBody'); if(!b) return; if(mood==='today'){ if(window.__todayMoodHTML) b.innerHTML=window.__todayMoodHTML; decorate(); bindFaces(); } else if(mood==='week'){ b.innerHTML=weekHTML(); var c=document.getElementById('moodChip'); if(c) c.textContent='過去 7 天'; } else { b.innerHTML=monthHTML(); var c2=document.getElementById('moodChip'); if(c2) c2.textContent='過去 30 天'; } } paint(); pull().then(function(){ paint(); }); }
+  function decorate(){ var orb=document.getElementById('moodOrb'), label=document.getElementById('moodLabel'), note=document.getElementById('moodNote'), chip=document.getElementById('moodChip'); if(!orb||!label) return; var cur=currentEntry(), i=cur?cur.i:null, st=state(); if(i!=null&&!MOODS[i]) i=null; /* 防呆：怪編號一律當「還沒記錄」、絕不讓卡片死 */ orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent=window.muneaUiT('mood.notRecorded','還沒記錄'); label.style.color='#8A9297'; if(note) note.textContent=window.muneaUiT('mood.emptyPrompt','點下面的表情，餵情緒球第一口'); } else { label.textContent=moodLabel(i); label.style.color=MOODS[i].c; if(note) note.textContent=moodNote(i); } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent=window.muneaUiT('mood.observedFromChat','{companion}從聊天感覺到的',{companion:window.muneaUiCompanionName()}); else sub.textContent=window.muneaUiT('status.today','今天'); } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?window.muneaUiT('mood.notRecorded','還沒記錄'):window.muneaUiT('status.today','今天'); }
+  function weekHTML(){ var days=[],filled=0; for(var off=6;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; days.push({lab:weekdayLabel(d),i:i}); } var dots=days.map(function(x){ var col=(x.i==null)?'transparent':MOODS[x.i].c; var bd=(x.i==null)?'2px dashed #D2CCBE':'none'; return '<div style="text-align:center;flex:1"><div style="width:28px;height:28px;border-radius:50%;margin:0 auto;background:'+col+';border:'+bd+'"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">'+x.lab+'</div></div>'; }).join(''); var cap=filled?window.muneaUiT('mood.weekRecorded','這週記了 {days} 天的心情，繼續保持。',{days:filled}):window.muneaUiT('mood.weekEmpty','每天記一點，這裡會慢慢長出你的心情軌跡。'); return '<div style="display:flex;justify-content:space-between;margin-bottom:12px">'+dots+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
+  function monthHTML(){ var cells=[],filled=0; for(var off=29;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; cells.push(i); } var grid=cells.map(function(i){ var col=(i==null)?'transparent':MOODS[i].c; var bd=(i==null)?'1.5px dashed #DAD4C6':'none'; return '<div style="height:22px;border-radius:5px;background:'+col+';border:'+bd+'"></div>'; }).join(''); var cap=filled?window.muneaUiT('mood.monthRecorded','這個月記了 {days} 天，心情地圖正在長出來。',{days:filled}):window.muneaUiT('mood.monthEmpty','每天記一點，一個月後這裡就是你的心情地圖。'); return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+grid+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
+  function renderMood(mood){ var body=document.getElementById('moodBody'), chip=document.getElementById('moodChip'); if(!body) return; function paint(){ var b=document.getElementById('moodBody'); if(!b) return; if(mood==='today'){ if(window.__todayMoodHTML) b.innerHTML=window.__todayMoodHTML; decorate(); bindFaces(); } else if(mood==='week'){ b.innerHTML=weekHTML(); var c=document.getElementById('moodChip'); if(c) c.textContent=window.muneaUiT('status.past7Days','過去 7 天'); } else { b.innerHTML=monthHTML(); var c2=document.getElementById('moodChip'); if(c2) c2.textContent=window.muneaUiT('status.past30Days','過去 30 天'); } } paint(); pull().then(function(){ paint(); }); }
   function currentMood(){ try{ var i=dominant(keyOf(Date.now())); return (i==null)?'':((MOODS[i]&&MOODS[i].k)||''); }catch(e){ return ''; } }
   return { renderMood:renderMood, pull:pull, MOODS:MOODS, currentMood:currentMood, hasSelfReportToday:hasSelfReportToday };
 })();
@@ -1324,8 +1343,8 @@ function mmDoneMap(){
   if(window.MuneaMedication){ var events=window.MuneaMedication.dayEvents(mmMeds(),mmDateKey()),out={}; events.forEach(function(e){ if(e.status==='taken') out[e.slot+'|'+e.medicationName]=true; }); return out; }
   try{ return JSON.parse(localStorage.getItem('munea.medDone.'+mmDateKey()))||{}; }catch(e){ return {}; }
 }
-window.MMMED=function(period){ var card=document.getElementById('medCard'); if(!card) return; if(period&&period!=='今天'){ card.style.display='none'; return; } var chip=document.getElementById('medChip'),icon=document.getElementById('medIcon'),sub=document.getElementById('medSub'); card.style.display='block'; if(chip){chip.style.padding='';chip.style.fontSize='';} var meds=mmMeds(); if(!meds.length){ if(sub) sub.textContent='還沒設定用藥，跟寧寧說一聲就好'; if(chip){ chip.textContent='去設定 ›'; chip.style.background='var(--teal)'; chip.style.color='#fff'; chip.style.padding='6px 13px'; chip.style.fontSize='13px'; } if(icon) icon.style.background='#B7BEC2'; return; } var slots=mmSlots(meds),done=mmDoneMap(),total=slots.length,doneN=0,next=null; for(var j=0;j<slots.length;j++){ if(done[slots[j].key]) doneN++; else if(!next) next=slots[j]; } if(next){ if(chip){ chip.textContent='尚未服用'; chip.style.background='var(--coral-soft)'; chip.style.color='var(--coral-d)'; } if(icon) icon.style.background='var(--coral)'; if(sub) sub.textContent=String(next.name).split(/\s+/)[0]+' · '+next.slot+'（今天 '+doneN+'/'+total+'）'; } else { if(chip){ chip.textContent='都完成了'; chip.style.background='var(--mint)'; chip.style.color='var(--teal-dd)'; } if(icon) icon.style.background='var(--teal)'; if(sub) sub.textContent='今天 '+total+' 次都記到了'; } };
-window.MMMEDCLICK=function(){ var meds=mmMeds(); if(!meds.length){ var mask=document.getElementById('medMgrModal'); if(mask){ if(typeof renderMedList==='function') renderMedList(); mask.classList.add('show'); } return; } if(window.MuneaMedication){ window.MuneaMedication.toggleNext(meds,'status'); return; } var slots=mmSlots(meds),done=mmDoneMap(),next=null; for(var j=0;j<slots.length;j++){ if(!done[slots[j].key]){ next=slots[j]; break; } } if(next){ done[next.key]=true; } else { var last=slots[slots.length-1]; if(last) delete done[last.key]; } try{ localStorage.setItem('munea.medDone.'+mmDateKey(), JSON.stringify(done)); }catch(e){} window.MMMED('今天'); };
+window.MMMED=function(period){ var card=document.getElementById('medCard'); if(!card) return; if(period&&period!=='today'){ card.style.display='none'; return; } var chip=document.getElementById('medChip'),icon=document.getElementById('medIcon'),sub=document.getElementById('medSub'); card.style.display='block'; if(chip){chip.style.padding='';chip.style.fontSize='';} var meds=mmMeds(); if(!meds.length){ if(sub) sub.textContent=window.muneaUiT('status.medicationUnset','還沒設定用藥，跟{companion}說一聲就好',{companion:window.muneaUiCompanionName()}); if(chip){ chip.textContent=window.muneaUiT('medication.goSet','去設定 ›'); chip.style.background='var(--teal)'; chip.style.color='#fff'; chip.style.padding='6px 13px'; chip.style.fontSize='13px'; } if(icon) icon.style.background='#B7BEC2'; return; } var slots=mmSlots(meds),done=mmDoneMap(),total=slots.length,doneN=0,next=null; for(var j=0;j<slots.length;j++){ if(done[slots[j].key]) doneN++; else if(!next) next=slots[j]; } if(next){ if(chip){ chip.textContent=window.muneaUiT('medication.notTaken','尚未服用'); chip.style.background='var(--coral-soft)'; chip.style.color='var(--coral-d)'; } if(icon) icon.style.background='var(--coral)'; if(sub) sub.textContent=window.muneaUiT('medication.nextDoseSummary','{name} · {slot}（今天 {done}/{total}）',{name:String(next.name).split(/\s+/)[0],slot:next.slot,done:doneN,total:total}); } else { if(chip){ chip.textContent=window.muneaUiT('medication.allDone','都完成了'); chip.style.background='var(--mint)'; chip.style.color='var(--teal-dd)'; } if(icon) icon.style.background='var(--teal)'; if(sub) sub.textContent=window.muneaUiT('medication.completedToday','今天 {total} 次都記到了',{total:total}); } };
+window.MMMEDCLICK=function(){ var meds=mmMeds(); if(!meds.length){ var mask=document.getElementById('medMgrModal'); if(mask){ if(typeof renderMedList==='function') renderMedList(); mask.classList.add('show'); } return; } if(window.MuneaMedication){ window.MuneaMedication.toggleNext(meds,'status'); return; } var slots=mmSlots(meds),done=mmDoneMap(),next=null; for(var j=0;j<slots.length;j++){ if(!done[slots[j].key]){ next=slots[j]; break; } } if(next){ done[next.key]=true; } else { var last=slots[slots.length-1]; if(last) delete done[last.key]; } try{ localStorage.setItem('munea.medDone.'+mmDateKey(), JSON.stringify(done)); }catch(e){} window.MMMED('today'); };
 </script>
 
 <!-- MUNEA-HEALTH-EMPTY -->
@@ -1352,86 +1371,38 @@ window.MMDEV = function(){
   // 沒有真觀察可寫的時候，這句話由狀態決定——三種情況講三種話，不可以互相沿用。
   // （只讀到一部分卻還說「讀不到資料」也是假的，一樣不行。）
   var obs=document.getElementById('obsText');
-  if(obs && !window.__muneaObsReal) obs.innerHTML = off
-    ? '還沒接上健康裝置——接上 <b style="color:#8FD4CC">Apple 健康</b>，或先記個心情、跟我聊聊，我就開始幫你看著了。'
+  if(obs && !window.__muneaObsReal) obs.textContent = off
+    ? window.muneaUiT('status.healthDeviceEmpty','還沒接上健康裝置。接上 Apple 健康，或先記個心情、跟我聊聊，我就開始幫你看著了。')
     : !anyOk
-      ? '已經連上 Apple 健康，但我還讀不到資料。到「健康」App→個人照片→<b style="color:#8FD4CC">「App 與服務」→沐寧</b>，把要給我看的項目打開就好。'
-      : '今天讀到的都整理在這裡了，<b style="color:#8FD4CC">還沒讀到的我也標了出來</b>。';
+      ? window.muneaUiT('status.healthConnectedNoData','已經連上 Apple 健康，但我還讀不到資料。到「健康」App → 個人照片 →「App 與服務」→ 沐寧，把要給我看的項目打開就好。')
+      : window.muneaUiT('status.healthPartialData','今天讀到的都整理在這裡了，還沒讀到的我也標了出來。');
 
   // 讀不到的項目：數字留「—」，標籤一定藏起來。
   // bpChip/hrChip 預設寫死「穩定」「正常」、bpSub 寫「正常範圍內」——
   // 一項都沒讀到還把它們顯示出來，等於對長輩做沒有根據的生理宣稱，絕對不行。
-  var miss = off ? '接 Apple 健康帶入' : '還沒讀到這一項';
+  var miss = off
+    ? window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入')
+    : window.muneaUiT('status.healthMetricMissing','還沒讀到這一項');
   if(st.bp !== 'ok'){ T('bpNum','—'); T('bpUnit',''); T('bpSub',miss); hide('bpChip'); } else { show('bpChip'); }
   if(st.hr !== 'ok'){ T('hrNum','—'); T('hrUnit',''); T('hrSub',miss); hide('hrChip'); } else { show('hrChip'); }
   if(st.spo2 !== 'ok'){ T('spo2Num','—'); T('spo2Unit',''); }
   if(st.sleep !== 'ok'){ T('sleepNum','—'); T('sleepUnit',''); }
   if(st.steps !== 'ok'){ T('stepsNum','—'); T('stepsUnit',''); }
   if(!anyOk){
-    var trendMsg = off ? '接上 Apple 健康後，這裡會長出你的趨勢' : '讀到資料後，這裡會長出你的趨勢';
+    var trendMsg = off
+      ? window.muneaUiT('status.healthTrendAfterConnect','接上 Apple 健康後，這裡會長出你的趨勢')
+      : window.muneaUiT('status.healthTrendAfterData','讀到資料後，這裡會長出你的趨勢');
     ['sleepTrendChart','actChart'].forEach(function(id){ var el=document.getElementById(id); if(el && el.offsetParent!==null){ el.innerHTML='<div style="padding:16px 2px;font-size:12.5px;color:var(--muted);text-align:center">'+trendMsg+'</div>'; } });
     hide('sleepTrendChip'); hide('actChip');
   }
 };
 </script>
 
-<!-- MUNEA-STATUS-PORT -->
-<script>
-(function(){
-  var SH='radial-gradient(circle at 35% 30%,rgba(255,255,255,.42),rgba(255,255,255,0) 62%),';
-  var moods=[
-    {k:'開心',c:'#F4B63A',note:'今天特別開心，還主動說想出去走走。'},
-    {k:'愉悅',c:'#2FB7A8',note:'心情很好，剛剛還哼了首歌呢。'},
-    {k:'平靜',c:'#236C66',note:'今天心情平穩，膝蓋的痠有記著。'},
-    {k:'低落',c:'#6D7F91',note:'今天話比較少，我多陪你一點。'},
-    {k:'焦慮',c:'#D98A32',note:'今天心裡悶悶的，要不要跟寧寧說說？'},
-    {k:'生氣',c:'#E95B4F',note:'好像有點不開心，深呼吸一下，寧寧在。'}
-  ];
-  function toRgb(c){ if(c[0]==='#'){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];} var m=c.match(/\d+/g); return [(+m[0]),(+m[1]),(+m[2])]; }
-  function vary(c){ var r=toRgb(c), j=function(v){return Math.max(0,Math.min(255,v+Math.round((Math.random()-0.5)*26)));}; return 'rgb('+j(r[0])+','+j(r[1])+','+j(r[2])+')'; }
-  window.initTodayMood=function(){
-    var orb=document.getElementById('moodOrb'),label=document.getElementById('moodLabel'),note=document.getElementById('moodNote');
-    if(!orb) return;
-    var faces=[].slice.call(document.querySelectorAll('.moodface'));
-    orb.style.position='relative'; orb.style.overflow='hidden'; orb.style.cursor='pointer';
-    function setOrb(color){ orb.style.background=SH+color; orb.style.boxShadow='0 8px 18px -7px rgba(0,0,0,.28)'; }
-    function wobble(){
-      orb.animate([
-        {transform:'scale(1,1)'},
-        {transform:'scale(1.16,.84)',offset:.2},
-        {transform:'scale(.88,1.14)',offset:.42},
-        {transform:'scale(1.07,.94)',offset:.64},
-        {transform:'scale(.97,1.03)',offset:.83},
-        {transform:'scale(1,1)'}
-      ],{duration:820,easing:'cubic-bezier(.34,1.56,.64,1)'});
-    }
-    function flash(color){
-      var g=document.createElement('span');
-      g.style.cssText='position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 40%,'+color+',transparent 68%);opacity:0;pointer-events:none';
-      orb.appendChild(g);
-      g.animate([{opacity:0},{opacity:.8,offset:.35},{opacity:0}],{duration:760,easing:'ease-out'}).onfinish=function(){g.remove();};
-    }
-    function markFaces(i){ faces.forEach(function(ff,j){ var ring=ff.querySelector('.fring'),lab=ff.querySelector('.flab'); ring.style.boxShadow=j===i?'0 0 0 3px #fff,0 0 0 5px '+moods[j].c:'none'; lab.style.color=j===i?moods[j].c:'var(--muted)'; }); }
-    orb.addEventListener('click',function(){ wobble(); });
-    faces.forEach(function(f){ f.addEventListener('click',function(){
-      var i=+f.getAttribute('data-i');
-      var fr=f.querySelector('.fring').getBoundingClientRect(), orbR=orb.getBoundingClientRect(), sz=22;
-      var ball=document.createElement('span');
-      ball.style.cssText='position:fixed;z-index:9999;width:'+sz+'px;height:'+sz+'px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.5),rgba(255,255,255,0) 60%),'+moods[i].c+';box-shadow:0 6px 14px -4px '+moods[i].c+';left:'+(fr.left+fr.width/2-sz/2)+'px;top:'+(fr.top+fr.height/2-sz/2)+'px;transition:transform .55s cubic-bezier(.5,0,.4,1),opacity .22s ease .38s';
-      document.body.appendChild(ball);
-      var dx=(orbR.left+orbR.width/2)-(fr.left+fr.width/2), dy=(orbR.top+orbR.height/2)-(fr.top+fr.height/2);
-      label.textContent=moods[i].k; label.style.color=moods[i].c; note.textContent=moods[i].note; markFaces(i);
-      requestAnimationFrame(function(){ ball.style.transform='translate('+dx+'px,'+dy+'px) scale(.35)'; ball.style.opacity='0'; });
-      setTimeout(function(){ ball.remove(); wobble(); flash(moods[i].c); setOrb(vary(moods[i].c)); },560);
-    }); });
-    setOrb('#236C66'); markFaces(2); label.textContent='平靜'; label.style.color='#236C66'; note.textContent=moods[2].note;
-  };
-})();
-</script>
 <script>
 (function(){
   var todayMoodHTML = document.getElementById('moodBody').innerHTML;
   window.__todayMoodHTML = todayMoodHTML;
+  var currentPeriod='today';
 
   // （7/9 正式化：示範心情週/月區塊已拆——真版在 MM.renderMood）
   var HL='color:#8FD4CC';
@@ -1440,21 +1411,37 @@ window.MMDEV = function(){
   function vitalsOf(){
     var t=mmTodayLog()||{};
     function n(v,f){ return (v||v===0)?String(f?f(v):v):'—'; }
+    function unit(key,fallback){ var locale=window.muneaUiLocale(); return ((locale==='en'||locale==='es')?' ':'')+window.muneaUiT(key,fallback); }
     return {
-      bp:{num:n(t.bpSys), unit:(t.bpDia?'/'+t.bpDia+' mmHg':''), chip:'', sub:(t.bpSys?'正常範圍內':'接 Apple 健康帶入')},
-      hr:{num:n(t.hr), unit:(t.hr?' bpm':''), chip:'', sub:(t.hr?'靜息心率':'接 Apple 健康帶入')},
-      spo2:{num:n(t.spo2), unit:(t.spo2?' %':'')}, sleep:{num:n(t.sleepHours), unit:(t.sleepHours?' 時':'')},
-      steps:{num:n(t.steps,function(v){return (+v).toLocaleString();}), unit:(t.steps?' 步':'')}
+      bp:{num:n(t.bpSys), unit:(t.bpDia?'/'+t.bpDia+' mmHg':''), chip:'', sub:(t.bpSys?window.muneaUiT('status.normalRange','正常範圍內'):window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入'))},
+      hr:{num:n(t.hr), unit:(t.hr?' bpm':''), chip:'', sub:(t.hr?window.muneaUiT('status.restingHeartRate','靜息心率'):window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入'))},
+      spo2:{num:n(t.spo2), unit:(t.spo2?' %':'')}, sleep:{num:n(t.sleepHours), unit:(t.sleepHours?unit('health.unit.hoursShort','小時'):'')},
+      steps:{num:n(t.steps,function(v){return (+v).toLocaleString(window.muneaUiLocale());}), unit:(t.steps?unit('health.unit.steps','步'):'')}
     };
   }
-  var data={
-    '今天':{title:'今天的狀態',moodChip:'今天',mood:'today',
-      obs:{p:'今天',t:'今天的數據會即時整理在這裡。',lead:'',act:'接上 Apple 健康或跟我聊聊',tail:'，我就開始幫你看著。'}},
-    '過去7天':{title:'過去7天的狀態',moodChip:'7 天',mood:'week',
-      obs:{p:'過去7天',t:'趨勢從你的真實紀錄長出來——記錄越多、整理越準。',lead:'',act:'每天記一點',tail:'，一週後這裡就有你的節奏。'}},
-    '過去30天':{title:'過去30天的狀態',moodChip:'30 天',mood:'month',
-      obs:{p:'過去30天',t:'一個月的健康地圖正在累積。',lead:'',act:'持續記錄',tail:'，我會幫你看出變化。'}}
-  };
+  function dataFor(period){
+    if(period==='week') return {
+      title:window.muneaUiT('status.period7Title','過去 7 天的狀態'),
+      moodChip:window.muneaUiT('status.past7Days','過去 7 天'),
+      mood:'week',
+      obsPeriod:window.muneaUiT('status.past7Days','過去 7 天'),
+      obs:window.muneaUiT('status.observationWeek','趨勢從你的真實紀錄長出來。每天記一點，一週後這裡就有你的節奏。')
+    };
+    if(period==='month') return {
+      title:window.muneaUiT('status.period30Title','過去 30 天的狀態'),
+      moodChip:window.muneaUiT('status.past30Days','過去 30 天'),
+      mood:'month',
+      obsPeriod:window.muneaUiT('status.past30Days','過去 30 天'),
+      obs:window.muneaUiT('status.observationMonth','一個月的健康地圖正在累積。持續記錄，我會幫你看出變化。')
+    };
+    return {
+      title:window.muneaUiT('status.title','今天的狀態'),
+      moodChip:window.muneaUiT('status.today','今天'),
+      mood:'today',
+      obsPeriod:window.muneaUiT('status.today','今天'),
+      obs:window.muneaUiT('status.observationToday','今天的數據會即時整理在這裡。接上 Apple 健康或跟我聊聊，我就開始幫你看著。')
+    };
+  }
 
   function refreshMedCard(period){ if(window.MMMED) window.MMMED(period); }
   document.getElementById('medCard').addEventListener('click', function(){ if(window.MMMEDCLICK) window.MMMEDCLICK(); });
@@ -1507,11 +1494,11 @@ window.MMDEV = function(){
   function mmIsGuest(){ try{ var a=window.MuneaAuth; var s=a&&a.state?a.state():null; return !s||s.status!=='signed-in'; }catch(e){ return true; } }
   function mmAccNote(el, n){ if(!el) return;
     // 7/9 Edward：只有登入會員才記每天的數據→之後才有趨勢；訪客講清楚要登入
-    if(mmIsGuest()){ el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">登入後，我會開始幫你記錄每天的數據<br>之後這裡就會長出「過去 7 天 / 30 天」的趨勢</div>'; return; }
-    el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">數據累積中（第 '+Math.max(n,1)+' 天）<br>每天的數據會自動記下來，這裡會長出趨勢</div>'; }
-  var WDL=['日','一','二','三','四','五','六'];
+    if(mmIsGuest()){ el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">'+window.muneaUiT('status.signInTrendPrompt','登入後，我會開始幫你記錄每天的數據。之後這裡就會長出過去 7 天與 30 天的趨勢。')+'</div>'; return; }
+    el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">'+window.muneaUiT('status.accumulatingTrend','數據累積中（第 {days} 天）。每天的數據會自動記下來，這裡會長出趨勢。',{days:Math.max(n,1)})+'</div>'; }
+  function shortWeekday(date){ try{ return new Intl.DateTimeFormat(window.muneaUiLocale(),{weekday:'narrow'}).format(date); }catch(e){ return ['日','一','二','三','四','五','六'][date.getDay()]; } }
   function mmRealTrends(period){
-    var n = (period==='過去7天')?7:30;
+    var n = (period==='week')?7:30;
     var agg = mmAgg(n);
     var actC=document.getElementById('actChart'), slpC=document.getElementById('sleepTrendChart'), medC=document.getElementById('medTrendChart');
     var stepDays=agg.days.filter(function(x){return x.v&&typeof x.v.steps==='number';});
@@ -1520,32 +1507,32 @@ window.MMDEV = function(){
     // 活動量
     if(stepDays.length>=2){
       if(n===7){
-        var labels=agg.days.map(function(x){return WDL[x.d.getDay()];});
+        var labels=agg.days.map(function(x){return shortWeekday(x.d);});
         var vals=agg.days.map(function(x){return (x.v&&x.v.steps)||0;});
         actC.innerHTML = barsChartHTML(labels, vals, stepGoal, function(v){return v>=stepGoal?'var(--teal)':'var(--gold)';}, agg.days.length-1);
       } else {
-        var wl=['第1週','第2週','第3週','第4週'], wv=[0,0,0,0], wc=[0,0,0,0];
+        var wl=[1,2,3,4].map(function(week){ return window.muneaUiT('status.weekNumber','第 {week} 週',{week:week}); }), wv=[0,0,0,0], wc=[0,0,0,0];
         agg.days.forEach(function(x,idx){ var b=Math.min(3,Math.floor(idx/8)); if(x.v&&typeof x.v.steps==='number'){ wv[b]+=x.v.steps; wc[b]++; } });
         var wavg=wv.map(function(s,j){return wc[j]?Math.round(s/wc[j]):0;});
         actC.innerHTML = barsChartHTML(wl, wavg, stepGoal, function(v){return v>=stepGoal?'var(--teal)':'var(--gold)';}, 3);
       }
-      document.getElementById('actChip').textContent='日均 '+(agg.steps||0).toLocaleString()+' 步';
-      document.getElementById('actNote').textContent='記到 '+stepDays.length+' 天的活動量';
-    } else { mmAccNote(actC, agg.n); document.getElementById('actChip').textContent='累積中'; document.getElementById('actNote').textContent='每天會自動記，越看越準'; }
+      document.getElementById('actChip').textContent=window.muneaUiT('status.dailyAverageSteps','日均 {steps} 步',{steps:(agg.steps||0).toLocaleString(window.muneaUiLocale())});
+      document.getElementById('actNote').textContent=window.muneaUiT('status.activityDaysRecorded','記到 {days} 天的活動量',{days:stepDays.length});
+    } else { mmAccNote(actC, agg.n); document.getElementById('actChip').textContent=window.muneaUiT('status.accumulating','累積中'); document.getElementById('actNote').textContent=window.muneaUiT('status.autoRecordMoreAccurate','每天會自動記，越看越準'); }
     // 睡眠
     if(sleepDays.length>=2){
       if(n===7){
-        var sl=agg.days.map(function(x){return WDL[x.d.getDay()];});
+        var sl=agg.days.map(function(x){return shortWeekday(x.d);});
         var sv=agg.days.map(function(x){return (x.v&&x.v.sleepHours)||0;});
         slpC.innerHTML = barsChartHTML(sl, sv, sleepGoal, function(v){return v>=7.5?'var(--teal)':(v>=6.5?'var(--gold)':'var(--coral)');}, agg.days.length-1);
       } else {
-        var wl2=['第1週','第2週','第3週','第4週'], sv2=[0,0,0,0], sc2=[0,0,0,0];
+        var wl2=[1,2,3,4].map(function(week){ return window.muneaUiT('status.weekNumber','第 {week} 週',{week:week}); }), sv2=[0,0,0,0], sc2=[0,0,0,0];
         agg.days.forEach(function(x,idx){ var b=Math.min(3,Math.floor(idx/8)); if(x.v&&typeof x.v.sleepHours==='number'){ sv2[b]+=x.v.sleepHours; sc2[b]++; } });
         var savg=sv2.map(function(s,j){return sc2[j]?+(s/sc2[j]).toFixed(1):0;});
         slpC.innerHTML = barsChartHTML(wl2, savg, sleepGoal, function(v){return v>=7.5?'var(--teal)':(v>=6.5?'var(--gold)':'var(--coral)');}, 3);
       }
-      document.getElementById('sleepTrendChip').textContent='日均 '+(agg.sleep||0)+' 時';
-    } else { mmAccNote(slpC, agg.n); document.getElementById('sleepTrendChip').textContent='累積中'; }
+      document.getElementById('sleepTrendChip').textContent=window.muneaUiT('status.dailyAverageHours','日均 {hours} 小時',{hours:agg.sleep||0});
+    } else { mmAccNote(slpC, agg.n); document.getElementById('sleepTrendChip').textContent=window.muneaUiT('status.accumulating','累積中'); }
     // 用藥（吃真吃藥紀錄 munea.medDone.日期）
     var meds = (typeof mmMeds==='function') ? mmMeds() : [];
     var medCard = document.getElementById('medTrendCard');
@@ -1555,17 +1542,17 @@ window.MMDEV = function(){
       var recDays = agg.days.filter(function(x){ return mmMedDaySummary(x.iso)!==null; });
       if(recDays.length>=2 && total>0){
         var st=agg.days.map(function(x){ var s=mmMedDaySummary(x.iso); if(!s) return 'miss'; if(s.status==='pending') return x.iso===mmDateKey()?'partial':'miss'; return s.status; });
-        if(n===7){ document.getElementById('medTrendChart').innerHTML = medWeekHTML(agg.days.map(function(x){return WDL[x.d.getDay()];}), st); }
+        if(n===7){ document.getElementById('medTrendChart').innerHTML = medWeekHTML(agg.days.map(function(x){return shortWeekday(x.d);}), st); }
         else { document.getElementById('medTrendChart').innerHTML = medMonthHTML(st); }
         var fullN=st.filter(function(t){return t==='full';}).length;
-        document.getElementById('medTrendChip').textContent = n+' 天完整服藥 '+fullN+'/'+n;
-      } else { mmAccNote(document.getElementById('medTrendChart'), recDays.length); document.getElementById('medTrendChip').textContent='累積中'; }
+        document.getElementById('medTrendChip').textContent = window.muneaUiT('status.fullMedicationDays','{done}/{days} 天完整服藥',{days:n,done:fullN});
+      } else { mmAccNote(document.getElementById('medTrendChart'), recDays.length); document.getElementById('medTrendChip').textContent=window.muneaUiT('status.accumulating','累積中'); }
     }
     return agg;
   }
 
   function refreshTrendCards(period){
-    var show = period !== '今天';
+    var show = period !== 'today';
     document.getElementById('medTrendCard').style.display = show ? 'block':'none';
     document.getElementById('sleepTrendCard').style.display = show ? 'block':'none';
     document.getElementById('actCard').style.display = show ? 'block':'none';
@@ -1575,14 +1562,16 @@ window.MMDEV = function(){
   }
 
   function render(period){
-    var d=data[period]; if(!d) return;
+    if(period!=='today'&&period!=='week'&&period!=='month') return;
+    currentPeriod=period;
+    var d=dataFor(period);
     refreshMedCard(period);
     refreshTrendCards(period);
     document.getElementById('pageTitle').textContent=d.title;
     document.getElementById('moodChip').textContent=d.moodChip;
     var body=document.getElementById('moodBody');
     window.MM.renderMood(d.mood);
-    var showVitals = period==='今天';
+    var showVitals = period==='today';
     document.getElementById('vitalsRow').style.display = showVitals?'flex':'none';
     document.getElementById('miniStatsCard').style.display = showVitals?'flex':'none';
     if(showVitals){
@@ -1602,46 +1591,47 @@ window.MMDEV = function(){
       document.getElementById('stepsNum').textContent=d.steps.num;
       document.getElementById('stepsUnit').textContent=d.steps.unit;
     }
-    if(period==='今天' && window.__muneaObsReal){ document.getElementById('obsText').innerHTML=window.__muneaObsReal; }
-    else { document.getElementById('obsText').innerHTML=d.obs.t+' '+d.obs.lead+'<span style="color:#8FD4CC;font-weight:700">'+d.obs.act+'</span>'+d.obs.tail; }
-    document.getElementById('obsPeriod').textContent=d.obs.p;
+    if(period==='today' && window.__muneaObsReal){ document.getElementById('obsText').innerHTML=window.__muneaObsReal; }
+    else { document.getElementById('obsText').textContent=d.obs; }
+    document.getElementById('obsPeriod').textContent=d.obsPeriod;
     // 7/30 分頁的「寧寧的觀察」：接上裝置後一律講真數據（累積不足就老實說第幾天）
-    if(period!=='今天' && localStorage.getItem('munea.devicesOn')){
-      var agg2 = mmAgg(period==='過去7天'?7:30);
+    if(period!=='today' && localStorage.getItem('munea.devicesOn')){
+      var agg2 = mmAgg(period==='week'?7:30);
       var oel = document.getElementById('obsText');
-      var HLS = 'color:#8FD4CC';
       if(agg2.n>=2){
         var ps=[];
-        if(agg2.bpS&&agg2.bpD) ps.push('血壓平均 <b style="'+HLS+'">'+agg2.bpS+'/'+agg2.bpD+'</b>');
-        if(agg2.hr) ps.push('心率 <b style="'+HLS+'">'+agg2.hr+'</b>');
-        if(agg2.sleep) ps.push('睡眠平均 <b style="'+HLS+'">'+agg2.sleep+' 小時</b>');
-        if(agg2.steps!=null) ps.push('日均 <b style="'+HLS+'">'+agg2.steps.toLocaleString()+'</b> 步');
-        oel.innerHTML = '這段時間記到 <b style="'+HLS+'">'+agg2.n+' 天</b>的數據'+(ps.length?('：'+ps.join('、')):'')+'。每天都會自動記下來，看得越久越準。';
+        if(agg2.bpS&&agg2.bpD) ps.push(window.muneaUiT('status.summaryBloodPressure','血壓平均 {value}',{value:agg2.bpS+'/'+agg2.bpD+' mmHg'}));
+        if(agg2.hr) ps.push(window.muneaUiT('status.summaryHeartRate','心率 {value}',{value:agg2.hr+' bpm'}));
+        if(agg2.sleep) ps.push(window.muneaUiT('status.summarySleep','睡眠平均 {value}',{value:window.muneaUiT('status.hoursValue','{hours} 小時',{hours:agg2.sleep})}));
+        if(agg2.steps!=null) ps.push(window.muneaUiT('status.summarySteps','日均 {value}',{value:window.muneaUiT('status.stepsValue','{steps} 步',{steps:agg2.steps.toLocaleString(window.muneaUiLocale())})}));
+        var separator=window.muneaUiT('common.listSeparator','、')+((window.muneaUiLocale()==='en'||window.muneaUiLocale()==='es')?' ':'');
+        oel.textContent = window.muneaUiT('status.observationRecordedDays','這段時間記到 {days} 天的數據：{details}。每天都會自動記下來，看得越久越準。',{days:agg2.n,details:ps.join(separator)});
       } else {
-        oel.innerHTML = '數據帳本開張了——今天的數據會自動記成歷史，明天起這裡就開始長出變化（目前累積<b style="'+HLS+'">第 '+Math.max(agg2.n,1)+' 天</b>）。';
+        oel.textContent = window.muneaUiT('status.observationFirstDay','數據帳本開張了。今天的數據會自動記成歷史，明天起這裡就開始長出變化（目前累積第 {days} 天）。',{days:Math.max(agg2.n,1)});
       }
-      document.getElementById('obsPeriod').textContent = period;
+      document.getElementById('obsPeriod').textContent = d.obsPeriod;
     }
-    if(window.MMDEV) window.MMDEV();
+    if(window.MMDEV) window.MMDEV(period);
   }
 
-  var segs=[].slice.call(document.querySelectorAll('.st-seg span'));
+  var segs=[].slice.call(document.querySelectorAll('.st-seg [data-period]'));
   var segThumb=document.getElementById('segThumb');
   segs.forEach(function(sp,i){ sp.style.cursor='pointer'; sp.addEventListener('click',function(){
-    var _p=sp.textContent.trim();
-    if((_p==='過去7天'||_p==='過去30天') && window.MMPLAN && window.MMPLAN.isFree()){ window.MMPLAN.upsell('status-history'); return; }
+    var nextPeriod=sp.getAttribute('data-period');
+    if(nextPeriod!=='today' && window.MMPLAN && window.MMPLAN.isFree()){ window.MMPLAN.upsell('status-history'); return; }
     segs.forEach(function(s){s.style.color='rgba(244,240,232,.55)';});
     sp.style.color='#fff';
     segThumb.style.transform='translateX('+(i*100)+'%)';
-    render(sp.textContent.trim());
+    render(nextPeriod);
   });});
 
   window.MM.renderMood('today');
-  refreshMedCard('今天');
-  refreshTrendCards('今天');
+  refreshMedCard('today');
+  refreshTrendCards('today');
   if(window.MMDEV) window.MMDEV();
-  window.__muneaRefreshMedicationUi=function(){ render('今天'); };
+  window.__muneaRefreshMedicationUi=function(){ render(currentPeriod); };
   window.addEventListener('munea:medication-change',function(){ window.__muneaRefreshMedicationUi(); });
+  window.addEventListener('munea:locale-ready',function(){ render(currentPeriod); });
 })();
 </script>
 </body>

@@ -102,8 +102,14 @@ expect(voiceServer.includes('asyncio.to_thread(_hokkien_fallback_pcm, char)'),
 expect(voiceServer.includes('prefix_padding_ms=_voice_rhythm_param(') &&
   voiceServer.includes('"MUNEA_VOICE_PREFIX_PADDING_MS", 300)'),
   'server VAD does not require sustained speech before committing a turn');
-expect(voiceServer.includes('types.LanguageHints(language_codes=["cmn-Hant-TW"])'),
-  'S2S input/output transcription is not explicitly biased to Taiwan Mandarin');
+expect(
+  voiceServer.includes('language_codes=localization.asr_language_hints(') &&
+  voiceServer.includes('locale_profile["sessionLocale"]') &&
+  voiceServer.includes('language_code=locale_profile["speechLanguageCode"]') &&
+  voiceServer.includes('output_audio_transcription=transcription_config') &&
+  voiceServer.includes('input_audio_transcription=transcription_config'),
+  'S2S input/output transcription and speech are not driven by the verified call locale profile'
+);
 expect(voiceServer.includes('adaptation_phrases=phrases'),
   'ASR does not receive call-specific product, person, and topic vocabulary');
 expect(voiceServer.includes('START_OF_ACTIVITY_INTERRUPTS'),
@@ -118,8 +124,11 @@ expect(voiceServer.includes('barge_cancelled and source in ("model_output", "man
   'a cancelled model turn can replay language-correction audio after barge-in');
 expect(voiceServer.includes('localization.contains_unstable_mandarin_speech'),
   'user-verified Mandarin mispronunciations do not trigger safe TTS rewriting');
-expect(voiceServer.includes('localization.voice_opening_instruction(fam, topics, location, day_call)'),
-  'proactive greetings do not use the rotating opening policy');
+expect(
+  voiceServer.includes('opening = localization.voice_opening_instruction(') &&
+  voiceServer.includes('opening = active_profile["openingMessage"]'),
+  'proactive greetings do not use the rotating localized opening policy'
+);
 expect(voiceServer.includes('await asyncio.wait_for(future, timeout=8)') && voiceServer.includes('"app_write_timeout"'),
   'voice tools can still report success without waiting for the App write receipt');
 expect(voiceServer.includes('name="send_family_relay"') && voiceServer.includes('st["relay_greet_id"]'),

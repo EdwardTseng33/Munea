@@ -2250,16 +2250,41 @@ def push_devices_response(data):
 
 
 def enqueue_notification_event(item, recipient_person_id=None, actor_person_id=None):
+    item = item or {}
     raw_event_type = str((item or {}).get("eventType") or (item or {}).get("event_type") or "").strip()
     if raw_event_type not in notification_service.EVENT_TYPES:
         return None, "notification_event_type_invalid"
+    backend = data_backend()
+    recipient_id = (
+        recipient_person_id
+        or item.get("recipientPersonId")
+        or item.get("recipient_person_id")
+    )
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    requested_locale = item.get("locale") or metadata.get("locale")
+    devices = None
+    if backend.enabled():
+        locale_loader = getattr(backend, "notification_locale_for_person", None)
+        resolved_locale = (
+            locale_loader(recipient_id, requested_locale=requested_locale)
+            if callable(locale_loader)
+            else notification_service.notification_locale(requested_locale)
+        )
+    else:
+        devices = read_json_file(PUSH_DEVICES_PATH, [])
+        resolved_locale = notification_service.preferred_device_locale(
+            devices if isinstance(devices, list) else [],
+            recipient_id,
+            requested_locale,
+        )
     event = notification_service.normalize_event(
-        item, recipient_person_id=recipient_person_id, actor_person_id=actor_person_id
+        {**item, "locale": resolved_locale},
+        recipient_person_id=recipient_person_id,
+        actor_person_id=actor_person_id,
     )
     error = notification_service.validate_event(event)
     if error:
         return None, error
-    backend = data_backend()
     if backend.enabled():
         saved = backend.enqueue_notification_event(event)
         return notification_service.normalize_event(saved), "supabase"
@@ -2275,7 +2300,7 @@ def enqueue_notification_event(item, recipient_person_id=None, actor_person_id=N
     events.append(event)
     write_json_file(NOTIFICATION_EVENTS_PATH, events[-10000:])
 
-    devices = read_json_file(PUSH_DEVICES_PATH, [])
+    devices = devices if isinstance(devices, list) else []
     deliveries = read_json_file(NOTIFICATION_DELIVERIES_PATH, [])
     deliveries = deliveries if isinstance(deliveries, list) else []
     # 通知中心設定：收件人關掉的類別只寫事件、不建推播投遞
@@ -3203,12 +3228,14 @@ def load_legacy_companion_profile():
 
 def default_app_profile_store(companion_profile=None):
     companion_profile = normalize_companion_profile(companion_profile)
+    locale_context = localization.build_locale_context()
     return {
         "schemaVersion": 1,
         "account": {
             "id": "local-demo-account",
-            "locale": "zh-TW",
-            "preferredLanguages": ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": "2026-06-29T00:00:00Z",
         },
         "familyGroup": {
@@ -3280,12 +3307,14 @@ def normalize_app_profile_store(data=None):
         }))
 
     account = data.get("account") or {}
+    locale_context = localization.locale_context_from_account(account)
     return {
         "schemaVersion": int(data.get("schemaVersion") or data.get("schema_version") or 1),
         "account": {
             "id": str(account.get("id") or "local-demo-account"),
-            "locale": str(account.get("locale") or "zh-TW"),
-            "preferredLanguages": account.get("preferredLanguages") or account.get("preferred_languages") or ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": account.get("createdAt") or account.get("created_at") or "2026-06-29T00:00:00Z",
         },
         "familyGroup": {
@@ -3540,15 +3569,15 @@ def family_relays_response(data):
             "familyGroupId": relay.get("familyGroupId"),
             "resourceType": "family_relay_message",
             "resourceId": relay.get("id"),
-            "title": f"{relay.get('senderLabel') or '家人'}捎來一則話",
             "body": relay.get("content"),
-            "publicTitle": "沐寧提醒",
-            "publicBody": "家人捎來一則訊息，解鎖後收聽。",
             "sensitivity": "private",
             "deepLink": f"munea://relay/{relay.get('id')}",
             "dedupeKey": f"family-relay:{relay.get('id')}",
             "expiresAt": relay.get("expiresAt"),
-            "metadata": {"source": relay.get("source")},
+            "metadata": {
+                "source": relay.get("source"),
+                "senderLabel": relay.get("senderLabel"),
+            },
         })
         return {
             "ok": True, "relay": relay, "backend": "json",
@@ -3655,8 +3684,15 @@ def family_relays_response(data):
 
 def bootstrap_account_response(data, headers=None):
     data = data or {}
-    data = {**data, "locale": localization.normalize_locale(data.get("locale"))}
     action = (data.get("action") or "create").lower()
+    if action not in ("update", "patch"):
+        locale_context = localization.locale_context_from_request(data)
+        data = {
+            **data,
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
+        }
     backend = data_backend()
     auth_context = verify_auth_context(headers)
     verified_auth_user_id = auth_context.get("authUserId") if auth_context.get("ok") else None
@@ -3718,8 +3754,10 @@ def bootstrap_account_response(data, headers=None):
     if action in ("update", "patch"):
         store = load_app_profile_store()
         account = store.setdefault("account", {})
-        account["locale"] = localization.normalize_locale(data.get("locale") or account.get("locale"))
-        account["preferredLanguages"] = data.get("preferredLanguages") or data.get("preferred_languages") or account.get("preferredLanguages") or [account["locale"]]
+        locale_context = localization.locale_context_from_request(data, account=account)
+        account["locale"] = locale_context["uiLocale"]
+        account["preferredLanguages"] = locale_context["preferredLanguages"]
+        account["localeContext"] = locale_context
         save_app_profile_store(store)
         return {"ok": True, "store": store, "activeCompanionProfile": active_companion_profile(store), "auth": public_auth_context(auth_context), "backend": data_backend_status()}
 
@@ -3736,8 +3774,9 @@ def bootstrap_account_response(data, headers=None):
         "schemaVersion": 1,
         "account": {
             "id": account_id,
-            "locale": data.get("locale") or "zh-TW",
-            "preferredLanguages": data.get("preferredLanguages") or data.get("preferred_languages") or ["zh-TW", "en"],
+            "locale": locale_context["uiLocale"],
+            "preferredLanguages": locale_context["preferredLanguages"],
+            "localeContext": locale_context,
             "createdAt": utc_now(),
         },
         "familyGroup": {
@@ -4229,11 +4268,13 @@ def normalize_admin_account_summary(item=None):
     companion = item.get("companion") or {}
     family_members = item.get("familyMembers") or item.get("family_members") or {}
     roles = family_members.get("byRole") or family_members.get("by_role") or {}
+    locale_context = localization.locale_context_from_account(item, primary_person)
     return {
         "accountId": str(item.get("accountId") or item.get("account_id") or ""),
         "accountName": str(item.get("accountName") or item.get("account_name") or ""),
-        "locale": str(item.get("locale") or "zh-TW"),
-        "preferredLanguages": item.get("preferredLanguages") or item.get("preferred_languages") or ["zh-TW", "en"],
+        "locale": locale_context["uiLocale"],
+        "preferredLanguages": locale_context["preferredLanguages"],
+        "localeContext": locale_context,
         "createdAt": item.get("createdAt") or item.get("created_at"),
         "updatedAt": item.get("updatedAt") or item.get("updated_at"),
         "familyGroup": {
@@ -4244,8 +4285,9 @@ def normalize_admin_account_summary(item=None):
             "id": str(primary_person.get("id") or ""),
             "displayName": str(primary_person.get("displayName") or primary_person.get("display_name") or ""),
             "relationship": str(primary_person.get("relationship") or "self"),
-            "locale": str(primary_person.get("locale") or item.get("locale") or "zh-TW"),
-            "timezone": str(primary_person.get("timezone") or "Asia/Taipei"),
+            "locale": locale_context["conversationLocale"],
+            "timezone": locale_context["timeZone"],
+            "regionCode": locale_context["countryCode"],
         },
         "companion": {
             "templateId": str(companion.get("templateId") or companion.get("template_id") or "nening-real-female"),
@@ -4272,11 +4314,13 @@ def local_admin_account_summary():
         role = member.get("role") or "unknown"
         roles[role] = roles.get(role, 0) + 1
     companion = (store.get("companionProfiles") or {}).get(primary_id) or active_companion_profile(store)
+    locale_context = localization.locale_context_from_account(account)
     return normalize_admin_account_summary({
         "accountId": account.get("id"),
         "accountName": account.get("name") or account.get("id") or "local-demo-account",
         "locale": account.get("locale"),
         "preferredLanguages": account.get("preferredLanguages"),
+        "localeContext": locale_context,
         "createdAt": account.get("createdAt"),
         "updatedAt": store.get("updatedAt"),
         "familyGroup": {
@@ -4287,8 +4331,9 @@ def local_admin_account_summary():
             "id": primary_id,
             "displayName": primary_member.get("displayName") or "Primary user",
             "relationship": primary_member.get("relationship") or "self",
-            "locale": account.get("locale") or "zh-TW",
-            "timezone": "Asia/Taipei",
+            "locale": locale_context["conversationLocale"],
+            "timezone": locale_context["timeZone"],
+            "regionCode": locale_context["countryCode"],
         },
         "companion": companion,
         "familyMembers": {

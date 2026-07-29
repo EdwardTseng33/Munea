@@ -7,7 +7,11 @@ const css = fs.readFileSync('web/src/styles.css', 'utf8');
 const versionSource = fs.readFileSync('web/src/version.js', 'utf8');
 const privacy = fs.readFileSync('web/privacy.html', 'utf8');
 const store = fs.readFileSync('web/src/store.js', 'utf8');
+const medication = fs.readFileSync('web/src/medication.js', 'utf8');
 const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
+const rendererCopySource = fs.readFileSync('web/src/i18n/app-renderer-copy.js', 'utf8');
+const legalRoutingSource = fs.readFileSync('web/src/i18n/legal-routing.js', 'utf8');
+const zhCatalog = JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'));
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -36,11 +40,11 @@ assert(versionSource.includes('window.MuneaApplyVersionToStaticUi') && versionSo
 
 // 內頁真版印章（通話畫面角落）只准開發包／瀏覽器預覽顯示；正式包一律藏（2026-07-18 Edward A）。
 // 這是給打包驗版用的除錯標籤，長輩看到只會困惑。若哪天有人把 gate 拿掉、變回無條件顯示，這裡亮紅燈。
-const verStampBlock = app.match(/const _vs = document\.getElementById\('webVerStamp'\);[\s\S]{0,320}?\n\s*\} catch/)?.[0] || '';
+const verStampBlock = app.match(/const _vs = document\.getElementById\('webVerStamp'\);[\s\S]{0,600}?\n\s*\} catch/)?.[0] || '';
 assert(verStampBlock.length > 0, 'webVerStamp assignment block not found (內頁真版印章)');
 assert(/isDeveloperBypassAllowed\(\)/.test(verStampBlock) && /!isPackagedApp\(\)/.test(verStampBlock),
   '內頁真版印章必須只在開發包或非打包預覽顯示——正式包不得出現除錯版本角標');
-assert(/_showStamp \? \('內頁 v' \+ MuneaVersion\.current\) : ''/.test(verStampBlock),
+assert(/muneaT\('version\.webBuild', 'Web v\{version\}', \{ version: MuneaVersion\.current \}\)[\s\S]*?: ''/.test(verStampBlock),
   '內頁真版印章正式包必須清空（三元運算 else 分支要給空字串，不能留舊值）');
 
 assert(app.includes('const __pullPromise = Promise.resolve(syncPullAll());'), 'Family sync bypass must still produce a safe promise for downstream initialization');
@@ -50,6 +54,19 @@ assert(criticalConsentSetup.includes("$('#consentDetail')") && criticalConsentSe
 assert(criticalConsentSetup.includes("$('#readerBack')") && criticalConsentSetup.includes('closeInAppReader'), 'The in-App privacy reader must retain a working back control');
 assert(app.indexOf("document.addEventListener('DOMContentLoaded', setupCriticalConsentControls)") < app.indexOf("document.addEventListener('DOMContentLoaded', init)"), 'Critical consent controls must bind before the main App initialization');
 assert(!app.includes("window.open('privacy.html', '_blank')"), 'Consent privacy detail must not leave the App in a new window');
+assert(app.startsWith("import './i18n/legal-routing.js';"), 'The App must load the reviewed legal routing contract before opening an in-App legal page');
+const legalReader = app.match(/async function openInAppReader\(kind, options\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(legalReader.includes('resolveInAppLegalPage(kind)') && legalReader.includes("muneaT('reader.loading'") && legalReader.includes("muneaT('reader.loadError'"),
+  'The in-App legal reader must resolve the locale-aware page and localize its loading and failure states');
+assert(app.includes("fetchJsonDocument('src/i18n/catalog-manifest.json')") && app.includes("fetchJsonDocument('legal/manifest.json')"),
+  'The App legal reader must use the catalog and legal-review manifests as its routing authority');
+assert(app.includes('legalRegion: trustedLegalRegion()') && !legalRoutingSource.includes('countryCode'),
+  'Legal routing must consume only the explicit trusted legalRegion and must never infer it from country or language');
+const draftGate = app.match(/function isLocalI18nDraftPreview\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(draftGate.includes('localOrigin') && draftGate.includes('config.enabled === true') && draftGate.includes('requestedLocale === muneaLocale()'),
+  'Unreviewed localized legal drafts must be limited to an explicit local i18n preview');
+assert(app.includes('captureTrustedLocaleContext(response)') && app.includes('response.store && response.store.account'),
+  'The legal region may be captured only from the backend account-bootstrap response, not from the active UI locale');
 assert(privacy.includes('目前機房位於日本東京'), 'Privacy disclosure must identify the current Tokyo data region');
 assert(!privacy.includes('目前機房位於澳洲'), 'Privacy disclosure must not retain the retired Sydney production region');
 const connectCall = app.match(/async function connectCall\(\) \{[\s\S]*?\n\}/)?.[0] || '';
@@ -78,7 +95,13 @@ assert(html.includes('id="busyCardAlt"'), 'Busy card must expose a secondary exi
 assert(css.includes('.busy-card'), 'Busy card styles must exist');
 assert(app.includes("showBusyCard('queued', queue)"), 'Queued gateway responses must surface the busy card with the full queue payload (position and eta_s), not just a bare position number');
 assert(app.includes("showBusyCard('full')"), 'A full queue must surface the explicit busy-try-later card');
-assert(app.includes('現在忙線中，請稍後再試試看'), 'Full-queue copy must say busy-try-later in plain language');
+assert(zhCatalog['voice.queue.fullTitle'] === '現在忙線中' && zhCatalog['voice.queue.fullBody'].includes('請稍後再試試看'), 'Full-queue catalog copy must say busy-try-later in plain language');
+assert(app.includes("muneaT('voice.queue.pending'") && app.includes("muneaT('voice.queue.wait'"), 'Queued call button and hidden fallback hint must follow the App language');
+const busyCardFallbackBody = app.slice(
+  app.indexOf('function showBusyCard(mode, payload)'),
+  app.indexOf('function formatQueueEta'),
+);
+assert(busyCardFallbackBody.includes("muneaT('voice.queue.fullTitle'") && busyCardFallbackBody.includes("'voice.queue.fullBody'"), 'Busy-card fallback copy must stay localized even before renderer-copy initialization');
 assert(/if \(\(callDialing \|\| callPreflightPending\) && !callConnected\)/.test(app), 'Tapping the call button must cancel while queued (preflight pending), not only while dialing');
 assert(app.includes('if (callConnected || callDialing || callPreflightPending)'), 'Leaving the call screen while queued must hang up and release the queue slot');
 assert(/callConnected \|\| callDialing \|\| callPreflightPending\) && \$\('#callToggle'\)/.test(app), 'Backgrounding the App while queued must cancel the queue slot');
@@ -88,18 +111,141 @@ assert(app.includes("if (reason === 'call_cancelled')"), 'A user-initiated cance
 // eta_s（後端一直都有算，之前被前端丟掉）要轉成粗略區間，不給會顯得說謊的精確倒數。
 assert(app.includes('function formatQueueEta(') && app.includes("if (n < 90) return 'soon';") && app.includes('if (n <= 600) return Math.ceil(n / 60);'),
   'Queue ETA must be bucketed into a soon/minutes/none narrative from queue.eta_s, not shown as a raw countdown');
-assert(app.includes("preparing = position <= 1") && app.includes("cname() + '正在為你準備聊天室'"),
+assert(app.includes("preparing = position <= 1") && busyCardFallbackBody.includes("'voice.queue.preparingWithCompanion'"),
   'Position 1 must use a preparing narrative instead of the misleading "you are #1 in line" framing');
-assert(app.includes('暫時先別關掉這個畫面，好了會自動接通'), 'The queue note must use the softened stay-on-screen phrasing instead of the old "leaving cancels the queue" warning');
+assert(busyCardFallbackBody.includes("'voice.queue.note'"), 'The queue note must use the localized softened stay-on-screen phrasing instead of the old "leaving cancels the queue" warning');
 
 // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
 // 斷線重連失敗／連線逾時／影像席位全滿／拿不到麥克風，過去全部只寫進被藏起來的 #chatCaption，等於零回饋。
-assert(app.includes('function showCallStatusCard(opts)'), 'A generic visible failure card function must exist for non-queue call failures');
-const statusCardCopies = ['登入狀態已失效', '帳號正在準備中', '通話服務正在更新', '目前無法接通', '服務尚未完成接通', '目前連線還沒準備好', '連線中斷了', '拿不到麥克風權限'];
-statusCardCopies.forEach(copy => assert(app.includes(copy), `Failure card copy missing for: ${copy}`));
-assert(app.includes("action: 'reopen-auth'") && app.includes("action === 'reopen-auth'") && app.includes('openAuthSheet()'),
+assert(app.includes('function showCallStatusCard(stateOrOptions)'), 'A generic visible localized failure card function must exist for non-queue call failures');
+const statusCardKeys = ['voice.call.authExpiredTitle', 'voice.call.accountPreparingTitle', 'voice.call.serviceUpdatingTitle', 'voice.call.unavailable', 'voice.call.activationPendingTitle', 'voice.call.readinessPendingTitle', 'voice.call.disconnectedTitle', 'voice.call.microphonePermissionTitle'];
+statusCardKeys.forEach(key => assert(zhCatalog[key], `Failure card catalog key missing for: ${key}`));
+assert(rendererCopySource.includes("action: 'reopen-auth'") && app.includes("action === 'reopen-auth'") && app.includes('openAuthSheet()'),
   'An expired session must offer a one-tap re-login action on the visible card, not just a hidden caption');
-assert(app.includes("showCallStatusCard({ title: '服務尚未完成接通'"), 'The gateway activation timeout must also surface a visible card, matching the other silent-failure fixes');
+assert(app.includes("showCallStatusCard('activationPending')"), 'The gateway activation timeout must also surface a visible localized card, matching the other silent-failure fixes');
+assert(app.includes("muneaT('voice.call.dialing'") && app.includes("muneaT('voice.call.online'") && app.includes("muneaT('voice.call.offline'"), 'Call control labels and presence state must use the locale catalog');
+['auth.chatSignInRequired', 'voice.caption.enabled', 'voice.caption.disabled', 'accessibility.markComplete'].forEach(key => {
+  assert(zhCatalog[key], `Dynamic App catalog key missing for: ${key}`);
+});
+assert(/muneaT\(\s*'auth\.chatSignInRequired'/.test(app) && app.includes("muneaT('voice.caption.enabled'") && app.includes("muneaT('voice.caption.disabled'"),
+  'Sign-in and caption feedback must be rendered from the active locale catalog');
+assert(app.includes("muneaT('accessibility.markComplete'"), 'Task completion controls must expose a localized accessible label');
+const runtimeVoiceKeys = [
+  'voice.runtime.playbackBlocked',
+  'voice.runtime.audioOnlyFallback',
+  'voice.runtime.microphoneTapToResume',
+  'voice.runtime.listening',
+  'voice.runtime.reconnecting',
+  'voice.runtime.microphonePermission',
+  'voice.runtime.heard',
+  'voice.runtime.thinking',
+  'voice.runtime.didNotHear',
+  'voice.runtime.recordingTapWhenDone',
+  'voice.runtime.microphoneMuted',
+  'voice.runtime.microphoneMutedHint',
+  'voice.runtime.recoveredTitle',
+  'voice.runtime.recoveredBody',
+  'voice.runtime.degradedTitle',
+  'voice.runtime.degradedBody',
+  'voice.runtime.textFallbackPrompt',
+  'voice.runtime.deviceTextFallbackPrompt',
+  'voice.runtime.microphoneTextFallbackPrompt',
+];
+runtimeVoiceKeys.forEach(key => assert(zhCatalog[key], `Voice runtime catalog key missing for: ${key}`));
+assert(app.includes('function setLocalizedRuntimeHint(state, busy = false)')
+  && app.includes('function setLocalizedRuntimeCaption(state)'),
+  'Voice runtime hints and recovery captions must use named localized renderers');
+assert(!/setCallHint\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),
+  'Call runtime hints must not bypass the locale catalog with inline Han copy');
+assert(!/setCaption\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),
+  'Call recovery captions must not bypass the locale catalog with inline Han copy');
+assert(app.includes('function applyTaskAccessibilityLabels()') && /refreshLocalizedDynamicUi\(\)[\s\S]*?applyTaskAccessibilityLabels\(\)/.test(app),
+  'Task completion accessibility labels must refresh after the active App locale changes');
+assert(app.includes('function localizeAuthTerms()') && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeAuthTerms\(\)/.test(app),
+  'The complete auth terms disclosure and close label must refresh with the active App locale');
+[
+  'medication.duration.days',
+  'medication.duration.longTerm',
+  'medication.action.added',
+  'medicationReminder.dueSay',
+  'medicationReminder.description',
+  'medicationReminder.speech',
+  'medicationReminder.takenToast',
+  'medicationManager.scheduleMultiple',
+  'medicationManager.emptySlot',
+  'medicationManager.removeSlot',
+  'medicationManager.addedToast',
+].forEach(key => assert(zhCatalog[key], `Medication surface catalog key missing for: ${key}`));
+assert(app.includes('function localizeMedicationSurfaces()')
+  && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeMedicationSurfaces\(\)/.test(app),
+  'Medication manager and due-reminder surfaces must refresh when the App locale changes');
+assert(/async function aiAddMedReminder[\s\S]*?muneaIsCleanDisplayText\(rawName\)/.test(app)
+  && !/async function aiAddMedReminder[\s\S]{0,260}?muneaIsCleanZhText\(rawName\)/.test(app),
+  'Voice-created medication names must accept safe English, Japanese, and Spanish text');
+assert(app.includes('function canonicalMedicationSlot(slot)')
+  && app.includes("import './i18n/medication-schedule.js'")
+  && app.includes("'after-breakfast': '早餐後'")
+  && app.includes("'after-lunch': '午餐後'")
+  && app.includes("'after-dinner': '晚餐後'")
+  && app.includes('window.MuneaMedicationScheduleI18n?.normalizeSlot(label)')
+  && app.includes('function canonicalMedicationDuration(duration)')
+  && app.includes('window.MuneaMedicationScheduleI18n?.normalizeDuration(raw)')
+  && /async function aiAddMedReminder[\s\S]*?days: canonicalMedicationDuration\(a && a\.days\)/.test(app)
+  && app.includes('function localizedMedicationDuration(duration)')
+  && app.includes('function medicationReminderSpeech(medication)'),
+  'Medication storage identifiers, visible durations, and spoken reminders must stay locale-aware');
+assert(
+  /const durationMatch = String\(med\.days \|\| ''\)\.match\(\/\(\\d\+\)\/\)/.test(medication),
+  'Medication scheduling must honor one-day and arbitrary finite treatments from voice actions',
+);
+const medicationManagerUi = app.slice(
+  app.indexOf("const setReminders = $('#medEntrySettings')"),
+  app.indexOf("if ($('#medEntryStatus'))"),
+);
+const medicationReminderUi = app.slice(
+  app.indexOf('function fireMedReminder(med)'),
+  app.indexOf('setInterval(checkDueMeds'),
+);
+assert(!/toast\(['"`](?:拿掉了|這張照片讀不到|先寫藥名|點一下什麼時候吃|記下了，藥吃了|好，10 分鐘後)/.test(
+  medicationManagerUi + medicationReminderUi,
+),
+  'Medication manager and due-reminder feedback must not bypass the locale catalog');
+assert(css.includes(':is(html:lang(en), html:lang(es)) .reader-card :is(p, li)'),
+  'English and Spanish legal copy must use natural left alignment instead of stretched CJK justification');
+[
+  'common.today',
+  'medication.takeName',
+  'medication.taskProgress',
+  'visit.defaultTitle',
+  'visit.defaultNote',
+  'event.familyTitle',
+  'event.arriveOnTime',
+  'home.walkProgressMet',
+  'home.walkProgress',
+  'home.walkGoalMet',
+  'home.walkSteps',
+].forEach(key => assert(zhCatalog[key], `Home task catalog key missing for: ${key}`));
+assert(app.includes('function localizedMedicationSlot(slot)')
+  && app.includes("muneaT('medication.taskProgress'")
+  && app.includes("muneaT('visit.defaultTitle'")
+  && app.includes("muneaT('event.familyTitle'")
+  && app.includes("muneaT('home.walkProgressMet'"),
+  'Medication, visit, family-event, and walking cards must render from the active locale catalog');
+assert(app.includes("muneaLocale() === 'zh-TW'")
+  && app.includes("sub.removeAttribute('data-i18n')")
+  && app.includes("chip.removeAttribute('data-i18n')"),
+  'Multilingual medicine names must not be truncated at the first word, and state-owned walking output must not be overwritten by static DOM localization');
+assert(app.includes('function muneaIsCleanDisplayText(raw)')
+  && /function muneaSafeDisplayText[\s\S]*?muneaIsCleanDisplayText\(s\)/.test(app),
+  'Stored user-visible names must accept safe multilingual text instead of applying the Chinese-only ASR guard');
+assert(app.includes("!/[\u005cp{L}\u005cp{N}]/u.test(meaningful)")
+  && app.includes('https?:\\/\\/'),
+  'The multilingual display guard must accept Unicode letters while rejecting URL-like and control-character payloads');
+assert(/refreshLocalizedDynamicUi\(\)[\s\S]*?renderDailyTasks\(\)[\s\S]*?renderStatusCharts\(true\)/.test(app),
+  'Locale changes must rerender daily tasks and locale-formatted chart weekday labels');
+assert(app.includes("new Intl.DateTimeFormat(muneaLocale(), { weekday: 'narrow' })")
+  && /function _visitDayShort[\s\S]*?new Intl\.DateTimeFormat\(muneaLocale\(\)/.test(app),
+  'Weekday labels and visit dates must use the active locale instead of fixed Chinese date text');
 
 // 全滿態給出口：先用文字聊（2026-07-24 Edward 拍板 P0）——不新造頁面，重用既有 chatHandle 文字管線，
 // 不佔用 Avatar／即時語音席位，讓長輩在滿載時仍有話可聊而不是只能乾等或放棄。
@@ -177,7 +323,7 @@ assert(app.includes('result.exportPackage') && app.includes('navigator.canShare'
 assert(html.includes('src/medication.js'), 'App shell must load the shared medication occurrence service');
 assert(app.includes("item.dataset.task === 'pill' && window.MuneaMedication"), 'Home medication checkbox must use the shared occurrence service');
 assert(app.includes("window.MuneaMedication.setStatus(dose, 'taken', 'notification')"), 'Reminder completion must use the shared occurrence service');
-const deviceEmptyState = html.match(/window\.MMDEV = function\(\)\{[\s\S]*?\n\};/)?.[0] || '';
+const deviceEmptyState = html.match(/window\.MMDEV = function\([^)]*\)\{[\s\S]*?\n\};/)?.[0] || '';
 assert(deviceEmptyState && !deviceEmptyState.includes('medTrendChart'), 'Medication history must not be hidden by Apple Health empty state');
 assert(html.includes('用藥紀錄是 Munea 自己的帳本，不依賴 Apple Health'), 'Medication trend must remain independent from Apple Health');
 assert(app.includes("type: 'action_result'") && app.includes("await window.__muneaHandleVoiceAction"), 'Voice AI must wait for the App action result before confirming reminders');
@@ -241,6 +387,19 @@ const refreshLowStateBody = app.match(/function refreshLowState\(\) \{[\s\S]*?\n
 assert(/const low = !\(window\.MMPLAN && window\.MMPLAN\.isFree\(\)\) && ptsLeft\(\) < LOW_PTS;/.test(refreshLowStateBody), 'The low-points warning must never fire for free members');
 assert(!/strip\.style\.display = ptsLeft\(\) < LOW_PTS/.test(app), 'The plan-blind low-points warning must stay dead');
 
+const renderPointsBody = app.match(/function renderPoints\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(renderPointsBody.includes("muneaT('settings.creditsBalance'") && renderPointsBody.includes('Intl.NumberFormat(muneaLocale())'), 'The live credit balance must use compact locale copy and number formatting');
+const callBudgetTickBody = app.match(/function callBudgetTick\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(callBudgetTickBody.includes("muneaT('credits.lowTitle'") && callBudgetTickBody.includes("muneaT('credits.lowBody'"), 'The low-credit call warning must be localized without changing the budget gate');
+const pointsPopupCopyBody = app.match(/function renderPointsPopupCopy\(root\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(pointsPopupCopyBody && app.includes("'credits.exhaustedTitle'") && app.includes("'credits.exhaustedBody'"), 'The exhausted-credit dialog must render localized title and body copy');
+assert(app.includes("muneaT('settings.topUpCredits'") && app.includes("muneaT('common.notNow'"), 'The exhausted-credit dialog actions must use shared localized labels');
+const refreshLocalizedDynamicUiBody = app.match(/function refreshLocalizedDynamicUi\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(refreshLocalizedDynamicUiBody.includes('renderPointsPopupCopy()'), 'An open exhausted-credit dialog must rerender after the iOS App Language changes');
+assert(app.includes("muneaT('credits.freeTrialEnded'"), 'The free-trial exhaustion toast must be localized');
+assert(app.includes("muneaT(\n          'credits.freeTrialOneMinute'"), 'The one-minute free-trial warning must be localized and must not call a minute a credit');
+assert(!app.includes("toast('免費體驗剩約 1 點"), 'The free-trial warning must never label a remaining minute as one credit');
+
 // 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）
 assert(app.includes('function planPurchaseFailMessage'), 'Purchase failures must map reasons to plain-language text');
 assert(app.includes('先登入帳號，才能訂閱。') && app.includes('這個方案現在還不能買') && app.includes('付款過了，但還沒對上帳'), 'Purchase failure texts must cover sign-in, unavailable product and unverified payment');
@@ -261,3 +420,40 @@ assert(askReviewBody, 'The review timing gate must remain a readable single func
 assert(askReviewBody.indexOf("typeof window.__muneaRequestReview !== 'function'") < askReviewBody.indexOf("localStorage.setItem('munea.reviewAsked."), 'The native-availability check must run BEFORE the once-per-version flag is written');
 
 console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, and the App Store review chain');
+
+// Multilingual catalogs stay development-only until their UI, Voice, regional,
+// App Store, and real-device gates pass. Keep this in the existing launch suite
+// without competing with active work that is editing package.json.
+require('./test-i18n-catalogs.js');
+require('./test-i18n-runtime.js');
+require('./test-i18n-browser-bootstrap.js');
+require('./test-i18n-preview.js');
+require('./test-i18n-dom-localizer.js');
+require('./test-i18n-legal-routing.js');
+require('./test-i18n-migration-worklist.js');
+require('./test-i18n-pseudo-catalog.js');
+require('./test-companion-profile-localization.js');
+require('./test-medication-schedule-i18n.js');
+require('./test-i18n-surface-inventory.js');
+require('./test-purchase-flow-localizations.js');
+require('./test-purchase-flow-view-model.js');
+require('./test-app-screen-localizations.js');
+require('./test-app-binding-runtime.js');
+require('./test-app-i18n-binding-manifest.js');
+require('./test-app-surface-manifest.js');
+require('./test-app-surface-copy-manifest.js');
+require('./test-app-full-surface-i18n-browser-precheck.js');
+require('./test-i18n-native-review-worklist.js');
+require('./test-i18n-native-review-evidence.js');
+require('./test-i18n-visual-qa-worklist.js');
+require('./test-i18n-visual-qa-evidence.js');
+require('./test-ipa-binary-identity.js');
+require('./test-ios-build-identity.js');
+require('./test-i18n-app-e2e-evidence.js');
+require('./test-ios-export-i18n-binary-gate.js');
+require('./test-i18n-layout-risk-worklist.js');
+require('./test-legal-localizations.js');
+require('./test-marketing-site-localizations.js');
+require('./test-app-store-localizations.js');
+require('./test-in-app-purchase-localizations.js');
+require('./test-i18n-release-readiness.js');

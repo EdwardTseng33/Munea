@@ -1,12 +1,52 @@
 """Locale policy shared by Munea's API, model prompts, and speech synthesis."""
 
 import re
+from collections.abc import Mapping
 
 from opencc import OpenCC
 
 SUPPORTED_LOCALES = ("zh-TW", "en", "ja", "es")
 DEFAULT_LOCALE = "zh-TW"
+LOCALE_CONTEXT_VERSION = 1
+APP_MUTABLE_LOCALE_FIELDS = (
+    "uiLocale",
+    "conversationLocale",
+    "preferredLanguages",
+    "timeZone",
+)
+SERVER_POLICY_LOCALE_FIELDS = (
+    "countryCode",
+    "units",
+    "currency",
+    "safetyRegion",
+    "legalRegion",
+    "dataRegion",
+)
+DEFAULT_LOCALE_CONTEXT = {
+    "version": LOCALE_CONTEXT_VERSION,
+    "uiLocale": DEFAULT_LOCALE,
+    "conversationLocale": DEFAULT_LOCALE,
+    "preferredLanguages": [DEFAULT_LOCALE],
+    "countryCode": "TW",
+    "timeZone": "Asia/Taipei",
+    "units": "metric",
+    "currency": "TWD",
+    "safetyRegion": "TW",
+    "legalRegion": "TW",
+    "dataRegion": "tw-primary",
+}
+_VALID_UNITS = ("metric", "us")
+_REGION_CODE_RE = re.compile(r"^[A-Z]{2}$")
+_CURRENCY_CODE_RE = re.compile(r"^[A-Z]{3}$")
+_TIME_ZONE_RE = re.compile(r"^(?:UTC|[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+)$")
+_DATA_REGION_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 _SPEECH_CODES = {"zh-TW": "cmn-TW", "en": "en-US", "ja": "ja-JP", "es": "es-ES"}
+_ASR_LANGUAGE_HINTS = {
+    "zh-TW": ["cmn-Hant-TW"],
+    "en": ["en-US"],
+    "ja": ["ja-JP"],
+    "es": ["es-ES"],
+}
 _REPLY_INSTRUCTIONS = {
     "zh-TW": "請一律使用自然的繁體台灣中文回覆，絕不使用簡體字。",
     "en": "Reply in warm, plain English. Keep voice responses short and easy to follow.",
@@ -24,6 +64,39 @@ _RETRY_MESSAGES = {
     "en": "I am having a little trouble connecting. Could we try again in a moment?",
     "ja": "少し接続が不安定です。少し待ってから、もう一度話しかけてもらえますか？",
     "es": "Estoy teniendo un pequeño problema de conexión. ¿Podemos intentarlo de nuevo en un momento?",
+}
+_GENERIC_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人有立即危險，請立刻聯絡所在地的緊急服務，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger, contact the local emergency service and ask a trusted person nearby to help.",
+    "ja": "差し迫った危険がある場合は、現地の緊急通報先に連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato, contacta con el servicio local de emergencias y pide ayuda a una persona de confianza cercana.",
+}
+_TAIWAN_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人有立即危險，請立刻撥打台灣 119；需要心理支持時可撥 1925，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Taiwan, call 119. For mental-health support, call 1925 and ask a trusted person nearby to help.",
+    "ja": "台湾で差し迫った危険がある場合は119へ、心の相談は1925へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Taiwán, llama al 119. Para apoyo de salud mental, llama al 1925 y pide ayuda a una persona cercana de confianza.",
+}
+_SPAIN_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在西班牙有立即危險，請立刻撥打 112，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Spain, call 112 and ask a trusted person nearby to help.",
+    "ja": "スペインで差し迫った危険がある場合は112へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en España, llama al 112 y pide ayuda a una persona de confianza cercana.",
+}
+_MEXICO_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在墨西哥有立即危險，請立刻撥打 911，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Mexico, call 911 and ask a trusted person nearby to help.",
+    "ja": "メキシコで差し迫った危険がある場合は911へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en México, llama al 911 y pide ayuda a una persona de confianza cercana.",
+}
+_REGIONAL_EMERGENCY_GUIDANCE = {
+    "TW": _TAIWAN_EMERGENCY_GUIDANCE,
+    "ES": _SPAIN_EMERGENCY_GUIDANCE,
+    "MX": _MEXICO_EMERGENCY_GUIDANCE,
+}
+REGIONAL_SAFETY_POLICY_SOURCES = {
+    "ES": "https://www.interior.gob.es/opencms/en/contacta-con-nosotros/contacto-prueba-3-hide/index.html",
+    "MX": "https://www.gob.mx/911/articulos/que-es-el-911emergencias?idiom=es",
 }
 
 # Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current
@@ -113,6 +186,7 @@ _CONTEXT_ASR_ALIASES = {
     "旺財": ("旺才",),
 }
 
+
 def normalize_locale(locale):
     raw = str(locale or "").strip().replace("_", "-")
     if raw in SUPPORTED_LOCALES: return raw
@@ -123,7 +197,515 @@ def normalize_locale(locale):
     if lowered.startswith("en"): return "en"
     return DEFAULT_LOCALE
 
+
+def build_locale_context(values=None):
+    """Return a normalized, JSON-ready LocaleContext v1.
+
+    This is an additive contract scaffold. It is intentionally not connected to
+    the production Gateway or Live call path yet. Language never infers country,
+    legal/safety policy, data residency, units, currency, or time zone.
+    """
+    if values is None:
+        values = {}
+    if not isinstance(values, Mapping):
+        raise TypeError("LocaleContext input must be a mapping")
+    if "version" in values:
+        try:
+            version = int(values["version"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid LocaleContext version: {values['version']!r}") from exc
+        if isinstance(values["version"], bool) or version != LOCALE_CONTEXT_VERSION:
+            raise ValueError(f"Unsupported LocaleContext version: {values['version']!r}")
+
+    context = {
+        key: list(value) if isinstance(value, list) else value
+        for key, value in DEFAULT_LOCALE_CONTEXT.items()
+    }
+    context["uiLocale"] = normalize_locale(values.get("uiLocale"))
+    context["conversationLocale"] = normalize_locale(
+        values.get("conversationLocale") or context["uiLocale"]
+    )
+    context["preferredLanguages"] = _normalize_preferred_languages(
+        values.get("preferredLanguages"),
+        context["conversationLocale"],
+    )
+    context["countryCode"] = _normalize_code(
+        values.get("countryCode"),
+        context["countryCode"],
+        _REGION_CODE_RE,
+    )
+    context["timeZone"] = _normalize_text(
+        values.get("timeZone"),
+        context["timeZone"],
+        _TIME_ZONE_RE,
+    )
+    context["units"] = _normalize_choice(
+        values.get("units"),
+        context["units"],
+        _VALID_UNITS,
+        "units",
+    )
+    context["currency"] = _normalize_code(
+        values.get("currency"),
+        context["currency"],
+        _CURRENCY_CODE_RE,
+    )
+    context["safetyRegion"] = _normalize_code(
+        values.get("safetyRegion"),
+        context["safetyRegion"],
+        _REGION_CODE_RE,
+    )
+    context["legalRegion"] = _normalize_code(
+        values.get("legalRegion"),
+        context["legalRegion"],
+        _REGION_CODE_RE,
+    )
+    context["dataRegion"] = _normalize_text(
+        values.get("dataRegion"),
+        context["dataRegion"],
+        _DATA_REGION_RE,
+        lowercase=True,
+    )
+    return context
+
+
+def locale_context_from_account(account=None, person=None, overrides=None):
+    """Build LocaleContext v1 from the existing account/person storage model.
+
+    Language, geography, legal/safety policy, and data residency remain
+    independent. Person attributes carry policy fields that do not have
+    dedicated database columns yet; no value is inferred from a language tag.
+    """
+    account = account if isinstance(account, Mapping) else {}
+    person = person if isinstance(person, Mapping) else {}
+    attributes = person.get("attributes")
+    attributes = attributes if isinstance(attributes, Mapping) else {}
+    stored = {}
+    for candidate in (
+        account.get("localeContext"),
+        account.get("locale_context"),
+        attributes.get("localeContext"),
+        attributes.get("locale_context"),
+    ):
+        if isinstance(candidate, Mapping):
+            stored.update(candidate)
+
+    values = dict(stored)
+    storage_values = {
+        "uiLocale": account.get("locale"),
+        "conversationLocale": person.get("locale"),
+        "preferredLanguages": (
+            account.get("preferredLanguages")
+            or account.get("preferred_languages")
+        ),
+        "countryCode": person.get("regionCode") or person.get("region_code"),
+        "timeZone": person.get("timeZone") or person.get("timezone"),
+    }
+    values.update({key: value for key, value in storage_values.items() if value is not None})
+    if overrides is not None:
+        if not isinstance(overrides, Mapping):
+            raise TypeError("LocaleContext overrides must be a mapping")
+        values.update(overrides)
+    return build_locale_context(values)
+
+
+def locale_context_from_request(data=None, account=None, person=None):
+    """Normalize a trusted App/API request without coupling locale to country."""
+    data = data if isinstance(data, Mapping) else {}
+    requested = data.get("localeContext") or data.get("locale_context") or {}
+    if not isinstance(requested, Mapping):
+        raise TypeError("localeContext request value must be a mapping")
+    requested = dict(requested)
+    aliases = {
+        "uiLocale": data.get("uiLocale") or data.get("ui_locale") or data.get("locale"),
+        "conversationLocale": (
+            data.get("conversationLocale")
+            or data.get("conversation_locale")
+        ),
+        "preferredLanguages": (
+            data.get("preferredLanguages")
+            or data.get("preferred_languages")
+        ),
+        "countryCode": data.get("countryCode") or data.get("country_code"),
+        "timeZone": data.get("timeZone") or data.get("time_zone") or data.get("timezone"),
+        "units": data.get("units"),
+        "currency": data.get("currency"),
+        "safetyRegion": data.get("safetyRegion") or data.get("safety_region"),
+        "legalRegion": data.get("legalRegion") or data.get("legal_region"),
+        "dataRegion": data.get("dataRegion") or data.get("data_region"),
+    }
+    requested.update({key: value for key, value in aliases.items() if value is not None})
+    return locale_context_from_account(account, person, requested)
+
+
+def locale_context_from_app_preferences(data=None, account=None, person=None):
+    """Apply untrusted App language preferences without changing policy regions.
+
+    The App may report the iOS language list and device time zone. It may not
+    decide country, currency, units, safety/legal policy, or data residency.
+    Those fields must already come from verified account/person storage or a
+    separate server-side market policy resolver.
+    """
+    data = data if isinstance(data, Mapping) else {}
+    requested = data.get("localeContext") or data.get("locale_context") or {}
+    if not isinstance(requested, Mapping):
+        raise TypeError("localeContext App preference value must be a mapping")
+    requested = dict(requested)
+
+    aliases = {
+        "uiLocale": data.get("uiLocale") or data.get("ui_locale") or data.get("locale"),
+        "conversationLocale": (
+            data.get("conversationLocale")
+            or data.get("conversation_locale")
+        ),
+        "preferredLanguages": (
+            data.get("preferredLanguages")
+            or data.get("preferred_languages")
+        ),
+        "timeZone": data.get("timeZone") or data.get("time_zone") or data.get("timezone"),
+    }
+    requested.update({key: value for key, value in aliases.items() if value is not None})
+
+    protected_aliases = {
+        "countryCode": ("countryCode", "country_code"),
+        "units": ("units",),
+        "currency": ("currency",),
+        "safetyRegion": ("safetyRegion", "safety_region"),
+        "legalRegion": ("legalRegion", "legal_region"),
+        "dataRegion": ("dataRegion", "data_region"),
+    }
+    protected = []
+    for field, field_aliases in protected_aliases.items():
+        if field in requested or any(
+            alias in data or alias in requested
+            for alias in field_aliases
+        ):
+            protected.append(field)
+    if protected:
+        raise ValueError(
+            "App preferences cannot change server policy fields: "
+            + ", ".join(sorted(protected))
+        )
+
+    unknown = sorted(set(requested) - set(APP_MUTABLE_LOCALE_FIELDS))
+    if unknown:
+        raise ValueError(
+            "Unsupported App locale preference fields: " + ", ".join(unknown)
+        )
+    return locale_context_from_account(account, person, requested)
+
+
+def locale_context_storage_fields(context, person_attributes=None):
+    """Map LocaleContext v1 onto existing account/person database fields."""
+    normalized = build_locale_context(context)
+    attributes = dict(person_attributes) if isinstance(person_attributes, Mapping) else {}
+    attributes["localeContext"] = {
+        "version": normalized["version"],
+        "units": normalized["units"],
+        "currency": normalized["currency"],
+        "safetyRegion": normalized["safetyRegion"],
+        "legalRegion": normalized["legalRegion"],
+        "dataRegion": normalized["dataRegion"],
+    }
+    return {
+        "account": {
+            "locale": normalized["uiLocale"],
+            "preferred_languages": list(normalized["preferredLanguages"]),
+        },
+        "person": {
+            "locale": normalized["conversationLocale"],
+            "timezone": normalized["timeZone"],
+            "region_code": normalized["countryCode"],
+            "attributes": attributes,
+        },
+    }
+
+
+def locale_context_call_claims(context):
+    """Return the only locale claim shape allowed inside a signed call token.
+
+    Gateway integration must use a LocaleContext resolved from trusted account
+    policy. This helper deliberately emits one nested object instead of legacy
+    top-level locale/country fields, which prevents downstream services from
+    accidentally treating UI language as geography or safety policy.
+    """
+    return {"locale_context": build_locale_context(context)}
+
+
+def locale_context_from_verified_call_payload(payload, allow_legacy=True):
+    """Read LocaleContext only after the surrounding call token is verified.
+
+    Existing production tokens carry no locale claim. During the additive
+    rollout they retain the current Taiwan defaults. Once Gateway and installed
+    App E2E are ready, callers can set ``allow_legacy=False`` to fail closed.
+    Top-level locale, country, or region fields are never trusted as aliases.
+    """
+    if not isinstance(payload, Mapping):
+        raise TypeError("Verified call-token payload must be a mapping")
+    raw = payload.get("locale_context")
+    if raw is None:
+        if allow_legacy:
+            return build_locale_context()
+        raise ValueError("Verified call token is missing locale_context")
+    if not isinstance(raw, Mapping):
+        raise TypeError("Verified call token locale_context must be a mapping")
+    return build_locale_context(raw)
+
+
+def _normalize_preferred_languages(values, conversation_locale):
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, (list, tuple)):
+        values = []
+    normalized = [conversation_locale]
+    for value in values:
+        locale = _match_supported_locale(value)
+        if locale and locale not in normalized:
+            normalized.append(locale)
+    return normalized
+
+
+def _match_supported_locale(locale):
+    raw = str(locale or "").strip().replace("_", "-")
+    lowered = raw.lower()
+    if raw in SUPPORTED_LOCALES:
+        return raw
+    if lowered.startswith("zh"):
+        return "zh-TW"
+    if lowered.startswith("en"):
+        return "en"
+    if lowered.startswith("ja"):
+        return "ja"
+    if lowered.startswith("es"):
+        return "es"
+    return None
+
+
+def new_conversation_locale_state(locale_context=None):
+    """Create session language state without copying geography or policy fields."""
+    context = build_locale_context(locale_context)
+    locale = context["conversationLocale"]
+    return {
+        "baseLocale": locale,
+        "sessionLocale": locale,
+        "pendingPermanentLocale": None,
+    }
+
+
+def resolve_conversation_turn_locale(
+    state,
+    detected_languages=None,
+    switch_locale=None,
+    permanent=False,
+    confirmation=False,
+):
+    """Resolve one voice turn without treating code-switching as a saved preference.
+
+    ASR or the model supplies ``detected_languages`` in dominant-first order.
+    A separate structured intent parser supplies ``switch_locale`` and whether
+    the request is permanent; this policy deliberately does not guess those
+    intents from raw speech. A permanent change is returned only after an
+    explicit confirmation turn.
+    """
+    if not isinstance(state, Mapping):
+        raise TypeError("Conversation locale state must be a mapping")
+    base_locale = _required_supported_locale(state.get("baseLocale"), "baseLocale")
+    session_locale = _required_supported_locale(
+        state.get("sessionLocale") or base_locale,
+        "sessionLocale",
+    )
+    pending_locale = state.get("pendingPermanentLocale")
+    if pending_locale is not None:
+        pending_locale = _required_supported_locale(
+            pending_locale,
+            "pendingPermanentLocale",
+        )
+
+    detected = detected_languages
+    if isinstance(detected, str):
+        detected = [detected]
+    if not isinstance(detected, (list, tuple)):
+        detected = []
+    detected_locales = []
+    for value in detected:
+        locale = _match_supported_locale(value)
+        if locale and locale not in detected_locales:
+            detected_locales.append(locale)
+
+    requested_locale = None
+    if switch_locale is not None:
+        requested_locale = _required_supported_locale(switch_locale, "switchLocale")
+    if permanent and requested_locale is None and not confirmation:
+        raise ValueError("A permanent conversation locale change requires switchLocale")
+
+    previous_session_locale = session_locale
+    confirmation_required = False
+    persisted_locale = None
+
+    if requested_locale is not None:
+        session_locale = requested_locale
+        if permanent:
+            if confirmation:
+                base_locale = requested_locale
+                pending_locale = None
+                persisted_locale = requested_locale
+            else:
+                pending_locale = requested_locale
+                confirmation_required = True
+        else:
+            pending_locale = None
+    elif confirmation:
+        if pending_locale is None:
+            raise ValueError("No permanent conversation locale change is pending")
+        base_locale = pending_locale
+        session_locale = pending_locale
+        persisted_locale = pending_locale
+        pending_locale = None
+
+    response_locale = requested_locale or (
+        detected_locales[0] if detected_locales else session_locale
+    )
+    next_state = {
+        "baseLocale": base_locale,
+        "sessionLocale": session_locale,
+        "pendingPermanentLocale": pending_locale,
+    }
+    return {
+        "state": next_state,
+        "responseLocale": response_locale,
+        "detectedLocales": detected_locales,
+        "codeSwitchDetected": len(detected_locales) > 1,
+        "sessionChanged": previous_session_locale != session_locale,
+        "confirmationRequired": confirmation_required,
+        "persistedLocale": persisted_locale,
+    }
+
+
+def _required_supported_locale(value, field):
+    locale = _match_supported_locale(value)
+    if locale is None:
+        raise ValueError(f"Unsupported conversation locale for {field}: {value!r}")
+    return locale
+
+
+def _normalize_code(value, fallback, pattern):
+    if value is None:
+        return fallback
+    normalized = str(value or "").strip().upper()
+    if not pattern.fullmatch(normalized):
+        raise ValueError(f"Invalid LocaleContext value: {value!r}")
+    return normalized
+
+
+def _normalize_text(value, fallback, pattern, lowercase=False):
+    if value is None:
+        return fallback
+    normalized = str(value or "").strip()
+    if lowercase:
+        normalized = normalized.lower()
+    if not pattern.fullmatch(normalized):
+        raise ValueError(f"Invalid LocaleContext value: {value!r}")
+    return normalized
+
+
+def _normalize_choice(value, fallback, choices, field):
+    if value is None:
+        return fallback
+    if value not in choices:
+        raise ValueError(f"Invalid LocaleContext {field}: {value!r}")
+    return value
+
+
 def speech_language_code(locale): return _SPEECH_CODES[normalize_locale(locale)]
+
+
+def asr_language_hints(locale):
+    return list(_ASR_LANGUAGE_HINTS[normalize_locale(locale)])
+
+
+def detect_supported_languages(text):
+    """Return conservative dominant-first locale hints for one ASR turn.
+
+    This is intentionally a lightweight routing hint, not identity or region
+    inference. It only helps Live Voice reply to a code-switched turn; safety,
+    legal, currency, and data-region policy remain fixed in LocaleContext.
+    """
+    value = str(text or "")
+    if not value.strip():
+        return []
+
+    scores = {locale: 0 for locale in SUPPORTED_LOCALES}
+    first = {locale: len(value) + 1 for locale in SUPPORTED_LOCALES}
+
+    kana = list(re.finditer(r"[\u3040-\u30ff]", value))
+    if kana:
+        scores["ja"] += len(kana) * 3
+        first["ja"] = kana[0].start()
+
+    han = list(re.finditer(r"[\u3400-\u4dbf\u4e00-\u9fff]", value))
+    if han:
+        if kana:
+            scores["ja"] += len(han)
+            first["ja"] = min(first["ja"], han[0].start())
+        else:
+            scores["zh-TW"] += len(han)
+            first["zh-TW"] = han[0].start()
+
+    words = list(re.finditer(r"[A-Za-zÀ-ÿ]+(?:'[A-Za-zÀ-ÿ]+)?", value))
+    spanish_markers = {
+        "el", "la", "los", "las", "un", "una", "que", "de", "por", "para",
+        "con", "como", "hola", "gracias", "quiero", "puedo", "hablar",
+        "español", "dime", "ahora", "sí", "también",
+    }
+    english_markers = {
+        "the", "a", "an", "and", "or", "but", "to", "of", "in", "with",
+        "hello", "thanks", "want", "can", "could", "please", "speak",
+        "english", "tell", "now", "also",
+    }
+    normalized_words = [match.group(0).casefold() for match in words]
+    has_spanish = any(
+        word in spanish_markers or re.search(r"[áéíóúüñ¿¡]", word)
+        for word in normalized_words
+    )
+    has_english = any(word in english_markers for word in normalized_words)
+    for match, word in zip(words, normalized_words):
+        if word in spanish_markers or re.search(r"[áéíóúüñ¿¡]", word):
+            scores["es"] += 3
+            first["es"] = min(first["es"], match.start())
+        elif word in english_markers:
+            scores["en"] += 3
+            first["en"] = min(first["en"], match.start())
+        elif has_spanish and not has_english:
+            scores["es"] += 1
+            first["es"] = min(first["es"], match.start())
+        else:
+            scores["en"] += 1
+            first["en"] = min(first["en"], match.start())
+
+    ranked = [
+        locale for locale in SUPPORTED_LOCALES
+        if scores[locale] > 0
+    ]
+    ranked.sort(key=lambda locale: (-scores[locale], first[locale]))
+    return ranked
+
+
+def live_voice_code_switch_instruction(locale):
+    """Prompt contract for spoken language switching inside one call."""
+    normalized = normalize_locale(locale)
+    return (
+        "\n[Live language switching]\n"
+        f"The saved conversation language for this call is {normalized}. "
+        "If the user clearly asks to switch to Traditional Chinese, English, "
+        "Japanese, or Spanish, answer in the requested language and keep using "
+        "it for later turns in this call. If a user naturally mixes supported "
+        "languages without asking to switch, answer only this turn in the "
+        "predominant language they just used, then keep the saved conversation "
+        "language for later turns. A language switch never changes country, "
+        "timezone, emergency, legal, currency, units, or data-region policy. "
+        "If the user asks to save a new default language, ask for explicit "
+        "confirmation before saying it was saved."
+    )
 
 
 def canonicalize_transcription(text, locale="zh-TW"):
@@ -154,6 +736,76 @@ def reconcile_context_transcription(text, expected_terms=None, locale="zh-TW"):
 def opening_message(locale): return _OPENING_MESSAGES[normalize_locale(locale)]
 
 def retry_message(locale): return _RETRY_MESSAGES[normalize_locale(locale)]
+
+
+def regional_safety_instruction(locale, safety_region):
+    """Return localized emergency guidance from an explicit safety region.
+
+    The response language never chooses a country, hotline, legal regime, or
+    data region. Only a trusted ``safetyRegion`` may select regional numbers;
+    unknown regions use generic local-emergency guidance until a separately
+    reviewed regional policy is added.
+    """
+    normalized_locale = normalize_locale(locale)
+    normalized_region = str(safety_region or "").strip().upper()
+    copy = _REGIONAL_EMERGENCY_GUIDANCE.get(
+        normalized_region,
+        _GENERIC_EMERGENCY_GUIDANCE,
+    )
+    return "\n[Regional safety]\n" + copy[normalized_locale]
+
+
+def voice_session_locale_profile(locale_context=None):
+    """Build the complete locale bundle consumed by one Live voice session."""
+    context = build_locale_context(locale_context)
+    locale = context["conversationLocale"]
+    return {
+        "localeContext": context,
+        "sessionLocale": locale,
+        "responseLocale": locale,
+        "captionLocale": locale,
+        "speechLanguageCode": speech_language_code(locale),
+        "openingMessage": opening_message(locale),
+        "retryMessage": retry_message(locale),
+        "replyLanguageInstruction": reply_language_instruction(locale),
+        "regionalSafetyInstruction": regional_safety_instruction(
+            locale,
+            context["safetyRegion"],
+        ),
+    }
+
+
+def voice_turn_locale_profile(
+    locale_context,
+    state,
+    detected_languages=None,
+    switch_locale=None,
+    permanent=False,
+    confirmation=False,
+):
+    """Resolve a mixed-language turn and return its prompt/speech locale bundle."""
+    context = build_locale_context(locale_context)
+    decision = resolve_conversation_turn_locale(
+        state,
+        detected_languages=detected_languages,
+        switch_locale=switch_locale,
+        permanent=permanent,
+        confirmation=confirmation,
+    )
+    response_locale = decision["responseLocale"]
+    profile = voice_session_locale_profile({
+        **context,
+        "conversationLocale": response_locale,
+    })
+    profile["localeContext"] = context
+    profile["sessionLocale"] = decision["state"]["sessionLocale"]
+    profile["responseLocale"] = response_locale
+    profile["captionLocale"] = response_locale
+    return {
+        "decision": decision,
+        "profile": profile,
+    }
+
 
 def reply_language_instruction(locale):
     """A narrow addition to the existing safety/persona prompt, never a replacement."""

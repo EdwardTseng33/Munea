@@ -142,8 +142,9 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .task-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; color: transparent; transition: .2s; }
 .task-item.done .task-check { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.05); }
 .task-item.done .task-title { color: var(--muted); text-decoration: line-through; }
-.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral); }
+.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
 .task-time.coral { color: var(--coral); }
+html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 
 .fam-peek { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); margin-top: 14px; }
 .fam-peek .fp-avatar { width: 46px; height: 46px; border-radius: 50%; background: #F2D9C0; flex-shrink: 0; }
@@ -1181,7 +1182,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-price { white-space: nowrap; color: var(--teal-dd); font-weight: 700; font-size: 20px; }
 .plan-price small { font-size: 13px; font-weight: 600; color: var(--muted); }
 .plan-actions { display: flex; gap: 10px; margin-top: 14px; }
-.plan-actions .plan-btn { flex: 1; white-space: nowrap; min-height: 48px; }
+.plan-actions .plan-btn { flex: 1 1 0; min-width: 0; white-space: normal; min-height: 48px; padding-inline: 12px; }
 #topUpBtn.plan-btn { background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); }
 
 /* 沒有全身圖的角色（方形素材）：滿版聰明裁切、臉保持偏上 */
@@ -1501,8 +1502,8 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .fc-role.pay { color: var(--teal-dd); background: var(--mint); }
 
 /* 加值點數 */
-.tu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tu-card { border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 16px 10px; text-align: center; cursor: pointer; font-family: var(--sans); }
+.tu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tu-card { min-width: 0; border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 16px 10px; text-align: center; cursor: pointer; font-family: var(--sans); }
 .tu-card b { display: block; font-family: var(--display); font-size: 20px; color: var(--ink); }
 .tu-card span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
 .tu-card.on { border-color: var(--teal); background: var(--mint); }
@@ -1608,12 +1609,12 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rpt-row div span { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
 /* 用藥時段清單 */
 .ms-group { background: #FFF; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
-.ms-head { display: flex; align-items: center; gap: 10px; }
-.ms-head > b { font-size: 17px; }
-.ms-time-wrap { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.ms-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; }
+.ms-head > b { grid-column: 1; grid-row: 1; min-width: 0; font-size: 17px; overflow-wrap: anywhere; }
+.ms-time-wrap { grid-column: 2; grid-row: 1; display: inline-flex; align-items: center; gap: 6px; margin-left: 0; }
 .ms-time { font-size: 17px; font-variant-numeric: tabular-nums; }
 .ms-tbtn { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--line); background: #FFF; color: var(--teal-d); font-size: 17px; }
-.ms-count { font-size: 13px; color: var(--muted); min-width: 34px; text-align: right; }
+.ms-count { grid-column: 1 / -1; grid-row: 2; justify-self: start; font-size: 13px; color: var(--muted); min-width: 0; text-align: left; }
 .ms-med { display: flex; align-items: center; gap: 8px; padding: 8px 0 0; }
 .ms-med b { font-size: 15px; }
 .ms-med span { font-size: 13px; color: var(--muted); }
@@ -1636,7 +1637,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .care-ico.coral { background: var(--coral); color: #fff; }
 .care-ico.gold { background: #C79A3B; color: #fff; }
 .care-txt { min-width: 0; }
-.care-txt p { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.care-txt p { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .care-txt small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; line-height: 1.45; color: var(--muted); margin-top: 3px; white-space: normal; overflow: hidden; }
 
 /* ===== 家庭版緊湊刻度 v2 ＋ 對比補強（Edward 7/3） ===== */
@@ -1752,7 +1753,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .set-row .sr-arrow { white-space: nowrap; flex-shrink: 0; }
 /* 加值卡三行各自單行 */
 .tu-card { display: flex; flex-direction: column; gap: 3px; align-items: center; }
-.tu-card b, .tu-card .tu-price, .tu-card .tu-min { white-space: nowrap; }
+.tu-card b, .tu-card .tu-price, .tu-card .tu-min { white-space: normal; overflow-wrap: anywhere; }
 .tu-card .tu-price { font-size: 15px; font-weight: 700; color: var(--ink); }
 .tu-card .tu-min { font-size: 12.5px; color: var(--muted); }
 /* 字級選單 */
@@ -1771,6 +1772,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .reader-card p { font-size: 15.5px; line-height: 1.95; letter-spacing: .02em; color: var(--ink-2); margin-bottom: 8px; text-align: justify; text-justify: inter-ideograph; overflow-wrap: anywhere; }
 .reader-card ul { padding-left: 6px; list-style: none; margin-bottom: 8px; }
 .reader-card li { position: relative; padding-left: 16px; margin-top: 7px; font-size: 15.5px; line-height: 1.95; letter-spacing: .02em; color: var(--ink-2); }
+:is(html:lang(en), html:lang(es)) .reader-card :is(p, li) { text-align: left; text-justify: auto; hyphens: auto; }
 .reader-card li::before { content: ""; position: absolute; left: 0; top: .8em; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
 .reader-card strong { color: var(--ink); }
 
@@ -2122,6 +2124,8 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 
 /* 聊聊待命態溫度（女巫 Top #2 · 2026-07-07） */
 .face-name .fn-status { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.82); }
+html[lang="es"] .face-name { gap: 6px; }
+html[lang="es"] .face-name .fn-status { font-size: 12px; }
 /* .face-idle-hi 招呼字泡已拿掉（Edward 2026-07-16）——樣式一併清除 */
 .face-screen[data-state="idle"] .avatar-mouth { opacity: 0; }
 
@@ -2151,6 +2155,10 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 input.ms-time { border: none; background: none; font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; padding: 2px 2px; cursor: pointer; }
 input.ms-time::-webkit-calendar-picker-indicator { opacity: .55; cursor: pointer; }
 input.ms-time:focus { outline: none; color: var(--teal-dd); }
+.ms-time-control { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 54px; min-height: 34px; border-radius: 9px; }
+.ms-time-display { color: var(--ink); font-family: var(--display); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; }
+.ms-time-control input.ms-time { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; }
+.ms-time-control:focus-within { outline: 2px solid var(--teal-d); outline-offset: 2px; }
 
 /* 藥物照片（Edward 7/7） */
 .med-photo-row { display: flex; align-items: center; gap: 14px; margin: 4px 0 10px; }

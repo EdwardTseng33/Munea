@@ -2,8 +2,19 @@ const fs = require('fs');
 const vm = require('vm');
 
 const appSource = fs.readFileSync('web/src/app.js', 'utf8');
-if (!appSource.includes("el.textContent = '訂閱到期日：' + date")) {
-  throw new Error('settings plan card must keep the verified subscription expiry date visible');
+const localizedExpiryBinding = "muneaT('subscription.expiryDate', '訂閱到期日：{date}', { date })";
+const localizedExpiryBindingCount = appSource.split(localizedExpiryBinding).length - 1;
+if (localizedExpiryBindingCount < 2) {
+  throw new Error(
+    'settings plan card and subscription summary must keep the verified expiry date visible through the localized copy contract',
+  );
+}
+for (const locale of ['zh-TW', 'en', 'ja', 'es']) {
+  const catalog = JSON.parse(fs.readFileSync(`web/src/i18n/${locale}.json`, 'utf8'));
+  const template = catalog['subscription.expiryDate'];
+  if (typeof template !== 'string' || !template.includes('{date}')) {
+    throw new Error(`${locale} subscription.expiryDate must preserve the verified date placeholder`);
+  }
 }
 
 const storage = new Map();
@@ -12,6 +23,8 @@ let applied = 0;
 let finished = 0;
 let managed = 0;
 let nativePurchases = 0;
+let productLoads = 0;
+let loadedProductIds = [];
 let serverAllows = true;
 let restoreTransactions = [];
 let appliedPurchase = null;
@@ -25,6 +38,18 @@ let currentTransaction = {
 
 const plugin = {
   addListener() {},
+  async getProducts({ ids }) {
+    productLoads += 1;
+    loadedProductIds = ids.slice();
+    return {
+      products: ids.map(productId => ({
+        productId,
+        displayName: `Localized ${productId}`,
+        description: 'Localized product description',
+        displayPrice: productId.includes('.monthly') ? '$19.99' : '$99.99'
+      }))
+    };
+  },
   async purchase() { nativePurchases += 1; return { ...currentTransaction }; },
   async finish() { finished += 1; return { ok: true }; },
   async restore() { return { transactions: restoreTransactions.map(tx => ({ ...tx })) }; },
@@ -86,6 +111,23 @@ vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
       throw new Error(`point package ${points} is not mapped to ${productId}`);
     }
   }
+  const expectedAllProducts = [
+    'net.munea.app.plus.monthly',
+    'net.munea.app.plus.yearly',
+    'net.munea.app.pro.monthly',
+    'net.munea.app.pro.yearly',
+    ...Object.values(expectedPointProducts)
+  ];
+  const localizedProducts = await context.window.MuneaStore.getProducts();
+  if (!localizedProducts.ok || localizedProducts.products.length !== 8 ||
+      productLoads !== 1 || loadedProductIds.join('|') !== expectedAllProducts.join('|')) {
+    throw new Error('StoreKit localized product query did not load the exact 8-product set');
+  }
+  const cachedProduct = context.window.MuneaStore.product('net.munea.app.plus.monthly');
+  if (!cachedProduct || cachedProduct.displayPrice !== '$19.99' ||
+      cachedProduct.displayName !== 'Localized net.munea.app.plus.monthly') {
+    throw new Error('localized StoreKit product metadata was not cached for App UI use');
+  }
 
   const first = await context.window.MuneaStore.purchase(currentTransaction.productId);
   if (!first.ok || !first.verified || serverCalls !== 1 || applied !== 1 || finished !== 1) {
@@ -146,7 +188,14 @@ vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
     throw new Error('developer purchase must simulate locally without Apple charge or server verification');
   }
 
-  console.log('Store server verification PASS', { serverCalls, applied, finished, managed, nativePurchases });
+  console.log('Store server verification PASS', {
+    serverCalls,
+    applied,
+    finished,
+    managed,
+    nativePurchases,
+    productLoads
+  });
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

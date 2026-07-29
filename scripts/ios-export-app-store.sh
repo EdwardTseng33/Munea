@@ -49,6 +49,7 @@ PACKAGED_INDEX_PATH="$APP_PATH/public/index.html"
 PACKAGED_APP_JS_PATH="$APP_PATH/public/src/app.js"
 PACKAGED_AUTH_JS_PATH="$APP_PATH/public/src/auth.js"
 PRIVACY_MANIFEST_PATH="$APP_PATH/PrivacyInfo.xcprivacy"
+BUILD_IDENTITY_PATH="$APP_PATH/public/src/build-identity.json"
 PRIVACY_DATA_TYPE_COUNT="$(plutil -extract NSPrivacyCollectedDataTypes raw "$PRIVACY_MANIFEST_PATH" 2>/dev/null || echo 0)"
 
 for relative_path in \
@@ -77,6 +78,56 @@ GOOGLE_IOS_CLIENT_ID="$(plutil -extract GIDClientID raw "$APP_PATH/Info.plist" 2
 GOOGLE_SERVER_CLIENT_ID="$(plutil -extract GIDServerClientID raw "$APP_PATH/Info.plist" 2>/dev/null || true)"
 GOOGLE_URL_TYPES="$(plutil -extract CFBundleURLTypes xml1 -o - "$APP_PATH/Info.plist" 2>/dev/null || true)"
 DEVICE_FAMILIES="$(plutil -extract UIDeviceFamily json -o - "$APP_PATH/Info.plist" 2>/dev/null || true)"
+
+if [ ! -f "$BUILD_IDENTITY_PATH" ]; then
+  echo "FAIL exported IPA is missing its packaged build identity."
+  exit 1
+fi
+node "$ROOT/scripts/ios-build-identity.js" \
+  --verify \
+  --input "$BUILD_IDENTITY_PATH" \
+  --commit "$(git rev-parse HEAD)" \
+  --version "$ACTUAL_VERSION" \
+  --build "$ACTUAL_BUILD" \
+  --bundle-id "$ACTUAL_BUNDLE_ID"
+
+# MUNEA_I18N_BINARY_GATE_START
+# App Store Connect may display languages from submitted metadata even when the installed binary
+# cannot actually resolve those localizations. Verify the exported App bundle itself, not the
+# source tree, so unreferenced *.lproj folders or stale Xcode target membership cannot pass.
+REQUIRED_IOS_LOCALIZATIONS=("zh-Hant" "en" "ja" "es")
+REQUIRED_LOCALIZED_USAGE_KEYS=(
+  "CFBundleDisplayName"
+  "NSMicrophoneUsageDescription"
+  "NSCameraUsageDescription"
+  "NSPhotoLibraryUsageDescription"
+  "NSSpeechRecognitionUsageDescription"
+  "NSUserNotificationsUsageDescription"
+  "NSLocalNetworkUsageDescription"
+  "NSHealthShareUsageDescription"
+  "NSHealthUpdateUsageDescription"
+)
+BUNDLE_LOCALIZATIONS="$(
+  plutil -extract CFBundleLocalizations json -o - "$APP_PATH/Info.plist" 2>/dev/null || true
+)"
+for locale in "${REQUIRED_IOS_LOCALIZATIONS[@]}"; do
+  LOCALIZED_INFO_PATH="$APP_PATH/$locale.lproj/InfoPlist.strings"
+  if ! grep -Eq "\"$locale\"" <<<"$BUNDLE_LOCALIZATIONS" \
+    || [ ! -f "$LOCALIZED_INFO_PATH" ]; then
+    echo "FAIL exported IPA is missing binary localization: $locale"
+    exit 1
+  fi
+  for usage_key in "${REQUIRED_LOCALIZED_USAGE_KEYS[@]}"; do
+    LOCALIZED_USAGE_VALUE="$(
+      plutil -extract "$usage_key" raw "$LOCALIZED_INFO_PATH" 2>/dev/null || true
+    )"
+    if [ -z "$LOCALIZED_USAGE_VALUE" ]; then
+      echo "FAIL exported IPA localization $locale is missing $usage_key"
+      exit 1
+    fi
+  done
+done
+# MUNEA_I18N_BINARY_GATE_END
 
 if [ ! -f "$AUTH_CONFIG_PATH" ] \
   || grep -q 'MUNEA_IOS_DEVELOPMENT_PROFILE_START' "$AUTH_CONFIG_PATH" \
@@ -114,7 +165,8 @@ for asset_regex in 'styles\.css' 'version\.js' 'auth\.js' 'app\.js'; do
 done
 
 if grep -Fq '登入暫時無法啟動' "$PACKAGED_APP_JS_PATH" \
-  || ! grep -Fq 'Google 登入失敗（${code}）' "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq "trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom })" "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq "setAuthMessageState('unavailable', 'error')" "$PACKAGED_APP_JS_PATH" \
   || ! grep -Fq 'signInWithBrowserOAuth' "$PACKAGED_AUTH_JS_PATH" \
   || ! grep -Fq 'fallbackFrom: nativeCode' "$PACKAGED_AUTH_JS_PATH"; then
   echo "FAIL exported IPA is missing the current Google sign-in fallback or diagnostic bundle."
@@ -182,6 +234,7 @@ fi
 echo "PASS IPA excludes development fixtures and contains the latest Web and authentication assets."
 echo "PASS IPA excludes cloud admin and FlashHead test assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
+echo "PASS IPA contains zh-Hant, English, Japanese, and Spanish binary localizations."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS IPA app.js is pinned to production Brain/Voice/Call-control endpoints with no staging leak."
 echo "PASS IPA supports iPhone only."

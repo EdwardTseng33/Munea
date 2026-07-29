@@ -1,0 +1,77 @@
+{
+  "schema": "munea.app-static-binding-local-smoke.v1",
+  "recordedAt": "2026-07-29T00:11:45+08:00",
+  "sourceBaseCommit": "d4d31d86",
+  "releaseEvidence": false,
+  "scope": {
+    "surface": "web/index.html",
+    "environment": "local-fixture-only",
+    "baseUrl": "http://127.0.0.1:4176",
+    "productionTouched": false,
+    "networkPolicy": "Every request outside 127.0.0.1 and localhost was aborted."
+  },
+  "runtime": {
+    "browser": "Chrome 150.0.7871.182",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "bindingManifest": "web/src/i18n/app-binding-manifest.json",
+    "bindingRuntime": "web/src/i18n/app-binding-runtime.js",
+    "safeStaticBindings": 20,
+    "stateOwnedBindingsDeferred": 7
+  },
+  "locales": {
+    "zh-TW": {
+      "resolvedLocale": "zh-TW",
+      "htmlLang": "zh-Hant-TW",
+      "bindingIssues": 0,
+      "bindingMismatches": 0,
+      "result": "pass"
+    },
+    "en": {
+      "resolvedLocale": "en",
+      "htmlLang": "en",
+      "bindingIssues": 0,
+      "bindingMismatches": 0,
+      "result": "pass"
+    },
+    "ja": {
+      "resolvedLocale": "ja",
+      "htmlLang": "ja",
+      "bindingIssues": 0,
+      "bindingMismatches": 0,
+      "result": "pass"
+    },
+    "es": {
+      "resolvedLocale": "es",
+      "htmlLang": "es",
+      "bindingIssues": 0,
+      "bindingMismatches": 0,
+      "result": "pass"
+    }
+  },
+  "productionReleaseGateCanary": {
+    "deviceLanguage": "ja-JP",
+    "developerPreviewConfigured": false,
+    "resolvedLocale": "zh-TW",
+    "htmlLang": "zh-Hant-TW",
+    "signInLabel": "登入",
+    "result": "pass"
+  },
+  "blockedExternalOrigins": [
+    "https://cdn.jsdelivr.net",
+    "https://fonts.googleapis.com"
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "fixtureStopped": true,
+    "localPortClosed": 4176
+  },
+  "limitations": [
+    "This is a local integration precheck, not exact-build release evidence.",
+    "Seven state-owned bindings still require their App renderers to call catalog keys after the conflicting main-screen pull requests merge.",
+    "The complete 38-state App surface manifest and 1685 remaining source-copy occurrences are not yet integrated.",
+    "No Gateway, Live Voice, StoreKit, App Store Connect, installed-iPhone, or production flow was exercised."
+  ]
+}

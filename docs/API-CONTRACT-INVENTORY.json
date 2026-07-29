@@ -1194,12 +1194,14 @@
       "method": "POST",
       "path": "/voice/health-recommended",
       "auth": "internal",
-      "criticality": "standard",
+      "criticality": "critical",
       "idempotency": "operation-defined",
       "rateLimit": "none",
       "pii": "health",
       "envelope": "json-object",
-      "tests": []
+      "tests": [
+        "engine/test_health_followup.py"
+      ]
     },
     {
       "surface": "brain",

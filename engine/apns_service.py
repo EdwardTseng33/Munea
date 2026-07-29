@@ -9,6 +9,8 @@ import threading
 import time
 from dataclasses import dataclass
 
+import notification_service
+
 
 APNS_PRODUCTION_HOST = "https://api.push.apple.com"
 APNS_SANDBOX_HOST = "https://api.sandbox.push.apple.com"
@@ -96,16 +98,20 @@ class APNSTokenProvider:
 
 def build_payload(delivery):
     delivery = delivery or {}
+    metadata = delivery.get("metadata") if isinstance(delivery.get("metadata"), dict) else {}
+    copy = notification_service.generic_copy(
+        delivery.get("locale") or metadata.get("locale")
+    )
     # 鎖屏隱私內建（2026-07-15 Edward 拍板拿掉「鎖定畫面內容」開關）：
     # 推播一律用不含藥名／健康數值／訊息內文的 public 文案，細節只在 App 內看；
     # 不再理會裝置的 showSensitiveContent 旗標。
     sensitivity = delivery.get("sensitivity") or "private"
     if sensitivity == "public":
-        title = delivery.get("title") or "沐寧提醒"
-        body = delivery.get("body") or "你有一則新提醒。"
+        title = delivery.get("title") or copy["title"]
+        body = delivery.get("body") or copy["body"]
     else:
-        title = delivery.get("public_title") or delivery.get("publicTitle") or "沐寧提醒"
-        body = delivery.get("public_body") or delivery.get("publicBody") or "你的健康提醒到了，解鎖後查看。"
+        title = delivery.get("public_title") or delivery.get("publicTitle") or copy["title"]
+        body = delivery.get("public_body") or delivery.get("publicBody") or copy["body"]
     event_type = delivery.get("event_type") or delivery.get("eventType") or "notification"
     event_id = str(delivery.get("event_id") or delivery.get("eventId") or "")
     payload = {

@@ -7,6 +7,8 @@ import re
 import uuid
 from datetime import datetime, timezone
 
+import localization
+
 
 EVENT_TYPES = {
     "family_relay",
@@ -67,8 +69,36 @@ PERMISSION_STATUSES = {"not_determined", "denied", "authorized", "provisional", 
 DELIVERY_ACTIONS = {"opened", "actioned"}
 HEX_TOKEN_RE = re.compile(r"^[0-9a-fA-F]{32,256}$")
 
-GENERIC_TITLE = "沐寧提醒"
-GENERIC_BODY = "你的健康提醒到了，解鎖後查看。"
+GENERIC_COPY = {
+    "zh-TW": {
+        "title": "沐寧提醒",
+        "body": "你的健康提醒到了，解鎖後查看。",
+        "familyRelayPublicBody": "家人捎來一則訊息，解鎖後收聽。",
+    },
+    "en": {
+        "title": "Munea Reminder",
+        "body": "Your health reminder is ready. Unlock to view it.",
+        "familyRelayPublicBody": "A family member sent you a message. Unlock to listen.",
+    },
+    "ja": {
+        "title": "Muneaからのお知らせ",
+        "body": "健康に関するお知らせがあります。ロックを解除して確認してください。",
+        "familyRelayPublicBody": "ご家族からメッセージが届きました。ロックを解除して再生できます。",
+    },
+    "es": {
+        "title": "Recordatorio de Munea",
+        "body": "Tienes un recordatorio de salud. Desbloquea para verlo.",
+        "familyRelayPublicBody": "Un familiar te envió un mensaje. Desbloquea para escucharlo.",
+    },
+}
+FAMILY_SENDER_FALLBACK = {
+    "zh-TW": "家人",
+    "en": "A family member",
+    "ja": "ご家族",
+    "es": "Un familiar",
+}
+GENERIC_TITLE = GENERIC_COPY["zh-TW"]["title"]
+GENERIC_BODY = GENERIC_COPY["zh-TW"]["body"]
 
 
 def utc_now():
@@ -78,6 +108,46 @@ def utc_now():
 def _text(value, maximum, default=""):
     value = str(value or default).strip()
     return value[:maximum]
+
+
+def notification_locale(value=None):
+    return localization.normalize_locale(value)
+
+
+def generic_copy(locale=None):
+    return dict(GENERIC_COPY[notification_locale(locale)])
+
+
+def family_relay_copy(sender_label=None, locale=None):
+    locale = notification_locale(locale)
+    copy = generic_copy(locale)
+    sender = _text(sender_label, 80, FAMILY_SENDER_FALLBACK[locale])
+    titles = {
+        "zh-TW": f"{sender}捎來一則話",
+        "en": f"{sender} sent you a message",
+        "ja": f"{sender}さんからメッセージが届きました",
+        "es": f"{sender} te envió un mensaje",
+    }
+    return {
+        "title": titles[locale],
+        "publicTitle": copy["title"],
+        "publicBody": copy["familyRelayPublicBody"],
+    }
+
+
+def preferred_device_locale(devices=None, person_id=None, requested_locale=None):
+    if requested_locale:
+        return notification_locale(requested_locale)
+    candidates = []
+    for item in devices or []:
+        device = normalize_device(item)
+        if person_id and device.get("personId") != person_id:
+            continue
+        if device.get("invalidatedAt") or not device.get("notificationsEnabled"):
+            continue
+        candidates.append(device)
+    candidates.sort(key=lambda item: item.get("lastSeenAt") or "", reverse=True)
+    return notification_locale(candidates[0].get("locale") if candidates else None)
 
 
 def token_hash(token):
@@ -166,6 +236,13 @@ def normalize_event(item, recipient_person_id=None, actor_person_id=None):
         event_type = "family_activity"
     if sensitivity not in SENSITIVITY_LEVELS:
         sensitivity = "private"
+    metadata = dict(item.get("metadata")) if isinstance(item.get("metadata"), dict) else {}
+    locale = notification_locale(item.get("locale") or metadata.get("locale"))
+    metadata["locale"] = locale
+    copy = generic_copy(locale)
+    event_copy = {}
+    if event_type == "family_relay":
+        event_copy = family_relay_copy(metadata.get("senderLabel"), locale)
     return {
         "id": _text(item.get("id"), 80) or str(uuid.uuid4()),
         "accountId": item.get("accountId") or item.get("account_id"),
@@ -175,14 +252,22 @@ def normalize_event(item, recipient_person_id=None, actor_person_id=None):
         "eventType": event_type,
         "resourceType": _text(item.get("resourceType") or item.get("resource_type"), 80),
         "resourceId": _text(item.get("resourceId") or item.get("resource_id"), 160),
-        "title": _text(item.get("title"), 160, GENERIC_TITLE),
-        "body": _text(item.get("body"), 500, GENERIC_BODY),
-        "publicTitle": _text(item.get("publicTitle") or item.get("public_title"), 160, GENERIC_TITLE),
-        "publicBody": _text(item.get("publicBody") or item.get("public_body"), 500, GENERIC_BODY),
+        "title": _text(item.get("title"), 160, event_copy.get("title") or copy["title"]),
+        "body": _text(item.get("body"), 500, copy["body"]),
+        "publicTitle": _text(
+            item.get("publicTitle") or item.get("public_title"),
+            160,
+            event_copy.get("publicTitle") or copy["title"],
+        ),
+        "publicBody": _text(
+            item.get("publicBody") or item.get("public_body"),
+            500,
+            event_copy.get("publicBody") or copy["body"],
+        ),
         "sensitivity": sensitivity,
         "deepLink": _text(item.get("deepLink") or item.get("deep_link"), 500, "munea://notifications"),
         "dedupeKey": _text(item.get("dedupeKey") or item.get("dedupe_key"), 240),
-        "metadata": item.get("metadata") if isinstance(item.get("metadata"), dict) else {},
+        "metadata": metadata,
         "expiresAt": item.get("expiresAt") or item.get("expires_at"),
         "readAt": item.get("readAt") or item.get("read_at"),
         "archivedAt": item.get("archivedAt") or item.get("archived_at"),

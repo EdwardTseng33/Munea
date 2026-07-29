@@ -13,6 +13,12 @@ window.MuneaHealth = (function () {
   // 讀到資料了沒：true=至少一項有值、false=一項都沒有、null=還沒讀過（不亂猜）
   let hasData = null;
 
+  function t(key, fallback, values) {
+    return window.MuneaI18n
+      ? window.MuneaI18n.t(key, values || null, fallback)
+      : fallback;
+  }
+
   function plugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Health) || null;
   }
@@ -84,25 +90,43 @@ window.MuneaHealth = (function () {
       btn.classList.toggle('disconnect', on);
       btn.classList.remove('arm');
       delete btn.dataset.disconnectArmed;
-      btn.textContent = on ? '解除連接' : (btn.dataset.label || '連接');
+      btn.textContent = on
+        ? t('health.disconnect', '解除連接')
+        : t('health.connect', btn.dataset.label || '連接');
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
     const state = document.getElementById('healthSettingsState');
     if (state) state.classList.toggle('off', !on);
     const stateLabel = document.getElementById('healthSettingsStateLabel');
-    if (stateLabel) stateLabel.textContent = !on ? '未連接' : blank ? '讀不到資料' : '已連接';
+    if (stateLabel) stateLabel.textContent = !on
+      ? t('health.notConnected', '未連接')
+      : blank
+        ? t('health.noReadableData', '讀不到資料')
+        : t('health.connected', '已連接');
     const detail = document.getElementById('cnHealthDetail');
     if (detail) detail.textContent = !on
-      ? '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧'
+      ? t(
+        'health.availableDetail',
+        '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧',
+      )
       : blank
-        ? '已連接，但目前一項資料都讀不到'
-        : '正在同步步數、心率、睡眠、血壓與血氧';
+        ? t('health.noReadableDataDetail', '已連接，但目前一項資料都讀不到')
+        : t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧');
     const help = document.getElementById('cnHealthHelp');
     if (help) help.textContent = !on
-      ? '目前未同步。重新連接後才會讀取新的健康資料。'
+      ? t(
+        'health.notConnectedHelp',
+        '目前未同步。重新連接後才會讀取新的健康資料。',
+      )
       : blank
-        ? '沐寧還讀不到任何一項。請打開手機的「健康」App → 右上角的個人照片 → 「App 與服務」→ 沐寧 → 把要給沐寧看的項目打開（步數、心率、睡眠、血壓、血氧）。如果這支手機本來就還沒有這些紀錄，等有了就會自己出現。'
-        : '解除連接會停止沐寧後續同步，既有紀錄仍會保留。要撤銷 Apple 健康的系統授權，請到「健康 App」的個人頭像／隱私權設定中管理沐寧。';
+        ? t(
+          'health.noReadableDataHelp',
+          '沐寧還讀不到任何一項。請打開手機的「健康」App → 右上角的個人照片 → 「App 與服務」→ 沐寧 → 把要給沐寧看的項目打開（步數、心率、睡眠、血壓、血氧）。如果這支手機本來就還沒有這些紀錄，等有了就會自己出現。',
+        )
+        : t(
+        'health.disconnectHelp',
+        '解除連接會停止沐寧後續同步，既有紀錄仍會保留。要撤銷 Apple 健康的系統授權，請到「健康 App」的個人頭像／隱私權設定中管理沐寧。',
+      );
   }
 
   function emitConnectionState() {
@@ -195,7 +219,7 @@ window.MuneaHealth = (function () {
       if (btn.dataset.disconnectArmed !== '1') {
         btn.dataset.disconnectArmed = '1';
         btn.classList.add('arm');
-        btn.textContent = '再按一次解除';
+        btn.textContent = t('health.confirmDisconnect', '再按一次解除');
         clearTimeout(disconnectArmTimer);
         disconnectArmTimer = setTimeout(renderConnectionState, 4000);
         return;
@@ -215,6 +239,7 @@ window.MuneaHealth = (function () {
 
   loadHasData();
   bindConnectionUi();
+  window.addEventListener('munea:locale-ready', renderConnectionState);
 
   return { GOAL: GOAL, REFRESH_COOLDOWN_MS: REFRESH_COOLDOWN_MS, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative, metricStates: metricStates, hasAnyValue: hasAnyValue };
 })();

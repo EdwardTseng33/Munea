@@ -60,6 +60,17 @@ class APNSServiceTests(unittest.TestCase):
         self.assertNotIn("降血壓藥", alert["title"] + alert["body"])
         self.assertEqual(alert["title"], "沐寧提醒")
 
+    def test_missing_copy_uses_delivery_locale_without_exposing_health_details(self):
+        payload = apns_service.build_payload({
+            "event_id": "event-es",
+            "event_type": "health_alert",
+            "sensitivity": "health_sensitive",
+            "metadata": {"locale": "es-MX"},
+        })
+        alert = payload["aps"]["alert"]
+        self.assertEqual(alert["title"], "Recordatorio de Munea")
+        self.assertIn("Desbloquea", alert["body"])
+
     def test_apns_response_classification(self):
         self.assertEqual(apns_service.classify_response(200, {}, {"apns-id": "abc"})["status"], "accepted")
         self.assertEqual(apns_service.classify_response(410, {"reason": "Unregistered"})["status"], "invalid_token")

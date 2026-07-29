@@ -45,5 +45,35 @@ assert(auth.includes('unregisterBeforeSignOut'), 'Sign-out must detach the curre
 assert(web.includes('munea://medications') && web.includes('munea://visits') && web.includes('munea://relay'), 'Required deep links must be routed');
 assert(!web.includes('munea.notification.showSensitive') && web.includes('showSensitiveContent: false'), 'Lock-screen privacy must be fixed on with no user bypass');
 assert(web.includes('durationDays') && web.includes('endDate'), 'Finite medication schedules must stop at their treatment end');
+for (const legacySlot of ['早餐後', '午餐後', '晚餐後', '睡前']) {
+  assert(web.includes(`'${legacySlot}':`), `${legacySlot} must remain a legacy schedule identity`);
+}
+for (const key of [
+  'notification.publicTitle',
+  'notification.publicBody',
+  'notification.medicationDueTitle',
+  'notification.medicationDueBody',
+  'notification.familyActivityTitle',
+  'notification.clinicTitle',
+  'notification.clinicBody',
+  'notification.enabled',
+  'notification.localEnabledCloudPending',
+  'notification.allowInSettings',
+  'notification.updated',
+  'notification.localUpdatedCloudPending',
+  'notification.medicationMissed',
+  'notification.familyRelay',
+  'notification.familyInvitation',
+  'notification.familyActivity',
+  'notification.loading',
+  'notification.signInRequired',
+  'notification.emptyDetail',
+]) {
+  assert(web.includes(`'${key}'`), `Notification UI must localize ${key}`);
+}
+assert(
+  web.includes("new Intl.DateTimeFormat(locale"),
+  'Notification inbox timestamps must follow the current App language',
+);
 
 console.log('Notification platform native/web contract: ALL PASS');
