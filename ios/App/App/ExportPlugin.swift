@@ -36,21 +36,31 @@ public class ExportPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func sharePdf(_ call: CAPPluginCall) {
         let html = call.getString("html") ?? ""
         // 檔名會出現在分享面板與「檔案」App 裡，讓長輩認得出這是什麼
-        let rawName = call.getString("filename") ?? "就診摘要"
+        let rawName = call.getString("filename")
+            ?? muneaNativeText("native.export.defaultFilename", "就診摘要")
         let filename = Self.safeFilename(rawName)
 
         guard !html.isEmpty else {
-            call.reject("沒有可以匯出的內容", "export_empty_html")
+            call.reject(
+                muneaNativeText("native.export.emptyContent", "沒有可以匯出的內容"),
+                "export_empty_html"
+            )
             return
         }
 
         DispatchQueue.main.async {
             guard self.pendingCall == nil else {
-                call.reject("正在匯出中，請稍候", "export_in_progress")
+                call.reject(
+                    muneaNativeText("native.export.inProgress", "正在匯出中，請稍候"),
+                    "export_in_progress"
+                )
                 return
             }
             guard let presenter = self.bridge?.viewController else {
-                call.reject("找不到目前的 App 畫面", "export_view_unavailable")
+                call.reject(
+                    muneaNativeText("native.common.viewUnavailable", "找不到目前的 App 畫面"),
+                    "export_view_unavailable"
+                )
                 return
             }
             self.pendingCall = call
@@ -77,7 +87,10 @@ public class ExportPlugin: CAPPlugin, CAPBridgedPlugin {
             DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in
                 guard let self, let pending = self.pendingCall else { return }
                 self.cleanup()
-                pending.reject("這一頁轉檔花太久，請再試一次", "export_render_timeout")
+                pending.reject(
+                    muneaNativeText("native.export.renderTimeout", "這一頁轉檔花太久，請再試一次"),
+                    "export_render_timeout"
+                )
             }
 
             self.presenterRef = presenter
@@ -86,7 +99,7 @@ public class ExportPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private var presenterRef: UIViewController?
-    private var pendingFilename: String = "就診摘要"
+    private var pendingFilename: String = muneaNativeText("native.export.defaultFilename", "就診摘要")
 
     private func cleanup() {
         renderer?.navigationDelegate = nil
@@ -102,7 +115,9 @@ public class ExportPlugin: CAPPlugin, CAPBridgedPlugin {
         let cleaned = trimmed.components(separatedBy: CharacterSet(charactersIn: "/\\:*?\"<>|\n\r\t"))
             .joined(separator: "-")
         let limited = String(cleaned.prefix(40))
-        return limited.isEmpty ? "就診摘要" : limited
+        return limited.isEmpty
+            ? muneaNativeText("native.export.defaultFilename", "就診摘要")
+            : limited
     }
 }
 
@@ -120,7 +135,11 @@ extension ExportPlugin: WKNavigationDelegate {
                 switch result {
                 case .failure(let error):
                     self.cleanup()
-                    pending.reject("轉成 PDF 失敗", "export_pdf_failed", error)
+                    pending.reject(
+                        muneaNativeText("native.export.pdfFailed", "轉成 PDF 失敗"),
+                        "export_pdf_failed",
+                        error
+                    )
                 case .success(let data):
                     let url = FileManager.default.temporaryDirectory
                         .appendingPathComponent("\(filename).pdf")
@@ -128,7 +147,11 @@ extension ExportPlugin: WKNavigationDelegate {
                         try data.write(to: url, options: .atomic)
                     } catch {
                         self.cleanup()
-                        pending.reject("檔案存不起來", "export_write_failed", error)
+                        pending.reject(
+                            muneaNativeText("native.export.writeFailed", "檔案存不起來"),
+                            "export_write_failed",
+                            error
+                        )
                         return
                     }
                     let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
@@ -164,6 +187,10 @@ extension ExportPlugin: WKNavigationDelegate {
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         guard let pending = pendingCall else { return }
         cleanup()
-        pending.reject("這一頁載入失敗", "export_load_failed", error)
+        pending.reject(
+            muneaNativeText("native.export.loadFailed", "這一頁載入失敗"),
+            "export_load_failed",
+            error
+        )
     }
 }
