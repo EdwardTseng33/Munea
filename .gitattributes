@@ -2,3 +2,11 @@
 # （2026-07-24 test_flashhead_patch_integrity 在新 worktree 亮紅燈後立）
 *.patch -text
 *.sh text eol=lf
+
+# 2026-07-29：Windows 上用程式重寫檔案會偷偷把 LF 換成 CRLF，
+# 一次 80 行的改動在紀錄上長成上萬行全檔重寫、每行的來歷全被蓋掉（PR #297 踩過）。
+# 這裡釘死行尾，工具再怎麼寫都不會再髒進來。
+*.py text eol=lf
+*.json text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
