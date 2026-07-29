@@ -53,7 +53,7 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):
     return [tid for _, tid in scored[:limit]]
 
 
-def injection_for(text, exclude=None, profile=None, hour=None):
+def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None):
     """文字線用：按這一句用戶的話組出注入段；沒命中回空字串（不佔說明書）。
 
     2026-07-29：命中的題目若已經有「方案池」（因人因時因地挑選），改用挑選層的結果——
@@ -61,8 +61,24 @@ def injection_for(text, exclude=None, profile=None, hour=None):
     照舊走原本那段固定注入文，兩者並存、不必一次搬完 21 題。
     """
     ids = match_topics(text, exclude=exclude)
+    # 2026-07-29（考卷實測抓到）：話題是連續的，關鍵字比對卻只看這一句。
+    # 「我睡不好」→「吃鎂有用嗎，真的假的？」第二句命中的是謠言查證題，
+    # 她就拿不到鎂的方案、只能講泛泛之談。上一輪在聊的那題要接得回來。
+    if recent_topic and recent_topic in health_selector.TOPICS and recent_topic not in ids:
+        ids = [recent_topic] + ids
     if not ids:
         return ""
+    # 2026-07-29（三齡層擴充時抓到）：同一句話可能命中好幾題（青少年說「睡不飽」會同時
+    # 命中成人失眠題與青少年睡眠題）。**要挑對這個人的那一題**——不然高中生會拿到
+    # 「白天曬太陽對長輩特別有效」這種答非所問的建議。有標齡層的題優先。
+    aud = (profile or {}).get("audience")
+    if aud:
+        def _serves_audience(tid):
+            topic = health_selector.TOPICS.get(tid)
+            if not topic:
+                return False
+            return any(aud in (s.get("audience") or []) for s in topic.get("solutions") or [])
+        ids = sorted(ids, key=lambda t: (not _serves_audience(t),))
     for tid in ids:
         if tid in health_selector.TOPICS:
             picked = health_selector.render(tid, text, profile, hour)
@@ -82,8 +98,19 @@ def injection_for(text, exclude=None, profile=None, hour=None):
     )
 
 
-def voice_cue(topic_id):
-    """語音線用：在守護腦同一個「輪替空檔」機制排隊送出的衛教提示（每題整通只送一次）。"""
+def voice_cue(topic_id, user_text="", profile=None, hour=None):
+    """語音線用：在守護腦同一個「輪替空檔」機制排隊送出的衛教提示（每題整通只送一次）。
+
+    2026-07-29：有方案池的題也走因人挑選——聊聊是主戰場，長輩版跟青少年版不能混。
+    """
+    if topic_id in health_selector.TOPICS:
+        picked = health_selector.render(topic_id, user_text, profile, hour)
+        if picked:
+            return (
+                "（系統衛教提示、不是用戶說的話——絕不把這段提示唸出來，"
+                "自然運用下面按他狀況挑好的方案，保持一兩句短話、先接情緒："
+                + picked + "）"
+            )
     t = TOPIC_BY_ID[topic_id]
     return (
         f"（系統衛教提示、不是用戶說的話——他剛聊到「{t['title']}」相關話題。"
