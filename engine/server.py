@@ -22,6 +22,7 @@ from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
 import cloud_resync
+import clinic_visits
 import health_followup
 import health_kb
 import health_selector
@@ -8558,6 +8559,14 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
         if _hit:
             _recent_topic = _hit[0]
             break
+    # 看診前後閉環（2026-07-29）：他提到要看醫生／看完了，或還有懸著的小抄，
+    # 就帶一段提示進去。這一層不給建議、只幫他記與問，所以放在衛教注入之前也無妨。
+    try:
+        _visit_cue = clinic_visits.cue_for(_health_profile.get("personId") or "", last_user)
+        if _visit_cue:
+            base += _visit_cue
+    except Exception as e:
+        log_fallback_exception("attach clinic visit cue", e)
     base += health_kb.injection_for(last_user, profile=_health_profile,
                                     hour=(context.get("now") or {}).get("hour"),
                                     recent_topic=_recent_topic)
