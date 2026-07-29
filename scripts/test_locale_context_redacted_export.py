@@ -92,6 +92,7 @@ def persons() -> list[dict]:
             "locale": "en-US",
             "timezone": "Asia/Taipei",
             "region_code": "TW",
+            "locale_context": policy(),
             "attributes": {
                 "localeContext": policy(),
                 "email": "never@example.test",
@@ -106,6 +107,12 @@ def persons() -> list[dict]:
             "locale": "ja-JP",
             "timezone": "Asia/Tokyo",
             "region_code": "JP",
+            "locale_context": policy(
+                currency="JPY",
+                safetyRegion="JP",
+                legalRegion="JP",
+                dataRegion="jp-primary",
+            ),
             "attributes": {
                 "localeContext": policy(
                     currency="JPY",
@@ -123,6 +130,7 @@ def persons() -> list[dict]:
             "locale": "es-MX",
             "timezone": "America/Mexico_City",
             "region_code": "MX",
+            "locale_context": policy(),
             "attributes": {"localeContext": policy()},
             "deleted_at": "2026-07-01T00:00:00Z",
         },
@@ -188,6 +196,16 @@ class LocaleContextRedactedExportTests(unittest.TestCase):
             "id,locale,preferred_languages,deleted_at",
         )
         self.assertNotIn("name", account_select)
+        person_select = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(
+                next(call[1] for call in transport.calls if "/persons?" in call[1])
+            ).query
+        )["select"][0]
+        self.assertIn(
+            "locale_context:attributes->localeContext",
+            person_select,
+        )
+        self.assertNotIn(",attributes,", person_select)
         self.assertNotIn("display_name", serialized)
         for private_value in (
             ACCOUNT_A,
@@ -258,9 +276,7 @@ class LocaleContextRedactedExportTests(unittest.TestCase):
         unsafe_persons[0] = {
             **unsafe_persons[0],
             "timezone": "private@example.test",
-            "attributes": {
-                "localeContext": policy(dataRegion="private@example.test")
-            },
+            "locale_context": policy(dataRegion="private@example.test"),
         }
         payload = build_export(
             config(page_size=100),

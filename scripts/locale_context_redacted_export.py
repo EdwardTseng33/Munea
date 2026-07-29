@@ -231,10 +231,7 @@ def _safe_locales(value: Any) -> list[str]:
     return result
 
 
-def _safe_policy(attributes: Any) -> dict[str, Any]:
-    if not isinstance(attributes, dict):
-        return {}
-    raw = attributes.get("localeContext")
+def _safe_policy(raw: Any) -> dict[str, Any]:
     if not isinstance(raw, dict):
         return {}
     version = raw.get("version")
@@ -271,7 +268,7 @@ def _redacted_person(
         "timezone": _safe_text(row.get("timezone"), _TIME_ZONE_RE),
         "region_code": _safe_text(row.get("region_code"), _REGION_RE),
         "attributes": {
-            "localeContext": _safe_policy(row.get("attributes")),
+            "localeContext": _safe_policy(row.get("locale_context")),
         },
     }
 
@@ -297,7 +294,8 @@ def build_export(
         _fetch_rows(
             config,
             "persons",
-            "id,account_id,locale,timezone,region_code,attributes,deleted_at",
+            "id,account_id,locale,timezone,region_code,"
+            "locale_context:attributes->localeContext,deleted_at",
             transport=transport,
         ),
         label="persons",
