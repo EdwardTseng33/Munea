@@ -1,9 +1,9 @@
 {
   "schema": "munea.app-full-surface-local-browser-precheck.v2",
-  "recordedAt": "2026-07-29T14:08:52.663Z",
+  "recordedAt": "2026-07-29T14:24:07.819Z",
   "result": "pass-local-precheck",
   "releaseEvidence": false,
-  "sourceBaseCommit": "c3242d5f1e7bee330f3394dea3081c806c273f21",
+  "sourceBaseCommit": "5f693533f0025f248a61ced904b74e3d5c827daa",
   "sourceChangedFiles": [],
   "scope": {
     "states": [
@@ -211,8 +211,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-home__iphone375x667.png",
-        "bytes": 68821,
-        "sha256": "7767e58f88b83325b669b4083cce22558b33940bb0f5201c264a15969aa007bc"
+        "bytes": 69131,
+        "sha256": "a2af547aefeee5284c7097c11a129a0974de312c55ec7714295a56e022849ce1"
       }
     },
     {
@@ -301,8 +301,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-status__iphone375x667.png",
-        "bytes": 76060,
-        "sha256": "1969ebd31b4be7d6efc85b720ae8b8b012833e65328b8d2e1976a35e7ef9c85c"
+        "bytes": 77291,
+        "sha256": "ee2e9d4e6c21713c04b37f3fa7db46b09e10214441f8f304adcb804cd6eb28ed"
       }
     },
     {
@@ -321,8 +321,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 1,
-        "bottom": 668,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -369,8 +369,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-family__iphone375x667.png",
-        "bytes": 78253,
-        "sha256": "59d6b3d17f0f1ac16c672679594166a517bb999adecd9ce356af982b39533792"
+        "bytes": 75630,
+        "sha256": "4586d884bf82b4bab00a9e12fc88d6e0855f24d9d420d9d7741d670134fd2051"
       }
     },
     {
@@ -455,8 +455,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-settings__iphone375x667.png",
-        "bytes": 55349,
-        "sha256": "802b2f31031eb8629e188dd1e1fd4fb5656b22015c54c128d3e43cccdbdeb44f"
+        "bytes": 55891,
+        "sha256": "db65011bb08c2ad44680e8baed64403b4e7fc66ce1055492c82d780ca9e460a9"
       }
     },
     {
@@ -475,8 +475,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 1,
-        "bottom": 668,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -518,8 +518,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-connect__iphone375x667.png",
-        "bytes": 72775,
-        "sha256": "3055964cec01a20a149b3e32a2351ae27c5d2a8b23c6fb570569980e3f88a1c0"
+        "bytes": 74319,
+        "sha256": "26228f0d1a401503a6f07d4cc132ae42dadca520d391b43f85a6173ce6c02fc9"
       }
     },
     {
@@ -538,8 +538,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 2,
-        "bottom": 669,
+        "top": 3,
+        "bottom": 670,
         "width": 375,
         "height": 667
       },
@@ -656,8 +656,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-connecting__iphone375x667.png",
-        "bytes": 271412,
-        "sha256": "8222c15494d05ae7d9a43ac0889c0905d012aa30a141674670d522938e6f29d7"
+        "bytes": 271417,
+        "sha256": "4534ce14c2ea051c7a53ce26fac68cc94135be808ef29d6c8572793c9f405d26"
       }
     },
     {
@@ -708,8 +708,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-queued__iphone375x667.png",
-        "bytes": 265407,
-        "sha256": "12cd199eb2bdc9dddfa5141cf3b10fb376c9021480ccf30afa0bfa683450e9e6"
+        "bytes": 265397,
+        "sha256": "885efc71dde145ab8c4fee912e8e3f7401fc790e2db6f7024918a0b6c7bba16d"
       }
     },
     {
@@ -872,8 +872,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-error__iphone375x667.png",
-        "bytes": 277197,
-        "sha256": "577f08745329dc89632acd58fcbb03e278a401e11e23b9d8bce0c0d7ab49e76a"
+        "bytes": 277242,
+        "sha256": "a872f77530a7471e4c24ea97f6fe6511409ad3a981e0202837d4819bd704e167"
       }
     },
     {
@@ -892,8 +892,8 @@
       "rect": {
         "left": 70,
         "right": 305,
-        "top": 524,
-        "bottom": 573,
+        "top": 523,
+        "bottom": 572,
         "width": 235,
         "height": 49
       },
@@ -916,8 +916,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__cross-surface-error-and-empty__iphone375x667.png",
-        "bytes": 35779,
-        "sha256": "aa110a36196d49619ced9096b4c43ffb3b5b6a1e3ce18693ac3764c246df2588"
+        "bytes": 40436,
+        "sha256": "ec25b6799270ad45bf6c3e83fec861b4890acbf3b4cfc00cf2d8ddd750cf0e81"
       }
     },
     {
@@ -968,8 +968,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-quiz__iphone375x667.png",
-        "bytes": 54595,
-        "sha256": "a6722c4a837467026f6db7a97c00c4d0c27312d275cc332ded1b33b4e26569d6"
+        "bytes": 49515,
+        "sha256": "fee7c7b5c551157e283e683da7e8f48455a0f2fc0fdb8c10d3a7d63a3d23958a"
       }
     },
     {
@@ -1040,8 +1040,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-challenge__iphone375x667.png",
-        "bytes": 76315,
-        "sha256": "ae7ab229980c0ebec94c4fe5727b41b94833642ef44d8c46cef4d0a63b0bfb8e"
+        "bytes": 72057,
+        "sha256": "6840d3794bf856eec824edd610a9f67fe74caf0bab955fcd1cb73089f8cc9b2b"
       }
     },
     {
@@ -1092,8 +1092,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-activity-detail__iphone375x667.png",
-        "bytes": 55617,
-        "sha256": "f12ae17ce3e43578e8b07811ba649eb4c8909c645780b2de08cf8068f1cd3f98"
+        "bytes": 54951,
+        "sha256": "a5687cca6b96265d62f878067d3a19ededad1094e36bf470664d7a0700255cee"
       }
     },
     {
@@ -1166,8 +1166,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-feedback__iphone375x667.png",
-        "bytes": 83591,
-        "sha256": "6bdcf4a19602df61779aa2d36eaf6af465c7f2f248e8e3310120f97073922de9"
+        "bytes": 77386,
+        "sha256": "db66aeb4b3ad460e3bfeb0e746ca9d26d9238431a42b0b5472b878e2a1d90acb"
       }
     },
     {
@@ -1244,8 +1244,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-interests__iphone375x667.png",
-        "bytes": 79636,
-        "sha256": "bf7308ca81abd20aaf501eefdad553c45a671c6d5276c117811cdf79807d36a3"
+        "bytes": 82517,
+        "sha256": "f78788ee76d856e19d926e45892f63af341d990137367ecb80e7894c74a96a7e"
       }
     },
     {
@@ -1316,8 +1316,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-safety__iphone375x667.png",
-        "bytes": 93294,
-        "sha256": "6c4635bc9e4cfec933f6e609d61d29d22f894d9b419ab0c30c77f390562ea5d0"
+        "bytes": 90067,
+        "sha256": "50d2d376ab79782e36bce2559096485641cbf64e97b75a113fc04dc1c2e4316c"
       }
     },
     {
@@ -1381,8 +1381,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-companion__iphone375x667.png",
-        "bytes": 82716,
-        "sha256": "c3c7965f4eb326316c068bdb6bef1092fd02240ddda82f7e3812c3c1059efc53"
+        "bytes": 74168,
+        "sha256": "af6d1b442f8570c768e121a7d879d36e27f981897c972b4dfc5c5047a05faaa6"
       }
     },
     {
@@ -1461,8 +1461,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-report__iphone375x667.png",
-        "bytes": 74775,
-        "sha256": "c6614196e0b7707a8ec96d57b55bc411d8eb2b851a87811e6c47c5ed7f373ba5"
+        "bytes": 66347,
+        "sha256": "afe0f61c192f60a47db3307b2ae9dca78652fa87aca97c28aab2eaddb9372616"
       }
     },
     {
@@ -1523,8 +1523,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-font__iphone375x667.png",
-        "bytes": 59960,
-        "sha256": "7464ca0a0388e28fbddc3987ee295aac3448bf93501bc5f07a8ed37e559402c8"
+        "bytes": 58931,
+        "sha256": "1f9e75a827a4a0db43a70319e0ed4de27721e0b8f2b2b31d64fcc2205c0b582f"
       }
     },
     {
@@ -1649,8 +1649,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-data__iphone375x667.png",
-        "bytes": 71015,
-        "sha256": "ce65fbdfe3d2fa8e8e844336d3d25ec2846de4b0fa7b71c17eaeb8e8af6a939e"
+        "bytes": 70874,
+        "sha256": "88ad74f5e5ca1113a8c2db83f0b2ad7b62b9b546a6c0f88f693fb3fe30875354"
       }
     },
     {
@@ -1712,8 +1712,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-profile__iphone375x667.png",
-        "bytes": 51352,
-        "sha256": "537c5708ae15714cc2e5fc2096f249171a4afe3e06fbe7f6947f9f5e7c8e57b2"
+        "bytes": 54677,
+        "sha256": "c9617e1667d16f199562a8e92bf591eaab77399977ac519f57ede244f7058f80"
       }
     },
     {
@@ -1782,8 +1782,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-family-circle__iphone375x667.png",
-        "bytes": 73264,
-        "sha256": "8aa77212ffeaf15e49508fd2eee74f4ef98d14669a2db3e5cbacad47da90c910"
+        "bytes": 76738,
+        "sha256": "a3ceb4d1acd0988465f5f5dfe3fd421d5f09893179b54f458f6dd17d7130e2e9"
       }
     },
     {
@@ -1842,8 +1842,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-invite-family__iphone375x667.png",
-        "bytes": 79196,
-        "sha256": "c108d1cb8166afe230bc7f190b73b51f9eec4b2484a6de995d1196f2440e7cd5"
+        "bytes": 58683,
+        "sha256": "e6c8e506536345465a0c7ac708ca68fa5f5b3eeb19dcc51ea3d05a8f2d149be6"
       }
     },
     {
@@ -1895,8 +1895,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-join-circle__iphone375x667.png",
-        "bytes": 64436,
-        "sha256": "06a5d4278a4496731896755e2728fa0b80da2d9c53fdcc5e67835f6ec07fa3b7"
+        "bytes": 64492,
+        "sha256": "e907e0de84c91bedd7033400594321d339041157799903488b25daa6435807ad"
       }
     },
     {
@@ -1973,8 +1973,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-top-up__iphone375x667.png",
-        "bytes": 75139,
-        "sha256": "e3b43c5231df1c8744f4e3b70f5a23a723cac33580da1301e6b7b92feb8c0b54"
+        "bytes": 64461,
+        "sha256": "b71b6b737f87f0023795db851acc4a4bb20acbcacc4d8feafabc8ff5c1d61450"
       }
     },
     {
@@ -2104,8 +2104,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-appointment__iphone375x667.png",
-        "bytes": 56059,
-        "sha256": "3821f03f0654b3fa43faf30a110eccf02fee4aa8460c941b5d35e71ad2913373"
+        "bytes": 58868,
+        "sha256": "86be15a87f6680de8b5692fe3e748dab2126b22c13a1cf375441355d6d8f86c8"
       }
     },
     {
@@ -2130,7 +2130,7 @@
         "height": 667
       },
       "visibleText": "過去紀錄\n\n保存一年；滿一年前寧寧會先問你要不要留下來。\n\n每月整理\n自選日期\n2026 年 6 月\n吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時\n2026 年 5 月\n已保存 · 點開看當月整理\n2026 年 4 月\n已保存 · 點開看當月整理\n2026 年 3 月\n已保存 · 點開看當月整理\n2026 年 2 月\n已保存 · 點開看當月整理\n2026 年 1 月\n已保存 · 點開看當月整理\n\n更早的（到 2025 年 8 月）也都在，往下會自動接著列。",
-      "visibleViewportText": "過去紀錄\n保存一年；滿一年前\n寧寧\n會先問你要不要留下來。\n每月整理\n自選日期\n2026 年 6 月\n吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時\n2026 年 5 月\n已保存 · 點開看當月整理\n2026 年 4 月\n已保存 · 點開看當月整理\n2026 年 3 月\n已保存 · 點開看當月整理\n2026 年 2 月\n已保存 · 點開看當月整理\n2026 年 1 月",
+      "visibleViewportText": "過去紀錄\n保存一年；滿一年前\n寧寧\n會先問你要不要留下來。\n每月整理\n自選日期\n2026 年 6 月\n吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時\n2026 年 5 月\n已保存 · 點開看當月整理\n2026 年 4 月\n已保存 · 點開看當月整理\n2026 年 3 月\n已保存 · 點開看當月整理\n2026 年 2 月\n已保存 · 點開看當月整理\n2026 年 1 月\n已保存 · 點開看當月整理",
       "visibleViewportLeafTexts": [
         "過去紀錄",
         "寧寧",
@@ -2146,7 +2146,8 @@
         "已保存 · 點開看當月整理",
         "2026 年 2 月",
         "已保存 · 點開看當月整理",
-        "2026 年 1 月"
+        "2026 年 1 月",
+        "已保存 · 點開看當月整理"
       ],
       "visibleViewportTextNodes": [
         "過去紀錄",
@@ -2165,7 +2166,8 @@
         "已保存 · 點開看當月整理",
         "2026 年 2 月",
         "已保存 · 點開看當月整理",
-        "2026 年 1 月"
+        "2026 年 1 月",
+        "已保存 · 點開看當月整理"
       ],
       "visibleAttributeTexts": [
         "關閉紀錄"
@@ -2182,8 +2184,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-history__iphone375x667.png",
-        "bytes": 75991,
-        "sha256": "3c8a6015db2230c9fa40130fb4cea0488446a76915bb125368c28f59820e6202"
+        "bytes": 62335,
+        "sha256": "971913d80c84daf2dc8293b822d5d1cc2b4c60472d8b0a4ccdbe9e722e60fc57"
       }
     },
     {
@@ -2255,8 +2257,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-consent__iphone375x667.png",
-        "bytes": 124088,
-        "sha256": "324f00c7421737fa5fed91d6dc550403c0e636cf63d8c53c3708cb73ff4eb34a"
+        "bytes": 113297,
+        "sha256": "225c3680cbc3f9f350b52252646daf9396c96fe822910a69c7ff39fd55f9ce3d"
       }
     },
     {
@@ -2324,8 +2326,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-version__iphone375x667.png",
-        "bytes": 126961,
-        "sha256": "c301fbefacdc447e1571c564be5618bc630a7ccc38720765f2a7379dc196df4d"
+        "bytes": 115798,
+        "sha256": "8b0f9554a0c8b0872bde8a0e40fe6fde33795d733b49c6a7f50d74cc5c21579a"
       }
     },
     {
@@ -2378,8 +2380,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-medication-reminder__iphone375x667.png",
-        "bytes": 69107,
-        "sha256": "d936e5f1bfeb89a4973ad67d223455bb663025ace883225576cf8393c6b52e6d"
+        "bytes": 53602,
+        "sha256": "96cf4466ecd08bc0df61e80d8ac61458b610a3bb567b8257c04d17ed28233f51"
       }
     },
     {
@@ -2469,8 +2471,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-medication-manager__iphone375x667.png",
-        "bytes": 71849,
-        "sha256": "803c5e020b1ddda7bc04e0007dce2f37abd6c9400b0e105ba9b910e9e348a92b"
+        "bytes": 51749,
+        "sha256": "8fa3dfbab851d50c8318628f4239a357c78e9b9242011dcb3a1d1cb93f70197e"
       }
     },
     {
@@ -2527,8 +2529,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-auth__iphone375x667.png",
-        "bytes": 71089,
-        "sha256": "cc0ef10d857195d834426db5b7b13f0f2019c2c635f2dae05c84f1c0b23a152e"
+        "bytes": 50967,
+        "sha256": "a68341e5b2d588aee7167fe9af0c2c45e6f672b570ab5155db6bdbad3ca1c9c6"
       }
     },
     {
@@ -2664,8 +2666,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-notification-inbox__iphone375x667.png",
-        "bytes": 62394,
-        "sha256": "ef3bc423163e1e054b96385d27458e3e87893024ef54a2a4f1838f0ec3fe696a"
+        "bytes": 54920,
+        "sha256": "e7e24719a19c49a33d50e2a8187620e2a0d6b4bc1cdcaeec781648e18fd14412"
       }
     },
     {
@@ -2755,8 +2757,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 1,
-        "bottom": 668,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -2819,8 +2821,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-status__iphone375x667.png",
-        "bytes": 76312,
-        "sha256": "83a1fe00eea4cc0d96fa4783fff4bd61a3ecd62fa914efd9ee302a85387d95c9"
+        "bytes": 65209,
+        "sha256": "63b2487ff36983e0e199d1731432b5be70f80218ba61939ea75ad55aa4433cbd"
       }
     },
     {
@@ -2839,8 +2841,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 1,
-        "bottom": 668,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -2883,8 +2885,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-family__iphone375x667.png",
-        "bytes": 80932,
-        "sha256": "806bb8d50cf2e6badd90c6e7e35b9cf8d70d29148dcbe9e87eda6788524ce7c8"
+        "bytes": 71760,
+        "sha256": "96b009fe060b3c113964dd0d5e7ae247062093e5ebb901fe9606381e643b71c0"
       }
     },
     {
@@ -2903,8 +2905,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 1,
-        "bottom": 668,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -2966,8 +2968,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-settings__iphone375x667.png",
-        "bytes": 61964,
-        "sha256": "505fb7b6a317686a45e4415dc15909f61e6fe544134c567cc89a58431c270274"
+        "bytes": 54411,
+        "sha256": "e6efe981a128dc78a47d54daa8211003eac23edefa937de62f9cbf2ac1bcc5ed"
       }
     },
     {
@@ -3025,8 +3027,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-connect__iphone375x667.png",
-        "bytes": 63616,
-        "sha256": "95c11c1259b16b5a0c84840515a25a127e3d3250b0735a31e6192bc5ebecd985"
+        "bytes": 51869,
+        "sha256": "964132d6de750d49cca2ba6a9ac612399a1fecf0a80b89e783c000936a84fa04"
       }
     },
     {
@@ -3045,8 +3047,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 4,
-        "bottom": 671,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -3090,8 +3092,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-idle__iphone375x667.png",
-        "bytes": 297363,
-        "sha256": "ee198354135b79196442e7e22c1580ea54ce5f3e22efd94f54eaa315b217828d"
+        "bytes": 339679,
+        "sha256": "b94d235c80f9cee17978cab4394977537d2d4215d2da44e8b9af3d16a2375af6"
       }
     },
     {
@@ -3163,8 +3165,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-connecting__iphone375x667.png",
-        "bytes": 258181,
-        "sha256": "1e03a9ecc9c85ff1b84b664a90ce15f52ead2403c4ecd59f062c402c4d03d451"
+        "bytes": 258235,
+        "sha256": "09795b737c8f2bd4e1ea2cf9f77eb456aec1396fdb344c89005c6d6211995327"
       }
     },
     {
@@ -3215,8 +3217,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-queued__iphone375x667.png",
-        "bytes": 252569,
-        "sha256": "37019257f94bccb7d1b4bdeb2f7d6cd0104eb49600b615a995b3930e365023ed"
+        "bytes": 252532,
+        "sha256": "298ab9c5d3e8f6713914457f06a65665396ed2d30c6e1e9c4e5cb726411a66bd"
       }
     },
     {
@@ -3379,8 +3381,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-error__iphone375x667.png",
-        "bytes": 269028,
-        "sha256": "9ee2e4dfa5203929d1632fa8aa981cab7aaf55749d3642a20a58f401a92c12ad"
+        "bytes": 269023,
+        "sha256": "1dde10361a68bf04a563d9d1cfdbf482b0655a671191c90d918ffb757c1bd1ef"
       }
     },
     {
@@ -3399,8 +3401,8 @@
       "rect": {
         "left": 28,
         "right": 348,
-        "top": 500,
-        "bottom": 573,
+        "top": 499,
+        "bottom": 571,
         "width": 320,
         "height": 73
       },
@@ -3423,8 +3425,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__cross-surface-error-and-empty__iphone375x667.png",
-        "bytes": 45635,
-        "sha256": "b6219099faf5337d08d5106b4bc00437e082ab104432c076ee63c1a7030666fc"
+        "bytes": 73241,
+        "sha256": "622571ea692e5de1da36fa787564641cbea9792317068d22de9025443b10ee14"
       }
     },
     {
@@ -3475,8 +3477,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-quiz__iphone375x667.png",
-        "bytes": 58559,
-        "sha256": "846e2ddc3d43141c9273645d3c297492e78e58409e5a9f918f349bf60bafaf03"
+        "bytes": 48874,
+        "sha256": "6603e55c3b56f189da60206b4e5af36f1035dd0d15823da4fdd4f1c97cddcf00"
       }
     },
     {
@@ -3543,8 +3545,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-challenge__iphone375x667.png",
-        "bytes": 81156,
-        "sha256": "112b945240975c8bffda29c728a752277c32dc63c72886d3a99046483cde5845"
+        "bytes": 69227,
+        "sha256": "56959f53553701973fba24dabfc3e40829d8e261902647b5e1c07237ccd8f4b6"
       }
     },
     {
@@ -3595,8 +3597,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-activity-detail__iphone375x667.png",
-        "bytes": 60762,
-        "sha256": "71d4fffcd63c2998adc0478bb6150b7eb6afb5fc6c9fadb16a0527d9b055fb29"
+        "bytes": 54928,
+        "sha256": "5035474525d402286d37cd813a447b788c344e6caa9fb3d638ef5f863f366e77"
       }
     },
     {
@@ -3666,8 +3668,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-feedback__iphone375x667.png",
-        "bytes": 81732,
-        "sha256": "2fa288a3dee504b678ea391427ed2a0037469b1d45486a654ebc0412feb3df00"
+        "bytes": 61738,
+        "sha256": "ac83475fbbc3bd1d83224489dc36a54d8e5fa7eac4e3ba5b788d3851f7cba634"
       }
     },
     {
@@ -3742,8 +3744,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-interests__iphone375x667.png",
-        "bytes": 80195,
-        "sha256": "a4a7882cedb8fcffc9764d3f6823089f2a6e318b16d7c70763e308d633794bfd"
+        "bytes": 48027,
+        "sha256": "b2f7ab2b68159ebbf0964571e247a9b19c10ba396abebc964f9cc56e912a594d"
       }
     },
     {
@@ -3811,8 +3813,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-safety__iphone375x667.png",
-        "bytes": 99766,
-        "sha256": "a05ea05680ea2e5b3268e5496feba48041a1c234e90f7351afe8965f19756beb"
+        "bytes": 70115,
+        "sha256": "05a35797572b309f17c406b4021a894e242c001b636ce67892efcff5fa84274e"
       }
     },
     {
@@ -3874,8 +3876,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-companion__iphone375x667.png",
-        "bytes": 84624,
-        "sha256": "c7c3d6bc328bc1d7e8fcc37d02981088166cf1d4e987de90333d4352be946c36"
+        "bytes": 61272,
+        "sha256": "12d9ff51a5b649df19d27037c5a81e8e986492b691dc687d63673e5d402fbc19"
       }
     },
     {
@@ -3926,8 +3928,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-report__iphone375x667.png",
-        "bytes": 76397,
-        "sha256": "378d32ec8a866f9bb6799ec72989da96743aaf2f5dc644a7c2251c8991ca9117"
+        "bytes": 70483,
+        "sha256": "e6fa8f619f17522f6770942781937846b8df2065255c87c551449a9b112e012a"
       }
     },
     {
@@ -3988,8 +3990,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-font__iphone375x667.png",
-        "bytes": 64645,
-        "sha256": "da56426a85aeb4d0f23ba9b6c371a2d8fe3102e5f1a5821088856cc4ab95cb43"
+        "bytes": 61671,
+        "sha256": "d5faf9feff29a7c9eb9ba96fea57a4580964a33a3eb98f3fe9582ad5119e758f"
       }
     },
     {
@@ -4108,8 +4110,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-data__iphone375x667.png",
-        "bytes": 69455,
-        "sha256": "cd61d2290213e14658e4def356f416fd05313090ebd52f83020cd9296fcc5b2c"
+        "bytes": 69456,
+        "sha256": "abcb6b98307c127bcb98de8313cc23cd92760eeeceeefc743304a53d15cd5940"
       }
     },
     {
@@ -4171,8 +4173,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-profile__iphone375x667.png",
-        "bytes": 57966,
-        "sha256": "55f66b4dcb9fefbb7fb8ac039b8a1c7b28ec0c5f8f3ee79c2612022bd7fcaff1"
+        "bytes": 58040,
+        "sha256": "b50afda607697c28212c2260fd83267186a29be727a008be8a9c4fb89fff481d"
       }
     },
     {
@@ -4239,8 +4241,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-family-circle__iphone375x667.png",
-        "bytes": 73831,
-        "sha256": "9b80783fa376baa463d3e85ab7882eba2a20eb032511940cddba1bde9e9b0e29"
+        "bytes": 59426,
+        "sha256": "d9dd043902a1e63f0d44769e7d9334b1e2c094efca225292832454cbd70e7c8f"
       }
     },
     {
@@ -4299,8 +4301,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-invite-family__iphone375x667.png",
-        "bytes": 77808,
-        "sha256": "f477313f755a3cd86df7f3247d38696aec9c6d15480afe44a6f04570fc50b5e9"
+        "bytes": 75108,
+        "sha256": "7096e53ba19da8af89292bda261e365e3a69fe7322211b9bdd45ea53ae08e7a8"
       }
     },
     {
@@ -4352,8 +4354,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-join-circle__iphone375x667.png",
-        "bytes": 68133,
-        "sha256": "4bb59ecda0099c6477badf2aac0966a538ac92177faab5a14bde18e864ca18e8"
+        "bytes": 64820,
+        "sha256": "1cd706bfdd17da419bce1dd9917b230a0f83c7ae4e765804c3deb9b97ff37ad5"
       }
     },
     {
@@ -4430,8 +4432,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-top-up__iphone375x667.png",
-        "bytes": 81893,
-        "sha256": "86c21a58d51800ab6f0147cf15825ce14adb539d0b0e310c02cb214ef74e6494"
+        "bytes": 77246,
+        "sha256": "da1d744b5589c53c658794c918a6efa501e441c6d06d530392d2ff8199d185e6"
       }
     },
     {
@@ -4562,8 +4564,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-appointment__iphone375x667.png",
-        "bytes": 65247,
-        "sha256": "85576b0bfae13b1d08169231736d98aeba7194f9b45b8ae0704dde3c23c603fc"
+        "bytes": 48127,
+        "sha256": "4c5ae634de419f7c82e39f28bb6b9921842647689c9e4143b5f20078e6c14e3e"
       }
     },
     {
@@ -4618,8 +4620,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-history__iphone375x667.png",
-        "bytes": 66754,
-        "sha256": "d75b5abafe1956985a43a6a12c0b636087cb1554b5b7e8d393057bd9e0edaaf2"
+        "bytes": 64822,
+        "sha256": "a3039552dd4b446ae009a54307e1cfc0dec4b41bae7e24019f0089279c4c29ac"
       }
     },
     {
@@ -4684,8 +4686,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-consent__iphone375x667.png",
-        "bytes": 104568,
-        "sha256": "d6d8b334ecf48b24330aad7b0fae7916d748467d794c0bbeab2514fe39b2e57c"
+        "bytes": 104566,
+        "sha256": "6ba89503ebfa7b4ae9723a7968fa2189a14908685d3cfc5b3154d61c48b503ea"
       }
     },
     {
@@ -4739,8 +4741,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-version__iphone375x667.png",
-        "bytes": 56030,
-        "sha256": "c5ec6fbee7b06b63e30da895203988cfe8d98a8ead30309464730caf6644856a"
+        "bytes": 58196,
+        "sha256": "f0092e687140da563367be25b613c27d83d0b5bdee476d95a399729479d7cb2f"
       }
     },
     {
@@ -4793,8 +4795,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-medication-reminder__iphone375x667.png",
-        "bytes": 76382,
-        "sha256": "316c5b0adbcd6b429059229765923f3edad7c0116c66c1d163839b2517074e68"
+        "bytes": 58397,
+        "sha256": "0ccba1f09a841084f62b0c0399aa6ef59a532380ce9c7d9af8cdf90394825ea7"
       }
     },
     {
@@ -4883,8 +4885,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-medication-manager__iphone375x667.png",
-        "bytes": 85076,
-        "sha256": "634501c9b928e949029847a9da2b0e5f4fa5d04cb0a0401fff0293a1bfd33b36"
+        "bytes": 75460,
+        "sha256": "1b9dd2440862c1258d2eadbfbfcca3203658744eb2bb0b1eddcdde4d756b8885"
       }
     },
     {
@@ -4941,8 +4943,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-auth__iphone375x667.png",
-        "bytes": 77536,
-        "sha256": "04a7a31632e2e7c5c891eee0f154d61bb6466aa55aede407522c4e9823dae814"
+        "bytes": 67806,
+        "sha256": "a510cbab549fd6ae7b7990d8aae83a691686fff925f4ba2499bdb3ff1161e072"
       }
     },
     {
@@ -5076,8 +5078,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-notification-inbox__iphone375x667.png",
-        "bytes": 67194,
-        "sha256": "98ef4477eb34076f37961f367b39fc5b9b26317cb80e666507344843ff121a24"
+        "bytes": 58191,
+        "sha256": "bd8be5c86cc311eff1287df12e351b252915394ce3c795643ec467da435e5b3f"
       }
     },
     {
@@ -5231,8 +5233,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-status__iphone375x667.png",
-        "bytes": 86971,
-        "sha256": "e3368c97fb3b76893c51a382c2f82114e038a786d5c72292f98e9a3a7cfccbbe"
+        "bytes": 85971,
+        "sha256": "f3d926c29e5926abe29afb340ee894847eafffd4a3836a77b3fcf3594f8c6597"
       }
     },
     {
@@ -5251,8 +5253,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 1,
-        "bottom": 668,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -5299,8 +5301,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-family__iphone375x667.png",
-        "bytes": 86084,
-        "sha256": "7c89fd4461bd1d0a5a89d840829d565937e5c93d5442e2ac246f8eb52bd317ff"
+        "bytes": 86071,
+        "sha256": "3d7a2f1384d890316a4a9f50cd1fddb171ae9be61cb08dac64615d63099ca805"
       }
     },
     {
@@ -5382,8 +5384,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-settings__iphone375x667.png",
-        "bytes": 60743,
-        "sha256": "7fbd6de5e7dcfa48602fdfd464d5a8172d0ecbbf98161b1171891dc0bf13d3e0"
+        "bytes": 60943,
+        "sha256": "f9b28750b1e14f118f572405882e733bb69a3bfe4d541aa0d67be7d923c79194"
       }
     },
     {
@@ -5442,8 +5444,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-connect__iphone375x667.png",
-        "bytes": 90739,
-        "sha256": "19445a15aa33b76f2527e80e9517761da8091e5ef77e5e148a40179c9aaf05c7"
+        "bytes": 89384,
+        "sha256": "002154610aade8ddbbbda0c853493157ecf2a56430f4badd092d6024f1b7e2bb"
       }
     },
     {
@@ -5462,8 +5464,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 2,
-        "bottom": 669,
+        "top": 3,
+        "bottom": 670,
         "width": 375,
         "height": 667
       },
@@ -5507,8 +5509,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-idle__iphone375x667.png",
-        "bytes": 297710,
-        "sha256": "fa70270b3c4e81225a7133fb9519a5f86322f8430c45a40c26ef793873d50dfa"
+        "bytes": 296259,
+        "sha256": "3d3f95e1c321ac6b9902bab06416137ee42777ae15f287d7ded9b5009057c0b7"
       }
     },
     {
@@ -5580,8 +5582,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-connecting__iphone375x667.png",
-        "bytes": 262431,
-        "sha256": "b2d5467e43f81275fff871790744286f5a074de4129b4a5e3800f6a230f0c6f3"
+        "bytes": 259571,
+        "sha256": "8735510d8daf3e99137ae0abfab7847f792b0afbe46432d6eee762db496a3b02"
       }
     },
     {
@@ -5632,8 +5634,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-queued__iphone375x667.png",
-        "bytes": 258610,
-        "sha256": "8a669a1cf3ab936943691bd6fefefe9046bf85143728b072354dc99d73608c30"
+        "bytes": 258583,
+        "sha256": "1a23f969db230ea31cbb7687119e4f0abc70585c21b3ff94bae0d09c04a0c425"
       }
     },
     {
@@ -5796,8 +5798,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-error__iphone375x667.png",
-        "bytes": 273144,
-        "sha256": "35f5f90447e4031e444a37c2100cd64e2417d4ae845de68e15e6324eec85bea9"
+        "bytes": 273155,
+        "sha256": "5cac7298b23cf44f944f8c26274e7d7372ef237b68beb16ddf498632a5a7834e"
       }
     },
     {
@@ -5840,8 +5842,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__cross-surface-error-and-empty__iphone375x667.png",
-        "bytes": 40121,
-        "sha256": "9a63868e4acd7130c2464d489c78a397de3f7b95bcbcc1b4e3f078d67885f3ac"
+        "bytes": 46931,
+        "sha256": "c886ce8fcafca3159fe6e770376a12a15f26242b897b1565fff37a26a86427e5"
       }
     },
     {
@@ -5892,8 +5894,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-quiz__iphone375x667.png",
-        "bytes": 62229,
-        "sha256": "934c0f5bd1cff379c2914a679ca0b930b510d8a624fdd1f1dd65e16155a1adff"
+        "bytes": 59662,
+        "sha256": "a579bc2fcd8d5fd7d8c22709b83610ab75722a18b851bf2199ed75d73f229a4f"
       }
     },
     {
@@ -5962,8 +5964,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-challenge__iphone375x667.png",
-        "bytes": 85796,
-        "sha256": "d976ba645a521f51a2bff1abf0a262e2bd6bcae6b7f3a38f53c19cc1e3b90720"
+        "bytes": 67363,
+        "sha256": "be228e01b2d93cd61f034b9cd999136ef3b7856e11108dcbab79af444591e7a8"
       }
     },
     {
@@ -6014,8 +6016,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-activity-detail__iphone375x667.png",
-        "bytes": 65107,
-        "sha256": "67cab6dcfa515ea3ed9716afd7545669ef7a2a7229f2ea28310e98e799e48b45"
+        "bytes": 60944,
+        "sha256": "5e56f2396498ff77440f7abecb49126a98822e271fc112b91fe1c33fade96085"
       }
     },
     {
@@ -6085,8 +6087,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-feedback__iphone375x667.png",
-        "bytes": 90687,
-        "sha256": "124f6c1c94a9241b1500d0ffeb64a316ffe4047d757a4ab24acd4671469addc4"
+        "bytes": 77672,
+        "sha256": "295c6075d9fa84325ee8f8d1fe9612b5772530f71fea8aebc39a2a3fa7c5d22f"
       }
     },
     {
@@ -6161,8 +6163,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-interests__iphone375x667.png",
-        "bytes": 77246,
-        "sha256": "80e1ee7d0ccb027e4cfecf55505e888da6fe19c003db1de0cad9e4411c416878"
+        "bytes": 50751,
+        "sha256": "58a9b78ffaa155f61d0b2f4b62041492b6b281094e033ca2aa9675a87561162c"
       }
     },
     {
@@ -6230,8 +6232,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-safety__iphone375x667.png",
-        "bytes": 111222,
-        "sha256": "da1524ab2b220536f2fcfc91fe17a460a8c24712e68f1f83830c7b8edc088bdc"
+        "bytes": 96614,
+        "sha256": "85be6e04b46a032694febfc2d1e20f05199eb27b8cf2ed831ba97922e3417867"
       }
     },
     {
@@ -6293,8 +6295,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-companion__iphone375x667.png",
-        "bytes": 89259,
-        "sha256": "d5b430d01d95da2b755b519fd2af1438bae69c399a003f9eee0c480610f3384a"
+        "bytes": 74081,
+        "sha256": "b0152542835b9a27f9862b3445bf802e1ab32bdc3a6b62dd82839eae398c3f5d"
       }
     },
     {
@@ -6345,8 +6347,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-report__iphone375x667.png",
-        "bytes": 82479,
-        "sha256": "b7ca39e8cd26754a9b535130f5b9c77c990cce51881f4242c902f302bc4a40b5"
+        "bytes": 81255,
+        "sha256": "8ed6a7a84da0813f5915f33bba5c22a25b478c9bc0a6c28530274b88a391c7af"
       }
     },
     {
@@ -6407,8 +6409,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-font__iphone375x667.png",
-        "bytes": 71176,
-        "sha256": "a44dc264941147559ee436e62ac5b4076883d71a2180abaf6b72d00e012a6180"
+        "bytes": 69088,
+        "sha256": "945993ba21cf0b3c1f5d91b531e6a3743b19b2ffc9247d8e1253cbd761afa618"
       }
     },
     {
@@ -6530,8 +6532,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-data__iphone375x667.png",
-        "bytes": 78587,
-        "sha256": "56ce488ad76d482d4334a3115671dd2ebef91451ad0a1e3f7518a93ea8024e72"
+        "bytes": 78544,
+        "sha256": "3f869e4f36d71817d84436614835f27bf716564ca97b819bd2b0a87b0865216f"
       }
     },
     {
@@ -6593,8 +6595,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-profile__iphone375x667.png",
-        "bytes": 63855,
-        "sha256": "d6c1fb84ca84732752253d4afad11198c0fe60c943376cb1bd28553164a3058b"
+        "bytes": 50213,
+        "sha256": "5f134e36b85bebaf7d36ed565dbe04715ef5dd979abd78d087658d72f73e53ab"
       }
     },
     {
@@ -6661,8 +6663,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-family-circle__iphone375x667.png",
-        "bytes": 76691,
-        "sha256": "ce207c8f1e46bc81ad419205d4512cfd44013416f665dd4d704cf2a6e780bb97"
+        "bytes": 72947,
+        "sha256": "01f1bba0168dcb56186e6d12c98447c457aa3a010929cd8ada1e5a55c1dec6a3"
       }
     },
     {
@@ -6721,8 +6723,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-invite-family__iphone375x667.png",
-        "bytes": 81330,
-        "sha256": "575c8019659161fb6627731f30ccd5df2236ba359c28c06df46becde24fcf63e"
+        "bytes": 81342,
+        "sha256": "04e4f74a0f0ba4e4234b81cab9df5544a24af84da4ba084f8c351627d29c072d"
       }
     },
     {
@@ -6774,8 +6776,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-join-circle__iphone375x667.png",
-        "bytes": 74493,
-        "sha256": "47e1a4f628d50dd3c8a44692b1969a1af65660c41d05c7605fbb5fa62f10f533"
+        "bytes": 76707,
+        "sha256": "7a95356c3ffc64649cc0010f37bd2748b6d8a45ef16ab99b18496f649423a3dd"
       }
     },
     {
@@ -6852,8 +6854,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-top-up__iphone375x667.png",
-        "bytes": 87038,
-        "sha256": "4cf49c34551f34f38b81c38740c0a9a1ac9af3c4f31268084b4a08aa41a59deb"
+        "bytes": 74524,
+        "sha256": "fb01c8e06fbdaaf228cb3312ffad487e0e74b82dfc07f23c4e6e50aa980bc15b"
       }
     },
     {
@@ -6984,8 +6986,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-appointment__iphone375x667.png",
-        "bytes": 63205,
-        "sha256": "4334e5ff34b1ef299648a101baba1676ddf87dcc6dd1a0ad9c84621918e9d9a3"
+        "bytes": 66809,
+        "sha256": "e07f568261de50e767dd7f5abb01e6afa89a65848b185ac062e45d03bf23ab2b"
       }
     },
     {
@@ -7040,8 +7042,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-history__iphone375x667.png",
-        "bytes": 73340,
-        "sha256": "2dfa424832ebd3fbff7d95c0bc4183e52addc24e699f0fe4d06edfb4832d9dfd"
+        "bytes": 73265,
+        "sha256": "984baf5f5e1d88162da828dc143818c5bf7d550772dc1092be6aa04827f2ea98"
       }
     },
     {
@@ -7108,8 +7110,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-consent__iphone375x667.png",
-        "bytes": 121346,
-        "sha256": "3aa468893340e92c6d7eb1f750d10f02049dfb1f624b6294c9f4b4028fe17ea4"
+        "bytes": 107877,
+        "sha256": "1a0487764f04e19d42dd7159aeefca0cae6d08751a8a3a12f7c90b43aa37a918"
       }
     },
     {
@@ -7163,8 +7165,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-version__iphone375x667.png",
-        "bytes": 64600,
-        "sha256": "a896edb6f8e3e01ae1144b546026fc113362b5588bc5f0136be785ef76122fe6"
+        "bytes": 57646,
+        "sha256": "00b61a13072b61033eb21f32b862f1ae63de08f3ce9cb8bf1c53eb1565338e75"
       }
     },
     {
@@ -7217,8 +7219,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-medication-reminder__iphone375x667.png",
-        "bytes": 77260,
-        "sha256": "da058159397868b0fd17d13c6f59ab9e3b09959db17dd7114bc062b5453a0693"
+        "bytes": 72105,
+        "sha256": "63692fa5d5e049b71cdc0065ca85d4b549e5ab59ef0d2d8ecbca40aa3e765656"
       }
     },
     {
@@ -7307,8 +7309,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-medication-manager__iphone375x667.png",
-        "bytes": 89505,
-        "sha256": "c020a4104f128d89b6991dfb95ac03d49d8085129155219fd21930013c5652cb"
+        "bytes": 65909,
+        "sha256": "2b87e720b509931c25b725d7ed5e81db7b1fe8eccde32976a7266dfa09e5791c"
       }
     },
     {
@@ -7365,8 +7367,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-auth__iphone375x667.png",
-        "bytes": 79900,
-        "sha256": "266b3bdfd9b3bd136bce476e8557845eeedf502ec7d065cfa6faf658afc13aaf"
+        "bytes": 79923,
+        "sha256": "a738561ddd09457261ad6d935ca06ca4d159354dd744df5e5b89041d1e962e5c"
       }
     },
     {
@@ -7502,8 +7504,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-notification-inbox__iphone375x667.png",
-        "bytes": 71132,
-        "sha256": "0081483d8e238ba72fb904865636b4d3519d1d71e37c71876020c0514d89d2e2"
+        "bytes": 69643,
+        "sha256": "04b659e256e43d5daceb63554b2d5832c3e7332143846e380e160daaf9cf84e5"
       }
     },
     {
@@ -7617,7 +7619,8 @@
         "En calma",
         "Decaído",
         "Con ansiedad",
-        "Enfadado"
+        "Enfadado",
+        "Datos de salud"
       ],
       "visibleViewportTextNodes": [
         "Estado de hoy",
@@ -7653,8 +7656,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-status__iphone375x667.png",
-        "bytes": 78049,
-        "sha256": "9928e14f3ce162786d62be7489bf4a5d285157aec8113fd0e0037323ea91a82e"
+        "bytes": 78544,
+        "sha256": "d0a91db75a0273aa515d1c65ee9a109e84686e99f8b692c72c1032b860e35861"
       }
     },
     {
@@ -7673,8 +7676,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 1,
-        "bottom": 668,
+        "top": 0,
+        "bottom": 667,
         "width": 375,
         "height": 667
       },
@@ -7717,8 +7720,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-family__iphone375x667.png",
-        "bytes": 81178,
-        "sha256": "111e37324e0adaacb18cea3f399fc3bffa03002a5d7b335daec6f0cb6b2f698e"
+        "bytes": 75910,
+        "sha256": "6304e8eae9f1c6c6f447e4011c3319024fdb45960f6d821d41953f0ba63b4ec1"
       }
     },
     {
@@ -7800,8 +7803,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-settings__iphone375x667.png",
-        "bytes": 62696,
-        "sha256": "fe2b7019d52df24a7b4b13ddc2e84dd91f2aef7f8012e4765bb3e881e129d5b1"
+        "bytes": 62699,
+        "sha256": "ec2641503cf40588ba5ad5a4fa743ce7f7b0b76356fd6d9c24f2e554cc40d379"
       }
     },
     {
@@ -7879,8 +7882,8 @@
       "rect": {
         "left": 0,
         "right": 375,
-        "top": 3,
-        "bottom": 670,
+        "top": 1,
+        "bottom": 668,
         "width": 375,
         "height": 667
       },
@@ -7924,8 +7927,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-idle__iphone375x667.png",
-        "bytes": 298232,
-        "sha256": "7a3ad12f559c0384c3c0c494d2432b3926301ff7d59d368d5bb7bd078aa79316"
+        "bytes": 315704,
+        "sha256": "7ccd846e6ddfe173c24e9b575ac93292d1f1467bb3c5dfb0d87c7d21aabf976a"
       }
     },
     {
@@ -7997,8 +8000,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-connecting__iphone375x667.png",
-        "bytes": 264337,
-        "sha256": "30d6ea443e99e14e7e7f3a8da56af6f4c3a1dc93f52bd8b3c72befcadbca3435"
+        "bytes": 260767,
+        "sha256": "cdb937b2d955c777c010486121d784e5850d6716323aac2f8c0a1ca7fa25e971"
       }
     },
     {
@@ -8049,8 +8052,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-queued__iphone375x667.png",
-        "bytes": 238909,
-        "sha256": "5a772def5d09b9b7ced946d000ce2ef9d167a76bcea4f2489335f5c3baa21428"
+        "bytes": 238927,
+        "sha256": "2546dc1814fdde47a572c52eef2bdfa646b9cd813a3261f5d7f0fa9fda763bd5"
       }
     },
     {
@@ -8213,8 +8216,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-error__iphone375x667.png",
-        "bytes": 273854,
-        "sha256": "f288f4efe04e752e21a3c01f0d41864b4243989d43799d849fc85faf43a71f44"
+        "bytes": 273844,
+        "sha256": "e3be75ffa4844c4681e8c788a5644e83fa88f12ce9218abe1aadcdff4bbd3761"
       }
     },
     {
@@ -8233,10 +8236,10 @@
       "rect": {
         "left": 28,
         "right": 348,
-        "top": 502,
-        "bottom": 574,
+        "top": 500,
+        "bottom": 572,
         "width": 320,
-        "height": 73
+        "height": 72
       },
       "visibleText": "Ha ocurrido un problema. Inténtalo de nuevo.",
       "visibleViewportText": "Ha ocurrido un problema. Inténtalo de nuevo.",
@@ -8257,8 +8260,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__cross-surface-error-and-empty__iphone375x667.png",
-        "bytes": 40794,
-        "sha256": "67853d3571d5efadd17960ed2a5190e6c0acad8b8fa8f6b6c84c90f6b02a4c52"
+        "bytes": 47115,
+        "sha256": "62272d7c9716a6377a553e44ebee3e6fc54c2d5693e2f3a6ae6f5140e7540277"
       }
     },
     {
@@ -8309,8 +8312,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-quiz__iphone375x667.png",
-        "bytes": 64048,
-        "sha256": "bd5cd838fa7bb95d44c168cf807773bdc12a00c6698a14812735fe6bc2ab9c33"
+        "bytes": 49336,
+        "sha256": "c0a690a7a476e925904066c976689173c16630493695c9cf71df79c69be2884c"
       }
     },
     {
@@ -8377,8 +8380,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-challenge__iphone375x667.png",
-        "bytes": 81855,
-        "sha256": "e3dab99d4d9d3af0b58afddb5eb8a12a6f8b0a76380615d68af2c984c82c9aaa"
+        "bytes": 73847,
+        "sha256": "1bdfa51f760ae83a62d3b169f252e69db634464833037ae73c4482f612838eb1"
       }
     },
     {
@@ -8429,8 +8432,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-activity-detail__iphone375x667.png",
-        "bytes": 62828,
-        "sha256": "1e48bb773dcef16c29d4d2337e9404a8d3301bac3b728ea13429a2b4cfe815a1"
+        "bytes": 60092,
+        "sha256": "2c4568a644dda43dd6809794e18b05361df464d750020d900a173910d6e1d324"
       }
     },
     {
@@ -8499,8 +8502,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-feedback__iphone375x667.png",
-        "bytes": 85324,
-        "sha256": "d37653aeb63faba61439850398a511eb4cf4738a459c539cfc9a250243a4da99"
+        "bytes": 70105,
+        "sha256": "f64b4955f383110af5a67b8551eb0c0c480e24b361f2c6c29df15bfba187ab65"
       }
     },
     {
@@ -8575,8 +8578,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-interests__iphone375x667.png",
-        "bytes": 79788,
-        "sha256": "a1842d123243097554039d206c78c7e0bfc2d2723bfcc16f05633c7fc6875987"
+        "bytes": 75258,
+        "sha256": "02926e7b5e3ea29ad3a04ea03a895a13e6e0f48cc9f9a8031dd54c7517502406"
       }
     },
     {
@@ -8644,8 +8647,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-safety__iphone375x667.png",
-        "bytes": 97891,
-        "sha256": "f40fb54390bd3a20c7b3b14daf1726a32f5321dbaf5ce89522605945aa95b232"
+        "bytes": 87578,
+        "sha256": "e7d94b7f8dd86bd0c60e85cfd5fdc020f9c3c697ef161ff168ac13fac79376c0"
       }
     },
     {
@@ -8707,8 +8710,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-companion__iphone375x667.png",
-        "bytes": 84488,
-        "sha256": "d090ba6140818fb7dc5d0083d96429b818f8563b299b366ccd0fbd11efdfc540"
+        "bytes": 80901,
+        "sha256": "c327b118c4925b7f6f58156484fd92230b5b99526866f96debe24f79d55f49fe"
       }
     },
     {
@@ -8759,8 +8762,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-report__iphone375x667.png",
-        "bytes": 78592,
-        "sha256": "ca6bf9927d1b946329e3acc8bfafb99bde5ba613005965f4ce2e8b2024ff4d24"
+        "bytes": 79983,
+        "sha256": "93c82c784b59bb7fcecd0c174bf0f040fd4b21a6a6ed6741124a8a3e10d5ab58"
       }
     },
     {
@@ -8821,8 +8824,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-font__iphone375x667.png",
-        "bytes": 67466,
-        "sha256": "b38a21e352ad7a2f99eb1659df9dce63ebc62757337672780a88c2ca340ddec3"
+        "bytes": 58189,
+        "sha256": "8b362264049321fc7ad93f6104a9591e6ce51e1fb74dfab7725d61151f51e103"
       }
     },
     {
@@ -8941,8 +8944,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-data__iphone375x667.png",
-        "bytes": 72888,
-        "sha256": "7d61a81eb4aa3d05855dff8662c5fdeb290daca2c6886728e254abb944d24afd"
+        "bytes": 60532,
+        "sha256": "fdfe901fada4ac6b9f38535ea646469ed11f46889235d272ed6ca9065c51d513"
       }
     },
     {
@@ -9004,8 +9007,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-profile__iphone375x667.png",
-        "bytes": 57838,
-        "sha256": "7bb2821a9694e6437c3cfc5db9263037b07634084886c1a299f65c5f86d74e70"
+        "bytes": 43761,
+        "sha256": "28298a8412cd5aa607dba0fae9cb4ea45fe07c763e8851a5a9c28e9b0ba2c9f6"
       }
     },
     {
@@ -9074,8 +9077,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-family-circle__iphone375x667.png",
-        "bytes": 76317,
-        "sha256": "320701ea6465adaa3253ad6240c7d848bb536f0caaf6e7b5bfdae47c636c5da3"
+        "bytes": 67823,
+        "sha256": "2c09bbc7d6b9d5c4f4147b3277d0b9fcf86882df965f012fcf37e1afec31b0f6"
       }
     },
     {
@@ -9134,8 +9137,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-invite-family__iphone375x667.png",
-        "bytes": 79434,
-        "sha256": "344cab98418163dc4f826230c54fcb04c19f1598cd1b95aa01635df8fa843cb3"
+        "bytes": 75108,
+        "sha256": "0785e01446401d9ed1d121c182bbfb7ad41606d714f3a353578203c5c313a606"
       }
     },
     {
@@ -9187,8 +9190,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-join-circle__iphone375x667.png",
-        "bytes": 71719,
-        "sha256": "559ebbd4f7b8aeb384d19efb29f03a22d32871d5f5952669ad874a10f783567d"
+        "bytes": 68703,
+        "sha256": "60ec82962d8f2e3f7185910aa7d08904e47389379f5b245502942923bd89648d"
       }
     },
     {
@@ -9265,8 +9268,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-top-up__iphone375x667.png",
-        "bytes": 90738,
-        "sha256": "85b91edb28a57bb4d5d894fa711e675181df40c3a8d5fd2febed3ae5ecbaff6c"
+        "bytes": 77128,
+        "sha256": "8956c826c978c5c46acf1b8f25c08b1aaca1d6dece835cfe8e898eed964e8b8a"
       }
     },
     {
@@ -9393,8 +9396,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-appointment__iphone375x667.png",
-        "bytes": 62715,
-        "sha256": "f204c2863e7d0ff3ea79865560f122e946707dded5b3fdc60f53a8430ffa1adf"
+        "bytes": 62766,
+        "sha256": "48c262d4cdbfa675fa02a886e9dbe9cde7195afa2204ee52d8349fad44f387cc"
       }
     },
     {
@@ -9449,8 +9452,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-history__iphone375x667.png",
-        "bytes": 68999,
-        "sha256": "2bb7f2d213d127c1541f3e99bf58837a2697f2f0c4b2c5c692f00346e61cb0f5"
+        "bytes": 69028,
+        "sha256": "4a015687a34fc68f5907ebe242be5ab4409053c55e491be524a8352e4f776d48"
       }
     },
     {
@@ -9515,8 +9518,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-consent__iphone375x667.png",
-        "bytes": 112461,
-        "sha256": "160f4597eeae56007f7f9cd27581bbf2e994f7baf2513b761637f1b11f8c5438"
+        "bytes": 108064,
+        "sha256": "3d8e53c78b56fa6a269d00123acea324e02641b4cf1d9195046e22896d24e365"
       }
     },
     {
@@ -9570,8 +9573,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-version__iphone375x667.png",
-        "bytes": 64926,
-        "sha256": "81d0fcb33086cf41c67aebd34752cee9368018dc95ef7e8ef08d5cd4ddc45279"
+        "bytes": 57185,
+        "sha256": "4e58636c8ce05c09e4679d0cc4504256200f6074dba0f8ab27c7f831b29e4aad"
       }
     },
     {
@@ -9624,8 +9627,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-medication-reminder__iphone375x667.png",
-        "bytes": 77195,
-        "sha256": "4c93dfad8a7a62a382dc7a59ac35eb0cde075e4898d787d22d38e8fb663afadd"
+        "bytes": 73991,
+        "sha256": "5328af86a131e5d1615dd1277b01c62379f08f7d919125106d29fd468acedbc7"
       }
     },
     {
@@ -9712,8 +9715,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-medication-manager__iphone375x667.png",
-        "bytes": 80123,
-        "sha256": "f0b1a37079234e60565d1744f95fee0e647101dab4523355b8357fbbfd90f5df"
+        "bytes": 71403,
+        "sha256": "9ec25c9d103791d1c61db98d98b40a4dcb32795819e1cd2d53a2412d9df6780e"
       }
     },
     {
@@ -9770,8 +9773,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-auth__iphone375x667.png",
-        "bytes": 80930,
-        "sha256": "8a798332f00b21c78c670dcbefdd6489386eb231b2503b3829a095e5d066ed2c"
+        "bytes": 65283,
+        "sha256": "2170a6fed1d574b6af435fb7b27297b971a81b473d5404c74c10d5dbb3e8850e"
       }
     },
     {
@@ -9907,8 +9910,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-notification-inbox__iphone375x667.png",
-        "bytes": 67263,
-        "sha256": "4f722792a457d7506aa42ab7d37d36e0f8f3b27d24e60aa3f9e80a46540d0f1c"
+        "bytes": 69270,
+        "sha256": "665c2c27e441c3e8eb170c6c5798322e0286eebfab50d75b943006a22423c449"
       }
     },
     {
@@ -9985,8 +9988,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-home__iphone390x844.png",
-        "bytes": 76017,
-        "sha256": "efa17d1ec45198a088e203ed5cb56e85a5a4dd6a3564587cc2c3a849c492d514"
+        "bytes": 76010,
+        "sha256": "3b8329ccc724e3a2da23c3ac488462b8c311d3540c9c37d2e4f96596f5f90875"
       }
     },
     {
@@ -10093,8 +10096,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-status__iphone390x844.png",
-        "bytes": 93738,
-        "sha256": "16f79856425cdf19805590d9d9497db8757a3829f415a2802fabd98cdedf8860"
+        "bytes": 93475,
+        "sha256": "479e3c78f7627c132295ffcb8c26195433fc5536e8b454a3463c29f5acd16eb4"
       }
     },
     {
@@ -10165,8 +10168,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-family__iphone390x844.png",
-        "bytes": 94102,
-        "sha256": "05d4003395331606e6e553bee04297a0f6cf7110d5c8bb1ff80cd94780f783bf"
+        "bytes": 94835,
+        "sha256": "5fe5f5e0eed1aafce9a13f21f6f42b3e4f2b9ebdd0a32e2359d8d7f5b4b3ed0f"
       }
     },
     {
@@ -10263,8 +10266,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-settings__iphone390x844.png",
-        "bytes": 73543,
-        "sha256": "8cadf6b919547d2fb636da21f06fd8a7c2f5c706549f2c34a18b8e2e7a888554"
+        "bytes": 72450,
+        "sha256": "41d75f7dbc1441b747eac53d5c3b6b6710fb004c081f5830638f97d359f59790"
       }
     },
     {
@@ -10346,8 +10349,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 2,
-        "bottom": 846,
+        "top": 3,
+        "bottom": 847,
         "width": 390,
         "height": 844
       },
@@ -10464,8 +10467,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-connecting__iphone390x844.png",
-        "bytes": 421067,
-        "sha256": "08e074ef2564bcf1d425ec6ea4a0234ebf564153482e7a257b1aa91b675228b7"
+        "bytes": 421066,
+        "sha256": "836b9183f3ab57efc34886ed618a545e44b2190cdd5a79948ad72cc5079550c9"
       }
     },
     {
@@ -10516,8 +10519,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-queued__iphone390x844.png",
-        "bytes": 407198,
-        "sha256": "0dcf05325019a916d1895d3bb3db3a26fdb50624fe7c3220ce4e8af29a09335f"
+        "bytes": 407186,
+        "sha256": "d2620e7281bc329464e55ee1741767635d6564c5e1b4703855432106361d9c18"
       }
     },
     {
@@ -10680,8 +10683,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-error__iphone390x844.png",
-        "bytes": 427744,
-        "sha256": "b9f6b118be65001dce6f91439ef11399391b1bd8be00f7d8a4a0784e00b6a586"
+        "bytes": 427748,
+        "sha256": "a41d17be9374c799832b94ffe2520567fd317cb38f0ae9991056dc20c1b059a9"
       }
     },
     {
@@ -10700,8 +10703,8 @@
       "rect": {
         "left": 78,
         "right": 313,
-        "top": 701,
-        "bottom": 750,
+        "top": 700,
+        "bottom": 749,
         "width": 235,
         "height": 49
       },
@@ -10724,8 +10727,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__cross-surface-error-and-empty__iphone390x844.png",
-        "bytes": 36645,
-        "sha256": "28bc978b369c088e5ca441f45b7429616a633edcfae841c82884d4357e14ab3c"
+        "bytes": 42960,
+        "sha256": "ff8082bcbdad863ee0acf01a1dd816e5ae871505963c45357d21bbbff8bcb20d"
       }
     },
     {
@@ -10776,8 +10779,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-quiz__iphone390x844.png",
-        "bytes": 67120,
-        "sha256": "3caf4ea11349b6bcd351f87f0d15572556106b1d9f08392b7c16de597c6c753b"
+        "bytes": 65377,
+        "sha256": "82f38c578685364b7cd8048796b4d472b7989d2eb50aa4d12c85ae5a1d45aa51"
       }
     },
     {
@@ -10856,8 +10859,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-challenge__iphone390x844.png",
-        "bytes": 98648,
-        "sha256": "59122b47a9638d3aa9614fea9532b83fef1789b460c90aaf56e83ccc8a06d35d"
+        "bytes": 83062,
+        "sha256": "2d2252868fdf61f3993d4e015746b46878d30bbbf520bf188ed8519e4476ba75"
       }
     },
     {
@@ -10908,8 +10911,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-activity-detail__iphone390x844.png",
-        "bytes": 68029,
-        "sha256": "5c865975116458b6f096439780d0a6620a399d387c8ec7ec78a1dddd99b26d59"
+        "bytes": 64994,
+        "sha256": "5283731de73a9a0e21ba828ae4f789a790d8c4af5ef899ad521e3209d1377000"
       }
     },
     {
@@ -10985,8 +10988,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-feedback__iphone390x844.png",
-        "bytes": 104239,
-        "sha256": "532ddfd692da33bd22e7a445d5f255df474946b410954ab4610974bcdc826e65"
+        "bytes": 100693,
+        "sha256": "45df6b8700beae2dd1d6d828eebfebc13ac75110ea1d781fea519741e63ff57f"
       }
     },
     {
@@ -11063,8 +11066,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-interests__iphone390x844.png",
-        "bytes": 95588,
-        "sha256": "e58aeb52d877ba51ecd94f622165e13a32c14664bd2a4fe4c7d9173e799bf6e6"
+        "bytes": 92517,
+        "sha256": "b4382f96c0c056a43181a4ca65f85dc47b6f460bd50870ac89d72029cba4cc62"
       }
     },
     {
@@ -11137,7 +11140,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-safety__iphone390x844.png",
         "bytes": 108922,
-        "sha256": "1dd7f7296996ea0de66d869f384cbd5338a1fe684ab2e807b69754898134ce6a"
+        "sha256": "56d9a3325d37217c5a2f58827ed6351534d3d01e3e3566ab749283c4cd6acd49"
       }
     },
     {
@@ -11202,7 +11205,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-companion__iphone390x844.png",
         "bytes": 94303,
-        "sha256": "2d89df5028167dda9c2c897f5b04a9e08dbb586d6508a21857cedb2a53618eb6"
+        "sha256": "2e563eefcdee283327603a4e56a7f8bff1c43f66c9b57ff10f947789af99b94f"
       }
     },
     {
@@ -11281,8 +11284,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-report__iphone390x844.png",
-        "bytes": 106769,
-        "sha256": "4214cad4a97ca92839e492b4a716506e95d7bcc50b18b3acac629645208dae56"
+        "bytes": 111845,
+        "sha256": "7476dd430ba98f4983e3836b4e8006d05b518b87012c82ee1f716a946782a55c"
       }
     },
     {
@@ -11343,8 +11346,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-font__iphone390x844.png",
-        "bytes": 77570,
-        "sha256": "a4718eab17cb934e08fdf7807e7692923d3042d3b2a05760da6f24b89f9c97e1"
+        "bytes": 75529,
+        "sha256": "9d2b98009aaa29070392623fba3e7a622730a75c332bef0377ae6d1a4e093fdd"
       }
     },
     {
@@ -11476,8 +11479,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-data__iphone390x844.png",
-        "bytes": 87288,
-        "sha256": "8da808690514be7bf50d49baa5efb618004e5b0db2d243b8af1e061f7f314161"
+        "bytes": 75991,
+        "sha256": "97eef877bbb880db4686c9ff311e3ca446e7a4e0637916ca12d2ffc0ee4ec574"
       }
     },
     {
@@ -11541,8 +11544,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-profile__iphone390x844.png",
-        "bytes": 67239,
-        "sha256": "158bbfd6a165c5d252fde74ced4392a088bf9377182c7de9ae22f7a9e0f6e676"
+        "bytes": 52503,
+        "sha256": "2ed385607ee4b78aa95aba27e98d62c9d38f78c800ff58c8e4cea81ebe611406"
       }
     },
     {
@@ -11611,8 +11614,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-family-circle__iphone390x844.png",
-        "bytes": 89475,
-        "sha256": "bbd5932d02e4860552b34a1844c26990a894a8ebe700b69d04bc36722d0d9493"
+        "bytes": 82366,
+        "sha256": "d8177a5b1420a7b322c1b733b3aa16cccc8088a880a1c5d8391dd2289f01d2ce"
       }
     },
     {
@@ -11671,8 +11674,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-invite-family__iphone390x844.png",
-        "bytes": 93033,
-        "sha256": "cccb3c35bddc8e4106f2bc94749b42ad5d738184b458a3b8f91a6459f2b5ef00"
+        "bytes": 93037,
+        "sha256": "887bf0c453a308e21ab1c3af947847e21f4d09e9ddbd65b36d5bb0995cfaf315"
       }
     },
     {
@@ -11724,8 +11727,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-join-circle__iphone390x844.png",
-        "bytes": 79319,
-        "sha256": "62de9745015a0ab05207c00380fd0c9b7c92ee132b2f024a622bb5060bc18dc6"
+        "bytes": 79314,
+        "sha256": "c6d42761ea74288f08401277af781cea2b47bf98c5bf9d4011cbcd31cbf96074"
       }
     },
     {
@@ -11802,8 +11805,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-top-up__iphone390x844.png",
-        "bytes": 85638,
-        "sha256": "26c8d827f7b8377ccb098a78e7e82a105b16509c7beb9fbdb24fa51ff1b93f3d"
+        "bytes": 78861,
+        "sha256": "ec97141ab68335d4f7dbe87bdfcf0600da72b884d01666683fffcfb41f95409f"
       }
     },
     {
@@ -11947,8 +11950,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-appointment__iphone390x844.png",
-        "bytes": 71488,
-        "sha256": "bb822ffcb2d8dfa48728f6feada78dc342d22433042063c1fa6f200f605cd658"
+        "bytes": 64963,
+        "sha256": "435ee81056863d6f8d76e9d5d0c519d882db27be7f95cb3de3f2d9911b34e1a6"
       }
     },
     {
@@ -12029,8 +12032,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-history__iphone390x844.png",
-        "bytes": 91246,
-        "sha256": "f840e846dafcda062d390e6b6e020262b933eb42e779471b68e9977900899149"
+        "bytes": 98848,
+        "sha256": "b885d942b7a571881d7f98d904a0e82fcee1493e144e24d8eabf6eebabfcab6d"
       }
     },
     {
@@ -12104,8 +12107,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-consent__iphone390x844.png",
-        "bytes": 143667,
-        "sha256": "c2f9ba38a8a39e15bc9b618c1b42fd38a0d146445b8a8f71d182b983bd1727e1"
+        "bytes": 122915,
+        "sha256": "5a1c522b37fc1ac9f2525e0602ed1ef5519b6df10f5a7ba2aa319f31feb066c5"
       }
     },
     {
@@ -12179,8 +12182,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-version__iphone390x844.png",
-        "bytes": 162417,
-        "sha256": "6e7dbbf86ccc92da353a7a7d7a44516b76477d0eeffe9bfe0a6d496e58053e60"
+        "bytes": 152987,
+        "sha256": "2d64ade8f6fa16ae8c750b37798cad1efe6c845d62b37aeb15363a4d82706cb6"
       }
     },
     {
@@ -12233,8 +12236,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-medication-reminder__iphone390x844.png",
-        "bytes": 84803,
-        "sha256": "fab2f7ce7a0e693ddfbbcbbc7e29bbb6207bb3ad985b563a2038b3f958125a81"
+        "bytes": 86502,
+        "sha256": "dc926d7aa8a0b440bd943238fc8421e984f74eccba12a496d53e534face14485"
       }
     },
     {
@@ -12330,8 +12333,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-medication-manager__iphone390x844.png",
-        "bytes": 93194,
-        "sha256": "ae50d35086c2d068f53ea9b06d4158e2d9e2098c4a51a5621e1cda871bf2ccde"
+        "bytes": 77418,
+        "sha256": "0bcf5da1b0190a382c317d43c12083c3934f8781ef09fe8966aba79b5b1b7319"
       }
     },
     {
@@ -12388,8 +12391,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-auth__iphone390x844.png",
-        "bytes": 86500,
-        "sha256": "e2f26e6df4b9eb7779f2aaeac5b7d5ac0c9112ebbe5c36245e7afabf1a316f15"
+        "bytes": 84175,
+        "sha256": "078f58ded48396bc4e70868b92f7d733acc705b32e9ba33547b865e23e08808a"
       }
     },
     {
@@ -12525,8 +12528,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-notification-inbox__iphone390x844.png",
-        "bytes": 73795,
-        "sha256": "fdcf6af2be02a015ffb6b01f72a969027709b887d7d320139d12a847a3ba52d2"
+        "bytes": 65413,
+        "sha256": "03968585aaa5ea065addd89d27278549c28f87a464c74d09c35e3ace10cedbf8"
       }
     },
     {
@@ -12705,8 +12708,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-status__iphone390x844.png",
-        "bytes": 94823,
-        "sha256": "57bfa80b4f390588960cee95ac30af6ad776b12e7851e94f74c6eb4a4fbbbc93"
+        "bytes": 94431,
+        "sha256": "f754fbc0109961ec747ded9b1d6ebe675041d300e5c3e9d5e7f3975590a72c0c"
       }
     },
     {
@@ -12777,8 +12780,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-family__iphone390x844.png",
-        "bytes": 99027,
-        "sha256": "80df548db0828670d42469d50dce52be24f9bdc5216c482cdc5d978e432613c4"
+        "bytes": 101314,
+        "sha256": "45aa248df6fae01b049537496a039ed6390ebcb225bafc74deaa0f11f9400972"
       }
     },
     {
@@ -12872,8 +12875,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-settings__iphone390x844.png",
-        "bytes": 76503,
-        "sha256": "05ba367d6a65aa1811e8eb36772feba76449f7d299d4823c455ffc06acda0816"
+        "bytes": 76461,
+        "sha256": "2a4513b3a81fdfcefb504a7d0abff1118bf8ae78ab85ac6fd3e42803fc894821"
       }
     },
     {
@@ -12932,8 +12935,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-connect__iphone390x844.png",
-        "bytes": 70113,
-        "sha256": "efc09d4443e30dd11ee040d878aa5f4d44b4880ac8adc58610d361c44ff25f65"
+        "bytes": 73166,
+        "sha256": "a8017704daa007bec7864e5eb9208969f9cbbb9666ce0b3ad7991d4d6296e382"
       }
     },
     {
@@ -12997,8 +13000,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-idle__iphone390x844.png",
-        "bytes": 419295,
-        "sha256": "2b337903bd3988b00387f6d02f49d7bdef8b621401625f0e64ff9b83d06df7e2"
+        "bytes": 428231,
+        "sha256": "3ca97eef86e384c029e812ba544f05c450fe65ac275bcc1abfd1eb9d1305cf8c"
       }
     },
     {
@@ -13070,8 +13073,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-connecting__iphone390x844.png",
-        "bytes": 400428,
-        "sha256": "c2314875a4f540949c74acecbea44a11f1764d5956cec594e3f2fb7895e73e08"
+        "bytes": 400431,
+        "sha256": "6d0224a79706d76148d15a92ff2737cd94f8839b20438b62cd3134031fc3b06b"
       }
     },
     {
@@ -13122,8 +13125,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-queued__iphone390x844.png",
-        "bytes": 388058,
-        "sha256": "05ec65424788551bf3c2dee085d83ae63941bba7522711d2b50bb08cec71bf58"
+        "bytes": 388062,
+        "sha256": "ce120c9754190976fb5c892388f39199cdd63a4bcd52356c91f5dbe7e4ff10c6"
       }
     },
     {
@@ -13286,8 +13289,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-error__iphone390x844.png",
-        "bytes": 418659,
-        "sha256": "6ffb52a3065e81bd343e663a4c31377d2566f8cd19d296e03a603aecb0c9977b"
+        "bytes": 418679,
+        "sha256": "9230ddd7f5666e41343fb6ca9126d48b4b0711a37477e7842b1e128822afb7c3"
       }
     },
     {
@@ -13306,8 +13309,8 @@
       "rect": {
         "left": 35,
         "right": 355,
-        "top": 677,
-        "bottom": 750,
+        "top": 676,
+        "bottom": 749,
         "width": 320,
         "height": 73
       },
@@ -13330,8 +13333,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__cross-surface-error-and-empty__iphone390x844.png",
-        "bytes": 41787,
-        "sha256": "09cac4eaa4ed057642bae3ab5b2928b6e122475e9d78bb87b3a2ed1be7352595"
+        "bytes": 65632,
+        "sha256": "ad3d8d2d0fa4c2057cddab53908a157b2cfcdaf5e75b3167fd6136e6ad9ba7af"
       }
     },
     {
@@ -13382,8 +13385,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-quiz__iphone390x844.png",
-        "bytes": 63457,
-        "sha256": "11833b2de21d3dbfab19fc19284f61e601a5f268171f6e633f5a985379271965"
+        "bytes": 69142,
+        "sha256": "a358ec6835e3af15b3f9f6e681554d29f562d8d64377bbb433375002d0539992"
       }
     },
     {
@@ -13457,7 +13460,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-challenge__iphone390x844.png",
         "bytes": 98103,
-        "sha256": "5e08852445f24c43a6c209cb32ffe85713712f563cb52896c3aeafea6706e09f"
+        "sha256": "c4585c07edfb6f962dd32fd0d7defd3f97f017c3aace4ec5f6172dd60fd83c6a"
       }
     },
     {
@@ -13508,8 +13511,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-activity-detail__iphone390x844.png",
-        "bytes": 75463,
-        "sha256": "647a389d5bee7ee1b1f9ba69528e5b0d24672aaaef8bb7b789831ed5a481ecb3"
+        "bytes": 72228,
+        "sha256": "47b072d8eb98af57bad92275ed2e8f27f0fd473e7712be67bae3b06e88e7098c"
       }
     },
     {
@@ -13583,8 +13586,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-feedback__iphone390x844.png",
-        "bytes": 103992,
-        "sha256": "6afe4a955001029d61d75252138342eb506190fc7ef87f12d95a2199578f4a3e"
+        "bytes": 93876,
+        "sha256": "dface1dd365737b11711e4b209dc57c29c847ee578a7ca521b67e79ee265ee80"
       }
     },
     {
@@ -13659,8 +13662,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-interests__iphone390x844.png",
-        "bytes": 94752,
-        "sha256": "05b815eac5bc296a64f38a17e7dda5d5e25e1a38e02d56a94d8200ae5a19b1e7"
+        "bytes": 61737,
+        "sha256": "8d4122993b638c24040c68b417aac5f145b7dfd636d73a711fedacd97adf2b1d"
       }
     },
     {
@@ -13730,8 +13733,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-safety__iphone390x844.png",
-        "bytes": 97423,
-        "sha256": "c46dbdbe31fe0ff07972d64ff7dbfb1230d4698c7e4276e88b11c4ec5159cbe2"
+        "bytes": 102322,
+        "sha256": "63b391a759824372e1b6757bee6816cd876fc796d72c75d8427884c19ba9b0f7"
       }
     },
     {
@@ -13793,8 +13796,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-companion__iphone390x844.png",
-        "bytes": 99569,
-        "sha256": "a6c579ade878ec65fae9e97840ff0c77eff48336dc3126e66a5fe3796b0a6416"
+        "bytes": 91659,
+        "sha256": "3702b16552c4d81a34310097b233bc4848c8810de7b05141d536194bb8bead34"
       }
     },
     {
@@ -13845,8 +13848,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-report__iphone390x844.png",
-        "bytes": 103185,
-        "sha256": "e0c342abebac69643728833043dc88caa571cd792312d53f6eda5eb58bbf8522"
+        "bytes": 99429,
+        "sha256": "cff3095430c370e1a1ee93174289f621128918038f6c596b7b183eee37b94a0a"
       }
     },
     {
@@ -13907,8 +13910,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-font__iphone390x844.png",
-        "bytes": 82917,
-        "sha256": "f37350396ecb0d7165785737fc29f02908008cc1b4873b191468b075e6c6cd1d"
+        "bytes": 75978,
+        "sha256": "c67dc2d7be8ecac5d13ca1120fdac19c9560be5406b602fd5171b9cbb9f513fc"
       }
     },
     {
@@ -14030,8 +14033,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-data__iphone390x844.png",
-        "bytes": 88001,
-        "sha256": "e2d574925eb78c71199de84a19a6ef6b259d0a2d4574823709e128413133413b"
+        "bytes": 75388,
+        "sha256": "ba2fab9731b7127c0866ce20ee7fe5a7096130eaba518ce4cced1687213c50eb"
       }
     },
     {
@@ -14095,8 +14098,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-profile__iphone390x844.png",
-        "bytes": 74878,
-        "sha256": "c532e8cefae2b1b6f851e25bb7c4b1c9eff685c6b5812546c61649943f0cb011"
+        "bytes": 70448,
+        "sha256": "6115f68571b0eb07e6cf3225fb0eb9e3dd05ec5393e6339353986e549aebd586"
       }
     },
     {
@@ -14165,8 +14168,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-family-circle__iphone390x844.png",
-        "bytes": 94897,
-        "sha256": "1cbe7c6f14579db4e95961161b70c00dd62aa4a9d54d231f3de80db7d3f3cb22"
+        "bytes": 90455,
+        "sha256": "51b7b8b76bd53d669dc3b9f81bde3f0e010a5a88c92135bb0604a590c6ce8716"
       }
     },
     {
@@ -14225,8 +14228,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-invite-family__iphone390x844.png",
-        "bytes": 91159,
-        "sha256": "3605451bb24f577cad1b391b78162f364ed59024d1956ea94e872a1e6f24d2a8"
+        "bytes": 87489,
+        "sha256": "19e3ff9ff8bafa9211c20d437da40c38d7971940d805fec2598f0142cc9869b1"
       }
     },
     {
@@ -14278,8 +14281,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-join-circle__iphone390x844.png",
-        "bytes": 82222,
-        "sha256": "f1d20fb19df4d58a5b0e34f4c6c6e3ea5b5dba99903303f9061a9c521df7e1d5"
+        "bytes": 77350,
+        "sha256": "d709cca72eda4c5cb8e1b12a4a36ffa0f9bc95914038ef443df3974c30a8a266"
       }
     },
     {
@@ -14356,8 +14359,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-top-up__iphone390x844.png",
-        "bytes": 90920,
-        "sha256": "60a5dc3d58be1af08cd76926740ce00d32f155318824c9606f6442db1320bce4"
+        "bytes": 83415,
+        "sha256": "1cea0ba2e37ed134ab0928643ac2297e5768a95fffcd8847b7cdc82b154b6641"
       }
     },
     {
@@ -14499,8 +14502,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-appointment__iphone390x844.png",
-        "bytes": 78144,
-        "sha256": "0ed60b068b5fc78aab7fdb13c3fb34bf132da9a5c56e01342d86e5222b459af5"
+        "bytes": 71610,
+        "sha256": "a47bfe4b00e2c37982f638435b90ba7f90ccc306609bdd91a0875e3895c5985c"
       }
     },
     {
@@ -14555,8 +14558,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-history__iphone390x844.png",
-        "bytes": 79261,
-        "sha256": "7cbdcbdca33f54d3f12c6297ced465bc4ec50374450a4f155e5579aaef109f2b"
+        "bytes": 77079,
+        "sha256": "20f2fb80203e9e7373e97c8ea06100f785d454ddeb79bbee07a89a229b1396ed"
       }
     },
     {
@@ -14625,8 +14628,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-consent__iphone390x844.png",
-        "bytes": 124691,
-        "sha256": "b62298fe299717b98d2c85129dee125baf5f269125a0d8375efa20dbfa2b39a4"
+        "bytes": 115568,
+        "sha256": "b040ec8655805158dd21ae10525ab40ae2be15ae54ec6661b36f0dc2fe9fa431"
       }
     },
     {
@@ -14680,8 +14683,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-version__iphone390x844.png",
-        "bytes": 75058,
-        "sha256": "8237cdc408513f1a65e6fda083c1e96b0232cb791cb702e59d7fb80a8560ab2d"
+        "bytes": 69344,
+        "sha256": "b51fc7fb294d34db811c02ea4ce2ce69e144361e4b347364592c593bcf13fbe4"
       }
     },
     {
@@ -14734,8 +14737,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-medication-reminder__iphone390x844.png",
-        "bytes": 91119,
-        "sha256": "99f90f1be8ea24d05fbc8d5cb727f65ade928e2b5ad18816b034d9bff9803a6f"
+        "bytes": 91030,
+        "sha256": "9f7ed9d14a8af1382917f3559088d0bda7bdadfc0bf27d4e67f09b839966161c"
       }
     },
     {
@@ -14829,8 +14832,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-medication-manager__iphone390x844.png",
-        "bytes": 99125,
-        "sha256": "1b6ff280306df6f4d946b9577420ae77d7f6182947fbeb9d62fb4fda721a8094"
+        "bytes": 75204,
+        "sha256": "280eaabe88af08c30772c87e81aab262e58d83bb77d09a6a060abea35e187d3f"
       }
     },
     {
@@ -14887,8 +14890,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-auth__iphone390x844.png",
-        "bytes": 93530,
-        "sha256": "418e3d9be61bd1799a99ee70abe3778a087901eb805eb61632845373006e3a57"
+        "bytes": 90680,
+        "sha256": "110676a50de90d30f0c4e137be0bcf72697ba2a504c6d21c05a20bd2f6afbcfe"
       }
     },
     {
@@ -15024,8 +15027,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-notification-inbox__iphone390x844.png",
-        "bytes": 78477,
-        "sha256": "0ad28c00f17825fcca1144bcc6d8d80ab842b288eeabd317ecdfeccb5e547634"
+        "bytes": 74790,
+        "sha256": "c4e246111069cfe2905fbe6615b0178b27cd8b7b4b63a2bc49c33075d3053219"
       }
     },
     {
@@ -15122,8 +15125,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 1,
-        "bottom": 845,
+        "top": 0,
+        "bottom": 844,
         "width": 390,
         "height": 844
       },
@@ -15204,8 +15207,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-status__iphone390x844.png",
-        "bytes": 108884,
-        "sha256": "ac4122329c0a116b69c64200ebce5149f4e9a2360a1c6da7c6007366069db654"
+        "bytes": 94545,
+        "sha256": "a2b31d6d93361edd9b6259139f0bb85ed8a130c12c5a923ee41c1921438870cb"
       }
     },
     {
@@ -15276,8 +15279,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-family__iphone390x844.png",
-        "bytes": 101312,
-        "sha256": "3d1ae4b49183b1417aecd643428a70443ef921e591b58441246dc650d3697c93"
+        "bytes": 103779,
+        "sha256": "f95ddf472b699f96ac0dc26a3309c20f9d7eccd2a0bbe81f8d1c89631ab60e10"
       }
     },
     {
@@ -15296,8 +15299,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 2,
-        "bottom": 846,
+        "top": 1,
+        "bottom": 845,
         "width": 390,
         "height": 844
       },
@@ -15371,8 +15374,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-settings__iphone390x844.png",
-        "bytes": 76268,
-        "sha256": "d8ae7b9e8f8ed236fd955863e5f7dddf6801937a47bc64079c044eafb3bc4e02"
+        "bytes": 76632,
+        "sha256": "b7119f9eff1c8cb58933c7c911ffac3303132c8afea9235249cf4d7e2c725bb7"
       }
     },
     {
@@ -15391,8 +15394,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 1,
-        "bottom": 845,
+        "top": 0,
+        "bottom": 844,
         "width": 390,
         "height": 844
       },
@@ -15431,8 +15434,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-connect__iphone390x844.png",
-        "bytes": 91485,
-        "sha256": "49cc054edb2e338905f482bd584fd9ec91ae069435bcdfe2a50154fa58a66f0c"
+        "bytes": 93955,
+        "sha256": "e1f32db34b97d86c6160c31bace1711e1ad4775bf7026a89a1962c0a5feb87ab"
       }
     },
     {
@@ -15496,8 +15499,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-idle__iphone390x844.png",
-        "bytes": 419310,
-        "sha256": "8d24699977e44288fc6c30bb5919f94b76032bc4d098b4107271848a10fed01e"
+        "bytes": 445909,
+        "sha256": "5e3306331a8353d00d0b83ab8d9156d1d0bc2eff8e051e0080ae85c2571f7bca"
       }
     },
     {
@@ -15569,8 +15572,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-connecting__iphone390x844.png",
-        "bytes": 403075,
-        "sha256": "99fb568f5f82c4596d3555d009fa6d75e8ec0682104cb48b78c417d66a2b1505"
+        "bytes": 403093,
+        "sha256": "2c43fe29710df7877852ee53c52f577594dc863655b78e39bbb94350f213e791"
       }
     },
     {
@@ -15621,8 +15624,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-queued__iphone390x844.png",
-        "bytes": 394350,
-        "sha256": "23ca61cf4c7557af2cd9e859f4f7dddb02e7310b843c0c3a0eff5ba460bdd501"
+        "bytes": 394344,
+        "sha256": "607379046c72bf18865c01a2d2653816566f2733bb2a030c52f268f2684ab8da"
       }
     },
     {
@@ -15785,8 +15788,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-error__iphone390x844.png",
-        "bytes": 423174,
-        "sha256": "2ddcd2a9af0f6d72bdc9095fe9ee0014e1aacaab37f40867bc6f77640d75d9c7"
+        "bytes": 423161,
+        "sha256": "aa5fea862ff0524e608c99a4743f7dcdbf2ba1c7422de3f1bd4f7e5389a852ad"
       }
     },
     {
@@ -15829,8 +15832,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__cross-surface-error-and-empty__iphone390x844.png",
-        "bytes": 47146,
-        "sha256": "2a19dd5f1d21d274996d8147d6419d77a8d7ae72513ee6ff65b975c800007675"
+        "bytes": 47158,
+        "sha256": "430d10a04e38c43db424cb6a487715e09314151fa87c34771c360e39f6c3f8da"
       }
     },
     {
@@ -15881,8 +15884,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-quiz__iphone390x844.png",
-        "bytes": 78017,
-        "sha256": "b4e2c5348f3f86e7d3ce2d622cd20afb953394da770292e78ca65db5344aefd9"
+        "bytes": 76230,
+        "sha256": "588e03ef3d620e8c23c862e7efb999a024ac9e8427aa0b776c8707029eb84998"
       }
     },
     {
@@ -15961,8 +15964,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-challenge__iphone390x844.png",
-        "bytes": 111359,
-        "sha256": "79e59cb8bc3596d6aac4f48fc7dc134e028deb8f90178db2b39ed2eac3a8f7cc"
+        "bytes": 95246,
+        "sha256": "8f649f0bc1f7bc5f28e99b6cfac38566e52cf270af33d11353df6487854a1b92"
       }
     },
     {
@@ -16013,8 +16016,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-activity-detail__iphone390x844.png",
-        "bytes": 81291,
-        "sha256": "e3f4d7d495dbb07203350512b8a7a662168eb1869dbab2edcfa3ad1b990280b5"
+        "bytes": 79789,
+        "sha256": "f6d6724960c3b40edbb911b1dd8e84d8cfc1b1d1f8e37528c77860969b03b7db"
       }
     },
     {
@@ -16039,7 +16042,7 @@
         "height": 844
       },
       "visibleText": "ご意見・ご要望\n\nいただいた内容はすべて確認します。種類を選んでお聞かせください。\n\n問題を報告\n機能を提案\n良かった点\nMuneaを評価\nどの機能についてですか？\nお話\n健康データ\nリマインダー\n家族サークル\nお支払い\nその他\n詳しい内容（具体的だと早く改善できます）\n画像を添付（任意）説明しにくい場合は、画面の画像を添付してください。\n画像を選ぶ\n送信する",
-      "visibleViewportText": "ご意見・ご要望\nいただいた内容はすべて確認します。種類を選んでお聞かせください。\n問題を報告\n機能を提案\n良かった点\nMuneaを評価\nどの機能についてですか？\nお話\n健康データ\nリマインダー\n家族サークル\nお支払い\nその他\n詳しい内容（具体的だと早く改善できます）\n画像を添付（任意）\n説明しにくい場合は、画面の画像を添付してください。\n画像を選ぶ",
+      "visibleViewportText": "ご意見・ご要望\nいただいた内容はすべて確認します。種類を選んでお聞かせください。\n問題を報告\n機能を提案\n良かった点\nMuneaを評価\nどの機能についてですか？\nお話\n健康データ\nリマインダー\n家族サークル\nお支払い\nその他\n詳しい内容（具体的だと早く改善できます）\n画像を添付（任意）\n説明しにくい場合は、画面の画像を添付してください。\n画像を選ぶ\n送信する",
       "visibleViewportLeafTexts": [
         "ご意見・ご要望",
         "いただいた内容はすべて確認します。種類を選んでお聞かせください。",
@@ -16071,7 +16074,8 @@
         "詳しい内容（具体的だと早く改善できます）",
         "画像を添付（任意）",
         "説明しにくい場合は、画面の画像を添付してください。",
-        "画像を選ぶ"
+        "画像を選ぶ",
+        "送信する"
       ],
       "visibleAttributeTexts": [
         "閉じる",
@@ -16089,8 +16093,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-feedback__iphone390x844.png",
-        "bytes": 116375,
-        "sha256": "f161d38ce5ddc788f0c6b1d2542a3d258210e76baee1fb5eed9c2cbda5e0e3b6"
+        "bytes": 95193,
+        "sha256": "76a5f62cade402577fd5a59cf968dc695c906235fc3b2fbbb0e63428a09a1566"
       }
     },
     {
@@ -16165,8 +16169,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-interests__iphone390x844.png",
-        "bytes": 96650,
-        "sha256": "e74e0344caef9274becededc6e8af7672a47f35c72a576a663204b3129cbdfbb"
+        "bytes": 92716,
+        "sha256": "7d407b254e0f7c569b32ee8db8fe04d77c8a18f405c56862a866ef98aed89711"
       }
     },
     {
@@ -16236,8 +16240,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-safety__iphone390x844.png",
-        "bytes": 130538,
-        "sha256": "f18ad614dacfdb52136e05b6bbd15504bfba7905ff6265c0d3ced51a23e436eb"
+        "bytes": 117247,
+        "sha256": "2834ea7ff65790b9978f4f804f4976d09ca2412c0bb242cae935c0b7663d2a3c"
       }
     },
     {
@@ -16299,8 +16303,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-companion__iphone390x844.png",
-        "bytes": 101806,
-        "sha256": "fdcb1c775caeed4ffe5b971a5e82ac678e273a7f3117a383136f49fc779ab7aa"
+        "bytes": 90467,
+        "sha256": "399c83390d29f468634afa93fa4b9cb5e84103b2502c90d402c240067feafb4e"
       }
     },
     {
@@ -16351,8 +16355,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-report__iphone390x844.png",
-        "bytes": 109713,
-        "sha256": "28e7e6d8714d04e4c47a9c1744fc5ec18ad071bfee5071ab379ea2f5497455b1"
+        "bytes": 101519,
+        "sha256": "9d5b051151e6221007acb89f291e846fc68d0bff4b5960a986d86a3dbedddc84"
       }
     },
     {
@@ -16413,8 +16417,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-font__iphone390x844.png",
-        "bytes": 89482,
-        "sha256": "c654421ba0935a7e5a9caadb094044c124d2856cb1a9f66da5017d67b53436a2"
+        "bytes": 87620,
+        "sha256": "08997b0c967a66b8ee9535089d521a8a4218a89a4ac3b3e603159de685f9b999"
       }
     },
     {
@@ -16541,8 +16545,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-data__iphone390x844.png",
-        "bytes": 102878,
-        "sha256": "e59710332a3737aeeaf8a46231de3cddce61c1fca49dca2ae3a0770d4a8f6235"
+        "bytes": 100499,
+        "sha256": "fc08ad8b2763a79de54100822fe1d44d343fdcebace2ce813d36a740d21f22fa"
       }
     },
     {
@@ -16606,8 +16610,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-profile__iphone390x844.png",
-        "bytes": 80297,
-        "sha256": "c8e93485f24a28b7dc4807b2d792c7e6fbff7533d1f2d7094db472ffe97ccac4"
+        "bytes": 75248,
+        "sha256": "77debd7e1aa4846966f24325dbb1aa85ccff40d19a9d00b1b4f77c37925f46d3"
       }
     },
     {
@@ -16676,8 +16680,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-family-circle__iphone390x844.png",
-        "bytes": 105104,
-        "sha256": "353a94f9ffaf247d4be1f1019dd68b4aa585f7aa7a714ace85867bfe725cb055"
+        "bytes": 85959,
+        "sha256": "2eed3e45aab8bce396ba948ea5878cc70302a1b17756846d56f28548eca5cd93"
       }
     },
     {
@@ -16736,8 +16740,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-invite-family__iphone390x844.png",
-        "bytes": 98947,
-        "sha256": "c2853891a1c599e3ffe2b1a09717e5dec80e3ebd095736484a4a29f54dc1f91d"
+        "bytes": 98814,
+        "sha256": "89b635b22cdff2879434e59e772f8618ad0286da7a95ab6a62ca49a348c1156d"
       }
     },
     {
@@ -16789,8 +16793,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-join-circle__iphone390x844.png",
-        "bytes": 92190,
-        "sha256": "06b376f721c9749b3c75d984a2cb3b55bec0ba7743630c5297c291fe6af5b171"
+        "bytes": 90199,
+        "sha256": "aaf1c2674f5464d3afd774b0c99512ee12c3b5e8d8914aecb8faa98590442e45"
       }
     },
     {
@@ -16867,8 +16871,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-top-up__iphone390x844.png",
-        "bytes": 101959,
-        "sha256": "a5cf4bf93a5b459f4bc5cf6d531593830b78e44889c50a7cdcac13ec117dedcb"
+        "bytes": 97858,
+        "sha256": "2a5c969557bd355bb393ed5d0e557670e06fe4164ca24fd602088dc38553b31a"
       }
     },
     {
@@ -17010,8 +17014,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-appointment__iphone390x844.png",
-        "bytes": 82301,
-        "sha256": "b1e3352a114a4207b9cf52f0cc6591f04d92a81ba48d0d25cb7b7941210998f6"
+        "bytes": 75875,
+        "sha256": "58c08cc4254a4422ea1179017572f34e29668929b853e59d9c53ebc00fca9c04"
       }
     },
     {
@@ -17066,8 +17070,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-history__iphone390x844.png",
-        "bytes": 88866,
-        "sha256": "32f3bd7aa83ef07cbf99f290fe0d6dcf30224ca2832142e1adba62aa79520c84"
+        "bytes": 78407,
+        "sha256": "df9e37677757dabdf406b3f7f5629cc66a8eb4bbed8cc2646239891c4d75f1d6"
       }
     },
     {
@@ -17136,8 +17140,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-consent__iphone390x844.png",
-        "bytes": 141842,
-        "sha256": "a334848850c06ef87d5e71440a20761033942fa703718e6a817723e979a7ed30"
+        "bytes": 124326,
+        "sha256": "f96a82821192b3e801603eda7492401bb4b7bf88c1d21771aef180caa9fd7924"
       }
     },
     {
@@ -17191,8 +17195,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-version__iphone390x844.png",
-        "bytes": 82693,
-        "sha256": "94934168c376f92634f50896a34ceaae4f5a6e2caf005af4845dd186731eb8d2"
+        "bytes": 79049,
+        "sha256": "563b9648d1bed6881df9ab631a1c4bf8d917122e76388cf67bafcbe4b99681ba"
       }
     },
     {
@@ -17245,8 +17249,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-medication-reminder__iphone390x844.png",
-        "bytes": 96366,
-        "sha256": "81e6b73f883e34810d495f11d8e21866f129ab3753a640089602bc5a7ccf1260"
+        "bytes": 90857,
+        "sha256": "91b6c4149e089358215ed8cb01dfa810f9485d366b657329f13ec80ff5e25f59"
       }
     },
     {
@@ -17340,8 +17344,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-medication-manager__iphone390x844.png",
-        "bytes": 109667,
-        "sha256": "5a026397e74d47a0f2e4b443f506312f95a8ee29938e8d1129b60ca5130c5fdf"
+        "bytes": 91939,
+        "sha256": "3507832cf2436269abae2432a363ea3aa6b2cff0fc24014b690d079f6f912c90"
       }
     },
     {
@@ -17398,8 +17402,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-auth__iphone390x844.png",
-        "bytes": 101295,
-        "sha256": "611722812ca344cea1d8bd415579838c6dd6dcf9dec3a408e7b4b1fec5e14dd0"
+        "bytes": 93011,
+        "sha256": "97765b04d6408e9fd856887b5176db772f95beb64bf9dd11f5e5972facf977d8"
       }
     },
     {
@@ -17535,8 +17539,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-notification-inbox__iphone390x844.png",
-        "bytes": 83441,
-        "sha256": "1f8febe844a5bfd93c991bd6d7a6055dc1a9c34776518b7ca906ecb34e718c51"
+        "bytes": 86827,
+        "sha256": "2944edd8787844e4bdc858d8ec36ada8c3113d1ead3abcd48e87fe2d54c9bf36"
       }
     },
     {
@@ -17703,8 +17707,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-status__iphone390x844.png",
-        "bytes": 98743,
-        "sha256": "f023bb851c7d86f68c4cbe5b988b6aa7098306963da823dde17adf8fdcda3912"
+        "bytes": 99343,
+        "sha256": "0d40f94d84450b407e5cba2f09fd475077c82ff79b7befdb9fc4f24aa22b08b9"
       }
     },
     {
@@ -17775,8 +17779,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-family__iphone390x844.png",
-        "bytes": 96667,
-        "sha256": "a6d325b6cd5ff7fef9f8400815e9efc336dd3532853b1eebfa3490418112dc85"
+        "bytes": 99427,
+        "sha256": "687850195ed247b8f9f2853243f27d70e5c822e5d662e5d7b1f08bf6e4e83726"
       }
     },
     {
@@ -17795,8 +17799,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 1,
-        "bottom": 845,
+        "top": 0,
+        "bottom": 844,
         "width": 390,
         "height": 844
       },
@@ -17870,8 +17874,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-settings__iphone390x844.png",
-        "bytes": 79914,
-        "sha256": "f95cd8801fb01bfbc9e5dcc105614d05ced7c35148798de6e201620316272674"
+        "bytes": 81327,
+        "sha256": "7658ca2c153466568865c2b9ec712bab56a7e73e95bcb57d7dc0c5aa9b6f9a0c"
       }
     },
     {
@@ -17890,8 +17894,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 1,
-        "bottom": 845,
+        "top": 0,
+        "bottom": 844,
         "width": 390,
         "height": 844
       },
@@ -17930,8 +17934,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-connect__iphone390x844.png",
-        "bytes": 79527,
-        "sha256": "4310cde3878302595864497ac755f143f9072e0ed95ddfced97b37df45709e83"
+        "bytes": 82283,
+        "sha256": "b27b2def2db8624fb342fac43896230d2839c0740c801f6c159b6efc948c55a8"
       }
     },
     {
@@ -17950,8 +17954,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 3,
-        "bottom": 847,
+        "top": 2,
+        "bottom": 846,
         "width": 390,
         "height": 844
       },
@@ -17995,8 +17999,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-idle__iphone390x844.png",
-        "bytes": 429045,
-        "sha256": "709ca34244636710eb50d828452e58da27c052fc784642e1d662c9a9580c61d0"
+        "bytes": 473679,
+        "sha256": "5824bbbe3294cc1c6371fed444b43bcb6b2bb931e0e8bc3956be79dff068ccc4"
       }
     },
     {
@@ -18068,8 +18072,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-connecting__iphone390x844.png",
-        "bytes": 405045,
-        "sha256": "6f35d0c0c994d6a12ce7f5e23cf72b8e08c28f409713a1c2ae7c207b98feddcf"
+        "bytes": 402407,
+        "sha256": "e9daa526f7615cd47adc1e336105b2f4585c50bba87a8a5a842e2c3c8034bf05"
       }
     },
     {
@@ -18120,8 +18124,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-queued__iphone390x844.png",
-        "bytes": 371819,
-        "sha256": "10cf7eaedff3d0474d8a7eccd3d00e9375405c537c3acdb330cf6a2a0f4bcb94"
+        "bytes": 371809,
+        "sha256": "c1bb757259fffce607a350123bcd2e9c87cfe1861d51a35c6b8a6de22e0383d9"
       }
     },
     {
@@ -18284,8 +18288,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-error__iphone390x844.png",
-        "bytes": 422971,
-        "sha256": "c8c2724255cf14bc3705faf5331aaec1f31035b6d38ef398f58f840d06559e3d"
+        "bytes": 422985,
+        "sha256": "86de78504958384bc233cb1e5846bb81fe82ded50f70768d47e5c8ec14219177"
       }
     },
     {
@@ -18304,7 +18308,7 @@
       "rect": {
         "left": 35,
         "right": 355,
-        "top": 677,
+        "top": 678,
         "bottom": 750,
         "width": 320,
         "height": 73
@@ -18328,8 +18332,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__cross-surface-error-and-empty__iphone390x844.png",
-        "bytes": 41812,
-        "sha256": "fce3a8740a59d5faf2c3adcc272a5c7b9d9b604c30cd258c0ab8259063e02e09"
+        "bytes": 46974,
+        "sha256": "c9f5b20e8cbc9ef16d85a591a594649949efd21dbc93bc9be7089e7926b7760b"
       }
     },
     {
@@ -18380,8 +18384,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-quiz__iphone390x844.png",
-        "bytes": 78493,
-        "sha256": "218058d8357c3110e9e836af9b41b366e95f0864dd4a077b097f637ad8c998ae"
+        "bytes": 72984,
+        "sha256": "ab5bd6d9e9360475b3f6ba07fb2085036ae11ff071a88b1314ec26e26b296476"
       }
     },
     {
@@ -18457,8 +18461,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-challenge__iphone390x844.png",
-        "bytes": 105501,
-        "sha256": "58039017df0178638d987841cd24d04e82db5a8bd1aa90981539772546c4154f"
+        "bytes": 86682,
+        "sha256": "fe014f7f75c9f5140948fdddd62fcedaa119cbafc9b1e6a4be28ee26258f8c25"
       }
     },
     {
@@ -18509,8 +18513,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-activity-detail__iphone390x844.png",
-        "bytes": 77966,
-        "sha256": "8203acd167da04c8d963208da39b16780dbb59cc90bdc79a44776e0080b5bbad"
+        "bytes": 67563,
+        "sha256": "0ffb550300d1233a30035fbaa885f2931f9ef553985e7d5b8fc8ee58ca0b92e4"
       }
     },
     {
@@ -18580,8 +18584,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-feedback__iphone390x844.png",
-        "bytes": 97285,
-        "sha256": "44422d3c587a10f1b89f1ddae97f85518607066da4383291a6bc81c34316166d"
+        "bytes": 73382,
+        "sha256": "bccd2813c32d5567366f434f1444a5cf12ecbb06e55a4a1ac80f358d327b054b"
       }
     },
     {
@@ -18656,8 +18660,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-interests__iphone390x844.png",
-        "bytes": 99659,
-        "sha256": "aed3fe81f8b32eb8fb8431ded940320bf8c9165cdb7235b2cd3ef2d9a72e49e8"
+        "bytes": 86251,
+        "sha256": "706fd785d3717d6d1699e78213661d91cb3b454fcb883997d94e0cb3f1b813c2"
       }
     },
     {
@@ -18727,8 +18731,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-safety__iphone390x844.png",
-        "bytes": 120805,
-        "sha256": "c65f032ff98a61c823a6f69967fb6828571224bfbf4bd07f348583fd55026c8d"
+        "bytes": 99599,
+        "sha256": "ab7fd11166205f837d7880def4f8412e480049ff99ef2a5ec0ecdd6009931a2b"
       }
     },
     {
@@ -18790,8 +18794,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-companion__iphone390x844.png",
-        "bytes": 101090,
-        "sha256": "0413aa0e3bb7549d80d3bc776a6b662294892b14e0da1860f4e8fe109ca504b8"
+        "bytes": 101094,
+        "sha256": "2607ba61609fb9e4db82a82373f1dc6393b244783b6696b76ee90d662f57878c"
       }
     },
     {
@@ -18842,8 +18846,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-report__iphone390x844.png",
-        "bytes": 104252,
-        "sha256": "2949389e1425f6a3ab79845bee664c95f53e10160782b8ac4594622986edc737"
+        "bytes": 102348,
+        "sha256": "702376ee2d2dc6e07c8c464bb1c69a922acf7200a4af5eb8cbdd800cd9acd820"
       }
     },
     {
@@ -18904,8 +18908,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-font__iphone390x844.png",
-        "bytes": 84383,
-        "sha256": "8457ea02ee57d65ba3015ebcb050c69606fc1ded4cfe4b24bc5ae1f7c45cc494"
+        "bytes": 84325,
+        "sha256": "84590eebe79ab2e28e3b1f9a7f70270aa5975fe13191d4e5bcb17c267c2c5a45"
       }
     },
     {
@@ -19027,8 +19031,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-data__iphone390x844.png",
-        "bytes": 89967,
-        "sha256": "2a3743476ddc87935e8477217836c57219d0a18e34623260a574902cf4f870e9"
+        "bytes": 75367,
+        "sha256": "03dfbd709036acee42489aa36d2a3b263b95b32686e75fa52bb0cd82b66fe8df"
       }
     },
     {
@@ -19092,8 +19096,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-profile__iphone390x844.png",
-        "bytes": 76629,
-        "sha256": "130da46beb658f0aede2c3d3e9aa9408e17a7f643a1f06b6a0b2077db9928775"
+        "bytes": 56987,
+        "sha256": "fd7df6b256fbca4d5c59cd1e45e544dcfb00b29ae9c2cbda50303e7a5a8784cd"
       }
     },
     {
@@ -19162,8 +19166,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-family-circle__iphone390x844.png",
-        "bytes": 100355,
-        "sha256": "b1df2b194ae415e47049f50043a59b28420c84db2e29751c9267ff67317bb7e4"
+        "bytes": 95193,
+        "sha256": "4ccd596453153f2720c1c3e72938d200579ef23d1942f152a0db83b5e1ddcd74"
       }
     },
     {
@@ -19222,8 +19226,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-invite-family__iphone390x844.png",
-        "bytes": 97061,
-        "sha256": "534ed4342e0c844cd67f4658f2a8375cdffec3d06a3368a724bede9f4bab146e"
+        "bytes": 87148,
+        "sha256": "a0732950ec11f2c8b786bf3aac24f1d374fe8571fdfb8fe6f4f4c4c3fe606d81"
       }
     },
     {
@@ -19275,8 +19279,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-join-circle__iphone390x844.png",
-        "bytes": 90476,
-        "sha256": "0526c20c692d7c8830d37e44dec2105539078e21e7047ac280e087d33b7305bd"
+        "bytes": 90358,
+        "sha256": "92fbbcb27b9c4629615ac45f12d374ddd506cba1d954fd6cfa404fc959e5263a"
       }
     },
     {
@@ -19353,8 +19357,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-top-up__iphone390x844.png",
-        "bytes": 105307,
-        "sha256": "677d4d199408affad72828ebee07e1404acfb82264af8b955d65430c37b936a5"
+        "bytes": 105304,
+        "sha256": "0ceec2843c4e8a5b4e7ee346f074cde4f90bcef39ca2188f46f57cf7edcb175c"
       }
     },
     {
@@ -19492,8 +19496,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-appointment__iphone390x844.png",
-        "bytes": 77446,
-        "sha256": "ba9f725dc92c6dff594a370c3b71dad669d8cf96baa3fa76b7cde40cfdfc43e7"
+        "bytes": 69861,
+        "sha256": "f14ae37eea4a4a56828d3b1821ffdfbf67252be190279d2309035430e0fa8134"
       }
     },
     {
@@ -19548,8 +19552,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-history__iphone390x844.png",
-        "bytes": 84781,
-        "sha256": "571c9d1ed90838668d248ec35d72a47ca7dbd8b7f0f9c80252b288128031e205"
+        "bytes": 82481,
+        "sha256": "f9c3c57a52da4236a87600599dfcd0698bce207ca1e52529ed102c0fde604045"
       }
     },
     {
@@ -19618,8 +19622,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-consent__iphone390x844.png",
-        "bytes": 123436,
-        "sha256": "bf8feae51bd483c3547e2ea141f874fb79f20271879d5c6a09b05cb9be3efa66"
+        "bytes": 102967,
+        "sha256": "84282767d2f6f5b6dbc5962d3af0f271a3ec5eb34c8653da489937c2b8e8ef6b"
       }
     },
     {
@@ -19673,8 +19677,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-version__iphone390x844.png",
-        "bytes": 78501,
-        "sha256": "efc9bb410f85513330882ee135995a7860abd8a3df67c95d293240b7e1e904c6"
+        "bytes": 75905,
+        "sha256": "5e34ecc5b63a8b353a18ae8d5c397a13d961ccc50fe4e8ebcfdade15cdb28e1e"
       }
     },
     {
@@ -19727,8 +19731,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-medication-reminder__iphone390x844.png",
-        "bytes": 81453,
-        "sha256": "3cc8ae9eaf382306402bd68f5c83434a91c96c3f6d2f6321474d960f1e6b4456"
+        "bytes": 88840,
+        "sha256": "1e9f7e15c9425776a29fa0d79a57e01b10a9adba3ff7a9b8951541d1def9b0c9"
       }
     },
     {
@@ -19819,8 +19823,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-medication-manager__iphone390x844.png",
-        "bytes": 92674,
-        "sha256": "aa642eb4b90f295a20d1d81963c72d98c259a91c1baa667d6b2029b354319901"
+        "bytes": 98164,
+        "sha256": "07a6a3013c420c89d2f210cb0ba5161a7ec8c8d8ff1efcfc4190324f6bf935df"
       }
     },
     {
@@ -19878,7 +19882,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-auth__iphone390x844.png",
         "bytes": 94205,
-        "sha256": "29f1c8976d24e35bb196b3c83038f879d9075a79585bc7b3ff22d9333d60c672"
+        "sha256": "2da318b3a04402992903b8c7fb3631edc53d538207084058896e2abeaa033182"
       }
     },
     {
@@ -20014,8 +20018,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-notification-inbox__iphone390x844.png",
-        "bytes": 81796,
-        "sha256": "5074d0fd02c2acfa111dc9c810bc0f6d7bc39178e3d4a8b9a141f55f80d0c81d"
+        "bytes": 74229,
+        "sha256": "67732354cfb7d7c101e1eac8fd19338a3e02e938624a0e2e19d15072a3f321a3"
       }
     },
     {
@@ -20092,8 +20096,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-home__iphone390x844-app-xl.png",
-        "bytes": 88801,
-        "sha256": "34935c5668cb8f86d7996c95253be128b16f1dd35f07428cb481ef92c6cd4171"
+        "bytes": 88209,
+        "sha256": "d3a38bf8ef2724820794e509783af5e32426b3a05651b459f044ab1f69c0a95e"
       }
     },
     {
@@ -20182,8 +20186,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-status__iphone390x844-app-xl.png",
-        "bytes": 104180,
-        "sha256": "a95ad2e219d2f1c9b7cbf2a4cc88b69029957e660fada0ee1bc44fb2babc48aa"
+        "bytes": 102857,
+        "sha256": "fdd223c911f9fec2362bcbef84ef505885af2b94603b7b132cc923bd85f04bbb"
       }
     },
     {
@@ -20202,8 +20206,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 2,
-        "bottom": 846,
+        "top": 1,
+        "bottom": 845,
         "width": 390,
         "height": 844
       },
@@ -20250,8 +20254,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-family__iphone390x844-app-xl.png",
-        "bytes": 97351,
-        "sha256": "c4a7a019507e3c85f77dae1afa6d37edaa8b41ef68aab0f0573fd5a24006ebfc"
+        "bytes": 97574,
+        "sha256": "91248c3bdb0e388c4df44556e21c0e928b48fb7d89b659ff3d4a889abe285543"
       }
     },
     {
@@ -20342,8 +20346,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-settings__iphone390x844-app-xl.png",
-        "bytes": 72035,
-        "sha256": "85a65024c60e8c5959f7acaac871c06c2c726c48d8ffe579ebb6ddd05d94e439"
+        "bytes": 71278,
+        "sha256": "14293d0014db58fc89fbd1d53b50f5d6a01b21b65ef88e89b6eadca71ae79884"
       }
     },
     {
@@ -20405,8 +20409,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__screen-connect__iphone390x844-app-xl.png",
-        "bytes": 90583,
-        "sha256": "40cc30236488068f0a170667bca40efbbd633ddd043250afeb48dda61d9c80eb"
+        "bytes": 90460,
+        "sha256": "df0e5c7488fa4481aa63ef74a38259ec519b7a58b2e3901a1e3f127aeb85ba81"
       }
     },
     {
@@ -20470,8 +20474,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-idle__iphone390x844-app-xl.png",
-        "bytes": 418511,
-        "sha256": "9918810f43b19c3d776812fc47c023d04c2afac97fba6a5863aab928fdbba329"
+        "bytes": 472095,
+        "sha256": "5b11a97c18a20d4c4af2aee9a27ed484c1cf29883b00cd4498d0849190844d5c"
       }
     },
     {
@@ -20543,8 +20547,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-connecting__iphone390x844-app-xl.png",
-        "bytes": 421066,
-        "sha256": "50606b2a37ade4f9bc3045dc9c11db26e15f5be9298e6619b17fc9ab900457a0"
+        "bytes": 421026,
+        "sha256": "dc0bae1c3535051dd422b78d7397908a5efe0e5ae77518d006fafaeab3a6f8fa"
       }
     },
     {
@@ -20595,8 +20599,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-queued__iphone390x844-app-xl.png",
-        "bytes": 407192,
-        "sha256": "4446921e21917e1a29f793f0531fe8200daf64cec77797fc6b41835636e9c2f7"
+        "bytes": 407191,
+        "sha256": "fbaea1433dc33c7456338ef847cb06e1839151a7407a354a48e098218c5c09eb"
       }
     },
     {
@@ -20759,8 +20763,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__chat-error__iphone390x844-app-xl.png",
-        "bytes": 427758,
-        "sha256": "16cc3fe1e2acdece04eed87e8a69fb1c2e7c9f4a56c873b2cb7a8cb770d7a601"
+        "bytes": 427750,
+        "sha256": "cf919affcbb461f416e1bbc5d175f62109c8cf094bd974636ea6965f20ca0b66"
       }
     },
     {
@@ -20803,8 +20807,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__cross-surface-error-and-empty__iphone390x844-app-xl.png",
-        "bytes": 40547,
-        "sha256": "d3157b627076fc2ee0cd2d3f5e805366d3d6c0bc850f2ee4e5e1c706d29ee72f"
+        "bytes": 40702,
+        "sha256": "0713579db42e531a3ee6c47dd863bf4e902086369145a0a168b5ab7712e6c3c1"
       }
     },
     {
@@ -20855,8 +20859,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-quiz__iphone390x844-app-xl.png",
-        "bytes": 68718,
-        "sha256": "829c576c65200bb27ad6ba6e40abc991e2215d4ff373ae508da9ef24e6613506"
+        "bytes": 66030,
+        "sha256": "b09d2909e612d250a52a97ba14e2dc466e75243f61a47bd4793b61e08894cbf0"
       }
     },
     {
@@ -20930,8 +20934,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-challenge__iphone390x844-app-xl.png",
-        "bytes": 103560,
-        "sha256": "8d85725a6d56c979dc20dae179db9f5fa963b01136b98cedaf9aadc1f3819d91"
+        "bytes": 103378,
+        "sha256": "3aa6f8d6e1e82b2785c6fa38553b89941c428b0226cee1a938a5358dc0216a22"
       }
     },
     {
@@ -20982,8 +20986,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-activity-detail__iphone390x844-app-xl.png",
-        "bytes": 69010,
-        "sha256": "ec2f0681cec0def71e7b675c390ada3a9f8b81bd54f20e40362573bdf7d8e50b"
+        "bytes": 61189,
+        "sha256": "418d4a7349424c3fd93ab85ab88ae1e1dd6d18481d2d032d266773531922152e"
       }
     },
     {
@@ -21057,8 +21061,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-feedback__iphone390x844-app-xl.png",
-        "bytes": 112167,
-        "sha256": "546c8f5377128b9098122523a910bfa9f77d24fa926eee2fc85002f4dc74409f"
+        "bytes": 87902,
+        "sha256": "01dd1ffa12a9363ddd95fd52cb05f71a92e20f90227818c3e5399ca720a4c762"
       }
     },
     {
@@ -21135,8 +21139,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-interests__iphone390x844-app-xl.png",
-        "bytes": 104670,
-        "sha256": "589a64f03b4be970daee70ac37f2e733a0ec4f14b67840ee7382e4967b721137"
+        "bytes": 104780,
+        "sha256": "ce9d6323bc693e2a8ef5adc9b28f72ba072fedeba86c87e6aaa75506081a6d6f"
       }
     },
     {
@@ -21208,8 +21212,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-safety__iphone390x844-app-xl.png",
-        "bytes": 120073,
-        "sha256": "155d0f15f08d6db7fdf1fa235c49a1b0f80bc34b7bb7ba4c23db8f7a4369f88b"
+        "bytes": 114457,
+        "sha256": "acb065566fc93ea2873e0ce2df0ab137e98899b7f2bd3bdd8a65cf8df4cc60d3"
       }
     },
     {
@@ -21273,8 +21277,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-companion__iphone390x844-app-xl.png",
-        "bytes": 107513,
-        "sha256": "59d4e1df3b4f20c318a3b2d5ae98583b6d4270e2ee3dff45370e928b7372a66e"
+        "bytes": 107509,
+        "sha256": "8ee8adea3255859005fa88fdbad5b2a260dd2f3b81be98e8c87e9b55c1d48d5a"
       }
     },
     {
@@ -21353,8 +21357,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-report__iphone390x844-app-xl.png",
-        "bytes": 115951,
-        "sha256": "5b1701738aa0d6b766a9836b7114d50cb25699eef9e12a2c7ca645e27866f1a9"
+        "bytes": 115762,
+        "sha256": "6c0c45e72961c8e7c984a55a313de953d781e98d7e748e715db6a6b9548444e3"
       }
     },
     {
@@ -21415,8 +21419,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-font__iphone390x844-app-xl.png",
-        "bytes": 77096,
-        "sha256": "e9066b0aa8a76d7c9c81688b889697e5b9def4b6843088453f02d2f08cb6b9f3"
+        "bytes": 70722,
+        "sha256": "9a730b63272af32c3e71e952d8c985d66e0a8e06644a232005c8df174ccaab13"
       }
     },
     {
@@ -21548,8 +21552,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-data__iphone390x844-app-xl.png",
-        "bytes": 90717,
-        "sha256": "bcd78fcac6901076862fab28692e16c24d3629c0a018140ae49932ce438f1745"
+        "bytes": 84070,
+        "sha256": "d82c00ec934aa8fd592efc335ce6e7877adc844fdad57a2d644a3621d597e635"
       }
     },
     {
@@ -21613,8 +21617,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-profile__iphone390x844-app-xl.png",
-        "bytes": 71408,
-        "sha256": "39f4763a85038637495d38dbadd5949c83cbf344b3f1edab018293921ba4371b"
+        "bytes": 68227,
+        "sha256": "23b395b92d95fb432951ffbf5f2d0d43f0c1a8e3c1ac5fd281cd36513e2872f5"
       }
     },
     {
@@ -21683,8 +21687,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-family-circle__iphone390x844-app-xl.png",
-        "bytes": 98982,
-        "sha256": "c06a11fb33c90989e4f3fd9e85ec5d54142e2fa9e11f3a884de975bca10bde85"
+        "bytes": 91086,
+        "sha256": "35ccfb934532756558e51f10f9543ac3ec5c91fd1ce5bbe285a4c96dc9c37fb6"
       }
     },
     {
@@ -21743,8 +21747,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-invite-family__iphone390x844-app-xl.png",
-        "bytes": 98932,
-        "sha256": "e79f04e09aa193501c0b451b1bcfb990b633f2d0e33eeaeb9fa6b94072ba8493"
+        "bytes": 94642,
+        "sha256": "6aa53f18701e3a62a43b195f8687165e08489e9d8686553c02ad51ef2ad887cc"
       }
     },
     {
@@ -21796,8 +21800,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-join-circle__iphone390x844-app-xl.png",
-        "bytes": 85591,
-        "sha256": "03b8713e3ddbacce74b611d3012c39beb5d6d6225dbff8fbe422e0e0e3aaee58"
+        "bytes": 84183,
+        "sha256": "4675122226bc169d3d90affd9cb6aa68bfabc5a0648690923d98d7abb48b4a01"
       }
     },
     {
@@ -21874,8 +21878,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-top-up__iphone390x844-app-xl.png",
-        "bytes": 95609,
-        "sha256": "0bca923e4e35fa20f73c931827f40df2457e78a6cef80a285eee17f5f86f108d"
+        "bytes": 92650,
+        "sha256": "1f68486cec05464e57f4bc5a3e3956f3ec0a287c1e623fba2f863950128f5506"
       }
     },
     {
@@ -22019,8 +22023,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-appointment__iphone390x844-app-xl.png",
-        "bytes": 76708,
-        "sha256": "4e5a4a51d61a10c18017a55d5ca8c2a741818da4260429a217604efd35a0dc0b"
+        "bytes": 66230,
+        "sha256": "f7255d8c06cfefea17aec619e67227a2c59c1d0703fa63529cdcabfda1bc04a1"
       }
     },
     {
@@ -22099,8 +22103,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-history__iphone390x844-app-xl.png",
-        "bytes": 99253,
-        "sha256": "6f79aaedda3ee500fc426f30bf2e85ab648b9100da389967a72eb6e374a619ad"
+        "bytes": 88454,
+        "sha256": "c7f4ec53d1e8892e213a3f930cb3cf177820ad7c2954ab669dc29015f7a7ff8a"
       }
     },
     {
@@ -22174,8 +22178,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-consent__iphone390x844-app-xl.png",
-        "bytes": 156821,
-        "sha256": "afdb09a8f0d1b3486c48caf03fa0fa64539bb8199dd78c399c13eea13d092148"
+        "bytes": 156538,
+        "sha256": "5eddb9494e389613381457179ba16b96972a1ba247561379134bb8a4dd7f92b6"
       }
     },
     {
@@ -22245,8 +22249,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-version__iphone390x844-app-xl.png",
-        "bytes": 160200,
-        "sha256": "9d7dfef5d64d2db9a54e7d1bdbfb23f1ff6940085f3279420fe71334fe6c73c4"
+        "bytes": 156364,
+        "sha256": "49cd9d447e0bed1cc873878b261a97434c639798f4a23da69ab9d4eb56802b82"
       }
     },
     {
@@ -22299,8 +22303,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-medication-reminder__iphone390x844-app-xl.png",
-        "bytes": 82577,
-        "sha256": "cf2baa2047ded412a183c3ff3c30ea137868fea0332c7f99486c4c88312c92ae"
+        "bytes": 80984,
+        "sha256": "3883b57324db43395613ccd733e9a57a7f7c097a37e9a53407cc41dba37dbf83"
       }
     },
     {
@@ -22392,8 +22396,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-medication-manager__iphone390x844-app-xl.png",
-        "bytes": 92711,
-        "sha256": "f21571ad3fb6d78e800220d42691e4b39af0a227a59e6601dc6ad7a197e817bf"
+        "bytes": 76914,
+        "sha256": "5f09af19e8353cdb38c5ca8ac8c761425f7ecef8f15988b8cc78054aa4c43b41"
       }
     },
     {
@@ -22451,7 +22455,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-auth__iphone390x844-app-xl.png",
         "bytes": 88469,
-        "sha256": "df2dbe5db5c168814edb4a80cb496470ccd26a005932817fd7b20ca1cc9625ef"
+        "sha256": "48a370c9ed403feea3ebfef1c330073142596977c97bfd20b1cb49dabe7637e6"
       }
     },
     {
@@ -22587,8 +22591,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/zh-TW__modal-notification-inbox__iphone390x844-app-xl.png",
-        "bytes": 74697,
-        "sha256": "0169e80f06672c894305a286bb74a6b445dbca27c1a69ae69accab3b5fca0f36"
+        "bytes": 75914,
+        "sha256": "9576ef8d6e54a3cf723e6f92499d58d981cf522050bda57f2fdccc3a2dc2cfcf"
       }
     },
     {
@@ -22660,8 +22664,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-home__iphone390x844-app-xl.png",
-        "bytes": 94028,
-        "sha256": "0c0c62baa359de5809dba0ef21b61649a02d550998ed123b10aedda998aed6cd"
+        "bytes": 93660,
+        "sha256": "3cdd9d4c5db299be593a40a7f7fee19286da2862b0d9febec0287ac5c3ee9b32"
       }
     },
     {
@@ -22814,8 +22818,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-family__iphone390x844-app-xl.png",
-        "bytes": 98252,
-        "sha256": "99bb08aa6faaec36a36821ed3250c8e77cb19fdaa18f5dbf941aafc89cf7b848"
+        "bytes": 99244,
+        "sha256": "76432946764956c84f4868585391014c4a4e0ed9049d7a1e461fade4d8885d55"
       }
     },
     {
@@ -22962,8 +22966,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__screen-connect__iphone390x844-app-xl.png",
-        "bytes": 79810,
-        "sha256": "a734f3d0d6e551db8e7344f72e022f5bfe10457f4dda3b88321da1b5c3dd5541"
+        "bytes": 79596,
+        "sha256": "7e1ffee00070e3a951310fa088bd7c3fb9fea93e277b62799d2efe0675259587"
       }
     },
     {
@@ -22982,8 +22986,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 2,
-        "bottom": 846,
+        "top": 3,
+        "bottom": 847,
         "width": 390,
         "height": 844
       },
@@ -23027,8 +23031,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-idle__iphone390x844-app-xl.png",
-        "bytes": 419295,
-        "sha256": "2b337903bd3988b00387f6d02f49d7bdef8b621401625f0e64ff9b83d06df7e2"
+        "bytes": 418768,
+        "sha256": "03a9ccf75fa512ce96fbbdb43bad76f8e1a937379c8342205650698a8c935c03"
       }
     },
     {
@@ -23100,8 +23104,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-connecting__iphone390x844-app-xl.png",
-        "bytes": 400428,
-        "sha256": "c2314875a4f540949c74acecbea44a11f1764d5956cec594e3f2fb7895e73e08"
+        "bytes": 400447,
+        "sha256": "227c7e3ccd48572ae246dc565a00c56b550f0a2d09b162798deea75371a2069d"
       }
     },
     {
@@ -23152,8 +23156,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-queued__iphone390x844-app-xl.png",
-        "bytes": 388058,
-        "sha256": "20ce5b7857d5f678cd78bb54598db14ae99a2d19d0dce7e5f1d6ccdcb4d0bf54"
+        "bytes": 388053,
+        "sha256": "ab8b6fcdcd2a306c2861350304f0e277202b2e1d7dcd53115a1fed2e45cdda3c"
       }
     },
     {
@@ -23316,8 +23320,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__chat-error__iphone390x844-app-xl.png",
-        "bytes": 418678,
-        "sha256": "8f50618b09a55e2987ecf04c39571a2b1ace90189d73db9c967d14f31d2416cc"
+        "bytes": 418654,
+        "sha256": "7e43cfde6e65955d78bf73095d07677a9f572c01e9d5f619395ddee031e73bb1"
       }
     },
     {
@@ -23336,8 +23340,8 @@
       "rect": {
         "left": 35,
         "right": 355,
-        "top": 679,
-        "bottom": 751,
+        "top": 678,
+        "bottom": 750,
         "width": 320,
         "height": 73
       },
@@ -23360,8 +23364,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__cross-surface-error-and-empty__iphone390x844-app-xl.png",
-        "bytes": 46706,
-        "sha256": "a863cae4b928604602895e12d6e74a3d860d4b898dc2e577eb562f46add41732"
+        "bytes": 46736,
+        "sha256": "7eb163e5e695e5123a16ca445a3c08c9739fa7a2d3ae4b38954f289d9104cebc"
       }
     },
     {
@@ -23412,8 +23416,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-quiz__iphone390x844-app-xl.png",
-        "bytes": 77951,
-        "sha256": "e7ed3d468aff53df40f8d7dbfe94d3566d04f954b43619292ed87c5cdf9fea34"
+        "bytes": 75806,
+        "sha256": "4b8383c36bcb3e721c840b20f6b065037cf1c40c740b087057c8b11b9669597e"
       }
     },
     {
@@ -23482,8 +23486,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-challenge__iphone390x844-app-xl.png",
-        "bytes": 99889,
-        "sha256": "479a22533bf0271ae9613fc2205972f882af2dae205181f18c207a496913f3f0"
+        "bytes": 94754,
+        "sha256": "4d0d27e69dd163985d4fed792b6f09d0a9edc5773b0efb875463df602e642aa0"
       }
     },
     {
@@ -23534,8 +23538,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-activity-detail__iphone390x844-app-xl.png",
-        "bytes": 79745,
-        "sha256": "7bf7e96dc71c902b8fbc641554b7b5d4796a260ff3cda15a8158ef78ce14dd8d"
+        "bytes": 75212,
+        "sha256": "4c79bedd0842f694afb8065414b04ab2327172ce09c02b609bbd79fa2d2ffadb"
       }
     },
     {
@@ -23605,8 +23609,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-feedback__iphone390x844-app-xl.png",
-        "bytes": 104882,
-        "sha256": "7f53949396cb0eaed8be57f82964d1297c1fe4e9022fe7c28d681958aaa05b6f"
+        "bytes": 95759,
+        "sha256": "5e0d009ad877663995e3ec6bec4babfbbf82d1b52c6256bbda0dcf6199067c62"
       }
     },
     {
@@ -23681,8 +23685,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-interests__iphone390x844-app-xl.png",
-        "bytes": 100630,
-        "sha256": "61c3da602e0db76055b44649a99adecf887138bafe52368e286bfe1d2d1b5967"
+        "bytes": 100751,
+        "sha256": "09a2b8731cdb3fec043e8af85ea51fb820a91c7b77f3ea602517bb15ce7e044f"
       }
     },
     {
@@ -23750,8 +23754,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-safety__iphone390x844-app-xl.png",
-        "bytes": 125611,
-        "sha256": "3ffb86adaf7de56964c3df62fc5d42a444280fa37e9df0ecde9b4ff4347582e7"
+        "bytes": 121488,
+        "sha256": "d2bda38bafbd90cb66975e1b31dab53bbdedec490207887a6fa8a2a8aa54c10d"
       }
     },
     {
@@ -23813,8 +23817,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-companion__iphone390x844-app-xl.png",
-        "bytes": 108231,
-        "sha256": "e472a93e3af0c950a0d24086f97fd7e52d4840395be0f46761f1f2613da11d1a"
+        "bytes": 103575,
+        "sha256": "bd80a808bfe19aa995528ba6ac03082c9640042a7352b93f34cfae5200ccb41f"
       }
     },
     {
@@ -23865,8 +23869,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-report__iphone390x844-app-xl.png",
-        "bytes": 99996,
-        "sha256": "1eda951afdebd4948d777a1f7c0d95eaf2df63b03dbf159eb660ca467ba351cd"
+        "bytes": 99997,
+        "sha256": "69f86705a2e5ba0f4834ee4cec548a5997d90e1356659c08e7dfcc7b48149ec8"
       }
     },
     {
@@ -23927,8 +23931,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-font__iphone390x844-app-xl.png",
-        "bytes": 85116,
-        "sha256": "3b1538fae53e5ac540c61991f37a21980085e2c627200a9ec4b88fb9a1c1c462"
+        "bytes": 79862,
+        "sha256": "ae217cc211a9dee7a7a68af83e74de9f3f253cdee9035648baeb3d3846c769dc"
       }
     },
     {
@@ -24050,8 +24054,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-data__iphone390x844-app-xl.png",
-        "bytes": 87565,
-        "sha256": "9b08de897cc54182688762298a0e00d1d4c70798e5f9d64f9369c38ce5fc4f69"
+        "bytes": 87608,
+        "sha256": "6864494df980013eee79697d89c73423c2c69678cd7007a9f2d5b9873fbec0c0"
       }
     },
     {
@@ -24115,8 +24119,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-profile__iphone390x844-app-xl.png",
-        "bytes": 80535,
-        "sha256": "63ed5cf84e11855863e189726c4c04bbb86280ea9e44d8d7d78838cafb08e379"
+        "bytes": 66725,
+        "sha256": "f00c2318bd9d180a13227d00be7064bc1aed2dd9ca005f6585746450b4eeeb6a"
       }
     },
     {
@@ -24185,8 +24189,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-family-circle__iphone390x844-app-xl.png",
-        "bytes": 99261,
-        "sha256": "248617cedfa4ae7dd7646a42dfc98b12ac00dfa4ea8b6cc2fefd7aa5e4521c47"
+        "bytes": 99320,
+        "sha256": "ca9f315849887bc1c903bdde68d38d73d09beb9c16bf3a7b7a365b7f72e7dbb0"
       }
     },
     {
@@ -24298,8 +24302,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-join-circle__iphone390x844-app-xl.png",
-        "bytes": 87017,
-        "sha256": "6364e53c8e9403673ffca256ddee2aad5ac39c0e0fdc0ee70d112b1ad6f1212a"
+        "bytes": 89062,
+        "sha256": "ec0412e76a6fcf4e94c60e7aaa656c7c201c4a96d55381442377e41f6829a4a9"
       }
     },
     {
@@ -24376,8 +24380,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-top-up__iphone390x844-app-xl.png",
-        "bytes": 103632,
-        "sha256": "8b60ca64623f600b76dd4bfc3963afe13ad2416073cd4ef342681dc8339ee3e0"
+        "bytes": 99725,
+        "sha256": "f8060fcd2292a517917df2e5b73f5c12e4af1c8ea7c5ca2d05ec58f434194b43"
       }
     },
     {
@@ -24519,8 +24523,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-appointment__iphone390x844-app-xl.png",
-        "bytes": 86844,
-        "sha256": "ef829db1c8f08aa3fb508e502068370a2d880798dcc71679c29fff3476835869"
+        "bytes": 82602,
+        "sha256": "7b46f83e617feb8a8b855807bcc199ab2c6cb789fe67db8f0adc0081e9c9026d"
       }
     },
     {
@@ -24575,8 +24579,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-history__iphone390x844-app-xl.png",
-        "bytes": 88301,
-        "sha256": "5794fa67fb5245a4f930e7094edef92cead7560dac8a6a48c6af2097c86f72a0"
+        "bytes": 88303,
+        "sha256": "79122d6fabc16a3d668171bd1a0ee7dad5899698d61f82b6b4dcd6bbba1f8810"
       }
     },
     {
@@ -24642,8 +24646,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-consent__iphone390x844-app-xl.png",
-        "bytes": 136943,
-        "sha256": "afaa4e312a26c664b4ea24820834c4bf5a898f55a103bd5f717f5a6b43845149"
+        "bytes": 122014,
+        "sha256": "581db09ab9f875650167dfcbb02f171d75545ef6363c9f7dea705bf3995c4983"
       }
     },
     {
@@ -24697,8 +24701,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-version__iphone390x844-app-xl.png",
-        "bytes": 77488,
-        "sha256": "e219b44f38838f22be583c9b23e5b6139b1362a27debd6b29f5347ab80a6683d"
+        "bytes": 77504,
+        "sha256": "1e75f135da75e8fca1fac8806606ca4d3e945ea3f66676f12ab8efff40fdc127"
       }
     },
     {
@@ -24751,8 +24755,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-medication-reminder__iphone390x844-app-xl.png",
-        "bytes": 93211,
-        "sha256": "81f209bbe2c29b0dfcbeca6ef10e9da38f0b250d834cfa34278aae96365ec13a"
+        "bytes": 93294,
+        "sha256": "72471c4c1c9f5bcb04d28fae31c762cc6679e58086b0752a9bf93d8ebc83c978"
       }
     },
     {
@@ -24843,8 +24847,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-medication-manager__iphone390x844-app-xl.png",
-        "bytes": 104938,
-        "sha256": "43fd345d62941138bb44b2a45ded783405225bc0f864d808cd24e035644f1843"
+        "bytes": 95467,
+        "sha256": "3b64a271c4d5bca291a0594b97aa5fe8e4f9d63d99e9edc9ff21a86fa4bf81d0"
       }
     },
     {
@@ -24901,8 +24905,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-auth__iphone390x844-app-xl.png",
-        "bytes": 97525,
-        "sha256": "08a33750a3c687cb35835c4590e90531e7e5b7333445a9f20cd75f569cca4318"
+        "bytes": 97524,
+        "sha256": "ea6f3ab958a0cc5484b1f2e31d3e8c58a386ecd34c56f6b334254d7d68f15512"
       }
     },
     {
@@ -25038,8 +25042,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/en__modal-notification-inbox__iphone390x844-app-xl.png",
-        "bytes": 83774,
-        "sha256": "a6f4b52b224aca07ee7dda2aa6116e809517ef17b8b167615ae3fa8c36e10078"
+        "bytes": 80408,
+        "sha256": "eb2aed76216869154cb479da30f2f71bdc89917effb87d45a3375975189befda"
       }
     },
     {
@@ -25199,8 +25203,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-status__iphone390x844-app-xl.png",
-        "bytes": 110193,
-        "sha256": "c919b24f0bd97626e47863ec6a5bdee1f2b1eb63c1e9fb3f4af804932895a163"
+        "bytes": 110151,
+        "sha256": "1c7ed552c3f4f11620ab503788107cba2a4fcf68af9577a52eeb6312ec2c9fe0"
       }
     },
     {
@@ -25267,8 +25271,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-family__iphone390x844-app-xl.png",
-        "bytes": 101908,
-        "sha256": "2349970e8a73726c09b87a332d48dc591ce4c97a5d5b846cbe2da787c3e08642"
+        "bytes": 104088,
+        "sha256": "872f037e2b5c6dd6f0f4a46c4782e91221b4b156d215a45f61a35f9d54345c0f"
       }
     },
     {
@@ -25356,8 +25360,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-settings__iphone390x844-app-xl.png",
-        "bytes": 82378,
-        "sha256": "2126e4b8fd05021ebb6c5dd36f0c49cbc4ba16912e2a145bee1b8120344aa39b"
+        "bytes": 81418,
+        "sha256": "267b4e754a0d2fccd47142fd46058febb260bc1ff61a6923a39fe6f4176b74b1"
       }
     },
     {
@@ -25416,8 +25420,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__screen-connect__iphone390x844-app-xl.png",
-        "bytes": 108242,
-        "sha256": "1adedd8033a1801162b83b1279460d461d64ce22bbfc9da3992b28c11bd8c67d"
+        "bytes": 108478,
+        "sha256": "7f536aed1b9470f0c0499c6b5bc91a3f5789da49ecd2b3d1fb8b487dd4ded71f"
       }
     },
     {
@@ -25481,8 +25485,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-idle__iphone390x844-app-xl.png",
-        "bytes": 473580,
-        "sha256": "aff6b9f2b3efec0d0e0ace541d9a6c18a871988483da038d579a9ff4538a5387"
+        "bytes": 472811,
+        "sha256": "634362d44a14896a1abc71a5fdea426dbd0a97513e5899af993e50f3c22cd979"
       }
     },
     {
@@ -25555,7 +25559,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-connecting__iphone390x844-app-xl.png",
         "bytes": 403092,
-        "sha256": "8e84e0c9ec9b89b3f85cee6e3fc5ffe4e86e2af33600a80275f0ea92aeb4fc47"
+        "sha256": "d5de3ac3e9c793aec238d800e4463211447d9c27c1526258caad6f74b2e3ef87"
       }
     },
     {
@@ -25607,7 +25611,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-queued__iphone390x844-app-xl.png",
         "bytes": 394334,
-        "sha256": "4856e4f7f15a8a55792190bff08164a41fc0b3dfe9327112f016d28f9081799c"
+        "sha256": "fedc2148c25300505ddc4c169c97edf6479c4fb00672f329a02cac2d9dbce932"
       }
     },
     {
@@ -25770,8 +25774,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__chat-error__iphone390x844-app-xl.png",
-        "bytes": 423183,
-        "sha256": "d106c3dba00fa3fef1503c912da7c9e533567f9e5a8e4dfc6926a4414893ecbc"
+        "bytes": 423164,
+        "sha256": "2ac4777c0e2683fc7966623d5f740406b76316ba3fb75434a617cb9cd9c72159"
       }
     },
     {
@@ -25790,8 +25794,8 @@
       "rect": {
         "left": 35,
         "right": 355,
-        "top": 679,
-        "bottom": 751,
+        "top": 677,
+        "bottom": 749,
         "width": 320,
         "height": 73
       },
@@ -25814,8 +25818,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__cross-surface-error-and-empty__iphone390x844-app-xl.png",
-        "bytes": 46249,
-        "sha256": "f5d99e1b841355b693ccc6fab5362c11c6e145ed63b5e0eb8b4d3c5bda8a76bf"
+        "bytes": 55142,
+        "sha256": "e9f4cea15081ce70c2f161cb718835b2926980ace0e1659a51528c71fd696556"
       }
     },
     {
@@ -25866,8 +25870,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-quiz__iphone390x844-app-xl.png",
-        "bytes": 82038,
-        "sha256": "14a76d43eadb36de081de5bf517ada7dd4a5f725289ff32d6a04e4a63f0e872d"
+        "bytes": 82205,
+        "sha256": "5543cf7fb94dfaa0355c0701446637bddb4da0a691f56d593edb6c68d9ff7994"
       }
     },
     {
@@ -25892,7 +25896,7 @@
         "height": 844
       },
       "visibleText": "活動を始める\n\n参加したいご家族を誘って、活動を選びます。\n\n活動の種類\n一緒に運動\nクイズ\n集まりを企画\n投票\n抽選\n歩数目標（全員で合計）\n28,000歩\n1人で7日間・1人1日約4,000歩\nチャレンジの締め切り（自動集計）\n誘う人を選ぶ（全員でなくてもかまいません）\nスマートフォンを使わないご家族にはニンニンが声で確認します。\n小さなごほうびを設定（任意）\n1\n2\n3\n招待を送る",
-      "visibleViewportText": "活動を始める\n参加したいご家族を誘って、活動を選びます。\n活動の種類\n一緒に運動\nクイズ\n集まりを企画\n投票\n抽選\n歩数目標（全員で合計）\n28,000歩\n1人で7日間・1人1日約4,000歩\nチャレンジの締め切り（自動集計）\n誘う人を選ぶ（全員でなくてもかまいません）\nスマートフォンを使わないご家族にはニンニンが声で確認します。",
+      "visibleViewportText": "活動を始める\n参加したいご家族を誘って、活動を選びます。\n活動の種類\n一緒に運動\nクイズ\n集まりを企画\n投票\n抽選\n歩数目標（全員で合計）\n28,000歩\n1人で7日間・1人1日約4,000歩\nチャレンジの締め切り（自動集計）\n誘う人を選ぶ（全員でなくてもかまいません）\nスマートフォンを使わないご家族にはニンニンが声で確認します。\n小さなごほうびを設定（任意）",
       "visibleViewportLeafTexts": [
         "活動を始める",
         "参加したいご家族を誘って、活動を選びます。",
@@ -25902,7 +25906,8 @@
         "1人で7日間・1人1日約4,000歩",
         "チャレンジの締め切り（自動集計）",
         "誘う人を選ぶ（全員でなくてもかまいません）",
-        "スマートフォンを使わないご家族にはニンニンが声で確認します。"
+        "スマートフォンを使わないご家族にはニンニンが声で確認します。",
+        "小さなごほうびを設定（任意）"
       ],
       "visibleViewportTextNodes": [
         "活動を始める",
@@ -25918,7 +25923,8 @@
         "1人で7日間・1人1日約4,000歩",
         "チャレンジの締め切り（自動集計）",
         "誘う人を選ぶ（全員でなくてもかまいません）",
-        "スマートフォンを使わないご家族にはニンニンが声で確認します。"
+        "スマートフォンを使わないご家族にはニンニンが声で確認します。",
+        "小さなごほうびを設定（任意）"
       ],
       "visibleAttributeTexts": [
         "閉じる",
@@ -25938,8 +25944,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-challenge__iphone390x844-app-xl.png",
-        "bytes": 110906,
-        "sha256": "6b0b186c3c2b1938770ea40ca57774a5d7b0c3dbf28ed874bcec9c25a90f6a76"
+        "bytes": 101864,
+        "sha256": "11cde51c9d598e3d188987d80bf7a8109e391e08462bf44dc8d1f01f307d61e8"
       }
     },
     {
@@ -25990,8 +25996,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-activity-detail__iphone390x844-app-xl.png",
-        "bytes": 84893,
-        "sha256": "9dd96b2c8c90118202e3a9ccb300f2e591458f9a3c69ccf48cf49d6bab7280a2"
+        "bytes": 79493,
+        "sha256": "e6fac6430d7f51a7d6054465fc3fcc0f756bc042421b2b4adefa92402eab2678"
       }
     },
     {
@@ -26061,8 +26067,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-feedback__iphone390x844-app-xl.png",
-        "bytes": 112709,
-        "sha256": "7df80c4083c8c2a06b19386f784249f8bee486fa82bdb52361813b7478e25d19"
+        "bytes": 97964,
+        "sha256": "6a4868a26c98dcf9c7496c26d823b7de83b91ea394919e83d6551b47b0b0ae46"
       }
     },
     {
@@ -26137,8 +26143,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-interests__iphone390x844-app-xl.png",
-        "bytes": 97868,
-        "sha256": "c1ef1b0a93bac7144ab779f74c749100fb184f5334689d8b713325078600b8e3"
+        "bytes": 92637,
+        "sha256": "da4b0f0672637d9e4a3f0e8a243b5f95726d48e9d4597c7105f625ac928f9547"
       }
     },
     {
@@ -26207,8 +26213,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-safety__iphone390x844-app-xl.png",
-        "bytes": 142893,
-        "sha256": "06f293ae54191e853a672d6fabcb4bd98d65ac5714834b334466abce84187372"
+        "bytes": 133115,
+        "sha256": "110da72347ac8c882594add7d195a2e1bf1a3fb7133a998fef6f94f192efb3bf"
       }
     },
     {
@@ -26270,8 +26276,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-companion__iphone390x844-app-xl.png",
-        "bytes": 117530,
-        "sha256": "71ff4f64d6644961d97c31689db90d8de3f5519c02993162dea1f3d25b24a232"
+        "bytes": 114245,
+        "sha256": "a6bb0bb98f37a60f592d01aad5b005a53ed60c0b5d2377c0ba88bdc3eb1f3529"
       }
     },
     {
@@ -26322,8 +26328,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-report__iphone390x844-app-xl.png",
-        "bytes": 111619,
-        "sha256": "1301043f45bba44de1a80dca5f1905eb7320cb0f2d07f2cb33b1a942a1ed86d4"
+        "bytes": 111616,
+        "sha256": "534fc318f49270ac4e996cb28d15e2178212dbf48c0a4668ff7228805b177c4d"
       }
     },
     {
@@ -26384,8 +26390,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-font__iphone390x844-app-xl.png",
-        "bytes": 91849,
-        "sha256": "569fabd6f6c65bc54651119b5e3cc5c1dbd0c42f0d5a48ad270b309cdb2c6de2"
+        "bytes": 78093,
+        "sha256": "36e18140a1a902201561d548b67d7c21f9775745606ad1f9e695ecb4ce24709f"
       }
     },
     {
@@ -26512,8 +26518,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-data__iphone390x844-app-xl.png",
-        "bytes": 105287,
-        "sha256": "8280ff6949333a867223980ca750f7b84f6f01825835fbe098dd3cf4ed0cc4d7"
+        "bytes": 101294,
+        "sha256": "1286b3dcdd9fb402f8d55044bddeb055400bc5811b70356f9c2349e51fb52f1a"
       }
     },
     {
@@ -26577,8 +26583,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-profile__iphone390x844-app-xl.png",
-        "bytes": 80981,
-        "sha256": "7796ce06a6255ff47c1bad696dd2c14d1ea5fbf1ef88b1044a83feb95e6f1b05"
+        "bytes": 65433,
+        "sha256": "1debbe84706e06cc70c4ad5cd94922377861623bdf2d9a38d5c8c14bbb3cf155"
       }
     },
     {
@@ -26647,8 +26653,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-family-circle__iphone390x844-app-xl.png",
-        "bytes": 111809,
-        "sha256": "6cd647c0827c38025db4b2f5ca140495005d70552ecabe7042ecb26ed9f454c7"
+        "bytes": 99211,
+        "sha256": "63783998d75a302cf0882b60d95717183d545352f564434f0d94b8da87292507"
       }
     },
     {
@@ -26707,8 +26713,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-invite-family__iphone390x844-app-xl.png",
-        "bytes": 108189,
-        "sha256": "c0e568e050878d1044a3e0da9db5d0421887e37ae301505d8cbc46e0661f6961"
+        "bytes": 97311,
+        "sha256": "46b6e4acc296db90af9718935dc3e02591aa003ffd29bfb5a95385ce9bcdeea1"
       }
     },
     {
@@ -26760,8 +26766,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-join-circle__iphone390x844-app-xl.png",
-        "bytes": 100506,
-        "sha256": "18f0695266cb98567dc01b5d5d8db5f07ab7518601c79fbc1d6150facbf10783"
+        "bytes": 100467,
+        "sha256": "837f76d2a26f42343931f709e8628557ef032d054bb4f6525ea72817da53ce4b"
       }
     },
     {
@@ -26838,8 +26844,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-top-up__iphone390x844-app-xl.png",
-        "bytes": 114386,
-        "sha256": "845f4de455d3933511b755bdfd5689690dfb2b5abad05461e3af9911858829b3"
+        "bytes": 94276,
+        "sha256": "9cbb34d70c566eb1432ad309883888a5a3350bfc7d299e9a0fdbcb77d138e4d8"
       }
     },
     {
@@ -26981,8 +26987,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-appointment__iphone390x844-app-xl.png",
-        "bytes": 90595,
-        "sha256": "c229e69a5c676b88b9c608932b5eeea30db62c3198661f9b7b3ac40057186ee6"
+        "bytes": 82201,
+        "sha256": "9a23f3ead81fc9d61dcc6ffb5e54aa0a7032545ddd6750842d3d53147908271b"
       }
     },
     {
@@ -27037,8 +27043,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-history__iphone390x844-app-xl.png",
-        "bytes": 96890,
-        "sha256": "1abb521c134509d0de21efda370e3c1dffe265bef9e75faea4b5c1cea297d92d"
+        "bytes": 95342,
+        "sha256": "879483af01d648ba6274a2b7050a9e49df941af9b437c0261353a66586a81b68"
       }
     },
     {
@@ -27107,8 +27113,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-consent__iphone390x844-app-xl.png",
-        "bytes": 152367,
-        "sha256": "a4d9f32e361e5a7441bd30830652b3d780c9d7cf1f01ab75a203dafb223c87ef"
+        "bytes": 145380,
+        "sha256": "e1dc17a69eb320503cf5242a7fef5d77f3c5e09a4044c51264bf1105451d9420"
       }
     },
     {
@@ -27162,8 +27168,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-version__iphone390x844-app-xl.png",
-        "bytes": 88376,
-        "sha256": "8fbd1fa80844ffd78145cfe3f0257800a3ee5e61702e2164e84e06bcf7af7c2a"
+        "bytes": 80741,
+        "sha256": "27f6ca2ae86bf5a379d227cdd7b202a86ded30c3f85b002a8d7b19586be5ac7c"
       }
     },
     {
@@ -27216,8 +27222,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-medication-reminder__iphone390x844-app-xl.png",
-        "bytes": 103671,
-        "sha256": "08bce7114876f400c150cdfd3ebf87ec367b37c8dd1434edb48a67ef0c9d5c2c"
+        "bytes": 80138,
+        "sha256": "cfdafb7460a73a6bd98ac4a6ebdddf71f15ecad311db0c3728db0fad3dff1eaa"
       }
     },
     {
@@ -27309,8 +27315,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-medication-manager__iphone390x844-app-xl.png",
-        "bytes": 107311,
-        "sha256": "9902a998039c8fcb8bdb0042ce71cb82d173281d0934e99406855f54a04df00d"
+        "bytes": 107451,
+        "sha256": "502bb8de0e3edb9f3089ad688569ffe0bbeb81f07d30ebb4d8c0746e24119a5c"
       }
     },
     {
@@ -27367,8 +27373,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-auth__iphone390x844-app-xl.png",
-        "bytes": 104641,
-        "sha256": "a960b0671e5265fb378615bab92d1a02414087cfa016afdfc0586437c7f886e3"
+        "bytes": 104642,
+        "sha256": "abaec85fea3df93c1a64e3c61f1f41cf002106d7c4809aeaf4286c3aabc63bb8"
       }
     },
     {
@@ -27504,8 +27510,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/ja__modal-notification-inbox__iphone390x844-app-xl.png",
-        "bytes": 91824,
-        "sha256": "ddc6cfd1389af9295f2d6d1061ab12d635260f1d1405a8de1b21f6ce15c49a8d"
+        "bytes": 91791,
+        "sha256": "1e8682b69967f1d0a35ee33099e549ce9f73be557ff2c84a2ceb8fc3d430cc29"
       }
     },
     {
@@ -27570,8 +27576,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-home__iphone390x844-app-xl.png",
-        "bytes": 84533,
-        "sha256": "a83dd3fd382e2d36b3bc54999b46324a9c2e36e49543d579026203a442ecf4ac"
+        "bytes": 84193,
+        "sha256": "51859a8782ee5ec3334d027d93ae4861d9bef47c055dc6b1d20fd2652fc89a26"
       }
     },
     {
@@ -27653,8 +27659,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-status__iphone390x844-app-xl.png",
-        "bytes": 97341,
-        "sha256": "80dfbf0524cdb2b525f43c6456a0300933cee7664028132ffb6883b48f4b1a44"
+        "bytes": 93975,
+        "sha256": "1c8123f0cc3fc7d8287e110485b4187b6b32d717bd66b4cf796c83e072b22342"
       }
     },
     {
@@ -27721,8 +27727,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-family__iphone390x844-app-xl.png",
-        "bytes": 94254,
-        "sha256": "31bf73c3102c6001c02e45aa74e850a574f183650a959454ae9bc3ae7ce929cc"
+        "bytes": 100185,
+        "sha256": "d551019411339c174ddff9ee3e54de9b48f3e8dea0ea2e81bffe9b26a964f65e"
       }
     },
     {
@@ -27808,8 +27814,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-settings__iphone390x844-app-xl.png",
-        "bytes": 80031,
-        "sha256": "66a48ca4cb4f33fa693cad95adb208911646d48b68344494ea347e46646686d5"
+        "bytes": 79513,
+        "sha256": "023075a3e2ebcf5c5c199195311f25cc8e1889b0b9fae244e3bdcc91da0f5b88"
       }
     },
     {
@@ -27828,8 +27834,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 2,
-        "bottom": 846,
+        "top": 1,
+        "bottom": 845,
         "width": 390,
         "height": 844
       },
@@ -27865,8 +27871,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__screen-connect__iphone390x844-app-xl.png",
-        "bytes": 73049,
-        "sha256": "7312dc5f5e08879ece805c4e82fd65ebd89f0679619464317c7e913532537a38"
+        "bytes": 75754,
+        "sha256": "575755ad3978379e3f3adff3ca224659df5c64bc8b785f80ceae58bb04d0bfed"
       }
     },
     {
@@ -27885,8 +27891,8 @@
       "rect": {
         "left": 0,
         "right": 390,
-        "top": 2,
-        "bottom": 846,
+        "top": 3,
+        "bottom": 847,
         "width": 390,
         "height": 844
       },
@@ -28003,8 +28009,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-connecting__iphone390x844-app-xl.png",
-        "bytes": 402398,
-        "sha256": "e6b3342d6fca4e09091f36c465aa6d4f4a3c431510cd7131ba3d74587fc9ccfb"
+        "bytes": 402409,
+        "sha256": "0394b13c6ad10c1c9f089785e344d9723c1d492826d4b93e14a36dca7fbc5543"
       }
     },
     {
@@ -28055,8 +28061,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-queued__iphone390x844-app-xl.png",
-        "bytes": 371839,
-        "sha256": "3c8a9e71e8bbeef3412a4b3d492c9cc3921f0dd7631e27870ddaaaf77ebf9dc0"
+        "bytes": 371868,
+        "sha256": "8167fa6f8a0960b120e814be0edab7590ed7652179abfadfb8ee0b7630749145"
       }
     },
     {
@@ -28219,8 +28225,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__chat-error__iphone390x844-app-xl.png",
-        "bytes": 422981,
-        "sha256": "566bb94e62b3ab7fd08af84adb7c106c65a7d7d62e5d82d78fffdcce947f6d06"
+        "bytes": 422983,
+        "sha256": "49adc06df25dffc80f2bccae83e6e5fb7a0cf06ace6b631de44b8b3a5dc88737"
       }
     },
     {
@@ -28239,7 +28245,7 @@
       "rect": {
         "left": 35,
         "right": 355,
-        "top": 677,
+        "top": 678,
         "bottom": 750,
         "width": 320,
         "height": 73
@@ -28263,8 +28269,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__cross-surface-error-and-empty__iphone390x844-app-xl.png",
-        "bytes": 46809,
-        "sha256": "9e11c54a1bb32a5d8608bc7d892b76f06835db4385edc2cbfa85308cd59362fa"
+        "bytes": 46780,
+        "sha256": "91b2aafa8a90e2da842f79f6746aba6c6efbc7c35f3c11d3fc51e95be2dcf408"
       }
     },
     {
@@ -28315,8 +28321,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-quiz__iphone390x844-app-xl.png",
-        "bytes": 84492,
-        "sha256": "203f534c1279bb6f14118795fcc1ddf1c44dee6ef28ec8ff2e76ab0ad0e5bdd7"
+        "bytes": 84486,
+        "sha256": "ffb6551aebf26d658bf1c5d51d13c2aede550532b08b694fa43cfb2da26d1758"
       }
     },
     {
@@ -28387,8 +28393,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-challenge__iphone390x844-app-xl.png",
-        "bytes": 98775,
-        "sha256": "f47eb280c867d177aaf5457af91486bbb3ef56dd04b58405a0ad8fd3847e5790"
+        "bytes": 95495,
+        "sha256": "d4cdf765afd45960ed0e09bfd75c3a8e19a965b0005d5153a781c1d791b5237d"
       }
     },
     {
@@ -28439,8 +28445,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-activity-detail__iphone390x844-app-xl.png",
-        "bytes": 83558,
-        "sha256": "8e6b714f9199d5236208a9f6682fc7d1692727c098dfa86b157e622a2b1fc996"
+        "bytes": 83623,
+        "sha256": "c828e26dd9753e06c4c06ed959a98bd259be6e72426e7f39d316d69c3206a6f8"
       }
     },
     {
@@ -28510,8 +28516,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-feedback__iphone390x844-app-xl.png",
-        "bytes": 110023,
-        "sha256": "76708cb26171e7e7e7a4afe557c0c25899a5ecc2d447b425476e5b5765635e22"
+        "bytes": 105449,
+        "sha256": "ce3e4a09bf84607fc157e2143b074d3b455923adfd64eff00b3c90e1d75cdfc4"
       }
     },
     {
@@ -28587,7 +28593,7 @@
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-interests__iphone390x844-app-xl.png",
         "bytes": 105559,
-        "sha256": "573d79cb9858dc04f839d0d4a30c4c05b33f2d8ea9fa08a71c19e5687e0b06b4"
+        "sha256": "8bd5bafb5ecea914b739b166864e24d27dcd9569978e8db024aa29d74f015996"
       }
     },
     {
@@ -28655,8 +28661,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-safety__iphone390x844-app-xl.png",
-        "bytes": 127939,
-        "sha256": "bc8f90c652c1291ec0fd5f3035e27db4612c237ff010d8b507c654e8464518e2"
+        "bytes": 124079,
+        "sha256": "4eccefe8d9847fe15d55a07622a9d83360ce43b2287d2617bbce3e1a7936b40b"
       }
     },
     {
@@ -28718,8 +28724,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-companion__iphone390x844-app-xl.png",
-        "bytes": 104464,
-        "sha256": "440b4a36fcf46bcf47b9629ca2c7ac9dc35d9166aa078439829f6baf1a68835a"
+        "bytes": 109427,
+        "sha256": "cbd34ae0cb155e1454e80df6d32e54eb802097219fa6a07c62c729587e967417"
       }
     },
     {
@@ -28770,8 +28776,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-report__iphone390x844-app-xl.png",
-        "bytes": 100036,
-        "sha256": "6466a5afa762cad1cac4f5b743c5dc4fcbd6bc6625662b839e4f8b39908dc9a9"
+        "bytes": 100091,
+        "sha256": "a453d8df5d407046e1a7e007a6ed786a5e9baf4250121c07fa8d488cff9f634b"
       }
     },
     {
@@ -28832,8 +28838,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-font__iphone390x844-app-xl.png",
-        "bytes": 74891,
-        "sha256": "37e6e76f8302aacf8083daa543929ab7b27138b2e2f733133f78acdd47d39512"
+        "bytes": 85568,
+        "sha256": "18923d441e1fe3c447253a0e5bb97d13a88eee3db9e79b0c2e14f6a4a71bfe74"
       }
     },
     {
@@ -28955,8 +28961,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-data__iphone390x844-app-xl.png",
-        "bytes": 87155,
-        "sha256": "637b38b089e08d023caeb8196d0dd75e4917edae51a38f54a2ca5c3a9b36ee22"
+        "bytes": 97822,
+        "sha256": "48a8bb2ca2fc256c935adcd8945d4b3481b4e88281eaa6762ec1e693c2ae7549"
       }
     },
     {
@@ -28981,7 +28987,7 @@
         "height": 844
       },
       "visibleText": "Perfil\nCambiar foto\nEsta foto aparecerá en la pantalla de familia\nNombre\nCómo te llama tu familia\nCumpleaños\nUbicación\nElige tu zona para mejorar el tiempo, los restaurantes cercanos y los temas locales.\nGuardar",
-      "visibleViewportText": "Perfil\nCambiar foto\nEsta foto aparecerá en la pantalla de familia\nNombre\nCómo te llama tu familia\nCumpleaños\nUbicación\nElige tu zona para mejorar el tiempo, los restaurantes cercanos y los temas locales.\nGuardar",
+      "visibleViewportText": "Perfil\nCambiar foto\nEsta foto aparecerá en la pantalla de familia\nNombre\nCómo te llama tu familia\nCumpleaños\nUbicación\nElige tu zona para mejorar el tiempo, los restaurantes cercanos y los temas locales.",
       "visibleViewportLeafTexts": [
         "Perfil",
         "Cambiar foto",
@@ -29001,8 +29007,7 @@
         "Cómo te llama tu familia",
         "Cumpleaños",
         "Ubicación",
-        "Elige tu zona para mejorar el tiempo, los restaurantes cercanos y los temas locales.",
-        "Guardar"
+        "Elige tu zona para mejorar el tiempo, los restaurantes cercanos y los temas locales."
       ],
       "visibleAttributeTexts": [
         "Cerrar",
@@ -29020,8 +29025,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-profile__iphone390x844-app-xl.png",
-        "bytes": 74994,
-        "sha256": "439960385ba565c524f4c41bf0667525cac70924c86f20747d938b7633aea97d"
+        "bytes": 80800,
+        "sha256": "ab987ed456344047002baf0a4ba47184cda0d438895589f90124a6fc919f62dc"
       }
     },
     {
@@ -29090,8 +29095,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-family-circle__iphone390x844-app-xl.png",
-        "bytes": 98321,
-        "sha256": "90387e51910aa71dd16ebf722ce7129404c058f69296269d2009d97fefb89607"
+        "bytes": 102845,
+        "sha256": "ea372e1dc9264321d7b16bf8c1f12c81e0956481d648ccf60957b7a50c2fdac6"
       }
     },
     {
@@ -29150,8 +29155,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-invite-family__iphone390x844-app-xl.png",
-        "bytes": 96314,
-        "sha256": "ab578c1604dc1fc0f43af68c94e15b44f140ff39ea0c02008c6b072fb49bf735"
+        "bytes": 101270,
+        "sha256": "f39af3f484f8bb6b91b494b8a492f3c5e08718842818dc6934eb04028923989e"
       }
     },
     {
@@ -29203,8 +29208,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-join-circle__iphone390x844-app-xl.png",
-        "bytes": 88959,
-        "sha256": "5757ae98ec415fdd488249727b6cd95f94805a77432f03ee3668a4ad3bc8affe"
+        "bytes": 92629,
+        "sha256": "721137f8df71f22bf5ce85b96a5e9a0d04d99d2f27fff0abaa6845c0c568c2c1"
       }
     },
     {
@@ -29281,8 +29286,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-top-up__iphone390x844-app-xl.png",
-        "bytes": 113304,
-        "sha256": "78e48585c11e883a68a28f33b572cfc4fe17ab9562823f748df25e04b47461c5"
+        "bytes": 113266,
+        "sha256": "0a3ec8384794d55a8933f33f67ee95345412a50753f90d3dc2a08b5147cd2b57"
       }
     },
     {
@@ -29420,8 +29425,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-appointment__iphone390x844-app-xl.png",
-        "bytes": 81498,
-        "sha256": "8bb90623f48a8db97591d2d380df5ca98265567e0264210ebda129bfa9d4b9e9"
+        "bytes": 81684,
+        "sha256": "1b6d58ac9392946d82f1531e9e4a8cfe09f63ed9d3c0762458771ee8cd7dd783"
       }
     },
     {
@@ -29476,8 +29481,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-history__iphone390x844-app-xl.png",
-        "bytes": 93191,
-        "sha256": "547d5ae99db5daa70f4b66b9ec9c61daf91cf094c5913231564b38b0e7a98121"
+        "bytes": 93180,
+        "sha256": "4efa02744c4a8ffb2fe5fe0f2c4ef55c33b8885918fc631c3b65387a0e527fda"
       }
     },
     {
@@ -29542,8 +29547,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-consent__iphone390x844-app-xl.png",
-        "bytes": 129763,
-        "sha256": "bd8f4fb2ab3d8b1198f37fa2f6a2a0a2b899eb43e254b8aff426b7eeb3f15aec"
+        "bytes": 129759,
+        "sha256": "f9eabf3e5ed0bd3c9e099cdb9c4cc45b3b010f2652696d799d8bfa392938223a"
       }
     },
     {
@@ -29597,8 +29602,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-version__iphone390x844-app-xl.png",
-        "bytes": 81698,
-        "sha256": "406d3cdfc5130560c81e4204ba1c0b2612453e106d15e0793910da9dda224071"
+        "bytes": 84427,
+        "sha256": "815f858e2efee416ba934776f1bb329d4c523391ed0b92770305b03d7eb99e41"
       }
     },
     {
@@ -29651,8 +29656,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-medication-reminder__iphone390x844-app-xl.png",
-        "bytes": 102162,
-        "sha256": "3650fcc8e0354ed79405b636bff414598fff5f5e5a1253332a80a080a5ee984d"
+        "bytes": 102291,
+        "sha256": "bb1e90dfe281f54a10227af5b33ec31f775b0f9bfa1ebec08b4ab97b1ac3d126"
       }
     },
     {
@@ -29741,8 +29746,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-medication-manager__iphone390x844-app-xl.png",
-        "bytes": 106913,
-        "sha256": "02edf8b39aae56d70a489c1a60e83f919edd372308b88bf533ad0009cb533318"
+        "bytes": 106756,
+        "sha256": "e9932b016820a965d9f7f4ca1d13ff2261c158bfdbe20a3804850c5d3d9c2c43"
       }
     },
     {
@@ -29799,8 +29804,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-auth__iphone390x844-app-xl.png",
-        "bytes": 98265,
-        "sha256": "d7b343ae9b21e7fe9f303011149ebaad6614b63f8f7380e122bd5fd6f2b74766"
+        "bytes": 93975,
+        "sha256": "c3fea332f0498ec33c2b798b31581fd1529668a84977105aa7d1d08bad249dec"
       }
     },
     {
@@ -29936,8 +29941,8 @@
       "browserErrors": [],
       "screenshot": {
         "path": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/es__modal-notification-inbox__iphone390x844-app-xl.png",
-        "bytes": 86726,
-        "sha256": "449b5a8281629599ed1494ddcadd5c7f056365b38c54fb54939717bdb87963aa"
+        "bytes": 88696,
+        "sha256": "8d103cecba51a97bebdb7fe2e6f20a730b82235205db0a1e3cda02f412aba9a1"
       }
     }
   ],
@@ -29948,5 +29953,5 @@
     "Native iOS controls, safe-area behavior, font rendering, and physical-device interaction remain part of the exact-build installed-iPhone 456-screenshot release gate.",
     "No production, staging, StoreKit, Gateway, Voice, Avatar, Supabase, or App Store Connect service was exercised."
   ],
-  "completedAt": "2026-07-29T14:10:32.642Z"
+  "completedAt": "2026-07-29T14:26:20.341Z"
 }
