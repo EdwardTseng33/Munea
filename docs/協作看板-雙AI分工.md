@@ -2,8 +2,8 @@
 
 ### 2026-07-29 Codex 📱 最新 main 包版 1.0.46 Build 2（call-path risk；App E2E pending）
 
-- **任務／來源**：獨立 worktree `codex/app-store-1.0.46-build2-post339-20260729`；`origin/main@1b3d0654`（through #339）＋發版設定，精確 packaged source `33a118693d848d11a4f9453c73401995a47cbb6e`。納入 #334 就診摘要／原生 PDF、#336 通知列修正與 #339 官網前門清理；未帶入仍未合併的 Draft #319。
-- **結果**：完整 `test:launch` exit 0；正式 Archive／IPA 防漏全 PASS。IPA 59,056,305 bytes，SHA-256 `e4422fb86b03437e2bcceb1e044c4399c2097f7c7ac9fd7676cce29ad1000318`。
+- **任務／來源**：獨立 worktree `codex/app-store-1.0.46-build2-post339-20260729`；`origin/main@1b3d0654`（through #339）＋發版設定，GitHub 精確 packaged source `b9dd198b0dff0a46ace222d497d18462f634047d`。納入 #334 就診摘要／原生 PDF、#336 通知列修正與 #339 官網前門清理；未帶入仍未合併的 Draft #319。
+- **結果**：完整 `test:launch` exit 0；本機測試 tree 與遠端 package tree 同為 `47320a8e`；正式 Archive／IPA 防漏全 PASS。最終 IPA 59,056,372 bytes，SHA-256 `7f5e639215917646aa40816d61e3270dc82cde46be1f424ee2d1fecf5efae542`。
 - **手機**：同來源 Development-signed／production-config App 已安裝、啟動並由 Edward iPhone 15 Pro 回讀 `1.0.46 (2)`；無 QA fixture。
 - **Apple／硬 Gate**：Build 2 尚未上傳；App Store Connect latest uploaded／selected 仍為 `1.0.45 (Build 1)`。0 點真帳號與 credited 真麥克風／AI 聲畫／掛斷釋位未完成，維持 `App E2E pending`；不送審、不公開。
 
