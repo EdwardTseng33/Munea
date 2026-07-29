@@ -17,7 +17,12 @@ function readText(relativePath) {
 const manifest = readJson('web/src/i18n/app-surface-manifest.json');
 const screenManifest = readJson('web/src/i18n/app-screen-manifest.json');
 assert.equal(manifest.schema, 'munea.i18n-app-surface-manifest.v1');
-assert.equal(manifest.integrationStatus, 'pending-full-surface-integration');
+assert.equal(manifest.integrationStatus, 'integrated');
+assert.equal(manifest.integrationEvidence.releaseEvidence, false);
+assert.equal(
+  manifest.integrationEvidence.report,
+  'docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/full-surface-all-profiles-local-browser-precheck.json',
+);
 assert.deepEqual(manifest.captureProfiles, [
   'iphone-small-standard',
   'iphone-standard',
@@ -69,7 +74,7 @@ for (const surface of manifest.surfaces) {
     ['dom-anchor', 'composite-state', 'dynamic-source'].includes(surface.captureMode),
     `${surface.state} has an unsupported capture mode`,
   );
-  assert.equal(surface.localizationStatus, 'pending-integration');
+  assert.equal(surface.localizationStatus, 'integrated');
   assert.ok(surface.coverageGroup, `${surface.state} is missing a coverage group`);
   if (!sourceCache.has(surface.source)) sourceCache.set(surface.source, readText(surface.source));
   const source = sourceCache.get(surface.source);

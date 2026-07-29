@@ -1,7 +1,13 @@
 {
   "schema": "munea.i18n-app-screen-manifest.v1",
-  "bindingStatus": "pending-main-screen-integration",
+  "bindingStatus": "integrated",
   "visualQaPending": true,
+  "integrationEvidence": {
+    "kind": "local-browser-precheck",
+    "coverage": "38-states-x-4-locales-x-3-profiles",
+    "report": "docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/full-surface-all-profiles-local-browser-precheck.json",
+    "releaseEvidence": false
+  },
   "requiredStates": {
     "signed-out": [
       "auth.sheetTitle",

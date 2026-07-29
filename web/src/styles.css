@@ -367,7 +367,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .auth-card-main { display: flex; align-items: center; gap: 13px; min-width: 0; }
 .auth-ico { width: 42px; height: 42px; border-radius: 13px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); flex-shrink: 0; }
 .auth-copy { min-width: 0; }
-.auth-title { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 17px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.auth-title { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 17px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
 .auth-email { font-size: 13px; color: var(--teal-dd); font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 185px; }
 .auth-email:empty { display: none; }
 .auth-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
@@ -704,6 +704,20 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .cn-row .cn-name { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--ink); }
 .cn-row .cn-desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .cn-row .cn-btn { font-family: var(--display); font-weight: 700; font-size: 15px; color: #fff; background: var(--teal-d); border: none; border-radius: 999px; padding: 9px 17px; cursor: pointer; flex-shrink: 0; }
+/* English and Spanish expand sharply at the App XL font setting. Keep the
+   description readable instead of squeezing it between the icon and CTA. */
+html[lang="en"] #connect .cn-row,
+html[lang="es"] #connect .cn-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+}
+html[lang="en"] #connect .cn-row .cn-btn,
+html[lang="es"] #connect .cn-row .cn-btn {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 7px;
+}
 .cn-row .cn-btn.done { background: var(--mint); color: var(--teal-dd); }
 .cn-row .cn-btn.disconnect { background: var(--surface); color: var(--danger-d); border: 1px solid rgba(176,57,45,.4); }
 .cn-row .cn-btn.disconnect.arm { background: rgba(194,75,68,.1); }
@@ -2061,10 +2075,10 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .credit-rules .cr-row { padding: 11px 0; }
 .credit-rules .cr-row + .cr-row { border-top: 1px solid var(--line); }
 /* 標題固定寬 → 所有說明對齊同一條垂直線（原本標題長度不一、說明起點像鋸齒）Edward 2026-07-14 */
-.cr-row { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ink2); font-size: 13px; line-height: 1.45; white-space: nowrap; }
+.cr-row { display: flex; align-items: flex-start; gap: 10px; min-width: 0; color: var(--ink2); font-size: 13px; line-height: 1.45; white-space: normal; }
 .cr-row > span:last-child { min-width: 0; }
 .cr-row b { flex: 0 0 5.6em; color: var(--ink); font-weight: 800; }
-.cr-note { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.cr-note { flex: 1; min-width: 0; color: var(--muted); overflow-wrap: anywhere; }
 .cr-row i { flex: 0 0 1px; width: 1px; height: 13px; margin: 0; background: var(--teal); opacity: .7; }
 .cr-ic { flex: 0 0 29px; width: 29px; height: 29px; border-radius: 9px; display: grid; place-items: center; color: var(--teal-dd); background: var(--mint); }
 .cr-ic .ic { width: 18px; height: 18px; }
@@ -2090,6 +2104,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .nps-readout { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
 .nps-readout b { font-family: var(--display); font-size: 34px; font-weight: 900; color: var(--teal-dd); line-height: 1; min-width: 44px; }
 .nps-readout span { font-size: 14.5px; color: var(--muted); font-weight: 600; }
+#fbPhotoLabel > span { margin-left: .5em; }
 .nps-slider { --fill: 80%; -webkit-appearance: none; appearance: none; width: 100%; height: 14px; border-radius: 100px; outline: none; margin: 6px 0 10px; cursor: pointer;
   background: linear-gradient(to right, var(--teal) 0%, var(--teal) var(--fill), var(--mint) var(--fill), var(--mint) 100%); }
 .nps-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 3px solid var(--teal); box-shadow: 0 4px 10px -3px rgba(35,108,102,.45); cursor: grab; }
