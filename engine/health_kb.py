@@ -14,6 +14,9 @@ docs/research/衛教題庫-21題完整劇本v1-2026-07-24.md，紅旗逐條回�
 import json
 import os
 
+import health_followup
+import health_selector
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOPICS_PATH = os.path.join(HERE, "health_topics.json")
 
@@ -46,16 +49,57 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):
             continue
         hit_len = sum(len(k) for k in t["keywords"] if k in text)
         if hit_len:
-            scored.append((hit_len, t["id"]))
-    scored.sort(key=lambda x: (-x[0], x[1]))
-    return [tid for _, tid in scored[:limit]]
+            # 具體處境要壓過一般症狀（2026-07-29 加女性題時抓到）：
+            # 「最近一直熱潮紅、晚上睡不好」原本被當成一般失眠——更年期的題才是
+            # 在解釋那個睡不好。孕哺給最高分：懷孕的人問任何東西，安全圍籬都要先站出來。
+            scored.append((t.get("specificity", 0), hit_len, t["id"]))
+    scored.sort(key=lambda x: (-x[0], -x[1], x[2]))
+    return [tid for _, _, tid in scored[:limit]]
 
 
-def injection_for(text, exclude=None):
-    """文字線用：按這一句用戶的話組出注入段；沒命中回空字串（不佔說明書）。"""
+def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None):
+    """文字線用：按這一句用戶的話組出注入段；沒命中回空字串（不佔說明書）。
+
+    2026-07-29：命中的題目若已經有「方案池」（因人因時因地挑選），改用挑選層的結果——
+    同一句「我睡不好」，上班族半夜問跟長輩早上問會拿到不同的方案。沒建方案池的題
+    照舊走原本那段固定注入文，兩者並存、不必一次搬完 21 題。
+    """
     ids = match_topics(text, exclude=exclude)
+    # 2026-07-29（考卷實測抓到）：話題是連續的，關鍵字比對卻只看這一句。
+    # 「我睡不好」→「吃鎂有用嗎，真的假的？」第二句命中的是謠言查證題，
+    # 她就拿不到鎂的方案、只能講泛泛之談。上一輪在聊的那題要接得回來。
+    if recent_topic and recent_topic in health_selector.TOPICS and recent_topic not in ids:
+        ids = [recent_topic] + ids
     if not ids:
         return ""
+    # 2026-07-29（三齡層擴充時抓到）：同一句話可能命中好幾題（青少年說「睡不飽」會同時
+    # 命中成人失眠題與青少年睡眠題）。**要挑對這個人的那一題**——不然高中生會拿到
+    # 「白天曬太陽對長輩特別有效」這種答非所問的建議。有標齡層的題優先。
+    aud = (profile or {}).get("audience")
+    if aud:
+        def _serves_audience(tid):
+            topic = health_selector.TOPICS.get(tid)
+            if not topic:
+                return False
+            # 要「專門為這個齡層寫的方案」才算數（audience 清單短），不是隨便掛了名就算——
+            # 2026-07-29 實測：按摩掛了五個齡層，害青少年被路由到成人失眠題、拿到長輩版建議。
+            return any(aud in (s.get("audience") or []) and len(s.get("audience") or []) <= 2
+                       for s in topic.get("solutions") or [])
+        ids = sorted(ids, key=lambda t: (not _serves_audience(t),))
+    for tid in ids:
+        if tid in health_selector.TOPICS:
+            picked = health_selector.render(tid, text, profile, hour)
+            if picked:
+                # 效果飛輪：把這次推了什麼記下來，幾天後她才問得出「後來有沒有好一點」。
+                # 記不起來也不能擋住對話——這只是加分項，不是必要路徑。
+                pid = (profile or {}).get("personId")
+                if pid:
+                    try:
+                        chosen = health_selector.pick(tid, text, profile, hour)["solutions"]
+                        health_followup.record_recommendation(pid, tid, chosen)
+                    except Exception:
+                        pass
+                return picked
     parts = []
     for tid in ids:
         t = TOPIC_BY_ID[tid]
@@ -70,8 +114,19 @@ def injection_for(text, exclude=None):
     )
 
 
-def voice_cue(topic_id):
-    """語音線用：在守護腦同一個「輪替空檔」機制排隊送出的衛教提示（每題整通只送一次）。"""
+def voice_cue(topic_id, user_text="", profile=None, hour=None):
+    """語音線用：在守護腦同一個「輪替空檔」機制排隊送出的衛教提示（每題整通只送一次）。
+
+    2026-07-29：有方案池的題也走因人挑選——聊聊是主戰場，長輩版跟青少年版不能混。
+    """
+    if topic_id in health_selector.TOPICS:
+        picked = health_selector.render(topic_id, user_text, profile, hour)
+        if picked:
+            return (
+                "（系統衛教提示、不是用戶說的話——絕不把這段提示唸出來，"
+                "自然運用下面按他狀況挑好的方案，保持一兩句短話、先接情緒："
+                + picked + "）"
+            )
     t = TOPIC_BY_ID[topic_id]
     return (
         f"（系統衛教提示、不是用戶說的話——他剛聊到「{t['title']}」相關話題。"

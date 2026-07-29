@@ -3262,6 +3262,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pass "Gateway user health redaction and admin boundaries are valid"
 
+Step "Gateway worker-health terminal-state guard"
+& $Python "scripts/test_gateway_worker_health.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "Gateway worker-health terminal-state guard failed with exit code $LASTEXITCODE"
+}
+Pass "A terminated worker stays down under healthy heartbeats"
+
 Step "Git diff check"
 git diff --check
 Pass "No whitespace errors"

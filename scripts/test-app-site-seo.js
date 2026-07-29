@@ -70,9 +70,20 @@ for (const key of [
   assert.ok(globalHeaders.some((header) => header.key === key), `Missing hosting header ${key}`);
 }
 
+// 四語系合約：每個語系一個真網址，彼此用 hreflang 互指。
+// 靠 JS 當場換字的舊做法，Google 只看得到中文版 —— 這裡守住不准回頭。
+const locales = [
+  { code: "zh", dir: "", hreflang: "zh-Hant" },
+  { code: "en", dir: "en", hreflang: "en" },
+  { code: "ja", dir: "ja", hreflang: "ja" },
+  { code: "es", dir: "es", hreflang: "es" },
+];
+// trailingSlash:false —— 對外網址不帶尾斜線，否則每個語系都要先吃一次轉址
+const localeUrl = (dir) => (dir ? `https://app.munea.net/${dir}` : "https://app.munea.net/");
+
 const sitemap = read("sitemap.xml");
 const sitemapUrls = [
-  "https://app.munea.net/",
+  ...locales.map((l) => localeUrl(l.dir)),
   "https://app.munea.net/privacy",
   "https://app.munea.net/terms",
   "https://app.munea.net/support",
@@ -81,6 +92,14 @@ for (const url of sitemapUrls) {
   assert.match(sitemap, new RegExp(`<loc>${url.replaceAll(".", "\\.")}</loc>`));
 }
 assert.equal(countMatches(sitemap, /<url>/g), sitemapUrls.length);
+for (const l of locales) {
+  assert.match(
+    sitemap,
+    new RegExp(`hreflang="${l.hreflang}" href="${localeUrl(l.dir).replaceAll(".", "\\.")}"`),
+    `sitemap missing hreflang alternate for ${l.code}`,
+  );
+}
+assert.match(sitemap, /hreflang="x-default"/, "sitemap needs an x-default alternate");
 
 const robots = read("robots.txt");
 assert.match(robots, /^User-agent:\s*\*/m);
@@ -88,7 +107,11 @@ assert.match(robots, /^Allow:\s*\/$/m);
 assert.match(robots, /^Sitemap:\s*https:\/\/app\.munea\.net\/sitemap\.xml$/m);
 
 const pages = [
-  { file: "index.html", canonical: "https://app.munea.net/" },
+  ...locales.map((l) => ({
+    file: l.dir ? `${l.dir}/index.html` : "index.html",
+    canonical: localeUrl(l.dir),
+    locale: l,
+  })),
   { file: "privacy.html", canonical: "https://app.munea.net/privacy" },
   { file: "terms.html", canonical: "https://app.munea.net/terms" },
   { file: "support.html", canonical: "https://app.munea.net/support" },
@@ -112,6 +135,35 @@ for (const page of pages) {
   );
   assert.equal(countMatches(html, /<h1(?:\s|>)/gi), 1, `${page.file} needs exactly one h1`);
   assert.doesNotMatch(html, /noindex/i, `${page.file} must remain indexable`);
+
+  if (!page.locale) continue;
+
+  // 每個語系頁都要：宣告自己的語言、把其他三語都指出去、附 x-default
+  assert.match(
+    html,
+    new RegExp(`<html\\s+lang=["'][^"']*${page.locale.code}[^"']*["']`, "i"),
+    `${page.file} must declare lang for ${page.locale.code}`,
+  );
+  for (const other of locales) {
+    assert.match(
+      html,
+      new RegExp(
+        `rel="alternate"\\s+hreflang="${other.hreflang}"\\s+href="${localeUrl(other.dir).replaceAll(".", "\\.")}"`,
+      ),
+      `${page.file} missing hreflang alternate for ${other.code}`,
+    );
+  }
+  assert.match(html, /hreflang="x-default"/, `${page.file} needs an x-default alternate`);
+
+  // 上架前不准留死連結：App Store 網址沒填就不該出現在頁面上
+  const appStoreUrl = JSON.parse(readRoot("site-src/config.json")).appStoreUrl;
+  if (!appStoreUrl) {
+    assert.doesNotMatch(
+      html,
+      /apps\.apple\.com/i,
+      `${page.file} must not link to the App Store before the app is live`,
+    );
+  }
 }
 
-console.log("[ok] app.munea.net SEO contract passed");
+console.log(`[ok] app.munea.net SEO contract passed (${locales.length} locales)`);

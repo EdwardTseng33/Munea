@@ -1,0 +1,3549 @@
+{
+  "version": "v1",
+  "updated": "2026-07-29",
+  "designDoc": "docs/research/因人因時因地-方案池與挑選邏輯-2026-07-29.md",
+  "note": "方案池：一個症狀不是一條答案，是一池方案。每個方案標好『多快有感／屬哪一類／要花多少力氣／誰不能用』，由 health_kb 的挑選層依這個人的狀況（急不急、偏好、做不做得到、年齡）安全剔除後排序，只端出主推 1＋備援 2。設計依據見 designDoc。",
+  "riskLevels": {
+    "L1": "生活調整——可直接建議",
+    "L2": "食物——可直接建議，食補優先",
+    "L3": "保健品／健康食品——可建議，但同段話必須講滿：成熟度＋每日上限＋禁忌族群且要問專業",
+    "L4": "用藥／處方——只提醒去問，絕不替他判斷",
+    "L5": "急症——立即轉介／119，對方推辭也不軟化"
+  },
+  "maturity": {
+    "proven": "🟢已證實",
+    "emerging": "🟡有苗頭、證據還在累積",
+    "traditional": "⚪傳統經驗，僅供參考"
+  },
+  "topics": {
+    "TW-EDU-01": {
+      "title": "睡不好",
+      "reframe": [
+        {
+          "when": "照顧者說『我媽半夜要起來上廁所／我根本睡不飽』",
+          "say": "這不是你睡不著，是你根本沒得睡——先把這件事講出來接住他，再談方法。硬套失眠的建議會答非所問。"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "sleep-screen-off",
+          "label": "睡前一小時把手機放遠一點",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "睡前一個鐘頭把手機放遠一點、燈調暗，讓腦袋知道要休息了——今晚就可以試。"
+        },
+        {
+          "id": "sleep-warm-bath",
+          "label": "睡前溫水澡／泡腳",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "elder",
+            "women"
+          ],
+          "say": "睡前洗個溫水澡或泡個腳，起來體溫慢慢降下來的時候比較好睡。"
+        },
+        {
+          "id": "sleep-fixed-waketime",
+          "label": "固定時間起床",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "elder",
+            "women"
+          ],
+          "notFor": [
+            "輪班工作",
+            "照顧者夜間需起身"
+          ],
+          "say": "每天固定同一個時間起床（連假日也是），身體的生理時鐘會慢慢調回來。"
+        },
+        {
+          "id": "sleep-daylight-walk",
+          "label": "白天曬太陽、走一走",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "白天多出去曬曬太陽、走一走，晚上比較好睡——這個對長輩特別有效。"
+        },
+        {
+          "id": "sleep-gentle-stretch",
+          "label": "睡前伸展／簡單瑜珈",
+          "riskLevel": "L1",
+          "maturity": "emerging",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "睡前做幾個慢慢的伸展、深呼吸，肩頸鬆開來人也比較容易放鬆下來。"
+        },
+        {
+          "id": "sleep-cut-caffeine",
+          "label": "下午之後不碰咖啡因",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "下午之後就別再喝咖啡、濃茶了，咖啡因在身體裡待得比想像中久。"
+        },
+        {
+          "id": "sleep-magnesium-food",
+          "label": "從食物補鎂",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver",
+            "women"
+          ],
+          "say": "深綠色蔬菜、堅果、香蕉本來就有鎂，從吃的補最安全，也不用擔心過量。"
+        },
+        {
+          "id": "sleep-magnesium-supplement",
+          "label": "睡前補鎂（保健品）",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "一週",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "contraindications": [
+            "腎功能異常",
+            "低血壓",
+            "孕哺",
+            "腸胃術後"
+          ],
+          "dailyCap": "補充品每日不超過 250 毫克",
+          "evidence": {
+            "year": 2025,
+            "source": "隨機雙盲對照試驗（PubMed 40918053）",
+            "population": "18-65 歲、自述睡不好 155 人",
+            "effect": "失眠嚴重度改善 -3.9 vs 安慰劑 -2.3（p=0.049），效果量小",
+            "olderAdults": "2021 老年人統合分析：入睡快約 17 分鐘，但低品質證據"
+          },
+          "say": "這一兩年有個比較新的研究，是找像你這樣睡不好的上班族做的——睡前補鎂，失眠的困擾確實有減輕一點，不過效果不大、不是人人有感。台灣營養師一般建議補充品的鎂一天不超過 250 毫克，吃多了會拉肚子；你如果有腎臟或血壓的狀況，要先問過醫師或營養師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "sleep-split-rest",
+          "label": "把睡眠切兩段顧",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "caregiver"
+          ],
+          "say": "既然半夜一定會被叫起來，不如把睡眠切成兩段——他起來之前先讓自己睡一段，比硬撐整夜好過一點。"
+        },
+        {
+          "id": "sleep-respite-service",
+          "label": "喘息服務補眠",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "caregiver"
+          ],
+          "say": "長照的喘息服務可以讓你補個眠，這是你應得的，要不要我幫你記著、你有空去問問看？"
+        },
+        {
+          "id": "sleep-acupressure",
+          "label": "睡前穴位按摩",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "中醫調理",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver",
+            "women"
+          ],
+          "evidence": {
+            "source": "台北榮總傳統醫學部失眠中醫論治衛教",
+            "finding": "睡前 5-10 分鐘按安眠穴、神門穴，屬傳統經驗層級、無交互作用風險"
+          },
+          "say": "如果你習慣中醫那一套，睡前花五分鐘按一下耳後的安眠穴、手腕的神門穴，按到有點痠脹就好。這是老方法、沒有什麼壞處，但也別期待它一次見效。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "sleep-melatonin-blocked",
+          "label": "褪黑激素（台灣屬處方藥）",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "褪黑激素在台灣是處方藥，我不能建議你去買——這個要跟醫師討論才行。"
+        },
+        {
+          "id": "sleep-tcm-herbs",
+          "label": "中藥調理",
+          "riskLevel": "L4",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "中醫調理",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "blocked": true,
+          "evidence": {
+            "source": "衛福部中醫藥司衛教／中國醫藥大學附設醫院中西藥併用衛教",
+            "finding": "中西藥「隔一兩小時仍算併用」——藥物可能 72 小時才完全排出，不是錯開時間就沒事"
+          },
+          "say": "中藥調理要給中醫師把脈開方，我不能建議你吃什麼。有一件事一定要提醒你：**很多人以為中藥西藥隔一兩個小時吃就沒事，其實那樣還是算一起吃**——藥物在身體裡可能要好幾天才排乾淨。你如果同時在吃西藥，一定要讓中醫師和西醫都知道。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "sleep-refer-doctor",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "escalateWhen": [
+            "長期失眠",
+            "白天累到不行",
+            "打呼合併呼吸中止",
+            "情緒持續低落"
+          ],
+          "say": "如果這樣持續好一陣子、白天累到影響生活，或睡覺會打呼打到像停止呼吸，這個要看醫生——一般會先看家醫科，或是有睡眠門診的醫院。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-25",
+          "when": "他同時提到壓力大、心情悶、提不起勁",
+          "say": "睡不好跟壓力常常是同一件事的兩面——如果他也在講壓力或心情，別只給睡眠的方法，把壓力那條也接進來。"
+        },
+        {
+          "topicId": "TW-EDU-03",
+          "when": "他同時提到血壓高",
+          "say": "睡不好會讓血壓飄、血壓藥也可能影響睡眠——兩件事要一起看，別分開處理。"
+        }
+      ]
+    },
+    "TW-EDU-22": {
+      "title": "肩頸／腰背痠痛（久坐）",
+      "solutions": [
+        {
+          "id": "neck-strength-training",
+          "label": "頸肩肌力訓練",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "caregiver",
+            "women"
+          ],
+          "evidence": {
+            "source": "辦公室工作者頸痛系統性回顧與統合分析（PubMed 32657531／30135909）",
+            "finding": "肌力訓練有較明確的實證支持（level II），單純伸展的證據反而較弱"
+          },
+          "say": "這裡有個跟直覺不太一樣的重點——研究上真正比較有效的是「練肌力」，不是一直拉筋。像簡單的聳肩、划船動作、靠牆挺胸，一週做個幾次，比每天拉半天有用。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "neck-workstation",
+          "label": "把桌椅螢幕調對",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker"
+          ],
+          "say": "螢幕調到眼睛平視、椅子讓腳踩得到地、手肘有支撐——研究裡「調整工作環境」跟肌力訓練一起做效果最好，而且今天就能調。"
+        },
+        {
+          "id": "neck-microbreak",
+          "label": "每小時起來動一下",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "caregiver"
+          ],
+          "say": "設個鬧鐘，每個鐘頭起來走一分鐘、肩膀轉一轉。久坐最傷的不是姿勢不良，是「一個姿勢維持太久」。"
+        },
+        {
+          "id": "neck-heat",
+          "label": "熱敷放鬆",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "痠得難受的時候熱敷一下會舒服些，這算是讓當下好過，不是根治。"
+        },
+        {
+          "id": "neck-gentle-yoga",
+          "label": "伸展／瑜珈",
+          "riskLevel": "L1",
+          "maturity": "emerging",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "伸展跟瑜珈做起來很舒服，也有幫助，只是研究上證據沒有練肌力那麼紮實——當放鬆很好，別當唯一的辦法。"
+        },
+        {
+          "id": "neck-caregiver-transfer",
+          "label": "搬移長輩的省力姿勢",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "caregiver"
+          ],
+          "say": "扶人起身的時候記得屈膝、靠近他的身體再使力，不要彎腰用背去撐——照顧者的腰傷多半是這樣一次次累積來的。長照的輔具租借也可以問問看。"
+        },
+        {
+          "id": "neck-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "escalateWhen": [
+            "手麻",
+            "無力",
+            "痛到晚上睡不著",
+            "痛延伸到手臂"
+          ],
+          "say": "如果會手麻、手沒力，或痛到晚上睡不著，這個要看醫生——一般會先看復健科或骨科，別自己一直忍。"
+        }
+      ]
+    },
+    "TW-EDU-23": {
+      "title": "青少年睡不夠／叫不起來",
+      "reframe": [
+        {
+          "forWhom": "parent",
+          "when": "家長抱怨小孩熬夜叫不起來",
+          "say": "先幫家長把這件事翻譯過來：青春期一開始，生理時鐘真的會往後移一到兩個小時（褪黑激素分泌時間延後），**他不是懶、不是故意跟你作對，是生理**。這句話先講出來，親子之間的火會小很多，後面的建議才聽得進去。"
+        },
+        {
+          "forWhom": "self",
+          "when": "青少年自己說睡不飽",
+          "say": "先讓他知道：晚睡爬不起來不是你意志力差，你這個年紀的生理時鐘本來就會往後跑一兩個小時——這是真的、有研究的。不用先罵自己。"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "teen-explain-biology",
+          "label": "先講清楚這是生理不是懶",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "teen"
+          ],
+          "forWhom": "parent",
+          "evidence": {
+            "source": "美國兒科醫學會學校上課時間立場聲明／青少年睡眠相位延遲研究",
+            "finding": "青春期褪黑激素分泌延後約1.5-2小時；13-18歲建議睡8-10小時，實際多半只有7小時"
+          },
+          "say": "跟他吵「早點睡」通常沒用，因為他生理上那個時間真的還不想睡。與其吵，不如把重點放在「早上怎麼比較好起來」跟「假日別補太多」。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "teen-weekend-anchor",
+          "label": "假日別補眠補太多",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "teen"
+          ],
+          "say": "假日最多比平常晚起一兩個小時就好。一補就補到中午，等於每個週末讓生理時鐘再往後推，禮拜一會更爬不起來。"
+        },
+        {
+          "id": "teen-morning-light",
+          "label": "起床後先照到光",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "teen"
+          ],
+          "say": "早上起來先拉開窗簾、出門走幾分鐘，光線是把生理時鐘往前拉最有效的東西——比多睡十分鐘有用。"
+        },
+        {
+          "id": "teen-screen-limit",
+          "label": "睡前螢幕時間",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "teen"
+          ],
+          "evidence": {
+            "source": "瑞典公共衛生署 2024 建議／螢幕時間與青少年憂鬱症狀 12 個月追蹤",
+            "finding": "13-18歲每日休閒螢幕建議上限2-3小時；螢幕時間主要透過排擠睡眠影響情緒"
+          },
+          "say": "研究上螢幕真正的傷害不是藍光，是「一滑就忘記時間、睡眠被吃掉」。與其禁用，不如一起約好一個「手機睡覺時間」，放到房間外面充電。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "teen-no-blame-talk",
+          "label": "別用罵的談這件事",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "teen"
+          ],
+          "forWhom": "parent",
+          "say": "這個年紀你越用罵的，他越不會跟你講真話。可以換成問他「你自己覺得睡得夠嗎？早上起來會不會很痛苦？」——讓他自己說，比你說十句有用。"
+        },
+        {
+          "id": "teen-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "teen"
+          ],
+          "escalateWhen": [
+            "白天嚴重嗜睡影響上課",
+            "情緒明顯低落或不想上學",
+            "體重快速變化",
+            "講到不想活"
+          ],
+          "say": "如果他白天累到上課都在睡、或情緒明顯低落、不想上學，這個要看醫生——一般先看兒童青少年身心科或家醫科。**要是他講到不想活、活著沒意思這類的話，那不能等，立刻找專業幫忙（1925 安心專線 24 小時）。**"
+        }
+      ]
+    },
+    "TW-EDU-25": {
+      "title": "工作壓力／情緒耗竭",
+      "reframe": [
+        {
+          "forWhom": "self",
+          "when": "照顧者說撐不住",
+          "say": "照顧者的累跟一般工作壓力不一樣——他沒有下班時間、也不能請假。先承認這件事，再談方法。"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "stress-name-it",
+          "label": "先把壓力講出來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "caregiver",
+            "women",
+            "teen"
+          ],
+          "say": "光是把「我現在壓力很大」講出來、有人聽，身體的緊繃就會鬆一點。你想講的話我都在。"
+        },
+        {
+          "id": "stress-micro-break",
+          "label": "每天留一段完全屬於自己的時間",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "一天留十五分鐘，不回訊息、不處理別人的事，做一件自己想做的小事。不用長，但要每天有。"
+        },
+        {
+          "id": "stress-caregiver-respite",
+          "label": "照顧者的喘息不是奢侈",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "caregiver"
+          ],
+          "say": "長照的喘息服務就是設計給你用的，不是偷懶。你倒下了，家裡就沒人撐了——照顧自己也是照顧他。"
+        },
+        {
+          "id": "stress-breathing",
+          "label": "慢呼吸",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "caregiver",
+            "women",
+            "teen",
+            "elder"
+          ],
+          "say": "覺得快撐不住的時候，吸氣四秒、吐氣六秒，做個十次。吐氣比吸氣長，身體才會知道可以放鬆了。"
+        },
+        {
+          "id": "stress-move",
+          "label": "動一動比躺著有用",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "women",
+            "teen"
+          ],
+          "say": "壓力大的時候身體其實需要動——快走二十分鐘，比癱在沙發上滑手機更能把那個緊繃卸掉。"
+        },
+        {
+          "id": "stress-acupressure",
+          "label": "按內關穴",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "中醫調理",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "手腕內側往上三指寬的內關穴，煩躁的時候按一按。老方法、沒壞處，當作給自己一個停下來的理由。"
+        },
+        {
+          "id": "stress-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "caregiver",
+            "women",
+            "teen",
+            "elder"
+          ],
+          "escalateWhen": [
+            "持續兩週以上",
+            "睡不著吃不下",
+            "什麼都提不起勁",
+            "不想出門",
+            "講到不想活"
+          ],
+          "say": "如果這樣持續兩個禮拜以上、連本來喜歡的事都提不起勁，那不是你不夠堅強，是該找專業的人聊聊了——先看家醫科就可以。**要是有不想活的念頭，那不能等，1925 安心專線 24 小時都有人接。**"
+        }
+      ]
+    },
+    "TW-EDU-11": {
+      "title": "胃脹氣／消化不良／火燒心",
+      "solutions": [
+        {
+          "id": "reflux-no-lie-down",
+          "label": "餐後別馬上躺",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "吃完別馬上躺，隔個兩三小時再躺，睡前三小時盡量別再吃東西——這個最有感。"
+        },
+        {
+          "id": "reflux-late-dinner",
+          "label": "別再吃宵夜",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker"
+          ],
+          "say": "加班晚吃、吃完就倒下睡，這是上班族火燒心最常見的組合。如果真的要晚吃，就吃少一點、別吃油炸的，睡前撐個兩小時。"
+        },
+        {
+          "id": "reflux-raise-head",
+          "label": "床頭墊高一點",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "床頭那側墊高十幾公分（枕頭墊高沒用、要整個床頭抬起來），晚上胃酸比較不會往上跑。"
+        },
+        {
+          "id": "reflux-diet",
+          "label": "少油炸、少吃太飽",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "油炸、太甜、咖啡濃茶跟酒都會讓胃酸更容易往上，先減這幾樣，一餐別吃到太撐。"
+        },
+        {
+          "id": "reflux-weight",
+          "label": "體重控制",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "高",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "肚子的壓力會把胃往上擠，體重降一點對火燒心是實打實的幫助——不用急，慢慢來。"
+        },
+        {
+          "id": "reflux-meds-blocked",
+          "label": "胃藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "胃藥的種類跟吃法我不能建議；長期在吃的也別自己停，那要醫師評估。"
+        },
+        {
+          "id": "reflux-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吞嚥困難",
+            "不明原因變瘦",
+            "解黑便",
+            "貧血",
+            "胸悶合併冒冷汗或喘"
+          ],
+          "say": "如果會吞不下去、莫名變瘦、大便變黑，這要看腸胃科排除食道胃部的問題。**最重要的一條：火燒心會罩住心肌梗塞——要是合併冒冷汗、喘、痛延伸到左手或下巴、動一動更痛，先當心臟的事處理，立刻就醫或打 119。**"
+        }
+      ]
+    },
+    "TW-EDU-02": {
+      "title": "退化性關節炎／膝蓋痛",
+      "solutions": [
+        {
+          "id": "knee-thigh-strength",
+          "label": "大腿肌力訓練",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "膝蓋不好最有效的其實是練大腿——坐著抬腿、扶著椅子起立坐下，一天幾次就好。肌肉幫忙撐，膝蓋就不用自己扛。"
+        },
+        {
+          "id": "knee-weight",
+          "label": "體重控制",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "高",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "體重每少一點，膝蓋每一步的負擔就少好幾倍——這個的實證比任何保健品都紮實。"
+        },
+        {
+          "id": "knee-avoid-squat",
+          "label": "避開傷膝蓋的動作",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "走路挑平地、少爬樓梯、別久蹲久跪。拖地擦地那種蹲著做的家事，換成坐著或用長柄的。"
+        },
+        {
+          "id": "knee-patch",
+          "label": "痠痛貼布",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "貼布讓當下舒服一點可以，但別天天長期貼把問題蓋住——痛是身體在講話。",
+          "secondLine": true,
+          "askedFor": [
+            "貼布",
+            "痠痛藥布",
+            "藥膏"
+          ]
+        },
+        {
+          "id": "knee-glucosamine",
+          "label": "葡萄糖胺／軟骨素",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "腎功能不佳",
+            "對甲殼類過敏"
+          ],
+          "dailyCap": "依產品標示，且不與其他同成分保健品重複吃",
+          "evidence": {
+            "finding": "證據普遍中偏弱、效果因人而異；體重控制與肌力訓練的實證比它明確得多"
+          },
+          "say": "葡萄糖胺、軟骨素這類的研究證據普遍中偏弱、不是人人有感——可以試，但別把它當主力。真正有效的還是控制體重跟練大腿肌力。你如果在吃抗凝血劑、腎功能不好、或對蝦蟹過敏，吃之前一定要問過醫師或藥師。",
+          "verifiedAt": "2026-07-29",
+          "secondLine": true,
+          "askedFor": [
+            "葡萄糖胺",
+            "軟骨素",
+            "維骨力"
+          ]
+        },
+        {
+          "id": "knee-surgery-blocked",
+          "label": "開刀／打針",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "要不要開刀、要不要打玻尿酸或類固醇，這是骨科醫師的判斷，我不能替你決定。"
+        },
+        {
+          "id": "knee-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "單側突然腫熱",
+            "合併發燒",
+            "外傷後不能踩地",
+            "劇痛"
+          ],
+          "say": "如果是單邊突然腫起來又發熱、還發燒，或是撞到之後就踩不了地，這不是一般退化——要儘快看醫生排除感染或骨折。"
+        }
+      ]
+    },
+    "TW-EDU-03": {
+      "title": "高血壓控制",
+      "solutions": [
+        {
+          "id": "bp-take-meds-on-time",
+          "label": "固定時間吃藥、不自己加減",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "血壓藥最重要的是固定時間吃、不漏吃也不自己加量。放在每天一定會看到的地方，比方牙刷旁邊。"
+        },
+        {
+          "id": "bp-measure-right",
+          "label": "量血壓的正確方式",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker"
+          ],
+          "say": "坐著休息五分鐘再量、手臂跟心臟同高、每天固定同一個時段量——不同時間量出來本來就會差很多，量法不對容易白擔心。"
+        },
+        {
+          "id": "bp-reduce-salt",
+          "label": "鹽少一點",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "醬油、醃漬品、湯麵的湯是台灣人最大宗的鹽——湯少喝幾口、沾醬少一點，比什麼都有感。"
+        },
+        {
+          "id": "bp-dash-diet",
+          "label": "多蔬果、多鉀的吃法",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "蔬菜水果、全穀、低脂乳品這樣的吃法（就是常聽到的得舒飲食），對降血壓有紮實的研究支持。不過腎功能不好的人不適合刻意補鉀，要先問過醫師。",
+          "contraindications": [
+            "腎功能異常",
+            "腎臟病",
+            "洗腎"
+          ]
+        },
+        {
+          "id": "bp-walk",
+          "label": "規律走路",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "一週五天、一次三十分鐘的快走，對血壓是實打實的幫助。不用一次到位，從十分鐘開始也算。"
+        },
+        {
+          "id": "bp-stress-sleep",
+          "label": "睡不好跟壓力也會讓血壓飆",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "caregiver"
+          ],
+          "say": "壓力大、睡不好、天氣忽冷忽熱，血壓都會臨時往上跑——不一定是藥沒效。先看是不是這幾天特別累。",
+          "related": "TW-EDU-25"
+        },
+        {
+          "id": "bp-normalize",
+          "label": "這很普遍、不是你特別差",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "say": "65 歲以上超過六成有高血壓，是最普遍的慢性病——不是你一個人的問題。",
+          "secondLine": true
+        },
+        {
+          "id": "bp-med-change-blocked",
+          "label": "換藥／加藥／停藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "換藥、加藥、停藥只有醫師能決定，我不會替你判斷，血壓的數字我也不做解讀。"
+        },
+        {
+          "id": "bp-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "收縮壓超過180",
+            "臉歪手垂大舌頭",
+            "胸悶痛冒冷汗"
+          ],
+          "say": "量到收縮壓超過 180、或是出現臉歪、手垂、講話大舌頭（中風警訊），或胸悶胸痛冒冷汗（心臟警訊）——立刻打 119，不要等回診。"
+        }
+      ]
+    },
+    "TW-EDU-16": {
+      "title": "保健品＋處方藥一起管",
+      "solutions": [
+        {
+          "id": "supp-inventory",
+          "label": "把手上的全部列出來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "say": "我們一起把你手上的保健品跟正在吃的藥列成一張清單——哪些天天吃、哪些想到才吃。列出來常常自己就看到重複了。"
+        },
+        {
+          "id": "supp-red-yeast",
+          "label": "紅麴配降血脂藥的風險",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "contraindications": [
+            "正在吃降血脂藥（Statin 類）",
+            "肝功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "以產品標示為準，且與降血脂藥併用前先問過醫師或藥師",
+          "evidence": {
+            "finding": "紅麴含天然 Statin 成分，與處方降血脂藥併用有橫紋肌溶解等交互作用風險"
+          },
+          "say": "這題最重要的一條：紅麴本身含天然的 Statin 成分，跟醫師開的降血脂藥一起吃，有橫紋肌溶解這類交互作用的風險。如果你兩個都在吃，先別自己決定要不要停，帶著兩瓶去問藥師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "supp-food-first",
+          "label": "食物永遠優先於藥丸",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "能從食物吃到的就別靠藥丸——保健品是補不足的部分，不是拿來取代吃飯。"
+        },
+        {
+          "id": "supp-ask-pharmacist",
+          "label": "帶去給藥師整合看",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "say": "整理完最實在的一步：整袋帶去藥局，請藥師做一次用藥整合——這個健保有給付、不用錢，而且他們看得出來哪兩瓶會打架。"
+        },
+        {
+          "id": "supp-normalize",
+          "label": "手上一堆很常見",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "say": "60 歲以上將近八成過去一年買過保健食品——手上一堆很常見，不是你特別愛亂買。",
+          "secondLine": true
+        },
+        {
+          "id": "supp-no-brand-blocked",
+          "label": "推薦特定品牌或成分",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "我不會主動推薦特定品牌或成分、不報份量，也不會替你判斷「配你的藥沒問題」——那要藥師看過才算數。"
+        },
+        {
+          "id": "supp-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吃了保健品後肌肉痠痛無力",
+            "皮膚或眼白變黃",
+            "心悸"
+          ],
+          "say": "如果吃了保健品之後肌肉痠痛沒力、皮膚或眼白變黃、或會心悸——立刻停用並儘快就醫，這不是自己觀察看看的事。"
+        }
+      ]
+    },
+    "TW-EDU-06": {
+      "title": "便秘",
+      "solutions": [
+        {
+          "id": "consti-water",
+          "label": "水要喝夠",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "很多長輩怕頻尿就不敢喝水，結果更難解。水喝夠纖維才推得動——白天分次喝，不要等口渴才喝。"
+        },
+        {
+          "id": "consti-fiber-food",
+          "label": "從食物補纖維",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "深綠色蔬菜、地瓜、水果連皮吃、糙米換一半——纖維從食物補最實在，而且要配著水一起。"
+        },
+        {
+          "id": "consti-kiwi-prune",
+          "label": "奇異果或黑棗",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women",
+            "caregiver"
+          ],
+          "say": "一天兩顆奇異果、或幾顆黑棗（加州蜜棗），這兩樣在研究裡對便秘算是少數蠻站得住腳的食物。"
+        },
+        {
+          "id": "consti-routine",
+          "label": "固定時間上廁所",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "早餐後半小時是腸子最想動的時候，固定那時去坐一下、不急不催，久了身體會養成節奏。"
+        },
+        {
+          "id": "consti-walk",
+          "label": "起來動一動",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "久坐不動腸子也會跟著懶。飯後散個十幾分鐘，比什麼都便宜。"
+        },
+        {
+          "id": "consti-probiotics",
+          "label": "益生菌",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "益生菌",
+            "乳酸菌",
+            "益菌"
+          ],
+          "contraindications": [
+            "免疫功能低下",
+            "正在化療",
+            "短腸症"
+          ],
+          "dailyCap": "依產品標示，不重複吃多種同類產品",
+          "evidence": {
+            "finding": "菌株差異大、效果因人而異；證據不如水分與纖維紮實"
+          },
+          "say": "益生菌可以試，但菌株差很多、不是人人有感——證據沒有「水喝夠＋纖維吃夠」來得紮實，別當主力。免疫功能低下或正在化療的人吃之前一定要問醫師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "consti-laxative-blocked",
+          "label": "瀉藥／軟便劑",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "瀉藥、軟便劑、浣腸的種類跟用量我不能建議；長期靠瀉藥腸子會更懶，那要醫師評估。"
+        },
+        {
+          "id": "consti-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "解黑便或血便",
+            "不明原因變瘦",
+            "突然變得完全解不出來",
+            "肚子劇痛合併嘔吐"
+          ],
+          "say": "如果大便帶血或變黑、莫名其妙變瘦、或是原本正常突然完全解不出來還肚子劇痛——這要儘快看醫生，不是調飲食就好。"
+        }
+      ]
+    },
+    "TW-EDU-15": {
+      "title": "腳抽筋（小腿夜間抽筋）",
+      "solutions": [
+        {
+          "id": "cramp-stretch-before-bed",
+          "label": "睡前拉小腿",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "運動",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "睡前扶著牆把小腿後側拉開，一次撐三十秒、做兩三回。這個對夜間抽筋是少數真的有研究支持的作法。"
+        },
+        {
+          "id": "cramp-hydration",
+          "label": "水跟電解質",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "流汗多、水喝太少的日子特別容易抽。白天把水補回來，不是睡前猛灌。"
+        },
+        {
+          "id": "cramp-warm",
+          "label": "保暖跟泡腳",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "腳冷容易抽。睡前泡個溫水腳、被子把腳蓋好，這個沒什麼壞處、很多人覺得有差。",
+          "secondLine": true,
+          "askedFor": [
+            "泡腳",
+            "保暖",
+            "腳很冷"
+          ]
+        },
+        {
+          "id": "cramp-food-minerals",
+          "label": "從食物補礦物質",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "香蕉、深綠色蔬菜、堅果、牛奶——鉀、鎂、鈣從吃的補起，比買瓶罐實在。"
+        },
+        {
+          "id": "cramp-magnesium",
+          "label": "鎂補充劑",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "鎂",
+            "鎂錠",
+            "檸檬酸鎂"
+          ],
+          "contraindications": [
+            "腎功能異常",
+            "正在吃某些抗生素或骨鬆藥（間隔時間有講究）"
+          ],
+          "dailyCap": "成人補充劑型式一天不超過 350 毫克（這是官方訂的安全上限，不是建議你吃到）",
+          "evidence": {
+            "finding": "對「老年人夜間抽筋」的試驗多數沒看到明顯效果；對孕期抽筋的證據較好"
+          },
+          "say": "鎂常被拿來治抽筋，但講實話：針對長輩夜間抽筋的試驗大多沒看到明顯效果，孕期抽筋的證據反而好一些。要試可以，別抱太大期待。腎功能不好的人不要自己吃；跟某些抗生素、骨鬆藥要隔開時間，先問藥師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "cramp-med-review",
+          "label": "會不會是藥的關係",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "有些利尿劑、降血脂藥吃了比較容易抽筋。如果是最近換藥才開始的，回診時提一句，讓醫師看看。",
+          "related": "TW-EDU-16"
+        },
+        {
+          "id": "cramp-quinine-blocked",
+          "label": "抽筋的藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "治抽筋的藥（像奎寧那類）有嚴重副作用、國外已經不建議這樣用，我不會建議你去弄來吃。"
+        },
+        {
+          "id": "cramp-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "單側小腿持續腫痛發熱",
+            "抽筋合併無力或麻木",
+            "走一段路就腿痛要停"
+          ],
+          "say": "如果是單邊小腿一直腫痛又發熱（要排除血栓）、或抽筋還合併無力發麻、或走一段路就痛到得停下來——這幾種不是普通抽筋，要看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-17": {
+      "title": "骨質疏鬆／防跌倒骨折",
+      "solutions": [
+        {
+          "id": "osteo-fall-proof-home",
+          "label": "把家裡的跌倒點清掉",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "骨鬆真正可怕的是跌倒。今晚就能做的：浴室止滑墊、走道別放雜物、地上的電線收起來、半夜起來的路上留一盞小燈。"
+        },
+        {
+          "id": "osteo-strength-balance",
+          "label": "練肌力跟平衡",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "扶著椅背單腳站、起立坐下、太極——練平衡跟腿力，防跌倒的實證比補鈣還明確。"
+        },
+        {
+          "id": "osteo-sunlight",
+          "label": "曬太陽",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women",
+            "worker"
+          ],
+          "say": "每天出門曬個十幾二十分鐘，順便走路。這是最便宜的維生素 D。"
+        },
+        {
+          "id": "osteo-calcium-food",
+          "label": "從食物補鈣",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women",
+            "teen"
+          ],
+          "say": "牛奶、小魚乾、豆腐、深綠色蔬菜、黑芝麻——鈣從吃的補最好吸收，也不會有結石的疑慮。"
+        },
+        {
+          "id": "osteo-calcium-vitd-supp",
+          "label": "鈣片＋維生素 D",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "contraindications": [
+            "有腎結石病史",
+            "高血鈣",
+            "副甲狀腺問題",
+            "正在吃某些骨鬆藥或甲狀腺藥（要隔開時間）"
+          ],
+          "dailyCap": "鈣的每日總攝取（含食物）成人建議不超過 2000-2500 毫克，這是安全上限不是目標",
+          "evidence": {
+            "finding": "食物補不夠時才補充；一次大量不如分次，且需與部分藥物間隔"
+          },
+          "say": "如果吃的實在補不夠，鈣片配維生素 D 是合理的補法——但要記得三件事：一次別吃太多、分次吃吸收比較好；有腎結石病史或高血鈣的人不要自己補；跟骨鬆藥、甲狀腺藥要隔開時間。要吃多少、要不要吃，帶著你現在的藥去問醫師或藥師。",
+          "verifiedAt": "2026-07-29",
+          "secondLine": true,
+          "askedFor": [
+            "鈣片",
+            "補鈣",
+            "維他命D",
+            "維生素D"
+          ]
+        },
+        {
+          "id": "osteo-quit-smoke-alcohol",
+          "label": "菸酒少一點",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "高",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "抽菸跟喝酒都會加速骨質流失，這兩樣少一點，比多吃一罐鈣片有用。"
+        },
+        {
+          "id": "osteo-dexa",
+          "label": "去做骨密度檢查",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "想知道自己到底鬆不鬆，去做個骨密度檢查（DXA）最實在——不用猜。符合條件的健保有給付，可以先問家醫科。"
+        },
+        {
+          "id": "osteo-meds-blocked",
+          "label": "骨鬆藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "骨鬆的藥（打針的、吃的）要不要用、用哪一種，是醫師依照你的骨密度跟骨折風險決定的，我不會替你判斷。"
+        },
+        {
+          "id": "osteo-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "跌倒後站不起來或劇痛",
+            "身高明顯變矮或駝背變快",
+            "突然的背痛"
+          ],
+          "say": "跌倒之後站不起來、或痛到不能動——先別自己扶起來，叫救護車。另外身高明顯變矮、駝背變快、或突然背痛，那可能是脊椎壓迫性骨折，要看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-18": {
+      "title": "情緒低落／老年憂鬱",
+      "solutions": [
+        {
+          "id": "mood-listen-first",
+          "label": "先被聽見",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "say": "先不用急著解決什麼。你願意講，我就聽——這種心情能講出來，本身就有用。"
+        },
+        {
+          "id": "mood-daylight-walk",
+          "label": "白天出去走走、曬到太陽",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "白天出門走個二十分鐘、曬到太陽——運動對輕中度的情緒低落，研究上是有實質幫助的，不是安慰話。"
+        },
+        {
+          "id": "mood-one-connection",
+          "label": "一週跟人見一次面",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "一個人待久了心情會往下沉。一週固定跟人見一次面就好——老朋友、社區據點、教會、什麼都算。"
+        },
+        {
+          "id": "mood-sleep-link",
+          "label": "先看是不是睡不好",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "caregiver",
+            "teen"
+          ],
+          "say": "睡不好跟心情低落常常是同一件事的兩面，先把睡的部分顧好，心情往往跟著鬆一點。",
+          "related": "TW-EDU-01"
+        },
+        {
+          "id": "mood-caregiver-respite",
+          "label": "照顧者要有喘息",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "caregiver"
+          ],
+          "say": "你不是心情不好，你是太久沒有休息了。長照專線 1966 可以問喘息服務——找人替你幾個小時，不是偷懶。"
+        },
+        {
+          "id": "mood-1925",
+          "label": "安心專線 1925",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "say": "如果晚上特別難熬，安心專線 1925 是 24 小時免付費的，隨時有人接。你不必等到很嚴重才打。"
+        },
+        {
+          "id": "mood-antidep-blocked",
+          "label": "抗憂鬱藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "中",
+          "audience": [],
+          "blocked": true,
+          "say": "抗憂鬱的藥要不要吃、吃哪一種，是身心科醫師的判斷；已經在吃的更不要自己停，那反彈會很不舒服。"
+        },
+        {
+          "id": "mood-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "escalateWhen": [
+            "想傷害自己",
+            "覺得活著沒意思",
+            "兩週以上吃不下睡不著",
+            "突然把東西送人交代後事"
+          ],
+          "say": "如果有想傷害自己的念頭、或覺得活著沒什麼意思——請立刻打 1925 安心專線或 119，也讓身邊的人知道。連續兩週以上吃不下睡不著、什麼都提不起勁，那要看身心科，這是病、不是想不開。"
+        }
+      ]
+    },
+    "TW-EDU-14": {
+      "title": "記性變差／輕度認知障礙",
+      "solutions": [
+        {
+          "id": "mci-normalize-vs-warn",
+          "label": "分清楚正常老化跟該擔心的",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "想不起某個名字、東西放哪忘了但提醒一下會想起來——這比較像正常老化。真正要留意的是整件事忘掉、重複問同一句、熟悉的路走丟。"
+        },
+        {
+          "id": "mci-exercise",
+          "label": "規律運動",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "講到護腦，運動是目前證據最強的一項——比任何補腦保健品都強。一週幾次快走就算數。"
+        },
+        {
+          "id": "mci-social",
+          "label": "多跟人來往、動腦",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder"
+          ],
+          "say": "跟人聊天、打牌、學新東西、參加據點活動——社交跟動腦對延緩退化是有幫助的，而且比一個人在家做習題有效。"
+        },
+        {
+          "id": "mci-hearing-vision",
+          "label": "聽力視力先顧好",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "這一條常被忽略：聽不清楚、看不清楚會讓人退縮不出門，是失智少數幾個「可以改變」的風險因子。該配助聽器、該看眼睛就去。"
+        },
+        {
+          "id": "mci-vascular",
+          "label": "血壓血糖顧好就是護腦",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "血壓、血糖、血脂控制好，腦子的血管就顧好了——護腦不是靠吃補品，是靠這些。",
+          "related": "TW-EDU-03"
+        },
+        {
+          "id": "mci-brain-supp",
+          "label": "銀杏、魚油那類補腦品",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "銀杏",
+            "魚油",
+            "磷脂醯絲胺酸",
+            "補腦"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑或阿斯匹靈",
+            "即將手術"
+          ],
+          "dailyCap": "依產品標示，且不與其他同類補充品重複吃",
+          "evidence": {
+            "finding": "銀杏等補腦保健品對預防或延緩失智的證據普遍不足；運動與三高控制的證據明確得多"
+          },
+          "say": "銀杏、魚油這些補腦的，講實話證據普遍不足，別把錢跟期待放在那裡。運動、控制三高、多跟人來往，這幾樣的證據明確得多。要吃也可以，但如果你在吃抗凝血劑或阿斯匹靈，銀杏會增加出血風險，一定要先問醫師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "mci-checkup",
+          "label": "去做記憶門診評估",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "與其自己猜，不如去神經內科或記憶門診做個評估。有些記性變差其實是甲狀腺、B12 不足、憂鬱或藥物引起的，這幾種找出來是可以處理的。"
+        },
+        {
+          "id": "mci-dementia-drug-blocked",
+          "label": "失智藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "失智相關的藥物要不要用、用哪一種，是醫師評估後的決定，我不會替你判斷。"
+        },
+        {
+          "id": "mci-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "突然發生的意識混亂",
+            "熟悉的路走丟",
+            "重複問同一件事",
+            "人格或行為明顯改變"
+          ],
+          "say": "如果是**突然**變得胡塗、認不得人、講話顛三倒四——那不是失智，那是急性的譫妄，可能是感染或藥物引起，要立刻就醫。如果是慢慢的：熟悉的路走丟、一直重複問同一件事、性情大變——安排記憶門診評估。"
+        }
+      ]
+    },
+    "TW-EDU-04": {
+      "title": "糖尿病／血糖控制",
+      "solutions": [
+        {
+          "id": "dm-veggie-first",
+          "label": "吃飯順序調一下",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "先吃菜跟肉、最後才吃飯——同樣一餐，順序換一下血糖上升就比較平緩。這個今晚就能做。"
+        },
+        {
+          "id": "dm-carb-swap",
+          "label": "精緻澱粉換一半",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "白飯白麵白吐司換一半成糙米、地瓜、燕麥。這比任何偏方都實在。"
+        },
+        {
+          "id": "dm-walk-after-meal",
+          "label": "飯後散步",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "飯後十五到二十分鐘走一走，對飯後血糖的幫助研究上很明確——不用快，慢慢走就算。"
+        },
+        {
+          "id": "dm-sugary-drinks",
+          "label": "含糖飲料先戒",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "teen"
+          ],
+          "say": "手搖、罐裝飲料、果汁——液體的糖進得最快。單獨戒這一項，很多人數字就有差。"
+        },
+        {
+          "id": "dm-take-meds",
+          "label": "規律用藥回診",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "藥固定吃、回診不要拖——血糖是長期的事，斷斷續續反而最傷。"
+        },
+        {
+          "id": "dm-normalize",
+          "label": "這很普遍",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "say": "65 歲以上將近三成有血糖問題，是很多長輩共同的課題——不是你沒顧好。"
+        },
+        {
+          "id": "dm-med-blocked",
+          "label": "調藥／判讀數值",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "血糖的數字我不做判讀，調藥也只有醫師能決定；保健品會不會跟你的藥打架，要問藥師。"
+        },
+        {
+          "id": "dm-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "冒冷汗手抖",
+            "意識恍惚叫不醒",
+            "極度口渴呼吸急促帶爛蘋果味",
+            "傷口一直好不了"
+          ],
+          "say": "**低血糖是這題最急的一條**：冒冷汗、手抖但人還清醒吞得下去——趕快吃方糖或喝含糖飲料；**同時要記住，只要變得恍惚、叫不醒，就要馬上打 119 或請家人送醫**（這兩件事一定要一起講、不能只講前面）。已經意識模糊叫不醒＝立刻 119。另外極度口渴、意識恍惚、呼吸急促帶爛蘋果味＝立刻就醫。"
+        }
+      ]
+    },
+    "TW-EDU-05": {
+      "title": "痛風／尿酸過高",
+      "solutions": [
+        {
+          "id": "gout-avoid-triggers",
+          "label": "這幾樣先避開",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "內臟、帶殼海鮮、濃湯火鍋湯底，還有酒（啤酒最明顯）——發作期先全部避開，這幾樣是最常見的引信。"
+        },
+        {
+          "id": "gout-water",
+          "label": "水喝多一點",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "contraindications": [
+            "心衰竭",
+            "洗腎"
+          ],
+          "say": "多喝水幫尿酸排出去，白天分次喝。如果醫師有交代你要限水，就以醫師說的為準。"
+        },
+        {
+          "id": "gout-sugary-drinks",
+          "label": "含糖飲料也是兇手",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "teen"
+          ],
+          "say": "這條很多人不知道：含果糖的飲料會讓尿酸上升，跟啤酒同一個等級。手搖先減。"
+        },
+        {
+          "id": "gout-weight",
+          "label": "體重慢慢降",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "高",
+          "audience": [
+            "worker",
+            "elder"
+          ],
+          "say": "體重降下來尿酸通常跟著降——但要慢慢來，急速減重反而會誘發發作。"
+        },
+        {
+          "id": "gout-lemon-soda",
+          "label": "檸檬水、蘇打水",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "檸檬水",
+            "蘇打水",
+            "小蘇打"
+          ],
+          "say": "檸檬水、蘇打水這類說法實證不強，屬於傳統經驗——喝可以，但別當成治療，該避的東西還是要避。"
+        },
+        {
+          "id": "gout-med-blocked",
+          "label": "止痛藥／降尿酸藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "降尿酸藥、消炎止痛藥的用量我不能建議。如果你在吃利尿劑那類的藥，跟痛風有沒有關係要問醫師。"
+        },
+        {
+          "id": "gout-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "單一關節紅腫熱痛合併發燒",
+            "痛擴散變嚴重"
+          ],
+          "say": "如果那個關節紅腫熱痛還發燒、或痛的範圍越來越大——要儘快就醫排除感染性關節炎或蜂窩性組織炎，不是自己冰敷等它退。"
+        }
+      ]
+    },
+    "TW-EDU-07": {
+      "title": "頭暈／姿勢性低血壓",
+      "solutions": [
+        {
+          "id": "dizzy-two-step",
+          "label": "起身分兩段",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "起身分兩段：先坐起來停個幾秒，再慢慢站。起床也先坐床邊緩一下——今晚就能做，而且最有效。"
+        },
+        {
+          "id": "dizzy-hydrate",
+          "label": "補水、別站太久",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "天熱、水喝不夠、喝了酒都會更暈。水補足，也避免長時間站著不動。"
+        },
+        {
+          "id": "dizzy-explain",
+          "label": "這是怎麼回事",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "say": "這叫姿勢性低血壓——姿勢一換，血壓沒跟上，腦子一下子供血不足。長輩很常見，知道原因就不用那麼慌。"
+        },
+        {
+          "id": "dizzy-med-review",
+          "label": "回診時提一句",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "降血壓藥、利尿劑常是誘因。回診時跟醫師說「我起身會頭暈」，讓他評估要不要調——**但絕對不要自己停藥**。"
+        },
+        {
+          "id": "dizzy-fall-proof",
+          "label": "順便把跌倒點清掉",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "會頭暈就容易跌。半夜起來的路上留一盞小燈、浴室鋪止滑墊、走道別放雜物。"
+        },
+        {
+          "id": "dizzy-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "單側無力",
+            "嘴歪",
+            "講話不清楚",
+            "突然劇烈頭痛",
+            "看東西有重影"
+          ],
+          "say": "**頭暈如果合併單側無力、嘴歪、講話不清楚、突然劇烈頭痛或看東西有重影——這是中風警訊，立刻打 119。** 另外反覆發作或已經跌倒過，也要請醫師評估。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-17",
+          "say": "你提到怕跌倒——會頭暈本來就比較容易跌，家裡的防跌我們也可以一起看。"
+        },
+        {
+          "topicId": "TW-EDU-03",
+          "say": "你有在吃血壓的藥——起身會暈很常跟這個有關，回診記得提一句。"
+        }
+      ]
+    },
+    "TW-EDU-08": {
+      "title": "老花眼／白內障／眼睛霧茫茫",
+      "solutions": [
+        {
+          "id": "eye-light-safety",
+          "label": "把光線跟環境調好",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "看不清楚最怕跌倒。家裡照明加亮一點、樓梯口跟走道留燈、常用的東西放固定位置。"
+        },
+        {
+          "id": "eye-uv",
+          "label": "出門戴個帽子墨鏡",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "紫外線會加速白內障，出門戴頂帽子或墨鏡——便宜又實在的一招。"
+        },
+        {
+          "id": "eye-food",
+          "label": "深色蔬果",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women",
+            "worker"
+          ],
+          "say": "深綠色蔬菜、玉米、蛋黃本來就含葉黃素，從吃的補最實在、也不用花錢。"
+        },
+        {
+          "id": "eye-normalize",
+          "label": "這是普遍的老化",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "say": "白內障是台灣長輩第二常見的慢性病，70 歲以上九成都有——很普遍的老化現象，不是你身體特別差。"
+        },
+        {
+          "id": "eye-lutein",
+          "label": "葉黃素",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "葉黃素",
+            "護眼"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "即將手術",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "依產品標示，不與其他含同成分的保健品重複吃",
+          "evidence": {
+            "finding": "對黃斑部有一定保護研究；對已經形成的白內障沒有逆轉證據"
+          },
+          "say": "葉黃素對黃斑部有一定的保護研究，但對**已經形成的白內障沒有逆轉的證據**——它是保護、不是治療，別期待吃了會變清楚。深綠色蔬菜、玉米、蛋黃本來就有。正在吃抗凝血劑或要開刀的人，吃之前先問醫師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "eye-surgery-blocked",
+          "label": "開刀換水晶體",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "要不要開刀換水晶體、什麼時候開，是眼科的醫療判斷，我不會替你決定。"
+        },
+        {
+          "id": "eye-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "突然視力大幅下降",
+            "視野出現缺角",
+            "眼睛劇痛"
+          ],
+          "say": "如果是**突然**看不清楚、視野缺了一角、或眼睛劇痛——儘速就醫，那可能是青光眼急性發作或視網膜剝離，不能當一般老花帶過。"
+        }
+      ]
+    },
+    "TW-EDU-09": {
+      "title": "皮膚癢（冬季癢）",
+      "solutions": [
+        {
+          "id": "itch-shower-temp",
+          "label": "洗澡水別太熱",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "熱水洗起來很舒服，但會把皮膚的油洗光、洗完更癢。水溫調低一點、時間縮短——這條最有感。"
+        },
+        {
+          "id": "itch-moisturize",
+          "label": "趁濕擦乳液",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women",
+            "caregiver"
+          ],
+          "say": "洗完趁皮膚還濕潤就擦乳液，水分才鎖得住。等全乾了再擦效果差很多。"
+        },
+        {
+          "id": "itch-clothes",
+          "label": "衣服換寬鬆棉質",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "貼身的衣服選寬鬆棉質，羊毛跟粗糙布料會一直磨、越磨越癢。"
+        },
+        {
+          "id": "itch-humidity",
+          "label": "別讓室內太乾",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "冷氣或暖氣開久了空氣很乾，放盆水或開加濕器，皮膚會舒服一點。"
+        },
+        {
+          "id": "itch-normalize",
+          "label": "這是年紀的關係",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "say": "年紀大了皮脂分泌少、皮膚保不住水，老年性搔癢很常見——不是你哪裡有問題。"
+        },
+        {
+          "id": "itch-steroid-blocked",
+          "label": "藥膏",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "類固醇藥膏的強度跟擦法我不能建議，那要看部位跟嚴重度，得問醫師或藥師。"
+        },
+        {
+          "id": "itch-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "皮膚或眼白變黃",
+            "不明原因變瘦",
+            "淋巴結腫大",
+            "癢到睡不著",
+            "抓到破皮流湯"
+          ],
+          "say": "如果癢還合併皮膚或眼白變黃、莫名變瘦、淋巴結腫起來，或癢到睡不著、抓到破皮流湯——要看皮膚科，那可能是肝腎或感染的徵兆，不是單純乾燥。"
+        }
+      ]
+    },
+    "TW-EDU-10": {
+      "title": "夜尿／攝護腺肥大",
+      "solutions": [
+        {
+          "id": "noct-fluid-timing",
+          "label": "把水挪到白天喝",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "一天的水量不用減，但睡前兩三個小時少喝，白天分次補回來——夜裡起來的次數通常就會少。"
+        },
+        {
+          "id": "noct-caffeine-alcohol",
+          "label": "晚上少咖啡濃茶酒",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "咖啡、濃茶、酒都會利尿，晚上這幾樣先停掉。"
+        },
+        {
+          "id": "noct-night-safety",
+          "label": "起夜的路要安全",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "半夜起來最容易跌。床邊到廁所留一盞小燈、地上別有雜物、起身先坐一下再走。"
+        },
+        {
+          "id": "noct-normalize",
+          "label": "這很常見",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "say": "50 歲以上男性大約一半有攝護腺肥大的症狀，70 歲以後超過七成——很普遍，不用覺得難以啟齒。"
+        },
+        {
+          "id": "noct-saw-palmetto",
+          "label": "鋸棕櫚那類保健品",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "鋸棕櫚",
+            "南瓜子油",
+            "攝護腺保健"
+          ],
+          "contraindications": [
+            "正在吃攝護腺藥物",
+            "正在吃抗凝血劑",
+            "即將手術"
+          ],
+          "dailyCap": "依產品標示，且不與正在吃的攝護腺藥物自行併用",
+          "evidence": {
+            "finding": "鋸棕櫚等成分證據普遍偏弱，多數試驗未顯示明顯優於安慰劑"
+          },
+          "say": "鋸棕櫚這類的證據普遍偏弱，我不會主動推。如果你已經在吃攝護腺的藥，再加保健品之前一定要問過藥師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "noct-dx-blocked",
+          "label": "是良性還是別的",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "是良性肥大還是別的問題，我不會判斷——這要泌尿科檢查才知道。"
+        },
+        {
+          "id": "noct-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "完全解不出尿",
+            "血尿",
+            "劇烈腰痛合併發燒",
+            "合併下肢水腫或喘"
+          ],
+          "say": "完全解不出來、有血尿、或劇烈腰痛還發燒——這是急症，立刻就醫。另外夜尿有時候是血糖或心臟在報警，如果同時腳會腫、會喘，也要一起請醫師看。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-17",
+          "say": "半夜起來上廁所是長輩跌倒最常見的時機，防跌那塊我們也顧一下。"
+        }
+      ]
+    },
+    "TW-EDU-12": {
+      "title": "流感／肺炎鏈球菌疫苗",
+      "solutions": [
+        {
+          "id": "vax-free-eligibility",
+          "label": "你可能有公費資格",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "65 歲以上政府有提供公費的流感疫苗跟肺炎鏈球菌疫苗。這題我會主動提醒你——可以去附近的診所或衛生所問問看。"
+        },
+        {
+          "id": "vax-why",
+          "label": "為什麼長輩特別要打",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "年紀大抵抗力下降，得流感或肺炎比較容易變嚴重、拖出併發症。打疫苗不是保證不生病，是把「變嚴重」的機會壓下來。"
+        },
+        {
+          "id": "vax-side-effects",
+          "label": "副作用實話實說",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "常見的就是打的地方痠痠痛痛、少數人會輕微發燒，通常一兩天就過去——沒有傳言講的那麼可怕，但也不是完全沒感覺。"
+        },
+        {
+          "id": "vax-eligibility-blocked",
+          "label": "你適不適合打",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "你現在的身體狀況適不適合打（正在發燒、免疫功能的問題、對成分過敏），這要醫師判斷，去打之前跟醫師確認一下。"
+        },
+        {
+          "id": "vax-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women",
+            "worker"
+          ],
+          "escalateWhen": [
+            "接種後呼吸困難",
+            "臉部腫脹",
+            "全身紅疹"
+          ],
+          "say": "打完如果出現呼吸困難、臉腫起來、全身紅疹——立刻就醫，不要等。"
+        }
+      ]
+    },
+    "TW-EDU-13": {
+      "title": "牙口不好／咀嚼吞嚥困難",
+      "solutions": [
+        {
+          "id": "swallow-texture",
+          "label": "把食物質地調一下",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "食物切小塊、煮軟一點、勾芡增加滑順度——同樣的菜換個做法就好吞很多。"
+        },
+        {
+          "id": "swallow-thin-liquid",
+          "label": "最容易嗆的其實是水",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "很多人以為稀的比較好吞，其實太稀的水最容易嗆——如果常嗆到水，可以問專業要不要用增稠劑。"
+        },
+        {
+          "id": "swallow-pace",
+          "label": "吃慢一點、別邊吃邊講",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "細嚼慢嚥、一口不要太多、盡量別邊吃邊講話，坐正了吃——這幾個小習慣就能少嗆很多次。"
+        },
+        {
+          "id": "swallow-eval",
+          "label": "去做吞嚥評估",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "如果常嗆，最實在的是給語言治療師或耳鼻喉科做一次吞嚥評估——質地調整只是輔助，不能取代專業評估。"
+        },
+        {
+          "id": "swallow-normalize",
+          "label": "這很普遍",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "say": "機構裡的長輩三分之二有口腔衰弱的狀況，很普遍——不用覺得是自己變沒用了。"
+        },
+        {
+          "id": "swallow-dental-blocked",
+          "label": "假牙／植牙",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "假牙、植牙該不該做、做哪一種，是牙科的判斷，我不會替你決定。"
+        },
+        {
+          "id": "swallow-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "反覆嗆咳",
+            "體重快速下降",
+            "噎到無法呼吸臉色發紫"
+          ],
+          "say": "**噎到當下講不出話、無法呼吸、臉色發紫——立刻打 119 並做哈姆立克急救**，這種時候不是「切小塊慢慢吃」能處理的。另外反覆嗆咳、體重掉很快，要轉介做吞嚥功能評估。"
+        }
+      ]
+    },
+    "TW-EDU-19": {
+      "title": "感冒／上呼吸道感染",
+      "solutions": [
+        {
+          "id": "cold-ask-pharmacist",
+          "label": "成藥先問會不會跟你的藥打架",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "這題最該提醒的一句：家裡囤的綜合感冒藥、退燒止痛藥，很容易跟你正在吃的藥衝突。吃之前拿去問藥師「這個跟我在吃的藥會不會打架」——一分鐘的事。"
+        },
+        {
+          "id": "cold-rest-fluids",
+          "label": "多喝水多休息",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "teen"
+          ],
+          "say": "一般感冒大多是病毒引起的，水喝夠、睡飽，症狀通常一個禮拜左右會緩下來。"
+        },
+        {
+          "id": "cold-protect-others",
+          "label": "別傳給家裡的人",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "caregiver",
+            "teen"
+          ],
+          "say": "戴口罩、勤洗手，尤其家裡有長輩或小孩的時候——你只是不舒服幾天，傳給長輩可能就是住院。"
+        },
+        {
+          "id": "cold-warm-fluids",
+          "label": "溫的東西讓喉嚨舒服",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "secondLine": true,
+          "say": "溫開水、熱湯、蜂蜜水（一歲以下的寶寶不能吃蜂蜜）讓喉嚨舒服一點——這是緩解、不是治療。"
+        },
+        {
+          "id": "cold-otc-blocked",
+          "label": "哪個牌子、吃多少",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "我不會建議特定的成藥牌子或用量，也不會判斷這是感冒、流感還是肺炎——那要看醫師。"
+        },
+        {
+          "id": "cold-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "escalateWhen": [
+            "發燒超過三天不退",
+            "呼吸喘",
+            "意識改變",
+            "原本慢性病明顯惡化"
+          ],
+          "say": "發燒三天不退、會喘、人變得怪怪的、或原本的慢性病明顯變嚴重——這就不是單純感冒能自己處理的，要看醫生。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-16",
+          "say": "你手上藥不少——感冒成藥最容易跟它們打架，這正好一起問藥師。"
+        }
+      ]
+    },
+    "TW-EDU-20": {
+      "title": "心悸／心律不整",
+      "solutions": [
+        {
+          "id": "palp-record",
+          "label": "把發作的樣子記下來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "下次發作記一下：什麼時候、持續多久、有沒有伴隨頭暈胸悶、當時在做什麼。這幾筆資料交給心臟科醫師非常有用——比事後回想準得多。"
+        },
+        {
+          "id": "palp-caffeine",
+          "label": "看看是不是咖啡因",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "women",
+            "elder"
+          ],
+          "say": "咖啡、濃茶、提神飲料、還有睡不飽，都會讓心跳變明顯。先減一個禮拜看看有沒有差。"
+        },
+        {
+          "id": "palp-anxiety",
+          "label": "緊張的時候特別會",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "worker",
+            "women",
+            "teen",
+            "caregiver"
+          ],
+          "say": "心悸有時候跟緊張焦慮有關，不一定都是心臟的毛病。發作的時候先坐下來、慢慢吐氣，不用急著站起來走動。"
+        },
+        {
+          "id": "palp-anemia",
+          "label": "也可能是貧血",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "心悸有時候是貧血引起的，尤其女生。下次抽血可以請醫師一起看看。"
+        },
+        {
+          "id": "palp-normalize",
+          "label": "這在長輩很常見",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "say": "65 歲以上心律不整很常見——會怕是正常的，但不是每一種都危險。"
+        },
+        {
+          "id": "palp-dx-blocked",
+          "label": "這是良性還是危險的",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "這是良性還是危險的心律不整，我完全不能判斷——那是醫療診斷。我能做的是陪你記錄、陪你去看醫生。"
+        },
+        {
+          "id": "palp-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "心悸合併胸痛",
+            "呼吸困難",
+            "暈厥",
+            "冒冷汗",
+            "痛延伸左手或下巴",
+            "臉歪手垂大舌頭"
+          ],
+          "say": "**心悸如果合併胸痛、喘不過氣、暈倒、冒冷汗、或痛延伸到左手下巴——立刻就醫或打 119。** 心律不整也會增加中風風險，要是出現臉歪、手垂、講話大舌頭，同樣立刻 119。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-25",
+          "say": "你提到最近壓力大——心悸有時候就是這樣來的，兩件事可以一起看。"
+        }
+      ]
+    },
+    "TW-EDU-26": {
+      "title": "更年期不適",
+      "solutions": [
+        {
+          "id": "meno-normalize",
+          "label": "這不是你的問題",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "secondLine": true,
+          "say": "更年期不是生病，是荷爾蒙在調整——熱潮紅、睡不好、情緒起伏都是真的生理反應，不是你想太多，也不是你不夠堅強。"
+        },
+        {
+          "id": "meno-layers",
+          "label": "洋蔥式穿法、環境降溫",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "熱潮紅來的時候最實用的就是好脫的外套、隨手一把小電扇、房間睡前先降溫——聽起來很土，但這是最快有感的。"
+        },
+        {
+          "id": "meno-triggers",
+          "label": "找出自己的引信",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "辣的、燙的、酒、咖啡、緊張——每個人的引信不一樣。記個幾天看看熱潮紅前都做了什麼，找到就好避。"
+        },
+        {
+          "id": "meno-exercise",
+          "label": "規律運動",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "規律運動對更年期的睡眠跟情緒是有實證的，順便顧到骨頭跟心血管——這階段骨質流失會加快。"
+        },
+        {
+          "id": "meno-sleep-link",
+          "label": "睡不好要分開處理",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "很多人以為更年期就一定睡不好——其實半夜熱醒跟本來就淺眠是兩件事，可以分開處理，不用整包認了。",
+          "related": "TW-EDU-01"
+        },
+        {
+          "id": "meno-food",
+          "label": "從食物吃到的植物性雌激素",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "豆漿、豆腐、毛豆這些黃豆製品本來就含大豆異黃酮，一般飲食吃到的量很安全——先從吃的來，不用急著買瓶罐。"
+        },
+        {
+          "id": "meno-isoflavone",
+          "label": "大豆異黃酮補充劑",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "大豆異黃酮",
+            "異黃酮",
+            "更年期保健品",
+            "月見草"
+          ],
+          "contraindications": [
+            "乳癌或其他荷爾蒙相關癌症病史",
+            "正在吃抗荷爾蒙藥物（如泰莫西芬）",
+            "甲狀腺疾病用藥中"
+          ],
+          "dailyCap": "依產品標示，且不與其他含異黃酮的保健品重複吃",
+          "evidence": {
+            "finding": "對熱潮紅的效果證據中等偏弱、個體差異大；食物來源的攝取量安全性較無疑慮"
+          },
+          "say": "大豆異黃酮補充劑對熱潮紅的證據中等偏弱、有人有感有人沒有——可以試，但別當特效藥。**最重要的一條：有乳癌或其他荷爾蒙相關癌症病史、或正在吃抗荷爾蒙藥物的人，補充劑一定要先問過醫師**，這不是可以自己決定的。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "meno-hrt-blocked",
+          "label": "荷爾蒙治療",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "中",
+          "audience": [],
+          "blocked": true,
+          "say": "荷爾蒙治療是處方，要不要用、用多久，要婦產科醫師依你的病史評估——我不會建議，但如果你困擾到影響生活，這是可以去問的一條路，不用忍。"
+        },
+        {
+          "id": "meno-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "停經後又出血",
+            "異常大量出血",
+            "情緒低落持續兩週以上",
+            "嚴重到無法工作或生活"
+          ],
+          "say": "**停經之後又出血——這一條不要拖，要看婦產科**。另外如果情緒低落超過兩週、或不適嚴重到影響工作生活，那不是「忍一忍就過去」，值得去看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-27": {
+      "title": "經期不適",
+      "solutions": [
+        {
+          "id": "period-heat",
+          "label": "熱敷肚子",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "熱敷下腹部是少數有研究支持、而且今晚就能做的——暖暖包、熱水袋、泡個熱水澡都算。"
+        },
+        {
+          "id": "period-movement",
+          "label": "輕度活動反而比躺著好",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "運動",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "痛的時候只想躺著，但輕輕走一走、伸展一下，血液循環好一點反而比較不痛——不是叫你去運動，是別整天縮著。"
+        },
+        {
+          "id": "period-track",
+          "label": "把週期記下來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "記一下什麼時候來、痛幾天、痛到什麼程度——自己心裡有底就不會每次都被突襲，去看醫生時這也是最有用的資料。"
+        },
+        {
+          "id": "period-pms-plan",
+          "label": "經前那幾天先降載",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "worker"
+          ],
+          "say": "如果每次經前都特別煩躁、水腫、想哭——那不是你脾氣差。知道大概哪幾天，就把重要的會議跟硬仗排開一點。"
+        },
+        {
+          "id": "period-food",
+          "label": "這幾天的吃法",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "經前少鹽少咖啡因會少水腫跟脹痛；經期流失鐵，深綠色蔬菜、紅肉、豆類可以多一點。",
+          "related": "TW-EDU-28"
+        },
+        {
+          "id": "period-tcm",
+          "label": "中醫調理",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "中醫調理",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "經期調理是中醫常見的路線，如果你偏好這個方向可以找合格中醫師。四物湯那類不是人人都適合、也不是經期都能喝——請中醫師看過再吃，別照網路抓。"
+        },
+        {
+          "id": "period-painkiller-blocked",
+          "label": "止痛藥怎麼吃",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "止痛藥的種類跟吃法我不能建議，那要問醫師或藥師。不過有一件事想跟你說：**經痛吃止痛藥不是「意志力不夠」**，痛到影響生活就該處理。"
+        },
+        {
+          "id": "period-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "teen",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "痛到請假或無法上學",
+            "痛到嘔吐或昏倒",
+            "經血量突然變很多",
+            "經期外出血",
+            "持續一個月以上沒來又不是懷孕"
+          ],
+          "say": "**痛到得請假、痛到吐或昏倒、或血量突然變很多——去看婦產科，別忍。** 子宮內膜異位這類問題在台灣平均要拖很多年才被診斷出來，就是因為大家都覺得「經痛本來就會痛」。另外經期以外出血、或超過一個月沒來又排除懷孕，也要看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-28": {
+      "title": "缺鐵性貧血",
+      "solutions": [
+        {
+          "id": "iron-test-first",
+          "label": "先驗血、別盲補",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "elder",
+            "teen",
+            "caregiver"
+          ],
+          "say": "容易累、頭暈、臉色差不一定就是缺鐵——先抽個血看血紅素跟鐵蛋白，補對了才有用。**鐵補過頭是會傷身體的**，所以不建議自己猜著吃。",
+          "leadWith": true
+        },
+        {
+          "id": "iron-food",
+          "label": "從食物補鐵",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "elder",
+            "teen"
+          ],
+          "say": "紅肉、豬肝、文蛤、深綠色蔬菜、豆類——動物性的鐵吸收比植物性好很多，吃素的人要更留意。"
+        },
+        {
+          "id": "iron-vitc",
+          "label": "配維生素 C 一起吃",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "elder",
+            "teen"
+          ],
+          "say": "這條很實用：吃含鐵的東西時配點芭樂、柑橘、番茄，維生素 C 會讓鐵吸收好很多。"
+        },
+        {
+          "id": "iron-avoid-tea",
+          "label": "別配茶或咖啡",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "elder"
+          ],
+          "say": "茶、咖啡裡的單寧會擋住鐵的吸收——飯後隔一兩個小時再喝，這個不用花錢就有差。"
+        },
+        {
+          "id": "iron-supplement",
+          "label": "鐵劑",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "elder"
+          ],
+          "contraindications": [
+            "血色素沉著症等鐵過載疾病",
+            "地中海型貧血未經評估",
+            "正在吃甲狀腺藥或某些抗生素（要隔開時間）"
+          ],
+          "dailyCap": "劑量與吃法一律照醫師或藥師指示，不自行加量",
+          "evidence": {
+            "finding": "確診缺鐵時補充效果明確；但補鐵前需先確認貧血原因，鐵過載有害"
+          },
+          "say": "如果驗出來真的缺鐵，鐵劑是這題少數「補對了真的有感」的東西——但**劑量跟吃多久要醫師決定**，而且要先確認為什麼會缺（成人不明原因缺鐵有時是腸胃在慢性出血）。鐵劑常會便祕或胃不舒服，跟甲狀腺藥、某些抗生素要隔開時間。",
+          "verifiedAt": "2026-07-29",
+          "secondLine": true,
+          "askedFor": [
+            "鐵劑",
+            "補鐵",
+            "鐵片"
+          ]
+        },
+        {
+          "id": "iron-cause-blocked",
+          "label": "為什麼會缺鐵",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "缺鐵的原因我不做判斷——月經量多、腸胃出血、吸收不良都有可能，這要醫師查。"
+        },
+        {
+          "id": "iron-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "elder",
+            "teen",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "解黑便或血便",
+            "經血量突然變很多",
+            "嚴重喘或心悸",
+            "不明原因變瘦",
+            "男性或停經後女性缺鐵"
+          ],
+          "say": "如果貧血還合併解黑便、喘得厲害、或莫名變瘦——要儘快就醫查原因。**特別是男性或停經後的女性缺鐵，那通常代表某個地方在慢性出血，一定要查清楚，不是補鐵就好。**"
+        }
+      ]
+    },
+    "TW-EDU-29": {
+      "title": "懷孕與哺乳期間的安全界線",
+      "solutions": [
+        {
+          "id": "preg-ask-first",
+          "label": "這段時間，任何補充品都先問過",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "懷孕跟哺乳這段時間，我在保健品上會比平常保守很多——不是我不想幫忙，是這時候的安全資料本來就少，很多成分沒有足夠證據說「孕婦吃沒問題」。任何補充品、草藥、中藥，都先問過你的產科醫師或藥師。"
+        },
+        {
+          "id": "preg-folate",
+          "label": "葉酸是少數明確建議的",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "葉酸是少數證據明確、國健署也建議備孕與懷孕期間補充的——深綠色蔬菜、豆類本來就有。具體要不要另外吃、吃多少，產檢時問醫師，他們一定會安排。",
+          "secondLine": true,
+          "askedFor": [
+            "葉酸",
+            "備孕要吃"
+          ]
+        },
+        {
+          "id": "preg-food-safety",
+          "label": "這幾樣避開",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "生食（生魚片、溏心蛋、未殺菌乳製品）、大型深海魚（汞）、酒——這幾樣避開。咖啡因也要節制，量的部分問醫師。"
+        },
+        {
+          "id": "preg-herbs-caution",
+          "label": "草藥、中藥、精油都算",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "「純天然」不等於孕期安全——很多草藥、中藥、精油在懷孕跟哺乳期間都有疑慮。長輩好意送的補品也一樣，先問過再吃，不用不好意思。"
+        },
+        {
+          "id": "preg-rest",
+          "label": "累就休息，這不是嬌氣",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "這段時間累是真的累。想睡就睡、該請假就請假——你在做一件很耗身體的事，不是嬌氣。"
+        },
+        {
+          "id": "preg-med-blocked",
+          "label": "哪些藥能吃",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "孕期跟哺乳期哪些藥能吃、哪些不行，我完全不做判斷——連感冒藥、止痛藥都要問過醫師或藥師。原本在吃的慢性病藥更不要自己停，那要醫師調整。"
+        },
+        {
+          "id": "preg-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "陰道出血",
+            "持續腹痛",
+            "胎動明顯減少",
+            "嚴重頭痛合併視力模糊或水腫",
+            "發燒",
+            "破水"
+          ],
+          "say": "**出血、持續肚子痛、胎動明顯變少、破水——立刻就醫，不要等。** 另外嚴重頭痛合併看東西模糊或突然水腫，那可能是子癇前症的警訊，也要馬上去。產後如果情緒持續低落、對什麼都提不起勁，那是產後憂鬱、是病不是「不夠愛小孩」，安心專線 1925 隨時可以打。"
+        }
+      ]
+    }
+  }
+}

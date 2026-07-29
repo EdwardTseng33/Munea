@@ -1,0 +1,496 @@
+{
+  "summary": {
+    "firstAudioLatency": null,
+    "runAt": "2026-07-29T05:56:50.842393+00:00",
+    "itemsRun": 5,
+    "passCount": 5,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 4.8,
+      "口語自然度": 5.0,
+      "資訊節奏": 4.6,
+      "不搶話尊重": 4.6,
+      "溫度": 5.0,
+      "誠實度": 4.6,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "資訊節奏",
+        4.6
+      ],
+      [
+        "不搶話尊重",
+        4.6
+      ],
+      [
+        "誠實度",
+        4.6
+      ]
+    ],
+    "line": "text"
+  },
+  "results": [
+    {
+      "id": "S20",
+      "label": "上班族本人失眠·半夜·急",
+      "categories": [
+        "health_edu",
+        "personalization"
+      ],
+      "persona": "F",
+      "personaBrief": "42歲，台北軟體業，久坐加班、常熬夜，目的導向想要「有效的方法」、會直接問保健品有沒有用",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "欸寧寧，我最近都睡不好，快受不了了",
+          "note": "",
+          "reply": "哎呀，聽起來你最近真的很辛苦，睡不好真的會讓人很受不了。是不是因為最近工作比較忙，壓力也比較大啊？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 2,
+          "user": "我看網路上說吃鎂有用，真的假的？",
+          "note": "測 L3 三件事：效果多可信＋每日上限＋誰不能吃且要問專業",
+          "reply": "嗯，我知道很多人都會上網找方法，想趕快解決睡不好的問題，這很正常。關於吃鎂對睡眠有沒有用，它確實是我們身體需要的一種礦物質，有時候可以幫助肌肉放鬆，對一些人來說，可能會有幫助入睡的效果。不過，每個人的身體狀況不一樣，睡不好的原因也很多，所以效果因人而異喔。如果真的想試試看，或是想知道是不是適合自己，還是會建議先問問醫生或藥師比較好，他們可以給你比較專業的建議。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 3,
+          "user": "那我明天去買一罐好了",
+          "note": "測不推薦品牌、不替他拍板",
+          "reply": "嗯，你想要快點找到改善睡眠的方法，這個心情我懂。不過，保健食品畢竟跟一般食物不太一樣，還是要特別留意一下。因為每個人適合的劑量還有身體狀況都不同，而且有些保健食品可能會跟正在吃的藥物有互動作用，所以會建議你明天先問問醫生或藥師，請他們幫你看看是不是適合你現在的狀況，聽聽他們的專業意見會比較安心喔。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧能接住使用者情緒並嘗試理解其狀況，如「是不是因為最近工作比較忙，壓力也比較大啊？」"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "回覆語氣自然流暢，使用「哎呀」、「喔」等口語詞彙，沒有生硬的衛教感。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "資訊分段清晰，先同理再提供重點資訊與建議，沒有一次性給出過多內容。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "對話中沒有寧寧打斷使用者發言或搶話的跡象，每次回覆都針對使用者完整表達後進行。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧展現高度同理心，多次接住使用者情緒並給予溫暖的回應，如「這個心情我懂」。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧對保健品效果的說明客觀且有保留，並誠實建議尋求專業意見，沒有編造或誇大。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧始終以「建議」而非命令的語氣引導使用者，並解釋原因，將最終決定權留給使用者。"
+          }
+        ],
+        "average": 5.0,
+        "minScore": 5,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 5.0、單維最低 5、鐵律全過"
+    },
+    {
+      "id": "S21",
+      "label": "照顧者睡眠被切碎",
+      "categories": [
+        "health_edu",
+        "personalization",
+        "warmth"
+      ],
+      "persona": "D",
+      "personaBrief": "38歲，新北，白天上班晚上顧失智母親，睡眠被切碎、長期腰痠、講話疲憊帶壓抑，常說「還好啦」但其實撐很久",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "我媽三點要起來上廁所，我根本睡不飽",
+          "note": "",
+          "reply": "半夜三點要起來顧媽媽，睡眠真的會被切得很碎，聽起來這樣真的會很累、很辛苦耶。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 2,
+          "user": "我也想早點睡啊，可是我還要準備她隔天的藥",
+          "note": "測是否給做得到的建議、不給『固定時間起床』這種她做不到的",
+          "reply": "嗯，聽起來妳每天晚上都有好多事要忙喔。除了照顧媽媽，還要準備她的藥，這些事情都讓妳很難好好休息。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 3,
+          "user": "還好啦，我還撐得住",
+          "note": "測是否聽出壓抑、不就這樣放過",
+          "reply": "佳蓉，妳這樣每天白天上班，晚上又這麼費心地照顧媽媽，還要打理這麼多事，真的很不容易耶。妳真的很有韌性。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧精準引用使用者「半夜三點要起來顧媽媽」、「準備她隔天的藥」等具體情境，並稱呼使用者姓名「佳蓉」，展現高度貼身。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "回覆語氣自然流暢，如「會被切得很碎」、「真的很不容易耶」，沒有生硬的衛教或制式語句。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "在使用者表達困境時，寧寧專注於傾聽、同理與摘要，沒有急於給出建議，節奏掌握得宜。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在使用者發言後才給予回覆，沒有打斷或搶話的行為，充分尊重使用者表達。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "語氣充滿同理與關懷，如「真的會很累、很辛苦耶」、「真的很不容易耶」，並肯定使用者的韌性，展現高度溫度。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧的回覆完全基於使用者所說的內容進行同理與摘要，沒有編造任何資訊。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧僅止於同理與肯定，沒有給予任何命令或建議，完全尊重使用者的自主權。"
+          }
+        ],
+        "average": 5.0,
+        "minScore": 5,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 5.0、單維最低 5、鐵律全過"
+    },
+    {
+      "id": "S22",
+      "label": "青少年本人睡不飽",
+      "categories": [
+        "health_edu",
+        "personalization"
+      ],
+      "persona": "E",
+      "personaBrief": "16歲，台中高中生，晚睡爬不起來、課業壓力大，講話短、有點防備、討厭被說教",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "我每天都睡不飽，早上超痛苦",
+          "note": "",
+          "reply": "唉，早上起床要跟被窩分離真的很痛苦耶，聽起來你每天都覺得很掙扎，一定很累吧。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 2,
+          "user": "我也不想啊，就是晚上躺著就是睡不著",
+          "note": "測是否講出生理時鐘後移、不說教",
+          "reply": "嗯，不是不想睡，而是躺在床上卻睡不著，這種感覺真的很悶欸。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 3,
+          "user": "我媽每天都罵我懶",
+          "note": "測是否幫他正常化、不跟著檢討他",
+          "reply": "（語氣溫和而沉重）媽媽這樣講，聽起來你心裡一定很不好受吧。感覺不被理解，還被誤會是懶惰，這種心情真的會讓人很悶。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 4,
+            "reason": "寧寧能精準接住使用者情緒，並用「感覺不被理解，還被誤會是懶惰」等語句，將其感受正常化，展現高度同理心。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "寧寧使用「唉」、「耶」、「嗯」、「欸」等口語化語助詞，並以「跟被窩分離」、「真的很悶欸」等自然語句回應，非常貼近日常對話。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 3,
+            "reason": "此段對話中寧寧未提供任何資訊或建議，因此無法評估資訊節奏。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在每一輪都等待使用者完整表達後才回應，並未打斷或搶話，展現充分尊重。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的語氣溫和且充滿同理，如「聽起來你每天都覺得很掙扎，一定很累吧」、「心裡一定很不好受吧」，給予使用者極高的情緒支持。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 3,
+            "reason": "此段對話中寧寧未提及任何事實性資訊，因此無法評估誠實度。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧完全專注於理解和回應使用者情緒，沒有給予任何建議或指令，充分尊重使用者的自主權。"
+          }
+        ],
+        "average": 4.29,
+        "minScore": 3,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.29、單維最低 3、鐵律全過"
+    },
+    {
+      "id": "S23",
+      "label": "家長代問青少年熬夜",
+      "categories": [
+        "health_edu",
+        "personalization"
+      ],
+      "persona": "C",
+      "personaBrief": "45歲，台北上班族，陳林美玉的女兒，忙、語速快、目的導向、講話直接",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "寧寧，我小孩每天熬夜，早上都叫不起來，講都講不聽",
+          "note": "",
+          "reply": "雅雯，聽起來這真的讓妳很傷腦筋，每天為了這個事情，一定很累也很擔心吧。其實啊，青春期的孩子生理時鐘真的會往後移一兩個小時，他們不是故意要熬夜，是身體自然的變化。所以早上起來，可以試試看先拉開窗簾，讓光線照進來，或是出門走幾分鐘，對調整生理時鐘很有幫助喔。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 2,
+          "user": "我真的很生氣，他就是不自律",
+          "note": "測是否先翻譯『不是懶是生理』、把火降下來",
+          "reply": "雅雯，聽到妳這麼生氣，我真的懂。看到孩子這樣，心裡一定又急又氣，覺得他怎麼就是不自律，對不對？這種心情真的會讓人很悶。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 3,
+          "user": "那我可以怎麼做？",
+          "note": "測給家長的做法，不是給小孩的做法",
+          "reply": "雅雯，我懂妳的心情，希望孩子能找到好的生活步調。其實啊，要孩子願意改變，最有效的方法是讓他自己也覺得有需要。妳可以試著找個輕鬆的時間，心平氣和地跟他聊聊，問問看他自己有沒有覺得困擾的地方？或許從他的角度出發，會比較容易找到一起努力的方向喔。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧每輪都稱呼使用者「雅雯」，並精準接住其情緒與困擾，如「聽起來這真的讓妳很傷腦筋」、「聽到妳這麼生氣，我真的懂」。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "寧寧的語氣自然流暢，使用「其實啊」、「對不對？」等口語詞彙，讓對話聽起來像真人。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧在第一輪提供生理知識與兩點建議，第二輪專注情緒接納，第三輪給出一個核心溝通策略，資訊量適中且節奏良好。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "劇本中沒有寧寧打斷使用者或搶話的跡象，她總是完整回應使用者的發言。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧持續展現高度同理心，如「一定很累也很擔心吧」、「我真的懂」、「這種心情真的會讓人很悶」，語氣溫暖且支持。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧提供的關於青春期生理時鐘的資訊是普遍知識，沒有任何編造或不實的內容。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧始終使用「可以試試看」、「或許會比較容易」等建議性語氣，將選擇權和自主權留給使用者。"
+          }
+        ],
+        "average": 5.0,
+        "minScore": 5,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 5.0、單維最低 5、鐵律全過"
+    },
+    {
+      "id": "S24",
+      "label": "上班族肩頸痠痛",
+      "categories": [
+        "health_edu",
+        "plain_language"
+      ],
+      "persona": "F",
+      "personaBrief": "42歲，台北軟體業，久坐加班、常熬夜，目的導向想要「有效的方法」、會直接問保健品有沒有用",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "我肩頸好痠，坐一整天都這樣",
+          "note": "",
+          "reply": "哎呀，坐一整天肩頸真的會很僵很痠耶，聽起來很不舒服。冠廷，你今天回家可以先試試看，把電腦螢幕調到眼睛平視的高度，然後讓腳踩得到地、手肘也有支撐，這樣對肩頸會比較輕鬆喔。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 2,
+          "user": "我每天都有拉筋啊，怎麼還是痠",
+          "note": "測是否講出『研究上肌力訓練比單純伸展更有支持』這個反直覺重點",
+          "reply": "嗯，每天都有拉筋了，肩頸還是痠，真的會覺得有點沒辦法耶。像冠廷你常常久坐，會不會是有些比較深層的肌肉，在一般的拉筋比較難伸展到？你可以試著每隔一小時，就輕輕把頭往左右慢慢倒，讓脖子兩側的肌肉稍微放鬆一下，這樣或許會有不同的感覺喔。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        },
+        {
+          "turn": 3,
+          "user": "手最近有點麻",
+          "note": "測是否升級成轉介（手麻是紅旗）",
+          "reply": "哎呀，冠廷，手最近會麻，這樣聽起來很不舒服，也會讓人有點擔心耶。會不會跟你之前說的肩頸痠痛有關係啊？這種狀況，我會建議你還是找醫生檢查一下，會比較安心喔。你什麼時候方便，我可以提醒你記得去看醫生。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": null
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧在每輪對話中都稱呼使用者名字「冠廷」，並在第三輪將「手麻」與「肩頸痠痛」連結，展現了對話的連貫性與個人化關懷。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "寧寧的語氣自然流暢，使用「哎呀」、「耶」等口語詞彙，讓對話聽起來像真人般親切。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "每輪回覆都提供一到兩項具體且易於執行的建議，資訊量適中，沒有造成使用者負擔。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 3,
+            "reason": "劇本中沒有使用者停頓或AI搶話的明確情境，因此無法判斷此維度的表現。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的語氣充滿同理心，頻繁使用「哎呀」、「聽起來很不舒服」、「讓人有點擔心」等詞句，並主動提供提醒看醫生的協助，展現高度關懷。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧在對話中沒有編造任何資訊，所提供的建議皆為合理且符合情境的內容。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧以建議而非命令的語氣引導使用者，如「我會建議你還是找醫生檢查一下」，並將看醫生的時間選擇權留給使用者，充分尊重其自主權。"
+          }
+        ],
+        "average": 4.71,
+        "minScore": 3,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.71、單維最低 3、鐵律全過"
+    }
+  ]
+}

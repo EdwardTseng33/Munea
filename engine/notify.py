@@ -36,10 +36,27 @@ def ops(event_name, summary=""):
             "health_connected": "❤️"}.get(event_name, "📈")
     _post(_OPS, f"{icon} [{_ENV}] {event_name}" + (f" · {summary}" if summary else ""))
 
-def alert(kind, where, detail=""):
-    """功能告警：kind=chat|voice|data|billing|engine；where=哪個口；detail=去識別的錯誤摘要"""
+# 2026-07-29：告警原本只有一級——半夜「有人打不進來」跟「某一筆資料沒寫進雲端」
+# 在頻道裡長得一模一樣，結果就是兩種都不會叫醒人。分兩級：
+#   critical＝使用者現在打不通／叫不到人／付不了錢（人在等、會出事）→ @channel 穿透手機免打擾
+#   warning ＝有東西壞了但服務還活著（單筆寫入失敗、單台機器異常）→ 安靜進頻道、早上看
+# 只有真的會咬人的才 @channel；狼來了幾次以後就沒人理了，那比不發還糟。
+CRITICAL_KINDS = ("call_down", "gpu_down", "auth_down", "billing_down")
+_CRITICAL_THROTTLE_S = 300     # critical 節流短一點（5 分鐘），壞消息要跟得上現場
+_WARNING_THROTTLE_S = 600
+
+
+def alert(kind, where, detail="", critical=None):
+    """功能告警：kind=chat|voice|data|billing|engine|call_down|gpu_down…；
+    where=哪個口；detail=去識別的錯誤摘要；critical 不指定時照 CRITICAL_KINDS 自動判。"""
+    is_critical = (kind in CRITICAL_KINDS) if critical is None else bool(critical)
     now = time.time()
-    if now - _last_alert.get(kind + where, 0) < 600:   # 同類 10 分鐘一次
+    window = _CRITICAL_THROTTLE_S if is_critical else _WARNING_THROTTLE_S
+    if now - _last_alert.get(kind + where, 0) < window:
         return
     _last_alert[kind + where] = now
-    _post(_ALERT, f"🔴 [{_ENV}] 功能告警 · {kind} · {where}\n{(detail or '')[:300]}")
+    if is_critical:
+        _post(_ALERT, f"<!channel> 🚨 [{_ENV}] 服務中斷 · {kind} · {where}\n"
+                      f"{(detail or '')[:300]}\n（使用者現在受影響，需要立刻看）")
+    else:
+        _post(_ALERT, f"🔴 [{_ENV}] 功能告警 · {kind} · {where}\n{(detail or '')[:300]}")

@@ -4,6 +4,14 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-07-28 Codex 📱 App 1.0.44 Build 492 上傳與 Edward iPhone 換裝（App E2E pending）
+
+- **來源／範圍**：獨立 worktree `codex/app-store-1.0.44-build492-20260728`，基準 `origin/main@5d2008c`；修改 Xcode Build 48→492、`web/index.html` 四個 cache identity → `20260728-v1044`，以及本次發版證據文件。未帶入 Draft PR #247 的 UI 內容。
+- **測試／正式包**：完整 `test:launch`、App Call Control 15/15、Avatar render contract、strict release consistency、App Store IPA 五道防漏全 PASS。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`。
+- **Apple**：17:22:57 `Upload succeeded`，processing 完成；17:31 已選入並儲存在 1.0.44 版本頁。目前仍為「準備提交」，未點「新增以供審查」、未送審／核准／公開。
+- **手機**：Edward iPhone 15 Pro 已安裝、啟動並從裝置回讀 `Munea 1.0.44 (492)`；Development signing＋production config，沒有 direct／gateway QA fixture。
+- **硬 Gate**：自動 contract 只屬 precheck。仍需 Edward 以 0 點真帳號確認不顯示撥號中／不領 lease，再以 505 點 QA 帳號完成 Voice＋Avatar、AI 聲畫回應、掛斷後釋位；在此之前維持 `App E2E pending`。
+
 ### 2026-07-27 蘇菲 🚀 部署：正式機兩台上 7/25 深夜班成果（Edward「更新上線吧」授權）
 
 - **範圍**：`munea-brain` `00021-kow`→`00023-xoc`、`munea-voice` `00009-muh`→`00011-luw`→`00013-joj`（疊試驗設定）；皆 v1.0.44 @ `f6d9c7fa3408`。
@@ -2152,6 +2160,13 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **安全邊界**：純 CI 判定邏輯與文件，不動 App、Brain、Voice、Gateway、iOS 包、線上服務或部署流程。證據檔本身**沒有**動——重擷是上線車道的動作，這次刻意不做，否則只是把今天補綠、下次跳版再紅一次。
 - **本機驗收**：治理關 8 個步驟照 CI 順序全跑，全綠（含 `check-release-consistency --strict-ios` PASS、source 1.0.43／iOS 1.0.43 Build 48 對齊）。預設模式印出落後 warning 後 PASS；`--strict-version` 如預期紅燈。非 call-path 變更，無 App E2E 需求。
 
+### 2026-07-24 Claude / Windows 🔄 開發中：全站按鈕對比修正＋刪除鈕危險樣式（女巫 Gate 2 抓的兩個既有問題）
+
+- **目標**：①主按鈕白字對比全站不過 WCAG AA（`--btn-green #37A099` 白字只有 3.16:1、`--teal-d` 底也只有 4.13:1，主用戶是高齡族群更需要對比）②設定頁「刪除我的資料」掛著從未定義的 `.quiet`、渲染成跟一般確認鈕相同的實心綠。兩者皆為既有系統性問題、非 PR #246 造成。
+- **修法**：`--btn-green` 色票加深為 `#2A7E78`（白字 4.82:1 ✓、色相不變），一次修掉全站十多顆共用主鈕；三顆 `--teal-d` 底的按鈕（consent-go／auth-primary／已服藥）統一改用 `--btn-green`。新增 `--danger-d #B0392D`（6.05:1）＋`.modal-btn.danger`（白底深紅描邊；「再按一次確認」武裝態＝實心深紅白字）；`#dataDeleteBtn` 改掛 `danger`，中斷連結／退出家庭圈兩顆紅字鈕一併換深紅。
+- **實際檔案**：`web/src/styles.css`（色票 2 處＋按鈕 7 處）、`web/index.html`（刪除鈕 class 一行）、`docs/qa/button-contrast-20260724/`（前後截圖 8 張＋對比數值 README）、本看板。
+- **安全邊界**：純前端 CSS／一行 HTML class，不動 App 邏輯、Brain、Voice、Gateway、iOS 包。刪除流程的兩段確認行為（app.js）完全沒動、只加視覺層。與 PR #246 不衝突（它動的是 `.modal-btn.quiet` 定義與 profileModal 區塊、沒碰 `#dataDeleteBtn` 那行）。
+- **本機驗收**：`node scripts/test-ui-contracts.js` 綠；前後截圖 4 組畫面目檢過（品牌薄荷綠色相未跑、危險鈕與確認鈕視覺明確分權）。
 
 ### 2026-07-24 Claude / Windows 🔄 開發前：開帳與個人資料重整（Edward 拍板需求單）
 
@@ -2317,3 +2332,12 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **正式機**：`munea-voice` 部署前後皆為 `munea-voice-00009-muh`（`prod-0724-204904-8ddab84`）、100% 流量，未動。
 - **回滾把手**：`gcloud run services update-traffic munea-voice-staging --region asia-east1 --project gen-lang-client-0229303523 --to-revisions munea-voice-staging-00058-yer=100`
 
+### 2026-07-29 Claude/城堡 🔀 拆分批次①：就醫建議不對稱安全鐵則（自 #270 移植）
+
+- **來源**：PR #270 已由 Edward 關閉並批准拆分（2026-07-29）。本批＝原 commit `9a337ae`～`b565921` 五筆，自最新 `origin/main` 重新移植。原分支 `claude/health-caregiver-ai-features-v9kcj3`（head `1aa53a3`）完整保留、未改寫。
+- **為何本批可先走**：只碰 `engine/chat_engine.py`＋測試＋兩份方向文件，**完全沒碰 #284 接管的檔案**（`web/index.html`／`web/src/app.js`／`web/src/notify.js`／iOS locale／Gateway·Voice locale contract），無雙邊修改風險。
+- **內容**：不對稱鐵則入 CORE/RED——**只往上推、永不往下擋**。可以說「建議盡快就醫」，永遠不說「不用看醫生」「觀察就好」「應該沒事」。往下擋＝延誤就醫＝出人命，也是醫材紅線唯一會出大事的方向。附 13 項鐵律測試並掛進 `test:launch`。
+- **移植處置**：`docs/協作看板-雙AI分工.md` 在 main 已被其他線更新，cherry-pick 以 main 為準（`-X ours`），本條為移植後的單一補記，不回填舊條目。
+- **驗證**：`test_medical_escalation_asymmetry` 13 項全過；`test_guardian_crisis`／`test_health_kb`／`test_reasoning_leak_guard`／`test_voice_style_rules`／`test_relationship_dialogue` 全 exit=0。
+- **⚠ 既有失敗（非本批造成，已用乾淨 main 對照確認）**：`scripts/test-voice-launch-policy.js`「current-information lookup can still bypass the feature-gated controlled Voice tool path」在 **未套用本批的 origin/main 上同樣 exit=1**。屬他線議題，本 PR 不處理。
+- **⚠ 未驗**：call-path risk（動 chat_engine 的 CORE/RED），**App E2E pending**、未部署。

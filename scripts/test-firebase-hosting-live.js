@@ -10,10 +10,40 @@ async function request(pathname, options = {}) {
 }
 
 async function main() {
-  for (const pathname of ["/", "/privacy", "/terms", "/support"]) {
+  for (const pathname of ["/", "/en", "/ja", "/es", "/privacy", "/terms", "/support"]) {
     const response = await request(pathname);
     assert.equal(response.status, 200, `${pathname} must return 200`);
     assert.match(response.headers.get("content-type") || "", /text\/html/i);
+  }
+
+  // 帶尾斜線的寫法會被轉到不帶的那個 —— 確認轉址是對的、不是壞掉
+  for (const dir of ["en", "ja", "es"]) {
+    const response = await request(`/${dir}/`);
+    assert.equal(response.status, 301, `/${dir}/ must redirect to the canonical path`);
+    assert.equal(response.headers.get("location"), `/${dir}`);
+  }
+
+  // 每個語系真的送出該語系的頁（不是四個網址指到同一份中文）
+  for (const [pathname, lang] of [
+    ["/", "zh-Hant-TW"],
+    ["/en", "en"],
+    ["/ja", "ja"],
+    ["/es", "es"],
+  ]) {
+    const html = await (await request(pathname)).text();
+    assert.match(html, new RegExp(`<html\\s+lang="${lang}"`), `${pathname} must serve lang=${lang}`);
+  }
+
+  // 版型與文案表住在 app-site 外面（site-src/），結構上就送不出去。
+  // 萬一哪天有人搬回來，這幾條會立刻紅燈。
+  for (const pathname of [
+    "/_src/index.html",
+    "/_src/i18n/zh.json",
+    "/_src/config.json",
+    "/site-src/index.html",
+  ]) {
+    const response = await request(pathname);
+    assert.equal(response.status, 404, `${pathname} must not be published`);
   }
 
   for (const pathname of ["privacy", "terms", "support"]) {

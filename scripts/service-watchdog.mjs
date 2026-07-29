@@ -21,11 +21,14 @@ export const TARGETS = [
     url: "https://munea-brain-491603544409.asia-east1.run.app/healthz/",
     expect: [200],
     check: "json-ok",
+    // 2026-07-29：正式兩台倒了＝使用者現在打不通、叫不到人 → 告警要叫得醒人（見 buildAlertText）
+    userFacing: true,
   },
   {
     name: "Voice 正式（munea-voice）",
     url: "https://munea-voice-491603544409.asia-east1.run.app/",
     expect: [200], // websocket 服務的 HTTP 門面；能回頁面＝程序活著
+    userFacing: true,
   },
   {
     name: "Brain 測試環境（munea-brain-staging）",
@@ -193,6 +196,13 @@ export async function runChecks(targets, fetchImpl, retryDelayMs = RETRY_DELAY_M
 
 export function buildAlertText(failures) {
   const lines = failures.map((f) => `• ${f.name}：${f.detail}\n  ${f.url}`);
+  // 2026-07-29 分級：正式的大腦／聊聊倒了＝使用者現在打不通、叫不到人，
+  // 半夜也要叫得醒（<!channel> 才穿得透手機的免打擾）。其他（測試機、周邊）
+  // 安靜進頻道、早上看就好——只有真的會咬人的才吵，狼來了幾次以後就沒人理了。
+  if (failures.some((f) => f.userFacing)) {
+    return `<!channel> 🚨 沐寧服務中斷：${failures.length} 個服務異常（使用者現在打不通）\n`
+      + `${lines.join("\n")}\n（每 5 分鐘巡一輪；恢復後告警自然停止）`;
+  }
   return `🔴 沐寧服務看門狗：${failures.length} 個服務異常\n${lines.join("\n")}\n（每 5 分鐘巡一輪；恢復後告警自然停止）`;
 }
 

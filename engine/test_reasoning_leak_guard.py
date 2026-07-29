@@ -111,7 +111,10 @@ class ProductionCallSitesWireTheGuardTests(unittest.TestCase):
             src = f.read()
         # 2026-07-29：出口改走統一清洗 clean_outgoing_reply（內含這道剝除＋空頭承諾攔截），
         # 這道防禦沒有被拿掉、只是包進同一支函式，檢查跟著改認新名字。
-        self.assertIn("eng.clean_outgoing_reply(r.text)", src)
+        # 2026-07-29 這行改成多行呼叫（多帶了 has_briefing）——保證沒變，改驗實質：
+        # 文字線出口確實走共用清洗，而且清的是模型回的那段字。
+        self.assertIn("eng.clean_outgoing_reply(", src)
+        self.assertIn("r.text, has_briefing=", src)
 
     def test_live_voice_caption_output_calls_strip_reasoning_artifacts(self):
         src_path = os.path.join(os.path.dirname(__file__), "live_voice_server.py")

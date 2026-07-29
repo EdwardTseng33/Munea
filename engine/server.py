@@ -22,7 +22,9 @@ from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
 import cloud_resync
+import health_followup
 import health_kb
+import health_selector
 import localization
 import supabase_adapter
 import enterprise_seats
@@ -2454,12 +2456,22 @@ def proactive_opening_response(data):
             today_line = brief.get("briefingLine") or ""
             if style == "gentle":
                 today_line += "（她昨天聽起來有點悶——開場要更輕更慢，先陪伴、不要話題轟炸。）"
+            # 效果飛輪（2026-07-29）：幾天前推薦過的方法到期了 → 這次開口就順便關心後來怎麼樣。
+            # 這是「陪伴即追蹤」真正發生的地方——不追問結果的建議，等於講完就沒了。
+            try:
+                _due = health_followup.due_followups(person_id, limit=1)
+                if _due:
+                    today_line += health_followup.followup_cue(_due[0])
+                    reasons.append(f"有到期的回訪（{_due[0].get('label')}）")
+            except Exception as e:
+                log_fallback_exception("attach health followup to opener", e)
             opener = eng.open_chat(data.get("char") or DEFAULT_CHAR, today=today_line)
         except Exception as e:
             log_fallback_exception("generate proactive opener", e)
     return {"ok": True, "brain": "butler", "action": "proactive_opening",
             "shouldOpen": should, "score": score, "style": style,
-            "period": ctx["period"], "reasons": reasons, "opener": opener}
+            "period": ctx["period"], "reasons": reasons, "opener": opener,
+            "followUp": (health_followup.due_followups(person_id, limit=1) or [None])[0]}
 
 
 def refresh_daily_briefing(region=None, person_id=None):
@@ -8437,7 +8449,22 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
             last_user = (h.get("text") or h.get("content") or "").strip()
             if last_user:
                 break
-    base += health_kb.injection_for(last_user)
+    # 2026-07-29：把「這個人是誰、現在幾點」一起傳進去，方案挑選才會因人因時。
+    # 沒有出生年就傳 None——挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
+    _health_profile = current_health_profile()
+    # 話題延續：翻回前幾輪他說過的話，找出這通在聊的那題——不然「我睡不好」的下一句
+    # 「吃鎂有用嗎，真的假的？」會被當成謠言查證，拿不到鎂的方案（2026-07-29 考卷抓到）。
+    _recent_topic = None
+    for h in reversed((history or [])[:-1]):
+        if not isinstance(h, dict) or (h.get("role") or "user") != "user":
+            continue
+        _hit = health_kb.match_topics((h.get("text") or h.get("content") or "").strip(), limit=1)
+        if _hit:
+            _recent_topic = _hit[0]
+            break
+    base += health_kb.injection_for(last_user, profile=_health_profile,
+                                    hour=(context.get("now") or {}).get("hour"),
+                                    recent_topic=_recent_topic)
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):
@@ -8458,7 +8485,10 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                     config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
                 # 2026-07-25（卡西法・三修③）：出口前防禦性清洗，剝掉模型偶爾漏出的
                 # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
-                return eng.clean_outgoing_reply(r.text)
+                # has_briefing：今天到底有沒有備到天氣。沒有卻講「氣象報告說」＝
+                # 引用一個不存在的來源，出口硬擋（2026-07-29 考卷 S03 抓到）。
+                return eng.clean_outgoing_reply(
+                    r.text, has_briefing=bool((context or {}).get("dailyBriefing")))
             except Exception as e:
                 log_fallback_exception(f"generate chat reply with {m}", e)
         time.sleep(2)
@@ -8913,6 +8943,50 @@ def voice_call_recap_response(data):
             REQUEST_DATA_IDENTITY.reset(scope_token)
 
 
+def current_health_profile():
+    """這個人的「挑方案用側寫」：齡層＋人別鍵＋他試過什麼有沒有效。
+
+    2026-07-29 抽成共用函式——原本只有文字線在組，聊聊那條線讀的是一個
+    「從來沒有人寫進去」的狀態鍵，所以語音線的因人分齡其實一直沒生效。
+    兩條線共用同一份組法，才不會再出現一邊有、一邊悄悄沒有的落差。
+
+    沒有出生年就傳 None——挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
+    """
+    pp = load_person_profile() or {}
+    person_id = _current_person_id() or ""
+    return {
+        "audience": health_selector.audience_from_birth_year(pp.get("birthYear")),
+        "personId": person_id,
+        # 效果飛輪：他上次試過什麼、有沒有效——說沒效的這次就不要再端出來
+        "outcomes": health_followup.outcomes_for(person_id) if person_id else {},
+    }
+
+
+def voice_health_recommended_response(data):
+    """POST /voice/health-recommended（內部密語驗證後才會進來）：
+    聊聊那頭剛端出一組方案，回報進來讓 Brain 記帳。
+
+    為什麼要繞這一圈：飛輪的帳本在 Brain 這台（跟文字線同一本）。Voice 是另一台
+    Cloud Run、有自己的磁碟，寫在那邊等於開第二本帳——同一個人在聊聊講「那個沒效」，
+    文字線卻不知道，下次照樣端一樣的東西出來。一本帳、Brain 記。
+    """
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        if not person:
+            return {"ok": True, "recorded": 0, "identityResolved": False}
+        person_id = _current_person_id() or ""
+        topic_id = str(data.get("topicId") or "").strip()
+        solutions = [s for s in (data.get("solutions") or []) if isinstance(s, dict)]
+        if not (person_id and topic_id and solutions):
+            return {"ok": True, "recorded": 0, "identityResolved": True}
+        added = health_followup.record_recommendation(person_id, topic_id, solutions)
+        return {"ok": True, "recorded": len(added), "identityResolved": True}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def voice_health_context_response(data):
     """POST /voice/health-context（內部密語驗證後才會進來）：
     Voice 開場前向 Brain 要「這位來電者自己的身體狀況」。
@@ -8928,7 +9002,11 @@ def voice_health_context_response(data):
     scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
     try:
         ctx = load_health_context() if person else {"facts": [], "notable": [], "hasData": False}
-        return {"ok": True, "healthContext": ctx, "identityResolved": bool(person)}
+        # 2026-07-29：順路把「挑方案用側寫」一起給——聊聊那頭沒有雲端鑰匙、
+        # 自己算不出齡層，也讀不到他上次說哪個沒效。認不出人就不給，讓那邊退回通用。
+        profile = current_health_profile() if person else None
+        return {"ok": True, "healthContext": ctx, "healthProfile": profile,
+                "identityResolved": bool(person)}
     finally:
         if scope_token is not None:
             REQUEST_DATA_IDENTITY.reset(scope_token)
@@ -9164,7 +9242,8 @@ class H(BaseHTTPRequestHandler):
             # Voice→Brain 內部通道（通話記憶）：Voice 沒有用戶的登入 token，
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
-            if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context"):
+            if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context",
+                                "/voice/health-recommended"):
                 _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
                 _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
                 if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
@@ -9175,6 +9254,7 @@ class H(BaseHTTPRequestHandler):
                     "/voice/call-memory": voice_call_memory_response,
                     "/voice/call-recap": voice_call_recap_response,
                     "/voice/health-context": voice_health_context_response,
+                    "/voice/health-recommended": voice_health_recommended_response,
                 }
                 self._json(_voice_internal[request_path](data))
                 return

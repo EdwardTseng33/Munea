@@ -24,6 +24,24 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-u", "engine/live_voice_server.py"],
       "port": 8201
+    },
+    {
+      "name": "busy-card-p0",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8129", "--directory", "E:/Claude/Munea-worktrees/busy-card-p0/web"],
+      "port": 8129
+    },
+    {
+      "name": "munea-site-i18n",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["firebase-tools@15.23.0", "emulators:start", "--only", "hosting", "--project", "gen-lang-client-0229303523"],
+      "port": 5000
+    },
+    {
+      "name": "munea-b2b-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vercel", "dev", "--cwd", "E:/Claude/Munea/munea-b2b", "--listen", "3111", "--yes"],
+      "port": 3111
     }
   ]
 }

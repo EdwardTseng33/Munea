@@ -16,11 +16,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 class HealthTopicsDataTest(unittest.TestCase):
-    def test_21_topics_all_present_with_unique_ids(self):
-        self.assertEqual(len(health_kb.TOPICS), 21)
+    def test_curated_elder_set_intact_and_ids_unique(self):
+        """原 21 題＝7/24 雙審過的長輩策展套組，一題都不能少（22 起是全家人擴充，另立規矩）。"""
         ids = [t["id"] for t in health_kb.TOPICS]
-        self.assertEqual(len(set(ids)), 21)
-        self.assertEqual(sorted(ids), [f"TW-EDU-{n:02d}" for n in range(1, 22)])
+        self.assertEqual(len(set(ids)), len(ids), "題號有重複")
+        for n in range(1, 22):
+            self.assertIn(f"TW-EDU-{n:02d}", ids, f"長輩策展套組少了 TW-EDU-{n:02d}")
 
     def test_every_topic_has_required_fields(self):
         for t in health_kb.TOPICS:
@@ -29,23 +30,42 @@ class HealthTopicsDataTest(unittest.TestCase):
             self.assertTrue(t["keywords"], t["id"])
             self.assertTrue(t["source"], t["id"])
             # 注入文有內容、也有上限：衛教是配菜，太長會淹沒安全紅線（拍板：單次 500-700 字含包裝）
+            # 2026-07-29：已改用方案池的題（如 TW-EDU-22），內容在 health_solutions.json、
+            # 這裡只留指路註記，長度不適用——但必須真的有方案池，不能兩邊都空。
+            if "方案池" in t["inject"]:
+                import health_selector
+                self.assertIn(t["id"], health_selector.TOPICS, f"{t['id']} 說走方案池、卻沒有方案池")
+                continue
             self.assertGreaterEqual(len(t["inject"]), 120, t["id"])
             self.assertLessEqual(len(t["inject"]), 650, t["id"])
 
-    def test_category_balance_matches_curated_script(self):
-        """雙審裁決：三類各 7 題、不讓任一類過半。"""
+    def test_curated_elder_set_keeps_its_category_balance(self):
+        """雙審裁決：原 21 題三類各 7 題、不讓任一類過半（只驗那 21 題，擴充題不受此限）。"""
         counts = {}
         for t in health_kb.TOPICS:
-            counts[t["category"]] = counts.get(t["category"], 0) + 1
+            n = int(t["id"].rsplit("-", 1)[1])
+            if n <= 21:
+                counts[t["category"]] = counts.get(t["category"], 0) + 1
         self.assertEqual(counts, {"保健品期待型": 7, "必須嚴管轉介型": 7, "純生活型": 7})
 
     def test_strict_referral_topics_carry_referral_language(self):
-        """嚴管轉介型 7 題：注入文必須帶轉介／就醫／119 方向，不能只有生活建議。"""
+        """嚴管轉介型 7 題：必須帶轉介／就醫／119 方向，不能只有生活建議。
+
+        2026-07-29 改成查「實際生效的那份」——題目搬進方案池之後，轉介語言
+        在池子的 L5 轉介卡裡，只驗 inject 會漏掉整個新架構。
+        """
+        import health_selector
         for t in health_kb.TOPICS:
             if t["category"] != "必須嚴管轉介型":
                 continue
+            pooled = health_selector.TOPICS.get(t["id"])
+            if pooled:
+                text = " ".join(s.get("say", "") for s in pooled["solutions"]
+                                if s.get("riskLevel") in ("L4", "L5"))
+            else:
+                text = t["inject"]
             self.assertTrue(
-                any(k in t["inject"] for k in ("就醫", "119", "轉介", "醫師")),
+                any(k in text for k in ("就醫", "119", "轉介", "醫師")),
                 f"{t['id']} 嚴管題缺轉介語言")
 
     def test_no_simplified_chinese_in_injects(self):
@@ -110,6 +130,21 @@ class MatchingTest(unittest.TestCase):
             got = health_kb.match_topics(text)
             self.assertIn(want, got, f"「{text}」應命中 {want}、實際 {got}")
 
+    def test_natural_phrasings_with_infix_words_still_trigger(self):
+        """2026-07-29 實測抓到的真漏洞：關鍵字是死的字串比對，
+        長輩／上班族講「睡**不太**好」「腰**好**痛」中間插一個字就整個叫不出衛教庫。
+        這條把常見的插字說法釘住——以後有人精簡關鍵字表會立刻紅燈。"""
+        cases = [
+            ("我最近攏睡不太好", "TW-EDU-01"),
+            ("我睡得好差", "TW-EDU-01"),
+            ("躺很久都睡不著", "TW-EDU-01"),
+            ("我腰好痛", "TW-EDU-22"),
+            ("脖子好痛", "TW-EDU-22"),
+            ("肩膀很痠", "TW-EDU-22"),
+        ]
+        for text, want in cases:
+            self.assertIn(want, health_kb.match_topics(text), f"「{text}」應命中 {want}")
+
     def test_everyday_smalltalk_hits_nothing(self):
         for text in ("今天天氣真好想去公園走走", "我孫子這次考試考很好", "晚餐想吃什麼好呢",
                      "昨天那齣連續劇很好看"):
@@ -122,7 +157,10 @@ class MatchingTest(unittest.TestCase):
         self.assertLessEqual(len(ids), health_kb.MAX_TOPICS_PER_TURN)
         inj = health_kb.injection_for(text)
         self.assertLessEqual(len(inj), 1500)
-        self.assertIn("衛教資料庫命中", inj)
+        # 2026-07-29：有建方案池的題（如失眠）走「因人挑選」格式、其餘走原本的固定注入文，
+        # 兩種都要帶框架說明（告訴模型這是系統給的素材、怎麼講），認任一即可。
+        self.assertTrue("衛教資料庫命中" in inj or "因人挑選的方案" in inj,
+                        f"注入段沒有框架說明：{inj[:60]}")
 
     def test_no_match_returns_empty_string_not_noise(self):
         self.assertEqual(health_kb.injection_for("今天天氣真好"), "")
@@ -151,7 +189,11 @@ class WiringContractTest(unittest.TestCase):
 
     def test_text_line_injects_on_last_user_message(self):
         src = self._read("server.py")
-        self.assertIn("health_kb.injection_for(last_user)", src)
+        # 2026-07-29：文字線改成連「這個人是誰、現在幾點」一起傳（因人因時才會生效），
+        # 這條鎖住三件事都在——只傳話沒傳人，等於齡層差異化沒啟動。
+        self.assertIn("health_kb.injection_for(last_user,", src)
+        self.assertIn("audience_from_birth_year", src)
+        self.assertIn('hour=(context.get("now") or {}).get("hour")', src)
 
     def test_voice_line_watches_user_captions_and_flushes_at_turn_gap(self):
         src = self._read("live_voice_server.py")
@@ -161,6 +203,9 @@ class WiringContractTest(unittest.TestCase):
         self.assertIn("衛教排在安全導引之後", src)
         # 每通上限：不把通話變衛教講座
         self.assertIn("MAX_TOPICS_PER_CALL", src)
+        # 2026-07-29：聊聊是主戰場——語音線也要把「這個人是誰、幾點」傳進去，
+        # 不然長輩版跟青少年版會混在一起（文字線做了、語音線漏掉＝最容易發生的疏漏）。
+        self.assertIn("health_kb.voice_cue(ids[0], said, _prof, _hour)", src)
 
     def test_eval_mirrors_production_injection(self):
         src = self._read(os.path.join("eval", "gen_reply.py"))

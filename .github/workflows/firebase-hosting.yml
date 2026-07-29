@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - "app-site/**"
+      # 四語系的版型與文案表 —— 只改這裡（例如改一句英文文案）也要能重新發佈
+      - "site-src/**"
+      - "package.json"
       - ".firebaserc"
       - "firebase.json"
       - "scripts/test-app-site-seo.js"
