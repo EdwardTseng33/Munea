@@ -539,6 +539,9 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .u-fam{ font-weight:600; color:var(--ink-2); white-space:normal; overflow-wrap:anywhere; }
 .family-cell{ display:inline-flex; align-items:baseline; flex-wrap:wrap; column-gap:4px; white-space:normal; }
 .retention-cell{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
+/* 用戶欄裝的是姓名＋登入方式＋信箱，內容最長——給它一個比例寬度，信箱才不會折成三行。
+   用 width（表格會當建議值）而不是 min-width：min-width 撐破格子會疊到隔壁欄，踩過了。 */
+.roster-card table td:first-child, .roster-card table th:first-child { width: 26%; }
 .market-cell{ display:flex; flex-direction:column; gap:2px; min-width:0; word-break:keep-all; overflow-wrap:normal; }
 .market-cell b{ color:var(--ink); font-family:var(--num); letter-spacing:.04em; }
 

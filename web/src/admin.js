@@ -483,7 +483,7 @@
     const neverSeen=accts.filter(neverOpened).length;
     const nearPurge=idleList.filter((d)=>d!=null&&d>=RETENTION_WARN_AT).length;
     let html=kpiRow([
-      { label:"總用戶", star:true, value:n(accts.length), sub:`家庭圈 ${accts.length} · 成員 ${people} 人` },
+      { label:"總用戶", star:true, value:n(accts.length), sub:`含家人共 ${people} 人` },
       { label:"快被自動清除", value:n(nearPurge), sub:`閒置滿 ${RETENTION_WARN_AT} 天`, star:nearPurge>0, tone:"alert", info:`免費帳號 ${RETENTION_DAYS} 天沒上線就會自動清除資料，這是已進入警示期的戶數` },
       { label:"還沒上線過", value:n(neverSeen), sub:"註冊後沒開過 App", info:"註冊完就沒回來的帳號" },
       { label:"守護中", value:n(escalations), sub:"安全警示待處理", star:escalations>0, tone:"alert", info:"有安全守護警示、建議優先確認" },
@@ -510,7 +510,6 @@
       const who=ownerSubHTML(a);
       return [
         `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub"><span>${esc(sub)}</span><span aria-hidden="true"> · </span>${who}</div></div></div>`,
-        `<span class="family-cell"><span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span></span>`,
         accountMarketCell(a),
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
@@ -521,7 +520,7 @@
       ];
     });
     const hiddenNote=(!showTest&&hiddenTestCount)?` · 已隱藏 ${hiddenTestCount} 個測試帳號`:"";
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","自動清除",""], trows)}</div>`;
+    html+=`<div class="card tbl-card roster-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","自動清除",""], trows)}</div>`;
     return html;
   }
 
