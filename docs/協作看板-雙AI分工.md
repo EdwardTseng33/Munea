@@ -4,7 +4,15 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
-### 2026-07-28 Codex 📱 App 1.0.44 Build 492 上傳與 Edward iPhone 換裝（App E2E pending）
+### 2026-07-29 蘇菲 🏗️ 上線併發機制收尾（PR #300 · 鏡像/十席/看門狗已上線、全鏈演習卡 RunPod 餘額）
+
+- **已上線（雲端操作、依部署長期授權）**：①印象檔重烤（雙程序版 dualproc-20260729）＋三地入倉（asia-east1 正本＋asia-northeast1 東京＋europe-west4 歐洲、munea-ar-reader 已授權）②RunPod 分機房模板 JP=`k9wr1ijfeh`／EU=`4xj6bbg1h9` ③管家 `munea-runpod-controller-00009-84c`：SLOTS=2／MAX_PODS=4／TARGET=10（主卡2席＋備援4×2＝10席）＋TEMPLATE_MAP 分機房開卡＋開卡等待 600s ④看門狗 `munea-gateway-monitor-00009-skj`：時鐘偏差偵測插電（MUNEA_APP_KEY）＋自動收屍（unhealthy+心跳斷>30分→自動標 terminated、7/23-24 alerts 翻面根因）⑤GCP 6 條正式線 uptime 檢查綁上警報（email、原本 0 條 alert policy=巡了沒人知道）。
+- **演習 4 輪的實戰收穫（全修進 PR #300）**：排隊者必須每10秒保活重問（否則45秒被防殭屍踢隊、管家看不到隊伍）；佔位單要心跳續命（45-60秒過期、重問會觸發清掃）；善後必須「先釋放再刪帳號」（cascade 刪單=席位計數器永久掛帳、已用總機維運正門救回、總機補聲音帳校正欄位隨下次部署生效）；RunPod 缺貨字樣實際為 "no instances currently available"；**混合錯誤裡藏著真相：帳戶餘額不足**。
+- **🔴 卡住＝RunPod 帳戶餘額歸零（"Your account balance is too low"）**：備援開卡線整條停擺、7/23-24 整夜「控制器 ok=false」警報的最深根因。Edward 儲值後重跑 `python scripts/run-queue-burst-drill.py --fetch-secrets` 即完成全鏈驗證。
+- **⏸ 主卡 tw-06 服務檔更新待重啟**：flashhead_server/engine_core 新版（server_time 報時＋待機微閃修正＋句尾補刀）已上傳機器（.bak-0729 備份在旁）、逐房重啟指令被權限閘擋下待 Edward 拍板；重啟前時鐘偵測對主卡量不到（router 照抄後端健康、後端舊版無 server_time）。
+- **暫時帳（要記得收）**：voice shard capacity 暫調 6（抵銷 3 席幻影佔位、實質空位=3=正常）；總機 gateway_server.py 的聲音帳校正欄位部署後→ active 歸 0＋capacity 調回 3。
+- **安全備註（沙利曼）**：7/23 印象檔烤箱曾把 deploy/runpod-avatar/.env（含 RUNPOD_API_KEY）打包進 Cloud Build 來源桶（該目錄無 .gcloudignore）；本輪已改用乾淨材料間，舊來源桶清理＋鑰匙輪替建議列巡檢。
+
 
 - **來源／範圍**：獨立 worktree `codex/app-store-1.0.44-build492-20260728`，基準 `origin/main@5d2008c`；修改 Xcode Build 48→492、`web/index.html` 四個 cache identity → `20260728-v1044`，以及本次發版證據文件。未帶入 Draft PR #247 的 UI 內容。
 - **測試／正式包**：完整 `test:launch`、App Call Control 15/15、Avatar render contract、strict release consistency、App Store IPA 五道防漏全 PASS。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`。
