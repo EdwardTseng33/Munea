@@ -20,7 +20,7 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | `1.0.46 (Build 2)`；exact GitHub commit `b9dd198b`，Archive／IPA／Edward iPhone 回讀已成立 | App Store latest uploaded／selected 仍是 1.0.45；1.0.46 Build 2 upload 與 exact-Build 真人 Gate 未完成 | `partial` | 精確 binary 上傳核准 → upload／processing／選取 → 真人 Gate |
+| App source lane | `1.0.46 (Build 2)`；exact GitHub commit `6d5eed83`，Archive／IPA／Edward iPhone 回讀已成立 | App Store latest uploaded／selected 仍是 1.0.45；1.0.46 Build 2 upload 與 exact-Build 真人 Gate 未完成 | `partial` | 精確 binary 上傳核准 → upload／processing／選取 → 真人 Gate |
 | App Store lane | latest uploaded／selected `1.0.45 (Build 1)`；packaged next candidate `1.0.46 (Build 2)` | 1.0.45 processing 完成並儲存；1.0.46 Build 2 尚未上傳或建立草稿版本頁。未送審／核准／公開 | `partial` | 1.0.46 upload/processing/selection；送審另行授權 |
 | Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |

@@ -77,7 +77,7 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.46 (Build 2)` exact GitHub commit `b9dd198b`；Archive／IPA 防漏與 Edward iPhone 安裝／啟動／回讀 PASS，App E2E pending |
+| Latest source | `1.0.46 (Build 2)` exact GitHub commit `6d5eed83`；Archive／IPA 防漏與 Edward iPhone 安裝／啟動／回讀 PASS，App E2E pending |
 | Latest uploaded App | `1.0.45 (Build 1)`；Apple processing／版本頁選取已成立。1.0.46 Build 2 尚未上傳 |
 | App Store | 1.0.45 Build 1 已選入並儲存；狀態為「準備提交」，未送審／核准／公開。1.0.46 尚未上傳或建立版本頁 |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
