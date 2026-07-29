@@ -25,7 +25,21 @@ TOPICS = _DOC["topics"]
 MAX_SOLUTIONS = 3
 
 # 急迫詞：講出這些就是「他要的是今晚能做的事」，不管幾點問
-URGENCY_WORDS = ("受不了", "撐不住", "快瘋了", "好幾天沒睡", "三天沒睡", "整晚沒睡", "很嚴重", "急")
+# 2026-07-29：audience 這欄混了兩種東西——齡層（從出生年推得出來）跟處境
+# （照顧者、女性身體，推不出來）。正式機的齡層只可能是 teen/worker/elder，
+# 所以 caregiver 與 women 從來沒出現過：掛這兩個標籤的方案不只拿不到專屬度加分，
+# 還因為「對不上這個人」被倒扣 3 分——照顧者專屬內容（喘息、把睡眠切兩段）
+# 跟整組女性題等於一直被壓在底下。分開之後：齡層對不上才扣分，處境標籤只加不扣。
+AGE_AUDIENCES = ("teen", "worker", "elder")
+SITUATION_AUDIENCES = ("caregiver", "women")
+# 講到這些＝他正在照顧人（照顧者身分推不出來、只能從他怎麼講聽出來）
+CAREGIVING_WORDS = ("照顧", "顧我媽", "顧我爸", "顧他", "看護", "臥床", "失智",
+                    "長照", "喘息", "帶他去看", "我媽", "我爸", "婆婆", "公公",
+                    "阿嬤", "阿公", "奶奶", "爺爺", "外婆", "外公")
+URGENCY_WORDS = ("受不了", "撐不住", "快瘋了", "好幾天沒睡", "三天沒睡", "整晚沒睡", "很嚴重", "急",
+                 # 2026-07-29 搬痛風題時補：正在發作＝現在就痛，「一週檔」的建議
+                 # 排在「今晚先避開這幾樣」前面完全答非所問
+                 "發作", "又痛起來", "腫起來", "痛到")
 # 排斥藥丸的說法
 PILL_AVERSE_WORDS = ("不想吃藥", "不要吃藥", "不敢吃藥", "藥吃太多", "不想再吃", "怕副作用")
 # 偏好中醫
@@ -92,6 +106,9 @@ def _profile_flags(profile):
     p = profile or {}
     return {
         "audience": p.get("audience"),                       # elder / worker / caregiver / women
+        # 挑選時比對用的齡層清單。多數情況就是他自己那一個；照顧者替家人問時
+        # 會在 pick() 裡加上被照顧的那位（方案是要給媽媽用的、不是給他用的）。
+        "audiences": [p.get("audience")] if p.get("audience") else [],
         "conditions": [str(c) for c in (p.get("conditions") or [])],   # 腎功能異常、低血壓…
         "constraints": [str(c) for c in (p.get("constraints") or [])], # 輪班工作、照顧者夜間需起身…
         "lowMobility": bool(p.get("lowMobility")),
@@ -125,16 +142,21 @@ def _score(sol, flags, urgent, user_text):
         score += {"慢養": 3.0, "一週": 2.5, "今晚": 1.5}.get(time_to, 0)
 
     # 對不對這個人（沒標 audience 的方案＝通用，不加不減）
-    aud = flags["audience"]
-    sol_aud = sol.get("audience")
-    if aud and sol_aud:
-        if aud in sol_aud:
+    auds = flags.get("audiences") or ([flags["audience"]] if flags["audience"] else [])
+    sol_aud = sol.get("audience") or []
+    if auds and sol_aud:
+        if any(a in sol_aud for a in auds):
             # 專屬度：只針對這種處境設計的方案（例照顧者的「把睡眠切兩段」），
             # 要贏過人人適用的通用方案——不然照顧者拿到的主推會是「睡前手機放遠」，
             # 那對「我媽三點要起來」根本答非所問。
             score += 2.0 + (2.0 if len(sol_aud) <= 2 else 0.0)
-        else:
+        elif any(a in AGE_AUDIENCES for a in sol_aud):
+            score -= 3.0          # 這是寫給別的齡層的
+        elif "caregiver" in sol_aud and "caregiver" not in auds:
+            # 照顧者身分聽得出來（他會講「我媽…」「顧到…」），所以「沒聽到」是有意義的：
+            # 16 歲說睡不好，不該拿到「喘息服務補眠」。
             score -= 3.0
+        # 剩下的是 women 這種純身體標籤——我們根本無從得知，不知道就不罰。
 
     # 做不做得到——正確但做不到的建議比不給更傷
     for c in sol.get("notFor") or []:
@@ -206,28 +228,63 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     pool = topic.get("solutions") or []
     # 代問時只留「講給家長聽」的版本；本人問只留「講給本人聽」的版本；沒標的兩邊都給。
     pool = [s for s in pool if s.get("forWhom") in (None, "parent" if proxy else "self")]
+    # 照顧者替家人問時，方案是要給**被照顧的那位**用的（2026-07-29 骨鬆題抓到）：
+    # 「我媽有骨鬆，怕她跌倒」原本只比對 caregiver，結果專為長輩寫的「練肌力跟平衡」
+    # 拿不到專屬度加分、被通用建議擠掉——防跌實證最明確的那條反而沒端出去。
+    # 兩個齡層都算數：照顧者自己的方案（喘息、把睡眠切兩段）照樣浮得上來。
+    # 照顧者身分推不出來、只能聽出來：他講「我媽…」「顧到…」就是正在照顧人。
+    # （原本只在 profile 已經是 caregiver 時才成立——但那個值正式機從來不會有。）
+    text_now = user_text or ""
+    caregiving = proxy or any(w in text_now for w in CAREGIVING_WORDS)
+    if caregiving and "caregiver" not in flags["audiences"]:
+        flags["audiences"] = list(flags["audiences"]) + ["caregiver"]
+    if proxy and "elder" not in flags["audiences"]:
+        # 代問的對象在這個產品裡絕大多數是長輩——方案要挑給被照顧的那位
+        flags["audiences"] = list(flags["audiences"]) + ["elder"]
 
+    # secondLine＝可以講、但永遠不准當第一個講的（2026-07-29 搬膝蓋題時抓到）：
+    #   ① 證據偏弱的保健品（葡萄糖胺）——排在肌力訓練前面等於把最弱的當主力，
+    #      「潑冷水同一句要帶更有效的替代」這個設計就整個反過來了
+    #   ② 「這很普遍、不是你特別差」這類安慰話——是配菜、不該吃掉行動建議的位子
+    # 用分數硬壓不可靠（差 0.3 分就翻盤），直接分兩層排：正規的先、陪襯的後。
+    # 但他自己點名問的不算陪襯——「葡萄糖胺到底有沒有效」問的就是那個，
+    # 這時候把答案壓到後面切掉，等於問了不答。
+    def _demoted(s):
+        if not s.get("secondLine"):
+            return False
+        return not any(w and w in (user_text or "") for w in (s.get("askedFor") or []))
+
+    # leadWith＝陪襯層的反面（2026-07-29 加貧血題時抓到）：有些方案是「門檻」——
+    # 不先做這件事，後面每一條都失去意義。貧血題的「先驗血、別盲補」就是，
+    # 它靠分數永遠擠不進前三（食補又慢養又省力，分數天生高），可是把補鐵法
+    # 講在驗血前面，等於教人盲補——鐵補過頭是會傷身體的。
     ranked = sorted(
         (s for s in pool if not _blocked_by_safety(s, flags, user_text)),
-        key=lambda s: -_score(s, flags, urgent, user_text),
+        key=lambda s: (not s.get("leadWith"), _demoted(s),
+                       -_score(s, flags, urgent, user_text)),
     )
     # 類型多樣性：三個建議全是「行為調整」等於同一招講三次，長輩也記不住差別。
     # 挑的時候同類型最多兩個，把位置留給食補／運動／保健品這些不同路數的方案。
     picked, type_count = [], {}
-    for s in ranked:
-        t = s.get("solutionType")
-        if len(picked) >= limit:
-            break
-        if type_count.get(t, 0) >= 2:
-            continue
-        picked.append(s)
-        type_count[t] = type_count.get(t, 0) + 1
-    if len(picked) < limit:   # 池子太小就照原排名補滿，不硬留空位
-        for s in ranked:
+
+    def _take(candidates, respect_type_cap):
+        for s in candidates:
             if len(picked) >= limit:
-                break
-            if s not in picked:
-                picked.append(s)
+                return
+            if s in picked:
+                continue
+            t = s.get("solutionType")
+            if respect_type_cap and type_count.get(t, 0) >= 2:
+                continue
+            picked.append(s)
+            type_count[t] = type_count.get(t, 0) + 1
+
+    normal = [s for s in ranked if not _demoted(s)]
+    demoted = [s for s in ranked if _demoted(s)]
+    _take(normal, True)      # 先照多樣性挑正規方案
+    _take(normal, False)     # 正規的還有就補滿——多樣性只是偏好，不該讓位給陪襯層
+    _take(demoted, True)     # 真的不夠了才動陪襯層
+    _take(demoted, False)
 
     # 轉介卡：紅旗類永遠獨立帶著，不跟一般方案搶名額
     referral = next((s for s in pool if s.get("riskLevel") == "L5"), None)
@@ -238,7 +295,10 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
         if r.get("forWhom") == "parent" and proxy:
             reframe = r["say"]
             break
-        if r.get("forWhom") in (None, "self") and not proxy and flags["audience"] == "caregiver"                 and "照顧者" in r.get("when", ""):
+        # 同一個病：這裡原本也看 flags["audience"] == "caregiver"，但正式機的齡層
+        # 只可能是 teen/worker/elder——所以「你不是睡不著，是你根本沒得睡」這句
+        # 從來沒有對任何一個真的照顧者講過。改看聽出來的處境。
+        if r.get("forWhom") in (None, "self") and not proxy                 and "caregiver" in (flags.get("audiences") or [])                 and "照顧者" in r.get("when", ""):
             reframe = r["say"]
             break
 

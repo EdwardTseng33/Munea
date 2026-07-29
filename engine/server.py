@@ -8447,14 +8447,7 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                 break
     # 2026-07-29：把「這個人是誰、現在幾點」一起傳進去，方案挑選才會因人因時。
     # 沒有出生年就傳 None——挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
-    _pp = load_person_profile() or {}
-    _person_id = _current_person_id() or ""
-    _health_profile = {
-        "audience": health_selector.audience_from_birth_year(_pp.get("birthYear")),
-        "personId": _person_id,
-        # 效果飛輪：他上次試過什麼、有沒有效——說沒效的這次就不要再端出來
-        "outcomes": health_followup.outcomes_for(_person_id) if _person_id else {},
-    }
+    _health_profile = current_health_profile()
     # 話題延續：翻回前幾輪他說過的話，找出這通在聊的那題——不然「我睡不好」的下一句
     # 「吃鎂有用嗎，真的假的？」會被當成謠言查證，拿不到鎂的方案（2026-07-29 考卷抓到）。
     _recent_topic = None
@@ -8926,6 +8919,50 @@ def voice_call_recap_response(data):
             REQUEST_DATA_IDENTITY.reset(scope_token)
 
 
+def current_health_profile():
+    """這個人的「挑方案用側寫」：齡層＋人別鍵＋他試過什麼有沒有效。
+
+    2026-07-29 抽成共用函式——原本只有文字線在組，聊聊那條線讀的是一個
+    「從來沒有人寫進去」的狀態鍵，所以語音線的因人分齡其實一直沒生效。
+    兩條線共用同一份組法，才不會再出現一邊有、一邊悄悄沒有的落差。
+
+    沒有出生年就傳 None——挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
+    """
+    pp = load_person_profile() or {}
+    person_id = _current_person_id() or ""
+    return {
+        "audience": health_selector.audience_from_birth_year(pp.get("birthYear")),
+        "personId": person_id,
+        # 效果飛輪：他上次試過什麼、有沒有效——說沒效的這次就不要再端出來
+        "outcomes": health_followup.outcomes_for(person_id) if person_id else {},
+    }
+
+
+def voice_health_recommended_response(data):
+    """POST /voice/health-recommended（內部密語驗證後才會進來）：
+    聊聊那頭剛端出一組方案，回報進來讓 Brain 記帳。
+
+    為什麼要繞這一圈：飛輪的帳本在 Brain 這台（跟文字線同一本）。Voice 是另一台
+    Cloud Run、有自己的磁碟，寫在那邊等於開第二本帳——同一個人在聊聊講「那個沒效」，
+    文字線卻不知道，下次照樣端一樣的東西出來。一本帳、Brain 記。
+    """
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        if not person:
+            return {"ok": True, "recorded": 0, "identityResolved": False}
+        person_id = _current_person_id() or ""
+        topic_id = str(data.get("topicId") or "").strip()
+        solutions = [s for s in (data.get("solutions") or []) if isinstance(s, dict)]
+        if not (person_id and topic_id and solutions):
+            return {"ok": True, "recorded": 0, "identityResolved": True}
+        added = health_followup.record_recommendation(person_id, topic_id, solutions)
+        return {"ok": True, "recorded": len(added), "identityResolved": True}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def voice_health_context_response(data):
     """POST /voice/health-context（內部密語驗證後才會進來）：
     Voice 開場前向 Brain 要「這位來電者自己的身體狀況」。
@@ -8941,7 +8978,11 @@ def voice_health_context_response(data):
     scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
     try:
         ctx = load_health_context() if person else {"facts": [], "notable": [], "hasData": False}
-        return {"ok": True, "healthContext": ctx, "identityResolved": bool(person)}
+        # 2026-07-29：順路把「挑方案用側寫」一起給——聊聊那頭沒有雲端鑰匙、
+        # 自己算不出齡層，也讀不到他上次說哪個沒效。認不出人就不給，讓那邊退回通用。
+        profile = current_health_profile() if person else None
+        return {"ok": True, "healthContext": ctx, "healthProfile": profile,
+                "identityResolved": bool(person)}
     finally:
         if scope_token is not None:
             REQUEST_DATA_IDENTITY.reset(scope_token)
@@ -9177,7 +9218,8 @@ class H(BaseHTTPRequestHandler):
             # Voice→Brain 內部通道（通話記憶）：Voice 沒有用戶的登入 token，
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
-            if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context"):
+            if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context",
+                                "/voice/health-recommended"):
                 _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
                 _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
                 if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
@@ -9188,6 +9230,7 @@ class H(BaseHTTPRequestHandler):
                     "/voice/call-memory": voice_call_memory_response,
                     "/voice/call-recap": voice_call_recap_response,
                     "/voice/health-context": voice_health_context_response,
+                    "/voice/health-recommended": voice_health_recommended_response,
                 }
                 self._json(_voice_internal[request_path](data))
                 return
