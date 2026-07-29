@@ -63,6 +63,18 @@ function localizeCanonicalLegacyPanels() {
     const element = document.querySelector(selector);
     if (element) element.textContent = muneaT(key, fallback, values);
   };
+  const setDirectText = (selector, key, fallback, values = null) => {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    [...element.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    element.append(document.createTextNode(muneaT(key, fallback, values)));
+  };
+  const setAttribute = (selector, attribute, key, fallback, values = null) => {
+    const element = document.querySelector(selector);
+    if (element) element.setAttribute(attribute, muneaT(key, fallback, values));
+  };
 
   setText('#reportModal h2', 'report.title', 'Health and daily summary');
   setText('#reportModal > .modal > .modal-sub', 'report.empty', 'There is not enough information to create a summary yet.');
@@ -101,6 +113,120 @@ function localizeCanonicalLegacyPanels() {
   setText('#consentSheet .consent-note', 'consent.dataController', 'Munea manages this data. You can request access, correction, or deletion.');
   setText('#consentAgree', 'consent.agree', 'I understand. Start talking');
   setText('#consentDetail', 'consent.detail', 'Read the full privacy notice first');
+
+  setText(
+    '#connect .cn-intro p',
+    'health.connectDisclosure',
+    'Apple Health syncs steps, heart rate, sleep, and other data when Munea opens. Munea can notify you when something needs attention. This is not real-time or medical-grade monitoring.',
+  );
+  setText('#connect .cn-note p', 'health.optionalBody', 'Health data is optional. Your companion can still support you through daily conversations and reminders.', {
+    companion: cname(),
+  });
+  setDirectText(
+    '#connect .cn-privacy',
+    'health.familyVisibility',
+    'Only family members you authorize can view health information.',
+  );
+
+  setText('#feedbackModal h2', 'feedback.title', 'Feedback');
+  setText('#feedbackModal > .modal > .modal-sub', 'legacyUi.feedbackSubtitle', 'We read every message. Choose a topic and tell us what you think.');
+  [
+    ['bug', 'feedback.categoryBug', 'Report a problem'],
+    ['idea', 'feedback.categoryIdea', 'Suggest a feature'],
+    ['praise', 'feedback.categoryPraise', 'Share praise'],
+    ['nps', 'feedback.categoryNps', 'Rate Munea'],
+  ].forEach(([type, key, fallback]) => {
+    setDirectText(`#fbTypes [data-t="${type}"]`, key, fallback);
+  });
+  const feedbackPhotoLabel = $('#fbPhotoLabel');
+  if (feedbackPhotoLabel) {
+    [...feedbackPhotoLabel.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    feedbackPhotoLabel.insertBefore(
+      document.createTextNode(muneaT('feedback.photoLabel', 'Add an image (optional)')),
+      feedbackPhotoLabel.firstChild,
+    );
+  }
+  setText('#fbPhotoLabel span', 'feedback.photoHint', 'Add a screenshot when words are not enough.');
+  setDirectText('#fbPhotoAdd', 'feedback.choosePhoto', 'Choose an image');
+  const feedbackText = $('#fbText');
+  if (feedbackText) feedbackText.placeholder = muneaT(
+    'feedback.placeholder',
+    'Tell us what happened or what you would like Munea to add',
+  );
+  setText('#fbSend', 'feedback.submit', 'Send feedback');
+
+  setText('#interestsModal h2', 'interests.title', 'Topics to talk about');
+  setText('#interestsModal > .modal > .modal-sub', 'interests.subtitle', 'Choose topics that interest you. You can change them at any time.');
+  setText('#interestsSave', 'interests.save', 'Save topics');
+
+  setText('#safetyModal h2', 'safety.title', 'Safety notifications');
+  setText('#safetyModal > .modal > .modal-sub', 'legacyUi.safetyDescription', 'Choose when selected family members should be notified. This is not real-time or medical-grade monitoring.');
+  const safetyTriggers = [
+    ['safety.triggerBloodPressure', 'Blood pressure is very high or low (above 180 or below 90)'],
+    ['safety.triggerHeartRate', 'Heart rate is unusually fast or slow'],
+    ['safety.triggerBloodOxygen', 'Blood oxygen is low (below 90%)'],
+  ];
+  $$('#safetyModal .safety-triggers li').forEach((item, index) => {
+    const copy = safetyTriggers[index];
+    if (copy) setDirectText(`#safetyModal .safety-triggers li:nth-child(${index + 1})`, copy[0], copy[1]);
+  });
+  const safetyFlow = $$('#safetyModal .sf-step > span');
+  if (safetyFlow[0]) safetyFlow[0].textContent = muneaT(
+    'safety.checkInFlow',
+    '{companion} checks in with you first.',
+    { companion: cname() },
+  );
+  if (safetyFlow[1]) safetyFlow[1].textContent = muneaT('legacyUi.safetyLog', 'Save the event and notify selected family members.');
+  if (safetyFlow[2]) safetyFlow[2].textContent = muneaT('legacyUi.safetyEmergency', 'A contact can call or check on you. Contact local emergency services in an emergency.');
+  setText('#safetySave', 'safety.save', 'Save safety settings');
+
+  setText('#companionSheet h2', 'companion.settingsTitle', 'Companion');
+  setText(
+    '#companionSheet > .modal > .modal-sub',
+    'companion.settingsIntro',
+    'Choose a companion, then give them a name. Their appearance, voice, and personality follow the companion; your memories stay with you.',
+  );
+  setText('#companionSheet .companion-name-label', 'legacyUi.companionName', 'Name your companion');
+  setText('#companionSheet .field-label', 'legacyUi.companionRole', 'Choose an AI companion');
+  setAttribute('#companionNameInput', 'placeholder', 'companion.namePlaceholder', 'For example: Ningning, Mia, or Alex');
+
+  setAttribute('#famManageBtn', 'aria-label', 'accessibility.manageFamily', 'Manage family members');
+  setAttribute('#chatExit', 'aria-label', 'accessibility.closeChat', 'Close conversation and return home');
+  setAttribute('#walkGoal', 'aria-label', 'activity.adjustGoal', 'Adjust step goal');
+  setAttribute('#walkDue', 'aria-label', 'activity.deadlineDate', 'Challenge deadline date');
+  setAttribute('#walkDueTime', 'aria-label', 'activity.deadlineTime', 'Challenge deadline time');
+  setAttribute('#eventName', 'placeholder', 'activity.eventNamePlaceholder', 'For example: Family birthday dinner');
+  setAttribute('#eventPlace', 'placeholder', 'activity.eventPlacePlaceholder', 'For example: A nearby restaurant or home');
+  setAttribute('#voteQ', 'placeholder', 'activity.voteQuestionPlaceholder', 'For example: Where should we eat this weekend?');
+  ['#vo1', '#vo2'].forEach((selector) => setAttribute(
+    selector,
+    'placeholder',
+    'activity.voteOptionPlaceholder',
+    'For example: A restaurant or home',
+  ));
+  setAttribute('#drawPrize', 'placeholder', 'activity.drawPrizePlaceholder', 'For example: Ice cream or a small treat');
+  ['#rw1', '#rw2', '#rw3'].forEach((selector) => setAttribute(
+    selector,
+    'placeholder',
+    'activity.rewardPlaceholder',
+    'For example: A family meal or a small gift',
+  ));
+  ['#reportClose', '#profileClose', '#famCircleClose', '#topUpClose', '#historyClose']
+    .forEach((selector) => setAttribute(
+      selector,
+      'aria-label',
+      'accessibility.close',
+      'Close',
+    ));
+  setAttribute('#pfNick', 'placeholder', 'profile.familyNicknamePlaceholder', 'For example: Grandma');
+  setAttribute('#joinCodeInput', 'placeholder', 'join.codePlaceholder', 'Enter invitation code');
+  setAttribute('#visitTitle', 'placeholder', 'appointment.titlePlaceholder', 'For example: Cardiology follow-up');
+  setAttribute('#npsSlider', 'aria-label', 'feedback.npsAria', 'Recommendation score from 0 to 10');
+  const npsHints = $$('#fbNpsWrap .nps-hint span');
+  if (npsHints[0]) npsHints[0].textContent = muneaT('feedback.npsZero', '0 · Not at all likely');
+  if (npsHints[1]) npsHints[1].textContent = muneaT('feedback.npsTen', '10 · Very likely');
 
   setText('#subPlans > .sub-intro', 'subscription.benefitsIntro', 'Every paid plan includes');
   const benefitKeys = [
@@ -154,6 +280,12 @@ function localizeCanonicalLegacyPanels() {
     );
     changelog.appendChild(summary);
   }
+  setText('#versionSheet h2', 'version.title', "What's new");
+  const versionSubtitle = $('#versionSheet > .modal > .modal-sub');
+  if (versionSubtitle && versionSubtitle.firstChild) {
+    versionSubtitle.firstChild.textContent = `${muneaT('app.title', 'Munea')} `;
+  }
+  setText('#verClose', 'version.close', 'Got it');
 }
 let muneaRendererCopyCache = null;
 function muneaRendererCopy() {
@@ -4969,6 +5101,49 @@ function pushWallet() { syncPush('wallet', { grant: POINTS.total, used: POINTS.u
 // 只有「免費 + 真的 0 點」才收起來——免費走一次性 5 分鐘體驗、不吃點數，
 // 這時掛「剩 0 點」會被誤會成「沒點數不能聊」。
 function ptsPillHidden() { return !!(window.MMPLAN && window.MMPLAN.isFree()) && ptsLeft() <= 0; }
+function rebuildSettingsPointsLabel(formattedLeft) {
+  const label = document.querySelector('.plan-card .pts-label');
+  const balance = $('#ptsLeft');
+  const usage = label ? label.querySelector('.pts-used') : null;
+  const grant = $('#setPlanGrant');
+  const used = $('#ptsUsed');
+  if (!label || !balance || !usage || !grant || !used) return;
+
+  const balanceMarker = '__MUNEA_CREDITS__';
+  const balanceCopy = muneaT(
+    'settings.creditsBalance',
+    '點數 {credits} 點',
+    { credits: balanceMarker },
+  );
+  const balanceParts = balanceCopy.split(balanceMarker);
+  balance.textContent = formattedLeft;
+  label.replaceChildren(
+    document.createTextNode(balanceParts[0] || ''),
+    balance,
+    document.createTextNode(balanceParts.slice(1).join(balanceMarker) || ''),
+    document.createTextNode(' '),
+    usage,
+  );
+
+  const grantMarker = '__MUNEA_GRANT__';
+  const usedMarker = '__MUNEA_USED__';
+  const usageCopy = muneaT(
+    'settings.monthlyGrantUsed',
+    '每月送 {grant} · 已用 {used}',
+    { grant: grantMarker, used: usedMarker },
+  );
+  const usageParts = usageCopy.split(grantMarker);
+  const afterGrant = (usageParts[1] || '').split(usedMarker);
+  grant.textContent = new Intl.NumberFormat(muneaLocale()).format(Number(grant.textContent) || 0);
+  used.textContent = new Intl.NumberFormat(muneaLocale()).format(POINTS.used);
+  usage.replaceChildren(
+    document.createTextNode(usageParts[0] || ''),
+    grant,
+    document.createTextNode(afterGrant[0] || ''),
+    used,
+    document.createTextNode(afterGrant.slice(1).join(usedMarker) || ''),
+  );
+}
 function renderPoints() {
   const left = ptsLeft();
   const formattedLeft = new Intl.NumberFormat(muneaLocale()).format(left);
@@ -4977,8 +5152,7 @@ function renderPoints() {
     hud.textContent = muneaT('settings.creditsBalance', '點數 {credits} 點', { credits: formattedLeft });
     hud.style.display = ptsPillHidden() ? 'none' : '';
   }
-  if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
-  if ($('#ptsUsed')) $('#ptsUsed').textContent = POINTS.used;
+  rebuildSettingsPointsLabel(formattedLeft);
   if ($('#ptsBar')) $('#ptsBar').style.width = (POINTS.total > 0 ? Math.round(POINTS.used / POINTS.total * 100) : 0) + '%';
   refreshLowState();
 }
@@ -6737,18 +6911,43 @@ function init() {
     const members = loadCircle(); const plan = circlePlan(); const limit = CIRCLE_LIMITS[plan] || 4;
     const cnt = $('#fcCount'); if (cnt) cnt.textContent = members.length + '/' + limit + ' · ' + CIRCLE_PLAN_LABEL[plan];
     box.innerHTML = members.map(m => {
-      const action = m.self ? '<span class="fc-you">本人</span>' : '<button type="button" class="fc-remove" data-name="' + m.name + '">移除</button>';
+      const action = m.self
+        ? `<span class="fc-you">${muneaT('familyCircle.you', '本人')}</span>`
+        : `<button type="button" class="fc-remove" data-name="${m.name}">${muneaT('familyCircle.remove', '移除')}</button>`;
       return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
     const inv = $('#fcInviteBtn');
-    if (inv) { const full = members.length >= limit; inv.textContent = full ? ('已達 ' + CIRCLE_PLAN_LABEL[plan] + ' 上限 · 升級可加更多') : '邀請家人加入'; inv.dataset.full = full ? '1' : ''; }
-    const note = $('#invLimitNote'); if (note) note.textContent = '目前 ' + CIRCLE_PLAN_LABEL[plan] + ' 方案 · 家庭健康圈最多 ' + limit + ' 人';
+    if (inv) {
+      const full = members.length >= limit;
+      inv.textContent = full
+        ? muneaT('familyCircle.limitReached', '{plan} 已達上限 · 升級可加更多', {
+          plan: CIRCLE_PLAN_LABEL[plan],
+        })
+        : muneaT('familyCircle.invite', '邀請家人加入');
+      inv.dataset.full = full ? '1' : '';
+    }
+    const note = $('#invLimitNote');
+    if (note) note.textContent = muneaT(
+      'invite.planLimit',
+      '目前 {plan} 方案 · 家庭健康圈最多 {limit} 人',
+      { plan: CIRCLE_PLAN_LABEL[plan], limit },
+    );
   }
   // 移除家人：點一下「移除」→變紅「確定移除」、再點才移（App 內確認、不用系統醜彈窗）
   if ($('#fcRoster')) $('#fcRoster').addEventListener('click', e => {
     const rm = e.target.closest('.fc-remove'); if (!rm) return;
-    if (rm.dataset.arm !== '1') { rm.dataset.arm = '1'; rm.classList.add('arm'); rm.textContent = '確定移除'; setTimeout(() => { rm.dataset.arm = ''; rm.classList.remove('arm'); rm.textContent = '移除'; }, 3000); return; }
+    if (rm.dataset.arm !== '1') {
+      rm.dataset.arm = '1';
+      rm.classList.add('arm');
+      rm.textContent = muneaT('familyCircle.confirmRemove', '確定移除');
+      setTimeout(() => {
+        rm.dataset.arm = '';
+        rm.classList.remove('arm');
+        rm.textContent = muneaT('familyCircle.remove', '移除');
+      }, 3000);
+      return;
+    }
     saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
     renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
     toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
@@ -6939,7 +7138,15 @@ function init() {
     const y = new Date(); y.setDate(y.getDate() - 1);
     const yesterIso = y.getFullYear() + '-' + String(y.getMonth() + 1).padStart(2, '0') + '-' + String(y.getDate()).padStart(2, '0');
     if (m.date !== _todayISO() && m.date !== yesterIso) return null;
-    return { key: m.key, label: MOODS[m.key].label };
+    const moodKey = {
+      happy: 'mood.happy',
+      glad: 'mood.pleasant',
+      calm: 'mood.calm',
+      tired: 'mood.tired',
+      down: 'mood.low',
+      upset: 'mood.angry',
+    }[m.key];
+    return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label) };
   }
   // 真數據 → 顯示格式（門檻白話跟狀態頁同一套規則）
   function vitalsToDisplay(v) {
@@ -7033,9 +7240,21 @@ function init() {
       const d = rv ? vitalsToDisplay(rv) : null;
       const warn = !!(d && ((d.bp && d.bp.warn) || (d.hr && d.hr.warn) || (rv && +rv.spo2 && +rv.spo2 < 90)));
       const mood = famMoodFor(rv);
-      const st = rv ? (warn ? { cls: 'watch', label: '需留意' } : { cls: 'ok', label: '安好' }) : { cls: 'off', label: '未連' };
+      const st = rv
+        ? (
+          warn
+            ? { cls: 'watch', label: muneaT('family.status.needsAttention', '需留意') }
+            : { cls: 'ok', label: muneaT('family.status.okay', '安好') }
+        )
+        : { cls: 'off', label: muneaT('family.status.notConnected', '未連') };
       const pill = mood ? '<em class="mood-pill ' + mood.key + '">' + moodFaceSvg(mood.key, 13) + mood.label + '</em>' : '';
-      const txt = rv ? '數據更新於 ' + (rv.day || '近日') : '等他加入連上，就看得到狀態';
+      let familyDay = rv && rv.day ? String(rv.day) : '';
+      if (familyDay === '今天') familyDay = muneaT('common.today', '今天');
+      else if (familyDay === '昨天') familyDay = muneaT('common.yesterday', '昨天');
+      if (!familyDay) familyDay = muneaT('common.recently', '近日');
+      const txt = rv
+        ? muneaT('family.status.updatedAt', '數據更新於 {day}', { day: familyDay })
+        : muneaT('family.status.waiting', '等他加入連上，就看得到狀態');
       return '<div class="health-row" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '">' +
         '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
         '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
@@ -8214,7 +8433,11 @@ function init() {
     );
     const n = $$('#inviteList .iv.on').length || 1;
     const d = +($('#walkDays') ? $('#walkDays').value : 7);
-    if ($('#walkDaysVal')) $('#walkDaysVal').textContent = d + ' 天';
+    if ($('#walkDaysVal')) $('#walkDaysVal').textContent = muneaT(
+      'legacyUi.activityDaysValue',
+      '{days} days',
+      { days: new Intl.NumberFormat(muneaLocale()).format(d) },
+    );
     const per = Math.max(100, Math.round(g / (n * d) / 100) * 100);
     if ($('#goalHint')) $('#goalHint').textContent = muneaT(
       'legacyUi.activityGoalHint',
@@ -8226,6 +8449,7 @@ function init() {
       },
     );
   }
+  window.__muneaUpdateWalkLabels = updateWalkLabels;
   function recalcWalk(reset) {
     const slider = $('#walkGoal');
     if (!slider) return;
@@ -8459,7 +8683,19 @@ function init() {
   function renderNps() {
     // 拉桿 Bar 條打分（Edward 7/9：不要 11 顆按鈕）：拉或點都行、上方大字即時顯示
     const s = $('#npsSlider'); if (!s || s.dataset.built) return; s.dataset.built = '1';
-    const WORDS = ['完全不會', '不太會', '不太會', '普通', '普通', '普通', '還可以', '願意', '願意', '非常願意', '非常願意'];
+    const WORDS = [
+      muneaT('feedback.npsVeryUnlikely', 'Very unlikely'),
+      muneaT('feedback.npsUnlikely', 'Unlikely'),
+      muneaT('feedback.npsUnlikely', 'Unlikely'),
+      muneaT('feedback.npsNeutral', 'Neutral'),
+      muneaT('feedback.npsNeutral', 'Neutral'),
+      muneaT('feedback.npsNeutral', 'Neutral'),
+      muneaT('feedback.npsSomewhatLikely', 'Somewhat likely'),
+      muneaT('feedback.npsLikely', 'Likely'),
+      muneaT('feedback.npsLikely', 'Likely'),
+      muneaT('feedback.npsVeryLikely', 'Very likely'),
+      muneaT('feedback.npsVeryLikely', 'Very likely'),
+    ];
     const paint = () => {
       const v = +s.value;
       s.style.setProperty('--fill', (v * 10) + '%');
@@ -8474,8 +8710,14 @@ function init() {
     if ($('#fbCatWrap')) $('#fbCatWrap').style.display = _fbType === 'bug' ? '' : 'none';
     if ($('#fbNpsWrap')) $('#fbNpsWrap').style.display = _fbType === 'nps' ? '' : 'none';
     const lbl = $('#fbTextLabel'), txt = $('#fbText');
-    if (lbl) lbl.textContent = _fbType === 'bug' ? '發生了什麼事？（越具體我們修得越快）' : _fbType === 'idea' ? '想要什麼新功能？' : _fbType === 'praise' ? '想稱讚哪裡？我們會轉告寧寧' : '為什麼給這個分數？（可以不填）';
-    if (txt) txt.placeholder = _fbType === 'idea' ? '例：希望可以幫我記血糖、想要台語' : _fbType === 'praise' ? '例：寧寧記得我孫子要結婚，好感動' : '例：聊聊講到一半沒聲音了';
+    const feedbackCopy = {
+      bug: ['feedback.promptBug', 'What happened? Details help us fix it faster.', 'feedback.placeholderBug', 'For example: The conversation went silent halfway through.'],
+      idea: ['feedback.promptIdea', 'What would you like Munea to add?', 'feedback.placeholderIdea', 'For example: Help me record blood sugar or support another language.'],
+      praise: ['feedback.promptPraise', 'What did you appreciate?', 'feedback.placeholderPraise', 'For example: My companion remembered an important family event.'],
+      nps: ['feedback.promptNps', 'Why did you choose this score? (Optional)', 'feedback.placeholderNps', 'Tell us what shaped your score.'],
+    }[_fbType];
+    if (lbl) lbl.textContent = muneaT(feedbackCopy[0], feedbackCopy[1]);
+    if (txt) txt.placeholder = muneaT(feedbackCopy[2], feedbackCopy[3]);
     renderNps();
   }
   // 意見回饋附圖（7/9 Edward：文字說不清時附截圖）：選圖→縮到最長邊 1200px、壓成 JPEG→data URL 預覽
@@ -9266,6 +9508,8 @@ function refreshLocalizedDynamicUi() {
     }
   } catch (e) {}
   try { renderStatusCharts(true); } catch (e) {}
+  try { if (window.__muneaAfterCircleSync) window.__muneaAfterCircleSync(); } catch (e) {}
+  try { if (window.__muneaUpdateWalkLabels) window.__muneaUpdateWalkLabels(); } catch (e) {}
   try { applyAppVersion(); } catch (e) {}
   try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
   try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
