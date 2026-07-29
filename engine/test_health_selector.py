@@ -342,6 +342,212 @@ def health_kb_match(text):
     return health_kb.match_topics(text)
 
 
+class Batch4Test(unittest.TestCase):
+    """最後一批十題：糖尿病／痛風／頭暈／眼睛／皮膚癢／夜尿／疫苗／吞嚥／感冒／心悸。
+
+    TW-EDU-21 LINE 謠言查證刻意不搬——那題是「三級判斷程序」（權威已闢謠→只轉述／
+    查不到→給懷疑線索＋教他自己查／涉停藥→一律加提醒），不是一組可互相替換的方案。
+    硬塞進池子會把程序拆散。方案池不是萬用結構。
+    """
+
+    def test_low_blood_sugar_always_says_sugar_and_119_together(self):
+        """只講「趕快吃糖」不講「叫不醒要打119」＝把人留在最危險的那一步。"""
+        ref = hs.pick("TW-EDU-04", "我有糖尿病", ELDER, 10)["referral"]
+        self.assertIn("119", ref["say"])
+        self.assertIn("糖", ref["say"])
+
+    def test_an_active_gout_flare_is_treated_as_urgent(self):
+        res = hs.pick("TW-EDU-05", "痛風又發作了，腳趾頭腫起來", WORKER, 20)
+        self.assertTrue(res["urgent"], "正在發作卻不算急，今晚能做的排不到前面")
+        self.assertEqual(res["solutions"][0]["id"], "gout-avoid-triggers")
+
+    def test_dizziness_always_carries_the_stroke_red_line(self):
+        ref = hs.pick("TW-EDU-07", "我站起來就會暈", ELDER, 8)["referral"]
+        for word in ("119", "無力", "嘴歪"):
+            self.assertIn(word, ref["say"])
+
+    def test_lutein_never_claims_to_reverse_cataract(self):
+        sol = next(s for s in hs.TOPICS["TW-EDU-08"]["solutions"] if s["id"] == "eye-lutein")
+        self.assertIn("沒有逆轉的證據", sol["say"])
+
+    def test_choking_gets_119_not_chew_slowly(self):
+        ref = hs.pick("TW-EDU-13", "我媽最近常嗆到", {"audience": "caregiver"}, 12)["referral"]
+        self.assertIn("119", ref["say"])
+        self.assertIn("哈姆立克", ref["say"])
+
+    def test_cold_medicine_advice_leads_with_the_interaction_warning(self):
+        first = hs.pick("TW-EDU-19", "我感冒了，可以吃家裡的感冒藥嗎", ELDER, 15)["solutions"][0]
+        self.assertEqual(first["id"], "cold-ask-pharmacist")
+
+    def test_palpitations_never_get_judged_benign_or_dangerous(self):
+        for s in hs.pick("TW-EDU-20", "最近心跳很快", WORKER, 23)["solutions"]:
+            self.assertNotEqual(s.get("riskLevel"), "L4")
+
+    def test_vaccine_is_the_one_topic_we_may_nudge(self):
+        """疫苗是唯一該主動推一把的題——公費資格要講出來。"""
+        ids = [s["id"] for s in hs.pick("TW-EDU-12", "要不要去打疫苗",
+                                        {"audience": "caregiver"}, 10)["solutions"]]
+        self.assertIn("vax-free-eligibility", ids)
+
+    def test_itchy_skin_survives_an_inserted_character(self):
+        """「皮膚**一直**癢」——插一個字就整組叫不出來，這個漏洞已經咬過三次。"""
+        import health_kb
+        for said in ("冬天皮膚一直癢", "身體好癢", "癢到睡不著"):
+            self.assertTrue(health_kb.match_topics(said), said)
+
+    def test_rumor_check_deliberately_stays_on_fixed_text(self):
+        self.assertNotIn("TW-EDU-21", hs.TOPICS,
+                         "謠言查證被搬進池子了——那是判斷程序、不是可替換的方案")
+
+
+class TypeDiversityTest(unittest.TestCase):
+    """多樣性只是偏好，不該把「我不會主動推」的東西推上桌（2026-07-29 夜尿題抓到）。"""
+
+    def test_diversity_never_promotes_a_second_line_item_over_a_real_one(self):
+        ids = [s["id"] for s in hs.pick("TW-EDU-10", "晚上要起來尿好幾次", ELDER, 22)["solutions"]]
+        self.assertNotIn("noct-saw-palmetto", ids,
+                         "自己說「證據弱、不主動推」的東西被主動端出來了")
+
+    def test_diversity_still_applies_among_normal_solutions(self):
+        """正規方案夠多時，同類型仍不該連上三個。"""
+        picked = hs.pick("TW-EDU-01", "我睡不好", WORKER, 14)["solutions"]
+        types = [s.get("solutionType") for s in picked]
+        self.assertLess(max(types.count(t) for t in set(types)), 3)
+
+
+class WomenTopicsTest(unittest.TestCase):
+    """女性四題（2026-07-29）：更年期／經期／缺鐵／孕哺。
+
+    為什麼補：「全家人的健康陪伴」原本 24 題裡，女性專屬 0 題——
+    家裡最常張羅全家健康的那個人，自己的困擾一題都沒有。
+    """
+
+    WOMAN = {"audience": "women"}
+
+    def test_hot_flashes_route_to_menopause_not_generic_insomnia(self):
+        """「熱潮紅、晚上睡不好」原本被當成一般失眠——更年期才是在解釋那個睡不好。"""
+        import health_kb
+        self.assertEqual(health_kb.match_topics("最近一直熱潮紅，晚上睡不好")[0], "TW-EDU-26")
+
+    def test_plain_insomnia_still_goes_to_the_insomnia_topic(self):
+        import health_kb
+        self.assertEqual(health_kb.match_topics("我睡不好")[0], "TW-EDU-01")
+
+    def test_breast_cancer_history_removes_the_isoflavone(self):
+        prof = {"audience": "women", "conditions": ["乳癌或其他荷爾蒙相關癌症病史"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-26", "更年期好難受", prof, 14)["solutions"]]
+        self.assertNotIn("meno-isoflavone", ids)
+
+    def test_hormone_therapy_is_never_recommended_but_the_door_stays_open(self):
+        sol = next(s for s in hs.TOPICS["TW-EDU-26"]["solutions"] if s["id"] == "meno-hrt-blocked")
+        self.assertTrue(sol["blocked"])
+        self.assertIn("不用忍", sol["say"], "擋掉建議的同時要留一條可以去問的路")
+
+    def test_severe_period_pain_is_never_normalised_away(self):
+        ref = hs.pick("TW-EDU-27", "經痛痛到請假", WOMAN_PROFILE, 9)["referral"]
+        self.assertIn("別忍", ref["say"])
+        self.assertIn("子宮內膜異位", ref["say"])
+
+    def test_anemia_always_leads_with_get_tested(self):
+        """把補鐵法講在驗血前面＝教人盲補，鐵補過頭是會傷身體的。"""
+        for said in ("我好像有貧血，容易累", "鐵劑要吃多久"):
+            first = hs.pick("TW-EDU-28", said, WOMAN_PROFILE, 15)["solutions"][0]
+            self.assertEqual(first["id"], "iron-test-first", said)
+
+    def test_iron_deficiency_in_men_or_postmenopause_is_flagged(self):
+        ref = hs.pick("TW-EDU-28", "我有貧血", WOMAN_PROFILE, 15)["referral"]
+        self.assertIn("慢性出血", ref["say"])
+
+    def test_pregnancy_wins_over_every_other_topic(self):
+        """懷孕的人問任何東西，安全圍籬都要先站出來。"""
+        import health_kb
+        for said in ("懷孕可以吃這個保健品嗎", "我在餵母奶，感冒可以吃藥嗎"):
+            self.assertEqual(health_kb.match_topics(said)[0], "TW-EDU-29", said)
+
+    def test_asking_what_i_can_take_leads_with_ask_first_not_folate(self):
+        first = hs.pick("TW-EDU-29", "我在餵母奶，感冒可以吃藥嗎", WOMAN_PROFILE, 21)["solutions"][0]
+        self.assertEqual(first["id"], "preg-ask-first")
+
+    def test_asking_about_folate_by_name_still_answers_folate(self):
+        first = hs.pick("TW-EDU-29", "懷孕可以吃葉酸嗎", WOMAN_PROFILE, 20)["solutions"][0]
+        self.assertEqual(first["id"], "preg-folate")
+
+    def test_pregnancy_never_judges_medication(self):
+        for s in hs.pick("TW-EDU-29", "懷孕感冒了", WOMAN_PROFILE, 20)["solutions"]:
+            self.assertNotEqual(s.get("riskLevel"), "L4")
+
+    def test_pregnancy_referral_covers_preeclampsia_and_postpartum(self):
+        ref = hs.pick("TW-EDU-29", "我懷孕了", WOMAN_PROFILE, 20)["referral"]
+        self.assertIn("子癇前症", ref["say"])
+        self.assertIn("1925", ref["say"])
+
+
+WOMAN_PROFILE = {"audience": "women"}
+
+
+class LeadWithTest(unittest.TestCase):
+    """門檻方案：不先做這件事，後面每一條都失去意義——分數擠不上去也要排第一。"""
+
+    def test_lead_with_beats_a_higher_scoring_solution(self):
+        first = hs.pick("TW-EDU-28", "我容易累", WOMAN_PROFILE, 15)["solutions"][0]
+        self.assertTrue(first.get("leadWith"))
+
+    def test_lead_with_still_cannot_beat_a_safety_removal(self):
+        """安全永遠翻不了——門檻方案也不例外。"""
+        prof = {"audience": "women", "conditions": ["血色素沉著症等鐵過載疾病"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-28", "我要補鐵", prof, 15)["solutions"]]
+        self.assertNotIn("iron-supplement", ids)
+
+
+class ProductionAudienceTest(unittest.TestCase):
+    """正式機真的算得出來的齡層只有 teen／worker／elder（從出生年推）。
+
+    2026-07-29 第五次踩到同一個病：方案上標了 caregiver 與 women，
+    但那兩個值**正式機從來不會出現**——所以照顧者專屬內容（喘息、把睡眠切兩段）
+    跟整組女性題不只拿不到專屬度加分，還因為「對不上這個人」被倒扣 3 分，
+    一直被壓在底下。這個 class 全部用「正式機真的會有的 profile」跑，
+    不准再用手寫的 {"audience": "caregiver"} 自欺。
+    """
+
+    @staticmethod
+    def _real(birth_year):
+        return {"audience": hs.audience_from_birth_year(birth_year)}
+
+    def test_production_never_produces_caregiver_or_women_as_an_age_band(self):
+        got = {hs.audience_from_birth_year(y) for y in (2010, 1990, 1950, None, "亂寫")}
+        self.assertTrue(got <= {"teen", "worker", "elder", None})
+
+    def test_a_real_caregiver_gets_the_caregiver_solution(self):
+        picked = hs.pick("TW-EDU-01", "我媽三點要起來，我根本睡不飽",
+                         self._real(1988), 2)["solutions"]
+        self.assertEqual(picked[0]["id"], "sleep-split-rest",
+                         "照顧者專屬方案沒排第一——正式機上這條一直被倒扣")
+
+    def test_a_real_caregiver_gets_the_reframe(self):
+        res = hs.pick("TW-EDU-01", "我媽三點要起來，我根本睡不飽", self._real(1988), 2)
+        self.assertIsNotNone(res["reframe"],
+                             "「你不是睡不著、是你根本沒得睡」從來沒對真的照顧者講過")
+
+    def test_a_teen_never_gets_caregiver_content(self):
+        """照顧者身分聽得出來，所以「沒聽到」是有意義的——16 歲不該拿到喘息服務。"""
+        ids = [s["id"] for s in hs.pick("TW-EDU-01", "我都睡不好，早上爬不起來",
+                                        self._real(2010), 2)["solutions"]]
+        self.assertNotIn("sleep-respite-service", ids)
+        self.assertNotIn("sleep-split-rest", ids)
+
+    def test_women_topics_are_not_penalised_for_unknown_sex(self):
+        """性別我們根本無從得知——不知道就不該罰。"""
+        picked = hs.pick("TW-EDU-26", "最近一直熱潮紅", self._real(1978), 14)["solutions"]
+        self.assertTrue(picked)
+        self.assertTrue(any("women" in (s.get("audience") or []) for s in picked),
+                        "女性題自己的方案被壓掉了")
+
+    def test_caregiving_is_heard_not_derived(self):
+        flags_words = ("照顧", "我媽", "看護", "長照")
+        for w in flags_words:
+            self.assertIn(w, hs.CAREGIVING_WORDS)
+
+
 class DataIntegrityTest(unittest.TestCase):
     """資料本身的紀律——內容寫壞了這裡先亮紅燈。"""
 
