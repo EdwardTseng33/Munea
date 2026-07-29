@@ -38,6 +38,7 @@ load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰�
 from service_metadata import build_service_metadata
 import chat_engine as eng
 import health_kb
+import health_selector
 import localization
 import live_lookup
 from call_control_client import post_internal, verify_call_token, CallControlError
@@ -418,6 +419,79 @@ async def guardian_watch(cid, who, text, st, session):
         _diag(cid, "guardian.watch_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
+def _fetch_health_profile(memory_scope):
+    """接通時跟 Brain 要一次「挑方案用側寫」（齡層＋人別鍵＋他試過什麼有沒有效）。
+
+    跟要「上次聊天」「他的身體狀況」同一條內部通道、同一個認人規矩：Voice 這台
+    沒有雲端鑰匙也認不出電話那頭是誰，一律由 Brain 認人。拿不到就回空——
+    挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
+    """
+    brain_url, brain_secret = _brain_memory_config()
+    if not (brain_url and memory_scope and str(memory_scope).startswith("voice-")):
+        return {}
+    try:
+        resp = post_internal(
+            brain_url, brain_secret, "/voice/health-context",
+            {"userId": str(memory_scope)[len("voice-"):]}, timeout=3,
+            app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
+    except Exception:
+        return {}
+    prof = (resp or {}).get("healthProfile")
+    return prof if isinstance(prof, dict) else {}
+
+
+def _start_health_profile_fetch(st, memory_scope):
+    """背景去要側寫、拿到才填進 st——絕不放在接通那條路上等。
+
+    這是個最多 3 秒的阻塞 HTTP；接通流程是 async 主幹道，在那裡等於把
+    這台機器上「所有」通話一起卡住（2026-07-12 壓測抓過同一類真兇）。
+    衛教提示要等用戶先講到相關的話才會用到，那是接通後好幾秒的事，
+    背景填完全來得及；還沒填好就先當通用，不會出錯只會少一點個人化。
+    """
+    if not memory_scope:
+        return
+
+    def _fill():
+        try:
+            st["health_profile"] = _fetch_health_profile(memory_scope)
+        except Exception:
+            pass
+
+    threading.Thread(target=_fill, daemon=True).start()
+
+
+def _record_voice_recommendation(cid, st, topic_id, said, prof, hour):
+    """把聊聊剛端出的方案回報給 Brain 記帳——飛輪的帳本只有一本，在 Brain 那台。
+
+    背景執行緒送、失敗就算了：記不到帳最多是下次少一點個人化，
+    絕不能為了記帳去卡住音訊管線（她講話卡住是用戶當場感覺得到的事）。
+    """
+    scope = st.get("memory_scope")
+    if not (scope and prof.get("personId") and topic_id in health_selector.TOPICS):
+        return
+    try:
+        chosen = health_selector.pick(topic_id, said, prof, hour)["solutions"]
+    except Exception:
+        return
+    if not chosen:
+        return
+    brain_url, brain_secret = _brain_memory_config()
+    if not brain_url:
+        return
+
+    def _send():
+        try:
+            post_internal(brain_url, brain_secret, "/voice/health-recommended",
+                          {"userId": str(scope)[len("voice-"):], "topicId": topic_id,
+                           "solutions": [{"id": s.get("id"), "label": s.get("label"),
+                                          "timeToEffect": s.get("timeToEffect")} for s in chosen]},
+                          timeout=3, app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
+        except Exception as e:
+            _diag(cid, "healthkb.record_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
 def health_watch_user_text(cid, st):
     """B2 衛教（2026-07-24）：用戶字幕命中策展題庫→排隊一條衛教提示，騎守護腦同一個
     「輪替空檔」送出機制。每題整通只注入一次、每通上限 health_kb.MAX_TOPICS_PER_CALL 題
@@ -427,15 +501,22 @@ def health_watch_user_text(cid, st):
         if len(sent) >= health_kb.MAX_TOPICS_PER_CALL or st.get("pending_health_cue"):
             return
         said = st.get("user_buf") or ""
-        # 2026-07-29：把「這個人是誰、現在幾點」帶進來，聊聊也要因人因時
+        # 2026-07-29：把「這個人是誰、現在幾點、上次哪個沒效」帶進來，聊聊也要因人因時
         # （聊聊是主戰場——長輩版跟青少年版不能混）。判不出齡層就傳 None、退回通用。
-        _prof = {"audience": st.get("health_audience")}
+        #
+        # ⚠ 這行原本讀 st["health_audience"]，但那個鍵從頭到尾沒有任何地方寫進去——
+        # 語音線的因人分齡等於一直沒生效。改成接通時跟 Brain 要一次、存進這通的
+        # 狀態裡（st 是每通獨立的；絕不做跨通的模組級快取，那會把 A 的資料端給 B）。
+        _prof = st.get("health_profile") or {}
         _hour = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).hour
         ids = health_kb.match_topics(said, limit=1, exclude=sent)
         if not ids:
             return
         sent.add(ids[0])
         st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour)
+        # 帳先備著、等這句真的送出去才記——提示是排在下一個輪替空檔送的，
+        # 電話在那之前掛掉就等於她沒講過，記了下次會問「上次那個有試嗎」問空氣。
+        st["pending_health_record"] = (ids[0], said, _prof, _hour)
         _diag(cid, "healthkb.hit", topic=ids[0])
     except Exception as e:
         _diag(cid, "healthkb.err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
@@ -447,6 +528,8 @@ async def guardian_flush_pending_cue(cid, session, st):
     st["pending_cues"] = []
     health_cue = st.get("pending_health_cue")
     st["pending_health_cue"] = None
+    health_record = st.get("pending_health_record")
+    st["pending_health_record"] = None
     promise_cue = st.get("pending_promise_cue")
     st["pending_promise_cue"] = None
     if promise_cue:
@@ -462,6 +545,8 @@ async def guardian_flush_pending_cue(cid, session, st):
             turn_complete=True,
         )
         _diag(cid, "guardian.cue_sent", count=len(pending))
+        if health_cue and health_record:
+            _record_voice_recommendation(cid, st, *health_record)   # 送出去了才入帳
     except Exception as e:
         _diag(cid, "guardian.cue_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
@@ -2376,6 +2461,11 @@ async def handle(ws):
     memory_scope = None
     if call_payload and call_payload.get("user_id"):
         memory_scope = f"voice-{call_payload['user_id']}"
+    # 衛教方案要因人挑（齡層／他上次說哪個沒效），這些只有 Brain 知道。
+    # 接通時要一次、存進這通的狀態；認不出人就是空的，挑選層退回通用方案。
+    st["memory_scope"] = memory_scope
+    st["health_profile"] = {}
+    _start_health_profile_fetch(st, memory_scope)
     try:
         # 只有走舊的橋接查詢才需要暖機（那條路要靠伺服器插播過場句蓋住 5 秒空白，
         # 所以得先把整個句庫都配好音）。2026-07-28 起預設走 native＝她自己查、沒有過場句，
