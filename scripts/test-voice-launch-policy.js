@@ -153,14 +153,18 @@ const liveConfigEnd = voiceServer.indexOf('async def search_current_information(
 const liveConfig = voiceServer.slice(liveConfigStart, liveConfigEnd);
 expect(liveConfigStart >= 0 && liveConfigEnd > liveConfigStart &&
   liveConfig.includes('tools = []') &&
-  liveConfig.includes('if live_lookup_enabled():') &&
+  liveConfig.includes('if native_search_enabled() and not demo_mode:') &&
+  liveConfig.includes('tools.append(types.Tool(google_search=types.GoogleSearch()))') &&
+  liveConfig.includes('elif live_lookup_enabled():') &&
+  liveConfig.includes('if not demo_mode:') &&
   liveConfig.includes('tools.append(_LIVE_LOOKUP_TOOL)') &&
   liveConfig.includes('tools=tools') &&
-  !liveConfig.includes('google_search=types.GoogleSearch()') &&
+  voiceServer.includes('MUNEA_VOICE_SEARCH_MODE') &&
+  voiceServer.includes('return SEARCH_MODE_NATIVE if os.environ.get("MUNEA_VOICE_LIVE_LOOKUP", "0").strip() == "1" else SEARCH_MODE_OFF') &&
   voiceServer.includes('name=live_lookup.TOOL_NAME') &&
   voiceServer.includes('if function_name == live_lookup.TOOL_NAME') &&
   voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
-  'current-information lookup can still bypass the feature-gated controlled Voice tool path');
+  'current-information lookup can bypass the explicit native/bridge/off Voice feature gate or demo isolation');
 const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
 // 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，呼叫點仍必須在
 // 真的打網路查詢之前。

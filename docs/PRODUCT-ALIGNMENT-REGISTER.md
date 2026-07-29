@@ -1,8 +1,8 @@
 # Munea Product Alignment Register
 
-更新：`2026-07-28 17:26 Asia/Taipei`
+更新：`2026-07-29 Asia/Taipei`
 
-來源基準：`origin/main@5d2008c` + `codex/app-store-1.0.44-build492-20260728`
+來源基準：`origin/main@68956b3` + `codex/app-store-1.0.45-build1-20260729`
 
 本表回答產品承諾、App、source、AI、服務、資料與真人驗收是否仍描述同一個產品。易變的版本／revision 以 [`RELEASE-STATE.md`](./RELEASE-STATE.md) 為準，品質分數以 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md) 為準。
 
@@ -20,7 +20,7 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | `1.0.44 (Build 492)`；current source 已超過凍結 commit `72a0bd46`，post-package source 沒有同一份 Archive／IPA 證據 | Build 492 的 Archive／IPA、Apple upload 與 Edward iPhone 安裝／啟動證據只適用 `72a0bd46`；App E2E pending | `partial` | 若驗現有 492，須針對該凍結成品；若包 current source，先換新 Build number 再完整驗收 |
+| App source lane | `1.0.45 (Build 1)`；current release candidate 由 `origin/main@68956b3` 建立 | Archive／IPA、Apple upload、Edward iPhone 安裝與 App E2E 證據尚待本輪產生；Build 492 舊證據不得上推 | `partial` | 完成自動門檻、Archive／IPA、手機安裝回讀、Apple upload／selection，再跑精確 Build 真人 Gate |
 | App Store lane | latest uploaded／selected `1.0.44 (Build 492)` | Apple processing 完成，17:31 已選入並儲存於 1.0.44；仍為「準備提交」，未送審／核准／公開 | `partial` | 完成 App E2E 與審查資料核對；送審另行授權 |
 | Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
