@@ -49,12 +49,23 @@ class HealthTopicsDataTest(unittest.TestCase):
         self.assertEqual(counts, {"保健品期待型": 7, "必須嚴管轉介型": 7, "純生活型": 7})
 
     def test_strict_referral_topics_carry_referral_language(self):
-        """嚴管轉介型 7 題：注入文必須帶轉介／就醫／119 方向，不能只有生活建議。"""
+        """嚴管轉介型 7 題：必須帶轉介／就醫／119 方向，不能只有生活建議。
+
+        2026-07-29 改成查「實際生效的那份」——題目搬進方案池之後，轉介語言
+        在池子的 L5 轉介卡裡，只驗 inject 會漏掉整個新架構。
+        """
+        import health_selector
         for t in health_kb.TOPICS:
             if t["category"] != "必須嚴管轉介型":
                 continue
+            pooled = health_selector.TOPICS.get(t["id"])
+            if pooled:
+                text = " ".join(s.get("say", "") for s in pooled["solutions"]
+                                if s.get("riskLevel") in ("L4", "L5"))
+            else:
+                text = t["inject"]
             self.assertTrue(
-                any(k in t["inject"] for k in ("就醫", "119", "轉介", "醫師")),
+                any(k in text for k in ("就醫", "119", "轉介", "醫師")),
                 f"{t['id']} 嚴管題缺轉介語言")
 
     def test_no_simplified_chinese_in_injects(self):

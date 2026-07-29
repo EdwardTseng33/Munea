@@ -207,9 +207,21 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     # 代問時只留「講給家長聽」的版本；本人問只留「講給本人聽」的版本；沒標的兩邊都給。
     pool = [s for s in pool if s.get("forWhom") in (None, "parent" if proxy else "self")]
 
+    # secondLine＝可以講、但永遠不准當第一個講的（2026-07-29 搬膝蓋題時抓到）：
+    #   ① 證據偏弱的保健品（葡萄糖胺）——排在肌力訓練前面等於把最弱的當主力，
+    #      「潑冷水同一句要帶更有效的替代」這個設計就整個反過來了
+    #   ② 「這很普遍、不是你特別差」這類安慰話——是配菜、不該吃掉行動建議的位子
+    # 用分數硬壓不可靠（差 0.3 分就翻盤），直接分兩層排：正規的先、陪襯的後。
+    # 但他自己點名問的不算陪襯——「葡萄糖胺到底有沒有效」問的就是那個，
+    # 這時候把答案壓到後面切掉，等於問了不答。
+    def _demoted(s):
+        if not s.get("secondLine"):
+            return False
+        return not any(w and w in (user_text or "") for w in (s.get("askedFor") or []))
+
     ranked = sorted(
         (s for s in pool if not _blocked_by_safety(s, flags, user_text)),
-        key=lambda s: -_score(s, flags, urgent, user_text),
+        key=lambda s: (_demoted(s), -_score(s, flags, urgent, user_text)),
     )
     # 類型多樣性：三個建議全是「行為調整」等於同一招講三次，長輩也記不住差別。
     # 挑的時候同類型最多兩個，把位置留給食補／運動／保健品這些不同路數的方案。

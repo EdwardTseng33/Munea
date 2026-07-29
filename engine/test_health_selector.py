@@ -208,8 +208,84 @@ class OutputShapeTest(unittest.TestCase):
             self.assertIn("絕不推薦品牌", text)
 
 
+class SecondLineTest(unittest.TestCase):
+    """陪襯層：可以講、但不准當主力（2026-07-29 搬膝蓋題時抓到）。
+
+    當初的設計是「潑保健品冷水的同一句一定要帶更有效的替代」，
+    結果排序把證據最弱的葡萄糖胺頂到第一個——設計整個反過來。
+    """
+
+    def test_weak_evidence_supplement_never_leads(self):
+        first = hs.pick("TW-EDU-02", "膝蓋痛，爬樓梯特別酸", ELDER, 15)["solutions"][0]
+        self.assertNotEqual(first["id"], "knee-glucosamine",
+                            "證據偏弱的保健品排到第一個＝把最弱的當主力")
+
+    def test_stronger_alternative_leads_instead(self):
+        picked = hs.pick("TW-EDU-02", "膝蓋痛，爬樓梯特別酸", ELDER, 15)["solutions"]
+        self.assertIn(picked[0]["id"], ("knee-thigh-strength", "knee-weight"),
+                      "實證更明確的肌力訓練／體重控制沒排在前面")
+
+    def test_comfort_lines_do_not_take_an_action_slot(self):
+        """「這很普遍、不是你特別差」是配菜，不該吃掉行動建議的位子。"""
+        ids = [s["id"] for s in hs.pick("TW-EDU-03", "我血壓又高了", ELDER, 8)["solutions"]]
+        self.assertNotEqual(ids[0], "bp-normalize")
+
+    def test_what_he_asked_about_by_name_is_answered_not_buried(self):
+        """他點名問的東西被降級切掉＝問了不答，比排序難看得多。"""
+        picked = hs.pick("TW-EDU-02", "葡萄糖胺到底有沒有效？我膝蓋不好", ELDER, 15)["solutions"]
+        self.assertEqual(picked[0]["id"], "knee-glucosamine")
+
+    def test_answering_the_supplement_still_offers_a_better_path(self):
+        ids = [s["id"] for s in hs.pick("TW-EDU-02", "葡萄糖胺有效嗎", ELDER, 15)["solutions"]]
+        self.assertTrue({"knee-thigh-strength", "knee-weight"} & set(ids),
+                        "潑了冷水卻沒給更有效的替代路")
+
+
+class MigratedTopicsTest(unittest.TestCase):
+    """2026-07-29 第二批搬進方案池的四題，各自最要命的那條要守住。"""
+
+    def test_reflux_always_carries_the_heart_attack_red_line(self):
+        ref = hs.pick("TW-EDU-11", "我火燒心", WORKER, 22)["referral"]
+        self.assertIsNotNone(ref)
+        self.assertIn("心", ref["say"])
+
+    def test_blood_pressure_never_touches_medication(self):
+        for prof in (ELDER, CAREGIVER, WORKER):
+            for s in hs.pick("TW-EDU-03", "我血壓高，是不是要加藥", prof, 9)["solutions"]:
+                self.assertNotEqual(s.get("riskLevel"), "L4", "把調藥端上桌了")
+
+    def test_red_yeast_interaction_surfaces_when_he_mentions_it(self):
+        ids = [s["id"] for s in hs.pick("TW-EDU-16", "我在吃紅麴", ELDER, 14)["solutions"]]
+        self.assertIn("supp-red-yeast", ids, "紅麴配降血脂藥是這題最重要的一條，沒講到")
+
+    def test_kidney_trouble_removes_the_potassium_advice(self):
+        prof = {"audience": "elder", "conditions": ["腎功能異常"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-03", "我血壓高", prof, 9)["solutions"]]
+        self.assertNotIn("bp-dash-diet", ids, "腎功能不好還叫他補鉀")
+
+    def test_worker_and_elder_get_different_reflux_advice(self):
+        w = [s["id"] for s in hs.pick("TW-EDU-11", "我火燒心", WORKER, 23)["solutions"]]
+        e = [s["id"] for s in hs.pick("TW-EDU-11", "我火燒心", ELDER, 9)["solutions"]]
+        self.assertNotEqual(w, e, "上班族跟長輩拿到一模一樣的答案＝因人而異沒生效")
+
+
 class DataIntegrityTest(unittest.TestCase):
     """資料本身的紀律——內容寫壞了這裡先亮紅燈。"""
+
+    def test_migrated_topics_no_longer_carry_fixed_text(self):
+        """搬進方案池的題目若 inject 還留舊固定稿＝兩份真相打架。"""
+        import json
+        with open(os.path.join(HERE, "health_topics.json"), encoding="utf-8") as f:
+            topics = json.load(f)["topics"]
+        for t in topics:
+            if t["id"] in hs.TOPICS:
+                self.assertIn("方案池", t.get("inject", ""),
+                              f"{t['id']} 已有方案池，inject 卻還是舊固定稿")
+
+    def test_every_pool_has_a_referral_card(self):
+        for tid, topic in hs.TOPICS.items():
+            self.assertTrue(any(s.get("riskLevel") == "L5" for s in topic["solutions"]),
+                            f"{tid} 沒有轉介卡——出事沒有出口")
 
     def test_every_supplement_declares_cap_and_contraindications(self):
         for topic in hs.TOPICS.values():
