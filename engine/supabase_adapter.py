@@ -601,30 +601,42 @@ class SupabaseAdapter:
                 filters["or"] = f"(id.eq.{query},name.ilike.*{query}*)"
             else:
                 filters["name"] = f"ilike.*{query}*"
-        rows = self._select("accounts", filters)
-        summaries = []
-        account_ids = []
-        for account in rows or []:
-            account_id = account.get("id")
-            if account_id:
-                account_ids.append(account_id)
-            family_group = self._first("family_groups", {"account_id": f"eq.{account_id}", "select": "*", "limit": "1"})
-            primary_person = self._first(
+        rows = self._select("accounts", filters) or []
+        account_ids = [account.get("id") for account in rows if account.get("id")]
+        # 2026-07-29 改批次查詢：原本每一戶各查四次（家庭圈／主要使用者／家人／陪伴角色），
+        # 12 戶就要 49 次來回、實測 6.7 秒；照這個斜率大約 30 戶起，後台名冊就會撞上前端 15 秒
+        # 逾時、整頁讀不出來。改成四張表各查一次、在記憶體裡歸戶，總來回固定 5 次不隨戶數成長。
+        groups_by_account, persons_by_account = {}, {}
+        memberships_by_account, companions_by_person = {}, {}
+        if account_ids:
+            id_str = ",".join(account_ids)
+            in_filter = f"in.({id_str})"
+            for row in self._select("family_groups", {"account_id": in_filter, "select": "*"}) or []:
+                # 一戶多個家庭圈時取第一筆，跟原本 limit=1 的行為一致
+                groups_by_account.setdefault(row.get("account_id"), row)
+            for row in self._select(
                 "persons",
-                {"account_id": f"eq.{account_id}", "is_primary_care_recipient": "eq.true", "select": "*", "limit": "1"},
-            )
+                {"account_id": in_filter, "is_primary_care_recipient": "eq.true", "select": "*"},
+            ) or []:
+                persons_by_account.setdefault(row.get("account_id"), row)
+            for row in self._select("family_memberships", {"account_id": in_filter, "select": "*"}) or []:
+                memberships_by_account.setdefault(row.get("account_id"), []).append(row)
+            for row in self._select("companion_profiles", {"account_id": in_filter, "select": "*"}) or []:
+                companions_by_person.setdefault((row.get("account_id"), row.get("person_id")), row)
+
+        summaries = []
+        for account in rows:
+            account_id = account.get("id")
+            family_group = groups_by_account.get(account_id)
+            primary_person = persons_by_account.get(account_id)
+            # 原本只撈「屬於這一戶當前家庭圈」的成員——批次撈回來後在記憶體裡照樣過濾，不放寬。
             memberships = []
             if family_group and family_group.get("id"):
-                memberships = self._select(
-                    "family_memberships",
-                    {"account_id": f"eq.{account_id}", "family_group_id": f"eq.{family_group.get('id')}", "select": "*"},
-                )
+                memberships = [m for m in memberships_by_account.get(account_id, [])
+                               if m.get("family_group_id") == family_group.get("id")]
             companion = None
             if primary_person and primary_person.get("id"):
-                companion = self._first(
-                    "companion_profiles",
-                    {"account_id": f"eq.{account_id}", "person_id": f"eq.{primary_person.get('id')}", "select": "*", "limit": "1"},
-                )
+                companion = companions_by_person.get((account_id, primary_person.get("id")))
             summaries.append(self.admin_account_rows_to_summary(account, family_group, primary_person, memberships, companion))
         # 測試帳號判準（2026-07-21 補）：email @munea.net 網域 union 人工標記，只查一次（不逐列查），
         # 標成 isTestAccount 給名冊隱藏／分析排除共用；查失敗一律 fail-open（見 resolve_test_account_signals）。
