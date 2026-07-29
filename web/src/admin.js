@@ -758,27 +758,17 @@
       { label:"免費→付費轉換率", value:sm.freeToPaidConversion==null?"–":(sm.freeToPaidConversion*100).toFixed(1)+"%", sub:"付費數 ÷ 註冊數 · 目標 ≥8%" },
     ]);
     // ══ 點數經濟：平台層用全帳號點數、明細用 /admin/credits ══
+    // 「快用完名單」已移除（Edward 2026-07-29 拍板：不用快用完這個概念）——
+    // 跟 7/28「後台不做關心名單」同一條線：點數見底是用戶自己的體驗，不由後台盯著誰該加購。
+    // 點數的平台層數字（總量／平均／加購）留著，那是生意健康度，不是「該聯絡誰」名單。
     const cAccts=(D().accounts||{}).accounts||[];
-    const LOW_PTS=20;
     const ptsTotal=cAccts.reduce((s,a)=>s+Number(a.points||0),0);
     const ptsAvg=cAccts.length?Math.round(ptsTotal/cAccts.length):null;
-    const lowList=cAccts.filter((a)=>Number(a.points||0)<LOW_PTS).sort((a,b)=>Number(a.points||0)-Number(b.points||0));
     html+=kpiRow([
       { label:"全平台持有點數", value:n(ptsTotal), sub:`${n(cAccts.length)} 戶合計`, star:true },
       { label:"平均每戶點數", value:ptsAvg==null?"–":n(ptsAvg), sub:"點／戶" },
-      { label:"快用完", value:n(lowList.length), sub:`剩不到 ${LOW_PTS} 點`, star:lowList.length>0, tone:"alert", info:"點數快見底的帳號——主動關心或提醒加購的好時機" },
       { label:"近 30 天加購", value:n(sm.pointsPurchases), unit:sm.pointsPurchases?" 筆":"", sub:`共 ${n(sm.pointsTotal)} 點` },
     ]);
-    html+=card("快用完名單", `剩不到 ${LOW_PTS} 點 · 建議主動關心或提醒加購`, lowList.length?tableHTML(["用戶","家庭","方案","剩餘點數","最近活躍"], lowList.slice(0,12).map((a)=>{
-      const pp=a.primaryPerson||{},ff=a.familyGroup||{},uu=a.usage||{};
-      return [
-        `<b>${esc(acctPersonName(a))}</b>`,
-        esc(ff.name||"–"),
-        planPill(a.plan||"free"),
-        `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
-        `<span class="muted small">${esc(fmtTime(uu.lastActiveAt||a.updatedAt||a.createdAt))}</span>`,
-      ];
-    })):emptyBox("目前沒有人點數快用完——很好。"));
     const cw=creditsSummary(), ws=cw.walletSummary||{}, ctx=cw.recentTransactions||[];
     html+=card("點數組成與最近異動", "贈點與加購的餘額、最近的發放與消耗", (ws.total!=null||ctx.length)?`
       <div style="display:flex;gap:26px;flex-wrap:wrap${ctx.length?";margin-bottom:14px":""}">
