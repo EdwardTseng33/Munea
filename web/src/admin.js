@@ -370,6 +370,12 @@
 
   const AV_TINTS=[["var(--coral-soft)","var(--coral-d)"],["var(--mint)","var(--teal-dd)"],["var(--gold-soft)","#9A7B24"],["#E7E9F2","#5A6B8C"],["#F1E4EC","#9C5B84"]];
   const REL_ZH={ self:"主要使用者", primary_user:"主要使用者", elder:"長輩", senior:"長輩", child:"子女", daughter:"女兒", son:"兒子", family:"家人", caregiver:"照顧者" };
+  const SIGNIN_ZH={ google:"Google 登入", apple:"Apple 登入", email:"信箱登入", phone:"手機登入" };
+  // 「這一戶是誰登入的」一句話：登入方式 + 信箱。Apple 選「隱藏我的電子郵件」時拿到的是轉信地址，
+  // 老實顯示成「Apple 隱藏信箱」——那是 Apple 的規矩不是我們漏抓，寫成真信箱會誤導維運判讀。
+  function ownerLabel(o){ o=o||{}; return SIGNIN_ZH[String(o.signInMethod||"").toLowerCase()]||(o.signInMethod?String(o.signInMethod):""); }
+  function ownerEmailText(o){ o=o||{}; if(!o.email) return ""; return o.emailIsPrivateRelay?"Apple 隱藏信箱":o.email; }
+  function ownerLine(o){ o=o||{}; const parts=[ownerLabel(o), ownerEmailText(o)].filter(Boolean); return parts.length?parts.join(" · "):(o.authUserId?"":"查無登入身分"); }
   function planPill(p){ const m={ pro:["pill pro","Pro"], plus:["pill ok","Plus"], free:["pill mute","免費"] }; const x=m[p]||m.free; return `<span class="${x[0]}">${x[1]}</span>`; }
   function statusPill(s){ const m={ on:["ok","活躍中"], idle:["warn","低度使用"], off:["mute","離線"], alert:["bad","守護中"] }; const x=m[s]||m.off; return `<span class="pill ${x[0]}"><span class="sdot"></span>${x[1]}</span>`; }
   function usageCell(u){ u=u||{}; const mins=Math.round(u.totalMinutes||0); if(!mins) return `<span class="muted">—</span>`; const h=Math.min(22,Math.max(6,mins/6)); return `<div class="use-cell"><span class="mini-bars"><i style="height:${Math.round(h*0.5)}px"></i><i style="height:${Math.round(h*0.78)}px"></i><i style="height:${Math.round(h)}px"></i></span><b class="num">${n(mins)}</b><span class="muted small">分</span></div>`; }
@@ -397,7 +403,7 @@
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
     const planC={free:0,plus:0,pro:0}; accts.forEach((a)=>{ const p=a.plan||"free"; planC[p]=(planC[p]||0)+1; });
     const passFilter=(a)=>{ if(["on","idle","alert"].includes(filt)) return stOf(a)===filt; if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt; return true; };
-    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")).toLowerCase().indexOf(q)>-1; });
+    const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{},o=a.owner||{}; return ((p.displayName||a.accountName||"")+" "+(f.name||"")+" "+(o.email||"")+" "+(o.signInName||"")).toLowerCase().indexOf(q)>-1; });
     const chip=(id,label,cnt)=>`<button type="button" class="chip-filter${filt===id?" on":""}" data-ufilter="${id}" aria-pressed="${filt===id?"true":"false"}">${esc(label)} <span class="c">${cnt}</span></button>`;
     const testToggle=`<label class="test-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.9rem;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" id="showTestAccountsChk"${showTest?" checked":""}> 顯示測試帳號</label>`;
     const tools=`<div class="tbl-tools">${chip("all","全部",accts.length)}${chip("on","活躍中",activeC)}${chip("idle","低度使用",idleC)}${chip("alert","守護中",guardC)}<span class="chip-sep"></span>${chip("free","免費",planC.free||0)}${chip("plus","Plus",planC.plus||0)}${chip("pro","Pro",planC.pro||0)}<span class="chip-spring"></span>${testToggle}<input class="tbl-search" id="userSearch" type="search" aria-label="搜尋用戶名字或家庭" placeholder="搜尋名字或家庭"></div>`;
@@ -405,8 +411,9 @@
       const nm=p.displayName||a.accountName||"–", initial=(String(nm).trim()[0]||"家");
       const tint=AV_TINTS[Math.abs(String(nm).split("").reduce((h,ch)=>((h<<5)-h+ch.charCodeAt(0))|0,0))%AV_TINTS.length];
       const sub=REL_ZH[String(p.relationship||"").toLowerCase()]||"成員";
+      const who=ownerLine(a.owner);
       return [
-        `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub">${esc(sub)}</div></div></div>`,
+        `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub">${esc(sub)}${who?` · ${esc(who)}`:""}</div></div></div>`,
         `<span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span>`,
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
@@ -760,12 +767,17 @@
     const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[a.plan||"free"]||"免費";
     const stTxt={on:"活躍中",idle:"低度使用",off:"離線",alert:"守護中"}[st]||"離線";
     const mins=Math.round(u.totalMinutes||0);
-    const fields=[["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]];
+    const o=a.owner||{};
+    const fields=[["家庭圈",f.name||"–"],["主要使用者",p.displayName||"–"],
+      // 會員資料三欄（2026-07-29 補）：後台要能回答「這一戶到底是誰」，不然名冊只剩暱稱、
+      // 上線後分不出真實用戶跟測試帳號、也聯絡不到人。
+      ["登入方式",ownerLabel(o)||"查無登入身分"],["登入信箱",ownerEmailText(o)||"–"],["註冊時間",o.signedUpAt?fmtTime(o.signedUpAt):fmtTime(a.createdAt)],["最後登入",o.lastSignInAt?fmtTime(o.lastSignInAt):"–"],
+      ["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],["活躍狀態",stTxt],["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]];
     const nm=p.displayName||a.accountName||"帳號";
     const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
       <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
       <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>
-      <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button><button type="button" class="btn-ghost btn-sm" data-open-action="extend">⏱ 延長天數</button><button type="button" class="btn-ghost btn-sm" data-open-action="testflag">${a.isTestAccount?"✓ 取消測試標記":"🧪 標記為測試帳號"}</button></div>
+      <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button><button type="button" class="btn-ghost btn-sm" data-open-action="extend">⏱ 延長天數</button><button type="button" class="btn-ghost btn-sm" data-open-action="testflag">${a.isTestAccount?"✓ 取消測試標記":"🧪 標記為測試帳號"}</button>${a.isTestAccount?'<button type="button" class="btn-ghost btn-sm danger" data-open-action="delete">🗑 永久刪除</button>':""}</div>
       <div id="acctActionPanel"></div>`;
     const previous=document.activeElement,layout=document.querySelector(".layout");
     let mo=$("acctModal"); if(!mo){ mo=document.createElement("div"); mo.id="acctModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
@@ -1497,7 +1509,41 @@
       </div>`;
       panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
       panel.querySelector("#testFlagSubmitBtn")?.addEventListener("click",()=>submitSetTestFlag(a,willMark));
+    } else if(mode==="delete"){
+      // 永久刪除（2026-07-29 補）：只對已標記測試的帳號開放（後端也再擋一次）。
+      // 除了勾選標記這道閘，這裡再要求手打「刪除」兩個字——不可逆的動作不給一鍵誤觸。
+      panel.innerHTML=`<div class="modal-subpanel">
+        <div class="modal-subtitle">永久刪除測試帳號「${esc(nm)}」</div>
+        <div class="kpi-sub" style="margin-bottom:10px">會一併刪掉這個帳號的家庭圈、個人資料、點數錢包、聊天摘要與登入身分，<b>刪掉就回不來</b>。只有已標記為測試的帳號刪得掉；真實用戶要刪帳號請走 App 內的帳號刪除或隱私請求。</div>
+        <label class="field"><span>請輸入「刪除」兩個字確認</span><input id="deleteConfirmInput" type="text" autocomplete="off" placeholder="刪除"></label>
+        <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm danger" id="deleteSubmitBtn">永久刪除</button></div>
+        <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
+      </div>`;
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("#deleteSubmitBtn")?.addEventListener("click",()=>submitDeleteAccount(a));
     }
+  }
+
+  async function submitDeleteAccount(a){
+    const nm=(a.primaryPerson||{}).displayName||a.accountName||"帳號";
+    const hint=$("acctActionHint");
+    const typed=($("deleteConfirmInput")?.value||"").trim();
+    if(typed!=="刪除"){ if(hint){ hint.textContent="請輸入「刪除」兩個字才能送出"; hint.className="modal-subhint err"; } return; }
+    if(!a.isTestAccount){ if(hint){ hint.textContent="這個帳號沒有標記為測試帳號，不能從後台刪除"; hint.className="modal-subhint err"; } return; }
+    if(!window.confirm("要永久刪除測試帳號「"+nm+"」嗎？\n\n這個動作無法復原。")) return;
+    const btn=$("deleteSubmitBtn"); if(btn) btn.disabled=true;
+    if(hint){ hint.textContent="刪除中…"; hint.className="modal-subhint"; }
+    try{
+      const res=await postAdmin(state.base,state.token,"/admin/accounts/delete",{accountId:a.accountId});
+      // 登入身分刪不掉時後端會回 cleanupRequired，老實講出來，不要顯示成完全乾淨。
+      if(res&&res.cleanupRequired){
+        if(hint){ hint.textContent="帳號已刪除，但登入身分沒清乾淨，請工程師確認"; hint.className="modal-subhint err"; }
+      }else if(hint){ hint.textContent="已永久刪除"; hint.className="modal-subhint ok"; }
+      await refreshData();
+      if(!res||!res.cleanupRequired){ const mo=$("acctModal"); if(mo){ mo.hidden=true; const layout=document.querySelector(".layout"); if(layout)layout.inert=false; } }
+    }catch(e){
+      if(hint){ hint.textContent=explainErr(e&&e.message); hint.className="modal-subhint err"; }
+    }finally{ if(btn) btn.disabled=false; }
   }
 
   async function submitGrantCredits(a){
@@ -1704,7 +1750,7 @@
     if(!res.ok||p.ok===false){ const code=typeof p.error==="string"?p.error:(p.error&&p.error.code); throw new Error(code||("http_"+res.status)); }
     return p;
   }
-  function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/plan_not_eligible_for_extension/.test(m))return "免費帳號沒有到期日，請先改方案"; if(/invalid_days/.test(m))return "天數格式不正確"; if(/days_out_of_range/.test(m))return "單次最多延長 365 天，請分批操作"; if(/days_required/.test(m))return "請輸入延長天數"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
+  function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/plan_not_eligible_for_extension/.test(m))return "免費帳號沒有到期日，請先改方案"; if(/invalid_days/.test(m))return "天數格式不正確"; if(/days_out_of_range/.test(m))return "單次最多延長 365 天，請分批操作"; if(/days_required/.test(m))return "請輸入延長天數"; if(/account_deletion_requires_test_flag/.test(m))return "只有標記為測試的帳號才能從後台刪除"; if(/account_deletion_not_configured/.test(m))return "這台伺服器沒接上資料庫，不能刪帳號"; if(/account_deletion_failed/.test(m))return "刪除沒有成功，請看系統操作紀錄"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
 
   // 抓所有真資料（登入成功、貼通行碼、開頁自動連線 三處共用）
   async function loadAll(base, token){

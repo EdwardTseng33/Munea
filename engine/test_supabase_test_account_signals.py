@@ -42,14 +42,20 @@ class ResolveTestAccountSignalsTests(unittest.TestCase):
                 ]
             raise AssertionError("unexpected table " + table)
 
-        def fake_email(user_id):
-            return {"user-a": "qa-review@munea.net", "user-b": "someone@gmail.com"}.get(user_id)
+        def fake_user(user_id):
+            return {
+                "user-a": {"id": "user-a", "email": "qa-review@munea.net", "app_metadata": {"provider": "email"}},
+                "user-b": {"id": "user-b", "email": "someone@gmail.com", "app_metadata": {"provider": "google"}},
+            }.get(user_id)
 
         with patch.object(adapter, "_select", side_effect=fake_select), \
-             patch.object(adapter, "_fetch_auth_user_email", side_effect=fake_email):
+             patch.object(adapter, "_fetch_auth_user", side_effect=fake_user):
             result = adapter.resolve_test_account_signals(account_ids=["acct-a", "acct-b"])
         self.assertEqual(result["domainTestIds"], {"acct-a"})
         self.assertEqual(result["manualTestIds"], {"acct-b"})
+        # 同一趟查詢順帶回 owner 資訊給名冊用（後台要能顯示「這一戶是誰登入的」）
+        self.assertEqual(result["ownersByAccount"]["acct-b"]["email"], "someone@gmail.com")
+        self.assertEqual(result["ownersByAccount"]["acct-b"]["signInMethod"], "google")
 
     def test_manual_flag_query_failure_is_fail_open(self):
         adapter = make_adapter()
@@ -62,10 +68,54 @@ class ResolveTestAccountSignalsTests(unittest.TestCase):
             raise AssertionError("unexpected table " + table)
 
         with patch.object(adapter, "_select", side_effect=fake_select), \
-             patch.object(adapter, "_fetch_auth_user_email", return_value="qa-review@munea.net"):
+             patch.object(adapter, "_fetch_auth_user",
+                          return_value={"id": "user-a", "email": "qa-review@munea.net"}):
             result = adapter.resolve_test_account_signals(account_ids=["acct-a"])
         self.assertEqual(result["manualTestIds"], set())
         self.assertEqual(result["domainTestIds"], {"acct-a"})
+
+    def test_drill_named_accounts_are_treated_as_test(self):
+        """演習腳本留下的孤兒帳號靠保留名字收乾淨——它們沒有 owner、也沒有測試旗子。"""
+        adapter = make_adapter()
+        seen = []
+
+        def fake_select(table, query):
+            seen.append((table, query.get("name")))
+            if table == "accounts":
+                # 第一趟問人工標記（is_test_account=eq.true）：沒有。
+                if query.get("is_test_account"):
+                    return []
+                # 第二趟問演習保留名字。
+                return [{"id": "acct-drill", "name": "Queue burst drill"}]
+            if table == "account_members":
+                return []
+            raise AssertionError("unexpected table " + table)
+
+        with patch.object(adapter, "_select", side_effect=fake_select):
+            result = adapter.resolve_test_account_signals(account_ids=["acct-drill", "acct-real"])
+        self.assertEqual(result["manualTestIds"], {"acct-drill"})
+        # 保留名字是完整比對的清單，不是關鍵字模糊比對——真用戶的帳號名不該被掃進來
+        name_filter = [q for t, q in seen if t == "accounts" and q][0]
+        self.assertIn('"Queue burst drill"', name_filter)
+        self.assertIn('"RunPod failover drill"', name_filter)
+
+    def test_drill_name_query_failure_is_fail_open(self):
+        """演習名字這條查失敗不能拖垮名冊，也不能誤標任何帳號。"""
+        adapter = make_adapter()
+
+        def fake_select(table, query):
+            if table == "accounts" and query.get("name"):
+                raise supabase_adapter.SupabaseRequestError("unreachable")
+            if table == "accounts":
+                return []
+            if table == "account_members":
+                return []
+            raise AssertionError("unexpected table " + table)
+
+        with patch.object(adapter, "_select", side_effect=fake_select):
+            result = adapter.resolve_test_account_signals(account_ids=["acct-a"])
+        self.assertEqual(result["manualTestIds"], set())
+        self.assertEqual(result["domainTestIds"], set())
 
     def test_membership_query_failure_is_fail_open(self):
         adapter = make_adapter()

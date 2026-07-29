@@ -31,6 +31,13 @@ _CIRCUIT_COOLDOWN = 20.0  # 秒：一次連線失敗後，這段時間內直接�
 _MISSING_TABLES = {}
 _MISSING_TTL = 30.0
 
+# ── 演習腳本的保留帳號名（2026-07-29）──
+# scripts/run-queue-burst-drill.py 與 run-runpod-failover-drill.py 建臨時帳號時用的固定名字。
+# 兩支腳本現在建立當下就標 is_test_account，這份名單是收「腳本改版前留下的存量」——
+# 演習中途斷線收屍不完全時，帳號列會留在正式庫，沒名單就會混進後台名冊看起來像真用戶。
+# 新增演習腳本時，名字要一起加進來（也記得在腳本裡帶 is_test_account=True）。
+DRILL_ACCOUNT_NAMES = ("Queue burst drill", "RunPod failover drill")
+
 
 class SupabaseRequestError(RuntimeError):
     """Structured REST failure without weakening existing RuntimeError callers."""
@@ -378,8 +385,8 @@ class SupabaseAdapter:
         result["cleanupRequired"] = bool(cleanup["failed"])
         return result
 
-    def _fetch_auth_user_email(self, auth_user_id):
-        """GoTrue Admin 單一 user 查詢、只取 email（測試帳號網域判準用）。
+    def _fetch_auth_user(self, auth_user_id):
+        """GoTrue Admin 單一 user 查詢，回整個 user 物件（測試帳號網域判準＋名冊會員資料共用）。
         任何失敗（逾時／找不到／格式異常）一律回 None，不讓名冊或分析請求被單一查詢拖垮。"""
         if not self.configured() or not self._is_uuid(auth_user_id):
             return None
@@ -392,7 +399,32 @@ class SupabaseAdapter:
             return None
         # GoTrue 舊版包一層 {"user": {...}}，新版直接回 user 物件；兩種都接。
         user = payload.get("user") if isinstance(payload, dict) and isinstance(payload.get("user"), dict) else payload
-        return (user or {}).get("email") if isinstance(user, dict) else None
+        return user if isinstance(user, dict) else None
+
+    def _fetch_auth_user_email(self, auth_user_id):
+        """只取 email 的薄包裝（網域判準用）。"""
+        return (self._fetch_auth_user(auth_user_id) or {}).get("email")
+
+    @staticmethod
+    def auth_user_to_owner(user):
+        """把 GoTrue user 物件收斂成後台名冊要顯示的「這個帳號是誰登入的」四欄。
+
+        signInMethod 取 app_metadata.provider（Google／Apple／Email）；Apple 選「隱藏我的電子郵件」
+        時 email 會是 @privaterelay.appleid.com 轉信地址——那是 Apple 給的上限，不是我們漏抓，
+        所以另外標 emailIsPrivateRelay 讓後台老實顯示「Apple 隱藏信箱」而不是假裝拿到真信箱。"""
+        user = user or {}
+        metadata = user.get("user_metadata") or {}
+        email = (user.get("email") or "").strip()
+        provider = (user.get("app_metadata") or {}).get("provider") or ""
+        return {
+            "authUserId": user.get("id") or "",
+            "email": email,
+            "emailIsPrivateRelay": email.lower().endswith("@privaterelay.appleid.com"),
+            "signInMethod": provider,
+            "signInName": metadata.get("name") or metadata.get("full_name") or "",
+            "signedUpAt": user.get("created_at"),
+            "lastSignInAt": user.get("last_sign_in_at"),
+        }
 
     def enabled(self):
         return (
@@ -593,8 +625,17 @@ class SupabaseAdapter:
         # 標成 isTestAccount 給名冊隱藏／分析排除共用；查失敗一律 fail-open（見 resolve_test_account_signals）。
         signals = self.resolve_test_account_signals(account_ids=account_ids)
         test_ids = (signals.get("domainTestIds") or set()) | (signals.get("manualTestIds") or set())
+        owners = signals.get("ownersByAccount") or {}
         for summary in summaries:
-            summary["isTestAccount"] = summary.get("accountId") in test_ids
+            account_id = summary.get("accountId")
+            summary["isTestAccount"] = account_id in test_ids
+            # 後台名冊要能回答「這一戶是誰登入的」：email／登入方式／註冊時間／最後登入。
+            # 查不到 owner（例如演習腳本留下的孤兒帳號列）就給空殼，讓前端顯示「查無登入身分」，
+            # 不要無聲留白讓人以為系統壞了。
+            summary["owner"] = owners.get(account_id) or {
+                "authUserId": "", "email": "", "emailIsPrivateRelay": False,
+                "signInMethod": "", "signInName": "", "signedUpAt": None, "lastSignInAt": None,
+            }
         return summaries
 
     def resolve_test_account_signals(self, account_ids=None, limit=200):
@@ -628,24 +669,41 @@ class SupabaseAdapter:
             manual_ids = {r.get("id") for r in (flagged or []) if r.get("id")}
         except Exception:
             pass  # is_test_account 欄位可能還沒 migrate，人工標記先當沒有，不影響網域判準那條
+        # 演習保留名字（2026-07-29 補）：壓力／故障演習腳本建的帳號名字是寫死的常數，
+        # 演習中途斷線時收屍不完全，帳號列會留在正式庫混進用戶名冊。腳本已改成建立當下就標
+        # is_test_account，但「腳本改版前留下的存量」沒有那面旗子——靠名字補一條判準收乾淨。
+        # 這是保留字，不是模糊比對：真實用戶不會把家庭帳號取名叫「Queue burst drill」。
+        try:
+            drill_names = ",".join(f'"{name}"' for name in DRILL_ACCOUNT_NAMES)
+            named = self._select(
+                "accounts",
+                {"select": "id,name", "id": f"in.({id_str})", "name": f"in.({drill_names})"},
+            ) or []
+            manual_ids |= {r.get("id") for r in named if r.get("id")}
+        except Exception:
+            pass
+        owners = {}
         try:
             memberships = self._select(
                 "account_members",
                 {"account_id": f"in.({id_str})", "role": "eq.owner", "status": "eq.active", "select": "account_id,user_id"},
             ) or []
-            checked_emails = {}
+            checked_users = {}
             for m in memberships:
                 account_id, user_id = m.get("account_id"), m.get("user_id")
                 if not account_id or not user_id:
                     continue
-                if user_id not in checked_emails:
-                    checked_emails[user_id] = self._fetch_auth_user_email(user_id)
-                email = checked_emails[user_id]
+                if user_id not in checked_users:
+                    checked_users[user_id] = self._fetch_auth_user(user_id)
+                user = checked_users[user_id] or {}
+                owners[account_id] = self.auth_user_to_owner(user) if user else {"authUserId": user_id}
+                email = user.get("email")
                 if email and str(email).strip().lower().endswith("@munea.net"):
                     domain_ids.add(account_id)
         except Exception:
             pass
-        return {"domainTestIds": domain_ids, "manualTestIds": manual_ids}
+        # ownersByAccount 順帶回去給名冊用（同一趟 GoTrue 查詢，不為了顯示 email 多打一輪）。
+        return {"domainTestIds": domain_ids, "manualTestIds": manual_ids, "ownersByAccount": owners}
 
     def set_account_test_flag(self, account_id, is_test):
         """人工標記／取消標記帳號為測試帳號（accounts.is_test_account）。只影響「名冊隱藏＋分析
@@ -664,6 +722,85 @@ class SupabaseAdapter:
             prefer="return=representation",
         )
         return rows[0] if rows else None
+
+    def admin_delete_test_account(self, account_id, actor=None):
+        """後台永久刪除一個測試帳號（帳號列＋連動個人資料＋Supabase Auth 登入身分）。
+
+        跟 delete_scoped_account（用戶自己刪自己、需要本人登入身分）分開兩支：這支是維運端清場用的，
+        身分驗證由 server.py 的後台通行碼那層負責，這裡負責「不准誤刪真客戶」這道業務閘——
+
+          只有 accounts.is_test_account = true 的帳號才刪得掉。
+
+        要刪真實用戶帳號一律走用戶自己的刪除流程或隱私請求，維運端不開後門；想刪測試帳號就先在後台
+        勾「標記為測試帳號」，兩個動作分開＝手滑點錯也刪不掉付費客戶。
+        刪除前寫 audit_events 留痕；Auth 登入身分刪不掉時老實回報 cleanupRequired，不假裝乾淨。"""
+        if not self.configured():
+            raise RuntimeError("Supabase adapter is not configured")
+        if not self._is_uuid(account_id):
+            raise RuntimeError("A valid account id is required")
+
+        account = self._first("accounts", {"id": f"eq.{account_id}", "select": "id,name,is_test_account", "limit": "1"})
+        if not account:
+            raise LookupError("account_not_found")
+        if not account.get("is_test_account"):
+            raise PermissionError("account_deletion_requires_test_flag")
+
+        owner_ids = []
+        try:
+            members = self._select(
+                "account_members",
+                {"account_id": f"eq.{account_id}", "role": "eq.owner", "select": "user_id"},
+            ) or []
+            owner_ids = [m.get("user_id") for m in members if self._is_uuid(m.get("user_id") or "")]
+        except Exception:
+            owner_ids = []
+
+        try:
+            self._request(
+                "POST",
+                "audit_events",
+                query={"select": "id"},
+                payload={
+                    "account_id": account_id,
+                    "event_type": "admin_test_account_deleted",
+                    "target_table": "accounts",
+                    "target_id": account_id,
+                    "details": {
+                        "accountName": account.get("name") or "",
+                        "actor": str(actor or "admin_console")[:120],
+                        "scope": "test_account_and_cascading_data",
+                        "authUserIds": owner_ids,
+                    },
+                },
+                prefer="return=minimal",
+            )
+        except Exception:
+            pass  # 留痕失敗不擋清場（帳號本來就是測試資料），刪除結果照樣如實回報
+
+        deleted = self._request(
+            "DELETE",
+            "accounts",
+            query={"id": f"eq.{account_id}", "select": "id"},
+            prefer="return=representation",
+        )
+        if not deleted:
+            raise RuntimeError("Supabase account deletion did not delete an account row")
+
+        cleanup = {"attempted": 0, "deleted": 0, "failed": []}
+        for uid in owner_ids:
+            cleanup["attempted"] += 1
+            try:
+                self._delete_auth_user(uid)
+                cleanup["deleted"] += 1
+            except Exception as exc:
+                cleanup["failed"].append({"authUserId": uid, "error": type(exc).__name__})
+        return {
+            "ok": True,
+            "accountId": account_id,
+            "accountName": account.get("name") or "",
+            "authCleanup": cleanup,
+            "cleanupRequired": bool(cleanup["failed"]),
+        }
 
     @staticmethod
     def feedback_row_to_item(row):

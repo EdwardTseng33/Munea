@@ -105,10 +105,13 @@ class Drill:
         if not self.user_id:
             raise DrillError("temporary auth user creation returned no id")
 
+        # is_test_account=True 是演習帳號的出生證明（2026-07-29 補）：演習中斷／收屍失敗時，
+        # 帳號列會留在正式庫，沒有這面旗子就會混進後台用戶名冊跟營運數據，看起來像真用戶。
+        # 建立當下就標，不靠事後人工補勾。
         accounts = self._rest(
             "POST",
             "accounts",
-            {"name": "RunPod failover drill", "locale": "zh-TW"},
+            {"name": "RunPod failover drill", "locale": "zh-TW", "is_test_account": True},
             "return=representation",
         )
         self.account_id = str((accounts or [{}])[0].get("id") or "")
