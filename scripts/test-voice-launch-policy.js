@@ -151,16 +151,24 @@ expect(voiceServer.includes('"node.asr_input"'),
 const liveConfigStart = voiceServer.indexOf('def live_config(');
 const liveConfigEnd = voiceServer.indexOf('async def search_current_information(', liveConfigStart + 1);
 const liveConfig = voiceServer.slice(liveConfigStart, liveConfigEnd);
+// 2026-07-29：查詢改走 Gemini 內建搜尋（#274 刻意的——舊的橋接查詢會讓她說「我幫你查一下」
+// 再空白 9 秒＝客服腔）。原本「不准出現內建搜尋」那條斷言已與現行設計相反、屬過期測試。
+// 換成守真正該守的兩件事：①橋接查詢那條路仍完整保留（一個環境變數就能退回去）
+// ②**開了搜尋就必須同時擋住「拿網路內容回答健康問題」**——搜尋結果沒人審過，
+// 內容農場跟醫學會指引長得一樣，而健康建議講錯長輩會照著做（7/24 拍板：健康走策展題庫）。
 expect(liveConfigStart >= 0 && liveConfigEnd > liveConfigStart &&
   liveConfig.includes('tools = []') &&
   liveConfig.includes('if live_lookup_enabled():') &&
   liveConfig.includes('tools.append(_LIVE_LOOKUP_TOOL)') &&
   liveConfig.includes('tools=tools') &&
-  !liveConfig.includes('google_search=types.GoogleSearch()') &&
   voiceServer.includes('name=live_lookup.TOOL_NAME') &&
   voiceServer.includes('if function_name == live_lookup.TOOL_NAME') &&
   voiceServer.includes('response = await _run_live_lookup(fargs, cue_already_spoken=turn_out > 0)'),
-  'current-information lookup can still bypass the feature-gated controlled Voice tool path');
+  'the controlled bridge-lookup path is no longer intact as a fallback');
+expect(voiceServer.includes('if native_search_enabled() and not demo_mode:') &&
+  voiceServer.includes('絕對不准用查到的網路內容回答') &&
+  voiceServer.includes('寧可說不知道，也不要拿網路上的東西當健康建議'),
+  'native search is enabled without the rule that health questions must never be answered from search results');
 const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
 // 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，呼叫點仍必須在
 // 真的打網路查詢之前。
