@@ -679,6 +679,29 @@ class LocalizationTests(unittest.TestCase):
             localization.voice_opening_instruction(8, ["懷舊老歌"], "台北市", 1),
         )
 
+    def test_live_asr_hints_follow_conversation_locale(self):
+        self.assertEqual(localization.asr_language_hints("zh-TW"), ["cmn-Hant-TW"])
+        self.assertEqual(localization.asr_language_hints("en-US"), ["en-US"])
+        self.assertEqual(localization.asr_language_hints("ja"), ["ja-JP"])
+        self.assertEqual(localization.asr_language_hints("es-MX"), ["es-ES"])
+
+    def test_code_switch_detection_is_language_only_not_region_policy(self):
+        self.assertEqual(
+            localization.detect_supported_languages("今天還不錯, and I want to tell you why"),
+            ["en", "zh-TW"],
+        )
+        self.assertEqual(
+            localization.detect_supported_languages("Hola, quiero hablar contigo"),
+            ["es"],
+        )
+        self.assertEqual(
+            localization.detect_supported_languages("今日はいい天気ですね"),
+            ["ja"],
+        )
+        instruction = localization.live_voice_code_switch_instruction("en")
+        self.assertIn("saved conversation language", instruction)
+        self.assertIn("never changes country", instruction)
+
 
 if __name__ == "__main__":
     unittest.main()

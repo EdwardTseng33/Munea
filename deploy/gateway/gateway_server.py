@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from call_control_store import CallControlAuthError, CallControlError, SupabaseCallStore, issue_call_token
 from gateway_core import Gateway, VoicePool
+from locale_context_claims import build_verified_locale_context, locale_context_call_claims
 
 app = FastAPI(title="munea-chat-gateway")
 logger = logging.getLogger("munea.gateway")
@@ -64,6 +65,9 @@ _CALL_TOKEN_SECRET = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
 _TURN_SECRET = os.environ.get("MUNEA_TURN_SECRET", "").strip()
 _TURN_URLS = [x.strip() for x in os.environ.get("MUNEA_TURN_URLS", "").split(",") if x.strip()]
 _REQUIRE_DURABLE = os.environ.get("MUNEA_GATEWAY_REQUIRE_DURABLE", "0") == "1"
+_ALLOW_LEGACY_LOCALE_CONTEXT = (
+    os.environ.get("MUNEA_GATEWAY_ALLOW_LEGACY_LOCALE_CONTEXT", "1") == "1"
+)
 DURABLE = SupabaseCallStore.from_env()
 
 # A worker in one of these states has been taken offline on purpose. A liveness
@@ -210,12 +214,25 @@ def _admin_bearer(authorization: str, x_munea_admin_token: str) -> None:
         raise HTTPException(status_code=403, detail="admin token required")
 
 
-def _decorate_connect(result: dict, user_id: str) -> dict:
+def _decorate_connect(result: dict, user_id: str, store: SupabaseCallStore) -> dict:
     if result.get("status") != "connect":
         return result
     worker = result.get("worker") or {}
     if not _CALL_TOKEN_SECRET:
         raise HTTPException(status_code=503, detail="call token signer is not configured")
+    try:
+        account, person = store.load_call_locale_records(
+            call_id=str(result.get("call_id") or ""),
+            user_id=user_id,
+        )
+        locale_context = build_verified_locale_context(
+            account,
+            person,
+            allow_legacy=_ALLOW_LEGACY_LOCALE_CONTEXT,
+        )
+    except (CallControlError, TypeError, ValueError) as exc:
+        logger.error("trusted_call_locale_resolution_failed")
+        raise CallControlError("trusted call locale context is unavailable") from exc
     token_payload = {
         "call_id": str(result.get("call_id") or ""),
         "user_id": user_id,
@@ -223,6 +240,7 @@ def _decorate_connect(result: dict, user_id: str) -> dict:
         "voice_shard_id": str((result.get("voice") or {}).get("shard_id") or ""),
         "slot_id": int(result.get("slot_id") or 0),
         "lease_version": int(result.get("lease_version") or 0),
+        **locale_context_call_claims(locale_context),
     }
     if _TURN_SECRET and _TURN_URLS:
         turn_username = str(int(time.time()) + 120) + ":" + user_id
@@ -320,7 +338,7 @@ def calls_v2(body: CallRequestV2Body, authorization: str = Header(default="")):
             idempotency_key=body.idempotency_key,
             queue_max=_QUEUE_MAX_DEPTH,
         )
-        return _decorate_connect(result, user.user_id)
+        return _decorate_connect(result, user.user_id, store)
     except CallControlError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -374,7 +392,7 @@ def call_token_v2(call_id: str, body: CallClaimV2Body,
         )
         if not result.get("ok"):
             raise HTTPException(status_code=409, detail=str(result.get("reason") or "stale lease"))
-        return _decorate_connect(result, user.user_id)
+        return _decorate_connect(result, user.user_id, store)
     except CallControlError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

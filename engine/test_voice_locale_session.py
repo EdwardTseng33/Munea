@@ -23,13 +23,30 @@ class VoiceLocaleSessionTests(unittest.TestCase):
         self.assertEqual(manifest["spokenIntentStatus"], "integrated")
         self.assertEqual(manifest["appRequestPolicyStatus"], "integrated")
         self.assertEqual(manifest["preHandlerPipelineContractStatus"], "integrated")
-        self.assertEqual(manifest["appRequestPolicyWiringStatus"], "pending-pr-270")
-        self.assertEqual(manifest["liveVoiceServerStatus"], "pending-pr-270")
+        self.assertEqual(manifest["appRequestPolicyWiringStatus"], "integrated")
+        self.assertEqual(manifest["liveVoiceServerStatus"], "integrated")
         self.assertEqual(manifest["gatewayResolverStatus"], "integrated")
-        self.assertEqual(manifest["gatewayClaimsStatus"], "pending-pr-258")
+        self.assertEqual(manifest["gatewayClaimsStatus"], "integrated")
         self.assertEqual(manifest["legacyTokenMode"], "compatibility")
         self.assertEqual(manifest["appE2EStatus"], "pending")
         self.assertTrue(manifest["callPathRisk"])
+
+    def test_shipping_handlers_consume_verified_locale_context(self):
+        repo_root = ENGINE_DIR.parent
+        voice_server = (ENGINE_DIR / "live_voice_server.py").read_text(encoding="utf-8")
+        gateway_server = (
+            repo_root / "deploy" / "gateway" / "gateway_server.py"
+        ).read_text(encoding="utf-8")
+        app = (repo_root / "web" / "src" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("VoiceLocaleSession.from_verified_call_payload", voice_server)
+        self.assertIn('locale_profile["speechLanguageCode"]', voice_server)
+        self.assertIn("detect_supported_languages", voice_server)
+        self.assertIn("node.locale_reconnect_at_turn_boundary", voice_server)
+        self.assertIn("locale_context_call_claims(locale_context)", gateway_server)
+        self.assertIn("load_call_locale_records", gateway_server)
+        self.assertIn("requestBody.person_id = personId", app)
+        self.assertIn("update_conversation_locale", app)
 
     def test_verified_claim_initializes_complete_session_profile(self):
         session = VoiceLocaleSession.from_verified_call_payload({

@@ -110,7 +110,7 @@ class GatewayLocaleContextClaimsTests(unittest.TestCase):
         )
         self.assertEqual(manifest["gatewayResolverStatus"], "integrated")
         self.assertEqual(manifest["preHandlerPipelineContractStatus"], "integrated")
-        self.assertEqual(manifest["gatewayClaimsStatus"], "pending-pr-258")
+        self.assertEqual(manifest["gatewayClaimsStatus"], "integrated")
 
 
 if __name__ == "__main__":

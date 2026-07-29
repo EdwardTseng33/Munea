@@ -41,6 +41,7 @@ import health_kb
 import health_selector
 import localization
 import live_lookup
+from voice_locale_session import VoiceLocaleSession
 from call_control_client import post_internal, verify_call_token, CallControlError
 from google import genai
 from google.genai import errors as genai_errors
@@ -563,7 +564,7 @@ def _capture_call_turns(st, max_turns=120, max_chars=600):
         del turns[:-max_turns]
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, locale_profile=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
@@ -849,9 +850,7 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "（這一版 App 還記不了約會、聚餐這類行程。他想記行程時，誠實說你這邊還記不了、"
             "請他到「家人」頁用「發起活動」自己建一個，千萬不要拿看診或用藥提醒充數。）"
         )
-    # Keep this last so persona, memory, interests, and older examples can
-    # never weaken the Mandarin-only launch rule.
-    base += localization.taiwan_mandarin_launch_instruction("zh-TW")
+    locale_profile = locale_profile or localization.voice_session_locale_profile()
     base += (
         "\n[即時語音話量上限]\n"
         "一般閒聊預設只回答一句、約十五到三十個中文字，講完就停。"
@@ -901,6 +900,26 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "這類一百個人講一百次的罐頭話單獨當建議；也不要說教、不要比慘（「別人更慘」）、不要還沒聽完就給答案。"
         "\n界線：低落持續兩週以上、開始影響吃飯睡覺，就溫柔建議找專業的人聊聊（1925 安心專線），"
         "說明這跟感冒去看醫生一樣自然；醫療紅線與危機處理規則永遠優先於本節。"
+    )
+    # Keep verified language and region policy absolutely last. The long-lived
+    # Taiwan persona prompt above remains useful for the current launch, but it
+    # must not override a signed non-Taiwan call context.
+    locale_context = locale_profile["localeContext"]
+    base += (
+        "\n[Verified locale context]\n"
+        f"Conversation locale: {locale_profile['sessionLocale']}. "
+        f"Country: {locale_context['countryCode']}. "
+        f"Timezone: {locale_context['timeZone']}. "
+        f"Safety region: {locale_context['safetyRegion']}. "
+        "Use the verified country only for local examples and services. "
+        "Ignore Taiwan-specific examples, cultural defaults, and hotline "
+        "numbers elsewhere in this prompt when the verified country or safety "
+        "region is not TW."
+    )
+    base += locale_profile["replyLanguageInstruction"]
+    base += locale_profile["regionalSafetyInstruction"]
+    base += localization.live_voice_code_switch_instruction(
+        locale_profile["sessionLocale"],
     )
     return base
 
@@ -1170,9 +1189,10 @@ def _voice_thinking_level(explicit=None):
 
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
-                 resumption_handle=None, thinking_level=None):
+                 resumption_handle=None, thinking_level=None, locale_profile=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
+    locale_profile = locale_profile or localization.voice_session_locale_profile()
     # 通話中即時查詢：預設關（2026-07-17 Edward 拍板）。
     #
     # 為什麼關：正式機紀錄實測，查一次 8-9 秒、還常 TimeoutError／查不到來源。
@@ -1210,17 +1230,24 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
     phrases = asr_adaptation_phrases(char, name, user, topics, location)
     transcription_config = types.AudioTranscriptionConfig(
-        language_hints=types.LanguageHints(language_codes=["cmn-Hant-TW"]),
+        language_hints=types.LanguageHints(
+            language_codes=localization.asr_language_hints(
+                locale_profile["sessionLocale"],
+            ),
+        ),
         adaptation_phrases=phrases,
     )
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=system_instruction(char, name, mood, topics, user, location, allow_reminders, fam, memory_scope, allow_events, demo_mode),
+        system_instruction=system_instruction(
+            char, name, mood, topics, user, location, allow_reminders, fam,
+            memory_scope, allow_events, demo_mode, locale_profile,
+        ),
         tools=tools,
         output_audio_transcription=transcription_config,
         input_audio_transcription=transcription_config,
         speech_config=types.SpeechConfig(
-            language_code="cmn-TW",   # 台灣華語（Edward 2026-07-12：沒設地區→通用華語=馬來腔/「自己」念成jì-jǐ；設 cmn-TW 講台灣腔）
+            language_code=locale_profile["speechLanguageCode"],
             voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
             )
@@ -1534,12 +1561,15 @@ def _new_call_state():
           "lookup_waiting_answer": False, "lookup_cue_task": None,
           "lookup_cue_at": 0.0, "lookup_fail_streak": 0, "lookup_block_until": 0.0,
           "goaway_pending": False, "goaway_deadline": None, "resumption_handle": None,  # 通話延長：GoAway 預警狀態＋最新 session resumption handle（跨底層連線延續）
+          "voice_locale_profile": None, "locale_user_transcript": "",
+          "locale_resolved_text": "", "locale_reconnect_requested": False,
+          "locale_persistence_requested": False,
           "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
 
 
 async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topics, fam, day_call,
                               call_payload, gate_key, call_token, asr_context_terms,
-                              first_connect, resumption_handle):
+                              first_connect, resumption_handle, voice_locale_session):
     """跑「一條底層 Gemini Live 連線」的完整生命週期（收麥克風、送她的聲音、查詢、字幕、
     守護腦、記憶）。2026-07-25 通話延長之前，這段是直接寫在 handle() 的 async with 區塊
     裡、整通電話只跑一次；現在拆成獨立函式，讓 handle() 能在 GoAway 換線時重複呼叫，
@@ -1591,6 +1621,67 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
 
     call_ended = False   # 這條底層連線跑完之後，由下面的 wait/branch 邏輯決定要不要換線
 
+    async def _persist_confirmed_locale(persistence_request):
+        if not persistence_request or st.get("locale_persistence_requested"):
+            return
+        st["locale_persistence_requested"] = True
+        action_id = "locale-" + uuid.uuid4().hex
+        future = asyncio.get_running_loop().create_future()
+        st["action_results"][action_id] = future
+        try:
+            await ws.send(json.dumps({
+                "type": "action",
+                "id": action_id,
+                "action": "update_conversation_locale",
+                "args": {
+                    "locale": persistence_request["localeContext"]["conversationLocale"],
+                },
+            }, ensure_ascii=False))
+            result = await asyncio.wait_for(future, timeout=8)
+            _diag(
+                cid,
+                "node.locale_preference_persisted",
+                ok=bool(isinstance(result, dict) and result.get("ok")),
+            )
+        except Exception as exc:
+            _diag(
+                cid,
+                "node.locale_preference_persist_failed",
+                err=f"{type(exc).__name__}:{str(exc)[:60]}",
+            )
+        finally:
+            st["action_results"].pop(action_id, None)
+            st["locale_persistence_requested"] = False
+
+    def _resolve_locale_turn(transcript):
+        text = str(transcript or "").strip()
+        if not text or text == st.get("locale_resolved_text"):
+            return None
+        st["locale_resolved_text"] = text
+        turn = voice_locale_session.resolve_spoken_turn(
+            text,
+            detected_languages=localization.detect_supported_languages(text),
+        )
+        st["voice_locale_profile"] = turn["profile"]
+        decision = turn["decision"]
+        intent = turn["intent"]
+        if decision["sessionChanged"]:
+            st["locale_reconnect_requested"] = True
+        if turn["persistenceRequest"]:
+            st["bg_tasks"].append(asyncio.create_task(
+                _persist_confirmed_locale(turn["persistenceRequest"]),
+            ))
+        _diag(
+            cid,
+            "node.locale_turn",
+            response=turn["profile"]["responseLocale"],
+            session=turn["profile"]["sessionLocale"],
+            intent=intent["kind"],
+            code_switch=decision["codeSwitchDetected"],
+            reconnect=bool(st.get("locale_reconnect_requested")),
+        )
+        return turn
+
     # 主動開口 cue（治「叫兩三次才回、以為當機」· Edward 2026-07-09）：
     # 不在 session 開好就立刻送——改由 App 在「聲音＋會動的臉兩邊都就緒」時送 {"type":"greet"} 才觸發，
     # 這樣她一開口臉就同步在動、不會出現「已在講、臉還沒好」的當機感（Edward 2026-07-09 二次拍板）。
@@ -1616,10 +1707,18 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             else:
                 if relay_id:
                     await ws.send(json.dumps({"type": "relay_rejected", "id": relay_id}, ensure_ascii=False))
+                active_profile = voice_locale_session.current_profile()
+                if active_profile["sessionLocale"] == "zh-TW":
+                    opening = localization.voice_opening_instruction(
+                        fam, topics, location, day_call,
+                    )
+                else:
+                    opening = active_profile["openingMessage"]
                 greet_cue = (
                     "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
                     "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
-                    + localization.voice_opening_instruction(fam, topics, location, day_call)
+                    + opening
+                    + active_profile["replyLanguageInstruction"]
                 )
             await session.send_client_content(
                 turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
@@ -2039,11 +2138,24 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 elif t == "text" and obj.get("text"):
                     st["last_in"] = time.monotonic()
                     st["await_first"] = True
-                    if localization.requires_taiwanese_hokkien_fallback(obj["text"]):
+                    locale_turn = _resolve_locale_turn(obj["text"])
+                    active_profile = (
+                        locale_turn["profile"] if locale_turn
+                        else voice_locale_session.current_profile()
+                    )
+                    if (
+                        active_profile["responseLocale"] == "zh-TW"
+                        and localization.requires_taiwanese_hokkien_fallback(obj["text"])
+                    ):
                         await _send_hokkien_fallback("text_input")
                     else:
+                        prompt = (
+                            str(obj["text"])
+                            + active_profile["replyLanguageInstruction"]
+                            + active_profile["regionalSafetyInstruction"]
+                        )
                         await session.send_client_content(
-                            turns=types.Content(role="user", parts=[types.Part(text=obj["text"])]),
+                            turns=types.Content(role="user", parts=[types.Part(text=prompt)]),
                             turn_complete=True,
                         )
                 elif t == "audio_end":
@@ -2102,25 +2214,56 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         if it_pre and getattr(it_pre, "text", None):
                             if st.get("user_turn_started_at") is None:
                                 st["user_turn_started_at"] = time.monotonic()
-                            transcript = localization.reconcile_context_transcription(
-                                it_pre.text, asr_context_terms, "zh-TW"
+                            current_profile = (
+                                st.get("voice_locale_profile")
+                                or voice_locale_session.current_profile()
                             )
+                            transcript = localization.reconcile_context_transcription(
+                                it_pre.text,
+                                asr_context_terms,
+                                current_profile["sessionLocale"],
+                            )
+                            st["locale_user_transcript"] = (
+                                st.get("locale_user_transcript", "") + transcript
+                            )[-600:]
+                            locale_turn = _resolve_locale_turn(
+                                st["locale_user_transcript"],
+                            )
+                            if locale_turn:
+                                current_profile = locale_turn["profile"]
                             st["asr_turns"] += 1
                             st["asr_chars"] += len(transcript)
                             if st.get("client_barge_in"):
                                 st["client_barge_in"] = False
                                 _diag(cid, "node.client_barge_in_heard")
-                            is_hokkien = localization.requires_taiwanese_hokkien_fallback(transcript)
+                            is_hokkien = (
+                                current_profile["responseLocale"] == "zh-TW"
+                                and localization.requires_taiwanese_hokkien_fallback(transcript)
+                            )
                             _diag(cid, "node.asr_input", chars=len(transcript), language_block=is_hokkien)
                             if is_hokkien:
                                 await _arm_language_block("audio_input")
                         ot_pre = getattr(sc, "output_transcription", None)
                         if ot_pre and getattr(ot_pre, "text", None):
-                            output_text = localization.canonicalize_transcription(ot_pre.text, "zh-TW")
+                            current_profile = (
+                                st.get("voice_locale_profile")
+                                or voice_locale_session.current_profile()
+                            )
+                            output_locale = current_profile["responseLocale"]
+                            output_text = localization.canonicalize_transcription(
+                                ot_pre.text,
+                                output_locale,
+                            )
                             st["blocked_output_text"] = (st["blocked_output_text"] + output_text)[-600:]
-                            if localization.looks_like_taiwanese_hokkien(output_text):
+                            if (
+                                output_locale == "zh-TW"
+                                and localization.looks_like_taiwanese_hokkien(output_text)
+                            ):
                                 await _arm_language_block("model_output")
-                            elif localization.contains_unstable_mandarin_speech(output_text):
+                            elif (
+                                output_locale == "zh-TW"
+                                and localization.contains_unstable_mandarin_speech(output_text)
+                            ):
                                 await _arm_language_block("mandarin_pronunciation")
                     data = getattr(msg, "data", None)
                     if data and not st.get("language_block") and not st.get("client_barge_in"):
@@ -2163,7 +2306,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         if ot and getattr(ot, "text", None):
                             # 2026-07-25（卡西法・三修③）：語音線字幕出口也要過同一道防禦性
                             # 清洗，剝掉可能漏出的 <thinking> 內部推理標記，跟文字線同一把關卡。
-                            raw_caption = localization.display_text(ot.text, "zh-TW")
+                            current_profile = (
+                                st.get("voice_locale_profile")
+                                or voice_locale_session.current_profile()
+                            )
+                            raw_caption = localization.display_text(
+                                ot.text,
+                                current_profile["responseLocale"],
+                            )
                             caption_text = eng.clean_outgoing_reply(raw_caption)
                             # 語音線：字幕能清、聲音已經放出去了——排一句自我更正，
                             # 讓她在下一個輪替空檔（幾秒內）自然收回，趕在長輩真的坐著等之前。
@@ -2178,7 +2328,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         it = getattr(sc, "input_transcription", None)
                         if it and getattr(it, "text", None):
                             user_text = localization.reconcile_context_transcription(
-                                it.text, asr_context_terms, "zh-TW"
+                                it.text,
+                                asr_context_terms,
+                                voice_locale_session.current_profile()["sessionLocale"],
                             )
                             await ws.send(json.dumps({"type": "caption", "who": "user", "text": user_text}))
                             st["user_buf"] = (st["user_buf"] + user_text)[-200:]
@@ -2239,6 +2391,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 st["blocked_output_text"] = ""
                             st["client_barge_in"] = False
                             st["user_turn_started_at"] = None
+                            st["locale_user_transcript"] = ""
+                            st["locale_resolved_text"] = ""
                             # 通話記憶：這一輪講完，先把雙方字幕收進整通紀錄再清緩衝（收線時交聊後管線）
                             _capture_call_turns(st)
                             # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
@@ -2248,6 +2402,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["ai_flagged"] = set()
                             if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
+                            if st.get("locale_reconnect_requested"):
+                                st["locale_reconnect_requested"] = False
+                                st["voice_locale_profile"] = voice_locale_session.current_profile()
+                                _diag(cid, "node.locale_reconnect_at_turn_boundary")
+                                return "reconnect"
                             if _voice_session_extend_enabled() and st.get("goaway_pending"):
                                 # GoAway 已經預警過、現在剛好是天然的輪替空檔（這一輪自然講完了）——
                                 # 主動換線比乾等硬斷線好，App／使用者完全無感。
@@ -2357,6 +2516,7 @@ async def handle(ws):
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
+    voice_locale_session = None
     demo_mode = False
     # 收線時要告訴總機「這一席讓出來了」的原因。2026-07-28 修：這裡原本是空字串，而下面
     # finally 寫的是「有原因才通知總機」——結果只有『出錯』那條路會設值，**使用者正常講完
@@ -2387,12 +2547,27 @@ async def handle(ws):
             token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
             voice_shard_id = os.environ.get("MUNEA_VOICE_SHARD_ID", "").strip()
             call_payload = verify_call_token(call_token, token_secret, voice_shard_id=voice_shard_id)
+            voice_locale_session = VoiceLocaleSession.from_verified_call_payload(
+                call_payload,
+                allow_legacy=(
+                    os.environ.get(
+                        "MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT",
+                        "1",
+                    ) == "1"
+                ),
+            )
         except Exception:
             try:
                 await ws.close(code=4403, reason="invalid call token")
             except Exception:
                 pass
             return
+
+    if voice_locale_session is None:
+        # Developer-direct and legacy key sessions preserve today's Taiwan
+        # behavior. Production call-control tokens above are the only path that
+        # may supply non-default locale or regional policy.
+        voice_locale_session = VoiceLocaleSession({})
 
     try:
         # 薄門（正式上線 · 7/9 Edward 拍板）：環境設了 MUNEA_APP_KEY 就要對通行碼（?key=）。
@@ -2454,7 +2629,15 @@ async def handle(ws):
     cid = _CID["n"]
     t0 = time.monotonic()
     st = _new_call_state()
-    _diag(cid, "connected", name=name or "-", char=char, demo=demo_mode)
+    st["voice_locale_profile"] = voice_locale_session.current_profile()
+    _diag(
+        cid,
+        "connected",
+        name=name or "-",
+        char=char,
+        demo=demo_mode,
+        locale=st["voice_locale_profile"]["sessionLocale"],
+    )
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     # 通話記憶的人別隔離鍵：Gateway 正式路徑的 call token 帶已驗證的 user_id；
     # 開發包直連沒 token → None（server 端落回主要照護對象）。收線回寫與開場接續共用同一 scope。
@@ -2488,7 +2671,8 @@ async def handle(ws):
             # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
             cfg = await asyncio.to_thread(
                 live_config, char, name, mood, topics, user, location, allow_reminders, fam,
-                memory_scope, allow_events, demo_mode, resumption_handle=resumption_handle)
+                memory_scope, allow_events, demo_mode, resumption_handle=resumption_handle,
+                locale_profile=voice_locale_session.current_profile())
             if first_connect and cfg.thinking_config is not None:
                 # A/B 實測要有帳可查：這通到底跑在哪一段思考深度，直接寫進通話紀錄。
                 # 沒設（正式機預設）時一個字都不印，日誌不變吵。
@@ -2499,7 +2683,7 @@ async def handle(ws):
                     call_ended, resumption_handle = await _run_voice_session(
                         session, _cli, ws, cid, t0, st, char, location, topics, fam, day_call,
                         call_payload, gate_key, call_token, asr_context_terms,
-                        first_connect, resumption_handle,
+                        first_connect, resumption_handle, voice_locale_session,
                     )
             finally:
                 if _key_idx is not None:

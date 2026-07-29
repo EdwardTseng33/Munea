@@ -41,6 +41,12 @@ _CURRENCY_CODE_RE = re.compile(r"^[A-Z]{3}$")
 _TIME_ZONE_RE = re.compile(r"^(?:UTC|[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+)$")
 _DATA_REGION_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 _SPEECH_CODES = {"zh-TW": "cmn-TW", "en": "en-US", "ja": "ja-JP", "es": "es-ES"}
+_ASR_LANGUAGE_HINTS = {
+    "zh-TW": ["cmn-Hant-TW"],
+    "en": ["en-US"],
+    "ja": ["ja-JP"],
+    "es": ["es-ES"],
+}
 _REPLY_INSTRUCTIONS = {
     "zh-TW": "請一律使用自然的繁體台灣中文回覆，絕不使用簡體字。",
     "en": "Reply in warm, plain English. Keep voice responses short and easy to follow.",
@@ -611,6 +617,95 @@ def _normalize_choice(value, fallback, choices, field):
 
 
 def speech_language_code(locale): return _SPEECH_CODES[normalize_locale(locale)]
+
+
+def asr_language_hints(locale):
+    return list(_ASR_LANGUAGE_HINTS[normalize_locale(locale)])
+
+
+def detect_supported_languages(text):
+    """Return conservative dominant-first locale hints for one ASR turn.
+
+    This is intentionally a lightweight routing hint, not identity or region
+    inference. It only helps Live Voice reply to a code-switched turn; safety,
+    legal, currency, and data-region policy remain fixed in LocaleContext.
+    """
+    value = str(text or "")
+    if not value.strip():
+        return []
+
+    scores = {locale: 0 for locale in SUPPORTED_LOCALES}
+    first = {locale: len(value) + 1 for locale in SUPPORTED_LOCALES}
+
+    kana = list(re.finditer(r"[\u3040-\u30ff]", value))
+    if kana:
+        scores["ja"] += len(kana) * 3
+        first["ja"] = kana[0].start()
+
+    han = list(re.finditer(r"[\u3400-\u4dbf\u4e00-\u9fff]", value))
+    if han:
+        if kana:
+            scores["ja"] += len(han)
+            first["ja"] = min(first["ja"], han[0].start())
+        else:
+            scores["zh-TW"] += len(han)
+            first["zh-TW"] = han[0].start()
+
+    words = list(re.finditer(r"[A-Za-zÀ-ÿ]+(?:'[A-Za-zÀ-ÿ]+)?", value))
+    spanish_markers = {
+        "el", "la", "los", "las", "un", "una", "que", "de", "por", "para",
+        "con", "como", "hola", "gracias", "quiero", "puedo", "hablar",
+        "español", "dime", "ahora", "sí", "también",
+    }
+    english_markers = {
+        "the", "a", "an", "and", "or", "but", "to", "of", "in", "with",
+        "hello", "thanks", "want", "can", "could", "please", "speak",
+        "english", "tell", "now", "also",
+    }
+    normalized_words = [match.group(0).casefold() for match in words]
+    has_spanish = any(
+        word in spanish_markers or re.search(r"[áéíóúüñ¿¡]", word)
+        for word in normalized_words
+    )
+    has_english = any(word in english_markers for word in normalized_words)
+    for match, word in zip(words, normalized_words):
+        if word in spanish_markers or re.search(r"[áéíóúüñ¿¡]", word):
+            scores["es"] += 3
+            first["es"] = min(first["es"], match.start())
+        elif word in english_markers:
+            scores["en"] += 3
+            first["en"] = min(first["en"], match.start())
+        elif has_spanish and not has_english:
+            scores["es"] += 1
+            first["es"] = min(first["es"], match.start())
+        else:
+            scores["en"] += 1
+            first["en"] = min(first["en"], match.start())
+
+    ranked = [
+        locale for locale in SUPPORTED_LOCALES
+        if scores[locale] > 0
+    ]
+    ranked.sort(key=lambda locale: (-scores[locale], first[locale]))
+    return ranked
+
+
+def live_voice_code_switch_instruction(locale):
+    """Prompt contract for spoken language switching inside one call."""
+    normalized = normalize_locale(locale)
+    return (
+        "\n[Live language switching]\n"
+        f"The saved conversation language for this call is {normalized}. "
+        "If the user clearly asks to switch to Traditional Chinese, English, "
+        "Japanese, or Spanish, answer in the requested language and keep using "
+        "it for later turns in this call. If a user naturally mixes supported "
+        "languages without asking to switch, answer only this turn in the "
+        "predominant language they just used, then keep the saved conversation "
+        "language for later turns. A language switch never changes country, "
+        "timezone, emergency, legal, currency, units, or data-region policy. "
+        "If the user asks to save a new default language, ask for explicit "
+        "confirmation before saying it was saved."
+    )
 
 
 def canonicalize_transcription(text, locale="zh-TW"):

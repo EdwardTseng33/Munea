@@ -1125,6 +1125,32 @@ async function aiAddMedReminder(a) {
 // 聊聊語音收到 AI 的「幫你做進 App」指令 → 執行 + 螢幕輕提示（寧寧的口頭確認由 AI 那頭講）
 async function handleVoiceAction(action, args) {
   args = args || {};
+  if (action === 'update_conversation_locale') {
+    const locale = window.MuneaI18n
+      ? window.MuneaI18n.normalize(args.locale)
+      : String(args.locale || '');
+    if (!['zh-TW', 'en', 'ja', 'es'].includes(locale)) {
+      return { ok: false, error: 'unsupported_locale' };
+    }
+    const current = latestTrustedLocaleContext || {};
+    const preferred = [
+      locale,
+      ...(Array.isArray(current.preferredLanguages)
+        ? current.preferredLanguages
+        : muneaPreferredLanguages()),
+    ].filter((value, index, all) => value && all.indexOf(value) === index);
+    const response = await brainPost('/account-bootstrap', accountBootstrapPayload('patch', {
+      localeContext: {
+        conversationLocale: locale,
+        preferredLanguages: preferred,
+      },
+    }));
+    if (!response || !response.ok) {
+      return { ok: false, error: 'locale_preference_write_failed' };
+    }
+    captureTrustedLocaleContext(response);
+    return { ok: true, locale, persistence: 'cloud' };
+  }
   if (action === 'set_clinic_reminder') {
     const r = await aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
     if (typeof toast === 'function') toast(r.ok ? ('看診提醒設好了：' + r.title + ' · ' + r.label) : '看診日期我沒抓到，你再說一次日期好嗎');
@@ -1627,9 +1653,17 @@ const CallControl = {
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
     let accountRecoveryAttempted = false;
     while (!this.cancelled) {
+      const personId = storageGet('munea.cloudPersonId') || '';
+      const requestBody = {
+        character_id: characterId || 'default',
+        idempotency_key: idempotencyKey,
+      };
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(personId)) {
+        requestBody.person_id = personId;
+      }
       const response = await this._fetch(base + '/v1/calls', {
         method: 'POST',
-        body: JSON.stringify({ character_id: characterId || 'default', idempotency_key: idempotencyKey }),
+        body: JSON.stringify(requestBody),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error((result && result.detail) || ('call_control_http_' + response.status));
