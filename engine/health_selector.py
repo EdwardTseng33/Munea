@@ -41,7 +41,10 @@ PROXY_WORDS = ("我小孩", "我兒子", "我女兒", "我孫", "我家那個", 
 # （2026-07-29 實測抓到：照顧者說「**我媽**三點要起來上廁所，**我**根本睡不飽」——
 #  提到媽媽只是原因、主角是她自己；判成代問會害她拿到給家長聽的話。）
 SELF_COMPLAINT_WORDS = ("我根本", "我自己", "我都睡", "我睡", "我好累", "我很累", "我快",
-                        "我最近", "我每天", "我沒辦法", "我撐", "我覺得")
+                        "我最近", "我每天", "我沒辦法", "我撐", "我覺得",
+                        # 2026-07-29 實測補：照顧者講自己的累常常是「照顧到好累」「顧到快撐不住」，
+                        # 句子裡有「我媽」但主角是他自己——判成代問會給錯人聽的話。
+                        "照顧到", "顧到", "到好累", "到快", "我照顧", "我顧")
 
 
 def _asking_for_someone_else(user_text):
@@ -93,6 +96,8 @@ def _profile_flags(profile):
         "constraints": [str(c) for c in (p.get("constraints") or [])], # 輪班工作、照顧者夜間需起身…
         "lowMobility": bool(p.get("lowMobility")),
         "pillAverse": bool(p.get("pillAverse")),
+        # 這個人試過什麼、結果如何（health_followup.outcomes_for 給的）
+        "outcomes": p.get("outcomes") or {},
     }
 
 
@@ -144,12 +149,49 @@ def _score(sol, flags, urgent, user_text):
     pill_averse = flags["pillAverse"] or any(w in text for w in PILL_AVERSE_WORDS)
     if pill_averse and sol.get("solutionType") == "保健品":
         score -= 6.0
-    if any(w in text for w in TCM_WORDS) and sol.get("solutionType") in ("食補", "行為調整"):
-        score += 0.5      # 願意慢慢調理的人，食補與作息更接得上
+    if not any(w in text for w in TCM_WORDS) and sol.get("solutionType") == "中醫調理":
+        # 他沒提中醫時，傳統經驗類不該壓過有實證的方案——留著（他問就給），但不主動帶頭。
+        # 2026-07-29 實測：不壓的話按摩會把有 2025 研究的鎂、以及青少年專屬內容擠掉。
+        score -= 2.0
+    if any(w in text for w in TCM_WORDS):
+        # 他自己提到中醫／中藥＝願意走調理路線：中醫類方案要真的浮上來（原本只加分給
+        # 食補與作息，等於他問中醫、我們還是只給西方那套，答非所問）。
+        if sol.get("solutionType") == "中醫調理":
+            score += 3.0
+        elif sol.get("solutionType") in ("食補", "行為調整"):
+            score += 0.5
 
     # 證據強度：同分時已證實的排前面
     score += {"proven": 0.8, "emerging": 0.3, "traditional": 0.0}.get(sol.get("maturity"), 0)
+
+    # 效果飛輪（2026-07-29）：上次推過、他回報過結果的，這次要不一樣——
+    # 有效的先講（他信得過、也真的幫到他）、說沒效的別再端出來（再講一次很傷信任）、
+    # 還沒試的輕輕加一點（可以再提一次，但不要壓過新方案）。
+    outcome = (flags.get("outcomes") or {}).get(sol.get("id"))
+    if outcome == "worked":
+        score += 3.0
+    elif outcome == "no_effect":
+        score -= 8.0
+    elif outcome == "not_tried":
+        score += 0.5
     return score
+
+
+_TOPIC_KEYWORDS = None
+
+
+def health_kb_keywords(topic_id):
+    """借 health_topics 那份觸發字判斷「他這輪有沒有也提到另一件事」。
+    不另外造一份關鍵字——兩份會走鐘（7/29 已經被關鍵字漏洞咬過一次）。"""
+    global _TOPIC_KEYWORDS
+    if _TOPIC_KEYWORDS is None:
+        try:
+            with open(os.path.join(HERE, "health_topics.json"), encoding="utf-8") as f:
+                doc = json.load(f)
+            _TOPIC_KEYWORDS = {t["id"]: t.get("keywords") or [] for t in doc.get("topics") or []}
+        except Exception:
+            _TOPIC_KEYWORDS = {}
+    return _TOPIC_KEYWORDS.get(topic_id) or []
 
 
 def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
@@ -200,8 +242,17 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
             reframe = r["say"]
             break
 
+    # 跨題連結（2026-07-29）：睡不好、血壓飄、心情悶常常是同一件事的不同面向。
+    # 只在他這一輪自己也提到那件事時才連——不硬拉、不擴大話題。
+    related = None
+    for r in topic.get("relatedTopics") or []:
+        cue = health_kb_keywords(r.get("topicId"))
+        if cue and any(k in (user_text or "") for k in cue):
+            related = r.get("say")
+            break
+
     return {"solutions": picked, "referral": referral, "reframe": reframe,
-            "urgent": urgent, "proxy": proxy}
+            "urgent": urgent, "proxy": proxy, "related": related}
 
 
 def render(topic_id, user_text="", profile=None, hour=None):
@@ -220,6 +271,8 @@ def render(topic_id, user_text="", profile=None, hour=None):
             line += f"（**這是保健品，同一段話一定要講到：一天上限{s.get('dailyCap','請問專業')}、"
             line += f"以及{'、'.join(s.get('contraindications') or [])}的人要先問醫師或營養師**）"
         parts.append(line)
+    if res.get("related"):
+        parts.append("【這兩件事可能有關】" + res["related"])
     if res["referral"]:
         parts.append("【什麼時候該看醫生】" + res["referral"]["say"])
     head = (
