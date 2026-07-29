@@ -55,8 +55,13 @@ def test_real_login_bootstraps_before_gateway_and_recovers_once() -> None:
     assert "ACCOUNT_BOOTSTRAP_USER_KEY" in bootstrap
     assert "reason === 'account_not_ready' && !accountRecoveryAttempted" in call_control
     assert "reason: 'gateway_account_not_ready'" in call_control
-    assert "const accountReady = await syncAccountBootstrap('create', { reason: 'call_preflight' });" in connect_call
-    assert connect_call.index("const accountReady = await syncAccountBootstrap") < connect_call.index("await CallControl.acquire(")
+    # 2026-07-29：接通提速把「帳號確認 / 點數同步」改成 Promise.all 並行（b82f2cdc），
+    # 原本寫死的 `const accountReady = await syncAccountBootstrap(...)` 單行寫法已不存在，
+    # 這條守門自那次起就一直是紅的。改成守「意圖」而非「那一行長怎樣」——
+    # 意圖沒變：叫號前一定要先確認帳號，而且確認結果一定要被檢查。
+    assert "syncAccountBootstrap('create', { reason: 'call_preflight' })" in connect_call
+    assert "if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');" in connect_call
+    assert connect_call.index("syncAccountBootstrap('create', { reason: 'call_preflight' })") < connect_call.index("await CallControl.acquire(")
     assert "if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY)" not in APP
 
 
