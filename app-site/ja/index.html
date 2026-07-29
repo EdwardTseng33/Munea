@@ -165,66 +165,6 @@
   .hero-media .fc-1{top:-20px;left:-16px}
   .hero-media .fc-2{bottom:-20px;right:-16px}
 
-  /* ══════════ 動態層（Edward 7/29 拍板：中等）══════════ */
-  /* 全部都吃系統的「減少動態」設定；長輩或會暈的人不會被轉到 */
-
-  /* ① 數字滑到才長出來 */
-  .cnum{font-variant-numeric:tabular-nums}
-
-  /* ② 手機截圖跟著捲動輕微位移（很淡的視差） */
-  .pz-vis .dev,.pz-vis .callphone{will-change:transform;transition:transform .12s linear}
-
-  /* ③ 逐項錯開浮現：清單、流程步驟 */
-  .stg>*{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s cubic-bezier(.2,.8,.2,1)}
-  .stg.in>*{opacity:1;transform:none}
-  .stg.in>*:nth-child(1){transition-delay:.04s}
-  .stg.in>*:nth-child(2){transition-delay:.12s}
-  .stg.in>*:nth-child(3){transition-delay:.20s}
-  .stg.in>*:nth-child(4){transition-delay:.28s}
-  .stg.in>*:nth-child(5){transition-delay:.36s}
-  .stg.in>*:nth-child(6){transition-delay:.44s}
-  .stg.in>*:nth-child(7){transition-delay:.52s}
-  .stg.in>*:nth-child(8){transition-delay:.60s}
-  .stg.in>*:nth-child(9){transition-delay:.68s}
-
-  @media(prefers-reduced-motion:reduce){
-    .stg>*{opacity:1!important;transform:none!important;transition:none!important}
-    .pz-vis .dev,.pz-vis .callphone{transform:none!important}
-    .hero-media .fc-1,.hero-media .fc-2{animation:none!important}
-  }
-
-  /* ══════════ 一天之中（捲動說故事）══════════ */
-  #story{padding:80px 0}
-  #story .story-grid{margin-top:44px}
-  #story .scene .ph{border-radius:20px;overflow:hidden;background:#e9f2ed;display:grid;place-items:center}
-  #story .scene .ph img{width:auto;height:100%;max-height:520px;object-fit:contain;display:block;transition:opacity .35s ease}
-  #story .scene .ph.swapping img{opacity:0}
-  #story .story-step{cursor:pointer}
-  #story .story-step p{margin:0}
-  @media(max-width:880px){
-    #story .story-grid{grid-template-columns:1fr;gap:28px}
-    #story .story-sticky{position:static}
-    #story .scene .ph img{max-height:380px}
-  }
-
-  /* ══════════ 六位夥伴 ══════════ */
-  #cast{padding:78px 0;background:var(--cream-2)}
-  .castgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:42px}
-  .castcard{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px 14px 20px;text-align:center;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s}
-  .castcard:hover{transform:translateY(-6px);border-color:var(--teal)}
-  .castcard .av{width:96px;height:96px;border-radius:50%;overflow:hidden;margin:0 auto 14px;background:var(--mint);position:relative}
-  .castcard .av img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
-  .castcard:hover .av img{transform:scale(1.09)}
-  .castcard .av::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--coral);opacity:0;transform:scale(.86);transition:opacity .3s,transform .35s cubic-bezier(.2,.8,.2,1)}
-  .castcard:hover .av::after{opacity:1;transform:scale(1)}
-  .castcard b{display:block;font-size:17px;font-weight:700;color:var(--ink);margin-bottom:5px}
-  .castcard small{display:block;font-size:12.5px;color:var(--muted);line-height:1.6}
-  .castcard .kind{display:inline-block;margin-top:11px;font-family:"Poppins";font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:4px 10px;border-radius:100px;background:var(--mint);color:var(--teal-d)}
-  .castcard .kind.toon{background:var(--coral-soft);color:var(--coral-d)}
-  .castnote{text-align:center;margin-top:34px;color:var(--muted);font-size:15px}
-  @media(max-width:980px){.castgrid{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:520px){.castgrid{grid-template-columns:repeat(2,1fr);gap:14px}.castcard .av{width:78px;height:78px}}
-
   /* ══════════ 眼見為憑 ══════════ */
   #livedemo{padding:76px 0;background:var(--mint)}
   #livedemo .sec-head{margin-bottom:38px}
@@ -406,9 +346,9 @@
       <div class="eyebrow">Muneaが受けとめること</div>
       <h2>そばにいてもらうのに、誰かの空き時間を待たなくていい</h2>
       <p>家の年長者から、遠くにいる子どもまで。それぞれが、言い出しにくい困りごとを抱えています。</p>
-      <div class="pain-aside-foot"><span class="big cnum" data-count="4">0</span><span class="txt">Muneaがそっと<br>受けとめること</span></div>
+      <div class="pain-aside-foot"><span class="big">4</span><span class="txt">Muneaがそっと<br>受けとめること</span></div>
     </aside>
-    <ol class="pain-track stg reveal">
+    <ol class="pain-track reveal">
       <li class="ptk-item"><span class="ptk-num">01</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><div class="ptk-body"><span class="ptk-role">さみしさ</span><h3>一日じゅう、ちゃんと話せる相手がいない</h3></div></li>
       <li class="ptk-item"><span class="ptk-num">02</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span><div class="ptk-body"><span class="ptk-role">忘れてしまう</span><h3>薬は飲んだ？通院はいつ？——思い出せない</h3></div></li>
       <li class="ptk-item"><span class="ptk-num">03</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span><div class="ptk-body"><span class="ptk-role">遠くにいる</span><h3>そばにいないから、今日の様子がわからない</h3></div></li>
@@ -417,31 +357,6 @@
   </div>
 </section>
 
-<!-- ═══ 一天之中（捲動說故事）═══ -->
-<section class="story" id="story">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow center">Muneaの一日</div>
-      <h2>話しかけられてから、思い出すのではなく</h2>
-      <p>朝のひとことから、寝る前のおやすみまで。Muneaの一日は、家族を中心にまわっています。</p>
-    </div>
-    <div class="story-grid">
-      <div class="story-sticky">
-        <div class="scene">
-          <div class="ph"><img src="/assets/app-home.jpg" alt="Muneaアプリの画面" loading="lazy"></div>
-          <div class="scene-label"><span class="d"></span><span class="txt">朝・先に声をかける</span></div>
-          <div class="timechip">08:00</div>
-        </div>
-      </div>
-      <div class="story-steps">
-        <article class="story-step on" data-scene="朝・先に声をかける" data-img="/assets/app-home.jpg" data-time="08:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span><div><span class="num">01</span><h3>朝、Muneaから「おはよう」</h3></div></div><p>夜が明ける前に、その日の天気・日付・家族の様子をまとめておきます。話しはじめればすぐ通じるので、一から説明する必要はありません。</p></article>
-        <article class="story-step" data-scene="昼・声でお知らせ" data-img="/assets/app-reminder.jpg" data-time="12:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span><div><span class="num">02</span><h3>昼、お薬の時間を声でお知らせ</h3></div></div><p>服薬も通院も、時間になれば声でお知らせし、スマホにも届きます。うっかり忘れても責めません。時間をおいて、もう一度たずねます。</p></article>
-        <article class="story-step" data-scene="午後・家族も安心" data-img="/assets/app-family.jpg" data-time="15:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span><div><span class="num">03</span><h3>午後、離れている家族にも安心を</h3></div></div><p>体調や気分の変化が、家族のスマホから見える形になります。ほんとうに気になるときは、まずご本人に声をかけ、それから家族にお知らせします。</p></article>
-        <article class="story-step" data-scene="夜・今日を覚えておく" data-img="/assets/app-status.jpg" data-time="21:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span><div><span class="num">04</span><h3>夜、今日話したことをしまっておく</h3></div></div><p>その日の会話を記憶に整理します。大切なことは長く、その日だけのことは短く。明日はその続きから話せます。</p></article>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- ═══ 功能 ═══ -->
 <section id="features">
@@ -461,7 +376,7 @@
           <span class="badge"><span class="d"></span><span>AIによる健康の見守り</span></span>
           <h3>お薬も、通院も、からだの数字も、まとめて見守り</h3>
           <p>Muneaが健康を見守ります。服薬・通院のお知らせはやさしい声で。歩数・心拍・血圧・睡眠などの数字は、ヘルスケアから自動で取り込みます。</p>
-          <ul class="flist stg">
+          <ul class="flist">
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span><b>服薬・通院のお知らせ</b>——時間になれば声でお伝え、忘れても責めません</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span><b>健康の移り変わりがひと目で</b>——歩数・心拍・血圧・睡眠</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span><b>ヘルスケア連携</b>——自動で取り込み、手入力は不要</span></li>
@@ -478,7 +393,7 @@
           <span class="badge"><span class="d"></span><span>テレビ電話のような自然さ</span></span>
           <h3>まるでテレビ電話。生き生きとした、自然な会話</h3>
           <p>家族の健康ケアパートナーとして、Muneaが話し相手になります。リアルタイムの音声と動く顔で、毎回の会話が生き生きと、あたたかく、自然に——ほんとうにテレビ電話をしているような心地よさです。</p>
-          <ul class="flist stg">
+          <ul class="flist">
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg><span><b>リアルタイム音声</b>——いつでも割り込めて、返事が途切れません</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg><span><b>動く顔</b>——目を合わせて話すので、ほんとうに誰かがいるよう</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg><span><b>話したことを覚えている</b>——前回の続きから話せます</span></li>
@@ -495,7 +410,7 @@
           <span class="badge"><span class="d"></span><span>家族がもっと近づく</span></span>
           <h3>おたがいの様子が見えて、一緒に楽しめる</h3>
           <p>家族の輪では、おたがいの体調や気分を見て、気づかい合えます。ウォーキング対決やクイズなどの小さなゲームで、世代をこえた時間にちょっとした楽しさを。</p>
-          <ul class="flist stg">
+          <ul class="flist">
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg><span><b>体調と気分</b>——おたがいに見えるから、離れていても安心</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 3v7a6 6 0 0012 0V3"/><path d="M4 21h16M9 3H5m14 0h-4"/></svg><span><b>ウォーキング対決</b>——家族で歩数をきそって、元気に</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 115 .5c0 1.5-2 2-2 3.5M12 17h.01"/></svg><span><b>クイズゲーム</b>——頭の体操になって、笑いも増えます</span></li>
@@ -508,25 +423,6 @@
   </div>
 </section>
 
-<!-- ═══ 六位夥伴 ═══ -->
-<section id="cast">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow center">気の合う相手を選んで</div>
-      <h2>6人のパートナー。誰に来てもらってもかまいません</h2>
-      <p>パートナーを変えれば、性格も声も変わります。ご本人が話しやすい相手を選んでください。記憶は家族についてくるので、相手が変わっても、あなたのことは覚えています。</p>
-    </div>
-    <div class="castgrid stg reveal">
-      <div class="castcard"><div class="av"><img src="/assets/face-nening.png" alt="ネイネイ" loading="lazy" width="132" height="132"></div><b>ネイネイ</b><small>やさしく気がきく<br>リアル系の女性</small><span class="kind">リアル</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-ahong.png" alt="アホン" loading="lazy" width="132" height="132"></div><b>アホン</b><small>落ち着いて頼れる<br>リアル系の男性</small><span class="kind">リアル</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-xiaoyun.png" alt="シャオユン" loading="lazy" width="132" height="132"></div><b>シャオユン</b><small>明るくよく話す<br>イラストの女の子</small><span class="kind toon">イラスト</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-ayuan.png" alt="アユエン" loading="lazy" width="132" height="132"></div><b>アユエン</b><small>素朴でユーモアのある<br>イラストの男の子</small><span class="kind toon">イラスト</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-mimi.png" alt="ミミ" loading="lazy" width="132" height="132"></div><b>ミミ</b><small>甘えん坊で<br>くっついてくる猫</small><span class="kind toon">ペット</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-wangcai.png" alt="ワンツァイ" loading="lazy" width="132" height="132"></div><b>ワンツァイ</b><small>元気いっぱいで<br>忠実な犬</small><span class="kind toon">ペット</span></div>
-    </div>
-    <p class="castnote reveal">名前も自由に変えられます。呼びたい名前で呼べば、その名前で返事をします。</p>
-  </div>
-</section>
 
 <!-- ═══ 眼見為憑 ═══ -->
 <section id="livedemo">
@@ -569,7 +465,7 @@
     <div class="arch-wrap reveal">
       <div class="arch-cap"><i></i><span>技術のしくみ · どう組み上がっているか</span><i></i></div>
 
-      <div class="arch-modules stg">
+      <div class="arch-modules">
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg></span>
           <span class="arch-tag">MEMORY · 記憶</span>
@@ -601,7 +497,7 @@
         </div>
       </div>
 
-      <div class="arch-formula stg">
+      <div class="arch-formula">
         <span class="af-result">返答</span>
         <span class="af-eq">=</span>
         <span class="af-term">人格</span><span class="af-plus">+</span>
@@ -612,7 +508,7 @@
         <span class="af-term">表現</span>
       </div>
 
-      <div class="arch-pipeline stg">
+      <div class="arch-pipeline">
         <span class="ap-step">あなたが話す</span><span class="ap-arrow">→</span>
         <span class="ap-step">その場で文脈を組む</span><span class="ap-arrow">→</span>
         <span class="ap-step">声で返答＋顔が同期</span><span class="ap-arrow">→</span>
@@ -631,7 +527,7 @@
         </div>
         <div class="cmp-item"><span class="ci-cat">本質</span><p class="ci-a">なんでも答える汎用アシスタント</p><p class="ci-b">記憶・知覚・対話・安全・人格が連動するケアのしくみ</p></div>
         <div class="cmp-item"><span class="ci-cat">顔と声</span><p class="ci-a">テキスト入力欄</p><p class="ci-b">本物のような顔と声。テレビ電話の感覚</p></div>
-        <div class="cmp-item"><span class="ci-cat">キャラクター</span><p class="ci-a">アシスタントがひとり</p><p class="ci-b">個性のある6人。替えれば人格も声も替わります</p></div>
+        <div class="cmp-item"><span class="ci-cat">キャラクター</span><p class="ci-a">アシスタントがひとり</p><p class="ci-b">個性のあるキャラクター。替えれば人格も声も替わります</p></div>
         <div class="cmp-item"><span class="ci-cat">「今」の理解</span><p class="ci-a">聞かれてから調べる</p><p class="ci-b">毎朝、自分から今日の文脈を用意する</p></div>
         <div class="cmp-item"><span class="ci-cat">境界線</span><p class="ci-a">医療的な助言をしてしまうことがある</p><p class="ci-b">診断はしない。薬はお知らせのみ。わからないことはわからないと言う</p></div>
         <div class="cmp-item"><span class="ci-cat">誰のために</span><p class="ci-a">汎用のツール</p><p class="ci-b">家族みんなの心とからだの健康のために</p></div>
@@ -664,7 +560,6 @@
         <h4>Muneaを知る</h4>
         <a href="#personas">こんな方へ</a>
         <a href="#features">機能</a>
-        <a href="#cast">6人のパートナー</a>
         <a href="#tech">技術のこと</a>
       </div>
       <div class="foot-col">
@@ -751,65 +646,6 @@
     });
   })();
 
-  if (reduce) return;
-
-  /* 數字滑到才長出來 */
-  (function(){
-    var nums = [].slice.call(document.querySelectorAll('.cnum[data-count]'));
-    if (!nums.length) return;
-    var io = new IntersectionObserver(function(es){
-      es.forEach(function(e){
-        if (!e.isIntersecting) return;
-        io.unobserve(e.target);
-        var el = e.target, target = parseInt(el.dataset.count, 10) || 0, t0 = null;
-        (function step(ts){
-          if (t0 === null) t0 = ts;
-          var p = Math.min((ts - t0) / 900, 1);
-          el.textContent = String(Math.round(target * (1 - Math.pow(1 - p, 3))));
-          if (p < 1) requestAnimationFrame(step);
-        })(performance.now());
-      });
-    }, {threshold: .6});
-    nums.forEach(function(n){ io.observe(n); });
-  })();
-
-  /* 逐項錯開浮現 */
-  (function(){
-    var groups = [].slice.call(document.querySelectorAll('.stg'));
-    if (!groups.length) return;
-    var io = new IntersectionObserver(function(es){
-      es.forEach(function(e){
-        if (!e.isIntersecting) return;
-        e.target.classList.add('in');
-        io.unobserve(e.target);
-      });
-    }, {threshold: .18});
-    groups.forEach(function(g){ io.observe(g); });
-  })();
-
-  /* 手機截圖跟著捲動輕輕位移（最大 ±14px，不搶戲） */
-  (function(){
-    if (!window.matchMedia('(min-width:881px)').matches) return;
-    var shots = [].slice.call(document.querySelectorAll('.pz-vis .dev, .pz-vis .callphone'));
-    if (!shots.length) return;
-    var ticking = false;
-    function tick(){
-      var vh = window.innerHeight;
-      shots.forEach(function(el){
-        var r = el.getBoundingClientRect();
-        if (r.bottom < -200 || r.top > vh + 200) return;
-        var mid = (r.top + r.height / 2 - vh / 2) / vh;   // -0.5 ~ 0.5
-        el.style.transform = 'translateY(' + (mid * -22).toFixed(1) + 'px)';
-      });
-      ticking = false;
-    }
-    window.addEventListener('scroll', function(){
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(tick);
-    }, {passive:true});
-    tick();
-  })();
 })();
 </script>
 </body>
