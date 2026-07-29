@@ -49,9 +49,12 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):
             continue
         hit_len = sum(len(k) for k in t["keywords"] if k in text)
         if hit_len:
-            scored.append((hit_len, t["id"]))
-    scored.sort(key=lambda x: (-x[0], x[1]))
-    return [tid for _, tid in scored[:limit]]
+            # 具體處境要壓過一般症狀（2026-07-29 加女性題時抓到）：
+            # 「最近一直熱潮紅、晚上睡不好」原本被當成一般失眠——更年期的題才是
+            # 在解釋那個睡不好。孕哺給最高分：懷孕的人問任何東西，安全圍籬都要先站出來。
+            scored.append((t.get("specificity", 0), hit_len, t["id"]))
+    scored.sort(key=lambda x: (-x[0], -x[1], x[2]))
+    return [tid for _, _, tid in scored[:limit]]
 
 
 def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None):

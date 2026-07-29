@@ -415,6 +415,90 @@ class TypeDiversityTest(unittest.TestCase):
         self.assertLess(max(types.count(t) for t in set(types)), 3)
 
 
+class WomenTopicsTest(unittest.TestCase):
+    """女性四題（2026-07-29）：更年期／經期／缺鐵／孕哺。
+
+    為什麼補：「全家人的健康陪伴」原本 24 題裡，女性專屬 0 題——
+    家裡最常張羅全家健康的那個人，自己的困擾一題都沒有。
+    """
+
+    WOMAN = {"audience": "women"}
+
+    def test_hot_flashes_route_to_menopause_not_generic_insomnia(self):
+        """「熱潮紅、晚上睡不好」原本被當成一般失眠——更年期才是在解釋那個睡不好。"""
+        import health_kb
+        self.assertEqual(health_kb.match_topics("最近一直熱潮紅，晚上睡不好")[0], "TW-EDU-26")
+
+    def test_plain_insomnia_still_goes_to_the_insomnia_topic(self):
+        import health_kb
+        self.assertEqual(health_kb.match_topics("我睡不好")[0], "TW-EDU-01")
+
+    def test_breast_cancer_history_removes_the_isoflavone(self):
+        prof = {"audience": "women", "conditions": ["乳癌或其他荷爾蒙相關癌症病史"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-26", "更年期好難受", prof, 14)["solutions"]]
+        self.assertNotIn("meno-isoflavone", ids)
+
+    def test_hormone_therapy_is_never_recommended_but_the_door_stays_open(self):
+        sol = next(s for s in hs.TOPICS["TW-EDU-26"]["solutions"] if s["id"] == "meno-hrt-blocked")
+        self.assertTrue(sol["blocked"])
+        self.assertIn("不用忍", sol["say"], "擋掉建議的同時要留一條可以去問的路")
+
+    def test_severe_period_pain_is_never_normalised_away(self):
+        ref = hs.pick("TW-EDU-27", "經痛痛到請假", WOMAN_PROFILE, 9)["referral"]
+        self.assertIn("別忍", ref["say"])
+        self.assertIn("子宮內膜異位", ref["say"])
+
+    def test_anemia_always_leads_with_get_tested(self):
+        """把補鐵法講在驗血前面＝教人盲補，鐵補過頭是會傷身體的。"""
+        for said in ("我好像有貧血，容易累", "鐵劑要吃多久"):
+            first = hs.pick("TW-EDU-28", said, WOMAN_PROFILE, 15)["solutions"][0]
+            self.assertEqual(first["id"], "iron-test-first", said)
+
+    def test_iron_deficiency_in_men_or_postmenopause_is_flagged(self):
+        ref = hs.pick("TW-EDU-28", "我有貧血", WOMAN_PROFILE, 15)["referral"]
+        self.assertIn("慢性出血", ref["say"])
+
+    def test_pregnancy_wins_over_every_other_topic(self):
+        """懷孕的人問任何東西，安全圍籬都要先站出來。"""
+        import health_kb
+        for said in ("懷孕可以吃這個保健品嗎", "我在餵母奶，感冒可以吃藥嗎"):
+            self.assertEqual(health_kb.match_topics(said)[0], "TW-EDU-29", said)
+
+    def test_asking_what_i_can_take_leads_with_ask_first_not_folate(self):
+        first = hs.pick("TW-EDU-29", "我在餵母奶，感冒可以吃藥嗎", WOMAN_PROFILE, 21)["solutions"][0]
+        self.assertEqual(first["id"], "preg-ask-first")
+
+    def test_asking_about_folate_by_name_still_answers_folate(self):
+        first = hs.pick("TW-EDU-29", "懷孕可以吃葉酸嗎", WOMAN_PROFILE, 20)["solutions"][0]
+        self.assertEqual(first["id"], "preg-folate")
+
+    def test_pregnancy_never_judges_medication(self):
+        for s in hs.pick("TW-EDU-29", "懷孕感冒了", WOMAN_PROFILE, 20)["solutions"]:
+            self.assertNotEqual(s.get("riskLevel"), "L4")
+
+    def test_pregnancy_referral_covers_preeclampsia_and_postpartum(self):
+        ref = hs.pick("TW-EDU-29", "我懷孕了", WOMAN_PROFILE, 20)["referral"]
+        self.assertIn("子癇前症", ref["say"])
+        self.assertIn("1925", ref["say"])
+
+
+WOMAN_PROFILE = {"audience": "women"}
+
+
+class LeadWithTest(unittest.TestCase):
+    """門檻方案：不先做這件事，後面每一條都失去意義——分數擠不上去也要排第一。"""
+
+    def test_lead_with_beats_a_higher_scoring_solution(self):
+        first = hs.pick("TW-EDU-28", "我容易累", WOMAN_PROFILE, 15)["solutions"][0]
+        self.assertTrue(first.get("leadWith"))
+
+    def test_lead_with_still_cannot_beat_a_safety_removal(self):
+        """安全永遠翻不了——門檻方案也不例外。"""
+        prof = {"audience": "women", "conditions": ["血色素沉著症等鐵過載疾病"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-28", "我要補鐵", prof, 15)["solutions"]]
+        self.assertNotIn("iron-supplement", ids)
+
+
 class DataIntegrityTest(unittest.TestCase):
     """資料本身的紀律——內容寫壞了這裡先亮紅燈。"""
 
