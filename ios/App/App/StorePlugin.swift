@@ -66,7 +66,7 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func purchase(_ call: CAPPluginCall) {
         guard let pid = call.getString("productId"), !pid.isEmpty else {
-            call.reject("缺 productId")
+            call.reject(muneaNativeText("native.store.productIdMissing", "缺少商品識別碼"))
             return
         }
         Task {
@@ -133,7 +133,7 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
         Task { @MainActor in
             let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
             guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first else {
-                call.reject("找不到目前的 App 視窗")
+                call.reject(muneaNativeText("native.common.windowUnavailable", "找不到目前的 App 視窗"))
                 return
             }
             do {
@@ -166,7 +166,7 @@ public class StorePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func finish(_ call: CAPPluginCall) {
         guard let rawId = call.getString("transactionId"), let transactionId = UInt64(rawId) else {
-            call.reject("缺 transactionId")
+            call.reject(muneaNativeText("native.store.transactionIdMissing", "缺少交易識別碼"))
             return
         }
         Task {

@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -26,10 +27,50 @@ const expectedProfiles = [
   ['iphone-standard', 390, 844, 'std'],
   ['iphone-dynamic-type-large', 390, 844, 'xl'],
 ];
+const evidenceSourcePaths = [
+  'web',
+  'scripts/app-full-surface-i18n-browser-precheck.js',
+  'scripts/app-i18n-fixture-server.js',
+];
+
+function gitLines(args) {
+  return execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+  }).trim().split(/\r?\n/u).filter(Boolean);
+}
 
 assert.equal(report.schema, 'munea.app-full-surface-local-browser-precheck.v2');
 assert.equal(report.result, 'pass-local-precheck');
 assert.equal(report.releaseEvidence, false);
+assert.match(
+  report.sourceBaseCommit,
+  /^[0-9a-f]{40}$/u,
+  'Browser evidence must identify the exact 40-character source commit',
+);
+assert.deepEqual(
+  report.sourceChangedFiles,
+  [],
+  'Browser evidence captured from a dirty worktree cannot certify the App source',
+);
+assert.doesNotThrow(
+  () => execFileSync(
+    'git',
+    ['merge-base', '--is-ancestor', report.sourceBaseCommit, 'HEAD'],
+    { cwd: ROOT, stdio: 'ignore' },
+  ),
+  'Browser evidence source commit must be an ancestor of the tested HEAD',
+);
+assert.deepEqual(
+  gitLines(['diff', '--name-only', report.sourceBaseCommit, '--', ...evidenceSourcePaths]),
+  [],
+  'Browser evidence is stale because shipping WebView or capture source changed',
+);
+assert.deepEqual(
+  gitLines(['status', '--short', '--untracked-files=all', '--', ...evidenceSourcePaths]),
+  [],
+  'Browser evidence cannot pass with uncommitted shipping WebView or capture source changes',
+);
 assert.equal(report.scope.environment, 'local-fixture-only');
 assert.deepEqual(
   report.scope.captureProfiles.map(({ id, viewport, appFontScale }) => [
@@ -93,5 +134,5 @@ for (const [profile] of expectedProfiles) {
 }
 
 process.stdout.write(
-  `Full-surface App i18n browser evidence PASS: ${report.screens.length} local screenshots.\n`,
+  `Full-surface App i18n browser evidence PASS: ${report.screens.length} local screenshots bound to ${report.sourceBaseCommit.slice(0, 8)}.\n`,
 );
