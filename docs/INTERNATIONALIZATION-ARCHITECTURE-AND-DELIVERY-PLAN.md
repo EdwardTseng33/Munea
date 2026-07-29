@@ -146,7 +146,7 @@ Phase 1e（2026-07-28）：App 全畫面狀態契約
 - 設定、登入、帳號、家庭、健康安全、個人資料、資料匯出／刪除與字體顯示的四語文案已備妥；英文與西班牙文會被測試阻擋中文字殘留。
 - `app-binding-manifest.json` 再把現有 DOM anchor、動態 renderer 與需要 markup refactor 的容器對到 27 個靜態接線、7 個動態狀態及 5 個結構改造，讓 #247／#270／#273 合併後可依清單接線，不靠人工搜尋中文字。
 - release readiness 新增 `appUiIntegration` Gate；只要 screen／binding manifest 尚未明確標記 `integrated`，即使 catalog、審稿或截圖狀態被誤改為通過，也不得開放任一語系。
-- manifest 明確保持 `pending-main-screen-integration` 與 `visualQaPending=true`；catalog 備妥不等於畫面已接線，也不能解除 exact-build 截圖與實機 Gate。
+- 38 個 shipping states 與動態 renderer 已標記 `integrated`，依據是 4 語系 × 3 profiles 的 loopback browser precheck；`visualQaPending=true` 保持不變，本機證據不能解除 exact-build 截圖與實機 Gate。
 - `scripts/test-app-screen-localizations.js` 與 `scripts/test-app-i18n-binding-manifest.js` 驗證畫面狀態與 inventory 完全一致、四語 key 齊全、DOM anchor／renderer 存在且每個狀態至少有五個驗收項目，並納入 UI contract suite。
 
 Phase 1f（2026-07-28）：全畫面遷移工作表與排版壓力測試
@@ -191,7 +191,7 @@ Phase 1k（2026-07-28）：動態畫面的自動本地化接線
 - `web/src/i18n/dom-localizer.js` 以 `MutationObserver` 監看新增節點與經審核的 `data-i18n*` 屬性，通知設定、收件匣、錯誤狀態及執行期 modal 在插入 DOM 後能自動套用目前 App Language。
 - Observer 只寫入 `textContent` 與 aria-label／placeholder／title／value 白名單，不接受 HTML；非瀏覽器或不支援 Observer 的環境則安全略過，不阻斷 App 啟動。
 - `web/src/i18n.js` 在 catalog 初始化與初次套用後才啟動 observer，語系來源仍只跟隨 iOS App Language 或明確開發預覽，沒有新增使用者語言切換器。
-- `appUiIntegration` Gate 現在也要求動態 observer 已整合；這只完成動態接線底盤，#270 內的通知 renderer 仍須在合併後補上實際 key，故整體狀態仍為 `App E2E pending`。
+- `appUiIntegration` Gate 也要求動態 observer 與 38 個 shipping states 全部整合；通知 renderer 已補上實際 key 並通過本機四語系畫面守門，但 exact-build visual／voice／purchase／installed-App 證據仍為 `App E2E pending`。
 
 Phase 2a（2026-07-28）將 LocaleContext 接入帳號資料：
 
