@@ -33,7 +33,8 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
-from voice_echo_guard import frame_rms, in_output_window, should_drop_uplink_frame
+from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
+                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -1409,7 +1410,7 @@ def _new_call_state():
     """一通電話的可變狀態（st）。2026-07-25 抽成獨立函式：①讓 handle() 讀起來清楚
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
-    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "await_first": True, "first_mic": False,
+    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -1610,7 +1611,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         if not chunk:
             return
         st["out"] += len(chunk)
-        st["last_out"] = time.monotonic()
+        _fa_now = time.monotonic()
+        st["last_out"] = _fa_now
+        st["playout_head"] = note_playout(st.get("playout_head"), _fa_now, len(chunk))
         await ws.send(chunk)
         fw = st.get("face_ws")
         if fw is not None:
@@ -1902,8 +1905,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # 回音濾網（病歷 a 快藥）：她出聲期間＋殘響窗內，低能量上行＝喇叭漏回來的
                 # 自己聲音 → 丟棄；正常音量直說天生高於門檻、插話照常穿透。voice_echo_guard.py。
                 _eg_now = time.monotonic()
-                if in_output_window(_eg_now, st.get("last_out")) and should_drop_uplink_frame(
-                        _eg_now, st.get("last_out"), frame_rms(message)):
+                # v2：窗以「手機大概播到哪」為準（in_playout_window）；送出時間窗當後備。
+                _eg_window = (in_playout_window(_eg_now, st.get("playout_head"))
+                              or in_output_window(_eg_now, st.get("last_out")))
+                if _eg_window and guard_enabled() and frame_rms(message) < guard_rms_threshold():
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
                         _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
@@ -1948,6 +1953,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 elif t == "audio_end":
                     await session.send_realtime_input(audio_stream_end=True)
                 elif t == "barge_in":
+                    st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1
                     await ws.send(json.dumps({"type": "barge_in_ack"}))
@@ -2046,6 +2052,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if _gap > turn_max_gap_ms:
                                 turn_max_gap_ms = _gap
                         st["last_out"] = _now_out
+                        # 回音窗 v2（2026-07-29）：鏡射 App 播放節奏、推進「手機大概播到哪」。
+                        # Gemini 送資料比講話快，只看送出時間會讓句子後半的回音落在窗外＝自問自答。
+                        st["playout_head"] = note_playout(st.get("playout_head"), _now_out, len(data))
                         await ws.send(data)
                         fw = st.get("face_ws")
                         if fw is not None:
@@ -2092,6 +2101,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
                             health_watch_user_text(cid, st)  # B2 衛教：同一份字幕順手比對題庫（同步、零模型呼叫）
                         if getattr(sc, "interrupted", False) and not st.get("language_block"):
+                            st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
                             _diag(cid, "node.interrupted")
                             await ws.send(json.dumps({"type": "interrupted"}))
                             fw = st.get("face_ws")
