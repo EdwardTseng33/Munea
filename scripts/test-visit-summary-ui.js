@@ -104,21 +104,16 @@ expect(/if \(!q \|\| !q\.askedAt\) return true;/.test(app),
   '①g 清理時把「還沒問的」也清掉了');
 ok('①g 只留 60 天，但還沒問的問題不會被清掉');
 
-/* ①h 字級設定必須套得到這一頁。
-   2026-07-29 回歸：把 #reportModal 從 .modal 改成 .reader-page 之後，
-   applyFontScale 的選擇器（.screen .pad, .modal）就選不到它——使用者選了
-   「特大」卻完全沒變大，而這正是最需要放大的一頁（長輩在診間唸給醫生聽）。
-   註：zoom **不會**改變 computed font-size，所以量 font-size 判斷不出來，
-   要看的是選擇器有沒有涵蓋 .reader-page。 */
-const fontScaleFn = app.slice(app.indexOf('function applyFontScale()'), app.indexOf('function markFontOpt'));
-expect(fontScaleFn.length > 100, '①h 找不到 applyFontScale，這條測試已失效需重寫');
-expect(/querySelectorAll\([^)]*\.reader-page/.test(fontScaleFn),
-  '①h applyFontScale 沒有涵蓋 .reader-page＝就診摘要不會跟著字級設定放大');
-expect(/\.modal/.test(fontScaleFn), '①h 順手把 .modal 弄丟了，其他彈窗會不再放大');
-// 版型本身也要是 reader-page，兩者要一起成立才有意義
-expect(html.includes('class="reader-page sub-page" id="reportModal"'),
-  '①h 版型不是 reader-page，這條與 ①b 已經不一致');
-ok('①h 字級設定涵蓋 reader-page 子頁（特大真的會變大）');
+/* ①h 字級設定要套得到這一頁——**這條不在這裡驗**。
+   main 的 scripts/test-i18n-font-scale-surface-gate.js（#349）驗的是同一條
+   不變式，而且做得更嚴：它會正確解析 applyFontScale 的選擇器清單，還帶
+   新舊 markup 的自我檢查。同一條不變式擺兩份，只會讓未來改動要同時滿足
+   兩組訊息不同的斷言，不會多守到任何東西，所以這裡只留指標。
+
+   （背景：2026-07-29 把 #reportModal 從 .modal 改成 .reader-page 後就掉出
+   applyFontScale 的選擇器，使用者選「特大」完全沒變大。註記量測陷阱：
+   CSS zoom **不會**改變 computed font-size，量 font-size 會誤判成沒生效；
+   實際算繪尺寸由 scripts/probe-visit-summary-font-scale.js 量。） */
 
 /* ①i aria-label 必須走宣告式綁定（data-i18n-aria-label）。
    兩個教訓寫在這裡：

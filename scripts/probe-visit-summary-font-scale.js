@@ -16,7 +16,13 @@
  *   MUNEA_PLAYWRIGHT_PATH=... MUNEA_CHROME_PATH=... node scripts/probe-visit-summary-font-scale.js
  */
 const { createFixtureServer } = require('./app-i18n-fixture-server.js');
-const { chromium } = require(process.env.MUNEA_PLAYWRIGHT_PATH || 'playwright');
+if (!process.env.MUNEA_PLAYWRIGHT_PATH || !process.env.MUNEA_CHROME_PATH) {
+  console.error('需要 MUNEA_PLAYWRIGHT_PATH 與 MUNEA_CHROME_PATH 兩個環境變數。');
+  console.error('例：MUNEA_PLAYWRIGHT_PATH=/path/to/playwright \\');
+  console.error('    MUNEA_CHROME_PATH=/path/to/chrome node scripts/probe-visit-summary-font-scale.js');
+  process.exit(2);
+}
+const { chromium } = require(process.env.MUNEA_PLAYWRIGHT_PATH);
 const PORT = 4377;
 const CASES = [
   ['zh-TW', 390, 844], ['en', 375, 667], ['es', 375, 667], ['ja', 390, 844],
