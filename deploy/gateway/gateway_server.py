@@ -163,6 +163,12 @@ class DurableVoiceShardBody(BaseModel):
     region: str = "asia-east1"
     capacity: int
     status: str = "ready"
+    # 2026-07-29: same escape hatch DurableWorkerBody already has. The
+    # active_leases counters are only ever decremented by release/cancel/reap;
+    # if the lease rows vanish some other way (e.g. an account cascade delete
+    # mid-call), the seats stay phantom-occupied and, until this field
+    # existed, the voice ledger had no sanctioned correction path at all.
+    active_leases: int | None = None
 
 
 def _bearer(authorization: str) -> str:

@@ -223,13 +223,28 @@ class Drill:
         print("[6/7] all reservations released; billed credits = 0")
 
     def cleanup(self) -> None:
-        for index, result in enumerate(self.calls):
-            if result.get("status") == "queued":
-                try:
+        # Ordering is load-bearing: leases MUST be released before the drill
+        # account is deleted. Deleting the account cascade-deletes the lease
+        # rows, but gpu_workers/voice_shards.active_leases are counters that
+        # only munea_call_release/cancel decrement -- delete first and the
+        # seats stay phantom-occupied forever (first 2026-07-29 drill run
+        # leaked both primary seats this way; recovered via the gateway
+        # admin surface).
+        for result in self.calls:
+            status = result.get("status")
+            try:
+                if status == "connect":
+                    self.store.release(
+                        call_id=str(result["call_id"]),
+                        lease_version=int(result.get("lease_version") or 1),
+                        event_id="queue-drill-cleanup-" + uuid.uuid4().hex,
+                        reason="queue_burst_drill_cleanup", user_id=self.user_id,
+                    )
+                elif status == "queued":
                     self.store.cancel(call_id=str(result.get("call_id") or ""),
                                       user_id=self.user_id)
-                except Exception:
-                    pass
+            except Exception:
+                pass
         if self.voice_original is not None:
             try:
                 self._gateway_voice(self.voice_original)
