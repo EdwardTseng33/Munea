@@ -65,7 +65,9 @@ function localizeCanonicalLegacyPanels() {
   };
 
   // 就診摘要面板（M1 起改為真資料）。原本這裡在幫「寫死假數字的舊面板」做多語，
-  // 其中 #rptSendBtn 與 .rpt-card 已隨改版移除。面板本文走 data-i18n，
+  // 其中 rptSendBtn 與 rpt-card 已隨改版移除（這裡刻意不寫井字號前綴：smoke.ps1 的
+  // 「Frontend id references」會掃全檔的井字號選擇器、連註解也算，
+  // 寫了就等於宣告一個不存在的元素，CI 會紅）。面板本文走 data-i18n，
   // 這裡只補 data-i18n 到不了的地方：aria-label、期間膠囊、要帶角色名的頁尾。
   const setAria = (selector, key, fallback) => {
     const element = document.querySelector(selector);
