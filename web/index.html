@@ -221,7 +221,7 @@
   <!-- ===== 家人 ===== -->
   <section class="screen" id="family">
     <div class="pad">
-      <div class="page-head fam-page-head"><h1 class="page-title" data-i18n="family.title">全家健康圈</h1><button type="button" class="pt-nav" id="famManageBtn" aria-label="管理家人、移除或封鎖成員"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></button></div>
+      <div class="page-head fam-page-head"><h1 class="page-title" data-i18n="family.title">全家健康圈</h1><button type="button" class="pt-nav" id="famManageBtn" aria-label="管理家人、移除或封鎖成員" data-i18n-aria-label="accessibility.manageFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></button></div>
 
       <div class="hscroll-wrap"><div class="fam-switch" id="famSwitch">
         <button class="fam-switch-item active" data-person="all"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="fs-name" data-i18n="family.all">全家</span></button>
@@ -513,9 +513,9 @@
 
     <!-- 底部單列：字幕開關｜麥克風開關｜通話（同一顆：綠=開始、紅=結束） -->
     <div class="face-bar">
-      <button class="ctl-btn" id="captionToggle" aria-label="字幕開關"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 11h-3v3h3M17 11h-3v3h3"/></svg><span>字幕</span></button>
-      <button class="ctl-btn" id="chatMic" aria-label="麥克風開關"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg><span>麥克風</span></button>
-      <button class="call-btn start" id="callToggle" aria-label="開始或結束通話"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg><span id="callToggleLabel">開始通話</span></button>
+      <button class="ctl-btn" id="captionToggle" aria-label="字幕開關" data-i18n-aria-label="accessibility.toggleCaptions"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 11h-3v3h3M17 11h-3v3h3"/></svg><span>字幕</span></button>
+      <button class="ctl-btn" id="chatMic" aria-label="麥克風開關" data-i18n-aria-label="accessibility.toggleMicrophone"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg><span>麥克風</span></button>
+      <button class="call-btn start" id="callToggle" aria-label="開始或結束通話" data-i18n-aria-label="accessibility.toggleCall"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg><span id="callToggleLabel">開始通話</span></button>
     </div>
   </section>
 
@@ -578,13 +578,13 @@
       </div>
       <div id="walkFields">
         <div class="field-label">目標步數（大家一起累積）</div>
-        <div class="range-row"><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" aria-label="調整目標步數" /><b id="walkGoalVal">84,000 步</b></div>
+        <div class="range-row"><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" aria-label="調整目標步數" data-i18n-aria-label="activity.adjustGoal" /><b id="walkGoalVal">84,000 步</b></div>
         <input type="range" id="walkDays" min="1" max="30" step="1" value="7" hidden aria-hidden="true" tabindex="-1" />
         <div class="goal-hint" id="goalHint">3 人一起走 7 天 · 平均每人每天約 4,000 步</div>
         <div class="field-label">挑戰截止（到期自動結算）</div>
         <div class="dt-row">
-          <input class="chal-input" type="date" id="walkDue" aria-label="挑戰截止日期" />
-          <input class="chal-input" type="time" id="walkDueTime" value="20:00" step="300" aria-label="挑戰截止時間" />
+          <input class="chal-input" type="date" id="walkDue" aria-label="挑戰截止日期" data-i18n-aria-label="activity.deadlineDate" />
+          <input class="chal-input" type="time" id="walkDueTime" value="20:00" step="300" aria-label="挑戰截止時間" data-i18n-aria-label="activity.deadlineTime" />
         </div>
       </div>
       <div id="quizFields" style="display:none">
@@ -609,7 +609,7 @@
       </div>
       <div id="voteFields" style="display:none">
         <div class="field-label">想問大家什麼</div>
-        <input class="chal-input" id="voteQ" maxlength="20" placeholder="例：週末聚餐吃哪一家？" />
+        <input class="chal-input" id="voteQ" maxlength="20" placeholder="例：週末聚餐吃哪一家？" data-i18n-placeholder="activity.voteQuestionPlaceholder" />
         <div class="field-label">選項（至少兩個）</div>
         <div class="rw-list">
           <div class="rw-row"><span class="vo-no">A</span><input class="rw-in" id="vo1" maxlength="10" placeholder="例：老王海鮮" /></div>
@@ -685,7 +685,7 @@
         <div class="field-label">你會想把沐寧推薦給朋友或家人嗎？拉一下打個分數</div>
         <div class="nps-bar">
           <div class="nps-readout"><b id="npsVal">—</b><span id="npsWord">拉一下或點一下</span></div>
-          <input type="range" class="nps-slider" id="npsSlider" min="0" max="10" step="1" value="8" aria-label="推薦分數 0 到 10" />
+          <input type="range" class="nps-slider" id="npsSlider" min="0" max="10" step="1" value="8" aria-label="推薦分數 0 到 10" data-i18n-aria-label="feedback.npsAria" />
           <div class="nps-hint"><span>0 完全不會</span><span>10 非常願意</span></div>
         </div>
       </div>
@@ -695,7 +695,7 @@
       <input type="file" id="fbPhotoInput" accept="image/*" style="display:none">
       <div id="fbPhotoWrap">
         <button type="button" class="fb-photo-add" id="fbPhotoAdd"><svg class="ic" viewBox="0 0 24 24" style="width:20px;height:20px"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M3 17l5-4 4 3 3-2 6 5"/></svg>選一張圖片</button>
-        <div id="fbPhotoPreview" style="display:none;position:relative;margin-top:10px"><img id="fbPhotoImg" alt="附圖預覽" style="max-width:100%;max-height:180px;border-radius:12px;border:1px solid var(--line)"><button type="button" id="fbPhotoRemove" aria-label="移除圖片" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:16px;cursor:pointer">✕</button></div>
+        <div id="fbPhotoPreview" style="display:none;position:relative;margin-top:10px"><img id="fbPhotoImg" alt="附圖預覽" style="max-width:100%;max-height:180px;border-radius:12px;border:1px solid var(--line)"><button type="button" id="fbPhotoRemove" aria-label="移除圖片" data-i18n-aria-label="accessibility.removeImage" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:16px;cursor:pointer">✕</button></div>
       </div>
       <button class="modal-btn" id="fbSend">送出</button>
     </div>
@@ -822,7 +822,7 @@
         <div class="pf-avatar-row">
           <div class="pf-avatar-wrap">
             <span class="pf-avatar" id="pfAvatar"><svg class="ic pf-avatar-placeholder" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
-            <button class="pf-avatar-clear" id="pfAvatarClear" type="button" aria-label="移除照片" title="移除照片" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button class="pf-avatar-clear" id="pfAvatarClear" type="button" aria-label="移除照片" data-i18n-aria-label="accessibility.removePhoto" title="移除照片" data-i18n-title="accessibility.removePhoto" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="pf-avatar-side">
             <button class="pf-avatar-btn" id="pfAvatarBtn" type="button">更換照片</button>
@@ -936,7 +936,7 @@
           <button class="scyc-btn on" data-cyc="month" type="button">月繳</button>
           <button class="scyc-btn" data-cyc="year" type="button">年繳 <em class="scyc-badge">省 20%</em></button>
         </div>
-        <div class="credit-rules" aria-label="點數使用規則">
+        <div class="credit-rules" aria-label="點數使用規則" data-i18n-aria-label="subscription.creditRulesTitle">
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
             <b>會員月點數</b><i></i><span class="cr-note">每月重發，不留到下個月</span>
@@ -1052,9 +1052,9 @@
       </div>
       <div id="histRange" style="display:none">
         <div class="rc-head">
-          <button class="rc-nav" id="rcPrev" type="button" aria-label="上個月">‹</button>
+          <button class="rc-nav" id="rcPrev" type="button" aria-label="上個月" data-i18n-aria-label="history.previousMonth">‹</button>
           <b id="rcTitle">2026 年 7 月</b>
-          <button class="rc-nav" id="rcNext" type="button" aria-label="下個月">›</button>
+          <button class="rc-nav" id="rcNext" type="button" aria-label="下個月" data-i18n-aria-label="history.nextMonth">›</button>
         </div>
         <div class="rc-week"><i>一</i><i>二</i><i>三</i><i>四</i><i>五</i><i>六</i><i>日</i></div>
         <div class="rc-grid" id="rcGrid"></div>
