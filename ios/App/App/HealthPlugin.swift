@@ -85,9 +85,16 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         let group = DispatchGroup()
         var result: [String: Any] = ["available": true]
+        // 讀取失敗跟「真的沒有資料」原本長得一模一樣（都只是安靜地什麼都不回），
+        // 結果使用者看到空白，我們也查不出是哪一種。這裡把每一項的成敗都記下來回報。
+        var readErrors: [String] = []
         let lock = NSLock()
         func put(_ key: String, _ value: Any) {
             lock.lock(); result[key] = value; lock.unlock()
+        }
+        func note(_ what: String, _ error: Error?) {
+            guard let error = error else { return }
+            lock.lock(); readErrors.append("\(what): \(error.localizedDescription)"); lock.unlock()
         }
 
         // 今天步數（累加）
@@ -95,7 +102,8 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
             group.enter()
             let start = Calendar.current.startOfDay(for: Date())
             let pred = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
-            let q = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: pred, options: .cumulativeSum) { _, stats, _ in
+            let q = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: pred, options: .cumulativeSum) { _, stats, error in
+                note("steps", error)
                 if let sum = stats?.sumQuantity() {
                     put("steps", Int(sum.doubleValue(for: HKUnit.count())))
                 }
@@ -107,7 +115,8 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
         // 最近一次心率（次/分）
         if let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) {
             group.enter()
-            latestQuantity(hrType) { qty in
+            latestQuantity(hrType) { qty, error in
+                note("hr", error)
                 if let qty = qty {
                     put("hr", Int(qty.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute())).rounded()))
                 }
@@ -118,7 +127,8 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
         // 最近一次血氧（%）
         if let spo2Type = HKQuantityType.quantityType(forIdentifier: .oxygenSaturation) {
             group.enter()
-            latestQuantity(spo2Type) { qty in
+            latestQuantity(spo2Type) { qty, error in
+                note("spo2", error)
                 if let qty = qty {
                     put("spo2", Int((qty.doubleValue(for: HKUnit.percent()) * 100).rounded()))
                 }
@@ -129,14 +139,16 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
         // 最近一次血壓（收縮 / 舒張，mmHg）
         if let sysType = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic) {
             group.enter()
-            latestQuantity(sysType) { qty in
+            latestQuantity(sysType) { qty, error in
+                note("bpSys", error)
                 if let qty = qty { put("bpSys", Int(qty.doubleValue(for: HKUnit.millimeterOfMercury()).rounded())) }
                 group.leave()
             }
         }
         if let diaType = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic) {
             group.enter()
-            latestQuantity(diaType) { qty in
+            latestQuantity(diaType) { qty, error in
+                note("bpDia", error)
                 if let qty = qty { put("bpDia", Int(qty.doubleValue(for: HKUnit.millimeterOfMercury()).rounded())) }
                 group.leave()
             }
@@ -148,7 +160,8 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
             let end = Date()
             let start = Calendar.current.date(byAdding: .hour, value: -24, to: end) ?? end
             let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
-            let q = HKSampleQuery(sampleType: sleepType, predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+            let q = HKSampleQuery(sampleType: sleepType, predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                note("sleep", error)
                 var secs = 0.0
                 if let samples = samples as? [HKCategorySample] {
                     for s in samples where self.isAsleep(s.value) {
@@ -162,6 +175,13 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         group.notify(queue: .main) {
+            // 讀到哪幾項、哪幾項出錯，一起回報。網頁端才分得出「沒資料」跟「讀失敗」。
+            lock.lock()
+            let fields = ["steps", "hr", "spo2", "bpSys", "bpDia", "sleepHours"].filter { result[$0] != nil }
+            result["fields"] = fields
+            result["errors"] = readErrors
+            result["readAt"] = Date().timeIntervalSince1970 * 1000
+            lock.unlock()
             call.resolve(result)
         }
     }
@@ -272,13 +292,13 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
     /// 讀「最近一筆」某種量測值
     /// 限最近 7 天內：狀態頁把這些值標成「今天」，沒有時間界線的話，
     /// 幾個月前的舊紀錄會被當成今天的數值顯示（長輩會以為是剛量的）。
-    private func latestQuantity(_ type: HKQuantityType, completion: @escaping (HKQuantity?) -> Void) {
+    private func latestQuantity(_ type: HKQuantityType, completion: @escaping (HKQuantity?, Error?) -> Void) {
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
         let end = Date()
         let start = Calendar.current.date(byAdding: .day, value: -7, to: end) ?? end
         let recent = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
-        let q = HKSampleQuery(sampleType: type, predicate: recent, limit: 1, sortDescriptors: [sort]) { _, samples, _ in
-            completion((samples?.first as? HKQuantitySample)?.quantity)
+        let q = HKSampleQuery(sampleType: type, predicate: recent, limit: 1, sortDescriptors: [sort]) { _, samples, error in
+            completion((samples?.first as? HKQuantitySample)?.quantity, error)
         }
         store.execute(q)
     }
