@@ -849,5 +849,6 @@
   "appointment.scheduled": "予定されている受診",
   "visit.openSummary": "サマリー",
   "visit.questionSaved": "記録しました。受診前にお知らせします（{n} 件）。",
-  "visit.questionUnheard": "その質問がうまく聞き取れませんでした。もう一度お願いできますか"
+  "visit.questionUnheard": "その質問がうまく聞き取れませんでした。もう一度お願いできますか",
+  "common.tomorrow": "明日"
 }

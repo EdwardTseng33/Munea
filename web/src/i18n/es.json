@@ -849,5 +849,6 @@
   "appointment.scheduled": "Visitas programadas",
   "visit.openSummary": "Resumen",
   "visit.questionSaved": "Guardado. Te lo recordaré antes de la visita ({n} preguntas).",
-  "visit.questionUnheard": "No entendí esa pregunta. ¿Puedes repetirla?"
+  "visit.questionUnheard": "No entendí esa pregunta. ¿Puedes repetirla?",
+  "common.tomorrow": "Mañana"
 }

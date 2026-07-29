@@ -762,14 +762,14 @@
        紙面抬頭刻意用「就診摘要」而不是 App 裡的暱稱：這一頁會被醫師看到，要專業不要俏皮。 -->
   <div class="reader-page sub-page" id="reportModal" aria-hidden="true">
     <div class="nav-head">
-      <button class="nav-back" id="reportClose" type="button" aria-label="返回"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="nav-back" id="reportClose" type="button" aria-label="返回" data-i18n-aria-label="accessibility.back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <span class="nav-title" data-i18n="visit.summaryTitle">就診摘要</span>
       <!-- 右上角動作鍵：現有子頁的 nav-head 右格一直是空的，這是第一個需要動作的子頁。
            規格照 .nav-back 鏡像（同 44×44、同 --teal-dd、按下同薄荷圓底），不新訂數字。 -->
-      <button class="nav-act" id="rptExportBtn" type="button" aria-label="匯出這份摘要"><svg class="ic" viewBox="0 0 24 24"><path d="M12 16V3M8 7l4-4 4 4"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg></button>
+      <button class="nav-act" id="rptExportBtn" type="button" aria-label="匯出這份摘要" data-i18n-aria-label="visit.exportAria"><svg class="ic" viewBox="0 0 24 24"><path d="M12 16V3M8 7l4-4 4 4"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg></button>
     </div>
     <div class="reader-scroll">
-      <div class="seg" id="rptPeriodTabs" role="tablist" aria-label="選擇涵蓋期間">
+      <div class="seg" id="rptPeriodTabs" role="tablist" aria-label="選擇涵蓋期間" data-i18n-aria-label="visit.periodAria">
         <button class="seg-btn" type="button" data-days="7">7天</button>
         <button class="seg-btn on" type="button" data-days="14">14天</button>
         <button class="seg-btn" type="button" data-days="30">30天</button>
@@ -1017,7 +1017,7 @@
   <div class="modal-mask" id="visitModal">
     <div class="modal">
       <div class="modal-grab"></div>
-      <button class="auth-close" id="visitClose" type="button" aria-label="關閉就診提醒" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <button class="auth-close" id="visitClose" type="button" aria-label="關閉就診提醒" data-i18n-aria-label="appointment.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="appointment.title">就診提醒</h2>
       <p class="modal-sub" data-i18n="legacyUi.appointmentSubtitle">記下就診時間，我會在當天提醒你、就診摘要也先準備好。可以記好幾筆。</p>
       <div class="visit-list" id="visitList"></div>

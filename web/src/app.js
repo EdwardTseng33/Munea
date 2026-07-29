@@ -81,13 +81,10 @@ function localizeCanonicalLegacyPanels() {
   // 「Frontend id references」會掃全檔的井字號選擇器、連註解也算，
   // 寫了就等於宣告一個不存在的元素，CI 會紅）。面板本文走 data-i18n，
   // 這裡只補 data-i18n 到不了的地方：aria-label、期間膠囊、要帶角色名的頁尾。
-  const setAria = (selector, key, fallback) => {
-    const element = document.querySelector(selector);
-    if (element) element.setAttribute('aria-label', muneaT(key, fallback));
-  };
-  setAria('#reportClose', 'accessibility.back', 'Back');   // 改成子頁後這顆是返回，不是關閉
-  setAria('#rptExportBtn', 'visit.exportAria', 'Export this summary');
-  setAria('#rptPeriodTabs', 'visit.periodAria', 'Choose the period covered');
+  // aria-label 改走 markup 的 data-i18n-aria-label（dom-localizer.js 支援）。
+  // 原本在這裡用 JS setAttribute，問題是這整個函式**只在非 zh-TW 才跑**——
+  // 等於 aria 只有外語使用者才是對的，中文讀屏使用者拿到的是 markup 裡的字。
+  // 宣告式綁定四個語系一視同仁，而且改文案時不會忘記同步。
   $$('#rptPeriodTabs .seg-btn').forEach(button => {
     const days = parseInt(button.dataset.days, 10);
     if (days) button.textContent = muneaT('visit.days', '{n} days', { n: days });
@@ -8723,7 +8720,14 @@ function init() {
     let html = '';
     for (let i = 0; i < 14; i++) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-      const wdName = i === 0 ? '今天' : (i === 1 ? '明天' : '週' + '日一二三四五六'[d.getDay()]);
+      // 星期名走 Intl，四語系自動正確——不要為了七個星期硬刻 28 把 key，
+      // 也不要留寫死的中文（這一格捕捉工具掃不到：harness 用 showModal() 直接開面板，
+      // 不會觸發 buildCalGrid，所以這裡漏中文不會有任何測試發現）。
+      const wdName = i === 0
+        ? muneaT('common.today', '今天')
+        : (i === 1
+          ? muneaT('common.tomorrow', '明天')
+          : new Intl.DateTimeFormat(muneaLocale(), { weekday: 'short' }).format(d));
       html += '<button type="button" class="cal-cell" data-iso="' + isoOf(d) + '"><small>' + wdName + '</small><b>' + (d.getDate() === 1 ? (d.getMonth() + 1) + '/1' : d.getDate()) + '</b></button>';
     }
     box.innerHTML = html;

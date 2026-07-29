@@ -849,5 +849,6 @@
   "appointment.scheduled": "Scheduled visits",
   "visit.openSummary": "Summary",
   "visit.questionSaved": "Saved. I will remind you before the visit ({n} questions).",
-  "visit.questionUnheard": "I did not catch that question. Could you say it again?"
+  "visit.questionUnheard": "I did not catch that question. Could you say it again?",
+  "common.tomorrow": "Tomorrow"
 }

@@ -120,6 +120,35 @@ expect(html.includes('class="reader-page sub-page" id="reportModal"'),
   '①h 版型不是 reader-page，這條與 ①b 已經不一致');
 ok('①h 字級設定涵蓋 reader-page 子頁（特大真的會變大）');
 
+/* ①i aria-label 必須走宣告式綁定（data-i18n-aria-label）。
+   兩個教訓寫在這裡：
+   ① 我一度以為 aria-label 不支援 i18n（grep 錯檔案：機制在 i18n/dom-localizer.js
+      不在 i18n.js），於是改用 JS setAttribute——但那段只在非 zh-TW 才跑，
+      等於 aria 只有外語使用者是對的，**中文讀屏使用者拿到的是 markup 裡的舊字**。
+   ② 改名時只動 markup 沒動 catalog（或反過來），讀屏文字就會停在舊文案。
+   宣告式綁定讓四語系一視同仁，也讓改文案不可能忘記同步。 */
+const ARIA_BOUND = [
+  ['visitClose', 'appointment.close'],
+  ['reportClose', 'accessibility.back'],
+  ['rptExportBtn', 'visit.exportAria'],
+  ['rptPeriodTabs', 'visit.periodAria'],
+];
+for (const [id, key] of ARIA_BOUND) {
+  const tag = (html.match(new RegExp(`<[^>]*id="${id}"[^>]*>`)) || [''])[0];
+  expect(tag.length > 0, `①i 找不到 #${id}，這條測試已失效需重寫`);
+  expect(tag.includes(`data-i18n-aria-label="${key}"`),
+    `①i #${id} 的 aria-label 沒有綁 ${key}＝讀屏文字不會跟著語系走`);
+  for (const locale of ['zh-TW', 'en', 'ja', 'es']) {
+    const catalog = JSON.parse(fs.readFileSync(path.join(root, 'web', 'src', 'i18n', `${locale}.json`), 'utf8'));
+    expect(typeof catalog[key] === 'string' && catalog[key].trim(),
+      `①i ${locale} 缺 ${key}，#${id} 的讀屏文字會是空的`);
+  }
+}
+// 綁定之後就不該再有那段只跑外語的 JS setAttribute
+expect(!/setAria\('#reportClose'/.test(app),
+  '①i 又回到只在非 zh-TW 才跑的 JS setAria——中文讀屏使用者會拿到舊字');
+ok(`①i ${ARIA_BOUND.length} 個 aria-label 走宣告式綁定，四語系都有值`);
+
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
   '疑似', '診斷', '嚴重', '正常值', '標準值'];
