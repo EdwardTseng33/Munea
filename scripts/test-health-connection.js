@@ -33,12 +33,20 @@ const elements = {
   healthSettingsStateLabel: element('未連接'),
   cnHealthDetail: element(),
   cnHealthHelp: element(),
+  cnHealthOpenBtn: element(),
 };
 elements.cnHealthBtn.dataset.label = '連接';
 
 let summaryReads = 0;
 let historyReads = 0;
-global.document = { getElementById: id => elements[id] || null };
+let emptySummary = false;   // 模擬「授權過了、但一項都讀不到」
+let openedHealthApp = 0;
+global.document = {
+  getElementById: id => elements[id] || null,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  visibilityState: 'visible',
+};
 global.CustomEvent = function (name, options) { this.type = name; this.detail = options.detail; };
 global.window = global;
 window.dispatchEvent = () => {};
@@ -50,8 +58,9 @@ window.Capacitor = {
   isNativePlatform: () => true,
   Plugins: { Health: {
     requestAuthorization: async () => ({ granted: true, available: true }),
-    getSummary: async () => { summaryReads += 1; return { available: true, steps: 1234 }; },
+    getSummary: async () => { summaryReads += 1; return emptySummary ? { available: true } : { available: true, steps: 1234 }; },
     getHistory: async () => { historyReads += 1; return { available: true, days: [] }; },
+    openHealthApp: async () => { openedHealthApp += 1; return { opened: true }; },
   } },
 };
 
@@ -113,6 +122,36 @@ vm.runInThisContext(fs.readFileSync('web/src/health.js', 'utf8'), { filename: 'h
   assert.strictEqual(elements.healthSettingsStateLabel.textContent, 'Not connected');
   assert.strictEqual(elements.cnHealthDetail.textContent, 'Available health data');
   assert.strictEqual(elements.cnHealthHelp.textContent, 'Connect to sync new health data.');
+
+  window.MuneaI18n = null;   // 回到中文預設字，接著驗「讀不到資料」這條路
+
+  // 蘋果不會告訴 App 讀取被拒絕，而且授權視窗一輩子只跳一次。
+  // 所以「連了卻一項都讀不到」必須：照實說 + 給一顆真的按鍵送使用者去健康 App，
+  // 不能繼續叫他重按「連接」（系統不會再跳，永遠不會有結果）。
+  emptySummary = true;
+  const again = await MuneaHealth.connect();
+  await new Promise(resolve => setTimeout(resolve, 1));
+  assert.strictEqual(again.empty, true, '一項都讀不到必須回報 empty');
+  assert.strictEqual(again.needsHealthApp, true, '問過之後再連接必須直接送去健康 App');
+  assert.strictEqual(elements.healthSettingsStateLabel.textContent, '讀不到資料');
+  assert.strictEqual(elements.cnHealthOpenBtn.hidden, false, '讀不到資料時必須出現「打開健康 App」按鍵');
+  assert.ok(elements.cnHealthHelp.textContent.includes('健康'), '說明必須告訴使用者去健康 App 打開項目');
+  assert.ok(!MuneaHealth.hasAnyValue({ available: true }), '空摘要不得算成有資料');
+  assert.ok(
+    Object.values(MuneaHealth.metricStates()).every(state => state === 'empty'),
+    '讀不到時每一項都必須標成 empty，不得沿用舊值繼續宣稱',
+  );
+  assert.strictEqual(openedHealthApp, 0, '沒按按鍵之前不得自己跳去健康 App');
+  elements.cnHealthOpenBtn.listeners.click();
+  await new Promise(resolve => setTimeout(resolve, 1));
+  assert.strictEqual(openedHealthApp, 1, '按下按鍵必須打開健康 App');
+
+  // 有資料時按鍵要收起來，不要一直提醒
+  emptySummary = false;
+  await MuneaHealth.refresh({ force: true });
+  await new Promise(resolve => setTimeout(resolve, 1));
+  assert.strictEqual(elements.cnHealthOpenBtn.hidden, true, '讀得到資料後就不該再顯示補救按鍵');
+  assert.strictEqual(elements.healthSettingsStateLabel.textContent, '已連接');
 
   console.log('Apple Health connection state: ALL PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });

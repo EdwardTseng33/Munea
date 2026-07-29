@@ -460,11 +460,11 @@
   "health.notConnected": "Not connected",
   "health.noReadableData": "No readable data",
   "health.noReadableDataDetail": "Connected, but no health data is readable yet",
-  "health.noReadableDataHelp": "Munea cannot read any health items yet. Open the Health app, tap your profile photo, choose Apps and Services, select Munea, and enable the items you want to share. If this iPhone has no records yet, they will appear when available.",
+  "health.noReadableDataHelp": "Munea can't read any data yet. The items may not have been turned on, or this iPhone may not have these records yet. Use the button below to open Health and turn them on.",
   "health.syncingDetail": "Syncing steps, heart rate, sleep, blood pressure, and blood oxygen",
   "health.availableDetail": "Includes Apple Watch and other devices automatically · Steps / heart rate / sleep / blood pressure / blood oxygen",
   "health.disconnectHelp": "Disconnecting stops future sync with Munea. Existing records remain. To revoke Apple Health access, open your profile in the Health app and manage Munea under Privacy.",
-  "health.notConnectedHelp": "Health data is not syncing. Connect again to read new health data.",
+  "health.notConnectedHelp": "After you tap Connect, iPhone shows a permission screen. Turn on each item you want Munea to see, then tap Allow — they all start switched off.",
   "health.confirmDisconnect": "Tap again to disconnect",
   "companion.nening.name": "Ningning",
   "companion.nening.label": "Warm · Caring, like family",
@@ -729,5 +729,6 @@
   "legacyUi.familyAllStatus": "Family status",
   "legacyUi.familyOkay": "Doing well",
   "version.webBuild": "Web v{version}",
-  "version.localizedSummary": "This update improves call status explanations, text fallback, and readability."
+  "version.localizedSummary": "This update improves call status explanations, text fallback, and readability.",
+  "health.openHealthApp": "Open Health to turn on items"
 }
