@@ -53,7 +53,7 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):
     return [tid for _, tid in scored[:limit]]
 
 
-def injection_for(text, exclude=None, profile=None, hour=None):
+def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None):
     """文字線用：按這一句用戶的話組出注入段；沒命中回空字串（不佔說明書）。
 
     2026-07-29：命中的題目若已經有「方案池」（因人因時因地挑選），改用挑選層的結果——
@@ -61,6 +61,11 @@ def injection_for(text, exclude=None, profile=None, hour=None):
     照舊走原本那段固定注入文，兩者並存、不必一次搬完 21 題。
     """
     ids = match_topics(text, exclude=exclude)
+    # 2026-07-29（考卷實測抓到）：話題是連續的，關鍵字比對卻只看這一句。
+    # 「我睡不好」→「吃鎂有用嗎，真的假的？」第二句命中的是謠言查證題，
+    # 她就拿不到鎂的方案、只能講泛泛之談。上一輪在聊的那題要接得回來。
+    if recent_topic and recent_topic in health_selector.TOPICS and recent_topic not in ids:
+        ids = [recent_topic] + ids
     if not ids:
         return ""
     # 2026-07-29（三齡層擴充時抓到）：同一句話可能命中好幾題（青少年說「睡不飽」會同時

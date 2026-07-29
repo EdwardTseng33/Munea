@@ -82,6 +82,9 @@ def _set_isolated_paths(tmpdir, person_id):
         ("MUNEA_CONVERSATION_SUMMARIES_PATH", "conversation_summaries.json"),
         ("MUNEA_FAMILY_STATE_STORE_PATH", "family_state_store.json"),
         ("MUNEA_APP_PROFILE_STORE_PATH", "app_profile_store.json"),
+        # 2026-07-29：個人資料卡也要隔離——正式線是從這裡的出生年推齡層的，
+        # 沒有這個檔，考卷永遠驗不到「同一句話對不同齡層答案不同」。
+        ("MUNEA_PERSON_PROFILE_PATH", "person_profile.json"),
     ):
         os.environ[key] = os.path.join(tmpdir, filename)
 
@@ -99,6 +102,8 @@ def main():
     fixture = case.get("fixture") or {}
     if fixture.get("memory_items"):
         server.save_memory_items(fixture["memory_items"])
+    if fixture.get("person_profile"):
+        server.save_person_profile(fixture["person_profile"])
     if fixture.get("living_profile"):
         profile = dict(fixture["living_profile"])
         profile["personId"] = person_id
