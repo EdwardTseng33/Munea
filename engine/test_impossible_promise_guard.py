@@ -87,7 +87,9 @@ class WiringLockTest(unittest.TestCase):
         with open(os.path.join(HERE, "chat_engine.py"), encoding="utf-8") as f:
             self.assertIn("def clean_outgoing_reply", f.read())
         with open(os.path.join(HERE, "server.py"), encoding="utf-8") as f:
-            self.assertIn("eng.clean_outgoing_reply(r.text)", f.read())
+            src = f.read()
+            self.assertIn("eng.clean_outgoing_reply(", src)
+            self.assertIn("r.text, has_briefing=", src)
         with open(os.path.join(HERE, "live_voice_server.py"), encoding="utf-8") as f:
             self.assertIn("caption_text = eng.clean_outgoing_reply(raw_caption)", f.read())
 
