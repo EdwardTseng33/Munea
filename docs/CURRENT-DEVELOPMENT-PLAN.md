@@ -3,9 +3,9 @@
 > Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.44 (Build 492)`; this is post-package source that has advanced beyond the frozen uploaded binary at `72a0bd46` and must use a new Build number when packaged again.
+> **Current source:** `1.0.46 (Build 2)` at exact packaged commit `33a11869` (main through #339); Archive／IPA and Edward iPhone install／launch／version readback pass. Apple upload has not been performed.
 >
-> **Latest uploaded App:** `1.0.44 (Build 492)`; Apple processing completed and the Build was selected and saved for 1.0.44 at 17:31. It has not been submitted, approved or released.
+> **Latest uploaded App:** `1.0.45 (Build 1)`; Apple processing completed and the Build was selected and saved for 1.0.45 at 14:52. It has not been submitted, approved or released.
 >
 > **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000. Existing App Store Product IDs stay unchanged.
 >
@@ -27,8 +27,8 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source | Current `1.0.44` source has advanced beyond the frozen Build 492 commit `72a0bd46`; no Archive／IPA evidence applies to the post-package source | `merged evidence; next Build not packaged` |
-| Uploaded App | `1.0.44 (Build 492)` was uploaded, processed and selected for 1.0.44; Edward iPhone install／launch／version readback pass; App E2E remains pending | `selected and installed, not submitted; human call gate pending` |
+| App source / package | `1.0.46 (Build 2)` exact commit `33a11869`; Archive／IPA and Edward iPhone readback pass; App E2E pending | `packaged and installed; human call gate pending` |
+| Uploaded App | `1.0.45 (Build 1)` remains latest uploaded／processed／selected. 1.0.46 upload awaits explicit exact-binary approval | `previous candidate selected; new binary not uploaded` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |
 | Tokyo database | Repo migration head is `019`; `017`／`018`／`019` are blocked and `verifiedHead=null` | `blocked` |

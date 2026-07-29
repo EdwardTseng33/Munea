@@ -20,28 +20,28 @@ const locales = [
     catalog: 'zh',
     output: 'index.html',
     htmlLang: 'zh-Hant-TW',
-    canonical: 'https://app.munea.net/',
+    canonical: `${config.siteUrl}/`,
   },
   {
     locale: 'en',
     catalog: 'en',
     output: 'en/index.html',
     htmlLang: 'en',
-    canonical: 'https://app.munea.net/en',
+    canonical: `${config.siteUrl}/en`,
   },
   {
     locale: 'ja',
     catalog: 'ja',
     output: 'ja/index.html',
     htmlLang: 'ja',
-    canonical: 'https://app.munea.net/ja',
+    canonical: `${config.siteUrl}/ja`,
   },
   {
     locale: 'es',
     catalog: 'es',
     output: 'es/index.html',
     htmlLang: 'es',
-    canonical: 'https://app.munea.net/es',
+    canonical: `${config.siteUrl}/es`,
   },
 ];
 

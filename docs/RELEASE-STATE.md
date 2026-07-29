@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-29 02:50 Asia/Taipei` (Build 492 frozen-artifact evidence reconciled against post-package main; runtime and DB lanes otherwise unchanged)
+Snapshot time: `2026-07-29 23:55 Asia/Taipei` (1.0.46 Build 2 packaged from latest main through PR #339 and installed; Apple upload not performed)
 
-Source reconciliation baseline: `origin/main@db229d8c`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
+Source reconciliation baseline: `origin/main@1b3d0654`; exact 1.0.46 package commit: `33a118693d848d11a4f9453c73401995a47cbb6e`
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -26,10 +26,11 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.44 (Build 492)` | 這是 post-package source，已在凍結 commit `72a0bd46` 之後加入 Voice／Gateway 等變更；沒有適用 current HEAD 的 Archive／IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source。下一次包版必須換新 Build number | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 02:50 |
-| Latest uploaded App | `1.0.44 (Build 492)` | App Store Release Archive／IPA 已建立；Apple 於 17:22:57 回傳 `Upload succeeded`，TestFlight upload status 與 Build 處理皆完成。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1` | Xcode upload receipt; App Store Connect; `STATUS.md` | 2026-07-28 17:31 |
-| App Store selected review lane | `1.0.44 (Build 492)` | 17:31 已選入 1.0.44 版本頁並儲存；頁面狀態仍為「準備提交」。未點「新增以供審查」、未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-28 17:31 |
-| Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
+| Latest source | `1.0.46 (Build 2)` | GitHub 精確 commit `33a118693d848d11a4f9453c73401995a47cbb6e`，含 main through #339；完整 launch、Call Control、Voice／Avatar、i18n／UI 與 Archive／IPA 防漏 PASS。IPA 59,056,305 bytes，SHA-256 `e4422fb86b03437e2bcceb1e044c4399c2097f7c7ac9fd7676cce29ad1000318` | test logs; Xcode Archive／export; packaged build identity | 2026-07-29 23:55 |
+| Latest uploaded App | `1.0.45 (Build 1)` | 2026-07-29 Apple upload 與 processing 完成並選入 1.0.45 版本頁。不得把該成品證據上推到 1.0.46 | App Store Connect live page; PR #288 | 2026-07-29 14:52 |
+| App Store selected review lane | `1.0.45 (Build 1)` | 頁面標題與版本欄位均為 1.0.45，Build 1 已選入並儲存；仍為「準備提交」，未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-29 14:52 |
+| Edward iPhone install lane | `1.0.46 (Build 2)` | Edward iPhone 15 Pro 已覆蓋安裝／啟動並由裝置資料庫回讀同版；Development signing＋production config，無 QA fixture。安裝成功不等於真人通話 Gate | `devicectl` install／launch／app inventory; build identity `33a11869` | 2026-07-29 23:55 |
+| Pending Apple upload lane | `1.0.46 (Build 2)` | 精確 IPA 已準備完成（SHA-256 `e4422fb86b03437e2bcceb1e044c4399c2097f7c7ac9fd7676cce29ad1000318`）；尚未 upload／processing／選取。上傳會把此私有 binary 送往 Apple，需對此精確成品明確核准 | local verified IPA | 2026-07-29 23:55 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
 ## Runtime services
@@ -75,9 +76,9 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Google login | fallback code 已進 Build 47；post-Build 47完整真人紀錄未找到 | 選帳 → callback → session → 登出／重登 → 真 token call |
 | 0-credit call preflight | #174 `tested`, Draft，base 落後 main | rebase／merge → package next candidate → 0 點 iPhone 不得顯示「撥通中」 |
 | Developer purchase / Apple account mismatch UX | #175 `tested`, Draft，stacked on #174 | 整合後包版；TEST 不觸發 Apple；真帳號 mismatch 不重複扣款 |
-| Dedicated QA account | 正式 Supabase password sign-in、account bootstrap 與 Brain balance readback 已驗證；purchased balance `505`（免費 5＋授權測試 500），帳密只存 Secret Manager，事件排除營運分析 | #188 合併後由 Mac 安全載入 Secret，包一個開發版完成 iPhone 登入與 credited chat-call；後端帳號存在不等於 App Gate 通過 |
+| Dedicated QA account | 正式 Supabase 登入狀態仍在 exact Build；2026-07-29 23:30 App 顯示餘額 `453`（原 505 測試額度已被過往測試扣用），本次 production call 已到「在線」並顯示 Avatar，隨後掛斷回到「未在線」 | iPhone Mirroring 明確禁止使用 iPhone 麥克風，因此未完成真上行／AI 可聽回覆；未獨立確認 Gateway lease／GPU 後端釋放，不能標 App E2E PASS |
 | Subscription / points purchase | Build 47 使用者回報身份與購買後續無法完成 | Sandbox Apple ID、server verification、entitlement／wallet refresh E2E |
-| Authenticated chat call | 凍結 commit `72a0bd46` 的 Build 492 已通過 App Call Control 15/15 與 Avatar render contract，手機已安裝／啟動 | `App E2E pending`：仍需針對該 exact Build＋production Gateway／Voice／Avatar 完成真麥克風、AI 聲畫回應與掛斷釋位；post-package source 不承接結果 |
+| Authenticated chat call | Exact Build `33a11869` 已在 Edward iPhone 安裝；自動化 Call Control 與 Voice／Avatar contract PASS | `App E2E pending`：Build 2 尚未直接在實體 iPhone 完成 0 點 lane 與 credited 真麥克風、可聽／可見 AI 回覆，並以後端證據確認 lease／GPU release |
 | Pricing policy v4 | source／uploaded Build 47／production Brain 已對齊；Apple Product ID 維持原值，Brain 實際 grant mapping 為點數包 100／300／600／1000、Plus 100、Pro 200 | App Store price／description、Tokyo `019` 與登入後 Sandbox purchase／wallet refresh 真人驗收；DB policy mismatch 不參與目前 `/apple/transaction` 的 `verified.points` 入帳路徑，但仍需治理對焦 |
 | Managed-cloud `/chat-test` | #182 已合併，source 預設 404 | Voice 尚未部署；production／staging live GET 仍須重新驗證 404 |
 

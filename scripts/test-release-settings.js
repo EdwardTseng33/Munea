@@ -40,7 +40,7 @@ const gatewayDeploy = read('scripts/cloud-run-deploy-gateway.ps1');
 
 const packageVersion = JSON.parse(read('package.json')).version;
 const expectedAssetToken = `v${packageVersion.replace(/\./g, '')}`;
-for (const asset of ['styles.css', 'version.js', 'auth.js', 'app.js']) {
+for (const asset of ['styles.css', 'version.js', 'auth.js', 'health.js', 'app.js']) {
   const escaped = asset.replace('.', '\\.');
   const match = index.match(new RegExp(`src/${escaped}\\?v=([^"']+)`));
   expect(match && match[1].endsWith(`-${expectedAssetToken}`),

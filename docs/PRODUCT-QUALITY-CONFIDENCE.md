@@ -10,7 +10,7 @@
 
 **目前產品品質信心：69/100，未達 90。**
 
-這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#199 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract、DB deployment ledger、服務 watchdog、Cloud Monitoring 固定頻率控制面與輕量風險治理。2026-07-20 的公開 evidence 確認 production Voice 已由 `1.0.31` 前進到 `1.0.41@906732ab`，但部署身分不能替代安裝版 iPhone 通話。東京 live probe 仍證實 `017` 不可到達、`019` active v4 policy 不符合，`018` 缺核准備份與完整前後檢查。專用 QA 帳號已完成真密碼登入、account bootstrap 與 `505` 點讀回，讓一個 Build 的驗收可執行；Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄。latest uploaded／App Store selected 成品為凍結 commit `72a0bd46` 的 `1.0.44 (Build 492)`；Edward iPhone 已安裝／啟動，但完整 App E2E 仍待真人驗收。current source 已在它之後前進，不得冒用 Build 492 的成品證據。
+這不代表系統只有 69 分的工程能力；它代表目前缺少足以支持「上線可放心」的完整證據。#181–#199 已補 API inventory、managed-cloud `/chat-test` fail-closed、admin data provenance／freshness contract、DB deployment ledger、服務 watchdog、Cloud Monitoring 固定頻率控制面與輕量風險治理。部署身分不能替代安裝版 iPhone 通話。專用 QA 帳號已完成真密碼登入、account bootstrap 與 `505` 點讀回，讓一個 Build 的驗收可執行；Google／帳號、會員與點數購買、0 點通話預檢、真實聊聊撥通仍沒有同一個 Build 的完整 iPhone 驗收紀錄。`1.0.46 (Build 2)` 已完成 Archive／IPA 與 Edward iPhone 安裝回讀；latest uploaded／App Store selected 仍為 `1.0.45 (Build 1)`，Build 2 App E2E 與 Apple upload 仍未完成。
 
 在任何 P0 關鍵旅程失敗或缺少真機閉環時，整體分數最高只能是 69。自動測試全綠可以提高工程信心，不能解除這個上限。
 
@@ -77,9 +77,9 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.44 (Build 492)`；current source 已超過凍結 commit `72a0bd46`，目前沒有適用 post-package source 的 Archive／IPA 或 iPhone 證據，下一包必須使用新 Build number |
-| Latest uploaded App | `1.0.44 (Build 492)`；凍結 commit `72a0bd46`，IPA SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`，Edward iPhone 安裝／啟動與版號回讀成功，App E2E pending |
-| App Store | Build 492 已上傳、processing 完成並選入 1.0.44 版本頁；狀態為「準備提交」，未送審／核准／公開 |
+| Latest source | `1.0.46 (Build 2)` exact commit `33a11869`；Archive／IPA 防漏與 Edward iPhone 安裝／啟動／回讀 PASS，App E2E pending |
+| Latest uploaded App | `1.0.45 (Build 1)`；Apple processing／版本頁選取已成立。1.0.46 Build 2 尚未上傳 |
+| App Store | 1.0.45 Build 1 已選入並儲存；狀態為「準備提交」，未送審／核准／公開。1.0.46 尚未上傳或建立版本頁 |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
 | Production Brain | 17:23 secret-free manifest：公開 `/version` 回 `1.0.40@fa14e4c`，revision `munea-brain-00006-faw`，100% traffic；點數包 100／300／600／1,000 與 Plus 100／Pro 200 mapping 已部署，安全 smoke 與新 revision ERROR log 檢查 PASS，真人 Sandbox purchase 仍 pending |
 | Production Voice | 00:21 secret-free manifest：公開 `/version` 回 `1.0.41@906732ab`，revision `munea-voice-00007-xab`；已與 current Voice source 對齊，真人通話仍需 App E2E |

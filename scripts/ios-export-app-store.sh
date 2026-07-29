@@ -95,7 +95,27 @@ node "$ROOT/scripts/ios-build-identity.js" \
 # App Store Connect may display languages from submitted metadata even when the installed binary
 # cannot actually resolve those localizations. Verify the exported App bundle itself, not the
 # source tree, so unreferenced *.lproj folders or stale Xcode target membership cannot pass.
-REQUIRED_IOS_LOCALIZATIONS=("zh-Hant" "en" "ja" "es")
+REQUIRED_IOS_LOCALIZATIONS=()
+if [ -n "${MUNEA_REQUIRED_IOS_LOCALIZATIONS:-}" ]; then
+  while IFS= read -r locale; do
+    [ -n "$locale" ] && REQUIRED_IOS_LOCALIZATIONS+=("$locale")
+  done <<<"$MUNEA_REQUIRED_IOS_LOCALIZATIONS"
+else
+  while IFS= read -r locale; do
+    [ -n "$locale" ] && REQUIRED_IOS_LOCALIZATIONS+=("$locale")
+  done < <(
+    node -e "
+      const manifest = require('./web/src/i18n/catalog-manifest.json');
+      manifest.locales
+        .filter((entry) => entry.binaryLocalizationEnabled)
+        .forEach((entry) => console.log(entry.nativeLocale));
+    "
+  )
+fi
+if [ "${#REQUIRED_IOS_LOCALIZATIONS[@]}" -eq 0 ]; then
+  echo "FAIL release manifest enables no iOS binary localization."
+  exit 1
+fi
 REQUIRED_LOCALIZED_USAGE_KEYS=(
   "CFBundleDisplayName"
   "NSMicrophoneUsageDescription"
@@ -152,12 +172,15 @@ if ! cmp -s "$ROOT/web/index.html" "$APP_PATH/public/index.html" \
   || ! cmp -s "$ROOT/web/src/app.js" "$APP_PATH/public/src/app.js" \
   || ! cmp -s "$ROOT/web/src/auth.js" "$APP_PATH/public/src/auth.js" \
   || ! cmp -s "$ROOT/web/src/auth-config.js" "$AUTH_CONFIG_PATH" \
+  || ! cmp -s "$ROOT/web/src/health.js" "$APP_PATH/public/src/health.js" \
+  || ! cmp -s "$ROOT/web/src/companion-profile.js" "$APP_PATH/public/src/companion-profile.js" \
+  || ! cmp -s "$ROOT/web/src/notify.js" "$APP_PATH/public/src/notify.js" \
   || ! cmp -s "$ROOT/web/src/styles.css" "$APP_PATH/public/src/styles.css"; then
   echo "FAIL exported IPA does not contain the latest Web design assets."
   exit 1
 fi
 
-for asset_regex in 'styles\.css' 'version\.js' 'auth\.js' 'app\.js'; do
+for asset_regex in 'styles\.css' 'version\.js' 'auth\.js' 'health\.js' 'companion-profile\.js' 'notify\.js' 'app\.js'; do
   if ! grep -Eq "src/${asset_regex}\\?v=[^\"]*-${EXPECTED_ASSET_TOKEN}\"" "$PACKAGED_INDEX_PATH"; then
     echo "FAIL exported IPA cache identity is stale for $asset_regex (expected $EXPECTED_ASSET_TOKEN)."
     exit 1
@@ -234,7 +257,7 @@ fi
 echo "PASS IPA excludes development fixtures and contains the latest Web and authentication assets."
 echo "PASS IPA excludes cloud admin and FlashHead test assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
-echo "PASS IPA contains zh-Hant, English, Japanese, and Spanish binary localizations."
+echo "PASS IPA contains every binary localization enabled by the release manifest."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS IPA app.js is pinned to production Brain/Voice/Call-control endpoints with no staging leak."
 echo "PASS IPA supports iPhone only."
