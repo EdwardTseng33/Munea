@@ -555,8 +555,7 @@
       ],
       "inject": "（此題已改用方案池挑選，見 health_solutions.json TW-EDU-23）",
       "source": "美國兒科醫學會學校上課時間立場聲明＋瑞典公共衛生署螢幕時間建議",
-      "evidence": "強",
-      "specificity": 2
+      "evidence": "強"
     },
     {
       "id": "TW-EDU-25",
