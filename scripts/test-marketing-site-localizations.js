@@ -13,6 +13,8 @@ const config = JSON.parse(
 const manifest = JSON.parse(
   fs.readFileSync(path.join(SITE_SOURCE, 'localization-manifest.json'), 'utf8'),
 );
+const siteUrl = String(config.siteUrl || '').replace(/\/+$/, '');
+assert.equal(siteUrl, 'https://munea.net', 'Marketing canonical authority drifted');
 
 const locales = [
   {
@@ -20,28 +22,28 @@ const locales = [
     catalog: 'zh',
     output: 'index.html',
     htmlLang: 'zh-Hant-TW',
-    canonical: 'https://app.munea.net/',
+    canonical: `${siteUrl}/`,
   },
   {
     locale: 'en',
     catalog: 'en',
     output: 'en/index.html',
     htmlLang: 'en',
-    canonical: 'https://app.munea.net/en',
+    canonical: `${siteUrl}/en`,
   },
   {
     locale: 'ja',
     catalog: 'ja',
     output: 'ja/index.html',
     htmlLang: 'ja',
-    canonical: 'https://app.munea.net/ja',
+    canonical: `${siteUrl}/ja`,
   },
   {
     locale: 'es',
     catalog: 'es',
     output: 'es/index.html',
     htmlLang: 'es',
-    canonical: 'https://app.munea.net/es',
+    canonical: `${siteUrl}/es`,
   },
 ];
 
