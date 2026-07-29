@@ -8438,8 +8438,19 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     # 沒有出生年就傳 None——挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
     _pp = load_person_profile() or {}
     _health_profile = {"audience": health_selector.audience_from_birth_year(_pp.get("birthYear"))}
+    # 話題延續：翻回前幾輪他說過的話，找出這通在聊的那題——不然「我睡不好」的下一句
+    # 「吃鎂有用嗎，真的假的？」會被當成謠言查證，拿不到鎂的方案（2026-07-29 考卷抓到）。
+    _recent_topic = None
+    for h in reversed((history or [])[:-1]):
+        if not isinstance(h, dict) or (h.get("role") or "user") != "user":
+            continue
+        _hit = health_kb.match_topics((h.get("text") or h.get("content") or "").strip(), limit=1)
+        if _hit:
+            _recent_topic = _hit[0]
+            break
     base += health_kb.injection_for(last_user, profile=_health_profile,
-                                    hour=(context.get("now") or {}).get("hour"))
+                                    hour=(context.get("now") or {}).get("hour"),
+                                    recent_topic=_recent_topic)
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):
