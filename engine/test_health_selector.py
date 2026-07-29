@@ -79,6 +79,41 @@ class ThreePeopleThreeAnswersTest(unittest.TestCase):
         self.assertEqual(r["solutions"][0]["id"], "sleep-split-rest")
 
 
+class ThreeAgeBandsTest(unittest.TestCase):
+    """三齡層（高齡／中齡／青少齡）＋代問（2026-07-29 Edward 加的線）。"""
+
+    def test_teen_saying_tired_gets_the_teen_topic_not_the_adult_one(self):
+        """真實抓到的 bug：青少年說「睡不飽」會同時命中成人失眠題，
+        結果拿到「白天曬太陽對長輩特別有效」——對高中生答非所問。"""
+        import health_kb
+        out = health_kb.injection_for("我每天都睡不飽，早上超痛苦",
+                                      profile={"audience": "teen"}, hour=8)
+        self.assertIn("生理時鐘", out)          # 青少年題的內容
+        self.assertNotIn("對長輩特別有效", out)  # 不可以是長輩版
+
+    def test_parent_asking_gets_the_translation_first(self):
+        """家長代問：第一句要先把「他不是懶、是生理」翻譯出來，火才會小。"""
+        r = hs.pick("TW-EDU-23", "我小孩每天熬夜，早上都叫不起來", {"audience": "teen"}, 8)
+        self.assertTrue(r["proxy"])
+        self.assertIsNotNone(r["reframe"])
+        self.assertIn("不是懶", r["reframe"])
+
+    def test_teen_asking_for_self_is_not_treated_as_proxy(self):
+        r = hs.pick("TW-EDU-23", "我每天都睡不飽", {"audience": "teen"}, 8)
+        self.assertFalse(r["proxy"])
+        self.assertNotIn("teen-explain-biology", ids(r))   # 那句是講給家長聽的
+
+    def test_parent_only_solutions_never_reach_the_teen(self):
+        r = hs.pick("TW-EDU-23", "我每天都睡不飽", {"audience": "teen"}, 8)
+        for s in r["solutions"]:
+            self.assertNotEqual(s.get("forWhom"), "parent")
+
+    def test_teen_referral_carries_the_crisis_line(self):
+        """青少年這條線最危險的是情緒——轉介卡必須帶危機專線。"""
+        r = hs.pick("TW-EDU-23", "我每天都睡不飽", {"audience": "teen"}, 8)
+        self.assertIn("1925", r["referral"]["say"])
+
+
 class DoableAndPreferenceTest(unittest.TestCase):
     """正確但做不到的建議比不給更傷；偏好也要被尊重。"""
 

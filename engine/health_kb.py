@@ -63,6 +63,17 @@ def injection_for(text, exclude=None, profile=None, hour=None):
     ids = match_topics(text, exclude=exclude)
     if not ids:
         return ""
+    # 2026-07-29（三齡層擴充時抓到）：同一句話可能命中好幾題（青少年說「睡不飽」會同時
+    # 命中成人失眠題與青少年睡眠題）。**要挑對這個人的那一題**——不然高中生會拿到
+    # 「白天曬太陽對長輩特別有效」這種答非所問的建議。有標齡層的題優先。
+    aud = (profile or {}).get("audience")
+    if aud:
+        def _serves_audience(tid):
+            topic = health_selector.TOPICS.get(tid)
+            if not topic:
+                return False
+            return any(aud in (s.get("audience") or []) for s in topic.get("solutions") or [])
+        ids = sorted(ids, key=lambda t: (not _serves_audience(t),))
     for tid in ids:
         if tid in health_selector.TOPICS:
             picked = health_selector.render(tid, text, profile, hour)

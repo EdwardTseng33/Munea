@@ -345,6 +345,119 @@
           "say": "如果會手麻、手沒力，或痛到晚上睡不著，這個要看醫生——一般會先看復健科或骨科，別自己一直忍。"
         }
       ]
+    },
+    "TW-EDU-23": {
+      "title": "青少年睡不夠／叫不起來",
+      "reframe": [
+        {
+          "forWhom": "parent",
+          "when": "家長抱怨小孩熬夜叫不起來",
+          "say": "先幫家長把這件事翻譯過來：青春期一開始，生理時鐘真的會往後移一到兩個小時（褪黑激素分泌時間延後），**他不是懶、不是故意跟你作對，是生理**。這句話先講出來，親子之間的火會小很多，後面的建議才聽得進去。"
+        },
+        {
+          "forWhom": "self",
+          "when": "青少年自己說睡不飽",
+          "say": "先讓他知道：晚睡爬不起來不是你意志力差，你這個年紀的生理時鐘本來就會往後跑一兩個小時——這是真的、有研究的。不用先罵自己。"
+        }
+      ],
+      "solutions": [
+        {
+          "id": "teen-explain-biology",
+          "label": "先講清楚這是生理不是懶",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "teen"
+          ],
+          "forWhom": "parent",
+          "evidence": {
+            "source": "美國兒科醫學會學校上課時間立場聲明／青少年睡眠相位延遲研究",
+            "finding": "青春期褪黑激素分泌延後約1.5-2小時；13-18歲建議睡8-10小時，實際多半只有7小時"
+          },
+          "say": "跟他吵「早點睡」通常沒用，因為他生理上那個時間真的還不想睡。與其吵，不如把重點放在「早上怎麼比較好起來」跟「假日別補太多」。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "teen-weekend-anchor",
+          "label": "假日別補眠補太多",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "teen"
+          ],
+          "say": "假日最多比平常晚起一兩個小時就好。一補就補到中午，等於每個週末讓生理時鐘再往後推，禮拜一會更爬不起來。"
+        },
+        {
+          "id": "teen-morning-light",
+          "label": "起床後先照到光",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "teen"
+          ],
+          "say": "早上起來先拉開窗簾、出門走幾分鐘，光線是把生理時鐘往前拉最有效的東西——比多睡十分鐘有用。"
+        },
+        {
+          "id": "teen-screen-limit",
+          "label": "睡前螢幕時間",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "teen"
+          ],
+          "evidence": {
+            "source": "瑞典公共衛生署 2024 建議／螢幕時間與青少年憂鬱症狀 12 個月追蹤",
+            "finding": "13-18歲每日休閒螢幕建議上限2-3小時；螢幕時間主要透過排擠睡眠影響情緒"
+          },
+          "say": "研究上螢幕真正的傷害不是藍光，是「一滑就忘記時間、睡眠被吃掉」。與其禁用，不如一起約好一個「手機睡覺時間」，放到房間外面充電。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "teen-no-blame-talk",
+          "label": "別用罵的談這件事",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "teen"
+          ],
+          "forWhom": "parent",
+          "say": "這個年紀你越用罵的，他越不會跟你講真話。可以換成問他「你自己覺得睡得夠嗎？早上起來會不會很痛苦？」——讓他自己說，比你說十句有用。"
+        },
+        {
+          "id": "teen-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "teen"
+          ],
+          "escalateWhen": [
+            "白天嚴重嗜睡影響上課",
+            "情緒明顯低落或不想上學",
+            "體重快速變化",
+            "講到不想活"
+          ],
+          "say": "如果他白天累到上課都在睡、或情緒明顯低落、不想上學，這個要看醫生——一般先看兒童青少年身心科或家醫科。**要是他講到不想活、活著沒意思這類的話，那不能等，立刻找專業幫忙（1925 安心專線 24 小時）。**"
+        }
+      ]
     }
   }
 }
