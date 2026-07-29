@@ -47,6 +47,29 @@ assert.equal(
   worklist.summary.occurrences,
 );
 assert.equal(new Set(worklist.entries.map((entry) => entry.suggestedKey)).size, worklist.entries.length);
+const migratedAttributeKeys = [
+  'accessibility.manageFamily',
+  'accessibility.removeImage',
+  'accessibility.removePhoto',
+  'accessibility.toggleCall',
+  'accessibility.toggleCaptions',
+  'accessibility.toggleMicrophone',
+  'activity.adjustGoal',
+  'activity.deadlineDate',
+  'activity.deadlineTime',
+  'activity.voteQuestionPlaceholder',
+  'appointment.close',
+  'feedback.npsAria',
+  'history.nextMonth',
+  'history.previousMonth',
+  'subscription.creditRulesTitle',
+];
+for (const key of migratedAttributeKeys) {
+  assert(
+    !worklist.entries.some((entry) => entry.suggestedKey === key),
+    `${key} must stay catalog-bound after the first attribute migration batch`,
+  );
+}
 for (const entry of worklist.entries) {
   assert.equal(entry.reviewStatus, 'pending', 'No catalog match may auto-approve source migration');
   if (entry.resolutionKind === 'reuse-existing-key') {
