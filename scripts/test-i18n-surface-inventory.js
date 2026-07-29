@@ -240,7 +240,7 @@ assert.deepEqual(medication.reviewFailures, []);
 const notifications = appWebView.files.find(
   (file) => file.path === 'web/src/notify.js',
 );
-assert.equal(notifications.boundHanCandidates, 63);
+assert.equal(notifications.boundHanCandidates, 64);
 assert.equal(notifications.reviewedNonUserFacingHanCandidates, 9);
 assert.equal(notifications.unboundHanCandidates, 0);
 assert.deepEqual(notifications.reviewFailures, []);

@@ -316,6 +316,17 @@ window.MuneaNotify = (function () {
       var visitAt = new Date(visit.dateISO + 'T' + (visit.time || '09:00'));
       var remindAt = new Date(visitAt.getTime() - 60 * 60 * 1000);
       if (isNaN(remindAt) || remindAt <= new Date()) return;
+      // 口袋問題：有記下要問醫生的問題，就在看診提醒裡帶一句「有 N 個問題要問」。
+      // 只帶**數量**、不帶問題內文——健康疑問屬敏感內容，不放進推播文字（鎖定畫面另有 publicBody 遮罩）。
+      var openQ = 0;
+      try {
+        var qs = JSON.parse(localStorage.getItem('munea.careQuestions')) || [];
+        if (Array.isArray(qs)) openQ = qs.filter(function (q) { return q && q.text && !q.askedAt; }).length;
+      } catch (e) {}
+      var visitBody = t('notification.clinicBody', '等等 {time} 記得帶健保卡。', { time: visit.time || '' });
+      if (openQ > 0) {
+        visitBody += t('notification.clinicQuestions', '你有 {n} 個問題要問醫生，記得帶著問。', { n: openQ });
+      }
       items.push(Object.assign({
         id: 'visit-' + visit.id,
         hour: remindAt.getHours(), minute: remindAt.getMinutes()
@@ -323,7 +334,7 @@ window.MuneaNotify = (function () {
         t('notification.clinicTitle', '{title}提醒', {
           title: visit.title || t('notification.clinicDefaultTitle', '回診')
         }),
-        t('notification.clinicBody', '等等 {time} 記得帶健保卡。', { time: visit.time || '' }),
+        visitBody,
         'clinic_upcoming', visit.id, 'munea://visits/' + visit.id
       )));
     });
