@@ -165,66 +165,6 @@
   .hero-media .fc-1{top:-20px;left:-16px}
   .hero-media .fc-2{bottom:-20px;right:-16px}
 
-  /* ══════════ 動態層（Edward 7/29 拍板：中等）══════════ */
-  /* 全部都吃系統的「減少動態」設定；長輩或會暈的人不會被轉到 */
-
-  /* ① 數字滑到才長出來 */
-  .cnum{font-variant-numeric:tabular-nums}
-
-  /* ② 手機截圖跟著捲動輕微位移（很淡的視差） */
-  .pz-vis .dev,.pz-vis .callphone{will-change:transform;transition:transform .12s linear}
-
-  /* ③ 逐項錯開浮現：清單、流程步驟 */
-  .stg>*{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s cubic-bezier(.2,.8,.2,1)}
-  .stg.in>*{opacity:1;transform:none}
-  .stg.in>*:nth-child(1){transition-delay:.04s}
-  .stg.in>*:nth-child(2){transition-delay:.12s}
-  .stg.in>*:nth-child(3){transition-delay:.20s}
-  .stg.in>*:nth-child(4){transition-delay:.28s}
-  .stg.in>*:nth-child(5){transition-delay:.36s}
-  .stg.in>*:nth-child(6){transition-delay:.44s}
-  .stg.in>*:nth-child(7){transition-delay:.52s}
-  .stg.in>*:nth-child(8){transition-delay:.60s}
-  .stg.in>*:nth-child(9){transition-delay:.68s}
-
-  @media(prefers-reduced-motion:reduce){
-    .stg>*{opacity:1!important;transform:none!important;transition:none!important}
-    .pz-vis .dev,.pz-vis .callphone{transform:none!important}
-    .hero-media .fc-1,.hero-media .fc-2{animation:none!important}
-  }
-
-  /* ══════════ 一天之中（捲動說故事）══════════ */
-  #story{padding:80px 0}
-  #story .story-grid{margin-top:44px}
-  #story .scene .ph{border-radius:20px;overflow:hidden;background:#e9f2ed;display:grid;place-items:center}
-  #story .scene .ph img{width:auto;height:100%;max-height:520px;object-fit:contain;display:block;transition:opacity .35s ease}
-  #story .scene .ph.swapping img{opacity:0}
-  #story .story-step{cursor:pointer}
-  #story .story-step p{margin:0}
-  @media(max-width:880px){
-    #story .story-grid{grid-template-columns:1fr;gap:28px}
-    #story .story-sticky{position:static}
-    #story .scene .ph img{max-height:380px}
-  }
-
-  /* ══════════ 六位夥伴 ══════════ */
-  #cast{padding:78px 0;background:var(--cream-2)}
-  .castgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:42px}
-  .castcard{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px 14px 20px;text-align:center;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s}
-  .castcard:hover{transform:translateY(-6px);border-color:var(--teal)}
-  .castcard .av{width:96px;height:96px;border-radius:50%;overflow:hidden;margin:0 auto 14px;background:var(--mint);position:relative}
-  .castcard .av img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
-  .castcard:hover .av img{transform:scale(1.09)}
-  .castcard .av::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--coral);opacity:0;transform:scale(.86);transition:opacity .3s,transform .35s cubic-bezier(.2,.8,.2,1)}
-  .castcard:hover .av::after{opacity:1;transform:scale(1)}
-  .castcard b{display:block;font-size:17px;font-weight:700;color:var(--ink);margin-bottom:5px}
-  .castcard small{display:block;font-size:12.5px;color:var(--muted);line-height:1.6}
-  .castcard .kind{display:inline-block;margin-top:11px;font-family:"Poppins";font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:4px 10px;border-radius:100px;background:var(--mint);color:var(--teal-d)}
-  .castcard .kind.toon{background:var(--coral-soft);color:var(--coral-d)}
-  .castnote{text-align:center;margin-top:34px;color:var(--muted);font-size:15px}
-  @media(max-width:980px){.castgrid{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:520px){.castgrid{grid-template-columns:repeat(2,1fr);gap:14px}.castcard .av{width:78px;height:78px}}
-
   /* ══════════ 眼見為憑 ══════════ */
   #livedemo{padding:76px 0;background:var(--mint)}
   #livedemo .sec-head{margin-bottom:38px}
@@ -406,9 +346,9 @@
       <div class="eyebrow">沐寧接住的事</div>
       <h2>被好好陪著，不該總是要等人有空</h2>
       <p>從家裡的長輩，到在外地的孩子，每個人都卡在一個不好說出口的難處。</p>
-      <div class="pain-aside-foot"><span class="big cnum" data-count="4">0</span><span class="txt">沐寧默默<br>接住的事</span></div>
+      <div class="pain-aside-foot"><span class="big">4</span><span class="txt">沐寧默默<br>接住的事</span></div>
     </aside>
-    <ol class="pain-track stg reveal">
+    <ol class="pain-track reveal">
       <li class="ptk-item"><span class="ptk-num">01</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><div class="ptk-body"><span class="ptk-role">孤單</span><h3>一整天，沒有一個人好好說說話</h3></div></li>
       <li class="ptk-item"><span class="ptk-num">02</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span><div class="ptk-body"><span class="ptk-role">記不住</span><h3>藥吃了沒、該回診了嗎，常記不清</h3></div></li>
       <li class="ptk-item"><span class="ptk-num">03</span><span class="ptk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span><div class="ptk-body"><span class="ptk-role">在外地</span><h3>不在身邊，不知道爸媽今天好不好</h3></div></li>
@@ -417,31 +357,6 @@
   </div>
 </section>
 
-<!-- ═══ 一天之中（捲動說故事）═══ -->
-<section class="story" id="story">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow center">一天之中</div>
-      <h2>她不是等你開口，才想起你</h2>
-      <p>從早上第一句話，到睡前那一句晚安——沐寧的一天，是繞著家裡的人走的。</p>
-    </div>
-    <div class="story-grid">
-      <div class="story-sticky">
-        <div class="scene">
-          <div class="ph"><img src="/assets/app-home.jpg" alt="沐寧 App 畫面" loading="lazy"></div>
-          <div class="scene-label"><span class="d"></span><span class="txt">早上・她先開口</span></div>
-          <div class="timechip">08:00</div>
-        </div>
-      </div>
-      <div class="story-steps">
-        <article class="story-step on" data-scene="早上・她先開口" data-img="/assets/app-home.jpg" data-time="08:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span><div><span class="num">01</span><h3>早上，她先跟你說早</h3></div></div><p>天亮前她已經把今天的天氣、日子、家人動態都備好了。你一開口，她接得上，不用你從頭交代。</p></article>
-        <article class="story-step" data-scene="中午・親口提醒" data-img="/assets/app-reminder.jpg" data-time="12:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span><div><span class="num">02</span><h3>中午，該吃藥了她會喊你</h3></div></div><p>用藥與回診到點親口提醒，還會推到手機上。漏了也不指責，換個時間再問一次。</p></article>
-        <article class="story-step" data-scene="下午・家人放心" data-img="/assets/app-family.jpg" data-time="15:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span><div><span class="num">03</span><h3>下午，家人那邊也安心</h3></div></div><p>健康與心情的變化，變成家人手機上看得到的狀況。真有異常，先關心本人，再通知家人。</p></article>
-        <article class="story-step" data-scene="晚上・睡前記得" data-img="/assets/app-status.jpg" data-time="21:00"><div class="head"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span><div><span class="num">04</span><h3>晚上，今天說過的事她收好了</h3></div></div><p>聊過的事整理進記憶：重要的長期記著、當天的暫時放著。明天接得上，不用你重講一次。</p></article>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- ═══ 功能 ═══ -->
 <section id="features">
@@ -461,7 +376,7 @@
           <span class="badge"><span class="d"></span><span>AI 健康趨勢看顧</span></span>
           <h3>用藥、看診、身體數字，都替你看著</h3>
           <p>沐寧替你看顧健康——用藥提醒、回診看診提醒都用溫柔的語音喊你；步數、心率、血壓、睡眠等數字從 Apple 健康自動帶進來。</p>
-          <ul class="flist stg">
+          <ul class="flist">
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span><b>用藥與看診提醒</b>——到點親口喊你，漏了不指責</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span><b>健康趨勢一眼看見</b>——步數、心率、血壓、睡眠</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span><b>Apple 健康同步</b>——自動帶進來，不用手動記</span></li>
@@ -478,7 +393,7 @@
           <span class="badge"><span class="d"></span><span>像跟真人視訊</span></span>
           <h3>聊起來生動自然，就像在跟人視訊</h3>
           <p>作為家庭的健康照護管家，沐寧陪家人聊天。即時語音對話＋會動的臉，讓每次聊天都生動、有溫度、舒服自然——就像在跟真人視訊。</p>
-          <ul class="flist stg">
+          <ul class="flist">
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg><span><b>即時語音對話</b>——想插話就插話，答話不卡頓</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg><span><b>會動的臉</b>——看著你、開口說話，像真的有人在陪</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg><span><b>記得你說的話</b>——這次從上次聊到的地方接著聊</span></li>
@@ -495,7 +410,7 @@
           <span class="badge"><span class="d"></span><span>一家人更靠近</span></span>
           <h3>看見彼此的狀態，也一起玩在一起</h3>
           <p>在家庭照護圈裡，家人可以看見、關心彼此的健康與心情；還能發起健康運動、機智問答等小遊戲，替親子的陪伴與互動多添一點樂趣。</p>
-          <ul class="flist stg">
+          <ul class="flist">
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg><span><b>健康與心情狀態</b>——互相看得見，在外地也安心</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 3v7a6 6 0 0012 0V3"/><path d="M4 21h16M9 3H5m14 0h-4"/></svg><span><b>一起走路挑戰</b>——全家比步數，越動越健康</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 115 .5c0 1.5-2 2-2 3.5M12 17h.01"/></svg><span><b>機智問答遊戲</b>——陪爸媽動動腦，笑聲多一點</span></li>
@@ -508,25 +423,6 @@
   </div>
 </section>
 
-<!-- ═══ 六位夥伴 ═══ -->
-<section id="cast">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="eyebrow center">挑一個合得來的</div>
-      <h2>六位夥伴，換誰陪都可以</h2>
-      <p>換一位夥伴，就換一套個性與聲音——長輩喜歡誰陪，就讓誰陪。記憶跟著家人走，換了夥伴，她們一樣記得你。</p>
-    </div>
-    <div class="castgrid stg reveal">
-      <div class="castcard"><div class="av"><img src="/assets/face-nening.png" alt="寧寧" loading="lazy" width="132" height="132"></div><b>寧寧</b><small>溫柔細心的<br>擬真女生</small><span class="kind">擬真</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-ahong.png" alt="阿宏" loading="lazy" width="132" height="132"></div><b>阿宏</b><small>沉穩可靠的<br>擬真男生</small><span class="kind">擬真</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-xiaoyun.png" alt="小昀" loading="lazy" width="132" height="132"></div><b>小昀</b><small>活潑好聊的<br>插畫女孩</small><span class="kind toon">插畫</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-ayuan.png" alt="阿原" loading="lazy" width="132" height="132"></div><b>阿原</b><small>憨厚幽默的<br>插畫男孩</small><span class="kind toon">插畫</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-mimi.png" alt="咪咪" loading="lazy" width="132" height="132"></div><b>咪咪</b><small>撒嬌黏人的<br>貓咪</small><span class="kind toon">毛小孩</span></div>
-      <div class="castcard"><div class="av"><img src="/assets/face-wangcai.png" alt="旺財" loading="lazy" width="132" height="132"></div><b>旺財</b><small>熱情忠心的<br>狗狗</small><span class="kind toon">毛小孩</span></div>
-    </div>
-    <p class="castnote reveal">名字也可以自己改——想叫她什麼，她就答應什麼。</p>
-  </div>
-</section>
 
 <!-- ═══ 眼見為憑 ═══ -->
 <section id="livedemo">
@@ -569,7 +465,7 @@
     <div class="arch-wrap reveal">
       <div class="arch-cap"><i></i><span>技術架構 · 智能怎麼組成</span><i></i></div>
 
-      <div class="arch-modules stg">
+      <div class="arch-modules">
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg></span>
           <span class="arch-tag">MEMORY · 記憶</span>
@@ -601,7 +497,7 @@
         </div>
       </div>
 
-      <div class="arch-formula stg">
+      <div class="arch-formula">
         <span class="af-result">回應</span>
         <span class="af-eq">=</span>
         <span class="af-term">人格</span><span class="af-plus">+</span>
@@ -612,7 +508,7 @@
         <span class="af-term">表達</span>
       </div>
 
-      <div class="arch-pipeline stg">
+      <div class="arch-pipeline">
         <span class="ap-step">你說話</span><span class="ap-arrow">→</span>
         <span class="ap-step">即時組脈絡</span><span class="ap-arrow">→</span>
         <span class="ap-step">語音回＋臉同步</span><span class="ap-arrow">→</span>
@@ -631,7 +527,7 @@
         </div>
         <div class="cmp-item"><span class="ci-cat">本質</span><p class="ci-a">一個通用助手，什麼都回</p><p class="ci-b">記憶＋感知＋交互＋安全＋人格，協同運作的照護系統</p></div>
         <div class="cmp-item"><span class="ci-cat">臉／聲音</span><p class="ci-a">文字框</p><p class="ci-b">真臉＋真聲，即時視訊感</p></div>
-        <div class="cmp-item"><span class="ci-cat">角色</span><p class="ci-a">一個助理</p><p class="ci-b">六位有個性的角色，換角色就換一套人格與聲線</p></div>
+        <div class="cmp-item"><span class="ci-cat">角色</span><p class="ci-a">一個助理</p><p class="ci-b">有個性的角色人格，換角色就換一套人格與聲線</p></div>
         <div class="cmp-item"><span class="ci-cat">懂此刻</span><p class="ci-a">你問才知道</p><p class="ci-b">每天主動預建今日情境脈絡</p></div>
         <div class="cmp-item"><span class="ci-cat">邊界</span><p class="ci-a">可能亂給醫療建議</p><p class="ci-b">不做診斷、用藥只提醒，不知道就說不知道</p></div>
         <div class="cmp-item"><span class="ci-cat">為誰做</span><p class="ci-a">通用工具</p><p class="ci-b">為全家人的身心健康而做</p></div>
@@ -664,7 +560,6 @@
         <h4>認識沐寧</h4>
         <a href="#personas">用戶情境</a>
         <a href="#features">功能特色</a>
-        <a href="#cast">六位夥伴</a>
         <a href="#tech">技術核心</a>
       </div>
       <div class="foot-col">
@@ -751,65 +646,6 @@
     });
   })();
 
-  if (reduce) return;
-
-  /* 數字滑到才長出來 */
-  (function(){
-    var nums = [].slice.call(document.querySelectorAll('.cnum[data-count]'));
-    if (!nums.length) return;
-    var io = new IntersectionObserver(function(es){
-      es.forEach(function(e){
-        if (!e.isIntersecting) return;
-        io.unobserve(e.target);
-        var el = e.target, target = parseInt(el.dataset.count, 10) || 0, t0 = null;
-        (function step(ts){
-          if (t0 === null) t0 = ts;
-          var p = Math.min((ts - t0) / 900, 1);
-          el.textContent = String(Math.round(target * (1 - Math.pow(1 - p, 3))));
-          if (p < 1) requestAnimationFrame(step);
-        })(performance.now());
-      });
-    }, {threshold: .6});
-    nums.forEach(function(n){ io.observe(n); });
-  })();
-
-  /* 逐項錯開浮現 */
-  (function(){
-    var groups = [].slice.call(document.querySelectorAll('.stg'));
-    if (!groups.length) return;
-    var io = new IntersectionObserver(function(es){
-      es.forEach(function(e){
-        if (!e.isIntersecting) return;
-        e.target.classList.add('in');
-        io.unobserve(e.target);
-      });
-    }, {threshold: .18});
-    groups.forEach(function(g){ io.observe(g); });
-  })();
-
-  /* 手機截圖跟著捲動輕輕位移（最大 ±14px，不搶戲） */
-  (function(){
-    if (!window.matchMedia('(min-width:881px)').matches) return;
-    var shots = [].slice.call(document.querySelectorAll('.pz-vis .dev, .pz-vis .callphone'));
-    if (!shots.length) return;
-    var ticking = false;
-    function tick(){
-      var vh = window.innerHeight;
-      shots.forEach(function(el){
-        var r = el.getBoundingClientRect();
-        if (r.bottom < -200 || r.top > vh + 200) return;
-        var mid = (r.top + r.height / 2 - vh / 2) / vh;   // -0.5 ~ 0.5
-        el.style.transform = 'translateY(' + (mid * -22).toFixed(1) + 'px)';
-      });
-      ticking = false;
-    }
-    window.addEventListener('scroll', function(){
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(tick);
-    }, {passive:true});
-    tick();
-  })();
 })();
 </script>
 </body>
