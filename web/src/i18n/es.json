@@ -442,7 +442,7 @@
   "feedback.submit": "Enviar comentarios",
   "medication.title": "Medicación",
   "medication.namePlaceholder": "Copia el nombre del medicamento de la etiqueta",
-  "medication.genericName": "Medicamento",
+  "medication.genericName": "medicamento",
   "medication.taken": "Tomado",
   "medication.notTaken": "No tomado",
   "medication.slot.afterBreakfast": "Desayuno",
@@ -460,11 +460,11 @@
   "health.notConnected": "Sin conexión",
   "health.noReadableData": "No hay datos legibles",
   "health.noReadableDataDetail": "Conectado, pero todavía no se puede leer ningún dato de salud",
-  "health.noReadableDataHelp": "Munea todavía no puede leer ningún elemento de salud. Abre la app Salud, toca tu foto de perfil, entra en Apps y servicios, selecciona Munea y activa los elementos que quieras compartir. Si este iPhone aún no tiene registros, aparecerán cuando estén disponibles.",
+  "health.noReadableDataHelp": "Munea aún no puede leer ningún dato. Puede que no activaras los elementos o que este iPhone todavía no tenga esos registros. Usa el botón de abajo para abrir Salud y activarlos.",
   "health.syncingDetail": "Sincronizando pasos, frecuencia cardiaca, sueño, presión arterial y oxígeno en sangre",
   "health.availableDetail": "Incluye automáticamente Apple Watch y otros dispositivos · Pasos / frecuencia cardiaca / sueño / presión arterial / oxígeno en sangre",
   "health.disconnectHelp": "Al desconectar Munea se detendrá la sincronización futura. Los registros existentes se conservarán. Para revocar el acceso a Apple Salud, abre tu perfil en la app Salud y administra Munea en Privacidad.",
-  "health.notConnectedHelp": "Los datos de salud no se están sincronizando. Vuelve a conectar para leer datos nuevos.",
+  "health.notConnectedHelp": "Al tocar Conectar, el iPhone muestra una pantalla de permisos. Activa cada dato que quieras compartir con Munea y luego toca Permitir: todos vienen desactivados.",
   "health.confirmDisconnect": "Pulsa de nuevo para desconectar",
   "companion.nening.name": "Ningning",
   "companion.nening.label": "Cálida · Atenta, como de la familia",
@@ -661,7 +661,6 @@
   "notification.loading": "Cargando notificaciones…",
   "notification.signInRequired": "Inicia sesión o inténtalo de nuevo más tarde.",
   "notification.emptyDetail": "Todavía no hay notificaciones. Los recordatorios y mensajes familiares nuevos aparecerán aquí.",
-  "medication.genericName": "medicamento",
   "textChat.title": "Continuar por texto",
   "textChat.placeholder": "Escribe lo que quieras decir",
   "textChat.send": "Enviar",
@@ -730,5 +729,6 @@
   "legacyUi.familyAllStatus": "Estado familiar",
   "legacyUi.familyOkay": "Todo bien",
   "version.webBuild": "Web v{version}",
-  "version.localizedSummary": "Esta actualización mejora las explicaciones del estado de llamada, la alternativa por texto y la legibilidad."
+  "version.localizedSummary": "Esta actualización mejora las explicaciones del estado de llamada, la alternativa por texto y la legibilidad.",
+  "health.openHealthApp": "Abrir Salud para activar los datos"
 }

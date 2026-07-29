@@ -703,6 +703,10 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .cn-row .cn-btn.disconnect { background: var(--surface); color: var(--danger-d); border: 1px solid rgba(176,57,45,.4); }
 .cn-row .cn-btn.disconnect.arm { background: rgba(194,75,68,.1); }
 .cn-health-help { margin: 0 4px 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+/* 讀不到資料時才出現的補救鍵：長輩找不到「健康」App 裡那層設定，用一顆鍵直接送過去 */
+.cn-health-open { display: block; width: calc(100% - 8px); margin: -8px 4px 18px; min-height: 48px; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--teal); background: #fff; color: var(--teal-dd); font-family: var(--display); font-weight: 700; font-size: 15px; line-height: 1.4; cursor: pointer; }
+.cn-health-open:active { background: var(--mint); }
+.cn-health-open[hidden] { display: none; }
 .sr-on.off { color: var(--muted); }
 .sr-on.off .d { background: var(--muted); }
 .cn-note { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 15px 16px; margin-top: 18px; }

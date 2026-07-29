@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import HealthKit
+import UIKit
 
 /// 沐寧 · Apple 健康（HealthKit）原生橋接
 /// 網頁端透過 Capacitor.Plugins.Health 呼叫：
@@ -19,7 +20,8 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getSummary", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getHistory", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getHistory", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openHealthApp", returnType: CAPPluginReturnPromise)
     ]
 
     private let store = HKHealthStore()
@@ -52,6 +54,27 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             call.resolve(["granted": success, "available": true])
+        }
+    }
+
+    /// 打開「健康」App，讓使用者自己去開項目。
+    /// 為什麼需要這個：蘋果的授權視窗**一輩子只跳一次**（同一批項目問過就不再問），
+    /// 而且視窗裡的項目**預設全是關的**——很多人直接按「允許」等於一項都沒開。
+    /// 之後要補開，唯一的路就是「健康」App →個人照片→「App 與服務」→沐寧。
+    /// App 不能代替使用者打開項目（蘋果不給），只能把他送到門口。
+    @objc func openHealthApp(_ call: CAPPluginCall) {
+        guard let url = URL(string: "x-apple-health://") else {
+            call.resolve(["opened": false])
+            return
+        }
+        DispatchQueue.main.async {
+            guard UIApplication.shared.canOpenURL(url) else {
+                call.resolve(["opened": false])
+                return
+            }
+            UIApplication.shared.open(url, options: [:]) { ok in
+                call.resolve(["opened": ok])
+            }
         }
     }
 

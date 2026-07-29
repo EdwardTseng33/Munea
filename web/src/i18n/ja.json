@@ -460,11 +460,11 @@
   "health.notConnected": "未接続",
   "health.noReadableData": "データを読み取れません",
   "health.noReadableDataDetail": "連携済みですが、現在読み取れる健康データがありません",
-  "health.noReadableDataHelp": "Munea はまだ健康項目を読み取れません。ヘルスケア App でプロフィール写真をタップし、「App とサービス」→ Munea を開いて、共有する項目を有効にしてください。この iPhone にまだ記録がない場合は、記録ができると表示されます。",
+  "health.noReadableDataHelp": "まだ一つも読み取れていません。許可画面で項目がオンになっていないか、この iPhone にまだ記録がない可能性があります。下のボタンからヘルスケアを開いて項目をオンにしてください。",
   "health.syncingDetail": "歩数、心拍数、睡眠、血圧、血中酸素を同期しています",
   "health.availableDetail": "Apple Watchやほかのデバイスを自動で含みます · 歩数／心拍数／睡眠／血圧／血中酸素",
   "health.disconnectHelp": "Muneaとの接続を解除すると今後の同期は停止します。これまでの記録は残ります。Appleヘルスケアのシステム権限を取り消すには、「ヘルスケア」Appのプロフィール画像からプライバシー設定を開き、Muneaを管理してください。",
-  "health.notConnectedHelp": "現在は同期していません。新しい健康データを読み取るには、もう一度接続してください。",
+  "health.notConnectedHelp": "「連携」を押すと iPhone に許可画面が出ます。Munea に見せたい項目を一つずつオンにしてから許可を押してください——初期状態ではすべてオフです。",
   "health.confirmDisconnect": "もう一度押して解除",
   "companion.nening.name": "ニンニン",
   "companion.nening.label": "やさしいタイプ · 家族のように見守る",
@@ -661,7 +661,6 @@
   "notification.loading": "通知を読み込んでいます…",
   "notification.signInRequired": "サインインしてから、もう一度お試しください。",
   "notification.emptyDetail": "通知はまだありません。新しいリマインダーや家族からのお知らせはここに表示されます。",
-  "medication.genericName": "薬",
   "textChat.title": "文字で会話を続ける",
   "textChat.placeholder": "伝えたいことを入力",
   "textChat.send": "送信",
@@ -730,5 +729,6 @@
   "legacyUi.familyAllStatus": "家族の状態",
   "legacyUi.familyOkay": "良好",
   "version.webBuild": "Web v{version}",
-  "version.localizedSummary": "通話状態の説明、文字での代替手段、読みやすさを改善しました。"
+  "version.localizedSummary": "通話状態の説明、文字での代替手段、読みやすさを改善しました。",
+  "health.openHealthApp": "ヘルスケアを開いて項目をオンにする"
 }
