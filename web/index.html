@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260728-v1044" />
+  <link rel="stylesheet" href="src/styles.css?v=20260729-v1044" />
 </head>
 <body>
 <div class="app-shell">
@@ -420,6 +420,8 @@
         <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main"><span data-i18n="settings.appleHealth">Apple 健康</span><small data-i18n="settings.appleHealthSubtitle">步數・心率・睡眠</small></span><span class="sr-on" id="healthSettingsState"><span class="d"></span><span id="healthSettingsStateLabel">未連接</span></span></div>
         <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings">2 種藥</b> ›</span></div>
         <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">看診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">回診前一天提醒你</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
+
+        <div class="set-row" id="visitSummaryRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="sr-main"><span data-i18n="settings.visitSummary">就診摘要</span><small data-i18n="settings.visitSummarySubtitle">帶去給醫生看的一頁整理</small></span><span class="sr-arrow"><b id="visitSummaryPeriodLabel"></b> ›</span></div>
         <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">同步到需留意的數據時，通知你選定的家人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
         <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="settings.myData">我的資料</span><small data-i18n="settings.myDataSubtitle">匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
@@ -757,16 +759,22 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close" id="reportClose" type="button" aria-label="關閉摘要" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>回診摘要 · 6 月</h2>
-      <p class="modal-sub">這個月的重點整理成一頁，醫生一眼看懂。</p>
-      <div class="rpt-card">
-        <div class="rpt-row"><span class="rpt-k">用藥</span><div><b>準時 23 / 30 天</b><span>漏的多在中餐，已把提醒往後挪半小時</span></div></div>
-        <div class="rpt-row"><span class="rpt-k">血壓</span><div><b>平均 128 / 82</b><span>範圍 118–142 · 早晚各量一次</span></div></div>
-        <div class="rpt-row"><span class="rpt-k">睡眠</span><div><b>平均 7.3 小時</b><span>入睡穩定，偶爾半夜醒一次</span></div></div>
-        <div class="rpt-row"><span class="rpt-k">想問醫生</span><div><b>睡前偶爾頭暈</b><span>7/1 跟<span class="cname">寧寧</span>聊到，記得帶這題問</span></div></div>
+      <!-- 就診摘要（M1 · PR-4c）。這個面板本來是死的：#reportBtn 全專案不存在＝按鈕從沒被綁上、
+           內容全是寫死的假數字。2026-07-28 改為真資料 —— 版型與分享管線沿用，內容全部重寫。
+           紙面抬頭刻意用「就診摘要」而不是 App 裡的暱稱：這一頁會被醫師看到，要專業不要俏皮。 -->
+      <button class="rpt-export" id="rptExportBtn" type="button" aria-label="匯出這份摘要" data-i18n="visit.export">匯出</button>
+      <h2 data-i18n="visit.summaryTitle">就診摘要</h2>
+      <p class="modal-sub" id="rptPeriodLine" data-i18n="visit.preparing">整理中…</p>
+      <div class="seg" id="rptPeriodTabs" role="tablist" aria-label="選擇涵蓋期間">
+        <button class="seg-btn" type="button" data-days="7">7天</button>
+        <button class="seg-btn on" type="button" data-days="14">14天</button>
+        <button class="seg-btn" type="button" data-days="30">30天</button>
+        <button class="seg-btn" type="button" data-days="60">60天</button>
       </div>
-      <button class="modal-btn" id="rptSendBtn">分享給家人，回診帶著</button>
-      <p class="modal-sub" style="margin-top:10px;margin-bottom:4px">在診間也可以直接打開這一頁給醫生看。</p>
+      <div id="rptBody"></div>
+      <p class="rpt-foot" id="rptFoot"><span class="cname">沐寧</span>整理 · 家屬提供的紀錄，非醫療診斷</p>
+      <button class="modal-btn" id="rptDoneBtn" data-i18n="visit.done">看完醫生了</button>
+      <p class="modal-sub" id="rptClinicHint" style="margin-top:10px;margin-bottom:4px" data-i18n="visit.clinicHint">在診間可以直接打開這一頁給醫生看。</p>
     </div>
   </div>
 
@@ -1169,16 +1177,16 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260728-v1044"></script>
+  <script src="src/version.js?v=20260729-v1044"></script>
   <script src="src/i18n.js?v=20260729-four-locale2"></script>
   <script src="src/i18n/app-renderer-copy.js?v=20260729-four-locale2"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
-  <script src="src/auth.js?v=20260728-v1044"></script>
+  <script src="src/auth.js?v=20260729-v1044"></script>
   <script src="src/health.js?v=20260715-health3"></script>
   <script src="src/store.js?v=20260708-store"></script>
-  <script src="src/notify.js?v=20260716-v1023"></script>
+  <script src="src/notify.js?v=20260729-visitq"></script>
   <script src="src/medication.js?v=20260715-med1"></script>
   <script>
   window.muneaUiT = function(key, fallback, values) {
@@ -1240,7 +1248,7 @@
   </script>
   <script src="src/voice-turn-policy.js?v=20260716-v1024"></script>
   <script src="src/voice-call-diagnostics.js?v=20260715-v1"></script>
-  <script type="module" src="src/app.js?v=20260728-v1044"></script>
+  <script type="module" src="src/app.js?v=20260729-v1044"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>

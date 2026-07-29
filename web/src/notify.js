@@ -316,6 +316,17 @@ window.MuneaNotify = (function () {
       var visitAt = new Date(visit.dateISO + 'T' + (visit.time || '09:00'));
       var remindAt = new Date(visitAt.getTime() - 60 * 60 * 1000);
       if (isNaN(remindAt) || remindAt <= new Date()) return;
+      // 口袋問題：有記下要問醫生的問題，就在看診提醒裡帶一句「有 N 個問題要問」。
+      // 只帶**數量**、不帶問題內文——健康疑問屬敏感內容，不放進推播文字（鎖定畫面另有 publicBody 遮罩）。
+      var openQ = 0;
+      try {
+        var qs = JSON.parse(localStorage.getItem('munea.careQuestions')) || [];
+        if (Array.isArray(qs)) openQ = qs.filter(function (q) { return q && q.text && !q.askedAt; }).length;
+      } catch (e) {}
+      var visitBody = t('notification.clinicBody', '等等 {time} 記得帶健保卡。', { time: visit.time || '' });
+      if (openQ > 0) {
+        visitBody += t('notification.clinicQuestions', '你有 {n} 個問題要問醫生，記得帶著問。', { n: openQ });
+      }
       items.push(Object.assign({
         id: 'visit-' + visit.id,
         hour: remindAt.getHours(), minute: remindAt.getMinutes()
@@ -323,7 +334,7 @@ window.MuneaNotify = (function () {
         t('notification.clinicTitle', '{title}提醒', {
           title: visit.title || t('notification.clinicDefaultTitle', '回診')
         }),
-        t('notification.clinicBody', '等等 {time} 記得帶健保卡。', { time: visit.time || '' }),
+        visitBody,
         'clinic_upcoming', visit.id, 'munea://visits/' + visit.id
       )));
     });
@@ -382,16 +393,19 @@ window.MuneaNotify = (function () {
     }
     row.innerHTML = settingsIcon()
       + '<span class="sr-main">' + escapeHtml(t('notification.centerTitle', '通知中心'))
-      + '<small>' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒。'))
+      + '<small>' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒'))
       + '</small></span><span class="sr-arrow"><b id="notificationCenterState"></b> ›</span>';
     if (row.dataset.notificationBound !== '1') {
       row.dataset.notificationBound = '1';
       row.addEventListener('click', function () { void openNotificationSettings(); });
     }
+    // 設定頁那一列右邊只放短短的狀態（跟「已連接」「0 種藥」「標準」同一個樣子）。
+    // 原本放的是整句「重要提醒會送到這支手機」，把左邊的副標擠成「選擇要在…」，
+    // 整列變成一句沒講完的話。完整說明留在點進去的那一頁，不搶這一列的寬度。
     var state = document.getElementById('notificationCenterState');
     if (state) state.textContent = notificationMasterOn()
-      ? t('notification.pushOn', '重要提醒會送到這支手機')
-      : t('notification.pushOff', '開啟後才會收到提醒');
+      ? t('notification.centerStateOn', '已開啟')
+      : t('notification.centerStateOff', '已關閉');
   }
 
   // 通知中心＝全螢幕子頁（7/16 Edward：內容多、不做彈窗）；沿用條款/方案同一套 reader-page 版型
@@ -409,7 +423,7 @@ window.MuneaNotify = (function () {
     var familyTitle = escapeHtml(t('notification.family', '家人消息'));
     var safetyTitle = escapeHtml(t('notification.safety', '安全通知'));
     page.innerHTML = '<div class="nav-head"><button class="nav-back" id="notificationSettingsBack" type="button" aria-label="' + escapeHtml(t('common.close', '關閉')) + '"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title">' + centerTitle + '</span><span></span></div>' +
-      '<div class="reader-scroll notification-page-scroll"><p class="notification-page-sub">' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒。')) + '</p>' +
+      '<div class="reader-scroll notification-page-scroll"><p class="notification-page-sub">' + escapeHtml(t('notification.centerSubtitle', '選擇這支手機要收到哪些提醒')) + '</p>' +
       '<div class="notification-setting-list">' +
       '<div class="notification-setting-row notification-master-row"><span><b>' + pushTitle + '</b><small id="notificationPermissionMessage">' + escapeHtml(t('notification.pushOff', '開啟後才會收到提醒')) + '</small></span><button class="notification-switch" type="button" role="switch" data-notification-setting="pushEnabled" aria-label="' + pushTitle + '"><i></i></button></div>' +
       '<p class="notification-setting-heading">' + escapeHtml(t('notification.reminderTypes', '提醒類型')) + '</p>' +

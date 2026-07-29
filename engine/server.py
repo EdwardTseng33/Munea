@@ -26,6 +26,7 @@ import clinic_visits
 import health_followup
 import health_kb
 import health_selector
+import visit_summary
 import localization
 import supabase_adapter
 import enterprise_seats
@@ -2075,6 +2076,87 @@ def medication_doses_response(data):
             limit=data.get("limit") or 1000,
         ),
     }
+
+
+def visit_summary_response(data):
+    """POST /visit-summary：組一份帶去給醫生看的就診摘要（M1 · F2/F3）。
+
+    為什麼摘要在 Brain 組、不在 App 組：症狀時間軸的來源是記憶層（memory_items），
+    那是伺服器端的東西，App 根本拿不到。所以由這裡撈齊三種資料、交給 visit_summary
+    純函式組裝，App 只負責畫和存快照（存快照＝診間離線也打得開，且不受記憶淘汰影響）。
+
+    **認人只認已驗證身分**：一律用 _current_person_id()，絕不採信 payload 裡的 personId
+    （那可以偽造）。沿用 load_health_context／voice_health_context 同一條規矩——
+    健康資料把 A 的講給 B 聽，比不講嚴重得多。
+
+    **部分資料讀不到要說出來**：任何一路撈失敗都記進 partial 回報上去。
+    一份少了血壓的摘要看起來就像「他都沒量」，醫師會據此判斷——
+    悄悄少一塊比整份失敗更危險（延續 visit_summary 鐵律 6）。
+    """
+    data = data or {}
+    person_id = _current_person_id()
+    if not person_id:
+        # 認不出人就不給，不猜、不退預設身分——寧可空手，不可張冠李戴
+        return {"ok": False, "error": "identity_required"}
+
+    try:
+        period_days = int(data.get("periodDays") or data.get("period_days") or visit_summary.DEFAULT_PERIOD)
+    except (TypeError, ValueError):
+        period_days = visit_summary.DEFAULT_PERIOD
+    if period_days not in visit_summary.PERIOD_DAYS:
+        period_days = visit_summary.DEFAULT_PERIOD
+
+    try:
+        import perception_engine
+        today = (perception_engine.now_context() or {}).get("date") or ""
+    except Exception:
+        today = ""
+    start, end = visit_summary.period_bounds(period_days, today or None)
+
+    partial = []
+    health_log, doses, memories = None, None, None
+
+    try:
+        state = family_state_response({"action": "load", "familyGroupId": _current_family_group_id() or "shared"})
+        vitals = (state.get("state") or {}).get("vitals") or {}
+        if isinstance(vitals, dict):
+            health_log = vitals.get(person_id)
+    except Exception as e:
+        log_fallback_exception("load vitals for visit summary", e)
+        partial.append("vitals")
+
+    try:
+        doses = load_medication_doses(
+            person_id=person_id,
+            start_date=start.strftime("%Y-%m-%d"),
+            end_date=end.strftime("%Y-%m-%d"),
+            limit=2000,
+        )
+    except Exception as e:
+        log_fallback_exception("load medication doses for visit summary", e)
+        partial.append("medication")
+
+    try:
+        # 上限放寬到 1000：60 天的摘要要撈得夠深，預設 200 會把早期症狀吃掉。
+        # 再依 personId 過濾一次——本機 JSON 退路裡多個人的記憶是混在一起的，
+        # 只靠後端 scope 不夠（同上：認錯人比沒有更嚴重）。
+        memories = [
+            item for item in (load_memory_items(limit=1000) or [])
+            if isinstance(item, dict) and str(item.get("personId") or item.get("person_id") or person_id) == str(person_id)
+        ]
+    except Exception as e:
+        log_fallback_exception("load memory items for visit summary", e)
+        partial.append("symptoms")
+
+    summary = visit_summary.build(
+        period_days=period_days,
+        memories=memories,
+        health_log=health_log,
+        doses=doses,
+        today=today or None,
+    )
+    summary["partial"] = partial
+    return {"ok": True, "summary": summary}
 
 
 def _notification_identity():
@@ -4300,6 +4382,9 @@ def normalize_admin_account_summary(item=None):
         "localeContext": locale_context,
         "createdAt": item.get("createdAt") or item.get("created_at"),
         "updatedAt": item.get("updatedAt") or item.get("updated_at"),
+        # 60 天閒置自動刪除那條規則認的欄位——名冊要顯示「離自動清除還有幾天」就靠它
+        "lastSeenAt": item.get("lastSeenAt") or item.get("last_seen_at"),
+        "retentionWarnedAt": item.get("retentionWarnedAt") or item.get("retention_warned_at"),
         "familyGroup": {
             "id": str(family_group.get("id") or ""),
             "name": str(family_group.get("name") or "Munea Care Circle"),
@@ -4501,11 +4586,29 @@ def _account_points_map(accounts):
     return points
 
 
+def _account_usage_minutes_map(accounts):
+    """每一戶的聊聊分鐘（總計＋本月）。查不到就回空 dict，前端顯示「—」而不是編一個 0。
+
+    來源是 credit_ledger 的實際扣點紀錄（1 點 = 1 分鐘），不是由使用事件推算的近 N 天分鐘——
+    「誰是大戶」問的是累積用量，近 30 天答不了。"""
+    account_ids = [a.get("accountId") for a in accounts if a.get("accountId")]
+    if not account_ids:
+        return {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            return backend.load_account_usage_minutes(account_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load per-account usage minutes", e)
+    return {}
+
+
 def _enrich_accounts_with_activity(accounts, days=30):
     """幫每個帳號補真資料：plan / usage（分鐘·最後活躍·事件數）/ status / points（持有點數）。
     單帳號 scoped（試營運鎖一戶）時把未歸戶事件併給唯一帳號、誠實不亂攤。"""
     index, unattributed = _account_activity_index(days=days)
     points_map = _account_points_map(accounts)
+    minutes_map = _account_usage_minutes_map(accounts)
     single = len(accounts) == 1
     for acct in accounts:
         aid = acct.get("accountId") or ""
@@ -4522,10 +4625,18 @@ def _enrich_accounts_with_activity(accounts, days=30):
         voice = round(agg["voiceMinutes"], 1)
         avatar = round(agg["avatarMinutes"], 1)
         acct["plan"] = _normalize_account_plan(agg["plan"])
+        # windowMinutes ＝ 近 N 天（由使用事件推算，看短期活躍）；
+        # lifetimeMinutes／monthMinutes ＝ 真正的聊聊分鐘帳（credit_ledger 每分鐘扣 1 點一筆），
+        # 用來看「誰是大戶」——那個問題要的是累積量，不是最近 30 天。
+        spend = minutes_map.get(aid) or {}
         acct["usage"] = {
             "totalMinutes": round(voice + avatar, 1),
+            "windowMinutes": round(voice + avatar, 1),
             "voiceMinutes": voice,
             "avatarMinutes": avatar,
+            "lifetimeMinutes": spend.get("totalMinutes"),
+            "monthMinutes": spend.get("monthMinutes"),
+            "minutesTruncated": bool(spend.get("truncated")),
             "eventCount": int(agg["eventCount"]),
             "lastActiveAt": agg["lastActiveAt"],
         }
@@ -9376,7 +9487,7 @@ class H(BaseHTTPRequestHandler):
                 "release": BRAIN_RELEASE_METADATA,
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "person-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "person-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "visit-summary", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
                 "notificationPush": apns_status(),
             })
@@ -9469,6 +9580,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(feedback_response(data))
             elif self.path == "/product-event":
                 self._json(product_event_response(data))
+            elif self.path == "/visit-summary":
+                self._json(visit_summary_response(data))
             elif self.path == "/ai/brain-status":
                 self._json(model_router.brain_status_response())
             elif self.path == "/persona/context":

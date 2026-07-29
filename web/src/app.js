@@ -76,13 +76,26 @@ function localizeCanonicalLegacyPanels() {
     if (element) element.setAttribute(attribute, muneaT(key, fallback, values));
   };
 
-  setText('#reportModal h2', 'report.title', 'Health and daily summary');
-  setText('#reportModal > .modal > .modal-sub', 'report.empty', 'There is not enough information to create a summary yet.');
-  const reportCard = $('#reportModal .rpt-card');
-  if (reportCard) reportCard.style.display = 'none';
-  setText('#rptSendBtn', 'report.share', 'Share summary');
-  const reportFooter = $('#reportModal .modal-sub[style*="margin-top"]');
-  if (reportFooter) reportFooter.style.display = 'none';
+  // 就診摘要面板（M1 起改為真資料）。原本這裡在幫「寫死假數字的舊面板」做多語，
+  // 其中 rptSendBtn 與 rpt-card 已隨改版移除（這裡刻意不寫井字號前綴：smoke.ps1 的
+  // 「Frontend id references」會掃全檔的井字號選擇器、連註解也算，
+  // 寫了就等於宣告一個不存在的元素，CI 會紅）。面板本文走 data-i18n，
+  // 這裡只補 data-i18n 到不了的地方：aria-label、期間膠囊、要帶角色名的頁尾。
+  const setAria = (selector, key, fallback) => {
+    const element = document.querySelector(selector);
+    if (element) element.setAttribute('aria-label', muneaT(key, fallback));
+  };
+  setAria('#reportClose', 'visit.closeAria', 'Close summary');
+  setAria('#rptExportBtn', 'visit.exportAria', 'Export this summary');
+  setAria('#rptPeriodTabs', 'visit.periodAria', 'Choose the period covered');
+  $$('#rptPeriodTabs .seg-btn').forEach(button => {
+    const days = parseInt(button.dataset.days, 10);
+    if (days) button.textContent = muneaT('visit.days', '{n} days', { n: days });
+  });
+  // 頁尾要帶角色名，而角色是使用者選的（不是字串常數），所以不能單靠 data-i18n
+  setText('#rptFoot', 'visit.footer',
+    'Compiled by {companion} · Records provided by the family, not a medical diagnosis',
+    { companion: (typeof cname === 'function' ? cname() : 'Munea') });
 
   setText('#historyModal h2', 'history.title', 'Past records');
   setText('#historyModal > .modal > .modal-sub', 'history.subtitle', 'View monthly summaries or choose a date range.');
@@ -939,7 +952,7 @@ function syncCompanionUI() {
   const settingName = $('#settingsCompanionName'); if (settingName) settingName.textContent = display;
   const careHeading = $('#careHeading'); if (careHeading) careHeading.textContent = muneaT('home.careHeading', '{companion}幫你留意', { companion: display });
   const chatTaskTitle = $('#chatTaskTitle'); if (chatTaskTitle) chatTaskTitle.textContent = muneaT('home.taskChatTitle', '和{companion}聊聊', { companion: display });
-  const interestsSubtitle = $('#interestsSubtitle'); if (interestsSubtitle) interestsSubtitle.textContent = muneaT('settings.interestsSubtitle', '挑幾個興趣，{companion}會多留意這些新鮮事', { companion: display });
+  const interestsSubtitle = $('#interestsSubtitle'); if (interestsSubtitle) interestsSubtitle.textContent = muneaT('settings.interestsSubtitle', '挑幾個興趣，{companion}會多留意', { companion: display });
   const settingLabel = $('#settingsTemplateLabel'); if (settingLabel) settingLabel.textContent = t.templateLabel;
   const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = thumbSrc;
   const nameInput = $('#companionNameInput');
@@ -994,7 +1007,7 @@ function playB64(b64) {
   } catch (e) {}
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
-const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000 };
+const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000, '/visit-summary': 15000 };  // 摘要要撈記憶＋量測＋用藥三路，比一般請求慢（M1 PR-4c）
 // 管家腦雲端正式住址（台灣機房）——打包後的手機沒有「同一棟樓」可打相對路徑，一定要絕對網址
 // 否則家人同步/邀請/資料權利/回饋全打空氣（7/9 上線體檢 B2 抓到的重傷）
 // 7/16 Edward 拍板 B 案：正式包指真正式 munea-brain（測試機 -staging 留給開發包與 canary）
@@ -1369,6 +1382,413 @@ async function aiAddVisitReminder(a) {
   try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
   return { ok: true, title, label, reminderId: visit.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
 }
+const CARE_Q_KEY = 'munea.careQuestions';
+const CARE_Q_MAX = 20;          // 上限：清單太長長輩讀不完、也不是這個功能的用途
+const CARE_Q_MAX_LEN = 60;      // 一題最長 60 字（跟工具描述一致）
+function loadCareQuestions() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem(CARE_Q_KEY) || '[]') || []; } catch (e) {}
+  if (!Array.isArray(arr)) arr = [];
+  return arr.filter(q => q && typeof q.text === 'string' && q.text);
+}
+function saveCareQuestions(arr) {
+  try { localStorage.setItem(CARE_Q_KEY, JSON.stringify(arr.slice(-CARE_Q_MAX))); return true; } catch (e) { return false; }
+}
+function openCareQuestions() {
+  return loadCareQuestions().filter(q => !q.askedAt);
+}
+async function aiAddCareQuestion(a) {
+  const raw = String((a && a.question) || '').trim().slice(0, CARE_Q_MAX_LEN);
+  // 同一道共用守門：辨識雜訊／外文亂碼寧可拒收讓她再問一次，不存假問題（沿用 2026-07-15 事故的教訓）
+  if (!raw || !muneaIsCleanZhText(raw)) return { ok: false, error: 'question_text_unclear' };
+  const arr = loadCareQuestions();
+  const norm = raw.replace(/\s+/g, '');
+  if (arr.some(q => !q.askedAt && String(q.text || '').replace(/\s+/g, '') === norm)) {
+    // 同一個問題重複記＝清單變垃圾場。回 ok（她已經跟長輩說要記了，不該讓她改口說失敗），但不重複塞。
+    return { ok: true, question: raw, count: openCareQuestions().length, duplicate: true };
+  }
+  const item = { id: 'q_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6), text: raw, createdAt: new Date().toISOString(), askedAt: '' };
+  arr.push(item);
+  if (!saveCareQuestions(arr)) return { ok: false, error: 'local_write_failed' };
+  const count = openCareQuestions().length;
+  // 閘門埋點（H1：就醫時刻是不是真痛點）——只記數量與長度，**不送問題內文**（健康疑問屬敏感內容，
+  // trackProductEvent 本來就會剝 text/transcript/reply，這裡連欄位都不放）
+  try { trackProductEvent('care_question_added', { questionCount: count, textLength: raw.length, via: 'voice' }); } catch (e) {}
+  try { if (window.__muneaRefreshVisitRow) window.__muneaRefreshVisitRow(); } catch (e) {}
+  try { if (typeof renderCareQuestions === 'function') renderCareQuestions(); } catch (e) {}
+  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+  return { ok: true, question: raw, count, persistence: 'device' };
+}
+window.__muneaOpenCareQuestions = openCareQuestions;
+window.__muneaLoadCareQuestions = loadCareQuestions;
+window.__muneaSaveCareQuestions = saveCareQuestions;
+
+/* ===== 就診摘要（M1 · PR-4c）=====
+   帶去給醫生看的一頁。三條設計決定寫在這裡，改動前先讀：
+
+   ① **快照優先，不是每次現算**。診間網路常常爛，而且記憶層會淘汰舊資料
+      （不重要的一次性事件放兩週就清掉）。所以產生過的摘要一律存快照，
+      打開時先畫快照、背景再更新——離線打得開，且早期症狀不會憑空消失。
+   ② **口袋問題在前端合併**。那份清單是裝置本機的（H1 期間刻意不上雲），
+      後端不知道它的存在。客觀資料由後端組、主觀問題由前端接上去。
+   ③ **不出現任何判定字眼與警示色**。後端 visit_summary.py 守了一遍，
+      這裡再守一遍——畫面上加一個紅色驚嘆號，就等於我們在說「這個不正常」。 */
+const VISIT_SUMMARY_SNAP_KEY = 'munea.visitSummary.v1';
+const VISIT_SUMMARY_PERIOD_KEY = 'munea.visitSummaryPeriod';
+const VISIT_SUMMARY_PERIODS = [7, 14, 30, 60];
+const VISIT_SUMMARY_MARK = { symptom: '●', vital: '▲', med: '✕' };
+let _rptPeriod = 0;
+let _rptEditing = false;
+
+function visitSummaryPeriod() {
+  let stored = 0;
+  try { stored = parseInt(localStorage.getItem(VISIT_SUMMARY_PERIOD_KEY) || '', 10); } catch (e) {}
+  return VISIT_SUMMARY_PERIODS.indexOf(stored) >= 0 ? stored : 14;
+}
+function setVisitSummaryPeriod(days) {
+  if (VISIT_SUMMARY_PERIODS.indexOf(days) < 0) return;
+  try { localStorage.setItem(VISIT_SUMMARY_PERIOD_KEY, String(days)); } catch (e) {}
+}
+function loadVisitSummarySnapshot(days) {
+  try {
+    const all = JSON.parse(localStorage.getItem(VISIT_SUMMARY_SNAP_KEY) || '{}') || {};
+    const snap = all[String(days)];
+    return (snap && snap.summary) ? snap : null;
+  } catch (e) { return null; }
+}
+function saveVisitSummarySnapshot(days, summary) {
+  try {
+    const all = JSON.parse(localStorage.getItem(VISIT_SUMMARY_SNAP_KEY) || '{}') || {};
+    all[String(days)] = { summary, savedAt: new Date().toISOString() };
+    localStorage.setItem(VISIT_SUMMARY_SNAP_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+async function fetchVisitSummary(days) {
+  const r = await brainPost('/visit-summary', { periodDays: days });
+  if (r && r.ok && r.summary) { saveVisitSummarySnapshot(days, r.summary); return r.summary; }
+  return null;
+}
+
+function rptEsc(text) {
+  return String(text == null ? '' : text)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function rptShortDate(iso) {
+  const m = String(iso || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
+  return m ? (parseInt(m[1], 10) + '/' + parseInt(m[2], 10)) : '';
+}
+/* 沒讀到的來源翻成人話。畫面、純文字、PDF 三處共用同一份對照，
+   免得同一份摘要在三個地方講出不一樣的缺料清單。 */
+function visitPartialNames(partial) {
+  const label = {
+    vitals: muneaT('visit.partialVitals', '在家量測'),
+    medication: muneaT('visit.partialMedication', '用藥紀錄'),
+    symptoms: muneaT('visit.partialSymptoms', '聊天中提到的狀況'),
+  };
+  return (partial || []).map(k => label[k] || k).join(muneaT('common.listSeparator', '、'));
+}
+
+function renderVisitSummary(summary) {
+  const body = document.getElementById('rptBody');
+  if (!body) return;
+  const questions = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
+  const parts = [];
+
+  // ① 想問醫生擺最上面——醫師最先想知道的是「這個病人今天想幹嘛」
+  parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生')) + '</h3>');
+  if (questions.length) {
+    questions.forEach((q, i) => {
+      parts.push('<div class="rpt-q"><span class="rpt-q-n">' + (i + 1) + '</span>'
+        + '<span class="rpt-q-t">' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</span>'
+        + (_rptEditing ? '<button class="rpt-q-x" type="button" data-qid="' + rptEsc(q.id) + '" aria-label="'
+          + rptEsc(muneaT('visit.deleteQuestionAria', '刪掉這一題')) + '">✕</button>' : '')
+        + '</div>');
+    });
+  } else {
+    parts.push('<p class="rpt-empty">' + rptEsc(muneaT('visit.questionsEmpty',
+      '還沒有記下要問的問題。跟{companion}聊到身體上的疑問時，她會幫你記下來。',
+      { companion: (typeof cname === 'function' ? cname() : '寧寧') })) + '</p>');
+  }
+  parts.push('<button class="rpt-addq" type="button" id="rptAddQ">'
+    + rptEsc(muneaT('visit.addQuestion', '＋ 自己加一題')) + '</button></div>');
+
+  if (!summary) {
+    parts.push('<p class="rpt-empty">' + rptEsc(muneaT('visit.restUnavailable', '其他資料還沒讀到，等連上網路再看一次。')) + '</p>');
+    body.innerHTML = parts.join('');
+    bindVisitSummaryBody();
+    return;
+  }
+
+  // ② 時間軸：三種來源用形狀分（醫師要分辨的是可信度，不是嚴重度，所以不用顏色）
+  parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.timelineTitle', '這段期間發生的事')) + '</h3>');
+  if (summary.timeline && summary.timeline.length) {
+    parts.push('<ul class="rpt-tl">');
+    summary.timeline.forEach(e => {
+      parts.push('<li><span class="rpt-d">' + rptShortDate(e.date) + '</span>'
+        + '<span class="rpt-mk">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</span>'
+        + '<span class="rpt-tx">' + rptEsc(e.text)
+        + (e.detail ? '<em>' + rptEsc(e.detail) + '</em>' : '') + '</span></li>');
+    });
+    parts.push('</ul><p class="rpt-legend">'
+      + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    // 截斷一定要說出來——悄悄少幾筆會讓醫師以為這就是全部
+    if (summary.timelineOmitted > 0) {
+      parts.push('<p class="rpt-note">'
+        + rptEsc(muneaT('visit.timelineOmitted', '另有 {n} 筆較早的紀錄沒有列出來。', { n: summary.timelineOmitted }))
+        + '</p>');
+    }
+  } else {
+    parts.push('<p class="rpt-empty">' + rptEsc(muneaT('visit.timelineEmpty', '這段期間沒有記錄到特別的變化。')) + '</p>');
+  }
+  parts.push('</div>');
+
+  if (summary.vitals && summary.vitals.length) {
+    parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.vitalsTitle', '在家量的')) + '</h3><div class="rpt-card">');
+    summary.vitals.forEach(line => {
+      parts.push('<div class="rpt-row"><div><b>' + rptEsc(line) + '</b></div></div>');
+    });
+    parts.push('</div><p class="rpt-note">' + rptEsc(summary.baselineNote || '') + '</p></div>');
+  }
+
+  if (summary.medication && summary.medication.length) {
+    parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.medTitle', '藥實際吃了沒')) + '</h3><div class="rpt-card">');
+    summary.medication.forEach(m => {
+      parts.push('<div class="rpt-row"><span class="rpt-k">' + rptEsc(m.name) + '</span><div>'
+        + '<b>' + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次',
+          { scheduled: m.scheduled, taken: m.taken })) + '</b>'
+        + (m.missed ? '<span>' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) + '</span>' : '')
+        + '</div></div>');
+    });
+    parts.push('</div></div>');
+  }
+
+  // 部分資料沒讀到要講——一份少了血壓的摘要看起來就像「他都沒量」
+  if (summary.partial && summary.partial.length) {
+    parts.push('<p class="rpt-note">⌛ '
+      + rptEsc(muneaT('visit.partialNote', '{names}這次沒有讀到，這一頁不是完整的。連上網路後再開一次。',
+        { names: visitPartialNames(summary.partial) })) + '</p>');
+  }
+
+  body.innerHTML = parts.join('');
+  bindVisitSummaryBody();
+}
+
+function bindVisitSummaryBody() {
+  const add = document.getElementById('rptAddQ');
+  if (add) add.addEventListener('click', addCareQuestionManually);
+  document.querySelectorAll('#rptBody .rpt-q-x').forEach(btn => {
+    btn.addEventListener('click', () => removeCareQuestion(btn.dataset.qid));
+  });
+}
+
+/* 長輩自己加一題。刻意**沒有**「子女代為新增」的入口——
+   沐寧要降低子女的負擔，不是給子女一個做整理工的工具（Edward 2026-07-28）。 */
+function addCareQuestionManually() {
+  const raw = window.prompt(muneaT('visit.promptQuestion', '想問醫生什麼？'));
+  if (raw === null) return;
+  const text = String(raw).trim().slice(0, CARE_Q_MAX_LEN);
+  if (!text) return;
+  if (!muneaIsCleanZhText(text)) { toast(muneaT('visit.questionUnclear', '這句我看不懂，換個說法再試一次')); return; }
+  const arr = loadCareQuestions();
+  const norm = text.replace(/\s+/g, '');
+  if (arr.some(q => !q.askedAt && String(q.text || '').replace(/\s+/g, '') === norm)) {
+    toast(muneaT('visit.questionDuplicate', '這題已經在清單裡了')); return;
+  }
+  arr.push({ id: 'q_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6), text, createdAt: new Date().toISOString(), askedAt: '' });
+  if (!saveCareQuestions(arr)) { toast(muneaT('visit.questionSaveFailed', '沒存起來，請再試一次')); return; }
+  try { trackProductEvent('care_question_added', { questionCount: openCareQuestions().length, textLength: text.length, via: 'manual' }); } catch (e) {}
+  renderVisitSummary(_rptLastSummary);
+  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+}
+function removeCareQuestion(id) {
+  if (!id) return;
+  const arr = loadCareQuestions().filter(q => String(q.id) !== String(id));
+  saveCareQuestions(arr);
+  try { trackProductEvent('care_question_removed', { questionCount: openCareQuestions().length }); } catch (e) {}
+  renderVisitSummary(_rptLastSummary);
+  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+}
+/* 看完醫生了：清單上的問題整批標記「問過了」（保留歷史、不刪除），
+   下次看診就不會再拿舊問題提醒他。 */
+function markCareQuestionsAsked() {
+  const arr = loadCareQuestions();
+  const now = new Date().toISOString();
+  let n = 0;
+  arr.forEach(q => { if (!q.askedAt) { q.askedAt = now; n += 1; } });
+  saveCareQuestions(arr);
+  try { trackProductEvent('visit_summary_completed', { askedCount: n, periodDays: _rptPeriod }); } catch (e) {}
+  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+  return n;
+}
+
+let _rptLastSummary = null;
+async function openVisitSummary(source) {
+  const modal = document.getElementById('reportModal');
+  if (!modal) return;
+  _rptEditing = false;
+  _rptPeriod = visitSummaryPeriod();
+  syncVisitSummaryTabs();
+  modal.classList.add('show');
+  try { trackProductEvent('visit_summary_opened', { periodDays: _rptPeriod, source: source || 'unknown' }); } catch (e) {}
+  await loadVisitSummaryInto(_rptPeriod);
+}
+async function loadVisitSummaryInto(days) {
+  const line = document.getElementById('rptPeriodLine');
+  // 先畫快照＝診間離線也看得到東西，再背景更新
+  const coverage = s => muneaT('visit.coverage', '涵蓋 {from} – {to}',
+    { from: rptShortDate(s.from), to: rptShortDate(s.to) });
+  const snap = loadVisitSummarySnapshot(days);
+  _rptLastSummary = snap ? snap.summary : null;
+  renderVisitSummary(_rptLastSummary);
+  if (line) line.textContent = _rptLastSummary ? coverage(_rptLastSummary) : muneaT('visit.preparing', '整理中…');
+  const fresh = await fetchVisitSummary(days);
+  if (fresh) {
+    _rptLastSummary = fresh;
+    renderVisitSummary(fresh);
+    if (line) line.textContent = coverage(fresh);
+  } else if (!snap) {
+    if (line) line.textContent = muneaT('visit.offlineLine', '這次沒有連上，先看看你要問的問題');
+  }
+}
+function syncVisitSummaryTabs() {
+  document.querySelectorAll('#rptPeriodTabs .seg-btn').forEach(b => {
+    b.classList.toggle('on', parseInt(b.dataset.days, 10) === _rptPeriod);
+  });
+}
+window.__muneaOpenVisitSummary = openVisitSummary;
+
+/* 摘要轉純文字——分享給家人、複製，也是 PDF 失敗時的退路。
+   一樣只搬事實，不加任何一句解讀。 */
+function visitSummaryAsText(summary) {
+  const companion = (typeof cname === 'function' ? cname() : '沐寧');
+  const footer = muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion });
+  const lines = [muneaT('visit.summaryTitle', '就診摘要')];
+  if (summary) lines.push(muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to }));
+  const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
+  if (qs.length) {
+    lines.push('', '【' + muneaT('visit.questionsTitle', '這次想問醫生') + '】');
+    qs.forEach((q, i) => lines.push((i + 1) + '. ' + muneaSafeDisplayText(q.text, '')));
+  }
+  if (summary && summary.timeline && summary.timeline.length) {
+    lines.push('', '【' + muneaT('visit.timelineTitle', '這段期間發生的事') + '】');
+    summary.timeline.forEach(e => {
+      lines.push(rptShortDate(e.date) + ' ' + (VISIT_SUMMARY_MARK[e.kind] || '·') + ' ' + e.text + (e.detail ? '（' + e.detail + '）' : ''));
+    });
+    lines.push(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄'));
+    if (summary.timelineOmitted > 0) {
+      lines.push(muneaT('visit.timelineOmitted', '另有 {n} 筆較早的紀錄沒有列出來。', { n: summary.timelineOmitted }));
+    }
+  }
+  if (summary && summary.vitals && summary.vitals.length) {
+    lines.push('', '【' + muneaT('visit.vitalsTitle', '在家量的') + '】');
+    summary.vitals.forEach(v => lines.push(v));
+    if (summary.baselineNote) lines.push(summary.baselineNote);
+  }
+  if (summary && summary.medication && summary.medication.length) {
+    lines.push('', '【' + muneaT('visit.medTitle', '藥實際吃了沒') + '】');
+    summary.medication.forEach(m => lines.push(m.name + '：'
+      + muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次', { scheduled: m.scheduled, taken: m.taken })
+      + (m.missed ? '　' + muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed }) : '')));
+  }
+  if (summary && summary.partial && summary.partial.length) {
+    lines.push('', muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
+      { names: visitPartialNames(summary.partial) }));
+  }
+  lines.push('', footer);
+  return lines.join('\n');
+}
+
+/* 摘要 → 一份自成一體的 A4 HTML，餵給原生外掛轉 PDF。
+   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的 modal，直接印會拿到
+   App 的殼＋被裁掉的捲動內容。這份只有摘要本身，版面完全可控、每一份長一樣。
+   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS 根本不會被載到。 */
+function visitSummaryAsHTML(summary) {
+  const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
+  const rows = [];
+  rows.push('<h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>');
+  rows.push('<p class="sub">' + (summary
+    ? rptEsc(muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to }))
+    : '') + '</p>');
+
+  if (qs.length) {
+    rows.push('<h2>' + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生')) + '</h2><ol>');
+    qs.forEach(q => rows.push('<li>' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
+    rows.push('</ol>');
+  }
+  if (summary && summary.timeline && summary.timeline.length) {
+    rows.push('<h2>' + rptEsc(muneaT('visit.timelineTitle', '這段期間發生的事')) + '</h2><table>');
+    summary.timeline.forEach(e => {
+      rows.push('<tr><td class="d">' + rptEsc(rptShortDate(e.date)) + '</td>'
+        + '<td class="m">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</td>'
+        + '<td>' + rptEsc(e.text) + (e.detail ? '<span class="sm">（' + rptEsc(e.detail) + '）</span>' : '') + '</td></tr>');
+    });
+    rows.push('</table><p class="sm">' + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    if (summary.timelineOmitted > 0) {
+      rows.push('<p class="sm">'
+        + rptEsc(muneaT('visit.timelineOmitted', '另有 {n} 筆較早的紀錄沒有列出來。', { n: summary.timelineOmitted }))
+        + '</p>');
+    }
+  }
+  if (summary && summary.vitals && summary.vitals.length) {
+    rows.push('<h2>' + rptEsc(muneaT('visit.vitalsTitle', '在家量的')) + '</h2><ul>');
+    summary.vitals.forEach(v => rows.push('<li>' + rptEsc(v) + '</li>'));
+    rows.push('</ul><p class="sm">' + rptEsc(summary.baselineNote || '') + '</p>');
+  }
+  if (summary && summary.medication && summary.medication.length) {
+    rows.push('<h2>' + rptEsc(muneaT('visit.medTitle', '藥實際吃了沒')) + '</h2><table>');
+    summary.medication.forEach(m => {
+      rows.push('<tr><td>' + rptEsc(m.name) + '</td><td>'
+        + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次', { scheduled: m.scheduled, taken: m.taken }))
+        + (m.missed ? '　' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) : '')
+        + '</td></tr>');
+    });
+    rows.push('</table>');
+  }
+  if (summary && summary.partial && summary.partial.length) {
+    rows.push('<p class="sm">' + rptEsc(muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
+      { names: visitPartialNames(summary.partial) })) + '</p>');
+  }
+  rows.push('<p class="foot">' + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷',
+    { companion: (typeof cname === 'function' ? cname() : '沐寧') })) + '</p>');
+
+  // lang 跟著 App 語系走：離屏 webview 的斷行與字型選擇吃這個屬性，
+  // 寫死 zh-Hant 會讓日文那份用中文字形排版。
+  return '<!doctype html><html lang="' + rptEsc(muneaLocale() === 'zh-TW' ? 'zh-Hant' : muneaLocale()) + '"><head><meta charset="utf-8">'
+    + '<style>'
+    + '@page{size:A4;margin:14mm}'
+    + 'body{font-family:-apple-system,"PingFang TC","Heiti TC",sans-serif;color:#1a1a1a;font-size:12pt;line-height:1.6;margin:0}'
+    + 'h1{font-size:20pt;margin:0 0 2pt}'
+    + 'h2{font-size:12pt;margin:16pt 0 4pt;padding-bottom:2pt;border-bottom:1px solid #ccc}'
+    + '.sub{color:#555;margin:0 0 6pt;font-size:10.5pt}'
+    + 'ol,ul{margin:0;padding-left:18pt}li{margin:2pt 0}'
+    + 'table{width:100%;border-collapse:collapse}'
+    + 'td{padding:3pt 0;vertical-align:top;border-bottom:1px solid #eee}'
+    + 'td.d{width:42pt;color:#555;white-space:nowrap}td.m{width:16pt;text-align:center}'
+    + '.sm{font-size:9.5pt;color:#666;margin:4pt 0 0}'
+    + '.foot{margin-top:18pt;padding-top:6pt;border-top:1px solid #ccc;font-size:9pt;color:#666;text-align:center}'
+    + '</style></head><body>' + rows.join('') + '</body></html>';
+}
+
+/* 原生匯出外掛（ios/App/App/ExportPlugin.swift）。沒有就回 null，呼叫端自己退回文字分享。 */
+function muneaExportPlugin() {
+  return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Export) || null;
+}
+async function exportVisitSummaryPdf(summary) {
+  const plugin = muneaExportPlugin();
+  if (!plugin || typeof plugin.sharePdf !== 'function') return { ok: false, error: 'plugin_unavailable' };
+  try {
+    const stamp = summary && summary.to ? String(summary.to) : '';
+    const r = await plugin.sharePdf({
+      html: visitSummaryAsHTML(summary),
+      filename: muneaT('visit.exportFilename', '就診摘要') + (stamp ? '-' + stamp : ''),
+    });
+    return { ok: true, completed: !!(r && r.completed) };
+  } catch (e) {
+    return { ok: false, error: (e && (e.code || e.message)) || 'export_failed' };
+  }
+}
+
+
 async function aiAddMedReminder(a) {
   const rawName = String((a && a.name) || '').trim();
   const name = (rawName && muneaIsCleanDisplayText(rawName)) ? rawName : '';
@@ -1429,6 +1849,11 @@ async function handleVoiceAction(action, args) {
   if (action === 'set_clinic_reminder') {
     const r = await aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
     if (typeof toast === 'function') toast(r.ok ? ('看診提醒設好了：' + r.title + ' · ' + r.label) : '看診日期我沒抓到，你再說一次日期好嗎');
+    return r;
+  }
+  if (action === 'add_care_question') {
+    const r = await aiAddCareQuestion({ question: args.question });
+    if (typeof toast === 'function') toast(r.ok ? ('記下來了，看醫生前我會提醒你（' + r.count + ' 個問題）') : '這個問題我沒聽清楚，你再說一次好嗎');
     return r;
   }
   if (action === 'set_medication_reminder') {
@@ -3198,6 +3623,8 @@ const LiveVoice = {
     url += (url.indexOf('?') >= 0 ? '&' : '?') + 'cap_rem=1';
     // 能力握手：「接得住 AI 幫你記行程」（揪一攤）→ 約會/聚餐不再被硬塞成看診提醒（2026-07-16 Edward）
     url += '&cap_evt=1';
+    // 能力握手：「接得住 AI 幫你記要問醫生的問題」（口袋問題）→ 舊版不會拿到工具（M1 PR-3）
+    url += '&cap_ask=1';
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
     // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。
@@ -4625,7 +5052,13 @@ function renderVisitTask() {
   card.style.display = '';
   const t = $('#visitTaskTitle'), s = $('#visitTaskSub'), tm = $('#visitTaskTime');
   if (t) t.textContent = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || muneaT('visit.defaultTitle', '回診');   // 今天一起完成的回診卡標題守門（Edward 2026-07-15 事故）
-  if (s) s.textContent = _visitDayShort(v) || muneaT('visit.defaultNote', '記得帶健保卡與用藥資料');
+  // 副標給一個點開的理由——有記問題就講幾題，沒有就回到原本的提醒（M1 PR-4c）
+  let sub = _visitDayShort(v) || muneaT('visit.defaultNote', '記得帶健保卡與用藥資料');
+  try {
+    const qn = (typeof openCareQuestions === 'function') ? openCareQuestions().length : 0;
+    if (qn > 0) sub = muneaT('visit.openForQuestions', '點開看這次要問的 {n} 個問題', { n: qn });
+  } catch (e) {}
+  if (s) s.textContent = sub;
   if (tm) tm.textContent = _clock24(v.time) || muneaT('common.today', '今天');
   if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
 }
@@ -5849,6 +6282,12 @@ function toggleTask(item) {
       return;
     }
     window.MuneaMedication.markNext(loadMeds(), 'home');
+    return;
+  }
+  // 看診任務：點開＝就診摘要，不是打勾（M1 PR-4c）。長輩按小勾勾很難按；
+  // 「看完醫生了」要順手把口袋問題標記問過，那在摘要頁底部用大按鈕做。
+  if (item.dataset.task === 'visit') {
+    if (typeof openVisitSummary === 'function') openVisitSummary('daily-task');
     return;
   }
   if (item.dataset.task === 'mood') {
@@ -7929,27 +8368,83 @@ function init() {
   bindFamTabs('#sleepTabs', r => { _famSleepRange = r; renderFamSleep(); });
   bindFamTabs('#mcRangeTabs', r => { _famMoodRange = r; renderFamMoodRange(); });
 
-  // 一鍵回診摘要
-  const rep = $('#reportBtn');
-  if (rep) rep.addEventListener('click', () => $('#reportModal').classList.add('show'));
+  // ── 就診摘要（M1 · PR-4c）──────────────────────────────
+  // 舊版這裡綁的是 #reportBtn，但那顆按鈕**全專案不存在**＝從來沒被綁上、面板打不開。
+  // 現在入口有三個：今天的看診任務卡、設定頁、以及看診推播。
   if ($('#reportClose')) $('#reportClose').addEventListener('click', () => $('#reportModal').classList.remove('show'));
   if ($('#reportModal')) $('#reportModal').addEventListener('click', e => { if (e.target === $('#reportModal')) $('#reportModal').classList.remove('show'); });
-  if ($('#rptSendBtn')) $('#rptSendBtn').addEventListener('click', () => {
-    // 真的分享出去（系統分享面板：LINE／簡訊／任何家人在用的），不再假裝「已傳送」
-    const rows = [...document.querySelectorAll('#reportModal .rpt-row')].map(r => {
-      const k = r.querySelector('.rpt-k'), b = r.querySelector('b');
-      return (k ? k.textContent : '') + '：' + (b ? b.textContent : '');
-    });
-    const text = '沐寧 · 回診摘要\n' + rows.join('\n');
-    const done = () => { $('#reportModal').classList.remove('show'); pushFamilyFeed('<b>你</b>把回診摘要分享給了家人'); };
-    if (navigator.share) {
-      navigator.share({ text }).then(() => { toast('摘要分享出去了，回診那天記得帶著'); done(); }).catch(() => {});
-    } else {
-      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject()).then(
-        () => { toast('摘要複製好了，貼給家人就行'); done(); },
-        () => toast('這台裝置不支援分享，晚點在手機上試')
-      );
+
+  // 期間切換：診間現場也能切（醫生問「這狀況多久了」→ 當場切到 60 天給他看）
+  if ($('#rptPeriodTabs')) $('#rptPeriodTabs').addEventListener('click', async e => {
+    const b = e.target.closest('.seg-btn');
+    if (!b) return;
+    const days = parseInt(b.dataset.days, 10);
+    if (!days || days === _rptPeriod) return;
+    _rptPeriod = days;
+    setVisitSummaryPeriod(days);          // 也更新預設值，下次打開就是這個
+    syncVisitSummaryTabs();
+    try { trackProductEvent('visit_summary_period_changed', { periodDays: days }); } catch (e2) {}
+    await loadVisitSummaryInto(days);
+  });
+
+  // 匯出：文字分享走既有系統分享面板；PDF 走瀏覽器內建列印（零外部套件）
+  if ($('#rptExportBtn')) $('#rptExportBtn').addEventListener('click', () => {
+    const text = visitSummaryAsText(_rptLastSummary);
+    // 第一次匯出提醒一次就好，不每次煩他。健康資料傳出去就收不回來，這句必須講。
+    let warned = false;
+    try { warned = localStorage.getItem('munea.visitSummary.shareWarned') === '1'; } catch (e) {}
+    if (!warned) {
+      if (!window.confirm(muneaT('visit.shareWarning', '這一頁有你的健康紀錄，傳出去之後就收不回來了。要繼續嗎？'))) return;
+      try { localStorage.setItem('munea.visitSummary.shareWarned', '1'); } catch (e) {}
     }
+    // PDF 有兩條路，可用的那條才會出現在選單裡：
+    //   · App 內 → 原生外掛（ExportPlugin.swift，WKWebView.createPDF＋系統分享面板）
+    //   · 瀏覽器 → window.print()
+    // **window.print() 在 iOS 的 WKWebView 完全無效**（同一顆按鈕在 Safari 可以、在 App 殼裡
+    // 按了沒反應），所以 App 內絕不能走那條——一顆按了沒事的按鈕比沒有更糟，
+    // 長輩會以為是自己按錯。兩條都沒有時，選單就不列 PDF，不給他一個假選項。
+    const hasNativePdf = !!(muneaExportPlugin() && typeof muneaExportPlugin().sharePdf === 'function');
+    const canPdf = hasNativePdf || !isPackagedApp();
+    const menu = canPdf
+      ? muneaT('visit.exportMenuWithPdf', '要怎麼匯出？\n1 = 存成 PDF\n2 = 傳給家人\n3 = 複製文字')
+      : muneaT('visit.exportMenuNoPdf', '要怎麼匯出？\n2 = 傳給家人\n3 = 複製文字');
+    const choice = window.prompt(menu, canPdf ? '1' : '2');
+    if (choice === null) return;
+    try { trackProductEvent('visit_summary_exported', { how: String(choice), periodDays: _rptPeriod, pdfPath: hasNativePdf ? 'native' : (isPackagedApp() ? 'none' : 'print') }); } catch (e) {}
+    if (String(choice).trim() === '1') {
+      if (hasNativePdf) {
+        exportVisitSummaryPdf(_rptLastSummary).then(r => {
+          if (!r.ok) toast(muneaT('visit.pdfFailed', 'PDF 這次沒做出來，可以改用「傳給家人」'));
+        });
+        return;
+      }
+      if (isPackagedApp()) { toast(muneaT('visit.pdfUnsupported', '這台裝置還不能存 PDF，可以改用「傳給家人」')); return; }
+      try { window.print(); } catch (e) { toast(muneaT('visit.printUnsupported', '這台裝置印不出來，可以改用「傳給家人」')); }
+      return;
+    }
+    if (String(choice).trim() === '2') {
+      if (navigator.share) {
+        navigator.share({ text }).then(() => toast(muneaT('visit.shared', '傳出去了，回診那天記得帶著'))).catch(() => {});
+      } else toast(muneaT('visit.shareUnsupported', '這台裝置不支援分享，可以改用「複製文字」'));
+      return;
+    }
+    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject()).then(
+      () => toast(muneaT('visit.copied', '摘要複製好了')),
+      () => toast(muneaT('visit.copyFailed', '這台裝置沒辦法複製，晚點在手機上試'))
+    );
+  });
+
+  // 「看完醫生了」：問題整批標記問過（保留歷史），順手把看診任務打勾。
+  // 這顆按鈕存在的理由是長輩按小勾勾很難按——大按鈕比小圖示友善得多。
+  if ($('#rptDoneBtn')) $('#rptDoneBtn').addEventListener('click', () => {
+    const n = markCareQuestionsAsked();
+    const card = document.querySelector('.task-item[data-task="visit"]');
+    if (card) card.classList.add('done');
+    if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
+    $('#reportModal').classList.remove('show');
+    toast(n
+      ? muneaT('visit.doneWithQuestions', '辛苦了，{n} 個問題都問過了', { n })
+      : muneaT('visit.doneNoQuestions', '辛苦了，回家好好休息'));
   });
 
   // 發起挑戰面板
@@ -8835,6 +9330,11 @@ function init() {
   if ($('#versionRow')) $('#versionRow').addEventListener('click', openVersionSheet);
   if ($('#verClose')) $('#verClose').addEventListener('click', () => $('#versionSheet').classList.remove('show'));
   applyAppVersion();
+  // 設定頁「就診摘要」：點了就打開，外層不顯示天數（Edward 2026-07-28）。
+  // 天數在摘要裡面用 7／14／30／60 四顆膠囊選——外層再標一次是重複資訊。
+  if ($('#visitSummaryRow')) $('#visitSummaryRow').addEventListener('click', () => {
+    if (typeof openVisitSummary === 'function') openVisitSummary('settings');
+  });
   if ($('#privacyRow')) $('#privacyRow').addEventListener('click', () => $('#dataModal').classList.add('show'));
   if ($('#dataClose')) $('#dataClose').addEventListener('click', () => $('#dataModal').classList.remove('show'));
   if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });

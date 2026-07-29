@@ -413,6 +413,9 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 #safetyModal { z-index: 70; }   /* 緊急聯絡人小窗要蓋在通知中心子頁（z-index 60）上面 */
 .notification-test-action { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--teal-d); border-radius: 12px; background: transparent; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
 .notification-save-state { min-height: 20px; margin-top: 8px; text-align: center; color: var(--teal-d); font-size: 12.5px; }
+/* 這一行只有存好設定時才會出現字。沒字的時候原本仍佔 20px 高＋8px 間距＝
+   頁尾平白多出 28px 空白，看起來像版面沒收乾淨。沒字就整個收起來。 */
+.notification-save-state:empty { min-height: 0; margin-top: 0; }
 .provider-consent-card { margin-top: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid rgba(58,168,160,.14); box-shadow: var(--shadow-sm); }
 .provider-consent-card[data-consent="agreed"] { border-color: rgba(58,168,160,.28); background: #F5FBF8; }
 .provider-consent-head { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
@@ -1622,6 +1625,41 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 /* 個人資料輸入 */
 .pf-input { width: 100%; max-width: 260px; }
 .rpt-row div span { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* ── 就診摘要（M1 · PR-4c）─────────────────────────────────
+   刻意不用紅色、不用警示圖示：這一頁只陳列事實，任何看起來像「醫療警報」的
+   視覺都會把我們推向判讀（紅線）。時間軸的三種來源用「形狀」區分而不是顏色，
+   因為醫師要分辨的是「可信度」不是「嚴重度」。 */
+.rpt-export { position: absolute; right: 52px; top: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--teal-dd); font-family: var(--sans); font-size: 13.5px; font-weight: 700; padding: 6px 14px; border-radius: 100px; cursor: pointer; min-height: 32px; }
+.rpt-sec { margin: 0 0 18px; }
+.rpt-sec h3 { font-size: 14px; font-weight: 800; color: var(--teal-dd); margin: 0 0 8px; letter-spacing: .02em; }
+.rpt-q { display: flex; gap: 10px; padding: 10px 0; align-items: flex-start; }
+.rpt-q + .rpt-q { border-top: 1px solid var(--line); }
+.rpt-q-n { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--btn-green); color: #FFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.rpt-q-t { flex: 1; font-size: 16px; color: var(--ink); line-height: 1.5; }
+.rpt-q-x { flex-shrink: 0; border: none; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; min-height: 28px; }
+.rpt-tl { list-style: none; margin: 0; padding: 0; }
+.rpt-tl li { display: flex; gap: 10px; padding: 9px 0; align-items: flex-start; }
+.rpt-tl li + li { border-top: 1px solid var(--line); }
+.rpt-d { flex-shrink: 0; width: 46px; font-size: 13px; font-weight: 700; color: var(--muted); padding-top: 2px; }
+.rpt-mk { flex-shrink: 0; width: 16px; text-align: center; font-size: 12px; color: var(--teal-dd); padding-top: 3px; }
+.rpt-tx { flex: 1; font-size: 15.5px; color: var(--ink); line-height: 1.5; }
+.rpt-tx em { display: block; font-style: normal; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.rpt-legend { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; line-height: 1.6; }
+.rpt-note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; line-height: 1.6; }
+.rpt-empty { font-size: 14.5px; color: var(--muted); padding: 10px 0; line-height: 1.6; }
+.rpt-foot { font-size: 12px; color: var(--muted); text-align: center; margin: 4px 0 14px; }
+.rpt-addq { width: 100%; border: 1px dashed var(--line); background: transparent; color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 700; padding: 10px; border-radius: 12px; cursor: pointer; margin-top: 8px; min-height: 40px; }
+
+/* 列印／存成 PDF：把 App 的殼全部藏起來，只留這一頁。
+   用瀏覽器內建列印＝零外部套件（Edward「不花錢證明」）。 */
+@media print {
+  body > *, .tab-bar, .modal-mask { visibility: hidden !important; }
+  #reportModal, #reportModal * { visibility: visible !important; }
+  #reportModal { position: absolute !important; inset: 0 !important; background: #FFF !important; display: block !important; }
+  #reportModal .modal { box-shadow: none !important; border: none !important; max-height: none !important; overflow: visible !important; }
+  .rpt-export, #rptClose, #reportClose, #rptPeriodTabs, #rptDoneBtn, .rpt-q-x, .rpt-addq, .modal-grab { display: none !important; }
+}
 /* 用藥時段清單 */
 .ms-group { background: #FFF; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
 .ms-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; }

@@ -388,6 +388,40 @@ class SupabaseAdapter:
         result["cleanupRequired"] = bool(cleanup["failed"])
         return result
 
+    def _fetch_auth_users_map(self, wanted_ids, per_page=200, max_pages=10):
+        """一次撈 GoTrue 使用者清單建索引 → {authUserId: user}，取代「一戶問一次」。
+
+        名冊要顯示「這一戶是誰登入的」，登入資料在 GoTrue（不是一般資料表），沒辦法跟其他表
+        一起 in.() 批次查。舊法逐一問，一戶一次來回——6 戶實測就佔掉整支名冊約七成時間，
+        戶數上去照樣會撞後台 15 秒逾時（#329 只解了另一半）。
+
+        改用列表接口分頁掃，想找的都找到就提早停。
+        上限 max_pages 是保險：使用者數遠超過 per_page × max_pages 時不再往下掃，
+        沒撈到的那幾戶回退成逐一查（呼叫端負責），寧可慢一點也不讓名冊整個掛掉。
+        任何失敗回空 dict，呼叫端照舊逐一查。"""
+        wanted = {str(i) for i in (wanted_ids or []) if i}
+        if not self.configured() or not wanted:
+            return {}
+        found = {}
+        for page in range(1, max_pages + 1):
+            url = f"{self.url}/auth/v1/admin/users?page={page}&per_page={int(per_page)}"
+            req = urllib.request.Request(url, headers=self._service_headers(), method="GET")
+            try:
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+            except Exception:
+                break
+            users = payload.get("users") if isinstance(payload, dict) else payload
+            if not isinstance(users, list) or not users:
+                break
+            for user in users:
+                uid = str((user or {}).get("id") or "")
+                if uid in wanted:
+                    found[uid] = user
+            if len(found) >= len(wanted) or len(users) < per_page:
+                break
+        return found
+
     def _fetch_auth_user(self, auth_user_id):
         """GoTrue Admin 單一 user 查詢，回整個 user 物件（測試帳號網域判準＋名冊會員資料共用）。
         任何失敗（逾時／找不到／格式異常）一律回 None，不讓名冊或分析請求被單一查詢拖垮。"""
@@ -705,7 +739,9 @@ class SupabaseAdapter:
                 "account_members",
                 {"account_id": f"in.({id_str})", "role": "eq.owner", "status": "eq.active", "select": "account_id,user_id"},
             ) or []
-            checked_users = {}
+            # 先用列表接口一次撈；沒撈到的（使用者數超過掃描上限那種）才逐一補問。
+            owner_user_ids = [m.get("user_id") for m in memberships if m.get("user_id")]
+            checked_users = dict(self._fetch_auth_users_map(owner_user_ids))
             for m in memberships:
                 account_id, user_id = m.get("account_id"), m.get("user_id")
                 if not account_id or not user_id:
@@ -2001,6 +2037,50 @@ class SupabaseAdapter:
             except (TypeError, ValueError):
                 continue
         return balances
+
+    def load_account_usage_minutes(self, account_ids, month_prefix=None, limit=20000):
+        """每一戶的聊聊分鐘：總計 ＋ 本月 → {accountId: {"totalMinutes": n, "monthMinutes": n}}。
+
+        真實來源是 credit_ledger：通話每分鐘扣 1 點記一筆
+        （event_type=credits_consumed、feature=realtime_voice_avatar），所以「消耗點數」就是分鐘數。
+        不用 voice_sessions（表是空的）也不用 usage_ledger（它的 used 欄一直是 0、沒在累加）。
+
+        ⚠ 現在是一次撈流水回來在記憶體彙總。上線初期資料量小（幾十筆）沒問題，但這張表每分鐘
+        長一筆——大約每月幾萬筆之後就該改成資料庫端聚合（RPC）。撈到 limit 上限時回傳
+        truncated=True，呼叫端要老實標示數字可能不完整，不要假裝是全部。
+        """
+        ids = [aid for aid in (account_ids or []) if self._is_uuid(str(aid or ""))]
+        if not self.configured() or not ids:
+            return {}
+        rows = self._select(
+            "credit_ledger",
+            {
+                "account_id": f"in.({','.join(ids)})",
+                "event_type": "eq.credits_consumed",
+                "select": "account_id,amount,created_at",
+                "order": "created_at.desc",
+                "limit": str(int(limit)),
+            },
+        ) or []
+        month_prefix = month_prefix or time.strftime("%Y-%m", time.gmtime())
+        out = {aid: {"totalMinutes": 0, "monthMinutes": 0} for aid in ids}
+        for row in rows:
+            aid = row.get("account_id")
+            if aid not in out:
+                continue
+            try:
+                minutes = abs(float(row.get("amount") or 0))
+            except (TypeError, ValueError):
+                continue
+            out[aid]["totalMinutes"] += minutes
+            if str(row.get("created_at") or "").startswith(month_prefix):
+                out[aid]["monthMinutes"] += minutes
+        truncated = len(rows) >= int(limit)
+        for value in out.values():
+            value["totalMinutes"] = round(value["totalMinutes"], 1)
+            value["monthMinutes"] = round(value["monthMinutes"], 1)
+            value["truncated"] = truncated
+        return out
 
     def grant_free_signup_trial(self):
         """Atomically grant the one-time account signup trial in Postgres."""
@@ -3447,6 +3527,10 @@ class SupabaseAdapter:
             "localeContext": locale_context,
             "createdAt": account.get("created_at"),
             "updatedAt": account.get("updated_at"),
+            # 閒置清理看的是 last_seen_at（App 開機蓋的上線章），跟 usage.lastActiveAt
+            # （由使用事件推算）不是同一個東西——60 天自動刪除那條規則認的是這一個。
+            "lastSeenAt": account.get("last_seen_at"),
+            "retentionWarnedAt": account.get("retention_warned_at"),
             "familyGroup": {
                 "id": family_group.get("id") or "",
                 "name": family_group.get("name") or "Munea Care Circle",

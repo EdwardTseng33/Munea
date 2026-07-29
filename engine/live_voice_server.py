@@ -578,7 +578,7 @@ def _capture_call_turns(st, max_turns=120, max_chars=600):
         del turns[:-max_turns]
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, locale_profile=None):
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, allow_care_questions=False, locale_profile=None):
     """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
@@ -859,6 +859,21 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "（這一版 App 還記不了約會、聚餐這類行程。他想記行程時，誠實說你這邊還記不了、"
             "請他到「家人」頁用「發起活動」自己建一個，千萬不要拿看診或用藥提醒充數。）"
         )
+    # 口袋問題（M1 PR-3 · 2026-07-27）——只給接得住的新版 App（?cap_ask=1）。
+    # 這條與 chat_engine.CORE ②-B 不對稱鐵則是一組：她不判斷嚴重度、不代替醫師回答，
+    # 但可以把疑問接住、存起來、讓他帶去問。這是「秘書」不是「醫生」。
+    if allow_care_questions:
+        base += (
+            "（他聊到身體上的疑問、或講出「這個不知道要不要問醫生」「我下次問醫生看看」這類話時，"
+            "你可以幫他把這個問題記進 App 的「要問醫生」清單——呼叫 add_care_question，"
+            "看診前 App 會把清單提醒他，讓他不會到了診間才發現忘記問。"
+            "**要先用一句話跟他確認你要記的是什麼問題**（例如「那我幫你記下來：膝蓋痠兩個禮拜、上下樓會卡，"
+            "下次問醫生要不要照 X 光，這樣對嗎？」），確認過再呼叫；工具回 status=ok 才能說記好了。"
+            "「這個工具的分寸」：你是幫他**保管問題**、不是**回答問題**——"
+            "記下來之後不要順口幫他判斷嚴重不嚴重、不要猜可能是什麼病、不要說「應該還好」，"
+            "那些都是醫生看了才知道的事（照你的安全界線走）。"
+            "他只是隨口抱怨、沒有想問醫生的意思，就不要硬記；一通電話最多記兩三個真正的疑問，不要把閒聊都記成問題。）"
+        )
     locale_profile = locale_profile or localization.voice_session_locale_profile()
     base += (
         "\n[即時語音話量上限]\n"
@@ -975,6 +990,30 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
                 "message": types.Schema(type=types.Type.STRING, description="已向使用者複誦並確認的完整傳話內容，最多 240 字"),
             },
             required=["recipientName", "message"],
+        ),
+    ),
+])
+
+# 「幫你記下要問醫生的問題」工具（M1 PR-3 · 2026-07-27）——口袋問題。
+# 只給帶 ?cap_ask=1 的新版 App（能力握手），舊版不聲明，免得她說「幫你記下來了」卻沒有地方記＝空頭承諾。
+# 邊界：這是「幫他把疑問存起來、帶去問醫生」，不是替他回答、不是分級、不是判嚴重度（見 chat_engine.CORE ②-B）。
+_CARE_QUESTION_TOOLS = types.Tool(function_declarations=[
+    types.FunctionDeclaration(
+        name="add_care_question",
+        description=(
+            "使用者提到某個身體狀況的疑問、或表示「下次要問醫生」時呼叫，"
+            "把這個問題存進 App 的「要問醫生」清單，看診前會提醒他。"
+            "只存問題本身，不做任何醫療判斷或嚴重度評估。"
+        ),
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "question": types.Schema(
+                    type=types.Type.STRING,
+                    description="要問醫生的問題，用使用者自己的話寫成一句完整的問句，最多 60 字，例如「膝蓋痠兩個禮拜了，上下樓會卡，需不需要照 X 光？」",
+                ),
+            },
+            required=["question"],
         ),
     ),
 ])
@@ -1197,6 +1236,7 @@ def _voice_thinking_level(explicit=None):
 
 
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
+                 allow_care_questions=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
                  resumption_handle=None, thinking_level=None, locale_profile=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
@@ -1232,6 +1272,8 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_REMINDER_TOOLS)
     if allow_events and not demo_mode:
         tools.append(_EVENT_TOOLS)
+    if allow_care_questions and not demo_mode:
+        tools.append(_CARE_QUESTION_TOOLS)
     resolved_thinking = _voice_thinking_level(thinking_level)
     thinking_config = (
         types.ThinkingConfig(thinking_level=resolved_thinking)
@@ -1248,9 +1290,14 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
+        # locale_profile 與 allow_care_questions 一律用具名傳。
+        # system_instruction 的參數順序是 ..., demo_mode, allow_care_questions, locale_profile，
+        # 照位置排下去會讓 locale_profile 落進 allow_care_questions 那格。
         system_instruction=system_instruction(
             char, name, mood, topics, user, location, allow_reminders, fam,
-            memory_scope, allow_events, demo_mode, locale_profile,
+            memory_scope, allow_events, demo_mode,
+            allow_care_questions=allow_care_questions,
+            locale_profile=locale_profile,
         ),
         tools=tools,
         output_audio_transcription=transcription_config,
@@ -2541,7 +2588,8 @@ async def handle(ws):
     user = None
     location = None
     allow_reminders = False   # 只有帶 ?cap_rem=1 的新版 App 才開放「幫你設提醒」工具（防舊版假成功）
-    allow_events = False      # 只有帶 ?cap_evt=1 的新版 App 才開放「幫你記行程」工具（2026-07-16）
+    allow_events = False
+    allow_care_questions = False   # 只有帶 ?cap_ask=1 的新版 App 才開放口袋問題工具（M1 PR-3）      # 只有帶 ?cap_evt=1 的新版 App 才開放「幫你記行程」工具（2026-07-16）
     fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
     day_call = None           # 當日第幾通（0-based）：只負責開場路線去重，不改變關係熟識度
     gate_key = ""   # Legacy 1.0.1 transition only.
@@ -2641,6 +2689,9 @@ async def handle(ws):
         # ?cap_evt=1：這版 App 接得住「AI 幫你記行程」→ 才給記行程工具（能力握手 · 2026-07-16 Edward「約吃飯被設成看診」）
         if _q.get("cap_evt") == ["1"] and not demo_mode:
             allow_events = True
+        # ?cap_ask=1：這版 App 接得住「AI 幫你記要問醫生的問題」（M1 PR-3）
+        if _q.get("cap_ask") == ["1"] and not demo_mode:
+            allow_care_questions = True
         # ?fam=N：聊過幾通（熟識度）→ 決定開場話量：越熟話越少（Edward 2026-07-10「隨熟識度思考語句量」）
         fvals = _q.get("fam")
         if fvals:
@@ -2702,7 +2753,9 @@ async def handle(ws):
             # 丟到背景執行緒，別卡住整條 async 事件主幹道、拖垮所有通話中的人（2026-07-12 卡西法壓測抓到 10 人斷崖真兇）
             cfg = await asyncio.to_thread(
                 live_config, char, name, mood, topics, user, location, allow_reminders, fam,
-                memory_scope, allow_events, demo_mode, resumption_handle=resumption_handle,
+                memory_scope, allow_events, demo_mode,
+                allow_care_questions=allow_care_questions,
+                resumption_handle=resumption_handle,
                 locale_profile=voice_locale_session.current_profile())
             if first_connect and cfg.thinking_config is not None:
                 # A/B 實測要有帳可查：這通到底跑在哪一段思考深度，直接寫進通話紀錄。
