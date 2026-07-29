@@ -231,9 +231,14 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
             return False
         return not any(w and w in (user_text or "") for w in (s.get("askedFor") or []))
 
+    # leadWith＝陪襯層的反面（2026-07-29 加貧血題時抓到）：有些方案是「門檻」——
+    # 不先做這件事，後面每一條都失去意義。貧血題的「先驗血、別盲補」就是，
+    # 它靠分數永遠擠不進前三（食補又慢養又省力，分數天生高），可是把補鐵法
+    # 講在驗血前面，等於教人盲補——鐵補過頭是會傷身體的。
     ranked = sorted(
         (s for s in pool if not _blocked_by_safety(s, flags, user_text)),
-        key=lambda s: (_demoted(s), -_score(s, flags, urgent, user_text)),
+        key=lambda s: (not s.get("leadWith"), _demoted(s),
+                       -_score(s, flags, urgent, user_text)),
     )
     # 類型多樣性：三個建議全是「行為調整」等於同一招講三次，長輩也記不住差別。
     # 挑的時候同類型最多兩個，把位置留給食補／運動／保健品這些不同路數的方案。
