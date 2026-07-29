@@ -42,6 +42,7 @@ global.document = { getElementById: id => elements[id] || null };
 global.CustomEvent = function (name, options) { this.type = name; this.detail = options.detail; };
 global.window = global;
 window.dispatchEvent = () => {};
+window.addEventListener = () => {};
 window.__muneaSetHealth = () => {};
 window.__muneaSetSteps = () => {};
 window.__muneaSetHealthHistory = () => {};

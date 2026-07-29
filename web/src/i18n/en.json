@@ -654,7 +654,6 @@
   "notification.loading": "Loading notifications…",
   "notification.signInRequired": "Please sign in, or try again later.",
   "notification.emptyDetail": "No notifications yet. New reminders and family updates will stay here.",
-  "medication.genericName": "medication",
   "textChat.title": "Continue by text",
   "textChat.placeholder": "Type what you'd like to say",
   "textChat.send": "Send",
