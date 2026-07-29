@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$ProjectId = "gen-lang-client-0229303523",
   [string]$Region = "asia-east1",
   [string]$Service = "munea-runpod-controller",
@@ -16,6 +16,17 @@ param(
   [int]$SlotsPerPod = 2,
   [int]$MaxPods = 4,
   [int]$TargetConcurrentCalls = 10,
+  # 2026-07-29: these values used to live only in the deployed service's env
+  # vars -- running this script (--env-vars-file replaces the whole env set)
+  # would wipe the template id and the controller could no longer open cards
+  # (fail closed). Now the script carries them. TemplateMap format:
+  # "AP-JP-1=tmplA,EU-RO-1=tmplB" (per-DC template whose image sits in the
+  # nearest registry mirror; empty string disables per-DC selection).
+  # (ASCII comments on purpose: non-ASCII inside param() breaks Windows
+  # PowerShell 5.1 parsing of the defaults.)
+  [string]$TemplateId = "bv9wrwdq8i",
+  [string]$DataCenters = "AP-JP-1,EU-RO-1",
+  [string]$TemplateMap = "",
   [switch]$DryRun
 )
 
@@ -62,11 +73,18 @@ $envValues = [ordered]@{
   MUNEA_RUNPOD_IDLE_SECONDS = "900"
   MUNEA_RUNPOD_COOLDOWN_SECONDS = "300"
   MUNEA_RUNPOD_SCALE_UP_COOLDOWN_SECONDS = "15"
-  MUNEA_RUNPOD_STARTUP_TIMEOUT_SECONDS = "420"
+  # 2026-07-29：420→600。鏡像後同城拉圖 2-5 分內綽綽有餘；放寬是給「全球
+  # 兜底」跨洋拉圖的最壞情境——超時會砍卡重開、太緊會變成開卡→砍卡的空燒迴圈。
+  MUNEA_RUNPOD_STARTUP_TIMEOUT_SECONDS = "600"
   MUNEA_RUNPOD_POLL_SECONDS = "15"
   MUNEA_RUNPOD_SCALE_DOWN_ACTION = "terminate"
   MUNEA_RUNPOD_STATE_FILE = "/tmp/runpod-backup-state.json"
   MUNEA_RUNPOD_LOCK_FILE = "/tmp/runpod-backup.lock"
+  MUNEA_RUNPOD_TEMPLATE_ID = $TemplateId
+  MUNEA_RUNPOD_DATA_CENTERS = $DataCenters
+}
+if ($TemplateMap.Trim()) {
+  $envValues["MUNEA_RUNPOD_TEMPLATE_MAP"] = $TemplateMap.Trim()
 }
 $lines = foreach ($entry in $envValues.GetEnumerator()) {
   $escaped = ([string]$entry.Value).Replace("'", "''")

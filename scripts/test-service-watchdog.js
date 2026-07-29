@@ -27,7 +27,7 @@ async function main() {
   check("名單含 Gateway 總機", names.includes("Gateway 通話總機"));
   check("名單含容量看守", names.includes("容量看守"));
   check("名單含 RunPod 控制器", names.includes("RunPod"));
-  check("名單含公開網站", names.includes("app.munea.net"));
+  check("名單含公開網站", names.includes("munea.net"));
 
   // 契約 1b：正式兩台（2026-07-16 PR #118 重建、STATUS 94 號）判定規則比照 staging
   const brainProd = TARGETS.find((t) => t.name.includes("Brain 正式"));

@@ -76,7 +76,7 @@
       "id": "public-web",
       "displayName": "Munea public web",
       "environment": "production",
-      "host": "app.munea.net",
+      "host": "munea.net",
       "path": "/",
       "statusCodes": [200],
       "jsonOk": false

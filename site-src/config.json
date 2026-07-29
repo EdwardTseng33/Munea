@@ -4,7 +4,7 @@
   "_appStoreUrl說明": "App 通過 App Store 審核、拿到正式網址後，把網址填進來再重跑 build，全站五個下載鍵會一起從『即將上架』翻成『免費下載』。留空＝維持即將上架，絕不會出現點了 404 的死連結。",
   "appStoreUrl": "https://apps.apple.com/tw/app/id6788658125",
 
-  "siteUrl": "https://app.munea.net",
+  "siteUrl": "https://munea.net",
   "contactEmail": "edwardt0303@gmail.com",
   "b2bUrl": "https://munea-b2b.vercel.app",
   "year": 2026,

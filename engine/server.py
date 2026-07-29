@@ -22,6 +22,7 @@ from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
 import cloud_resync
+import clinic_visits
 import health_followup
 import health_kb
 import health_selector
@@ -4264,6 +4265,25 @@ def admin_usage_summary(data=None):
     }
 
 
+def _normalize_account_owner(owner=None):
+    """名冊的「這一戶是誰登入的」：登入方式／信箱／註冊與最後登入時間。
+
+    查不到登入身分（例如演習腳本留下的孤兒帳號列）就回空殼，讓前端顯示「查無登入身分」，
+    不要整個欄位消失讓人以為後台壞了。"""
+    owner = owner or {}
+    email = str(owner.get("email") or "").strip()
+    return {
+        "authUserId": str(owner.get("authUserId") or owner.get("auth_user_id") or ""),
+        "email": email,
+        "emailIsPrivateRelay": bool(owner.get("emailIsPrivateRelay")
+                                    or email.lower().endswith("@privaterelay.appleid.com")),
+        "signInMethod": str(owner.get("signInMethod") or owner.get("sign_in_method") or ""),
+        "signInName": str(owner.get("signInName") or owner.get("sign_in_name") or ""),
+        "signedUpAt": owner.get("signedUpAt") or owner.get("signed_up_at"),
+        "lastSignInAt": owner.get("lastSignInAt") or owner.get("last_sign_in_at"),
+    }
+
+
 def normalize_admin_account_summary(item=None):
     item = item or {}
     family_group = item.get("familyGroup") or item.get("family_group") or {}
@@ -4286,12 +4306,18 @@ def normalize_admin_account_summary(item=None):
         },
         "primaryPerson": {
             "id": str(primary_person.get("id") or ""),
+            # displayName 存的是 AI 陪伴角色名；profileName／nickname 才是使用者本人的名字
+            # （見 supabase_adapter.person_row_to_profile）。這一層是名冊回應的最後把關，
+            # 漏掉哪個欄位前端就永遠拿不到——2026-07-29 owner 與 profileName 就是漏在這裡。
             "displayName": str(primary_person.get("displayName") or primary_person.get("display_name") or ""),
+            "profileName": str(primary_person.get("profileName") or primary_person.get("profile_name") or ""),
+            "nickname": str(primary_person.get("nickname") or ""),
             "relationship": str(primary_person.get("relationship") or "self"),
             "locale": locale_context["conversationLocale"],
             "timezone": locale_context["timeZone"],
             "regionCode": locale_context["countryCode"],
         },
+        "owner": _normalize_account_owner(item.get("owner")),
         "companion": {
             "templateId": str(companion.get("templateId") or companion.get("template_id") or "nening-real-female"),
             "displayName": str(companion.get("displayName") or companion.get("display_name") or "Munea"),
@@ -8558,6 +8584,14 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
         if _hit:
             _recent_topic = _hit[0]
             break
+    # 看診前後閉環（2026-07-29）：他提到要看醫生／看完了，或還有懸著的小抄，
+    # 就帶一段提示進去。這一層不給建議、只幫他記與問，所以放在衛教注入之前也無妨。
+    try:
+        _visit_cue = clinic_visits.cue_for(_health_profile.get("personId") or "", last_user)
+        if _visit_cue:
+            base += _visit_cue
+    except Exception as e:
+        log_fallback_exception("attach clinic visit cue", e)
     base += health_kb.injection_for(last_user, profile=_health_profile,
                                     hour=(context.get("now") or {}).get("hour"),
                                     recent_topic=_recent_topic)

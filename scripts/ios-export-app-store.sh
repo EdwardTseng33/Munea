@@ -172,12 +172,13 @@ if ! cmp -s "$ROOT/web/index.html" "$APP_PATH/public/index.html" \
   || ! cmp -s "$ROOT/web/src/app.js" "$APP_PATH/public/src/app.js" \
   || ! cmp -s "$ROOT/web/src/auth.js" "$APP_PATH/public/src/auth.js" \
   || ! cmp -s "$ROOT/web/src/auth-config.js" "$AUTH_CONFIG_PATH" \
+  || ! cmp -s "$ROOT/web/src/health.js" "$APP_PATH/public/src/health.js" \
   || ! cmp -s "$ROOT/web/src/styles.css" "$APP_PATH/public/src/styles.css"; then
   echo "FAIL exported IPA does not contain the latest Web design assets."
   exit 1
 fi
 
-for asset_regex in 'styles\.css' 'version\.js' 'auth\.js' 'app\.js'; do
+for asset_regex in 'styles\.css' 'version\.js' 'auth\.js' 'health\.js' 'app\.js'; do
   if ! grep -Eq "src/${asset_regex}\\?v=[^\"]*-${EXPECTED_ASSET_TOKEN}\"" "$PACKAGED_INDEX_PATH"; then
     echo "FAIL exported IPA cache identity is stale for $asset_regex (expected $EXPECTED_ASSET_TOKEN)."
     exit 1

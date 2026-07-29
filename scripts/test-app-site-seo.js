@@ -79,15 +79,10 @@ const locales = [
   { code: "es", dir: "es", hreflang: "es" },
 ];
 // trailingSlash:false —— 對外網址不帶尾斜線，否則每個語系都要先吃一次轉址
-const localeUrl = (dir) => (dir ? `https://app.munea.net/${dir}` : "https://app.munea.net/");
+const localeUrl = (dir) => (dir ? `https://munea.net/${dir}` : "https://munea.net/");
 
 const sitemap = read("sitemap.xml");
-const sitemapUrls = [
-  ...locales.map((l) => localeUrl(l.dir)),
-  "https://app.munea.net/privacy",
-  "https://app.munea.net/terms",
-  "https://app.munea.net/support",
-];
+const sitemapUrls = [...locales.map((l) => localeUrl(l.dir))];
 for (const url of sitemapUrls) {
   assert.match(sitemap, new RegExp(`<loc>${url.replaceAll(".", "\\.")}</loc>`));
 }
@@ -104,7 +99,7 @@ assert.match(sitemap, /hreflang="x-default"/, "sitemap needs an x-default altern
 const robots = read("robots.txt");
 assert.match(robots, /^User-agent:\s*\*/m);
 assert.match(robots, /^Allow:\s*\/$/m);
-assert.match(robots, /^Sitemap:\s*https:\/\/app\.munea\.net\/sitemap\.xml$/m);
+assert.match(robots, /^Sitemap:\s*https:\/\/munea\.net\/sitemap\.xml$/m);
 
 const pages = [
   ...locales.map((l) => ({
@@ -112,6 +107,7 @@ const pages = [
     canonical: localeUrl(l.dir),
     locale: l,
   })),
+  // 法律頁的正本留在 app.munea.net —— 那是 App Store 登記的網址，動它要改蘋果後台
   { file: "privacy.html", canonical: "https://app.munea.net/privacy" },
   { file: "terms.html", canonical: "https://app.munea.net/terms" },
   { file: "support.html", canonical: "https://app.munea.net/support" },
@@ -166,6 +162,6 @@ for (const page of pages) {
   }
 }
 
-console.log(`[ok] app.munea.net SEO contract passed (${locales.length} locales)`);
+console.log(`[ok] munea.net SEO contract passed (${locales.length} locales)`);
 
 require("./test-app-site-legal-localizations.js");

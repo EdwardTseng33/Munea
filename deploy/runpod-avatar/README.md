@@ -39,6 +39,25 @@
 4. 驗證通過後，才把 `MUNEA_RUNPOD_SLOTS` 現行值（Cloud Run 環境變數）與 `scripts/cloud-run-deploy-runpod-controller.ps1` 的 `-SlotsPerPod` 一起從 1 調整為 2；`MaxPods`／`TargetConcurrentCalls` 的新預設（4／10）本 PR 已經改好，重跑該腳本或用 `gcloud run services update` 手動套用即可生效。
 5. 誰能做：需要 RunPod 主控台權限（換模板映像）與 GCP `gcloud` 部署權限（Cloud Run 更新），目前是 Edward／有金鑰的人手動跑，非本 PR 範圍。
 
+### 印象檔三地鏡像＋分機房模板（2026-07-29 蘇菲）
+
+7/23 演習「開卡→能講話 9 分 09 秒」的大頭是從台灣 `asia-east1` 跨洲拉 25GB 印象檔
+（東京缺 4090 時卡常開在歐洲 EU-RO-1）。修法＝同一份印象檔烤完推三地倉庫：
+
+| 倉庫 | 服務對象 |
+|---|---|
+| `asia-east1-docker.pkg.dev/.../munea-gpu/vocaframe-640` | 原倉（正本＋退版標籤） |
+| `asia-northeast1-docker.pkg.dev/.../munea-gpu/vocaframe-640` | RunPod AP-JP-1（東京同城） |
+| `europe-west4-docker.pkg.dev/.../munea-gpu/vocaframe-640` | RunPod EU-RO-1（同洲） |
+
+領貨憑證共用同一個 `munea-ar-reader` 服務帳號（兩個新倉庫已各發 reader 權限）。
+RunPod 端各機房建自己的模板（映像指向最近的倉庫），管家用
+`MUNEA_RUNPOD_TEMPLATE_MAP="AP-JP-1=<東京模板>,EU-RO-1=<歐洲模板>"` 分機房開卡：
+照 `MUNEA_RUNPOD_DATA_CENTERS` 順序逐機房嘗試、缺卡（stockout）自動換下一個；
+全部缺卡時預設會做「全球找卡」兜底（不限機房、用 `MUNEA_RUNPOD_TEMPLATE_ID`
+基準模板、拉圖較慢但至少拿得到卡），設 `MUNEA_RUNPOD_GLOBAL_FALLBACK=0` 可關。
+`MUNEA_RUNPOD_TEMPLATE_MAP` 沒設時行為與舊版完全相同（單模板、機房清單一次帶入）。
+
 ## 768（720P級）首發設定
 
 FlashHead實測可用尺寸是32的倍數；720會炸，首發720P級畫質使用 **768×768**。正式切換前必須同時完成：

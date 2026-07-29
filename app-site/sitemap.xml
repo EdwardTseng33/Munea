@@ -1,42 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://app.munea.net/</loc>
-    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://app.munea.net/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://app.munea.net/en"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://app.munea.net/ja"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://app.munea.net/es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.munea.net/"/>
+    <loc>https://munea.net/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>
   <url>
-    <loc>https://app.munea.net/en</loc>
-    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://app.munea.net/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://app.munea.net/en"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://app.munea.net/ja"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://app.munea.net/es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.munea.net/"/>
+    <loc>https://munea.net/en</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>
   <url>
-    <loc>https://app.munea.net/ja</loc>
-    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://app.munea.net/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://app.munea.net/en"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://app.munea.net/ja"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://app.munea.net/es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.munea.net/"/>
+    <loc>https://munea.net/ja</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>
   <url>
-    <loc>https://app.munea.net/es</loc>
-    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://app.munea.net/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://app.munea.net/en"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://app.munea.net/ja"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://app.munea.net/es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.munea.net/"/>
+    <loc>https://munea.net/es</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>
-  <url><loc>https://app.munea.net/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://app.munea.net/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://app.munea.net/support</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+
 </urlset>
