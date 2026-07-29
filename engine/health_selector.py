@@ -30,6 +30,26 @@ URGENCY_WORDS = ("受不了", "撐不住", "快瘋了", "好幾天沒睡", "三�
 PILL_AVERSE_WORDS = ("不想吃藥", "不要吃藥", "不敢吃藥", "藥吃太多", "不想再吃", "怕副作用")
 # 偏好中醫
 TCM_WORDS = ("中藥", "中醫", "轉骨", "四物", "藥膳")
+# 代問偵測（2026-07-29 · 三齡層擴充時發現）：青少年的事多半是爸媽在問、不是本人；
+# 長輩的事也常是子女在問。同一題對「本人」跟「替他問的人」要講完全不同的話——
+# 對本人是「你可以怎麼做」，對家長是「先理解他不是故意的，你可以怎麼幫」。
+PROXY_WORDS = ("我小孩", "我兒子", "我女兒", "我孫", "我家那個", "我兒", "小朋友",
+               "我媽", "我爸", "我先生", "我太太", "我老公", "我老婆", "家裡老人家")
+
+
+# 第一人稱抱怨：出現這些就代表主角是說話的人自己，即使他也提到了別人。
+# （2026-07-29 實測抓到：照顧者說「**我媽**三點要起來上廁所，**我**根本睡不飽」——
+#  提到媽媽只是原因、主角是她自己；判成代問會害她拿到給家長聽的話。）
+SELF_COMPLAINT_WORDS = ("我根本", "我自己", "我都睡", "我睡", "我好累", "我很累", "我快",
+                        "我最近", "我每天", "我沒辦法", "我撐", "我覺得")
+
+
+def _asking_for_someone_else(user_text):
+    text = user_text or ""
+    if not any(w in text for w in PROXY_WORDS):
+        return False
+    # 也講了自己的不舒服 → 主角是他本人，不是代問
+    return not any(w in text for w in SELF_COMPLAINT_WORDS)
 
 
 def _is_urgent(user_text, hour=None):
@@ -118,7 +138,10 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
 
     flags = _profile_flags(profile)
     urgent = _is_urgent(user_text, hour)
+    proxy = _asking_for_someone_else(user_text)
     pool = topic.get("solutions") or []
+    # 代問時只留「講給家長聽」的版本；本人問只留「講給本人聽」的版本；沒標的兩邊都給。
+    pool = [s for s in pool if s.get("forWhom") in (None, "parent" if proxy else "self")]
 
     ranked = sorted(
         (s for s in pool if not _blocked_by_safety(s, flags, user_text)),
@@ -148,11 +171,15 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     # 重新定義問題（例：照顧者不是失眠、是沒得睡）
     reframe = None
     for r in topic.get("reframe") or []:
-        if flags["audience"] == "caregiver" and "照顧者" in r.get("when", ""):
+        if r.get("forWhom") == "parent" and proxy:
+            reframe = r["say"]
+            break
+        if r.get("forWhom") in (None, "self") and not proxy and flags["audience"] == "caregiver"                 and "照顧者" in r.get("when", ""):
             reframe = r["say"]
             break
 
-    return {"solutions": picked, "referral": referral, "reframe": reframe, "urgent": urgent}
+    return {"solutions": picked, "referral": referral, "reframe": reframe,
+            "urgent": urgent, "proxy": proxy}
 
 
 def render(topic_id, user_text="", profile=None, hour=None):
