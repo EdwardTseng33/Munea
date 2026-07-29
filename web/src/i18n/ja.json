@@ -618,7 +618,7 @@
   "medicationManager.scheduleRequired": "服用する時間を選んでください。複数選択できます。",
   "medicationManager.addedToast": "{companion}が{slots}に「{name}」を飲むようお知らせします。時刻は生活リズムに合わせます。",
   "notification.centerTitle": "通知センター",
-  "notification.centerSubtitle": "この端末で受け取るリマインダーを選びます。",
+  "notification.centerSubtitle": "この端末で受け取るリマインダーを選びます",
   "notification.push": "アプリの通知",
   "notification.pushOff": "オンにするとリマインダーを受け取れます",
   "notification.pushOn": "大切なリマインダーをこの端末へ送ります",
@@ -730,5 +730,7 @@
   "legacyUi.familyOkay": "良好",
   "version.webBuild": "Web v{version}",
   "version.localizedSummary": "通話状態の説明、文字での代替手段、読みやすさを改善しました。",
-  "health.openHealthApp": "ヘルスケアを開いて項目をオンにする"
+  "health.openHealthApp": "ヘルスケアを開いて項目をオンにする",
+  "notification.centerStateOn": "オン",
+  "notification.centerStateOff": "オフ"
 }

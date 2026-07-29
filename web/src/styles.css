@@ -413,6 +413,9 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 #safetyModal { z-index: 70; }   /* 緊急聯絡人小窗要蓋在通知中心子頁（z-index 60）上面 */
 .notification-test-action { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--teal-d); border-radius: 12px; background: transparent; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
 .notification-save-state { min-height: 20px; margin-top: 8px; text-align: center; color: var(--teal-d); font-size: 12.5px; }
+/* 這一行只有存好設定時才會出現字。沒字的時候原本仍佔 20px 高＋8px 間距＝
+   頁尾平白多出 28px 空白，看起來像版面沒收乾淨。沒字就整個收起來。 */
+.notification-save-state:empty { min-height: 0; margin-top: 0; }
 .provider-consent-card { margin-top: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid rgba(58,168,160,.14); box-shadow: var(--shadow-sm); }
 .provider-consent-card[data-consent="agreed"] { border-color: rgba(58,168,160,.28); background: #F5FBF8; }
 .provider-consent-head { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
