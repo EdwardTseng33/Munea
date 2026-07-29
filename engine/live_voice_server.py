@@ -426,11 +426,16 @@ def health_watch_user_text(cid, st):
         sent = st.setdefault("health_topics_sent", set())
         if len(sent) >= health_kb.MAX_TOPICS_PER_CALL or st.get("pending_health_cue"):
             return
-        ids = health_kb.match_topics(st.get("user_buf") or "", limit=1, exclude=sent)
+        said = st.get("user_buf") or ""
+        # 2026-07-29：把「這個人是誰、現在幾點」帶進來，聊聊也要因人因時
+        # （聊聊是主戰場——長輩版跟青少年版不能混）。判不出齡層就傳 None、退回通用。
+        _prof = {"audience": st.get("health_audience")}
+        _hour = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).hour
+        ids = health_kb.match_topics(said, limit=1, exclude=sent)
         if not ids:
             return
         sent.add(ids[0])
-        st["pending_health_cue"] = health_kb.voice_cue(ids[0])
+        st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour)
         _diag(cid, "healthkb.hit", topic=ids[0])
     except Exception as e:
         _diag(cid, "healthkb.err", err="%s:%s" % (type(e).__name__, str(e)[:60]))

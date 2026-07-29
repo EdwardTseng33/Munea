@@ -23,6 +23,7 @@ from admin_data_quality import admin_contract_response, latest_record_timestamp,
 import chat_engine as eng
 import cloud_resync
 import health_kb
+import health_selector
 import localization
 import supabase_adapter
 import enterprise_seats
@@ -8433,7 +8434,12 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
             last_user = (h.get("text") or h.get("content") or "").strip()
             if last_user:
                 break
-    base += health_kb.injection_for(last_user)
+    # 2026-07-29：把「這個人是誰、現在幾點」一起傳進去，方案挑選才會因人因時。
+    # 沒有出生年就傳 None——挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
+    _pp = load_person_profile() or {}
+    _health_profile = {"audience": health_selector.audience_from_birth_year(_pp.get("birthYear"))}
+    base += health_kb.injection_for(last_user, profile=_health_profile,
+                                    hour=(context.get("now") or {}).get("hour"))
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):

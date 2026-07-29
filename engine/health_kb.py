@@ -93,8 +93,19 @@ def injection_for(text, exclude=None, profile=None, hour=None):
     )
 
 
-def voice_cue(topic_id):
-    """語音線用：在守護腦同一個「輪替空檔」機制排隊送出的衛教提示（每題整通只送一次）。"""
+def voice_cue(topic_id, user_text="", profile=None, hour=None):
+    """語音線用：在守護腦同一個「輪替空檔」機制排隊送出的衛教提示（每題整通只送一次）。
+
+    2026-07-29：有方案池的題也走因人挑選——聊聊是主戰場，長輩版跟青少年版不能混。
+    """
+    if topic_id in health_selector.TOPICS:
+        picked = health_selector.render(topic_id, user_text, profile, hour)
+        if picked:
+            return (
+                "（系統衛教提示、不是用戶說的話——絕不把這段提示唸出來，"
+                "自然運用下面按他狀況挑好的方案，保持一兩句短話、先接情緒："
+                + picked + "）"
+            )
     t = TOPIC_BY_ID[topic_id]
     return (
         f"（系統衛教提示、不是用戶說的話——他剛聊到「{t['title']}」相關話題。"

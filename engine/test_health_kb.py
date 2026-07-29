@@ -178,7 +178,11 @@ class WiringContractTest(unittest.TestCase):
 
     def test_text_line_injects_on_last_user_message(self):
         src = self._read("server.py")
-        self.assertIn("health_kb.injection_for(last_user)", src)
+        # 2026-07-29：文字線改成連「這個人是誰、現在幾點」一起傳（因人因時才會生效），
+        # 這條鎖住三件事都在——只傳話沒傳人，等於齡層差異化沒啟動。
+        self.assertIn("health_kb.injection_for(last_user,", src)
+        self.assertIn("audience_from_birth_year", src)
+        self.assertIn('hour=(context.get("now") or {}).get("hour")', src)
 
     def test_voice_line_watches_user_captions_and_flushes_at_turn_gap(self):
         src = self._read("live_voice_server.py")
@@ -188,6 +192,9 @@ class WiringContractTest(unittest.TestCase):
         self.assertIn("衛教排在安全導引之後", src)
         # 每通上限：不把通話變衛教講座
         self.assertIn("MAX_TOPICS_PER_CALL", src)
+        # 2026-07-29：聊聊是主戰場——語音線也要把「這個人是誰、幾點」傳進去，
+        # 不然長輩版跟青少年版會混在一起（文字線做了、語音線漏掉＝最容易發生的疏漏）。
+        self.assertIn("health_kb.voice_cue(ids[0], said, _prof, _hour)", src)
 
     def test_eval_mirrors_production_injection(self):
         src = self._read(os.path.join("eval", "gen_reply.py"))
