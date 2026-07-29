@@ -1975,6 +1975,33 @@ class SupabaseAdapter:
         )
         return self.credits_rows_to_store(wallets, transactions, ledger)
 
+    def load_account_credit_balances(self, account_ids):
+        """一次撈多戶的點數餘額 → {accountId: 餘額}（後台名冊的「持有點數」欄用）。
+
+        既有的 load_credits_store 綁單一帳號（request-scoped），名冊要顯示每一戶的點數時
+        用不上——2026-07-29 之前後台就是因此除了當前那一戶之外通通印 0，看起來像每個人都沒點數，
+        「快用完名單」那一頁也連帶失去意義。
+
+        只算 status=active 的錢包（closed／過期的不列入可用餘額，跟 credit_wallet_summary 同義），
+        一次 in.() 查完不逐戶查。查詢失敗回空 dict，讓呼叫端退回舊行為，不編數字。"""
+        ids = [aid for aid in (account_ids or []) if self._is_uuid(str(aid or ""))]
+        if not self.configured() or not ids:
+            return {}
+        rows = self._select(
+            "credit_wallets",
+            {"account_id": f"in.({','.join(ids)})", "status": "eq.active", "select": "account_id,balance"},
+        ) or []
+        balances = {}
+        for row in rows:
+            aid = row.get("account_id")
+            if not aid:
+                continue
+            try:
+                balances[aid] = balances.get(aid, 0.0) + float(row.get("balance") or 0)
+            except (TypeError, ValueError):
+                continue
+        return balances
+
     def grant_free_signup_trial(self):
         """Atomically grant the one-time account signup trial in Postgres."""
         result = self._request(
