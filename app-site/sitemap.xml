@@ -36,5 +36,5 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>
-
+  <url><loc>https://munea.net/solutions.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>
