@@ -639,6 +639,527 @@
           "say": "如果這樣持續兩個禮拜以上、連本來喜歡的事都提不起勁，那不是你不夠堅強，是該找專業的人聊聊了——先看家醫科就可以。**要是有不想活的念頭，那不能等，1925 安心專線 24 小時都有人接。**"
         }
       ]
+    },
+    "TW-EDU-11": {
+      "title": "胃脹氣／消化不良／火燒心",
+      "solutions": [
+        {
+          "id": "reflux-no-lie-down",
+          "label": "餐後別馬上躺",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "吃完別馬上躺，隔個兩三小時再躺，睡前三小時盡量別再吃東西——這個最有感。"
+        },
+        {
+          "id": "reflux-late-dinner",
+          "label": "別再吃宵夜",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker"
+          ],
+          "say": "加班晚吃、吃完就倒下睡，這是上班族火燒心最常見的組合。如果真的要晚吃，就吃少一點、別吃油炸的，睡前撐個兩小時。"
+        },
+        {
+          "id": "reflux-raise-head",
+          "label": "床頭墊高一點",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "床頭那側墊高十幾公分（枕頭墊高沒用、要整個床頭抬起來），晚上胃酸比較不會往上跑。"
+        },
+        {
+          "id": "reflux-diet",
+          "label": "少油炸、少吃太飽",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "油炸、太甜、咖啡濃茶跟酒都會讓胃酸更容易往上，先減這幾樣，一餐別吃到太撐。"
+        },
+        {
+          "id": "reflux-weight",
+          "label": "體重控制",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "高",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "肚子的壓力會把胃往上擠，體重降一點對火燒心是實打實的幫助——不用急，慢慢來。"
+        },
+        {
+          "id": "reflux-meds-blocked",
+          "label": "胃藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "胃藥的種類跟吃法我不能建議；長期在吃的也別自己停，那要醫師評估。"
+        },
+        {
+          "id": "reflux-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吞嚥困難",
+            "不明原因變瘦",
+            "解黑便",
+            "貧血",
+            "胸悶合併冒冷汗或喘"
+          ],
+          "say": "如果會吞不下去、莫名變瘦、大便變黑，這要看腸胃科排除食道胃部的問題。**最重要的一條：火燒心會罩住心肌梗塞——要是合併冒冷汗、喘、痛延伸到左手或下巴、動一動更痛，先當心臟的事處理，立刻就醫或打 119。**"
+        }
+      ]
+    },
+    "TW-EDU-02": {
+      "title": "退化性關節炎／膝蓋痛",
+      "solutions": [
+        {
+          "id": "knee-thigh-strength",
+          "label": "大腿肌力訓練",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "膝蓋不好最有效的其實是練大腿——坐著抬腿、扶著椅子起立坐下，一天幾次就好。肌肉幫忙撐，膝蓋就不用自己扛。"
+        },
+        {
+          "id": "knee-weight",
+          "label": "體重控制",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "高",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "體重每少一點，膝蓋每一步的負擔就少好幾倍——這個的實證比任何保健品都紮實。"
+        },
+        {
+          "id": "knee-avoid-squat",
+          "label": "避開傷膝蓋的動作",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "走路挑平地、少爬樓梯、別久蹲久跪。拖地擦地那種蹲著做的家事，換成坐著或用長柄的。"
+        },
+        {
+          "id": "knee-patch",
+          "label": "痠痛貼布",
+          "riskLevel": "L1",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "貼布讓當下舒服一點可以，但別天天長期貼把問題蓋住——痛是身體在講話。",
+          "secondLine": true,
+          "askedFor": [
+            "貼布",
+            "痠痛藥布",
+            "藥膏"
+          ]
+        },
+        {
+          "id": "knee-glucosamine",
+          "label": "葡萄糖胺／軟骨素",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "腎功能不佳",
+            "對甲殼類過敏"
+          ],
+          "dailyCap": "依產品標示，且不與其他同成分保健品重複吃",
+          "evidence": {
+            "finding": "證據普遍中偏弱、效果因人而異；體重控制與肌力訓練的實證比它明確得多"
+          },
+          "say": "葡萄糖胺、軟骨素這類的研究證據普遍中偏弱、不是人人有感——可以試，但別把它當主力。真正有效的還是控制體重跟練大腿肌力。你如果在吃抗凝血劑、腎功能不好、或對蝦蟹過敏，吃之前一定要問過醫師或藥師。",
+          "verifiedAt": "2026-07-29",
+          "secondLine": true,
+          "askedFor": [
+            "葡萄糖胺",
+            "軟骨素",
+            "維骨力"
+          ]
+        },
+        {
+          "id": "knee-surgery-blocked",
+          "label": "開刀／打針",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "高",
+          "audience": [],
+          "blocked": true,
+          "say": "要不要開刀、要不要打玻尿酸或類固醇，這是骨科醫師的判斷，我不能替你決定。"
+        },
+        {
+          "id": "knee-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "單側突然腫熱",
+            "合併發燒",
+            "外傷後不能踩地",
+            "劇痛"
+          ],
+          "say": "如果是單邊突然腫起來又發熱、還發燒，或是撞到之後就踩不了地，這不是一般退化——要儘快看醫生排除感染或骨折。"
+        }
+      ]
+    },
+    "TW-EDU-03": {
+      "title": "高血壓控制",
+      "solutions": [
+        {
+          "id": "bp-take-meds-on-time",
+          "label": "固定時間吃藥、不自己加減",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "血壓藥最重要的是固定時間吃、不漏吃也不自己加量。放在每天一定會看到的地方，比方牙刷旁邊。"
+        },
+        {
+          "id": "bp-measure-right",
+          "label": "量血壓的正確方式",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker"
+          ],
+          "say": "坐著休息五分鐘再量、手臂跟心臟同高、每天固定同一個時段量——不同時間量出來本來就會差很多，量法不對容易白擔心。"
+        },
+        {
+          "id": "bp-reduce-salt",
+          "label": "鹽少一點",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "醬油、醃漬品、湯麵的湯是台灣人最大宗的鹽——湯少喝幾口、沾醬少一點，比什麼都有感。"
+        },
+        {
+          "id": "bp-dash-diet",
+          "label": "多蔬果、多鉀的吃法",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "蔬菜水果、全穀、低脂乳品這樣的吃法（就是常聽到的得舒飲食），對降血壓有紮實的研究支持。不過腎功能不好的人不適合刻意補鉀，要先問過醫師。",
+          "contraindications": [
+            "腎功能異常",
+            "腎臟病",
+            "洗腎"
+          ]
+        },
+        {
+          "id": "bp-walk",
+          "label": "規律走路",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "notFor": [
+            "行動不便"
+          ],
+          "say": "一週五天、一次三十分鐘的快走，對血壓是實打實的幫助。不用一次到位，從十分鐘開始也算。"
+        },
+        {
+          "id": "bp-stress-sleep",
+          "label": "睡不好跟壓力也會讓血壓飆",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "caregiver"
+          ],
+          "say": "壓力大、睡不好、天氣忽冷忽熱，血壓都會臨時往上跑——不一定是藥沒效。先看是不是這幾天特別累。",
+          "related": "TW-EDU-25"
+        },
+        {
+          "id": "bp-normalize",
+          "label": "這很普遍、不是你特別差",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "say": "65 歲以上超過六成有高血壓，是最普遍的慢性病——不是你一個人的問題。",
+          "secondLine": true
+        },
+        {
+          "id": "bp-med-change-blocked",
+          "label": "換藥／加藥／停藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "換藥、加藥、停藥只有醫師能決定，我不會替你判斷，血壓的數字我也不做解讀。"
+        },
+        {
+          "id": "bp-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "收縮壓超過180",
+            "臉歪手垂大舌頭",
+            "胸悶痛冒冷汗"
+          ],
+          "say": "量到收縮壓超過 180、或是出現臉歪、手垂、講話大舌頭（中風警訊），或胸悶胸痛冒冷汗（心臟警訊）——立刻打 119，不要等回診。"
+        }
+      ]
+    },
+    "TW-EDU-16": {
+      "title": "保健品＋處方藥一起管",
+      "solutions": [
+        {
+          "id": "supp-inventory",
+          "label": "把手上的全部列出來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "say": "我們一起把你手上的保健品跟正在吃的藥列成一張清單——哪些天天吃、哪些想到才吃。列出來常常自己就看到重複了。"
+        },
+        {
+          "id": "supp-red-yeast",
+          "label": "紅麴配降血脂藥的風險",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "contraindications": [
+            "正在吃降血脂藥（Statin 類）",
+            "肝功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "以產品標示為準，且與降血脂藥併用前先問過醫師或藥師",
+          "evidence": {
+            "finding": "紅麴含天然 Statin 成分，與處方降血脂藥併用有橫紋肌溶解等交互作用風險"
+          },
+          "say": "這題最重要的一條：紅麴本身含天然的 Statin 成分，跟醫師開的降血脂藥一起吃，有橫紋肌溶解這類交互作用的風險。如果你兩個都在吃，先別自己決定要不要停，帶著兩瓶去問藥師。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "supp-food-first",
+          "label": "食物永遠優先於藥丸",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "能從食物吃到的就別靠藥丸——保健品是補不足的部分，不是拿來取代吃飯。"
+        },
+        {
+          "id": "supp-ask-pharmacist",
+          "label": "帶去給藥師整合看",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "say": "整理完最實在的一步：整袋帶去藥局，請藥師做一次用藥整合——這個健保有給付、不用錢，而且他們看得出來哪兩瓶會打架。"
+        },
+        {
+          "id": "supp-normalize",
+          "label": "手上一堆很常見",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "say": "60 歲以上將近八成過去一年買過保健食品——手上一堆很常見，不是你特別愛亂買。",
+          "secondLine": true
+        },
+        {
+          "id": "supp-no-brand-blocked",
+          "label": "推薦特定品牌或成分",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "我不會主動推薦特定品牌或成分、不報份量，也不會替你判斷「配你的藥沒問題」——那要藥師看過才算數。"
+        },
+        {
+          "id": "supp-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吃了保健品後肌肉痠痛無力",
+            "皮膚或眼白變黃",
+            "心悸"
+          ],
+          "say": "如果吃了保健品之後肌肉痠痛沒力、皮膚或眼白變黃、或會心悸——立刻停用並儘快就醫，這不是自己觀察看看的事。"
+        }
+      ]
     }
   }
 }
