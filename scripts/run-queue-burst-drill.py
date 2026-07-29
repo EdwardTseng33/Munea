@@ -156,51 +156,53 @@ class Drill:
               f"(position={((third.get('queue') or {}).get('position'))}, "
               f"eta_s={((third.get('queue') or {}).get('eta_s'))})")
 
-    def wait_for_live_controller_backup(self) -> str:
-        """Poll the gateway snapshot until the LIVE controller registers a
-        ready runpod worker. Returns the backup worker_id."""
+    def keep_queueing_until_promoted(self) -> None:
+        """Behave like the real App while the busy card is showing: re-issue
+        the same call request every ~10s. That keepalive is load-bearing --
+        a queued caller who stops asking is kicked after ~45s (lock-screen
+        zombie protection), and an empty queue tells the controller nothing
+        needs to happen (first drill run on 2026-07-29 proved exactly this).
+        The same poll also detects promotion: once the live controller has
+        opened and registered a backup card, the request flips to connect."""
         deadline = time.monotonic() + self.args.scale_up_timeout
-        while time.monotonic() < deadline:
-            snapshot = self.gateway.snapshot()
-            for worker in snapshot.get("workers", []):
-                if (str(worker.get("provider") or "") == "runpod"
-                        and str(worker.get("status") or "") == "ready"):
-                    self._mark("backup_ready")
-                    waited = self.timeline["backup_ready"] - self.timeline["third_queued"]
-                    print(f"[4/7] live controller opened backup "
-                          f"{worker.get('worker_id')} (region={worker.get('region')}) "
-                          f"in {waited:.0f}s from queue signal")
-                    return str(worker.get("worker_id"))
-            time.sleep(10)
-        raise DrillError(
-            f"live controller did not register a ready backup within "
-            f"{self.args.scale_up_timeout}s -- check munea-runpod-controller logs"
-        )
-
-    def promote_third(self, backup_worker_id: str) -> None:
-        deadline = time.monotonic() + 120
+        backup_seen = ""
         result: dict[str, Any] = {}
         while time.monotonic() < deadline:
+            if not backup_seen:
+                snapshot = self.gateway.snapshot()
+                for worker in snapshot.get("workers", []):
+                    if (str(worker.get("provider") or "") == "runpod"
+                            and str(worker.get("status") or "") == "ready"):
+                        backup_seen = str(worker.get("worker_id"))
+                        self._mark("backup_ready")
+                        waited = self.timeline["backup_ready"] - self.timeline["third_queued"]
+                        print(f"[4/7] live controller opened backup {backup_seen} "
+                              f"(region={worker.get('region')}) in {waited:.0f}s "
+                              "from queue signal")
+                        break
             result = self.store.request_call(
                 user_id=self.user_id, person_id=None, character_id="nening",
                 idempotency_key=f"queue-drill-{self.run_id}-3", queue_max=30,
             )
             if result.get("status") == "connect":
-                break
-            time.sleep(5)
-        if result.get("status") != "connect":
-            raise DrillError("queued third caller was not promoted: " + json.dumps({
-                "status": result.get("status"), "reason": result.get("reason"),
-                "queue": result.get("queue"),
-            }))
-        routed = str((result.get("worker") or {}).get("worker_id") or "")
-        if routed != backup_worker_id:
-            raise DrillError(f"third caller routed to {routed}, expected {backup_worker_id}")
-        self.calls[2] = result
-        self._mark("third_connected")
-        waited = self.timeline["third_connected"] - self.timeline["third_queued"]
-        print(f"[5/7] third caller promoted to the fresh backup card "
-              f"({waited:.0f}s queue-to-connect)")
+                routed = str((result.get("worker") or {}).get("worker_id") or "")
+                if not routed.startswith("runpod-"):
+                    raise DrillError(
+                        f"third caller connected to {routed}, expected a runpod backup"
+                    )
+                self.calls[2] = result
+                self._mark("third_connected")
+                waited = self.timeline["third_connected"] - self.timeline["third_queued"]
+                print(f"[5/7] third caller promoted to the fresh backup card "
+                      f"{routed} ({waited:.0f}s queue-to-connect)")
+                return
+            time.sleep(10)
+        raise DrillError(
+            "third caller was not promoted within "
+            f"{self.args.scale_up_timeout}s (backup_seen={backup_seen or 'none'}, "
+            f"last={json.dumps({'status': result.get('status'), 'queue': result.get('queue')})})"
+            " -- check munea-runpod-controller logs"
+        )
 
     def release_calls(self) -> None:
         billed_total = 0
@@ -250,8 +252,7 @@ class Drill:
             self.create_synthetic_account()
             self.raise_voice_admission()
             self.occupy_primary_and_queue_third()
-            backup_worker_id = self.wait_for_live_controller_backup()
-            self.promote_third(backup_worker_id)
+            self.keep_queueing_until_promoted()
             self.release_calls()
             print(json.dumps({
                 "drill": "queue-burst", "run_id": self.run_id, "result": "PASS",
