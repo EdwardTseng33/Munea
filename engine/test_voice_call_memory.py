@@ -160,26 +160,53 @@ class PersistVoiceCallTurnsTest(unittest.TestCase):
 
 
 class RecentCallRecapLineTest(unittest.TestCase):
-    def test_recap_within_window(self):
+    def test_recap_within_window_feeds_real_summary(self):
+        """v2（2026-07-29）：防編造地基蓋好後，改餵真摘要——她才講得出
+        「上次你提到X，後來還好嗎？」這種真貼身。四道新閘取代 v1 的「內容不知道」。"""
         _reset_summaries()
         server.append_conversation_summary({
-            "summary": "Post-turn companion review covered daily topics; user turns: 3.",
+            "summary": "聊到陽台的花開了，他說膝蓋還是有點痠，約好下次講孫子婚禮的事。",
             "memoryTags": ["self_harm", "diet"],
         })
         line = server.recent_call_recap_line()
         self.assertIn("上次聊天", line)
         self.assertIn("分鐘", line)
         self.assertIn("不要當開場再問一次", line)
-        # memoryTags 是內部英文 slug、可能含守護腦風險分類，絕不能進 prompt
+        # 真摘要進來了（v2 的核心）
+        self.assertIn("陽台的花", line)
+        # memoryTags 是內部英文 slug、可能含守護腦風險分類，絕不能進 prompt（v1 鐵律不變）
         self.assertNotIn("self_harm", line)
         self.assertNotIn("diet", line)
-        # 三道閘（2026-07-16 Edward「再撥還在講上一通＋幻覺」）：recap 只知道時間、
-        # 不知道內容，措辭必須明講「不知道內容、不准編、不主動宣稱記得」。
-        self.assertIn("不知道", line)
-        self.assertIn("不要編造", line)
-        self.assertIn("不要主動宣稱", line)
-        # 舊版「自然接續」等於邀請模型編上一通內容，不得回歸
+        # 四道新閘：不逐字複誦、紀錄外不知道、以他現在說的為準
+        self.assertIn("不要逐字複誦", line)
+        self.assertIn("不准補", line)
+        self.assertIn("以他現在說的為準", line)
+        # 舊版「自然接續」措辭（無邊界的接續邀請）仍不得回歸
         self.assertNotIn("自然接續", line)
+
+    def test_recap_safety_relevant_falls_back_to_time_only(self):
+        """安全敏感的通話不把內容當日常寒暄接——退回 v1 只講時間。"""
+        _reset_summaries()
+        server.append_conversation_summary({
+            "summary": "使用者提到心情很低落、有負面念頭，已依守護流程處理。",
+            "safetyRelevant": True,
+        })
+        line = server.recent_call_recap_line()
+        self.assertIn("上次聊天", line)
+        self.assertNotIn("低落", line)
+        self.assertIn("不知道", line)
+
+    def test_recap_content_env_off_falls_back(self):
+        """MUNEA_VOICE_RECAP_CONTENT=0 一個字退回 v1（可逆退路）。"""
+        _reset_summaries()
+        server.append_conversation_summary({"summary": "聊到花開了"})
+        os.environ["MUNEA_VOICE_RECAP_CONTENT"] = "0"
+        try:
+            line = server.recent_call_recap_line()
+            self.assertNotIn("花開", line)
+            self.assertIn("不知道", line)
+        finally:
+            os.environ.pop("MUNEA_VOICE_RECAP_CONTENT", None)
 
     def test_recap_expired_returns_empty(self):
         _reset_summaries()
