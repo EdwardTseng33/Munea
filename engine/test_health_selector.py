@@ -135,6 +135,54 @@ class DoableAndPreferenceTest(unittest.TestCase):
         self.assertNotEqual(r["solutions"][0]["solutionType"], "運動")
 
 
+class TcmAndCrossTopicTest(unittest.TestCase):
+    """中醫（項目7）與跨題連結（項目8）——2026-07-29 Edward 指定的兩項。"""
+
+    def test_acupressure_is_offered_when_he_mentions_tcm(self):
+        """他自己提中醫＝願意走調理路線，中醫類要真的浮上來（不是只給西方那套）。"""
+        r = hs.pick("TW-EDU-01", "我睡不好，想說看中醫調理", WORKER, 22)
+        self.assertTrue(any(s["solutionType"] == "中醫調理" for s in r["solutions"]))
+
+    def test_herbal_medicine_is_never_pushed(self):
+        """中藥要中醫師把脈開方——屬處方級，任何情況都不主動推。"""
+        for text in ("我睡不好，想吃中藥", "我睡不好", "中醫可以調嗎"):
+            r = hs.pick("TW-EDU-01", text, WORKER, 22)
+            self.assertNotIn("sleep-tcm-herbs", ids(r))
+
+    def test_herbal_entry_carries_the_real_safety_fact(self):
+        """關鍵安全事實：中西藥隔一兩小時仍算併用，不是錯開時間就沒事。"""
+        herb = next(s for s in hs.TOPICS["TW-EDU-01"]["solutions"] if s["id"] == "sleep-tcm-herbs")
+        self.assertIn("隔一兩個小時吃就沒事", herb["say"])
+        self.assertIn("還是算一起吃", herb["say"])
+
+    def test_cross_topic_link_only_when_he_raises_it(self):
+        """睡不好＋壓力常是同一件事——但只在他自己也提到時才連，不硬拉話題。"""
+        self.assertIsNotNone(hs.pick("TW-EDU-01", "我睡不好，壓力又大", WORKER, 23).get("related"))
+        self.assertIsNone(hs.pick("TW-EDU-01", "我睡不好", WORKER, 23).get("related"))
+
+
+class StressTopicTest(unittest.TestCase):
+    """工作壓力／情緒耗竭（項目5）——Edward 最初的例子就是工作壓力。"""
+
+    def test_caregiver_saying_tired_is_not_treated_as_proxy(self):
+        """「我照顧我媽照顧到好累」句子裡有「我媽」，但主角是他自己。"""
+        r = hs.pick("TW-EDU-25", "我照顧我媽照顧到好累", CAREGIVER, 22)
+        self.assertFalse(r["proxy"])
+        self.assertIsNotNone(r["reframe"])
+        self.assertIn("沒有下班時間", r["reframe"])
+
+    def test_caregiver_gets_respite_worker_does_not(self):
+        c = ids(hs.pick("TW-EDU-25", "我照顧到快撐不住", CAREGIVER, 22))
+        w = ids(hs.pick("TW-EDU-25", "我工作壓力好大", WORKER, 22))
+        self.assertIn("stress-caregiver-respite", c)
+        self.assertNotIn("stress-caregiver-respite", w)
+
+    def test_stress_referral_carries_two_week_rule_and_crisis_line(self):
+        r = hs.pick("TW-EDU-25", "我壓力好大", WORKER, 22)
+        self.assertIn("兩個禮拜", r["referral"]["say"])
+        self.assertIn("1925", r["referral"]["say"])
+
+
 class OutputShapeTest(unittest.TestCase):
     def test_at_most_three_and_not_all_the_same_kind(self):
         """最多三個（再多長輩記不住）；且不會三個都同一招。"""
