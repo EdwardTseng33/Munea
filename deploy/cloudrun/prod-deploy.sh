@@ -43,6 +43,31 @@ if [ -z "$KEY" ] && [ -f deploy/.munea-app-key ]; then
 fi
 [ -n "$KEY" ] || { echo "⛔ 找不到 MUNEA_APP_KEY 或 deploy/.munea-app-key——薄門沒鑰匙不准部署"; exit 1; }
 
+# ── 不准倒退保險（2026-07-29 立·當晚親踩）：拿「自己的分支」上正式、沒發現主線在
+#    自己之外又進了別條線的貨（含 #291 就醫安全鐵則），把已上線的安全功能蓋掉 8 分鐘。
+#    機器擋門：抓「正式機此刻在跑的版本」，HEAD 必須包含它（是它的後代）才准部署。
+#    真要非線性部署（例如緊急回退鏈）：MUNEA_DEPLOY_ALLOW_NONLINEAR=1 明示跳過、留下記錄。
+if [ "${MUNEA_DEPLOY_ALLOW_NONLINEAR:-0}" != "1" ]; then
+  # 兩步取「吃流量那版」的版本（spec.template 是最新版模板、可能是還沒切流量的 canary——抓錯會誤判）
+  SERVING_REV=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format=json 2>/dev/null | python -c 'import json,sys; d=json.load(sys.stdin); tr=[t for t in d["status"].get("traffic",[]) if t.get("percent")]; print(tr[0]["revisionName"] if tr else "")' 2>/dev/null || true)
+  SERVING_COMMIT=""
+  if [ -n "$SERVING_REV" ]; then
+    SERVING_COMMIT=$(gcloud_run run revisions describe "$SERVING_REV" --region "$REGION" --project "$PROJECT" --format=json 2>/dev/null | python -c 'import json,sys; d=json.load(sys.stdin); envs=d["spec"]["containers"][0].get("env",[]); print(next((e.get("value","") for e in envs if e.get("name")=="MUNEA_RELEASE_COMMIT"),""))' 2>/dev/null || true)
+  fi
+  if [ -n "$SERVING_COMMIT" ]; then
+    if git cat-file -e "$SERVING_COMMIT" 2>/dev/null && git merge-base --is-ancestor "$SERVING_COMMIT" HEAD 2>/dev/null; then
+      echo "✅ 不倒退檢查 PASS：HEAD 包含正式機現跑版本 ${SERVING_COMMIT:0:12}"
+    else
+      echo "⛔ 不倒退檢查 FAIL：正式機現跑 ${SERVING_COMMIT:0:12}，你的 HEAD 不包含它——"
+      echo "   先 git fetch 並把 origin/main（或現跑版本）合併進來再部署，否則會蓋掉別條線已上線的貨。"
+      echo "   （緊急情況明示 MUNEA_DEPLOY_ALLOW_NONLINEAR=1 才可跳過）"
+      exit 1
+    fi
+  else
+    echo "⚠ 讀不到正式機現跑版本（首次部署或查詢失敗）——不倒退檢查跳過"
+  fi
+fi
+
 echo "== 只打包 committed 程式碼（git archive HEAD）=="
 TMP=$(mktemp -d)
 RELEASE_COMMIT="$(git rev-parse HEAD)"
