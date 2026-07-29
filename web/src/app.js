@@ -6883,8 +6883,12 @@ function init() {
       if (r && r.ok) {
         clearBtnBusy(b, '✓ 已連接');
         b.classList.add('done');
-        trackProductEvent('health_connected', {});
-        hint('好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
+        trackProductEvent('health_connected', { empty: !!r.empty });
+        // 一項都沒讀到就不要承諾會幫她留意——蘋果不會告訴我們是沒授權還是本來就沒紀錄，
+        // 所以只講現況跟怎麼打開，不亂猜原因（詳細步驟在「連接裝置」頁的說明文字）
+        hint(r.empty
+          ? '連上了，但我還讀不到資料。到「健康」App→個人照片→「App 與服務」→沐寧，把項目打開。'
+          : '好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
       } else {
         clearBtnBusy(b, b.dataset.label || '連接');
         hint(r && r.reason === 'unavailable' ? '這台裝置沒有健康資料可讀。' : '沒有連上，晚點在「連接裝置」再試一次也可以。');
