@@ -236,12 +236,15 @@ class Drill:
                 idempotency_key=f"queue-drill-{self.run_id}-3", queue_max=30,
             )
             if result.get("status") == "connect":
+                # Record the connect FIRST so cleanup() can always release it
+                # -- round 2 raised before recording and the orphaned lease
+                # outlived the drill account (phantom seat again).
+                self.calls[2] = result
                 routed = str((result.get("worker") or {}).get("worker_id") or "")
                 if not routed.startswith("runpod-"):
                     raise DrillError(
                         f"third caller connected to {routed}, expected a runpod backup"
                     )
-                self.calls[2] = result
                 self._mark("third_connected")
                 waited = self.timeline["third_connected"] - self.timeline["third_queued"]
                 print(f"[5/7] third caller promoted to the fresh backup card "
