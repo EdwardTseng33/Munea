@@ -76,9 +76,9 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Google login | fallback code 已進 Build 47；post-Build 47完整真人紀錄未找到 | 選帳 → callback → session → 登出／重登 → 真 token call |
 | 0-credit call preflight | #174 `tested`, Draft，base 落後 main | rebase／merge → package next candidate → 0 點 iPhone 不得顯示「撥通中」 |
 | Developer purchase / Apple account mismatch UX | #175 `tested`, Draft，stacked on #174 | 整合後包版；TEST 不觸發 Apple；真帳號 mismatch 不重複扣款 |
-| Dedicated QA account | 正式 Supabase password sign-in、account bootstrap 與 Brain balance readback 已驗證；purchased balance `505`（免費 5＋授權測試 500），帳密只存 Secret Manager，事件排除營運分析 | #188 合併後由 Mac 安全載入 Secret，包一個開發版完成 iPhone 登入與 credited chat-call；後端帳號存在不等於 App Gate 通過 |
+| Dedicated QA account | 正式 Supabase 登入狀態仍在 exact Build；2026-07-29 23:30 App 顯示餘額 `453`（原 505 測試額度已被過往測試扣用），本次 production call 已到「在線」並顯示 Avatar，隨後掛斷回到「未在線」 | iPhone Mirroring 明確禁止使用 iPhone 麥克風，因此未完成真上行／AI 可聽回覆；未獨立確認 Gateway lease／GPU 後端釋放，不能標 App E2E PASS |
 | Subscription / points purchase | Build 47 使用者回報身份與購買後續無法完成 | Sandbox Apple ID、server verification、entitlement／wallet refresh E2E |
-| Authenticated chat call | 凍結 commit `72a0bd46` 的 Build 492 已通過 App Call Control 15/15 與 Avatar render contract，手機已安裝／啟動 | `App E2E pending`：仍需針對該 exact Build＋production Gateway／Voice／Avatar 完成真麥克風、AI 聲畫回應與掛斷釋位；post-package source 不承接結果 |
+| Authenticated chat call | Exact Build `20493517` 已在 Edward iPhone 安裝；自動化 Call Control 15/15 與 Avatar contract PASS。23:30 credited QA call 到「在線」且 Avatar 可見，掛斷後 UI 回「未在線」 | `App E2E pending`：iPhone Mirroring 無法使用手機麥克風；仍需直接在實體 iPhone 完成真麥克風、可聽／可見 AI 回覆，並以後端證據確認 lease／GPU release |
 | Pricing policy v4 | source／uploaded Build 47／production Brain 已對齊；Apple Product ID 維持原值，Brain 實際 grant mapping 為點數包 100／300／600／1000、Plus 100、Pro 200 | App Store price／description、Tokyo `019` 與登入後 Sandbox purchase／wallet refresh 真人驗收；DB policy mismatch 不參與目前 `/apple/transaction` 的 `verified.points` 入帳路徑，但仍需治理對焦 |
 | Managed-cloud `/chat-test` | #182 已合併，source 預設 404 | Voice 尚未部署；production／staging live GET 仍須重新驗證 404 |
 
