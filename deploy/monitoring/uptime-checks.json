@@ -15,7 +15,9 @@
       "environment": "production",
       "host": "munea-brain-491603544409.asia-east1.run.app",
       "path": "/healthz/",
-      "statusCodes": [200],
+      "statusCodes": [
+        200
+      ],
       "jsonOk": true
     },
     {
@@ -24,7 +26,9 @@
       "environment": "production",
       "host": "munea-voice-491603544409.asia-east1.run.app",
       "path": "/",
-      "statusCodes": [200],
+      "statusCodes": [
+        200
+      ],
       "jsonOk": false
     },
     {
@@ -33,7 +37,9 @@
       "environment": "staging",
       "host": "munea-brain-staging-491603544409.asia-east1.run.app",
       "path": "/healthz/",
-      "statusCodes": [200],
+      "statusCodes": [
+        200
+      ],
       "jsonOk": true
     },
     {
@@ -42,7 +48,9 @@
       "environment": "staging",
       "host": "munea-voice-staging-491603544409.asia-east1.run.app",
       "path": "/",
-      "statusCodes": [200],
+      "statusCodes": [
+        200
+      ],
       "jsonOk": false
     },
     {
@@ -51,7 +59,9 @@
       "environment": "shared",
       "host": "munea-call-control-fiu65jd4da-de.a.run.app",
       "path": "/health",
-      "statusCodes": [401],
+      "statusCodes": [
+        401
+      ],
       "jsonOk": false
     },
     {
@@ -60,7 +70,9 @@
       "environment": "shared",
       "host": "munea-gateway-monitor-fiu65jd4da-de.a.run.app",
       "path": "/",
-      "statusCodes": [403],
+      "statusCodes": [
+        403
+      ],
       "jsonOk": false
     },
     {
@@ -69,16 +81,20 @@
       "environment": "shared",
       "host": "munea-runpod-controller-fiu65jd4da-de.a.run.app",
       "path": "/",
-      "statusCodes": [200],
+      "statusCodes": [
+        200
+      ],
       "jsonOk": true
     },
     {
       "id": "public-web",
       "displayName": "Munea public web",
       "environment": "production",
-      "host": "app.munea.net",
+      "host": "munea.net",
       "path": "/",
-      "statusCodes": [200],
+      "statusCodes": [
+        200
+      ],
       "jsonOk": false
     }
   ]

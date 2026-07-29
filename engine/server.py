@@ -21,6 +21,7 @@ load_engine_env()
 from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
+import ai_health
 import cloud_resync
 import clinic_visits
 import health_followup
@@ -225,6 +226,13 @@ LOGGER = logging.getLogger("munea.server")
 
 
 def log_fallback_exception(context, exc):
+    # 2026-07-29 事故後補：模型呼叫失敗要留下痕跡，不然巡邏永遠報綠燈。
+    # 只認「跟模型講話」那類的失敗，別把資料庫、推播的錯也算進來。
+    if any(k in (context or "") for k in ("chat reply", "TTS", "opener", "generate", "model")):
+        try:
+            ai_health.record_failure("%s: %s" % (context, exc))
+        except Exception:
+            pass
     LOGGER.warning(
         "%s failed; using prototype fallback: %s",
         context,
@@ -4586,11 +4594,29 @@ def _account_points_map(accounts):
     return points
 
 
+def _account_usage_minutes_map(accounts):
+    """每一戶的聊聊分鐘（總計＋本月）。查不到就回空 dict，前端顯示「—」而不是編一個 0。
+
+    來源是 credit_ledger 的實際扣點紀錄（1 點 = 1 分鐘），不是由使用事件推算的近 N 天分鐘——
+    「誰是大戶」問的是累積用量，近 30 天答不了。"""
+    account_ids = [a.get("accountId") for a in accounts if a.get("accountId")]
+    if not account_ids:
+        return {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            return backend.load_account_usage_minutes(account_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load per-account usage minutes", e)
+    return {}
+
+
 def _enrich_accounts_with_activity(accounts, days=30):
     """幫每個帳號補真資料：plan / usage（分鐘·最後活躍·事件數）/ status / points（持有點數）。
     單帳號 scoped（試營運鎖一戶）時把未歸戶事件併給唯一帳號、誠實不亂攤。"""
     index, unattributed = _account_activity_index(days=days)
     points_map = _account_points_map(accounts)
+    minutes_map = _account_usage_minutes_map(accounts)
     single = len(accounts) == 1
     for acct in accounts:
         aid = acct.get("accountId") or ""
@@ -4607,10 +4633,18 @@ def _enrich_accounts_with_activity(accounts, days=30):
         voice = round(agg["voiceMinutes"], 1)
         avatar = round(agg["avatarMinutes"], 1)
         acct["plan"] = _normalize_account_plan(agg["plan"])
+        # windowMinutes ＝ 近 N 天（由使用事件推算，看短期活躍）；
+        # lifetimeMinutes／monthMinutes ＝ 真正的聊聊分鐘帳（credit_ledger 每分鐘扣 1 點一筆），
+        # 用來看「誰是大戶」——那個問題要的是累積量，不是最近 30 天。
+        spend = minutes_map.get(aid) or {}
         acct["usage"] = {
             "totalMinutes": round(voice + avatar, 1),
+            "windowMinutes": round(voice + avatar, 1),
             "voiceMinutes": voice,
             "avatarMinutes": avatar,
+            "lifetimeMinutes": spend.get("totalMinutes"),
+            "monthMinutes": spend.get("monthMinutes"),
+            "minutesTruncated": bool(spend.get("truncated")),
             "eventCount": int(agg["eventCount"]),
             "lastActiveAt": agg["lastActiveAt"],
         }
@@ -8737,6 +8771,7 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
                 # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
                 # has_briefing：今天到底有沒有備到天氣。沒有卻講「氣象報告說」＝
                 # 引用一個不存在的來源，出口硬擋（2026-07-29 考卷 S03 抓到）。
+                ai_health.record_success()   # 她剛剛真的講出話了——最可信的健康訊號
                 return eng.clean_outgoing_reply(
                     r.text, has_briefing=bool((context or {}).get("dailyBriefing")))
             except Exception as e:
@@ -9464,6 +9499,9 @@ class H(BaseHTTPRequestHandler):
                 "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "person-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "visit-summary", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
                 "notificationPush": apns_status(),
+                # 2026-07-29：機器活著不等於她講得出話。今晚額度用完、兩台都啞了，
+                # 巡邏燈卻全綠——因為誰都沒在問這一句。
+                "ai": ai_health.status(),
             })
             return
         if path in ("/", ""):

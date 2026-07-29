@@ -55,6 +55,13 @@ try {
   }
   Pass "App Store metadata, screenshots, territories, IAP copy, review assets, and prices normalize without writes"
 
+  Step "LocaleContext production redacted export contract"
+  & python -m unittest scripts.test_locale_context_redacted_export scripts.test_locale_context_data_audit
+  if ($LASTEXITCODE -ne 0) {
+    throw "LocaleContext redacted export contract failed with exit code $LASTEXITCODE"
+  }
+  Pass "Production LocaleContext capture is GET-only, identifier-free, and fail-closed"
+
   Step "Product alignment governance"
   & python scripts/check_product_alignment.py
   if ($LASTEXITCODE -ne 0) {

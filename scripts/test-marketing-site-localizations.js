@@ -1,3 +1,6 @@
+// 2026-07-29：官網整站搬到正門 munea.net（法律頁 privacy/terms/support 仍留在
+// app.munea.net，那是蘋果登記的網址、不動）。這支原本寫死舊網域、整站搬完後
+// 就一直紅——出貨閘門紅著沒人發現，比這條斷鏈本身更嚴重。
 'use strict';
 
 const assert = require('node:assert/strict');
@@ -20,28 +23,28 @@ const locales = [
     catalog: 'zh',
     output: 'index.html',
     htmlLang: 'zh-Hant-TW',
-    canonical: 'https://app.munea.net/',
+    canonical: 'https://munea.net/',
   },
   {
     locale: 'en',
     catalog: 'en',
     output: 'en/index.html',
     htmlLang: 'en',
-    canonical: 'https://app.munea.net/en',
+    canonical: 'https://munea.net/en',
   },
   {
     locale: 'ja',
     catalog: 'ja',
     output: 'ja/index.html',
     htmlLang: 'ja',
-    canonical: 'https://app.munea.net/ja',
+    canonical: 'https://munea.net/ja',
   },
   {
     locale: 'es',
     catalog: 'es',
     output: 'es/index.html',
     htmlLang: 'es',
-    canonical: 'https://app.munea.net/es',
+    canonical: 'https://munea.net/es',
   },
 ];
 

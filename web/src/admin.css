@@ -269,9 +269,14 @@ html[data-admin-locale="ja"] .nav-group-label {
 
 /* ══ 表格 ══ */
 .table-wrap { min-width: 0; max-width: 100%; overflow-x: auto; }
+/* 欄位多的時候寧可橫向捲動，也不要硬擠——擠到最後是各欄文字疊在一起（2026-07-29 截圖抓到）。
+   桌機給表格一個下限寬度，容器不夠就出現水平捲軸；手機版另有堆疊卡片規則，不受影響。 */
 table { width: 100%; border-collapse: collapse; }
+.tbl-card .table-wrap table { min-width: 940px; }
 th, td { border-bottom: 1px solid var(--line-soft); padding: 11px 10px; text-align: left; vertical-align: middle; }
-th { color: var(--muted); font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
+/* 表頭一律不折行：上面那條共用規則給了 overflow-wrap:anywhere，欄位一窄就會把
+   「持有點數」斷成「持有點／數」。這裡明確關掉，寧可欄位寬一點也不要標題斷字。 */
+th { color: var(--muted); font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
 td.r, th.r { text-align: right; font-family: var(--num); font-variant-numeric: tabular-nums; }
 tbody tr:hover { background: var(--cream); }
 .tabs { display: inline-flex; flex-wrap: wrap; gap: 6px; }
@@ -523,14 +528,23 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 .chip-sep{ width:1px; height:20px; background:var(--line); margin:0 4px; }
 .chip-spring{ flex:1; min-width:20px; }
 
-.u-cell{ display:flex; align-items:center; gap:11px; min-width:100px; }
+/* 名冊「用戶」欄 2026-07-29 加了信箱＋登入方式。這一格千萬不要給 min-width——
+   它會比欄位本身還寬，整格溢出去蓋到隔壁欄的文字（截圖抓到兩次）。
+   靠 u-sub 換行處理長信箱就好，寬度交給表格分配。 */
+.u-cell{ display:flex; align-items:center; gap:11px; min-width:0; }
 .u-av{ flex:none; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; font-family:var(--sans); }
 .u-meta{ min-width:0; }
 .u-nm{ font-weight:700; color:var(--ink); font-size:.94rem; line-height:1.2; white-space:nowrap; }
-.u-sub{ color:var(--muted); font-size:0.875rem; margin-top:2px; white-space:nowrap; }
-.u-fam{ font-weight:600; color:var(--ink-2); white-space:nowrap; }
+.u-sub{ color:var(--muted); font-size:0.875rem; margin-top:2px; white-space:normal; overflow-wrap:anywhere; line-height:1.4; }
+/* nowrap 會讓「Munea Care Circle」這種長名字直接撐出格子、疊到隔壁欄的文字上
+   （2026-07-29 截圖抓到）。允許換行，欄窄的時候折行而不是溢出。 */
+.u-fam{ font-weight:600; color:var(--ink-2); white-space:normal; overflow-wrap:anywhere; }
 .family-cell{ display:inline-flex; align-items:baseline; flex-wrap:wrap; column-gap:4px; white-space:normal; }
-.market-cell{ display:flex; flex-direction:column; gap:2px; min-width:118px; word-break:keep-all; overflow-wrap:normal; }
+.use-nums{ display:flex; flex-direction:column; line-height:1.25; }
+/* 用戶欄裝的是姓名＋登入方式＋信箱，內容最長——給它一個比例寬度，信箱才不會折成三行。
+   用 width（表格會當建議值）而不是 min-width：min-width 撐破格子會疊到隔壁欄，踩過了。 */
+.roster-card table td:first-child, .roster-card table th:first-child { width: 26%; }
+.market-cell{ display:flex; flex-direction:column; gap:2px; min-width:0; word-break:keep-all; overflow-wrap:normal; }
 .market-cell b{ color:var(--ink); font-family:var(--num); letter-spacing:.04em; }
 
 .use-cell{ display:flex; align-items:flex-end; gap:8px; white-space:nowrap; }

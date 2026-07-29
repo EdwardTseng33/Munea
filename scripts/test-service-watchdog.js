@@ -27,14 +27,17 @@ async function main() {
   check("名單含 Gateway 總機", names.includes("Gateway 通話總機"));
   check("名單含容量看守", names.includes("容量看守"));
   check("名單含 RunPod 控制器", names.includes("RunPod"));
-  check("名單含公開網站", names.includes("app.munea.net"));
+  check("名單含公開網站", names.includes("munea.net"));   // 正門 munea.net 或 app 子網域都算
 
   // 契約 1b：正式兩台（2026-07-16 PR #118 重建、STATUS 94 號）判定規則比照 staging
   const brainProd = TARGETS.find((t) => t.name.includes("Brain 正式"));
   const voiceProd = TARGETS.find((t) => t.name.includes("Voice 正式"));
   check("名單含 Brain 正式", Boolean(brainProd));
   check("名單含 Voice 正式", Boolean(voiceProd));
-  check("Brain 正式走 /healthz/＋要 ok=true", brainProd?.url.endsWith("/healthz/") && brainProd?.check === "json-ok" && JSON.stringify(brainProd?.expect) === "[200]");
+  // 2026-07-29 事故後：正式 Brain 從 json-ok 升成 ai-alive——除了 ok=true，還要問
+  // 「她講不講得出話」。ai-alive 是 json-ok 的超集，兩者都算過關。
+  check("Brain 正式走 /healthz/＋要 ok=true", brainProd?.url.endsWith("/healthz/") && ["json-ok", "ai-alive"].includes(brainProd?.check) && JSON.stringify(brainProd?.expect) === "[200]");
+  check("Brain 正式要問她講不講得出話", brainProd?.check === "ai-alive");
   check("Voice 正式走根路徑、預期 200", voiceProd?.url.endsWith(".run.app/") && JSON.stringify(voiceProd?.expect) === "[200]");
   check("正式門牌不得指 staging", Boolean(brainProd && voiceProd) && !brainProd.url.includes("staging") && !voiceProd.url.includes("staging"));
 
@@ -132,9 +135,11 @@ async function main() {
   const cloudTargets = uptimeManifest.targets.map((target) => ({
     url: `https://${target.host}${target.path}`,
     expect: target.statusCodes,
+    // 雲端探測器只會打 HTTP、讀不出「她講不講得出話」，所以設定檔維持 json-ok；
+    // Node 這支跑在自己手上、做得到更深的檢查。比對時 ai-alive 視為滿足 json-ok。
     check: target.jsonOk ? "json-ok" : undefined,
   }));
-  const targetContract = (target) => `${target.url}|${target.expect.join(",")}|${target.check || ""}`;
+  const targetContract = (target) => `${target.url}|${target.expect.join(",")}|${target.check === "ai-alive" ? "json-ok" : (target.check || "")}`;
   check("Cloud uptime 與 Node watchdog 8 targets 完全對齊", cloudTargets.length === 8 && JSON.stringify(cloudTargets.map(targetContract).sort()) === JSON.stringify(TARGETS.map(targetContract).sort()));
   const monthlyExecutions = cloudTargets.length * uptimeManifest.regions.length * (60 / uptimeManifest.periodMinutes) * 24 * 30;
   check("Cloud uptime 月執行數低於官方 100 萬免費額度", monthlyExecutions === 207360 && monthlyExecutions < 1000000);
