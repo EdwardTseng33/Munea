@@ -16,14 +16,16 @@ param(
   [int]$SlotsPerPod = 2,
   [int]$MaxPods = 4,
   [int]$TargetConcurrentCalls = 10,
-  # 2026-07-29 蘇菲：這三個值原本只活在線上服務的環境變數裡、腳本沒帶——
-  # 照跑一次 --env-vars-file 整份覆蓋就會把模板編號洗掉、管家從此開不了卡
-  # （fail closed）。現在收進腳本＝部署即完整。
+  # 2026-07-29: these values used to live only in the deployed service's env
+  # vars -- running this script (--env-vars-file replaces the whole env set)
+  # would wipe the template id and the controller could no longer open cards
+  # (fail closed). Now the script carries them. TemplateMap format:
+  # "AP-JP-1=tmplA,EU-RO-1=tmplB" (per-DC template whose image sits in the
+  # nearest registry mirror; empty string disables per-DC selection).
+  # (ASCII comments on purpose: non-ASCII inside param() breaks Windows
+  # PowerShell 5.1 parsing of the defaults.)
   [string]$TemplateId = "bv9wrwdq8i",
   [string]$DataCenters = "AP-JP-1,EU-RO-1",
-  # 每機房配隔壁倉庫的模板（鏡像倉庫：東京 asia-northeast1、歐洲 europe-west4；
-  # 25GB 印象檔跨洲拉是 7/23 演習開卡 9 分鐘的元凶）。空字串＝關閉分機房、
-  # 全部用 TemplateId。格式 "AP-JP-1=tmplA,EU-RO-1=tmplB"。
   [string]$TemplateMap = "",
   [switch]$DryRun
 )

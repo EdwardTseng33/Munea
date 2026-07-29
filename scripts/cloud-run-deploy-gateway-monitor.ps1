@@ -6,10 +6,11 @@ param(
   [string]$GatewayUrl = "https://munea-call-control-fiu65jd4da-de.a.run.app",
   [string]$AdminKeySecret = "munea-gateway-admin-key",
   [string]$SlackWebhookSecret = "munea-slack-alert-webhook",
-  # 2026-07-29 蘇菲：STATUS 125 防線二（工作機時鐘偏差偵測）蓋好後一直沒插電——
-  # monitor.py 只在有 MUNEA_APP_KEY 時才會直接敲每台臉機的 /health 量時鐘差
-  # （tw-06 快 4分17秒那次，總機心跳完全看不出來、只有這條路看得到）。
-  # 預設帶上；要關掉才傳 -NoWorkerClockProbe。
+  # 2026-07-29: STATUS 125 defense line 2 (worker clock-skew probing) ships
+  # armed by default -- monitor.py only probes each worker's /health for
+  # clock skew when MUNEA_APP_KEY is bound. Pass -NoWorkerClockProbe to opt
+  # out. (ASCII comment on purpose: non-ASCII inside param() breaks
+  # Windows PowerShell 5.1 parsing of the defaults.)
   [string]$AvatarAppKeySecret = "munea-avatar-app-key",
   [switch]$NoWorkerClockProbe,
   [int]$IntervalSeconds = 60,
