@@ -44,17 +44,18 @@ const htmlCandidates = scanHtml(`
   <style>.button::before { content: "裝飾不算"; }</style>
   <h1 data-i18n="settings.title">設定</h1>
   <button data-i18n-aria-label="common.save" aria-label="儲存">送出</button>
+  <img data-i18n-alt="companion.nening.name" alt="寧寧">
   <p data-i18n="missing.catalog.key">未翻譯</p>
   <script>const toast = '完成'; // '忽略'</script>
 `);
 assert.deepEqual(
   htmlCandidates.map((item) => item.text),
-  ['完成', '儲存', '設定', '送出', '未翻譯'],
+  ['完成', '儲存', '寧寧', '設定', '送出', '未翻譯'],
   'HTML scanner should cover inline scripts, localizable attributes, and text nodes',
 );
 assert.deepEqual(
   htmlCandidates.map((item) => item.bindingStatus),
-  ['unbound', 'bound', 'bound', 'unbound', 'unbound'],
+  ['unbound', 'bound', 'bound', 'bound', 'unbound', 'unbound'],
   'HTML bindings must be recognized only when their catalog key is complete',
 );
 const lateHanCandidate = scanHtml(

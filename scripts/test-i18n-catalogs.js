@@ -150,7 +150,7 @@ const expectedBinaryLocales = sorted(
     .map(({ nativeLocale }) => nativeLocale),
 );
 const infoPlist = readText(path.join(ROOT, 'ios', 'App', 'App', 'Info.plist'));
-const requiredInfoPlistKeys = [
+const requiredUsageDescriptionKeys = [
   'CFBundleDisplayName',
   'NSMicrophoneUsageDescription',
   'NSCameraUsageDescription',
@@ -161,6 +161,24 @@ const requiredInfoPlistKeys = [
   'NSHealthShareUsageDescription',
   'NSHealthUpdateUsageDescription',
 ];
+const defaultInfoPlistStrings = readText(path.join(
+  ROOT,
+  'ios',
+  'App',
+  'App',
+  `${localeEntries.get(manifest.defaultLocale).nativeLocale}.lproj`,
+  'InfoPlist.strings',
+));
+const requiredInfoPlistKeys = sorted(
+  [...defaultInfoPlistStrings.matchAll(/^"([^"]+)"\s*=\s*"((?:[^"\\]|\\.)*)";\s*$/gm)]
+    .map((match) => match[1]),
+);
+for (const key of requiredUsageDescriptionKeys) {
+  assert.ok(
+    requiredInfoPlistKeys.includes(key),
+    `default InfoPlist.strings is missing required usage copy: ${key}`,
+  );
+}
 for (const entry of manifest.locales) {
   const stringsPath = path.join(
     ROOT,

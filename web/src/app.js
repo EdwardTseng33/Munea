@@ -223,13 +223,18 @@ function localizeCanonicalLegacyPanels() {
     'activity.rewardPlaceholder',
     'For example: A family meal or a small gift',
   ));
-  ['#reportClose', '#profileClose', '#famCircleClose', '#topUpClose', '#historyClose']
-    .forEach((selector) => setAttribute(
-      selector,
-      'aria-label',
-      'accessibility.close',
-      'Close',
-    ));
+  [
+    ['#reportClose', 'accessibility.back', 'Back'],
+    ['#profileClose', 'profile.close', 'Close profile'],
+    ['#famCircleClose', 'familyCircle.close', 'Close care circle'],
+    ['#topUpClose', 'purchase.close', 'Close credit top-up'],
+    ['#historyClose', 'history.close', 'Close records'],
+  ].forEach(([selector, key, fallback]) => setAttribute(
+    selector,
+    'aria-label',
+    key,
+    fallback,
+  ));
   setAttribute('#pfNick', 'placeholder', 'profile.familyNicknamePlaceholder', 'For example: Grandma');
   setAttribute('#joinCodeInput', 'placeholder', 'join.codePlaceholder', 'Enter invitation code');
   setAttribute('#visitTitle', 'placeholder', 'appointment.titlePlaceholder', 'For example: Cardiology follow-up');
