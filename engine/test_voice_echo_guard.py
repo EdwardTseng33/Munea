@@ -63,6 +63,26 @@ def main():
     # 為了順便量抖動改成先取一次 now 再指派（功能完全一樣）。改成檢查「有幾個地方在更新
     # 出聲時間」這個行為本身，不綁特定寫法——回音濾網要靠它判斷她此刻在不在講話。
     check("模型主聲道記出聲時間", srv.count('st["last_out"] = ') >= 2)
+
+    # 回音窗 v2（2026-07-29 · Edward 點名「自問自答」後抓到的結構性漏洞）：
+    # Gemini 送資料比講話快——一句 10 秒的話伺服器 2 秒送完，舊窗（送出時間+2.5秒）
+    # 在她才播到第 5 秒時就關了，句子後半的回音全放行＝她回答自己。
+    # v2 鏡射 App 播放節奏推「手機大概播到哪」的水位，窗蓋到播完+殘響。
+    check("每送一塊聲音就推進播放水位（兩條送聲路都要）", srv.count("note_playout(") >= 2)
+    check("回音判定以播放水位為主", "in_playout_window(_eg_now" in srv)
+    check("送出時間窗留著當後備", "or in_output_window(_eg_now" in srv)
+    check("用戶插話→水位歸零（App 已清掉未播聲音，窗立刻收、不吃真人聲）",
+          srv.count('st["playout_head"] = 0.0') >= 2)
+
+    import voice_echo_guard as g
+    head = 0.0
+    for i in range(5):
+        head = g.note_playout(head, 100.0 + i*0.4, 24000*2*2)   # 10 秒的話、2 秒送完
+    check("水位推到接近播完時刻", 110.0 < head < 112.0)
+    check("舊窗在句子後半已經失守（這就是自問自答的洞）", not g.in_output_window(105.0, 101.6))
+    check("新窗在句子後半仍蓋著", g.in_playout_window(105.0, head))
+    check("播完+殘響後窗會關（不永遠蓋）", not g.in_playout_window(114.0, head))
+    check("歸零後窗立即關", not g.in_playout_window(105.0, 0.0))
     check("收線總帳含回音丟棄數", "echo_dropped=st" in srv)
     check("發音級攔截先讓她自己重講(同聲線)", 'source in ("model_output", "mandarin_pronunciation")' in srv)
     check("重講再被攔才換安全配音", "_send_safe_mandarin_tts(blocked_text, source)" in srv)
