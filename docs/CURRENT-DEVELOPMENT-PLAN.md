@@ -3,7 +3,7 @@
 > Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.46 (Build 1)` at exact GitHub packaged commit `496107f` (main through #321); Archive／IPA and Edward iPhone install／launch／version readback pass. Apple upload is pending explicit approval for this exact binary.
+> **Current source:** `1.0.46 (Build 1)` at exact GitHub packaged commit `e40dbd7` (main through #327); Archive／IPA and Edward iPhone install／launch／version readback pass. Apple upload is pending explicit approval for this exact binary.
 >
 > **Latest uploaded App:** `1.0.45 (Build 1)`; Apple processing completed and the Build was selected and saved for 1.0.45 at 14:52. It has not been submitted, approved or released.
 >
@@ -27,7 +27,7 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source / package | `1.0.46 (Build 1)` exact GitHub commit `496107f`; Archive／IPA and Edward iPhone readback pass; App E2E pending | `packaged and installed; human call gate pending` |
+| App source / package | `1.0.46 (Build 1)` exact GitHub commit `e40dbd7`; Archive／IPA and Edward iPhone readback pass; App E2E pending | `packaged and installed; human call gate pending` |
 | Uploaded App | `1.0.45 (Build 1)` remains latest uploaded／processed／selected. 1.0.46 upload awaits explicit exact-binary approval | `previous candidate selected; new binary not uploaded` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |
