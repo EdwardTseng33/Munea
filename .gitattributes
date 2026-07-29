@@ -16,3 +16,8 @@ app-site/legal/** text eol=lf
 *.json text eol=lf
 *.mjs text eol=lf
 *.js text eol=lf
+
+# eval 結果是機器產生的檔案，換行交給產生它的機器決定——
+# 這幾支在 repo 裡存的是 CRLF，text=auto 會每次都把它們標成「已修改」，
+# 任何人 clone 下來都一樣髒（2026-07-29 查證：乾淨的 origin/main worktree 同樣七支全紅）。
+engine/eval/results/*.json -text

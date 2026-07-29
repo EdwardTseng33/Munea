@@ -1105,6 +1105,8 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .vi-info b { display: block; font-size: 15.5px; font-weight: 800; color: var(--ink); }
 .vi-info span { font-size: 13px; color: var(--teal-dd); }
 .vi-del { flex-shrink: 0; border: 1px solid var(--line); background: #fff; color: var(--muted); font-size: 12.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+/* 每一筆就診直接看那次的摘要——樣式跟 .vi-del 同規格，只有顏色是主色（這是主要動作） */
+.vi-sum { flex-shrink: 0; border: 1px solid var(--line); background: #fff; color: var(--teal-dd); font-size: 12.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
 /* 看診時間：精確時間選擇器（大字、長輩好按）*/
 .visit-time { width: 100%; box-sizing: border-box; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; padding: 13px 16px; font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--ink); -webkit-appearance: none; appearance: none; }
 .visit-time::-webkit-date-and-time-value { text-align: left; }
@@ -1641,40 +1643,61 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .pf-input { width: 100%; max-width: 260px; }
 .rpt-row div span { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
 
-/* ── 就診摘要（M1 · PR-4c）─────────────────────────────────
+/* ── 就診摘要 ────────────────────────────────────────────
    刻意不用紅色、不用警示圖示：這一頁只陳列事實，任何看起來像「醫療警報」的
    視覺都會把我們推向判讀（紅線）。時間軸的三種來源用「形狀」區分而不是顏色，
-   因為醫師要分辨的是「可信度」不是「嚴重度」。 */
-.rpt-export { position: absolute; right: 52px; top: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--teal-dd); font-family: var(--sans); font-size: 13.5px; font-weight: 700; padding: 6px 14px; border-radius: 100px; cursor: pointer; min-height: 32px; }
-.rpt-sec { margin: 0 0 18px; }
-.rpt-sec h3 { font-size: 14px; font-weight: 800; color: var(--teal-dd); margin: 0 0 8px; letter-spacing: .02em; }
-.rpt-q { display: flex; gap: 10px; padding: 10px 0; align-items: flex-start; }
-.rpt-q + .rpt-q { border-top: 1px solid var(--line); }
-.rpt-q-n { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--btn-green); color: #FFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-.rpt-q-t { flex: 1; font-size: 16px; color: var(--ink); line-height: 1.5; }
-.rpt-q-x { flex-shrink: 0; border: none; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; min-height: 28px; }
-.rpt-tl { list-style: none; margin: 0; padding: 0; }
-.rpt-tl li { display: flex; gap: 10px; padding: 9px 0; align-items: flex-start; }
-.rpt-tl li + li { border-top: 1px solid var(--line); }
-.rpt-d { flex-shrink: 0; width: 46px; font-size: 13px; font-weight: 700; color: var(--muted); padding-top: 2px; }
-.rpt-mk { flex-shrink: 0; width: 16px; text-align: center; font-size: 12px; color: var(--teal-dd); padding-top: 3px; }
-.rpt-tx { flex: 1; font-size: 15.5px; color: var(--ink); line-height: 1.5; }
-.rpt-tx em { display: block; font-style: normal; font-size: 13px; color: var(--muted); margin-top: 2px; }
-.rpt-legend { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; line-height: 1.6; }
-.rpt-note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; line-height: 1.6; }
-.rpt-empty { font-size: 14.5px; color: var(--muted); padding: 10px 0; line-height: 1.6; }
-.rpt-foot { font-size: 12px; color: var(--muted); text-align: center; margin: 4px 0 14px; }
-.rpt-addq { width: 100%; border: 1px dashed var(--line); background: transparent; color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 700; padding: 10px; border-radius: 12px; cursor: pointer; margin-top: 8px; min-height: 40px; }
+   因為醫師要分辨的是「可信度」不是「嚴重度」。
 
-/* 列印／存成 PDF：把 App 的殼全部藏起來，只留這一頁。
-   用瀏覽器內建列印＝零外部套件（Edward「不花錢證明」）。 */
-@media print {
-  body > *, .tab-bar, .modal-mask { visibility: hidden !important; }
-  #reportModal, #reportModal * { visibility: visible !important; }
-  #reportModal { position: absolute !important; inset: 0 !important; background: #FFF !important; display: block !important; }
-  #reportModal .modal { box-shadow: none !important; border: none !important; max-height: none !important; overflow: visible !important; }
-  .rpt-export, #rptClose, #reportClose, #rptPeriodTabs, #rptDoneBtn, .rpt-q-x, .rpt-addq, .modal-grab { display: none !important; }
-}
+   2026-07-29 Edward 巡檢後改版：版型改吃既有子頁規範（nav-head / set-section /
+   set-list / seg / reader-card），原本那一整套 .rpt-* 自訂樣式全部刪掉。
+   下面只留規範裡沒有的三個，數值一律沿用既有 class，不另訂。 */
+
+/* 右上角動作鍵。現有子頁的 .nav-head 右格一直是空的，這是第一個需要動作的子頁——
+   規格完全鏡像 .nav-back（styles.css 上方），只差圖示，不新訂尺寸或顏色。 */
+.nav-act { width: 44px; height: 44px; border: none; background: none; color: var(--teal-dd); display: grid; place-items: center; cursor: pointer; border-radius: 50%; }
+.nav-act .ic { width: 24px; height: 24px; stroke-width: 2; }
+.nav-act:active { background: var(--mint); }
+
+/* 時間軸單列：既有 class 沒有「日期＋來源符號＋文字」這種三欄列。
+   間距、線色、字級全部取自 .set-row / --fs-note，不另訂數字。 */
+.vs-line { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; font-size: var(--fs-sub); color: var(--ink); line-height: 1.5; }
+.vs-line + .vs-line { border-top: 1px solid var(--line); }
+.vs-line .d { flex-shrink: 0; width: 40px; font-size: var(--fs-note); color: var(--muted); font-variant-numeric: tabular-nums; }
+.vs-line .m { flex-shrink: 0; width: 16px; text-align: center; color: var(--teal-dd); }
+.vs-line .q { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.vs-line .q em { display: block; font-style: normal; font-size: var(--fs-note); color: var(--muted); margin-top: 2px; }
+.vs-line .n { flex-shrink: 0; align-self: center; width: 22px; height: 22px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.vs-line .x { flex-shrink: 0; border: none; background: transparent; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 4px; cursor: pointer; min-height: 30px; }
+
+/* 分區標題右側的「編輯／完成」。.set-section 本來只是一行文字，
+   這裡讓它變成兩欄；字級顏色沿用，只加排版。 */
+.set-section.vs-sec-act { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.set-section.vs-sec-act button { border: none; background: none; font-family: var(--sans); font-size: var(--fs-sub); font-weight: 700; color: var(--teal-dd); cursor: pointer; padding: 6px 2px; min-height: 44px; }
+
+/* 刪除鍵：視覺跟就診清單的 .vi-del 同一款（同一件事就長同一個樣），
+   但點擊區拉到 44px——長輩的手指按不準 28px 的小藥丸。
+   用「刪除」兩個字不用 ✕ 圖示：長輩讀得懂字、猜不出圖示，
+   而且刪東西不可逆，更不該讓他用猜的。 */
+.vs-del { flex-shrink: 0; border: 1px solid var(--line); background: #fff; color: var(--muted); font-family: var(--sans); font-size: var(--fs-note); font-weight: 700; padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 44px; }
+.vs-del:active { background: var(--mint); }
+
+/* 「＋ 自己加一題」：App 裡沒有同類的虛線新增鍵 */
+.vs-add { width: 100%; border: 1px dashed var(--line); background: transparent; color: var(--teal-dd); font-family: var(--sans); font-size: var(--fs-sub); font-weight: 700; padding: 10px; border-radius: var(--radius-sm); cursor: pointer; margin-top: 10px; min-height: 40px; }
+
+/* 以下都是既有樣式的薄包裝，只是給這一頁的語意名字 */
+.vs-range { margin: 0 2px 14px; color: var(--muted); font-size: var(--fs-sub); font-variant-numeric: tabular-nums; }
+.vs-note { font-size: var(--fs-note); color: var(--muted); margin: 10px 0 0; line-height: 1.6; }
+.vs-empty { font-size: var(--fs-sub); color: var(--muted); padding: 4px 0; line-height: 1.6; }
+.vs-foot { font-size: var(--fs-note); color: var(--muted); text-align: center; margin: 22px 0 8px; }
+.vs-pend { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: var(--fs-note); color: var(--muted); }
+.vs-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); flex-shrink: 0; animation: vsPulse 1.4s ease-in-out infinite; }
+@keyframes vsPulse { 0%, 100% { opacity: .3 } 50% { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .vs-dot { animation: none; opacity: .7 } }
+
+/* 存成 PDF 走的是原生外掛（ExportPlugin.swift）自組的一份 A4 HTML，
+   不是印這個畫面——所以這裡不需要 @media print 規則。瀏覽器版退回
+   window.print() 時才用得到，那條在 exportVisitSummaryPdf 內另外處理。 */
+
 /* 用藥時段清單 */
 .ms-group { background: #FFF; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
 .ms-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; }
