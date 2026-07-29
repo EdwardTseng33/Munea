@@ -614,7 +614,23 @@ def score_memory(query, item):
     importance = float(item.get("importance") or 0)
     confidence = float(item.get("confidence") or 0)
     type_bonus = 0.2 if item.get("type") in {"relationship", "routine", "preference"} else 0
-    return overlap * 1.2 + importance + confidence + type_bonus
+    # 2026-07-29 加「新鮮度」：語音通話開場時 query 是空的（還沒對話），原公式只剩
+    # importance+confidence → 排序完全不看新舊——「孫子下個月要結婚」這種最該先講的
+    # 近況，會輸給分數差不多的陳年條目。近況/當天級的記憶兩週內加分（跟語意召回
+    # memory_engine.retrieve 同一把尺）；權重 0.6＝空 query 時新鮮事能贏過舊條目、
+    # 有 query 時字面比對（每個重疊詞 1.2 分）仍然主導、不打亂原本的相關性排序。
+    recency = 0.0
+    if item.get("tier") in ("recent", "today"):
+        try:
+            import datetime as _dt, math as _math
+            from memory_engine import _age_days
+            age = _age_days(item.get("updatedAt") or item.get("createdAt"),
+                            _dt.datetime.now(_dt.timezone.utc))
+            if age is not None:
+                recency = _math.exp(-age / 14.0)
+        except Exception:
+            recency = 0.0
+    return overlap * 1.2 + importance + confidence + type_bonus + 0.6 * recency
 
 
 def memory_retrieve_response(data, memory_items=None):

@@ -2987,7 +2987,11 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "text": text,
     })
     guardian = guardian_evaluate_response({"text": text, "effort": "quick"})
-    memories = memory_retrieve_response({"query": text, "limit": 5}).get("memories", [])
+    # 2026-07-29 記憶餵養（貼身度最大槓桿）：語音通話開場 text 是空的（還沒對話），
+    # 語意召回派不上用場、走關鍵字排序——這時撈 5 條太少（考卷七輪貼身度墊底、評審
+    # 理由每次都是「沒有連結使用者的背景資訊」）。開場改撈 10 條給她當聊天素材；
+    # 對話中（text 非空）維持語意召回 5 條、不動原本的相關性行為。
+    memories = memory_retrieve_response({"query": text, "limit": (5 if text.strip() else 10)}).get("memories", [])
     perception = topic_perception_plan_response({"query": text})
     try:
         import perception_engine
@@ -3082,7 +3086,7 @@ def reply_context_instruction(context):
         health_line = HEALTH_FENCE_WHEN_BLIND
     memory_lines = [
         f"- {item.get('type')}: {item.get('content')}"
-        for item in memories[:5]
+        for item in memories[:10]   # 2026-07-29：跟上面撈的量對齊（開場 10 條、對話中本來就只有 5 條）
         if item.get("content")
     ]
     domain_lines = [
