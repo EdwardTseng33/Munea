@@ -4607,6 +4607,9 @@ def admin_accounts_summary(data=None):
         "privacy": {
             "surface": "admin_account_lookup",
             "rawTranscriptRecords": 0,
+            # 2026-07-29：名冊多帶了 owner（登入信箱／登入方式／註冊與最後登入時間），
+            # 這是個人資料，老實標出來——後台走管理鑰匙、只給維運端看，不進任何對外回應。
+            "includesOwnerContact": True,
         },
         "backend": data_backend_status(),
     }
