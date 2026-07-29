@@ -7527,21 +7527,20 @@ function init() {
       setBtnBusy(b, '連接中');
       const r = await window.MuneaHealth.connect();
       if (r && r.ok) {
-        clearBtnBusy(b, '✓ 已連接');
-        b.classList.add('done');
+        clearBtnBusy(b);
         trackProductEvent('health_connected', { empty: !!r.empty, needsHealthApp: !!r.needsHealthApp });
-        // 一項都沒讀到就不要承諾會幫她留意——蘋果不會告訴我們是沒授權還是本來就沒紀錄，
-        // 所以只講現況跟怎麼打開，不亂猜原因（詳細步驟在「連接裝置」頁的說明文字）
-        if (r.needsHealthApp) {
-          // 之前就問過了，蘋果不會再跳授權視窗，再按幾次「連接」都不會有結果。
-          // 直接把他送到「健康」App，不要讓他卡在原地重按。
-          hint('要在「健康」App 裡打開項目才讀得到，我幫你開過去。');
-          try { await window.MuneaHealth.openHealthApp(); } catch (e) {}
-        } else {
-          hint(r.empty
-            ? '連上了，但我還讀不到資料。用下面那顆鍵去「健康」App 把項目打開就好。'
-            : '好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
+        // 按鍵長什麼樣、下一步該做什麼，統一交給 health.js 依狀態決定（整頁只有這一顆鍵）。
+        // 這裡只負責講一句人話，不要在這邊自己改按鍵文字，否則兩邊會打架。
+        if (typeof window.MuneaHealth.renderConnectionState === 'function') {
+          window.MuneaHealth.renderConnectionState();
         }
+        // 一項都沒讀到就不要承諾會幫她留意——蘋果不會告訴我們是沒授權還是本來就沒紀錄，
+        // 所以只講現況跟怎麼打開，不亂猜原因
+        hint(r.empty
+          ? (r.needsHealthApp
+            ? muneaT('health.hintAskedOnce', '這個授權視窗只會跳一次，之後要改都在「健康」App 裡。按上面那顆鍵我帶你過去。')
+            : muneaT('health.hintEmpty', '連上了，但我還讀不到資料。按上面那顆鍵去「健康」App 把項目打開就好。'))
+          : muneaT('health.hintConnected', '好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。'));
       } else {
         clearBtnBusy(b, b.dataset.label || '連接');
         hint(r && r.reason === 'unavailable' ? '這台裝置沒有健康資料可讀。' : '沒有連上，晚點在「連接裝置」再試一次也可以。');
