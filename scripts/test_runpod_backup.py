@@ -507,6 +507,11 @@ def test_template_map_parsing_and_stockout_detection():
         "RunPod API POST /pods failed: HTTP 500: There are no longer any "
         "instances available with the requested specifications."
     ))
+    # Live wording from the 2026-07-29 drill (adverb in the middle).
+    assert podctl.is_stockout_error(podctl.RunPodError(
+        'RunPod API POST /pods failed: HTTP 500: {"error":"create pod: '
+        'There are no instances currently available"}'
+    ))
     assert not podctl.is_stockout_error(podctl.RunPodError("HTTP 401: unauthorized"))
 
 

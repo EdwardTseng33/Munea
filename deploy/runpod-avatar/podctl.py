@@ -66,10 +66,15 @@ def template_map() -> dict[str, str]:
 
 
 def is_stockout_error(exc: BaseException) -> bool:
-    """True when RunPod rejected a create only because the DC has no GPUs."""
+    """True when RunPod rejected a create only because the DC has no GPUs.
+
+    Live wording observed 2026-07-29: "There are no instances currently
+    available" -- an adverb in the middle defeated an exact-phrase match, so
+    match on the stable stem instead.
+    """
     text = str(exc).lower()
     return any(marker in text for marker in (
-        "no instances available",
+        "no instances",
         "no longer any instances",
         "no available instances",
         "not have any available",
