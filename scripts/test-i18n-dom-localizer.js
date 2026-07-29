@@ -69,15 +69,17 @@ const root = new FakeElement({ 'data-i18n-title': 'reader.privacyTitle' });
 const text = new FakeElement({ 'data-i18n': 'voice.queue.position.one' });
 const aria = new FakeElement({ 'data-i18n-aria-label': 'reader.back' });
 const placeholder = new FakeElement({ 'data-i18n-placeholder': 'feedback.placeholder' });
-root.append(text, aria, placeholder);
+const alt = new FakeElement({ 'data-i18n-alt': 'companion.nening.name' });
+root.append(text, aria, placeholder, alt);
 
 const applied = apply(root, runtime, 'en', (key) => (
   key === 'voice.queue.position.one' ? { count: 3 } : undefined
 ));
-assert.equal(applied, 4, 'Every text and attribute binding should be applied once');
+assert.equal(applied, 5, 'Every text and attribute binding should be applied once');
 assert.equal(text.textContent, 'You are number 3 in line');
 assert.equal(aria.getAttribute('aria-label'), 'Back');
 assert.equal(placeholder.getAttribute('placeholder'), catalogs.en['feedback.placeholder']);
+assert.equal(alt.getAttribute('alt'), catalogs.en['companion.nening.name']);
 assert.equal(root.getAttribute('title'), 'Privacy Policy');
 assert.equal(text.getAttribute('innerHTML'), null, 'The localizer must never write innerHTML');
 
@@ -97,7 +99,7 @@ assert.equal(documentElement.getAttribute('dir'), 'ltr');
 
 assert.deepEqual(
   ATTRIBUTE_BINDINGS.map((binding) => binding.attribute),
-  ['aria-label', 'placeholder', 'title', 'value'],
+  ['aria-label', 'placeholder', 'title', 'alt', 'value'],
   'Only the reviewed safe attribute allowlist may be written',
 );
 assert.throws(

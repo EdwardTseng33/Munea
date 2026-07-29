@@ -11,6 +11,7 @@
     Object.freeze({ marker: 'data-i18n-aria-label', attribute: 'aria-label' }),
     Object.freeze({ marker: 'data-i18n-placeholder', attribute: 'placeholder' }),
     Object.freeze({ marker: 'data-i18n-title', attribute: 'title' }),
+    Object.freeze({ marker: 'data-i18n-alt', attribute: 'alt' }),
     Object.freeze({ marker: 'data-i18n-value', attribute: 'value' }),
   ]);
   const OBSERVED_ATTRIBUTES = Object.freeze([

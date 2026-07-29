@@ -38,6 +38,11 @@ assert.equal(
 assert(worklist.summary.resolutionKinds['reuse-existing-key'] > 0);
 assert(worklist.summary.resolutionKinds['review-existing-keys'] > 0);
 assert(worklist.summary.resolutionKinds['create-key'] > 0);
+assert.equal(
+  worklist.summary.bindingKinds.attribute || 0,
+  0,
+  'Every App/WebView localizable HTML attribute must stay catalog-bound',
+);
 assert(
   worklist.summary.uniqueSourceStrings > 500,
   'The worklist must expose the real unbound App copy debt',
@@ -58,16 +63,37 @@ const migratedAttributeKeys = [
   'activity.deadlineDate',
   'activity.deadlineTime',
   'activity.voteQuestionPlaceholder',
+  'activity.quizQuestionCountAria',
+  'activity.quizDeadlineDate',
+  'activity.quizDeadlineTime',
+  'activity.eventDate',
+  'activity.eventTime',
+  'activity.voteDeadlineDate',
+  'activity.voteDeadlineTime',
+  'activity.drawDate',
+  'activity.drawTime',
   'appointment.close',
+  'appointment.time',
+  'familyCircle.close',
+  'feedback.photoPreviewAlt',
   'feedback.npsAria',
+  'history.close',
   'history.nextMonth',
   'history.previousMonth',
+  'profile.close',
+  'purchase.close',
   'subscription.creditRulesTitle',
+  'subscription.topUpCreditRulesTitle',
+  'textChat.inputAria',
 ];
 for (const key of migratedAttributeKeys) {
+  const lingeringAttributeOccurrence = worklist.entries
+    .filter((entry) => entry.suggestedKey === key)
+    .flatMap((entry) => entry.occurrences)
+    .find((occurrence) => occurrence.kind.startsWith('attribute:'));
   assert(
-    !worklist.entries.some((entry) => entry.suggestedKey === key),
-    `${key} must stay catalog-bound after the first attribute migration batch`,
+    !lingeringAttributeOccurrence,
+    `${key} must stay catalog-bound after the attribute migration batches`,
   );
 }
 for (const entry of worklist.entries) {
