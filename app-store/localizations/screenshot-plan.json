@@ -1,0 +1,194 @@
+{
+  "schema": "munea.app-store-screenshot-plan.v1",
+  "authority": "repository-draft-only",
+  "status": "draft",
+  "canvas": {
+    "width": 1242,
+    "height": 2688,
+    "format": "png"
+  },
+  "capturePolicy": {
+    "exactApprovedBuildRequired": true,
+    "localizedUiRequired": true,
+    "productionDataForbidden": true,
+    "syntheticQaAccountRequired": true,
+    "noUntranslatedCopy": true,
+    "noOverflow": true,
+    "noClipping": true
+  },
+  "frameOrder": [
+    "voice-companion",
+    "daily-reminders",
+    "family-circle",
+    "conversation-memory",
+    "wellbeing-records"
+  ],
+  "locales": {
+    "zh-Hant": {
+      "catalogLocale": "zh-TW",
+      "variant": "zh-Hant-TW",
+      "status": "draft",
+      "frames": [
+        {
+          "id": "voice-companion",
+          "appState": "chat-active",
+          "headline": "像打電話一樣，聊聊每天的事",
+          "supportingText": "用聲音自然說話，也能看見陪伴角色的回應。"
+        },
+        {
+          "id": "daily-reminders",
+          "appState": "home",
+          "headline": "重要小事，不再錯過",
+          "supportingText": "把用藥、回診與日常事項整理成清楚提醒。"
+        },
+        {
+          "id": "family-circle",
+          "appState": "family",
+          "headline": "只和受邀家人保持連結",
+          "supportingText": "在照護圈傳話、分享近況，一起參與家庭活動。"
+        },
+        {
+          "id": "conversation-memory",
+          "appState": "status",
+          "headline": "下次聊天，接續重要回憶",
+          "supportingText": "經你同意後保存對話摘要，讓陪伴更連貫。"
+        },
+        {
+          "id": "wellbeing-records",
+          "appState": "settings",
+          "headline": "生活與健康資料，由你決定",
+          "supportingText": "查看自己保存的紀錄，Apple 健康連結完全由你授權。"
+        }
+      ]
+    },
+    "en-US": {
+      "catalogLocale": "en",
+      "variant": "en-US",
+      "status": "draft",
+      "frames": [
+        {
+          "id": "voice-companion",
+          "appState": "chat-active",
+          "headline": "A familiar voice for everyday moments",
+          "supportingText": "Talk naturally and see your companion respond as the conversation unfolds."
+        },
+        {
+          "id": "daily-reminders",
+          "appState": "home",
+          "headline": "Stay on top of daily routines",
+          "supportingText": "Keep medication schedules, appointments, and everyday tasks in one clear view."
+        },
+        {
+          "id": "family-circle",
+          "appState": "family",
+          "headline": "Stay connected with invited family",
+          "supportingText": "Share updates, messages, and activities inside your private family circle."
+        },
+        {
+          "id": "conversation-memory",
+          "appState": "status",
+          "headline": "Pick up where your last chat left off",
+          "supportingText": "With your consent, conversation summaries help future chats feel connected."
+        },
+        {
+          "id": "wellbeing-records",
+          "appState": "settings",
+          "headline": "Your wellbeing data stays in your control",
+          "supportingText": "Review what you save and choose whether to connect supported Apple Health data."
+        }
+      ]
+    },
+    "ja": {
+      "catalogLocale": "ja",
+      "variant": "ja-JP",
+      "status": "draft",
+      "frames": [
+        {
+          "id": "voice-companion",
+          "appState": "chat-active",
+          "headline": "声で話す、いつものひととき",
+          "supportingText": "電話のように自然に話しながら、コンパニオンの反応も見られます。"
+        },
+        {
+          "id": "daily-reminders",
+          "appState": "home",
+          "headline": "毎日の予定を、忘れずに",
+          "supportingText": "服薬予定、通院予定、日々の用事を見やすくまとめます。"
+        },
+        {
+          "id": "family-circle",
+          "appState": "family",
+          "headline": "招待した家族と、無理なくつながる",
+          "supportingText": "家族サークルで近況やメッセージ、活動を共有できます。"
+        },
+        {
+          "id": "conversation-memory",
+          "appState": "status",
+          "headline": "大切な話を、次の会話へ",
+          "supportingText": "同意した会話の要約を保存し、次の会話を自然につなげます。"
+        },
+        {
+          "id": "wellbeing-records",
+          "appState": "settings",
+          "headline": "生活と健康の記録は、自分で選ぶ",
+          "supportingText": "保存した記録を確認し、Appleヘルスケア連携も自分で許可できます。"
+        }
+      ]
+    },
+    "es": {
+      "catalogLocale": "es",
+      "variant": "neutral-international-Spanish-market-pending",
+      "status": "draft-market-variant-pending",
+      "marketVariants": {
+        "es-ES": {
+          "status": "missing",
+          "targetTerritories": [
+            "ES"
+          ],
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        },
+        "es-MX": {
+          "status": "missing",
+          "targetTerritories": [
+            "MX"
+          ],
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        }
+      },
+      "frames": [
+        {
+          "id": "voice-companion",
+          "appState": "chat-active",
+          "headline": "Una voz cercana para cada día",
+          "supportingText": "Habla con naturalidad y mira cómo responde tu acompañante durante la conversación."
+        },
+        {
+          "id": "daily-reminders",
+          "appState": "home",
+          "headline": "Tus rutinas, siempre presentes",
+          "supportingText": "Organiza horarios de medicación, citas y tareas cotidianas en una vista clara."
+        },
+        {
+          "id": "family-circle",
+          "appState": "family",
+          "headline": "Conecta con los familiares que invites",
+          "supportingText": "Comparte novedades, mensajes y actividades dentro de tu círculo familiar privado."
+        },
+        {
+          "id": "conversation-memory",
+          "appState": "status",
+          "headline": "Retoma las conversaciones importantes",
+          "supportingText": "Con tu consentimiento, los resúmenes ayudan a dar continuidad a próximos encuentros."
+        },
+        {
+          "id": "wellbeing-records",
+          "appState": "settings",
+          "headline": "Tú decides sobre tus datos de bienestar",
+          "supportingText": "Revisa lo que guardas y elige si conectas datos compatibles de Apple Salud."
+        }
+      ]
+    }
+  }
+}

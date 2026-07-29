@@ -1,0 +1,98 @@
+{
+  "schema": "munea.member-data-isolation-readiness.v1",
+  "status": "pending-staging-two-tenant-e2e",
+  "evidencePath": "docs/qa/i18n/member-data-isolation-e2e.json",
+  "productionMutationAuthorized": false,
+  "staticPrechecks": [
+    "engine/test_account_scope.py",
+    "scripts/test_production_security_sql.py",
+    "engine/test_family_invitation_access.py"
+  ],
+  "requiredEvidence": {
+    "environment": "staging",
+    "captureMode": "read-only-preprovisioned-two-tenant",
+    "realMemberDataUsed": false,
+    "productionWritesPerformed": false,
+    "fixtureAccounts": 2,
+    "fixtureLifecycleReviewed": true,
+    "containsSecrets": false,
+    "containsPersonalData": false,
+    "maximumAgeHours": 24
+  },
+  "requiredScenarios": [
+    "ownAccountReadable",
+    "otherAccountPersonDeniedByRls",
+    "otherAccountPersonDeniedByBrain",
+    "otherAccountFamilyDeniedByBrain",
+    "clientTenantOverrideDenied",
+    "removedMemberDenied",
+    "unknownUserDenied",
+    "fixtureLifecycleReviewed"
+  ],
+  "requiredChecks": [
+    {
+      "name": "staging_release_identity",
+      "allowedStatusCodes": [200],
+      "commitMatched": true
+    },
+    {
+      "name": "tenant_a_reads_own_person_via_rls",
+      "allowedStatusCodes": [200],
+      "rowCount": 1
+    },
+    {
+      "name": "tenant_b_reads_own_person_via_rls",
+      "allowedStatusCodes": [200],
+      "rowCount": 1
+    },
+    {
+      "name": "tenant_a_cannot_read_tenant_b_person_via_rls",
+      "allowedStatusCodes": [200],
+      "rowCount": 0
+    },
+    {
+      "name": "tenant_b_cannot_read_tenant_a_person_via_rls",
+      "allowedStatusCodes": [200],
+      "rowCount": 0
+    },
+    {
+      "name": "tenant_a_reads_own_person_via_brain",
+      "allowedStatusCodes": [200]
+    },
+    {
+      "name": "tenant_b_reads_own_person_via_brain",
+      "allowedStatusCodes": [200]
+    },
+    {
+      "name": "tenant_a_cannot_read_tenant_b_person_via_brain",
+      "allowedStatusCodes": [403]
+    },
+    {
+      "name": "tenant_b_cannot_read_tenant_a_person_via_brain",
+      "allowedStatusCodes": [403]
+    },
+    {
+      "name": "tenant_a_cannot_read_tenant_b_family_via_brain",
+      "allowedStatusCodes": [403]
+    },
+    {
+      "name": "tenant_b_cannot_read_tenant_a_family_via_brain",
+      "allowedStatusCodes": [403]
+    },
+    {
+      "name": "client_tenant_override_denied",
+      "allowedStatusCodes": [403]
+    },
+    {
+      "name": "removed_member_denied",
+      "allowedStatusCodes": [403]
+    },
+    {
+      "name": "unknown_user_denied",
+      "allowedStatusCodes": [200, 401, 403]
+    }
+  ],
+  "probeScript": "scripts/member_data_isolation_probe.py",
+  "releaseRule": "Static tests are prechecks only. International promotion requires a current read-only two-tenant staging E2E on a non-production Supabase project, proving that direct Supabase access and Brain service-role handlers both deny cross-account reads. The evidence exactCommit must equal the complete commit returned by the staging Brain /version identity.",
+  "currentEvidence": "No two-tenant staging E2E evidence has been recorded. Release remains blocked without fabricating evidence."
+}

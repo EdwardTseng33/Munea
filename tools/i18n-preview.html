@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Munea i18n QA preview</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eef4f1; color: #17372f; }
+    header { position: sticky; top: 0; z-index: 2; padding: 14px 18px; background: #17372f; color: white; }
+    header strong { display: block; margin-bottom: 8px; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; }
+    nav a, button { border: 1px solid #b9ccc5; border-radius: 999px; padding: 7px 11px; background: white; color: #17372f; text-decoration: none; font: inherit; cursor: pointer; }
+    main { width: min(100%, 430px); margin: 20px auto; padding: 0 20px 30px; }
+    main.large-text { font-size: 125%; }
+    .status { margin: 0 0 16px; padding: 10px 12px; border-radius: 10px; background: #fff5d9; font-size: 13px; }
+    section { margin-bottom: 16px; padding: 18px; border: 1px solid #d9e4df; border-radius: 18px; background: white; box-shadow: 0 8px 24px rgba(23,55,47,.06); overflow-wrap: anywhere; }
+    h2 { margin: 0 0 12px; font-size: 17px; }
+    p { margin: 8px 0; line-height: 1.5; }
+    .tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; font-size: 12px; text-align: center; }
+    .tabs span { min-width: 0; padding: 8px 2px; border-radius: 8px; background: #edf7f3; overflow-wrap: anywhere; }
+    .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf1ef; }
+    .row:last-child { border-bottom: 0; }
+    .row span:last-child { max-width: 62%; text-align: right; color: #42645a; }
+    .long-copy { padding: 12px; border-radius: 12px; background: #f5f8f7; }
+    .error { background: #ffe5e5; color: #852525; }
+    .purchase-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .purchase-tabs span { padding: 9px; border-radius: 10px; background: #edf7f3; text-align: center; }
+    .plan-card { margin-top: 12px; padding: 14px; border: 2px solid #79b8aa; border-radius: 14px; }
+    .plan-card h3 { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: 16px; }
+    .plan-card button { width: 100%; margin-top: 10px; border: 0; border-radius: 12px; background: #237e70; color: white; font-weight: 700; }
+    .purchase-rule { margin: 8px 0; padding-left: 12px; border-left: 3px solid #79b8aa; }
+    .purchase-state { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #f5f8f7; font-size: 13px; }
+    .dynamic-card { margin-top: 10px; padding: 14px; border: 1px solid #b9ccc5; border-radius: 14px; background: #f8fbfa; }
+    .dynamic-card strong, .dynamic-card small { display: block; }
+    .dynamic-card small { margin-top: 6px; color: #42645a; line-height: 1.45; }
+    .dynamic-card button { margin-top: 10px; }
+  </style>
+  <script>
+    (function () {
+      const allowed = ['zh-TW', 'en', 'ja', 'es'];
+      const requested = new URLSearchParams(location.search).get('locale');
+      window.MUNEA_DEV_CONFIG = {
+        enabled: true,
+        i18nPreviewLocale: allowed.includes(requested) ? requested : 'zh-TW',
+      };
+    }());
+  </script>
+</head>
+<body>
+  <header>
+    <strong>Munea local i18n QA · <span id="activeLocale">loading</span></strong>
+    <nav aria-label="QA locale controls">
+      <a href="?locale=zh-TW">繁中</a>
+      <a href="?locale=en">English</a>
+      <a href="?locale=ja">日本語</a>
+      <a href="?locale=es">Español</a>
+      <button type="button" id="largeText">125% text</button>
+    </nav>
+  </header>
+  <main id="preview">
+    <p class="status" id="status">Loading local catalogs…</p>
+
+    <section>
+      <h2 data-i18n="app.title">Munea 沐寧</h2>
+      <div class="tabs">
+        <span data-i18n="tab.home">首頁</span>
+        <span data-i18n="tab.status">狀態</span>
+        <span data-i18n="tab.chat">聊聊</span>
+        <span data-i18n="tab.family">家人</span>
+        <span data-i18n="tab.settings">設定</span>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-i18n="health.title">健康</h2>
+      <div class="row"><span data-i18n="health.connected">已連接</span><span data-i18n="health.syncingDetail">正在同步健康資料</span></div>
+      <div class="row"><span data-i18n="health.notConnected">未連接</span><span data-i18n="health.connect">連接</span></div>
+      <p class="long-copy" data-i18n="health.disconnectHelp">解除連接說明</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="settings.companion">陪伴角色</h2>
+      <div class="row"><span data-i18n="companion.nening.name">寧寧</span><span data-i18n="companion.nening.label">溫柔型</span></div>
+      <div class="row"><span data-i18n="companion.ahong.name">阿宏</span><span data-i18n="companion.ahong.label">沉穩型</span></div>
+      <div class="row"><span data-i18n="companion.xiaoyun.name">小昀</span><span data-i18n="companion.xiaoyun.label">開朗型</span></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="auth.sheetTitle">登入 Munea</h2>
+      <p data-i18n="auth.sheetSubtitle">同步陪伴角色、家人照護圈與訂閱權益</p>
+      <div class="row"><span data-i18n="auth.apple">使用 Apple 登入</span><span data-i18n="auth.google">使用 Google 登入</span></div>
+      <p class="long-copy">
+        <span data-i18n="auth.termsPrefix">繼續即代表同意</span>
+        <strong data-i18n="auth.termsLink">服務條款與隱私權政策</strong>
+      </p>
+      <p class="long-copy" data-i18n="auth.aiProcessingDisclosure">AI 處理說明</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="settings.title">設定</h2>
+      <div class="row"><span data-i18n="settings.section.account">帳號</span><span data-i18n="auth.guestMode">訪客模式</span></div>
+      <div class="row"><span data-i18n="settings.section.billing">訂閱與點數</span><span id="settingsCreditBalance">Credits</span></div>
+      <div class="row"><span data-i18n="settings.profile">個人資料</span><span data-i18n="settings.profileSubtitle">名稱、生日、所在地</span></div>
+      <div class="row"><span data-i18n="settings.careCircle">照護圈</span><span data-i18n="settings.careCircleSubtitle">誰在圈裡</span></div>
+      <div class="row"><span data-i18n="settings.interests">想聊的話題</span><span id="settingsInterestsSubtitle">Interests</span></div>
+      <div class="row"><span data-i18n="settings.appleHealth">Apple 健康</span><span data-i18n="settings.appleHealthSubtitle">步數、心率、睡眠</span></div>
+      <div class="row"><span data-i18n="settings.medicationReminders">用藥提醒</span><span data-i18n="settings.medicationRemindersSubtitle">到時間通知</span></div>
+      <div class="row"><span data-i18n="settings.safetyNotifications">安全通知</span><span data-i18n="settings.safetyNotificationsSubtitle">通知家人</span></div>
+      <p class="long-copy" data-i18n="settings.lowCredits">點數快用完</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="profile.title">個人資料</h2>
+      <p class="long-copy" id="profileFirstRunIntro">個人化說明</p>
+      <div class="row"><span data-i18n="profile.changePhoto">更換照片</span><span data-i18n="profile.photoHint">家人頁顯示</span></div>
+      <div class="row"><span data-i18n="profile.name">名稱</span><span data-i18n="profile.familyNickname">家人稱呼</span></div>
+      <div class="row"><span data-i18n="profile.birthdate">生日</span><span data-i18n="profile.location">所在地</span></div>
+      <p class="long-copy" data-i18n="profile.locationHint">區域說明</p>
+      <p class="long-copy" data-i18n="profile.cloudDisclosure">雲端同步說明</p>
+      <div class="row"><span data-i18n="profile.skip">先跳過</span><span data-i18n="profile.save">儲存</span></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="data.title">我的資料</h2>
+      <p class="long-copy" data-i18n="data.description">資料匯出與刪除說明</p>
+      <div class="row"><span data-i18n="data.export">匯出資料副本</span><span data-i18n="data.delete">刪除我的資料</span></div>
+      <p data-i18n="data.policyHint">請查看隱私權政策</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="font.title">字體與顯示</h2>
+      <p data-i18n="font.subtitle">選擇看得舒服的大小</p>
+      <div class="row"><span data-i18n="font.standard">標準</span><span data-i18n="font.standardBody">手機常用大小</span></div>
+      <div class="row"><span data-i18n="font.large">大</span><span data-i18n="font.largeBody">閱讀更輕鬆</span></div>
+      <div class="row"><span data-i18n="font.extraLarge">特大</span><span data-i18n="font.extraLargeBody">更大的閱讀字級</span></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="medication.title">用藥</h2>
+      <div class="row"><span data-i18n="medication.slot.afterBreakfast">早餐後</span><span data-i18n="medication.taken">已服用</span></div>
+      <div class="row"><span data-i18n="medication.slot.afterLunch">午餐後</span><span data-i18n="medication.notTaken">尚未服用</span></div>
+      <div class="row"><span data-i18n="medication.slot.afterDinner">晚餐後</span><span data-i18n="medication.slot.bedtime">睡前</span></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="reader.privacyTitle">隱私權政策</h2>
+      <div class="row"><span data-i18n="reader.loading">載入中</span><span data-i18n="reader.back">返回</span></div>
+      <p class="long-copy" data-i18n="reader.loadError">無法載入內容</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="voice.call.start">開始通話</h2>
+      <p id="queuePosition">Queue position</p>
+      <p class="long-copy" data-i18n="voice.queue.wait">等待通話</p>
+      <div class="dynamic-card">
+        <strong id="dynamicQueueTitle">Dynamic queue title</strong>
+        <span id="dynamicQueuePosition">Dynamic queue position</span>
+        <small id="dynamicQueueNote">Dynamic queue note</small>
+        <button type="button" id="dynamicQueueButton">Dynamic queue action</button>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-i18n="home.todayTogether">今天一起完成</h2>
+      <div class="dynamic-card">
+        <strong id="dynamicCareTitle">Dynamic care title</strong>
+        <small id="dynamicCareBody">Dynamic care body</small>
+        <button type="button" id="dynamicCareButton">Dynamic care action</button>
+      </div>
+      <div class="dynamic-card">
+        <strong id="dynamicVisitTitle">Dynamic visit title</strong>
+        <small id="dynamicVisitBody">Dynamic visit body</small>
+      </div>
+    </section>
+
+    <section id="purchasePreview">
+      <h2 data-i18n="subscription.title">方案與點數</h2>
+      <p data-i18n="subscription.tagline">選擇適合家人的陪伴方案</p>
+      <div class="purchase-tabs">
+        <span data-i18n="subscription.plansTab">訂閱方案</span>
+        <span data-i18n="subscription.creditsTab">加購點數</span>
+      </div>
+      <div class="plan-card">
+        <h3>
+          <span data-i18n="subscription.planPlus">Plus</span>
+          <span id="planStorePrice">StoreKit price</span>
+        </h3>
+        <p data-i18n="subscription.plusAudience">日常語音陪伴與基本家庭關懷</p>
+        <p data-i18n="subscription.plusFeature1">日常語音陪伴</p>
+        <p data-i18n="subscription.plusFeature2">持續陪伴記憶</p>
+        <p id="dynamicPlanName">Dynamic plan name</p>
+        <p id="dynamicPlanNote">Dynamic plan note</p>
+        <button type="button" id="planBuyLabel">Confirm plan</button>
+      </div>
+      <div class="plan-card">
+        <h3>
+          <span data-i18n="purchase.topUpTitle">加購通話點數</span>
+          <span id="creditStorePrice">StoreKit price</span>
+        </h3>
+        <p data-i18n="purchase.topUpDescription">點數用途說明</p>
+        <p id="creditMinutes">Estimated minutes</p>
+        <button type="button" id="creditBuyLabel">Buy credits</button>
+      </div>
+      <h2 data-i18n="subscription.creditRulesTitle">點數使用規則</h2>
+      <div class="purchase-rule">
+        <strong data-i18n="subscription.monthlyCreditsTitle">每月方案點數</strong>
+        <p data-i18n="subscription.monthlyCreditsBody">未使用點數不累積</p>
+      </div>
+      <div class="purchase-rule">
+        <strong data-i18n="subscription.purchasedCreditsTitle">加購點數</strong>
+        <p data-i18n="subscription.purchasedCreditsBody">加購點數不會到期</p>
+      </div>
+      <div class="purchase-state" id="purchasePending">Purchase pending</div>
+      <div class="purchase-state error" id="purchaseMismatch">Account mismatch</div>
+      <div class="purchase-state" id="purchaseRestoreNone">Nothing to restore</div>
+    </section>
+  </main>
+
+  <script src="../web/src/i18n/purchase-flow.js"></script>
+  <script src="../web/src/i18n/app-renderer-copy.js"></script>
+  <script src="../web/src/i18n.js"></script>
+  <script>
+    (async function () {
+      const api = window.MuneaI18n;
+      const result = await api.ready;
+      document.getElementById('activeLocale').textContent = api.current();
+      const status = document.getElementById('status');
+      status.textContent = result.fallback
+        ? 'Fallback active: ' + (result.error || 'unknown error')
+        : 'Local catalog loaded. This page is not release evidence.';
+      status.classList.toggle('error', result.fallback);
+      document.getElementById('queuePosition').textContent = api.t(
+        'voice.queue.position.one',
+        { count: 3 },
+        'Queue position 3',
+      );
+      document.getElementById('settingsCreditBalance').textContent = api.t(
+        'settings.creditsBalance',
+        { credits: 240 },
+        '240 credits',
+      );
+      document.getElementById('settingsInterestsSubtitle').textContent = api.t(
+        'settings.interestsSubtitle',
+        { companion: api.t('companion.nening.name') },
+        'Topics',
+      );
+      document.getElementById('profileFirstRunIntro').textContent = api.t(
+        'profile.firstRunIntro',
+        { companion: api.t('companion.nening.name') },
+        'Profile introduction',
+      );
+      const mockPrices = {
+        'zh-TW': { plan: 'NT$300', credits: 'NT$180' },
+        en: { plan: '$9.99', credits: '$5.99' },
+        ja: { plan: '¥1,500', credits: '¥900' },
+        es: { plan: '9,99 €', credits: '5,99 €' },
+      };
+      const prices = mockPrices[api.current()] || mockPrices['zh-TW'];
+      const flow = window.MuneaPurchaseFlow.createPurchaseFlow({ t: api.t });
+      const rendererCopy = window.MuneaAppRendererCopy.createAppRendererCopy({ t: api.t });
+      const plan = flow.subscription({
+        productId: 'net.munea.app.plus.monthly',
+        displayName: 'Munea Plus',
+        description: '',
+        displayPrice: prices.plan,
+      }, { plan: 'plus', billingPeriod: 'month' });
+      const credits = flow.creditPack({
+        productId: 'net.munea.app.points.200',
+        displayName: 'Munea Credits',
+        description: '',
+        displayPrice: prices.credits,
+      }, { credits: 100, minutes: 20 });
+      document.getElementById('planStorePrice').textContent = plan.displayPrice;
+      document.getElementById('planBuyLabel').textContent = plan.upgradeLabel;
+      document.getElementById('creditStorePrice').textContent = credits.displayPrice;
+      document.getElementById('creditMinutes').textContent = credits.minutesLabel;
+      document.getElementById('creditBuyLabel').textContent = credits.buyLabel;
+      document.getElementById('purchasePending').textContent = flow.failureMessage('pending');
+      document.getElementById('purchaseMismatch').textContent = flow.failureMessage('apple_account_token_mismatch');
+      document.getElementById('purchaseRestoreNone').textContent = flow.restoreMessage({ ok: false, reason: 'none' });
+      const queue = rendererCopy.queueCard({
+        mode: 'queued',
+        position: 3,
+        etaSeconds: 121,
+        companion: api.t('companion.nening.name'),
+      });
+      document.getElementById('dynamicQueueTitle').textContent = queue.title;
+      document.getElementById('dynamicQueuePosition').textContent = queue.position;
+      document.getElementById('dynamicQueueNote').textContent = queue.note;
+      document.getElementById('dynamicQueueButton').textContent = queue.button;
+      const care = rendererCopy.walkActivity({
+        owner: 'Mei',
+        gap: 5000,
+      });
+      document.getElementById('dynamicCareTitle').textContent = care.title;
+      document.getElementById('dynamicCareBody').textContent = care.body;
+      document.getElementById('dynamicCareButton').textContent = rendererCopy.careLabels().open;
+      const visit = rendererCopy.upcomingVisit({
+        title: api.t('home.care.visitFallback'),
+        date: '7/31',
+        companion: api.t('companion.nening.name'),
+      });
+      document.getElementById('dynamicVisitTitle').textContent = visit.title;
+      document.getElementById('dynamicVisitBody').textContent = visit.body;
+      const planSummary = rendererCopy.planSummary({
+        plan: 'plus',
+        monthlyCredits: 300,
+        minutes: 300,
+      });
+      document.getElementById('dynamicPlanName').textContent = planSummary.name;
+      document.getElementById('dynamicPlanNote').textContent = planSummary.note;
+      document.getElementById('largeText').addEventListener('click', function () {
+        document.getElementById('preview').classList.toggle('large-text');
+      });
+    }());
+  </script>
+</body>
+</html>

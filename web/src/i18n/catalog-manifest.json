@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "defaultLocale": "zh-TW",
+  "fallbackLocale": "zh-TW",
+  "locales": [
+    {
+      "locale": "zh-TW",
+      "nativeLocale": "zh-Hant",
+      "label": "繁體中文",
+      "htmlLang": "zh-Hant-TW",
+      "weatherLanguage": "zh",
+      "catalog": "zh-TW.json",
+      "status": "production",
+      "runtimeEnabled": true,
+      "binaryLocalizationEnabled": true
+    },
+    {
+      "locale": "en",
+      "nativeLocale": "en",
+      "label": "English",
+      "htmlLang": "en",
+      "weatherLanguage": "en",
+      "catalog": "en.json",
+      "status": "development",
+      "runtimeEnabled": false,
+      "binaryLocalizationEnabled": false
+    },
+    {
+      "locale": "ja",
+      "nativeLocale": "ja",
+      "label": "日本語",
+      "htmlLang": "ja",
+      "weatherLanguage": "ja",
+      "catalog": "ja.json",
+      "status": "development",
+      "runtimeEnabled": false,
+      "binaryLocalizationEnabled": false
+    },
+    {
+      "locale": "es",
+      "nativeLocale": "es",
+      "label": "Español",
+      "htmlLang": "es",
+      "weatherLanguage": "es",
+      "catalog": "es.json",
+      "status": "development",
+      "runtimeEnabled": false,
+      "binaryLocalizationEnabled": false
+    }
+  ],
+  "releaseGates": [
+    "uiCoverage",
+    "nativeLanguageReview",
+    "layoutAndDynamicType",
+    "voiceE2E",
+    "regionalSafetyAndLegal",
+    "appStoreMetadata",
+    "inAppPurchaseLocalization",
+    "marketAvailability"
+  ]
+}

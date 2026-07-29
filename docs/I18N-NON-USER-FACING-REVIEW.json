@@ -1,0 +1,128 @@
+{
+  "schema": "munea.i18n-non-user-facing-review.v1",
+  "policy": {
+    "exactFileTextKindAndOccurrenceMatchRequired": true,
+    "newOccurrencesFailClosed": true,
+    "userVisibleFallbacksForbidden": true,
+    "evidenceFileRequired": true
+  },
+  "entries": [
+    {
+      "id": "companion-backend-nening",
+      "path": "web/src/companion-profile.js",
+      "text": "寧寧",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-ahong",
+      "path": "web/src/companion-profile.js",
+      "text": "阿宏",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-xiaoyun",
+      "path": "web/src/companion-profile.js",
+      "text": "小昀",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-ayuan",
+      "path": "web/src/companion-profile.js",
+      "text": "阿原",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-mimi",
+      "path": "web/src/companion-profile.js",
+      "text": "咪咪",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-wangcai",
+      "path": "web/src/companion-profile.js",
+      "text": "旺財",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-legacy-brand-sentinel",
+      "path": "web/src/companion-profile.js",
+      "text": "沐寧",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-brand-migration-sentinel",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "medication-legacy-generic-name",
+      "path": "web/src/medication.js",
+      "text": "藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-medication-service.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-breakfast",
+      "path": "web/src/notify.js",
+      "text": "早餐後",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-lunch",
+      "path": "web/src/notify.js",
+      "text": "午餐後",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-dinner",
+      "path": "web/src/notify.js",
+      "text": "晚餐後",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-bedtime",
+      "path": "web/src/notify.js",
+      "text": "睡前",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-generic-medication-name",
+      "path": "web/src/notify.js",
+      "text": "藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    }
+  ]
+}

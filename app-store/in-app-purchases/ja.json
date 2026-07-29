@@ -1,0 +1,34 @@
+{
+  "net.munea.app.plus.monthly": {
+    "displayName": "Munea Plus 月額",
+    "description": "毎月100ポイント、健康の傾向、家族4人まで"
+  },
+  "net.munea.app.plus.yearly": {
+    "displayName": "Munea Plus 年額",
+    "description": "年額プラン、毎月100ポイント、家族4人まで"
+  },
+  "net.munea.app.pro.monthly": {
+    "displayName": "Munea Pro 月額",
+    "description": "毎月200ポイント、健康の傾向、家族12人まで"
+  },
+  "net.munea.app.pro.yearly": {
+    "displayName": "Munea Pro 年額",
+    "description": "年額プラン、毎月200ポイント、家族12人まで"
+  },
+  "net.munea.app.points.200": {
+    "displayName": "Munea 100ポイント",
+    "description": "Plus・Pro会員向けに100ポイント追加"
+  },
+  "net.munea.app.points.500": {
+    "displayName": "Munea 300ポイント",
+    "description": "Plus・Pro会員向けに300ポイント追加"
+  },
+  "net.munea.app.points.1000": {
+    "displayName": "Munea 600ポイント",
+    "description": "Plus・Pro会員向けに600ポイント追加"
+  },
+  "net.munea.app.points.1800": {
+    "displayName": "Munea 1000ポイント",
+    "description": "Plus・Pro会員向けに1000ポイント追加"
+  }
+}

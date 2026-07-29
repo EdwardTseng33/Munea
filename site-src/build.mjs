@@ -110,6 +110,8 @@ function ctaVars(dict) {
       'cta.small': dict['cta.onAppStore'],
       'cta.big': dict['cta.freeDownload'],
       'cta.navLabel': dict['cta.freeDownload'],
+      'cta.navHref': config.appStoreUrl,
+      'cta.navAttrs': ' target=\"_blank\" rel=\"noopener\"',
       'cta.state': 'live',
     };
   }
@@ -120,6 +122,8 @@ function ctaVars(dict) {
     'cta.small': dict['cta.comingSoonSmall'],
     'cta.big': dict['cta.comingSoonBig'],
     'cta.navLabel': dict['cta.comingSoonBig'],
+    'cta.navHref': '#download',
+    'cta.navAttrs': '',
     'cta.state': 'soon',
   };
 }

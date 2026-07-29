@@ -77,6 +77,39 @@ def test_auth_error_classification():
         assert exc.status_code == 500
 
 
+def test_call_locale_records_are_scoped_through_verified_lease():
+    store = SupabaseCallStore("https://example.supabase.co", "service-role")
+    requested_urls = []
+
+    def fake_json(method, url, **_kwargs):
+        assert method == "GET"
+        requested_urls.append(url)
+        if "/call_leases?" in url:
+            return [{"account_id": "account-1", "person_id": "person-1"}]
+        if "/accounts?" in url:
+            return [{"id": "account-1", "locale": "en", "preferred_languages": ["en", "ja"]}]
+        if "/persons?" in url:
+            return [{
+                "id": "person-1",
+                "account_id": "account-1",
+                "locale": "ja",
+                "timezone": "Asia/Tokyo",
+                "region_code": "JP",
+                "attributes": {},
+            }]
+        raise AssertionError("unexpected URL " + url)
+
+    store._json = fake_json
+    account, person = store.load_call_locale_records(
+        call_id="call-1",
+        user_id="user-1",
+    )
+    assert account["locale"] == "en" and person["locale"] == "ja"
+    assert "call_id=eq.call-1" in requested_urls[0]
+    assert "user_id=eq.user-1" in requested_urls[0]
+    assert any("account_id=eq.account-1" in url for url in requested_urls)
+
+
 class FakeDurable:
     def __init__(self):
         self.requests = []
@@ -99,6 +132,35 @@ class FakeDurable:
             "worker": {"worker_id": "glows-primary", "url": "https://avatar.example"},
             "voice": {"shard_id": "voice-1", "url": "wss://voice.example"},
         }
+
+    def load_call_locale_records(self, **kwargs):
+        assert kwargs["call_id"] == "11111111-1111-1111-1111-111111111111"
+        assert kwargs["user_id"] == "00000000-0000-0000-0000-000000000001"
+        return ({
+            "id": "account-1",
+            "locale": "en",
+            "preferred_languages": ["en", "ja"],
+        }, {
+            "id": "person-1",
+            "locale": "ja",
+            "timezone": "Asia/Tokyo",
+            "region_code": "JP",
+            "attributes": {
+                "localeContext": {
+                    "version": 1,
+                    "uiLocale": "en",
+                    "conversationLocale": "ja",
+                    "preferredLanguages": ["ja", "en"],
+                    "countryCode": "JP",
+                    "timeZone": "Asia/Tokyo",
+                    "units": "metric",
+                    "currency": "JPY",
+                    "safetyRegion": "JP",
+                    "legalRegion": "JP",
+                    "dataRegion": "jp-primary",
+                },
+            },
+        })
 
     def heartbeat(self, **kwargs):
         self.heartbeats.append(kwargs)
@@ -128,6 +190,9 @@ class FakeDurable:
         self.worker_updates.append((worker_id, values))
         return {"worker_id": worker_id, **values}
 
+    def get_worker(self, worker_id):
+        return {"worker_id": worker_id, "status": "ready", "active_leases": 0}
+
 
 def test_http_v2_contract():
     os.environ.setdefault("MUNEA_CALL_TOKEN_SECRET", "unit-test-call-token-secret")
@@ -152,6 +217,9 @@ def test_http_v2_contract():
         body["call_token"], gs._CALL_TOKEN_SECRET, worker_id="glows-primary", slot_id=2
     )
     assert token_payload["call_id"] == body["call_id"]
+    assert token_payload["locale_context"]["uiLocale"] == "en"
+    assert token_payload["locale_context"]["conversationLocale"] == "ja"
+    assert token_payload["locale_context"]["safetyRegion"] == "JP"
 
     queued = client.post("/v1/calls", headers=auth, json={
         "character_id": "a05", "idempotency_key": "queued",
@@ -208,6 +276,7 @@ def main():
     test_short_lived_call_token()
     test_supabase_service_key_headers()
     test_auth_error_classification()
+    test_call_locale_records_are_scoped_through_verified_lease()
     test_http_v2_contract()
     test_sql_contract()
     print("Durable Call Control contract: ALL PASS")

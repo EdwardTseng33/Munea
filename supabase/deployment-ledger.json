@@ -1,6 +1,6 @@
 {
   "schema": "munea.supabase-deployment-ledger.v1",
-  "updated": "2026-07-24",
+  "updated": "2026-07-28",
   "documentationRef": "docs/supabase/DEPLOYMENT-LEDGER.md",
   "statusVocabulary": [
     "unknown",
@@ -206,6 +206,12 @@
           "sha256": "d81ca45794714608160abb130692c1d183f6c12426811b17a0a088335cfb4759",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+        },
+        {
+          "filename": "027_localized_notification_copy.sql",
+          "sha256": "8ca87fe025316592663dec83fc828a44f899c8e03f3ca736696f21815d6091d8",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
         }
       ],
       "rollback": {

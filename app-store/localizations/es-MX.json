@@ -1,0 +1,14 @@
+{
+  "status": "draft-qualified-review-pending",
+  "contentVariant": "es-MX",
+  "name": "Munea: compañía para familias",
+  "subtitle": "Voz, recuerdos y familia",
+  "promotionalText": "Habla de la vida diaria, conserva recuerdos importantes y mantén el contacto con los familiares que invites.",
+  "description": "Munea es un acompañante de IA para la vida cotidiana en iPhone.\n\nHabla de forma natural con un acompañante sobre rutinas, intereses y recuerdos. Con tu consentimiento, Munea puede guardar resúmenes de las conversaciones para dar continuidad a próximos encuentros.\n\nFunciones principales:\n• Conversaciones de voz similares a una llamada familiar\n• Recordatorios de horarios de medicación, citas y tareas cotidianas\n• Un círculo familiar solo por invitación para mensajes y actividades\n• Registros de ánimo, bienestar y salud que tú decides guardar\n• Acceso opcional a datos compatibles de Apple Salud\n\nMunea es una herramienta de compañía y recordatorios cotidianos. No ofrece diagnóstico, tratamiento, psicoterapia ni servicios de emergencia. Consulta a un profesional cualificado ante dudas médicas y, ante un peligro urgente en México, llama al 911.\n\nAlgunas funciones de voz e IA utilizan créditos. Los precios, la renovación, la cancelación, los créditos incluidos y las condiciones de los créditos comprados se muestran claramente en la App y en la pantalla de compra de Apple.",
+  "keywords": "compañía,voz,familia,recordatorios,bienestar,mayores,ánimo,cuidadores",
+  "whatsNew": "Conoce Munea con compañía por voz, recordatorios cotidianos, actividades familiares, registro del ánimo y acceso opcional a Apple Salud.",
+  "privacyPolicyUrl": "https://app.munea.net/legal/es/privacy.html",
+  "supportUrl": "https://app.munea.net/legal/es/support.html",
+  "marketingUrl": "https://app.munea.net/",
+  "reviewNotesStatus": "separate-current-build-and-regional-review-required"
+}

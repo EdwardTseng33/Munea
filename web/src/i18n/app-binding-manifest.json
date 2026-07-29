@@ -1,0 +1,415 @@
+{
+  "schema": "munea.i18n-app-binding-manifest.v1",
+  "integrationStatus": "in-progress-main-screen-integration",
+  "staticBindingRuntimeStatus": "integrated",
+  "stateOwnedRendererStatus": "in-progress-main-screen-integration",
+  "dynamicContentObserver": "integrated",
+  "rendererCopyProvider": "MuneaAppRendererCopy",
+  "staticBindings": [
+    {"anchorId": "authStatusText", "target": "textContent", "key": "auth.guestMode", "applyMode": "state-owned"},
+    {"anchorId": "authSignInBtn", "target": "textContent", "key": "auth.signIn", "applyMode": "static"},
+    {"anchorId": "authSignOutBtn", "target": "textContent", "key": "auth.signOut", "applyMode": "static"},
+    {"anchorId": "managePlanBtn", "target": "textContent", "key": "settings.managePlan", "applyMode": "state-owned"},
+    {"anchorId": "topUpBtn", "target": "textContent", "key": "settings.topUpCredits", "applyMode": "static"},
+    {"anchorId": "healthSettingsStateLabel", "target": "textContent", "key": "health.notConnected", "applyMode": "state-owned"},
+    {"anchorId": "callToggleLabel", "target": "textContent", "key": "voice.call.start", "applyMode": "state-owned"},
+    {"anchorId": "callToggle", "target": "aria-label", "key": "accessibility.toggleCall", "applyMode": "static"},
+    {"anchorId": "busyCardBtn", "target": "textContent", "key": "voice.queue.cancel", "applyMode": "state-owned"},
+    {"anchorId": "dataExportBtn", "target": "textContent", "key": "data.export", "applyMode": "static"},
+    {"anchorId": "dataDeleteBtn", "target": "textContent", "key": "data.delete", "applyMode": "static"},
+    {"anchorId": "pfFirstRunBanner", "target": "textContent", "key": "profile.firstRunIntro", "applyMode": "state-owned"},
+    {"anchorId": "pfAvatarBtn", "target": "textContent", "key": "profile.changePhoto", "applyMode": "static"},
+    {"anchorId": "pfAvatarClear", "target": "aria-label", "key": "accessibility.removePhoto", "applyMode": "static"},
+    {"anchorId": "pfAvatarClear", "target": "title", "key": "accessibility.removePhoto", "applyMode": "static"},
+    {"anchorId": "pfNick", "target": "placeholder", "key": "profile.familyNicknamePlaceholder", "applyMode": "static"},
+    {"anchorId": "pfFirstRunDisclosure", "target": "textContent", "key": "profile.cloudDisclosure", "applyMode": "static"},
+    {"anchorId": "pfSaveBtn", "target": "textContent", "key": "profile.save", "applyMode": "static"},
+    {"anchorId": "pfSkipBtn", "target": "textContent", "key": "profile.skip", "applyMode": "static"},
+    {"anchorId": "planCancelBtn", "target": "textContent", "key": "purchase.manageSubscription", "applyMode": "static"},
+    {"anchorId": "restoreBtn", "target": "textContent", "key": "purchase.restore", "applyMode": "static"},
+    {"anchorId": "planYes", "target": "textContent", "key": "subscription.confirmAction", "applyMode": "state-owned"},
+    {"anchorId": "planNo", "target": "textContent", "key": "subscription.cancel", "applyMode": "static"},
+    {"anchorId": "authSheetTitle", "target": "textContent", "key": "auth.sheetTitle", "applyMode": "static"},
+    {"anchorId": "authAppleBtn", "target": "descendantText", "key": "auth.apple", "applyMode": "static"},
+    {"anchorId": "authGoogleBtn", "target": "descendantText", "key": "auth.google", "applyMode": "static"},
+    {"anchorId": "authDeveloperBtn", "target": "textContent", "key": "auth.developerMode", "applyMode": "static"},
+    {"anchorId": "pageTitle", "target": "textContent", "key": "status.title", "applyMode": "state-owned"},
+    {"anchorId": "obsHeading", "target": "textContent", "key": "status.companionObservation", "applyMode": "state-owned"},
+    {"anchorId": "obsPeriod", "target": "textContent", "key": "status.today", "applyMode": "state-owned"},
+    {"anchorId": "obsText", "target": "textContent", "key": "status.observationToday", "applyMode": "state-owned"},
+    {"anchorId": "moodChip", "target": "textContent", "key": "status.today", "applyMode": "state-owned"},
+    {"anchorId": "moodLabel", "target": "textContent", "key": "mood.calm", "applyMode": "state-owned"},
+    {"anchorId": "moodNote", "target": "textContent", "key": "mood.note.calm", "applyMode": "state-owned"},
+    {"anchorId": "moodPeriodLabel", "target": "textContent", "key": "status.today", "applyMode": "state-owned"},
+    {"anchorId": "medSub", "target": "textContent", "key": "status.medicationUnset", "applyMode": "state-owned"},
+    {"anchorId": "medChip", "target": "textContent", "key": "medication.notTaken", "applyMode": "state-owned"},
+    {"anchorId": "bpSub", "target": "textContent", "key": "status.normalRange", "applyMode": "state-owned"},
+    {"anchorId": "hrSub", "target": "textContent", "key": "status.restingHeartRate", "applyMode": "state-owned"},
+    {"anchorId": "medTrendChip", "target": "textContent", "key": "status.fullMedicationDays", "applyMode": "state-owned"},
+    {"anchorId": "sleepTrendChip", "target": "textContent", "key": "status.dailyAverageHours", "applyMode": "state-owned"},
+    {"anchorId": "actChip", "target": "textContent", "key": "status.dailyAverageSteps", "applyMode": "state-owned"}
+  ],
+  "dynamicBindings": [
+    {
+      "anchorId": "setPlanName",
+      "renderer": "renderPlanState",
+      "keys": [
+        "settings.planName",
+        "settings.managePlan",
+        "settings.upgradePlan",
+        "subscription.planFree",
+        "subscription.planPlus",
+        "subscription.planPro",
+        "subscription.monthlyCreditsNote",
+        "subscription.freeCreditsLeft",
+        "subscription.freePlanNote"
+      ]
+    },
+    {
+      "anchorId": "chatCaption",
+      "renderer": "setCallHint",
+      "keys": ["voice.ready", "voice.connecting", "voice.fallback", "voice.call.unavailable"]
+    },
+    {
+      "anchorId": "chatCaption",
+      "renderer": "setLocalizedRuntimeHint",
+      "keys": [
+        "voice.runtime.playbackBlocked",
+        "voice.runtime.audioOnlyFallback",
+        "voice.runtime.microphoneTapToResume",
+        "voice.runtime.listening",
+        "voice.runtime.reconnecting",
+        "voice.runtime.microphonePermission",
+        "voice.runtime.heard",
+        "voice.runtime.thinking",
+        "voice.runtime.didNotHear",
+        "voice.runtime.recordingTapWhenDone",
+        "voice.runtime.microphoneMuted",
+        "voice.runtime.microphoneMutedHint"
+      ]
+    },
+    {
+      "anchorId": "chat",
+      "renderer": "setLocalizedRuntimeCaption",
+      "keys": [
+        "voice.runtime.recoveredTitle",
+        "voice.runtime.recoveredBody",
+        "voice.runtime.degradedTitle",
+        "voice.runtime.degradedBody"
+      ]
+    },
+    {
+      "anchorId": "busyCardTitle",
+      "renderer": "showBusyCard",
+      "keys": [
+        "voice.queue.preparingWithCompanion",
+        "voice.queue.busyWithCompanion",
+        "voice.queue.position",
+        "voice.queue.etaPreparingSoon",
+        "voice.queue.etaWaitingSoon",
+        "voice.queue.etaPreparingMinutes",
+        "voice.queue.etaWaitingMinutes",
+        "voice.queue.etaPreparingUnknown",
+        "voice.queue.etaWaitingUnknown",
+        "voice.queue.note",
+        "voice.queue.cancel",
+        "voice.queue.pending",
+        "voice.queue.wait",
+        "voice.queue.fullTitle",
+        "voice.queue.fullBody",
+        "common.okay"
+      ]
+    },
+    {
+      "anchorId": "busyCardTitle",
+      "renderer": "showCallStatusCard",
+      "keys": [
+        "voice.call.unavailable",
+        "voice.call.retryLater",
+        "voice.call.microphoneHttpsTitle",
+        "voice.call.microphoneHttpsNote",
+        "voice.call.microphonePermissionTitle",
+        "voice.call.microphonePermissionNote",
+        "voice.call.authExpiredTitle",
+        "voice.call.authExpiredNote",
+        "voice.call.accountPreparingTitle",
+        "voice.call.accountPreparingNote",
+        "voice.call.serviceUpdatingTitle",
+        "voice.call.serviceUpdatingNote",
+        "voice.call.serviceBusyNote",
+        "voice.call.activationPendingTitle",
+        "voice.call.readinessPendingTitle",
+        "voice.call.readinessPendingNote",
+        "voice.call.disconnectedTitle",
+        "voice.call.disconnectedNote",
+        "auth.signInAgain",
+        "common.okay"
+      ]
+    },
+    {
+      "anchorId": "subCta",
+      "renderer": "renderSubUI",
+      "keys": [
+        "subscription.currentPlanCta",
+        "subscription.upgradeTo",
+        "subscription.changeTo"
+      ]
+    },
+    {
+      "anchorId": "tuBuyBtn2",
+      "renderer": "renderSubUI",
+      "keys": ["purchase.buyCredits", "purchase.storeUnavailable", "purchase.loadingProducts"]
+    },
+    {
+      "anchorId": "planConfirmText",
+      "renderer": "planConfirmHtml",
+      "keys": [
+        "subscription.confirmTitle",
+        "subscription.confirmBody",
+        "subscription.confirmFacts",
+        "subscription.confirmAction",
+        "subscription.cancel"
+      ]
+    },
+    {
+      "anchorId": "authMessage",
+      "renderer": "openAuthSheet",
+      "keys": ["auth.inProgress", "auth.cancelled", "auth.unavailable", "auth.chatSignInRequired"]
+    },
+    {
+      "anchorId": "authSheet",
+      "renderer": "localizeAuthTerms",
+      "keys": [
+        "auth.termsPrefix",
+        "auth.termsLink",
+        "auth.aiProcessingDisclosure",
+        "accessibility.close"
+      ]
+    },
+    {
+      "anchorId": "readerBody",
+      "renderer": "openInAppReader",
+      "keys": [
+        "reader.privacyTitle",
+        "reader.termsTitle",
+        "reader.loading",
+        "reader.loadError"
+      ]
+    },
+    {
+      "anchorId": "captionToggle",
+      "renderer": "localizeChatControls",
+      "keys": ["voice.caption.enabled", "voice.caption.disabled", "voice.caption.label", "voice.microphone.label", "accessibility.toggleCaptions", "accessibility.toggleMicrophone"]
+    },
+    {
+      "anchorId": "careBody",
+      "renderer": "buildCareItems",
+      "keys": [
+        "home.profilePromptTitle",
+        "home.profilePromptBody",
+        "home.profilePromptAction",
+        "home.care.familyRelayTitle",
+        "home.care.familyRelayFrom",
+        "home.care.acknowledge",
+        "home.care.open",
+        "home.care.demoRelay",
+        "home.care.familyFallback",
+        "home.care.activityFallback",
+        "home.care.walkTitle",
+        "home.care.walkGap",
+        "home.care.walkComplete",
+        "home.care.activityTitle",
+        "home.care.activityProgress",
+        "home.care.visitFallback",
+        "home.care.visitSoon",
+        "home.care.visitNote",
+        "home.care.medicationRhythm",
+        "home.care.remove",
+        "home.care.report"
+      ]
+    },
+    {
+      "anchorId": "pillTitle",
+      "renderer": "renderPillTask",
+      "keys": [
+        "medication.genericName",
+        "medication.takeName",
+        "medication.taskProgress",
+        "medication.allDone",
+        "medication.completedToday",
+        "medication.slot.afterBreakfast",
+        "medication.slot.afterLunch",
+        "medication.slot.afterDinner",
+        "medication.slot.bedtime"
+      ]
+    },
+    {
+      "anchorId": "medMgrModal",
+      "renderer": "localizeMedicationSurfaces",
+      "keys": [
+        "medication.title",
+        "medication.namePlaceholder",
+        "medication.genericName",
+        "medication.slot.afterBreakfast",
+        "medication.slot.afterLunch",
+        "medication.slot.afterDinner",
+        "medication.slot.bedtime",
+        "medication.duration.days",
+        "medication.duration.longTerm",
+        "medication.duration.daily",
+        "medicationManager.subtitle",
+        "medicationManager.addMedicine",
+        "medicationManager.photo",
+        "medicationManager.photoHint",
+        "medicationManager.scheduleMultiple",
+        "medicationManager.duration",
+        "medicationManager.add",
+        "medicationManager.disclaimer",
+        "medicationManager.close",
+        "medicationManager.emptySlot",
+        "medicationManager.medicineCountOne",
+        "medicationManager.medicineCountOther",
+        "medicationManager.reminderTime",
+        "medicationManager.removeSlot",
+        "medicationManager.removedToast",
+        "medicationManager.photoReadError",
+        "medicationManager.nameRequired",
+        "medicationManager.scheduleRequired",
+        "medicationManager.addedToast"
+      ]
+    },
+    {
+      "anchorId": "medRemindModal",
+      "renderer": "renderMedicationReminderCopy",
+      "keys": [
+        "medicationReminder.title",
+        "medicationReminder.streak",
+        "medicationReminder.taken",
+        "medicationReminder.snooze",
+        "medicationReminder.dueSay",
+        "medicationReminder.description",
+        "medicationReminder.speech",
+        "medicationReminder.takenToast",
+        "medicationReminder.snoozedToast",
+        "medicationReminder.familyFeedTaken"
+      ]
+    },
+    {
+      "anchorId": "visitTask",
+      "renderer": "renderVisitTask",
+      "keys": [
+        "visit.defaultTitle",
+        "visit.defaultNote",
+        "common.today"
+      ]
+    },
+    {
+      "anchorId": "eventTask",
+      "renderer": "renderEventTask",
+      "keys": [
+        "event.familyTitle",
+        "event.arriveOnTime",
+        "common.today"
+      ]
+    },
+    {
+      "anchorId": "walkSub",
+      "renderer": "renderWalkProgress",
+      "keys": [
+        "home.walkProgressMet",
+        "home.walkProgress",
+        "home.walkGoalMet",
+        "home.walkSteps"
+      ]
+    },
+    {
+      "anchorId": "ptsLeft",
+      "renderer": "renderPoints",
+      "keys": [
+        "settings.creditsBalance",
+        "settings.lowCredits"
+      ]
+    },
+    {
+      "anchorId": "chatCaption",
+      "renderer": "callBudgetTick",
+      "keys": [
+        "credits.lowTitle",
+        "credits.lowBody"
+      ]
+    },
+    {
+      "anchorId": "topUpModal",
+      "renderer": "renderPointsPopupCopy",
+      "keys": [
+        "credits.exhaustedTitle",
+        "credits.exhaustedBody",
+        "credits.freeTrialEnded",
+        "settings.topUpCredits",
+        "common.notNow"
+      ]
+    },
+    {
+      "anchorId": "callTimer",
+      "renderer": "startCallTimer",
+      "keys": [
+        "credits.freeTrialOneMinute",
+        "credits.freeTrialEnded"
+      ]
+    }
+  ],
+  "markupRefactors": [
+    {
+      "containerId": "settings",
+      "keys": [
+        "settings.section.account",
+        "settings.section.billing",
+        "settings.section.accountFamily",
+        "settings.section.companion",
+        "settings.section.healthSafety",
+        "settings.section.experience",
+        "settings.section.about"
+      ]
+    },
+    {
+      "containerId": "profileModal",
+      "keys": [
+        "profile.title",
+        "profile.name",
+        "profile.familyNickname",
+        "profile.birthdate",
+        "profile.location",
+        "profile.locationHint"
+      ]
+    },
+    {
+      "containerId": "dataModal",
+      "keys": ["data.title", "data.description", "data.policyHint"]
+    },
+    {
+      "containerId": "fontModal",
+      "keys": [
+        "font.title",
+        "font.subtitle",
+        "font.standard",
+        "font.standardBody",
+        "font.large",
+        "font.largeBody",
+        "font.extraLarge",
+        "font.extraLargeBody"
+      ]
+    },
+    {
+      "containerId": "planModal",
+      "keys": [
+        "subscription.title",
+        "subscription.tagline",
+        "subscription.plansTab",
+        "subscription.creditsTab",
+        "subscription.creditRulesTitle",
+        "subscription.monthlyCreditsBody",
+        "subscription.purchasedCreditsBody"
+      ]
+    }
+  ]
+}

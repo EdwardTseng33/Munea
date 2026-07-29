@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "requiredLocales": [
+    "zh-TW",
+    "en",
+    "ja",
+    "es"
+  ],
+  "candidatePolicy": {
+    "description": "Han text remains visible in the audit. Text connected to a valid key present in every required locale catalog is bound; exact internal identities may be excluded only by the fail-closed non-user-facing review manifest. All remaining Han text is unbound localization debt.",
+    "completionTarget": 0,
+    "regressionPolicy": "A surface may not exceed its checked-in total-Han baseline while migration is in progress. Release requires unbound Han candidates to reach zero; catalog-bound fallback text remains auditable but does not block release."
+  },
+  "surfaces": [
+    {
+      "id": "app-webview",
+      "label": "iPhone App WebView",
+      "audience": "member",
+      "scanMode": "localized-text",
+      "files": [
+        "web/index.html",
+        "web/src/app.js",
+        "web/src/auth.js",
+        "web/src/health.js",
+        "web/src/store.js",
+        "web/src/notify.js",
+        "web/src/medication.js",
+        "web/src/companion-profile.js"
+      ],
+      "requiredStates": [
+        "signed-out",
+        "home",
+        "status",
+        "chat-idle",
+        "chat-connecting",
+        "chat-active",
+        "family",
+        "settings",
+        "purchase",
+        "error-and-empty-states"
+      ],
+      "releaseGate": "App UI coverage and visual QA",
+      "baselineHanCandidates": 2083
+    },
+    {
+      "id": "legal-and-support",
+      "label": "Privacy, terms, and support",
+      "audience": "member",
+      "scanMode": "localized-text",
+      "files": [
+        "web/privacy.html",
+        "web/terms.html",
+        "web/support.html"
+      ],
+      "staticLocalizedAssets": {
+        "manifest": "web/legal/manifest.json",
+        "sourceLocale": "zh-TW",
+        "pageBySource": {
+          "web/privacy.html": "privacy",
+          "web/terms.html": "terms",
+          "web/support.html": "support"
+        }
+      },
+      "requiredStates": [
+        "privacy",
+        "terms",
+        "support"
+      ],
+      "releaseGate": "Localized legal review",
+      "baselineHanCandidates": 146
+    },
+    {
+      "id": "operations-admin",
+      "label": "Operations admin",
+      "audience": "operator",
+      "scanMode": "localized-text",
+      "files": [
+        "web/admin.html",
+        "web/src/admin.js"
+      ],
+      "requiredStates": [
+        "signed-out",
+        "overview",
+        "members",
+        "calls",
+        "subscriptions",
+        "safety",
+        "locale-segmentation"
+      ],
+      "releaseGate": "Country and locale operational visibility",
+      "baselineHanCandidates": 692,
+      "localizationContract": {
+        "runtime": "web/src/admin-i18n.js",
+        "validation": "scripts/test-admin-localizations.js",
+        "sourceLocale": "zh-TW",
+        "catalogs": {
+          "en": "web/src/i18n/admin-en.json",
+          "ja": "web/src/i18n/admin-ja.json",
+          "es": "web/src/i18n/admin-es.json"
+        },
+        "localeResolution": "browser-language-with-localhost-only-forcing",
+        "policyFields": [
+          "countryCode",
+          "safetyRegion",
+          "legalRegion",
+          "dataRegion"
+        ]
+      }
+    },
+    {
+      "id": "marketing-site",
+      "label": "Public marketing site",
+      "audience": "prospect",
+      "scanMode": "localized-text",
+      "files": [
+        "app-site/index.html"
+      ],
+      "staticLocalizedAssets": {
+        "profile": "marketing-generated",
+        "manifest": "site-src/localization-manifest.json",
+        "sourceLocale": "zh-TW",
+        "pageBySource": {
+          "app-site/index.html": "landing"
+        }
+      },
+      "requiredStates": [
+        "landing-mobile",
+        "landing-desktop"
+      ],
+      "releaseGate": "Localized acquisition surface",
+      "baselineHanCandidates": 244,
+      "localizationContract": {
+        "runtime": "site-src/build.mjs",
+        "validation": "scripts/test-app-site-seo.js",
+        "sourceLocale": "zh-TW",
+        "catalogs": {
+          "zh-TW": "site-src/i18n/zh.json",
+          "en": "site-src/i18n/en.json",
+          "ja": "site-src/i18n/ja.json",
+          "es": "site-src/i18n/es.json"
+        },
+        "localeResolution": "static-paths-with-native-links",
+        "mediaGate": {
+          "status": "pending-exact-build-localized-captures-and-captions",
+          "embeddedAppScreenshots": "pending-four-locale-exact-build-captures",
+          "videoCaptions": "pending-source-audio-transcription-and-four-locale-review"
+        }
+      }
+    },
+    {
+      "id": "locale-contract",
+      "label": "Locale contract and catalogs",
+      "audience": "system",
+      "scanMode": "existence",
+      "files": [
+        "web/src/i18n.js",
+        "web/src/i18n/app-binding-runtime.js",
+        "web/src/i18n/catalog-runtime.js",
+        "web/src/i18n/dom-localizer.js",
+        "web/src/i18n/legal-routing.js",
+        "web/src/i18n/medication-schedule.js",
+        "web/src/i18n/purchase-flow.js",
+        "web/src/i18n/catalog-manifest.json",
+        "web/src/i18n/review-manifest.json",
+        "web/src/i18n/app-screen-manifest.json",
+        "web/src/i18n/app-binding-manifest.json",
+        "web/src/i18n/app-surface-manifest.json",
+        "web/src/i18n/app-surface-copy-manifest.json",
+        "docs/I18N-NON-USER-FACING-REVIEW.json",
+        "web/src/i18n/zh-TW.json",
+        "web/src/i18n/en.json",
+        "web/src/i18n/ja.json",
+        "web/src/i18n/es.json",
+        "scripts/i18n-migration-worklist.js",
+        "scripts/i18n-pseudo-catalog.js",
+        "scripts/test-companion-profile-localization.js",
+        "scripts/test-app-screen-localizations.js",
+        "scripts/test-app-i18n-binding-manifest.js",
+        "scripts/test-app-surface-manifest.js",
+        "scripts/test-app-surface-copy-manifest.js",
+        "scripts/i18n-visual-qa-worklist.js",
+        "scripts/test-i18n-visual-qa-worklist.js",
+        "scripts/test-i18n-browser-bootstrap.js",
+        "tools/i18n-preview.html",
+        "web/src/legal.css",
+        "web/legal/manifest.json",
+        "web/legal/en/privacy.html",
+        "web/legal/en/terms.html",
+        "web/legal/en/support.html",
+        "web/legal/ja/privacy.html",
+        "web/legal/ja/terms.html",
+        "web/legal/ja/support.html",
+        "web/legal/es/privacy.html",
+        "web/legal/es/terms.html",
+        "web/legal/es/support.html",
+        "app-site/legal/legal.css",
+        "app-site/legal/en/privacy.html",
+        "app-site/legal/en/terms.html",
+        "app-site/legal/en/support.html",
+        "app-site/legal/ja/privacy.html",
+        "app-site/legal/ja/terms.html",
+        "app-site/legal/ja/support.html",
+        "app-site/legal/es/privacy.html",
+        "app-site/legal/es/terms.html",
+        "app-site/legal/es/support.html",
+        "engine/localization.py",
+        "engine/voice_locale_session.py",
+        "engine/voice-locale-integration-manifest.json",
+        "engine/test_voice_locale_session.py",
+        "engine/test_localization.py"
+      ],
+      "requiredStates": [
+        "device-locale-resolution",
+        "release-gated-fallback",
+        "missing-key-telemetry"
+      ],
+      "releaseGate": "Catalog parity and LocaleContext validation"
+    },
+    {
+      "id": "voice-and-gateway",
+      "label": "Gateway and live voice",
+      "audience": "system",
+      "scanMode": "existence",
+      "files": [
+        "deploy/gateway/gateway_server.py",
+        "deploy/gateway/call_control_store.py",
+        "engine/live_voice_server.py",
+        "engine/server.py"
+      ],
+      "requiredStates": [
+        "signed-locale-context",
+        "asr-language",
+        "prompt-language",
+        "opening-and-retry-copy",
+        "tts-language",
+        "mixed-language-turn",
+        "regional-safety"
+      ],
+      "releaseGate": "Installed App voice E2E for every locale"
+    },
+    {
+      "id": "ios-and-store",
+      "label": "iOS binary and App Store",
+      "audience": "distribution",
+      "scanMode": "existence",
+      "files": [
+        "ios/App/App/Info.plist",
+        "ios/App/App.xcodeproj/project.pbxproj",
+        "ios/App/App/zh-Hant.lproj/InfoPlist.strings",
+        "ios/App/App/en.lproj/InfoPlist.strings",
+        "ios/App/App/ja.lproj/InfoPlist.strings",
+        "ios/App/App/es.lproj/InfoPlist.strings",
+        "app-store/localizations/manifest.json",
+        "app-store/localizations/screenshot-plan.json",
+        "app-store/localizations/zh-Hant.json",
+        "app-store/localizations/en-US.json",
+        "app-store/localizations/ja.json",
+        "app-store/localizations/es-draft.json",
+        "app-store/in-app-purchases/manifest.json",
+        "app-store/in-app-purchases/zh-Hant.json",
+        "app-store/in-app-purchases/en-US.json",
+        "app-store/in-app-purchases/ja.json",
+        "app-store/in-app-purchases/es-draft.json",
+        "docs/qa/i18n/README.md",
+        "scripts/i18n-release-readiness.js",
+        "scripts/test-i18n-release-readiness.js",
+        "scripts/test-in-app-purchase-localizations.js",
+        "scripts/test-purchase-flow-localizations.js",
+        "scripts/test-purchase-flow-view-model.js"
+      ],
+      "requiredStates": [
+        "binary-localizations",
+        "privacy-purpose-strings",
+        "store-description",
+        "keywords",
+        "screenshots",
+        "iap-localized-information",
+        "iap-review-screenshots",
+        "storekit-localized-prices",
+        "market-availability",
+        "purchase-e2e"
+      ],
+      "releaseGate": "Exact approved binary and App Store localization"
+    }
+  ]
+}

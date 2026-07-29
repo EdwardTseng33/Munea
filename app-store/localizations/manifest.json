@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "authority": "repository-draft-only",
+  "primaryLocale": "zh-Hant",
+  "locales": {
+    "zh-Hant": {
+      "catalogLocale": "zh-TW",
+      "appStoreLocale": "zh-Hant",
+      "metadataFile": "zh-Hant.json",
+      "targetTerritories": [
+        "TW"
+      ],
+      "metadataReview": "draft",
+      "publicUrlStatus": "existing-primary-pages",
+      "screenshotStatus": "existing-unreviewed",
+      "screenshotDirectory": "../../App store pic",
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    },
+    "en-US": {
+      "catalogLocale": "en",
+      "appStoreLocale": "en-US",
+      "metadataFile": "en-US.json",
+      "targetTerritories": [
+        "US"
+      ],
+      "metadataReview": "draft",
+      "publicUrlStatus": "pending-deployment",
+      "screenshotStatus": "missing",
+      "screenshotDirectory": null,
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    },
+    "ja": {
+      "catalogLocale": "ja",
+      "appStoreLocale": "ja",
+      "metadataFile": "ja.json",
+      "targetTerritories": [
+        "JP"
+      ],
+      "metadataReview": "draft",
+      "publicUrlStatus": "pending-deployment",
+      "screenshotStatus": "missing",
+      "screenshotDirectory": null,
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    },
+    "es": {
+      "catalogLocale": "es",
+      "appStoreLocale": null,
+      "selectedVariant": null,
+      "selectedVariants": [],
+      "candidateAppStoreLocales": [
+        "es-ES",
+        "es-MX"
+      ],
+      "marketVariants": {
+        "es-ES": {
+          "metadataFile": "es-ES.json",
+          "targetTerritories": [
+            "ES"
+          ],
+          "safetyRegion": "ES",
+          "legalRegion": "ES",
+          "metadataReview": "draft-qualified-review-pending",
+          "publicUrlStatus": "pending-regional-review",
+          "screenshotStatus": "missing",
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        },
+        "es-MX": {
+          "metadataFile": "es-MX.json",
+          "targetTerritories": [
+            "MX"
+          ],
+          "safetyRegion": "MX",
+          "legalRegion": "MX",
+          "metadataReview": "draft-qualified-review-pending",
+          "publicUrlStatus": "pending-regional-review",
+          "screenshotStatus": "missing",
+          "expectedScreenshotCount": 5,
+          "promotionAuthorized": false
+        }
+      },
+      "metadataFile": "es-draft.json",
+      "targetTerritories": [],
+      "marketDecision": "Select one or both prepared variants only after regional legal, safety, screenshot, price, and App E2E review.",
+      "marketDecisionSource": "https://developer.apple.com/help/app-store-connect/reference/app-information/app-store-localizations/",
+      "metadataReview": "draft",
+      "publicUrlStatus": "pending-deployment",
+      "screenshotStatus": "missing",
+      "screenshotDirectory": null,
+      "expectedScreenshotCount": 5,
+      "promotionAuthorized": false
+    }
+  },
+  "appAvailability": {
+    "currentState": "unverified",
+    "sourceOfTruth": "App Store Connect Pricing and Availability",
+    "changeAuthorized": false
+  },
+  "inAppPurchaseManifest": "../in-app-purchases/manifest.json"
+}

@@ -17,6 +17,7 @@ import unittest
 os.environ.setdefault("GEMINI_API_KEY", "test")
 
 import live_voice_server as voice
+from voice_locale_session import VoiceLocaleSession
 from google.genai import types
 
 
@@ -151,6 +152,7 @@ class RunVoiceSessionGoAwayReconnectTests(unittest.IsolatedAsyncioTestCase):
             location=None, topics=None, fam=0, day_call=None,
             call_payload=None, gate_key="", call_token="",
             asr_context_terms=["寧寧"], first_connect=False, resumption_handle=None,
+            voice_locale_session=VoiceLocaleSession({}),
         )
 
         self.assertFalse(call_ended)   # 這通電話沒結束——只是該換一條底層連線了
@@ -176,6 +178,7 @@ class RunVoiceSessionGoAwayReconnectTests(unittest.IsolatedAsyncioTestCase):
             location=None, topics=None, fam=0, day_call=None,
             call_payload=None, gate_key="", call_token="",
             asr_context_terms=["寧寧"], first_connect=False, resumption_handle="old-handle",
+            voice_locale_session=VoiceLocaleSession({}),
         )
 
         self.assertTrue(call_ended)

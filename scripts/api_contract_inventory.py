@@ -203,6 +203,7 @@ def _criticality(route: Route) -> str:
         "/auth-status", "/credits/balance", "/credits/consume", "/credits/grant",
         "/entitlements", "/privacy-export", "/subscription-event",
         "/voice/call-memory", "/voice/call-recap", "/voice/health-context",
+        "/voice/health-recommended",
     }
     if route.surface == "gateway" and route.path.startswith(("/v1/calls", "/v1/internal/calls", "/v1/internal/reap")):
         return "critical"
@@ -306,6 +307,7 @@ def _tests(route: Route) -> list[str]:
         "/voice/call-memory": ["engine/test_voice_call_memory.py", "scripts/test_voice_chain_probe.py"],
         "/voice/call-recap": ["engine/test_voice_call_memory.py", "scripts/test_voice_chain_probe.py"],
         "/voice/health-context": ["engine/test_voice_health_context.py", "scripts/test_voice_chain_probe.py"],
+        "/voice/health-recommended": ["engine/test_health_followup.py"],
     }
     return mapping.get(path, [])
 
@@ -433,6 +435,7 @@ def write_inventory(root: Path = ROOT) -> Path:
     destination.write_text(
         json.dumps(build_inventory(root), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     return destination
 

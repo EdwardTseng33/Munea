@@ -172,6 +172,8 @@ normalized_store = server.normalize_app_profile_store({
 active = server.active_companion_profile(normalized_store)
 assert active["templateId"] == "nening-real-female"
 assert active["displayName"] == "Munea"
+assert normalized_store["account"]["localeContext"]["uiLocale"] == "zh-TW"
+assert normalized_store["account"]["localeContext"]["safetyRegion"] == "TW"
 print("companion profile", profile["templateId"], profile["displayName"])
 '@
 Pass "Companion profile and app store contracts are valid"
@@ -850,6 +852,7 @@ assert saved_participant["status"] == "completed"
 assert saved_participant["contribution"]["originalPersonId"] == "local-person-self"
 
 bootstrap_writes = []
+bootstrap_payloads = {}
 bootstrap_adapter = supabase_adapter.make_adapter(env=env)
 def fake_bootstrap_request(method, table, query=None, payload=None, prefer=None):
     if method == "GET" and table == "account_members":
@@ -866,6 +869,7 @@ def fake_bootstrap_request(method, table, query=None, payload=None, prefer=None)
         }
         return fixtures.get(table, [])
     bootstrap_writes.append(table)
+    bootstrap_payloads[table] = payload
     if table == "accounts":
         bootstrap_adapter.account_id = payload["id"]
     elif table == "persons":
@@ -878,10 +882,28 @@ bootstrap_adapter._request = fake_bootstrap_request
 bootstrapped = bootstrap_adapter.bootstrap_account({
     "authUserId": "44444444-4444-4444-8444-444444444444",
     "displayName": "Bootstrap User",
+    "localeContext": {
+        "uiLocale": "ja-JP",
+        "conversationLocale": "en-US",
+        "preferredLanguages": ["ja-JP", "en-US"],
+        "countryCode": "JP",
+        "timeZone": "Asia/Tokyo",
+        "units": "metric",
+        "currency": "JPY",
+        "safetyRegion": "JP",
+        "legalRegion": "JP",
+        "dataRegion": "jp-primary",
+    },
 })
 for table in ["accounts", "account_members", "persons", "family_groups", "family_memberships", "companion_profiles", "subscription_ledger", "usage_ledger", "audit_events"]:
     assert table in bootstrap_writes, f"bootstrap did not write {table}"
 assert bootstrapped["familyGroup"]["members"][0]["role"] == "primary_user"
+assert bootstrap_payloads["accounts"]["locale"] == "ja"
+assert bootstrap_payloads["accounts"]["preferred_languages"] == ["en", "ja"]
+assert bootstrap_payloads["persons"]["locale"] == "en"
+assert bootstrap_payloads["persons"]["timezone"] == "Asia/Tokyo"
+assert bootstrap_payloads["persons"]["region_code"] == "JP"
+assert bootstrap_payloads["persons"]["attributes"]["localeContext"]["safetyRegion"] == "JP"
 print("supabase adapter", adapter.status()["enabled"])
 '@
 Pass "Supabase adapter supports profile, billing, usage, and privacy contracts"
@@ -900,12 +922,36 @@ with tempfile.TemporaryDirectory() as d:
     server.PRODUCT_EVENTS_PATH = str(Path(d) / "product_events.json")
     response = server.bootstrap_account_response({
         "displayName": "Test User",
+        "localeContext": {
+            "uiLocale": "es-MX",
+            "conversationLocale": "en-US",
+            "preferredLanguages": ["es-MX", "en-US"],
+            "countryCode": "MX",
+            "timeZone": "America/Mexico_City",
+            "units": "metric",
+            "currency": "MXN",
+            "safetyRegion": "MX",
+            "legalRegion": "MX",
+            "dataRegion": "us-central",
+        },
         "companionProfile": {"templateId": "real-f", "displayName": "Munea", "nameTouched": True},
     })
     assert response["ok"] is True
     store = response["store"]
     assert store["account"]["id"].startswith("local-account-")
     assert store["familyGroup"]["members"][0]["displayName"] == "Test User"
+    assert store["account"]["locale"] == "es"
+    assert store["account"]["localeContext"]["conversationLocale"] == "en"
+    assert store["account"]["localeContext"]["countryCode"] == "MX"
+    assert store["account"]["localeContext"]["safetyRegion"] == "MX"
+    patched = server.bootstrap_account_response({
+        "action": "patch",
+        "conversationLocale": "ja-JP",
+    })
+    assert patched["store"]["account"]["locale"] == "es"
+    assert patched["store"]["account"]["localeContext"]["conversationLocale"] == "ja"
+    assert patched["store"]["account"]["localeContext"]["countryCode"] == "MX"
+    assert patched["store"]["account"]["localeContext"]["safetyRegion"] == "MX"
     assert response["activeCompanionProfile"]["templateId"] == "nening-real-female"
     events = server.load_product_events(limit=10)
     assert events[0]["eventName"] == "account_bootstrapped"
@@ -1209,8 +1255,13 @@ class FakeAdminAccountsBackend:
         return [{
             "accountId": "account-remote",
             "accountName": "Remote care account",
-            "locale": "zh-TW",
-            "preferredLanguages": ["zh-TW", "en"],
+            "locale": "ja",
+            "preferredLanguages": ["en", "ja"],
+            "localeContext": {
+                "uiLocale": "ja", "conversationLocale": "en",
+                "countryCode": "JP", "timeZone": "Asia/Tokyo",
+                "safetyRegion": "JP", "legalRegion": "JP", "dataRegion": "jp-primary",
+            },
             "familyGroup": {"id": "family-remote", "name": "Remote family"},
             "primaryPerson": {"id": "person-remote", "displayName": "Auntie", "relationship": "self"},
             "companion": {"templateId": "nening-real-female", "displayName": "Munea", "nameTouched": False},
@@ -1237,6 +1288,9 @@ try:
     assert remote["count"] == 1
     assert remote["accounts"][0]["accountId"] == "account-remote"
     assert remote["accounts"][0]["familyMembers"]["byRole"]["caregiver"] == 1
+    assert remote["accounts"][0]["localeContext"]["uiLocale"] == "ja"
+    assert remote["accounts"][0]["localeContext"]["conversationLocale"] == "en"
+    assert remote["accounts"][0]["localeContext"]["countryCode"] == "JP"
     assert remote["privacy"]["rawTranscriptRecords"] == 0
 finally:
     server.data_backend = original_backend
@@ -1248,7 +1302,15 @@ with tempfile.TemporaryDirectory() as d:
     try:
         server.data_backend = lambda: DisabledBackend()
         server.save_app_profile_store({
-            "account": {"id": "local-account-1", "name": "Local care account", "locale": "zh-TW"},
+            "account": {
+                "id": "local-account-1", "name": "Local care account", "locale": "es",
+                "localeContext": {
+                    "uiLocale": "es", "conversationLocale": "en",
+                    "countryCode": "MX", "timeZone": "America/Mexico_City",
+                    "currency": "MXN", "safetyRegion": "MX",
+                    "legalRegion": "MX", "dataRegion": "us-central",
+                },
+            },
             "familyGroup": {
                 "id": "family-local-1",
                 "name": "Local family",
@@ -1267,6 +1329,9 @@ with tempfile.TemporaryDirectory() as d:
         assert local["accounts"][0]["familyGroup"]["id"] == "family-local-1"
         assert local["accounts"][0]["primaryPerson"]["displayName"] == "Edward"
         assert local["accounts"][0]["familyMembers"]["count"] == 2
+        assert local["accounts"][0]["localeContext"]["uiLocale"] == "es"
+        assert local["accounts"][0]["localeContext"]["conversationLocale"] == "en"
+        assert local["accounts"][0]["localeContext"]["countryCode"] == "MX"
         by_person = server.admin_accounts_summary({"personId": "person-local-1"})
         assert by_person["count"] == 1
     finally:

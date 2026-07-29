@@ -1,0 +1,34 @@
+{
+  "net.munea.app.plus.monthly": {
+    "displayName": "沐寧 Plus 月繳",
+    "description": "每月含100點、健康趨勢與最多4人健康圈"
+  },
+  "net.munea.app.plus.yearly": {
+    "displayName": "沐寧 Plus 年繳",
+    "description": "年繳方案，每月含100點與最多4人健康圈"
+  },
+  "net.munea.app.pro.monthly": {
+    "displayName": "沐寧 Pro 月繳",
+    "description": "每月含200點、健康趨勢與最多12人健康圈"
+  },
+  "net.munea.app.pro.yearly": {
+    "displayName": "沐寧 Pro 年繳",
+    "description": "年繳方案，每月含200點與最多12人健康圈"
+  },
+  "net.munea.app.points.200": {
+    "displayName": "沐寧 100 點加值",
+    "description": "為 Plus／Pro 會員加值100點"
+  },
+  "net.munea.app.points.500": {
+    "displayName": "沐寧 300 點加值",
+    "description": "為 Plus／Pro 會員加值300點"
+  },
+  "net.munea.app.points.1000": {
+    "displayName": "沐寧 600 點加值",
+    "description": "為 Plus／Pro 會員加值600點"
+  },
+  "net.munea.app.points.1800": {
+    "displayName": "沐寧 1000 點加值",
+    "description": "為 Plus／Pro 會員加值1000點"
+  }
+}
