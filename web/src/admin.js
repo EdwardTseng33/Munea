@@ -430,7 +430,17 @@
   // 老實顯示成「Apple 隱藏信箱」——那是 Apple 的規矩不是我們漏抓，寫成真信箱會誤導維運判讀。
   function ownerLabel(o){ o=o||{}; return SIGNIN_ZH[String(o.signInMethod||"").toLowerCase()]||(o.signInMethod?String(o.signInMethod):""); }
   function ownerEmailText(o){ o=o||{}; if(!o.email) return ""; return o.emailIsPrivateRelay?"Apple 隱藏信箱":o.email; }
-  function ownerLine(o){ o=o||{}; const parts=[ownerLabel(o), ownerEmailText(o)].filter(Boolean); return parts.length?parts.join(" · "):(o.authUserId?"":"查無登入身分"); }
+  // 名冊那一行的「誰登入的」：每段各自包一個 <span>，不要串成一整句中文——
+  // 後台的翻譯是「整個文字節點完全對照」，串在一起就查不到字典，英日西介面會露出中文。
+  // 信箱不必翻，直接標 data-i18n-skip 讓翻譯器跳過。
+  function ownerSubHTML(a){ const o=(a||{}).owner||{};
+    const label=ownerLabel(o), parts=[];
+    if(label) parts.push(`<span>${esc(label)}</span>`);
+    // 「Apple 隱藏信箱」是我們寫的說明文字、要翻；真信箱才跳過翻譯（翻了反而會被字典亂改）
+    if(o.emailIsPrivateRelay) parts.push(`<span>Apple 隱藏信箱</span>`);
+    else if(o.email) parts.push(`<span data-i18n-skip>${esc(o.email)}</span>`);
+    if(!parts.length) parts.push(`<span>查無登入身分</span>`);
+    return parts.join('<span aria-hidden="true"> · </span>'); }
   function planPill(p){ const m={ pro:["pill pro","Pro"], plus:["pill ok","Plus"], free:["pill mute","免費"] }; const x=m[p]||m.free; return `<span class="${x[0]}">${x[1]}</span>`; }
   function statusPill(s){ const m={ on:["ok","活躍中"], idle:["warn","低度使用"], off:["mute","離線"], alert:["bad","守護中"] }; const x=m[s]||m.off; return `<span class="pill ${x[0]}"><span class="sdot"></span>${x[1]}</span>`; }
   function usageCell(u){ u=u||{}; const mins=Math.round(u.totalMinutes||0); if(!mins) return `<span class="muted">—</span>`; const h=Math.min(22,Math.max(6,mins/6)); return `<div class="use-cell"><span class="mini-bars"><i style="height:${Math.round(h*0.5)}px"></i><i style="height:${Math.round(h*0.78)}px"></i><i style="height:${Math.round(h)}px"></i></span><b class="num">${n(mins)}</b><span class="muted small">分</span></div>`; }
@@ -466,9 +476,9 @@
       const nm=acctPersonName(a), initial=(String(nm).trim()[0]||"家");
       const tint=AV_TINTS[Math.abs(String(nm).split("").reduce((h,ch)=>((h<<5)-h+ch.charCodeAt(0))|0,0))%AV_TINTS.length];
       const sub=REL_ZH[String(p.relationship||"").toLowerCase()]||"成員";
-      const who=ownerLine(a.owner);
+      const who=ownerSubHTML(a);
       return [
-        `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub">${esc(sub)}${who?` · ${esc(who)}`:""}</div></div></div>`,
+        `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub"><span>${esc(sub)}</span><span aria-hidden="true"> · </span>${who}</div></div></div>`,
         `<span class="family-cell"><span class="u-fam">${esc(f.name||"–")}</span><span class="muted small"> · ${n(m.count||0)}人</span></span>`,
         accountMarketCell(a),
         planPill(a.plan||"free"),
