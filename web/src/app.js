@@ -5049,15 +5049,14 @@ async function connectCall() {
     });
     return;
   }
-  // 家人傳話是附加功能：正式帳號最多等 1.2 秒；開發假登入直接略過，不能卡住主要通話。
-  if (!developmentDirectCall) {
-    try {
-      await Promise.race([
-        LiveVoice.prepareRelay(),
-        new Promise(resolve => setTimeout(resolve, 1200)),
-      ]);
-    } catch (e) {}
-  }
+  // 前置並行（2026-07-29 接通提速）：家人傳話準備、帳號確認、點數同步原本一條龍
+  // 等完才向總機叫號——行動網路一趟來回幾百毫秒、串起來破秒。改成同時跑，語意不變：
+  // 傳話仍最多等 1.2 秒（從這裡就開始計時、跟其他前置重疊）、帳號沒好照樣擋在叫號前、
+  // 點數不足照樣不佔席位。
+  const _relayReady = developmentDirectCall ? null : Promise.race([
+    LiveVoice.prepareRelay().catch(() => {}),
+    new Promise(resolve => setTimeout(resolve, 1200)),
+  ]);
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   if (developmentDirectCall) {
     setCallDialing(true);
@@ -5069,11 +5068,15 @@ async function connectCall() {
       // A verified Auth session is not enough for Call Control: its durable
       // lease RPC also requires the account_members/person graph. Await the
       // idempotent bootstrap so a fresh login cannot race the first call.
-      const accountReady = await syncAccountBootstrap('create', { reason: 'call_preflight' });
-      if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');
-      // 跨月或年繳方案可能在這次通話前進入新點數週期；先向伺服器同步本期額度。
+      const _preflightT0 = performance.now();
       let creditState = null;
-      try { creditState = await refreshServerCredits(); } catch (e0) {}
+      // 帳號確認與點數同步並行（各自一趟網路來回，疊起來只花較慢那趟的時間）。
+      // 跨月或年繳方案可能在這次通話前進入新點數週期；點數照樣在叫號前同步完。
+      const [accountReady] = await Promise.all([
+        syncAccountBootstrap('create', { reason: 'call_preflight' }),
+        (async () => { try { creditState = await refreshServerCredits(); } catch (e0) {} })(),
+      ]);
+      if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');
       const rawAvailableCredits = creditState && creditState.walletSummary && creditState.walletSummary.total;
       const availableCredits = Number(rawAvailableCredits);
       if (rawAvailableCredits !== null && rawAvailableCredits !== undefined && rawAvailableCredits !== '' && Number.isFinite(availableCredits)) {
@@ -5088,6 +5091,9 @@ async function connectCall() {
       // 按鈕與字幕一路維持「連線中…」直到真的進入撥號（Edward 2026-07-20 拍板）。
       // 例外＝真的滿載在排隊（Edward 2026-07-22 拍板 B 案）：排隊卡明講第幾位，這不是後台字眼、是誠實狀態。
       setCallPreflightPending(true);
+      // 傳話準備若還沒好，補等到 1.2 秒上限為止（多半已在上面並行期間完成＝零等待）
+      if (_relayReady) { try { await _relayReady; } catch (e0) {} }
+      voiceCallMark('preflight_parallel', 'pass', { ms: Math.round(performance.now() - _preflightT0) });
       voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
       if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
