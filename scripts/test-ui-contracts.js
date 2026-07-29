@@ -297,6 +297,28 @@ assert(!/authEmailInput|authEmailBtn|電子信箱登入|寄登入信/.test(authS
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'Opening auth sheet must not focus an input or open the keyboard');
 
+// AI 陪伴角色的說明：設定頁那一行（存在文案表）跟選角色頁的卡片（寫死在版面裡）
+// 是兩份各自獨立的文字，改一邊另一邊不會跟——測試員就抓到設定頁那句比卡片少了尾巴。
+// 這裡強制兩邊講同一句：設定頁 = 「<類型>，<說明>」，說明字要跟卡片一字不差。
+const companionCards = [...html.matchAll(/data-ava="([^"]+)"[\s\S]{0,400}?<b>([^<]+)<\/b><small>([^<]+)<\/small>/g)];
+assert(companionCards.length >= 2, 'Companion picker must keep its selectable persona cards');
+const companionLabelKey = { 'nening-real-female': 'companion.nening.label', 'companion-real-male': 'companion.ahong.label' };
+companionCards.forEach(([, ava, type, trait]) => {
+  const key = companionLabelKey[ava];
+  if (!key) return;
+  const label = zhCatalog[key];
+  assert(label, `Companion label catalog key missing for: ${key}`);
+  assert(
+    label === `${type}，${trait}`,
+    `設定頁的角色說明必須跟選角色卡片講同一句：「${label}」 vs 卡片「${type}，${trait}」`,
+  );
+  assert(!label.includes(' · '), '角色說明要用一句話敘述，不要用「·」串標籤');
+});
+assert(
+  html.includes('<small id="settingsTemplateLabel">' + zhCatalog['companion.nening.label'] + '</small>'),
+  '設定頁角色說明的預設字必須跟文案表一致（不然沒載到翻譯時又會兩邊不一樣）',
+);
+
 // 健康數據誠實層：蘋果不會告訴 App 讀取被拒絕，所以「有沒有資料」只能看真的讀到什麼，
 // 不能看使用者按過連接鍵（munea.devicesOn）。讀不到卻把「穩定/正常」標籤秀出來 = 沒有根據的生理宣稱。
 const healthSource = fs.readFileSync('web/src/health.js', 'utf8');
