@@ -239,7 +239,11 @@
     "今天有上線": "Abrió hoy",
     "已達自動清除門檻": "Superó el umbral de borrado",
     "註冊後沒開過 App": "Se registró pero nunca abrió la app",
-    "註冊完就沒回來的帳號": "Cuentas que se registraron y no volvieron"
+    "註冊完就沒回來的帳號": "Cuentas que se registraron y no volvieron",
+    "沒有活動紀錄": "Sin actividad registrada",
+    "沒開過": "nunca abierta",
+    "還沒開過 App": "Nunca abrió la app",
+    "今天有動作": "Actividad hoy"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Últimos {0} días" },
@@ -264,6 +268,8 @@
     { "source": "剩 {0} 天", "target": "Quedan {0} días" },
     { "source": "{0} 天沒上線", "target": "{0} días sin abrir" },
     { "source": "{0} 天前上線", "target": "Abrió hace {0} días" },
-    { "source": "閒置滿 {0} 天", "target": "Inactivo {0} días" }
+    { "source": "閒置滿 {0} 天", "target": "Inactivo {0} días" },
+    { "source": "{0} 天沒動作", "target": "{0} días sin actividad" },
+    { "source": "{0} 天前有動作", "target": "Última actividad hace {0} días" }
   ]
 }
