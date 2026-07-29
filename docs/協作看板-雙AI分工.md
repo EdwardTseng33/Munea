@@ -13,6 +13,7 @@
 - **暫時帳（要記得收）**：voice shard capacity 暫調 6（抵銷 3 席幻影佔位、實質空位=3=正常）；總機 gateway_server.py 的聲音帳校正欄位部署後→ active 歸 0＋capacity 調回 3。
 - **安全備註（沙利曼）**：7/23 印象檔烤箱曾把 deploy/runpod-avatar/.env（含 RUNPOD_API_KEY）打包進 Cloud Build 來源桶（該目錄無 .gcloudignore）；本輪已改用乾淨材料間，舊來源桶清理＋鑰匙輪替建議列巡檢。
 
+### 2026-07-28 Codex 📱 App 1.0.44 Build 492 上傳與 Edward iPhone 換裝（App E2E pending）
 
 - **來源／範圍**：獨立 worktree `codex/app-store-1.0.44-build492-20260728`，基準 `origin/main@5d2008c`；修改 Xcode Build 48→492、`web/index.html` 四個 cache identity → `20260728-v1044`，以及本次發版證據文件。未帶入 Draft PR #247 的 UI 內容。
 - **測試／正式包**：完整 `test:launch`、App Call Control 15/15、Avatar render contract、strict release consistency、App Store IPA 五道防漏全 PASS。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`。
