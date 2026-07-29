@@ -25,7 +25,10 @@ TOPICS = _DOC["topics"]
 MAX_SOLUTIONS = 3
 
 # 急迫詞：講出這些就是「他要的是今晚能做的事」，不管幾點問
-URGENCY_WORDS = ("受不了", "撐不住", "快瘋了", "好幾天沒睡", "三天沒睡", "整晚沒睡", "很嚴重", "急")
+URGENCY_WORDS = ("受不了", "撐不住", "快瘋了", "好幾天沒睡", "三天沒睡", "整晚沒睡", "很嚴重", "急",
+                 # 2026-07-29 搬痛風題時補：正在發作＝現在就痛，「一週檔」的建議
+                 # 排在「今晚先避開這幾樣」前面完全答非所問
+                 "發作", "又痛起來", "腫起來", "痛到")
 # 排斥藥丸的說法
 PILL_AVERSE_WORDS = ("不想吃藥", "不要吃藥", "不敢吃藥", "藥吃太多", "不想再吃", "怕副作用")
 # 偏好中醫
@@ -235,20 +238,25 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     # 類型多樣性：三個建議全是「行為調整」等於同一招講三次，長輩也記不住差別。
     # 挑的時候同類型最多兩個，把位置留給食補／運動／保健品這些不同路數的方案。
     picked, type_count = [], {}
-    for s in ranked:
-        t = s.get("solutionType")
-        if len(picked) >= limit:
-            break
-        if type_count.get(t, 0) >= 2:
-            continue
-        picked.append(s)
-        type_count[t] = type_count.get(t, 0) + 1
-    if len(picked) < limit:   # 池子太小就照原排名補滿，不硬留空位
-        for s in ranked:
+
+    def _take(candidates, respect_type_cap):
+        for s in candidates:
             if len(picked) >= limit:
-                break
-            if s not in picked:
-                picked.append(s)
+                return
+            if s in picked:
+                continue
+            t = s.get("solutionType")
+            if respect_type_cap and type_count.get(t, 0) >= 2:
+                continue
+            picked.append(s)
+            type_count[t] = type_count.get(t, 0) + 1
+
+    normal = [s for s in ranked if not _demoted(s)]
+    demoted = [s for s in ranked if _demoted(s)]
+    _take(normal, True)      # 先照多樣性挑正規方案
+    _take(normal, False)     # 正規的還有就補滿——多樣性只是偏好，不該讓位給陪襯層
+    _take(demoted, True)     # 真的不夠了才動陪襯層
+    _take(demoted, False)
 
     # 轉介卡：紅旗類永遠獨立帶著，不跟一般方案搶名額
     referral = next((s for s in pool if s.get("riskLevel") == "L5"), None)
