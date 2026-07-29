@@ -2332,6 +2332,15 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **正式機**：`munea-voice` 部署前後皆為 `munea-voice-00009-muh`（`prod-0724-204904-8ddab84`）、100% 流量，未動。
 - **回滾把手**：`gcloud run services update-traffic munea-voice-staging --region asia-east1 --project gen-lang-client-0229303523 --to-revisions munea-voice-staging-00058-yer=100`
 
+### 2026-07-29 Claude/城堡 🔀 拆分批次①：就醫建議不對稱安全鐵則（自 #270 移植）
+
+- **來源**：PR #270 已由 Edward 關閉並批准拆分（2026-07-29）。本批＝原 commit `9a337ae`～`b565921` 五筆，自最新 `origin/main` 重新移植。原分支 `claude/health-caregiver-ai-features-v9kcj3`（head `1aa53a3`）完整保留、未改寫。
+- **為何本批可先走**：只碰 `engine/chat_engine.py`＋測試＋兩份方向文件，**完全沒碰 #284 接管的檔案**（`web/index.html`／`web/src/app.js`／`web/src/notify.js`／iOS locale／Gateway·Voice locale contract），無雙邊修改風險。
+- **內容**：不對稱鐵則入 CORE/RED——**只往上推、永不往下擋**。可以說「建議盡快就醫」，永遠不說「不用看醫生」「觀察就好」「應該沒事」。往下擋＝延誤就醫＝出人命，也是醫材紅線唯一會出大事的方向。附 13 項鐵律測試並掛進 `test:launch`。
+- **移植處置**：`docs/協作看板-雙AI分工.md` 在 main 已被其他線更新，cherry-pick 以 main 為準（`-X ours`），本條為移植後的單一補記，不回填舊條目。
+- **驗證**：`test_medical_escalation_asymmetry` 13 項全過；`test_guardian_crisis`／`test_health_kb`／`test_reasoning_leak_guard`／`test_voice_style_rules`／`test_relationship_dialogue` 全 exit=0。
+- **⚠ 既有失敗（非本批造成，已用乾淨 main 對照確認）**：`scripts/test-voice-launch-policy.js`「current-information lookup can still bypass the feature-gated controlled Voice tool path」在 **未套用本批的 origin/main 上同樣 exit=1**。屬他線議題，本 PR 不處理。
+- **⚠ 未驗**：call-path risk（動 chat_engine 的 CORE/RED），**App E2E pending**、未部署。
 ### 2026-07-29 Claude/城堡 🔀 拆分批次②：就診摘要組裝層（純函式・自 #270 移植）
 
 - **來源**：PR #270 拆分批次②，原 commit `3b686a3`，自最新 `origin/main` 重新移植。
