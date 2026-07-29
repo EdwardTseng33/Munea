@@ -20,6 +20,11 @@ def fake_target(account_name="測試家庭"):
     return {"accountName": account_name, "identity": {"accountId": ACCOUNT_ID, "personId": PERSON_ID}}
 
 
+def fake_account(account_name="測試家庭"):
+    """_find_admin_account 回的是名冊那一列本身（不含資料身分）——標記測試帳號只需要這個。"""
+    return {"accountId": ACCOUNT_ID, "accountName": account_name, "primaryPerson": {"id": PERSON_ID}}
+
+
 class FakeBackend:
     """假的 data_backend()，模擬 SupabaseAdapter 對外可見的介面，不碰真網路。"""
 
@@ -174,14 +179,14 @@ class AdminSetTestAccountFlagTests(unittest.TestCase):
         self.assertEqual(result["error"]["code"], "account_id_required")
 
     def test_unknown_account_rejected(self):
-        with patch.object(server, "_resolve_admin_target_identity", return_value=None):
+        with patch.object(server, "_find_admin_account", return_value=None):
             result = server.admin_set_test_account_flag_response({"accountId": "nope", "isTestAccount": True})
         self.assertFalse(result["ok"])
         self.assertEqual(result["error"]["code"], "account_not_found")
 
     def test_backend_not_configured_rejected(self):
         backend = FakeBackend(enabled=False)
-        with patch.object(server, "_resolve_admin_target_identity", return_value=fake_target()), \
+        with patch.object(server, "_find_admin_account", return_value=fake_account()), \
              patch.object(server, "data_backend", return_value=backend):
             result = server.admin_set_test_account_flag_response({"accountId": ACCOUNT_ID, "isTestAccount": True})
         self.assertFalse(result["ok"])
@@ -189,7 +194,7 @@ class AdminSetTestAccountFlagTests(unittest.TestCase):
 
     def test_missing_column_reports_clear_error(self):
         backend = FakeBackend(set_flag_error=RuntimeError("column is_test_account does not exist"))
-        with patch.object(server, "_resolve_admin_target_identity", return_value=fake_target()), \
+        with patch.object(server, "_find_admin_account", return_value=fake_account()), \
              patch.object(server, "data_backend", return_value=backend):
             result = server.admin_set_test_account_flag_response({"accountId": ACCOUNT_ID, "isTestAccount": True})
         self.assertFalse(result["ok"])
@@ -197,7 +202,7 @@ class AdminSetTestAccountFlagTests(unittest.TestCase):
 
     def test_happy_path_marks_and_writes_audit_and_refreshes_cache(self):
         backend = FakeBackend()
-        with patch.object(server, "_resolve_admin_target_identity", return_value=fake_target("陳先生家")), \
+        with patch.object(server, "_find_admin_account", return_value=fake_account("陳先生家")), \
              patch.object(server, "data_backend", return_value=backend), \
              patch.object(server, "append_audit_event") as audit:
             result = server.admin_set_test_account_flag_response(
@@ -215,7 +220,7 @@ class AdminSetTestAccountFlagTests(unittest.TestCase):
 
     def test_unmark_sends_false(self):
         backend = FakeBackend()
-        with patch.object(server, "_resolve_admin_target_identity", return_value=fake_target()), \
+        with patch.object(server, "_find_admin_account", return_value=fake_account()), \
              patch.object(server, "data_backend", return_value=backend), \
              patch.object(server, "append_audit_event"):
             result = server.admin_set_test_account_flag_response({"accountId": ACCOUNT_ID, "isTestAccount": False})
