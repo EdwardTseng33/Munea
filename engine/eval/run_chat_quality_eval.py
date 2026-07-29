@@ -242,9 +242,13 @@ def pregenerate_live_replies(item, persona, case_dir):
     result = run_subprocess_json(
         os.path.join(HERE, "gen_reply_live.py"), payload, cwd=ENGINE_DIR, timeout=600)
     replies = result.get("replies") or []
+    # 2026-07-29：她這通實際拿到的「今日簡報」原文（可能為空字串）。
+    # 交給鐵律評審當已知事實——簡報裡有的（天氣/明天預告/本週話題）她照講不算編造、
+    # 簡報裡沒有的假新聞照樣抓。
+    briefing = str(result.get("briefingText") or "")
     if not result.get("ok"):
-        return replies, result.get("error") or "live generation failed"
-    return replies, None
+        return replies, briefing, result.get("error") or "live generation failed"
+    return replies, briefing, None
 
 
 def run_scenario(item, personas, tmp_root, line="text"):
@@ -271,7 +275,7 @@ def run_scenario(item, personas, tmp_root, line="text"):
                 "status": "skipped", "verdict": "ERROR",
                 "verdictReason": "語音線不支援劇本指定的 AI 開場白（Live API 不收 model 角色內容），這條只在文字線考",
             }
-        live_replies, live_error = pregenerate_live_replies(item, persona, case_dir)
+        live_replies, live_briefing, live_error = pregenerate_live_replies(item, persona, case_dir)
 
     history = []  # [{"role": "user"/"model", "text": "..."}]
     if item.get("openingAssistantLine"):
@@ -291,6 +295,14 @@ def run_scenario(item, personas, tmp_root, line="text"):
     known_facts = known_facts_for(persona)
     if item.get("openingAssistantLine"):
         known_facts = known_facts + [f"（寧寧稍早已主動說過）{item['openingAssistantLine']}"]
+    # 2026-07-29：語音線把「她這通實際拿到的今日簡報原文」也給評審——簡報涵蓋的
+    # 天氣/明天預告/本週話題她照講不算編造（S02/S19 誤判修正）；簡報裡沒有的假新聞照抓。
+    if line == "live" and locals().get("live_briefing"):
+        known_facts = known_facts + [
+            "【產品事實・今日簡報原文】以下是系統當天核實後寫進寧寧說明書的簡報，"
+            "她講到其中的天氣、預告、話題屬照資料講、不是編造；"
+            "另外「我查了一下」「簡報有提到」這類過程描述本身也不算編造："
+            + live_briefing]
 
     for idx, turn in enumerate(item["turns"], 1):
         if line == "live":

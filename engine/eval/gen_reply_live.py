@@ -121,8 +121,32 @@ async def run_call(case, person_id, replies):
         "modelUsed": f"{lv.MODEL} (live voice line)",
         "thinkingLevel": str(thinking) if thinking else "default(minimal)",
         "systemInstructionChars": len(instruction),
+        # 2026-07-29：把她這通實際拿到的「今日簡報」原文交回去給評審當已知事實。
+        # 動機：評審不知道她真的有一份當天核實的簡報（天氣/明天預告/本週話題），
+        # 把「簡報裡有提到天氣…」這種照資料講的話判成編造（考卷 S02/S19 誤判）。
+        # 用「她實際拿到的原文」而不是一句籠統的「她有簡報」——這樣簡報裡沒有的
+        # 假新聞仍然會被抓，不是放水。
+        "briefingText": _extract_briefing(instruction),
         "replies": replies,
     }
+
+
+def _extract_briefing(instruction):
+    """從說明書裡切出「（今日簡報…）」整段。內含巢狀括號（「（已核實…）」），
+    要數括號深度、不能傻找第一個右括號。"""
+    start = instruction.find("（今日簡報")
+    if start < 0:
+        return ""
+    depth = 0
+    for i in range(start, min(len(instruction), start + 4000)):
+        ch = instruction[i]
+        if ch == "（":
+            depth += 1
+        elif ch == "）":
+            depth -= 1
+            if depth == 0:
+                return instruction[start:i + 1]
+    return ""
 
 
 def main():
