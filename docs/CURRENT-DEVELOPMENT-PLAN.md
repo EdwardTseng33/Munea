@@ -5,7 +5,7 @@
 
 > **Current source:** `1.0.45 (Build 1)`; App source frozen at `ac9aac2` from `origin/main@68956b3`. Archive／IPA, Edward iPhone install／readback and Apple upload succeeded; human App E2E is pending.
 >
-> **Latest uploaded App:** `1.0.45 (Build 1)`; Apple accepted the upload at 13:49 and reported processing. App Store Connect login expired before processing completion／1.0.45 version-page selection could be confirmed. It has not been submitted, approved or released.
+> **Latest uploaded App:** `1.0.45 (Build 1)`; Apple accepted the upload at 13:49. At 14:52 App Store Connect showed `iOS App 版本 1.0.45`; processing was complete and Build 1 was selected and saved with updated release notes. It has not been submitted, approved or released.
 >
 > **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000. Existing App Store Product IDs stay unchanged.
 >
@@ -28,7 +28,7 @@
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
 | App source | `1.0.45 (Build 1)` frozen at `ac9aac2`; Archive／IPA and package inspection pass | `packaged` |
-| Uploaded App | `1.0.45 (Build 1)` upload accepted and processing; Edward iPhone install／launch／version readback pass; App Store selection and App E2E remain pending | `uploaded and installed, not selected or submitted; human call gate pending` |
+| Uploaded App | `1.0.45 (Build 1)` uploaded, processed, selected and saved; Edward iPhone install／launch／version readback pass; App E2E remains pending | `uploaded, installed and selected; not submitted; human call gate pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |
 | Tokyo database | Repo migration head is `019`; `017`／`018`／`019` are blocked and `verifiedHead=null` | `blocked` |
@@ -37,9 +37,9 @@
 
 ## Current Execution Order
 
-1. Re-authenticate App Store Connect, confirm Build 1 processing, create／select the 1.0.45 version lane, add release notes and save. Do not submit or release without separate authorization.
-2. On Edward iPhone 15 Pro, record Build 1 evidence for the 0-credit preflight and 505-credit production Gateway／Voice／Avatar call, including cleanup.
-3. Reconcile App Store selected Build, product price／description and Sandbox purchase result before changing review state.
+1. On Edward iPhone 15 Pro, record Build 1 evidence for the 0-credit preflight and 505-credit production Gateway／Voice／Avatar call, including cleanup.
+2. Reconcile App Store selected Build, product price／description and Sandbox purchase result before changing review state.
+3. Keep `1.0.45` as the marketing version while incrementing Build numbers for later candidates; choose the final Build only after the exact candidate passes the physical-App gates. Do not submit or release without separate authorization.
 4. Apply Tokyo `017`／`019` only through the approved migration process; `018` requires backup, approval and full pre/post checks.
 5. Collect at least seven days of login, purchase, call setup, disconnect, credit-ledger, API and admin-freshness indicators before claiming 90.
 

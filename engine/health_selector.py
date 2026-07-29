@@ -62,6 +62,28 @@ def _is_urgent(user_text, hour=None):
     return False
 
 
+def audience_from_birth_year(birth_year, this_year=2026):
+    """從出生年推齡層。判不出來就回 None（不亂猜——猜錯比不猜更傷）。
+
+    分界依 Edward 2026-07-29「高齡／中齡／青少齡」：
+      13-19 → teen（青少齡；未滿 13 不做，兒科誤判代價太高）
+      20-64 → worker（中齡；名字沿用既有標籤，涵蓋沒在上班的中年人）
+      65+   → elder（高齡）
+    """
+    try:
+        year = int(birth_year)
+    except (TypeError, ValueError):
+        return None
+    age = this_year - year
+    if age < 13 or age > 120:
+        return None
+    if age <= 19:
+        return "teen"
+    if age <= 64:
+        return "worker"
+    return "elder"
+
+
 def _profile_flags(profile):
     """把這個人的狀況攤平成挑選要用的旗標。profile 缺欄位一律當「不知道」，不亂猜。"""
     p = profile or {}

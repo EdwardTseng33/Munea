@@ -2,7 +2,7 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-29 13:49 Asia/Taipei` (1.0.45 Build 1 packaged, installed and uploaded; Apple processing／version-page selection not yet confirmed)
+Snapshot time: `2026-07-29 14:52 Asia/Taipei` (1.0.45 Build 1 packaged, installed, uploaded, processed, selected and saved; not submitted)
 
 Source reconciliation baseline: `origin/main@68956b3`; frozen uploaded App source: `ac9aac2`
 
@@ -27,8 +27,8 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
 | Latest source | `1.0.45 (Build 1)` | App source 凍結於 `ac9aac2`，由 `origin/main@68956b3` 建立，含 #247 按鈕對比／危險操作樣式與其後已合併內容；版本、Build 與 WebView cache identity 已對齊 | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 |
-| Latest uploaded App | `1.0.45 (Build 1)` | App Store Archive／IPA 已建立；13:49:37 Apple 回傳 `Uploaded package is processing`／`Upload succeeded`。IPA 58,868,591 bytes，SHA-256 `901da9287281db1b6185cc7ed7d5d57aa0253b564c2cccc7e44517ed9bf311ff`；processing 完成尚未由 App Store Connect 確認 | Xcode upload receipt; archive／IPA inspection; `STATUS.md` | 2026-07-29 13:49 |
-| App Store selected review lane | `1.0.44 (Build 492)` | 1.0.44 舊頁曾選入 Build 492 並儲存；1.0.45 Build 1 上傳後，App Store Connect 工作階段逾時，尚未確認 processing 完成或將 Build 1 選入新版頁。未送審、未核准、未公開發佈 | App Store Connect live page; login handoff | 2026-07-29 13:54 |
+| Latest uploaded App | `1.0.45 (Build 1)` | App Store Archive／IPA 已建立；13:49:37 Apple 回傳 `Uploaded package is processing`／`Upload succeeded`。IPA 58,868,591 bytes，SHA-256 `901da9287281db1b6185cc7ed7d5d57aa0253b564c2cccc7e44517ed9bf311ff`；14:52 App Store Connect 已確認 processing 完成 | Xcode upload receipt; archive／IPA inspection; App Store Connect live page; `STATUS.md` | 2026-07-29 14:52 |
+| App Store selected review lane | `1.0.45 (Build 1)` | 頁面標題與版本欄位均為 1.0.45；Build 1 已選入並儲存，更新說明已優化。仍為「準備提交」，未送審、未核准、未公開發佈。後續可維持 1.0.45 並遞增 Build number，最後再選擇通過驗收的候選 Build | App Store Connect live page | 2026-07-29 14:52 |
 | Edward iPhone install lane | `1.0.45 (Build 1)` | Edward iPhone 15 Pro（iPhone16,1）安裝與啟動成功，`devicectl` 從手機回讀 `Munea net.munea.app 1.0.45 1`；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-29 13:46 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
