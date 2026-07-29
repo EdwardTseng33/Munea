@@ -120,18 +120,28 @@ for (const locale of ['en', 'ja', 'es']) {
   );
 }
 
+const verifiedAppStoreUrl = 'https://apps.apple.com/tw/app/id6788658125';
 assert.equal(
   config.appStoreUrl,
-  '',
-  'The public site must stay in coming-soon mode until a verified App Store URL is supplied',
+  verifiedAppStoreUrl,
+  'The public site must keep the verified Taiwan App Store URL for Munea',
 );
 for (const item of locales) {
   const html = fs.readFileSync(path.join(SITE_OUTPUT, item.output), 'utf8');
-  assert.doesNotMatch(
-    html,
-    /apps\.apple\.com/i,
-    `${item.output} must not expose an unverified App Store storefront`,
+  const appStoreLinks = [
+    ...html.matchAll(
+      /<a\b[^>]*href=["']https:\/\/apps\.apple\.com\/tw\/app\/id6788658125["'][^>]*>/gi,
+    ),
+  ];
+  assert.equal(
+    appStoreLinks.length,
+    3,
+    `${item.output} must expose the verified App Store URL in all three download CTAs`,
   );
+  for (const [anchor] of appStoreLinks) {
+    assert.match(anchor, /\btarget=["']_blank["']/i, `${item.output} App Store CTA opens safely`);
+    assert.match(anchor, /\brel=["']noopener["']/i, `${item.output} App Store CTA isolates its opener`);
+  }
 }
 
 console.log(

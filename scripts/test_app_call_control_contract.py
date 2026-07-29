@@ -61,8 +61,12 @@ def test_real_login_bootstraps_before_gateway_and_recovers_once() -> None:
     assert "ACCOUNT_BOOTSTRAP_USER_KEY" in bootstrap
     assert "reason === 'account_not_ready' && !accountRecoveryAttempted" in call_control
     assert "reason: 'gateway_account_not_ready'" in call_control
-    assert "const accountReady = await syncAccountBootstrap('create', { reason: 'call_preflight' });" in connect_call
-    assert connect_call.index("const accountReady = await syncAccountBootstrap") < connect_call.index("await CallControl.acquire(")
+    parallel_preflight = connect_call.index("const [accountReady] = await Promise.all([")
+    bootstrap_preflight = connect_call.index(
+        "syncAccountBootstrap('create', { reason: 'call_preflight' })"
+    )
+    gateway_acquire = connect_call.index("await CallControl.acquire(")
+    assert parallel_preflight < bootstrap_preflight < gateway_acquire
     assert "if (detail.status === 'signed-in' && storageGet(ONBOARDING_COMPLETED_KEY)" not in APP
 
 
