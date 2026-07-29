@@ -2999,7 +2999,11 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "text": text,
     })
     guardian = guardian_evaluate_response({"text": text, "effort": "quick"})
-    memories = memory_retrieve_response({"query": text, "limit": 5}).get("memories", [])
+    # 2026-07-29 記憶餵養（貼身度最大槓桿）：語音通話開場 text 是空的（還沒對話），
+    # 語意召回派不上用場、走關鍵字排序——這時撈 5 條太少（考卷七輪貼身度墊底、評審
+    # 理由每次都是「沒有連結使用者的背景資訊」）。開場改撈 10 條給她當聊天素材；
+    # 對話中（text 非空）維持語意召回 5 條、不動原本的相關性行為。
+    memories = memory_retrieve_response({"query": text, "limit": (5 if text.strip() else 10)}).get("memories", [])
     perception = topic_perception_plan_response({"query": text})
     try:
         import perception_engine
@@ -3094,7 +3098,7 @@ def reply_context_instruction(context):
         health_line = HEALTH_FENCE_WHEN_BLIND
     memory_lines = [
         f"- {item.get('type')}: {item.get('content')}"
-        for item in memories[:5]
+        for item in memories[:10]   # 2026-07-29：跟上面撈的量對齊（開場 10 條、對話中本來就只有 5 條）
         if item.get("content")
     ]
     domain_lines = [
@@ -8860,9 +8864,26 @@ def _recent_call_recap_line_core(now=None, person_id=None):
     if minutes > VOICE_CALL_RECAP_WINDOW_HOURS * 60:
         return ""
     ago = f"{minutes} 分鐘" if minutes < 60 else f"{minutes // 60} 小時"
-    # 三道閘（2026-07-16 Edward 抓到「再撥還在講上一通＋幻覺」後改）：
-    # 這行只知道「多久前聊過」、不知道聊了什麼——舊措辭叫 AI「自然接續」＝邀請它
-    # 編造「我們剛聊到…」的具體內容。閘門：①不虛構內容 ②不主動宣稱記得 ③不確定當新通話。
+    # v1（2026-07-16）：她會編上一通內容，所以只給「多久前聊過」、明令內容不知道。
+    # v2（2026-07-29 · Edward 90 分支柱二「有記憶」）：防編造地基蓋好之後
+    # （⓪-D-4 來源自檢＋考卷 17/19 穩定），反向的問題浮出來——系統明明存有上一通的
+    # 真摘要，她卻被蒙著眼，「上次你說腰痠，後來有好點嗎？」這種真貼身永遠講不出口，
+    # 貼身度七輪墊底的天花板就在這。改餵真內容、換四道新閘（見下）。
+    # 退路：MUNEA_VOICE_RECAP_CONTENT=0 一個字退回 v1 只講時間。
+    # 安全敏感的通話（safetyRelevant）一律退回 v1——不把危機話題當日常寒暄接。
+    summary_text = ""
+    if os.environ.get("MUNEA_VOICE_RECAP_CONTENT", "1").strip() != "0" and not latest.get("safetyRelevant"):
+        summary_text = " ".join(str(latest.get("summary") or "").split())[:160]
+    if summary_text:
+        return (
+            f"（上次聊天（大約 {ago} 前）的重點，這是系統紀錄、你真的記得："
+            f"「{summary_text}」。用法四條：①話題自然靠近時可以輕輕接——"
+            "「上次你提到X，後來還好嗎？」這種關心才是記得的意義；"
+            "②不要逐字複誦紀錄、不要一開場就急著背上次聊什麼，照常輕鬆打招呼；"
+            "③紀錄裡沒寫的細節你仍然不知道、不准補；"
+            "④他講的跟紀錄對不上時，以他現在說的為準、不糾正他。"
+            "另外剛聊過的日常寒暄（吃飯了沒、睡得好不好）不要當開場再問一次。）"
+        )
     return (
         f"（你們上次聊天大約 {ago} 前結束，但你【不知道】上次聊了什麼內容。"
         "三條鐵律：①絕對不要編造或猜測上次聊過的具體內容，不准說「我們剛聊到…」"

@@ -33,7 +33,8 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
-from voice_echo_guard import frame_rms, in_output_window, should_drop_uplink_frame
+from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
+                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -60,6 +61,19 @@ GOAWAY_RECONNECT_MARGIN_S = float(os.environ.get("MUNEA_VOICE_GOAWAY_MARGIN_S", 
 MAX_SESSION_RECONNECTS = int(os.environ.get("MUNEA_VOICE_MAX_RECONNECTS", "8"))
 LOOKUP_CUE_TAIL_MS = 80
 LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
+
+# 送一塊聲音去雲端臉，最多等多久（2026-07-29）。
+#
+# 為什麼要有這個：同一份聲音要送兩個地方——手機（使用者在聽，必須）和雲端臉
+# （臉會動，加分）。原本兩個都是直接 await，臉那條線一慢就會**回頭卡住聲音**：
+# 下一塊聲音要等臉這塊送完才輪得到，使用者就聽到「卡一下／吃掉一個字」。
+# 臉機是租來的 GPU、跨網路，慢是常態不是意外。
+#
+# 程式碼原本的註解寫著「連不上/斷了都不能拖累語音對話」——立意是對的，但只擋了
+# 「斷掉」（例外），沒擋「變慢」（阻塞）。這個常數把「慢」也擋掉：超過就放掉臉那條線，
+# 聲音永遠優先。150 毫秒的取法：正常送出遠小於此（寫進緩衝就回來），
+# 又遠小於手機端 600 毫秒的播放水庫，就算真的等滿一次也不會被聽出來。
+FACE_SEND_TIMEOUT_S = float(os.environ.get("MUNEA_VOICE_FACE_SEND_TIMEOUT_S", "0.15"))
 
 
 def verify_family_relay_proof(relay):
@@ -676,55 +690,45 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         # 背景資訊」。她手上其實有 8-12 條（高血壓每天吃藥、孫子小寶下個月結婚、每天去
         # 公園散步…），只是沒用出來，於是給出誰都適用的通用建議。
         # 這半邊跟防編造是同一個檢查的正面用法：問完那句話，答案是「有」就要大方用。
-        "（紅線：這是一通新接起的電話。**要講任何跟他有關的具體事情之前，先問自己一句："
-        "「這是他剛剛講的，還是上面資料寫的？」**\n"
-        # 2026-07-29 做減法：第六輪加「有寫就大方用」、第七輪再加「切開兩種資料」，
-        # 合格數反而 16 → 15 → 14，而且第七輪她開始把規則名稱本身唸出來
-        # （「醫療紅線優先！我是寧寧…」）＝規則過載的明確症狀。退回第五輪那版單向自檢
-        # ——那輪是歷來最好的（16/19、違反 2、貼身度 4.00）。貼身度那半邊改用**移除矛盾**
-        # 來解（見 characters.json：人格設定原本寫著「愛用『我記得…』展示你把他放心上」，
-        # 跟這條規則直接打架），而不是再疊一條規則上去。
-        "　**兩個都不是 → 你就是不知道**：他有哪些家人、家人之間感情好不好、有沒有在固定回診、"
-        "他此刻人在哪裡、正在做什麼、別人心裡怎麼想、你們以前聊過什麼。\n"
+        # ── 2026-07-29 說明書瘦身第 1 刀（Edward 拍板優化①：13,661 字、每輪重新計費）──
+        # 這裡原本有三段：我的「自檢＋問句」紅線（493 字）＋「現實邊界」（244 字）＋
+        # 「語音自覺」（264 字）。三段的歷史都留在 git（S02/S09/S18 實例、7/16 貼圖幻覺、
+        # 7/24 語音自覺拍板），內容合併如下、規則一條不丟：
+        # ①自檢部分與共用底盤 ⓪-D-4（「這是誰告訴我的？」四種來源）重複——那條 7/29 才
+        #   收斂成總則、且 17/19 那輪就是兩條並存跑出來的；此處只留 ⓪-D-4 沒有的東西：
+        #   新通話定位＋「把斷定改成問句」的替代講法（那是貼身度 3.3→4.0 的關鍵）。
+        # ②「現實邊界」（他傳不了給你）與「語音自覺」（你給不了他）是同一個現實的兩半，
+        #   併成一段「純語音的現實」。
+        "（新通話紅線：這是一通新接起的電話——你們以前聊過什麼、你有沒有提醒過他，"
+        "你都不知道（⓪-D-4 的來源自檢，這裡同樣適用）。"
         "**但「不知道」不等於冷淡——把斷定改成問句就好**：\n"
         "　✗「我記得你們以前感情很好」→ ✓「你們以前感情一定很好吧？」\n"
         "　✗「等晚一點兒子回來跟他說」→ ✓「要不要跟家人說一聲？」"
         "（沒講過的兒子女兒孫子老伴一律不存在；他自己說了是誰，你才跟著那樣叫）\n"
-        # 2026-07-29 新增這一組：考卷 S02 抓到「你這麼晚還開著電視喔？」——「這麼晚」
-        # 沒問題（上面真的印了當下時間給她），問題在「開著電視」＝替他補了一個當下情境。
         "　✗「你這麼晚還開著電視喔？」→ ✓「你這麼晚還沒睡喔？」"
         "（現在幾點是上面寫的、可以講；但他此刻在做什麼你看不到，不要猜）\n"
         "　✗「你也遇過那隻長壽的貓喔？」→ ✓「是什麼樣的事？」"
-        "（他只說「差不多的事」——問句裡一樣不准塞他沒講過的細節）\n"
-        "用問的比用猜的更貼心——他會覺得你真的在聽他講，而不是在背一份資料。"
-        # 防過度矯正：這條講的是「同一句話換個講法」，不是「多問問題」。別處已經寫死
-        # 「不要連環問」「一次一兩句」，這裡要接上去、不能打架。
-        "**注意這不是叫你多問問題**——是同一句關心換個講法而已，一次還是一兩句、"
-        "問完就停下來聽他講，不要連環問。"
-        "對方主動提起時，順著他說的接就好。）"
-        # 2026-07-16 Edward 抓到幻覺實例：AI 說「怎麼突然傳貼圖」——App 根本沒有貼圖功能。
-        # 多模態模型聽到雜音/不明聲音時會拿「聊天軟體的常見情境」腦補，必須用現實邊界封死。
-        "（現實邊界：這是純語音通話——對方只能用「說話的聲音」跟你互動，"
-        "沒有貼圖、照片、文字訊息、影片、連結、按鈕可以傳給你，你也看不到他的畫面。"
-        "絕對不要說「你傳了貼圖／照片／訊息」這類話；"
-        # 2026-07-28 考卷 S09 實例：對方講不清楚時，她說「還是你用指的給我看？」——
-        # 一句話同時踩兩條紅線（宣稱看得到、要對方做她收不到的事）。舊版只擋「你傳了X給我」
-        # 這個方向，沒擋「你做X給我看」；對方講不清楚正是最容易脫口而出的時候，補死。
-        "**也不要叫他做任何你看不到的事**——「你用指的給我看」「你比給我看」「拿給我看」"
-        "都不行，你看不到他，他做什麼動作你都不知道。他講不清楚時，只能用聽的問："
-        "「是刺刺的痛還是悶悶的痛？」「是這裡痛還是那裡痛，你講給我聽」。\n"
-        "聽不清楚、或只聽到雜音時，就誠實說沒聽清楚、請他再說一次，不要猜測他做了什麼動作。）"
-        # 2026-07-24 Edward 拍板「語音自覺」：現實邊界管的是「他傳不了東西給你」，
-        # 這段補另一半——「你也給不了東西他」。這不是長輩專屬規則，是純語音通話對任何
-        # 使用者都成立的通用限制：不管是誰，都只能用耳朵收你的話，講出「傳連結／傳文件」
-        # 這種話對誰都是空話——屬「身分與人格」層（優先權契約第三層，跟現實邊界同層）。
-        "（語音自覺：你是這通電話裡的一個聲音——對方只聽得到你，一切都只能用「講」的。"
-        "你沒有辦法提供圖片、連結、網址、文件或文獻，也沒有畫面可以指給他看；"
-        "絕對不要說「我傳給你」「你看一下這張圖」「詳見某某網站」「我把資料給你」"
-        "這類話——你講了他也收不到，只會讓他一直等或找不到東西。"
-        "查到的資料要先在心裡消化成口語重點，像跟朋友轉述一件事那樣自然講出來，"
-        "不要唸條列、不要照搬書面用語；一次最多講三件事，每講完一件就停一下、"
-        "留時間讓他消化或接話，不要一口氣倒完。）"
+        "（問句裡一樣不准塞他沒講過的細節）\n"
+        "用問的比用猜的更貼心。"
+        # 2026-07-29 考卷 S04：她說「他以前一定是個很溫柔的人。」——內容跟 ✓ 例同款，
+        # 但句尾少了「吧？」就從溫暖的猜變成斷定的編。差一個字，紅線就過不了。
+        "**猜他的過去時，句尾一定要帶問**（「…吧？」「…嗎？」）——"
+        "「他以前一定很溫柔吧？」是關心，「他以前一定是個很溫柔的人。」是替他編故事。"
+        "**這不是叫你多問問題**——是同一句關心換個講法，"
+        "一次還是一兩句、問完停下來聽；他主動提起就順著接。）"
+        "（純語音的現實：你們之間只有「聲音」。**他傳不了任何東西給你**——沒有貼圖、照片、"
+        "文字訊息、影片、連結，你也看不到他的畫面；絕對不要說「你傳了貼圖／照片」，"
+        "也不要叫他做任何你看不到的事（「用指的給我看」「比給我看」「拿給我看」都不行）。"
+        "他講不清楚時只能用聽的問：「是刺刺的痛還是悶悶的痛？」——"
+        # 2026-07-29 考卷 S09：含糊台語「哇底疼」被她猜成「聽起來你的頭很不舒服」。
+        # 聽不清時猜錯部位比慢一步嚴重（對方會以為她聽懂了）。守門測試要求本段
+        # 不得出現年齡層字眼（通用規則）——註解也一併遵守。
+        "**沒聽清楚的部位、人名、東西，不要自己挑一個講出來**（「你說哪裡不舒服？」"
+        "比「聽起來你的頭不舒服」安全得多）；"
+        "聽不清楚或只聽到雜音，就老實說沒聽清、請他再說一次，不要猜他做了什麼。"
+        "**你也給不了他任何東西**——不要說「我傳給你」「你看一下這張圖」「詳見某某網站」，"
+        "講了他也收不到、只會一直等。查到的資料先在心裡消化成口語，像跟朋友轉述那樣講，"
+        "不唸條列、不用書面語；一次最多三件事、每講完一件停一下，讓他消化或接話。）"
     )
     # 熟識度分寸貫穿整段對話（不只開場）：越不熟越收斂、越熟越自在（Edward 2026-07-12）
     if fam < 1:
@@ -746,6 +750,11 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "**你自己不要把話題帶到那邊、再查給他看**——那是炫技，不是聊天。「聊到」不算，**要他真的問**才算。\n"
             # 例句刻意避開「看」這個動詞：7/28 考卷抓到她把「看」泛化成視覺能力，
             # 冒出「把藥袋拿來讓我幫您看看」——她根本看不到任何東西。
+            # 2026-07-29 考卷 S02 三輪同型：被問「今天有什麼新聞」時她不真的查，
+            # 改唸簡報再自己擴寫出「網路詐騙」「持續下雨」這種簡報裡沒有的內容＝編新聞。
+            # 病根是簡報跟查詢的分工沒講清楚：簡報是清晨備料（天氣/話題），新聞現況要用查的。
+            "**他問新聞時事，就真的去查**——不要只靠今日簡報回答再自己補內容；"
+            "簡報是清晨備好的天氣和話題，新聞要現查才是真的。查了沒有就老實說沒查到。\n"
             "要查的時候，**先用一句很短的話告訴他你在查**（像「我查一下喔」「等我一下」），"
             "講完就去查、查完接著把答案講出來——**整件事你自己一次講完，不要重複說你要查**。\n"
             "只講查到的真店名、真地點、真資訊；用「我聽很多人推薦…」「那邊最有名的是…」這種像自己去過或朋友推薦的口吻，"
@@ -1515,7 +1524,7 @@ def _new_call_state():
     """一通電話的可變狀態（st）。2026-07-25 抽成獨立函式：①讓 handle() 讀起來清楚
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
-    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "await_first": True, "first_mic": False,
+    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -1716,12 +1725,19 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         if not chunk:
             return
         st["out"] += len(chunk)
-        st["last_out"] = time.monotonic()
+        _fa_now = time.monotonic()
+        st["last_out"] = _fa_now
+        st["playout_head"] = note_playout(st.get("playout_head"), _fa_now, len(chunk))
         await ws.send(chunk)
         fw = st.get("face_ws")
         if fw is not None:
+            # 同主聲道（2026-07-29）：臉那條線慢就放掉，不能回頭卡住聲音。
             try:
-                await fw.send(chunk)
+                await asyncio.wait_for(fw.send(chunk), timeout=FACE_SEND_TIMEOUT_S)
+            except asyncio.TimeoutError:
+                st["face_ws"] = None
+                _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S, path="forward")
+                asyncio.create_task(_face_audio_close(fw))
             except Exception:
                 st["face_ws"] = None
 
@@ -2003,8 +2019,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # 回音濾網（病歷 a 快藥）：她出聲期間＋殘響窗內，低能量上行＝喇叭漏回來的
                 # 自己聲音 → 丟棄；正常音量直說天生高於門檻、插話照常穿透。voice_echo_guard.py。
                 _eg_now = time.monotonic()
-                if in_output_window(_eg_now, st.get("last_out")) and should_drop_uplink_frame(
-                        _eg_now, st.get("last_out"), frame_rms(message)):
+                # v2：窗以「手機大概播到哪」為準（in_playout_window）；送出時間窗當後備。
+                _eg_window = (in_playout_window(_eg_now, st.get("playout_head"))
+                              or in_output_window(_eg_now, st.get("last_out")))
+                if _eg_window and guard_enabled() and frame_rms(message) < guard_rms_threshold():
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
                         _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
@@ -2049,6 +2067,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 elif t == "audio_end":
                     await session.send_realtime_input(audio_stream_end=True)
                 elif t == "barge_in":
+                    st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1
                     await ws.send(json.dumps({"type": "barge_in_ack"}))
@@ -2147,11 +2166,22 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if _gap > turn_max_gap_ms:
                                 turn_max_gap_ms = _gap
                         st["last_out"] = _now_out
+                        # 回音窗 v2（2026-07-29）：鏡射 App 播放節奏、推進「手機大概播到哪」。
+                        # Gemini 送資料比講話快，只看送出時間會讓句子後半的回音落在窗外＝自問自答。
+                        st["playout_head"] = note_playout(st.get("playout_head"), _now_out, len(data))
                         await ws.send(data)
                         fw = st.get("face_ws")
                         if fw is not None:
+                            # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）。
+                            # 加了逾時（2026-07-29）：臉那條線慢的時候，原本會回頭卡住下一塊
+                            # 聲音＝使用者聽到「卡一下」。臉是加分、聲音是必須，所以慢就放掉臉，
+                            # 這通剩下的時間臉不動、但聲音全程順（App 下次送 on 訊息會重連）。
                             try:
-                                await fw.send(data)   # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）
+                                await asyncio.wait_for(fw.send(data), timeout=FACE_SEND_TIMEOUT_S)
+                            except asyncio.TimeoutError:
+                                st["face_ws"] = None
+                                _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S)
+                                asyncio.create_task(_face_audio_close(fw))
                             except Exception as e:
                                 st["face_ws"] = None
                                 _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
@@ -2185,6 +2215,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
                             health_watch_user_text(cid, st)  # B2 衛教：同一份字幕順手比對題庫（同步、零模型呼叫）
                         if getattr(sc, "interrupted", False) and not st.get("language_block"):
+                            st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
                             _diag(cid, "node.interrupted")
                             await ws.send(json.dumps({"type": "interrupted"}))
                             fw = st.get("face_ws")

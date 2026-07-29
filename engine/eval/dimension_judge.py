@@ -54,7 +54,11 @@ def build_prompt(scenario, persona, turns, dimensions, system_context=None):
     dims_text = []
     for d in dimensions:
         dims_text.append(
+            # 2026-07-29：錨點只給得起「最好與最差長什麼樣」，給不了「什麼情況不該扣分」。
+            # 貼身度就是這樣連三輪被誤扣（純辦事的輪次沒有背景可帶，照樣被當沒接住背景）。
+            # note 是該維度的判斷但書，有就一起給評審。
             f"- {d['name']}：1分範例「{d.get('anchor1', '')}」／5分範例「{d.get('anchor5', '')}」"
+            + (f"\n  {d['note']}" if d.get("note") else "")
         )
     # 2026-07-25 蘇菲評測骨架修繕：系統即時提供給寧寧的真實事實（時間/地點/今日簡報），
     # 讓誠實度維度不把『照系統給的真時間講今天日期』誤讀成不誠實。

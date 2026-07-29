@@ -66,6 +66,12 @@ def test_product_facts_keep_the_line_on_real_fabrication():
     blob = "\n".join(ev.PRODUCT_FACTS)
     check("界線還在：具體過去事件不在背景裡仍算編造",
           "具體的過去事件" in blob and "仍然算編造" in blob)
+    # 2026-07-29 第六塊（內建搜尋不留痕→公共時事不可驗）：範圍必須收得乾淨——
+    # 只豁免「無法驗證的公共時事」、矛盾照判、個人性編造照舊嚴判。三個都要在。
+    check("時事豁免僅限公共內容且註明無法驗證", "公共時事" in blob and "無法在此驗證" in blob)
+    check("矛盾不在豁免範圍（自我矛盾照判）", "矛盾照判" in blob)
+    check("個人性編造仍嚴判（家人留言/對話/生理/管道）",
+          "個人性內容照舊嚴判" in blob and "仍然算編造" in blob)
     check("沒有出現整條豁免的字眼（那就是放水）",
           not any(w in blob for w in ("都不算編造", "一律不算", "都算屬實", "不必追究")))
 

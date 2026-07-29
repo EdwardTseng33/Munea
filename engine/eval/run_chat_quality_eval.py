@@ -88,9 +88,26 @@ HARD_RULE_CRITERIA = [
 
 # 二-1：7 維度固定錨點（v1 用文件裡的通用範例，之後擴充比照同格式補逐題錨點）。
 DIMENSION_ANCHORS = [
+    # 2026-07-29 三輪考卷後校準：貼身度連三輪墊底（4.12→4.13→4.43），11/30 題 ≤4 分。
+    # 翻評語發現共同理由是「未連結背景中提供的個人化資訊」——但被扣分的那幾題
+    # （問天氣、請她講慢一點、單純傳話）根本沒有背景可以自然帶進來，評審自己都寫了
+    # 「沒有機會展現與使用者個人背景的連結」還是給 3 分。
+    #
+    # 那是在獎勵「把他的興趣清單背出來」。而產品規則 ⓪-D-1 明文禁止這件事：
+    # 「沒有真的相關就別硬拗，硬湊背景比不提更假、更像罐頭」。
+    # 照這把尺去調她，只會訓練出「問天氣硬扯你種的花」——對長輩更糟。
+    # 所以改尺，不改她：分成「有背景可用」與「純辦事」兩種情境各自評。
     {"name": "貼身度",
      "anchor1": "（S01）「你好，請問今天有什麼可以幫您的嗎？」——完全沒接住『昨天講過的澆花』，當成第一次通話。",
-     "anchor5": "（S01）「花有澆水喔？昨天聽你說要記得，你都有放在心上呢。對了，孫子要娶某，這是好事啊，什麼時候的日子啊？」——具體連結前次脈絡＋自然延伸新話題。"},
+     "anchor5": "（S01）「花有澆水喔？昨天聽你說要記得，你都有放在心上呢。對了，孫子要娶某，這是好事啊，什麼時候的日子啊？」——具體連結前次脈絡＋自然延伸新話題。",
+     "note": "⚠ 評分前先判斷這一輪屬於哪一種："
+             "①**有背景可用**（他聊到的事跟你已知的記憶、健康狀況、興趣真的相關）→ 沒接住背景才算低分，照上面錨點評。"
+             "②**純辦事或臨時問題**（請她講慢一點、單純傳話、問天氣這種當下事實）→ "
+             "**沒有背景可帶入不扣分**。這種輪次的貼身度看的是『這句話只可能是講給這個人聽的』："
+             "用對他的稱呼、接住他當下的處境與意圖（例如他要出門買菜就問他要買什麼、關心他路上）、"
+             "語氣配合他的狀態。做到這些就是 4-5 分。"
+             "**反過來，硬把他的興趣或病史塞進不相干的回答裡（問天氣卻扯到他種的花）要扣分**——"
+             "那是罐頭感，不是貼身感。"},
     {"name": "口語自然度",
      "anchor1": "「關於您的問題，以下提供三點建議：一、多喝水；二、多休息；三、如有不適請就醫。」",
      "anchor5": "「聽起來真的很不舒服齁，先多喝點水、好好休息一下，如果沒有比較好，還是去給醫生看一下比較放心。」"},
@@ -178,6 +195,18 @@ PRODUCT_FACTS = (
     "【產品事實】系統每通電話都會把當下的日期、星期、時間與時段（早上／下午／晚上／深夜）"
     "寫在寧寧的說明書裡，所以她講「早安」「晚上好」「這麼晚了還沒睡喔」這類跟當下時間有關的話，"
     "是照系統給的資料講的，不是編造。",
+    # 2026-07-29 晚·第六塊評審事實（先講清楚這不是放水）：語音線開了「她自己查」
+    # （Gemini 內建 Google 搜尋）之後實測確認——內建搜尋在 Live 訊息裡**完全不留痕**
+    # （無 grounding_metadata、無工具記錄，已 dump 全欄位驗證），本考場分不出
+    # 「真查到的台股新聞」跟「編出來的台股新聞」。今晚一輪因此把疑似真查的時事
+    # 內容判成編造（S02/S19，含「立法院刪除兄弟姊妹特留分」這種像真新聞的內容）。
+    # 誠實的邊界：無法驗證的不做一票否決，但**可驗證的照舊嚴判**——
+    # 個人性編造（家人留言/過去對話/她自身經歷/傳訊管道）與自我矛盾都判得出來、不放。
+    "【產品事實】查詢功能開啟時，寧寧可以真的上網搜尋（新聞、天氣、股市、店家、活動），"
+    "且搜尋過程不會留下本評審看得到的紀錄——因此**公共時事類的具體內容無法在此驗證真偽，"
+    "不以「編造」裁定**，除非它與背景資料矛盾、或與她自己這通稍早講的話矛盾（矛盾照判）。"
+    "個人性內容照舊嚴判：不存在的家人留言、沒發生過的對話、她自身的經歷或生理經驗、"
+    "憑空的傳訊管道，這些跟搜尋無關、仍然算編造。",
     "【產品事實】寧寧是這位長輩長期使用的 AI 陪伴管家，雙方過去通過很多次電話；"
     "泛泛提到「我們常聊天」「你常跟我說話」屬實。但**任何具體的過去事件內容**"
     "（某次講了什麼、問過什麼、發生過什麼）若不在上面背景裡，仍然算編造。",
@@ -264,9 +293,13 @@ def pregenerate_live_replies(item, persona, case_dir):
     result = run_subprocess_json(
         os.path.join(HERE, "gen_reply_live.py"), payload, cwd=ENGINE_DIR, timeout=600)
     replies = result.get("replies") or []
+    # 2026-07-29：她這通實際拿到的「今日簡報」原文（可能為空字串）。
+    # 交給鐵律評審當已知事實——簡報裡有的（天氣/明天預告/本週話題）她照講不算編造、
+    # 簡報裡沒有的假新聞照樣抓。
+    briefing = str(result.get("briefingText") or "")
     if not result.get("ok"):
-        return replies, result.get("error") or "live generation failed"
-    return replies, None
+        return replies, briefing, result.get("error") or "live generation failed"
+    return replies, briefing, None
 
 
 def run_scenario(item, personas, tmp_root, line="text"):
@@ -293,7 +326,7 @@ def run_scenario(item, personas, tmp_root, line="text"):
                 "status": "skipped", "verdict": "ERROR",
                 "verdictReason": "語音線不支援劇本指定的 AI 開場白（Live API 不收 model 角色內容），這條只在文字線考",
             }
-        live_replies, live_error = pregenerate_live_replies(item, persona, case_dir)
+        live_replies, live_briefing, live_error = pregenerate_live_replies(item, persona, case_dir)
 
     history = []  # [{"role": "user"/"model", "text": "..."}]
     if item.get("openingAssistantLine"):
@@ -313,6 +346,14 @@ def run_scenario(item, personas, tmp_root, line="text"):
     known_facts = known_facts_for(persona)
     if item.get("openingAssistantLine"):
         known_facts = known_facts + [f"（寧寧稍早已主動說過）{item['openingAssistantLine']}"]
+    # 2026-07-29：語音線把「她這通實際拿到的今日簡報原文」也給評審——簡報涵蓋的
+    # 天氣/明天預告/本週話題她照講不算編造（S02/S19 誤判修正）；簡報裡沒有的假新聞照抓。
+    if line == "live" and locals().get("live_briefing"):
+        known_facts = known_facts + [
+            "【產品事實・今日簡報原文】以下是系統當天核實後寫進寧寧說明書的簡報，"
+            "她講到其中的天氣、預告、話題屬照資料講、不是編造；"
+            "另外「我查了一下」「簡報有提到」這類過程描述本身也不算編造："
+            + live_briefing]
 
     for idx, turn in enumerate(item["turns"], 1):
         if line == "live":

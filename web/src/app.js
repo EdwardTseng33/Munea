@@ -1923,10 +1923,37 @@ const Avatar = {
         }
       });
       const o = await this.pc.createOffer(); await this.pc.setLocalDescription(o);
-      await new Promise(res => {  // 等收集完連線候選再送（demo-live 同款）
+      // 2026-07-29 接通提速第 2 刀：舊版「等收集完全部連線候選再送（demo-live 同款）、
+      // 上限 3 秒」——名單裡掛著多台中繼站（含公用備援），行動網路上幾乎每次都等好等滿，
+      // 是真機 trail「5.9 秒影像軌才到」的最大單一成分。改成夠用就先送：
+      // 湊到第一條「走得出去」的路線（經 STUN 或中繼）＋0.8 秒緩衝就出發；
+      // 3 秒上限與收集完成照舊。量測記號 avatar_ice_gather 上真機直接看省多少。
+      await new Promise(res => {
         if (this.pc.iceGatheringState === 'complete') return res();
-        const chk = () => { if (this.pc.iceGatheringState === 'complete') { this.pc.removeEventListener('icegatheringstatechange', chk); res(); } };
-        this.pc.addEventListener('icegatheringstatechange', chk); setTimeout(res, 3000);
+        const gatherT0 = performance.now();
+        let usable = 0, settled = false;
+        const done = () => {
+          if (settled) return; settled = true;
+          try { this.pc.removeEventListener('icegatheringstatechange', chk); } catch (e2) {}
+          try { this.pc.removeEventListener('icecandidate', onCand); } catch (e2) {}
+          clearInterval(tick); clearTimeout(cap);
+          try { voiceCallMark('avatar_ice_gather', 'pass', { ms: Math.round(performance.now() - gatherT0), usable }); } catch (e2) {}
+          res();
+        };
+        const maybe = () => {
+          if (this.pc.iceGatheringState === 'complete') return done();
+          if (usable > 0 && (performance.now() - gatherT0) >= 800) return done();
+        };
+        const chk = () => maybe();
+        const onCand = (e) => {
+          // host 候選只在同網段有用；能出門的是經 STUN（srflx）或中繼（relay）那幾條
+          if (e && e.candidate && /typ (srflx|relay)/.test(String(e.candidate.candidate || ''))) usable += 1;
+          maybe();
+        };
+        this.pc.addEventListener('icegatheringstatechange', chk);
+        this.pc.addEventListener('icecandidate', onCand);
+        const tick = setInterval(maybe, 200);
+        const cap = setTimeout(done, 3000);
       });
       // 帶上目前選的角色（六角色 · 7/9）；角色不吃擬真引擎時服務會說不行 → 自動退回 2D 動畫
       // FlashHead 測試模式不帶角色（它目前只有測試臉、帶中文名會被拒連）——擬真女底圖入庫後再帶
@@ -2403,6 +2430,60 @@ const LiveVoice = {
     try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_greet' }); } catch (e) {}
     return { mode, verified: stable, receiverAttached };
   },
+  // ── 同線聲音「中途斷續」監測＋自動退回（2026-07-29 · 穩定度）──
+  // 背景：同線模式下聲音繞三趟（伺服器→手機→臉機→WebRTC回手機），只要上行或臉機
+  // 慢一下，使用者聽到的就是「卡一下／吃掉一個字」。而既有保底只在「開頭 3 秒完全沒聲」
+  // 才退回本地播放——只擋「死掉」、沒擋「斷續」，跟伺服器端 7/29 修掉的是同一類設計漏洞。
+  // 真機數據佐證（正式庫 sameline_check）：Edward 7/28 的通話全部走同線（result: kept），
+  // 但通話中段沒有任何量測——他回報的卡卡正好發生在沒人看的地方。
+  // 判法：每 500ms 問一次連線「聲音位元組有沒有在增加」（getStats，iPhone 讀得到；
+  // 不用音量量表——iPhone Web Audio 讀遠端串流恆為 0，7/12 已踩過）。
+  // 「她此刻應該在講話」（_playoutUntil 未到）而位元組不動連續兩拍＝一次斷續；
+  // 一通累積 2 次＝這條線不可靠，退回本地播放（聲音穩定優先，臉可能慢半拍——
+  // 跟伺服器端同一個取捨：長輩主要用聽的）。每次斷續都回報後台，之後不用截圖就有數據。
+  _sameLineFallBackNow(reason) {
+    this._sameLineFellBack = true;
+    // 退回本地播放的同時把同線那軌靜音——不然臉機晚點醒過來、兩邊一起出聲＝回答重疊（7/11 真機教訓）
+    try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
+    try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
+    try { Avatar._diagNote('同線退回本地(' + reason + ')', true); } catch (e) {}
+    try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
+    try { trackProductEvent('sameline_fellback', { reason: String(reason || '') }); } catch (e) {}
+  },
+  _armSameLineStutterWatch() {
+    if (this._slStutterT) return;
+    this._slPrevBytes = -1; this._slStallStreak = 0; this._slStalls = 0;
+    this._slStutterT = setInterval(async () => {
+      if (!this.on || !this._sameLine || this._sameLineFellBack === true) {
+        clearInterval(this._slStutterT); this._slStutterT = null; return;
+      }
+      const now = performance.now();
+      // 只在「她此刻應該正在講話」的時間窗內量；剩不到 400ms 的句尾不算（自然收尾）
+      if (!this._playoutUntil || now > this._playoutUntil - 400) {
+        this._slStallStreak = 0; this._slPrevBytes = -1; return;
+      }
+      let bytes = -1;
+      try {
+        const rcv = Avatar._faceAudReceiver;
+        if (rcv && rcv.getStats) {
+          const st = await rcv.getStats();
+          st.forEach(r => { if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio') && typeof r.bytesReceived === 'number') bytes = r.bytesReceived; });
+        }
+      } catch (e) {}
+      if (bytes < 0) return;   // 讀不到就不判（寧可漏一拍、不誤退）
+      if (this._slPrevBytes >= 0 && (bytes - this._slPrevBytes) < 200) {
+        this._slStallStreak += 1;
+        if (this._slStallStreak === 2) {   // 連續兩拍（約 1 秒）沒聲進來、而她應該在講＝一次斷續
+          this._slStalls += 1;
+          try { trackProductEvent('sameline_audio_stall', { count: this._slStalls, turn: this._playbackTurn || 0 }); } catch (e) {}
+          if (this._slStalls >= 2) this._sameLineFallBackNow('midcall_stutter');
+        }
+      } else {
+        this._slStallStreak = 0;
+      }
+      this._slPrevBytes = bytes;
+    }, 500);
+  },
   _notePlayout(byteLength) {
     const now = performance.now();
     const useSameLine = this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true;
@@ -2824,6 +2905,7 @@ const LiveVoice = {
               }
             }, 3000);
           }
+          this._armSameLineStutterWatch();   // 中途斷續監測（2026-07-29）：開頭 3 秒查只擋「死掉」，這支擋「斷續」
           this._toListening();                                    // 依實際應播完時間換手，不再用「資料停止到貨」誤判句尾
           return;                                                  // 不本地排程（聲音由 faceAud 出）
         }
@@ -2879,6 +2961,7 @@ const LiveVoice = {
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
+    try { clearInterval(this._slStutterT); } catch (e) {} this._slStutterT = null;   // 中途斷續監測一起收（2026-07-29）
     try { Avatar.stop(); } catch (e) {}   // 掛斷＝臉一起收（所有掛斷路徑都走這裡）
     try { const c = document.getElementById('chat'); if (c && c.dataset.state === 'connecting') c.dataset.state = 'idle'; } catch (e) {}
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
@@ -4999,15 +5082,14 @@ async function connectCall() {
     });
     return;
   }
-  // 家人傳話是附加功能：正式帳號最多等 1.2 秒；開發假登入直接略過，不能卡住主要通話。
-  if (!developmentDirectCall) {
-    try {
-      await Promise.race([
-        LiveVoice.prepareRelay(),
-        new Promise(resolve => setTimeout(resolve, 1200)),
-      ]);
-    } catch (e) {}
-  }
+  // 前置並行（2026-07-29 接通提速）：家人傳話準備、帳號確認、點數同步原本一條龍
+  // 等完才向總機叫號——行動網路一趟來回幾百毫秒、串起來破秒。改成同時跑，語意不變：
+  // 傳話仍最多等 1.2 秒（從這裡就開始計時、跟其他前置重疊）、帳號沒好照樣擋在叫號前、
+  // 點數不足照樣不佔席位。
+  const _relayReady = developmentDirectCall ? null : Promise.race([
+    LiveVoice.prepareRelay().catch(() => {}),
+    new Promise(resolve => setTimeout(resolve, 1200)),
+  ]);
   if (typeof FaceIdle !== 'undefined' && !FaceIdle.active) FaceIdle.start();   // 進頁已在播就延續、不重啟（免重播招呼）
   if (developmentDirectCall) {
     setCallDialing(true);
@@ -5019,11 +5101,15 @@ async function connectCall() {
       // A verified Auth session is not enough for Call Control: its durable
       // lease RPC also requires the account_members/person graph. Await the
       // idempotent bootstrap so a fresh login cannot race the first call.
-      const accountReady = await syncAccountBootstrap('create', { reason: 'call_preflight' });
-      if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');
-      // 跨月或年繳方案可能在這次通話前進入新點數週期；先向伺服器同步本期額度。
+      const _preflightT0 = performance.now();
       let creditState = null;
-      try { creditState = await refreshServerCredits(); } catch (e0) {}
+      // 帳號確認與點數同步並行（各自一趟網路來回，疊起來只花較慢那趟的時間）。
+      // 跨月或年繳方案可能在這次通話前進入新點數週期；點數照樣在叫號前同步完。
+      const [accountReady] = await Promise.all([
+        syncAccountBootstrap('create', { reason: 'call_preflight' }),
+        (async () => { try { creditState = await refreshServerCredits(); } catch (e0) {} })(),
+      ]);
+      if (!accountReady || !accountReady.ok) throw new Error('account_not_ready');
       const rawAvailableCredits = creditState && creditState.walletSummary && creditState.walletSummary.total;
       const availableCredits = Number(rawAvailableCredits);
       if (rawAvailableCredits !== null && rawAvailableCredits !== undefined && rawAvailableCredits !== '' && Number.isFinite(availableCredits)) {
@@ -5038,6 +5124,9 @@ async function connectCall() {
       // 按鈕與字幕一路維持「連線中…」直到真的進入撥號（Edward 2026-07-20 拍板）。
       // 例外＝真的滿載在排隊（Edward 2026-07-22 拍板 B 案）：排隊卡明講第幾位，這不是後台字眼、是誠實狀態。
       setCallPreflightPending(true);
+      // 傳話準備若還沒好，補等到 1.2 秒上限為止（多半已在上面並行期間完成＝零等待）
+      if (_relayReady) { try { await _relayReady; } catch (e0) {} }
+      voiceCallMark('preflight_parallel', 'pass', { ms: Math.round(performance.now() - _preflightT0) });
       voiceCallMark('gateway_requested', 'pass', { endpoint: CallControl.url() });
       const lease = await CallControl.acquire(typeof currentChar === 'string' ? currentChar : 'default');
       if (!lease || !lease.voice || !lease.voice.url || !lease.worker || !lease.worker.url) {
