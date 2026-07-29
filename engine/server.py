@@ -4586,11 +4586,29 @@ def _account_points_map(accounts):
     return points
 
 
+def _account_usage_minutes_map(accounts):
+    """每一戶的聊聊分鐘（總計＋本月）。查不到就回空 dict，前端顯示「—」而不是編一個 0。
+
+    來源是 credit_ledger 的實際扣點紀錄（1 點 = 1 分鐘），不是由使用事件推算的近 N 天分鐘——
+    「誰是大戶」問的是累積用量，近 30 天答不了。"""
+    account_ids = [a.get("accountId") for a in accounts if a.get("accountId")]
+    if not account_ids:
+        return {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            return backend.load_account_usage_minutes(account_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load per-account usage minutes", e)
+    return {}
+
+
 def _enrich_accounts_with_activity(accounts, days=30):
     """幫每個帳號補真資料：plan / usage（分鐘·最後活躍·事件數）/ status / points（持有點數）。
     單帳號 scoped（試營運鎖一戶）時把未歸戶事件併給唯一帳號、誠實不亂攤。"""
     index, unattributed = _account_activity_index(days=days)
     points_map = _account_points_map(accounts)
+    minutes_map = _account_usage_minutes_map(accounts)
     single = len(accounts) == 1
     for acct in accounts:
         aid = acct.get("accountId") or ""
@@ -4607,10 +4625,18 @@ def _enrich_accounts_with_activity(accounts, days=30):
         voice = round(agg["voiceMinutes"], 1)
         avatar = round(agg["avatarMinutes"], 1)
         acct["plan"] = _normalize_account_plan(agg["plan"])
+        # windowMinutes ＝ 近 N 天（由使用事件推算，看短期活躍）；
+        # lifetimeMinutes／monthMinutes ＝ 真正的聊聊分鐘帳（credit_ledger 每分鐘扣 1 點一筆），
+        # 用來看「誰是大戶」——那個問題要的是累積量，不是最近 30 天。
+        spend = minutes_map.get(aid) or {}
         acct["usage"] = {
             "totalMinutes": round(voice + avatar, 1),
+            "windowMinutes": round(voice + avatar, 1),
             "voiceMinutes": voice,
             "avatarMinutes": avatar,
+            "lifetimeMinutes": spend.get("totalMinutes"),
+            "monthMinutes": spend.get("monthMinutes"),
+            "minutesTruncated": bool(spend.get("truncated")),
             "eventCount": int(agg["eventCount"]),
             "lastActiveAt": agg["lastActiveAt"],
         }

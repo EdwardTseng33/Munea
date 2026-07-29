@@ -2038,6 +2038,50 @@ class SupabaseAdapter:
                 continue
         return balances
 
+    def load_account_usage_minutes(self, account_ids, month_prefix=None, limit=20000):
+        """每一戶的聊聊分鐘：總計 ＋ 本月 → {accountId: {"totalMinutes": n, "monthMinutes": n}}。
+
+        真實來源是 credit_ledger：通話每分鐘扣 1 點記一筆
+        （event_type=credits_consumed、feature=realtime_voice_avatar），所以「消耗點數」就是分鐘數。
+        不用 voice_sessions（表是空的）也不用 usage_ledger（它的 used 欄一直是 0、沒在累加）。
+
+        ⚠ 現在是一次撈流水回來在記憶體彙總。上線初期資料量小（幾十筆）沒問題，但這張表每分鐘
+        長一筆——大約每月幾萬筆之後就該改成資料庫端聚合（RPC）。撈到 limit 上限時回傳
+        truncated=True，呼叫端要老實標示數字可能不完整，不要假裝是全部。
+        """
+        ids = [aid for aid in (account_ids or []) if self._is_uuid(str(aid or ""))]
+        if not self.configured() or not ids:
+            return {}
+        rows = self._select(
+            "credit_ledger",
+            {
+                "account_id": f"in.({','.join(ids)})",
+                "event_type": "eq.credits_consumed",
+                "select": "account_id,amount,created_at",
+                "order": "created_at.desc",
+                "limit": str(int(limit)),
+            },
+        ) or []
+        month_prefix = month_prefix or time.strftime("%Y-%m", time.gmtime())
+        out = {aid: {"totalMinutes": 0, "monthMinutes": 0} for aid in ids}
+        for row in rows:
+            aid = row.get("account_id")
+            if aid not in out:
+                continue
+            try:
+                minutes = abs(float(row.get("amount") or 0))
+            except (TypeError, ValueError):
+                continue
+            out[aid]["totalMinutes"] += minutes
+            if str(row.get("created_at") or "").startswith(month_prefix):
+                out[aid]["monthMinutes"] += minutes
+        truncated = len(rows) >= int(limit)
+        for value in out.values():
+            value["totalMinutes"] = round(value["totalMinutes"], 1)
+            value["monthMinutes"] = round(value["monthMinutes"], 1)
+            value["truncated"] = truncated
+        return out
+
     def grant_free_signup_trial(self):
         """Atomically grant the one-time account signup trial in Postgres."""
         result = self._request(
