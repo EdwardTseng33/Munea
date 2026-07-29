@@ -84,7 +84,7 @@
       "path": "web/src/notify.js",
       "text": "早餐後",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-notification-platform.js"
     },
@@ -93,7 +93,7 @@
       "path": "web/src/notify.js",
       "text": "午餐後",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-notification-platform.js"
     },
@@ -102,7 +102,7 @@
       "path": "web/src/notify.js",
       "text": "晚餐後",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-notification-platform.js"
     },
@@ -111,7 +111,7 @@
       "path": "web/src/notify.js",
       "text": "睡前",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-notification-platform.js"
     },

@@ -165,7 +165,8 @@ for asset_regex in 'styles\.css' 'version\.js' 'auth\.js' 'app\.js'; do
 done
 
 if grep -Fq '登入暫時無法啟動' "$PACKAGED_APP_JS_PATH" \
-  || ! grep -Fq 'Google 登入失敗（${code}）' "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq "trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom })" "$PACKAGED_APP_JS_PATH" \
+  || ! grep -Fq "setAuthMessageState('unavailable', 'error')" "$PACKAGED_APP_JS_PATH" \
   || ! grep -Fq 'signInWithBrowserOAuth' "$PACKAGED_AUTH_JS_PATH" \
   || ! grep -Fq 'fallbackFrom: nativeCode' "$PACKAGED_AUTH_JS_PATH"; then
   echo "FAIL exported IPA is missing the current Google sign-in fallback or diagnostic bundle."

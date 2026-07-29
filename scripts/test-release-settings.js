@@ -141,7 +141,11 @@ expect(auth.includes("nativePlugin('GoogleSignIn')"), 'native Google plugin brid
 expect(auth.includes("provider: 'google'") && auth.includes('google_identity_token_missing'), 'native Google ID token is not exchanged with Supabase');
 expect(auth.includes('signInWithBrowserOAuth') && auth.includes("fallbackFrom: nativeCode"), 'native Google failure does not fall back to browser OAuth');
 expect(app.includes("auth_sign_in_fallback_started") && app.includes("auth_sign_in_failed"), 'Google sign-in fallback diagnostics are missing');
-expect(app.includes('Google 登入失敗（${code}）'), 'Google sign-in failure still hides the diagnostic code');
+expect(
+  app.includes("trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom })") &&
+  app.includes("setAuthMessageState('unavailable', 'error')"),
+  'localized Google sign-in failure does not retain the diagnostic code in telemetry'
+);
 expect(!app.includes('登入暫時無法啟動'), 'retired generic Google sign-in failure text remains in the App bundle');
 expect(auth.includes('signInWithIdToken'), 'native Apple ID token is not exchanged with Supabase');
 expect(infoPlist.includes('<string>munea</string>'), 'iOS OAuth callback URL scheme is missing');
