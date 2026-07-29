@@ -112,6 +112,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pass "Native auth, StoreKit, notification, and export copy is localized"
 
+Step "i18n font-scale surface coverage"
+& node scripts/test-i18n-font-scale-surface-gate.js
+if ($LASTEXITCODE -ne 0) {
+  throw "i18n font-scale surface coverage failed with exit code $LASTEXITCODE"
+}
+Pass "Reader-page conversions cannot bypass the App font-scale setting"
+
 Step "Chat engine profile is local runtime data"
 Invoke-PythonBlock @'
 import os, sys, tempfile
