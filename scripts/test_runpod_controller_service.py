@@ -20,6 +20,10 @@ def main() -> None:
     assert 'MUNEA_AVATAR_APP_KEY is required' in SERVICE
     assert 'RUNPOD_API_KEY is required' in SERVICE
     assert "await asyncio.to_thread(controller.run_once)" in SERVICE
+    # A bad startup config must surface via /health + logs and retry, not kill
+    # the asyncio task silently.
+    assert "_STARTUP_RETRY_SECONDS" in SERVICE
+    assert 'f"startup:' in SERVICE
     assert '"--min-instances", "1"' in DEPLOY
     assert '"--max-instances", "1"' in DEPLOY
     assert '"--no-cpu-throttling"' in DEPLOY

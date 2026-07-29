@@ -250,7 +250,21 @@ async function main() {
     console.log(`❌ ${FAILS.length} 項未過：` + FAILS.join("、"));
     process.exit(1);
   }
-  console.log("✅ 服務看門狗契約全過");
+    // 2026-07-29 告警分級：正式的大腦／聊聊倒了要叫得醒人（<!channel> 穿透手機免打擾），
+  // 其他安靜進頻道。原本兩種長一樣，結果半夜兩種都不會叫醒人。
+  const userFacingText = buildAlertText([{ name: "Brain 正式", detail: "500", url: "u", userFacing: true }]);
+  check("正式服務倒了會叫醒人（<!channel>）", userFacingText.includes("<!channel>"));
+  check("服務中斷訊息講清楚影響", userFacingText.includes("使用者現在打不通"));
+  const quietText = buildAlertText([{ name: "某周邊服務", detail: "500", url: "u" }]);
+  check("周邊服務異常不吵醒人（狼來了會讓人不理告警）", !quietText.includes("<!channel>"));
+  const bothDown = buildAlertText([
+    { name: "某周邊服務", detail: "500", url: "u" },
+    { name: "Voice 正式", detail: "500", url: "u", userFacing: true },
+  ]);
+  check("混合情況只要有一個使用者受影響就叫醒", bothDown.includes("<!channel>"));
+  check("正式大腦與正式聊聊都標成使用者受影響", TARGETS.filter((t) => t.userFacing).length === 2);
+
+console.log("✅ 服務看門狗契約全過");
 }
 
 main().catch((err) => {
