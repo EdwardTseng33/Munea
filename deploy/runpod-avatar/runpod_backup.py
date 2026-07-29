@@ -272,9 +272,39 @@ class RunPodProvider:
         return url
 
     def _create_named(self, ordinal: int) -> dict[str, Any]:
-        spec = podctl.build_pod_spec(require_template=True)
-        spec["name"] = f"{self.prefix}-{int(self.now())}-{ordinal:02d}"
-        return podctl.create_pod(spec=spec, require_template=True)
+        name = f"{self.prefix}-{int(self.now())}-{ordinal:02d}"
+        mapping = podctl.template_map()
+        if not mapping:
+            spec = podctl.build_pod_spec(require_template=True)
+            spec["name"] = name
+            return podctl.create_pod(spec=spec, require_template=True)
+
+        # Per-DC creation: each data center boots from the template whose
+        # image sits in its nearest registry mirror (25GB cross-continent
+        # pulls are what made 2026-07-23 cold starts take 9 minutes). A DC
+        # with no GPU stock falls through to the next; when every listed DC
+        # is dry, the optional global fallback trades a slower image pull
+        # for actually getting a card at all.
+        attempts: list[tuple[str, str | None]] = [
+            (dc, mapping.get(dc)) for dc in podctl.data_centers()
+        ]
+        if os.environ.get("MUNEA_RUNPOD_GLOBAL_FALLBACK", "1").strip() != "0":
+            attempts.append(("", None))
+        last_error: Exception | None = None
+        for data_center, template_id in attempts:
+            spec = podctl.build_pod_spec(
+                require_template=True, data_center=data_center, template_id=template_id
+            )
+            spec["name"] = name
+            try:
+                return podctl.create_pod(spec=spec, require_template=True)
+            except podctl.RunPodError as exc:
+                if not podctl.is_stockout_error(exc):
+                    raise
+                last_error = exc
+        raise BackupControllerError(
+            f"every configured RunPod data center is out of GPU stock for {name}: {last_error}"
+        )
 
     def ensure_ready_many(self, count: int, timeout_s: int, poll_s: int,
                           exclude_ids: set[str] | None = None) -> list[dict[str, Any]]:

@@ -468,6 +468,177 @@ def test_scale_up_batch_over_pool_self_heals_from_env():
         pass
 
 
+class _EnvPatch:
+    """Set env vars for one test and restore the previous values on exit."""
+
+    def __init__(self, **values):
+        self.values = values
+        self.saved = {}
+
+    def __enter__(self):
+        for key, value in self.values.items():
+            self.saved[key] = os.environ.get(key)
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        return self
+
+    def __exit__(self, *exc):
+        for key, value in self.saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def test_template_map_parsing_and_stockout_detection():
+    with _EnvPatch(MUNEA_RUNPOD_TEMPLATE_MAP="AP-JP-1=tpl-jp, EU-RO-1=tpl-eu"):
+        assert podctl.template_map() == {"AP-JP-1": "tpl-jp", "EU-RO-1": "tpl-eu"}
+    with _EnvPatch(MUNEA_RUNPOD_TEMPLATE_MAP=""):
+        assert podctl.template_map() == {}
+    with _EnvPatch(MUNEA_RUNPOD_TEMPLATE_MAP="garbage-without-equals"):
+        try:
+            podctl.template_map()
+            raise AssertionError("malformed map entry must fail loudly")
+        except podctl.RunPodError:
+            pass
+    assert podctl.is_stockout_error(podctl.RunPodError(
+        "RunPod API POST /pods failed: HTTP 500: There are no longer any "
+        "instances available with the requested specifications."
+    ))
+    # Live wording from the 2026-07-29 drill (adverb in the middle).
+    assert podctl.is_stockout_error(podctl.RunPodError(
+        'RunPod API POST /pods failed: HTTP 500: {"error":"create pod: '
+        'There are no instances currently available"}'
+    ))
+    # Balance exhaustion beats stockout even when the mixed per-GPU-type
+    # message contains both lines (2026-07-29 live): it must surface as a
+    # hard error naming the fix (add funds), not fall through DCs.
+    assert not podctl.is_stockout_error(podctl.RunPodError(
+        'HTTP 500: {"error":"create pod: There are no instances currently '
+        'available\nYour account balance is too low to rent a pod. Please '
+        'add funds to your account."}'
+    ))
+    assert not podctl.is_stockout_error(podctl.RunPodError("HTTP 401: unauthorized"))
+
+
+def _capture_creates(results):
+    """Fake podctl.create_pod recording each spec; raises queued errors."""
+    specs = []
+
+    def create(spec=None, require_template=True):
+        specs.append(spec)
+        outcome = results.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    return specs, create
+
+
+def test_per_dc_create_falls_through_to_stocked_dc():
+    with _EnvPatch(
+        MUNEA_RUNPOD_TEMPLATE_MAP="AP-JP-1=tpl-jp,EU-RO-1=tpl-eu",
+        MUNEA_RUNPOD_DATA_CENTERS="AP-JP-1,EU-RO-1",
+    ):
+        provider = rb.RunPodProvider("munea-vocaframe-backup", now=Clock())
+        specs, fake_create = _capture_creates([
+            podctl.RunPodError("no instances available"),
+            {"id": "pod-eu", "desiredStatus": "RUNNING"},
+        ])
+        original = podctl.create_pod
+        try:
+            podctl.create_pod = fake_create
+            pod = provider._create_named(1)
+        finally:
+            podctl.create_pod = original
+        assert pod["id"] == "pod-eu"
+        assert specs[0]["dataCenterIds"] == ["AP-JP-1"]
+        assert specs[0]["templateId"] == "tpl-jp"
+        assert specs[1]["dataCenterIds"] == ["EU-RO-1"]
+        assert specs[1]["templateId"] == "tpl-eu"
+        # The retry must stay the same named pod, not mint a second one.
+        assert specs[0]["name"] == specs[1]["name"]
+
+
+def test_per_dc_create_global_fallback_and_hard_failure():
+    env = dict(
+        MUNEA_RUNPOD_TEMPLATE_MAP="AP-JP-1=tpl-jp,EU-RO-1=tpl-eu",
+        MUNEA_RUNPOD_DATA_CENTERS="AP-JP-1,EU-RO-1",
+    )
+    stockout = podctl.RunPodError("no instances available")
+    with _EnvPatch(**env):
+        provider = rb.RunPodProvider("munea-vocaframe-backup", now=Clock())
+        specs, fake_create = _capture_creates([
+            stockout, stockout, {"id": "pod-any", "desiredStatus": "RUNNING"},
+        ])
+        original = podctl.create_pod
+        try:
+            podctl.create_pod = fake_create
+            pod = provider._create_named(1)
+        finally:
+            podctl.create_pod = original
+        assert pod["id"] == "pod-any"
+        # Global fallback: no DC pin, base template from env.
+        assert "dataCenterIds" not in specs[2]
+        assert specs[2]["templateId"] == "tpl-test"
+    with _EnvPatch(MUNEA_RUNPOD_GLOBAL_FALLBACK="0", **env):
+        provider = rb.RunPodProvider("munea-vocaframe-backup", now=Clock())
+        _, fake_create = _capture_creates([stockout, stockout])
+        original = podctl.create_pod
+        try:
+            podctl.create_pod = fake_create
+            try:
+                provider._create_named(1)
+                raise AssertionError("all-DC stockout must raise when fallback is off")
+            except rb.BackupControllerError:
+                pass
+        finally:
+            podctl.create_pod = original
+
+
+def test_per_dc_create_non_stock_error_raises_immediately():
+    with _EnvPatch(
+        MUNEA_RUNPOD_TEMPLATE_MAP="AP-JP-1=tpl-jp,EU-RO-1=tpl-eu",
+        MUNEA_RUNPOD_DATA_CENTERS="AP-JP-1,EU-RO-1",
+    ):
+        provider = rb.RunPodProvider("munea-vocaframe-backup", now=Clock())
+        specs, fake_create = _capture_creates([
+            podctl.RunPodError("HTTP 401: unauthorized"),
+        ])
+        original = podctl.create_pod
+        try:
+            podctl.create_pod = fake_create
+            try:
+                provider._create_named(1)
+                raise AssertionError("auth failure must not be retried across DCs")
+            except podctl.RunPodError:
+                pass
+        finally:
+            podctl.create_pod = original
+        assert len(specs) == 1
+
+
+def test_map_unset_keeps_legacy_single_create():
+    with _EnvPatch(MUNEA_RUNPOD_TEMPLATE_MAP=None,
+                   MUNEA_RUNPOD_DATA_CENTERS="AP-JP-1,EU-RO-1"):
+        provider = rb.RunPodProvider("munea-vocaframe-backup", now=Clock())
+        specs, fake_create = _capture_creates([
+            {"id": "pod-legacy", "desiredStatus": "RUNNING"},
+        ])
+        original = podctl.create_pod
+        try:
+            podctl.create_pod = fake_create
+            pod = provider._create_named(1)
+        finally:
+            podctl.create_pod = original
+        assert pod["id"] == "pod-legacy"
+        assert len(specs) == 1
+        assert specs[0]["dataCenterIds"] == ["AP-JP-1", "EU-RO-1"]
+        assert specs[0]["templateId"] == "tpl-test"
+
+
 def main():
     old = os.environ.get("MUNEA_RUNPOD_TEMPLATE_ID")
     os.environ["MUNEA_RUNPOD_TEMPLATE_ID"] = "tpl-test"
@@ -493,6 +664,11 @@ def main():
             test_thirty_call_burst_scales_in_bounded_batches,
             test_scale_up_registration_failure_rolls_back_entire_batch,
             test_scale_up_batch_over_pool_self_heals_from_env,
+            test_template_map_parsing_and_stockout_detection,
+            test_per_dc_create_falls_through_to_stocked_dc,
+            test_per_dc_create_global_fallback_and_hard_failure,
+            test_per_dc_create_non_stock_error_raises_immediately,
+            test_map_unset_keeps_legacy_single_create,
         ]
         for test in tests:
             test()

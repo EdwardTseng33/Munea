@@ -447,7 +447,7 @@ class MonitorCycleTests(unittest.TestCase):
         self.assertEqual(after_recovery["recovered"], [])
         self.assertEqual(recurrence["sent"], ["queue_depth_nonzero"])
         self.assertEqual(len(delivered), 3)
-        self.assertIn("[RECOVERED]", delivered[1]["text"])
+        self.assertIn("已恢復", delivered[1]["text"])
 
     def test_lifecycle_state_survives_monitor_recreation(self) -> None:
         class Client:
@@ -472,6 +472,91 @@ class MonitorCycleTests(unittest.TestCase):
             )
             self.assertEqual(second.run_once()["suppressed"], ["queue_depth_nonzero"])
             self.assertEqual(len(delivered), 1)
+
+
+class AutoRetireTests(unittest.TestCase):
+    """Containment behind the alarm: dead rows get terminated, not re-alerted."""
+
+    @staticmethod
+    def _result_with_workers(workers: list[dict]) -> monitor.PollResult:
+        return monitor.PollResult(
+            health={
+                "ok": True,
+                "mode": "durable",
+                "durable_ready": True,
+                "snapshot": {"workers": workers},
+            },
+            metrics={},
+        )
+
+    def _monitor(self, workers, retired, fail=False, **kwargs):
+        outer = self
+
+        class Client:
+            def poll(self) -> monitor.PollResult:
+                return outer._result_with_workers(workers)
+
+            def retire_worker(self, worker_id: str) -> None:
+                if fail:
+                    raise RuntimeError("HTTP 503")
+                retired.append(worker_id)
+
+        return monitor.GatewayMonitor(
+            Client(), monitor.ObserveOnlyNotifier(), clock=lambda: NOW, **kwargs
+        )
+
+    def test_unhealthy_and_long_stale_worker_is_retired_once(self) -> None:
+        stale_at = dt.datetime.fromtimestamp(NOW - 3600, dt.timezone.utc).isoformat()
+        workers = [{
+            "worker_id": "glows-old", "url": "https://old", "status": "unhealthy",
+            "last_heartbeat_at": stale_at,
+        }]
+        retired: list[str] = []
+        report = self._monitor(workers, retired).run_once()
+        self.assertEqual(report["auto_retired"], ["glows-old"])
+        self.assertEqual(retired, ["glows-old"])
+
+    def test_ready_worker_is_never_retired_even_when_stale(self) -> None:
+        stale_at = dt.datetime.fromtimestamp(NOW - 7200, dt.timezone.utc).isoformat()
+        workers = [{
+            "worker_id": "glows-main", "url": "https://main", "status": "ready",
+            "last_heartbeat_at": stale_at,
+        }]
+        retired: list[str] = []
+        report = self._monitor(workers, retired).run_once()
+        self.assertEqual(report["auto_retired"], [])
+        self.assertEqual(retired, [])
+
+    def test_recently_unhealthy_worker_is_left_alone(self) -> None:
+        recent = dt.datetime.fromtimestamp(NOW - 300, dt.timezone.utc).isoformat()
+        workers = [{
+            "worker_id": "glows-blip", "url": "https://blip", "status": "unhealthy",
+            "last_heartbeat_at": recent,
+        }]
+        retired: list[str] = []
+        report = self._monitor(workers, retired).run_once()
+        self.assertEqual(report["auto_retired"], [])
+
+    def test_disabled_by_non_positive_threshold(self) -> None:
+        stale_at = dt.datetime.fromtimestamp(NOW - 7200, dt.timezone.utc).isoformat()
+        workers = [{
+            "worker_id": "glows-old", "url": "https://old", "status": "unhealthy",
+            "last_heartbeat_at": stale_at,
+        }]
+        retired: list[str] = []
+        report = self._monitor(workers, retired, auto_retire_seconds=0).run_once()
+        self.assertEqual(report["auto_retired"], [])
+        self.assertEqual(retired, [])
+
+    def test_retire_failure_is_reported_not_raised(self) -> None:
+        stale_at = dt.datetime.fromtimestamp(NOW - 7200, dt.timezone.utc).isoformat()
+        workers = [{
+            "worker_id": "glows-old", "url": "https://old", "status": "unhealthy",
+            "last_heartbeat_at": stale_at,
+        }]
+        report = self._monitor(workers, [], fail=True).run_once()
+        self.assertEqual(report["auto_retired"], [])
+        self.assertIn("glows-old", report["auto_retire_errors"])
 
 
 class ObserveModeTests(unittest.TestCase):

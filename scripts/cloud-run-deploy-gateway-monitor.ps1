@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$ProjectId = "gen-lang-client-0229303523",
   [string]$Region = "asia-east1",
   [string]$Service = "munea-gateway-monitor",
@@ -6,6 +6,13 @@ param(
   [string]$GatewayUrl = "https://munea-call-control-fiu65jd4da-de.a.run.app",
   [string]$AdminKeySecret = "munea-gateway-admin-key",
   [string]$SlackWebhookSecret = "munea-slack-alert-webhook",
+  # 2026-07-29: STATUS 125 defense line 2 (worker clock-skew probing) ships
+  # armed by default -- monitor.py only probes each worker's /health for
+  # clock skew when MUNEA_APP_KEY is bound. Pass -NoWorkerClockProbe to opt
+  # out. (ASCII comment on purpose: non-ASCII inside param() breaks
+  # Windows PowerShell 5.1 parsing of the defaults.)
+  [string]$AvatarAppKeySecret = "munea-avatar-app-key",
+  [switch]$NoWorkerClockProbe,
   [int]$IntervalSeconds = 60,
   [switch]$Notify,
   [switch]$DryRun
@@ -37,6 +44,11 @@ $secretBindings = "MUNEA_GATEWAY_ADMIN_KEY=$($AdminKeySecret):latest"
 if ($Notify) {
   $secretBindings += ",MUNEA_SLACK_ALERT_WEBHOOK=$($SlackWebhookSecret):latest"
 }
+if (-not $NoWorkerClockProbe) {
+  & $gcloud.Source secrets describe $AvatarAppKeySecret --project $ProjectId --format="value(name)" 2>$null | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Required Secret Manager secret is missing: $AvatarAppKeySecret" }
+  $secretBindings += ",MUNEA_APP_KEY=$($AvatarAppKeySecret):latest"
+}
 $argsList = @(
   "run", "deploy", $Service,
   "--source", $source,
@@ -57,8 +69,11 @@ $argsList = @(
   "--no-allow-unauthenticated",
   "--quiet"
 )
-if (-not $Notify) {
-  $argsList += @("--remove-secrets", "MUNEA_SLACK_ALERT_WEBHOOK")
+$removeSecrets = @()
+if (-not $Notify) { $removeSecrets += "MUNEA_SLACK_ALERT_WEBHOOK" }
+if ($NoWorkerClockProbe) { $removeSecrets += "MUNEA_APP_KEY" }
+if ($removeSecrets.Count -gt 0) {
+  $argsList += @("--remove-secrets", ($removeSecrets -join ","))
 }
 
 Write-Host "Deploying $Service (notify=$notifyValue)" -ForegroundColor Cyan
