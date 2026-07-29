@@ -151,12 +151,23 @@ assert(!/authEmailInput|authEmailBtn|電子信箱登入|寄登入信/.test(authS
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'Opening auth sheet must not focus an input or open the keyboard');
 
+// 健康數據誠實層：蘋果不會告訴 App 讀取被拒絕，所以「有沒有資料」只能看真的讀到什麼，
+// 不能看使用者按過連接鍵（munea.devicesOn）。讀不到卻把「穩定/正常」標籤秀出來 = 沒有根據的生理宣稱。
+const healthSource = fs.readFileSync('web/src/health.js', 'utf8');
+const mmdev = html.match(/window\.MMDEV = function\(\)\{[\s\S]*?\n\};/)?.[0] || '';
+assert(mmdev, 'Status page must keep the health honesty layer (MMDEV)');
+assert(/metricStates/.test(mmdev) && /metricStates/.test(healthSource), 'Health honesty layer must render from per-metric read results');
+assert(/hide\('bpChip'\)/.test(mmdev) && /hide\('hrChip'\)/.test(mmdev), 'Blood-pressure and heart-rate chips must be hidden when the metric was not read');
+assert(!/^\s*var has = !!localStorage\.getItem\('munea\.devicesOn'\);[\s\S]*?if\(has\)\{[^}]*forEach\(show\)/m.test(mmdev), 'Health chips must not be shown just because the connect button was tapped');
+assert(/hasAnyValue/.test(healthSource) && /r\.empty/.test(app), 'Connecting Apple Health with nothing readable must be reported honestly, not promised as syncing');
+assert(!/predicate: nil/.test(fs.readFileSync('ios/App/App/HealthPlugin.swift', 'utf8')), 'Latest vitals must be time-bounded so stale readings are not shown as today');
+
 const subscriptionSheet = html.match(/<div class="reader-page sub-page" id="planModal">([\s\S]*?)<div class="modal-mask" id="visitModal">/)?.[1] || '';
-assert(subscriptionSheet.includes('會員月點數') && subscriptionSheet.includes('每期重發，不累積'), 'Subscription plans must explain that monthly credits do not roll over');
+assert(subscriptionSheet.includes('會員月點數') && subscriptionSheet.includes('每月重發，不留到下個月'), 'Subscription plans must explain that monthly credits do not roll over');
 assert(subscriptionSheet.includes('加購點數') && subscriptionSheet.includes('可累積，不會過期'), 'Subscription plans must distinguish durable purchased credits');
-assert((subscriptionSheet.match(/當期有效・不累積/g) || []).length === 2, 'Every paid plan credit allowance must show its non-rollover label');
+assert((subscriptionSheet.match(/當月有效・不留到下個月/g) || []).length === 2, 'Every paid plan credit allowance must show its non-rollover label');
 const pointsPane = subscriptionSheet.match(/<div id="subPoints"[\s\S]*?<\/div>\s*<\/div>\s*<div class="plan-confirm-bar"/)?.[0] || '';
-assert(pointsPane.includes('會員月點數') && pointsPane.includes('每期重發，不累積'), 'Points purchase pane must explain monthly-credit expiry');
+assert(pointsPane.includes('會員月點數') && pointsPane.includes('每月重發，不留到下個月'), 'Points purchase pane must explain monthly-credit expiry');
 assert(pointsPane.includes('加購點數') && pointsPane.includes('可累積，不會過期'), 'Points purchase pane must explain purchased-credit retention');
 assert(pointsPane.includes('扣點順序') && pointsPane.includes('先扣月點數，再扣加購'), 'Points purchase pane must explain credit deduction order');
 assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {'), 'Credit rule explanation must have dedicated readable styling');
