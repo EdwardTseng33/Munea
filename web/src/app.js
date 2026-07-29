@@ -9332,7 +9332,11 @@ function init() {
   function applyFontScale() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     const step = FONT_STEPS.find(x => x[0] === cur) || FONT_STEPS[0];
-    document.querySelectorAll('.screen .pad, .modal').forEach(el => { el.style.zoom = step[2]; });
+    // .reader-page 也要跟著放大。2026-07-29 就診摘要從 .modal 改成子頁後，
+    // 它就掉出這個選擇器＝使用者選了「特大」卻完全沒變大——而這一頁正是最需要
+    // 放大的一頁（長輩在診間拿著唸給醫生聽）。順帶把通知中心、條款那幾個子頁
+    // 一起納入，它們本來也一直沒被縮放到。
+    document.querySelectorAll('.screen .pad, .modal, .reader-page').forEach(el => { el.style.zoom = step[2]; });
     const row = $('#fontNow');
     if (row) row.textContent = muneaT(FONT_LABEL_KEYS[step[0]], step[1]) + ' ›';
   }

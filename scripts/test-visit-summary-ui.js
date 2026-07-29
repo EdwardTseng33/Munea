@@ -104,6 +104,22 @@ expect(/if \(!q \|\| !q\.askedAt\) return true;/.test(app),
   '①g 清理時把「還沒問的」也清掉了');
 ok('①g 只留 60 天，但還沒問的問題不會被清掉');
 
+/* ①h 字級設定必須套得到這一頁。
+   2026-07-29 回歸：把 #reportModal 從 .modal 改成 .reader-page 之後，
+   applyFontScale 的選擇器（.screen .pad, .modal）就選不到它——使用者選了
+   「特大」卻完全沒變大，而這正是最需要放大的一頁（長輩在診間唸給醫生聽）。
+   註：zoom **不會**改變 computed font-size，所以量 font-size 判斷不出來，
+   要看的是選擇器有沒有涵蓋 .reader-page。 */
+const fontScaleFn = app.slice(app.indexOf('function applyFontScale()'), app.indexOf('function markFontOpt'));
+expect(fontScaleFn.length > 100, '①h 找不到 applyFontScale，這條測試已失效需重寫');
+expect(/querySelectorAll\([^)]*\.reader-page/.test(fontScaleFn),
+  '①h applyFontScale 沒有涵蓋 .reader-page＝就診摘要不會跟著字級設定放大');
+expect(/\.modal/.test(fontScaleFn), '①h 順手把 .modal 弄丟了，其他彈窗會不再放大');
+// 版型本身也要是 reader-page，兩者要一起成立才有意義
+expect(html.includes('class="reader-page sub-page" id="reportModal"'),
+  '①h 版型不是 reader-page，這條與 ①b 已經不一致');
+ok('①h 字級設定涵蓋 reader-page 子頁（特大真的會變大）');
+
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
   '疑似', '診斷', '嚴重', '正常值', '標準值'];
