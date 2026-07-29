@@ -2922,13 +2922,21 @@ const LiveVoice = {
   // 一通累積 2 次＝這條線不可靠，退回本地播放（聲音穩定優先，臉可能慢半拍——
   // 跟伺服器端同一個取捨：長輩主要用聽的）。每次斷續都回報後台，之後不用截圖就有數據。
   _sameLineFallBackNow(reason) {
+    // 2026-07-29 深夜 Edward 真機（1.0.46 · 22:15 通）抓到第一版的錯：這裡原本只把
+    // 同線那軌靜音、聲音改走手機播——但**臉還在雲端自己的時鐘上繼續演**，聲音跟嘴
+    // 從此兩個時鐘、越走越歪（「查詢後嘴巴慢慢對不上」）；切換瞬間兩條出聲路的音量
+    // 也不同（「忽大忽小」）。教訓：**切聲音就要一起收臉**——不留一張說謊的嘴。
+    // 改為整套走 Avatar._fallbackVoiceOnly（收掉活臉、換待機立繪、掛提示、標記同線退回），
+    // 跟「影像凍住救不回」同一條已驗證的降級路。
     this._sameLineFellBack = true;
-    // 退回本地播放的同時把同線那軌靜音——不然臉機晚點醒過來、兩邊一起出聲＝回答重疊（7/11 真機教訓）
-    try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
-    try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
-    try { Avatar._diagNote('同線退回本地(' + reason + ')', true); } catch (e) {}
-    try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
     try { trackProductEvent('sameline_fellback', { reason: String(reason || '') }); } catch (e) {}
+    try { Avatar._diagNote('同線退回本地(' + reason + ')→臉一起收、換待機', true); } catch (e) {}
+    try { Avatar._fallbackVoiceOnly('sameline_' + String(reason || 'stutter')); } catch (e) {
+      // 後備（降級路本身出錯時至少把聲音顧好）：靜音同線那軌、防兩邊一起出聲（7/11 教訓）
+      try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e2) {}
+      try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e2) {}
+      try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e2) {}
+    }
   },
   _armSameLineStutterWatch() {
     if (this._slStutterT) return;
