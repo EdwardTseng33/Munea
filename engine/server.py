@@ -7616,6 +7616,25 @@ def _resolve_admin_target_identity(account_id):
     }
 
 
+def _find_admin_account(account_id):
+    """只確認帳號存在、順便拿名字——不要求它有 primaryPerson。
+
+    跟 _resolve_admin_target_identity 分開兩支（2026-07-29）：那支要組出「可切換的資料身分」，
+    所以沒有 persons 資料列就回 None。發點數／改方案／延長天數確實需要那個身分，但
+    「標記為測試帳號」跟「刪除測試帳號」只認 accountId。
+    演習腳本留下的孤兒帳號正好沒有 persons 列——照舊路走，這兩個動作對它們永遠回
+    account_not_found，等於清不掉；上線前巡後台就是卡在這裡。"""
+    account_id = str(account_id or "").strip()
+    if not account_id:
+        return None
+    try:
+        found = admin_accounts_summary({"query": account_id, "limit": 5, "includeTest": True}).get("accounts") or []
+    except Exception as e:
+        log_fallback_exception("find admin account", e)
+        return None
+    return next((a for a in found if a.get("accountId") == account_id), None)
+
+
 def admin_grant_credits_response(data, headers=None):
     """後台手動發點給指定帳號。單次上限 2000 點，防手滑，每次都寫稽核，
     記誰、何時、對誰、多少、為什麼、發放前後餘額。點數一律進加購錢包，
@@ -7882,7 +7901,9 @@ def admin_set_test_account_flag_response(data, headers=None):
     if raw_flag is None:
         raw_flag = data.get("is_test_account")
     is_test = truthy(raw_flag)
-    target = _resolve_admin_target_identity(account_id)
+    # 用 _find_admin_account（只認 accountId）而不是 _resolve_admin_target_identity——
+    # 後者要求帳號有 persons 資料列，演習腳本留下的孤兒帳號沒有，會被誤判成「查無此帳號」而標不起來。
+    target = _find_admin_account(account_id)
     if not target:
         return {"ok": False, "error": {"code": "account_not_found"}}
     backend = data_backend()
@@ -7923,7 +7944,7 @@ def admin_delete_test_account_response(data, headers=None):
     account_id = str(data.get("accountId") or data.get("account_id") or "").strip()
     if not account_id:
         return {"ok": False, "error": {"code": "account_id_required"}}
-    target = _resolve_admin_target_identity(account_id)
+    target = _find_admin_account(account_id)
     account_name = (target or {}).get("accountName") or ""
     backend = data_backend()
     if not backend.enabled():
