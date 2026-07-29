@@ -15,13 +15,20 @@ const end = source.indexOf(endMarker);
 assert.ok(start >= 0 && end > start, 'could not locate the IPA i18n binary gate');
 const gate = source.slice(start + startMarker.length, end);
 assert.match(gate, /exit 1/, 'the IPA i18n binary gate must fail closed');
+assert.match(gate, /catalog-manifest\.json/, 'the binary gate must follow the release manifest');
 assert.match(
   gate,
-  /REQUIRED_IOS_LOCALIZATIONS=\("zh-Hant" "en" "ja" "es"\)/,
-  'the binary gate must require all four supported iOS localizations',
+  /binaryLocalizationEnabled/,
+  'the binary gate must only ship release-enabled binary localizations',
 );
 
-const requiredLocales = ['zh-Hant', 'en', 'ja', 'es'];
+const manifest = JSON.parse(
+  fs.readFileSync('web/src/i18n/catalog-manifest.json', 'utf8'),
+);
+const requiredLocales = manifest.locales
+  .filter((entry) => entry.binaryLocalizationEnabled)
+  .map((entry) => entry.nativeLocale);
+assert.deepEqual(requiredLocales, ['zh-Hant']);
 
 function gitBashPath() {
   if (process.platform !== 'win32') return 'bash';
@@ -49,6 +56,7 @@ function runGate(options = {}) {
   const wrapper = [
     'set -euo pipefail',
     'APP_PATH="$1"',
+    `MUNEA_REQUIRED_IOS_LOCALIZATIONS='${requiredLocales.join('\n')}'`,
     `MUNEA_TEST_BUNDLE_LOCALES='${JSON.stringify(bundleLocales)}'`,
     `MUNEA_TEST_MISSING_KEY='${options.missingKey || ''}'`,
     'plutil() {',
@@ -81,13 +89,13 @@ assert.equal(
 );
 assert.match(complete.stdout, /GATE_PASS/);
 
-const missingFile = runGate({ missingLocaleFile: 'ja' });
+const missingFile = runGate({ missingLocaleFile: 'zh-Hant' });
 assert.equal(missingFile.status, 1);
-assert.match(missingFile.stdout, /missing binary localization: ja/);
+assert.match(missingFile.stdout, /missing binary localization: zh-Hant/);
 
-const missingDeclaration = runGate({ bundleLocales: ['zh-Hant', 'en', 'ja'] });
+const missingDeclaration = runGate({ bundleLocales: [] });
 assert.equal(missingDeclaration.status, 1);
-assert.match(missingDeclaration.stdout, /missing binary localization: es/);
+assert.match(missingDeclaration.stdout, /missing binary localization: zh-Hant/);
 
 const missingUsageCopy = runGate({ missingKey: 'NSHealthShareUsageDescription' });
 assert.equal(missingUsageCopy.status, 1);
@@ -96,4 +104,4 @@ assert.match(
   /localization zh-Hant is missing NSHealthShareUsageDescription/,
 );
 
-console.log('PASS: IPA export rejects missing four-locale resources and usage copy');
+console.log('PASS: IPA export rejects missing release-enabled localizations and usage copy');
