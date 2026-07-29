@@ -192,5 +192,37 @@ class AdminAccountSummaryFieldTests(unittest.TestCase):
         self.assertTrue(out["owner"]["emailIsPrivateRelay"])
 
 
+
+class OrphanAccountLookupTests(unittest.TestCase):
+    """孤兒帳號（沒有 persons 資料列）也要標記得到、刪得掉。
+
+    真踩過（2026-07-29）：標記測試帳號跟刪除帳號都先走 _resolve_admin_target_identity，
+    那支要組出「可切換的資料身分」，沒有 primaryPerson 就回 None——於是演習腳本留下的
+    孤兒帳號永遠回 account_not_found，清不掉，而錯誤訊息看起來像帳號根本不存在。
+    """
+
+    def setUp(self):
+        os.environ.setdefault("GEMINI_API_KEY", "orphan-account-lookup-test-key")
+        import server
+        self.server = server
+
+    def test_account_without_primary_person_is_found(self):
+        summary = {"accountId": ACCOUNT_ID, "accountName": "Queue burst drill",
+                   "primaryPerson": {"id": "", "displayName": ""}}
+        with patch.object(self.server, "admin_accounts_summary",
+                          return_value={"accounts": [summary]}):
+            found = self.server._find_admin_account(ACCOUNT_ID)
+            identity = self.server._resolve_admin_target_identity(ACCOUNT_ID)
+        self.assertIsNotNone(found)
+        self.assertEqual(found["accountName"], "Queue burst drill")
+        # 對照組：舊那支照樣回 None（發點數／改方案確實需要資料身分，不該放寬）
+        self.assertIsNone(identity)
+
+    def test_wrong_account_id_still_rejected(self):
+        summary = {"accountId": "other-id", "accountName": "別人家"}
+        with patch.object(self.server, "admin_accounts_summary",
+                          return_value={"accounts": [summary]}):
+            self.assertIsNone(self.server._find_admin_account(ACCOUNT_ID))
+
 if __name__ == "__main__":
     unittest.main()

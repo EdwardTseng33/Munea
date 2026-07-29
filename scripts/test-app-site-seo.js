@@ -82,7 +82,7 @@ const locales = [
 const localeUrl = (dir) => (dir ? `https://munea.net/${dir}` : "https://munea.net/");
 
 const sitemap = read("sitemap.xml");
-const sitemapUrls = [...locales.map((l) => localeUrl(l.dir))];
+const sitemapUrls = [...locales.map((l) => localeUrl(l.dir)), "https://munea.net/solutions.html"];
 for (const url of sitemapUrls) {
   assert.match(sitemap, new RegExp(`<loc>${url.replaceAll(".", "\\.")}</loc>`));
 }

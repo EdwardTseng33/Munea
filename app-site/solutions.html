@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-en="Munea Solutions · Smart Pickup, Home Dispenser, AI Care">沐寧 Munea 解決方案｜智慧取藥櫃・居家給藥機・AI用藥照護</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/paining-icon.png" type="image/png">
+<meta name="description" content="沐寧（Munea）解決方案：藥局、醫院、家庭——把同一套照護閉環，調成最適合你的樣子。智慧取藥櫃、居家給藥機、AI用藥照護，高齡照護全程有藥師把關。">
+<meta property="og:title" content="沐寧 Munea 解決方案｜智慧取藥櫃・居家給藥機・AI用藥照護">
+<meta property="og:description" content="藥局、醫院、家庭——Munea 把同一套照護閉環，調成最適合你的樣子。">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:site_name" content="Munea">
+<meta property="og:url" content="https://munea.net/solutions.html">
+<meta property="og:image" content="https://munea.net/assets/og-cover-munea-20260630.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://munea.net/assets/og-cover-munea-20260630.jpg">
+<link rel="canonical" href="https://munea.net/solutions.html">
+<meta name="theme-color" content="#3AA8A0">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<style>
+  :root{
+    --cream:#FAF7F2; --surface:#ffffff; --mint:#E8F2EE; --mint-2:#DCEDE6;
+    --teal:#3AA8A0; --teal-d:#2E8A83; --teal-dd:#236C66;
+    --coral:#F4A261; --coral-d:#E08B45;
+    --ink:#33403D; --muted:#6B7B76; --line:#E7E0D6;
+    --shadow:0 18px 40px -22px rgba(46,138,131,.30);
+    --shadow-sm:0 8px 24px -16px rgba(46,138,131,.28);
+    --r:26px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Noto Sans TC","Poppins",sans-serif;background:var(--cream);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  h1,h2,h3,.en{font-family:"Poppins","Noto Sans TC",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+  a{text-decoration:none;color:inherit}
+  .eyebrow{font-family:"Poppins";font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-d)}
+  .btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:16px;padding:15px 28px;border-radius:100px;border:none;cursor:pointer;transition:.25s;font-family:inherit}
+  .btn-coral{background:var(--coral);color:#fff;box-shadow:0 12px 26px -12px rgba(224,139,69,.7)}
+  .btn-coral:hover{background:var(--coral-d);transform:translateY(-2px)}
+  .btn svg{width:18px;height:18px}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(250,247,242,.82);backdrop-filter:blur(12px);border-bottom:1px solid rgba(231,224,214,.7)}
+  nav{display:flex;align-items:center;justify-content:space-between;height:74px}
+  .logo{font-family:"Poppins";font-weight:700;font-size:22px;letter-spacing:-.025em;display:inline-flex;align-items:center;gap:11px;color:var(--ink)}
+  .logo-mark{width:30px;height:30px;flex-shrink:0;display:inline-grid;place-items:center;filter:drop-shadow(0 3px 8px rgba(244,162,97,.28))}
+  .logo-mark svg,.logo-mark img{width:100%;height:100%;overflow:visible;object-fit:contain;transition:transform 1.1s cubic-bezier(.5,.1,.2,1)}
+  .logo:hover .logo-mark svg,.logo:hover .logo-mark img{transform:rotate(360deg)}
+  .logo-word{line-height:1}
+  .logo-word b{color:var(--teal);font-weight:700}
+  .logo-zh{font-family:"Noto Sans TC","Poppins",sans-serif;font-size:.78em;font-weight:700;letter-spacing:.04em;margin-left:9px;opacity:.95}
+  @media(prefers-reduced-motion:reduce){.logo:hover .logo-mark svg,.logo:hover .logo-mark img{transform:none}}
+  .navlinks{display:flex;gap:30px;align-items:center}
+  .navlinks a{font-size:15px;font-weight:500;color:var(--muted);transition:.2s}
+  .navlinks a:hover,.navlinks a.active{color:var(--ink)}
+  .navlinks a.active{color:var(--teal-d);font-weight:700}
+  .nav-cta{background:var(--teal);color:#fff!important;padding:10px 20px;border-radius:100px;font-weight:600;font-size:14px}
+  .nav-cta:hover{background:var(--teal-d)}
+  .lang-switch{position:relative;margin-left:2px;font-family:"Poppins",sans-serif}
+  .lang-trigger{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--mint-2);color:var(--teal-d);font-family:inherit;font-weight:600;font-size:13px;padding:9px 12px;border-radius:100px;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s;line-height:1}
+  .lang-trigger:hover{border-color:var(--teal);background:var(--mint)}
+  .lang-trigger .globe{width:15px;height:15px;flex-shrink:0}
+  .lang-trigger .chev{width:11px;height:11px;opacity:.65;transition:transform .25s}
+  .lang-switch[data-open="true"] .lang-trigger{border-color:var(--teal);background:var(--mint);box-shadow:0 8px 18px -10px rgba(46,138,131,.55)}
+  .lang-switch[data-open="true"] .lang-trigger .chev{transform:rotate(180deg)}
+  .lang-menu{position:absolute;top:calc(100% + 9px);right:0;min-width:148px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:2px;opacity:0;transform:translateY(-7px) scale(.96);transform-origin:top right;pointer-events:none;transition:opacity .2s,transform .2s cubic-bezier(.2,.8,.2,1);z-index:80}
+  .lang-switch[data-open="true"] .lang-menu{opacity:1;transform:none;pointer-events:auto}
+  .lang-opt{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;font-family:inherit;font-weight:600;font-size:14px;color:var(--muted);padding:10px 12px;border-radius:11px;cursor:pointer;text-align:left;transition:background .18s,color .18s}
+  .lang-opt:hover{background:var(--mint);color:var(--ink)}
+  .lang-opt .tick{width:7px;height:7px;border-radius:50%;background:transparent;flex-shrink:0;transition:background .2s,box-shadow .2s}
+  .lang-opt .sub{margin-left:auto;font-size:11px;font-weight:600;color:#b9c6c1;letter-spacing:.04em}
+  .lang-opt[aria-selected="true"]{color:var(--teal-d);background:var(--mint)}
+  .lang-opt[aria-selected="true"] .tick{background:var(--coral);box-shadow:0 0 0 4px rgba(244,162,97,.18)}
+  .nav-cluster{display:flex;align-items:center;gap:14px}
+  .menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;border-radius:10px;transition:background .2s}
+  .menu-btn:hover{background:var(--mint)}
+  @media(max-width:900px){
+    .menu-btn{display:grid;place-items:center}
+    .navlinks{position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;gap:4px;background:rgba(250,247,242,.98);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);box-shadow:var(--shadow);padding:12px 22px 18px;opacity:0;transform:translateY(-12px);pointer-events:none;transition:opacity .22s,transform .22s}
+    header[data-menu="open"] .navlinks{opacity:1;transform:none;pointer-events:auto}
+    .navlinks a:not(.nav-cta){display:block;padding:13px 6px;font-size:16px;color:var(--ink);border-bottom:1px solid var(--line)}
+    .navlinks a.nav-cta{display:flex;justify-content:center;width:100%;margin-top:10px;padding:14px;font-size:15.5px}
+  }
+
+  /* page hero */
+  .phead{padding:70px 0 50px;text-align:center;position:relative;overflow:hidden}
+  .phead .blob{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,#d3ebe3,transparent 70%);top:-120px;left:50%;transform:translateX(-50%);opacity:.6}
+  .phead h1{font-size:clamp(34px,5vw,54px);font-weight:700;letter-spacing:-.01em;margin:14px 0 16px;position:relative}
+  .phead p{color:var(--muted);font-size:18px;max-width:620px;margin:0 auto;position:relative}
+  .tabs{display:flex;gap:10px;justify-content:center;margin-top:34px;flex-wrap:wrap;position:relative}
+  .tab{display:inline-flex;align-items:center;gap:9px;background:#fff;border:1.5px solid var(--line);border-radius:100px;padding:11px 22px;font-weight:600;font-size:15px;color:var(--muted);cursor:pointer;transition:.2s}
+  .tab:hover{border-color:var(--teal);color:var(--teal-d)}
+  .tab.on{background:var(--teal);border-color:var(--teal);color:#fff}
+  .tab svg{width:18px;height:18px}
+
+  /* sol block */
+  .solblk{padding:64px 0;border-top:1px solid var(--line)}
+  .solblk:nth-child(even){background:var(--mint)}
+  .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:54px;align-items:center}
+  .sgrid.flip .txt{order:2}
+  .tagrow{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .tagrow .ic{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;flex-shrink:0}
+  .tagrow .lbl{font-family:"Poppins";font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-d);font-weight:600}
+  .solblk h2{font-size:clamp(26px,3.6vw,38px);font-weight:700;line-height:1.28;letter-spacing:-.01em;margin-bottom:22px}
+  .blist{display:flex;flex-direction:column;gap:14px;margin-bottom:28px}
+  .blist .item{display:flex;gap:13px;align-items:flex-start;background:#fff;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+  .solblk:nth-child(even) .blist .item{background:#fff}
+  .blist .chk{width:26px;height:26px;border-radius:8px;background:var(--mint);color:var(--teal-d);display:grid;place-items:center;flex-shrink:0;margin-top:2px}
+  .blist .chk svg{width:16px;height:16px}
+  .blist .item b{font-weight:700;font-size:15.5px}
+  .blist .item p{color:var(--muted);font-size:14px;margin-top:2px}
+  .svisual .ph{background:repeating-linear-gradient(135deg,#eef4f1,#eef4f1 12px,#e3eee8 12px,#e3eee8 24px);border-radius:var(--r);aspect-ratio:4/3.6;display:grid;place-items:center;color:#9bb0a9;font-family:"Poppins",monospace;font-size:13px;text-align:center;padding:20px;box-shadow:var(--shadow);border:6px solid #fff}
+  .solblk:nth-child(even) .svisual .ph{background:repeating-linear-gradient(135deg,#fff,#fff 12px,#f1f7f4 12px,#f1f7f4 24px)}
+  .svisual .ph{position:relative;overflow:hidden}
+  .svisual .ph>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .ph-note{font-size:12px;line-height:1.55;color:var(--muted);text-align:center;margin:10px 6px 0;opacity:.85}
+  @media(max-width:880px){.sgrid{grid-template-columns:1fr;gap:30px}.sgrid.flip .txt{order:0}}
+
+  .reveal{opacity:0;transform:translateY(26px);transition:.7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
+
+  /* form */
+  .formsec{padding:80px 0}
+  .formbox{background:#fff;border-radius:34px;box-shadow:var(--shadow);overflow:hidden;display:grid;grid-template-columns:.85fr 1.15fr}
+  .formside{background:linear-gradient(160deg,var(--teal-d),var(--teal));color:#fff;padding:48px 40px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+  .formside .glow{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(244,162,97,.4),transparent 70%);bottom:-100px;left:-60px}
+  .formside h2{font-size:30px;font-weight:700;margin-bottom:16px;position:relative;line-height:1.35}
+  .formside p{opacity:.92;font-size:15.5px;position:relative;margin-bottom:26px}
+  .formside .pt{display:flex;align-items:center;gap:11px;margin-bottom:14px;font-size:15px;position:relative}
+  .formside .pt .ic{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex-shrink:0}
+  .formside .pt svg{width:18px;height:18px}
+  .formfields{padding:44px 42px}
+  .formfields h3{font-size:22px;font-weight:700;margin-bottom:6px}
+  .formfields .lead{color:var(--muted);font-size:15px;margin-bottom:24px}
+  .frow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:7px;color:var(--ink)}
+  .field input,.field select,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;font-family:inherit;font-size:15px;color:var(--ink);background:var(--cream);transition:.2s}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(58,168,160,.13)}
+  .field textarea{resize:vertical;min-height:96px}
+  .chips{display:flex;gap:9px;flex-wrap:wrap}
+  .chip{border:1.5px solid var(--line);background:var(--cream);border-radius:100px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:.18s;color:var(--muted)}
+  .chip.on{background:var(--mint);border-color:var(--teal);color:var(--teal-dd)}
+  .formfields .btn-coral{width:100%;justify-content:center;margin-top:8px}
+  .note{font-size:12.5px;color:var(--muted);text-align:center;margin-top:14px}
+  @media(max-width:820px){.formbox{grid-template-columns:1fr}.frow{grid-template-columns:1fr}}
+
+  footer{background:#2b3733;color:#cfd8d5;padding:40px 0}
+  .foot-bottom{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:#9aa8a3;align-items:center}
+  footer .logo{color:#fff;font-size:20px}
+  footer .logo-mark{filter:drop-shadow(0 3px 10px rgba(244,162,97,.4))}
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap">
+    <a class="logo" href="index.html" aria-label="Munea 首頁">
+      <span class="logo-mark" aria-hidden="true"><img src="assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </a>
+    <div class="nav-cluster">
+      <div class="navlinks">
+      <a class="nav-app" href="https://app.munea.net/" target="_blank" rel="noopener" data-en="Munea App">Munea App</a>
+      <a href="solutions.html" class="active" data-en="Solutions">解決方案</a>
+      <a href="index.html#mission" data-en="About">關於我們</a>
+      <a class="nav-cta" href="#form" data-en="Book a Consultation">預約合作洽詢</a>
+      </div>
+      <div class="lang-switch" data-open="false">
+        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換語言 / Switch language">
+          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+          <span class="lang-current">中文</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" aria-label="語言 / Language">
+          <button class="lang-opt" type="button" role="option" data-lang="zh"><span class="tick"></span>中文<span class="sub">繁中</span></button>
+          <button class="lang-opt" type="button" role="option" data-lang="en"><span class="tick"></span>English<span class="sub">EN</span></button>
+        </div>
+      </div>
+      <button class="menu-btn" type="button" aria-label="選單" aria-expanded="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33403D" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </nav>
+</header>
+
+<section class="phead">
+  <div class="blob"></div>
+  <div class="wrap">
+    <div class="eyebrow">Solutions</div>
+    <h1 data-en="Tailored to who you are">為不同的對象，量身設計</h1>
+    <p data-en="Pharmacy, hospital, home — Munea tunes the same care loop to fit you best.">藥局、醫院、家庭——Munea 把同一套照護閉環，調成最適合你的樣子。</p>
+    <div class="tabs">
+      <a class="tab on" href="#pharmacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span data-en="For pharmacies">給藥局</span></a>
+      <a class="tab" href="#hospital"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg><span data-en="For hospitals">給醫院</span></a>
+      <a class="tab" href="#home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg><span data-en="For families &amp; care">給家庭・長照</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- PHARMACY -->
+<section class="solblk" id="pharmacy">
+  <div class="wrap">
+    <div class="sgrid">
+      <div class="txt reveal">
+        <div class="tagrow"><div class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="26" height="26"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg></div><span class="lbl" data-en="For Pharmacy · digital upgrade for chain pharmacies">For Pharmacy · 連鎖藥局的數位升級</span></div>
+        <h2 data-en="Turn your pharmacy from selling medicine into caring for people">讓你的藥局，從「賣藥」變成「照顧人」</h2>
+        <div class="blist">
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="24/7 smart pickup that sets you apart">24 小時智慧取藥，讓你和對手不一樣</b><p data-en="Pickup after hours and on weekends — a service that stands out.">下班後、假日也能取藥，差異化你的服務。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="Higher refill return rates and member loyalty">慢箋回領率與會員黏著提升</b><p data-en="Proactive reminders for refills and check-ups keep customers coming back.">主動提醒該領藥、該回診，把客人留住。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="AI handles repetitive questions, easing the pharmacist's load">AI 接掉重複諮詢，藥師更省力</b><p data-en="Free pharmacists from the repetitive to do work that truly needs expertise.">把藥師從重複的事裡解放出來，做真正需要專業的事。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="Service extends from the patient to their whole family">服務從病人本人，擴大到他的家人</b><p data-en="The family care circle links one member to an entire household.">家屬照護圈讓一個會員，連結整個家庭。</p></div></div>
+        </div>
+        <a class="btn btn-coral" href="#form"><span data-en="Book a pharmacy consultation">預約藥局合作洽詢</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+      <div class="svisual reveal"><div class="ph"><img src="assets/pharmacy-scene.webp" alt="病人在藥局智慧取藥櫃前憑碼自助取藥，藥師在後把關" loading="lazy" width="1400" height="1050"></div><p class="ph-note" data-en="Device shown is a concept render, not the final product — contact us for product details.">※ 設備為參考示意圖，非正式產品外觀，歡迎洽詢索取產品說明。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOSPITAL -->
+<section class="solblk" id="hospital">
+  <div class="wrap">
+    <div class="sgrid flip">
+      <div class="svisual reveal"><div class="ph"><img src="assets/hospital-scene.webp" alt="病人在醫院門診智慧取藥櫃前自助取藥" loading="lazy" width="1400" height="1050"></div><p class="ph-note" data-en="Device shown is a concept render, not the final product — contact us for product details.">※ 設備為參考示意圖，非正式產品外觀，歡迎洽詢索取產品說明。</p></div>
+      <div class="txt reveal">
+        <div class="tagrow"><div class="ic" style="background:#fbe7d2;color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="26" height="26"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg></div><span class="lbl" data-en="For Hospital · self-service for outpatient prescriptions">For Hospital · 門診慢箋的自助化</span></div>
+        <h2 data-en="No more long queues at the pharmacy<br>window just to pick up medicine">讓病人不再為了領藥，<br>在藥局窗口排長隊</h2>
+        <div class="blist">
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="Self-service prescription pickup, available 24/7">慢箋自助取藥、24 小時可取</b><p data-en="Relieves window queues; patients come and go freely.">釋放窗口排隊壓力，病人來去自如。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="Free up pharmacist capacity for clinical work">釋放藥師人力，去做臨床</b><p data-en="Put staff where pharmacists' judgment is truly needed.">把人力投入真正需要藥師專業判斷的地方。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="AI guidance at pickup improves medication safety">取藥當下 AI 衛教，提升用藥安全</b><p data-en="Explains what matters in plain language.">用聽得懂的話，把該注意的事說清楚。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="Pharmacists stay in the process — compliant">藥師全程在流程中，合規</b><p data-en="Dispensing and oversight remain the pharmacist's; Munea is the tool.">調劑與把關仍由藥師負責，Munea 是工具。</p></div></div>
+        </div>
+        <a class="btn btn-coral" href="#form"><span data-en="Book a hospital consultation">預約醫院合作洽詢</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOME -->
+<section class="solblk" id="home">
+  <div class="wrap">
+    <div class="sgrid">
+      <div class="txt reveal">
+        <div class="tagrow"><div class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="26" height="26"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></div><span class="lbl" data-en="For Family · safe medication at home">For Family · 居家用藥安全</span></div>
+        <h2 data-en="Peace of mind for you, working away —<br>knowing your parents take their meds on time">讓在外打拼的你，<br>安心爸媽有沒有按時吃藥</h2>
+        <div class="blist">
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="Timed reminders + AI companionship">定時提醒 ＋ AI 陪伴</b><p data-en="The home dispenser reminds on time and chats with your elder.">居家給藥機準時提醒、陪長輩說說話。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="If a dose is missed, you're notified">忘記吃會通知你</b><p data-en="Missed doses are synced to family right away.">沒有按時服藥，第一時間同步給家人。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="Medication data for the doctor's reference">用藥數據可給醫師參考</b><p data-en="Gives check-up conversations real grounding.">讓回診時的對話，有真實依據。</p></div></div>
+          <div class="item"><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div><b data-en="An extra layer of protection for elders living alone">獨居長輩多一層守護</b><p data-en="So home alone no longer means no one watching.">讓「一個人在家」不再等於「沒人看著」。</p></div></div>
+        </div>
+        <a class="btn btn-coral" href="#form"><span data-en="Explore the home solution">了解居家方案</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+      <div class="svisual reveal"><div class="ph"><img src="assets/family-home-device.webp" alt="Munea 居家照護給藥機放在家中床頭，溫暖陪伴" loading="lazy" width="1400" height="1050"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FORM -->
+<section class="formsec" id="form">
+  <div class="wrap">
+    <div class="formbox reveal">
+      <div class="formside">
+        <div class="glow"></div>
+        <h2 data-en="Want to bring this care<br>to more people, together?">想一起把這份照顧，<br>帶給更多人嗎？</h2>
+        <p data-en="Leave your details and we'll reach out soon to arrange a suitable time.">留下資料，我們會盡快與你聯繫，安排一次合適的洽談。</p>
+        <div class="pt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span data-en="Pharmacist in the loop, compliant by design">藥師全程在迴路，合規設計</span></div>
+        <div class="pt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span data-en="A care loop that never closes">24 小時不打烊的照護閉環</span></div>
+        <div class="pt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span data-en="End-to-end service, from pharmacy to home">從藥局到家庭的完整服務</span></div>
+      </div>
+      <div class="formfields">
+        <h3 data-en="Partnership inquiry">合作洽詢</h3>
+        <p class="lead" data-en="Fill in the details below and we'll set up a time.">填寫以下資訊，我們會與你約一個時間。</p>
+        <form id="inquiryForm" action="https://api.web3forms.com/submit" method="POST">
+          <input type="hidden" name="access_key" value="b7802f74-48c6-451d-b3d7-0ea8f52961cf">
+          <input type="hidden" name="from_name" value="Munea 官網表單">
+          <input type="hidden" name="subject" value="Munea 官網・新合作洽詢">
+          <input type="hidden" name="redirect" value="https://munea.net/solutions.html?sent=1#form">
+          <input type="text" name="botcheck" style="display:none" tabindex="-1" autocomplete="off">
+          <input type="hidden" name="身分" value="藥局">
+          <div class="frow">
+            <div class="field"><label data-en="Name">姓名</label><input name="姓名" placeholder="你的稱呼" data-en-ph="Your name" required></div>
+            <div class="field"><label data-en="Organization / Company">單位／公司</label><input name="單位／公司" placeholder="例如：大樹藥局" data-en-ph="e.g. Great Tree Pharmacy"></div>
+          </div>
+          <div class="field"><label data-en="I am a">身分</label>
+            <div class="chips">
+              <span class="chip on" data-en="Pharmacy">藥局</span><span class="chip" data-en="Hospital">醫院</span><span class="chip" data-en="Facility">機構</span><span class="chip" data-en="Investor">投資人</span><span class="chip" data-en="Other">其他</span>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field"><label data-en="Email">Email（必填）</label><input name="email" type="email" placeholder="your@email.com" data-en-ph="your@email.com" required></div>
+            <div class="field"><label data-en="Phone (optional)">電話（選填）</label><input name="電話" type="tel" placeholder="手機或市話" data-en-ph="Mobile or landline"></div>
+          </div>
+          <div class="field"><label data-en="What you'd like to discuss">想談的內容</label><textarea name="想談的內容" placeholder="簡單描述你的需求或想了解的方案" data-en-ph="Briefly describe your needs or the solution you're interested in"></textarea></div>
+          <button class="btn btn-coral" type="submit"><span data-en="Send inquiry">送出洽詢</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <p class="note" data-en="We value your privacy; your details are used only for this inquiry.">我們重視你的隱私，資料僅用於本次合作聯繫。</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-bottom">
+    <div class="logo">
+      <span class="logo-mark" aria-hidden="true"><img src="assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </div>
+    <span data-en="© 2026 Munea · Care, always on.">© 2026 Munea · 把關心，一直開著。</span>
+    <a href="mailto:edwardt0303@gmail.com" style="color:#cfd8d5">edwardt0303@gmail.com</a>
+  </div>
+</footer>
+
+<script>
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  const roleField=document.querySelector('input[name="身分"]');
+  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');if(roleField) roleField.value=c.textContent.trim();});
+  const inquiryForm=document.getElementById('inquiryForm');
+  if(inquiryForm){
+    // On submit: set a unique subject (avoids Gmail threading), then let the native POST go to Web3Forms.
+    inquiryForm.addEventListener('submit', function(){
+      const nameEl=inquiryForm.querySelector('[name="姓名"]');
+      const subjEl=inquiryForm.querySelector('[name="subject"]');
+      const roleEl=document.querySelector('.chip.on');
+      const nm=(nameEl&&nameEl.value.trim())||'新洽詢';
+      if(subjEl) subjEl.value='Munea 官網洽詢｜'+nm+(roleEl?(' · '+roleEl.textContent.trim()):'');
+      const btn=inquiryForm.querySelector('.btn-coral'); const span=btn.querySelector('span[data-en]');
+      const t=(document.documentElement.lang==='en')?'Sending…':'送出中…';
+      if(span){span.textContent=t;} else {btn.textContent=t;}
+      // no preventDefault → page POSTs to Web3Forms, which redirects back to ?sent=1
+    });
+  }
+  // After Web3Forms redirects back, show a thank-you in place of the form.
+  if(/[?&]sent=1/.test(location.search)){
+    const ff=document.querySelector('.formfields');
+    if(ff){
+      const en=document.documentElement.lang==='en';
+      ff.innerHTML='<div style="text-align:center;padding:34px 10px">'
+        +'<div style="width:64px;height:64px;border-radius:50%;background:var(--mint);display:grid;place-items:center;margin:0 auto 18px"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#2E8A83" stroke-width="2.6"><path d="M20 6L9 17l-5-5"/></svg></div>'
+        +'<h3 style="font-size:23px;font-weight:700;margin-bottom:10px">'+(en?'Received — thank you!':'已收到，謝謝你！')+'</h3>'
+        +'<p style="color:var(--muted);font-size:15.5px;line-height:1.7">'+(en?'Your inquiry is in. We will be in touch with you soon.':'你的洽詢已送出，我們會盡快與你聯繫，安排一次合適的洽談。')+'</p>'
+        +'</div>';
+      const anchor=document.getElementById('form'); if(anchor) setTimeout(function(){anchor.scrollIntoView({behavior:'smooth',block:'center'});},200);
+    }
+  }
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on')}));
+
+  /* 中文 / English language switch (dropdown) */
+  (function(){
+    const KEY='careon-lang';
+    const sw=document.querySelector('.lang-switch');
+    const trigger=sw&&sw.querySelector('.lang-trigger');
+    const current=sw&&sw.querySelector('.lang-current');
+    const opts=sw?[...sw.querySelectorAll('.lang-opt')]:[];
+    const nodes=[...document.querySelectorAll('[data-en]')];
+    nodes.forEach(n=>{n._zh=n.innerHTML;});
+    const phNodes=[...document.querySelectorAll('[data-en-ph]')];
+    phNodes.forEach(n=>{n._zhPh=n.getAttribute('placeholder')||'';});
+    let lang='zh';
+    try{ if(localStorage.getItem(KEY)==='en') lang='en'; }catch(e){}
+    function setOpen(o){ if(!sw) return; sw.setAttribute('data-open',o?'true':'false'); if(trigger) trigger.setAttribute('aria-expanded',o?'true':'false'); }
+    function apply(l){
+      lang=l;
+      document.documentElement.lang=(l==='en')?'en':'zh-Hant';
+      nodes.forEach(n=>{n.innerHTML=(l==='en')?n.getAttribute('data-en'):n._zh;});
+      phNodes.forEach(n=>{n.setAttribute('placeholder',(l==='en')?n.getAttribute('data-en-ph'):n._zhPh);});
+      if(current) current.textContent=(l==='en')?'EN':'中文';
+      opts.forEach(o=>o.setAttribute('aria-selected',o.dataset.lang===l?'true':'false'));
+      try{localStorage.setItem(KEY,l);}catch(e){}
+    }
+    apply(lang);
+    if(trigger) trigger.addEventListener('click',(e)=>{e.stopPropagation();setOpen(sw.getAttribute('data-open')!=='true');});
+    opts.forEach(o=>o.addEventListener('click',()=>{apply(o.dataset.lang);setOpen(false);}));
+    document.addEventListener('click',(e)=>{ if(sw&&!sw.contains(e.target)) setOpen(false); });
+    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') setOpen(false); });
+  })();
+
+  /* mobile hamburger menu */
+  (function(){
+    const header=document.querySelector('header');
+    const btn=header&&header.querySelector('.menu-btn');
+    if(!header||!btn) return;
+    function setMenu(o){ header.setAttribute('data-menu',o?'open':'closed'); btn.setAttribute('aria-expanded',o?'true':'false'); }
+    setMenu(false);
+    btn.addEventListener('click',(e)=>{ e.stopPropagation(); setMenu(header.getAttribute('data-menu')!=='open'); });
+    header.querySelectorAll('.navlinks a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));
+    document.addEventListener('click',(e)=>{ if(!header.contains(e.target)) setMenu(false); });
+    window.addEventListener('resize',()=>{ if(window.innerWidth>900) setMenu(false); });
+  })();
+</script>
+</body>
+</html>

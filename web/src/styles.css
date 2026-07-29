@@ -1764,7 +1764,10 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 
 /* ===== 設定頁精修（Edward 7/4：單行、內頁選字級、條款 App 內閱讀） ===== */
 .set-row .sr-main { min-width: 0; }
-.set-row .sr-main small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+/* 原本是「不換行、超出就切掉」（Edward 7/4 拍板單行）。四語系上線後，
+   英文／西班牙文同一句長很多，單行等於把話講一半——測試員就抓到用藥提醒那行被切成「…」。
+   改成最多兩行：中文照樣一行（文案已寫短），其他語言折行而不是被切掉。 */
+.set-row .sr-main small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; overflow: hidden; }
 .set-row .sr-arrow { white-space: nowrap; flex-shrink: 0; }
 /* 加值卡三行各自單行 */
 .tu-card { display: flex; flex-direction: column; gap: 3px; align-items: center; }
