@@ -31,6 +31,12 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; min-height: 100%; }
+/* 通用保險（2026-07-29）：只要 JS 設了 hidden，就一定要真的消失。
+   瀏覽器預設的 [hidden]{display:none} 優先度比 class 低，任何 .foo{display:flex} 都會蓋掉它——
+   7/28 首頁「讓寧寧更認識你」那張卡的關閉 X 按了沒反應、四道顯示條件全失效，就是這個原因。
+   同類寫法在本檔還有好幾處（.sec-head / .chal-actions / .care-* 等都設了 display），
+   與其逐一補 [hidden] 規則，不如在這裡一次擋住，之後誰新增元件都不會再踩。 */
+[hidden] { display: none !important; }
 body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
 
 .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; flex-shrink: 0; }
@@ -39,6 +45,18 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
   width: 100%; max-width: 400px; margin: 0 auto; height: 100vh; max-height: 866px; min-height: 640px; position: relative; overflow: hidden; border-radius: var(--radius-xl);
   display: flex; flex-direction: column;
   background: var(--cream); /* 單一米黃底色（Edward 6/27：不要兩色漸層、薄荷綠留作點綴/其他模板底） */
+}
+/* 真的在手機上就填滿整個螢幕（Edward 2026-07-29 在 iPhone 16 Pro Max 上抓到）。
+   上面那組 max-width 400 / max-height 866 / 圓角是給電腦瀏覽器預覽用的「手機外框」外觀，
+   裝進大螢幕手機會露出四周底色跟圓角——實測 16 Pro Max(440x956) 左右各少 20px、上下少 45px，
+   16 Plus(430x932) 少 30/66，16 Pro(402x874) 少 2/8；16(393x852) 與 SE(375x667) 剛好在框內，
+   所以一直沒被發現。斷點取 520px：手機最寬 440，電腦視窗仍保留手機外框預覽。
+   height 寫兩次是為了舊版 Safari——不吃 dvh 的會用上一行的 vh。 */
+@media (max-width: 520px) {
+  .app-shell {
+    max-width: none; max-height: none; min-height: 0; border-radius: 0;
+    height: 100vh; height: 100dvh;
+  }
 }
 
 /* iOS 狀態列 */
@@ -469,6 +487,17 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 /* ===== 家庭任務卡（家人頁 · 合作型） ===== */
 .quest-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 16px 16px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
 .quest-empty { border: 1.5px dashed var(--line); border-radius: var(--radius-md); padding: 18px 16px; margin-bottom: 12px; text-align: center; font-size: 14px; color: var(--muted); line-height: 1.7; }
+/* 圈裡只有自己時的引導卡（Edward 2026-07-29）：這個狀態下整頁只該有一件事＝把家人找進來。
+   其他區塊（家庭活動／全家狀態）由 renderFamRoster 一起收起來。 */
+.fam-onboard { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 30px 22px; margin: 10px 0 4px; box-shadow: var(--shadow-sm); }
+.fam-onboard .fo-ico { width: 58px; height: 58px; border-radius: 18px; background: var(--mint); display: grid; place-items: center; color: var(--teal-d); }
+.fam-onboard .fo-ico .ic { width: 28px; height: 28px; }
+.fam-onboard b { font-family: var(--display); font-size: 19px; color: var(--ink); }
+.fam-onboard p { font-size: 14.5px; color: var(--muted); line-height: 1.7; margin: 0; }
+.fam-onboard .fo-btn { margin-top: 8px; min-height: 50px; padding: 0 30px; border-radius: 999px; border: none;
+  background: var(--teal); color: #fff; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer; }
 /* 發起人刪除鈕：卡片底部低調膠囊；點一下進「確認」紅色態、再點才刪（防誤刪）*/
 .qc-del { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
 .qc-del .ic { width: 15px; height: 15px; }

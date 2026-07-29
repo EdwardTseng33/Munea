@@ -124,7 +124,9 @@ assert(sendIndex > rewardIndex, 'Send invitation button must remain after the fo
 assert(!/#(?:chalModal\s+)?#?startChalBtn[^\{]*\{[^\}]*position\s*:\s*(?:sticky|fixed)/s.test(css), 'Send invitation button must scroll with form content');
 assert(!app.includes("$$('#chalModal .step-btn')"), 'Challenge stepper event handlers must stay removed');
 
-const familyActivitySection = html.match(/id="newChalBtn"[\s\S]*?<div class="sec-head"><div><h2>全家狀態/)?.[0] || '';
+// 2026-07-29：sec-head 加了 id（圈裡只有自己時要整區收起來），標籤不再是光禿禿的
+// <div class="sec-head">，這裡放寬成允許帶屬性——守的東西沒變，仍是「actEmpty 錨點必須還在」。
+const familyActivitySection = html.match(/id="newChalBtn"[\s\S]*?<div class="sec-head"[^>]*><div><h2>全家狀態/)?.[0] || '';
 assert(familyActivitySection.includes('id="actEmpty"'), 'Family activities must keep a real empty-state anchor');
 assert(!familyActivitySection.includes('class="quest-card'), 'Family activities must not ship hard-coded demo cards');
 assert(!html.includes('id="demoEventDate"') && !app.includes('fixDemoEventDate'), 'Retired demo activity dates must stay removed');

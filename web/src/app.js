@@ -3695,8 +3695,8 @@ function _muneaNotChattedTodayLine(now, ask) {
     const pill = _muneaPillStatusToday();
     if (pill) {
       const leads = [
-        pill.next.slot + '的藥吃了嗎，', '記得吃' + pill.next.slot + '的藥，', '別忘了' + pill.next.slot + '的藥，',
-        pill.next.slot + '該吃藥囉，', '藥還沒吃完，'
+        medSlotLabel(pill.next.slot) + '的藥吃了嗎，', '記得吃' + medSlotLabel(pill.next.slot) + '的藥，', '別忘了' + medSlotLabel(pill.next.slot) + '的藥，',
+        medSlotLabel(pill.next.slot) + '該吃藥囉，', '藥還沒吃完，'
       ];
       return leads[_muneaDayOfYear(now) % leads.length] + ask;
     }
@@ -3848,7 +3848,7 @@ function renderPillTask() {
   const next = slots.find(s => s.status !== 'taken' && s.status !== 'skipped');
   if (next) {
     title.textContent = '吃' + muneaSafeDisplayText(String(next.name).split(/\s+/)[0], '藥'); // 標題用短名、全名在用藥管理；短名守門（Edward 2026-07-15 事故）
-    sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
+    sub.textContent = medSlotLabel(next.slot) + ' · 今天 ' + doneN + '/' + total + ' 次';
     card.classList.remove('done');
   } else {
     title.textContent = '今天的藥都吃了';
@@ -4091,6 +4091,12 @@ function renderMedList() { renderMedSlots(); }
 const MED_SLOT_DEF = [
   ['早餐後', 'b', 30], ['午餐後', 'l', 30], ['晚餐後', 'd', 30], ['睡前', 's', -30]
 ];
+// 用藥時段的「畫面顯示名」（Edward 2026-07-29：直接寫餐別，不要寫飯前飯後——
+// 藥該飯前還飯後吃是醫生決定的，App 不該替使用者預設）。
+// 內部值維持「早餐後」等舊字串不動：那是用藥資料、推播、語音腦共用的代號，
+// 改掉會對不上使用者既有的藥單。所有給人看的地方一律走 medSlotLabel()。
+const MED_SLOT_LABEL = { '早餐後': '早餐', '午餐後': '中餐', '晚餐後': '晚餐', '睡前': '睡前' };
+function medSlotLabel(slot) { return MED_SLOT_LABEL[slot] || slot; }
 function medSlotTime(rtKey, offset) {
   let rt = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
   try { rt = Object.assign(rt, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) {}
@@ -4124,7 +4130,7 @@ function renderMedSlots() {
     const rows = inSlot.length
       ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + muneaSafeDisplayText(m.name, '藥') + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
       : '<div class="ms-empty">這個時段沒有藥</div>';
-    return '<div class="ms-group"><div class="ms-head"><b>' + slot + '</b>' +
+    return '<div class="ms-group"><div class="ms-head"><b>' + medSlotLabel(slot) + '</b>' +
       '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
       '<input type="time" class="ms-time" data-k="' + k + '" data-off="' + off + '" value="' + medSlotTime(k, off) + '" />' +
       '<button type="button" class="ms-tbtn" data-k="' + k + '" data-m="15">＋</button></span>' +
@@ -4409,7 +4415,7 @@ function handleMedicationChange(event) {
     source: dose.source || 'app',
   });
   // 家庭圈只分享服藥時段，不分享藥名，兼顧照護與用藥隱私。
-  pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot || '這次') + '服藥，' + cname() + '有看著');
+  pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot ? medSlotLabel(dose.slot) : '這次') + '服藥，' + cname() + '有看著');
 }
 function streakLine(n) {
   if (n >= 10) return '這個月有 <b>' + n + ' 天</b>準時吃藥，很穩，繼續保持';
@@ -6025,6 +6031,12 @@ function init() {
   function renderFamRoster() {
     const mem = loadCircle().filter(m => !m.self);
     FAM_ORDER = mem.map(m => m.name);
+    // 圈裡只有自己時（Edward 2026-07-29）：只留「把家人找進來」的引導，
+    // 家庭活動／全家狀態整組收起來——這時候「發起活動」點下去只會跳「圈裡還沒有家人」，是死路。
+    const _alone = mem.length === 0;
+    [['#famOnboard', _alone], ['#famActHead', !_alone], ['#famActBtns', !_alone],
+     ['#actEmpty', !_alone], ['#famHealthHead', !_alone], ['#healthList', !_alone]]
+      .forEach(([sel, show]) => { const el = $(sel); if (el) el.hidden = !show; });
     const fs = $('#famSwitch');
     if (fs) {
       const allBtn = fs.querySelector('[data-person="all"]');
@@ -6543,6 +6555,12 @@ function init() {
       if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); }
     }
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
+  });
+  // 引導卡的「邀請家人加入」：直接按既有的邀請鈕，沿用同一套守門
+  //（免費方案導升級、圈滿了給提示），不另開一條規則免得兩邊行為不一致。
+  if ($('#famOnboardInvite')) $('#famOnboardInvite').addEventListener('click', () => {
+    const inv = $('#famSwitch') && $('#famSwitch').querySelector('[data-person="invite"]');
+    if (inv) inv.click();
   });
   const healthList = $('#healthList');
   if (healthList) healthList.addEventListener('click', e => {
