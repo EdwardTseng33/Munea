@@ -64,9 +64,7 @@
     "ios:dev-profile:gateway": "node scripts/enable-ios-development-profile.mjs --gateway",
     "ios:package": "npm run ios:archive && npm run ios:export",
     "site:build": "node site-src/build.mjs",
-    "health:evidence": "python engine/health_evidence_freshness.py",
-    "site:sync-front-door": "node scripts/sync-front-door.mjs",
-    "site:check-front-door": "node scripts/sync-front-door.mjs --check"
+    "health:evidence": "python engine/health_evidence_freshness.py"
   },
   "dependencies": {
     "@capacitor/app": "8.1.0",
