@@ -38,9 +38,42 @@ expect(app.includes("item.dataset.task === 'visit'") && app.includes("openVisitS
 expect(app.includes("if ($('#visitSummaryRow'))"), '① 設定頁入口沒接');
 expect(html.includes('id="visitSummaryRow"'), '① 設定頁那一列不存在');
 // 每一個被綁的 id 都必須真的在 HTML 裡——這正是上一版沒人抓到的洞
-['rptExportBtn', 'rptPeriodTabs', 'rptDoneBtn', 'rptBody', 'rptPeriodLine', 'reportClose']
+['rptExportBtn', 'rptPeriodTabs', 'rptBody', 'rptPeriodLine', 'reportClose']
   .forEach(id => expect(html.includes('id="' + id + '"'), `① app.js 綁了 #${id}，但 HTML 裡沒有這個元素`));
 ok('① 入口與所綁元素全部存在（含上一版死因的回歸測試）');
+
+/* ①b 版型必須吃既有子頁規範（Edward 2026-07-29：「不要自己創一個新的」）*/
+const reportBlock = html.slice(html.indexOf('id="reportModal"') - 200, html.indexOf('id="fontModal"'));
+expect(/class="reader-page sub-page"[^>]*id="reportModal"/.test(html),
+  '①b 就診摘要不是 reader-page 子頁——又變回底部彈窗了');
+expect(!/modal-mask[^>]*id="reportModal"/.test(html), '①b 還掛著 modal-mask（彈窗遺留）');
+['nav-head', 'nav-back', 'nav-title', 'reader-scroll', 'seg']
+  .forEach(cls => expect(reportBlock.includes(cls), `①b 子頁少了既有規範元件 .${cls}`));
+// 渲染出來的內容也要用既有 class，不可以又長出一套自訂版型
+['set-section', 'set-list', 'set-row', 'reader-card']
+  .forEach(cls => expect(app.includes(`"${cls}` ) || app.includes(`'${cls}`) || app.includes(`class="${cls}`),
+    `①b 渲染沒有用既有 class .${cls}`));
+expect(!app.includes('rpt-sec') && !app.includes('rpt-q-n') && !app.includes('rpt-tl'),
+  '①b app.js 還在用改版前那套自訂 .rpt-* 版型');
+expect(!css.includes('.rpt-sec') && !css.includes('.rpt-addq'),
+  '①b styles.css 還留著改版前那套自訂 .rpt-* 樣式');
+ok('①b 版型吃既有子頁規範（nav-head／set-section／set-list／seg／reader-card）');
+
+/* ①c 「看完醫生了」整顆拿掉——這一頁是歷史資料，不是待辦事項 */
+expect(!html.includes('rptDoneBtn'), '①c「看完醫生了」還在版型裡');
+expect(!app.includes('rptDoneBtn'), '①c app.js 還綁著「看完醫生了」');
+expect(app.includes('autoArchiveCareQuestions'), '①c 拿掉按鈕後沒有接自動歸檔，問題會永遠提醒同一題');
+ok('①c 拿掉「看完醫生了」，改為看診日過了自動歸檔');
+
+/* ①d 開頁不得再出現「整理中」——資料在本機就先畫（Edward 2026-07-29）*/
+expect(app.includes('buildLocalVisitSummary'), '①d 沒有本機先組一份，開頁又會空白');
+expect(!app.includes("visit.preparing"), '①d 還留著「整理中…」那條路');
+expect(app.includes('timelinePending'), '①d 時間軸沒有「還在讀」狀態');
+expect(app.includes('timelineFailed'), '①d 時間軸沒有「讀不到」狀態');
+// 「還在讀」跟「沒事發生」必須是兩個不同狀態，講反了醫師會以為他這段期間都好好的
+expect(app.indexOf('visit.timelineLoading') > 0 && app.indexOf('visit.timelineEmpty') > 0,
+  '①d 讀取中與真的沒事共用同一句文案');
+ok('①d 開頁用本機資料先畫，不再有「整理中」');
 
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
@@ -124,10 +157,23 @@ for (const [locale, rule] of Object.entries(LOCALE_FORBIDDEN)) {
 }
 ok(`②-i18n 四語系目錄共 ${scannedCopy} 句文案都沒有判定字眼，且都帶免責聲明`);
 
-/* ②b 視覺也不得像醫療警報 */
-const rptCss = css.slice(css.indexOf('/* ── 就診摘要'), css.indexOf('@media print'));
-expect(!/red|#f00|#e0|crimson|--danger|--alert/i.test(rptCss),
-  '②b 摘要樣式用了紅色／警示色——看起來像醫療警報就等於在判讀');
+/* ②b 視覺也不得像醫療警報。
+   切片的結束點原本釘在 @media print，那條隨「一鍵匯出」改版拿掉了——
+   改釘下一個區塊的註解，並且**驗證切得到**，免得切片悄悄變成整份 CSS
+   （那樣這條會因為別的地方有紅色而亂紅，或反過來永遠通過）。 */
+const rptCssStart = css.indexOf('/* ── 就診摘要');
+const rptCssEnd = css.indexOf('/* 用藥時段清單 */', rptCssStart);
+expect(rptCssStart >= 0 && rptCssEnd > rptCssStart,
+  '②b 找不到就診摘要的樣式區塊，這條測試已失效需重寫');
+const rptCss = css.slice(rptCssStart, rptCssEnd);
+expect(rptCss.length < 4000, `②b 切片過大（${rptCss.length} 字元），應該只涵蓋就診摘要那一段`);
+// 用字界，否則 prefers-redUCED-motion 裡的 "reduced" 會被當成紅色（假警報）
+const alertColour = /\bred\b|\bcrimson\b|#f00\b|#e0[0-4]|--danger|--alert/i;
+expect(!alertColour.test(rptCss),
+  `②b 摘要樣式用了紅色／警示色——看起來像醫療警報就等於在判讀：${(rptCss.match(alertColour) || [''])[0]}`);
+// 反向自我檢查：這條規則本身要真的抓得到紅色，不然它只是裝飾
+expect(alertColour.test('color: var(--danger)') && alertColour.test('background: red;'),
+  '②b 警示色偵測失效，改壞了');
 ok('②b 摘要樣式沒有紅色或警示色');
 
 /* ③ 來源圖例（醫師要分辨可信度） */
@@ -163,12 +209,20 @@ expect(app.indexOf('renderVisitSummary(_rptLastSummary);') < app.indexOf('const 
   '⑦ 應先畫快照再背景更新，否則沒網路時畫面是空的');
 ok('⑦ 先畫快照、再背景更新（診間離線可用）');
 
-/* ⑧ 匯出：分享前警告 + PDF 走零套件的列印 */
-expect(app.includes('傳出去之後就收不回來'), '⑧ 匯出前沒有提醒健康資料不可回收');
-expect(app.includes('window.print()'), '⑧ PDF 沒有走瀏覽器內建列印');
-expect(css.includes('@media print'), '⑧ 缺列印樣式，印出來會夾雜 App 的殼');
+/* ⑧ 匯出＝按一下就跳系統分享（Edward 2026-07-29：「不需要顯示一堆提醒或流程」）。
+   原本那句「傳出去就收不回來」的 confirm 與 1/2/3 的 prompt 選單都由他判定拿掉——
+   系統分享面板本身就是那個確認動作，再多問一次只是擋路。 */
+const exportBlock = app.slice(app.indexOf("$('#rptExportBtn')"), app.indexOf("// 發起挑戰面板"));
+expect(exportBlock.length > 200, '⑧ 找不到匯出的綁定區塊，這條測試已失效需重寫');
+expect(!/window\.confirm/.test(exportBlock), '⑧ 匯出又出現 confirm 問答——他要的是按一下就好');
+expect(!/window\.prompt/.test(exportBlock), '⑧ 匯出又出現 prompt 選單——他要的是按一下就好');
+expect(exportBlock.includes('exportVisitSummaryPdf'), '⑧ 匯出沒有直接產 PDF');
+expect(exportBlock.includes("dataset.busy"), '⑧ 連按兩下會跑兩份，沒有防連點');
+expect(app.includes('sharePdf'), '⑧ 沒有走原生外掛的 PDF＋系統分享面板');
 expect(!/jspdf|html2canvas|pdfmake/i.test(app), '⑧ 引入了外部 PDF 套件——違反零支出與零新依賴');
-ok('⑧ 匯出有隱私提醒、PDF 零套件、列印樣式齊備');
+// window.print() 在 iOS WKWebView 完全無效，App 內絕不能走那條
+expect(!exportBlock.includes('window.print()'), '⑧ App 內又走了 window.print()——在 WKWebView 按了沒反應');
+ok('⑧ 匯出一鍵到系統分享、零套件、無多餘問答');
 
 /* ⑨ 後端契約對得上 */
 expect(app.includes("brainPost('/visit-summary'"), '⑨ 前端沒有呼叫 /visit-summary');

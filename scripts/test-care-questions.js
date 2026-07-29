@@ -127,11 +127,27 @@ expect(CARE_Q_MAX > 0 && CARE_Q_MAX_LEN > 0, '常數沒有正確導出，後面�
   r = await aiAddCareQuestion({ question: long });
   expect(r.ok === true, `A-6 過長問題應截斷而非拒收，實得 error=${r.error}`);
   expect(r.question.length === CARE_Q_MAX_LEN, `A-6 應截到 ${CARE_Q_MAX_LEN} 字，實得 ${r.question.length}`);
+  // 上限管的是「還沒問的」，不是總筆數——問過的要留著當病史（A-5 已經鎖了這點），
+  // 用總筆數當上限會逼著刪歷史。
+  const results = [];
   for (let i = 0; i < CARE_Q_MAX + 5; i += 1) {
-    await aiAddCareQuestion({ question: `第${i}個要問醫生的問題是什麼呢` });
+    results.push(await aiAddCareQuestion({ question: `第${i}個要問醫生的問題是什麼呢` }));
   }
-  expect(loadCareQuestions().length <= CARE_Q_MAX, `A-6 清單不得超過上限 ${CARE_Q_MAX}，實得 ${loadCareQuestions().length}`);
-  console.log(`PASS A-6 長度截到 ${CARE_Q_MAX_LEN} 字、清單上限 ${CARE_Q_MAX} 筆`);
+  expect(openCareQuestions().length <= CARE_Q_MAX,
+    `A-6 未問清單不得超過上限 ${CARE_Q_MAX}，實得 ${openCareQuestions().length}`);
+  // 滿了要**回報**，不可以默默擠掉最舊的——她答應要記住，偷偷刪掉就是毀約
+  const full = results.filter(r => r && r.error === 'question_list_full');
+  expect(full.length > 0, 'A-6 清單滿了應回 question_list_full，不可靜默丟棄');
+  expect(!results.some(r => r && r.ok && r.count > CARE_Q_MAX), 'A-6 不得有超過上限還回 ok 的呼叫');
+  console.log(`PASS A-6 長度截到 ${CARE_Q_MAX_LEN} 字、未問上限 ${CARE_Q_MAX} 題且滿了會明說`);
+
+  /* A-7 滿了不可以默默擠掉最舊的那一題（她說會記住，結果偷偷刪＝毀約） */
+  const beforeFull = openCareQuestions().map(q => q.text);
+  await aiAddCareQuestion({ question: '這題應該要被擋下來而不是擠掉別人' });
+  const afterFull = openCareQuestions().map(q => q.text);
+  expect(JSON.stringify(beforeFull) === JSON.stringify(afterFull),
+    'A-7 清單滿了再記一題，既有題目不可以被擠掉');
+  console.log('PASS A-7 清單滿了擋在門口，不動既有題目');
 
   /* ─── Part B · 契約：跨檔接線的 source-level 鎖 ──────────────── */
 

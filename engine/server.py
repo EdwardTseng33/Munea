@@ -231,8 +231,11 @@ def log_fallback_exception(context, exc):
     if any(k in (context or "") for k in ("chat reply", "TTS", "opener", "generate", "model")):
         try:
             ai_health.record_failure("%s: %s" % (context, exc))
-        except Exception:
-            pass
+        except Exception as record_exc:
+            # 這裡不能再呼叫 log_fallback_exception（會自己叫自己），但也不能默不作聲——
+            # 這一行吞掉的正是「健康監控記不下來」這件事，安靜吞掉就等於上面那句
+            # 「不然巡邏永遠報綠燈」被它自己破壞。直接寫 log，不繞回來。
+            LOGGER.warning("ai_health.record_failure failed for %s: %s", context, record_exc)
     LOGGER.warning(
         "%s failed; using prototype fallback: %s",
         context,
