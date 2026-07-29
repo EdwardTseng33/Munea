@@ -39,9 +39,15 @@ function Resolve-Python {
   foreach ($candidate in @("python3", "python", "python.exe")) {
     $pythonCommand = Get-Command $candidate -ErrorAction SilentlyContinue
     if ($pythonCommand) {
-      & $pythonCommand.Source --version | Out-Null
-      if ($LASTEXITCODE -eq 0) {
-        return $pythonCommand.Source
+      try {
+        & $pythonCommand.Source --version | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+          return $pythonCommand.Source
+        }
+      } catch {
+        # Windows App Execution Aliases can resolve through Get-Command even
+        # when the sandbox cannot execute them. Keep looking for python.exe.
+        continue
       }
     }
   }
@@ -98,6 +104,13 @@ for p in ["engine/characters.json"]:
     print(f"{p} OK")
 '@
 Pass "Static JSON files parse"
+
+Step "iOS native localization contract"
+& node scripts/test-native-ios-localizations.js
+if ($LASTEXITCODE -ne 0) {
+  throw "iOS native localization contract failed with exit code $LASTEXITCODE"
+}
+Pass "Native auth, StoreKit, notification, and export copy is localized"
 
 Step "Chat engine profile is local runtime data"
 Invoke-PythonBlock @'
