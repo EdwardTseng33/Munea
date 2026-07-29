@@ -489,7 +489,7 @@
       { label:"守護中", value:n(escalations), sub:"安全警示待處理", star:escalations>0, tone:"alert", info:"有安全守護警示、建議優先確認" },
     ]);
     if(!accts.length){
-      html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——正式開放註冊後，這裡會列出真實用戶。`:"還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
+      html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——有真實用戶註冊後，這裡就會列出來。`:"還沒有真實用戶——有人註冊後，這裡會列出每一家。"));
       return html;
     }
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
