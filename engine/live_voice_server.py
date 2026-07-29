@@ -60,6 +60,19 @@ MAX_SESSION_RECONNECTS = int(os.environ.get("MUNEA_VOICE_MAX_RECONNECTS", "8"))
 LOOKUP_CUE_TAIL_MS = 80
 LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
 
+# 送一塊聲音去雲端臉，最多等多久（2026-07-29）。
+#
+# 為什麼要有這個：同一份聲音要送兩個地方——手機（使用者在聽，必須）和雲端臉
+# （臉會動，加分）。原本兩個都是直接 await，臉那條線一慢就會**回頭卡住聲音**：
+# 下一塊聲音要等臉這塊送完才輪得到，使用者就聽到「卡一下／吃掉一個字」。
+# 臉機是租來的 GPU、跨網路，慢是常態不是意外。
+#
+# 程式碼原本的註解寫著「連不上/斷了都不能拖累語音對話」——立意是對的，但只擋了
+# 「斷掉」（例外），沒擋「變慢」（阻塞）。這個常數把「慢」也擋掉：超過就放掉臉那條線，
+# 聲音永遠優先。150 毫秒的取法：正常送出遠小於此（寫進緩衝就回來），
+# 又遠小於手機端 600 毫秒的播放水庫，就算真的等滿一次也不會被聽出來。
+FACE_SEND_TIMEOUT_S = float(os.environ.get("MUNEA_VOICE_FACE_SEND_TIMEOUT_S", "0.15"))
+
 
 def verify_family_relay_proof(relay):
     if not isinstance(relay, dict):
@@ -1616,8 +1629,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         await ws.send(chunk)
         fw = st.get("face_ws")
         if fw is not None:
+            # 同主聲道（2026-07-29）：臉那條線慢就放掉，不能回頭卡住聲音。
             try:
-                await fw.send(chunk)
+                await asyncio.wait_for(fw.send(chunk), timeout=FACE_SEND_TIMEOUT_S)
+            except asyncio.TimeoutError:
+                st["face_ws"] = None
+                _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S, path="forward")
+                asyncio.create_task(_face_audio_close(fw))
             except Exception:
                 st["face_ws"] = None
 
@@ -2046,8 +2064,16 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         await ws.send(data)
                         fw = st.get("face_ws")
                         if fw is not None:
+                            # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）。
+                            # 加了逾時（2026-07-29）：臉那條線慢的時候，原本會回頭卡住下一塊
+                            # 聲音＝使用者聽到「卡一下」。臉是加分、聲音是必須，所以慢就放掉臉，
+                            # 這通剩下的時間臉不動、但聲音全程順（App 下次送 on 訊息會重連）。
                             try:
-                                await fw.send(data)   # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）
+                                await asyncio.wait_for(fw.send(data), timeout=FACE_SEND_TIMEOUT_S)
+                            except asyncio.TimeoutError:
+                                st["face_ws"] = None
+                                _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S)
+                                asyncio.create_task(_face_audio_close(fw))
                             except Exception as e:
                                 st["face_ws"] = None
                                 _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
