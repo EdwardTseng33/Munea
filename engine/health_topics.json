@@ -555,7 +555,8 @@
       ],
       "inject": "（此題已改用方案池挑選，見 health_solutions.json TW-EDU-23）",
       "source": "美國兒科醫學會學校上課時間立場聲明＋瑞典公共衛生署螢幕時間建議",
-      "evidence": "強"
+      "evidence": "強",
+      "specificity": 2
     },
     {
       "id": "TW-EDU-25",
@@ -594,6 +595,83 @@
       "inject": "（此題已改用方案池挑選，見 health_solutions.json TW-EDU-25）",
       "source": "國健署心理健康衛教＋長照喘息服務",
       "evidence": "強"
+    },
+    {
+      "id": "TW-EDU-26",
+      "title": "更年期不適（熱潮紅、睡不好、情緒起伏）",
+      "category": "保健品期待型",
+      "source": "台灣婦產科醫學會、國健署婦女健康、Cochrane 更年期相關回顧",
+      "keywords": [
+        "更年期",
+        "熱潮紅",
+        "潮熱",
+        "盜汗",
+        "停經",
+        "月經沒來",
+        "荷爾蒙",
+        "大豆異黃酮",
+        "更年期障礙",
+        "臉一陣熱"
+      ],
+      "inject": "（此題已改用方案池挑選，見 health_solutions.json TW-EDU-26）",
+      "specificity": 2
+    },
+    {
+      "id": "TW-EDU-27",
+      "title": "經期不適（經痛、經前症候群）",
+      "category": "必須嚴管轉介型",
+      "source": "台灣婦產科醫學會、國健署",
+      "keywords": [
+        "經痛",
+        "生理痛",
+        "月經",
+        "經期",
+        "MC",
+        "大姨媽",
+        "經前",
+        "血塊",
+        "經血",
+        "生理期"
+      ],
+      "inject": "（此題已改用方案池挑選，見 health_solutions.json TW-EDU-27）",
+      "specificity": 2
+    },
+    {
+      "id": "TW-EDU-28",
+      "title": "缺鐵性貧血（頭暈、容易累、臉色差）",
+      "category": "保健品期待型",
+      "source": "國健署貧血防治、台灣血液病學會",
+      "keywords": [
+        "貧血",
+        "缺鐵",
+        "鐵劑",
+        "臉色蒼白",
+        "容易累",
+        "血紅素",
+        "頭暈想吐",
+        "爬樓梯會喘"
+      ],
+      "inject": "（此題已改用方案池挑選，見 health_solutions.json TW-EDU-28）",
+      "specificity": 2
+    },
+    {
+      "id": "TW-EDU-29",
+      "title": "懷孕與哺乳期間的安全界線",
+      "category": "必須嚴管轉介型",
+      "source": "國健署孕產婦關懷、台灣婦產科醫學會、母乳哺育相關指引",
+      "keywords": [
+        "懷孕",
+        "孕婦",
+        "哺乳",
+        "餵母奶",
+        "備孕",
+        "孕期",
+        "懷孕可以吃",
+        "哺乳可以吃",
+        "母乳"
+      ],
+      "inject": "（此題已改用方案池挑選，見 health_solutions.json TW-EDU-29）",
+      "specificity": 3
     }
   ]
 }

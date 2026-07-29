@@ -3034,6 +3034,516 @@
           "say": "你提到最近壓力大——心悸有時候就是這樣來的，兩件事可以一起看。"
         }
       ]
+    },
+    "TW-EDU-26": {
+      "title": "更年期不適",
+      "solutions": [
+        {
+          "id": "meno-normalize",
+          "label": "這不是你的問題",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "secondLine": true,
+          "say": "更年期不是生病，是荷爾蒙在調整——熱潮紅、睡不好、情緒起伏都是真的生理反應，不是你想太多，也不是你不夠堅強。"
+        },
+        {
+          "id": "meno-layers",
+          "label": "洋蔥式穿法、環境降溫",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "熱潮紅來的時候最實用的就是好脫的外套、隨手一把小電扇、房間睡前先降溫——聽起來很土，但這是最快有感的。"
+        },
+        {
+          "id": "meno-triggers",
+          "label": "找出自己的引信",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "辣的、燙的、酒、咖啡、緊張——每個人的引信不一樣。記個幾天看看熱潮紅前都做了什麼，找到就好避。"
+        },
+        {
+          "id": "meno-exercise",
+          "label": "規律運動",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "規律運動對更年期的睡眠跟情緒是有實證的，順便顧到骨頭跟心血管——這階段骨質流失會加快。"
+        },
+        {
+          "id": "meno-sleep-link",
+          "label": "睡不好要分開處理",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "很多人以為更年期就一定睡不好——其實半夜熱醒跟本來就淺眠是兩件事，可以分開處理，不用整包認了。",
+          "related": "TW-EDU-01"
+        },
+        {
+          "id": "meno-food",
+          "label": "從食物吃到的植物性雌激素",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "豆漿、豆腐、毛豆這些黃豆製品本來就含大豆異黃酮，一般飲食吃到的量很安全——先從吃的來，不用急著買瓶罐。"
+        },
+        {
+          "id": "meno-isoflavone",
+          "label": "大豆異黃酮補充劑",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "大豆異黃酮",
+            "異黃酮",
+            "更年期保健品",
+            "月見草"
+          ],
+          "contraindications": [
+            "乳癌或其他荷爾蒙相關癌症病史",
+            "正在吃抗荷爾蒙藥物（如泰莫西芬）",
+            "甲狀腺疾病用藥中"
+          ],
+          "dailyCap": "依產品標示，且不與其他含異黃酮的保健品重複吃",
+          "evidence": {
+            "finding": "對熱潮紅的效果證據中等偏弱、個體差異大；食物來源的攝取量安全性較無疑慮"
+          },
+          "say": "大豆異黃酮補充劑對熱潮紅的證據中等偏弱、有人有感有人沒有——可以試，但別當特效藥。**最重要的一條：有乳癌或其他荷爾蒙相關癌症病史、或正在吃抗荷爾蒙藥物的人，補充劑一定要先問過醫師**，這不是可以自己決定的。",
+          "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "meno-hrt-blocked",
+          "label": "荷爾蒙治療",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "用藥",
+          "effortCost": "中",
+          "audience": [],
+          "blocked": true,
+          "say": "荷爾蒙治療是處方，要不要用、用多久，要婦產科醫師依你的病史評估——我不會建議，但如果你困擾到影響生活，這是可以去問的一條路，不用忍。"
+        },
+        {
+          "id": "meno-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "停經後又出血",
+            "異常大量出血",
+            "情緒低落持續兩週以上",
+            "嚴重到無法工作或生活"
+          ],
+          "say": "**停經之後又出血——這一條不要拖，要看婦產科**。另外如果情緒低落超過兩週、或不適嚴重到影響工作生活，那不是「忍一忍就過去」，值得去看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-27": {
+      "title": "經期不適",
+      "solutions": [
+        {
+          "id": "period-heat",
+          "label": "熱敷肚子",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "熱敷下腹部是少數有研究支持、而且今晚就能做的——暖暖包、熱水袋、泡個熱水澡都算。"
+        },
+        {
+          "id": "period-movement",
+          "label": "輕度活動反而比躺著好",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "運動",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "痛的時候只想躺著，但輕輕走一走、伸展一下，血液循環好一點反而比較不痛——不是叫你去運動，是別整天縮著。"
+        },
+        {
+          "id": "period-track",
+          "label": "把週期記下來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "記一下什麼時候來、痛幾天、痛到什麼程度——自己心裡有底就不會每次都被突襲，去看醫生時這也是最有用的資料。"
+        },
+        {
+          "id": "period-pms-plan",
+          "label": "經前那幾天先降載",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "worker"
+          ],
+          "say": "如果每次經前都特別煩躁、水腫、想哭——那不是你脾氣差。知道大概哪幾天，就把重要的會議跟硬仗排開一點。"
+        },
+        {
+          "id": "period-food",
+          "label": "這幾天的吃法",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "teen"
+          ],
+          "say": "經前少鹽少咖啡因會少水腫跟脹痛；經期流失鐵，深綠色蔬菜、紅肉、豆類可以多一點。",
+          "related": "TW-EDU-28"
+        },
+        {
+          "id": "period-tcm",
+          "label": "中醫調理",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "中醫調理",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "經期調理是中醫常見的路線，如果你偏好這個方向可以找合格中醫師。四物湯那類不是人人都適合、也不是經期都能喝——請中醫師看過再吃，別照網路抓。"
+        },
+        {
+          "id": "period-painkiller-blocked",
+          "label": "止痛藥怎麼吃",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "止痛藥的種類跟吃法我不能建議，那要問醫師或藥師。不過有一件事想跟你說：**經痛吃止痛藥不是「意志力不夠」**，痛到影響生活就該處理。"
+        },
+        {
+          "id": "period-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "teen",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "痛到請假或無法上學",
+            "痛到嘔吐或昏倒",
+            "經血量突然變很多",
+            "經期外出血",
+            "持續一個月以上沒來又不是懷孕"
+          ],
+          "say": "**痛到得請假、痛到吐或昏倒、或血量突然變很多——去看婦產科，別忍。** 子宮內膜異位這類問題在台灣平均要拖很多年才被診斷出來，就是因為大家都覺得「經痛本來就會痛」。另外經期以外出血、或超過一個月沒來又排除懷孕，也要看醫生。"
+        }
+      ]
+    },
+    "TW-EDU-28": {
+      "title": "缺鐵性貧血",
+      "solutions": [
+        {
+          "id": "iron-test-first",
+          "label": "先驗血、別盲補",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "elder",
+            "teen",
+            "caregiver"
+          ],
+          "say": "容易累、頭暈、臉色差不一定就是缺鐵——先抽個血看血紅素跟鐵蛋白，補對了才有用。**鐵補過頭是會傷身體的**，所以不建議自己猜著吃。",
+          "leadWith": true
+        },
+        {
+          "id": "iron-food",
+          "label": "從食物補鐵",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "elder",
+            "teen"
+          ],
+          "say": "紅肉、豬肝、文蛤、深綠色蔬菜、豆類——動物性的鐵吸收比植物性好很多，吃素的人要更留意。"
+        },
+        {
+          "id": "iron-vitc",
+          "label": "配維生素 C 一起吃",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "elder",
+            "teen"
+          ],
+          "say": "這條很實用：吃含鐵的東西時配點芭樂、柑橘、番茄，維生素 C 會讓鐵吸收好很多。"
+        },
+        {
+          "id": "iron-avoid-tea",
+          "label": "別配茶或咖啡",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "elder"
+          ],
+          "say": "茶、咖啡裡的單寧會擋住鐵的吸收——飯後隔一兩個小時再喝，這個不用花錢就有差。"
+        },
+        {
+          "id": "iron-supplement",
+          "label": "鐵劑",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "women",
+            "elder"
+          ],
+          "contraindications": [
+            "血色素沉著症等鐵過載疾病",
+            "地中海型貧血未經評估",
+            "正在吃甲狀腺藥或某些抗生素（要隔開時間）"
+          ],
+          "dailyCap": "劑量與吃法一律照醫師或藥師指示，不自行加量",
+          "evidence": {
+            "finding": "確診缺鐵時補充效果明確；但補鐵前需先確認貧血原因，鐵過載有害"
+          },
+          "say": "如果驗出來真的缺鐵，鐵劑是這題少數「補對了真的有感」的東西——但**劑量跟吃多久要醫師決定**，而且要先確認為什麼會缺（成人不明原因缺鐵有時是腸胃在慢性出血）。鐵劑常會便祕或胃不舒服，跟甲狀腺藥、某些抗生素要隔開時間。",
+          "verifiedAt": "2026-07-29",
+          "secondLine": true,
+          "askedFor": [
+            "鐵劑",
+            "補鐵",
+            "鐵片"
+          ]
+        },
+        {
+          "id": "iron-cause-blocked",
+          "label": "為什麼會缺鐵",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "缺鐵的原因我不做判斷——月經量多、腸胃出血、吸收不良都有可能，這要醫師查。"
+        },
+        {
+          "id": "iron-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "elder",
+            "teen",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "解黑便或血便",
+            "經血量突然變很多",
+            "嚴重喘或心悸",
+            "不明原因變瘦",
+            "男性或停經後女性缺鐵"
+          ],
+          "say": "如果貧血還合併解黑便、喘得厲害、或莫名變瘦——要儘快就醫查原因。**特別是男性或停經後的女性缺鐵，那通常代表某個地方在慢性出血，一定要查清楚，不是補鐵就好。**"
+        }
+      ]
+    },
+    "TW-EDU-29": {
+      "title": "懷孕與哺乳期間的安全界線",
+      "solutions": [
+        {
+          "id": "preg-ask-first",
+          "label": "這段時間，任何補充品都先問過",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "懷孕跟哺乳這段時間，我在保健品上會比平常保守很多——不是我不想幫忙，是這時候的安全資料本來就少，很多成分沒有足夠證據說「孕婦吃沒問題」。任何補充品、草藥、中藥，都先問過你的產科醫師或藥師。"
+        },
+        {
+          "id": "preg-folate",
+          "label": "葉酸是少數明確建議的",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "葉酸是少數證據明確、國健署也建議備孕與懷孕期間補充的——深綠色蔬菜、豆類本來就有。具體要不要另外吃、吃多少，產檢時問醫師，他們一定會安排。",
+          "secondLine": true,
+          "askedFor": [
+            "葉酸",
+            "備孕要吃"
+          ]
+        },
+        {
+          "id": "preg-food-safety",
+          "label": "這幾樣避開",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "women"
+          ],
+          "say": "生食（生魚片、溏心蛋、未殺菌乳製品）、大型深海魚（汞）、酒——這幾樣避開。咖啡因也要節制，量的部分問醫師。"
+        },
+        {
+          "id": "preg-herbs-caution",
+          "label": "草藥、中藥、精油都算",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "「純天然」不等於孕期安全——很多草藥、中藥、精油在懷孕跟哺乳期間都有疑慮。長輩好意送的補品也一樣，先問過再吃，不用不好意思。"
+        },
+        {
+          "id": "preg-rest",
+          "label": "累就休息，這不是嬌氣",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "women"
+          ],
+          "say": "這段時間累是真的累。想睡就睡、該請假就請假——你在做一件很耗身體的事，不是嬌氣。"
+        },
+        {
+          "id": "preg-med-blocked",
+          "label": "哪些藥能吃",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "blocked": true,
+          "say": "孕期跟哺乳期哪些藥能吃、哪些不行，我完全不做判斷——連感冒藥、止痛藥都要問過醫師或藥師。原本在吃的慢性病藥更不要自己停，那要醫師調整。"
+        },
+        {
+          "id": "preg-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "陰道出血",
+            "持續腹痛",
+            "胎動明顯減少",
+            "嚴重頭痛合併視力模糊或水腫",
+            "發燒",
+            "破水"
+          ],
+          "say": "**出血、持續肚子痛、胎動明顯變少、破水——立刻就醫，不要等。** 另外嚴重頭痛合併看東西模糊或突然水腫，那可能是子癇前症的警訊，也要馬上去。產後如果情緒持續低落、對什麼都提不起勁，那是產後憂鬱、是病不是「不夠愛小孩」，安心專線 1925 隨時可以打。"
+        }
+      ]
     }
   }
 }
