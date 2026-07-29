@@ -1,3 +1,5 @@
+import './i18n/legal-routing.js';
+
 /* Munea 沐寧 — 原型互動
  * 落實 Claude Design「沐寧 沐寧 配色」+ Elfie 融入（安心存摺 / 今天一起完成 / 家人互動）
  * 標 [ENGINE] 處正式版接 castle-voice-engine（中文〔台灣〕優先、英文第二 + 三顆腦 + 擬真 avatar；台語先不承諾）。 */
@@ -73,6 +75,7 @@ let chatOpened = false;          // 這次進聊聊她有沒有先開過口
 let chatAudio = null;
 let companionBackendSyncing = false;
 let accountBootstrapPromise = null;
+let latestTrustedLocaleContext = null;
 let activeChatSessionId = null;
 let activeChatStartedAt = 0;
 let activeChatTurnCount = 0;
@@ -521,6 +524,12 @@ function accountBootstrapPayload(action = 'create', extra = {}) {
   if (authUserId) payload.authUserId = authUserId;
   return payload;
 }
+function captureTrustedLocaleContext(response) {
+  const account = response && response.store && response.store.account;
+  const context = account && account.localeContext;
+  if (!context || typeof context !== 'object' || Array.isArray(context)) return;
+  latestTrustedLocaleContext = Object.freeze({ ...context });
+}
 async function syncAccountBootstrap(action = 'create', extra = {}) {
   // Only the fixture/direct-call profile skips cloud account creation. The
   // Gateway QA profile is still a real Supabase user and must be bootstrapped.
@@ -540,6 +549,7 @@ async function syncAccountBootstrap(action = 'create', extra = {}) {
   accountBootstrapPromise = (async () => {
     const response = await brainPost('/account-bootstrap', accountBootstrapPayload(action, extra));
     if (response && response.ok) {
+      captureTrustedLocaleContext(response);
       storageSet(ACCOUNT_BOOTSTRAP_KEY, 'true');
       if (authUserId) storageSet(ACCOUNT_BOOTSTRAP_USER_KEY, authUserId);
       const store = response.store || {};
@@ -3485,19 +3495,56 @@ function setAuthMessage(text = '', type = '') {
 }
 function setAuthMessageState(state, type = '') {
   const rendererCopy = muneaRendererCopy();
+  const keys = {
+    cancelled: 'auth.cancelled',
+    inProgress: 'auth.inProgress',
+    unavailable: 'auth.unavailable',
+  };
   const fallback = {
     cancelled: '已取消登入',
     inProgress: '正在前往登入…',
     unavailable: '目前無法登入，請稍後再試。',
   };
+  const resolvedState = keys[state] ? state : 'unavailable';
   setAuthMessage(
-    rendererCopy ? rendererCopy.authMessage(state) : (fallback[state] || fallback.unavailable),
+    rendererCopy
+      ? rendererCopy.authMessage(resolvedState)
+      : muneaT(keys[resolvedState], fallback[resolvedState]),
     type,
   );
+}
+function localizeAuthTerms() {
+  const terms = $('#authSheet .auth-terms');
+  const link = terms && terms.querySelector('a');
+  if (terms && link) {
+    link.textContent = muneaT('auth.termsLink', '服務條款與隱私權政策');
+    link.setAttribute('href', '#');
+    link.removeAttribute('target');
+    link.removeAttribute('rel');
+    terms.replaceChildren(
+      document.createTextNode(`${muneaT('auth.termsPrefix', '繼續即代表同意')} `),
+      link,
+      document.createTextNode(` — ${muneaT(
+        'auth.aiProcessingDisclosure',
+        '語音與文字會由 Munea 的 AI 系統處理，部分服務位於境外。',
+      )}`),
+    );
+    if (link.dataset.readerBound !== '1') {
+      link.dataset.readerBound = '1';
+      link.addEventListener('click', event => {
+        event.preventDefault();
+        closeAuthSheet();
+        openInAppReader('privacy');
+      });
+    }
+  }
+  const close = $('#authCloseBtn');
+  if (close) close.setAttribute('aria-label', muneaT('accessibility.close', '關閉'));
 }
 function openAuthSheet() {
   const sheet = $('#authSheet');
   if (!sheet) return;
+  localizeAuthTerms();
   sheet.classList.add('show');
   sheet.setAttribute('aria-hidden', 'false');
   setAuthMessage('');
@@ -5402,25 +5449,85 @@ async function connectCall() {
   setTimeout(() => { if (window.__muneaStartListen) window.__muneaStartListen(); }, 400);
 }
 
+let legalRoutingManifestsPromise = null;
+function isLocalI18nDraftPreview() {
+  const config = window.MUNEA_DEV_CONFIG || {};
+  const localOrigin = ['localhost', '127.0.0.1', ''].includes(window.location.hostname)
+    || window.location.protocol === 'file:';
+  const queryLocale = new URLSearchParams(window.location.search).get('lang');
+  const requestedLocale = config.i18nPreviewLocale || queryLocale;
+  return localOrigin
+    && config.enabled === true
+    && ['zh-TW', 'en', 'ja', 'es'].includes(requestedLocale)
+    && requestedLocale === muneaLocale();
+}
+function trustedLegalRegion() {
+  const region = latestTrustedLocaleContext && latestTrustedLocaleContext.legalRegion;
+  return /^[A-Z]{2}$/.test(String(region || '').trim().toUpperCase())
+    ? String(region).trim().toUpperCase()
+    : null;
+}
+async function fetchJsonDocument(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Unable to load ${path}: HTTP ${response.status}`);
+  return response.json();
+}
+function legalRoutingManifests() {
+  if (!legalRoutingManifestsPromise) {
+    legalRoutingManifestsPromise = Promise.all([
+      fetchJsonDocument('src/i18n/catalog-manifest.json'),
+      fetchJsonDocument('legal/manifest.json'),
+    ]).then(([catalogManifest, legalManifest]) => ({ catalogManifest, legalManifest }))
+      .catch(error => {
+        legalRoutingManifestsPromise = null;
+        throw error;
+      });
+  }
+  return legalRoutingManifestsPromise;
+}
+async function resolveInAppLegalPage(kind) {
+  const routing = window.MuneaLegalRouting;
+  if (!routing || typeof routing.resolveLegalPage !== 'function') {
+    throw new Error('Legal routing is unavailable');
+  }
+  const manifests = await legalRoutingManifests();
+  return routing.resolveLegalPage({
+    kind,
+    ...manifests,
+    locale: muneaLocale(),
+    legalRegion: trustedLegalRegion(),
+    allowDraft: isLocalI18nDraftPreview(),
+  });
+}
+function setReaderStatus(body, text) {
+  const paragraph = document.createElement('p');
+  paragraph.textContent = text;
+  body.replaceChildren(paragraph);
+}
 async function openInAppReader(kind, options) {
-  const page = kind === 'terms' ? 'terms.html' : 'privacy.html';
   const reader = $('#readerPage');
   const body = $('#readerBody');
   if (!reader || !body) return;
-  $('#readerTitle').textContent = kind === 'terms' ? '使用條款' : '隱私權政策';
+  const titleKey = kind === 'terms' ? 'reader.termsTitle' : 'reader.privacyTitle';
+  const titleFallback = kind === 'terms' ? '服務條款' : '隱私權政策';
+  $('#readerTitle').textContent = muneaT(titleKey, titleFallback);
   reader.dataset.returnToConsent = options && options.returnToConsent ? '1' : '';
-  body.innerHTML = '<p>讀取中…</p>';
+  setReaderStatus(body, muneaT('reader.loading', '內容載入中…'));
   reader.classList.add('show');
   reader.setAttribute('aria-hidden', 'false');
   try {
-    const html = await fetch(page).then(r => r.text());
+    const route = await resolveInAppLegalPage(kind);
+    const response = await fetch(route.path);
+    if (!response.ok) throw new Error(`Unable to load legal page: HTTP ${response.status}`);
+    const html = await response.text();
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const secs = [...doc.querySelectorAll('.privacy-section')];
-    body.innerHTML = secs.map(s2 => '<h4>' + s2.querySelector('h2').textContent + '</h4>' +
+    if (!secs.length) throw new Error('Legal page has no readable sections');
+    body.innerHTML = secs.map(s2 => '<h4>' + (s2.querySelector('h2')?.textContent || '') + '</h4>' +
       [...s2.querySelectorAll('p, ul')].map(x => x.outerHTML.replace(/<h2.*?<\/h2>/, '')).join('')).join('');
     body.querySelectorAll('a').forEach(a => { const b2 = document.createElement('strong'); b2.textContent = a.textContent; a.replaceWith(b2); });
   } catch (e) {
-    body.innerHTML = '<p>暫時讀不到，晚點再試。</p>';
+    setReaderStatus(body, muneaT('reader.loadError', '無法載入內容，請稍後再試。'));
   }
   const scroll = body.closest('.reader-scroll');
   if (scroll) scroll.scrollTop = 0;
@@ -5437,6 +5544,13 @@ function closeInAppReader() {
     const sheet = $('#consentSheet');
     if (sheet) sheet.classList.add('show');
   }
+}
+
+function applyTaskAccessibilityLabels() {
+  document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
+  document.querySelectorAll('#taskCard .task-check').forEach(s2 => {
+    s2.setAttribute('aria-label', muneaT('accessibility.markComplete', '標示完成'));
+  });
 }
 
 function setupCriticalConsentControls() {
@@ -5514,8 +5628,7 @@ function init() {
       if (document.visibilityState === 'visible') syncPullAll({ minIntervalMs: 30000 });
     });
   }
-  document.querySelectorAll('#taskCard svg').forEach(s2 => s2.setAttribute('aria-hidden', 'true'));
-  document.querySelectorAll('#taskCard .task-check').forEach(s2 => s2.setAttribute('aria-label', '完成打勾'));
+  applyTaskAccessibilityLabels();
   syncCompanionUI();
   setupHscrollHints();
   renderPoints();
@@ -5589,7 +5702,9 @@ function init() {
     captionsOn = !captionsOn;
     try { localStorage.setItem('munea.captions', captionsOn ? '1' : '0'); } catch (e) {}
     applyCaptionState();
-    toast(captionsOn ? '字幕開啟：會顯示逐字' : '字幕關閉');
+    toast(captionsOn
+      ? muneaT('voice.caption.enabled', '字幕已開啟')
+      : muneaT('voice.caption.disabled', '字幕已關閉'));
   });
   applyCaptionState();
   enableSheetDrag();               // 所有彈窗支援下拉關閉手勢
@@ -5632,7 +5747,10 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
-    if (!requireLogin('請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘', 'chat')) return;
+    if (!requireLogin(muneaT(
+      'auth.chatSignInRequired',
+      '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+    ), 'chat')) return;
     if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
     else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
     showView('chat');
@@ -8366,6 +8484,8 @@ function refreshLocalizedDynamicUi() {
   try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
   try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
   try { updateAuthUI(); } catch (e) {}
+  try { localizeAuthTerms(); } catch (e) {}
+  try { applyTaskAccessibilityLabels(); } catch (e) {}
 }
 window.addEventListener('munea:locale-ready', refreshLocalizedDynamicUi);
 window.addEventListener('munea:locale-change', () => {

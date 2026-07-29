@@ -144,7 +144,32 @@
     {
       "anchorId": "authMessage",
       "renderer": "openAuthSheet",
-      "keys": ["auth.inProgress", "auth.cancelled", "auth.unavailable"]
+      "keys": ["auth.inProgress", "auth.cancelled", "auth.unavailable", "auth.chatSignInRequired"]
+    },
+    {
+      "anchorId": "authSheet",
+      "renderer": "localizeAuthTerms",
+      "keys": [
+        "auth.termsPrefix",
+        "auth.termsLink",
+        "auth.aiProcessingDisclosure",
+        "accessibility.close"
+      ]
+    },
+    {
+      "anchorId": "readerBody",
+      "renderer": "openInAppReader",
+      "keys": [
+        "reader.privacyTitle",
+        "reader.termsTitle",
+        "reader.loading",
+        "reader.loadError"
+      ]
+    },
+    {
+      "anchorId": "captionToggle",
+      "renderer": "init",
+      "keys": ["voice.caption.enabled", "voice.caption.disabled"]
     },
     {
       "anchorId": "careBody",

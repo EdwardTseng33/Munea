@@ -1748,6 +1748,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .reader-card p { font-size: 15.5px; line-height: 1.95; letter-spacing: .02em; color: var(--ink-2); margin-bottom: 8px; text-align: justify; text-justify: inter-ideograph; overflow-wrap: anywhere; }
 .reader-card ul { padding-left: 6px; list-style: none; margin-bottom: 8px; }
 .reader-card li { position: relative; padding-left: 16px; margin-top: 7px; font-size: 15.5px; line-height: 1.95; letter-spacing: .02em; color: var(--ink-2); }
+:is(html:lang(en), html:lang(es)) .reader-card :is(p, li) { text-align: left; text-justify: auto; hyphens: auto; }
 .reader-card li::before { content: ""; position: absolute; left: 0; top: .8em; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
 .reader-card strong { color: var(--ink); }
 

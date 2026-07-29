@@ -11,6 +11,7 @@
       "auth.termsPrefix",
       "auth.termsLink",
       "auth.aiProcessingDisclosure",
+      "auth.chatSignInRequired",
       "auth.cancelled",
       "auth.unavailable"
     ],
@@ -38,9 +39,12 @@
     "chat-idle": [
       "voice.call.start",
       "voice.call.offline",
+      "voice.caption.enabled",
+      "voice.caption.disabled",
       "accessibility.toggleCall",
       "accessibility.toggleCaptions",
-      "accessibility.toggleMicrophone"
+      "accessibility.toggleMicrophone",
+      "accessibility.markComplete"
     ],
     "chat-connecting": [
       "voice.connecting",
@@ -93,7 +97,12 @@
       "settings.safetyNotifications",
       "settings.myData",
       "settings.feedback",
-      "settings.fontDisplay"
+      "settings.fontDisplay",
+      "reader.privacyTitle",
+      "reader.termsTitle",
+      "reader.loading",
+      "reader.loadError",
+      "reader.back"
     ],
     "purchase": [
       "subscription.title",

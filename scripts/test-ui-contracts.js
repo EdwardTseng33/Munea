@@ -9,6 +9,7 @@ const privacy = fs.readFileSync('web/privacy.html', 'utf8');
 const store = fs.readFileSync('web/src/store.js', 'utf8');
 const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
 const rendererCopySource = fs.readFileSync('web/src/i18n/app-renderer-copy.js', 'utf8');
+const legalRoutingSource = fs.readFileSync('web/src/i18n/legal-routing.js', 'utf8');
 const zhCatalog = JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'));
 
 function assert(condition, message) {
@@ -52,6 +53,19 @@ assert(criticalConsentSetup.includes("$('#consentDetail')") && criticalConsentSe
 assert(criticalConsentSetup.includes("$('#readerBack')") && criticalConsentSetup.includes('closeInAppReader'), 'The in-App privacy reader must retain a working back control');
 assert(app.indexOf("document.addEventListener('DOMContentLoaded', setupCriticalConsentControls)") < app.indexOf("document.addEventListener('DOMContentLoaded', init)"), 'Critical consent controls must bind before the main App initialization');
 assert(!app.includes("window.open('privacy.html', '_blank')"), 'Consent privacy detail must not leave the App in a new window');
+assert(app.startsWith("import './i18n/legal-routing.js';"), 'The App must load the reviewed legal routing contract before opening an in-App legal page');
+const legalReader = app.match(/async function openInAppReader\(kind, options\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(legalReader.includes('resolveInAppLegalPage(kind)') && legalReader.includes("muneaT('reader.loading'") && legalReader.includes("muneaT('reader.loadError'"),
+  'The in-App legal reader must resolve the locale-aware page and localize its loading and failure states');
+assert(app.includes("fetchJsonDocument('src/i18n/catalog-manifest.json')") && app.includes("fetchJsonDocument('legal/manifest.json')"),
+  'The App legal reader must use the catalog and legal-review manifests as its routing authority');
+assert(app.includes('legalRegion: trustedLegalRegion()') && !legalRoutingSource.includes('countryCode'),
+  'Legal routing must consume only the explicit trusted legalRegion and must never infer it from country or language');
+const draftGate = app.match(/function isLocalI18nDraftPreview\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert(draftGate.includes('localOrigin') && draftGate.includes('config.enabled === true') && draftGate.includes('requestedLocale === muneaLocale()'),
+  'Unreviewed localized legal drafts must be limited to an explicit local i18n preview');
+assert(app.includes('captureTrustedLocaleContext(response)') && app.includes('response.store && response.store.account'),
+  'The legal region may be captured only from the backend account-bootstrap response, not from the active UI locale');
 assert(privacy.includes('目前機房位於日本東京'), 'Privacy disclosure must identify the current Tokyo data region');
 assert(!privacy.includes('目前機房位於澳洲'), 'Privacy disclosure must not retain the retired Sydney production region');
 const connectCall = app.match(/async function connectCall\(\) \{[\s\S]*?\n\}/)?.[0] || '';
@@ -103,6 +117,18 @@ assert(rendererCopySource.includes("action: 'reopen-auth'") && app.includes("act
   'An expired session must offer a one-tap re-login action on the visible card, not just a hidden caption');
 assert(app.includes("showCallStatusCard('activationPending')"), 'The gateway activation timeout must also surface a visible localized card, matching the other silent-failure fixes');
 assert(app.includes("muneaT('voice.call.dialing'") && app.includes("muneaT('voice.call.online'") && app.includes("muneaT('voice.call.offline'"), 'Call control labels and presence state must use the locale catalog');
+['auth.chatSignInRequired', 'voice.caption.enabled', 'voice.caption.disabled', 'accessibility.markComplete'].forEach(key => {
+  assert(zhCatalog[key], `Dynamic App catalog key missing for: ${key}`);
+});
+assert(/muneaT\(\s*'auth\.chatSignInRequired'/.test(app) && app.includes("muneaT('voice.caption.enabled'") && app.includes("muneaT('voice.caption.disabled'"),
+  'Sign-in and caption feedback must be rendered from the active locale catalog');
+assert(app.includes("muneaT('accessibility.markComplete'"), 'Task completion controls must expose a localized accessible label');
+assert(app.includes('function applyTaskAccessibilityLabels()') && /refreshLocalizedDynamicUi\(\)[\s\S]*?applyTaskAccessibilityLabels\(\)/.test(app),
+  'Task completion accessibility labels must refresh after the active App locale changes');
+assert(app.includes('function localizeAuthTerms()') && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeAuthTerms\(\)/.test(app),
+  'The complete auth terms disclosure and close label must refresh with the active App locale');
+assert(css.includes(':is(html:lang(en), html:lang(es)) .reader-card :is(p, li)'),
+  'English and Spanish legal copy must use natural left alignment instead of stretched CJK justification');
 
 // 全滿態給出口：先用文字聊（2026-07-24 Edward 拍板 P0）——不新造頁面，重用既有 chatHandle 文字管線，
 // 不佔用 Avatar／即時語音席位，讓長輩在滿載時仍有話可聊而不是只能乾等或放棄。
