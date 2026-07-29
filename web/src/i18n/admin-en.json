@@ -239,7 +239,12 @@
     "今天有上線": "Opened today",
     "已達自動清除門檻": "Past the auto-deletion threshold",
     "註冊後沒開過 App": "Signed up but never opened the app",
-    "註冊完就沒回來的帳號": "Accounts that signed up and never came back"
+    "註冊完就沒回來的帳號": "Accounts that signed up and never came back",
+    "沒有活動紀錄": "No activity on record",
+    "沒開過": "never opened",
+    "還沒開過 App": "Never opened the app",
+    "今天有動作": "Active today",
+    "還沒有真實用戶——有人註冊後，這裡會列出每一家。": "No real members yet — each household will appear here once someone signs up."
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },
@@ -264,6 +269,9 @@
     { "source": "剩 {0} 天", "target": "{0} days left" },
     { "source": "{0} 天沒上線", "target": "{0} days since last open" },
     { "source": "{0} 天前上線", "target": "Opened {0} days ago" },
-    { "source": "閒置滿 {0} 天", "target": "Idle for {0} days" }
+    { "source": "閒置滿 {0} 天", "target": "Idle for {0} days" },
+    { "source": "{0} 天沒動作", "target": "{0} days without activity" },
+    { "source": "{0} 天前有動作", "target": "Last activity {0} days ago" },
+    { "source": "目前只有測試帳號（已隱藏 {0} 個）——有真實用戶註冊後，這裡就會列出來。", "target": "Only test accounts right now ({0} hidden) — real members will appear here once they sign up." }
   ]
 }

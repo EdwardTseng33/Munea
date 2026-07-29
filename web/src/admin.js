@@ -447,17 +447,27 @@
   // 這一欄回答的就是那件事：離自動清除還有幾天。看的是 accounts.lastSeenAt（App 開機蓋的章），
   // 不是由使用事件推算的 lastActiveAt。
   const RETENTION_DAYS=60, RETENTION_WARN_AT=53;
-  function idleDays(a){ const seen=(a||{}).lastSeenAt; if(!seen) return null;
-    const t=new Date(seen); if(isNaN(t)) return null;
-    return Math.floor((Date.now()-t.getTime())/86400000); }
+  // 閒置天數要跟真正執行清除的規則對齊。資料庫那支（supabase/sql/024）取六路訊號的
+  // 最晚一筆：註冊、App 開機章、最後登入、推播裝置、通話、點數異動——**從沒上線過的帳號
+  // 是從註冊日起算的**，不是永遠不會被清。名冊只拿得到其中四路，所以這裡是保守估算：
+  // 可能比資料庫算的更早示警，但不會更晚——寧可提前提醒，不會讓人以為還有時間。
+  function lastActivityAt(a){
+    a=a||{};
+    const times=[a.lastSeenAt,(a.owner||{}).lastSignInAt,(a.usage||{}).lastActiveAt,a.createdAt]
+      .map((v)=>v?new Date(v).getTime():NaN).filter((t)=>!isNaN(t));
+    return times.length?Math.max.apply(null,times):null; }
+  function idleDays(a){ const t=lastActivityAt(a); if(t==null) return null;
+    return Math.floor((Date.now()-t)/86400000); }
+  function neverOpened(a){ return !((a||{}).lastSeenAt); }
   function retentionCell(a){
     const d=idleDays(a);
-    if(d==null) return `<span class="pill mute">還沒上線過</span>`;
+    if(d==null) return `<span class="pill mute">沒有活動紀錄</span>`;
     const left=RETENTION_DAYS-d;
-    if(left<=0) return `<span class="pill bad">待清除</span>`;
-    if(d>=RETENTION_WARN_AT) return `<span class="pill bad">剩 ${left} 天</span>`;
-    if(d>=30) return `<span class="pill warn">剩 ${left} 天</span>`;
-    return `<span class="pill ok">${d} 天前上線</span>`;
+    const never=neverOpened(a)?'<span class="muted small"> 沒開過</span>':"";
+    if(left<=0) return `<span class="pill bad">待清除</span>${never}`;
+    if(d>=RETENTION_WARN_AT) return `<span class="pill bad">剩 ${left} 天</span>${never}`;
+    if(d>=30) return `<span class="pill warn">剩 ${left} 天</span>${never}`;
+    return `<span class="pill ok">${d} 天前有動作</span>${never}`;
   }
   function usageCell(u){ u=u||{}; const mins=Math.round(u.totalMinutes||0); if(!mins) return `<span class="muted">—</span>`; const h=Math.min(22,Math.max(6,mins/6)); return `<div class="use-cell"><span class="mini-bars"><i style="height:${Math.round(h*0.5)}px"></i><i style="height:${Math.round(h*0.78)}px"></i><i style="height:${Math.round(h)}px"></i></span><b class="num">${n(mins)}</b><span class="muted small">分</span></div>`; }
 
@@ -470,7 +480,7 @@
     const single=accts.length===1;
     const people=accts.reduce((s,a)=>s+((a.familyMembers||{}).count||0),0);
     const idleList=accts.map(idleDays);
-    const neverSeen=idleList.filter((d)=>d==null).length;
+    const neverSeen=accts.filter(neverOpened).length;
     const nearPurge=idleList.filter((d)=>d!=null&&d>=RETENTION_WARN_AT).length;
     let html=kpiRow([
       { label:"總用戶", star:true, value:n(accts.length), sub:`家庭圈 ${accts.length} · 成員 ${people} 人` },
@@ -479,14 +489,14 @@
       { label:"守護中", value:n(escalations), sub:"安全警示待處理", star:escalations>0, tone:"alert", info:"有安全守護警示、建議優先確認" },
     ]);
     if(!accts.length){
-      html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——正式開放註冊後，這裡會列出真實用戶。`:"還沒有帳號——正式開放註冊後，這裡會列出每一家。"));
+      html+=card("用戶與家庭圈名冊", "現在有哪些人／家庭在用沐寧", emptyBox(hiddenTestCount?`目前只有測試帳號（已隱藏 ${hiddenTestCount} 個）——有真實用戶註冊後，這裡就會列出來。`:"還沒有真實用戶——有人註冊後，這裡會列出每一家。"));
       return html;
     }
     const filt=state.tabs.userFilter||"all", q=(state.tabs.userSearch||"").toLowerCase();
     const planC={free:0,plus:0,pro:0}; accts.forEach((a)=>{ const p=a.plan||"free"; planC[p]=(planC[p]||0)+1; });
     const passFilter=(a)=>{
       if(filt==="near-purge"){ const d=idleDays(a); return d!=null&&d>=RETENTION_WARN_AT; }
-      if(filt==="never-seen") return idleDays(a)==null;
+      if(filt==="never-seen") return neverOpened(a);
       if(["free","plus","pro"].includes(filt)) return (a.plan||"free")===filt;
       return true; };
     const rows=accts.filter((a)=>{ if(!passFilter(a))return false; if(!q)return true; const p=a.primaryPerson||{},f=a.familyGroup||{},o=a.owner||{}; return ((acctPersonName(a)||"")+" "+(p.displayName||"")+" "+(f.name||"")+" "+(o.email||"")+" "+(o.signInName||"")+" "+accountMarketSearchText(a)).toLowerCase().indexOf(q)>-1; });
@@ -853,7 +863,7 @@
     const planTxt={pro:"Pro",plus:"Plus",free:"免費"}[a.plan||"free"]||"免費";
     // 不再顯示「在線／離線」，改講對閒置清除有意義的話：多久沒上線、還剩幾天
     const idle=idleDays(a);
-    const idleTxt=idle==null?"還沒上線過":(idle<=0?"今天有上線":`${idle} 天沒上線`);
+    const idleTxt=(neverOpened(a)?"還沒開過 App":"")||(idle==null?"沒有活動紀錄":(idle<=0?"今天有動作":`${idle} 天沒動作`));
     const purgeTxt=idle==null?"—":(RETENTION_DAYS-idle<=0?"已達自動清除門檻":`剩 ${RETENTION_DAYS-idle} 天`);
     const mins=Math.round(u.totalMinutes||0);
     const ctx=accountLocaleContext(a);
