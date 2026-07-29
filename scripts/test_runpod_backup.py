@@ -512,6 +512,14 @@ def test_template_map_parsing_and_stockout_detection():
         'RunPod API POST /pods failed: HTTP 500: {"error":"create pod: '
         'There are no instances currently available"}'
     ))
+    # Balance exhaustion beats stockout even when the mixed per-GPU-type
+    # message contains both lines (2026-07-29 live): it must surface as a
+    # hard error naming the fix (add funds), not fall through DCs.
+    assert not podctl.is_stockout_error(podctl.RunPodError(
+        'HTTP 500: {"error":"create pod: There are no instances currently '
+        'available\nYour account balance is too low to rent a pod. Please '
+        'add funds to your account."}'
+    ))
     assert not podctl.is_stockout_error(podctl.RunPodError("HTTP 401: unauthorized"))
 
 

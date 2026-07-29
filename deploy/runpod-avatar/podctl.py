@@ -71,8 +71,16 @@ def is_stockout_error(exc: BaseException) -> bool:
     Live wording observed 2026-07-29: "There are no instances currently
     available" -- an adverb in the middle defeated an exact-phrase match, so
     match on the stable stem instead.
+
+    A create error can carry one line PER GPU type, mixing "no instances"
+    with "Your account balance is too low". Balance exhaustion is a hard
+    operator problem, not weather -- falling through data centers cannot fix
+    it and mislabeling it "out of stock" hides the one action that would
+    (top up the RunPod account). Balance always wins the classification.
     """
     text = str(exc).lower()
+    if "balance is too low" in text or "add funds" in text:
+        return False
     return any(marker in text for marker in (
         "no instances",
         "no longer any instances",
