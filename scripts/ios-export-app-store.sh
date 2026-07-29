@@ -95,7 +95,21 @@ node "$ROOT/scripts/ios-build-identity.js" \
 # App Store Connect may display languages from submitted metadata even when the installed binary
 # cannot actually resolve those localizations. Verify the exported App bundle itself, not the
 # source tree, so unreferenced *.lproj folders or stale Xcode target membership cannot pass.
-REQUIRED_IOS_LOCALIZATIONS=("zh-Hant" "en" "ja" "es")
+REQUIRED_IOS_LOCALIZATIONS=()
+while IFS= read -r locale; do
+  [ -n "$locale" ] && REQUIRED_IOS_LOCALIZATIONS+=("$locale")
+done < <(
+  node -e "
+    const manifest = require('./web/src/i18n/catalog-manifest.json');
+    manifest.locales
+      .filter((entry) => entry.binaryLocalizationEnabled)
+      .forEach((entry) => console.log(entry.nativeLocale));
+  "
+)
+if [ "${#REQUIRED_IOS_LOCALIZATIONS[@]}" -eq 0 ]; then
+  echo "FAIL release manifest enables no iOS binary localization."
+  exit 1
+fi
 REQUIRED_LOCALIZED_USAGE_KEYS=(
   "CFBundleDisplayName"
   "NSMicrophoneUsageDescription"
@@ -234,7 +248,7 @@ fi
 echo "PASS IPA excludes development fixtures and contains the latest Web and authentication assets."
 echo "PASS IPA excludes cloud admin and FlashHead test assets."
 echo "PASS IPA contains the non-tracking privacy manifest and collected-data declarations."
-echo "PASS IPA contains zh-Hant, English, Japanese, and Spanish binary localizations."
+echo "PASS IPA contains every binary localization enabled by the release manifest."
 echo "PASS IPA signature, version/build, bundle id, privacy usage strings, HealthKit, and Apple sign-in entitlement verified."
 echo "PASS IPA app.js is pinned to production Brain/Voice/Call-control endpoints with no staging leak."
 echo "PASS IPA supports iPhone only."
