@@ -274,7 +274,9 @@ html[data-admin-locale="ja"] .nav-group-label {
 table { width: 100%; border-collapse: collapse; }
 .tbl-card .table-wrap table { min-width: 940px; }
 th, td { border-bottom: 1px solid var(--line-soft); padding: 11px 10px; text-align: left; vertical-align: middle; }
-th { color: var(--muted); font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
+/* 表頭一律不折行：上面那條共用規則給了 overflow-wrap:anywhere，欄位一窄就會把
+   「持有點數」斷成「持有點／數」。這裡明確關掉，寧可欄位寬一點也不要標題斷字。 */
+th { color: var(--muted); font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
 td.r, th.r { text-align: right; font-family: var(--num); font-variant-numeric: tabular-nums; }
 tbody tr:hover { background: var(--cream); }
 .tabs { display: inline-flex; flex-wrap: wrap; gap: 6px; }
@@ -538,7 +540,7 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
    （2026-07-29 截圖抓到）。允許換行，欄窄的時候折行而不是溢出。 */
 .u-fam{ font-weight:600; color:var(--ink-2); white-space:normal; overflow-wrap:anywhere; }
 .family-cell{ display:inline-flex; align-items:baseline; flex-wrap:wrap; column-gap:4px; white-space:normal; }
-.retention-cell{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
+.use-nums{ display:flex; flex-direction:column; line-height:1.25; }
 /* 用戶欄裝的是姓名＋登入方式＋信箱，內容最長——給它一個比例寬度，信箱才不會折成三行。
    用 width（表格會當建議值）而不是 min-width：min-width 撐破格子會疊到隔壁欄，踩過了。 */
 .roster-card table td:first-child, .roster-card table th:first-child { width: 26%; }
