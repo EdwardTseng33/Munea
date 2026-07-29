@@ -2,8 +2,19 @@ const fs = require('fs');
 const vm = require('vm');
 
 const appSource = fs.readFileSync('web/src/app.js', 'utf8');
-if (!appSource.includes("el.textContent = '訂閱到期日：' + date")) {
-  throw new Error('settings plan card must keep the verified subscription expiry date visible');
+const localizedExpiryBinding = "muneaT('subscription.expiryDate', '訂閱到期日：{date}', { date })";
+const localizedExpiryBindingCount = appSource.split(localizedExpiryBinding).length - 1;
+if (localizedExpiryBindingCount < 2) {
+  throw new Error(
+    'settings plan card and subscription summary must keep the verified expiry date visible through the localized copy contract',
+  );
+}
+for (const locale of ['zh-TW', 'en', 'ja', 'es']) {
+  const catalog = JSON.parse(fs.readFileSync(`web/src/i18n/${locale}.json`, 'utf8'));
+  const template = catalog['subscription.expiryDate'];
+  if (typeof template !== 'string' || !template.includes('{date}')) {
+    throw new Error(`${locale} subscription.expiryDate must preserve the verified date placeholder`);
+  }
 }
 
 const storage = new Map();
