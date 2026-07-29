@@ -35,7 +35,7 @@ class ApiContractInventoryTests(unittest.TestCase):
         # 2026-07-21 再補：測試帳號人工標記 /admin/accounts/set-test-flag 1 支
         # 2026-07-22 再補：免費帳號閒置清理 /admin/retention/run 1 支
         # 2026-07-29 再補：測試帳號清場 /admin/accounts/delete 1 支（只刪得掉已標記為測試的帳號）
-        self.assertEqual(self.inventory["routeCounts"], {"brain": 93, "gateway": 23, "voice": 4})
+        self.assertEqual(self.inventory["routeCounts"], {"brain": 94, "gateway": 23, "voice": 4})
         self.assertIn(Route("voice", "WS", "/"), self.routes)
 
     def test_new_source_route_must_be_registered(self) -> None:
