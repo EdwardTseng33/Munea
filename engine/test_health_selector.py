@@ -499,6 +499,55 @@ class LeadWithTest(unittest.TestCase):
         self.assertNotIn("iron-supplement", ids)
 
 
+class ProductionAudienceTest(unittest.TestCase):
+    """正式機真的算得出來的齡層只有 teen／worker／elder（從出生年推）。
+
+    2026-07-29 第五次踩到同一個病：方案上標了 caregiver 與 women，
+    但那兩個值**正式機從來不會出現**——所以照顧者專屬內容（喘息、把睡眠切兩段）
+    跟整組女性題不只拿不到專屬度加分，還因為「對不上這個人」被倒扣 3 分，
+    一直被壓在底下。這個 class 全部用「正式機真的會有的 profile」跑，
+    不准再用手寫的 {"audience": "caregiver"} 自欺。
+    """
+
+    @staticmethod
+    def _real(birth_year):
+        return {"audience": hs.audience_from_birth_year(birth_year)}
+
+    def test_production_never_produces_caregiver_or_women_as_an_age_band(self):
+        got = {hs.audience_from_birth_year(y) for y in (2010, 1990, 1950, None, "亂寫")}
+        self.assertTrue(got <= {"teen", "worker", "elder", None})
+
+    def test_a_real_caregiver_gets_the_caregiver_solution(self):
+        picked = hs.pick("TW-EDU-01", "我媽三點要起來，我根本睡不飽",
+                         self._real(1988), 2)["solutions"]
+        self.assertEqual(picked[0]["id"], "sleep-split-rest",
+                         "照顧者專屬方案沒排第一——正式機上這條一直被倒扣")
+
+    def test_a_real_caregiver_gets_the_reframe(self):
+        res = hs.pick("TW-EDU-01", "我媽三點要起來，我根本睡不飽", self._real(1988), 2)
+        self.assertIsNotNone(res["reframe"],
+                             "「你不是睡不著、是你根本沒得睡」從來沒對真的照顧者講過")
+
+    def test_a_teen_never_gets_caregiver_content(self):
+        """照顧者身分聽得出來，所以「沒聽到」是有意義的——16 歲不該拿到喘息服務。"""
+        ids = [s["id"] for s in hs.pick("TW-EDU-01", "我都睡不好，早上爬不起來",
+                                        self._real(2010), 2)["solutions"]]
+        self.assertNotIn("sleep-respite-service", ids)
+        self.assertNotIn("sleep-split-rest", ids)
+
+    def test_women_topics_are_not_penalised_for_unknown_sex(self):
+        """性別我們根本無從得知——不知道就不該罰。"""
+        picked = hs.pick("TW-EDU-26", "最近一直熱潮紅", self._real(1978), 14)["solutions"]
+        self.assertTrue(picked)
+        self.assertTrue(any("women" in (s.get("audience") or []) for s in picked),
+                        "女性題自己的方案被壓掉了")
+
+    def test_caregiving_is_heard_not_derived(self):
+        flags_words = ("照顧", "我媽", "看護", "長照")
+        for w in flags_words:
+            self.assertIn(w, hs.CAREGIVING_WORDS)
+
+
 class DataIntegrityTest(unittest.TestCase):
     """資料本身的紀律——內容寫壞了這裡先亮紅燈。"""
 
