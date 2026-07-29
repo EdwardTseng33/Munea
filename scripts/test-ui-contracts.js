@@ -12,6 +12,12 @@ const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
 const rendererCopySource = fs.readFileSync('web/src/i18n/app-renderer-copy.js', 'utf8');
 const legalRoutingSource = fs.readFileSync('web/src/i18n/legal-routing.js', 'utf8');
 const zhCatalog = JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'));
+const companionCatalogs = Object.fromEntries(
+  ['zh-TW', 'en', 'ja', 'es'].map(locale => [
+    locale,
+    JSON.parse(fs.readFileSync(`web/src/i18n/${locale}.json`, 'utf8')),
+  ]),
+);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -297,22 +303,25 @@ assert(!/authEmailInput|authEmailBtn|電子信箱登入|寄登入信/.test(authS
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'Opening auth sheet must not focus an input or open the keyboard');
 
-// AI 陪伴角色的說明：設定頁那一行（存在文案表）跟選角色頁的卡片（寫死在版面裡）
-// 是兩份各自獨立的文字，改一邊另一邊不會跟——測試員就抓到設定頁那句比卡片少了尾巴。
-// 這裡強制兩邊講同一句：設定頁 = 「<類型>，<說明>」，說明字要跟卡片一字不差。
-const companionCards = [...html.matchAll(/data-ava="([^"]+)"[\s\S]{0,400}?<b>([^<]+)<\/b><small>([^<]+)<\/small>/g)];
+// AI 陪伴角色的說明：設定頁與選角卡片必須在四語系都講同一句，
+// 且卡片一定使用明確 key，不能再依賴中文原句剛好與翻譯表相同。
+const companionCards = [...html.matchAll(/data-ava="([^"]+)"[\s\S]{0,400}?<b data-i18n="([^"]+)">([^<]+)<\/b><small data-i18n="([^"]+)">([^<]+)<\/small>/g)];
 assert(companionCards.length >= 2, 'Companion picker must keep its selectable persona cards');
 const companionLabelKey = { 'nening-real-female': 'companion.nening.label', 'companion-real-male': 'companion.ahong.label' };
-companionCards.forEach(([, ava, type, trait]) => {
-  const key = companionLabelKey[ava];
-  if (!key) return;
-  const label = zhCatalog[key];
-  assert(label, `Companion label catalog key missing for: ${key}`);
-  assert(
-    label === `${type}，${trait}`,
-    `設定頁的角色說明必須跟選角色卡片講同一句：「${label}」 vs 卡片「${type}，${trait}」`,
-  );
-  assert(!label.includes(' · '), '角色說明要用一句話敘述，不要用「·」串標籤');
+const companionJoiner = { 'zh-TW': '，', en: ', ', ja: '。', es: ', ' };
+companionCards.forEach(([, ava, typeKey, typeFallback, traitKey, traitFallback]) => {
+  const labelKey = companionLabelKey[ava];
+  if (!labelKey) return;
+  assert(zhCatalog[typeKey] === typeFallback, `Companion type fallback must match ${typeKey}`);
+  assert(zhCatalog[traitKey] === traitFallback, `Companion trait fallback must match ${traitKey}`);
+  Object.entries(companionCatalogs).forEach(([locale, catalog]) => {
+    const cardLabel = `${catalog[typeKey]}${companionJoiner[locale]}${catalog[traitKey]}`;
+    assert(
+      catalog[labelKey] === cardLabel,
+      `${locale} 設定頁角色說明必須跟選角卡片講同一句：「${catalog[labelKey]}」 vs「${cardLabel}」`,
+    );
+    assert(!catalog[labelKey].includes(' · '), `${locale} 角色說明不得使用「·」串標籤`);
+  });
 });
 assert(
   html.includes('<small id="settingsTemplateLabel">' + zhCatalog['companion.nening.label'] + '</small>'),
