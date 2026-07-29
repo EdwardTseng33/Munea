@@ -516,13 +516,12 @@
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
         esc(c.displayName||c.templateId||"–"),
         usageCell(u),
-        retentionCell(a),
-        `<span class="muted small">${esc(a.lastSeenAt?fmtTime(a.lastSeenAt):"—")}</span>`,
+        `<div class="retention-cell">${retentionCell(a)}<span class="muted small">${esc(a.lastSeenAt?fmtTime(a.lastSeenAt):"—")}</span></div>`,
         `<button type="button" class="row-act" data-acct="${idx}" aria-label="查看 ${esc(nm)} 的用戶明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
       ];
     });
     const hiddenNote=(!showTest&&hiddenTestCount)?` · 已隱藏 ${hiddenTestCount} 個測試帳號`:"";
-    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","自動清除","最後上線",""], trows)}</div>`;
+    html+=`<div class="card tbl-card"><div class="card-head"><div><h3>用戶與家庭圈名冊</h3><div class="card-note">共 ${accts.length} 戶 · 點右側看單一用戶${single?"（試營運鎖定一戶）":""}${hiddenNote}</div></div></div>${tools}${tableHTML(["用戶","家庭",MARKET_TEXT.tableHeader,"方案","持有點數","陪伴角色","使用量","自動清除",""], trows)}</div>`;
     return html;
   }
 
