@@ -2,3 +2,9 @@
 # （2026-07-24 test_flashhead_patch_integrity 在新 worktree 亮紅燈後立）
 *.patch -text
 *.sh text eol=lf
+
+# Localized legal pages are transformed and compared byte-for-byte in CI.
+# Keep both the source and Firebase hosting copies on LF across Windows/macOS/Linux.
+web/legal/** text eol=lf
+web/src/legal.css text eol=lf
+app-site/legal/** text eol=lf
