@@ -306,7 +306,7 @@
   "settings.profileSubtitle": "名稱、生日、所在地",
   "settings.careCircleSubtitle": "誰在圈裡、誰付費、誰收通知",
   "settings.interests": "想聊的話題",
-  "settings.interestsSubtitle": "挑幾個興趣，{companion}會多留意這些新鮮事",
+  "settings.interestsSubtitle": "挑幾個興趣，{companion}會多留意",
   "settings.appleHealth": "Apple 健康",
   "settings.appleHealthSubtitle": "步數、心率、睡眠",
   "settings.medicationReminders": "用藥提醒",
@@ -618,7 +618,7 @@
   "medicationManager.scheduleRequired": "請選擇服藥時間，可以多選。",
   "medicationManager.addedToast": "{companion}會在{slots}提醒你服用「{name}」，時間依照你的作息。",
   "notification.centerTitle": "通知中心",
-  "notification.centerSubtitle": "選擇要在這支手機收到哪些提醒。",
+  "notification.centerSubtitle": "選擇這支手機要收到哪些提醒",
   "notification.push": "App 推播通知",
   "notification.pushOff": "開啟後才會收到提醒",
   "notification.pushOn": "重要提醒會送到這支手機",
@@ -730,5 +730,7 @@
   "legacyUi.familyOkay": "安好",
   "version.webBuild": "內頁 v{version}",
   "version.localizedSummary": "這次更新改善通話狀態說明、文字備援與閱讀清晰度。",
-  "health.openHealthApp": "打開「健康」App 開啟項目"
+  "health.openHealthApp": "打開「健康」App 開啟項目",
+  "notification.centerStateOn": "已開啟",
+  "notification.centerStateOff": "已關閉"
 }

@@ -618,7 +618,7 @@
   "medicationManager.scheduleRequired": "Choose when to take it. You can select more than one.",
   "medicationManager.addedToast": "{companion} will remind you to take “{name}” {slots}, based on your routine.",
   "notification.centerTitle": "Notification center",
-  "notification.centerSubtitle": "Choose which reminders this phone should receive.",
+  "notification.centerSubtitle": "Choose which reminders this phone receives",
   "notification.push": "App notifications",
   "notification.pushOff": "Turn on to receive reminders",
   "notification.pushOn": "Important reminders will be sent to this phone",
@@ -730,5 +730,7 @@
   "legacyUi.familyOkay": "Doing well",
   "version.webBuild": "Web v{version}",
   "version.localizedSummary": "This update improves call status explanations, text fallback, and readability.",
-  "health.openHealthApp": "Open Health to turn on items"
+  "health.openHealthApp": "Open Health to turn on items",
+  "notification.centerStateOn": "On",
+  "notification.centerStateOff": "Off"
 }
