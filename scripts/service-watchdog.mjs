@@ -20,8 +20,10 @@ export const TARGETS = [
     name: "Brain 正式（munea-brain＝正式 App 後端）",
     url: "https://munea-brain-491603544409.asia-east1.run.app/healthz/",
     expect: [200],
-    check: "json-ok",
-    // 2026-07-29：正式兩台倒了＝使用者現在打不通、叫不到人 → 告警要叫得醒人（見 buildAlertText）
+    // 2026-07-29 事故後升級：只檢查「有沒有回應」是不夠的。當晚模型額度用完，
+    // 大腦跟聊聊兩台都啞了、真的用戶打不通，八盞燈卻全綠——因為誰都沒在問
+    // 「她還講不講得出話」。ai-alive 會看 /healthz 回來的 ai 那一格。
+    check: "ai-alive",
     userFacing: true,
   },
   {
@@ -85,7 +87,7 @@ async function probeOnce(target, fetchImpl) {
         detail: `回應碼 ${res.status}（預期 ${target.expect.join("/")}）`,
       };
     }
-    if (target.check === "json-ok") {
+    if (target.check === "json-ok" || target.check === "ai-alive") {
       const body = await res.text();
       let parsed = null;
       try {
@@ -105,6 +107,21 @@ async function probeOnce(target, fetchImpl) {
           latencyMs: Math.round(performance.now() - startedAt),
           detail: "回應 JSON 沒有 ok=true",
         };
+      }
+      if (target.check === "ai-alive") {
+        const ai = parsed?.ai;
+        // 沒有 ai 這格＝跑的是舊版，先不當成倒（升級期間不誤報）
+        if (ai && ai.ok !== true) {
+          const why = ai.state === "unknown"
+            ? "問不出她講不講得出話（太久沒有真流量、探測也沒成功）"
+            : `她講不出話了：${(ai.lastError || "").slice(0, 120)}`;
+          return {
+            ok: false,
+            status: res.status,
+            latencyMs: Math.round(performance.now() - startedAt),
+            detail: `服務活著、但${why}`,
+          };
+        }
       }
     }
     return {
