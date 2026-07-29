@@ -3778,8 +3778,8 @@ function _muneaNotChattedTodayLine(now, ask) {
     const pill = _muneaPillStatusToday();
     if (pill) {
       const leads = [
-        pill.next.slot + '的藥吃了嗎，', '記得吃' + pill.next.slot + '的藥，', '別忘了' + pill.next.slot + '的藥，',
-        pill.next.slot + '該吃藥囉，', '藥還沒吃完，'
+        medSlotLabel(pill.next.slot) + '的藥吃了嗎，', '記得吃' + medSlotLabel(pill.next.slot) + '的藥，', '別忘了' + medSlotLabel(pill.next.slot) + '的藥，',
+        medSlotLabel(pill.next.slot) + '該吃藥囉，', '藥還沒吃完，'
       ];
       return leads[_muneaDayOfYear(now) % leads.length] + ask;
     }
@@ -3931,7 +3931,7 @@ function renderPillTask() {
   const next = slots.find(s => s.status !== 'taken' && s.status !== 'skipped');
   if (next) {
     title.textContent = '吃' + muneaSafeDisplayText(String(next.name).split(/\s+/)[0], '藥'); // 標題用短名、全名在用藥管理；短名守門（Edward 2026-07-15 事故）
-    sub.textContent = next.slot + ' · 今天 ' + doneN + '/' + total + ' 次';
+    sub.textContent = medSlotLabel(next.slot) + ' · 今天 ' + doneN + '/' + total + ' 次';
     card.classList.remove('done');
   } else {
     title.textContent = '今天的藥都吃了';
@@ -4174,6 +4174,12 @@ function renderMedList() { renderMedSlots(); }
 const MED_SLOT_DEF = [
   ['早餐後', 'b', 30], ['午餐後', 'l', 30], ['晚餐後', 'd', 30], ['睡前', 's', -30]
 ];
+// 用藥時段的「畫面顯示名」（Edward 2026-07-29：直接寫餐別，不要寫飯前飯後——
+// 藥該飯前還飯後吃是醫生決定的，App 不該替使用者預設）。
+// 內部值維持「早餐後」等舊字串不動：那是用藥資料、推播、語音腦共用的代號，
+// 改掉會對不上使用者既有的藥單。所有給人看的地方一律走 medSlotLabel()。
+const MED_SLOT_LABEL = { '早餐後': '早餐', '午餐後': '中餐', '晚餐後': '晚餐', '睡前': '睡前' };
+function medSlotLabel(slot) { return MED_SLOT_LABEL[slot] || slot; }
 function medSlotTime(rtKey, offset) {
   let rt = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
   try { rt = Object.assign(rt, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) {}
@@ -4207,7 +4213,7 @@ function renderMedSlots() {
     const rows = inSlot.length
       ? inSlot.map(m => '<div class="ms-med">' + (m.photo ? '<span class="ms-thumb" data-name="' + m.name + '" style="background-image:url(' + m.photo + ')"></span>' : '') + '<b>' + muneaSafeDisplayText(m.name, '藥') + '</b><span>' + m.days + '</span><button type="button" class="ms-del" data-slot="' + slot + '" data-name="' + m.name + '" aria-label="移除">✕</button></div>').join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
       : '<div class="ms-empty">這個時段沒有藥</div>';
-    return '<div class="ms-group"><div class="ms-head"><b>' + slot + '</b>' +
+    return '<div class="ms-group"><div class="ms-head"><b>' + medSlotLabel(slot) + '</b>' +
       '<span class="ms-time-wrap"><button type="button" class="ms-tbtn" data-k="' + k + '" data-m="-15">−</button>' +
       '<input type="time" class="ms-time" data-k="' + k + '" data-off="' + off + '" value="' + medSlotTime(k, off) + '" />' +
       '<button type="button" class="ms-tbtn" data-k="' + k + '" data-m="15">＋</button></span>' +
@@ -4492,7 +4498,7 @@ function handleMedicationChange(event) {
     source: dose.source || 'app',
   });
   // 家庭圈只分享服藥時段，不分享藥名，兼顧照護與用藥隱私。
-  pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot || '這次') + '服藥，' + cname() + '有看著');
+  pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot ? medSlotLabel(dose.slot) : '這次') + '服藥，' + cname() + '有看著');
 }
 function streakLine(n) {
   if (n >= 10) return '這個月有 <b>' + n + ' 天</b>準時吃藥，很穩，繼續保持';
@@ -6138,7 +6144,9 @@ function init() {
         '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
         '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
         '<div class="hr-status ' + st.cls + '"><span class="hr-dot"></span><span class="hr-slabel">' + st.label + '</span></div></div>';
-    }).join('') : '<p class="modal-sub" style="margin:6px 2px">圈裡還沒有家人，點上面「邀請」把家人拉進來。</p>';
+    }).join('') : '<div class="fam-empty">圈裡還沒有家人<br>點上面「邀請」把家人拉進來，就看得到大家的狀態</div>';
+    // 空的時候讓掉白卡外觀，改用跟上面「還沒有進行中的活動」同一套虛線框（Edward 2026-07-29）
+    if (hl) hl.classList.toggle('is-empty', !mem.length);
     if (currentPerson && !FAM_ORDER.includes(currentPerson)) { currentPerson = FAM_ORDER[0] || ''; if ($('#viewPerson') && $('#viewPerson').classList.contains('active')) showFamAll(); }
     renderFamDots();
   }
