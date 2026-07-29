@@ -210,7 +210,7 @@ class Drill:
                 beat = self.store.heartbeat(
                     call_id=str(occupier["call_id"]),
                     lease_version=int(occupier.get("lease_version") or 1),
-                    component="drill-occupier",
+                    component="app",
                     event_id="queue-drill-hb-" + uuid.uuid4().hex,
                     user_id=self.user_id,
                 )
