@@ -1,8 +1,8 @@
 {
   "schema": "munea.i18n-app-binding-manifest.v1",
-  "integrationStatus": "pending-conflicting-main-screen-prs",
+  "integrationStatus": "in-progress-main-screen-integration",
   "staticBindingRuntimeStatus": "integrated",
-  "stateOwnedRendererStatus": "pending-conflicting-main-screen-prs",
+  "stateOwnedRendererStatus": "in-progress-main-screen-integration",
   "dynamicContentObserver": "integrated",
   "rendererCopyProvider": "MuneaAppRendererCopy",
   "staticBindings": [
@@ -32,7 +32,22 @@
     {"anchorId": "authSheetTitle", "target": "textContent", "key": "auth.sheetTitle", "applyMode": "static"},
     {"anchorId": "authAppleBtn", "target": "descendantText", "key": "auth.apple", "applyMode": "static"},
     {"anchorId": "authGoogleBtn", "target": "descendantText", "key": "auth.google", "applyMode": "static"},
-    {"anchorId": "authDeveloperBtn", "target": "textContent", "key": "auth.developerMode", "applyMode": "static"}
+    {"anchorId": "authDeveloperBtn", "target": "textContent", "key": "auth.developerMode", "applyMode": "static"},
+    {"anchorId": "pageTitle", "target": "textContent", "key": "status.title", "applyMode": "state-owned"},
+    {"anchorId": "obsHeading", "target": "textContent", "key": "status.companionObservation", "applyMode": "state-owned"},
+    {"anchorId": "obsPeriod", "target": "textContent", "key": "status.today", "applyMode": "state-owned"},
+    {"anchorId": "obsText", "target": "textContent", "key": "status.observationToday", "applyMode": "state-owned"},
+    {"anchorId": "moodChip", "target": "textContent", "key": "status.today", "applyMode": "state-owned"},
+    {"anchorId": "moodLabel", "target": "textContent", "key": "mood.calm", "applyMode": "state-owned"},
+    {"anchorId": "moodNote", "target": "textContent", "key": "mood.note.calm", "applyMode": "state-owned"},
+    {"anchorId": "moodPeriodLabel", "target": "textContent", "key": "status.today", "applyMode": "state-owned"},
+    {"anchorId": "medSub", "target": "textContent", "key": "status.medicationUnset", "applyMode": "state-owned"},
+    {"anchorId": "medChip", "target": "textContent", "key": "medication.notTaken", "applyMode": "state-owned"},
+    {"anchorId": "bpSub", "target": "textContent", "key": "status.normalRange", "applyMode": "state-owned"},
+    {"anchorId": "hrSub", "target": "textContent", "key": "status.restingHeartRate", "applyMode": "state-owned"},
+    {"anchorId": "medTrendChip", "target": "textContent", "key": "status.fullMedicationDays", "applyMode": "state-owned"},
+    {"anchorId": "sleepTrendChip", "target": "textContent", "key": "status.dailyAverageHours", "applyMode": "state-owned"},
+    {"anchorId": "actChip", "target": "textContent", "key": "status.dailyAverageSteps", "applyMode": "state-owned"}
   ],
   "dynamicBindings": [
     {

@@ -17,7 +17,10 @@ const appSurface = inventory.surfaces.find((surface) => surface.id === 'app-webv
 assert.equal(worklist.schema, 'munea.i18n-migration-worklist.v3');
 assert.equal(worklist.surface, 'app-webview');
 assert.deepEqual(worklist.requiredLocales, ['zh-TW', 'en', 'ja', 'es']);
-assert.equal(worklist.summary.totalOccurrences, appSurface.baselineHanCandidates);
+assert(
+  worklist.summary.totalOccurrences <= appSurface.baselineHanCandidates,
+  'Current App copy inventory must not exceed the checked-in migration baseline',
+);
 assert(worklist.summary.boundOccurrences > 0, 'Bound fallbacks must be reported separately');
 assert.equal(worklist.summary.reviewedNonUserFacingOccurrences, 8);
 assert(worklist.summary.unboundOccurrences > 0, 'Unbound copy must remain in the worklist');

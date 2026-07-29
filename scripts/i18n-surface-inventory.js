@@ -333,7 +333,7 @@ function staticCatalogKey(source, argument) {
 
 function javaScriptBindings(source, catalogKeys) {
   const bindings = [];
-  const callPattern = /\b(muneaT|t|localizedFallback|(?:window\.)?MuneaI18n(?:\.|\?\.)t)\s*\(/g;
+  const callPattern = /\b(muneaT|(?:window\.)?muneaUiT|t|localizedFallback|(?:window\.)?MuneaI18n(?:\.|\?\.)t)\s*\(/g;
   let match;
   while ((match = callPattern.exec(source)) !== null) {
     const openParenIndex = source.indexOf('(', match.index + match[1].length);

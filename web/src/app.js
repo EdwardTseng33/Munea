@@ -551,6 +551,7 @@ async function syncAccountBootstrap(action = 'create', extra = {}) {
 }
 function syncCompanionUI() {
   const t = templateFor();
+  if (!companionNameTouched) companionDisplayName = t.defaultName;
   const display = companionDisplayName.trim() || t.defaultName;
   const src = 'avatars/' + currentAvatarId + '.png';
   const thumbSrc = t.thumbAsset || src;
@@ -569,7 +570,7 @@ function syncCompanionUI() {
   const fimg = $('#faceImg'); if (fimg) { fimg.src = fullSrc; fimg.classList.toggle('sq', !t.fullAsset); }
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
   $$('.obs-ava img').forEach(i => { i.src = thumbSrc; });   // 狀態頁「○○的觀察」頭像＝跟著選的角色臉（Edward 2026-07-09）
-  $$('.cname').forEach(el => { el.textContent = display; });
+  const obsHeading = $('#obsHeading'); if (obsHeading) obsHeading.textContent = muneaT('status.companionObservation', '{companion}的觀察', { companion: display });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
   renderCompanionGreeting();

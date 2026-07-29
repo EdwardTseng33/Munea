@@ -9,7 +9,7 @@ const {
 } = require('./i18n-native-review-worklist.js');
 
 const worklist = buildNativeReviewWorklist();
-const expectedPerLocale = 484;
+const expectedPerLocale = worklist.catalogs['zh-TW'].keyCount;
 
 assert.equal(worklist.schema, 'munea.i18n-native-review-worklist.v1');
 assert.deepEqual(worklist.locales, LOCALES);

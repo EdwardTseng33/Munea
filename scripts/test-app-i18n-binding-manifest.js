@@ -33,9 +33,9 @@ const catalogs = Object.fromEntries(
 );
 
 assert.equal(manifest.schema, 'munea.i18n-app-binding-manifest.v1');
-assert.equal(manifest.integrationStatus, 'pending-conflicting-main-screen-prs');
+assert.equal(manifest.integrationStatus, 'in-progress-main-screen-integration');
 assert.equal(manifest.staticBindingRuntimeStatus, 'integrated');
-assert.equal(manifest.stateOwnedRendererStatus, 'pending-conflicting-main-screen-prs');
+assert.equal(manifest.stateOwnedRendererStatus, 'in-progress-main-screen-integration');
 assert.equal(manifest.dynamicContentObserver, 'integrated');
 assert.equal(manifest.rendererCopyProvider, 'MuneaAppRendererCopy');
 assert.match(
@@ -118,7 +118,7 @@ assert.equal(
 );
 assert.equal(
   manifest.staticBindings.filter(({ applyMode }) => applyMode === 'state-owned').length,
-  7,
+  22,
   'State-owned binding inventory drifted',
 );
 

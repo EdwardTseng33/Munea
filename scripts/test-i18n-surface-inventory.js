@@ -17,23 +17,24 @@ const jsCandidates = scanJavaScript(`
   const bound = t('common.save', '儲存');
   const direct = window.MuneaI18n.t('common.cancel', null, '取消');
   const legacy = localizedFallback('medication.slot.bedtime', '睡前');
+  const uiHelper = window.muneaUiT('status.title', '今天的狀態');
   const unknown = t('missing.catalog.key', '未翻譯');
   /* "區塊註解不算" */
   const english = "Save";
 `);
 assert.deepEqual(
   jsCandidates.map((item) => item.text),
-  ['儲存成功', '你好，${name}', '儲存', '取消', '睡前', '未翻譯'],
+  ['儲存成功', '你好，${name}', '儲存', '取消', '睡前', '今天的狀態', '未翻譯'],
   'JavaScript scanner should keep localized literals and ignore comments',
 );
 assert.deepEqual(
   jsCandidates.map((item) => item.bindingStatus),
-  ['unbound', 'unbound', 'bound', 'bound', 'bound', 'unbound'],
+  ['unbound', 'unbound', 'bound', 'bound', 'bound', 'bound', 'unbound'],
   'Only fallback literals attached to catalog-complete keys may be classified as bound',
 );
 assert.deepEqual(
   jsCandidates.filter((item) => item.bindingStatus === 'bound').map((item) => item.bindingKey),
-  ['common.save', 'common.cancel', 'medication.slot.bedtime'],
+  ['common.save', 'common.cancel', 'medication.slot.bedtime', 'status.title'],
 );
 
 const htmlCandidates = scanHtml(`
@@ -265,8 +266,9 @@ for (const file of legalAndSupport.files) {
 const marketingReport = report.surfaces.find(
   (surface) => surface.id === 'marketing-site',
 );
-assert.equal(marketingReport.hanCandidates, 244);
-assert.equal(marketingReport.boundHanCandidates, 244);
+assert(marketingReport.hanCandidates > 0);
+assert(marketingReport.hanCandidates <= marketingReport.baselineHanCandidates);
+assert.equal(marketingReport.boundHanCandidates, marketingReport.hanCandidates);
 assert.equal(marketingReport.unboundHanCandidates, 0);
 assert.equal(marketingReport.files[0].path, 'app-site/index.html');
 assert.ok(

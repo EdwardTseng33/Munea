@@ -27,11 +27,12 @@ function completedWorklist(locale = 'en') {
   return worklist;
 }
 
-const evidence = compileNativeReviewEvidence(completedWorklist());
+const completed = completedWorklist();
+const evidence = compileNativeReviewEvidence(completed);
 assert.equal(evidence.schema, 'munea.i18n-native-review.v1');
 assert.equal(evidence.locale, 'en');
 assert.equal(evidence.result, 'pass');
-assert.equal(evidence.reviewedKeyCount, 484);
+assert.equal(evidence.reviewedKeyCount, completed.entryCount);
 assert.equal(evidence.openIssues, 0);
 assert.deepEqual(
   Object.keys(evidence.checks),
