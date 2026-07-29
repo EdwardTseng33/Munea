@@ -22,6 +22,7 @@ from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
 import cloud_resync
+import health_followup
 import health_kb
 import health_selector
 import localization
@@ -2455,12 +2456,22 @@ def proactive_opening_response(data):
             today_line = brief.get("briefingLine") or ""
             if style == "gentle":
                 today_line += "（她昨天聽起來有點悶——開場要更輕更慢，先陪伴、不要話題轟炸。）"
+            # 效果飛輪（2026-07-29）：幾天前推薦過的方法到期了 → 這次開口就順便關心後來怎麼樣。
+            # 這是「陪伴即追蹤」真正發生的地方——不追問結果的建議，等於講完就沒了。
+            try:
+                _due = health_followup.due_followups(person_id, limit=1)
+                if _due:
+                    today_line += health_followup.followup_cue(_due[0])
+                    reasons.append(f"有到期的回訪（{_due[0].get('label')}）")
+            except Exception as e:
+                log_fallback_exception("attach health followup to opener", e)
             opener = eng.open_chat(data.get("char") or DEFAULT_CHAR, today=today_line)
         except Exception as e:
             log_fallback_exception("generate proactive opener", e)
     return {"ok": True, "brain": "butler", "action": "proactive_opening",
             "shouldOpen": should, "score": score, "style": style,
-            "period": ctx["period"], "reasons": reasons, "opener": opener}
+            "period": ctx["period"], "reasons": reasons, "opener": opener,
+            "followUp": (health_followup.due_followups(person_id, limit=1) or [None])[0]}
 
 
 def refresh_daily_briefing(region=None, person_id=None):
@@ -8437,7 +8448,13 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     # 2026-07-29：把「這個人是誰、現在幾點」一起傳進去，方案挑選才會因人因時。
     # 沒有出生年就傳 None——挑選層會退回通用方案，不亂猜齡層（猜錯比不猜更傷）。
     _pp = load_person_profile() or {}
-    _health_profile = {"audience": health_selector.audience_from_birth_year(_pp.get("birthYear"))}
+    _person_id = _current_person_id() or ""
+    _health_profile = {
+        "audience": health_selector.audience_from_birth_year(_pp.get("birthYear")),
+        "personId": _person_id,
+        # 效果飛輪：他上次試過什麼、有沒有效——說沒效的這次就不要再端出來
+        "outcomes": health_followup.outcomes_for(_person_id) if _person_id else {},
+    }
     # 話題延續：翻回前幾輪他說過的話，找出這通在聊的那題——不然「我睡不好」的下一句
     # 「吃鎂有用嗎，真的假的？」會被當成謠言查證，拿不到鎂的方案（2026-07-29 考卷抓到）。
     _recent_topic = None
