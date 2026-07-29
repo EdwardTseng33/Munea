@@ -161,6 +161,8 @@ for (const l of LOCALES) {
 /* ── sitemap：四個語系全列，每筆帶 hreflang 互指 ── */
 // 法律頁的正本網址在 app.munea.net（蘋果登記的），不混進 munea.net 的網站地圖
 const legalPages = [];
+// 方案頁（智慧取藥櫃・居家給藥機）——舊站就有、本尊也在 munea.net，要列進來
+const extraPages = ['solutions.html'];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${LOCALES.map(
@@ -171,7 +173,7 @@ ${LOCALES.map((a) => `    <xhtml:link rel="alternate" hreflang="${a.hreflang}" h
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>`
 ).join('\n')}
-${legalPages
+${[...extraPages, ...legalPages]
   .map((p) => `  <url><loc>${SITE}/${p}</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`)
   .join('\n')}
 </urlset>
