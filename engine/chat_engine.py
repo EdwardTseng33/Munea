@@ -120,6 +120,11 @@ CORE = (
     "你知道的只有下面「今日簡報」那段裡備好的（天氣、明天預告、空品、本週話題），"
     "那些是今天早上核實過的真資料，可以自然講、大方講。**簡報裡沒有的就老實說不知道**："
     "「這我就不知道了欸」「我沒把握，你要不要打去問問看」——**絕不自己捏造颱風、災情、數字或事件**。"
+    "⚠ 2026-07-29 實測踩到、講明白：**沒有數字也算捏造**。簡報裡沒有天氣時，"
+    "「今天晴時多雲」「應該不會下雨」「天氣不錯」這種**狀態**一樣是編的，不因為沒報幾度就變成安全；"
+    "更不可以說「氣象報告說」「氣象局說」「預報說」——你手上沒有預報，**引用一個你沒有的來源比講錯天氣更嚴重**。"
+    "他問今天會不會下雨、簡報裡沒有 → 老實說「我今天沒有拿到天氣欸，你出門前看一下手機比較準」，"
+    "然後照樣關心他要出門的事（鞋子、傘、時間）——**接不住天氣不代表接不住他這個人**。"
     "（若這一通有另外給你即時查詢工具，會另有說明；沒說就是沒有，別假設自己查得到。）"
     "**講新聞／時事的三條鐵律**：①只講『今日簡報裡真的有』的，**不要假裝自己滑手機看到某則新聞、不要編爆紅故事或人物**（例如沒有根據就說「有個貓奶奶最近很紅」＝捏造）；"
     "②要講就講**台灣在地、對長輩有意義**的（天氣、生活、健康、他家鄉的事），不要丟他無感的國外瑣聞；"
@@ -221,7 +226,39 @@ def strip_impossible_promises(t):
     return cleaned, dropped
 
 
-def clean_outgoing_reply(t):
+# 2026-07-29 考卷 S03 抓到：劇本完全沒給天氣，她卻說「今天的天氣是晴時多雲喔」，
+# 被追問還加碼「今天氣象報告說會是晴時多雲的好天氣」。說明書早就寫了「不准捏造數字或
+# 事件」——她避開了數字，卻編了一個**狀態**跟一個**來源**，自認沒違規。
+#
+# 說明書那層已經講明白了（見 RED ⑥），這裡再加程式層硬擋：**引用一個不存在的預報來源**
+# 是可以確定判斷的——沒有簡報就等於沒有預報，那句話一定是假的。天氣狀態本身不硬擋
+# （使用者自己說「外面在下雨」時她跟著講是對的），那條靠說明書。
+FORECAST_SOURCE_WORDS = ("氣象報告", "氣象局", "氣象署", "天氣預報", "預報說", "中央氣象")
+FORECAST_FALLBACK = "我今天沒拿到天氣欸，你出門前看一下手機比較準。"
+
+
+def strip_unbacked_forecast_source(t, has_briefing=None):
+    """沒有今日簡報卻引用氣象來源＝編造來源，整句換掉。回傳 (清過的字, 被砍的句子)。
+
+    has_briefing=None（不知道有沒有簡報）時不動作——寧可漏擋，也不要把正確的話砍掉。
+    """
+    if not t or has_briefing is not False:
+        return t, []
+    parts, kept, dropped = re.split(r"(?<=[。！？\n])", t), [], []
+    for seg in parts:
+        if seg.strip() and any(w in seg for w in FORECAST_SOURCE_WORDS):
+            dropped.append(seg.strip())
+            continue
+        kept.append(seg)
+    if not dropped:
+        return t, []
+    # 先講「我不知道天氣」再接原本的話——不然會變成先問「你要去菜市場嗎」、
+    # 才補一句沒拿到天氣，聽起來像答非所問。
+    out = "".join(kept).strip()
+    return (FORECAST_FALLBACK + out) if out else FORECAST_FALLBACK, dropped
+
+
+def clean_outgoing_reply(t, has_briefing=None):
     """出去前的統一清洗——正式線都要走這支（文字線 server.reply_conv、語音線字幕出口、
     主動開口）。裡面兩道：①剝內部推理標記（2026-07-25）②砍做不到的空頭承諾（2026-07-29）。
 
@@ -234,6 +271,7 @@ def clean_outgoing_reply(t):
         return t
     cleaned = strip_reasoning_artifacts(t)
     cleaned, dropped = strip_impossible_promises(cleaned)
+    cleaned, _forecast = strip_unbacked_forecast_source(cleaned, has_briefing=has_briefing)
     if dropped:
         LOGGER.warning("stripped impossible promise from outgoing reply: %s", dropped[:2])
     return cleaned
