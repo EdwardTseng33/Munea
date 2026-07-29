@@ -38,6 +38,11 @@ html, body { width: 100%; min-height: 100%; }
    與其逐一補 [hidden] 規則，不如在這裡一次擋住，之後誰新增元件都不會再踩。 */
 [hidden] { display: none !important; }
 body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
+/* 按鈕與輸入框預設「不會」繼承字體，會掉回作業系統的預設字
+   （實測有 83 個元素跑成 Arial，而整份樣式檔沒有任何一條寫過 Arial）。
+   結果就是畫面上有些字照規範、有些字掉回系統字，看起來「沒有規則」。
+   這裡只把字體家族接回設計系統；字級與字重仍由各元件自己的樣式決定。 */
+button, input, select, textarea, optgroup { font-family: inherit; }
 
 .ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; flex-shrink: 0; }
 
@@ -636,9 +641,15 @@ body { font-family: var(--sans); background: #EFE9DD; color: var(--ink); -webkit
 .auth-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .auth-close { width: 38px; height: 38px; border-radius: 13px; border: 1px solid var(--line); background: #fff; color: var(--muted); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
 .auth-provider-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 14px; }
-.auth-provider { width: 100%; min-height: 52px; border-radius: 16px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
-.auth-provider .ic { width: 21px; height: 21px; }
-.auth-provider .apple-mark { width: 16px; height: 20px; display: block; flex-shrink: 0; fill: currentColor; stroke: none; }
+/* 兩顆登入鍵上下疊著，圖示與文字必須各自對齊成一直線。
+   原本是整組置中＋兩個圖示大小不同（Apple 16x20 / Google 21x21），
+   加上「Apple」「Google」字寬本來就不一樣，置中的結果是兩顆的圖示與文字都各歪各的
+   （實測圖示左緣差 6.9px）。改成圖示釘在固定位置、文字維持置中，兩顆就一定對得上。 */
+.auth-provider { position: relative; width: 100%; min-height: 52px; border-radius: 16px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; padding: 0 46px; cursor: pointer; }
+/* 兩個圖示共用同一個方框，Apple 商標靠 viewBox 自己置中、不會被拉變形（送審規定不可變形） */
+.auth-provider .ic,
+.auth-provider .apple-mark { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 21px; height: 21px; display: block; flex-shrink: 0; }
+.auth-provider .apple-mark { fill: currentColor; stroke: none; }
 .auth-dev-btn { width: 100%; margin-top: 10px; min-height: 46px; border-radius: 15px; background: var(--coral-soft); color: var(--coral-d); font-size: 15px; }
 .auth-message { min-height: 20px; font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.4; }
 .auth-message.is-error { color: var(--danger); font-weight: 700; }
