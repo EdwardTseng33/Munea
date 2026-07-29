@@ -1654,6 +1654,18 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .vs-line .n { flex-shrink: 0; align-self: center; width: 22px; height: 22px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
 .vs-line .x { flex-shrink: 0; border: none; background: transparent; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 4px; cursor: pointer; min-height: 30px; }
 
+/* 分區標題右側的「編輯／完成」。.set-section 本來只是一行文字，
+   這裡讓它變成兩欄；字級顏色沿用，只加排版。 */
+.set-section.vs-sec-act { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.set-section.vs-sec-act button { border: none; background: none; font-family: var(--sans); font-size: var(--fs-sub); font-weight: 700; color: var(--teal-dd); cursor: pointer; padding: 6px 2px; min-height: 44px; }
+
+/* 刪除鍵：視覺跟就診清單的 .vi-del 同一款（同一件事就長同一個樣），
+   但點擊區拉到 44px——長輩的手指按不準 28px 的小藥丸。
+   用「刪除」兩個字不用 ✕ 圖示：長輩讀得懂字、猜不出圖示，
+   而且刪東西不可逆，更不該讓他用猜的。 */
+.vs-del { flex-shrink: 0; border: 1px solid var(--line); background: #fff; color: var(--muted); font-family: var(--sans); font-size: var(--fs-note); font-weight: 700; padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 44px; }
+.vs-del:active { background: var(--mint); }
+
 /* 「＋ 自己加一題」：App 裡沒有同類的虛線新增鍵 */
 .vs-add { width: 100%; border: 1px dashed var(--line); background: transparent; color: var(--teal-dd); font-family: var(--sans); font-size: var(--fs-sub); font-weight: 700; padding: 10px; border-radius: var(--radius-sm); cursor: pointer; margin-top: 10px; min-height: 40px; }
 

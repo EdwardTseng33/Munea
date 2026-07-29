@@ -776,5 +776,7 @@
   "visit.measuredDays": "{n} 日測定",
   "visit.exportUnsupported": "この端末では書き出せません。あとでスマホでお試しください",
   "appointment.scheduled": "予定されている受診",
-  "visit.openSummary": "サマリー"
+  "visit.openSummary": "サマリー",
+  "visit.questionSaved": "記録しました。受診前にお知らせします（{n} 件）。",
+  "visit.questionUnheard": "その質問がうまく聞き取れませんでした。もう一度お願いできますか"
 }

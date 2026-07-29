@@ -1254,7 +1254,7 @@ const CARE_Q_KEY = 'munea.careQuestions';
 /* 上限 5 題（Edward 2026-07-29：「可以多點但不要超過 5 點」）。
    滿了**不可以默默丟掉最舊的**——寧寧答應要幫他記，偷偷刪掉等於毀約。
    滿了就講出來，讓他自己決定刪哪一題。 */
-const CARE_Q_MAX = 5;
+const CARE_Q_MAX = 10;
 const CARE_Q_MAX_LEN = 60;      // 一題最長 60 字（跟工具描述一致）
 function loadCareQuestions() {
   let arr = [];
@@ -1316,6 +1316,7 @@ const VISIT_SUMMARY_PERIOD_KEY = 'munea.visitSummaryPeriod';
 const VISIT_SUMMARY_PERIODS = [7, 14, 30, 60];
 const VISIT_SUMMARY_MARK = { symptom: '●', vital: '▲', med: '✕' };
 let _rptPeriod = 0;
+let _rptEditing = false;   // 診間閱讀狀態（乾淨）↔ 在家整理狀態（有刪除鍵）
 
 function visitSummaryPeriod() {
   let stored = 0;
@@ -1475,14 +1476,34 @@ function renderVisitSummary(summary) {
   const sec = key => '<h2 class="set-section">' + rptEsc(key) + '</h2>';
 
   // ① 想問醫生擺最上面——醫師最先想知道的是「這個病人今天想幹嘛」
-  parts.push(sec(muneaT('visit.questionsTitle', '這次想問醫生')));
+  //
+  // 為什麼刪除鍵要藏在「編輯」後面：這一頁有兩個使用時刻，需求正好相反。
+  //   · 看診前在家 → 要加、要刪
+  //   · 在診間把手機遞給醫生 → 一整排「刪除」既雜亂又不專業，
+  //     而且醫生捲頁時很可能誤觸，把他準備了兩個禮拜的問題刪掉
+  // 預設是乾淨的閱讀狀態，要改再按「編輯」。
+  parts.push('<h2 class="set-section vs-sec-act">'
+    + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生'))
+    + (questions.length
+      ? '<button type="button" id="rptEditToggle">' + rptEsc(_rptEditing
+        ? muneaT('common.done', '完成') : muneaT('common.edit', '編輯')) + '</button>'
+      : '')
+    + '</h2>');
   if (questions.length) {
+    // 問題列直接用 .set-row（17px＝規範定的「內文」字級）。
+    // 這是整頁最需要看清楚的東西——長輩在診間拿著手機唸給醫生聽，
+    // 縮成 14px 的小字等於白做。編號用 .sr-ico 那顆現成的圓角方塊，
+    // 他可以直接說「第二題」。刪除用文字不用 ✕ 圖示：長輩讀得懂字，
+    // 猜不出圖示，而且刪東西這種不可逆的動作更不該用猜的。
     parts.push('<div class="set-list">');
     questions.forEach((q, i) => {
-      parts.push('<div class="vs-line" style="padding:12px 16px"><span class="n">' + (i + 1) + '</span>'
-        + '<span class="q">' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</span>'
-        + '<button class="x" type="button" data-qid="' + rptEsc(q.id) + '" aria-label="'
-        + rptEsc(muneaT('visit.deleteQuestionAria', '刪掉這一題')) + '">✕</button>'
+      parts.push('<div class="set-row"><span class="sr-ico">' + (i + 1) + '</span>'
+        + '<span class="sr-main">' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</span>'
+        + (_rptEditing
+          ? '<button class="vs-del" type="button" data-qid="' + rptEsc(q.id) + '" aria-label="'
+            + rptEsc(muneaT('visit.deleteQuestionAria', '刪掉這一題')) + '">'
+            + rptEsc(muneaT('common.delete', '刪除')) + '</button>'
+          : '')
         + '</div>');
     });
     parts.push('</div>');
@@ -1495,7 +1516,7 @@ function renderVisitSummary(summary) {
   if (questions.length >= CARE_Q_MAX) {
     parts.push('<p class="vs-note">' + rptEsc(muneaT('visit.questionsFullHint',
       '已經記滿 {n} 題了。想再加的話，先刪掉一題。', { n: CARE_Q_MAX })) + '</p>');
-  } else {
+  } else if (!_rptEditing) {
     parts.push('<button class="vs-add" type="button" id="rptAddQ">'
       + rptEsc(muneaT('visit.addQuestion', '＋ 自己加一題')) + '</button>');
   }
@@ -1578,7 +1599,12 @@ function renderVisitSummary(summary) {
 function bindVisitSummaryBody() {
   const add = document.getElementById('rptAddQ');
   if (add) add.addEventListener('click', addCareQuestionManually);
-  document.querySelectorAll('#rptBody .vs-line .x').forEach(btn => {
+  const edit = document.getElementById('rptEditToggle');
+  if (edit) edit.addEventListener('click', () => {
+    _rptEditing = !_rptEditing;
+    renderVisitSummary(_rptLastSummary);
+  });
+  document.querySelectorAll('#rptBody .vs-del').forEach(btn => {
     btn.addEventListener('click', () => removeCareQuestion(btn.dataset.qid));
   });
 }
@@ -1622,6 +1648,36 @@ function removeCareQuestion(id) {
    歸檔＝標記 askedAt，**不刪除**。理由跟原本那顆按鈕一樣：他問過什麼是病史
    的一部分，只是不要再拿舊問題提醒他。判定用「問題建立時間早於某一次已過的
    就診」——早於那次看診才算問過了；看完診之後才記的，是要問下一次的。 */
+/* 只留 60 天（Edward 2026-07-29：「最多就是儲存60天」）。
+   60 天正好是天數選項的上限——超過那個範圍的紀錄，這一頁再也顯示不到，
+   留著只是佔手機空間。問過的問題也一樣：歸檔是為了下次不再提醒他，
+   不是要永久保存一份健康疑問清單在裝置上。 */
+const VISIT_DATA_RETENTION_DAYS = 60;
+function pruneVisitSummaryData() {
+  const cutoff = Date.now() - VISIT_DATA_RETENTION_DAYS * 86400000;
+  // ① 問過的問題：超過 60 天就清掉。**還沒問的一律留著**——
+  //    他可能兩個月前就想問了，還沒輪到看診，那不是過期資料。
+  try {
+    const arr = loadCareQuestions();
+    const kept = arr.filter(q => {
+      if (!q || !q.askedAt) return true;
+      const asked = Date.parse(q.askedAt);
+      return !Number.isFinite(asked) || asked > cutoff;
+    });
+    if (kept.length !== arr.length) saveCareQuestions(kept);
+  } catch (e) {}
+  // ② 摘要快照：存太久的那份跟現況早就對不上，留著反而可能拿舊的給醫生看
+  try {
+    const all = JSON.parse(localStorage.getItem(VISIT_SUMMARY_SNAP_KEY) || '{}') || {};
+    let changed = false;
+    for (const key of Object.keys(all)) {
+      const savedAt = Date.parse((all[key] || {}).savedAt || '');
+      if (!Number.isFinite(savedAt) || savedAt <= cutoff) { delete all[key]; changed = true; }
+    }
+    if (changed) localStorage.setItem(VISIT_SUMMARY_SNAP_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+
 function autoArchiveCareQuestions() {
   let visits = [];
   try { visits = JSON.parse(localStorage.getItem('munea.visits') || '[]') || []; } catch (e) {}
@@ -1654,7 +1710,9 @@ let _rptLastSummary = null;
 async function openVisitSummary(source) {
   const page = document.getElementById('reportModal');
   if (!page) return;
+  _rptEditing = false;   // 每次打開都回到閱讀狀態
   autoArchiveCareQuestions();
+  pruneVisitSummaryData();
   _rptPeriod = visitSummaryPeriod();
   syncVisitSummaryTabs();
   page.classList.add('show');
@@ -1909,7 +1967,19 @@ async function handleVoiceAction(action, args) {
   }
   if (action === 'add_care_question') {
     const r = await aiAddCareQuestion({ question: args.question });
-    if (typeof toast === 'function') toast(r.ok ? ('記下來了，看醫生前我會提醒你（' + r.count + ' 個問題）') : '這個問題我沒聽清楚，你再說一次好嗎');
+    if (typeof toast === 'function') {
+      // 失敗有兩種，不能都說「我沒聽清楚」——清單滿了他再重講一百次也沒用，
+      // 只會讓他覺得自己講話講不清楚。要講真正的原因。
+      let msg;
+      if (r.ok) {
+        msg = muneaT('visit.questionSaved', '記下來了，看醫生前我會提醒你（{n} 個問題）', { n: r.count });
+      } else if (r.error === 'question_list_full') {
+        msg = muneaT('visit.questionsFull', '已經記滿 {n} 題了，先刪掉一題再加', { n: r.max || CARE_Q_MAX });
+      } else {
+        msg = muneaT('visit.questionUnheard', '這個問題我沒聽清楚，你再說一次好嗎');
+      }
+      toast(msg);
+    }
     return r;
   }
   if (action === 'set_medication_reminder') {

@@ -149,6 +149,51 @@ expect(CARE_Q_MAX > 0 && CARE_Q_MAX_LEN > 0, '常數沒有正確導出，後面�
     'A-7 清單滿了再記一題，既有題目不可以被擠掉');
   console.log('PASS A-7 清單滿了擋在門口，不動既有題目');
 
+  /* A-8 語音那條路真的走得通——不是只驗字串有沒有出現，是把整條鏈跑一遍。
+     鏈路：Gemini 呼叫工具 → 伺服器轉成 {type:'action'} 送 ws → App 的
+     handleVoiceAction → aiAddCareQuestion → localStorage → 就診摘要讀得到。
+     這裡把 handleVoiceAction 那一段真的抽出來執行（不是 mock），只補它
+     依賴的 muneaT / toast，證明語音記下來的問題會出現在摘要的清單裡。 */
+  const actionBlock = sliceBlock(app, 'async function handleVoiceAction(action, args) {',
+    'window.__muneaHandleVoiceAction = handleVoiceAction;', 'handleVoiceAction');
+  const toasts = [];
+  sandbox.toast = m => toasts.push(String(m));
+  sandbox.muneaT = (k, fb, v) => String(fb).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] != null ? v[n] : ''));
+  sandbox.brainPost = async () => ({ ok: false });
+  vm.runInContext(actionBlock, sandbox, { filename: 'app.js#handleVoiceAction' });
+  const handleVoiceAction = sandbox.handleVoiceAction;
+  expect(typeof handleVoiceAction === 'function', 'A-8 抽不出 handleVoiceAction');
+
+  // 清乾淨再測，才知道是這一次語音存進去的
+  saveCareQuestions([]);
+  const before = openCareQuestions().length;
+  const voiceResult = await handleVoiceAction('add_care_question',
+    { question: '最近走路會喘，需不需要做心臟檢查？' });
+  expect(voiceResult && voiceResult.ok === true,
+    `A-8 語音記問題失敗：${JSON.stringify(voiceResult)}`);
+  const after = openCareQuestions();
+  expect(after.length === before + 1, 'A-8 語音記下的問題沒有進到清單');
+  expect(after[after.length - 1].text.includes('走路會喘'), 'A-8 存進去的不是他說的那句');
+  expect(toasts.some(m => m.includes('記下來了')), 'A-8 沒有跟長輩確認記好了');
+  // 摘要那一頁讀的就是這份清單（openCareQuestions），所以進得了清單＝看得到
+  console.log('PASS A-8 語音 → handleVoiceAction → 清單 → 就診摘要，整條走得通');
+
+  /* A-9 清單滿了，語音那條**不可以**跟他說「我沒聽清楚」——
+     他會一直重講，永遠不知道是滿了。失敗原因要講對。 */
+  saveCareQuestions([]);
+  for (let i = 0; i < CARE_Q_MAX; i += 1) {
+    await aiAddCareQuestion({ question: `第${i}個要問醫生的問題是什麼呢` });
+  }
+  toasts.length = 0;
+  const fullResult = await handleVoiceAction('add_care_question',
+    { question: '這一題應該要被擋下來並且說明原因' });
+  expect(fullResult && fullResult.ok === false && fullResult.error === 'question_list_full',
+    `A-9 滿了應回 question_list_full，實得 ${JSON.stringify(fullResult)}`);
+  expect(!toasts.some(m => m.includes('沒聽清楚')),
+    `A-9 清單滿了卻跟他說「沒聽清楚」，他會一直重講：${toasts.join(' / ')}`);
+  expect(toasts.some(m => m.includes('記滿')), `A-9 沒有講出真正的原因：${toasts.join(' / ')}`);
+  console.log('PASS A-9 清單滿了講真正的原因，不謊稱沒聽清楚');
+
   /* ─── Part B · 契約：跨檔接線的 source-level 鎖 ──────────────── */
 
   // B-1 能力握手兩邊對得上（事故②：舊版拿到工具卻沒地方寫＝空頭承諾）
@@ -199,5 +244,5 @@ expect(CARE_Q_MAX > 0 && CARE_Q_MAX_LEN > 0, '常數沒有正確導出，後面�
   }
   console.log(`PASS B-5 看診推播只帶數量、不帶問題內文（檢查 ${visitBodyLines.length} 行組裝碼）`);
 
-  console.log('\n✅ 口袋問題（M1 PR-3）全過：行為 6 組 ＋ 契約 5 組');
+  console.log('\n✅ 口袋問題全過：行為 9 組（含語音端對端）＋ 契約 5 組');
 })().catch(err => { console.error('\n❌ FAIL:', err.message); process.exit(1); });

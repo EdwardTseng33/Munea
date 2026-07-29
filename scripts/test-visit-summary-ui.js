@@ -75,6 +75,35 @@ expect(app.indexOf('visit.timelineLoading') > 0 && app.indexOf('visit.timelineEm
   '①d 讀取中與真的沒事共用同一句文案');
 ok('①d 開頁用本機資料先畫，不再有「整理中」');
 
+/* ①e 診間安全：把手機遞給醫生時，畫面不該有一排「刪除」等著被誤觸。
+   刪除鍵藏在「編輯」後面，而且每次重開都回到閱讀狀態。 */
+expect(app.includes('_rptEditing'), '①e 沒有閱讀／編輯兩種狀態，刪除鍵會一直露在外面');
+expect(/_rptEditing\s*\?[\s\S]{0,200}vs-del/.test(app),
+  '①e 刪除鍵沒有被 _rptEditing 包住＝診間也看得到，醫生捲頁可能誤刪');
+expect(/_rptEditing = false;[\s\S]{0,200}autoArchiveCareQuestions/.test(app),
+  '①e 重開摘要時沒有回到閱讀狀態，上次整理完的編輯模式會殘留到診間');
+expect(css.includes('.vs-del') && /\.vs-del[^}]*min-height: 44px/.test(css),
+  '①e 刪除鍵點擊區小於 44px，長輩按不準');
+// 用「刪除」兩個字而不是 ✕ 圖示：長輩讀得懂字、猜不出圖示，刪除又不可逆
+expect(app.includes("muneaT('common.delete'"), '①e 刪除鍵用圖示而非文字');
+ok('①e 診間是乾淨的閱讀狀態，刪除鍵收在「編輯」後面且點擊區夠大');
+
+/* ①f 字級要照規範——這一頁是給長輩在診間唸給醫生聽的，縮小字等於白做。
+   規範（styles.css :root）寫明「內文 17」，.set-row 就是 17px。 */
+expect(/questions\.forEach[\s\S]{0,400}class="set-row"/.test(app),
+  '①f 問題列沒有用 .set-row（17px 內文字級），自己縮成小字了');
+expect(/questions\.forEach[\s\S]{0,400}sr-main/.test(app), '①f 問題文字沒有走 .sr-main');
+ok('①f 問題列吃規範的內文字級（.set-row 17px），不自己縮小');
+
+/* ①g 只留 60 天——跟天數選項的上限一致，超過就再也顯示不到 */
+expect(app.includes('VISIT_DATA_RETENTION_DAYS'), '①g 沒有保存期限，資料會無限累積在手機上');
+expect(/VISIT_DATA_RETENTION_DAYS = 60/.test(app), '①g 保存期限不是 60 天');
+expect(app.includes('pruneVisitSummaryData'), '①g 有定義期限但沒有真的清');
+// 還沒問的一律留著——他可能兩個月前就想問，只是還沒輪到看診，那不是過期資料
+expect(/if \(!q \|\| !q\.askedAt\) return true;/.test(app),
+  '①g 清理時把「還沒問的」也清掉了');
+ok('①g 只留 60 天，但還沒問的問題不會被清掉');
+
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
   '疑似', '診斷', '嚴重', '正常值', '標準值'];

@@ -776,5 +776,7 @@
   "visit.measuredDays": "量了 {n} 天",
   "visit.exportUnsupported": "這台裝置沒辦法匯出，晚點在手機上試",
   "appointment.scheduled": "已排的就診",
-  "visit.openSummary": "看摘要"
+  "visit.openSummary": "看摘要",
+  "visit.questionSaved": "記下來了，看醫生前我會提醒你（{n} 個問題）",
+  "visit.questionUnheard": "這個問題我沒聽清楚，你再說一次好嗎"
 }

@@ -776,5 +776,7 @@
   "visit.measuredDays": "medido {n} días",
   "visit.exportUnsupported": "Este dispositivo no puede exportar. Inténtalo más tarde en tu teléfono.",
   "appointment.scheduled": "Visitas programadas",
-  "visit.openSummary": "Resumen"
+  "visit.openSummary": "Resumen",
+  "visit.questionSaved": "Guardado. Te lo recordaré antes de la visita ({n} preguntas).",
+  "visit.questionUnheard": "No entendí esa pregunta. ¿Puedes repetirla?"
 }
