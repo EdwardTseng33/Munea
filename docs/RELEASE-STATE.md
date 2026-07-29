@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-29 02:50 Asia/Taipei` (Build 492 frozen-artifact evidence reconciled against post-package main; runtime and DB lanes otherwise unchanged)
+Snapshot time: `2026-07-29 22:20 Asia/Taipei` (1.0.46 Build 1 packaged from GitHub exact commit through PR #317 and installed; Apple upload awaiting explicit binary-egress approval)
 
-Source reconciliation baseline: `origin/main@db229d8c`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
+Source reconciliation baseline: `origin/main@83b0d7a`; exact 1.0.46 package commit: `222c650`
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -26,10 +26,11 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.44 (Build 492)` | 這是 post-package source，已在凍結 commit `72a0bd46` 之後加入 Voice／Gateway 等變更；沒有適用 current HEAD 的 Archive／IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source。下一次包版必須換新 Build number | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 02:50 |
-| Latest uploaded App | `1.0.44 (Build 492)` | App Store Release Archive／IPA 已建立；Apple 於 17:22:57 回傳 `Upload succeeded`，TestFlight upload status 與 Build 處理皆完成。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1` | Xcode upload receipt; App Store Connect; `STATUS.md` | 2026-07-28 17:31 |
-| App Store selected review lane | `1.0.44 (Build 492)` | 17:31 已選入 1.0.44 版本頁並儲存；頁面狀態仍為「準備提交」。未點「新增以供審查」、未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-28 17:31 |
-| Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
+| Latest source | `1.0.46 (Build 1)` | GitHub 精確 commit `222c650`，含 main through #317；完整 launch、Call Control 15/15、Avatar、i18n、product alignment、Archive／IPA 防漏 PASS。IPA 59,019,647 bytes，SHA-256 `9794e303a8e84e76bb6bcf302b20df2a17a5c918a9fe9e0483f98c5059212da5` | test logs; Xcode Archive／export; packaged build identity | 2026-07-29 22:19 |
+| Latest uploaded App | `1.0.45 (Build 1)` | 2026-07-29 Apple upload 與 processing 完成並選入 1.0.45 版本頁。不得把該成品證據上推到 1.0.46 | App Store Connect live page; PR #288 | 2026-07-29 14:52 |
+| App Store selected review lane | `1.0.45 (Build 1)` | 頁面標題與版本欄位均為 1.0.45，Build 1 已選入並儲存；仍為「準備提交」，未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-29 14:52 |
+| Edward iPhone install lane | `1.0.46 (Build 1)` | Edward iPhone 15 Pro 已覆蓋安裝／啟動並由裝置資料庫回讀同版；Development signing＋production config，無 QA fixture。安裝成功不等於真人通話 Gate | `devicectl` install／launch／app inventory; build identity `222c650` | 2026-07-29 22:20 |
+| Pending Apple upload lane | `1.0.46 (Build 1)` | IPA 已準備完成；系統在將私有 binary 送往 App Store Connect 前要求 Edward 對此精確成品再次明確核准。尚未 upload／processing／選取 | local verified IPA; denied upload attempt before payload egress | 2026-07-29 22:06 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
 ## Runtime services
