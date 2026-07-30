@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>WebRTC 最後一哩 · 試作台</title>
+<style>
+  body { background:#0E1A17; color:#FAF7F2; font-family:system-ui,"Noto Sans TC",sans-serif;
+         display:flex; flex-direction:column; align-items:center; padding:24px; }
+  h1 { font-size:18px; }
+  #stats { background:rgba(0,0,0,.4); border-radius:12px; padding:14px 18px; font-size:14px;
+           line-height:1.9; font-variant-numeric:tabular-nums; min-width:300px; }
+  b { color:#3AA8A0; }
+  button { background:#3AA8A0; border:0; color:#06211C; font-weight:700; font-size:15px;
+           padding:12px 20px; border-radius:12px; cursor:pointer; margin:14px 6px; }
+</style>
+</head>
+<body>
+<h1>WebRTC 最後一哩 · 試作台（回音測試）</h1>
+<div>
+  <button id="btnTone">用測試音接通</button>
+  <button id="btnMic">用麥克風接通</button>
+</div>
+<div id="stats">
+  線路狀態 <b id="st">未連</b><br>
+  來回時間 <b id="rtt">–</b> ms（最近 20 次中位）<br>
+  抖動 <b id="jit">–</b> ms<br>
+  回音聲音 <b id="bytes">0</b> 包<br>
+</div>
+<audio id="echo" autoplay></audio>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let pc = null, dc = null, rtts = [], packets = 0;
+  window.__rtcStats = { state:'idle', rttMs:0, jitterMs:0, packets:0 };
+
+  async function connect(useMic) {
+    pc = new RTCPeerConnection();           // 本機試作、不需中繼站；上線版換 coturn
+    dc = pc.createDataChannel('ping');
+    dc.onopen = () => setInterval(() => { if (dc.readyState==='open') dc.send('ping:'+performance.now()); }, 250);
+    dc.onmessage = e => {
+      if (String(e.data).startsWith('pong:')) {
+        const rtt = performance.now() - parseFloat(e.data.slice(5));
+        rtts.push(rtt); if (rtts.length > 20) rtts.shift();
+        const sorted = [...rtts].sort((a,b)=>a-b);
+        const med = sorted[Math.floor(sorted.length/2)];
+        const jit = sorted.length>4 ? (sorted[Math.floor(sorted.length*0.9)]-sorted[Math.floor(sorted.length*0.1)]) : 0;
+        $('rtt').textContent = med.toFixed(1); $('jit').textContent = jit.toFixed(1);
+        Object.assign(window.__rtcStats, { rttMs:+med.toFixed(1), jitterMs:+jit.toFixed(1) });
+      }
+    };
+    pc.ontrack = e => { $('echo').srcObject = e.streams[0] || new MediaStream([e.track]); };
+    pc.onconnectionstatechange = () => { $('st').textContent = pc.connectionState; window.__rtcStats.state = pc.connectionState; };
+
+    let stream;
+    if (useMic) stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    else {   // 測試音：440Hz 正弦波（不用麥克風也能全自動測）
+      const ac = new AudioContext(); const dst = ac.createMediaStreamDestination();
+      const osc = ac.createOscillator(); const g = ac.createGain(); g.gain.value = 0.05;
+      osc.connect(g); g.connect(dst); osc.start(); stream = dst.stream;
+    }
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+    // 統計回音包
+    setInterval(async () => {
+      if (!pc) return;
+      const st = await pc.getStats();
+      st.forEach(r => { if (r.type==='inbound-rtp' && r.kind==='audio') {
+        packets = r.packetsReceived||0; $('bytes').textContent = packets; window.__rtcStats.packets = packets; } });
+    }, 1000);
+
+    const o = await pc.createOffer(); await pc.setLocalDescription(o);
+    await new Promise(res => { if (pc.iceGatheringState==='complete') res();
+      else { const f=()=>{ if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);res();} };
+             pc.addEventListener('icegatheringstatechange',f); setTimeout(res,1500); } });
+    const r = await fetch('/offer', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }) });
+    await pc.setRemoteDescription(await r.json());
+  }
+  $('btnTone').onclick = () => connect(false);
+  $('btnMic').onclick = () => connect(true);
+})();
+</script>
+</body>
+</html>
