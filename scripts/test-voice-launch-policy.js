@@ -190,10 +190,13 @@ expect(voiceServer.includes('if native_search_enabled() and not demo_mode:') &&
   voiceServer.includes('寧可說不知道，也不要拿網路上的東西當健康建議'),
   'native search is enabled without the rule that health questions must never be answered from search results');
 const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
-// 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，呼叫點仍必須在
-// 真的打網路查詢之前。
-expect(lookupFlow.indexOf('await _send_lookup_cue(category)') >= 0 &&
-  lookupFlow.indexOf('await _send_lookup_cue(category)') < lookupFlow.indexOf('search_current_information(cli') &&
+// 2026-07-30：過場句與查詢材料都跟當輪 responseLocale 走；呼叫點仍必須在真的打網路
+// 查詢之前，而且網路查詢仍包在總 timeout 裡。用穩定的行為標記，不綁單行排版。
+const lookupCueCall = 'await _send_lookup_cue(category, response_locale)';
+const lookupNetworkCall = 'search_current_information(';
+expect(lookupFlow.indexOf(lookupCueCall) >= 0 &&
+  lookupFlow.indexOf(lookupCueCall) < lookupFlow.indexOf(lookupNetworkCall) &&
+  lookupFlow.includes('cli, query, lookup_location, locale=response_locale,') &&
   lookupFlow.includes('asyncio.wait_for('),
   'lookup network I/O can start before the spoken cue or run without a timeout');
 expect(['node.lookup_started', 'node.lookup_cue_sent', 'node.lookup_done',
