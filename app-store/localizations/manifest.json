@@ -48,8 +48,11 @@
     "es": {
       "catalogLocale": "es",
       "appStoreLocale": null,
-      "selectedVariant": null,
-      "selectedVariants": [],
+      "selectedVariant": "es-ES",
+      "selectedVariants": [
+        "es-ES"
+      ],
+      "selectedVariantDecision": "2026-07-30 Edward: first Spanish market is es-ES (Spain); es-MX drafts stay prepared but unselected",
       "candidateAppStoreLocales": [
         "es-ES",
         "es-MX"

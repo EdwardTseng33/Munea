@@ -149,14 +149,19 @@ for (const filename of primaryScreenshots) {
 assert.equal(manifest.locales['en-US'].screenshotStatus, 'missing');
 assert.equal(manifest.locales.ja.screenshotStatus, 'missing');
 assert.equal(manifest.locales.es.screenshotStatus, 'missing');
-assert.equal(manifest.locales.es.appStoreLocale, null, 'Spanish App Store locale must wait for es-ES or es-MX choice');
+assert.equal(manifest.locales.es.appStoreLocale, null, 'Spanish stays variant-based; the storefront locale lives in marketVariants');
 assert.deepEqual(
   manifest.locales.es.candidateAppStoreLocales,
   ['es-ES', 'es-MX'],
   'Apple supports separate Spain and Mexico Spanish localizations',
 );
-assert.deepEqual(manifest.locales.es.targetTerritories, [], 'Spanish territories must stay closed before market choice');
-assert.equal(manifest.locales.es.selectedVariant, null);
+assert.deepEqual(manifest.locales.es.targetTerritories, [], 'Territory opening is a later App Store Connect step, not implied by the market choice');
+assert.equal(manifest.locales.es.selectedVariant, 'es-ES', '2026-07-30 decision: first Spanish market is Spain (es-ES)');
+assert.deepEqual(
+  manifest.locales.es.selectedVariants,
+  ['es-ES'],
+  'Only es-ES is selected; es-MX must stay prepared but unselected until its own market decision',
+);
 assert.deepEqual(
   Object.keys(manifest.locales.es.marketVariants),
   ['es-ES', 'es-MX'],

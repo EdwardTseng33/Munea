@@ -195,15 +195,23 @@ for (const locale of ['en', 'ja', 'es']) {
   assert.equal(entry.gates.marketAvailability.passed, false);
 }
 
-assert.equal(report.locales.es.storeLocale, null, 'Spanish market variant must remain undecided');
-assert.deepEqual(report.locales.es.selectedStoreVariants, []);
+assert.equal(report.locales.es.storeLocale, null, 'Spanish stays variant-based; the storefront locale lives in the selected variant');
+assert.deepEqual(
+  report.locales.es.selectedStoreVariants,
+  ['es-ES'],
+  '2026-07-30 decision: first Spanish market is Spain (es-ES); es-MX stays prepared but unselected',
+);
 assert.deepEqual(
   Object.keys(report.locales.es.candidateStoreVariants),
   ['es-ES', 'es-MX'],
 );
-for (const variant of Object.values(report.locales.es.candidateStoreVariants)) {
+for (const [variantKey, variant] of Object.entries(report.locales.es.candidateStoreVariants)) {
   assert.equal(variant.ready, false);
-  assert.equal(variant.gates.selected, false);
+  assert.equal(
+    variant.gates.selected,
+    variantKey === 'es-ES',
+    'only the decided es-ES variant may be selected',
+  );
   assert.equal(variant.gates.metadata, false);
   assert.equal(variant.gates.publicUrls, false);
   assert.equal(variant.gates.screenshots, false);
