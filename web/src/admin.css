@@ -419,6 +419,13 @@ tbody tr:hover { background: var(--cream); }
 .ops-notice { border-radius: var(--radius-sm); padding: 13px 16px; line-height: 1.55; }
 .ops-notice strong { display: block; margin-bottom: 3px; }
 .ops-notice.warn { border: 1px solid rgba(199,122,46,.32); background: var(--coral-soft); color: var(--coral-d); }
+/* 開錯台防呆：兩台網址只差一個字，左下角小字不夠醒目 */
+.env-banner { margin-bottom: 16px; padding: 11px 16px; border-radius: var(--radius-sm);
+  background: var(--gold-soft); border: 1px solid rgba(224,179,84,.5); color: var(--ink);
+  font-size: 0.94rem; line-height: 1.6; overflow-wrap: anywhere; }
+.env-banner b { color: var(--warn); }
+.env-banner code { font-family: var(--num); font-size: 0.9em; background: rgba(255,255,255,.6);
+  padding: 1px 6px; border-radius: 6px; }
 .ops-notice.error { border: 1px solid rgba(217,83,74,.35); background: var(--danger-soft); color: var(--danger); }
 .ops-notice code { font-size: .82em; overflow-wrap: anywhere; }
 

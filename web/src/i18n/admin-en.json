@@ -247,7 +247,10 @@
     "近 30 天通話": "Calls, past 30 days",
     "還沒開過": "Never opened",
     "沒有紀錄": "No record",
-    "1 點約 1 分鐘": "1 credit ≈ 1 minute"
+    "1 點約 1 分鐘": "1 credit ≈ 1 minute",
+    "這裡是": "You are on",
+    "測試機": "the test server",
+    "本機預覽": "a local preview"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },
