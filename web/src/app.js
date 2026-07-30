@@ -244,6 +244,7 @@ function localizeCanonicalLegacyPanels() {
   if (npsHints[1]) npsHints[1].textContent = muneaT('feedback.npsTen', '10 · Very likely');
 
   setText('#subPlans > .sub-intro', 'subscription.benefitsIntro', 'Every paid plan includes');
+  setDirectText('#pointsUnlockNotice', 'subscription.unlockCredits', 'Subscribe to Plus or Pro to buy credit packs.');
   const benefitKeys = [
     ['subscription.benefitVoiceTitle', 'Natural voice companionship', 'subscription.benefitVoiceBody', 'Talk naturally in a familiar language.'],
     ['subscription.benefitCareTitle', 'Everyday care', 'subscription.benefitCareBody', 'Companion reminders and daily records.'],
@@ -261,7 +262,12 @@ function localizeCanonicalLegacyPanels() {
   setText('#subPlans .sub-sec-label', 'subscription.choosePlan', 'Choose a plan');
   const cycleButtons = $$('#subCycle .scyc-btn');
   if (cycleButtons[0]) cycleButtons[0].textContent = muneaT('subscription.billingMonthly', 'Monthly');
-  if (cycleButtons[1]) cycleButtons[1].textContent = muneaT('subscription.billingYearly', 'Yearly');
+  if (cycleButtons[1]) {
+    const labelNode = [...cycleButtons[1].childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
+    if (labelNode) labelNode.textContent = `${muneaT('subscription.billingYearly', 'Yearly')} `;
+    const badge = cycleButtons[1].querySelector('.scyc-badge');
+    if (badge) badge.textContent = muneaT('subscription.savePercent', 'Save {percent}%', { percent: 20 });
+  }
   const creditRuleKeys = [
     ['subscription.monthlyCreditsTitle', 'Monthly plan credits', 'subscription.monthlyCreditsBody', 'Issued again each billing period.'],
     ['subscription.purchasedCreditsTitle', 'Purchased credits', 'subscription.purchasedCreditsBody', 'They do not expire.'],
@@ -275,6 +281,7 @@ function localizeCanonicalLegacyPanels() {
     if (title) title.textContent = muneaT(keys[0], keys[1]);
     if (body) body.textContent = muneaT(keys[2], keys[3]);
   });
+  localizePurchasePlanContent();
   $$('.tu-card').forEach((card) => {
     const credits = Number(card.dataset.p || 0);
     const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
@@ -311,6 +318,140 @@ function muneaRendererCopy() {
     t: (key, values) => muneaT(key, key, values),
   });
   return muneaRendererCopyCache;
+}
+let muneaPurchaseFlowCache = null;
+function muneaPurchaseFlow() {
+  if (muneaPurchaseFlowCache) return muneaPurchaseFlowCache;
+  const api = window.MuneaPurchaseFlow;
+  if (!api || typeof api.createPurchaseFlow !== 'function') return null;
+  muneaPurchaseFlowCache = api.createPurchaseFlow({
+    t: (key, values) => muneaT(key, key, values),
+  });
+  return muneaPurchaseFlowCache;
+}
+function localizePurchasePlanContent() {
+  const benefitsIntro = document.querySelector('#subPlans > .sub-intro');
+  if (benefitsIntro) benefitsIntro.textContent = muneaT(
+    'subscription.benefitsIntro',
+    'Every paid plan includes',
+  );
+  const unlockNotice = $('#pointsUnlockNotice');
+  if (unlockNotice) unlockNotice.textContent = muneaT(
+    'subscription.unlockCredits',
+    'Subscribe to Plus or Pro to buy credit packs.',
+  );
+  const benefitKeys = [
+    ['subscription.benefitVoiceTitle', 'Natural voice companionship', 'subscription.benefitVoiceBody', 'Talk naturally in a familiar language.'],
+    ['subscription.benefitCareTitle', 'Everyday care', 'subscription.benefitCareBody', 'Companion reminders and daily records.'],
+    ['subscription.benefitFamilyTitle', 'Family care circle', 'subscription.benefitFamilyBody', 'Helps family members stay informed and connected.'],
+    ['subscription.benefitMemoryTitle', 'Continuing companion memory', 'subscription.benefitMemoryBody', 'Keeps important people and routines in context.'],
+  ];
+  $$('#subPlans .sub-value .sv-row').forEach((row, index) => {
+    const keys = benefitKeys[index];
+    if (!keys) return;
+    const title = row.querySelector('.sv-txt b');
+    const body = row.querySelector('.sv-txt small');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  const planLabel = $('#subPlans .sub-sec-label');
+  if (planLabel) planLabel.textContent = muneaT('subscription.choosePlan', 'Choose a plan');
+  const cycleButtons = $$('#subCycle .scyc-btn');
+  if (cycleButtons[0]) cycleButtons[0].textContent = muneaT('subscription.billingMonthly', 'Monthly');
+  if (cycleButtons[1]) {
+    const labelNode = [...cycleButtons[1].childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
+    if (labelNode) labelNode.textContent = `${muneaT('subscription.billingYearly', 'Yearly')} `;
+    const badge = cycleButtons[1].querySelector('.scyc-badge');
+    if (badge) badge.textContent = muneaT('subscription.savePercent', 'Save {percent}%', { percent: 20 });
+  }
+  const creditRuleKeys = [
+    ['subscription.monthlyCreditsTitle', 'Monthly plan credits', 'subscription.monthlyCreditsBody', 'Issued again each billing period.'],
+    ['subscription.purchasedCreditsTitle', 'Purchased credits', 'subscription.purchasedCreditsBody', 'They do not expire.'],
+    ['subscription.deductionOrderTitle', 'Credit order', 'subscription.deductionOrderBody', 'Monthly credits are used before purchased credits.'],
+  ];
+  $$('#subPlans .credit-rules .cr-row, #subPoints .credit-rules .cr-row').forEach((row, index) => {
+    const keys = creditRuleKeys[index % creditRuleKeys.length];
+    const title = row.querySelector('b');
+    const body = row.querySelector('.cr-note');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  const planCardFacts = {
+    plus: {
+      audienceKey: 'subscription.plusAudience',
+      audienceFallback: 'For everyday voice companionship and essential family care',
+      credits: 100,
+      members: 4,
+    },
+    pro: {
+      audienceKey: 'subscription.proAudience',
+      audienceFallback: 'For more frequent companionship and advanced video interaction',
+      credits: 200,
+      members: 12,
+    },
+  };
+  $$('#planPick .ppk').forEach((card) => {
+    const facts = planCardFacts[card.dataset.t];
+    if (!facts) return;
+    const tag = card.querySelector('.ppk-tag');
+    if (tag) tag.textContent = muneaT('subscription.mostPopular', 'Most popular');
+    const audience = card.querySelector('.ppk-who');
+    if (audience) audience.textContent = muneaT(facts.audienceKey, facts.audienceFallback);
+    const features = card.querySelectorAll('.ppk-feats li');
+    if (features[0]) features[0].textContent = muneaT(
+      'subscription.monthlyVoiceCredits',
+      '{credits} voice-companion credits each month. Unused monthly credits do not roll over.',
+      { credits: facts.credits },
+    );
+    if (features[1]) features[1].textContent = muneaT(
+      'subscription.healthTrendAccess',
+      'Full 7-day and 30-day health trends',
+    );
+    if (features[2]) features[2].textContent = muneaT(
+      'subscription.familyMemberLimit',
+      'Up to {members} people in the family care circle',
+      { members: facts.members },
+    );
+  });
+  const creditIntro = document.querySelector('#subPoints > .sub-fine');
+  if (creditIntro) creditIntro.textContent = muneaT(
+    'subscription.creditsUsageIntro',
+    'Conversations use credits. Add more credits to keep talking when they run out.',
+  );
+  const legalTerms = $('#legalTermsLink');
+  const legalPrivacy = $('#legalPrivacyLink');
+  const legalLine = $('#subPlans .sub-legal');
+  if (legalLine && legalTerms && legalPrivacy) {
+    [...legalLine.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    legalTerms.textContent = muneaT('reader.termsTitle', 'Terms of Service');
+    legalPrivacy.textContent = muneaT('reader.privacyTitle', 'Privacy Policy');
+    legalLine.insertBefore(
+      document.createTextNode(`${muneaT(
+        'subscription.renewalDisclosure',
+        'Subscriptions renew automatically through your Apple Account. Manage or cancel in iPhone Settings; access continues through the current billing period. Purchased credits do not expire. See',
+      )} `),
+      legalTerms,
+    );
+    legalLine.insertBefore(
+      document.createTextNode(` ${muneaT('subscription.legalAnd', 'and')} `),
+      legalPrivacy,
+    );
+    legalLine.appendChild(document.createTextNode(muneaT('subscription.legalPeriod', '.')));
+  }
+  $$('.tu-card').forEach((card) => {
+    const credits = Number(card.dataset.p || 0);
+    const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
+    const amount = card.querySelector('b');
+    const minutes = card.querySelector('.tu-min');
+    if (amount) amount.textContent = muneaT('purchase.creditsAmount', '{credits} credits', { credits: formatted });
+    if (minutes) minutes.textContent = muneaT('purchase.approxMinutes', 'About {minutes} minutes', { minutes: formatted });
+  });
+  const manage = $('#planCancelBtn');
+  if (manage) manage.textContent = muneaT('purchase.manageSubscription', 'Manage subscription');
+  const restore = $('#restoreBtn');
+  if (restore) restore.textContent = muneaT('purchase.restore', 'Restore purchases');
 }
 
 function muneaIsCleanZhText(raw) {
@@ -8319,27 +8460,37 @@ function init() {
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   initHealthDashboard();
   
-  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
+  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => {
+    $('#topUpModal').classList.add('show');
+    void refreshLocalizedStoreProducts();
+  });
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
   if ($('#topUpModal')) $('#topUpModal').addEventListener('click', e => {
     if (e.target === $('#topUpModal')) { $('#topUpModal').classList.remove('show'); return; }
     const card = e.target.closest('.tu-card');
-    if (card) { document.querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on'); }
+    if (card) {
+      document.querySelectorAll('#topUpModal .tu-card').forEach(x => x.classList.remove('on'));
+      card.classList.add('on');
+      renderCreditPurchaseButtons();
+    }
   });
   if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', async () => {
-    const selCard = document.querySelector('.tu-card.on');
+    const selCard = document.querySelector('#topUpModal .tu-card.on');
     const p = selCard ? +selCard.dataset.p : 0;
-    if (!p) { toast('先選一包點數'); return; }
+    if (!p) { toast(muneaT('purchase.selectPack', 'Choose a credit pack')); return; }
     // App 裡走真蘋果付款；點數入帳由 __muneaApplyPurchase 統一做
     if (window.MuneaStore && window.MuneaStore.available()) {
       const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
       if (!authNow.authUserId) {
-        toast('先登入帳號，點數才能記在你的帳上。', 4200);
+        toast(muneaT('purchase.signInRequiredBody', 'Sign in to buy, restore, and use credits across your devices.'), 4200);
         if (typeof openAuthSheet === 'function') openAuthSheet();
         return;
       }
       const b = $('#tuBuyBtn');
-      setBtnBusy(b, '連到 App Store');
+      const purchaseFlow = muneaPurchaseFlow();
+      setBtnBusy(b, purchaseFlow
+        ? purchaseFlow.connectingMessage()
+        : muneaT('purchase.connectingStore', 'Connecting to the App Store…'));
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
       if (r.ok) $('#topUpModal').classList.remove('show');
@@ -8350,22 +8501,146 @@ function init() {
     pushWallet();
     renderPoints();
     $('#topUpModal').classList.remove('show');
-    toast('買好了，' + p.toLocaleString() + ' 點入帳（餘額已更新），這批不會過期');
+    toast(muneaT('purchase.success', '{credits} credits were added to your account.', {
+      credits: new Intl.NumberFormat(muneaLocale()).format(p),
+    }));
   });
   // ===== 訂閱頁：比較表 + 月/年繳切換 + 訂閱鈕（金額為暫定、待 Edward 拍板）=====
   // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
   const SUB_PRICE = { plus: { month: 599, year: 5750 }, pro: { month: 1199, year: 11500 } };
   const PT_PRICE = { 100: 790, 300: 2190, 600: 4190, 1000: 6490 };            // 加購一律貴過訂閱 6 元/分（訂閱含功能價值、點數是純加分鐘）
   let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
-  function fmtPrice(plan, cyc) { return 'NT$' + SUB_PRICE[plan][cyc].toLocaleString() + (cyc === 'year' ? '／年' : '／月'); }
+  let _storeProductsPromise = null;
+  let _storeProductsState = 'idle';
+  function hasNativeStore() {
+    return !!(window.MuneaStore && window.MuneaStore.available());
+  }
+  function fallbackTwdPrice(amount) {
+    return new Intl.NumberFormat(muneaLocale(), {
+      currency: 'TWD',
+      currencyDisplay: 'code',
+      maximumFractionDigits: 0,
+      style: 'currency',
+    }).format(Number(amount) || 0);
+  }
+  function storeProduct(productId) {
+    return window.MuneaStore && typeof window.MuneaStore.product === 'function'
+      ? window.MuneaStore.product(productId)
+      : null;
+  }
+  function subscriptionProduct(plan, cyc) {
+    if (!(window.MuneaStore && typeof window.MuneaStore.subId === 'function')) return null;
+    return storeProduct(window.MuneaStore.subId(plan, cyc));
+  }
+  function creditProduct(credits) {
+    if (!(window.MuneaStore && typeof window.MuneaStore.ptsId === 'function')) return null;
+    return storeProduct(window.MuneaStore.ptsId(credits));
+  }
+  function fmtPrice(plan, cyc) {
+    const product = subscriptionProduct(plan, cyc);
+    return product && product.displayPrice
+      ? product.displayPrice
+      : fallbackTwdPrice(SUB_PRICE[plan][cyc]);
+  }
+  function fmtCreditPrice(credits) {
+    const product = creditProduct(credits);
+    return product && product.displayPrice
+      ? product.displayPrice
+      : fallbackTwdPrice(PT_PRICE[credits]);
+  }
+  function localizedPurchaseButton(credits) {
+    const rendererCopy = muneaRendererCopy();
+    const values = {
+      credits,
+      price: fmtCreditPrice(credits),
+    };
+    return rendererCopy
+      ? rendererCopy.purchaseButton(values)
+      : muneaT('purchase.buyCredits', 'Buy {credits} credits · {price}', values);
+  }
+  function renderCreditPurchaseButtons() {
+    $$('.tu-card').forEach((card) => {
+      const credits = Number(card.dataset.p || 0);
+      const price = card.querySelector('.tu-price');
+      if (!price) return;
+      price.textContent = hasNativeStore()
+        && (_storeProductsState === 'idle'
+          || _storeProductsState === 'loading'
+          || _storeProductsState === 'unavailable'
+          || !creditProduct(credits))
+        ? '—'
+        : fmtCreditPrice(credits);
+    });
+    [
+      ['#topUpModal .tu-card.on', '#tuBuyBtn'],
+      ['#subPoints .tu-card.on', '#tuBuyBtn2'],
+    ].forEach(([cardSelector, buttonSelector]) => {
+      const card = document.querySelector(cardSelector);
+      const button = $(buttonSelector);
+      if (!button) return;
+      const credits = card ? Number(card.dataset.p || 0) : 0;
+      if (hasNativeStore() && (_storeProductsState === 'idle' || _storeProductsState === 'loading')) {
+        button.textContent = muneaT('purchase.loadingProducts', 'Loading products…');
+        button.disabled = true;
+        return;
+      }
+      if (hasNativeStore() && (_storeProductsState === 'unavailable' || !creditProduct(credits))) {
+        button.textContent = muneaT('purchase.storeUnavailable', 'The App Store is unavailable right now. Please try again later.');
+        button.disabled = true;
+        return;
+      }
+      button.textContent = credits
+        ? localizedPurchaseButton(credits)
+        : muneaT('purchase.selectPack', 'Choose a credit pack');
+      button.disabled = !credits;
+    });
+  }
+  async function refreshLocalizedStoreProducts() {
+    if (!hasNativeStore() || typeof window.MuneaStore.getProducts !== 'function') {
+      _storeProductsState = 'preview';
+      renderSubUI();
+      renderCreditPurchaseButtons();
+      return;
+    }
+    if (_storeProductsPromise) return _storeProductsPromise;
+    _storeProductsState = 'loading';
+    renderSubUI();
+    renderCreditPurchaseButtons();
+    _storeProductsPromise = window.MuneaStore.getProducts()
+      .then((result) => {
+        _storeProductsState = result && result.ok ? 'ready' : 'unavailable';
+        return result;
+      })
+      .catch(() => {
+        _storeProductsState = 'unavailable';
+        return { ok: false, reason: 'store_products_unavailable' };
+      })
+      .finally(() => {
+        _storeProductsPromise = null;
+        renderSubUI();
+        renderCreditPurchaseButtons();
+      });
+    return _storeProductsPromise;
+  }
   function renderSubUI() {
+    localizePurchasePlanContent();
     const cur = circlePlan();
     [['plus', 'Plus'], ['pro', 'Pro']].forEach(([pl, Cap]) => {
       const priceEl = $('#price' + Cap);
-      if (priceEl) priceEl.innerHTML = 'NT$' + SUB_PRICE[pl][_subCyc].toLocaleString() + '<small>' + (_subCyc === 'year' ? '/年' : '/月') + '</small>';
+      if (priceEl) {
+        const period = document.createElement('small');
+        period.textContent = muneaT(
+          _subCyc === 'year' ? 'subscription.perYearShort' : 'subscription.perMonthShort',
+          _subCyc === 'year' ? '/year' : '/month',
+        );
+        priceEl.replaceChildren(document.createTextNode(fmtPrice(pl, _subCyc)), period);
+      }
       const saveEl = $('#save' + Cap);
       if (saveEl) {
-        if (_subCyc === 'year') { const save = SUB_PRICE[pl].month * 12 - SUB_PRICE[pl].year; saveEl.textContent = '一年省 NT$' + save.toLocaleString(); saveEl.style.display = ''; }
+        if (_subCyc === 'year') {
+          saveEl.textContent = muneaT('subscription.savePercent', 'Save {percent}%', { percent: 20 });
+          saveEl.style.display = '';
+        }
         else saveEl.style.display = 'none';
       }
     });
@@ -8373,16 +8648,38 @@ function init() {
     const cta = $('#subCta');
     if (cta) {
       const rendererCopy = muneaRendererCopy();
-      cta.textContent = rendererCopy
-        ? rendererCopy.subscriptionCta({
+      if (hasNativeStore() && (_storeProductsState === 'idle' || _storeProductsState === 'loading')) {
+        cta.textContent = muneaT('purchase.loadingProducts', 'Loading products…');
+        cta.disabled = true;
+      } else if (hasNativeStore() && (_storeProductsState === 'unavailable' || !subscriptionProduct(_subPlan, _subCyc))) {
+        cta.textContent = muneaT('purchase.storeUnavailable', 'The App Store is unavailable right now. Please try again later.');
+        cta.disabled = true;
+      } else {
+        const ctaValues = {
           currentPlan: cur,
           price: fmtPrice(_subPlan, _subCyc),
           selectedPlan: _subPlan,
-        })
-        : (_subPlan === cur
-          ? '你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案'
-          : (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? '升級 ' : '改用 ') + CIRCLE_PLAN_LABEL[_subPlan] + ' · ' + fmtPrice(_subPlan, _subCyc));
+        };
+        cta.textContent = rendererCopy
+          ? rendererCopy.subscriptionCta(ctaValues)
+          : (_subPlan === cur
+            ? muneaT('subscription.currentPlanCta', 'You are currently on {plan}', {
+              plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+            })
+            : muneaT(
+              PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? 'subscription.upgradeTo' : 'subscription.changeTo',
+              PLAN_POINTS[_subPlan] > PLAN_POINTS[cur]
+                ? 'Upgrade to {plan} · {price}'
+                : 'Switch to {plan} · {price}',
+              {
+                plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+                price: ctaValues.price,
+              },
+            ));
+        cta.disabled = _subPlan === cur;
+      }
     }
+    renderCreditPurchaseButtons();
     // 免費不能買點數（Edward 7/17 拍板 Ⓐ）：點數是會員的東西，免費走一次性 5 分鐘體驗、不吃點數。
     // 只剩一個分頁的切換器像壞掉 → 整個收起來，免費只看得到訂閱方案。訂閱後才長出來。
     const seg = $('#subSeg');
@@ -8416,7 +8713,9 @@ function init() {
         purchasedCredits: POINTS.bought,
       })
       : null;
-    const sn = $('#setPlanName'); if (sn) sn.textContent = localizedPlan ? localizedPlan.name : label + ' 方案';
+    const sn = $('#setPlanName'); if (sn) sn.textContent = localizedPlan
+      ? localizedPlan.name
+      : muneaT('settings.planName', '{plan} plan', { plan: label });
     // 帳號卡右上角唯一的身份標籤（開發測試帳號會蓋成 TEST）
     renderMemBadge(plan);
     const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
@@ -8437,13 +8736,26 @@ function init() {
       if (_note) _note.textContent = localizedPlan
         ? localizedPlan.note
         : (!_isFreeP
-          ? (pts + ' 點約可聊 ' + pts + ' 分鐘；聊天用點數，用完補一下就能繼續。')
+          ? muneaT(
+            'subscription.monthlyCreditsNote',
+            '{credits} credits provide about {minutes} minutes of conversation. Add more when they run out to keep talking.',
+            { credits: pts, minutes: pts },
+          )
           : (_leftover > 0
-            ? '你還有 ' + _leftover + ' 點沒用完，會一直留著 · 訂閱 Plus／Pro 就能繼續用這些點聊天。'
-            : '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。'));
+            ? muneaT(
+              'subscription.freeCreditsLeft',
+              'Your unused {credits} credits will remain available. Subscribe to Plus or Pro to use them for conversations.',
+              { credits: _leftover },
+            )
+            : muneaT(
+              'subscription.freePlanNote',
+              'You are on the Free plan. Link an account for one 5-minute conversation. Plus and Pro add credit-based conversations, longer history, and family invitations.',
+            )));
     }
     const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
-    const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = localizedPlan ? localizedPlan.manageLabel : (_isFreeP ? '升級方案' : '訂閱方案');
+    const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = localizedPlan
+      ? localizedPlan.manageLabel
+      : muneaT(_isFreeP ? 'settings.upgradePlan' : 'settings.managePlan', _isFreeP ? 'Upgrade plan' : 'Manage plan');
     renderSubUI();
   }
   window.__muneaRenderPlanState = renderPlanState;
@@ -8465,33 +8777,48 @@ function init() {
   // 欄位文字與實際扣款會對不上（選 Plus 卻扣 Pro、寫月費卻扣年費）。一律重畫、不留舊值。
   function planConfirmHtml(plan, cyc) {
     const rendererCopy = muneaRendererCopy();
-    if (rendererCopy) {
-      const localized = rendererCopy.planConfirmation({
-        credits: PLAN_POINTS[plan],
-        members: CIRCLE_LIMITS[plan],
-        plan,
-        price: fmtPrice(plan, cyc),
-      });
-      const yes = $('#planYes'); if (yes) yes.textContent = localized.action;
-      const no = $('#planNo'); if (no) no.textContent = localized.cancel;
-      return localized.title + '<br>' + localized.facts + '<br><small>' + localized.body + '</small>';
-    }
-    return '訂閱「<b>' + CIRCLE_PLAN_LABEL[plan] + '</b>」· ' + fmtPrice(plan, cyc)
-      + '<br>每月 ' + PLAN_POINTS[plan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[plan] + ' 人。';
+    const values = {
+      credits: PLAN_POINTS[plan],
+      members: CIRCLE_LIMITS[plan],
+      plan,
+      price: fmtPrice(plan, cyc),
+    };
+    const localized = rendererCopy
+      ? rendererCopy.planConfirmation(values)
+      : {
+        action: muneaT('subscription.confirmAction', 'Confirm with Apple'),
+        body: muneaT(
+          'subscription.confirmBody',
+          'Apple will process your payment. The subscription renews automatically and can be managed in the App Store.',
+        ),
+        cancel: muneaT('subscription.cancel', 'Cancel'),
+        facts: muneaT(
+          'subscription.confirmFacts',
+          '{credits} credits each month · Up to {members} care circle members',
+          values,
+        ),
+        title: muneaT(
+          'subscription.confirmTitle',
+          'Confirm {plan} · {price}',
+          {
+            plan: muneaT(`subscription.plan${plan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[plan]),
+            price: values.price,
+          },
+        ),
+      };
+    const yes = $('#planYes'); if (yes) yes.textContent = localized.action;
+    const no = $('#planNo'); if (no) no.textContent = localized.cancel;
+    return muneaEscapeHtml(localized.title)
+      + '<br>' + muneaEscapeHtml(localized.facts)
+      + '<br><small>' + muneaEscapeHtml(localized.body) + '</small>';
   }
   function planConfirmOpen() { const b = $('#planConfirm'); return !!b && b.style.display !== 'none'; }
   // 付款失敗要講「為什麼」，不要全部混成一句（同邀請碼 105 號的教訓）
   function planPurchaseFailMessage(reason) {
-    if (reason === 'signin_required') return '先登入帳號，才能訂閱。';
-    if (reason === 'apple_account_token_mismatch') return '這筆 Apple 訂閱已綁定另一個沐寧帳號。請登入原帳號；測試版請先重置 Sandbox 購買紀錄。先不要重複付款。';
-    if (reason === 'authentication_required' || reason === 'invalid_auth_token') return '登入狀態無法驗證，請重新登入真實 Google／Apple 帳號後再試。';
-    if (reason === 'server_unavailable') return '網路不通，請檢查連線後再試一次。';
-    if (reason === 'notfound') return '這個方案現在還不能買，我們正在開通，晚點再試。';
-    if (reason === 'unsupported') return '這個版本還不能付款，更新 App 後再試。';
-    if (reason === 'unverified' || reason === 'server_verification_failed' || reason === 'signed_transaction_missing') {
-      return '付款過了，但還沒對上帳。先別重複付款，稍等會自動生效。';
-    }
-    return '付款沒有完成，晚點再試一次就好。';
+    const purchaseFlow = muneaPurchaseFlow();
+    return purchaseFlow
+      ? purchaseFlow.failureMessage(reason)
+      : muneaT('purchase.failed', 'The purchase could not be completed. Please try again later.');
   }
   function showPlanConfirm() {
     const bar = $('#planConfirm'); if (!bar) return;
@@ -8517,7 +8844,12 @@ function init() {
   // 訂閱鈕
   if ($('#subCta')) $('#subCta').addEventListener('click', () => {
     const cur = circlePlan();
-    if (_subPlan === cur) { toast('你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案'); return; }
+    if (_subPlan === cur) {
+      toast(muneaT('subscription.currentPlanCta', 'You are currently on {plan}', {
+        plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+      }));
+      return;
+    }
     showPlanConfirm();
   });
   if ($('#planYes')) $('#planYes').addEventListener('click', async () => {
@@ -8528,18 +8860,24 @@ function init() {
       const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
       if (!authNow.authUserId) {
         hidePlanConfirm();
-        toast('先登入帳號，訂閱才能綁到你的資料。', 4200);
+        toast(muneaT('purchase.signInRequiredBody', 'Sign in to buy, restore, and use credits across your devices.'), 4200);
         if (typeof openAuthSheet === 'function') openAuthSheet();
         return;
       }
       const pid = window.MuneaStore.subId(_planPick, _subCyc);
       const b = $('#planYes');
-      setBtnBusy(b, '連到 App Store');
+      const purchaseFlow = muneaPurchaseFlow();
+      setBtnBusy(b, purchaseFlow
+        ? purchaseFlow.connectingMessage()
+        : muneaT('purchase.connectingStore', 'Connecting to the App Store…'));
       const r = await window.MuneaStore.purchase(pid);
-      clearBtnBusy(b, '確認變更');
+      clearBtnBusy(b, muneaT('subscription.confirmAction', 'Confirm with Apple'));
       if (r.ok) { hidePlanConfirm(); } // 生效與提示由 __muneaApplyPurchase 統一做
-      else if (r.reason === 'cancelled') toast('沒關係，想好再訂就好。');
-      else if (r.reason === 'pending') { toast('付款送出了，等核准後會自動生效。'); hidePlanConfirm(); }
+      else if (r.reason === 'cancelled') toast(muneaT('purchase.cancelled', 'Purchase cancelled. You were not charged.'));
+      else if (r.reason === 'pending') {
+        toast(muneaT('purchase.pending', 'Apple is processing this purchase. Your balance will update automatically.'));
+        hidePlanConfirm();
+      }
       else toast(planPurchaseFailMessage(r.reason), 4200);
       return;
     }
@@ -8554,18 +8892,27 @@ function init() {
   if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', async () => {
     const b = $('#planCancelBtn');
     if (window.MuneaStore && window.MuneaStore.available() && typeof window.MuneaStore.manageSubscriptions === 'function') {
-      setBtnBusy(b, '開啟 Apple 訂閱');
+      setBtnBusy(b, muneaT('purchase.manageSubscription', 'Manage subscription'));
       const result = await window.MuneaStore.manageSubscriptions();
-      clearBtnBusy(b, '取消訂閱');
-      if (!result.ok) toast('暫時無法開啟 Apple 訂閱管理，請到 iPhone「設定 → Apple 帳戶 → 訂閱項目」操作');
+      clearBtnBusy(b, muneaT('purchase.manageSubscription', 'Manage subscription'));
+      if (!result.ok) {
+        toast(muneaT(
+          'purchase.manageSubscriptionUnavailable',
+          'Subscription management could not be opened. Use Settings → Apple Account → Subscriptions on your iPhone.',
+        ));
+      }
       return;
     }
-    toast('請到 iPhone「設定 → Apple 帳戶 → 訂閱項目」管理或取消訂閱');
+    toast(muneaT(
+      'purchase.manageSubscriptionInstructions',
+      'Use Settings → Apple Account → Subscriptions on your iPhone to manage or cancel.',
+    ));
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => {
     hidePlanConfirm();       // 每次進來都從乾淨狀態開始，不留上次挑到一半的確認欄
     renderSubUI();
     $('#planModal').classList.add('show');
+    void refreshLocalizedStoreProducts();
     void refreshServerPlanEntitlement();
   });
   if ($('#planClose')) $('#planClose').addEventListener('click', () => {
@@ -8577,17 +8924,25 @@ function init() {
   if ($('#restoreBtn')) $('#restoreBtn').addEventListener('click', async () => {
     const b = $('#restoreBtn');
     if (!(window.MuneaStore && window.MuneaStore.available() && typeof window.MuneaStore.restore === 'function')) {
-      toast('恢復購買只能在 iPhone App 內使用');
+      toast(muneaT('purchase.restoreInAppOnly', 'Restore Purchases is available in the iPhone app.'));
       return;
     }
-    setBtnBusy(b, '正在向 Apple 查詢');
+    const purchaseFlow = muneaPurchaseFlow();
+    setBtnBusy(b, purchaseFlow
+      ? purchaseFlow.restoringMessage()
+      : muneaT('purchase.restoring', 'Restoring purchases…'));
     const result = await window.MuneaStore.restore();
-    clearBtnBusy(b, '恢復購買');
-    if (result.ok) toast('購買已恢復，方案與帳號權益正在同步');
-    else if (result.reason === 'signin_required') toast('請先登入原本購買時使用的沐寧帳號');
-    else if (result.reason === 'apple_account_token_mismatch') toast(planPurchaseFailMessage(result.reason), 5200);
-    else if (result.reason === 'none') toast('這個 Apple 帳號目前沒有可恢復的訂閱');
-    else toast('恢復購買沒有完成，請確認網路後再試一次');
+    clearBtnBusy(b, muneaT('purchase.restore', 'Restore purchases'));
+    toast(
+      purchaseFlow
+        ? purchaseFlow.restoreMessage(result)
+        : result.ok
+          ? muneaT('purchase.restoreSuccess', 'Your purchases were restored and access is being updated.')
+          : result.reason === 'none'
+            ? muneaT('purchase.restoreNone', 'No active subscription was found to restore.')
+            : planPurchaseFailMessage(result.reason),
+      result.reason === 'apple_account_token_mismatch' ? 5200 : 4200,
+    );
   });
   if ($('#legalTermsLink')) $('#legalTermsLink').addEventListener('click', e => { e.preventDefault(); openInAppReader('terms'); });
   if ($('#legalPrivacyLink')) $('#legalPrivacyLink').addEventListener('click', e => { e.preventDefault(); openInAppReader('privacy'); });
@@ -8595,21 +8950,24 @@ function init() {
   if ($('#subPoints')) $('#subPoints').addEventListener('click', e => {
     const card = e.target.closest('.tu-card'); if (!card) return;
     $('#subPoints').querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on');
-    const p = +card.dataset.p; const cta = $('#tuBuyBtn2'); if (cta) cta.textContent = '直接購買 ' + p.toLocaleString() + ' 點 · NT$' + (PT_PRICE[p] || 0).toLocaleString();
+    renderCreditPurchaseButtons();
   });
   if ($('#tuBuyBtn2')) $('#tuBuyBtn2').addEventListener('click', async () => {
     const sel = document.querySelector('#subPoints .tu-card.on');
     const p = sel ? +sel.dataset.p : 0;
-    if (!p) { toast('先選一包點數'); return; }
+    if (!p) { toast(muneaT('purchase.selectPack', 'Choose a credit pack')); return; }
     if (window.MuneaStore && window.MuneaStore.available()) {
       const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
       if (!authNow.authUserId) {
-        toast('先登入帳號，點數才能記在你的帳上。', 4200);
+        toast(muneaT('purchase.signInRequiredBody', 'Sign in to buy, restore, and use credits across your devices.'), 4200);
         if (typeof openAuthSheet === 'function') openAuthSheet();
         return;
       }
       const b = $('#tuBuyBtn2');
-      setBtnBusy(b, '連到 App Store');
+      const purchaseFlow = muneaPurchaseFlow();
+      setBtnBusy(b, purchaseFlow
+        ? purchaseFlow.connectingMessage()
+        : muneaT('purchase.connectingStore', 'Connecting to the App Store…'));
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
       if (!r.ok && r.reason !== 'cancelled') toast(planPurchaseFailMessage(r.reason), 5200);
@@ -8617,7 +8975,9 @@ function init() {
     }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
     pushWallet(); renderPoints();
-    toast('買好了，' + p.toLocaleString() + ' 點入帳，這批不會過期');
+    toast(muneaT('purchase.success', '{credits} credits were added to your account.', {
+      credits: new Intl.NumberFormat(muneaLocale()).format(p),
+    }));
   });
   renderPlanState();
   // 蘋果內購（StoreKit）購買成功 → 前端生效的唯一入口。
@@ -8644,7 +9004,9 @@ function init() {
       try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + PT_PID[pid])); } catch (e3) {}
       trackProductEvent('points_purchased', { productId: pid, points: PT_PID[pid] });
       pushWallet(); renderPoints();
-      toast('買好了，' + PT_PID[pid].toLocaleString() + ' 點入帳，這批不會過期');
+      toast(muneaT('purchase.success', '{credits} credits were added to your account.', {
+        credits: new Intl.NumberFormat(muneaLocale()).format(PT_PID[pid]),
+      }));
       return true;
     }
     return false;
