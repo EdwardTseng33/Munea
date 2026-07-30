@@ -65,6 +65,7 @@ engine/notification_deliveries.json
 
 Video/
 .munea-turn-cred
+.munea-admin-token
 
 # FlashHead PoC 產出（大二進位 demo，不進 repo）
 deploy/flashhead-poc/outputs/
