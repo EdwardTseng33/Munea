@@ -162,6 +162,25 @@ for (const page of pages) {
   }
 }
 
+// 示範影片：每個語系播自己那支（英日西的夥伴要講當地語言），而且檔案真的在。
+// 打招呼與待機那兩支是無聲動畫，沒有語言問題，維持一份共用。
+for (const l of locales) {
+  const html = read(l.dir ? `${l.dir}/index.html` : "index.html");
+  const suffix = l.code === "zh" ? "" : `-${l.code}`;
+  for (const who of ["realfemale", "realmale"]) {
+    const mp4 = `${who}-talk-demo${suffix}.mp4`;
+    assert.match(
+      html,
+      new RegExp(`/assets/${mp4.replaceAll(".", "\\.")}`),
+      `${l.code} demo video should be ${mp4}`,
+    );
+    assert.ok(
+      fs.existsSync(path.join(appSite, "assets", mp4)),
+      `missing demo video asset ${mp4}`,
+    );
+  }
+}
+
 console.log(`[ok] munea.net SEO contract passed (${locales.length} locales)`);
 
 require("./test-app-site-legal-localizations.js");

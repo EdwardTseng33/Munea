@@ -135,6 +135,8 @@ for (const l of LOCALES) {
   const vars = {
     ...dict,
     ...ctaVars(dict),
+    // 示範影片：中文用原檔名，英日西各播自己那支（同一位夥伴、講當地語言）
+    'meta.demoSuffix': l.code === 'zh' ? '' : '-' + l.code,
     'meta.htmlLang': l.htmlLang,
     'meta.fonts': fontLink(l.fonts),
     'meta.canonical': urlFor(l.dir),
