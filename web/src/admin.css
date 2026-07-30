@@ -327,7 +327,24 @@ tbody tr:hover { background: var(--cream); }
 .acct-dim { margin-left: 7px; color: var(--muted); font-weight: 400; font-size: 0.875rem; }
 .acct-privacy { margin: 14px 24px 0; color: var(--muted); font-size: 0.85rem; line-height: 1.55; }
 .acct-modal .modal-actions { margin: 16px 0 0; padding: 16px 24px 20px; border-top: 1px solid var(--line-soft); background: var(--bg); }
-.acct-modal #acctActionPanel:not(:empty) { padding: 0 24px 20px; }
+/* 操作面板：原本接在按鈕列「下方」，卡片有高度上限就被切掉，輸入框整個看不到
+   （2026-07-30 截圖抓到）。改成面板出現時「取代」按鈕列的位置——同一塊區域，不必捲。 */
+/* 操作中：按鈕列讓位，下半部的分組細節也收起來——只留「這是誰 ＋ 現況數字 ＋ 表單」。
+   一來面板一定完整看得見（不必捲），二來動手時不需要看時區、資料區域那些設定。 */
+.acct-modal.is-acting .modal-actions,
+.acct-modal.is-acting .acct-block,
+.acct-modal.is-acting .acct-privacy { display: none; }
+.acct-modal.is-acting .acct-stats { border-bottom: 0; }
+.acct-modal .modal-subpanel { margin: 0; padding: 0; border: 0; }
+.acct-modal #acctActionPanel:not(:empty) { padding: 18px 24px 22px; border-top: 1px solid var(--line-soft); background: var(--bg); }
+.acct-modal .modal-subtitle { margin: 0 0 12px; font-size: 1rem; font-weight: 700; color: var(--ink); }
+.acct-modal .modal-subpanel .kpi-sub { margin-bottom: 14px; line-height: 1.6; }
+.acct-modal .modal-subpanel .field { margin-bottom: 12px; }
+.acct-modal .modal-subpanel .field span { font-size: 0.875rem; }
+.acct-modal .modal-subpanel input,
+.acct-modal .modal-subpanel select { background: var(--surface); }
+.acct-modal .modal-subactions { justify-content: flex-end; margin-top: 14px; }
+.acct-modal .modal-subhint { margin-top: 10px; font-size: 0.875rem; }
 
 @media (max-width: 560px) {
   .acct-stats { grid-template-columns: 1fr; }

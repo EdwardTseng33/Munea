@@ -926,7 +926,7 @@
     mo.querySelectorAll("[data-close]").forEach((b)=>b.addEventListener("click",close));
     mo.addEventListener("click",onOverlay);
     document.addEventListener("keydown",onKey);
-    mo.querySelectorAll("[data-open-action]").forEach((b)=>b.addEventListener("click",()=>renderAcctActionPanel(a,b.dataset.openAction)));
+    mo.querySelectorAll("[data-open-action]").forEach((b)=>b.addEventListener("click",()=>{ setActing(true); renderAcctActionPanel(a,b.dataset.openAction); }));
     mo.querySelector("[data-close]")?.focus();
   }
 
@@ -1596,6 +1596,15 @@
 
   // 用戶明細彈窗內的「發點數／改方案」動作面板（2026-07-20 補）。
   // 兩支都要求二次確認（window.confirm 明講對象＋內容）才送出，符合後台維運安全底線。
+  // 開面板＝整張卡進入「操作中」：按鈕列讓位給面板（不然面板接在按鈕列下方會被卡片底緣切掉）
+  function setActing(on){
+    const card=document.querySelector("#acctModal .acct-modal");
+    if(card) card.classList.toggle("is-acting", !!on);
+  }
+  function closeAcctActionPanel(){
+    const panel=$("acctActionPanel"); if(panel) panel.innerHTML="";
+    setActing(false);
+  }
   function renderAcctActionPanel(a, mode){
     const panel=$("acctActionPanel"); if(!panel) return;
     const nm=acctPersonName(a,"用戶");
@@ -1607,7 +1616,7 @@
         <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="grantSubmitBtn">確認發送</button></div>
         <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
       </div>`;
-      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",closeAcctActionPanel);
       panel.querySelector("#grantSubmitBtn")?.addEventListener("click",()=>submitGrantCredits(a));
     } else if(mode==="plan"){
       const cur=a.plan||"free";
@@ -1624,7 +1633,7 @@
         <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="planSubmitBtn">確認更新</button></div>
         <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
       </div>`;
-      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",closeAcctActionPanel);
       panel.querySelector("#planSubmitBtn")?.addEventListener("click",()=>submitSetPlan(a));
     } else if(mode==="extend"){
       if((a.plan||"free")==="free"){
@@ -1644,7 +1653,7 @@
         <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="testFlagSubmitBtn">${willMark?"確認標記":"確認取消標記"}</button></div>
         <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
       </div>`;
-      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",closeAcctActionPanel);
       panel.querySelector("#testFlagSubmitBtn")?.addEventListener("click",()=>submitSetTestFlag(a,willMark));
     } else if(mode==="delete"){
       // 永久刪除（2026-07-29 補）：只對已標記測試的帳號開放（後端也再擋一次）。
@@ -1656,7 +1665,7 @@
         <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm danger" id="deleteSubmitBtn">永久刪除</button></div>
         <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
       </div>`;
-      panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+      panel.querySelector("[data-cancel-action]")?.addEventListener("click",closeAcctActionPanel);
       panel.querySelector("#deleteSubmitBtn")?.addEventListener("click",()=>submitDeleteAccount(a));
     }
   }
@@ -1766,7 +1775,7 @@
       <div class="modal-subactions"><button type="button" class="btn-ghost btn-sm" data-cancel-action>取消</button><button type="button" class="btn-sm" id="extendSubmitBtn">確認延長</button></div>
       <div class="modal-subhint" id="acctActionHint" role="status" aria-live="polite"></div>
     </div>`;
-    panel.querySelector("[data-cancel-action]")?.addEventListener("click",()=>{ panel.innerHTML=""; });
+    panel.querySelector("[data-cancel-action]")?.addEventListener("click",closeAcctActionPanel);
     const baseMs=info.wasLapsedOrMissing?Date.now():new Date(info.previousExpiresAt).getTime();
     const updatePreview=()=>{
       const d=Number($("extendDays")?.value||0);
