@@ -1986,6 +1986,11 @@ function visitSummaryAsHTML(summary) {
   // 分兩行而不是塞進標題列，是因為醫生要先知道「這是什麼文件」——
   // 品牌是出處（安靜地放在信紙頭），標題才是主角。
   const brandLogo = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_LOGO) || '';
+  // 文字標的字體：Poppins 700 只子集化 "Munea" 五個字母（0.8KB）。
+  // 官網是從 Google CDN 載 Poppins，但這份 HTML 走 baseURL: nil 的離屏 webview，
+  // 載不到任何外部資源——不內嵌的話字形會退回系統無襯線，文字標就不是品牌了
+  // （Edward 2026-07-30：「Munea 的字粗字體也有問題」，根因就是這個）。
+  const brandFont = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_WORDMARK_FONT) || '';
   rows.push('<header>'
     + '<div class="logo">'
     // 圖載不到時只是少一個標記，文字標照樣在——紙上不會出現破圖，也不會沒有出處
@@ -2083,7 +2088,30 @@ function visitSummaryAsHTML(summary) {
     + '<style>'
     // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
     // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
-    + ':root{--ink:#3A352E;--muted:#5A6963;--teal:#236C66;--mint:#E8F2EE;--line:#D9D3C7}'
+    // 定色照 docs/產品設計期待-對齊憲章.md，Edward 2026-07-30 拍板補充：
+    // **主企業色是薄荷綠，不是深綠**；深綠依規範只准做文字強調。
+    // 所以這裡不叫 --teal（那個名字會讓後人以為品牌主色是深綠），
+    // 改用兩個講清楚用途的名字：
+    //   --mint-deep   #2E8A83  薄荷綠的深階 → **線條與來源符號**，不當內文色
+    //   --logo-orange #F4A261  Logo 上那顆橘（Edward 7/30 拍板）→ 只給品牌相關
+    //
+    // 為什麼區塊標回墨色、不用薄荷綠深階：實測 #2E8A83 對白紙是 4.13:1，
+    // 而區塊標是 9.5pt 粗體——WCAG 的「大字」要 ≥11.5pt 粗體才算，所以這個
+    // 組合沒過 AA（4.5:1）。憲章那條「不准淡色字配淡色底」就是在講這件事。
+    // 憲章原文是「文字只用白／石墨黑」，所以文字回石墨黑（11.6:1），
+    // 品牌與層級靠「線條＋字重＋級數」承載——這一頁本來就要求層級在灰階下
+    // 也成立，那顏色對標題就只是裝飾，裝飾不該犧牲可讀性。
+    //
+    // 文字標的「nea」是例外，仍用薄荷綠深階：那是品牌鎖定式的一部分，
+    // WCAG 對 logotype 明文豁免對比要求（1.4.3 例外條款），而且官網用的是
+    // 更淡的 #3AA8A0——紙面已經加深一階了。
+    + ':root{--ink:#3A352E;--muted:#5A6963;--mint-deep:#2E8A83;'
+    +   '--logo-orange:#F4A261;--mint:#E8F2EE;--line:#D9D3C7}'
+    // 內嵌字體要排在最前面，@font-face 必須先宣告才輪得到後面的 font-family
+    + (brandFont
+      ? '@font-face{font-family:"Munea Wordmark";src:url(' + brandFont + ') format("woff2");'
+        + 'font-weight:700;font-style:normal;font-display:block}'
+      : '')
     + '@page{size:A4;margin:15mm 14mm 12mm}'
     + '*{box-sizing:border-box}'
     // 底色要印得出來（WKWebView.createPDF 吃這個屬性），否則問題區塊會變全白
@@ -2093,17 +2121,17 @@ function visitSummaryAsHTML(summary) {
     +   'font-variant-numeric:tabular-nums}'
 
     // 抬頭：標題與期間同基線，下面一條 1.5pt 實線＝這一頁唯一的品牌動作
-    + 'header{border-bottom:1.5pt solid var(--teal);padding-bottom:5pt}'
+    + 'header{border-bottom:1.5pt solid var(--mint-deep);padding-bottom:5pt}'
     // 信紙頭：標記與品牌名，級數刻意壓小——出處不該跟文件標題爭
     // 品牌鎖定式：比例照官網 .logo（標記 30px 對字級 22px、間距 11px），
     // 換算成紙面級數後等比縮小。字型 Poppins 在離屏 webview 載不到，
     // 退回系統無襯線——字重與字距照規範，形不走樣。
     + '.logo{display:flex;align-items:center;gap:.5em;margin-bottom:3pt;'
-    +   'font-family:Poppins,-apple-system,"PingFang TC",sans-serif;'
+    +   'font-family:"Munea Wordmark",Poppins,-apple-system,"PingFang TC",sans-serif;'
     +   'font-weight:700;font-size:10.5pt;letter-spacing:-.025em;color:var(--ink)}'
     + '.logo-mark{width:14.3pt;height:14.3pt;flex:none;object-fit:contain}'
     + '.logo-word{line-height:1;white-space:nowrap}'
-    + '.logo-word b{color:var(--teal);font-weight:700}'
+    + '.logo-word b{color:var(--mint-deep);font-weight:700}'
     + '.logo-zh{font-family:"Noto Sans TC","PingFang TC",sans-serif;font-size:.78em;'
     +   'font-weight:700;letter-spacing:.04em;margin-left:.41em}'
     + '.title{display:flex;align-items:baseline;justify-content:space-between;gap:12pt}'
@@ -2115,7 +2143,7 @@ function visitSummaryAsHTML(summary) {
     // 中文被拉開字距看起來是排錯不是設計。層級靠「字重＋主色＋下方細線」建立，
     // 這三者在黑白印表機下也還在（線與字重不吃顏色）。
     + 'section{margin-top:12pt;page-break-inside:avoid;break-inside:avoid}'
-    + 'h2{font-size:9.5pt;font-weight:700;letter-spacing:.02em;color:var(--teal);'
+    + 'h2{font-size:9.5pt;font-weight:700;letter-spacing:.02em;color:var(--ink);'
     +   'margin:0 0 4pt;padding-bottom:2pt;border-bottom:.5pt solid var(--line)}'
 
     // ① 想問醫生：唯一有底色、字最大的一塊（這張紙存在的理由）
@@ -2124,14 +2152,14 @@ function visitSummaryAsHTML(summary) {
     + '.ask ul{margin:0;padding:0;list-style:none}'
     + '.ask li{position:relative;padding-left:18pt;font-size:11.5pt;line-height:1.5;margin:4pt 0}'
     + '.ask .n{position:absolute;left:0;top:0;width:13pt;text-align:right;'
-    +   'font-weight:700;color:var(--teal)}'
+    +   'font-weight:700;color:var(--ink)}'
 
     // 表格：只用細橫線，不用外框不用斑馬紋——紙上格線越少越好讀
     + 'table{width:100%;border-collapse:collapse}'
     + 'th,td{padding:3.5pt 0;vertical-align:baseline;border-bottom:.5pt solid var(--line);text-align:left}'
     + 'tr:last-child th,tr:last-child td{border-bottom:0}'
     + '.tl .d{width:34pt;color:var(--muted);font-size:9pt;white-space:nowrap}'
-    + '.tl .m{width:14pt;text-align:center;color:var(--teal)}'
+    + '.tl .m{width:14pt;text-align:center;color:var(--mint-deep)}'
     + '.det{display:block;font-size:8.5pt;font-weight:400;color:var(--muted);margin-top:1pt}'
 
     // 在家量的／藥：併排兩欄，數值緊跟在項目後面不貼頁緣
@@ -2148,7 +2176,7 @@ function visitSummaryAsHTML(summary) {
 
     + 'footer{margin-top:18pt;padding-top:5pt;border-top:.5pt solid var(--line);'
     +   'font-size:8.5pt;color:var(--muted);text-align:center}'
-    + 'footer b{color:var(--teal);font-weight:700}'
+    + 'footer b{color:var(--mint-deep);font-weight:700}'
     + '</style></head><body>' + rows.join('') + '</body></html>';
 }
 
