@@ -5812,14 +5812,14 @@ window.__muneaSetHealth = function (s) {
     const hi = sys >= 140 || dia >= 90, lo = sys < 90;
     put('bpNum', String(Math.round(sys)));
     put('bpUnit', '/' + Math.round(dia) + ' mmHg');
-    chip('bpChip', hi ? '偏高' : lo ? '偏低' : '穩定', hi || lo);
+    chip('bpChip', hi ? muneaT('health.high', '偏高') : lo ? muneaT('health.low', '偏低') : muneaT('health.stable', '穩定'), hi || lo);
     put('bpSub', hi ? '比平常高一點，晚點再量一次' : lo ? '偏低一些，起身動作放慢' : '正常範圍內');
     if (hi) worry.push('血壓比平常高一點'); if (lo) worry.push('血壓偏低');
   }
   if (hr) {
     const odd = hr < 50 || hr > 100;
     put('hrNum', String(Math.round(hr)));
-    chip('hrChip', odd ? '注意' : '正常', odd);
+    chip('hrChip', odd ? muneaT('health.attention', '注意') : muneaT('health.normal', '正常'), odd);
     if (odd) worry.push('心跳' + (hr > 100 ? '偏快' : '偏慢'));
   }
   if (spo2) {
@@ -8408,11 +8408,11 @@ function init() {
     const d = { bp: null, hr: null, spo2: null, sleep: null, steps: null, med: null, day: v.day || '' };
     if (sys && dia) {
       const hi = sys >= 140 || dia >= 90, lo = sys < 90;
-      d.bp = { n: String(Math.round(sys)), u: '/' + Math.round(dia) + ' mmHg', chip: hi ? '偏高' : lo ? '偏低' : '穩定', warn: (hi || lo) ? 1 : 0, sub: hi ? '比平常高一點，多留意' : lo ? '偏低一些，起身動作放慢' : '正常範圍內' };
+      d.bp = { n: String(Math.round(sys)), u: '/' + Math.round(dia) + ' mmHg', chip: hi ? muneaT('health.high', '偏高') : lo ? muneaT('health.low', '偏低') : muneaT('health.stable', '穩定'), warn: (hi || lo) ? 1 : 0, sub: hi ? '比平常高一點，多留意' : lo ? '偏低一些，起身動作放慢' : '正常範圍內' };
     }
     if (hr) {
       const odd = hr < 50 || hr > 100;
-      d.hr = { n: String(Math.round(hr)), chip: odd ? '注意' : '正常', warn: odd ? 1 : 0, sub: '靜息心率' };
+      d.hr = { n: String(Math.round(hr)), chip: odd ? muneaT('health.attention', '注意') : muneaT('health.normal', '正常'), warn: odd ? 1 : 0, sub: '靜息心率' };
     }
     if (spo2) d.spo2 = String(Math.round(spo2));
     if (sleep) d.sleep = String(Math.round(sleep * 10) / 10);
