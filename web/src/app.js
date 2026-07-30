@@ -3649,7 +3649,15 @@ const LiveVoice = {
         if (this._slStallStreak === 2) {   // 連續兩拍（約 1 秒）沒聲進來、而她應該在講＝一次斷續
           this._slStalls += 1;
           try { trackProductEvent('sameline_audio_stall', { count: this._slStalls, turn: this._playbackTurn || 0 }); } catch (e) {}
-          if (this._slStalls >= 2) this._sameLineFallBackNow('midcall_stutter');
+          // 2026-07-30 深夜降級為「只記錄、不動手」：這偵測器在真機上每通誤觸發——
+          // 她每輪開口前臉機要 1-2 秒處理，那段「該講卻沒聲」被誤算成斷流（turn 2/3/7
+          // 的 telemetry 全是這型）。自動切換帶來的雪崩（忽大忽小/臉不同步/回音自斷）
+          // 比它要治的斷續傷害大得多（Edward 7/30 親測退步）。保留計數與事件、
+          // 拿真數據把「輪首處理延遲」跟「真斷流」分開之後，才考慮放回自動切換。
+          if (this._slStalls >= 2 && !this._slWouldFallbackSent) {
+            this._slWouldFallbackSent = true;
+            try { trackProductEvent('sameline_would_fallback', { turn: this._playbackTurn || 0 }); } catch (e) {}
+          }
         }
       } else {
         this._slStallStreak = 0;

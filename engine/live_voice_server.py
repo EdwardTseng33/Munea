@@ -33,7 +33,7 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
-from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
+from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame, hot_threshold,
                               note_playout, in_playout_window, guard_enabled, guard_rms_threshold)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
@@ -1639,7 +1639,7 @@ def _new_call_state():
     """一通電話的可變狀態（st）。2026-07-25 抽成獨立函式：①讓 handle() 讀起來清楚
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
-    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "await_first": True, "first_mic": False,
+    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -2209,7 +2209,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # v2：窗以「手機大概播到哪」為準（in_playout_window）；送出時間窗當後備。
                 _eg_window = (in_playout_window(_eg_now, st.get("playout_head"))
                               or in_output_window(_eg_now, st.get("last_out")))
-                if _eg_window and guard_enabled() and frame_rms(message) < guard_rms_threshold():
+                # 2026-07-30 熱門檻：她講話中（水位在前方）要求更大聲才算真插話——
+                # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
+                _eg_rms = frame_rms(message)
+                _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
+                if _eg_window and _eg_rms >= _eg_hot:
+                    st["last_hot_voice_at"] = _eg_now   # 窗內聽到真的夠大聲＝可信的人聲（插話裁判的依據）
+                if _eg_window and guard_enabled() and _eg_rms < _eg_hot:
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
                         _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
@@ -2267,6 +2273,21 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 elif t == "audio_end":
                     await session.send_realtime_input(audio_stream_end=True)
                 elif t == "barge_in":
+                    # 2026-07-30 插話裁判（治「喇叭開大→她自己的聲音觸發手機端插話→自己閉嘴」）：
+                    # 手機端的插話偵測分不出「你在說話」跟「她自己的大聲回音」（退回手機播音
+                    # 模式時系統回音消除顧不到那條路、7/16 已點名）。伺服器聽得到上行音訊，
+                    # 當裁判：她講話中收到插話通知、但最近 0.6 秒沒聽過衝過熱門檻的人聲＝回音
+                    # → 駁回（回 ack 讓 App 解除靜音、她接著講），不打斷她。
+                    _bi_now = time.monotonic()
+                    if (in_playout_window(_bi_now, st.get("playout_head"))
+                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6):
+                        st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
+                        _diag(cid, "node.barge_in_rejected_echo", count=st["barge_in_rejected"])
+                        try:
+                            await ws.send(json.dumps({"type": "barge_in_ack"}))   # App 收 ack 會解除本地靜音
+                        except Exception:
+                            pass
+                        continue
                     st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1
