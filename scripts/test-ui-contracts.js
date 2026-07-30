@@ -12,8 +12,9 @@ const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
 const rendererCopySource = fs.readFileSync('web/src/i18n/app-renderer-copy.js', 'utf8');
 const legalRoutingSource = fs.readFileSync('web/src/i18n/legal-routing.js', 'utf8');
 const zhCatalog = JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'));
-const companionCatalogs = Object.fromEntries(
-  ['zh-TW', 'en', 'ja', 'es'].map(locale => [
+const COPY_LOCALES = ['zh-TW', 'en', 'ja', 'es'];
+const catalogs = Object.fromEntries(
+  COPY_LOCALES.map(locale => [
     locale,
     JSON.parse(fs.readFileSync(`web/src/i18n/${locale}.json`, 'utf8')),
   ]),
@@ -21,6 +22,33 @@ const companionCatalogs = Object.fromEntries(
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+// ── 文案類守門的通用寫法（2026-07-30 立）──────────────────────────────────────
+// 背景：畫面文字已經改成「index.html 放英文底稿、執行時由 web/src/i18n/*.json 套上該語言」。
+// 在 index.html 裡 grep 中文＝守著隨時會被翻譯批次改掉的寫法，不是守使用者實際看得到什麼。
+// 這個坑 2026-07 連續踩四次（7/28 renderCarePriority、7/29 sec-head 比對、7/29 通話前置並行、
+// 7/30 訂閱點數揭露在乾淨 main 上長期紅燈——揭露一直都在，是守門找錯地方）。
+//
+// 所以文案類的意圖一律拆三層守，不再對畫面檔 grep 某一國語言的句子：
+//   ① 結構：畫面上真的有那個節點（節點不在＝翻譯再對也沒人看得到）
+//   ② 接線：那個節點由哪個文案 key 餵（key 是穩定的，句子不是）
+//   ③ 文案：翻譯表裡那個 key 真的講到該講的事
+// 唯一例外是反向守門（「這句話必須永遠消失」）——那裡寫死的是不該再出現的舊句，本來就該寫死。
+//
+// ③ 的四語系逐句合規用字，各自有 scripts/test-*-localizations.js 專門守（例如訂閱點數在
+// test-purchase-flow-localizations.js）。這裡只驗「四語系都有、不空白」＋「zh-TW／en 兩份正本
+// 真的講到重點」，避免同一份用字表要在兩個地方維護、改文案時到處誤紅。
+function assertCatalogSays(key, patterns, why) {
+  COPY_LOCALES.forEach((locale) => {
+    const value = catalogs[locale][key];
+    assert(typeof value === 'string' && value.trim(), `${locale}:${key} 文案不見了——${why}`);
+  });
+  Object.entries(patterns).forEach(([locale, expected]) => {
+    [].concat(expected).forEach((pattern) => {
+      assert(pattern.test(catalogs[locale][key]), `${locale}:${key} 必須講到 ${pattern}——${why}`);
+    });
+  });
 }
 
 function contrastRatio(hexA, hexB) {
@@ -319,7 +347,7 @@ companionCards.forEach(([, ava, typeKey, typeFallback, traitKey, traitFallback])
   if (!labelKey) return;
   assert(zhCatalog[typeKey] === typeFallback, `Companion type fallback must match ${typeKey}`);
   assert(zhCatalog[traitKey] === traitFallback, `Companion trait fallback must match ${traitKey}`);
-  Object.entries(companionCatalogs).forEach(([locale, catalog]) => {
+  Object.entries(catalogs).forEach(([locale, catalog]) => {
     const cardLabel = `${catalog[typeKey]}${companionJoiner[locale]}${catalog[traitKey]}`;
     assert(
       catalog[labelKey] === cardLabel,
@@ -344,16 +372,51 @@ assert(!/^\s*var has = !!localStorage\.getItem\('munea\.devicesOn'\);[\s\S]*?if\
 assert(/hasAnyValue/.test(healthSource) && /r\.empty/.test(app), 'Connecting Apple Health with nothing readable must be reported honestly, not promised as syncing');
 assert(!/predicate: nil/.test(fs.readFileSync('ios/App/App/HealthPlugin.swift', 'utf8')), 'Latest vitals must be time-bounded so stale readings are not shown as today');
 
+// ── 訂閱點數揭露：不遞延／不過期／扣點順序（2026-07-30 改寫）─────────────────────
+// 原本是在 index.html 的 planModal 裡 grep「會員月點數」「當月有效・不留到下個月」等中文句子。
+// 四語系化之後底稿改成英文、中文改由 zh-TW.json 執行時套上，於是這幾條在乾淨 main 上長期紅燈：
+// 消費者揭露一直都在，紅的是守門。改照上面的三層守——節點在 → 由哪個 key 餵 → 文案表真的講到。
 const subscriptionSheet = html.match(/<div class="reader-page sub-page" id="planModal">([\s\S]*?)<div class="modal-mask" id="visitModal">/)?.[1] || '';
-assert(subscriptionSheet.includes('會員月點數') && subscriptionSheet.includes('每月重發，不留到下個月'), 'Subscription plans must explain that monthly credits do not roll over');
-assert(subscriptionSheet.includes('加購點數') && subscriptionSheet.includes('可累積，不會過期'), 'Subscription plans must distinguish durable purchased credits');
-assert((subscriptionSheet.match(/當月有效・不留到下個月/g) || []).length === 2, 'Every paid plan credit allowance must show its non-rollover label');
-const pointsPane = subscriptionSheet.match(/<div id="subPoints"[\s\S]*?<\/div>\s*<\/div>\s*<div class="plan-confirm-bar"/)?.[0] || '';
-assert(pointsPane.includes('會員月點數') && pointsPane.includes('每月重發，不留到下個月'), 'Points purchase pane must explain monthly-credit expiry');
-assert(pointsPane.includes('加購點數') && pointsPane.includes('可累積，不會過期'), 'Points purchase pane must explain purchased-credit retention');
-assert(pointsPane.includes('扣點順序') && pointsPane.includes('先扣月點數，再扣加購'), 'Points purchase pane must explain credit deduction order');
+assert(subscriptionSheet, 'Subscription sheet markup not found (planModal)');
+// ① 結構：訂閱方案／加購點數兩個分頁，各要有一組完整三行的點數規則
+const pointsPaneStart = subscriptionSheet.indexOf('<div id="subPoints"');
+assert(pointsPaneStart > 0, 'Subscription sheet must keep the separate credit-purchase pane');
+const plansPane = subscriptionSheet.slice(0, pointsPaneStart);
+const pointsPane = subscriptionSheet.slice(pointsPaneStart);
+[['訂閱方案', plansPane], ['加購點數', pointsPane]].forEach(([paneName, pane]) => {
+  assert((pane.match(/class="credit-rules/g) || []).length === 1, `${paneName}分頁必須有一組點數使用規則`);
+  assert((pane.match(/class="cr-row"/g) || []).length === 3, `${paneName}分頁的點數規則必須是三行：月點數／加購點數／扣點順序`);
+});
+// ② 接線：三行由哪三組 key 餵，且兩個分頁都要跟著換語言（少接一邊＝加購頁會停在英文）
+[
+  'subscription.monthlyCreditsTitle', 'subscription.monthlyCreditsBody',
+  'subscription.purchasedCreditsTitle', 'subscription.purchasedCreditsBody',
+  'subscription.deductionOrderTitle', 'subscription.deductionOrderBody',
+].forEach((key) => {
+  assert(app.includes(`'${key}'`), `點數規則必須由 ${key} 餵，四語系才會一起換`);
+});
+assert(/#subPlans \.credit-rules \.cr-row[^']*#subPoints \.credit-rules \.cr-row/.test(app), '加購點數分頁的規則也要跟著換語言，不能只換訂閱分頁');
+// ③ 文案：三條規則各自要講到不遞延／不過期／先扣月點
+assertCatalogSays('subscription.monthlyCreditsBody', { 'zh-TW': /不會累積|不留到下/, en: /do not roll over/i }, '每月方案點數必須說明不會留到下一期');
+assertCatalogSays('subscription.purchasedCreditsBody', { 'zh-TW': /不會到期/, en: /do not expire/i }, '加購點數必須說明不會過期');
+assertCatalogSays('subscription.deductionOrderBody', { 'zh-TW': /每月點數[\s\S]*加購點數/, en: /before purchased credits/i }, '扣點順序必須說明先扣月點數、再扣加購');
+// 每張付費方案卡的點數那一行都要自己標「當月點數不遞延」。
+// 原本寫死 .length === 2，方案一增減就會誤紅；改成從畫面上真的有幾張方案卡推出來。
+const planCards = [...plansPane.matchAll(/<button class="ppk[^"]*" data-t="([a-z]+)" type="button">([\s\S]*?)<\/button>/g)]
+  .map(([, plan, body]) => ({ plan, body }));
+assert(planCards.length >= 2, '付費方案卡片必須留在畫面上（至少 Plus 與 Pro）');
+const rolloverLabelled = planCards.filter(({ body }) => /do not roll over/i.test(body.match(/<li>([\s\S]*?)<\/li>/)?.[1] || ''));
+assert(
+  rolloverLabelled.length === planCards.length,
+  `每張付費方案卡的點數那行都要標不遞延：方案 ${planCards.length} 張、標到的 ${rolloverLabelled.length} 張`,
+);
+assert(app.includes("'subscription.monthlyVoiceCredits'"), '方案卡的點數那行必須由 subscription.monthlyVoiceCredits 餵');
+assertCatalogSays('subscription.monthlyVoiceCredits', { 'zh-TW': /不會累積|不留到下/, en: /do not roll over/i }, '方案卡的每月點數必須說明不會留到下一期');
 assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {'), 'Credit rule explanation must have dedicated readable styling');
-assert(html.includes('立即建立只屬於你的 JSON 資料副本'), 'Data export sheet must explain immediate scoped delivery');
+// 資料匯出說明（2026-07-30 改寫）：這段已經是 data-i18n="data.description" 的翻譯節點，
+// index.html 裡那句中文只是還沒換掉的底稿，跟 zh-TW.json 的正本已經對不起來（正本沒有「立即」兩字）。
+assert(/data-i18n="data\.description"/.test(html), '資料匯出說明必須由文案表餵，才會跟著 App 語言換');
+assertCatalogSays('data.description', { 'zh-TW': [/JSON/, /登入/], en: [/JSON/, /sign(ing)? in/i] }, '資料匯出說明必須講清楚登入後可建立自己的 JSON 資料副本');
 assert(app.includes('result.exportPackage') && app.includes('navigator.canShare') && app.includes('a.download = filename'), 'Data export must share or download the generated JSON package');
 
 assert(html.includes('src/medication.js'), 'App shell must load the shared medication occurrence service');
@@ -407,7 +470,9 @@ const renderPlanStateBody = app.match(/function renderPlanState\(\) \{[\s\S]*?\n
 assert(renderPlanStateBody, 'renderPlanState must remain a readable single function');
 assert(renderSubUiBody.includes("seg.style.display = cur === 'free' ? 'none' : ''"), 'Free members must not see the points-purchase switcher at all');
 assert(renderSubUiBody.includes("unlock.style.display = cur === 'free' ? '' : 'none'"), 'Free members must be told when points purchasing unlocks');
-assert(html.includes('訂閱成功後，會員身分會立即更新，並開放「點數購買」'), 'The subscription page must explain the points-purchase follow-up');
+// 2026-07-30 改寫：這句已經搬進文案表（subscription.unlockCredits），HTML 裡只剩英文底稿。
+assert(/id="pointsUnlockNotice"[\s\S]{0,200}?data-i18n="subscription\.unlockCredits"/.test(html), '免費會員必須看得到「訂閱之後才能加購點數」的說明，且由文案表餵');
+assertCatalogSays('subscription.unlockCredits', { 'zh-TW': [/訂閱/, /點數/], en: /credit/i }, '免費會員必須被告知加購點數要先訂閱');
 assert(renderSubUiBody.includes("if (cur === 'free') showSubPane('plans')"), 'Free members must be forced onto the subscription pane');
 assert(/dataset\.pane === 'points' && circlePlan\(\) === 'free'\) return;/.test(app), 'Clicking the points tab must be blocked for free members as a second guard');
 assert(app.includes('function showSubPane'), 'Pane switching must go through one function so the free guard cannot be bypassed');
@@ -415,7 +480,12 @@ assert(renderPlanStateBody.includes("_tBtn.style.display = _isFreeP ? 'none' : '
 // 只要有點數就一定看得到餘額（Edward 親訓）
 assert(renderPlanStateBody.includes('const _leftover = _isFreeP ? POINTS.bought : 0'), 'Leftover purchased points must be computed for free members');
 assert(renderPlanStateBody.includes("_lbl.style.display = (!_isFreeP || _leftover > 0) ? '' : 'none'"), 'Any member holding points must still see the balance');
-assert(renderPlanStateBody.includes('你還有 ') && renderPlanStateBody.includes('訂閱 Plus／Pro 就能繼續用這些點聊天'), 'Free members with leftover points must be told the points are kept and how to use them');
+// 2026-07-30 改寫：這句也搬進文案表（subscription.freeCreditsLeft），app.js 只剩 key 與剩餘點數。
+assert(
+  renderPlanStateBody.includes("'subscription.freeCreditsLeft'") && renderPlanStateBody.includes('{ credits: _leftover }'),
+  'Free members with leftover points must be told the points are kept and how to use them',
+);
+assertCatalogSays('subscription.freeCreditsLeft', { 'zh-TW': [/留著|保留/, /訂閱/], en: [/remain/i, /subscribe/i] }, '免費會員手上剩的加購點數必須說明會留著、以及怎麼用');
 const ptsPillHiddenBody = app.match(/function ptsPillHidden\(\) \{[^}]*\}/)?.[0] || '';
 assert(/isFree\(\)\) && ptsLeft\(\) <= 0/.test(ptsPillHiddenBody), 'The chat points chip may only hide when a free member truly has zero points');
 // 「點數快用完、去加值」只對付費成立（免費 0 點時 0 < 30 會誤觸發、且加值鈕根本是藏的）
@@ -436,10 +506,38 @@ assert(app.includes("muneaT('credits.freeTrialEnded'"), 'The free-trial exhausti
 assert(app.includes("muneaT(\n          'credits.freeTrialOneMinute'"), 'The one-minute free-trial warning must be localized and must not call a minute a credit');
 assert(!app.includes("toast('免費體驗剩約 1 點"), 'The free-trial warning must never label a remaining minute as one credit');
 
-// 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）
+// 付款失敗要講原因（同邀請碼 105 號教訓：不能全混成一句）。
+// 2026-07-30 改寫：訊息已經從 app.js 的中文字串搬進 web/src/i18n/purchase-flow.js 的理由對照表，
+// 所以改守「每個理由有沒有對到自己的 key」＋「四語系裡這些句子彼此不同、也不等於通用失敗句」——
+// 「不能全混成一句」本來就是可以直接驗的結構事實，不必去比對某一國語言的句子長什麼樣。
+const purchaseFlowSource = fs.readFileSync('web/src/i18n/purchase-flow.js', 'utf8');
 assert(app.includes('function planPurchaseFailMessage'), 'Purchase failures must map reasons to plain-language text');
-assert(app.includes('先登入帳號，才能訂閱。') && app.includes('這個方案現在還不能買') && app.includes('付款過了，但還沒對上帳'), 'Purchase failure texts must cover sign-in, unavailable product and unverified payment');
-assert(app.includes("reason === 'apple_account_token_mismatch'") && app.includes('先不要重複付款'), 'An Apple account-token mismatch must explain the account binding and stop repeat payment');
+assert(/purchaseFlow\s*\?\s*purchaseFlow\.failureMessage\(reason\)/.test(app), '付款失敗訊息必須走同一張理由對照表，不能每處各寫一句');
+const PURCHASE_FAIL_REASONS = {
+  signin_required: 'purchase.signInRequiredBody',
+  notfound: 'purchase.productUnavailable',
+  store_products_unavailable: 'purchase.productUnavailable',
+  unverified: 'purchase.unverified',
+  apple_account_token_mismatch: 'purchase.accountMismatch',
+  server_verification_failed: 'purchase.serverVerificationFailed',
+};
+Object.entries(PURCHASE_FAIL_REASONS).forEach(([reason, key]) => {
+  assert(
+    new RegExp(`${reason}:\\s*'${key.replace(/\./g, '\\.')}'`).test(purchaseFlowSource),
+    `付款失敗理由 ${reason} 必須對到 ${key}，不能落回通用失敗句`,
+  );
+});
+const purchaseFailKeys = [...new Set(Object.values(PURCHASE_FAIL_REASONS))];
+COPY_LOCALES.forEach((locale) => {
+  const texts = purchaseFailKeys.map(key => catalogs[locale][key]);
+  purchaseFailKeys.forEach((key, index) => {
+    assert(texts[index] && texts[index] !== catalogs[locale]['purchase.failed'], `${locale}:${key} 不能空白、也不能跟通用失敗句同一句`);
+  });
+  assert(new Set(texts).size === texts.length, `${locale} 每個付款失敗理由必須各講各的，不能混成同一句`);
+});
+assert(app.includes("reason === 'apple_account_token_mismatch'"), 'An Apple account-token mismatch must stay a separately handled purchase outcome');
+assertCatalogSays('purchase.accountMismatch', { 'zh-TW': [/帳戶|帳號/, /恢復|切換/], en: [/account/i, /restore/i] }, '買到別的帳戶名下時要講清楚是哪個帳戶、怎麼恢復');
+assertCatalogSays('purchase.serverVerificationFailed', { 'zh-TW': [/請勿重複購買|不要重複/, /恢復購買/], en: [/do not buy again/i, /restore/i] }, '驗證失敗必須擋住重複付款、並指向恢復購買');
 assert(app.includes("'TEST · ' + (_memBadgePlan || 'free').toUpperCase()"), 'Developer badges must expose the simulated FREE/PLUS/PRO identity');
 
 // App Store 評分視窗整條鏈（2026-07-29 立）。背景：網頁端 2026-07 就寫好時機閘，但原生那半從沒實作，
