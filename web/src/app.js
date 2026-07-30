@@ -2088,73 +2088,236 @@ function visitSummaryAsText(summary) {
 }
 
 /* 摘要 → 一份自成一體的 A4 HTML，餵給原生外掛轉 PDF。
-   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的 modal，直接印會拿到
+   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的子頁，直接印會拿到
    App 的殼＋被裁掉的捲動內容。這份只有摘要本身，版面完全可控、每一份長一樣。
-   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS 根本不會被載到。 */
+   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS／字型根本不會被載到。
+
+   ── 這一頁的設計前提（決定了下面每一個選擇）───────────────────
+   ① 醫生大約 60 秒看完 → 可掃讀優先於好看。標題列、區塊標、數字對齊
+      都是為了「眼睛一路往下不用回頭」。
+   ② **診所印表機常常是黑白的** → 層級必須在灰階下就成立。顏色只作點綴，
+      任何意義都同時由字重／級數／線條承載，不單靠顏色。
+   ③ 不得有警示色（醫材紅線）——沒有紅、沒有橘、沒有底色分級。
+      時間軸三種來源用「形狀」區分，因為醫師要分辨的是可信度不是嚴重度。
+   ④ 字型吃系統：標題用襯線（沐寧頁面大標本來就是襯線，紙面也才有文件的重量），
+      內文用系統無襯線。數字一律 tabular-nums 才對得齊。
+   ⑤ 可能超過一頁（60 天資料多），所以每個區塊都不准被切開。 */
 function visitSummaryAsHTML(summary) {
   const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
+  const companion = (typeof cname === 'function' ? cname() : '沐寧');
+  const period = summary
+    ? muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to })
+    : '';
+  const sec = label => '<h2>' + rptEsc(label) + '</h2>';
   const rows = [];
-  rows.push('<h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>');
-  rows.push('<p class="sub">' + (summary
-    ? rptEsc(muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to }))
-    : '') + '</p>');
 
+  // 抬頭走「信紙」結構：上面一行品牌，下面一行文件標題。
+  //
+  // Edward 2026-07-30 指正兩次：先是「報告沒有品牌 Logo 與名稱」，
+  // 然後是「Logo 與 Logo 字不是有圖嗎？不要自己自創，要符合品牌設計規範」。
+  // 我第一版整個省掉品牌（判斷錯了），第二版自己用向量重畫一個水滴（更錯——
+  // 品牌標記不是可以自由發揮的東西）。這一版用**真的資產**與**官網的鎖定式**。
+  //
+  // 標記：web/src/visit-summary-logo.js（現行 App Icon 的透明圓角版 base64）。
+  //   為什麼內嵌：ExportPlugin.swift 用 baseURL: nil 載這份 HTML，相對路徑會破圖。
+  // 文字標：照官網 app-site/warm.css 的 .logo 鎖定式原樣搬過來——
+  //   Poppins 700、字距 -.025em、「Mu」墨色 +「nea」主色、「沐寧」.78em 左距 .41em。
+  //   這不是我挑的排版，是既有規範，所以照抄不改。
+  //
+  // 分兩行而不是塞進標題列，是因為醫生要先知道「這是什麼文件」——
+  // 品牌是出處（安靜地放在信紙頭），標題才是主角。
+  const brandLogo = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_LOGO) || '';
+  // 文字標的字體：Poppins 700 只子集化 "Munea" 五個字母（0.8KB）。
+  // 官網是從 Google CDN 載 Poppins，但這份 HTML 走 baseURL: nil 的離屏 webview，
+  // 載不到任何外部資源——不內嵌的話字形會退回系統無襯線，文字標就不是品牌了
+  // （Edward 2026-07-30：「Munea 的字粗字體也有問題」，根因就是這個）。
+  const brandFont = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_WORDMARK_FONT) || '';
+  rows.push('<header>'
+    + '<div class="logo">'
+    // 圖載不到時只是少一個標記，文字標照樣在——紙上不會出現破圖，也不會沒有出處
+    +   (brandLogo ? '<img class="logo-mark" src="' + brandLogo + '" alt="" />' : '')
+    +   '<span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>'
+    + '</div>'
+    + '<div class="title"><h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>'
+    +   '<span class="period">' + rptEsc(period) + '</span></div>'
+    + '</header>');
+
+  // ① 想問醫生＝這張紙存在的理由，所以是唯一有底色、字也最大的一塊
   if (qs.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生')) + '</h2><ol>');
-    qs.forEach(q => rows.push('<li>' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
-    rows.push('</ol>');
+    rows.push('<section class="ask">' + sec(muneaT('visit.questionsTitle', '這次想問醫生')) + '<ul>');
+    // 編號自己畫：::marker 的 color 在各家排版引擎支援不一致，
+    // 用 span 才保證印出來是主色、而且對得齊
+    qs.forEach((q, i) => rows.push('<li><span class="n">' + (i + 1) + '</span>'
+      + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
+    rows.push('</ul></section>');
   }
+
+  // ② 時間軸
   if (summary && summary.timeline && summary.timeline.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.timelineTitle', '這段期間發生的事')) + '</h2><table>');
+    rows.push('<section>' + sec(muneaT('visit.timelineTitle', '這段期間發生的事')) + '<table class="tl">');
     summary.timeline.forEach(e => {
       rows.push('<tr><td class="d">' + rptEsc(rptShortDate(e.date)) + '</td>'
         + '<td class="m">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</td>'
-        + '<td>' + rptEsc(e.text) + (e.detail ? '<span class="sm">（' + rptEsc(e.detail) + '）</span>' : '') + '</td></tr>');
+        + '<td>' + rptEsc(e.text)
+        + (e.detail ? '<span class="det">' + rptEsc(e.detail) + '</span>' : '') + '</td></tr>');
     });
-    rows.push('</table><p class="sm">' + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    rows.push('</table><p class="legend">'
+      + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    // 截斷一定要說出來——悄悄少幾筆會讓醫師以為這就是全部
     if (summary.timelineOmitted > 0) {
-      rows.push('<p class="sm">'
+      rows.push('<p class="note">'
         + rptEsc(muneaT('visit.timelineOmitted', '另有 {n} 筆較早的紀錄沒有列出來。', { n: summary.timelineOmitted }))
         + '</p>');
     }
+    rows.push('</section>');
   }
-  if (summary && summary.vitals && summary.vitals.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.vitalsTitle', '在家量的')) + '</h2><ul>');
-    summary.vitals.forEach(v => rows.push('<li>' + rptEsc(v) + '</li>'));
-    rows.push('</ul><p class="sm">' + rptEsc(summary.baselineNote || '') + '</p>');
+
+  // ③④ 在家量的 ＋ 藥實際吃了沒：**併排兩欄**。
+  //     兩邊都是短清單，各佔一整列的話 A4 的寬度整片浪費，而且醫生的視線要
+  //     橫跨整頁才讀到一個數字。併排之後兩塊都在視線範圍內，一眼看完。
+  //     只有一邊有資料時自動吃滿整列。
+  const hasVitals = !!(summary && summary.vitals && summary.vitals.length);
+  const hasMeds = !!(summary && summary.medication && summary.medication.length);
+  if (hasVitals || hasMeds) {
+    rows.push('<div class="cols">');
+    if (hasVitals) {
+      rows.push('<section>' + sec(muneaT('visit.vitalsTitle', '在家量的')) + '<table class="kv">');
+      summary.vitals.forEach(v => {
+        // 「血壓 128/82 · 量了 14 天」→ 拆成項目／數值兩欄
+        const cut = String(v).indexOf(' ');
+        rows.push('<tr><th>' + rptEsc(cut > 0 ? v.slice(0, cut) : v) + '</th>'
+          + '<td>' + rptEsc(cut > 0 ? v.slice(cut + 1) : '') + '</td></tr>');
+      });
+      rows.push('</table>');
+      if (summary.baselineNote) rows.push('<p class="note">' + rptEsc(summary.baselineNote) + '</p>');
+      rows.push('</section>');
+    }
+    if (hasMeds) {
+      // 只給次數不給服藥率——百分比讀起來就是評分，評分就是判斷
+      rows.push('<section>' + sec(muneaT('visit.medTitle', '藥實際吃了沒')) + '<table class="kv">');
+      summary.medication.forEach(m => {
+        rows.push('<tr><th>' + rptEsc(m.name) + '</th><td>'
+          + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次',
+            { scheduled: m.scheduled, taken: m.taken }))
+          + (m.missed
+            ? '<span class="det">' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) + '</span>'
+            : '')
+          + '</td></tr>');
+      });
+      rows.push('</table></section>');
+    }
+    rows.push('</div>');
   }
-  if (summary && summary.medication && summary.medication.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.medTitle', '藥實際吃了沒')) + '</h2><table>');
-    summary.medication.forEach(m => {
-      rows.push('<tr><td>' + rptEsc(m.name) + '</td><td>'
-        + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次', { scheduled: m.scheduled, taken: m.taken }))
-        + (m.missed ? '　' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) : '')
-        + '</td></tr>');
-    });
-    rows.push('</table>');
-  }
+
+  // 缺料要講——一份少了血壓的摘要看起來就像「他都沒量」
   if (summary && summary.partial && summary.partial.length) {
-    rows.push('<p class="sm">' + rptEsc(muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
-      { names: visitPartialNames(summary.partial) })) + '</p>');
+    rows.push('<p class="note incomplete">'
+      + rptEsc(muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
+        { names: visitPartialNames(summary.partial) })) + '</p>');
   }
-  rows.push('<p class="foot">' + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷',
-    { companion: (typeof cname === 'function' ? cname() : '沐寧') })) + '</p>');
+
+  // 頁尾也帶品牌名——這張紙被影印、抬頭被裁掉的時候，出處還在。
+  // 品牌名是專有名詞，不進 i18n 目錄（不該被翻譯），所以另外接在前面。
+  rows.push('<footer><b>沐寧 Munea</b> · '
+    + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion }))
+    + '</footer>');
 
   // lang 跟著 App 語系走：離屏 webview 的斷行與字型選擇吃這個屬性，
   // 寫死 zh-Hant 會讓日文那份用中文字形排版。
-  return '<!doctype html><html lang="' + rptEsc(muneaLocale() === 'zh-TW' ? 'zh-Hant' : muneaLocale()) + '"><head><meta charset="utf-8">'
+  const lang = muneaLocale() === 'zh-TW' ? 'zh-Hant' : muneaLocale();
+  return '<!doctype html><html lang="' + rptEsc(lang) + '"><head><meta charset="utf-8">'
     + '<style>'
-    + '@page{size:A4;margin:14mm}'
-    + 'body{font-family:-apple-system,"PingFang TC","Heiti TC",sans-serif;color:#1a1a1a;font-size:12pt;line-height:1.6;margin:0}'
-    + 'h1{font-size:20pt;margin:0 0 2pt}'
-    + 'h2{font-size:12pt;margin:16pt 0 4pt;padding-bottom:2pt;border-bottom:1px solid #ccc}'
-    + '.sub{color:#555;margin:0 0 6pt;font-size:10.5pt}'
-    + 'ol,ul{margin:0;padding-left:18pt}li{margin:2pt 0}'
+    // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
+    // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
+    // 定色照 docs/產品設計期待-對齊憲章.md，Edward 2026-07-30 拍板補充：
+    // **主企業色是薄荷綠，不是深綠**；深綠依規範只准做文字強調。
+    // 所以這裡不叫 --teal（那個名字會讓後人以為品牌主色是深綠），
+    // 改用兩個講清楚用途的名字：
+    //   --mint-deep   #2E8A83  薄荷綠的深階 → **線條與來源符號**，不當內文色
+    //   --logo-orange #F4A261  Logo 上那顆橘（Edward 7/30 拍板）→ 只給品牌相關
+    //
+    // 為什麼區塊標回墨色、不用薄荷綠深階：實測 #2E8A83 對白紙是 4.13:1，
+    // 而區塊標是 9.5pt 粗體——WCAG 的「大字」要 ≥11.5pt 粗體才算，所以這個
+    // 組合沒過 AA（4.5:1）。憲章那條「不准淡色字配淡色底」就是在講這件事。
+    // 憲章原文是「文字只用白／石墨黑」，所以文字回石墨黑（11.6:1），
+    // 品牌與層級靠「線條＋字重＋級數」承載——這一頁本來就要求層級在灰階下
+    // 也成立，那顏色對標題就只是裝飾，裝飾不該犧牲可讀性。
+    //
+    // 文字標的「nea」是例外，仍用薄荷綠深階：那是品牌鎖定式的一部分，
+    // WCAG 對 logotype 明文豁免對比要求（1.4.3 例外條款），而且官網用的是
+    // 更淡的 #3AA8A0——紙面已經加深一階了。
+    + ':root{--ink:#3A352E;--muted:#5A6963;--mint-deep:#2E8A83;'
+    +   '--logo-orange:#F4A261;--mint:#E8F2EE;--line:#D9D3C7}'
+    // 內嵌字體要排在最前面，@font-face 必須先宣告才輪得到後面的 font-family
+    + (brandFont
+      ? '@font-face{font-family:"Munea Wordmark";src:url(' + brandFont + ') format("woff2");'
+        + 'font-weight:700;font-style:normal;font-display:block}'
+      : '')
+    + '@page{size:A4;margin:15mm 14mm 12mm}'
+    + '*{box-sizing:border-box}'
+    // 底色要印得出來（WKWebView.createPDF 吃這個屬性），否則問題區塊會變全白
+    + 'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    + 'body{margin:0;color:var(--ink);font-size:10.5pt;line-height:1.6;'
+    +   'font-family:-apple-system,"PingFang TC","Hiragino Sans","Heiti TC",sans-serif;'
+    +   'font-variant-numeric:tabular-nums}'
+
+    // 抬頭：標題與期間同基線，下面一條 1.5pt 實線＝這一頁唯一的品牌動作
+    + 'header{border-bottom:1.5pt solid var(--mint-deep);padding-bottom:5pt}'
+    // 信紙頭：標記與品牌名，級數刻意壓小——出處不該跟文件標題爭
+    // 品牌鎖定式：比例照官網 .logo（標記 30px 對字級 22px、間距 11px），
+    // 換算成紙面級數後等比縮小。字型 Poppins 在離屏 webview 載不到，
+    // 退回系統無襯線——字重與字距照規範，形不走樣。
+    + '.logo{display:flex;align-items:center;gap:.5em;margin-bottom:3pt;'
+    +   'font-family:"Munea Wordmark",Poppins,-apple-system,"PingFang TC",sans-serif;'
+    +   'font-weight:700;font-size:10.5pt;letter-spacing:-.025em;color:var(--ink)}'
+    + '.logo-mark{width:14.3pt;height:14.3pt;flex:none;object-fit:contain}'
+    + '.logo-word{line-height:1;white-space:nowrap}'
+    + '.logo-word b{color:var(--mint-deep);font-weight:700}'
+    + '.logo-zh{font-family:"Noto Sans TC","PingFang TC",sans-serif;font-size:.78em;'
+    +   'font-weight:700;letter-spacing:.04em;margin-left:.41em}'
+    + '.title{display:flex;align-items:baseline;justify-content:space-between;gap:12pt}'
+    + 'h1{font-family:"Songti TC","Noto Serif TC",Georgia,serif;font-size:18pt;font-weight:700;'
+    +   'margin:0;line-height:1.2}'
+    + '.period{font-size:9pt;color:var(--muted);white-space:nowrap}'
+
+    // 區塊標：不用 uppercase（對中文完全無效），字距只給極小值——
+    // 中文被拉開字距看起來是排錯不是設計。層級靠「字重＋主色＋下方細線」建立，
+    // 這三者在黑白印表機下也還在（線與字重不吃顏色）。
+    + 'section{margin-top:12pt;page-break-inside:avoid;break-inside:avoid}'
+    + 'h2{font-size:9.5pt;font-weight:700;letter-spacing:.02em;color:var(--ink);'
+    +   'margin:0 0 4pt;padding-bottom:2pt;border-bottom:.5pt solid var(--line)}'
+
+    // ① 想問醫生：唯一有底色、字最大的一塊（這張紙存在的理由）
+    + '.ask{background:var(--mint);border-radius:2pt;padding:9pt 11pt 10pt;margin-top:10pt}'
+    + '.ask h2{border-bottom-color:rgba(35,108,102,.28);margin-bottom:5pt}'
+    + '.ask ul{margin:0;padding:0;list-style:none}'
+    + '.ask li{position:relative;padding-left:18pt;font-size:11.5pt;line-height:1.5;margin:4pt 0}'
+    + '.ask .n{position:absolute;left:0;top:0;width:13pt;text-align:right;'
+    +   'font-weight:700;color:var(--ink)}'
+
+    // 表格：只用細橫線，不用外框不用斑馬紋——紙上格線越少越好讀
     + 'table{width:100%;border-collapse:collapse}'
-    + 'td{padding:3pt 0;vertical-align:top;border-bottom:1px solid #eee}'
-    + 'td.d{width:42pt;color:#555;white-space:nowrap}td.m{width:16pt;text-align:center}'
-    + '.sm{font-size:9.5pt;color:#666;margin:4pt 0 0}'
-    + '.foot{margin-top:18pt;padding-top:6pt;border-top:1px solid #ccc;font-size:9pt;color:#666;text-align:center}'
+    + 'th,td{padding:3.5pt 0;vertical-align:baseline;border-bottom:.5pt solid var(--line);text-align:left}'
+    + 'tr:last-child th,tr:last-child td{border-bottom:0}'
+    + '.tl .d{width:34pt;color:var(--muted);font-size:9pt;white-space:nowrap}'
+    + '.tl .m{width:14pt;text-align:center;color:var(--mint-deep)}'
+    + '.det{display:block;font-size:8.5pt;font-weight:400;color:var(--muted);margin-top:1pt}'
+
+    // 在家量的／藥：併排兩欄，數值緊跟在項目後面不貼頁緣
+    + '.cols{display:flex;gap:22pt;align-items:flex-start;'
+    +   'page-break-inside:avoid;break-inside:avoid}'
+    + '.cols>section{flex:1;min-width:0;margin-top:12pt}'
+    + '.kv th{font-weight:400;color:var(--muted);white-space:nowrap;padding-right:10pt}'
+    + '.kv td{text-align:right;font-weight:600}'
+
+    + '.legend{font-size:8.5pt;color:var(--muted);margin:5pt 0 0}'
+    + '.note{font-size:8.5pt;color:var(--muted);margin:4pt 0 0;line-height:1.5}'
+    // 缺料那句要看得見（但不用警示色——一條左側細線就夠）
+    + '.incomplete{margin-top:11pt;padding-left:7pt;border-left:2pt solid var(--line)}'
+
+    + 'footer{margin-top:18pt;padding-top:5pt;border-top:.5pt solid var(--line);'
+    +   'font-size:8.5pt;color:var(--muted);text-align:center}'
+    + 'footer b{color:var(--mint-deep);font-weight:700}'
     + '</style></head><body>' + rows.join('') + '</body></html>';
 }
 

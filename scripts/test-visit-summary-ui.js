@@ -169,9 +169,21 @@ function stripHtmlComments(markup) {
   return markup.replace(/<!--[\s\S]*?-->/g, '');
 }
 
-// 只掃摘要相關的程式與樣板字串，避免掃到全 App 無關文案
-const summaryCode = stripDisclaimers(stripComments(
-  app.slice(app.indexOf('const VISIT_SUMMARY_SNAP_KEY'), app.indexOf('function visitSummaryAsText') + 2600)));
+// 只掃摘要相關的程式與樣板字串，避免掃到全 App 無關文案。
+//
+// 切片邊界要用**真實的程式標記**，不可以用 `indexOf(...) + 2600` 這種魔術數字：
+// 那個數字一旦程式碼長度改變就會切在半個註解中間，剝註解的正則因為
+// `/*` 找不到成對的 `*/` 而失效，於是註解裡解釋「為什麼不能寫某個字」的字
+// 反而被當成違規（2026-07-30 真的發生過）。下面 assert 就是在擋這件事。
+const summaryStart = app.indexOf('const VISIT_SUMMARY_SNAP_KEY');
+const summaryEnd = app.indexOf('function muneaExportPlugin');
+expect(summaryStart >= 0 && summaryEnd > summaryStart,
+  '② 找不到摘要程式區塊的邊界，這條測試已失效需重寫');
+const summaryRaw = app.slice(summaryStart, summaryEnd);
+// 區塊註解必須成對，否則剝不乾淨、掃出來的結果不可信
+expect((summaryRaw.match(/\/\*/g) || []).length === (summaryRaw.match(/\*\//g) || []).length,
+  '② 切片裡的區塊註解不成對＝剝註解會失效，掃描結果不可信');
+const summaryCode = stripDisclaimers(stripComments(summaryRaw));
 FORBIDDEN.forEach(word => expect(!summaryCode.includes(word), `② 摘要畫面出現判定字眼「${word}」＝越過醫材紅線`));
 const modalHtml = stripDisclaimers(stripHtmlComments(html.slice(html.indexOf('id="reportModal"'), html.indexOf('id="fontModal"'))));
 FORBIDDEN.forEach(word => expect(!modalHtml.includes(word), `② 摘要版型出現判定字眼「${word}」`));
