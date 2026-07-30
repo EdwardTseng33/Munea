@@ -62,10 +62,10 @@ if (
 }
 
 // ── 局部驗收模式（2026-07-30 Edward 拍板：開發動到哪個畫面才截那幾張，不必每次全拍）──
-// 用法例：node scripts/app-full-surface-i18n-browser-precheck.js --states=screen-home,reader:subscription --locales=ja --profiles=iphone-dynamic-type-large
+// 用法例：node scripts/app-full-surface-i18n-browser-precheck.js --states=screen:home,reader:subscription --locales=ja --profiles=iphone-dynamic-type-large
 // 帶任一過濾參數＝局部模式：只拍指定組合、檢查照常跑、截圖存到 --out
 // （預設 docs/qa/i18n/local-browser-precheck/_targeted/，已列入 .gitignore 不進版控），
-// 且完全不改動正式證據報告。全套 456 張只在打包出貨前重拍（scripts/test-i18n-evidence-freshness.js 把關）。
+// 且完全不改動正式證據報告。不帶參數＝全套 456 張——同日 Edward 補拍板：連打包前也不強制，純選用。
 const cliArgs = process.argv.slice(2);
 function argValue(name) {
   const hit = cliArgs.find((a) => a.startsWith(`--${name}=`));

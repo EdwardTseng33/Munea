@@ -43,10 +43,10 @@ assert.doesNotThrow(
   ),
   'Browser evidence source commit must be an ancestor of the tested HEAD',
 );
-// 「證據必須跟上每一次畫面改動」的三道新鮮度檢查（乾淨工作區拍攝、拍攝後 web/ 無改動、
-// 現在工作區乾淨）已搬到 scripts/test-i18n-evidence-freshness.js，只在打包出貨前（test:launch）強制。
-// 2026-07-30 Edward 拍板：平常開發「動到哪個畫面才截那幾張」（capture 工具的 --states/--locales/--profiles），
-// 不必每次改版全拍 456 張；這裡只驗留存證據本身完整（張數、雜湊、零失敗、可追到來源存檔點）。
+// 2026-07-30 Edward 兩度拍板：①開發「動到哪個畫面才截那幾張」（capture 工具的
+// --states/--locales/--profiles），不必每次改版全拍 456 張；②打包出貨前也不強制全拍——
+// 全套模式純屬選用工具，任何關卡都不逼它。原「證據跟上每次畫面改動」的新鮮度檢查已整組移除。
+// 這裡只驗留存證據本身完整（張數、雜湊、零失敗、可追到來源存檔點），因為壞掉的證據比沒有更誤導。
 assert.equal(report.scope.environment, 'local-fixture-only');
 assert.deepEqual(
   report.scope.captureProfiles.map(({ id, viewport, appFontScale }) => [
