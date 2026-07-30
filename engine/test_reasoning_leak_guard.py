@@ -157,5 +157,19 @@ class ThirdPartyFabricationRuleTest(unittest.TestCase):
         self.assertIn("媽媽心裡怎麼理解，我沒辦法替她回答", src)
 
 
+class CapabilityAndEmpathyRuleTest(unittest.TestCase):
+    """2026-07-31 複考抓到的兩個小洞（規則鎖）。"""
+
+    def test_she_knows_she_cannot_see_the_user(self):
+        """S09：她說「用手比給我看」——畫面是單向的，她沒有鏡頭。"""
+        self.assertIn("你看不到他", eng.CORE)
+        self.assertIn("比給我看", eng.CORE)   # 禁句要被點名
+
+    def test_physical_pain_empathy_keeps_the_subject_on_him(self):
+        """S05：「我懂那種感覺」配上身體症狀＝聽起來像她痛過。"""
+        self.assertIn("我懂那種感覺", eng.CORE)   # 禁句被點名
+        self.assertIn("那種痛聽起來真的很磨人", eng.CORE)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
