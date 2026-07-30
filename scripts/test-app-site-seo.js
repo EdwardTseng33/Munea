@@ -70,6 +70,22 @@ for (const key of [
   assert.ok(globalHeaders.some((header) => header.key === key), `Missing hosting header ${key}`);
 }
 
+// 網頁本身必須每次回來確認有沒有新版。主機預設 max-age=3600，等於每次改版都有
+// 一小時空窗，回訪的人拿到的還是舊頁面（2026-07-30 換示範影片時踩到）。
+// 靜態檔那條規則排在後面會蓋掉這個值，圖片影片仍快取一天。
+const globalCache = globalHeaders.find((header) => header.key === "Cache-Control")?.value || "";
+assert.match(
+  globalCache,
+  /max-age=0/,
+  "HTML must revalidate every visit, otherwise a deploy takes up to an hour to reach returning visitors",
+);
+const assetCache = (hosting.headers || []).find((entry) => /mp4/.test(entry.source))?.headers || [];
+assert.match(
+  assetCache.find((header) => header.key === "Cache-Control")?.value || "",
+  /max-age=\d{3,}/,
+  "static assets should still be cached",
+);
+
 // 四語系合約：每個語系一個真網址，彼此用 hreflang 互指。
 // 靠 JS 當場換字的舊做法，Google 只看得到中文版 —— 這裡守住不准回頭。
 const locales = [
