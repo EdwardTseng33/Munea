@@ -887,5 +887,6 @@
   "visit.openSummary": "サマリー",
   "visit.questionSaved": "記録しました。受診前にお知らせします（{n} 件）。",
   "visit.questionUnheard": "その質問がうまく聞き取れませんでした。もう一度お願いできますか",
-  "common.tomorrow": "明日"
+  "common.tomorrow": "明日",
+  "health.reconnectHelp": "いまデータを読み取れません。許可画面は一度しか出ないため、「連携」を押すとヘルスケアへご案内します。そこで Munea の項目をオンにしてください。"
 }
