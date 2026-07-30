@@ -52,6 +52,13 @@ class GeminiVoiceTrack(AudioStreamTrack):
     def feed(self, pcm24k: bytes):
         self.queue.put_nowait(pcm24k)
 
+    def flush(self):
+        """被打斷＝水庫立刻倒掉（跟正式 App 收到 barge_in 清播放佇列同款）。
+        不倒的話，插話考量到的是緩衝裡的殘音、不是她的反應。"""
+        while not self.queue.empty():
+            self.queue.get_nowait()
+        self._buf = np.zeros(0, dtype=np.int16)
+
     async def recv(self):
         # 每格 20ms＝48000*0.02=960 個樣本
         need = 960
@@ -118,6 +125,9 @@ async def run_gemini(session_holder, out_track, status):
                     status["first_reply_ms"] = round((time.monotonic() - status["turn_asked_at"]) * 1000)
             sc = getattr(msg, "server_content", None)
             if sc:
+                if getattr(sc, "interrupted", None):
+                    out_track.flush()
+                    status["interrupts"] = status.get("interrupts", 0) + 1
                 ot = getattr(sc, "output_transcription", None)
                 if ot and getattr(ot, "text", None):
                     status["caption"] = (status.get("caption", "") + ot.text)[-120:]

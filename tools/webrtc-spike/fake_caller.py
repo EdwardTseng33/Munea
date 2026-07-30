@@ -59,10 +59,23 @@ class WavMouthTrack(AudioStreamTrack):
         self.total_speech_s = (self.speech_end_frame * 960) / 48000
         self.timeline = []   # (牆鐘, 假人此格有沒有出聲)
 
+    def speak_again(self, pcm48k):
+        """插話考：她講話講到一半，假人再開口。牆鐘記在真正播出的那格。"""
+        self.extra = np.asarray(pcm48k, dtype=np.int16)
+        self.extra_pos = 0
+        self.interrupt_wall = None   # 第一格播出時蓋章
+
     async def recv(self):
         from av import AudioFrame
         need = 960   # 20ms @48k
         chunk = self.pcm[self.pos:self.pos + need]
+        if len(chunk) < need and getattr(self, "extra", None) is not None:
+            if self.interrupt_wall is None:
+                self.interrupt_wall = time.monotonic()
+            chunk = self.extra[self.extra_pos:self.extra_pos + need]
+            self.extra_pos += need
+            if self.extra_pos >= len(self.extra):
+                self.extra = None
         if len(chunk) < need:
             chunk = np.concatenate([chunk, np.zeros(need - len(chunk), dtype=np.int16)])
         frame_idx = self.pos // need
@@ -82,7 +95,7 @@ class WavMouthTrack(AudioStreamTrack):
         return frame
 
 
-async def run_exam(wav_path, listen_s=40):
+async def run_exam(wav_path, listen_s=40, interrupt=False):
     mouth = WavMouthTrack(wav_path)
     pc = RTCPeerConnection()
     pc.addTrack(mouth)
@@ -110,7 +123,41 @@ async def run_exam(wav_path, listen_s=40):
     await pc.setRemoteDescription(RTCSessionDescription(sdp=answer["sdp"], type=answer["type"]))
 
     t0 = time.monotonic()
-    await asyncio.sleep(mouth.total_speech_s + listen_s)
+    interrupt_result = None
+    if interrupt:
+        # 等她接話 → 讓她講 1.2 秒 → 假人插一句 2.5 秒的話 → 量她多快閉嘴
+        # 期限以「假人真正講完那一刻」起算——播放牆鐘比音檔長度慢（每格 sleep 有零頭），
+        # 用 t0+音檔長 當期限會差點錯過她的接話（第一次插話考就這樣考砸的）
+        her_started = None
+        while time.monotonic() < t0 + 120:
+            await asyncio.sleep(0.05)
+            e = mouth.speech_end_wall
+            if e and time.monotonic() > e + 15:
+                break   # 講完 15 秒她都沒接話，放棄
+            if e and any(on and t > e for t, on in her_audio[-10:]):
+                her_started = next(t for t, on in her_audio if on and t > e)
+                break
+        if her_started:
+            await asyncio.sleep(1.2)
+            clip = mouth.pcm[:int(48000 * 2.5)]
+            mouth.speak_again(clip)
+            await asyncio.sleep(6)
+            iw = mouth.interrupt_wall
+            if iw:
+                # 插話開始後，她最後一次出聲（之後靜 ≥1 秒算真的閉嘴）
+                voiced = [t for t, on in her_audio if on and t > iw]
+                stop_ms = None
+                for t in voiced:
+                    if not any(iw < u <= t + 1.0 and u > t for u, on in her_audio if on):
+                        stop_ms = round((t - iw) * 1000); break
+                if stop_ms is None and voiced:
+                    stop_ms = round((voiced[-1] - iw) * 1000)
+                interrupt_result = {"stop_ms": stop_ms, "her_started": True}
+            else:
+                interrupt_result = {"stop_ms": None, "her_started": True}
+        else:
+            interrupt_result = {"stop_ms": None, "her_started": False}
+    await asyncio.sleep(listen_s if not interrupt else 8)
     await pc.close()
 
     # ── 閱卷（2026-07-30 二版·停頓感知）──
@@ -159,8 +206,10 @@ async def run_exam(wav_path, listen_s=40):
         sil = blamed_pause_s(a)
         (pause_reply if sil >= SILENCE_S else barge).append(round(sil * 1000))
     # ③ 破句：講完後她的回覆段之間 >1.2 秒的斷口
+    # （插話模式：打斷之後的空檔是我們造成的、不算她破句）
+    iw_cut = getattr(mouth, "interrupt_wall", None) or 1e18
     gaps = []
-    tail = [(a, b) for a, b in her_segs if a > end]
+    tail = [(a, b) for a, b in her_segs if end < a < iw_cut]
     for (a1, b1), (a2, b2) in zip(tail, tail[1:]):
         if a2 - b1 > 1.2:
             gaps.append(round((a2 - b1) * 1000))
@@ -169,9 +218,18 @@ async def run_exam(wav_path, listen_s=40):
     print(f"  ② 搶話：{'❌ ' + str(len(barge)) + ' 次（開口前假人才靜音 ' + str(barge) + ' ms）' if barge else '✅ 沒有'}"
           + (f"（另有 {len(pause_reply)} 次停頓後合法接話）" if pause_reply else ""))
     print(f"  ③ 破句：{'❌ ' + str(gaps) + ' ms' if gaps else '✅ 沒有'}")
+    if interrupt_result is not None:
+        if not interrupt_result["her_started"]:
+            print("  ④ 插話考：她一直沒接話、考不成 ⚠")
+        elif interrupt_result["stop_ms"] is None:
+            print("  ④ 插話考：插話後她完全沒再出聲（可能已講完）⚠ 換長答題重考")
+        else:
+            ok = interrupt_result["stop_ms"] < 1500
+            print(f"  ④ 插話後她 {interrupt_result['stop_ms']} ms 閉嘴讓人 {'✅' if ok else '❌（>1.5s 太慢）'}")
     return {"reply_ms": reply_ms, "barge": len(barge), "pause_reply": len(pause_reply), "gaps": gaps}
 
 
 if __name__ == "__main__":
-    wav = sys.argv[1] if len(sys.argv) > 1 else os.path.abspath(DEFAULT_WAV)
-    asyncio.run(run_exam(wav))
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    wav = args[0] if args else os.path.abspath(DEFAULT_WAV)
+    asyncio.run(run_exam(wav, interrupt=("--interrupt" in sys.argv)))
