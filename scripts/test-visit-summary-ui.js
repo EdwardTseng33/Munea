@@ -144,6 +144,31 @@ expect(!/setAria\('#reportClose'/.test(app),
   '①i 又回到只在非 zh-TW 才跑的 JS setAria——中文讀屏使用者會拿到舊字');
 ok(`①i ${ARIA_BOUND.length} 個 aria-label 走宣告式綁定，四語系都有值`);
 
+/* ①j 紙面姓名（Edward 2026-07-30 拍板「要有」）。
+   這條鎖兩件事，兩件都是出過事才會知道的：
+
+   ① **只能用真名，不准退回暱稱或角色名。**「阿嬤」在診間對比病歷毫無用處，
+      印一個看似有身分卻不能比對的名字，比留空更誤導；角色名是 AI 的名字。
+   ② **不准順手多印生日／身分證號／地址。** 拍板的是「要有姓名」，不是一整組
+      身分資料。這張紙會被影印、被放在診間桌上，多一個識別欄位就多一分外洩代價。 */
+const nameFn = app.slice(app.indexOf('function visitSummaryPatientName()'),
+  app.indexOf('function visitPartialNames'));
+expect(nameFn.length > 80, '①j 找不到 visitSummaryPatientName，這條測試已失效需重寫');
+expect(/p\.name/.test(nameFn), '①j 沒有取個人資料的真名欄位');
+expect(!/\bp\.nick\b/.test(nameFn), '①j 退回了暱稱——「阿嬤」在診間無法比對病歷，比留空更誤導');
+expect(!/cname\(/.test(nameFn), '①j 退回了角色名——那是 AI 的名字，不是病人的');
+expect(/muneaSafeDisplayText/.test(nameFn), '①j 姓名沒過共用文字守門（辨識雜訊會被印到紙上）');
+// 不得把其他身分欄位帶上紙面
+const sheetFn = app.slice(app.indexOf('function visitSummaryAsHTML'), app.indexOf('function muneaExportPlugin'));
+['birth', 'idNumber', 'city', 'address', 'phone'].forEach(field => expect(
+  !new RegExp(`\\b(?:p|profile)\\.${field}\\b`).test(sheetFn),
+  `①j 紙面帶上了「${field}」——拍板的是姓名，不是一整組身分資料`));
+// PDF 與純文字兩份給出去的身分要一致，不然同一份摘要有兩種身分
+const textFn = app.slice(app.indexOf('function visitSummaryAsText'), app.indexOf('function visitSummaryAsHTML'));
+expect(textFn.includes('visitSummaryPatientName'), '①j 純文字版沒有姓名，跟 PDF 身分不一致');
+expect(sheetFn.includes('visitSummaryPatientName'), '①j PDF 版沒有姓名');
+ok('①j 紙面只印真名、不退回暱稱／角色名，且不夾帶其他身分欄位');
+
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
   '疑似', '診斷', '嚴重', '正常值', '標準值'];
