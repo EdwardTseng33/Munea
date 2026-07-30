@@ -2082,6 +2082,44 @@ class SupabaseAdapter:
             value["truncated"] = truncated
         return out
 
+    def load_account_plans(self, account_ids, limit=2000):
+        """每一戶目前的方案 → {accountId: "free"|"plus"|"pro"}。
+
+        讀 subscription_ledger 最新一筆——那才是後台改方案／Apple 購買真正寫進去的地方。
+        ⚠ 不要從 product_events 的 subscription_purchased 推算：**後台改方案不會產生那種事件**，
+        於是名冊會顯示「點數發了 200、會員身分還是免費」（2026-07-30 Edward 抓到；
+        同一種病在點數欄與聊聊分鐘也各犯過一次——顯示與執行必須讀同一個來源）。
+
+        status 不是 active 就當免費（過期／降級的 pro 不該還掛著 Pro）。查不到回空 dict。
+        """
+        ids = [aid for aid in (account_ids or []) if self._is_uuid(str(aid or ""))]
+        if not self.configured() or not ids:
+            return {}
+        rows = self._select(
+            "subscription_ledger",
+            {
+                "account_id": f"in.({','.join(ids)})",
+                "select": "account_id,active_plan,status,created_at,updated_at",
+                # 排序跟 App 那條路（load_billing_store）用同一個欄位。差一個欄位就可能各取到
+                # 不同的紀錄、後台與手機各說各話——顯示與執行連排序都要一致。
+                "order": "updated_at.desc",
+                "limit": str(int(limit)),
+            },
+        ) or []
+        latest = {}
+        for row in rows:
+            aid = row.get("account_id")
+            if not aid or aid in latest:
+                continue  # 已按時間倒序，第一筆就是最新
+            latest[aid] = row
+        out = {}
+        for aid, row in latest.items():
+            plan = str(row.get("active_plan") or "free").strip().lower()
+            if str(row.get("status") or "").strip().lower() != "active":
+                plan = "free"
+            out[aid] = plan if plan in ("free", "plus", "pro") else "free"
+        return out
+
     def grant_free_signup_trial(self):
         """Atomically grant the one-time account signup trial in Postgres."""
         result = self._request(

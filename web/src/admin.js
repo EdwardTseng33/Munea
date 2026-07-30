@@ -376,7 +376,7 @@
     else if (id==="enterpriseClientDetail") html=renderEnterpriseClientDetail();
     else if (id==="enterprisePayments") html=renderEnterprisePayments();
     else if (id==="enterpriseBillingSettings") html=renderEnterpriseBillingSettings();
-    $("pageRoot").innerHTML=connectionNoticeHTML()+dataQualityNoticeHTML()+html;
+    $("pageRoot").innerHTML=envBannerHTML()+connectionNoticeHTML()+dataQualityNoticeHTML()+html;
     pending.forEach((fn)=>{ try{ fn(); }catch(e){ console.warn("chart",e); } });
     bindPageEvents(id);
     renderEntImportPanel(); // body-level面板，每次 renderPage 都同步一次狀態（開／關／內容）
@@ -1871,8 +1871,24 @@
   }
 
   // ══════════ 連線 ══════════
-  function initialBaseUrl(){ const s=storageGet(localStorage,ADMIN_BASE_KEY); if(s) return s; if(location.protocol.startsWith("http")) return location.origin; return DEFAULT_LOCAL_API; }
+  // 2026-07-30 修：原本優先用瀏覽器記著的「上次連過的網址」，於是會出現
+  // 「打開的是雲端後台、資料卻去連本機或別台」的錯配——畫面看起來正常，數字卻是另一台的，
+  // 而且左下角的環境標記跟著錯，非常難查（Edward 就是這樣看到舊版）。
+  // 規則改成：頁面自己在雲端 → 一律連同源；只有本機開發才吃記住的網址。
+  function initialBaseUrl(){
+    const onCloud=location.protocol.startsWith("http")&&!/^(localhost|127\.0\.0\.1|\[?::1\]?)$/i.test(location.hostname);
+    if(onCloud) return location.origin;
+    const s=storageGet(localStorage,ADMIN_BASE_KEY); if(s) return s;
+    if(location.protocol.startsWith("http")) return location.origin;
+    return DEFAULT_LOCAL_API; }
   function envLabelFor(u){ if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
+  // 開錯台防呆：頁面在測試機時頂部掛一條明顯橫幅。兩台的網址只差一個字（brain 與 brain-staging），
+  // 左下角那行小字不夠醒目——Edward 花了三輪才發現自己看的是測試機。
+  function envBannerHTML(){
+    const host=location.hostname;
+    if(/munea-brain-staging/.test(host)) return `<div class="env-banner" role="status">這裡是<b>測試機</b>——數字不是正式營運資料。要看正式後台請改開 <code data-i18n-skip>munea-brain-491603544409.asia-east1.run.app</code></div>`;
+    if(/^(localhost|127\.0\.0\.1)/.test(host)) return `<div class="env-banner" role="status">這裡是<b>本機預覽</b>——資料不是正式營運資料。</div>`;
+    return ""; }
   function setStatus(t,k){
     const sp=$("statusPill"); if(sp){ sp.textContent=t; sp.className="status-pill"+(k?" "+k:""); }
     const r=$("envRole"); if(r) r.textContent=state.connected?envLabelFor(state.base||initialBaseUrl()):(t||"");

@@ -4606,6 +4606,20 @@ def _account_points_map(accounts):
     return points
 
 
+def _account_plan_map(accounts):
+    """每一戶目前的方案（讀真正的訂閱帳，不從購買事件推算）。查不到回空 dict。"""
+    account_ids = [a.get("accountId") for a in accounts if a.get("accountId")]
+    if not account_ids:
+        return {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            return backend.load_account_plans(account_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load per-account plans", e)
+    return {}
+
+
 def _account_usage_minutes_map(accounts):
     """每一戶的聊聊分鐘（總計＋本月）。查不到就回空 dict，前端顯示「—」而不是編一個 0。
 
@@ -4629,6 +4643,7 @@ def _enrich_accounts_with_activity(accounts, days=30):
     index, unattributed = _account_activity_index(days=days)
     points_map = _account_points_map(accounts)
     minutes_map = _account_usage_minutes_map(accounts)
+    plan_map = _account_plan_map(accounts)
     single = len(accounts) == 1
     for acct in accounts:
         aid = acct.get("accountId") or ""
@@ -4644,7 +4659,9 @@ def _enrich_accounts_with_activity(accounts, days=30):
                 agg["plan"] = unattributed["plan"]
         voice = round(agg["voiceMinutes"], 1)
         avatar = round(agg["avatarMinutes"], 1)
-        acct["plan"] = _normalize_account_plan(agg["plan"])
+        # 方案以訂閱帳為準；訂閱帳查不到才退回用購買事件推算（舊行為）——
+        # 後台改方案不產生購買事件，只靠事件推算會顯示「點數發了、身分沒變」。
+        acct["plan"] = plan_map.get(aid) or _normalize_account_plan(agg["plan"])
         # windowMinutes ＝ 近 N 天（由使用事件推算，看短期活躍）；
         # lifetimeMinutes／monthMinutes ＝ 真正的聊聊分鐘帳（credit_ledger 每分鐘扣 1 點一筆），
         # 用來看「誰是大戶」——那個問題要的是累積量，不是最近 30 天。
