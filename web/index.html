@@ -27,13 +27,13 @@
           <div class="bc-avatar"><img class="ava-img" src="avatars/nening-hero.jpg" alt="寧寧" data-i18n-alt="companion.nening.name"></div>
           <div class="bc-info">
             <div class="bc-name"><span id="companionHomeName" data-i18n="companion.nening.name">寧寧</span></div>
-            <div class="bc-msg"><span class="bc-msg-t" id="bcMsg">上次聊得很開心，我都記得你——來跟我聊聊今天？</span></div>
+            <div class="bc-msg"><span class="bc-msg-t" id="bcMsg"></span></div>
           </div>
         </div>
       </div>
       <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span data-i18n="home.startChat">開始聊聊</span></button>
       <div class="care-card" id="careCard">
-        <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"/></svg><span id="careHeading">寧寧幫你留意</span><span class="care-dots" id="careDots"></span></div>
+        <div class="care-head"><svg class="ic care-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12z"/><path d="M12 8.1c.42 1.83 1.16 2.57 2.99 2.99-1.83.42-2.57 1.16-2.99 2.99-.42-1.83-1.16-2.57-2.99-2.99 1.83-.42 2.57-1.16 2.99-2.99z" fill="currentColor" stroke="none"/></svg><span id="careHeading"></span><span class="care-dots" id="careDots"></span></div>
         <div class="care-body" id="careBody"></div>
       </div>
       <!-- 2026-07-28：原「讓寧寧更認識你」獨立小卡已退役，提醒改收進上方「幫你留意」輪播的第一則 -->
@@ -78,7 +78,7 @@
         </div>
         <div class="task-item" data-task="chat">
           <span class="task-ico chat"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></span>
-          <div class="task-body"><div class="task-title" id="chatTaskTitle">和寧寧聊聊</div><div class="task-sub" data-i18n="home.taskChatBody">說說今天的事</div></div>
+          <div class="task-body"><div class="task-title" id="chatTaskTitle"></div><div class="task-sub" data-i18n="home.taskChatBody">說說今天的事</div></div>
           <span class="task-time" data-i18n="home.taskAnytime">隨時</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
@@ -103,7 +103,7 @@
     <div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
       <span class="obs-ava" style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;overflow:hidden;flex-shrink:0;background:var(--mint2)"><img class="ava-img" src="avatars/nening-face.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"></span>
       <div style="flex:1">
-        <div class="serif" id="obsHeading" style="font-size:15.5px;font-weight:900">寧寧的觀察</div>
+        <div class="serif" id="obsHeading" style="font-size:15.5px;font-weight:900"></div>
         <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700" data-i18n="status.dataReviewed">剛剛幫你看過數據</span></div>
       </div>
       <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff">今天</span>
@@ -141,7 +141,7 @@
         <span id="medIcon" style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:var(--coral);display:grid;place-items:center;color:#fff;transition:background .2s"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
         <div style="min-width:0">
           <div style="font-weight:700;font-size:14.5px" data-i18n="status.medication">用藥狀態</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:1px" id="medSub">還沒設定用藥，跟寧寧說一聲就好</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:1px" id="medSub"></div>
         </div>
       </div>
       <span class="chip" id="medChip" style="flex-shrink:0;background:var(--coral-soft);color:var(--ink)" data-i18n="medication.notTaken">尚未服用</span>
@@ -817,7 +817,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="profileClose" type="button" aria-label="關閉個人資料" data-i18n-aria-label="profile.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>個人資料</h2>
-      <p class="pf-first-run-banner" id="pfFirstRunBanner" hidden>填了這些，寧寧會用你習慣的稱呼、合你的節奏跟你說話，也能報你那邊的天氣。</p>
+      <p class="pf-first-run-banner" id="pfFirstRunBanner" hidden></p>
       <div class="pf-form">
         <div class="pf-avatar-row">
           <div class="pf-avatar-wrap">
