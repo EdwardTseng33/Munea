@@ -892,17 +892,17 @@
   <div class="modal-mask" id="topUpModal">
     <div class="modal">
       <div class="modal-grab"></div>
-      <button class="auth-close" id="topUpClose" type="button" aria-label="關閉加值" data-i18n-aria-label="purchase.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>加值點數</h2>
-      <p class="modal-sub">聊天會用點數；點數用完就先停，補了才能繼續。</p>
+      <button class="auth-close" id="topUpClose" type="button" aria-label="Close credit top-up" data-i18n-aria-label="purchase.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <h2 data-i18n="purchase.topUpTitle">Buy call credits</h2>
+      <p class="modal-sub" data-i18n="subscription.creditsUsageIntro">Conversations use credits. Add more credits to keep talking when they run out.</p>
       <div class="tu-grid">
-        <button class="tu-card" data-p="100"><b>100 點</b><span class="tu-price">NT$790</span><small class="tu-min">約 100 分鐘</small></button>
-        <button class="tu-card on" data-p="300"><b>300 點</b><span class="tu-price">NT$2,190</span><small class="tu-min">約 300 分鐘</small></button>
-        <button class="tu-card" data-p="600"><b>600 點</b><span class="tu-price">NT$4,190</span><small class="tu-min">約 600 分鐘</small></button>
-        <button class="tu-card" data-p="1000"><b>1,000 點</b><span class="tu-price">NT$6,490</span><small class="tu-min">約 1,000 分鐘</small></button>
+        <button class="tu-card" data-p="100"><b>100 credits</b><span class="tu-price">—</span><small class="tu-min">About 100 minutes</small></button>
+        <button class="tu-card on" data-p="300"><b>300 credits</b><span class="tu-price">—</span><small class="tu-min">About 300 minutes</small></button>
+        <button class="tu-card" data-p="600"><b>600 credits</b><span class="tu-price">—</span><small class="tu-min">About 600 minutes</small></button>
+        <button class="tu-card" data-p="1000"><b>1,000 credits</b><span class="tu-price">—</span><small class="tu-min">About 1,000 minutes</small></button>
       </div>
-      <button class="modal-btn" id="tuBuyBtn" style="margin-top:14px">直接購買</button>
-      <p class="modal-sub" style="margin-top:10px">買的點數不會過期；每月送的先用完，才會用到買的。</p>
+      <button class="modal-btn" id="tuBuyBtn" style="margin-top:14px" data-i18n="purchase.selectPack">Choose a credit pack</button>
+      <p class="modal-sub" style="margin-top:10px"><span data-i18n="subscription.purchasedCreditsBody">Purchased credits do not expire.</span> <span data-i18n="subscription.deductionOrderBody">Monthly credits are used before purchased credits.</span></p>
     </div>
   </div>
 
@@ -911,105 +911,105 @@
     <div class="sub-hero">
       <button class="sub-x" id="planClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <img class="sub-hero-art" src="illustrations/sub-hero-family.png" alt="" width="800" height="379" />
-      <div class="sub-hero-cap"><div class="sub-hero-title" data-i18n="subscription.title">升級沐寧</div><div class="sub-hero-sub" data-i18n="subscription.tagline">把一家人的每一天，照顧得更周到</div></div>
+      <div class="sub-hero-cap"><div class="sub-hero-title" data-i18n="subscription.title">Upgrade Munea</div><div class="sub-hero-sub" data-i18n="subscription.tagline">More complete care for every day your family shares</div></div>
     </div>
     <div class="sub-body">
       <!-- 分段 tab（狀態頁風格）-->
       <div class="sub-seg" id="subSeg">
         <div class="sseg-thumb" id="ssegThumb"></div>
-        <button class="sseg-btn on" data-pane="plans" type="button" data-i18n="subscription.plansTab">訂閱方案</button>
-        <button class="sseg-btn" data-pane="points" type="button" data-i18n="subscription.creditsTab">點數購買</button>
+        <button class="sseg-btn on" data-pane="plans" type="button" data-i18n="subscription.plansTab">Subscription plans</button>
+        <button class="sseg-btn" data-pane="points" type="button" data-i18n="subscription.creditsTab">Buy credits</button>
       </div>
-      <p class="sub-intro" id="pointsUnlockNotice"><b>訂閱成功後，會員身分會立即更新，並開放「點數購買」。</b></p>
+      <p class="sub-intro" id="pointsUnlockNotice"><b data-i18n="subscription.unlockCredits">Subscribe to Plus or Pro to buy credit packs.</b></p>
       <!-- 訂閱方案 -->
       <div id="subPlans">
-        <p class="sub-intro">沐寧免費就能天天陪伴、幫你記提醒。<b>升級後，解鎖更完整的照護：</b></p>
+        <p class="sub-intro">Munea provides everyday companionship and reminders for free. <b>Paid plans add more complete care:</b></p>
         <div class="sub-value">
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></span><div class="sv-txt"><b>聊天陪伴更完整</b><small>免費只有綁帳號送的「單次」5 分鐘體驗；升級後改用點數聊，每月固定送點、想多聊可加值。</small></div></div>
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span><div class="sv-txt"><b>看得見身體與心情的變化</b><small>解鎖過去 7 天、30 天的健康與情緒趨勢，變化早知道。</small></div></div>
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><div class="sv-txt"><b>全家一起照看</b><small>邀請家人進健康圈，彼此的狀況都看得到、互相照應。</small></div></div>
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.5 2 2 2 4M18 2H6v7a6 6 0 0 0 12 0z"/></svg></span><div class="sv-txt"><b>一起互動不無聊</b><small>一起走路挑戰、玩機智問答小遊戲，全家互動更有樂趣。</small></div></div>
+          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></span><div class="sv-txt"><b>Natural voice companionship</b><small>Talk naturally in a familiar language without learning complicated controls.</small></div></div>
+          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span><div class="sv-txt"><b>Everyday care</b><small>Companion reminders, daily records, and family updates.</small></div></div>
+          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><div class="sv-txt"><b>Family care circle</b><small>Helps family members stay informed and connected.</small></div></div>
+          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.5 2 2 2 4M18 2H6v7a6 6 0 0 0 12 0z"/></svg></span><div class="sv-txt"><b>Continuing companion memory</b><small>Keeps track of important people, routines, and family context.</small></div></div>
         </div>
-        <div class="sub-sec-label">選一個適合的方案</div>
+        <div class="sub-sec-label" data-i18n="subscription.choosePlan">Choose a plan</div>
         <div class="sub-cycle" id="subCycle">
           <div class="scyc-thumb" id="scycThumb"></div>
-          <button class="scyc-btn on" data-cyc="month" type="button">月繳</button>
-          <button class="scyc-btn" data-cyc="year" type="button">年繳 <em class="scyc-badge">省 20%</em></button>
+          <button class="scyc-btn on" data-cyc="month" type="button">Monthly</button>
+          <button class="scyc-btn" data-cyc="year" type="button">Yearly <em class="scyc-badge">Save 20%</em></button>
         </div>
         <div class="credit-rules" aria-label="點數使用規則" data-i18n-aria-label="subscription.creditRulesTitle">
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
-            <b>會員月點數</b><i></i><span class="cr-note">每月重發，不留到下個月</span>
+            <b>Monthly plan credits</b><i></i><span class="cr-note">Issued again each billing period</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
-            <b>加購點數</b><i></i><span class="cr-note">可累積，不會過期</span>
+            <b>Purchased credits</b><i></i><span class="cr-note">They do not expire</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 3-4"/></svg></span>
-            <b>扣點順序</b><i></i><span class="cr-note">先扣月點數，再扣加購</span>
+            <b>Credit order</b><i></i><span class="cr-note">Monthly credits are used first</span>
           </div>
         </div>
         <div class="plan-pick" id="planPick">
           <button class="ppk pro sel" data-t="pro" type="button">
-            <span class="ppk-tag">最多人選</span>
+            <span class="ppk-tag" data-i18n="subscription.mostPopular">Most popular</span>
             <span class="ppk-radio"></span>
-            <div class="ppk-top"><span class="ppk-name">Pro</span><span class="ppk-price" id="pricePro">NT$1,199<small>/月</small></span></div>
+            <div class="ppk-top"><span class="ppk-name">Pro</span><span class="ppk-price" id="pricePro">—<small>/month</small></span></div>
             <span class="ppk-save" id="savePro" style="display:none"></span>
-            <div class="ppk-who">家裡多個人要照看、全家一起顧</div>
+            <div class="ppk-who">For more frequent companionship and advanced video interaction</div>
             <ul class="ppk-feats">
-              <li>每月 <b>200</b> 點語音陪聊 <span class="ppk-rule">當月有效・不留到下個月</span></li>
-              <li>健康 7／30 天趨勢全解鎖</li>
-              <li>家庭健康圈最多 <b>12 人</b></li>
+              <li>200 voice-companion credits each month. Unused monthly credits do not roll over.</li>
+              <li>Full 7-day and 30-day health trends</li>
+              <li>Up to 12 people in the family care circle</li>
             </ul>
           </button>
           <button class="ppk" data-t="plus" type="button">
             <span class="ppk-radio"></span>
-            <div class="ppk-top"><span class="ppk-name">Plus</span><span class="ppk-price" id="pricePlus">NT$599<small>/月</small></span></div>
+            <div class="ppk-top"><span class="ppk-name">Plus</span><span class="ppk-price" id="pricePlus">—<small>/month</small></span></div>
             <span class="ppk-save" id="savePlus" style="display:none"></span>
-            <div class="ppk-who">先照顧一個人，基本照護就夠</div>
+            <div class="ppk-who">For everyday voice companionship and essential family care</div>
             <ul class="ppk-feats">
-              <li>每月 <b>100</b> 點語音陪聊 <span class="ppk-rule">當月有效・不留到下個月</span></li>
-              <li>健康 7／30 天趨勢全解鎖</li>
-              <li>家庭健康圈最多 <b>4 人</b></li>
+              <li>100 voice-companion credits each month. Unused monthly credits do not roll over.</li>
+              <li>Full 7-day and 30-day health trends</li>
+              <li>Up to 4 people in the family care circle</li>
             </ul>
           </button>
         </div>
-        <button class="sub-cta" id="subCta" type="button">升級 Pro · NT$1,199／月</button>
-        <button class="sub-cancel2" id="planCancelBtn" type="button">取消訂閱</button>
-        <button class="sub-cancel2" id="restoreBtn" type="button">恢復購買</button>
-        <p class="sub-legal">訂閱按所選週期（月／年）自動續訂，於期滿前 24 小時透過你的 Apple 帳戶扣款；可隨時到 iPhone「設定 → Apple 帳戶 → 訂閱項目」取消，取消後可用到本期結束。購買點數不會過期。詳見 <a href="#" id="legalTermsLink">使用條款</a> 與 <a href="#" id="legalPrivacyLink">隱私權政策</a>。</p>
+        <button class="sub-cta" id="subCta" type="button">Upgrade to Pro</button>
+        <button class="sub-cancel2" id="planCancelBtn" type="button" data-i18n="purchase.manageSubscription">Manage subscription</button>
+        <button class="sub-cancel2" id="restoreBtn" type="button" data-i18n="purchase.restore">Restore purchases</button>
+        <p class="sub-legal">Subscriptions renew automatically through your Apple Account. Manage or cancel in iPhone Settings; access continues through the current billing period. Purchased credits do not expire. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
         <span id="planHeroName" hidden></span><span id="planHeroPts" hidden></span><span id="planHeroMeta" hidden></span>
       </div>
       <!-- 點數購買 -->
       <div id="subPoints" style="display:none">
-        <p class="sub-fine" style="margin:4px 0 12px">聊天會用點數；用完就先停、補了再聊。</p>
+        <p class="sub-fine" style="margin:4px 0 12px" data-i18n="subscription.creditsUsageIntro">Conversations use credits. Add more credits to keep talking when they run out.</p>
         <div class="tu-grid">
-          <button class="tu-card" data-p="100" type="button"><b>100 點</b><span class="tu-price">NT$790</span><small class="tu-min">約 100 分鐘</small></button>
-          <button class="tu-card on" data-p="300" type="button"><b>300 點</b><span class="tu-price">NT$2,190</span><small class="tu-min">約 300 分鐘</small></button>
-          <button class="tu-card" data-p="600" type="button"><b>600 點</b><span class="tu-price">NT$4,190</span><small class="tu-min">約 600 分鐘</small></button>
-          <button class="tu-card" data-p="1000" type="button"><b>1,000 點</b><span class="tu-price">NT$6,490</span><small class="tu-min">約 1,000 分鐘</small></button>
+          <button class="tu-card" data-p="100" type="button"><b>100 credits</b><span class="tu-price">TWD 790</span><small class="tu-min">About 100 minutes</small></button>
+          <button class="tu-card on" data-p="300" type="button"><b>300 credits</b><span class="tu-price">TWD 2,190</span><small class="tu-min">About 300 minutes</small></button>
+          <button class="tu-card" data-p="600" type="button"><b>600 credits</b><span class="tu-price">TWD 4,190</span><small class="tu-min">About 600 minutes</small></button>
+          <button class="tu-card" data-p="1000" type="button"><b>1,000 credits</b><span class="tu-price">TWD 6,490</span><small class="tu-min">About 1,000 minutes</small></button>
         </div>
-        <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">直接購買 300 點 · NT$2,190</button>
+        <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">Buy 300 credits · TWD 2,190</button>
         <div class="credit-rules points-rules" aria-label="加購點數使用規則" data-i18n-aria-label="subscription.topUpCreditRulesTitle">
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
-            <b>會員月點數</b><i></i><span class="cr-note">每月重發，不留到下個月</span>
+            <b>Monthly plan credits</b><i></i><span class="cr-note">Issued again each billing period</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
-            <b>加購點數</b><i></i><span class="cr-note">可累積，不會過期</span>
+            <b>Purchased credits</b><i></i><span class="cr-note">They do not expire</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 3-4"/></svg></span>
-            <b>扣點順序</b><i></i><span class="cr-note">先扣月點數，再扣加購</span>
+            <b>Credit order</b><i></i><span class="cr-note">Monthly credits are used first</span>
           </div>
         </div>
       </div>
     </div>
     <div class="plan-confirm-bar" id="planConfirm" style="display:none">
       <p id="planConfirmText"></p>
-      <div class="pc-actions"><button class="modal-btn" id="planYes" type="button">確認變更</button><button class="btn-quiet" id="planNo" type="button">先不要</button></div>
+      <div class="pc-actions"><button class="modal-btn" id="planYes" type="button">Confirm with Apple</button><button class="btn-quiet" id="planNo" type="button">Cancel</button></div>
     </div>
   </div>
 
@@ -1183,6 +1183,7 @@
   <script src="src/version.js?v=20260729b-v1044"></script>
   <script src="src/i18n.js?v=20260729-four-locale2"></script>
   <script src="src/i18n/app-renderer-copy.js?v=20260729-four-locale2"></script>
+  <script src="src/i18n/purchase-flow.js?v=20260730-four-locale1"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
   <script src="src/companion-profile.js?v=20260629-profile"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
