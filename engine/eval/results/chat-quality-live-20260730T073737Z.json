@@ -1,0 +1,43 @@
+{
+  "summary": {
+    "firstAudioLatency": null,
+    "runAt": "2026-07-30T07:37:37.940498+00:00",
+    "itemsRun": 1,
+    "passCount": 0,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 1,
+    "passRate": 0.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {},
+    "weakestDimensions": [],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S03",
+      "label": "問天氣",
+      "categories": [
+        "current_events"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "今仔日會落雨沒？我想要去菜市仔。",
+          "note": "",
+          "reply": null,
+          "genOk": false,
+          "error": "APIError: 1008 None. models/gemini-live-2.5-flash-native-audio is not found for API version v1beta, or is not supported for bidiGenerateContent."
+        }
+      ],
+      "status": "error",
+      "error": "turn 1: APIError: 1008 None. models/gemini-live-2.5-flash-native-audio is not found for API version v1beta, or is not supported for bidiGenerateContent.",
+      "verdict": "ERROR",
+      "verdictReason": "生成失敗，未跑完整條劇本：turn 1: APIError: 1008 None. models/gemini-live-2.5-flash-native-audio is not found for API version v1beta, or is not supported for bidiGenerateContent."
+    }
+  ]
+}
