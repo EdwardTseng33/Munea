@@ -125,6 +125,8 @@ for (const l of LOCALES) {
     'js.dict': JSON.stringify(jsDict),
     'meta.htmlLang': l.htmlLang,
     'meta.langCode': l.code,
+    // 示範影片：中文用原檔名，英日西各播自己那支（同一位夥伴、講當地語言）
+    'meta.demoSuffix': l.code === 'zh' ? '' : '-' + l.code,
     'meta.fonts': fontLink(l.fonts),
     'meta.fontVars': l.vars,
     'meta.canonical': urlFor(l.dir),
