@@ -864,32 +864,61 @@
     const mins=Math.round(u.totalMinutes||0);
     const ctx=accountLocaleContext(a);
     const o=a.owner||{};
-    const fields=[
-      // 「主要使用者」放真人名字（個人資料／登入帶進來的），AI 陪伴角色名另有自己的欄位——
-      // 兩者混在同一欄的話，後台就分不出「這戶是誰」跟「他把 AI 叫什麼」。
-      ["家庭圈",f.name||"–"],["主要使用者",acctPersonName(a)],
-      // 會員資料四欄（2026-07-29 補）：後台要能回答「這一戶到底是誰」，不然名冊只剩暱稱、
-      // 上線後分不出真實用戶跟測試帳號、也聯絡不到人。
-      ["登入方式",ownerLabel(o)||"查無登入身分"],["登入信箱",ownerEmailText(o)||"–"],
-      ["註冊時間",o.signedUpAt?fmtTime(o.signedUpAt):fmtTime(a.createdAt)],["最後登入",o.lastSignInAt?fmtTime(o.lastSignInAt):"–"],
-      [MARKET_TEXT.country,ctx.countryCode],
-      [MARKET_TEXT.appLanguage,localeLabel(ctx.uiLocale)],[MARKET_TEXT.conversationLanguage,localeLabel(ctx.conversationLocale)],[MARKET_TEXT.timeZone,ctx.timeZone],
-      [MARKET_TEXT.policyRegions,`${ctx.safetyRegion} / ${ctx.legalRegion}`],[MARKET_TEXT.dataRegion,ctx.dataRegion],
-      ["陪伴角色",c.displayName||c.templateId||"–"],["方案",planTxt],["持有點數",n(a.points||0)+" 點"],
-      ["最後上線",idleTxt],["離自動清除",purgeTxt],["聊聊分鐘 累積",u.lifetimeMinutes==null?"—":Math.round(u.lifetimeMinutes)+" 分"],
-      ["聊聊分鐘 本月",u.monthMinutes==null?"—":Math.round(u.monthMinutes)+" 分"],
-      ["近 30 天使用",mins?mins+" 分（通話 "+Math.round(u.voiceMinutes||0)+" · 視訊 "+Math.round(u.avatarMinutes||0)+"）":"—"],
-      ["最近活躍",fmtTime(u.lastActiveAt||a.updatedAt)],["家人數",(m.count||0)+" 人"],["建立",fmtTime(a.createdAt)]
-    ];
     const nm=acctPersonName(a,"帳號");
-    const body=`<div class="modal-head"><div><div class="modal-title" id="acctModalTitle">${esc(nm)}</div><div class="muted small">${esc(f.name||"–")}</div></div><button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button></div>
-      <div class="detail-grid">${fields.map((x)=>`<div class="dcell"><div class="dlabel">${esc(x[0])}</div><div class="dval">${esc(x[1])}</div></div>`).join("")}</div>
-      <div class="kpi-sub" style="margin-top:14px">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</div>
+    const life=u.lifetimeMinutes, month=u.monthMinutes;
+    // 排版分三層（2026-07-30 Edward：這樣看很醜又不舒服）——
+    // ① 標頭回答「這是誰」② 三個大數字回答「用得多不多、剩多少」
+    // ③ 其餘收成分組條列。19 個一模一樣的色塊平鋪沒有主次，資訊全在卻看不出重點。
+    const initial=(String(nm).trim()[0]||"家");
+    const tint=AV_TINTS[Math.abs(String(nm).split("").reduce((h,ch)=>((h<<5)-h+ch.charCodeAt(0))|0,0))%AV_TINTS.length];
+    const stat=(label,value,unit,note,tone)=>`<div class="astat${tone?" "+tone:""}">
+      <div class="astat-label">${esc(label)}</div>
+      <div class="astat-value">${esc(value)}${unit?`<span class="astat-unit">${esc(unit)}</span>`:""}</div>
+      <div class="astat-note">${note||""}</div></div>`;
+    const rows=(title,items)=>`<section class="acct-block">
+      <h4 class="acct-block-title">${esc(title)}</h4>
+      <dl class="acct-rows">${items.filter(Boolean).map(([k,v,dim])=>`<div class="acct-row">
+        <dt>${esc(k)}</dt><dd>${esc(v)}${dim?`<span class="acct-dim">${esc(dim)}</span>`:""}</dd></div>`).join("")}</dl></section>`;
+
+    const body=`<div class="acct-head">
+        <span class="acct-avatar" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span>
+        <div class="acct-who">
+          <div class="modal-title" id="acctModalTitle">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div>
+          <div class="acct-who-sub"><span>${esc(ownerLabel(o)||"查無登入身分")}</span>${ownerEmailText(o)?`<span class="acct-dot">·</span><span data-i18n-skip>${esc(ownerEmailText(o))}</span>`:""}</div>
+        </div>
+        <button class="modal-x" data-close type="button" aria-label="關閉用戶明細">✕</button>
+      </div>
+      <div class="acct-stats">
+        ${stat("聊聊分鐘", life==null?"—":String(Math.round(life)), life==null?"":"分",
+               life==null?"<span class='acct-dim'>沒有紀錄</span>":`本月 ${n(Math.round(month||0))} 分`,
+               (life==null||Math.round(life)===0)?"is-zero":"")}
+        ${stat("持有點數", n(a.points||0), "點", "1 點約 1 分鐘")}
+        ${stat("方案", planTxt, "", `${esc(fmtTime(o.signedUpAt||a.createdAt))} 加入`, a.plan==="pro"||a.plan==="plus"?"is-paid":"")}
+      </div>
+      ${rows("使用狀況", [
+        ["家庭圈", f.name||"–", `${n(m.count||0)} 人`],
+        ["陪伴角色", c.displayName||c.templateId||"–"],
+        // 「最後開 App」只講開機那一刻；「今天有動作」是四路訊號（開機／登入／使用／註冊）
+        // 算出來的最近活動，掛在倒數旁邊才對——掛在開機時間旁邊會讀成「7/29 卻說今天」的矛盾。
+        ["最後開 App", a.lastSeenAt?fmtTime(a.lastSeenAt):"還沒開過"],
+        ["離自動清除", purgeTxt, idleTxt],
+        mins?["近 30 天通話", `${mins} 分`, `語音 ${Math.round(u.voiceMinutes||0)} · 視訊 ${Math.round(u.avatarMinutes||0)}`]:null,
+      ])}
+      ${rows("登入紀錄", [
+        ["註冊時間", fmtTime(o.signedUpAt||a.createdAt)],
+        ["最後登入", o.lastSignInAt?fmtTime(o.lastSignInAt):"–"],
+      ])}
+      ${rows(MARKET_TEXT.tableHeader, [
+        [MARKET_TEXT.country, ctx.countryCode, ctx.timeZone],
+        [MARKET_TEXT.appLanguage, localeLabel(ctx.uiLocale), localeLabel(ctx.conversationLocale)===localeLabel(ctx.uiLocale)?"":localeLabel(ctx.conversationLocale)],
+        [MARKET_TEXT.policyRegions, `${ctx.safetyRegion} / ${ctx.legalRegion}`, ctx.dataRegion],
+      ])}
+      <p class="acct-privacy">為保護隱私，健康與聊天內容需經該用戶授權才在此顯示。</p>
       <div class="modal-actions"><button type="button" class="btn-ghost btn-sm" data-open-action="grant">＋ 發點數</button><button type="button" class="btn-ghost btn-sm" data-open-action="plan">✎ 改方案</button><button type="button" class="btn-ghost btn-sm" data-open-action="extend">⏱ 延長天數</button><button type="button" class="btn-ghost btn-sm" data-open-action="testflag">${a.isTestAccount?"✓ 取消測試標記":"🧪 標記為測試帳號"}</button>${a.isTestAccount?'<button type="button" class="btn-ghost btn-sm danger" data-open-action="delete">🗑 永久刪除</button>':""}</div>
       <div id="acctActionPanel"></div>`;
     const previous=document.activeElement,layout=document.querySelector(".layout");
     let mo=$("acctModal"); if(!mo){ mo=document.createElement("div"); mo.id="acctModal"; mo.className="modal-overlay"; document.body.appendChild(mo); }
-    mo.innerHTML=`<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="acctModalTitle">${body}</div>`; mo.hidden=false;
+    mo.innerHTML=`<div class="modal-card acct-modal" role="dialog" aria-modal="true" aria-labelledby="acctModalTitle">${body}</div>`; mo.hidden=false;
     if(layout)layout.inert=true;
     const onKey=(e)=>{ if(e.key==="Escape")close(); };
     const onOverlay=(e)=>{ if(e.target===mo)close(); };
