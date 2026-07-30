@@ -48,9 +48,17 @@ class GeminiVoiceTrack(AudioStreamTrack):
         self._resampler = AudioResampler(format="s16", layout="mono", rate=48000)
         self._buf = np.zeros(0, dtype=np.int16)   # 48k 待播樣本
         self._pts = 0
+        self._wall0 = None   # 起播牆鐘（配速基準）
 
     def feed(self, pcm24k: bytes):
         self.queue.put_nowait(pcm24k)
+
+    def flush(self):
+        """被打斷＝水庫立刻倒掉（跟正式 App 收到 barge_in 清播放佇列同款）。
+        不倒的話，插話考量到的是緩衝裡的殘音、不是她的反應。"""
+        while not self.queue.empty():
+            self.queue.get_nowait()
+        self._buf = np.zeros(0, dtype=np.int16)
 
     async def recv(self):
         # 每格 20ms＝48000*0.02=960 個樣本
@@ -73,7 +81,14 @@ class GeminiVoiceTrack(AudioStreamTrack):
         frame.pts = self._pts
         frame.time_base = fractions.Fraction(1, 48000)
         self._pts += need
-        await asyncio.sleep(0.02)   # 準點節拍
+        # 牆鐘校準配速（跟 fake_caller 同病同修）：固定睡 0.02 在 Windows 實際睡 31ms
+        # →只有 0.64 倍速。對「起播牆鐘＋已播樣本數」校準、睡過頭下一格自動補回。
+        if self._wall0 is None:
+            self._wall0 = time.monotonic()
+        target = self._wall0 + self._pts / 48000.0
+        wait = target - time.monotonic()
+        if wait > 0:
+            await asyncio.sleep(wait)
         return frame
 
 
@@ -87,14 +102,24 @@ async def run_gemini(session_holder, out_track, status):
             voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Leda"))),
         output_audio_transcription=types.AudioTranscriptionConfig(),
+        # 收音節奏抄正式線（假人考場要同規格才公平——2026-07-30 第一輪考出 99 段「搶話」，
+        # 其實是引擎預設 VAD 太急、錄音每個自然停頓她都跳進來；正式線是低靈敏+800ms 靜音窗）
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
+                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
+                prefix_padding_ms=300,
+                silence_duration_ms=int(os.environ.get("SPIKE_SILENCE_MS", "800")),
+            ),
+            activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
+            turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
+        ),
     )
     async with client.aio.live.connect(model=MODEL, config=cfg) as session:
         session_holder["s"] = session
         status["engine"] = "connected"
-        # 開場先讓她講一句：立刻驗「她的聲音→水管→瀏覽器」這半條路通不通
-        await session.send_client_content(
-            turns=types.Content(role="user", parts=[types.Part(text="請跟我打個招呼")]),
-            turn_complete=True)
+        # （開場招呼探針已拆——假人考場要量「純聽與答」，開場招呼會跟假人錄音重疊、
+        #   把整段開頭都算成搶話。要單獨驗下行時再臨時加回。）
         while True:   # receive() 每輪結束會收尾，要外圈重進（跟正式線同款）
           got = False
           async for msg in session.receive():
@@ -108,6 +133,9 @@ async def run_gemini(session_holder, out_track, status):
                     status["first_reply_ms"] = round((time.monotonic() - status["turn_asked_at"]) * 1000)
             sc = getattr(msg, "server_content", None)
             if sc:
+                if getattr(sc, "interrupted", None):
+                    out_track.flush()
+                    status["interrupts"] = status.get("interrupts", 0) + 1
                 ot = getattr(sc, "output_transcription", None)
                 if ot and getattr(ot, "text", None):
                     status["caption"] = (status.get("caption", "") + ot.text)[-120:]
@@ -160,7 +188,10 @@ async def status_endpoint(request):
 
 async def offer(request):
     params = await request.json()
-    app_status = request.app["status"]
+    # 每通獨立的量測簿（2026-07-30 假人考場轉正）：之前掛全域、上一通的
+    # 時間戳污染下一通（first_reply_ms 曾量出 10 萬毫秒的笑話）。
+    app_status = {"rtc": "idle", "engine": "connecting"}
+    request.app["status"] = app_status   # /status 永遠回「最近一通」
     pc = RTCPeerConnection()
     pcs.add(pc)
     session_holder = {}
