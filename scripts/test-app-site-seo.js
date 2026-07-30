@@ -197,6 +197,26 @@ for (const l of locales) {
   }
 }
 
+// 條款／隱私／客服：每個語系要連自己語言那一份（三語版本在 app-site/legal/<code>/）。
+// 四個語系的頁尾一路都連中文版，是 2026-07-31 才抓到的——翻譯早就做好了、只是沒接上。
+for (const l of locales) {
+  const html = read(l.dir ? `${l.dir}/index.html` : "index.html");
+  for (const page of ["privacy", "terms", "support"]) {
+    const href = l.code === "zh" ? `/${page}` : `/legal/${l.code}/${page}.html`;
+    assert.match(
+      html,
+      new RegExp(`href="${href.replaceAll(".", "\\.")}"`),
+      `${l.code} footer should link to ${href}`,
+    );
+    if (l.code !== "zh") {
+      assert.ok(
+        fs.existsSync(path.join(appSite, "legal", l.code, `${page}.html`)),
+        `missing translated legal page: ${l.code}/${page}.html`,
+      );
+    }
+  }
+}
+
 console.log(`[ok] munea.net SEO contract passed (${locales.length} locales)`);
 
 require("./test-app-site-legal-localizations.js");
