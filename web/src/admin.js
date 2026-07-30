@@ -457,6 +457,49 @@
     if(!parts.length) parts.push(`<span>查無登入身分</span>`);
     return parts.join('<span aria-hidden="true"> · </span>'); }
   function planPill(p){ const m={ pro:["pill pro","Pro"], plus:["pill ok","Plus"], free:["pill mute","免費"] }; const x=m[p]||m.free; return `<span class="${x[0]}">${x[1]}</span>`; }
+  // 方案是自己買的還是企業給的（2026-07-30 Edward）。光看 Pro／Plus 分不出來，
+  // 但收費對帳跟客服都要知道——尤其企業席次不是從 App 下單，是我們後台直接開的。
+  // 席次進緩衝期＝合約已到期、緩衝期跑完就會自動轉回免費，這種要特別標出來。
+  const SEAT_STATE_ZH={ grace:"緩衝期", waiting:"等待接手" };
+  function enterpriseNoteHTML(a){
+    const e=(a||{}).enterprise; if(!e||!e.seatId) return "";
+    const name=String(e.clientName||"").trim();
+    const state=SEAT_STATE_ZH[e.seatStatus]||"";
+    const bits=[`<span>企業席次</span>`];
+    if(name) bits.push(`<span data-i18n-skip>${esc(name)}</span>`);
+    if(state) bits.push(`<span>${state}</span>`);
+    return `<div class="plan-src${e.seatStatus==="grace"?" is-ending":""}">${bits.join('<span aria-hidden="true"> · </span>')}</div>`;
+  }
+  // 明細卡的「方案」那格底下那行小字：是自己在 App 買的、還是我們後台開的企業席次。
+  // ⚠ 中文標籤與公司名要拆成兩個獨立區塊。串成一個字串的話整段變成一個文字節點，
+  // 三語翻譯是逐節點比對的、比不到就整段留中文（2026-07-30 英文版實測抓到）。
+  function planSourceTxt(a){
+    const e=(a||{}).enterprise, o=(a||{}).owner||{};
+    if(e&&e.seatId){
+      const name=String(e.clientName||"").trim();
+      return name
+        ? `<span>企業席次</span><span aria-hidden="true"> · </span><span data-i18n-skip>${esc(name)}</span>`
+        : `<span>企業席次</span>`;
+    }
+    if((a||{}).plan==="pro"||(a||{}).plan==="plus") return `<span>在 App 內購買</span>`;
+    return `<span data-i18n-skip>${esc(fmtTime(o.signedUpAt||(a||{}).createdAt))}</span><span> 加入</span>`;
+  }
+  // 明細卡的企業席次那一列。緩衝期要明講「哪天會自動轉回免費」——
+  // 只寫「緩衝期」看不出還有多久，客服接到電話沒法回答。
+  function enterpriseRow(a){
+    const e=(a||{}).enterprise; if(!e||!e.seatId) return null;
+    const name=String(e.clientName||"").trim()||"（未填公司名）";
+    if(e.seatStatus==="grace"){
+      const until=e.graceUntil?fmtTime(e.graceUntil):"";
+      return ["企業席次", name, until?`${until} 自動轉回免費`:"合約已到期 · 緩衝期中"];
+    }
+    if(e.seatStatus==="waiting"){
+      const until=e.waitingUntil?fmtTime(e.waitingUntil):"";
+      return ["企業席次", name, until?`${until} 由企業接手`:"等待個人訂閱到期"];
+    }
+    const end=e.contractEnd?fmtTime(e.contractEnd):"";
+    return ["企業席次", name, end?`合約到 ${end}`:"生效中"];
+  }
   // 後台不追「誰在線上誰離線」（Edward 2026-07-29 拍板）——要追的是「有沒有登入活動」，
   // 因為免費帳號 60 天沒上線就會自動清除資料（supabase/sql/024）。
   // 這一欄回答的就是那件事：離自動清除還有幾天。看的是 accounts.lastSeenAt（App 開機蓋的章），
@@ -534,7 +577,7 @@
       return [
         `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub"><span>${esc(sub)}</span><span aria-hidden="true"> · </span>${who}</div></div></div>`,
         accountMarketCell(a),
-        planPill(a.plan||"free"),
+        planPill(a.plan||"free")+enterpriseNoteHTML(a),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
         esc(companionLabel(c)),
         usageCell(u),
@@ -908,11 +951,12 @@
                life==null?"<span class='acct-dim'>沒有紀錄</span>":`本月 ${n(Math.round(month||0))} 分`,
                (life==null||Math.round(life)===0)?"is-zero":"")}
         ${stat("持有點數", n(a.points||0), "點", "1 點約 1 分鐘")}
-        ${stat("方案", planTxt, "", `${esc(fmtTime(o.signedUpAt||a.createdAt))} 加入`, a.plan==="pro"||a.plan==="plus"?"is-paid":"")}
+        ${stat("方案", planTxt, "", planSourceTxt(a), a.plan==="pro"||a.plan==="plus"?"is-paid":"")}
       </div>
       ${rows("使用狀況", [
         ["家庭圈", f.name||"–", `${n(m.count||0)} 人`],
         ["陪伴角色", companionLabel(c)],
+        enterpriseRow(a),
         // 「最後開 App」只講開機那一刻；「今天有動作」是四路訊號（開機／登入／使用／註冊）
         // 算出來的最近活動，掛在倒數旁邊才對——掛在開機時間旁邊會讀成「7/29 卻說今天」的矛盾。
         ["最後開 App", a.lastSeenAt?fmtTime(a.lastSeenAt):"還沒開過"],

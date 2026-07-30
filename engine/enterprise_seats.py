@@ -75,6 +75,25 @@ def _iso_plus_days(iso_str, days):
     return (base + timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _parse_when(value):
+    """把資料庫各種時間寫法解析成可比較的時間。席次的時間欄是帶時區的完整時間
+    （2026-07-30T12:00:00+00:00 或 ...Z），合約起訖只有日期（2026-07-30）。
+    解析不出來一律回 None——判到期時「看不懂就當沒到期」，寧可晚收回也不要誤收。"""
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        try:
+            parsed = datetime.strptime(text, "%Y-%m-%d")
+        except ValueError:
+            return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
 def _safe_number(value):
     try:
         return float(value)
@@ -772,6 +791,170 @@ def grant_enterprise_membership(seat_id, actor="admin", reason="batch_grant"):
         },
     )
     return {"granted": True, "waiting": False, "ledger": ledger_row, "seat": seat_after}
+
+
+# ---- 會員資格收回（2026-07-30 Edward：「到期自動會轉會員身分」）----
+#
+# 為什麼是「補一筆新紀錄」而不是「改掉舊那筆」：
+#   · subscription_ledger 是流水帳，兩邊讀取（後台名冊 load_account_plans、
+#     App 那條 load_billing_store）都取「最新一筆」。補一筆 free 進去，兩邊同時看到 free，
+#     而當初那筆企業授予留著當歷史憑證（收費爭議時要拿得出來）。
+#   · 直接改舊那筆會毀掉憑證，而且只要有一邊改用不同排序就會兩邊各說各話。
+def revoke_enterprise_membership(seat_id, actor="admin", reason="seat_released"):
+    """把某顆席次授予的會員資格收回：補一筆 free／expired 的訂閱紀錄，
+    讓後台名冊與 App 兩邊都立刻看到「已經不是付費會員」。
+
+    冪等：這顆席次目前沒有生效中的企業授予（沒授予過、或已經收回過）就直接回
+    revoked=False，不會補第二筆 free。
+    """
+    seat = get_seat(seat_id)
+    if not seat:
+        raise ValueError("enterprise_seat_not_found")
+    account_id = seat.get("accountId")
+    if not account_id:
+        return {"revoked": False, "reason": "seat_has_no_bound_account", "seat": seat}
+
+    grant = _find_active_ledger_by_grant_ref(seat["id"])
+    if not grant:
+        return {"revoked": False, "reason": "no_active_enterprise_grant", "seat": seat}
+
+    payload = {
+        "account_id": account_id,
+        "platform": "web",
+        "provider": "enterprise",
+        "product_id": "enterprise:revoked",
+        "status": "expired",
+        "active_plan": "free",
+        "entitlements": {},
+        # provider=enterprise 的紀錄一定要指出處（資料庫層有 check constraint 把關），
+        # 所以收回這筆也掛在同一顆席次上——一眼看得出是哪顆席次到期造成的。
+        "grant_ref": seat["id"],
+        "verified_at": _utc_now(),
+        "raw_event_ref": f"enterprise_seat_revoked:{seat['id']}",
+    }
+
+    ledger_row = None
+    backend = _backend()
+    try:
+        ledger_row = backend.insert_enterprise_subscription_grant(payload)
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback("insert enterprise membership revocation", exc)
+    if ledger_row is None:
+        ledger_row = {
+            "accountId": account_id, "provider": "enterprise", "activePlan": "free",
+            "grantRef": seat["id"], "status": "expired", "verifiedAt": _utc_now(),
+        }
+        grants = _read_json_file(LOCAL_GRANTS_PATH, [])
+        if not isinstance(grants, list):
+            grants = []
+        grants.append(ledger_row)
+        _write_json_file(LOCAL_GRANTS_PATH, grants)
+
+    write_seat_event(
+        seat, seat.get("status"), actor, reason,
+        metadata={"membershipRevoked": True, "grantRef": seat["id"], "accountId": account_id},
+    )
+    return {"revoked": True, "ledger": ledger_row, "seat": seat, "accountId": account_id}
+
+
+# ---- 到期自動處理（2026-07-30）----
+#
+# 三件事，順序有意義：
+#   ① 合約到期的公司 → 旗下 active 席次進 30 天緩衝期（不是立刻斷，長輩不該當天被切掉）
+#   ② 緩衝期跑完的席次 → 正式釋出，並且收回會員資格（這一段以前完全沒做＝公司停付款後
+#      那個人的 Pro 會一直留著）
+#   ③ 等待中的席次到了個人訂閱到期日 → 由企業接手（原本就設計好、但沒有人來按）
+#
+# dry_run 預設 True：跟 60 天閒置清除同一個規矩——先出報告，看過才敢真的動。
+def sweep_seat_lifecycle(dry_run=True, actor="scheduler", now=None):
+    """巡一遍所有企業席次，把該進緩衝期／該釋出並收回／該接手的都處理掉。
+
+    回傳每一類的清單與筆數；dry_run=True 時只列出「會做什麼」，不真的動資料。
+    單筆出錯不影響其他筆——錯誤收在 errors 裡回報，不讓一顆壞席次擋住整輪巡檢。
+    """
+    moment = _parse_when(now) or datetime.now(timezone.utc)
+    planned = {"toGrace": [], "toReleased": [], "handedOver": []}
+    errors = []
+
+    clients_by_id = {}
+    for client in list_clients() or []:
+        clients_by_id[client.get("id")] = client
+
+    seats = list_seats() or []
+
+    for seat in seats:
+        seat_id = seat.get("id")
+        status = seat.get("status")
+        client = clients_by_id.get(seat.get("enterpriseClientId")) or {}
+        try:
+            # ① 合約到期 → 進緩衝期
+            if status == "active":
+                contract_end = _parse_when(client.get("contractEnd") or client.get("contract_end"))
+                if contract_end and contract_end < moment:
+                    planned["toGrace"].append({
+                        "seatId": seat_id, "accountId": seat.get("accountId"),
+                        "clientName": client.get("name"), "contractEnd": client.get("contractEnd"),
+                    })
+                    if not dry_run:
+                        transition_seat(seat_id, "grace", actor=actor, reason="contract_ended")
+                continue
+
+            # ② 緩衝期跑完 → 釋出 + 收回會員資格
+            if status == "grace":
+                grace_until = _parse_when(seat.get("graceUntil") or seat.get("grace_until"))
+                if grace_until and grace_until < moment:
+                    entry = {
+                        "seatId": seat_id, "accountId": seat.get("accountId"),
+                        "clientName": client.get("name"), "graceUntil": seat.get("graceUntil"),
+                        "membershipRevoked": None,
+                    }
+                    if not dry_run:
+                        # 先收回會員資格、再把席次標成已釋出。順序反了的話，
+                        # 收回那步若失敗，席次已經是 released（不能再轉狀態），
+                        # 這顆席次就永遠卡在「已釋出但人還是付費會員」。
+                        outcome = revoke_enterprise_membership(
+                            seat_id, actor=actor, reason="grace_period_ended")
+                        entry["membershipRevoked"] = bool(outcome.get("revoked"))
+                        transition_seat(seat_id, "released", actor=actor,
+                                        reason="grace_period_ended", released_reason="contract_end")
+                    planned["toReleased"].append(entry)
+                continue
+
+            # ③ 等待中的席次：個人訂閱到期了，換企業接手
+            if status == "waiting":
+                waiting_until = _parse_when(seat.get("waitingUntil") or seat.get("waiting_until"))
+                if waiting_until and waiting_until < moment:
+                    entry = {
+                        "seatId": seat_id, "accountId": seat.get("accountId"),
+                        "clientName": client.get("name"), "waitingUntil": seat.get("waitingUntil"),
+                        "granted": None,
+                    }
+                    if not dry_run:
+                        outcome = grant_enterprise_membership(
+                            seat_id, actor=actor, reason="individual_plan_expired_handover")
+                        entry["granted"] = bool(outcome.get("granted"))
+                    planned["handedOver"].append(entry)
+                continue
+        except Exception as exc:
+            errors.append({"seatId": seat_id, "status": status, "error": str(exc)})
+
+    return {
+        "dryRun": bool(dry_run),
+        "checkedSeats": len(seats),
+        "toGrace": planned["toGrace"],
+        "toReleased": planned["toReleased"],
+        "handedOver": planned["handedOver"],
+        "summary": {
+            "toGrace": len(planned["toGrace"]),
+            "toReleased": len(planned["toReleased"]),
+            "handedOver": len(planned["handedOver"]),
+            "errors": len(errors),
+        },
+        "errors": errors,
+        "ranAt": _utc_now(),
+    }
 
 
 def batch_grant_enterprise_membership(seat_ids, actor="admin", reason="batch_grant"):
