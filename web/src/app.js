@@ -1458,7 +1458,7 @@ async function createFamilyRelay(recipientName, message) {
     },
   });
   if (!data || !data.ok || !data.relay) {
-    if (typeof toast === 'function') toast('這句話還沒送出去，請再試一次');
+    if (typeof toast === 'function') toast(muneaT('chat.sendFailedToast', "這句話還沒送出去，請再試一次"));
     return { ok: false, error: (data && data.error) || 'relay_write_failed' };
   }
   if (typeof toast === 'function') toast('已請' + cname() + '在' + target.name + '下次聊聊時轉達');
@@ -6787,7 +6787,7 @@ function removeFamilyFeedItem(idx) {
   try { localStorage.setItem('munea.familyFeed2', JSON.stringify(a)); } catch (e) {}
   syncPush('familyFeed', a);
   renderCareCarousel();
-  toast('已經移除這則了');
+  toast(muneaT('notification.removedToast', "已經移除這則了"));
 }
 function reportFamilyFeedItem(idx) {
   const a = loadFeed();
@@ -6804,7 +6804,7 @@ function reportFamilyFeedItem(idx) {
   try { localStorage.setItem('munea.familyFeed2', JSON.stringify(a)); } catch (e) {}
   syncPush('familyFeed', a);
   renderCareCarousel();
-  toast('已收到，我們會處理；這則也先收起來了');
+  toast(muneaT('notification.reportedToast', "已收到，我們會處理；這則也先收起來了"));
 }
 
 function toast(text, duration = 2600) {
@@ -6947,12 +6947,12 @@ function speakChat(text) {
 
 // 今天一起完成：打勾 → 寧寧鼓勵（不是賺幣，是被看見）
 const CHEERS = {
-  pill: '藥吃了，你真棒，我幫你記到存摺裡，美華也看得到。',
-  visit: '回診辛苦了，醫生說的我幫你記著，回家歇一下。',
-  event: '這個約赴完了吧？跟喜歡的人吃頓飯最好了，回來跟我說說。',
-  walk: '出去走走最好了，回來記得喝口水。',
-  chat: '謝謝你跟我說這些，我都記下來了。',
-  mood: '今天的心情記好了，謝謝你願意照顧自己的感受。',
+  pill: () => muneaT('home.cheer.pill', '藥吃了，你真棒，我幫你記到存摺裡，家人也看得到。'),
+  visit: () => muneaT('home.cheer.visit', '回診辛苦了，醫生說的我幫你記著，回家歇一下。'),
+  event: () => muneaT('home.cheer.event', '這個約赴完了吧？跟喜歡的人吃頓飯最好了，回來跟我說說。'),
+  walk: () => muneaT('home.cheer.walk', '出去走走最好了，回來記得喝口水。'),
+  chat: () => muneaT('home.cheer.chat', '謝謝你跟我說這些，我都記下來了。'),
+  mood: () => muneaT('home.cheer.mood', '今天的心情記好了，謝謝你願意照顧自己的感受。'),
 };
 function refreshMoodTask() {
   const item = document.querySelector('.task-item[data-task="mood"]');
@@ -7012,7 +7012,7 @@ function toggleTask(item) {
         toast(muneaT('medication.undoLastDose', '好，已取消最後一筆服藥紀錄。'));
       } else {
         _uncheckArm = item;
-        toast('今天的藥已完成，再按一次才會取消最後一筆。');
+        toast(muneaT('medication.allDoneUndoHint', "今天的藥已完成，再按一次才會取消最後一筆。"));
         setTimeout(() => { if (_uncheckArm === item) _uncheckArm = null; }, 3000);
       }
       return;
@@ -7044,14 +7044,14 @@ function toggleTask(item) {
       toast(muneaT('medication.cancelDoseToast', '好，先取消這筆，等等再完成也可以。'));
     } else {
       _uncheckArm = item;
-      toast('這件已經完成了，再按一次才會取消。');
+      toast(muneaT('home.taskDoneUndoHint', "這件已經完成了，再按一次才會取消。"));
       setTimeout(() => { if (_uncheckArm === item) _uncheckArm = null; }, 3000);
     }
     return;
   }
   item.classList.add('done');
   refreshTaskProgress();
-  hint(CHEERS[item.dataset.task] || muneaT('home.taskCheerDefault', '做得很好。'));
+  hint(CHEERS[item.dataset.task] ? CHEERS[item.dataset.task]() : muneaT('home.taskCheerDefault', '做得很好。'));
 }
 
 // 心情圖譜 v2（六類）；之後接 /wellbeing/trend 真資料
@@ -8108,7 +8108,7 @@ function init() {
   }
   window.__muneaApplyUserAvatar = applyUserAvatar;
   if ($('#pfAvatarBtn')) $('#pfAvatarBtn').addEventListener('click', () => { if ($('#pfAvatarFile')) $('#pfAvatarFile').click(); });
-  if ($('#pfAvatarFile')) $('#pfAvatarFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#pfAvatar'); if (box) box.classList.add('processing'); resizeAvatar(f, dataUrl => { if (box) box.classList.remove('processing'); _pfPendingAvatar = dataUrl; renderPfAvatar(dataUrl); }, () => { if (box) box.classList.remove('processing'); toast('這張照片讀不到，換一張相簿裡的照片試試'); }); });
+  if ($('#pfAvatarFile')) $('#pfAvatarFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#pfAvatar'); if (box) box.classList.add('processing'); resizeAvatar(f, dataUrl => { if (box) box.classList.remove('processing'); _pfPendingAvatar = dataUrl; renderPfAvatar(dataUrl); }, () => { if (box) box.classList.remove('processing'); toast(muneaT('profile.photoUnreadable', "這張照片讀不到，換一張相簿裡的照片試試")); }); });
   if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '我'); });
   applyUserAvatar();
   // 全家健康圈
@@ -8211,7 +8211,7 @@ function init() {
     if (!requireLoginForFamily('要加入家人的健康圈，先登入一下')) return;   // 雙保險：訪客不能入別人的圈
     if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; }   // 雙保險：免費不能入別人的圈
     const code = ($('#joinCodeInput').value || '').trim();
-    if (!code || code.replace(/\D/g, '').length < 4) { toast('把家人給你的邀請碼打進去（例：MUNEA-284753）'); return; }
+    if (!code || code.replace(/\D/g, '').length < 4) { toast(muneaT('familyCircle.invitePlaceholderHint', "把家人給你的邀請碼打進去（例：MUNEA-284753）")); return; }
     const btn = $('#joinCircleBtn');
     if (typeof setBtnBusy === 'function') setBtnBusy(btn, '加入中');
     try {
@@ -8228,11 +8228,11 @@ function init() {
         if (!mem.some(m => m.name === meName)) { mem.push({ name: meName, init: meName[0], tint: 'p-bao', self: true }); saveCircle(mem); }
         renderFamRoster(); renderFcRoster();
         $('#joinCircleModal').classList.remove('show'); $('#joinCodeInput').value = '';
-        toast('加入了！你們現在在同一個全家健康圈，動態會互相看得到。');
+        toast(muneaT('familyCircle.joinedToast', "加入了！你們現在在同一個全家健康圈，動態會互相看得到。"));
       } else if (j && j.error === 'invitation_expired') {
-        toast('這組邀請碼過期了，請家人重新產一組給你。');
+        toast(muneaT('familyCircle.inviteExpiredToast', "這組邀請碼過期了，請家人重新產一組給你。"));
       } else if (j && j.error === 'circle_full') {
-        toast('這個全家健康圈人數已滿，請家人升級方案後再邀請你。');
+        toast(muneaT('familyCircle.circleFullToast', "這個全家健康圈人數已滿，請家人升級方案後再邀請你。"));
       } else {
         toast(muneaT('familyCircle.inviteCodeNotFound', '找不到這組邀請碼，跟家人核對一下數字。'));
       }
@@ -8320,7 +8320,7 @@ function init() {
     const code = shownInvCode();
     if (!code) { toast(muneaT('familyCircle.inviteCodeNotReady', '邀請碼還沒建立好，先看畫面上寫的原因處理一下。')); return; }
     (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : Promise.reject()).then(
-      () => toast('邀請碼複製好了，貼給家人'),
+      () => toast(muneaT('familyCircle.inviteCopiedToast', "邀請碼複製好了，貼給家人")),
       () => toast('你的邀請碼：' + code)
     );
   });
@@ -8354,7 +8354,7 @@ function init() {
     }
     const on = b.classList.toggle('done');
     b.textContent = on ? '✓ 已連接' : (b.dataset.label || '連接');
-    if (on) { hint('好，連上了，之後健康資料我會自動留意。'); try { localStorage.setItem('munea.devicesOn', '1'); } catch (e2) {} }
+    if (on) { hint(muneaT('health.connectedToast', "好，連上了，之後健康資料我會自動留意。")); try { localStorage.setItem('munea.devicesOn', '1'); } catch (e2) {} }
   }));
 
   // 今天一起完成（任務打勾）
@@ -9767,7 +9767,7 @@ function init() {
       const c = card || document.querySelector('[data-act-id="' + act.id + '"]'); if (c) c.remove();
       updateActEmpty();
       sheet.classList.remove('show');
-      toast('活動刪除了');
+      toast(muneaT('activity.deletedToast', "活動刪除了"));
     });
     body.appendChild(del);
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();   // 有上傳帳號照片的（本人）→ 圓形頭像帶照片
@@ -9868,7 +9868,7 @@ function init() {
       act.title = '一起運動';
       // 挑戰截止（跟其他活動同款日期＋時間）：今天開始、到期自動結算 — Edward 7/9
       const wd0 = ($('#walkDue') && $('#walkDue').value) ? new Date($('#walkDue').value + 'T00:00') : null;
-      if (!wd0 || isNaN(wd0)) { toast('先選挑戰截止的日期'); return; }
+      if (!wd0 || isNaN(wd0)) { toast(muneaT('activity.pickChallengeDeadline', "先選挑戰截止的日期")); return; }
       const wt = ($('#walkDueTime') && $('#walkDueTime').value) || '20:00';
       const start = new Date();
       act.startISO = isoOf(start);
@@ -9886,10 +9886,10 @@ function init() {
     } else if (kind === 'vote') {
       act.title = (($('#voteQ') && $('#voteQ').value.trim()) || '家庭投票');
       act.opts = ['#vo1', '#vo2', '#vo3'].map(x => ($(x) && $(x).value.trim()) || '').filter(Boolean);
-      if (act.opts.length < 2) { toast('投票至少要兩個選項'); return; }
+      if (act.opts.length < 2) { toast(muneaT('activity.voteNeedsTwoOptions', "投票至少要兩個選項")); return; }
       // 投票要有截止（到期自動公布結果、收進記錄簿）— Edward 7/9
       const vd0 = ($('#voteDue') && $('#voteDue').value) ? new Date($('#voteDue').value + 'T00:00') : null;
-      if (!vd0 || isNaN(vd0)) { toast('先選投票截止的日期'); return; }
+      if (!vd0 || isNaN(vd0)) { toast(muneaT('activity.pickVoteDeadline', "先選投票截止的日期")); return; }
       const vt = ($('#voteDueTime') && $('#voteDueTime').value) || '20:00';
       act.dueISO = isoOf(vd0); act.dueTime = vt; act.dateISO = act.dueISO;
       act.dueLabel = fmtDay(vd0) + ' ' + _clock12(vt) + ' 截止';
@@ -9897,7 +9897,7 @@ function init() {
       ['#voteQ', '#vo1', '#vo2', '#vo3'].forEach(x => { if ($(x)) $(x).value = ''; });
     } else if (kind === 'draw') {
       act.prize = (($('#drawPrize') && $('#drawPrize').value.trim()) || '');
-      if (!act.prize) { toast('先填獎品，抽起來才有趣'); return; }
+      if (!act.prize) { toast(muneaT('activity.fillPrizeFirst', "先填獎品，抽起來才有趣")); return; }
       const dd0 = ($('#drawDate') && $('#drawDate').value) ? new Date($('#drawDate').value + 'T00:00') : new Date();
       const dd = isNaN(dd0) ? new Date() : dd0;
       const dtv = ($('#drawTime') && $('#drawTime').value) || '20:00';
@@ -9907,7 +9907,7 @@ function init() {
       if ($('#drawPrize')) $('#drawPrize').value = '';
     } else {
       const ed0 = ($('#evDate') && $('#evDate').value) ? new Date($('#evDate').value + 'T00:00') : null;
-      if (!ed0 || isNaN(ed0)) { toast('先選聚會的日期'); return; }
+      if (!ed0 || isNaN(ed0)) { toast(muneaT('activity.pickEventDate', "先選聚會的日期")); return; }
       const etv = ($('#evTime') && $('#evTime').value) || '18:00';
       act.dateISO = isoOf(ed0);
       act.time = etv;   // 原始時間：給「活動前 30 分提醒」＋「時間過了鎖 RSVP」用
@@ -10242,7 +10242,7 @@ function init() {
     const b = e.target.closest('.topic-chip'); if (!b) return;
     const t = b.dataset.t;
     if (_intSel.includes(t)) _intSel = _intSel.filter(x => x !== t);
-    else { if (_intSel.length >= 5) { toast('挑 5 個以內就好，聊得才深'); return; } _intSel.push(t); }
+    else { if (_intSel.length >= 5) { toast(muneaT('interests.maxFiveHint', "挑 5 個以內就好，聊得才深")); return; } _intSel.push(t); }
     b.classList.toggle('on', _intSel.includes(t));
   });
   if ($('#interestsRow')) $('#interestsRow').addEventListener('click', () => window.__muneaOpenInterests(false));
@@ -10331,7 +10331,7 @@ function init() {
   });
   if ($('#fbSend')) $('#fbSend').addEventListener('click', async () => {
     const text = ($('#fbText') && $('#fbText').value.trim()) || '';
-    if (_fbType === 'nps' && _fbNps === null) { toast('先拉一下分數條，選個 0～10 的分數'); return; }
+    if (_fbType === 'nps' && _fbNps === null) { toast(muneaT('feedback.pickScoreFirst', "先拉一下分數條，選個 0～10 的分數")); return; }
     if (_fbType !== 'nps' && !text) { toast(muneaT('feedback.needText', '說一句就好，我們想聽')); return; }
     const cat = _fbType === 'bug' ? ((document.querySelector('#fbCats .topic-chip.on') || { dataset: {} }).dataset.c || '其他') : '';
     const body = { type: _fbType, category: cat, text: text, score: _fbNps, appVersion: (window.MuneaVersion && window.MuneaVersion.current) || '', plan: (window.MMPLAN && window.MMPLAN.get()) || '' };
@@ -10398,12 +10398,12 @@ function init() {
   if ($('#dataModal')) $('#dataModal').addEventListener('click', e => { if (e.target === $('#dataModal')) $('#dataModal').classList.remove('show'); });
   if ($('#dataExportBtn')) $('#dataExportBtn').addEventListener('click', async () => {
     const b = $('#dataExportBtn');
-    if (authState().status !== 'signed-in') { toast('請先登入，才能安全匯出只屬於你的資料'); return; }
+    if (authState().status !== 'signed-in') { toast(muneaT('profile.exportLoginFirst', "請先登入，才能安全匯出只屬於你的資料")); return; }
     setBtnBusy(b, '正在整理資料');
     const result = await brainPost('/privacy-export', { action: 'request' });
     clearBtnBusy(b, '匯出一份給我');
     if (!(result && result.ok && result.status === 'completed' && result.exportPackage)) {
-      toast('資料副本沒有建立，請確認登入與網路後再試一次');
+      toast(muneaT('profile.exportFailedToast', "資料副本沒有建立，請確認登入與網路後再試一次"));
       return;
     }
     const filename = result.filename || 'munea-personal-data.json';
@@ -10424,7 +10424,7 @@ function init() {
       }
       toast(muneaT('profile.exportReadyToast', '資料副本已建立，只包含你本人與你的帳務資料'));
     } catch (e) {
-      if (e && e.name !== 'AbortError') toast('資料已建立，但分享視窗沒有完成；可以再按一次');
+      if (e && e.name !== 'AbortError') toast(muneaT('profile.exportShareIncomplete', "資料已建立，但分享視窗沒有完成；可以再按一次"));
     }
   });
   if ($('#dataDeleteBtn')) $('#dataDeleteBtn').addEventListener('click', () => {
@@ -10446,7 +10446,7 @@ function init() {
         if (!(deletion && deletion.ok && deletion.accountDeleted)) {
           b.disabled = false;
           b.textContent = '刪除我的資料';
-          toast('帳號與雲端資料尚未刪除，請確認網路後再試一次');
+          toast(muneaT('profile.deleteFailedToast', "帳號與雲端資料尚未刪除，請確認網路後再試一次"));
           return;
         }
         if (typeof signOutAuth === 'function') { try { await signOutAuth(); } catch (e) {} }
@@ -10457,9 +10457,9 @@ function init() {
         ks.forEach(k => localStorage.removeItem(k));
       } catch (e) {}
       $('#dataModal').classList.remove('show');
-      if (!signedIn) toast('這台裝置上的沐寧資料已清除');
-      else if (deletion.authUserDeleted) toast('帳號與雲端資料已永久刪除；Apple 訂閱需另行取消');
-      else toast('雲端資料已刪除，登入帳號移除正在完成；Apple 訂閱需另行取消');
+      if (!signedIn) toast(muneaT('profile.localDataCleared', "這台裝置上的沐寧資料已清除"));
+      else if (deletion.authUserDeleted) toast(muneaT('profile.accountDeletedToast', "帳號與雲端資料已永久刪除；Apple 訂閱需另行取消"));
+      else toast(muneaT('profile.cloudDeletedToast', "雲端資料已刪除，登入帳號移除正在完成；Apple 訂閱需另行取消"));
       setTimeout(() => { location.reload(); }, 1200);
     })();
   });
@@ -10535,7 +10535,7 @@ function init() {
   });
   if ($('#rcNext')) $('#rcNext').addEventListener('click', () => {
     const now = new Date();
-    if (rcYear === now.getFullYear() && rcMonth === now.getMonth()) { toast('已經是這個月了'); return; }
+    if (rcYear === now.getFullYear() && rcMonth === now.getMonth()) { toast(muneaT('report.alreadyThisMonth', "已經是這個月了")); return; }
     rcMonth++; if (rcMonth > 11) { rcMonth = 0; rcYear++; }
     renderRangeCal();
   });
