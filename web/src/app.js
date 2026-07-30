@@ -6138,9 +6138,24 @@ function handleMedicationChange(event) {
   pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot ? medSlotLabel(dose.slot) : '這次') + '服藥，' + cname() + '有看著');
 }
 function streakLine(n) {
-  if (n >= 10) return '這個月有 <b>' + n + ' 天</b>準時吃藥，很穩，繼續保持';
-  if (n >= 3) return '這個月有 <b>' + n + ' 天</b>準時吃藥，節奏出來了';
-  return '開始把吃藥記下來了，好的開始';
+  if (n >= 10) {
+    return muneaT(
+      'home.care.medicationStreakLong',
+      'You took your medication on time {days} days this month. Great consistency—keep it up.',
+      { days: n },
+    );
+  }
+  if (n >= 3) {
+    return muneaT(
+      'home.care.medicationStreakMedium',
+      'You took your medication on time {days} days this month. Your routine is taking shape.',
+      { days: n },
+    );
+  }
+  return muneaT(
+    'home.care.medicationStreakStart',
+    'You started tracking your medication. That is a good start.',
+  );
 }
 const CARE_ICONS = {
   msg: '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>',
@@ -6152,17 +6167,27 @@ const CARE_ICONS = {
 let _careIdx = 0, _careTimer = null;
 // 留意卡文案規則（Edward 7/6）：標題 ≤12 字（一行放得下）、副標最多兩行（約 26 字內）完整顯示
 function plain(s) { return String(s == null ? '' : s).replace(/<[^>]+>/g, ''); }
+function localizedCareLabels(rendererCopy) {
+  return rendererCopy
+    ? rendererCopy.careLabels()
+    : {
+      acknowledge: muneaT('home.care.acknowledge', 'Got it'),
+      open: muneaT('home.care.open', 'View'),
+      remove: muneaT('home.care.remove', 'Remove this item'),
+      report: muneaT('home.care.report', 'Report'),
+    };
+}
 function buildCareItems() {
   const items = [];
   const rendererCopy = muneaRendererCopy();
-  const careLabels = rendererCopy ? rendererCopy.careLabels() : null;
+  const careLabels = localizedCareLabels(rendererCopy);
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
   const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
   // 留意卡是首頁會轉動輪播的位置、比招呼卡更容易被看到——family feed 原文一律要過守門才能顯示（Edward 2026-07-15 事故：這裡漏接、招呼卡另一條路徑已守）
   let _rTitle = rendererCopy
     ? rendererCopy.familyRelay({ companion: cname() }).title
-    : '家人帶話給你';
+    : muneaT('home.care.familyRelayTitle', 'Your family left you a message');
   let _rSub = '', _relayClean = false;
   if (relayMsg) {
     const _p = plain(relayMsg);
@@ -6174,7 +6199,9 @@ function buildCareItems() {
         const localized = rendererCopy
           ? rendererCopy.familyRelay({ body: _bodySafe, companion: cname(), from: _whoSafe })
           : null;
-        _rTitle = localized ? localized.title : _whoSafe + ' 要我提醒你';
+        _rTitle = localized
+          ? localized.title
+          : muneaT('home.care.familyRelayFrom', '{name} asked me to remind you', { name: _whoSafe });
         _rSub = localized ? localized.body : _bodySafe;
         _relayClean = true;
       }
@@ -6190,14 +6217,22 @@ function buildCareItems() {
     ? rendererCopy.familyRelay({ body: _feed0Safe, companion: cname() })
     : null;
   const familyItem = _relayClean
-    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: careLabels ? careLabels.acknowledge : '知道了', feedIdx: _feedIdx }
+    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: careLabels.acknowledge, feedIdx: _feedIdx }
     : {
       k: 'family',
       tone: '',
       icon: 'msg',
-      title: defaultRelay ? defaultRelay.title : '家人帶話給你',
-      sub: defaultRelay ? defaultRelay.body : (_feed0Safe || ('美華說週末回去看你，' + cname() + '都幫你收著了')),
-      btn: careLabels ? careLabels.open : '去看看',
+      title: defaultRelay
+        ? defaultRelay.title
+        : muneaT('home.care.familyRelayTitle', 'Your family left you a message'),
+      sub: defaultRelay
+        ? defaultRelay.body
+        : (_feed0Safe || muneaT(
+          'home.care.demoRelay',
+          'Your family says they will visit this weekend. {companion} saved the message for you.',
+          { companion: cname() },
+        )),
+      btn: careLabels.open,
       feedIdx: _feedIdx,
     };
   let acts = [];
@@ -6206,23 +6241,65 @@ function buildCareItems() {
   if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
     const goal = +(act.steps || act.goal || 8000);
     const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
+    const owner = muneaSafeDisplayText(act.owner, '')
+      || muneaT('home.care.familyFallback', 'Family');
     const localized = rendererCopy
-      ? rendererCopy.walkActivity({ gap, owner: muneaSafeDisplayText(act.owner, '') })
+      ? rendererCopy.walkActivity({ gap, owner })
       : null;
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : muneaSafeDisplayText(act.owner, '家人') + '發起的走路活動', sub: localized ? localized.body : (gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績'), btn: careLabels ? careLabels.open : '去看看' });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
+    items.push({
+      k: 'family',
+      tone: 'coral',
+      icon: 'walk',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.walkTitle', '{name} started a walking activity', { name: owner }),
+      sub: localized
+        ? localized.body
+        : gap > 0
+          ? muneaT('home.care.walkGap', '{count} steps to go. Shall we take a walk tonight?', { count: Math.ceil(gap) })
+          : muneaT('home.care.walkComplete', 'Goal reached. See how everyone did.'),
+      btn: careLabels.open,
+    });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
   } else if (act) {
+    const owner = muneaSafeDisplayText(act.owner, '')
+      || muneaT('home.care.familyFallback', 'Family');
+    const title = muneaSafeDisplayText(act.title, '')
+      || muneaT('home.care.activityFallback', 'Family activity');
     const localized = rendererCopy
       ? rendererCopy.familyActivity({
-        owner: muneaSafeDisplayText(act.owner, ''),
-        title: muneaSafeDisplayText(act.title, ''),
+        owner,
+        title,
       })
       : null;
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : muneaSafeDisplayText(act.owner, '家人') + '發起了活動', sub: localized ? localized.body : '「' + muneaSafeDisplayText(act.title, '家庭活動') + '」進行中，看看大家的進度', btn: careLabels ? careLabels.open : '去看看' });
+    items.push({
+      k: 'family',
+      tone: 'coral',
+      icon: 'walk',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.activityTitle', '{name} started an activity', { name: owner }),
+      sub: localized
+        ? localized.body
+        : muneaT('home.care.activityProgress', '“{title}” is in progress. See how everyone is doing.', { title }),
+      btn: careLabels.open,
+    });
   } else {
+    const owner = muneaT('home.care.familyFallback', 'Family');
     const localized = rendererCopy
-      ? rendererCopy.walkActivity({ gap: 5000, owner: '' })
+      ? rendererCopy.walkActivity({ gap: 5000, owner })
       : null;
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : '外婆發起的走路活動', sub: localized ? localized.body : '還差 5,000 步就達標，今晚一起走走？', btn: careLabels ? careLabels.open : '去看看' });
+    items.push({
+      k: 'family',
+      tone: 'coral',
+      icon: 'walk',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.walkTitle', '{name} started a walking activity', { name: owner }),
+      sub: localized
+        ? localized.body
+        : muneaT('home.care.walkGap', '{count} steps to go. Shall we take a walk tonight?', { count: 5000 }),
+      btn: careLabels.open,
+    });
   }
   items.push(familyItem);
   let v = null;
@@ -6233,17 +6310,35 @@ function buildCareItems() {
     v = arr.filter(x => x && x.dateISO && x.dateISO >= today).sort((a, b) => a.dateISO.localeCompare(b.dateISO))[0] || null;
   } catch (e) {}
   if (v && v.dateISO) {
-    const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診';
+    const _vTitle = muneaSafeDisplayText(v.title, '')
+      || muneaSafeDisplayText(v.label, '')
+      || muneaT('home.care.visitFallback', 'Appointment');
+    const visitDate = v.label || String(v.dateISO).slice(5).replace('-', '/');
     const localized = rendererCopy
       ? rendererCopy.upcomingVisit({
         companion: cname(),
-        date: v.label || String(v.dateISO).slice(5).replace('-', '/'),
+        date: visitDate,
         title: _vTitle,
       })
       : null;
-    items.push({ k: 'status', tone: '', icon: 'cal', title: localized ? localized.title : _vTitle + '快到了', sub: localized ? localized.body : (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: careLabels ? careLabels.open : '看安排' });
+    items.push({
+      k: 'status',
+      tone: '',
+      icon: 'cal',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.visitSoon', '{title} is coming up', { title: _vTitle }),
+      sub: localized
+        ? localized.body
+        : muneaT(
+          'home.care.visitNote',
+          '{date} · {companion} saved what you want to ask the doctor.',
+          { companion: cname(), date: visitDate },
+        ),
+      btn: careLabels.open,
+    });
   }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
-  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: muneaT('home.care.medicationRhythm', '準時吃藥有節奏'), sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
+  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: muneaT('home.care.medicationRhythm', 'Your medication routine is on track'), sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
   // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
   // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）；
@@ -6253,7 +6348,23 @@ function buildCareItems() {
   // 渲染時的 slice(0,12) 硬切（沒補刪節號）、以及 .care-txt p 的單行 ellipsis（375px 下約 10 字到底）。
   if (shouldShowProfileNudge()) {
     const localized = rendererCopy ? rendererCopy.profilePrompt() : null;
-    items.unshift({ k: 'profile', tone: '', icon: 'person', title: localized ? localized.title : '個人資料', sub: localized ? localized.body : '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: localized ? localized.action : '去填寫' });
+    items.unshift({
+      k: 'profile',
+      tone: '',
+      icon: 'person',
+      title: localized
+        ? localized.title
+        : muneaT('home.profilePromptTitle', 'Personal profile'),
+      sub: localized
+        ? localized.body
+        : muneaT(
+          'home.profilePromptBody',
+          'Add your preferred name, birthday, and location for more natural greetings and accurate weather.',
+        ),
+      btn: localized
+        ? localized.action
+        : muneaT('home.profilePromptAction', 'Update'),
+    });
   }
   return items;
 }
@@ -6262,13 +6373,13 @@ function renderCareCarousel() {
   const dots = document.getElementById('careDots');
   if (!body || !dots) return;
   const rendererCopy = muneaRendererCopy();
-  const careLabels = rendererCopy ? rendererCopy.careLabels() : null;
+  const careLabels = localizedCareLabels(rendererCopy);
   const items = buildCareItems();
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
     '<div class="care-txt"><p>' + it.title + '</p>' + (it.sub ? '<small>' + it.sub + '</small>' : '') +
-    (typeof it.feedIdx === 'number' && it.feedIdx > -1 ? '<div class="care-mod"><button type="button" class="care-mod-btn" data-remove="' + it.feedIdx + '">' + (careLabels ? careLabels.remove : '移除這則') + '</button><button type="button" class="care-mod-btn" data-report="' + it.feedIdx + '">' + (careLabels ? careLabels.report : '檢舉') + '</button></div>' : '') +
+    (typeof it.feedIdx === 'number' && it.feedIdx > -1 ? '<div class="care-mod"><button type="button" class="care-mod-btn" data-remove="' + it.feedIdx + '">' + careLabels.remove + '</button><button type="button" class="care-mod-btn" data-report="' + it.feedIdx + '">' + careLabels.report + '</button></div>' : '') +
     '</div>' +
     (it.btn ? '<button type="button" class="care-btn" data-go="' + it.k + '">' + it.btn + '</button>' : '') +
     '</div>').join('');
