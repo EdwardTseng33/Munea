@@ -1036,6 +1036,12 @@
           ],
           "say": "量到收縮壓超過 180、或是出現臉歪、手垂、講話大舌頭（中風警訊），或胸悶胸痛冒冷汗（心臟警訊）——立刻打 119，不要等回診。"
         }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-16",
+          "say": "你提到柚子（葡萄柚也一樣）——它會讓部分血壓藥、降血脂藥在身體裡變太濃，而且錯開時間吃也躲不掉。回診或去藥局時問一句「我的藥能不能配柚子」最保險。"
+        }
       ]
     },
     "TW-EDU-16": {
@@ -1080,6 +1086,28 @@
           },
           "say": "這題最重要的一條：紅麴本身含天然的 Statin 成分，跟醫師開的降血脂藥一起吃，有橫紋肌溶解這類交互作用的風險。如果你兩個都在吃，先別自己決定要不要停，帶著兩瓶去問藥師。",
           "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "supp-grapefruit",
+          "label": "葡萄柚跟柚子會讓藥變太強",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "葡萄柚",
+            "柚子",
+            "文旦"
+          ],
+          "say": "這條很多人不知道、但每年中秋都該講一次：**葡萄柚和柚子（文旦也是）會擋住肝臟分解藥的酵素，讓某些藥在身體裡變太濃**——降血脂、部分血壓藥、部分安眠藥都在名單上，而且**效果可以持續兩三天，錯開時間吃也沒用**。有在吃慢性病藥的人，中秋收到文旦先問藥師「我的藥能不能配柚子」，再決定吃多少。",
+          "verifiedAt": "2026-07-31"
         },
         {
           "id": "supp-food-first",
@@ -3768,6 +3796,589 @@
             "為了吃中藥自行停掉西藥"
           ],
           "say": "吃中藥之後如果皮膚或眼白變黃、水腫、莫名瘀青出血、或嚴重腹瀉嘔吐——**先停下來、儘快就醫**。另外一條最重要：**不要為了吃中藥自己把西藥停掉**，尤其血壓、血糖、心臟、抗凝血的藥，那個風險很高。"
+        }
+      ]
+    },
+    "TW-EDU-31": {
+      "title": "保健品百科",
+      "solutions": [
+        {
+          "id": "lex-essence-chicken",
+          "label": "雞精／滴雞精",
+          "riskLevel": "L3",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "雞精",
+            "滴雞精"
+          ],
+          "contraindications": [
+            "痛風／尿酸過高",
+            "腎功能異常",
+            "洗腎"
+          ],
+          "dailyCap": "一天一瓶為限；痛風、腎臟病人飲用前先問醫師",
+          "evidence": {
+            "finding": "抗疲勞多為小型試驗；蛋白質含量低於一顆雞蛋；普林與鈉鉀含量是主要風險"
+          },
+          "say": "雞精是台灣人最愛送的補品，講實話：它的蛋白質含量其實**不如一顆蛋**，抗疲勞的研究多是小型試驗、證據不算強——當心意收很好，別當營養主力。三件事要記得：一天一瓶就好、別當水喝；**痛風的人要小心（普林高）**；腎功能不好的人鉀跟蛋白都有講究、喝之前問醫師。血壓高的人挑低鈉版本。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-b-complex",
+          "label": "B群",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "B群",
+            "維他命B",
+            "維生素B"
+          ],
+          "contraindications": [
+            "帕金森氏症用藥中"
+          ],
+          "dailyCap": "依產品標示；B6 不長期高劑量（會神經病變）",
+          "evidence": {
+            "finding": "缺乏者補充有效；非缺乏者無提神實證；尿黃為核黃素正常排出"
+          },
+          "say": "B群不是提神劑——它是身體代謝的小幫手，**缺的人補了才有感，不缺的人吃了就是尿變黃**（那是正常的，不是更有效）。真的容易缺的是：吃全素的人（B12）、喝酒多的人、某些胃藥長期吃的人。三件事：照產品標示吃就好；**B6 長期高劑量會手腳發麻**，不是越多越好；跟帕金森氏症的藥有交互，有在治療的先問醫師。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-vitamin-c",
+          "label": "維他命C",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "維他命C",
+            "維生素C"
+          ],
+          "contraindications": [
+            "有腎結石病史"
+          ],
+          "dailyCap": "成人上限一天 2000 毫克（官方安全上限，不是目標）",
+          "evidence": {
+            "finding": "Cochrane 回顧：一般人規律補充不減少感冒次數、僅輕微縮短病程"
+          },
+          "say": "維他命C 預防感冒的效果，大型回顧看下來是**「不太能預防、頂多讓病程短一點點」**——芭樂一顆的維他命C 就超過每天需要量了。要吃記得：**一天不要超過 2000 毫克**，吃太多會拉肚子；**有腎結石病史的人高劑量要避開**（會增加草酸）。從水果吃永遠是更好的路。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-vitamin-d",
+          "label": "維他命D",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "維他命D",
+            "維生素D"
+          ],
+          "contraindications": [
+            "高血鈣",
+            "副甲狀腺問題",
+            "結節病"
+          ],
+          "dailyCap": "依產品標示；脂溶性會累積、不與其他含D產品重複",
+          "evidence": {
+            "finding": "VITAL 等大型試驗：無缺乏的健康成人補充未降低骨折/癌症/心血管風險；缺乏者矯正仍有意義"
+          },
+          "say": "台灣人維他命D不足的比例確實高（怕曬又擦防曬），但講實話：近年最大型的研究顯示，**健康的人額外補充，對防骨折防慢性病的效果比想像小**。先曬太陽最實在——每天十幾分鐘就夠。真的要補：它是**脂溶性、會累積**，別跟多種含D的產品疊著吃；抽血知道自己缺不缺最準，回診時可以請醫師順便驗。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-fish-oil",
+          "label": "魚油（護心）",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "魚油"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "即將手術"
+          ],
+          "dailyCap": "依產品標示；與抗凝血藥併用前先問醫師、術前停用",
+          "evidence": {
+            "finding": "ASCEND/VITAL 等大型試驗：一般劑量魚油補充未降低心血管事件；吃魚本身證據較好"
+          },
+          "say": "魚油護心臟的說法要更新了：**近年的大型試驗，一般魚油補充品對預防心血管疾病大多沒看到效果**（有效的那個是高濃度處方藥、那是醫師開的，不是架上買的）。真的有實證的是**每週吃兩次魚**這件事。要吃記得：**它會讓血比較不容易凝固——跟抗凝血藥一起吃要問醫師，手術或拔牙前要停**；腸胃不適和魚腥嗝是常見副作用。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-q10",
+          "label": "Q10",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "Q10",
+            "輔酶"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑"
+          ],
+          "dailyCap": "依產品標示",
+          "evidence": {
+            "finding": "心衰輔助有初步證據；statin 肌痛緩解證據分歧；與 warfarin 有明確交互（降低藥效）"
+          },
+          "say": "Q10 常見兩種吃法：心臟保養（心衰竭輔助有一些證據、要配合治療不是取代）跟緩解降血脂藥的肌肉痠（研究結果其實很分歧、不是人人有效）。**最重要的一條：Q10 會讓抗凝血藥（華法林）效果變弱**——有在吃的人要先問醫師，不然藥被悄悄抵銷了很危險。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-turmeric",
+          "label": "薑黃",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "薑黃",
+            "薑黃素"
+          ],
+          "contraindications": [
+            "膽結石",
+            "正在吃抗凝血劑",
+            "肝功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "依產品標示、不追高劑量（肝損傷通報多在高劑量）",
+          "evidence": {
+            "finding": "關節症狀有小型試驗支持；生物利用率低；高劑量肝損傷已有官方通報"
+          },
+          "say": "薑黃素對關節不舒服有一些小型研究支持，但**吸收率天生很差**（所以廠商都在拚配方）。三個要小心的：**膽結石的人不要吃**（會刺激膽囊收縮）；**會抗凝血**，跟抗凝血藥或手術前都要避；**近年歐洲通報過高劑量薑黃素的肝損傷案例**——肝不好的人先問醫師，吃了皮膚眼白變黃立刻停。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-cranberry",
+          "label": "蔓越莓",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "蔓越莓"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑"
+          ],
+          "dailyCap": "依產品標示；急性感染不可用它取代就醫",
+          "evidence": {
+            "finding": "Cochrane 2023：反覆UTI 族群預防有效；急性治療無效；與 warfarin 交互"
+          },
+          "say": "蔓越莓對**反覆泌尿道感染的預防**，最新的大型回顧轉為「某些族群有幫助」（反覆感染的女性、小孩）——但**已經感染了它治不了，那要看醫生**。兩個要注意：跟**抗凝血藥（華法林）**有交互；市售果汁糖分高，糖尿病的人選錠劑或低糖版本。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-collagen",
+          "label": "膠原蛋白",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "膠原蛋白"
+          ],
+          "contraindications": [
+            "對魚類或甲殼類過敏"
+          ],
+          "dailyCap": "依產品標示",
+          "evidence": {
+            "finding": "小型試驗顯示皮膚水分/彈性小幅改善、多為業界贊助；蛋白質與防曬的實證更強"
+          },
+          "say": "講實話：膠原蛋白吃下去會被分解成胺基酸，**「吃膠原長膠原」在科學上不是直達車**。皮膚保濕彈性的研究多是小型、而且不少是廠商贊助的——可以抱著「試試看」的心情，別抱「回春」的期待。蛋白質夠、維他命C夠、防曬做好，對皮膚的實證比它強。對魚蝦過敏的人注意來源。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-probiotic",
+          "label": "益生菌（顧腸胃）",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "益生菌",
+            "乳酸菌"
+          ],
+          "contraindications": [
+            "免疫功能低下",
+            "正在化療",
+            "短腸症"
+          ],
+          "dailyCap": "依產品標示、不同時疊多種同類",
+          "evidence": {
+            "finding": "菌株特異性高；腸道症狀證據較佳、免疫宣稱證據弱；與抗生素需間隔"
+          },
+          "say": "益生菌的效果**看菌株、看目的**——不是一罐通吃。腸胃道的證據比「增強免疫」紮實；同一罐對別人有效對你未必。三件事：**跟抗生素要隔開兩小時**（不然白吃）；**免疫功能低下、正在化療的人不要自己吃**，要問醫師；吃一兩個月沒感覺就停，不用戀戰。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-multivitamin",
+          "label": "綜合維他命",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "綜合維他命",
+            "綜合維它命"
+          ],
+          "contraindications": [
+            "正在吃多種單方補充品（重複疊加風險）"
+          ],
+          "dailyCap": "一天一顆、不與單方重複疊加",
+          "evidence": {
+            "finding": "多項大型世代與試驗：對慢性病預防與死亡率無顯著差異"
+          },
+          "say": "講實話：大型研究看下來，**綜合維他命對預防慢性病、延長壽命幾乎沒有差**。它的合理角色是「吃得很不均衡時的補位」，不是保險也不是治療。要吃記得：**別跟單方（鈣、D、B群）疊著吃**，脂溶性的會累積；一天一顆就好。錢想花在健康上，買菜比買罐子實在。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-ginseng",
+          "label": "人蔘",
+          "riskLevel": "L3",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "人蔘",
+            "人參",
+            "蔘"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "正在吃降血糖藥",
+            "高血壓控制不佳",
+            "感冒發燒中"
+          ],
+          "dailyCap": "份量由中醫師定；不長期天天當茶喝",
+          "evidence": {
+            "finding": "部分試驗顯示疲勞改善；與抗凝血/降血糖藥交互明確；發燒時忌補為中醫共識"
+          },
+          "say": "人蔘是補氣的經典，但它**跟西藥打架的名單很長**：抗凝血藥、降血糖藥（會加強、可能低血糖）、部分血壓藥。**感冒發燒的時候不要補**（中醫自己也這樣說）；睡不好、容易燥熱的人吃了可能更睡不著。有在吃慢性病藥的，帶著藥單問過中醫師或藥師再吃。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-lingzhi",
+          "label": "靈芝",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "靈芝"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "正在吃免疫抑制劑",
+            "即將手術"
+          ],
+          "dailyCap": "依產品標示；治療性宣稱一律不信",
+          "evidence": {
+            "finding": "免疫調節僅細胞/動物與小型研究；抗癌無人體實證；凝血與免疫交互明確"
+          },
+          "say": "靈芝的免疫調節研究還在初步階段，「抗癌」這種話**沒有人體實證、聽到請當行銷**。兩個硬規矩：**會影響凝血**，抗凝血藥使用者與手術前避開；**免疫抑制劑（器官移植、自體免疫治療）使用者不要吃**——它跟藥的方向相反。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-antrodia",
+          "label": "牛樟芝",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "牛樟芝",
+            "樟芝"
+          ],
+          "contraindications": [
+            "肝功能異常",
+            "腎功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "不建議長期自行服用",
+          "evidence": {
+            "finding": "人體證據薄弱；動物試驗曾有毒性疑慮通報；價格與證據不成比例"
+          },
+          "say": "牛樟芝是台灣特有、也賣得特別貴，但講實話：**人體實證很薄，而且過去有肝腎毒性的安全疑慮通報**——花大錢買「可能傷肝」的東西，這筆帳不划算。肝腎功能不好的人不要碰；真的想吃，先問醫師，吃了不舒服立刻停。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-nattokinase",
+          "label": "納豆激酶",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "納豆激酶"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "出血性疾病",
+            "即將手術"
+          ],
+          "dailyCap": "抗凝血藥使用者禁止自行併用",
+          "evidence": {
+            "finding": "人體證據弱；與抗凝血藥疊加出血風險；納豆食物的維生素K反向干擾 warfarin"
+          },
+          "say": "納豆激酶主打「溶血栓」，但人體證據還很弱。這一條**最容易搞混、也最危險**：它本身會抗凝血、**跟抗凝血藥疊加會增加出血風險**；但發酵的納豆「食物」本身維生素K很高、方向剛好**相反**（會削弱華法林）——一個讓血太稀、一個讓藥失效。有在吃抗凝血藥的人，這兩樣都先問醫師，不要自己配。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-bitter-melon",
+          "label": "苦瓜胜肽",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "苦瓜胜肽",
+            "苦瓜萃取"
+          ],
+          "contraindications": [
+            "正在吃降血糖藥",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "依產品標示；絕不取代血糖用藥",
+          "evidence": {
+            "finding": "初步小型試驗；效果量小；與降血糖藥疊加低血糖風險"
+          },
+          "say": "苦瓜胜肽主打「調節血糖」，研究還在早期、效果量也不大。**最重要的一條：它不能取代血糖藥**——有人吃了自己減藥，血糖反彈更危險；跟降血糖藥一起吃**可能疊出低血糖**（冒冷汗、手抖）。有糖尿病的人要吃之前，帶著藥單問醫師。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-maca",
+          "label": "瑪卡",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "瑪卡"
+          ],
+          "contraindications": [
+            "荷爾蒙相關癌症病史",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "依產品標示",
+          "evidence": {
+            "finding": "小樣本試驗；性功能/活力證據弱；荷爾蒙敏感族群安全性未明"
+          },
+          "say": "瑪卡主打活力跟「那方面」的表現，研究都是小樣本、證據弱——當食物吃可以，當仙丹會失望。**有荷爾蒙相關疾病病史的人（乳癌、攝護腺癌等）先問醫師**，它的作用機轉還不清楚，這種時候保守才聰明。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-gaba",
+          "label": "GABA／芝麻明類助眠",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "GABA",
+            "芝麻明",
+            "助眠保健"
+          ],
+          "contraindications": [
+            "正在吃安眠藥"
+          ],
+          "dailyCap": "依產品標示、不與安眠藥併用",
+          "evidence": {
+            "finding": "口服 GABA 通過血腦障壁存疑；助眠證據弱於睡眠衛生"
+          },
+          "say": "GABA 這類助眠保健品，講實話：**口服進得了大腦多少，科學上還有爭議**，助眠證據弱。睡前不滑手機、白天曬太陽的實證都比它強。要試可以，**別跟安眠藥疊著吃**（頭暈跌倒風險）；吃兩週沒感覺就停。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-melatonin",
+          "label": "褪黑激素",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "褪黑激素",
+            "退黑激素"
+          ],
+          "say": "褪黑激素**在台灣是處方藥**，不是保健品——國外帶回來或網購都不建議。真的長期睡不好，掛個門診跟醫師談，比自己買安全得多。"
+        },
+        {
+          "id": "lex-one-at-a-time",
+          "label": "一次試一種、給它一個期限",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "想試新的保健品，記得兩個原則：**一次只加一種**（不然有效沒效分不出來）、**給它一個期限**（一兩個月沒感覺就停）。我可以幫你記著開始的日子，到時候問你有沒有差。"
+        },
+        {
+          "id": "lex-pharmacist",
+          "label": "整袋帶去給藥師看",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "say": "手上的保健品跟藥加起來超過五種，最實在的一步：**整袋帶去藥局請藥師做用藥整合**——健保有給付、不用錢，哪兩瓶會打架他們一眼就看得出來。"
+        },
+        {
+          "id": "lex-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吃了之後皮膚或眼白變黃",
+            "起疹子或水腫",
+            "心悸",
+            "肌肉痠痛無力",
+            "為了吃保健品自行停藥"
+          ],
+          "say": "吃了任何保健品之後，如果皮膚眼白變黃、起疹子、心悸、肌肉痠痛沒力——**立刻停用、儘快就醫**，帶著那罐東西去。還有一條最重要：**不要為了吃保健品把醫師開的藥停掉**，那個風險完全不對等。"
         }
       ]
     }
