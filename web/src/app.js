@@ -8083,7 +8083,7 @@ function init() {
   if ($('#pfAvatarFile')) $('#pfAvatarFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; const box = $('#pfAvatar'); if (box) box.classList.add('processing'); resizeAvatar(f, dataUrl => { if (box) box.classList.remove('processing'); _pfPendingAvatar = dataUrl; renderPfAvatar(dataUrl); }, () => { if (box) box.classList.remove('processing'); toast('這張照片讀不到，換一張相簿裡的照片試試'); }); });
   if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '我'); });
   applyUserAvatar();
-  // 家庭照護圈
+  // 全家健康圈
   const CIRCLE_LIMITS = { free: 1, plus: 4, pro: 12 };                       // 免費只含本人；Plus 4 人、Pro 12 人
   const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', pro: 'Pro' };
   const PLAN_POINTS = { free: 0, plus: 100, pro: 200 };                       // 每月贈點（2026-07-17 Edward 拍板：每分鐘 6 元錨）
@@ -8147,11 +8147,11 @@ function init() {
     renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
     toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
   });
-  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (!requireLoginForFamily('要加入家人的照護圈，先登入一下（換手機也找得回來）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
+  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (!requireLoginForFamily('要加入家人的健康圈，先登入一下（換手機也找得回來）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
   if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
   if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', async () => {
-    if (!requireLoginForFamily('要加入家人的照護圈，先登入一下')) return;   // 雙保險：訪客不能入別人的圈
+    if (!requireLoginForFamily('要加入家人的健康圈，先登入一下')) return;   // 雙保險：訪客不能入別人的圈
     if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; }   // 雙保險：免費不能入別人的圈
     const code = ($('#joinCodeInput').value || '').trim();
     if (!code || code.replace(/\D/g, '').length < 4) { toast('把家人給你的邀請碼打進去（例：MUNEA-284753）'); return; }
@@ -8171,18 +8171,18 @@ function init() {
         if (!mem.some(m => m.name === meName)) { mem.push({ name: meName, init: meName[0], tint: 'p-bao', self: true }); saveCircle(mem); }
         renderFamRoster(); renderFcRoster();
         $('#joinCircleModal').classList.remove('show'); $('#joinCodeInput').value = '';
-        toast('加入了！你們現在在同一個照護圈，動態會互相看得到。');
+        toast('加入了！你們現在在同一個全家健康圈，動態會互相看得到。');
       } else if (j && j.error === 'invitation_expired') {
         toast('這組邀請碼過期了，請家人重新產一組給你。');
       } else if (j && j.error === 'circle_full') {
-        toast('這個照護圈人數已滿，請家人升級方案後再邀請你。');
+        toast('這個全家健康圈人數已滿，請家人升級方案後再邀請你。');
       } else {
         toast('找不到這組邀請碼，跟家人核對一下數字。');
       }
     } catch (e) {
       toast('現在連不上雲端，等網路好一點再試一次。');
     }
-    if (typeof clearBtnBusy === 'function') clearBtnBusy(btn); else if (btn) btn.textContent = '加入照護圈';
+    if (typeof clearBtnBusy === 'function') clearBtnBusy(btn); else if (btn) btn.textContent = '加入全家健康圈';
   });
   if ($('#fcLeaveBtn')) $('#fcLeaveBtn').addEventListener('click', () => {
     const b = $('#fcLeaveBtn');
@@ -8196,7 +8196,7 @@ function init() {
   if ($('#famManageBtn')) $('#famManageBtn').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily('要邀請家人連上你，先登入一下（這樣家人才連得到你）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily('要邀請家人連上你，先登入一下（這樣家人才連得到你）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('全家健康圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
   // 邀請碼：跟雲端拿真的（6 位數、72 小時內有效、綁自己的家庭編號）；連不上雲端就先給本機碼並提示
   async function ensureCloudInvite() {
     // 已有 48 小時內拿到的雲端碼就沿用（雲端碼 72 小時有效，留 24 小時緩衝）
@@ -8255,7 +8255,7 @@ function init() {
   }
   if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
     if (!shownInvCode()) { toast('邀請碼還沒建立好，先看畫面上寫的原因處理一下。'); return; }
-    const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + shownInvCode() + '，在沐寧的「家人 → 加入照護圈」輸入，我們就連上了！';
+    const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + shownInvCode() + '，在沐寧的「家人 → 加入全家健康圈」輸入，我們就連上了！';
     if (navigator.share) { navigator.share({ text }).catch(() => {}); }
     else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
   });
@@ -9228,7 +9228,7 @@ function init() {
     else if (p === 'invite') {
       // 家人頁的邀請入口也要守門：免費不能邀、滿了不能再邀（跟設定頁同一套規則）
       if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; }
-      if (loadCircle().length >= (CIRCLE_LIMITS[circlePlan()] || 4)) { toast('照護圈滿了，升級方案可以邀請更多家人。'); return; }
+      if (loadCircle().length >= (CIRCLE_LIMITS[circlePlan()] || 4)) { toast('全家健康圈滿了，升級方案可以邀請更多家人。'); return; }
       if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); }
     }
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
@@ -10684,7 +10684,7 @@ function init() {
         : '點數用完了喔——補一些點數就能繼續跟我聊，設定裡就能加值。';
     }
     // 傳話：①「提醒／告訴 某人 …」直接算 ②「跟 某人」必須真的接「說」才算（防「有跟誰約好」這種閒聊誤觸發）
-    // 7/9 正式化：名單改吃真的照護圈成員（不再寫死示範名）；圈外仍有通用中文名比對兜底
+    // 7/9 正式化：名單改吃真的全家健康圈成員（不再寫死示範名）；圈外仍有通用中文名比對兜底
     let KNOWN_FAM = [];
     try { KNOWN_FAM = (typeof loadCircle === 'function' ? loadCircle() : []).map(m => m.name).filter(Boolean); } catch (e) {}
     let relay0 = null;
